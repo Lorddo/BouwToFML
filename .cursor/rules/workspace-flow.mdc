@@ -1,0 +1,32 @@
+---
+description: Vast 4-stappen workspace-flow — elke code-wijziging hoort in de juiste stap
+alwaysApply: true
+---
+
+# Workspace-flow (niet breken)
+
+Lees `.cursor/docs/workspace-flow.md` vóór UI/CV-wijzigingen aan upload, preprocess, detectie of resultaat.
+
+## Vaste stappen
+
+1. **Onderlegger** — schaal, rotatie, gum/crop (`input`)
+2. **Voorbewerking** — B/W muren (+ int muur) + referentievakken muur/deur/raam; OCR-toggle; muurdikte bij afronden (`preprocess`)
+3. **Detectie** — optioneel OCR scan+mask, daarna muren (room-first) genereren (`templates` → `tabOutputs.walls`)
+4. **Resultaat** — gecombineerde view + FML uit `mergeTabOutputs` (`result`)
+
+## Verplichte bronnen (DRY)
+
+| Concern | Module |
+|---------|--------|
+| Laagvolgorde + detect-targets | `frontend/src/cv/workspace/layer-flow.ts` |
+| Per-laag preprocess | `frontend/src/cv/preprocess/layer-preprocess.ts` |
+| Tab-output merge | `frontend/src/cv/pipeline/merge-tab-outputs.ts` |
+| UI per stap | `frontend/src/ui/composables/workspace/useWorkspace*.ts` |
+
+## Regels bij wijzigingen
+
+- **OCR** alleen stap 3 tab OCR (`useWorkspaceOcr`) — **niet** opnieuw in `geometry-pipeline.ts`.
+- Tekst wegfilteren in CV via `ocrMask` / `eraserMask` (`preparePreprocessMasks`), niet via runtime Tesseract in worker.
+- Nieuwe laag-tab → uitbreiden `WORKSPACE_ELEMENT_LAYER_ORDER` + `resolveLayerPreprocess`, niet aparte composable kopiëren.
+- `tabOutputs` alleen vullen in stap 3 detectie-run; valideer met `isValidTabOutput`.
+- Worker-wijzigingen: `registerAllExtractors` + `canvasEnv` (geen `HTMLImageElement` / `document`).

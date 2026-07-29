@@ -1,0 +1,64 @@
+---
+description: Floorplanner API integratie – auth, import, tokens
+globs: "backend/**/*.{ts,js}"
+alwaysApply: false
+---
+
+# Floorplanner API
+
+Offline docs: `.cursor/docs/floorplanner/`
+
+## Omgevingen
+
+| | URL |
+|---|-----|
+| Sandbox | `https://floorplanner.dev/api/v2/` |
+| Production | `https://floorplanner.com/api/v2/` |
+
+## Authenticatie
+
+HTTP Basic Auth: username = API key, password = `x`.
+
+Env vars (later in backend):
+```
+FLOORPLANNER_API_KEY=
+FLOORPLANNER_BASE_URL=https://floorplanner.dev/api/v2/
+```
+
+**Nooit** API key in frontend exposen.
+
+## Relevante endpoints
+
+### Import FML → nieuw project
+
+```
+POST /projects/import.json
+Content-Type: application/json | text/xml
+Body: FML JSON of XML string
+```
+
+**QUIRK:** coördinaten in **meters** (160 cm → 1.6). Zie export-options.md.
+
+Response: project met `id`, `floors`, `designs`.
+
+### Editor openen
+
+```
+GET /projects/{id}/token.json?editor_url=true&expires_in=3600
+```
+
+Response: `{ token, editor_url }` — token verloopt; altijd nieuw opvragen.
+
+### FML ophalen (validatie)
+
+```
+GET /projects/{id}/fml
+```
+
+## Implementatie-richtlijnen
+
+1. Backend proxy voor alle Floorplanner calls
+2. V1 export: JSON v3 in **cm** (download). V2 API-import: **cm → m** op import-pad
+3. Sandbox eerst testen
+4. Download als fallback als API faalt
+5. Zie `.cursor/docs/export-options.md` voor fasering

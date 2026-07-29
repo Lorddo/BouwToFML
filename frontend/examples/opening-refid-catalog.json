@@ -1,0 +1,434 @@
+{
+  "beschrijving": "Invulbare catalogus van opening-refids voor BouwToFML. Vul benaming, subtype en kind in na visuele controle. FML-preview: 'kind' kiest het symbool; 'swingInsetCm' (of swing_inset_defaults per kind) = vaste kozijn-inset per zijde zodat gap=volle breedte en boog/blad iets smaller — plattegrond-onafhankelijk. Ramen: optioneel 'panels' (1|2|3) voor vaste indeling i.p.v. breedte-heuristiek.",
+  "laatste_update": "2026-07-25",
+  "swing_inset_defaults": {
+    "single": 5,
+    "closet45": 5,
+    "double_wide": 5,
+    "sliding": 0,
+    "sliding_pocket": 0,
+    "sliding_single": 0,
+    "garage": 0,
+    "passage": 0
+  },
+  "kind_hints": {
+    "deur": {
+      "single": "Enkele draaideur — 1 vleugel + 90° kwartcirkel (default voor onbekende refids).",
+      "double_wide": "Eén brede opening met twee vleugels vanuit het midden + twee 90° bogen (bijv. Franse balkondeuren).",
+      "sliding": "Schuifpui 2 schuivende delen — middenstreep + twee pijlen naar elkaar toe, geen draaicirkel.",
+      "sliding_single": "Schuifpui 2 delen met 1 schuivend deel — middenstreep + 1 pijl op linker deel naar rechts.",
+      "sliding_pocket": "Pocketdeur — 1 schuifpijl (vaak in muurpocket), geen draaicirkel.",
+      "garage": "Garagedeur — sectionaal/breed, geen draaicirkel; preview: parallelle paneellijnen.",
+      "passage": "Kale opening (geen vleugel, geen boog).",
+      "closet45": "Kastdeur — vleugel onder ~45° + 45° boogje (komt overeen met Floorplanner 2D)."
+    },
+    "raam": {
+      "single": "Enkel raam (1 paneel).",
+      "multi": "Meerdelig raam (2 of 3 panelen; gebruik veld panels).",
+      "round": "Rond raam — cirkelcontour onder het raam (vaste 50px diameter).",
+      "half_round": "Half-rond raam — halve-cirkelcontour onder het raam (vaste 50px diameter)."
+    }
+  },
+  "subtype_hints": {
+    "raam": [
+      "enkel",
+      "dubbel",
+      "driedelig",
+      "rond",
+      "half_rond",
+      "schuifpui",
+      "onbekend"
+    ],
+    "deur": [
+      "enkel",
+      "dubbel",
+      "pocket",
+      "schuif_enkel",
+      "schuifpui",
+      "garage",
+      "zonder_boog",
+      "boog_45",
+      "boog_90",
+      "opening_passage",
+      "onbekend"
+    ]
+  },
+  "entries": [
+    {
+      "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+      "type": "door",
+      "benaming": "Deur enkel",
+      "subtype": "enkel",
+      "kind": "single",
+      "swingInsetCm": 5,
+      "notities": "Standaard enkele deur met 90° draaicirkel; FML-boog 5cm inset per zijde (kozijn-simulatie)",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Amstelveenseweg 1092 A, Amsterdam",
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kinderdijkstraat 53 1, Amsterdam",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 51
+    },
+    {
+      "refid": "181e49d1e848e8668befb4ee93bb5a2ec86b017c",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 7
+    },
+    {
+      "refid": "1cdb4e6092e998630e7881667f2ddedafa3b0eb9",
+      "type": "door",
+      "benaming": "Schuifpui (2 schuivend)",
+      "subtype": "schuifpui",
+      "kind": "sliding",
+      "swingInsetCm": 0,
+      "notities": "Twee schuivende delen; preview: middenstreep + twee pijlen naar elkaar toe (Template ID: rechts onder)",
+      "bronnen": [
+        "FML(current)",
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kinderdijkstraat 53 1, Amsterdam",
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 4
+    },
+    {
+      "refid": "200",
+      "type": "door",
+      "benaming": "Deur enkel",
+      "subtype": "enkel",
+      "kind": "single",
+      "swingInsetCm": 5,
+      "notities": "Template ID objects — links boven (standaard deur). Numeriek FP-template-id.",
+      "bronnen": [
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 0
+    },
+    {
+      "refid": "216",
+      "type": "door",
+      "benaming": "Pocketdeur",
+      "subtype": "pocket",
+      "kind": "sliding_pocket",
+      "swingInsetCm": 0,
+      "notities": "Template ID objects — rechts boven. Sliding in muurpocket; preview: 1 pijl (spiegelbaar via mirrored).",
+      "bronnen": [
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 0
+    },
+    {
+      "refid": "2cb4a1c74ec301ab0fdc762deb37eaf0e28d9ecc",
+      "type": "door",
+      "benaming": "Deur enkel (balkon)",
+      "subtype": "enkel",
+      "kind": "single",
+      "swingInsetCm": 5,
+      "notities": "In Kinderdijkstraat-FML: enkele balkondeur met 90°-boog (niet kastdeur 45°); FML-boog 5cm inset per zijde",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Amstelveenseweg 1092 A, Amsterdam",
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kinderdijkstraat 53 1, Amsterdam",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam"
+      ],
+      "aantal_in_fml_current": 7
+    },
+    {
+      "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+      "type": "door",
+      "benaming": "Deur dubbel openslaand (breed)",
+      "subtype": "dubbel",
+      "kind": "double_wide",
+      "swingInsetCm": 5,
+      "notities": "Één brede opening met twee vleugels + twee 90°-bogen (niet schuif); FML-boog 5cm inset per zijde",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Amstelveenseweg 1092 A, Amsterdam",
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Kinderdijkstraat 53 1, Amsterdam",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 9
+    },
+    {
+      "refid": "5eed19e75b817e0185f83ae0c673e1f0680ca5f7",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Benedendorpsweg 51, Oosterbeek"
+      ],
+      "aantal_in_fml_current": 1
+    },
+    {
+      "refid": "9c1479d9dfc482859aea10b9dd67f5e7773fff6d",
+      "type": "door",
+      "benaming": "Garagedeur",
+      "subtype": "garage",
+      "kind": "garage",
+      "swingInsetCm": 0,
+      "notities": "Kandidaat uit Benedendorpsweg (188 cm bij Garage-ruimtes). Visuele FP-check via editor-plaatsen + export nog open; ook gebruikt op ~94 cm elders in dat project.",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Benedendorpsweg 51, Oosterbeek"
+      ],
+      "aantal_in_fml_current": 15
+    },
+    {
+      "refid": "9c845cf2ad8de220b65ee4dedeeb28ba4d750e21",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 4
+    },
+    {
+      "refid": "ab70da280dddcf9be151cb00ee94b2785909c71d",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam"
+      ],
+      "aantal_in_fml_current": 2
+    },
+    {
+      "refid": "d2785cc45c9c0ec86644135d22fa9ac9c49bcad6",
+      "type": "door",
+      "benaming": "Schuifpui (1 schuivend)",
+      "subtype": "schuif_enkel",
+      "kind": "sliding_single",
+      "swingInsetCm": 0,
+      "notities": "Template ID objects — links onder. Twee delen met 1 schuivend (links); preview: 1 pijl op linker deel naar rechts.",
+      "bronnen": [
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 0
+    },
+    {
+      "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+      "type": "door",
+      "benaming": "Kastdeur (draai 45°)",
+      "subtype": "boog_45",
+      "kind": "closet45",
+      "swingInsetCm": 5,
+      "notities": "In Floorplanner 2D staat deze deur daadwerkelijk onder ~45° (met boogje), ook op kastmuur. Bevestigd via 2D-Eerste verdieping.jpg (Kinderdijkstraat). Geen 90°. FML-boog 5cm inset per zijde.",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Amstelveenseweg 1092 A, Amsterdam",
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kinderdijkstraat 53 1, Amsterdam",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 72
+    },
+    {
+      "refid": "df95e84f01163fe9983d43d088551813e40e3e2f",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek"
+      ],
+      "aantal_in_fml_current": 40
+    },
+    {
+      "refid": "e187280929d3631c3e8aaac341077556fea22fe2",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam"
+      ],
+      "aantal_in_fml_current": 3
+    },
+    {
+      "refid": "eec7e3d89097fc1a9b5ec153b0148cf6f52222dc",
+      "type": "door",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Amstelveenseweg 1092 A, Amsterdam",
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 7
+    },
+    {
+      "refid": "14980facdeef5985d186e6767ee5300a1845abbc",
+      "type": "window",
+      "benaming": "",
+      "subtype": "",
+      "notities": "",
+      "bronnen": [
+        "FML(current)"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam"
+      ],
+      "aantal_in_fml_current": 1
+    },
+    {
+      "refid": "65d378c39d0183c82927e4ed7f8be6b224cf1df8",
+      "type": "window",
+      "benaming": "Raam half-rond",
+      "subtype": "half_rond",
+      "kind": "half_round",
+      "notities": "Template ID objects — rechts onder. Halve cirkelcontour onder raam; UI-diameter vast 50px.",
+      "bronnen": [
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 0
+    },
+    {
+      "refid": "6da47b0a60330d19716d716046ec6c72c19d2cdb",
+      "type": "window",
+      "benaming": "Raam rond",
+      "subtype": "rond",
+      "kind": "round",
+      "notities": "Template ID objects — links onder. Cirkelcontour onder raam; UI-diameter vast 50px.",
+      "bronnen": [
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 0
+    },
+    {
+      "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+      "type": "window",
+      "benaming": "Raam 1-delig",
+      "subtype": "enkel",
+      "kind": "single",
+      "panels": 1,
+      "notities": "Template ID objects — links boven. Standaard enkel raam.",
+      "bronnen": [
+        "FML(current)",
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Amstelveenseweg 1092 A, Amsterdam",
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kinderdijkstraat 53 1, Amsterdam",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Template ID objects",
+        "Van Ostadestraat 139 1, Amsterdam"
+      ],
+      "aantal_in_fml_current": 72
+    },
+    {
+      "refid": "bbf86e131112adca8869e9970229a71d7ff3fc28",
+      "type": "window",
+      "benaming": "Raam 2-delig",
+      "subtype": "dubbel",
+      "kind": "multi",
+      "panels": 2,
+      "notities": "Template ID objects — midden boven. Indelingstreep blijft binnen muurgap.",
+      "bronnen": [
+        "FML(current)",
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Anna van den Vondelstraat 13 D, Amsterdam",
+        "Benedendorpsweg 51, Oosterbeek",
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam",
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 19
+    },
+    {
+      "refid": "e3296a727699a3fc70e70dfec4ab715ed368ef63",
+      "type": "window",
+      "benaming": "Raam 3-delig",
+      "subtype": "driedelig",
+      "kind": "multi",
+      "panels": 3,
+      "notities": "Template ID objects — rechts boven. Vaste 3 panelen (niet breedte-heuristiek); indelingstreep binnen muurgap.",
+      "bronnen": [
+        "FML(current)",
+        "Template ID objects.json (1).fml"
+      ],
+      "projecten": [
+        "Benedendorpsweg 51, Oosterbeek",
+        "Template ID objects"
+      ],
+      "aantal_in_fml_current": 3
+    }
+  ]
+}

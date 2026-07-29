@@ -1,0 +1,21 @@
+.canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.canvas-wrap.cursor-grab {
+  cursor: grab;
+}
+
+.canvas-wrap.cursor-grabbing {
+  cursor: grabbing;
+}
+
+.canvas-wrap.cursor-crosshair {
+  cursor: crosshair;
+}
+
+.canvas-wrap.cursor-pointer {
+  cursor: pointer;
+}

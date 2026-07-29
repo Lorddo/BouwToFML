@@ -1,0 +1,172 @@
+---
+description: Sessie-geheugen – huidige staat en lopende werkzaamheden
+alwaysApply: true
+---
+
+# Memory – BouwToFML
+
+Laatste update: 2026-07-29 (face-edit perf)
+
+## Audit-uitkomst (2026-07-29)
+
+Rapport: `.cursor/docs/audit-2026-07-29.md`. Geverifieerd, niet gefixt.
+
+**Blokkerend:** (1) geen git-repo (`.git` ontbreekt; backups op .101 ≠ versiebeheer) · (2) `npm run build` faalt — 134 TS-fouten, 77 in `src/` waarvan ~15 echte typefouten incl. ontbrekende params `room-raster-merge.ts:347,350`, niet-bestaande `removeSpeckles` in `room-reference-preprocess.ts:21`, nulldereference `connector-detect.ts:254,265` · (3) geen CI/lint/hooks · (4) detectiekwaliteit onmeetbaar — 980 tests zijn synthetisch, geen E2E-fixture op echte scan.
+
+**Ingetrokken:** `keepLargestOnly: true` = **bewuste keuze** (losstaande garage → eigen plattegrond; aanbouw zit vast) — alleen comment op aanroep ontbreekt.
+
+**Ernstig:** 2 falende tests (`derive-fml-band-from-ref` 24 vs 25.5 raakt min/mid/max; `ref-analysis` face-contouren weg) · geen sessie-persistentie · `core ↔ cv` cirkel · `useWorkspace` 184-key facade · vaste px-drempels schalen niet · FML zonder validatie, `balance` altijd 0.5, ramen zonder `mirrored` · CV op UI-thread · Mat-lek zonder try/finally.
+
+**Vastgesteld met gebruiker:** muurtypering = min/mid/max diktebanden (gebouwd) · tabs Deuren/Ramen worden vóór oplevering verborgen → gate-lek `useWorkspaceFlow.ts:89` afgedekt, maar correctiepad deuren/ramen verschuift volledig naar FML-editor (open vraag) · backups op .101.
+
+**Volgorde:** git init → build groen → CI-poort → E2E-fixtures → correctheid (keepLargestOnly, balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade).
+
+## Huidige focus
+
+Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.jpg`, 1500×1000) i.p.v. 2D_3E — nieuwe cases om op te lossen. Refs + preprocess: LBE in **stap 2**; abs-px besluiten gedaan (R7/R8 Later open). Production-refactor: **ronde 1–22 gedaan**. **Lean/DRY pass:** skill + 8 inventaris + cross B1 + Stap1–2 + Doors D1 + Windows B1–B2 + Stap4 conversie B1–B3 + **FML B1–B4** + UI B1–B2 + **Walls L0–L4** (W1–W3) + **Walls L5–L6 structural** (A–E; **Cat C = product-F**) + **Walls L7–L10** (B1–B4 + dist-map). Open: L6 Cat C (product-F, geen lean-batch); `hasFmlSemanticSource` gate = F; overige UI-smokes Project4.
+
+**Open / handmatig checken**
+
+- **Face-edit perf (code gedaan)** — dirty-rect preview + claim-detach bounds; region-sized ink nearest + in-place prior; demote prune 80 ms coalesce. Specs face-overlay-perf + demote guards groen. UI-smoke Project4: Shift-klik wall↔unknown / box / demote overlays.
+- **Lean Walls W3+B4 (code gedaan)** — `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (plan “Expliciet later”); 122 pipeline-v3 groen. Planned lean walls items **empty**.
+- **Lean Walls dist-map pass-through (code gedaan)** — `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; scaffold v2=false + arm via scale; UI-smoke Project4 L7–L10 user-OK.
+- **Lean FML B1–B4 (code gedaan)** — DEFAULT_FML_*/clamps; `computeOpeningDraftState`; `extractionToPlanWithOrigin` + underlay bundle; `filterOpeningsForEdge`. hasFmlSemanticSource-gate = F. 53 FML vitest groen. UI-smoke: Project4 select/move/spiegel/copy + underlay + twin double_wide + download.
+- **Lean Windows B2 (code gedaan)** — `buildEvidenceStats` + `window-stage3-retarget`; unalias dual → `resolveFloorDual`; B3 L14↔L11 segment-geom = F. 71 window-tests groen. UI-smoke: Project4 Stage 3 → afronden → L14 cyaan + FML; doorframe class (geen L14).
+- **Lean Doors doorframe-preview (code gedaan)** — `pushStageClassesOntoWalls` → assign `roomRasterCache` → pas daarna `onWindowFacesApplied` (preview/reattach). Was: preview op stale cache zonder DF tot face-edit. UI-smoke: Project4 na raam-pass DF donker oranje **zonder** vlakklik.
+- **Lean Stap2 B2–B4 (code gedaan)** — één publish; masks/debounce DRY; shared `buildWallLayerBwMat`/`bwBytesToCanvas`; style+REF vanaf post-bake `baseBw` (gebakken inkt mee, nooit `effectiveBw`). 14 compose/ref tests groen. UI-smoke: Project4 B/W-tune, inkt in LBE → Volgende dikte+style, REF-export, FML-underlay kleur.
+- **Lean Doors demote-wipe hotfix** — face-edit riep `existingDoorsOnly` pipeline + door-arc → window herdetectie → pins weg. Nu: deur-demote = prune-only; window invalidate bewaart lastAuto; lege herdetectie wist geen window/doorframe pins; full face-preview na edit.
+- **Lean Doors D1 hotfix (dual-cache)** — ComputationCache epoch bij live cache veroorzaakte stale dual → existingDoorsOnly leeg → door/window wipe bij vlakklik. Fix: live cache → altijd `ensureFaceDualSpace`; + guard tegen lege stage bij nog-class=`door`. UI-smoke opnieuw: Project4 detectie → raam-pass doorframes → 1 vlak wijzigen → deuren/ramen blijven.
+- **Lean Doors D1 rest (code gedaan)** — `resolveClassAtLabel` (missing expliciet: attach/Path A `undefined`, surround `'surface'`); snap `applyFaceClassificationOverrides`; `BBoxBounds` → geometry-utils; L12 `normalizeVector`; dual epoch-cache; D2 = F. 145 door-tests groen. UI-smoke: Project4 na raam-pass sticky window-DF → Path A/FML.
+- **Lean Stap1 B2–B3 (code gedaan)** — affine DRY + `ROTATION_EPS_DEG`; `createByteArrayHistory` shared (mask 40 / ink 30); `resolveDisplayImageSrc`. UI-smoke: schaal/rotatie/gum undo → Volgende; stap2 inkt Ctrl+Z + underlay.
+- **Lean/DRY Batch 1 (code gedaan)** — merge/`semanticAsSegments`; dode median; unused deps; `buildCombinedPreview` weg; labels DRY; door geom; window evidence-geom; faces recalculate inklap. UI-smoke: Project4 4 stappen → afronden → FML.
+- **Cleanup ronde 18–22 (code gedaan)** — `pipelineV2Debug` weg; `layer-debug-report` + `PipelineLayerDebug`; `room-raster-cache` / `ref-swing-hinge` / faces gesplit. UI-smoke: Project4 afronden → Layer Debug L1–L10 → FML; Shift-klik faces; DevSession (oude V2-blobs = breaking, alleen V3).
+- **Stap4 Batch 3 (code gedaan)** — deur-swing export prefer live `orientedDoors`; `build-semantic-walls-source` + `hasFmlSemanticSource`. UI-smoke: Project4 afronden → DevPanel L12 → deur-swing rapport L12-count gelijk; FML ongewijzigd.
+- **Refactor ronde 17 (code gedaan)** — consumer-chain: finalize canvases/`parallelPairs` weg; FML-DTO zonder `openingBBox`; semantic `lengthPx`/`angleDeg` weg; docs sync. UI-smoke: Project4 afronden → Result overlays L1–L10 → FML + Layer Debug; geen double-wide regressie.
+- **Refactor ronde 16 (code gedaan)** — `room-ink-classify` → mapping/effective/autoclass/render + lean barrel ~42; `ROOM_INK_CLASSIFY_TUNING`; pickers DRY; exterior BFS private; refineWall F; 77 classify-specs. UI-smoke: Project4 classify → Shift-klik/box → inkt-edit → afronden → L10.
+- **L5 endpoint-bake ULP (code gedaan)** — `unifyNearEndpoints` + bake in `rebuildFaceFromSegments`; weld skip `maxD≤1e-6` weg. 2D_3E @516: collinear hub → geen 2×I. Specs L5+L6 groen. UI-check: 2D_3E probe (716,488) L5→L10 geen diagonale stam.
+- **Refactor ronde 15 (code gedaan)** — `useWorkspaceDevSession` → capture/restore-base/detection/flow; lean ~264; dode `wallBwPreviewUrl`; return-keys + exact/replay 1:1; 16/16 dev-workspace. UI-smoke: Project4 DevSession opnemen/herstellen.
+- **Refactor ronde 14 (code gedaan)** — `useWorkspaceExports` → shared/underlay/layer-debug/ref/deur/raam; lean entry ~70; dode deps + DRY; return-keys stabiel; vite + platform export specs. UI-smoke: Project4 downloads + debug-panel exports.
+- **Refactor ronde 13 (code gedaan)** — sticky helpers; assemble construction-slices (flat keys); View → FmlResultPanel/PreviewHost/FloorplanCanvasHost; gaps-ink persistence; 12 UI specs. UI-smoke: Project4 4 stappen + sticky restore + FML panel/preview.
+- **Refactor ronde 12 (code gedaan)** — Canvas draw-previews + dead `resetView`; Stage → Walls/Openings/Fixtures/Junctions; Canvas ~436 / Stage ~167; 93 fml-preview specs. UI-smoke: Project4 select/move/spiegel/copy/draw/measure/pan/dikte-pick/download.
+- **Refactor ronde 11 (code gedaan)** — FmlPanel → Heights/Thickness/Opacity/Actions; import-props F; 7 UI specs. UI-smoke: Project4 Panel hoogtes/dikte/bands/pick/opacity/regenerate/download.
+- **Refactor ronde 10 (code gedaan)** — FML editor: Render types/openings/panels; Interaction `useFmlPreviewPointer`; Toolbar → `FmlPreviewToolbarSettings`; entries ~293/487/225; 93 fml-preview specs. UI-smoke: Project4 select/move/spiegel/copy/download.
+- **Refactor ronde 9 (code gedaan)** — FML conversie: `extractionToPlan` → types/geom/walls/doors/windows; `useWorkspaceFml` → generate + thickness-ui + `layer-openings-to-fml`; 33 specs groen. UI-smoke: Project4 afronden → vector preview → download.
+- **Refactor ronde 8 (code + functioneel OK)** — UI faces: demote/helpers/bind/snap; Project4 smoke bevestigd.
+- **Refactor ronde 7 (code gedaan)** — L11 snap-split; 25 specs. UI-smoke Project4 twin Path A/B.
+- **Archive leeg (code gedaan)** — `src/archive` + `tests/archive` parking lot; `room-first` V3-only. Ronde 1–17 gedaan.
+- **Deur wall-touch gate (code gedaan)** — Stage-2 ná surround+angle-rescue: ink-adjacent `wall|window|doorframe` verplicht (`no_wall_touch`); existingDoorsOnly skip. UI-check Project4 garage: losse/meubel FPs weg, muur-deuren + poort blijven.
+- **existingDoorsOnly + angle-rescue (code gedaan)** — demote/restore wiste angle-rescue → twin 32 / 360·361 wel class=door in probe, niet in Deuren-overlay/FML; export kleurde wel (volle pipeline). Fix: angle-rescue aan in existingDoorsOnly alleen class=`door` + snap na refresh. UI-check Project4: demote auto-valse deur → bovenste twin blijft rood + 2 FML-openingen (geen double_wide).
+- **L12 doorframe leidende maat (code gedaan)** — L11 clear = deurblad; FML = clear + REF framing; display = clear. UI-check Project4 twin/single met kozijn → FML-breedte = df+framing.
+- **L11 Path B dual/ink (code gedaan)** — Path B = ink-adjacent `wall` → segment-first (geen white+wallMask); UI-check Project4 swings zonder doorframe na afronden → L12 bind.
+- **Sticky doorframeFaceIds (code gedaan)** — bridge koppelt sticky `doorframe` → `byHypothesisId`; attach peelt cluster-kozijn uit `faceIds`; reattach na window-pass (geen Stage-2 her-run). UI-check Project4 twin 32+df27/28 + single-3 79+df77/78 → export `doorframeFaceIds` gevuld; afronden Path A.
+- **Face bbox-index (code gedaan)** — classify toggle/box via `faceBBox` (geen dual-rebuild); dual alleen deur/raam/probe. UI-check Project4 Shift-klik + box. Wall↔unknown nog regionale ink-resolve (verwacht).
+- **Stap-3 initial-detection gate (code gedaan)** — face/ink UI + afronden geblokkeerd tot muur+deur+raam eerste pass klaar; canvas-spinner met stappen. UI-check Project4: land stap 3 → overlay tot alles klaar → pas dan face-klik.
+- **Wall B/W overlay Pad B (code gedaan)** — `composeWallBw` = base ⊕ OCR ⊕ ink; Verwerk inkt zonder kleur-rethreshold; geen bake naar kleur. UI-check Project4: penseel/gum op B/W stap 2+3, Verwerk inkt, OCR aan/uit, download B/W, FML-underlay nog kleur, retune behoudt ink.
+- **L11 doorframe-first + sticky (code gedaan)** — Path A **segment-first** langs ink/bbox-near doorframe (geen wallMask-gate); sticky pins. UI-check Project4 twin boven face 32 + df 27/28 na afronden → L12.
+- **Stage-2 angle-rescue (code gedaan)** — diepte ±15% Either; hoek white + `expectedAngleDeg` + H/V-prefer; fill &lt;0.80; hinge L/R met expected → dichtste hoek (twin 360). UI-check twin 360/361, shallow 373/374.
+- **Deur REF via rechte face-crop (code gedaan)** — `analyzeDoorSwingRef` = `runRefStages` → swing-pick; verticale REFs (90° LBE) komen in `refBands`. UI-check Project4 deur #3 / face 32 naast horizontale REF.
+- **Wall-rescue Either (code gedaan)** — Stage-1 probeert ink óf white (`wallRescueMatchSpaces`); UI-check Project4 twin onder raam (face ~439) naast gevonden 485. Kleine deuren boven (opgeslokt in wall) → later apart.
+- **claimFacesFromParentMap** — muur refine/classify + deur/raam/doorframe push claimen enclosed children als individuele roots; UI-check Project4 draaibogen vindbaar in Stage 1.
+- **Deur dual-space (fase 1 gedaan)** — `DOOR_SPACE_POLICY` + `runDoorStagePipeline` + `rebindFaceDualWhite`; **cluster-brug = ink** (wit–inkt–wit). UI-check Project4 / BouwTek11 clustered swings. **Nog open:** shallow underdeeps.
+- **Project4 bg** — end-to-end; raam REF alleen-top → strip_stack (asymmetrische rails fix 2026-07-23); UI-check Stage 3. **Opening-wit dual-space**: deur/raam Stage 1 wit — dunne ramen. **Doorframe**: UI-check 2D_3E / Project4.
+- **Abs-px smoke** — BouwTek11 + De Roemer na L6/ramen-schaal (ref≈30 vs dikkere ref / 3k floor).
+- **Refs in stap 2** — tekenen op muur-B/W; dikte bij afronden; BouwTek11 + De Roemer.
+- **3k floor + preprocess** — canvas-performance; deur/raam dicht-op-elkaar.
+- **OCR op muur-B/W** — kwaliteit dunne tekst na pre-B/W/thicken (opt-in OCR); O2/O4 ×underlay.
+- **FML-editor ramen** — Ctrl+klik settings (vloer/glas), sleep verplaatsen, copy→plaats-tool; UI-check.
+- **FML-editor deuren** — spiegel als iconen + copy-icoon; UI-check.
+- **L14 ramen** — na afronden: cyaan bbox/opening-lijn; junction-in-window rejects; FML windows met concept-refid.
+- **Template ID FML in viewer** — pocket/schuif/rond/half-rond + fixtures visueel checken.
+- **Ramen op Muren-tab** — window-faces cyaan in classify-overlay; Stage-3 push; handmatige check De Roemer e.d.
+- **De Roemer Hal/mk raam** — Stage-3: 4 strip_stack leden → Stage-4 merge; UI-check Hal/mk.
+- **BouwTek11 swing-span/hinge 2026-07-19** — handmatige UI-check probes open.
+- Snapshot exact-restore: Deuren-tab overlay + geen unknown→deur over restore.
+- Deur-swing schaal / FML double-door / Stage-2 wall-fill — POC’s open.
+- Kinderdijkstraat / smoke end-to-end nog niet handmatig gevalideerd.
+
+## Wat WERKT (huidige staat)
+
+**Flow:** Onderlegger → Voorbewerking → Detectie → Resultaat. Contract: `.cursor/docs/workspace-flow.md` + `layer-flow.ts`.
+
+**Wall-B/W overlay:** `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay` (`compose-wall-bw.ts`); stap 2/3 inkt-tools op overlay; afronden stap 2 bakt ink→`baseBw` (+ `bakedInkOverlay`); classify/finalize/Verwerk inkt via `precomposedWallBw`; geen bake naar kleur.
+
+**Stap 1:** schaal/rotatie/crop/gum. Geen refs. Floor **min 3000px** (`OPTIMIZATION_BASE_DIMENSION`); upscale high-quality.
+
+**Stap 2:** tabs Muren + Int muur; B/W-tune + **LBE-refs** (muur/deur/raam) + OCR-toggle (**default uit**) + deur Template ID. Gate naar stap 3: muur-rect; bij afronden meet dikte/stijl op post-bake **`baseBw`**. Ref-crops = **`baseBw`** (gebakken inkt mee; nooit `effectiveBw`/OCR; fallback rebuild wallLayer zonder UI-state).
+
+**Stap 3 detectie:** (optioneel OCR) → Muren (room-first; bij review: deuren+ramen mee) → Deuren → Ramen. Gaten-tab hidden. Na afronden → Vector/FML.
+
+**Muren:** enig pad = room-first → pipeline-V3 L1–L10 (`fmlReady`). Face-class flow: `wall` = L0 mask; V3 ziet alleen binary mask — zie `wall-face-class-flow.md`.
+
+**Deuren:** Stage-2 → class `door` (amber); finalize `door`≡`unknown` in mask; L11/L12 → FML. Floor dual via `runDoorStagePipeline` + `DOOR_SPACE_POLICY` (Stage 1 white, cluster white, rescue/resolve ink).
+
+**Ramen:** Stage 1–4 via `pipeDual` (`rebindFaceDualWhite` na detach) + `WINDOW_SPACE_POLICY`/`dual.geom`; starten op Muren- of Ramen-tab; faces → class `window` (cyaan); finalize `window`→`wall` in mask. L14 bind + merge → FML. REF: `RefFaceDualSpace` (strips white, framing ink). Doc: `window-detection-flow.md`.
+
+**FML:** preview + download via `previewPlan`; `buildFmlV3`; dikte-harmonize; wall boolean union; deuren L12 + ramen L14 openings. Editor: deuren én ramen selecteerbaar/verplaatsbaar; raam settings vloer (`z`) + glas (`z_height`); copy → create-tool; deur spiegel via iconen.
+
+**UI:** `useWorkspace` + `workspace/*` composables; Layer Debug toont eindlagen L10/L12/L14 (tussenlagen in details; na finalize die drie aan).
+
+## Wat NIET / half
+
+- Ramen: L14 + merge + FML actief; per-ref Template ID UI nog niet; handmatige POC open.
+- Ink-resolve/gaps demote: window formeel als wall-boost nog niet aangescherpt (mask-mapping wel).
+- Oude archive openings (`src/archive/openings/**`) ≠ actieve deurpad.
+- Wall-orientation-audit findings nog open (doc).
+- `vitest run` hangt soms na laatste test op Windows (inhoud OK; kill proces).
+- Diverse handmatige POC’s boven (snapshot/deuren/FML) nog open.
+
+## Technische schuld (kort)
+
+- Layer-preprocess tuning handmatig; opening-layer defaults conservatief.
+- Raw-ink overlay = alle zwarte inkt (incl. tekst/ruis).
+- L6 connector ~35 files (L5–L6 lean A–E); Cat C generalisatie = product-F (geen lean-batch).
+- Pipeline-V3 Cat C + meer fixtures buiten BouwTek11/2D_3E (apart product-go).
+
+## Architectuur (niet wijzigen zonder overleg)
+
+- Geometry-first + per-laag preprocess; rotatie/crop op Origineel; geen maxres-downscale in CV.
+- Enige muurpad: room-first + V3 L10. OCR alleen stap-3 UI (`useWorkspaceOcr`), niet in `geometry-pipeline`.
+- `tabOutputs` alleen vullen in detectie-run; `isValidTabOutput`.
+
+## Niet aanraken
+
+- `frontend/src/cv/port/baseline.ts` Hough-baseline parameters.
+
+## Recente besluiten (samenvatting)
+
+- **2026-07-29** — Face-edit perf: dirty-rect UI + region ink alloc + demote schedule; geen detectie-tuning.
+- **2026-07-29** — Lean Walls W3+B4 finish: `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (L5–L6 “Expliciet later” / geen batch-todo); 122 pipeline-v3 groen; planned lean walls empty.
+- **2026-07-29** — Lean Walls dist-map pass-through: `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; UI-smoke Project4 user-OK; scaffold v2=false + arm via scale (geen L6 retune).
+- **2026-07-29** — Lean Walls L5–L6 structural go (A–E): cleanup/junction/detect/apply/chamfer splits + dead knip; behavior freeze; **Cat C product-F**.
+- **2026-07-29** — Lean Walls L7–L10 core: B1–B4 + dist-map; behavior freeze.
+- **2026-07-28** — Lean Stap2 B2–B4: dikte/style/REF-crops = post-bake `baseBw` (gebakken inkt mee); nooit `effectiveBw`; shared `buildWallLayerBwMat` in compose.
+- **2026-07-28** — Lean Stap1 B2–B3: `ROTATION_EPS_DEG` in `rotateMat`; undo = `createByteArrayHistory({ maxSteps })` in `maskHistory.ts` (mask+ink); display underlay = `resolveDisplayImageSrc`.
+- **2026-07-28** — Cleanup Batch 1–6 / ronde 18–22: knip dode HTML/aliases; `pipelineV2Debug` V3-only; naming `PipelineLayerDebug` / `layer-debug-report` / `WallPipelineVersion='v3'`; splits `room-raster-cache`, `ref-swing-hinge`, faces (~476/472/416). Oude V2-only DevSessions = breaking.
+- **2026-07-28** — Lean/DRY pass: skill + 8 inventaris; Batch 1 (I/R/O/D) cross-cluster — geen tuning.
+- **2026-07-28** — Stap4 Batch 3: deur-swing export = live L12 (re-snap fallback); `build-semantic-walls-source` + `hasFmlSemanticSource` i.p.v. `-v2` naming.
+- **2026-07-28** — Refactor ronde 17: consumer-chain hot-path X — geen finalize canvas-alloc/`parallelPairs`; FML-DTO zonder `openingBBox`; semantic `lengthPx`/`angleDeg` weg (`junctions` blijven L14).
+- **2026-07-28** — Refactor ronde 16: L0 `room-ink-classify` → mapping/effective/autoclass/render + lean barrel; TUNING.
+- **2026-07-28** — L5 bake endpoint-unification: ULP-near hubs → byte-identiek in segmentcoords (`unifyNearEndpoints` + `rebuildFace`); voorkomt 2×I @516 → L6-diagonaal (2D_3E ref=77).
+- **2026-07-27** — Refactor ronde 13–15: facade slices; exports; DevSession capture/restore.
+- **2026-07-27** — Refactor ronde 9–12: FML conversie/editor/panel/canvas/stage.
+- **2026-07-27** — Refactor ronde 7–8: L11 snap-split; UI faces demote/helpers/bind/snap.
+Detailbesluiten → `.cursor/docs/decisions.md` / layer-decision docs. Changelog-achtige sessienotities horen hier niet meer.
+
+---
+
+## Onderhoud (voor de agent)
+
+**Wanneer:** einde substantiële sessie; na expliciet besluit; bij WERKT ↔ NIET ↔ schuld.
+
+**Hier vs elders**
+
+| Onderwerp | Plaats |
+|-----------|--------|
+| Sessiestaat, lopend werk | **dit bestand** |
+| Principes, stack, scope | `project-context.mdc` |
+| Formele beslissingen | `.cursor/docs/decisions.md` |
+| Testartifacts | `.cursor/tests/artifacts/` |
+
+**Hoe:** datum bijwerken; bullets kort; verouderd weg; besluiten `YYYY-MM-DD — wat — waarom`; geen proza/changelog. Max ~richtlijn: focus + werkt + open + ≤15 recente besluiten.
+
+**Niet:** invullen zonder observatie; dupliceren van project-context/decisions; commit-notities.

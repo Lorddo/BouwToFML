@@ -1,0 +1,178 @@
+# Floorplanner Documentation
+
+## API Reference
+- [Getting started](https://floorplanner.readme.io/reference/getting-started.md)
+- [Authentication](https://floorplanner.readme.io/reference/authentication.md)
+- [List projects](https://floorplanner.readme.io/reference/listprojects.md): List projects
+- [Create Project](https://floorplanner.readme.io/reference/createproject.md): Create a project
+- [Search projects](https://floorplanner.readme.io/reference/searchprojects.md): Search projects
+- [Import Project](https://floorplanner.readme.io/reference/importproject.md): Import a project FML (JSON or XML) **QUIRK** The `x`, `y`, and `z` coordinates must be specified in meters instead of centimeters. To set any coordinate to 160cm set it to 1.6.
+- [Import Apple Roomplan](https://floorplanner.readme.io/reference/importroomplanproject.md): Import roomplan data (JSON) from Apple's Roomplan API. The body should contain a list of points with windows, walls, objects and openings.
+- [List 25 last deleted projects](https://floorplanner.readme.io/reference/deletedprojects.md): List 25 deleted projects
+- [Show Project](https://floorplanner.readme.io/reference/showproject.md): Show a project by id
+- [Update Project](https://floorplanner.readme.io/reference/updateproject.md): Update a project
+- [Destroy/delete Project](https://floorplanner.readme.io/reference/destroyproject.md): Destroy/delete a project by id
+- [Upgrade Project](https://floorplanner.readme.io/reference/upgradeproject.md): Change the level of a project
+- [Duplicate a project](https://floorplanner.readme.io/reference/duplicateproject.md): Duplicate a project and respond with duplicated project
+- [Copy a project to another user](https://floorplanner.readme.io/reference/copyproject.md): Copy a project to another user and respond with copied project
+- [Generate project based token](https://floorplanner.readme.io/reference/tokenproject.md): This token can be used to embed the editor and only allow access to this specific project
+- [List products](https://floorplanner.readme.io/reference/productsproject.md): List the products in a project in CSV or JSON format
+- [Download FML XML (Legacy)](https://floorplanner.readme.io/reference/downloadproject.md): Download a XML based project FML
+- [Download FML JSON](https://floorplanner.readme.io/reference/fmlproject.md): Fetch based project FML in JSON format
+- [Generate share link and e-mail](https://floorplanner.readme.io/reference/shareplannerproject.md): Share a link to the editor where you can only decorate
+- [Undestroy/recover Project](https://floorplanner.readme.io/reference/undestroyproject.md): Undestroy/recover a project by id
+- [List textures](https://floorplanner.readme.io/reference/texturesproject.md): List the textures in a project in JSON format
+- [Publishes a project](https://floorplanner.readme.io/reference/publishproject.md): This API call sends the FML of a project to the cloud and returns a link which can be used to embed the editor specific project
+- [Unpublish a project](https://floorplanner.readme.io/reference/unpublishproject.md): This API call removes the project FML from the cloud and makes it no longer accessible
+- [Enable 3D tour exports for a project](https://floorplanner.readme.io/reference/vrtourupgradeproject.md): Enable 3D tour exports (this will require a credit transaction)
+- [List project labels](https://floorplanner.readme.io/reference/listprojectlabels.md): List labels for a project by project id
+- [Show data from the lead](https://floorplanner.readme.io/reference/showleaddata.md): Shows detailed information about the lead including exports and products
+- [Project measurements](https://floorplanner.readme.io/reference/measurementsproject.md): Returns measurements for all areas and surfaces in all designs in all floors for a specific project
+- [Create Floorscanner Deeplink](https://floorplanner.readme.io/reference/createfloorscannerdeeplink.md): Create a deeplink to the Floorscanner up to automatically start scanning a room
+- [List permissions](https://floorplanner.readme.io/reference/listprojectpermission.md): List all permissions of a project
+- [Add a new permission](https://floorplanner.readme.io/reference/createprojectpermission.md): Add a permission for a user to utilise a project
+- [Show permission](https://floorplanner.readme.io/reference/showprojectpermission.md): Returns a specific permission
+- [Update a permission](https://floorplanner.readme.io/reference/updateprojectpermission.md): Update a permission for a user
+- [Remove a permission](https://floorplanner.readme.io/reference/destroyprojectpermission.md): Remove a permission from a project
+- [List floors](https://floorplanner.readme.io/reference/listfloors.md): List floors of a project
+- [Create a floor](https://floorplanner.readme.io/reference/createfloor.md): Add a floor to the project
+- [List removed floors](https://floorplanner.readme.io/reference/deletedfloors.md): List removed floors of a project
+- [Recover a removed floor](https://floorplanner.readme.io/reference/recoverfloor.md): Recover a removed floor
+- [Show floor](https://floorplanner.readme.io/reference/showfloor.md): Returns a specific floor
+- [Update floor](https://floorplanner.readme.io/reference/updatefloor.md): Update the contents of a floor
+- [Remove a floor](https://floorplanner.readme.io/reference/destroyfloor.md): Remove a floor
+- [Floor measurements](https://floorplanner.readme.io/reference/measurementsfloor.md): Returns measurements for all areas and surfaces in all designs for a specific floor
+- [Show drawing data](https://floorplanner.readme.io/reference/showfloordrawing.md): Show drawing
+- [Create drawing](https://floorplanner.readme.io/reference/createfloordrawing.md): Add a drawing to a floor
+- [Update drawing](https://floorplanner.readme.io/reference/updatefloordrawing.md): Update the drawing of a floor
+- [Remove a drawing](https://floorplanner.readme.io/reference/destroyfloordrawing.md): Remove a drawing
+- [List cameras](https://floorplanner.readme.io/reference/listcameras.md): List cameras of a floor
+- [Create camera](https://floorplanner.readme.io/reference/createfloorcamera.md): Add a camera to a floor
+- [Update order for cameras](https://floorplanner.readme.io/reference/orderfloorcameras.md): Updates the order of cameras for a floor
+- [Show camera](https://floorplanner.readme.io/reference/showfloorcamera.md): Show camera of a floor
+- [Update a camera](https://floorplanner.readme.io/reference/updatefloorcamera.md): Update the camera
+- [Remove a camera](https://floorplanner.readme.io/reference/destroyfloorcamera.md): Remove a camera
+- [List designs](https://floorplanner.readme.io/reference/listdesigns.md): List designs of a floor
+- [Create a design](https://floorplanner.readme.io/reference/createdesign.md): Add a design to the floor
+- [List removed designs](https://floorplanner.readme.io/reference/deleteddesigns.md): List removed designs of a floor
+- [Recover a removed design](https://floorplanner.readme.io/reference/recoverdesign.md): Recover a removed design
+- [Show design](https://floorplanner.readme.io/reference/showdesign.md): Returns a specific design
+- [Update design](https://floorplanner.readme.io/reference/updatedesign.md): Update the contents of a design
+- [Remove a design](https://floorplanner.readme.io/reference/destroydesign.md): Remove a design
+- [Design measurements](https://floorplanner.readme.io/reference/measurementsdesign.md): Returns measurements for all areas and surfaces in a specific design
+- [List users](https://floorplanner.readme.io/reference/listusers.md): List users
+- [Create a sub-user](https://floorplanner.readme.io/reference/createuser.md): Add a user to your account
+- [Search users](https://floorplanner.readme.io/reference/searchusers.md): Search users
+- [Invite a users to become a sub-user](https://floorplanner.readme.io/reference/inviteuser.md): Invite user by email
+- [Invite a user by a link](https://floorplanner.readme.io/reference/sharedinviteuser.md): Invite multiple users by link
+- [Show user](https://floorplanner.readme.io/reference/showuser.md): Returns a specific user
+- [Update user](https://floorplanner.readme.io/reference/updateuser.md): Update the user
+- [Remove a user](https://floorplanner.readme.io/reference/destroyuser.md): Remove a user
+- [Generate user based token](https://floorplanner.readme.io/reference/tokenuser.md): This token can be used to embed the editor and only allow access to this the sub-users data
+- [List user labels](https://floorplanner.readme.io/reference/listuserlabels.md): List labels for a user by user id
+- [Show user's profile](https://floorplanner.readme.io/reference/showprofile.md): Returns the profile
+- [Update profile](https://floorplanner.readme.io/reference/updateprofile.md): Update the user's profile
+- [Show company](https://floorplanner.readme.io/reference/showcompany.md): Returns the company
+- [Update company](https://floorplanner.readme.io/reference/updatecompany.md): Update the company
+- [List roles](https://floorplanner.readme.io/reference/listroles.md): List all roles
+- [Create a new role](https://floorplanner.readme.io/reference/createrole.md): Add a new user role
+- [Show role](https://floorplanner.readme.io/reference/showrole.md): Returns a specific role
+- [Update a role](https://floorplanner.readme.io/reference/updaterole.md): Update the role
+- [Remove a role](https://floorplanner.readme.io/reference/destroyrole.md): Remove a role
+- [Remove a role from a user](https://floorplanner.readme.io/reference/unassignrole.md): Unassign a user's role
+- [List exports](https://floorplanner.readme.io/reference/listexport.md): List exports last 100 exports
+- [Show export](https://floorplanner.readme.io/reference/showexport.md): Returns a specific export
+- [List export labels](https://floorplanner.readme.io/reference/listexportlabels.md): List labels for an export by export id
+- [Search exports](https://floorplanner.readme.io/reference/searchexport.md): Search exports
+- [Export a project](https://floorplanner.readme.io/reference/exportproject.md): Export a project to 2D / 3D images or Virtual staging. There are lot of options but most of them are not required
+- [Export a panorama](https://floorplanner.readme.io/reference/exportpanoramaproject.md): Creates a panorama based based a specific camera and specific design
+- [List templates](https://floorplanner.readme.io/reference/listtemplate.md): List template
+- [Create a template](https://floorplanner.readme.io/reference/createtemplate.md): Add a template
+- [Show template](https://floorplanner.readme.io/reference/showtemplate.md): Returns a specific template
+- [Update template](https://floorplanner.readme.io/reference/updatetemplate.md): Update the template
+- [Remove a template](https://floorplanner.readme.io/reference/destroytemplate.md): Remove a template
+- [Search leads](https://floorplanner.readme.io/reference/searchleads.md): Search leads
+- [Assigns and unassigns a user from a lead](https://floorplanner.readme.io/reference/assignlead.md): Assigns when the user is not assigned to a lead and unassigns the user when it is assigned to the lead
+- [Export Leads as CSV as JSON](https://floorplanner.readme.io/reference/exportleads.md): Export Leads
+- [Remove a lead](https://floorplanner.readme.io/reference/destroyload.md): Remove a lead by id
+- [List sponsorships](https://floorplanner.readme.io/reference/listsponsorship.md): List sponsorships
+- [Create a sponsorship](https://floorplanner.readme.io/reference/createsponsorship.md): Add a sponsorship
+- [Show sponsorship](https://floorplanner.readme.io/reference/showsponsorship.md): Returns a specific sponsorship
+- [Update a sponsorship](https://floorplanner.readme.io/reference/updatesponsorship.md): Update a sponsorship
+- [Remove a sponsorship](https://floorplanner.readme.io/reference/destroysponsorship.md): Remove a sponsorship
+- [Create a sponsorship through an invite](https://floorplanner.readme.io/reference/createinvitesponsorship.md): Creates a sponsorship for existing or non-existing users
+- [List labels by object](https://floorplanner.readme.io/reference/listlabels.md): List labels by object
+- [Add labels to an object](https://floorplanner.readme.io/reference/createlabels.md): Add a label to an object
+- [Remove a label from an object](https://floorplanner.readme.io/reference/deletelabels.md): Remove a label from an object
+- [List services](https://floorplanner.readme.io/reference/listservices.md): List services
+- [List subusers with assigned services](https://floorplanner.readme.io/reference/listuserservices.md): List subusers with assigned services
+- [Connect a user to a service](https://floorplanner.readme.io/reference/connectservice.md): Enable usage of a service for a user
+- [Disconnect a user from a service](https://floorplanner.readme.io/reference/disconnectservice.md): Disable a service for a user
+- [Product analytics](https://floorplanner.readme.io/reference/productanalytics.md): Product analytics
+- [Popular products by action](https://floorplanner.readme.io/reference/popularproductsbyaction.md): Popular products by action
+- [List and search styleboards](https://floorplanner.readme.io/reference/liststyleboards.md): List and search styleboards
+- [Create Styleboard](https://floorplanner.readme.io/reference/createstyleboard.md): Create a styleboard
+- [Show styleboard](https://floorplanner.readme.io/reference/showstyleboard.md): Show a styleboard by id
+- [Update Styleboard](https://floorplanner.readme.io/reference/updatestyleboard.md): Update a styleboard
+- [Destroy/delete styleboard](https://floorplanner.readme.io/reference/destroystyleboard.md): Destroy/delete a styleboard by id
+- [Duplicate a styleboard](https://floorplanner.readme.io/reference/duplicatestyleboard.md): Duplicate a styleboard and respond with duplicated styleboard
+- [Copy a styleboard to another user](https://floorplanner.readme.io/reference/copystyleboard.md): Copy a styleboard to another user and respond with copied styleboard
+- [List permissions](https://floorplanner.readme.io/reference/liststyleboardpermission.md): List all permissions of a styleboard
+- [Add a new styleboard permission](https://floorplanner.readme.io/reference/createstyleboardpermission.md): Add a permission for user/s to utilise a styleboard. An email will be sent to the user/s containing a link to the styleboard and the comment (if provided).
+- [Show permission](https://floorplanner.readme.io/reference/showstyleboardpermission.md): Returns a specific permission
+- [Update a permission](https://floorplanner.readme.io/reference/updatestyleboardpermission.md): Update a permission for a styleboard
+- [Remove a permission](https://floorplanner.readme.io/reference/destroystyleboardpermission.md): Remove a permission from a styleboard
+- [List and search documents](https://floorplanner.readme.io/reference/listdocuments.md): List and search documents
+- [Create Document](https://floorplanner.readme.io/reference/createdocument.md): Create a document
+- [Remove document](https://floorplanner.readme.io/reference/destroydocument.md): Remove a document by id
+- [Search products](https://floorplanner.readme.io/reference/searchviewerproducts.md): Search products that are available in the productviewer
+- [Search room type set](https://floorplanner.readme.io/reference/searchroomtypeset.md): Search room type set
+- [Create a room type set](https://floorplanner.readme.io/reference/createroomtypeset.md): Create a room type set
+- [Show room type set](https://floorplanner.readme.io/reference/showroomtypeset.md): Returns a specific room type set
+- [Update room type set](https://floorplanner.readme.io/reference/updateroomtypeset.md): Update the room type set
+- [Remove room type set](https://floorplanner.readme.io/reference/destroyroomtypeset.md): Remove room type set
+- [List roomtypes](https://floorplanner.readme.io/reference/listroomtypes.md): List roomtypes by room type set
+- [Create a room type](https://floorplanner.readme.io/reference/createroomtype.md): Create a room type
+- [Show room type](https://floorplanner.readme.io/reference/showroomtype.md): Returns a specific room type
+- [Update room type](https://floorplanner.readme.io/reference/updateroomtype.md): Update the room type
+- [Remove room type](https://floorplanner.readme.io/reference/destroyroomtype.md): Remove room type
+- [Show Product](https://floorplanner.readme.io/reference/showproduct.md): Show a product by id or SKU
+- [List and search current user's product groups](https://floorplanner.readme.io/reference/listproductgroups.md): List and search product groups, shows all product groups belonging to current user or for which they have permissions plus shared product groups belonging to account user
+- [Create ProductGroup](https://floorplanner.readme.io/reference/createproductgroup.md): Create a product group
+- [List and search account user's product groups](https://floorplanner.readme.io/reference/listadminproductgroups.md): List and search all the account's product groups, shows all product groups belonging to account user, if current user is a subuser they must have a role with manage_products permission
+- [Show product group](https://floorplanner.readme.io/reference/showproductgroup.md): Show a product group by id
+- [Update ProductGroup](https://floorplanner.readme.io/reference/updateproductgroup.md): Update a product_group
+- [Destroy/delete product group](https://floorplanner.readme.io/reference/destroyproductgroup.md): Destroy/delete a product group by id
+- [Embedding the editor](https://floorplanner.readme.io/reference/embedding-the-editor-v2.md)
+- [Viewer & spaceplanner](https://floorplanner.readme.io/reference/viewer-spaceplanner.md)
+- [Roomplanner](https://floorplanner.readme.io/reference/roomplanner.md)
+- [Embedding the product viewer](https://floorplanner.readme.io/reference/embedding-the-productviewer.md)
+- [Introduction](https://floorplanner.readme.io/reference/introduction.md)
+- [Authorize](https://floorplanner.readme.io/reference/authorize.md)
+- [Token](https://floorplanner.readme.io/reference/token.md)
+- [Revoke token](https://floorplanner.readme.io/reference/revoke-token.md)
+- [Viewer for iOS](https://floorplanner.readme.io/reference/viewer-for-ios.md)
+- [Viewer for Android](https://floorplanner.readme.io/reference/viewer-for-android.md)
+- [v3.0 Specification](https://floorplanner.readme.io/reference/v30-specification.md)
+- [Introduction](https://floorplanner.readme.io/reference/introduction-1.md)
+- [Available services](https://floorplanner.readme.io/reference/api.md)
+- [Vloor](https://floorplanner.readme.io/reference/vloor.md)
+- [Create order](https://floorplanner.readme.io/reference/create-order.md)
+- [Order result](https://floorplanner.readme.io/reference/order-result.md)
+- [Accept order](https://floorplanner.readme.io/reference/accept-order.md)
+- [Reject order](https://floorplanner.readme.io/reference/reject-order-1.md)
+- [Matterport](https://floorplanner.readme.io/reference/matterport.md)
+- [Create order](https://floorplanner.readme.io/reference/create-order-1.md)
+- [Accept order](https://floorplanner.readme.io/reference/accept-order-1.md)
+- [Reject order](https://floorplanner.readme.io/reference/reject-order.md)
+- [Wescan Mobile](https://floorplanner.readme.io/reference/wescan-mobile.md)
+- [Create order](https://floorplanner.readme.io/reference/create-order-2.md): Create a new order for the WeScan mobile service
+- [Execute order](https://floorplanner.readme.io/reference/execute-order.md)
+- [Accept order](https://floorplanner.readme.io/reference/accept-order-2.md)
+- [Reject order](https://floorplanner.readme.io/reference/reject-order-2.md)
+- [Introduction](https://floorplanner.readme.io/reference/getting-started-media-suppliers.md)
+- [List offices](https://floorplanner.readme.io/reference/list-offices.md)
+- [Search listings by address](https://floorplanner.readme.io/reference/search-address.md)
+- [Add listing](https://floorplanner.readme.io/reference/add-new-listing-publish.md)
+- [Connect project](https://floorplanner.readme.io/reference/connect-project.md)
+- [List projects connected with a listing](https://floorplanner.readme.io/reference/list-listings.md)

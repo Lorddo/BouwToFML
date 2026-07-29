@@ -1,0 +1,147 @@
+import type { Floor } from '@/core/fml/types'
+import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
+import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
+import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
+import { groupDoorOpeningsOnWall } from '@/ui/components/fml-preview-doors'
+import { buildWindowOpeningId } from '@/ui/components/fml-preview-openings'
+import {
+  buildOpeningGapPolygon,
+  buildWindowSymbol,
+  clamp01,
+  doorGroupDetail,
+  flattenStagePoints,
+  resolveWindowPanelCount,
+  windowTypeLabel,
+} from './fml-preview-opening-render'
+import type {
+  RenderDoorGroup,
+  RenderFixture,
+  RenderWall,
+  RenderWindowOpening,
+} from './fml-preview-render-types'
+
+type StagePointFn = (x: number, y: number) => { x: number; y: number }
+
+export function buildRenderDoorGroupsAndWindows(
+  wallLines: RenderWall[],
+  toStagePoint: StagePointFn,
+): { doorGroups: RenderDoorGroup[]; windows: RenderWindowOpening[] } {
+  const doorGroups: RenderDoorGroup[] = []
+  const windows: RenderWindowOpening[] = []
+
+  wallLines.forEach((wallLine) => {
+    const dx = wallLine.b.x - wallLine.a.x
+    const dy = wallLine.b.y - wallLine.a.y
+    const len = Math.hypot(dx, dy)
+    if (len < 1e-6) return
+    const ux = dx / len
+    const uy = dy / len
+
+    const groupedDoors = groupDoorOpeningsOnWall(
+      wallLine.id,
+      wallLine.a,
+      wallLine.b,
+      wallLine.wall.openings,
+    )
+    groupedDoors.forEach((group) => {
+      const start = toStagePoint(group.startCm.x, group.startCm.y)
+      const end = toStagePoint(group.endCm.x, group.endCm.y)
+      doorGroups.push({
+        id: group.id,
+        wallId: wallLine.id,
+        openingIndex: group.openingIndex,
+        openingGuid: group.openingGuid,
+        openings: group.openings,
+        hitPoints: [start.x, start.y, end.x, end.y],
+        gapPoints: buildOpeningGapPolygon({
+          startCm: group.startCm,
+          endCm: group.endCm,
+          wallUnit: { x: ux, y: uy },
+          thicknessCm: wallLine.wall.thickness,
+          toStagePoint,
+        }),
+        label: group.catalogLabel,
+        detail: doorGroupDetail(group),
+        leafLines: group.leafLines.map((line) => flattenStagePoints(line, toStagePoint)),
+        arcPoints: group.arcPoints.map((arc) => flattenStagePoints(arc, toStagePoint)),
+        arrowPoints: group.arrowPoints.map((arrow) => flattenStagePoints(arrow, toStagePoint)),
+      })
+    })
+
+    wallLine.wall.openings.forEach((opening, openingIndex) => {
+      if (opening.type !== 'window') return
+
+      const center = {
+        x: wallLine.a.x + clamp01(opening.t) * dx,
+        y: wallLine.a.y + clamp01(opening.t) * dy,
+      }
+      const half = Math.max(0.5, opening.width / 2)
+      const startCm = { x: center.x - ux * half, y: center.y - uy * half }
+      const endCm = { x: center.x + ux * half, y: center.y + uy * half }
+      const start = toStagePoint(startCm.x, startCm.y)
+      const end = toStagePoint(endCm.x, endCm.y)
+      const catalog = resolveOpeningCatalog(opening.refid, 'window')
+      const panels = resolveWindowPanelCount(opening.width, catalog.kind, catalog.panels)
+      const windowSymbol = buildWindowSymbol({
+        startCm,
+        endCm,
+        thicknessCm: wallLine.wall.thickness,
+        toStagePoint,
+        panelCount: panels,
+        kind: catalog.kind,
+      })
+      windows.push({
+        id: buildWindowOpeningId(wallLine.id, opening, openingIndex),
+        wallId: wallLine.id,
+        opening,
+        hitPoints: [start.x, start.y, end.x, end.y],
+        gapPoints: buildOpeningGapPolygon({
+          startCm,
+          endCm,
+          wallUnit: { x: ux, y: uy },
+          thicknessCm: wallLine.wall.thickness,
+          toStagePoint,
+        }),
+        label: catalog.label,
+        detail: `${windowTypeLabel(panels, catalog.kind)} · ${Math.round(opening.width)} cm`,
+        basePoints: windowSymbol.basePoints,
+        mullions: windowSymbol.mullions,
+        ornament: windowSymbol.ornament,
+      })
+    })
+  })
+
+  return { doorGroups, windows }
+}
+
+export function buildRenderFixtures(
+  floor: Floor,
+  toStagePoint: StagePointFn,
+): RenderFixture[] {
+  return (floor.items ?? []).map((item, index) => {
+    const catalog = resolveFixtureCatalog(item.refid)
+    const symbol = buildFixtureSymbol(catalog.kind, item.width, item.height)
+    const center = toStagePoint(item.x, item.y)
+    const origin = toStagePoint(0, 0)
+    const unit = toStagePoint(1, 0)
+    const cmToStage = Math.hypot(unit.x - origin.x, unit.y - origin.y) || 1
+    const mirroredX = item.mirrored?.[0] === 1 ? -1 : 1
+    const mirroredY = item.mirrored?.[1] === 1 ? -1 : 1
+    return {
+      id: item.guid ?? `fixture-${index}`,
+      label: catalog.label,
+      detail: catalog.categorie,
+      x: center.x,
+      y: center.y,
+      rotationDeg: item.rotation ?? 0,
+      scaleX: cmToStage * mirroredX,
+      scaleY: cmToStage * mirroredY,
+      rects: symbol.rects,
+      ellipses: symbol.ellipses,
+      circles: symbol.circles,
+      polylines: symbol.polylines,
+      stroke: symbol.stroke,
+      fill: symbol.fill,
+    }
+  })
+}

@@ -1,0 +1,52 @@
+# ─────────────────────────────────────────────────────────────
+# Alleen frontend/ + projectdocumentatie staan onder versiebeheer.
+# Whitelist: eerst alles negeren, daarna gericht toelaten. Nieuwe
+# rommel in de root blijft er zo vanzelf buiten.
+# ─────────────────────────────────────────────────────────────
+/*
+!/.gitignore
+!/README.md
+!/frontend/
+!/.cursor/
+!/.github/
+
+# Uit .cursor alleen de kennisbank
+/.cursor/*
+!/.cursor/rules/
+!/.cursor/docs/
+
+# ── Dependencies & build-output ──
+node_modules/
+dist/
+*.tsbuildinfo
+*.local
+
+# Emit van tsconfig.node.json (composite build)
+/frontend/vite.config.js
+/frontend/vite.config.d.ts
+/frontend/vite/*.js
+/frontend/vite/*.d.ts
+
+# Runtime-assets: gedownload of gegenereerd, niet in de repo
+/frontend/public/tesseract/
+/frontend/public/models/
+*.onnx
+
+# ── Omgeving (Floorplanner API-sleutels) ──
+.env
+.env.*
+!.env.example
+
+# ── Test- en debug-artifacts ──
+coverage/
+.vitest-report.json
+debug-*.out
+debug-*.err
+probe-debug.json
+*.log
+tmp/
+.cache/
+
+# ── OS / IDE ──
+.DS_Store
+Thumbs.db

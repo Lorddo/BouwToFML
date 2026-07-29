@@ -1,0 +1,78 @@
+{
+  "beschrijving": "Catalogus van Floorplanner item/fixture-refids (keuken, sanitair, installaties). Alleen weergave bij FML-import; nog geen place-tool.",
+  "laatste_update": "2026-07-21",
+  "kind_hints": {
+    "countertop": "Keukenblad — rechthoekige top-view.",
+    "toilet": "Toilet — reservoir + ovale pot (top-view).",
+    "sink_small": "Wasbak (klein) — ovaal met kraan-stip.",
+    "shower_head": "Douchekop — steel + ronde kop.",
+    "sink_large": "Wasbak (groot) — afgerond vierkant met kraan.",
+    "boiler": "CV-ketel — vierkant met twee aansluitcirkels.",
+    "heat_pump": "Warmtepomp — hoge kast met grill-lijnen."
+  },
+  "entries": [
+    {
+      "refid": "5bbfd9e1325ca8d3c59e23b35401eeec71424256",
+      "type": "fixture",
+      "benaming": "Keukenblad",
+      "kind": "countertop",
+      "categorie": "keuken",
+      "notities": "Template ID objects — Keuken",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "17e3ab9295832bd22e220a7f861580bb5aaeb007",
+      "type": "fixture",
+      "benaming": "Toilet",
+      "kind": "toilet",
+      "categorie": "sanitair",
+      "notities": "Template ID objects — Sanitair",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "e96698fedd2611ba51fff989e8ff2e764e106b85",
+      "type": "fixture",
+      "benaming": "Wasbak (klein)",
+      "kind": "sink_small",
+      "categorie": "sanitair",
+      "notities": "Template ID objects — Sanitair",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "074b112e6d9be8860fce202dd706de49598db82d",
+      "type": "fixture",
+      "benaming": "Douchekop",
+      "kind": "shower_head",
+      "categorie": "sanitair",
+      "notities": "Template ID objects — Sanitair",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "7b5d656c72b56ae0e8200132ec92a1ae03869b93",
+      "type": "fixture",
+      "benaming": "Wasbak (groot)",
+      "kind": "sink_large",
+      "categorie": "sanitair",
+      "notities": "Template ID objects — Sanitair",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "33e2521c0692e52b4fb6a3f1bdc0cb3e7b37a88d",
+      "type": "fixture",
+      "benaming": "CV-ketel",
+      "kind": "boiler",
+      "categorie": "installaties",
+      "notities": "Template ID objects — Installaties",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "c17bf1853d916f1b0ece0259bb0d5b4313c71730",
+      "type": "fixture",
+      "benaming": "Warmtepomp",
+      "kind": "heat_pump",
+      "categorie": "installaties",
+      "notities": "Template ID objects — Installaties",
+      "bronnen": ["Template ID objects.json (1).fml"]
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+.canvas-toolbelt {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.canvas-toolbelt-dock {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.canvas-toolbelt-dock__row {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.1);
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.canvas-toolbelt-dock__section {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+}
+
+.canvas-toolbelt-dock__section--face {
+  background: #e8edf4;
+}
+
+.canvas-toolbelt-dock__section--ink {
+  background: rgb(255 255 255 / 0.96);
+}
+
+.canvas-toolbelt-dock__section--fml {
+  background: rgb(255 255 255 / 0.96);
+  gap: 2px;
+  padding: 2px 4px;
+}
+
+.fml-toolbelt__meta {
+  font-size: 10px;
+  color: #475569;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.canvas-toolbelt-dock__sep {
+  width: 1px;
+  flex-shrink: 0;
+  background: #cbd5e1;
+  margin: 4px 0;
+}
+
+.canvas-toolbelt__bar--embedded {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.canvas-toolbelt__bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background: rgb(255 255 255 / 0.94);
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.1);
+  pointer-events: auto;
+}
+
+.canvas-toolbelt__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+}
+
+.canvas-toolbelt__btn:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.canvas-toolbelt__btn.is-active {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+  color: #0369a1;
+}
+
+.canvas-toolbelt__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.canvas-toolbelt__size {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 8px;
+  border-left: 1px solid #e2e8f0;
+  margin-left: 2px;
+}
+
+.canvas-toolbelt__size input[type='range'] {
+  width: 72px;
+}
+
+.canvas-toolbelt__size-value {
+  font-size: 11px;
+  color: #64748b;
+  min-width: 20px;
+  text-align: right;
+}
+
+.canvas-toolbelt__hint,
+.canvas-toolbelt__stale,
+.canvas-instruction-hint {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 0;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.canvas-instruction-hint {
+  margin: 0;
+  color: #64748b;
+  background: rgb(255 255 255 / 0.96);
+  border-bottom: 1px solid #e2e8f0;
+  line-height: 1.35;
+}
+
+.canvas-instruction-hint--stale {
+  color: #92400e;
+  background: #fffbeb;
+  border-bottom-color: #fcd34d;
+}
+
+.canvas-toolbelt__hint {
+  color: #64748b;
+  background: rgb(255 255 255 / 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  pointer-events: auto;
+}
+
+.canvas-toolbelt__stale {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+}
+
+.canvas-toolbelt__icon {
+  width: 18px;
+  height: 18px;
+}

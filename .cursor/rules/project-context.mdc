@@ -1,0 +1,84 @@
+---
+description: Projectcontext BouwToFML – doel, flow, stack en principes
+alwaysApply: true
+---
+
+# BouwToFML – projectcontext
+
+## Doel
+
+Semi-automatische conversie van plattegrond-afbeeldingen (PNG/JPG per verdieping) naar Floorplanner FML.
+Focus: **muren, deuren, ramen**. Geen AI — train-by-example **per project**.
+
+Het grootste **repetitieve** tekenwerk wegnemen; interpretatie blijft bij de tekenaar.
+
+**Buiten scope:** handschetsen en point clouds (ander project/tool).
+
+## Documentatie
+
+Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse markdown-bestanden in de repo.
+
+| Document | Pad |
+|----------|-----|
+| Projectbeschrijving | `.cursor/docs/project-brief.md` |
+| Export download vs API | `.cursor/docs/export-options.md` |
+| Beslissingen | `.cursor/docs/decisions.md` |
+| **Volledige audit 2026-07-29** | `.cursor/docs/audit-2026-07-29.md` |
+| Klanteisen V1 | `.cursor/docs/klant-eisen-v1.md` |
+| Examples inventaris | `.cursor/docs/examples-inventory.md` |
+| POC testplan | `.cursor/docs/poc-test-plan.md` |
+| V2 roadmap | `.cursor/docs/v2-roadmap.md` |
+| Crosscheck hergebruik | `.cursor/docs/crosscheck-reference.md` |
+| CV-consultatie (Google AI) | `.cursor/docs/google-ai-cv-consultatie.md` |
+| Floorplanner/FML offline | `.cursor/docs/floorplanner/` |
+| **Deur/raam `mirrored` semantiek** | `.cursor/docs/floorplanner/door-mirrored-semantics.md` |
+| **Workspace 4-stappen flow** | `.cursor/docs/workspace-flow.md` |
+| **Production-refactor inventaris (workspace-pipeline)** | `.cursor/docs/refactor/README.md` |
+| **Resolutie 2k→4k impact-audit** | `.cursor/docs/resolution-4k-impact-audit.md` |
+| **Detectie abs-px inventaris** | `.cursor/docs/detection-abs-px-inventory.md` |
+| **Wall face-class flow (`wall`/`door`/`window`)** | `.cursor/docs/archive/wall-face-class-flow.md` |
+| **Deur-detectie flow (stap 3, dual-space)** | `.cursor/docs/door-detection-flow.md` |
+| **Raam-detectie flow (stap 3, dual-space)** | `.cursor/docs/window-detection-flow.md` |
+| **Deuren draaiboog face-filter (plan)** | `.cursor/docs/archive/door-swing-face-filter-plan.md` |
+| **Laag 8 → FML conversie (V2a plan)** | `.cursor/docs/fml-layer8-conversion-plan.md` |
+| **V3 baseline / engines / cutover** | `.cursor/docs/v3-baseline-index.md`, `v3-engine-contract.md`, `v3-cutover-checklist.md` |
+| **V3 dependency index** | `.cursor/docs/v3-dependency-index.md` |
+| **V3 L1+L2 decision** | `.cursor/docs/v3-layer-1-2-decision.md` |
+| **V3 L3 decision** | `.cursor/docs/v3-layer-3-decision.md` |
+| **V3 L8 decision** | `.cursor/docs/v3-layer-8-decision.md` |
+| **V3 L9 (+L10) decision** | `.cursor/docs/v3-layer-9-decision.md` |
+| **V3 L7 decision** | `.cursor/docs/v3-layer-7-decision.md` |
+| **L6 connector fragiliteits-audit** | `.cursor/docs/l6-connector-fragility-audit.md` |
+| Sessie-geheugen (lopende staat) | `.cursor/rules/memory.mdc` |
+
+## Stack (V1)
+
+- **Frontend:** Vue 3, TypeScript, Quasar, KonvaJS
+- **CV/detectie:** OpenCV **client-side** (browser); pure TS-CV onvoldoende (Crosscheck-ervaring)
+- **Backend:** niet vereist V1; Fastify later voor API-import (V2)
+- **Referentie:** `C:\Pranimate\Crosscheck` (kalibratie, FML-motor POC)
+
+## Mappenstructuur
+
+```
+frontend/     Vue/Quasar app (nog leeg)
+backend/      Fastify — V2 / optioneel
+examples/     FML(current) + samplessourcefiles/ (klant ZIP's)
+.cursor/      Documentatie + Cursor rules
+```
+
+## Taal
+
+Communiceer met de gebruiker in het **Nederlands**.
+
+## Principes
+
+1. Semi-automatisch = repetitief werk weg; tekenaar interpreteert (train-by-example per project, 3–5 per type)
+2. **OpenCV only** — geen AI fallback; client-side V1
+3. Voorbewerking tot B&W vóór detectie; volgorde: deuren/ramen (masking) → muren + knooppunten → openingen op muur
+4. 80% detectie + 50% tijdsbesparing > perfectie
+5. Minimale editor vóór export; geen embedded Floorplanner-editor (facturering)
+6. Multi-verdieping: herkenningen optioneel overnemen; schaal per verdieping
+7. V1 export: FML-download + onderlegger apart; muurclassificatie post-detectie; **structurele openingstypes** + clustering-voorstel; deur-tags (semantisch); geen maatlijnen, geen aanzichten
+8. V2/V3: visuele deurstijl per makelaar, maatlijnen, volledige opening-editor, onderlegger in FML, aanzichten, keuken/sanitair detectie — zie `v2-roadmap.md`; API-import V2
+9. POC: Kinderdijkstraat end-to-end; fase D: `samplessourcefiles/` — zie `poc-test-plan.md` en `klant-eisen-v1.md`

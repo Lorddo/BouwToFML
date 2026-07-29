@@ -1,0 +1,169 @@
+---
+description: FML JSON v3 exportformaat voor BouwToFML (muren, deuren, ramen)
+globs: "**/*.{fml,json}"
+alwaysApply: false
+---
+
+# FML-export (BouwToFML scope)
+
+Primair: **muren, deuren, ramen** via JSON v3 (`walls[]` + `openings[]`).
+Muurclassificatie (buiten / woningsscheidend / binnen) → `walls[].thickness` via 3 projectdefaults.
+Deur-tags (voor/achter/binnen) + **structurele openingstypes** + maatdefaults — zie `klant-eisen-v1.md`.
+Maatlijnen: **V2**. Onderlegger: **V1 apart download**, **V2 in FML**. Roomtags: onderzoek.
+V1: **structurele types** (refid per soort deur/raam); POC start met standaard enkeldeur + standaard raam. Visuele stijl per makelaar: V2.
+
+Referentie-examples: `examples/FML(current)/` — zie `examples-inventory.md`.
+Volledige spec: `.cursor/docs/floorplanner/v30-specification.md`.
+
+## Formaat
+
+| | Waarde |
+|---|--------|
+| **Formaat** | JSON v3 (persistent) |
+| **Eenheden** | **Centimeters** |
+| **Extensie download** | `.fml` of `.json.fml` (inhoud is JSON) |
+| **Coördinaten** | X links→rechts, Y boven→onder |
+
+Bij API-import V2 (`POST /projects/import.json`): **cm → m** conversie op import-pad (Floorplanner QUIRK).
+
+## Project-structuur (export)
+
+```json
+{
+  "name": "Projectnaam",
+  "settings": {
+    "wallHeight": 280,
+    "wallThickness": 10,
+    "wallOuterThickness": 30,
+    "useMetric": true,
+    "dimensionMode": "interior"
+  },
+  "floors": [
+    {
+      "name": "Begane grond",
+      "level": 0,
+      "height": 280,
+      "designs": [
+        {
+          "name": "First design",
+          "walls": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Muur (`walls[]`)
+
+Centerline + dikte; openingen ingebed.
+
+```json
+{
+  "a": { "x": 0, "y": 500 },
+  "b": { "x": 300, "y": 500 },
+  "c": null,
+  "az": { "z": 0, "h": 280 },
+  "bz": { "z": 0, "h": 280 },
+  "thickness": 30,
+  "balance": 0.5,
+  "openings": [],
+  "decor": { "left": null, "right": null, "top": null, "outline": 0 }
+}
+```
+
+- Buitenmuur: `thickness` ≈ projectdefault buiten (`settings.wallOuterThickness`, vaak 30 cm)
+- Binnenmuur: `thickness` ≈ projectdefault binnen (`settings.wallThickness`, vaak 10 cm)
+- Woningsscheidend: derde projectdefault (klanttemplate; vaak 15–20 cm in examples)
+- Gebogen muur: `c` = bezier control point
+
+## Openingen (`walls[].openings[]`)
+
+Deur of raam **op** muurlijn — niet los zwevend.
+
+```json
+{
+  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+  "t": 0.5,
+  "type": "door",
+  "width": 90,
+  "z_height": 220,
+  "z": 0,
+  "mirrored": [0, 0],
+  "materials": {
+    "FP_DOOR": { "type": "color", "value": "#ffffff" },
+    "FP_DOORFRAME": { "type": "color", "value": "#ffffff" }
+  }
+}
+```
+
+- **`t`:** 0..1 — positie langs muur (0 bij `a`, 1 bij `b`)
+- **`width`:** breedte in cm
+- **`refid`:** SHA-hash uit Floorplanner-catalogus (geen korte IDs)
+- **`mirrored`:** draairichting
+- **Deur-tags** (voor/achter/binnen): persistent FML-veld nog te bevestigen via roundtrip — `klant-eisen-v1.md`
+- Raam: `z` + `z_height` voor sill en hoogte
+
+### Structurele openingstypes (refid)
+
+Twee lagen: **structureel type** → `refid`; **deur-tag** (voor/achter/binnen) → semantisch, orthogonaal. Zie `klant-eisen-v1.md` §2.
+
+| Structureel type | Exportvorm | refid-status |
+|----------------|------------|--------------|
+| Deur enkel (draaicirkel) | 1 opening | `0434246537840a3326e305dbe7b9c355743e6e93` ✓ |
+| Dubbel openslaand | vaak **2** openings, zelfde refid | TBD — o.a. `df95e84f…` in examples |
+| Schuifdeur / schuifpui | 1 brede of 2 segmenten | TBD — o.a. `5ae0ee3c…`, `1cdb4e60…` |
+| Garagedeur | 1 brede opening | `9c1479d9dfc482859aea10b9dd67f5e7773fff6d` (kandidaat; FP-export-check open) |
+| Opening (geen deur) | 1 opening, ander refid | TBD |
+| Raam enkel | 1 opening | `b88cd3f479455fbf57205a91c613c02b7e6dc2df` ✓ |
+| Raam dubbel/driedelig | 1 brede opening | TBD — o.a. `bbf86e13…` |
+| Raam rond/halfrond | 1 opening | TBD |
+
+FML v3 heeft **geen pane-count** — meerdelig raam = `t` + totale `width` + juiste refid.
+
+Placeholders in projectdefaults tot catalogus compleet is (roundtrip FP + `examples-inventory.md`).
+
+### Standaard refids (POC-start)
+
+| Type | refid (concept) | Opmerking |
+|------|-----------------|-----------|
+| Deur enkel (draaicirkel) | `0434246537840a3326e305dbe7b9c355743e6e93` | POC-start; V2 visuele variant per makelaar |
+| Raam enkel | `b88cd3f479455fbf57205a91c613c02b7e6dc2df` | Hoogte/sill via per-verdieping defaults in V1 |
+
+## Onderlegger (`floors[].drawing`)
+
+| Versie | Export |
+|--------|--------|
+| V1 | **Niet** in FML — opgepoetste tekening apart downloaden |
+| V2 | `drawing.url` of embedded image in FML |
+
+## Maatlijnen (V2)
+
+```json
+{ "type": "custom_dimension", "a": { "x": 0, "y": 0 }, "b": { "x": 300, "y": 0 } }
+```
+
+- Binnenmaten (`dimensionMode: "interior"`)
+- Plaatsing visueel **buiten** footprint (offset in cm)
+
+## Intern model → FML
+
+```
+Detectie (px + mm-kalibratie)
+    → primitives (template hits)
+    → clustering-voorstel (optioneel) → structuralKind
+    → wall graph (cm): punten + segmenten + dikte
+    → openings op segment: t, width, refid, exportShape
+    → buildFmlV3(Plan) → JSON download
+```
+
+## Conventies
+
+- Invoer tekening: mm + px → vector **cm** → export **cm**
+- Maten **binnenwerks**; muur = centerline
+- Detectievolgorde: deuren/ramen (masking) → muren + knooppunten → openingen op muur
+- Valideer JSON vóór download (schema + open in Floorplanner)
+
+## Crosscheck
+
+Crosscheck FML-motor (`importfml.ts`, `fml.ts`) is **XML legacy** — porten naar JSON v3 `walls[]`/`openings[]`, niet 1-op-1 kopiëren.
