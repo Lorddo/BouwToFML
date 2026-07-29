@@ -6,7 +6,7 @@ import { groupDoorOpeningsOnWall } from '@/ui/components/fml-preview-doors'
 
 const KINDERDIJK = resolve(
   __dirname,
-  '../../../examples/FML(current)/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam.json.fml',
+  '../../examples/FML(current)/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam.json.fml',
 )
 
 function arcMatchesLeafTip(arc: number[], leaf: number[]): boolean {

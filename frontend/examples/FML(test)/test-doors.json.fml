@@ -1,0 +1,2028 @@
+{
+  "id": 900000001,
+  "name": "BouwToFML deur-test",
+  "public": false,
+  "features": [],
+  "settings": {
+    "wallHeight": 280,
+    "wallSectionHeight": 150,
+    "wallThickness": 10,
+    "wallOuterThickness": 10,
+    "useMetric": true,
+    "showGrid": true,
+    "showDims": false,
+    "showShortDims": false,
+    "showAreaDims": false,
+    "generateOuterDimension": false,
+    "showDropShadows": false,
+    "showObjects": true,
+    "showFixtures": true,
+    "showItemOutline": false,
+    "showObjectColour": false,
+    "showStructuralColour": true,
+    "showFloorsBelow": false,
+    "showObjects3D": true,
+    "showObjectMono": false,
+    "showLights": false,
+    "showLabels": true,
+    "areaLabelOutline": false,
+    "areaLabelLetterSpacing": 7,
+    "dimLineLabelHorizontal": false,
+    "exportLabels3D": false,
+    "showShadows3D": true,
+    "exportOrtho3D": false,
+    "visuals": "BWC",
+    "showTexts": true,
+    "arrowHeadType": "arrow",
+    "showNorthArrow": false,
+    "northArrowRotation": 0,
+    "northArrowKind": 1,
+    "blueprintMode": false
+  },
+  "floors": [
+    {
+      "id": 900000010,
+      "project_id": 900000001,
+      "name": "Test",
+      "level": 0,
+      "created_at": "2026-07-03T00:00:00.000Z",
+      "updated_at": "2026-07-03T00:00:00.000Z",
+      "height": 280,
+      "cameras": [],
+      "designs": [
+        {
+          "id": 1,
+          "name": "Deur-test",
+          "lines": [],
+          "dimensions": [],
+          "labels": [
+            {
+              "x": 120,
+              "y": 0,
+              "text": "wall-horizontal:s00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 241.36363636363637,
+              "y": 0,
+              "text": "wall-horizontal:s01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 362.72727272727275,
+              "y": 0,
+              "text": "wall-horizontal:s10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 484.09090909090907,
+              "y": 0,
+              "text": "wall-horizontal:s11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 605.4545454545455,
+              "y": 0,
+              "text": "wall-horizontal:c00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 726.8181818181819,
+              "y": 0,
+              "text": "wall-horizontal:c01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 848.1818181818181,
+              "y": 0,
+              "text": "wall-horizontal:c10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 969.5454545454545,
+              "y": 0,
+              "text": "wall-horizontal:c11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 1090.909090909091,
+              "y": 0,
+              "text": "wall-horizontal:d00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 1212.2727272727273,
+              "y": 0,
+              "text": "wall-horizontal:d01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 1333.6363636363635,
+              "y": 0,
+              "text": "wall-horizontal:d10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 1455.0000000000002,
+              "y": 0,
+              "text": "wall-horizontal:d11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -120,
+              "text": "wall-vertical:s00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -241.36363636363637,
+              "text": "wall-vertical:s01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -362.72727272727275,
+              "text": "wall-vertical:s10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -484.09090909090907,
+              "text": "wall-vertical:s11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -605.4545454545455,
+              "text": "wall-vertical:c00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -726.8181818181819,
+              "text": "wall-vertical:c01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -848.1818181818181,
+              "text": "wall-vertical:c10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -969.5454545454545,
+              "text": "wall-vertical:c11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -1090.909090909091,
+              "text": "wall-vertical:d00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -1212.2727272727273,
+              "text": "wall-vertical:d01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -1333.6363636363635,
+              "text": "wall-vertical:d10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 0,
+              "y": -1455.0000000000002,
+              "text": "wall-vertical:d11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 84.88,
+              "y": -84.88,
+              "text": "wall-diag-right:s00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 170.72454545454548,
+              "y": -170.72454545454548,
+              "text": "wall-diag-right:s01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 256.5690909090909,
+              "y": -256.5690909090909,
+              "text": "wall-diag-right:s10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 342.41363636363633,
+              "y": -342.41363636363633,
+              "text": "wall-diag-right:s11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 428.25818181818187,
+              "y": -428.25818181818187,
+              "text": "wall-diag-right:c00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 514.1027272727273,
+              "y": -514.1027272727273,
+              "text": "wall-diag-right:c01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 599.9472727272727,
+              "y": -599.9472727272727,
+              "text": "wall-diag-right:c10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 685.7918181818181,
+              "y": -685.7918181818181,
+              "text": "wall-diag-right:c11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 771.6363636363636,
+              "y": -771.6363636363636,
+              "text": "wall-diag-right:d00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 857.480909090909,
+              "y": -857.480909090909,
+              "text": "wall-diag-right:d01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 943.3254545454545,
+              "y": -943.3254545454545,
+              "text": "wall-diag-right:d10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": 1029.17,
+              "y": -1029.17,
+              "text": "wall-diag-right:d11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -84.88,
+              "y": -84.88,
+              "text": "wall-diag-left:s00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -170.72454545454548,
+              "y": -170.72454545454548,
+              "text": "wall-diag-left:s01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -256.5690909090909,
+              "y": -256.5690909090909,
+              "text": "wall-diag-left:s10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -342.41363636363633,
+              "y": -342.41363636363633,
+              "text": "wall-diag-left:s11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -428.25818181818187,
+              "y": -428.25818181818187,
+              "text": "wall-diag-left:c00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -514.1027272727273,
+              "y": -514.1027272727273,
+              "text": "wall-diag-left:c01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -599.9472727272727,
+              "y": -599.9472727272727,
+              "text": "wall-diag-left:c10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -685.7918181818181,
+              "y": -685.7918181818181,
+              "text": "wall-diag-left:c11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -771.6363636363636,
+              "y": -771.6363636363636,
+              "text": "wall-diag-left:d00",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -857.480909090909,
+              "y": -857.480909090909,
+              "text": "wall-diag-left:d01",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -943.3254545454545,
+              "y": -943.3254545454545,
+              "text": "wall-diag-left:d10",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            },
+            {
+              "x": -1029.17,
+              "y": -1029.17,
+              "text": "wall-diag-left:d11",
+              "fontFamily": "arial",
+              "fontSize": 16,
+              "letterSpacing": 0,
+              "fontColor": "#000000",
+              "backgroundColor": "#f4f8f4",
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "align": "left",
+              "rotation": 0
+            }
+          ],
+          "areas": [],
+          "surfaces": [],
+          "items": [],
+          "annotations": [],
+          "cameras": [],
+          "walls": [
+            {
+              "guid": "wall-horizontal",
+              "a": {
+                "x": 0,
+                "y": 0
+              },
+              "b": {
+                "x": 1500,
+                "y": 0
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.08,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000001"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.16090909090909092,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000002"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.24181818181818182,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000003"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.3227272727272727,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000004"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.4036363636363637,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000005"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.48454545454545456,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000006"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.5654545454545454,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000007"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.6463636363636364,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000008"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.7272727272727273,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000009"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.8081818181818181,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000a"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.889090909090909,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000b"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.9700000000000001,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000c"
+                }
+              ]
+            },
+            {
+              "guid": "wall-vertical",
+              "a": {
+                "x": 0,
+                "y": 0
+              },
+              "b": {
+                "x": 0,
+                "y": -1500
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.08,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000d"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.16090909090909092,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000e"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.24181818181818182,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000f"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.3227272727272727,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000g"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.4036363636363637,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000h"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.48454545454545456,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000i"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.5654545454545454,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000j"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.6463636363636364,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000k"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.7272727272727273,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000l"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.8081818181818181,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000m"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.889090909090909,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000n"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.9700000000000001,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000o"
+                }
+              ]
+            },
+            {
+              "guid": "wall-diag-right",
+              "a": {
+                "x": 0,
+                "y": 0
+              },
+              "b": {
+                "x": 1061,
+                "y": -1061
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.08,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000p"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.16090909090909092,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000q"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.24181818181818182,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000r"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.3227272727272727,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000s"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.4036363636363637,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000t"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.48454545454545456,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000u"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.5654545454545454,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000v"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.6463636363636364,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000w"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.7272727272727273,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000x"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.8081818181818181,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000y"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.889090909090909,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00000z"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.9700000000000001,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000010"
+                }
+              ]
+            },
+            {
+              "guid": "wall-diag-left",
+              "a": {
+                "x": 0,
+                "y": 0
+              },
+              "b": {
+                "x": -1061,
+                "y": -1061
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.08,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000011"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.16090909090909092,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000012"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.24181818181818182,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000013"
+                },
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.3227272727272727,
+                  "type": "door",
+                  "width": 70,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000014"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.4036363636363637,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000015"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.48454545454545456,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000016"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.5654545454545454,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000017"
+                },
+                {
+                  "refid": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+                  "t": 0.6463636363636364,
+                  "type": "door",
+                  "width": 60,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000018"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.7272727272727273,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "000019"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.8081818181818181,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00001a"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.889090909090909,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00001b"
+                },
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.9700000000000001,
+                  "type": "door",
+                  "width": 110,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "00001c"
+                }
+              ]
+            }
+          ],
+          "settings": {
+            "engineAutoDims": false,
+            "areaLabelMultiplier": 1,
+            "scaleMultiplierDimensions": 1.5,
+            "scaleMultiplierComments": 1,
+            "dimLineLabelHorizontal": false,
+            "showCeilings3D": true,
+            "minWallLength": 4
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -7,22 +7,17 @@ import { pdfJsAssetsPlugin } from './vite/pdfJsAssetsPlugin'
 import { tesseractAssetsPlugin } from './vite/tesseractAssetsPlugin'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const repoRoot = path.resolve(__dirname, '..')
 
-function serveRepoStatic() {
+/** Serveert frontend/examples onder /examples/ in dev — te groot voor public/. */
+function serveExamples() {
   return {
-    name: 'serve-repo-static',
+    name: 'serve-examples',
     configureServer(server: import('vite').ViteDevServer) {
       server.middlewares.use((req, res, next) => {
         const url = req.url?.split('?')[0] ?? ''
 
-        if (
-          url.startsWith('/examples/') ||
-          url.startsWith('/data/')
-        ) {
-          const filePath = url.startsWith('/data/')
-            ? path.join(__dirname, decodeURIComponent(url))
-            : path.join(repoRoot, decodeURIComponent(url))
+        if (url.startsWith('/examples/')) {
+          const filePath = path.join(__dirname, decodeURIComponent(url))
           if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
             const ext = path.extname(filePath).toLowerCase()
             const types: Record<string, string> = {
@@ -45,7 +40,7 @@ function serveRepoStatic() {
 }
 
 export default defineConfig({
-  plugins: [vue(), serveRepoStatic(), pdfJsAssetsPlugin(__dirname), tesseractAssetsPlugin(__dirname)],
+  plugins: [vue(), serveExamples(), pdfJsAssetsPlugin(__dirname), tesseractAssetsPlugin(__dirname)],
   optimizeDeps: {
     exclude: ['@opencvjs/web', 'pdfjs-dist', 'pdfjs-dist/legacy/build/pdf.mjs'],
     esbuildOptions: {
@@ -73,9 +68,6 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Resource-Policy': 'same-origin',
-    },
-    fs: {
-      allow: [repoRoot],
     },
   },
   worker: {

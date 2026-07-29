@@ -1,4 +1,4 @@
-import catalogData from '../../../../examples/opening-refid-catalog.json'
+import catalogData from '../../../examples/opening-refid-catalog.json'
 import type { OpeningType } from './types'
 
 /**
@@ -7,7 +7,7 @@ import type { OpeningType } from './types'
  * Kozijn-simulatie (boog vs gap) komt uit `swingInsetCm` in de catalogus —
  * plattegrond-onafhankelijk, niet uit gemeten ref-framing.
  *
- * Bron: examples/opening-refid-catalog.json
+ * Bron: frontend/examples/opening-refid-catalog.json
  * Onbekende refid → default 'single' + swing_inset_defaults.single.
  */
 export type DoorAssetKind =

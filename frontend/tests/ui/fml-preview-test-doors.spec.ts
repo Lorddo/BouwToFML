@@ -5,7 +5,7 @@ import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
 import { groupDoorOpeningsOnWall } from '@/ui/components/fml-preview-doors'
 
-const TEST_FML = resolve(__dirname, '../../../examples/FML(test)/test-doors.json.fml')
+const TEST_FML = resolve(__dirname, '../../examples/FML(test)/test-doors.json.fml')
 
 function loadPlan() {
   const { plan, warnings } = importFmlV3(readFileSync(TEST_FML, 'utf8'))

@@ -1,4 +1,5 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import {
@@ -6,20 +7,14 @@ import {
   maxFillVertexDistanceFromWallEnds,
 } from '@/ui/components/fml-preview-wall-polygons'
 
-const KINDERDIJK_CANDIDATES = [
-  'c:/Pranimate/BouwToFML/examples/FML(current)/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam.json.fml',
-  'c:/Pranimate/BouwToFMLSidetrack/examples/FML(current)/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam.json.fml',
-]
+const KINDERDIJK = resolve(
+  __dirname,
+  '../../examples/FML(current)/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam.json.fml',
+)
 
 describe('buildWallRenderGeometry Kinderdijkstraat', () => {
   it('has no runaway fill vertices', () => {
-    const path = KINDERDIJK_CANDIDATES.find((candidate) => existsSync(candidate))
-    if (!path) {
-      // Skip when example FML is not present in this workspace checkout.
-      return
-    }
-
-    const { plan } = importFmlV3(JSON.parse(readFileSync(path, 'utf8')))
+    const { plan } = importFmlV3(JSON.parse(readFileSync(KINDERDIJK, 'utf8')))
     const walls = plan.floors[0]!.walls.map((wall) => ({
       id: wall.id,
       a: wall.a,
