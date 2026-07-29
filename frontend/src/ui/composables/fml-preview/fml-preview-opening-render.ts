@@ -4,10 +4,6 @@ import { clamp01 } from '@/core/fml/extraction-to-plan-geom'
 
 export { clamp01 }
 
-function openingColor(type: OpeningType): string {
-  return type === 'door' ? '#0284c7' : '#a21caf'
-}
-
 export function openingFillColor(type: OpeningType, selected: boolean): string {
   if (selected) return '#f97316'
   return type === 'door' ? '#38bdf8' : '#e879f9'

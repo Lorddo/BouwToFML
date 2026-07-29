@@ -68,14 +68,6 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
   return `data:${blob.type || 'image/png'};base64,${bytesToBase64(new Uint8Array(buffer))}`
 }
 
-/** Sync — alleen HTMLCanvasElement (main thread). */
-function canvasToDataUrl(canvas: CanvasLike, mimeType = 'image/png'): string {
-  if ('toDataURL' in canvas && typeof canvas.toDataURL === 'function') {
-    return canvas.toDataURL(mimeType)
-  }
-  return ''
-}
-
 /** Worker-safe — OffscreenCanvas via convertToBlob, anders toDataURL. */
 export async function canvasToDataUrlAsync(canvas: CanvasLike, mimeType = 'image/png'): Promise<string> {
   if ('toDataURL' in canvas && typeof canvas.toDataURL === 'function') {
@@ -86,18 +78,6 @@ export async function canvasToDataUrlAsync(canvas: CanvasLike, mimeType = 'image
     return blobToDataUrl(blob)
   }
   return ''
-}
-
-function scaleCanvasToSize(
-  source: CanvasLike,
-  targetWidth: number,
-  targetHeight: number,
-): CanvasLike {
-  const canvas = createCanvas(targetWidth, targetHeight)
-  const ctx = getCanvas2dContext(canvas)
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(source as unknown as CanvasImageSource, 0, 0, targetWidth, targetHeight)
-  return canvas
 }
 
 /** Classificatie-mask (transparante inkt) over B/W-onderlegger — inkt blijft zwart. */

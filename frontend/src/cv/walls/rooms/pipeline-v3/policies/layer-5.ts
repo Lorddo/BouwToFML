@@ -13,9 +13,7 @@ import { PIPELINE_ENDPOINT_EPS_PX, resolvePipelineScale } from '../engines/scale
 
 const LAYER5_MAX_ITERATIONS = 20
 
-/** Copy6 LAYER5_SAME_LINE_MAX_OFFSET_PX */
 const SCALE_REF30 = resolvePipelineScale()
-const LAYER5_SAME_LINE_MAX_OFFSET_PX = SCALE_REF30.layer5SameLineMaxOffsetPx
 
 export const layer5WeldPolicy: WeldPolicy = {
   layerId: 5,

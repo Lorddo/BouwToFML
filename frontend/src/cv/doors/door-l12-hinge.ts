@@ -1,13 +1,7 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { normalizeVector } from './door-geometry-utils'
 import { computeDoorHingeFromMask } from './door-swing-hinge'
-import {
-  buildDoorSwingMask,
-  closeClusterSwingMaskGaps,
-  countUniqueSwingFaceIds,
-  trimMaskToContent,
-  CLUSTER_SWING_CLOSE_KERNEL_PX,
-} from './door-swing-mask'
+import { buildDoorSwingMask } from './door-swing-mask'
 import type { DoorHingeAxis } from './types'
 import type { RefBBox, RefPoint } from '@/cv/refs/types'
 

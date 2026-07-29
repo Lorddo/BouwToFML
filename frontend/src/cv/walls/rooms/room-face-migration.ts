@@ -317,21 +317,6 @@ export function applyMigratedFaceOverrides(
   return { applied, dropped }
 }
 
-/** Map handmatige overrides naar nieuwe face-labels na buildFaceLabelsFromBw. */
-function migrateFaceOverridesForRefine(params: {
-  priorState: SerializedRoomClassifyState
-  priorOverrides: Map<number, RoomRasterClass>
-  pinnedRoots: Set<number>
-  newLabelsData: Int32Array
-  width: number
-  height: number
-}): Map<number, RoomRasterClass> {
-  return migratePinnedOverridesToTopology({
-    ...params,
-    newParentMap: [],
-  }).faceOverrides
-}
-
 /** Behoud pinned handmatige keuzes na topologie-wijziging (ink-resolve, merge, splits). */
 export function migratePinnedOverridesToTopology(params: {
   priorState: SerializedRoomClassifyState

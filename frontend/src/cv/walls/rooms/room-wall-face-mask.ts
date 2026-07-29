@@ -1,4 +1,3 @@
-import type { OpenCV } from '@/cv/loadOpenCV'
 import { resolveMergedLabel } from './room-raster-merge'
 import {
   isWallMaskClass,
@@ -54,17 +53,4 @@ export function buildMergedWallFaceMaskData(params: {
     maskData[idx] = 255
   }
   return maskData
-}
-
-function buildMergedWallFaceMaskMat(params: {
-  cv: OpenCV
-  labelsData: Int32Array
-  parentMap: Map<number, number>
-  classificationByLabel: Map<number, RoomRasterClass>
-  width: number
-  height: number
-  groupBy?: RoomClassificationGroupBy
-}): OpenCV['Mat'] {
-  const maskData = buildMergedWallFaceMaskData(params)
-  return params.cv.matFromArray(params.height, params.width, params.cv.CV_8UC1, maskData)
 }

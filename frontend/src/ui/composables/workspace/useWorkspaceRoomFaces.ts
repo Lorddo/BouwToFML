@@ -42,7 +42,6 @@ import {
   resolveReferenceWallRect,
   createClassifyRunner,
   recalculateFaces as recalculateFacesCore,
-  normalizeClassifyState,
 } from './room-faces-classify-run'
 import { finalizeWallDetection as finalizeWallDetectionCore } from './room-faces-finalize'
 import {

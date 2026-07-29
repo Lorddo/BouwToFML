@@ -96,27 +96,6 @@ export function lJunctionsPreservedInGraph(
   return true
 }
 
-function collectBaselineJunctions(segments: Segment[]): BaselineJunctionRef[] {
-  const graph = buildConnectorJunctionGraph(segments)
-  return graph.nodes.map((node) => ({
-    x: node.x,
-    y: node.y,
-    kind: node.kind,
-  }))
-}
-
-/** Geen downgrade van T/X op hun baseline-locatie. L mag verschuiven (chamfer → H×V). */
-function baselineJunctionsPreserved(
-  baseline: BaselineJunctionRef[],
-  segments: Segment[],
-  radiusPx: number,
-): boolean {
-  const txBaseline = baseline.filter(
-    (ref): ref is BaselineTxJunctionRef => ref.kind === 'T' || ref.kind === 'X',
-  )
-  return baselineTxJunctionsPreserved(txBaseline, segments, radiusPx)
-}
-
 /** T/X mogen niet dalen (T→X telt als behoud); I mag niet stijgen. L mag dalen bij upgrade. */
 function layer6JunctionKindsDegraded(
   baseline: Layer6JunctionKindCounts,

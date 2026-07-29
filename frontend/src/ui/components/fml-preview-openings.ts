@@ -150,12 +150,6 @@ export function findOpeningById(walls: Wall[], openingId: string): OpeningLocati
   return null
 }
 
-function findDoorOpeningById(walls: Wall[], openingId: string): OpeningLocation | null {
-  const located = findOpeningById(walls, openingId)
-  if (!located || located.opening.type !== 'door') return null
-  return located
-}
-
 type OpeningPatch = Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored'>>
 
 export function updateOpeningById(walls: Wall[], openingId: string, patch: OpeningPatch): Wall[] {
@@ -220,10 +214,6 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
   return changed ? nextWalls : walls
 }
 
-function updateDoorOpeningById(walls: Wall[], openingId: string, patch: OpeningPatch): Wall[] {
-  return updateOpeningById(walls, openingId, patch)
-}
-
 export function removeOpeningsById(walls: Wall[], openingIds: Iterable<string>): Wall[] {
   const idSet = new Set(openingIds)
   if (idSet.size === 0) return walls
@@ -241,10 +231,6 @@ export function removeOpeningsById(walls: Wall[], openingIds: Iterable<string>):
   })
 
   return changed ? nextWalls : walls
-}
-
-function removeDoorOpeningsById(walls: Wall[], openingIds: Iterable<string>): Wall[] {
-  return removeOpeningsById(walls, openingIds)
 }
 
 export {

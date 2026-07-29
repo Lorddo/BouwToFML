@@ -5,10 +5,7 @@ import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
-import {
-  isWallThicknessBridgeCandidatePx,
-  wallThicknessBandsCompatible,
-} from '@/core/fml/wall-thickness-chain'
+import { wallThicknessBandsCompatible } from '@/core/fml/wall-thickness-chain'
 import { FML_BAND_MAX_RATIO } from '@/core/fml/fml-wall-thickness-tiers'
 import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickness'
 import type { CollapsePolicy } from '../policy-types'

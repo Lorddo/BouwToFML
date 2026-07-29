@@ -61,12 +61,3 @@ export function rotateMatExpandBounds(cv: OpenCV, src: OpenCV['Mat'], uiDegrees:
   src.delete()
   return out
 }
-
-/** Vaste afmetingen — alleen voor live preview vóór commit; gebruik `rotateMatExpandBounds` bij bakken. */
-function rotateMatByDegrees(cv: OpenCV, src: OpenCV['Mat'], uiDegrees: number): OpenCV['Mat'] {
-  if (Math.abs(uiDegrees) < ROTATION_EPS_DEG) return src
-
-  const out = warpRotateMat(cv, src, uiDegrees, src.cols, src.rows, 0, 0)
-  src.delete()
-  return out
-}

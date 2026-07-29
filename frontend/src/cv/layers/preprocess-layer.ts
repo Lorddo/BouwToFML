@@ -56,19 +56,6 @@ export function buildGrayscalePreMat(ctx: LayerContext): OpenCV['Mat'] {
   return rotateMatExpandBounds(cv, mat, totalRotation)
 }
 
-/** Grijswaarden-onderlegger voor Tesseract — geen binarisatie (beter op pixel-fonts). */
-function runOcrGrayscaleLayer(ctx: LayerContext): PreprocessResult {
-  const { cv, eraserMask, preprocess } = ctx
-  const mat = buildGrayscalePreMat(ctx)
-  applyEraserMask(cv, mat, eraserMask)
-  const previewCanvas = matToCanvas(cv, mat)
-  return {
-    mat,
-    previewCanvas,
-    config: preprocess,
-  }
-}
-
 function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']): PreprocessResult {
   const { cv, eraserMask } = ctx
   const preprocess = ctx.preprocess

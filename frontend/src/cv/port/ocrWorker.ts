@@ -62,8 +62,3 @@ export function warmUpOcrWorker(language?: string | null): Promise<void> {
   warmUpPromises.set(resolved, promise)
   return promise
 }
-
-function isOcrWorkerReady(language?: string | null): boolean {
-  const resolved = resolveOcrLanguage(language)
-  return activeWorker !== null && activeLanguage === resolved
-}

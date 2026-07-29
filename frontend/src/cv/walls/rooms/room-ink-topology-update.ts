@@ -1,4 +1,3 @@
-import type { RoomRasterClass } from './room-ink-classify'
 import type { InkDiffBounds } from './room-ink-symmetric'
 import { carveAddedInk } from './room-ink-symmetric'
 
@@ -127,33 +126,6 @@ export function splitDisconnectedFaceLabels(
   }
 
   return { splitMap, splitCount }
-}
-
-/** Classificatie + overrides erven op gesplitste child-labels. */
-function migrateClassificationAfterLabelSplits(params: {
-  classificationByLabel: Map<number, RoomRasterClass>
-  faceOverrides: Map<number, RoomRasterClass>
-  pinnedRoots: Set<number>
-  splitMap: Map<number, number[]>
-}): void {
-  for (const [sourceLabel, descendants] of params.splitMap.entries()) {
-    const inheritedClass =
-      params.faceOverrides.get(sourceLabel) ?? params.classificationByLabel.get(sourceLabel)
-    if (!inheritedClass) continue
-
-    const hadOverride = params.faceOverrides.has(sourceLabel)
-    const wasPinned = params.pinnedRoots.has(sourceLabel)
-
-    for (const label of descendants) {
-      params.classificationByLabel.set(label, inheritedClass)
-      if (hadOverride) {
-        params.faceOverrides.set(label, inheritedClass)
-      }
-      if (wasPinned) {
-        params.pinnedRoots.add(label)
-      }
-    }
-  }
 }
 
 /** Verwerk getekende/gewijzigde muur-inkt op opgeslagen CC-topologie (alleen labels). */

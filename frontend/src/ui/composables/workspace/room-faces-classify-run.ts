@@ -3,13 +3,11 @@ import type { PreprocessConfig } from '@/platform/image'
 import type { WallJunctionStrategy } from '@/core/extraction/types'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { SelectionRect } from '@/platform/selection'
-import type { CanvasLike } from '@/cv/port/canvasEnv'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import {
   applySerializedFaceOverrides,
-  createRoomRasterCache,
   invalidateFaceDualSpace,
   rebuildFaceBBoxIndex,
   serializeFaceOverrides,

@@ -9,7 +9,6 @@ import {
 } from '@/cv/walls/rooms/room-raster-cache'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
-import { restoreCacheFromOutput } from './room-faces-cache-sync'
 
 export function wallsFinalizeOutputValid(
   output: ExtractionOutput | null | undefined,

@@ -1,4 +1,4 @@
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/fml/types'
 import {
   MIN_SPLIT_SEGMENT_CM,
   BALANCE_DEFAULT,

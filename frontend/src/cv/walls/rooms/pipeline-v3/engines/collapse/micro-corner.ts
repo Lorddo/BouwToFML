@@ -16,7 +16,6 @@ import type { CollapsePolicy } from '../policy-types'
 import {
   buildExactAdjacency,
   exactPointKey,
-  otherEndpoint,
   otherIncidentSegIndex,
   segmentAxis,
   turnAngleDegAtPoint,

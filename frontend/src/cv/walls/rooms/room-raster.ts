@@ -1,10 +1,5 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
-import { createCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
-import {
-  buildEnclosedFaceParentMap,
-  countMergedSurfaces,
-  resolveMergedLabel,
-} from './room-raster-merge'
+import { type CanvasLike } from '@/cv/port/canvasEnv'
 
 export interface RasterRoomComponent {
   label: number
@@ -54,9 +49,6 @@ export const DOORFRAME_FACE_RGBA: [number, number, number, number] = [194, 88, 1
 
 /** Niet-toegewezen inkt (label 0 na resolve). */
 export const UNRESOLVED_INK_RGBA: [number, number, number, number] = [0, 0, 0, 255]
-
-/** Niet-toegewezen rand-void na ink-resolve. */
-const BORDER_VOID_FACE_RGBA: [number, number, number, number] = [128, 128, 128, 255]
 
 /** Halve breedte (°) rond deur-amber / raam-cyaan — surface-pastels blijven erbuiten. */
 const RESERVED_SURFACE_HUE_HALF_WIDTH_DEG = 28
@@ -151,35 +143,6 @@ export function colorForLabel(label: number): [number, number, number, number] {
   }
   // Fallback buiten amber/cyaan én muur-donkergrijs.
   return [140, 105, 185, 255]
-}
-
-function renderComponentMask(params: {
-  width: number
-  height: number
-  labelsData: Int32Array
-  parentMap?: Map<number, number>
-}): CanvasLike {
-  const canvas = createCanvas(params.width, params.height)
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return canvas
-  const image = ctx.createImageData(params.width, params.height)
-  const data = image.data
-  const parentMap = params.parentMap
-  const { width, labelsData } = params
-  for (let y = 0; y < params.height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const rawLabel = labelsData[y * width + x] ?? 0
-      const label = parentMap ? resolveMergedLabel(rawLabel, parentMap) : rawLabel
-      const [r, g, b, a] = colorForLabel(label)
-      const idx = (y * params.width + x) * 4
-      data[idx] = r
-      data[idx + 1] = g
-      data[idx + 2] = b
-      data[idx + 3] = a
-    }
-  }
-  ctx.putImageData(image, 0, 0)
-  return canvas
 }
 
 /** Component-metadata uit bestaande labelsData (geen OpenCV re-detect). */
@@ -279,37 +242,3 @@ export function buildFaceLabelsFromBw(params: {
   }
 }
 
-/** Debug-wrapper: CC + enclosed merge + kleurmasker. Classify gebruikt losse stappen. */
-function buildFaceColorMaskFromBw(params: {
-  cv: OpenCV
-  mat: OpenCV['Mat']
-  /** Classify-pipeline heeft geen kleur-debugmasker nodig — scheelt een volledige pixel-pass. */
-  skipDebugMask?: boolean
-}): RasterRoomResult {
-  const faceLabels = buildFaceLabelsFromBw(params)
-  const { width, height, labelsData, components, labels } = faceLabels
-
-  const labelAt = (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= width || y >= height) return 0
-    return labelsData[y * width + x] ?? 0
-  }
-  const parentMap = buildEnclosedFaceParentMap(components, width, height, { labelAt })
-  const debugMask = params.skipDebugMask
-    ? createCanvas(1, 1)
-    : renderComponentMask({ width, height, labelsData, parentMap })
-  const mergedFaceCount = new Set(
-    components.map((c) => resolveMergedLabel(c.label, parentMap)),
-  ).size
-  const mergedSurfaceCount = countMergedSurfaces(components, parentMap)
-  const absorbedFaceCount = parentMap.size
-
-  return {
-    components,
-    debugMask,
-    parentMap,
-    labels,
-    mergedFaceCount,
-    mergedSurfaceCount,
-    absorbedFaceCount,
-  }
-}

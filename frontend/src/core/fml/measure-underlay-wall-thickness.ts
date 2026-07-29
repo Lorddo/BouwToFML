@@ -19,10 +19,6 @@ const PROBE_SCAN_COUNT = 5
 /** Binnen deze graden van H/V: as-aligned bbox; anders diagonale fallback. */
 const ORTHO_ANGLE_EPS_DEG = 15
 
-function segmentLength(a: Point2D, b: Point2D): number {
-  return Math.hypot(b.x - a.x, b.y - a.y)
-}
-
 function medianOf(values: number[]): number {
   if (values.length === 0) return 0
   const sorted = [...values].sort((left, right) => left - right)

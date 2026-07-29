@@ -29,10 +29,6 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
-async function saveLastDevSession(session: unknown): Promise<void> {
-  await saveDevSession(LEGACY_SESSION_ID, session)
-}
-
 import { toStorableDevSession } from './storable'
 
 export async function saveDevSession(sessionId: string, session: unknown): Promise<void> {
