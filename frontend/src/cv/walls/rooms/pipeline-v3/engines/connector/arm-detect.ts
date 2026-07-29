@@ -112,7 +112,8 @@ function shouldEnableChamferAxisNearAtT(
   hvBandPx: number,
   endpointSnapPx: number,
 ): boolean {
-  const classify = (segment: Segment, segIndex: number) => classifyLayer6Segment(segment, segIndex, hvBandPx)
+  const classify = (segment: Segment, segIndex: number) =>
+    classifyLayer6Segment(segment, segIndex, hvBandPx)
   const endpointIncidents = incidentAt(segments, point, endpointSnapPx)
   const diags = endpointIncidents.filter((incident) => {
     const kind = classify(incident.segment, incident.segIndex).kind
@@ -208,7 +209,8 @@ export function collectLayer6HvArmsAtPoint(params: {
 }): Layer6ArmRef[] {
   const hvBandPx = params.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
   const endpointSnapPx = params.endpointSnapPx ?? LAYER6_ENDPOINT_SNAP_PX
-  const classify = (segment: Segment, segIndex: number) => classifyLayer6Segment(segment, segIndex, hvBandPx)
+  const classify = (segment: Segment, segIndex: number) =>
+    classifyLayer6Segment(segment, segIndex, hvBandPx)
   const seen = new Set<number>()
   const out: Layer6ArmRef[] = []
 
@@ -239,7 +241,15 @@ export function collectLayer6HvArmsAtPoint(params: {
     push(incident.segIndex)
   }
 
-  if (!shouldEnableChamferAxisNear(params.segments, params.point, hvBandPx, params.junctionKind, endpointSnapPx)) {
+  if (
+    !shouldEnableChamferAxisNear(
+      params.segments,
+      params.point,
+      hvBandPx,
+      params.junctionKind,
+      endpointSnapPx,
+    )
+  ) {
     return out
   }
 

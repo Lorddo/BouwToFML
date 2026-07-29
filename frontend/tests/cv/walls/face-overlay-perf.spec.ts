@@ -133,7 +133,10 @@ describe('paintClassifiedFaceMaskRegion', () => {
       height,
       labelsData,
       parentMap,
-      classificationByLabel: new Map([[1, 'wall'], [2, 'unknown']]),
+      classificationByLabel: new Map([
+        [1, 'wall'],
+        [2, 'unknown'],
+      ]),
       groupBy: 'component',
     })
     // Start van full (door), herkleur alleen label-2 bbox naar unknown
@@ -142,7 +145,10 @@ describe('paintClassifiedFaceMaskRegion', () => {
       height,
       labelsData,
       parentMap,
-      classificationByLabel: new Map([[1, 'wall'], [2, 'unknown']]),
+      classificationByLabel: new Map([
+        [1, 'wall'],
+        [2, 'unknown'],
+      ]),
       groupBy: 'component',
       bounds: { x0: 4, y0: 1, x1: 6, y1: 4 },
     })
@@ -258,11 +264,11 @@ describe('claim detach → dirtyBounds dekt child (merged groupBy)', () => {
     expect([childPx[0], childPx[1], childPx[2], childPx[3]]).toEqual([...WALL_FACE_RGBA])
 
     // Full paint moet identiek zijn aan dirty-path resultaat
-    const afterDirty = new Uint8ClampedArray(
-      dirtyCtx.getImageData(0, 0, width, height).data,
-    )
+    const afterDirty = new Uint8ClampedArray(dirtyCtx.getImageData(0, 0, width, height).data)
     updateRoomRasterPreviewMask(cache)
-    const fullData = cache.previewMaskCanvas!.getContext('2d')!.getImageData(0, 0, width, height).data
+    const fullData = cache
+      .previewMaskCanvas!.getContext('2d')!
+      .getImageData(0, 0, width, height).data
     expect(afterDirty.length).toBe(fullData.length)
     for (let i = 0; i < afterDirty.length; i += 1) {
       expect(afterDirty[i]).toBe(fullData[i])

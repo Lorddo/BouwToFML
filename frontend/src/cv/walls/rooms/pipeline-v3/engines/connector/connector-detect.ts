@@ -148,8 +148,20 @@ export function detectLayer6ConnectorCandidates(params: {
         })
       }
     }
-    let h = pickDominantIncident(params.segments, hCandidates, scale.hvBandPx, endpointSnapPx, nearbyWeldPx)
-    let v = pickDominantIncident(params.segments, vCandidates, scale.hvBandPx, endpointSnapPx, nearbyWeldPx)
+    let h = pickDominantIncident(
+      params.segments,
+      hCandidates,
+      scale.hvBandPx,
+      endpointSnapPx,
+      nearbyWeldPx,
+    )
+    let v = pickDominantIncident(
+      params.segments,
+      vCandidates,
+      scale.hvBandPx,
+      endpointSnapPx,
+      nearbyWeldPx,
+    )
     const hadLocalH = !!h
     const hadLocalV = !!v
     let syntheticV: Segment | undefined
@@ -210,8 +222,8 @@ export function detectLayer6ConnectorCandidates(params: {
         )
         if (near > fallbackMaxPx) continue
         const anchor =
-          endpointDistanceToSegmentEndpoints(connector.a, seg)
-          <= endpointDistanceToSegmentEndpoints(connector.b, seg)
+          endpointDistanceToSegmentEndpoints(connector.a, seg) <=
+          endpointDistanceToSegmentEndpoints(connector.b, seg)
             ? connector.a
             : connector.b
         const candidateRef = {
@@ -222,8 +234,22 @@ export function detectLayer6ConnectorCandidates(params: {
         if (kind === 'H') fallbackH.push(candidateRef)
         if (kind === 'V') fallbackV.push(candidateRef)
       }
-      if (!h) h = pickDominantIncident(params.segments, fallbackH, scale.hvBandPx, endpointSnapPx, nearbyWeldPx)
-      if (!v) v = pickDominantIncident(params.segments, fallbackV, scale.hvBandPx, endpointSnapPx, nearbyWeldPx)
+      if (!h)
+        h = pickDominantIncident(
+          params.segments,
+          fallbackH,
+          scale.hvBandPx,
+          endpointSnapPx,
+          nearbyWeldPx,
+        )
+      if (!v)
+        v = pickDominantIncident(
+          params.segments,
+          fallbackV,
+          scale.hvBandPx,
+          endpointSnapPx,
+          nearbyWeldPx,
+        )
     }
 
     // Vermijd reparaties op volledig "remote" fallback-paren; die trekken ketens scheef.

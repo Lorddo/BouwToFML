@@ -25,7 +25,9 @@ import {
 import PreprocessActionGroup from '@/ui/components/PreprocessActionGroup.vue'
 
 const model = defineModel<PreprocessConfig>({ required: true })
-const props = withDefaults(defineProps<{ activeLayer?: PreprocessPanelLayer }>(), { activeLayer: 'walls' })
+const props = withDefaults(defineProps<{ activeLayer?: PreprocessPanelLayer }>(), {
+  activeLayer: 'walls',
+})
 const emit = defineEmits<{ resetPreview: []; layerCopied: [target: PreprocessLayerId] }>()
 
 const advancedOpen = ref(false)
@@ -73,9 +75,13 @@ function setEnabledWithDefaults(
   defaults: Partial<PreprocessLayerTune> = {},
 ): void {
   const current = readActiveTune()
-  const patch: Partial<PreprocessLayerTune> = { [enabledField]: enabled } as Partial<PreprocessLayerTune>
+  const patch: Partial<PreprocessLayerTune> = {
+    [enabledField]: enabled,
+  } as Partial<PreprocessLayerTune>
   if (enabled) {
-    for (const [key, value] of Object.entries(defaults) as Array<[TuneField, number | boolean | string]>) {
+    for (const [key, value] of Object.entries(defaults) as Array<
+      [TuneField, number | boolean | string]
+    >) {
       const currentValue = current[key]
       if (currentValue == null || (typeof currentValue === 'number' && currentValue <= 0)) {
         ;(patch as Record<string, unknown>)[key] = value
@@ -103,17 +109,12 @@ function setNumber(field: TuneField, event: Event): void {
 }
 
 /** Stap 2 toont ook `inkWall`, dat geen eigen B/W-tune heeft en dus niet kopieerbaar is. */
-type CopyTargetLayer = Extract<
-  PreprocessLayerId,
-  (typeof WORKSPACE_PREPROCESS_LAYER_ORDER)[number]
->
+type CopyTargetLayer = Extract<PreprocessLayerId, (typeof WORKSPACE_PREPROCESS_LAYER_ORDER)[number]>
 
 const copyTargetLayers = computed(() =>
   WORKSPACE_PREPROCESS_LAYER_ORDER.filter(
     (id): id is CopyTargetLayer =>
-      isPreprocessLayerId(id) &&
-      id !== currentLayerId.value &&
-      (GAPS_TAB_VISIBLE || id !== 'gaps'),
+      isPreprocessLayerId(id) && id !== currentLayerId.value && (GAPS_TAB_VISIBLE || id !== 'gaps'),
   ),
 )
 
@@ -139,7 +140,10 @@ function ensureLayerRecords(): void {
     changed = true
   }
   // Muur-tab: 2e pass altijd adaptive (modus-UI is weg).
-  if (next.wallLayer && (next.wallLayer.thresholdMode !== 'adaptive' || next.wallLayer.useAdaptive !== true)) {
+  if (
+    next.wallLayer &&
+    (next.wallLayer.thresholdMode !== 'adaptive' || next.wallLayer.useAdaptive !== true)
+  ) {
     next.wallLayer = {
       ...next.wallLayer,
       thresholdMode: 'adaptive',
@@ -148,9 +152,7 @@ function ensureLayerRecords(): void {
     changed = true
   }
   if (changed) {
-    model.value = next.wallLayer
-      ? mirrorWallTuneToRoot(next, next.wallLayer)
-      : next
+    model.value = next.wallLayer ? mirrorWallTuneToRoot(next, next.wallLayer) : next
   }
 }
 ensureLayerRecords()
@@ -215,30 +217,83 @@ ensureLayerRecords()
         <div class="setting-row">
           <span class="setting-label">Helderheid</span>
           <div class="field-row">
-            <input :value="readField('brightness', 50)" type="range" :min="UI_BRIGHTNESS_MIN" :max="UI_BRIGHTNESS_MAX" @input="setNumber('brightness', $event)" />
-            <input :value="readField('brightness', 50)" type="number" :min="UI_BRIGHTNESS_MIN" :max="UI_BRIGHTNESS_MAX" step="1" class="num-input" @input="setNumber('brightness', $event)" />
+            <input
+              :value="readField('brightness', 50)"
+              type="range"
+              :min="UI_BRIGHTNESS_MIN"
+              :max="UI_BRIGHTNESS_MAX"
+              @input="setNumber('brightness', $event)"
+            />
+            <input
+              :value="readField('brightness', 50)"
+              type="number"
+              :min="UI_BRIGHTNESS_MIN"
+              :max="UI_BRIGHTNESS_MAX"
+              step="1"
+              class="num-input"
+              @input="setNumber('brightness', $event)"
+            />
           </div>
         </div>
         <div class="setting-row">
           <span class="setting-label">Contrast</span>
           <div class="field-row">
-            <input :value="readField('contrast', 1)" type="range" min="0.6" max="1.6" step="0.02" @input="setNumber('contrast', $event)" />
-            <input :value="readField('contrast', 1)" type="number" min="0.6" max="1.6" step="0.02" class="num-input" @input="setNumber('contrast', $event)" />
+            <input
+              :value="readField('contrast', 1)"
+              type="range"
+              min="0.6"
+              max="1.6"
+              step="0.02"
+              @input="setNumber('contrast', $event)"
+            />
+            <input
+              :value="readField('contrast', 1)"
+              type="number"
+              min="0.6"
+              max="1.6"
+              step="0.02"
+              class="num-input"
+              @input="setNumber('contrast', $event)"
+            />
           </div>
         </div>
-        <label class="check-row"><input :checked="readField('adjustNegativeEnabled', false)" type="checkbox" @change="setChecked('adjustNegativeEnabled', $event)" /> Negatief omkeren (vóór drempel)</label>
+        <label class="check-row"
+          ><input
+            :checked="readField('adjustNegativeEnabled', false)"
+            type="checkbox"
+            @change="setChecked('adjustNegativeEnabled', $event)"
+          />
+          Negatief omkeren (vóór drempel)</label
+        >
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
         title="Speckles verwijderen"
         :model-value="readField('removeSpecklesEnabled', false)"
-        @update:model-value="(next) => setEnabledWithDefaults('removeSpecklesEnabled', next, { despeckleMinPx: 32 })"
+        @update:model-value="
+          (next) => setEnabledWithDefaults('removeSpecklesEnabled', next, { despeckleMinPx: 32 })
+        "
       >
         <div class="setting-row">
           <span class="setting-label">Min. oppervlakte (px)</span>
           <div class="field-row">
-            <input :value="readField('despeckleMinPx', 0)" type="range" min="0" max="32" step="1" @input="setNumber('despeckleMinPx', $event)" />
-            <input :value="readField('despeckleMinPx', 0)" type="number" min="0" max="32" step="1" class="num-input" @input="setNumber('despeckleMinPx', $event)" />
+            <input
+              :value="readField('despeckleMinPx', 0)"
+              type="range"
+              min="0"
+              max="32"
+              step="1"
+              @input="setNumber('despeckleMinPx', $event)"
+            />
+            <input
+              :value="readField('despeckleMinPx', 0)"
+              type="number"
+              min="0"
+              max="32"
+              step="1"
+              class="num-input"
+              @input="setNumber('despeckleMinPx', $event)"
+            />
           </div>
         </div>
       </PreprocessActionGroup>
@@ -246,20 +301,52 @@ ensureLayerRecords()
       <PreprocessActionGroup
         title="Holes vullen (zwart/wit)"
         :model-value="readField('removeHolesEnabled', false)"
-        @update:model-value="(next) => setEnabledWithDefaults('removeHolesEnabled', next, { removeHolesMaxPx: 4 })"
+        @update:model-value="
+          (next) => setEnabledWithDefaults('removeHolesEnabled', next, { removeHolesMaxPx: 4 })
+        "
       >
         <div class="setting-row">
           <span class="setting-label">Zwart vullen (px)</span>
           <div class="field-row">
-            <input :value="readField('removeHolesMaxPx', 0)" type="range" min="0" max="24" step="1" @input="setNumber('removeHolesMaxPx', $event)" />
-            <input :value="readField('removeHolesMaxPx', 0)" type="number" min="0" max="24" step="1" class="num-input" @input="setNumber('removeHolesMaxPx', $event)" />
+            <input
+              :value="readField('removeHolesMaxPx', 0)"
+              type="range"
+              min="0"
+              max="24"
+              step="1"
+              @input="setNumber('removeHolesMaxPx', $event)"
+            />
+            <input
+              :value="readField('removeHolesMaxPx', 0)"
+              type="number"
+              min="0"
+              max="24"
+              step="1"
+              class="num-input"
+              @input="setNumber('removeHolesMaxPx', $event)"
+            />
           </div>
         </div>
         <div class="setting-row">
           <span class="setting-label">Wit openen (px)</span>
           <div class="field-row">
-            <input :value="readField('despeckleOpen', 0)" type="range" min="0" max="6" step="1" @input="setNumber('despeckleOpen', $event)" />
-            <input :value="readField('despeckleOpen', 0)" type="number" min="0" max="6" step="1" class="num-input" @input="setNumber('despeckleOpen', $event)" />
+            <input
+              :value="readField('despeckleOpen', 0)"
+              type="range"
+              min="0"
+              max="6"
+              step="1"
+              @input="setNumber('despeckleOpen', $event)"
+            />
+            <input
+              :value="readField('despeckleOpen', 0)"
+              type="number"
+              min="0"
+              max="6"
+              step="1"
+              class="num-input"
+              @input="setNumber('despeckleOpen', $event)"
+            />
           </div>
         </div>
       </PreprocessActionGroup>
@@ -267,13 +354,30 @@ ensureLayerRecords()
       <PreprocessActionGroup
         title="Gaten overbruggen"
         :model-value="readField('bridgeGapsEnabled', false)"
-        @update:model-value="(next) => setEnabledWithDefaults('bridgeGapsEnabled', next, { bridgeGaps: 1 })"
+        @update:model-value="
+          (next) => setEnabledWithDefaults('bridgeGapsEnabled', next, { bridgeGaps: 1 })
+        "
       >
         <div class="setting-row">
           <span class="setting-label">Brug (px)</span>
           <div class="field-row">
-            <input :value="readField('bridgeGaps', 1)" type="range" min="1" max="10" step="1" @input="setNumber('bridgeGaps', $event)" />
-            <input :value="readField('bridgeGaps', 1)" type="number" min="1" max="10" step="1" class="num-input" @input="setNumber('bridgeGaps', $event)" />
+            <input
+              :value="readField('bridgeGaps', 1)"
+              type="range"
+              min="1"
+              max="10"
+              step="1"
+              @input="setNumber('bridgeGaps', $event)"
+            />
+            <input
+              :value="readField('bridgeGaps', 1)"
+              type="number"
+              min="1"
+              max="10"
+              step="1"
+              class="num-input"
+              @input="setNumber('bridgeGaps', $event)"
+            />
           </div>
         </div>
       </PreprocessActionGroup>
@@ -281,13 +385,30 @@ ensureLayerRecords()
       <PreprocessActionGroup
         title="Randen gladstrijken"
         :model-value="readField('smoothLinesEnabled', false)"
-        @update:model-value="(next) => setEnabledWithDefaults('smoothLinesEnabled', next, { smoothLines: 1 })"
+        @update:model-value="
+          (next) => setEnabledWithDefaults('smoothLinesEnabled', next, { smoothLines: 1 })
+        "
       >
         <div class="setting-row">
           <span class="setting-label">Sterkte (px)</span>
           <div class="field-row">
-            <input :value="readField('smoothLines', 1)" type="range" min="1" max="8" step="1" @input="setNumber('smoothLines', $event)" />
-            <input :value="readField('smoothLines', 1)" type="number" min="1" max="8" step="1" class="num-input" @input="setNumber('smoothLines', $event)" />
+            <input
+              :value="readField('smoothLines', 1)"
+              type="range"
+              min="1"
+              max="8"
+              step="1"
+              @input="setNumber('smoothLines', $event)"
+            />
+            <input
+              :value="readField('smoothLines', 1)"
+              type="number"
+              min="1"
+              max="8"
+              step="1"
+              class="num-input"
+              @input="setNumber('smoothLines', $event)"
+            />
           </div>
         </div>
       </PreprocessActionGroup>
@@ -295,13 +416,30 @@ ensureLayerRecords()
       <PreprocessActionGroup
         title="Lijnen verdikken"
         :model-value="readField('thickenLinesEnabled', true)"
-        @update:model-value="(next) => setEnabledWithDefaults('thickenLinesEnabled', next, { thickenLinesPx: 1 })"
+        @update:model-value="
+          (next) => setEnabledWithDefaults('thickenLinesEnabled', next, { thickenLinesPx: 1 })
+        "
       >
         <div class="setting-row">
           <span class="setting-label">Dikte (px)</span>
           <div class="field-row">
-            <input :value="readField('thickenLinesPx', 1)" type="range" min="1" max="8" step="1" @input="setNumber('thickenLinesPx', $event)" />
-            <input :value="readField('thickenLinesPx', 1)" type="number" min="1" max="8" step="1" class="num-input" @input="setNumber('thickenLinesPx', $event)" />
+            <input
+              :value="readField('thickenLinesPx', 1)"
+              type="range"
+              min="1"
+              max="8"
+              step="1"
+              @input="setNumber('thickenLinesPx', $event)"
+            />
+            <input
+              :value="readField('thickenLinesPx', 1)"
+              type="number"
+              min="1"
+              max="8"
+              step="1"
+              class="num-input"
+              @input="setNumber('thickenLinesPx', $event)"
+            />
           </div>
         </div>
       </PreprocessActionGroup>
@@ -309,13 +447,30 @@ ensureLayerRecords()
       <PreprocessActionGroup
         title="Lijnen afschaven"
         :model-value="readField('erodeLinesEnabled', false)"
-        @update:model-value="(next) => setEnabledWithDefaults('erodeLinesEnabled', next, { erodeLinesPx: 1 })"
+        @update:model-value="
+          (next) => setEnabledWithDefaults('erodeLinesEnabled', next, { erodeLinesPx: 1 })
+        "
       >
         <div class="setting-row">
           <span class="setting-label">Afschaven (px)</span>
           <div class="field-row">
-            <input :value="readField('erodeLinesPx', 1)" type="range" min="0" max="6" step="1" @input="setNumber('erodeLinesPx', $event)" />
-            <input :value="readField('erodeLinesPx', 1)" type="number" min="0" max="6" step="1" class="num-input" @input="setNumber('erodeLinesPx', $event)" />
+            <input
+              :value="readField('erodeLinesPx', 1)"
+              type="range"
+              min="0"
+              max="6"
+              step="1"
+              @input="setNumber('erodeLinesPx', $event)"
+            />
+            <input
+              :value="readField('erodeLinesPx', 1)"
+              type="number"
+              min="0"
+              max="6"
+              step="1"
+              class="num-input"
+              @input="setNumber('erodeLinesPx', $event)"
+            />
           </div>
         </div>
       </PreprocessActionGroup>
@@ -378,10 +533,23 @@ ensureLayerRecords()
   gap: 2px;
 }
 
-.copy-section { margin-top: 12px; }
-.copy-section h4 { margin: 0 0 4px; font-size: 12px; }
-.copy-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
-.actions { display: flex; gap: 8px; margin-top: 6px; }
+.copy-section {
+  margin-top: 12px;
+}
+.copy-section h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+.copy-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
 .field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 64px;

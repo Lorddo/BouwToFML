@@ -1,14 +1,15 @@
 import { normalizeStoredPreprocess } from '@/cv/preprocess/layer-preprocess'
-import type { DevSessionCaptureInput, DevWorkspaceRoomSnapshot, DevWorkspaceSessionV2 } from './types'
+import type {
+  DevSessionCaptureInput,
+  DevWorkspaceRoomSnapshot,
+  DevWorkspaceSessionV2,
+} from './types'
 import { DEV_WORKSPACE_SESSION_VERSION, resolveWallsReplayPhase } from './types'
 import { encodeMaskBase64, maskHasInk } from './mask-codec'
 import { imageElementToPngDataUrl } from './image-capture'
 import { clonePlain } from './clone-plain'
 import { toStorableDevSession } from './storable'
-import {
-  cloneTabOutputsForSnapshot,
-  enrichWallsOutputWithFaceState,
-} from './tab-outputs-serialize'
+import { cloneTabOutputsForSnapshot, enrichWallsOutputWithFaceState } from './tab-outputs-serialize'
 
 function buildRoomSnapshot(input: DevSessionCaptureInput): DevWorkspaceRoomSnapshot {
   const snapshot: DevWorkspaceRoomSnapshot = {}

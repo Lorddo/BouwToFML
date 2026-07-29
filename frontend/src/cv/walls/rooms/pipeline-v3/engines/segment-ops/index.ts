@@ -280,9 +280,7 @@ type EndpointGroupMember = {
 
 function endpointsByteIdentical(group: EndpointGroupMember[]): boolean {
   const first = group[0]!
-  return group.every(
-    (item) => item.point.x === first.point.x && item.point.y === first.point.y,
-  )
+  return group.every((item) => item.point.x === first.point.x && item.point.y === first.point.y)
 }
 
 function groupMaxPairwiseDistance(group: EndpointGroupMember[]): number {

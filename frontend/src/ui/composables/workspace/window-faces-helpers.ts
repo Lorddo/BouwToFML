@@ -227,16 +227,11 @@ export function hypothesesWithStackEvidence(params: {
       const faceBbox = params.faceBboxByRoot.get(faceId)
       if (!faceBbox) continue
       bbox = unionFaceBBox(bbox, faceBbox)
-      const along =
-        hyp.orientation === 'horizontal' ? faceBbox.width : faceBbox.height
+      const along = hyp.orientation === 'horizontal' ? faceBbox.width : faceBbox.height
       if (along > maxAxisSpan) maxAxisSpan = along
     }
     const axisSpanPx =
-      maxAxisSpan > 0
-        ? maxAxisSpan
-        : hyp.orientation === 'horizontal'
-          ? bbox.width
-          : bbox.height
+      maxAxisSpan > 0 ? maxAxisSpan : hyp.orientation === 'horizontal' ? bbox.width : bbox.height
     return {
       ...hyp,
       faceIds,

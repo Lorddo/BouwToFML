@@ -1,4 +1,7 @@
-import { resolvePixelClassification, type RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
+import {
+  resolvePixelClassification,
+  type RoomRasterClass,
+} from '@/cv/walls/rooms/room-ink-classify'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import type { DoorSizeBandPx, DoorSwingRefBand } from './types'
@@ -69,7 +72,6 @@ const CLASS_PRIORITY: Record<RoomRasterClass, number> = {
   outside: 1,
 }
 
-
 export type RefMatch = {
   matchedRefIndex: number
   score: number
@@ -93,20 +95,18 @@ function computeAspect(bbox: { width: number; height: number }): number {
 }
 
 /** Lange as = muur/opening, korte as = draaidiepte (ondiepe boog). */
-function orientedWallDepth(
-  width: number,
-  height: number,
-): { wallPx: number; depthPx: number } {
-  return width >= height
-    ? { wallPx: width, depthPx: height }
-    : { wallPx: height, depthPx: width }
+function orientedWallDepth(width: number, height: number): { wallPx: number; depthPx: number } {
+  return width >= height ? { wallPx: width, depthPx: height } : { wallPx: height, depthPx: width }
 }
 
 function refSwingSpanPx(ref: DoorSwingRefBand): number {
   return Math.max(1, ref.swingSpanPx ?? 0, ref.swingWpx, ref.swingHpx)
 }
 
-function resolveRefWallDepthRatios(ref: DoorSwingRefBand): { wallRatio: number; depthRatio: number } {
+function resolveRefWallDepthRatios(ref: DoorSwingRefBand): {
+  wallRatio: number
+  depthRatio: number
+} {
   const span = refSwingSpanPx(ref)
   const fallbackWall = Math.max(ref.swingWpx, ref.swingHpx) / span
   const fallbackDepth = Math.min(ref.swingWpx, ref.swingHpx) / span
@@ -153,9 +153,7 @@ function fitsSizeBandForRef(
   const box = orientedWallDepth(bbox.width, bbox.height)
 
   const refWallMin = Math.max(1, Math.round(ref.wallPx * minRelax))
-  const wallMin = enforceAbsoluteWallMin
-    ? Math.max(sizeBand.wallMinPx, refWallMin)
-    : refWallMin
+  const wallMin = enforceAbsoluteWallMin ? Math.max(sizeBand.wallMinPx, refWallMin) : refWallMin
   const wallMax = Math.min(sizeBand.wallMaxPx, Math.round(ref.wallPx * maxRelax))
   if (wallMin > wallMax) return false
   if (box.wallPx < wallMin || box.wallPx > wallMax) return false

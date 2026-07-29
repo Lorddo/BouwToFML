@@ -2,13 +2,7 @@ import type { RasterRoomComponent } from './room-raster'
 import { resolveMergedLabel } from './room-raster-merge'
 
 export type RoomRasterClass =
-  | 'wall'
-  | 'surface'
-  | 'unknown'
-  | 'outside'
-  | 'door'
-  | 'window'
-  | 'doorframe'
+  'wall' | 'surface' | 'unknown' | 'outside' | 'door' | 'window' | 'doorframe'
 
 export type RoomClassificationGroupBy = 'merged' | 'component'
 

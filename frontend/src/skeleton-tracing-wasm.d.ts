@@ -7,7 +7,11 @@ declare module 'skeleton-tracing-wasm' {
   }
 
   interface SkeletonTracer {
-    fromBoolArray(data: ArrayLike<number | boolean>, width: number, height: number): SkeletonTraceResult
+    fromBoolArray(
+      data: ArrayLike<number | boolean>,
+      width: number,
+      height: number,
+    ): SkeletonTraceResult
   }
 
   export default class TraceSkeleton {

@@ -135,7 +135,14 @@ export function renderGroupedFacePolygonsCleanRgba(params: {
   const thickness = params.thickness ?? 2
   for (const part of params.parts) {
     if (part.polygon.length < 3) continue
-    drawClosedPolygon(out, params.width, params.height, part.polygon, ZONE_RGB[part.zone], thickness)
+    drawClosedPolygon(
+      out,
+      params.width,
+      params.height,
+      part.polygon,
+      ZONE_RGB[part.zone],
+      thickness,
+    )
   }
   return out
 }

@@ -12,7 +12,10 @@ function benchMs(fn: () => void, maxMs: number): number {
 }
 
 /** Simuleert plattegrond: dunne muren (ink) + grote witte vlakken. */
-function syntheticFloorPlan(width: number, height: number): {
+function syntheticFloorPlan(
+  width: number,
+  height: number,
+): {
   labelsData: Int32Array
   components: RasterRoomComponent[]
 } {
@@ -21,10 +24,7 @@ function syntheticFloorPlan(width: number, height: number): {
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const onBorder = x === 0 || y === 0 || x === width - 1 || y === height - 1
-      const onWall =
-        x % 80 === 0 ||
-        y % 60 === 0 ||
-        (x > 200 && x < 206 && y > 100 && y < 400)
+      const onWall = x % 80 === 0 || y % 60 === 0 || (x > 200 && x < 206 && y > 100 && y < 400)
       if (onWall) {
         labelsData[y * width + x] = 0
       } else if (onBorder) {
@@ -35,7 +35,9 @@ function syntheticFloorPlan(width: number, height: number): {
       }
     }
   }
-  const components: RasterRoomComponent[] = [{ label: 1, areaPx: 1, bbox: { x: 0, y: 0, width, height }, touchesBorder: true }]
+  const components: RasterRoomComponent[] = [
+    { label: 1, areaPx: 1, bbox: { x: 0, y: 0, width, height }, touchesBorder: true },
+  ]
   for (let label = 2; label < 42; label += 1) {
     components.push({
       label,
@@ -93,7 +95,12 @@ describe('room classify perf guards', () => {
       labelsData[(55 + i) * width + 100] = label
     }
     const components: RasterRoomComponent[] = [
-      { label: 10, areaPx: 10000, bbox: { x: 50, y: 50, width: 100, height: 100 }, touchesBorder: false },
+      {
+        label: 10,
+        areaPx: 10000,
+        bbox: { x: 50, y: 50, width: 100, height: 100 },
+        touchesBorder: false,
+      },
       ...Array.from({ length: 20 }, (_, i) => ({
         label: 20 + i,
         areaPx: 1,

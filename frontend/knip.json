@@ -2,17 +2,8 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": ["src/main.ts"],
   "project": ["src/**/*.{ts,vue}", "tests/**/*.ts"],
-  "ignore": [
-    "src/archive/**",
-    "tests/archive/**",
-    "src/**/*.d.ts",
-    "vite.config.d.ts"
-  ],
-  "ignoreDependencies": [
-    "@opencvjs/web",
-    "@tesseract.js-data/eng",
-    "@tesseract.js-data/nld"
-  ],
+  "ignore": ["src/archive/**", "tests/archive/**", "src/**/*.d.ts", "vite.config.d.ts"],
+  "ignoreDependencies": ["@opencvjs/web", "@tesseract.js-data/eng", "@tesseract.js-data/nld"],
   "ignoreExportsUsedInFile": {
     "interface": true,
     "type": true

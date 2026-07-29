@@ -227,8 +227,7 @@ export function runDoorStagePipeline(
     surroundFiltered.rejected.length +
     wallTouchFiltered.rejected.length
 
-  const bridgeClassification =
-    params.bridgeClassificationByLabel ?? detachedClassificationByLabel
+  const bridgeClassification = params.bridgeClassificationByLabel ?? detachedClassificationByLabel
   const bridgeResult = existingDoorsOnly
     ? { allFaceIds: [] as number[], byHypothesisId: new Map<string, number[]>() }
     : findDoorBridgeWallFaces({

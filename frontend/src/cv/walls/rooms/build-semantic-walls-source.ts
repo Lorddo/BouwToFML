@@ -6,10 +6,7 @@ import {
   directionsAtNode,
   type WallGraph,
 } from '@/cv/port/wallJunctionGraph'
-import {
-  SEMANTIC_JUNCTION_EPS_PX,
-  SEMANTIC_SEGMENT_CONFIDENCE,
-} from './semantic-wall-constants'
+import { SEMANTIC_JUNCTION_EPS_PX, SEMANTIC_SEGMENT_CONFIDENCE } from './semantic-wall-constants'
 
 export interface SemanticGraphFromFmlLayer {
   semantic: RoomWallSemanticGraph
@@ -47,19 +44,25 @@ export function buildSemanticGraphFromFmlLayer(walls: ExtractionOutput): Semanti
     x: node.x,
     y: node.y,
     kind: node.kind,
-    anglesDeg: computeJunctionAnglesDeg(node.kind, directionsAtNode(node.id, wallGraph.edges, wallGraph.nodes)),
+    anglesDeg: computeJunctionAnglesDeg(
+      node.kind,
+      directionsAtNode(node.id, wallGraph.edges, wallGraph.nodes),
+    ),
     source: 'raw' as const,
   }))
-  const angleAtLeast25Count = (source?.junctions ?? []).filter((junction) => junction.angleDeg >= 25).length
+  const angleAtLeast25Count = (source?.junctions ?? []).filter(
+    (junction) => junction.angleDeg >= 25,
+  ).length
   return {
     semantic: {
       segments: wallGraph.edges.map((edge) => {
         return {
           a: { x: edge.segment.a.x, y: edge.segment.a.y },
           b: { x: edge.segment.b.x, y: edge.segment.b.y },
-          thicknessPxMax: Number((edge.segment as { thicknessPx?: number }).thicknessPx) > 0
-            ? Number((edge.segment as { thicknessPx?: number }).thicknessPx)
-            : 0,
+          thicknessPxMax:
+            Number((edge.segment as { thicknessPx?: number }).thicknessPx) > 0
+              ? Number((edge.segment as { thicknessPx?: number }).thicknessPx)
+              : 0,
           junctionAId: edge.a,
           junctionBId: edge.b,
         }

@@ -4,10 +4,7 @@
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt } from '../segment-ops'
-import {
-  collectChamferChainSegmentIndices,
-  walkDiagonalChamferChain,
-} from './chamfer-chain'
+import { collectChamferChainSegmentIndices, walkDiagonalChamferChain } from './chamfer-chain'
 import { LAYER6_GROUP_EXPAND_MAX_STEPS } from './constants'
 import { classifyLayer6Segment } from './segment-classify'
 
@@ -71,7 +68,8 @@ export function collectDiagonalGroupIndices(params: {
       for (const point of [seg.a, seg.b]) {
         for (const inc of incidentAt(params.segments, point, params.endpointSnapPx)) {
           if (indices.has(inc.segIndex)) continue
-          if (classifyLayer6Segment(inc.segment, inc.segIndex, params.hvBandPx).kind !== 'D') continue
+          if (classifyLayer6Segment(inc.segment, inc.segIndex, params.hvBandPx).kind !== 'D')
+            continue
           if (inc.lengthPx > params.maxStubPx) continue
           if (totalLen + inc.lengthPx > params.maxChainPx) continue
           indices.add(inc.segIndex)

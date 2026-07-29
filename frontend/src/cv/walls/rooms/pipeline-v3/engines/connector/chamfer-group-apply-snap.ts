@@ -25,17 +25,11 @@ export function snapArmToHit(params: {
   const shift = Math.hypot(end.x - params.hit.x, end.y - params.hit.y)
   if (shift > params.maxArmShift) return
   if (
-    !params.allowLongSegment
-    && segmentLength(seg) > params.maxArmShift * 3
-    && shift > (params.longSegmentShiftGuardPx ?? 8)
+    !params.allowLongSegment &&
+    segmentLength(seg) > params.maxArmShift * 3 &&
+    shift > (params.longSegmentShiftGuardPx ?? 8)
   ) {
     return
   }
-  replaceSegmentEndpoint(
-    params.segments,
-    params.segIndex,
-    end,
-    params.hit,
-    endpointSnapPx,
-  )
+  replaceSegmentEndpoint(params.segments, params.segIndex, end, params.hit, endpointSnapPx)
 }

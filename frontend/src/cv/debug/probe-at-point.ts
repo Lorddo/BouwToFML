@@ -1,14 +1,7 @@
 import { pointToSegmentDistancePx } from '@/platform/export/layer-debug/segment-geometry'
 import type { RoomJunctionRecord, SegmentRecord } from '@/platform/export/examples-report'
-import type {
-  FlatProbeLayer,
-  FlattenedProbeLayers,
-  ProbeLayerKey,
-} from './flatten-output-layers'
-import {
-  formatProbeLayerLabel,
-  probeLayerJsonPath,
-} from './flatten-output-layers'
+import type { FlatProbeLayer, FlattenedProbeLayers, ProbeLayerKey } from './flatten-output-layers'
+import { formatProbeLayerLabel, probeLayerJsonPath } from './flatten-output-layers'
 import type { ProbeFaceHit } from './probe-faces'
 
 export type ProbeSampleKind = 'point' | 'region'
@@ -158,12 +151,8 @@ export function probeLayersAtPoint(
       matchJunction: () => true,
       junctionDistance: (junction) => dist(point, junction),
     })
-    segments.push(
-      ...hits.segments.filter((hit) => hit.distancePx <= radiusPx),
-    )
-    junctions.push(
-      ...hits.junctions.filter((hit) => hit.distancePx <= radiusPx),
-    )
+    segments.push(...hits.segments.filter((hit) => hit.distancePx <= radiusPx))
+    junctions.push(...hits.junctions.filter((hit) => hit.distancePx <= radiusPx))
   }
 
   return {

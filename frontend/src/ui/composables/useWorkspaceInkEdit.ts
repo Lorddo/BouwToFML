@@ -31,9 +31,7 @@ export function useWorkspaceInkEdit(deps: {
     () => deps.flowStep.value === 'preprocess' || deps.flowStep.value === 'templates',
   )
 
-  const canvasInkTool = computed(() =>
-    inkToolbeltVisible.value ? activeInkTool.value : null,
-  )
+  const canvasInkTool = computed(() => (inkToolbeltVisible.value ? activeInkTool.value : null))
 
   function syncCanUndo() {
     canUndoInkEdit.value = editHistory.canUndo()

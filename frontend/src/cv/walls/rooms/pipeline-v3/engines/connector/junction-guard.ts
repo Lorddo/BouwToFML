@@ -68,8 +68,7 @@ export function txJunctionsPreservedInGraph(
         return node.kind === 'X'
       })
       .sort(
-        (a, b) =>
-          Math.hypot(a.x - ref.x, a.y - ref.y) - Math.hypot(b.x - ref.x, b.y - ref.y),
+        (a, b) => Math.hypot(a.x - ref.x, a.y - ref.y) - Math.hypot(b.x - ref.x, b.y - ref.y),
       )[0]
     if (!near) return false
   }
@@ -87,8 +86,7 @@ export function lJunctionsPreservedInGraph(
     const near = graph.nodes
       .filter((node) => Math.hypot(node.x - ref.x, node.y - ref.y) <= radiusPx)
       .sort(
-        (a, b) =>
-          Math.hypot(a.x - ref.x, a.y - ref.y) - Math.hypot(b.x - ref.x, b.y - ref.y),
+        (a, b) => Math.hypot(a.x - ref.x, a.y - ref.y) - Math.hypot(b.x - ref.x, b.y - ref.y),
       )[0]
     if (!near) continue
     if (near.kind === 'I') return false

@@ -24,12 +24,7 @@ export async function collectWindowAxelRefBands(params: {
   baseBw?: { data: Uint8Array; width: number; height: number } | null
 }): Promise<WindowAxelRefBand[]> {
   const sharedWallBwMat = params.baseBw
-    ? grayMatFromBwBytes(
-        params.cv,
-        params.baseBw.data,
-        params.baseBw.width,
-        params.baseBw.height,
-      )
+    ? grayMatFromBwBytes(params.cv, params.baseBw.data, params.baseBw.width, params.baseBw.height)
     : undefined
   try {
     const refBands: WindowAxelRefBand[] = []

@@ -74,7 +74,8 @@ export function useWorkspaceOverlays(deps: {
   roomPhase?: Ref<RoomPhase>
 }) {
   const showWallGeometry = computed(() => {
-    if (deps.flowStep.value === 'templates') return usesWallDetectionOverlays(deps.templateTab.value)
+    if (deps.flowStep.value === 'templates')
+      return usesWallDetectionOverlays(deps.templateTab.value)
     if (deps.flowStep.value === 'result') {
       return deps.resultTab.value !== 'vector'
     }
@@ -193,10 +194,7 @@ export function useWorkspaceOverlays(deps: {
       phase === 'finalizing' ||
       phase === 'done'
     ) {
-      return !!(
-        deps.roomPreviewMaskCanvas?.value ??
-        rasterOverlaySrc.value
-      )
+      return !!(deps.roomPreviewMaskCanvas?.value ?? rasterOverlaySrc.value)
     }
     return !!rasterOverlaySrc.value
   })
@@ -233,8 +231,7 @@ export function useWorkspaceOverlays(deps: {
     const onDetectStep = deps.flowStep.value === 'templates' || deps.flowStep.value === 'result'
 
     if (onDetectStep && deps.showWallLines.value && showWallGeometry.value) {
-      const layers =
-        output?.pipelineV3Debug?.layers
+      const layers = output?.pipelineV3Debug?.layers
       const layer1Segments = layers?.layer1?.segments ?? []
       const layer2Segments = layers?.layer2?.segments ?? []
       const layer3Segments = layers?.layer3?.segments ?? []

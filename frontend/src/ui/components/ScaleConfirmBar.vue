@@ -56,9 +56,7 @@ const emit = defineEmits<{
       </div>
     </template>
     <template v-else>
-      <button type="button" class="primary" @click="emit('toggleOpen')">
-        Schalen openen
-      </button>
+      <button type="button" class="primary" @click="emit('toggleOpen')">Schalen openen</button>
     </template>
   </div>
 </template>

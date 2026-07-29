@@ -192,8 +192,7 @@ function buildWindowOrnament(params: {
   const unitW = { x: wallStage.x / wLen, y: wallStage.y / wLen }
   const startAngle = Math.atan2(unitW.y, unitW.x)
   // Geflipte boog t.o.v. −normal (platte kant blijft diameter langs muur).
-  const sweepSign =
-    unitW.x * unitN.y - unitW.y * unitN.x >= 0 ? -1 : 1
+  const sweepSign = unitW.x * unitN.y - unitW.y * unitN.x >= 0 ? -1 : 1
   const points: number[] = []
   const samples = 16
   for (let i = 0; i <= samples; i += 1) {
@@ -229,10 +228,7 @@ function doorDirectionLabel(opening: Opening): string {
   return `${side}, ${hinge}`
 }
 
-export function doorGroupDetail(group: {
-  openings: Opening[]
-  isDouble: boolean
-}): string {
+export function doorGroupDetail(group: { openings: Opening[]; isDouble: boolean }): string {
   const parts: string[] = []
   const refid = group.openings[0]?.refid
   if (refid) parts.push(refid.slice(0, 12))

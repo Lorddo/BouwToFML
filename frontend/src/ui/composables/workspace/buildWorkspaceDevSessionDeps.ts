@@ -6,10 +6,7 @@ import type { DrawingProfileId } from '@/platform/profile'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { ResultViewTab, TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { TemplateTab, PreprocessPanelLayer } from '@/cv/preprocess/layer-preprocess'
-import {
-  serializeFaceOverrides,
-  serializePinnedRoots,
-} from '@/cv/walls/rooms/room-raster-cache'
+import { serializeFaceOverrides, serializePinnedRoots } from '@/cv/walls/rooms/room-raster-cache'
 import type { DevWallReferenceRect } from '@/platform/dev-workspace/types'
 import type { ElementClass, SelectionRect } from '@/platform/selection/types'
 import type { WorkspaceFlowStep } from './constants'
@@ -27,7 +24,10 @@ export function buildWorkspaceDevSessionDeps(ctx: {
   drawingProfileId: Ref<DrawingProfileId>
   wallPipelineVersion: Ref<WallPipelineVersion>
   scale: ReturnType<typeof useHScaleCalibration>
-  scaleUi: Pick<ReturnType<typeof useWorkspaceScale>, 'resetScaleFull' | 'restoreFromSessionSnapshot'>
+  scaleUi: Pick<
+    ReturnType<typeof useWorkspaceScale>,
+    'resetScaleFull' | 'restoreFromSessionSnapshot'
+  >
   inputMask: {
     eraserMask: Ref<Uint8Array | null>
     eraserTouched: Ref<boolean>

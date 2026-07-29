@@ -5,16 +5,10 @@ import { grayMatFromBwBytes } from '@/cv/refs/ref-crop-bw'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
-import {
-  resolveFloorDual,
-  type RoomRasterCache,
-} from '@/cv/walls/rooms/room-raster-cache'
+import { resolveFloorDual, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import type { SelectionRect } from '@/platform/selection'
 import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
-import {
-  resolveDoorRefKind,
-  signatureForDoorRects,
-} from './useWorkspaceDoorSwingHelpers'
+import { resolveDoorRefKind, signatureForDoorRects } from './useWorkspaceDoorSwingHelpers'
 
 function fingerprintBaseBw(
   baseBw: { data: Uint8Array; width: number; height: number } | null | undefined,
@@ -134,12 +128,7 @@ export function createDoorSwingComputationCache() {
       return refBandCache.bands
     }
     const sharedWallBwMat = params.baseBw
-      ? grayMatFromBwBytes(
-          params.cv,
-          params.baseBw.data,
-          params.baseBw.width,
-          params.baseBw.height,
-        )
+      ? grayMatFromBwBytes(params.cv, params.baseBw.data, params.baseBw.width, params.baseBw.height)
       : undefined
     try {
       const bands: DoorSwingRefBand[] = []

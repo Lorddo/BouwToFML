@@ -19,9 +19,7 @@ import { weldNearEndpoints } from './engines/weld'
 import { resolveLayer8FinalizePolicy } from './policies/layer-8'
 import type { PipelineV3Layer7Result, PipelineV3Layer8Result } from './types'
 
-function countJunctionKinds(
-  junctions: RoomWallJunction[],
-): Record<'I' | 'L' | 'T' | 'X', number> {
+function countJunctionKinds(junctions: RoomWallJunction[]): Record<'I' | 'L' | 'T' | 'X', number> {
   const counts: Record<'I' | 'L' | 'T' | 'X', number> = { I: 0, L: 0, T: 0, X: 0 }
   for (const junction of junctions) counts[junction.kind] += 1
   return counts

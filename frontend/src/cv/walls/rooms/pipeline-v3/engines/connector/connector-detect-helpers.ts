@@ -2,10 +2,7 @@
  * L6 connector-detect — shared pick / synthetic-V helpers.
  */
 import type { Segment } from '@/cv/port/wallGraph'
-import {
-  buildSyntheticBranchSegmentAtT,
-  resolveChamferBranchTipFromT,
-} from './chamfer-chain'
+import { buildSyntheticBranchSegmentAtT, resolveChamferBranchTipFromT } from './chamfer-chain'
 import { pickDominantChainIncident } from './collinear-chain'
 
 export type IncidentRef = {
@@ -50,7 +47,8 @@ export function resolveSyntheticVFromChamferChain(params: {
     endpointSnapPx: params.endpointSnapPx,
   })
   if (!tip) return null
-  if (Math.hypot(tip.x - params.hAnchor.x, tip.y - params.hAnchor.y) < params.shortHStubPx) return null
+  if (Math.hypot(tip.x - params.hAnchor.x, tip.y - params.hAnchor.y) < params.shortHStubPx)
+    return null
   return buildSyntheticBranchSegmentAtT({
     tPoint: params.hAnchor,
     tipPoint: tip,

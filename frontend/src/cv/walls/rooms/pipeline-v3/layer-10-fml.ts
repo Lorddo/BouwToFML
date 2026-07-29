@@ -14,10 +14,7 @@ import {
   straightenCollinearAxisChains,
   withTopologyGuard,
 } from './engines/collapse'
-import {
-  dedupeExactSegments,
-  rebuildFaceFromSegments,
-} from './engines/segment-ops'
+import { dedupeExactSegments, rebuildFaceFromSegments } from './engines/segment-ops'
 import { resolveLayer10FmlPolicy } from './policies/layer-10'
 import type { PipelineV3Layer9Result, PipelineV3Layer10Result } from './types'
 
@@ -108,12 +105,7 @@ export function runLayer10Fml(params: {
     const deduped = dedupeExactSegments(segmentsOut, 0)
     dedupedCount += deduped.removed
 
-    const readyFace = rebuildFaceFromSegments(
-      face,
-      deduped.segments,
-      policy.weld,
-      policy.junction,
-    )
+    const readyFace = rebuildFaceFromSegments(face, deduped.segments, policy.weld, policy.junction)
     facesReady.push(readyFace)
     allSegmentsReady.push(...deduped.segments)
     allJunctionsReady.push(...readyFace.junctions)

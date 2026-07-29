@@ -39,7 +39,8 @@ export function useFloorplanCanvasImage(deps: {
         deps.onImageLoaded(img.naturalWidth, img.naturalHeight)
         const stage = deps.getStage()
         if (stage) {
-          const sameSize = hadImage && prevSize.w === img.naturalWidth && prevSize.h === img.naturalHeight
+          const sameSize =
+            hadImage && prevSize.w === img.naturalWidth && prevSize.h === img.naturalHeight
           if (!sameSize) {
             deps.fitToScreen(stage, img.naturalWidth, img.naturalHeight)
             stageScale.value = Math.max(0.01, stage.scaleX())

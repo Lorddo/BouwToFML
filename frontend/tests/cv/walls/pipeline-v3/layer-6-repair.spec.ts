@@ -19,11 +19,7 @@ import {
 import type { PipelineV3Layer5Result } from '@/cv/walls/rooms/pipeline-v3/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const FIXTURE_47 = path.join(
-  __dirname,
-  'fixtures',
-  'BouwTek11-layer-debug-v2-47.json',
-)
+const FIXTURE_47 = path.join(__dirname, 'fixtures', 'BouwTek11-layer-debug-v2-47.json')
 
 function makeLayer5(segments: Segment[]): PipelineV3Layer5Result {
   const cloned = segments.map((s) => ({ ...s, a: { ...s.a }, b: { ...s.b } }))
@@ -105,10 +101,19 @@ const WEST_L5: Segment[] = [
 
 /** 2D_3E koof @572 — diag@587 mag T@572 niet kapot trekken. */
 const KOOF_L5: Segment[] = [
-  { a: { x: 572.608069822705, y: 316.95254937885363 }, b: { x: 544.3333333333331, y: 316.9525493788537 } },
-  { a: { x: 572.6080698462956, y: 377.49999999999994 }, b: { x: 572.608069822705, y: 316.95254937885363 } },
+  {
+    a: { x: 572.608069822705, y: 316.95254937885363 },
+    b: { x: 544.3333333333331, y: 316.9525493788537 },
+  },
+  {
+    a: { x: 572.6080698462956, y: 377.49999999999994 },
+    b: { x: 572.608069822705, y: 316.95254937885363 },
+  },
   { a: { x: 587.5, y: 316.9525493788536 }, b: { x: 572.608069822705, y: 316.95254937885363 } },
-  { a: { x: 544.3333333333331, y: 316.9525493788537 }, b: { x: 531.5244112486043, y: 317.8511369563207 } },
+  {
+    a: { x: 544.3333333333331, y: 316.9525493788537 },
+    b: { x: 531.5244112486043, y: 317.8511369563207 },
+  },
   { a: { x: 928, y: 316.95254937885363 }, b: { x: 587.5, y: 316.9525493788536 } },
   { a: { x: 590.780775389251, y: 308 }, b: { x: 587.5, y: 316.9525493788536 } },
   { a: { x: 531.5244112486043, y: 317.8511369563207 }, b: { x: 48, y: 317.875 } },
@@ -218,11 +223,11 @@ describe('V3 layer-6 export 47 regressie', () => {
     const afterGraph = buildConnectorJunctionGraph(layer6.allSegmentsRepaired)
     const eastTx = afterGraph.nodes.filter(
       (n) =>
-        (n.kind === 'T' || n.kind === 'X')
-        && n.x >= zoneEast.x0
-        && n.x <= zoneEast.x1
-        && n.y >= 30
-        && n.y <= 70,
+        (n.kind === 'T' || n.kind === 'X') &&
+        n.x >= zoneEast.x0 &&
+        n.x <= zoneEast.x1 &&
+        n.y >= 30 &&
+        n.y <= 70,
     )
     expect(eastTx.length).toBeGreaterThanOrEqual(1)
 
@@ -253,8 +258,8 @@ describe('V3 layer-6 west T-jog', () => {
     expect(
       graph.nodes.some(
         (n) =>
-          (n.kind === 'L' || n.kind === 'T' || n.kind === 'X')
-          && Math.hypot(n.x - 645.37, n.y - 45.42) <= 3,
+          (n.kind === 'L' || n.kind === 'T' || n.kind === 'X') &&
+          Math.hypot(n.x - 645.37, n.y - 45.42) <= 3,
       ),
     ).toBe(true)
 
@@ -305,9 +310,7 @@ describe('V3 layer-6 2D_3E koof @572', () => {
     expect(afterKinds.T).toBeGreaterThanOrEqual(1)
     expect(
       graph.nodes.some(
-        (n) =>
-          (n.kind === 'T' || n.kind === 'X')
-          && Math.hypot(n.x - 572.6, n.y - 317) <= 4,
+        (n) => (n.kind === 'T' || n.kind === 'X') && Math.hypot(n.x - 572.6, n.y - 317) <= 4,
       ),
     ).toBe(true)
   })
@@ -352,9 +355,7 @@ describe('V3 layer-6 through-V T chamfer @1489', () => {
     const graph = buildConnectorJunctionGraph(segs)
     expect(
       graph.nodes.some(
-        (n) =>
-          (n.kind === 'T' || n.kind === 'X')
-          && Math.hypot(n.x - 1515.26, n.y - 907.7) <= 4,
+        (n) => (n.kind === 'T' || n.kind === 'X') && Math.hypot(n.x - 1515.26, n.y - 907.7) <= 4,
       ),
     ).toBe(true)
   })

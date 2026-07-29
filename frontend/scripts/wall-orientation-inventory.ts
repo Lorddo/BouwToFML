@@ -10,7 +10,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
-const DEFAULT_OUT = path.resolve(ROOT, '..', '.cursor', 'tests', 'artifacts', 'wall-orientation-inventory.json')
+const DEFAULT_OUT = path.resolve(
+  ROOT,
+  '..',
+  '.cursor',
+  'tests',
+  'artifacts',
+  'wall-orientation-inventory.json',
+)
 
 type FindingType = 'M' | 'D' | 'O' | 'A' | 'X' | 'T'
 
@@ -105,31 +112,33 @@ function main(): void {
   const files = collectFiles()
   const generatedAt = new Date().toISOString().slice(0, 10)
 
-  const fileReports = files.map((filePath) => {
-    const content = fs.readFileSync(filePath, 'utf8')
-    const rel = path.relative(ROOT, filePath).replace(/\\/g, '/')
-    const patterns = PATTERNS.map((rule) => {
-      const count = countMatches(content, rule.regex)
-      if (count === 0) return null
+  const fileReports = files
+    .map((filePath) => {
+      const content = fs.readFileSync(filePath, 'utf8')
+      const rel = path.relative(ROOT, filePath).replace(/\\/g, '/')
+      const patterns = PATTERNS.map((rule) => {
+        const count = countMatches(content, rule.regex)
+        if (count === 0) return null
+        return {
+          type: rule.type,
+          label: rule.label,
+          count,
+          lines: lineNumbers(content, rule.regex).slice(0, 20),
+        }
+      }).filter(Boolean)
+
+      const hasHBranch = countMatches(content, /\bisHorizontalAngle\s*\(/g) > 0
+      const hasVBranch = countMatches(content, /\bisVerticalAngle\s*\(/g) > 0
+      const duplicateHV = hasHBranch && hasVBranch
+
       return {
-        type: rule.type,
-        label: rule.label,
-        count,
-        lines: lineNumbers(content, rule.regex).slice(0, 20),
+        file: rel,
+        patternHits: patterns,
+        duplicateHVBranches: duplicateHV,
+        totalHits: patterns.reduce((sum, p) => sum + (p?.count ?? 0), 0),
       }
-    }).filter(Boolean)
-
-    const hasHBranch = countMatches(content, /\bisHorizontalAngle\s*\(/g) > 0
-    const hasVBranch = countMatches(content, /\bisVerticalAngle\s*\(/g) > 0
-    const duplicateHV = hasHBranch && hasVBranch
-
-    return {
-      file: rel,
-      patternHits: patterns,
-      duplicateHVBranches: duplicateHV,
-      totalHits: patterns.reduce((sum, p) => sum + (p?.count ?? 0), 0),
-    }
-  }).filter((r) => r.totalHits > 0 || r.duplicateHVBranches)
+    })
+    .filter((r) => r.totalHits > 0 || r.duplicateHVBranches)
 
   const byType: Record<FindingType, number> = { M: 0, D: 0, O: 0, A: 0, X: 0, T: 0 }
   for (const report of fileReports) {
@@ -141,7 +150,11 @@ function main(): void {
   const oneSidedExports = fileReports
     .flatMap((r) =>
       r.patternHits
-        .filter((p) => p && (p.label.includes('Horizontal in export') || p.label.includes('Vertical in export')))
+        .filter(
+          (p) =>
+            p &&
+            (p.label.includes('Horizontal in export') || p.label.includes('Vertical in export')),
+        )
         .map((p) => ({ file: r.file, label: p!.label, count: p!.count })),
     )
     .filter((x) => x.count > 0)

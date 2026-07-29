@@ -151,8 +151,7 @@ export async function recalculateFaces(ctx: {
     return { success: false, nextCache: null, nextTabOutputs: null }
   }
 
-  const cache =
-    ctx.roomRasterCache ?? ctx.restoreCacheFromOutput(ctx.wallsOutput)
+  const cache = ctx.roomRasterCache ?? ctx.restoreCacheFromOutput(ctx.wallsOutput)
   if (!cache) {
     ctx.setStatus?.('Geen classificatie-state — eerst autoclassificeren.')
     return { success: false, nextCache: null, nextTabOutputs: null }

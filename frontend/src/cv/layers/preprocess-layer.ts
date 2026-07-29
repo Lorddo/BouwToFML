@@ -1,7 +1,12 @@
 import type { LayerContext, PreprocessResult } from './types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { ensureBlackInkOnWhiteBackground } from '@/cv/port/binaryPolarity'
-import { binarizeMat, matToCanvas, toGrayscaleMat, uiBrightnessToOpenCv } from '@/cv/port/preprocess'
+import {
+  binarizeMat,
+  matToCanvas,
+  toGrayscaleMat,
+  uiBrightnessToOpenCv,
+} from '@/cv/port/preprocess'
 import { despeckleByMinArea } from '@/cv/port/despeckle'
 import { maskHasInk } from '@/cv/tools/polygon'
 import { rotateMatExpandBounds } from '@/cv/tools/rotateMat'
@@ -24,7 +29,12 @@ function applyEraserMask(cv: OpenCV, mat: OpenCV['Mat'], mask?: Uint8Array): voi
   maskMat.delete()
 }
 
-function applyBrightnessContrast(cv: OpenCV, mat: OpenCV['Mat'], brightness: number, contrast: number): OpenCV['Mat'] {
+function applyBrightnessContrast(
+  cv: OpenCV,
+  mat: OpenCV['Mat'],
+  brightness: number,
+  contrast: number,
+): OpenCV['Mat'] {
   if (brightness === 0 && contrast === 1) return mat
   const out = new cv.Mat()
   mat.convertTo(out, -1, contrast, brightness)
@@ -145,7 +155,10 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
   }
 }
 
-export function runPreprocessLayerFromGrayscale(ctx: LayerContext, gray: OpenCV['Mat']): PreprocessResult {
+export function runPreprocessLayerFromGrayscale(
+  ctx: LayerContext,
+  gray: OpenCV['Mat'],
+): PreprocessResult {
   return runBinarizedPreprocessFromGray(ctx, gray)
 }
 
@@ -159,7 +172,10 @@ export function runPreprocessLayer(ctx: LayerContext): PreprocessResult {
 }
 
 /** B/W + grijs voor OCR-scan — één gedeelde grijswaarden-pass (Tesseract op beide). */
-export function runOcrScanLayers(ctx: LayerContext): { bw: PreprocessResult; grayscale: PreprocessResult } {
+export function runOcrScanLayers(ctx: LayerContext): {
+  bw: PreprocessResult
+  grayscale: PreprocessResult
+} {
   const { cv, eraserMask, preprocess } = ctx
   const gray = buildGrayscalePreMat(ctx)
   const grayForOcr = gray.clone()

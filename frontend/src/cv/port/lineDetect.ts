@@ -45,9 +45,7 @@ function segmentLength(seg: Segment): number {
 
 function dedupeSegments(seed: Segment[], incoming: Segment[]): Segment[] {
   const merged = [...seed]
-  const seen = new Set(
-    seed.map((seg) => keyForSegment(seg.a.x, seg.a.y, seg.b.x, seg.b.y)),
-  )
+  const seen = new Set(seed.map((seg) => keyForSegment(seg.a.x, seg.a.y, seg.b.x, seg.b.y)))
   for (const seg of incoming) {
     const key = keyForSegment(seg.a.x, seg.a.y, seg.b.x, seg.b.y)
     if (seen.has(key)) continue
@@ -164,11 +162,7 @@ function mergeHorizontalRuns(
 
   for (const item of sorted) {
     const prev = merged[merged.length - 1]
-    if (
-      prev &&
-      Math.abs(prev.y - item.y) <= axisAlignTolPx &&
-      item.x0 <= prev.x1 + mergeGapPx
-    ) {
+    if (prev && Math.abs(prev.y - item.y) <= axisAlignTolPx && item.x0 <= prev.x1 + mergeGapPx) {
       prev.x1 = Math.max(prev.x1, item.x1)
       prev.y = Math.round((prev.y + item.y) / 2)
     } else {
@@ -193,11 +187,7 @@ function mergeVerticalRuns(
 
   for (const item of sorted) {
     const prev = merged[merged.length - 1]
-    if (
-      prev &&
-      Math.abs(prev.x - item.x) <= axisAlignTolPx &&
-      item.y0 <= prev.y1 + mergeGapPx
-    ) {
+    if (prev && Math.abs(prev.x - item.x) <= axisAlignTolPx && item.y0 <= prev.y1 + mergeGapPx) {
       prev.y1 = Math.max(prev.y1, item.y1)
       prev.x = Math.round((prev.x + item.x) / 2)
     } else {

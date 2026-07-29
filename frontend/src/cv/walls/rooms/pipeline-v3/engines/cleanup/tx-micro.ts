@@ -55,7 +55,8 @@ export function cleanupTxMicroSegments(
       i += 1
       continue
     }
-    const hubIsA = atA.length > atB.length ? true : atB.length > atA.length ? false : atA.length >= 2
+    const hubIsA =
+      atA.length > atB.length ? true : atB.length > atA.length ? false : atA.length >= 2
     const leafIncidents = hubIsA ? atB : atA
     if (leafIncidents.length === 0) {
       i += 1

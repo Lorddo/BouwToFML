@@ -35,7 +35,9 @@ function resolveComponentLabel(
 }
 
 /** Pixel-omtrek + bbox per face-component (voor handmatige override-migratie). */
-export function computeFaceSignatures(state: SerializedRoomClassifyState): Map<number, FaceComponentSignature> {
+export function computeFaceSignatures(
+  state: SerializedRoomClassifyState,
+): Map<number, FaceComponentSignature> {
   const { width, height, labelsData } = state
   const parentMap = mapFromEntries(state.parentMap)
   const groupBy = state.classificationGroupBy ?? 'component'
@@ -182,9 +184,7 @@ export function collectSpatialAssignmentsForMigration(params: {
   const seen = new Set<string>()
 
   const labelsToMigrate =
-    params.pinnedRoots.size > 0
-      ? [...params.pinnedRoots]
-      : [...params.priorOverrides.keys()]
+    params.pinnedRoots.size > 0 ? [...params.pinnedRoots] : [...params.priorOverrides.keys()]
 
   for (const label of labelsToMigrate) {
     const centroid = centroids.get(label)
@@ -234,7 +234,12 @@ function resolveFaceLabelAtPosition(
 function applySpatialFaceOverrides(
   newState: SerializedRoomClassifyState,
   assignments: FaceSpatialAssignment[],
-): { faceOverrides: Map<number, RoomRasterClass>; pinnedRoots: Set<number>; applied: number; dropped: number } {
+): {
+  faceOverrides: Map<number, RoomRasterClass>
+  pinnedRoots: Set<number>
+  applied: number
+  dropped: number
+} {
   const faceOverrides = new Map<number, RoomRasterClass>()
   const pinnedRoots = new Set<number>()
   if (assignments.length === 0) {
@@ -242,20 +247,13 @@ function applySpatialFaceOverrides(
   }
 
   const { width, height, labelsData } = newState
-  const labels =
-    labelsData instanceof Int32Array ? labelsData : new Int32Array(labelsData)
+  const labels = labelsData instanceof Int32Array ? labelsData : new Int32Array(labelsData)
   const claimed = new Set<number>()
   let applied = 0
   let dropped = 0
 
   for (const assignment of assignments) {
-    const matchLabel = resolveFaceLabelAtPosition(
-      labels,
-      width,
-      height,
-      assignment.x,
-      assignment.y,
-    )
+    const matchLabel = resolveFaceLabelAtPosition(labels, width, height, assignment.x, assignment.y)
     if (matchLabel == null || claimed.has(matchLabel)) {
       dropped += 1
       continue
@@ -275,7 +273,12 @@ export function migratePinnedOverridesSpatially(params: {
   priorOverrides: Map<number, RoomRasterClass>
   pinnedRoots: Set<number>
   newState: SerializedRoomClassifyState
-}): { faceOverrides: Map<number, RoomRasterClass>; pinnedRoots: Set<number>; applied: number; dropped: number } {
+}): {
+  faceOverrides: Map<number, RoomRasterClass>
+  pinnedRoots: Set<number>
+  applied: number
+  dropped: number
+} {
   const assignments = collectSpatialAssignmentsForMigration({
     state: params.priorState,
     priorOverrides: params.priorOverrides,

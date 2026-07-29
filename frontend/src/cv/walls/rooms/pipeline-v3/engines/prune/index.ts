@@ -56,12 +56,20 @@ function weldNearEndpointsForGraph(segments: Segment[], weldGapPx: number): Segm
     changed = false
     outer: for (let i = 0; i < work.length; i += 1) {
       const seg = work[i]!
-      const refs: Array<{ segIndex: number; endpoint: 'a' | 'b'; point: { x: number; y: number } }> = [
+      const refs: Array<{
+        segIndex: number
+        endpoint: 'a' | 'b'
+        point: { x: number; y: number }
+      }> = [
         { segIndex: i, endpoint: 'a', point: seg.a },
         { segIndex: i, endpoint: 'b', point: seg.b },
       ]
       for (const ref of refs) {
-        const group: Array<{ segIndex: number; endpoint: 'a' | 'b'; point: { x: number; y: number } }> = []
+        const group: Array<{
+          segIndex: number
+          endpoint: 'a' | 'b'
+          point: { x: number; y: number }
+        }> = []
         const seen = new Set<string>()
         for (let j = 0; j < work.length; j += 1) {
           const candidate = work[j]!
@@ -210,10 +218,7 @@ function directionAwayFromNode(
   return { x: dx / len, y: dy / len }
 }
 
-function pathIsStructuralHvOnly(
-  pathSegments: Segment[],
-  hvBandPx: number,
-): boolean {
+function pathIsStructuralHvOnly(pathSegments: Segment[], hvBandPx: number): boolean {
   return pathSegments.every((seg, index) => {
     const kind = classifyLayer6Segment(seg, index, hvBandPx).kind
     return kind === 'H' || kind === 'V'
@@ -272,7 +277,8 @@ export function tracePathFromIToFirstTx(params: {
       (node) =>
         node.kind === 'I' && endpointNearPoint(node, params.iPoint, params.policy.endpointEpsPx),
     ) ?? null
-  if (!startNode) return { pathSegments: [], pathLengthPx: 0, reachedTx: false, reachedTerminal: false }
+  if (!startNode)
+    return { pathSegments: [], pathLengthPx: 0, reachedTx: false, reachedTerminal: false }
   return tracePathFromNodeToFirstTerminal({
     graph,
     startNode,

@@ -88,9 +88,10 @@ export const DRAWING_PROFILES: DrawingProfile[] = [
   ),
 ]
 
-const profileById = Object.fromEntries(
-  DRAWING_PROFILES.map((item) => [item.id, item]),
-) as Record<DrawingProfileId, DrawingProfile>
+const profileById = Object.fromEntries(DRAWING_PROFILES.map((item) => [item.id, item])) as Record<
+  DrawingProfileId,
+  DrawingProfile
+>
 
 export function getDrawingProfile(id: DrawingProfileId): DrawingProfile {
   return profileById[id] ?? profileById[DEFAULT_PROFILE_ID]
@@ -125,8 +126,14 @@ export function defaultRoomInkThresholdForProfile(id: DrawingProfileId): number 
 }
 
 export function detectionPresetForProfile(id: DrawingProfileId): DetectionPreset {
-  const { id: _id, label: _label, tagline: _tagline, description: _desc, expectations: _exp, ...preset } =
-    getDrawingProfile(id)
+  const {
+    id: _id,
+    label: _label,
+    tagline: _tagline,
+    description: _desc,
+    expectations: _exp,
+    ...preset
+  } = getDrawingProfile(id)
   return preset
 }
 

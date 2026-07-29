@@ -57,8 +57,7 @@ export function createWorkspaceExportUnderlay(deps: WorkspaceExportUnderlayDeps)
       }
       // Muren / stap 2–3: composed effective B/W (base ⊕ OCR ⊕ ink).
       await deps.refreshLayerUnderlayPreview('walls')
-      const dataUrl =
-        deps.effectiveBwUrl?.value ?? deps.preprocessPreview.previewUrl.value
+      const dataUrl = deps.effectiveBwUrl?.value ?? deps.preprocessPreview.previewUrl.value
       if (!dataUrl) {
         throw new Error('Geen bewerkte onderlegger beschikbaar.')
       }
@@ -79,10 +78,7 @@ export function createWorkspaceExportUnderlay(deps: WorkspaceExportUnderlayDeps)
         throw new Error('Geen muurmasker — rond eerst muur-detectie af (finalize).')
       }
       const canvas = renderBinaryMaskRleCanvas(maskRle)
-      downloadCanvasPng(
-        canvas,
-        underlayDownloadFilename(deps.imageName.value, 'muurmask-gebruikt'),
-      )
+      downloadCanvasPng(canvas, underlayDownloadFilename(deps.imageName.value, 'muurmask-gebruikt'))
     } catch (e) {
       deps.setLocalError(formatCvError(e))
     }

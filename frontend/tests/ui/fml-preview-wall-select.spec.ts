@@ -31,7 +31,10 @@ describe('findWallsFullyInCmBBox', () => {
 
   it('selecteert alleen muren volledig binnen bbox', () => {
     expect(findWallsFullyInCmBBox(walls, { x: 0, y: 0, width: 100, height: 30 })).toEqual(['w1'])
-    expect(findWallsFullyInCmBBox(walls, { x: 0, y: 0, width: 100, height: 70 })).toEqual(['w1', 'w2'])
+    expect(findWallsFullyInCmBBox(walls, { x: 0, y: 0, width: 100, height: 70 })).toEqual([
+      'w1',
+      'w2',
+    ])
     expect(findWallsFullyInCmBBox(walls, { x: 20, y: 0, width: 60, height: 30 })).toEqual([])
   })
 

@@ -18,9 +18,7 @@ const WALL_LAYER_ORDER = [
 
 type WallLayerKey = (typeof WALL_LAYER_ORDER)[number]
 
-function toFlatLayer(
-  layer: NonNullable<PipelineV3Debug['layers'][WallLayerKey]>,
-): FlatLayer {
+function toFlatLayer(layer: NonNullable<PipelineV3Debug['layers'][WallLayerKey]>): FlatLayer {
   return {
     segments: layer.segments.map((seg) => ({
       a: { x: seg.a.x, y: seg.a.y },

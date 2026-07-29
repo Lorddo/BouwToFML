@@ -36,12 +36,7 @@ export function classifyLineRelation(
 function segmentCenterInBox(seg: Segment, bbox: RefBBox): boolean {
   const cx = (seg.a.x + seg.b.x) / 2
   const cy = (seg.a.y + seg.b.y) / 2
-  return (
-    cx >= bbox.x &&
-    cx <= bbox.x + bbox.width &&
-    cy >= bbox.y &&
-    cy <= bbox.y + bbox.height
-  )
+  return cx >= bbox.x && cx <= bbox.x + bbox.width && cy >= bbox.y && cy <= bbox.y + bbox.height
 }
 
 function clusterAxisPositions(positions: number[], mergeTol: number): number[] {
@@ -107,21 +102,28 @@ export function buildLineProfile(params: {
   const parallelBands = clusterAxisPositions(
     lines
       .filter((l) => l.relation === 'parallel')
-      .map((l) => (params.orientation === 'horizontal' ? (l.a.y + l.b.y) / 2 : (l.a.x + l.b.x) / 2)),
+      .map((l) =>
+        params.orientation === 'horizontal' ? (l.a.y + l.b.y) / 2 : (l.a.x + l.b.x) / 2,
+      ),
     mergeTol,
   )
   const perpBands = clusterAxisPositions(
     lines
       .filter((l) => l.relation === 'perp')
-      .map((l) => (params.orientation === 'horizontal' ? (l.a.x + l.b.x) / 2 : (l.a.y + l.b.y) / 2)),
+      .map((l) =>
+        params.orientation === 'horizontal' ? (l.a.x + l.b.x) / 2 : (l.a.y + l.b.y) / 2,
+      ),
     mergeTol,
   )
 
   return {
     lines,
     parallelCount:
-      parallelBands.length > 0 ? parallelBands.length : lines.filter((l) => l.relation === 'parallel').length,
-    perpCount: perpBands.length > 0 ? perpBands.length : lines.filter((l) => l.relation === 'perp').length,
+      parallelBands.length > 0
+        ? parallelBands.length
+        : lines.filter((l) => l.relation === 'parallel').length,
+    perpCount:
+      perpBands.length > 0 ? perpBands.length : lines.filter((l) => l.relation === 'perp').length,
     otherCount: lines.filter((l) => l.relation === 'other').length,
     arcCount: lines.filter((l) => l.relation === 'arc').length,
   }

@@ -6,10 +6,7 @@ import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt } from '../segment-ops'
 import type { ChamferGroupGeometry } from './chamfer-group-geometry'
 import { snapArmToHit } from './chamfer-group-apply-snap'
-import {
-  LAYER6_BRIDGE_MAX_SHIFT_RATIO,
-  LAYER6_COLLAPSE_SHIFT_RATIO,
-} from './constants'
+import { LAYER6_BRIDGE_MAX_SHIFT_RATIO, LAYER6_COLLAPSE_SHIFT_RATIO } from './constants'
 import type { Layer6Scale } from './constants'
 import { classifyLayer6Segment } from './segment-classify'
 
@@ -64,9 +61,7 @@ export function applyLandingChamferGroup(params: {
           // Korte H-stub: lange arm aan de andere kant ook meenemen.
           const seg = work[inc.segIndex]!
           const other =
-            Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <= endpointSnapPx
-              ? seg.b
-              : seg.a
+            Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <= endpointSnapPx ? seg.b : seg.a
           for (const far of incidentAt(work, other, endpointSnapPx)) {
             if (far.segIndex === inc.segIndex) continue
             if (classify(far.segment, far.segIndex).kind === 'H') {
@@ -80,9 +75,7 @@ export function applyLandingChamferGroup(params: {
         stubRemove.add(inc.segIndex)
         const seg = work[inc.segIndex]!
         const other =
-          Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <= endpointSnapPx
-            ? seg.b
-            : seg.a
+          Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <= endpointSnapPx ? seg.b : seg.a
         for (const far of incidentAt(work, other, endpointSnapPx)) {
           if (diagSet.has(far.segIndex) || far.segIndex === inc.segIndex) continue
           const farKind = classify(far.segment, far.segIndex).kind
@@ -99,8 +92,8 @@ export function applyLandingChamferGroup(params: {
       const seg = work[vIdx]
       if (!seg) continue
       const touch =
-        Math.hypot(seg.a.x - geometry.vTouchPoint.x, seg.a.y - geometry.vTouchPoint.y)
-        <= Math.hypot(seg.b.x - geometry.vTouchPoint.x, seg.b.y - geometry.vTouchPoint.y)
+        Math.hypot(seg.a.x - geometry.vTouchPoint.x, seg.a.y - geometry.vTouchPoint.y) <=
+        Math.hypot(seg.b.x - geometry.vTouchPoint.x, seg.b.y - geometry.vTouchPoint.y)
           ? seg.a
           : seg.b
       snapArmToHit({
@@ -120,18 +113,17 @@ export function applyLandingChamferGroup(params: {
       if (!seg) continue
       // Eindpunt dichter bij junction OF bij oude diag-zone → naar hit (mag scheef).
       const nearJ =
-        Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y)
-        <= Math.hypot(seg.b.x - junction.x, seg.b.y - junction.y)
+        Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <=
+        Math.hypot(seg.b.x - junction.x, seg.b.y - junction.y)
           ? seg.a
           : seg.b
       const nearHit =
-        Math.hypot(seg.a.x - hit.x, seg.a.y - hit.y)
-        <= Math.hypot(seg.b.x - hit.x, seg.b.y - hit.y)
+        Math.hypot(seg.a.x - hit.x, seg.a.y - hit.y) <= Math.hypot(seg.b.x - hit.x, seg.b.y - hit.y)
           ? seg.a
           : seg.b
       const touch =
-        Math.hypot(nearJ.x - hit.x, nearJ.y - hit.y)
-        <= Math.hypot(nearHit.x - hit.x, nearHit.y - hit.y) + 1
+        Math.hypot(nearJ.x - hit.x, nearJ.y - hit.y) <=
+        Math.hypot(nearHit.x - hit.x, nearHit.y - hit.y) + 1
           ? nearJ
           : nearHit
       // Alleen snappen als binnen muurdikte-budget t.o.v. hit (Δy of totale shift).
@@ -167,10 +159,7 @@ export function applyLandingChamferGroup(params: {
         if (dy > scale.jogEpsilonPx) return false
         const oMinX = Math.min(other.a.x, other.b.x)
         const oMaxX = Math.max(other.a.x, other.b.x)
-        return (
-          oMinX <= sMinX + scale.jogEpsilonPx
-          && oMaxX >= sMaxX - scale.jogEpsilonPx
-        )
+        return oMinX <= sMinX + scale.jogEpsilonPx && oMaxX >= sMaxX - scale.jogEpsilonPx
       })
       if (coveredByLonger) removeSet.add(hIdx)
     }
@@ -190,8 +179,8 @@ export function applyLandingChamferGroup(params: {
     }
     const junctionDist = Math.hypot(hit.x - junction.x, hit.y - junction.y)
     if (
-      junctionDist > scale.shortHStubPx
-      && junctionDist <= collapseShift * LAYER6_BRIDGE_MAX_SHIFT_RATIO
+      junctionDist > scale.shortHStubPx &&
+      junctionDist <= collapseShift * LAYER6_BRIDGE_MAX_SHIFT_RATIO
     ) {
       const alreadyLinked = work.some((seg, idx) => {
         if (diagSet.has(idx) || removeSet.has(idx)) return false
@@ -205,10 +194,10 @@ export function applyLandingChamferGroup(params: {
         // Alleen brug als Δ buiten "tikje scheef"-collapse van bestaande H/V.
         const hAtJ = incidentAt(work, junction, endpointSnapPx).filter(
           (inc) =>
-            !diagSet.has(inc.segIndex)
-            && !removeSet.has(inc.segIndex)
-            && classify(inc.segment, inc.segIndex).kind === 'H'
-            && inc.lengthPx > scale.armStrictPx,
+            !diagSet.has(inc.segIndex) &&
+            !removeSet.has(inc.segIndex) &&
+            classify(inc.segment, inc.segIndex).kind === 'H' &&
+            inc.lengthPx > scale.armStrictPx,
         )
         if (hAtJ.length > 0) {
           for (const inc of hAtJ) {

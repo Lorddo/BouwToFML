@@ -29,10 +29,7 @@ function isAxisAligned(seg: Segment, tolDeg = 15): boolean {
   const deg = (segmentAngle(seg) * 180) / Math.PI
   const abs = Math.abs(deg)
   return (
-    abs < tolDeg ||
-    abs > 180 - tolDeg ||
-    Math.abs(abs - 90) < tolDeg ||
-    Math.abs(abs + 90) < tolDeg
+    abs < tolDeg || abs > 180 - tolDeg || Math.abs(abs - 90) < tolDeg || Math.abs(abs + 90) < tolDeg
   )
 }
 
@@ -163,10 +160,7 @@ function snapToOrthogonal(seg: Segment, tolDeg = 12): Segment | null {
   return null
 }
 
-export function buildWallGraph(
-  segments: Segment[],
-  options: WallGraphOptions = {},
-): Segment[] {
+export function buildWallGraph(segments: Segment[], options: WallGraphOptions = {}): Segment[] {
   const snapRadius = options.snapRadiusPx ?? 12
   const minLen = options.minLengthPx ?? 20
   const angleTol = ((options.angleToleranceDeg ?? 8) * Math.PI) / 180
@@ -182,9 +176,7 @@ export function buildWallGraph(
     .filter((s): s is Segment => s !== null)
 
   if (result.length > maxInput) {
-    result = [...result]
-      .sort((a, b) => dist(b.a, b.b) - dist(a.a, a.b))
-      .slice(0, maxInput)
+    result = [...result].sort((a, b) => dist(b.a, b.b) - dist(a.a, a.b)).slice(0, maxInput)
   }
 
   result = snapEndpoints(result, snapRadius)

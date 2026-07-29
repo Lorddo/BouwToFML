@@ -40,11 +40,7 @@ const emit = defineEmits<{
       <div class="initial-detection-spinner" aria-hidden="true" />
       <p class="initial-detection-title">Eerste detectie loopt…</p>
       <ul class="initial-detection-steps">
-        <li
-          v-for="step in initialDetectionSteps"
-          :key="step.id"
-          :class="`step-${step.status}`"
-        >
+        <li v-for="step in initialDetectionSteps" :key="step.id" :class="`step-${step.status}`">
           <span class="step-mark" aria-hidden="true" />
           <span>{{ step.label }}</span>
         </li>

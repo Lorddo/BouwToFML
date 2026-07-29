@@ -53,12 +53,11 @@ defineProps<{
       :key="`${line.id}-hit`"
       :config="{
         points: line.points,
-        stroke:
-          settingsWallIds.includes(line.id)
-            ? '#f97316'
-            : moveWallId === line.id
-              ? '#3b82f6'
-              : '#000000',
+        stroke: settingsWallIds.includes(line.id)
+          ? '#f97316'
+          : moveWallId === line.id
+            ? '#3b82f6'
+            : '#000000',
         strokeWidth: Math.max(14, line.strokeWidth + 12),
         opacity: settingsWallIds.includes(line.id) || moveWallId === line.id ? 0.15 : 0,
         lineCap: 'butt',

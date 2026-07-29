@@ -69,7 +69,10 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /** Worker-safe — OffscreenCanvas via convertToBlob, anders toDataURL. */
-export async function canvasToDataUrlAsync(canvas: CanvasLike, mimeType = 'image/png'): Promise<string> {
+export async function canvasToDataUrlAsync(
+  canvas: CanvasLike,
+  mimeType = 'image/png',
+): Promise<string> {
   if ('toDataURL' in canvas && typeof canvas.toDataURL === 'function') {
     return canvas.toDataURL(mimeType)
   }

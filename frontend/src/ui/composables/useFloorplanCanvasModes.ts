@@ -23,9 +23,7 @@ export function useFloorplanCanvasModes(deps: {
 }) {
   const isPanDragging = ref(false)
 
-  const isDrawMode = computed(
-    () => deps.lbeEnabled() && deps.drawType() != null && !deps.inkTool(),
-  )
+  const isDrawMode = computed(() => deps.lbeEnabled() && deps.drawType() != null && !deps.inkTool())
   const isSelectionMode = computed(
     () =>
       deps.lbeEnabled() &&
@@ -46,14 +44,9 @@ export function useFloorplanCanvasModes(deps: {
   const isFaceBoxMode = computed(() => deps.faceTool() != null)
   const isProbeMode = computed(
     () =>
-      deps.probeEnabled() &&
-      !deps.eraserEnabled() &&
-      !deps.polygonToolMode() &&
-      !deps.inkTool(),
+      deps.probeEnabled() && !deps.eraserEnabled() && !deps.polygonToolMode() && !deps.inkTool(),
   )
-  const isInkBrushMode = computed(
-    () => deps.inkTool() === 'brush' || deps.inkTool() === 'eraser',
-  )
+  const isInkBrushMode = computed(() => deps.inkTool() === 'brush' || deps.inkTool() === 'eraser')
   const isInkLineMode = computed(() => deps.inkTool() === 'line')
   const isInkRectMode = computed(() => deps.inkTool() === 'rect')
   const isInkToolMode = computed(() => deps.inkTool() != null)
@@ -99,13 +92,9 @@ export function useFloorplanCanvasModes(deps: {
     return '#ef4444'
   })
 
-  const polygonCloseThreshold = computed(() =>
-    Math.max(10, 14 / deps.stageScale()),
-  )
+  const polygonCloseThreshold = computed(() => Math.max(10, 14 / deps.stageScale()))
 
-  const hasRotationPreview = computed(
-    () => Math.abs(deps.rotationPreviewDeg() ?? 0) > 0.001,
-  )
+  const hasRotationPreview = computed(() => Math.abs(deps.rotationPreviewDeg() ?? 0) > 0.001)
 
   const underlayGroupConfig = computed(() => {
     const w = deps.imgSize().w

@@ -11,11 +11,7 @@ import {
   type ProbeRegion,
   type ProbeResult,
 } from '@/cv/debug/probe-at-point'
-import {
-  probeFaceAtPoint,
-  probeFacesInRegion,
-  type ProbeFaceSource,
-} from '@/cv/debug/probe-faces'
+import { probeFaceAtPoint, probeFacesInRegion, type ProbeFaceSource } from '@/cv/debug/probe-faces'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { prepareOpeningPipeDual } from '@/cv/walls/rooms/opening-pipe-dual'
 import { detachEnclosedChildrenForOpeningSeeds } from '@/cv/walls/rooms/opening-seed-detach'
@@ -41,8 +37,7 @@ function faceSourceFromState(
   parentMapOverride?: Map<number, number>,
 ): ProbeFaceSource {
   const classification =
-    classificationByLabel ??
-    (new Map(state.classificationByLabel) as Map<number, RoomRasterClass>)
+    classificationByLabel ?? (new Map(state.classificationByLabel) as Map<number, RoomRasterClass>)
   const labelsData = labelsOverride ?? normalizeLabelsData(state.labelsData)
   const parentMap = parentMapOverride ?? new Map(state.parentMap)
   const components = extractComponentsFromLabelsData(labelsData, state.width, state.height)
@@ -130,10 +125,7 @@ function buildDualFaceSources(params: {
   }
 }
 
-function attachFaces(
-  result: ProbeResult,
-  sources: DualFaceSources | null,
-): ProbeResult {
+function attachFaces(result: ProbeResult, sources: DualFaceSources | null): ProbeResult {
   if (!sources) {
     return {
       ...result,

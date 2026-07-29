@@ -67,7 +67,10 @@ export function rebuildFaceBBoxInk(
   }
 }
 
-function sideOf(index: FaceBBoxIndex, source: FaceBBoxSource): {
+function sideOf(
+  index: FaceBBoxIndex,
+  source: FaceBBoxSource,
+): {
   list: RasterRoomComponent[]
   byLabel: Map<number, RasterRoomComponent>
 } {
@@ -130,7 +133,12 @@ export function unionLabelsBBox(
     }
   }
 
-  if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) {
+  if (
+    !Number.isFinite(x0) ||
+    !Number.isFinite(y0) ||
+    !Number.isFinite(x1) ||
+    !Number.isFinite(y1)
+  ) {
     return null
   }
 

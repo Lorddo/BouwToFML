@@ -5,7 +5,11 @@ function normalizeMaskValue(value: number): number {
   return value >= 128 ? 1 : 0
 }
 
-export function encodeMaskRle(data: ArrayLike<number>, width: number, height: number): RoomWallMaskRle {
+export function encodeMaskRle(
+  data: ArrayLike<number>,
+  width: number,
+  height: number,
+): RoomWallMaskRle {
   const total = Math.max(0, width * height)
   const runs: number[] = []
   if (total === 0) {

@@ -62,44 +62,38 @@ describe('tab-outputs-serialize', () => {
       walls: wallsOutputWithLabels([0, 1, 0, 1]),
     }
     const liveLabels = new Int32Array([0, 2, 0, 2])
-    const enriched = enrichWallsOutputWithFaceState(
-      outputs,
-      [[2, 'unknown']],
-      [2],
-      {
-        width: 2,
-        height: 2,
-        labelsData: liveLabels,
-        rawLabelsData: liveLabels,
-        parentMap: [[2, 0]],
-        classificationByLabel: [[2, 'surface']],
-        threshold: 0.7,
-        mergedFaceCount: 1,
-      },
-    )
-    expect(Array.from(enriched.walls?.meta?.roomClassifyState?.labelsData ?? [])).toEqual([0, 2, 0, 2])
+    const enriched = enrichWallsOutputWithFaceState(outputs, [[2, 'unknown']], [2], {
+      width: 2,
+      height: 2,
+      labelsData: liveLabels,
+      rawLabelsData: liveLabels,
+      parentMap: [[2, 0]],
+      classificationByLabel: [[2, 'surface']],
+      threshold: 0.7,
+      mergedFaceCount: 1,
+    })
+    expect(Array.from(enriched.walls?.meta?.roomClassifyState?.labelsData ?? [])).toEqual([
+      0, 2, 0, 2,
+    ])
     expect(enriched.walls?.meta?.roomClassifyState?.faceOverrides).toEqual([[2, 'unknown']])
   })
 
   it('creates walls output from live state when tab output is missing', () => {
     const liveLabels = new Int32Array([0, 2, 0, 2])
-    const enriched = enrichWallsOutputWithFaceState(
-      { walls: null },
-      [[2, 'wall']],
-      [2],
-      {
-        width: 2,
-        height: 2,
-        labelsData: liveLabels,
-        rawLabelsData: liveLabels,
-        parentMap: [[2, 0]],
-        classificationByLabel: [[2, 'surface']],
-        threshold: 0.7,
-        mergedFaceCount: 1,
-      },
-    )
+    const enriched = enrichWallsOutputWithFaceState({ walls: null }, [[2, 'wall']], [2], {
+      width: 2,
+      height: 2,
+      labelsData: liveLabels,
+      rawLabelsData: liveLabels,
+      parentMap: [[2, 0]],
+      classificationByLabel: [[2, 'surface']],
+      threshold: 0.7,
+      mergedFaceCount: 1,
+    })
     expect(enriched.walls?.meta?.roomPipelinePhase).toBe('classify')
-    expect(Array.from(enriched.walls?.meta?.roomClassifyState?.labelsData ?? [])).toEqual([0, 2, 0, 2])
+    expect(Array.from(enriched.walls?.meta?.roomClassifyState?.labelsData ?? [])).toEqual([
+      0, 2, 0, 2,
+    ])
     expect(enriched.walls?.meta?.roomClassifyState?.faceOverrides).toEqual([[2, 'wall']])
   })
 })

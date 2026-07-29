@@ -54,9 +54,7 @@ function resolveLayer5TxZoneMaxPx(referenceWallThicknessPx?: number): number {
   return Math.max(5, Math.min(20, scaled))
 }
 
-export function resolveLayer5CleanupPolicy(
-  referenceWallThicknessPx?: number,
-): Layer5CleanupPolicy {
+export function resolveLayer5CleanupPolicy(referenceWallThicknessPx?: number): Layer5CleanupPolicy {
   const scale = resolvePipelineScale(referenceWallThicknessPx)
   const thicknessFallbackPx = scale.thicknessFallbackRefPx
   return {

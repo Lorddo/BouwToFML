@@ -66,15 +66,15 @@ function labelAtFromPainter(
 describe('room-raster-merge tiers', () => {
   it('classificeert micro (≤3%) en small (3–10%) op tekening', () => {
     const shortSide = 2000
-    expect(classifyChildTier(component(1, 100, { x: 0, y: 0, width: 50, height: 50 }), shortSide)).toBe(
-      'micro',
-    )
-    expect(classifyChildTier(component(2, 400, { x: 0, y: 0, width: 80, height: 80 }), shortSide)).toBe(
-      'small',
-    )
-    expect(classifyChildTier(component(3, 900, { x: 0, y: 0, width: 250, height: 80 }), shortSide)).toBe(
-      null,
-    )
+    expect(
+      classifyChildTier(component(1, 100, { x: 0, y: 0, width: 50, height: 50 }), shortSide),
+    ).toBe('micro')
+    expect(
+      classifyChildTier(component(2, 400, { x: 0, y: 0, width: 80, height: 80 }), shortSide),
+    ).toBe('small')
+    expect(
+      classifyChildTier(component(3, 900, { x: 0, y: 0, width: 250, height: 80 }), shortSide),
+    ).toBe(null)
     expect(bboxMaxSidePct({ x: 0, y: 0, width: 60, height: 60 }, shortSide)).toBeCloseTo(0.03)
   })
 
@@ -376,7 +376,13 @@ describe('na resolveInkBetweenFaces', () => {
         rawLabels[y * width + x] = 0
       }
     }
-    const resolved = resolveLabels({ labelsData: rawLabels, components, width, height, inkOnLabels: new Set([1]) })
+    const resolved = resolveLabels({
+      labelsData: rawLabels,
+      components,
+      width,
+      height,
+      inkOnLabels: new Set([1]),
+    })
     const labelAt = (x: number, y: number) => resolved.labelsData[y * width + x] ?? 0
     const parentMap = buildEnclosedFaceParentMap(components, width, height, { labelAt })
     expect(parentMap.get(2)).toBe(1)
@@ -398,7 +404,13 @@ describe('na resolveInkBetweenFaces', () => {
         else if (x >= 500 && x < 514 && y >= 370 && y < 384) rawLabels[y * width + x] = 3
       }
     }
-    const resolved = resolveLabels({ labelsData: rawLabels, components, width, height, inkOnLabels: new Set([1]) })
+    const resolved = resolveLabels({
+      labelsData: rawLabels,
+      components,
+      width,
+      height,
+      inkOnLabels: new Set([1]),
+    })
     const labelAt = (x: number, y: number) => resolved.labelsData[y * width + x] ?? 0
     const parentMap = buildEnclosedFaceParentMap(components, width, height, { labelAt })
     expect(parentMap.get(3)).not.toBe(1)

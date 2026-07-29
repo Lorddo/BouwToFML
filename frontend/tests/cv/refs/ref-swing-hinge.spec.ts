@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { resolveMinAxisSeparationDeg, resolveSwingHingeFromPolygon } from '@/cv/refs/ref-swing-hinge'
+import {
+  resolveMinAxisSeparationDeg,
+  resolveSwingHingeFromPolygon,
+} from '@/cv/refs/ref-swing-hinge'
 import type { RefPoint } from '@/cv/refs/types'
 
 function degToRad(deg: number): number {
@@ -75,7 +78,12 @@ describe('ref-swing-hinge', () => {
     expect(result!.hinge.y).toBeCloseTo(hinge.y, 0)
     expect(result!.angleDeg).toBeGreaterThan(60)
     expect(result!.angleDeg).toBeLessThan(120)
-    expect(hasHorizontalAndVerticalAxes(result!.axes.map((axis) => axis.angleDeg), 12)).toBe(true)
+    expect(
+      hasHorizontalAndVerticalAxes(
+        result!.axes.map((axis) => axis.angleDeg),
+        12,
+      ),
+    ).toBe(true)
   })
 
   it('blijft assen vinden bij 1-2px trapjes in radii', () => {
@@ -93,7 +101,12 @@ describe('ref-swing-hinge', () => {
     expect(result).not.toBeNull()
     expect(Number.isFinite(result!.hinge.x)).toBe(true)
     expect(Number.isFinite(result!.hinge.y)).toBe(true)
-    expect(hasHorizontalAndVerticalAxes(result!.axes.map((axis) => axis.angleDeg), 15)).toBe(true)
+    expect(
+      hasHorizontalAndVerticalAxes(
+        result!.axes.map((axis) => axis.angleDeg),
+        15,
+      ),
+    ).toBe(true)
   })
 
   it('kiest radii-assen ook bij boog met veel korte segmenten', () => {
@@ -108,7 +121,12 @@ describe('ref-swing-hinge', () => {
       options: { axisBandPx: 3 },
     })
     expect(result).not.toBeNull()
-    expect(hasHorizontalAndVerticalAxes(result!.axes.map((axis) => axis.angleDeg), 14)).toBe(true)
+    expect(
+      hasHorizontalAndVerticalAxes(
+        result!.axes.map((axis) => axis.angleDeg),
+        14,
+      ),
+    ).toBe(true)
   })
 
   it('geeft null terug zonder bruikbaar sector-vlak', () => {
@@ -327,10 +345,8 @@ describe('ref-swing-hinge', () => {
     expect(left).not.toBeNull()
     expect(right).not.toBeNull()
 
-    const leftT =
-      (left!.hinge.x - left!.sectorBBox.x) / Math.max(1, left!.sectorBBox.width)
-    const rightT =
-      (right!.hinge.x - right!.sectorBBox.x) / Math.max(1, right!.sectorBBox.width)
+    const leftT = (left!.hinge.x - left!.sectorBBox.x) / Math.max(1, left!.sectorBBox.width)
+    const rightT = (right!.hinge.x - right!.sectorBBox.x) / Math.max(1, right!.sectorBBox.width)
     expect(leftT).toBeLessThan(0.28)
     expect(rightT).toBeGreaterThan(0.72)
 

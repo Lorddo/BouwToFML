@@ -51,13 +51,25 @@ function warpRotateMat(
 }
 
 /** Rotatie met uitgebreid canvas zodat hoeken niet worden afgesneden. */
-export function rotateMatExpandBounds(cv: OpenCV, src: OpenCV['Mat'], uiDegrees: number): OpenCV['Mat'] {
+export function rotateMatExpandBounds(
+  cv: OpenCV,
+  src: OpenCV['Mat'],
+  uiDegrees: number,
+): OpenCV['Mat'] {
   if (Math.abs(uiDegrees) < ROTATION_EPS_DEG) return src
 
   const expanded = expandedSizeForRotation(src.cols, src.rows, uiDegrees)
   const offsetCols = (expanded.width - src.cols) / 2
   const offsetRows = (expanded.height - src.rows) / 2
-  const out = warpRotateMat(cv, src, uiDegrees, expanded.width, expanded.height, offsetCols, offsetRows)
+  const out = warpRotateMat(
+    cv,
+    src,
+    uiDegrees,
+    expanded.width,
+    expanded.height,
+    offsetCols,
+    offsetRows,
+  )
   src.delete()
   return out
 }

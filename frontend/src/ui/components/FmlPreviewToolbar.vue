@@ -3,11 +3,7 @@ import { computed } from 'vue'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
-import {
-  FML_EDIT_TOOLS,
-  FML_SELECT_TOOLS,
-  type FmlToolId,
-} from './canvas/fmlToolbeltItems'
+import { FML_EDIT_TOOLS, FML_SELECT_TOOLS, type FmlToolId } from './canvas/fmlToolbeltItems'
 import './canvas/canvas-toolbelt.css'
 
 const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })

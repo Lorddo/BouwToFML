@@ -421,7 +421,10 @@ export function countMergedSurfaces(
   for (const c of components) {
     const root = resolveMergedLabel(c.label, parentMap)
     const touchesBorder = rootMeta.get(root)
-    rootMeta.set(root, touchesBorder === undefined ? c.touchesBorder : touchesBorder && c.touchesBorder)
+    rootMeta.set(
+      root,
+      touchesBorder === undefined ? c.touchesBorder : touchesBorder && c.touchesBorder,
+    )
   }
   let count = 0
   for (const [, touchesBorder] of rootMeta) {

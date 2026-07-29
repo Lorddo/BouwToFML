@@ -11,11 +11,10 @@ import {
 import { createRoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 
-function minimalState(overrides?: Partial<SerializedRoomClassifyState>): SerializedRoomClassifyState {
-  const labelsData = new Int32Array([
-    0, 1, 1,
-    0, 2, 2,
-  ])
+function minimalState(
+  overrides?: Partial<SerializedRoomClassifyState>,
+): SerializedRoomClassifyState {
+  const labelsData = new Int32Array([0, 1, 1, 0, 2, 2])
   return {
     width: 3,
     height: 2,
@@ -89,10 +88,7 @@ describe('applyMigratedFaceOverrides', () => {
 
     const newCache = createRoomRasterCache(
       minimalState({
-        labelsData: new Int32Array([
-          0, 1, 1, 1, 1,
-          0, 2, 2, 0, 0,
-        ]),
+        labelsData: new Int32Array([0, 1, 1, 1, 1, 0, 2, 2, 0, 0]),
         width: 5,
         height: 2,
         classificationByLabel: [
@@ -129,10 +125,7 @@ describe('migratePinnedOverridesToTopology', () => {
 describe('migratePinnedOverridesSpatially', () => {
   it('behoudt override bij hernummerd label op dezelfde plek', () => {
     const prior = minimalState()
-    const newLabels = new Int32Array([
-      0, 99, 99,
-      0, 2, 2,
-    ])
+    const newLabels = new Int32Array([0, 99, 99, 0, 2, 2])
     const migrated = migratePinnedOverridesSpatially({
       priorState: prior,
       priorOverrides: new Map([[1, 'unknown']]),

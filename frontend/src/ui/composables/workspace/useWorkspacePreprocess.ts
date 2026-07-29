@@ -71,12 +71,20 @@ export function useWorkspacePreprocess(deps: {
 
   async function publishWallBwUnderlay(): Promise<void> {
     if (!deps.wallBw) return
-    const url = await deps.wallBw.composeAndPublish({ includeOcr: detectionUnderlayIncludesOcrMask() })
+    const url = await deps.wallBw.composeAndPublish({
+      includeOcr: detectionUnderlayIncludesOcrMask(),
+    })
     if (url) deps.preprocessPreview.previewUrl.value = url
   }
 
-  async function refreshLayerUnderlayPreview(layer: PreprocessPanelLayer = deps.activeUnderlayLayer()) {
-    if (deps.flowStep.value !== 'preprocess' && deps.flowStep.value !== 'templates' && deps.flowStep.value !== 'result') {
+  async function refreshLayerUnderlayPreview(
+    layer: PreprocessPanelLayer = deps.activeUnderlayLayer(),
+  ) {
+    if (
+      deps.flowStep.value !== 'preprocess' &&
+      deps.flowStep.value !== 'templates' &&
+      deps.flowStep.value !== 'result'
+    ) {
       return
     }
     deps.setLocalError(null)

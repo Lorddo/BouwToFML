@@ -57,7 +57,9 @@ const isInkWallTab = computed(() => props.preprocessTab === 'inkWall')
       <li>Helderheid: 150 · bridgeGaps: 8</li>
       <li>
         Hole-fill / thicken: geschaald op muurdikte
-        <template v-if="referenceWallThicknessPx != null"> ({{ referenceWallThicknessPx }}px)</template>
+        <template v-if="referenceWallThicknessPx != null">
+          ({{ referenceWallThicknessPx }}px)</template
+        >
       </li>
     </ul>
   </div>

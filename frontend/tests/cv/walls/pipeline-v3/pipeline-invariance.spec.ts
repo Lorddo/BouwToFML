@@ -15,9 +15,7 @@ import {
 } from '@/cv/walls/rooms/pipeline-v3/engines/collapse'
 import { runLayer8Finalize } from '@/cv/walls/rooms/pipeline-v3/layer-8-finalize'
 import { buildConnectorJunctionGraph } from '@/cv/walls/rooms/pipeline-v3/engines/connector'
-import {
-  resolveLayer3PrunePolicy,
-} from '@/cv/walls/rooms/pipeline-v3/policies/layer-3'
+import { resolveLayer3PrunePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-3'
 import { resolveLayer4HvPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-4'
 import { resolveLayer7AlignPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-7'
 import { resolveLayer9DissolvePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
@@ -180,14 +178,29 @@ const L6_CHAMFER_FIXTURE: Segment[] = [
 ]
 
 const L9_COVER_FIXTURE: Segment[] = [
-  { a: { x: 1515.2593541390515, y: 907.6953047376124 }, b: { x: 1515.2593541390515, y: 567.4006785403706 } },
-  { a: { x: 1515.2593541390515, y: 907.6953047376124 }, b: { x: 1515.2593541390515, y: 886.5840005392155 } },
-  { a: { x: 1515.2593541390515, y: 886.5840005392155 }, b: { x: 970.553840378512, y: 886.5840005392155 } },
-  { a: { x: 1515.2593541390518, y: 1334.0680002436966 }, b: { x: 1515.2593541390515, y: 907.6953047376124 } },
+  {
+    a: { x: 1515.2593541390515, y: 907.6953047376124 },
+    b: { x: 1515.2593541390515, y: 567.4006785403706 },
+  },
+  {
+    a: { x: 1515.2593541390515, y: 907.6953047376124 },
+    b: { x: 1515.2593541390515, y: 886.5840005392155 },
+  },
+  {
+    a: { x: 1515.2593541390515, y: 886.5840005392155 },
+    b: { x: 970.553840378512, y: 886.5840005392155 },
+  },
+  {
+    a: { x: 1515.2593541390518, y: 1334.0680002436966 },
+    b: { x: 1515.2593541390515, y: 907.6953047376124 },
+  },
 ]
 
 const L10_MICRO_CORNER_FIXTURE: Segment[] = [
-  { a: { x: 1353.9463520275667, y: 1044.0492764016738 }, b: { x: 1353.946352027567, y: 1229.7002808483203 } },
+  {
+    a: { x: 1353.9463520275667, y: 1044.0492764016738 },
+    b: { x: 1353.946352027567, y: 1229.7002808483203 },
+  },
   { a: { x: 1353.946352027567, y: 1229.7002808483203 }, b: { x: 1349, y: 1229.7002808483205 } },
   { a: { x: 1349, y: 1229.7002808483205 }, b: { x: 1132.25, y: 1229.7002808483205 } },
 ]
@@ -230,7 +243,9 @@ const cases: Array<{
   {
     layer: 'L5',
     fixture: BASE_FIXTURE,
-    run: (segments, ref) => runLayer5Cleanup({ layer4: makeLayer4Result(segments), referenceWallThicknessPx: ref }).allSegmentsCleaned,
+    run: (segments, ref) =>
+      runLayer5Cleanup({ layer4: makeLayer4Result(segments), referenceWallThicknessPx: ref })
+        .allSegmentsCleaned,
   },
   {
     layer: 'L6',

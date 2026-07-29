@@ -1,7 +1,4 @@
-import type {
-  CollapsePolicy,
-  Layer7AlignPolicy,
-} from '../engines/policy-types'
+import type { CollapsePolicy, Layer7AlignPolicy } from '../engines/policy-types'
 import { resolvePipelineScale } from '../engines/scale'
 import {
   baseCollapsePolicy,

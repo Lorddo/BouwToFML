@@ -72,11 +72,7 @@ describe('composeWallBw', () => {
     const target = new Uint8Array([INK_OVERLAY_BLACK, INK_OVERLAY_NONE, INK_OVERLAY_WHITE])
     const source = new Uint8Array([INK_OVERLAY_WHITE, INK_OVERLAY_BLACK, INK_OVERLAY_NONE])
     mergeInkOverlayInto(target, source)
-    expect(Array.from(target)).toEqual([
-      INK_OVERLAY_WHITE,
-      INK_OVERLAY_BLACK,
-      INK_OVERLAY_WHITE,
-    ])
+    expect(Array.from(target)).toEqual([INK_OVERLAY_WHITE, INK_OVERLAY_BLACK, INK_OVERLAY_WHITE])
   })
 
   it('inkOverlayHasEdits', () => {

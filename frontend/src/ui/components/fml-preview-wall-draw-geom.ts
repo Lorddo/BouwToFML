@@ -55,11 +55,7 @@ function segmentIntersectionParams(
 }
 
 /** Shared with wall-slide connector stubs; not part of public barrel API. */
-export function splitCrossedWallsAlongSegment(
-  walls: Wall[],
-  a: Point2D,
-  b: Point2D,
-): void {
+export function splitCrossedWallsAlongSegment(walls: Wall[], a: Point2D, b: Point2D): void {
   let changed = true
   while (changed) {
     changed = false
@@ -87,11 +83,7 @@ function isWallCollinearWithSegment(wall: Wall, a: Point2D, b: Point2D): boolean
 }
 
 /** Shared with wall-slide connector stubs; not part of public barrel API. */
-export function splitCarrierWallsAtJunctionsOnSegment(
-  walls: Wall[],
-  a: Point2D,
-  b: Point2D,
-): void {
+export function splitCarrierWallsAtJunctionsOnSegment(walls: Wall[], a: Point2D, b: Point2D): void {
   let changed = true
   while (changed) {
     changed = false

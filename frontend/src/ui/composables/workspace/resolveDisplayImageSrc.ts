@@ -1,4 +1,8 @@
-import { usesWallBwUnderlay, type PreprocessPanelLayer, type TemplateTab } from '@/cv/preprocess/layer-preprocess'
+import {
+  usesWallBwUnderlay,
+  type PreprocessPanelLayer,
+  type TemplateTab,
+} from '@/cv/preprocess/layer-preprocess'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import type { WorkspaceFlowStep } from './constants'
 

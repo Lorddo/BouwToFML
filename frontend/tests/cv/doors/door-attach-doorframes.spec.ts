@@ -28,7 +28,10 @@ function makeDoor(params: {
     faceIds: params.faceIds ?? [1],
     doorframeFaceIds: params.doorframeFaceIds,
     bbox: params.bbox,
-    centroidPx: { x: params.bbox.x + params.bbox.width / 2, y: params.bbox.y + params.bbox.height / 2 },
+    centroidPx: {
+      x: params.bbox.x + params.bbox.width / 2,
+      y: params.bbox.y + params.bbox.height / 2,
+    },
     swingSpanPx: params.bbox.width,
     framingPx: 0,
     overhangAlongPx: params.bbox.width,

@@ -66,7 +66,9 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
       />
     </label>
     <label class="fml-limit-field">
-      <span title="Standaard voor alle deuren; per deur overschrijfbaar via Ctrl+klik in de preview">
+      <span
+        title="Standaard voor alle deuren; per deur overschrijfbaar via Ctrl+klik in de preview"
+      >
         Deurhoogte (m)
       </span>
       <input
@@ -80,7 +82,9 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
       />
     </label>
     <label class="fml-limit-field">
-      <span title="Standaard afstand vloer → onderkant raam; per raam overschrijfbaar via Ctrl+klik">
+      <span
+        title="Standaard afstand vloer → onderkant raam; per raam overschrijfbaar via Ctrl+klik"
+      >
         Raam vloer (m)
       </span>
       <input
@@ -108,9 +112,7 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
       />
     </label>
   </div>
-  <p class="fml-band-hint">
-    Per opening overschrijven: Ctrl+klik in de preview → maat/hoogte.
-  </p>
+  <p class="fml-band-hint">Per opening overschrijven: Ctrl+klik in de preview → maat/hoogte.</p>
 </template>
 
 <style scoped>

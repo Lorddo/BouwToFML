@@ -10,7 +10,8 @@ import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { JsonTabDetectionOutputs } from './tab-outputs-serialize'
 
-export type DevRoomPhase = 'idle' | 'awaiting_reference' | 'classifying' | 'review' | 'finalizing' | 'done'
+export type DevRoomPhase =
+  'idle' | 'awaiting_reference' | 'classifying' | 'review' | 'finalizing' | 'done'
 
 export const DEV_WORKSPACE_SESSION_VERSION = 2 as const
 

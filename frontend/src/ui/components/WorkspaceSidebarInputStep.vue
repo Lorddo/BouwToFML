@@ -73,8 +73,9 @@ defineEmits<{
   <div class="panel">
     <h3>Onderlegger</h3>
     <p class="hint">
-      Download de huidige afbeelding (crop/gum + rotatie) als PNG. Bewerk lokaal en upload opnieuw — zet rotatie
-      dan op 0° (al in de PNG). Schaal blijft per upload instellen. Referenties teken je in stap 2 (Voorbewerking).
+      Download de huidige afbeelding (crop/gum + rotatie) als PNG. Bewerk lokaal en upload opnieuw —
+      zet rotatie dan op 0° (al in de PNG). Schaal blijft per upload instellen. Referenties teken je
+      in stap 2 (Voorbewerking).
     </p>
     <button type="button" class="primary" :disabled="!imageSrc" @click="$emit('downloadUnderlay')">
       Download onderlegger (PNG)

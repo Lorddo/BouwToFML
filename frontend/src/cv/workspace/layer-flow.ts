@@ -1,9 +1,6 @@
 import type { ExtractionOutput } from '@/core/extraction'
 import type { ElementClass } from '@/core/extraction/types'
-import {
-  type DetectionLayerId,
-  type TemplateTab,
-} from '@/cv/preprocess/layer-preprocess'
+import { type DetectionLayerId, type TemplateTab } from '@/cv/preprocess/layer-preprocess'
 
 /** Volgorde stap 2: muren → int muur → gaten (OCR deelt muur-tune; gaten UI vaak verborgen). */
 export const WORKSPACE_PREPROCESS_LAYER_ORDER = ['walls', 'inkWall', 'gaps'] as const

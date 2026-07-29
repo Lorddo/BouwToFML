@@ -186,8 +186,19 @@ defineExpose<{
           :error="ws.error"
           :preprocess-preview-error="ws.preprocessPreview.error.value"
           :scale-locked="ws.scaleLocked"
-          :last-output-summary="ws.lastOutput?.meta ? { extractorId: ws.lastOutput.meta.extractorId, elapsedMs: ws.lastOutput.meta.elapsedMs } : null"
-          :active-segment-count="ws.flowStep === 'result' && ws.activePipelineOutput ? (ws.activePipelineOutput.segments?.length ?? 0) : null"
+          :last-output-summary="
+            ws.lastOutput?.meta
+              ? {
+                  extractorId: ws.lastOutput.meta.extractorId,
+                  elapsedMs: ws.lastOutput.meta.elapsedMs,
+                }
+              : null
+          "
+          :active-segment-count="
+            ws.flowStep === 'result' && ws.activePipelineOutput
+              ? (ws.activePipelineOutput.segments?.length ?? 0)
+              : null
+          "
         />
 
         <ResultWallsLayerPanel
@@ -284,10 +295,7 @@ defineExpose<{
     </aside>
 
     <div class="canvas-area">
-      <DrawingProfilePicker
-        v-if="!ws.imageSrc"
-        @file-input="ws.onFileInput"
-      />
+      <DrawingProfilePicker v-if="!ws.imageSrc" @file-input="ws.onFileInput" />
 
       <template v-else>
         <WorkspaceCanvasTabs
@@ -309,7 +317,9 @@ defineExpose<{
           <WorkspaceFmlPreviewHost
             v-if="onFmlResultTab"
             :plan="ws.previewPlan"
-            :underlay-src="ws.fmlUnderlayOpacity > 0 || ws.fmlThicknessPickTier ? ws.fmlUnderlaySrc : null"
+            :underlay-src="
+              ws.fmlUnderlayOpacity > 0 || ws.fmlThicknessPickTier ? ws.fmlUnderlaySrc : null
+            "
             :underlay-opacity="ws.fmlUnderlayOpacity / 100"
             :content-opacity="ws.fmlContentOpacity / 100"
             :underlay-width-px="ws.fmlUnderlaySize?.width ?? 0"
@@ -527,7 +537,8 @@ defineExpose<{
       />
 
       <p v-if="debugSidebarEmpty" class="debug-empty-hint">
-        Geen debug-tools op deze stap. Open opnieuw bij voorbewerking (muren), detectie of resultaat.
+        Geen debug-tools op deze stap. Open opnieuw bij voorbewerking (muren), detectie of
+        resultaat.
       </p>
     </WorkspaceDebugSidebar>
   </div>
@@ -600,5 +611,4 @@ defineExpose<{
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
 }
-
 </style>

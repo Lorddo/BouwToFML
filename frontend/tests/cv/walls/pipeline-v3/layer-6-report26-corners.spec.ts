@@ -10,10 +10,7 @@ import { buildConnectorJunctionGraph } from '@/cv/walls/rooms/pipeline-v3/engine
 import type { PipelineV3Layer5Result } from '@/cv/walls/rooms/pipeline-v3/types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const REPORT_26 = path.join(
-  'c:/Users/jordi/Downloads',
-  '2D_3E-layer-debug-v2 (26).json',
-)
+const REPORT_26 = path.join('c:/Users/jordi/Downloads', '2D_3E-layer-debug-v2 (26).json')
 const FIXTURE_26 = path.join(__dirname, 'fixtures', '2D_3E-layer5-report26-top.json')
 
 /** Report 26 L5 top-hoeken (TR + TL met 4px H-stub). */
@@ -103,12 +100,8 @@ describe('V3 L6 2D_3E report-26 corner fixes', () => {
     expect(segs.some((s, i) => isDiagonal(s, i))).toBe(false)
 
     const graph = buildConnectorJunctionGraph(segs)
-    const tr = graph.nodes.find(
-      (n) => Math.hypot(n.x - 1353.95, n.y - 43.5) <= 3 && n.kind === 'L',
-    )
-    const tl = graph.nodes.find(
-      (n) => Math.hypot(n.x - 936.5, n.y - 43.5) <= 3 && n.kind === 'L',
-    )
+    const tr = graph.nodes.find((n) => Math.hypot(n.x - 1353.95, n.y - 43.5) <= 3 && n.kind === 'L')
+    const tl = graph.nodes.find((n) => Math.hypot(n.x - 936.5, n.y - 43.5) <= 3 && n.kind === 'L')
     expect(tr).toBeTruthy()
     expect(tl).toBeTruthy()
   })
@@ -140,16 +133,13 @@ describe('V3 L6 2D_3E report-26 corner fixes', () => {
     })
     const top = out.allSegmentsRepaired.filter(
       (s) =>
-        Math.hypot(s.a.x - 1140, s.a.y - 50) <= 280
-        || Math.hypot(s.b.x - 1140, s.b.y - 50) <= 280,
+        Math.hypot(s.a.x - 1140, s.a.y - 50) <= 280 || Math.hypot(s.b.x - 1140, s.b.y - 50) <= 280,
     )
     const topDiags = top.filter((s, i) => isDiagonal(s, i) && segmentLength(s) < 40)
     expect(topDiags.length).toBe(0)
 
     const graph = buildConnectorJunctionGraph(out.allSegmentsRepaired)
-    const tr = graph.nodes.find(
-      (n) => Math.hypot(n.x - 1353.95, n.y - 43.5) <= 4 && n.kind === 'L',
-    )
+    const tr = graph.nodes.find((n) => Math.hypot(n.x - 1353.95, n.y - 43.5) <= 4 && n.kind === 'L')
     expect(tr).toBeTruthy()
     expect(out.repairStats.facesRolledBack).toBe(0)
   }, 30_000)

@@ -5,11 +5,7 @@ import {
   extractWallInkComponents,
   mergeOpeningWhiteWithWallInk,
 } from '@/cv/walls/rooms/opening-white-space'
-import {
-  DOOR_SPACE_POLICY,
-  buildDoorMergedForPipe,
-  runDoorSwingFilter,
-} from '@/cv/doors'
+import { DOOR_SPACE_POLICY, buildDoorMergedForPipe, runDoorSwingFilter } from '@/cv/doors'
 
 describe('door dual-space policy + merge', () => {
   it('DOOR_SPACE_POLICY defaults: Stage1 white measure; cluster ink; rescue Either ink|white', () => {

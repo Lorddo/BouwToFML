@@ -34,7 +34,11 @@ function componentCount(graph: ReturnType<typeof buildJunctionGraph>): number {
   return components
 }
 
-function prepareForGraph(segments: Segment[], policy: TopologyPolicy, weldPolicy?: WeldPolicy): Segment[] {
+function prepareForGraph(
+  segments: Segment[],
+  policy: TopologyPolicy,
+  weldPolicy?: WeldPolicy,
+): Segment[] {
   if (!policy.weldBeforeGraph || !weldPolicy) return segments
   const microWeld: WeldPolicy = {
     ...weldPolicy,

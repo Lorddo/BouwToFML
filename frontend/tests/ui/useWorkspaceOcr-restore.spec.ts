@@ -5,7 +5,9 @@ import { ocrHitKey } from '@/cv/port/ocrHitKey'
 
 describe('useWorkspaceOcr restoreOcrFromRegions', () => {
   it('vult kandidaten voor sidebar en shift-verwijderen', async () => {
-    const applied = ref<{ regions: import('@/core/extraction').OcrTextCandidate[] }>({ regions: [] })
+    const applied = ref<{ regions: import('@/core/extraction').OcrTextCandidate[] }>({
+      regions: [],
+    })
     const ocr = useWorkspaceOcr({
       preprocess: ref({
         ocrEnabled: true,

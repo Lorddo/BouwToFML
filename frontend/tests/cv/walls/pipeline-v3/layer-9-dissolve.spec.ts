@@ -15,19 +15,34 @@ import {
   isV3FmlReady,
   listIncompleteLayers,
 } from '@/cv/walls/rooms/pipeline-v3/native-layers'
-import { resolveFmlSourceLayer, hasFmlSemanticSource } from '@/cv/walls/rooms/build-semantic-walls-source'
+import {
+  resolveFmlSourceLayer,
+  hasFmlSemanticSource,
+} from '@/cv/walls/rooms/build-semantic-walls-source'
 import type { ExtractionOutput, PipelineV3Debug } from '@/core/extraction/types'
 
 /** BouwTek11 L8-state ~(1514,892): short-V on through-V + H west @886. */
 const BOUWTEK11_PARALLEL_L8: Segment[] = [
   // through-V north
-  { a: { x: 1515.2593541390515, y: 907.6953047376124 }, b: { x: 1515.2593541390515, y: 567.4006785403706 } },
+  {
+    a: { x: 1515.2593541390515, y: 907.6953047376124 },
+    b: { x: 1515.2593541390515, y: 567.4006785403706 },
+  },
   // short-V (redundant cover)
-  { a: { x: 1515.2593541390515, y: 907.6953047376124 }, b: { x: 1515.2593541390515, y: 886.5840005392155 } },
+  {
+    a: { x: 1515.2593541390515, y: 907.6953047376124 },
+    b: { x: 1515.2593541390515, y: 886.5840005392155 },
+  },
   // H west @ L886
-  { a: { x: 1515.2593541390515, y: 886.5840005392155 }, b: { x: 970.553840378512, y: 886.5840005392155 } },
+  {
+    a: { x: 1515.2593541390515, y: 886.5840005392155 },
+    b: { x: 970.553840378512, y: 886.5840005392155 },
+  },
   // through-V south
-  { a: { x: 1515.2593541390518, y: 1334.0680002436966 }, b: { x: 1515.2593541390515, y: 907.6953047376124 } },
+  {
+    a: { x: 1515.2593541390518, y: 1334.0680002436966 },
+    b: { x: 1515.2593541390515, y: 907.6953047376124 },
+  },
 ]
 
 /** V—(korte H)—V—(korte H)—V chamfer stair. */
@@ -115,17 +130,15 @@ describe('V3 L9/L10 dissolve → FML', () => {
       const graph = buildJunctionGraph(covered.segments, 1)
       const tAt886 = graph.nodes.some(
         (n) =>
-          n.kind === 'T'
-          && Math.abs(n.x - (1515.26 + dx)) < 1
-          && Math.abs(n.y - (886.58 + dy)) < 1,
+          n.kind === 'T' && Math.abs(n.x - (1515.26 + dx)) < 1 && Math.abs(n.y - (886.58 + dy)) < 1,
       )
       expect(tAt886).toBe(true)
 
       const hRemains = covered.segments.some(
         (seg) =>
-          Math.abs(seg.a.y - (886.58 + dy)) < 1
-          && Math.abs(seg.b.y - (886.58 + dy)) < 1
-          && Math.abs(seg.a.x - seg.b.x) > 100,
+          Math.abs(seg.a.y - (886.58 + dy)) < 1 &&
+          Math.abs(seg.b.y - (886.58 + dy)) < 1 &&
+          Math.abs(seg.a.x - seg.b.x) > 100,
       )
       expect(hRemains).toBe(true)
     })
@@ -162,9 +175,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
       expect(result.segments).toHaveLength(2)
 
       const graph = buildJunctionGraph(result.segments, 0)
-      const near = graph.nodes.filter(
-        (n) => Math.hypot(n.x - (1354 + dx), n.y - (1230 + dy)) < 8,
-      )
+      const near = graph.nodes.filter((n) => Math.hypot(n.x - (1354 + dx), n.y - (1230 + dy)) < 8)
       expect(near).toHaveLength(1)
       expect(near[0]!.kind).toBe('L')
       expect(Math.abs(near[0]!.angleDeg - 90)).toBeLessThan(5)
@@ -217,25 +228,49 @@ describe('V3 L9/L10 dissolve → FML', () => {
   it('L10 axis-straighten: BouwTek11 V—H5—V jog (~4.5px) → één as, stub weg (offset-invariant)', () => {
     // L9-state ~(970,655): V@970.55 — 5px H — V@975.10 (+ through-V noord).
     const jog: Segment[] = [
-      { a: { x: 970.553840378512, y: 886.5840005392155 }, b: { x: 970.553840378512, y: 709.8119442366 } },
-      { a: { x: 970.553840378512, y: 709.8119442366 }, b: { x: 975.1012324605566, y: 709.8119442366 } },
-      { a: { x: 975.1012324605566, y: 709.8119442366 }, b: { x: 975.1012324605568, y: 567.4006785403706 } },
-      { a: { x: 975.1012324605568, y: 567.4006785403706 }, b: { x: 975.1012324605567, y: 414.0329545659554 } },
+      {
+        a: { x: 970.553840378512, y: 886.5840005392155 },
+        b: { x: 970.553840378512, y: 709.8119442366 },
+      },
+      {
+        a: { x: 970.553840378512, y: 709.8119442366 },
+        b: { x: 975.1012324605566, y: 709.8119442366 },
+      },
+      {
+        a: { x: 975.1012324605566, y: 709.8119442366 },
+        b: { x: 975.1012324605568, y: 567.4006785403706 },
+      },
+      {
+        a: { x: 975.1012324605568, y: 567.4006785403706 },
+        b: { x: 975.1012324605567, y: 414.0329545659554 },
+      },
       // H west op de T
-      { a: { x: 970.553840378512, y: 709.8119442366 }, b: { x: 785.2115980695758, y: 709.8119442366 } },
+      {
+        a: { x: 970.553840378512, y: 709.8119442366 },
+        b: { x: 785.2115980695758, y: 709.8119442366 },
+      },
       // H oost @567
-      { a: { x: 1515.2593541390515, y: 567.4006785403706 }, b: { x: 975.1012324605568, y: 567.4006785403706 } },
+      {
+        a: { x: 1515.2593541390515, y: 567.4006785403706 },
+        b: { x: 975.1012324605568, y: 567.4006785403706 },
+      },
       // H @414
       { a: { x: 975.1012324605567, y: 414.0329545659554 }, b: { x: 648, y: 414.0329545659554 } },
       // H @886
-      { a: { x: 1515.2593541390515, y: 886.5840005392155 }, b: { x: 970.553840378512, y: 886.5840005392155 } },
+      {
+        a: { x: 1515.2593541390515, y: 886.5840005392155 },
+        b: { x: 970.553840378512, y: 886.5840005392155 },
+      },
     ]
 
     ;[
       [0, 0],
       [1234, 987],
     ].forEach(([dx, dy]) => {
-      const result = straightenCollinearAxisChains(offsetSegments(jog, dx, dy), layer10CollapsePolicy)
+      const result = straightenCollinearAxisChains(
+        offsetSegments(jog, dx, dy),
+        layer10CollapsePolicy,
+      )
       expect(result.stats.chainsStraightened).toBeGreaterThanOrEqual(1)
       expect(result.stats.zeroStubsDropped).toBeGreaterThanOrEqual(1)
 

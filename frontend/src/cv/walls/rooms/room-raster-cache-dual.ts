@@ -5,16 +5,9 @@ import {
   type RoomRasterClass,
 } from './room-ink-classify'
 import type { SerializedRoomClassifyState } from '../strategies/room-first'
-import {
-  buildFaceDualSpaceFromState,
-  type FaceDualSpace,
-} from './face-dual-space'
+import { buildFaceDualSpaceFromState, type FaceDualSpace } from './face-dual-space'
 import { claimFacesFromParentMap } from './face-parent-claim'
-import {
-  buildFaceBBoxIndex,
-  rebuildFaceBBoxInk,
-  type FaceBBoxIndex,
-} from './face-bbox-index'
+import { buildFaceBBoxIndex, rebuildFaceBBoxInk, type FaceBBoxIndex } from './face-bbox-index'
 import type { RoomRasterCache } from './room-raster-cache-types'
 
 export function mapFromEntries<K extends number, V>(entries: Array<[K, V]>): Map<K, V> {
@@ -229,7 +222,11 @@ export function effectiveClassification(cache: RoomRasterCache): Map<number, Roo
   )
 }
 
-export function resolveFaceLabelAtPixel(cache: RoomRasterCache, x: number, y: number): number | null {
+export function resolveFaceLabelAtPixel(
+  cache: RoomRasterCache,
+  x: number,
+  y: number,
+): number | null {
   const { width, height, labelsData } = cache.state
   const px = Math.floor(x)
   const py = Math.floor(y)

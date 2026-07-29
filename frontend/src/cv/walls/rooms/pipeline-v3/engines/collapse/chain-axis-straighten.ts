@@ -221,10 +221,10 @@ function applyAxisToCluster(params: {
   }
 }
 
-function collapseStraightDegree2Nodes(params: {
+function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: number }): {
   segments: Segment[]
-  hvBandPx: number
-}): { segments: Segment[]; merged: number } {
+  merged: number
+} {
   let work = params.segments.map((seg) => ({
     ...seg,
     a: { ...seg.a },
@@ -252,9 +252,9 @@ function collapseStraightDegree2Nodes(params: {
       if (!firstAxis || !secondAxis || firstAxis !== secondAxis) continue
 
       if (
-        firstSeg.templateIndex != null
-        && secondSeg.templateIndex != null
-        && firstSeg.templateIndex !== secondSeg.templateIndex
+        firstSeg.templateIndex != null &&
+        secondSeg.templateIndex != null &&
+        firstSeg.templateIndex !== secondSeg.templateIndex
       ) {
         continue
       }

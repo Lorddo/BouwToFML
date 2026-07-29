@@ -14,10 +14,7 @@ import {
   collapseOrthoStairStubs,
   parallelCoverAbsorb,
 } from './engines/collapse'
-import {
-  dedupeExactSegments,
-  rebuildFaceFromSegments,
-} from './engines/segment-ops'
+import { dedupeExactSegments, rebuildFaceFromSegments } from './engines/segment-ops'
 import { resolveLayer9DissolvePolicy } from './policies/layer-9'
 import type { PipelineV3Layer8Result, PipelineV3Layer9Result } from './types'
 

@@ -5,9 +5,7 @@ import type { GapsInkMode } from '@/cv/gaps'
 /** Inclusief buiten-faces: ≤5 = solid, >5 = details (arcering). */
 const WALL_SOLID_MAX_FACE_COUNT = 5
 
-export function classifyWallRenderStyleFromFaceCount(
-  faceCount: number,
-): WallRenderStyleInference {
+export function classifyWallRenderStyleFromFaceCount(faceCount: number): WallRenderStyleInference {
   const solid = faceCount <= WALL_SOLID_MAX_FACE_COUNT
   const renderStyle: WallRenderStyle = solid ? 'solid' : 'details'
   const confidence = solid

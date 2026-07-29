@@ -1,8 +1,5 @@
 import type { CanvasLike } from '@/cv/port/canvasEnv'
-import {
-  renderWindowOverlayCanvas,
-  type WindowAxelStage,
-} from '@/cv/windows'
+import { renderWindowOverlayCanvas, type WindowAxelStage } from '@/cv/windows'
 import {
   activeWindowHypothesesForStage,
   hypothesesWithStackEvidence,
@@ -65,13 +62,18 @@ export function renderWindowOverlayForActiveStage(ctx: {
 export function syncWindowStatsFromCache(ctx: {
   stage: WindowAxelStage
   cache: WindowAxelStageCache
-}): { activeHypotheses: ReturnType<typeof activeWindowHypothesesForStage>; stats: WindowFaceUiStats } {
+}): {
+  activeHypotheses: ReturnType<typeof activeWindowHypothesesForStage>
+  stats: WindowFaceUiStats
+} {
   const activeHypotheses = activeWindowHypothesesForStage({
     stage: ctx.stage,
     cache: ctx.cache,
   })
   const stage2RejectedCount =
-    ctx.cache.stage2RejectedShare + ctx.cache.stage2RejectedAdjacent + ctx.cache.stage2RejectedDirectional
+    ctx.cache.stage2RejectedShare +
+    ctx.cache.stage2RejectedAdjacent +
+    ctx.cache.stage2RejectedDirectional
   return {
     activeHypotheses,
     stats: {

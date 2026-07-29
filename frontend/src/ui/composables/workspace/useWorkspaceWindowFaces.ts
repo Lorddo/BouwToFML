@@ -91,8 +91,11 @@ export function useWorkspaceWindowFaces(deps: {
   const refreshQueued = ref(false)
   const stageCache = ref<WindowAxelStageCache>(createEmptyWindowAxelStageCache())
   const overlayCache = ref<{
-    width: number; height: number; labelsData: Int32Array
-    parentMap: Map<number, number>; faceBboxByRoot: Map<number, FaceBBox>
+    width: number
+    height: number
+    labelsData: Int32Array
+    parentMap: Map<number, number>
+    faceBboxByRoot: Map<number, FaceBBox>
   } | null>(null)
   const refreshTimer = ref<ReturnType<typeof setTimeout> | null>(null)
   let refreshInFlight = false
@@ -104,7 +107,9 @@ export function useWorkspaceWindowFaces(deps: {
   const autoPassApplied = ref(false)
   const autoPass: WindowAutoPassState = createWindowAutoPassState()
 
-  function syncAutoPassRef() { autoPassApplied.value = autoPass.autoPassApplied }
+  function syncAutoPassRef() {
+    autoPassApplied.value = autoPass.autoPassApplied
+  }
 
   const wallsClassifyReady = computed(() => {
     const state = deps.tabOutputs.value.walls?.meta?.roomClassifyState
@@ -201,7 +206,10 @@ export function useWorkspaceWindowFaces(deps: {
       classification,
       parentMap,
     )
-    autoPass.lastAutoWindowFaceIds = collectWindowClassFaceIds({ stage: 'stage3', cache: stageCache.value })
+    autoPass.lastAutoWindowFaceIds = collectWindowClassFaceIds({
+      stage: 'stage3',
+      cache: stageCache.value,
+    })
     autoPass.lastAutoDoorframeFaceIds = collectDoorframeClassFaceIds(stageCache.value)
     await syncStageViewFromCache()
     bindResolvedWindowsToWalls()
@@ -270,7 +278,10 @@ export function useWorkspaceWindowFaces(deps: {
 
   // --- core refresh ---
   async function runWindowRefreshPass(): Promise<void> {
-    if (!shouldRunWindowPass()) { refreshQueued.value = false; return }
+    if (!shouldRunWindowPass()) {
+      refreshQueued.value = false
+      return
+    }
     if (!shouldApplyAutoWindowPass(autoPass)) {
       refreshQueued.value = false
       if (onWindowOverlayTab() && overlayCache.value) await syncStageViewFromCache()
@@ -280,15 +291,19 @@ export function useWorkspaceWindowFaces(deps: {
     const state = normalizeWindowState(rawState)
     if (!state?.labelsData) {
       resetWindowState()
-      markWindowAutoPassDone(autoPass); syncAutoPassRef()
+      markWindowAutoPassDone(autoPass)
+      syncAutoPassRef()
       return
     }
     const windowRects = deps.openingRects().filter((rect) => rect.type === 'window')
     if (windowRects.length <= 0) {
       stageCache.value = createEmptyWindowAxelStageCache()
       overlayCache.value = {
-        width: state.width, height: state.height,
-        labelsData: state.labelsData, parentMap: new Map(state.parentMap), faceBboxByRoot: new Map(),
+        width: state.width,
+        height: state.height,
+        labelsData: state.labelsData,
+        parentMap: new Map(state.parentMap),
+        faceBboxByRoot: new Map(),
       }
       markWindowAutoPassDone(autoPass)
       autoPass.appliedDoorArcSig = signatureForFaceIdSet(deps.getDoorArcFaceIds())
@@ -296,11 +311,13 @@ export function useWorkspaceWindowFaces(deps: {
       refreshQueued.value = false
       if (shouldPushWindowClasses()) {
         const next = await pushStageClassesOntoWalls({
-          stageCache: stageCache.value, windowAxelStage: windowAxelStage.value,
+          stageCache: stageCache.value,
+          windowAxelStage: windowAxelStage.value,
           roomRasterCache: deps.roomRasterCache.value,
           wallsOutput: deps.tabOutputs.value.walls,
           referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-          autoPassState: autoPass, persistOverrides,
+          autoPassState: autoPass,
+          persistOverrides,
         })
         await commitWindowClassPush(next)
       }
@@ -315,7 +332,8 @@ export function useWorkspaceWindowFaces(deps: {
       const cv = await waitForOpenCV()
       const image = await deps.getImageEl()
       const refBands = await collectWindowAxelRefBands({
-        cv, image,
+        cv,
+        image,
         windowRects: windowRects.map((r) => ({ x: r.x, y: r.y, width: r.width, height: r.height })),
         preprocess: deps.preprocess.value,
         eraserMask: deps.preprocessMaskArgs?.()?.eraserMask ?? undefined,
@@ -327,14 +345,18 @@ export function useWorkspaceWindowFaces(deps: {
           ? effectiveClassification(cache)
           : new Map(state.classificationByLabel)
       const dual = resolveFloorDual({
-        state, cache, classificationByLabel: wallClassification,
+        state,
+        cache,
+        classificationByLabel: wallClassification,
         faceOverrides: cache?.faceOverrides,
       })
       const ppm = deps.getPxPerMm()
       const pipeline = runWindowStagePipelineWithBands({
-        dual, refBands,
+        dual,
+        refBands,
         windowRects: windowRects.map((r) => ({ x: r.x, y: r.y, width: r.width, height: r.height })),
-        ppm, doorArcFaceIds: deps.getDoorArcFaceIds(),
+        ppm,
+        doorArcFaceIds: deps.getDoorArcFaceIds(),
         wallThicknessPx: Math.max(0, deps.referenceWallThicknessPx?.value ?? 0),
       })
       const faceBboxByRoot = new Map<number, FaceBBox>()
@@ -365,7 +387,8 @@ export function useWorkspaceWindowFaces(deps: {
       }
       const overlaySpace = pipeline.pipeDual.space(WINDOW_SPACE_POLICY.overlayPaint)
       overlayCache.value = {
-        width: state.width, height: state.height,
+        width: state.width,
+        height: state.height,
         labelsData: overlaySpace.labelsData,
         parentMap: pipeline.detachedParentMap,
         faceBboxByRoot,
@@ -375,18 +398,21 @@ export function useWorkspaceWindowFaces(deps: {
       syncAutoPassRef()
       if (shouldPushWindowClasses()) {
         const next = await pushStageClassesOntoWalls({
-          stageCache: stageCache.value, windowAxelStage: windowAxelStage.value,
+          stageCache: stageCache.value,
+          windowAxelStage: windowAxelStage.value,
           roomRasterCache: deps.roomRasterCache.value,
           wallsOutput: deps.tabOutputs.value.walls,
           referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-          autoPassState: autoPass, persistOverrides,
+          autoPassState: autoPass,
+          persistOverrides,
         })
         await commitWindowClassPush(next)
       }
       await syncStageViewFromCache()
     } catch (error) {
       resetWindowState()
-      markWindowAutoPassDone(autoPass); syncAutoPassRef()
+      markWindowAutoPassDone(autoPass)
+      syncAutoPassRef()
       deps.setLocalError(formatCvError(error))
     } finally {
       refreshing.value = false
@@ -394,8 +420,14 @@ export function useWorkspaceWindowFaces(deps: {
   }
 
   async function refreshWindowOverlay(): Promise<void> {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
-    if (refreshInFlight) { rerunRequested = true; return }
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
+    if (refreshInFlight) {
+      rerunRequested = true
+      return
+    }
     refreshInFlight = true
     try {
       do {
@@ -412,64 +444,103 @@ export function useWorkspaceWindowFaces(deps: {
 
   // --- watches ---
   onBeforeUnmount(() => {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
-  })
-
-  watch(() => deps.roomPhase.value, (phase, prev) => {
-    if (phase !== 'review' && !(phase === 'done' && deps.templateTab.value === 'windows')) {
-      if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
-      refreshQueued.value = false
-      rerunRequested = false
-      return
-    }
-    if (prev === 'classifying') {
-      invalidateAutoWindowPassCore(autoPass); syncAutoPassRef()
-      scheduleWindowRefresh()
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
     }
   })
 
   watch(
-    () => [deps.flowStep.value, deps.templateTab.value, wallsClassifyReady.value, deps.roomPhase.value] as const,
-    () => { scheduleWindowRefresh() },
+    () => deps.roomPhase.value,
+    (phase, prev) => {
+      if (phase !== 'review' && !(phase === 'done' && deps.templateTab.value === 'windows')) {
+        if (refreshTimer.value) {
+          clearTimeout(refreshTimer.value)
+          refreshTimer.value = null
+        }
+        refreshQueued.value = false
+        rerunRequested = false
+        return
+      }
+      if (prev === 'classifying') {
+        invalidateAutoWindowPassCore(autoPass)
+        syncAutoPassRef()
+        scheduleWindowRefresh()
+      }
+    },
   )
 
-  watch(() => signatureForWindowRects(deps.openingRects()), () => {
-    invalidateAutoWindowPassCore(autoPass); syncAutoPassRef()
-    scheduleWindowRefresh()
-  })
+  watch(
+    () =>
+      [
+        deps.flowStep.value,
+        deps.templateTab.value,
+        wallsClassifyReady.value,
+        deps.roomPhase.value,
+      ] as const,
+    () => {
+      scheduleWindowRefresh()
+    },
+  )
 
-  watch(() => {
-    const state = deps.tabOutputs.value.walls?.meta?.roomClassifyState
-    return [state?.labelsData, state?.parentMap, state?.classificationByLabel] as const
-  }, () => { scheduleWindowRefresh() })
+  watch(
+    () => signatureForWindowRects(deps.openingRects()),
+    () => {
+      invalidateAutoWindowPassCore(autoPass)
+      syncAutoPassRef()
+      scheduleWindowRefresh()
+    },
+  )
 
-  watch(() => deps.wallBwPreviewUrl.value, () => {
-    if (onWindowOverlayTab() && overlayCache.value) void syncStageViewFromCache()
-  })
+  watch(
+    () => {
+      const state = deps.tabOutputs.value.walls?.meta?.roomClassifyState
+      return [state?.labelsData, state?.parentMap, state?.classificationByLabel] as const
+    },
+    () => {
+      scheduleWindowRefresh()
+    },
+  )
 
-  watch(() => windowAxelStage.value, () => {
-    if (!overlayCache.value) return
-    if (shouldPushWindowClasses() && shouldApplyAutoWindowPass(autoPass)) {
-      void pushStageClassesOntoWalls({
-        stageCache: stageCache.value, windowAxelStage: windowAxelStage.value,
-        roomRasterCache: deps.roomRasterCache.value,
-        wallsOutput: deps.tabOutputs.value.walls,
-        referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-        autoPassState: autoPass, persistOverrides,
-      }).then(async (next) => {
-        await commitWindowClassPush(next)
-        return syncStageViewFromCache()
-      })
-      return
-    }
-    void syncStageViewFromCache()
-  })
+  watch(
+    () => deps.wallBwPreviewUrl.value,
+    () => {
+      if (onWindowOverlayTab() && overlayCache.value) void syncStageViewFromCache()
+    },
+  )
 
-  watch(() => signatureForFaceIdSet(deps.getDoorArcFaceIds()), (sig) => {
-    if (sig === autoPass.appliedDoorArcSig) return
-    invalidateAutoWindowPassCore(autoPass); syncAutoPassRef()
-    scheduleWindowRefresh()
-  })
+  watch(
+    () => windowAxelStage.value,
+    () => {
+      if (!overlayCache.value) return
+      if (shouldPushWindowClasses() && shouldApplyAutoWindowPass(autoPass)) {
+        void pushStageClassesOntoWalls({
+          stageCache: stageCache.value,
+          windowAxelStage: windowAxelStage.value,
+          roomRasterCache: deps.roomRasterCache.value,
+          wallsOutput: deps.tabOutputs.value.walls,
+          referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
+          autoPassState: autoPass,
+          persistOverrides,
+        }).then(async (next) => {
+          await commitWindowClassPush(next)
+          return syncStageViewFromCache()
+        })
+        return
+      }
+      void syncStageViewFromCache()
+    },
+  )
+
+  watch(
+    () => signatureForFaceIdSet(deps.getDoorArcFaceIds()),
+    (sig) => {
+      if (sig === autoPass.appliedDoorArcSig) return
+      invalidateAutoWindowPassCore(autoPass)
+      syncAutoPassRef()
+      scheduleWindowRefresh()
+    },
+  )
 
   return {
     windowAxelStage,

@@ -1,10 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest'
-import {
-  bwBytesToCanvas,
-  WALL_BW_INK,
-  WALL_BW_WHITE,
-} from '@/cv/preprocess/compose-wall-bw'
+import { bwBytesToCanvas, WALL_BW_INK, WALL_BW_WHITE } from '@/cv/preprocess/compose-wall-bw'
 import { cropBwBytesFromRect } from '@/cv/refs/ref-crop-bw'
 import { classifyWallRefStyleFromBw } from '@/cv/refs/classify-wall-ref-style'
 
@@ -25,12 +21,7 @@ describe('cropBwBytesFromRect / classifyWallRefStyleFromBw', () => {
     })
     expect(crop.width).toBe(2)
     expect(crop.height).toBe(2)
-    expect(Array.from(crop.data)).toEqual([
-      WALL_BW_INK,
-      WALL_BW_INK,
-      WALL_BW_INK,
-      WALL_BW_INK,
-    ])
+    expect(Array.from(crop.data)).toEqual([WALL_BW_INK, WALL_BW_INK, WALL_BW_INK, WALL_BW_INK])
   })
 
   it('style solid bij één face (border-seal)', () => {

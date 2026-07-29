@@ -57,7 +57,9 @@ function bindDragHorizontalLeg() {
         draggable: true,
         dragBoundFunc: bindDragVerticalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'xLeft', ($event.target as any).x() + Math.max(10, 12 / stageScale))"
+      @dragmove="
+        emit('moveScaleHandle', 'xLeft', ($event.target as any).x() + Math.max(10, 12 / stageScale))
+      "
     />
     <v-rect
       :config="{
@@ -69,7 +71,13 @@ function bindDragHorizontalLeg() {
         draggable: true,
         dragBoundFunc: bindDragVerticalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'xRight', ($event.target as any).x() + Math.max(10, 12 / stageScale))"
+      @dragmove="
+        emit(
+          'moveScaleHandle',
+          'xRight',
+          ($event.target as any).x() + Math.max(10, 12 / stageScale),
+        )
+      "
     />
     <v-rect
       :config="{
@@ -81,7 +89,9 @@ function bindDragHorizontalLeg() {
         draggable: true,
         dragBoundFunc: bindDragHorizontalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'yTop', ($event.target as any).y() + Math.max(10, 12 / stageScale))"
+      @dragmove="
+        emit('moveScaleHandle', 'yTop', ($event.target as any).y() + Math.max(10, 12 / stageScale))
+      "
     />
     <v-rect
       :config="{
@@ -93,7 +103,13 @@ function bindDragHorizontalLeg() {
         draggable: true,
         dragBoundFunc: bindDragHorizontalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'yBottom', ($event.target as any).y() + Math.max(10, 12 / stageScale))"
+      @dragmove="
+        emit(
+          'moveScaleHandle',
+          'yBottom',
+          ($event.target as any).y() + Math.max(10, 12 / stageScale),
+        )
+      "
     />
 
     <v-line

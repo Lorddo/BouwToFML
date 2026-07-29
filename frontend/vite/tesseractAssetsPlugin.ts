@@ -7,7 +7,14 @@ const LANG_CODES = ['eng', 'nld'] as const
 
 function langSourcePaths(frontendRoot: string): string[] {
   return LANG_CODES.map((code) =>
-    path.join(frontendRoot, 'node_modules', '@tesseract.js-data', code, LANG_SUBDIR, `${code}.traineddata.gz`),
+    path.join(
+      frontendRoot,
+      'node_modules',
+      '@tesseract.js-data',
+      code,
+      LANG_SUBDIR,
+      `${code}.traineddata.gz`,
+    ),
   )
 }
 

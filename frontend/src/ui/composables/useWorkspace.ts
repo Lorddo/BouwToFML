@@ -38,7 +38,11 @@ import { useWorkspaceWindowFaces } from './workspace/useWorkspaceWindowFaces'
 import { assembleWorkspaceFacadeReturn } from './workspace/assembleWorkspaceFacadeReturn'
 import { useGapsInkModePersistence } from './workspace/useGapsInkModePersistence'
 import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
-import { emptyTabOutputs, type ResultViewTab, type TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
+import {
+  emptyTabOutputs,
+  type ResultViewTab,
+  type TabDetectionOutputs,
+} from '@/cv/pipeline/merge-tab-outputs'
 import {
   normalizeStoredPreprocess,
   type PreprocessPanelLayer,

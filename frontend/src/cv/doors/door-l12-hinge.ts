@@ -45,7 +45,11 @@ export function wallAlignUiDegrees(wallUnit: Vec2): number {
   return -imageDeg
 }
 
-function expandedSize(width: number, height: number, uiDeg: number): { width: number; height: number } {
+function expandedSize(
+  width: number,
+  height: number,
+  uiDeg: number,
+): { width: number; height: number } {
   const rad = (-uiDeg * Math.PI) / 180
   const cos = Math.abs(Math.cos(rad))
   const sin = Math.abs(Math.sin(rad))
@@ -136,10 +140,7 @@ export function orientSwingMaskToBottom(
 }
 
 /** Straightened → local crop coords (vóór floor-offset). */
-function untransformStraightenedPoint(
-  point: RefPoint,
-  meta: L12HingeStraightenMeta,
-): RefPoint {
+function untransformStraightenedPoint(point: RefPoint, meta: L12HingeStraightenMeta): RefPoint {
   let x = point.x
   let y = point.y
   if (meta.rotated180) {
@@ -160,10 +161,7 @@ function untransformStraightenedPoint(
   }
 }
 
-function toFloorAxis(
-  axis: DoorHingeAxis,
-  meta: L12HingeStraightenMeta,
-): DoorHingeAxis {
+function toFloorAxis(axis: DoorHingeAxis, meta: L12HingeStraightenMeta): DoorHingeAxis {
   const aLocal = untransformStraightenedPoint(axis.a, meta)
   const bLocal = untransformStraightenedPoint(axis.b, meta)
   return {

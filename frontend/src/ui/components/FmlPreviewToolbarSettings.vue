@@ -195,11 +195,7 @@ const showMeasureStrip = computed(
             @change="onDrawThicknessBandChange"
           >
             <option v-if="drawThicknessBand === ''" value="" disabled>Aangepast</option>
-            <option
-              v-for="preset in thicknessPresets"
-              :key="preset.id"
-              :value="preset.id"
-            >
+            <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
               {{ preset.label }} ({{ preset.cm }} cm)
             </option>
           </select>
@@ -216,7 +212,12 @@ const showMeasureStrip = computed(
             @change="emit('commitWallThickness')"
           />
           <span class="fml-toolbelt__unit">cm</span>
-          <div v-if="selectedWallPanel" class="fml-toolbelt__presets" role="group" aria-label="Dikte presets">
+          <div
+            v-if="selectedWallPanel"
+            class="fml-toolbelt__presets"
+            role="group"
+            aria-label="Dikte presets"
+          >
             <button
               v-for="preset in thicknessPresets"
               :key="preset.id"
@@ -232,7 +233,9 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="selectedWallPanel" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label" title="Hartlijn-offset in muurband">Uitlijning</span>
+        <span class="fml-toolbelt__field-label" title="Hartlijn-offset in muurband"
+          >Uitlijning</span
+        >
         <div class="fml-toolbelt__field-controls">
           <input
             type="range"
@@ -246,7 +249,9 @@ const showMeasureStrip = computed(
             @input="emit('wallBalanceInput', $event)"
             @change="emit('commitWallBalance')"
           />
-          <span class="fml-toolbelt__unit">{{ wallBalanceMixed ? '—' : wallBalanceDraft.toFixed(2) }}</span>
+          <span class="fml-toolbelt__unit">{{
+            wallBalanceMixed ? '—' : wallBalanceDraft.toFixed(2)
+          }}</span>
         </div>
       </div>
       <div v-if="selectedOpeningPanel" class="fml-toolbelt__field">
@@ -271,11 +276,7 @@ const showMeasureStrip = computed(
         <span class="fml-toolbelt__field-label">Deurtype</span>
         <div class="fml-toolbelt__field-controls">
           <select v-model="addDoorSubtype" class="fml-toolbelt__select" aria-label="Deurtype">
-            <option
-              v-for="opt in doorSubtypeOptions"
-              :key="opt.value"
-              :value="opt.value"
-            >
+            <option v-for="opt in doorSubtypeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>
@@ -300,11 +301,7 @@ const showMeasureStrip = computed(
         <span class="fml-toolbelt__field-label">Raamtype</span>
         <div class="fml-toolbelt__field-controls">
           <select v-model="addWindowSubtype" class="fml-toolbelt__select" aria-label="Raamtype">
-            <option
-              v-for="opt in windowSubtypeOptions"
-              :key="opt.value"
-              :value="opt.value"
-            >
+            <option v-for="opt in windowSubtypeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>
@@ -476,8 +473,12 @@ const showMeasureStrip = computed(
         v-if="selectedWallPanel"
         type="button"
         class="canvas-toolbelt__btn"
-        :title="selectedWallPanel.count === 1 ? 'Muur verwijderen' : 'Geselecteerde muren verwijderen'"
-        :aria-label="selectedWallPanel.count === 1 ? 'Muur verwijderen' : 'Geselecteerde muren verwijderen'"
+        :title="
+          selectedWallPanel.count === 1 ? 'Muur verwijderen' : 'Geselecteerde muren verwijderen'
+        "
+        :aria-label="
+          selectedWallPanel.count === 1 ? 'Muur verwijderen' : 'Geselecteerde muren verwijderen'
+        "
         @click="emit('deleteWalls')"
       >
         <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -535,7 +536,9 @@ const showMeasureStrip = computed(
   <template v-if="showMeasureStrip">
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
     <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <span class="fml-toolbelt__meta">{{ measureLineCount }} maatlijn{{ measureLineCount === 1 ? '' : 'en' }}</span>
+      <span class="fml-toolbelt__meta"
+        >{{ measureLineCount }} maatlijn{{ measureLineCount === 1 ? '' : 'en' }}</span
+      >
       <button
         type="button"
         class="canvas-toolbelt__btn"

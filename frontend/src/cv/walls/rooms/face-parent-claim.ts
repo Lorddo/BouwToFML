@@ -8,12 +8,7 @@ import { resolveMergedLabel } from './room-raster-merge'
 
 /** Classes die permanente FaceID-identiteit verdienen (los uit enclosed parentMap). */
 export function isClaimIdentityClass(cls: RoomRasterClass): boolean {
-  return (
-    cls === 'wall' ||
-    cls === 'door' ||
-    cls === 'window' ||
-    cls === 'doorframe'
-  )
+  return cls === 'wall' || cls === 'door' || cls === 'window' || cls === 'doorframe'
 }
 
 /**
@@ -62,10 +57,7 @@ export function claimWallishAfterInherit(params: {
     params.classificationByLabel,
     inheritanceOverrides,
   )
-  const wallishChildren = collectWallishParentMapChildren(
-    params.parentMap,
-    classificationByLabel,
-  )
+  const wallishChildren = collectWallishParentMapChildren(params.parentMap, classificationByLabel)
   const claimed = claimFacesFromParentMap({
     parentMap: params.parentMap,
     faceIds: wallishChildren,

@@ -107,7 +107,9 @@ export function useWorkspaceWallBwCompose(deps: {
     const size = imageSize()
     const eraser = deps.step1EraserMask()
     const eraserKey = eraser && eraser.length > 0 ? `e${eraser.length}` : 'e0'
-    const wallTune = layerTuneFingerprintParts(underlayPreviewFingerprint(deps.preprocess.value)).wall
+    const wallTune = layerTuneFingerprintParts(
+      underlayPreviewFingerprint(deps.preprocess.value),
+    ).wall
     return `${size?.width ?? 0}x${size?.height ?? 0}|${wallTune}|${eraserKey}`
   }
 

@@ -26,10 +26,7 @@ export function buildEffectiveComponentClassification(params: {
       continue
     }
     const priorRoot = resolveMergedLabel(component.label, params.priorParentMap)
-    effective.set(
-      component.label,
-      params.classificationByLabel.get(priorRoot) ?? 'surface',
-    )
+    effective.set(component.label, params.classificationByLabel.get(priorRoot) ?? 'surface')
   }
   return effective
 }

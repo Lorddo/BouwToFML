@@ -84,7 +84,8 @@ export function evaluateAxisCandidate(
 function sameAxis(a: AxisCandidate, b: AxisCandidate, axisBandPx: number): boolean {
   if (Math.abs(dot(a.dir, b.dir)) < 0.9995) return false
   const dist = pointLineDistance(b.origin, a.origin, a.dir)
-  const overlap = Math.min(a.supportLength, b.supportLength) / Math.max(a.supportLength, b.supportLength)
+  const overlap =
+    Math.min(a.supportLength, b.supportLength) / Math.max(a.supportLength, b.supportLength)
   return dist <= axisBandPx && overlap >= 0.75
 }
 
@@ -240,15 +241,13 @@ function pickWallAxisCandidate(
         ? Math.min(
             Math.abs(meanSupportCoord(candidate.supportPoints, 'y') - sectorBBox.y),
             Math.abs(
-              meanSupportCoord(candidate.supportPoints, 'y') -
-                (sectorBBox.y + sectorBBox.height),
+              meanSupportCoord(candidate.supportPoints, 'y') - (sectorBBox.y + sectorBBox.height),
             ),
           )
         : Math.min(
             Math.abs(meanSupportCoord(candidate.supportPoints, 'x') - sectorBBox.x),
             Math.abs(
-              meanSupportCoord(candidate.supportPoints, 'x') -
-                (sectorBBox.x + sectorBBox.width),
+              meanSupportCoord(candidate.supportPoints, 'x') - (sectorBBox.x + sectorBBox.width),
             ),
           )
     // Straffen van as midden in de sector (boog-trapjes).
@@ -341,7 +340,9 @@ function resolveBladeFromCorner(params: {
     const angleDeg = directedAngleDeg(wallDirIntoSector, bladeDir)
     if (angleDeg < options.minAxisSeparationDeg || angleDeg > 95) continue
     const score =
-      reach * 2 - angleMatchPenalty(angleDeg, options.expectedAngleDeg) + candidate.supportLength * 0.25
+      reach * 2 -
+      angleMatchPenalty(angleDeg, options.expectedAngleDeg) +
+      candidate.supportLength * 0.25
     if (!best || score > best.score) {
       best = { axis: candidate, tip, angleDeg, score }
     }
@@ -432,9 +433,7 @@ export function pickWallAxisCornerHinge(
       options,
     })
     if (!blade) continue
-    const angleError = preferAngleMatch
-      ? Math.abs(blade.angleDeg - options.expectedAngleDeg!)
-      : 0
+    const angleError = preferAngleMatch ? Math.abs(blade.angleDeg - options.expectedAngleDeg!) : 0
     const wallReach = magnitude(subtract(other, hinge))
     const bladeReach = magnitude(subtract(blade.tip, hinge))
     // Stub-blad (2–3px) = valse radius op een trapje; echte open-radius heeft lengte.

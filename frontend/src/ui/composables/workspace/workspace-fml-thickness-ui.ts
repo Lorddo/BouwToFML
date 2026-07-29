@@ -119,11 +119,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     pxPerMmX: number,
     pxPerMmY: number,
   ): void {
-    const derived = deriveFmlBandBoundariesCmFromRefPx(
-      referenceWallThicknessPx,
-      pxPerMmX,
-      pxPerMmY,
-    )
+    const derived = deriveFmlBandBoundariesCmFromRefPx(referenceWallThicknessPx, pxPerMmX, pxPerMmY)
     fmlBandMidBoundaryCm.value = derived.midBoundaryCm
     fmlBandMaxBoundaryCm.value = derived.maxBoundaryCm
     appliedFmlBandBoundaries.value = { ...derived }

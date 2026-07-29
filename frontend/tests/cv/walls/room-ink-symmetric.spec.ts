@@ -8,14 +8,8 @@ import {
 
 describe('room-ink-symmetric', () => {
   it('carveAddedInk zet donkere muurpixels op label 0', () => {
-    const labelsData = new Int32Array([
-      1, 1, 1,
-      1, 1, 1,
-    ])
-    const wallInkData = Uint8Array.from([
-      255, 255, 255,
-      0, 0, 255,
-    ])
+    const labelsData = new Int32Array([1, 1, 1, 1, 1, 1])
+    const wallInkData = Uint8Array.from([255, 255, 255, 0, 0, 255])
     const carved = carveAddedInk({ labelsData, wallInkData })
     expect(carved).toBe(2)
     expect(labelsData[3]).toBe(0)

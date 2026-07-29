@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
-import { applyNegative, fillHolesByMaxArea, smoothBinaryLines, thickenLines } from '@/cv/port/cleanBinary'
+import {
+  applyNegative,
+  fillHolesByMaxArea,
+  smoothBinaryLines,
+  thickenLines,
+} from '@/cv/port/cleanBinary'
 
 function makeMat(cols = 1000, rows = 1000, data?: Uint8Array) {
   return {
@@ -40,7 +45,10 @@ describe('cleanBinary helpers', () => {
         return { delete: vi.fn() }
       }),
       Size: class {
-        constructor(public width: number, public height: number) {}
+        constructor(
+          public width: number,
+          public height: number,
+        ) {}
       },
       Mat: class {
         cols = 1000
@@ -96,7 +104,10 @@ describe('cleanBinary helpers', () => {
         rectangles.push({ x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y })
       }),
       Point: class {
-        constructor(public x: number, public y: number) {}
+        constructor(
+          public x: number,
+          public y: number,
+        ) {}
       },
       Scalar: class {
         constructor(..._args: number[]) {}

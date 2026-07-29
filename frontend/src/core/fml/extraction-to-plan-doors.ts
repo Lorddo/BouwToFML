@@ -53,11 +53,15 @@ function mergeTwoDoorsForDoubleWide(
           x: Math.min(left.snappedBBox.x, right.snappedBBox.x),
           y: Math.min(left.snappedBBox.y, right.snappedBBox.y),
           width:
-            Math.max(left.snappedBBox.x + left.snappedBBox.width, right.snappedBBox.x + right.snappedBBox.width) -
-            Math.min(left.snappedBBox.x, right.snappedBBox.x),
+            Math.max(
+              left.snappedBBox.x + left.snappedBBox.width,
+              right.snappedBBox.x + right.snappedBBox.width,
+            ) - Math.min(left.snappedBBox.x, right.snappedBBox.x),
           height:
-            Math.max(left.snappedBBox.y + left.snappedBBox.height, right.snappedBBox.y + right.snappedBBox.height) -
-            Math.min(left.snappedBBox.y, right.snappedBBox.y),
+            Math.max(
+              left.snappedBBox.y + left.snappedBBox.height,
+              right.snappedBBox.y + right.snappedBBox.height,
+            ) - Math.min(left.snappedBBox.y, right.snappedBBox.y),
         }
       : undefined
   return {
@@ -156,9 +160,7 @@ export function mapLayer12DoorsToOpenings(params: {
     )
     const sourceMirrored = door.mirrored ?? [0, 0]
     const mirrored =
-      sourceUnit && dot(sourceUnit, targetUnit) < 0
-        ? flipMirrored(sourceMirrored)
-        : sourceMirrored
+      sourceUnit && dot(sourceUnit, targetUnit) < 0 ? flipMirrored(sourceMirrored) : sourceMirrored
     return {
       refid: door.fmlRefId,
       type: 'door',

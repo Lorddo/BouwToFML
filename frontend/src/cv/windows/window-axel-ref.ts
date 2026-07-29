@@ -202,13 +202,11 @@ export function analyzeWindowAxelRef(params: {
   const { refIndex, profile } = params
   if (profile.kind !== 'window') return null
 
-  let best:
-    | {
-        stripHeightsPx: number[]
-        fullStripHeightsPx: number[]
-        axisBandHeightPx: number
-      }
-    | null = null
+  let best: {
+    stripHeightsPx: number[]
+    fullStripHeightsPx: number[]
+    axisBandHeightPx: number
+  } | null = null
   const framingFaces: RefFace[] = []
   /** Opening-wit rails — presence + Stage-3 stack heights. */
   const topRailFacesWhite: RefFace[] = []
@@ -280,14 +278,13 @@ export function analyzeWindowAxelRef(params: {
     }
     if (!axisBand) continue
     const minAxisFaceAreaPx = Math.max(1, anchorAreaPx * 0.5)
-    const axisFaces = faceProfile.faces
-      .filter((face) => {
-        if (face.role !== 'interior') return false
-        if (excludedLabels.has(face.label)) return false
-        if (face.centroid.y < axisBand.yMin || face.centroid.y > axisBand.yMax) return false
-        if (face.areaPx < minAxisFaceAreaPx) return false
-        return face.bbox.width >= face.bbox.height * 1.2
-      })
+    const axisFaces = faceProfile.faces.filter((face) => {
+      if (face.role !== 'interior') return false
+      if (excludedLabels.has(face.label)) return false
+      if (face.centroid.y < axisBand.yMin || face.centroid.y > axisBand.yMax) return false
+      if (face.areaPx < minAxisFaceAreaPx) return false
+      return face.bbox.width >= face.bbox.height * 1.2
+    })
     if (axisFaces.length <= 0) continue
     const stripHeightsPx = collectVerticalBandHeights({
       faces: axisFaces,

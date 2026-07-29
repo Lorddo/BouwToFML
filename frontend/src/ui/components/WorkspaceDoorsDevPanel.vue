@@ -118,8 +118,10 @@ defineProps<{
             <td>{{ door.kind }} · {{ door.source }}</td>
             <td>
               {{ door.widthPx.toFixed(1) }}px ({{ door.widthCm.toFixed(2) }}cm)<br />
-              swing {{ door.swingSpanPx.toFixed(1) }} · along {{ (door.overhangAlongPx ?? 0).toFixed(1) }} ·
-              opp {{ (door.overhangOppositePx ?? 0).toFixed(1) }} · frame {{ door.framingPx.toFixed(1) }} · ratio
+              swing {{ door.swingSpanPx.toFixed(1) }} · along
+              {{ (door.overhangAlongPx ?? 0).toFixed(1) }} · opp
+              {{ (door.overhangOppositePx ?? 0).toFixed(1) }} · frame
+              {{ door.framingPx.toFixed(1) }} · ratio
               {{ door.ratioBlade.toFixed(2) }}
             </td>
             <td>{{ door.fmlRefId }}</td>
@@ -148,10 +150,13 @@ defineProps<{
             <td>{{ door.doorId }}</td>
             <td>#{{ door.segmentIndex }} · t {{ door.t.toFixed(2) }}</td>
             <td>{{ door.openingAxis }} · sign {{ door.outwardSign }}</td>
-            <td>{{ door.contactScore.toFixed(2) }} (2e {{ door.secondaryContactScore.toFixed(2) }})</td>
             <td>
-              {{ door.snappedBBox.width.toFixed(1) }}×{{ door.snappedBBox.height.toFixed(1) }} @
-              ({{ door.snappedBBox.x.toFixed(1) }}, {{ door.snappedBBox.y.toFixed(1) }})
+              {{ door.contactScore.toFixed(2) }} (2e {{ door.secondaryContactScore.toFixed(2) }})
+            </td>
+            <td>
+              {{ door.snappedBBox.width.toFixed(1) }}×{{ door.snappedBBox.height.toFixed(1) }} @ ({{
+                door.snappedBBox.x.toFixed(1)
+              }}, {{ door.snappedBBox.y.toFixed(1) }})
             </td>
           </tr>
         </tbody>
@@ -178,8 +183,9 @@ defineProps<{
             <td>[{{ door.mirrored[0] }}, {{ door.mirrored[1] }}]</td>
             <td>({{ door.hingePx.x.toFixed(1) }}, {{ door.hingePx.y.toFixed(1) }})</td>
             <td>
-              ({{ door.openingStartPx.x.toFixed(1) }}, {{ door.openingStartPx.y.toFixed(1) }}) →
-              ({{ door.openingEndPx.x.toFixed(1) }}, {{ door.openingEndPx.y.toFixed(1) }})
+              ({{ door.openingStartPx.x.toFixed(1) }}, {{ door.openingStartPx.y.toFixed(1) }}) → ({{
+                door.openingEndPx.x.toFixed(1)
+              }}, {{ door.openingEndPx.y.toFixed(1) }})
             </td>
             <td>
               leaf {{ door.leafLines.length }} · arc {{ door.arcPoints.length }} · arrows

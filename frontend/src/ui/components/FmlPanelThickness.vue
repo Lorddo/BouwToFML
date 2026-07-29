@@ -90,7 +90,9 @@ function onBandMaxBoundaryInput(event: Event): void {
           class="pick-btn"
           title="Meet min-bandgrens op onderlegger (gemeten × 1.10)"
           :class="{ active: fmlThicknessPickTier === 'min' }"
-          :disabled="!scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy"
+          :disabled="
+            !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
+          "
           @click="emit('startThicknessPick', 'min')"
         >
           ⊕
@@ -138,7 +140,9 @@ function onBandMaxBoundaryInput(event: Event): void {
           class="pick-btn"
           title="Meet max-bandgrens op onderlegger (gemeten × 0.90)"
           :class="{ active: fmlThicknessPickTier === 'max' }"
-          :disabled="!scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy"
+          :disabled="
+            !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
+          "
           @click="emit('startThicknessPick', 'max')"
         >
           ⊕

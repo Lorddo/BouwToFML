@@ -138,7 +138,10 @@ describe('demoteExteriorPocketFaces', () => {
       classificationByLabel: scene.classes,
       parentMap: scene.parentMap,
     })
-    const labelClass = buildInkEaterLabelClassFromEffective(scene.components, demoted.classificationByLabel)
+    const labelClass = buildInkEaterLabelClassFromEffective(
+      scene.components,
+      demoted.classificationByLabel,
+    )
     const resolved = resolveInkBetweenFaces({
       labelsData: scene.labels,
       components: scene.components,

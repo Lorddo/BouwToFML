@@ -133,10 +133,10 @@ describe('2D_3E L5 opposite-T (234,1285)', () => {
 
       const vertical = out.allSegmentsCleaned.find(
         (s) =>
-          Math.abs(s.a.x - (221.7 + dx)) <= 1.5
-          && Math.abs(s.b.x - (221.7 + dx)) <= 1.5
-          && Math.min(s.a.y, s.b.y) < 1310 + dy
-          && Math.max(s.a.y, s.b.y) > 1340 + dy,
+          Math.abs(s.a.x - (221.7 + dx)) <= 1.5 &&
+          Math.abs(s.b.x - (221.7 + dx)) <= 1.5 &&
+          Math.min(s.a.y, s.b.y) < 1310 + dy &&
+          Math.max(s.a.y, s.b.y) > 1340 + dy,
       )
       expect(vertical).toBeTruthy()
     })

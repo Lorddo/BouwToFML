@@ -7,10 +7,7 @@ import {
   resolveFmlSourceJunctionCount,
   semanticAsSegments,
 } from './build-semantic-walls-source'
-import {
-  buildWallDistanceMap,
-  measureSegmentThicknessMax,
-} from './room-wall-segment-thickness'
+import { buildWallDistanceMap, measureSegmentThicknessMax } from './room-wall-segment-thickness'
 
 export interface BuildSemanticWallsOutputResult {
   output: ExtractionOutput

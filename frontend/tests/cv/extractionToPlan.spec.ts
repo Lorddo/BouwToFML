@@ -61,7 +61,10 @@ describe('extractionToPlan', () => {
     expect(parsed.plan.floors[0].walls.length).toBeGreaterThan(0)
 
     const existingPath = fileURLToPath(
-      new URL('../../examples/FML(current)/Benedendorpsweg 51, Oosterbeek.json.fml', import.meta.url),
+      new URL(
+        '../../examples/FML(current)/Benedendorpsweg 51, Oosterbeek.json.fml',
+        import.meta.url,
+      ),
     )
     const existingRaw = readFileSync(existingPath, 'utf-8')
     const existingParsed = importFmlV3(existingRaw)

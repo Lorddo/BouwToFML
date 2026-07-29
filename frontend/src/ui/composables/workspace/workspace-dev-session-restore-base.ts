@@ -10,7 +10,11 @@ import {
   type DevOpeningReferenceRect,
   type DevWallReferenceRect,
 } from '@/platform/dev-workspace'
-import { normalizeStoredPreprocess, type PreprocessPanelLayer, type TemplateTab } from '@/cv/preprocess/layer-preprocess'
+import {
+  normalizeStoredPreprocess,
+  type PreprocessPanelLayer,
+  type TemplateTab,
+} from '@/cv/preprocess/layer-preprocess'
 import { storeProfileId, type DrawingProfileId } from '@/platform/profile'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
@@ -21,7 +25,10 @@ export type WorkspaceDevSessionRestoreBaseDeps = {
   preprocess: Ref<PreprocessConfig>
   drawingProfileId: Ref<DrawingProfileId>
   wallPipelineVersion: Ref<WallPipelineVersion>
-  scaleUi: Pick<ReturnType<typeof useWorkspaceScale>, 'resetScaleFull' | 'restoreFromSessionSnapshot'>
+  scaleUi: Pick<
+    ReturnType<typeof useWorkspaceScale>,
+    'resetScaleFull' | 'restoreFromSessionSnapshot'
+  >
   resetInkEdit: () => void
   hydrateInkOverlay: (runs: number[] | null | undefined, width: number, height: number) => void
   rebuildBaseWallBw: (options?: { force?: boolean }) => Promise<boolean>
@@ -51,9 +58,7 @@ export type WorkspaceDevSessionRestoreBaseDeps = {
   resetAutoDoorPassGate: () => void
 }
 
-export function createWorkspaceDevSessionRestoreBase(
-  deps: WorkspaceDevSessionRestoreBaseDeps,
-) {
+export function createWorkspaceDevSessionRestoreBase(deps: WorkspaceDevSessionRestoreBaseDeps) {
   async function restoreBaseSession(session: DevWorkspaceSession): Promise<void> {
     deps.setLocalError(null)
     deps.clearWorkspaceForSession()

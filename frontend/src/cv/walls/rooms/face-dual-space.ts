@@ -1,9 +1,6 @@
 import { buildLabelAdjacency } from './label-adjacency'
 import type { RoomRasterClass } from './room-ink-classify'
-import {
-  buildOpeningWhiteSpace,
-  type OpeningWhiteSpace,
-} from './opening-white-space'
+import { buildOpeningWhiteSpace, type OpeningWhiteSpace } from './opening-white-space'
 import { extractComponentsFromLabelsData, type RasterRoomComponent } from './room-raster'
 import { buildEnclosedFaceParentMap, resolveMergedLabel } from './room-raster-merge'
 import type { SerializedRoomClassifyState } from '../strategies/room-first'
@@ -116,11 +113,7 @@ function buildInkFaceSpace(params: {
   classificationByLabel: Map<number, RoomRasterClass>
   parentMap?: Map<number, number>
 }): FaceSpace {
-  const components = extractComponentsFromLabelsData(
-    params.labelsData,
-    params.width,
-    params.height,
-  )
+  const components = extractComponentsFromLabelsData(params.labelsData, params.width, params.height)
   const labelAt = (x: number, y: number) => {
     if (x < 0 || y < 0 || x >= params.width || y >= params.height) return 0
     return params.labelsData[y * params.width + x] ?? 0
@@ -328,8 +321,7 @@ export function buildFaceSpaceFromComponents(params: {
   labelsData?: Int32Array
 }): FaceSpace {
   const parentMap = params.parentMap ?? new Map<number, number>()
-  const classificationByLabel =
-    params.classificationByLabel ?? new Map<number, RoomRasterClass>()
+  const classificationByLabel = params.classificationByLabel ?? new Map<number, RoomRasterClass>()
   for (const component of params.components) {
     if (!classificationByLabel.has(component.label)) {
       classificationByLabel.set(component.label, 'surface')

@@ -6,7 +6,10 @@ import {
   tracePathFromIToFirstTx,
 } from '@/cv/walls/rooms/pipeline-v3/engines/prune'
 import { resolveLayer3PrunePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-3'
-import { V3_NATIVE_THROUGH_LAYER, listIncompleteLayers } from '@/cv/walls/rooms/pipeline-v3/native-layers'
+import {
+  V3_NATIVE_THROUGH_LAYER,
+  listIncompleteLayers,
+} from '@/cv/walls/rooms/pipeline-v3/native-layers'
 
 const policyAt = (referenceWallThicknessPx: number) =>
   resolveLayer3PrunePolicy(referenceWallThicknessPx)
@@ -130,8 +133,8 @@ describe('pruneISpurs', () => {
       expect(
         pruned.segments.some(
           (seg) =>
-            Math.hypot(seg.a.x - anchor.x, seg.a.y - anchor.y) < 2
-            || Math.hypot(seg.b.x - anchor.x, seg.b.y - anchor.y) < 2,
+            Math.hypot(seg.a.x - anchor.x, seg.a.y - anchor.y) < 2 ||
+            Math.hypot(seg.b.x - anchor.x, seg.b.y - anchor.y) < 2,
         ),
       ).toBe(false)
     })
@@ -150,7 +153,9 @@ describe('pruneISpurs', () => {
     const iNodes = graph.nodes.filter((node) => node.kind === 'I')
     expect(iNodes).toHaveLength(2)
     expect(
-      iNodes.every((node) => graph.edges.filter((e) => e.a === node.id || e.b === node.id).length === 1),
+      iNodes.every(
+        (node) => graph.edges.filter((e) => e.a === node.id || e.b === node.id).length === 1,
+      ),
     ).toBe(true)
   })
 })

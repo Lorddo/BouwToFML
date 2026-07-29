@@ -13,7 +13,10 @@ export interface Layer6SegmentClassified {
   targetAxis: number | null
 }
 
-function isNearHorizontalAngle(angleDeg: number, tolDeg: number = LAYER6_HV_ANGLE_TOL_DEG): boolean {
+function isNearHorizontalAngle(
+  angleDeg: number,
+  tolDeg: number = LAYER6_HV_ANGLE_TOL_DEG,
+): boolean {
   const abs = Math.abs(((angleDeg % 180) + 180) % 180)
   return abs <= tolDeg || abs >= 180 - tolDeg
 }

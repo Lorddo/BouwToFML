@@ -1,8 +1,5 @@
 import type { SemanticWallSegment } from '@/core/extraction/types'
-import {
-  resolveClassAtLabel,
-  type RoomRasterClass,
-} from '@/cv/walls/rooms/room-ink-classify'
+import { resolveClassAtLabel, type RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import { collectDirectionalAdjacentClassRoots } from './door-attach-doorframes'
 import { tryBindDoorToAnchorSegment, tryBindDoorToBounds } from './door-wall-snap-bind'
@@ -141,8 +138,7 @@ export function growDoorframeUnionAlongAxis(params: {
   expandPx: number
 }): BBoxBounds | null {
   const door = params.doorBounds
-  const axis: DoorOpeningAxis =
-    door.y1 - door.y0 >= door.x1 - door.x0 ? 'v' : 'h'
+  const axis: DoorOpeningAxis = door.y1 - door.y0 >= door.x1 - door.x0 ? 'v' : 'h'
   const found = new Set<number>()
   const visited = new Set<number>(params.doorRoots)
   const queue: Array<{ root: number; hops: number }> = [...params.doorRoots].map((root) => ({

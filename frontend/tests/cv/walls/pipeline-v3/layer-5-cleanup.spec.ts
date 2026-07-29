@@ -2,13 +2,20 @@ import { describe, expect, it } from 'vitest'
 import type { Segment } from '@/cv/port/wallGraph'
 import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
 import { runLayer5Cleanup } from '@/cv/walls/rooms/pipeline-v3/layer-5-cleanup'
-import { repairDanglingConnections, weldNearConnectedEndpoints } from '@/cv/walls/rooms/pipeline-v3/engines/weld'
+import {
+  repairDanglingConnections,
+  weldNearConnectedEndpoints,
+} from '@/cv/walls/rooms/pipeline-v3/engines/weld'
 import { unifyNearEndpoints } from '@/cv/walls/rooms/pipeline-v3/engines/segment-ops'
 import {
   cleanupTxMicroSegments,
   cleanupLlStairs,
 } from '@/cv/walls/rooms/pipeline-v3/engines/cleanup'
-import { resolveLayer5CleanupPolicy, layer5WeldPolicy, layer5TopologyPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-5'
+import {
+  resolveLayer5CleanupPolicy,
+  layer5WeldPolicy,
+  layer5TopologyPolicy,
+} from '@/cv/walls/rooms/pipeline-v3/policies/layer-5'
 import {
   V3_NATIVE_THROUGH_LAYER,
   listIncompleteLayers,
@@ -165,9 +172,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
     // After dangling repair the gap should be closed (shared endpoint)
     const endpoints = segs.flatMap((s) => [s.a, s.b])
     const nearPairs = endpoints.filter((p, i) =>
-      endpoints.some(
-        (q, j) => i < j && Math.hypot(p.x - q.x, p.y - q.y) < 0.01,
-      ),
+      endpoints.some((q, j) => i < j && Math.hypot(p.x - q.x, p.y - q.y) < 0.01),
     )
     expect(nearPairs.length).toBeGreaterThan(0)
   })
@@ -183,9 +188,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 30 })
     const face = result.facesCleaned[0]!
     const segs = face.segments
-    const short = segs.filter(
-      (s) => Math.hypot(s.a.x - s.b.x, s.a.y - s.b.y) <= 1,
-    )
+    const short = segs.filter((s) => Math.hypot(s.a.x - s.b.x, s.a.y - s.b.y) <= 1)
     expect(short).toHaveLength(0)
     expect(segs.length).toBeLessThanOrEqual(2)
     // No leftover I at the former micro (outer ends of an open wall may still be I)
@@ -251,7 +254,10 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
     const layer4 = makeLayer4([
       { a: { x: 726.6384507234746, y: 570 }, b: { x: 726.6384507234749, y: 516 } },
       { a: { x: 726.6384507234748, y: 621.5532841546399 }, b: { x: 726.6384507234746, y: 570 } },
-      { a: { x: 1155.8787804508847, y: 424.99123438745255 }, b: { x: 742.25, y: 424.9912343874526 } },
+      {
+        a: { x: 1155.8787804508847, y: 424.99123438745255 },
+        b: { x: 742.25, y: 424.9912343874526 },
+      },
       { a: { x: 742.25, y: 424.9912343874526 }, b: { x: 727, y: 424.9912343874526 } },
       { a: { x: 726.6384507234749, y: 516 }, b: { x: 726.6384507234748, y: 424.99123438745255 } },
       { a: { x: 726.6384507234748, y: 424.99123438745255 }, b: { x: 727, y: 424.9912343874526 } },

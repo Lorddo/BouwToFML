@@ -42,11 +42,7 @@ const HALF_WIDTH = 28
 const MIN_SURFACE_LIGHTNESS = 110
 const MIN_SURFACE_CHROMA = 40
 const MAX_WALL_LIKE_GRAY_LIGHTNESS = 150
-const WALL_LIGHTNESS = perceivedLightness(
-  WALL_FACE_RGBA[0],
-  WALL_FACE_RGBA[1],
-  WALL_FACE_RGBA[2],
-)
+const WALL_LIGHTNESS = perceivedLightness(WALL_FACE_RGBA[0], WALL_FACE_RGBA[1], WALL_FACE_RGBA[2])
 
 describe('colorForLabel', () => {
   it('houdt surface-pastels buiten deur-amber en raam-cyaan hue-bands', () => {

@@ -136,8 +136,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
             groupMarkerConfig: { locked: false },
             decor: { left: null, right: null, top: null, outline: 0 },
             openings: wall.openings.map((op) => ({
-              refid:
-                op.refid || (op.type === 'window' ? CONCEPT_WINDOW_REFID : CONCEPT_DOOR_REFID),
+              refid: op.refid || (op.type === 'window' ? CONCEPT_WINDOW_REFID : CONCEPT_DOOR_REFID),
               t: op.t,
               type: op.type,
               width: op.width,

@@ -8,7 +8,8 @@ export function buildLayerDebugReportFromLayers(
     transitions?: LayerDebugReport['transitions']
   },
 ): LayerDebugReport {
-  const transitions = params.transitions ?? enrichTransitionsWithEffects(compareAllLayerTransitions(params.layers))
+  const transitions =
+    params.transitions ?? enrichTransitionsWithEffects(compareAllLayerTransitions(params.layers))
   return {
     version: LAYER_DEBUG_VERSION,
     ...params,

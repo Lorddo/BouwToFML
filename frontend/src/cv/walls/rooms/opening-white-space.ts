@@ -102,10 +102,7 @@ export function buildOpeningWhiteSpace(params: BuildOpeningWhiteSpaceParams): Op
     const root = resolveMergedLabel(component.label, parentMap)
     if (seen.has(root)) continue
     seen.add(root)
-    const cls =
-      effectiveClass.get(root) ??
-      effectiveClass.get(component.label) ??
-      'surface'
+    const cls = effectiveClass.get(root) ?? effectiveClass.get(component.label) ?? 'surface'
     if (isOpeningWhiteClass(cls)) roots.push(root)
   }
   roots.sort((a, b) => a - b)
@@ -132,11 +129,7 @@ export function extractWallInkComponents(params: {
   classificationByLabel: Map<number, RoomRasterClass>
   parentMap?: Map<number, number>
 }): RasterRoomComponent[] {
-  const components = extractComponentsFromLabelsData(
-    params.labelsData,
-    params.width,
-    params.height,
-  )
+  const components = extractComponentsFromLabelsData(params.labelsData, params.width, params.height)
   const parentMap = params.parentMap ?? new Map<number, number>()
   return components.filter((component) => {
     const root = resolveMergedLabel(component.label, parentMap)

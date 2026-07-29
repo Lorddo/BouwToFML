@@ -2,7 +2,12 @@ import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
 import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
 import { measureSwingSpanPxFromFaceBBox } from './door-swing-hinge'
 import { round2 } from './door-wall-snap-geom'
-import type { DoorResolvedKind, DoorSwingHypothesis, DoorSwingRefBand, ResolvedDoorCandidate } from './types'
+import type {
+  DoorResolvedKind,
+  DoorSwingHypothesis,
+  DoorSwingRefBand,
+  ResolvedDoorCandidate,
+} from './types'
 
 function resolveAveragePpm(pxPerMmX: number, pxPerMmY: number): number {
   const x = pxPerMmX > 0 ? pxPerMmX : 0
@@ -37,7 +42,11 @@ function resolveClearOverhangRatio(params: {
   framingPx: number
   refSwingSpanPx: number
 }): number {
-  if (typeof params.explicit === 'number' && Number.isFinite(params.explicit) && params.explicit >= 0) {
+  if (
+    typeof params.explicit === 'number' &&
+    Number.isFinite(params.explicit) &&
+    params.explicit >= 0
+  ) {
     return params.explicit
   }
   const clearPx = Math.max(0, params.legacyOverhangPx - params.framingPx)
@@ -77,9 +86,7 @@ export function resolveDoorCandidates(params: {
       const refFrameAlong = Math.max(0, ref?.framingAlongPx ?? 0)
       const refFrameOpposite = Math.max(0, ref?.framingOppositePx ?? 0)
       const hasRefFramingSides = refFrameAlong + refFrameOpposite > 0
-      const framingAlongPx = hasRefFramingSides
-        ? refFrameAlong
-        : Math.max(0, framingPx / 2)
+      const framingAlongPx = hasRefFramingSides ? refFrameAlong : Math.max(0, framingPx / 2)
       const framingOppositePx = hasRefFramingSides
         ? refFrameOpposite
         : Math.max(0, framingPx - framingAlongPx)

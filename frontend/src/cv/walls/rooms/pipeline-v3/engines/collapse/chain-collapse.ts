@@ -125,8 +125,8 @@ function pickChainExtension(params: {
       params.segments,
     )
     if (
-      angle < params.policy.collinearThicknessBypassDeg
-      && collinearThicknessWithinMaxBandNoise(
+      angle < params.policy.collinearThicknessBypassDeg &&
+      collinearThicknessWithinMaxBandNoise(
         viaThickness,
         otherThickness,
         params.referenceWallThicknessPx,
@@ -150,13 +150,14 @@ function pickChainExtension(params: {
   }
   if (compatible.length > 1) return null
 
-  const incompatible = candidates.filter((inc) =>
-    !thicknessCompatible(
-      viaThickness,
-      params.thicknessBySegment[inc.segIndex] ?? 0,
-      params.policy,
-      params.referenceWallThicknessPx,
-    ),
+  const incompatible = candidates.filter(
+    (inc) =>
+      !thicknessCompatible(
+        viaThickness,
+        params.thicknessBySegment[inc.segIndex] ?? 0,
+        params.policy,
+        params.referenceWallThicknessPx,
+      ),
   )
   if (incompatible.length !== 1) return null
 
@@ -290,15 +291,7 @@ function countFakeLInChain(params: {
       if (!bothInChain) continue
       const [a, b] = node.incidents
       if (a.segIndex === b.segIndex) continue
-      if (
-        isPassableInternalTurn(
-          point,
-          a.segIndex,
-          b.segIndex,
-          params.segments,
-          params.policy,
-        )
-      ) {
+      if (isPassableInternalTurn(point, a.segIndex, b.segIndex, params.segments, params.policy)) {
         fakeL += 1
       }
     }
@@ -357,7 +350,11 @@ export function collapseInterJunctionChains(params: {
       hvBandPx,
     })
 
-    const chainIndices = [...backward.segIndices.slice().reverse(), seedIndex, ...forward.segIndices]
+    const chainIndices = [
+      ...backward.segIndices.slice().reverse(),
+      seedIndex,
+      ...forward.segIndices,
+    ]
     if (chainIndices.length < params.policy.minChainSegments) continue
 
     const startPoint = backward.endPoint

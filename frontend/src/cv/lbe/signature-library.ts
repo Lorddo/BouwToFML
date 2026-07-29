@@ -44,9 +44,7 @@ function deriveLineFingerprint(lines: Segment[]): WallLineFingerprint | undefine
   const dominant = dominantOrientation === 'horizontal' ? horizontal : vertical
   const lengths = dominant.map((line) => segmentLength(line))
   const centers = dominant.map((line) =>
-    dominantOrientation === 'horizontal'
-      ? (line.a.y + line.b.y) / 2
-      : (line.a.x + line.b.x) / 2,
+    dominantOrientation === 'horizontal' ? (line.a.y + line.b.y) / 2 : (line.a.x + line.b.x) / 2,
   )
   const sortedCenters = [...centers].sort((a, b) => a - b)
   const spacings: number[] = []
@@ -122,7 +120,15 @@ function aggregateWallSignatures(signatures: GeometricSignature[]): GeometricSig
 
   const aggregatedWallEntries: GeometricSignature[] = []
   for (const set of clusters) {
-    const thicknessPx = Math.max(3, Math.round(median(set.map((s) => s.thicknessPx), 14)))
+    const thicknessPx = Math.max(
+      3,
+      Math.round(
+        median(
+          set.map((s) => s.thicknessPx),
+          14,
+        ),
+      ),
+    )
     const spacingPool = set
       .map((s) => s.parallelSpacingPx ?? s.lineFingerprint?.spacingPx)
       .filter((v): v is number => typeof v === 'number' && v > 0)
@@ -146,29 +152,44 @@ function aggregateWallSignatures(signatures: GeometricSignature[]): GeometricSig
       thicknessPx,
       parallelLineCount,
       parallelSpacingPx,
-      angleToleranceDeg: Math.round(median(set.map((s) => s.angleToleranceDeg), 12)),
+      angleToleranceDeg: Math.round(
+        median(
+          set.map((s) => s.angleToleranceDeg),
+          12,
+        ),
+      ),
       minLengthPx: wallMinLengthPxForRenderStyle(style),
       closeKernelPx:
         style === 'details'
-          ? Math.round(median(set.map((s) => s.closeKernelPx ?? s.thicknessPx), thicknessPx))
+          ? Math.round(
+              median(
+                set.map((s) => s.closeKernelPx ?? s.thicknessPx),
+                thicknessPx,
+              ),
+            )
           : undefined,
       rejectDiagonalHatch: style === 'details',
       lineFingerprint:
         style === 'parallel_lines'
           ? {
               rawLineCount: Math.round(
-                median(set.map((s) => s.lineFingerprint?.rawLineCount ?? 0), 0),
+                median(
+                  set.map((s) => s.lineFingerprint?.rawLineCount ?? 0),
+                  0,
+                ),
               ),
               dominantOrientation:
-                set.filter((s) => s.lineFingerprint?.dominantOrientation === 'horizontal')
-                  .length >=
+                set.filter((s) => s.lineFingerprint?.dominantOrientation === 'horizontal').length >=
                 set.filter((s) => s.lineFingerprint?.dominantOrientation === 'vertical').length
                   ? 'horizontal'
                   : 'vertical',
               medianLengthPx: Math.max(
                 4,
                 Math.round(
-                  median(set.map((s) => s.lineFingerprint?.medianLengthPx ?? s.minLengthPx), 12),
+                  median(
+                    set.map((s) => s.lineFingerprint?.medianLengthPx ?? s.minLengthPx),
+                    12,
+                  ),
                 ),
               ),
               spacingPx: parallelSpacingPx,

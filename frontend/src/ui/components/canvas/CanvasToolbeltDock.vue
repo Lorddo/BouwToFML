@@ -50,11 +50,7 @@ const emit = defineEmits<{
           @update:active-tool="emit('update:faceActiveTool', $event)"
         />
       </div>
-      <div
-        v-if="faceVisible && inkVisible"
-        class="canvas-toolbelt-dock__sep"
-        aria-hidden="true"
-      />
+      <div v-if="faceVisible && inkVisible" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
       <div
         v-if="inkVisible"
         class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--ink"

@@ -52,18 +52,14 @@ function tryRescueMatchOnFace(params: {
     params.aspectToleranceRatio,
     { sizeBand: params.sizeBand },
   )
-  const sizeNearMatch =
-    !strictSingleMatch
-      ? bestAspectRef(
-          params.face.bbox,
-          params.refBands,
-          Math.max(
-            params.aspectToleranceRatio,
-            DOOR_SWING_TUNING.wallFillAspectToleranceRatio,
-          ),
-          { sizeBand: params.sizeBand },
-        )
-      : null
+  const sizeNearMatch = !strictSingleMatch
+    ? bestAspectRef(
+        params.face.bbox,
+        params.refBands,
+        Math.max(params.aspectToleranceRatio, DOOR_SWING_TUNING.wallFillAspectToleranceRatio),
+        { sizeBand: params.sizeBand },
+      )
+    : null
   const isUnderWallMin = underWallMinBand(params.face.bbox, params.sizeBand)
   const looseUnderMinMatch =
     !strictSingleMatch && isUnderWallMin
@@ -80,14 +76,14 @@ function tryRescueMatchOnFace(params: {
       : null
   const looseWallMatch =
     params.includeWallRescueMatch && !strictSingleMatch
-      ? sizeNearMatch ??
+      ? (sizeNearMatch ??
         looseUnderMinMatch ??
         wallRescueMatch(
           params.face.bbox,
           params.refBands,
           params.sizeBand,
           params.aspectToleranceRatio,
-        )
+        ))
       : null
   const candidateMatch = strictSingleMatch ?? looseWallMatch ?? sizeNearMatch ?? looseUnderMinMatch
   if (!candidateMatch) return null
@@ -174,18 +170,14 @@ function resolveSingleMatch(params: {
     { sizeBand: params.sizeBand },
   )
   // Size past op muur-as+ref-diepte, aspect iets ruimer (ondiepe refs / tekeningvariatie).
-  const sizeNearMatch =
-    !strictSingleMatch
-      ? bestAspectRef(
-          rootFace.bbox,
-          params.refBands,
-          Math.max(
-            params.aspectToleranceRatio,
-            DOOR_SWING_TUNING.wallFillAspectToleranceRatio,
-          ),
-          { sizeBand: params.sizeBand },
-        )
-      : null
+  const sizeNearMatch = !strictSingleMatch
+    ? bestAspectRef(
+        rootFace.bbox,
+        params.refBands,
+        Math.max(params.aspectToleranceRatio, DOOR_SWING_TUNING.wallFillAspectToleranceRatio),
+        { sizeBand: params.sizeBand },
+      )
+    : null
   const isUnderWallMin = underWallMinBand(rootFace.bbox, params.sizeBand)
   const looseUnderMinMatch =
     !strictSingleMatch && isUnderWallMin
@@ -215,16 +207,15 @@ function resolveSingleMatch(params: {
       refBands: params.refBands,
     })
   // Opening-wit: outside mag seed zijn (size-band filtert mega-exterior).
-  const clippedSingleMatch =
-    !strictSingleMatch
-      ? clippedArcRescueMatch({
-          bbox: rootFace.bbox,
-          areaPx: rootFace.areaPx,
-          refBands: params.refBands,
-          sizeBand: params.sizeBand,
-          aspectToleranceRatio: params.aspectToleranceRatio,
-        })
-      : null
+  const clippedSingleMatch = !strictSingleMatch
+    ? clippedArcRescueMatch({
+        bbox: rootFace.bbox,
+        areaPx: rootFace.areaPx,
+        refBands: params.refBands,
+        sizeBand: params.sizeBand,
+        aspectToleranceRatio: params.aspectToleranceRatio,
+      })
+    : null
   return {
     isNotSeed: false,
     measureFace: rootFace,
@@ -257,10 +248,7 @@ export function evaluateSeedForRef(params: {
   allowedSeedClasses?: ReadonlySet<RoomRasterClass>
 }): SeedOutcome {
   const { rootFace, refBands, sizeBand, aspectToleranceRatio, maxClusterSize } = params
-  if (
-    params.allowedSeedClasses &&
-    !params.allowedSeedClasses.has(rootFace.className)
-  ) {
+  if (params.allowedSeedClasses && !params.allowedSeedClasses.has(rootFace.className)) {
     return { kind: 'not_seed' }
   }
   const remap = (match: RefMatch): RefMatch => ({
@@ -293,7 +281,7 @@ export function evaluateSeedForRef(params: {
   const refSpan = Math.max(1, ref.swingSpanPx ?? 0, ref.swingWpx, ref.swingHpx)
   const refAreaSpan2Ratio = Math.max(
     1e-6,
-    ref.areaSpan2Ratio ?? (ref.areaPx / Math.max(1, refSpan * refSpan)),
+    ref.areaSpan2Ratio ?? ref.areaPx / Math.max(1, refSpan * refSpan),
   )
   const refBoxArea = Math.max(1, refAreaSpan2Ratio * refSpan * refSpan)
 

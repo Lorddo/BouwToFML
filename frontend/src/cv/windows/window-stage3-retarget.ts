@@ -2,10 +2,7 @@ import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { shouldRetargetAcceptedWindowToDoorframe } from './window-door-arc-filter'
 import { buildEvidenceStats } from './window-evidence-filter'
 import { WINDOW_SPACE_POLICY } from './window-space-policy'
-import type {
-  WindowEvidenceAcceptance,
-  WindowEvidenceFilterResult,
-} from './types'
+import type { WindowEvidenceAcceptance, WindowEvidenceFilterResult } from './types'
 
 function assembleEvidenceResult(params: {
   accepted: WindowEvidenceAcceptance[]

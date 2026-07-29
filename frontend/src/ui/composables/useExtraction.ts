@@ -35,7 +35,10 @@ function scaleRange(
   return { min, max }
 }
 
-function scaleSignatureToWork(signature: GeometricSignature | undefined, scale: number): GeometricSignature | undefined {
+function scaleSignatureToWork(
+  signature: GeometricSignature | undefined,
+  scale: number,
+): GeometricSignature | undefined {
   if (!signature) return signature
   if (scale >= 1) return signature
   if (signature.wall) {
@@ -64,9 +67,11 @@ function scaleSignatureToWork(signature: GeometricSignature | undefined, scale: 
       ...signature,
       door: {
         ...signature.door,
-        openingWidthPx: scaleRange(signature.door.openingWidthPx, scale) ?? signature.door.openingWidthPx,
+        openingWidthPx:
+          scaleRange(signature.door.openingWidthPx, scale) ?? signature.door.openingWidthPx,
         arcRadiusPx: scaleRange(signature.door.arcRadiusPx, scale),
-        symbolDepthPx: scaleValue(signature.door.symbolDepthPx, scale) ?? signature.door.symbolDepthPx,
+        symbolDepthPx:
+          scaleValue(signature.door.symbolDepthPx, scale) ?? signature.door.symbolDepthPx,
       },
     }
   }
@@ -75,8 +80,10 @@ function scaleSignatureToWork(signature: GeometricSignature | undefined, scale: 
       ...signature,
       window: {
         ...signature.window,
-        openingWidthPx: scaleRange(signature.window.openingWidthPx, scale) ?? signature.window.openingWidthPx,
-        symbolDepthPx: scaleValue(signature.window.symbolDepthPx, scale) ?? signature.window.symbolDepthPx,
+        openingWidthPx:
+          scaleRange(signature.window.openingWidthPx, scale) ?? signature.window.openingWidthPx,
+        symbolDepthPx:
+          scaleValue(signature.window.symbolDepthPx, scale) ?? signature.window.symbolDepthPx,
       },
     }
   }
@@ -106,7 +113,9 @@ function formatExtractionStatus(output: ExtractionOutput, effectiveEdge: number)
     parts.push(`OCR woorden: ${output.meta.ocrWordCount}`)
   }
   if (output.meta?.wallSignatureCount != null) {
-    parts.push(`signatures W/D/R: ${output.meta.wallSignatureCount}/${output.meta.doorSignatureCount ?? 0}/${output.meta.windowSignatureCount ?? 0}`)
+    parts.push(
+      `signatures W/D/R: ${output.meta.wallSignatureCount}/${output.meta.doorSignatureCount ?? 0}/${output.meta.windowSignatureCount ?? 0}`,
+    )
   }
   if (parts.length === 0) {
     return `Klaar — geen resultaten (detectie ${effectiveEdge}px)`
@@ -161,8 +170,7 @@ function runExtractionInWorker(payload: WorkerRequestPayload): Promise<Extractio
   const requestId = workerSeq++
   const { imageData, onProgress, ...rest } = payload
   const message = { ...deproxyForWorker(rest), requestId, imageData }
-  const transfer: Transferable[] =
-    imageData && !payload.skipImage ? [imageData.data.buffer] : []
+  const transfer: Transferable[] = imageData && !payload.skipImage ? [imageData.data.buffer] : []
   return new Promise((resolve, reject) => {
     const handleMessage = (
       event: MessageEvent<{
@@ -311,9 +319,7 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
           ...c,
           bbox: scaleBoxesToOriginal([c.bbox], work.scale)[0],
         })),
-        segments: raw.segments
-          ? scaleSegmentsToOriginal(raw.segments, work.scale)
-          : raw.segments,
+        segments: raw.segments ? scaleSegmentsToOriginal(raw.segments, work.scale) : raw.segments,
         wallGraph: raw.wallGraph
           ? scaleWallGraphToOriginal(raw.wallGraph, work.scale)
           : raw.wallGraph,
@@ -329,7 +335,10 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
         debugGaps: raw.debugGaps
           ? raw.debugGaps.map((g) => ({
               ...g,
-              ...scaleBoxesToOriginal([{ x: g.x, y: g.y, width: g.width, height: g.height }], work.scale)[0],
+              ...scaleBoxesToOriginal(
+                [{ x: g.x, y: g.y, width: g.width, height: g.height }],
+                work.scale,
+              )[0],
             }))
           : raw.debugGaps,
         pipelineV3Debug: raw.pipelineV3Debug
@@ -356,14 +365,19 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
           : raw.pipelineV3Debug,
         wallMatches: raw.wallMatches
           ? raw.wallMatches.map((m) => ({
-            ...m,
-            bbox: scaleBoxesToOriginal([m.bbox], work.scale)[0],
-          }))
+              ...m,
+              bbox: scaleBoxesToOriginal([m.bbox], work.scale)[0],
+            }))
           : raw.wallMatches,
         roomWallMaskRle: raw.roomWallMaskRle
           ? scaleMaskRleNearest(raw.roomWallMaskRle, work.originalWidth, work.originalHeight)
           : raw.roomWallMaskRle,
-        meta: { ...raw.meta, extractorId: raw.meta?.extractorId ?? plugin.capabilities.id, elapsedMs: raw.meta?.elapsedMs ?? 0, workScale: work.scale },
+        meta: {
+          ...raw.meta,
+          extractorId: raw.meta?.extractorId ?? plugin.capabilities.id,
+          elapsedMs: raw.meta?.elapsedMs ?? 0,
+          workScale: work.scale,
+        },
       }
       lastOutput.value = output
       const effectiveEdge = Math.max(work.workWidth, work.workHeight)

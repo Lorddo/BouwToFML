@@ -150,7 +150,10 @@ export function useWorkspaceSignaturePreview(deps: {
       const scaledExamples = deps.rects.value.map((rect) => ({
         id: rect.id,
         type: rect.type,
-        bbox: scaleBoxesToWork([{ x: rect.x, y: rect.y, width: rect.width, height: rect.height }], work.scale)[0],
+        bbox: scaleBoxesToWork(
+          [{ x: rect.x, y: rect.y, width: rect.width, height: rect.height }],
+          work.scale,
+        )[0],
         signature: rect.signature ? scaleSignature(rect.signature, work.scale) : undefined,
       }))
       const masks = preparePreprocessMasks({

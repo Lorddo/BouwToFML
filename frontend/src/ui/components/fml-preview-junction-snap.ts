@@ -23,8 +23,7 @@ export function applyShiftSnapFromOppositeEnd(
   preferredWallId?: string | null,
 ): Point2D {
   const ref =
-    (preferredWallId ? refs.find((item) => item.wallId === preferredWallId) : null) ??
-    refs[0]
+    (preferredWallId ? refs.find((item) => item.wallId === preferredWallId) : null) ?? refs[0]
   if (!ref) return candidate
 
   const wall = walls.find((item) => item.id === ref.wallId)

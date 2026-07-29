@@ -74,8 +74,7 @@ export function doorTouchesKeptWallMask(params: {
     for (let x = x0; x < x1; x += 1) {
       const label = labelsData[y * width + x] ?? 0
       if (label <= 0) continue
-      const isDoorFace =
-        faceSet.has(label) || faceSet.has(resolveMergedLabel(label, parentMap))
+      const isDoorFace = faceSet.has(label) || faceSet.has(resolveMergedLabel(label, parentMap))
       if (!isDoorFace) continue
       if (
         maskInkWithinRadius({

@@ -97,10 +97,7 @@ function round3(value: number): number {
   return Math.round(value * 1000) / 1000
 }
 
-function preferredWallAxisFromBBox(bbox: {
-  width: number
-  height: number
-}): 'h' | 'v' {
+function preferredWallAxisFromBBox(bbox: { width: number; height: number }): 'h' | 'v' {
   return bbox.width >= bbox.height ? 'h' : 'v'
 }
 
@@ -134,10 +131,7 @@ function baseDiag(params: {
   wallMaxPx: number
   matchedRefIndex: number
   refAngleDeg: number
-}): Omit<
-  DoorAngleRescueDiagnostic,
-  'status' | 'candidateAngleDeg' | 'angleDeltaDeg' | 'score'
-> {
+}): Omit<DoorAngleRescueDiagnostic, 'status' | 'candidateAngleDeg' | 'angleDeltaDeg' | 'score'> {
   return {
     root: params.root,
     space: params.space,

@@ -28,11 +28,7 @@ const screenPreview = computed(() => {
 
 <template>
   <svg class="fml-measure-overlay" :width="width" :height="height">
-    <g
-      v-for="line in screenLines"
-      :key="line.id"
-      class="fml-measure-line"
-    >
+    <g v-for="line in screenLines" :key="line.id" class="fml-measure-line">
       <line :x1="line.x1" :y1="line.y1" :x2="line.x2" :y2="line.y2" />
       <line :x1="line.tickAx1" :y1="line.tickAy1" :x2="line.tickAx2" :y2="line.tickAy2" />
       <line :x1="line.tickBx1" :y1="line.tickBy1" :x2="line.tickBx2" :y2="line.tickBy2" />

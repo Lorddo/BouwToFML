@@ -1,20 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import {
-  CONCEPT_WINDOW_REFID,
-  WINDOW_DOUBLE_REFID,
-  WINDOW_TRIPLE_REFID,
-} from '@/core/fml/types'
+import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
 import { mergeAdjacentBoundWindows } from '@/cv/windows/window-wall-merge'
 import type { BoundWindow } from '@/cv/windows/types'
 
-function makeBound(partial: Partial<BoundWindow> & Pick<BoundWindow, 'windowId' | 't' | 'openingBBox'>): BoundWindow {
+function makeBound(
+  partial: Partial<BoundWindow> & Pick<BoundWindow, 'windowId' | 't' | 'openingBBox'>,
+): BoundWindow {
   const bbox = partial.openingBBox
   return {
     segmentIndex: partial.segmentIndex ?? 0,
     openingAxis: partial.openingAxis ?? 'h',
     openingStartPx: partial.openingStartPx ?? { x: bbox.x, y: bbox.y + bbox.height / 2 },
-    openingEndPx:
-      partial.openingEndPx ?? { x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 },
+    openingEndPx: partial.openingEndPx ?? { x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 },
     widthPx: partial.widthPx ?? bbox.width,
     widthCm: partial.widthCm ?? bbox.width / 5,
     fmlRefId: partial.fmlRefId ?? CONCEPT_WINDOW_REFID,

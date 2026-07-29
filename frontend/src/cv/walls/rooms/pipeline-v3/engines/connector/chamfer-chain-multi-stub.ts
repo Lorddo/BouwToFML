@@ -5,10 +5,7 @@ import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { classifyLayer6Segment } from './segment-classify'
 import { LAYER6_HV_BAND_FALLBACK_PX } from './constants'
-import {
-  diagonalIncidentsAt,
-  walkDiagonalChamferChain,
-} from './chamfer-chain-walk'
+import { diagonalIncidentsAt, walkDiagonalChamferChain } from './chamfer-chain-walk'
 
 export function collectChamferChainSegmentIndices(params: {
   segments: Segment[]
@@ -21,12 +18,7 @@ export function collectChamferChainSegmentIndices(params: {
   const hvBandPx = params.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
   const endpointSnapPx = params.endpointSnapPx
   const stubMax = params.maxStubSegmentPx ?? params.maxChainPx
-  const diags = diagonalIncidentsAt(
-    params.segments,
-    params.tPoint,
-    hvBandPx,
-    endpointSnapPx,
-  )
+  const diags = diagonalIncidentsAt(params.segments, params.tPoint, hvBandPx, endpointSnapPx)
   let best: number[] = []
   let bestLen = 0
   for (const diag of diags) {
@@ -69,7 +61,11 @@ export function isSegmentInMultiStubChamferChain(params: {
   hvBandPx?: number
 }): boolean {
   const hvBandPx = params.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
-  const classified = classifyLayer6Segment(params.segments[params.segIndex]!, params.segIndex, hvBandPx)
+  const classified = classifyLayer6Segment(
+    params.segments[params.segIndex]!,
+    params.segIndex,
+    hvBandPx,
+  )
   if (classified.kind !== 'D') return false
 
   const stubLists: number[][] = []

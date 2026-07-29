@@ -12,9 +12,21 @@ import {
 } from '@/platform/profile'
 import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import type { SelectionRect } from '@/platform/selection'
-import { emptyTabOutputs, tabFromDetectTargets, type TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
-import { detectTargetsForTab, elementClassToDetectionLayer, isFinalizeTabOutput, isGeometryDetectionLayer } from '@/cv/workspace/layer-flow'
-import { attachPreprocessVectorCacheToOutput, type PreprocessVectorCache } from '@/cv/preprocess/preprocess-vector-cache'
+import {
+  emptyTabOutputs,
+  tabFromDetectTargets,
+  type TabDetectionOutputs,
+} from '@/cv/pipeline/merge-tab-outputs'
+import {
+  detectTargetsForTab,
+  elementClassToDetectionLayer,
+  isFinalizeTabOutput,
+  isGeometryDetectionLayer,
+} from '@/cv/workspace/layer-flow'
+import {
+  attachPreprocessVectorCacheToOutput,
+  type PreprocessVectorCache,
+} from '@/cv/preprocess/preprocess-vector-cache'
 import { formatCvError } from '@/cv/formatCvError'
 import { measureReferenceWallThicknessPx } from '@/cv/walls/measure-reference-wall'
 import { classifyWallRefStyleFromBw } from '@/cv/refs/classify-wall-ref-style'
@@ -63,7 +75,10 @@ export function useWorkspaceDetection(deps: {
   clearRectsByType: (cls: ElementClass) => void
   removeRect: (id: string) => void
   selectRect: (id: string | null) => void
-  updateRectBounds: (id: string, bounds: { x: number; y: number; width: number; height: number }) => void
+  updateRectBounds: (
+    id: string,
+    bounds: { x: number; y: number; width: number; height: number },
+  ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   endDraw: () => void
   cancelDraw: () => void
@@ -238,7 +253,9 @@ export function useWorkspaceDetection(deps: {
         /* stijl optioneel — dikte blijft leidend */
       }
       if (thickness == null) {
-        deps.setLocalError('Kon muurdikte niet meten in het referentievak. Teken opnieuw over een duidelijke muur.')
+        deps.setLocalError(
+          'Kon muurdikte niet meten in het referentievak. Teken opnieuw over een duidelijke muur.',
+        )
       } else {
         deps.setLocalError(null)
         if (!status.value.startsWith('Muurdikte')) {
@@ -255,7 +272,10 @@ export function useWorkspaceDetection(deps: {
     }
   }
 
-  function onRectUpdate(id: string, bounds: { x: number; y: number; width: number; height: number }) {
+  function onRectUpdate(
+    id: string,
+    bounds: { x: number; y: number; width: number; height: number },
+  ) {
     deps.updateRectBounds(id, bounds)
     const rect = deps.rects.value.find((item) => item.id === id)
     if (rect?.type === 'wall') {
@@ -330,7 +350,11 @@ export function useWorkspaceDetection(deps: {
       if (!deps.scaleConfirmed.value) {
         throw new Error('Bevestig eerst de schaal met ✓ voordat je detectie start.')
       }
-      if (options?.phase === 'classify' || options?.phase === 'finalize' || options?.phase === 'full') {
+      if (
+        options?.phase === 'classify' ||
+        options?.phase === 'finalize' ||
+        options?.phase === 'full'
+      ) {
         await deps.ensureWallBwReady?.()
       }
       if (options?.phase === 'classify') {
@@ -347,21 +371,25 @@ export function useWorkspaceDetection(deps: {
         deps.setLocalError('Teken minstens één voorbeeldvak voor muur.')
         return false
       }
-      const output = await run(img, runRects, deps.preprocess.value, targets, deps.preprocessMaskArgs(), {
-        roomInkCoverageThreshold: roomInkCoverageThreshold.value,
-        wallStyle: deps.preprocess.value.wallStyle,
-        referenceWallThicknessPx: deps.referenceWallThicknessPx.value ?? undefined,
-        referenceWallMeasureRect: options?.referenceWallMeasureRect,
-        roomPipelinePhase: options?.phase ?? 'full',
-        wallPipelineVersion: deps.wallPipelineVersion.value,
-        roomClassifyState: options?.roomClassifyState,
-        faceOverrides: options?.faceOverrides,
-        pinnedRoots: options?.pinnedRoots,
-      })
-      if (
-        output.meta?.referenceWallThicknessPx &&
-        output.meta.referenceWallThicknessPx > 0
-      ) {
+      const output = await run(
+        img,
+        runRects,
+        deps.preprocess.value,
+        targets,
+        deps.preprocessMaskArgs(),
+        {
+          roomInkCoverageThreshold: roomInkCoverageThreshold.value,
+          wallStyle: deps.preprocess.value.wallStyle,
+          referenceWallThicknessPx: deps.referenceWallThicknessPx.value ?? undefined,
+          referenceWallMeasureRect: options?.referenceWallMeasureRect,
+          roomPipelinePhase: options?.phase ?? 'full',
+          wallPipelineVersion: deps.wallPipelineVersion.value,
+          roomClassifyState: options?.roomClassifyState,
+          faceOverrides: options?.faceOverrides,
+          pinnedRoots: options?.pinnedRoots,
+        },
+      )
+      if (output.meta?.referenceWallThicknessPx && output.meta.referenceWallThicknessPx > 0) {
         deps.referenceWallThicknessPx.value = output.meta.referenceWallThicknessPx
       }
       const outputWithVectorDebug = deps.preprocessVectorCache.value

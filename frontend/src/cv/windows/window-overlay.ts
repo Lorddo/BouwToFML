@@ -1,4 +1,9 @@
-import { canvasToDataUrlAsync, compositeMaskOverUnderlay, createCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
+import {
+  canvasToDataUrlAsync,
+  compositeMaskOverUnderlay,
+  createCanvas,
+  type CanvasLike,
+} from '@/cv/port/canvasEnv'
 import { DOORFRAME_FACE_RGBA } from '@/cv/walls/rooms/room-raster'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import type { WindowAxelHypothesis } from './types'
@@ -66,7 +71,12 @@ function resolveHypothesisBounds(params: {
     maxX = Math.max(maxX, Math.ceil(bbox.x + bbox.width) - 1)
     maxY = Math.max(maxY, Math.ceil(bbox.y + bbox.height) - 1)
   }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY)
+  ) {
     return null
   }
   const clampedMinX = clamp(minX, 0, Math.max(0, params.width - 1))
@@ -172,9 +182,12 @@ function renderWindowOverlay(params: {
         if (contour[idx]) continue
         const mask = pixelMask[idx]
         if (mask === 0) continue
-        const upEdge = y > 0 && contour[idx - params.width] && pixelMask[idx - params.width] === mask
+        const upEdge =
+          y > 0 && contour[idx - params.width] && pixelMask[idx - params.width] === mask
         const downEdge =
-          y < params.height - 1 && contour[idx + params.width] && pixelMask[idx + params.width] === mask
+          y < params.height - 1 &&
+          contour[idx + params.width] &&
+          pixelMask[idx + params.width] === mask
         const leftEdge = x > 0 && contour[idx - 1] && pixelMask[idx - 1] === mask
         const rightEdge = x < params.width - 1 && contour[idx + 1] && pixelMask[idx + 1] === mask
         if (upEdge || downEdge || leftEdge || rightEdge) grown[idx] = 1
@@ -202,7 +215,11 @@ function renderWindowOverlay(params: {
   return canvas
 }
 
-async function loadCanvasFromUrl(url: string, width: number, height: number): Promise<CanvasLike | null> {
+async function loadCanvasFromUrl(
+  url: string,
+  width: number,
+  height: number,
+): Promise<CanvasLike | null> {
   if (typeof Image === 'undefined') return null
   return new Promise((resolve) => {
     const img = new Image()

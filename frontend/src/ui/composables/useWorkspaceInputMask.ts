@@ -1,5 +1,11 @@
 import { ref, computed, type Ref } from 'vue'
-import { createEraserMask, applyBrushStroke, applyPolygonErase, applyIncludeCropToMask, applyRectRegionsToMask } from '@/cv/tools/eraser'
+import {
+  createEraserMask,
+  applyBrushStroke,
+  applyPolygonErase,
+  applyIncludeCropToMask,
+  applyRectRegionsToMask,
+} from '@/cv/tools/eraser'
 import type { OcrTextCandidate } from '@/core/extraction'
 import { bakeMaskIntoCanvas, canvasToDataUrl } from '@/cv/tools/maskImage'
 import { createByteArrayHistory } from '@/cv/tools/maskHistory'
@@ -35,10 +41,13 @@ export function useWorkspaceInputMask(deps: {
   const eraserRadius = ref(10)
 
   const canvasEraserEnabled = computed(
-    () => deps.flowStep.value === 'input' && deps.inputTab.value === 'origineel' && eraserEnabled.value,
+    () =>
+      deps.flowStep.value === 'input' && deps.inputTab.value === 'origineel' && eraserEnabled.value,
   )
   const canvasPolygonToolMode = computed(() =>
-    deps.flowStep.value === 'input' && deps.inputTab.value === 'origineel' ? polygonToolMode.value : null,
+    deps.flowStep.value === 'input' && deps.inputTab.value === 'origineel'
+      ? polygonToolMode.value
+      : null,
   )
 
   function syncCanUndoMask() {
@@ -53,7 +62,12 @@ export function useWorkspaceInputMask(deps: {
 
   function refreshMaskedWorkingImage() {
     const source = deps.originalImageEl.value
-    if (!source?.complete || !eraserMask.value || !eraserTouched.value || !maskHasInk(eraserMask.value)) {
+    if (
+      !source?.complete ||
+      !eraserMask.value ||
+      !eraserTouched.value ||
+      !maskHasInk(eraserMask.value)
+    ) {
       maskedWorkingCanvas.value = null
       maskedWorkingSrc.value = null
       return
@@ -248,7 +262,10 @@ export function useWorkspaceInputMask(deps: {
     deps.preprocessPreview.clearPreview()
   }
 
-  async function applyOcrTextMask(regions: OcrTextCandidate[], options?: { replace?: boolean }): Promise<void> {
+  async function applyOcrTextMask(
+    regions: OcrTextCandidate[],
+    options?: { replace?: boolean },
+  ): Promise<void> {
     const img = deps.originalImageEl.value
     if (!img?.complete) throw new Error('Laad eerst een tekening.')
     const { width, height } = deps.imageDimensions(img)

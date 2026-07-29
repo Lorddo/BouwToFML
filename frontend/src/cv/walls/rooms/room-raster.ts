@@ -121,9 +121,7 @@ function isReservedSurfaceHue(hueDeg: number): boolean {
 function isReservedSurfaceWallLike(r: number, g: number, b: number): boolean {
   const lightness = perceivedLightness(r, g, b)
   if (lightness < MIN_SURFACE_LIGHTNESS) return true
-  return (
-    rgbChroma(r, g, b) < MIN_SURFACE_CHROMA && lightness < MAX_WALL_LIKE_GRAY_LIGHTNESS
-  )
+  return rgbChroma(r, g, b) < MIN_SURFACE_CHROMA && lightness < MAX_WALL_LIKE_GRAY_LIGHTNESS
 }
 
 /**
@@ -177,10 +175,7 @@ export function extractComponentsFromLabelsData(
   const components: RasterRoomComponent[] = []
   for (const [label, stats] of byLabel.entries()) {
     const touchesBorder =
-      stats.minX <= 0 ||
-      stats.minY <= 0 ||
-      stats.maxX >= width - 1 ||
-      stats.maxY >= height - 1
+      stats.minX <= 0 || stats.minY <= 0 || stats.maxX >= width - 1 || stats.maxY >= height - 1
     components.push({
       label,
       areaPx: stats.areaPx,
@@ -241,4 +236,3 @@ export function buildFaceLabelsFromBw(params: {
     height,
   }
 }
-

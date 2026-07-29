@@ -1,6 +1,10 @@
 import type { ExampleSample, ExtractionOutput, PreprocessConfig } from '@/core/extraction'
 import type { OpenCV } from '@/cv/loadOpenCV'
-import { runPreprocessLayer, runPreprocessLayerFromGrayscale, buildGrayscalePreMat } from '@/cv/layers/preprocess-layer'
+import {
+  runPreprocessLayer,
+  runPreprocessLayerFromGrayscale,
+  buildGrayscalePreMat,
+} from '@/cv/layers/preprocess-layer'
 import { composeLayers } from './compose-layers'
 import { getOpenCvCapabilities } from '@/cv/port/opencvCapabilities'
 import { resolveLayerPreprocess } from '@/cv/preprocess/layer-preprocess'
@@ -202,7 +206,8 @@ export async function runGeometryPipeline(params: {
       roomWallSkeletonPolishedUnfilteredCount:
         wallLayer.roomStats?.roomWallSkeletonPolishedUnfilteredCount,
       roomWallSkeletonRawSegmentCount: wallLayer.roomStats?.roomWallSkeletonLayerAInputCount,
-      roomWallSkeletonFilteredSegmentCount: wallLayer.roomStats?.roomWallSkeletonFilteredSegmentCount,
+      roomWallSkeletonFilteredSegmentCount:
+        wallLayer.roomStats?.roomWallSkeletonFilteredSegmentCount,
       roomWallSkeletonLayerCSegmentCount: wallLayer.roomStats?.roomWallSkeletonLayerCSegmentCount,
       roomWallJunctionCount: wallLayer.roomStats?.roomWallJunctionFilteredCount,
       roomWallJunctionRawCount: wallLayer.roomStats?.roomWallJunctionRawCount,

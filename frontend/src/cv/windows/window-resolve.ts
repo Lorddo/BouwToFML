@@ -112,9 +112,7 @@ function mergeStripStackGroup(params: {
     dual: params.dual,
   })
   const bbox = measureBBoxes.reduce((acc, next) => unionFaceBBox(acc, next))
-  const widthPx = Math.max(
-    ...measureBBoxes.map((strip) => axisSpan(strip, params.orientation)),
-  )
+  const widthPx = Math.max(...measureBBoxes.map((strip) => axisSpan(strip, params.orientation)))
   const heightPx = perpSpan(bbox, params.orientation)
   const score = Math.max(...sorted.map((entry) => entry.hypothesis.score))
   const id = `window:stack:${faceIds.join('+')}:${params.index}`

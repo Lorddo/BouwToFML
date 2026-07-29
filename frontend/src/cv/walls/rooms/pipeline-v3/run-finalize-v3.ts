@@ -77,18 +77,8 @@ export async function runFinalizePipelineV3(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
 
-  const {
-    layer1,
-    layer2,
-    layer3,
-    layer4,
-    layer5,
-    layer6,
-    layer7,
-    layer8,
-    layer9,
-    layer10,
-  } = pipeline
+  const { layer1, layer2, layer3, layer4, layer5, layer6, layer7, layer8, layer9, layer10 } =
+    pipeline
   const segmentCounts: Record<string, number> = {
     layer1: layer1.totalSegmentsRaw,
     layer2: layer2.totalSegmentsClean,

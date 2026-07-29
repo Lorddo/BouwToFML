@@ -6,9 +6,7 @@ describe('binary-mask-rle', () => {
     const width = 6
     const height = 3
     const data = new Uint8Array([
-      0, 0, 255, 255, 255, 0,
-      255, 255, 0, 0, 0, 0,
-      0, 255, 0, 255, 0, 255,
+      0, 0, 255, 255, 255, 0, 255, 255, 0, 0, 0, 0, 0, 255, 0, 255, 0, 255,
     ])
     const encoded = encodeMaskRle(data, width, height)
     expect(encoded.width).toBe(width)

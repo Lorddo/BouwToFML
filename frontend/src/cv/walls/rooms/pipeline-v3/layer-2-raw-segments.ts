@@ -16,16 +16,10 @@ import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickne
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
 import type { Layer2JitterPolicy } from './engines/policy-types'
 import { rebuildFaceJunctionsOnly } from './engines/segment-ops'
-import {
-  resolveLayer2JitterPolicy,
-  resolveMergeTolerancePx,
-} from './policies/layer-2'
+import { resolveLayer2JitterPolicy, resolveMergeTolerancePx } from './policies/layer-2'
 import type { PipelineV3Layer1Result, PipelineV3Layer2Result } from './types'
 
-function pointsEqual(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
-): boolean {
+function pointsEqual(a: { x: number; y: number }, b: { x: number; y: number }): boolean {
   return a.x === b.x && a.y === b.y
 }
 
@@ -128,7 +122,8 @@ function sampleLocalThicknessPx(params: {
   referenceWallThicknessPx?: number
   policy: Layer2JitterPolicy
 }): number {
-  const longer = segmentLength(params.segA) >= segmentLength(params.segB) ? params.segA : params.segB
+  const longer =
+    segmentLength(params.segA) >= segmentLength(params.segB) ? params.segA : params.segB
   const sample = samplePointInsetFromJunction(
     longer,
     params.junction,
@@ -329,4 +324,3 @@ export function runLayer2RawSegments(params: {
     mergeStats: { mergedJunctionCount, dedupedCount },
   }
 }
-

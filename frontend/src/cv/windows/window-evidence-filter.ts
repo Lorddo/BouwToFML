@@ -29,10 +29,7 @@ export { WINDOW_EVIDENCE_TUNING } from './window-evidence-tuning'
  */
 export function buildEvidenceStats(
   accepted: WindowEvidenceAcceptance[],
-  preserve: Pick<
-    WindowEvidenceFilterStats,
-    'rejectedNoEvidence' | 'stripStackFailedBeforeFraming'
-  >,
+  preserve: Pick<WindowEvidenceFilterStats, 'rejectedNoEvidence' | 'stripStackFailedBeforeFraming'>,
 ): WindowEvidenceFilterStats {
   return {
     acceptedCount: accepted.length,

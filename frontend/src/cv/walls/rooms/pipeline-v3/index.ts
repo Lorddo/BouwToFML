@@ -12,11 +12,7 @@ import { runLayer7Align } from './layer-7-align'
 import { runLayer8Finalize } from './layer-8-finalize'
 import { runLayer9Dissolve } from './layer-9-dissolve'
 import { runLayer10Fml } from './layer-10-fml'
-import {
-  listIncompleteLayers,
-  isV3FmlReady,
-  V3_NATIVE_THROUGH_LAYER,
-} from './native-layers'
+import { listIncompleteLayers, isV3FmlReady, V3_NATIVE_THROUGH_LAYER } from './native-layers'
 import type { PipelineV3Layer1Result, PipelineV3Result } from './types'
 
 /**

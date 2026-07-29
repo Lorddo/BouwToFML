@@ -15,9 +15,7 @@ describe('fixture catalog + symbols', () => {
       'countertop',
     )
     expect(resolveFixtureCatalog('17e3ab9295832bd22e220a7f861580bb5aaeb007').label).toBe('Toilet')
-    expect(resolveFixtureCatalog('c17bf1853d916f1b0ece0259bb0d5b4313c71730').kind).toBe(
-      'heat_pump',
-    )
+    expect(resolveFixtureCatalog('c17bf1853d916f1b0ece0259bb0d5b4313c71730').kind).toBe('heat_pump')
   })
 
   it('builds non-empty geometry for known kinds', () => {
@@ -104,8 +102,6 @@ describe('importFmlV3 items', () => {
       ],
     })
     expect(plan.floors[0]?.items).toHaveLength(1)
-    expect(plan.floors[0]?.items?.[0]?.refid).toBe(
-      '5bbfd9e1325ca8d3c59e23b35401eeec71424256',
-    )
+    expect(plan.floors[0]?.items?.[0]?.refid).toBe('5bbfd9e1325ca8d3c59e23b35401eeec71424256')
   })
 })

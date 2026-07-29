@@ -77,7 +77,10 @@ function sampleSegmentThicknessFromMaskPx(params: {
     y: params.segment.b.y - (params.segment.b.y - params.segment.a.y) * inset,
   }
   const sampledLength = Math.hypot(end.x - start.x, end.y - start.y)
-  const sampleCount = Math.max(1, Math.min(9, Math.floor(sampledLength / Math.max(2, params.policy.thicknessSampleInsetPx)) + 1))
+  const sampleCount = Math.max(
+    1,
+    Math.min(9, Math.floor(sampledLength / Math.max(2, params.policy.thicknessSampleInsetPx)) + 1),
+  )
   const values: number[] = []
   for (let i = 0; i < sampleCount; i += 1) {
     const t = sampleCount === 1 ? 0.5 : i / (sampleCount - 1)
@@ -101,7 +104,8 @@ function resolveSegmentThicknessPx(params: {
   referenceWallThicknessPx?: number
   policy: HvPolicy
 }): number {
-  if (params.sampledThicknessPx != null && params.sampledThicknessPx > 0) return params.sampledThicknessPx
+  if (params.sampledThicknessPx != null && params.sampledThicknessPx > 0)
+    return params.sampledThicknessPx
   if (params.faceThicknessPx > 0) return params.faceThicknessPx
   return params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
 }
@@ -239,17 +243,19 @@ export function positionSegmentsHv(params: {
     return next
   })
 
-  const positionedJunctions: RoomWallJunction[] = params.face.junctions.map((junction, junctionIndex) => ({
-    ...junction,
-    x: positionedJunctionCoords[junctionIndex]!.x,
-    y: positionedJunctionCoords[junctionIndex]!.y,
-    angleDeg: buildJunctionAngleDeg({
-      junctionIndex,
-      junctions: positionedJunctionCoords,
-      segments: movedSegments,
-      endpointMap,
+  const positionedJunctions: RoomWallJunction[] = params.face.junctions.map(
+    (junction, junctionIndex) => ({
+      ...junction,
+      x: positionedJunctionCoords[junctionIndex]!.x,
+      y: positionedJunctionCoords[junctionIndex]!.y,
+      angleDeg: buildJunctionAngleDeg({
+        junctionIndex,
+        junctions: positionedJunctionCoords,
+        segments: movedSegments,
+        endpointMap,
+      }),
     }),
-  }))
+  )
 
   let movedSegmentCount = 0
   for (let i = 0; i < sourceSegments.length; i += 1) {

@@ -50,7 +50,8 @@ function makeRefBand(params: {
     orientation: params.orientation ?? 'horizontal',
     fullStripCount,
     fullStripHeightsPx:
-      params.fullStripHeightsPx ?? Array.from({ length: fullStripCount }, () => targetStripHeightPx),
+      params.fullStripHeightsPx ??
+      Array.from({ length: fullStripCount }, () => targetStripHeightPx),
     framingSizeRange: params.framing ?? null,
     topRailRange: null,
     bottomRailRange: null,
@@ -66,8 +67,7 @@ function makeHypothesis(params: {
   orientation?: 'horizontal' | 'vertical'
 }): WindowAxelHypothesis {
   const orientation =
-    params.orientation ??
-    (params.bbox.height > params.bbox.width ? 'vertical' : 'horizontal')
+    params.orientation ?? (params.bbox.height > params.bbox.width ? 'vertical' : 'horizontal')
   return {
     id: params.id,
     matchedRefIndex: 0,
@@ -79,7 +79,10 @@ function makeHypothesis(params: {
   }
 }
 
-function component(label: number, bbox: { x: number; y: number; width: number; height: number }): RasterRoomComponent {
+function component(
+  label: number,
+  bbox: { x: number; y: number; width: number; height: number },
+): RasterRoomComponent {
   return {
     label,
     areaPx: Math.max(1, bbox.width * bbox.height),
@@ -136,8 +139,7 @@ function evidence(params: {
     kind: 'wall-ink',
     components: params.wallInkComponents ?? [],
     parentMap: params.wallInkParentMap ?? parent,
-    classificationByLabel:
-      params.wallInkClassificationByLabel ?? params.classificationByLabel,
+    classificationByLabel: params.wallInkClassificationByLabel ?? params.classificationByLabel,
     adjacency: params.wallInkAdjacency ?? new Map(),
   })
   return filterWindowsByRefEvidence({
@@ -387,9 +389,7 @@ describe('window-evidence-filter', () => {
       wallInkComponents: ink,
       wallInkParentMap: parentMap(),
       wallInkClassificationByLabel: classificationMap([99, 98]),
-      wallInkAdjacency: adjacencyFromEdges([
-        [99, 98],
-      ]),
+      wallInkAdjacency: adjacencyFromEdges([[99, 98]]),
     })
     expect(result.accepted[0]?.evidence).toBe('strip_stack')
     expect(result.accepted[0]?.evidenceFaceIds).toEqual([10, 11, 20])
@@ -520,8 +520,18 @@ describe('window-evidence-filter', () => {
 
   it('strip-stack: 1px REF-hoogte matcht 1px-buur (±20%)', () => {
     const whiteFaces = [
-      { root: 1, areaPx: 50, bbox: { x: 10, y: 10, width: 50, height: 1 }, className: 'unknown' as const },
-      { root: 2, areaPx: 50, bbox: { x: 10, y: 12, width: 50, height: 1 }, className: 'unknown' as const },
+      {
+        root: 1,
+        areaPx: 50,
+        bbox: { x: 10, y: 10, width: 50, height: 1 },
+        className: 'unknown' as const,
+      },
+      {
+        root: 2,
+        areaPx: 50,
+        bbox: { x: 10, y: 12, width: 50, height: 1 },
+        className: 'unknown' as const,
+      },
     ]
     const ids = growFullStackFromSeedFaces({
       seedFaceIds: [1],
@@ -594,10 +604,7 @@ describe('window-evidence-filter', () => {
       // Ver weg in X (deur/raam elders) — oude BFS pakte dit via as-overlap
       component(308, { x: 2704, y: 974, width: 2, height: 103 }),
     ]
-    const ink = [
-      ...white,
-      component(999, { x: 863, y: 1002, width: 2000, height: 284 }),
-    ]
+    const ink = [...white, component(999, { x: 863, y: 1002, width: 2000, height: 284 })]
     const result = evidence({
       hypotheses,
       refBands: [
@@ -748,7 +755,9 @@ describe('window-evidence-filter', () => {
     ]
     const result = evidence({
       hypotheses: [hypothesis],
-      refBands: [makeRefBand({ orientation: 'horizontal', axisBandHeightPx, framing: framingRange })],
+      refBands: [
+        makeRefBand({ orientation: 'horizontal', axisBandHeightPx, framing: framingRange }),
+      ],
       components,
       parentMap: parentMap(),
       classificationByLabel: classificationMap([40, 41, 42]),
@@ -826,7 +835,11 @@ describe('window-evidence-filter', () => {
     const axisBandHeightPx = 14
     const framingRange = makeNormalizedRange(8, 14, 14, 15, axisBandHeightPx)
     const hypotheses = [
-      makeHypothesis({ id: 'lonely', faceIds: [1], bbox: { x: 200, y: 100, width: 120, height: 12 } }),
+      makeHypothesis({
+        id: 'lonely',
+        faceIds: [1],
+        bbox: { x: 200, y: 100, width: 120, height: 12 },
+      }),
     ]
     const components = [component(1, { x: 200, y: 100, width: 120, height: 12 })]
     const result = evidence({

@@ -30,7 +30,9 @@ export function repairLAtPoint(params: {
   )
   if (
     diagIncidentsBefore.some(
-      (incident) => incident.lengthPx > Math.max(params.armStrictPx, params.maxConnectorPx * LAYER6_LANDING_DIAGONAL_GUARD_RATIO),
+      (incident) =>
+        incident.lengthPx >
+        Math.max(params.armStrictPx, params.maxConnectorPx * LAYER6_LANDING_DIAGONAL_GUARD_RATIO),
     )
   ) {
     return { changed: false, removed: 0 }

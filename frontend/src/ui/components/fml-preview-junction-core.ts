@@ -189,11 +189,7 @@ export function moveJunction(walls: Wall[], node: JunctionNode, position: Point2
   return pruneCollapsedWalls(next)
 }
 
-export function mergeJunctions(
-  walls: Wall[],
-  source: JunctionNode,
-  target: JunctionNode,
-): Wall[] {
+export function mergeJunctions(walls: Wall[], source: JunctionNode, target: JunctionNode): Wall[] {
   if (source.id === target.id) return walls
   let next = moveJunction(walls, source, { x: target.x, y: target.y })
   next = pruneCollapsedWalls(next)
@@ -227,7 +223,9 @@ export function junctionIdsForWall(wall: Wall, walls: Wall[]): [string, string] 
       junction.refs.some((ref) => ref.wallId === wall.id && ref.end === end),
     )
     if (byRef) return byRef.id
-    const byPoint = junctions.find((junction) => distance(junction, point) < JUNCTION_SNAP_CM + 0.01)
+    const byPoint = junctions.find(
+      (junction) => distance(junction, point) < JUNCTION_SNAP_CM + 0.01,
+    )
     if (byPoint) return byPoint.id
     return stableJunctionId([{ wallId: wall.id, end }])
   }

@@ -48,8 +48,7 @@ export function labelWhiteFaces(
   bbox?: RefBBox,
   options?: LabelWhiteFacesOptions,
 ): { labels: Int32Array; faces: RefFace[] } {
-  const sealed =
-    options?.sealBorders === true && !bbox ? sealBwBorders(data, width, height) : data
+  const sealed = options?.sealBorders === true && !bbox ? sealBwBorders(data, width, height) : data
   const src = sealed
   const connectivity = options?.connectivity ?? 8
   const x0 = bbox ? Math.max(0, Math.floor(bbox.x)) : 0
@@ -138,8 +137,7 @@ export function labelWhiteFaces(
       const bh = maxY - minY + 1
       const bboxArea = bw * bh
       const centroid = { x: sumX / area, y: sumY / area }
-      const touchesBorder =
-        minX <= 0 || minY <= 0 || maxX >= cropW - 1 || maxY >= cropH - 1
+      const touchesBorder = minX <= 0 || minY <= 0 || maxX >= cropW - 1 || maxY >= cropH - 1
 
       faces.push({
         label,
@@ -175,11 +173,7 @@ function countTouchedBorders(face: RefFace, width: number, height: number): numb
   return count
 }
 
-export function classifyFaceRoles(
-  faces: RefFace[],
-  width: number,
-  height: number,
-): RefFace[] {
+export function classifyFaceRoles(faces: RefFace[], width: number, height: number): RefFace[] {
   if (faces.length === 0) return []
   return faces.map((face) => {
     const borderHits = countTouchedBorders(face, width, height)

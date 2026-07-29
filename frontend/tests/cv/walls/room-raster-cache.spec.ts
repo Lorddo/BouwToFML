@@ -21,15 +21,11 @@ import {
 } from '@/cv/walls/rooms/room-raster-cache'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 
-function minimalState(overrides?: Partial<SerializedRoomClassifyState>): SerializedRoomClassifyState {
-  const rawLabelsData = new Int32Array([
-    0, 1, 1,
-    0, 2, 2,
-  ])
-  const labelsData = new Int32Array([
-    1, 1, 1,
-    2, 2, 2,
-  ])
+function minimalState(
+  overrides?: Partial<SerializedRoomClassifyState>,
+): SerializedRoomClassifyState {
+  const rawLabelsData = new Int32Array([0, 1, 1, 0, 2, 2])
+  const labelsData = new Int32Array([1, 1, 1, 2, 2, 2])
   return {
     width: 3,
     height: 2,
@@ -66,7 +62,10 @@ describe('cycleFaceClassification', () => {
 
 describe('applyFaceClassificationOverrides', () => {
   it('past overrides toe op classificatie', () => {
-    const base = new Map<number, 'wall' | 'surface'>([[1, 'wall'], [2, 'surface']])
+    const base = new Map<number, 'wall' | 'surface'>([
+      [1, 'wall'],
+      [2, 'surface'],
+    ])
     const result = applyFaceClassificationOverrides(base, new Map([[1, 'unknown']]))
     expect(result.get(1)).toBe('unknown')
     expect(result.get(2)).toBe('surface')
@@ -114,9 +113,7 @@ describe('room-raster-cache', () => {
   it('toggle op sibling label laat parent-component ongemoeid', () => {
     const cache = createRoomRasterCache(
       minimalState({
-        parentMap: [
-          [2, 1],
-        ],
+        parentMap: [[2, 1]],
         classificationByLabel: [
           [1, 'wall'],
           [2, 'wall'],
@@ -142,10 +139,7 @@ describe('room-raster-cache', () => {
   })
 
   it('toggle wall herkent inkt opnieuw naar dichtstbijzijnde muur', () => {
-    const rawLabelsData = new Int32Array([
-      1, 0, 2,
-      1, 0, 2,
-    ])
+    const rawLabelsData = new Int32Array([1, 0, 2, 1, 0, 2])
     const cache = createRoomRasterCache(
       minimalState({
         rawLabelsData,

@@ -1,5 +1,8 @@
 import type { ExampleSample, OcrTextCandidate } from '@/core/extraction'
-import type { GeometricSignature, OpeningLineFingerprint } from '@/core/extraction/geometric-signature'
+import type {
+  GeometricSignature,
+  OpeningLineFingerprint,
+} from '@/core/extraction/geometric-signature'
 import type { PreprocessConfig } from '@/platform/image'
 import type { ExtractionOutput } from '@/core/extraction'
 

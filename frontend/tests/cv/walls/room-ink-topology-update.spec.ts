@@ -7,16 +7,8 @@ import {
 
 describe('room-ink-topology-update', () => {
   it('carveWallInkIntoLabels snijdt door vlak', () => {
-    const labelsData = new Int32Array([
-      1, 1, 1,
-      1, 1, 1,
-      1, 1, 1,
-    ])
-    const wallInkData = Uint8Array.from([
-      255, 255, 255,
-      0, 0, 0,
-      255, 255, 255,
-    ])
+    const labelsData = new Int32Array([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    const wallInkData = Uint8Array.from([255, 255, 255, 0, 0, 0, 255, 255, 255])
 
     const carved = carveWallInkIntoLabels({ labelsData, wallInkData })
     expect(carved).toBe(3)
@@ -28,11 +20,7 @@ describe('room-ink-topology-update', () => {
   it('splitDisconnectedFaceLabels maakt nieuw label voor afgesneden helft', () => {
     const width = 5
     const height = 3
-    const labelsData = new Int32Array([
-      1, 1, 0, 1, 1,
-      1, 1, 0, 1, 1,
-      1, 1, 0, 1, 1,
-    ])
+    const labelsData = new Int32Array([1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1])
 
     const { splitMap, splitCount } = splitDisconnectedFaceLabels(labelsData, width, height)
     expect(splitCount).toBe(1)
@@ -43,15 +31,9 @@ describe('room-ink-topology-update', () => {
   it('applyDrawnInkToStoredTopology splitst vlak zonder classificatie-mutatie', () => {
     const width = 5
     const height = 3
-    const rawLabelsData = new Int32Array([
-      1, 1, 1, 1, 1,
-      1, 1, 1, 1, 1,
-      1, 1, 1, 1, 1,
-    ])
+    const rawLabelsData = new Int32Array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
     const wallInkData = Uint8Array.from([
-      255, 255, 0, 255, 255,
-      255, 255, 0, 255, 255,
-      255, 255, 0, 255, 255,
+      255, 255, 0, 255, 255, 255, 255, 0, 255, 255, 255, 255, 0, 255, 255,
     ])
 
     const updated = applyDrawnInkToStoredTopology({

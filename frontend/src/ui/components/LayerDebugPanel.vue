@@ -42,9 +42,24 @@ const emit = defineEmits<{
 
 /** Laatste laag per detectie — standaard zichtbaar in de panel. */
 const FINAL_LAYER_TOGGLES = [
-  { n: 10, title: 'Muren FML input', checked: () => props.showLayer10, event: 'toggleLayer10' as const },
-  { n: 12, title: 'Deur swing orient', checked: () => props.showLayer12, event: 'toggleLayer12' as const },
-  { n: 14, title: 'Raam segment-bind', checked: () => props.showLayer14, event: 'toggleLayer14' as const },
+  {
+    n: 10,
+    title: 'Muren FML input',
+    checked: () => props.showLayer10,
+    event: 'toggleLayer10' as const,
+  },
+  {
+    n: 12,
+    title: 'Deur swing orient',
+    checked: () => props.showLayer12,
+    event: 'toggleLayer12' as const,
+  },
+  {
+    n: 14,
+    title: 'Raam segment-bind',
+    checked: () => props.showLayer14,
+    event: 'toggleLayer14' as const,
+  },
 ]
 
 /** Tussenlagen — standaard uit; in details. */
@@ -53,12 +68,42 @@ const INTERMEDIATE_LAYER_TOGGLES = [
   { n: 2, title: 'Segment-merge', checked: () => props.showLayer2, event: 'toggleLayer2' as const },
   { n: 3, title: 'I-spur prune', checked: () => props.showLayer3, event: 'toggleLayer3' as const },
   { n: 4, title: 'H/V position', checked: () => props.showLayer4, event: 'toggleLayer4' as const },
-  { n: 5, title: 'Segment cleanup', checked: () => props.showLayer5, event: 'toggleLayer5' as const },
-  { n: 6, title: 'Junction repair', checked: () => props.showLayer6, event: 'toggleLayer6' as const },
-  { n: 7, title: 'Keten-collapse', checked: () => props.showLayer7, event: 'toggleLayer7' as const },
-  { n: 8, title: 'H/V + I-prune (finalize)', checked: () => props.showLayer8, event: 'toggleLayer8' as const },
-  { n: 9, title: 'Dissolve (stub/cover)', checked: () => props.showLayer9, event: 'toggleLayer9' as const },
-  { n: 11, title: 'Door-wall snap', checked: () => props.showLayer11, event: 'toggleLayer11' as const },
+  {
+    n: 5,
+    title: 'Segment cleanup',
+    checked: () => props.showLayer5,
+    event: 'toggleLayer5' as const,
+  },
+  {
+    n: 6,
+    title: 'Junction repair',
+    checked: () => props.showLayer6,
+    event: 'toggleLayer6' as const,
+  },
+  {
+    n: 7,
+    title: 'Keten-collapse',
+    checked: () => props.showLayer7,
+    event: 'toggleLayer7' as const,
+  },
+  {
+    n: 8,
+    title: 'H/V + I-prune (finalize)',
+    checked: () => props.showLayer8,
+    event: 'toggleLayer8' as const,
+  },
+  {
+    n: 9,
+    title: 'Dissolve (stub/cover)',
+    checked: () => props.showLayer9,
+    event: 'toggleLayer9' as const,
+  },
+  {
+    n: 11,
+    title: 'Door-wall snap',
+    checked: () => props.showLayer11,
+    event: 'toggleLayer11' as const,
+  },
 ]
 
 type LayerToggleEvent =
@@ -97,8 +142,7 @@ function junctionCountForLayer(n: number): number {
 
 function junctionKindSummaryForLayer(n: number): string | null {
   const key = `layer${n}` as keyof NonNullable<PipelineWallDebug['summary']>['junctionKindCounts']
-  const counts =
-    props.pipelineDebug?.summary?.junctionKindCounts?.[key] ?? countKindsFromLayer(n)
+  const counts = props.pipelineDebug?.summary?.junctionKindCounts?.[key] ?? countKindsFromLayer(n)
   if (!counts) return null
   return `I=${counts.I} L=${counts.L} T=${counts.T} X=${counts.X}`
 }
@@ -164,7 +208,12 @@ function activeVersionLabel(): string {
 function bridgeHint(): string | null {
   if (props.pipelineDebug?.pipelineVersion !== 'v3') return null
   const summary = props.pipelineDebug.summary as
-    | { bridgeMode?: string; completedThroughLayer?: number; fmlReady?: boolean; incompleteLayers?: number[] }
+    | {
+        bridgeMode?: string
+        completedThroughLayer?: number
+        fmlReady?: boolean
+        incompleteLayers?: number[]
+      }
     | undefined
   if (!summary) return null
   const through = summary.completedThroughLayer
@@ -189,11 +238,7 @@ function bridgeHint(): string | null {
 
     <p class="section-label">Eindlagen (muur / deur / raam)</p>
     <div class="toggle-list layer-toggles">
-      <label
-        v-for="layer in FINAL_LAYER_TOGGLES"
-        :key="layer.n"
-        :title="layer.title"
-      >
+      <label v-for="layer in FINAL_LAYER_TOGGLES" :key="layer.n" :title="layer.title">
         <input
           type="checkbox"
           :checked="layer.checked()"
@@ -207,11 +252,7 @@ function bridgeHint(): string | null {
     <details class="intermediate-details">
       <summary>Tussenlagen (standaard uit)</summary>
       <div class="toggle-list layer-toggles">
-        <label
-          v-for="layer in INTERMEDIATE_LAYER_TOGGLES"
-          :key="layer.n"
-          :title="layer.title"
-        >
+        <label v-for="layer in INTERMEDIATE_LAYER_TOGGLES" :key="layer.n" :title="layer.title">
           <input
             type="checkbox"
             :checked="layer.checked()"

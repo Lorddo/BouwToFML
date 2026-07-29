@@ -142,7 +142,11 @@ export function applyDrawnInkToStoredTopology(params: {
     wallInkData: params.wallInkData,
     inkThreshold: params.inkThreshold,
   })
-  const { splitMap, splitCount } = splitDisconnectedFaceLabels(labelsData, params.width, params.height)
+  const { splitMap, splitCount } = splitDisconnectedFaceLabels(
+    labelsData,
+    params.width,
+    params.height,
+  )
 
   return { rawLabelsData: labelsData, splitMap, carvedPx, splitCount }
 }

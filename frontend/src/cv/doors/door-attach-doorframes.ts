@@ -1,7 +1,4 @@
-import {
-  resolveClassAtLabel,
-  type RoomRasterClass,
-} from '@/cv/walls/rooms/room-ink-classify'
+import { resolveClassAtLabel, type RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import { clampBounds } from './door-wall-snap-geom'
 import type { BBoxBounds } from './door-wall-snap-tuning'
@@ -30,7 +27,11 @@ function classAt(
   return resolveClassAtLabel(label, parentMap, classificationByLabel, undefined)
 }
 
-function isDoorFaceLabel(label: number, faceSet: Set<number>, parentMap: Map<number, number>): boolean {
+function isDoorFaceLabel(
+  label: number,
+  faceSet: Set<number>,
+  parentMap: Map<number, number>,
+): boolean {
   if (label <= 0) return false
   if (faceSet.has(label)) return true
   return faceSet.has(resolveMergedLabel(label, parentMap))
@@ -249,8 +250,7 @@ export function attachDoorframesToResolvedDoors(params: {
     const facesChanged =
       nextFaceIds.length !== door.faceIds.length ||
       nextFaceIds.some((id, i) => id !== door.faceIds[i])
-    const dfChanged =
-      nextDf.length !== prevDf.length || nextDf.some((id, i) => id !== prevDf[i])
+    const dfChanged = nextDf.length !== prevDf.length || nextDf.some((id, i) => id !== prevDf[i])
     if (!facesChanged && !dfChanged) return door
     if (nextDf.length <= 0 && !facesChanged) return door
     return {

@@ -17,12 +17,7 @@ const emit = defineEmits<{
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <button
-      v-if="error"
-      type="button"
-      class="clear-btn"
-      @click="emit('reset')"
-    >
+    <button v-if="error" type="button" class="clear-btn" @click="emit('reset')">
       Reset loader
     </button>
   </div>

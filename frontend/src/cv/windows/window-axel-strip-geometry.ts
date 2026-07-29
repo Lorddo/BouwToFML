@@ -222,7 +222,11 @@ export function resolveCentroidStripSample(params: {
   }
 }
 
-export function overlapRatioAlongAxis(a: RootFace, b: RootFace, orientation: WindowAxelOrientation): number {
+export function overlapRatioAlongAxis(
+  a: RootFace,
+  b: RootFace,
+  orientation: WindowAxelOrientation,
+): number {
   const start = Math.max(axisStart(a.bbox, orientation), axisStart(b.bbox, orientation))
   const end = Math.min(axisEnd(a.bbox, orientation), axisEnd(b.bbox, orientation))
   const overlap = Math.max(0, end - start)
@@ -231,7 +235,12 @@ export function overlapRatioAlongAxis(a: RootFace, b: RootFace, orientation: Win
   return overlap / base
 }
 
-export function unionBbox(faces: RootFace[]): { x: number; y: number; width: number; height: number } {
+export function unionBbox(faces: RootFace[]): {
+  x: number
+  y: number
+  width: number
+  height: number
+} {
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
   let maxX = Number.NEGATIVE_INFINITY
@@ -242,7 +251,12 @@ export function unionBbox(faces: RootFace[]): { x: number; y: number; width: num
     maxX = Math.max(maxX, face.bbox.x + face.bbox.width)
     maxY = Math.max(maxY, face.bbox.y + face.bbox.height)
   }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY)
+  ) {
     return { x: 0, y: 0, width: 0, height: 0 }
   }
   return {
@@ -293,10 +307,7 @@ export function resolveReferenceTargetStripHeightPx(params: {
   minSpanPx: number
   maxHeightPx: number
 }): number {
-  const referenceTargetPx = denormalizeTargetStripHeightPx(
-    params.ref,
-    params.ref.axisBandHeightPx,
-  )
+  const referenceTargetPx = denormalizeTargetStripHeightPx(params.ref, params.ref.axisBandHeightPx)
   // Voor single-strip refs blijft de referentie leidend:
   // anders krijg je precies het De Roemer-probleem (13px -> ~8.9px drift).
   if (params.ref.stripCount <= 1) return referenceTargetPx
@@ -332,10 +343,7 @@ export function resolveReferenceTargetStripHeightPx(params: {
     .filter((heightPx) => heightPx > 0)
   if (sampled.length < params.ref.stripCount) return referenceTargetPx
   const nearestToRef = [...sampled]
-    .sort(
-      (a, b) =>
-        Math.abs(a - referenceTargetPx) - Math.abs(b - referenceTargetPx),
-    )
+    .sort((a, b) => Math.abs(a - referenceTargetPx) - Math.abs(b - referenceTargetPx))
     .slice(0, Math.max(params.ref.stripCount, 2))
   const calibrated = median(nearestToRef)
   if (!(calibrated > 0)) return referenceTargetPx

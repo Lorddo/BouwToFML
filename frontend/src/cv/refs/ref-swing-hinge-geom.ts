@@ -164,7 +164,11 @@ export function distancePointToSegment(point: RefPoint, a: RefPoint, b: RefPoint
   return Math.hypot(point.x - q.x, point.y - q.y)
 }
 
-export function pointOnPolygonEdge(point: RefPoint, polygon: RefPoint[], tolerancePx: number): boolean {
+export function pointOnPolygonEdge(
+  point: RefPoint,
+  polygon: RefPoint[],
+  tolerancePx: number,
+): boolean {
   if (polygon.length < 2) return false
   for (let i = 0; i < polygon.length; i += 1) {
     const a = polygon[i]!
@@ -180,14 +184,18 @@ export function pointInPolygon(point: RefPoint, polygon: RefPoint[]): boolean {
     const a = polygon[i]!
     const b = polygon[j]!
     const intersects =
-      (a.y > point.y) !== (b.y > point.y) &&
+      a.y > point.y !== b.y > point.y &&
       point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y + 1e-9) + a.x
     if (intersects) inside = !inside
   }
   return inside
 }
 
-export function pointInOrOnPolygon(point: RefPoint, polygon: RefPoint[], tolerancePx: number): boolean {
+export function pointInOrOnPolygon(
+  point: RefPoint,
+  polygon: RefPoint[],
+  tolerancePx: number,
+): boolean {
   if (pointInPolygon(point, polygon)) return true
   return pointOnPolygonEdge(point, polygon, tolerancePx)
 }

@@ -24,10 +24,7 @@ function cmBBoxContains(outer: CmBBox, inner: CmBBox): boolean {
   const i = normalizeCmBBox(inner)
   if (o.width < 1e-6 || o.height < 1e-6) return false
   return (
-    i.x >= o.x &&
-    i.y >= o.y &&
-    i.x + i.width <= o.x + o.width &&
-    i.y + i.height <= o.y + o.height
+    i.x >= o.x && i.y >= o.y && i.x + i.width <= o.x + o.width && i.y + i.height <= o.y + o.height
   )
 }
 
@@ -45,7 +42,5 @@ export function wallCmBBox(wall: Wall): CmBBox {
 export function findWallsFullyInCmBBox(walls: Wall[], bbox: CmBBox): string[] {
   const selection = normalizeCmBBox(bbox)
   if (selection.width < 0.5 || selection.height < 0.5) return []
-  return walls
-    .filter((wall) => cmBBoxContains(selection, wallCmBBox(wall)))
-    .map((wall) => wall.id)
+  return walls.filter((wall) => cmBBoxContains(selection, wallCmBBox(wall))).map((wall) => wall.id)
 }

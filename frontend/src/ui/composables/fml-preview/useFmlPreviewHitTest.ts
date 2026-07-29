@@ -3,7 +3,11 @@ import type Konva from 'konva'
 import type { Point2D, Wall } from '@/core/fml/types'
 import { normalizeCmBBox } from './fml-preview-wall-select'
 import type { ContentLayout } from './useFmlPreviewViewport'
-import type { RenderDoorGroup, RenderJunction, RenderWindowOpening } from './useFmlPreviewRenderModel'
+import type {
+  RenderDoorGroup,
+  RenderJunction,
+  RenderWindowOpening,
+} from './useFmlPreviewRenderModel'
 
 interface ViewportApi {
   contentLayout: Ref<ContentLayout | null>
@@ -40,7 +44,10 @@ function pointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
   return inside
 }
 
-type OpeningHitTarget = Pick<RenderDoorGroup | RenderWindowOpening, 'id' | 'hitPoints' | 'gapPoints'>
+type OpeningHitTarget = Pick<
+  RenderDoorGroup | RenderWindowOpening,
+  'id' | 'hitPoints' | 'gapPoints'
+>
 
 export function useFmlPreviewHitTest(
   viewport: ViewportApi,
@@ -101,7 +108,12 @@ export function useFmlPreviewHitTest(
       const b = viewport.renderTransform.value.toCmPoint(target.hitPoints[2]!, target.hitPoints[3]!)
       const polygon: Point2D[] = []
       for (let idx = 0; idx + 1 < target.gapPoints.length; idx += 2) {
-        polygon.push(viewport.renderTransform.value.toCmPoint(target.gapPoints[idx]!, target.gapPoints[idx + 1]!))
+        polygon.push(
+          viewport.renderTransform.value.toCmPoint(
+            target.gapPoints[idx]!,
+            target.gapPoints[idx + 1]!,
+          ),
+        )
       }
 
       if (pointInPolygon(cm, polygon)) {

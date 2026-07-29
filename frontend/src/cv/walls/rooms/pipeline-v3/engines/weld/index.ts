@@ -59,11 +59,7 @@ export function weldNearConnectedEndpoints(
   segments: Segment[],
   policy: WeldPolicy,
 ): { segments: Segment[]; weldedCount: number } {
-  const unified = unifyNearEndpoints(
-    segments,
-    policy.nearEndpointGapPx,
-    policy.endpointEpsPx,
-  )
+  const unified = unifyNearEndpoints(segments, policy.nearEndpointGapPx, policy.endpointEpsPx)
   return { segments: unified.segments, weldedCount: unified.unifiedCount }
 }
 

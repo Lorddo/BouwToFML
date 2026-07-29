@@ -28,14 +28,8 @@ function component(label: number, areaPx: number, touchesBorder = false): Raster
 
 describe('classifyFacesByInkCoverage', () => {
   it('classificeert lage inkt-dekking als surface', () => {
-    const labelsData = new Int32Array([
-      1, 1, 1, 1, 1,
-      1, 1, 1, 1, 1,
-    ])
-    const referenceData = new Uint8Array([
-      0, 0, 255, 255, 255,
-      255, 255, 255, 255, 255,
-    ])
+    const labelsData = new Int32Array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+    const referenceData = new Uint8Array([0, 0, 255, 255, 255, 255, 255, 255, 255, 255])
     const result = classifyFacesByInkCoverage({
       labelsData,
       referenceData,
@@ -78,14 +72,8 @@ describe('classifyFacesByInkCoverage', () => {
   })
 
   it('geeft child-labels met zelfde parent één classificatie', () => {
-    const labelsData = new Int32Array([
-      2, 2, 3, 3,
-      2, 2, 3, 3,
-    ])
-    const referenceData = new Uint8Array([
-      0, 0, 0, 0,
-      0, 0, 255, 255,
-    ])
+    const labelsData = new Int32Array([2, 2, 3, 3, 2, 2, 3, 3])
+    const referenceData = new Uint8Array([0, 0, 0, 0, 0, 0, 255, 255])
     const parentMap = new Map<number, number>([
       [2, 1],
       [3, 1],
@@ -103,14 +91,8 @@ describe('classifyFacesByInkCoverage', () => {
   })
 
   it('component mode: merged siblings krijgen eigen classificatie', () => {
-    const labelsData = new Int32Array([
-      2, 2, 3, 3,
-      2, 2, 3, 3,
-    ])
-    const referenceData = new Uint8Array([
-      255, 255, 0, 0,
-      255, 255, 255, 255,
-    ])
+    const labelsData = new Int32Array([2, 2, 3, 3, 2, 2, 3, 3])
+    const referenceData = new Uint8Array([255, 255, 0, 0, 255, 255, 255, 255])
     const parentMap = new Map<number, number>([
       [2, 1],
       [3, 1],
@@ -129,24 +111,12 @@ describe('classifyFacesByInkCoverage', () => {
   })
 
   it('omsloten micro-vlak wordt nooit buiten (zonder merge naar rand-parent)', () => {
-    const labelsData = new Int32Array([
-      1, 1, 1, 1,
-      3, 3, 2, 2,
-      3, 3, 2, 2,
-    ])
-    const referenceData = new Uint8Array([
-      255, 255, 255, 255,
-      0, 0, 255, 255,
-      0, 0, 255, 255,
-    ])
+    const labelsData = new Int32Array([1, 1, 1, 1, 3, 3, 2, 2, 3, 3, 2, 2])
+    const referenceData = new Uint8Array([255, 255, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255])
     const result = classifyFacesByInkCoverage({
       labelsData,
       referenceData,
-      components: [
-        component(1, 4, true),
-        component(2, 4, false),
-        component(3, 4, false),
-      ],
+      components: [component(1, 4, true), component(2, 4, false), component(3, 4, false)],
       parentMap: new Map(),
       threshold: 0.8,
     })
@@ -155,14 +125,8 @@ describe('classifyFacesByInkCoverage', () => {
   })
 
   it('component mode: erft touchesBorder van merged groep', () => {
-    const labelsData = new Int32Array([
-      2, 2, 3, 3,
-      2, 2, 3, 3,
-    ])
-    const referenceData = new Uint8Array([
-      0, 0, 0, 0,
-      0, 0, 0, 0,
-    ])
+    const labelsData = new Int32Array([2, 2, 3, 3, 2, 2, 3, 3])
+    const referenceData = new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0])
     const parentMap = new Map<number, number>([
       [2, 1],
       [3, 1],
@@ -170,11 +134,7 @@ describe('classifyFacesByInkCoverage', () => {
     const result = classifyFacesByInkCoverage({
       labelsData,
       referenceData,
-      components: [
-        component(1, 8, true),
-        component(2, 4, false),
-        component(3, 4, false),
-      ],
+      components: [component(1, 8, true), component(2, 4, false), component(3, 4, false)],
       parentMap,
       threshold: 0.8,
       groupBy: 'component',
@@ -186,14 +146,8 @@ describe('classifyFacesByInkCoverage', () => {
 
 describe('classifyFaceLabelsSubset', () => {
   it('behoudt frozen labels en autoclass alleen geraakte', () => {
-    const labelsData = new Int32Array([
-      1, 1, 2, 2,
-      1, 1, 2, 2,
-    ])
-    const referenceData = new Uint8Array([
-      0, 0, 255, 255,
-      0, 0, 255, 255,
-    ])
+    const labelsData = new Int32Array([1, 1, 2, 2, 1, 1, 2, 2])
+    const referenceData = new Uint8Array([0, 0, 255, 255, 0, 0, 255, 255])
     const frozen = new Map<number, 'wall' | 'surface'>([
       [1, 'surface'],
       [2, 'surface'],
@@ -272,9 +226,7 @@ describe('classifyFaceLabelsSubset', () => {
     const height = 1
     const labelsData = new Int32Array([3, 3, 1, 1, 1, 1, 1, 1])
     const priorLabels = new Int32Array([1, 1, 1, 1, 1, 1, 1, 1])
-    const priorEffective = new Map<number, 'wall' | 'surface' | 'outside'>([
-      [1, 'outside'],
-    ])
+    const priorEffective = new Map<number, 'wall' | 'surface' | 'outside'>([[1, 'outside']])
     const componentsByLabel = new Map([
       [
         3,
@@ -317,9 +269,7 @@ describe('classifyFaceLabelsSubset', () => {
     const height = 1
     const labelsData = new Int32Array([1, 1, 0, 3, 3, 3, 3, 0, 1, 1])
     const priorLabels = new Int32Array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    const priorEffective = new Map<number, 'wall' | 'surface' | 'outside'>([
-      [1, 'outside'],
-    ])
+    const priorEffective = new Map<number, 'wall' | 'surface' | 'outside'>([[1, 'outside']])
     const componentsByLabel = new Map([
       [
         3,
@@ -424,7 +374,10 @@ describe('toWallPipelineClass', () => {
 
 describe('applyFaceClassificationOverrides', () => {
   it('overschrijft alleen opgegeven roots', () => {
-    const base = new Map([[1, 'wall' as const], [2, 'surface' as const]])
+    const base = new Map([
+      [1, 'wall' as const],
+      [2, 'surface' as const],
+    ])
     const merged = applyFaceClassificationOverrides(base, new Map([[2, 'unknown']]))
     expect(merged.get(1)).toBe('wall')
     expect(merged.get(2)).toBe('unknown')
@@ -433,10 +386,7 @@ describe('applyFaceClassificationOverrides', () => {
 
 describe('remapClassificationForParentMap', () => {
   it('behoudt wall-classificatie na merge onder nieuwe root', () => {
-    const components = [
-      component(1, 100),
-      component(2, 4),
-    ]
+    const components = [component(1, 100), component(2, 4)]
     const priorParentMap = new Map<number, number>()
     const parentMap = new Map<number, number>([[2, 1]])
     const classificationByLabel = new Map([
@@ -457,8 +407,6 @@ describe('remapClassificationForParentMap', () => {
 
 describe('resolvePixelClassification', () => {
   it('valt terug op surface i.p.v. outside bij onbekende root', () => {
-    expect(
-      resolvePixelClassification(5, new Map([[5, 3]]), new Map(), 'merged'),
-    ).toBe('surface')
+    expect(resolvePixelClassification(5, new Map([[5, 3]]), new Map(), 'merged')).toBe('surface')
   })
 })

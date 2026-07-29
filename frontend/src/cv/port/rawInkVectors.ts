@@ -3,11 +3,7 @@ import type { Segment } from './wallGraph'
 
 const INK_THRESHOLD = 245
 
-function segmentFromPoints(
-  data32S: Int32Array,
-  aIdx: number,
-  bIdx: number,
-): Segment | null {
+function segmentFromPoints(data32S: Int32Array, aIdx: number, bIdx: number): Segment | null {
   const ax = data32S[aIdx * 2]
   const ay = data32S[aIdx * 2 + 1]
   const bx = data32S[bIdx * 2]

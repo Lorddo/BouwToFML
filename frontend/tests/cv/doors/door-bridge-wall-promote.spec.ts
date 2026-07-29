@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  findDoorBridgeWallFaces,
-  type DoorSwingHypothesis,
-} from '@/cv/doors'
+import { findDoorBridgeWallFaces, type DoorSwingHypothesis } from '@/cv/doors'
 import { buildLabelAdjacency } from '@/cv/walls/rooms/label-adjacency'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'
@@ -24,7 +21,12 @@ function makeComponent(face: FaceDef): RasterRoomComponent {
   }
 }
 
-function paintFace(labelsData: Int32Array, imageWidth: number, imageHeight: number, face: FaceDef): void {
+function paintFace(
+  labelsData: Int32Array,
+  imageWidth: number,
+  imageHeight: number,
+  face: FaceDef,
+): void {
   for (let y = face.y; y < face.y + face.height; y += 1) {
     if (y < 0 || y >= imageHeight) continue
     for (let x = face.x; x < face.x + face.width; x += 1) {

@@ -2,7 +2,11 @@ import type { OpenCV } from '@/cv/loadOpenCV'
 
 const MIN_PX_REFERENCE_SIDE = 1000
 
-export function scaleMinPixels(minPixels: number | undefined, width: number, height: number): number {
+export function scaleMinPixels(
+  minPixels: number | undefined,
+  width: number,
+  height: number,
+): number {
   const base = Math.max(0, minPixels ?? 0)
   if (base === 0) return 0
   const sideRatio = Math.max(width, height) / MIN_PX_REFERENCE_SIDE

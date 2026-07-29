@@ -146,7 +146,9 @@ export function findDoorBridgeWallFaces(params: {
   })
   if (rootFaces.size === 0) return empty
 
-  const componentsByLabel = new Map(params.components.map((component) => [component.label, component]))
+  const componentsByLabel = new Map(
+    params.components.map((component) => [component.label, component]),
+  )
   const promoted = new Set<number>()
   const byHypothesisId = new Map<string, number[]>()
 
@@ -266,7 +268,10 @@ export function findDoorBridgeWallFaces(params: {
     }
 
     if (hypPromoted.size > 0) {
-      byHypothesisId.set(hypothesis.id, [...hypPromoted].sort((a, b) => a - b))
+      byHypothesisId.set(
+        hypothesis.id,
+        [...hypPromoted].sort((a, b) => a - b),
+      )
     }
   }
 

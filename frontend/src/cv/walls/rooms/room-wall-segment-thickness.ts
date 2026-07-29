@@ -275,8 +275,7 @@ function collectSegmentThicknessSamples(params: {
   referenceWallThicknessPx?: number
 }): number[] {
   const margin =
-    params.junctionMarginPx ??
-    resolveJunctionThicknessMarginPx(params.referenceWallThicknessPx)
+    params.junctionMarginPx ?? resolveJunctionThicknessMarginPx(params.referenceWallThicknessPx)
   if (params.distanceMap) {
     const byDt = sampleThicknessFromDistanceMap({
       distanceMap: params.distanceMap,
@@ -343,7 +342,8 @@ function undirectedAngleDiffDeg(a: number, b: number): number {
 
 function areCollinearSegments(a: SemanticWallSegment, b: SemanticWallSegment): boolean {
   return (
-    undirectedAngleDiffDeg(segmentAngleDeg(a), segmentAngleDeg(b)) < WALL_LINE_COLLINEAR_MIN_TURN_DEG
+    undirectedAngleDiffDeg(segmentAngleDeg(a), segmentAngleDeg(b)) <
+    WALL_LINE_COLLINEAR_MIN_TURN_DEG
   )
 }
 
@@ -476,7 +476,9 @@ export function groupWallLineIndices(
 }
 
 /** Geef alle segmenten op dezelfde muurlijn de dikste gemeten dikte (en balance van dat segment). */
-export function harmonizeThicknessPerWallLine(segments: SemanticWallSegment[]): SemanticWallSegment[] {
+export function harmonizeThicknessPerWallLine(
+  segments: SemanticWallSegment[],
+): SemanticWallSegment[] {
   if (segments.length <= 1) return segments
   const groups = groupWallLineIndices(segments)
   const result = segments.map((segment) => ({ ...segment }))
@@ -566,8 +568,6 @@ export function measureSegmentThicknessMax(params: {
   return {
     ...params.graph,
     segments:
-      params.harmonizeByWallLine === false
-        ? segments
-        : harmonizeThicknessPerWallLine(segments),
+      params.harmonizeByWallLine === false ? segments : harmonizeThicknessPerWallLine(segments),
   }
 }

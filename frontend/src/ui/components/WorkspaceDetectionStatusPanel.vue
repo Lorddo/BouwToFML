@@ -19,7 +19,6 @@ defineProps<{
   lastOutputSummary: { extractorId: string; elapsedMs: number } | null
   activeSegmentCount: number | null
 }>()
-
 </script>
 
 <template>

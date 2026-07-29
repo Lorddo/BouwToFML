@@ -1,17 +1,11 @@
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { WallStrategyResult } from '../strategy-utils'
-import {
-  buildFaceLabelsFromBw,
-  type RasterRoomComponent,
-} from '../rooms/room-raster'
+import { buildFaceLabelsFromBw, type RasterRoomComponent } from '../rooms/room-raster'
 import { buildEnclosedFaceParentMap, countDistinctMergedFaces } from '../rooms/room-raster-merge'
 import { buildInkEaterLabels, resolveInkBetweenFaces } from '../rooms/room-ink-resolve'
 import { demoteExteriorPocketFaces } from '../rooms/room-exterior-pocket'
-import {
-  buildRoomReferenceMat,
-  finalizeRoomReferenceMat,
-} from '../rooms/room-reference-preprocess'
+import { buildRoomReferenceMat, finalizeRoomReferenceMat } from '../rooms/room-reference-preprocess'
 import {
   buildEffectiveComponentClassification,
   classifyFacesByInkCoverage,
@@ -23,8 +17,7 @@ import {
 import { claimWallishAfterInherit } from '../rooms/face-parent-claim'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
-import { resolveInkFromRawTopology,
-} from '../rooms/room-refine-topology'
+import { resolveInkFromRawTopology } from '../rooms/room-refine-topology'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import { prepareRoomFinalizeMask } from '../rooms/room-wall-finalize-shared'
 import { runFinalizePipelineV3 } from '../rooms/pipeline-v3/run-finalize-v3'
@@ -135,7 +128,9 @@ function classifyRoomFacesFromBwMat(params: {
     if (x < 0 || y < 0 || x >= width || y >= height) return 0
     return labelsData[y * width + x] ?? 0
   }
-  let parentMap = buildEnclosedFaceParentMap(components, width, height, { labelAt: labelAtBootstrap })
+  let parentMap = buildEnclosedFaceParentMap(components, width, height, {
+    labelAt: labelAtBootstrap,
+  })
   let mergedFaceCount = countDistinctMergedFaces(components, parentMap)
   faceLabels.labels.delete()
 
@@ -217,7 +212,9 @@ function classifyRoomFacesFromBwMat(params: {
   }
 }
 
-export function serializeRoomClassifyState(result: RoomClassifyResult): SerializedRoomClassifyState {
+export function serializeRoomClassifyState(
+  result: RoomClassifyResult,
+): SerializedRoomClassifyState {
   return {
     width: result.width,
     height: result.height,
@@ -233,7 +230,9 @@ export function serializeRoomClassifyState(result: RoomClassifyResult): Serializ
   }
 }
 
-export function deserializeRoomClassifyState(state: SerializedRoomClassifyState): RoomClassifyResult {
+export function deserializeRoomClassifyState(
+  state: SerializedRoomClassifyState,
+): RoomClassifyResult {
   const classificationByLabel = new Map(state.classificationByLabel)
   const classificationGroupBy = state.classificationGroupBy ?? ROOM_MANUAL_CLASSIFICATION_GROUP_BY
   const parentMap = new Map(state.parentMap)

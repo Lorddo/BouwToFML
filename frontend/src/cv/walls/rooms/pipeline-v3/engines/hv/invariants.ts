@@ -50,7 +50,9 @@ export function assertLayer4Invariants(params: {
       const source = params.layer3.facesPruned[i]!
       const positioned = params.layer4.facesPositioned[i]!
       if (source.rootLabel !== positioned.rootLabel) {
-        errors.push(`face order mismatch at index ${i}: ${source.rootLabel} != ${positioned.rootLabel}`)
+        errors.push(
+          `face order mismatch at index ${i}: ${source.rootLabel} != ${positioned.rootLabel}`,
+        )
         continue
       }
       if (source.segments.length !== positioned.segments.length) {

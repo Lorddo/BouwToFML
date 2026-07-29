@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
-import {
-  DOOR_FML_TEMPLATE_OPTIONS,
-  resolveDoorFmlTemplateRefId,
-} from '@/core/fml/types'
+import { DOOR_FML_TEMPLATE_OPTIONS, resolveDoorFmlTemplateRefId } from '@/core/fml/types'
 import { SELECTION_COLORS } from '@/platform/selection'
 import type { SelectionRect } from '@/platform/selection'
 
@@ -53,9 +50,10 @@ onUnmounted(() => {
     <h3>Referenties</h3>
     <p class="hint">
       Tune eerst de B/W, teken daarna referentievakken op dezelfde bewerking. Muur: 1 selectie
-      (dikte wordt gemeten bij afronden). Deur/raam: meerdere. Na een vak terug naar pan; opnieuw klikken
-      op Muur/Deur/Raam om verder te tekenen. Escape of opnieuw op de actieve knop stopt tekenen.
-      Shift+klik verwijdert een vak. Referentie-analyse: Debug-sidebar → «Exporteer referentie-analyse».
+      (dikte wordt gemeten bij afronden). Deur/raam: meerdere. Na een vak terug naar pan; opnieuw
+      klikken op Muur/Deur/Raam om verder te tekenen. Escape of opnieuw op de actieve knop stopt
+      tekenen. Shift+klik verwijdert een vak. Referentie-analyse: Debug-sidebar → «Exporteer
+      referentie-analyse».
     </p>
 
     <label class="ocr-toggle">
@@ -83,7 +81,10 @@ onUnmounted(() => {
         <span class="count">{{ counts[item.type] ?? 0 }}</span>
       </button>
     </div>
-    <p class="metric" :class="{ warning: referenceWallThicknessPx == null && (counts.wall ?? 0) > 0 }">
+    <p
+      class="metric"
+      :class="{ warning: referenceWallThicknessPx == null && (counts.wall ?? 0) > 0 }"
+    >
       <template v-if="measuring">Muurdikte meten…</template>
       <template v-else-if="referenceWallThicknessPx != null">
         Gemeten muurdikte: {{ referenceWallThicknessPx }}px
@@ -94,7 +95,8 @@ onUnmounted(() => {
     <div v-if="doorRects.length > 0" class="door-list">
       <h4>Deur Template ID</h4>
       <p class="hint subtle">
-        Per referentie: standaard deur of kastdeur. Dubbele deuren en ramen worden later algoritmisch bepaald.
+        Per referentie: standaard deur of kastdeur. Dubbele deuren en ramen worden later
+        algoritmisch bepaald.
       </p>
       <ul>
         <li v-for="(rect, index) in doorRects" :key="rect.id">
@@ -102,18 +104,10 @@ onUnmounted(() => {
           <select
             :value="resolveDoorFmlTemplateRefId(rect.fmlRefId)"
             @change="
-              $emit(
-                'updateDoorFmlRefId',
-                rect.id,
-                ($event.target as HTMLSelectElement).value,
-              )
+              $emit('updateDoorFmlRefId', rect.id, ($event.target as HTMLSelectElement).value)
             "
           >
-            <option
-              v-for="opt in DOOR_FML_TEMPLATE_OPTIONS"
-              :key="opt.refid"
-              :value="opt.refid"
-            >
+            <option v-for="opt in DOOR_FML_TEMPLATE_OPTIONS" :key="opt.refid" :value="opt.refid">
               {{ opt.label }}
             </option>
           </select>

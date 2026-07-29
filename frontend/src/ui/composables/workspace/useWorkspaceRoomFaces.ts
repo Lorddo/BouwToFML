@@ -49,7 +49,8 @@ import {
   refreshPreviewMask as refreshPreviewMaskCore,
 } from './room-faces-preview'
 
-export type RoomPhase = 'idle' | 'awaiting_reference' | 'classifying' | 'recalculating' | 'review' | 'finalizing' | 'done'
+export type RoomPhase =
+  'idle' | 'awaiting_reference' | 'classifying' | 'recalculating' | 'review' | 'finalizing' | 'done'
 
 export function useWorkspaceRoomFaces(deps: {
   flowStep: Ref<WorkspaceFlowStep>
@@ -90,9 +91,7 @@ export function useWorkspaceRoomFaces(deps: {
   const roomRasterCache = ref<RoomRasterCache | null>(null)
   const classifyingInFlight = ref(false)
   let suspendWallBwPreviewWatch = false
-  const hasReferenceWallRect = computed(
-    () => deps.rects.value.some((rect) => rect.type === 'wall'),
-  )
+  const hasReferenceWallRect = computed(() => deps.rects.value.some((rect) => rect.type === 'wall'))
 
   const roomPreviewMaskCanvas = ref<CanvasLike | null>(null)
   const roomPreviewMaskRevision = ref(0)
@@ -210,7 +209,9 @@ export function useWorkspaceRoomFaces(deps: {
       roomPhase: roomPhase.value,
       tabOutputs: deps.tabOutputs.value,
       roomRasterCache: roomRasterCache.value,
-      setRoomPhase: (p) => { roomPhase.value = p },
+      setRoomPhase: (p) => {
+        roomPhase.value = p
+      },
       syncDetectionComplete,
       ingestClassifyOutput,
       restoreCacheFromTabOutput,
@@ -224,9 +225,15 @@ export function useWorkspaceRoomFaces(deps: {
 
   // --- classify ---
   const classifyRunner = createClassifyRunner({
-    get templateTab() { return deps.templateTab.value },
-    get referenceWallThicknessPx() { return deps.referenceWallThicknessPx.value },
-    setRoomPhase: (p) => { roomPhase.value = p },
+    get templateTab() {
+      return deps.templateTab.value
+    },
+    get referenceWallThicknessPx() {
+      return deps.referenceWallThicknessPx.value
+    },
+    setRoomPhase: (p) => {
+      roomPhase.value = p
+    },
     syncDetectionComplete,
     setStatus: deps.setStatus,
     onExtractTargets: deps.onExtractTargets,
@@ -248,7 +255,9 @@ export function useWorkspaceRoomFaces(deps: {
           templateTab: deps.templateTab.value,
           profileConfirmed: deps.profileConfirmed.value,
         }),
-      (v) => { classifyingInFlight.value = v },
+      (v) => {
+        classifyingInFlight.value = v
+      },
       () => {
         roomRasterCache.value = null
         roomPreviewMaskCanvas.value = null
@@ -273,7 +282,10 @@ export function useWorkspaceRoomFaces(deps: {
       return true
     }
     const rect = resolveReferenceWallRect(deps.rects.value, deps.selectedRectId.value)
-    if (!rect && (!deps.referenceWallThicknessPx.value || deps.referenceWallThicknessPx.value <= 0)) {
+    if (
+      !rect &&
+      (!deps.referenceWallThicknessPx.value || deps.referenceWallThicknessPx.value <= 0)
+    ) {
       roomPhase.value = 'awaiting_reference'
       syncDetectionComplete()
       return false
@@ -295,10 +307,15 @@ export function useWorkspaceRoomFaces(deps: {
       }
       deps.referenceWallThicknessPx.value = null
       const classified = await runClassifyPhase(true, {
-        x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
       })
       if (!classified) {
-        deps.setStatus?.('Muurclassificatie niet gestart — controleer profiel (Solid/Open) en probeer opnieuw.')
+        deps.setStatus?.(
+          'Muurclassificatie niet gestart — controleer profiel (Solid/Open) en probeer opnieuw.',
+        )
         roomPhase.value = 'awaiting_reference'
         syncDetectionComplete()
         return false
@@ -335,7 +352,12 @@ export function useWorkspaceRoomFaces(deps: {
         return runClassifyPhase(true)
       }
       if (rect) {
-        return runClassifyPhase(true, { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
+        return runClassifyPhase(true, {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        })
       }
       deps.setStatus?.('Meet eerst een referentie muur via het vak of Autoclassificeer.')
       roomPhase.value = 'awaiting_reference'
@@ -394,7 +416,9 @@ export function useWorkspaceRoomFaces(deps: {
     return finalizeWallDetectionCore({
       roomRasterCache: roomRasterCache.value,
       roomPhase: roomPhase.value,
-      setRoomPhase: (p) => { roomPhase.value = p },
+      setRoomPhase: (p) => {
+        roomPhase.value = p
+      },
       setStatus: deps.setStatus,
       syncDetectionComplete,
       getWallsOutput: () => deps.tabOutputs.value.walls,
@@ -414,7 +438,9 @@ export function useWorkspaceRoomFaces(deps: {
     if (label == null) return
     const previousClass = classificationAtLabel(cache, label)
     const result = toggleFaceAtLabelDetailed(
-      cache, label, deps.referenceWallThicknessPx.value ?? undefined,
+      cache,
+      label,
+      deps.referenceWallThicknessPx.value ?? undefined,
     )
     if (!result) return
     refreshPreviewMask(cache, { dirtyBounds: result.dirtyBounds })
@@ -434,7 +460,9 @@ export function useWorkspaceRoomFaces(deps: {
     if (!activeFaceBoxTool.value) return
     const target: RoomRasterClass = activeFaceBoxTool.value === 'box_wall' ? 'wall' : 'unknown'
     const faceLabels = findFaceLabelsFullyInBBox(
-      cache, bounds, deps.referenceWallThicknessPx.value ?? undefined,
+      cache,
+      bounds,
+      deps.referenceWallThicknessPx.value ?? undefined,
     )
     const hadDoorFaceBefore = faceLabels.some(
       (faceLabel) => classificationAtLabel(cache, faceLabel) === 'door',
@@ -443,18 +471,29 @@ export function useWorkspaceRoomFaces(deps: {
       isWindowPipelineFaceClass(classificationAtLabel(cache, faceLabel)),
     )
     const change = setFaceClassificationForLabels(
-      cache, faceLabels, target, deps.referenceWallThicknessPx.value ?? undefined,
+      cache,
+      faceLabels,
+      target,
+      deps.referenceWallThicknessPx.value ?? undefined,
     )
     if (change.changedLabels.length > 0) {
       refreshPreviewMask(cache, { dirtyBounds: change.dirtyBounds })
-      if (shouldRefreshDoorOverlayAfterBoxDemote({
-        targetClass: target, changedCount: change.changedLabels.length, hadDoorFaceBefore,
-      })) {
+      if (
+        shouldRefreshDoorOverlayAfterBoxDemote({
+          targetClass: target,
+          changedCount: change.changedLabels.length,
+          hadDoorFaceBefore,
+        })
+      ) {
         void deps.onDoorFacesDemoted?.()
       }
-      if (shouldRefreshWindowOverlayAfterBoxDemote({
-        targetClass: target, changedCount: change.changedLabels.length, hadWindowPipelineFaceBefore,
-      })) {
+      if (
+        shouldRefreshWindowOverlayAfterBoxDemote({
+          targetClass: target,
+          changedCount: change.changedLabels.length,
+          hadWindowPipelineFaceBefore,
+        })
+      ) {
         void deps.onWindowFacesDemoted?.()
       }
     }

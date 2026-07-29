@@ -220,7 +220,7 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     pushUndo,
     prepareParentSync,
     addWallSegment,
-  applyJunctionMove,
+    applyJunctionMove,
     applyJunctionMerge,
     applyWallThickness,
     applyWallsThickness,

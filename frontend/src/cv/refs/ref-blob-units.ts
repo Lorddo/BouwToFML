@@ -1,10 +1,5 @@
 import type { RefBBox, RefBlobUnit, RefPoint } from './types'
-import {
-  filterSignificantBlobs,
-  isInk,
-  labelInkComponents,
-  type AxisSpan,
-} from './ref-blob-label'
+import { filterSignificantBlobs, isInk, labelInkComponents, type AxisSpan } from './ref-blob-label'
 import {
   detectKopeindeZones,
   findKozijnPostsAlongX,
@@ -75,7 +70,12 @@ export function keepPrimaryBlobOnly(
   data: Uint8Array,
   width: number,
   height: number,
-): { data: Uint8Array; labels: Int32Array; primaryLabel: number | null; primaryBBox: RefBBox | null } {
+): {
+  data: Uint8Array
+  labels: Int32Array
+  primaryLabel: number | null
+  primaryBBox: RefBBox | null
+} {
   const labeled = labelInkComponents(data, width, height)
   const significant = filterSignificantBlobs(labeled.blobs, width * height, {
     minAreaPx: 8,
@@ -170,7 +170,12 @@ export function resolveOpeningUnits(params: {
   width: number
   height: number
   singleUnit?: boolean
-}): { primary: RefBlobUnit | null; units: RefBlobUnit[]; labels: Int32Array; maskedData: Uint8Array } {
+}): {
+  primary: RefBlobUnit | null
+  units: RefBlobUnit[]
+  labels: Int32Array
+  maskedData: Uint8Array
+} {
   const { width, height, data } = params
   const labeled = labelInkComponents(data, width, height)
   const labels = labeled.labels
@@ -302,7 +307,9 @@ export function resolveOpeningUnits(params: {
         centroid: centroidInBBox(data, width, height, mergedBbox),
         isPrimary: true,
         source: anyKozijnSpan ? 'kozijn_span' : 'component',
-        includesBothHeads: anyBothHeads || detectKopeindeZones(data, width, height, mergedBbox, 'horizontal') != null,
+        includesBothHeads:
+          anyBothHeads ||
+          detectKopeindeZones(data, width, height, mergedBbox, 'horizontal') != null,
       },
     ]
   }

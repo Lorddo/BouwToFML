@@ -54,10 +54,7 @@ export function runWindowAxelFilter(params: {
     const rejectedByReason: Partial<Record<WindowAxelRejectReason, number>> = {}
     const orientations: WindowAxelOrientation[] =
       ref.orientation === 'horizontal' ? ['horizontal', 'vertical'] : ['vertical', 'horizontal']
-    let effectiveTargetStripHeightPx = denormalizeTargetStripHeightPx(
-      ref,
-      ref.axisBandHeightPx,
-    )
+    let effectiveTargetStripHeightPx = denormalizeTargetStripHeightPx(ref, ref.axisBandHeightPx)
     let acceptedCount = 0
     let rejectedCount = 0
     let clusterCount = 0
@@ -66,8 +63,7 @@ export function runWindowAxelFilter(params: {
 
     for (let orientationIndex = 0; orientationIndex < orientations.length; orientationIndex += 1) {
       const orientation = orientations[orientationIndex]!
-      const orientedRefBase =
-        orientation === ref.orientation ? ref : { ...ref, orientation }
+      const orientedRefBase = orientation === ref.orientation ? ref : { ...ref, orientation }
       const baseTargetStripHeightPx = denormalizeTargetStripHeightPx(
         orientedRefBase,
         orientedRefBase.axisBandHeightPx,
@@ -100,14 +96,16 @@ export function runWindowAxelFilter(params: {
         orientationIndex > 0 &&
         calibratedTarget === baseTargetStripHeightPx &&
         effectiveTargetStripHeightPx > 0
-      const resolvedTarget = fallbackToPrimaryTarget ? effectiveTargetStripHeightPx : calibratedTarget
+      const resolvedTarget = fallbackToPrimaryTarget
+        ? effectiveTargetStripHeightPx
+        : calibratedTarget
       const resolvedAxisBandPx = resolveAxisBandFromTargetStripHeightPx(
         orientedRefBase,
         resolvedTarget,
       )
       const effectiveRef =
         resolvedTarget === baseTargetStripHeightPx &&
-          resolvedAxisBandPx === orientedRefBase.axisBandHeightPx
+        resolvedAxisBandPx === orientedRefBase.axisBandHeightPx
           ? {
               ...orientedRefBase,
               targetStripHeightPx: baseTargetStripHeightPx,
@@ -165,22 +163,22 @@ export function runWindowAxelFilter(params: {
           })
           continue
         }
-          const faceIds = variant.map((face) => face.root).sort((a, b) => a - b)
-          // Orientatie in key: H- en V-match van dezelfde faces mogen naast elkaar bestaan.
-          const faceKey = `${effectiveRef.orientation}:${faceIds.join('_')}`
-          const next: WindowAxelHypothesis = {
-            id: `window-${ref.refIndex}-${effectiveRef.orientation}-${faceIds.join('_')}`,
-            matchedRefIndex: ref.refIndex,
-            orientation: effectiveRef.orientation,
-            faceIds,
-            unionBBox: unionBbox(variant),
-            axisSpanPx: scored.axisSpanPx,
-            score: scored.score,
-          }
-          const existing = acceptedByFaceKey.get(faceKey)
-          if (!existing || next.score > existing.score) {
-            acceptedByFaceKey.set(faceKey, next)
-          }
+        const faceIds = variant.map((face) => face.root).sort((a, b) => a - b)
+        // Orientatie in key: H- en V-match van dezelfde faces mogen naast elkaar bestaan.
+        const faceKey = `${effectiveRef.orientation}:${faceIds.join('_')}`
+        const next: WindowAxelHypothesis = {
+          id: `window-${ref.refIndex}-${effectiveRef.orientation}-${faceIds.join('_')}`,
+          matchedRefIndex: ref.refIndex,
+          orientation: effectiveRef.orientation,
+          faceIds,
+          unionBBox: unionBbox(variant),
+          axisSpanPx: scored.axisSpanPx,
+          score: scored.score,
+        }
+        const existing = acceptedByFaceKey.get(faceKey)
+        if (!existing || next.score > existing.score) {
+          acceptedByFaceKey.set(faceKey, next)
+        }
       }
     }
     for (const hypothesis of acceptedByFaceKey.values()) {

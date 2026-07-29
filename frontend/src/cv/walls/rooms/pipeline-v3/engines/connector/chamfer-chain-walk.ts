@@ -18,7 +18,10 @@ interface DiagonalChamferChainWalk {
   rootPoint: { x: number; y: number }
 }
 
-function unitFrom(point: { x: number; y: number }, toward: { x: number; y: number }): { x: number; y: number } {
+function unitFrom(
+  point: { x: number; y: number },
+  toward: { x: number; y: number },
+): { x: number; y: number } {
   const dx = toward.x - point.x
   const dy = toward.y - point.y
   const len = Math.hypot(dx, dy)
@@ -91,21 +94,26 @@ export function walkDiagonalChamferChain(params: {
     : undefined
 
   for (let step = 0; step < LAYER6_CHAIN_WALK_MAX_STEPS; step += 1) {
-    const diags = diagonalIncidentsAt(params.segments, current, hvBandPx, endpointSnapPx).filter((incident) => {
-      if (visited.has(incident.segIndex)) return false
-      if (prevPoint) {
-        const da = Math.hypot(incident.other.x - prevPoint.x, incident.other.y - prevPoint.y)
-        if (da <= endpointSnapPx) return false
-      }
-      return true
-    })
+    const diags = diagonalIncidentsAt(params.segments, current, hvBandPx, endpointSnapPx).filter(
+      (incident) => {
+        if (visited.has(incident.segIndex)) return false
+        if (prevPoint) {
+          const da = Math.hypot(incident.other.x - prevPoint.x, incident.other.y - prevPoint.y)
+          if (da <= endpointSnapPx) return false
+        }
+        return true
+      },
+    )
     if (diags.length === 0) break
-    if (diags.length > 1 && !areDiagonalsAntiParallelChainAtPoint({
-      segments: params.segments,
-      point: current,
-      hvBandPx,
-      endpointSnapPx,
-    })) {
+    if (
+      diags.length > 1 &&
+      !areDiagonalsAntiParallelChainAtPoint({
+        segments: params.segments,
+        point: current,
+        hvBandPx,
+        endpointSnapPx,
+      })
+    ) {
       break
     }
 
@@ -204,13 +212,15 @@ export function hasBlockingCompanionDiagonalAtEndpoint(params: {
     return false
   }
 
-  if (areDiagonalsAntiParallelChainAtPoint({
-    segments: params.segments,
-    point: params.point,
-    hvBandPx,
-    endpointSnapPx,
-    excludeSegIndex: params.connectorIndex,
-  })) {
+  if (
+    areDiagonalsAntiParallelChainAtPoint({
+      segments: params.segments,
+      point: params.point,
+      hvBandPx,
+      endpointSnapPx,
+      excludeSegIndex: params.connectorIndex,
+    })
+  ) {
     return false
   }
 

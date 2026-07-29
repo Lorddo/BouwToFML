@@ -84,7 +84,8 @@ const { shiftPressed, spacePressed, onKeyDown, onKeyUp } = useStage()
 const editor = useFmlPreviewEditor(toRef(props, 'plan'), toRef(props, 'floorIndex'))
 const selection = createFmlPreviewSelection()
 const floor = computed(
-  () => editor.localPlan.value?.floors[props.floorIndex] ?? editor.localPlan.value?.floors[0] ?? null,
+  () =>
+    editor.localPlan.value?.floors[props.floorIndex] ?? editor.localPlan.value?.floors[0] ?? null,
 )
 const floorItems = computed(() => floor.value?.items ?? [])
 const viewport = useFmlPreviewViewport(containerRef, editor.walls, floorItems)
@@ -215,18 +216,14 @@ const {
   unmountInteraction,
 } = interaction
 
-const {
-  drawWallPreviewScreen,
-  drawRoomPreviewScreen,
-  drawRoomPreviewPolygon,
-  cmToScreen,
-} = useFmlPreviewDrawPreviews({
-  drawWallPreview,
-  drawRoomPreview,
-  contentLayout,
-  viewPosition,
-  viewScale,
-})
+const { drawWallPreviewScreen, drawRoomPreviewScreen, drawRoomPreviewPolygon, cmToScreen } =
+  useFmlPreviewDrawPreviews({
+    drawWallPreview,
+    drawRoomPreview,
+    contentLayout,
+    viewPosition,
+    viewScale,
+  })
 
 onMounted(() => {
   mountResizeObserver()
@@ -342,9 +339,7 @@ watch(
         height: `${Math.abs(selectionBoxPreview.height)}px`,
       }"
     />
-    <div v-if="!renderModel" class="empty">
-      Geen FML-plan beschikbaar voor preview.
-    </div>
+    <div v-if="!renderModel" class="empty">Geen FML-plan beschikbaar voor preview.</div>
     <FmlPreviewStage
       v-else
       v-model:stage-ref="stageRef"

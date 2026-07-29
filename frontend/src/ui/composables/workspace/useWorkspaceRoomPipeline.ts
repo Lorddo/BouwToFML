@@ -43,7 +43,10 @@ export function useWorkspaceRoomPipeline(deps: {
   clearRectsByType: (type: ElementClass) => void
   removeRect: (id: string) => void
   selectRect: (id: string | null) => void
-  updateRectBounds: (id: string, bounds: { x: number; y: number; width: number; height: number }) => void
+  updateRectBounds: (
+    id: string,
+    bounds: { x: number; y: number; width: number; height: number },
+  ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   endDraw: () => void
   cancelDraw: () => void

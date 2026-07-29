@@ -48,10 +48,10 @@ function segmentsUnchanged(baseSegments: Segment[], work: Segment[]): boolean {
     const other = work[index]
     if (!other) return false
     return (
-      Math.abs(seg.a.x - other.a.x) < 1e-6
-      && Math.abs(seg.a.y - other.a.y) < 1e-6
-      && Math.abs(seg.b.x - other.b.x) < 1e-6
-      && Math.abs(seg.b.y - other.b.y) < 1e-6
+      Math.abs(seg.a.x - other.a.x) < 1e-6 &&
+      Math.abs(seg.a.y - other.a.y) < 1e-6 &&
+      Math.abs(seg.b.x - other.b.x) < 1e-6 &&
+      Math.abs(seg.b.y - other.b.y) < 1e-6
     )
   })
 }
@@ -178,8 +178,8 @@ export function runLayer6JunctionRepair(params: {
     // Geen agressieve end-sanitize die I's maakt als raw face-ok was.
     if (!acceptLayer6FaceKinds(baseSegments, work).ok) {
       if (
-        acceptLayer6FaceKinds(baseSegments, bestFaceOk).ok
-        && !segmentsUnchanged(baseSegments, bestFaceOk)
+        acceptLayer6FaceKinds(baseSegments, bestFaceOk).ok &&
+        !segmentsUnchanged(baseSegments, bestFaceOk)
       ) {
         work = cloneSegments(bestFaceOk)
         lastRollBackReason = 'final gate → keep best face-ok'

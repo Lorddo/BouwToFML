@@ -54,10 +54,7 @@ export function runRoomTopologyRefinePass(params: {
     priorParentMap,
   })
 
-  const resolvePass = (
-    labelsData: Int32Array,
-    labelClass: ReadonlyMap<number, RoomRasterClass>,
-  ) =>
+  const resolvePass = (labelsData: Int32Array, labelClass: ReadonlyMap<number, RoomRasterClass>) =>
     resolveInkBetweenFaces({
       labelsData,
       components,
@@ -129,8 +126,14 @@ export function resolveInkFromRawTopology(params: {
   parentMap: Map<number, number>
   inkResolveStats: { assignedPx: number; unresolvedPx: number }
 } {
-  const { rawLabelsData, components, width, height, classificationByLabel, referenceWallThicknessPx } =
-    params
+  const {
+    rawLabelsData,
+    components,
+    width,
+    height,
+    classificationByLabel,
+    referenceWallThicknessPx,
+  } = params
   const labelClass = buildInkEaterLabelClassFromEffective(components, classificationByLabel)
   const resolved = resolveInkBetweenFaces({
     labelsData: rawLabelsData,
@@ -171,8 +174,14 @@ export function resolveInkOnStoredTopology(params: {
   labelsData: Int32Array
   inkResolveStats: { assignedPx: number; unresolvedPx: number }
 } {
-  const { rawLabelsData, components, width, height, classificationByLabel, referenceWallThicknessPx } =
-    params
+  const {
+    rawLabelsData,
+    components,
+    width,
+    height,
+    classificationByLabel,
+    referenceWallThicknessPx,
+  } = params
   const labelClass = buildInkEaterLabelClassFromEffective(components, classificationByLabel)
 
   if (params.priorLabelsData && params.regionBounds) {

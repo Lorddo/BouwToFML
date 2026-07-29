@@ -108,7 +108,9 @@ describe('layer-debug-report summary junction kinds', () => {
       output,
     })
 
-    const t = report.wallTransitions?.find((item) => item.from === 'layer9' && item.to === 'layer10')
+    const t = report.wallTransitions?.find(
+      (item) => item.from === 'layer9' && item.to === 'layer10',
+    )
     expect(t).toBeTruthy()
     expect(t!.summary.dropped).toBe(1)
     expect(t!.droppedSegments).toEqual([

@@ -10,9 +10,7 @@ import { FML_BAND_MAX_RATIO } from '@/core/fml/fml-wall-thickness-tiers'
 import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickness'
 import type { CollapsePolicy } from '../policy-types'
 
-export {
-  isWallThicknessBridgeCandidatePx,
-} from '@/core/fml/wall-thickness-chain'
+export { isWallThicknessBridgeCandidatePx } from '@/core/fml/wall-thickness-chain'
 
 function sampleSegmentThicknessPx(params: {
   segment: Segment
@@ -26,9 +24,10 @@ function sampleSegmentThicknessPx(params: {
   if (len <= 1e-3) {
     return params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
   }
-  const inset = len > params.policy.thicknessSampleInsetPx * 2 + 1
-    ? params.policy.thicknessSampleInsetPx / len
-    : 0.5
+  const inset =
+    len > params.policy.thicknessSampleInsetPx * 2 + 1
+      ? params.policy.thicknessSampleInsetPx / len
+      : 0.5
   const sx = params.segment.a.x + (params.segment.b.x - params.segment.a.x) * inset
   const sy = params.segment.a.y + (params.segment.b.y - params.segment.a.y) * inset
   if (params.distanceMap) {
@@ -52,7 +51,10 @@ export function collinearThicknessWithinMaxBandNoise(
   thicknessB: number,
   referenceWallThicknessPx: number,
 ): boolean {
-  return Math.abs(thicknessA - thicknessB) <= resolveCollinearThicknessNoiseMaxPx(referenceWallThicknessPx)
+  return (
+    Math.abs(thicknessA - thicknessB) <=
+    resolveCollinearThicknessNoiseMaxPx(referenceWallThicknessPx)
+  )
 }
 
 export function thicknessCompatible(

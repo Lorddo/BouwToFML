@@ -58,12 +58,10 @@ export function useFmlPreviewWallSelection(options: {
 
   const selectionBoxMode = computed(() => activeFmlTool.value === 'box_select')
 
-  let selectionBoxDrag:
-    | {
-        startX: number
-        startY: number
-      }
-    | null = null
+  let selectionBoxDrag: {
+    startX: number
+    startY: number
+  } | null = null
 
   function syncWallThicknessDraftFromSelection(): void {
     const ids = settingsWallIds.value
@@ -90,9 +88,7 @@ export function useFmlPreviewWallSelection(options: {
 
     if (balances.length > 0) {
       const firstBalance = Math.round(balances[0]! * 100) / 100
-      const balanceMixed = balances.some(
-        (value) => Math.round(value * 100) / 100 !== firstBalance,
-      )
+      const balanceMixed = balances.some((value) => Math.round(value * 100) / 100 !== firstBalance)
       wallBalanceMixed.value = balanceMixed
       wallBalanceDraft.value = firstBalance
     }

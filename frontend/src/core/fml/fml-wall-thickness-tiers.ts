@@ -2,9 +2,9 @@ const FML_BAND_MID_BOUNDARY_CM = 12
 const FML_BAND_MAX_BOUNDARY_CM = 23
 
 /** Ondergrens mid-band t.o.v. referentie-muur (dikste): min &lt; 40%. */
-export const FML_BAND_MID_RATIO = 0.40
+export const FML_BAND_MID_RATIO = 0.4
 /** Bovengrens mid-band t.o.v. referentie-muur: mid t/m 80%, max &gt; 80%. */
-export const FML_BAND_MAX_RATIO = 0.80
+export const FML_BAND_MAX_RATIO = 0.8
 
 export type FmlThicknessBand = 'min' | 'mid' | 'max'
 

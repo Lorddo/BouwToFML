@@ -14,9 +14,7 @@ import { escapeHtml, formatJson } from './examples-report-html-utils'
 function formatRejectedByReason(rejected: WindowAxelRefMatchStats['rejectedByReason']): string {
   const keys = Object.keys(rejected)
   if (keys.length <= 0) return '-'
-  return keys
-    .map((key) => `${key}: ${rejected[key as keyof typeof rejected] ?? 0}`)
-    .join(' | ')
+  return keys.map((key) => `${key}: ${rejected[key as keyof typeof rejected] ?? 0}`).join(' | ')
 }
 
 export function buildWindowFaceReportHtml(params: {

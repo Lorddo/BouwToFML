@@ -10,7 +10,10 @@ export interface InkRectBounds {
   height: number
 }
 
-function canvasDimensions(source: HTMLImageElement | HTMLCanvasElement): { width: number; height: number } {
+function canvasDimensions(source: HTMLImageElement | HTMLCanvasElement): {
+  width: number
+  height: number
+} {
   if (source.width > 0 && source.height > 0) {
     return { width: source.width, height: source.height }
   }
@@ -24,7 +27,9 @@ function getInkEditContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D 
   return canvas.getContext('2d', INK_EDIT_CONTEXT_OPTS)
 }
 
-export function cloneSourceToEditCanvas(source: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
+export function cloneSourceToEditCanvas(
+  source: HTMLImageElement | HTMLCanvasElement,
+): HTMLCanvasElement {
   const { width, height } = canvasDimensions(source)
   const canvas = document.createElement('canvas')
   canvas.width = width

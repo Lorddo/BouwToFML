@@ -39,7 +39,8 @@ const phaseLabel = computed(() => {
   <div class="panel">
     <p class="phase">{{ phaseLabel }}</p>
     <p v-if="stats" class="stats">
-      {{ stats.wallCount }} muur · {{ stats.surfaceCount }} vloer · {{ stats.unknownCount }} onbekend
+      {{ stats.wallCount }} muur · {{ stats.surfaceCount }} vloer ·
+      {{ stats.unknownCount }} onbekend
       <span v-if="(stats.doorCount ?? 0) > 0"> · {{ stats.doorCount }} deur</span>
       <span v-if="(stats.windowCount ?? 0) > 0"> · {{ stats.windowCount }} raam</span>
       <span v-if="(stats.doorframeCount ?? 0) > 0"> · {{ stats.doorframeCount }} kozijn</span>

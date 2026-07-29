@@ -27,7 +27,10 @@ function makeDoor(params: {
     matchedRefIndex: 0,
     faceIds: params.faceIds ?? [1],
     bbox: params.bbox,
-    centroidPx: { x: params.bbox.x + params.bbox.width / 2, y: params.bbox.y + params.bbox.height / 2 },
+    centroidPx: {
+      x: params.bbox.x + params.bbox.width / 2,
+      y: params.bbox.y + params.bbox.height / 2,
+    },
     swingSpanPx: params.bbox.width,
     framingPx: 0,
     overhangAlongPx: params.bbox.width,
@@ -174,7 +177,9 @@ describe('door-wall-snap', () => {
     fillRect(labels, width, { x0: 40, y0: 40, x1: 60, y1: 60 }, 1)
     fillRect(wallMask, width, { x0: 38, y0: 35, x1: 40, y1: 65 }, 255) // links: sterk contact
     fillRect(wallMask, width, { x0: 40, y0: 38, x1: 60, y1: 40 }, 255) // boven: ook contact
-    const doors = [makeDoor({ id: 'door-side-fallback', bbox: { x: 40, y: 40, width: 20, height: 20 } })]
+    const doors = [
+      makeDoor({ id: 'door-side-fallback', bbox: { x: 40, y: 40, width: 20, height: 20 } }),
+    ]
     const segments = [makeSegment({ a: { x: 20, y: 39 }, b: { x: 90, y: 39 }, thicknessPxMax: 6 })]
 
     const snapped = snapDoorsToWalls({
@@ -205,7 +210,9 @@ describe('door-wall-snap', () => {
     fillRect(wallMask, width, { x0: 40, y0: 38, x1: 80, y1: 40 }, 255) // boven: basis volledig
     fillRect(wallMask, width, { x0: 66, y0: 38, x1: 80, y1: 40 }, 0) // boven rechts deels weg -> lagere ratio
 
-    const doors = [makeDoor({ id: 'door-ratio-priority', bbox: { x: 40, y: 40, width: 40, height: 40 } })]
+    const doors = [
+      makeDoor({ id: 'door-ratio-priority', bbox: { x: 40, y: 40, width: 40, height: 40 } }),
+    ]
     const segments = [
       makeSegment({ a: { x: 39, y: 20 }, b: { x: 39, y: 100 }, thicknessPxMax: 6 }), // links
       makeSegment({ a: { x: 20, y: 39 }, b: { x: 110, y: 39 }, thicknessPxMax: 6 }), // boven
@@ -237,7 +244,9 @@ describe('door-wall-snap', () => {
     fillRect(wallMask, width, { x0: 40, y0: 38, x1: 120, y1: 40 }, 255) // top contact
     fillRect(wallMask, width, { x0: 38, y0: 40, x1: 40, y1: 56 }, 255) // left contact (moet genegeerd worden)
 
-    const doors = [makeDoor({ id: 'door-thin-horizontal', bbox: { x: 40, y: 40, width: 80, height: 16 } })]
+    const doors = [
+      makeDoor({ id: 'door-thin-horizontal', bbox: { x: 40, y: 40, width: 80, height: 16 } }),
+    ]
     const segments = [
       makeSegment({ a: { x: 39, y: 20 }, b: { x: 39, y: 90 }, thicknessPxMax: 6 }), // verticaal (left/right)
       makeSegment({ a: { x: 10, y: 39 }, b: { x: 160, y: 39 }, thicknessPxMax: 6 }), // horizontaal (top/bottom)
@@ -266,8 +275,12 @@ describe('door-wall-snap', () => {
     const labels = new Int32Array(width * height)
     fillRect(labels, width, { x0: 40, y0: 40, x1: 100, y1: 70 }, 1)
     fillRect(wallMask, width, { x0: 40, y0: 38, x1: 100, y1: 40 }, 255) // top touch
-    const doors = [makeDoor({ id: 'door-relaxed-span-gap', bbox: { x: 40, y: 40, width: 60, height: 30 } })]
-    const segments = [makeSegment({ a: { x: 110, y: 39 }, b: { x: 170, y: 39 }, thicknessPxMax: 6 })]
+    const doors = [
+      makeDoor({ id: 'door-relaxed-span-gap', bbox: { x: 40, y: 40, width: 60, height: 30 } }),
+    ]
+    const segments = [
+      makeSegment({ a: { x: 110, y: 39 }, b: { x: 170, y: 39 }, thicknessPxMax: 6 }),
+    ]
 
     const snapped = snapDoorsToWalls({
       doors,
@@ -297,7 +310,9 @@ describe('door-wall-snap', () => {
     fillRect(wallMask, width, { x0: 40, y0: 38, x1: 80, y1: 40 }, 255) // boven basis
     fillRect(wallMask, width, { x0: 62, y0: 38, x1: 80, y1: 40 }, 0) // boven deels weg
 
-    const doors = [makeDoor({ id: 'door-bbox-coverage', bbox: { x: 40, y: 40, width: 40, height: 40 } })]
+    const doors = [
+      makeDoor({ id: 'door-bbox-coverage', bbox: { x: 40, y: 40, width: 40, height: 40 } }),
+    ]
     const segments = [
       makeSegment({ a: { x: 39, y: 20 }, b: { x: 39, y: 100 }, thicknessPxMax: 6 }),
       makeSegment({ a: { x: 20, y: 39 }, b: { x: 110, y: 39 }, thicknessPxMax: 6 }),
@@ -334,10 +349,21 @@ describe('door-wall-snap', () => {
     ]
     const doors = doorBBoxes.map((bbox, idx) => {
       const label = idx + 1
-      fillRect(labels, width, { x0: bbox.x, y0: bbox.y, x1: bbox.x + bbox.width, y1: bbox.y + bbox.height }, label)
+      fillRect(
+        labels,
+        width,
+        { x0: bbox.x, y0: bbox.y, x1: bbox.x + bbox.width, y1: bbox.y + bbox.height },
+        label,
+      )
       return makeDoor({ id: `door-small-${idx + 1}`, bbox, faceIds: [label] })
     })
-    const segments = [makeSegment({ a: { x: 222.97, y: 1219.45 }, b: { x: 643.12, y: 1219.45 }, thicknessPxMax: 8 })]
+    const segments = [
+      makeSegment({
+        a: { x: 222.97, y: 1219.45 },
+        b: { x: 643.12, y: 1219.45 },
+        thicknessPxMax: 8,
+      }),
+    ]
 
     const snapped = snapDoorsToWalls({
       doors,
@@ -367,7 +393,12 @@ describe('door-wall-snap', () => {
     fillRect(labels, width, { x0: 120, y0: 120, x1: 180, y1: 180 }, 1)
     fillRect(wallMask, width, { x0: 120, y0: 105, x1: 180, y1: 109 }, 255) // top op 15px afstand
     fillRect(wallMask, width, { x0: 112, y0: 120, x1: 116, y1: 200 }, 255) // links op 8px afstand
-    const doors = [makeDoor({ id: 'door-segment-supported-side', bbox: { x: 120, y: 120, width: 60, height: 60 } })]
+    const doors = [
+      makeDoor({
+        id: 'door-segment-supported-side',
+        bbox: { x: 120, y: 120, width: 60, height: 60 },
+      }),
+    ]
     const segments = [
       makeSegment({ a: { x: 114, y: 90 }, b: { x: 114, y: 210 }, thicknessPxMax: 8 }), // verticaal (verwacht)
       makeSegment({ a: { x: 90, y: 107 }, b: { x: 220, y: 107 }, thicknessPxMax: 8 }), // horizontaal
@@ -397,8 +428,12 @@ describe('door-wall-snap', () => {
 
     fillRect(labels, width, { x0: 120, y0: 120, x1: 160, y1: 160 }, 1)
     fillRect(wallMask, width, { x0: 118, y0: 120, x1: 120, y1: 160 }, 255) // alleen links touch
-    const doors = [makeDoor({ id: 'door-no-opposite-relaxed', bbox: { x: 120, y: 120, width: 40, height: 40 } })]
-    const segments = [makeSegment({ a: { x: 170, y: 100 }, b: { x: 170, y: 190 }, thicknessPxMax: 8 })] // alleen rechts
+    const doors = [
+      makeDoor({ id: 'door-no-opposite-relaxed', bbox: { x: 120, y: 120, width: 40, height: 40 } }),
+    ]
+    const segments = [
+      makeSegment({ a: { x: 170, y: 100 }, b: { x: 170, y: 190 }, thicknessPxMax: 8 }),
+    ] // alleen rechts
 
     const snapped = snapDoorsToWalls({
       doors,
@@ -420,8 +455,18 @@ describe('door-wall-snap', () => {
       const height = 300 * scale
       const wallMask = new Uint8Array(width * height)
       const labels = new Int32Array(width * height)
-      fillRect(wallMask, width, { x0: 40 * scale, y0: 20 * scale, x1: 43 * scale, y1: 260 * scale }, 255)
-      fillRect(labels, width, { x0: 43 * scale, y0: 90 * scale, x1: 63 * scale, y1: 130 * scale }, 1)
+      fillRect(
+        wallMask,
+        width,
+        { x0: 40 * scale, y0: 20 * scale, x1: 43 * scale, y1: 260 * scale },
+        255,
+      )
+      fillRect(
+        labels,
+        width,
+        { x0: 43 * scale, y0: 90 * scale, x1: 63 * scale, y1: 130 * scale },
+        1,
+      )
       const doors = [
         makeDoor({
           id: `door-scale-${scale}`,

@@ -23,12 +23,7 @@ export async function analyzeAllReferenceRects(params: {
   const openingRects = params.rects.filter((r) => r.type === 'door' || r.type === 'window')
 
   const sharedWallBwMat = params.baseBw
-    ? grayMatFromBwBytes(
-        params.cv,
-        params.baseBw.data,
-        params.baseBw.width,
-        params.baseBw.height,
-      )
+    ? grayMatFromBwBytes(params.cv, params.baseBw.data, params.baseBw.width, params.baseBw.height)
     : buildWallLayerBwMat({
         cv: params.cv,
         image: params.image,

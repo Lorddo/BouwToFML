@@ -17,7 +17,10 @@ import {
 } from './junction-guard'
 
 export type { ChamferGroupGeometry, ChamferGroupKind } from './chamfer-group-geometry'
-export { isAlternatingStairDiagonalChain, resolveChamferGroupGeometry } from './chamfer-group-geometry'
+export {
+  isAlternatingStairDiagonalChain,
+  resolveChamferGroupGeometry,
+} from './chamfer-group-geometry'
 
 export function tryRepairChamferGroup(params: {
   segments: Segment[]
@@ -47,7 +50,13 @@ export function tryRepairChamferGroup(params: {
 
   // Hard contract: geen T/X-downgrade, geen I-explosie, connectivity elders.
   const txBaseline = collectBaselineTxJunctions(before)
-  if (!baselineTxJunctionsPreserved(txBaseline, applied.segments, resolveLayer6ThicknessMarginPx(params.referenceWallThicknessPx))) {
+  if (
+    !baselineTxJunctionsPreserved(
+      txBaseline,
+      applied.segments,
+      resolveLayer6ThicknessMarginPx(params.referenceWallThicknessPx),
+    )
+  ) {
     return { segments: before, repaired: false, removed: 0 }
   }
   if (!layer6RepairTopologyOk({ baselineSegments: before, repairedSegments: applied.segments })) {
@@ -55,15 +64,19 @@ export function tryRepairChamferGroup(params: {
   }
 
   // Sanity: minstens één diagonaal weg, anders geen echte repair.
-  const beforeDiags = before.filter((seg, i) => classifyLayer6Segment(seg, i, hvBandPx).kind === 'D').length
-  const afterDiags = applied.segments.filter((seg, i) => classifyLayer6Segment(seg, i, hvBandPx).kind === 'D').length
+  const beforeDiags = before.filter(
+    (seg, i) => classifyLayer6Segment(seg, i, hvBandPx).kind === 'D',
+  ).length
+  const afterDiags = applied.segments.filter(
+    (seg, i) => classifyLayer6Segment(seg, i, hvBandPx).kind === 'D',
+  ).length
   if (afterDiags >= beforeDiags && segmentLength(before[params.connectorIndex]!) > 0) {
     // Groep kan gedeeld zijn; check seed weg.
     const seedGone = !applied.segments.some((seg) => {
       const s = before[params.connectorIndex]!
       return (
-        Math.hypot(seg.a.x - s.a.x, seg.a.y - s.a.y) < 1e-3
-        && Math.hypot(seg.b.x - s.b.x, seg.b.y - s.b.y) < 1e-3
+        Math.hypot(seg.a.x - s.a.x, seg.a.y - s.a.y) < 1e-3 &&
+        Math.hypot(seg.b.x - s.b.x, seg.b.y - s.b.y) < 1e-3
       )
     })
     if (!seedGone && afterDiags >= beforeDiags) {

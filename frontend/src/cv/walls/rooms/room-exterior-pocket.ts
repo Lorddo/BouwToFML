@@ -44,9 +44,7 @@ export function demoteExteriorPocketFaces(params: {
 }): { classificationByLabel: Map<number, RoomRasterClass>; demotedLabels: number[] } {
   const maxBBoxPx = Math.max(
     1,
-    Math.round(
-      params.maxBBoxPx ?? resolveExteriorPocketMaxBBoxPx(params.referenceWallThicknessPx),
-    ),
+    Math.round(params.maxBBoxPx ?? resolveExteriorPocketMaxBBoxPx(params.referenceWallThicknessPx)),
   )
   const minOutsideSides = Math.max(
     1,
@@ -59,7 +57,9 @@ export function demoteExteriorPocketFaces(params: {
     if (x < 0 || y < 0 || x >= params.width || y >= params.height) return 0
     return params.rawLabelsData[y * params.width + x] ?? 0
   }
-  const componentsByLabel = new Map(params.components.map((component) => [component.label, component]))
+  const componentsByLabel = new Map(
+    params.components.map((component) => [component.label, component]),
+  )
   const resolve = (label: number) => resolveMergedLabel(label, params.parentMap)
 
   for (const component of params.components) {
@@ -89,7 +89,9 @@ export function demoteExteriorPocketFaces(params: {
     )
     if (neighborClasses.some((neighborClass) => neighborClass === 'surface')) continue
 
-    const outsideCount = neighborClasses.filter((neighborClass) => neighborClass === 'outside').length
+    const outsideCount = neighborClasses.filter(
+      (neighborClass) => neighborClass === 'outside',
+    ).length
     if (outsideCount < minOutsideSides) continue
 
     nextClassification.set(component.label, 'outside')

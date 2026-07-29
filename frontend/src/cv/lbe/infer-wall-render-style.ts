@@ -193,16 +193,8 @@ function analyzeInkStructure(
   const scanCount = 7
   const lines =
     orientation === 'vertical'
-      ? sampleScanLines(
-          y0 + Math.floor(span * 0.15),
-          y1 - Math.floor(span * 0.15),
-          scanCount,
-        )
-      : sampleScanLines(
-          x0 + Math.floor(span * 0.15),
-          x1 - Math.floor(span * 0.15),
-          scanCount,
-        )
+      ? sampleScanLines(y0 + Math.floor(span * 0.15), y1 - Math.floor(span * 0.15), scanCount)
+      : sampleScanLines(x0 + Math.floor(span * 0.15), x1 - Math.floor(span * 0.15), scanCount)
 
   let darkPixels = 0
   let totalPixels = 0
@@ -272,9 +264,7 @@ function analyzeInkStructure(
   }
 
   const transitionSpread =
-    transitionCounts.length > 1
-      ? Math.max(...transitionCounts) - Math.min(...transitionCounts)
-      : 0
+    transitionCounts.length > 1 ? Math.max(...transitionCounts) - Math.min(...transitionCounts) : 0
   const inconsistentTransitions = transitionSpread >= 3 ? 1 : 0
   const referenceCenters =
     parallelCenterSets.length > 0
@@ -283,12 +273,7 @@ function analyzeInkStructure(
           parallelCenterSets[0],
         )
       : []
-  const alongWallContinuity = measureAlongWallContinuity(
-    mat,
-    bbox,
-    orientation,
-    referenceCenters,
-  )
+  const alongWallContinuity = measureAlongWallContinuity(mat, bbox, orientation, referenceCenters)
 
   return {
     darkRatio: darkPixels / Math.max(1, totalPixels),
@@ -366,7 +351,11 @@ function scoreStyles(
     scores.details += 0.22
     scores.parallel_lines -= 0.12
   }
-  if (structure.avgTransitions >= 4.2 && structure.singleThickRatio < 0.2 && structure.parallelLineRatio < 0.4) {
+  if (
+    structure.avgTransitions >= 4.2 &&
+    structure.singleThickRatio < 0.2 &&
+    structure.parallelLineRatio < 0.4
+  ) {
     scores.details += 0.28
   }
   if (structure.detailsRatio >= 0.3 && structure.parallelLineRatio < 0.45) {

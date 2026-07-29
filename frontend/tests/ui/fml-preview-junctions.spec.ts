@@ -100,8 +100,12 @@ describe('mergeJunctions', () => {
       },
     ]
     const junctions = buildJunctions(walls)
-    const target = junctions.find((junction) => junction.refs.some((ref) => ref.wallId === 'w1' && ref.end === 'a'))!
-    const source = junctions.find((junction) => junction.refs.some((ref) => ref.wallId === 'w2' && ref.end === 'a'))!
+    const target = junctions.find((junction) =>
+      junction.refs.some((ref) => ref.wallId === 'w1' && ref.end === 'a'),
+    )!
+    const source = junctions.find((junction) =>
+      junction.refs.some((ref) => ref.wallId === 'w2' && ref.end === 'a'),
+    )!
     const merged = mergeJunctions(walls, source, target)
 
     const corner = buildJunctions(merged).find((junction) => junction.refs.length === 2)
@@ -467,11 +471,10 @@ describe('applyShiftSnapFromOppositeEnd', () => {
         openings: [],
       },
     ]
-    const snapped = applyShiftSnapFromOppositeEnd(
-      walls,
-      [{ wallId: 'w1', end: 'a' }],
-      { x: 40, y: 25 },
-    )
+    const snapped = applyShiftSnapFromOppositeEnd(walls, [{ wallId: 'w1', end: 'a' }], {
+      x: 40,
+      y: 25,
+    })
     expect(snapped).toEqual({ x: 40, y: 0 })
   })
 
@@ -485,11 +488,10 @@ describe('applyShiftSnapFromOppositeEnd', () => {
         openings: [],
       },
     ]
-    const snapped = applyShiftSnapFromOppositeEnd(
-      walls,
-      [{ wallId: 'w1', end: 'a' }],
-      { x: 25, y: 40 },
-    )
+    const snapped = applyShiftSnapFromOppositeEnd(walls, [{ wallId: 'w1', end: 'a' }], {
+      x: 25,
+      y: 40,
+    })
     expect(snapped).toEqual({ x: 0, y: 40 })
   })
 })
@@ -665,7 +667,9 @@ describe('slideWallSegmentAlongAxis', () => {
     ).toBe(true)
 
     const junctions = buildJunctions(moved)
-    const atTen = junctions.find((junction) => Math.abs(junction.x - 10) < 0.01 && Math.abs(junction.y) < 0.01)
+    const atTen = junctions.find(
+      (junction) => Math.abs(junction.x - 10) < 0.01 && Math.abs(junction.y) < 0.01,
+    )
     expect(atTen?.refs.length).toBeGreaterThanOrEqual(3)
 
     const branchJunction = junctions.find((junction) =>
@@ -817,7 +821,8 @@ describe('slideWallSegmentAlongAxis', () => {
 
     const hostParts = moved.filter(
       (wall) =>
-        (Math.abs(wall.a.y) < 0.01 && Math.abs(wall.b.y) < 0.01) &&
+        Math.abs(wall.a.y) < 0.01 &&
+        Math.abs(wall.b.y) < 0.01 &&
         ((Math.abs(wall.a.x - 40) < 0.01 && Math.abs(wall.b.x - 20) < 0.01) ||
           (Math.abs(wall.a.x - 20) < 0.01 && Math.abs(wall.b.x - 0) < 0.01)),
     )
@@ -875,9 +880,7 @@ describe('slideWallSegmentAlongAxis', () => {
     )
     expect(verticalAt20.length).toBeGreaterThanOrEqual(2)
     expect(
-      verticalAt20.some(
-        (wall) => Math.abs(wall.a.y) < 0.01 || Math.abs(wall.b.y) < 0.01,
-      ),
+      verticalAt20.some((wall) => Math.abs(wall.a.y) < 0.01 || Math.abs(wall.b.y) < 0.01),
     ).toBe(true)
   })
 
@@ -992,7 +995,8 @@ describe('slideWallSegmentAlongAxis', () => {
       return (
         Math.abs(xVals[0]! - 50) < 0.01 &&
         Math.abs(xVals[1]! - 60) < 0.01 &&
-        (Math.abs(yVals[0] - 0) < 0.01 || (Math.abs(yVals[0] - 80) < 0.01 && Math.abs(yVals[1] - 80) < 0.01))
+        (Math.abs(yVals[0] - 0) < 0.01 ||
+          (Math.abs(yVals[0] - 80) < 0.01 && Math.abs(yVals[1] - 80) < 0.01))
       )
     })
     expect(connectors.length).toBeGreaterThanOrEqual(2)

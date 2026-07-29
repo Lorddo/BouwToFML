@@ -11,7 +11,14 @@ const model = defineModel<PreprocessConfig>({ required: true })
       <span class="setting-label">Rotatie (graden)</span>
       <div class="field-row">
         <input v-model.number="model.rotationDeg" type="range" min="-180" max="180" step="0.1" />
-        <input v-model.number="model.rotationDeg" type="number" min="-180" max="180" step="0.1" class="num-input" />
+        <input
+          v-model.number="model.rotationDeg"
+          type="number"
+          min="-180"
+          max="180"
+          step="0.1"
+          class="num-input"
+        />
       </div>
     </div>
   </div>
@@ -48,5 +55,4 @@ const model = defineModel<PreprocessConfig>({ required: true })
   width: 74px;
   min-width: 74px;
 }
-
 </style>

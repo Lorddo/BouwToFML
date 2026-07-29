@@ -25,8 +25,9 @@ const currentStepLabel = computed(() => WORKSPACE_FLOW_LABELS[props.currentStep]
   <div class="panel dev-session">
     <h3>Dev — workspace snapshot</h3>
     <p class="hint">
-      Neem de huidige stap op (<strong>{{ currentStepLabel }}</strong>) en herstel exact tot dat punt.
-      Snapshot op resultaat draait detectie opnieuw met dezelfde invoer (stap 1–3) en huidige code.
+      Neem de huidige stap op (<strong>{{ currentStepLabel }}</strong
+      >) en herstel exact tot dat punt. Snapshot op resultaat draait detectie opnieuw met dezelfde
+      invoer (stap 1–3) en huidige code.
     </p>
 
     <label class="select-label" for="dev-session-select">Project / onderlegger</label>
@@ -35,7 +36,7 @@ const currentStepLabel = computed(() => WORKSPACE_FLOW_LABELS[props.currentStep]
       class="session-select"
       :value="selectedSessionId ?? ''"
       :disabled="busy || !sessions.length"
-      @change="emit('selectSession', (($event.target as HTMLSelectElement).value || null))"
+      @change="emit('selectSession', ($event.target as HTMLSelectElement).value || null)"
     >
       <option value="" disabled>
         {{ sessions.length ? 'Kies snapshot' : 'Nog geen snapshots' }}
@@ -46,9 +47,7 @@ const currentStepLabel = computed(() => WORKSPACE_FLOW_LABELS[props.currentStep]
     </select>
 
     <div class="actions">
-      <button type="button" :disabled="busy" @click="emit('record')">
-        Opnemen (huidige stap)
-      </button>
+      <button type="button" :disabled="busy" @click="emit('record')">Opnemen (huidige stap)</button>
       <button type="button" :disabled="busy || !hasStored" @click="emit('restore')">
         Herstellen geselecteerde
       </button>

@@ -124,7 +124,9 @@ export type SnapResolvedDoorsParams = {
 export async function snapResolvedDoorsToWalls(
   params: SnapResolvedDoorsParams,
 ): Promise<SnapResolvedDoorsResult> {
-  const empty = (nextResolvedDoors: ResolvedDoorCandidate[] | null = null): SnapResolvedDoorsResult => ({
+  const empty = (
+    nextResolvedDoors: ResolvedDoorCandidate[] | null = null,
+  ): SnapResolvedDoorsResult => ({
     bound: [],
     oriented: [],
     nextResolvedDoors,

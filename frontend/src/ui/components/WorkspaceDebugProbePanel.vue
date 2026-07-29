@@ -30,7 +30,10 @@ const statusLabel = computed(() => {
   <div class="probe-section">
     <div class="probe-header">
       <h3>Debug-probe</h3>
-      <p class="hint">Markeer een plek op het canvas; FaceID/class (na muren-classify) + nabije segmenten gaan naar je klembord.</p>
+      <p class="hint">
+        Markeer een plek op het canvas; FaceID/class (na muren-classify) + nabije segmenten gaan
+        naar je klembord.
+      </p>
     </div>
 
     <div class="probe-actions">
@@ -87,9 +90,7 @@ const statusLabel = computed(() => {
       <template v-if="mode === 'region'">
         Sleep een rechthoek op de tekening · spatie = pan · scroll = zoom
       </template>
-      <template v-else>
-        Klik op de tekening · spatie = pan · scroll = zoom
-      </template>
+      <template v-else> Klik op de tekening · spatie = pan · scroll = zoom </template>
     </p>
 
     <div v-if="lastResult" class="probe-result">
@@ -114,22 +115,17 @@ const statusLabel = computed(() => {
             v-for="face in (lastResult.wallInkFaces ?? lastResult.faces).slice(0, 5)"
             :key="'wi' + face.faceId"
           >
-            FaceID {{ face.faceId }} · {{ face.className }} · {{ face.pixelCount }}px
-            · {{ face.bbox.width }}×{{ face.bbox.height }}
+            FaceID {{ face.faceId }} · {{ face.className }} · {{ face.pixelCount }}px ·
+            {{ face.bbox.width }}×{{ face.bbox.height }}
           </li>
-          <li
-            v-if="!(lastResult.wallInkFaces ?? lastResult.faces).length"
-            class="empty"
-          >
-            (geen)
-          </li>
+          <li v-if="!(lastResult.wallInkFaces ?? lastResult.faces).length" class="empty">(geen)</li>
           <li class="section">Opening-wit</li>
           <li
             v-for="face in (lastResult.openingWhiteFaces ?? []).slice(0, 5)"
             :key="'ow' + face.faceId"
           >
-            FaceID {{ face.faceId }} · {{ face.className }} · {{ face.pixelCount }}px
-            · {{ face.bbox.width }}×{{ face.bbox.height }}
+            FaceID {{ face.faceId }} · {{ face.className }} · {{ face.pixelCount }}px ·
+            {{ face.bbox.width }}×{{ face.bbox.height }}
           </li>
           <li v-if="!(lastResult.openingWhiteFaces ?? []).length" class="empty">(geen)</li>
         </template>
@@ -138,8 +134,9 @@ const statusLabel = computed(() => {
           {{ Math.round(hit.distancePx) }}px
         </li>
         <li v-for="(hit, i) in lastResult.junctions.slice(0, 3)" :key="'j' + i">
-          {{ formatProbeLayerLabel(hit.layer) }} junction
-          {{ hit.junction.kind }} @ ({{ hit.junction.x }},{{ hit.junction.y }})
+          {{ formatProbeLayerLabel(hit.layer) }} junction {{ hit.junction.kind }} @ ({{
+            hit.junction.x
+          }},{{ hit.junction.y }})
         </li>
       </ul>
       <p v-if="statusLabel" class="status" :class="clipboardStatus">{{ statusLabel }}</p>

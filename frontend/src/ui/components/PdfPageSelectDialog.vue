@@ -135,7 +135,14 @@ function onCancel() {
 }
 
 function onConfirm() {
-  if (!pdfReady.value || loading.value || props.confirmBusy || errorMessage.value || renderingPreview.value) return
+  if (
+    !pdfReady.value ||
+    loading.value ||
+    props.confirmBusy ||
+    errorMessage.value ||
+    renderingPreview.value
+  )
+    return
   emit('confirm', pageNumber.value)
 }
 
@@ -175,7 +182,9 @@ watch(
         <header class="dialog-header">
           <h2 id="pdf-page-select-title">PDF-pagina kiezen</h2>
           <p v-if="fileName" class="dialog-lead">{{ fileName }} — {{ pageLabel }}</p>
-          <p v-else class="dialog-lead">Selecteer de pagina die je als onderlegger wilt gebruiken.</p>
+          <p v-else class="dialog-lead">
+            Selecteer de pagina die je als onderlegger wilt gebruiken.
+          </p>
         </header>
 
         <div v-if="loading" class="state-box">PDF laden…</div>
@@ -183,18 +192,18 @@ watch(
 
         <template v-else>
           <div class="preview-wrap">
-            <img
-              v-if="previewUrl"
-              :src="previewUrl"
-              alt="PDF preview"
-              class="preview-image"
-            />
+            <img v-if="previewUrl" :src="previewUrl" alt="PDF preview" class="preview-image" />
             <div v-else class="state-box">Preview laden…</div>
             <div v-if="renderingPreview" class="preview-overlay">Preview bijwerken…</div>
           </div>
 
           <div v-if="canNavigatePages" class="page-controls">
-            <button type="button" class="dialog-btn" :disabled="pageNumber <= 1" @click="goToPreviousPage">
+            <button
+              type="button"
+              class="dialog-btn"
+              :disabled="pageNumber <= 1"
+              @click="goToPreviousPage"
+            >
               Vorige
             </button>
             <label class="page-input-label">
@@ -223,7 +232,12 @@ watch(
 
         <footer class="dialog-footer">
           <button type="button" class="dialog-btn" @click="onCancel">Annuleren</button>
-          <button type="button" class="dialog-btn primary" :disabled="confirmDisabled" @click="onConfirm">
+          <button
+            type="button"
+            class="dialog-btn primary"
+            :disabled="confirmDisabled"
+            @click="onConfirm"
+          >
             {{ confirmBusy ? 'Pagina voorbereiden…' : 'Gebruik pagina' }}
           </button>
         </footer>

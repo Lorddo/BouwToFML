@@ -1,0 +1,10 @@
+dist
+examples
+public
+src/archive
+tests/archive
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+vite/*.js
+.vitest-report.json

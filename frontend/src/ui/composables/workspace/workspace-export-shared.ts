@@ -14,10 +14,7 @@ export function underlayDownloadFilename(
   return `${safe}-${suffix}.png`
 }
 
-export function exportBasename(
-  imageName: string | null | undefined,
-  fallback: string,
-): string {
+export function exportBasename(imageName: string | null | undefined, fallback: string): string {
   const raw = imageName?.replace(/\.[^.]+$/i, '') ?? fallback
   return sanitizeWithFallback(raw, fallback)
 }

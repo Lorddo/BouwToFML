@@ -4,10 +4,7 @@
 import type { Segment } from '@/cv/port/wallGraph'
 import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
 import { cloneSegments, dropZeroLengthSegments } from '../segment-ops'
-import {
-  LAYER6_HV_BAND_FALLBACK_PX,
-  resolveLayer6Scale,
-} from './constants'
+import { LAYER6_HV_BAND_FALLBACK_PX, resolveLayer6Scale } from './constants'
 import { prepareSegmentsForConnectorGraph } from './junction-guard'
 import { repairLAtPoint } from './junction-repair-l'
 import { isChamferLandingForTNode, orderJunctionNodesForRepair } from './junction-repair-order'
@@ -50,7 +47,13 @@ export function repairLayer6JunctionNodes(params: {
   }
 
   const graph = buildJunctionGraph(work, 0)
-  const orderedNodes = orderJunctionNodesForRepair(graph.nodes, work, armDetectPx, hvBandPx, endpointSnapPx)
+  const orderedNodes = orderJunctionNodesForRepair(
+    graph.nodes,
+    work,
+    armDetectPx,
+    hvBandPx,
+    endpointSnapPx,
+  )
   let pendingTNodes = graph.nodes
     .filter((node) => node.kind === 'T' || node.kind === 'X')
     .map((node) => ({ x: node.x, y: node.y }))

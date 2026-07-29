@@ -15,13 +15,7 @@ import {
 } from './types'
 
 export type DoorAddSubtype =
-  | 'standard'
-  | 'closet'
-  | 'double'
-  | 'pocket'
-  | 'sliding_single'
-  | 'sliding'
-  | 'garage'
+  'standard' | 'closet' | 'double' | 'pocket' | 'sliding_single' | 'sliding' | 'garage'
 
 export type WindowAddSubtype = 'single' | 'double' | 'triple' | 'round' | 'half_round'
 
@@ -59,7 +53,10 @@ export function resolveWindowAddPreset(subtype: WindowAddSubtype): OpeningAddPre
 
 export function resolveDoorSubtypeFromRefid(refid: string | undefined): DoorAddSubtype {
   if (!refid) return 'standard'
-  for (const [subtype, preset] of Object.entries(DOOR_ADD_PRESETS) as [DoorAddSubtype, OpeningAddPreset][]) {
+  for (const [subtype, preset] of Object.entries(DOOR_ADD_PRESETS) as [
+    DoorAddSubtype,
+    OpeningAddPreset,
+  ][]) {
     if (preset.refid === refid) return subtype
   }
   return 'standard'

@@ -45,10 +45,7 @@ export function useFloorplanInkPointer(deps: {
     inkStrokePoints.value = []
   }
 
-  function onInkMouseDown(
-    p: Point,
-    stopDrag: () => void,
-  ): boolean {
+  function onInkMouseDown(p: Point, stopDrag: () => void): boolean {
     if (deps.spacePressed()) return false
     if (deps.isInkBrushMode()) {
       stopDrag()
@@ -102,7 +99,12 @@ export function useFloorplanInkPointer(deps: {
     if (deps.isInkBrushMode()) {
       endInkBrushStroke()
     }
-    if (deps.isInkLineMode() && inkLineDraftStart.value && inkLineDraftEnd.value && !deps.spacePressed()) {
+    if (
+      deps.isInkLineMode() &&
+      inkLineDraftStart.value &&
+      inkLineDraftEnd.value &&
+      !deps.spacePressed()
+    ) {
       const start = inkLineDraftStart.value
       const end = inkLineDraftEnd.value
       if (Math.hypot(end.x - start.x, end.y - start.y) >= 1) {

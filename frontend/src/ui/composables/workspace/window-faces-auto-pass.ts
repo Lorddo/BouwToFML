@@ -120,10 +120,7 @@ export async function pushStageClassesOntoWalls(ctx: {
   ctx.autoPassState.lastAutoDoorframeFaceIds = [...new Set(nextDoorframeIds)]
 
   const changed =
-    windowSync.changed ||
-    dfSync.changed ||
-    windowClaim.parentMapChanged ||
-    dfClaim.parentMapChanged
+    windowSync.changed || dfSync.changed || windowClaim.parentMapChanged || dfClaim.parentMapChanged
   if (!changed) return null
 
   const next: RoomRasterCache = {

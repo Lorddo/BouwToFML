@@ -112,10 +112,12 @@ export function buildFmlThicknessChains(
     const pointB = wallsAtPoint.get(endpointKey(bridge.b)) ?? []
     if (pointA.length < 2 || pointB.length < 2) continue
 
-    const neighborsA = pointA
-      .filter((index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]!))
-    const neighborsB = pointB
-      .filter((index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]!))
+    const neighborsA = pointA.filter(
+      (index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]!),
+    )
+    const neighborsB = pointB.filter(
+      (index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]!),
+    )
     if (neighborsA.length !== 1 || neighborsB.length !== 1) continue
 
     const leftIndex = neighborsA[0]!
@@ -124,7 +126,10 @@ export function buildFmlThicknessChains(
     const rightBand = classifyFmlThicknessBand(walls[rightIndex]!.thickness, boundaries)
     if (leftBand !== rightBand || leftBand === bridgeBand) continue
 
-    const maxNeighborLength = Math.min(wallLengthCm(walls[leftIndex]!), wallLengthCm(walls[rightIndex]!))
+    const maxNeighborLength = Math.min(
+      wallLengthCm(walls[leftIndex]!),
+      wallLengthCm(walls[rightIndex]!),
+    )
     if (bridgeLength > CHAIN_BRIDGE_MAX_CM) continue
     if (bridgeLength > maxNeighborLength * WALL_CHAIN_BRIDGE_MAX_RATIO) continue
 
@@ -162,18 +167,16 @@ function resolveChainBand(
     bandLengths[band] += Math.max(0, wallLengthCm(wall))
   }
   const ordered: FmlThicknessBand[] = ['max', 'mid', 'min']
-  const best = ordered.reduce((current, band) =>
-    bandLengths[band] >= bandLengths[current] ? band : current,
-  'min' as FmlThicknessBand)
+  const best = ordered.reduce(
+    (current, band) => (bandLengths[band] >= bandLengths[current] ? band : current),
+    'min' as FmlThicknessBand,
+  )
   if (bandLengths[best] > 0) return best
   const rawValues = chain.map((index) => walls[index]?.thickness ?? 10)
   return classifyFmlThicknessBand(roundFmlThicknessCm(averageThicknessCm(rawValues)), boundaries)
 }
 
-function resolveBandThicknessCm(
-  band: FmlThicknessBand,
-  limits: FmlWallThicknessLimits,
-): number {
+function resolveBandThicknessCm(band: FmlThicknessBand, limits: FmlWallThicknessLimits): number {
   const effective = resolveEffectiveFmlWallThicknessLimits(limits)
   if (band === 'min') return effective.minCm
   if (band === 'mid') return effective.midCm

@@ -14,7 +14,11 @@ import {
 import { buildLineProfile } from './ref-line-profile'
 import { deriveOpeningPrimitives } from './ref-opening-primitives'
 import { detectDoorSwingSector } from './ref-swing-arc'
-import { computeSwingHinge, renderSwingHingeOverlayRgba, type SwingHingeResult } from './ref-swing-hinge'
+import {
+  computeSwingHinge,
+  renderSwingHingeOverlayRgba,
+  type SwingHingeResult,
+} from './ref-swing-hinge'
 import { runRefStages } from './ref-stages'
 import { resolveUnitBBoxForFaces, resolveUnitFacePolygons } from './ref-unit-faces'
 import { classifyWallRenderStyleFromFaceCount } from './ref-wall-render-style'
@@ -111,7 +115,11 @@ async function buildImages(params: {
   sealBorders?: boolean
 }): Promise<RefImageBundle> {
   const seal = params.sealBorders === true
-  const bwCanvas = bwDataToCanvas(params.selectedBwData, params.selectedWidth, params.selectedHeight)
+  const bwCanvas = bwDataToCanvas(
+    params.selectedBwData,
+    params.selectedWidth,
+    params.selectedHeight,
+  )
   const fullFaces = renderFaceOverlayRgba(
     params.selectedBwData,
     params.selectedWidth,
@@ -155,7 +163,8 @@ async function buildImages(params: {
     params.combinedFacePolygonParts.some((part) => part.polygon.length >= 3)
   const combinedPolygonOverlay =
     hasGroupedParts ||
-    (params.combinedFacePolygons && params.combinedFacePolygons.some((polygon) => polygon.length >= 3))
+    (params.combinedFacePolygons &&
+      params.combinedFacePolygons.some((polygon) => polygon.length >= 3))
       ? renderCombinedFacePolygonOverlayRgba({
           data: params.straightenedBwData,
           width: params.straightenedWidth,
@@ -282,9 +291,15 @@ export async function runWallRefPipeline(params: {
     stages.straightened.height,
   )
   try {
-    const localRect = { x: 0, y: 0, width: stages.straightened.width, height: stages.straightened.height }
+    const localRect = {
+      x: 0,
+      y: 0,
+      width: stages.straightened.width,
+      height: stages.straightened.height,
+    }
     const measure = measureInkBandInBox(bwMat, localRect, 'horizontal')
-    let thicknessPx = measure && measure.thicknessPx > 0 ? Math.max(1, Math.round(measure.thicknessPx)) : null
+    let thicknessPx =
+      measure && measure.thicknessPx > 0 ? Math.max(1, Math.round(measure.thicknessPx)) : null
     const inference = classifyWallRenderStyleFromFaceCount(stages.finalFaceProfile.faceCount)
     const lineProfile = stages.finalLineProfile
     const parallelN = inference.parallelLineCount ?? lineProfile.parallelCount
@@ -296,7 +311,8 @@ export async function runWallRefPipeline(params: {
         gap = Math.abs((ys[ys.length - 1] ?? 0) - (ys[0] ?? 0))
       }
       if (gap != null && gap >= 2) thicknessPx = Math.max(1, Math.round(gap))
-      else if (measure && measure.thicknessPx > 0) thicknessPx = Math.max(1, Math.round(measure.thicknessPx))
+      else if (measure && measure.thicknessPx > 0)
+        thicknessPx = Math.max(1, Math.round(measure.thicknessPx))
     } else if (measure && measure.thicknessPx > 0) {
       thicknessPx = Math.max(1, Math.round(measure.thicknessPx))
     }
@@ -394,7 +410,9 @@ export async function runOpeningRefPipeline(params: {
   }))
   const finalFaceProfile = { ...stages.finalFaceProfile, faces: facesWithPolygons }
   const allFacePolygons = facesWithPolygons
-    .filter((face) => isInteriorLikeFace(face) && face.approxPolygon && face.approxPolygon.length >= 3)
+    .filter(
+      (face) => isInteriorLikeFace(face) && face.approxPolygon && face.approxPolygon.length >= 3,
+    )
     .map((face) => ({ label: face.label, points: face.approxPolygon! }))
   const swingHinges: SwingHingeResult[] = []
 
@@ -472,7 +490,6 @@ export async function runOpeningRefPipeline(params: {
       primitives: resolvedPrimitives,
     }
   })
-
 
   const images = await buildImages({
     selectedCanvas: stages.selected.originalCanvas,

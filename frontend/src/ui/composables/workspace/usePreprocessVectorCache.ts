@@ -47,7 +47,11 @@ export function usePreprocessVectorCache(deps: {
       const img = await deps.getImageEl()
       deps.ensureScaleInitialized(img)
       const work = createWorkCanvas(img)
-      const prepared = resolvePreviewMasks(work, deps.preprocessMaskArgs(), options?.includeOcrMask ?? false)
+      const prepared = resolvePreviewMasks(
+        work,
+        deps.preprocessMaskArgs(),
+        options?.includeOcrMask ?? false,
+      )
       const wallPreprocess = resolveLayerPreprocess(deps.preprocess.value, 'walls')
       const out = runPreprocessLayer({
         cv,

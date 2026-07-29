@@ -34,7 +34,10 @@ export function measureSideContact(params: {
   let sampleCount = 0
   let distanceSum = 0
   let distanceHits = 0
-  const sideLength = sideMeta.axis === 'v' ? params.bounds.y1 - params.bounds.y0 : params.bounds.x1 - params.bounds.x0
+  const sideLength =
+    sideMeta.axis === 'v'
+      ? params.bounds.y1 - params.bounds.y0
+      : params.bounds.x1 - params.bounds.x0
 
   if (params.side === 'left' || params.side === 'right') {
     const edgeX = params.side === 'left' ? params.bounds.x0 : params.bounds.x1 - 1
@@ -112,17 +115,21 @@ export function pickBestContactSide(contacts: SideContact[]): {
 } | null {
   if (contacts.length <= 0) return null
   const hasTouch = contacts.some((side) => side.contactCount > 0)
-  const candidates = contacts.filter((side) => side.sampleCount > 0 && Number.isFinite(side.proximityDistancePx))
+  const candidates = contacts.filter(
+    (side) => side.sampleCount > 0 && Number.isFinite(side.proximityDistancePx),
+  )
   if (candidates.length <= 0) return null
   const sorted = [...candidates].sort((a, b) => {
     if (hasTouch) {
       if (b.score !== a.score) return b.score - a.score
       if (b.contactCount !== a.contactCount) return b.contactCount - a.contactCount
       if (b.sideCoverage !== a.sideCoverage) return b.sideCoverage - a.sideCoverage
-      if (a.proximityDistancePx !== b.proximityDistancePx) return a.proximityDistancePx - b.proximityDistancePx
+      if (a.proximityDistancePx !== b.proximityDistancePx)
+        return a.proximityDistancePx - b.proximityDistancePx
       return b.sideLength - a.sideLength
     }
-    if (a.proximityDistancePx !== b.proximityDistancePx) return a.proximityDistancePx - b.proximityDistancePx
+    if (a.proximityDistancePx !== b.proximityDistancePx)
+      return a.proximityDistancePx - b.proximityDistancePx
     if (b.sideCoverage !== a.sideCoverage) return b.sideCoverage - a.sideCoverage
     if (b.sampleCount !== a.sampleCount) return b.sampleCount - a.sampleCount
     return b.sideLength - a.sideLength
@@ -151,7 +158,10 @@ export function findBestSegment(params: {
   normalDistancePx: number
 } | null {
   const sideSpanInfo = sideSpan(params.bounds, params.side.axis)
-  const doorDepthPx = params.side.axis === 'v' ? params.bounds.x1 - params.bounds.x0 : params.bounds.y1 - params.bounds.y0
+  const doorDepthPx =
+    params.side.axis === 'v'
+      ? params.bounds.x1 - params.bounds.x0
+      : params.bounds.y1 - params.bounds.y0
   let best: {
     segmentIndex: number
     projected: { t: number; x: number; y: number }
@@ -168,14 +178,16 @@ export function findBestSegment(params: {
     if (segAxis !== params.side.axis) continue
     const segSpan = segmentSpan(segment, params.side.axis)
     const overlapPx = overlapLength(sideSpanInfo.min, sideSpanInfo.max, segSpan.min, segSpan.max)
-    const spanGapPx = overlapPx > 0
-      ? 0
-      : Math.max(0, sideSpanInfo.min - segSpan.max, segSpan.min - sideSpanInfo.max)
+    const spanGapPx =
+      overlapPx > 0
+        ? 0
+        : Math.max(0, sideSpanInfo.min - segSpan.max, segSpan.min - sideSpanInfo.max)
     const spanGapTolerancePx = Math.max(
       T.spanGapToleranceMinPx,
       Math.round(
-        (params.referenceWallThicknessPx ?? segment.thicknessPxMax ?? T.spanGapThicknessFallbackPx) *
-          T.spanGapThicknessFactor,
+        (params.referenceWallThicknessPx ??
+          segment.thicknessPxMax ??
+          T.spanGapThicknessFallbackPx) * T.spanGapThicknessFactor,
       ),
     )
     if (!params.relaxed && overlapPx <= 0 && spanGapPx > spanGapTolerancePx) continue
@@ -240,7 +252,9 @@ export function findBestSegment(params: {
         T.relaxedMaxSnapCapThicknessFactor +
         doorDepthPx * T.relaxedMaxSnapCapDoorDepthFactor,
     )
-    const maxSnapPx = params.relaxed ? Math.min(relaxedMaxSnapPx, relaxedMaxSnapCapPx) : maxSnapPxBase
+    const maxSnapPx = params.relaxed
+      ? Math.min(relaxedMaxSnapPx, relaxedMaxSnapCapPx)
+      : maxSnapPxBase
     if (normalDistancePx > maxSnapPx) continue
     if (params.relaxed && spanGapPx > maxSnapPx * T.relaxedSpanGapVsMaxSnapFactor) continue
 
@@ -253,7 +267,9 @@ export function findBestSegment(params: {
       !best ||
       score < best.score ||
       (score === best.score && normalDistancePx < best.normalDistancePx) ||
-      (score === best.score && normalDistancePx === best.normalDistancePx && overlapRatio > best.overlapRatio)
+      (score === best.score &&
+        normalDistancePx === best.normalDistancePx &&
+        overlapRatio > best.overlapRatio)
     ) {
       best = {
         segmentIndex,

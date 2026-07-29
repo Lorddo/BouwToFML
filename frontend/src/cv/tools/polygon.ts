@@ -23,11 +23,7 @@ function distPoints(a: PolygonPoint, b: PolygonPoint): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-export function isNearPoint(
-  a: PolygonPoint,
-  b: PolygonPoint,
-  thresholdPx: number,
-): boolean {
+export function isNearPoint(a: PolygonPoint, b: PolygonPoint, thresholdPx: number): boolean {
   return distPoints(a, b) <= thresholdPx
 }
 

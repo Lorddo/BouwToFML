@@ -7,7 +7,10 @@ import {
 
 function emptyCache() {
   return {
-    faceOverrides: new Map<number, 'door' | 'window' | 'doorframe' | 'wall' | 'unknown' | 'surface' | 'outside'>(),
+    faceOverrides: new Map<
+      number,
+      'door' | 'window' | 'doorframe' | 'wall' | 'unknown' | 'surface' | 'outside'
+    >(),
     pinnedRoots: new Set<number>(),
   }
 }

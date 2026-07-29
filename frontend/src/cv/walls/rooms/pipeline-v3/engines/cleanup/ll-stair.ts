@@ -3,12 +3,7 @@
  */
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentAngleDeg, segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
-import {
-  cloneSegments,
-  incidentAt,
-  removeSegmentAt,
-  dropZeroLengthSegments,
-} from '../segment-ops'
+import { cloneSegments, incidentAt, removeSegmentAt, dropZeroLengthSegments } from '../segment-ops'
 import { PIPELINE_HV_ANGLE_TOL_DEG } from '../scale'
 import type { Layer5CleanupPolicy } from '../policy-types'
 

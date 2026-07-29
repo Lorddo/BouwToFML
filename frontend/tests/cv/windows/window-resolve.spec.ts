@@ -28,7 +28,10 @@ function makeRefBand(refIndex: number, orientation: 'horizontal' | 'vertical'): 
   }
 }
 
-function component(label: number, bbox: { x: number; y: number; width: number; height: number }): RasterRoomComponent {
+function component(
+  label: number,
+  bbox: { x: number; y: number; width: number; height: number },
+): RasterRoomComponent {
   return {
     label,
     areaPx: Math.max(1, bbox.width * bbox.height),

@@ -1,5 +1,8 @@
 import { escapeHtml, formatJson } from './examples-report-html-utils'
-import { aggregateGeneralCategoryMetrics, type UnitGeneralCategoryMetrics } from '@/cv/refs/ref-general-categories'
+import {
+  aggregateGeneralCategoryMetrics,
+  type UnitGeneralCategoryMetrics,
+} from '@/cv/refs/ref-general-categories'
 import type {
   KozijnFaceMetrics,
   OpeningRefProfile,
@@ -145,7 +148,9 @@ function renderGroupedFacePolygonFigure(opening: OpeningRefProfile): string {
   const polygons = usable
     .map((part) => {
       const stroke = GROUPED_ZONE_STROKE[part.zone] ?? '#06b6d4'
-      const points = part.polygon.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')
+      const points = part.polygon
+        .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+        .join(' ')
       return `<polygon points="${points}" fill="none" stroke="${stroke}" stroke-width="1.5" />`
     })
     .join('')
@@ -193,10 +198,7 @@ function unitBlock(unit: OpeningRefUnitProfile, kind: 'door' | 'window'): string
   const facePolygonSummary =
     facePolygons.length > 0
       ? facePolygons
-          .map(
-            (face) =>
-              `label ${face.label} (${face.role}) — ${face.approxPolygon.length} punten`,
-          )
+          .map((face) => `label ${face.label} (${face.role}) — ${face.approxPolygon.length} punten`)
           .join(' · ')
       : 'geen'
 
@@ -219,8 +221,7 @@ function unitBlock(unit: OpeningRefUnitProfile, kind: 'door' | 'window'): string
 }
 
 function wallSection(wall: WallRefProfile): string {
-  const bwLabel =
-    wall.bwMode === 'otsu' ? 'B/W (Otsu)' : 'B/W (adaptief)'
+  const bwLabel = wall.bwMode === 'otsu' ? 'B/W (Otsu)' : 'B/W (adaptief)'
   return `<article class="ref-card wall">
     <h2>Muur-referentie</h2>
     <p><strong>Stijl:</strong> ${escapeHtml(wall.renderStyleLabel)} <span class="muted">(${wall.renderStyle}, conf ${wall.renderStyleConfidence.toFixed(2)})</span>
@@ -257,8 +258,7 @@ function wallSection(wall: WallRefProfile): string {
 
 function openingSection(opening: OpeningRefProfile, index: number): string {
   const title = opening.kind === 'door' ? 'Deur' : 'Raam'
-  const bwLabel =
-    opening.bwMode === 'otsu' ? 'B/W (Otsu)' : 'B/W (adaptief)'
+  const bwLabel = opening.bwMode === 'otsu' ? 'B/W (Otsu)' : 'B/W (adaptief)'
   return `<article class="ref-card ${opening.kind}">
     <h2>${title}-referentie #${index + 1}</h2>
     <p class="muted">LBE ${opening.rect.width.toFixed(0)}×${opening.rect.height.toFixed(0)} · originele crop ${opening.sourceCropWidth}×${opening.sourceCropHeight} · rechte crop ${opening.cropWidth}×${opening.cropHeight} · ${opening.orientation} · units ${opening.units.length} · as-align ${opening.skewCorrectedDeg.toFixed(2)}° · ${escapeHtml(bwLabel)}</p>
@@ -288,7 +288,9 @@ function openingSection(opening: OpeningRefProfile, index: number): string {
 /** Self-contained HTML met embedded PNG data-URLs voor stap-1 referentie-analyse. */
 export function buildReferenceAnalysisHtml(report: ReferenceAnalysisReport): string {
   const categoriesHtml = buildGeneralCategoriesSection(report)
-  const wallHtml = report.wall ? wallSection(report.wall) : '<p class="muted">Geen muur-referentie.</p>'
+  const wallHtml = report.wall
+    ? wallSection(report.wall)
+    : '<p class="muted">Geen muur-referentie.</p>'
   const openingsHtml =
     report.openings.length > 0
       ? report.openings.map((o, i) => openingSection(o, i)).join('\n')

@@ -50,7 +50,9 @@ export type DoorSwingStageCache = {
   sizeBandPx: DoorSizeBandPx | null
 }
 
-export function createEmptyDoorSwingStageCache(sizeBandPx: DoorSizeBandPx | null = null): DoorSwingStageCache {
+export function createEmptyDoorSwingStageCache(
+  sizeBandPx: DoorSizeBandPx | null = null,
+): DoorSwingStageCache {
   return {
     stage1Hypotheses: [],
     stage2AcceptedHypotheses: [],

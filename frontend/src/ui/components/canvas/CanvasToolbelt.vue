@@ -54,11 +54,7 @@ function onBrushSizeInput(event: Event) {
       Onderlegger gewijzigd — klik «Verwerk wijzigingen» in de sidebar
     </p>
     <div class="canvas-toolbelt__bar">
-      <CanvasToolbeltButtons
-        :tools="tools"
-        :active-tool="activeTool"
-        @toggle="toggleTool"
-      />
+      <CanvasToolbeltButtons :tools="tools" :active-tool="activeTool" @toggle="toggleTool" />
       <div v-if="activeToolShowsSize" class="canvas-toolbelt__size">
         <input
           type="range"
@@ -91,11 +87,7 @@ function onBrushSizeInput(event: Event) {
     <p v-if="hint" class="canvas-toolbelt__hint">{{ hint }}</p>
   </div>
   <div v-else class="canvas-toolbelt__bar canvas-toolbelt__bar--embedded">
-    <CanvasToolbeltButtons
-      :tools="tools"
-      :active-tool="activeTool"
-      @toggle="toggleTool"
-    />
+    <CanvasToolbeltButtons :tools="tools" :active-tool="activeTool" @toggle="toggleTool" />
     <div v-if="activeToolShowsSize" class="canvas-toolbelt__size">
       <input
         type="range"

@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  areLinkedViaWallInkBridge,
-  enumerateLinkedTuples,
-} from '@/cv/windows/window-axel-cluster'
+import { areLinkedViaWallInkBridge, enumerateLinkedTuples } from '@/cv/windows/window-axel-cluster'
 import type { RootFace } from '@/cv/windows/window-axel-strip-geometry'
 
 function face(
@@ -122,7 +119,14 @@ describe('window cluster over ink (axisBand + wall bridge)', () => {
         [356, 'wall'],
       ]),
     })
-    const keys = tuples.map((t) => t.map((f) => f.root).sort((a, b) => a - b).join('_')).sort()
+    const keys = tuples
+      .map((t) =>
+        t
+          .map((f) => f.root)
+          .sort((a, b) => a - b)
+          .join('_'),
+      )
+      .sort()
     // Goede glas-paar én rail+glas-paren — Stage 2/3 filtert.
     expect(keys).toContain('359_360')
     expect(keys).toContain('354_359')

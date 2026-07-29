@@ -21,7 +21,10 @@ import {
   listIncompleteLayers,
 } from '@/cv/walls/rooms/pipeline-v3/native-layers'
 import { resolveActivePipelineDebug } from '@/cv/walls/rooms/pipeline-debug'
-import { resolveFmlSourceLayer, hasFmlSemanticSource } from '@/cv/walls/rooms/build-semantic-walls-source'
+import {
+  resolveFmlSourceLayer,
+  hasFmlSemanticSource,
+} from '@/cv/walls/rooms/build-semantic-walls-source'
 import type { ExtractionOutput, PipelineV3Debug } from '@/core/extraction/types'
 
 describe('wall-pipeline-version', () => {
@@ -171,6 +174,8 @@ describe('V3 FML gate', () => {
       pipelineV3Debug: incompleteV3,
     } as ExtractionOutput
     expect(resolveActivePipelineDebug(output)?.pipelineVersion).toBe('v3')
-    expect(resolveActivePipelineDebug({ candidates: [], meta: { extractorId: 'x', elapsedMs: 0 } })).toBeUndefined()
+    expect(
+      resolveActivePipelineDebug({ candidates: [], meta: { extractorId: 'x', elapsedMs: 0 } }),
+    ).toBeUndefined()
   })
 })

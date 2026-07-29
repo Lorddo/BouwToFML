@@ -141,7 +141,9 @@ export function formatLayerDebugMarkdown(report: LayerDebugReport): string {
     lines.push(`- segments: ${layer.segments.length}`)
     lines.push(`- junctions: ${layer.junctions.length}`)
     if (kindCounts) {
-      lines.push(`- junction_kinds: I=${kindCounts.I}, L=${kindCounts.L}, T=${kindCounts.T}, X=${kindCounts.X}`)
+      lines.push(
+        `- junction_kinds: I=${kindCounts.I}, L=${kindCounts.L}, T=${kindCounts.T}, X=${kindCounts.X}`,
+      )
     }
     lines.push('')
   }
@@ -202,7 +204,9 @@ export function formatLayerDebugMarkdown(report: LayerDebugReport): string {
       const summary = openingsSummary?.layer12
       lines.push('### layer12 — Deur swing orient')
       lines.push(`- oriented: ${summary?.oriented ?? openings.layer12.oriented.length}`)
-      lines.push(`- skipped (orient failed): ${summary?.skipped ?? openings.layer12.skipped.length}`)
+      lines.push(
+        `- skipped (orient failed): ${summary?.skipped ?? openings.layer12.skipped.length}`,
+      )
       lines.push('')
       if (openings.layer12.oriented.length > 0) {
         lines.push('| doorId | seg | t | kind | mirrored | hinge | opening |')

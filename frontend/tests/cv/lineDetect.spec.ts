@@ -20,19 +20,13 @@ function fillRect(data: Uint8Array, cols: number, x0: number, y0: number, x1: nu
 
 describe('mergeCollinearBoundarySegments', () => {
   it('voegt collineaire horizontale stukken met 1px gat samen', () => {
-    const merged = mergeCollinearBoundarySegments([
-      seg(10, 50, 40, 50),
-      seg(41, 50, 80, 50),
-    ])
+    const merged = mergeCollinearBoundarySegments([seg(10, 50, 40, 50), seg(41, 50, 80, 50)])
     expect(merged).toHaveLength(1)
     expect(merged[0]).toEqual({ a: { x: 10, y: 50 }, b: { x: 80, y: 50 } })
   })
 
   it('bridged niet over 15px wit tussen twee horizontale lijnen', () => {
-    const merged = mergeCollinearBoundarySegments([
-      seg(10, 50, 40, 50),
-      seg(55, 50, 90, 50),
-    ])
+    const merged = mergeCollinearBoundarySegments([seg(10, 50, 40, 50), seg(55, 50, 90, 50)])
     expect(merged).toHaveLength(2)
   })
 })

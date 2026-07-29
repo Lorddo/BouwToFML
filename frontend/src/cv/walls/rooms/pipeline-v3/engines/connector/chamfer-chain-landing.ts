@@ -67,12 +67,18 @@ export function isLandingChamferAtJunction(params: {
   const scale = resolveLayer6Scale(params.referenceWallThicknessPx)
   const hvBandPx = params.hvBandPx ?? scale.hvBandPx
   const endpointSnapPx = scale.endpointSnapPx
-  const da = Math.hypot(params.diagonal.a.x - params.junctionPoint.x, params.diagonal.a.y - params.junctionPoint.y)
-  const db = Math.hypot(params.diagonal.b.x - params.junctionPoint.x, params.diagonal.b.y - params.junctionPoint.y)
+  const da = Math.hypot(
+    params.diagonal.a.x - params.junctionPoint.x,
+    params.diagonal.a.y - params.junctionPoint.y,
+  )
+  const db = Math.hypot(
+    params.diagonal.b.x - params.junctionPoint.x,
+    params.diagonal.b.y - params.junctionPoint.y,
+  )
   const landing = da <= db ? params.diagonal.b : params.diagonal.a
   if (
-    Math.hypot(landing.x - params.junctionPoint.x, landing.y - params.junctionPoint.y)
-    <= endpointSnapPx
+    Math.hypot(landing.x - params.junctionPoint.x, landing.y - params.junctionPoint.y) <=
+    endpointSnapPx
   ) {
     return false
   }
@@ -136,19 +142,15 @@ export function resolveLandingChamferGeometry(params: {
     const hAtJunction = incidentAt(params.segments, junctionPoint, endpointSnapPx).filter(
       (inc) => classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind === 'H',
     )
-    const vAtJunction = incidentAt(params.segments, junctionPoint, endpointSnapPx).filter(
-      (inc) => {
-        const kind = classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind
-        // Korte V-stubs op T (bv. y-jog 2px @660) tellen mee voor landing.
-        return kind === 'V' && inc.lengthPx >= Math.min(minArm, scale.jogEpsilonPx)
-      },
-    )
-    const hAtLanding = incidentAt(params.segments, landingPoint, endpointSnapPx).filter(
-      (inc) => {
-        const kind = classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind
-        return kind === 'H' && inc.lengthPx >= minArm
-      },
-    )
+    const vAtJunction = incidentAt(params.segments, junctionPoint, endpointSnapPx).filter((inc) => {
+      const kind = classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind
+      // Korte V-stubs op T (bv. y-jog 2px @660) tellen mee voor landing.
+      return kind === 'V' && inc.lengthPx >= Math.min(minArm, scale.jogEpsilonPx)
+    })
+    const hAtLanding = incidentAt(params.segments, landingPoint, endpointSnapPx).filter((inc) => {
+      const kind = classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind
+      return kind === 'H' && inc.lengthPx >= minArm
+    })
     const vAtLandingList = incidentAt(params.segments, landingPoint, endpointSnapPx).filter(
       (inc) => {
         const kind = classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind
@@ -165,11 +167,11 @@ export function resolveLandingChamferGeometry(params: {
     // Inverted: through-H op junction + V op landing → brug junction→hit, V naar hit.
     // Alleen korte chamfer-diagonalen (geen lange schuine muren / jogs).
     if (
-      hAtJunctionLoose.length >= 2
-      && vAtJunction.length === 0
-      && vAtLandingList.length >= 1
-      && hAtLanding.length === 0
-      && diagLen <= maxConnectorPx * LAYER6_DIAGONAL_MAX_RATIO
+      hAtJunctionLoose.length >= 2 &&
+      vAtJunction.length === 0 &&
+      vAtLandingList.length >= 1 &&
+      hAtLanding.length === 0 &&
+      diagLen <= maxConnectorPx * LAYER6_DIAGONAL_MAX_RATIO
     ) {
       const dx = Math.abs(params.diagonal.a.x - params.diagonal.b.x)
       const dy = Math.abs(params.diagonal.a.y - params.diagonal.b.y)
@@ -196,12 +198,12 @@ export function resolveLandingChamferGeometry(params: {
     // T-jog: korte H+V stubs op junction + lange V op landing (export 49 @660, y-jog).
     // Geen lange V-stam op junction — dat is oost-T / classic through-T.
     if (
-      hAtJunctionLoose.length >= 1
-      && vAtJunction.length >= 1
-      && vAtJunction.every((inc) => inc.lengthPx <= Math.min(maxConnectorPx, scale.stubCapPx))
-      && vAtLandingList.length >= 1
-      && hAtLanding.length === 0
-      && diagLen <= maxConnectorPx * LAYER6_DIAGONAL_MAX_RATIO
+      hAtJunctionLoose.length >= 1 &&
+      vAtJunction.length >= 1 &&
+      vAtJunction.every((inc) => inc.lengthPx <= Math.min(maxConnectorPx, scale.stubCapPx)) &&
+      vAtLandingList.length >= 1 &&
+      hAtLanding.length === 0 &&
+      diagLen <= maxConnectorPx * LAYER6_DIAGONAL_MAX_RATIO
     ) {
       const dx = Math.abs(params.diagonal.a.x - params.diagonal.b.x)
       const dy = Math.abs(params.diagonal.a.y - params.diagonal.b.y)
@@ -240,15 +242,20 @@ export function resolveLandingChamferGeometry(params: {
     // Echte L-hoek (één V-stam, géén H op junction): simple-L, niet landing.
     // Through-V (≥2 V) is wel classic through-T — diagonaal naar H-landing (BouwTek11 @1489).
     if (
-      hAtLanding.length >= 1
-      && vAtLandingList.length === 0
-      && vAtJunction.length === 1
-      && hAtJunction.length === 0
+      hAtLanding.length >= 1 &&
+      vAtLandingList.length === 0 &&
+      vAtJunction.length === 1 &&
+      hAtJunction.length === 0
     ) {
       continue
     }
     // Klassiek through-T: ≥1 V (+hooguit één H-stub); landing = één lange H.
-    if (hAtJunction.length >= 2 || vAtJunction.length === 0 || hAtLanding.length === 0 || hAtLanding.length >= 2) {
+    if (
+      hAtJunction.length >= 2 ||
+      vAtJunction.length === 0 ||
+      hAtLanding.length === 0 ||
+      hAtLanding.length >= 2
+    ) {
       continue
     }
 

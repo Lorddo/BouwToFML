@@ -49,7 +49,9 @@ function rgbaForClassifiedPixel(params: {
 }): [number, number, number, number] {
   if (params.label <= 0) return UNRESOLVED_INK_RGBA
   const colorRoot =
-    params.groupBy === 'component' ? params.label : resolveMergedLabel(params.label, params.parentMap)
+    params.groupBy === 'component'
+      ? params.label
+      : resolveMergedLabel(params.label, params.parentMap)
   const classification = resolveRenderedClassification({
     rawLabel: params.label,
     idx: params.idx,

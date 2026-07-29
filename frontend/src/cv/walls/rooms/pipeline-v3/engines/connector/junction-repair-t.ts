@@ -59,7 +59,10 @@ export function repairTAtPoint(params: {
   if (Math.hypot(target.x - params.point.x, target.y - params.point.y) > params.maxShiftPx) {
     return { changed: false, removed: 0 }
   }
-  const minArmPx = Math.max(params.armStrictPx, Math.round(params.maxConnectorPx * LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO))
+  const minArmPx = Math.max(
+    params.armStrictPx,
+    Math.round(params.maxConnectorPx * LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO),
+  )
   for (const arm of hs) {
     replaceLongArmEndpointAtJunction({
       segments: params.segments,

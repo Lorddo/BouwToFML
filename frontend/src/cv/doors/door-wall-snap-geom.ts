@@ -1,11 +1,7 @@
 import type { SemanticWallSegment } from '@/core/extraction/types'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import type { DoorOpeningAxis } from './types'
-import {
-  DOOR_WALL_SNAP_TUNING,
-  type BBoxBounds,
-  type DoorSide,
-} from './door-wall-snap-tuning'
+import { DOOR_WALL_SNAP_TUNING, type BBoxBounds, type DoorSide } from './door-wall-snap-tuning'
 
 const T = DOOR_WALL_SNAP_TUNING
 
@@ -78,7 +74,10 @@ export function segmentAxis(segment: SemanticWallSegment): DoorOpeningAxis {
   return Math.abs(segment.b.x - segment.a.x) >= Math.abs(segment.b.y - segment.a.y) ? 'h' : 'v'
 }
 
-export function sideSpan(bounds: BBoxBounds, axis: DoorOpeningAxis): { min: number; max: number; length: number } {
+export function sideSpan(
+  bounds: BBoxBounds,
+  axis: DoorOpeningAxis,
+): { min: number; max: number; length: number } {
   if (axis === 'v') {
     const min = bounds.y0
     const max = bounds.y1 - 1
@@ -89,7 +88,10 @@ export function sideSpan(bounds: BBoxBounds, axis: DoorOpeningAxis): { min: numb
   return { min, max, length: Math.max(1, max - min + 1) }
 }
 
-export function segmentSpan(segment: SemanticWallSegment, axis: DoorOpeningAxis): { min: number; max: number } {
+export function segmentSpan(
+  segment: SemanticWallSegment,
+  axis: DoorOpeningAxis,
+): { min: number; max: number } {
   if (axis === 'v') {
     return {
       min: Math.min(segment.a.y, segment.b.y),
@@ -173,7 +175,12 @@ export function bboxContainsDoorFacePixel(params: {
   return false
 }
 
-export function expandBounds(bounds: BBoxBounds, marginPx: number, width: number, height: number): BBoxBounds {
+export function expandBounds(
+  bounds: BBoxBounds,
+  marginPx: number,
+  width: number,
+  height: number,
+): BBoxBounds {
   const margin = Math.max(0, Math.round(marginPx))
   return {
     x0: clamp(bounds.x0 - margin, 0, width - 1),

@@ -1,9 +1,6 @@
 import type { RefBBox, RefFace, RefFaceProfile } from './types'
 import { classifyFaceRoles, labelWhiteFaces } from './ref-face-profile'
-import {
-  resolveKopeindeAxisBand,
-  type KopeindeAxisBand,
-} from './ref-general-categories'
+import { resolveKopeindeAxisBand, type KopeindeAxisBand } from './ref-general-categories'
 
 /** Bbox-breedte ≥ dit aandeel van crop → “full-width” kamerblob (t.o.v. echte boog). */
 const FULL_WIDTH_RATIO = 0.9
@@ -57,14 +54,12 @@ function isFullCanvasInterior(
   cropH: number,
 ): boolean {
   const cropArea = cropW * cropH
-  return face.areaPx > cropArea * 0.72 && face.bbox.width > cropW * 0.9 && face.bbox.height > cropH * 0.9
+  return (
+    face.areaPx > cropArea * 0.72 && face.bbox.width > cropW * 0.9 && face.bbox.height > cropH * 0.9
+  )
 }
 
-function scoreSwingSectorFace(
-  face: RefFace,
-  cropW: number,
-  cropH: number,
-): number {
+function scoreSwingSectorFace(face: RefFace, cropW: number, cropH: number): number {
   if (isFullCanvasInterior(face, cropW, cropH)) return -1
   if (face.areaPx < Math.max(24, Math.round(cropW * cropH * 0.01))) return -1
   if (isThinKozijnStrip(face, cropH)) return -1
@@ -85,10 +80,7 @@ function scoreSwingSectorFace(
   return score
 }
 
-function faceAxisZone(
-  face: RefFace,
-  band: KopeindeAxisBand,
-): 'above' | 'below' | 'on_axis' {
+function faceAxisZone(face: RefFace, band: KopeindeAxisBand): 'above' | 'below' | 'on_axis' {
   const y = face.centroid.y
   if (y < band.yMin) return 'above'
   if (y > band.yMax) return 'below'

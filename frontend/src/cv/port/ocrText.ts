@@ -1,10 +1,6 @@
 import type { Worker } from 'tesseract.js'
 import type { OcrTextCandidate } from '@/core/extraction'
-import {
-  filterAndMergeOcrHits,
-  type OcrScanPass,
-  type OcrWordHit,
-} from '@/cv/port/ocrTextFilters'
+import { filterAndMergeOcrHits, type OcrScanPass, type OcrWordHit } from '@/cv/port/ocrTextFilters'
 import { getOcrWorker } from '@/cv/port/ocrWorker'
 
 function asBoundingBox(word: any): OcrTextCandidate | null {
@@ -31,8 +27,7 @@ function unionCandidates(words: OcrTextCandidate[]): OcrTextCandidate | null {
     .map((w) => w.text.trim())
     .filter(Boolean)
     .join('')
-  const confidence =
-    words.reduce((sum, w) => sum + w.confidence, 0) / Math.max(1, words.length)
+  const confidence = words.reduce((sum, w) => sum + w.confidence, 0) / Math.max(1, words.length)
   if (!text) return null
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0, text, confidence }
 }
@@ -146,11 +141,10 @@ async function recognizeWords(params: {
     config.tessedit_char_whitelist = '0123456789.,-+xX/:'
     config.classify_bln_numeric_mode = '1'
   }
-  const recognized = await params.worker.recognize(
-    params.image,
-    {},
-    { blocks: true, config } as any,
-  )
+  const recognized = await params.worker.recognize(params.image, {}, {
+    blocks: true,
+    config,
+  } as any)
   return flattenWords((recognized as any).data)
 }
 

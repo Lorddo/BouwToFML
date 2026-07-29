@@ -138,7 +138,11 @@ function estimateDeskewCorrectionFromInkPca(
   return Math.abs(clamped) < 0.2 ? 0 : clamped
 }
 
-function inkSpan(data: Uint8Array, width: number, height: number): { horizontal: number; vertical: number } {
+function inkSpan(
+  data: Uint8Array,
+  width: number,
+  height: number,
+): { horizontal: number; vertical: number } {
   let minX = width
   let minY = height
   let maxX = -1

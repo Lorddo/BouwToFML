@@ -4,7 +4,11 @@ import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
 import { traceSkeletonSegments } from '@/cv/port/wallSkeletonTrace'
 import type { ConnectedWallBlob } from '../room-wall-connected-blobs'
-import type { RoomWallFaceSkeleton, RoomWallJunction, RoomWallJunctionKind } from '../room-wall-skeleton-types'
+import type {
+  RoomWallFaceSkeleton,
+  RoomWallJunction,
+  RoomWallJunctionKind,
+} from '../room-wall-skeleton-types'
 import { resolveLayer1RawPolicy } from './policies/layer-1'
 import type { PipelineV3Layer1Result } from './types'
 
@@ -77,9 +81,7 @@ export async function runLayer1RawWasm(params: {
   for (let blobIndex = 0; blobIndex < params.blobs.length; blobIndex += 1) {
     const blob = params.blobs[blobIndex]
     reportPipelineProgress(
-      blobCount > 1
-        ? `V3 Skeleton Laag 1 (${blobIndex + 1}/${blobCount})…`
-        : 'V3 Skeleton Laag 1…',
+      blobCount > 1 ? `V3 Skeleton Laag 1 (${blobIndex + 1}/${blobCount})…` : 'V3 Skeleton Laag 1…',
     )
     const started = performance.now()
     const skeletonInput = invertMaskForSkeletonTracing(params.cv, blob.maskMat)

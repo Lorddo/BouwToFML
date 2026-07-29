@@ -9,7 +9,8 @@ import {
 } from '@/cv/port/ocrTextFilters'
 
 function hit(
-  partial: Partial<OcrWordHit> & Pick<OcrWordHit, 'text' | 'x' | 'y' | 'width' | 'height' | 'confidence'>,
+  partial: Partial<OcrWordHit> &
+    Pick<OcrWordHit, 'text' | 'x' | 'y' | 'width' | 'height' | 'confidence'>,
 ): OcrWordHit {
   return {
     pass: 'horizontal',
@@ -126,9 +127,33 @@ describe('resolveOverlappingHits', () => {
 describe('mergeAdjacentWordHits', () => {
   it('merges fragmented horizontal letters into one region', () => {
     const parts: OcrWordHit[] = [
-      hit({ text: 'Woo', x: 500, y: 680, width: 55, height: 40, confidence: 86, pass: 'horizontal' }),
-      hit({ text: 'nk', x: 560, y: 682, width: 38, height: 38, confidence: 85, pass: 'horizontal' }),
-      hit({ text: 'amer', x: 602, y: 681, width: 72, height: 39, confidence: 87, pass: 'horizontal' }),
+      hit({
+        text: 'Woo',
+        x: 500,
+        y: 680,
+        width: 55,
+        height: 40,
+        confidence: 86,
+        pass: 'horizontal',
+      }),
+      hit({
+        text: 'nk',
+        x: 560,
+        y: 682,
+        width: 38,
+        height: 38,
+        confidence: 85,
+        pass: 'horizontal',
+      }),
+      hit({
+        text: 'amer',
+        x: 602,
+        y: 681,
+        width: 72,
+        height: 39,
+        confidence: 87,
+        pass: 'horizontal',
+      }),
     ]
     const merged = mergeAdjacentWordHits(parts)
     expect(merged).toHaveLength(1)
@@ -166,8 +191,24 @@ describe('filterAndMergeOcrHits', () => {
 
   it('merges fragments before overlap resolution', () => {
     const words: OcrWordHit[] = [
-      hit({ text: 'Woo', x: 500, y: 680, width: 55, height: 40, confidence: 86, pass: 'horizontal' }),
-      hit({ text: 'nkamer', x: 560, y: 681, width: 110, height: 39, confidence: 84, pass: 'horizontal' }),
+      hit({
+        text: 'Woo',
+        x: 500,
+        y: 680,
+        width: 55,
+        height: 40,
+        confidence: 86,
+        pass: 'horizontal',
+      }),
+      hit({
+        text: 'nkamer',
+        x: 560,
+        y: 681,
+        width: 110,
+        height: 39,
+        confidence: 84,
+        pass: 'horizontal',
+      }),
       hit({
         text: '3',
         x: 520,

@@ -135,7 +135,9 @@ export const DOOR_FML_TEMPLATE_OPTIONS = [
 
 export type DoorFmlTemplateRefId = (typeof DOOR_FML_TEMPLATE_OPTIONS)[number]['refid']
 
-export function resolveDoorFmlTemplateRefId(refid: string | undefined | null): DoorFmlTemplateRefId {
+export function resolveDoorFmlTemplateRefId(
+  refid: string | undefined | null,
+): DoorFmlTemplateRefId {
   if (refid === CLOSET_DOOR_REFID) return CLOSET_DOOR_REFID
   return CONCEPT_DOOR_REFID
 }

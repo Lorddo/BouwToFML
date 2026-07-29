@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { OcrTextOverlay } from '@/platform/canvas'
 import { findOcrOverlayAt } from '@/platform/canvas/ocrOverlayHitTest'
 
-function overlay(partial: Partial<OcrTextOverlay> & Pick<OcrTextOverlay, 'x' | 'y' | 'width' | 'height'>): OcrTextOverlay {
+function overlay(
+  partial: Partial<OcrTextOverlay> & Pick<OcrTextOverlay, 'x' | 'y' | 'width' | 'height'>,
+): OcrTextOverlay {
   return {
     text: 'test',
     confidence: 90,

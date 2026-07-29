@@ -20,9 +20,7 @@ export function emptyTabOutputs(): TabDetectionOutputs {
 export function mergeTabOutputs(outputs: TabDetectionOutputs): ExtractionOutput | null {
   const base = outputs.walls
   if (!base) return null
-  const semanticSegments = base.semanticWallGraph
-    ? semanticAsSegments(base.semanticWallGraph)
-    : []
+  const semanticSegments = base.semanticWallGraph ? semanticAsSegments(base.semanticWallGraph) : []
   const mergedSegments = semanticSegments.length > 0 ? semanticSegments : (base.segments ?? [])
 
   return {

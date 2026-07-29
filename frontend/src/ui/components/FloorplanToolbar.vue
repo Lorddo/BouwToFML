@@ -48,18 +48,22 @@ defineEmits<{
         Sleep een rechthoek · spatie + sleep = pan · scroll = zoom
       </template>
       <template v-else-if="isDrawMode">
-        Sleep vak op tekening ({{ drawType }}) · spatie + sleep = pan · Shift+klik op vak = verwijderen
+        Sleep vak op tekening ({{ drawType }}) · spatie + sleep = pan · Shift+klik op vak =
+        verwijderen
       </template>
       <template v-else-if="isFaceBoxMode">
         <template v-if="faceBoxTool === 'box_unknown'">
-          Sleep een box — vlakken volledig binnen selectie worden onbekend · spatie + sleep = pan · scroll = zoom
+          Sleep een box — vlakken volledig binnen selectie worden onbekend · spatie + sleep = pan ·
+          scroll = zoom
         </template>
         <template v-else>
-          Sleep een box — vlakken volledig binnen selectie worden muur · spatie + sleep = pan · scroll = zoom
+          Sleep een box — vlakken volledig binnen selectie worden muur · spatie + sleep = pan ·
+          scroll = zoom
         </template>
       </template>
       <template v-else-if="isFaceSelectMode">
-        Shift + klik op een wit vlak = classificatie wisselen · sleep = pan · spatie + sleep = pan · scroll = zoom
+        Shift + klik op een wit vlak = classificatie wisselen · sleep = pan · spatie + sleep = pan ·
+        scroll = zoom
       </template>
       <template v-else-if="isProbeMode">
         <template v-if="probeMode === 'point'">
@@ -70,13 +74,15 @@ defineEmits<{
         </template>
       </template>
       <template v-else-if="isSelectionMode">
-        Klik vak om te selecteren · sleep randen = wijzigen · Shift+klik = verwijderen · icoon rechts = verwijderen
+        Klik vak om te selecteren · sleep randen = wijzigen · Shift+klik = verwijderen · icoon
+        rechts = verwijderen
       </template>
       <template v-else>Sleep = pan · scroll = zoom · kies type links om vak te tekenen</template>
     </span>
     <span v-else class="hint">
       <template v-if="isFaceSelectMode">
-        Shift + klik op een wit vlak = classificatie wisselen · sleep = pan · spatie + sleep = pan · scroll = zoom
+        Shift + klik op een wit vlak = classificatie wisselen · sleep = pan · spatie + sleep = pan ·
+        scroll = zoom
       </template>
       <template v-else-if="isProbeMode">
         <template v-if="probeMode === 'point'">
@@ -87,7 +93,8 @@ defineEmits<{
         </template>
       </template>
       <template v-else-if="isSelectionMode">
-        Klik vak om te selecteren · sleep randen = wijzigen · icoon links = verplaatsen · icoon rechts = verwijderen
+        Klik vak om te selecteren · sleep randen = wijzigen · icoon links = verplaatsen · icoon
+        rechts = verwijderen
       </template>
       <template v-else-if="isDrawMode">
         Sleep vak op tekening ({{ drawType }}) · spatie + sleep = pan

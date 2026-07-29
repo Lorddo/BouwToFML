@@ -129,22 +129,10 @@ function sampleThicknessViaProbeBox(params: {
   const halfAlong = alongPx / 2
   const halfPerp = params.maxSearchPx
 
-  const x0 = Math.max(
-    0,
-    Math.floor(horizontal ? mid.x - halfAlong : mid.x - halfPerp),
-  )
-  const x1 = Math.min(
-    params.width,
-    Math.ceil(horizontal ? mid.x + halfAlong : mid.x + halfPerp),
-  )
-  const y0 = Math.max(
-    0,
-    Math.floor(horizontal ? mid.y - halfPerp : mid.y - halfAlong),
-  )
-  const y1 = Math.min(
-    params.height,
-    Math.ceil(horizontal ? mid.y + halfPerp : mid.y + halfAlong),
-  )
+  const x0 = Math.max(0, Math.floor(horizontal ? mid.x - halfAlong : mid.x - halfPerp))
+  const x1 = Math.min(params.width, Math.ceil(horizontal ? mid.x + halfAlong : mid.x + halfPerp))
+  const y0 = Math.max(0, Math.floor(horizontal ? mid.y - halfPerp : mid.y - halfAlong))
+  const y1 = Math.min(params.height, Math.ceil(horizontal ? mid.y + halfPerp : mid.y + halfAlong))
   if (x1 <= x0 || y1 <= y0) return { values: [], nx, ny }
 
   const values: number[] = []
@@ -345,7 +333,11 @@ export function imagePxThicknessToCmAlongNormal(
   return Math.max(1, (thicknessPx * mmPerPxAlongNormal) / 10)
 }
 
-export function imagePxThicknessToCm(thicknessPx: number, pxPerMmX: number, pxPerMmY: number): number {
+export function imagePxThicknessToCm(
+  thicknessPx: number,
+  pxPerMmX: number,
+  pxPerMmY: number,
+): number {
   const pxPerMmAvg = (pxPerMmX + pxPerMmY) / 2
   if (!Number.isFinite(pxPerMmAvg) || pxPerMmAvg <= 0) return 10
   return Math.max(1, thicknessPx / pxPerMmAvg / 10)
@@ -362,7 +354,10 @@ function buildInkMask(imageData: ImageData): Uint8Array {
   return mask
 }
 
-const imageMaskCache = new Map<string, Promise<{ mask: Uint8Array; width: number; height: number }>>()
+const imageMaskCache = new Map<
+  string,
+  Promise<{ mask: Uint8Array; width: number; height: number }>
+>()
 
 async function loadInkMask(
   imageSrc: string,
@@ -373,25 +368,27 @@ async function loadInkMask(
   const cached = imageMaskCache.get(key)
   if (cached) return cached
 
-  const promise = new Promise<{ mask: Uint8Array; width: number; height: number }>((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        reject(new Error('Canvas niet beschikbaar voor muurdiktemeting.'))
-        return
+  const promise = new Promise<{ mask: Uint8Array; width: number; height: number }>(
+    (resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          reject(new Error('Canvas niet beschikbaar voor muurdiktemeting.'))
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+        const imageData = ctx.getImageData(0, 0, width, height)
+        resolve({ mask: buildInkMask(imageData), width, height })
       }
-      ctx.drawImage(img, 0, 0, width, height)
-      const imageData = ctx.getImageData(0, 0, width, height)
-      resolve({ mask: buildInkMask(imageData), width, height })
-    }
-    img.onerror = () => reject(new Error('Onderlegger kon niet geladen worden voor meting.'))
-    img.src = imageSrc
-  })
+      img.onerror = () => reject(new Error('Onderlegger kon niet geladen worden voor meting.'))
+      img.src = imageSrc
+    },
+  )
 
   imageMaskCache.set(key, promise)
   return promise
@@ -418,7 +415,8 @@ export async function measureWallThicknessCmOnUnderlay(params: {
     (Math.max(0, params.pxPerMmX) + Math.max(0, params.pxPerMmY)) / 2 ||
     Math.max(params.pxPerMmX, params.pxPerMmY)
   const maxSearchPx = pxPerMmAvg > 0 ? Math.round(MAX_WALL_SEARCH_CM * 10 * pxPerMmAvg) : 512
-  const gapTolerancePx = pxPerMmAvg > 0 ? Math.round(INTERNAL_GAP_TOLERANCE_CM * 10 * pxPerMmAvg) : 4
+  const gapTolerancePx =
+    pxPerMmAvg > 0 ? Math.round(INTERNAL_GAP_TOLERANCE_CM * 10 * pxPerMmAvg) : 4
   const { values, nx, ny } = sampleThicknessPxOnMask({
     mask,
     width,

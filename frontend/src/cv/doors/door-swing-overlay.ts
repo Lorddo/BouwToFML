@@ -1,4 +1,9 @@
-import { canvasToDataUrlAsync, compositeMaskOverUnderlay, createCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
+import {
+  canvasToDataUrlAsync,
+  compositeMaskOverUnderlay,
+  createCanvas,
+  type CanvasLike,
+} from '@/cv/port/canvasEnv'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import type { DoorSwingHypothesis } from './types'
 
@@ -98,7 +103,12 @@ function resolveHypothesisBounds(params: {
     maxX = Math.max(maxX, localMaxX)
     maxY = Math.max(maxY, localMaxY)
   }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY)
+  ) {
     return null
   }
   const clampedMinX = clamp(minX, 0, Math.max(0, params.width - 1))
@@ -263,7 +273,11 @@ function renderDoorSwingOverlay(params: {
   return canvas
 }
 
-async function loadCanvasFromUrl(url: string, width: number, height: number): Promise<CanvasLike | null> {
+async function loadCanvasFromUrl(
+  url: string,
+  width: number,
+  height: number,
+): Promise<CanvasLike | null> {
   if (typeof Image === 'undefined') return null
   return new Promise((resolve) => {
     const img = new Image()

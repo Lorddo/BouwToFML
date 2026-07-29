@@ -39,8 +39,7 @@ export function detectKopeindeZones(
 
   const profile: number[] = []
   for (let i = 0; i < spanAlong; i += 1) profile.push(thicknessRuns(i))
-  const med =
-    [...profile].sort((a, b) => a - b)[Math.floor(profile.length / 2)] ?? 0
+  const med = [...profile].sort((a, b) => a - b)[Math.floor(profile.length / 2)] ?? 0
   const headThreshold = Math.max(2, med + Math.max(1, Math.round(spanAcross * 0.15)))
 
   const findHead = (from: number, to: number, forward: boolean): AxisSpan | null => {
@@ -149,8 +148,7 @@ export function findKozijnPostsAlongX(
   let runStart: number | null = null
   for (let i = 0; i < peakMask.length; i += 1) {
     const cover = heightCover[i] ?? 0
-    const on =
-      peakMask[i] === 1 || (runStart !== null && cover >= coverFloor * 0.9)
+    const on = peakMask[i] === 1 || (runStart !== null && cover >= coverFloor * 0.9)
     if (on) {
       if (runStart === null) runStart = i
     } else if (runStart !== null) {

@@ -49,12 +49,7 @@ export function useStage() {
     position.value = newPos
   }
 
-  function fitToScreen(
-    stage: Konva.Stage,
-    imgWidth: number,
-    imgHeight: number,
-    padding = 40,
-  ) {
+  function fitToScreen(stage: Konva.Stage, imgWidth: number, imgHeight: number, padding = 40) {
     const container = stage.container()
     const cw = container.clientWidth
     const ch = container.clientHeight

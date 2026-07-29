@@ -77,11 +77,7 @@ export function removeWalls(walls: Wall[], wallIds: Iterable<string>): Wall[] {
  * Split een muur op parameter `t` (0–1 langs a→b) in twee segmenten met een gedeeld hoekpunt.
  * `t` wordt geclamped zodat beide segmenten ≥ {@link MIN_SPLIT_SEGMENT_CM} blijven.
  */
-export function splitWallAtT(
-  walls: Wall[],
-  wallId: string,
-  tSplit = 0.5,
-): SplitWallResult | null {
+export function splitWallAtT(walls: Wall[], wallId: string, tSplit = 0.5): SplitWallResult | null {
   const index = walls.findIndex((item) => item.id === wallId)
   if (index < 0) return null
 

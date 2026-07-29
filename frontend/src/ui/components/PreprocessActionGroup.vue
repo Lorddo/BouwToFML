@@ -63,5 +63,4 @@ function onToggle(event: Event): void {
   min-width: 0;
   margin-top: 4px;
 }
-
 </style>

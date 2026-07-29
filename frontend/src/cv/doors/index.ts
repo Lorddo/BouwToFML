@@ -18,4 +18,3 @@ export * from './door-kept-wall-mask-contact'
 export * from './door-attach-doorframes'
 export * from './door-wall-orient'
 export * from './door-bridge-wall-promote'
-

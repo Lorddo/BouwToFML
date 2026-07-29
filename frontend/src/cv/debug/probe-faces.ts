@@ -53,10 +53,7 @@ function resolveHit(
 /**
  * Face onder één plan-pixel (merged root + class uit roomClassifyState).
  */
-export function probeFaceAtPoint(
-  source: ProbeFaceSource,
-  point: ProbePoint,
-): ProbeFaceHit | null {
+export function probeFaceAtPoint(source: ProbeFaceSource, point: ProbePoint): ProbeFaceHit | null {
   const x = Math.round(point.x)
   const y = Math.round(point.y)
   if (x < 0 || y < 0 || x >= source.width || y >= source.height) return null

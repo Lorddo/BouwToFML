@@ -25,7 +25,11 @@ export function buildDoorOpeningId(wallId: string, opening: Opening, openingInde
   return `${wallId}-door-${opening.guid ?? openingIndex}`
 }
 
-export function buildWindowOpeningId(wallId: string, opening: Opening, openingIndex: number): string {
+export function buildWindowOpeningId(
+  wallId: string,
+  opening: Opening,
+  openingIndex: number,
+): string {
   return `${wallId}-window-${opening.guid ?? openingIndex}`
 }
 
@@ -80,7 +84,11 @@ export function clampOpeningSillZ(zCm: number): number {
   return Math.max(MIN_OPENING_SILL_Z_CM, Math.min(MAX_OPENING_SILL_Z_CM, Math.round(zCm)))
 }
 
-export function clampDoorOpeningT(wall: { a: { x: number; y: number }; b: { x: number; y: number } }, widthCm: number, t: number): number {
+export function clampDoorOpeningT(
+  wall: { a: { x: number; y: number }; b: { x: number; y: number } },
+  widthCm: number,
+  t: number,
+): number {
   const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
   if (!Number.isFinite(t) || len < 1e-6) return 0.5
   const half = Math.max(0.5, widthCm / 2)
@@ -194,7 +202,10 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
   }
 
   if (patch.mirrored != null && nextOpening.type === 'door') {
-    const mirrored: [number, number] = [patch.mirrored[0] === 1 ? 1 : 0, patch.mirrored[1] === 1 ? 1 : 0]
+    const mirrored: [number, number] = [
+      patch.mirrored[0] === 1 ? 1 : 0,
+      patch.mirrored[1] === 1 ? 1 : 0,
+    ]
     const current = nextOpening.mirrored ?? [0, 0]
     if (current[0] !== mirrored[0] || current[1] !== mirrored[1]) {
       nextOpening.mirrored = mirrored

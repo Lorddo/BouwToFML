@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { PREPROCESS_TAB_LABELS, TEMPLATE_TAB_LABELS, type PreprocessPanelLayer, type TemplateTab } from '@/cv/preprocess/layer-preprocess'
+import {
+  PREPROCESS_TAB_LABELS,
+  TEMPLATE_TAB_LABELS,
+  type PreprocessPanelLayer,
+  type TemplateTab,
+} from '@/cv/preprocess/layer-preprocess'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import { RESULT_TAB_LABELS, type WorkspaceFlowStep } from '../composables/workspace/constants'
 
@@ -22,7 +27,12 @@ const showLines = defineModel<boolean>('showLines', { required: true })
 
 <template>
   <div
-    v-if="flowStep === 'input' || flowStep === 'preprocess' || flowStep === 'templates' || flowStep === 'result'"
+    v-if="
+      flowStep === 'input' ||
+      flowStep === 'preprocess' ||
+      flowStep === 'templates' ||
+      flowStep === 'result'
+    "
     class="canvas-tabs"
   >
     <div v-if="flowStep === 'input'" class="layer-tabs">

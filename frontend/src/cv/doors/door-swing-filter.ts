@@ -64,7 +64,10 @@ export function runDoorSwingFilter(params: {
   assertSpacePolicy('door wall-rescue merge', DOOR_SPACE_POLICY.wallRescueMeasure, 'ink')
   const aspectToleranceRatio =
     params.aspectToleranceRatio ?? DOOR_SWING_TUNING.defaultAspectToleranceRatio
-  const maxClusterSize = Math.max(2, params.maxClusterSize ?? DOOR_SWING_TUNING.defaultMaxClusterSize)
+  const maxClusterSize = Math.max(
+    2,
+    params.maxClusterSize ?? DOOR_SWING_TUNING.defaultMaxClusterSize,
+  )
   const allowedSeedClasses = params.allowedSeedClasses?.length
     ? new Set(params.allowedSeedClasses)
     : undefined
@@ -99,7 +102,10 @@ export function runDoorSwingFilter(params: {
     match: RefMatch | null,
   ) => {
     const existing = diagByRoot.get(root)
-    if (existing && DIAGNOSTIC_STATUS_PRIORITY[existing.status] >= DIAGNOSTIC_STATUS_PRIORITY[status]) {
+    if (
+      existing &&
+      DIAGNOSTIC_STATUS_PRIORITY[existing.status] >= DIAGNOSTIC_STATUS_PRIORITY[status]
+    ) {
       return
     }
     diagByRoot.set(root, {
@@ -203,8 +209,10 @@ export function runDoorSwingFilter(params: {
     seedCount: consideredSeeds.size,
     singleAccepted: hypotheses.filter((hyp) => hyp.source === 'single').length,
     clusterAccepted: hypotheses.filter((hyp) => hyp.source === 'cluster').length,
-    skippedOutsideSeedCount: diagnostics.filter((d) => d.status === 'rejected_outside_or_wall').length,
-    skippedOutOfBandCount: diagnostics.filter((d) => d.status === 'rejected_out_of_band_or_aspect').length,
+    skippedOutsideSeedCount: diagnostics.filter((d) => d.status === 'rejected_outside_or_wall')
+      .length,
+    skippedOutOfBandCount: diagnostics.filter((d) => d.status === 'rejected_out_of_band_or_aspect')
+      .length,
   }
 
   return { hypotheses, stats, diagnostics }

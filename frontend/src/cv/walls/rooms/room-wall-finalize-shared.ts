@@ -12,7 +12,10 @@ import {
 } from './room-ink-classify'
 import { buildInkWallMaskMat } from './room-ink-wall-mask'
 import { closeWallMaskMat } from './room-wall-merged-mask'
-import { splitConnectedWallBlobs, type SplitConnectedWallBlobsResult } from './room-wall-connected-blobs'
+import {
+  splitConnectedWallBlobs,
+  type SplitConnectedWallBlobsResult,
+} from './room-wall-connected-blobs'
 import { resolveWallPreprocessThickenPx } from '@/cv/preprocess/layer-preprocess'
 import { prepareRoomFinalizeState } from './room-refine-topology'
 import type { RoomClassifyResult } from '../strategies/room-first'

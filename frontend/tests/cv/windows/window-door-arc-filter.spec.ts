@@ -161,7 +161,9 @@ describe('window-door-arc-filter', () => {
 
   it('wijst geen zij-ramen als doorframe bij richting-mismatch', () => {
     const result = filterWindowsTouchingDoorArcs({
-      hypotheses: [hypothesis({ id: 'w5', faceIds: [301], x: 1000, y: 980, width: 20, height: 120 })],
+      hypotheses: [
+        hypothesis({ id: 'w5', faceIds: [301], x: 1000, y: 980, width: 20, height: 120 }),
+      ],
       doorArcFaceIds: new Set([214]),
       wallThicknessPx: 20,
     })

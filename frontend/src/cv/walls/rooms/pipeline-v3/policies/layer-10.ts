@@ -1,8 +1,4 @@
-import type {
-  CollapsePolicy,
-  JunctionGraphPolicy,
-  WeldPolicy,
-} from '../engines/policy-types'
+import type { CollapsePolicy, JunctionGraphPolicy, WeldPolicy } from '../engines/policy-types'
 import { resolvePipelineScale } from '../engines/scale'
 import {
   baseCollapsePolicy,
@@ -36,11 +32,7 @@ export function resolveLayer10FmlPolicy(referenceWallThicknessPx?: number): Laye
   const scale = resolvePipelineScale(referenceWallThicknessPx)
   return {
     layerId: 10,
-    collapse: scaleCollapsePolicy(
-      layer10CollapsePolicy,
-      scale,
-      scale.collapseChainAxisMaxSpreadPx,
-    ),
+    collapse: scaleCollapsePolicy(layer10CollapsePolicy, scale, scale.collapseChainAxisMaxSpreadPx),
     weld: { ...layer10WeldPolicy },
     junction: { ...layer10JunctionPolicy },
   }

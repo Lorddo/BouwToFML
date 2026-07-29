@@ -4,7 +4,10 @@ import { bindWindowsToWalls } from '@/cv/windows/window-wall-bind'
 import type { ResolvedWindowCandidate, WindowAxelRefBand } from '@/cv/windows/types'
 import type { SemanticWallJunction, SemanticWallSegment } from '@/core/extraction/types'
 
-function makeWindow(partial: Partial<ResolvedWindowCandidate> & Pick<ResolvedWindowCandidate, 'id' | 'bbox' | 'centroidPx'>): ResolvedWindowCandidate {
+function makeWindow(
+  partial: Partial<ResolvedWindowCandidate> &
+    Pick<ResolvedWindowCandidate, 'id' | 'bbox' | 'centroidPx'>,
+): ResolvedWindowCandidate {
   return {
     sourceHypothesisId: partial.sourceHypothesisId ?? 'hyp-1',
     matchedRefIndex: partial.matchedRefIndex ?? 0,

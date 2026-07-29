@@ -72,8 +72,18 @@ function hingeOk(angleDeg = 16) {
       { a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, angleDeg: 0, supportLength: 10 },
       { a: { x: 0, y: 0 }, b: { x: 1, y: 1 }, angleDeg: angleDeg, supportLength: 10 },
     ] as [
-      { a: { x: number; y: number }; b: { x: number; y: number }; angleDeg: number; supportLength: number },
-      { a: { x: number; y: number }; b: { x: number; y: number }; angleDeg: number; supportLength: number },
+      {
+        a: { x: number; y: number }
+        b: { x: number; y: number }
+        angleDeg: number
+        supportLength: number
+      },
+      {
+        a: { x: number; y: number }
+        b: { x: number; y: number }
+        angleDeg: number
+        supportLength: number
+      },
     ],
     swingAngleDeg: angleDeg,
     swingSpanPx: 50,

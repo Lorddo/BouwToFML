@@ -7,11 +7,7 @@
  */
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
-import {
-  cloneSegments,
-  removeSegmentAt,
-  replaceSegmentEndpoint,
-} from '../segment-ops'
+import { cloneSegments, removeSegmentAt, replaceSegmentEndpoint } from '../segment-ops'
 import type { CollapsePolicy } from '../policy-types'
 import {
   buildExactAdjacency,
@@ -68,18 +64,12 @@ function tryCollectMicroCorner(params: {
   let hardArmIndex: number
   let continuationIndex: number
 
-  if (
-    angleA >= params.policy.structuralLDeg
-    && angleB < params.policy.collinearMaxDeg
-  ) {
+  if (angleA >= params.policy.structuralLDeg && angleB < params.policy.collinearMaxDeg) {
     hardPoint = pointA
     fakePoint = pointB
     hardArmIndex = armAIndex
     continuationIndex = armBIndex
-  } else if (
-    angleB >= params.policy.structuralLDeg
-    && angleA < params.policy.collinearMaxDeg
-  ) {
+  } else if (angleB >= params.policy.structuralLDeg && angleA < params.policy.collinearMaxDeg) {
     hardPoint = pointB
     fakePoint = pointA
     hardArmIndex = armBIndex
@@ -138,13 +128,7 @@ export function absorbMicroCornerJogs(
       if (!hit) continue
 
       // Weld continuation onto the hard corner, then drop the stub.
-      replaceSegmentEndpoint(
-        work,
-        hit.continuationIndex,
-        hit.fakePoint,
-        hit.hardPoint,
-        0,
-      )
+      replaceSegmentEndpoint(work, hit.continuationIndex, hit.fakePoint, hit.hardPoint, 0)
       removeSegmentAt(work, hit.stubIndex)
       cornersAbsorbed += 1
       segmentsRemoved += 1

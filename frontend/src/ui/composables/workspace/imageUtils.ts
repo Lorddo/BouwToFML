@@ -24,7 +24,12 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
 
-function isContentPixel(r: number, g: number, b: number, threshold = CONTENT_WHITE_THRESHOLD): boolean {
+function isContentPixel(
+  r: number,
+  g: number,
+  b: number,
+  threshold = CONTENT_WHITE_THRESHOLD,
+): boolean {
   return r < threshold || g < threshold || b < threshold
 }
 
@@ -79,7 +84,17 @@ function cropCanvasToBounds(canvas: HTMLCanvasElement, bounds: PixelBounds): HTM
   out.height = bounds.height
   const ctx = out.getContext('2d')
   if (!ctx) return out
-  ctx.drawImage(canvas, bounds.left, bounds.top, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height)
+  ctx.drawImage(
+    canvas,
+    bounds.left,
+    bounds.top,
+    bounds.width,
+    bounds.height,
+    0,
+    0,
+    bounds.width,
+    bounds.height,
+  )
   return out
 }
 
@@ -126,7 +141,13 @@ export function normalizeWorkingCanvas(
 
   if (trimWhitespace) {
     const bounds = findContentBounds(canvas)
-    if (bounds && (bounds.left > 0 || bounds.top > 0 || bounds.width < canvas.width || bounds.height < canvas.height)) {
+    if (
+      bounds &&
+      (bounds.left > 0 ||
+        bounds.top > 0 ||
+        bounds.width < canvas.width ||
+        bounds.height < canvas.height)
+    ) {
       working = cropCanvasToBounds(canvas, bounds)
       cropOffset = { x: bounds.left, y: bounds.top }
     }
@@ -146,8 +167,10 @@ export function transformHScaleState(
   width: number,
   height: number,
 ): HScaleState {
-  const mapX = (value: number) => clamp(Math.round((value - transform.offsetX) * transform.scale), 0, width)
-  const mapY = (value: number) => clamp(Math.round((value - transform.offsetY) * transform.scale), 0, height)
+  const mapX = (value: number) =>
+    clamp(Math.round((value - transform.offsetX) * transform.scale), 0, width)
+  const mapY = (value: number) =>
+    clamp(Math.round((value - transform.offsetY) * transform.scale), 0, height)
   return {
     xLeft: mapX(state.xLeft),
     xRight: mapX(state.xRight),
@@ -158,7 +181,11 @@ export function transformHScaleState(
   }
 }
 
-export function transformHScaleStateRotate180(state: HScaleState, width: number, height: number): HScaleState {
+export function transformHScaleStateRotate180(
+  state: HScaleState,
+  width: number,
+  height: number,
+): HScaleState {
   return {
     xLeft: width - state.xRight,
     xRight: width - state.xLeft,
@@ -222,7 +249,12 @@ export function transformHScaleStateRotation(
 
 export type SelectionRectBounds = { x: number; y: number; width: number; height: number }
 
-function mapPointRotate180(x: number, y: number, width: number, height: number): { x: number; y: number } {
+function mapPointRotate180(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): { x: number; y: number } {
   return { x: width - x, y: height - y }
 }
 
@@ -303,7 +335,9 @@ export function transformSelectionRect(
   }
 }
 
-export function imageSourceToCanvas(source: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
+export function imageSourceToCanvas(
+  source: HTMLImageElement | HTMLCanvasElement,
+): HTMLCanvasElement {
   if (source instanceof HTMLCanvasElement) {
     const copy = document.createElement('canvas')
     copy.width = source.width
@@ -329,7 +363,10 @@ export function canvasLikeToHtmlCanvas(canvas: CanvasLike): HTMLCanvasElement {
   return copy
 }
 
-export function imageDimensions(img: HTMLImageElement | HTMLCanvasElement): { width: number; height: number } {
+export function imageDimensions(img: HTMLImageElement | HTMLCanvasElement): {
+  width: number
+  height: number
+} {
   if (img instanceof HTMLCanvasElement) {
     return { width: img.width, height: img.height }
   }

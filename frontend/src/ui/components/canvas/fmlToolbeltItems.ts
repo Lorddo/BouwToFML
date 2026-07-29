@@ -1,12 +1,7 @@
 import type { ToolbeltItem } from './canvas-toolbelt.types'
 
 export type FmlToolId =
-  | 'box_select'
-  | 'measure'
-  | 'draw_wall'
-  | 'draw_room'
-  | 'add_door'
-  | 'add_window'
+  'box_select' | 'measure' | 'draw_wall' | 'draw_room' | 'add_door' | 'add_window'
 
 /** FML-viewer tools — volgt het canvas-toolbelt-patroon van stap 2/3. */
 export const FML_SELECT_TOOLS: ToolbeltItem[] = [

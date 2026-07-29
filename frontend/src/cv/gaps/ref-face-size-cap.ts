@@ -51,12 +51,7 @@ export async function resolveMaxOpeningRefFaceAreaPx(params: {
   if (params.rects.length === 0) return null
 
   const sharedWallBwMat = params.baseBw
-    ? grayMatFromBwBytes(
-        params.cv,
-        params.baseBw.data,
-        params.baseBw.width,
-        params.baseBw.height,
-      )
+    ? grayMatFromBwBytes(params.cv, params.baseBw.data, params.baseBw.width, params.baseBw.height)
     : buildWallLayerBwMat({
         cv: params.cv,
         image: params.image,

@@ -57,14 +57,7 @@ export function patchTopologyLabelsInDiffRegion(params: {
   bounds: InkDiffBounds
   inkThreshold?: number
 }): TopologyPatchResult {
-  const {
-    rawLabelsData,
-    newWallBwData,
-    width,
-    height,
-    bounds,
-    inkThreshold = 127,
-  } = params
+  const { rawLabelsData, newWallBwData, width, height, bounds, inkThreshold = 127 } = params
   const oldLabels = new Int32Array(rawLabelsData)
   const labelsData = new Int32Array(rawLabelsData)
   const visited = new Uint8Array(width * height)

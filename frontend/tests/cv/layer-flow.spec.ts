@@ -19,14 +19,18 @@ describe('layer-flow', () => {
   })
 
   it('heeft Int muur en Gaten in preprocess/template orders (OCR alleen stap 3)', async () => {
-    const { WORKSPACE_PREPROCESS_LAYER_ORDER, WORKSPACE_TEMPLATE_LAYER_ORDER } = await import(
-      '@/cv/workspace/layer-flow'
-    )
-    const { usesWallBwUnderlay, usesGapsFaceOverlay, usesDoorSwingOverlay } = await import(
-      '@/cv/preprocess/layer-preprocess'
-    )
+    const { WORKSPACE_PREPROCESS_LAYER_ORDER, WORKSPACE_TEMPLATE_LAYER_ORDER } =
+      await import('@/cv/workspace/layer-flow')
+    const { usesWallBwUnderlay, usesGapsFaceOverlay, usesDoorSwingOverlay } =
+      await import('@/cv/preprocess/layer-preprocess')
     expect([...WORKSPACE_PREPROCESS_LAYER_ORDER]).toEqual(['walls', 'inkWall', 'gaps'])
-    expect([...WORKSPACE_TEMPLATE_LAYER_ORDER]).toEqual(['ocr', 'walls', 'gaps', 'doors', 'windows'])
+    expect([...WORKSPACE_TEMPLATE_LAYER_ORDER]).toEqual([
+      'ocr',
+      'walls',
+      'gaps',
+      'doors',
+      'windows',
+    ])
     expect(usesWallBwUnderlay('gaps')).toBe(true)
     expect(usesWallBwUnderlay('doors')).toBe(true)
     expect(usesWallBwUnderlay('windows')).toBe(true)

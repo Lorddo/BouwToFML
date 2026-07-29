@@ -8,7 +8,11 @@ import {
 import { layer7CollapsePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-7'
 import { V3_NATIVE_THROUGH_LAYER } from '@/cv/walls/rooms/pipeline-v3/native-layers'
 
-function collapse(segments: Segment[], thicknessBySegment?: number[], referenceWallThicknessPx = 30) {
+function collapse(
+  segments: Segment[],
+  thicknessBySegment?: number[],
+  referenceWallThicknessPx = 30,
+) {
   const thickness = thicknessBySegment ?? segments.map(() => 30)
   return collapseInterJunctionChains({
     segments,
@@ -111,10 +115,13 @@ describe('collapseInterJunctionChains (V3)', () => {
     expect(before.T).toBe(2)
     expect(after.T).toBe(2)
     expect(result.stats.chainsCollapsed).toBeGreaterThan(0)
-    expect(result.segments.some((seg) =>
-      (seg.a.x === 50 && seg.a.y === 0 && seg.b.x === 100 && seg.b.y === 0)
-      || (seg.b.x === 50 && seg.b.y === 0 && seg.a.x === 100 && seg.a.y === 0),
-    )).toBe(true)
+    expect(
+      result.segments.some(
+        (seg) =>
+          (seg.a.x === 50 && seg.a.y === 0 && seg.b.x === 100 && seg.b.y === 0) ||
+          (seg.b.x === 50 && seg.b.y === 0 && seg.a.x === 100 && seg.a.y === 0),
+      ),
+    ).toBe(true)
   })
 
   it('split keten bij dikte-mismatch', () => {
@@ -132,8 +139,14 @@ describe('collapseInterJunctionChains (V3)', () => {
 
   it('merge collineaire fake-L binnen max-band meetruis (ref×0.85)', () => {
     const segments: Segment[] = [
-      { a: { x: 572.7225507703973, y: 483.0467104938556 }, b: { x: 572.7225507703973, y: 377.49999999999994 } },
-      { a: { x: 572.7225507703973, y: 377.49999999999994 }, b: { x: 572.7225507703973, y: 317.4688309613627 } },
+      {
+        a: { x: 572.7225507703973, y: 483.0467104938556 },
+        b: { x: 572.7225507703973, y: 377.49999999999994 },
+      },
+      {
+        a: { x: 572.7225507703973, y: 377.49999999999994 },
+        b: { x: 572.7225507703973, y: 317.4688309613627 },
+      },
     ]
     const result = collapse(segments, [30, 10], 30)
     expect(result.segments).toHaveLength(1)
@@ -205,9 +218,9 @@ describe('collapseInterJunctionChains (V3)', () => {
 
       const vertical = result.segments.find(
         (seg) =>
-          Math.abs(seg.a.x - (1060.44 + dx)) <= 1
-          && Math.abs(seg.b.x - (1060.44 + dx)) <= 1
-          && Math.max(seg.a.y, seg.b.y) > 350 + dy,
+          Math.abs(seg.a.x - (1060.44 + dx)) <= 1 &&
+          Math.abs(seg.b.x - (1060.44 + dx)) <= 1 &&
+          Math.max(seg.a.y, seg.b.y) > 350 + dy,
       )
       expect(vertical).toBeDefined()
     })

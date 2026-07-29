@@ -25,7 +25,11 @@ function isInsidePdfRoot(pdfRoot: string, filePath: string): boolean {
 }
 
 function servePdfJsAssets(pdfRoot: string) {
-  return (req: import('http').IncomingMessage, res: import('http').ServerResponse, next: () => void) => {
+  return (
+    req: import('http').IncomingMessage,
+    res: import('http').ServerResponse,
+    next: () => void,
+  ) => {
     const url = req.url?.split('?')[0] ?? ''
     if (!url.startsWith(PDFJS_URL_PREFIX)) {
       next()
@@ -34,7 +38,11 @@ function servePdfJsAssets(pdfRoot: string) {
 
     const rel = decodeURIComponent(url.slice(PDFJS_URL_PREFIX.length))
     const filePath = path.resolve(pdfRoot, rel)
-    if (!isInsidePdfRoot(pdfRoot, filePath) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+    if (
+      !isInsidePdfRoot(pdfRoot, filePath) ||
+      !fs.existsSync(filePath) ||
+      !fs.statSync(filePath).isFile()
+    ) {
       next()
       return
     }

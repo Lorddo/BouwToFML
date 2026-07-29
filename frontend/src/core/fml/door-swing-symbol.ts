@@ -113,9 +113,8 @@ function buildWideDoubleLeafSymbol(params: {
 }): DoorSymbol {
   const mid = midpoint(params.start, params.end)
   const halfSpan = Math.hypot(mid.x - params.start.x, mid.y - params.start.y)
-  const leafLength = params.leafLength != null
-    ? Math.max(10, params.leafLength / 2)
-    : Math.max(10, halfSpan * 0.92)
+  const leafLength =
+    params.leafLength != null ? Math.max(10, params.leafLength / 2) : Math.max(10, halfSpan * 0.92)
   const swingSign = resolveSwingSign(params.mirrored)
   const left = buildSingleDoorSymbol({
     start: params.start,
@@ -144,7 +143,11 @@ function buildWideDoubleLeafSymbol(params: {
   }
 }
 
-function buildArrowLine(center: DoorSwingPoint, direction: DoorSwingPoint, length: number): number[] {
+function buildArrowLine(
+  center: DoorSwingPoint,
+  direction: DoorSwingPoint,
+  length: number,
+): number[] {
   const half = length / 2
   const tipX = center.x + direction.x * half
   const tipY = center.y + direction.y * half
@@ -181,9 +184,7 @@ function arrowAlongWall(
   length: number,
   towardEnd: boolean,
 ): number[] {
-  const dir = towardEnd
-    ? wallUnit
-    : { x: -wallUnit.x, y: -wallUnit.y }
+  const dir = towardEnd ? wallUnit : { x: -wallUnit.x, y: -wallUnit.y }
   return buildArrowLine(center, dir, length)
 }
 

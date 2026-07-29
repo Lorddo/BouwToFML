@@ -1,9 +1,6 @@
 import type { ExtractionOutput } from '@/core/extraction'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
-import {
-  createRoomRasterCache,
-  type RoomRasterCache,
-} from '@/cv/walls/rooms/room-raster-cache'
+import { createRoomRasterCache, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 
 export function isWallsOutputFinalized(output: ExtractionOutput | null | undefined): boolean {

@@ -1,8 +1,5 @@
 import type { Opening } from '@/core/fml/types'
-import {
-  resolveOpeningCatalog,
-  type DoorAssetKind,
-} from '@/core/fml/opening-refid-catalog'
+import { resolveOpeningCatalog, type DoorAssetKind } from '@/core/fml/opening-refid-catalog'
 import {
   buildDoorSwingSymbol,
   buildMirrored,
@@ -96,7 +93,10 @@ function openingSpanOnWall(
   opening: Opening,
 ): { start: Point; end: Point } {
   const t = clamp01(opening.t)
-  const center = { x: wallA.x + t * wallUnit.x * wallLength, y: wallA.y + t * wallUnit.y * wallLength }
+  const center = {
+    x: wallA.x + t * wallUnit.x * wallLength,
+    y: wallA.y + t * wallUnit.y * wallLength,
+  }
   const half = Math.max(0.5, opening.width / 2)
   return {
     start: { x: center.x - wallUnit.x * half, y: center.y - wallUnit.y * half },
@@ -118,7 +118,10 @@ export function resolveSwingSpanWithinOpening(params: {
 }): { start: Point; end: Point; width: number } {
   const totalFrameCm =
     Math.max(0, params.swingHingeInsetCm ?? 0) + Math.max(0, params.swingFreeInsetCm ?? 0)
-  const spanLength = Math.hypot(params.endCm.x - params.startCm.x, params.endCm.y - params.startCm.y)
+  const spanLength = Math.hypot(
+    params.endCm.x - params.startCm.x,
+    params.endCm.y - params.startCm.y,
+  )
   const eachSide = Math.min(totalFrameCm / 2, Math.max(0, (spanLength - 1) / 2))
   const ux = params.wallUnit.x
   const uy = params.wallUnit.y

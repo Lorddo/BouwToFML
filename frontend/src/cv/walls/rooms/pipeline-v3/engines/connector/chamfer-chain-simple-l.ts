@@ -48,19 +48,20 @@ export function resolveSimpleLChamferGeometry(params: {
   }
 
   const pickSimpleLPair = (
-    hArms: { h: Array<{ segIndex: number; segment: Segment }>; v: Array<{ segIndex: number; segment: Segment }> },
-    vArms: { h: Array<{ segIndex: number; segment: Segment }>; v: Array<{ segIndex: number; segment: Segment }> },
+    hArms: {
+      h: Array<{ segIndex: number; segment: Segment }>
+      v: Array<{ segIndex: number; segment: Segment }>
+    },
+    vArms: {
+      h: Array<{ segIndex: number; segment: Segment }>
+      v: Array<{ segIndex: number; segment: Segment }>
+    },
     hTouch: { x: number; y: number },
     vTouch: { x: number; y: number },
   ) => {
     // Through-T (≥2 H of ≥2 V op één eind): geen simple-L — trekt de through-arm los → T→I
     // (BouwTek11 @1489: through-V T + H-landing diagonaal).
-    if (
-      hArms.h.length >= 2
-      || vArms.h.length >= 2
-      || hArms.v.length >= 2
-      || vArms.v.length >= 2
-    ) {
+    if (hArms.h.length >= 2 || vArms.h.length >= 2 || hArms.v.length >= 2 || vArms.v.length >= 2) {
       return null
     }
     if (hArms.h.length === 0 || vArms.v.length === 0) return null

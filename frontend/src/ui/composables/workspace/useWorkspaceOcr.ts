@@ -42,7 +42,9 @@ export function useWorkspaceOcr(deps: {
   const ocrUnderlayMaxEdgePx = ref(2000)
 
   const ocrHitList = computed(() =>
-    [...ocrCandidates.value].sort((a, b) => b.confidence - a.confidence || a.text.localeCompare(b.text)),
+    [...ocrCandidates.value].sort(
+      (a, b) => b.confidence - a.confidence || a.text.localeCompare(b.text),
+    ),
   )
 
   function ocrFilterParams() {

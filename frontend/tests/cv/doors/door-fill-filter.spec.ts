@@ -46,7 +46,9 @@ describe('door-fill-filter', () => {
   })
 
   it('werkt per-ref: ondiepe ref accepteert passende candidate en reject te volle candidate', () => {
-    const refs: DoorSwingRefBand[] = [{ aspectRef: 1.25, swingWpx: 100, swingHpx: 80, areaPx: 3000 }]
+    const refs: DoorSwingRefBand[] = [
+      { aspectRef: 1.25, swingWpx: 100, swingHpx: 80, areaPx: 3000 },
+    ]
     const result = runDoorFillFilter({
       hypotheses: [
         hypothesis({ id: 'ok', filledAreaPx: 3200, width: 100, height: 80 }),

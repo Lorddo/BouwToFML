@@ -6,11 +6,7 @@ import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments } from '../segment-ops'
 import type { CollapsePolicy } from '../policy-types'
-import {
-  segmentAxis,
-  type CollapseAxis,
-  type ExactPoint,
-} from './adjacency'
+import { segmentAxis, type CollapseAxis, type ExactPoint } from './adjacency'
 
 export interface ParallelCoverStats {
   coveredCount: number
@@ -75,7 +71,11 @@ function spanCoveredByUnion(
   return cursor + slack >= hi
 }
 
-function projectPointOntoAxis(point: ExactPoint, axis: CollapseAxis, axisValue: number): ExactPoint {
+function projectPointOntoAxis(
+  point: ExactPoint,
+  axis: CollapseAxis,
+  axisValue: number,
+): ExactPoint {
   return axis === 'V' ? { x: axisValue, y: point.y } : { x: point.x, y: axisValue }
 }
 
@@ -190,9 +190,7 @@ export function parallelCoverAbsorb(
 
     if (victims.length === 0) break
 
-    victims.sort(
-      (a, b) => segmentLength(work[a.index]!) - segmentLength(work[b.index]!),
-    )
+    victims.sort((a, b) => segmentLength(work[a.index]!) - segmentLength(work[b.index]!))
     const victim = victims[0]!
     const victimSeg = work[victim.index]!
 

@@ -26,7 +26,9 @@ export { splitWallAtPoint }
 
 /** Richting vanaf een eindpunt de muur in op. */
 function directionFromEndpoint(wall: { a: Point2D; b: Point2D }, end: 'a' | 'b'): Point2D {
-  return end === 'a' ? normalizeDir({ x: wall.b.x - wall.a.x, y: wall.b.y - wall.a.y }) : normalizeDir({ x: wall.a.x - wall.b.x, y: wall.a.y - wall.b.y })
+  return end === 'a'
+    ? normalizeDir({ x: wall.b.x - wall.a.x, y: wall.b.y - wall.a.y })
+    : normalizeDir({ x: wall.a.x - wall.b.x, y: wall.a.y - wall.b.y })
 }
 
 /** Twee muren delen een rechte lijn op het knooppunt. */

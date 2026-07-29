@@ -34,7 +34,10 @@ function extractApproxPointsFromContour(
 ): RefPoint[] {
   const approx = new cv.Mat()
   try {
-    const epsilon = Math.max(0.5, cv.arcLength(contour, true) * (epsilonFactor ?? DEFAULT_EPSILON_FACTOR))
+    const epsilon = Math.max(
+      0.5,
+      cv.arcLength(contour, true) * (epsilonFactor ?? DEFAULT_EPSILON_FACTOR),
+    )
     cv.approxPolyDP(contour, approx, epsilon, true)
     const data = approx.data32S as Int32Array
     const points: RefPoint[] = []
@@ -112,9 +115,7 @@ export function buildFaceUnionMask(
   const include =
     includeLabels ??
     new Set(
-      faceProfile.faces
-        .filter((face) => isFaceRoleIncluded(face.role))
-        .map((face) => face.label),
+      faceProfile.faces.filter((face) => isFaceRoleIncluded(face.role)).map((face) => face.label),
     )
   const mask = new Uint8Array(width * height)
   if (include.size === 0) return mask
@@ -230,7 +231,12 @@ export function extractFacePolygons(params: {
   faceProfile: RefFaceProfile
   epsilonFactor?: number
 }): Map<number, RefPoint[]> {
-  const labels = resolveProfileLabelsData(params.data, params.width, params.height, params.faceProfile)
+  const labels = resolveProfileLabelsData(
+    params.data,
+    params.width,
+    params.height,
+    params.faceProfile,
+  )
   const out = new Map<number, RefPoint[]>()
   for (const face of params.faceProfile.faces) {
     if (!isFaceRoleIncluded(face.role)) continue

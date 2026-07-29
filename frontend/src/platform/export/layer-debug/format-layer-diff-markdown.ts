@@ -9,8 +9,7 @@ function junctionLine(j: { x: number; y: number; kind: string; angleDeg?: number
 }
 
 function formatTransitionSummaryTable(transitions: LayerTransitionDiff[]): string {
-  const header =
-    '| Overgang | prev | next | ✓imp | ✗reg | merged | dropped | moved | added |'
+  const header = '| Overgang | prev | next | ✓imp | ✗reg | merged | dropped | moved | added |'
   const sep = '|---|--:|--:|--:|--:|--:|--:|--:|--:|'
   const rows = transitions.map((t) => {
     const s = t.summary
@@ -29,7 +28,9 @@ function formatEffectsList(
   if (!effects) return '_Niet geclassificeerd._\n'
   const list = kind === 'improvement' ? effects.improvements : effects.regressions
   if (list.length === 0) {
-    return kind === 'improvement' ? '_Geen verbeteringen gedetecteerd._\n' : '_Geen regressies gedetecteerd._\n'
+    return kind === 'improvement'
+      ? '_Geen verbeteringen gedetecteerd._\n'
+      : '_Geen regressies gedetecteerd._\n'
   }
   return list
     .slice(0, topN)
@@ -82,9 +83,7 @@ function formatMovedList(transition: LayerTransitionDiff): string {
 
 function formatMergedSummary(transition: LayerTransitionDiff): string {
   if (transition.segments.merged.length === 0) return '_Geen merges._\n'
-  const top = transition.segments.merged
-    .sort((a, b) => b.prev.length - a.prev.length)
-    .slice(0, 10)
+  const top = transition.segments.merged.sort((a, b) => b.prev.length - a.prev.length).slice(0, 10)
   return top
     .map((item, i) => {
       const totalPrevLen = item.prev.reduce((sum, s) => sum + s.lengthPx, 0)
@@ -100,9 +99,7 @@ function formatJunctionShifts(transition: LayerTransitionDiff): string {
   if (shifted.length === 0) return '_Geen junction-verschuivingen._\n'
   return shifted
     .map((item, i) => {
-      const kindNote = item.kindChanged
-        ? ` kind ${item.prev.kind}→${item.next.kind}`
-        : ''
+      const kindNote = item.kindChanged ? ` kind ${item.prev.kind}→${item.next.kind}` : ''
       return `${i + 1}. Δ=${item.shiftPx}px ${junctionLine(item.prev)} → ${junctionLine(item.next)}${kindNote}`
     })
     .join('\n')
@@ -130,7 +127,9 @@ export function formatLayerDebugMarkdown(report: LayerDebugReport): string {
   lines.push('')
   lines.push('## Overgangen (samenvatting)')
   lines.push('')
-  lines.push('_✓imp = verbeteringen (merge, snap, prune, verleng) · ✗reg = regressies (verloren segment, drift)_')
+  lines.push(
+    '_✓imp = verbeteringen (merge, snap, prune, verleng) · ✗reg = regressies (verloren segment, drift)_',
+  )
   lines.push('')
   lines.push(formatTransitionSummaryTable(report.transitions))
   lines.push('')
@@ -217,9 +216,7 @@ export function formatRunComparisonMarkdown(
   lines.push('| Overgang | baseline dropped | candidate dropped | Δ |')
   lines.push('|---|--:|--:|--:|')
   for (const baseT of baseline.transitions) {
-    const candT = candidate.transitions.find(
-      (t) => t.from === baseT.from && t.to === baseT.to,
-    )
+    const candT = candidate.transitions.find((t) => t.from === baseT.from && t.to === baseT.to)
     if (!candT) continue
     const delta = candT.summary.dropped - baseT.summary.dropped
     const sign = delta > 0 ? `+${delta}` : String(delta)

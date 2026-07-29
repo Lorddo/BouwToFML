@@ -3,11 +3,7 @@
  */
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
-import {
-  dropZeroLengthSegments,
-  incidentAt,
-  replaceSegmentEndpoint,
-} from '../segment-ops'
+import { dropZeroLengthSegments, incidentAt, replaceSegmentEndpoint } from '../segment-ops'
 import type { ChamferGroupGeometry } from './chamfer-group-geometry'
 import { applyLandingChamferGroup } from './chamfer-group-apply-landing'
 import { applyLtChamferGroup } from './chamfer-group-apply-lt'
@@ -29,7 +25,8 @@ export function applyChamferGroupRepair(params: {
   const hvBandPx = scale.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
   const endpointSnapPx = scale.endpointSnapPx
   const nearbyWeldPx = scale.nearbyWeldPx
-  const classify = (segment: Segment, segIndex: number) => classifyLayer6Segment(segment, segIndex, hvBandPx)
+  const classify = (segment: Segment, segIndex: number) =>
+    classifyLayer6Segment(segment, segIndex, hvBandPx)
   const work = params.segments
   const maxConnectorPx = scale.connectorMaxPx
   const maxArmShift = Math.max(
@@ -51,9 +48,7 @@ export function applyChamferGroupRepair(params: {
     if (!seg) return
     const thicknessMargin = scale.thicknessMarginPx
     for (const end of [seg.a, seg.b]) {
-      const onDiag = diagEndpoints.some(
-        (p) => Math.hypot(p.x - end.x, p.y - end.y) <= nearbyWeldPx,
-      )
+      const onDiag = diagEndpoints.some((p) => Math.hypot(p.x - end.x, p.y - end.y) <= nearbyWeldPx)
       if (!onDiag) continue
       const shift = Math.hypot(end.x - hit.x, end.y - hit.y)
       // Nooit een arm plat trekken naar een verre hit (2D_3E: H@587→hit@572 → zero + gat).

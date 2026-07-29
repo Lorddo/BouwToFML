@@ -6,7 +6,11 @@ import { labelInkComponents, resolveOpeningUnits } from './ref-blob'
 import { cropRefByFaces, type RefCropState } from './ref-face-crop'
 import { buildFaceProfile } from './ref-face-profile'
 import { findInkBounds } from './ref-deskew'
-import { buildClassifiedProfile, classifyRawSegments, extractRawInkSegments } from './ref-ink-vectors'
+import {
+  buildClassifiedProfile,
+  classifyRawSegments,
+  extractRawInkSegments,
+} from './ref-ink-vectors'
 import { detectMidlineInk } from './ref-midline-ink'
 import { straightenRefLast } from './ref-straighten'
 import { detectDoorSwingSector } from './ref-swing-arc'
@@ -41,7 +45,12 @@ function resolveDominantOrientation(data: Uint8Array, width: number, height: num
   return bounds.width >= bounds.height ? 'horizontal' : 'vertical'
 }
 
-function areaInBBox(data: Uint8Array, width: number, height: number, bbox: { x: number; y: number; width: number; height: number }): number {
+function areaInBBox(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  bbox: { x: number; y: number; width: number; height: number },
+): number {
   let area = 0
   const x0 = Math.max(0, Math.floor(bbox.x))
   const y0 = Math.max(0, Math.floor(bbox.y))
@@ -55,7 +64,12 @@ function areaInBBox(data: Uint8Array, width: number, height: number, bbox: { x: 
   return area
 }
 
-function centroidInBBox(data: Uint8Array, width: number, height: number, bbox: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
+function centroidInBBox(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  bbox: { x: number; y: number; width: number; height: number },
+): { x: number; y: number } {
   let n = 0
   let sx = 0
   let sy = 0
@@ -88,11 +102,9 @@ function buildComponentUnit(data: Uint8Array, width: number, height: number): Re
   }
 }
 
-function selectStageInput(params: {
+function selectStageInput(params: { data: Uint8Array; width: number; height: number }): {
   data: Uint8Array
-  width: number
-  height: number
-}): { data: Uint8Array } {
+} {
   return { data: params.data }
 }
 
@@ -220,9 +232,7 @@ export async function runRefStages(params: {
       straightened.width,
       straightened.height,
       undefined,
-      params.kind === 'wall'
-        ? { minAreaPx: 4, sealBorders: true }
-        : { minAreaPx: 1 },
+      params.kind === 'wall' ? { minAreaPx: 4, sealBorders: true } : { minAreaPx: 1 },
     )
     const finalLabels = labelInkComponents(
       straightened.bwData,

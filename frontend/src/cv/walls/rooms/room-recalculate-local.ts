@@ -3,10 +3,7 @@ import type { OpenCV } from '@/cv/loadOpenCV'
 import { yieldToMain } from '@/platform/image/workImage'
 import type { RoomRasterClass } from './room-ink-classify'
 import { runInkProcessAfterEdits } from './room-ink-process'
-import {
-  buildRoomReferenceMat,
-  finalizeRoomReferenceMat,
-} from './room-reference-preprocess'
+import { buildRoomReferenceMat, finalizeRoomReferenceMat } from './room-reference-preprocess'
 import {
   deserializeRoomClassifyState,
   serializeRoomClassifyState,

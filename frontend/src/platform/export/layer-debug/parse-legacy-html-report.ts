@@ -27,7 +27,10 @@ function extractJsonBlock(html: string, layerId: LayerId): string | null {
   return unescapeHtml(html.slice(jsonStart, jsonEnd))
 }
 
-function flattenFaceJson(data: unknown): { segments: SegmentRecord[]; junctions: RoomJunctionRecord[] } {
+function flattenFaceJson(data: unknown): {
+  segments: SegmentRecord[]
+  junctions: RoomJunctionRecord[]
+} {
   if (!Array.isArray(data)) {
     const obj = data as { segments?: SegmentRecord[]; junctions?: RoomJunctionRecord[] }
     return {
@@ -37,7 +40,9 @@ function flattenFaceJson(data: unknown): { segments: SegmentRecord[]; junctions:
   }
   return {
     segments: data.flatMap((face) => (face as { segments?: SegmentRecord[] }).segments ?? []),
-    junctions: data.flatMap((face) => (face as { junctions?: RoomJunctionRecord[] }).junctions ?? []),
+    junctions: data.flatMap(
+      (face) => (face as { junctions?: RoomJunctionRecord[] }).junctions ?? [],
+    ),
   }
 }
 

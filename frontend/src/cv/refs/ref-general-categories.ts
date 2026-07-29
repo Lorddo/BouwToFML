@@ -89,10 +89,7 @@ export function resolveKopeindeAxisBand(
   }
 }
 
-function resolveKozijnFromFaces(params: {
-  faceProfile: RefFaceProfile
-  spanW: number
-}): {
+function resolveKozijnFromFaces(params: { faceProfile: RefFaceProfile; spanW: number }): {
   kopeinde: boolean
   kozijnLinks: KozijnFaceMetrics | null
   kozijnRechts: KozijnFaceMetrics | null
@@ -129,9 +126,7 @@ export function computeUnitGeneralCategoryMetrics(params: {
   middenlijnSpanPx?: number | null
 }): UnitGeneralCategoryMetrics {
   const doorArc =
-    params.kind === 'door'
-      ? { draaicirkel: params.draaicirkel ?? false }
-      : { draaicirkel: null }
+    params.kind === 'door' ? { draaicirkel: params.draaicirkel ?? false } : { draaicirkel: null }
 
   const midline =
     params.kind === 'door' && params.draaicirkel === false
@@ -183,7 +178,8 @@ export function aggregateGeneralCategoryMetrics(
   for (const unit of units) {
     if (unit.kozijnLinks) agg.kozijnLinks.push(unit.kozijnLinks)
     if (unit.kozijnRechts) agg.kozijnRechts.push(unit.kozijnRechts)
-    if (unit.kozijnTotaalOppervlakPx != null) agg.kozijnTotaalOppervlakPx.push(unit.kozijnTotaalOppervlakPx)
+    if (unit.kozijnTotaalOppervlakPx != null)
+      agg.kozijnTotaalOppervlakPx.push(unit.kozijnTotaalOppervlakPx)
     if (unit.draaicirkel === true) agg.draaicirkelJa += 1
     else if (unit.draaicirkel === false) agg.draaicirkelNee += 1
     if (unit.middenlijn === true) agg.middenlijnJa += 1

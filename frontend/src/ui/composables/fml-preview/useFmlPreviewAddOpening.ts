@@ -48,9 +48,7 @@ export function useFmlPreviewAddOpening(options: {
     const sillZCm =
       mode === 'window' ? clampOpeningSillZ(options.addWindowSillZCm.value) : undefined
     const heightCm =
-      mode === 'window'
-        ? clampWindowOpeningHeight(options.addWindowHeightCm.value)
-        : undefined
+      mode === 'window' ? clampWindowOpeningHeight(options.addWindowHeightCm.value) : undefined
     if (mode === 'window') {
       options.addWindowSillZCm.value = sillZCm ?? DEFAULT_WINDOW_SILL_Z_CM
       options.addWindowHeightCm.value = heightCm ?? DEFAULT_WINDOW_HEIGHT_CM

@@ -45,7 +45,10 @@ export type UseWorkspaceDevSessionDeps = {
   drawingProfileId: Ref<DrawingProfileId>
   wallPipelineVersion: Ref<WallPipelineVersion>
   scale: ReturnType<typeof useHScaleCalibration>
-  scaleUi: Pick<ReturnType<typeof useWorkspaceScale>, 'resetScaleFull' | 'restoreFromSessionSnapshot'>
+  scaleUi: Pick<
+    ReturnType<typeof useWorkspaceScale>,
+    'resetScaleFull' | 'restoreFromSessionSnapshot'
+  >
   eraserMask: Ref<Uint8Array | null>
   eraserTouched: Ref<boolean>
   ocrMask: Ref<Uint8Array | null>
@@ -127,8 +130,9 @@ export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
 
   async function refreshDevSessionOptions(preferSessionId?: string | null): Promise<void> {
     const rows = await listDevSessions<unknown>()
-    const validRows = rows
-      .filter((row): row is { id: string; session: DevWorkspaceSession } => isDevWorkspaceSession(row.session))
+    const validRows = rows.filter((row): row is { id: string; session: DevWorkspaceSession } =>
+      isDevWorkspaceSession(row.session),
+    )
     if (validRows.length === 0) {
       const legacy = await loadLastDevSession<unknown>()
       if (isDevWorkspaceSession(legacy)) {
@@ -163,7 +167,9 @@ export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
     const desiredId =
       (preferSessionId && availableIds.has(preferSessionId) && preferSessionId) ||
       (currentSessionId && availableIds.has(currentSessionId) && currentSessionId) ||
-      (selectedDevSessionId.value && availableIds.has(selectedDevSessionId.value) && selectedDevSessionId.value) ||
+      (selectedDevSessionId.value &&
+        availableIds.has(selectedDevSessionId.value) &&
+        selectedDevSessionId.value) ||
       devSessionOptions.value[0]?.id ||
       null
     selectedDevSessionId.value = desiredId
@@ -185,17 +191,15 @@ export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
     try {
       const session = capture.captureCurrentSession(label)
       const rows = await listDevSessions<unknown>()
-      const existingRows = rows.filter(
-        (row): row is { id: string; session: DevWorkspaceSession } => isDevWorkspaceSession(row.session),
+      const existingRows = rows.filter((row): row is { id: string; session: DevWorkspaceSession } =>
+        isDevWorkspaceSession(row.session),
       )
       const storageId = resolveDevSessionStorageId(existingRows, session.imageName)
       await saveDevSession(storageId, session)
       await refreshDevSessionOptions(storageId)
       const stepLabel = flowStepLabel(resolveTargetFlowStep(session))
       const modeHint =
-        isSessionV2(session) && session.flow.restoreMode === 'replay'
-          ? ' (replay bij herstel)'
-          : ''
+        isSessionV2(session) && session.flow.restoreMode === 'replay' ? ' (replay bij herstel)' : ''
       devSessionMessage.value = `Snapshot opgeslagen voor ${session.imageName} op ${stepLabel}${modeHint} (${session.imageWidth}×${session.imageHeight}).`
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)

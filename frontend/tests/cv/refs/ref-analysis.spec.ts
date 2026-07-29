@@ -34,7 +34,11 @@ import { buildReferenceAnalysisHtml } from '@/platform/export/reference-analysis
 import type { ReferenceAnalysisReport } from '@/cv/refs/types'
 import { wallRenderStyleLabel } from '@/cv/refs/types'
 
-function makeBw(width: number, height: number, paint: (set: (x: number, y: number) => void) => void): Uint8Array {
+function makeBw(
+  width: number,
+  height: number,
+  paint: (set: (x: number, y: number) => void) => void,
+): Uint8Array {
   const data = new Uint8Array(width * height).fill(255)
   paint((x, y) => {
     if (x >= 0 && y >= 0 && x < width && y < height) data[y * width + x] = 0
@@ -161,7 +165,10 @@ describe('ref-blob', () => {
       set(36, 2)
     })
     const { blobs } = labelInkComponents(data, 40, 20)
-    const significant = filterSignificantBlobs(blobs, 40 * 20, { minAreaPx: 4, minRatioOfLargest: 0.05 })
+    const significant = filterSignificantBlobs(blobs, 40 * 20, {
+      minAreaPx: 4,
+      minRatioOfLargest: 0.05,
+    })
     expect(significant.length).toBe(1)
   })
 
@@ -613,8 +620,20 @@ describe('ref-straighten', () => {
   it('deskew gebruikt geclassificeerde lijnen als bron', () => {
     const correction = estimateDeskewCorrectionFromLines(
       [
-        { a: { x: 0, y: 0 }, b: { x: 50, y: 2.6 }, lengthPx: 50, angleDeg: 3, relation: 'parallel' },
-        { a: { x: 10, y: 0 }, b: { x: 10.3, y: 40 }, lengthPx: 40, angleDeg: 89.6, relation: 'perp' },
+        {
+          a: { x: 0, y: 0 },
+          b: { x: 50, y: 2.6 },
+          lengthPx: 50,
+          angleDeg: 3,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 10, y: 0 },
+          b: { x: 10.3, y: 40 },
+          lengthPx: 40,
+          angleDeg: 89.6,
+          relation: 'perp',
+        },
       ],
       'horizontal',
     )
@@ -626,10 +645,28 @@ describe('ref-straighten', () => {
     // BouwTek11-achtig: lange H-rails ~0.6° door pixel-aliasing + korte kozijnen met luidruchtige hoek.
     const correction = estimateDeskewCorrectionFromLines(
       [
-        { a: { x: 0, y: 8 }, b: { x: 140, y: 9.5 }, lengthPx: 140, angleDeg: 0.62, relation: 'parallel' },
-        { a: { x: 0, y: 20 }, b: { x: 140, y: 21.5 }, lengthPx: 140, angleDeg: 0.61, relation: 'parallel' },
+        {
+          a: { x: 0, y: 8 },
+          b: { x: 140, y: 9.5 },
+          lengthPx: 140,
+          angleDeg: 0.62,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 0, y: 20 },
+          b: { x: 140, y: 21.5 },
+          lengthPx: 140,
+          angleDeg: 0.61,
+          relation: 'parallel',
+        },
         { a: { x: 4, y: 6 }, b: { x: 5, y: 24 }, lengthPx: 18, angleDeg: 87.2, relation: 'perp' },
-        { a: { x: 132, y: 7 }, b: { x: 134, y: 25 }, lengthPx: 18, angleDeg: 83.7, relation: 'perp' },
+        {
+          a: { x: 132, y: 7 },
+          b: { x: 134, y: 25 },
+          lengthPx: 18,
+          angleDeg: 83.7,
+          relation: 'perp',
+        },
       ],
       'horizontal',
       5,
@@ -641,8 +678,20 @@ describe('ref-straighten', () => {
   it('corrigeert echte scheefstand (~3°) op parallelrails wél', () => {
     const correction = estimateDeskewCorrectionFromLines(
       [
-        { a: { x: 0, y: 0 }, b: { x: 100, y: 5.2 }, lengthPx: 100, angleDeg: 3, relation: 'parallel' },
-        { a: { x: 0, y: 12 }, b: { x: 100, y: 17.2 }, lengthPx: 100, angleDeg: 3, relation: 'parallel' },
+        {
+          a: { x: 0, y: 0 },
+          b: { x: 100, y: 5.2 },
+          lengthPx: 100,
+          angleDeg: 3,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 0, y: 12 },
+          b: { x: 100, y: 17.2 },
+          lengthPx: 100,
+          angleDeg: 3,
+          relation: 'parallel',
+        },
         { a: { x: 2, y: 0 }, b: { x: 4, y: 20 }, lengthPx: 20, angleDeg: 84, relation: 'perp' },
       ],
       'horizontal',
@@ -830,7 +879,8 @@ describe('draaicirkel', () => {
     expect(metrics.kozijnRechts?.widthPx).toBeGreaterThan(1)
     expect(metrics.kozijnLinks?.centroidX).toBeGreaterThan(0)
     expect(metrics.kozijnTotaalOppervlakPx).toBe(
-      Math.round(((metrics.kozijnLinks?.areaPx ?? 0) + (metrics.kozijnRechts?.areaPx ?? 0)) * 10) / 10,
+      Math.round(((metrics.kozijnLinks?.areaPx ?? 0) + (metrics.kozijnRechts?.areaPx ?? 0)) * 10) /
+        10,
     )
   })
 
@@ -981,7 +1031,13 @@ describe('reference-analysis-report', () => {
                 source: 'kozijn_span',
                 includesBothHeads: true,
               },
-              lineProfile: { lines: [], parallelCount: 0, perpCount: 0, arcCount: 0, otherCount: 0 },
+              lineProfile: {
+                lines: [],
+                parallelCount: 0,
+                perpCount: 0,
+                arcCount: 0,
+                otherCount: 0,
+              },
               faceProfile: { faces: [], totalAreaPx: 0, faceCount: 0 },
               facePolygons: [
                 {

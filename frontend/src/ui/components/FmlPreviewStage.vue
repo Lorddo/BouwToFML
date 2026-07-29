@@ -58,8 +58,7 @@ const contentGroupRef = defineModel<{ getNode: () => Konva.Group } | null>('cont
 // Bind drag on the Konva node — v-group is a fragment root, so Vue @drag* spam warnings.
 let boundGroup: Konva.Group | null = null
 const onGroupDragStart = () => emit('groupDragStart')
-const onGroupDragMove = (event: Konva.KonvaEventObject<DragEvent>) =>
-  emit('groupDragMove', event)
+const onGroupDragMove = (event: Konva.KonvaEventObject<DragEvent>) => emit('groupDragMove', event)
 const onGroupDragEnd = (event: Konva.KonvaEventObject<DragEvent>) => emit('groupDragEnd', event)
 
 function unbindGroupDrag() {
@@ -95,7 +94,16 @@ onBeforeUnmount(unbindGroupDrag)
     @contextmenu.prevent
   >
     <v-layer>
-      <v-rect :config="{ x: 0, y: 0, width: stageSize.width, height: stageSize.height, fill: '#ffffff', listening: false }" />
+      <v-rect
+        :config="{
+          x: 0,
+          y: 0,
+          width: stageSize.width,
+          height: stageSize.height,
+          fill: '#ffffff',
+          listening: false,
+        }"
+      />
       <v-group
         ref="contentGroupRef"
         :config="{
@@ -116,10 +124,7 @@ onBeforeUnmount(unbindGroupDrag)
             listening: false,
           }"
         />
-        <v-image
-          v-if="underlayConfig"
-          :config="underlayConfig"
-        />
+        <v-image v-if="underlayConfig" :config="underlayConfig" />
         <v-group :config="{ opacity: contentOpacity, listening: true }">
           <FmlPreviewStageWalls
             :render-model="renderModel"

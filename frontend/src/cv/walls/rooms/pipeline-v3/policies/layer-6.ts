@@ -32,9 +32,7 @@ const layer6JunctionPolicy: JunctionGraphPolicy = {
   weldBeforeGraph: true,
 }
 
-export function resolveLayer6RepairPolicy(
-  referenceWallThicknessPx?: number,
-): Layer6RepairPolicy {
+export function resolveLayer6RepairPolicy(referenceWallThicknessPx?: number): Layer6RepairPolicy {
   const ref = resolveLayer6ReferencePx(referenceWallThicknessPx)
   const scale = resolveLayer6Scale(ref)
   return {

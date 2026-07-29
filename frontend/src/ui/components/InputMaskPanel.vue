@@ -34,7 +34,11 @@ const emit = defineEmits<{
     <div class="section">
       <div class="section-head">
         <p class="section-title">Crop</p>
-        <button type="button" :class="{ primary: cropIncludeEnabled }" @click="emit('toggleCropInclude')">
+        <button
+          type="button"
+          :class="{ primary: cropIncludeEnabled }"
+          @click="emit('toggleCropInclude')"
+        >
           Crop polygon
         </button>
       </div>
@@ -43,8 +47,14 @@ const emit = defineEmits<{
     <div class="section section-divider">
       <div class="section-head">
         <p class="section-title">Gum</p>
-        <button type="button" :class="{ primary: eraserEnabled }" @click="emit('toggleEraser')">Gum penseel</button>
-        <button type="button" :class="{ primary: polygonEraserEnabled }" @click="emit('togglePolygonEraser')">
+        <button type="button" :class="{ primary: eraserEnabled }" @click="emit('toggleEraser')">
+          Gum penseel
+        </button>
+        <button
+          type="button"
+          :class="{ primary: polygonEraserEnabled }"
+          @click="emit('togglePolygonEraser')"
+        >
           Gum polygon
         </button>
       </div>

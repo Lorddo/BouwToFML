@@ -29,11 +29,8 @@ export interface RoomRootInkStats {
 }
 
 function clampThreshold(threshold: number | undefined): number {
-  const {
-    inkCoverageThreshold,
-    inkCoverageClampMin,
-    inkCoverageClampMax,
-  } = ROOM_INK_CLASSIFY_TUNING
+  const { inkCoverageThreshold, inkCoverageClampMin, inkCoverageClampMax } =
+    ROOM_INK_CLASSIFY_TUNING
   if (threshold == null || Number.isNaN(threshold)) return inkCoverageThreshold
   return Math.min(inkCoverageClampMax, Math.max(inkCoverageClampMin, threshold))
 }

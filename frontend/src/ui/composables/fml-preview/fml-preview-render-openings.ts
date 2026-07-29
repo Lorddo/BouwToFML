@@ -114,10 +114,7 @@ export function buildRenderDoorGroupsAndWindows(
   return { doorGroups, windows }
 }
 
-export function buildRenderFixtures(
-  floor: Floor,
-  toStagePoint: StagePointFn,
-): RenderFixture[] {
+export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): RenderFixture[] {
   return (floor.items ?? []).map((item, index) => {
     const catalog = resolveFixtureCatalog(item.refid)
     const symbol = buildFixtureSymbol(catalog.kind, item.width, item.height)

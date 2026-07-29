@@ -1,8 +1,4 @@
-import {
-  DOOR_SWING_TUNING,
-  wallRescueMatch,
-  type RefMatch,
-} from './door-swing-filter-matching'
+import { DOOR_SWING_TUNING, wallRescueMatch, type RefMatch } from './door-swing-filter-matching'
 import type {
   DoorSwingDiagnosticStatus,
   DoorSwingHypothesis,
@@ -43,12 +39,7 @@ export function buildWallRejectedFillCandidates(params: {
     if (row.status !== ('rejected_outside_or_wall' satisfies DoorSwingDiagnosticStatus)) continue
     if (row.className !== 'wall') continue
     // Size + ruimere aspect-gate; area/fill-abs bewust niet (Stage-2 fill beslist).
-    const match = matchWallRescue(
-      row.bbox,
-      params.refBands,
-      params.sizeBand,
-      aspectToleranceRatio,
-    )
+    const match = matchWallRescue(row.bbox, params.refBands, params.sizeBand, aspectToleranceRatio)
     if (!match) continue
     candidates.push({
       id: `door-swing-wall-fill-${row.root}`,

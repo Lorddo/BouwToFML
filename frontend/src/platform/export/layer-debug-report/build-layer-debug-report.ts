@@ -191,21 +191,20 @@ export function buildLayerDebugReport(params: {
   openings?: LayerDebugOpeningsInput
 }): LayerDebugReport {
   const debug = params.output?.pipelineV3Debug
-  const junctionKindCounts =
-    debug?.summary?.junctionKindCounts ?? {
-      ...(debug?.layers.layer1 ? { layer1: countJunctionKinds(debug.layers.layer1.junctions) } : {}),
-      ...(debug?.layers.layer2 ? { layer2: countJunctionKinds(debug.layers.layer2.junctions) } : {}),
-      ...(debug?.layers.layer3 ? { layer3: countJunctionKinds(debug.layers.layer3.junctions) } : {}),
-      ...(debug?.layers.layer4 ? { layer4: countJunctionKinds(debug.layers.layer4.junctions) } : {}),
-      ...(debug?.layers.layer5 ? { layer5: countJunctionKinds(debug.layers.layer5.junctions) } : {}),
-      ...(debug?.layers.layer6 ? { layer6: countJunctionKinds(debug.layers.layer6.junctions) } : {}),
-      ...(debug?.layers.layer7 ? { layer7: countJunctionKinds(debug.layers.layer7.junctions) } : {}),
-      ...(debug?.layers.layer8 ? { layer8: countJunctionKinds(debug.layers.layer8.junctions) } : {}),
-      ...(debug?.layers.layer9 ? { layer9: countJunctionKinds(debug.layers.layer9.junctions) } : {}),
-      ...(debug?.layers.layer10
-        ? { layer10: countJunctionKinds(debug.layers.layer10.junctions) }
-        : {}),
-    }
+  const junctionKindCounts = debug?.summary?.junctionKindCounts ?? {
+    ...(debug?.layers.layer1 ? { layer1: countJunctionKinds(debug.layers.layer1.junctions) } : {}),
+    ...(debug?.layers.layer2 ? { layer2: countJunctionKinds(debug.layers.layer2.junctions) } : {}),
+    ...(debug?.layers.layer3 ? { layer3: countJunctionKinds(debug.layers.layer3.junctions) } : {}),
+    ...(debug?.layers.layer4 ? { layer4: countJunctionKinds(debug.layers.layer4.junctions) } : {}),
+    ...(debug?.layers.layer5 ? { layer5: countJunctionKinds(debug.layers.layer5.junctions) } : {}),
+    ...(debug?.layers.layer6 ? { layer6: countJunctionKinds(debug.layers.layer6.junctions) } : {}),
+    ...(debug?.layers.layer7 ? { layer7: countJunctionKinds(debug.layers.layer7.junctions) } : {}),
+    ...(debug?.layers.layer8 ? { layer8: countJunctionKinds(debug.layers.layer8.junctions) } : {}),
+    ...(debug?.layers.layer9 ? { layer9: countJunctionKinds(debug.layers.layer9.junctions) } : {}),
+    ...(debug?.layers.layer10
+      ? { layer10: countJunctionKinds(debug.layers.layer10.junctions) }
+      : {}),
+  }
   const { openings, openingsSummary } = buildOpenings(params.openings)
   const layers = debug?.layers ?? {}
   const wallTransitions = compareWallLayerTransitions(layers)
@@ -216,9 +215,7 @@ export function buildLayerDebugReport(params: {
     pipelineVersion: debug?.pipelineVersion ?? 'v3',
     roomPipelinePhase: params.output?.meta?.roomPipelinePhase,
     layers,
-    summary: debug?.summary
-      ? { ...debug.summary, junctionKindCounts }
-      : { junctionKindCounts },
+    summary: debug?.summary ? { ...debug.summary, junctionKindCounts } : { junctionKindCounts },
     ...(wallTransitions.length > 0 ? { wallTransitions } : {}),
     ...(openings ? { openings } : {}),
     ...(openingsSummary ? { openingsSummary } : {}),

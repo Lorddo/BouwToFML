@@ -12,7 +12,10 @@ import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
 import { DOOR_SPACE_POLICY } from './door-space-policy'
 import type { DoorSwingRefBand } from './types'
 
-function resolveAxisSpan(face: { bbox: { x: number; y: number; width: number; height: number } }, axis: 'x' | 'y'): number {
+function resolveAxisSpan(
+  face: { bbox: { x: number; y: number; width: number; height: number } },
+  axis: 'x' | 'y',
+): number {
   if (axis === 'x') return face.bbox.width
   return face.bbox.height
 }

@@ -1,9 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
-import {
-  resolveDoorAddPreset,
-  resolveWindowAddPreset,
-} from '@/core/fml/opening-add-presets'
+import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
 import type { FloorPlan, Point2D } from '@/core/fml/types'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import {
@@ -59,7 +56,10 @@ export function useFmlPreviewInteraction(options: {
   hitTest: HitTestApi
   selection: FmlPreviewSelectionRefs
   editor: EditorApi
-  emit: (event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick', payload?: FloorPlan | string) => void
+  emit: (
+    event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick',
+    payload?: FloorPlan | string,
+  ) => void
   containerRef: Ref<HTMLDivElement | null>
   contentGroupRef: Ref<{ getNode: () => Konva.Group } | null>
   shiftPressed: Ref<boolean>

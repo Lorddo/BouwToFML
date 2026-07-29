@@ -39,7 +39,11 @@ export function computePreviewScale(
   return maxPreviewEdge / maxEdge
 }
 
-export function formatPdfPageImageName(fileName: string, pageNumber: number, numPages: number): string {
+export function formatPdfPageImageName(
+  fileName: string,
+  pageNumber: number,
+  numPages: number,
+): string {
   if (numPages <= 1) return fileName
   return `${fileName} (pagina ${pageNumber})`
 }

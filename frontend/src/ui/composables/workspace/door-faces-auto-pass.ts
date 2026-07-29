@@ -6,10 +6,7 @@ import {
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import type { DoorSwingHypothesis } from '@/cv/doors'
-import {
-  collectAcceptedDoorFaceIds,
-  normalizeDoorSwingState,
-} from './useWorkspaceDoorSwingHelpers'
+import { collectAcceptedDoorFaceIds, normalizeDoorSwingState } from './useWorkspaceDoorSwingHelpers'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 
 export interface AutoPassState {
@@ -98,10 +95,16 @@ export async function pushStage2DoorsOntoWalls(ctx: {
   const previousAutoDoors = resolvePreviousAutoDoorFaceIds(ctx.autoPassState)
   const previousAutoBridges = resolvePreviousAutoBridgeFaceIds(ctx.autoPassState)
   const doorSync = syncDoorSwingFaceOverrides(
-    cache, faceIds, ctx.referenceWallThicknessPx, previousAutoDoors,
+    cache,
+    faceIds,
+    ctx.referenceWallThicknessPx,
+    previousAutoDoors,
   )
   const bridgeSync = syncDoorBridgeWallOverrides(
-    cache, bridgeFaceIds, ctx.referenceWallThicknessPx, previousAutoBridges,
+    cache,
+    bridgeFaceIds,
+    ctx.referenceWallThicknessPx,
+    previousAutoBridges,
   )
   const parentClaim = claimFacesInRoomRasterCache(cache, [...faceIds, ...bridgeFaceIds])
   ctx.autoPassState.lastAutoDoorFaceIds = [...new Set(faceIds)]
@@ -133,7 +136,10 @@ export function syncPurgedDoorFaceOverrides(ctx: {
 }): RoomRasterCache | null {
   const previousAuto = resolvePreviousAutoDoorFaceIds(ctx.autoPassState)
   const doorSync = syncDoorSwingFaceOverrides(
-    ctx.cache, ctx.purgeKeptFaceIds, ctx.referenceWallThicknessPx, previousAuto,
+    ctx.cache,
+    ctx.purgeKeptFaceIds,
+    ctx.referenceWallThicknessPx,
+    previousAuto,
   )
   ctx.autoPassState.lastAutoDoorFaceIds = ctx.purgeKeptFaceIds
   if (!doorSync.changed) return null

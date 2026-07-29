@@ -12,10 +12,7 @@ import { imageDimensions } from './imageUtils'
 import { useWorkspacePreprocess } from './useWorkspacePreprocess'
 import { usePreprocessVectorCache } from './usePreprocessVectorCache'
 import { useWorkspaceWallBwCompose } from './useWorkspaceWallBwCompose'
-import {
-  type PreprocessPanelLayer,
-  type TemplateTab,
-} from '@/cv/preprocess/layer-preprocess'
+import { type PreprocessPanelLayer, type TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import type { GapsInkMode } from '@/cv/gaps'
 import type { WorkspaceFlowStep } from './constants'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
@@ -205,7 +202,8 @@ export function useWorkspacePreprocessWiring(deps: {
     activeUnderlayLayer,
     scheduleLivePreprocessPreview: () => scheduleLivePreprocessPreview(),
     refreshOcrUnderlayPreview: () => refreshOcrUnderlayPreview(),
-    refreshLayerUnderlayPreview: (layer?: PreprocessPanelLayer) => refreshLayerUnderlayPreview(layer),
+    refreshLayerUnderlayPreview: (layer?: PreprocessPanelLayer) =>
+      refreshLayerUnderlayPreview(layer),
     preprocessVectorCacheClear: () => preprocessVectorCacheClear(),
     resetBakedRotation,
     bindSignaturePreview,

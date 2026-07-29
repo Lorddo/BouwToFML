@@ -6,16 +6,8 @@ import {
 } from './door-swing-mask'
 import { segmentNearDoorCentroid } from './door-wall-snap-bind'
 import { resolveCandidateSides, resolveSideMeta, round2 } from './door-wall-snap-geom'
-import {
-  findBestSegment,
-  pickBestContactSide,
-  resolveBindingScore,
-} from './door-wall-snap-scoring'
-import {
-  DOOR_WALL_SNAP_TUNING,
-  type BBoxBounds,
-  type SideContact,
-} from './door-wall-snap-tuning'
+import { findBestSegment, pickBestContactSide, resolveBindingScore } from './door-wall-snap-scoring'
+import { DOOR_WALL_SNAP_TUNING, type BBoxBounds, type SideContact } from './door-wall-snap-tuning'
 import type { BoundDoor, ResolvedDoorCandidate } from './types'
 
 const T = DOOR_WALL_SNAP_TUNING

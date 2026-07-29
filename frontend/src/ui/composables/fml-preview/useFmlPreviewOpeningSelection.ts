@@ -3,8 +3,15 @@ import {
   resolveDoorSubtypeFromRefid,
   resolveWindowSubtypeFromRefid,
 } from '@/core/fml/opening-add-presets'
-import { DEFAULT_FML_DOOR_HEIGHT_CM, DEFAULT_FML_WINDOW_SILL_Z_CM } from '@/core/fml/extraction-to-plan-types'
-import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from '@/ui/components/fml-preview-doors'
+import {
+  DEFAULT_FML_DOOR_HEIGHT_CM,
+  DEFAULT_FML_WINDOW_SILL_Z_CM,
+} from '@/core/fml/extraction-to-plan-types'
+import {
+  buildMirrored,
+  resolveHingeAtStart,
+  resolveSwingSign,
+} from '@/ui/components/fml-preview-doors'
 import {
   clampOpeningHeight,
   clampOpeningSillZ,
@@ -25,13 +32,8 @@ export function useFmlPreviewOpeningSelection(options: {
   cancelMoveDragPending: () => void
   cancelOpeningDragPending: () => void
 }) {
-  const {
-    editor,
-    selection,
-    syncPlanToParent,
-    cancelMoveDragPending,
-    cancelOpeningDragPending,
-  } = options
+  const { editor, selection, syncPlanToParent, cancelMoveDragPending, cancelOpeningDragPending } =
+    options
 
   const {
     settingsWallIds,
@@ -116,7 +118,8 @@ export function useFmlPreviewOpeningSelection(options: {
     } else if (located) {
       const existing = selectedOpenings()
       const sameType =
-        existing.length === 0 || existing.every((item) => item.opening.type === located.opening.type)
+        existing.length === 0 ||
+        existing.every((item) => item.opening.type === located.opening.type)
       settingsOpeningIds.value = sameType ? [...current, openingId] : [openingId]
     } else {
       settingsOpeningIds.value = [...current, openingId]

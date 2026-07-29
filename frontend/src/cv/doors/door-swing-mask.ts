@@ -327,8 +327,7 @@ export function measureSwingMaskSideContacts(params: {
       }
     }
 
-    const sideLength =
-      side === 'left' || side === 'right' ? Math.max(1, mh) : Math.max(1, mw)
+    const sideLength = side === 'left' || side === 'right' ? Math.max(1, mh) : Math.max(1, mw)
     const edgeMid =
       side === 'left'
         ? { x: offsetX, y: sampleCount > 0 ? midSumY / sampleCount : offsetY + mh / 2 }

@@ -1,7 +1,4 @@
-import {
-  rebindFaceDualWhite,
-  type FaceDualSpace,
-} from './face-dual-space'
+import { rebindFaceDualWhite, type FaceDualSpace } from './face-dual-space'
 import { detachEnclosedChildrenForOpeningSeeds } from './opening-seed-detach'
 import type { RoomRasterClass } from './room-ink-classify'
 import type { RasterRoomComponent } from './room-raster'
@@ -31,8 +28,7 @@ export function prepareOpeningPipeDual(
   params: PrepareOpeningPipeDualParams = {},
 ): PrepareOpeningPipeDualResult {
   const parentMap = params.parentMap ?? dual.white.parentMap
-  const classificationByLabel =
-    params.classificationByLabel ?? dual.white.classificationByLabel
+  const classificationByLabel = params.classificationByLabel ?? dual.white.classificationByLabel
   const components = params.components ?? dual.white.components
 
   const detached = detachEnclosedChildrenForOpeningSeeds({

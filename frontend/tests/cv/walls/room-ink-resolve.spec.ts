@@ -9,10 +9,7 @@ import {
   WALL_INK_REACH_BOOSTER,
 } from '@/cv/walls/rooms/room-ink-resolve'
 
-function component(
-  label: number,
-  touchesBorder = false,
-): RasterRoomComponent {
+function component(label: number, touchesBorder = false): RasterRoomComponent {
   return {
     label,
     areaPx: 100,

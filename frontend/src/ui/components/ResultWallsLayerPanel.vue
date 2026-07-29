@@ -40,68 +40,128 @@ const emit = defineEmits<{
   <div class="panel layers-panel">
     <p class="section-label">Eindlagen</p>
     <label>
-      <input :checked="showLayer10" type="checkbox" @change="emit('toggleLayer10', ($event.target as HTMLInputElement).checked)" />
+      <input
+        :checked="showLayer10"
+        type="checkbox"
+        @change="emit('toggleLayer10', ($event.target as HTMLInputElement).checked)"
+      />
       Laag 10 (muren FML)
     </label>
     <label>
-      <input :checked="showLayer12" type="checkbox" @change="emit('toggleLayer12', ($event.target as HTMLInputElement).checked)" />
+      <input
+        :checked="showLayer12"
+        type="checkbox"
+        @change="emit('toggleLayer12', ($event.target as HTMLInputElement).checked)"
+      />
       Laag 12 (deur swing)
     </label>
     <label>
-      <input :checked="showLayer14" type="checkbox" @change="emit('toggleLayer14', ($event.target as HTMLInputElement).checked)" />
+      <input
+        :checked="showLayer14"
+        type="checkbox"
+        @change="emit('toggleLayer14', ($event.target as HTMLInputElement).checked)"
+      />
       Laag 14 (raam bind)
     </label>
 
     <details class="intermediate-details">
       <summary>Tussenlagen</summary>
       <label>
-        <input :checked="showSkeleton" type="checkbox" @change="emit('toggleSkeleton', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showSkeleton"
+          type="checkbox"
+          @change="emit('toggleSkeleton', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 1
       </label>
       <label>
-        <input :checked="showSkeletonLayerB" type="checkbox" @change="emit('toggleSkeletonLayerB', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showSkeletonLayerB"
+          type="checkbox"
+          @change="emit('toggleSkeletonLayerB', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 2
       </label>
       <label>
-        <input :checked="showSemanticLayerC" type="checkbox" @change="emit('toggleSemanticLayerC', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showSemanticLayerC"
+          type="checkbox"
+          @change="emit('toggleSemanticLayerC', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 3
       </label>
       <label>
-        <input :checked="showLayer4" type="checkbox" @change="emit('toggleLayer4', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer4"
+          type="checkbox"
+          @change="emit('toggleLayer4', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 4
       </label>
       <label>
-        <input :checked="showLayer5" type="checkbox" @change="emit('toggleLayer5', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer5"
+          type="checkbox"
+          @change="emit('toggleLayer5', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 5
       </label>
       <label>
-        <input :checked="showLayer6" type="checkbox" @change="emit('toggleLayer6', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer6"
+          type="checkbox"
+          @change="emit('toggleLayer6', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 6
       </label>
       <label>
-        <input :checked="showLayer7" type="checkbox" @change="emit('toggleLayer7', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer7"
+          type="checkbox"
+          @change="emit('toggleLayer7', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 7
       </label>
       <label>
-        <input :checked="showLayer8" type="checkbox" @change="emit('toggleLayer8', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer8"
+          type="checkbox"
+          @change="emit('toggleLayer8', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 8
       </label>
       <label>
-        <input :checked="showLayer9" type="checkbox" @change="emit('toggleLayer9', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer9"
+          type="checkbox"
+          @change="emit('toggleLayer9', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 9 (dissolve)
       </label>
       <label>
-        <input :checked="showLayer11" type="checkbox" @change="emit('toggleLayer11', ($event.target as HTMLInputElement).checked)" />
+        <input
+          :checked="showLayer11"
+          type="checkbox"
+          @change="emit('toggleLayer11', ($event.target as HTMLInputElement).checked)"
+        />
         Laag 11 (deur snap)
       </label>
     </details>
 
     <label>
-      <input :checked="showWallLines" type="checkbox" @change="emit('toggleWallLines', ($event.target as HTMLInputElement).checked)" />
+      <input
+        :checked="showWallLines"
+        type="checkbox"
+        @change="emit('toggleWallLines', ($event.target as HTMLInputElement).checked)"
+      />
       Centerlines
     </label>
     <label>
-      <input :checked="showLines" type="checkbox" @change="emit('toggleLines', ($event.target as HTMLInputElement).checked)" />
+      <input
+        :checked="showLines"
+        type="checkbox"
+        @change="emit('toggleLines', ($event.target as HTMLInputElement).checked)"
+      />
       Ruwe lijnen
     </label>
   </div>

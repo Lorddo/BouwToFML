@@ -52,10 +52,7 @@ export type ImprovementKind =
   | 'gap_synthesized'
 
 export type RegressionKind =
-  | 'segment_lost'
-  | 'length_shrunk'
-  | 'junction_regressed'
-  | 'lateral_drift'
+  'segment_lost' | 'length_shrunk' | 'junction_regressed' | 'lateral_drift'
 
 export interface TransitionEffect {
   kind: 'improvement' | 'regression'
@@ -112,11 +109,7 @@ export interface AddedSegmentDiff {
 }
 
 export type SegmentTransitionItem =
-  | KeptSegmentDiff
-  | MovedSegmentDiff
-  | MergedSegmentDiff
-  | DroppedSegmentDiff
-  | AddedSegmentDiff
+  KeptSegmentDiff | MovedSegmentDiff | MergedSegmentDiff | DroppedSegmentDiff | AddedSegmentDiff
 
 export interface JunctionRef {
   index: number
@@ -159,10 +152,7 @@ export interface JunctionAddedDiff {
 }
 
 export type JunctionTransitionItem =
-  | JunctionKeptDiff
-  | JunctionShiftedDiff
-  | JunctionDroppedDiff
-  | JunctionAddedDiff
+  JunctionKeptDiff | JunctionShiftedDiff | JunctionDroppedDiff | JunctionAddedDiff
 
 export interface LayerTransitionDiff {
   from: LayerTransitionId

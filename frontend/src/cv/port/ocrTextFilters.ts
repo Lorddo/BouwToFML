@@ -34,10 +34,7 @@ function singleLetterMinConfidence(minConfidence: number, pass: OcrScanPass): nu
   return Math.max(minConfidence, 50)
 }
 
-function isTinyLowConfidenceNoise(
-  word: OcrTextCandidate,
-  minConfidence: number,
-): boolean {
+function isTinyLowConfidenceNoise(word: OcrTextCandidate, minConfidence: number): boolean {
   const token = word.text.trim()
   if (token.length > 2) return false
   const shortSide = Math.min(word.width, word.height)
@@ -146,7 +143,11 @@ export function resolveOverlappingHits(words: OcrWordHit[]): OcrWordHit[] {
 
     if (singleCharVertical && conflict.text.trim().length >= 1) continue
     if (sameArea && word.text.trim().length < conflict.text.trim().length) continue
-    if (sameArea && word.text.trim().length === conflict.text.trim().length && word.confidence <= conflict.confidence) {
+    if (
+      sameArea &&
+      word.text.trim().length === conflict.text.trim().length &&
+      word.confidence <= conflict.confidence
+    ) {
       continue
     }
     kept.push(word)
@@ -196,8 +197,7 @@ function gapBetweenBoxes(a: OcrWordHit, b: OcrWordHit): number {
   const bBottom = b.y + b.height
 
   if (a.pass === 'vertical') {
-    const verticalGap =
-      b.y >= aBottom ? b.y - aBottom : a.y >= bBottom ? a.y - bBottom : 0
+    const verticalGap = b.y >= aBottom ? b.y - aBottom : a.y >= bBottom ? a.y - bBottom : 0
     return verticalGap
   }
 
@@ -285,13 +285,7 @@ export function filterAndMergeOcrHits(
   const underlayMaxEdgePx = params.underlayMaxEdgePx ?? OCR_UNDERLAY_FALLBACK_MAX_EDGE_PX
   const filtered = dedupeWordHits(words, underlayMaxEdgePx).filter((word) => {
     if (word.confidence < params.minConfidence) return false
-    return looksLikeTextToken(
-      word,
-      params.mode,
-      word.pass,
-      params.minConfidence,
-      underlayMaxEdgePx,
-    )
+    return looksLikeTextToken(word, params.mode, word.pass, params.minConfidence, underlayMaxEdgePx)
   })
   const merged = mergeAdjacentWordHits(filtered)
   return resolveOverlappingHits(merged).map(stripPass)

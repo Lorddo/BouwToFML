@@ -43,7 +43,9 @@ export type WorkspaceFacadeContext = {
   imageName: Ref<string | null>
   drawingProfileId: Ref<DrawingProfileId>
   profileConfirmed: Ref<boolean>
-  activeDrawingProfile: ComputedRef<ReturnType<typeof import('@/platform/profile').getDrawingProfile>>
+  activeDrawingProfile: ComputedRef<
+    ReturnType<typeof import('@/platform/profile').getDrawingProfile>
+  >
   referenceWallThicknessPx: Ref<number | null>
   wallPipelineVersion: Ref<WallPipelineVersion>
   showOcrDetails: Ref<boolean>
@@ -93,9 +95,7 @@ export type WorkspaceFacadeContext = {
   doorSwingFaces?: ReturnType<
     typeof import('./useWorkspaceDoorSwingFaces').useWorkspaceDoorSwingFaces
   >
-  windowFaces?: ReturnType<
-    typeof import('./useWorkspaceWindowFaces').useWorkspaceWindowFaces
-  >
+  windowFaces?: ReturnType<typeof import('./useWorkspaceWindowFaces').useWorkspaceWindowFaces>
   toolbelt: ReturnType<typeof useWorkspaceToolbelt>
   recalculateFaces: () => Promise<boolean>
   ocr: ReturnType<typeof useWorkspaceOcr>
@@ -127,7 +127,9 @@ function sliceCore(ctx: WorkspaceFacadeContext) {
     tabOutputs: ctx.tabOutputs,
     flowStep: ctx.flowStep,
     preprocessLayerTabs: computed(() => visiblePreprocessLayerTabs()),
-    templateLayerTabs: computed(() => visibleTemplateLayerTabs(ctx.preprocess.value.ocrEnabled ?? false)),
+    templateLayerTabs: computed(() =>
+      visibleTemplateLayerTabs(ctx.preprocess.value.ocrEnabled ?? false),
+    ),
     resultLayerTabs: RESULT_LAYER_TABS,
     RESULT_TAB_LABELS,
   }

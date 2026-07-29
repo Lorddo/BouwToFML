@@ -226,10 +226,10 @@ export function buildDoorSwingReportHtml(params: {
       ? `<section class="panel">
     <h2>Gaten-context (input voor deuren)</h2>
     <p>demoted ${params.gapsContext.demotedCount} · kept ${params.gapsContext.keptCount}${
-          params.gapsContext.oversizedDemotedCount != null
-            ? ` · oversized ${params.gapsContext.oversizedDemotedCount}`
-            : ''
-        }</p>
+      params.gapsContext.oversizedDemotedCount != null
+        ? ` · oversized ${params.gapsContext.oversizedDemotedCount}`
+        : ''
+    }</p>
     <p class="muted">ref max area ${Math.round(params.gapsContext.maxRefFaceAreaPx ?? 0)} px · area cap ${Math.round(params.gapsContext.refFaceAreaCapPx ?? 0)} px</p>
   </section>`
       : ''

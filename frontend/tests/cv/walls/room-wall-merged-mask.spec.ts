@@ -8,11 +8,7 @@ describe('buildMergedWallFaceMaskData', () => {
   it('unioneert alleen wall-classified roots', () => {
     const width = 5
     const height = 3
-    const labelsData = new Int32Array([
-      0, 1, 1, 0, 0,
-      2, 2, 3, 3, 0,
-      0, 0, 0, 0, 0,
-    ])
+    const labelsData = new Int32Array([0, 1, 1, 0, 0, 2, 2, 3, 3, 0, 0, 0, 0, 0, 0])
     const parentMap = new Map<number, number>([
       [1, 1],
       [2, 2],
@@ -44,7 +40,10 @@ describe('buildMergedWallFaceMaskData', () => {
     const width = 4
     const height = 2
     const labelsData = new Int32Array([1, 1, 2, 2, 1, 0, 2, 2])
-    const parentMap = new Map<number, number>([[1, 1], [2, 2]])
+    const parentMap = new Map<number, number>([
+      [1, 1],
+      [2, 2],
+    ])
     const classificationByLabel = new Map<number, 'wall' | 'surface'>([
       [1, 'wall'],
       [2, 'wall'],

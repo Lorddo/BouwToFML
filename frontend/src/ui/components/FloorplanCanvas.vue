@@ -295,10 +295,7 @@ defineExpose({ fit, imageObj, imgSize })
     >
       <v-layer>
         <v-group ref="underlayGroupRef" :config="underlayGroupConfig">
-          <v-image
-            v-if="imageObj"
-            :config="baseImageConfig"
-          />
+          <v-image v-if="imageObj" :config="baseImageConfig" />
           <v-image
             v-if="rasterOverlayObj && showRasterOverlay"
             :config="{
@@ -357,7 +354,12 @@ defineExpose({ fit, imageObj, imgSize })
           <v-line
             v-if="inkLineDraftStart && inkLineDraftEnd"
             :config="{
-              points: [inkLineDraftStart.x, inkLineDraftStart.y, inkLineDraftEnd.x, inkLineDraftEnd.y],
+              points: [
+                inkLineDraftStart.x,
+                inkLineDraftStart.y,
+                inkLineDraftEnd.x,
+                inkLineDraftEnd.y,
+              ],
               stroke: '#0f172a',
               strokeWidth: Math.max(1, inkBrushSize) / Math.max(0.01, stageScale),
               listening: false,
@@ -366,8 +368,14 @@ defineExpose({ fit, imageObj, imgSize })
           <v-rect
             v-if="faceBoxPreviewRect"
             :config="{
-              x: faceBoxPreviewRect.width < 0 ? faceBoxPreviewRect.x + faceBoxPreviewRect.width : faceBoxPreviewRect.x,
-              y: faceBoxPreviewRect.height < 0 ? faceBoxPreviewRect.y + faceBoxPreviewRect.height : faceBoxPreviewRect.y,
+              x:
+                faceBoxPreviewRect.width < 0
+                  ? faceBoxPreviewRect.x + faceBoxPreviewRect.width
+                  : faceBoxPreviewRect.x,
+              y:
+                faceBoxPreviewRect.height < 0
+                  ? faceBoxPreviewRect.y + faceBoxPreviewRect.height
+                  : faceBoxPreviewRect.y,
               width: Math.abs(faceBoxPreviewRect.width),
               height: Math.abs(faceBoxPreviewRect.height),
               stroke: faceBoxPreviewStroke,

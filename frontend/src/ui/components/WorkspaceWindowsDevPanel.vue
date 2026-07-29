@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import {
-  CONCEPT_WINDOW_REFID,
-  WINDOW_DOUBLE_REFID,
-  WINDOW_TRIPLE_REFID,
-} from '@/core/fml/types'
+import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
 import type {
   BoundWindow,
   ResolvedWindowCandidate,
@@ -94,7 +90,8 @@ function shortRefId(refid: string): string {
     <details v-if="windowFaceStats" class="fold">
       <summary>
         Stats · {{ windowFaceStats.stage }} · {{ windowFaceStats.hypothesisCount }} zichtbaar · S3
-        {{ windowFaceStats.stage3AcceptedCount }} · S4 {{ windowFaceStats.stage4ResolvedCount }} · L14
+        {{ windowFaceStats.stage3AcceptedCount }} · S4 {{ windowFaceStats.stage4ResolvedCount }} ·
+        L14
         {{ boundWindows?.length ?? 0 }}
       </summary>
       <ul class="stat-list">
@@ -174,9 +171,10 @@ function shortRefId(refid: string): string {
               {{ window.heightPx.toFixed(1) }}px / {{ window.heightCm.toFixed(2) }}cm
             </td>
             <td>
-              bbox {{ window.bbox.width.toFixed(1) }}×{{ window.bbox.height.toFixed(1) }} @
-              ({{ window.bbox.x.toFixed(1) }}, {{ window.bbox.y.toFixed(1) }}) · centroid
-              ({{ window.centroidPx.x.toFixed(1) }}, {{ window.centroidPx.y.toFixed(1) }})
+              bbox {{ window.bbox.width.toFixed(1) }}×{{ window.bbox.height.toFixed(1) }} @ ({{
+                window.bbox.x.toFixed(1)
+              }}, {{ window.bbox.y.toFixed(1) }}) · centroid ({{ window.centroidPx.x.toFixed(1) }},
+              {{ window.centroidPx.y.toFixed(1) }})
             </td>
           </tr>
         </tbody>

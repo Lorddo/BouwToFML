@@ -41,7 +41,4 @@ export {
   refineWallClassificationByKeptMask,
 } from './room-ink-classify-autoclass'
 
-export {
-  renderClassifiedFaceMask,
-  paintClassifiedFaceMaskRegion,
-} from './room-ink-classify-render'
+export { renderClassifiedFaceMask, paintClassifiedFaceMaskRegion } from './room-ink-classify-render'

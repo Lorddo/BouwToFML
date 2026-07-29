@@ -109,14 +109,18 @@ function tryFramingPath(params: {
       continue
     }
     const center = axisCenter(face.bbox, orientation)
-    const distanceToStart = Math.abs(axisEnd(face.bbox, orientation) - axisStart(hypBbox, orientation))
+    const distanceToStart = Math.abs(
+      axisEnd(face.bbox, orientation) - axisStart(hypBbox, orientation),
+    )
     if (center <= startThreshold && distanceToStart <= sideDistancePx) {
       sawSideCandidate = true
       if (!bestStart || distanceToStart < bestStart.distance) {
         bestStart = { faceId: face.root, distance: distanceToStart }
       }
     }
-    const distanceToEnd = Math.abs(axisStart(face.bbox, orientation) - axisEnd(hypBbox, orientation))
+    const distanceToEnd = Math.abs(
+      axisStart(face.bbox, orientation) - axisEnd(hypBbox, orientation),
+    )
     if (center >= endThreshold && distanceToEnd <= sideDistancePx) {
       sawSideCandidate = true
       if (!bestEnd || distanceToEnd < bestEnd.distance) {

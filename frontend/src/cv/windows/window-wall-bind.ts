@@ -64,10 +64,12 @@ function bboxCorners(bbox: BBox): Point2D[] {
 }
 
 /** Projecteer bbox-uiteinden langs de segment-as → opening start/end + mid-t. */
-function resolveOpeningSpan(params: {
-  bbox: BBox
-  segment: SemanticWallSegment
-}): { start: Point2D; end: Point2D; t: number; widthPx: number } {
+function resolveOpeningSpan(params: { bbox: BBox; segment: SemanticWallSegment }): {
+  start: Point2D
+  end: Point2D
+  t: number
+  widthPx: number
+} {
   const projections = bboxCorners(params.bbox).map((corner) =>
     projectPointToSegment(corner, params.segment),
   )
@@ -86,10 +88,7 @@ function resolveOpeningSpan(params: {
   }
 }
 
-function projectedSpanOverlapRatio(params: {
-  bbox: BBox
-  segment: SemanticWallSegment
-}): number {
+function projectedSpanOverlapRatio(params: { bbox: BBox; segment: SemanticWallSegment }): number {
   const projections = bboxCorners(params.bbox).map((corner) =>
     projectPointToSegment(corner, params.segment),
   )

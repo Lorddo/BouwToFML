@@ -1,10 +1,7 @@
 import { ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
-import {
-  type MeasureLine,
-  measureDistanceCm,
-} from './fml-preview-measure'
+import { type MeasureLine, measureDistanceCm } from './fml-preview-measure'
 
 let measureIdCounter = 0
 

@@ -74,7 +74,9 @@ export type Layer8FinalizePolicy = {
   prune: PrunePolicy
 }
 
-export function resolveLayer8FinalizePolicy(referenceWallThicknessPx?: number): Layer8FinalizePolicy {
+export function resolveLayer8FinalizePolicy(
+  referenceWallThicknessPx?: number,
+): Layer8FinalizePolicy {
   const scale = resolvePipelineScale(referenceWallThicknessPx)
   const thicknessFallbackPx = scale.thicknessFallbackRefPx
   return {

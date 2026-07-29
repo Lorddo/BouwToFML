@@ -8,11 +8,14 @@ export interface Segment2 {
   b: Point2
 }
 
-export interface WallGraph2<Node extends { id: string; x: number; y: number }, Edge extends {
-  a: string
-  b: string
-  segment: Segment2
-}> {
+export interface WallGraph2<
+  Node extends { id: string; x: number; y: number },
+  Edge extends {
+    a: string
+    b: string
+    segment: Segment2
+  },
+> {
   nodes: Node[]
   edges: Edge[]
 }
@@ -74,8 +77,12 @@ export function scaleWallGraphToOriginal<
       ...edge,
       segment: {
         ...edge.segment,
-        a: aNode ? { x: aNode.x, y: aNode.y } : { x: edge.segment.a.x * inv, y: edge.segment.a.y * inv },
-        b: bNode ? { x: bNode.x, y: bNode.y } : { x: edge.segment.b.x * inv, y: edge.segment.b.y * inv },
+        a: aNode
+          ? { x: aNode.x, y: aNode.y }
+          : { x: edge.segment.a.x * inv, y: edge.segment.a.y * inv },
+        b: bNode
+          ? { x: bNode.x, y: bNode.y }
+          : { x: edge.segment.b.x * inv, y: edge.segment.b.y * inv },
       },
     }
   })

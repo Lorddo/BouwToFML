@@ -1,10 +1,6 @@
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { collectNeighborsViaWallInkBridge } from '@/cv/walls/rooms/wall-ink-bridge'
-import type {
-  DoorSizeBandPx,
-  DoorSwingHypothesis,
-  DoorSwingRefBand,
-} from './types'
+import type { DoorSizeBandPx, DoorSwingHypothesis, DoorSwingRefBand } from './types'
 import {
   DOOR_SWING_TUNING,
   bestAspectRef,
@@ -85,8 +81,7 @@ function pickBestNeighbor(params: {
     if (nextBbox.width > maxWpx && nextBbox.width > params.currentBbox.width) continue
     if (nextBbox.height > maxHpx && nextBbox.height > params.currentBbox.height) continue
     const nextUnderfill =
-      Math.max(0, targetWpx - nextBbox.width) +
-      Math.max(0, targetHpx - nextBbox.height)
+      Math.max(0, targetWpx - nextBbox.width) + Math.max(0, targetHpx - nextBbox.height)
     const reduction = baseUnderfill - nextUnderfill
     if (reduction <= 0) continue
     const aspectRelDiff = Math.abs(bboxAspect(nextBbox) - refAspect) / refAspect
@@ -154,7 +149,9 @@ export function absorbInBandNeighbors(params: {
     if (candidateRoots.length === 0) break
     const candidates = candidateRoots
       .map((root) => params.rootFaces.get(root))
-      .filter((face): face is RootFace => !!face && isClusterableFace(face, params.allowedSeedClasses))
+      .filter(
+        (face): face is RootFace => !!face && isClusterableFace(face, params.allowedSeedClasses),
+      )
       .sort((a, b) => a.areaPx - b.areaPx || a.root - b.root)
     let absorbedAny = false
     for (const candidate of candidates) {
@@ -215,7 +212,11 @@ export function growClusterForRef(params: {
   aspectToleranceRatio: number
   maxClusterSize: number
   allowedSeedClasses?: ReadonlySet<RoomRasterClass>
-}): { roots: number[]; union: { x: number; y: number; width: number; height: number }; match: RefMatch } | null {
+}): {
+  roots: number[]
+  union: { x: number; y: number; width: number; height: number }
+  match: RefMatch
+} | null {
   const ref = params.refBands[0]
   if (!ref) return null
   const clusterRoots: number[] = [params.seed]

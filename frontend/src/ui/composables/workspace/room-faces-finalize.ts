@@ -10,9 +10,7 @@ import {
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 
-export function wallsFinalizeOutputValid(
-  output: ExtractionOutput | null | undefined,
-): boolean {
+export function wallsFinalizeOutputValid(output: ExtractionOutput | null | undefined): boolean {
   return isFinalizeTabOutput(output)
 }
 

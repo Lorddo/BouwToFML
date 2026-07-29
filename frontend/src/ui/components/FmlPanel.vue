@@ -95,7 +95,9 @@ const emit = defineEmits<{
       <template v-if="generatedStats.doors > 0"> · {{ generatedStats.doors }} deuren</template>
       <template v-if="generatedStats.windows > 0"> · {{ generatedStats.windows }} ramen</template>
     </p>
-    <p v-else-if="!scaleConfirmed" class="fml-hint">Bevestig eerst de schaal om de FML-preview te zien.</p>
+    <p v-else-if="!scaleConfirmed" class="fml-hint">
+      Bevestig eerst de schaal om de FML-preview te zien.
+    </p>
     <p v-else-if="!hasCombinedOutput" class="fml-hint">Rond muurdetectie af voor de FML-preview.</p>
 
     <FmlPanelHeights

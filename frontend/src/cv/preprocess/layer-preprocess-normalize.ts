@@ -250,10 +250,7 @@ export function isColorThresholdEnabled(config: PreprocessConfig | PreprocessLay
   return true
 }
 
-function readLayerTune(
-  config: PreprocessConfig,
-  layer: PreprocessLayerId,
-): PreprocessLayerTune {
+function readLayerTune(config: PreprocessConfig, layer: PreprocessLayerId): PreprocessLayerTune {
   const stored = normalizeStoredPreprocess(config)
   const key = layerTuneStorageKey(layer)
   return stored[key] ?? defaultLayerTune(layer)
@@ -280,8 +277,7 @@ export function resolveLayerPreprocess(
     useAdaptive: tune.useAdaptive ?? false,
     colorThresholdEnabled: tune.colorThresholdEnabled,
     thresholdEnabled: tune.thresholdEnabled,
-    thresholdMode:
-      tune.thresholdMode ?? (tune.useAdaptive ? 'adaptive' : 'fixed'),
+    thresholdMode: tune.thresholdMode ?? (tune.useAdaptive ? 'adaptive' : 'fixed'),
     preBinarizeEnabled: tune.preBinarizeEnabled ?? false,
     preBinarizeThreshold: tune.preBinarizeThreshold ?? 150,
     adaptiveBlockSize: tune.adaptiveBlockSize ?? 11,

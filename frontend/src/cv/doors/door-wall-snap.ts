@@ -181,7 +181,10 @@ export function snapDoorsToWalls(params: {
 
     const wallUnion =
       adjacentWallBBoxes.length > 0
-        ? adjacentWallBBoxes.reduce((acc, box) => (acc ? unionBBoxBounds(acc, box) : { ...box }), null as BBoxBounds | null)
+        ? adjacentWallBBoxes.reduce(
+            (acc, box) => (acc ? unionBBoxBounds(acc, box) : { ...box }),
+            null as BBoxBounds | null,
+          )
         : null
     if (wallUnion) {
       const pathBSeg = tryBindDoorToAnchorSegment({

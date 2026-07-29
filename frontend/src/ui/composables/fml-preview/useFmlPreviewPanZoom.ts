@@ -14,14 +14,12 @@ export function useFmlPreviewPanZoom(options: {
 }) {
   const { viewport, containerRef, isPanDragging, onBeforePan } = options
 
-  let panDrag:
-    | {
-        startClientX: number
-        startClientY: number
-        startViewX: number
-        startViewY: number
-      }
-    | null = null
+  let panDrag: {
+    startClientX: number
+    startClientY: number
+    startViewX: number
+    startViewY: number
+  } | null = null
 
   function onPanDragMove(event: MouseEvent): void {
     if (!panDrag) return

@@ -10,7 +10,8 @@ export function toLayer12DoorForFml(
   pxPerMmY: number,
 ): Layer12DoorForFml | null {
   // FML = kozijn-buiten tot kozijn-buiten (niet alleen clear blad).
-  if (!Number.isFinite(door.openingStartPx.x) || !Number.isFinite(door.openingStartPx.y)) return null
+  if (!Number.isFinite(door.openingStartPx.x) || !Number.isFinite(door.openingStartPx.y))
+    return null
   if (!Number.isFinite(door.openingEndPx.x) || !Number.isFinite(door.openingEndPx.y)) return null
   const widthCm = spanWidthCmBetweenPoints(
     door.openingStartPx,
@@ -33,8 +34,10 @@ export function toLayer12DoorForFml(
 
 /** Map L14 BoundWindow → FML DTO; null als span ongeldig. openingBBox blijft op BoundWindow (merge/overlays). */
 export function toLayer14WindowForFml(window: BoundWindow): Layer14WindowForFml | null {
-  if (!Number.isFinite(window.openingStartPx.x) || !Number.isFinite(window.openingStartPx.y)) return null
-  if (!Number.isFinite(window.openingEndPx.x) || !Number.isFinite(window.openingEndPx.y)) return null
+  if (!Number.isFinite(window.openingStartPx.x) || !Number.isFinite(window.openingStartPx.y))
+    return null
+  if (!Number.isFinite(window.openingEndPx.x) || !Number.isFinite(window.openingEndPx.y))
+    return null
   if (!isValidOpeningSpanCm(window.widthCm) && !(window.widthPx > 0)) return null
   return {
     windowId: window.windowId,

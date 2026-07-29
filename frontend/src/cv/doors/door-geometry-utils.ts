@@ -2,7 +2,11 @@ import type { RefBBox } from '@/cv/refs/types'
 
 export type BBoxBounds = { x0: number; y0: number; x1: number; y1: number }
 
-export function clampRefBBoxToImage(bbox: RefBBox, width: number, height: number): BBoxBounds | null {
+export function clampRefBBoxToImage(
+  bbox: RefBBox,
+  width: number,
+  height: number,
+): BBoxBounds | null {
   const x0 = Math.max(0, Math.floor(bbox.x))
   const y0 = Math.max(0, Math.floor(bbox.y))
   const x1 = Math.min(width, Math.ceil(bbox.x + bbox.width))

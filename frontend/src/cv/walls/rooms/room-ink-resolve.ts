@@ -203,7 +203,16 @@ function buildNearestFaceField(params: {
         continue
       }
 
-      if (isNearestFaceBetter(nextDist, curLabel, curNearest, nearestLabel[nidx] ?? -1, labelClass, wallReach)) {
+      if (
+        isNearestFaceBetter(
+          nextDist,
+          curLabel,
+          curNearest,
+          nearestLabel[nidx] ?? -1,
+          labelClass,
+          wallReach,
+        )
+      ) {
         nearestDist[nidx] = nextDist
         nearestLabel[nidx] = curLabel
         queue.push(nidx)
@@ -312,7 +321,16 @@ function buildNearestFaceFieldInRegion(params: {
         continue
       }
 
-      if (isNearestFaceBetter(nextDist, curLabel, curNearest, nearestLabel[nLocal] ?? -1, labelClass, wallReach)) {
+      if (
+        isNearestFaceBetter(
+          nextDist,
+          curLabel,
+          curNearest,
+          nearestLabel[nLocal] ?? -1,
+          labelClass,
+          wallReach,
+        )
+      ) {
         nearestDist[nLocal] = nextDist
         nearestLabel[nLocal] = curLabel
         queue.push(nLocal)

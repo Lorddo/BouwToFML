@@ -1,9 +1,5 @@
 import { unionFaceBBox } from '@/cv/walls/rooms/face-dual-space'
-import {
-  CONCEPT_WINDOW_REFID,
-  WINDOW_DOUBLE_REFID,
-  WINDOW_TRIPLE_REFID,
-} from '@/core/fml/types'
+import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
 import type { BoundWindow } from './types'
 
 type BBox = { x: number; y: number; width: number; height: number }
@@ -42,7 +38,11 @@ function relativeDiff(a: number, b: number): number {
   return Math.abs(a - b) / max
 }
 
-function sizesCompatible(a: BoundWindow, b: BoundWindow, maxRatio = WINDOW_MERGE_MAX_SIZE_RATIO): boolean {
+function sizesCompatible(
+  a: BoundWindow,
+  b: BoundWindow,
+  maxRatio = WINDOW_MERGE_MAX_SIZE_RATIO,
+): boolean {
   return (
     relativeDiff(a.widthPx, b.widthPx) <= maxRatio &&
     relativeDiff(perpSpanPx(a), perpSpanPx(b)) <= maxRatio
@@ -52,7 +52,8 @@ function sizesCompatible(a: BoundWindow, b: BoundWindow, maxRatio = WINDOW_MERGE
 function canMergePair(a: BoundWindow, b: BoundWindow): boolean {
   if (a.segmentIndex !== b.segmentIndex) return false
   if (a.fmlRefId !== CONCEPT_WINDOW_REFID || b.fmlRefId !== CONCEPT_WINDOW_REFID) return false
-  if (!bboxesTouchOrOverlap(a.openingBBox, b.openingBBox, resolveMergeTouchEpsPx(a, b))) return false
+  if (!bboxesTouchOrOverlap(a.openingBBox, b.openingBBox, resolveMergeTouchEpsPx(a, b)))
+    return false
   return sizesCompatible(a, b)
 }
 
@@ -88,10 +89,7 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
       : [...allEnds].sort((a, b) => a.y - b.y || a.x - b.x)
   const openingStartPx = sortedEnds[0]!
   const openingEndPx = sortedEnds[sortedEnds.length - 1]!
-  const spanPx = Math.hypot(
-    openingEndPx.x - openingStartPx.x,
-    openingEndPx.y - openingStartPx.y,
-  )
+  const spanPx = Math.hypot(openingEndPx.x - openingStartPx.x, openingEndPx.y - openingStartPx.y)
 
   const panelCount = windows.length as 2 | 3
   const fmlRefId = panelCount === 3 ? WINDOW_TRIPLE_REFID : WINDOW_DOUBLE_REFID

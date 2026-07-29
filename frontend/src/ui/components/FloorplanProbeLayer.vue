@@ -39,14 +39,8 @@ function rectConfig(rect: { x: number; y: number; width: number; height: number 
 
 <template>
   <v-group>
-    <v-rect
-      v-if="probePreviewRect"
-      :config="rectConfig(probePreviewRect, '#2563eb')"
-    />
-    <v-rect
-      v-if="probeResultRect"
-      :config="rectConfig(probeResultRect, '#16a34a')"
-    />
+    <v-rect v-if="probePreviewRect" :config="rectConfig(probePreviewRect, '#2563eb')" />
+    <v-rect v-if="probeResultRect" :config="rectConfig(probeResultRect, '#16a34a')" />
     <v-circle v-if="markerConfig" :config="markerConfig" />
     <v-line
       v-if="probePoint"

@@ -124,11 +124,7 @@ export function useFloorplanPointerRouter(deps: {
       const stage = deps.stageRef.value?.getNode()
       if (!stage || !deps.imageObj.value) return
       const size = deps.imgSize()
-      const bounds = axisAlignedBoundsForRotation(
-        size.w,
-        size.h,
-        deps.rotationPreviewDeg() ?? 0,
-      )
+      const bounds = axisAlignedBoundsForRotation(size.w, size.h, deps.rotationPreviewDeg() ?? 0)
       deps.fitToScreen(stage, bounds.width, bounds.height)
       deps.stageScale.value = Math.max(0.01, stage.scaleX())
     },
@@ -143,12 +139,7 @@ export function useFloorplanPointerRouter(deps: {
     }
     if (e.evt.button === 0 && deps.onProbeMouseDown(p, stopDrag)) return
     if (e.evt.button === 0 && deps.onFaceBoxMouseDown(p, stopDrag)) return
-    if (
-      deps.lbeEnabled() &&
-      e.evt.button === 0 &&
-      e.evt.shiftKey &&
-      !deps.spacePressed()
-    ) {
+    if (deps.lbeEnabled() && e.evt.button === 0 && e.evt.shiftKey && !deps.spacePressed()) {
       const hit = findSelectionRectAt(p, deps.lbeRects())
       if (hit) {
         stopDrag()

@@ -6,7 +6,9 @@ import {
 } from '@/cv/walls/rooms/build-semantic-walls-output'
 import { emptyTabOutputs } from '@/cv/pipeline/merge-tab-outputs'
 
-function v3ReadyOutput(segments: Array<{ a: { x: number; y: number }; b: { x: number; y: number } }>): ExtractionOutput {
+function v3ReadyOutput(
+  segments: Array<{ a: { x: number; y: number }; b: { x: number; y: number } }>,
+): ExtractionOutput {
   return {
     candidates: [],
     meta: { extractorId: 'test', elapsedMs: 0, wallPipelineVersion: 'v3' },
@@ -18,7 +20,12 @@ function v3ReadyOutput(segments: Array<{ a: { x: number; y: number }; b: { x: nu
           junctions: [],
         },
       },
-      summary: { fmlReady: true, completedThroughLayer: 10, incompleteLayers: [], bridgeMode: 'native' },
+      summary: {
+        fmlReady: true,
+        completedThroughLayer: 10,
+        incompleteLayers: [],
+        bridgeMode: 'native',
+      },
     },
   }
 }
@@ -58,7 +65,9 @@ describe('buildSemanticWallsForOutput', () => {
     expect(wallGraph.edges.length).toBe(semantic.segments.length)
     expect(wallGraph.nodes.length).toBe(semantic.junctions.length)
     for (const seg of semantic.segments) {
-      expect(wallGraph.edges.some((e) => e.a === seg.junctionAId && e.b === seg.junctionBId)).toBe(true)
+      expect(wallGraph.edges.some((e) => e.a === seg.junctionAId && e.b === seg.junctionBId)).toBe(
+        true,
+      )
     }
   })
 
@@ -74,7 +83,12 @@ describe('buildSemanticWallsForOutput', () => {
             junctions: [],
           },
         },
-        summary: { fmlReady: false, completedThroughLayer: 8, incompleteLayers: [9, 10], bridgeMode: 'native' },
+        summary: {
+          fmlReady: false,
+          completedThroughLayer: 8,
+          incompleteLayers: [9, 10],
+          bridgeMode: 'native',
+        },
       },
     }
 

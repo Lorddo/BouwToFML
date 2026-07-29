@@ -3,14 +3,7 @@ import type { WallGraph } from '@/cv/port/wallJunctionGraph'
 
 /** Uitbreidbaar elementtype — V2 start met wall/door/window. */
 export type ElementClass =
-  | 'wall'
-  | 'door'
-  | 'window'
-  | 'stair'
-  | 'column'
-  | 'sanitary'
-  | 'furniture'
-  | 'electrical'
+  'wall' | 'door' | 'window' | 'stair' | 'column' | 'sanitary' | 'furniture' | 'electrical'
 
 export interface BoundingBox {
   x: number
@@ -150,9 +143,21 @@ export interface RoomWallSemanticGraph {
 
 export interface PreprocessVectorCacheInput {
   workScale: number
-  rawInk: Array<{ a: { x: number; y: number }; b: { x: number; y: number }; templateIndex?: number }>
-  simplifiedInk: Array<{ a: { x: number; y: number }; b: { x: number; y: number }; templateIndex?: number }>
-  skeleton: Array<{ a: { x: number; y: number }; b: { x: number; y: number }; templateIndex?: number }>
+  rawInk: Array<{
+    a: { x: number; y: number }
+    b: { x: number; y: number }
+    templateIndex?: number
+  }>
+  simplifiedInk: Array<{
+    a: { x: number; y: number }
+    b: { x: number; y: number }
+    templateIndex?: number
+  }>
+  skeleton: Array<{
+    a: { x: number; y: number }
+    b: { x: number; y: number }
+    templateIndex?: number
+  }>
   meta?: {
     rawInkCount?: number
     simplifiedInkCount?: number

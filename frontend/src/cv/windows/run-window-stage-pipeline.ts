@@ -20,9 +20,10 @@ import type {
 /** Minimum glass opening (cm) — gedeelde scale-floor voor Stage-1 min-span. */
 const MIN_WINDOW_GLASS_CM = 20
 
-export function resolveWindowMinSpanPxByOrientation(
-  ppm: { x: number; y: number },
-): Partial<Record<WindowAxelOrientation, number>> {
+export function resolveWindowMinSpanPxByOrientation(ppm: {
+  x: number
+  y: number
+}): Partial<Record<WindowAxelOrientation, number>> {
   const minWindowMm = MIN_WINDOW_GLASS_CM * 10
   return {
     horizontal: ppm.x > 0 ? ppm.x * minWindowMm : 0,
@@ -34,7 +35,10 @@ export type RunWindowStagePipelineParams = {
   /** Floor dual: Stage 1 white; cluster/door-arc/evidence ink. */
   dual: FaceDualSpace
   refBands: WindowAxelRefBand[]
-  refRects: Array<{ refIndex: number; rect: { x: number; y: number; width: number; height: number } }>
+  refRects: Array<{
+    refIndex: number
+    rect: { x: number; y: number; width: number; height: number }
+  }>
   minSpanPxByOrientation: Partial<Record<WindowAxelOrientation, number>>
   doorArcFaceIds: ReadonlySet<number>
   wallThicknessPx: number

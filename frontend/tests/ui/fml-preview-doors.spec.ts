@@ -60,15 +60,10 @@ describe('resolveSwingSpanWithinOpening', () => {
 
 describe('groupDoorOpeningsOnWall', () => {
   it('renders one display group per door opening (no refid-pair merging)', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 400, y: 0 },
-      [
-        doorOpening({ guid: 'left', t: 0.45, width: 90 }),
-        doorOpening({ guid: 'right', t: 0.55, width: 90 }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 400, y: 0 }, [
+      doorOpening({ guid: 'left', t: 0.45, width: 90 }),
+      doorOpening({ guid: 'right', t: 0.55, width: 90 }),
+    ])
 
     expect(groups).toHaveLength(2)
     expect(groups[0].isDouble).toBe(false)
@@ -78,19 +73,14 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('renders wide double-leaf doors (double_wide) from a single opening', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 400, y: 0 },
-      [
-        doorOpening({
-          refid: '5ae0ee3c682e32c8c7ac15a6136d692df5737b22',
-          t: 0.5,
-          width: 170,
-          mirrored: [0, 1],
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 400, y: 0 }, [
+      doorOpening({
+        refid: '5ae0ee3c682e32c8c7ac15a6136d692df5737b22',
+        t: 0.5,
+        width: 170,
+        mirrored: [0, 1],
+      }),
+    ])
 
     expect(groups).toHaveLength(1)
     expect(groups[0].isDouble).toBe(true)
@@ -99,18 +89,13 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('renders sliding doors with divider + two arrows and no swing arc', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 300, y: 0 },
-      [
-        doorOpening({
-          refid: '1cdb4e6092e998630e7881667f2ddedafa3b0eb9',
-          t: 0.5,
-          width: 150,
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
+      doorOpening({
+        refid: '1cdb4e6092e998630e7881667f2ddedafa3b0eb9',
+        t: 0.5,
+        width: 150,
+      }),
+    ])
 
     expect(groups[0].arcPoints).toHaveLength(0)
     expect(groups[0].leafLines).toHaveLength(1)
@@ -118,18 +103,13 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('renders pocket doors with one arrow and no divider', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 300, y: 0 },
-      [
-        doorOpening({
-          refid: '216',
-          t: 0.5,
-          width: 100,
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
+      doorOpening({
+        refid: '216',
+        t: 0.5,
+        width: 100,
+      }),
+    ])
 
     expect(groups[0].catalogLabel).toBe('Pocketdeur')
     expect(groups[0].leafLines).toHaveLength(0)
@@ -138,18 +118,13 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('renders sliding_single with divider + one arrow', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 300, y: 0 },
-      [
-        doorOpening({
-          refid: 'd2785cc45c9c0ec86644135d22fa9ac9c49bcad6',
-          t: 0.5,
-          width: 180,
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
+      doorOpening({
+        refid: 'd2785cc45c9c0ec86644135d22fa9ac9c49bcad6',
+        t: 0.5,
+        width: 180,
+      }),
+    ])
 
     expect(groups[0].catalogLabel).toBe('Schuifpui (1 schuivend)')
     expect(groups[0].leafLines).toHaveLength(1)
@@ -157,19 +132,14 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('renders d34e31c as a closet45 door (45° leaf + arc, like Floorplanner 2D)', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 300, y: 0 },
-      [
-        doorOpening({
-          refid: 'd34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9',
-          t: 0.5,
-          width: 67,
-          mirrored: [0, 1],
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
+      doorOpening({
+        refid: 'd34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9',
+        t: 0.5,
+        width: 67,
+        mirrored: [0, 1],
+      }),
+    ])
 
     expect(groups[0].catalogLabel).toBe('Kastdeur (draai 45°)')
     expect(groups[0].isDouble).toBe(false)
@@ -191,37 +161,27 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('renders 2cb4a1c as standard 90° door with arc', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 300, y: 0 },
-      { x: 100, y: 0 },
-      [
-        doorOpening({
-          refid: '2cb4a1c74ec301ab0fdc762deb37eaf0e28d9ecc',
-          t: 0.5,
-          width: 90,
-          mirrored: [1, 1],
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 300, y: 0 }, { x: 100, y: 0 }, [
+      doorOpening({
+        refid: '2cb4a1c74ec301ab0fdc762deb37eaf0e28d9ecc',
+        t: 0.5,
+        width: 90,
+        mirrored: [1, 1],
+      }),
+    ])
 
     expect(groups[0].arcPoints).toHaveLength(1)
     expect(groups[0].catalogLabel).not.toBe('Kastdeur')
   })
 
   it('defaults unknown refids to a single 90° door', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 300, y: 0 },
-      [
-        doorOpening({
-          refid: 'unknownrefidunknownrefidunknownrefidunknown',
-          t: 0.5,
-          width: 90,
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
+      doorOpening({
+        refid: 'unknownrefidunknownrefidunknownrefidunknown',
+        t: 0.5,
+        width: 90,
+      }),
+    ])
 
     expect(groups[0].isDouble).toBe(false)
     expect(groups[0].leafLines).toHaveLength(1)
@@ -229,21 +189,16 @@ describe('groupDoorOpeningsOnWall', () => {
   })
 
   it('gap = volle opening; boog/blad = catalogus swingInsetCm (5cm) per zijde', () => {
-    const groups = groupDoorOpeningsOnWall(
-      'wall-1',
-      { x: 0, y: 0 },
-      { x: 400, y: 0 },
-      [
-        doorOpening({
-          t: 0.5,
-          width: 100,
-          mirrored: [0, 1],
-          // Gemeten framing mag FML-weergave niet meer sturen:
-          swingHingeInsetCm: 8,
-          swingFreeInsetCm: 16,
-        }),
-      ],
-    )
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 400, y: 0 }, [
+      doorOpening({
+        t: 0.5,
+        width: 100,
+        mirrored: [0, 1],
+        // Gemeten framing mag FML-weergave niet meer sturen:
+        swingHingeInsetCm: 8,
+        swingFreeInsetCm: 16,
+      }),
+    ])
 
     // Gap: volle opening.width
     expect(groups[0].startCm.x).toBeCloseTo(150, 5)
@@ -380,9 +335,15 @@ describe('resolveOpeningCatalog', () => {
   })
 
   it('exposes swingInsetCm from catalog (plattegrond-onafhankelijk)', () => {
-    expect(resolveOpeningCatalog('0434246537840a3326e305dbe7b9c355743e6e93', 'door').swingInsetCm).toBe(5)
-    expect(resolveOpeningCatalog('d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9', 'door').swingInsetCm).toBe(5)
-    expect(resolveOpeningCatalog('1cdb4e6092e998630e7881667f2ddedafa3b0eb9', 'door').swingInsetCm).toBe(0)
+    expect(
+      resolveOpeningCatalog('0434246537840a3326e305dbe7b9c355743e6e93', 'door').swingInsetCm,
+    ).toBe(5)
+    expect(
+      resolveOpeningCatalog('d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9', 'door').swingInsetCm,
+    ).toBe(5)
+    expect(
+      resolveOpeningCatalog('1cdb4e6092e998630e7881667f2ddedafa3b0eb9', 'door').swingInsetCm,
+    ).toBe(0)
     expect(resolveOpeningCatalog('deadbeef', 'door').swingInsetCm).toBe(5)
     expect(resolveOpeningCatalog('deadbeef', 'window').swingInsetCm).toBe(0)
   })
@@ -391,8 +352,12 @@ describe('resolveOpeningCatalog', () => {
     expect(resolveOpeningCatalog('bbf86e131112adca8869e9970229a71d7ff3fc28', 'window').kind).toBe(
       'multi',
     )
-    expect(resolveOpeningCatalog('bbf86e131112adca8869e9970229a71d7ff3fc28', 'window').panels).toBe(2)
-    expect(resolveOpeningCatalog('e3296a727699a3fc70e70dfec4ab715ed368ef63', 'window').panels).toBe(3)
+    expect(resolveOpeningCatalog('bbf86e131112adca8869e9970229a71d7ff3fc28', 'window').panels).toBe(
+      2,
+    )
+    expect(resolveOpeningCatalog('e3296a727699a3fc70e70dfec4ab715ed368ef63', 'window').panels).toBe(
+      3,
+    )
     expect(resolveOpeningCatalog('6da47b0a60330d19716d716046ec6c72c19d2cdb', 'window').kind).toBe(
       'round',
     )

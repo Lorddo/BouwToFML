@@ -3,7 +3,11 @@ import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from './wallGraph'
 
 interface SkeletonTracer {
-  fromBoolArray(data: ArrayLike<number | boolean>, w: number, h: number): {
+  fromBoolArray(
+    data: ArrayLike<number | boolean>,
+    w: number,
+    h: number,
+  ): {
     polylines: number[][][]
   }
 }

@@ -8,11 +8,7 @@ export function useFloorplanProbePointer(deps: {
   probeMode: () => DebugProbeMode
   spacePressed: () => boolean
   isProbeMode: () => boolean
-  onProbeSample: (sample: {
-    kind: 'point' | 'region'
-    point: Point
-    region?: Rect
-  }) => void
+  onProbeSample: (sample: { kind: 'point' | 'region'; point: Point; region?: Rect }) => void
 }) {
   const probeStrokeActive = ref(false)
   const probeDraftStart = ref<Point | null>(null)
@@ -32,11 +28,7 @@ export function useFloorplanProbePointer(deps: {
     probeResultRect.value = null
   }
 
-  function emitProbeSample(
-    kind: 'point' | 'region',
-    point: Point,
-    region?: Rect,
-  ) {
+  function emitProbeSample(kind: 'point' | 'region', point: Point, region?: Rect) {
     const roundedPoint = { x: Math.round(point.x), y: Math.round(point.y) }
     probeResultPoint.value = roundedPoint
     if (kind === 'region' && region) {

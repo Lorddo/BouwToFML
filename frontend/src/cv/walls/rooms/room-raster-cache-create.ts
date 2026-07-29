@@ -1,7 +1,4 @@
-import {
-  countClassificationStats,
-  type RoomRasterClass,
-} from './room-ink-classify'
+import { countClassificationStats, type RoomRasterClass } from './room-ink-classify'
 import type { SerializedRoomClassifyState } from '../strategies/room-first'
 import {
   syncDoorBridgeWallOverrides as syncDoorBridgeWallOverridesBase,
@@ -19,7 +16,10 @@ import {
   rebuildFaceBBoxIndex,
 } from './room-raster-cache-dual'
 
-function afterPinnedSync(cache: RoomRasterCache, result: SyncPinnedClassResult): SyncPinnedClassResult {
+function afterPinnedSync(
+  cache: RoomRasterCache,
+  result: SyncPinnedClassResult,
+): SyncPinnedClassResult {
   if (result.changed) bumpFaceDualClassEpoch(cache)
   return result
 }
@@ -39,7 +39,12 @@ export function syncDoorSwingFaceOverrides(
 ): SyncPinnedClassResult {
   return afterPinnedSync(
     cache,
-    syncDoorSwingFaceOverridesBase(cache, doorFaceIds, referenceWallThicknessPx, previousAutoFaceIds),
+    syncDoorSwingFaceOverridesBase(
+      cache,
+      doorFaceIds,
+      referenceWallThicknessPx,
+      previousAutoFaceIds,
+    ),
   )
 }
 
@@ -68,7 +73,12 @@ export function syncWindowFaceOverrides(
 ): SyncPinnedClassResult {
   return afterPinnedSync(
     cache,
-    syncWindowFaceOverridesBase(cache, windowFaceIds, referenceWallThicknessPx, previousAutoFaceIds),
+    syncWindowFaceOverridesBase(
+      cache,
+      windowFaceIds,
+      referenceWallThicknessPx,
+      previousAutoFaceIds,
+    ),
   )
 }
 

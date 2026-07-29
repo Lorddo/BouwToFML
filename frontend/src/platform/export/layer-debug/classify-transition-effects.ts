@@ -1,10 +1,7 @@
 import type { ImprovementKind, LayerTransitionDiff, TransitionEffect } from './types.ts'
 import { formatSegmentLine } from './segment-geometry.ts'
 
-function junctionKindCorrection(
-  from: string,
-  to: string,
-): boolean {
+function junctionKindCorrection(from: string, to: string): boolean {
   if (from === to) return false
   // Ruis / over-segmentatie naar eenvoudiger junction
   if (from === 'X' && (to === 'L' || to === 'T' || to === 'I')) return true

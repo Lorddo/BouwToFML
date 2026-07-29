@@ -154,8 +154,19 @@ function swatchStyle(color: string): Record<string, string> {
   <OcrSettingsPanel v-if="templateTab === 'ocr'" v-model="preprocess" />
 
   <div v-if="templateTab === 'ocr'" class="panel">
-    <button type="button" class="primary" :disabled="ocrScanning || !imageSrc" @click="$emit('runOcrScan')">
-      {{ ocrScanning ? 'Scannen…' : ocrCandidateCount > 0 ? `Opnieuw scannen (${ocrCandidateCount})` : 'Scan tekst' }}
+    <button
+      type="button"
+      class="primary"
+      :disabled="ocrScanning || !imageSrc"
+      @click="$emit('runOcrScan')"
+    >
+      {{
+        ocrScanning
+          ? 'Scannen…'
+          : ocrCandidateCount > 0
+            ? `Opnieuw scannen (${ocrCandidateCount})`
+            : 'Scan tekst'
+      }}
     </button>
     <button
       type="button"
@@ -172,8 +183,8 @@ function swatchStyle(color: string): Record<string, string> {
     <p class="hint">
       Solid: dezelfde vlakken als Muren, maar vlakken die onder het Gaten-muurmasker (stap 2, zwart)
       vallen worden als buiten gezet — vloeren en gaten blijven gekleurd. Vlakken groter dan 3× het
-      grootste deur/raam-refvlak (head/interior, geen buitenrand) worden ook wit. Eerst Muren classificeren.
-      Detail-modus (debug-sidebar): Otsu-wit alleen in gaten-zwart carveën.
+      grootste deur/raam-refvlak (head/interior, geen buitenrand) worden ook wit. Eerst Muren
+      classificeren. Detail-modus (debug-sidebar): Otsu-wit alleen in gaten-zwart carveën.
     </p>
     <p class="metric">
       {{
@@ -195,8 +206,8 @@ function swatchStyle(color: string): Record<string, string> {
   <div v-if="templateTab === 'doors'" class="panel">
     <h3>Deuren</h3>
     <p class="hint">
-      Fase 1 draaiboog-filter: ref-gestuurde kandidaten op face-niveau (non-outside seeds, shared-edge
-      clustering, schaalband 40-120 cm en aspect ±5%).
+      Fase 1 draaiboog-filter: ref-gestuurde kandidaten op face-niveau (non-outside seeds,
+      shared-edge clustering, schaalband 40-120 cm en aspect ±5%).
     </p>
     <p class="metric">
       {{
@@ -219,8 +230,8 @@ function swatchStyle(color: string): Record<string, string> {
   <div v-if="templateTab === 'windows'" class="panel">
     <h3>Ramen</h3>
     <p class="hint">
-      Stage 1 axel-filter + Stage 2 deurboog-reject + Stage 3 evidence-filter
-      (framing op as-uiteinden, fallback top+bottom).
+      Stage 1 axel-filter + Stage 2 deurboog-reject + Stage 3 evidence-filter (framing op
+      as-uiteinden, fallback top+bottom).
     </p>
     <p class="metric">
       {{
@@ -261,7 +272,12 @@ function swatchStyle(color: string): Record<string, string> {
     >
       {{ autoclassifyButtonLabel }}
     </button>
-    <button type="button" class="action-btn" :disabled="!canProcessChanges" @click="$emit('recalculateFaces')">
+    <button
+      type="button"
+      class="action-btn"
+      :disabled="!canProcessChanges"
+      @click="$emit('recalculateFaces')"
+    >
       {{ classifyingInFlight ? 'Inkt verwerken…' : 'Verwerk inkt' }}
     </button>
     <p v-if="inkEditStale" class="metric warning">

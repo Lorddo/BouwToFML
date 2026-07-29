@@ -78,7 +78,12 @@ function areaInBBox(data: Uint8Array, width: number, height: number, bbox: RefBB
   return area
 }
 
-function centroidInBBox(data: Uint8Array, width: number, height: number, bbox: RefBBox): { x: number; y: number } {
+function centroidInBBox(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  bbox: RefBBox,
+): { x: number; y: number } {
   let n = 0
   let sx = 0
   let sy = 0
@@ -298,7 +303,7 @@ export function resolveFaceCropBBox(params: {
       height: params.height,
     }
     const polygonBounds = useMask
-      ? bboxFromMask(useMask, params.width, params.height, padPx) ?? fallbackBounds
+      ? (bboxFromMask(useMask, params.width, params.height, padPx) ?? fallbackBounds)
       : fallbackBounds
     const cropBBox = clampBBox(polygonBounds, params.width, params.height)
     const unit = buildComponentUnit(useData, params.width, params.height)
@@ -310,7 +315,12 @@ export function resolveFaceCropBBox(params: {
     }
   }
 
-  const faceMask = buildInteriorFaceMask(params.data, params.width, params.height, params.faceProfile)
+  const faceMask = buildInteriorFaceMask(
+    params.data,
+    params.width,
+    params.height,
+    params.faceProfile,
+  )
   const { maskedData, regionMask } = buildPolygonMaskedData(
     params.data,
     params.width,
@@ -325,7 +335,8 @@ export function resolveFaceCropBBox(params: {
     width: params.width,
     height: params.height,
   }
-  const polygonBounds = bboxFromMask(regionMask, params.width, params.height, padPx) ?? fallbackBounds
+  const polygonBounds =
+    bboxFromMask(regionMask, params.width, params.height, padPx) ?? fallbackBounds
   const cropBBox = clampBBox(polygonBounds, params.width, params.height)
 
   const resolved = resolveOpeningUnits({
@@ -333,7 +344,10 @@ export function resolveFaceCropBBox(params: {
     width: params.width,
     height: params.height,
   })
-  const units = resolved.units.length > 0 ? resolved.units : [buildComponentUnit(maskedData, params.width, params.height)]
+  const units =
+    resolved.units.length > 0
+      ? resolved.units
+      : [buildComponentUnit(maskedData, params.width, params.height)]
   const primary = resolved.primary ?? units.find((unit) => unit.isPrimary) ?? units[0] ?? null
   return {
     cropBBox,
@@ -370,7 +384,8 @@ export function cropRefByFaces(params: {
     ...unit,
     index,
   }))
-  if (units.length === 0) units = [buildComponentUnit(cropped.bwData, cropped.width, cropped.height)]
+  if (units.length === 0)
+    units = [buildComponentUnit(cropped.bwData, cropped.width, cropped.height)]
   let maxArea = -1
   let primaryIndex = 0
   for (const unit of units) {

@@ -22,7 +22,13 @@ function buildQuarterSectorPolygon(params: { hinge: RefPoint; radius: number }):
   return points
 }
 
-function paintQuarterSector(mask: Uint8Array, width: number, height: number, hinge: RefPoint, radius: number): void {
+function paintQuarterSector(
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  hinge: RefPoint,
+  radius: number,
+): void {
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       if (x < hinge.x || y < hinge.y) continue

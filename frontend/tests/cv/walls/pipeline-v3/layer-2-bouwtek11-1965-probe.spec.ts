@@ -56,9 +56,9 @@ describe('V3 BouwTek11 probe (1126,1965) T-behoud', () => {
 
       const touchesJunction = result.segments.some(
         (s) =>
-          (Math.hypot(s.a.x - anchorA.x, s.a.y - anchorA.y) <= 1
-            || Math.hypot(s.b.x - anchorA.x, s.b.y - anchorA.y) <= 1)
-          && Math.abs(s.a.y - s.b.y) <= 2,
+          (Math.hypot(s.a.x - anchorA.x, s.a.y - anchorA.y) <= 1 ||
+            Math.hypot(s.b.x - anchorA.x, s.b.y - anchorA.y) <= 1) &&
+          Math.abs(s.a.y - s.b.y) <= 2,
       )
       expect(touchesJunction).toBe(true)
     })

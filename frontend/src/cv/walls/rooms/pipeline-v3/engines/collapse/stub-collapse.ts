@@ -106,8 +106,8 @@ function collectOrthoStairChain(params: {
   const armA = params.segments[armAIndex]!
   const armB = params.segments[armBIndex]!
   if (
-    segmentAxis(armA, armAIndex, params.hvBandPx) !== armAxis
-    || segmentAxis(armB, armBIndex, params.hvBandPx) !== armAxis
+    segmentAxis(armA, armAIndex, params.hvBandPx) !== armAxis ||
+    segmentAxis(armB, armBIndex, params.hvBandPx) !== armAxis
   ) {
     return null
   }

@@ -109,9 +109,7 @@ export interface WindowAxelFilterResult {
 }
 
 export type WindowDoorArcRejectionReason =
-  | 'shares_door_arc_face'
-  | 'adjacent_to_door_arc'
-  | 'aligned_with_rejected_arc_band'
+  'shares_door_arc_face' | 'adjacent_to_door_arc' | 'aligned_with_rejected_arc_band'
 
 export interface WindowDoorArcRejection {
   hypothesis: WindowAxelHypothesis

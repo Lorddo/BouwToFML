@@ -50,7 +50,9 @@ describe('buildJunctionGraph', () => {
       { a: { x: 20, y: -20 }, b: { x: 20, y: 20 } },
     ]
     const graph = buildJunctionGraph(segments, 2)
-    expect(graph.nodes.every((node) => graph.edges.some((e) => e.a === node.id || e.b === node.id))).toBe(true)
+    expect(
+      graph.nodes.every((node) => graph.edges.some((e) => e.a === node.id || e.b === node.id)),
+    ).toBe(true)
     expect(graph.nodes.filter((n) => n.kind === 'I')).toHaveLength(4)
   })
 })

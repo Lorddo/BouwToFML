@@ -7,7 +7,10 @@ import {
   extendInkEaterClassAfterMerge,
 } from '@/cv/walls/rooms/room-ink-classify'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
-import { runRoomTopologyRefinePass, prepareRoomFinalizeState } from '@/cv/walls/rooms/room-refine-topology'
+import {
+  runRoomTopologyRefinePass,
+  prepareRoomFinalizeState,
+} from '@/cv/walls/rooms/room-refine-topology'
 
 function component(
   label: number,
@@ -22,9 +25,7 @@ describe('room-refine-topology', () => {
     const width = 7
     const height = 3
     const labelsData = new Int32Array([
-      1, 1, 1, 0, 2, 2, 2,
-      1, 1, 1, 0, 2, 2, 2,
-      1, 1, 1, 0, 2, 2, 2,
+      1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 2, 2, 2,
     ])
     const components = [
       component(1, { x: 0, y: 0, width: 3, height: 3 }),
@@ -58,11 +59,7 @@ describe('room-refine-topology', () => {
   it('tweede ink-resolve wijst inkt toe tussen manual wall faces', () => {
     const width = 5
     const height = 3
-    const rawLabels = new Int32Array([
-      1, 0, 2, 0, 3,
-      1, 0, 2, 0, 3,
-      1, 0, 2, 0, 3,
-    ])
+    const rawLabels = new Int32Array([1, 0, 2, 0, 3, 1, 0, 2, 0, 3, 1, 0, 2, 0, 3])
     const components = [
       component(1, { x: 0, y: 0, width: 1, height: 3 }),
       component(2, { x: 2, y: 0, width: 1, height: 3 }),
@@ -150,9 +147,7 @@ describe('room-refine-topology', () => {
     const width = 7
     const height = 3
     const labelsData = new Int32Array([
-      1, 1, 1, 0, 2, 2, 2,
-      1, 1, 1, 0, 2, 2, 2,
-      1, 1, 1, 0, 2, 2, 2,
+      1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 2, 2, 2,
     ])
     const components = [
       component(1, { x: 0, y: 0, width: 3, height: 3 }),
@@ -179,11 +174,7 @@ describe('room-refine-topology', () => {
   it('finalize gebruikt handmatige classificatie zonder auto ink-classify', () => {
     const width = 5
     const height = 3
-    const rawLabelsData = new Int32Array([
-      1, 1, 0, 2, 2,
-      1, 1, 0, 2, 2,
-      1, 1, 0, 2, 2,
-    ])
+    const rawLabelsData = new Int32Array([1, 1, 0, 2, 2, 1, 1, 0, 2, 2, 1, 1, 0, 2, 2])
     const priorParentMap = new Map([[3, 1]])
 
     const prepared = prepareRoomFinalizeState({

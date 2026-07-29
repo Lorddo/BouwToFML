@@ -1,6 +1,10 @@
 import type { Segment } from '@/cv/port/wallGraph'
 import { pointsNear } from '../segment-ops'
-import { LAYER6_ENDPOINT_SNAP_PX, LAYER6_HV_BAND_FALLBACK_PX, LAYER6_NEARBY_WELD_PX } from './constants'
+import {
+  LAYER6_ENDPOINT_SNAP_PX,
+  LAYER6_HV_BAND_FALLBACK_PX,
+  LAYER6_NEARBY_WELD_PX,
+} from './constants'
 import { classifyLayer6Segment } from './segment-classify'
 
 function axisValueFor(seg: Segment, segIndex: number, kind: 'H' | 'V', hvBandPx: number): number {
@@ -68,7 +72,11 @@ export function measureCollinearChainSpan(params: {
       }
       if (!found) break
       consumed.add(found.segIndex)
-      span += classifyLayer6Segment(params.segments[found.segIndex]!, found.segIndex, hvBandPx).lengthPx
+      span += classifyLayer6Segment(
+        params.segments[found.segIndex]!,
+        found.segIndex,
+        hvBandPx,
+      ).lengthPx
       viaSegIndex = found.segIndex
       atPoint = found.nextPoint
     }
@@ -118,10 +126,11 @@ export function pickDominantChainIncident(params: {
       nearbyWeldPx,
     })
     if (
-      span > bestSpan
-      || (span === bestSpan
-        && classifyLayer6Segment(params.segments[candidate.segIndex]!, candidate.segIndex, hvBandPx).lengthPx
-          > classifyLayer6Segment(params.segments[best.segIndex]!, best.segIndex, hvBandPx).lengthPx)
+      span > bestSpan ||
+      (span === bestSpan &&
+        classifyLayer6Segment(params.segments[candidate.segIndex]!, candidate.segIndex, hvBandPx)
+          .lengthPx >
+          classifyLayer6Segment(params.segments[best.segIndex]!, best.segIndex, hvBandPx).lengthPx)
     ) {
       best = candidate
       bestSpan = span

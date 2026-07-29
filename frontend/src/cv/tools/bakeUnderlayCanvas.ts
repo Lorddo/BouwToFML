@@ -4,7 +4,10 @@ import { matToCanvas } from '@/cv/port/preprocess'
 import { rotateMatExpandBounds } from './rotateMat'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 
-export type UnderlayBakeConfig = Pick<PreprocessConfig, 'rotate180' | 'rotationDeg' | 'autoRotationDeg'>
+export type UnderlayBakeConfig = Pick<
+  PreprocessConfig,
+  'rotate180' | 'rotationDeg' | 'autoRotationDeg'
+>
 
 /** Crop/gum zit al in source; hier 180° + handmatige rotatie (stap 1). */
 export function bakeUnderlayCanvas(

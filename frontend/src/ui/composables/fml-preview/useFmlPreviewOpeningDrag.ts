@@ -21,21 +21,17 @@ export function useFmlPreviewOpeningDrag(options: {
 
   const draggingOpening = ref(false)
 
-  let openingDrag:
-    | {
-        openingId: string
-      }
-    | null = null
+  let openingDrag: {
+    openingId: string
+  } | null = null
 
-  let openingDragPending:
-    | {
-        openingId: string
-        startClientX: number
-        startClientY: number
-        onMove: (event: MouseEvent) => void
-        onUp: () => void
-      }
-    | null = null
+  let openingDragPending: {
+    openingId: string
+    startClientX: number
+    startClientY: number
+    onMove: (event: MouseEvent) => void
+    onUp: () => void
+  } | null = null
 
   function cancelOpeningDragPending(): void {
     if (!openingDragPending) return

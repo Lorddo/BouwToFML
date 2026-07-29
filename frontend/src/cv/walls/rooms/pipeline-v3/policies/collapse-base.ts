@@ -2,11 +2,7 @@
  * Shared collapse policy defaults for L7 / L9 / L10.
  * L8 stays apart (HV/prune, not CollapsePolicy).
  */
-import type {
-  CollapsePolicy,
-  JunctionGraphPolicy,
-  WeldPolicy,
-} from '../engines/policy-types'
+import type { CollapsePolicy, JunctionGraphPolicy, WeldPolicy } from '../engines/policy-types'
 import {
   PIPELINE_AXIS_COVER_EPS_PX,
   PIPELINE_COLLINEAR_THICKNESS_BYPASS_DEG,
@@ -81,8 +77,7 @@ export function baseCollapsePolicy(
     orthoStubTierMaxPx: scale.collapseOrthoStubTierMaxPx,
     axisCoverEpsPx: PIPELINE_AXIS_COVER_EPS_PX,
     microCornerMaxPx: scale.collapseMicroCornerMaxPx,
-    chainAxisMaxSpreadPx:
-      flags.chainAxisMaxSpreadPx ?? scale.hvRepositionToleranceMinPx,
+    chainAxisMaxSpreadPx: flags.chainAxisMaxSpreadPx ?? scale.hvRepositionToleranceMinPx,
   }
 }
 

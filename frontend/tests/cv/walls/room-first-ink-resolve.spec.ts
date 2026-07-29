@@ -1,7 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { buildInkEaterLabels, resolveInkBetweenFaces } from '@/cv/walls/rooms/room-ink-resolve'
 import { buildEnclosedFaceParentMap } from '@/cv/walls/rooms/room-raster-merge'
-import { classifyFacesByInkCoverage, applyFaceClassificationOverrides } from '@/cv/walls/rooms/room-ink-classify'
+import {
+  classifyFacesByInkCoverage,
+  applyFaceClassificationOverrides,
+} from '@/cv/walls/rooms/room-ink-classify'
 import { buildMergedWallFaceMaskData } from '@/cv/walls/rooms/room-wall-face-mask'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'

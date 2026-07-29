@@ -9,15 +9,9 @@ import {
   hasBlockingCompanionDiagonalAtEndpoint,
   resolveChamferBranchTipFromT,
 } from './chamfer-chain'
-import {
-  LAYER6_BRIDGE_MAX_SHIFT_RATIO,
-  LAYER6_MIN_SEGMENT_LEN_PX,
-} from './constants'
+import { LAYER6_BRIDGE_MAX_SHIFT_RATIO, LAYER6_MIN_SEGMENT_LEN_PX } from './constants'
 import type { Layer6ConnectorCandidate } from './connector-detect-types'
-import {
-  pickDominantIncident,
-  resolveSyntheticVFromChamferChain,
-} from './connector-detect-helpers'
+import { pickDominantIncident, resolveSyntheticVFromChamferChain } from './connector-detect-helpers'
 import { classifyLayer6Segments } from './segment-classify'
 
 export function appendChamferChainTipCandidates(params: {
@@ -78,21 +72,19 @@ export function appendChamferChainTipCandidates(params: {
       (incident) => incident.segIndex !== entry.index,
     )
 
-    const hCandidatesA = incidentsA.filter(
-      (inc) => classified[inc.segIndex]?.kind === 'H',
-    )
-    const hCandidatesB = incidentsB.filter(
-      (inc) => classified[inc.segIndex]?.kind === 'H',
-    )
+    const hCandidatesA = incidentsA.filter((inc) => classified[inc.segIndex]?.kind === 'H')
+    const hCandidatesB = incidentsB.filter((inc) => classified[inc.segIndex]?.kind === 'H')
 
     let hAnchor: { x: number; y: number } | null = null
-    if (hCandidatesA.length > 0 && incidentsB.every(
-      (inc) => classified[inc.segIndex]?.kind === 'D',
-    )) {
+    if (
+      hCandidatesA.length > 0 &&
+      incidentsB.every((inc) => classified[inc.segIndex]?.kind === 'D')
+    ) {
       hAnchor = connector.a
-    } else if (hCandidatesB.length > 0 && incidentsA.every(
-      (inc) => classified[inc.segIndex]?.kind === 'D',
-    )) {
+    } else if (
+      hCandidatesB.length > 0 &&
+      incidentsA.every((inc) => classified[inc.segIndex]?.kind === 'D')
+    ) {
       hAnchor = connector.b
     }
     if (!hAnchor) continue
@@ -144,7 +136,11 @@ export function appendChamferChainTipCandidates(params: {
     const hSeg = segments[hPick.segIndex]!
     const hit = infiniteLineIntersection(hSeg, synthetic)
     if (!hit) continue
-    if (Math.hypot(hit.x - hAnchor.x, hit.y - hAnchor.y) > maxConnectorPx * LAYER6_BRIDGE_MAX_SHIFT_RATIO) continue
+    if (
+      Math.hypot(hit.x - hAnchor.x, hit.y - hAnchor.y) >
+      maxConnectorPx * LAYER6_BRIDGE_MAX_SHIFT_RATIO
+    )
+      continue
 
     out.push({
       connectorIndex: entry.index,

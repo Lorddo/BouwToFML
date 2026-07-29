@@ -148,8 +148,15 @@ function fillRemovedInk(params: {
   inkThreshold?: number
   bounds?: InkDiffBounds | null
 }): number {
-  const { labelsData, oldWallBwData, newWallBwData, width, height, inkThreshold = 127, bounds } =
-    params
+  const {
+    labelsData,
+    oldWallBwData,
+    newWallBwData,
+    width,
+    height,
+    inkThreshold = 127,
+    bounds,
+  } = params
   const visited = new Uint8Array(labelsData.length)
   let filledPx = 0
 

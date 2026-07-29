@@ -101,7 +101,10 @@ describe('pruneISpurs L8 once-ltx', () => {
   it('BouwTek11: verwijdert korte I→L verticale stomp, horizontale muur blijft (offset-invariant)', () => {
     const base: Segment[] = [
       { a: { x: 129.5, y: 44.572750925447686 }, b: { x: 129.5, y: 16 } },
-      { a: { x: 241.91778635559288, y: 44.57275092544769 }, b: { x: 129.5, y: 44.572750925447686 } },
+      {
+        a: { x: 241.91778635559288, y: 44.57275092544769 },
+        b: { x: 129.5, y: 44.572750925447686 },
+      },
     ]
     ;[
       [0, 0],
@@ -139,12 +142,16 @@ describe('pruneISpurs L8 once-ltx', () => {
       const anchor = { x: 1138 + dx, y: 43 + dy }
       const before = buildJunctionGraph(segments, 0)
       expect(
-        before.nodes.some((node) => node.kind === 'T' && Math.hypot(node.x - anchor.x, node.y - anchor.y) < 2),
+        before.nodes.some(
+          (node) => node.kind === 'T' && Math.hypot(node.x - anchor.x, node.y - anchor.y) < 2,
+        ),
       ).toBe(true)
       const pruned = pruneL8(segments, 30)
       const after = buildJunctionGraph(pruned.segments, 0)
       expect(
-        after.nodes.some((node) => node.kind === 'T' && Math.hypot(node.x - anchor.x, node.y - anchor.y) < 2),
+        after.nodes.some(
+          (node) => node.kind === 'T' && Math.hypot(node.x - anchor.x, node.y - anchor.y) < 2,
+        ),
       ).toBe(true)
       expect(pruned.pruneStats.removedPathCount).toBe(0)
     })

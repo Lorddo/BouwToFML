@@ -10,7 +10,12 @@ export type WorkspaceFlowStep = 'input' | 'preprocess' | 'templates' | 'result'
 /** Debounce voor live B/W-preview bij tune-wijzigingen in stap 2. */
 export const PREPROCESS_PREVIEW_DEBOUNCE_MS = 220
 
-export const WORKSPACE_FLOW_ORDER: WorkspaceFlowStep[] = ['input', 'preprocess', 'templates', 'result']
+export const WORKSPACE_FLOW_ORDER: WorkspaceFlowStep[] = [
+  'input',
+  'preprocess',
+  'templates',
+  'result',
+]
 
 export const WORKSPACE_FLOW_LABELS: Record<WorkspaceFlowStep, string> = {
   input: '1. Onderlegger',
@@ -50,7 +55,9 @@ export function visiblePreprocessLayerTabs(): Array<(typeof PREPROCESS_LAYER_TAB
   return GAPS_TAB_VISIBLE ? tabs : tabs.filter((tab) => tab !== 'gaps')
 }
 
-export function visibleTemplateLayerTabs(ocrEnabled: boolean): Array<(typeof TEMPLATE_LAYER_TABS)[number]> {
+export function visibleTemplateLayerTabs(
+  ocrEnabled: boolean,
+): Array<(typeof TEMPLATE_LAYER_TABS)[number]> {
   return TEMPLATE_LAYER_TABS.filter((tab) => {
     if (tab === 'ocr' && !ocrEnabled) return false
     if (tab === 'gaps' && !GAPS_TAB_VISIBLE) return false

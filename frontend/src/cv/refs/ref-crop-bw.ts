@@ -305,17 +305,7 @@ export function cropRegion(params: {
   const canvas = createCanvas(w, h)
   const ctx = canvas.getContext('2d')
   if (ctx) {
-    ctx.drawImage(
-      params.originalCanvas as CanvasImageSource,
-      x0,
-      y0,
-      w,
-      h,
-      0,
-      0,
-      w,
-      h,
-    )
+    ctx.drawImage(params.originalCanvas as CanvasImageSource, x0, y0, w, h, 0, 0, w, h)
   }
   return { bwData: out, width: w, height: h, originalCanvas: canvas }
 }

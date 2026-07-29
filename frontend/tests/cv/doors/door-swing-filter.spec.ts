@@ -49,10 +49,7 @@ function run(params: {
 describe('door-swing-filter', () => {
   it('accepteert single-seeds met aspect ±5% orientatie-agnostisch', () => {
     const result = run({
-      components: [
-        component(1, 0, 0, 80, 40),
-        component(2, 120, 0, 40, 80),
-      ],
+      components: [component(1, 0, 0, 80, 40), component(2, 120, 0, 40, 80)],
       classes: [
         [1, 'surface'],
         [2, 'unknown'],
@@ -69,10 +66,7 @@ describe('door-swing-filter', () => {
 
   it('outside mag seed zijn (opening-wit); cluster-expansie neemt outside mee', () => {
     const result = run({
-      components: [
-        component(1, 0, 0, 30, 45),
-        component(2, 30, 0, 15, 45),
-      ],
+      components: [component(1, 0, 0, 30, 45), component(2, 30, 0, 15, 45)],
       classes: [
         [1, 'surface'],
         [2, 'outside'],
@@ -140,10 +134,7 @@ describe('door-swing-filter', () => {
 
   it('geeft diagnostics terug voor accepted en dropped roots', () => {
     const result = run({
-      components: [
-        component(1, 0, 0, 80, 40),
-        component(2, 90, 0, 20, 20),
-      ],
+      components: [component(1, 0, 0, 80, 40), component(2, 90, 0, 20, 20)],
       classes: [
         [1, 'surface'],
         [2, 'outside'],
@@ -446,10 +437,7 @@ describe('door-swing-filter', () => {
 
   it('absorbeert kleine aanliggende puntjes in de mask zolang union binnen marge blijft', () => {
     const result = run({
-      components: [
-        component(1, 0, 0, 45, 45),
-        component(2, 45, 0, 5, 10),
-      ],
+      components: [component(1, 0, 0, 45, 45), component(2, 45, 0, 5, 10)],
       classes: [
         [1, 'surface'],
         [2, 'surface'],
@@ -469,10 +457,7 @@ describe('door-swing-filter', () => {
 
   it('slokt een even grote buurkamer niet op tijdens absorptie (area-guard)', () => {
     const result = run({
-      components: [
-        component(1, 0, 0, 45, 45),
-        component(2, 45, 0, 45, 45),
-      ],
+      components: [component(1, 0, 0, 45, 45), component(2, 45, 0, 45, 45)],
       classes: [
         [1, 'surface'],
         [2, 'surface'],
@@ -496,10 +481,7 @@ describe('door-swing-filter', () => {
     // matchen op zichzelf niet (aspect 2.0 vs ref 1.0). Samen vormen ze 90x90 = ref.
     // Voorheen werden ze via de underMinBand-gate als out-of-band afgewezen.
     const result = run({
-      components: [
-        component(1, 0, 0, 90, 45),
-        component(2, 0, 45, 90, 45),
-      ],
+      components: [component(1, 0, 0, 90, 45), component(2, 0, 45, 90, 45)],
       classes: [
         [1, 'surface'],
         [2, 'surface'],
@@ -512,9 +494,7 @@ describe('door-swing-filter', () => {
     })
 
     expect(
-      result.hypotheses.some(
-        (hyp) => hyp.source === 'cluster' && hyp.faceIds.join(',') === '1,2',
-      ),
+      result.hypotheses.some((hyp) => hyp.source === 'cluster' && hyp.faceIds.join(',') === '1,2'),
     ).toBe(true)
   })
 
@@ -540,9 +520,7 @@ describe('door-swing-filter', () => {
     })
 
     expect(
-      result.hypotheses.some(
-        (hyp) => hyp.source === 'cluster' && hyp.faceIds.join(',') === '1,2',
-      ),
+      result.hypotheses.some((hyp) => hyp.source === 'cluster' && hyp.faceIds.join(',') === '1,2'),
     ).toBe(true)
     // Wall mid mag niet in de hypothese belanden.
     expect(result.hypotheses.every((hyp) => !hyp.faceIds.includes(99))).toBe(true)
@@ -554,10 +532,7 @@ describe('door-swing-filter', () => {
     // heeft dezelfde aspect maar overschrijdt de ref-gebonden bovengrens en valt af,
     // ook al past hij nog binnen de globale maatband (max 254).
     const result = runDoorSwingFilter({
-      components: [
-        component(1, 0, 0, 105, 59),
-        component(2, 400, 0, 210, 117),
-      ],
+      components: [component(1, 0, 0, 105, 59), component(2, 400, 0, 210, 117)],
       parentMap: new Map(),
       classificationByLabel: new Map<number, RoomRasterClass>([
         [1, 'surface'],
@@ -582,10 +557,7 @@ describe('door-swing-filter', () => {
     // union 229x137 maken, wat qua aspect bij ref1 (1.67) past. Absorptie is echter
     // aan ref0 gebonden, dus de strook wordt niet opgeslokt en de deur blijft 129 breed.
     const result = runDoorSwingFilter({
-      components: [
-        component(1, 0, 0, 129, 137),
-        component(2, 129, 0, 100, 20),
-      ],
+      components: [component(1, 0, 0, 129, 137), component(2, 129, 0, 100, 20)],
       parentMap: new Map(),
       classificationByLabel: new Map<number, RoomRasterClass>([
         [1, 'surface'],
@@ -1025,10 +997,7 @@ describe('door-swing-filter', () => {
       [2, new Set([1])],
     ])
     const result = runDoorSwingFilter({
-      components: [
-        component(1, 0, 0, 80, 80),
-        component(2, 80, 0, 20, 20),
-      ],
+      components: [component(1, 0, 0, 80, 80), component(2, 80, 0, 20, 20)],
       parentMap: new Map(),
       classificationByLabel: new Map([
         [1, 'door'],
@@ -1049,10 +1018,7 @@ describe('door-swing-filter', () => {
   it('surface-pocket gemerged in wall-parent blijft eigen seed (niet mega-wall)', () => {
     // Reproduceert 2D_3E: rawLabel 214 (surface) → parentMap → root 17 (wall).
     // Detach-owner = opening-seed-detach (pipeline via prepareOpeningPipeDual).
-    const components = [
-      component(17, 0, 0, 400, 400),
-      component(214, 10, 10, 70, 40),
-    ]
+    const components = [component(17, 0, 0, 400, 400), component(214, 10, 10, 70, 40)]
     const detached = detachEnclosedChildrenForOpeningSeeds({
       parentMap: new Map([[214, 17]]),
       classificationByLabel: new Map([
@@ -1082,10 +1048,7 @@ describe('door-swing-filter', () => {
   it('autoclass-realiteit: child zonder eigen class-key (erft wall) wordt alsnog surface-seed', () => {
     // Autoclass schrijft alleen merged-root keys. Child 214 staat NIET in de map
     // en resolvePixelClassification erft wall — detach materialiseert surface.
-    const components = [
-      component(17, 0, 0, 400, 400),
-      component(214, 10, 10, 70, 40),
-    ]
+    const components = [component(17, 0, 0, 400, 400), component(214, 10, 10, 70, 40)]
     const detached = detachEnclosedChildrenForOpeningSeeds({
       parentMap: new Map([[214, 17]]),
       classificationByLabel: new Map([[17, 'wall']]),
@@ -1124,8 +1087,18 @@ describe('door-swing-filter', () => {
     ]
     const result = runDoorSwingFilter({
       components: [
-        { label: 198, areaPx: 693, bbox: { x: 1209, y: 1237, width: 44, height: 26 }, touchesBorder: false },
-        { label: 199, areaPx: 686, bbox: { x: 1292, y: 1237, width: 45, height: 26 }, touchesBorder: false },
+        {
+          label: 198,
+          areaPx: 693,
+          bbox: { x: 1209, y: 1237, width: 44, height: 26 },
+          touchesBorder: false,
+        },
+        {
+          label: 199,
+          areaPx: 686,
+          bbox: { x: 1292, y: 1237, width: 45, height: 26 },
+          touchesBorder: false,
+        },
       ],
       parentMap: new Map(),
       classificationByLabel: new Map<number, RoomRasterClass>([
@@ -1169,11 +1142,36 @@ describe('door-swing-filter', () => {
     ]
     const result = runDoorSwingFilter({
       components: [
-        { label: 41, areaPx: 2054, bbox: { x: 966, y: 279, width: 88, height: 33 }, touchesBorder: false },
-        { label: 47, areaPx: 4506, bbox: { x: 929, y: 310, width: 126, height: 42 }, touchesBorder: false },
-        { label: 56, areaPx: 5465, bbox: { x: 912, y: 351, width: 143, height: 41 }, touchesBorder: false },
-        { label: 68, areaPx: 168, bbox: { x: 980, y: 392, width: 28, height: 6 }, touchesBorder: false },
-        { label: 69, areaPx: 1218, bbox: { x: 1052, y: 389, width: 88, height: 28 }, touchesBorder: false },
+        {
+          label: 41,
+          areaPx: 2054,
+          bbox: { x: 966, y: 279, width: 88, height: 33 },
+          touchesBorder: false,
+        },
+        {
+          label: 47,
+          areaPx: 4506,
+          bbox: { x: 929, y: 310, width: 126, height: 42 },
+          touchesBorder: false,
+        },
+        {
+          label: 56,
+          areaPx: 5465,
+          bbox: { x: 912, y: 351, width: 143, height: 41 },
+          touchesBorder: false,
+        },
+        {
+          label: 68,
+          areaPx: 168,
+          bbox: { x: 980, y: 392, width: 28, height: 6 },
+          touchesBorder: false,
+        },
+        {
+          label: 69,
+          areaPx: 1218,
+          bbox: { x: 1052, y: 389, width: 88, height: 28 },
+          touchesBorder: false,
+        },
       ],
       parentMap: new Map(),
       classificationByLabel: new Map<number, RoomRasterClass>([

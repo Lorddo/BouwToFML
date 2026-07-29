@@ -60,16 +60,8 @@ export function useFmlPreviewPointer(options: {
   thicknessPickTier: Ref<FmlThicknessBand | null>
   emit: (event: 'thicknessWallPick', payload: string) => void
 }) {
-  const {
-    hitTest,
-    selection,
-    modes,
-    drag,
-    actions,
-    spacePressed,
-    thicknessPickTier,
-    emit,
-  } = options
+  const { hitTest, selection, modes, drag, actions, spacePressed, thicknessPickTier, emit } =
+    options
 
   const {
     settingsWallIds,
@@ -84,12 +76,18 @@ export function useFmlPreviewPointer(options: {
   } = selection
 
   const canvasCursor = computed(() => {
-    if (modes.measureMode.value && !spacePressed.value && !thicknessPickTier.value) return 'crosshair'
-    if (modes.drawWallMode.value && !spacePressed.value && !thicknessPickTier.value) return 'crosshair'
-    if (modes.drawRoomMode.value && !spacePressed.value && !thicknessPickTier.value) return 'crosshair'
-    if (modes.addDoorMode.value && !spacePressed.value && !thicknessPickTier.value) return 'crosshair'
-    if (modes.addWindowMode.value && !spacePressed.value && !thicknessPickTier.value) return 'crosshair'
-    if (modes.selectionBoxMode.value && !spacePressed.value && !thicknessPickTier.value) return 'crosshair'
+    if (modes.measureMode.value && !spacePressed.value && !thicknessPickTier.value)
+      return 'crosshair'
+    if (modes.drawWallMode.value && !spacePressed.value && !thicknessPickTier.value)
+      return 'crosshair'
+    if (modes.drawRoomMode.value && !spacePressed.value && !thicknessPickTier.value)
+      return 'crosshair'
+    if (modes.addDoorMode.value && !spacePressed.value && !thicknessPickTier.value)
+      return 'crosshair'
+    if (modes.addWindowMode.value && !spacePressed.value && !thicknessPickTier.value)
+      return 'crosshair'
+    if (modes.selectionBoxMode.value && !spacePressed.value && !thicknessPickTier.value)
+      return 'crosshair'
     if (thicknessPickTier.value) return 'crosshair'
     if (drag.draggingWall.value || drag.draggingJunction.value || drag.draggingOpening.value) {
       return 'grabbing'
@@ -104,7 +102,11 @@ export function useFmlPreviewPointer(options: {
   function onWrapPointerDown(event: MouseEvent): void {
     if (event.button !== 0) return
     const target = event.target as HTMLElement
-    if (target.closest('.fml-preview-hint, .canvas-toolbelt-dock, .canvas-toolbelt, button, input, label')) {
+    if (
+      target.closest(
+        '.fml-preview-hint, .canvas-toolbelt-dock, .canvas-toolbelt, button, input, label',
+      )
+    ) {
       return
     }
 

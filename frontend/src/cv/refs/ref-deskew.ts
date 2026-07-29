@@ -2,7 +2,12 @@ import type { RefBBox } from './types'
 
 const INK_THRESHOLD = 128
 
-export function findInkBounds(data: Uint8Array, width: number, height: number, padPx = 0): RefBBox | null {
+export function findInkBounds(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  padPx = 0,
+): RefBBox | null {
   let minX = width
   let minY = height
   let maxX = -1

@@ -63,9 +63,7 @@ export type WorkspaceExportDoorSwingReportDeps = {
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
 }
 
-export function createWorkspaceExportDoorSwingReport(
-  deps: WorkspaceExportDoorSwingReportDeps,
-) {
+export function createWorkspaceExportDoorSwingReport(deps: WorkspaceExportDoorSwingReportDeps) {
   async function exportDoorSwingReport() {
     deps.setLocalError(null)
     try {
@@ -182,12 +180,7 @@ export function createWorkspaceExportDoorSwingReport(
       let boundDoors: BoundDoor[] = deps.boundDoors?.value ?? []
       let orientedDoors: OrientedDoor[] = deps.orientedDoors?.value ?? []
       const hasLiveL12 = orientedDoors.length > 0
-      if (
-        !hasLiveL12 &&
-        maskRle &&
-        segments.length > 0 &&
-        resolvedDoors.length > 0
-      ) {
+      if (!hasLiveL12 && maskRle && segments.length > 0 && resolvedDoors.length > 0) {
         const wallMask = decodeMaskRle(maskRle)
         const thickness = deps.referenceWallThicknessPx?.value ?? undefined
         const maskFiltered = filterDoorsByKeptWallMaskContact({

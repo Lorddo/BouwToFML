@@ -8,10 +8,7 @@ import type { RoomPhase } from './useWorkspaceRoomFaces'
 
 export function shouldRefreshPreviewForPhase(phase: RoomPhase): boolean {
   return (
-    phase === 'review' ||
-    phase === 'recalculating' ||
-    phase === 'done' ||
-    phase === 'finalizing'
+    phase === 'review' || phase === 'recalculating' || phase === 'done' || phase === 'finalizing'
   )
 }
 

@@ -25,7 +25,11 @@ export function measureBorderWhiteRatio(data: Uint8Array, width: number, height:
   return total > 0 ? white / total : 1
 }
 
-export function shouldInvertBinaryPolarity(data: Uint8Array, width: number, height: number): boolean {
+export function shouldInvertBinaryPolarity(
+  data: Uint8Array,
+  width: number,
+  height: number,
+): boolean {
   const borderWhiteRatio = measureBorderWhiteRatio(data, width, height)
   // Typische scan/PDF: rand is wit papier. Donkere rand → witte inkt op zwarte achtergrond.
   if (borderWhiteRatio < 0.5) return true

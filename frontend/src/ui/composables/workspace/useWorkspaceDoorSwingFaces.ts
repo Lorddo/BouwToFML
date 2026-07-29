@@ -90,7 +90,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
   const refreshQueued = ref(false)
   const stageCache = ref<DoorSwingStageCache>(createEmptyDoorSwingStageCache())
   const overlayCache = ref<{
-    width: number; height: number; labelsData: Int32Array; parentMap: Map<number, number>
+    width: number
+    height: number
+    labelsData: Int32Array
+    parentMap: Map<number, number>
   } | null>(null)
   const computationCache = createDoorSwingComputationCache()
   const refreshTimer = ref<ReturnType<typeof setTimeout> | null>(null)
@@ -103,7 +106,9 @@ export function useWorkspaceDoorSwingFaces(deps: {
   const autoPassApplied = ref(false)
   const autoPass: AutoPassState = createAutoPassState()
 
-  function syncAutoPassRef() { autoPassApplied.value = autoPass.autoPassApplied }
+  function syncAutoPassRef() {
+    autoPassApplied.value = autoPass.autoPassApplied
+  }
 
   const wallsClassifyReady = computed(() => {
     const state = deps.tabOutputs.value.walls?.meta?.roomClassifyState
@@ -184,13 +189,16 @@ export function useWorkspaceDoorSwingFaces(deps: {
   }
 
   // --- core refresh pass ---
-  async function runDoorSwingOverlayRefreshPass(
-    options?: { mode?: 'auto' | 'existing-doors-only' },
-  ): Promise<void> {
+  async function runDoorSwingOverlayRefreshPass(options?: {
+    mode?: 'auto' | 'existing-doors-only'
+  }): Promise<void> {
     const mode = options?.mode ?? 'auto'
     const existingDoorsOnly = mode === 'existing-doors-only'
     if (!existingDoorsOnly) {
-      if (!shouldRunDoorSwingPass()) { refreshQueued.value = false; return }
+      if (!shouldRunDoorSwingPass()) {
+        refreshQueued.value = false
+        return
+      }
       if (!shouldApplyAutoDoorPass(autoPass)) {
         refreshQueued.value = false
         if (onDoorSwingOverlayTab() && overlayCache.value) await syncStageViewFromCache()
@@ -204,13 +212,19 @@ export function useWorkspaceDoorSwingFaces(deps: {
     const rawState = deps.tabOutputs.value.walls?.meta?.roomClassifyState
     if (!rawState?.labelsData) {
       resetDoorSwingState()
-      if (!existingDoorsOnly) { markDoorAutoPassDone(autoPass); syncAutoPassRef() }
+      if (!existingDoorsOnly) {
+        markDoorAutoPassDone(autoPass)
+        syncAutoPassRef()
+      }
       return
     }
     const ppm = deps.getPxPerMm()
     if (!(ppm.x > 0) || !(ppm.y > 0)) {
       resetDoorSwingState()
-      if (!existingDoorsOnly) { markDoorAutoPassDone(autoPass); syncAutoPassRef() }
+      if (!existingDoorsOnly) {
+        markDoorAutoPassDone(autoPass)
+        syncAutoPassRef()
+      }
       return
     }
     const sizeBand = resolveDoorSizeBandPx(ppm.x, ppm.y)
@@ -223,11 +237,14 @@ export function useWorkspaceDoorSwingFaces(deps: {
       syncStatsFromCache()
       if (!existingDoorsOnly) {
         const next = await pushStage2DoorsOntoWalls({
-          accepted: [], bridgeWallFaceIds: [],
+          accepted: [],
+          bridgeWallFaceIds: [],
           roomRasterCache: deps.roomRasterCache.value,
           wallsOutput: deps.tabOutputs.value.walls,
           referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-          autoPassState: autoPass, persistOverrides, onDoorFacesApplied: deps.onDoorFacesApplied,
+          autoPassState: autoPass,
+          persistOverrides,
+          onDoorFacesApplied: deps.onDoorFacesApplied,
         })
         syncAutoPassRef()
         if (next) deps.roomRasterCache.value = next
@@ -243,7 +260,9 @@ export function useWorkspaceDoorSwingFaces(deps: {
       const cv = await waitForOpenCV()
       const img = await deps.getImageEl()
       const refBands = await computationCache.resolveRefBands({
-        rects: doorRects, image: img, cv,
+        rects: doorRects,
+        image: img,
+        cv,
         preprocess: deps.preprocess.value,
         eraserMask: deps.preprocessMaskArgs?.()?.eraserMask ?? undefined,
         baseBw: deps.getBaseWallBw?.() ?? undefined,
@@ -256,11 +275,14 @@ export function useWorkspaceDoorSwingFaces(deps: {
         syncStatsFromCache()
         if (!existingDoorsOnly) {
           const next = await pushStage2DoorsOntoWalls({
-            accepted: [], bridgeWallFaceIds: [],
+            accepted: [],
+            bridgeWallFaceIds: [],
             roomRasterCache: deps.roomRasterCache.value,
             wallsOutput: deps.tabOutputs.value.walls,
             referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-            autoPassState: autoPass, persistOverrides, onDoorFacesApplied: deps.onDoorFacesApplied,
+            autoPassState: autoPass,
+            persistOverrides,
+            onDoorFacesApplied: deps.onDoorFacesApplied,
           })
           syncAutoPassRef()
           if (next) deps.roomRasterCache.value = next
@@ -269,14 +291,23 @@ export function useWorkspaceDoorSwingFaces(deps: {
       }
       const prior = resolvePriorDoorClassification(state, deps.roomRasterCache.value)
       const faceOverrides = deps.roomRasterCache.value?.faceOverrides
-      const dual = computationCache.resolveDual(state, prior, faceOverrides, deps.roomRasterCache.value)
+      const dual = computationCache.resolveDual(
+        state,
+        prior,
+        faceOverrides,
+        deps.roomRasterCache.value,
+      )
       const pipe = runDoorStagePipeline({
-        dual, cv, refBands, sizeBand,
+        dual,
+        cv,
+        refBands,
+        sizeBand,
         classificationGroupBy: state.classificationGroupBy ?? 'component',
         existingDoorsOnly,
         ...(existingDoorsOnly ? { allowedSeedClasses: ['door'] as const } : {}),
         referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-        pxPerMmX: ppm.x, pxPerMmY: ppm.y,
+        pxPerMmX: ppm.x,
+        pxPerMmY: ppm.y,
         bridgeClassificationByLabel: prior,
       })
       assertSpacePolicy('door overlay', DOOR_SPACE_POLICY.overlayPaint, 'ink')
@@ -305,8 +336,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
       }
 
       overlayCache.value = {
-        width: overlaySpace.width, height: overlaySpace.height,
-        labelsData: overlaySpace.labelsData, parentMap: pipe.detachedParentMap,
+        width: overlaySpace.width,
+        height: overlaySpace.height,
+        labelsData: overlaySpace.labelsData,
+        parentMap: pipe.detachedParentMap,
       }
       stageCache.value = {
         stage1Hypotheses: pipe.stage1Hypotheses,
@@ -326,11 +359,14 @@ export function useWorkspaceDoorSwingFaces(deps: {
       }
       if (!existingDoorsOnly) {
         const next = await pushStage2DoorsOntoWalls({
-          accepted: pipe.stage2Accepted, bridgeWallFaceIds: pipe.bridgeWallFaceIds,
+          accepted: pipe.stage2Accepted,
+          bridgeWallFaceIds: pipe.bridgeWallFaceIds,
           roomRasterCache: deps.roomRasterCache.value,
           wallsOutput: deps.tabOutputs.value.walls,
           referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
-          autoPassState: autoPass, persistOverrides, onDoorFacesApplied: deps.onDoorFacesApplied,
+          autoPassState: autoPass,
+          persistOverrides,
+          onDoorFacesApplied: deps.onDoorFacesApplied,
         })
         syncAutoPassRef()
         if (next) deps.roomRasterCache.value = next
@@ -343,7 +379,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
       await syncStageViewFromCache()
     } catch (error) {
       resetDoorSwingState()
-      if (!existingDoorsOnly) { markDoorAutoPassDone(autoPass); syncAutoPassRef() }
+      if (!existingDoorsOnly) {
+        markDoorAutoPassDone(autoPass)
+        syncAutoPassRef()
+      }
       deps.setLocalError(formatCvError(error))
     } finally {
       refreshing.value = false
@@ -351,7 +390,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
   }
 
   async function refreshDoorSwingFromExistingDoors(): Promise<void> {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
     refreshQueued.value = false
     rerunRequested = false
     // Alleen prune — geen Stage-herdetectie (voorkomt lege pipeline → door-arc wipe → window re-run).
@@ -413,8 +455,14 @@ export function useWorkspaceDoorSwingFaces(deps: {
   }
 
   async function refreshDoorSwingOverlay(): Promise<void> {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
-    if (refreshInFlight) { rerunRequested = true; return }
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
+    if (refreshInFlight) {
+      rerunRequested = true
+      return
+    }
     refreshInFlight = true
     try {
       do {
@@ -498,7 +546,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
   }
 
   function markAutoDoorPassApplied(): void {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
     refreshQueued.value = false
     rerunRequested = false
     markDoorAutoPassDone(autoPass)
@@ -507,7 +558,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
   }
 
   function resetAutoDoorPassGate(): void {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
     refreshQueued.value = false
     rerunRequested = false
     resetAutoPassState(autoPass)
@@ -516,50 +570,85 @@ export function useWorkspaceDoorSwingFaces(deps: {
 
   // --- watches ---
   onBeforeUnmount(() => {
-    if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
-  })
-
-  watch(() => deps.roomPhase.value, (phase, prev) => {
-    if (phase !== 'review') {
-      if (refreshTimer.value) { clearTimeout(refreshTimer.value); refreshTimer.value = null }
-      refreshQueued.value = false
-      rerunRequested = false
-      return
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
     }
-    if (prev === 'classifying') onWallsClassified('replace-all')
   })
 
   watch(
-    () => [deps.templateTab.value, deps.flowStep.value, wallsClassifyReady.value, deps.roomPhase.value] as const,
+    () => deps.roomPhase.value,
+    (phase, prev) => {
+      if (phase !== 'review') {
+        if (refreshTimer.value) {
+          clearTimeout(refreshTimer.value)
+          refreshTimer.value = null
+        }
+        refreshQueued.value = false
+        rerunRequested = false
+        return
+      }
+      if (prev === 'classifying') onWallsClassified('replace-all')
+    },
+  )
+
+  watch(
+    () =>
+      [
+        deps.templateTab.value,
+        deps.flowStep.value,
+        wallsClassifyReady.value,
+        deps.roomPhase.value,
+      ] as const,
     ([tab, step, ready, phase]) => {
-      if (step === 'templates' && ready && phase === 'review' && (tab === 'walls' || tab === 'doors')) {
+      if (
+        step === 'templates' &&
+        ready &&
+        phase === 'review' &&
+        (tab === 'walls' || tab === 'doors')
+      ) {
         scheduleDoorSwingOverlayRefresh()
       }
     },
   )
 
-  watch(() => deps.wallBwPreviewUrl.value, () => {
-    if (onDoorSwingOverlayTab() && overlayCache.value) void syncStageViewFromCache()
-  })
+  watch(
+    () => deps.wallBwPreviewUrl.value,
+    () => {
+      if (onDoorSwingOverlayTab() && overlayCache.value) void syncStageViewFromCache()
+    },
+  )
 
-  watch(() => { const ppm = deps.getPxPerMm(); return `${ppm.x}:${ppm.y}` }, () => {
-    if (deps.devSessionRestoring?.value) return
-    if (!shouldRunDoorSwingPass()) return
-    invalidateAutoDoorPass('replace-auto')
-    scheduleDoorSwingOverlayRefresh()
-  })
+  watch(
+    () => {
+      const ppm = deps.getPxPerMm()
+      return `${ppm.x}:${ppm.y}`
+    },
+    () => {
+      if (deps.devSessionRestoring?.value) return
+      if (!shouldRunDoorSwingPass()) return
+      invalidateAutoDoorPass('replace-auto')
+      scheduleDoorSwingOverlayRefresh()
+    },
+  )
 
-  watch(() => signatureForDoorRects(deps.openingRects()), () => {
-    if (deps.devSessionRestoring?.value) return
-    if (!shouldRunDoorSwingPass()) return
-    invalidateAutoDoorPass('replace-auto')
-    scheduleDoorSwingOverlayRefresh()
-  })
+  watch(
+    () => signatureForDoorRects(deps.openingRects()),
+    () => {
+      if (deps.devSessionRestoring?.value) return
+      if (!shouldRunDoorSwingPass()) return
+      invalidateAutoDoorPass('replace-auto')
+      scheduleDoorSwingOverlayRefresh()
+    },
+  )
 
-  watch(() => doorSwingStage.value, () => {
-    if (!onDoorSwingOverlayTab()) return
-    void syncStageViewFromCache()
-  })
+  watch(
+    () => doorSwingStage.value,
+    () => {
+      if (!onDoorSwingOverlayTab()) return
+      void syncStageViewFromCache()
+    },
+  )
 
   function getStage2DoorArcFaceIds(): ReadonlySet<number> {
     return new Set(collectAcceptedDoorFaceIds(stageCache.value.stage2AcceptedHypotheses))

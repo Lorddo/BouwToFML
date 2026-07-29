@@ -13,10 +13,7 @@ import {
   buildThicknessBySegment,
   withTopologyGuard,
 } from './engines/collapse'
-import {
-  dedupeExactSegments,
-  rebuildFaceFromSegments,
-} from './engines/segment-ops'
+import { dedupeExactSegments, rebuildFaceFromSegments } from './engines/segment-ops'
 import { resolveLayer7AlignPolicy } from './policies/layer-7'
 import type { PipelineV3Layer6Result, PipelineV3Layer7Result } from './types'
 

@@ -26,7 +26,9 @@ export function didDemoteWindowPipelineFace(
   previousClass: RoomRasterClass | null | undefined,
   nextClass: RoomRasterClass | null | undefined,
 ): boolean {
-  return isWindowPipelineFaceClass(previousClass) && !!nextClass && !isWindowPipelineFaceClass(nextClass)
+  return (
+    isWindowPipelineFaceClass(previousClass) && !!nextClass && !isWindowPipelineFaceClass(nextClass)
+  )
 }
 
 export function shouldRefreshWindowOverlayAfterBoxDemote(params: {

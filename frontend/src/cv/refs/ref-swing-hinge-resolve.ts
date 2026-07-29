@@ -33,11 +33,7 @@ import {
   polygonBounds,
   subtract,
 } from './ref-swing-hinge-geom'
-import type {
-  SwingHingeOptions,
-  SwingHingeResult,
-  SwingSectorFacePick,
-} from './ref-swing-hinge'
+import type { SwingHingeOptions, SwingHingeResult, SwingSectorFacePick } from './ref-swing-hinge'
 import type { RefBBox, RefPoint } from './types'
 
 const AXIS_BAND_PX = 3
@@ -164,9 +160,7 @@ function pickBestAxes(
       const balance = Math.min(left.supportLength, right.supportLength)
       const support = left.supportLength + right.supportLength
       const angleError =
-        options.expectedAngleDeg != null
-          ? Math.abs(angleDiff - options.expectedAngleDeg)
-          : 0
+        options.expectedAngleDeg != null ? Math.abs(angleDiff - options.expectedAngleDeg) : 0
       const tip0 = farthestSupportFromHinge(left, intersection)
       const tip1 = farthestSupportFromHinge(right, intersection)
       const d0 = subtract(tip0, intersection)
@@ -274,14 +268,12 @@ export function resolveSwingHingeFromPolygon(params: {
 
   const outAxisH = toOutputAxis(picked.axes[0], hinge, picked.tips[0])
   const outAxisL = toOutputAxis(picked.axes[1], hinge, picked.tips[1])
-  const directedAngle = directedAngleDeg(
-    subtract(outAxisH.b, hinge),
-    subtract(outAxisL.b, hinge),
-  )
+  const directedAngle = directedAngleDeg(subtract(outAxisH.b, hinge), subtract(outAxisL.b, hinge))
   return {
     hinge,
     axes: [outAxisH, outAxisL],
-    angleDeg: directedAngle > 1e-6 ? directedAngle : angleDiffDeg(outAxisH.angleDeg, outAxisL.angleDeg),
+    angleDeg:
+      directedAngle > 1e-6 ? directedAngle : angleDiffDeg(outAxisH.angleDeg, outAxisL.angleDeg),
     sectorPolygon: params.polygon,
     sectorBBox,
   }

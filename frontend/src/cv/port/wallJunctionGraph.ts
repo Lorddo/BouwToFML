@@ -41,7 +41,10 @@ function makeLine(seg: Segment) {
   }
 }
 
-function collectIntersectionPoints(segments: Segment[], snapRadiusPx: number): Array<{ x: number; y: number }> {
+function collectIntersectionPoints(
+  segments: Segment[],
+  snapRadiusPx: number,
+): Array<{ x: number; y: number }> {
   const points: Array<{ x: number; y: number }> = []
   for (let i = 0; i < segments.length; i += 1) {
     for (let j = i + 1; j < segments.length; j += 1) {
@@ -64,7 +67,10 @@ function collectIntersectionPoints(segments: Segment[], snapRadiusPx: number): A
   return points
 }
 
-function clusterPoints(points: Array<{ x: number; y: number }>, snapRadiusPx: number): Array<{ x: number; y: number }> {
+function clusterPoints(
+  points: Array<{ x: number; y: number }>,
+  snapRadiusPx: number,
+): Array<{ x: number; y: number }> {
   if (points.length === 0) return []
   const tree = new RBush<PointItem>()
   const clusters: Array<{ x: number; y: number; points: Array<{ x: number; y: number }> }> = []
@@ -218,9 +224,7 @@ function resolveEndpointNodeMatchPx(snapRadiusPx: number): number {
  * cel-hash op integer-coördinaat + 3×3 buurcellen, daarna dezelfde `d <= bestD` argmin
  * (incl. tie-break op node-volgorde) als `nearestNodeId`. Byte-identiek, maar O(1) i.p.v. O(n).
  */
-function buildExactNodeLookup(
-  nodes: WallNode[],
-): (p: { x: number; y: number }) => string | null {
+function buildExactNodeLookup(nodes: WallNode[]): (p: { x: number; y: number }) => string | null {
   const cellMap = new Map<string, Array<{ node: WallNode; index: number }>>()
   for (let i = 0; i < nodes.length; i += 1) {
     const n = nodes[i]!

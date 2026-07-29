@@ -16,7 +16,10 @@ vi.mock('@/cv/doors/door-l12-hinge', async (importOriginal) => {
   }
 })
 
-function makeSegment(a: { x: number; y: number }, b: { x: number; y: number }): SemanticWallSegment {
+function makeSegment(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+): SemanticWallSegment {
   return {
     a,
     b,
@@ -47,7 +50,10 @@ function makeResolvedDoor(params: {
     matchedRefIndex: 0,
     faceIds: [1],
     bbox: params.bbox,
-    centroidPx: { x: params.bbox.x + params.bbox.width / 2, y: params.bbox.y + params.bbox.height / 2 },
+    centroidPx: {
+      x: params.bbox.x + params.bbox.width / 2,
+      y: params.bbox.y + params.bbox.height / 2,
+    },
     swingSpanPx: Math.max(1, overhangAlongPx),
     framingPx,
     overhangAlongPx,
@@ -74,7 +80,10 @@ function mockHinge(params: {
     axes: [
       {
         a: params.hinge,
-        b: { x: params.hinge.x + openingSign * Math.max(1, params.overhangAlongPx), y: params.hinge.y },
+        b: {
+          x: params.hinge.x + openingSign * Math.max(1, params.overhangAlongPx),
+          y: params.hinge.y,
+        },
         angleDeg: 0,
         supportLength: Math.max(1, params.overhangAlongPx),
       },
@@ -85,8 +94,18 @@ function mockHinge(params: {
         supportLength: 22,
       },
     ] as [
-      { a: { x: number; y: number }; b: { x: number; y: number }; angleDeg: number; supportLength: number },
-      { a: { x: number; y: number }; b: { x: number; y: number }; angleDeg: number; supportLength: number },
+      {
+        a: { x: number; y: number }
+        b: { x: number; y: number }
+        angleDeg: number
+        supportLength: number
+      },
+      {
+        a: { x: number; y: number }
+        b: { x: number; y: number }
+        angleDeg: number
+        supportLength: number
+      },
     ],
     swingAngleDeg: 90,
   }

@@ -16,9 +16,7 @@ export const INK_OVERLAY_BLACK = 1 as const
 export const INK_OVERLAY_WHITE = 2 as const
 
 export type InkOverlayCode =
-  | typeof INK_OVERLAY_NONE
-  | typeof INK_OVERLAY_BLACK
-  | typeof INK_OVERLAY_WHITE
+  typeof INK_OVERLAY_NONE | typeof INK_OVERLAY_BLACK | typeof INK_OVERLAY_WHITE
 
 /** Zwarte inkt op muur-B/W (OpenCV-conventie: 0 = inkt, 255 = wit). */
 export const WALL_BW_INK = 0
@@ -65,10 +63,7 @@ export function composeWallBw(params: {
  * OCR blijft een aparte compose-laag — niet meebakken.
  * @returns true als er pixels zijn gebakken.
  */
-export function bakeInkOverlayIntoBaseBw(
-  baseBw: Uint8Array,
-  inkOverlay: Uint8Array,
-): boolean {
+export function bakeInkOverlayIntoBaseBw(baseBw: Uint8Array, inkOverlay: Uint8Array): boolean {
   if (inkOverlay.length !== baseBw.length) return false
   let changed = false
   for (let i = 0; i < baseBw.length; i += 1) {
@@ -92,11 +87,7 @@ export function mergeInkOverlayInto(target: Uint8Array, source: Uint8Array): voi
 }
 
 /** Gray bytes → RGBA canvas (R=G=B, A=255). Missing → wit. */
-export function bwBytesToCanvas(
-  data: Uint8Array,
-  width: number,
-  height: number,
-): CanvasLike {
+export function bwBytesToCanvas(data: Uint8Array, width: number, height: number): CanvasLike {
   const canvas = createCanvas(width, height)
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas

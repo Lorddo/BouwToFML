@@ -37,11 +37,7 @@ export type CandidateLinkParams = {
 }
 
 /** Of twee kandidaten een Stage-1 link hebben (geometric / adj / wall-bridge). */
-function facesAreLinked(
-  a: RootFace,
-  b: RootFace,
-  params: CandidateLinkParams,
-): boolean {
+function facesAreLinked(a: RootFace, b: RootFace, params: CandidateLinkParams): boolean {
   if (a.root === b.root) return false
   const maxPerpDelta = Math.max(3, params.axisBandHeightPx)
   const maxHeightDelta = Math.max(3, params.targetStripHeightPx * 0.7)
@@ -66,8 +62,7 @@ function facesAreLinked(
     })
   const geometricallyLinked =
     overlap >= 0.45 && centerDelta <= maxPerpDelta && heightDelta <= maxHeightDelta
-  const adjacencyLinked =
-    directAdjacent && overlap >= 0.1 && centerDelta <= maxPerpDelta * 1.6
+  const adjacencyLinked = directAdjacent && overlap >= 0.1 && centerDelta <= maxPerpDelta * 1.6
   const wallBridgeLinked =
     wallBridged &&
     overlap >= 0.1 &&
@@ -214,10 +209,7 @@ export type ClusterScore =
 /**
  * Strikte score (o.a. stripCount=1): height/count mismatch = reject.
  */
-function scoreCluster(params: {
-  cluster: RootFace[]
-  ref: WindowAxelRefBand
-}): ClusterScore {
+function scoreCluster(params: { cluster: RootFace[]; ref: WindowAxelRefBand }): ClusterScore {
   const { cluster, ref } = params
   const bbox = unionBbox(cluster)
   const span = axisSpan(bbox, ref.orientation)

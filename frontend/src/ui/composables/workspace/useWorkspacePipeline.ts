@@ -24,10 +24,7 @@ import { WORKSPACE_DETECTION_LAYER_ORDER } from '@/cv/workspace/layer-flow'
 
 import type { WorkspaceFlowStep } from './constants'
 
-
-
 export function useWorkspacePipeline(deps: {
-
   flowStep: Ref<WorkspaceFlowStep>
 
   templateTab: Ref<TemplateTab>
@@ -49,9 +46,7 @@ export function useWorkspacePipeline(deps: {
   ocrMaskApplied: Ref<boolean>
 
   wallsDetectionComplete: Ref<boolean>
-
 }) {
-
   const combinedOutput = computed(() => mergeTabOutputs(deps.tabOutputs.value))
 
   function wallsTabComplete(): boolean {
@@ -64,9 +59,7 @@ export function useWorkspacePipeline(deps: {
   }
 
   const activePipelineOutput = computed((): ExtractionOutput | null => {
-
     if (deps.flowStep.value === 'templates') {
-
       if (deps.templateTab.value === 'ocr') return null
 
       // Gaten/Deuren/Ramen: eigen face-overlays — geen muur-mirror via tabOutputs.walls
@@ -76,35 +69,23 @@ export function useWorkspacePipeline(deps: {
 
       if (deps.templateTab.value === 'walls') return deps.tabOutputs.value.walls
       return null
-
     }
 
     if (deps.flowStep.value === 'result') {
-
       if (deps.resultTab.value === 'vector') {
-
         return combinedOutput.value
-
       }
 
       return deps.tabOutputs.value[deps.resultTab.value]
-
     }
 
     return deps.lastOutput.value
-
   })
-
-
 
   const templateElementClass = computed(() => templateTabToElementClass(deps.templateTab.value))
 
-
-
   const currentTabDetected = computed(() => {
-
     if (deps.flowStep.value === 'templates') {
-
       if (deps.templateTab.value === 'ocr') return deps.ocrMaskApplied.value
 
       if (deps.templateTab.value === 'walls') return wallsTabComplete()
@@ -121,75 +102,46 @@ export function useWorkspacePipeline(deps: {
       }
 
       return false
-
     }
 
     if (deps.flowStep.value === 'result' && deps.resultTab.value !== 'vector') {
-
       if (deps.resultTab.value === 'walls') return wallsTabComplete()
 
       return isValidTabOutput(deps.tabOutputs.value[deps.resultTab.value])
-
     }
 
     return isValidTabOutput(combinedOutput.value)
-
   })
 
-
-
   const rectsForTemplateTab = computed(() => {
-
     const cls = templateElementClass.value
 
     if (!cls) return []
 
     return deps.rects.value.filter((rect) => rect.type === cls)
-
   })
 
-
-
   const canGenerateCurrentTab = computed(
-
     () =>
-
       isWallTechniqueTab(deps.templateTab.value) &&
-
       !deps.running.value &&
-
       !deps.scaleLocked.value &&
-
       deps.profileConfirmed.value,
-
   )
 
-
-
-  const lbeEnabled = computed(
-    () => deps.flowStep.value === 'preprocess' && !deps.scaleLocked.value,
-  )
-
-
+  const lbeEnabled = computed(() => deps.flowStep.value === 'preprocess' && !deps.scaleLocked.value)
 
   const canExportReport = computed(() => {
-
     if (deps.rects.value.length > 0) return true
 
     if (deps.ocrMaskApplied.value) return true
 
     return WORKSPACE_DETECTION_LAYER_ORDER.some((tab) =>
-
       isValidTabOutput(deps.tabOutputs.value[tab]),
-
     )
-
   })
 
-
-
   return {
-
     combinedOutput,
 
     activePipelineOutput,
@@ -219,8 +171,5 @@ export function useWorkspacePipeline(deps: {
       }
       return isDetectionLayerId(layer) ? isValidTabOutput(deps.tabOutputs.value[layer]) : false
     },
-
   }
-
 }
-

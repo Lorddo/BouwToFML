@@ -19,10 +19,7 @@ function graphWeldPolicy(layerId: CollapsePolicy['layerId']): WeldPolicy {
   }
 }
 
-export function buildCollapseJunctionGraph(
-  segments: Segment[],
-  policy: CollapsePolicy,
-) {
+export function buildCollapseJunctionGraph(segments: Segment[], policy: CollapsePolicy) {
   const welded = weldNearEndpoints(segments, graphWeldPolicy(policy.layerId))
   return buildJunctionGraph(welded, 0)
 }
@@ -48,8 +45,8 @@ function junctionEndpointsPreserved(
     if (node.kind !== 'I' && node.kind !== 'T' && node.kind !== 'X') continue
     const hasEndpointAfter = segmentsAfter.some(
       (seg) =>
-        Math.hypot(seg.a.x - node.x, seg.a.y - node.y) <= anchorPx
-        || Math.hypot(seg.b.x - node.x, seg.b.y - node.y) <= anchorPx,
+        Math.hypot(seg.a.x - node.x, seg.a.y - node.y) <= anchorPx ||
+        Math.hypot(seg.b.x - node.x, seg.b.y - node.y) <= anchorPx,
     )
     if (!hasEndpointAfter) return false
   }

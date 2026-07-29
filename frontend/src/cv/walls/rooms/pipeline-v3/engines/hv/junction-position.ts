@@ -82,8 +82,11 @@ export function resolveJunctionPosition(params: {
 
   const localThickness = mean(params.arms.map((arm) => arm.thicknessPx))
   const maxShiftPx =
-    Math.max(localThickness, params.referenceWallThicknessPx ?? 0, params.policy.thicknessFallbackPx) *
-    params.policy.junctionShiftMaxRatio
+    Math.max(
+      localThickness,
+      params.referenceWallThicknessPx ?? 0,
+      params.policy.thicknessFallbackPx,
+    ) * params.policy.junctionShiftMaxRatio
 
   const next = {
     x:

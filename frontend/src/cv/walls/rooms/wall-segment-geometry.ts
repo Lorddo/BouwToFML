@@ -66,7 +66,11 @@ function perpendicularOffsetPx(a: Segment, b: Segment): number {
   return Math.abs((midB.x - a.a.x) * nx + (midB.y - a.a.y) * ny)
 }
 
-function segmentPassesNearPoint(seg: Segment, point: { x: number; y: number }, snapPx: number): boolean {
+function segmentPassesNearPoint(
+  seg: Segment,
+  point: { x: number; y: number },
+  snapPx: number,
+): boolean {
   const nearA = Math.hypot(seg.a.x - point.x, seg.a.y - point.y) <= snapPx
   const nearB = Math.hypot(seg.b.x - point.x, seg.b.y - point.y) <= snapPx
   if (nearA || nearB) return true
@@ -134,8 +138,4 @@ export function hasPerpendicularBranchAt(
   return false
 }
 
-export {
-  infiniteLineIntersection,
-  endpointNearPoint,
-  perpendicularOffsetPx,
-}
+export { infiniteLineIntersection, endpointNearPoint, perpendicularOffsetPx }

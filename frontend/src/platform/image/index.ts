@@ -1,9 +1,4 @@
-export {
-  createWorkCanvas,
-  yieldToMain,
-  type WorkCanvasSource,
-  type WorkImage,
-} from './workImage'
+export { createWorkCanvas, yieldToMain, type WorkCanvasSource, type WorkImage } from './workImage'
 export {
   scaleBoxesToOriginal,
   scaleBoxesToWork,

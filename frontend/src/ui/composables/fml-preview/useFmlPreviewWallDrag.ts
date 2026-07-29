@@ -28,31 +28,25 @@ export function useFmlPreviewWallDrag(options: {
   const draggingJunction = ref(false)
   const draggingWall = ref(false)
 
-  let junctionDrag:
-    | {
-        refs: WallEndRef[]
-        originCm: Point2D
-      }
-    | null = null
+  let junctionDrag: {
+    refs: WallEndRef[]
+    originCm: Point2D
+  } | null = null
 
-  let wallDrag:
-    | {
-        wallId: string
-        wall: { a: Point2D; b: Point2D }
-        startCm: Point2D
-        baseWalls: Wall[]
-      }
-    | null = null
+  let wallDrag: {
+    wallId: string
+    wall: { a: Point2D; b: Point2D }
+    startCm: Point2D
+    baseWalls: Wall[]
+  } | null = null
 
-  let moveDragPending:
-    | {
-        wallId: string
-        startClientX: number
-        startClientY: number
-        onMove: (event: MouseEvent) => void
-        onUp: () => void
-      }
-    | null = null
+  let moveDragPending: {
+    wallId: string
+    startClientX: number
+    startClientY: number
+    onMove: (event: MouseEvent) => void
+    onUp: () => void
+  } | null = null
 
   function cancelMoveDragPending(): void {
     if (!moveDragPending) return

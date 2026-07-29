@@ -109,9 +109,7 @@ export function useWorkspaceViewUi(deps: {
 
   const debugSidebarVisible = computed(() => !!deps.imageSrc.value)
 
-  const onFmlResultTab = computed(() =>
-    isOnFmlResultTab(deps.flowStep.value, deps.resultTab.value),
-  )
+  const onFmlResultTab = computed(() => isOnFmlResultTab(deps.flowStep.value, deps.resultTab.value))
 
   const fmlDevPanelVisible = computed(() => onFmlResultTab.value)
 

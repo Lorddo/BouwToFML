@@ -45,7 +45,12 @@ describe('compressPolylinePoints', () => {
   })
 
   it('laat korte polyline ongemoeid', () => {
-    expect(compressPolylinePoints([[1, 2], [4, 5]])).toEqual([
+    expect(
+      compressPolylinePoints([
+        [1, 2],
+        [4, 5],
+      ]),
+    ).toEqual([
       [1, 2],
       [4, 5],
     ])

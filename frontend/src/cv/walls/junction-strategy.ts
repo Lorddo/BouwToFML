@@ -10,9 +10,7 @@ import {
   type SerializedRoomClassifyState,
 } from './strategies/room-first'
 import { runInkProcessAfterEdits } from './rooms/room-ink-process'
-import {
-  finalizeRoomReferenceMat,
-} from './rooms/room-reference-preprocess'
+import { finalizeRoomReferenceMat } from './rooms/room-reference-preprocess'
 import type { RoomPipelinePhase, WallStrategyResult } from './strategy-utils'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import { DEFAULT_WALL_PIPELINE_VERSION } from '@/platform/wall-pipeline-version'
@@ -155,5 +153,9 @@ export async function runWallJunctionStrategy(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     roomInkCoverageThreshold: params.roomInkCoverageThreshold,
   })
-  return { ...result, roomPipelinePhase: 'full', wallPipelineVersion: params.wallPipelineVersion ?? DEFAULT_WALL_PIPELINE_VERSION }
+  return {
+    ...result,
+    roomPipelinePhase: 'full',
+    wallPipelineVersion: params.wallPipelineVersion ?? DEFAULT_WALL_PIPELINE_VERSION,
+  }
 }

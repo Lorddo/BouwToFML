@@ -8,12 +8,14 @@ import type { PreprocessConfig } from '@/platform/image'
 import { createWorkCanvas } from '@/platform/image'
 import type { ExampleSample } from '@/core/extraction'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
-import {
-  resolveLayerPreprocess,
-  usesGapsFaceOverlay,
-} from '@/cv/preprocess/layer-preprocess'
+import { resolveLayerPreprocess, usesGapsFaceOverlay } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
-import { carveOtsuWhiteIntoGapsMat, runGapsPipeline, resolveMaxOpeningRefFaceAreaPx, type GapsInkMode } from '@/cv/gaps'
+import {
+  carveOtsuWhiteIntoGapsMat,
+  runGapsPipeline,
+  resolveMaxOpeningRefFaceAreaPx,
+  type GapsInkMode,
+} from '@/cv/gaps'
 import { runPreprocessLayer } from '@/cv/layers/preprocess-layer'
 import { buildRoomReferenceMat } from '@/cv/walls/rooms/room-reference-preprocess'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
@@ -160,9 +162,9 @@ export function useWorkspaceGapsFaces(deps: {
           state.height,
         )
         const prior = resolvePriorClassification(state)
-        const openingRects = deps.openingRects().filter(
-          (rect) => rect.type === 'door' || rect.type === 'window',
-        )
+        const openingRects = deps
+          .openingRects()
+          .filter((rect) => rect.type === 'door' || rect.type === 'window')
         const maxRefFaceAreaPx =
           openingRects.length > 0
             ? await resolveMaxOpeningRefFaceAreaPx({

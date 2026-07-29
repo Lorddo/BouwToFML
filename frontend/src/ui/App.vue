@@ -29,18 +29,10 @@ function onNewWorkspace(): void {
       <span class="subtitle">Bouwtekening naar Floorplanner</span>
     </div>
     <nav class="header-nav">
-      <button
-        type="button"
-        :class="{ active: activeView === 'workspace' }"
-        @click="openWorkspace"
-      >
+      <button type="button" :class="{ active: activeView === 'workspace' }" @click="openWorkspace">
         Nieuw
       </button>
-      <button
-        type="button"
-        :class="{ active: activeView === 'fml-viewer' }"
-        @click="openFmlViewer"
-      >
+      <button type="button" :class="{ active: activeView === 'fml-viewer' }" @click="openFmlViewer">
         FML viewer
       </button>
       <button

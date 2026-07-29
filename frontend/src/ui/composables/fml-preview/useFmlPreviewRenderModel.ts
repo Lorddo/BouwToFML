@@ -9,10 +9,7 @@ import { loadImage } from '@/ui/composables/workspace/imageUtils'
 import type { ContentLayout } from './useFmlPreviewViewport'
 import { layoutTransform } from './useFmlPreviewViewport'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
-import {
-  buildRenderDoorGroupsAndWindows,
-  buildRenderFixtures,
-} from './fml-preview-render-openings'
+import { buildRenderDoorGroupsAndWindows, buildRenderFixtures } from './fml-preview-render-openings'
 import type {
   RenderJunction,
   RenderModel,
@@ -131,9 +128,7 @@ export function useFmlPreviewRenderModel(
     }))
     const wallFillPathData = wallFillComponentsToPathData(
       geometry.fillComponents.map((component) => ({
-        rings: component.rings.map((ring) =>
-          ring.map((point) => toStagePoint(point.x, point.y)),
-        ),
+        rings: component.rings.map((ring) => ring.map((point) => toStagePoint(point.x, point.y))),
       })),
     )
     if (!wallFillPathData) {
@@ -202,7 +197,9 @@ export function useFmlPreviewRenderModel(
   const moveWallPolygon = computed(() => {
     if (!selection.moveWallId.value || !renderModel.value) return null
     if (settingsWallIds.value.includes(selection.moveWallId.value)) return null
-    return renderModel.value.wallPolygons.find((item) => item.id === selection.moveWallId.value) ?? null
+    return (
+      renderModel.value.wallPolygons.find((item) => item.id === selection.moveWallId.value) ?? null
+    )
   })
 
   const moveOpeningId = computed(() => selection.moveOpeningId.value)

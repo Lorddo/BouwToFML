@@ -107,7 +107,10 @@ export function tryBindDoorToAnchorSegment(params: {
       0,
       axis === 'v' ? Math.abs(dfCx - edgeX) : Math.abs(dfCy - edgeY),
     ),
-    sideLength: axis === 'v' ? Math.max(1, spanBounds.y1 - spanBounds.y0) : Math.max(1, spanBounds.x1 - spanBounds.x0),
+    sideLength:
+      axis === 'v'
+        ? Math.max(1, spanBounds.y1 - spanBounds.y0)
+        : Math.max(1, spanBounds.x1 - spanBounds.x0),
     sideMid,
   }
 

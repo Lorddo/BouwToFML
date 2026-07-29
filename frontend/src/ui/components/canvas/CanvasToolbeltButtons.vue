@@ -61,10 +61,7 @@ const emit = defineEmits<{
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <path
-        fill="currentColor"
-        d="M3 5v14h18V5H3zm16 12H5V7h14v10z"
-      />
+      <path fill="currentColor" d="M3 5v14h18V5H3zm16 12H5V7h14v10z" />
     </svg>
     <svg
       v-else-if="tool.icon === 'unknown'"
@@ -116,10 +113,7 @@ const emit = defineEmits<{
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <path
-        fill="currentColor"
-        d="M4 4h16v16H4V4zm2 2v12h12V6H6zm3 3h6v2H9V9zm0 4h4v2H9v-2z"
-      />
+      <path fill="currentColor" d="M4 4h16v16H4V4zm2 2v12h12V6H6zm3 3h6v2H9V9zm0 4h4v2H9v-2z" />
     </svg>
     <svg
       v-else-if="tool.icon === 'delete'"
@@ -138,10 +132,7 @@ const emit = defineEmits<{
       viewBox="0 0 24 24"
       aria-hidden="true"
     >
-      <path
-        fill="currentColor"
-        d="M3 5v14h8V5H3zm10 0v14h8V5h-8zM5 7h4v10H5V7zm12 0h4v10h-4V7z"
-      />
+      <path fill="currentColor" d="M3 5v14h8V5H3zm10 0v14h8V5h-8zM5 7h4v10H5V7zm12 0h4v10h-4V7z" />
     </svg>
     <svg
       v-else-if="tool.icon === 'ruler'"

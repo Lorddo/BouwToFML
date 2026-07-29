@@ -5,15 +5,9 @@ describe('patchTopologyLabelsInDiffRegion', () => {
   it('laat labels buiten patch ongemoeid', () => {
     const width = 5
     const height = 3
-    const rawLabelsData = new Int32Array([
-      1, 1, 0, 2, 2,
-      1, 1, 0, 2, 2,
-      1, 1, 0, 2, 2,
-    ])
+    const rawLabelsData = new Int32Array([1, 1, 0, 2, 2, 1, 1, 0, 2, 2, 1, 1, 0, 2, 2])
     const newWallBwData = Uint8Array.from([
-      255, 255, 255, 255, 255,
-      255, 255, 255, 255, 255,
-      255, 255, 255, 255, 255,
+      255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
     ])
 
     const before = new Int32Array(rawLabelsData)

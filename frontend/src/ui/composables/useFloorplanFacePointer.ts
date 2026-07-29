@@ -29,7 +29,10 @@ export function useFloorplanFacePointer(deps: {
     return true
   }
 
-  function onFaceSelectMouseDown(p: Point, opts: { shiftKey: boolean; stopDrag: () => void }): boolean {
+  function onFaceSelectMouseDown(
+    p: Point,
+    opts: { shiftKey: boolean; stopDrag: () => void },
+  ): boolean {
     if (!deps.isFaceSelectMode() || !opts.shiftKey || deps.spacePressed()) return false
     opts.stopDrag()
     deps.onFaceClick(Math.round(p.x), Math.round(p.y))

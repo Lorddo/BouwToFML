@@ -3,7 +3,10 @@ import type { ExtractionOutput } from '@/core/extraction'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import { downloadText } from '@/core/fml/downloadFml'
 import { formatCvError } from '@/cv/formatCvError'
-import { buildLayerDebugReport, formatLayerDebugMarkdown } from '@/platform/export/layer-debug-report'
+import {
+  buildLayerDebugReport,
+  formatLayerDebugMarkdown,
+} from '@/platform/export/layer-debug-report'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type { BoundWindow, WindowBindRejection } from '@/cv/windows'
 import { exportBasename } from './workspace-export-shared'
@@ -48,11 +51,7 @@ export function createWorkspaceExportLayerDebug(deps: WorkspaceExportLayerDebugD
           `${safe}-layer-debug.json`,
           'application/json',
         )
-        downloadText(
-          formatLayerDebugMarkdown(report),
-          `${safe}-layer-debug.md`,
-          'text/markdown',
-        )
+        downloadText(formatLayerDebugMarkdown(report), `${safe}-layer-debug.md`, 'text/markdown')
       } catch (e) {
         deps.setLocalError(formatCvError(e))
       }

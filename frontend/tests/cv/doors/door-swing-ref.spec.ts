@@ -170,11 +170,7 @@ describe('door-swing-ref', () => {
   })
 
   it('meet asymmetrische overhangs t.o.v. boog-scharnier (ondiepe pivot niet op kozijn)', () => {
-    const makeKozijn = (params: {
-      label: number
-      x: number
-      width: number
-    }): RefFace =>
+    const makeKozijn = (params: { label: number; x: number; width: number }): RefFace =>
       ({
         label: params.label,
         role: 'interior',
@@ -186,7 +182,10 @@ describe('door-swing-ref', () => {
       }) as RefFace
 
     const sizing = resolveReferenceSizing({
-      faces: [makeKozijn({ label: 1, x: 4, width: 12 }), makeKozijn({ label: 2, x: 108, width: 13 })],
+      faces: [
+        makeKozijn({ label: 1, x: 4, width: 12 }),
+        makeKozijn({ label: 2, x: 108, width: 13 }),
+      ],
       axis: 'x',
       swingSpanPx: 80,
       fallbackTotalPx: 120,
@@ -203,11 +202,7 @@ describe('door-swing-ref', () => {
   })
 
   it('valt terug op de swing-span als een kozijn gemist wordt (geen mini-deur)', () => {
-    const makeKozijn = (params: {
-      label: number
-      x: number
-      width: number
-    }): RefFace =>
+    const makeKozijn = (params: { label: number; x: number; width: number }): RefFace =>
       ({
         label: params.label,
         role: 'interior',

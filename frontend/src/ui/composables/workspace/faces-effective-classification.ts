@@ -1,8 +1,5 @@
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
-import {
-  effectiveClassification,
-  type RoomRasterCache,
-} from '@/cv/walls/rooms/room-raster-cache'
+import { effectiveClassification, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import {
   applyFaceClassificationOverrides,
   type RoomRasterClass,

@@ -46,12 +46,14 @@ export function repairLayer6ConnectorCandidates(params: {
     if (candidate.syntheticVSegment) return false
     const connector = work[candidate.connectorIndex]
     if (!connector) return false
-    return resolveLandingChamferGeometry({
-      segments: work,
-      diagonal: connector,
-      referenceWallThicknessPx: scale.refPx,
-      hvBandPx,
-    }) != null
+    return (
+      resolveLandingChamferGeometry({
+        segments: work,
+        diagonal: connector,
+        referenceWallThicknessPx: scale.refPx,
+        hvBandPx,
+      }) != null
+    )
   })
 
   const stats: Layer6ConnectorRepairStats = {
@@ -72,7 +74,9 @@ export function repairLayer6ConnectorCandidates(params: {
       diagonal: connector,
       referenceWallThicknessPx: scale.refPx,
       hvBandPx,
-    }) ? 2 : 1
+    })
+      ? 2
+      : 1
   }
 
   const orderedCandidates = [...candidates]
@@ -109,15 +113,18 @@ export function repairLayer6ConnectorCandidates(params: {
 
   for (const candidate of orderedCandidates) {
     if (
-      params.onlyCandidateIndex != null
-      && candidate.connectorIndex !== params.onlyCandidateIndex
+      params.onlyCandidateIndex != null &&
+      candidate.connectorIndex !== params.onlyCandidateIndex
     ) {
       continue
     }
 
     // Indexen verschuiven na eerdere repairs — zoek seed opnieuw op geometrie.
     let seedIndex = candidate.connectorIndex
-    if (seedIndex >= work.length || classifyLayer6Segment(work[seedIndex]!, seedIndex, hvBandPx).kind !== 'D') {
+    if (
+      seedIndex >= work.length ||
+      classifyLayer6Segment(work[seedIndex]!, seedIndex, hvBandPx).kind !== 'D'
+    ) {
       const orig = params.segments[candidate.connectorIndex]
       if (!orig) {
         stats.skippedNoIntersection += 1
@@ -125,8 +132,8 @@ export function repairLayer6ConnectorCandidates(params: {
       }
       seedIndex = work.findIndex((seg) => {
         return (
-          Math.hypot(seg.a.x - orig.a.x, seg.a.y - orig.a.y) < 0.5
-          && Math.hypot(seg.b.x - orig.b.x, seg.b.y - orig.b.y) < 0.5
+          Math.hypot(seg.a.x - orig.a.x, seg.a.y - orig.a.y) < 0.5 &&
+          Math.hypot(seg.b.x - orig.b.x, seg.b.y - orig.b.y) < 0.5
         )
       })
       if (seedIndex < 0) {
@@ -191,12 +198,14 @@ export function repairLandingChamferConnectors(params: {
       if (candidate.syntheticVSegment) return false
       const connector = segments[candidate.connectorIndex]
       if (!connector) return false
-      return resolveLandingChamferGeometry({
-        segments,
-        diagonal: connector,
-        referenceWallThicknessPx: scale.refPx,
-        hvBandPx,
-      }) != null
+      return (
+        resolveLandingChamferGeometry({
+          segments,
+          diagonal: connector,
+          referenceWallThicknessPx: scale.refPx,
+          hvBandPx,
+        }) != null
+      )
     })
     if (landingLeft.length === 0) break
     const pick = [...landingLeft].sort((a, b) => b.lengthPx - a.lengthPx)[0]!

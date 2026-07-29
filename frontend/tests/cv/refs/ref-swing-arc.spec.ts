@@ -25,7 +25,8 @@ function makeFace(params: {
     centroid: { x: cx, y: cy },
     relativeCentroid: { x: cx / cropW, y: cy / cropH },
     inkRatio: 0.1,
-    aspectRatio: Math.max(params.width, params.height) / Math.max(1, Math.min(params.width, params.height)),
+    aspectRatio:
+      Math.max(params.width, params.height) / Math.max(1, Math.min(params.width, params.height)),
     compactness: params.compactness ?? 0.5,
     touchesBorder: params.touchesBorder ?? false,
     role: params.role ?? 'interior',
@@ -47,7 +48,16 @@ describe('selectSwingSectorFace', () => {
     const faces: RefFace[] = [
       ...kozijnPair(),
       // As-rails (on_axis)
-      makeFace({ label: 3, x: 12, y: 10, width: 100, height: 3, areaPx: 280, role: 'interior', compactness: 0.85 }),
+      makeFace({
+        label: 3,
+        x: 12,
+        y: 10,
+        width: 100,
+        height: 3,
+        areaPx: 280,
+        role: 'interior',
+        compactness: 0.85,
+      }),
       // Full-width blob (zou area-rank winnen) — on_axis / bovenste helft
       makeFace({
         label: 4,

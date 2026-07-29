@@ -3,10 +3,7 @@ import type { OpenCV } from '@/cv/loadOpenCV'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
 import { yieldToMain } from '@/platform/image/workImage'
 import type { RoomClassifyResult } from '../strategies/room-first'
-import {
-  collectAffectedFaceLabels,
-  pruneStaleLabelMaps,
-} from './room-ink-affected-faces'
+import { collectAffectedFaceLabels, pruneStaleLabelMaps } from './room-ink-affected-faces'
 import {
   applyFaceClassificationOverrides,
   buildEffectiveComponentClassification,
@@ -102,12 +99,7 @@ export function needsFullInkResolveForEdits(params: {
   if (!params.diffBounds) return false
   const m = Math.max(0, Math.round(params.borderMarginPx))
   const b = params.diffBounds
-  return (
-    b.x0 <= m ||
-    b.y0 <= m ||
-    b.x1 >= params.width - 1 - m ||
-    b.y1 >= params.height - 1 - m
-  )
+  return b.x0 <= m || b.y0 <= m || b.x1 >= params.width - 1 - m || b.y1 >= params.height - 1 - m
 }
 
 /**
@@ -258,9 +250,7 @@ export async function runInkProcessAfterEdits(params: {
     priorParentMap,
   })
   const inkResolveBounds =
-    diffBounds != null
-      ? expandDiffBounds(diffBounds, impactMarginPx, width, height)
-      : undefined
+    diffBounds != null ? expandDiffBounds(diffBounds, impactMarginPx, width, height) : undefined
   const useRegionalInkResolve =
     inkResolveBounds != null &&
     !needsFullInkResolveForEdits({
@@ -325,4 +315,3 @@ export async function runInkProcessAfterEdits(params: {
     refinedPinnedRoots,
   }
 }
-

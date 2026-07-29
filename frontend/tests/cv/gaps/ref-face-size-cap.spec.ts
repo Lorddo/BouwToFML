@@ -12,7 +12,11 @@ describe('ref-face-size-cap', () => {
     expect(isOpeningRefFaceForCap({ role: 'head' } as never, null, 'horizontal')).toBe(true)
     expect(isOpeningRefFaceForCap({ role: 'unknown' } as never, null, 'horizontal')).toBe(true)
     expect(
-      isOpeningRefFaceForCap({ role: 'outside', centroid: { x: 50, y: 10 } } as never, null, 'horizontal'),
+      isOpeningRefFaceForCap(
+        { role: 'outside', centroid: { x: 50, y: 10 } } as never,
+        null,
+        'horizontal',
+      ),
     ).toBe(false)
   })
 

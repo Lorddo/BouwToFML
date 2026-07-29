@@ -36,7 +36,9 @@ export function countPlanElements(plan: FloorPlan | null): {
   const floor = plan.floors[0]
   if (!floor) return { walls: 0, doors: 0, windows: 0 }
   const walls = floor.walls.length
-  const doors = floor.walls.flatMap((wall) => wall.openings).filter((opening) => opening.type === 'door').length
+  const doors = floor.walls
+    .flatMap((wall) => wall.openings)
+    .filter((opening) => opening.type === 'door').length
   const windows = floor.walls
     .flatMap((wall) => wall.openings)
     .filter((opening) => opening.type === 'window').length

@@ -5,10 +5,7 @@ import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt, removeSegmentAt, replaceSegmentEndpoint } from '../segment-ops'
 import { collectLayer6HvArmsAtPoint } from './arm-detect'
-import {
-  LAYER6_ENDPOINT_SNAP_PX,
-  LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO,
-} from './constants'
+import { LAYER6_ENDPOINT_SNAP_PX, LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO } from './constants'
 import { isLandingChamferAtJunction } from './chamfer-chain'
 import { classifyLayer6Segment } from './segment-classify'
 
@@ -19,7 +16,10 @@ export type IncidentTyped = ReturnType<typeof incidentAt>[number] & {
 
 export type HvArmTyped = ReturnType<typeof collectLayer6HvArmsAtPoint>[number]
 
-export function otherEndpoint(seg: Segment, point: { x: number; y: number }): { x: number; y: number } {
+export function otherEndpoint(
+  seg: Segment,
+  point: { x: number; y: number },
+): { x: number; y: number } {
   const da = Math.hypot(seg.a.x - point.x, seg.a.y - point.y)
   const db = Math.hypot(seg.b.x - point.x, seg.b.y - point.y)
   return da <= db ? { ...seg.b } : { ...seg.a }
@@ -75,7 +75,10 @@ export function removeShortDiagonalIncidents(params: {
         segments: params.segments,
         diagonal: incident.segment,
         junctionPoint: params.junctionPoint,
-        minArmPx: Math.max(params.armStrictPx, params.maxConnectorPx * LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO),
+        minArmPx: Math.max(
+          params.armStrictPx,
+          params.maxConnectorPx * LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO,
+        ),
         hvBandPx: params.hvBandPx,
       })
     ) {
@@ -111,8 +114,14 @@ export function replaceLongArmEndpointAtJunction(params: {
 }): void {
   const endpointSnapPx = params.endpointSnapPx ?? LAYER6_ENDPOINT_SNAP_PX
   if (params.arm.lengthPx < params.minArmPx) return
-  const da = Math.hypot(params.arm.segment.a.x - params.junctionPoint.x, params.arm.segment.a.y - params.junctionPoint.y)
-  const db = Math.hypot(params.arm.segment.b.x - params.junctionPoint.x, params.arm.segment.b.y - params.junctionPoint.y)
+  const da = Math.hypot(
+    params.arm.segment.a.x - params.junctionPoint.x,
+    params.arm.segment.a.y - params.junctionPoint.y,
+  )
+  const db = Math.hypot(
+    params.arm.segment.b.x - params.junctionPoint.x,
+    params.arm.segment.b.y - params.junctionPoint.y,
+  )
   const end = da <= db ? params.arm.segment.a : params.arm.segment.b
   if (Math.hypot(end.x - params.junctionPoint.x, end.y - params.junctionPoint.y) > endpointSnapPx) {
     return

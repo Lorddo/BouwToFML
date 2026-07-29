@@ -20,7 +20,11 @@ type AxisItem = {
   lengthPx: number
 }
 
-function resolveRepositionTolerancePx(policy: HvPolicy, localThicknessPx: number, referenceFallbackPx?: number): number {
+function resolveRepositionTolerancePx(
+  policy: HvPolicy,
+  localThicknessPx: number,
+  referenceFallbackPx?: number,
+): number {
   const base = Math.max(localThicknessPx, referenceFallbackPx ?? 0, policy.thicknessFallbackPx)
   const raw = policy.repositionToleranceRatio * base
   return Math.min(
@@ -57,7 +61,10 @@ function canClusterParallelOffsetWall(params: {
   if (maxThickness > 0 && minThickness / maxThickness < params.policy.thicknessMatchMinRatio) {
     return false
   }
-  const separateWallThreshold = Math.max(1, Math.round(minThickness * params.policy.separateWallRatio))
+  const separateWallThreshold = Math.max(
+    1,
+    Math.round(minThickness * params.policy.separateWallRatio),
+  )
   if (params.offsetPx >= separateWallThreshold) return false
   const tolerancePx = Math.min(
     resolveRepositionTolerancePx(params.policy, params.thicknessA, params.referenceWallThicknessPx),
@@ -219,7 +226,8 @@ export function resolveSegmentAxisTargets(params: {
         const item = items.find((entry) => entry.index === index)
         if (!item) continue
         const targetAxis =
-          cluster.targetAxis != null && Math.abs(cluster.targetAxis - item.pos) <= cluster.maxShiftPx
+          cluster.targetAxis != null &&
+          Math.abs(cluster.targetAxis - item.pos) <= cluster.maxShiftPx
             ? cluster.targetAxis
             : item.pos
         out[index] = { orientation, targetAxis }

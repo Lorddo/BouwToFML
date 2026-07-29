@@ -10,11 +10,7 @@ import {
   perpStart,
 } from './window-evidence-geom'
 import { WINDOW_EVIDENCE_TUNING } from './window-evidence-tuning'
-import type {
-  WindowAxelHypothesis,
-  WindowAxelOrientation,
-  WindowAxelRefBand,
-} from './types'
+import type { WindowAxelHypothesis, WindowAxelOrientation, WindowAxelRefBand } from './types'
 
 function medianNumber(values: number[]): number {
   if (values.length <= 0) return 0
@@ -68,10 +64,7 @@ function thicknessMatchesStackExpectation(params: {
   return false
 }
 
-function faceStripThicknessPx(
-  bbox: RootFace['bbox'],
-  orientation: WindowAxelOrientation,
-): number {
+function faceStripThicknessPx(bbox: RootFace['bbox'], orientation: WindowAxelOrientation): number {
   return orientation === 'horizontal' ? bbox.height : bbox.width
 }
 
@@ -134,9 +127,7 @@ export function growFullStackFromSeedFaces(params: {
   const whiteByRoot = new Map(whiteFaces.map((f) => [f.root, f]))
   const inkByRoot = new Map(inkFaces.map((f) => [f.root, f]))
   const seedIds = [...new Set(seedFaceIds.filter((id) => id > 0 && whiteByRoot.has(id)))]
-  const seedFaces = seedIds
-    .map((id) => whiteByRoot.get(id))
-    .filter((f): f is RootFace => !!f)
+  const seedFaces = seedIds.map((id) => whiteByRoot.get(id)).filter((f): f is RootFace => !!f)
   const seedSpans = seedFaces.map((f) => axisSpan(f.bbox, orientation)).filter((s) => s > 0)
   const seedMedianSpan = medianNumber(seedSpans)
   if (!(seedMedianSpan > 0) || expectedHeightsPx.length <= 0) {
@@ -149,7 +140,10 @@ export function growFullStackFromSeedFaces(params: {
   const maxAxisCenterOffsetPx = seedAxisLen * WINDOW_EVIDENCE_TUNING.axisSideCenterRatio
   /** Lokale stack-dikte: seed ± N×max REF-hoogte (N = fullStripCount), geen gevel-BFS. */
   const maxExpectedH = Math.max(1, ...expectedHeightsPx)
-  const stackPadPx = Math.max(1, maxExpectedH * Math.max(1, maxFaceCount) + Math.max(1, maxFaceCount))
+  const stackPadPx = Math.max(
+    1,
+    maxExpectedH * Math.max(1, maxFaceCount) + Math.max(1, maxFaceCount),
+  )
   const bandPerp0 = perpStart(seedBbox, orientation) - stackPadPx
   const bandPerp1 = perpEnd(seedBbox, orientation) + stackPadPx
   /** Wit↔wit: alleen dunne inkt-gap. Grotere sprongen = framing-territorium. */

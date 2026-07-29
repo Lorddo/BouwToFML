@@ -21,10 +21,7 @@ function contentBounds(
   for (const item of items) {
     const halfW = Math.max(0, item.width) / 2
     const halfH = Math.max(0, item.height) / 2
-    points.push(
-      { x: item.x - halfW, y: item.y - halfH },
-      { x: item.x + halfW, y: item.y + halfH },
-    )
+    points.push({ x: item.x - halfW, y: item.y - halfH }, { x: item.x + halfW, y: item.y + halfH })
   }
   const minX = Math.min(...points.map((p) => p.x))
   const minY = Math.min(...points.map((p) => p.y))
@@ -103,8 +100,7 @@ export function useFmlPreviewViewport(
     if (!container) return
     const width = Math.max(360, Math.floor(container.clientWidth))
     const height = Math.max(320, Math.floor(container.clientHeight))
-    const sizeChanged =
-      width !== stageSize.value.width || height !== stageSize.value.height
+    const sizeChanged = width !== stageSize.value.width || height !== stageSize.value.height
     stageSize.value = { width, height }
     // Alleen herfitten bij echte container-resize of ontbrekende layout —
     // niet bij elke ResizeObserver-callback na muur-edit (dat voelt als uitzoomen).

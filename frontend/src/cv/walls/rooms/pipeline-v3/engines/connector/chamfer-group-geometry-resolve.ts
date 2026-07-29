@@ -4,10 +4,7 @@
 import type { Segment } from '@/cv/port/wallGraph'
 import { infiniteLineIntersection, segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt } from '../segment-ops'
-import {
-  resolveLandingChamferGeometry,
-  resolveSimpleLChamferGeometry,
-} from './chamfer-chain'
+import { resolveLandingChamferGeometry, resolveSimpleLChamferGeometry } from './chamfer-chain'
 import { measureCollinearChainSpan, pickDominantChainIncident } from './collinear-chain'
 import {
   LAYER6_BRIDGE_MAX_SHIFT_RATIO,
@@ -76,10 +73,11 @@ function hvIncidentsNearGroup(params: {
           )
           if (d < bestDist) {
             bestDist = d
-            bestAnchor = Math.hypot(point.x - seg.a.x, point.y - seg.a.y)
-              <= Math.hypot(point.x - seg.b.x, point.y - seg.b.y)
-              ? seg.a
-              : seg.b
+            bestAnchor =
+              Math.hypot(point.x - seg.a.x, point.y - seg.a.y) <=
+              Math.hypot(point.x - seg.b.x, point.y - seg.b.y)
+                ? seg.a
+                : seg.b
           }
         }
       }
@@ -127,8 +125,9 @@ function consensusAxisSegment(params: {
   })
   // Representatieve oneindige as: verleng langs consensus-aswaarde.
   const classified = classifyLayer6Segment(seg, params.segIndex, params.hvBandPx)
-  const axis = classified.targetAxis
-    ?? (params.kind === 'H' ? (seg.a.y + seg.b.y) / 2 : (seg.a.x + seg.b.x) / 2)
+  const axis =
+    classified.targetAxis ??
+    (params.kind === 'H' ? (seg.a.y + seg.b.y) / 2 : (seg.a.x + seg.b.x) / 2)
   const reach = Math.max(span, params.consensusReachPx)
   if (params.kind === 'H') {
     return {
@@ -242,7 +241,9 @@ export function resolveChamferGroupGeometry(params: {
   })
 
   // Trap-keten (draaizin wisselt): niet als chamfer-groep collapsen.
-  if (isAlternatingStairDiagonalChain({ segments: params.segments, diagonalIndices, endpointSnapPx })) {
+  if (
+    isAlternatingStairDiagonalChain({ segments: params.segments, diagonalIndices, endpointSnapPx })
+  ) {
     return null
   }
 
@@ -284,7 +285,9 @@ export function resolveChamferGroupGeometry(params: {
       const vPick = vSide.v[0]!
       // Gebruik langste H-as (stub×V kan numeriek ok zijn; lange arm is stabieler).
       const hForHit =
-        hSide.h.find((inc) => segmentLength(inc.segment) >= maxConnectorPx * LAYER6_LONG_H_MIN_CONNECTOR_RATIO) ?? hPick
+        hSide.h.find(
+          (inc) => segmentLength(inc.segment) >= maxConnectorPx * LAYER6_LONG_H_MIN_CONNECTOR_RATIO,
+        ) ?? hPick
       const hit = infiniteLineIntersection(hForHit.segment, vPick.segment)
       if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) continue
       const reach = Math.max(
@@ -296,12 +299,13 @@ export function resolveChamferGroupGeometry(params: {
       // T of through-H op het H-eind: niet simple-L yanken.
       // Landing-brug alleen bij korte V-jog-stub of ≥2 H (west @660).
       // Lange V op hetzelfde eind = echte T-stam → gewoon naar H×V lassen (oost-T).
-      const shortVAtH = hSide.v.filter((inc) => inc.lengthPx <= Math.min(maxConnectorPx, scale.stubCapPx))
-      const longVAtH = hSide.v.filter((inc) => inc.lengthPx > Math.min(maxConnectorPx, scale.stubCapPx))
-      if (
-        (hSide.h.length >= 2 || shortVAtH.length > 0)
-        && longVAtH.length === 0
-      ) {
+      const shortVAtH = hSide.v.filter(
+        (inc) => inc.lengthPx <= Math.min(maxConnectorPx, scale.stubCapPx),
+      )
+      const longVAtH = hSide.v.filter(
+        (inc) => inc.lengthPx > Math.min(maxConnectorPx, scale.stubCapPx),
+      )
+      if ((hSide.h.length >= 2 || shortVAtH.length > 0) && longVAtH.length === 0) {
         const maxBridge = scale.maxAttachmentShiftPx * LAYER6_BRIDGE_MAX_SHIFT_RATIO
         const bridgeLen = Math.hypot(hit.x - hSide.point.x, hit.y - hSide.point.y)
         if (bridgeLen > maxBridge) continue
@@ -361,8 +365,11 @@ export function resolveChamferGroupGeometry(params: {
       const seg = params.segments[idx]!
       return [seg.a, seg.b]
     })
-    let bestV: { segIndex: number; lengthPx: number; anchorPoint: { x: number; y: number } } | null =
-      null
+    let bestV: {
+      segIndex: number
+      lengthPx: number
+      anchorPoint: { x: number; y: number }
+    } | null = null
     let bestSpan = 0
     for (const tip of tipCandidates) {
       const vAtTip = incidentAt(params.segments, tip, endpointSnapPx).filter((inc) => {
@@ -453,26 +460,24 @@ export function resolveChamferGroupGeometry(params: {
   // Seed-diagonaal moet aan H- of V-touch hangen — geen T@572 repareren via diag@587.
   const seed = params.segments[params.connectorIndex]!
   const seedTouches = (point: { x: number; y: number }) =>
-    Math.hypot(seed.a.x - point.x, seed.a.y - point.y) <= nearbyWeldPx
-    || Math.hypot(seed.b.x - point.x, seed.b.y - point.y) <= nearbyWeldPx
+    Math.hypot(seed.a.x - point.x, seed.a.y - point.y) <= nearbyWeldPx ||
+    Math.hypot(seed.b.x - point.x, seed.b.y - point.y) <= nearbyWeldPx
   const seedOnGroupTouch =
-    seedTouches(hInc.anchorPoint)
-    || seedTouches(vInc.anchorPoint)
-    || diagonalIndices.some((idx) => {
+    seedTouches(hInc.anchorPoint) ||
+    seedTouches(vInc.anchorPoint) ||
+    diagonalIndices.some((idx) => {
       if (idx === params.connectorIndex) return false
       const other = params.segments[idx]!
       return (
-        seedTouches(other.a)
-        || seedTouches(other.b)
-      ) && (
-        Math.hypot(other.a.x - hInc.anchorPoint.x, other.a.y - hInc.anchorPoint.y)
-          <= nearbyWeldPx
-        || Math.hypot(other.b.x - hInc.anchorPoint.x, other.b.y - hInc.anchorPoint.y)
-          <= nearbyWeldPx
-        || Math.hypot(other.a.x - vInc.anchorPoint.x, other.a.y - vInc.anchorPoint.y)
-          <= nearbyWeldPx
-        || Math.hypot(other.b.x - vInc.anchorPoint.x, other.b.y - vInc.anchorPoint.y)
-          <= nearbyWeldPx
+        (seedTouches(other.a) || seedTouches(other.b)) &&
+        (Math.hypot(other.a.x - hInc.anchorPoint.x, other.a.y - hInc.anchorPoint.y) <=
+          nearbyWeldPx ||
+          Math.hypot(other.b.x - hInc.anchorPoint.x, other.b.y - hInc.anchorPoint.y) <=
+            nearbyWeldPx ||
+          Math.hypot(other.a.x - vInc.anchorPoint.x, other.a.y - vInc.anchorPoint.y) <=
+            nearbyWeldPx ||
+          Math.hypot(other.b.x - vInc.anchorPoint.x, other.b.y - vInc.anchorPoint.y) <=
+            nearbyWeldPx)
       )
     })
   if (!seedOnGroupTouch) return null
@@ -485,8 +490,8 @@ export function resolveChamferGroupGeometry(params: {
   const nearGroup = diagonalIndices.some((idx) => {
     const seg = params.segments[idx]!
     return (
-      Math.hypot(seg.a.x - hit.x, seg.a.y - hit.y) <= maxShift
-      || Math.hypot(seg.b.x - hit.x, seg.b.y - hit.y) <= maxShift
+      Math.hypot(seg.a.x - hit.x, seg.a.y - hit.y) <= maxShift ||
+      Math.hypot(seg.b.x - hit.x, seg.b.y - hit.y) <= maxShift
     )
   })
   if (!nearGroup) return null
@@ -498,8 +503,7 @@ export function resolveChamferGroupGeometry(params: {
     .filter((inc) => classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind === 'V')
     .map((inc) => inc.segIndex)
 
-  const kind: ChamferGroupKind =
-    hAtTouch.length >= 2 || vAtTouch.length >= 2 ? 'T' : 'L'
+  const kind: ChamferGroupKind = hAtTouch.length >= 2 || vAtTouch.length >= 2 ? 'T' : 'L'
 
   return {
     kind,

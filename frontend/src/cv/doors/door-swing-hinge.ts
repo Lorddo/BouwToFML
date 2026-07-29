@@ -47,10 +47,7 @@ function measureSwingSpanPxFromFaceMask(params: {
 }
 
 /** Zelfde meetmethode als mask: max zijde van de face-/unie-bbox. */
-export function measureSwingSpanPxFromFaceBBox(bbox: {
-  width: number
-  height: number
-}): number {
+export function measureSwingSpanPxFromFaceBBox(bbox: { width: number; height: number }): number {
   return Math.max(1, bbox.width, bbox.height)
 }
 
@@ -94,7 +91,8 @@ export function computeDoorHingeFromMask(params: {
     if (!resolved) continue
     // Gebalanceerde radii prefereren (zelfde idee als pickBestAxes).
     const balance = Math.min(resolved.axes[0].supportLength, resolved.axes[1].supportLength)
-    const supportScore = balance * 2 + resolved.axes[0].supportLength + resolved.axes[1].supportLength
+    const supportScore =
+      balance * 2 + resolved.axes[0].supportLength + resolved.axes[1].supportLength
     if (supportScore < bestScore) continue
     bestScore = supportScore
     best = {

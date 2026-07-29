@@ -6,6 +6,7 @@
 /*
 !/.gitignore
 !/.gitattributes
+!/.git-blame-ignore-revs
 !/README.md
 !/frontend/
 !/.cursor/

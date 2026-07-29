@@ -35,7 +35,15 @@ function geomFromLabelRaster(
 ): Map<number, RefFaceGeom> {
   const acc = new Map<
     number,
-    { minX: number; minY: number; maxX: number; maxY: number; area: number; sumX: number; sumY: number }
+    {
+      minX: number
+      minY: number
+      maxX: number
+      maxY: number
+      area: number
+      sumX: number
+      sumY: number
+    }
   >()
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {

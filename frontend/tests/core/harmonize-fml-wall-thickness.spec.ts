@@ -7,7 +7,12 @@ import {
 import { classifyFmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { FloorPlan, Wall } from '@/core/fml/types'
 
-function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }, thickness: number): Wall {
+function wall(
+  id: string,
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  thickness: number,
+): Wall {
   return { id, a, b, thickness, balance: 0.5, c: null, openings: [] }
 }
 

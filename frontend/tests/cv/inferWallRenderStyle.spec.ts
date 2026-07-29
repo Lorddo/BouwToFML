@@ -68,9 +68,13 @@ describe('inferWallRenderStyle', () => {
   it('gebruikt tekeningprofiel-prior bij twijfel', () => {
     const mat = parallelLinesMat(220, 80, [31, 47], 10, 200, 0)
     const neutral = inferWallRenderStyle(mat, wallSample({ x: 0, y: 20, width: 210, height: 40 }))
-    const withPrior = inferWallRenderStyle(mat, wallSample({ x: 0, y: 20, width: 210, height: 40 }), {
-      expectedWallStyles: ['parallel_lines'],
-    })
+    const withPrior = inferWallRenderStyle(
+      mat,
+      wallSample({ x: 0, y: 20, width: 210, height: 40 }),
+      {
+        expectedWallStyles: ['parallel_lines'],
+      },
+    )
 
     expect(withPrior.scores.parallel_lines).toBeGreaterThanOrEqual(neutral.scores.parallel_lines)
   })

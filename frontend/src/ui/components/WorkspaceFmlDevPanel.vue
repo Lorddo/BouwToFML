@@ -66,11 +66,10 @@ function onBandMaxBoundaryInput(event: Event): void {
       />
     </label>
     <p class="band-hint">
-      min: ≤ {{ fmlBandMidBoundaryCm }} · mid: &gt; {{ fmlBandMidBoundaryCm }} en &lt; {{ fmlBandMaxBoundaryCm }} · max: ≥ {{ fmlBandMaxBoundaryCm }}
+      min: ≤ {{ fmlBandMidBoundaryCm }} · mid: &gt; {{ fmlBandMidBoundaryCm }} en &lt;
+      {{ fmlBandMaxBoundaryCm }} · max: ≥ {{ fmlBandMaxBoundaryCm }}
     </p>
-    <p v-if="fmlBandDirty" class="dirty-hint">
-      Bandgrenzen gewijzigd — Regenereren in FML-paneel.
-    </p>
+    <p v-if="fmlBandDirty" class="dirty-hint">Bandgrenzen gewijzigd — Regenereren in FML-paneel.</p>
   </div>
 </template>
 

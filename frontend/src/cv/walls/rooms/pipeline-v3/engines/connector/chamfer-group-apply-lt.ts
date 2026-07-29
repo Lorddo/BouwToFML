@@ -51,9 +51,7 @@ export function applyLtChamferGroup(params: {
     const seg = work[segIndex]
     if (!seg) return
     for (const end of [seg.a, seg.b]) {
-      const onDiag = diagEndpoints.some(
-        (p) => Math.hypot(p.x - end.x, p.y - end.y) <= nearbyWeldPx,
-      )
+      const onDiag = diagEndpoints.some((p) => Math.hypot(p.x - end.x, p.y - end.y) <= nearbyWeldPx)
       if (!onDiag) continue
       const shift = Math.hypot(end.x - hit.x, end.y - hit.y)
       // Nooit een arm plat trekken naar een verre hit (2D_3E: H@587→hit@572 → zero + gat).
@@ -77,8 +75,8 @@ export function applyLtChamferGroup(params: {
     if (classify(inc.segment, inc.segIndex).kind !== 'H') continue
     const touchesDiag = diagEndpoints.some(
       (p) =>
-        Math.hypot(p.x - inc.segment.a.x, p.y - inc.segment.a.y) <= nearbyWeldPx
-        || Math.hypot(p.x - inc.segment.b.x, p.y - inc.segment.b.y) <= nearbyWeldPx,
+        Math.hypot(p.x - inc.segment.a.x, p.y - inc.segment.a.y) <= nearbyWeldPx ||
+        Math.hypot(p.x - inc.segment.b.x, p.y - inc.segment.b.y) <= nearbyWeldPx,
     )
     if (touchesDiag) removeSet.add(inc.segIndex)
   }
@@ -90,8 +88,8 @@ export function applyLtChamferGroup(params: {
     if (classify(inc.segment, inc.segIndex).kind !== 'V') continue
     const touchesDiag = diagEndpoints.some(
       (p) =>
-        Math.hypot(p.x - inc.segment.a.x, p.y - inc.segment.a.y) <= nearbyWeldPx
-        || Math.hypot(p.x - inc.segment.b.x, p.y - inc.segment.b.y) <= nearbyWeldPx,
+        Math.hypot(p.x - inc.segment.a.x, p.y - inc.segment.a.y) <= nearbyWeldPx ||
+        Math.hypot(p.x - inc.segment.b.x, p.y - inc.segment.b.y) <= nearbyWeldPx,
     )
     if (touchesDiag) removeSet.add(inc.segIndex)
   }
@@ -129,11 +127,9 @@ export function applyLtChamferGroup(params: {
     if (diagSet.has(i) || removeSet.has(i)) continue
     if (classify(work[i]!, i).kind !== 'H') continue
     const aHit =
-      Math.hypot(work[i]!.a.x - geometry.hit.x, work[i]!.a.y - geometry.hit.y)
-      <= nearbyWeldPx
+      Math.hypot(work[i]!.a.x - geometry.hit.x, work[i]!.a.y - geometry.hit.y) <= nearbyWeldPx
     const bHit =
-      Math.hypot(work[i]!.b.x - geometry.hit.x, work[i]!.b.y - geometry.hit.y)
-      <= nearbyWeldPx
+      Math.hypot(work[i]!.b.x - geometry.hit.x, work[i]!.b.y - geometry.hit.y) <= nearbyWeldPx
     if (aHit || bHit) hForCover.add(i)
   }
   for (const hIdx of [...hForCover]) {
@@ -151,10 +147,7 @@ export function applyLtChamferGroup(params: {
       if (Math.abs((other.a.y + other.b.y) / 2 - sMidY) > scale.jogEpsilonPx) return false
       const oMinX = Math.min(other.a.x, other.b.x)
       const oMaxX = Math.max(other.a.x, other.b.x)
-      return (
-        oMinX <= sMinX + scale.jogEpsilonPx
-        && oMaxX >= sMaxX - scale.jogEpsilonPx
-      )
+      return oMinX <= sMinX + scale.jogEpsilonPx && oMaxX >= sMaxX - scale.jogEpsilonPx
     })
     if (covered) removeSet.add(hIdx)
   }

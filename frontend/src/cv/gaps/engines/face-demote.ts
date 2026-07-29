@@ -46,8 +46,7 @@ export function demoteFacesByWallMaskCoverage(params: {
   for (const [root, stats] of coverage.rootStats.entries()) {
     const prior = params.priorClassification.get(root) ?? 'surface'
     const ratio = stats.inkCoverageRatio
-    const demote =
-      stats.touchesBorder || ratio >= params.policy.wallCoverageThreshold
+    const demote = stats.touchesBorder || ratio >= params.policy.wallCoverageThreshold
     if (demote) {
       classificationByLabel.set(root, 'outside')
       demotedCount += 1

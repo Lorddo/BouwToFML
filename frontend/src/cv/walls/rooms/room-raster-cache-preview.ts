@@ -1,14 +1,8 @@
 import { createCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
-import {
-  paintClassifiedFaceMaskRegion,
-  renderClassifiedFaceMask,
-} from './room-ink-classify'
+import { paintClassifiedFaceMaskRegion, renderClassifiedFaceMask } from './room-ink-classify'
 import type { InkDiffBounds } from './room-ink-symmetric'
 import type { RoomRasterCache } from './room-raster-cache-types'
-import {
-  effectiveClassification,
-  mapFromEntries,
-} from './room-raster-cache-dual'
+import { effectiveClassification, mapFromEntries } from './room-raster-cache-dual'
 
 function ensurePreviewMaskCanvas(cache: RoomRasterCache): CanvasLike {
   const { width, height } = cache.state

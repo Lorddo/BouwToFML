@@ -16,7 +16,10 @@ export function useFloorplanRectInteraction(deps: {
   stageScale: () => number
   stagePointerPos: () => { x: number; y: number } | null
   onSelectRect: (id: string | null) => void
-  onRectUpdate: (id: string, bounds: { x: number; y: number; width: number; height: number }) => void
+  onRectUpdate: (
+    id: string,
+    bounds: { x: number; y: number; width: number; height: number },
+  ) => void
   onRectDelete: (id: string) => void
 }) {
   const resizeDrag = ref<{

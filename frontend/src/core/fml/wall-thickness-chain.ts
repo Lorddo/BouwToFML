@@ -31,8 +31,8 @@ export function wallThicknessBandsCompatible(
 ): boolean {
   if (thicknessA <= 0 || thicknessB <= 0) return true
   return (
-    classifyWallThicknessBandPx(thicknessA, referenceWallThicknessPx)
-    === classifyWallThicknessBandPx(thicknessB, referenceWallThicknessPx)
+    classifyWallThicknessBandPx(thicknessA, referenceWallThicknessPx) ===
+    classifyWallThicknessBandPx(thicknessB, referenceWallThicknessPx)
   )
 }
 

@@ -20,9 +20,9 @@ function onPick(mode: GapsInkMode) {
   <div class="panel">
     <h3>Gaten — inktmodus</h3>
     <p class="hint">
-      Auto uit muur-ref (≤5 faces = solid, &gt;5 = detail). Solid = alleen Gaten-B/W.
-      Detail = Otsu (Int muur) wit alleen in zwart van de gaten-laag carveën.
-      Handmatig wijzigen blijft staan tot je opnieuw een muur-ref tekent.
+      Auto uit muur-ref (≤5 faces = solid, &gt;5 = detail). Solid = alleen Gaten-B/W. Detail = Otsu
+      (Int muur) wit alleen in zwart van de gaten-laag carveën. Handmatig wijzigen blijft staan tot
+      je opnieuw een muur-ref tekent.
     </p>
     <p v-if="gapsInkModeManual" class="source">Bron: handmatig</p>
     <p v-else class="source">Bron: muur-referentie (auto)</p>

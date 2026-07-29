@@ -69,7 +69,11 @@ export function usePreprocessPreview() {
         examples,
         eraserMask: prepared.eraserMask,
       })
-      const displayCanvas = canvasAtOriginalSize(out.previewCanvas, work.originalWidth, work.originalHeight)
+      const displayCanvas = canvasAtOriginalSize(
+        out.previewCanvas,
+        work.originalWidth,
+        work.originalHeight,
+      )
       previewUrl.value = displayCanvas.toDataURL('image/png')
       out.mat.delete()
     } catch (e) {
@@ -102,7 +106,11 @@ export function usePreprocessPreview() {
         referenceWallThicknessPx: options?.referenceWallThicknessPx ?? undefined,
         wallStyle: preprocess.wallStyle === 'solid' ? 'solid' : 'open',
       })
-      const displayCanvas = canvasAtOriginalSize(out.previewCanvas, work.originalWidth, work.originalHeight)
+      const displayCanvas = canvasAtOriginalSize(
+        out.previewCanvas,
+        work.originalWidth,
+        work.originalHeight,
+      )
       previewUrl.value = displayCanvas.toDataURL('image/png')
       out.mat.delete()
     } catch (e) {
@@ -157,7 +165,11 @@ export function usePreprocessPreview() {
           }
         }
         const previewCanvas = matToCanvas(cv, gapsOut.mat)
-        const displayCanvas = canvasAtOriginalSize(previewCanvas, work.originalWidth, work.originalHeight)
+        const displayCanvas = canvasAtOriginalSize(
+          previewCanvas,
+          work.originalWidth,
+          work.originalHeight,
+        )
         previewUrl.value = displayCanvas.toDataURL('image/png')
       } finally {
         gapsOut.mat.delete()
@@ -188,7 +200,11 @@ export function usePreprocessPreview() {
         examples,
         eraserMask: prepared.eraserMask,
       })
-      const displayCanvas = canvasAtOriginalSize(out.previewCanvas, work.originalWidth, work.originalHeight)
+      const displayCanvas = canvasAtOriginalSize(
+        out.previewCanvas,
+        work.originalWidth,
+        work.originalHeight,
+      )
       ocrPreviewUrl.value = displayCanvas.toDataURL('image/png')
       out.mat.delete()
     } catch (e) {

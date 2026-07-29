@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { buildInkWallMaskData } from '@/cv/walls/rooms/room-ink-wall-mask'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
-import { runRoomTopologyRefinePass, applyTopologyRefineToClassification } from '@/cv/walls/rooms/room-refine-topology'
+import {
+  runRoomTopologyRefinePass,
+  applyTopologyRefineToClassification,
+} from '@/cv/walls/rooms/room-refine-topology'
 
 function buildMaskInput(width: number, height: number, fill = 255): Uint8Array {
   return new Uint8Array(width * height).fill(fill)
@@ -311,14 +314,11 @@ describe('buildInkWallMaskData', () => {
     const width = 7
     const height = 3
     const rawLabels = new Int32Array([
-      1, 1, 1, 0, 2, 2, 2,
-      1, 1, 1, 0, 2, 2, 2,
-      1, 1, 1, 0, 2, 2, 2,
+      1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 2, 2, 2, 1, 1, 1, 0, 2, 2, 2,
     ])
     const wallMat = new Uint8Array([
-      255, 255, 255, 0, 255, 255, 255,
-      255, 255, 255, 0, 255, 255, 255,
-      255, 255, 255, 0, 255, 255, 255,
+      255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 0, 255, 255, 255, 255, 255, 255, 0, 255, 255,
+      255,
     ])
     const components = [
       { label: 1, areaPx: 9, bbox: { x: 0, y: 0, width: 3, height: 3 }, touchesBorder: false },

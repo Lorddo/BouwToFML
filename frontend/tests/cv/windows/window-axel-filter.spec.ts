@@ -7,7 +7,10 @@ import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'
 import { runWindowAxelFilter, type WindowAxelRefBand } from '@/cv/windows'
 
-function component(label: number, bbox: { x: number; y: number; width: number; height: number }): RasterRoomComponent {
+function component(
+  label: number,
+  bbox: { x: number; y: number; width: number; height: number },
+): RasterRoomComponent {
   return {
     label,
     areaPx: bbox.width * bbox.height,

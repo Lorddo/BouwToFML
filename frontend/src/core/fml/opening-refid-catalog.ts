@@ -23,12 +23,7 @@ export type WindowAssetKind = 'single' | 'multi' | 'round' | 'half_round'
 export type OpeningAssetKind = DoorAssetKind | WindowAssetKind
 
 /** CV/detectie-kinds: alle schuifvarianten vallen onder `sliding`. */
-export type DoorResolvedKindCompat =
-  | 'single'
-  | 'double_wide'
-  | 'sliding'
-  | 'passage'
-  | 'closet45'
+export type DoorResolvedKindCompat = 'single' | 'double_wide' | 'sliding' | 'passage' | 'closet45'
 
 interface CatalogEntry {
   refid: string
@@ -95,11 +90,15 @@ function inferWindowKind(entry: CatalogEntry | undefined): WindowAssetKind {
     return 'half_round'
   }
   if (sub.includes('rond')) return 'round'
-  if (sub.includes('dubbel') || sub.includes('driedelig') || sub.includes('meerdelig')) return 'multi'
+  if (sub.includes('dubbel') || sub.includes('driedelig') || sub.includes('meerdelig'))
+    return 'multi'
   return 'single'
 }
 
-function inferPanels(entry: CatalogEntry | undefined, kind: WindowAssetKind): 1 | 2 | 3 | undefined {
+function inferPanels(
+  entry: CatalogEntry | undefined,
+  kind: WindowAssetKind,
+): 1 | 2 | 3 | undefined {
   const raw = entry?.panels
   if (raw === 1 || raw === 2 || raw === 3) return raw
   if (kind === 'single' || kind === 'round' || kind === 'half_round') return 1
@@ -161,7 +160,12 @@ export interface OpeningCatalogInfo {
 
 /** Map preview-kinds naar CV-compatibele deurkinds (schuifvarianten → sliding). */
 export function toCvDoorKind(kind: OpeningAssetKind): DoorResolvedKindCompat {
-  if (kind === 'sliding_pocket' || kind === 'sliding_single' || kind === 'sliding' || kind === 'garage') {
+  if (
+    kind === 'sliding_pocket' ||
+    kind === 'sliding_single' ||
+    kind === 'sliding' ||
+    kind === 'garage'
+  ) {
     return 'sliding'
   }
   if (kind === 'double_wide' || kind === 'passage' || kind === 'closet45' || kind === 'single') {
@@ -172,8 +176,7 @@ export function toCvDoorKind(kind: OpeningAssetKind): DoorResolvedKindCompat {
 
 export function resolveOpeningCatalog(refid: string, type: OpeningType): OpeningCatalogInfo {
   const entry = byRefid.get(refid)
-  const kind: OpeningAssetKind =
-    type === 'door' ? inferDoorKind(entry) : inferWindowKind(entry)
+  const kind: OpeningAssetKind = type === 'door' ? inferDoorKind(entry) : inferWindowKind(entry)
   const label = entry?.benaming?.trim() || defaultLabel(kind, type)
   const swingInsetCm = type === 'door' ? resolveSwingInsetCm(entry, kind as DoorAssetKind) : 0
   const panels = type === 'window' ? inferPanels(entry, kind as WindowAssetKind) : undefined

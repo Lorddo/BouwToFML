@@ -68,27 +68,31 @@ export function resolveOpeningRects(
   }>,
 ): DevOpeningReferenceRect[] {
   return rects
-    .filter((rect): rect is {
-      type: 'door' | 'window'
-      x: number
-      y: number
-      width: number
-      height: number
-      fmlRefId?: string
-    } => rect.type === 'door' || rect.type === 'window')
+    .filter(
+      (
+        rect,
+      ): rect is {
+        type: 'door' | 'window'
+        x: number
+        y: number
+        width: number
+        height: number
+        fmlRefId?: string
+      } => rect.type === 'door' || rect.type === 'window',
+    )
     .map((rect) => ({
       type: rect.type,
       x: rect.x,
       y: rect.y,
       width: rect.width,
       height: rect.height,
-      ...(rect.type === 'door'
-        ? { fmlRefId: resolveDoorFmlTemplateRefId(rect.fmlRefId) }
-        : {}),
+      ...(rect.type === 'door' ? { fmlRefId: resolveDoorFmlTemplateRefId(rect.fmlRefId) } : {}),
     }))
 }
 
-export function serializeLiveRoomClassifyState(cache: RoomRasterCache): SerializedRoomClassifyState {
+export function serializeLiveRoomClassifyState(
+  cache: RoomRasterCache,
+): SerializedRoomClassifyState {
   const state = cache.state
   return {
     ...state,

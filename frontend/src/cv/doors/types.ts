@@ -104,7 +104,6 @@ export interface DoorSizeBandPx {
   wallMaxPx: number
 }
 
-
 export type DoorSwingStage = 'stage1' | 'stage2'
 
 export type DoorFillRejectionReason = 'too_full' | 'too_empty' | 'missing_ref'

@@ -9,10 +9,7 @@ export interface OpeningLineFingerprint {
 
 export type WallRenderStyle = 'solid' | 'parallel_lines' | 'details'
 
-
-
 export interface WallLineFingerprint {
-
   /** Aantal ruwe lijnsegmenten binnen voorbeeldvak. */
 
   rawLineCount: number
@@ -28,13 +25,9 @@ export interface WallLineFingerprint {
   /** Typische afstand tussen parallelle lijnen in voorbeeldvak. */
 
   spacingPx?: number
-
 }
 
-
-
 export interface WallSignature {
-
   renderStyle: WallRenderStyle
 
   /** Auto-detectie of handmatig gekozen door tekenaar. */
@@ -76,13 +69,9 @@ export interface WallSignature {
   /** Vingerafdruk van ruwe lijnen uit het voorbeeldvak. */
 
   lineFingerprint?: WallLineFingerprint
-
 }
 
-
-
 export interface DoorSignature {
-
   sourceExampleId?: string
 
   openingWidthPx: { min: number; max: number }
@@ -100,13 +89,9 @@ export interface DoorSignature {
 
   /** @deprecated Afgeleid uit lineFingerprint; alleen voor oude exports. */
   innerLineCount?: number
-
 }
 
-
-
 export interface WindowSignature {
-
   sourceExampleId?: string
 
   /** Vector-vingerafdruk (Hough-lijnen in voorbeeldvak) — primair voor matching. */
@@ -120,13 +105,9 @@ export interface WindowSignature {
   openingWidthPx: { min: number; max: number }
 
   symbolDepthPx: number
-
 }
 
-
-
 export interface GeometricSignature {
-
   id: string
 
   type: 'wall' | 'door' | 'window'
@@ -138,7 +119,4 @@ export interface GeometricSignature {
   door?: DoorSignature
 
   window?: WindowSignature
-
 }
-
-

@@ -1,10 +1,6 @@
 import { ref, computed } from 'vue'
 import { CONCEPT_DOOR_REFID } from '@/core/fml/types'
-import {
-  SELECTION_COLORS,
-  type ElementClass,
-  type SelectionRect,
-} from './types'
+import { SELECTION_COLORS, type ElementClass, type SelectionRect } from './types'
 
 const ACTIVE_SELECTION_CLASSES: ElementClass[] = ['wall', 'door', 'window']
 
@@ -24,9 +20,7 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
 
   function addRect(rect: Omit<SelectionRect, 'id'>) {
     const withDefaults: Omit<SelectionRect, 'id'> =
-      rect.type === 'door'
-        ? { ...rect, fmlRefId: rect.fmlRefId ?? CONCEPT_DOOR_REFID }
-        : rect
+      rect.type === 'door' ? { ...rect, fmlRefId: rect.fmlRefId ?? CONCEPT_DOOR_REFID } : rect
     rects.value.push({ ...withDefaults, id: `sel-${nextId++}` })
   }
 

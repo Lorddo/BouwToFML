@@ -15,11 +15,7 @@ import {
 import type { InkDiffBounds } from './room-ink-symmetric'
 import { isClaimIdentityClass } from './face-parent-claim'
 import { unionLabelsBBox } from './face-bbox-index'
-import type {
-  FaceClassChangeResult,
-  RasterBBox,
-  RoomRasterCache,
-} from './room-raster-cache-types'
+import type { FaceClassChangeResult, RasterBBox, RoomRasterCache } from './room-raster-cache-types'
 import {
   buildFaceClassLookup,
   bumpFaceDualClassEpoch,
@@ -288,12 +284,7 @@ export function setFaceClassificationForLabels(
       changes.map((c) => c.label),
     ).detachedFaceIds
   }
-  return applyInkAfterClassChanges(
-    cache,
-    changes,
-    referenceWallThicknessPx,
-    detachedFaceIds,
-  )
+  return applyInkAfterClassChanges(cache, changes, referenceWallThicknessPx, detachedFaceIds)
 }
 
 export function setFacesFullyInBBox(

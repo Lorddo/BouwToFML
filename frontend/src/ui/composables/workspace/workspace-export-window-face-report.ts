@@ -45,9 +45,7 @@ export type WorkspaceExportWindowFaceReportDeps = {
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
 }
 
-export function createWorkspaceExportWindowFaceReport(
-  deps: WorkspaceExportWindowFaceReportDeps,
-) {
+export function createWorkspaceExportWindowFaceReport(deps: WorkspaceExportWindowFaceReportDeps) {
   async function exportWindowFaceReport() {
     deps.setLocalError(null)
     try {

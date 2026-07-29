@@ -37,9 +37,7 @@ export function detachEnclosedChildrenForOpeningSeeds(params: {
   const nextParent = new Map(parentMap)
   const nextClass = new Map(params.classificationByLabel)
   const shortSide =
-    params.imageWidth && params.imageHeight
-      ? Math.min(params.imageWidth, params.imageHeight)
-      : 0
+    params.imageWidth && params.imageHeight ? Math.min(params.imageWidth, params.imageHeight) : 0
   const byLabel =
     params.components && params.components.length > 0
       ? new Map(params.components.map((c) => [c.label, c]))
@@ -51,8 +49,7 @@ export function detachEnclosedChildrenForOpeningSeeds(params: {
     if (root === child) continue
 
     const rootCls =
-      nextClass.get(root) ??
-      resolvePixelClassification(root, parentMap, nextClass, 'merged')
+      nextClass.get(root) ?? resolvePixelClassification(root, parentMap, nextClass, 'merged')
 
     let shouldDetach = false
     if (!hasTier) {
@@ -68,8 +65,7 @@ export function detachEnclosedChildrenForOpeningSeeds(params: {
         rootCls === 'window' ||
         rootCls === 'doorframe' ||
         rootCls === 'outside' ||
-        (tier !== null &&
-          (rootCls === 'surface' || rootCls === 'unknown' || rootCls === 'door'))
+        (tier !== null && (rootCls === 'surface' || rootCls === 'unknown' || rootCls === 'door'))
     }
 
     if (!shouldDetach) continue

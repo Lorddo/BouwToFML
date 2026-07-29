@@ -32,9 +32,7 @@ function aggregateLineBands(
   const roughMed = median(bands.map((b) => b.thicknessPx))
   const filtered =
     bands.length >= 3
-      ? bands.filter(
-          (b) => b.thicknessPx >= roughMed * 0.45 && b.thicknessPx <= roughMed * 2.2,
-        )
+      ? bands.filter((b) => b.thicknessPx >= roughMed * 0.45 && b.thicknessPx <= roughMed * 2.2)
       : bands
   const pool = filtered.length > 0 ? filtered : bands
 

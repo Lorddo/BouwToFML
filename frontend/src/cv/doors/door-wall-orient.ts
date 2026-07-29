@@ -4,12 +4,7 @@ import type { OpenCV } from '@/cv/loadOpenCV'
 import { normalizeVector } from './door-geometry-utils'
 import { computeL12DoorHinge } from './door-l12-hinge'
 import { round2 } from './door-wall-snap-geom'
-import type {
-  BoundDoor,
-  DoorHingeAxis,
-  OrientedDoor,
-  ResolvedDoorCandidate,
-} from './types'
+import type { BoundDoor, DoorHingeAxis, OrientedDoor, ResolvedDoorCandidate } from './types'
 
 type Vec2 = { x: number; y: number }
 
@@ -255,7 +250,11 @@ export function orientBoundDoors(params: {
   width: number
   height: number
 }): OrientedDoor[] {
-  if (params.boundDoors.length <= 0 || params.resolvedDoors.length <= 0 || params.segments.length <= 0) {
+  if (
+    params.boundDoors.length <= 0 ||
+    params.resolvedDoors.length <= 0 ||
+    params.segments.length <= 0
+  ) {
     return []
   }
   if (params.whiteLabelsData.length < params.width * params.height) return []

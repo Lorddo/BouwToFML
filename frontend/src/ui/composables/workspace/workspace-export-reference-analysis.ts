@@ -21,9 +21,7 @@ export type WorkspaceExportReferenceAnalysisDeps = {
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
 }
 
-export function createWorkspaceExportReferenceAnalysis(
-  deps: WorkspaceExportReferenceAnalysisDeps,
-) {
+export function createWorkspaceExportReferenceAnalysis(deps: WorkspaceExportReferenceAnalysisDeps) {
   async function exportReferenceAnalysis() {
     deps.setLocalError(null)
     try {
@@ -52,12 +50,14 @@ export function createWorkspaceExportReferenceAnalysis(
         })),
       })
       if (report.wall) {
-        deps.applyAutoGapsInkMode?.(
-          report.wall.renderStyle === 'details' ? 'detail' : 'solid',
-        )
+        deps.applyAutoGapsInkMode?.(report.wall.renderStyle === 'details' ? 'detail' : 'solid')
       }
       const safe = exportBasename(deps.imageName.value, 'referenties')
-      downloadText(buildReferenceAnalysisHtml(report), `${safe}-referentie-analyse.html`, 'text/html')
+      downloadText(
+        buildReferenceAnalysisHtml(report),
+        `${safe}-referentie-analyse.html`,
+        'text/html',
+      )
     } catch (e) {
       console.error('[exportReferenceAnalysis]', e)
       deps.setLocalError(formatCvError(e))

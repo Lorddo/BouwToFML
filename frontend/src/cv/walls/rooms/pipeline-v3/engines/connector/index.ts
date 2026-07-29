@@ -9,15 +9,7 @@ export {
   isAlternatingStairDiagonalChain,
 } from './chamfer-group'
 export { validateJunctionKindsPreserved, acceptLayer6FaceKinds } from './kind-accept'
-export {
-  countLayer6JunctionKinds,
-  buildConnectorJunctionGraph,
-} from './junction-guard'
-export type {
-  Layer6JunctionKindCounts,
-  BaselineTxJunctionRef,
-} from './junction-guard'
+export { countLayer6JunctionKinds, buildConnectorJunctionGraph } from './junction-guard'
+export type { Layer6JunctionKindCounts, BaselineTxJunctionRef } from './junction-guard'
 export type { ChamferGroupGeometry, ChamferGroupKind } from './chamfer-group'
-export {
-  resolveLayer6AxisChainPx,
-} from './constants'
+export { resolveLayer6AxisChainPx } from './constants'

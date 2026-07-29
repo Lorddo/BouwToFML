@@ -1,8 +1,4 @@
-import type {
-  CollapsePolicy,
-  JunctionGraphPolicy,
-  WeldPolicy,
-} from '../engines/policy-types'
+import type { CollapsePolicy, JunctionGraphPolicy, WeldPolicy } from '../engines/policy-types'
 import { resolvePipelineScale } from '../engines/scale'
 import {
   baseCollapsePolicy,
@@ -29,7 +25,9 @@ export interface Layer9DissolvePolicy {
   junction: JunctionGraphPolicy
 }
 
-export function resolveLayer9DissolvePolicy(referenceWallThicknessPx?: number): Layer9DissolvePolicy {
+export function resolveLayer9DissolvePolicy(
+  referenceWallThicknessPx?: number,
+): Layer9DissolvePolicy {
   const scale = resolvePipelineScale(referenceWallThicknessPx)
   return {
     layerId: 9,

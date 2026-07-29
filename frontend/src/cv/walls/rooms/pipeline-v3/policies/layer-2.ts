@@ -42,14 +42,7 @@ export function resolveMergeTolerancePx(
   referenceFallbackPx?: number,
   policy: Layer2JitterPolicy = layer2JitterPolicy,
 ): number {
-  const base = Math.max(
-    localThicknessPx,
-    referenceFallbackPx ?? 0,
-    policy.thicknessFallbackPx,
-  )
+  const base = Math.max(localThicknessPx, referenceFallbackPx ?? 0, policy.thicknessFallbackPx)
   const raw = policy.mergeToleranceRatio * base
-  return Math.min(
-    policy.mergeToleranceMaxPx,
-    Math.max(policy.mergeToleranceMinPx, Math.round(raw)),
-  )
+  return Math.min(policy.mergeToleranceMaxPx, Math.max(policy.mergeToleranceMinPx, Math.round(raw)))
 }

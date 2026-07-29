@@ -2,7 +2,10 @@ import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
 import * as roomInkClassify from '@/cv/walls/rooms/room-ink-classify'
 import * as roomInkSymmetric from '@/cv/walls/rooms/room-ink-symmetric'
 import * as roomTopologyPatch from '@/cv/walls/rooms/room-topology-patch'
-import { runInkProcessAfterEdits, needsFullInkResolveForEdits } from '@/cv/walls/rooms/room-ink-process'
+import {
+  runInkProcessAfterEdits,
+  needsFullInkResolveForEdits,
+} from '@/cv/walls/rooms/room-ink-process'
 import type { RoomClassifyResult } from '@/cv/walls/strategies/room-first'
 
 class FakeMat {

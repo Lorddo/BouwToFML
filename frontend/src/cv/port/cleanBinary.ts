@@ -1,6 +1,10 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { scaleMinPixels } from '@/cv/port/despeckle'
-import { directionalCloseForeground, kernelFromPixelRadius, morphBinaryInPlace } from '@/cv/port/morphClose'
+import {
+  directionalCloseForeground,
+  kernelFromPixelRadius,
+  morphBinaryInPlace,
+} from '@/cv/port/morphClose'
 
 export function applyNegative(cv: OpenCV, mat: OpenCV['Mat']): void {
   cv.bitwise_not(mat, mat)
@@ -32,11 +36,17 @@ function applyDirectionalGrowth(
   ;(mat.data as Uint8Array).set(out)
 }
 
-function copyInkDirectional(mat: OpenCV['Mat'], directions: Array<{ dx: number; dy: number }>): void {
+function copyInkDirectional(
+  mat: OpenCV['Mat'],
+  directions: Array<{ dx: number; dy: number }>,
+): void {
   applyDirectionalGrowth(mat, directions, 0, (value) => value < 128)
 }
 
-function copyWhiteDirectional(mat: OpenCV['Mat'], directions: Array<{ dx: number; dy: number }>): void {
+function copyWhiteDirectional(
+  mat: OpenCV['Mat'],
+  directions: Array<{ dx: number; dy: number }>,
+): void {
   applyDirectionalGrowth(mat, directions, 255, (value) => value >= 128)
 }
 
@@ -64,7 +74,11 @@ function growWhiteOnePixelBalanced(mat: OpenCV['Mat'], step: number): void {
  * Glad traptrede-randen via directional close op wit — vult kleine witte inkepingen
  * langs horizontale/verticale randen zonder lijnen te verdikken zoals bridge op inkt.
  */
-export function smoothBinaryLines(cv: OpenCV, mat: OpenCV['Mat'], strength: number | undefined): void {
+export function smoothBinaryLines(
+  cv: OpenCV,
+  mat: OpenCV['Mat'],
+  strength: number | undefined,
+): void {
   const steps = Math.max(0, Math.round(strength ?? 0))
   if (steps <= 0) return
   const kernelPx = Math.max(2, steps * 2)

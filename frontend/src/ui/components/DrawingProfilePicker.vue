@@ -8,9 +8,7 @@ const emit = defineEmits<{
   <div class="welcome">
     <div class="welcome-header">
       <h2>Upload een plattegrond</h2>
-      <p class="lead">
-        Start met je onderlegger. Je kiest het detectieprofiel pas in stap 3.
-      </p>
+      <p class="lead">Start met je onderlegger. Je kiest het detectieprofiel pas in stap 3.</p>
     </div>
 
     <div class="upload-block">

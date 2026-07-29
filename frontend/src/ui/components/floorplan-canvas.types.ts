@@ -113,11 +113,13 @@ export type FloorplanCanvasEmits = {
   rectDelete: [id: string]
   faceClick: [x: number, y: number]
   faceBoxSelect: [bounds: { x: number; y: number; width: number; height: number }]
-  probeSample: [sample: {
-    kind: 'point' | 'region'
-    point: { x: number; y: number }
-    region?: { x: number; y: number; width: number; height: number }
-  }]
+  probeSample: [
+    sample: {
+      kind: 'point' | 'region'
+      point: { x: number; y: number }
+      region?: { x: number; y: number; width: number; height: number }
+    },
+  ]
   ocrHitRemove: [key: string]
   inkBrushStroke: [points: Array<{ x: number; y: number }>, radius: number]
   inkEraseStroke: [points: Array<{ x: number; y: number }>, radius: number]
