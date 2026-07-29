@@ -5,7 +5,6 @@ import { classifyFacesByInkCoverage, applyFaceClassificationOverrides } from '@/
 import { buildMergedWallFaceMaskData } from '@/cv/walls/rooms/room-wall-face-mask'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'
-import type { ConnectedWallBlob } from '@/cv/walls/rooms/room-wall-connected-blobs'
 import type { Segment } from '@/cv/port/wallGraph'
 
 vi.mock('@/cv/port/wallSkeletonTrace', () => ({
@@ -21,84 +20,6 @@ function component(
 ): RasterRoomComponent {
   const areaPx = bbox.width * bbox.height
   return { label, areaPx, bbox, touchesBorder }
-}
-
-class FakeMat {
-  cols: number
-  rows: number
-  data: Uint8Array
-
-  constructor(rows = 1, cols = 1, data?: Uint8Array) {
-    this.rows = rows
-    this.cols = cols
-    this.data = data ?? new Uint8Array(rows * cols)
-  }
-
-  clone() {
-    return new FakeMat(this.rows, this.cols, new Uint8Array(this.data))
-  }
-
-  copyTo(target: FakeMat) {
-    target.cols = this.cols
-    target.rows = this.rows
-    target.data = new Uint8Array(this.data)
-  }
-
-  delete() {}
-}
-
-function createFakeCv() {
-  return {
-    CV_8UC1: 0,
-    MORPH_RECT: 0,
-    MORPH_CLOSE: 1,
-    MORPH_OPEN: 2,
-    Size: class {
-      constructor(public width: number, public height: number) {}
-    },
-    Mat: FakeMat,
-    matFromArray: vi.fn((rows: number, cols: number, _type: number, data: ArrayLike<number>) => {
-      return new FakeMat(rows, cols, Uint8Array.from(data))
-    }),
-    getStructuringElement: vi.fn(() => ({ delete: vi.fn() })),
-    morphologyEx: vi.fn((src: FakeMat, dst: FakeMat) => {
-      dst.rows = src.rows
-      dst.cols = src.cols
-      dst.data = new Uint8Array(src.data)
-    }),
-    bitwise_not: vi.fn((src: FakeMat, dst: FakeMat) => {
-      dst.rows = src.rows
-      dst.cols = src.cols
-      dst.data = new Uint8Array(src.data.length)
-      for (let i = 0; i < src.data.length; i += 1) {
-        dst.data[i] = 255 - (src.data[i] ?? 0)
-      }
-    }),
-    bitwise_and: vi.fn((a: FakeMat, b: FakeMat, out: FakeMat) => {
-      const count = Math.min(a.data.length, b.data.length)
-      out.rows = a.rows
-      out.cols = a.cols
-      out.data = new Uint8Array(a.data.length)
-      for (let i = 0; i < count; i += 1) {
-        out.data[i] = (a.data[i] ?? 0) & (b.data[i] ?? 0)
-      }
-    }),
-  }
-}
-
-function blob(
-  componentId: number,
-  bbox: { x: number; y: number; width: number; height: number },
-  areaPx: number,
-): ConnectedWallBlob {
-  return {
-    componentId,
-    bbox,
-    areaPx,
-    maskMat: new FakeMat(bbox.height, bbox.width, new Uint8Array(bbox.width * bbox.height).fill(255)) as never,
-    originX: bbox.x,
-    originY: bbox.y,
-  }
 }
 
 describe('room-first ink-resolve E2E', () => {

@@ -67,7 +67,7 @@ describe('test-doors.json.fml', () => {
     for (const wall of plan.floors[0].walls) {
       const groups = groupDoorOpeningsOnWall(wall.id, wall.a, wall.b, wall.openings)
       expect(groups).toHaveLength(12)
-      groups.forEach((g, i) => {
+      groups.forEach((g) => {
         const kind = resolveOpeningCatalog(g.openings[0].refid, 'door').kind
         if (kind === 'single') {
           expect(g.leafLines).toHaveLength(1)

@@ -5,6 +5,7 @@ import {
   cloneTabOutputsForSnapshot,
   enrichWallsOutputWithFaceState,
   restoreTabOutputsFromSnapshot,
+  type JsonTabDetectionOutputs,
 } from '@/platform/dev-workspace/tab-outputs-serialize'
 
 function wallsOutputWithLabels(labels: number[]): ExtractionOutput {
@@ -14,6 +15,7 @@ function wallsOutputWithLabels(labels: number[]): ExtractionOutput {
     masks: [],
     meta: {
       extractorId: 'geometry-lbe',
+      elapsedMs: 0,
       roomPipelinePhase: 'classify',
       roomClassifyState: {
         width: 2,
@@ -36,7 +38,7 @@ describe('tab-outputs-serialize', () => {
       walls: wallsOutputWithLabels([0, 1, 0, 2]),
     }
     const snapshot = cloneTabOutputsForSnapshot(outputs)
-    const json = JSON.parse(JSON.stringify(snapshot)) as TabDetectionOutputs
+    const json = JSON.parse(JSON.stringify(snapshot)) as JsonTabDetectionOutputs
     const restored = restoreTabOutputsFromSnapshot(json)
     const state = restored.walls?.meta?.roomClassifyState
     expect(state?.labelsData).toBeInstanceOf(Int32Array)

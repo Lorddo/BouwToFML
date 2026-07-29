@@ -14,7 +14,7 @@ function hyp(id: string, faceIds: number[]): WindowAxelHypothesis {
   return {
     id,
     matchedRefIndex: 0,
-    orientation: 'h',
+    orientation: 'horizontal',
     faceIds,
     unionBBox: { x: 0, y: 0, width: 10, height: 4 },
     axisSpanPx: 10,
@@ -45,7 +45,7 @@ function resolved(
     id,
     sourceHypothesisId: id,
     matchedRefIndex: 0,
-    orientation: 'h',
+    orientation: 'horizontal',
     evidence,
     faceIds,
     evidenceFaceIds,

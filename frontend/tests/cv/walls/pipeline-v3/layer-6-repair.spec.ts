@@ -156,14 +156,14 @@ describe('V3 layer-6 chamfer-group contract', () => {
   it('kind-accept documents gate: T/X downgrade rejected', () => {
     // Proper T: through-H + branch sharing exact mid endpoint.
     const before: Segment[] = [
-      { a: { x: 0, y: 0 }, b: { x: 50, y: 0 }, type: 'wall', confidence: 1 },
-      { a: { x: 50, y: 0 }, b: { x: 100, y: 0 }, type: 'wall', confidence: 1 },
-      { a: { x: 50, y: 0 }, b: { x: 50, y: 40 }, type: 'wall', confidence: 1 },
+      { a: { x: 0, y: 0 }, b: { x: 50, y: 0 } },
+      { a: { x: 50, y: 0 }, b: { x: 100, y: 0 } },
+      { a: { x: 50, y: 0 }, b: { x: 50, y: 40 } },
     ]
     // Drop branch → through-line only (T gone).
     const after: Segment[] = [
-      { a: { x: 0, y: 0 }, b: { x: 50, y: 0 }, type: 'wall', confidence: 1 },
-      { a: { x: 50, y: 0 }, b: { x: 100, y: 0 }, type: 'wall', confidence: 1 },
+      { a: { x: 0, y: 0 }, b: { x: 50, y: 0 } },
+      { a: { x: 50, y: 0 }, b: { x: 100, y: 0 } },
     ]
     const beforeKinds = countLayer6JunctionKinds(before)
     const afterKinds = countLayer6JunctionKinds(after)
@@ -315,11 +315,11 @@ describe('V3 layer-6 2D_3E koof @572', () => {
 
 /** BouwTek11 export-64 @1489: through-V T + H-landing diagonaal — geen simple-L yank. */
 const THROUGH_V_T_CHAMFER_L5: Segment[] = [
-  { a: { x: 1515.26, y: 907.7 }, b: { x: 1515.26, y: 567.4 }, type: 'wall', confidence: 1 },
-  { a: { x: 1515.26, y: 1213 }, b: { x: 1515.26, y: 907.7 }, type: 'wall', confidence: 1 },
-  { a: { x: 1515.26, y: 907.7 }, b: { x: 1490, y: 886.58 }, type: 'wall', confidence: 1 },
-  { a: { x: 1490, y: 886.58 }, b: { x: 1462, y: 886.58 }, type: 'wall', confidence: 1 },
-  { a: { x: 1461, y: 886.58 }, b: { x: 1203, y: 886.58 }, type: 'wall', confidence: 1 },
+  { a: { x: 1515.26, y: 907.7 }, b: { x: 1515.26, y: 567.4 } },
+  { a: { x: 1515.26, y: 1213 }, b: { x: 1515.26, y: 907.7 } },
+  { a: { x: 1515.26, y: 907.7 }, b: { x: 1490, y: 886.58 } },
+  { a: { x: 1490, y: 886.58 }, b: { x: 1462, y: 886.58 } },
+  { a: { x: 1461, y: 886.58 }, b: { x: 1203, y: 886.58 } },
 ]
 
 describe('V3 layer-6 through-V T chamfer @1489', () => {

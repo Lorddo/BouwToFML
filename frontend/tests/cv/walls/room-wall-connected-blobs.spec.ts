@@ -4,9 +4,10 @@ import { splitConnectedWallBlobs } from '@/cv/walls/rooms/room-wall-connected-bl
 class FakeMat {
   cols: number
   rows: number
-  data: Uint8Array
+  /** Net als cv.Mat hangt de bufferbreedte van de diepte af: mask 8-bit, labels/stats 32-bit. */
+  data: Uint8Array | Int32Array
 
-  constructor(rows: number, cols: number, data: Uint8Array) {
+  constructor(rows: number, cols: number, data: Uint8Array | Int32Array) {
     this.rows = rows
     this.cols = cols
     this.data = data

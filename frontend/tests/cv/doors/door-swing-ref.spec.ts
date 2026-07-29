@@ -194,10 +194,12 @@ describe('door-swing-ref', () => {
       freeDir: { x: -1, y: 0 },
     })
     // low=4, high=121, hinge≈87.7, free toward left
-    expect(sizing.overhangAlongPx).toBeCloseTo(87.7 - 4, 0)
-    expect(sizing.overhangOppositePx).toBeCloseTo(121 - 87.7, 0)
+    // Defaults op -1: als de meting ontbreekt faalt de closeTo hieronder.
+    const { overhangAlongPx = -1, overhangOppositePx = -1 } = sizing
+    expect(overhangAlongPx).toBeCloseTo(87.7 - 4, 0)
+    expect(overhangOppositePx).toBeCloseTo(121 - 87.7, 0)
     expect(sizing.totalRefPx).toBeCloseTo(117, 0)
-    expect(sizing.overhangAlongPx).not.toBeCloseTo(sizing.overhangOppositePx, 0)
+    expect(overhangAlongPx).not.toBeCloseTo(overhangOppositePx, 0)
   })
 
   it('valt terug op de swing-span als een kozijn gemist wordt (geen mini-deur)', () => {
@@ -230,8 +232,9 @@ describe('door-swing-ref', () => {
     // Guard grijpt in: opening ~ swing-span i.p.v. de kapotte 13px kozijnmeting.
     expect(sizing.totalRefPx).toBeGreaterThanOrEqual(113)
     expect(sizing.bladeRefPx).toBeGreaterThanOrEqual(113)
-    expect(sizing.ratioBlade).toBeGreaterThan(0.8)
-    expect(sizing.clearOverhangAlongRatio).toBeCloseTo(sizing.ratioBlade, 6)
+    const { ratioBlade = 0 } = sizing
+    expect(ratioBlade).toBeGreaterThan(0.8)
+    expect(sizing.clearOverhangAlongRatio).toBeCloseTo(ratioBlade, 6)
     expect(sizing.clearOverhangOppositeRatio).toBe(0)
   })
 })

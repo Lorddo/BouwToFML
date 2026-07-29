@@ -166,7 +166,7 @@ export function layerTuneFingerprintParts(fingerprint: string): {
   }
 }
 
-function pickSharedFields(base: PreprocessConfig): Partial<PreprocessConfig> {
+function pickSharedFields(base: Partial<PreprocessConfig>): Partial<PreprocessConfig> {
   const picked: Partial<PreprocessConfig> = {}
   for (const key of SHARED_PREPROCESS_KEYS) {
     if (base[key] !== undefined) {
@@ -176,7 +176,7 @@ function pickSharedFields(base: PreprocessConfig): Partial<PreprocessConfig> {
   return picked
 }
 
-function legacyWallTuneFromRoot(config: PreprocessConfig): PreprocessLayerTune {
+function legacyWallTuneFromRoot(config: Partial<PreprocessConfig>): PreprocessLayerTune {
   return pickLayerTuneFields(config as PreprocessLayerTune)
 }
 
@@ -197,8 +197,11 @@ function applyLegacyNoiseFlags(tune: PreprocessLayerTune): PreprocessLayerTune {
   return next
 }
 
-/** Eenmalige normalisatie voor opslag (UI / export) — geen defaults forceren over expliciete false. */
-export function normalizeStoredPreprocess(config: PreprocessConfig): PreprocessConfig {
+/**
+ * Eenmalige normalisatie voor opslag (UI / export) — geen defaults forceren over expliciete false.
+ * Input komt uit localStorage en kan elke oudere of incomplete vorm hebben.
+ */
+export function normalizeStoredPreprocess(config: Partial<PreprocessConfig>): PreprocessConfig {
   const shared = pickSharedFields(config)
   const wallLayer = applyLegacyNoiseFlags({
     ...WALL_LAYER_DEFAULTS,

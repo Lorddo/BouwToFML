@@ -14,6 +14,7 @@ import {
   invalidateFaceDualSpace,
   resolveFloorDual,
 } from '@/cv/walls/rooms/room-raster-cache'
+import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import { prepareOpeningPipeDual } from '@/cv/walls/rooms/opening-pipe-dual'
 
 describe('pickGeomByPrefer', () => {
@@ -198,13 +199,13 @@ describe('face-dual-space', () => {
     const labels = new Int32Array(width * height)
     labels[0] = 1
     labels[1] = 1
-    const state = {
+    const state: SerializedRoomClassifyState = {
       width,
       height,
       rawLabelsData: raw,
       labelsData: labels,
-      parentMap: [] as Array<[number, number]>,
-      classificationByLabel: [[1, 'surface' as const]],
+      parentMap: [],
+      classificationByLabel: [[1, 'surface']],
       threshold: 0,
       mergedFaceCount: 1,
     }
@@ -242,13 +243,13 @@ describe('face-dual-space', () => {
     otherRaw[0] = 1
     const otherLabels = new Int32Array(4)
     otherLabels[0] = 1
-    const otherState = {
+    const otherState: SerializedRoomClassifyState = {
       width: 2,
       height: 2,
       rawLabelsData: otherRaw,
       labelsData: otherLabels,
-      parentMap: [] as Array<[number, number]>,
-      classificationByLabel: [[1, 'surface' as const]],
+      parentMap: [],
+      classificationByLabel: [[1, 'surface']],
       threshold: 0,
       mergedFaceCount: 1,
     }

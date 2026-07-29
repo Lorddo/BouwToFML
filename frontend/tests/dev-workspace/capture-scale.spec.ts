@@ -36,7 +36,7 @@ describe('captureDevWorkspaceSession scale snapshot', () => {
       ocrMask: null,
       ocrMaskedRegions: [],
       ocrApplied: false,
-      tabOutputs: {},
+      tabOutputs: { walls: null },
       roomPhase: 'idle',
       wallsDetectionComplete: false,
       workingImagePng: 'data:image/png;base64,AA==',

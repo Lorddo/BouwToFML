@@ -208,6 +208,7 @@ describe('layer-debug-report openings L11/L12/L14', () => {
       id: 'win-2',
       sourceHypothesisId: 'hyp-2',
       matchedRefIndex: 0,
+      orientation: 'horizontal',
       faceIds: [20],
       evidenceFaceIds: [20],
       bbox: { x: 300, y: 40, width: 50, height: 12 },

@@ -691,7 +691,6 @@ describe('draaicirkel', () => {
       draaicirkel: detectDoorSwingSector({ data, width: w, height: h, bbox }),
     })
     expect(prim.draaicirkel).toBe(true)
-    expect(prim.draaicirkelGraden).toBeUndefined()
   })
 
   it('deur zonder sector: draaicirkel=false', () => {

@@ -29,7 +29,7 @@ function offsetSegments(segments: Segment[], dx: number, dy: number): Segment[] 
 function makeFace(segments: Segment[]): RoomWallFaceSkeleton {
   return {
     rootLabel: 1,
-    bbox: { x0: 0, y0: 0, x1: 100, y1: 100 },
+    bbox: { x: 0, y: 0, width: 100, height: 100 },
     areaPx: 1,
     inkCoverageRatio: 1,
     segments,

@@ -38,8 +38,6 @@ describe('carveOtsuWhiteIntoGapsBlack', () => {
 describe('demoteFacesByWallMaskCoverage', () => {
   it('demoteert faces met hoge muurmask-dekking naar outside; houdt floors', () => {
     // 2x2: label1 left column (wall-covered), label2 right column (floor)
-    const width = 2
-    const height = 2
     const labelsData = Int32Array.from([1, 2, 1, 2])
     const wallMaskData = Uint8Array.from([0, 255, 0, 255]) // black under label1
     const components: RasterRoomComponent[] = [

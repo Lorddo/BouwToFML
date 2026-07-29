@@ -22,7 +22,7 @@ function junctionKindRegression(from: string, to: string): boolean {
 
 export function classifyTransitionEffects(
   transition: LayerTransitionDiff,
-): LayerTransitionDiff['effects'] {
+): NonNullable<LayerTransitionDiff['effects']> {
   const improvements: TransitionEffect[] = []
   const regressions: TransitionEffect[] = []
   let neutral = 0

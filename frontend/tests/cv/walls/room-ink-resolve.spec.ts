@@ -215,7 +215,7 @@ describe('resolveInkBetweenFaces', () => {
   it('gelijke afstand: muur wint van buiten', () => {
     const width = 7
     const height = 5
-    const labelsData = paintLabels(width, height, (x, y) => {
+    const labelsData = paintLabels(width, height, (_x, y) => {
       if (y === 0) return 3
       if (y === 4) return 1
       return 0

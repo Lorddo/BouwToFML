@@ -96,6 +96,7 @@ function imageGrid(
     ${figure(images.lineOverlayPng, 'Vectorlijnen (raw op face-crop)')}
     ${figure(images.straightenedPng, 'Rechte face-crop (zonder lijnen)')}
     ${figure(images.facePolygonOverlayPng, 'Face-polygonen (per vlak, interior/head)')}
+    ${figure(images.combinedPolygonOverlayPng, 'Gegroepeerde contouren op faces')}
     ${figure(images.groupedPolygonCleanPng, 'Gegroepeerde contouren los (wit: cyaan=as, oranje=boven, roze=onder)')}
     ${figure(images.swingHingeOverlayPng, 'Scharnierpunt (assen + groene cirkel)')}
   </div>`

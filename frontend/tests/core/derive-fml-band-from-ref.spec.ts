@@ -7,10 +7,11 @@ import {
 } from '@/core/fml/fml-wall-thickness-tiers'
 
 describe('deriveFmlBandBoundariesCmFromRefPx', () => {
-  it('leidt 40% en 85% bandgrenzen af uit referentie px + schaal', () => {
+  it('leidt bandgrenzen af uit referentie px + schaal', () => {
+    // 60px / 0.2 px-per-mm = 300mm = 30cm referentie-muur.
     const boundaries = deriveFmlBandBoundariesCmFromRefPx(60, 0.2, 0.2)
-    expect(boundaries.midBoundaryCm).toBe(12)
-    expect(boundaries.maxBoundaryCm).toBe(25.5)
+    expect(boundaries.midBoundaryCm).toBe(30 * FML_BAND_MID_RATIO)
+    expect(boundaries.maxBoundaryCm).toBe(30 * FML_BAND_MAX_RATIO)
   })
 
   it('classificeert ratio-banden rond referentie-muur', () => {

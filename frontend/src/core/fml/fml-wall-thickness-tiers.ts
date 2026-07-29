@@ -1,9 +1,9 @@
 const FML_BAND_MID_BOUNDARY_CM = 12
 const FML_BAND_MAX_BOUNDARY_CM = 23
 
-/** Ondergrens mid-band t.o.v. referentie-muur (dikste): min &lt; 45%. */
+/** Ondergrens mid-band t.o.v. referentie-muur (dikste): min &lt; 40%. */
 export const FML_BAND_MID_RATIO = 0.40
-/** Bovengrens mid-band t.o.v. referentie-muur: mid t/m 85%, max &gt; 85%. */
+/** Bovengrens mid-band t.o.v. referentie-muur: mid t/m 80%, max &gt; 80%. */
 export const FML_BAND_MAX_RATIO = 0.80
 
 export type FmlThicknessBand = 'min' | 'mid' | 'max'
@@ -84,7 +84,7 @@ function roundBoundaryCm(value: number): number {
 
 /**
  * Leidt meetbandgrenzen (cm) af uit referentie-muur in px + schaal.
- * min &lt; 40% ref · mid 40–85% · max &gt; 85%.
+ * min &lt; 40% ref · mid 40–80% · max &gt; 80%.
  */
 export function deriveFmlBandBoundariesCmFromRefPx(
   referenceWallThicknessPx: number,

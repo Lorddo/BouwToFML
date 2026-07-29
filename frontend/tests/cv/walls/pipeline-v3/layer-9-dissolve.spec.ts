@@ -281,11 +281,11 @@ describe('V3 L9/L10 dissolve → FML', () => {
       pipelineVersion: 'v3',
       layers: {
         layer8: {
-          segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+          segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
           junctions: [],
         },
         layer9: {
-          segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+          segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
           junctions: [],
         },
       },
@@ -300,11 +300,11 @@ describe('V3 L9/L10 dissolve → FML', () => {
       pipelineVersion: 'v3',
       layers: {
         layer9: {
-          segments: [{ a: { x: 0, y: 0 }, b: { x: 5, y: 0 }, confidence: 1 }],
+          segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 5, y: 0 }, confidence: 1 }],
           junctions: [],
         },
         layer10: {
-          segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+          segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
           junctions: [],
         },
       },

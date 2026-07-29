@@ -20,7 +20,6 @@ import {
 } from '@/cv/walls/rooms/pipeline-v3/policies/layer-3'
 import { resolveLayer4HvPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-4'
 import { resolveLayer7AlignPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-7'
-import { resolveLayer8FinalizePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-8'
 import { resolveLayer9DissolvePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
 import { resolveLayer10FmlPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
 import type {
@@ -174,10 +173,10 @@ const BASE_FIXTURE: Segment[] = [
 ]
 
 const L6_CHAMFER_FIXTURE: Segment[] = [
-  { a: { x: 0, y: 40 }, b: { x: 40, y: 40 }, type: 'wall', confidence: 1 },
-  { a: { x: 40, y: 40 }, b: { x: 48, y: 32 }, type: 'wall', confidence: 1 },
-  { a: { x: 48, y: 32 }, b: { x: 56, y: 24 }, type: 'wall', confidence: 1 },
-  { a: { x: 56, y: 24 }, b: { x: 56, y: 0 }, type: 'wall', confidence: 1 },
+  { a: { x: 0, y: 40 }, b: { x: 40, y: 40 } },
+  { a: { x: 40, y: 40 }, b: { x: 48, y: 32 } },
+  { a: { x: 48, y: 32 }, b: { x: 56, y: 24 } },
+  { a: { x: 56, y: 24 }, b: { x: 56, y: 0 } },
 ]
 
 const L9_COVER_FIXTURE: Segment[] = [

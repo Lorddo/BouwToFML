@@ -8,10 +8,12 @@ function hyp(id: string, faceIds: number[]): DoorSwingHypothesis {
   return {
     id,
     faceIds,
-    bbox: { x: 0, y: 0, width: 10, height: 10 },
-    kind: 'single',
+    unionBBox: { x: 0, y: 0, width: 10, height: 10 },
+    filledAreaPx: 100,
     score: 1,
-  } as DoorSwingHypothesis
+    source: 'single',
+    matchedRefIndex: 0,
+  }
 }
 
 function door(id: string, faceIds: number[]): ResolvedDoorCandidate {

@@ -520,8 +520,8 @@ describe('window-evidence-filter', () => {
 
   it('strip-stack: 1px REF-hoogte matcht 1px-buur (±20%)', () => {
     const whiteFaces = [
-      { root: 1, bbox: { x: 10, y: 10, width: 50, height: 1 }, className: 'unknown' as const },
-      { root: 2, bbox: { x: 10, y: 12, width: 50, height: 1 }, className: 'unknown' as const },
+      { root: 1, areaPx: 50, bbox: { x: 10, y: 10, width: 50, height: 1 }, className: 'unknown' as const },
+      { root: 2, areaPx: 50, bbox: { x: 10, y: 12, width: 50, height: 1 }, className: 'unknown' as const },
     ]
     const ids = growFullStackFromSeedFaces({
       seedFaceIds: [1],

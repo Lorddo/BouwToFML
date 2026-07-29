@@ -30,7 +30,7 @@ describe('V3 mergeLayer2JitterSegments', () => {
     expect(result.segments.length).toBeLessThan(segments.length)
     expect(result.mergedJunctionCount).toBeGreaterThan(0)
     const parent = Array.from({ length: result.segments.length }, (_, i) => i)
-    const find = (i: number) => (parent[i] === i ? i : (parent[i] = find(parent[i]!)))
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)))
     const union = (i: number, j: number) => {
       parent[find(i)] = find(j)
     }

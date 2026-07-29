@@ -92,35 +92,35 @@ describe('V3 FML gate', () => {
     layers: {
       layer1: { segments: [], junctions: [] },
       layer2: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer3: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer4: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer5: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer6: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer7: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer8: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
       layer9: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
     },
@@ -136,7 +136,7 @@ describe('V3 FML gate', () => {
     pipelineVersion: 'v3',
     layers: {
       layer10: {
-        segments: [{ a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
+        segments: [{ type: 'wall', a: { x: 0, y: 0 }, b: { x: 10, y: 0 }, confidence: 1 }],
         junctions: [],
       },
     },
