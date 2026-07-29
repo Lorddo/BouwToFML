@@ -5,21 +5,29 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-07-29 (face-edit perf)
+Laatste update: 2026-07-29 (fase 1 grond onder de voeten — afgerond)
+
+## Fase 1 afgerond (2026-07-29): git + groene build + CI
+
+Repo: **https://github.com/Lorddo/BouwToFML** (publiek, `main`). Alleen `frontend/` + `.cursor/{rules,docs}` + `.github/`; whitelist-`.gitignore`. CI (`.github/workflows/ci.yml`) draait `npm ci` → `npm test` → `npm run build` op elke push; **groen**.
+
+**Gedaan:** 134 TS-fouten → 0 (~600 regels dode code weg uit `src/`, incl. `wall-segment-geometry-constants.ts`) · 981 tests groen · `vite build` slaagt · typecheck via `vue-tsc -b` (niet `--noEmit`: `tsconfig.node.json` is composite → anders TS6305) · voorbeeldbestanden binnen `frontend/examples` gehaald (root-`examples` staat niet in git; productiecode importeerde daaruit) · hardgecodeerde `c:/Pranimate/...`-paden in `fml-preview-wall-polygons-kinderdijk.spec.ts` weg — die test draaide voorheen nooit.
+
+**Twee opgeloste testfouten (beide: code hertuned, test bleef achter):** `FML_BAND_MAX_RATIO` staat op 0.80, test/comments zeiden 85% → test leidt grenzen nu af uit de constanten · rapport-figuur "Gegroepeerde contouren op faces" werd nog berekend maar niet meer getoond → terug in `reference-analysis-report.ts`.
 
 ## Audit-uitkomst (2026-07-29)
 
-Rapport: `.cursor/docs/audit-2026-07-29.md`. Geverifieerd, niet gefixt.
+Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) = **klaar**, zie hierboven.
 
-**Blokkerend:** (1) geen git-repo (`.git` ontbreekt; backups op .101 ≠ versiebeheer) · (2) `npm run build` faalt — 134 TS-fouten, 77 in `src/` waarvan ~15 echte typefouten incl. ontbrekende params `room-raster-merge.ts:347,350`, niet-bestaande `removeSpeckles` in `room-reference-preprocess.ts:21`, nulldereference `connector-detect.ts:254,265` · (3) geen CI/lint/hooks · (4) detectiekwaliteit onmeetbaar — 980 tests zijn synthetisch, geen E2E-fixture op echte scan.
+**Nog open — blokkerend:** detectiekwaliteit onmeetbaar — 981 tests zijn synthetisch, geen E2E-fixture op echte scan.
 
 **Ingetrokken:** `keepLargestOnly: true` = **bewuste keuze** (losstaande garage → eigen plattegrond; aanbouw zit vast) — alleen comment op aanroep ontbreekt.
 
-**Ernstig:** 2 falende tests (`derive-fml-band-from-ref` 24 vs 25.5 raakt min/mid/max; `ref-analysis` face-contouren weg) · geen sessie-persistentie · `core ↔ cv` cirkel · `useWorkspace` 184-key facade · vaste px-drempels schalen niet · FML zonder validatie, `balance` altijd 0.5, ramen zonder `mirrored` · CV op UI-thread · Mat-lek zonder try/finally.
+**Nog open — ernstig:** geen linter/formatter/pre-commit hook (ESLint + Prettier ontbreken volledig) · geen sessie-persistentie · `core ↔ cv` cirkel · `useWorkspace` 184-key facade · vaste px-drempels schalen niet · FML zonder validatie, `balance` altijd 0.5, ramen zonder `mirrored` · CV op UI-thread · Mat-lek zonder try/finally · 78.800 regels moet fors omlaag (projectspecifieke fixes wegpoetsen).
 
 **Vastgesteld met gebruiker:** muurtypering = min/mid/max diktebanden (gebouwd) · tabs Deuren/Ramen worden vóór oplevering verborgen → gate-lek `useWorkspaceFlow.ts:89` afgedekt, maar correctiepad deuren/ramen verschuift volledig naar FML-editor (open vraag) · backups op .101.
 
-**Volgorde:** git init → build groen → CI-poort → E2E-fixtures → correctheid (keepLargestOnly, balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade).
+**Volgorde:** ~~git init → build groen → CI-poort~~ (klaar) → lint/format-poort → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
 
 ## Huidige focus
 
@@ -134,6 +142,7 @@ Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.
 
 ## Recente besluiten (samenvatting)
 
+- **2026-07-29** — Fase 1: git + CI-poort + groene build. Typecheck = `vue-tsc -b`; alle assets binnen `frontend/`; root-`examples` blijft buiten de repo.
 - **2026-07-29** — Face-edit perf: dirty-rect UI + region ink alloc + demote schedule; geen detectie-tuning.
 - **2026-07-29** — Lean Walls W3+B4 finish: `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (L5–L6 “Expliciet later” / geen batch-todo); 122 pipeline-v3 groen; planned lean walls empty.
 - **2026-07-29** — Lean Walls dist-map pass-through: `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; UI-smoke Project4 user-OK; scaffold v2=false + arm via scale (geen L6 retune).
