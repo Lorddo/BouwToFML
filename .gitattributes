@@ -1,0 +1,16 @@
+# Normaliseer regeleindes: LF in de repo, native in de working copy.
+# Voorkomt CRLF-ruis tussen Windows-development en Linux-CI.
+* text=auto eol=lf
+
+# Binaire assets nooit converteren
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.pdf  binary
+*.docx binary
+*.xlsx binary
+*.wasm binary
+*.onnx binary
+*.traineddata binary
