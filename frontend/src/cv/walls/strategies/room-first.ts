@@ -131,7 +131,6 @@ function classifyRoomFacesFromBwMat(params: {
   let parentMap = buildEnclosedFaceParentMap(components, width, height, {
     labelAt: labelAtBootstrap,
   })
-  let mergedFaceCount = countDistinctMergedFaces(components, parentMap)
   faceLabels.labels.delete()
 
   reportPipelineProgress('Inkt-classificatie…')
@@ -172,7 +171,6 @@ function classifyRoomFacesFromBwMat(params: {
   })
   labelsData = finalInk.labelsData
   parentMap = finalInk.parentMap
-  mergedFaceCount = countDistinctMergedFaces(components, parentMap)
 
   reportPipelineProgress('Classificatie bijwerken…')
   const classifiedFinal = classifyFacesByInkCoverage({
@@ -190,9 +188,9 @@ function classifyRoomFacesFromBwMat(params: {
     parentMap,
     faceOverrides: new Map(),
   })
-  let classificationByLabel = wallish.classificationByLabel
+  const classificationByLabel = wallish.classificationByLabel
   parentMap = wallish.parentMap
-  mergedFaceCount = countDistinctMergedFaces(components, parentMap)
+  const mergedFaceCount = countDistinctMergedFaces(components, parentMap)
   const stats = countClassificationStats(classificationByLabel)
 
   return {

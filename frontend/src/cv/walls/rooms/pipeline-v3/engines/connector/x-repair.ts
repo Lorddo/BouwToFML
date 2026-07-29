@@ -14,7 +14,7 @@ export function repairLayer6XAtPoint(params: {
   const endpointSnapPx = params.endpointSnapPx ?? LAYER6_ENDPOINT_SNAP_PX
   const incidents: Array<{ index: number; kind: 'H' | 'V' | 'D'; axis: number | null }> = []
   for (let i = 0; i < params.segments.length; i += 1) {
-    const seg = params.segments[i]!
+    const seg = params.segments[i]
     const touches =
       Math.hypot(seg.a.x - params.point.x, seg.a.y - params.point.y) <= endpointSnapPx ||
       Math.hypot(seg.b.x - params.point.x, seg.b.y - params.point.y) <= endpointSnapPx

@@ -36,7 +36,7 @@ function isOffsetBranchTJunction(params: {
     (inc) => classified[inc.segIndex]?.kind === 'V' && inc.lengthPx >= scale.minVArmPx,
   )
   for (const vInc of vAtT) {
-    const seg = params.segments[vInc.segIndex]!
+    const seg = params.segments[vInc.segIndex]
     const da = Math.hypot(seg.a.x - params.tPoint.x, seg.a.y - params.tPoint.y)
     const db = Math.hypot(seg.b.x - params.tPoint.x, seg.b.y - params.tPoint.y)
     const other = da <= db ? seg.b : seg.a
@@ -176,11 +176,11 @@ export function resolveLandingChamferGeometry(params: {
       const dx = Math.abs(params.diagonal.a.x - params.diagonal.b.x)
       const dy = Math.abs(params.diagonal.a.y - params.diagonal.b.y)
       if (dx < scale.jogEpsilonPx || dy < scale.jogEpsilonPx) continue
-      const longH = [...hAtJunctionLoose].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
-      const vPick = [...vAtLandingList].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
+      const longH = [...hAtJunctionLoose].sort((a, b) => b.lengthPx - a.lengthPx)[0]
+      const vPick = [...vAtLandingList].sort((a, b) => b.lengthPx - a.lengthPx)[0]
       const hit = infiniteLineIntersection(
-        params.segments[longH.segIndex]!,
-        params.segments[vPick.segIndex]!,
+        params.segments[longH.segIndex],
+        params.segments[vPick.segIndex],
       )
       if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) continue
       const bridge = Math.hypot(hit.x - junctionPoint.x, hit.y - junctionPoint.y)
@@ -208,11 +208,11 @@ export function resolveLandingChamferGeometry(params: {
       const dx = Math.abs(params.diagonal.a.x - params.diagonal.b.x)
       const dy = Math.abs(params.diagonal.a.y - params.diagonal.b.y)
       if (dx < scale.jogEpsilonPx || dy < scale.jogEpsilonPx) continue
-      const longH = [...hAtJunctionLoose].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
-      const vPick = [...vAtLandingList].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
+      const longH = [...hAtJunctionLoose].sort((a, b) => b.lengthPx - a.lengthPx)[0]
+      const vPick = [...vAtLandingList].sort((a, b) => b.lengthPx - a.lengthPx)[0]
       const hit = infiniteLineIntersection(
-        params.segments[longH.segIndex]!,
-        params.segments[vPick.segIndex]!,
+        params.segments[longH.segIndex],
+        params.segments[vPick.segIndex],
       )
       if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) continue
       const bridge = Math.hypot(hit.x - junctionPoint.x, hit.y - junctionPoint.y)
@@ -259,12 +259,12 @@ export function resolveLandingChamferGeometry(params: {
       continue
     }
 
-    const longH = [...hAtLanding].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
-    const vPick = [...vAtJunction].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
+    const longH = [...hAtLanding].sort((a, b) => b.lengthPx - a.lengthPx)[0]
+    const vPick = [...vAtJunction].sort((a, b) => b.lengthPx - a.lengthPx)[0]
 
     const hit = infiniteLineIntersection(
-      params.segments[longH.segIndex]!,
-      params.segments[vPick.segIndex]!,
+      params.segments[longH.segIndex],
+      params.segments[vPick.segIndex],
     )
     if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) continue
 

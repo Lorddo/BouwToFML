@@ -42,7 +42,7 @@ export function rotateCanvas90Cw(source: CanvasLike): CanvasLike {
   if (!ctx) return out
   ctx.translate(out.width, 0)
   ctx.rotate(Math.PI / 2)
-  ctx.drawImage(source as CanvasImageSource, 0, 0)
+  ctx.drawImage(source, 0, 0)
   return out
 }
 
@@ -52,6 +52,6 @@ export function rotateCanvas180(source: CanvasLike): CanvasLike {
   if (!ctx) return out
   ctx.translate(out.width, out.height)
   ctx.rotate(Math.PI)
-  ctx.drawImage(source as CanvasImageSource, 0, 0)
+  ctx.drawImage(source, 0, 0)
   return out
 }

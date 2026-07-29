@@ -45,7 +45,7 @@ describe('findWallsFullyInCmBBox', () => {
   })
 
   it('houdt rekening met muurdikte in bbox', () => {
-    const bbox = wallCmBBox(walls[0]!)
+    const bbox = wallCmBBox(walls[0])
     expect(findWallsFullyInCmBBox(walls, bbox)).toEqual(['w1'])
     expect(
       findWallsFullyInCmBBox(walls, {

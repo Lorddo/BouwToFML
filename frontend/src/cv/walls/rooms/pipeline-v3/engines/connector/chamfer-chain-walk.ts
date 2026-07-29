@@ -117,7 +117,7 @@ export function walkDiagonalChamferChain(params: {
       break
     }
 
-    const next = diags[0]!
+    const next = diags[0]
     if (totalLengthPx + next.lengthPx > params.maxLengthPx) break
 
     visited.add(next.segIndex)
@@ -230,7 +230,7 @@ export function hasBlockingCompanionDiagonalAtEndpoint(params: {
       fromPoint: params.point,
       hvBandPx,
       excludeSegIndex: params.connectorIndex,
-      excludePoint: companions[0]!.other,
+      excludePoint: companions[0].other,
       maxLengthPx: params.maxChainPx,
       endpointSnapPx,
     })

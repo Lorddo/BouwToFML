@@ -81,7 +81,7 @@ export function buildFmlThicknessChains(
   const wallsAtPoint = new Map<string, number[]>()
 
   for (let index = 0; index < count; index += 1) {
-    const wall = walls[index]!
+    const wall = walls[index]
     for (const point of [wall.a, wall.b]) {
       const key = endpointKey(point)
       const bucket = wallsAtPoint.get(key) ?? []
@@ -93,10 +93,10 @@ export function buildFmlThicknessChains(
   for (const indices of wallsAtPoint.values()) {
     for (let i = 0; i < indices.length; i += 1) {
       for (let j = i + 1; j < indices.length; j += 1) {
-        const left = indices[i]!
-        const right = indices[j]!
-        const bandLeft = classifyFmlThicknessBand(walls[left]!.thickness, boundaries)
-        const bandRight = classifyFmlThicknessBand(walls[right]!.thickness, boundaries)
+        const left = indices[i]
+        const right = indices[j]
+        const bandLeft = classifyFmlThicknessBand(walls[left].thickness, boundaries)
+        const bandRight = classifyFmlThicknessBand(walls[right].thickness, boundaries)
         if (bandLeft === bandRight) uf.union(left, right)
       }
     }
@@ -105,7 +105,7 @@ export function buildFmlThicknessChains(
   // Brug-regel: dik-dun-dik op dezelfde lijn blijft één keten.
   // Dunne tussensegmenten (bv kozijn/ruis) verbinden twee gelijke buitenbanden.
   for (let bridgeIndex = 0; bridgeIndex < count; bridgeIndex += 1) {
-    const bridge = walls[bridgeIndex]!
+    const bridge = walls[bridgeIndex]
     const bridgeBand = classifyFmlThicknessBand(bridge.thickness, boundaries)
     const bridgeLength = wallLengthCm(bridge)
     const pointA = wallsAtPoint.get(endpointKey(bridge.a)) ?? []
@@ -113,22 +113,22 @@ export function buildFmlThicknessChains(
     if (pointA.length < 2 || pointB.length < 2) continue
 
     const neighborsA = pointA.filter(
-      (index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]!),
+      (index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]),
     )
     const neighborsB = pointB.filter(
-      (index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]!),
+      (index) => index !== bridgeIndex && areCollinearWalls(bridge, walls[index]),
     )
     if (neighborsA.length !== 1 || neighborsB.length !== 1) continue
 
-    const leftIndex = neighborsA[0]!
-    const rightIndex = neighborsB[0]!
-    const leftBand = classifyFmlThicknessBand(walls[leftIndex]!.thickness, boundaries)
-    const rightBand = classifyFmlThicknessBand(walls[rightIndex]!.thickness, boundaries)
+    const leftIndex = neighborsA[0]
+    const rightIndex = neighborsB[0]
+    const leftBand = classifyFmlThicknessBand(walls[leftIndex].thickness, boundaries)
+    const rightBand = classifyFmlThicknessBand(walls[rightIndex].thickness, boundaries)
     if (leftBand !== rightBand || leftBand === bridgeBand) continue
 
     const maxNeighborLength = Math.min(
-      wallLengthCm(walls[leftIndex]!),
-      wallLengthCm(walls[rightIndex]!),
+      wallLengthCm(walls[leftIndex]),
+      wallLengthCm(walls[rightIndex]),
     )
     if (bridgeLength > CHAIN_BRIDGE_MAX_CM) continue
     if (bridgeLength > maxNeighborLength * WALL_CHAIN_BRIDGE_MAX_RATIO) continue

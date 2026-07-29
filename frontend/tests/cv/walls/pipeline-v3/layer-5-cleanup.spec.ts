@@ -91,8 +91,8 @@ describe('V3 L5 Copy6 dangling + near weld', () => {
     ]
     const result = repairDanglingConnections(segments, layer5WeldPolicy)
     expect(result.repairedCount).toBeGreaterThan(0)
-    const midA = result.segments[0]!.b
-    const midB = result.segments[1]!.a
+    const midA = result.segments[0].b
+    const midB = result.segments[1].a
     expect(Math.hypot(midA.x - midB.x, midA.y - midB.y)).toBeLessThan(0.01)
   })
 
@@ -118,15 +118,15 @@ describe('V3 L5 Copy6 dangling + near weld', () => {
     expect(xA).not.toBe(xB)
     const unified = unifyNearEndpoints(segments, 1)
     expect(unified.unifiedCount).toBeGreaterThan(0)
-    const hubA = unified.segments[0]!.a
-    const hubB = unified.segments[1]!.a
+    const hubA = unified.segments[0].a
+    const hubB = unified.segments[1].a
     expect(hubA.x).toBe(hubB.x)
     expect(hubA.y).toBe(hubB.y)
     const graph = buildJunctionGraph(unified.segments, 0)
     const atHub = graph.nodes.filter((n) => Math.hypot(n.x - hubA.x, n.y - y) < 1e-9)
     expect(atHub).toHaveLength(1)
-    expect(atHub[0]!.kind).toBe('L') // deg-2 collinear → graph labels L, angle≈0
-    expect(atHub[0]!.angleDeg).toBeLessThan(5)
+    expect(atHub[0].kind).toBe('L') // deg-2 collinear → graph labels L, angle≈0
+    expect(atHub[0].angleDeg).toBeLessThan(5)
   })
 })
 
@@ -168,7 +168,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 30 })
     expect(result.facesCleaned).toHaveLength(1)
     expect(result.cleanupStats.endpointSealed).toBe(0)
-    const segs = result.facesCleaned[0]!.segments
+    const segs = result.facesCleaned[0].segments
     // After dangling repair the gap should be closed (shared endpoint)
     const endpoints = segs.flatMap((s) => [s.a, s.b])
     const nearPairs = endpoints.filter((p, i) =>
@@ -186,7 +186,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
       { a: { x: 1202, y: 886.584 }, b: { x: 970.55, y: 886.584 } },
     ])
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 30 })
-    const face = result.facesCleaned[0]!
+    const face = result.facesCleaned[0]
     const segs = face.segments
     const short = segs.filter((s) => Math.hypot(s.a.x - s.b.x, s.a.y - s.b.y) <= 1)
     expect(short).toHaveLength(0)
@@ -210,7 +210,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
       { a: { x, y: 240 }, b: { x: 645.3675714979156, y: 194 } },
     ])
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 30 })
-    const face = result.facesCleaned[0]!
+    const face = result.facesCleaned[0]
     const nearHub = face.junctions.filter((j) => Math.hypot(j.x - x, j.y - hubY) <= 1)
     const nearLeaf = face.junctions.filter((j) => Math.hypot(j.x - x, j.y - 240) <= 1)
     expect(nearLeaf).toHaveLength(0)
@@ -226,7 +226,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
     }
     const layer4 = makeLayer4(report.layers.layer4.segments)
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 30 })
-    const face = result.facesCleaned[0]!
+    const face = result.facesCleaned[0]
     const x = 645.3675714979157
     const hubY = 243.30459110304145
     const nearLeaf = face.junctions.filter((j) => Math.hypot(j.x - x, j.y - 240) <= 1.5)
@@ -243,7 +243,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
       { a: { x: 500, y: 0 }, b: { x: 550, y: 0 } },
     ])
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 30 })
-    expect(result.facesCleaned[0]!.segments).toHaveLength(2)
+    expect(result.facesCleaned[0].segments).toHaveLength(2)
     expect(result.cleanupStats.weldedNear).toBe(0)
   })
 
@@ -269,7 +269,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
       { a: { x: 746.9783376298436, y: 417 }, b: { x: 742.25, y: 424.9912343874526 } },
     ])
     const result = runLayer5Cleanup({ layer4, referenceWallThicknessPx: 77 })
-    const face = result.facesCleaned[0]!
+    const face = result.facesCleaned[0]
     const at516 = face.junctions.filter(
       (j) => Math.abs(j.y - 516) <= 0.5 && Math.abs(j.x - 726.64) <= 2,
     )
@@ -280,7 +280,7 @@ describe('V3 L5 orchestrator Copy6 loop', () => {
       [s.a, s.b].filter((p) => Math.abs(p.y - 516) <= 0.5 && Math.abs(p.x - 726.64) <= 2),
     )
     expect(endsAt516.length).toBeGreaterThanOrEqual(2)
-    const hub = endsAt516[0]!
+    const hub = endsAt516[0]
     for (const p of endsAt516) {
       expect(p.x).toBe(hub.x)
       expect(p.y).toBe(hub.y)

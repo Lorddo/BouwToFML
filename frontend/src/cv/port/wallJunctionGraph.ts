@@ -227,7 +227,7 @@ function resolveEndpointNodeMatchPx(snapRadiusPx: number): number {
 function buildExactNodeLookup(nodes: WallNode[]): (p: { x: number; y: number }) => string | null {
   const cellMap = new Map<string, Array<{ node: WallNode; index: number }>>()
   for (let i = 0; i < nodes.length; i += 1) {
-    const n = nodes[i]!
+    const n = nodes[i]
     const key = `${Math.floor(n.x)},${Math.floor(n.y)}`
     const bucket = cellMap.get(key)
     if (bucket) bucket.push({ node: n, index: i })

@@ -5,11 +5,21 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-07-29 (fase 1 grond onder de voeten — afgerond)
+Laatste update: 2026-07-29 (lint/format-poort — afgerond)
+
+## Lint/format-poort afgerond (2026-07-29)
+
+Prettier (`printWidth` 100, no semi, single quotes) + ESLint 9 flat (`recommended` + `recommendedTypeChecked` + vue) + husky/lint-staged + CI `format:check`/`lint` vóór tests.
+
+**Uitzonderingen (config, met reden):** `no-unsafe-*` + `no-redundant-type-constituents` (OpenCV=`any`); `require-await` (async API-shapes); `unbound-method` (Vue composable destructure). `_`-prefix voor unused vars. Scripts buiten type-aware lint.
+
+**Bandgrens:** `FML_BAND_MAX_RATIO = 0.80` vastgelegd in `decisions.md`; UI-tekst 85%→80%.
+
+**Volgende:** E2E-fixtures op echte scan (enige resterende blokkerende audit-punt).
 
 ## Fase 1 afgerond (2026-07-29): git + groene build + CI
 
-Repo: **https://github.com/Lorddo/BouwToFML** (publiek, `main`). Alleen `frontend/` + `.cursor/{rules,docs}` + `.github/`; whitelist-`.gitignore`. CI (`.github/workflows/ci.yml`) draait `npm ci` → `npm test` → `npm run build` op elke push; **groen**.
+Repo: **https://github.com/Lorddo/BouwToFML** (publiek, `main`). Alleen `frontend/` + `.cursor/{rules,docs}` + `.github/`; whitelist-`.gitignore`. CI (`.github/workflows/ci.yml`) draait `npm ci` → `format:check` → `lint` → `npm test` → `npm run build` op elke push.
 
 **Gedaan:** 134 TS-fouten → 0 (~600 regels dode code weg uit `src/`, incl. `wall-segment-geometry-constants.ts`) · 981 tests groen · `vite build` slaagt · typecheck via `vue-tsc -b` (niet `--noEmit`: `tsconfig.node.json` is composite → anders TS6305) · voorbeeldbestanden binnen `frontend/examples` gehaald (root-`examples` staat niet in git; productiecode importeerde daaruit) · hardgecodeerde `c:/Pranimate/...`-paden in `fml-preview-wall-polygons-kinderdijk.spec.ts` weg — die test draaide voorheen nooit.
 
@@ -17,17 +27,17 @@ Repo: **https://github.com/Lorddo/BouwToFML** (publiek, `main`). Alleen `fronten
 
 ## Audit-uitkomst (2026-07-29)
 
-Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) = **klaar**, zie hierboven.
+Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) = **klaar**. Lint/format-poort = **klaar**.
 
 **Nog open — blokkerend:** detectiekwaliteit onmeetbaar — 981 tests zijn synthetisch, geen E2E-fixture op echte scan.
 
 **Ingetrokken:** `keepLargestOnly: true` = **bewuste keuze** (losstaande garage → eigen plattegrond; aanbouw zit vast) — alleen comment op aanroep ontbreekt.
 
-**Nog open — ernstig:** geen linter/formatter/pre-commit hook (ESLint + Prettier ontbreken volledig) · geen sessie-persistentie · `core ↔ cv` cirkel · `useWorkspace` 184-key facade · vaste px-drempels schalen niet · FML zonder validatie, `balance` altijd 0.5, ramen zonder `mirrored` · CV op UI-thread · Mat-lek zonder try/finally · 78.800 regels moet fors omlaag (projectspecifieke fixes wegpoetsen).
+**Nog open — ernstig:** geen sessie-persistentie · `core ↔ cv` cirkel · `useWorkspace` 184-key facade · vaste px-drempels schalen niet · FML zonder validatie, `balance` altijd 0.5, ramen zonder `mirrored` · CV op UI-thread · Mat-lek zonder try/finally · 78.800 regels moet fors omlaag (projectspecifieke fixes wegpoetsen).
 
 **Vastgesteld met gebruiker:** muurtypering = min/mid/max diktebanden (gebouwd) · tabs Deuren/Ramen worden vóór oplevering verborgen → gate-lek `useWorkspaceFlow.ts:89` afgedekt, maar correctiepad deuren/ramen verschuift volledig naar FML-editor (open vraag) · backups op .101.
 
-**Volgorde:** ~~git init → build groen → CI-poort~~ (klaar) → lint/format-poort → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
+**Volgorde:** ~~git init → build groen → CI-poort~~ · ~~lint/format-poort~~ (klaar) → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
 
 ## Huidige focus
 

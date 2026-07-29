@@ -51,12 +51,12 @@ export function detachEnclosedChildrenForOpeningSeeds(params: {
     const rootCls =
       nextClass.get(root) ?? resolvePixelClassification(root, parentMap, nextClass, 'merged')
 
-    let shouldDetach = false
+    let shouldDetach: boolean
     if (!hasTier) {
       // Probe / geen meta: CC-identiteit = FaceID (zelfde als unieke preview-kleur).
       shouldDetach = true
     } else {
-      const childComp = byLabel!.get(child)
+      const childComp = byLabel.get(child)
       const tier = childComp ? classifyChildTier(childComp, shortSide) : null
       // Wall/outside-parent: altijd los (ook als child class nog “wall” erft).
       // Surface-parent: alleen micro/small (enclosed-merge kandidaten).

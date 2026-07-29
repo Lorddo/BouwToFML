@@ -43,8 +43,8 @@ function dualFrom(params: {
   wallInkAdjacency?: Map<number, Set<number>>
   wallInkClassificationByLabel?: Map<number, RoomRasterClass>
 }) {
-  const classificationByLabel = new Map(
-    params.classes ?? params.components.map((c) => [c.label, 'wall' as RoomRasterClass]),
+  const classificationByLabel = new Map<number, RoomRasterClass>(
+    params.classes ?? params.components.map((c): [number, RoomRasterClass] => [c.label, 'wall']),
   )
   const white = buildFaceSpaceFromComponents({
     kind: 'opening-white',
@@ -121,7 +121,7 @@ describe('window-axel-filter', () => {
       framingSizeRange: null,
       topRailRange: null,
       bottomRailRange: null,
-    } as WindowAxelRefBand)
+    })
     expect(result.hypotheses).toHaveLength(0)
   })
 

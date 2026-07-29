@@ -255,7 +255,7 @@ describe('door-swing-angle-rescue', () => {
     expect(result.accepted[0]?.source).toBe('angle_rescue')
     expect(result.diagnostics[0]?.status).toBe('accepted')
     expect(result.diagnostics[0]?.candidateAngleDeg).toBe(16)
-    const call = vi.mocked(computeDoorHingeFromFaces).mock.calls[0]![0]
+    const call = vi.mocked(computeDoorHingeFromFaces).mock.calls[0][0]
     expect(call.options?.expectedAngleDeg).toBe(16)
     expect(call.options?.preferredWallAxis).toBe('h')
   })
@@ -374,7 +374,7 @@ describe('door-swing-angle-rescue', () => {
     // Meet-bbox = white (h=10), niet ink
     expect(result.accepted[0]?.unionBBox.height).toBe(10)
     expect(result.diagnostics[0]?.space).toBe('white')
-    const call = vi.mocked(computeDoorHingeFromFaces).mock.calls[0]![0]
+    const call = vi.mocked(computeDoorHingeFromFaces).mock.calls[0][0]
     expect(call.labelsData).toBe(dual.white.labelsData)
     expect(call.options?.expectedAngleDeg).toBe(16)
     expect(call.options?.preferredWallAxis).toBe('h')

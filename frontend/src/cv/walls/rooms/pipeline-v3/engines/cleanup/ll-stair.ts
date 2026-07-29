@@ -37,7 +37,7 @@ export function cleanupLlStairs(
 
   let i = 0
   while (i < work.length) {
-    const micro = work[i]!
+    const micro = work[i]
     const microLen = segmentLength(micro)
     if (microLen > microMaxPx) {
       i += 1
@@ -49,11 +49,11 @@ export function cleanupLlStairs(
       i += 1
       continue
     }
-    const leftHit = atA[0]!
-    const rightHit = atB[0]!
+    const leftHit = atA[0]
+    const rightHit = atB[0]
     // Re-fetch by index — `.segment` refs go stale after prior removals in this pass.
-    const left = work[leftHit.segIndex]!
-    const right = work[rightHit.segIndex]!
+    const left = work[leftHit.segIndex]
+    const right = work[rightHit.segIndex]
     if (!left || !right || leftHit.segIndex === rightHit.segIndex) {
       i += 1
       continue

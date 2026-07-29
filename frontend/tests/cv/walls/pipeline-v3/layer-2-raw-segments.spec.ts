@@ -30,14 +30,14 @@ describe('V3 mergeLayer2JitterSegments', () => {
     expect(result.segments.length).toBeLessThan(segments.length)
     expect(result.mergedJunctionCount).toBeGreaterThan(0)
     const parent = Array.from({ length: result.segments.length }, (_, i) => i)
-    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)))
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])))
     const union = (i: number, j: number) => {
       parent[find(i)] = find(j)
     }
     for (let i = 0; i < result.segments.length; i += 1) {
       for (let j = i + 1; j < result.segments.length; j += 1) {
-        const si = result.segments[i]!
-        const sj = result.segments[j]!
+        const si = result.segments[i]
+        const sj = result.segments[j]
         const shares = [si.a, si.b].some((p) =>
           [sj.a, sj.b].some((q) => Math.hypot(p.x - q.x, p.y - q.y) <= 1),
         )

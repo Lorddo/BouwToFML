@@ -155,7 +155,7 @@ export function useWorkspaceImage(deps: {
     const hadMask = deps.eraserTouched.value
     deps.refreshMaskedWorkingImage()
 
-    let source: HTMLCanvasElement | null = null
+    let source: HTMLCanvasElement | null
     if (hadMask && deps.maskedWorkingCanvas.value) {
       source = deps.maskedWorkingCanvas.value
     } else {

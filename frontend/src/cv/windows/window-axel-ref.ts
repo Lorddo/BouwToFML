@@ -102,11 +102,11 @@ function pickExtremeHorizontalRails(params: {
     const bottomCandidates = rails.filter((face) => face.centroid.y > params.axisBand!.yMax)
     const top =
       topCandidates.length > 0
-        ? [...topCandidates].sort((a, b) => b.bbox.width - a.bbox.width)[0]!
+        ? [...topCandidates].sort((a, b) => b.bbox.width - a.bbox.width)[0]
         : null
     const bottom =
       bottomCandidates.length > 0
-        ? [...bottomCandidates].sort((a, b) => b.bbox.width - a.bbox.width)[0]!
+        ? [...bottomCandidates].sort((a, b) => b.bbox.width - a.bbox.width)[0]
         : null
     if (!top && !bottom) return null
     if (top && bottom && top.label === bottom.label) return null
@@ -114,8 +114,8 @@ function pickExtremeHorizontalRails(params: {
   }
   if (rails.length < 2) return null
   const sorted = [...rails].sort((a, b) => a.centroid.y - b.centroid.y)
-  const top = sorted[0]!
-  const bottom = sorted[sorted.length - 1]!
+  const top = sorted[0]
+  const bottom = sorted[sorted.length - 1]
   if (top.label === bottom.label) return null
   return { top, bottom }
 }
@@ -224,8 +224,8 @@ export function analyzeWindowAxelRef(params: {
     let axisBand = resolveKopeindeAxisBand(faceProfile, spanW)
     let excludedLabels = new Set<number>()
     let kozijnExcludedLabels = new Set<number>()
-    let anchorAreaPx = 0
-    let centerX = 0
+    let anchorAreaPx: number
+    let centerX: number
 
     const pushRails = (rails: TopBottomRails) => {
       // White = presence + stack-dikte; ink per rail onafhankelijk (asymmetrisch OK).

@@ -67,7 +67,7 @@ function readField<T>(field: TuneField, fallback: T): T {
   return (readActiveTune()[field] as T | undefined) ?? fallback
 }
 function writeField(field: TuneField, value: number | boolean | string): void {
-  patchActiveTune({ [field]: value } as Partial<PreprocessLayerTune>)
+  patchActiveTune({ [field]: value })
 }
 function setEnabledWithDefaults(
   enabledField: TuneField,
@@ -77,7 +77,7 @@ function setEnabledWithDefaults(
   const current = readActiveTune()
   const patch: Partial<PreprocessLayerTune> = {
     [enabledField]: enabled,
-  } as Partial<PreprocessLayerTune>
+  }
   if (enabled) {
     for (const [key, value] of Object.entries(defaults) as Array<
       [TuneField, number | boolean | string]

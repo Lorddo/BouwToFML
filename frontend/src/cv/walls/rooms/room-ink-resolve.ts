@@ -116,12 +116,10 @@ export function buildInkEaterLabels(params: {
   for (let idx = 0; idx < params.labelsData.length; idx += 1) {
     const label = params.labelsData[idx] ?? 0
     if (label <= 0) continue
-    const prev =
-      statsByLabel.get(label) ??
-      ({
-        pixelCount: 0,
-        blackCount: 0,
-      } as { pixelCount: number; blackCount: number })
+    const prev = statsByLabel.get(label) ?? {
+      pixelCount: 0,
+      blackCount: 0,
+    }
     prev.pixelCount += 1
     if ((params.referenceData[idx] ?? 255) < 128) prev.blackCount += 1
     statsByLabel.set(label, prev)
@@ -181,15 +179,15 @@ function buildNearestFaceField(params: {
 
   let head = 0
   while (head < queue.length) {
-    const idx = queue[head++]!
+    const idx = queue[head++]
     const x = idx % width
     const y = (idx - x) / width
-    const curLabel = nearestLabel[idx]!
-    const curDist = nearestDist[idx]!
+    const curLabel = nearestLabel[idx]
+    const curDist = nearestDist[idx]
 
     for (let d = 0; d < 4; d += 1) {
-      const nx = x + CARDINAL_DX[d]!
-      const ny = y + CARDINAL_DY[d]!
+      const nx = x + CARDINAL_DX[d]
+      const ny = y + CARDINAL_DY[d]
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
       const nidx = ny * width + nx
       if ((labelsData[nidx] ?? 0) > 0) continue
@@ -280,8 +278,8 @@ function buildNearestFaceFieldInRegion(params: {
   for (let y = bounds.y0; y <= bounds.y1; y += 1) {
     for (let x = bounds.x0; x <= bounds.x1; x += 1) {
       for (let d = 0; d < 4; d += 1) {
-        const nx = x + CARDINAL_DX[d]!
-        const ny = y + CARDINAL_DY[d]!
+        const nx = x + CARDINAL_DX[d]
+        const ny = y + CARDINAL_DY[d]
         if (insidePaintRegion(nx, ny)) continue
         if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
         // Halo moet binnen pad vallen
@@ -295,17 +293,17 @@ function buildNearestFaceFieldInRegion(params: {
 
   let head = 0
   while (head < queue.length) {
-    const local = queue[head++]!
+    const local = queue[head++]
     const lx = local % regionW
     const ly = (local - lx) / regionW
     const x = ox + lx
     const y = oy + ly
-    const curLabel = nearestLabel[local]!
-    const curDist = nearestDist[local]!
+    const curLabel = nearestLabel[local]
+    const curDist = nearestDist[local]
 
     for (let d = 0; d < 4; d += 1) {
-      const nx = x + CARDINAL_DX[d]!
-      const ny = y + CARDINAL_DY[d]!
+      const nx = x + CARDINAL_DX[d]
+      const ny = y + CARDINAL_DY[d]
       if (!insidePaintRegion(nx, ny)) continue
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
       const nidx = ny * width + nx

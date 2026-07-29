@@ -28,8 +28,7 @@ export function computeOpeningDraftState(openings: Opening[]): OpeningDraftState
   if (openings.length === 0) return null
 
   const types = new Set(openings.map((opening) => opening.type))
-  const openingType: OpeningDraftType =
-    types.size === 1 ? (openings[0]!.type as OpeningType) : 'mixed'
+  const openingType: OpeningDraftType = types.size === 1 ? openings[0].type : 'mixed'
 
   const widths = openings.map((opening) => Math.round(opening.width))
   const heights = openings.map((opening) => resolveOpeningHeight(opening))

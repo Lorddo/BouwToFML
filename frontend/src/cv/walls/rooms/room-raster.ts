@@ -82,7 +82,7 @@ function rgbToHueDeg(r: number, g: number, b: number): number | null {
   const min = Math.min(rn, gn, bn)
   const delta = max - min
   if (delta < 1e-6) return null
-  let hue = 0
+  let hue: number
   if (max === rn) hue = ((gn - bn) / delta) % 6
   else if (max === gn) hue = (bn - rn) / delta + 2
   else hue = (rn - gn) / delta + 4

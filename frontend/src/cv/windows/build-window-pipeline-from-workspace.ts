@@ -29,7 +29,7 @@ export async function collectWindowAxelRefBands(params: {
   try {
     const refBands: WindowAxelRefBand[] = []
     for (let i = 0; i < params.windowRects.length; i += 1) {
-      const rect = params.windowRects[i]!
+      const rect = params.windowRects[i]
       const profile = await analyzeOpeningRef({
         cv: params.cv,
         image: params.image,

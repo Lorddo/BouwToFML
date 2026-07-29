@@ -89,7 +89,7 @@ function estimateInkAxisCorrectionDeg(cv: OpenCV, bwMat: OpenCV['Mat']): number 
     .sort((a, b) => b.s.len - a.s.len)
 
   if (spanning.length > 0) {
-    const best = spanning[0]!
+    const best = spanning[0]
     const deviation = foldToNearestAxisDeviation(best.s.angleDeg)
     const uiDeg = -deviation
     if (Math.abs(uiDeg) < 0.15) return 0
@@ -98,7 +98,7 @@ function estimateInkAxisCorrectionDeg(cv: OpenCV, bwMat: OpenCV['Mat']): number 
 
   // 2) Langste lijn (bijna-horizontaal of bijna-verticaal)
   if (segs.length > 0) {
-    const longest = [...segs].sort((a, b) => b.len - a.len)[0]!
+    const longest = [...segs].sort((a, b) => b.len - a.len)[0]
     const deviation = foldToNearestAxisDeviation(longest.angleDeg)
     // Alleen corrigeren als redelijk dicht bij een as (±25°)
     if (Math.abs(deviation) <= 25) {

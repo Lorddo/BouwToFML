@@ -200,7 +200,7 @@ function buildWindowOrnament(params: {
     points.push(center.x + Math.cos(a) * radius, center.y + Math.sin(a) * radius)
   }
   // Platte kant: sluit boog-eindpunten (diameter).
-  points.push(points[0]!, points[1]!)
+  points.push(points[0], points[1])
   return {
     kind: 'half_round',
     centerX: center.x,

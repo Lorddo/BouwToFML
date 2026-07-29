@@ -81,7 +81,7 @@ describe('V3 L4 bare HV — alles mee', () => {
     }
 
     const positioned = positionSegmentsHv({
-      face: layer3.facesPruned[0]!,
+      face: layer3.facesPruned[0],
       distanceMap,
       maskWidth: width,
       maskHeight: height,
@@ -106,7 +106,7 @@ describe('V3 L4 bare HV — alles mee', () => {
     expect(tBefore).toBeDefined()
 
     const positioned = positionSegmentsHv({
-      face: layer3.facesPruned[0]!,
+      face: layer3.facesPruned[0],
       distanceMap: null,
       maskWidth: 0,
       maskHeight: 0,

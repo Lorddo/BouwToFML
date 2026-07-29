@@ -42,8 +42,8 @@ export function compareWallLayerTransitions(
 ): LayerDebugWallTransition[] {
   const transitions: LayerDebugWallTransition[] = []
   for (let i = 0; i < WALL_LAYER_ORDER.length - 1; i += 1) {
-    const from = WALL_LAYER_ORDER[i]!
-    const to = WALL_LAYER_ORDER[i + 1]!
+    const from = WALL_LAYER_ORDER[i]
+    const to = WALL_LAYER_ORDER[i + 1]
     const prevLayer = layers[from]
     const nextLayer = layers[to]
     if (!prevLayer || !nextLayer) continue

@@ -277,7 +277,7 @@ export function buildDoorSwingReportHtml(params: {
 
   <section class="panel">
     <h2>Stage 2 — angle-rescue diagnostics</h2>
-    <p class="muted">Alleen faces die de hoogte-gate (±20% diepte, ink\|white) haalden. Hoek op white. Status: accepted / rejected_too_long / rejected_fill_cap / rejected_no_hinge / rejected_angle_mismatch.</p>
+    <p class="muted">Alleen faces die de hoogte-gate (±20% diepte, ink|white) haalden. Hoek op white. Status: accepted / rejected_too_long / rejected_fill_cap / rejected_no_hinge / rejected_angle_mismatch.</p>
     <table>
       <thead><tr><th>root</th><th>status</th><th>space</th><th>bbox</th><th>area</th><th>fill</th><th>depth/ref</th><th>long/max</th><th>ref</th><th>cand°</th><th>ref°</th><th>Δ°</th><th>score</th></tr></thead>
       <tbody>${angleDiagRows}</tbody>

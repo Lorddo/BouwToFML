@@ -58,8 +58,8 @@ export function repairLAtPoint(params: {
   const h = hvArms.filter((arm) => arm.kind === 'H')
   const v = hvArms.filter((arm) => arm.kind === 'V')
   if (h.length === 0 || v.length === 0) return { changed: false, removed: 0 }
-  const longestH = h.sort((a, b) => b.lengthPx - a.lengthPx)[0]!
-  const longestV = v.sort((a, b) => b.lengthPx - a.lengthPx)[0]!
+  const longestH = h.sort((a, b) => b.lengthPx - a.lengthPx)[0]
+  const longestV = v.sort((a, b) => b.lengthPx - a.lengthPx)[0]
   const hit = infiniteLineIntersection(longestH.segment, longestV.segment)
   if (!hit) return { changed: false, removed: 0 }
   if (Math.hypot(hit.x - params.point.x, hit.y - params.point.y) > params.maxShiftPx) {

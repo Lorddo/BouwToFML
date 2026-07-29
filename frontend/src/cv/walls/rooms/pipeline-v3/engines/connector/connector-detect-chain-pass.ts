@@ -43,7 +43,7 @@ export function appendChamferChainTipCandidates(params: {
     if (entry.lengthPx > maxConnectorPx || entry.lengthPx < LAYER6_MIN_SEGMENT_LEN_PX) continue
     if (out.some((candidate) => candidate.connectorIndex === entry.index)) continue
 
-    const connector = segments[entry.index]!
+    const connector = segments[entry.index]
     if (
       hasBlockingCompanionDiagonalAtEndpoint({
         segments,
@@ -113,7 +113,7 @@ export function appendChamferChainTipCandidates(params: {
       (hAnchor === connector.a ? hCandidatesA : hCandidatesB).map((inc) => ({
         segIndex: inc.segIndex,
         lengthPx: inc.lengthPx,
-        anchorPoint: hAnchor!,
+        anchorPoint: hAnchor,
       })),
       hvBandPx,
       endpointSnapPx,
@@ -133,7 +133,7 @@ export function appendChamferChainTipCandidates(params: {
     })
     if (!synthetic) continue
 
-    const hSeg = segments[hPick.segIndex]!
+    const hSeg = segments[hPick.segIndex]
     const hit = infiniteLineIntersection(hSeg, synthetic)
     if (!hit) continue
     if (

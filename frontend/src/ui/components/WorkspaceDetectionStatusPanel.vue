@@ -22,7 +22,7 @@ defineProps<{
 </script>
 
 <template>
-  <div class="panel" v-if="flowStep === 'templates' || flowStep === 'result'">
+  <div v-if="flowStep === 'templates' || flowStep === 'result'" class="panel">
     <p v-if="running && status" class="status">{{ status }}</p>
     <p v-else-if="status" class="status">{{ status }}</p>
     <p v-if="error" class="error">{{ error }}</p>

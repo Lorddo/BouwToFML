@@ -54,7 +54,7 @@ function resolveCollinearAxisGroup(params: {
     .filter((arm) => arm.targetAxis != null)
     .map((arm) => arm.targetAxis as number)
   if (axes.length === 0) return params.originalAxis
-  if (axes.length === 1) return axes[0]!
+  if (axes.length === 1) return axes[0]
   const spread = Math.max(...axes) - Math.min(...axes)
   if (spread <= params.policy.collinearChainMaxSpreadPx) {
     const weighted = weightedAxisFromArms(params.arms.filter((arm) => arm.targetAxis != null))

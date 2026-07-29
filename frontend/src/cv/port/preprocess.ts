@@ -143,7 +143,7 @@ export function toGrayscaleMat(
   } else if (hasHtmlImageElement() && source instanceof HTMLImageElement) {
     src = cv.imread(source)
   } else {
-    src = cv.imread(source as unknown as HTMLCanvasElement)
+    src = cv.imread(source)
   }
   let work = new cv.Mat()
 

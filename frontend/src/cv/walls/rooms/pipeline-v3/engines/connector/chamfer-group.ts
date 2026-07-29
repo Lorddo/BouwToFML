@@ -70,10 +70,10 @@ export function tryRepairChamferGroup(params: {
   const afterDiags = applied.segments.filter(
     (seg, i) => classifyLayer6Segment(seg, i, hvBandPx).kind === 'D',
   ).length
-  if (afterDiags >= beforeDiags && segmentLength(before[params.connectorIndex]!) > 0) {
+  if (afterDiags >= beforeDiags && segmentLength(before[params.connectorIndex]) > 0) {
     // Groep kan gedeeld zijn; check seed weg.
     const seedGone = !applied.segments.some((seg) => {
-      const s = before[params.connectorIndex]!
+      const s = before[params.connectorIndex]
       return (
         Math.hypot(seg.a.x - s.a.x, seg.a.y - s.a.y) < 1e-3 &&
         Math.hypot(seg.b.x - s.b.x, seg.b.y - s.b.y) < 1e-3

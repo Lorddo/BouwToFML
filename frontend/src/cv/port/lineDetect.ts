@@ -354,6 +354,8 @@ function detectHoughSegments(cv: OpenCV, mat: OpenCV['Mat']): Segment[] {
 function detectLsdSegments(cv: OpenCV, gray: OpenCV['Mat']): Segment[] {
   const caps = getOpenCvCapabilities(cv)
   if (!caps.lsd) return []
+  // LSD-detector heeft geen typings in OpenCV.js.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- createLineSegmentDetector
   let detector: any = null
   const lines = new cv.Mat()
   try {

@@ -84,7 +84,7 @@ export function useFmlPreviewDrawRoom(options: {
     options.hoveredJunctionId.value = null
     if (!drag || !preview) return
 
-    const pointerCm = options.hitTest.clientToCm(event.clientX, event.clientY) ?? preview[2]!
+    const pointerCm = options.hitTest.clientToCm(event.clientX, event.clientY) ?? preview[2]
     const endCm = resolveEndPoint(pointerCm, drag.startCm)
     const corners = buildRectCorners(drag.startCm, endCm)
 

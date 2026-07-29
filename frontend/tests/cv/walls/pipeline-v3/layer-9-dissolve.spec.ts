@@ -102,7 +102,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
     const result = collapseOrthoStairStubs(PROBE_CHAMFER_VHV, layer9CollapsePolicy)
     expect(result.segments).toHaveLength(1)
     expect(result.stats.chainsCollapsed).toBe(1)
-    const seg = result.segments[0]!
+    const seg = result.segments[0]
     expect(Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y)).toBeGreaterThan(150)
   })
 
@@ -177,8 +177,8 @@ describe('V3 L9/L10 dissolve → FML', () => {
       const graph = buildJunctionGraph(result.segments, 0)
       const near = graph.nodes.filter((n) => Math.hypot(n.x - (1354 + dx), n.y - (1230 + dy)) < 8)
       expect(near).toHaveLength(1)
-      expect(near[0]!.kind).toBe('L')
-      expect(Math.abs(near[0]!.angleDeg - 90)).toBeLessThan(5)
+      expect(near[0].kind).toBe('L')
+      expect(Math.abs(near[0].angleDeg - 90)).toBeLessThan(5)
 
       // Geen restje 0°-L rond het fake-jog punt.
       const junk = graph.nodes.filter(
@@ -290,7 +290,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
 
       const graph = buildJunctionGraph(result.segments, 0)
       const near710 = graph.nodes.filter(
-        (n) => Math.abs(n.y - (709.81 + dy)) < 1 && Math.abs(n.x - xs[0]!) < 1,
+        (n) => Math.abs(n.y - (709.81 + dy)) < 1 && Math.abs(n.x - xs[0]) < 1,
       )
       expect(near710.some((n) => n.kind === 'T')).toBe(true)
     })
@@ -308,7 +308,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
     )
     expect(vs).toHaveLength(2)
     const xs = vs.map((seg) => seg.a.x).sort((a, b) => a - b)
-    expect(xs[1]! - xs[0]!).toBeGreaterThan(5)
+    expect(xs[1] - xs[0]).toBeGreaterThan(5)
   })
 
   it('FML reads L10 only when fmlReady', () => {

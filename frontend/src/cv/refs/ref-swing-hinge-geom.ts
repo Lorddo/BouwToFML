@@ -93,8 +93,8 @@ export function buildSegments(points: RefPoint[], minLenPx: number): Segment2[] 
   if (points.length < 2) return []
   const out: Segment2[] = []
   for (let i = 0; i < points.length; i += 1) {
-    const a = points[i]!
-    const b = points[(i + 1) % points.length]!
+    const a = points[i]
+    const b = points[(i + 1) % points.length]
     const length = Math.hypot(b.x - a.x, b.y - a.y)
     if (length < minLenPx) continue
     const dir = normalize({ x: b.x - a.x, y: b.y - a.y })
@@ -171,8 +171,8 @@ export function pointOnPolygonEdge(
 ): boolean {
   if (polygon.length < 2) return false
   for (let i = 0; i < polygon.length; i += 1) {
-    const a = polygon[i]!
-    const b = polygon[(i + 1) % polygon.length]!
+    const a = polygon[i]
+    const b = polygon[(i + 1) % polygon.length]
     if (distancePointToSegment(point, a, b) <= tolerancePx) return true
   }
   return false
@@ -181,8 +181,8 @@ export function pointOnPolygonEdge(
 export function pointInPolygon(point: RefPoint, polygon: RefPoint[]): boolean {
   let inside = false
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
-    const a = polygon[i]!
-    const b = polygon[j]!
+    const a = polygon[i]
+    const b = polygon[j]
     const intersects =
       a.y > point.y !== b.y > point.y &&
       point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y + 1e-9) + a.x

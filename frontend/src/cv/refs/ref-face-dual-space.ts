@@ -135,7 +135,7 @@ export function assignInkLabelsToWhiteFacesCrop(params: {
 
   let head = 0
   while (head < queue.length) {
-    const i = queue[head]!
+    const i = queue[head]
     head += 1
     const label = inkLabels[i] ?? 0
     if (!(label > 0)) continue

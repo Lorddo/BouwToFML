@@ -32,9 +32,9 @@ export function cleanupMicroLoops(
   while (changed) {
     changed = false
     for (let i = 0; i < work.length; i += 1) {
-      const a = work[i]!
+      const a = work[i]
       for (let j = i + 1; j < work.length; j += 1) {
-        const b = work[j]!
+        const b = work[j]
         const shareA = Math.hypot(a.a.x - b.a.x, a.a.y - b.a.y) <= 1
         const shareB = Math.hypot(a.a.x - b.b.x, a.a.y - b.b.y) <= 1
         const shareC = Math.hypot(a.b.x - b.a.x, a.b.y - b.a.y) <= 1

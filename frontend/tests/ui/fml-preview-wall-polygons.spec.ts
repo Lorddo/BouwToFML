@@ -28,7 +28,7 @@ describe('buildWallRenderGeometry', () => {
       { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 20 },
     ])
     expect(geometry.fillComponents.length).toBe(1)
-    expect(geometry.fillComponents[0]!.rings.length).toBe(1)
+    expect(geometry.fillComponents[0].rings.length).toBe(1)
   })
 
   it('equal-thickness L fills outer corner via extend+union (no internal seam)', () => {

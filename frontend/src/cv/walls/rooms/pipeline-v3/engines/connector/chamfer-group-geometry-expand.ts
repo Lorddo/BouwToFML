@@ -33,7 +33,7 @@ export function collectDiagonalGroupIndices(params: {
     })
     for (const idx of chain) {
       if (indices.has(idx)) continue
-      const len = segmentLength(params.segments[idx]!)
+      const len = segmentLength(params.segments[idx])
       if (totalLen + len > params.maxChainPx) continue
       indices.add(idx)
       totalLen += len
@@ -50,7 +50,7 @@ export function collectDiagonalGroupIndices(params: {
     if (walkA) {
       for (const idx of walkA.segIndices) {
         if (indices.has(idx)) continue
-        const len = segmentLength(params.segments[idx]!)
+        const len = segmentLength(params.segments[idx])
         if (totalLen + len > params.maxChainPx) continue
         indices.add(idx)
         totalLen += len

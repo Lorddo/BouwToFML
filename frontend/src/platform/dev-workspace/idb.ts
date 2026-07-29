@@ -77,8 +77,12 @@ export async function listDevSessions<T>(): Promise<Array<{ id: string; session:
         resolve(results)
         return
       }
-      const rawKey = String(cursor.key)
-      const id = fromStoreKey(rawKey)
+      const key = cursor.key
+      if (typeof key !== 'string') {
+        cursor.continue()
+        return
+      }
+      const id = fromStoreKey(key)
       if (id) {
         results.push({ id, session: cursor.value as T })
       }

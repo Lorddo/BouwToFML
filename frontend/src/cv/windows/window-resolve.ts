@@ -98,7 +98,7 @@ function mergeStripStackGroup(params: {
     if (b.hypothesis.score !== a.hypothesis.score) return b.hypothesis.score - a.hypothesis.score
     return a.hypothesis.id.localeCompare(b.hypothesis.id)
   })
-  const first = sorted[0]!
+  const first = sorted[0]
   const faceIds = [...new Set(sorted.flatMap((entry) => entry.hypothesis.faceIds))].sort(
     (a, b) => a - b,
   )
@@ -223,7 +223,7 @@ export function resolveWindowCandidates(params: {
   const resolved: ResolvedWindowCandidate[] = []
   let index = 1
   for (const group of stripStackGroups.values()) {
-    const orientation = group[0]!.hypothesis.orientation
+    const orientation = group[0].hypothesis.orientation
     resolved.push(
       mergeStripStackGroup({
         group,

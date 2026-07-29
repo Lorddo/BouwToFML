@@ -30,8 +30,8 @@ export function isAlternatingStairDiagonalChain(params: {
       )
       if (diags.length !== 2) continue
       seenJoints.add(key)
-      const a = diags[0]!.segment
-      const b = diags[1]!.segment
+      const a = diags[0].segment
+      const b = diags[1].segment
       const mid = joint
       const otherA = Math.hypot(a.a.x - mid.x, a.a.y - mid.y) <= endpointSnapPx ? a.b : a.a
       const otherB = Math.hypot(b.a.x - mid.x, b.a.y - mid.y) <= endpointSnapPx ? b.b : b.a

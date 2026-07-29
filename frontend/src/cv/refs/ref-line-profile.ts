@@ -43,11 +43,11 @@ function clusterAxisPositions(positions: number[], mergeTol: number): number[] {
   if (positions.length === 0) return []
   const sorted = [...positions].sort((a, b) => a - b)
   const out: number[] = []
-  let sum = sorted[0]!
+  let sum = sorted[0]
   let n = 1
-  let start = sorted[0]!
+  let start = sorted[0]
   for (let i = 1; i < sorted.length; i += 1) {
-    const v = sorted[i]!
+    const v = sorted[i]
     if (v - start <= mergeTol) {
       sum += v
       n += 1

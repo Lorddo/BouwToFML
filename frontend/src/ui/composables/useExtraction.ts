@@ -159,7 +159,7 @@ function deproxyForWorker<T>(value: T): T {
   if (ArrayBuffer.isView(raw)) return raw
   if (Array.isArray(raw)) return raw.map((item) => deproxyForWorker(item)) as T
   const result: Record<string, unknown> = {}
-  for (const key of Object.keys(raw as object)) {
+  for (const key of Object.keys(raw)) {
     result[key] = deproxyForWorker((raw as Record<string, unknown>)[key])
   }
   return result as T
@@ -360,7 +360,7 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
                     },
                   ]
                 }),
-              ) as NonNullable<ExtractionOutput['pipelineV3Debug']>['layers'],
+              ),
             }
           : raw.pipelineV3Debug,
         wallMatches: raw.wallMatches

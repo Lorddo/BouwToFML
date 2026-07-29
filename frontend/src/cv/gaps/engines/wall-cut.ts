@@ -19,7 +19,7 @@ export function cutWallsFromGrayData(
   const out = new Uint8Array(source)
   const maxInk = policy.wallInkMaxValue
   for (let i = 0; i < out.length; i += 1) {
-    if (wallMask[i]! <= maxInk) out[i] = WHITE
+    if (wallMask[i] <= maxInk) out[i] = WHITE
   }
   return out
 }

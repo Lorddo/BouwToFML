@@ -60,8 +60,8 @@ export function pickExtremeKozijnFaces(
   const kozijnen = faces.filter((face) => isKozijnFace(face, spanW))
   if (kozijnen.length < 2) return null
   const sorted = [...kozijnen].sort((a, b) => a.bbox.x - b.bbox.x || a.bbox.y - b.bbox.y)
-  const left = sorted[0]!
-  const right = sorted[sorted.length - 1]!
+  const left = sorted[0]
+  const right = sorted[sorted.length - 1]
   if (left.label === right.label) return null
   return { left, right }
 }

@@ -246,7 +246,7 @@ describe('ref-blob', () => {
     })
     const { units } = resolveOpeningUnits({ data, width: 80, height: 24 })
     expect(units.length).toBeGreaterThanOrEqual(1)
-    const primary = units.find((u) => u.isPrimary) ?? units[0]!
+    const primary = units.find((u) => u.isPrimary) ?? units[0]
     // Crop mag niet tot x=0 (muur) beginnen
     expect(primary.bbox.x).toBeGreaterThanOrEqual(15)
     expect(primary.bbox.x + primary.bbox.width).toBeLessThanOrEqual(65)

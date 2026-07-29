@@ -308,8 +308,8 @@ export function useWorkspaceOverlays(deps: {
           if (points.length < 4) return
           for (let i = 0; i + 3 < points.length; i += 2) {
             overlays.push({
-              a: { x: points[i]!, y: points[i + 1]! },
-              b: { x: points[i + 2]!, y: points[i + 3]! },
+              a: { x: points[i], y: points[i + 1] },
+              b: { x: points[i + 2], y: points[i + 3] },
               color,
               dashed,
             })
@@ -332,8 +332,8 @@ export function useWorkspaceOverlays(deps: {
           for (const line of door.leafLines) {
             if (line.length < 4) continue
             overlays.push({
-              a: { x: line[0]!, y: line[1]! },
-              b: { x: line[2]!, y: line[3]! },
+              a: { x: line[0], y: line[1] },
+              b: { x: line[2], y: line[3] },
               color: '#16a34a',
               dashed: false,
             })

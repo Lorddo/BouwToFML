@@ -51,9 +51,9 @@ export function resolveEffectiveFmlWallThicknessLimits(
   const normalized = normalizeLimits(limits)
   const sorted = [normalized.minCm, normalized.midCm, normalized.maxCm].sort((a, b) => a - b)
   return {
-    minCm: sorted[0]!,
-    midCm: sorted[1]!,
-    maxCm: sorted[2]!,
+    minCm: sorted[0],
+    midCm: sorted[1],
+    maxCm: sorted[2],
   }
 }
 

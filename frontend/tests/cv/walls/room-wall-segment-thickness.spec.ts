@@ -149,7 +149,7 @@ describe('room-wall-segment-thickness', () => {
         thicknessPxMax: 0,
       },
     ]
-    expect(segmentsOnSameWallLine(segments[0]!, segments[1]!)).toBe(true)
+    expect(segmentsOnSameWallLine(segments[0], segments[1])).toBe(true)
     expect(groupWallLineIndices(segments)).toEqual([[0, 1]])
 
     const graph = {

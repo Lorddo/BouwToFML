@@ -73,7 +73,7 @@ function resolveOpeningFreeDirFromHinge(hinge: DoorSwingHingeResult, axis: 'x' |
     score: axis === 'x' ? Math.abs(row.dir.x) : Math.abs(row.dir.y),
   }))
   scored.sort((a, b) => b.score - a.score)
-  return scored[0]!.dir
+  return scored[0].dir
 }
 
 function projectOnAxis(point: RefPoint, axis: 'x' | 'y'): number {

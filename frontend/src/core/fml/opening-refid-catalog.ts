@@ -1,4 +1,4 @@
-import catalogData from '../../../examples/opening-refid-catalog.json'
+import catalogData from './data/opening-refid-catalog.json'
 import type { OpeningType } from './types'
 
 /**
@@ -7,7 +7,7 @@ import type { OpeningType } from './types'
  * Kozijn-simulatie (boog vs gap) komt uit `swingInsetCm` in de catalogus —
  * plattegrond-onafhankelijk, niet uit gemeten ref-framing.
  *
- * Bron: frontend/examples/opening-refid-catalog.json
+ * Bron: ./data/opening-refid-catalog.json
  * Onbekende refid → default 'single' + swing_inset_defaults.single.
  */
 export type DoorAssetKind =
@@ -42,8 +42,8 @@ type SwingInsetDefaults = Partial<Record<DoorAssetKind, number>>
 
 const entries = (catalogData.entries ?? []) as CatalogEntry[]
 const byRefid = new Map(entries.map((entry) => [entry.refid, entry]))
-const swingInsetDefaults = ((catalogData as { swing_inset_defaults?: SwingInsetDefaults })
-  .swing_inset_defaults ?? {}) as SwingInsetDefaults
+const swingInsetDefaults =
+  (catalogData as { swing_inset_defaults?: SwingInsetDefaults }).swing_inset_defaults ?? {}
 
 const DEFAULT_SWING_INSET_CM: Record<DoorAssetKind, number> = {
   single: 5,

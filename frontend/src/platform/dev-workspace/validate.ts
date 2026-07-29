@@ -19,7 +19,7 @@ function isDevWorkspaceSessionV1(value: unknown): value is DevWorkspaceSessionV1
   const session = value as Partial<DevWorkspaceSessionV1>
   return (
     session.schemaVersion === 1 &&
-    isValidSessionBase(session as Record<string, unknown>) &&
+    isValidSessionBase(session) &&
     typeof session.scale?.state === 'object' &&
     session.scale.state !== null
   )
@@ -30,7 +30,7 @@ function isDevWorkspaceSessionV2(value: unknown): value is DevWorkspaceSessionV2
   const session = value as Partial<DevWorkspaceSessionV2>
   return (
     session.schemaVersion === 2 &&
-    isValidSessionBase(session as Record<string, unknown>) &&
+    isValidSessionBase(session) &&
     typeof session.flow === 'object' &&
     session.flow !== null &&
     typeof session.flow.targetFlowStep === 'string' &&

@@ -38,7 +38,7 @@ function tryCollectMicroCorner(params: {
   policy: CollapsePolicy
   hvBandPx: number
 }): MicroCornerHit | null {
-  const stub = params.segments[params.stubIndex]!
+  const stub = params.segments[params.stubIndex]
   const stubLen = segmentLength(stub)
   if (stubLen <= 0 || stubLen > params.policy.microCornerMaxPx) return null
 
@@ -78,9 +78,9 @@ function tryCollectMicroCorner(params: {
     return null
   }
 
-  const hardAxis = segmentAxis(params.segments[hardArmIndex]!, hardArmIndex, params.hvBandPx)
+  const hardAxis = segmentAxis(params.segments[hardArmIndex], hardArmIndex, params.hvBandPx)
   const contAxis = segmentAxis(
-    params.segments[continuationIndex]!,
+    params.segments[continuationIndex],
     continuationIndex,
     params.hvBandPx,
   )

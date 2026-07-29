@@ -54,7 +54,7 @@ export function repairLayer6JunctionNodes(params: {
     hvBandPx,
     endpointSnapPx,
   )
-  let pendingTNodes = graph.nodes
+  const pendingTNodes = graph.nodes
     .filter((node) => node.kind === 'T' || node.kind === 'X')
     .map((node) => ({ x: node.x, y: node.y }))
   for (const node of orderedNodes) {

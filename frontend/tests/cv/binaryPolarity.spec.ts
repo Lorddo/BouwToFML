@@ -52,7 +52,7 @@ describe('binaryPolarity', () => {
       bitwise_not: vi.fn((_src, dst) => dst.data.set(mat.data.map((v) => (v < 128 ? 255 : 0)))),
     }
     const out = { ...mat, data: mat.data.slice() }
-    ensureBlackInkOnWhiteBackground(cv as never, out as never)
+    ensureBlackInkOnWhiteBackground(cv, out)
     expect(cv.bitwise_not).toHaveBeenCalled()
   })
 })

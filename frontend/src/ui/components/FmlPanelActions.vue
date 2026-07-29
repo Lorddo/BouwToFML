@@ -3,8 +3,8 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    generatedFmlText: string
-    fmlLimitsDirty: boolean
+    generatedFmlText?: string
+    fmlLimitsDirty?: boolean
   }>(),
   {
     generatedFmlText: '',

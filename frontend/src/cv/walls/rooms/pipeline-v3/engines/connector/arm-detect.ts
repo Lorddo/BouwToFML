@@ -255,7 +255,7 @@ export function collectLayer6HvArmsAtPoint(params: {
 
   for (let i = 0; i < params.segments.length; i += 1) {
     if (seen.has(i)) continue
-    const segment = params.segments[i]!
+    const segment = params.segments[i]
     const classified = classify(segment, i)
     if (classified.kind !== 'H' && classified.kind !== 'V') continue
     if (!isHvArmNearJunction(params.point, segment, classified.kind, params.armDetectPx)) continue

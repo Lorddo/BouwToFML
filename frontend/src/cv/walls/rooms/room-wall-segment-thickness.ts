@@ -460,7 +460,7 @@ export function groupWallLineIndices(
   const uf = new UnionFind(segments.length)
   for (let i = 0; i < segments.length; i += 1) {
     for (let j = i + 1; j < segments.length; j += 1) {
-      if (segmentsOnSameWallLine(segments[i]!, segments[j]!, resolvedSnap, parallelSepPx)) {
+      if (segmentsOnSameWallLine(segments[i], segments[j], resolvedSnap, parallelSepPx)) {
         uf.union(i, j)
       }
     }
@@ -484,7 +484,7 @@ export function harmonizeThicknessPerWallLine(
   const result = segments.map((segment) => ({ ...segment }))
   for (const group of groups) {
     if (group.length <= 1) continue
-    let bestIndex = group[0]!
+    let bestIndex = group[0]
     for (const index of group) {
       if ((result[index]?.thicknessPxMax ?? 0) > (result[bestIndex]?.thicknessPxMax ?? 0)) {
         bestIndex = index
@@ -494,7 +494,7 @@ export function harmonizeThicknessPerWallLine(
     const balancePx = result[bestIndex]?.balancePx
     for (const index of group) {
       result[index] = {
-        ...result[index]!,
+        ...result[index],
         thicknessPxMax,
         balancePx,
       }

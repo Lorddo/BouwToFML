@@ -40,7 +40,7 @@ export function renderMergedWallCloseOverlay(params: {
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(params.base as unknown as CanvasImageSource, 0, 0)
+  ctx.drawImage(params.base, 0, 0)
 
   const { width, height } = params.base
   const maskData = params.closedMask.data as Uint8Array

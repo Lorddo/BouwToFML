@@ -142,8 +142,8 @@ export function addSegmentPathWithJunctionBreaks(
   const points = collectSegmentBreakpoints(walls, a, b)
   const addedIds: string[] = []
   for (let idx = 0; idx + 1 < points.length; idx += 1) {
-    const p1 = points[idx]!
-    const p2 = points[idx + 1]!
+    const p1 = points[idx]
+    const p2 = points[idx + 1]
     if (distance(p1, p2) < options.minLengthCm) continue
     if (hasSegmentBetween(walls, p1, p2)) continue
     const wallId = `${options.idPrefix}-${crypto.randomUUID().slice(0, 8)}`
@@ -218,12 +218,12 @@ export function addRoomRect(
   thicknessCm: number,
 ): { walls: Wall[]; wallIds: string[] } | null {
   if (corners.length !== 4) return null
-  let next = cloneWalls(walls)
+  const next = cloneWalls(walls)
   const snappedCorners = corners.map((corner) => ({ x: corner.x, y: corner.y }))
   let changed = false
 
   for (let idx = 0; idx < snappedCorners.length; idx += 1) {
-    const corner = snappedCorners[idx]!
+    const corner = snappedCorners[idx]
     const match = findWallAtPoint(next, corner)
     if (!match) continue
     snappedCorners[idx] = { ...match.projected }
@@ -236,8 +236,8 @@ export function addRoomRect(
 
   const addedIds: string[] = []
   for (let idx = 0; idx < snappedCorners.length; idx += 1) {
-    const a = snappedCorners[idx]!
-    const b = snappedCorners[(idx + 1) % snappedCorners.length]!
+    const a = snappedCorners[idx]
+    const b = snappedCorners[(idx + 1) % snappedCorners.length]
     const edgeIds = addSegmentPathWithJunctionBreaks(next, a, b, {
       thickness: Math.max(1, Math.min(200, Math.round(thicknessCm))),
       idPrefix: 'wall',

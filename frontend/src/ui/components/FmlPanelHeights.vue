@@ -5,10 +5,10 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    fmlWallHeightCm: number
-    fmlDoorHeightCm: number
-    fmlWindowHeightCm: number
-    fmlWindowSillZCm: number
+    fmlWallHeightCm?: number
+    fmlDoorHeightCm?: number
+    fmlWindowHeightCm?: number
+    fmlWindowSillZCm?: number
   }>(),
   {
     fmlWallHeightCm: 280,

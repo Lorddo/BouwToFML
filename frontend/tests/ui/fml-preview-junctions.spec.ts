@@ -252,7 +252,7 @@ describe('splitWallAtPoint', () => {
         ],
       },
     ]
-    const ok = splitWallAtPoint(walls, walls[0]!, { x: 50, y: 0 }, 0.5)
+    const ok = splitWallAtPoint(walls, walls[0], { x: 50, y: 0 }, 0.5)
     expect(ok).toBe(true)
     expect(walls).toHaveLength(2)
     expect(walls[0]?.openings[0]?.t).toBeCloseTo(0.4, 6)
@@ -993,8 +993,8 @@ describe('slideWallSegmentAlongAxis', () => {
       const xVals = [wall.a.x, wall.b.x].sort((left, right) => left - right)
       const yVals = [wall.a.y, wall.b.y].sort((left, right) => left - right)
       return (
-        Math.abs(xVals[0]! - 50) < 0.01 &&
-        Math.abs(xVals[1]! - 60) < 0.01 &&
+        Math.abs(xVals[0] - 50) < 0.01 &&
+        Math.abs(xVals[1] - 60) < 0.01 &&
         (Math.abs(yVals[0] - 0) < 0.01 ||
           (Math.abs(yVals[0] - 80) < 0.01 && Math.abs(yVals[1] - 80) < 0.01))
       )

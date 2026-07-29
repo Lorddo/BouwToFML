@@ -46,7 +46,7 @@ describe('window panels + ornament', () => {
     })
     // begin + midden + eind
     expect(multi.mullions).toHaveLength(3)
-    const m = multi.mullions[1]!
+    const m = multi.mullions[1]
     // half thickness = 7.5 → y van -7.5 tot 7.5
     expect(m[1]).toBeCloseTo(-7.5, 5)
     expect(m[3]).toBeCloseTo(7.5, 5)

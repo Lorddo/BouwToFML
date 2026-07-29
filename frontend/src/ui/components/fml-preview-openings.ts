@@ -110,7 +110,7 @@ export function projectPointToWallT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D)
 export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening): Wall[] {
   const wallIndex = walls.findIndex((wall) => wall.id === wallId)
   if (wallIndex < 0) return walls
-  const wall = walls[wallIndex]!
+  const wall = walls[wallIndex]
 
   const width = Math.max(1, Math.round(opening.width))
   const t = clampDoorOpeningT(wall, width, opening.t)
@@ -139,9 +139,9 @@ export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening
 
 export function findOpeningById(walls: Wall[], openingId: string): OpeningLocation | null {
   for (let wallIndex = 0; wallIndex < walls.length; wallIndex += 1) {
-    const wall = walls[wallIndex]!
+    const wall = walls[wallIndex]
     for (let openingIndex = 0; openingIndex < wall.openings.length; openingIndex += 1) {
-      const opening = wall.openings[openingIndex]!
+      const opening = wall.openings[openingIndex]
       const wallId = wall.id || `wall-${wallIndex}`
       const id = buildOpeningId(wallId, opening, openingIndex)
       if (id !== openingId) continue

@@ -231,7 +231,7 @@ export function useFmlPreviewOpeningSelection(options: {
   function copySelectedOpening(): void {
     const selected = selectedOpenings()
     if (selected.length !== 1) return
-    const { opening } = selected[0]!
+    const { opening } = selected[0]
     if (opening.type === 'window') {
       const subtype = resolveWindowSubtypeFromRefid(opening.refid)
       const width = clampOpeningWidth(opening.width)

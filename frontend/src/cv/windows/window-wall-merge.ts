@@ -61,14 +61,14 @@ function canMergePair(a: BoundWindow, b: BoundWindow): boolean {
 function canMergeChain(windows: BoundWindow[]): boolean {
   if (windows.length < 2) return false
   for (let i = 0; i + 1 < windows.length; i += 1) {
-    if (!canMergePair(windows[i]!, windows[i + 1]!)) return false
+    if (!canMergePair(windows[i], windows[i + 1])) return false
   }
   return true
 }
 
 function mergeGroup(windows: BoundWindow[]): BoundWindow {
-  const first = windows[0]!
-  const last = windows[windows.length - 1]!
+  const first = windows[0]
+  const last = windows[windows.length - 1]
   let bbox = { ...first.openingBBox }
   const faceIds = new Set<number>()
   let widthCmSum = 0
@@ -87,8 +87,8 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
     first.openingAxis === 'h'
       ? [...allEnds].sort((a, b) => a.x - b.x || a.y - b.y)
       : [...allEnds].sort((a, b) => a.y - b.y || a.x - b.x)
-  const openingStartPx = sortedEnds[0]!
-  const openingEndPx = sortedEnds[sortedEnds.length - 1]!
+  const openingStartPx = sortedEnds[0]
+  const openingEndPx = sortedEnds[sortedEnds.length - 1]
   const spanPx = Math.hypot(openingEndPx.x - openingStartPx.x, openingEndPx.y - openingStartPx.y)
 
   const panelCount = windows.length as 2 | 3
@@ -146,7 +146,7 @@ export function mergeAdjacentBoundWindows(windows: BoundWindow[]): BoundWindow[]
         i += 2
         continue
       }
-      out.push(sorted[i]!)
+      out.push(sorted[i])
       i += 1
     }
   }

@@ -114,8 +114,8 @@ describe('pruneISpurs L8 once-ltx', () => {
       expect(pruned.pruneStats.removedPathCount).toBe(1)
       expect(pruned.pruneStats.removedSegmentCount).toBe(1)
       expect(pruned.segments).toHaveLength(1)
-      expect(Math.abs(pruned.segments[0]!.a.y - (44.57 + dy))).toBeLessThan(0.1)
-      expect(Math.abs(pruned.segments[0]!.b.y - (44.57 + dy))).toBeLessThan(0.1)
+      expect(Math.abs(pruned.segments[0].a.y - (44.57 + dy))).toBeLessThan(0.1)
+      expect(Math.abs(pruned.segments[0].b.y - (44.57 + dy))).toBeLessThan(0.1)
     })
   })
 

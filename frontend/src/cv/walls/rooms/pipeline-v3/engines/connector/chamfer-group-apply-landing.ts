@@ -59,7 +59,7 @@ export function applyLandingChamferGroup(params: {
         hToSnap.add(inc.segIndex)
         if (inc.lengthPx <= thicknessMargin) {
           // Korte H-stub: lange arm aan de andere kant ook meenemen.
-          const seg = work[inc.segIndex]!
+          const seg = work[inc.segIndex]
           const other =
             Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <= endpointSnapPx ? seg.b : seg.a
           for (const far of incidentAt(work, other, endpointSnapPx)) {
@@ -73,7 +73,7 @@ export function applyLandingChamferGroup(params: {
       if (kind === 'V' && inc.lengthPx <= thicknessMargin) {
         // Korte V-jog-stub: volg naar andere kant (linker H op andere y), stub weg.
         stubRemove.add(inc.segIndex)
-        const seg = work[inc.segIndex]!
+        const seg = work[inc.segIndex]
         const other =
           Math.hypot(seg.a.x - junction.x, seg.a.y - junction.y) <= endpointSnapPx ? seg.b : seg.a
         for (const far of incidentAt(work, other, endpointSnapPx)) {

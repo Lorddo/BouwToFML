@@ -151,8 +151,8 @@ describe('door-wall-orient', () => {
       height: 1,
     })
     expect(oriented).toHaveLength(1)
-    expect(oriented[0]!.mirrored).toEqual([0, 1])
-    expect(oriented[0]!.hingePx).toEqual({ x: 10, y: 10 })
+    expect(oriented[0].mirrored).toEqual([0, 1])
+    expect(oriented[0].hingePx).toEqual({ x: 10, y: 10 })
     expect(vi.mocked(computeL12DoorHinge).mock.calls[0]?.[0]?.faceIds).toEqual([1])
   })
 

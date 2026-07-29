@@ -32,10 +32,10 @@ function pointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
   if (polygon.length < 3) return false
   let inside = false
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i]!.x
-    const yi = polygon[i]!.y
-    const xj = polygon[j]!.x
-    const yj = polygon[j]!.y
+    const xi = polygon[i].x
+    const yi = polygon[i].y
+    const xj = polygon[j].x
+    const yj = polygon[j].y
     const intersects =
       yi > point.y !== yj > point.y &&
       point.x < ((xj - xi) * (point.y - yi)) / (yj - yi + Number.EPSILON) + xi
@@ -104,14 +104,14 @@ export function useFmlPreviewHitTest(
 
     for (const target of targets) {
       if (target.hitPoints.length < 4 || target.gapPoints.length < 6) continue
-      const a = viewport.renderTransform.value.toCmPoint(target.hitPoints[0]!, target.hitPoints[1]!)
-      const b = viewport.renderTransform.value.toCmPoint(target.hitPoints[2]!, target.hitPoints[3]!)
+      const a = viewport.renderTransform.value.toCmPoint(target.hitPoints[0], target.hitPoints[1])
+      const b = viewport.renderTransform.value.toCmPoint(target.hitPoints[2], target.hitPoints[3])
       const polygon: Point2D[] = []
       for (let idx = 0; idx + 1 < target.gapPoints.length; idx += 2) {
         polygon.push(
           viewport.renderTransform.value.toCmPoint(
-            target.gapPoints[idx]!,
-            target.gapPoints[idx + 1]!,
+            target.gapPoints[idx],
+            target.gapPoints[idx + 1],
           ),
         )
       }

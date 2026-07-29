@@ -383,7 +383,7 @@ export function useWorkspace() {
     setLocalError,
     getBaseWallBw,
     onWindowFacesApplied: () => {
-      roomFaces.refreshClassificationPreview()
+      void roomFaces.refreshClassificationPreview()
       // Window sticky doorframes na deur-Stage-2: IDs meenemen zonder Stage-2 her-run.
       doorSwingFaces.reattachStickyDoorframesToResolved()
     },

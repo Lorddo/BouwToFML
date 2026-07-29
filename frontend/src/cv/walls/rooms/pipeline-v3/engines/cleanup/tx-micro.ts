@@ -36,7 +36,7 @@ export function cleanupTxMicroSegments(
 
   let i = 0
   while (i < work.length) {
-    const seg = work[i]!
+    const seg = work[i]
     if (!isRemovableTxStub(seg, microMaxPx)) {
       i += 1
       continue
@@ -66,7 +66,7 @@ export function cleanupTxMicroSegments(
     // Apply on a candidate so one bad stub cannot poison the whole batch
     // (full-face tx was rejected for "losse delen" while this T needed reconnect).
     const candidate = cloneSegments(work)
-    const candSeg = candidate[i]!
+    const candSeg = candidate[i]
     const candHub = hubIsA ? candSeg.a : candSeg.b
     const candLeaf = hubIsA ? candSeg.b : candSeg.a
     const moved = replaceEndpoint(candidate, candLeaf, candHub)

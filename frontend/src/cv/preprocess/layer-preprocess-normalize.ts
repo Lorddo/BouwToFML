@@ -177,7 +177,7 @@ function pickSharedFields(base: Partial<PreprocessConfig>): Partial<PreprocessCo
 }
 
 function legacyWallTuneFromRoot(config: Partial<PreprocessConfig>): PreprocessLayerTune {
-  return pickLayerTuneFields(config as PreprocessLayerTune)
+  return pickLayerTuneFields(config)
 }
 
 function applyLegacyNoiseFlags(tune: PreprocessLayerTune): PreprocessLayerTune {

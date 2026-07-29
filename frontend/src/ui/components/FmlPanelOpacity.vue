@@ -1,9 +1,9 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    underlayOpacity: number
-    fmlOpacity: number
-    underlayAvailable: boolean
+    underlayOpacity?: number
+    fmlOpacity?: number
+    underlayAvailable?: boolean
   }>(),
   {
     underlayOpacity: 25,

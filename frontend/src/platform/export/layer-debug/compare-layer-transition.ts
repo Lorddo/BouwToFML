@@ -73,12 +73,12 @@ function compareJunctions(
   const usedNext = new Set<number>()
 
   for (let ni = 0; ni < nextRefs.length; ni++) {
-    const nextJ = nextRefs[ni]!
+    const nextJ = nextRefs[ni]
     let bestPi = -1
     let bestDist = Infinity
     for (let pi = 0; pi < prevRefs.length; pi++) {
       if (usedPrev.has(pi)) continue
-      const prevJ = prevRefs[pi]!
+      const prevJ = prevRefs[pi]
       const d = Math.hypot(prevJ.x - nextJ.x, prevJ.y - nextJ.y)
       if (d < bestDist) {
         bestDist = d
@@ -88,7 +88,7 @@ function compareJunctions(
     if (bestPi < 0 || bestDist > opts.junctionSnapPx) continue
     usedPrev.add(bestPi)
     usedNext.add(ni)
-    const prevJ = prevRefs[bestPi]!
+    const prevJ = prevRefs[bestPi]
     const kindChanged = prevJ.kind !== nextJ.kind
     if (bestDist <= opts.junctionShiftThresholdPx && !kindChanged) {
       items.push({
@@ -115,11 +115,11 @@ function compareJunctions(
 
   for (let pi = 0; pi < prevRefs.length; pi++) {
     if (usedPrev.has(pi)) continue
-    items.push({ kind: 'dropped', prevIndex: pi, prev: prevRefs[pi]! })
+    items.push({ kind: 'dropped', prevIndex: pi, prev: prevRefs[pi] })
   }
   for (let ni = 0; ni < nextRefs.length; ni++) {
     if (usedNext.has(ni)) continue
-    items.push({ kind: 'added', nextIndex: ni, next: nextRefs[ni]! })
+    items.push({ kind: 'added', nextIndex: ni, next: nextRefs[ni] })
   }
 
   return items
@@ -147,12 +147,12 @@ export function compareLayerTransition(
 
   // Fase 1: 1:1 matches (kept / moved)
   for (let ni = 0; ni < nextRefs.length; ni++) {
-    const nextSeg = nextRefs[ni]!
+    const nextSeg = nextRefs[ni]
     let bestPi = -1
     let bestError = Infinity
     for (let pi = 0; pi < prevRefs.length; pi++) {
       if (matchedPrev.has(pi)) continue
-      const prevSeg = prevRefs[pi]!
+      const prevSeg = prevRefs[pi]
       if (!orientationSimilar(prevSeg, nextSeg)) continue
       const err = endpointErrorPx(prevSeg, nextSeg)
       if (err < bestError) {
@@ -163,7 +163,7 @@ export function compareLayerTransition(
     if (bestPi < 0 || bestError > opts.tolerancePx) continue
     matchedPrev.add(bestPi)
     matchedNext.add(ni)
-    const prevSeg = prevRefs[bestPi]!
+    const prevSeg = prevRefs[bestPi]
     if (bestError <= opts.movedThresholdPx) {
       kept.push({
         kind: 'kept',
@@ -189,18 +189,18 @@ export function compareLayerTransition(
   // Fase 2: merged (meerdere prev → één next)
   for (let ni = 0; ni < nextRefs.length; ni++) {
     if (matchedNext.has(ni)) continue
-    const nextSeg = nextRefs[ni]!
+    const nextSeg = nextRefs[ni]
     const mergePrev: number[] = []
     for (let pi = 0; pi < prevRefs.length; pi++) {
       if (matchedPrev.has(pi)) continue
-      if (segmentProjectsOntoLine(prevRefs[pi]!, nextSeg, opts.mergeBandPx)) {
+      if (segmentProjectsOntoLine(prevRefs[pi], nextSeg, opts.mergeBandPx)) {
         mergePrev.push(pi)
       }
     }
     if (mergePrev.length === 0) continue
     for (const pi of mergePrev) matchedPrev.add(pi)
     matchedNext.add(ni)
-    const prevSegs = mergePrev.map((pi) => prevRefs[pi]!)
+    const prevSegs = mergePrev.map((pi) => prevRefs[pi])
     merged.push({
       kind: 'merged',
       prevIndices: mergePrev,
@@ -216,12 +216,12 @@ export function compareLayerTransition(
   // Fase 3: fuzzy match op middenpunt (restanten)
   for (let ni = 0; ni < nextRefs.length; ni++) {
     if (matchedNext.has(ni)) continue
-    const nextSeg = nextRefs[ni]!
+    const nextSeg = nextRefs[ni]
     let bestPi = -1
     let bestMidDist = Infinity
     for (let pi = 0; pi < prevRefs.length; pi++) {
       if (matchedPrev.has(pi)) continue
-      const prevSeg = prevRefs[pi]!
+      const prevSeg = prevRefs[pi]
       if (!orientationSimilar(prevSeg, nextSeg, 0.85)) continue
       const midDist = Math.hypot(prevSeg.mid.x - nextSeg.mid.x, prevSeg.mid.y - nextSeg.mid.y)
       if (midDist < bestMidDist) {
@@ -236,8 +236,8 @@ export function compareLayerTransition(
       kind: 'moved',
       prevIndex: bestPi,
       nextIndex: ni,
-      endpointErrorPx: Math.round(endpointErrorPx(prevRefs[bestPi]!, nextSeg) * 10) / 10,
-      prev: prevRefs[bestPi]!,
+      endpointErrorPx: Math.round(endpointErrorPx(prevRefs[bestPi], nextSeg) * 10) / 10,
+      prev: prevRefs[bestPi],
       next: nextSeg,
       dropReasonHint: 'inferred_moved',
     })
@@ -248,8 +248,8 @@ export function compareLayerTransition(
     dropped.push({
       kind: 'dropped',
       prevIndex: pi,
-      prev: prevRefs[pi]!,
-      dropReasonHint: inferDropReason(prevRefs[pi]!, from, to, opts.spurMinLengthPx),
+      prev: prevRefs[pi],
+      dropReasonHint: inferDropReason(prevRefs[pi], from, to, opts.spurMinLengthPx),
     })
   }
 
@@ -258,7 +258,7 @@ export function compareLayerTransition(
     added.push({
       kind: 'added',
       nextIndex: ni,
-      next: nextRefs[ni]!,
+      next: nextRefs[ni],
     })
   }
 
@@ -295,10 +295,10 @@ export function compareLayerTransition(
       added: added as LayerTransitionDiff['segments']['added'],
     },
     junctions: {
-      kept: junctionKept as LayerTransitionDiff['junctions']['kept'],
-      shifted: junctionShifted as LayerTransitionDiff['junctions']['shifted'],
-      dropped: junctionDropped as LayerTransitionDiff['junctions']['dropped'],
-      added: junctionAdded as LayerTransitionDiff['junctions']['added'],
+      kept: junctionKept,
+      shifted: junctionShifted,
+      dropped: junctionDropped,
+      added: junctionAdded,
     },
   }
 }

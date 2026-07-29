@@ -51,7 +51,7 @@ describe('door-resolve', () => {
       pxPerMmY: 2,
     })
     expect(resolved).toHaveLength(1)
-    const door = resolved[0]!
+    const door = resolved[0]
     expect(door.overhangAlongPx).toBeCloseTo(90, 1)
     expect(door.overhangOppositePx).toBeCloseTo(30, 1)
     expect(door.widthPx).toBeCloseTo(120, 1)
@@ -90,7 +90,7 @@ describe('door-resolve', () => {
       pxPerMmY: 2,
     })
     expect(resolved).toHaveLength(1)
-    const door = resolved[0]!
+    const door = resolved[0]
     expect(door.swingSpanPx).toBeCloseTo(200, 1)
     expect(door.framingAlongPx).toBe(12)
     expect(door.framingOppositePx).toBe(13)
@@ -195,7 +195,7 @@ describe('door-resolve', () => {
       pxPerMmY: 2,
     })
     expect(resolved).toHaveLength(1)
-    const door = resolved[0]!
+    const door = resolved[0]
     expect(door.overhangAlongPx).toBeCloseTo(100 * 0.75 + 6, 2)
     expect(door.overhangOppositePx).toBeCloseTo(100 * 0.1 + 8, 2)
   })
@@ -228,8 +228,8 @@ describe('door-resolve', () => {
       pxPerMmY: 2,
     })
     expect(resolved).toHaveLength(1)
-    expect(resolved[0]!.kind).toBe('single')
-    expect(resolved[0]!.fmlRefId).toBe(CONCEPT_DOOR_REFID)
+    expect(resolved[0].kind).toBe('single')
+    expect(resolved[0].fmlRefId).toBe(CONCEPT_DOOR_REFID)
   })
 
   it('dropt niet meer bij ontbrekende hinge (hinge pas in L12)', () => {
@@ -257,8 +257,8 @@ describe('door-resolve', () => {
       pxPerMmY: 2,
     })
     expect(resolved).toHaveLength(1)
-    expect(resolved[0]!.id).toBe('door-no-hinge-yet')
-    expect(resolved[0]!.swingSpanPx).toBe(60)
+    expect(resolved[0].id).toBe('door-no-hinge-yet')
+    expect(resolved[0].swingSpanPx).toBe(60)
   })
 
   it('schaalt op face-bbox (BouwTek11 single-7)', () => {
@@ -292,7 +292,7 @@ describe('door-resolve', () => {
       pxPerMmY: 0.1289,
     })
     expect(resolved).toHaveLength(1)
-    const door = resolved[0]!
+    const door = resolved[0]
     expect(door.swingSpanPx).toBe(116)
     expect(door.widthCm).toBeLessThan(110)
     expect(door.widthCm).toBeGreaterThan(80)

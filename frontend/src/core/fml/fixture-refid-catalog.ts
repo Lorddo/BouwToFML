@@ -1,8 +1,8 @@
-import catalogData from '../../../examples/fixture-refid-catalog.json'
+import catalogData from './data/fixture-refid-catalog.json'
 
 /**
  * Asset-kind voor FML-preview van items/fixtures (keuken/sanitair/installaties).
- * Bron: frontend/examples/fixture-refid-catalog.json
+ * Bron: ./data/fixture-refid-catalog.json
  * Onbekende refid → generic box.
  */
 export type FixtureAssetKind =

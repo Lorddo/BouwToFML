@@ -45,7 +45,7 @@ function collectExactDegree2Nodes(segments: Segment[]): ExactDegree2Node[] {
   const byPoint = new Map<string, { point: { x: number; y: number }; indices: number[] }>()
   const selfLoopKeys = new Set<string>()
   for (let i = 0; i < segments.length; i += 1) {
-    const seg = segments[i]!
+    const seg = segments[i]
     if (pointsEqual(seg.a, seg.b)) {
       selfLoopKeys.add(pointKeyExact(seg.a))
       continue
@@ -64,7 +64,7 @@ function collectExactDegree2Nodes(segments: Segment[]): ExactDegree2Node[] {
   for (const [key, entry] of byPoint) {
     if (entry.indices.length !== 2) continue
     if (selfLoopKeys.has(key)) continue
-    nodes.push({ point: entry.point, indexA: entry.indices[0]!, indexB: entry.indices[1]! })
+    nodes.push({ point: entry.point, indexA: entry.indices[0], indexB: entry.indices[1] })
   }
   return nodes
 }
@@ -214,7 +214,7 @@ export function mergeLayer2JitterSegments(params: {
   policy?: Layer2JitterPolicy
 }): { segments: Segment[]; mergedJunctionCount: number } {
   const policy = params.policy ?? resolveLayer2JitterPolicy(params.referenceWallThicknessPx)
-  let work = params.segments.map((seg) => ({ ...seg, a: { ...seg.a }, b: { ...seg.b } }))
+  const work = params.segments.map((seg) => ({ ...seg, a: { ...seg.a }, b: { ...seg.b } }))
   let mergedJunctionCount = 0
 
   let changed = true
@@ -226,8 +226,8 @@ export function mergeLayer2JitterSegments(params: {
       const junction = node.point
       const i = node.indexA
       const j = node.indexB
-      const segA = work[i]!
-      const segB = work[j]!
+      const segA = work[i]
+      const segB = work[j]
       const angleDeg = exactNodeTurnAngleDeg(segA, segB, junction)
       const spreadPx = junctionPerpSpreadPx(segA, segB)
       const localThickness = sampleLocalThicknessPx({

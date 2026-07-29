@@ -70,7 +70,7 @@ describe('addOpeningToWall', () => {
     expect(opening?.type).toBe('window')
     expect(opening?.z).toBe(70)
     expect(opening?.z_height).toBe(150)
-    const id = buildWindowOpeningId('w1', opening!, 0)
+    const id = buildWindowOpeningId('w1', opening, 0)
     expect(findOpeningById(next, id)?.opening.width).toBe(100)
   })
 })

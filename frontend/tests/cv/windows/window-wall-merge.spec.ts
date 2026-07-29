@@ -36,12 +36,12 @@ describe('mergeAdjacentBoundWindows', () => {
 
     const merged = mergeAdjacentBoundWindows(windows)
     expect(merged).toHaveLength(2)
-    expect(merged[0]!.fmlRefId).toBe(WINDOW_TRIPLE_REFID)
-    expect(merged[1]!.fmlRefId).toBe(WINDOW_TRIPLE_REFID)
-    expect(merged[0]!.windowId).toBe('w0__w1__w2')
-    expect(merged[1]!.windowId).toBe('w3__w4__w5')
-    expect(merged[0]!.openingBBox.width).toBeCloseTo(120, 1)
-    expect(merged[1]!.openingBBox.x).toBeCloseTo(130, 1)
+    expect(merged[0].fmlRefId).toBe(WINDOW_TRIPLE_REFID)
+    expect(merged[1].fmlRefId).toBe(WINDOW_TRIPLE_REFID)
+    expect(merged[0].windowId).toBe('w0__w1__w2')
+    expect(merged[1].windowId).toBe('w3__w4__w5')
+    expect(merged[0].openingBBox.width).toBeCloseTo(120, 1)
+    expect(merged[1].openingBBox.x).toBeCloseTo(130, 1)
   })
 
   it('maakt double van 2 aanliggende gelijke ramen', () => {
@@ -60,8 +60,8 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(1)
-    expect(merged[0]!.fmlRefId).toBe(WINDOW_DOUBLE_REFID)
-    expect(merged[0]!.windowId).toBe('a__b')
+    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].windowId).toBe('a__b')
   })
 
   it('houdt losse ramen bij >5% maatverschil', () => {
@@ -136,7 +136,7 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(1)
-    expect(merged[0]!.fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
   })
 
   it('merge alleen binnen hetzelfde segment', () => {
@@ -171,8 +171,8 @@ describe('mergeAdjacentBoundWindows', () => {
     )
     const merged = mergeAdjacentBoundWindows(windows)
     expect(merged).toHaveLength(2)
-    expect(merged[0]!.fmlRefId).toBe(WINDOW_TRIPLE_REFID)
-    expect(merged[1]!.fmlRefId).toBe(CONCEPT_WINDOW_REFID)
+    expect(merged[0].fmlRefId).toBe(WINDOW_TRIPLE_REFID)
+    expect(merged[1].fmlRefId).toBe(CONCEPT_WINDOW_REFID)
   })
 
   it('houdt volle opening-span bij reverse t-volgorde (segment rechts→links)', () => {
@@ -198,8 +198,8 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(1)
-    expect(merged[0]!.fmlRefId).toBe(WINDOW_DOUBLE_REFID)
-    expect(merged[0]!.widthPx).toBeGreaterThan(250)
-    expect(merged[0]!.openingStartPx.x).toBeLessThan(merged[0]!.openingEndPx.x)
+    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].widthPx).toBeGreaterThan(250)
+    expect(merged[0].openingStartPx.x).toBeLessThan(merged[0].openingEndPx.x)
   })
 })

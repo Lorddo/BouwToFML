@@ -58,8 +58,8 @@ export function hasArcLikeContour(polygon: RefPoint[]): boolean {
   if (polygon.length < 6) return false
   const dirs: { x: number; y: number }[] = []
   for (let i = 0; i < polygon.length; i += 1) {
-    const a = polygon[i]!
-    const b = polygon[(i + 1) % polygon.length]!
+    const a = polygon[i]
+    const b = polygon[(i + 1) % polygon.length]
     const dir = normalize({ x: b.x - a.x, y: b.y - a.y })
     if (!dir) continue
     dirs.push(dir)
@@ -67,8 +67,8 @@ export function hasArcLikeContour(polygon: RefPoint[]): boolean {
   if (dirs.length < 5) return false
   let gradualTurnCount = 0
   for (let i = 0; i < dirs.length; i += 1) {
-    const d0 = dirs[i]!
-    const d1 = dirs[(i + 1) % dirs.length]!
+    const d0 = dirs[i]
+    const d1 = dirs[(i + 1) % dirs.length]
     const a0 = angleDegFromDir(d0)
     const a1 = angleDegFromDir(d1)
     const diff = angleDiffDeg(a0, a1)
@@ -133,9 +133,9 @@ function pickBestAxes(
   let bestAngleError = Number.POSITIVE_INFINITY
   let bestCornerDistance = Number.POSITIVE_INFINITY
   for (let i = 0; i < candidates.length; i += 1) {
-    const left = candidates[i]!
+    const left = candidates[i]
     for (let j = i + 1; j < candidates.length; j += 1) {
-      const right = candidates[j]!
+      const right = candidates[j]
       const angleDiff = angleDiffDeg(left.angleDeg, right.angleDeg)
       // Bijna-parallel → snijpunt willekeurig; drempel uit ref of degenerate-vloer.
       if (angleDiff < options.minAxisSeparationDeg) continue

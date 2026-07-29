@@ -183,12 +183,12 @@ export function resolveOpeningUnits(params: {
   const searchBox: RefBBox = { x: 0, y: 0, width, height }
   const posts = findKozijnPostsAlongX(data, width, height, searchBox)
 
-  let candidateBBoxes: Array<{ bbox: RefBBox; source: RefBlobUnit['source'] }> = []
+  const candidateBBoxes: Array<{ bbox: RefBBox; source: RefBlobUnit['source'] }> = []
 
   if (posts.length >= 2) {
     for (let i = 0; i < posts.length - 1; i += 1) {
-      const a = posts[i]!
-      const b = posts[i + 1]!
+      const a = posts[i]
+      const b = posts[i + 1]
       const strip: RefBBox = {
         x: a.start,
         y: 0,
@@ -314,7 +314,7 @@ export function resolveOpeningUnits(params: {
     ]
   }
 
-  for (let i = 0; i < units.length; i += 1) units[i]!.index = i
+  for (let i = 0; i < units.length; i += 1) units[i].index = i
 
   let maxArea = -1
   let primaryIndex = 0

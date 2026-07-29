@@ -25,7 +25,7 @@ describe('cleanBinary helpers', () => {
     const cv = { bitwise_not: bitwiseNot }
     const mat = makeMat()
 
-    applyNegative(cv as never, mat as never)
+    applyNegative(cv, mat)
     expect(bitwiseNot).toHaveBeenCalledWith(mat, mat)
   })
 
@@ -62,7 +62,7 @@ describe('cleanBinary helpers', () => {
     }
     const mat = new cv.Mat()
 
-    smoothBinaryLines(cv as never, mat as never, 2)
+    smoothBinaryLines(cv, mat, 2)
 
     expect(calls.filter((c) => c === 'not')).toHaveLength(0)
     expect(calls.filter((c) => c === 'close')).toHaveLength(2)
@@ -78,7 +78,7 @@ describe('cleanBinary helpers', () => {
     data[5] = 0
     const mat = makeMat(4, 4, data)
 
-    thickenLines({} as never, mat as never, 1)
+    thickenLines({}, mat, 1)
 
     expect(mat.data[6]).toBe(0)
   })
@@ -137,7 +137,7 @@ describe('cleanBinary helpers', () => {
     )
 
     const mat = makeMat()
-    const filled = fillHolesByMaxArea(cv as never, mat as never, 20)
+    const filled = fillHolesByMaxArea(cv, mat, 20)
 
     expect(filled).toBe(1)
     expect(rectangles).toHaveLength(0)

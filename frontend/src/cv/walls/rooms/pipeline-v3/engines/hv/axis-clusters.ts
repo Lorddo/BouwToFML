@@ -108,8 +108,8 @@ function buildConnectedAxisClusters(params: {
   const ufParent: number[] = []
   for (const item of params.items) ufParent[item.index] = item.index
   function ufFind(i: number): number {
-    if (ufParent[i] !== i) ufParent[i] = ufFind(ufParent[i]!)
-    return ufParent[i]!
+    if (ufParent[i] !== i) ufParent[i] = ufFind(ufParent[i])
+    return ufParent[i]
   }
   function ufUnion(a: number, b: number): void {
     ufParent[ufFind(b)] = ufFind(a)
@@ -132,8 +132,8 @@ function buildConnectedAxisClusters(params: {
     const sameOrientation = segmentIndices.filter((index) => indexSet.has(index))
     for (let i = 0; i < sameOrientation.length; i += 1) {
       for (let j = i + 1; j < sameOrientation.length; j += 1) {
-        const a = itemByIndex.get(sameOrientation[i]!)!
-        const b = itemByIndex.get(sameOrientation[j]!)!
+        const a = itemByIndex.get(sameOrientation[i])!
+        const b = itemByIndex.get(sameOrientation[j])!
         if (
           canUnionAtJunction({
             policy: params.policy,
@@ -174,7 +174,7 @@ function buildConnectedAxisClusters(params: {
       params.orientation === 'H' ? params.policy.collinearChainMaxSpreadPx : maxShiftPx
     const totalLength = component.reduce((sum, item) => sum + Math.max(1, item.lengthPx), 0)
     const weighted = component.reduce((sum, item) => sum + item.pos * Math.max(1, item.lengthPx), 0)
-    const clusterAxis = totalLength > 0 ? weighted / totalLength : component[0]!.pos
+    const clusterAxis = totalLength > 0 ? weighted / totalLength : component[0].pos
     return {
       targetAxis: clusterSpread <= spreadLimitPx ? clusterAxis : null,
       indices: component.map((item) => item.index),
@@ -206,7 +206,7 @@ export function resolveSegmentAxisTargets(params: {
     const items: AxisItem[] = []
     for (let index = 0; index < params.segments.length; index += 1) {
       if (params.orientationBySegment[index] !== orientation) continue
-      const seg = params.segments[index]!
+      const seg = params.segments[index]
       items.push({
         index,
         pos: axisPosition(seg, orientation),

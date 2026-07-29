@@ -15,7 +15,7 @@ const KINDERDIJK = resolve(
 describe('buildWallRenderGeometry Kinderdijkstraat', () => {
   it('has no runaway fill vertices', () => {
     const { plan } = importFmlV3(JSON.parse(readFileSync(KINDERDIJK, 'utf8')))
-    const walls = plan.floors[0]!.walls.map((wall) => ({
+    const walls = plan.floors[0].walls.map((wall) => ({
       id: wall.id,
       a: wall.a,
       b: wall.b,

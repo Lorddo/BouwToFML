@@ -3,7 +3,25 @@ import type { OcrTextCandidate } from '@/core/extraction'
 import { filterAndMergeOcrHits, type OcrScanPass, type OcrWordHit } from '@/cv/port/ocrTextFilters'
 import { getOcrWorker } from '@/cv/port/ocrWorker'
 
-function asBoundingBox(word: any): OcrTextCandidate | null {
+/** Minimale Tesseract word/bbox-shape; volledige typings ontbreken in de recognize-output. */
+type TesseractWordLike = {
+  bbox?: { x0?: number; y0?: number; x1?: number; y1?: number }
+  text?: string
+  confidence?: number
+}
+
+type TesseractResultData = {
+  words?: TesseractWordLike[]
+  blocks?: Array<{
+    paragraphs?: Array<{
+      lines?: Array<{
+        words?: TesseractWordLike[]
+      }>
+    }>
+  }>
+}
+
+function asBoundingBox(word: TesseractWordLike): OcrTextCandidate | null {
   if (!word?.bbox) return null
   const x0 = Number(word.bbox.x0 ?? 0)
   const y0 = Number(word.bbox.y0 ?? 0)
@@ -32,7 +50,7 @@ function unionCandidates(words: OcrTextCandidate[]): OcrTextCandidate | null {
   return { x: x0, y: y0, width: x1 - x0, height: y1 - y0, text, confidence }
 }
 
-function flattenWords(resultData: any): OcrTextCandidate[] {
+function flattenWords(resultData: TesseractResultData | undefined): OcrTextCandidate[] {
   const directWords = Array.isArray(resultData?.words) ? resultData.words : []
   if (directWords.length > 0) {
     return directWords
@@ -141,11 +159,12 @@ async function recognizeWords(params: {
     config.tessedit_char_whitelist = '0123456789.,-+xX/:'
     config.classify_bln_numeric_mode = '1'
   }
+  // Tesseract recognize-outputOptions + data-shape zijn losser dan de Worker-types.
   const recognized = await params.worker.recognize(params.image, {}, {
     blocks: true,
     config,
-  } as any)
-  return flattenWords((recognized as any).data)
+  } as Parameters<Worker['recognize']>[2])
+  return flattenWords((recognized as { data?: TesseractResultData }).data)
 }
 
 async function recognizeWordsMultiPsm(params: {

@@ -24,7 +24,7 @@ function resolveRefKind(
 ): { kind: DoorResolvedKind; fmlRefId: string } {
   const baseRefId = resolveDoorFmlTemplateRefId(ref?.fmlRefId)
   const catalogKind = resolveOpeningCatalog(baseRefId, 'door').kind
-  const baseKind = (ref?.kind ?? toCvDoorKind(catalogKind)) as DoorResolvedKind
+  const baseKind = ref?.kind ?? toCvDoorKind(catalogKind)
   return {
     kind: baseKind,
     fmlRefId: baseRefId,

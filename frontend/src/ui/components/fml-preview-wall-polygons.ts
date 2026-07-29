@@ -131,8 +131,8 @@ function alongWallDir(wall: WallPolygonInput): Point2D {
 function ringArea(ring: Point2D[]): number {
   let area = 0
   for (let i = 0; i < ring.length; i += 1) {
-    const a = ring[i]!
-    const b = ring[(i + 1) % ring.length]!
+    const a = ring[i]
+    const b = ring[(i + 1) % ring.length]
     area += a.x * b.y - b.x * a.y
   }
   return area / 2
@@ -233,8 +233,8 @@ function buildWallRectPolygon(
 
 function ensureClosedRing(points: Point2D[]): Point2D[] {
   if (points.length === 0) return points
-  const first = points[0]!
-  const last = points[points.length - 1]!
+  const first = points[0]
+  const last = points[points.length - 1]
   if (Math.abs(first.x - last.x) < 1e-9 && Math.abs(first.y - last.y) < 1e-9) {
     return points.slice(0, -1)
   }
@@ -252,19 +252,19 @@ function toClippingRing(points: Point2D[]): [number, number][] {
     deduped.push(p)
   }
   if (deduped.length >= 2) {
-    const first = deduped[0]!
-    const last = deduped[deduped.length - 1]!
+    const first = deduped[0]
+    const last = deduped[deduped.length - 1]
     if (first.x === last.x && first.y === last.y) deduped.pop()
   }
   if (deduped.length < 3) return []
   if (Math.abs(ringArea(deduped)) < 1e-6) return []
 
   const pairs: [number, number][] = deduped.map((p) => [p.x, p.y])
-  const first = pairs[0]!
+  const first = pairs[0]
   pairs.push([first[0], first[1]])
   if (ringArea(deduped) < 0) {
     const open = pairs.slice(0, -1).reverse()
-    return [...open, open[0]!]
+    return [...open, open[0]]
   }
   return pairs
 }
@@ -303,7 +303,7 @@ function resolveUnionFn(): typeof polygonClipping.union {
   if (typeof fn !== 'function') {
     throw new Error('polygon-clipping.union is not available')
   }
-  return fn.bind(mod.default ?? mod) as typeof polygonClipping.union
+  return fn.bind(mod.default ?? mod)
 }
 
 function toUnionGeom(points: Point2D[]): [[number, number][]] | null {
@@ -323,14 +323,14 @@ function unionWallRects(rects: Point2D[][]): WallFillComponent[] {
     throw new Error('fml-walls: no valid wall rectangles for union')
   }
   if (geoms.length === 1) {
-    return [{ rings: [fromClippingRing(geoms[0]![0]!)] }]
+    return [{ rings: [fromClippingRing(geoms[0][0])] }]
   }
 
   const union = resolveUnionFn()
   // Pairwise only — never union(...N). No catch/append fallback.
-  let acc: [number, number][][][] = [geoms[0]!]
+  let acc: [number, number][][][] = [geoms[0]]
   for (let i = 1; i < geoms.length; i += 1) {
-    acc = union(acc, geoms[i]!)
+    acc = union(acc, geoms[i])
   }
 
   if (acc.length === 0) {
@@ -389,10 +389,10 @@ function wallFillComponentToPathData(component: WallFillComponent): string {
   const parts: string[] = []
   for (const ring of component.rings) {
     if (ring.length < 3) continue
-    const first = ring[0]!
+    const first = ring[0]
     let d = `M ${first.x} ${first.y}`
     for (let i = 1; i < ring.length; i += 1) {
-      const p = ring[i]!
+      const p = ring[i]
       d += ` L ${p.x} ${p.y}`
     }
     d += ' Z'
@@ -420,8 +420,8 @@ function pointInRing(point: Point2D, ring: Point2D[]): boolean {
   const pts = ensureClosedRing(ring)
   let inside = false
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i, i += 1) {
-    const a = pts[i]!
-    const b = pts[j]!
+    const a = pts[i]
+    const b = pts[j]
     const intersect =
       a.y > point.y !== b.y > point.y &&
       point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y + 1e-15) + a.x

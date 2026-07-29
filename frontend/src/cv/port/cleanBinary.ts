@@ -23,7 +23,7 @@ function applyDirectionalGrowth(
 
   for (let y = 0; y < rows; y += 1) {
     for (let x = 0; x < cols; x += 1) {
-      if (!isSourcePixel(src[y * cols + x]!)) continue
+      if (!isSourcePixel(src[y * cols + x])) continue
       for (const { dx, dy } of directions) {
         const targetX = x + dx
         const targetY = y + dy

@@ -70,7 +70,7 @@ describe('bindWindowsToWalls', () => {
 
     expect(result.rejected).toHaveLength(0)
     expect(result.bound).toHaveLength(1)
-    const bound = result.bound[0]!
+    const bound = result.bound[0]
     expect(bound.segmentIndex).toBe(0)
     expect(bound.openingBBox).toEqual(candidate.bbox)
     expect(bound.fmlRefId).toBe(CONCEPT_WINDOW_REFID)
@@ -109,7 +109,7 @@ describe('bindWindowsToWalls', () => {
 
     expect(result.bound).toHaveLength(0)
     expect(result.rejected).toHaveLength(1)
-    expect(result.rejected[0]!.reason).toBe('junction_in_window')
+    expect(result.rejected[0].reason).toBe('junction_in_window')
   })
 
   it('houdt raam met junction alleen op segment-eind buiten bbox', () => {
@@ -165,7 +165,7 @@ describe('bindWindowsToWalls', () => {
     })
 
     expect(result.bound).toHaveLength(0)
-    expect(result.rejected[0]!.reason).toBe('no_segment')
+    expect(result.rejected[0].reason).toBe('no_segment')
   })
 
   it('bindt verticaal raam op verticale muur', () => {
@@ -195,7 +195,7 @@ describe('bindWindowsToWalls', () => {
     })
 
     expect(result.rejected).toHaveLength(0)
-    expect(result.bound[0]!.openingAxis).toBe('v')
-    expect(result.bound[0]!.openingBBox).toEqual(candidate.bbox)
+    expect(result.bound[0].openingAxis).toBe('v')
+    expect(result.bound[0].openingBBox).toEqual(candidate.bbox)
   })
 })

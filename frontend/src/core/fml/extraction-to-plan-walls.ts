@@ -55,7 +55,7 @@ export function matchSemanticSegmentByEdge(params: {
 } | null {
   const segments = params.semanticSegments ?? []
   for (let i = 0; i < segments.length; i += 1) {
-    const segment = segments[i]!
+    const segment = segments[i]
     const direct =
       Math.abs(segment.a.x - params.edgeSegment.a.x) <= 2 &&
       Math.abs(segment.a.y - params.edgeSegment.a.y) <= 2 &&

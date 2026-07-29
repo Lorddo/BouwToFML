@@ -73,8 +73,8 @@ function resolveOpeningSpan(params: { bbox: BBox; segment: SemanticWallSegment }
   const projections = bboxCorners(params.bbox).map((corner) =>
     projectPointToSegment(corner, params.segment),
   )
-  let minT = projections[0]!
-  let maxT = projections[0]!
+  let minT = projections[0]
+  let maxT = projections[0]
   for (const projection of projections) {
     if (projection.t < minT.t) minT = projection
     if (projection.t > maxT.t) maxT = projection
@@ -137,7 +137,7 @@ function pickBestSegment(params: {
 }): { segmentIndex: number; distance: number } | null {
   let best: { segmentIndex: number; distance: number; score: number } | null = null
   for (let i = 0; i < params.segments.length; i += 1) {
-    const segment = params.segments[i]!
+    const segment = params.segments[i]
     if (segmentAxis(segment) !== params.axis) continue
     const distance = perpendicularDistance(params.candidate.centroidPx, segment)
     const maxDist = Math.max(segment.thicknessPxMax / 2, 10)
@@ -180,7 +180,7 @@ export function bindWindowsToWalls(params: {
       rejected.push({ candidate, reason: 'no_segment' satisfies WindowBindRejectReason })
       continue
     }
-    const segment = params.segments[picked.segmentIndex]!
+    const segment = params.segments[picked.segmentIndex]
     const openingBBox = { ...candidate.bbox }
     if (
       junctionInsideWindow({

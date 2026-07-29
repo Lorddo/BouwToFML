@@ -84,7 +84,7 @@ export function incidentAt(
 ): IncidentSegment[] {
   const out: IncidentSegment[] = []
   for (let i = 0; i < segments.length; i += 1) {
-    const hit = incidentForSegment(segments[i]!, i, point, epsPx)
+    const hit = incidentForSegment(segments[i], i, point, epsPx)
     if (hit) out.push(hit)
   }
   return out
@@ -119,7 +119,7 @@ export function buildEndpointIndex(
     }
   }
   for (let i = 0; i < segments.length; i += 1) {
-    const seg = segments[i]!
+    const seg = segments[i]
     add(seg.a.x, seg.a.y, i)
     add(seg.b.x, seg.b.y, i)
   }
@@ -149,7 +149,7 @@ export function incidentAtIndexed(
   const sorted = [...candidates].sort((a, b) => a - b)
   const out: IncidentSegment[] = []
   for (const i of sorted) {
-    const hit = incidentForSegment(segments[i]!, i, point, epsPx)
+    const hit = incidentForSegment(segments[i], i, point, epsPx)
     if (hit) out.push(hit)
   }
   return out
@@ -279,7 +279,7 @@ type EndpointGroupMember = {
 }
 
 function endpointsByteIdentical(group: EndpointGroupMember[]): boolean {
-  const first = group[0]!
+  const first = group[0]
   return group.every((item) => item.point.x === first.point.x && item.point.y === first.point.y)
 }
 
@@ -287,10 +287,7 @@ function groupMaxPairwiseDistance(group: EndpointGroupMember[]): number {
   let maxD = 0
   for (let a = 0; a < group.length; a += 1) {
     for (let b = a + 1; b < group.length; b += 1) {
-      const d = Math.hypot(
-        group[a]!.point.x - group[b]!.point.x,
-        group[a]!.point.y - group[b]!.point.y,
-      )
+      const d = Math.hypot(group[a].point.x - group[b].point.x, group[a].point.y - group[b].point.y)
       if (d > maxD) maxD = d
     }
   }
@@ -316,7 +313,7 @@ export function unifyNearEndpoints(
     const index = buildEndpointIndex(work, indexEpsPx)
     outer: for (let i = 0; i < work.length; i += 1) {
       for (const endpoint of ['a', 'b'] as const) {
-        const point = endpoint === 'a' ? work[i]!.a : work[i]!.b
+        const point = endpoint === 'a' ? work[i].a : work[i].b
         const incidents = incidentAtIndexed(work, index, point, indexEpsPx)
         if (incidents.length < 2) continue
 
@@ -324,7 +321,7 @@ export function unifyNearEndpoints(
         for (const hit of incidents) {
           const key = `${hit.segIndex}:${hit.endpoint}`
           if (unique.has(key)) continue
-          const ep = hit.endpoint === 'a' ? work[hit.segIndex]!.a : work[hit.segIndex]!.b
+          const ep = hit.endpoint === 'a' ? work[hit.segIndex].a : work[hit.segIndex].b
           unique.set(key, {
             segIndex: hit.segIndex,
             endpoint: hit.endpoint,
@@ -343,7 +340,7 @@ export function unifyNearEndpoints(
           y: group.reduce((sum, item) => sum + item.point.y, 0) / group.length,
         }
         for (const item of group) {
-          const seg = work[item.segIndex]!
+          const seg = work[item.segIndex]
           if (item.endpoint === 'a') {
             seg.a.x = target.x
             seg.a.y = target.y

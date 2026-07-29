@@ -200,8 +200,6 @@ function onLayerToggle(event: LayerToggleEvent, checked: boolean) {
 }
 
 function activeVersionLabel(): string {
-  const fromDebug = props.pipelineDebug?.pipelineVersion
-  if (fromDebug && fromDebug !== 'v3') return `v3 (last run: ${fromDebug})`
   return 'v3'
 }
 

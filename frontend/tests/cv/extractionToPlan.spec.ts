@@ -482,9 +482,9 @@ describe('extractionToPlan', () => {
         },
       ],
     })
-    const wall = plan.floors[0]!.walls[0]!
+    const wall = plan.floors[0].walls[0]
     expect(wall.openings).toHaveLength(1)
-    const opening = wall.openings[0]!
+    const opening = wall.openings[0]
     expect(opening.type).toBe('window')
     expect(opening.refid).toBe(CONCEPT_WINDOW_REFID)
     expect(opening.guid).toBe('window-1')

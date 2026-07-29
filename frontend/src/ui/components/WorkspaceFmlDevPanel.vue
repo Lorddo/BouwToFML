@@ -1,10 +1,10 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    enabled: boolean
-    fmlBandMidBoundaryCm: number
-    fmlBandMaxBoundaryCm: number
-    fmlBandDirty: boolean
+    enabled?: boolean
+    fmlBandMidBoundaryCm?: number
+    fmlBandMaxBoundaryCm?: number
+    fmlBandDirty?: boolean
   }>(),
   {
     enabled: false,

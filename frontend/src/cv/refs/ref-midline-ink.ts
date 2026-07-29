@@ -44,8 +44,8 @@ export function detectMidlineInk(params: {
   let innerRight: number
 
   if (posts.length >= 2) {
-    innerLeft = posts[0]!.end + 1
-    innerRight = posts[posts.length - 1]!.start - 1
+    innerLeft = posts[0].end + 1
+    innerRight = posts[posts.length - 1].start - 1
   } else {
     const x0 = Math.max(0, Math.floor(bbox.x))
     const x1 = Math.min(width, Math.ceil(bbox.x + bbox.width))

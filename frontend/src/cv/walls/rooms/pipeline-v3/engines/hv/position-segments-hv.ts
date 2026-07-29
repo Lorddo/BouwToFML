@@ -23,7 +23,7 @@ function nearestJunctionIndex(
   let bestIndex: number | null = null
   let bestDistance = snapPx
   for (let i = 0; i < junctions.length; i += 1) {
-    const junction = junctions[i]!
+    const junction = junctions[i]
     const distance = Math.hypot(point.x - junction.x, point.y - junction.y)
     if (distance <= bestDistance) {
       bestDistance = distance
@@ -48,8 +48,8 @@ function median(values: number[]): number {
   if (values.length === 0) return 0
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
-  if (sorted.length % 2 === 1) return sorted[mid]!
-  return (sorted[mid - 1]! + sorted[mid]!) / 2
+  if (sorted.length % 2 === 1) return sorted[mid]
+  return (sorted[mid - 1] + sorted[mid]) / 2
 }
 
 function sampleSegmentThicknessFromMaskPx(params: {
@@ -120,8 +120,8 @@ function buildJunctionAngleDeg(params: {
   if (!center) return 0
   const directions: Array<{ x: number; y: number }> = []
   for (let segIndex = 0; segIndex < params.segments.length; segIndex += 1) {
-    const refs = params.endpointMap[segIndex]!
-    const seg = params.segments[segIndex]!
+    const refs = params.endpointMap[segIndex]
+    const seg = params.segments[segIndex]
     if (refs.aJunctionIndex === params.junctionIndex) {
       const dx = seg.b.x - center.x
       const dy = seg.b.y - center.y
@@ -194,8 +194,8 @@ export function positionSegmentsHv(params: {
 
   const armsByJunction = new Map<number, JunctionArmInfo[]>()
   for (let segmentIndex = 0; segmentIndex < sourceSegments.length; segmentIndex += 1) {
-    const refs = endpointMap[segmentIndex]!
-    const axis = axisBySegment[segmentIndex]!
+    const refs = endpointMap[segmentIndex]
+    const axis = axisBySegment[segmentIndex]
     const thicknessPx =
       thicknessBySegment[segmentIndex] ??
       params.referenceWallThicknessPx ??
@@ -208,7 +208,7 @@ export function positionSegmentsHv(params: {
         orientation: axis.orientation,
         targetAxis: axis.targetAxis,
         thicknessPx,
-        lengthPx: segmentLength(sourceSegments[segmentIndex]!),
+        lengthPx: segmentLength(sourceSegments[segmentIndex]),
       })
       armsByJunction.set(junctionIndex, list)
     }
@@ -227,11 +227,11 @@ export function positionSegmentsHv(params: {
 
   const movedSegments: Segment[] = sourceSegments.map((segment, segmentIndex) => {
     const next = cloneSegment(segment)
-    const refs = endpointMap[segmentIndex]!
-    const axis = axisBySegment[segmentIndex]!
+    const refs = endpointMap[segmentIndex]
+    const axis = axisBySegment[segmentIndex]
     // Co-move: every endpoint mapped to a junction copies the new junction XY exactly.
-    if (refs.aJunctionIndex != null) next.a = { ...positionedJunctionCoords[refs.aJunctionIndex]! }
-    if (refs.bJunctionIndex != null) next.b = { ...positionedJunctionCoords[refs.bJunctionIndex]! }
+    if (refs.aJunctionIndex != null) next.a = { ...positionedJunctionCoords[refs.aJunctionIndex] }
+    if (refs.bJunctionIndex != null) next.b = { ...positionedJunctionCoords[refs.bJunctionIndex] }
 
     if (axis.orientation === 'H' && axis.targetAxis != null) {
       if (refs.aJunctionIndex == null) next.a.y = axis.targetAxis
@@ -246,8 +246,8 @@ export function positionSegmentsHv(params: {
   const positionedJunctions: RoomWallJunction[] = params.face.junctions.map(
     (junction, junctionIndex) => ({
       ...junction,
-      x: positionedJunctionCoords[junctionIndex]!.x,
-      y: positionedJunctionCoords[junctionIndex]!.y,
+      x: positionedJunctionCoords[junctionIndex].x,
+      y: positionedJunctionCoords[junctionIndex].y,
       angleDeg: buildJunctionAngleDeg({
         junctionIndex,
         junctions: positionedJunctionCoords,
@@ -259,8 +259,8 @@ export function positionSegmentsHv(params: {
 
   let movedSegmentCount = 0
   for (let i = 0; i < sourceSegments.length; i += 1) {
-    const before = sourceSegments[i]!
-    const after = movedSegments[i]!
+    const before = sourceSegments[i]
+    const after = movedSegments[i]
     if (
       Math.abs(before.a.x - after.a.x) > 1e-3 ||
       Math.abs(before.a.y - after.a.y) > 1e-3 ||
@@ -273,8 +273,8 @@ export function positionSegmentsHv(params: {
 
   let movedJunctionCount = 0
   for (let i = 0; i < params.face.junctions.length; i += 1) {
-    const before = params.face.junctions[i]!
-    const after = positionedJunctions[i]!
+    const before = params.face.junctions[i]
+    const after = positionedJunctions[i]
     if (Math.abs(before.x - after.x) > 1e-3 || Math.abs(before.y - after.y) > 1e-3) {
       movedJunctionCount += 1
     }

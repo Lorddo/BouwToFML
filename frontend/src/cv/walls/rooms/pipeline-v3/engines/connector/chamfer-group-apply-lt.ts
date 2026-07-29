@@ -125,11 +125,11 @@ export function applyLtChamferGroup(params: {
   const hForCover = new Set<number>(geometry.hSegIndices)
   for (let i = 0; i < work.length; i += 1) {
     if (diagSet.has(i) || removeSet.has(i)) continue
-    if (classify(work[i]!, i).kind !== 'H') continue
+    if (classify(work[i], i).kind !== 'H') continue
     const aHit =
-      Math.hypot(work[i]!.a.x - geometry.hit.x, work[i]!.a.y - geometry.hit.y) <= nearbyWeldPx
+      Math.hypot(work[i].a.x - geometry.hit.x, work[i].a.y - geometry.hit.y) <= nearbyWeldPx
     const bHit =
-      Math.hypot(work[i]!.b.x - geometry.hit.x, work[i]!.b.y - geometry.hit.y) <= nearbyWeldPx
+      Math.hypot(work[i].b.x - geometry.hit.x, work[i].b.y - geometry.hit.y) <= nearbyWeldPx
     if (aHit || bHit) hForCover.add(i)
   }
   for (const hIdx of [...hForCover]) {

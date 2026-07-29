@@ -27,7 +27,7 @@ import type { WorkspaceFlowStep } from './constants'
 export type DebugProbeMode = 'point' | 'region'
 
 function normalizeLabelsData(data: SerializedRoomClassifyState['labelsData']): Int32Array {
-  return data instanceof Int32Array ? data : new Int32Array(data as ArrayLike<number>)
+  return data instanceof Int32Array ? data : new Int32Array(data)
 }
 
 function faceSourceFromState(
@@ -36,8 +36,7 @@ function faceSourceFromState(
   labelsOverride?: Int32Array,
   parentMapOverride?: Map<number, number>,
 ): ProbeFaceSource {
-  const classification =
-    classificationByLabel ?? (new Map(state.classificationByLabel) as Map<number, RoomRasterClass>)
+  const classification = classificationByLabel ?? new Map(state.classificationByLabel)
   const labelsData = labelsOverride ?? normalizeLabelsData(state.labelsData)
   const parentMap = parentMapOverride ?? new Map(state.parentMap)
   const components = extractComponentsFromLabelsData(labelsData, state.width, state.height)
@@ -80,7 +79,7 @@ function buildDualFaceSources(params: {
   const classification =
     cache?.state?.labelsData && cache.state.labelsData.length === state.labelsData.length
       ? effectiveClassification(cache)
-      : (new Map(state.classificationByLabel) as Map<number, RoomRasterClass>)
+      : new Map(state.classificationByLabel)
 
   try {
     const canResolveDual =

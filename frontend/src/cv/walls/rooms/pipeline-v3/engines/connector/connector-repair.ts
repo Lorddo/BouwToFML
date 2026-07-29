@@ -94,8 +94,8 @@ export function repairLayer6ConnectorCandidates(params: {
     const extras: typeof orderedCandidates = []
     for (let i = 0; i < work.length; i += 1) {
       if (seenDiag.has(i)) continue
-      if (classifyLayer6Segment(work[i]!, i, hvBandPx).kind !== 'D') continue
-      const len = segmentLength(work[i]!)
+      if (classifyLayer6Segment(work[i], i, hvBandPx).kind !== 'D') continue
+      const len = segmentLength(work[i])
       if (len < LAYER6_MIN_SEGMENT_LEN_PX || len > maxConnectorPx) continue
       extras.push({
         connectorIndex: i,
@@ -123,7 +123,7 @@ export function repairLayer6ConnectorCandidates(params: {
     let seedIndex = candidate.connectorIndex
     if (
       seedIndex >= work.length ||
-      classifyLayer6Segment(work[seedIndex]!, seedIndex, hvBandPx).kind !== 'D'
+      classifyLayer6Segment(work[seedIndex], seedIndex, hvBandPx).kind !== 'D'
     ) {
       const orig = params.segments[candidate.connectorIndex]
       if (!orig) {
@@ -142,7 +142,7 @@ export function repairLayer6ConnectorCandidates(params: {
       }
     }
     if (repairedSeeds.has(seedIndex)) continue
-    if (classifyLayer6Segment(work[seedIndex]!, seedIndex, hvBandPx).kind !== 'D') continue
+    if (classifyLayer6Segment(work[seedIndex], seedIndex, hvBandPx).kind !== 'D') continue
 
     const result = tryRepairChamferGroup({
       segments: work,
@@ -208,7 +208,7 @@ export function repairLandingChamferConnectors(params: {
       )
     })
     if (landingLeft.length === 0) break
-    const pick = [...landingLeft].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
+    const pick = [...landingLeft].sort((a, b) => b.lengthPx - a.lengthPx)[0]
 
     const pass = repairLayer6ConnectorCandidates({
       segments,

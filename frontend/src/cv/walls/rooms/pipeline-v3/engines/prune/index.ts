@@ -55,7 +55,7 @@ function weldNearEndpointsForGraph(segments: Segment[], weldGapPx: number): Segm
   while (changed) {
     changed = false
     outer: for (let i = 0; i < work.length; i += 1) {
-      const seg = work[i]!
+      const seg = work[i]
       const refs: Array<{
         segIndex: number
         endpoint: 'a' | 'b'
@@ -72,7 +72,7 @@ function weldNearEndpointsForGraph(segments: Segment[], weldGapPx: number): Segm
         }> = []
         const seen = new Set<string>()
         for (let j = 0; j < work.length; j += 1) {
-          const candidate = work[j]!
+          const candidate = work[j]
           for (const endpoint of ['a', 'b'] as const) {
             const point = endpoint === 'a' ? candidate.a : candidate.b
             if (Math.hypot(point.x - ref.point.x, point.y - ref.point.y) > 1) continue
@@ -88,8 +88,8 @@ function weldNearEndpointsForGraph(segments: Segment[], weldGapPx: number): Segm
         for (let a = 0; a < group.length; a += 1) {
           for (let b = a + 1; b < group.length; b += 1) {
             const d = Math.hypot(
-              group[a]!.point.x - group[b]!.point.x,
-              group[a]!.point.y - group[b]!.point.y,
+              group[a].point.x - group[b].point.x,
+              group[a].point.y - group[b].point.y,
             )
             if (d > maxD) maxD = d
           }
@@ -101,7 +101,7 @@ function weldNearEndpointsForGraph(segments: Segment[], weldGapPx: number): Segm
           y: group.reduce((sum, item) => sum + item.point.y, 0) / group.length,
         }
         for (const item of group) {
-          const s = work[item.segIndex]!
+          const s = work[item.segIndex]
           if (item.endpoint === 'a') {
             s.a.x = target.x
             s.a.y = target.y
@@ -137,7 +137,7 @@ function tracePathFromNodeToFirstTerminal(params: {
 
   const pathSegments: Segment[] = []
   let pathLengthPx = 0
-  let incomingEdge = startEdges[0]!
+  let incomingEdge = startEdges[0]
   let currentNodeId = otherNodeId(incomingEdge, startNode.id)
   const maxHops = Math.max(1, graph.edges.length + 1)
 
@@ -164,7 +164,7 @@ function tracePathFromNodeToFirstTerminal(params: {
       (edge) => edgeTouchesNode(edge, currentNode.id) && edge.id !== incomingEdge.id,
     )
     if (nextEdges.length !== 1) break
-    const nextEdge = nextEdges[0]!
+    const nextEdge = nextEdges[0]
     pathSegments.push(nextEdge.segment)
     pathLengthPx += segmentLength(nextEdge.segment)
     incomingEdge = nextEdge
@@ -295,9 +295,7 @@ function pruneISpursIterative(segments: Segment[], policy: PrunePolicy): PruneIS
   let removedPathCount = 0
   let removedSegmentCount = 0
 
-  let changed = true
-  while (changed) {
-    changed = false
+  while (true) {
     const graph = buildJunctionGraph(work, policy.junctionSnapPx)
     const candidates = graph.nodes
       .filter((node) => node.kind === 'I')
@@ -324,13 +322,12 @@ function pruneISpursIterative(segments: Segment[], policy: PrunePolicy): PruneIS
       .sort((a, b) => a.trace.pathLengthPx - b.trace.pathLengthPx)
 
     if (candidates.length === 0) break
-    const next = candidates[0]!
+    const next = candidates[0]
     const removed = removePathSegments(work, next.trace.pathSegments, endpointEpsPx)
     if (removed.removedSegmentCount <= 0) break
     work = removed.segments
     removedPathCount += 1
     removedSegmentCount += removed.removedSegmentCount
-    changed = true
   }
 
   return {

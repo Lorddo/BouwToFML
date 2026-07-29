@@ -346,7 +346,7 @@ export function runDoorSwingAngleRescue(params: {
     }
   }
 
-  const accepted = [...bestByRoot.values()].sort((a, b) => a.faceIds[0]! - b.faceIds[0]!)
+  const accepted = [...bestByRoot.values()].sort((a, b) => a.faceIds[0] - b.faceIds[0])
   const diagnostics = [...diagByRoot.values()].sort((a, b) => a.root - b.root)
   return {
     accepted,

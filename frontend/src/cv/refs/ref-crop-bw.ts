@@ -92,17 +92,7 @@ function cropColorCanvas(
   const originalCanvas = createCanvas(box.width, box.height)
   const ctx = originalCanvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 2D context niet beschikbaar voor ref-crop')
-  ctx.drawImage(
-    image as CanvasImageSource,
-    box.x,
-    box.y,
-    box.width,
-    box.height,
-    0,
-    0,
-    box.width,
-    box.height,
-  )
+  ctx.drawImage(image, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height)
   return originalCanvas
 }
 
@@ -305,7 +295,7 @@ export function cropRegion(params: {
   const canvas = createCanvas(w, h)
   const ctx = canvas.getContext('2d')
   if (ctx) {
-    ctx.drawImage(params.originalCanvas as CanvasImageSource, x0, y0, w, h, 0, 0, w, h)
+    ctx.drawImage(params.originalCanvas, x0, y0, w, h, 0, 0, w, h)
   }
   return { bwData: out, width: w, height: h, originalCanvas: canvas }
 }

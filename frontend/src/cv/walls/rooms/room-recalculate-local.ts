@@ -42,11 +42,11 @@ export async function runRoomRecalculateLocal(params: {
   const width =
     params.image instanceof HTMLCanvasElement || params.image instanceof OffscreenCanvas
       ? params.image.width
-      : (params.image as HTMLImageElement).naturalWidth
+      : params.image.naturalWidth
   const height =
     params.image instanceof HTMLCanvasElement || params.image instanceof OffscreenCanvas
       ? params.image.height
-      : (params.image as HTMLImageElement).naturalHeight
+      : params.image.naturalHeight
 
   if (params.precomposedWallBw.length !== width * height) {
     throw new Error('precomposedWallBw past niet bij image-afmetingen.')

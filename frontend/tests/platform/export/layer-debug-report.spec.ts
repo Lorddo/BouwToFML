@@ -3,6 +3,8 @@ import { buildLayerDebugReport } from '@/platform/export/layer-debug-report/buil
 import { formatLayerDebugMarkdown } from '@/platform/export/layer-debug-report/format-layer-debug-markdown'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type { BoundWindow, WindowBindRejection } from '@/cv/windows'
+import type { ExtractionOutput } from '@/core/extraction'
+import type { LayerDebugReport } from '@/platform/export/layer-debug-report/types'
 
 describe('layer-debug-report summary junction kinds', () => {
   it('vult junctionKindCounts af vanuit layers als summary ze niet heeft', () => {
@@ -23,7 +25,7 @@ describe('layer-debug-report summary junction kinds', () => {
           junctionCounts: { layer1: 2 },
         },
       },
-    } as any
+    } as unknown as ExtractionOutput
 
     const report = buildLayerDebugReport({
       drawing: 'dummy.png',
@@ -68,7 +70,7 @@ describe('layer-debug-report summary junction kinds', () => {
           layer10: { I: 0, L: 0, T: 1, X: 0 },
         },
       },
-    } as any
+    } as unknown as LayerDebugReport
 
     const markdown = formatLayerDebugMarkdown(report)
     expect(markdown).toContain('### layer3')
@@ -101,7 +103,7 @@ describe('layer-debug-report summary junction kinds', () => {
           },
         },
       },
-    } as any
+    } as unknown as ExtractionOutput
 
     const report = buildLayerDebugReport({
       drawing: 'drops.png',
@@ -235,7 +237,7 @@ describe('layer-debug-report openings L11/L12/L14', () => {
           },
         },
       },
-    } as any
+    } as unknown as ExtractionOutput
 
     const report = buildLayerDebugReport({
       drawing: 'openings.png',

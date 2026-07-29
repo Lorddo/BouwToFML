@@ -20,28 +20,28 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    generatedFmlText: string
+    generatedFmlText?: string
     generatedStats: { walls: number; doors: number; windows: number }
-    importedFmlText: string
+    importedFmlText?: string
     importedStats: { walls: number; doors: number; windows: number }
-    importedWarnings: ImportWarning[]
-    underlayOpacity: number
+    importedWarnings?: ImportWarning[]
+    underlayOpacity?: number
     /** FML-geometrie opacity 0–100. */
-    fmlOpacity: number
-    underlayAvailable: boolean
-    fmlWallHeightCm: number
-    fmlDoorHeightCm: number
-    fmlWindowHeightCm: number
-    fmlWindowSillZCm: number
-    fmlThicknessMinCm: number
-    fmlThicknessMidCm: number
-    fmlThicknessMaxCm: number
-    fmlBandMidBoundaryCm: number
-    fmlBandMaxBoundaryCm: number
-    fmlLimitsDirty: boolean
-    fmlThicknessPickTier: FmlThicknessPickTier | null
-    fmlThicknessPickMessage: string | null
-    fmlThicknessPickBusy: boolean
+    fmlOpacity?: number
+    underlayAvailable?: boolean
+    fmlWallHeightCm?: number
+    fmlDoorHeightCm?: number
+    fmlWindowHeightCm?: number
+    fmlWindowSillZCm?: number
+    fmlThicknessMinCm?: number
+    fmlThicknessMidCm?: number
+    fmlThicknessMaxCm?: number
+    fmlBandMidBoundaryCm?: number
+    fmlBandMaxBoundaryCm?: number
+    fmlLimitsDirty?: boolean
+    fmlThicknessPickTier?: FmlThicknessPickTier | null
+    fmlThicknessPickMessage?: string | null
+    fmlThicknessPickBusy?: boolean
   }>(),
   {
     generatedFmlText: '',

@@ -51,8 +51,8 @@ export function repairTAtPoint(params: {
   const vs = hvArms.filter((arm) => arm.kind === 'V')
   if (hs.length === 0 || vs.length === 0) return { changed: false, removed: 0 }
 
-  const longestH = [...hs].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
-  const longestV = [...vs].sort((a, b) => b.lengthPx - a.lengthPx)[0]!
+  const longestH = [...hs].sort((a, b) => b.lengthPx - a.lengthPx)[0]
+  const longestV = [...vs].sort((a, b) => b.lengthPx - a.lengthPx)[0]
   const hit = infiniteLineIntersection(longestH.segment, longestV.segment)
   const target = hit ?? resolveLayer6HvConsensusTarget(hs, vs)
   if (!target) return { changed: false, removed: 0 }

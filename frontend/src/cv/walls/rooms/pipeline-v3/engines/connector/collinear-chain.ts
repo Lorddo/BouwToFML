@@ -59,7 +59,7 @@ export function measureCollinearChainSpan(params: {
       let found: { segIndex: number; nextPoint: { x: number; y: number } } | null = null
       for (let i = 0; i < params.segments.length; i += 1) {
         if (consumed.has(i) || i === viaSegIndex) continue
-        const seg = params.segments[i]!
+        const seg = params.segments[i]
         if (!sameAxisKind(seg, i, axis, axisValue, hvBandPx, nearbyWeldPx)) continue
         if (pointsNear(seg.a, atPoint, endpointSnapPx)) {
           found = { segIndex: i, nextPoint: { ...seg.b } }
@@ -73,7 +73,7 @@ export function measureCollinearChainSpan(params: {
       if (!found) break
       consumed.add(found.segIndex)
       span += classifyLayer6Segment(
-        params.segments[found.segIndex]!,
+        params.segments[found.segIndex],
         found.segIndex,
         hvBandPx,
       ).lengthPx
@@ -106,7 +106,7 @@ export function pickDominantChainIncident(params: {
   const endpointSnapPx = params.endpointSnapPx ?? LAYER6_ENDPOINT_SNAP_PX
   const nearbyWeldPx = params.nearbyWeldPx ?? LAYER6_NEARBY_WELD_PX
   if (params.incidents.length === 0) return null
-  let best = params.incidents[0]!
+  let best = params.incidents[0]
   let bestSpan = measureCollinearChainSpan({
     segments: params.segments,
     startSegIndex: best.segIndex,
@@ -116,7 +116,7 @@ export function pickDominantChainIncident(params: {
     nearbyWeldPx,
   })
   for (let i = 1; i < params.incidents.length; i += 1) {
-    const candidate = params.incidents[i]!
+    const candidate = params.incidents[i]
     const span = measureCollinearChainSpan({
       segments: params.segments,
       startSegIndex: candidate.segIndex,
@@ -128,9 +128,9 @@ export function pickDominantChainIncident(params: {
     if (
       span > bestSpan ||
       (span === bestSpan &&
-        classifyLayer6Segment(params.segments[candidate.segIndex]!, candidate.segIndex, hvBandPx)
+        classifyLayer6Segment(params.segments[candidate.segIndex], candidate.segIndex, hvBandPx)
           .lengthPx >
-          classifyLayer6Segment(params.segments[best.segIndex]!, best.segIndex, hvBandPx).lengthPx)
+          classifyLayer6Segment(params.segments[best.segIndex], best.segIndex, hvBandPx).lengthPx)
     ) {
       best = candidate
       bestSpan = span

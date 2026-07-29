@@ -260,7 +260,7 @@ function swatchStyle(color: string): Record<string, string> {
     <p class="metric">
       {{
         referenceWallThicknessPx != null
-          ? `Referentie muurdikte: ${referenceWallThicknessPx}px · banden &lt;40% / 40–85% / &gt;85%`
+          ? `Referentie muurdikte: ${referenceWallThicknessPx}px · banden &lt;40% / 40–80% / &gt;80%`
           : 'Geen muurdikte — teken een referentievak op stap 1.'
       }}
     </p>

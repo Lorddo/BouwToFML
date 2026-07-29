@@ -56,7 +56,7 @@ function flattenFromPipelineDebug(debug: PipelineV3Debug): FlattenedProbeLayers 
   for (const { n, layer } of keys) {
     if (!layer) continue
     layers[n] = flattenLayer(layer)
-    if (layers[n]!.segments.length > 0 || layers[n]!.junctions.length > 0) {
+    if (layers[n].segments.length > 0 || layers[n].junctions.length > 0) {
       layerOrder.push(n)
     }
   }

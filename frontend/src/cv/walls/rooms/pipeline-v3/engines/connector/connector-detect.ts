@@ -50,7 +50,7 @@ export function detectLayer6ConnectorCandidates(params: {
     if (entry.kind !== 'D') continue
     if (entry.lengthPx > maxConnectorPx || entry.lengthPx < LAYER6_MIN_SEGMENT_LEN_PX) continue
 
-    const connector = params.segments[entry.index]!
+    const connector = params.segments[entry.index]
     if (
       hasBlockingCompanionDiagonalAtEndpoint({
         segments: params.segments,
@@ -187,7 +187,7 @@ export function detectLayer6ConnectorCandidates(params: {
           endpointSnapPx,
         })
         if (synthetic) {
-          const hSeg = params.segments[h.segIndex]!
+          const hSeg = params.segments[h.segIndex]
           if (infiniteLineIntersection(hSeg, synthetic)) {
             syntheticV = synthetic
           }
@@ -215,7 +215,7 @@ export function detectLayer6ConnectorCandidates(params: {
         if (i === entry.index) continue
         const kind = classified[i]?.kind
         if (kind !== 'H' && kind !== 'V') continue
-        const seg = params.segments[i]!
+        const seg = params.segments[i]
         const near = Math.min(
           endpointDistanceToSegmentEndpoints(connector.a, seg),
           endpointDistanceToSegmentEndpoints(connector.b, seg),
@@ -228,7 +228,7 @@ export function detectLayer6ConnectorCandidates(params: {
             : connector.b
         const candidateRef = {
           segIndex: i,
-          lengthPx: classified[i]!.lengthPx,
+          lengthPx: classified[i].lengthPx,
           anchorPoint: anchor,
         }
         if (kind === 'H') fallbackH.push(candidateRef)
@@ -271,7 +271,7 @@ export function detectLayer6ConnectorCandidates(params: {
 
     // Fallback-as moet lokaal genoeg zijn; anders trek je een verre tak naar een fout knooppunt.
     if (!hadLocalH) {
-      const hSeg = params.segments[h.segIndex]!
+      const hSeg = params.segments[h.segIndex]
       const nearH = Math.min(
         endpointDistanceToSegmentEndpoints(connector.a, hSeg),
         endpointDistanceToSegmentEndpoints(connector.b, hSeg),
@@ -279,7 +279,7 @@ export function detectLayer6ConnectorCandidates(params: {
       if (nearH > fallbackAxisMaxPx) continue
     }
     if (!hadLocalV) {
-      const vSeg = params.segments[v.segIndex]!
+      const vSeg = params.segments[v.segIndex]
       const nearV = Math.min(
         endpointDistanceToSegmentEndpoints(connector.a, vSeg),
         endpointDistanceToSegmentEndpoints(connector.b, vSeg),

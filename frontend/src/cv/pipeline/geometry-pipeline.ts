@@ -71,11 +71,11 @@ export async function runGeometryPipeline(params: {
     const imageWidth =
       params.image instanceof HTMLCanvasElement || params.image instanceof OffscreenCanvas
         ? params.image.width
-        : (params.image as HTMLImageElement).naturalWidth
+        : params.image.naturalWidth
     const imageHeight =
       params.image instanceof HTMLCanvasElement || params.image instanceof OffscreenCanvas
         ? params.image.height
-        : (params.image as HTMLImageElement).naturalHeight
+        : params.image.naturalHeight
     const precomposed = params.precomposedWallBw
     const canUsePrecomposed =
       precomposed != null &&

@@ -6,16 +6,16 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    underlayAvailable: boolean
-    fmlThicknessMinCm: number
-    fmlThicknessMidCm: number
-    fmlThicknessMaxCm: number
-    fmlBandMidBoundaryCm: number
-    fmlBandMaxBoundaryCm: number
-    fmlLimitsDirty: boolean
-    fmlThicknessPickTier: FmlThicknessPickTier | null
-    fmlThicknessPickMessage: string | null
-    fmlThicknessPickBusy: boolean
+    underlayAvailable?: boolean
+    fmlThicknessMinCm?: number
+    fmlThicknessMidCm?: number
+    fmlThicknessMaxCm?: number
+    fmlBandMidBoundaryCm?: number
+    fmlBandMaxBoundaryCm?: number
+    fmlLimitsDirty?: boolean
+    fmlThicknessPickTier?: FmlThicknessPickTier | null
+    fmlThicknessPickMessage?: string | null
+    fmlThicknessPickBusy?: boolean
   }>(),
   {
     underlayAvailable: false,

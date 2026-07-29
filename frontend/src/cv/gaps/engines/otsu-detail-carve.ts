@@ -24,7 +24,7 @@ export function carveOtsuWhiteIntoGapsBlack(
   }
   const out = new Uint8Array(gapsData)
   for (let i = 0; i < out.length; i += 1) {
-    if (out[i]! <= inkMaxValue && otsuData[i]! > inkMaxValue) {
+    if (out[i] <= inkMaxValue && otsuData[i] > inkMaxValue) {
       out[i] = WHITE
     }
   }

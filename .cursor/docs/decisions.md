@@ -352,6 +352,18 @@ Startcase: `Kinderdijkstraat 53 1` — 1 verdieping, 53 muren, `drawing.url` aan
 
 ---
 
+## FML diktebanden — max-ratio 0.80 (2026-07-29)
+
+| Beslissing | Detail |
+|------------|--------|
+| `FML_BAND_MAX_RATIO` | **0.80** (code leidend) — mid t/m 80%, max &gt; 80% |
+| Mid | `FML_BAND_MID_RATIO = 0.40` — min &lt; 40% |
+| Waarom niet 0.85 | Comments/UI zeiden 85%, maar code + L6-collapse (`collinearThicknessWithinMaxBandNoise`) gebruiken 0.80; stil wijzigen raakt muurdetectie |
+| Test | `derive-fml-band-from-ref` leidt grenzen af uit de constanten, niet hardcoded 85% |
+| UI | Sidebar-tekst gelijkgetrokken naar 40%/80% |
+
+---
+
 ## Nog open
 
 - Geschikte OpenCV browser-build/versie

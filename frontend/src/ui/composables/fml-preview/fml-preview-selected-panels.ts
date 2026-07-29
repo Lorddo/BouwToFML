@@ -20,12 +20,12 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[]) {
     (value) => Math.round((value ?? 0.5) * 100) / 100 !== firstBalance,
   )
   const openingCount = wallLines.reduce((sum, line) => sum + line.wall.openings.length, 0)
-  const singleLine = wallLines.length === 1 ? wallLines[0]! : null
+  const singleLine = wallLines.length === 1 ? wallLines[0] : null
 
   return {
     wallIds: wallLines.map((line) => line.id),
     count: wallLines.length,
-    lengthCm: singleLine ? lengths[0]! : null,
+    lengthCm: singleLine ? lengths[0] : null,
     lengthCmMin: wallLines.length > 1 ? Math.min(...lengths) : null,
     lengthCmMax: wallLines.length > 1 ? Math.max(...lengths) : null,
     thicknessCm: thicknessMixed ? null : firstThickness,

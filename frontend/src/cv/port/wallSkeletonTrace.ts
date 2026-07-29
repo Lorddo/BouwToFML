@@ -45,16 +45,16 @@ function stepDirection(from: PolylinePoint, to: PolylinePoint): [number, number]
  */
 export function compressPolylinePoints(points: number[][]): PolylinePoint[] {
   if (points.length <= 2) {
-    return points.map((p) => [p[0]!, p[1]!] as PolylinePoint)
+    return points.map((p) => [p[0], p[1]] as PolylinePoint)
   }
 
-  const compressed: PolylinePoint[] = [[points[0]![0]!, points[0]![1]!]]
+  const compressed: PolylinePoint[] = [[points[0][0], points[0][1]]]
   let runDir: [number, number] | null = null
 
   for (let i = 1; i < points.length; i += 1) {
-    const prev = points[i - 1]!
-    const cur = points[i]!
-    const dir = stepDirection([prev[0]!, prev[1]!], [cur[0]!, cur[1]!])
+    const prev = points[i - 1]
+    const cur = points[i]
+    const dir = stepDirection([prev[0], prev[1]], [cur[0], cur[1]])
     if (dir[0] === 0 && dir[1] === 0) continue
 
     if (runDir === null) {
@@ -63,13 +63,13 @@ export function compressPolylinePoints(points: number[][]): PolylinePoint[] {
     }
 
     if (dir[0] !== runDir[0] || dir[1] !== runDir[1]) {
-      compressed.push([prev[0]!, prev[1]!])
+      compressed.push([prev[0], prev[1]])
       runDir = dir
     }
   }
 
-  const last = points[points.length - 1]!
-  compressed.push([last[0]!, last[1]!])
+  const last = points[points.length - 1]
+  compressed.push([last[0], last[1]])
   return compressed
 }
 
@@ -78,8 +78,8 @@ function polylineToSegments(points: number[][]): Segment[] {
   if (compressed.length < 2) return []
   const out: Segment[] = []
   for (let i = 0; i < compressed.length - 1; i += 1) {
-    const a = compressed[i]!
-    const b = compressed[i + 1]!
+    const a = compressed[i]
+    const b = compressed[i + 1]
     out.push({
       a: { x: a[0], y: a[1] },
       b: { x: b[0], y: b[1] },

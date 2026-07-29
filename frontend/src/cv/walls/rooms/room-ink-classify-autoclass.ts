@@ -280,13 +280,13 @@ function isFaceConnectedToExterior(params: {
 
   let head = 0
   while (head < queue.length) {
-    const idx = queue[head++]!
+    const idx = queue[head++]
     const cx = idx % width
     const cy = (idx / width) | 0
 
     for (let d = 0; d < 4; d += 1) {
-      const nx = cx + CARDINAL_DX[d]!
-      const ny = cy + CARDINAL_DY[d]!
+      const nx = cx + CARDINAL_DX[d]
+      const ny = cy + CARDINAL_DY[d]
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
       const nidx = ny * width + nx
       const neighborLabel = labelsData[nidx] ?? 0

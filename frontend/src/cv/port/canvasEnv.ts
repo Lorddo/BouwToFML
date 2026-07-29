@@ -88,8 +88,8 @@ export function compositeMaskOverUnderlay(underlay: CanvasLike, mask: CanvasLike
   const canvas = createCanvas(mask.width, mask.height)
   const ctx = getCanvas2dContext(canvas)
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(underlay as unknown as CanvasImageSource, 0, 0, mask.width, mask.height)
-  ctx.drawImage(mask as unknown as CanvasImageSource, 0, 0)
+  ctx.drawImage(underlay, 0, 0, mask.width, mask.height)
+  ctx.drawImage(mask, 0, 0)
   return canvas
 }
 

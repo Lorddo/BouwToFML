@@ -50,7 +50,7 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const image = resolveWorkerImage(payload)
     const output = await plugin.extract({
       ...payload.input,
-      image: image as unknown as HTMLCanvasElement,
+      image: image,
     })
     const response: WorkerResponse = { requestId: payload.requestId, output }
     self.postMessage(response)

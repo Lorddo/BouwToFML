@@ -8,7 +8,11 @@ import { tesseractAssetsPlugin } from './vite/tesseractAssetsPlugin'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-/** Serveert frontend/examples onder /examples/ in dev — te groot voor public/. */
+/**
+ * Serveert frontend/examples onder /examples/ in dev — te groot voor public/.
+ * Bestanden gaan hier rauw de deur uit (geen Vite-transform), dus data die je
+ * met `import` binnenhaalt hoort in `src/` te staan, niet in examples/.
+ */
 function serveExamples() {
   return {
     name: 'serve-examples',

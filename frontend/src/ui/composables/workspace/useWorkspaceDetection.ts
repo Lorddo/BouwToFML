@@ -314,7 +314,7 @@ export function useWorkspaceDetection(deps: {
       deps.onRoomPipelineReset?.()
       deps.clearGapsInkModeManual?.()
       if (keep) {
-        deps.onReferenceWallRectReady?.()
+        void deps.onReferenceWallRectReady?.()
       }
       return
     }

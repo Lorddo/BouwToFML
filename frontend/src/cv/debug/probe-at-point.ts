@@ -103,7 +103,7 @@ function probeLayer(
 ): { segments: ProbeSegmentHit[]; junctions: ProbeJunctionHit[] } {
   const segHits: ProbeSegmentHit[] = []
   for (let index = 0; index < layer.segments.length; index += 1) {
-    const segment = layer.segments[index]!
+    const segment = layer.segments[index]
     if (!options.matchSegment(segment, index)) continue
     segHits.push({
       layer: layerId,

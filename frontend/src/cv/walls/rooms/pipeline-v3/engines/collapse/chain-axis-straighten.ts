@@ -57,8 +57,8 @@ function buildUnionFind(size: number): {
 } {
   const parent = Array.from({ length: size }, (_, i) => i)
   const find = (i: number): number => {
-    if (parent[i] !== i) parent[i] = find(parent[i]!)
-    return parent[i]!
+    if (parent[i] !== i) parent[i] = find(parent[i])
+    return parent[i]
   }
   const union = (a: number, b: number): void => {
     parent[find(b)] = find(a)
@@ -78,7 +78,7 @@ function sameAxisIndicesAtPoint(params: {
   for (const inc of params.incidents) {
     if (inc.segIndex === params.excludeSegIndex) continue
     if (!params.memberSet.has(inc.segIndex)) continue
-    const seg = params.segments[inc.segIndex]!
+    const seg = params.segments[inc.segIndex]
     if (isZeroLength(seg) || segmentAxis(seg, inc.segIndex, params.hvBandPx) === params.axis) {
       out.push(inc.segIndex)
     }
@@ -96,7 +96,7 @@ function collectAxisClusters(params: {
   const { segments, axis, maxSpreadPx, maxBridgePx } = params
   const members: number[] = []
   for (let i = 0; i < segments.length; i += 1) {
-    if (eligibleForAxis(segments[i]!, i, axis, params.hvBandPx)) members.push(i)
+    if (eligibleForAxis(segments[i], i, axis, params.hvBandPx)) members.push(i)
   }
   if (members.length < 2) return []
 
@@ -111,9 +111,9 @@ function collectAxisClusters(params: {
     )
     for (let i = 0; i < local.length; i += 1) {
       for (let j = i + 1; j < local.length; j += 1) {
-        const a = local[i]!
-        const b = local[j]!
-        const spread = Math.abs(axisValueOf(segments[a]!, axis) - axisValueOf(segments[b]!, axis))
+        const a = local[i]
+        const b = local[j]
+        const spread = Math.abs(axisValueOf(segments[a], axis) - axisValueOf(segments[b], axis))
         if (spread <= maxSpreadPx) union(a, b)
       }
     }
@@ -122,7 +122,7 @@ function collectAxisClusters(params: {
   // 2) Bridge: short perpendicular jog between two same-axis arms (T/L micro-offset).
   const perp = perpendicularAxis(axis)
   for (let stubIndex = 0; stubIndex < segments.length; stubIndex += 1) {
-    const stub = segments[stubIndex]!
+    const stub = segments[stubIndex]
     if (isZeroLength(stub)) continue
     if (segmentAxis(stub, stubIndex, params.hvBandPx) !== perp) continue
     const stubLen = segmentLength(stub)
@@ -153,7 +153,7 @@ function collectAxisClusters(params: {
     for (const a of armsA) {
       for (const b of armsB) {
         if (a === b) continue
-        const spread = Math.abs(axisValueOf(segments[a]!, axis) - axisValueOf(segments[b]!, axis))
+        const spread = Math.abs(axisValueOf(segments[a], axis) - axisValueOf(segments[b], axis))
         if (spread <= maxSpreadPx) union(a, b)
       }
     }
@@ -170,8 +170,8 @@ function collectAxisClusters(params: {
   return [...groups.values()].filter((indices) => {
     if (indices.length < 2) return false
     const nonZeroSameAxis = indices.filter((idx) => {
-      if (isZeroLength(segments[idx]!)) return false
-      return segmentAxis(segments[idx]!, idx, params.hvBandPx) === axis
+      if (isZeroLength(segments[idx])) return false
+      return segmentAxis(segments[idx], idx, params.hvBandPx) === axis
     })
     return nonZeroSameAxis.length >= 2
   })
@@ -185,7 +185,7 @@ function applyAxisToCluster(params: {
 }): { segmentsAdjusted: number; endpointsAdjusted: number } {
   const pointKeys = new Set<string>()
   for (const idx of params.clusterIndices) {
-    const seg = params.work[idx]!
+    const seg = params.work[idx]
     pointKeys.add(exactPointKey(seg.a))
     pointKeys.add(exactPointKey(seg.b))
   }
@@ -195,7 +195,7 @@ function applyAxisToCluster(params: {
   const touchedSeg = new Set<number>()
 
   for (let segIndex = 0; segIndex < params.work.length; segIndex += 1) {
-    const seg = params.work[segIndex]!
+    const seg = params.work[segIndex]
     for (const endpoint of ['a', 'b'] as const) {
       const point = seg[endpoint]
       if (!pointKeys.has(exactPointKey(point))) continue
@@ -211,7 +211,7 @@ function applyAxisToCluster(params: {
   }
 
   for (const update of updates) {
-    const seg = params.work[update.segIndex]!
+    const seg = params.work[update.segIndex]
     seg[update.endpoint] = { ...update.point }
   }
 
@@ -241,8 +241,8 @@ function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: n
       const incidentIndices = [...new Set(node.incidents.map((incident) => incident.segIndex))]
       if (incidentIndices.length !== 2) continue
 
-      const firstIdx = incidentIndices[0]!
-      const secondIdx = incidentIndices[1]!
+      const firstIdx = incidentIndices[0]
+      const secondIdx = incidentIndices[1]
       const firstSeg = work[firstIdx]
       const secondSeg = work[secondIdx]
       if (!firstSeg || !secondSeg) continue
@@ -270,7 +270,7 @@ function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: n
       const next: Segment[] = []
       for (let i = 0; i < work.length; i += 1) {
         if (i === firstIdx || i === secondIdx) continue
-        next.push(work[i]!)
+        next.push(work[i])
       }
       next.push(mergedCandidate)
 
@@ -315,7 +315,7 @@ export function straightenCollinearAxisChains(
       let weight = 0
       let sum = 0
       for (const idx of clusterIndices) {
-        const seg = work[idx]!
+        const seg = work[idx]
         if (isZeroLength(seg)) continue
         if (segmentAxis(seg, idx, hvBandPx) !== axis) continue
         const len = Math.max(1, segmentLength(seg))
@@ -326,8 +326,8 @@ export function straightenCollinearAxisChains(
 
       const targetAxis = sum / weight
       const beforeSpread =
-        Math.max(...clusterIndices.map((idx) => axisValueOf(work[idx]!, axis))) -
-        Math.min(...clusterIndices.map((idx) => axisValueOf(work[idx]!, axis)))
+        Math.max(...clusterIndices.map((idx) => axisValueOf(work[idx], axis))) -
+        Math.min(...clusterIndices.map((idx) => axisValueOf(work[idx], axis)))
 
       const applied = applyAxisToCluster({
         work,

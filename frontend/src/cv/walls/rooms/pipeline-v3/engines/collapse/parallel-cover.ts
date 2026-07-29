@@ -38,10 +38,10 @@ function axisValueOf(seg: Segment, axis: CollapseAxis): number {
 function mergeIntervals(intervals: Array<[number, number]>): Array<[number, number]> {
   if (intervals.length === 0) return []
   const sorted = [...intervals].sort((a, b) => a[0] - b[0])
-  const out: Array<[number, number]> = [[sorted[0]![0], sorted[0]![1]]]
+  const out: Array<[number, number]> = [[sorted[0][0], sorted[0][1]]]
   for (let i = 1; i < sorted.length; i += 1) {
-    const [lo, hi] = sorted[i]!
-    const last = out[out.length - 1]!
+    const [lo, hi] = sorted[i]
+    const last = out[out.length - 1]
     if (lo <= last[1] + 1e-6) {
       last[1] = Math.max(last[1], hi)
     } else {
@@ -144,16 +144,13 @@ export function parallelCoverAbsorb(
   let segmentsRemoved = 0
   let splitCount = 0
 
-  let changed = true
-  while (changed) {
-    changed = false
-
+  while (true) {
     const clusters = new Map<string, { axis: CollapseAxis; axisValue: number; indices: number[] }>()
     for (let i = 0; i < work.length; i += 1) {
-      const axis = segmentAxis(work[i]!, i, hvBandPx)
+      const axis = segmentAxis(work[i], i, hvBandPx)
       if (axis !== 'H' && axis !== 'V') continue
-      if (segmentLength(work[i]!) <= eps) continue
-      const value = axisValueOf(work[i]!, axis)
+      if (segmentLength(work[i]) <= eps) continue
+      const value = axisValueOf(work[i], axis)
       const existingKey = findClusterKey(clusters, axis, value, axisClusterEps)
       if (existingKey) {
         clusters.get(existingKey)!.indices.push(i)
@@ -169,7 +166,7 @@ export function parallelCoverAbsorb(
     for (const cluster of clusters.values()) {
       if (cluster.indices.length < 2) continue
       const spans: Span[] = cluster.indices.map((index) => {
-        const span = alongSpan(work[index]!, cluster.axis)
+        const span = alongSpan(work[index], cluster.axis)
         return { index, lo: span.lo, hi: span.hi, axisValue: cluster.axisValue }
       })
 
@@ -190,15 +187,15 @@ export function parallelCoverAbsorb(
 
     if (victims.length === 0) break
 
-    victims.sort((a, b) => segmentLength(work[a.index]!) - segmentLength(work[b.index]!))
-    const victim = victims[0]!
-    const victimSeg = work[victim.index]!
+    victims.sort((a, b) => segmentLength(work[a.index]) - segmentLength(work[b.index]))
+    const victim = victims[0]
+    const victimSeg = work[victim.index]
 
     const uniqueEnds: ExactPoint[] = []
     for (const ep of [victimSeg.a, victimSeg.b]) {
       const sharedWithCluster = victim.clusterIndices.some((idx) => {
         if (idx === victim.index) return false
-        return segmentHasEndpoint(work[idx]!, ep, axisClusterEps)
+        return segmentHasEndpoint(work[idx], ep, axisClusterEps)
       })
       if (!sharedWithCluster) uniqueEnds.push(ep)
     }
@@ -207,7 +204,7 @@ export function parallelCoverAbsorb(
     const next: Segment[] = []
     for (let i = 0; i < work.length; i += 1) {
       if (i === victim.index) continue
-      let pieces: Segment[] = [work[i]!]
+      let pieces: Segment[] = [work[i]]
       if (victim.clusterIndices.includes(i)) {
         for (const ep of uniqueEnds) {
           const t = alongCoord(ep, victim.axis)
@@ -237,7 +234,6 @@ export function parallelCoverAbsorb(
     work = next
     coveredCount += 1
     segmentsRemoved += 1
-    changed = true
   }
 
   // Drop zero-length leftovers from splits / covers.

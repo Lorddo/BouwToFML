@@ -65,8 +65,8 @@ export function resolveSimpleLChamferGeometry(params: {
       return null
     }
     if (hArms.h.length === 0 || vArms.v.length === 0) return null
-    const hPick = hArms.h[0]!
-    const vPick = vArms.v[0]!
+    const hPick = hArms.h[0]
+    const vPick = vArms.v[0]
     const hit = infiniteLineIntersection(hPick.segment, vPick.segment)
     if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) return null
     return {

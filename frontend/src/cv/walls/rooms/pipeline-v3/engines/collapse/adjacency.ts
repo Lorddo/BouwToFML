@@ -42,7 +42,7 @@ export function buildExactAdjacency(segments: Segment[]): Map<string, ExactAdjac
     map.set(key, { x: point.x, y: point.y, incidents: [{ segIndex, endpoint }] })
   }
   for (let i = 0; i < segments.length; i += 1) {
-    const seg = segments[i]!
+    const seg = segments[i]
     add(seg.a, i, 'a')
     add(seg.b, i, 'b')
   }
@@ -62,7 +62,7 @@ export function otherIncidentSegIndex(
   const indices = [...new Set(node.incidents.map((inc) => inc.segIndex))].filter(
     (idx) => idx !== excludeSegIndex,
   )
-  return indices.length === 1 ? indices[0]! : null
+  return indices.length === 1 ? indices[0] : null
 }
 
 export function segmentAxis(seg: Segment, segIndex: number, hvBandPx: number): CollapseAxis | null {
@@ -93,8 +93,8 @@ export function turnAngleDegAtPoint(
   segOutIndex: number,
   segments: Segment[],
 ): number {
-  const segIn = segments[segInIndex]!
-  const segOut = segments[segOutIndex]!
+  const segIn = segments[segInIndex]
+  const segOut = segments[segOutIndex]
   const dirs = [directionFromPoint(segIn, point), directionFromPoint(segOut, point)]
   return computeJunctionTurnAngleDeg(dirs)
 }
@@ -117,7 +117,7 @@ function isThroughFootJunctionNode(
   let hasChainAxisArm = false
   let hasPerpAxisArm = false
   for (const idx of segIndices) {
-    const classified = classifyLayer6Segment(segments[idx]!, idx, hvBandPx)
+    const classified = classifyLayer6Segment(segments[idx], idx, hvBandPx)
     if (classified.kind === chainAxis) hasChainAxisArm = true
     if (classified.kind === perpendicularAxis(chainAxis)) hasPerpAxisArm = true
   }
@@ -137,7 +137,7 @@ function isPerpendicularArmNearChainPoint(params: {
   const perpKind = perpendicularAxis(params.chainAxis)
   for (let i = 0; i < params.segments.length; i += 1) {
     if (params.excludeSegIndices.has(i)) continue
-    const seg = params.segments[i]!
+    const seg = params.segments[i]
     const classified = classifyLayer6Segment(seg, i, params.hvBandPx)
     if (classified.kind !== perpKind) continue
 
@@ -215,9 +215,7 @@ export function isHardChainAnchor(
   if (degree <= 1) return true
   if (degree >= 3) return true
   if (segIndices.length < 2) return true
-  return (
-    turnAngleDegAtPoint(point, segIndices[0]!, segIndices[1]!, segments) >= policy.structuralLDeg
-  )
+  return turnAngleDegAtPoint(point, segIndices[0], segIndices[1], segments) >= policy.structuralLDeg
 }
 
 export function isPassableInternalTurn(

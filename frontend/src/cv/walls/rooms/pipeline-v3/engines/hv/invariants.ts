@@ -47,8 +47,8 @@ export function assertLayer4Invariants(params: {
     )
   } else {
     for (let i = 0; i < params.layer3.facesPruned.length; i += 1) {
-      const source = params.layer3.facesPruned[i]!
-      const positioned = params.layer4.facesPositioned[i]!
+      const source = params.layer3.facesPruned[i]
+      const positioned = params.layer4.facesPositioned[i]
       if (source.rootLabel !== positioned.rootLabel) {
         errors.push(
           `face order mismatch at index ${i}: ${source.rootLabel} != ${positioned.rootLabel}`,

@@ -89,6 +89,8 @@ defineExpose<{
 
         <WorkspaceSidebarInputStep
           v-if="ws.flowStep === 'input'"
+          v-model:preprocess="ws.preprocess"
+          v-model:eraser-radius="ws.eraserRadius"
           :scale="ws.scale"
           :scale-panel-open="ws.scalePanelOpen"
           :cv-loader="ws.cvLoader"
@@ -98,8 +100,6 @@ defineExpose<{
           :crop-include-enabled="ws.cropIncludeEnabled"
           :eraser-touched="ws.eraserTouched"
           :can-undo-mask="ws.canUndoMask"
-          v-model:preprocess="ws.preprocess"
-          v-model:eraser-radius="ws.eraserRadius"
           @update-mm-x="ws.updateMmX"
           @update-mm-y="ws.updateMmY"
           @confirm-scale="ws.onConfirmScale"
@@ -135,6 +135,7 @@ defineExpose<{
 
         <WorkspaceSidebarTemplatesStep
           v-if="ws.flowStep === 'templates'"
+          v-model:preprocess="ws.preprocess"
           :profile-confirmed="ws.profileConfirmed"
           :active-drawing-profile="ws.activeDrawingProfile"
           :template-tab="ws.templateTab"
@@ -158,7 +159,6 @@ defineExpose<{
           :ink-edit-stale="ws.inkEditStale"
           :running="ws.running"
           :signature-preview-list="ws.signaturePreviewList"
-          v-model:preprocess="ws.preprocess"
           @profile-selected="ws.onProfileSelected"
           @run-ocr-scan="ws.runOcrScan"
           @clear-ocr-candidates="ws.clearOcrCandidates"
@@ -299,6 +299,11 @@ defineExpose<{
 
       <template v-else>
         <WorkspaceCanvasTabs
+          v-model:preprocess-tab="ws.preprocessTab"
+          v-model:template-tab="ws.templateTab"
+          v-model:result-tab="ws.resultTab"
+          v-model:show-wall-lines="ws.showWallLines"
+          v-model:show-lines="ws.showLines"
           :flow-step="ws.flowStep"
           :preprocess-layer-tabs="ws.preprocessLayerTabs"
           :template-layer-tabs="ws.templateLayerTabs"
@@ -306,11 +311,6 @@ defineExpose<{
           :ocr-masked-region-count="ws.ocrMaskedRegionCount"
           :tab-output-ready="ws.tabOutputReady"
           :wall-overlay-toggles-visible="ws.wallOverlayTogglesVisible"
-          v-model:preprocess-tab="ws.preprocessTab"
-          v-model:template-tab="ws.templateTab"
-          v-model:result-tab="ws.resultTab"
-          v-model:show-wall-lines="ws.showWallLines"
-          v-model:show-lines="ws.showLines"
         />
 
         <div class="canvas-main">
@@ -383,6 +383,8 @@ defineExpose<{
               :instruction-hint="templatesInitialDetectionBusy ? '' : ws.toolbeltCanvasHint"
               :instruction-hint-stale="ws.toolbeltCanvasHintStale"
               :relocate-tool-hints="ws.inkToolbeltVisible && !templatesInitialDetectionBusy"
+              :probe-enabled="ws.probeActive"
+              :probe-mode="ws.probeMode"
               @lbe-start="ws.startDraw"
               @lbe-move="ws.updateDraw"
               @lbe-end="ws.onLbeEndDraw"
@@ -404,8 +406,6 @@ defineExpose<{
               @ink-erase-stroke="ws.onInkEraseStroke"
               @ink-line="ws.onInkLine"
               @ink-rect="ws.onInkRect"
-              :probe-enabled="ws.probeActive"
-              :probe-mode="ws.probeMode"
               @probe-sample="ws.onProbeSample"
             />
           </WorkspaceFloorplanCanvasHost>

@@ -62,7 +62,7 @@ export function runWindowAxelFilter(params: {
     const acceptedByFaceKey = new Map<string, WindowAxelHypothesis>()
 
     for (let orientationIndex = 0; orientationIndex < orientations.length; orientationIndex += 1) {
-      const orientation = orientations[orientationIndex]!
+      const orientation = orientations[orientationIndex]
       const orientedRefBase = orientation === ref.orientation ? ref : { ...ref, orientation }
       const baseTargetStripHeightPx = denormalizeTargetStripHeightPx(
         orientedRefBase,

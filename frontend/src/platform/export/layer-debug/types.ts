@@ -9,8 +9,8 @@ export const LAYER_DEBUG_VERSION = 1 as const
 
 export type LayerId = 'A' | 'B' | 'C' | 'D' | 'E'
 
-/** Legacy A–E of V2/V3 `layer1`…`layer10`. */
-export type LayerTransitionId = LayerId | string
+/** Legacy A–E of V2/V3 `layer1`…`layer10` (string zodat nieuwe ids niet type-breken). */
+export type LayerTransitionId = string
 
 export interface FlatLayer {
   segments: SegmentRecord[]

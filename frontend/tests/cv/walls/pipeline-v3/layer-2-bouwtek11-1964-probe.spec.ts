@@ -16,14 +16,14 @@ const BOUWTEK11_1964_L1: Segment[] = [
 
 function countConnectedComponents(segments: Segment[], snapPx = 1): number {
   const parent = Array.from({ length: segments.length }, (_, i) => i)
-  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i]!)))
+  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])))
   const union = (i: number, j: number) => {
     parent[find(i)] = find(j)
   }
   for (let i = 0; i < segments.length; i += 1) {
     for (let j = i + 1; j < segments.length; j += 1) {
-      const si = segments[i]!
-      const sj = segments[j]!
+      const si = segments[i]
+      const sj = segments[j]
       const shares = [si.a, si.b].some((p) =>
         [sj.a, sj.b].some((q) => Math.hypot(p.x - q.x, p.y - q.y) <= snapPx),
       )

@@ -48,7 +48,7 @@ function walkStairFromFarEnd(params: {
     const stubIndex = otherIncidentSegIndex(node, currentArmIndex)
     if (stubIndex == null) break
 
-    const stubSeg = params.segments[stubIndex]!
+    const stubSeg = params.segments[stubIndex]
     if (segmentAxis(stubSeg, stubIndex, params.hvBandPx) !== params.stubAxis) break
     const stubLen = segmentLength(stubSeg)
     if (stubLen <= 0 || stubLen > params.stubMaxPx) break
@@ -60,8 +60,8 @@ function walkStairFromFarEnd(params: {
     const nextArmIndex = otherIncidentSegIndex(stubFarNode, stubIndex)
     if (nextArmIndex == null) break
 
-    const currentArm = params.segments[currentArmIndex]!
-    const nextArm = params.segments[nextArmIndex]!
+    const currentArm = params.segments[currentArmIndex]
+    const nextArm = params.segments[nextArmIndex]
     if (segmentAxis(nextArm, nextArmIndex, params.hvBandPx) !== params.armAxis) break
 
     const tierDelta = Math.abs(
@@ -86,7 +86,7 @@ function collectOrthoStairChain(params: {
   tierMaxPx: number
   hvBandPx: number
 }): { chain: Set<number>; farA: ExactPoint; farB: ExactPoint } | null {
-  const stub = params.segments[params.stubIndex]!
+  const stub = params.segments[params.stubIndex]
   const stubLen = segmentLength(stub)
   if (stubLen <= 0 || stubLen > params.stubMaxPx) return null
 
@@ -103,8 +103,8 @@ function collectOrthoStairChain(params: {
   const armBIndex = otherIncidentSegIndex(nodeB, params.stubIndex)
   if (armAIndex == null || armBIndex == null) return null
 
-  const armA = params.segments[armAIndex]!
-  const armB = params.segments[armBIndex]!
+  const armA = params.segments[armAIndex]
+  const armB = params.segments[armBIndex]
   if (
     segmentAxis(armA, armAIndex, params.hvBandPx) !== armAxis ||
     segmentAxis(armB, armBIndex, params.hvBandPx) !== armAxis
@@ -156,7 +156,7 @@ function pickTemplateIndex(segments: Segment[], chain: Set<number>): number | un
   let bestIdx: number | undefined
   let bestLen = -1
   for (const idx of chain) {
-    const len = segmentLength(segments[idx]!)
+    const len = segmentLength(segments[idx])
     if (len > bestLen) {
       bestLen = len
       bestIdx = idx
@@ -171,16 +171,16 @@ function chainExtremeDiagonal(
 ): { a: ExactPoint; b: ExactPoint } {
   const points: ExactPoint[] = []
   for (const idx of chain) {
-    const seg = segments[idx]!
+    const seg = segments[idx]
     points.push(seg.a, seg.b)
   }
   let bestDist = -1
-  let bestA = points[0]!
-  let bestB = points[1] ?? points[0]!
+  let bestA = points[0]
+  let bestB = points[1] ?? points[0]
   for (let i = 0; i < points.length; i += 1) {
     for (let j = i + 1; j < points.length; j += 1) {
-      const pi = points[i]!
-      const pj = points[j]!
+      const pi = points[i]
+      const pj = points[j]
       const d = Math.hypot(pi.x - pj.x, pi.y - pj.y)
       if (d > bestDist) {
         bestDist = d
@@ -219,7 +219,7 @@ export function collapseOrthoStairStubs(
     const adjacency = buildExactAdjacency(work)
     for (let stubIndex = 0; stubIndex < work.length; stubIndex += 1) {
       if (consumed.has(stubIndex)) continue
-      const axis = segmentAxis(work[stubIndex]!, stubIndex, hvBandPx)
+      const axis = segmentAxis(work[stubIndex], stubIndex, hvBandPx)
       if (axis !== 'H' && axis !== 'V') continue
 
       const collected = collectOrthoStairChain({

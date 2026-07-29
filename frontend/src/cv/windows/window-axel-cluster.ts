@@ -84,10 +84,10 @@ function buildCandidateAdjacency(
     return set
   }
   for (let i = 0; i < candidates.length; i += 1) {
-    const a = candidates[i]!
+    const a = candidates[i]
     ensure(a.root)
     for (let j = i + 1; j < candidates.length; j += 1) {
-      const b = candidates[j]!
+      const b = candidates[j]
       if (!facesAreLinked(a, b, params)) continue
       ensure(a.root).add(b.root)
       ensure(b.root).add(a.root)
@@ -99,8 +99,8 @@ function buildCandidateAdjacency(
 function subsetIsConnected(roots: number[], adj: Map<number, Set<number>>): boolean {
   if (roots.length <= 1) return true
   const allowed = new Set(roots)
-  const stack = [roots[0]!]
-  const seen = new Set<number>([roots[0]!])
+  const stack = [roots[0]]
+  const seen = new Set<number>([roots[0]])
   while (stack.length > 0) {
     const cur = stack.pop()
     if (cur == null) continue
@@ -159,7 +159,7 @@ export function enumerateLinkedTuples(params: {
 
   if (k === 2) {
     for (let i = 0; i < roots.length; i += 1) {
-      const a = roots[i]!
+      const a = roots[i]
       for (const b of adj.get(a) ?? []) {
         if (b <= a) continue
         const fa = byRoot.get(a)
@@ -181,7 +181,7 @@ export function enumerateLinkedTuples(params: {
       return
     }
     for (let i = start; i <= n - (k - chosen); i += 1) {
-      pick.push(roots[i]!)
+      pick.push(roots[i])
       walk(i + 1, chosen + 1)
       pick.pop()
     }

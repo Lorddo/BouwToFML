@@ -5,7 +5,7 @@ import { resolveSolidFaceDemotePolicy } from './policies/solid'
 import type { GapsLayer1Result, RunGapsPipelineParams } from './types'
 
 export function runGapsPipeline(params: RunGapsPipelineParams): GapsLayer1Result {
-  const policyId = params.policyId ?? 'solid'
+  const policyId: string = params.policyId ?? 'solid'
   if (policyId !== 'solid') {
     throw new Error(`runGapsPipeline: policy '${policyId}' is not implemented (only solid)`)
   }

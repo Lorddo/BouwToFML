@@ -121,12 +121,12 @@ export function collectTouchedDoorArcFaceIds(params: {
 
 function unionRects(rects: Rect[]): Rect | null {
   if (rects.length <= 0) return null
-  let x0 = rects[0]!.x
-  let y0 = rects[0]!.y
-  let x1 = rects[0]!.x + rects[0]!.width
-  let y1 = rects[0]!.y + rects[0]!.height
+  let x0 = rects[0].x
+  let y0 = rects[0].y
+  let x1 = rects[0].x + rects[0].width
+  let y1 = rects[0].y + rects[0].height
   for (let i = 1; i < rects.length; i += 1) {
-    const r = rects[i]!
+    const r = rects[i]
     x0 = Math.min(x0, r.x)
     y0 = Math.min(y0, r.y)
     x1 = Math.max(x1, r.x + r.width)

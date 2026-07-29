@@ -78,8 +78,8 @@ function drawClosedPolygon(
 ) {
   if (polygon.length < 2) return
   for (let i = 0; i < polygon.length; i += 1) {
-    const a = polygon[i]!
-    const b = polygon[(i + 1) % polygon.length]!
+    const a = polygon[i]
+    const b = polygon[(i + 1) % polygon.length]
     drawLine(out, width, height, a, b, rgb, thickness)
   }
 }

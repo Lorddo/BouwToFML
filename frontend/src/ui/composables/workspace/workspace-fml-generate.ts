@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
 import {
@@ -235,7 +235,7 @@ export function createWorkspaceFmlGenerate(
   return {
     generatedPlan,
     fmlExportPlan,
-    previewPlan: previewPlan as ComputedRef<FloorPlan | null>,
+    previewPlan: previewPlan,
     generatedFmlText,
     generatedStats,
     importedPlan,

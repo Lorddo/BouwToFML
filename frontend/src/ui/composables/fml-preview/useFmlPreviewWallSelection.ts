@@ -81,13 +81,13 @@ export function useFmlPreviewWallSelection(options: {
       wallBalanceMixed.value = false
       return
     }
-    const first = Math.round(thicknesses[0]!)
+    const first = Math.round(thicknesses[0])
     const mixed = thicknesses.some((value) => Math.round(value) !== first)
     wallThicknessMixed.value = mixed
     wallThicknessDraft.value = mixed ? first : first
 
     if (balances.length > 0) {
-      const firstBalance = Math.round(balances[0]! * 100) / 100
+      const firstBalance = Math.round(balances[0] * 100) / 100
       const balanceMixed = balances.some((value) => Math.round(value * 100) / 100 !== firstBalance)
       wallBalanceMixed.value = balanceMixed
       wallBalanceDraft.value = firstBalance
@@ -149,7 +149,7 @@ export function useFmlPreviewWallSelection(options: {
 
   function splitSelectedWall(): void {
     if (settingsWallIds.value.length !== 1) return
-    const wallId = settingsWallIds.value[0]!
+    const wallId = settingsWallIds.value[0]
     const wall = editor.walls.value.find((item) => item.id === wallId)
     if (!wall) return
     const lengthCm = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)

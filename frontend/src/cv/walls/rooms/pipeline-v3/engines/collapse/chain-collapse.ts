@@ -70,7 +70,7 @@ function filterCollinearChainCandidates(params: {
     if (inc.segIndex === params.viaSegIndex) return false
     if (params.consumed.has(inc.segIndex)) return false
     if (params.collected.includes(inc.segIndex)) return false
-    const axis = segmentAxis(params.segments[inc.segIndex]!, inc.segIndex, params.hvBandPx)
+    const axis = segmentAxis(params.segments[inc.segIndex], inc.segIndex, params.hvBandPx)
     if (axis !== params.axis) return false
     if (
       !isPassableInternalTurn(
@@ -142,10 +142,10 @@ function pickChainExtension(params: {
     )
   })
   if (compatible.length === 1) {
-    const next = compatible[0]!
+    const next = compatible[0]
     return {
       segIndices: [next.segIndex],
-      endPoint: otherEndpoint(params.segments[next.segIndex]!, params.atPoint),
+      endPoint: otherEndpoint(params.segments[next.segIndex], params.atPoint),
     }
   }
   if (compatible.length > 1) return null
@@ -161,9 +161,9 @@ function pickChainExtension(params: {
   )
   if (incompatible.length !== 1) return null
 
-  const bridgeInc = incompatible[0]!
+  const bridgeInc = incompatible[0]
   const bridgeIndex = bridgeInc.segIndex
-  const bridgeSeg = params.segments[bridgeIndex]!
+  const bridgeSeg = params.segments[bridgeIndex]
   const bridgeOther = otherEndpoint(bridgeSeg, params.atPoint)
   const beyondCandidates = filterCollinearChainCandidates({
     atPoint: bridgeOther,
@@ -186,10 +186,10 @@ function pickChainExtension(params: {
   )
   if (beyondCandidates.length !== 1) return null
 
-  const beyondInc = beyondCandidates[0]!
+  const beyondInc = beyondCandidates[0]
   const beyondIndex = beyondInc.segIndex
-  const viaLen = segmentLength(params.segments[params.viaSegIndex]!)
-  const beyondLen = segmentLength(params.segments[beyondIndex]!)
+  const viaLen = segmentLength(params.segments[params.viaSegIndex])
+  const beyondLen = segmentLength(params.segments[beyondIndex])
   if (
     !isWallThicknessBridgeCandidatePx({
       bridgeThicknessPx: params.thicknessBySegment[bridgeIndex] ?? 0,
@@ -205,7 +205,7 @@ function pickChainExtension(params: {
 
   return {
     segIndices: [bridgeIndex, beyondIndex],
-    endPoint: otherEndpoint(params.segments[beyondIndex]!, bridgeOther),
+    endPoint: otherEndpoint(params.segments[beyondIndex], bridgeOther),
   }
 }
 
@@ -257,10 +257,10 @@ function buildCollapsedSegment(params: {
   chainIndices: number[]
   segments: Segment[]
 }): Segment {
-  let longestIdx = params.chainIndices[0]!
+  let longestIdx = params.chainIndices[0]
   let longestLen = -1
   for (const idx of params.chainIndices) {
-    const len = segmentLength(params.segments[idx]!)
+    const len = segmentLength(params.segments[idx])
     if (len > longestLen) {
       longestLen = len
       longestIdx = idx
@@ -283,7 +283,7 @@ function countFakeLInChain(params: {
   let fakeL = 0
   const chainSet = new Set(params.chainIndices)
   for (const idx of params.chainIndices) {
-    const seg = params.segments[idx]!
+    const seg = params.segments[idx]
     for (const point of [seg.a, seg.b]) {
       const node = params.adjacency.get(exactPointKey(point))
       if (!node || node.incidents.length !== 2) continue
@@ -319,7 +319,7 @@ export function collapseInterJunctionChains(params: {
 
   for (let seedIndex = 0; seedIndex < work.length; seedIndex += 1) {
     if (consumed.has(seedIndex)) continue
-    const seed = work[seedIndex]!
+    const seed = work[seedIndex]
     const axis = segmentAxis(seed, seedIndex, hvBandPx)
     if (!axis) continue
 

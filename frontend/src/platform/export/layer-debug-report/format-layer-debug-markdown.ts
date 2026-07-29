@@ -39,7 +39,7 @@ function formatWallTransitions(transitions: LayerDebugWallTransition[]): string[
       lines.push(`**Segments dropped** (${t.summary.dropped})`)
       lines.push('')
       for (let i = 0; i < dropped.length; i += 1) {
-        const item = dropped[i]!
+        const item = dropped[i]
         const hint = item.dropReasonHint !== 'unmatched' ? ` _(${item.dropReasonHint})_` : ''
         lines.push(
           `${i + 1}. #${item.prevIndex} len=${item.lengthPx} (${item.a.x},${item.a.y})→(${item.b.x},${item.b.y}) mid ${item.mid.x},${item.mid.y}${hint}`,

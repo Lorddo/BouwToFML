@@ -95,9 +95,9 @@ export function applyChamferGroupRepair(params: {
   if (params.geometry.kind !== 'landing') {
     for (let i = 0; i < work.length; i += 1) {
       if (diagSet.has(i) || removeSet.has(i)) continue
-      const kind = classify(work[i]!, i).kind
+      const kind = classify(work[i], i).kind
       if (kind !== 'H' && kind !== 'V') continue
-      if (segmentLength(work[i]!) > maxConnectorPx * LAYER6_FALLBACK_AXIS_MAX_SHIFT_RATIO) continue
+      if (segmentLength(work[i]) > maxConnectorPx * LAYER6_FALLBACK_AXIS_MAX_SHIFT_RATIO) continue
       snapAnyEndpointNearDiagToHit(i, params.geometry.hit)
     }
   }

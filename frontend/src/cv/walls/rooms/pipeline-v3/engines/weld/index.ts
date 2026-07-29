@@ -31,7 +31,7 @@ function collectDanglingEndpoints(segments: Segment[]): EndpointRef[] {
   const index = buildEndpointIndex(segments)
   const out: EndpointRef[] = []
   for (let i = 0; i < segments.length; i += 1) {
-    const seg = segments[i]!
+    const seg = segments[i]
     const endpoints: Array<{ endpoint: 'a' | 'b'; point: { x: number; y: number } }> = [
       { endpoint: 'a', point: seg.a },
       { endpoint: 'b', point: seg.b },
@@ -82,15 +82,13 @@ export function repairDanglingConnections(
   const work = cloneSegments(segments)
   let repairedCount = 0
 
-  let changed = true
-  while (changed) {
-    changed = false
+  while (true) {
     const dangling = collectDanglingEndpoints(work)
     let bestPair: { a: EndpointRef; b: EndpointRef; d: number } | null = null
     for (let i = 0; i < dangling.length; i += 1) {
-      const a = dangling[i]!
+      const a = dangling[i]
       for (let j = i + 1; j < dangling.length; j += 1) {
-        const b = dangling[j]!
+        const b = dangling[j]
         if (a.segIndex === b.segIndex) continue
         const d = Math.hypot(a.point.x - b.point.x, a.point.y - b.point.y)
         if (d > maxGapPx) continue
@@ -105,10 +103,9 @@ export function repairDanglingConnections(
       x: (bestPair.a.point.x + bestPair.b.point.x) / 2,
       y: (bestPair.a.point.y + bestPair.b.point.y) / 2,
     }
-    moveEndpoint(work[bestPair.a.segIndex]!, bestPair.a.endpoint, target)
-    moveEndpoint(work[bestPair.b.segIndex]!, bestPair.b.endpoint, target)
+    moveEndpoint(work[bestPair.a.segIndex], bestPair.a.endpoint, target)
+    moveEndpoint(work[bestPair.b.segIndex], bestPair.b.endpoint, target)
     repairedCount += 1
-    changed = true
   }
 
   const welded = weldNearConnectedEndpoints(work, policy)

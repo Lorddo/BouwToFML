@@ -61,6 +61,7 @@ const props = withDefaults(
     thicknessMinCm: 10,
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
+    measureLineCount: 0,
   },
 )
 

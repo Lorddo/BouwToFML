@@ -223,7 +223,7 @@ export async function snapResolvedDoorsToWalls(
         : state.labelsData
   const whiteParentMap = params.whiteParentMap ?? parentMap
 
-  let oriented: OrientedDoor[] = []
+  let oriented: OrientedDoor[]
   try {
     const cv = await waitForOpenCV()
     oriented = orientBoundDoors({

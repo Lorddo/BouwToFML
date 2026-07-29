@@ -76,7 +76,7 @@ function buildClustersForKey(params: {
   const ranges = params.indices
     .map((index) => ({
       index,
-      ...projectionRange(params.segments[index]!, params.axis),
+      ...projectionRange(params.segments[index], params.axis),
     }))
     .sort((a, b) => a.min - b.min)
 
@@ -108,7 +108,7 @@ export function mergeSameLineSegments(
   const work = cloneSegments(segments)
   const byKey = new Map<string, { axis: Axis; cross: number; indices: number[] }>()
   for (let i = 0; i < work.length; i += 1) {
-    const seg = work[i]!
+    const seg = work[i]
     const axis = classifyAxis(seg, policy.sameLineMaxOffsetPx)
     if (!axis) continue
     const cross = lineCross(seg, axis)
@@ -139,7 +139,7 @@ export function mergeSameLineSegments(
 
     for (const cluster of clusters) {
       if (cluster.indices.length < 2) continue
-      const clusterSegments = cluster.indices.map((idx) => work[idx]!)
+      const clusterSegments = cluster.indices.map((idx) => work[idx])
       const hasShort = clusterSegments.some((seg) => segmentLength(seg) <= ref)
       if (!hasShort) continue
 
@@ -152,7 +152,7 @@ export function mergeSameLineSegments(
 
       for (let i = 0; i < work.length; i += 1) {
         if (cluster.indices.includes(i)) continue
-        const seg = work[i]!
+        const seg = work[i]
         if (endpointOnLine(seg.a, cluster.axis, cluster.cross)) {
           pushUniqueCut(cuts, cluster.axis === 'H' ? seg.a.x : seg.a.y)
         }
@@ -176,8 +176,8 @@ export function mergeSameLineSegments(
 
       let created = 0
       for (let i = 0; i < sortedCuts.length - 1; i += 1) {
-        const from = sortedCuts[i]!
-        const to = sortedCuts[i + 1]!
+        const from = sortedCuts[i]
+        const to = sortedCuts[i + 1]
         // Skip sub-eps spans — otherwise same-line merge recreates 1px mid-chain stubs
         // (BouwTek11 @1202–1203) that incidentAt cannot clean up.
         if (to - from <= policy.weld.endpointEpsPx) continue

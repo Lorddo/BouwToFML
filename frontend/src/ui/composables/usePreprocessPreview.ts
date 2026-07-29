@@ -23,7 +23,7 @@ function canvasAtOriginalSize(
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(workCanvas as unknown as CanvasImageSource, 0, 0, originalWidth, originalHeight)
+  ctx.drawImage(workCanvas, 0, 0, originalWidth, originalHeight)
   return canvas
 }
 

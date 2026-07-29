@@ -25,7 +25,7 @@ export function collectChamferChainSegmentIndices(params: {
     if (diag.lengthPx > stubMax) continue
     let totalLengthPx = diag.lengthPx
     const indices = [diag.segIndex]
-    let tipPoint = { ...diag.other }
+    const tipPoint = { ...diag.other }
     const walk = walkDiagonalChamferChain({
       segments: params.segments,
       fromPoint: tipPoint,
@@ -36,11 +36,10 @@ export function collectChamferChainSegmentIndices(params: {
     })
     if (walk) {
       for (const segIndex of walk.segIndices) {
-        const len = segmentLength(params.segments[segIndex]!)
+        const len = segmentLength(params.segments[segIndex])
         if (len > stubMax) break
         indices.push(segIndex)
         totalLengthPx += len
-        tipPoint = walk.tipPoint
       }
     }
     if (totalLengthPx > params.maxChainPx) continue
@@ -62,7 +61,7 @@ export function isSegmentInMultiStubChamferChain(params: {
 }): boolean {
   const hvBandPx = params.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
   const classified = classifyLayer6Segment(
-    params.segments[params.segIndex]!,
+    params.segments[params.segIndex],
     params.segIndex,
     hvBandPx,
   )
@@ -83,9 +82,9 @@ export function isSegmentInMultiStubChamferChain(params: {
   for (const point of [params.connector.a, params.connector.b]) {
     pushStubs(point)
     for (let i = 0; i < params.segments.length; i += 1) {
-      const kind = classifyLayer6Segment(params.segments[i]!, i, hvBandPx).kind
+      const kind = classifyLayer6Segment(params.segments[i], i, hvBandPx).kind
       if (kind !== 'H') continue
-      const seg = params.segments[i]!
+      const seg = params.segments[i]
       const near = Math.min(
         Math.hypot(point.x - seg.a.x, point.y - seg.a.y),
         Math.hypot(point.x - seg.b.x, point.y - seg.b.y),

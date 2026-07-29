@@ -23,7 +23,7 @@ describe('ref-face-dual-space', () => {
       labels: white.labels,
       faces: roles,
     })
-    const label = roles[0]!.label
+    const label = roles[0].label
     const w = dual.geom(label, 'white')
     const i = dual.geom(label, 'ink')
     expect(w?.areaPx).toBe(3)

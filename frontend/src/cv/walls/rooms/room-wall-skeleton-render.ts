@@ -18,7 +18,7 @@ export function renderRoomWallSkeletonOverlay(params: {
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
   ctx.imageSmoothingEnabled = false
-  ctx.drawImage(params.base as unknown as CanvasImageSource, 0, 0)
+  ctx.drawImage(params.base, 0, 0)
 
   ctx.strokeStyle = '#a855f7'
   ctx.lineWidth = 2

@@ -41,10 +41,10 @@ export function applyBrushStroke(params: {
     }
   }
 
-  let prev = points[0]!
+  let prev = points[0]
   stamp(Math.round(prev.x), Math.round(prev.y))
   for (let i = 1; i < points.length; i += 1) {
-    const next = points[i]!
+    const next = points[i]
     const dx = next.x - prev.x
     const dy = next.y - prev.y
     const dist = Math.hypot(dx, dy)

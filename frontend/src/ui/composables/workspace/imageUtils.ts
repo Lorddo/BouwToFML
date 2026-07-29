@@ -359,7 +359,7 @@ export function canvasLikeToHtmlCanvas(canvas: CanvasLike): HTMLCanvasElement {
   const copy = document.createElement('canvas')
   copy.width = canvas.width
   copy.height = canvas.height
-  copy.getContext('2d')?.drawImage(canvas as unknown as CanvasImageSource, 0, 0)
+  copy.getContext('2d')?.drawImage(canvas, 0, 0)
   return copy
 }
 

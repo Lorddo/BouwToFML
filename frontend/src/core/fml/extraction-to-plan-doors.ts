@@ -93,7 +93,7 @@ function mergeAdjacentStandardDoors(params: {
   const merged: Layer12DoorForFml[] = []
   let i = 0
   while (i < sorted.length) {
-    const current = sorted[i]!
+    const current = sorted[i]
     const next = sorted[i + 1]
     if (
       next &&

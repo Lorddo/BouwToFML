@@ -23,7 +23,7 @@ function medianOf(values: number[]): number {
   if (values.length === 0) return 0
   const sorted = [...values].sort((left, right) => left - right)
   const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid]
 }
 
 function isDark(mask: Uint8Array, width: number, height: number, x: number, y: number): boolean {
@@ -348,7 +348,7 @@ function buildInkMask(imageData: ImageData): Uint8Array {
   const mask = new Uint8Array(width * height)
   for (let i = 0; i < width * height; i += 1) {
     const offset = i * 4
-    const lum = 0.299 * data[offset]! + 0.587 * data[offset + 1]! + 0.114 * data[offset + 2]!
+    const lum = 0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2]
     mask[i] = lum < INK_LUMINANCE_THRESHOLD ? 255 : 0
   }
   return mask

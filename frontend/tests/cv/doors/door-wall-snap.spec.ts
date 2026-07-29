@@ -674,11 +674,11 @@ describe('door-wall-snap', () => {
     })
     expect(snapped).toHaveLength(1)
     expect(snapped[0]?.doorframeClearOpening).toBeTruthy()
-    const clear = snapped[0]!.doorframeClearOpening!
+    const clear = snapped[0].doorframeClearOpening!
     const clearLen = Math.hypot(clear.endPx.x - clear.startPx.x, clear.endPx.y - clear.startPx.y)
     expect(clearLen).toBeGreaterThan(80)
     // snappedBBox langs muur ≈ deurblad + REF framing
-    expect(snapped[0]!.snappedBBox.height).toBeCloseTo(clearLen + 10, 0)
+    expect(snapped[0].snappedBBox.height).toBeCloseTo(clearLen + 10, 0)
   })
 
   it('Path A: as-grow bereikt doorframe achter 1 wall-hop', () => {

@@ -61,11 +61,11 @@ function hvIncidentsNearGroup(params: {
       if (diagSet.has(i)) continue
       const kind = classified[i]?.kind
       if (kind !== 'H' && kind !== 'V') continue
-      const seg = params.segments[i]!
+      const seg = params.segments[i]
       let bestDist = Number.POSITIVE_INFINITY
       let bestAnchor = seg.a
       for (const diagIndex of params.diagonalIndices) {
-        const diag = params.segments[diagIndex]!
+        const diag = params.segments[diagIndex]
         for (const point of [diag.a, diag.b]) {
           const d = Math.min(
             Math.hypot(point.x - seg.a.x, point.y - seg.a.y),
@@ -86,7 +86,7 @@ function hvIncidentsNearGroup(params: {
         seenH.add(i)
         h.push({
           segIndex: i,
-          lengthPx: classified[i]!.lengthPx,
+          lengthPx: classified[i].lengthPx,
           anchorPoint: { ...bestAnchor },
         })
       }
@@ -94,7 +94,7 @@ function hvIncidentsNearGroup(params: {
         seenV.add(i)
         v.push({
           segIndex: i,
-          lengthPx: classified[i]!.lengthPx,
+          lengthPx: classified[i].lengthPx,
           anchorPoint: { ...bestAnchor },
         })
       }
@@ -114,7 +114,7 @@ function consensusAxisSegment(params: {
   endpointSnapPx?: number
   nearbyWeldPx?: number
 }): Segment {
-  const seg = params.segments[params.segIndex]!
+  const seg = params.segments[params.segIndex]
   const span = measureCollinearChainSpan({
     segments: params.segments,
     startSegIndex: params.segIndex,
@@ -251,7 +251,7 @@ export function resolveChamferGroupGeometry(params: {
   // (geen interne anti-parallel knopen), bereik ≤ connector×2.
   const leafEnds: Array<{ x: number; y: number }> = []
   for (const idx of diagonalIndices) {
-    const seg = params.segments[idx]!
+    const seg = params.segments[idx]
     for (const p of [seg.a, seg.b]) {
       const diagDeg = incidentAt(params.segments, p, endpointSnapPx).filter((inc) =>
         diagonalIndices.includes(inc.segIndex),
@@ -278,11 +278,11 @@ export function resolveChamferGroupGeometry(params: {
   for (let i = 0; i < hvAtEnds.length; i += 1) {
     for (let j = 0; j < hvAtEnds.length; j += 1) {
       if (i === j) continue
-      const hSide = hvAtEnds[i]!
-      const vSide = hvAtEnds[j]!
+      const hSide = hvAtEnds[i]
+      const vSide = hvAtEnds[j]
       if (hSide.h.length === 0 || vSide.v.length === 0) continue
-      const hPick = hSide.h[0]!
-      const vPick = vSide.v[0]!
+      const hPick = hSide.h[0]
+      const vPick = vSide.v[0]
       // Gebruik langste H-as (stub×V kan numeriek ok zijn; lange arm is stabieler).
       const hForHit =
         hSide.h.find(
@@ -362,7 +362,7 @@ export function resolveChamferGroupGeometry(params: {
   if (hPick && !vPick) {
     const hInc = h.find((item) => item.segIndex === hPick.segIndex)!
     const tipCandidates = diagonalIndices.flatMap((idx) => {
-      const seg = params.segments[idx]!
+      const seg = params.segments[idx]
       return [seg.a, seg.b]
     })
     let bestV: {
@@ -458,7 +458,7 @@ export function resolveChamferGroupGeometry(params: {
   if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) return null
 
   // Seed-diagonaal moet aan H- of V-touch hangen — geen T@572 repareren via diag@587.
-  const seed = params.segments[params.connectorIndex]!
+  const seed = params.segments[params.connectorIndex]
   const seedTouches = (point: { x: number; y: number }) =>
     Math.hypot(seed.a.x - point.x, seed.a.y - point.y) <= nearbyWeldPx ||
     Math.hypot(seed.b.x - point.x, seed.b.y - point.y) <= nearbyWeldPx
@@ -467,7 +467,7 @@ export function resolveChamferGroupGeometry(params: {
     seedTouches(vInc.anchorPoint) ||
     diagonalIndices.some((idx) => {
       if (idx === params.connectorIndex) return false
-      const other = params.segments[idx]!
+      const other = params.segments[idx]
       return (
         (seedTouches(other.a) || seedTouches(other.b)) &&
         (Math.hypot(other.a.x - hInc.anchorPoint.x, other.a.y - hInc.anchorPoint.y) <=
@@ -488,7 +488,7 @@ export function resolveChamferGroupGeometry(params: {
     maxChainPx * LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO,
   )
   const nearGroup = diagonalIndices.some((idx) => {
-    const seg = params.segments[idx]!
+    const seg = params.segments[idx]
     return (
       Math.hypot(seg.a.x - hit.x, seg.a.y - hit.y) <= maxShift ||
       Math.hypot(seg.b.x - hit.x, seg.b.y - hit.y) <= maxShift

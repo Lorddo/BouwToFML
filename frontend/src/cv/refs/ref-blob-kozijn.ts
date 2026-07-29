@@ -191,10 +191,10 @@ export function findKozijnPostsAlongX(
     }
     return best
   }
-  const filtered: AxisSpan[] = [merged[0]!]
+  const filtered: AxisSpan[] = [merged[0]]
   for (let i = 1; i < merged.length; i += 1) {
-    const prev = filtered[filtered.length - 1]!
-    const cur = merged[i]!
+    const prev = filtered[filtered.length - 1]
+    const cur = merged[i]
     if (cur.start - prev.end >= minGap) filtered.push(cur)
     else if (score(cur) > score(prev)) filtered[filtered.length - 1] = cur
   }

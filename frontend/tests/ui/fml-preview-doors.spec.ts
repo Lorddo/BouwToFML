@@ -205,14 +205,14 @@ describe('groupDoorOpeningsOnWall', () => {
     expect(groups[0].endCm.x).toBeCloseTo(250, 5)
 
     // Boog/blad: catalogus 5cm per zijde → clear 90 @ 155..245
-    const leaf = groups[0].leafLines[0]!
-    const hinge = { x: leaf[0]!, y: leaf[1]! }
-    const tip = { x: leaf[2]!, y: leaf[3]! }
+    const leaf = groups[0].leafLines[0]
+    const hinge = { x: leaf[0], y: leaf[1] }
+    const tip = { x: leaf[2], y: leaf[3] }
     expect(hinge.x).toBeCloseTo(155, 5)
     expect(Math.hypot(tip.x - hinge.x, tip.y - hinge.y)).toBeCloseTo(90, 5)
 
-    const arc = groups[0].arcPoints[0]!
-    const arcEnd = { x: arc[arc.length - 2]!, y: arc[arc.length - 1]! }
+    const arc = groups[0].arcPoints[0]
+    const arcEnd = { x: arc[arc.length - 2], y: arc[arc.length - 1] }
     expect(Math.hypot(arcEnd.x - hinge.x, arcEnd.y - hinge.y)).toBeCloseTo(90, 5)
   })
 })

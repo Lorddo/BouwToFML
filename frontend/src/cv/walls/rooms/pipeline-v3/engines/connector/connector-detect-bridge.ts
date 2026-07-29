@@ -28,8 +28,8 @@ export function tryHvChamferBridgeCandidate(params: {
 
   let hAnchor: { x: number; y: number } | null = null
   let vAnchor: { x: number; y: number } | null = null
-  let hIncidents: typeof params.incidentsA = []
-  let vIncidents: typeof params.incidentsA = []
+  let hIncidents: typeof params.incidentsA
+  let vIncidents: typeof params.incidentsA
 
   if (hFromB.length > 0 && vFromA.length > 0) {
     hAnchor = params.connector.b
@@ -50,7 +50,7 @@ export function tryHvChamferBridgeCandidate(params: {
     hIncidents.map((inc) => ({
       segIndex: inc.segIndex,
       lengthPx: inc.lengthPx,
-      anchorPoint: hAnchor!,
+      anchorPoint: hAnchor,
     })),
     params.hvBandPx,
     params.endpointSnapPx,
@@ -61,7 +61,7 @@ export function tryHvChamferBridgeCandidate(params: {
     vIncidents.map((inc) => ({
       segIndex: inc.segIndex,
       lengthPx: inc.lengthPx,
-      anchorPoint: vAnchor!,
+      anchorPoint: vAnchor,
     })),
     params.hvBandPx,
     params.endpointSnapPx,
@@ -69,22 +69,22 @@ export function tryHvChamferBridgeCandidate(params: {
   )
   if (!hPick || !vPick) return null
 
-  const hAtT = incidentAt(params.segments, hAnchor!, params.endpointSnapPx).filter(
+  const hAtT = incidentAt(params.segments, hAnchor, params.endpointSnapPx).filter(
     (inc) => params.classified[inc.segIndex]?.kind === 'H',
   )
   if (hAtT.length < 2) return null
 
-  const hSeg = params.segments[hPick.segIndex]!
-  const vSeg = params.segments[vPick.segIndex]!
+  const hSeg = params.segments[hPick.segIndex]
+  const vSeg = params.segments[vPick.segIndex]
   const directHit = infiniteLineIntersection(hSeg, vSeg)
   if (directHit) {
-    const hJunctionDist = Math.hypot(directHit.x - hAnchor!.x, directHit.y - hAnchor!.y)
+    const hJunctionDist = Math.hypot(directHit.x - hAnchor.x, directHit.y - hAnchor.y)
     if (hJunctionDist <= params.nearbyWeldPx) return null
   }
 
   const synthetic = buildSyntheticBranchSegmentAtT({
-    tPoint: hAnchor!,
-    tipPoint: vAnchor!,
+    tPoint: hAnchor,
+    tipPoint: vAnchor,
   })
   if (!infiniteLineIntersection(hSeg, synthetic)) return null
 
@@ -94,6 +94,6 @@ export function tryHvChamferBridgeCandidate(params: {
     vSegmentIndex: vPick.segIndex,
     lengthPx: params.lengthPx,
     syntheticVSegment: synthetic,
-    branchTipPoint: { ...vAnchor! },
+    branchTipPoint: { ...vAnchor },
   }
 }
