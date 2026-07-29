@@ -1,0 +1,3 @@
+# Format-only commits that should be ignored by git blame.
+# Use: git config blame.ignoreRevsFile .git-blame-ignore-revs
+364c678 style: apply Prettier across frontend (printWidth 100)
