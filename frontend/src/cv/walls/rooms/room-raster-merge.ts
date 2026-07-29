@@ -285,10 +285,8 @@ function uniformCardinalParentLabel(params: {
   labelAt: (x: number, y: number) => number
   imageWidth: number
   imageHeight: number
-  maxMarchPx: number
   resolve: (label: number) => number
   componentsByLabel: Map<number, RasterRoomComponent>
-  shortSide: number
 }): number | null {
   const neighbors = cardinalNeighborRoots(params)
   if (neighbors.some((n) => n === null)) return null
@@ -303,10 +301,8 @@ export function majorityCardinalParentLabel(params: {
   labelAt: (x: number, y: number) => number
   imageWidth: number
   imageHeight: number
-  maxMarchPx: number
   resolve: (label: number) => number
   componentsByLabel: Map<number, RasterRoomComponent>
-  shortSide: number
 }): number | null {
   const neighbors = cardinalNeighborRoots(params)
   const valid = neighbors.filter((n): n is number => n !== null)

@@ -183,7 +183,7 @@ export function runDoorStagePipeline(
   })
 
   const surroundFiltered = existingDoorsOnly
-    ? { kept: fillResult.accepted, rejected: [] as const }
+    ? { kept: fillResult.accepted, rejected: [] as DoorRoomSurroundRejection[] }
     : filterRoomSurroundedHypotheses({
         hypotheses: fillResult.accepted,
         adjacency: clusterAdjacency,

@@ -228,18 +228,20 @@ export function detectLayer6ConnectorCandidates(params: {
 
     // Vermijd reparaties op volledig "remote" fallback-paren; die trekken ketens scheef.
     if (!hadLocalH && !hadLocalV && !syntheticV) continue
-    if (!h || (!v && !syntheticV)) continue
+    if (!h) continue
 
     if (syntheticV) {
       out.push({
         connectorIndex: entry.index,
-        hSegmentIndex: h!.segIndex,
-        vSegmentIndex: h!.segIndex,
+        hSegmentIndex: h.segIndex,
+        vSegmentIndex: h.segIndex,
         lengthPx: entry.lengthPx,
         syntheticVSegment: syntheticV,
       })
       continue
     }
+
+    if (!v) continue
 
     // Fallback-as moet lokaal genoeg zijn; anders trek je een verre tak naar een fout knooppunt.
     if (!hadLocalH) {

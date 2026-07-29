@@ -102,9 +102,15 @@ function setNumber(field: TuneField, event: Event): void {
   writeField(field, Number((event.target as HTMLInputElement).value))
 }
 
+/** Stap 2 toont ook `inkWall`, dat geen eigen B/W-tune heeft en dus niet kopieerbaar is. */
+type CopyTargetLayer = Extract<
+  PreprocessLayerId,
+  (typeof WORKSPACE_PREPROCESS_LAYER_ORDER)[number]
+>
+
 const copyTargetLayers = computed(() =>
   WORKSPACE_PREPROCESS_LAYER_ORDER.filter(
-    (id): id is PreprocessLayerId =>
+    (id): id is CopyTargetLayer =>
       isPreprocessLayerId(id) &&
       id !== currentLayerId.value &&
       (GAPS_TAB_VISIBLE || id !== 'gaps'),

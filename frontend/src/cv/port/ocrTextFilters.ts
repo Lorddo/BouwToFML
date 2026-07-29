@@ -228,7 +228,7 @@ function mergeGroup(group: OcrWordHit[]): OcrWordHit {
 }
 
 function mergeOneOrientation(words: OcrWordHit[]): OcrWordHit[] {
-  if (words.length <= 1) return words.map(stripPass)
+  if (words.length <= 1) return words
 
   const sorted =
     words[0]?.pass === 'vertical'
@@ -255,14 +255,6 @@ function mergeOneOrientation(words: OcrWordHit[]): OcrWordHit[] {
   return groups.map(mergeGroup)
 }
 
-/** Voeg dicht bij elkaar liggende woordfragmenten samen tot één masker-regio. */
-export function mergeAdjacentWordHits(words: OcrWordHit[]): OcrWordHit[] {
-  if (words.length <= 1) return words
-  const horizontal = words.filter((w) => w.pass === 'horizontal')
-  const vertical = words.filter((w) => w.pass === 'vertical')
-  return [...mergeOneOrientation(horizontal), ...mergeOneOrientation(vertical)]
-}
-
 function stripPass(hit: OcrWordHit): OcrTextCandidate {
   return {
     x: hit.x,
@@ -272,6 +264,14 @@ function stripPass(hit: OcrWordHit): OcrTextCandidate {
     text: hit.text,
     confidence: hit.confidence,
   }
+}
+
+/** Voeg dicht bij elkaar liggende woordfragmenten samen tot één masker-regio. */
+export function mergeAdjacentWordHits(words: OcrWordHit[]): OcrWordHit[] {
+  if (words.length <= 1) return words
+  const horizontal = words.filter((w) => w.pass === 'horizontal')
+  const vertical = words.filter((w) => w.pass === 'vertical')
+  return [...mergeOneOrientation(horizontal), ...mergeOneOrientation(vertical)]
 }
 
 export function filterAndMergeOcrHits(

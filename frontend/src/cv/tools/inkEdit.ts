@@ -11,11 +11,8 @@ export interface InkRectBounds {
 }
 
 function canvasDimensions(source: HTMLImageElement | HTMLCanvasElement): { width: number; height: number } {
-  if (source instanceof HTMLCanvasElement || typeof (source as HTMLCanvasElement).width === 'number') {
-    const canvas = source as HTMLCanvasElement
-    if (canvas.width > 0 && canvas.height > 0) {
-      return { width: canvas.width, height: canvas.height }
-    }
+  if (source.width > 0 && source.height > 0) {
+    return { width: source.width, height: source.height }
   }
   const img = source as HTMLImageElement
   return { width: img.naturalWidth, height: img.naturalHeight }

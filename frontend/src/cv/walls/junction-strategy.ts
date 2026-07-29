@@ -120,10 +120,6 @@ export async function runWallJunctionStrategy(params: {
     }
   }
 
-  if (phase === 'refine') {
-    throw new Error('refine-fase is vervangen door recalculate — gebruik recalculateFaces')
-  }
-
   if (phase === 'finalize') {
     if (!params.mat) {
       throw new Error('mat is vereist voor finalize-fase')

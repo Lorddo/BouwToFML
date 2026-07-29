@@ -376,9 +376,7 @@ defineExpose({ fit, imageObj, imgSize })
               fill:
                 faceBoxPreviewStroke === '#ef4444'
                   ? 'rgba(239, 68, 68, 0.12)'
-                  : faceBoxPreviewStroke === '#f59e0b'
-                    ? 'rgba(245, 158, 11, 0.14)'
-                    : 'rgba(30, 41, 59, 0.12)',
+                  : 'rgba(30, 41, 59, 0.12)',
               listening: false,
             }"
           />

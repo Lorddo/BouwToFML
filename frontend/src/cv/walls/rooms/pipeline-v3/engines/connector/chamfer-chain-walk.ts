@@ -236,9 +236,7 @@ export function buildSyntheticBranchSegmentAtT(params: {
   tipPoint: { x: number; y: number }
 }): Segment {
   return {
-    type: 'wall',
     a: { ...params.tPoint },
     b: { ...params.tipPoint },
-    confidence: 0.75,
   }
 }

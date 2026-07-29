@@ -1,4 +1,5 @@
 import type { ExtractionOutput } from '@/core/extraction'
+import type { DetectionLayerId } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
@@ -12,6 +13,21 @@ type JsonRoomClassifyState = Omit<
   rawLabelsData?: number[]
   baselineWallBwData?: number[]
 }
+
+type ExtractionMeta = NonNullable<ExtractionOutput['meta']>
+
+/**
+ * Opgeslagen variant van een detectie-output: TypedArrays zijn number[] zodat
+ * JSON.stringify werkt. Bewust een eigen type — de snapshot en de runtime-vorm
+ * zijn niet uitwisselbaar, ook al lijken ze op elkaar.
+ */
+export type JsonExtractionOutput = Omit<ExtractionOutput, 'meta'> & {
+  meta?: Omit<ExtractionMeta, 'roomClassifyState'> & {
+    roomClassifyState?: JsonRoomClassifyState
+  }
+}
+
+export type JsonTabDetectionOutputs = Record<DetectionLayerId, JsonExtractionOutput | null>
 
 function serializeRoomClassifyState(state: SerializedRoomClassifyState): JsonRoomClassifyState {
   return {
@@ -33,47 +49,52 @@ function deserializeRoomClassifyState(state: JsonRoomClassifyState): SerializedR
   }
 }
 
-function serializeOutput(output: ExtractionOutput | null): ExtractionOutput | null {
+function serializeOutput(output: ExtractionOutput | null): JsonExtractionOutput | null {
   if (!output) return null
   const state = output.meta?.roomClassifyState
-  const prepared: ExtractionOutput = state
-    ? {
-        ...output,
-        meta: {
-          ...output.meta,
-          extractorId: output.meta?.extractorId ?? 'geometry-lbe',
-          elapsedMs: output.meta?.elapsedMs ?? 0,
-          roomClassifyState: serializeRoomClassifyState(state),
-        },
-      }
-    : output
+  if (!state) {
+    // Zonder classify-state verschilt de snapshot-vorm niet van de runtime-vorm.
+    return clonePlain(output as JsonExtractionOutput)
+  }
+  const prepared: JsonExtractionOutput = {
+    ...output,
+    meta: {
+      ...output.meta,
+      extractorId: output.meta?.extractorId ?? 'geometry-lbe',
+      elapsedMs: output.meta?.elapsedMs ?? 0,
+      roomClassifyState: serializeRoomClassifyState(state),
+    },
+  }
   return clonePlain(prepared)
 }
 
 /** JSON-veilige kopie van tabOutputs — behoudt Int32Array-labels als number[]. */
-export function cloneTabOutputsForSnapshot(outputs: TabDetectionOutputs): TabDetectionOutputs {
-  const next: TabDetectionOutputs = { ...outputs }
-  for (const key of Object.keys(outputs) as Array<keyof TabDetectionOutputs>) {
+export function cloneTabOutputsForSnapshot(outputs: TabDetectionOutputs): JsonTabDetectionOutputs {
+  const next = {} as JsonTabDetectionOutputs
+  for (const key of Object.keys(outputs) as DetectionLayerId[]) {
     next[key] = serializeOutput(outputs[key])
   }
   return next
 }
 
 /** Herstel tabOutputs na JSON-parse — zet labels terug naar Int32Array. */
-export function restoreTabOutputsFromSnapshot(outputs: TabDetectionOutputs): TabDetectionOutputs {
-  const next: TabDetectionOutputs = { ...outputs }
-  for (const key of Object.keys(outputs) as Array<keyof TabDetectionOutputs>) {
+export function restoreTabOutputsFromSnapshot(
+  outputs: JsonTabDetectionOutputs,
+): TabDetectionOutputs {
+  const next = {} as TabDetectionOutputs
+  for (const key of Object.keys(outputs) as DetectionLayerId[]) {
     const output = outputs[key]
-    if (!output?.meta?.roomClassifyState) {
-      next[key] = output
+    const meta = output?.meta
+    if (!output || !meta?.roomClassifyState) {
+      // Zonder classify-state verschilt de snapshot-vorm niet van de runtime-vorm.
+      next[key] = output as ExtractionOutput | null
       continue
     }
-    const state = output.meta.roomClassifyState as JsonRoomClassifyState
     next[key] = {
       ...output,
       meta: {
-        ...output.meta,
-        roomClassifyState: deserializeRoomClassifyState(state),
+        ...meta,
+        roomClassifyState: deserializeRoomClassifyState(meta.roomClassifyState),
       },
     }
   }
@@ -117,6 +138,8 @@ export function enrichWallsOutputWithFaceState(
     walls: {
       ...walls,
       meta: {
+        extractorId: 'geometry-lbe',
+        elapsedMs: 0,
         ...walls.meta,
         roomClassifyState: nextState,
       },

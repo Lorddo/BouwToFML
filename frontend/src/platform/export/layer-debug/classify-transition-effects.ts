@@ -1,9 +1,4 @@
-import type {
-  ImprovementKind,
-  LayerId,
-  LayerTransitionDiff,
-  TransitionEffect,
-} from './types.ts'
+import type { ImprovementKind, LayerTransitionDiff, TransitionEffect } from './types.ts'
 import { formatSegmentLine } from './segment-geometry.ts'
 
 function junctionKindCorrection(
@@ -31,8 +26,6 @@ export function classifyTransitionEffects(
   const improvements: TransitionEffect[] = []
   const regressions: TransitionEffect[] = []
   let neutral = 0
-
-  const { from, to } = transition
 
   for (const item of transition.segments.merged) {
     const prevTotalLen = item.prev.reduce((sum, s) => sum + s.lengthPx, 0)
@@ -199,12 +192,12 @@ export function classifyTransitionEffects(
       regressions: regressions.length,
       neutral,
     },
-    improvements: sortEffects(improvements, from, to),
-    regressions: sortEffects(regressions, from, to),
+    improvements: sortEffects(improvements),
+    regressions: sortEffects(regressions),
   }
 }
 
-function sortEffects(effects: TransitionEffect[], _from: LayerId, _to: LayerId): TransitionEffect[] {
+function sortEffects(effects: TransitionEffect[]): TransitionEffect[] {
   return [...effects].sort((a, b) => {
     const aLen = Math.abs(a.lengthDeltaPx ?? a.endpointErrorPx ?? 0)
     const bLen = Math.abs(b.lengthDeltaPx ?? b.endpointErrorPx ?? 0)

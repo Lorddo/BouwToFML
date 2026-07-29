@@ -114,10 +114,8 @@ describe('room-raster-merge tiers', () => {
       labelAt,
       imageWidth: width,
       imageHeight: height,
-      maxMarchPx: 2000,
       resolve: (l) => l,
       componentsByLabel,
-      shortSide: 2000,
     })
     expect(parentLabel).toBe(1)
 

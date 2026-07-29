@@ -4,6 +4,7 @@ import { runPreprocessLayer, runPreprocessLayerFromGrayscale } from '@/cv/layers
 import { thickenLines } from '@/cv/port/cleanBinary'
 import { matToCanvas } from '@/cv/port/preprocess'
 import { resolveLayerPreprocess } from '@/cv/preprocess/layer-preprocess'
+import type { LayerContext } from '@/cv/layers/types'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 
 const ROOM_REFERENCE_LAYER_TUNE = {
@@ -18,7 +19,6 @@ const ROOM_REFERENCE_LAYER_TUNE = {
   smoothLinesEnabled: false,
   smoothLines: 1,
   removeSpecklesEnabled: true,
-  removeSpeckles: 80,
   removeHolesEnabled: false,
   removeHolesMaxPx: 15,
   thickenLinesEnabled: false,
@@ -29,6 +29,12 @@ const ROOM_REFERENCE_LAYER_TUNE = {
   erodeLinesEnabled: false,
   erodeLinesPx: 1,
   despeckleOpen: 0,
+  /**
+   * Despeckle staat aan maar op 0 px: effectief een no-op. Stond hier eerder als
+   * `removeSpeckles: 80`, een veldnaam die niet in PreprocessConfig bestaat en dus
+   * nooit is toegepast. Ophogen verandert de detectie-uitkomst en hoort pas te
+   * gebeuren als er E2E-fixtures zijn om dat te meten.
+   */
   despeckleMinPx: 0,
 } satisfies Partial<PreprocessConfig>
 
@@ -83,10 +89,10 @@ export function buildRoomReferenceMat(params: {
   /** Hergebruik grijswaarden uit classify (scheelt volledige image→gray pass). */
   sharedGrayscale?: OpenCV['Mat']
 }) {
-  const layerCtx = {
+  const layerCtx: LayerContext = {
     cv: params.cv,
     image: params.image,
-    examples: [] as unknown[],
+    examples: [],
     eraserMask: params.eraserMask,
     preprocess: {
       ...buildRoomReferencePreprocess(

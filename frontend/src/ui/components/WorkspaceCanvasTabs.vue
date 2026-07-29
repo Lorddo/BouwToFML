@@ -73,7 +73,7 @@ const showLines = defineModel<boolean>('showLines', { required: true })
         <input v-model="showWallLines" type="checkbox" />
         Centerlines
       </label>
-      <label v-if="flowStep === 'templates' || flowStep === 'result'">
+      <label v-if="flowStep === 'templates'">
         <input v-model="showLines" type="checkbox" />
         Ruwe Hough
       </label>
