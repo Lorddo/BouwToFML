@@ -364,6 +364,35 @@ Startcase: `Kinderdijkstraat 53 1` — 1 verdieping, 53 muren, `drawing.url` aan
 
 ---
 
+## ESC-tags geankerd (2026-07-29)
+
+| Beslissing | Detail |
+|------------|--------|
+| Tag-vorm | `// ESC:<ID> (<Cat>)` op eigen regel boven tak/tuning-key |
+| Omvang | 228 inventaris-ID's, 249 tags in `frontend/src` |
+| Checker | `npm run esc:check` — CI-poort na Lint |
+| Tagindex | `.cursor/docs/escalatiepaden-tagindex.md` (gegenereerd) |
+| Ledger | `.cursor/docs/escalatie-ledger.md` — verdicts (nog leeg) |
+| E2E-reservering | `EscalationLedger` in `tests/e2e/harness/`; layers-snapshot heeft vanaf eerste fixture een `escalations`-sleutel |
+| Waarom | Inventaris-regelnummers schuiven; zonder tags is het document binnen twee refactors archeologie |
+
+---
+
+## Run-journaal — batch nul escalatiepaden (2026-07-30)
+
+| Beslissing | Detail |
+|------------|--------|
+| Plaats | `frontend/src/core/diagnostics/` — leaf-module, geen UI/DOM, worker-veilig |
+| ID-registry | Verhuisd van `tests/e2e/harness/` naar `src/core/diagnostics/`; `--write-ids` schrijft daarheen (productiecode mag niet uit `tests/` importeren) |
+| Vorm | **Module-scoped** journaal + vrije functies, **niet** diagnostics-als-resultaat (zou ~130 signaturen raken; zie aanpak §5.6) |
+| Worker | Eigen journaal per request; reist mee in het antwoord en wordt in `useExtraction` samengevoegd |
+| Teller vs. event | `counts` per ESC-ID = waarheid (= grootboek-veld); `events` begrensd op 3/ID en 400/run; hot paths gebruiken `tally(id, niveau)` zonder allocatie |
+| Gedegradeerd | Alleen een ingeslikte exceptie zet die vlag; zichtbaar in status-regel en in `journal` van het layer-debug-rapport |
+| Buiten de inventaris | Aparte `DiagnosticCode` (nu `REF_COUNT_BELOW_ADVICE`), blijft buiten `escalations` — geen verzonnen ESC-ID's in de bevroren inventaris |
+| Harde grens | Geen drempel gewijzigd, geen pad verwijderd |
+
+---
+
 ## Nog open
 
 - Geschikte OpenCV browser-build/versie

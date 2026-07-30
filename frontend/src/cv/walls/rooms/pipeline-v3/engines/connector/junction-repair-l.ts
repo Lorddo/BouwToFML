@@ -28,6 +28,7 @@ export function repairLAtPoint(params: {
     params.armDetectPx,
     params.hvBandPx,
   )
+  // ESC:W-42 (B)
   if (
     diagIncidentsBefore.some(
       (incident) =>

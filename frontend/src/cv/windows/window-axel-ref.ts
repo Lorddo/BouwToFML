@@ -1,3 +1,4 @@
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import { pickExtremeKozijnFaces, resolveKopeindeAxisBand } from '@/cv/refs/ref-general-categories'
 import { refFaceWithGeom, type RefFaceGeom } from '@/cv/refs/ref-face-dual-space'
 import type { OpeningRefProfile, RefFace, RefFaceProfile } from '@/cv/refs/types'
@@ -86,6 +87,7 @@ function isHorizontalRailFace(face: RefFace, spanW: number): boolean {
   return face.bbox.width > face.bbox.height * 2.5 && face.bbox.width > spanW * 0.15
 }
 
+// ESC:R-02 (A)
 /**
  * Echte top/bottom rails: horizontale faces **buiten** de as-band.
  * Met `axisBand`: top en/of bottom onafhankelijk (geen fallthrough naar as-glas).
@@ -259,6 +261,7 @@ export function analyzeWindowAxelRef(params: {
         axisBand,
       })
       if (rails) pushRails(rails)
+      // ESC:R-03 (A)
     } else {
       const rails = pickExtremeHorizontalRails({
         faces: faceProfile.faces,
@@ -305,8 +308,17 @@ export function analyzeWindowAxelRef(params: {
       axisYMin: 0,
       axisYMax: Math.max(0, fullYMax),
     })
+    if (fullStripHeightsPx.length === 0 && stripHeightsPx.length > 0) {
+      noteMissingMeasurement(
+        'R-05',
+        'window-axel-ref.collectVerticalBandHeights',
+        'geen volle-strip hoogtes — terug naar stripHeightsPx',
+        { stripHeights: stripHeightsPx.length },
+      )
+    }
     const candidate = {
       stripHeightsPx,
+      // ESC:R-05 (E)
       fullStripHeightsPx: fullStripHeightsPx.length > 0 ? fullStripHeightsPx : stripHeightsPx,
       axisBandHeightPx: axisBand.yMax - axisBand.yMin + 1,
     }
@@ -324,6 +336,7 @@ export function analyzeWindowAxelRef(params: {
   const axisBandHeightPx = Math.max(1, best.axisBandHeightPx)
   const fullStripHeightsPx = best.fullStripHeightsPx
   const fullStripCount = Math.max(1, fullStripHeightsPx.length)
+  // ESC:R-02 (A)
   // Asymmetrisch: top en bottom onafhankelijk (alleen echte rails buiten as-band).
   const topRailHeightPx =
     topRailFacesWhite.length > 0
@@ -341,6 +354,7 @@ export function analyzeWindowAxelRef(params: {
     bottomRailFacesInk.length > 0
       ? round1(median(bottomRailFacesInk.map((face) => face.bbox.height)))
       : null
+  // ESC:R-04 (C)
   // Size-range: ink wanneer dual voor die rail; anders white.
   const topRailRangeFaces =
     topRailFacesInk.length > 0

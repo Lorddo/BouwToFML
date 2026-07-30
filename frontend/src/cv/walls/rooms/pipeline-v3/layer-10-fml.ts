@@ -58,6 +58,7 @@ export function runLayer10Fml(params: {
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
     })
+    // ESC:W-50 (B)
     const chainGuard = withTopologyGuard({
       segments: face.segments,
       policy: policy.collapse,
@@ -78,6 +79,7 @@ export function runLayer10Fml(params: {
       fakeLRemoved += chainGuard.result.stats.fakeLRemoved
     }
 
+    // ESC:W-51 (A)
     // Axis polish before micro-corner so 0px / near-collinear H/V share one line.
     const straightened = straightenCollinearAxisChains(segmentsOut, policy.collapse)
     segmentsOut = straightened.segments
@@ -87,6 +89,7 @@ export function runLayer10Fml(params: {
       axisEndpointsAdjusted += straightened.stats.endpointsAdjusted
     }
 
+    // ESC:W-52 (B)
     const microGuard = withTopologyGuard({
       segments: segmentsOut,
       policy: policy.collapse,

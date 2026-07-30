@@ -27,9 +27,11 @@ function resolveClassForLabel(
   const direct = classificationByLabel.get(label)
   if (direct) return direct
   const root = resolveMergedLabel(label, parentMap)
+  // ESC:W-06 (E)
   return classificationByLabel.get(root) ?? 'surface'
 }
 
+// ESC:W-02 (A)
 export function demoteExteriorPocketFaces(params: {
   components: RasterRoomComponent[]
   rawLabelsData: Int32Array

@@ -1,4 +1,5 @@
 import { computed, ref, type Ref } from 'vue'
+import { noteSwallowedError } from '@/core/diagnostics'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
 import {
@@ -122,7 +123,11 @@ export function createWorkspaceFmlGenerate(
         layer14Windows,
       })
       return { plan, origin, pxPerMmX, pxPerMmY }
-    } catch {
+      // ESC:O-38 (D)
+    } catch (error) {
+      noteSwallowedError('O-38', 'workspace-fml-generate.generatedBundle', error, {
+        effect: 'lege FML-preview zonder uitleg',
+      })
       return null
     }
   })

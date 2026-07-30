@@ -63,6 +63,7 @@ export function cleanupTxMicroSegments(
       continue
     }
 
+    // ESC:W-20 (B)
     // Apply on a candidate so one bad stub cannot poison the whole batch
     // (full-face tx was rejected for "losse delen" while this T needed reconnect).
     const candidate = cloneSegments(work)

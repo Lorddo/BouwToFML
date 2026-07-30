@@ -6,6 +6,7 @@ import type {
   DoorSwingRefBand,
 } from './types'
 
+// ESC:D-25 (B)
 export const DOOR_FILL_BAND_MIN_RATIO = 0.8
 export const DOOR_FILL_BAND_MAX_RATIO = 1.2
 

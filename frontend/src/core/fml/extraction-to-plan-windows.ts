@@ -31,6 +31,7 @@ export function mapLayer14WindowsToOpenings(params: {
       params.pxPerMmX,
       params.pxPerMmY,
     )
+    // ESC:X-11 (E)
     return {
       refid: window.fmlRefId,
       type: 'window',

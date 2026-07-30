@@ -20,6 +20,7 @@ function assembleEvidenceResult(params: {
   }
 }
 
+// ESC:R-21 (D)
 /**
  * Late Stage-3 doorframe-retarget: hyp-faces + as-overlap met deurboog
  * (geen framing-evidence). Retargeted accepted → doorframes; raw reject-stats behouden.

@@ -35,6 +35,7 @@ export function buildWallRejectedFillCandidates(params: {
   const matchWallRescue = params.matchWallRescue ?? wallRescueMatch
   const candidates: DoorSwingHypothesis[] = []
   const sorted = [...params.diagnostics].sort((a, b) => a.root - b.root)
+  // ESC:D-24 (A)
   for (const row of sorted) {
     if (row.status !== ('rejected_outside_or_wall' satisfies DoorSwingDiagnosticStatus)) continue
     if (row.className !== 'wall') continue
@@ -63,6 +64,7 @@ export function mergeHypothesesForFillStage(params: {
   for (const hyp of params.stage1Hypotheses) {
     for (const faceId of hyp.faceIds) claimed.add(faceId)
   }
+  // ESC:D-26 (A)
   const extras = params.wallFillCandidates.filter((hyp) =>
     hyp.faceIds.every((faceId) => !claimed.has(faceId)),
   )

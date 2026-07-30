@@ -1,5 +1,6 @@
 import type { DoorOpeningAxis } from './types'
 
+// ESC:D-49 (A)
 /** L11 snap-tolerances — waarden ongewijzigd t.o.v. pre-refactor literals. */
 export const DOOR_WALL_SNAP_TUNING = {
   thinBBoxRatio: 1.45,

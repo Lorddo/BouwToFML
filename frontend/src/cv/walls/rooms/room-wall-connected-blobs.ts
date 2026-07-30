@@ -157,6 +157,7 @@ export function splitConnectedWallBlobs(params: {
     })
   }
 
+  // ESC:W-01 (E)
   const keptCandidates = keepLargestOnly
     ? candidates.length > 0
       ? [candidates.reduce((best, next) => (next.areaPx > best.areaPx ? next : best))]

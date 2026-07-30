@@ -86,6 +86,7 @@ export function snapDoorsToWalls(params: {
     })
     if (!hasDoorFacePixel) continue
 
+    // ESC:D-44 (P)
     // Path A: explicit IDs → 1-hop/bbox discovery → as-grow → bind.
     let doorframeUnion: BBoxBounds | null = null
     if (door.doorframeFaceIds && door.doorframeFaceIds.length > 0) {
@@ -95,6 +96,7 @@ export function snapDoorsToWalls(params: {
         doorframeBBoxByRoot,
       })
     }
+    // ESC:D-45 (A)
     if (!doorframeUnion) {
       doorframeUnion = findAdjacentDoorframeUnionBounds({
         doorBounds: bounds,
@@ -108,6 +110,7 @@ export function snapDoorsToWalls(params: {
         expandPx,
       })
     }
+    // ESC:D-46 (A)
     if (!doorframeUnion && doorframeBBoxByRoot.size > 0) {
       const doorRoots = new Set<number>()
       for (const id of faceSet) {
@@ -187,6 +190,7 @@ export function snapDoorsToWalls(params: {
           )
         : null
     if (wallUnion) {
+      // ESC:D-50 (A)
       const pathBSeg = tryBindDoorToAnchorSegment({
         door,
         doorBounds: bounds,
@@ -215,6 +219,7 @@ export function snapDoorsToWalls(params: {
               y0: bounds.y0,
               y1: bounds.y1,
             }
+      // ESC:D-51 (A)
       const pathBMask = tryBindDoorToBounds({
         door,
         bounds: pathBBounds,
@@ -230,6 +235,7 @@ export function snapDoorsToWalls(params: {
       }
     }
 
+    // ESC:D-52 (A)
     // Legacy: geen ink-wall adjacency → wallMask op deur-bbox (unit tests / oude fixtures).
     const pathBLegacy = tryBindDoorToBounds({
       door,

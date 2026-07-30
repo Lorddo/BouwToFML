@@ -72,6 +72,7 @@ export function detectLayer6ConnectorCandidates(params: {
       continue
     }
 
+    // ESC:W-33 (A)
     const landingGeom = resolveLandingChamferGeometry({
       segments: params.segments,
       diagonal: connector,

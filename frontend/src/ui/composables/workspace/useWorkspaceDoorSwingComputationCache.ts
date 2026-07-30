@@ -68,6 +68,7 @@ export function createDoorSwingComputationCache() {
     faceOverrides?: Map<number, RoomRasterClass>,
     cache?: RoomRasterCache | null,
   ): FaceDualSpace {
+    // ESC:O-18 (B)
     // Live roomRasterCache heeft eigen epoch-cache in ensureFaceDualSpace —
     // geen tweede signature/epoch-laag (stale dual → existingDoorsOnly leeg → wipe).
     if (cache) {
@@ -79,6 +80,7 @@ export function createDoorSwingComputationCache() {
       })
     }
 
+    // ESC:O-19 (D)
     const rawLabelsData = state.rawLabelsData ?? state.labelsData
     const overrideSig = faceOverrides
       ? [...faceOverrides.entries()]

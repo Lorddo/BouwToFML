@@ -22,6 +22,7 @@ function sampleSegmentThicknessPx(params: {
 }): number {
   const len = segmentLength(params.segment)
   if (len <= 1e-3) {
+    // ESC:W-46 (E)
     return params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
   }
   const inset =

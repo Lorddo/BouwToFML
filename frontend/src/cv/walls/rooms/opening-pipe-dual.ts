@@ -19,6 +19,7 @@ export type PrepareOpeningPipeDualResult = {
   classificationByLabel: Map<number, RoomRasterClass>
 }
 
+// ESC:R-01 (C)
 /**
  * Opening-pipeline bootstrap: enclosed seed-detach → `rebindFaceDualWhite`.
  * Deur merge (`buildDoorMergedForPipe`) blijft vóór deze stap; cluster-adjacency ná (deur).

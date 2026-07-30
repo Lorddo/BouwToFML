@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import {
@@ -205,6 +206,7 @@ function cropRectFromWallBw(params: {
   }
 }
 
+// ESC:REF-01 (A)
 /**
  * Crop → wallLayer-B/W (zelfde tune als plattegrond) → optionele as-align.
  * Prefer `baseBw` / `sharedWallBwMat` (post-bake inkl. inkt); fallback rebuild vanaf kleur.
@@ -224,6 +226,7 @@ export function cropRectToLocalBw(params: {
 }): RefCropBwResult {
   let owned = false
   let wallBwMat = params.sharedWallBwMat
+  tally('REF-01', params.sharedWallBwMat ? 'sharedWallBw' : params.baseBw ? 'baseBw' : 'rebuild')
   if (!wallBwMat && params.baseBw) {
     wallBwMat = grayMatFromBwBytes(
       params.cv,

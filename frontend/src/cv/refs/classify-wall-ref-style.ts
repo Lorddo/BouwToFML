@@ -53,6 +53,7 @@ export function classifyWallRefStyleFromBw(params: {
   return classifyFromCropBw(crop.data, crop.width, crop.height)
 }
 
+// ESC:REF-11 (A)
 /**
  * Fallback: cropt uit wallLayer-rebuild of `sharedWallBwMat` / `baseBw`.
  * Prefer `classifyWallRefStyleFromBw` wanneer UI-`baseBw` beschikbaar is.

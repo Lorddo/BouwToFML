@@ -61,6 +61,7 @@ export function repairLayer6JunctionNodes(params: {
     const before = cloneSegments(work)
     let changed = false
     let removed = 0
+    // ESC:W-40 (B)
     if (node.kind === 'L') {
       if (
         isChamferLandingForTNode({
@@ -119,6 +120,7 @@ export function repairLayer6JunctionNodes(params: {
       continue
     }
 
+    // ESC:W-39 (B)
     if (params.validateCandidate) {
       const compact = dropZeroLengthSegments(work)
       const ok = params.validateCandidate(before, compact.segments)

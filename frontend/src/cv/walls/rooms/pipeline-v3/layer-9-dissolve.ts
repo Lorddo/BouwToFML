@@ -58,6 +58,7 @@ export function runLayer9Dissolve(params: {
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
     })
+    // ESC:W-49 (B)
     const chainGuard = withTopologyGuard({
       segments: face.segments,
       policy: policy.collapse,

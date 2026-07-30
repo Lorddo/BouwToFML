@@ -1,3 +1,4 @@
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import { cropRegion } from './ref-crop-bw'
 import { labelInkComponents, resolveOpeningUnits } from './ref-blob'
@@ -159,10 +160,17 @@ function buildEnclosureFaceMask(
     const role = byLabel.get(face.label) ?? face.role
     if (allowRole(role)) targetLabels.add(face.label)
   }
+  // ESC:REF-08 (E)
   if (targetLabels.size === 0) {
     for (const face of roles) {
       if (allowRole(face.role)) targetLabels.add(face.label)
     }
+    noteMissingMeasurement(
+      'REF-08',
+      'ref-face-crop.buildTargetMask',
+      'geen target-labels in face-profiel — alle toegestane rollen meegenomen',
+      { fallbackLabels: targetLabels.size },
+    )
   }
   const out = new Uint8Array(width * height)
   if (targetLabels.size === 0) return out
@@ -228,8 +236,15 @@ function collectInkLabelsTouchingMask(
       }
     }
   }
+  // ESC:REF-07 (E)
   if (keep.size === 0) {
     for (const blob of ink.blobs) keep.add(blob.label)
+    noteMissingMeasurement(
+      'REF-07',
+      'ref-face-crop.resolveInkLabels',
+      'geen inkt raakt de mask — alle ink-labels behouden',
+      { fallbackLabels: keep.size },
+    )
   }
   return { labels: ink.labels, keep }
 }
@@ -293,7 +308,16 @@ export function resolveFaceCropBBox(params: {
       faceMask,
       maxInkDistancePx,
     )
+    // ESC:REF-06 (E)
     const hasInk = maskedData.some((v) => v < 128)
+    if (!hasInk) {
+      noteMissingMeasurement(
+        'REF-06',
+        'ref-face-crop.cropFaceRegion',
+        'geen inkt binnen de polygon-mask — ruwe data als crop-bron',
+        { maxInkDistancePx },
+      )
+    }
     const useData = hasInk ? maskedData : params.data
     const useMask = hasInk ? regionMask : undefined
     const fallbackBounds = findInkBounds(useData, params.width, params.height, padPx) ?? {

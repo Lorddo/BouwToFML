@@ -240,6 +240,7 @@ export async function runRefStages(params: {
       straightened.height,
     ).labels
 
+    // ESC:REF-05 (E)
     const unitsResolved =
       params.kind === 'wall'
         ? null

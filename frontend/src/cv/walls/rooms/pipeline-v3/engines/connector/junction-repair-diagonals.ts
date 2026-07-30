@@ -43,6 +43,7 @@ export function diagonalIncidentsAtPoint(
     .filter((incident) => incident.kind === 'D')
 }
 
+// ESC:W-41 (B)
 /** Chamfer-diagonaal waarvan het verre eind buiten armDetect ligt → connector-pad, niet junction-snap. */
 function isUnretractableChamferDiagonal(params: {
   segment: Segment

@@ -1,3 +1,4 @@
+import { noteDiscardedMeasurement } from '@/core/diagnostics'
 import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import { resolveEffectiveFmlWallThicknessLimits } from './fml-wall-thickness-limits'
@@ -102,6 +103,7 @@ export function buildFmlThicknessChains(
     }
   }
 
+  // ESC:X-04 (A)
   // Brug-regel: dik-dun-dik op dezelfde lijn blijft één keten.
   // Dunne tussensegmenten (bv kozijn/ruis) verbinden twee gelijke buitenbanden.
   for (let bridgeIndex = 0; bridgeIndex < count; bridgeIndex += 1) {
@@ -154,6 +156,7 @@ function averageThicknessCm(values: number[]): number {
   return finite.reduce((sum, value) => sum + value, 0) / finite.length
 }
 
+// ESC:X-03 (E)
 function resolveChainBand(
   chain: number[],
   walls: Wall[],
@@ -183,12 +186,17 @@ function resolveBandThicknessCm(band: FmlThicknessBand, limits: FmlWallThickness
   return effective.maxCm
 }
 
+/** Elke geharmoniseerde muur krijgt deze balans; overschrijft de gemeten waarde (ESC:X-01). */
+const HARMONIZED_WALL_BALANCE = 0.5
+
+// ESC:X-05 (E)
 /** Afronden op 1 decimaal — discrete FML-waarde uit ketengemiddelde. */
 export function roundFmlThicknessCm(value: number): number {
   if (!Number.isFinite(value)) return 10
   return Math.round(value * 10) / 10
 }
 
+// ESC:X-02 (E)
 /**
  * Harmoniseert muurdikte per keten en mapt naar absolute min/mid/max exportdiktes.
  * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits.
@@ -212,16 +220,37 @@ export function harmonizeFmlWallThickness(
 
       return {
         ...floor,
-        walls: floor.walls.map((wall, index) => ({
-          ...wall,
-          thickness:
+        walls: floor.walls.map((wall, index) => {
+          const exportThickness =
             thicknessByIndex.get(index) ??
             resolveBandThicknessCm(
               classifyFmlThicknessBand(roundFmlThicknessCm(wall.thickness), boundaries),
               limits,
-            ),
-          balance: 0.5,
-        })),
+            )
+          if (exportThickness !== wall.thickness) {
+            noteDiscardedMeasurement(
+              'X-02',
+              'harmonizeFmlWallThickness',
+              wall.thickness,
+              exportThickness,
+              { chained: thicknessByIndex.has(index) },
+            )
+          }
+          if (wall.balance != null && wall.balance !== HARMONIZED_WALL_BALANCE) {
+            noteDiscardedMeasurement(
+              'X-01',
+              'harmonizeFmlWallThickness',
+              wall.balance,
+              HARMONIZED_WALL_BALANCE,
+            )
+          }
+          return {
+            ...wall,
+            thickness: exportThickness,
+            // ESC:X-01 (E)
+            balance: HARMONIZED_WALL_BALANCE,
+          }
+        }),
       }
     }),
   }

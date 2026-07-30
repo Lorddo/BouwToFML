@@ -251,6 +251,7 @@ export function resolveSwingHingeFromPolygon(params: {
     if (candidate) rawCandidates.push(candidate)
   }
   const candidates = dedupeCandidates(rawCandidates, options)
+  // ESC:REF-13 (A)
   // 1) Muur-as-hoek (L/R of T/B) — voorkomt midden-scharnier op boogkoord × trapjes-as.
   // 2) Fallback: klassieke as-paar picker mét side-guard.
   const picked =

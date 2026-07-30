@@ -170,6 +170,7 @@ export function buildDoorSwingMask(params: {
 }): SwingMaskCrop | null {
   let painted = paintSwingFaceMask(params)
   if (!painted) return null
+  // ESC:D-54 (A)
   if (params.cv && countUniqueSwingFaceIds(params.faceIds) > 1) {
     painted = closeClusterSwingMaskGaps({
       cv: params.cv,
@@ -302,6 +303,7 @@ export function measureSwingMaskSideContacts(params: {
         inkThreshold,
       )
       const dBox = distanceToWallBBoxes(wallBBoxes, fx, fy, normalX, normalY, searchDepth)
+      // ESC:D-55 (C)
       const distancePx = Math.min(dMask, dBox)
       if (!Number.isFinite(distancePx)) return
       distanceSum += distancePx

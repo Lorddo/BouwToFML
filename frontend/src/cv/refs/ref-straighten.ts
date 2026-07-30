@@ -259,6 +259,7 @@ export function straightenRefLast(params: {
   rotated180: boolean
   totalCorrectionDeg: number
 } {
+  // ESC:REF-03 (A)
   // Openingen: as recht houden > micro-deskew. Korte kozijnen + aliasing geven
   // vaak ~0.5–1° valse skew; PCA op asymmetrische eindstukken maakt het erger.
   const isOpening = params.kind === 'door' || params.kind === 'window'

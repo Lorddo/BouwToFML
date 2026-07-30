@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 
 /**
@@ -72,6 +73,7 @@ function touchesOppositeSides(
   return null
 }
 
+// ESC:REF-02 (A)
 /**
  * Hoekcorrectie (UI-graden, + = klokwijs) zodat dominante lijnen H/V worden.
  * Exact: atan2 van de gekozen lijn, gevouwen naar as, daarna tegendraaien.
@@ -92,6 +94,7 @@ function estimateInkAxisCorrectionDeg(cv: OpenCV, bwMat: OpenCV['Mat']): number 
     const best = spanning[0]
     const deviation = foldToNearestAxisDeviation(best.s.angleDeg)
     const uiDeg = -deviation
+    tally('REF-02', 'spanning')
     if (Math.abs(uiDeg) < 0.15) return 0
     return Math.max(-MAX_ABS_CORRECTION_DEG, Math.min(MAX_ABS_CORRECTION_DEG, uiDeg))
   }
@@ -104,12 +107,14 @@ function estimateInkAxisCorrectionDeg(cv: OpenCV, bwMat: OpenCV['Mat']): number 
     if (Math.abs(deviation) <= 25) {
       const uiDeg = -deviation
       if (Math.abs(uiDeg) >= 0.15) {
+        tally('REF-02', 'longestLine')
         return Math.max(-MAX_ABS_CORRECTION_DEG, Math.min(MAX_ABS_CORRECTION_DEG, uiDeg))
       }
     }
   }
 
   // 3) Fallback: Δy ink links vs rechts → helling over volle breedte
+  tally('REF-02', 'edgeInkHeights')
   return estimateAxisFromEdgeInkHeights(bwMat)
 }
 

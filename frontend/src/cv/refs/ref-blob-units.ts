@@ -1,3 +1,4 @@
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import type { RefBBox, RefBlobUnit, RefPoint } from './types'
 import { filterSignificantBlobs, isInk, labelInkComponents, type AxisSpan } from './ref-blob-label'
 import {
@@ -156,6 +157,7 @@ function tightInkBBox(
   }
 }
 
+// ESC:REF-04 (A)
 /**
  * Opening-units na horizontale normalisatie:
  * 1) vind smalle verticale kozijn-stijlen
@@ -274,7 +276,14 @@ export function resolveOpeningUnits(params: {
       : unitsRaw
   if (units.length === 0) units = unitsRaw
 
+  // ESC:REF-05 (E)
   if (params.singleUnit && units.length > 1) {
+    noteMissingMeasurement(
+      'REF-05',
+      'ref-blob-units.resolveUnits',
+      'singleUnit gevraagd — losse units samengevoegd tot één opening',
+      { mergedUnits: units.length },
+    )
     let minX = width
     let minY = height
     let maxX = 0

@@ -1,3 +1,4 @@
+import { noteCascadeLevel, noteEvidenceMissing } from '@/core/diagnostics'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
 import { rootFacesFromSpace } from './window-dual-faces'
@@ -101,6 +102,7 @@ export function filterWindowsByRefEvidence(params: {
   const rejectReasonById = new Map<string, WindowEvidenceRejectReason>()
   const stripStackFailedIds = new Set<string>()
 
+  // ESC:R-16 (A)
   /**
    * Per hyp: matched REF bepaalt pad.
    * - minstens één rail (top en/of bottom) → strip_stack (grow); bij fail → framing als REF die heeft
@@ -137,6 +139,10 @@ export function filterWindowsByRefEvidence(params: {
           consumedByStripStack.add(seed.id)
           rejectReasonById.delete(seed.id)
           stripStackFailedIds.delete(seed.id)
+          noteCascadeLevel('R-16', 'window-evidence-filter', 'strip_stack', {
+            hypothesis: seed.id,
+            evidenceFaces: evidenceFaceIds.length,
+          })
           accepted.push({
             hypothesis: seed,
             evidence: 'strip_stack',
@@ -158,6 +164,10 @@ export function filterWindowsByRefEvidence(params: {
         inkFaces,
       })
       if (framing.ok) {
+        noteCascadeLevel('R-16', 'window-evidence-filter', 'framing', {
+          hypothesis: seed.id,
+          evidenceFaces: framing.faceIds.length,
+        })
         keptIds.add(seed.id)
         accepted.push({
           hypothesis: seed,
@@ -170,8 +180,15 @@ export function filterWindowsByRefEvidence(params: {
       continue
     }
 
+    // ESC:R-16 (A)
     // Geen top/bottom én geen framing → Stage-1 stack doorlaten (niet bij framing-only modes).
     if (!hasRails && !hasFraming && allowStripStack) {
+      noteEvidenceMissing(
+        'R-16',
+        'window-evidence-filter',
+        'raam geaccepteerd zonder rails- of framing-bewijs (passthrough Stage-1)',
+        { hypothesis: seed.id, hasMatchedRef: matchedRef != null, faces: seed.faceIds.length },
+      )
       keptIds.add(seed.id)
       consumedByStripStack.add(seed.id)
       rejectReasonById.delete(seed.id)

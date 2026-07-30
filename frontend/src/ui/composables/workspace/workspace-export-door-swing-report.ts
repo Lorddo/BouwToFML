@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import type { PreprocessConfig } from '@/platform/image'
 import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import type { SelectionRect } from '@/platform/selection'
@@ -172,6 +173,7 @@ export function createWorkspaceExportDoorSwingReport(deps: WorkspaceExportDoorSw
         classificationByLabel,
         referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,
       })
+      // ESC:O-41 (D)
       // Prefer live L11/L12 (same snapshot as UI/FML). Re-snap only when live L12 is empty
       // (e.g. export vóór afronden / geen door-faces pass) so the report still has openings.
       const wallsOut = deps.tabOutputs.value.walls
@@ -181,6 +183,12 @@ export function createWorkspaceExportDoorSwingReport(deps: WorkspaceExportDoorSw
       let orientedDoors: OrientedDoor[] = deps.orientedDoors?.value ?? []
       const hasLiveL12 = orientedDoors.length > 0
       if (!hasLiveL12 && maskRle && segments.length > 0 && resolvedDoors.length > 0) {
+        noteMissingMeasurement(
+          'O-41',
+          'workspace-export-door-swing-report',
+          'geen live L12 — rapport snapt en oriënteert opnieuw',
+          { resolvedDoors: resolvedDoors.length, segments: segments.length },
+        )
         const wallMask = decodeMaskRle(maskRle)
         const thickness = deps.referenceWallThicknessPx?.value ?? undefined
         const maskFiltered = filterDoorsByKeptWallMaskContact({

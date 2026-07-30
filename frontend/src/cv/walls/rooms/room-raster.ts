@@ -124,6 +124,7 @@ function isReservedSurfaceWallLike(r: number, g: number, b: number): boolean {
   return rgbChroma(r, g, b) < MIN_SURFACE_CHROMA && lightness < MAX_WALL_LIKE_GRAY_LIGHTNESS
 }
 
+// ESC:W-05 (F)
 /**
  * Deterministische pastel per face-label. Vermijdt amber/cyaan hue-bands
  * (`door` / `window`) én donker/bijna-grijs (`wall`).

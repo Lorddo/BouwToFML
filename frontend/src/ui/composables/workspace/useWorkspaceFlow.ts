@@ -85,6 +85,7 @@ export function useWorkspaceFlow(deps: {
           hasWallRect: deps.rects.value.some((rect) => rect.type === 'wall'),
           vectorCacheLoading: deps.vectorCacheLoading.value,
         })
+      // ESC:O-42 (B)
       case 'templates':
         if (deps.templateTab.value === 'walls' && !deps.wallsDetectionComplete?.()) {
           return false

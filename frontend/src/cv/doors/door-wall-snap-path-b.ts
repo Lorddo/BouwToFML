@@ -33,6 +33,7 @@ function swingContactToSideContact(contact: SwingMaskSideContact): SideContact {
  * Path B primair: as/side uit gemergde swing-mask ↔ muur (wallMask of adjacent
  * wall-bboxes) — niet uit wall-union aspect (dfH≥dfW faalt in hoeken).
  */
+// ESC:D-48 (A)
 export function tryBindDoorViaSwingMaskContact(params: {
   door: ResolvedDoorCandidate
   doorBounds: BBoxBounds

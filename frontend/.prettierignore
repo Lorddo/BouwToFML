@@ -7,4 +7,5 @@ tests/archive
 vite.config.js
 vite.config.d.ts
 vite/*.js
+vite/*.d.ts
 .vitest-report.json

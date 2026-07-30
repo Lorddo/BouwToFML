@@ -1,3 +1,4 @@
+import { summarizeRunJournal } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type { BoundWindow, WindowBindRejectReason, WindowBindRejection } from '@/cv/windows'
@@ -107,6 +108,7 @@ function buildLayer12(params: {
 }): LayerDebugLayer12 | undefined {
   if (params.boundDoors.length <= 0 && params.orientedDoors.length <= 0) return undefined
   const orientedIds = new Set(params.orientedDoors.map((door) => door.doorId))
+  // ESC:X-26 (E)
   const skipped: LayerDebugDoorOrientSkipped[] = params.boundDoors
     .filter((door) => !orientedIds.has(door.doorId))
     .map((door) => ({
@@ -219,5 +221,6 @@ export function buildLayerDebugReport(params: {
     ...(wallTransitions.length > 0 ? { wallTransitions } : {}),
     ...(openings ? { openings } : {}),
     ...(openingsSummary ? { openingsSummary } : {}),
+    journal: summarizeRunJournal(),
   }
 }

@@ -1,3 +1,4 @@
+import { noteGatesDisabled } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { prepareOpeningPipeDual } from '@/cv/walls/rooms/opening-pipe-dual'
@@ -133,6 +134,14 @@ export function runDoorStagePipeline(
 
   const { dual } = params
   const existingDoorsOnly = params.existingDoorsOnly === true
+  if (existingDoorsOnly) {
+    noteGatesDisabled('D-61', 'runDoorStagePipeline', [
+      'wall-fill',
+      'room-surround',
+      'wall-touch',
+      'bridge-promote',
+    ])
+  }
   const classificationGroupBy = params.classificationGroupBy ?? 'component'
   const merged = buildDoorMergedForPipe(dual)
 
@@ -167,6 +176,7 @@ export function runDoorStagePipeline(
         : {}),
   })
 
+  // ESC:D-61 (D)
   const wallFillCandidates = existingDoorsOnly
     ? []
     : buildWallRejectedFillCandidates({
@@ -182,6 +192,7 @@ export function runDoorStagePipeline(
     refBands: params.refBands,
   })
 
+  // ESC:D-61 (D)
   const surroundFiltered = existingDoorsOnly
     ? { kept: fillResult.accepted, rejected: [] as DoorRoomSurroundRejection[] }
     : filterRoomSurroundedHypotheses({
@@ -213,6 +224,7 @@ export function runDoorStagePipeline(
   })
 
   const stage2BeforeWallTouch = [...surroundFiltered.kept, ...angleRescue.accepted]
+  // ESC:D-61 (D)
   const wallTouchFiltered = existingDoorsOnly
     ? { kept: stage2BeforeWallTouch, rejected: [] as DoorWallTouchRejection[] }
     : filterWallUntouchedHypotheses({
@@ -228,6 +240,7 @@ export function runDoorStagePipeline(
     wallTouchFiltered.rejected.length
 
   const bridgeClassification = params.bridgeClassificationByLabel ?? detachedClassificationByLabel
+  // ESC:D-61 (D)
   const bridgeResult = existingDoorsOnly
     ? { allFaceIds: [] as number[], byHypothesisId: new Map<string, number[]>() }
     : findDoorBridgeWallFaces({
@@ -256,6 +269,7 @@ export function runDoorStagePipeline(
     pxPerMmX: params.pxPerMmX,
     pxPerMmY: params.pxPerMmY,
   })
+  // ESC:D-42 (D)
   // Sticky window/bridge doorframes → doorframeFaceIds (ook als Stage 2 geen promote deed).
   const resolved = attachDoorframesToResolvedDoors({
     doors: resolvedRaw,

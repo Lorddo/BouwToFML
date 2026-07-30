@@ -41,6 +41,7 @@ export function markWindowAutoPassDone(state: WindowAutoPassState): void {
   state.forceApplyOnNextPass = false
 }
 
+// ESC:O-07 (D)
 export function invalidateAutoWindowPass(state: WindowAutoPassState): void {
   state.forceApplyOnNextPass = true
   state.autoPassApplied = false
@@ -82,6 +83,7 @@ export async function pushStageClassesOntoWalls(ctx: {
     return null
   }
 
+  // ESC:O-09 (D)
   const doorframeIds = collectDoorframeClassFaceIds(ctx.stageCache)
   const doorframeSet = new Set(doorframeIds)
   for (const [label, cls] of cache.faceOverrides.entries()) {
@@ -92,6 +94,7 @@ export async function pushStageClassesOntoWalls(ctx: {
     cache: ctx.stageCache,
   }).filter((id) => !doorframeSet.has(id))
 
+  // ESC:O-08 (D)
   // Lege herdetectie (bv. na door-arc invalidate) mag bestaande window-pins niet wissen.
   if (windowIds.length === 0 && ctx.autoPassState.lastAutoWindowFaceIds.length > 0) {
     windowIds = [...ctx.autoPassState.lastAutoWindowFaceIds]

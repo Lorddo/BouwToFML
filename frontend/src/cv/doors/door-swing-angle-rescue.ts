@@ -1,3 +1,4 @@
+import { noteEvidenceMissing } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { FaceDualSpace, FaceGeom, SpacePrefer } from '@/cv/walls/rooms/face-dual-space'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
@@ -73,6 +74,7 @@ function depthInBand(shortPx: number, depthRefPx: number): boolean {
   return shortPx >= lo && shortPx <= hi
 }
 
+// ESC:D-29 (B)
 function isRefEligible(ref: DoorSwingRefBand): boolean {
   const angle = ref.swingAngleDeg
   return (
@@ -113,12 +115,14 @@ function resolveMeasureGeom(params: {
 }): { geom: FaceGeom; space: SpacePrefer } | null {
   const white = params.dual.geom(params.root, 'white')
   const ink = params.dual.geom(params.root, 'ink')
+  // ESC:D-31 (C)
   const whiteHit = white != null && depthInBand(shortSide(white.bbox), params.depthRefPx)
   const inkHit = ink != null && depthInBand(shortSide(ink.bbox), params.depthRefPx)
   if (!whiteHit && !inkHit) return null
   if (white) {
     return { geom: white, space: DOOR_SPACE_POLICY.angleRescueMeasurePrefer }
   }
+  // ESC:D-32 (C)
   if (ink) return { geom: ink, space: 'ink' }
   return null
 }
@@ -163,6 +167,7 @@ function rejectRank(status: DoorAngleRescueStatus): number {
   }
 }
 
+// ESC:D-38 (B)
 function keepBetterDiag(
   prev: DoorAngleRescueDiagnostic | undefined,
   next: DoorAngleRescueDiagnostic,
@@ -208,6 +213,7 @@ export function runDoorSwingAngleRescue(params: {
     return { accepted: [], diagnostics: [], scannedCount: 0, matchedCount: 0 }
   }
 
+  // ESC:D-30 (B)
   const allowedClassSet =
     params.allowedClasses == null
       ? null
@@ -250,6 +256,7 @@ export function runDoorSwingAngleRescue(params: {
         refAngleDeg: refAngle,
       })
 
+      // ESC:D-33 (B)
       if (exceedsMaxSizeBand(geom.bbox, params.sizeBand)) {
         diagByRoot.set(
           root,
@@ -265,6 +272,7 @@ export function runDoorSwingAngleRescue(params: {
       }
 
       const candidateFill = fillRatio(geom.areaPx, geom.bbox)
+      // ESC:D-34 (B)
       if (candidateFill >= DOOR_ANGLE_RESCUE_TUNING.maxFillRatio) {
         diagByRoot.set(
           root,
@@ -280,6 +288,7 @@ export function runDoorSwingAngleRescue(params: {
       }
 
       const paint = params.dual.space(space)
+      // ESC:D-39 (A)
       const hinge = computeDoorHingeFromFaces({
         cv: params.cv,
         labelsData: paint.labelsData,
@@ -293,6 +302,7 @@ export function runDoorSwingAngleRescue(params: {
           preferredWallAxis: preferredWallAxisFromBBox(geom.bbox),
         },
       })
+      // ESC:D-35 (B)
       if (!hinge) {
         diagByRoot.set(
           root,
@@ -308,6 +318,7 @@ export function runDoorSwingAngleRescue(params: {
       }
 
       const delta = Math.abs(hinge.swingAngleDeg - refAngle)
+      // ESC:D-36 (B)
       if (delta > DOOR_ANGLE_RESCUE_TUNING.angleMarginDeg) {
         diagByRoot.set(
           root,
@@ -322,6 +333,7 @@ export function runDoorSwingAngleRescue(params: {
         continue
       }
 
+      // ESC:D-37 (A)
       const score = Math.max(0, 1 - delta / DOOR_ANGLE_RESCUE_TUNING.angleMarginDeg)
       const candidate: DoorSwingHypothesis = {
         id: `door-swing-angle-rescue-${root}`,
@@ -334,6 +346,12 @@ export function runDoorSwingAngleRescue(params: {
       }
       const prev = bestByRoot.get(root)
       if (!prev || candidate.score > prev.score) {
+        noteEvidenceMissing(
+          'D-37',
+          'door-swing-angle-rescue',
+          'hypothese geïnjecteerd langs fill- en surround-filter heen',
+          { root, score: round3(score), matchedRefIndex },
+        )
         bestByRoot.set(root, candidate)
       }
       diagByRoot.set(root, {

@@ -140,6 +140,7 @@ export function mergeSameLineSegments(
     for (const cluster of clusters) {
       if (cluster.indices.length < 2) continue
       const clusterSegments = cluster.indices.map((idx) => work[idx])
+      // ESC:W-22 (A)
       const hasShort = clusterSegments.some((seg) => segmentLength(seg) <= ref)
       if (!hasShort) continue
 

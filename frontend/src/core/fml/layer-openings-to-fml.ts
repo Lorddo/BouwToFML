@@ -19,6 +19,7 @@ export function toLayer12DoorForFml(
     pxPerMmX,
     pxPerMmY,
   )
+  // ESC:X-24 (B)
   if (!isValidOpeningSpanCm(widthCm)) return null
   return {
     doorId: door.doorId,

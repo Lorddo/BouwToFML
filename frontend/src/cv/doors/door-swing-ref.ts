@@ -176,6 +176,7 @@ export function resolveReferenceSizing(params: {
   const bladeRefPx = Math.max(1, totalRefPx - framingPx)
   // Guard: gemist kozijn → absurd smalle opening. Val terug op de swing-span,
   // die het deurblad betrouwbaar weergeeft (voorkomt ~10 cm mini-deuren).
+  // ESC:D-60 (E)
   if (bladeRefPx < params.swingSpanPx * DEGENERATE_BLADE_TO_SPAN_RATIO) {
     return sizingFromSwingSpan(params.swingSpanPx, params.fallbackTotalPx)
   }

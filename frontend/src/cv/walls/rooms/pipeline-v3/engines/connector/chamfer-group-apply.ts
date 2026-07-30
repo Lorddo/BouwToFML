@@ -51,6 +51,7 @@ export function applyChamferGroupRepair(params: {
       const onDiag = diagEndpoints.some((p) => Math.hypot(p.x - end.x, p.y - end.y) <= nearbyWeldPx)
       if (!onDiag) continue
       const shift = Math.hypot(end.x - hit.x, end.y - hit.y)
+      // ESC:W-37 (B)
       // Nooit een arm plat trekken naar een verre hit (2D_3E: H@587→hit@572 → zero + gat).
       if (shift > Math.min(maxArmShift, thicknessMargin)) continue
       const other = end === seg.a ? seg.b : seg.a

@@ -234,6 +234,7 @@ function slicePipelineScale(ctx: WorkspaceFacadeContext) {
 }
 
 function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
+  // ESC:O-40 (D)
   const fallbackDoorSwingStage = ref<DoorSwingStage>('stage2')
   const fallbackWindowAxelStage = ref<WindowAxelStage>('stage2')
   return {

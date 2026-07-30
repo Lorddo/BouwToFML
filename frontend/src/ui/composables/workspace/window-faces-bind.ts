@@ -14,6 +14,7 @@ import {
 } from './faces-effective-classification'
 import type { WindowAxelStageCache } from './window-faces-helpers'
 
+// ESC:O-22 (B)
 export function filterResolvedWindowsStillClassifiedAsWindow(params: {
   resolved: ResolvedWindowCandidate[]
   roomRasterCache: RoomRasterCache | null

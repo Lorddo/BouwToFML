@@ -60,6 +60,7 @@ export function spanWidthCmBetweenPoints(
   return Math.hypot(dxCm, dyCm)
 }
 
+// ESC:X-24 (B)
 /** Minimale openingsspan in cm (L12/L14 gate; niet floored widthCmBetweenPoints). */
 export const MIN_OPENING_SPAN_CM = 0.5
 

@@ -18,6 +18,7 @@ import {
 /** Re-export: wit–inkt–wit hop (owner = `walls/rooms/wall-ink-bridge`). */
 export { areLinkedViaWallInkBridge }
 
+// ESC:R-12 (B)
 /** Max max/min as-span binnen één Stage-1 k-tuple (weer lange rail×kort glas). */
 const MAX_PAIR_AXIS_SPAN_RATIO = 1.5
 
@@ -36,6 +37,7 @@ export type CandidateLinkParams = {
   wallInkClassificationByLabel?: Map<number, RoomRasterClass>
 }
 
+// ESC:R-11 (E)
 /** Of twee kandidaten een Stage-1 link hebben (geometric / adj / wall-bridge). */
 function facesAreLinked(a: RootFace, b: RootFace, params: CandidateLinkParams): boolean {
   if (a.root === b.root) return false
@@ -63,6 +65,7 @@ function facesAreLinked(a: RootFace, b: RootFace, params: CandidateLinkParams): 
   const geometricallyLinked =
     overlap >= 0.45 && centerDelta <= maxPerpDelta && heightDelta <= maxHeightDelta
   const adjacencyLinked = directAdjacent && overlap >= 0.1 && centerDelta <= maxPerpDelta * 1.6
+  // ESC:R-13 (C)
   const wallBridgeLinked =
     wallBridged &&
     overlap >= 0.1 &&
@@ -222,6 +225,7 @@ function scoreCluster(params: { cluster: RootFace[]; ref: WindowAxelRefBand }): 
     orientation: ref.orientation,
     targetStripHeightPx: ref.targetStripHeightPx,
   })
+  // ESC:R-09 (A)
   const sampled = pickBestStripSample({
     expectedStripCount: ref.stripCount,
     samples: [bandSample, centroidSample],
@@ -245,6 +249,7 @@ function scoreCluster(params: { cluster: RootFace[]; ref: WindowAxelRefBand }): 
       actualStripHeightsPx: [],
     }
   }
+  // ESC:R-10 (A)
   // Ruimere hoogteband: ~70% afwijking (2D_3E dunne verticals ~2px vs target ~6).
   const tolerance = Math.max(2, ref.targetStripHeightPx * 0.7)
   const medianHeight = median(heights)

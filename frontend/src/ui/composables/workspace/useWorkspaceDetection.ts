@@ -1,4 +1,10 @@
 import { ref, watch, type ComputedRef, type Ref } from 'vue'
+import {
+  getRunJournal,
+  noteRollback,
+  noteSwallowedError,
+  resetRunJournal,
+} from '@/core/diagnostics'
 import type { GeometricSignature } from '@/core/extraction/geometric-signature'
 import type { ElementClass } from '@/core/extraction/types'
 import type { WallJunctionStrategy } from '@/core/extraction/types'
@@ -249,8 +255,12 @@ export function useWorkspaceDetection(deps: {
         if (thickness != null) {
           status.value = `Muurdikte ${thickness}px · ${style.renderStyle} (${style.faceCount} faces)`
         }
-      } catch {
+        // ESC:O-31 (D)
+      } catch (error) {
         /* stijl optioneel — dikte blijft leidend */
+        noteSwallowedError('O-31', 'useWorkspaceDetection.measureReferenceWall', error, {
+          effect: 'muurstijl-classificatie overgeslagen',
+        })
       }
       if (thickness == null) {
         deps.setLocalError(
@@ -338,6 +348,9 @@ export function useWorkspaceDetection(deps: {
     },
   ): Promise<boolean> {
     deps.setLocalError(null)
+    // Nieuwe top-level actie → nieuw run-journaal. Deur-/raampassen die hierna in watchers
+    // lopen tellen mee in dezelfde run.
+    resetRunJournal(`detect:${options?.phase ?? 'full'}`)
     try {
       if (!deps.cvLoader.ready.value) {
         await deps.cvLoader.ensureOpenCv()
@@ -405,7 +418,12 @@ export function useWorkspaceDetection(deps: {
       if (tabKey && isGeometryDetectionLayer(tabKey)) {
         const previous = deps.tabOutputs.value[tabKey]
         const isFinalize = options?.phase === 'finalize'
+        // ESC:O-32 (D)
         if (isFinalize && !isFinalizeTabOutput(outputWithVectorDebug)) {
+          noteRollback('O-32', 'useWorkspaceDetection.runDetection', 'finalize-output afgekeurd', {
+            tab: tabKey,
+            restoredPrevious: !!previous,
+          })
           if (previous) {
             deps.tabOutputs.value = { ...deps.tabOutputs.value, [tabKey]: previous }
           }
@@ -415,8 +433,17 @@ export function useWorkspaceDetection(deps: {
         }
         deps.tabOutputs.value = { ...deps.tabOutputs.value, [tabKey]: outputWithVectorDebug }
       }
+      const journal = getRunJournal()
+      if (journal.degraded) {
+        const swallowed = journal.events.filter((event) => event.kind === 'swallowed_error')
+        status.value = `Detectie klaar, maar ${swallowed.length} fout(en) verzwegen — zie Layer Debug journaal (${swallowed[0]?.where ?? 'onbekend'}).`
+      }
       return true
+      // ESC:O-33 (D)
     } catch (e) {
+      noteSwallowedError('O-33', 'useWorkspaceDetection.runDetection', e, {
+        phase: options?.phase ?? 'detect',
+      })
       deps.setLocalError(formatCvError(e))
       return false
     }

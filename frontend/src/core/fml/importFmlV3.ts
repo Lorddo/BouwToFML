@@ -119,6 +119,7 @@ function parseWall(raw: RawWall, warnings: ImportWarning[], floorName: string): 
     id: raw.guid ?? `${raw.a?.x ?? 0},${raw.a?.y ?? 0}-${raw.b?.x ?? 0},${raw.b?.y ?? 0}`,
     a: point(raw.a),
     b: point(raw.b),
+    // ESC:X-25 (F)
     thickness: raw.thickness ?? 10,
     balance: raw.balance,
     c: raw.c ? point(raw.c) : null,

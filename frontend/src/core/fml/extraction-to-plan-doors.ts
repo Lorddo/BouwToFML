@@ -10,6 +10,7 @@ import {
 } from './extraction-to-plan-geom'
 import { filterOpeningsForEdge, openingSpanOnEdge } from './extraction-to-plan-edge-openings'
 
+// ESC:X-10 (A)
 /** Maximaal gat langs de muur (px) waarbij twee standaarddeuren nog als paar gelden. */
 export const DOUBLE_DOOR_MERGE_GAP_PX = 24
 
@@ -158,6 +159,7 @@ export function mapLayer12DoorsToOpenings(params: {
       params.pxPerMmX,
       params.pxPerMmY,
     )
+    // ESC:X-12 (A)
     const sourceMirrored = door.mirrored ?? [0, 0]
     const mirrored =
       sourceUnit && dot(sourceUnit, targetUnit) < 0 ? flipMirrored(sourceMirrored) : sourceMirrored

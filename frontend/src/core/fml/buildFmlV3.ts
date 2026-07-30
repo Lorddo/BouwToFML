@@ -47,6 +47,7 @@ function openingGuid(opening: Opening): string {
 }
 
 export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string {
+  // ESC:X-13 (E)
   const projectId = 900000001
   const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
   const output = {
@@ -54,6 +55,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
     name: options.name ?? plan.name,
     public: false,
     features: [],
+    // ESC:X-15 (E)
     settings: {
       wallHeight: wallHeightCm,
       wallSectionHeight: 150,
@@ -107,6 +109,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
           lines: [],
           dimensions: [],
           labels: [],
+          // ESC:X-14 (E)
           areas: [],
           surfaces: [],
           items: (floor.items ?? []).map((item) => ({
@@ -129,9 +132,11 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
             a: { x: wall.a.x, y: wall.a.y },
             b: { x: wall.b.x, y: wall.b.y },
             c: wall.c ?? null,
+            // ESC:X-16 (E)
             az: { z: 0, h: floor.height - 14 },
             bz: { z: 0, h: floor.height - 14 },
             thickness: wall.thickness,
+            // ESC:X-01 (E)
             balance: wall.balance ?? 0.5,
             groupMarkerConfig: { locked: false },
             decor: { left: null, right: null, top: null, outline: 0 },
@@ -140,6 +145,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
               t: op.t,
               type: op.type,
               width: op.width,
+              // ESC:X-17 (E)
               z_height:
                 op.z_height ??
                 (op.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM),

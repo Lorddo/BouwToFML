@@ -154,6 +154,7 @@ function classifyRoomFacesFromBwMat(params: {
     referenceWallThicknessPx,
   })
 
+  // ESC:W-03 (A)
   reportPipelineProgress('Inkt opnieuw toewijzen (muur-booster)…')
   const effectiveForResolve = buildEffectiveComponentClassification({
     components,

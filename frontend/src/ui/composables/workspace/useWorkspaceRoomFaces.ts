@@ -1,4 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
+import { noteSwallowedError } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { PreprocessConfig } from '@/platform/image'
 import type { WallJunctionStrategy } from '@/core/extraction/types'
@@ -127,12 +128,14 @@ export function useWorkspaceRoomFaces(deps: {
     roomPreviewMaskRevision.value += 1
   }
 
+  // ESC:O-37 (D)
   function refreshPreviewMaskAsync(cache: RoomRasterCache): void {
     try {
       refreshPreviewMask(cache)
       deps.setStatus?.('Kleuren klaar — controleer vlakken en rond detectie af.')
-    } catch {
+    } catch (error) {
       // foutmelding loopt via detectiepipeline
+      noteSwallowedError('O-37', 'useWorkspaceRoomFaces.refreshPreviewMaskAsync', error)
     }
   }
 
@@ -445,6 +448,7 @@ export function useWorkspaceRoomFaces(deps: {
     if (!result) return
     refreshPreviewMask(cache, { dirtyBounds: result.dirtyBounds })
     // Stage-caches prunen (geen pipeline-herdetectie) — scheduled, blokkeert paint niet.
+    // ESC:O-16 (D)
     if (didDemoteDoorFace(previousClass, result.next)) {
       void deps.onDoorFacesDemoted?.()
     }

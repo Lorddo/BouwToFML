@@ -87,6 +87,7 @@ export function repairLayer6ConnectorCandidates(params: {
     })
     .slice(0, params.maxCandidates ?? Number.POSITIVE_INFINITY)
 
+  // ESC:W-30 (A)
   // Alleen bij volledige pass: korte diagonalen die detect mist (niet bij landing-only).
   if (!params.onlyLandingChamfers && params.onlyCandidateIndex == null) {
     const maxConnectorPx = scale.connectorMaxPx
@@ -119,6 +120,7 @@ export function repairLayer6ConnectorCandidates(params: {
       continue
     }
 
+    // ESC:W-31 (A)
     // Indexen verschuiven na eerdere repairs — zoek seed opnieuw op geometrie.
     let seedIndex = candidate.connectorIndex
     if (
@@ -173,6 +175,7 @@ export function repairLayer6ConnectorCandidates(params: {
   return { segments: sanitized.segments, stats }
 }
 
+// ESC:W-32 (A)
 /** Through-T landing-chamfers: één per pass, compact + opnieuw detecteren. */
 export function repairLandingChamferConnectors(params: {
   segments: Segment[]

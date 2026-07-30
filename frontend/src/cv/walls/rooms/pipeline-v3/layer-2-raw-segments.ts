@@ -1,4 +1,5 @@
 /** V3 Laag 2 � native jitter merge (own types + policy; no pipeline-v2 import). */
+import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -134,9 +135,14 @@ function sampleLocalThicknessPx(params: {
     const y = Math.round(sample.y)
     if (x >= 0 && y >= 0 && x < params.maskWidth && y < params.maskHeight) {
       const dt = params.distanceMap[y * params.maskWidth + x] ?? 0
-      if (Number.isFinite(dt) && dt > 0) return dt * 2
+      if (Number.isFinite(dt) && dt > 0) {
+        tally('W-07', 'sampled')
+        return dt * 2
+      }
     }
   }
+  // ESC:W-07 (E)
+  tally('W-07', params.referenceWallThicknessPx != null ? 'reference' : 'zero')
   return params.referenceWallThicknessPx ?? 0
 }
 
@@ -217,6 +223,7 @@ export function mergeLayer2JitterSegments(params: {
   const work = params.segments.map((seg) => ({ ...seg, a: { ...seg.a }, b: { ...seg.b } }))
   let mergedJunctionCount = 0
 
+  // ESC:W-10 (A)
   let changed = true
   while (changed) {
     changed = false
@@ -246,10 +253,12 @@ export function mergeLayer2JitterSegments(params: {
         policy,
       )
 
+      // ESC:W-08 (A)
       if (angleDeg >= policy.structuralAngleDeg) continue
       if (angleDeg >= policy.preserveMinAngleDeg && spreadPx > tolerancePx) continue
       if (spreadPx > tolerancePx) continue
 
+      // ESC:W-09 (B)
       if (
         hasPerpendicularBranchAt(
           junction,

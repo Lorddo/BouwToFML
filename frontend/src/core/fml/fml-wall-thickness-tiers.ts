@@ -92,6 +92,7 @@ export function deriveFmlBandBoundariesCmFromRefPx(
   pxPerMmY: number,
   ratios: { midRatio?: number; maxRatio?: number } = {},
 ): FmlThicknessBandBoundaries {
+  // ESC:REF-14 (E)
   const pxPerMm = averagePxPerMm(pxPerMmX, pxPerMmY)
   if (referenceWallThicknessPx <= 0 || pxPerMm <= 0) {
     return { ...DEFAULT_FML_BAND_BOUNDARIES }

@@ -111,6 +111,7 @@ export function filterDoorsByKeptWallMaskContact(params: {
   const rejected: DoorKeptWallMaskRejection[] = []
 
   for (const door of params.doors) {
+    // ESC:D-56 (B)
     if (
       doorTouchesKeptWallMask({
         door,

@@ -116,6 +116,7 @@ export type DoorBridgeWallFacesResult = {
   byHypothesisId: Map<string, number[]>
 }
 
+// ESC:D-40 (A)
 export function findDoorBridgeWallFaces(params: {
   hypotheses: DoorSwingHypothesis[]
   components: RasterRoomComponent[]
@@ -242,6 +243,7 @@ export function findDoorBridgeWallFaces(params: {
       }
     }
 
+    // ESC:D-41 (D)
     // Sticky class=`doorframe` (window Stage-2/3 of eerdere bridge): wel koppelen
     // aan de hyp, niet opnieuw promoten (geen allFaceIds — pin blijft sticky).
     for (const doorRoot of doorRoots) {

@@ -27,6 +27,7 @@ function isHorizontal(seg: Segment): boolean {
   return Math.abs(seg.b.x - seg.a.x) >= Math.abs(seg.b.y - seg.a.y)
 }
 
+// ESC:W-23 (A)
 export function cleanupLlStairs(
   segments: Segment[],
   policy: Layer5CleanupPolicy,

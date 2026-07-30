@@ -80,6 +80,7 @@ export function fitsFramingSizeRange(params: {
   // +0.5px tolerantie: 1px opening-wit CCs vs fractional denorm-min.
   if (params.widthPx + 0.5 < minW || params.widthPx > range.maxWidth) return false
   if (params.heightPx > range.maxHeight) return false
+  // ESC:R-19 (A)
   if (params.bandValidated) {
     // Band dekt plaatsing; blokkeer alleen stof (<25% ref-minH).
     const softMinH = Math.max(1, range.minHeight * 0.25)

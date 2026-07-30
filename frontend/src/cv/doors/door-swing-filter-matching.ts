@@ -9,6 +9,7 @@ import type { DoorSizeBandPx, DoorSwingRefBand } from './types'
 export const DOOR_SWING_TUNING = {
   defaultAspectToleranceRatio: 0.05,
   defaultMaxClusterSize: 10,
+  // ESC:D-18 (A)
   refAxisMinRelaxRatio: 0.75,
   // Ref-gebonden bovengrens: een gematchte blob mag niet veel groter zijn dan de
   // referentie zelf. Voorheen was de bovengrens de absolute muur-max (~1200mm),
@@ -16,6 +17,7 @@ export const DOOR_SWING_TUNING = {
   // puur omdat de aspect toevallig klopte. Nu: muur-as ∩ ref-muur, diepte alleen ref.
   refAxisMaxRelaxRatio: 2.0,
   wallRescueAxisMinRelaxRatio: 0.65,
+  // ESC:D-10 (A)
   // Ondiepe plan-fragmenten liggen vaak ~55% van de ref-swing (2D_3E kast).
   // 0.55 liet 44px net zakken (0.55×81=44.55) terwijl 45px wel door kwam.
   shallowRescueAxisMinRelaxRatio: 0.5,
@@ -25,6 +27,7 @@ export const DOOR_SWING_TUNING = {
   // schieten (dubbele-deur vrije tip) worden geweigerd — anders wint pure
   // underfill-greedy en verziekt de aspect (probe-1 rechter vleugel).
   growMaxOvershootRatio: 1.2,
+  // ESC:D-09 (A)
   // Stage-2 wall-fill (pass A): Otsu-ingekleurde deuren zijn vaak iets "dikker"
   // in bbox dan de ref-swing (muurstrook meegenomen) → aspect-relDiff ~10–17%.
   // Strikte 5% (Stage-1) blokkeert die vóór fill; hier ruimer zodat fill beslist.
@@ -229,6 +232,7 @@ export function bestAspectRef(
   return { matchedRefIndex: bestIndex, score: Math.max(0, 1 - bestDiff) }
 }
 
+// ESC:D-11 (A)
 export function wallRescueMatch(
   bbox: { width: number; height: number },
   refBands: DoorSwingRefBand[],
@@ -262,6 +266,7 @@ function expectedSwingAreaPx(
   return Math.max(1, resolveRefAreaSpan2Ratio(ref) * candidateSpan * candidateSpan)
 }
 
+// ESC:D-12 (B)
 export function isWallRescueCandidate(params: {
   face: RootFace
   match: RefMatch
@@ -284,6 +289,7 @@ export function isWallRescueCandidate(params: {
   return fillDiff <= DOOR_SWING_TUNING.wallRescueMaxFillDiff
 }
 
+// ESC:D-14 (A)
 export function clippedArcRescueMatch(params: {
   bbox: { width: number; height: number }
   areaPx: number

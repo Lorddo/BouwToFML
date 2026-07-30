@@ -81,6 +81,7 @@ export function runRoomTopologyRefinePass(params: {
     effectiveClass,
   })
 
+  // ESC:W-03 (A)
   const pass2 = resolvePass(rawLabelsData, labelClass)
 
   // Wallish children → individuele roots (geen nieuwe parent-hiërarchie).

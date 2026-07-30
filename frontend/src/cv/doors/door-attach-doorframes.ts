@@ -183,6 +183,7 @@ export function collectDirectionalAdjacentClassRoots(params: {
   return [...collected].sort((a, b) => a - b)
 }
 
+// ESC:D-42 (D)
 /**
  * Sticky/class doorframe pins op resolved deuren (na window-pass / vóór L11).
  * Alleen directionele ink-adjacency — geen bbox-near.

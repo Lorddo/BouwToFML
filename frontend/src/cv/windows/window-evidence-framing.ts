@@ -137,6 +137,7 @@ function tryFramingPath(params: {
   return { ok: false, reason: 'framing_sides' }
 }
 
+// ESC:R-18 (C)
 /**
  * Dual-space framing — WINDOW_SPACE_POLICY.stage3Framing === 'either' (OR):
  * 1) opening-wit hyp-band + wit framing faces

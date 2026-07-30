@@ -77,6 +77,7 @@ export function createWorkspaceDevSessionRestoreDetection(
     await deps.refreshClassificationPreview?.()
   }
 
+  // ESC:O-29 (D)
   async function rebuildDoorsFromRestoredFaces(): Promise<void> {
     deps.markAutoDoorPassApplied()
     await deps.refreshDoorSwingFromExistingDoors()
@@ -91,6 +92,7 @@ export function createWorkspaceDevSessionRestoreDetection(
     deps.roomPhase.value = exact.roomPhase
     deps.wallsDetectionComplete.value = exact.wallsDetectionComplete
     applyRoomSnapshot(exact, { restoreReferenceWallRect: !hasClassifyState })
+    // ESC:O-30 (D)
     // Direct na phase/rects: annuleer geplande Stage-2 vóór awaits (>80ms debounce).
     if (exact.roomPhase === 'review' || exact.roomPhase === 'done') {
       deps.markAutoDoorPassApplied()

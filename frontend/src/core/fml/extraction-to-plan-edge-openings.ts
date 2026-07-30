@@ -4,6 +4,7 @@ import {
   widthCmBetweenPoints,
 } from './extraction-to-plan-geom'
 
+// ESC:X-09 (E)
 /** Filter openings voor één edge + mark consumed (gedeeld L12/L14). */
 export function filterOpeningsForEdge<T extends { segmentIndex: number }>(params: {
   openings: T[]

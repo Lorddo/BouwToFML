@@ -67,6 +67,7 @@ export function resolveDoorCandidates(params: {
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((hypothesis): ResolvedDoorCandidate => {
       const ref = params.refBands[hypothesis.matchedRefIndex]
+      // ESC:D-43 (E)
       const ratioBlade = ref?.ratioBlade && ref.ratioBlade > 0 ? ref.ratioBlade : 1
       const framingPx = Math.max(0, ref?.framingPx ?? 0)
       const { kind, fmlRefId } = resolveRefKind(ref, hypothesis)

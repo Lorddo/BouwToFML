@@ -36,6 +36,7 @@ export function markDoorAutoPassDone(state: AutoPassState): void {
   state.forceApplyOnNextPass = false
 }
 
+// ESC:O-06 (D)
 export function invalidateAutoDoorPass(
   state: AutoPassState,
   mode: 'replace-all' | 'replace-auto' = 'replace-all',

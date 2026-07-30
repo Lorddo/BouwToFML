@@ -294,6 +294,7 @@ function groupMaxPairwiseDistance(group: EndpointGroupMember[]): number {
   return maxD
 }
 
+// ESC:W-11 (B)
 /**
  * Snap near-coincident endpoints to one byte-identical coordinate.
  * Unlike the old micro-weld skip (`maxD <= 1e-6`), ULP drift is forced equal so

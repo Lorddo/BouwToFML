@@ -1,3 +1,4 @@
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { unionFaceBBox } from '@/cv/walls/rooms/face-dual-space'
 import type {
@@ -42,6 +43,7 @@ function resolveFramingBBox(params: {
     if (!bbox) return
     merged = merged ? unionFaceBBox(merged, bbox) : { ...bbox }
   }
+  // ESC:R-22 (C)
   for (const faceId of params.accepted.hypothesis.faceIds) {
     if (!(faceId > 0)) continue
     add(params.dual.geom(faceId, WINDOW_SPACE_POLICY.stage4GlassBBox)?.bbox)
@@ -68,6 +70,7 @@ function stripStackClusterKey(entry: WindowEvidenceAcceptance): string {
   return glassFaceKey(faces, entry.hypothesis.orientation)
 }
 
+// ESC:R-23 (E)
 /**
  * Strip-bboxes voor full-stack maat: evidence-faces (glas+rails) via dual.
  * Fallback = hyp unionBBoxes (tests / ontbrekende dual-geom).
@@ -84,6 +87,12 @@ function stripStackMeasureBBoxes(params: {
     if (bbox) stripBBoxes.push({ ...bbox })
   }
   if (stripBBoxes.length > 0) return stripBBoxes
+  noteMissingMeasurement(
+    'R-23',
+    'window-resolve.stripStackMeasureBBoxes',
+    'geen dual-geom op evidence-faces — maat uit unionBBox',
+    { evidenceFaces: params.evidenceFaceIds.length, groupSize: params.group.length },
+  )
   return params.group.map((entry) => ({ ...entry.hypothesis.unionBBox }))
 }
 
@@ -187,6 +196,7 @@ function dedupeByExclusiveGlassFaces(
   return kept
 }
 
+// ESC:R-24 (A)
 /**
  * Stage 4: strip_stack-leden met dezelfde glas/strip-faces → 1 window (over refs heen);
  * framing per glas-face-set → 1 (beste score); daarna exclusieve glas-face claim.
@@ -203,6 +213,7 @@ export function resolveWindowCandidates(params: {
 }): ResolvedWindowCandidate[] {
   const avgPxPerMm = averagePxPerMm(params.pxPerMmX, params.pxPerMmY)
 
+  // ESC:R-25 (B)
   const framingByGlass = new Map<string, WindowEvidenceAcceptance>()
   const stripStackGroups = new Map<string, WindowEvidenceAcceptance[]>()
   for (const entry of params.accepted) {

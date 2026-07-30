@@ -52,6 +52,7 @@ export function runWindowAxelFilter(params: {
 
   for (const ref of rootsByRef) {
     const rejectedByReason: Partial<Record<WindowAxelRejectReason, number>> = {}
+    // ESC:R-06 (A)
     const orientations: WindowAxelOrientation[] =
       ref.orientation === 'horizontal' ? ['horizontal', 'vertical'] : ['vertical', 'horizontal']
     let effectiveTargetStripHeightPx = denormalizeTargetStripHeightPx(ref, ref.axisBandHeightPx)
@@ -92,6 +93,7 @@ export function runWindowAxelFilter(params: {
       if (orientationIndex === 0) {
         effectiveTargetStripHeightPx = calibratedTarget
       }
+      // ESC:R-07 (E)
       const fallbackToPrimaryTarget =
         orientationIndex > 0 &&
         calibratedTarget === baseTargetStripHeightPx &&

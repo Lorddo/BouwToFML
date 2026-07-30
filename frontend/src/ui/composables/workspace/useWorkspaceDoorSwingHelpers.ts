@@ -12,6 +12,7 @@ import type {
 import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
 import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
 
+// ESC:O-28 (D)
 export const DOOR_SWING_REFRESH_DEBOUNCE_MS = 80
 
 export type DoorSwingUiStats = {

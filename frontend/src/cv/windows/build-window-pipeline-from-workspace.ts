@@ -1,3 +1,4 @@
+import { noteDiagnostic } from '@/core/diagnostics'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { analyzeOpeningRef } from '@/cv/refs/opening-ref-analyze'
@@ -12,6 +13,9 @@ import {
 import type { WindowAxelRefBand } from './types'
 
 export type WindowRefRect = { x: number; y: number; width: number; height: number }
+
+/** `project-brief.md`: 3–5 voorbeelden per type. Niet afgedwongen, wel gesignaleerd. */
+const MIN_ADVISED_REF_BANDS = 3
 
 /** Stap-2 raam-rects → axel REF-bands (gedeeld door UI refresh + face-report export). */
 export async function collectWindowAxelRefBands(params: {
@@ -45,6 +49,14 @@ export async function collectWindowAxelRefBands(params: {
       })
       if (!band) continue
       refBands.push(band)
+    }
+    if (refBands.length > 0 && refBands.length < MIN_ADVISED_REF_BANDS) {
+      noteDiagnostic(
+        'REF_COUNT_BELOW_ADVICE',
+        'build-window-pipeline-from-workspace',
+        `${refBands.length} raam-referentie(s) — advies is ${MIN_ADVISED_REF_BANDS}–5 per type; alle relax-marges staan wel aan`,
+        { refBands: refBands.length, rects: params.windowRects.length },
+      )
     }
     return refBands
   } finally {

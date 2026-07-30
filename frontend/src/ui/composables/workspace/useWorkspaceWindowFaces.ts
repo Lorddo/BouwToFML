@@ -1,4 +1,5 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
+import { noteSwallowedError } from '@/core/diagnostics'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import { usesWindowOverlay } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -128,6 +129,7 @@ export function useWorkspaceWindowFaces(deps: {
     return deps.roomPhase.value === 'review' || deps.roomPhase.value === 'done'
   }
 
+  // ESC:O-45 (B)
   function shouldPushWindowClasses(): boolean {
     return deps.roomPhase.value === 'review'
   }
@@ -137,6 +139,7 @@ export function useWorkspaceWindowFaces(deps: {
     if (next) deps.tabOutputs.value = next
   }
 
+  // ESC:O-12 (D)
   /** Commit push-result eerst; preview/reattach daarna op de verse cache. */
   async function commitWindowClassPush(next: RoomRasterCache | null): Promise<void> {
     if (next) deps.roomRasterCache.value = next
@@ -188,6 +191,7 @@ export function useWorkspaceWindowFaces(deps: {
     windowBindRejections.value = result.rejected
   }
 
+  // ESC:O-15 (D)
   async function refreshWindowsFromExistingClasses(): Promise<void> {
     const classification = resolveEffectiveWallClassification({
       roomRasterCache: deps.roomRasterCache.value,
@@ -409,7 +413,11 @@ export function useWorkspaceWindowFaces(deps: {
         await commitWindowClassPush(next)
       }
       await syncStageViewFromCache()
+      // ESC:O-35 (D)
     } catch (error) {
+      noteSwallowedError('O-35', 'useWorkspaceWindowFaces.refresh', error, {
+        effect: 'volledige raam-state reset incl. lastAuto',
+      })
       resetWindowState()
       markWindowAutoPassDone(autoPass)
       syncAutoPassRef()
@@ -492,6 +500,7 @@ export function useWorkspaceWindowFaces(deps: {
     },
   )
 
+  // ESC:O-25 (D)
   watch(
     () => {
       const state = deps.tabOutputs.value.walls?.meta?.roomClassifyState
@@ -532,6 +541,7 @@ export function useWorkspaceWindowFaces(deps: {
     },
   )
 
+  // ESC:O-23 (D)
   watch(
     () => signatureForFaceIdSet(deps.getDoorArcFaceIds()),
     (sig) => {

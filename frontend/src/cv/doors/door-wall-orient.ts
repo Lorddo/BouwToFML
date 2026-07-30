@@ -280,6 +280,7 @@ export function orientBoundDoors(params: {
       bbox: resolved.bbox,
       wallUnit,
     })
+    // ESC:D-59 (B)
     if (!hinge) continue
 
     const axisPair = resolveOpeningAndLeafAxis(hinge.axes, wallUnit)
@@ -293,6 +294,7 @@ export function orientBoundDoors(params: {
 
     const swingRight = dot(axisPair.leafAxis, normal) >= 0
 
+    // ESC:D-58 (A)
     const framed = bound.doorframeClearOpening
       ? resolveDoorframeLedOpening({
           hingePx: hinge.hingePx,

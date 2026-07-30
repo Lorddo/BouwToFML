@@ -115,6 +115,7 @@ function bandWhiteMass(data: Uint8Array, width: number, y0: number, y1: number):
   return count
 }
 
+// ESC:D-57 (A)
 /** LBE: swing-massa onderaan (white ≥128), anders 180°. */
 export function orientSwingMaskToBottom(
   maskData: Uint8Array,

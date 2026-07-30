@@ -25,6 +25,7 @@ function collectBoundaryNeighbors(
     adjacency,
     seen,
     classificationByLabel,
+    // ESC:D-19 (C)
     bridgeViaInk: DOOR_SPACE_POLICY.stage1ClusterBridge === 'ink',
   })
 }
@@ -78,6 +79,7 @@ function pickBestNeighbor(params: {
     // Tip-faces van een boog (vrije tip naast de sector) verlagen underfill hard
     // door breedte én hoogte tegelijk, maar schieten ver voorbij de ref-target en
     // verzieken de aspect. Sectorstroken (diepte-opbouw) blijven binnen maxW/H.
+    // ESC:D-21 (B)
     if (nextBbox.width > maxWpx && nextBbox.width > params.currentBbox.width) continue
     if (nextBbox.height > maxHpx && nextBbox.height > params.currentBbox.height) continue
     const nextUnderfill =
@@ -137,6 +139,7 @@ export function absorbInBandNeighbors(params: {
   // bij een ANDERE referentie past (dat gaf de scheve dubbele-deur velden).
   const matchRef = params.refBands[params.matchedRefIndex]
   if (!matchRef) return { roots, union }
+  // ESC:D-22 (A)
   const absorbAspectTolerance =
     params.aspectToleranceRatio + DOOR_SWING_TUNING.absorbAspectToleranceBonus
   while (roots.length < params.maxClusterSize) {
@@ -239,6 +242,7 @@ export function growClusterForRef(params: {
       bestAspectRef(union, params.refBands, params.aspectToleranceRatio, {
         sizeBand: params.sizeBand,
       }) ??
+      // ESC:D-20 (A)
       clippedArcRescueMatch({
         bbox: union,
         areaPx: unionAreaPx,
@@ -254,6 +258,7 @@ export function growClusterForRef(params: {
     // de schone boog 138×122). Bij gelijke score wint het grotere oppervlak.
     const area = union.width * union.height
     const current = bestHolder.current
+    // ESC:D-23 (B)
     const isBetter =
       !current ||
       match.score > current.match.score + 1e-9 ||

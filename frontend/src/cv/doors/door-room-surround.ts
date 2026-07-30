@@ -105,6 +105,7 @@ export function filterRoomSurroundedHypotheses(params: {
       adjacency: params.adjacency,
       parentMap: params.parentMap,
     })
+    // ESC:D-27 (B)
     if (isHypothesisSurroundedByWall(neighbors, params.parentMap, params.classificationByLabel)) {
       rejected.push({ hypothesis, reason: 'surrounded_by_wall' })
       continue
@@ -171,6 +172,7 @@ export function filterWallUntouchedHypotheses(params: {
       kept.push(hypothesis)
       continue
     }
+    // ESC:D-28 (B)
     rejected.push({ hypothesis, reason: 'no_wall_touch' })
   }
 

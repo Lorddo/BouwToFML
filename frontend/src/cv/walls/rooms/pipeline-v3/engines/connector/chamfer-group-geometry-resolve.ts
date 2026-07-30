@@ -20,6 +20,7 @@ import { collectDiagonalGroupIndices } from './chamfer-group-geometry-expand'
 import { isAlternatingStairDiagonalChain } from './chamfer-group-geometry-stair'
 import type { ChamferGroupGeometry, ChamferGroupKind } from './chamfer-group-geometry-types'
 
+// ESC:W-35 (A)
 function hvIncidentsNearGroup(params: {
   segments: Segment[]
   diagonalIndices: number[]
@@ -161,6 +162,7 @@ export function resolveChamferGroupGeometry(params: {
   const maxChainPx = scale.axisChainPx
   const maxConnectorPx = scale.connectorMaxPx
 
+  // ESC:W-34 (A)
   // Prioriteit: landing / simple-L (expliciete H+V-topology). Geen hoekfilter hier —
   // korte ondiepe L-chamfers (~9px, ~24°) zijn geldig; zigzag-jogs matchen geen simple-L.
   const landing = resolveLandingChamferGeometry({
@@ -462,6 +464,7 @@ export function resolveChamferGroupGeometry(params: {
   const seedTouches = (point: { x: number; y: number }) =>
     Math.hypot(seed.a.x - point.x, seed.a.y - point.y) <= nearbyWeldPx ||
     Math.hypot(seed.b.x - point.x, seed.b.y - point.y) <= nearbyWeldPx
+  // ESC:W-36 (B)
   const seedOnGroupTouch =
     seedTouches(hInc.anchorPoint) ||
     seedTouches(vInc.anchorPoint) ||

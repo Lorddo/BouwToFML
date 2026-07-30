@@ -95,6 +95,7 @@ function buildFaceProfile(faces: RefFace[]): RefFaceProfile {
   }
 }
 
+// ESC:REF-12 (A)
 /**
  * Candidate pool t.o.v. kopeinde-as (LBE: boog = `below`).
  * Inclusief outside (rand-touchende boog); niet alleen interior/head.

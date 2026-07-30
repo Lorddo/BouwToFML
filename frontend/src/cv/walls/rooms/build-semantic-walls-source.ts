@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { ExtractionOutput, RoomWallSemanticGraph, SegmentCandidate } from '@/core/extraction'
 import type { PipelineLayerDebug } from '@/core/extraction/types'
 import {
@@ -14,6 +15,8 @@ export interface SemanticGraphFromFmlLayer {
   wallGraph: WallGraph
 }
 
+// ESC:W-53 (B)
+// ESC:X-21 (B)
 /**
  * FML-bronlaag voor semantic walls.
  * V3-only: L10 alleen bij `fmlReady` (geen L8/L9 fallback).
@@ -29,6 +32,17 @@ export function resolveFmlSourceLayer(walls: ExtractionOutput): PipelineLayerDeb
 /** True wanneer `resolveFmlSourceLayer` minstens één segment levert. */
 export function hasFmlSemanticSource(walls: ExtractionOutput): boolean {
   return (resolveFmlSourceLayer(walls)?.segments.length ?? 0) > 0
+}
+
+/** L10-segment zonder positieve dikte levert 0 — de FML-dikte komt dan uit de harmonisatie. */
+function resolveSemanticThicknessPxMax(segment: { thicknessPx?: number }): number {
+  const measured = Number(segment.thicknessPx)
+  if (measured > 0) {
+    tally('X-22', 'measured')
+    return measured
+  }
+  tally('X-22', 'zero')
+  return 0
 }
 
 export function buildSemanticGraphFromFmlLayer(walls: ExtractionOutput): SemanticGraphFromFmlLayer {
@@ -59,10 +73,8 @@ export function buildSemanticGraphFromFmlLayer(walls: ExtractionOutput): Semanti
         return {
           a: { x: edge.segment.a.x, y: edge.segment.a.y },
           b: { x: edge.segment.b.x, y: edge.segment.b.y },
-          thicknessPxMax:
-            Number((edge.segment as { thicknessPx?: number }).thicknessPx) > 0
-              ? Number((edge.segment as { thicknessPx?: number }).thicknessPx)
-              : 0,
+          // ESC:X-22 (E)
+          thicknessPxMax: resolveSemanticThicknessPxMax(edge.segment as { thicknessPx?: number }),
           junctionAId: edge.a,
           junctionBId: edge.b,
         }

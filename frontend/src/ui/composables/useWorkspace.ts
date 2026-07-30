@@ -313,6 +313,7 @@ export function useWorkspace() {
       onWindowFacesDemoted: () => {
         windowFacesApi?.scheduleRefreshWindowsFromExistingClasses()
       },
+      // ESC:O-27 (D)
       onAfterFinalize: async () => {
         void doorSwingFacesApi?.snapResolvedDoorsToWalls()
         windowFacesApi?.bindResolvedWindowsToWalls()

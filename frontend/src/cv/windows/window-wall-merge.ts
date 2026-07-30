@@ -110,6 +110,7 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
   }
 }
 
+// ESC:R-27 (A)
 /**
  * Per segment, van voor naar achter (stijgende `t`): greedy 3 → 2 → 1.
  * Zes gelijke aanliggende ramen → twee triples.

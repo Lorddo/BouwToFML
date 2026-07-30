@@ -1,3 +1,4 @@
+import { noteSwallowedError } from '@/core/diagnostics'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { formatCvError } from '@/cv/formatCvError'
@@ -24,6 +25,7 @@ import {
  * Voorkomt dat stale Stage-2-hits (handmatig teruggezet naar unknown/wall)
  * bij afronden alsnog als L11/L12-symbolen verschijnen.
  */
+// ESC:O-20 (B)
 export function filterResolvedDoorsStillClassifiedAsDoor(params: {
   resolved: ResolvedDoorCandidate[]
   roomRasterCache: RoomRasterCache | null
@@ -50,6 +52,7 @@ export function filterResolvedDoorsStillClassifiedAsDoor(params: {
  * bestaande resolved → `doorframeFaceIds`. L11 blijft alleen bij finalize.
  * @returns next resolved list, or `null` if unchanged.
  */
+// ESC:O-10 (D)
 export function reattachStickyDoorframesToResolved(params: {
   resolvedDoors: ResolvedDoorCandidate[]
   walls: TabDetectionOutputs['walls'] | null | undefined
@@ -152,6 +155,7 @@ export async function snapResolvedDoorsToWalls(
     }) ?? new Map()
   const parentMap = new Map(state.parentMap)
 
+  // ESC:O-11 (D)
   // Verse sticky pins (window) meenemen vóór Path A.
   const stickyNext = reattachStickyDoorframesToResolved({
     resolvedDoors: params.resolvedDoors,
@@ -173,6 +177,7 @@ export async function snapResolvedDoorsToWalls(
 
   const wallMask = decodeMaskRle(maskRle)
   const thickness = params.referenceWallThicknessPx
+  // ESC:O-21 (B)
   // Post-L0: alleen deuren die de kept wall mask raken → L11; orphan auto-doors unpin.
   const maskFiltered = filterDoorsByKeptWallMaskContact({
     doors: enriched,
@@ -236,7 +241,12 @@ export async function snapResolvedDoorsToWalls(
       width: state.width,
       height: state.height,
     })
+    // ESC:O-36 (D)
   } catch (error) {
+    noteSwallowedError('O-36', 'door-faces-snap.orientBoundDoors', error, {
+      boundDoors: snapped.length,
+      effect: 'L12 leeg — deuren verdwijnen uit FML',
+    })
     oriented = []
     params.setLocalError(formatCvError(error))
   }

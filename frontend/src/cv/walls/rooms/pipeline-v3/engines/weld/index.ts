@@ -63,6 +63,7 @@ export function weldNearConnectedEndpoints(
   return { segments: unified.segments, weldedCount: unified.unifiedCount }
 }
 
+// ESC:W-19 (A)
 /**
  * Copy6 repairLayer5DanglingConnections — close dangling pairs then near-weld.
  * Requires policy.repairMaxGapPx > 0.

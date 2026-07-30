@@ -16,6 +16,7 @@ import { scaleMaskRleNearest } from '@/cv/util/binary-mask-rle'
 import { formatCvError } from '@/cv/formatCvError'
 import { preparePreprocessMasks, type PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import { scaleMaskToSize } from '@/cv/tools/polygon'
+import { mergeRunJournalSummary, type RunJournalSummary } from '@/core/diagnostics'
 import { setPipelineProgressListener } from '@/cv/pipeline/pipeline-progress'
 
 function scaleValue(value: number | undefined, scale: number): number | undefined {
@@ -178,6 +179,7 @@ function runExtractionInWorker(payload: WorkerRequestPayload): Promise<Extractio
         output?: ExtractionOutput
         error?: string
         progress?: string
+        journal?: RunJournalSummary
       }>,
     ) => {
       if (event.data.requestId !== requestId) return
@@ -186,6 +188,7 @@ function runExtractionInWorker(payload: WorkerRequestPayload): Promise<Extractio
         return
       }
       worker.removeEventListener('message', handleMessage)
+      if (event.data.journal) mergeRunJournalSummary(event.data.journal)
       if (event.data.error) {
         reject(new Error(event.data.error))
         return

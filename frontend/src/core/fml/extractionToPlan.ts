@@ -91,6 +91,7 @@ export function extractionToPlanWithOrigin(
   const walls: Wall[] = graph.edges.map((edge, index) => {
     const aNode = nodeById.get(edge.a)
     const bNode = nodeById.get(edge.b)
+    // ESC:X-08 (E)
     const aSource = aNode ?? edge.segment.a
     const bSource = bNode ?? edge.segment.b
     const a = {
@@ -137,6 +138,7 @@ export function extractionToPlanWithOrigin(
       id: edge.id || `wall-${index}`,
       a,
       b,
+      // ESC:X-07 (E)
       thickness:
         semanticThicknessCm ??
         resolveThicknessCm(

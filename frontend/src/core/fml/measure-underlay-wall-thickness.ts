@@ -1,3 +1,4 @@
+import { noteDiscardedMeasurement } from '@/core/diagnostics'
 import type { Point2D, Wall } from './types'
 
 const INK_LUMINANCE_THRESHOLD = 140
@@ -5,6 +6,7 @@ const INK_LUMINANCE_THRESHOLD = 140
  * De getekende inktband is iets breder dan de werkelijke muur (lijndikte/anti-alias).
  * Neem 90% van de gemeten dikte zodat de bandgrens niet stelselmatig te dik uitvalt.
  */
+// ESC:X-18 (E)
 const INK_THICKNESS_FACTOR = 0.9
 /** Zoekvenster per zijde loodrecht op de muur — geen muur is dikker dan dit (cm). */
 const MAX_WALL_SEARCH_CM = 60
@@ -273,6 +275,7 @@ function sampleThicknessPxOnMask(params: {
 }): ThicknessSampleResult {
   const maxSearchPx = params.maxSearchPx ?? 512
   const gapTolerancePx = params.gapTolerancePx ?? 0
+  // ESC:X-19 (A)
   if (isNearOrtho(params.a, params.b)) {
     const boxed = sampleThicknessViaProbeBox({
       mask: params.mask,
@@ -323,6 +326,7 @@ export function imagePxThicknessToCmAlongNormal(
   const safeX = Number.isFinite(pxPerMmX) && pxPerMmX > 0 ? pxPerMmX : 0
   const safeY = Number.isFinite(pxPerMmY) && pxPerMmY > 0 ? pxPerMmY : 0
   const normLen = Math.hypot(nx, ny)
+  // ESC:X-20 (E)
   if (normLen <= 1e-6 || (safeX <= 0 && safeY <= 0)) return 10
   const ux = nx / normLen
   const uy = ny / normLen
@@ -429,7 +433,12 @@ export async function measureWallThicknessCmOnUnderlay(params: {
   if (!values.length) {
     throw new Error('Geen muur-inkt gevonden op de onderlegger bij deze muur.')
   }
-  const thicknessPx = medianOf(values) * INK_THICKNESS_FACTOR
+  const measuredPx = medianOf(values)
+  const thicknessPx = measuredPx * INK_THICKNESS_FACTOR
+  noteDiscardedMeasurement('X-18', 'measureUnderlayWallThickness', measuredPx, thicknessPx, {
+    factor: INK_THICKNESS_FACTOR,
+    samples: values.length,
+  })
   const cm = imagePxThicknessToCmAlongNormal(thicknessPx, nx, ny, params.pxPerMmX, params.pxPerMmY)
   return Math.round(cm * 10) / 10
 }

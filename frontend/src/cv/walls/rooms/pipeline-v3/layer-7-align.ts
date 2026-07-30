@@ -51,6 +51,7 @@ export function runLayer7Align(params: {
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
     })
+    // ESC:W-44 (B)
     const guard = withTopologyGuard({
       segments: face.segments,
       policy: policy.collapse,

@@ -11,6 +11,7 @@ import { PIPELINE_ENDPOINT_EPS_PX, resolvePipelineScale } from '../engines/scale
  * No seal-after-removal, no I-junction rollback, never L6 weld.
  */
 
+// ESC:W-24 (A)
 const LAYER5_MAX_ITERATIONS = 20
 
 const SCALE_REF30 = resolvePipelineScale()

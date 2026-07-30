@@ -1,4 +1,5 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
+import { noteSwallowedError } from '@/core/diagnostics'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import { usesDoorSwingOverlay } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -127,6 +128,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     return deps.flowStep.value === 'templates' && usesDoorSwingOverlay(deps.templateTab.value)
   }
 
+  // ESC:O-45 (B)
   function shouldRunDoorSwingPass(): boolean {
     if (deps.flowStep.value !== 'templates' || !wallsClassifyReady.value) return false
     if (deps.roomPhase.value !== 'review') return false
@@ -313,6 +315,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
       assertSpacePolicy('door overlay', DOOR_SPACE_POLICY.overlayPaint, 'ink')
       const overlaySpace = pipe.pipeDual.space(DOOR_SPACE_POLICY.overlayPaint)
 
+      // ESC:O-17 (B)
       // existingDoorsOnly: nooit stage leeggooien als er nog class=`door` faces zijn
       // (stale dual zou anders door-arc sig legen → window auto-pass wipe).
       const priorResolved = stageCache.value.resolvedDoors
@@ -377,7 +380,12 @@ export function useWorkspaceDoorSwingFaces(deps: {
         syncAutoPassRef()
       }
       await syncStageViewFromCache()
+      // ESC:O-34 (D)
     } catch (error) {
+      noteSwallowedError('O-34', 'useWorkspaceDoorSwingFaces.refresh', error, {
+        existingDoorsOnly,
+        effect: 'volledige deur-state reset',
+      })
       resetDoorSwingState()
       if (!existingDoorsOnly) {
         markDoorAutoPassDone(autoPass)
@@ -389,6 +397,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     }
   }
 
+  // ESC:O-14 (D)
   async function refreshDoorSwingFromExistingDoors(): Promise<void> {
     if (refreshTimer.value) {
       clearTimeout(refreshTimer.value)
@@ -588,6 +597,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
         rerunRequested = false
         return
       }
+      // ESC:O-24 (D)
       if (prev === 'classifying') onWallsClassified('replace-all')
     },
   )
@@ -619,6 +629,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     },
   )
 
+  // ESC:O-26 (D)
   watch(
     () => {
       const ppm = deps.getPxPerMm()

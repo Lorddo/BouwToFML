@@ -62,6 +62,7 @@ export function runLayer8Finalize(params: {
     const weldedBefore = weldNearEndpoints(face.segments, policy.weld)
     const hvInput = rebuildFaceFromSegments(face, weldedBefore, policy.weld, policy.junction)
 
+    // ESC:W-47 (A)
     const positioned = positionSegmentsHv({
       face: hvInput,
       distanceMap,
@@ -74,6 +75,7 @@ export function runLayer8Finalize(params: {
     movedJunctionCount += positioned.movedJunctionCount
 
     const weldedAfterHv = weldNearEndpoints(positioned.face.segments, policy.weld)
+    // ESC:W-48 (B)
     const pruned = pruneISpurs(weldedAfterHv, policy.prune)
     removedPathCount += pruned.pruneStats.removedPathCount
     removedSegmentCount += pruned.pruneStats.removedSegmentCount

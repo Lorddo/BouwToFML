@@ -24,6 +24,7 @@ import type { PipelineV3Layer4Result, PipelineV3Layer5Result } from './types'
 /** L5 accept grid (0.01px) + template — same buckets as former Math.round(v*100)/100 keys. */
 const LAYER5_ACCEPT_IDENTITY = { gridPx: 0.01, includeTemplateIndex: true } as const
 
+// ESC:W-16 (B)
 /**
  * Compact incidental ≤eps zeros/dupes before connectivity guard.
  * Without this, same-line/tx/ll-stair are rejected on large faces because a
@@ -35,6 +36,7 @@ function compactCandidate(segments: Segment[], policy: Layer5CleanupPolicy): Seg
   return dedupeExactSegments(compacted.segments, policy.weld.endpointEpsPx).segments
 }
 
+// ESC:W-17 (B)
 function tryAcceptStep(
   before: Segment[],
   candidate: Segment[],
@@ -151,6 +153,7 @@ export function runLayer5Cleanup(params: {
       if (!changed) break
     }
 
+    // ESC:W-18 (B)
     const finalCompacted = compactCandidate(work, policy)
     const finalGuard = validateConnectivity(
       face.segments,

@@ -44,6 +44,7 @@ export function tryRepairChamferGroup(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
 
+  // ESC:W-29 (B)
   if (params.validate && !params.validate(before, applied.segments)) {
     return { segments: before, repaired: false, removed: 0 }
   }

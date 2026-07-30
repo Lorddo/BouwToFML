@@ -32,6 +32,7 @@ export const RESULT_LAYER_TABS = ['walls', 'vector'] as const
  * Gaten-tab UI (stap 2+3); pipeline/code blijft beschikbaar.
  * F — niet aanzetten in deze ronde; sticky redirects houden restore/live assigns op muren.
  */
+// ESC:O-46 (B)
 export const GAPS_TAB_VISIBLE = false
 
 /**
@@ -39,6 +40,7 @@ export const GAPS_TAB_VISIBLE = false
  * OCR is alleen stap 3 (`useWorkspaceOcr`); gaps-UI uit (`GAPS_TAB_VISIBLE`).
  * DevSession restore mapt ook — deze helper is de gedeelde safety-net voor live assigns.
  */
+// ESC:O-13 (D)
 export function stickyPreprocessTab(tab: PreprocessPanelLayer): PreprocessPanelLayer {
   if (tab === 'ocr' || tab === 'gaps') return 'walls'
   return tab

@@ -96,6 +96,7 @@ export function runLayer6JunctionRepair(params: {
   for (const face of params.layer5.facesCleaned) {
     const baseSegments = cloneSegments(face.segments)
     let work = cloneSegments(face.segments)
+    // ESC:W-25 (B)
     /** Laatste state die face kind-gate haalt t.o.v. L5 (connector of volledige iter). */
     let bestFaceOk = cloneSegments(baseSegments)
 
@@ -112,6 +113,7 @@ export function runLayer6JunctionRepair(params: {
         work = cloneSegments(sanitized.segments)
         return true
       }
+      // ESC:W-26 (B)
       if (acceptLayer6FaceKinds(baseSegments, raw).ok) {
         bestFaceOk = cloneSegments(raw)
         work = cloneSegments(raw)
@@ -124,6 +126,7 @@ export function runLayer6JunctionRepair(params: {
       return false
     }
 
+    // ESC:W-27 (A)
     for (let repairIter = 0; repairIter < maxIter; repairIter += 1) {
       iterationsRun += 1
       const beforeSig = segmentSetSignature(work)

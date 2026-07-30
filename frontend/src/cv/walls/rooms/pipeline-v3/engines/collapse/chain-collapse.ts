@@ -87,6 +87,7 @@ function filterCollinearChainCandidates(params: {
   })
 }
 
+// ESC:W-45 (A)
 function pickChainExtension(params: {
   atPoint: ExactPoint
   viaSegIndex: number

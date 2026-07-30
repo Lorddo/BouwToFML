@@ -37,6 +37,7 @@ export function useWorkspaceViewUi(deps: {
 }) {
   const isDev = deps.isDev ?? import.meta.env.DEV
 
+  // ESC:O-44 (B)
   /** Eerste muren+deuren+ramen-pass afgerond; face-edits mogen overlay niet opnieuw tonen. */
   const initialDetectionSettled = ref(false)
 

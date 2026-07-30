@@ -5,7 +5,25 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-07-29 (lint/format-poort — afgerond)
+Laatste update: 2026-07-30 (E2E fase 0 spike — OpenCV in Node)
+
+## E2E fase 0 GO (2026-07-30)
+
+Spike `tests/e2e/spike-cv-node.spec.ts` (vitest `environment: node`): `@opencvjs/web` ~190 ms · `distanceTransform` / `connectedComponentsWithStats` / `bitwise_not` op Uint8Array · `skeleton-tracing-wasm` ~1 ms · volle L1–L10 synthetisch 320×240 ~84 ms (`fmlReady`). **Gevolg:** L1 mag in de harness; gebakken skelet = vangnet/goedkeuring, geen Node-noodzaak. Plan-todo `spike-cv-node` completed.
+
+**Volgende:** E2E fase 1 (layer1-injectie + faces in debug) → fixture-contract + exportknop.
+
+## Batch nul escalatiepaden afgerond (2026-07-30)
+
+ESC-tags geankerd (228 ID's, 249 tags, `esc:check` CI-poort) + **run-journaal** in `src/core/diagnostics/`. Docs: `escalatiepaden-aanpak.md` §5.6, `escalatie-ledger.md`.
+
+**Vorm:** module-scoped journaal (`resetRunJournal` bij top-level actie, `escalate`/`tally`/`note*` in de diepte) i.p.v. diagnostics-als-resultaat — dat zou ~130 signaturen raken. Leaf-module, worker-veilig. Worker heeft eigen instantie: journaal reist mee in het antwoord, `useExtraction` merget.
+
+**Gewired:** 11 ingeslikte excepties (O-31..O-41 minus O-40, + X-23) → event mét stack + run **gedegradeerd** · ontbrekende metingen (W-07/13/14, R-05/23, X-22, REF-05..08) · weggegooide metingen mét beide waarden (X-01/02/18) · deur/raam vóór finalize (R-16 incl. bewijsloze passthrough, D-61 gates, D-37 injectie, D-15/D-13/REF-01/REF-02 cascade-niveaus) · §7.1 refBands&lt;3 via aparte `DiagnosticCode` (buiten grootboek).
+
+**Overgeslagen:** O-40 (facade-`ref()` altijd aangemaakt → teller telt constructie, niet escalatie).
+
+Geen drempel gewijzigd, geen pad weg. 989 tests groen, esc:check 228/228, lint/format/build groen.
 
 ## Lint/format-poort afgerond (2026-07-29)
 
@@ -15,7 +33,7 @@ Prettier (`printWidth` 100, no semi, single quotes) + ESLint 9 flat (`recommende
 
 **Bandgrens:** `FML_BAND_MAX_RATIO = 0.80` vastgelegd in `decisions.md`; UI-tekst 85%→80%.
 
-**Volgende:** E2E-fixtures op echte scan (enige resterende blokkerende audit-punt).
+**Volgende:** E2E-fixtures op echte scan (enige resterende blokkerende audit-punt) · parallel: escalatiepaden batch nul (journaal) — zie `escalatiepaden-aanpak.md`.
 
 ## Fase 1 afgerond (2026-07-29): git + groene build + CI
 
@@ -152,6 +170,8 @@ Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.
 
 ## Recente besluiten (samenvatting)
 
+- **2026-07-30** — Run-journaal (batch nul): module-scoped sink in `core/diagnostics` + worker-transport; `counts` per ESC-ID = grootboek-veld, events begrensd (3/ID, 400/run); alleen observatie, geen drempel/pad geraakt.
+- **2026-07-29** — Escalatiepaden-aanpak (`escalatiepaden-aanpak.md`): doel = precondititie per tak + herleidbare drempel, niet "takken weg". E2E-plan ongewijzigd → gedragswijzigingen eerst alleen muren L2–L10 + FML (rest van het harnas dekt deuren/ramen/orkestratie niet). **Batch nul = stille fouten luid** (incl. deur/raam-stages vóór finalize), zonder drempel- of padwijziging. Eenheid van werk = **cascade**, niet laag. Grootboek (teller + kill-switch per inventaris-ID) vóór interview.
 - **2026-07-29** — Fase 1: git + CI-poort + groene build. Typecheck = `vue-tsc -b`; alle assets binnen `frontend/`; root-`examples` blijft buiten de repo.
 - **2026-07-29** — Face-edit perf: dirty-rect UI + region ink alloc + demote schedule; geen detectie-tuning.
 - **2026-07-29** — Lean Walls W3+B4 finish: `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (L5–L6 “Expliciet later” / geen batch-todo); 122 pipeline-v3 groen; planned lean walls empty.

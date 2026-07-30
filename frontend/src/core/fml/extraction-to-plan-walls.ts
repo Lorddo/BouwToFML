@@ -16,6 +16,7 @@ export function asWallSegments(segments: SegmentCandidate[] | undefined): Array<
   }))
 }
 
+// ESC:X-06 (A)
 export function resolveGraph(output: ExtractionOutput): WallGraph {
   if (output.semanticWallGraph?.segments?.length) {
     const semanticSegments = output.semanticWallGraph.segments.map((segment) => ({
@@ -29,6 +30,7 @@ export function resolveGraph(output: ExtractionOutput): WallGraph {
   return buildJunctionGraph(fallbackSegments, SEMANTIC_JUNCTION_EPS_PX)
 }
 
+// ESC:X-07 (E)
 export function resolveThicknessCm(
   output: ExtractionOutput,
   templateIndex: number | undefined,

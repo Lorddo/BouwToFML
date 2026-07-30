@@ -24,6 +24,7 @@ export function snapArmToHit(params: {
   const end = nearestEndpoint(seg, params.touchPoint)
   const shift = Math.hypot(end.x - params.hit.x, end.y - params.hit.y)
   if (shift > params.maxArmShift) return
+  // ESC:W-38 (B)
   if (
     !params.allowLongSegment &&
     segmentLength(seg) > params.maxArmShift * 3 &&

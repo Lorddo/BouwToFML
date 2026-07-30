@@ -81,6 +81,7 @@ function isTargetFullyInsidePerpBand(params: {
   return targetMin >= sourceMin && targetMax <= sourceMax
 }
 
+// ESC:R-14 (C)
 /**
  * 1-hop adjacency via wall-ink (labels na ink-resolve): wit–inkt–wit bruggen tellen mee.
  * Opening-wit adjacency is hier bewust niet genoeg (inkt-pixels = 0 → geen brug).
@@ -232,6 +233,7 @@ export function filterWindowsTouchingDoorArcs(params: {
     doorframeById.set(hypothesis.id, { hypothesis, reason })
   }
 
+  // ESC:R-15 (A)
   // Pass 2: propagatie in dezelfde richting/as-band vanaf DIRECT geraakte hypotheses.
   if (wallThicknessPx > 0 && doorframeById.size > 0) {
     const directDoorframes = [...doorframeById.values()]

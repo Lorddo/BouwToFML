@@ -1,4 +1,5 @@
 export const LAYER6_HV_ANGLE_TOL_DEG = 12
+// ESC:W-43 (E)
 /** Alleen noodpad zonder scale-object (Keep L6g). */
 export const LAYER6_HV_BAND_FALLBACK_PX = 8
 /** Fallback endpoint-snap bij ref=30 (0.1×ref); prefer `scale.endpointSnapPx`. */

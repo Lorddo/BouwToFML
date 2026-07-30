@@ -36,6 +36,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: ESC-tags
+        run: npm run esc:check
+
       - name: Tests
         run: npm test
 

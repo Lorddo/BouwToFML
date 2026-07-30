@@ -110,6 +110,7 @@ export function prepareRoomFinalizeMask(params: {
     closedMask: mergedWallClosedMask,
     imageWidth: width,
     imageHeight: height,
+    // ESC:W-01 (E)
     keepLargestOnly: true,
     minBlobAreaPx:
       params.referenceWallThicknessPx && params.referenceWallThicknessPx > 0

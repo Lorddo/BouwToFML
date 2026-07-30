@@ -2,6 +2,7 @@
 import type { ExtractionInput, ExtractionOutput } from '@/core/extraction'
 import { getExtractor, noopExtractor } from '@/core/extraction'
 import { registerAllExtractors } from '@/core/extraction/register-all-extractors'
+import { resetRunJournal, summarizeRunJournal, type RunJournalSummary } from '@/core/diagnostics'
 import { installWorkerDomPolyfills } from '@/cv/port/canvasEnv'
 import { setPipelineProgressListener } from '@/cv/pipeline/pipeline-progress'
 
@@ -20,8 +21,8 @@ type WorkerRequest = {
 }
 
 type WorkerResponse =
-  | { requestId: number; output: ExtractionOutput }
-  | { requestId: number; error: string }
+  | { requestId: number; output: ExtractionOutput; journal: RunJournalSummary }
+  | { requestId: number; error: string; journal: RunJournalSummary }
   | { requestId: number; progress: string }
 
 function imageFromData(payload: WorkerRequest & { imageData: ImageData }): OffscreenCanvas {
@@ -45,6 +46,9 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const progress: WorkerResponse = { requestId: payload.requestId, progress: step }
     self.postMessage(progress)
   })
+  // Eigen module-instantie hier: het journaal reist met het antwoord mee terug (anders zouden
+  // alle CV-tellers in de worker blijven hangen).
+  resetRunJournal(`worker:${payload.extractorId}`)
   try {
     const plugin = getExtractor(payload.extractorId) ?? noopExtractor
     const image = resolveWorkerImage(payload)
@@ -52,12 +56,17 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       ...payload.input,
       image: image,
     })
-    const response: WorkerResponse = { requestId: payload.requestId, output }
+    const response: WorkerResponse = {
+      requestId: payload.requestId,
+      output,
+      journal: summarizeRunJournal(),
+    }
     self.postMessage(response)
   } catch (error) {
     const response: WorkerResponse = {
       requestId: payload.requestId,
       error: error instanceof Error ? error.message : 'Worker extractie mislukt',
+      journal: summarizeRunJournal(),
     }
     self.postMessage(response)
   } finally {

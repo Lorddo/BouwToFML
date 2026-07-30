@@ -8,6 +8,7 @@ import {
   txRefsFromGraph,
 } from './junction-guard'
 
+// ESC:W-28 (B)
 /**
  * Per-candidate kind gate (mid-state → after one repair).
  * Position-based: baseline T/X within radius; L must not become I locally.

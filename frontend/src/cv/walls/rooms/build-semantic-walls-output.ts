@@ -1,3 +1,4 @@
+import { noteSwallowedError } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -46,10 +47,14 @@ export async function buildSemanticWallsForOutput(
   let distanceMap: Float32Array | null | undefined
 
   if (walls.roomWallMaskRle) {
+    // ESC:X-23 (E)
     let cv: Awaited<ReturnType<typeof waitForOpenCV>> | undefined
     try {
       cv = await waitForOpenCV()
-    } catch {
+    } catch (error) {
+      noteSwallowedError('X-23', 'build-semantic-walls-output', error, {
+        effect: 'geen distance-map → geen diktemeting op L10-segmenten',
+      })
       cv = undefined
     }
 
@@ -85,6 +90,7 @@ export async function buildSemanticWallsForOutput(
       semanticWallGraph: semantic,
       segments: semanticSegments.length > 0 ? semanticSegments : (walls.segments ?? []),
       wallGraph,
+      // ESC:X-27 (P)
       semanticUsedLayerBFallback: false,
     },
     built: true,

@@ -18,6 +18,7 @@ export type TemplatesInitialDetectionStep = {
   status: 'pending' | 'active' | 'done'
 }
 
+// ESC:O-43 (B)
 export function isTemplatesInitialDetectionBusy(params: {
   flowStep: WorkspaceFlowStep
   roomPhase: RoomPhase

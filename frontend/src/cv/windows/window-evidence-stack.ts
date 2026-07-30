@@ -97,6 +97,7 @@ function facesPerpTouch(params: {
   )
 }
 
+// ESC:R-17 (C)
 /**
  * Stage-3 full stack — ALLEEN parallelle strips op de glas-as (lokale perp-stapel).
  * Framing (as-uiteinden L/R of T/B) doet het andere pad; hier niet naartoe groeien.
@@ -130,6 +131,7 @@ export function growFullStackFromSeedFaces(params: {
   const seedFaces = seedIds.map((id) => whiteByRoot.get(id)).filter((f): f is RootFace => !!f)
   const seedSpans = seedFaces.map((f) => axisSpan(f.bbox, orientation)).filter((s) => s > 0)
   const seedMedianSpan = medianNumber(seedSpans)
+  // ESC:R-20 (B)
   if (!(seedMedianSpan > 0) || expectedHeightsPx.length <= 0) {
     return seedIds.sort((a, b) => a - b)
   }

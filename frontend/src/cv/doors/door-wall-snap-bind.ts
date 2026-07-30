@@ -46,6 +46,7 @@ export function segmentNearDoorCentroid(params: {
  * Contact-side = swing-rand naar de anchor; span = anchor (lange as).
  * Geen wallMask-gate. As uit anchor-aspect — alleen als swing-mask-pad faalt.
  */
+// ESC:D-50 (A)
 export function tryBindDoorToAnchorSegment(params: {
   door: ResolvedDoorCandidate
   doorBounds: BBoxBounds
@@ -120,6 +121,7 @@ export function tryBindDoorToAnchorSegment(params: {
     segments: params.segments,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
+  // ESC:D-53 (A)
   const match =
     strictMatch ??
     findBestSegment({

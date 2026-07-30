@@ -1,3 +1,4 @@
+import type { RunJournalSummary } from '@/core/diagnostics'
 import type { PipelineV3Debug } from '@/core/extraction/types'
 import type { BoundDoor, DoorResolvedKind, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type {
@@ -156,6 +157,12 @@ export interface LayerDebugReport {
   /** Deuren L11/L12 + ramen L14 (niet in pipelineV3Debug). */
   openings?: LayerDebugOpenings
   openingsSummary?: LayerDebugOpeningsSummary
+  /**
+   * Run-journaal: escalatiepaden die vuurden, ingeslikte fouten en weggegooide metingen.
+   * `degraded: true` betekent dat er minstens één exceptie is verzwegen — de rest van dit
+   * rapport is dan mogelijk incompleet.
+   */
+  journal?: RunJournalSummary
 }
 
 export type LayerDebugOpeningsInput = {

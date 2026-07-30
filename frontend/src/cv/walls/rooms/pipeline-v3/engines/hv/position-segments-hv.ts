@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { computeJunctionTurnAngleDeg } from '@/cv/port/wallJunctionGraph'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
@@ -98,16 +99,27 @@ function sampleSegmentThicknessFromMaskPx(params: {
   return median(values)
 }
 
+// ESC:W-14 (E)
 function resolveSegmentThicknessPx(params: {
   sampledThicknessPx: number | null
   faceThicknessPx: number
   referenceWallThicknessPx?: number
   policy: HvPolicy
 }): number {
-  if (params.sampledThicknessPx != null && params.sampledThicknessPx > 0)
+  if (params.sampledThicknessPx != null && params.sampledThicknessPx > 0) {
+    tally('W-14', 'sampled')
     return params.sampledThicknessPx
-  if (params.faceThicknessPx > 0) return params.faceThicknessPx
-  return params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
+  }
+  if (params.faceThicknessPx > 0) {
+    tally('W-14', 'faceMedian')
+    return params.faceThicknessPx
+  }
+  if (params.referenceWallThicknessPx != null) {
+    tally('W-14', 'reference')
+    return params.referenceWallThicknessPx
+  }
+  tally('W-14', 'policyFallback')
+  return params.policy.thicknessFallbackPx
 }
 
 function buildJunctionAngleDeg(params: {
@@ -233,6 +245,7 @@ export function positionSegmentsHv(params: {
     if (refs.aJunctionIndex != null) next.a = { ...positionedJunctionCoords[refs.aJunctionIndex] }
     if (refs.bJunctionIndex != null) next.b = { ...positionedJunctionCoords[refs.bJunctionIndex] }
 
+    // ESC:W-15 (B)
     if (axis.orientation === 'H' && axis.targetAxis != null) {
       if (refs.aJunctionIndex == null) next.a.y = axis.targetAxis
       if (refs.bJunctionIndex == null) next.b.y = axis.targetAxis

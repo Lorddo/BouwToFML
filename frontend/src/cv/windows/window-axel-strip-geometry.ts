@@ -296,6 +296,7 @@ export function median(values: number[]): number {
   return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2
 }
 
+// ESC:R-08 (A)
 /**
  * Kalibreer target striphoogte op echte px in dezelfde ruimte als room-faces,
  * op basis van roots die het referentievak snijden.

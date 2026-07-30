@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { DoorSizeBandPx, DoorSwingRefBand } from './types'
@@ -52,6 +53,7 @@ function tryRescueMatchOnFace(params: {
     params.aspectToleranceRatio,
     { sizeBand: params.sizeBand },
   )
+  // ESC:D-09 (A)
   const sizeNearMatch = !strictSingleMatch
     ? bestAspectRef(
         params.face.bbox,
@@ -61,6 +63,7 @@ function tryRescueMatchOnFace(params: {
       )
     : null
   const isUnderWallMin = underWallMinBand(params.face.bbox, params.sizeBand)
+  // ESC:D-10 (A)
   const looseUnderMinMatch =
     !strictSingleMatch && isUnderWallMin
       ? bestAspectRef(
@@ -110,6 +113,7 @@ function resolveWallRescueEither(params: {
   sizeBand: DoorSizeBandPx
   aspectToleranceRatio: number
 }): { match: RefMatch; measureFace: RootFace } | null {
+  // ESC:D-13 (C)
   for (const space of DOOR_SPACE_POLICY.wallRescueMatchSpaces) {
     let face: RootFace
     if (space === 'ink') {
@@ -132,8 +136,12 @@ function resolveWallRescueEither(params: {
       aspectToleranceRatio: params.aspectToleranceRatio,
       includeWallRescueMatch: true,
     })
-    if (match) return { match, measureFace: face }
+    if (match) {
+      tally('D-13', space)
+      return { match, measureFace: face }
+    }
   }
+  tally('D-13', 'none')
   return null
 }
 
@@ -216,15 +224,26 @@ function resolveSingleMatch(params: {
         aspectToleranceRatio: params.aspectToleranceRatio,
       })
     : null
-  return {
-    isNotSeed: false,
-    measureFace: rootFace,
-    singleMatch:
-      strictSingleMatch ??
-      clippedSingleMatch ??
-      (sizeNearRescue ? sizeNearMatch : null) ??
-      (shallowRescue ? looseUnderMinMatch : null),
-  }
+  // ESC:D-15 (A)
+  const singleMatch =
+    strictSingleMatch ??
+    clippedSingleMatch ??
+    (sizeNearRescue ? sizeNearMatch : null) ??
+    (shallowRescue ? looseUnderMinMatch : null)
+  // Welk niveau leverde: dit is het signaal of de strikte poging ooit slaagt.
+  tally(
+    'D-15',
+    strictSingleMatch
+      ? 'strict'
+      : clippedSingleMatch
+        ? 'clippedArc'
+        : sizeNearRescue
+          ? 'sizeNear'
+          : shallowRescue
+            ? 'shallow'
+            : 'none',
+  )
+  return { isNotSeed: false, measureFace: rootFace, singleMatch }
 }
 
 /**
@@ -266,6 +285,7 @@ export function evaluateSeedForRef(params: {
   if (singleResolution.isNotSeed) {
     return { kind: 'not_seed' }
   }
+  // ESC:D-16 (C)
   // Wall-rescue Either kan white-geom kiezen terwijl aggregate ink heeft.
   const measureFace = singleResolution.measureFace
   if (
@@ -330,6 +350,7 @@ export function evaluateSeedForRef(params: {
     const singleArea = absorbed.union.width * absorbed.union.height
     // Undersized single: veel kleiner dan de ref-bbox → eerst proberen naar de
     // volle boog te clusteren. Lukt dat (grotere passende union), gebruik die.
+    // ESC:D-17 (A)
     if (singleArea < DOOR_SWING_TUNING.undersizedSingleRefAreaRatio * refBoxArea) {
       const clustered = growClusterForRef({
         seed: params.root,

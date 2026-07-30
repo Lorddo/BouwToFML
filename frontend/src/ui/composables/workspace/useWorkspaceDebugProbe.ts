@@ -1,4 +1,5 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { noteSwallowedError } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { ResultViewTab, TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
@@ -116,7 +117,11 @@ function buildDualFaceSources(params: {
       classificationGroupBy: state.classificationGroupBy ?? 'component',
     }
     return { wallInk, openingWhite }
-  } catch {
+    // ESC:O-39 (D)
+  } catch (error) {
+    noteSwallowedError('O-39', 'useWorkspaceDebugProbe.dualFaceSources', error, {
+      effect: 'probe valt terug op ink-only',
+    })
     return {
       wallInk: faceSourceFromState(state, classification),
       openingWhite: null,

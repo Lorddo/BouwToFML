@@ -3,6 +3,7 @@
  * L3: iterative shortest I→T/X.
  * L8: single sweep I→L/T/X with optional structural T/X protect.
  */
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import {
   buildJunctionGraph,
   computeJunctionTurnAngleDeg,
@@ -38,8 +39,16 @@ function otherNodeId(edge: WallEdge, nodeId: string): string | null {
   return null
 }
 
+// ESC:W-13 (E)
 function resolveSpurThresholdPx(policy: PrunePolicy): number {
-  return policy.thicknessFallbackPx * policy.maxPathLengthRatio
+  const thresholdPx = policy.thicknessFallbackPx * policy.maxPathLengthRatio
+  noteMissingMeasurement(
+    'W-13',
+    'prune.resolveSpurThresholdPx',
+    'spur-drempel uit fallback-dikte; geen gemeten dikte in dit pad',
+    { thicknessFallbackPx: policy.thicknessFallbackPx, thresholdPx },
+  )
+  return thresholdPx
 }
 
 function isTerminalKind(kind: WallNode['kind'], terminals: readonly PruneTerminalKind[]): boolean {
@@ -286,6 +295,7 @@ export function tracePathFromIToFirstTx(params: {
   })
 }
 
+// ESC:W-12 (A)
 function pruneISpursIterative(segments: Segment[], policy: PrunePolicy): PruneISpursResult {
   const thresholdPx = resolveSpurThresholdPx(policy)
   const endpointEpsPx = policy.endpointEpsPx

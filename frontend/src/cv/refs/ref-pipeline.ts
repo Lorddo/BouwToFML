@@ -232,6 +232,7 @@ function isInteriorLikeFace(face: { role: string }): boolean {
   return face.role === 'interior' || face.role === 'head'
 }
 
+// ESC:REF-09 (A)
 function dropSmallWindowInteriorFaces(params: {
   kind: 'door' | 'window'
   faceProfile: OpeningRefUnitProfile['faceProfile']
@@ -402,6 +403,7 @@ export async function runOpeningRefPipeline(params: {
   })
   const combinedFacePolygons = combinedFacePolygonParts.map((part) => part.polygon)
   const onAxisParts = combinedFacePolygonParts.filter((part) => part.zone === 'on_axis')
+  // ESC:REF-10 (E)
   const primaryPool = onAxisParts.length > 0 ? onAxisParts : combinedFacePolygonParts
   const combinedFacePolygon = primaryPool[0]?.polygon ?? []
   const facesWithPolygons = filteredFaceProfile.faces.map((face) => ({

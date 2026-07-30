@@ -29,6 +29,7 @@ export function collectWallishParentMapChildren(
   return ids
 }
 
+// ESC:W-04 (A)
 /**
  * Vaste volgorde na classify/refine-merge: inherit wallish children →
  * materialiseer class → claim los als individuele roots.

@@ -193,6 +193,7 @@ export function bindWindowsToWalls(params: {
       continue
     }
     const span = resolveOpeningSpan({ bbox: openingBBox, segment })
+    // ESC:R-26 (E)
     // Breedte: Stage-4 widthPx (strip_stack = langste strip); fallback op geprojecteerde span.
     const widthPx = candidate.widthPx > 0 ? candidate.widthPx : span.widthPx
     bound.push({

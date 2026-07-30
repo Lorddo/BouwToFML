@@ -33,6 +33,7 @@ export interface SyncPinnedClassResult {
  * Handmatige pins buiten `upgradeFrom` worden niet teruggedraaid;
  * remove is previousAuto-only wanneer `previousAutoFaceIds` gezet is.
  */
+// ESC:O-05 (D)
 export function syncPinnedClassOverrides(
   cache: FaceOverridePinTarget,
   params: SyncPinnedClassOverridesParams,
@@ -92,6 +93,7 @@ export function syncPinnedClassOverrides(
  * Geen ink-reresolve hier: tot L11/L12 is `door` class/UI; afronden ziet door als
  * unknown via `toWallPipelineClass`. Ink-topologie blijft wall/unknown/surface.
  */
+// ESC:O-01 (D)
 export function syncDoorSwingFaceOverrides(
   cache: FaceOverridePinTarget,
   doorFaceIds: Iterable<number>,
@@ -116,6 +118,7 @@ export function syncDoorSwingFaceOverrides(
  * Alleen stale `wall`-bridge-seeds uit previousAuto worden opgeruimd.
  * Handmatige pins op andere classes blijven leidend.
  */
+// ESC:O-02 (D)
 export function syncDoorBridgeWallOverrides(
   cache: FaceOverridePinTarget,
   bridgeFaceIds: Iterable<number>,
@@ -140,6 +143,7 @@ export function syncDoorBridgeWallOverrides(
  * Handmatige pins (niet in previous) blijven. Gepinde non-window
  * (wall/door/doorframe/unknown/surface) worden niet terug naar `window` gezet.
  */
+// ESC:O-03 (D)
 export function syncWindowFaceOverrides(
   cache: FaceOverridePinTarget,
   windowFaceIds: Iterable<number>,
@@ -161,6 +165,7 @@ export function syncWindowFaceOverrides(
  * Sticky: geen auto-remove — eens doorframe blijft doorframe tot handmatige override.
  * Upgrade vanaf `window` blijft (Stage-2 door-arc → doorframe).
  */
+// ESC:O-04 (D)
 export function syncDoorframeFaceOverrides(
   cache: FaceOverridePinTarget,
   doorframeFaceIds: Iterable<number>,

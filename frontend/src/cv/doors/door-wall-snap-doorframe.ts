@@ -282,6 +282,7 @@ function finalizePathABound(params: {
   }
 }
 
+// ESC:D-47 (A)
 /**
  * Path A segment-first: bind op muursegment langs doorframe zonder wallMask-gate.
  */
@@ -310,6 +311,7 @@ function tryBindDoorToDoorframeSegment(params: {
   })
 }
 
+// ESC:D-47 (A)
 export function tryPathABind(params: {
   door: ResolvedDoorCandidate
   doorBounds: BBoxBounds

@@ -15,7 +15,10 @@
     "lint:fix": "eslint . --fix",
     "prepare": "cd .. && husky frontend/.husky",
     "layer-diff": "node --experimental-strip-types scripts/layer-diff.ts",
-    "wall-orientation-inventory": "node --experimental-strip-types scripts/wall-orientation-inventory.ts"
+    "wall-orientation-inventory": "node --experimental-strip-types scripts/wall-orientation-inventory.ts",
+    "esc:check": "node --experimental-strip-types scripts/check-esc-tags.ts --check",
+    "esc:report": "node --experimental-strip-types scripts/check-esc-tags.ts --report",
+    "esc:index": "node --experimental-strip-types scripts/check-esc-tags.ts --write-index"
   },
   "lint-staged": {
     "*.{ts,vue}": [
