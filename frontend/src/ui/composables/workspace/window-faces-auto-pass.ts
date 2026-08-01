@@ -119,16 +119,29 @@ export async function pushStageClassesOntoWalls(ctx: {
     ctx.referenceWallThicknessPx,
     ctx.autoPassState.lastAutoDoorframeFaceIds,
   )
-  const dfClaim = claimFacesInRoomRasterCache(cache, nextDoorframeIds)
+  // Doorframe wél materialiseren, maar nooit over class=`door` heen (wall-rescue pins).
+  const doorframeIdsSafe = nextDoorframeIds.filter((id) => cache.faceOverrides.get(id) !== 'door')
+  const dfClaim = claimFacesInRoomRasterCache(cache, doorframeIdsSafe, {
+    class: 'doorframe',
+    forceClass: true,
+  })
   ctx.autoPassState.lastAutoDoorframeFaceIds = [...new Set(nextDoorframeIds)]
 
   const changed =
-    windowSync.changed || dfSync.changed || windowClaim.parentMapChanged || dfClaim.parentMapChanged
+    windowSync.changed ||
+    dfSync.changed ||
+    windowClaim.parentMapChanged ||
+    dfClaim.parentMapChanged ||
+    dfClaim.classChanged
   if (!changed) return null
 
   const next: RoomRasterCache = {
     ...cache,
-    state: { ...cache.state, parentMap: [...cache.state.parentMap] },
+    state: {
+      ...cache.state,
+      parentMap: [...cache.state.parentMap],
+      classificationByLabel: [...cache.state.classificationByLabel],
+    },
     faceOverrides: new Map(cache.faceOverrides),
     pinnedRoots: new Set(cache.pinnedRoots),
   }

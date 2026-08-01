@@ -42,11 +42,10 @@ export function segmentNearDoorCentroid(params: {
 }
 
 /**
- * Segment-first bind via ink-anchor (doorframe Path A fallback / legacy Path B).
- * Contact-side = swing-rand naar de anchor; span = anchor (lange as).
- * Geen wallMask-gate. As uit anchor-aspect — alleen als swing-mask-pad faalt.
+ * Segment-first bind via ink-anchor (Path A / D-47).
+ * Contact-side = swing-rand naar de anchor; span = anchor (lange as). Geen wallMask-gate.
+ * ESC:D-50 Path B wall-union-aanroep — VERWIJDERD 2026-07-31 (tombstone in door-wall-snap.ts).
  */
-// ESC:D-50 (A)
 export function tryBindDoorToAnchorSegment(params: {
   door: ResolvedDoorCandidate
   doorBounds: BBoxBounds
@@ -121,16 +120,8 @@ export function tryBindDoorToAnchorSegment(params: {
     segments: params.segments,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
-  // ESC:D-53 (A)
-  const match =
-    strictMatch ??
-    findBestSegment({
-      side: fakeContact,
-      bounds: spanBounds,
-      segments: params.segments,
-      referenceWallThicknessPx: params.referenceWallThicknessPx,
-      relaxed: true,
-    })
+  // ESC:D-53 (A) — VERWIJDERD 2026-07-31: anchor relaxed fallback; alleen strikte match.
+  const match = strictMatch
   if (!match) return null
   const segment = params.segments[match.segmentIndex]
   if (!segment) return null

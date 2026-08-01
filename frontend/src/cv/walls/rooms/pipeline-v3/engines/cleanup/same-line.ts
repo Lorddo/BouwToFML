@@ -1,6 +1,7 @@
 /**
  * L5 cleanup — Copy(6) same-line merge.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments, dropZeroLengthSegments } from '../segment-ops'
@@ -142,7 +143,10 @@ export function mergeSameLineSegments(
       const clusterSegments = cluster.indices.map((idx) => work[idx])
       // ESC:W-22 (A)
       const hasShort = clusterSegments.some((seg) => segmentLength(seg) <= ref)
-      if (!hasShort) continue
+      if (!hasShort) {
+        tally('W-22', 'skip_no_short')
+        continue
+      }
 
       const ranges = clusterSegments.map((seg) => projectionRange(seg, cluster.axis))
       const cuts: number[] = []
@@ -189,6 +193,7 @@ export function mergeSameLineSegments(
       }
 
       if (created === 0) continue
+      tally('W-22', 'merged')
       mergedClusterCount += 1
       mergedSegmentCount += cluster.indices.length
       for (const idx of cluster.indices) toDelete.add(idx)

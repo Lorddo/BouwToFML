@@ -4,7 +4,7 @@ Peildatum: 2026-07-29 · Status: **advies, vastgesteld met gebruiker** · Bron-i
 
 Dit document zegt **hoe** we de ruim tweehonderd escalatiepaden gaan opruimen. De inventaris zegt *wat* er is en blijft een bevroren momentopname; hier staan de doelstelling, het meetinstrument, de volgorde en de spelregels. Uit dit document worden vervolgens de losse plannen afgeleid — één per cascade, niet één voor het geheel.
 
-Verwante documenten: [`audit-2026-07-29.md`](audit-2026-07-29.md) (risico 5 is de aanleiding), het E2E-fixtureplan (`.cursor/plans/e2e_fixtures_fml_current_*.plan.md`), [`decisions.md`](decisions.md) voor de formele besluiten.
+Verwante documenten: [`audit-2026-07-29.md`](audit-2026-07-29.md) (risico 5 is de aanleiding), het E2E-fixtureplan (`.cursor/plans/e2e_fixtures_fml_current_*.plan.md`), [`decisions.md`](decisions.md) voor de formele besluiten, [`escalatiepaden-lagen-diagrammen.md`](escalatiepaden-lagen-diagrammen.md) (flow per laag/stage).
 
 ---
 

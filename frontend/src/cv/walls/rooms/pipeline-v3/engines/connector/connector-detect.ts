@@ -2,6 +2,7 @@
  * L6 connector-detect — primary pass + chain-tip pass (public API).
  */
 import type { Segment } from '@/cv/port/wallGraph'
+import { tally } from '@/core/diagnostics'
 import { infiniteLineIntersection } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt } from '../segment-ops'
 import {
@@ -86,6 +87,7 @@ export function detectLayer6ConnectorCandidates(params: {
         vSegmentIndex: landingGeom.vSegIndex,
         lengthPx: entry.lengthPx,
       })
+      tally('W-33', 'landing')
       continue
     }
 
@@ -112,6 +114,7 @@ export function detectLayer6ConnectorCandidates(params: {
     })
     if (hvBridge) {
       out.push(hvBridge)
+      tally('W-33', 'hv_bridge')
       continue
     }
 
@@ -265,6 +268,7 @@ export function detectLayer6ConnectorCandidates(params: {
         lengthPx: entry.lengthPx,
         syntheticVSegment: syntheticV,
       })
+      tally('W-33', 'synthetic_v')
       continue
     }
 
@@ -294,8 +298,10 @@ export function detectLayer6ConnectorCandidates(params: {
       vSegmentIndex: v.segIndex,
       lengthPx: entry.lengthPx,
     })
+    tally('W-33', hadLocalH && hadLocalV ? 'local_hv' : 'fallback_axis')
   }
 
+  const beforeChainTip = out.length
   appendChamferChainTipCandidates({
     segments: params.segments,
     classified,
@@ -307,6 +313,9 @@ export function detectLayer6ConnectorCandidates(params: {
     nearbyWeldPx,
     shortHStubPx: scale.shortHStubPx,
   })
+  for (let i = beforeChainTip; i < out.length; i += 1) {
+    tally('W-33', 'chain_tip')
+  }
 
   return out
 }

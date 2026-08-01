@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { RefBBox, RefFace, RefFaceProfile } from './types'
 import { classifyFaceRoles, labelWhiteFaces } from './ref-face-profile'
 import { resolveKopeindeAxisBand, type KopeindeAxisBand } from './ref-general-categories'
@@ -112,9 +113,16 @@ function resolveSwingCandidatePool(faces: RefFace[], cropW: number): RefFace[] {
     if (zone === 'below') below.push(face)
     else if (zone === 'on_axis') onAxis.push(face)
   }
-  if (below.length > 0) return below
-  if (onAxis.length > 0) return onAxis
+  if (below.length > 0) {
+    tally('REF-12', 'below')
+    return below
+  }
+  if (onAxis.length > 0) {
+    tally('REF-12', 'on_axis')
+    return onAxis
+  }
   // Band bestaat maar geen below/on_axis → niet `above` forceren; legacy all-faces.
+  tally('REF-12', 'legacy_all')
   return faces
 }
 

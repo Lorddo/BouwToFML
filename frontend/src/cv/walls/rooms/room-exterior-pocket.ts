@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { RasterRoomComponent } from './room-raster'
 import type { RoomRasterClass } from './room-ink-classify'
 import { cardinalNeighborRoots, resolveMergedLabel } from './room-raster-merge'
@@ -28,7 +29,9 @@ function resolveClassForLabel(
   if (direct) return direct
   const root = resolveMergedLabel(label, parentMap)
   // ESC:W-06 (E)
-  return classificationByLabel.get(root) ?? 'surface'
+  const resolved = classificationByLabel.get(root)
+  if (resolved == null) tally('W-06', 'surface_fallback')
+  return resolved ?? 'surface'
 }
 
 // ESC:W-02 (A)
@@ -99,6 +102,7 @@ export function demoteExteriorPocketFaces(params: {
     nextClassification.set(component.label, 'outside')
     nextClassification.set(componentRoot, 'outside')
     demotedLabels.push(component.label)
+    tally('W-02', 'demoted')
   }
 
   return {

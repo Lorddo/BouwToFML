@@ -10,12 +10,15 @@ const props = defineProps<{
   sessions: Array<{ id: string; label: string }>
   selectedSessionId: string | null
   currentStep: WorkspaceFlowStep
+  e2eFixtureBusy?: boolean
+  e2eFixtureMessage?: string | null
 }>()
 
 const emit = defineEmits<{
   record: []
   restore: []
   selectSession: [sessionId: string | null]
+  exportE2eFixture: []
 }>()
 
 const currentStepLabel = computed(() => WORKSPACE_FLOW_LABELS[props.currentStep])
@@ -54,6 +57,19 @@ const currentStepLabel = computed(() => WORKSPACE_FLOW_LABELS[props.currentStep]
     </div>
 
     <p v-if="message" class="status">{{ message }}</p>
+
+    <hr class="divider" />
+    <h4 class="subhead">E2E-fixture</h4>
+    <p class="hint">
+      Na afronden (muren + deuren + ramen): download
+      <code>fixture.json</code> + <code>mask.png</code> altijd samen.
+    </p>
+    <div class="actions">
+      <button type="button" :disabled="busy || e2eFixtureBusy" @click="emit('exportE2eFixture')">
+        Exporteer E2E-fixture
+      </button>
+    </div>
+    <p v-if="e2eFixtureMessage" class="status">{{ e2eFixtureMessage }}</p>
   </div>
 </template>
 
@@ -75,6 +91,18 @@ const currentStepLabel = computed(() => WORKSPACE_FLOW_LABELS[props.currentStep]
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 8px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px dashed #cbd5e1;
+  margin: 12px 0 10px;
+}
+
+.subhead {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .actions button {

@@ -1,4 +1,4 @@
-import { noteDiscardedMeasurement } from '@/core/diagnostics'
+import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import { resolveEffectiveFmlWallThicknessLimits } from './fml-wall-thickness-limits'
@@ -8,6 +8,7 @@ import {
   type FmlThicknessBand,
   type FmlThicknessBandBoundaries,
 } from './fml-wall-thickness-tiers'
+import { wallLengthCm } from './fml-wall-geom'
 
 const ENDPOINT_KEY_DECIMALS = 4
 import { WALL_CHAIN_BRIDGE_MAX_RATIO } from './wall-thickness-chain'
@@ -47,10 +48,6 @@ class UnionFind {
     if (rootA === rootB) return
     this.parent[rootB] = rootA
   }
-}
-
-function wallLengthCm(wall: Wall): number {
-  return Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
 }
 
 function wallAngleDeg(wall: Wall): number {
@@ -135,6 +132,7 @@ export function buildFmlThicknessChains(
     if (bridgeLength > CHAIN_BRIDGE_MAX_CM) continue
     if (bridgeLength > maxNeighborLength * WALL_CHAIN_BRIDGE_MAX_RATIO) continue
 
+    tally('X-04', 'bridge_merged')
     uf.union(bridgeIndex, leftIndex)
     uf.union(bridgeIndex, rightIndex)
     uf.union(leftIndex, rightIndex)
@@ -175,6 +173,7 @@ function resolveChainBand(
     'min' as FmlThicknessBand,
   )
   if (bandLengths[best] > 0) return best
+  tally('X-03', 'no_chain_length')
   const rawValues = chain.map((index) => walls[index]?.thickness ?? 10)
   return classifyFmlThicknessBand(roundFmlThicknessCm(averageThicknessCm(rawValues)), boundaries)
 }
@@ -192,14 +191,18 @@ const HARMONIZED_WALL_BALANCE = 0.5
 // ESC:X-05 (E)
 /** Afronden op 1 decimaal — discrete FML-waarde uit ketengemiddelde. */
 export function roundFmlThicknessCm(value: number): number {
-  if (!Number.isFinite(value)) return 10
+  if (!Number.isFinite(value)) {
+    tally('X-05', 'non_finite')
+    return 10
+  }
   return Math.round(value * 10) / 10
 }
 
 // ESC:X-02 (E)
 /**
  * Harmoniseert muurdikte per keten en mapt naar absolute min/mid/max exportdiktes.
- * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits.
+ * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits (bewust beleid).
+ * Balance: altijd 0.5 bij export (ESC:X-01 AFBAKENEN) — gemeten hinge niet meenemen.
  */
 export function harmonizeFmlWallThickness(
   plan: FloorPlan,
@@ -247,7 +250,7 @@ export function harmonizeFmlWallThickness(
           return {
             ...wall,
             thickness: exportThickness,
-            // ESC:X-01 (E)
+            // ESC:X-01 (E) — AFBAKENEN: export altijd 0.5 (geen gemeten hinge-balance).
             balance: HARMONIZED_WALL_BALANCE,
           }
         }),

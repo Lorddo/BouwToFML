@@ -12,8 +12,9 @@ function wall(
   a: { x: number; y: number },
   b: { x: number; y: number },
   thickness: number,
+  balance = 0.5,
 ): Wall {
-  return { id, a, b, thickness, balance: 0.5, c: null, openings: [] }
+  return { id, a, b, thickness, balance, c: null, openings: [] }
 }
 
 function planWithWalls(walls: Wall[]): FloorPlan {
@@ -107,12 +108,12 @@ describe('buildFmlThicknessChains', () => {
 })
 
 describe('harmonizeFmlWallThickness', () => {
-  it('harmoniseert naar absolute tier-waarde (min)', () => {
+  it('harmoniseert naar absolute tier-waarde (min) en forceert balance 0.5', () => {
     const plan = planWithWalls([
-      wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
-      wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 11),
-      wall('w2', { x: 200, y: 0 }, { x: 300, y: 0 }, 10),
-      wall('w3', { x: 300, y: 0 }, { x: 400, y: 0 }, 11.5),
+      wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10, 0.34),
+      wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 11, 0.62),
+      wall('w2', { x: 200, y: 0 }, { x: 300, y: 0 }, 10, 0.41),
+      wall('w3', { x: 300, y: 0 }, { x: 400, y: 0 }, 11.5, 0.55),
     ])
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []

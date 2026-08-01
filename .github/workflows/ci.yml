@@ -42,6 +42,9 @@ jobs:
       - name: Tests
         run: npm test
 
+      - name: E2E fixtures
+        run: npm run test:e2e
+
       # vue-tsc -b i.p.v. --noEmit: tsconfig.node.json is een composite
       # reference waarvan de output eerst gebouwd moet zijn (anders TS6305).
       - name: Typecheck & build

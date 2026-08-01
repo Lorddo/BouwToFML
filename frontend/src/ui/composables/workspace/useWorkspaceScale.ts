@@ -24,10 +24,12 @@ export function useWorkspaceScale(deps: {
 
   function updateMmX(value: number) {
     deps.scale.distanceMmX.value = Number.isFinite(value) ? value : deps.scale.distanceMmX.value
+    deps.scale.recomputeConfirmedFromDistances()
   }
 
   function updateMmY(value: number) {
     deps.scale.distanceMmY.value = Number.isFinite(value) ? value : deps.scale.distanceMmY.value
+    deps.scale.recomputeConfirmedFromDistances()
   }
 
   function onConfirmScale() {
@@ -46,7 +48,9 @@ export function useWorkspaceScale(deps: {
     scalePanelOpen.value = !scalePanelOpen.value
     if (scalePanelOpen.value) {
       const img = deps.originalImageEl.value
-      if (img) {
+      // Alleen init als er nog geen linialen zijn — opnieuw openen mag bevestigde
+      // schaal + mm niet wissen (anders: default 35%-span met oude mm → foute FML).
+      if (img && !deps.scale.state.value) {
         deps.scale.init(img.naturalWidth, img.naturalHeight)
       }
     }

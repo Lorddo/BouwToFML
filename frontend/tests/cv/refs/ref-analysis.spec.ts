@@ -27,6 +27,11 @@ import { deriveOpeningPrimitives } from '@/cv/refs/ref-opening-primitives'
 import { computeUnitGeneralCategoryMetrics } from '@/cv/refs/ref-general-categories'
 import { rotateBwData90Cw } from '@/cv/refs/ref-orient'
 import { shouldInvertRefCropPolarity } from '@/cv/refs/ref-crop-bw'
+import {
+  estimateDoorWallDeskewFromInk,
+  orientDoorHeaviestFaceToBottom,
+  resolveDoorNeed90Cw,
+} from '@/cv/refs/ref-door-orient'
 import { estimateDeskewCorrectionFromLines } from '@/cv/refs/ref-straighten'
 import { detectDoorSwingSector } from '@/cv/refs/ref-swing-arc'
 import { detectMidlineInk } from '@/cv/refs/ref-midline-ink'
@@ -642,21 +647,21 @@ describe('ref-straighten', () => {
   })
 
   it('negeert micro-skew op bijna-horizontale parallelrails (raam-as recht houden)', () => {
-    // BouwTek11-achtig: lange H-rails ~0.6° door pixel-aliasing + korte kozijnen met luidruchtige hoek.
+    // Lange H-rails ~0.15° door pixel-aliasing — onder openings-minAbsDeg (0.25).
     const correction = estimateDeskewCorrectionFromLines(
       [
         {
           a: { x: 0, y: 8 },
-          b: { x: 140, y: 9.5 },
+          b: { x: 140, y: 8.4 },
           lengthPx: 140,
-          angleDeg: 0.62,
+          angleDeg: 0.15,
           relation: 'parallel',
         },
         {
           a: { x: 0, y: 20 },
-          b: { x: 140, y: 21.5 },
+          b: { x: 140, y: 20.35 },
           lengthPx: 140,
-          angleDeg: 0.61,
+          angleDeg: 0.14,
           relation: 'parallel',
         },
         { a: { x: 4, y: 6 }, b: { x: 5, y: 24 }, lengthPx: 18, angleDeg: 87.2, relation: 'perp' },
@@ -670,7 +675,7 @@ describe('ref-straighten', () => {
       ],
       'horizontal',
       5,
-      { preferParallel: true, minAbsDeg: 1.25, minLengthPx: 8 },
+      { preferParallel: true, minAbsDeg: 0.25, minLengthPx: 8 },
     )
     expect(correction).toBe(0)
   })
@@ -696,7 +701,168 @@ describe('ref-straighten', () => {
       ],
       'horizontal',
       5,
-      { preferParallel: true, minAbsDeg: 1.25, minLengthPx: 8 },
+      { preferParallel: true, minAbsDeg: 0.25, minLengthPx: 8 },
+    )
+    expect(correction).toBeLessThan(0)
+    expect(Math.abs(correction)).toBeGreaterThanOrEqual(2.5)
+  })
+})
+
+describe('ref-door-orient', () => {
+  const stubFace = (partial: Pick<RefFace, 'bbox' | 'areaPx'> & Partial<RefFace>): RefFace => ({
+    label: partial.label ?? 1,
+    areaPx: partial.areaPx,
+    bbox: partial.bbox,
+    centroid: partial.centroid ?? {
+      x: partial.bbox.x + partial.bbox.width / 2,
+      y: partial.bbox.y + partial.bbox.height / 2,
+    },
+    relativeCentroid: { x: 0.5, y: 0.5 },
+    inkRatio: 0,
+    aspectRatio: partial.bbox.width / Math.max(1, partial.bbox.height),
+    compactness: 1,
+    touchesBorder: false,
+    role: partial.role ?? 'interior',
+  })
+
+  it('ontdekt verticale muuras → 90° CW nodig', () => {
+    const w = 80
+    const h = 100
+    // Verticale muur-inkt links.
+    const data = new Uint8Array(w * h).fill(255)
+    for (let y = 5; y < 95; y += 1) {
+      for (let x = 4; x < 18; x += 1) data[y * w + x] = 0
+    }
+    const result = resolveDoorNeed90Cw({ bwData: data, width: w, height: h })
+    expect(result.need90).toBe(true)
+    expect(result.source).toBe('wallAxis')
+  })
+
+  it('ontdekt horizontale muuras → geen 90° (ook bij ondiepe swing)', () => {
+    const w = 120
+    const h = 50
+    // Horizontale muur bovenaan + ondiep wit eronder (kleine |dy|, grote |dx| mogelijk).
+    const data = new Uint8Array(w * h).fill(255)
+    for (let y = 6; y < 16; y += 1) {
+      for (let x = 5; x < 115; x += 1) data[y * w + x] = 0
+    }
+    const result = resolveDoorNeed90Cw({
+      bwData: data,
+      width: w,
+      height: h,
+      faces: [
+        stubFace({
+          label: 1,
+          bbox: { x: 20, y: 18, width: 80, height: 22 },
+          areaPx: 1400,
+          // Lateraal verschoven t.o.v. ink-midden — oude swingSide zou vals 90° doen.
+          centroid: { x: 90, y: 30 },
+        }),
+      ],
+    })
+    expect(result.need90).toBe(false)
+    expect(result.source).toBe('wallAxis')
+  })
+
+  it('draait 180° als muur-inkt onder het zwaarste draaivlak zit', () => {
+    const w = 80
+    const h = 70
+    const data = new Uint8Array(w * h).fill(255)
+    for (let y = 48; y < 62; y += 1) {
+      for (let x = 5; x < 75; x += 1) data[y * w + x] = 0
+    }
+    const oriented = orientDoorHeaviestFaceToBottom(data, w, h)
+    expect(oriented.rotated180).toBe(true)
+    const after = buildFaceProfile(oriented.bwData, oriented.width, oriented.height, undefined, {
+      minAreaPx: 4,
+    })
+    const heaviest = after.faces.reduce((a, b) => (a.areaPx >= b.areaPx ? a : b))
+    let inkY = 0
+    let inkN = 0
+    for (let y = 0; y < oriented.height; y += 1) {
+      for (let x = 0; x < oriented.width; x += 1) {
+        if ((oriented.bwData[y * oriented.width + x] ?? 255) >= 128) continue
+        inkY += y
+        inkN += 1
+      }
+    }
+    expect(inkN).toBeGreaterThan(0)
+    expect(inkY / inkN).toBeLessThan(heaviest.centroid.y)
+  })
+
+  it('draait niet 180° als muur-inkt al boven het draaivlak zit', () => {
+    const w = 80
+    const h = 70
+    const data = new Uint8Array(w * h).fill(255)
+    for (let y = 8; y < 22; y += 1) {
+      for (let x = 5; x < 75; x += 1) data[y * w + x] = 0
+    }
+    const oriented = orientDoorHeaviestFaceToBottom(data, w, h)
+    expect(oriented.rotated180).toBe(false)
+  })
+
+  it('deskew PCA op muur-band corrigeert scheve muur-inkt', () => {
+    const w = 120
+    const h = 80
+    const data = new Uint8Array(w * h).fill(255)
+    const slope = Math.tan((3 * Math.PI) / 180)
+    for (let x = 5; x < 115; x += 1) {
+      const y0 = Math.round(10 + x * slope)
+      for (let t = 0; t < 8; t += 1) {
+        const y = y0 + t
+        if (y >= 0 && y < h) data[y * w + x] = 0
+      }
+    }
+    for (let y = 45; y < 75; y += 1) {
+      for (let x = 20; x < 90; x += 1) data[y * w + x] = 255
+    }
+    const correction = estimateDoorWallDeskewFromInk({
+      bwData: data,
+      width: w,
+      height: h,
+      wallYMax: 35,
+      maxAbsDeg: 8,
+      minAbsDeg: 0.35,
+    })
+    expect(correction).not.toBe(0)
+    expect(Math.abs(correction)).toBeGreaterThanOrEqual(1.5)
+  })
+
+  it('deskew op muur-band-lijnen negeert onderste swing-chords', () => {
+    const correction = estimateDeskewCorrectionFromLines(
+      [
+        {
+          a: { x: 0, y: 8 },
+          b: { x: 100, y: 13.2 },
+          lengthPx: 100,
+          angleDeg: 3,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 0, y: 18 },
+          b: { x: 100, y: 23.2 },
+          lengthPx: 100,
+          angleDeg: 3,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 10, y: 70 },
+          b: { x: 90, y: 70 },
+          lengthPx: 80,
+          angleDeg: 0,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 15, y: 78 },
+          b: { x: 85, y: 78 },
+          lengthPx: 70,
+          angleDeg: 0,
+          relation: 'parallel',
+        },
+      ].filter((line) => (line.a.y + line.b.y) / 2 < 80 * 0.55),
+      'horizontal',
+      5,
+      { preferParallel: true, minAbsDeg: 0.35, minLengthPx: 8 },
     )
     expect(correction).toBeLessThan(0)
     expect(Math.abs(correction)).toBeGreaterThanOrEqual(2.5)

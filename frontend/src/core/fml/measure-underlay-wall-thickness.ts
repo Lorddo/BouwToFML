@@ -1,4 +1,4 @@
-import { noteDiscardedMeasurement } from '@/core/diagnostics'
+import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import type { Point2D, Wall } from './types'
 
 const INK_LUMINANCE_THRESHOLD = 140
@@ -285,8 +285,12 @@ function sampleThicknessPxOnMask(params: {
       b: params.b,
       maxSearchPx,
     })
-    if (boxed.values.length) return boxed
+    if (boxed.values.length) {
+      tally('X-19', 'ortho_box')
+      return boxed
+    }
   }
+  tally('X-19', 'diagonal')
   return sampleThicknessDiagonalAtMid({
     mask: params.mask,
     width: params.width,
@@ -327,13 +331,19 @@ export function imagePxThicknessToCmAlongNormal(
   const safeY = Number.isFinite(pxPerMmY) && pxPerMmY > 0 ? pxPerMmY : 0
   const normLen = Math.hypot(nx, ny)
   // ESC:X-20 (E)
-  if (normLen <= 1e-6 || (safeX <= 0 && safeY <= 0)) return 10
+  if (normLen <= 1e-6 || (safeX <= 0 && safeY <= 0)) {
+    tally('X-20', 'invalid_normal_or_scale')
+    return 10
+  }
   const ux = nx / normLen
   const uy = ny / normLen
   const mmPerPxX = safeX > 0 ? 1 / safeX : safeY > 0 ? 1 / safeY : 0
   const mmPerPxY = safeY > 0 ? 1 / safeY : safeX > 0 ? 1 / safeX : 0
   const mmPerPxAlongNormal = Math.hypot(ux * mmPerPxX, uy * mmPerPxY)
-  if (mmPerPxAlongNormal <= 0) return 10
+  if (mmPerPxAlongNormal <= 0) {
+    tally('X-20', 'zero_along_normal')
+    return 10
+  }
   return Math.max(1, (thicknessPx * mmPerPxAlongNormal) / 10)
 }
 

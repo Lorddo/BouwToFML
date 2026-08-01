@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { resolvePixelClassification } from '@/cv/walls/rooms/room-ink-classify'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'
@@ -207,6 +208,7 @@ export function findDoorBridgeWallFaces(params: {
 
     const hypPromoted = new Set<number>()
     if (seedRoots.length > 0) {
+      tally('D-40', 'seed_between_two_walls')
       const visited = new Set<number>(doorRoots)
       const queue = [...seedRoots]
       for (const root of seedRoots) {
@@ -248,7 +250,10 @@ export function findDoorBridgeWallFaces(params: {
     // aan de hyp, niet opnieuw promoten (geen allFaceIds — pin blijft sticky).
     for (const doorRoot of doorRoots) {
       const cls = rootFaces.get(doorRoot)?.className
-      if (cls === 'doorframe') hypPromoted.add(doorRoot)
+      if (cls === 'doorframe') {
+        tally('D-41', 'sticky_doorframe_kept')
+        hypPromoted.add(doorRoot)
+      }
       for (const neighborRaw of params.adjacency.get(doorRoot) ?? []) {
         const neighbor = resolveMergedLabel(neighborRaw, params.parentMap)
         if (neighbor <= 0 || doorRoots.has(neighbor)) continue
@@ -265,6 +270,7 @@ export function findDoorBridgeWallFaces(params: {
         ) {
           continue
         }
+        tally('D-41', 'sticky_doorframe_neighbor_linked')
         hypPromoted.add(neighbor)
       }
     }

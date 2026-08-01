@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { WindowSizeRange2d } from './types'
 
 const DEFAULT_MARGIN_RATIO = 0.4
@@ -84,7 +85,9 @@ export function fitsFramingSizeRange(params: {
   if (params.bandValidated) {
     // Band dekt plaatsing; blokkeer alleen stof (<25% ref-minH).
     const softMinH = Math.max(1, range.minHeight * 0.25)
-    return params.heightPx >= softMinH
+    const ok = params.heightPx >= softMinH
+    tally('R-19', ok ? 'band_soft_ok' : 'band_soft_reject')
+    return ok
   }
   return params.heightPx >= range.minHeight
 }

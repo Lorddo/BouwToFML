@@ -53,6 +53,8 @@ export function useWorkspaceImage(deps: {
 }) {
   const optimizationBaseSrc = ref<string | null>(null)
   const suppressNextSrcWatch = ref(false)
+  /** Guards against stale async upscale completing after a newer upload. */
+  let imageSrcLoadGeneration = 0
 
   function onImageLoaded(width: number, height: number): void {
     if (!deps.scale.state.value) {
@@ -107,9 +109,11 @@ export function useWorkspaceImage(deps: {
         suppressNextSrcWatch.value = false
         return
       }
+      const generation = ++imageSrcLoadGeneration
       void deps.cvLoader.ensureOpenCv()
       try {
         const base = await buildOptimizationBase(src)
+        if (generation !== imageSrcLoadGeneration) return
         optimizationBaseSrc.value = base.src
         deps.originalImageEl.value = base.image
         if (base.scale !== 1) {
@@ -122,8 +126,10 @@ export function useWorkspaceImage(deps: {
         }
         onImageLoaded(base.image.naturalWidth, base.image.naturalHeight)
       } catch {
+        if (generation !== imageSrcLoadGeneration) return
         optimizationBaseSrc.value = src
         const fallback = await loadImage(src)
+        if (generation !== imageSrcLoadGeneration) return
         deps.originalImageEl.value = fallback
         onImageLoaded(fallback.naturalWidth, fallback.naturalHeight)
       }
@@ -183,6 +189,11 @@ export function useWorkspaceImage(deps: {
     onImageLoaded(img.naturalWidth, img.naturalHeight)
 
     if (deps.scale.confirmed.value) {
+      // Bevestigde px/mm = dichtheid in pre-bake ruimte. Rotatie wijzigt geen densiteit,
+      // wel as-rollen bij 90°/270°; daarna alleen commit-upscale meenemen.
+      // (Liniaal-transform na 90° zou H-span inklappen → ppm≈0 — daarom niet herberekend.)
+      const bakedRotation = totalRotation + (preprocess.rotate180 ? 180 : 0)
+      deps.scale.applyCardinalAxisSwapToConfirmedScale(bakedRotation)
       deps.scale.applyUpscaleToConfirmedScale(normalized.scale)
     } else if (deps.scale.state.value) {
       let state = deps.scale.state.value

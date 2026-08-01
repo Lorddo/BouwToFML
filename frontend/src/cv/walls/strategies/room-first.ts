@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { WallStrategyResult } from '../strategy-utils'
@@ -170,6 +171,7 @@ function classifyRoomFacesFromBwMat(params: {
     classificationByLabel: effectiveForResolve,
     referenceWallThicknessPx,
   })
+  tally('W-03', finalInk.inkResolveStats.assignedPx > 0 ? 'booster_assigned' : 'booster_noop')
   labelsData = finalInk.labelsData
   parentMap = finalInk.parentMap
 

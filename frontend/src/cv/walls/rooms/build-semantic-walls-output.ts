@@ -1,4 +1,4 @@
-import { noteSwallowedError } from '@/core/diagnostics'
+import { noteSwallowedError, tally } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -80,17 +80,24 @@ export async function buildSemanticWallsForOutput(
     })
   }
 
+  // ESC:X-22 (E) — VERWIJDERD 2026-07-31: zero-fallback. Alleen gemeten dikte telt;
+  // thicknessPxMax≤0 → FML-dikte via resolveThicknessCm (X-07), niet via 0→1cm.
+  for (const segment of semantic.segments) {
+    if (segment.thicknessPxMax > 0) tally('X-22', 'measured')
+  }
+
   const semanticSegments = semanticAsSegments(semantic)
   // Endpoints wijzigen niet door thickness — hergebruik dezelfde WallGraph (geen 2e buildJunctionGraph).
   const wallGraph = semantic.segments.length > 0 ? built.wallGraph : walls.wallGraph
 
+  // ESC:X-27 (P) — dode vlag: nooit gezet op true, geen setter elders in de codebase.
+  tally('X-27', 'dead_flag_false')
   return {
     output: {
       ...walls,
       semanticWallGraph: semantic,
       segments: semanticSegments.length > 0 ? semanticSegments : (walls.segments ?? []),
       wallGraph,
-      // ESC:X-27 (P)
       semanticUsedLayerBFallback: false,
     },
     built: true,

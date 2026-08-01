@@ -46,9 +46,30 @@ export interface RoomWallJunctionDebug {
   angleDeg: number
 }
 
+/**
+ * Face-metadata op layer-1 debug zodat een E2E-fixture
+ * `PipelineV3Layer1Result.facesRaw` kan herbouwen via index-ranges
+ * in `segments` / `junctions` (aaneengesloten per blob, L1-push-volgorde).
+ * Bestaande rapporten lezen dit veld niet.
+ */
+export interface PipelineLayer1FaceDebug {
+  rootLabel: number
+  bbox: BoundingBox
+  areaPx: number
+  inkCoverageRatio: number
+  /** Half-open range in `layers.layer1.segments`. */
+  segmentStart: number
+  segmentEnd: number
+  /** Half-open range in `layers.layer1.junctions`. */
+  junctionStart: number
+  junctionEnd: number
+}
+
 export interface PipelineLayerDebug {
   segments: SegmentCandidate[]
   junctions: RoomWallJunctionDebug[]
+  /** Alleen gevuld op `layers.layer1` (E2E-export / layer1-injectie). */
+  faces?: PipelineLayer1FaceDebug[]
 }
 
 export interface PipelineV3Debug {

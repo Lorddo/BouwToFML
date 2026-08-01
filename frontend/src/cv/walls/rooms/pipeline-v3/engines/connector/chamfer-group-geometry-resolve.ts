@@ -2,17 +2,18 @@
  * L6 chamfer-group geometry — resolve-entry (landing / simple-L / multi / T-branch).
  */
 import type { Segment } from '@/cv/port/wallGraph'
+import { tally } from '@/core/diagnostics'
 import { infiniteLineIntersection, segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt } from '../segment-ops'
 import { resolveLandingChamferGeometry, resolveSimpleLChamferGeometry } from './chamfer-chain'
 import { measureCollinearChainSpan, pickDominantChainIncident } from './collinear-chain'
 import {
   LAYER6_BRIDGE_MAX_SHIFT_RATIO,
-  LAYER6_HV_BAND_FALLBACK_PX,
   LAYER6_LONG_H_MIN_CONNECTOR_RATIO,
   LAYER6_NEAR_GROUP_AXIS_CHAIN_RATIO,
   LAYER6_SHALLOW_JOG_DEG,
   LAYER6_STEEP_JOG_DEG,
+  resolveHvBandPx,
   resolveLayer6Scale,
 } from './constants'
 import { classifyLayer6Segment, classifyLayer6Segments } from './segment-classify'
@@ -56,7 +57,10 @@ function hvIncidentsNearGroup(params: {
   }
 
   // Nabije H/V binnen maxNearPx (keten-assen wanneer chamfer niet direct op endpoint zit).
-  if (h.length === 0 || v.length === 0) {
+  if (h.length > 0 && v.length > 0) {
+    tally('W-35', 'endpoint')
+  } else {
+    tally('W-35', 'near_scan')
     const classified = classifyLayer6Segments(params.segments, params.hvBandPx)
     for (let i = 0; i < params.segments.length; i += 1) {
       if (diagSet.has(i)) continue
@@ -99,6 +103,9 @@ function hvIncidentsNearGroup(params: {
           anchorPoint: { ...bestAnchor },
         })
       }
+    }
+    if (h.length === 0 || v.length === 0) {
+      tally('W-35', 'incomplete')
     }
   }
 
@@ -152,7 +159,7 @@ export function resolveChamferGroupGeometry(params: {
   referenceWallThicknessPx?: number
 }): ChamferGroupGeometry | null {
   const scale = resolveLayer6Scale(params.referenceWallThicknessPx)
-  const hvBandPx = scale.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
+  const hvBandPx = resolveHvBandPx(scale.hvBandPx)
   const endpointSnapPx = scale.endpointSnapPx
   const nearbyWeldPx = scale.nearbyWeldPx
   const connector = params.segments[params.connectorIndex]
@@ -182,6 +189,7 @@ export function resolveChamferGroupGeometry(params: {
       endpointSnapPx,
     })
     const vAtLanding = landing.vAtLanding === true
+    tally('W-34', 'landing')
     return {
       kind: 'landing',
       hit: landing.hit,
@@ -214,6 +222,7 @@ export function resolveChamferGroupGeometry(params: {
       hvBandPx,
       endpointSnapPx,
     })
+    tally('W-34', 'simple_L')
     return {
       kind: 'L',
       hit: simpleL.hit,
@@ -230,7 +239,10 @@ export function resolveChamferGroupGeometry(params: {
     const dx = Math.abs(connector.a.x - connector.b.x)
     const dy = Math.abs(connector.a.y - connector.b.y)
     const angleFromH = (Math.atan2(dy, dx) * 180) / Math.PI
-    if (angleFromH < LAYER6_SHALLOW_JOG_DEG || angleFromH > LAYER6_STEEP_JOG_DEG) return null
+    if (angleFromH < LAYER6_SHALLOW_JOG_DEG || angleFromH > LAYER6_STEEP_JOG_DEG) {
+      tally('W-34', 'skip_shallow_steep')
+      return null
+    }
   }
 
   const diagonalIndices = collectDiagonalGroupIndices({
@@ -246,6 +258,7 @@ export function resolveChamferGroupGeometry(params: {
   if (
     isAlternatingStairDiagonalChain({ segments: params.segments, diagonalIndices, endpointSnapPx })
   ) {
+    tally('W-34', 'skip_stair')
     return null
   }
 
@@ -311,6 +324,7 @@ export function resolveChamferGroupGeometry(params: {
         const maxBridge = scale.maxAttachmentShiftPx * LAYER6_BRIDGE_MAX_SHIFT_RATIO
         const bridgeLen = Math.hypot(hit.x - hSide.point.x, hit.y - hSide.point.y)
         if (bridgeLen > maxBridge) continue
+        tally('W-34', 'multi')
         return {
           kind: 'landing',
           hit,
@@ -325,6 +339,7 @@ export function resolveChamferGroupGeometry(params: {
         }
       }
 
+      tally('W-34', 'multi')
       return {
         kind: 'L',
         hit,
@@ -419,6 +434,7 @@ export function resolveChamferGroupGeometry(params: {
         const hAtT = incidentAt(params.segments, hInc.anchorPoint, endpointSnapPx)
           .filter((inc) => classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind === 'H')
           .map((inc) => inc.segIndex)
+        tally('W-34', 'multi')
         return {
           kind: hAtT.length >= 2 ? 'T' : 'L',
           hit,
@@ -432,7 +448,10 @@ export function resolveChamferGroupGeometry(params: {
     }
   }
 
-  if (!hPick || !vPick) return null
+  if (!hPick || !vPick) {
+    tally('W-34', 'null')
+    return null
+  }
 
   const hInc = h.find((item) => item.segIndex === hPick.segIndex)!
   const vInc = v.find((item) => item.segIndex === vPick.segIndex)!
@@ -457,7 +476,10 @@ export function resolveChamferGroupGeometry(params: {
     nearbyWeldPx,
   })
   const hit = infiniteLineIntersection(hAxis, vAxis)
-  if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) return null
+  if (!hit || !Number.isFinite(hit.x) || !Number.isFinite(hit.y)) {
+    tally('W-34', 'null')
+    return null
+  }
 
   // Seed-diagonaal moet aan H- of V-touch hangen — geen T@572 repareren via diag@587.
   const seed = params.segments[params.connectorIndex]
@@ -483,7 +505,11 @@ export function resolveChamferGroupGeometry(params: {
             nearbyWeldPx)
       )
     })
-  if (!seedOnGroupTouch) return null
+  if (!seedOnGroupTouch) {
+    tally('W-36', 'reject_seed_not_on_touch')
+    return null
+  }
+  tally('W-36', 'accepted')
 
   const maxShift = Math.max(
     scale.maxAttachmentShiftPx * 2,
@@ -497,7 +523,10 @@ export function resolveChamferGroupGeometry(params: {
       Math.hypot(seg.b.x - hit.x, seg.b.y - hit.y) <= maxShift
     )
   })
-  if (!nearGroup) return null
+  if (!nearGroup) {
+    tally('W-34', 'null')
+    return null
+  }
 
   const hAtTouch = incidentAt(params.segments, hInc.anchorPoint, endpointSnapPx)
     .filter((inc) => classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind === 'H')
@@ -508,6 +537,7 @@ export function resolveChamferGroupGeometry(params: {
 
   const kind: ChamferGroupKind = hAtTouch.length >= 2 || vAtTouch.length >= 2 ? 'T' : 'L'
 
+  tally('W-34', 'multi')
   return {
     kind,
     hit,

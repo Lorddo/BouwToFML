@@ -3,7 +3,7 @@
  * L3: iterative shortest I→T/X.
  * L8: single sweep I→L/T/X with optional structural T/X protect.
  */
-import { noteMissingMeasurement } from '@/core/diagnostics'
+import { noteMissingMeasurement, tally } from '@/core/diagnostics'
 import {
   buildJunctionGraph,
   computeJunctionTurnAngleDeg,
@@ -39,7 +39,7 @@ function otherNodeId(edge: WallEdge, nodeId: string): string | null {
   return null
 }
 
-// ESC:W-13 (E)
+// ESC:W-13 (E) — AFBAKENEN 2026-07-31: spur zonder meting blijft (laag volume).
 function resolveSpurThresholdPx(policy: PrunePolicy): number {
   const thresholdPx = policy.thicknessFallbackPx * policy.maxPathLengthRatio
   noteMissingMeasurement(
@@ -338,6 +338,7 @@ function pruneISpursIterative(segments: Segment[], policy: PrunePolicy): PruneIS
     work = removed.segments
     removedPathCount += 1
     removedSegmentCount += removed.removedSegmentCount
+    tally('W-12', 'iterated')
   }
 
   return {

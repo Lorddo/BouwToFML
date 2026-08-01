@@ -8,6 +8,7 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -18,7 +19,11 @@
     "wall-orientation-inventory": "node --experimental-strip-types scripts/wall-orientation-inventory.ts",
     "esc:check": "node --experimental-strip-types scripts/check-esc-tags.ts --check",
     "esc:report": "node --experimental-strip-types scripts/check-esc-tags.ts --report",
-    "esc:index": "node --experimental-strip-types scripts/check-esc-tags.ts --write-index"
+    "esc:coverage": "node --experimental-strip-types scripts/check-esc-tags.ts --coverage",
+    "esc:missing": "node --experimental-strip-types scripts/check-esc-tags.ts --missing",
+    "esc:index": "node --experimental-strip-types scripts/check-esc-tags.ts --write-index",
+    "esc:grootboek": "node --experimental-strip-types scripts/esc-grootboek.ts --write-ledger",
+    "esc:killswitch": "node --experimental-strip-types scripts/esc-killswitch.ts"
   },
   "lint-staged": {
     "*.{ts,vue}": [

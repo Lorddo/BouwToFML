@@ -1,6 +1,7 @@
 /**
  * V3 Laag 10 — FML input: final chain + axis straighten + micro corner-jog absorb after L9 dissolve.
  */
+import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -71,6 +72,7 @@ export function runLayer10Fml(params: {
         }),
     })
     let segmentsOut = chainGuard.segments
+    tally('W-50', chainGuard.preserved ? 'accepted' : 'rolled_back')
     if (!chainGuard.preserved) {
       facesSkippedTopology += 1
     } else {
@@ -83,6 +85,7 @@ export function runLayer10Fml(params: {
     // Axis polish before micro-corner so 0px / near-collinear H/V share one line.
     const straightened = straightenCollinearAxisChains(segmentsOut, policy.collapse)
     segmentsOut = straightened.segments
+    tally('W-51', straightened.stats.chainsStraightened > 0 ? 'straightened' : 'noop')
     if (straightened.stats.chainsStraightened > 0) {
       chainsStraightened += straightened.stats.chainsStraightened
       axisSegmentsAdjusted += straightened.stats.segmentsAdjusted
@@ -95,6 +98,7 @@ export function runLayer10Fml(params: {
       policy: policy.collapse,
       apply: (segments) => absorbMicroCornerJogs(segments, policy.collapse),
     })
+    tally('W-52', microGuard.preserved ? 'accepted' : 'rolled_back')
     if (microGuard.preserved) {
       segmentsOut = microGuard.segments
       if (microGuard.result.stats.cornersAbsorbed > 0) {

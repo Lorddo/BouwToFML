@@ -1,6 +1,7 @@
 /**
  * L5 cleanup — Copy(6) L-L stair micro collapse.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentAngleDeg, segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments, incidentAt, removeSegmentAt, dropZeroLengthSegments } from '../segment-ops'
@@ -47,6 +48,7 @@ export function cleanupLlStairs(
     const atA = incidentAt(work, micro.a).filter((item) => item.segIndex !== i)
     const atB = incidentAt(work, micro.b).filter((item) => item.segIndex !== i)
     if (atA.length !== 1 || atB.length !== 1) {
+      tally('W-23', 'skip_not_ll')
       i += 1
       continue
     }
@@ -89,6 +91,7 @@ export function cleanupLlStairs(
     rightPoint.y = target.y
     removeSegmentAt(work, i)
     collapsedCount += 1
+    tally('W-23', 'collapsed')
   }
 
   const cleaned = dropZeroLengthSegments(work, policy.weld.endpointEpsPx)

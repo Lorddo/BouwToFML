@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { RasterRoomComponent } from './room-raster'
 import { extractComponentsFromLabelsData } from './room-raster'
 import { buildEnclosedFaceParentMap, countDistinctMergedFaces } from './room-raster-merge'
@@ -83,6 +84,7 @@ export function runRoomTopologyRefinePass(params: {
 
   // ESC:W-03 (A)
   const pass2 = resolvePass(rawLabelsData, labelClass)
+  tally('W-03', pass2.assignedPx > 0 ? 'booster_assigned' : 'booster_noop')
 
   // Wallish children → individuele roots (geen nieuwe parent-hiërarchie).
   const wallish = claimWallishAfterInherit({

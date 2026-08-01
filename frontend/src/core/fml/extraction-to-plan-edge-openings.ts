@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import {
   type Point2D,
   projectPointToSegmentT,
@@ -14,6 +15,7 @@ export function filterOpeningsForEdge<T extends { segmentIndex: number }>(params
   consumedIds: Set<string>
 }): T[] {
   if (params.openings.length <= 0) return []
+  if (params.semanticSegmentIndex == null) tally('X-09', 'edge_index_fallback')
   const matched = params.openings.filter((opening) => {
     if (params.consumedIds.has(params.getId(opening))) return false
     if (params.semanticSegmentIndex != null) {

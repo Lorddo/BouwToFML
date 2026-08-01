@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import {
@@ -20,6 +21,7 @@ export function filterResolvedWindowsStillClassifiedAsWindow(params: {
   roomRasterCache: RoomRasterCache | null
   wallsMeta: TabDetectionOutputs['walls'] | null | undefined
 }): ResolvedWindowCandidate[] {
+  tally('O-22', 'filter_class_window')
   const classification = resolveEffectiveWallClassification({
     roomRasterCache: params.roomRasterCache,
     wallsMeta: params.wallsMeta,

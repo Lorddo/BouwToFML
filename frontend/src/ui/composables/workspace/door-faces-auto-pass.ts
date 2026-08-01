@@ -71,6 +71,11 @@ function resolvePreviousAutoBridgeFaceIds(state: AutoPassState): number[] | unde
 /**
  * Push Stage-2 accepted door hypotheses as face overrides onto the wall raster cache.
  * Returns the (potentially updated) cache if Vue reactivity trigger is needed, or null if nothing changed.
+ *
+ * Wall-rescue seeds blijven anders grijs: pin-sync alleen in faceOverrides is niet
+ * genoeg wanneer Otsu/dark-bg enclosed parentMap de class via root-erfenis toont.
+ * Claim mét `class` breekt parentMap én materialiseert `door`/`doorframe` in
+ * `classificationByLabel` zodat preview/probe/window-doorframe de override overleven.
  */
 export async function pushStage2DoorsOntoWalls(ctx: {
   accepted: DoorSwingHypothesis[]
@@ -107,15 +112,34 @@ export async function pushStage2DoorsOntoWalls(ctx: {
     ctx.referenceWallThicknessPx,
     previousAutoBridges,
   )
-  const parentClaim = claimFacesInRoomRasterCache(cache, [...faceIds, ...bridgeFaceIds])
+  // Escaped parentMap + materialiseer class (wall-rescue → door blijft zichtbaar).
+  // Nooit sticky doorframe overschrijven (claim forceClass omzeilt sync upgradeFrom).
+  const doorIdsSafe = faceIds.filter((id) => cache.faceOverrides.get(id) !== 'doorframe')
+  const doorClaim = claimFacesInRoomRasterCache(cache, doorIdsSafe, {
+    class: 'door',
+    forceClass: true,
+  })
+  const bridgeClaim = claimFacesInRoomRasterCache(cache, bridgeFaceIds, {
+    class: 'doorframe',
+    forceClass: true,
+  })
   ctx.autoPassState.lastAutoDoorFaceIds = [...new Set(faceIds)]
   ctx.autoPassState.lastAutoBridgeFaceIds = bridgeFaceIds
   markDoorAutoPassDone(ctx.autoPassState)
   ctx.autoPassState.pendingApplyMode = 'replace-auto'
-  if (!doorSync.changed && !bridgeSync.changed && !parentClaim.parentMapChanged) return null
+  const claimChanged =
+    doorClaim.parentMapChanged ||
+    doorClaim.classChanged ||
+    bridgeClaim.parentMapChanged ||
+    bridgeClaim.classChanged
+  if (!doorSync.changed && !bridgeSync.changed && !claimChanged) return null
   const next: RoomRasterCache = {
     ...cache,
-    state: { ...cache.state, parentMap: [...cache.state.parentMap] },
+    state: {
+      ...cache.state,
+      parentMap: [...cache.state.parentMap],
+      classificationByLabel: [...cache.state.classificationByLabel],
+    },
     faceOverrides: new Map(cache.faceOverrides),
     pinnedRoots: new Set(cache.pinnedRoots),
   }
@@ -142,11 +166,19 @@ export function syncPurgedDoorFaceOverrides(ctx: {
     ctx.referenceWallThicknessPx,
     previousAuto,
   )
+  const doorClaim = claimFacesInRoomRasterCache(ctx.cache, ctx.purgeKeptFaceIds, {
+    class: 'door',
+    forceClass: true,
+  })
   ctx.autoPassState.lastAutoDoorFaceIds = ctx.purgeKeptFaceIds
-  if (!doorSync.changed) return null
+  if (!doorSync.changed && !doorClaim.parentMapChanged && !doorClaim.classChanged) return null
   const next: RoomRasterCache = {
     ...ctx.cache,
-    state: { ...ctx.cache.state, parentMap: [...ctx.cache.state.parentMap] },
+    state: {
+      ...ctx.cache.state,
+      parentMap: [...ctx.cache.state.parentMap],
+      classificationByLabel: [...ctx.cache.state.classificationByLabel],
+    },
     faceOverrides: new Map(ctx.cache.faceOverrides),
     pinnedRoots: new Set(ctx.cache.pinnedRoots),
   }

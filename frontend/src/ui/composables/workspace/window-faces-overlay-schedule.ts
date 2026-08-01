@@ -2,6 +2,7 @@ import type { CanvasLike } from '@/cv/port/canvasEnv'
 import { renderWindowOverlayCanvas, type WindowAxelStage } from '@/cv/windows'
 import {
   activeWindowHypothesesForStage,
+  collectStage1RejectedOverlayFaces,
   hypothesesWithStackEvidence,
   statsByRef,
   type FaceBBox,
@@ -47,6 +48,14 @@ export function renderWindowOverlayForActiveStage(ctx: {
         })
       : ctx.stageCache.stage3AcceptedDoorframes.map((e) => e.hypothesis)
 
+  const rejectedOverlay =
+    ctx.stage === 'stage1'
+      ? collectStage1RejectedOverlayFaces({
+          rejections: ctx.stageCache.stage1Rejections,
+          faceBboxByRoot: ctx.overlayCache.faceBboxByRoot,
+        })
+      : null
+
   const canvas = renderWindowOverlayCanvas({
     width: ctx.overlayCache.width,
     height: ctx.overlayCache.height,
@@ -54,6 +63,8 @@ export function renderWindowOverlayForActiveStage(ctx: {
     parentMap: ctx.overlayCache.parentMap,
     hypotheses,
     doorframeHypotheses,
+    rejectedFaceIds: rejectedOverlay?.rejectedFaceIds,
+    rejectedFaceBBoxes: rejectedOverlay?.rejectedFaceBBoxes,
   })
   return { canvas, revision: true }
 }

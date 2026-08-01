@@ -1,4 +1,4 @@
-import { noteEvidenceMissing } from '@/core/diagnostics'
+import { noteEvidenceMissing, tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { FaceDualSpace, FaceGeom, SpacePrefer } from '@/cv/walls/rooms/face-dual-space'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
@@ -77,11 +77,12 @@ function depthInBand(shortPx: number, depthRefPx: number): boolean {
 // ESC:D-29 (B)
 function isRefEligible(ref: DoorSwingRefBand): boolean {
   const angle = ref.swingAngleDeg
-  return (
+  const eligible =
     typeof angle === 'number' &&
     Number.isFinite(angle) &&
     angle < DOOR_ANGLE_RESCUE_TUNING.maxRefAngleDeg
-  )
+  tally('D-29', eligible ? 'eligible' : 'ineligible')
+  return eligible
 }
 
 function collectRootIds(dual: FaceDualSpace): number[] {
@@ -119,11 +120,17 @@ function resolveMeasureGeom(params: {
   const whiteHit = white != null && depthInBand(shortSide(white.bbox), params.depthRefPx)
   const inkHit = ink != null && depthInBand(shortSide(ink.bbox), params.depthRefPx)
   if (!whiteHit && !inkHit) return null
+  tally('D-31', whiteHit && inkHit ? 'either_both' : whiteHit ? 'white_only' : 'ink_only')
   if (white) {
+    // ESC:D-08 (C)
+    tally('D-08', DOOR_SPACE_POLICY.angleRescueMeasurePrefer)
     return { geom: white, space: DOOR_SPACE_POLICY.angleRescueMeasurePrefer }
   }
   // ESC:D-32 (C)
-  if (ink) return { geom: ink, space: 'ink' }
+  if (ink) {
+    tally('D-32', 'ink_fallback')
+    return { geom: ink, space: 'ink' }
+  }
   return null
 }
 
@@ -175,12 +182,16 @@ function keepBetterDiag(
   if (!prev) return next
   if (next.status === 'accepted') return next
   if (prev.status === 'accepted') return prev
-  if (rejectRank(next.status) > rejectRank(prev.status)) return next
+  if (rejectRank(next.status) > rejectRank(prev.status)) {
+    tally('D-38', 'replaced_closer_reject')
+    return next
+  }
   if (
     next.status === 'rejected_angle_mismatch' &&
     prev.status === 'rejected_angle_mismatch' &&
     (next.angleDeltaDeg ?? Infinity) < (prev.angleDeltaDeg ?? Infinity)
   ) {
+    tally('D-38', 'replaced_smaller_delta')
     return next
   }
   return prev
@@ -230,7 +241,10 @@ export function runDoorSwingAngleRescue(params: {
     if (params.claimedFaceIds.has(root)) continue
     if (allowedClassSet) {
       const cls = params.classificationByLabel?.get(root)
-      if (!cls || !allowedClassSet.has(cls)) continue
+      if (!cls || !allowedClassSet.has(cls)) {
+        tally('D-30', 'class_filtered')
+        continue
+      }
     }
 
     for (const { ref, index: matchedRefIndex } of eligibleRefs) {
@@ -258,6 +272,7 @@ export function runDoorSwingAngleRescue(params: {
 
       // ESC:D-33 (B)
       if (exceedsMaxSizeBand(geom.bbox, params.sizeBand)) {
+        tally('D-33', 'rejected_too_long')
         diagByRoot.set(
           root,
           keepBetterDiag(diagByRoot.get(root), {
@@ -274,6 +289,7 @@ export function runDoorSwingAngleRescue(params: {
       const candidateFill = fillRatio(geom.areaPx, geom.bbox)
       // ESC:D-34 (B)
       if (candidateFill >= DOOR_ANGLE_RESCUE_TUNING.maxFillRatio) {
+        tally('D-34', 'rejected_fill_cap')
         diagByRoot.set(
           root,
           keepBetterDiag(diagByRoot.get(root), {
@@ -289,6 +305,7 @@ export function runDoorSwingAngleRescue(params: {
 
       const paint = params.dual.space(space)
       // ESC:D-39 (A)
+      tally('D-39', 'expected_angle_hv_prefer')
       const hinge = computeDoorHingeFromFaces({
         cv: params.cv,
         labelsData: paint.labelsData,
@@ -304,6 +321,7 @@ export function runDoorSwingAngleRescue(params: {
       })
       // ESC:D-35 (B)
       if (!hinge) {
+        tally('D-35', 'rejected_no_hinge')
         diagByRoot.set(
           root,
           keepBetterDiag(diagByRoot.get(root), {
@@ -320,6 +338,7 @@ export function runDoorSwingAngleRescue(params: {
       const delta = Math.abs(hinge.swingAngleDeg - refAngle)
       // ESC:D-36 (B)
       if (delta > DOOR_ANGLE_RESCUE_TUNING.angleMarginDeg) {
+        tally('D-36', 'rejected_angle_mismatch')
         diagByRoot.set(
           root,
           keepBetterDiag(diagByRoot.get(root), {

@@ -1,4 +1,5 @@
 import type { SemanticWallSegment } from '@/core/extraction/types'
+import { noteCascadeLevel } from '@/core/diagnostics'
 import {
   measureSwingMaskSideContacts,
   paintSwingFaceMask,
@@ -32,6 +33,7 @@ function swingContactToSideContact(contact: SwingMaskSideContact): SideContact {
 /**
  * Path B primair: as/side uit gemergde swing-mask ↔ muur (wallMask of adjacent
  * wall-bboxes) — niet uit wall-union aspect (dfH≥dfW faalt in hoeken).
+ * ESC:D-48 (A) — AFBAKENEN 2026-07-31: Path B swing-mask blijft.
  */
 // ESC:D-48 (A)
 export function tryBindDoorViaSwingMaskContact(params: {
@@ -110,48 +112,42 @@ export function tryBindDoorViaSwingMaskContact(params: {
     if (candidateSide.contactCount <= 0 && !Number.isFinite(candidateSide.proximityDistancePx)) {
       continue
     }
-    const strictMatch = findBestSegment({
+    // ESC:D-49 (A) — VERWIJDERD 2026-07-31: relaxed segment-match; alleen strikte match.
+    const match = findBestSegment({
       side: candidateSide,
       bounds: spanBounds,
       segments: params.segments,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
     })
-    const relaxedMatch = strictMatch
-      ? null
-      : findBestSegment({
-          side: candidateSide,
-          bounds: spanBounds,
-          segments: params.segments,
-          referenceWallThicknessPx: params.referenceWallThicknessPx,
-          relaxed: true,
-        })
-    for (const match of [strictMatch, relaxedMatch]) {
-      if (!match) continue
-      const segment = params.segments[match.segmentIndex]
-      if (!segment) continue
-      if (
-        !segmentNearDoorCentroid({
-          segment,
-          doorBounds: params.doorBounds,
-          referenceWallThicknessPx: params.referenceWallThicknessPx,
-        })
-      ) {
-        continue
-      }
-      const bindingScore = resolveBindingScore({
-        side: candidateSide,
-        segmentScore: match.segmentScore,
-        hasTouch: candidateSide.contactCount > 0,
+    if (!match) continue
+    const segment = params.segments[match.segmentIndex]
+    if (!segment) continue
+    if (
+      !segmentNearDoorCentroid({
+        segment,
+        doorBounds: params.doorBounds,
+        referenceWallThicknessPx: params.referenceWallThicknessPx,
       })
-      if (bindingScore >= bestBindingScore) continue
-      bestBindingScore = bindingScore
-      selectedSide = candidateSide
-      segmentMatch = match
+    ) {
+      continue
     }
+    const bindingScore = resolveBindingScore({
+      side: candidateSide,
+      segmentScore: match.segmentScore,
+      hasTouch: candidateSide.contactCount > 0,
+    })
+    if (bindingScore >= bestBindingScore) continue
+    bestBindingScore = bindingScore
+    selectedSide = candidateSide
+    segmentMatch = match
   }
   if (!segmentMatch || !selectedSide) return null
   const segment = params.segments[segmentMatch.segmentIndex]
   if (!segment) return null
+
+  noteCascadeLevel('D-48', 'door-wall-snap-path-b.tryBindDoorViaSwingMaskContact', 'swing_mask', {
+    doorId: params.door.id,
+  })
 
   const shiftX = segmentMatch.projected.x - selectedSide.sideMid.x
   const shiftY = segmentMatch.projected.y - selectedSide.sideMid.y

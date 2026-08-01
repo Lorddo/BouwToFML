@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { analyzeDoorSwingRef, type DoorSwingRefBand } from '@/cv/doors'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { PreprocessConfig } from '@/core/extraction/types'
@@ -72,6 +73,7 @@ export function createDoorSwingComputationCache() {
     // Live roomRasterCache heeft eigen epoch-cache in ensureFaceDualSpace —
     // geen tweede signature/epoch-laag (stale dual → existingDoorsOnly leeg → wipe).
     if (cache) {
+      tally('O-18', 'live_cache_dual')
       return resolveFloorDual({
         state,
         cache,
@@ -81,6 +83,7 @@ export function createDoorSwingComputationCache() {
     }
 
     // ESC:O-19 (D)
+    tally('O-19', 'signature_cache')
     const rawLabelsData = state.rawLabelsData ?? state.labelsData
     const overrideSig = faceOverrides
       ? [...faceOverrides.entries()]

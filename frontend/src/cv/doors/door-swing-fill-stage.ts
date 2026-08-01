@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { DOOR_SWING_TUNING, wallRescueMatch, type RefMatch } from './door-swing-filter-matching'
 import type {
   DoorSwingDiagnosticStatus,
@@ -42,6 +43,7 @@ export function buildWallRejectedFillCandidates(params: {
     // Size + ruimere aspect-gate; area/fill-abs bewust niet (Stage-2 fill beslist).
     const match = matchWallRescue(row.bbox, params.refBands, params.sizeBand, aspectToleranceRatio)
     if (!match) continue
+    tally('D-24', 'wall_fill_candidate')
     candidates.push({
       id: `door-swing-wall-fill-${row.root}`,
       faceIds: [row.root],
@@ -65,8 +67,10 @@ export function mergeHypothesesForFillStage(params: {
     for (const faceId of hyp.faceIds) claimed.add(faceId)
   }
   // ESC:D-26 (A)
-  const extras = params.wallFillCandidates.filter((hyp) =>
-    hyp.faceIds.every((faceId) => !claimed.has(faceId)),
-  )
+  const extras = params.wallFillCandidates.filter((hyp) => {
+    const notClaimed = hyp.faceIds.every((faceId) => !claimed.has(faceId))
+    if (notClaimed) tally('D-26', 'unclaimed_merged')
+    return notClaimed
+  })
   return [...params.stage1Hypotheses, ...extras]
 }

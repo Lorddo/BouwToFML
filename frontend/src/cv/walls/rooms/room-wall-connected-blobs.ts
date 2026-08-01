@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { RasterBBox } from './room-raster-merge'
 
@@ -165,6 +166,10 @@ export function splitConnectedWallBlobs(params: {
     : minBlobAreaPx > 0
       ? candidates.filter((candidate) => candidate.areaPx >= minBlobAreaPx)
       : candidates
+
+  if (keepLargestOnly && candidates.length > 1) {
+    tally('W-01', 'multiple_discarded')
+  }
 
   const keptWallMaskData = new Uint8Array(params.imageWidth * params.imageHeight)
   const blobs: ConnectedWallBlob[] = []

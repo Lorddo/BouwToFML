@@ -1,7 +1,7 @@
 import type { SemanticWallSegment } from '@/core/extraction/types'
+import { noteCascadeLevel } from '@/core/diagnostics'
 import { resolveClassAtLabel, type RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
-import { collectDirectionalAdjacentClassRoots } from './door-attach-doorframes'
 import { tryBindDoorToAnchorSegment, tryBindDoorToBounds } from './door-wall-snap-bind'
 import { closestPointOnSegment, overlapLength, round2 } from './door-wall-snap-geom'
 import { DOOR_WALL_SNAP_TUNING, type BBoxBounds } from './door-wall-snap-tuning'
@@ -19,40 +19,10 @@ function classAt(
 }
 
 /**
- * 1-hop ink-buren met class `doorframe`, daarna alleen verder in diezelfde
- * cardinale richting. Geen bbox-near.
+ * 1-hop ink-buren met class `doorframe` — VERWIJDERD 2026-07-31 (ESC:D-45).
+ * Tombstone: sticky `doorframeFaceIds` (D-44) of as-grow (D-46) zijn de enige Path A-bronnen.
  */
-export function findAdjacentDoorframeUnionBounds(params: {
-  doorBounds: BBoxBounds
-  faceSet: Set<number>
-  labelsData: Int32Array
-  width: number
-  height: number
-  parentMap: Map<number, number>
-  classificationByLabel: Map<number, RoomRasterClass>
-  doorframeBBoxByRoot: Map<number, BBoxBounds>
-  expandPx: number
-}): BBoxBounds | null {
-  const doorframeRoots = collectDirectionalAdjacentClassRoots({
-    doorBounds: params.doorBounds,
-    faceSet: params.faceSet,
-    labelsData: params.labelsData,
-    width: params.width,
-    height: params.height,
-    parentMap: params.parentMap,
-    classificationByLabel: params.classificationByLabel,
-    targetClass: 'doorframe',
-  })
-  if (doorframeRoots.length <= 0) return null
-
-  let union: BBoxBounds | null = null
-  for (const root of doorframeRoots) {
-    const bbox = params.doorframeBBoxByRoot.get(root)
-    if (!bbox) continue
-    union = union ? unionBBoxBounds(union, bbox) : { ...bbox }
-  }
-  return union
-}
+// ESC:D-45 (A) — VERWIJDERD 2026-07-31
 
 export function buildClassBBoxesByRoot(params: {
   labelsData: Int32Array
@@ -116,6 +86,7 @@ export function resolveExplicitDoorframeUnion(params: {
   parentMap: Map<number, number>
   doorframeBBoxByRoot: Map<number, BBoxBounds>
 }): BBoxBounds | null {
+  // ESC:D-44 (P) — AFBAKENEN 2026-07-31: sticky IDs alleen; geen discovery hier.
   const roots = new Set<number>()
   for (const id of params.doorframeFaceIds) {
     if (id <= 0) continue
@@ -127,6 +98,7 @@ export function resolveExplicitDoorframeUnion(params: {
 
 /**
  * Multi-hop vanaf deur-roots langs wall/doorframe tot class doorframe in as-band.
+ * ESC:D-46 — bij hit: sticky `doorframeFaceIds` + class `doorframe` (caller).
  */
 export function growDoorframeUnionAlongAxis(params: {
   doorBounds: BBoxBounds
@@ -136,7 +108,7 @@ export function growDoorframeUnionAlongAxis(params: {
   classificationByLabel: Map<number, RoomRasterClass>
   doorframeBBoxByRoot: Map<number, BBoxBounds>
   expandPx: number
-}): BBoxBounds | null {
+}): { union: BBoxBounds; roots: number[] } | null {
   const door = params.doorBounds
   const axis: DoorOpeningAxis = door.y1 - door.y0 >= door.x1 - door.x0 ? 'v' : 'h'
   const found = new Set<number>()
@@ -188,7 +160,9 @@ export function growDoorframeUnionAlongAxis(params: {
     }
   }
 
-  return unionFromDoorframeRoots(found, params.doorframeBBoxByRoot)
+  const union = unionFromDoorframeRoots(found, params.doorframeBBoxByRoot)
+  if (!union) return null
+  return { union, roots: [...found] }
 }
 
 function projectDoorframeClearOpening(params: {
@@ -282,7 +256,7 @@ function finalizePathABound(params: {
   }
 }
 
-// ESC:D-47 (A)
+// ESC:D-47 (A) — AFBAKENEN 2026-07-31: Path A segment-bind blijft (primair).
 /**
  * Path A segment-first: bind op muursegment langs doorframe zonder wallMask-gate.
  */
@@ -329,7 +303,12 @@ export function tryPathABind(params: {
     segments: params.segments,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
-  if (pathASeg) return pathASeg
+  if (pathASeg) {
+    noteCascadeLevel('D-47', 'door-wall-snap-doorframe.tryPathABind', 'segment', {
+      doorId: params.door.id,
+    })
+    return pathASeg
+  }
 
   const dfW = params.doorframeUnion.x1 - params.doorframeUnion.x0
   const dfH = params.doorframeUnion.y1 - params.doorframeUnion.y0
@@ -357,6 +336,9 @@ export function tryPathABind(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
   if (!pathAMask) return null
+  noteCascadeLevel('D-47', 'door-wall-snap-doorframe.tryPathABind', 'bounds', {
+    doorId: params.door.id,
+  })
   const segment = params.segments[pathAMask.segmentIndex]
   if (!segment) return pathAMask
   return finalizePathABound({

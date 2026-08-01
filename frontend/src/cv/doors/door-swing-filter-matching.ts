@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import {
   resolvePixelClassification,
   type RoomRasterClass,
@@ -165,6 +166,9 @@ function fitsSizeBandForRef(
   const depthMax = Math.max(depthMin, Math.round(ref.depthPx * maxRelax))
   if (box.depthPx < depthMin || box.depthPx > depthMax) return false
 
+  // ESC:D-18 (A)
+  // Muur-as ∩ ref-muur ± relax (default policy-relax tenzij caller een eigen relaxRatio gaf).
+  if (relaxRatio === undefined) tally('D-18', 'default_relax_matched')
   return true
 }
 
@@ -239,10 +243,12 @@ export function wallRescueMatch(
   sizeBand: DoorSizeBandPx,
   aspectToleranceRatio: number,
 ): RefMatch | null {
-  return bestAspectRef(bbox, refBands, aspectToleranceRatio, {
+  const match = bestAspectRef(bbox, refBands, aspectToleranceRatio, {
     sizeBand,
     relaxRatio: DOOR_SWING_TUNING.wallRescueAxisMinRelaxRatio,
   })
+  if (match) tally('D-11', 'wall_rescue_axis_065')
+  return match
 }
 
 function fillRatio(areaPx: number, bbox: { width: number; height: number }): number {
@@ -276,17 +282,23 @@ export function isWallRescueCandidate(params: {
   if (!ref) return false
   const expectedArea = expectedSwingAreaPx(ref, params.face.bbox)
   const areaRelDiff = Math.abs(params.face.areaPx - expectedArea) / expectedArea
-  if (areaRelDiff > DOOR_SWING_TUNING.wallRescueMaxRelAreaDiff) return false
+  if (areaRelDiff > DOOR_SWING_TUNING.wallRescueMaxRelAreaDiff) {
+    tally('D-12', 'rejected_area')
+    return false
+  }
   const candidateFill = fillRatio(params.face.areaPx, params.face.bbox)
   if (
     candidateFill < DOOR_SWING_TUNING.wallRescueMinFill ||
     candidateFill > DOOR_SWING_TUNING.wallRescueMaxFill
   ) {
+    tally('D-12', 'rejected_fill_abs')
     return false
   }
   const refFill = resolveRefFillRatio(ref)
   const fillDiff = Math.abs(candidateFill - refFill)
-  return fillDiff <= DOOR_SWING_TUNING.wallRescueMaxFillDiff
+  const accepted = fillDiff <= DOOR_SWING_TUNING.wallRescueMaxFillDiff
+  tally('D-12', accepted ? 'accepted' : 'rejected_fill_diff')
+  return accepted
 }
 
 // ESC:D-14 (A)
@@ -339,6 +351,7 @@ export function clippedArcRescueMatch(params: {
     }
   }
   if (!best) return null
+  tally('D-14', 'clipped_arc_accepted')
   return { matchedRefIndex: best.index, score: best.score }
 }
 

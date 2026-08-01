@@ -62,6 +62,7 @@ function tryRescueMatchOnFace(params: {
         { sizeBand: params.sizeBand },
       )
     : null
+  if (sizeNearMatch) tally('D-09', 'wall_rescue_size_near')
   const isUnderWallMin = underWallMinBand(params.face.bbox, params.sizeBand)
   // ESC:D-10 (A)
   const looseUnderMinMatch =
@@ -77,6 +78,7 @@ function tryRescueMatchOnFace(params: {
           },
         )
       : null
+  if (looseUnderMinMatch) tally('D-10', 'wall_rescue_shallow')
   const looseWallMatch =
     params.includeWallRescueMatch && !strictSingleMatch
       ? (sizeNearMatch ??
@@ -113,6 +115,10 @@ function resolveWallRescueEither(params: {
   sizeBand: DoorSizeBandPx
   aspectToleranceRatio: number
 }): { match: RefMatch; measureFace: RootFace } | null {
+  // ESC:D-04 (C)
+  // Beleid: twee volledige meetruimte-pogingen (ink dan white) — geobserveerd
+  // per wall-rescue Either-aanroep, los van welke poging D-13 uiteindelijk wint.
+  tally('D-04', DOOR_SPACE_POLICY.wallRescueMatchSpaces.join('|'))
   // ESC:D-13 (C)
   for (const space of DOOR_SPACE_POLICY.wallRescueMatchSpaces) {
     let face: RootFace
@@ -295,6 +301,7 @@ export function evaluateSeedForRef(params: {
     measureFace.bbox.x !== rootFace.bbox.x ||
     measureFace.bbox.y !== rootFace.bbox.y
   ) {
+    tally('D-16', 'white_geom_override')
     params.rootFaces.set(params.root, measureFace)
   }
   const ref = refBands[0]
@@ -352,6 +359,7 @@ export function evaluateSeedForRef(params: {
     // volle boog te clusteren. Lukt dat (grotere passende union), gebruik die.
     // ESC:D-17 (A)
     if (singleArea < DOOR_SWING_TUNING.undersizedSingleRefAreaRatio * refBoxArea) {
+      tally('D-17', 'undersized_single_retry_cluster')
       const clustered = growClusterForRef({
         seed: params.root,
         rootFace: measureFace,

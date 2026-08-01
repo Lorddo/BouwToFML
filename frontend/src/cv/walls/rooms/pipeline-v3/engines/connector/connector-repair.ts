@@ -3,6 +3,7 @@
  * Nooit diagonalen verwijderen zonder weld (geen chamferRemovalOnly).
  */
 import type { Segment } from '@/cv/port/wallGraph'
+import { tally } from '@/core/diagnostics'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments, dropZeroLengthSegments } from '../segment-ops'
 import { resolveLandingChamferGeometry } from './chamfer-chain'
@@ -107,7 +108,11 @@ export function repairLayer6ConnectorCandidates(params: {
       seenDiag.add(i)
     }
     extras.sort((a, b) => b.lengthPx - a.lengthPx)
-    orderedCandidates.push(...extras.slice(0, 64))
+    const extrasAdded = extras.slice(0, 64)
+    orderedCandidates.push(...extrasAdded)
+    tally('W-30', extrasAdded.length > 0 ? 'extras_appended' : 'primary_only')
+  } else if (params.onlyLandingChamfers) {
+    tally('W-30', 'landing_only_skip')
   }
 
   const repairedSeeds = new Set<number>()
@@ -130,6 +135,7 @@ export function repairLayer6ConnectorCandidates(params: {
       const orig = params.segments[candidate.connectorIndex]
       if (!orig) {
         stats.skippedNoIntersection += 1
+        tally('W-31', 'seed_missing')
         continue
       }
       seedIndex = work.findIndex((seg) => {
@@ -140,8 +146,12 @@ export function repairLayer6ConnectorCandidates(params: {
       })
       if (seedIndex < 0) {
         stats.skippedNoIntersection += 1
+        tally('W-31', 'seed_missing')
         continue
       }
+      tally('W-31', 'reindexed')
+    } else {
+      tally('W-31', 'index_ok')
     }
     if (repairedSeeds.has(seedIndex)) continue
     if (classifyLayer6Segment(work[seedIndex], seedIndex, hvBandPx).kind !== 'D') continue
@@ -192,6 +202,7 @@ export function repairLandingChamferConnectors(params: {
   let repaired = 0
   const skipped = new Set<number>()
   const maxIter = Math.max(8, Math.round(scale.axisChainPx / 8))
+  let exhausted = true
   for (let iter = 0; iter < maxIter; iter += 1) {
     const landingLeft = detectLayer6ConnectorCandidates({
       segments,
@@ -210,7 +221,10 @@ export function repairLandingChamferConnectors(params: {
         }) != null
       )
     })
-    if (landingLeft.length === 0) break
+    if (landingLeft.length === 0) {
+      exhausted = false
+      break
+    }
     const pick = [...landingLeft].sort((a, b) => b.lengthPx - a.lengthPx)[0]
 
     const pass = repairLayer6ConnectorCandidates({
@@ -222,10 +236,15 @@ export function repairLandingChamferConnectors(params: {
     })
     if (pass.stats.repaired === 0) {
       skipped.add(pick.connectorIndex)
+      tally('W-32', 'skipped_stuck')
       continue
     }
     repaired += pass.stats.repaired
     segments = pass.segments
+    tally('W-32', 'repaired')
+  }
+  if (exhausted) {
+    tally('W-32', 'exhausted')
   }
   return { segments, repaired }
 }

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { CONCEPT_DOOR_REFID, DOUBLE_WIDE_DOOR_REFID, type Opening } from './types'
 import type { Layer12DoorForFml } from './extraction-to-plan-types'
 import {
@@ -107,6 +108,7 @@ function mergeAdjacentStandardDoors(params: {
       )
     ) {
       // Beide singles verdwijnen; één double_wide over de gecombineerde span.
+      tally('X-10', 'double_wide_merged')
       merged.push(mergeTwoDoorsForDoubleWide(current, next, params.edgeSegment))
       i += 2
       continue
@@ -161,8 +163,9 @@ export function mapLayer12DoorsToOpenings(params: {
     )
     // ESC:X-12 (A)
     const sourceMirrored = door.mirrored ?? [0, 0]
-    const mirrored =
-      sourceUnit && dot(sourceUnit, targetUnit) < 0 ? flipMirrored(sourceMirrored) : sourceMirrored
+    const flips = sourceUnit ? dot(sourceUnit, targetUnit) < 0 : false
+    if (flips) tally('X-12', 'mirrored_flip')
+    const mirrored = flips ? flipMirrored(sourceMirrored) : sourceMirrored
     return {
       refid: door.fmlRefId,
       type: 'door',

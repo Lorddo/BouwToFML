@@ -1,6 +1,7 @@
 /**
  * Segment CRUD — Copy(6) layer-5-segment-ops, policy-driven endpoint eps.
  */
+import { tally } from '@/core/diagnostics'
 import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
@@ -351,6 +352,7 @@ export function unifyNearEndpoints(
           }
         }
         unifiedCount += 1
+        tally('W-11', 'unified')
         changed = true
         break outer
       }

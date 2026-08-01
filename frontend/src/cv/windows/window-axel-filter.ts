@@ -1,6 +1,7 @@
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
 import type {
+  WindowAxelCandidateEval,
   WindowAxelFilterResult,
   WindowAxelHypothesis,
   WindowAxelOrientation,
@@ -45,6 +46,7 @@ export function runWindowAxelFilter(params: {
   const rootsByRef = [...params.refBands].sort((a, b) => b.axisBandHeightPx - a.axisBandHeightPx)
   const hypotheses: WindowAxelHypothesis[] = []
   const rejections: WindowAxelRejection[] = []
+  const candidateEvals: WindowAxelCandidateEval[] = []
   const byRef: WindowAxelRefMatchStats[] = []
   const refRectByIndex = new Map<number, RectLike>(
     (params.refRects ?? []).map((entry) => [entry.refIndex, entry.rect]),
@@ -121,18 +123,52 @@ export function runWindowAxelFilter(params: {
       const maxStripHeightForCandidates = resolveMaxStage1StripHeightPx(
         effectiveRef.targetStripHeightPx,
       )
-      const candidates = roots.filter((face) => {
+      const candidates: typeof roots = []
+      for (const face of roots) {
         const span = axisSpan(face.bbox, effectiveRef.orientation)
         const sample = resolveStripSample({
           cluster: [face],
           orientation: effectiveRef.orientation,
         })
         const height = sample.stripHeightsPx[0] ?? 0
-        if (!(span >= minSpan)) return false
-        if (!(height > 0) || height > maxStripHeightForCandidates) return false
-        return true
-      })
-      for (const candidate of candidates) candidateRoots.add(candidate.root)
+        let rejectReason: WindowAxelRejectReason | null = null
+        if (!(span >= minSpan)) rejectReason = 'span_below_min'
+        else if (!(height > 0)) rejectReason = 'strip_height_invalid'
+        else if (height > maxStripHeightForCandidates) rejectReason = 'strip_height_above_max'
+        candidateEvals.push({
+          refIndex: ref.refIndex,
+          orientation: effectiveRef.orientation,
+          faceId: face.root,
+          bbox: { ...face.bbox },
+          spanPx: span,
+          stripHeightPx: height,
+          minSpanPx: minSpan,
+          maxStripHeightPx: maxStripHeightForCandidates,
+          eligible: rejectReason === null,
+          rejectReason,
+        })
+        if (rejectReason) {
+          rejectedCount += 1
+          rejectedByReason[rejectReason] = (rejectedByReason[rejectReason] ?? 0) + 1
+          rejections.push({
+            refIndex: ref.refIndex,
+            orientation: effectiveRef.orientation,
+            faceIds: [face.root],
+            unionBBox: { ...face.bbox },
+            reason: rejectReason,
+            expectedStripCount: effectiveRef.stripCount,
+            actualStripCount: height > 0 ? 1 : 0,
+            expectedStripHeightPx: effectiveRef.targetStripHeightPx,
+            actualStripHeightsPx: height > 0 ? [height] : [],
+            axisSpanPx: span,
+            minSpanPx: minSpan,
+            maxStripHeightPx: maxStripHeightForCandidates,
+          })
+          continue
+        }
+        candidates.push(face)
+        candidateRoots.add(face.root)
+      }
       // Generatief: alle linked k-tuples (één face mag in meerdere hyps).
       const tuples = enumerateLinkedTuples({
         candidates,
@@ -203,6 +239,7 @@ export function runWindowAxelFilter(params: {
   return {
     hypotheses,
     rejections,
+    candidateEvals,
     stats: {
       refBandCount: params.refBands.length,
       candidateRootCount: roots.length,

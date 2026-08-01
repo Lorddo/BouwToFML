@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { normalizeVector } from './door-geometry-utils'
 import { computeDoorHingeFromMask } from './door-swing-hinge'
@@ -129,8 +130,10 @@ export function orientSwingMaskToBottom(
   const bottom = bandWhiteMass(maskData, width, height * 0.55, height)
   // Meer swing-massa boven → 180° zodat sector onderaan ligt (LBE).
   if (top <= bottom * 1.08) {
+    tally('D-57', 'kept')
     return { data: maskData, width, height, rotated180: false }
   }
+  tally('D-57', 'rotated')
   const out = new Uint8Array(width * height)
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {

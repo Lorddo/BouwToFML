@@ -1,6 +1,7 @@
 import type {
   ResolvedWindowCandidate,
   WindowAxelStage,
+  WindowAxelCandidateEval,
   WindowAxelHypothesis,
   WindowAxelRefBand,
   WindowAxelRejection,
@@ -15,6 +16,10 @@ function formatRejectedByReason(rejected: WindowAxelRefMatchStats['rejectedByRea
   const keys = Object.keys(rejected)
   if (keys.length <= 0) return '-'
   return keys.map((key) => `${key}: ${rejected[key as keyof typeof rejected] ?? 0}`).join(' | ')
+}
+
+function formatBBox(bbox: { x: number; y: number; width: number; height: number }): string {
+  return `${bbox.width}×${bbox.height} @ (${bbox.x}, ${bbox.y})`
 }
 
 export function buildWindowFaceReportHtml(params: {
@@ -49,6 +54,7 @@ export function buildWindowFaceReportHtml(params: {
     active: WindowAxelHypothesis[]
   }
   rejections: WindowAxelRejection[]
+  candidateEvals?: WindowAxelCandidateEval[]
   stage2DoorframeCandidates: WindowDoorArcRejection[]
   stage3Accepted: WindowEvidenceAcceptance[]
   stage3Rejections: WindowEvidenceRejection[]
@@ -67,6 +73,9 @@ export function buildWindowFaceReportHtml(params: {
   overlayPng?: string | null
 }): string {
   const title = `Ramen stage-1+2+3+4 report — ${params.drawing ?? 'onbekend'}`
+  const candidateEvals = params.candidateEvals ?? []
+  const eligibleCount = candidateEvals.filter((row) => row.eligible).length
+  const prefilterRejectCount = candidateEvals.length - eligibleCount
   const refRows =
     params.refBands.length > 0
       ? params.refBands
@@ -90,25 +99,34 @@ export function buildWindowFaceReportHtml(params: {
       ? params.hypotheses.active
           .map(
             (hyp) =>
-              `<tr><td>${escapeHtml(hyp.id)}</td><td>${hyp.matchedRefIndex + 1}</td><td>${hyp.faceIds.join(', ')}</td><td>${hyp.unionBBox.width}×${hyp.unionBBox.height} @ (${hyp.unionBBox.x}, ${hyp.unionBBox.y})</td><td>${hyp.axisSpanPx.toFixed(2)}</td><td>${hyp.score.toFixed(3)}</td></tr>`,
+              `<tr><td>${escapeHtml(hyp.id)}</td><td>${hyp.matchedRefIndex + 1}</td><td>${hyp.faceIds.join(', ')}</td><td>${formatBBox(hyp.unionBBox)}</td><td>${hyp.axisSpanPx.toFixed(2)}</td><td>${hyp.score.toFixed(3)}</td></tr>`,
           )
           .join('')
       : '<tr><td colspan="6">Geen accepted hypotheses.</td></tr>'
+  const candidateEvalRows =
+    candidateEvals.length > 0
+      ? candidateEvals
+          .map(
+            (row) =>
+              `<tr class="${row.eligible ? '' : 'reject'}"><td>${row.faceId}</td><td>${row.refIndex + 1}</td><td>${row.orientation}</td><td>${row.spanPx.toFixed(1)}</td><td>${row.stripHeightPx.toFixed(1)}</td><td>${row.minSpanPx.toFixed(1)}</td><td>${row.maxStripHeightPx.toFixed(1)}</td><td>${row.eligible ? 'ja' : 'nee'}</td><td>${row.rejectReason ?? '-'}</td><td>${formatBBox(row.bbox)}</td></tr>`,
+          )
+          .join('')
+      : '<tr><td colspan="10">Geen face-evals (lege Stage 1).</td></tr>'
   const rejectionRows =
     params.rejections.length > 0
       ? params.rejections
           .map(
             (rej) =>
-              `<tr><td>${rej.refIndex + 1}</td><td>${rej.orientation}</td><td>${rej.faceIds.join(', ')}</td><td>${rej.reason}</td><td>${rej.expectedStripCount}</td><td>${rej.actualStripCount}</td><td>${rej.expectedStripHeightPx.toFixed(2)}</td><td>${rej.actualStripHeightsPx.map((h) => h.toFixed(1)).join(', ') || '-'}</td><td>${rej.axisSpanPx.toFixed(2)}</td><td>${rej.unionBBox.width}×${rej.unionBBox.height} @ (${rej.unionBBox.x}, ${rej.unionBBox.y})</td></tr>`,
+              `<tr><td>${rej.refIndex + 1}</td><td>${rej.orientation}</td><td>${rej.faceIds.join(', ')}</td><td>${rej.reason}</td><td>${rej.expectedStripCount}</td><td>${rej.actualStripCount}</td><td>${rej.expectedStripHeightPx.toFixed(2)}</td><td>${rej.actualStripHeightsPx.map((h) => h.toFixed(1)).join(', ') || '-'}</td><td>${rej.axisSpanPx.toFixed(2)}</td><td>${rej.minSpanPx?.toFixed(1) ?? '-'}</td><td>${rej.maxStripHeightPx?.toFixed(1) ?? '-'}</td><td>${formatBBox(rej.unionBBox)}</td></tr>`,
           )
           .join('')
-      : '<tr><td colspan="10">Geen rejected clusters.</td></tr>'
+      : '<tr><td colspan="12">Geen rejected clusters / pre-filter.</td></tr>'
   const stage2DoorframeRows =
     params.stage2DoorframeCandidates.length > 0
       ? params.stage2DoorframeCandidates
           .map(
             (rej) =>
-              `<tr><td>${escapeHtml(rej.hypothesis.id)}</td><td>${rej.hypothesis.matchedRefIndex + 1}</td><td>${rej.hypothesis.faceIds.join(', ')}</td><td>${rej.reason}</td><td>${rej.hypothesis.unionBBox.width}×${rej.hypothesis.unionBBox.height} @ (${rej.hypothesis.unionBBox.x}, ${rej.hypothesis.unionBBox.y})</td></tr>`,
+              `<tr><td>${escapeHtml(rej.hypothesis.id)}</td><td>${rej.hypothesis.matchedRefIndex + 1}</td><td>${rej.hypothesis.faceIds.join(', ')}</td><td>${rej.reason}</td><td>${formatBBox(rej.hypothesis.unionBBox)}</td></tr>`,
           )
           .join('')
       : '<tr><td colspan="5">Geen doorframe-kandidaten in stage 2.</td></tr>'
@@ -117,7 +135,7 @@ export function buildWindowFaceReportHtml(params: {
       ? (params.stage4Doorframes ?? [])
           .map(
             (entry) =>
-              `<tr><td>${escapeHtml(entry.id)}</td><td>${entry.matchedRefIndex + 1}</td><td>${entry.evidence}</td><td>${entry.widthPx.toFixed(2)}</td><td>${entry.widthCm.toFixed(2)}</td><td>${entry.heightPx.toFixed(2)}</td><td>${entry.heightCm.toFixed(2)}</td><td>${entry.bbox.width}×${entry.bbox.height} @ (${entry.bbox.x}, ${entry.bbox.y})</td><td>(${entry.centroidPx.x.toFixed(2)}, ${entry.centroidPx.y.toFixed(2)})</td></tr>`,
+              `<tr><td>${escapeHtml(entry.id)}</td><td>${entry.matchedRefIndex + 1}</td><td>${entry.evidence}</td><td>${entry.widthPx.toFixed(2)}</td><td>${entry.widthCm.toFixed(2)}</td><td>${entry.heightPx.toFixed(2)}</td><td>${entry.heightCm.toFixed(2)}</td><td>${formatBBox(entry.bbox)}</td><td>(${entry.centroidPx.x.toFixed(2)}, ${entry.centroidPx.y.toFixed(2)})</td></tr>`,
           )
           .join('')
       : '<tr><td colspan="9">Geen stage-4 resolved doorframes.</td></tr>'
@@ -126,7 +144,7 @@ export function buildWindowFaceReportHtml(params: {
       ? params.stage3Accepted
           .map(
             (entry) =>
-              `<tr><td>${escapeHtml(entry.hypothesis.id)}</td><td>${entry.hypothesis.matchedRefIndex + 1}</td><td>${entry.evidence}</td><td>${entry.evidenceFaceIds.join(', ') || '-'}</td><td>${entry.hypothesis.faceIds.join(', ')}</td><td>${entry.hypothesis.unionBBox.width}×${entry.hypothesis.unionBBox.height} @ (${entry.hypothesis.unionBBox.x}, ${entry.hypothesis.unionBBox.y})</td></tr>`,
+              `<tr><td>${escapeHtml(entry.hypothesis.id)}</td><td>${entry.hypothesis.matchedRefIndex + 1}</td><td>${entry.evidence}</td><td>${entry.evidenceFaceIds.join(', ') || '-'}</td><td>${entry.hypothesis.faceIds.join(', ')}</td><td>${formatBBox(entry.hypothesis.unionBBox)}</td></tr>`,
           )
           .join('')
       : '<tr><td colspan="6">Geen stage-3 accepts.</td></tr>'
@@ -135,7 +153,7 @@ export function buildWindowFaceReportHtml(params: {
       ? params.stage3Rejections
           .map(
             (entry) =>
-              `<tr><td>${escapeHtml(entry.hypothesis.id)}</td><td>${entry.hypothesis.matchedRefIndex + 1}</td><td>${entry.reason}</td><td>${entry.hypothesis.faceIds.join(', ')}</td><td>${entry.hypothesis.unionBBox.width}×${entry.hypothesis.unionBBox.height} @ (${entry.hypothesis.unionBBox.x}, ${entry.hypothesis.unionBBox.y})</td></tr>`,
+              `<tr><td>${escapeHtml(entry.hypothesis.id)}</td><td>${entry.hypothesis.matchedRefIndex + 1}</td><td>${entry.reason}</td><td>${entry.hypothesis.faceIds.join(', ')}</td><td>${formatBBox(entry.hypothesis.unionBBox)}</td></tr>`,
           )
           .join('')
       : '<tr><td colspan="5">Geen stage-3 rejects.</td></tr>'
@@ -144,7 +162,7 @@ export function buildWindowFaceReportHtml(params: {
       ? params.stage4Resolved
           .map(
             (entry) =>
-              `<tr><td>${escapeHtml(entry.id)}</td><td>${entry.matchedRefIndex + 1}</td><td>${entry.evidence}</td><td>${entry.widthPx.toFixed(2)}</td><td>${entry.widthCm.toFixed(2)}</td><td>${entry.heightPx.toFixed(2)}</td><td>${entry.heightCm.toFixed(2)}</td><td>${entry.bbox.width}×${entry.bbox.height} @ (${entry.bbox.x}, ${entry.bbox.y})</td><td>(${entry.centroidPx.x.toFixed(2)}, ${entry.centroidPx.y.toFixed(2)})</td></tr>`,
+              `<tr><td>${escapeHtml(entry.id)}</td><td>${entry.matchedRefIndex + 1}</td><td>${entry.evidence}</td><td>${entry.widthPx.toFixed(2)}</td><td>${entry.widthCm.toFixed(2)}</td><td>${entry.heightPx.toFixed(2)}</td><td>${entry.heightCm.toFixed(2)}</td><td>${formatBBox(entry.bbox)}</td><td>(${entry.centroidPx.x.toFixed(2)}, ${entry.centroidPx.y.toFixed(2)})</td></tr>`,
           )
           .join('')
       : '<tr><td colspan="9">Geen stage-4 resolved windows.</td></tr>'
@@ -173,6 +191,7 @@ export function buildWindowFaceReportHtml(params: {
     table { border-collapse: collapse; width: 100%; font-size: 13px; }
     th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; vertical-align: top; }
     th { background: #f8fafc; }
+    tr.reject td { background: #fef2f2; color: #7f1d1d; }
     img { max-width: min(100%, 1200px); border: 1px solid #cbd5e1; border-radius: 8px; }
     pre { background: #0b1020; color: #dbeafe; padding: 10px; border-radius: 8px; overflow: auto; font-size: 12px; }
   </style>
@@ -185,6 +204,7 @@ export function buildWindowFaceReportHtml(params: {
     <h2>Samenvatting</h2>
     <p>Actieve stage: <strong>${params.activeStage}</strong></p>
     <p>Refs: <strong>${params.stage1Stats.refBandCount}</strong> · candidate roots: <strong>${params.stage1Stats.candidateRootCount}</strong></p>
+    <p>Stage 1 face-evals: <strong>${candidateEvals.length}</strong> · eligible: <strong>${eligibleCount}</strong> · pre-filter reject: <strong>${prefilterRejectCount}</strong></p>
     <p>Stage 1 accepted: <strong>${params.stage1Stats.acceptedCount}</strong> · Stage 1 rejected: <strong>${params.stage1Stats.rejectedCount}</strong></p>
     <p>Stage 2 accepted (windows): <strong>${params.stage2Stats.acceptedCount}</strong> · doorframe candidates shared: <strong>${params.stage2Stats.rejectedShare}</strong> · adjacent: <strong>${params.stage2Stats.rejectedAdjacent}</strong> · directional: <strong>${params.stage2Stats.rejectedDirectional}</strong></p>
     <p>Stage 3 accepted: <strong>${params.stage3Stats.acceptedCount}</strong> · framing: <strong>${params.stage3Stats.acceptedByFraming}</strong> · strip-stack: <strong>${params.stage3Stats.acceptedByStripStack}</strong> · strip-fail→framing: <strong>${params.stage3Stats.stripStackFailedBeforeFraming ?? 0}</strong> · no-evidence reject: <strong>${params.stage3Stats.rejectedNoEvidence}</strong></p>
@@ -213,6 +233,15 @@ export function buildWindowFaceReportHtml(params: {
     <table>
       <thead><tr><th>ref</th><th>rect</th><th>hasBand</th><th>intersectingRoots</th><th>candidateRoots</th><th>matched</th><th>rejectedClusters</th></tr></thead>
       <tbody>${probeRows}</tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Stage 1 kandidaten (alle face-evals vóór clustering)</h2>
+    <p class="muted">Per ref×ori: span/hoogte vs minSpan/maxH. Rood = pre-filter afgewezen.</p>
+    <table>
+      <thead><tr><th>face</th><th>ref</th><th>ori</th><th>span</th><th>H</th><th>minSpan</th><th>maxH</th><th>eligible</th><th>reason</th><th>bbox</th></tr></thead>
+      <tbody>${candidateEvalRows}</tbody>
     </table>
   </section>
 
@@ -266,9 +295,9 @@ export function buildWindowFaceReportHtml(params: {
   </section>
 
   <section class="panel">
-    <h2>Rejected clusters + reason</h2>
+    <h2>Stage 1 rejected (pre-filter + clusters) + reason</h2>
     <table>
-      <thead><tr><th>ref</th><th>ori</th><th>faceIds</th><th>reason</th><th>exp strips</th><th>act strips</th><th>exp H</th><th>act H list</th><th>axis span</th><th>bbox</th></tr></thead>
+      <thead><tr><th>ref</th><th>ori</th><th>faceIds</th><th>reason</th><th>exp strips</th><th>act strips</th><th>exp H</th><th>act H list</th><th>axis span</th><th>minSpan</th><th>maxH</th><th>bbox</th></tr></thead>
       <tbody>${rejectionRows}</tbody>
     </table>
   </section>
@@ -290,6 +319,7 @@ export function buildWindowFaceReportHtml(params: {
       stage2Stats: params.stage2Stats,
       stage3Stats: params.stage3Stats,
       refProbes: params.refProbes,
+      candidateEvals,
       hypotheses: params.hypotheses,
       rejections: params.rejections,
       stage2DoorframeCandidates: params.stage2DoorframeCandidates,

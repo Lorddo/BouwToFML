@@ -157,13 +157,14 @@ describe('E2E fase 0 — OpenCV + skeleton in Node', () => {
       console.log(
         `[spike] L1–L10: ${elapsedMs.toFixed(0)} ms | ` +
           `L1 segs=${result.layer1.allSegmentsRaw.length} | ` +
-          `L10 segs=${result.layer10.allSegmentsReady.length} | ` +
+          `L10 segs=${result.layer10?.allSegmentsReady.length ?? 0} | ` +
           `fmlReady=${result.fmlReady}`,
       )
 
       expect(result.fmlReady).toBe(true)
       expect(result.layer1.allSegmentsRaw.length).toBeGreaterThan(0)
-      expect(result.layer10.allSegmentsReady.length).toBeGreaterThan(0)
+      expect(result.layer10).toBeDefined()
+      expect(result.layer10!.allSegmentsReady.length).toBeGreaterThan(0)
       // Synthetisch 320×240: moet ruim onder CI-budget blijven
       expect(elapsedMs).toBeLessThan(15_000)
     } finally {

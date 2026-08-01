@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { WallGraph } from '@/cv/port/wallJunctionGraph'
 import type { FloorPlan, Wall } from './types'
@@ -92,6 +93,7 @@ export function extractionToPlanWithOrigin(
     const aNode = nodeById.get(edge.a)
     const bNode = nodeById.get(edge.b)
     // ESC:X-08 (E)
+    if (!aNode || !bNode) tally('X-08', 'edge_fallback')
     const aSource = aNode ?? edge.segment.a
     const bSource = bNode ?? edge.segment.b
     const a = {
@@ -109,9 +111,13 @@ export function extractionToPlanWithOrigin(
     const semanticSegment = semanticMatch?.segment
     const semanticThicknessPx = semanticSegment?.thicknessPxMax
     const pxPerMmAvg = (options.pxPerMmX + options.pxPerMmY) / 2
+    // ESC:X-22 — thicknessPxMax≤0 telt niet als meting (zero-fallback weg); dan resolveThicknessCm.
     const semanticThicknessCm =
-      Number.isFinite(semanticThicknessPx) && Number.isFinite(pxPerMmAvg) && pxPerMmAvg > 0
-        ? Math.max(1, (semanticThicknessPx ?? 0) / pxPerMmAvg / 10)
+      Number.isFinite(semanticThicknessPx) &&
+      (semanticThicknessPx ?? 0) > 0 &&
+      Number.isFinite(pxPerMmAvg) &&
+      pxPerMmAvg > 0
+        ? Math.max(1, (semanticThicknessPx as number) / pxPerMmAvg / 10)
         : null
     const doorOpenings = mapLayer12DoorsToOpenings({
       layer12Doors: options.layer12Doors ?? [],

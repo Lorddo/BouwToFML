@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { resolveClassAtLabel, type RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import { clampBounds } from './door-wall-snap-geom'
@@ -254,6 +255,7 @@ export function attachDoorframesToResolvedDoors(params: {
     const dfChanged = nextDf.length !== prevDf.length || nextDf.some((id, i) => id !== prevDf[i])
     if (!facesChanged && !dfChanged) return door
     if (nextDf.length <= 0 && !facesChanged) return door
+    if (dfChanged) tally('D-42', 'attached')
     return {
       ...door,
       faceIds: nextFaceIds,

@@ -1,4 +1,4 @@
-import { summarizeRunJournal } from '@/core/diagnostics'
+import { summarizeRunJournal, tally } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type { BoundWindow, WindowBindRejectReason, WindowBindRejection } from '@/cv/windows'
@@ -111,11 +111,14 @@ function buildLayer12(params: {
   // ESC:X-26 (E)
   const skipped: LayerDebugDoorOrientSkipped[] = params.boundDoors
     .filter((door) => !orientedIds.has(door.doorId))
-    .map((door) => ({
-      doorId: door.doorId,
-      reason: 'orient_failed' as const,
-      segmentIndex: door.segmentIndex,
-    }))
+    .map((door) => {
+      tally('X-26', 'orient_failed_inferred')
+      return {
+        doorId: door.doorId,
+        reason: 'orient_failed' as const,
+        segmentIndex: door.segmentIndex,
+      }
+    })
   return {
     oriented: params.orientedDoors.map(toDoorOriented),
     skipped,

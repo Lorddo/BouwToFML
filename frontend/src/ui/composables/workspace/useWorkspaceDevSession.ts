@@ -99,14 +99,18 @@ export type UseWorkspaceDevSessionDeps = {
   setRoomInkCoverageThreshold: (value: number) => void
   devSessionRestoring: Ref<boolean>
   setLocalError: (message: string | null) => void
-  /** Exact restore: Stage-2 niet opnieuw unknown→deur laten pushen. */
+  /** Tijdens exact-restore: Stage-2 niet laten racen vóór expliciete re-run. */
   markAutoDoorPassApplied: () => void
-  /** Clear/nieuwe sessie: auto-pass gate resetten. */
+  /** Tijdens exact-restore: Stage-3/4 niet laten racen vóór expliciete re-run. */
+  markAutoWindowPassApplied: () => void
+  /** Na restore: Stage-2 opnieuw toestaan. */
   resetAutoDoorPassGate: () => void
-  /** Replay zonder overrides: Stage-2 direct draaien (niet via debounce-race). */
+  /** Deuren Stage-2 direct draaien (niet via debounce-race). */
   refreshDoorSwingOverlay: () => Promise<void>
-  /** Exact restore: Deuren-tab herbouwen uit bestaande door-vlakken (geen unknown). */
-  refreshDoorSwingFromExistingDoors: () => Promise<void>
+  /** Ramen Stage-3/4 opnieuw toestaan. */
+  invalidateAutoWindowPass: () => void
+  /** Ramen Stage-3/4 direct draaien. */
+  refreshWindowOverlay: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
 }
 
@@ -226,19 +230,17 @@ export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
         throw new Error('Geselecteerde snapshot is niet beschikbaar. Kies een andere snapshot.')
       }
       await restoreFlow.restoreSession(session)
-      // Na alle flowStep/tab-watches: exact review-state niet alsnog Stage-2 laten pushen.
-      if (
-        resolveRestoreMode(session) === 'exact' &&
-        isSessionV2(session) &&
-        (session.detectionExact?.roomPhase === 'review' ||
-          session.detectionExact?.roomPhase === 'done')
-      ) {
-        deps.markAutoDoorPassApplied()
-      }
       const target = resolveTargetFlowStep(session)
       const mode = resolveRestoreMode(session)
       const modeHint = mode === 'replay' ? ' — detectie opnieuw gedraaid' : ''
-      devSessionMessage.value = `Hersteld: ${session.imageName} → ${flowStepLabel(target)}${modeHint} (${session.imageWidth}×${session.imageHeight}).`
+      const openingsHint =
+        mode === 'exact' &&
+        isSessionV2(session) &&
+        (session.detectionExact?.roomPhase === 'review' ||
+          session.detectionExact?.roomPhase === 'done')
+          ? ' — deuren+ramen opnieuw'
+          : ''
+      devSessionMessage.value = `Hersteld: ${session.imageName} → ${flowStepLabel(target)}${modeHint}${openingsHint} (${session.imageWidth}×${session.imageHeight}).`
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       deps.setLocalError(message)

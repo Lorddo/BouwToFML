@@ -1,9 +1,23 @@
-/**
- * Escalatie-grootboek veld voor E2E-snapshots (`<slug>.layers.json`).
- * Teller-implementatie volgt in batch nul; dit type reserveert de sleutel
- * zodat de eerste fixtures geen hergoedkeuring nodig hebben.
- */
 import type { EscalationId } from '@/core/diagnostics'
+import type { RunJournalSummary } from '@/core/diagnostics/run-journal'
 
-/** Per ESC-ID: hoe vaak het pad vuurde in deze run. Ontbrekende keys = 0. */
-export type EscalationLedger = Partial<Record<EscalationId, number>>
+/**
+ * Escalatie-grootboek in `<slug>.layers.json`.
+ * `levels` is verplicht: `tally` telt ook geslaagde passages (zie plan § escalatie-grootboek).
+ * Geen `events` — die bevatten ruwe floats en churnen.
+ */
+export type EscalationLedger = {
+  escalations: Partial<Record<EscalationId, number>>
+  levels: Record<string, number>
+  degraded: boolean
+  diagnostics: Record<string, number>
+}
+
+export function ledgerFromJournal(summary: RunJournalSummary): EscalationLedger {
+  return {
+    escalations: { ...summary.escalations },
+    levels: { ...summary.levels },
+    degraded: summary.degraded,
+    diagnostics: { ...summary.diagnostics },
+  }
+}

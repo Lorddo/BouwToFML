@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import { createCanvas, readRgbaMatFromCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
@@ -405,6 +406,7 @@ export async function runOpeningRefPipeline(params: {
   const onAxisParts = combinedFacePolygonParts.filter((part) => part.zone === 'on_axis')
   // ESC:REF-10 (E)
   const primaryPool = onAxisParts.length > 0 ? onAxisParts : combinedFacePolygonParts
+  tally('REF-10', onAxisParts.length > 0 ? 'on_axis' : 'all_parts_fallback')
   const combinedFacePolygon = primaryPool[0]?.polygon ?? []
   const facesWithPolygons = filteredFaceProfile.faces.map((face) => ({
     ...face,

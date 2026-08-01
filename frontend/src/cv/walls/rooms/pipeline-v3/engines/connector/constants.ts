@@ -1,7 +1,19 @@
+import { tally } from '@/core/diagnostics'
+
 export const LAYER6_HV_ANGLE_TOL_DEG = 12
 // ESC:W-43 (E)
 /** Alleen noodpad zonder scale-object (Keep L6g). */
 export const LAYER6_HV_BAND_FALLBACK_PX = 8
+
+/** Journaliseert of de scale-geschaalde hv-band gebruikt wordt of de noodpad-fallback. */
+export function resolveHvBandPx(scaleHvBandPx: number | undefined): number {
+  if (scaleHvBandPx != null && Number.isFinite(scaleHvBandPx) && scaleHvBandPx > 0) {
+    tally('W-43', 'scaled')
+    return scaleHvBandPx
+  }
+  tally('W-43', 'fallback')
+  return LAYER6_HV_BAND_FALLBACK_PX
+}
 /** Fallback endpoint-snap bij ref=30 (0.1×ref); prefer `scale.endpointSnapPx`. */
 export const LAYER6_ENDPOINT_SNAP_PX = 3
 /** Fallback nearby-weld bij ref=30 (0.2×ref); prefer `scale.nearbyWeldPx`. */

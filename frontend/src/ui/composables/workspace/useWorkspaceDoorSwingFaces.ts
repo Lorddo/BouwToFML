@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
-import { noteSwallowedError } from '@/core/diagnostics'
+import { noteSwallowedError, tally } from '@/core/diagnostics'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import { usesDoorSwingOverlay } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -38,7 +38,10 @@ import {
   reattachStickyDoorframesToResolved as reattachStickyDoorframesToResolvedCore,
   snapResolvedDoorsToWalls as snapResolvedDoorsToWallsCore,
 } from './door-faces-snap'
-import { pruneDoorStageCacheByClassification } from './door-stage-cache-prune'
+import {
+  collectOrphanedDoorframeFaceIdsAfterDoorPrune,
+  pruneDoorStageCacheByClassification,
+} from './door-stage-cache-prune'
 import {
   resolveEffectiveWallClassification,
   resolveEffectiveWallParentMap,
@@ -56,6 +59,7 @@ import {
 import { persistDoorOverridesToTabOutputs } from './faces-overrides-persist'
 import {
   DOOR_SWING_REFRESH_DEBOUNCE_MS,
+  noteDoorSwingRefreshDebounce,
   renderDoorSwingOverlayForActiveStage,
   syncDoorSwingStatsFromCache as buildStatsFromCache,
 } from './door-faces-overlay-schedule'
@@ -76,6 +80,11 @@ export function useWorkspaceDoorSwingFaces(deps: {
   referenceWallThicknessPx?: Ref<number | null>
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
   onDoorFacesApplied?: () => void | Promise<void>
+  /**
+   * Na demote-prune: sync window door-arc sig + optionele wees-doorframe cleanup.
+   * Geen volle raam-pipeline.
+   */
+  onDoorSwingDemotePruned?: (orphanedDoorframeFaceIds: readonly number[]) => void | Promise<void>
   devSessionRestoring?: Ref<boolean>
 }) {
   const doorSwingStage = ref<DoorSwingStage>('stage2')
@@ -133,7 +142,9 @@ export function useWorkspaceDoorSwingFaces(deps: {
     if (deps.flowStep.value !== 'templates' || !wallsClassifyReady.value) return false
     if (deps.roomPhase.value !== 'review') return false
     const tab = deps.templateTab.value
-    return tab === 'walls' || tab === 'doors'
+    const ok = tab === 'walls' || tab === 'doors'
+    if (ok) tally('O-45', 'door_pass_gate')
+    return ok
   }
 
   // --- persist helper ---
@@ -184,6 +195,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     }
     refreshQueued.value = true
     if (refreshTimer.value) clearTimeout(refreshTimer.value)
+    noteDoorSwingRefreshDebounce()
     refreshTimer.value = setTimeout(() => {
       refreshTimer.value = null
       void refreshDoorSwingOverlay()
@@ -321,6 +333,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
       const priorResolved = stageCache.value.resolvedDoors
       const pipelineEmpty = pipe.stage2Accepted.length <= 0 && pipe.resolved.length <= 0
       if (existingDoorsOnly && pipelineEmpty && priorResolved.length > 0) {
+        tally('O-17', 'guard_keep_prior')
         const cache = deps.roomRasterCache.value
         const classification = cache ? effectiveClassification(cache) : prior
         const stillHasDoorFaces = priorResolved.some((door) =>
@@ -399,6 +412,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
 
   // ESC:O-14 (D)
   async function refreshDoorSwingFromExistingDoors(): Promise<void> {
+    tally('O-14', 'prune_only')
     if (refreshTimer.value) {
       clearTimeout(refreshTimer.value)
       refreshTimer.value = null
@@ -418,10 +432,15 @@ export function useWorkspaceDoorSwingFaces(deps: {
       roomRasterCache: deps.roomRasterCache.value,
       wallsMeta: deps.tabOutputs.value.walls,
     })
+    const beforeResolved = stageCache.value.resolvedDoors
     stageCache.value = pruneDoorStageCacheByClassification(
       stageCache.value,
       classification,
       parentMap,
+    )
+    const orphanedDoorframeFaceIds = collectOrphanedDoorframeFaceIdsAfterDoorPrune(
+      beforeResolved,
+      stageCache.value.resolvedDoors,
     )
     autoPass.lastAutoDoorFaceIds = collectAcceptedDoorFaceIds(
       stageCache.value.stage2AcceptedHypotheses,
@@ -434,6 +453,8 @@ export function useWorkspaceDoorSwingFaces(deps: {
     if (deps.tabOutputs.value.walls?.roomWallMaskRle) {
       await snapResolvedDoorsToWalls()
     }
+    // Window: arc-sig sync + wees-DF cleanup — nooit volle raam-pipeline via deze prune.
+    await deps.onDoorSwingDemotePruned?.(orphanedDoorframeFaceIds)
   }
 
   /** Face-demote: debounce + coalesce zodat Shift-kliks de UI niet blokkeren. */
@@ -598,7 +619,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
         return
       }
       // ESC:O-24 (D)
-      if (prev === 'classifying') onWallsClassified('replace-all')
+      if (prev === 'classifying') {
+        tally('O-24', 'walls_classified')
+        onWallsClassified('replace-all')
+      }
     },
   )
 
@@ -638,6 +662,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     () => {
       if (deps.devSessionRestoring?.value) return
       if (!shouldRunDoorSwingPass()) return
+      tally('O-26', 'scale_invalidate')
       invalidateAutoDoorPass('replace-auto')
       scheduleDoorSwingOverlayRefresh()
     },

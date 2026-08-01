@@ -1,3 +1,5 @@
+import { tally } from '@/core/diagnostics'
+
 const FML_BAND_MID_BOUNDARY_CM = 12
 const FML_BAND_MAX_BOUNDARY_CM = 23
 
@@ -85,6 +87,7 @@ function roundBoundaryCm(value: number): number {
 /**
  * Leidt meetbandgrenzen (cm) af uit referentie-muur in px + schaal.
  * min &lt; 40% ref · mid 40–80% · max &gt; 80%.
+ * Ongeldige ref/schaal → hard fail (geen stille 12/23 default; ESC:REF-14).
  */
 export function deriveFmlBandBoundariesCmFromRefPx(
   referenceWallThicknessPx: number,
@@ -92,11 +95,15 @@ export function deriveFmlBandBoundariesCmFromRefPx(
   pxPerMmY: number,
   ratios: { midRatio?: number; maxRatio?: number } = {},
 ): FmlThicknessBandBoundaries {
-  // ESC:REF-14 (E)
+  // ESC:REF-14 (E) — stille default weg 2026-08-01; zonder meting geen banden.
   const pxPerMm = averagePxPerMm(pxPerMmX, pxPerMmY)
   if (referenceWallThicknessPx <= 0 || pxPerMm <= 0) {
-    return { ...DEFAULT_FML_BAND_BOUNDARIES }
+    tally('REF-14', 'rejected')
+    throw new Error(
+      'Diktebanden vereisen een geldige muur-referentie en schaal (pixels per millimeter).',
+    )
   }
+  tally('REF-14', 'from_ref_px')
   const refCm = referenceWallThicknessPx / pxPerMm / 10
   const midRatio = ratios.midRatio ?? FML_BAND_MID_RATIO
   const maxRatio = ratios.maxRatio ?? FML_BAND_MAX_RATIO

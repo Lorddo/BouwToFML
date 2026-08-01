@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { computed, watch, type Ref } from 'vue'
 import type { ElementClass } from '@/core/extraction/types'
 import type { SelectionRect } from '@/platform/selection'
@@ -88,6 +89,7 @@ export function useWorkspaceFlow(deps: {
       // ESC:O-42 (B)
       case 'templates':
         if (deps.templateTab.value === 'walls' && !deps.wallsDetectionComplete?.()) {
+          tally('O-42', 'walls_gate_block')
           return false
         }
         return true

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { areLinkedViaWallInkBridge } from '@/cv/walls/rooms/wall-ink-bridge'
 import type { WindowAxelOrientation, WindowAxelRefBand, WindowAxelRejectReason } from './types'
@@ -70,6 +71,9 @@ function facesAreLinked(a: RootFace, b: RootFace, params: CandidateLinkParams): 
     wallBridged &&
     overlap >= 0.1 &&
     centerDelta <= Math.max(maxPerpDelta * 1.6, params.axisBandHeightPx * 4)
+  if (wallBridgeLinked) tally('R-13', 'wall_bridge')
+  else if (adjacencyLinked) tally('R-11', 'adjacency')
+  else if (geometricallyLinked) tally('R-11', 'geometry')
   return adjacencyLinked || wallBridgeLinked || geometricallyLinked
 }
 
@@ -250,10 +254,12 @@ function scoreCluster(params: { cluster: RootFace[]; ref: WindowAxelRefBand }): 
     }
   }
   // ESC:R-10 (A)
-  // Ruimere hoogteband: ~70% afwijking (2D_3E dunne verticals ~2px vs target ~6).
-  const tolerance = Math.max(2, ref.targetStripHeightPx * 0.7)
+  // Hoogteband ~75%: na floor-kalibratie (tilt-bbox) blijven ook dunnere
+  // as-aligned strips elders binnen bereik (target 11 ↔ median 3).
+  const tolerance = Math.max(2, ref.targetStripHeightPx * 0.75)
   const medianHeight = median(heights)
   if (Math.abs(medianHeight - ref.targetStripHeightPx) > tolerance) {
+    tally('R-10', 'strip_height_mismatch')
     return {
       accepted: false,
       reason: 'strip_height_mismatch',
@@ -344,6 +350,7 @@ export function scoreStage1Tuple(params: {
   const minAxis = axisSpans[0] ?? 0
   const maxAxis = axisSpans[axisSpans.length - 1] ?? 0
   if (minAxis > 0 && maxAxis / minAxis > MAX_PAIR_AXIS_SPAN_RATIO) {
+    tally('R-12', 'axis_span_spread')
     return {
       accepted: false,
       reason: 'axis_span_spread',
@@ -352,8 +359,8 @@ export function scoreStage1Tuple(params: {
       actualStripHeightsPx: heights,
     }
   }
-  // Per-strip vs target (±70%, min 2px) — 36px-panelen bij target 6 falen hier.
-  const tolerance = Math.max(2, ref.targetStripHeightPx * 0.7)
+  // Per-strip vs target (±75%, min 2px) — 36px-panelen bij target 6 falen hier.
+  const tolerance = Math.max(2, ref.targetStripHeightPx * 0.75)
   const maxStripH = resolveMaxStage1StripHeightPx(ref.targetStripHeightPx)
   const medianHeight = median(heights)
   if (Math.abs(medianHeight - ref.targetStripHeightPx) > tolerance) {

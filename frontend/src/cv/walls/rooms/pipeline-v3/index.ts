@@ -15,14 +15,24 @@ import { runLayer10Fml } from './layer-10-fml'
 import { listIncompleteLayers, isV3FmlReady, V3_NATIVE_THROUGH_LAYER } from './native-layers'
 import type { PipelineV3Layer1Result, PipelineV3Result } from './types'
 
+function requireBlobsForLayer1(blobs: ConnectedWallBlob[] | undefined): ConnectedWallBlob[] {
+  if (!blobs) {
+    throw new Error('runPipelineV3: blobs is required when layer1 is not provided')
+  }
+  return blobs
+}
+
 /**
  * V3 orchestrator — progressive native layers only.
  * No V2 bridge for missing layers: hard-stop after V3_NATIVE_THROUGH_LAYER.
+ *
+ * When `layer1` is provided (E2E harness / baked skeleton), L1 is skipped and
+ * `blobs` may be omitted. Production finalize always supplies blobs and no layer1.
  */
 export async function runPipelineV3(params: {
   cv: OpenCV
-  blobs: ConnectedWallBlob[]
-  /** Ignored when present — V3 always runs its own L1 copy. */
+  blobs?: ConnectedWallBlob[]
+  /** When present, used as-is; L1 (WASM skeleton) is not re-run. */
   layer1?: PipelineV3Layer1Result
   maskRle: RoomWallMaskRle
   referenceWallThicknessPx?: number
@@ -34,11 +44,13 @@ export async function runPipelineV3(params: {
   const distanceMap =
     buildWallDistanceMap({ cv: params.cv, maskRle: params.maskRle })?.distanceMap ?? null
 
-  const layer1 = await runLayer1RawWasm({
-    cv: params.cv,
-    blobs: params.blobs,
-    referenceWallThicknessPx: params.referenceWallThicknessPx,
-  })
+  const layer1 =
+    params.layer1 ??
+    (await runLayer1RawWasm({
+      cv: params.cv,
+      blobs: requireBlobsForLayer1(params.blobs),
+      referenceWallThicknessPx: params.referenceWallThicknessPx,
+    }))
   const layer2 = runLayer2RawSegments({
     layer1,
     cv: params.cv,

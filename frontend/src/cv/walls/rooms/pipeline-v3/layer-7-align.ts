@@ -2,6 +2,7 @@
  * V3 Laag 7 — inter-junction chain collapse (CURRENT golden).
  * No stub-collapse (that is L9 via enableStubCollapse).
  */
+import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -64,6 +65,7 @@ export function runLayer7Align(params: {
         }),
     })
     const segmentsOut = guard.segments
+    tally('W-44', guard.preserved ? 'accepted' : 'rolled_back')
     if (!guard.preserved) {
       facesSkippedTopology += 1
     } else {

@@ -12,6 +12,7 @@ import {
   unionBbox,
 } from './door-swing-filter-matching'
 import { DOOR_SPACE_POLICY } from './door-space-policy'
+import { tally } from '@/core/diagnostics'
 
 /** Cluster-buren via gedeelde ink-bridge hop (`wall-ink-bridge.ts`). */
 function collectBoundaryNeighbors(
@@ -20,12 +21,13 @@ function collectBoundaryNeighbors(
   seen: Set<number>,
   classificationByLabel?: Map<number, RoomRasterClass>,
 ): number[] {
+  // ESC:D-19 (C)
+  tally('D-19', DOOR_SPACE_POLICY.stage1ClusterBridge)
   return collectNeighborsViaWallInkBridge({
     roots,
     adjacency,
     seen,
     classificationByLabel,
-    // ESC:D-19 (C)
     bridgeViaInk: DOOR_SPACE_POLICY.stage1ClusterBridge === 'ink',
   })
 }
@@ -80,8 +82,14 @@ function pickBestNeighbor(params: {
     // door breedte én hoogte tegelijk, maar schieten ver voorbij de ref-target en
     // verzieken de aspect. Sectorstroken (diepte-opbouw) blijven binnen maxW/H.
     // ESC:D-21 (B)
-    if (nextBbox.width > maxWpx && nextBbox.width > params.currentBbox.width) continue
-    if (nextBbox.height > maxHpx && nextBbox.height > params.currentBbox.height) continue
+    if (nextBbox.width > maxWpx && nextBbox.width > params.currentBbox.width) {
+      tally('D-21', 'rejected_width_overshoot')
+      continue
+    }
+    if (nextBbox.height > maxHpx && nextBbox.height > params.currentBbox.height) {
+      tally('D-21', 'rejected_height_overshoot')
+      continue
+    }
     const nextUnderfill =
       Math.max(0, targetWpx - nextBbox.width) + Math.max(0, targetHpx - nextBbox.height)
     const reduction = baseUnderfill - nextUnderfill
@@ -173,6 +181,7 @@ export function absorbInBandNeighbors(params: {
         absorbAspectTolerance,
       )
       if (stillMatches === null) continue
+      tally('D-22', 'absorbed_with_bonus_tolerance')
       roots.push(candidate.root)
       seen.add(candidate.root)
       union = nextUnion
@@ -238,11 +247,12 @@ export function growClusterForRef(params: {
     // maar geldige boog). Anders zou een geclusterde boog die net iets langgerekter
     // is dan de ref (zoals de gestapelde stroken van een dubbele deur) nooit matchen
     // terwijl één enkel vlak van dezelfde vorm wél via clipped-arc geaccepteerd wordt.
+    const strictMatch = bestAspectRef(union, params.refBands, params.aspectToleranceRatio, {
+      sizeBand: params.sizeBand,
+    })
+    // ESC:D-20 (A)
     const match =
-      bestAspectRef(union, params.refBands, params.aspectToleranceRatio, {
-        sizeBand: params.sizeBand,
-      }) ??
-      // ESC:D-20 (A)
+      strictMatch ??
       clippedArcRescueMatch({
         bbox: union,
         areaPx: unionAreaPx,
@@ -250,6 +260,7 @@ export function growClusterForRef(params: {
         sizeBand: params.sizeBand,
         aspectToleranceRatio: params.aspectToleranceRatio,
       })
+    if (!strictMatch && match) tally('D-20', 'cluster_clipped_arc_fallback')
     if (!match) return
     // Kies de BEST scorende union (dichtst bij de ref qua aspect/fill), niet de
     // grootste. Anders slokt de groei een extra tussenvlak op zolang de bredere
@@ -258,12 +269,13 @@ export function growClusterForRef(params: {
     // de schone boog 138×122). Bij gelijke score wint het grotere oppervlak.
     const area = union.width * union.height
     const current = bestHolder.current
+    const scoreTied = !!current && Math.abs(match.score - current.match.score) <= 1e-9
     // ESC:D-23 (B)
     const isBetter =
       !current ||
       match.score > current.match.score + 1e-9 ||
-      (Math.abs(match.score - current.match.score) <= 1e-9 &&
-        area > current.union.width * current.union.height)
+      (scoreTied && area > current.union.width * current.union.height)
+    if (scoreTied && isBetter) tally('D-23', 'tie_break_by_area')
     if (isBetter) {
       bestHolder.current = { roots: [...clusterRoots], union: { ...union }, match }
     }

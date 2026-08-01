@@ -1,6 +1,6 @@
 import type { DoorOpeningAxis } from './types'
 
-// ESC:D-49 (A)
+// ESC:D-49 (A) — VERWIJDERD 2026-07-31 (Path B relaxed). relaxed*-keys: nog gebruikt door tryBindDoorToBounds.
 /** L11 snap-tolerances — waarden ongewijzigd t.o.v. pre-refactor literals. */
 export const DOOR_WALL_SNAP_TUNING = {
   thinBBoxRatio: 1.45,

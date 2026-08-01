@@ -313,6 +313,14 @@ export function resolveReferenceTargetStripHeightPx(params: {
   // anders krijg je precies het De Roemer-probleem (13px -> ~8.9px drift).
   if (params.ref.stripCount <= 1) return referenceTargetPx
   if (!params.refRect) return referenceTargetPx
+  const target = Math.max(1, referenceTargetPx)
+  const minBound = target * 0.7
+  const maxBound = target * 3.0
+  // Sample-plafond = herschaal-maxBound, niet Stage-1 candidate-max (target+tol).
+  // Anders chicken-egg: tilt-opgeblazen floor-bboxes bij de REF (~2–3× deskewed
+  // stripdikte) vallen buiten Stage-1-max en kalibratie blijft op ref-target →
+  // dezelfde faces falen daarna opnieuw op strip_height_above_max.
+  const sampleMaxHeightPx = Math.max(params.maxHeightPx, maxBound)
   const refSpan = axisSpan(params.refRect, params.ref.orientation)
   const local = params.roots
     .map((face) => {
@@ -329,7 +337,7 @@ export function resolveReferenceTargetStripHeightPx(params: {
       const span = axisSpan(face.bbox, params.ref.orientation)
       const height = entry.sampledHeight
       if (!(span >= params.minSpanPx)) return false
-      if (!(height > 0) || height > params.maxHeightPx) return false
+      if (!(height > 0) || height > sampleMaxHeightPx) return false
       return true
     })
     .sort((a, b) => {
@@ -348,9 +356,6 @@ export function resolveReferenceTargetStripHeightPx(params: {
     .slice(0, Math.max(params.ref.stripCount, 2))
   const calibrated = median(nearestToRef)
   if (!(calibrated > 0)) return referenceTargetPx
-  const target = Math.max(1, referenceTargetPx)
-  const minBound = target * 0.7
-  const maxBound = target * 3.0
   // Gebonden herschalen ([0.7×, 3×] target): micro-strip refs (2px) mogen
   // meeschalen naar echte wit-faces (~6px) i.p.v. hard terug naar ref-target.
   return Math.max(minBound, Math.min(maxBound, calibrated))

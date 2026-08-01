@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import type { PreprocessPanelLayer, TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import {
@@ -42,7 +43,10 @@ export const GAPS_TAB_VISIBLE = false
  */
 // ESC:O-13 (D)
 export function stickyPreprocessTab(tab: PreprocessPanelLayer): PreprocessPanelLayer {
-  if (tab === 'ocr' || tab === 'gaps') return 'walls'
+  if (tab === 'ocr' || tab === 'gaps') {
+    tally('O-13', 'redirect_walls')
+    return 'walls'
+  }
   return tab
 }
 
@@ -54,6 +58,7 @@ export function stickyTemplateTab(tab: TemplateTab): TemplateTab {
 
 export function visiblePreprocessLayerTabs(): Array<(typeof PREPROCESS_LAYER_TABS)[number]> {
   const tabs = [...PREPROCESS_LAYER_TABS]
+  if (!GAPS_TAB_VISIBLE) tally('O-46', 'gaps_hidden')
   return GAPS_TAB_VISIBLE ? tabs : tabs.filter((tab) => tab !== 'gaps')
 }
 

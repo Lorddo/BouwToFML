@@ -296,13 +296,22 @@ describe('syncDoorSwingFaceOverrides', () => {
     expect(cache.pinnedRoots.has(1)).toBe(true)
   })
 
-  it('overschrijft geen gepinde window', () => {
+  it('overschrijft gepinde window → door (wall-rescue absorb van autoclass-stroken)', () => {
     const cache = createRoomRasterCache(minimalState())
     cache.faceOverrides.set(1, 'window')
     cache.pinnedRoots.add(1)
     const result = syncDoorSwingFaceOverrides(cache, [1])
+    expect(result.applied).toBe(1)
+    expect(classificationAtLabel(cache, 1)).toBe('door')
+  })
+
+  it('overschrijft geen sticky doorframe', () => {
+    const cache = createRoomRasterCache(minimalState())
+    cache.faceOverrides.set(1, 'doorframe')
+    cache.pinnedRoots.add(1)
+    const result = syncDoorSwingFaceOverrides(cache, [1])
     expect(result.applied).toBe(0)
-    expect(classificationAtLabel(cache, 1)).toBe('window')
+    expect(classificationAtLabel(cache, 1)).toBe('doorframe')
   })
 })
 
@@ -458,5 +467,45 @@ describe('claimFacesInRoomRasterCache early-exit', () => {
     expect(result.parentMapChanged).toBe(true)
     expect(result.detachedFaceIds).toEqual([2])
     expect(cache.state.parentMap.some(([child]) => child === 2)).toBe(false)
+  })
+
+  it('wall-rescue: forceClass door materialiseert class + breekt enclosed parent', () => {
+    const cache = createRoomRasterCache(
+      minimalState({
+        parentMap: [[234, 100]],
+        classificationByLabel: [
+          [100, 'wall'],
+          [234, 'wall'],
+        ],
+      }),
+    )
+    const result = claimFacesInRoomRasterCache(cache, [234], {
+      class: 'door',
+      forceClass: true,
+    })
+    expect(result.parentMapChanged).toBe(true)
+    expect(result.classChanged).toBe(true)
+    expect(result.detachedFaceIds).toEqual([234])
+    expect(cache.state.parentMap.some(([child]) => child === 234)).toBe(false)
+    expect(new Map(cache.state.classificationByLabel).get(234)).toBe('door')
+    expect(cache.faceOverrides.get(234)).toBe('door')
+    expect(cache.pinnedRoots.has(234)).toBe(true)
+    expect(classificationAtLabel(cache, 234)).toBe('door')
+  })
+
+  it('wall-rescue root: forceClass door materialiseert ook zonder parentMap-child', () => {
+    const cache = createRoomRasterCache(
+      minimalState({
+        classificationByLabel: [[234, 'wall']],
+      }),
+    )
+    const result = claimFacesInRoomRasterCache(cache, [234], {
+      class: 'door',
+      forceClass: true,
+    })
+    expect(result.parentMapChanged).toBe(false)
+    expect(result.classChanged).toBe(true)
+    expect(new Map(cache.state.classificationByLabel).get(234)).toBe('door')
+    expect(classificationAtLabel(cache, 234)).toBe('door')
   })
 })

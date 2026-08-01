@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
@@ -62,6 +63,10 @@ export function runDoorSwingFilter(params: {
   assertSpacePolicy('door Stage 1 measure', DOOR_SPACE_POLICY.stage1Measure, 'white')
   assertSpacePolicy('door Stage 1 cluster-bridge', DOOR_SPACE_POLICY.stage1ClusterBridge, 'ink')
   assertSpacePolicy('door wall-rescue merge', DOOR_SPACE_POLICY.wallRescueMeasure, 'ink')
+  // ESC:D-01 (C)
+  tally('D-01', DOOR_SPACE_POLICY.stage1Measure)
+  // ESC:D-02 (C)
+  tally('D-02', DOOR_SPACE_POLICY.stage1ClusterBridge)
   const aspectToleranceRatio =
     params.aspectToleranceRatio ?? DOOR_SWING_TUNING.defaultAspectToleranceRatio
   const maxClusterSize = Math.max(

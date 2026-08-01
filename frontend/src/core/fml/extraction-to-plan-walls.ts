@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { ExtractionOutput, SegmentCandidate } from '@/core/extraction'
 import { buildJunctionGraph, type WallGraph } from '@/cv/port/wallJunctionGraph'
 import { SEMANTIC_JUNCTION_EPS_PX } from '@/cv/walls/rooms/semantic-wall-constants'
@@ -19,13 +20,18 @@ export function asWallSegments(segments: SegmentCandidate[] | undefined): Array<
 // ESC:X-06 (A)
 export function resolveGraph(output: ExtractionOutput): WallGraph {
   if (output.semanticWallGraph?.segments?.length) {
+    tally('X-06', 'semantic')
     const semanticSegments = output.semanticWallGraph.segments.map((segment) => ({
       a: { x: segment.a.x, y: segment.a.y },
       b: { x: segment.b.x, y: segment.b.y },
     }))
     return buildJunctionGraph(semanticSegments, SEMANTIC_JUNCTION_EPS_PX)
   }
-  if (output.wallGraph) return output.wallGraph
+  if (output.wallGraph) {
+    tally('X-06', 'wall_graph')
+    return output.wallGraph
+  }
+  tally('X-06', 'rebuild_from_segments')
   const fallbackSegments = asWallSegments(output.segments)
   return buildJunctionGraph(fallbackSegments, SEMANTIC_JUNCTION_EPS_PX)
 }
@@ -39,12 +45,21 @@ export function resolveThicknessCm(
   defaultThicknessCm: number,
 ): number {
   const kernels = output.meta?.templateKernels
-  if (!kernels?.length) return defaultThicknessCm
+  if (!kernels?.length) {
+    tally('X-07', 'no_kernels')
+    return defaultThicknessCm
+  }
   const index = templateIndex ?? 0
   const kernelPx = kernels[index] ?? kernels[0]
-  if (!Number.isFinite(kernelPx) || kernelPx <= 0) return defaultThicknessCm
+  if (!Number.isFinite(kernelPx) || kernelPx <= 0) {
+    tally('X-07', 'invalid_kernel')
+    return defaultThicknessCm
+  }
   const pxPerMmAvg = (pxPerMmX + pxPerMmY) / 2
-  if (!Number.isFinite(pxPerMmAvg) || pxPerMmAvg <= 0) return defaultThicknessCm
+  if (!Number.isFinite(pxPerMmAvg) || pxPerMmAvg <= 0) {
+    tally('X-07', 'invalid_scale')
+    return defaultThicknessCm
+  }
   return Math.max(1, kernelPx / pxPerMmAvg / 10)
 }
 

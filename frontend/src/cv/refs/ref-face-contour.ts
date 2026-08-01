@@ -9,7 +9,7 @@ import type {
   RefPoint,
 } from './types'
 
-const DEFAULT_EPSILON_FACTOR = 0.003
+const DEFAULT_EPSILON_FACTOR = 0.001
 
 function isFaceRoleIncluded(role: string): boolean {
   return role === 'interior' || role === 'head'

@@ -3,7 +3,7 @@ import { releaseConnectedWallBlobs } from '../room-wall-connected-blobs'
 import { asSegmentCandidates } from '../../strategy-utils'
 import { runPipelineV3 } from './index'
 import type { RoomFinalizeSharedPrepResult } from '../room-wall-finalize-shared'
-import type { PipelineV3Debug } from '@/core/extraction/types'
+import type { PipelineLayer1FaceDebug, PipelineV3Debug } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type {
   PipelineV3Layer1Result,
@@ -60,6 +60,85 @@ function mapJunctions(junctions: RoomWallJunction[]) {
   }))
 }
 
+/** Index-ranges into the flat L1 segment/junction lists (contiguous per face). */
+export function buildLayer1FaceDebugEntries(
+  layer1: PipelineV3Layer1Result,
+): PipelineLayer1FaceDebug[] {
+  const faces: PipelineLayer1FaceDebug[] = []
+  let segmentOffset = 0
+  let junctionOffset = 0
+  for (const face of layer1.facesRaw) {
+    const segmentStart = segmentOffset
+    const segmentEnd = segmentOffset + face.segments.length
+    const junctionStart = junctionOffset
+    const junctionEnd = junctionOffset + face.junctions.length
+    faces.push({
+      rootLabel: face.rootLabel,
+      bbox: { ...face.bbox },
+      areaPx: face.areaPx,
+      inkCoverageRatio: face.inkCoverageRatio,
+      segmentStart,
+      segmentEnd,
+      junctionStart,
+      junctionEnd,
+    })
+    segmentOffset = segmentEnd
+    junctionOffset = junctionEnd
+  }
+  return faces
+}
+
+/**
+ * Rebuild `PipelineV3Layer1Result` from the flat layer-1 debug lists + face ranges.
+ * Used by the E2E fixture harness when injecting a baked skeleton into `runPipelineV3`.
+ */
+export function rebuildLayer1FromFaceDebug(params: {
+  faces: PipelineLayer1FaceDebug[]
+  segments: Array<{
+    a: { x: number; y: number }
+    b: { x: number; y: number }
+    templateIndex?: number
+  }>
+  junctions: Array<{ x: number; y: number; kind: 'I' | 'L' | 'T' | 'X'; angleDeg: number }>
+}): PipelineV3Layer1Result {
+  const allSegmentsRaw = params.segments.map((seg) => ({
+    a: { ...seg.a },
+    b: { ...seg.b },
+    ...(seg.templateIndex !== undefined ? { templateIndex: seg.templateIndex } : {}),
+  }))
+  const facesRaw = params.faces.map((face) => {
+    const segments = allSegmentsRaw.slice(face.segmentStart, face.segmentEnd)
+    const junctions = params.junctions.slice(face.junctionStart, face.junctionEnd).map((j) => ({
+      rootLabel: face.rootLabel,
+      x: j.x,
+      y: j.y,
+      kind: j.kind,
+      angleDeg: j.angleDeg,
+    }))
+    return {
+      rootLabel: face.rootLabel,
+      bbox: { ...face.bbox },
+      areaPx: face.areaPx,
+      inkCoverageRatio: face.inkCoverageRatio,
+      segments,
+      junctions,
+      stats: {
+        segmentCount: segments.length,
+        junctionCount: junctions.length,
+        elapsedMs: 0,
+      },
+    }
+  })
+  const allJunctionsRaw = facesRaw.flatMap((face) => face.junctions)
+  return {
+    facesRaw,
+    allSegmentsRaw,
+    allJunctionsRaw,
+    totalSegmentsRaw: allSegmentsRaw.length,
+    totalJunctionsRaw: allJunctionsRaw.length,
+  }
+}
+
 export async function runFinalizePipelineV3(params: {
   cv: OpenCV
   prep: RoomFinalizeSharedPrepResult
@@ -96,6 +175,7 @@ export async function runFinalizePipelineV3(params: {
     layer1: {
       segments: asSegmentCandidates(layer1.allSegmentsRaw),
       junctions: mapJunctions(layer1.allJunctionsRaw),
+      faces: buildLayer1FaceDebugEntries(layer1),
     },
     layer2: {
       segments: asSegmentCandidates(layer2.allSegmentsClean),

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type {
   WindowAxelHypothesis,
   WindowDoorArcFilterResult,
@@ -91,7 +92,9 @@ export function facesTouchDoorArc(params: {
   doorArcFaceIds: ReadonlySet<number>
   wallInkAdjacency?: ReadonlyMap<number, ReadonlySet<number>>
 }): boolean {
-  return collectTouchedDoorArcFaceIds(params).length > 0
+  const hit = collectTouchedDoorArcFaceIds(params).length > 0
+  if (hit) tally('R-14', 'ink_bridge_hit')
+  return hit
 }
 
 /** Deurboog-faces die hyp-faces delen of 1-hop ink-adjacent raken. */
@@ -236,6 +239,7 @@ export function filterWindowsTouchingDoorArcs(params: {
   // ESC:R-15 (A)
   // Pass 2: propagatie in dezelfde richting/as-band vanaf DIRECT geraakte hypotheses.
   if (wallThicknessPx > 0 && doorframeById.size > 0) {
+    tally('R-15', 'propagate_pass')
     const directDoorframes = [...doorframeById.values()]
       .filter(
         (entry) =>

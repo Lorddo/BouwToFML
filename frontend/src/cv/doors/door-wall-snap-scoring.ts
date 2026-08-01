@@ -191,7 +191,6 @@ export function findBestSegment(params: {
       ),
     )
     if (!params.relaxed && overlapPx <= 0 && spanGapPx > spanGapTolerancePx) continue
-    // ESC:D-49 (A)
     if (params.relaxed && overlapPx <= 0) {
       const relaxedSpanGapLimit = Math.max(
         spanGapTolerancePx,

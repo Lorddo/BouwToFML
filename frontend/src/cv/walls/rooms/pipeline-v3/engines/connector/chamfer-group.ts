@@ -4,6 +4,7 @@
  * Nooit diagonalen verwijderen zonder geslaagde weld (geen gaten, geen T→L/I).
  */
 import type { Segment } from '@/cv/port/wallGraph'
+import { tally } from '@/core/diagnostics'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments } from '../segment-ops'
 import { applyChamferGroupRepair } from './chamfer-group-apply'
@@ -46,6 +47,7 @@ export function tryRepairChamferGroup(params: {
 
   // ESC:W-29 (B)
   if (params.validate && !params.validate(before, applied.segments)) {
+    tally('W-29', 'kind_validate')
     return { segments: before, repaired: false, removed: 0 }
   }
 
@@ -58,9 +60,11 @@ export function tryRepairChamferGroup(params: {
       resolveLayer6ThicknessMarginPx(params.referenceWallThicknessPx),
     )
   ) {
+    tally('W-29', 'tx_baseline')
     return { segments: before, repaired: false, removed: 0 }
   }
   if (!layer6RepairTopologyOk({ baselineSegments: before, repairedSegments: applied.segments })) {
+    tally('W-29', 'topology')
     return { segments: before, repaired: false, removed: 0 }
   }
 
@@ -81,10 +85,12 @@ export function tryRepairChamferGroup(params: {
       )
     })
     if (!seedGone && afterDiags >= beforeDiags) {
+      tally('W-29', 'no_diag_removed')
       return { segments: before, repaired: false, removed: 0 }
     }
   }
 
+  tally('W-29', 'accepted')
   return {
     segments: applied.segments,
     repaired: true,

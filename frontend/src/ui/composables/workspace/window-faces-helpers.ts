@@ -3,8 +3,10 @@ import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-fir
 import {
   windowRefColorHex,
   type ResolvedWindowCandidate,
+  type WindowAxelCandidateEval,
   type WindowAxelHypothesis,
   type WindowAxelRefBand,
+  type WindowAxelRejection,
   type WindowAxelStage,
   type WindowEvidenceAcceptance,
 } from '@/cv/windows'
@@ -46,6 +48,8 @@ export type FaceBBox = { x: number; y: number; width: number; height: number }
 export type WindowAxelStageCache = {
   refBands: WindowAxelRefBand[]
   stage1Hypotheses: WindowAxelHypothesis[]
+  stage1Rejections: WindowAxelRejection[]
+  stage1CandidateEvals: WindowAxelCandidateEval[]
   stage2AcceptedHypotheses: WindowAxelHypothesis[]
   stage3AcceptedHypotheses: WindowAxelHypothesis[]
   /** Stage-3 acceptances; strip_stack evidenceFaceIds = volle stack voor class/overlay. */
@@ -69,6 +73,8 @@ export function createEmptyWindowAxelStageCache(): WindowAxelStageCache {
   return {
     refBands: [],
     stage1Hypotheses: [],
+    stage1Rejections: [],
+    stage1CandidateEvals: [],
     stage2AcceptedHypotheses: [],
     stage3AcceptedHypotheses: [],
     stage3Accepted: [],
@@ -140,6 +146,17 @@ export function signatureForFaceIdSet(faceIds: ReadonlySet<number>): string {
     .filter((id) => id > 0)
     .sort((a, b) => a - b)
     .join(',')
+}
+
+/** True wanneer elke id in `subsetSig` ook in `ofSig` zit (lege subset = true). */
+export function isFaceIdSignatureSubset(subsetSig: string, ofSig: string): boolean {
+  if (subsetSig === ofSig || subsetSig === '') return true
+  if (ofSig === '') return false
+  const of = new Set(ofSig.split(','))
+  for (const id of subsetSig.split(',')) {
+    if (!of.has(id)) return false
+  }
+  return true
 }
 
 export function collectAcceptedWindowFaceIds(hypotheses: WindowAxelHypothesis[]): number[] {
@@ -239,4 +256,26 @@ export function hypothesesWithStackEvidence(params: {
       axisSpanPx,
     }
   })
+}
+
+/** Unieke faceIds + bboxes uit Stage-1 rejections (overlay/debug). */
+export function collectStage1RejectedOverlayFaces(params: {
+  rejections: WindowAxelRejection[]
+  faceBboxByRoot: Map<number, FaceBBox>
+}): {
+  rejectedFaceIds: Set<number>
+  rejectedFaceBBoxes: FaceBBox[]
+} {
+  const rejectedFaceIds = new Set<number>()
+  const rejectedFaceBBoxes: FaceBBox[] = []
+  for (const rejection of params.rejections) {
+    for (const faceId of rejection.faceIds) {
+      if (!(faceId > 0) || rejectedFaceIds.has(faceId)) continue
+      rejectedFaceIds.add(faceId)
+      const fromMap = params.faceBboxByRoot.get(faceId)
+      if (fromMap) rejectedFaceBBoxes.push({ ...fromMap })
+      else if (rejection.faceIds.length === 1) rejectedFaceBBoxes.push({ ...rejection.unionBBox })
+    }
+  }
+  return { rejectedFaceIds, rejectedFaceBBoxes }
 }

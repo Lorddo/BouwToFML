@@ -121,12 +121,27 @@ export function createWorkspaceExportWindowFaceReport(deps: WorkspaceExportWindo
           : activeStage === 'stage2'
             ? stage2.kept
             : filtered.hypotheses
+      const rejectedFaceIds = new Set<number>()
+      const rejectedFaceBBoxes: Array<{ x: number; y: number; width: number; height: number }> = []
+      if (activeStage === 'stage1') {
+        for (const rejection of filtered.rejections) {
+          for (const faceId of rejection.faceIds) {
+            if (!(faceId > 0) || rejectedFaceIds.has(faceId)) continue
+            rejectedFaceIds.add(faceId)
+            if (rejection.faceIds.length === 1) {
+              rejectedFaceBBoxes.push({ ...rejection.unionBBox })
+            }
+          }
+        }
+      }
       const overlayPng = await renderWindowOverlayWithUrlUnderlay({
         width: state.width,
         height: state.height,
         labelsData: pipeline.pipeDual.ink.labelsData,
         parentMap: detachedParentMap,
         hypotheses: activeHypotheses,
+        rejectedFaceIds: activeStage === 'stage1' ? rejectedFaceIds : undefined,
+        rejectedFaceBBoxes: activeStage === 'stage1' ? rejectedFaceBBoxes : undefined,
         underlayUrl,
       })
       const byRefStats = new Map(filtered.stats.byRef.map((entry) => [entry.refIndex, entry]))
@@ -174,6 +189,7 @@ export function createWorkspaceExportWindowFaceReport(deps: WorkspaceExportWindo
         stage3Stats: stage3.stats,
         stage3DoorframeStats: stage3Doorframes.stats,
         refProbes,
+        candidateEvals: filtered.candidateEvals,
         hypotheses: {
           stage1: filtered.hypotheses,
           stage2: stage2.kept,
@@ -210,6 +226,7 @@ export function createWorkspaceExportWindowFaceReport(deps: WorkspaceExportWindo
             active: activeHypotheses,
           },
           rejections: filtered.rejections,
+          candidateEvals: filtered.candidateEvals,
           stage2DoorframeCandidates: stage2.doorframeCandidates,
           stage3Accepted: stage3.accepted,
           stage3Rejections: stage3.rejected,

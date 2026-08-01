@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
-import { noteSwallowedError } from '@/core/diagnostics'
+import { noteSwallowedError, tally } from '@/core/diagnostics'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import { usesWindowOverlay } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -11,6 +11,7 @@ import type { CanvasLike } from '@/cv/port/canvasEnv'
 import {
   effectiveClassification,
   resolveFloorDual,
+  setFaceClassificationForLabels,
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
@@ -38,6 +39,7 @@ import {
   collectDoorframeClassFaceIds,
   collectWindowClassFaceIds,
   createEmptyWindowAxelStageCache,
+  isFaceIdSignatureSubset,
   normalizeWindowState,
   signatureForFaceIdSet,
   signatureForWindowRects,
@@ -131,7 +133,9 @@ export function useWorkspaceWindowFaces(deps: {
 
   // ESC:O-45 (B)
   function shouldPushWindowClasses(): boolean {
-    return deps.roomPhase.value === 'review'
+    const ok = deps.roomPhase.value === 'review'
+    if (ok) tally('O-45', 'window_push_gate')
+    return ok
   }
 
   function persistOverrides(cache: RoomRasterCache): void {
@@ -142,6 +146,7 @@ export function useWorkspaceWindowFaces(deps: {
   // ESC:O-12 (D)
   /** Commit push-result eerst; preview/reattach daarna op de verse cache. */
   async function commitWindowClassPush(next: RoomRasterCache | null): Promise<void> {
+    tally('O-12', 'commit_then_preview')
     if (next) deps.roomRasterCache.value = next
     await deps.onWindowFacesApplied?.()
   }
@@ -193,6 +198,7 @@ export function useWorkspaceWindowFaces(deps: {
 
   // ESC:O-15 (D)
   async function refreshWindowsFromExistingClasses(): Promise<void> {
+    tally('O-15', 'prune_only')
     const classification = resolveEffectiveWallClassification({
       roomRasterCache: deps.roomRasterCache.value,
       wallsMeta: deps.tabOutputs.value.walls,
@@ -244,6 +250,48 @@ export function useWorkspaceWindowFaces(deps: {
         }
       })()
     }, WINDOW_REFRESH_DEBOUNCE_MS)
+  }
+
+  /**
+   * Na deur-demote prune: sync door-arc sig (geen volle Stage 1–4) en ruim
+   * wees-doorframes op die niet meer aan een surviving swing hangen.
+   */
+  // ESC:O-23 (D)
+  async function acknowledgeDoorSwingDemotePrune(
+    orphanedDoorframeFaceIds: readonly number[],
+  ): Promise<void> {
+    tally('O-23', 'demote_ack')
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
+    refreshQueued.value = false
+    rerunRequested = false
+    autoPass.appliedDoorArcSig = signatureForFaceIdSet(deps.getDoorArcFaceIds())
+    autoPass.forceApplyOnNextPass = false
+    syncAutoPassRef()
+
+    const orphaned = [...new Set(orphanedDoorframeFaceIds.filter((id) => id > 0))]
+    if (orphaned.length <= 0) return
+
+    const cache = deps.roomRasterCache.value
+    if (cache) {
+      const stillDoorframe = orphaned.filter((id) => cache.faceOverrides.get(id) === 'doorframe')
+      if (stillDoorframe.length > 0) {
+        setFaceClassificationForLabels(
+          cache,
+          stillDoorframe,
+          'wall',
+          deps.referenceWallThicknessPx?.value ?? undefined,
+        )
+        persistOverrides(cache)
+        await deps.onWindowFacesApplied?.()
+      }
+    }
+    autoPass.lastAutoDoorframeFaceIds = autoPass.lastAutoDoorframeFaceIds.filter(
+      (id) => !orphaned.includes(id),
+    )
+    await refreshWindowsFromExistingClasses()
   }
 
   function resetWindowState(): void {
@@ -372,6 +420,8 @@ export function useWorkspaceWindowFaces(deps: {
       stageCache.value = {
         refBands,
         stage1Hypotheses: pipeline.stage1.hypotheses,
+        stage1Rejections: pipeline.stage1.rejections,
+        stage1CandidateEvals: pipeline.stage1.candidateEvals,
         stage2AcceptedHypotheses: pipeline.stage2.kept,
         stage3AcceptedHypotheses: pipeline.stage3.kept,
         stage3Accepted: pipeline.stage3.accepted,
@@ -507,6 +557,7 @@ export function useWorkspaceWindowFaces(deps: {
       return [state?.labelsData, state?.parentMap, state?.classificationByLabel] as const
     },
     () => {
+      tally('O-25', 'classify_state_refresh')
       scheduleWindowRefresh()
     },
   )
@@ -546,11 +597,43 @@ export function useWorkspaceWindowFaces(deps: {
     () => signatureForFaceIdSet(deps.getDoorArcFaceIds()),
     (sig) => {
       if (sig === autoPass.appliedDoorArcSig) return
+      tally('O-23', 'door_arc_sig')
+      // Face-edit demote-prune verwijdert alleen arcs — geen volle raam-pipeline.
+      if (
+        autoPass.autoPassApplied &&
+        !autoPass.forceApplyOnNextPass &&
+        isFaceIdSignatureSubset(sig, autoPass.appliedDoorArcSig)
+      ) {
+        autoPass.appliedDoorArcSig = sig
+        return
+      }
       invalidateAutoWindowPassCore(autoPass)
       syncAutoPassRef()
       scheduleWindowRefresh()
     },
   )
+
+  function invalidateAutoWindowPass(): void {
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
+    refreshQueued.value = false
+    rerunRequested = false
+    invalidateAutoWindowPassCore(autoPass)
+    syncAutoPassRef()
+  }
+
+  function markAutoWindowPassApplied(): void {
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
+    refreshQueued.value = false
+    rerunRequested = false
+    markWindowAutoPassDone(autoPass)
+    syncAutoPassRef()
+  }
 
   return {
     windowAxelStage,
@@ -561,12 +644,17 @@ export function useWorkspaceWindowFaces(deps: {
     boundWindows,
     windowBindRejections,
     windowFaceStats,
+    stage1Rejections: computed(() => stageCache.value.stage1Rejections),
+    stage1CandidateEvals: computed(() => stageCache.value.stage1CandidateEvals),
     wallsClassifyReady,
     initialPassReady: autoPassApplied,
     refreshing,
     refreshWindowOverlay,
     refreshWindowsFromExistingClasses,
     scheduleRefreshWindowsFromExistingClasses,
+    acknowledgeDoorSwingDemotePrune,
+    invalidateAutoWindowPass,
+    markAutoWindowPassApplied,
     bindResolvedWindowsToWalls,
   }
 }

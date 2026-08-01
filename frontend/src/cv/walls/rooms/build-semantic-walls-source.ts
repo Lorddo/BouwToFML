@@ -15,8 +15,8 @@ export interface SemanticGraphFromFmlLayer {
   wallGraph: WallGraph
 }
 
-// ESC:W-53 (B)
-// ESC:X-21 (B)
+// ESC:W-53 (B) — fmlReady-gate; geen L8/L9-fallback
+// ESC:X-21 (B) — alias van W-53 (DRY 2026-08-01; geen aparte telsite)
 /**
  * FML-bronlaag voor semantic walls.
  * V3-only: L10 alleen bij `fmlReady` (geen L8/L9 fallback).
@@ -24,8 +24,12 @@ export interface SemanticGraphFromFmlLayer {
 export function resolveFmlSourceLayer(walls: ExtractionOutput): PipelineLayerDebug | undefined {
   const debug = walls.pipelineV3Debug
   if (!debug) return undefined
-  if (debug.summary?.fmlReady !== true) return undefined
+  if (debug.summary?.fmlReady !== true) {
+    tally('W-53', 'not_ready')
+    return undefined
+  }
   if ((debug.layers.layer10?.segments.length ?? 0) > 0) return debug.layers.layer10
+  tally('W-53', 'empty_layer10')
   return undefined
 }
 
@@ -34,15 +38,13 @@ export function hasFmlSemanticSource(walls: ExtractionOutput): boolean {
   return (resolveFmlSourceLayer(walls)?.segments.length ?? 0) > 0
 }
 
-/** L10-segment zonder positieve dikte levert 0 — de FML-dikte komt dan uit de harmonisatie. */
+/**
+ * L10-segment zonder positieve dikte levert 0 — conversie behandelt 0 als ontbrekend (X-07).
+ * ESC:X-22 zero-fallback verwijderd 2026-07-31; tally alleen `measured` in buildSemanticWallsForOutput.
+ */
 function resolveSemanticThicknessPxMax(segment: { thicknessPx?: number }): number {
   const measured = Number(segment.thicknessPx)
-  if (measured > 0) {
-    tally('X-22', 'measured')
-    return measured
-  }
-  tally('X-22', 'zero')
-  return 0
+  return measured > 0 ? measured : 0
 }
 
 export function buildSemanticGraphFromFmlLayer(walls: ExtractionOutput): SemanticGraphFromFmlLayer {

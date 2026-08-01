@@ -31,8 +31,9 @@ export function useWorkspacePdfUpload(deps: {
       return
     }
 
-    deps.loadFile(file)
+    // Eerst sessie resetten, daarna nieuwe src — voorkomt dat reset de verse load wist.
     deps.applyNewUnderlayReset()
+    deps.loadFile(file)
   }
 
   async function confirmPdfPage(pageNumber: number) {
@@ -47,8 +48,8 @@ export function useWorkspacePdfUpload(deps: {
       const blobUrl = await renderPdfPageToBlobUrlForFile(file, pageNumber)
       await closePdfSession()
 
-      deps.setImageSource(blobUrl, formatPdfPageImageName(fileName, pageNumber, numPages))
       deps.applyNewUnderlayReset()
+      deps.setImageSource(blobUrl, formatPdfPageImageName(fileName, pageNumber, numPages))
       showPdfPageDialog.value = false
       pendingPdfFile.value = null
     } catch (error) {

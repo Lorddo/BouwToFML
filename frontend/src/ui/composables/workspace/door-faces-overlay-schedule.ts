@@ -3,10 +3,11 @@ import { renderDoorSwingOverlayCanvas, type DoorSwingStage } from '@/cv/doors'
 import {
   activeHypothesesForStage,
   DOOR_SWING_REFRESH_DEBOUNCE_MS,
+  noteDoorSwingRefreshDebounce,
   type DoorSwingStageCache,
 } from './useWorkspaceDoorSwingHelpers'
 
-export { DOOR_SWING_REFRESH_DEBOUNCE_MS }
+export { DOOR_SWING_REFRESH_DEBOUNCE_MS, noteDoorSwingRefreshDebounce }
 
 export function renderDoorSwingOverlayForActiveStage(ctx: {
   stage: DoorSwingStage

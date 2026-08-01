@@ -5,25 +5,42 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-07-30 (E2E fase 0 spike — OpenCV in Node)
+Laatste update: 2026-08-01 (escalatie-docs → 2 bestanden)
 
-## E2E fase 0 GO (2026-07-30)
+## Escalatie-docs (2026-08-01)
 
-Spike `tests/e2e/spike-cv-node.spec.ts` (vitest `environment: node`): `@opencvjs/web` ~190 ms · `distanceTransform` / `connectedComponentsWithStats` / `bitwise_not` op Uint8Array · `skeleton-tracing-wasm` ~1 ms · volle L1–L10 synthetisch 320×240 ~84 ms (`fmlReady`). **Gevolg:** L1 mag in de harness; gebakken skelet = vangnet/goedkeuring, geen Node-noodzaak. Plan-todo `spike-cv-node` completed.
+Living: `.cursor/docs/escalatie.md`. Bevroren inventaris: `escalatiepaden-inventaris.md`. Rest in `archive/escalatie/` (aanpak, ledger, doorspreken, luid-maken, diagrammen + gegenereerd).
 
-**Volgende:** E2E fase 1 (layer1-injectie + faces in debug) → fixture-contract + exportknop.
+## ESC luid-maken Golf 0–7 (2026-07-31)
+
+- **PR0:** multiline journal-detectie + Golf 2–7 checklists + O-40/VERWIJDEREN skip-loud.
+- **Golf 1–7:** alle checklists **0 stil** · ~198 geïnstrumenteerd · E2E 6 fixtures (escalations) · `esc:grootboek`.
+- **Skip-loud:** Cat F (W-05, X-25), O-40, VERWIJDEREN-weg (D-45/49–53, R-26).
+- **Open mop-up:** ~20 A–E stil buiten golf-sets (buiten harnas).
+
+## Escalatie besluiten batch (2026-07-31 → 2026-08-01)
+
+Harnas-ronde L2–L10 + bind + FML **doorsproken** — verdicts in `escalatie.md`. Weg: D-45/49–53, R-26, W-14 dode niveaus, W-46 zero-length, X-22 zero, REF-14 stil→throw, X-16 −14→floor.height. Rest AFBAKENEN / BEHOUDEN (F) / PROMOVEREN zoals ledger.
+
+## Escalatie-grootboek instrument (2026-07-31)
+
+- **`isEscalationEnabled` / `ESC_OFF`** + guards
+- **Scripts:** `esc:coverage`, `esc:grootboek`, `esc:killswitch` → schrijven naar `escalatie.md` / `archive/escalatie/`
+- **Docs:** `escalatie.md` + `e2e-fixtures.md`
+
+## E2E fixtures (2026-07-31)
+
+Zes fixtures: `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`. Shared `defineE2eSuite`. Doc: `.cursor/docs/e2e-fixtures.md`.
+
+**Open:** judging-skill; Kinderdijkstraat 53-1; mop-up ~20 stil; Stage 1/2 + orkestratie buiten harnas.
+
+## E2E referentie-metrics (2026-07-30)
+
+Harness: `plan-metrics.ts` + `reference-report.ts` (alléén `reference.fml`); grove vloer lengte ±25% + ≥5 openings + `degraded===false`.
 
 ## Batch nul escalatiepaden afgerond (2026-07-30)
 
-ESC-tags geankerd (228 ID's, 249 tags, `esc:check` CI-poort) + **run-journaal** in `src/core/diagnostics/`. Docs: `escalatiepaden-aanpak.md` §5.6, `escalatie-ledger.md`.
-
-**Vorm:** module-scoped journaal (`resetRunJournal` bij top-level actie, `escalate`/`tally`/`note*` in de diepte) i.p.v. diagnostics-als-resultaat — dat zou ~130 signaturen raken. Leaf-module, worker-veilig. Worker heeft eigen instantie: journaal reist mee in het antwoord, `useExtraction` merget.
-
-**Gewired:** 11 ingeslikte excepties (O-31..O-41 minus O-40, + X-23) → event mét stack + run **gedegradeerd** · ontbrekende metingen (W-07/13/14, R-05/23, X-22, REF-05..08) · weggegooide metingen mét beide waarden (X-01/02/18) · deur/raam vóór finalize (R-16 incl. bewijsloze passthrough, D-61 gates, D-37 injectie, D-15/D-13/REF-01/REF-02 cascade-niveaus) · §7.1 refBands&lt;3 via aparte `DiagnosticCode` (buiten grootboek).
-
-**Overgeslagen:** O-40 (facade-`ref()` altijd aangemaakt → teller telt constructie, niet escalatie).
-
-Geen drempel gewijzigd, geen pad weg. 989 tests groen, esc:check 228/228, lint/format/build groen.
+ESC-tags + run-journaal. Zie `escalatie.md`. Geen drempel/pad weg in batch nul.
 
 ## Lint/format-poort afgerond (2026-07-29)
 
@@ -33,7 +50,7 @@ Prettier (`printWidth` 100, no semi, single quotes) + ESLint 9 flat (`recommende
 
 **Bandgrens:** `FML_BAND_MAX_RATIO = 0.80` vastgelegd in `decisions.md`; UI-tekst 85%→80%.
 
-**Volgende:** E2E-fixtures op echte scan (enige resterende blokkerende audit-punt) · parallel: escalatiepaden batch nul (journaal) — zie `escalatiepaden-aanpak.md`.
+**Volgende:** mop-up stil A–E · Stage 1/2 + orkestratie (buiten harnas) — zie `escalatie.md`.
 
 ## Fase 1 afgerond (2026-07-29): git + groene build + CI
 
@@ -47,7 +64,7 @@ Repo: **https://github.com/Lorddo/BouwToFML** (publiek, `main`). Alleen `fronten
 
 Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) = **klaar**. Lint/format-poort = **klaar**.
 
-**Nog open — blokkerend:** detectiekwaliteit onmeetbaar — 981 tests zijn synthetisch, geen E2E-fixture op echte scan.
+**Nog open — blokkerend:** detectiekwaliteit onmeetbaar — 981 tests zijn synthetisch, geen E2E-fixture op echte scan. (Infra fase 0–2 klaar: OpenCV-spike, layer1-inject, exportknop; eerste echte fixture = Kromme-Mijdrecht nog open.)
 
 **Ingetrokken:** `keepLargestOnly: true` = **bewuste keuze** (losstaande garage → eigen plattegrond; aanbouw zit vast) — alleen comment op aanroep ontbreekt.
 
@@ -59,10 +76,13 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
-Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.jpg`, 1500×1000) i.p.v. 2D_3E — nieuwe cases om op te lossen. Refs + preprocess: LBE in **stap 2**; abs-px besluiten gedaan (R7/R8 Later open). Production-refactor: **ronde 1–22 gedaan**. **Lean/DRY pass:** skill + 8 inventaris + cross B1 + Stap1–2 + Doors D1 + Windows B1–B2 + Stap4 conversie B1–B3 + **FML B1–B4** + UI B1–B2 + **Walls L0–L4** (W1–W3) + **Walls L5–L6 structural** (A–E; **Cat C = product-F**) + **Walls L7–L10** (B1–B4 + dist-map). Open: L6 Cat C (product-F, geen lean-batch); `hasFmlSemanticSource` gate = F; overige UI-smokes Project4.
+**Escalatie-grootboek instrument klaar (2026-07-31).** Batch VERWIJDEREN deels gedaan: D-45, D-49, D-53, R-26 weg. Rest: D-50..D-52 of FML cat-E (X-01/X-11/…). Geen drempel én pad in dezelfde diff.
+
+Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.jpg`, 1500×1000). Refs + preprocess: LBE in **stap 2**; abs-px besluiten gedaan (R7/R8 Later open). Production-refactor: **ronde 1–22 gedaan**. **Lean/DRY pass:** clusters leeg / Cat C product-F. Open: `hasFmlSemanticSource` gate = F; UI-smokes Project4.
 
 **Open / handmatig checken**
 
+- **Door-demote → window cascade (code gedaan 2026-07-31)** — face-edit deur-prune sync’t door-arc sig; geen volle raam-pipeline. Wees-`doorframeFaceIds` → class `wall` + window stage-prune only. UI-smoke: Project4 demote deur zonder/met DF → geen Raamkandidaten-herstart.
 - **Face-edit perf (code gedaan)** — dirty-rect preview + claim-detach bounds; region-sized ink nearest + in-place prior; demote prune 80 ms coalesce. Specs face-overlay-perf + demote guards groen. UI-smoke Project4: Shift-klik wall↔unknown / box / demote overlays.
 - **Lean Walls W3+B4 (code gedaan)** — `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (plan “Expliciet later”); 122 pipeline-v3 groen. Planned lean walls items **empty**.
 - **Lean Walls dist-map pass-through (code gedaan)** — `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; scaffold v2=false + arm via scale; UI-smoke Project4 L7–L10 user-OK.
@@ -171,7 +191,7 @@ Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.
 ## Recente besluiten (samenvatting)
 
 - **2026-07-30** — Run-journaal (batch nul): module-scoped sink in `core/diagnostics` + worker-transport; `counts` per ESC-ID = grootboek-veld, events begrensd (3/ID, 400/run); alleen observatie, geen drempel/pad geraakt.
-- **2026-07-29** — Escalatiepaden-aanpak (`escalatiepaden-aanpak.md`): doel = precondititie per tak + herleidbare drempel, niet "takken weg". E2E-plan ongewijzigd → gedragswijzigingen eerst alleen muren L2–L10 + FML (rest van het harnas dekt deuren/ramen/orkestratie niet). **Batch nul = stille fouten luid** (incl. deur/raam-stages vóór finalize), zonder drempel- of padwijziging. Eenheid van werk = **cascade**, niet laag. Grootboek (teller + kill-switch per inventaris-ID) vóór interview.
+- **2026-07-29** — Escalatiepaden: doel = precondititie per tak + herleidbare drempel. E2E-plan ongewijzigd → gedrag eerst L2–L10 + FML. Batch nul = stille fouten luid. Eenheid = cascade. Grootboek vóór interview. (Living: `escalatie.md` sinds 2026-08-01.)
 - **2026-07-29** — Fase 1: git + CI-poort + groene build. Typecheck = `vue-tsc -b`; alle assets binnen `frontend/`; root-`examples` blijft buiten de repo.
 - **2026-07-29** — Face-edit perf: dirty-rect UI + region ink alloc + demote schedule; geen detectie-tuning.
 - **2026-07-29** — Lean Walls W3+B4 finish: `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (L5–L6 “Expliciet later” / geen batch-todo); 122 pipeline-v3 groen; planned lean walls empty.

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import {
   applyFaceClassificationOverrides,
   applyMergedWallChildInheritance,
@@ -63,6 +64,7 @@ export function claimWallishAfterInherit(params: {
     parentMap: params.parentMap,
     faceIds: wallishChildren,
   })
+  tally('W-04', claimed.detachedFaceIds.length > 0 ? 'detached' : 'none')
   return {
     inheritanceOverrides,
     classificationByLabel,

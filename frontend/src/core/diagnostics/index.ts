@@ -5,6 +5,12 @@ export {
   type EscalationId,
 } from './escalation-ids.generated'
 export {
+  clearEscalationOff,
+  getEscalationOff,
+  isEscalationEnabled,
+  setEscalationOff,
+} from './escalation-killswitch'
+export {
   createRunJournal,
   escalate,
   getRunJournal,

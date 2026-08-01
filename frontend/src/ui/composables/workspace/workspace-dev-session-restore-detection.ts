@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { Ref } from 'vue'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
@@ -38,9 +39,15 @@ export type WorkspaceDevSessionRestoreDetectionDeps = {
   restoreWallReferenceRect: (rect: DevWallReferenceRect) => void
   restoreOpeningReferenceRects: (rects: DevOpeningReferenceRect[]) => void
   setRoomInkCoverageThreshold: (value: number) => void
+  /** Tijdens exact-restore: Stage-2 niet laten racen vóór expliciete re-run. */
   markAutoDoorPassApplied: () => void
+  /** Tijdens exact-restore: Stage-3/4 niet laten racen vóór expliciete re-run. */
+  markAutoWindowPassApplied: () => void
+  /** Na restore: Stage-2 opnieuw toestaan. */
+  resetAutoDoorPassGate: () => void
   refreshDoorSwingOverlay: () => Promise<void>
-  refreshDoorSwingFromExistingDoors: () => Promise<void>
+  invalidateAutoWindowPass: () => void
+  refreshWindowOverlay: () => Promise<void>
 }
 
 export function createWorkspaceDevSessionRestoreDetection(
@@ -77,10 +84,28 @@ export function createWorkspaceDevSessionRestoreDetection(
     await deps.refreshClassificationPreview?.()
   }
 
-  // ESC:O-29 (D)
-  async function rebuildDoorsFromRestoredFaces(): Promise<void> {
-    deps.markAutoDoorPassApplied()
-    await deps.refreshDoorSwingFromExistingDoors()
+  /**
+   * Deur/raam stage-caches zitten niet in de snapshot — na restore beide opnieuw
+   * draaien zodat finalize L11/L12 + L14 heeft (niet alleen face-classes).
+   * Forceert templates/walls/review tijdelijk zodat shouldRun*-gates beide laten lopen.
+   */
+  async function rerunOpeningsAfterRestore(): Promise<void> {
+    const prevStep = deps.flowStep.value
+    const prevTab = deps.templateTab.value
+    const prevPhase = deps.roomPhase.value
+    deps.flowStep.value = 'templates'
+    deps.templateTab.value = 'walls'
+    if (prevPhase !== 'review') deps.roomPhase.value = 'review'
+    try {
+      deps.resetAutoDoorPassGate()
+      await deps.refreshDoorSwingOverlay()
+      deps.invalidateAutoWindowPass()
+      await deps.refreshWindowOverlay()
+    } finally {
+      deps.flowStep.value = prevStep
+      deps.templateTab.value = prevTab
+      deps.roomPhase.value = prevPhase
+    }
   }
 
   async function restoreExactDetection(session: DevWorkspaceSession): Promise<void> {
@@ -93,14 +118,18 @@ export function createWorkspaceDevSessionRestoreDetection(
     deps.wallsDetectionComplete.value = exact.wallsDetectionComplete
     applyRoomSnapshot(exact, { restoreReferenceWallRect: !hasClassifyState })
     // ESC:O-30 (D)
-    // Direct na phase/rects: annuleer geplande Stage-2 vóór awaits (>80ms debounce).
+    // Direct na phase/rects: annuleer geplande Stage-2/3 vóór awaits (>80ms debounce).
+    // Expliciete re-run volgt via rerunOpeningsAfterRestore.
     if (exact.roomPhase === 'review' || exact.roomPhase === 'done') {
+      tally('O-30', 'mark_auto_pass')
       deps.markAutoDoorPassApplied()
+      deps.markAutoWindowPassApplied()
     }
     await deps.syncFromTabOutputs()
     await restoreRoomCacheFromSnapshot(exact)
     if (exact.roomPhase === 'review' || exact.roomPhase === 'done') {
       deps.markAutoDoorPassApplied()
+      deps.markAutoWindowPassApplied()
     }
   }
 
@@ -128,14 +157,11 @@ export function createWorkspaceDevSessionRestoreDetection(
     if (!classified) return
 
     await restoreRoomCacheFromSnapshot(replay)
-    const hasRestoredFaceEdits = !!(replay.faceOverrides?.length || replay.pinnedRoots?.length)
-    if (hasRestoredFaceEdits) {
-      // Snapshot-overrides behouden — Deuren-tab herbouwen alleen uit bestaande door-vlakken.
-      await rebuildDoorsFromRestoredFaces()
-    } else {
-      // Classify plande Stage-2 via debounce; forceer nu zodat finalize de hits heeft.
-      await deps.refreshDoorSwingOverlay()
-    }
+    // ESC:O-29 (D)
+    // DevSession replay: openings opnieuw draaien na classify (historisch existing-doors-only;
+    // nu volle refresh zodat finalize L11/L12 + L14 heeft).
+    tally('O-29', 'rerun_openings')
+    await rerunOpeningsAfterRestore()
 
     if (replay.wallsPhase === 'classify') return
     await deps.finalizeWallDetection()
@@ -146,6 +172,6 @@ export function createWorkspaceDevSessionRestoreDetection(
     restoreRoomCacheFromSnapshot,
     restoreExactDetection,
     replayDetection,
-    rebuildDoorsFromRestoredFaces,
+    rerunOpeningsAfterRestore,
   }
 }

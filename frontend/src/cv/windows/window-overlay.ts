@@ -14,6 +14,9 @@ const WINDOW_CONTOUR_THICKNESS_PX = 2
 const WINDOW_STRIPE_WIDTH_PX = 9
 /** Bit 31 in pixel mask = doorframe (niet een ref-index). */
 const DOORFRAME_MASK_BIT = 1 << 30
+/** Bit 30 = Stage-1 rejected face (debug overlay). */
+const REJECTED_MASK_BIT = 1 << 29
+const REJECTED_FACE_RGB: [number, number, number] = [148, 163, 184]
 
 type OverlayBounds = {
   minX: number
@@ -42,6 +45,9 @@ function colorForRefMask(
   if (mask & DOORFRAME_MASK_BIT) {
     return [DOORFRAME_FACE_RGBA[0], DOORFRAME_FACE_RGBA[1], DOORFRAME_FACE_RGBA[2]]
   }
+  if (mask & REJECTED_MASK_BIT) {
+    return REJECTED_FACE_RGB
+  }
   const refs = refsFromMask(mask, maskRefsCache)
   if (refs.length <= 0) return null
   if (refs.length === 1) return colorForWindowRef(refs[0] ?? 0)
@@ -55,16 +61,24 @@ function clamp(value: number, min: number, max: number): number {
 
 function resolveHypothesisBounds(params: {
   hypotheses: WindowAxelHypothesis[]
+  rejectedFaceBBoxes?: Array<{ x: number; y: number; width: number; height: number }>
   width: number
   height: number
 }): OverlayBounds | null {
-  if (params.hypotheses.length <= 0) return null
+  if (params.hypotheses.length <= 0 && (params.rejectedFaceBBoxes?.length ?? 0) <= 0) return null
   let minX = Number.POSITIVE_INFINITY
   let minY = Number.POSITIVE_INFINITY
   let maxX = Number.NEGATIVE_INFINITY
   let maxY = Number.NEGATIVE_INFINITY
   for (const hypothesis of params.hypotheses) {
     const bbox = hypothesis.unionBBox
+    if (bbox.width <= 0 || bbox.height <= 0) continue
+    minX = Math.min(minX, Math.floor(bbox.x))
+    minY = Math.min(minY, Math.floor(bbox.y))
+    maxX = Math.max(maxX, Math.ceil(bbox.x + bbox.width) - 1)
+    maxY = Math.max(maxY, Math.ceil(bbox.y + bbox.height) - 1)
+  }
+  for (const bbox of params.rejectedFaceBBoxes ?? []) {
     if (bbox.width <= 0 || bbox.height <= 0) continue
     minX = Math.min(minX, Math.floor(bbox.x))
     minY = Math.min(minY, Math.floor(bbox.y))
@@ -98,6 +112,7 @@ function buildPixelRefMask(params: {
   parentMap: Map<number, number>
   hypotheses: WindowAxelHypothesis[]
   doorframeHypotheses?: WindowAxelHypothesis[]
+  rejectedFaceIds?: ReadonlySet<number>
   width: number
 }): Int32Array {
   const rootToMask = new Map<number, number>()
@@ -114,6 +129,12 @@ function buildPixelRefMask(params: {
       if (!(faceId > 0)) continue
       rootToMask.set(faceId, (rootToMask.get(faceId) ?? 0) | DOORFRAME_MASK_BIT)
     }
+  }
+  for (const faceId of params.rejectedFaceIds ?? []) {
+    if (!(faceId > 0)) continue
+    // Accepted/doorframe wint: rejected alleen als face nergens anders zit.
+    if (rootToMask.has(faceId)) continue
+    rootToMask.set(faceId, REJECTED_MASK_BIT)
   }
   const pixelMask = new Int32Array(params.labelsData.length)
   for (let y = params.bounds.minY; y <= params.bounds.maxY; y += 1) {
@@ -138,6 +159,9 @@ function renderWindowOverlay(params: {
   hypotheses: WindowAxelHypothesis[]
   /** Doorframe-hyps: zelfde UI-kleur als muur-tab (`DOORFRAME_FACE_RGBA`). */
   doorframeHypotheses?: WindowAxelHypothesis[]
+  /** Stage-1 debug: afgekeurde faces (grijs), alleen als niet al accepted/doorframe. */
+  rejectedFaceIds?: ReadonlySet<number>
+  rejectedFaceBBoxes?: Array<{ x: number; y: number; width: number; height: number }>
 }): CanvasLike {
   const canvas = createCanvas(params.width, params.height)
   const ctx = canvas.getContext('2d')
@@ -145,6 +169,7 @@ function renderWindowOverlay(params: {
   const allHyps = [...params.hypotheses, ...(params.doorframeHypotheses ?? [])]
   const bounds = resolveHypothesisBounds({
     hypotheses: allHyps,
+    rejectedFaceBBoxes: params.rejectedFaceBBoxes,
     width: params.width,
     height: params.height,
   })
@@ -155,6 +180,7 @@ function renderWindowOverlay(params: {
     parentMap: params.parentMap,
     hypotheses: params.hypotheses,
     doorframeHypotheses: params.doorframeHypotheses,
+    rejectedFaceIds: params.rejectedFaceIds,
     width: params.width,
   })
   const maskRefsCache = new Map<number, number[]>()
@@ -247,6 +273,8 @@ export function renderWindowOverlayCanvas(params: {
   parentMap: Map<number, number>
   hypotheses: WindowAxelHypothesis[]
   doorframeHypotheses?: WindowAxelHypothesis[]
+  rejectedFaceIds?: ReadonlySet<number>
+  rejectedFaceBBoxes?: Array<{ x: number; y: number; width: number; height: number }>
 }): CanvasLike {
   return renderWindowOverlay(params)
 }
@@ -259,6 +287,8 @@ export async function renderWindowOverlayWithUrlUnderlay(params: {
   parentMap: Map<number, number>
   hypotheses: WindowAxelHypothesis[]
   doorframeHypotheses?: WindowAxelHypothesis[]
+  rejectedFaceIds?: ReadonlySet<number>
+  rejectedFaceBBoxes?: Array<{ x: number; y: number; width: number; height: number }>
   underlayUrl?: string | null
 }): Promise<string> {
   const mask = renderWindowOverlay({
@@ -268,6 +298,8 @@ export async function renderWindowOverlayWithUrlUnderlay(params: {
     parentMap: params.parentMap,
     hypotheses: params.hypotheses,
     doorframeHypotheses: params.doorframeHypotheses,
+    rejectedFaceIds: params.rejectedFaceIds,
+    rejectedFaceBBoxes: params.rejectedFaceBBoxes,
   })
   if (!params.underlayUrl) return canvasToDataUrlAsync(mask)
   const underlay = await loadCanvasFromUrl(params.underlayUrl, params.width, params.height)

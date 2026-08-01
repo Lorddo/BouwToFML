@@ -1,6 +1,7 @@
 /**
  * Thickness sampling + band-compat for chain collapse (CURRENT L7).
  */
+import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -21,10 +22,6 @@ function sampleSegmentThicknessPx(params: {
   referenceWallThicknessPx?: number
 }): number {
   const len = segmentLength(params.segment)
-  if (len <= 1e-3) {
-    // ESC:W-46 (E)
-    return params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
-  }
   const inset =
     len > params.policy.thicknessSampleInsetPx * 2 + 1
       ? params.policy.thicknessSampleInsetPx / len
@@ -39,6 +36,8 @@ function sampleSegmentThicknessPx(params: {
       if (Number.isFinite(dt) && dt > 0) return dt * 2
     }
   }
+  // ESC:W-46 (E) — DT-miss / geen map (zero-length-tak weg 2026-08-01; L5/L6 droppen die al)
+  tally('W-46', params.distanceMap ? 'sample_miss' : 'no_map')
   return params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
 }
 

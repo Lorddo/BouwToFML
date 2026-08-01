@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
 import type { RootFace } from './window-axel-strip-geometry'
 import { denormalizeSizeRange, fitsFramingSizeRange } from './window-size-range'
@@ -150,6 +151,7 @@ export function selectFramingEvidence(params: {
   inkFacesByRoot: Map<number, RootFace>
   inkFaces: RootFace[]
 }): FramingAttempt {
+  tally('R-18', 'either_framing')
   assertSpacePolicy('window Stage 3 framing', WINDOW_SPACE_POLICY.stage3Framing, 'either')
   const orientation = params.hypothesis.orientation
   const whiteHyp = params.hypothesis.unionBBox

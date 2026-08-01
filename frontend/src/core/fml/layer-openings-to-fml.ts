@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
 import { isValidOpeningSpanCm, spanWidthCmBetweenPoints } from './extraction-to-plan-geom'
@@ -20,7 +21,10 @@ export function toLayer12DoorForFml(
     pxPerMmY,
   )
   // ESC:X-24 (B)
-  if (!isValidOpeningSpanCm(widthCm)) return null
+  if (!isValidOpeningSpanCm(widthCm)) {
+    tally('X-24', 'door_span_rejected')
+    return null
+  }
   return {
     doorId: door.doorId,
     segmentIndex: door.segmentIndex,
@@ -39,7 +43,11 @@ export function toLayer14WindowForFml(window: BoundWindow): Layer14WindowForFml 
     return null
   if (!Number.isFinite(window.openingEndPx.x) || !Number.isFinite(window.openingEndPx.y))
     return null
-  if (!isValidOpeningSpanCm(window.widthCm) && !(window.widthPx > 0)) return null
+  // ESC:X-24 (B)
+  if (!isValidOpeningSpanCm(window.widthCm) && !(window.widthPx > 0)) {
+    tally('X-24', 'window_span_rejected')
+    return null
+  }
   return {
     windowId: window.windowId,
     segmentIndex: window.segmentIndex,

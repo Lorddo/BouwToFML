@@ -6,6 +6,7 @@
  * behoud laatste connector-only state die wél face-ok is (2D_3E top-chamfers).
  */
 import type { Segment } from '@/cv/port/wallGraph'
+import { noteCascadeLevel, noteRollback, tally } from '@/core/diagnostics'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
 import {
@@ -111,6 +112,8 @@ export function runLayer6JunctionRepair(params: {
       if (acceptLayer6FaceKinds(baseSegments, sanitized.segments).ok) {
         bestFaceOk = cloneSegments(sanitized.segments)
         work = cloneSegments(sanitized.segments)
+        tally('W-25', 'accepted_sanitized')
+        tally('W-26', 'sanitize_ok')
         return true
       }
       // ESC:W-26 (B)
@@ -118,11 +121,13 @@ export function runLayer6JunctionRepair(params: {
         bestFaceOk = cloneSegments(raw)
         work = cloneSegments(raw)
         lastRollBackReason = `${reason}: sanitize skipped (would I-explode)`
+        tally('W-26', 'sanitize_skipped_raw_ok')
         return true
       }
       work = cloneSegments(bestFaceOk)
       const gate = acceptLayer6FaceKinds(baseSegments, sanitized.segments)
       lastRollBackReason = reason + (gate.reason ? `: ${gate.reason}` : '')
+      tally('W-26', 'face_reject')
       return false
     }
 
@@ -142,8 +147,10 @@ export function runLayer6JunctionRepair(params: {
       connectorCandidates += connectorPass.stats.candidates
       connectorRepaired += connectorPass.stats.repaired
       if (!keepIfFaceOk(connectorPass.segments, 'connector face-gate')) {
+        tally('W-27', 'face_gate_break')
         break
       }
+      noteCascadeLevel('W-27', 'layer-6-repair.runLayer6JunctionRepair', 'connector')
 
       const landingPass = repairLandingChamferConnectors({
         segments: work,
@@ -151,9 +158,10 @@ export function runLayer6JunctionRepair(params: {
         validateCandidate,
       })
       connectorRepaired += landingPass.repaired
-      if (!keepIfFaceOk(landingPass.segments, 'landing face-gate')) {
-        // Landing regressie: connector-winst behouden, junction nog proberen op bestFaceOk.
+      if (keepIfFaceOk(landingPass.segments, 'landing face-gate')) {
+        noteCascadeLevel('W-27', 'layer-6-repair.runLayer6JunctionRepair', 'landing')
       }
+      // Landing regressie: connector-winst behouden, junction nog proberen op bestFaceOk.
 
       const junctionPass = repairLayer6JunctionNodes({
         segments: work,
@@ -167,15 +175,20 @@ export function runLayer6JunctionRepair(params: {
       junctionsSkipped += junctionPass.stats.skipped
       connectorsRemoved += junctionPass.stats.removedDiagonals
       if (!keepIfFaceOk(junctionPass.segments, 'junction face-gate')) {
+        tally('W-27', 'face_gate_break')
         break
       }
+      noteCascadeLevel('W-27', 'layer-6-repair.runLayer6JunctionRepair', 'junction')
 
       // Netto-0: segment-set (volgorde/jitter-onafhankelijk) stabiel → klaar.
       // Blijft itereren bij echte vervolg-chamfers (set verandert) tot convergentie.
       const noGeomChange = segmentSetSignature(work) === beforeSig
       const noBestChange = segmentsUnchanged(bestBeforeIter, bestFaceOk)
       const noRepairs = connectorRepaired + junctionsRepaired === repairedBefore
-      if (noGeomChange || (noBestChange && noRepairs)) break
+      if (noGeomChange || (noBestChange && noRepairs)) {
+        tally('W-27', 'converged')
+        break
+      }
     }
 
     // Geen agressieve end-sanitize die I's maakt als raw face-ok was.
@@ -186,11 +199,14 @@ export function runLayer6JunctionRepair(params: {
       ) {
         work = cloneSegments(bestFaceOk)
         lastRollBackReason = 'final gate → keep best face-ok'
+        tally('W-25', 'keep_bestFaceOk')
       } else if (!segmentsUnchanged(baseSegments, work)) {
         work = baseSegments
         facesRolledBack += 1
         lastRollBackReason =
           acceptLayer6FaceKinds(baseSegments, work).reason ?? 'kind-accept rejected'
+        noteRollback('W-25', 'layer-6-repair.runLayer6JunctionRepair', lastRollBackReason)
+        tally('W-25', 'rolled_back_to_L5')
       }
     } else if (segmentsUnchanged(baseSegments, work)) {
       facesUnchanged += 1

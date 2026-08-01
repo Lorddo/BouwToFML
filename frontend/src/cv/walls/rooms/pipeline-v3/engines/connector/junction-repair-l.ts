@@ -1,6 +1,7 @@
 /**
  * L6 junction-repair — L-node snap at a point.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { infiniteLineIntersection } from '@/cv/walls/rooms/wall-segment-geometry'
 import { collectLayer6HvArmsAtPoint } from './arm-detect'
@@ -36,6 +37,7 @@ export function repairLAtPoint(params: {
         Math.max(params.armStrictPx, params.maxConnectorPx * LAYER6_LANDING_DIAGONAL_GUARD_RATIO),
     )
   ) {
+    tally('W-42', 'skip_long_landing_diag')
     return { changed: false, removed: 0 }
   }
   if (
@@ -46,6 +48,7 @@ export function repairLAtPoint(params: {
       maxConnectorPx: params.maxConnectorPx,
     })
   ) {
+    tally('W-42', 'skip_unretractable')
     return { changed: false, removed: 0 }
   }
   const hvArms = collectLayer6HvArmsAtPoint({
@@ -58,12 +61,19 @@ export function repairLAtPoint(params: {
   })
   const h = hvArms.filter((arm) => arm.kind === 'H')
   const v = hvArms.filter((arm) => arm.kind === 'V')
-  if (h.length === 0 || v.length === 0) return { changed: false, removed: 0 }
+  if (h.length === 0 || v.length === 0) {
+    tally('W-42', 'skip_no_hv_arms')
+    return { changed: false, removed: 0 }
+  }
   const longestH = h.sort((a, b) => b.lengthPx - a.lengthPx)[0]
   const longestV = v.sort((a, b) => b.lengthPx - a.lengthPx)[0]
   const hit = infiniteLineIntersection(longestH.segment, longestV.segment)
-  if (!hit) return { changed: false, removed: 0 }
+  if (!hit) {
+    tally('W-42', 'skip_no_hit')
+    return { changed: false, removed: 0 }
+  }
   if (Math.hypot(hit.x - params.point.x, hit.y - params.point.y) > params.maxShiftPx) {
+    tally('W-42', 'skip_shift_too_far')
     return { changed: false, removed: 0 }
   }
   for (const arm of h) {
@@ -95,5 +105,6 @@ export function repairLAtPoint(params: {
     armStrictPx: params.armStrictPx,
     hvBandPx: params.hvBandPx,
   })
+  tally('W-42', 'repaired')
   return { changed: true, removed }
 }

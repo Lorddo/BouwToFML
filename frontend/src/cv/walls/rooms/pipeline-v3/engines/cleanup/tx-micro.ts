@@ -1,6 +1,7 @@
 /**
  * L5 cleanup — Copy(6) T/X micro-stub collapse.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentAngleDeg, segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import {
@@ -73,6 +74,7 @@ export function cleanupTxMicroSegments(
     const moved = replaceEndpoint(candidate, candLeaf, candHub)
     // Stub leaf itself always matches — require ≥1 other endpoint reconnected.
     if (moved <= 1) {
+      tally('W-20', 'moved_insufficient')
       i += 1
       continue
     }
@@ -80,9 +82,11 @@ export function cleanupTxMicroSegments(
     const compacted = dropZeroLengthSegments(candidate, policy.weld.endpointEpsPx).segments
     const guard = validateConnectivity(work, compacted, policy.topology, policy.weld)
     if (!guard.ok) {
+      tally('W-20', 'connectivity_reject')
       i += 1
       continue
     }
+    tally('W-20', 'accepted')
     work.length = 0
     work.push(...compacted)
     removedCount += 1

@@ -1,3 +1,4 @@
+import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import { attachRefFaceDualFromWhiteLabels, refFaceWithGeom } from '@/cv/refs/ref-face-dual-space'
@@ -178,6 +179,10 @@ export function resolveReferenceSizing(params: {
   // die het deurblad betrouwbaar weergeeft (voorkomt ~10 cm mini-deuren).
   // ESC:D-60 (E)
   if (bladeRefPx < params.swingSpanPx * DEGENERATE_BLADE_TO_SPAN_RATIO) {
+    noteDiscardedMeasurement('D-60', 'resolveReferenceSizing', bladeRefPx, params.swingSpanPx, {
+      totalRefPx,
+      framingPx,
+    })
     return sizingFromSwingSpan(params.swingSpanPx, params.fallbackTotalPx)
   }
   const ratioBlade = Math.max(0.1, bladeRefPx / Math.max(1, params.swingSpanPx))
@@ -221,9 +226,12 @@ export function buildDoorSwingRefBandFromStraightened(params: {
   // Swing-sector: policy white; framing/kozijn-sizing: policy ink.
   assertSpacePolicy('door REF swing', DOOR_SPACE_POLICY.refSwingMeasure, 'white')
   assertSpacePolicy('door REF framing', DOOR_SPACE_POLICY.refFramingMeasure, 'ink')
+  // ESC:D-07 (C)
+  tally('D-07', `swing:${DOOR_SPACE_POLICY.refSwingMeasure}`)
   const swingRoles = roles.map((face) =>
     refFaceWithGeom(face, dual.geom(face.label, DOOR_SPACE_POLICY.refSwingMeasure)),
   )
+  tally('D-07', `framing:${DOOR_SPACE_POLICY.refFramingMeasure}`)
   const inkRoles = roles.map((face) =>
     refFaceWithGeom(face, dual.geom(face.label, DOOR_SPACE_POLICY.refFramingMeasure)),
   )

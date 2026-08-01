@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { FloorPlan, Opening } from './types'
 import { CONCEPT_DOOR_REFID, CONCEPT_WINDOW_REFID } from './types'
 import {
@@ -47,7 +48,24 @@ function openingGuid(opening: Opening): string {
 }
 
 export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string {
-  // ESC:X-13 (E)
+  // ESC:X-13 (E) — vaste project/floor/design-id's + timestamps; geen multi-verdieping-identiteit.
+  tally('X-13', 'hardcoded_metadata')
+  // ESC:X-14 (E) — areas/surfaces altijd leeg (verplicht voor Floorplanner.com-import).
+  tally('X-14', 'empty_collections')
+  // ESC:X-15 (E) — hardcoded project-settings; geen instellingen-pagina.
+  tally('X-15', 'hardcoded_settings')
+  for (const floor of plan.floors) {
+    // ESC:X-16 (E) — was floor.height-14 (vloerdikte uit bron-FML); zonder vloer-surfaces
+    // = volle muurhoogte = floor.height (sidebar default 280).
+    tally('X-16', 'full_height')
+    for (const wall of floor.walls) {
+      for (const op of wall.openings) {
+        // ESC:X-17 (E) — opening-defaults (raam 150/70, deur 220/0) alleen bij ontbrekend veld.
+        if (op.z_height == null)
+          tally('X-17', op.type === 'window' ? 'window_default' : 'door_default')
+      }
+    }
+  }
   const projectId = 900000001
   const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
   const output = {
@@ -55,7 +73,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
     name: options.name ?? plan.name,
     public: false,
     features: [],
-    // ESC:X-15 (E)
+    // ESC:X-15 (E) — hardcoded project-settings; geen instellingen-pagina.
     settings: {
       wallHeight: wallHeightCm,
       wallSectionHeight: 150,
@@ -132,11 +150,11 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
             a: { x: wall.a.x, y: wall.a.y },
             b: { x: wall.b.x, y: wall.b.y },
             c: wall.c ?? null,
-            // ESC:X-16 (E)
-            az: { z: 0, h: floor.height - 14 },
-            bz: { z: 0, h: floor.height - 14 },
+            // ESC:X-16 (E) — volle floor.height (geen −14 vloerdikte; wij exporteren nog geen floors)
+            az: { z: 0, h: floor.height },
+            bz: { z: 0, h: floor.height },
             thickness: wall.thickness,
-            // ESC:X-01 (E)
+            // ESC:X-01 (E) — default bij ontbrekende meting; harmonize forceert daarna 0.5.
             balance: wall.balance ?? 0.5,
             groupMarkerConfig: { locked: false },
             decor: { left: null, right: null, top: null, outline: 0 },

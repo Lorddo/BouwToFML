@@ -114,6 +114,44 @@ export function useHScaleCalibration() {
     }
   }
 
+  /**
+   * Na 90°/270° bake: beeld-X/Y wisselen van rol — bevestigde px/mm (en mm-labels) meenemen.
+   * Rotatie verandert geen pixeldichtheid; alleen as-uitlijning bij kardinale hoeken.
+   */
+  function applyCardinalAxisSwapToConfirmedScale(totalRotationDeg: number): void {
+    if (!confirmed.value) return
+    const normalized = ((totalRotationDeg % 360) + 360) % 360
+    const nearest = Math.round(normalized / 90) * 90
+    const delta = Math.min(
+      Math.abs(normalized - nearest),
+      Math.abs(normalized - nearest + 360),
+      Math.abs(normalized - nearest - 360),
+    )
+    if (delta > 0.5) return
+    const quad = ((nearest % 360) + 360) % 360
+    if (quad !== 90 && quad !== 270) return
+
+    const ppmX = confirmedPixelsPerMillimeterX.value
+    const ppmY = confirmedPixelsPerMillimeterY.value
+    confirmedPixelsPerMillimeterX.value = ppmY
+    confirmedPixelsPerMillimeterY.value = ppmX
+
+    const mmX = distanceMmX.value
+    distanceMmX.value = distanceMmY.value
+    distanceMmY.value = mmX
+  }
+
+  /** Mm-wijziging na bevestigen: herbereken locked px/mm van dezelfde liniaalspan. */
+  function recomputeConfirmedFromDistances(): void {
+    if (!confirmed.value || !state.value) return
+    if (distanceMmX.value > 0 && pxDistanceX.value > 0) {
+      confirmedPixelsPerMillimeterX.value = pxDistanceX.value / distanceMmX.value
+    }
+    if (distanceMmY.value > 0 && pxDistanceY.value > 0) {
+      confirmedPixelsPerMillimeterY.value = pxDistanceY.value / distanceMmY.value
+    }
+  }
+
   function restoreFromSnapshot(snapshot: {
     state: HScaleState
     distanceMmX: number
@@ -155,6 +193,8 @@ export function useHScaleCalibration() {
     confirm,
     cancel,
     applyUpscaleToConfirmedScale,
+    applyCardinalAxisSwapToConfirmedScale,
+    recomputeConfirmedFromDistances,
     restoreFromSnapshot,
     confirmedPixelsPerMillimeterX,
     confirmedPixelsPerMillimeterY,

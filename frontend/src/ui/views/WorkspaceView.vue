@@ -422,9 +422,12 @@ defineExpose<{
         :sessions="ws.devSessionOptions"
         :selected-session-id="ws.selectedDevSessionId"
         :current-step="ws.flowStep"
+        :e2e-fixture-busy="ws.e2eFixtureBusy"
+        :e2e-fixture-message="ws.e2eFixtureMessage"
         @select-session="ws.selectDevSession"
         @record="ws.recordDevSession()"
         @restore="ws.restoreDevSession()"
+        @export-e2e-fixture="ws.exportE2eFixture()"
       />
 
       <LayerDebugPanel
@@ -516,6 +519,8 @@ defineExpose<{
         :resolved-windows="ws.resolvedWindows"
         :bound-windows="ws.boundWindows"
         :window-bind-rejections="ws.windowBindRejections"
+        :stage1-rejections="ws.stage1WindowRejections"
+        :stage1-candidate-evals="ws.stage1WindowCandidateEvals"
       />
 
       <WorkspaceOcrDevPanel

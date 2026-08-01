@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { Opening } from './types'
 import type { Layer14WindowForFml } from './extraction-to-plan-types'
 import type { Point2D } from './extraction-to-plan-geom'
@@ -31,7 +32,8 @@ export function mapLayer14WindowsToOpenings(params: {
       params.pxPerMmX,
       params.pxPerMmY,
     )
-    // ESC:X-11 (E)
+    // ESC:X-11 (E) — geen mirrored-veld op ramen; export altijd [0,0] via buildFmlV3.
+    tally('X-11', 'no_mirrored')
     return {
       refid: window.fmlRefId,
       type: 'window',

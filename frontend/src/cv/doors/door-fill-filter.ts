@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type {
   DoorFillFilterResult,
   DoorFillFilterStats,
@@ -76,6 +77,7 @@ export function runDoorFillFilter(params: {
 
     if (candidateFill < minAllowedFill) {
       stats.rejectedTooEmpty += 1
+      tally('D-25', 'too_empty')
       rejected.push({
         hypothesis,
         candidateFill,
@@ -88,6 +90,7 @@ export function runDoorFillFilter(params: {
     }
     if (candidateFill > maxAllowedFill) {
       stats.rejectedTooFull += 1
+      tally('D-25', 'too_full')
       rejected.push({
         hypothesis,
         candidateFill,

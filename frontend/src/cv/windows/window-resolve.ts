@@ -1,4 +1,4 @@
-import { noteMissingMeasurement } from '@/core/diagnostics'
+import { noteMissingMeasurement, tally } from '@/core/diagnostics'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { unionFaceBBox } from '@/cv/walls/rooms/face-dual-space'
 import type {
@@ -52,6 +52,8 @@ function resolveFramingBBox(params: {
     if (!(faceId > 0)) continue
     add(params.dual.geom(faceId, WINDOW_SPACE_POLICY.stage4FrameBBox)?.bbox)
   }
+  if (merged) tally('R-22', 'dual_bbox')
+  else tally('R-22', 'hyp_fallback')
   return merged ? merged : { ...params.accepted.hypothesis.unionBBox }
 }
 
@@ -211,6 +213,7 @@ export function resolveWindowCandidates(params: {
   pxPerMmX: number
   pxPerMmY: number
 }): ResolvedWindowCandidate[] {
+  tally('R-24', 'resolve_run')
   const avgPxPerMm = averagePxPerMm(params.pxPerMmX, params.pxPerMmY)
 
   // ESC:R-25 (B)
@@ -218,6 +221,7 @@ export function resolveWindowCandidates(params: {
   const stripStackGroups = new Map<string, WindowEvidenceAcceptance[]>()
   for (const entry of params.accepted) {
     if (entry.evidence === 'framing') {
+      tally('R-25', 'framing_dedupe')
       const key = glassFaceKey(entry.hypothesis.faceIds, entry.hypothesis.orientation)
       const existing = framingByGlass.get(key)
       if (!existing || entry.hypothesis.score > existing.hypothesis.score) {

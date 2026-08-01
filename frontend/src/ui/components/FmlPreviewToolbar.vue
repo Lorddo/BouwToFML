@@ -109,7 +109,7 @@ const hint = computed(() => {
   if (props.selectedWallPanel) {
     const count = props.selectedWallPanel.count
     if (count === 1) {
-      return '1 muur geselecteerd · pas dikte/uitlijning aan · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteer'
+      return '1 muur geselecteerd · pas dikte/uitlijning aan · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteer · Ctrl+hoekpunt-sleep = zonder snap'
     }
     return `${count} muren geselecteerd · pas dikte/uitlijning aan of verwijder de groep · spatie + sleep = pan`
   }
@@ -126,7 +126,7 @@ const hint = computed(() => {
     }
     return `${count} deuren geselecteerd · pas instellingen aan of verwijder selectie · spatie + sleep = pan`
   }
-  return 'Kies selectie-tool · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteer · Esc = deselecteer · hoekpunt = verslepen (snapt aan andere uiteinden)'
+  return 'Kies selectie-tool · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteer · Esc = deselecteer · hoekpunt = verslepen (snapt aan andere uiteinden) · Ctrl+sleep = zonder snap'
 })
 </script>
 

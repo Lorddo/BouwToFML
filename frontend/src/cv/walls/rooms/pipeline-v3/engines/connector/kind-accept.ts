@@ -1,4 +1,5 @@
 import type { Segment } from '@/cv/port/wallGraph'
+import { tally } from '@/core/diagnostics'
 import {
   buildConnectorJunctionGraph,
   kindCountsFromGraph,
@@ -25,12 +26,14 @@ export function validateJunctionKindsPreserved(
   const afterKinds = kindCountsFromGraph(afterGraph)
 
   if (afterKinds.I > beforeKinds.I) {
+    tally('W-28', 'i_explosion')
     return {
       ok: false,
       reason: `I explosion ${beforeKinds.I}→${afterKinds.I}`,
     }
   }
   if (afterKinds.X < beforeKinds.X) {
+    tally('W-28', 'x_downgrade')
     return {
       ok: false,
       reason: `X downgrade ${beforeKinds.X}→${afterKinds.X}`,
@@ -39,14 +42,17 @@ export function validateJunctionKindsPreserved(
 
   const txBaseline = txRefsFromGraph(beforeGraph)
   if (!txJunctionsPreservedInGraph(txBaseline, afterGraph, radiusPx)) {
+    tally('W-28', 'tx_lost')
     return { ok: false, reason: 'baseline T/X junction not preserved within radius' }
   }
 
   const lBaseline = lRefsFromGraph(beforeGraph)
   if (!lJunctionsPreservedInGraph(lBaseline, afterGraph, radiusPx)) {
+    tally('W-28', 'l_became_i')
     return { ok: false, reason: 'baseline L junction became I' }
   }
 
+  tally('W-28', 'accepted')
   return { ok: true }
 }
 

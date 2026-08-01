@@ -2,6 +2,7 @@
  * V3 Laag 8 — finalize: bare HV (wall-mask distance map) + once I→L/T/X prune.
  * Golden: CURRENT layer-8-finalize. No L4 seal; no L9 stub absorb.
  */
+import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -73,12 +74,14 @@ export function runLayer8Finalize(params: {
     })
     movedSegmentCount += positioned.movedSegmentCount
     movedJunctionCount += positioned.movedJunctionCount
+    tally('W-47', positioned.movedSegmentCount > 0 ? 'repositioned' : 'noop')
 
     const weldedAfterHv = weldNearEndpoints(positioned.face.segments, policy.weld)
     // ESC:W-48 (B)
     const pruned = pruneISpurs(weldedAfterHv, policy.prune)
     removedPathCount += pruned.pruneStats.removedPathCount
     removedSegmentCount += pruned.pruneStats.removedSegmentCount
+    tally('W-48', pruned.pruneStats.removedPathCount > 0 ? 'pruned' : 'noop')
 
     const withoutZero = dropZeroLengthSegments(pruned.segments)
     zeroLengthRemoved += withoutZero.removed

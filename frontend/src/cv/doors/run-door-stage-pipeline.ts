@@ -1,4 +1,4 @@
-import { noteGatesDisabled } from '@/core/diagnostics'
+import { noteGatesDisabled, tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { prepareOpeningPipeDual } from '@/cv/walls/rooms/opening-pipe-dual'
@@ -47,6 +47,8 @@ export type DoorMergedForPipe = {
 
 export function buildDoorMergedForPipe(dual: FaceDualSpace): DoorMergedForPipe {
   assertSpacePolicy('door wall-rescue', DOOR_SPACE_POLICY.wallRescueMeasure, 'ink')
+  // ESC:D-03 (C)
+  tally('D-03', DOOR_SPACE_POLICY.wallRescueMeasure)
   const parentMap = dual.white.parentMap
   const classificationByLabel = new Map(dual.white.classificationByLabel)
   const ink = dual.space(DOOR_SPACE_POLICY.wallRescueMeasure)
@@ -131,6 +133,14 @@ export function runDoorStagePipeline(
   assertSpacePolicy('door bridge', DOOR_SPACE_POLICY.bridgeBetweenWalls, 'ink')
   assertSpacePolicy('door resolve', DOOR_SPACE_POLICY.resolvePaint, 'ink')
   assertSpacePolicy('door wall-fill', DOOR_SPACE_POLICY.wallFillMeasure, 'ink')
+  // ESC:D-06 (C)
+  // Drie ink-adjacency gates (surround/wall-touch/bridge) — één policy-groep.
+  tally(
+    'D-06',
+    `${DOOR_SPACE_POLICY.surroundLabels}|${DOOR_SPACE_POLICY.wallTouchLabels}|${DOOR_SPACE_POLICY.bridgeBetweenWalls}`,
+  )
+  // ESC:D-05 (C)
+  tally('D-05', DOOR_SPACE_POLICY.wallFillMeasure)
 
   const { dual } = params
   const existingDoorsOnly = params.existingDoorsOnly === true

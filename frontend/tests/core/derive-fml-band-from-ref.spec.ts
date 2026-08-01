@@ -27,4 +27,9 @@ describe('deriveFmlBandBoundariesCmFromRefPx', () => {
     expect(classifyFmlThicknessBand(refCm * 0.86, boundaries)).toBe('max')
     expect(classifyFmlThicknessBand(refCm, boundaries)).toBe('max')
   })
+
+  it('faalt hard zonder geldige ref of schaal (geen stille 12/23)', () => {
+    expect(() => deriveFmlBandBoundariesCmFromRefPx(0, 0.2, 0.2)).toThrow(/referentie|schaal/i)
+    expect(() => deriveFmlBandBoundariesCmFromRefPx(60, 0, 0)).toThrow(/referentie|schaal/i)
+  })
 })

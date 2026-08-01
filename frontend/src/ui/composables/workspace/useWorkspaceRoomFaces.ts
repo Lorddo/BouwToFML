@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import { noteSwallowedError } from '@/core/diagnostics'
+import { noteSwallowedError, tally } from '@/core/diagnostics'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { PreprocessConfig } from '@/platform/image'
 import type { WallJunctionStrategy } from '@/core/extraction/types'
@@ -450,9 +450,11 @@ export function useWorkspaceRoomFaces(deps: {
     // Stage-caches prunen (geen pipeline-herdetectie) — scheduled, blokkeert paint niet.
     // ESC:O-16 (D)
     if (didDemoteDoorFace(previousClass, result.next)) {
+      tally('O-16', 'door_demote')
       void deps.onDoorFacesDemoted?.()
     }
     if (didDemoteWindowPipelineFace(previousClass, result.next)) {
+      tally('O-16', 'window_demote')
       void deps.onWindowFacesDemoted?.()
     }
   }

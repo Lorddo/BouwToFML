@@ -1,3 +1,4 @@
+import { noteMissingMeasurement } from '@/core/diagnostics'
 import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
 import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
 import { measureSwingSpanPxFromFaceBBox } from './door-swing-hinge'
@@ -68,6 +69,14 @@ export function resolveDoorCandidates(params: {
     .map((hypothesis): ResolvedDoorCandidate => {
       const ref = params.refBands[hypothesis.matchedRefIndex]
       // ESC:D-43 (E)
+      if (!ref?.ratioBlade || ref.ratioBlade <= 0) {
+        noteMissingMeasurement(
+          'D-43',
+          'resolveDoorCandidates',
+          'ratioBlade ontbreekt of ongeldig op ref-band, val terug op 1',
+          { hypothesisId: hypothesis.id, matchedRefIndex: hypothesis.matchedRefIndex },
+        )
+      }
       const ratioBlade = ref?.ratioBlade && ref.ratioBlade > 0 ? ref.ratioBlade : 1
       const framingPx = Math.max(0, ref?.framingPx ?? 0)
       const { kind, fmlRefId } = resolveRefKind(ref, hypothesis)

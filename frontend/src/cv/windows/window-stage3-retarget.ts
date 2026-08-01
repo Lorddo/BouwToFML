@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { shouldRetargetAcceptedWindowToDoorframe } from './window-door-arc-filter'
 import { buildEvidenceStats } from './window-evidence-filter'
@@ -35,6 +36,7 @@ export function applyStage3DoorframeRetarget(params: {
   stage3Doorframes: WindowEvidenceFilterResult
 } {
   const wallInkAdjacency = params.pipeDual.space(WINDOW_SPACE_POLICY.stage2DoorArc).adjacency
+  tally('R-21', 'retarget_run')
   const doorArcBBoxByFaceId = new Map<
     number,
     { x: number; y: number; width: number; height: number }

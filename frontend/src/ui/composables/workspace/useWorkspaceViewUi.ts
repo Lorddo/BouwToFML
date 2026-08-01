@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import type { PreprocessPanelLayer, TemplateTab } from '@/cv/preprocess/layer-preprocess'
@@ -55,6 +56,7 @@ export function useWorkspaceViewUi(deps: {
         return
       }
       if (phase === 'review' && doorReady && windowReady) {
+        if (!initialDetectionSettled.value) tally('O-44', 'settled')
         initialDetectionSettled.value = true
       }
       if (phase === 'idle') {

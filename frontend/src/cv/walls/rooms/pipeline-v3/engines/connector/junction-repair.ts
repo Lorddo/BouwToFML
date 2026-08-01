@@ -1,10 +1,11 @@
 /**
  * L6 junction-repair orchestrator — L/T/X node pass (public API).
  */
+import { noteRollback, tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
 import { cloneSegments, dropZeroLengthSegments } from '../segment-ops'
-import { LAYER6_HV_BAND_FALLBACK_PX, resolveLayer6Scale } from './constants'
+import { resolveHvBandPx, resolveLayer6Scale } from './constants'
 import { prepareSegmentsForConnectorGraph } from './junction-guard'
 import { repairLAtPoint } from './junction-repair-l'
 import { isChamferLandingForTNode, orderJunctionNodesForRepair } from './junction-repair-order'
@@ -27,7 +28,7 @@ export function repairLayer6JunctionNodes(params: {
 }): { segments: Segment[]; stats: Layer6JunctionRepairStats } {
   const work = prepareSegmentsForConnectorGraph(cloneSegments(params.segments))
   const scale = resolveLayer6Scale(params.referenceWallThicknessPx)
-  const hvBandPx = scale.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
+  const hvBandPx = resolveHvBandPx(scale.hvBandPx)
   const endpointSnapPx = scale.endpointSnapPx
   const chamferLGuardPx = scale.chamferLGuardPx
   const maxConnectorPx = scale.connectorMaxPx
@@ -74,6 +75,7 @@ export function repairLayer6JunctionNodes(params: {
           chamferLGuardPx,
         })
       ) {
+        tally('W-40', 'skip_landing_chamfer')
         stats.skipped += 1
         continue
       }
@@ -89,7 +91,10 @@ export function repairLayer6JunctionNodes(params: {
       })
       changed = l.changed
       removed = l.removed
-      if (changed) stats.lRepaired += 1
+      if (changed) {
+        stats.lRepaired += 1
+        tally('W-40', 'l_repaired')
+      }
     } else if (node.kind === 'T') {
       const t = repairTAtPoint({
         segments: work,
@@ -130,9 +135,18 @@ export function repairLayer6JunctionNodes(params: {
         if (node.kind === 'L') stats.lRepaired -= 1
         if (node.kind === 'T') stats.tRepaired -= 1
         if (node.kind === 'X') stats.xRepaired -= 1
+        noteRollback(
+          'W-39',
+          'junction-repair.repairLayer6JunctionNodes',
+          'validateCandidate afgekeurd',
+          {
+            nodeKind: node.kind,
+          },
+        )
         continue
       }
       work.splice(0, work.length, ...compact.segments)
+      tally('W-39', 'accepted')
     }
 
     stats.removedDiagonals += removed

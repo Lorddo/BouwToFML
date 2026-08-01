@@ -2,6 +2,7 @@
  * Weld engine — Copy(6) L5 near-endpoint + dangling repair.
  * Junction-cluster / collinear-gap remain stubs until later child-plans.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import {
   buildEndpointIndex,
@@ -78,6 +79,7 @@ export function repairDanglingConnections(
 } {
   const maxGapPx = policy.repairMaxGapPx
   if (maxGapPx <= 0) {
+    tally('W-19', 'disabled')
     return { segments: cloneSegments(segments), repairedCount: 0, weldedCount: 0 }
   }
   const work = cloneSegments(segments)
@@ -107,9 +109,12 @@ export function repairDanglingConnections(
     moveEndpoint(work[bestPair.a.segIndex], bestPair.a.endpoint, target)
     moveEndpoint(work[bestPair.b.segIndex], bestPair.b.endpoint, target)
     repairedCount += 1
+    tally('W-19', 'pair_repair')
   }
 
   const welded = weldNearConnectedEndpoints(work, policy)
+  if (welded.weldedCount > 0) tally('W-19', 'near_weld')
+  if (repairedCount === 0 && welded.weldedCount === 0) tally('W-19', 'noop')
   return {
     segments: welded.segments,
     repairedCount,

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { WallRenderStyle } from '@/core/extraction/geometric-signature'
@@ -68,6 +69,7 @@ export function classifyWallRefStyleFromImage(params: {
   baseBw?: { data: Uint8Array; width: number; height: number }
 }): WallRefStyleClassification {
   if (params.baseBw) {
+    tally('REF-11', 'base_bw')
     return classifyWallRefStyleFromBw({
       bw: params.baseBw.data,
       width: params.baseBw.width,
@@ -75,6 +77,7 @@ export function classifyWallRefStyleFromImage(params: {
       rect: params.rect,
     })
   }
+  tally('REF-11', 'image_rebuild')
   const crop = cropRectToLocalBw({
     cv: params.cv,
     image: params.image,

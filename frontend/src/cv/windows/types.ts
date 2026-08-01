@@ -65,6 +65,9 @@ export interface WindowAxelHypothesis {
 export type WindowAxelStage = 'stage1' | 'stage2' | 'stage3'
 
 export type WindowAxelRejectReason =
+  | 'span_below_min'
+  | 'strip_height_above_max'
+  | 'strip_height_invalid'
   | 'strip_count_mismatch'
   | 'strip_height_mismatch'
   | 'strip_height_spread'
@@ -82,6 +85,27 @@ export interface WindowAxelRejection {
   expectedStripHeightPx: number
   actualStripHeightsPx: number[]
   axisSpanPx: number
+  /** Pre-filter drempel (span_below_min). */
+  minSpanPx?: number
+  /** Pre-filter plafond (strip_height_above_max). */
+  maxStripHeightPx?: number
+}
+
+/**
+ * Elke face die Stage 1 per ref×ori beoordeelt — vóór clustering.
+ * `eligible=true` → ging de cluster-enumeratie in.
+ */
+export interface WindowAxelCandidateEval {
+  refIndex: number
+  orientation: WindowAxelOrientation
+  faceId: number
+  bbox: { x: number; y: number; width: number; height: number }
+  spanPx: number
+  stripHeightPx: number
+  minSpanPx: number
+  maxStripHeightPx: number
+  eligible: boolean
+  rejectReason: WindowAxelRejectReason | null
 }
 
 export interface WindowAxelRefMatchStats {
@@ -105,6 +129,8 @@ export interface WindowAxelFilterStats {
 export interface WindowAxelFilterResult {
   hypotheses: WindowAxelHypothesis[]
   rejections: WindowAxelRejection[]
+  /** Alle face-beoordelingen vóór clustering (incl. pre-filter rejects). */
+  candidateEvals: WindowAxelCandidateEval[]
   stats: WindowAxelFilterStats
 }
 
@@ -212,7 +238,7 @@ export interface BoundWindow {
   faceIds: number[]
 }
 
-export type WindowBindRejectReason = 'junction_in_window' | 'no_segment'
+export type WindowBindRejectReason = 'junction_in_window' | 'no_segment' | 'no_width'
 
 export interface WindowBindRejection {
   candidate: ResolvedWindowCandidate

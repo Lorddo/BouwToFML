@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { buildDoorSwingSymbol, buildMirrored } from '@/core/fml/door-swing-symbol'
 import type { SemanticWallSegment } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
@@ -281,7 +282,10 @@ export function orientBoundDoors(params: {
       wallUnit,
     })
     // ESC:D-59 (B)
-    if (!hinge) continue
+    if (!hinge) {
+      tally('D-59', 'no_hinge')
+      continue
+    }
 
     const axisPair = resolveOpeningAndLeafAxis(hinge.axes, wallUnit)
     if (!axisPair) continue
@@ -295,6 +299,7 @@ export function orientBoundDoors(params: {
     const swingRight = dot(axisPair.leafAxis, normal) >= 0
 
     // ESC:D-58 (A)
+    tally('D-58', bound.doorframeClearOpening ? 'pathA_doorframe' : 'pathB_hinge_resolve')
     const framed = bound.doorframeClearOpening
       ? resolveDoorframeLedOpening({
           hingePx: hinge.hingePx,

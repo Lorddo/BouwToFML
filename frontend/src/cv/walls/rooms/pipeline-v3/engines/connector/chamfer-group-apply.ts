@@ -1,6 +1,7 @@
 /**
  * L6 chamfer-group apply — weld arms + remove diagonals (public API).
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { dropZeroLengthSegments, incidentAt, replaceSegmentEndpoint } from '../segment-ops'
@@ -10,7 +11,7 @@ import { applyLtChamferGroup } from './chamfer-group-apply-lt'
 import {
   LAYER6_COLLAPSE_SHIFT_RATIO,
   LAYER6_FALLBACK_AXIS_MAX_SHIFT_RATIO,
-  LAYER6_HV_BAND_FALLBACK_PX,
+  resolveHvBandPx,
   resolveLayer6Scale,
 } from './constants'
 import { classifyLayer6Segment } from './segment-classify'
@@ -22,7 +23,7 @@ export function applyChamferGroupRepair(params: {
   referenceWallThicknessPx?: number
 }): { segments: Segment[]; removedDiagonalCount: number } {
   const scale = resolveLayer6Scale(params.referenceWallThicknessPx)
-  const hvBandPx = scale.hvBandPx ?? LAYER6_HV_BAND_FALLBACK_PX
+  const hvBandPx = resolveHvBandPx(scale.hvBandPx)
   const endpointSnapPx = scale.endpointSnapPx
   const nearbyWeldPx = scale.nearbyWeldPx
   const classify = (segment: Segment, segIndex: number) =>
@@ -53,12 +54,17 @@ export function applyChamferGroupRepair(params: {
       const shift = Math.hypot(end.x - hit.x, end.y - hit.y)
       // ESC:W-37 (B)
       // Nooit een arm plat trekken naar een verre hit (2D_3E: H@587→hit@572 → zero + gat).
-      if (shift > Math.min(maxArmShift, thicknessMargin)) continue
+      if (shift > Math.min(maxArmShift, thicknessMargin)) {
+        tally('W-37', 'skip_far_hit')
+        continue
+      }
       const other = end === seg.a ? seg.b : seg.a
       if (Math.hypot(other.x - hit.x, other.y - hit.y) <= nearbyWeldPx) {
         // Andere kant zit al op hit → snap zou segment nul maken.
+        tally('W-37', 'skip_would_zero')
         continue
       }
+      tally('W-37', 'snapped')
       replaceSegmentEndpoint(work, segIndex, end, hit, endpointSnapPx)
       return
     }

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import { effectiveClassification, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
@@ -14,6 +15,11 @@ import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-ca
 
 // ESC:O-28 (D)
 export const DOOR_SWING_REFRESH_DEBOUNCE_MS = 80
+
+/** Journal bij schedule van deur-swing refresh (debounce-pad). */
+export function noteDoorSwingRefreshDebounce(): void {
+  tally('O-28', 'debounce')
+}
 
 export type DoorSwingUiStats = {
   stage: DoorSwingStage

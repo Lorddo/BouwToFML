@@ -4,7 +4,14 @@ import { matToCanvas } from '@/cv/port/preprocess'
 import { rotateMatExpandBounds } from '@/cv/tools/rotateMat'
 import type { RefLine } from './types'
 import { bwDataToCanvas } from './ref-crop-bw'
-import { rotateBwData90Cw, rotateBwData180, rotateCanvas180, rotateCanvas90Cw } from './ref-orient'
+import {
+  estimateDoorWallDeskewFromInk,
+  orientDoorHeaviestFaceToBottom,
+  resolveDoorNeed90Cw,
+  resolveDoorWallYMax,
+} from './ref-door-orient'
+import { classifyRawSegments, extractRawInkSegments } from './ref-ink-vectors'
+import { rotateBwData90Cw, rotateCanvas180, rotateCanvas90Cw } from './ref-orient'
 
 type Orientation = 'horizontal' | 'vertical'
 
@@ -160,38 +167,16 @@ function inkSpan(
   return { horizontal: maxX - minX + 1, vertical: maxY - minY + 1 }
 }
 
-function bandInk(data: Uint8Array, width: number, y0: number, y1: number): number {
-  const ya = Math.max(0, Math.floor(y0))
-  const yb = Math.max(ya, Math.floor(y1))
-  let count = 0
-  for (let y = ya; y < yb; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if ((data[y * width + x] ?? 255) < 128) count += 1
-    }
-  }
-  return count
-}
-
 /**
- * LBE-conventie: swing-inkt onderaan de crop (anders 180°).
- * Gebruikt door `straightenRefLast` (deur) — Stage-1 bands gaan via
- * `runRefStages` → deze straighten, daarna pas swing-pick.
+ * @deprecated Gebruik `orientDoorHeaviestFaceToBottom` — behouden als alias voor callers/tests.
+ * LBE-conventie: zwaarste wit-vlak (swing) onderaan.
  */
 export function orientDoorBwSwingToBottom(
   bwData: Uint8Array,
   width: number,
   height: number,
 ): { bwData: Uint8Array; width: number; height: number; rotated180: boolean } {
-  if (height < 8 || width < 8) {
-    return { bwData, width, height, rotated180: false }
-  }
-  const topInk = bandInk(bwData, width, 0, height * 0.45)
-  const bottomInk = bandInk(bwData, width, height * 0.55, height)
-  if (bottomInk > topInk * 1.08) {
-    const rotated = rotateBwData180(bwData, width, height)
-    return { bwData: rotated.data, width: rotated.width, height: rotated.height, rotated180: true }
-  }
-  return { bwData, width, height, rotated180: false }
+  return orientDoorHeaviestFaceToBottom(bwData, width, height)
 }
 
 function rotateByDegrees(params: {
@@ -240,6 +225,129 @@ function rotateByDegrees(params: {
   }
 }
 
+type StraightenState = {
+  bwData: Uint8Array
+  width: number
+  height: number
+  originalCanvas: CanvasLike
+}
+
+/**
+ * Deur-canon ontdekken (hoek niet vooraf bekend):
+ * muuras → eventueel 90° CW → draaivlak onder (180°) → deskew op muur-band.
+ */
+function straightenDoorRefLast(params: {
+  cv: OpenCV
+  bwData: Uint8Array
+  width: number
+  height: number
+  originalCanvas: CanvasLike
+}): {
+  bwData: Uint8Array
+  width: number
+  height: number
+  originalCanvas: CanvasLike
+  correctionDeg: number
+  rotationCw90: number
+  rotated180: boolean
+  totalCorrectionDeg: number
+} {
+  let state: StraightenState = {
+    bwData: params.bwData,
+    width: params.width,
+    height: params.height,
+    originalCanvas: params.originalCanvas,
+  }
+
+  let rotationCw90 = 0
+  const need90 = resolveDoorNeed90Cw({
+    bwData: state.bwData,
+    width: state.width,
+    height: state.height,
+  })
+  if (need90.need90) {
+    const rotated = rotateBwData90Cw(state.bwData, state.width, state.height)
+    state = {
+      bwData: rotated.data,
+      width: rotated.width,
+      height: rotated.height,
+      originalCanvas: rotateCanvas90Cw(state.originalCanvas),
+    }
+    rotationCw90 = 1
+  }
+
+  let rotated180 = false
+  const oriented = orientDoorHeaviestFaceToBottom(state.bwData, state.width, state.height)
+  if (oriented.rotated180) {
+    state = {
+      bwData: oriented.bwData,
+      width: oriented.width,
+      height: oriented.height,
+      originalCanvas: rotateCanvas180(state.originalCanvas),
+    }
+    rotated180 = true
+  }
+
+  // Deskew ná canon: muur-band = boven het draaivlak (niet vaste 55%-crop).
+  const wallYMax = resolveDoorWallYMax({
+    bwData: state.bwData,
+    width: state.width,
+    height: state.height,
+  })
+  const rawSegments = extractRawInkSegments({
+    cv: params.cv,
+    bwData: state.bwData,
+    width: state.width,
+    height: state.height,
+  })
+  const allLines = classifyRawSegments({
+    segments: rawSegments,
+    orientation: 'horizontal',
+    minLengthPx: 8,
+  }).filter((line) => line.relation !== 'arc')
+  const wallLines = allLines.filter((line) => (line.a.y + line.b.y) / 2 < wallYMax)
+  let deskew = estimateDeskewCorrectionFromLines(
+    wallLines.length >= 2 ? wallLines : allLines.filter((l) => (l.a.y + l.b.y) / 2 < wallYMax),
+    'horizontal',
+    5,
+    {
+      preferParallel: true,
+      minAbsDeg: 0.35,
+      minLengthPx: 8,
+    },
+  )
+  // Lijnen ontbreken vaak op dikke muur-blobs → PCA op muur-inkt.
+  if (Math.abs(deskew) < 0.35) {
+    deskew = estimateDoorWallDeskewFromInk({
+      bwData: state.bwData,
+      width: state.width,
+      height: state.height,
+      wallYMax,
+      maxAbsDeg: 8,
+      minAbsDeg: 0.35,
+    })
+  }
+  if (Math.abs(deskew) >= 0.35) {
+    state = rotateByDegrees({
+      cv: params.cv,
+      bwData: state.bwData,
+      width: state.width,
+      height: state.height,
+      originalCanvas: state.originalCanvas,
+      correctionDeg: deskew,
+    })
+  }
+
+  const totalCorrectionDeg = deskew + rotationCw90 * 90 + (rotated180 ? 180 : 0)
+  return {
+    ...state,
+    correctionDeg: deskew,
+    rotationCw90,
+    rotated180,
+    totalCorrectionDeg,
+  }
+}
+
 export function straightenRefLast(params: {
   cv: OpenCV
   kind: 'wall' | 'door' | 'window'
@@ -259,17 +367,27 @@ export function straightenRefLast(params: {
   rotated180: boolean
   totalCorrectionDeg: number
 } {
+  if (params.kind === 'door') {
+    return straightenDoorRefLast({
+      cv: params.cv,
+      bwData: params.bwData,
+      width: params.width,
+      height: params.height,
+      originalCanvas: params.originalCanvas,
+    })
+  }
+
   // ESC:REF-03 (A)
   // Openingen: as recht houden > micro-deskew. Korte kozijnen + aliasing geven
   // vaak ~0.5–1° valse skew; PCA op asymmetrische eindstukken maakt het erger.
-  const isOpening = params.kind === 'door' || params.kind === 'window'
+  const isOpening = params.kind === 'window'
   let deskew = estimateDeskewCorrectionFromLines(params.lines, params.orientation, 5, {
     preferParallel: isOpening,
-    minAbsDeg: isOpening ? 1.25 : 0.15,
+    minAbsDeg: isOpening ? 0.25 : 0.15,
     minLengthPx: isOpening ? 8 : 4,
   })
   if (params.kind === 'window' && Math.abs(deskew) < 0.15) {
-    // Alleen bij duidelijke scheefstand; micro-PCA (<~2°) maakt horizontale ramen schuin.
+    // Alleen bij duidelijke scheefstand; micro-PCA (<~1°) maakt horizontale ramen schuin.
     const pcaDeskew = estimateDeskewCorrectionFromInkPca(
       params.bwData,
       params.width,
@@ -277,7 +395,7 @@ export function straightenRefLast(params: {
       params.orientation,
       8,
     )
-    if (Math.abs(pcaDeskew) >= 2.5) deskew = pcaDeskew
+    if (Math.abs(pcaDeskew) >= 1.0) deskew = pcaDeskew
   }
   let state = rotateByDegrees({
     cv: params.cv,
@@ -289,7 +407,6 @@ export function straightenRefLast(params: {
   })
 
   let rotationCw90 = 0
-  let rotated180 = false
   const span = inkSpan(state.bwData, state.width, state.height)
   if (span.vertical > span.horizontal * 1.12) {
     const rotated = rotateBwData90Cw(state.bwData, state.width, state.height)
@@ -302,25 +419,12 @@ export function straightenRefLast(params: {
     rotationCw90 = 1
   }
 
-  if (params.kind === 'door') {
-    const oriented = orientDoorBwSwingToBottom(state.bwData, state.width, state.height)
-    if (oriented.rotated180) {
-      state = {
-        bwData: oriented.bwData,
-        width: oriented.width,
-        height: oriented.height,
-        originalCanvas: rotateCanvas180(state.originalCanvas),
-      }
-      rotated180 = true
-    }
-  }
-
-  const totalCorrectionDeg = deskew + rotationCw90 * 90 + (rotated180 ? 180 : 0)
+  const totalCorrectionDeg = deskew + rotationCw90 * 90
   return {
     ...state,
     correctionDeg: deskew,
     rotationCw90,
-    rotated180,
+    rotated180: false,
     totalCorrectionDeg,
   }
 }

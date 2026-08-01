@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { DoorSwingHypothesis, ResolvedDoorCandidate } from '@/cv/doors'
 import { createEmptyDoorSwingStageCache } from '@/ui/composables/workspace/useWorkspaceDoorSwingHelpers'
-import { pruneDoorStageCacheByClassification } from '@/ui/composables/workspace/door-stage-cache-prune'
+import {
+  collectOrphanedDoorframeFaceIdsAfterDoorPrune,
+  pruneDoorStageCacheByClassification,
+} from '@/ui/composables/workspace/door-stage-cache-prune'
 
 function hyp(id: string, faceIds: number[]): DoorSwingHypothesis {
   return {
@@ -16,13 +19,14 @@ function hyp(id: string, faceIds: number[]): DoorSwingHypothesis {
   }
 }
 
-function door(id: string, faceIds: number[]): ResolvedDoorCandidate {
+function door(id: string, faceIds: number[], doorframeFaceIds?: number[]): ResolvedDoorCandidate {
   return {
     id,
     faceIds,
     bbox: { x: 0, y: 0, width: 10, height: 10 },
     kind: 'single',
     score: 1,
+    ...(doorframeFaceIds && doorframeFaceIds.length > 0 ? { doorframeFaceIds } : {}),
   } as ResolvedDoorCandidate
 }
 
@@ -53,5 +57,25 @@ describe('door-stage-cache-prune', () => {
     const parentMap = new Map([[10, 5]])
     const next = pruneDoorStageCacheByClassification(cache, classification, parentMap)
     expect(next.resolvedDoors).toHaveLength(1)
+  })
+})
+
+describe('collectOrphanedDoorframeFaceIdsAfterDoorPrune', () => {
+  it('returns doorframes only for fully removed doors', () => {
+    const before = [door('a', [1], [10, 11]), door('b', [2], [20])]
+    const after = [door('b', [2], [20])]
+    expect(collectOrphanedDoorframeFaceIdsAfterDoorPrune(before, after).sort()).toEqual([10, 11])
+  })
+
+  it('keeps shared doorframes when a twin swing survives', () => {
+    const before = [door('a', [1], [10]), door('b', [2], [10])]
+    const after = [door('b', [2], [10])]
+    expect(collectOrphanedDoorframeFaceIdsAfterDoorPrune(before, after)).toEqual([])
+  })
+
+  it('returns empty when demoted door had no doorframes', () => {
+    const before = [door('a', [1]), door('b', [2], [20])]
+    const after = [door('b', [2], [20])]
+    expect(collectOrphanedDoorframeFaceIdsAfterDoorPrune(before, after)).toEqual([])
   })
 })

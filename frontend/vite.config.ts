@@ -80,6 +80,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.spec.ts'],
-    exclude: ['tests/archive/**'],
+    exclude: ['tests/archive/**', 'tests/e2e/**'],
   },
 })

@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { approxContoursFromMask } from './ref-face-contour'
 import { classifyFaceRoles, labelWhiteFaces } from './ref-face-profile'
@@ -254,9 +255,9 @@ export function resolveSwingHingeFromPolygon(params: {
   // ESC:REF-13 (A)
   // 1) Muur-as-hoek (L/R of T/B) — voorkomt midden-scharnier op boogkoord × trapjes-as.
   // 2) Fallback: klassieke as-paar picker mét side-guard.
-  const picked =
-    pickWallAxisCornerHinge(candidates, options, params.polygon) ??
-    pickBestAxes(candidates, options, params.polygon)
+  const wallCorner = pickWallAxisCornerHinge(candidates, options, params.polygon)
+  const picked = wallCorner ?? pickBestAxes(candidates, options, params.polygon)
+  tally('REF-13', wallCorner ? 'wall_axis_corner' : picked ? 'classic_axes' : 'none')
   if (!picked) return null
 
   const hinge = picked.hinge

@@ -1,0 +1,3350 @@
+{
+  "id": 900000001,
+  "name": "bg",
+  "public": false,
+  "features": [],
+  "settings": {
+    "wallHeight": 280,
+    "wallSectionHeight": 150,
+    "wallThickness": 10,
+    "wallOuterThickness": 30,
+    "useMetric": true,
+    "showGrid": true,
+    "showDims": true,
+    "showShortDims": false,
+    "showAreaDims": false,
+    "generateOuterDimension": false,
+    "dimensionMode": "interior",
+    "showDropShadows": false,
+    "showObjects": true,
+    "showFixtures": true,
+    "showItemOutline": false,
+    "showObjectColour": false,
+    "showStructuralColour": true,
+    "showFloorsBelow": false,
+    "showObjects3D": true,
+    "showObjectMono": false,
+    "showLights": false,
+    "showLabels": true,
+    "areaLabelOutline": false,
+    "areaLabelLetterSpacing": 7,
+    "dimLineLabelHorizontal": false,
+    "exportLabels3D": false,
+    "showShadows3D": true,
+    "exportOrtho3D": false,
+    "visuals": "BWC",
+    "showTexts": true,
+    "arrowHeadType": "arrow",
+    "showNorthArrow": false,
+    "northArrowRotation": 0,
+    "northArrowKind": 1,
+    "blueprintMode": false
+  },
+  "floors": [
+    {
+      "id": 900000011,
+      "project_id": 900000001,
+      "name": "Detectie",
+      "level": 0,
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z",
+      "height": 280,
+      "cameras": [],
+      "designs": [
+        {
+          "id": 1,
+          "name": "Detectie",
+          "lines": [],
+          "dimensions": [],
+          "labels": [],
+          "areas": [],
+          "surfaces": [],
+          "items": [],
+          "annotations": [],
+          "cameras": [],
+          "walls": [
+            {
+              "guid": "e0",
+              "a": {
+                "x": 5.007014558011804,
+                "y": 65.16146314628259
+              },
+              "b": {
+                "x": 0,
+                "y": 52.98796760456656
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e1",
+              "a": {
+                "x": 0.1140605833516446,
+                "y": 370.9310276352674
+              },
+              "b": {
+                "x": 4.978676748708693,
+                "y": 355.8931802013829
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e2",
+              "a": {
+                "x": 483.6595779689578,
+                "y": 419.9365976291832
+              },
+              "b": {
+                "x": 483.6595779689577,
+                "y": 351.8615383734203
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e3",
+              "a": {
+                "x": 513.1275354158531,
+                "y": 351.86153837342033
+              },
+              "b": {
+                "x": 483.6595779689577,
+                "y": 351.8615383734203
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e4",
+              "a": {
+                "x": 513.1275354158533,
+                "y": 419.9365976291832
+              },
+              "b": {
+                "x": 483.6595779689578,
+                "y": 419.9365976291832
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e5",
+              "a": {
+                "x": 850.1389938537216,
+                "y": 351.86153837342016
+              },
+              "b": {
+                "x": 677.721558021022,
+                "y": 351.86153837342016
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e6",
+              "a": {
+                "x": 600.3832129656986,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 600.3832129656986,
+                "y": 866.7330430547825
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e7",
+              "a": {
+                "x": 795.594627912659,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 795.594627912659,
+                "y": 769.5571263536048
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e8",
+              "a": {
+                "x": 795.594627912659,
+                "y": 769.5571263536048
+              },
+              "b": {
+                "x": 857.9139582970747,
+                "y": 769.5571263536048
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e9",
+              "a": {
+                "x": 857.9139582970747,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 857.9139582970747,
+                "y": 769.5571263536048
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e10",
+              "a": {
+                "x": 977.5287958871243,
+                "y": 769.5571263536048
+              },
+              "b": {
+                "x": 857.9139582970747,
+                "y": 769.5571263536048
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.49800000000000183,
+                  "type": "door",
+                  "width": 102.63,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-angle-rescue-344__door-swing-angle-rescue-343"
+                }
+              ]
+            },
+            {
+              "guid": "e11",
+              "a": {
+                "x": 1266.9036433511985,
+                "y": 848.9197496408817
+              },
+              "b": {
+                "x": 1178.431052126215,
+                "y": 848.9197496408817
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e12",
+              "a": {
+                "x": 1485.000173819746,
+                "y": 510.8229631277014
+              },
+              "b": {
+                "x": 1499.468139711304,
+                "y": 493.3820710254697
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e13",
+              "a": {
+                "x": 1832.7001143825385,
+                "y": 493.3820710254697
+              },
+              "b": {
+                "x": 1499.468139711304,
+                "y": 493.3820710254697
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e14",
+              "a": {
+                "x": 850.1389938537216,
+                "y": 351.86153837342016
+              },
+              "b": {
+                "x": 850.1389938537216,
+                "y": 292.39187439732876
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e15",
+              "a": {
+                "x": 861.003128558539,
+                "y": 363.0540599318041
+              },
+              "b": {
+                "x": 850.1389938537216,
+                "y": 351.86153837342016
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e16",
+              "a": {
+                "x": 977.815947085121,
+                "y": 506.57151879188257
+              },
+              "b": {
+                "x": 861.003128558539,
+                "y": 506.57151879188257
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e17",
+              "a": {
+                "x": 977.815947085121,
+                "y": 506.57151879188257
+              },
+              "b": {
+                "x": 977.8159470851208,
+                "y": 641.9086985288297
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e18",
+              "a": {
+                "x": 1114.0093255773702,
+                "y": 1274.5842748296384
+              },
+              "b": {
+                "x": 1176.6241812189533,
+                "y": 1206.0491416713635
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e19",
+              "a": {
+                "x": 1176.6241812189535,
+                "y": 1274.5842748296382
+              },
+              "b": {
+                "x": 1176.6241812189533,
+                "y": 1206.0491416713635
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e20",
+              "a": {
+                "x": 1176.6241812189533,
+                "y": 1206.0491416713635
+              },
+              "b": {
+                "x": 1176.6241812189535,
+                "y": 1134.7768849741997
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e21",
+              "a": {
+                "x": 1267.1163176926332,
+                "y": 1134.7768849741997
+              },
+              "b": {
+                "x": 1267.1163176926332,
+                "y": 1274.5842748296382
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e22",
+              "a": {
+                "x": 1915.386304806606,
+                "y": 1289.6718970483062
+              },
+              "b": {
+                "x": 1915.386304806606,
+                "y": 1274.5842748296382
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e23",
+              "a": {
+                "x": 1915.386304806606,
+                "y": 979.9638487075897
+              },
+              "b": {
+                "x": 1895.453059553162,
+                "y": 963.1357813410998
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e24",
+              "a": {
+                "x": 1895.453059553162,
+                "y": 963.1357813410998
+              },
+              "b": {
+                "x": 1873.9223887869534,
+                "y": 943.0853180959205
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e25",
+              "a": {
+                "x": 1873.9223887869534,
+                "y": 943.0853180959205
+              },
+              "b": {
+                "x": 1856.8772744303712,
+                "y": 928.763558635078
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e26",
+              "a": {
+                "x": 1856.8772744303712,
+                "y": 928.763558635078
+              },
+              "b": {
+                "x": 1856.8772744303712,
+                "y": 921.3502028008731
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e27",
+              "a": {
+                "x": 1845.9325167908814,
+                "y": 921.3502028008731
+              },
+              "b": {
+                "x": 1832.7001143825385,
+                "y": 903.700479578604
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e28",
+              "a": {
+                "x": 513.1275354158531,
+                "y": 351.86153837342033
+              },
+              "b": {
+                "x": 513.1275354158533,
+                "y": 419.9365976291832
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e29",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 1274.5842748296382
+              },
+              "b": {
+                "x": 513.1275354158532,
+                "y": 1296.116688805685
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e30",
+              "a": {
+                "x": 977.5287958871243,
+                "y": 769.5571263536048
+              },
+              "b": {
+                "x": 977.5287958871243,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e31",
+              "a": {
+                "x": 861.003128558539,
+                "y": 363.0540599318041
+              },
+              "b": {
+                "x": 861.003128558539,
+                "y": 506.57151879188257
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.706021755055233,
+                  "type": "door",
+                  "width": 72.32,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-angle-rescue-258"
+                }
+              ]
+            },
+            {
+              "guid": "e32",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 1274.5842748296382
+              },
+              "b": {
+                "x": 1114.0093255773702,
+                "y": 1274.5842748296384
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e33",
+              "a": {
+                "x": 1114.0093255773702,
+                "y": 1274.5842748296384
+              },
+              "b": {
+                "x": 1176.6241812189535,
+                "y": 1274.5842748296382
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e34",
+              "a": {
+                "x": 1176.6241812189535,
+                "y": 1274.5842748296382
+              },
+              "b": {
+                "x": 1267.1163176926332,
+                "y": 1274.5842748296382
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e35",
+              "a": {
+                "x": 1267.1163176926332,
+                "y": 1274.5842748296382
+              },
+              "b": {
+                "x": 1915.386304806606,
+                "y": 1274.5842748296382
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e36",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 513.1275354158532,
+                "y": 866.7330430547825
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e37",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 600.3832129656986,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e38",
+              "a": {
+                "x": 795.594627912659,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 857.9139582970747,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e39",
+              "a": {
+                "x": 977.5287958871243,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 1178.431052126215,
+                "y": 796.6150018419283
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.6055098240624432,
+                  "type": "door",
+                  "width": 86.12,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-15"
+                }
+              ]
+            },
+            {
+              "guid": "e40",
+              "a": {
+                "x": 1266.9036433511988,
+                "y": 796.6150018419283
+              },
+              "b": {
+                "x": 1485.000173819746,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.3695329083356071,
+                  "type": "door",
+                  "width": 86.12,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-13"
+                }
+              ]
+            },
+            {
+              "guid": "e41",
+              "a": {
+                "x": 1178.431052126215,
+                "y": 796.6150018419283
+              },
+              "b": {
+                "x": 1178.431052126215,
+                "y": 848.9197496408817
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e42",
+              "a": {
+                "x": 1266.9036433511985,
+                "y": 848.9197496408817
+              },
+              "b": {
+                "x": 1266.9036433511988,
+                "y": 925.0291236887033
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e43",
+              "a": {
+                "x": 861.003128558539,
+                "y": 641.9086985288297
+              },
+              "b": {
+                "x": 859.9018951898004,
+                "y": 671.4351281170809
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e44",
+              "a": {
+                "x": 677.721558021022,
+                "y": 351.86153837342016
+              },
+              "b": {
+                "x": 677.721558021022,
+                "y": 0
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.5013975900697032,
+                  "type": "door",
+                  "width": 221.99,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-2__door-swing-angle-rescue-32"
+                }
+              ]
+            },
+            {
+              "guid": "e45",
+              "a": {
+                "x": 4.978676748708693,
+                "y": 355.8931802013829
+              },
+              "b": {
+                "x": 5.007014558011804,
+                "y": 65.16146314628259
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e46",
+              "a": {
+                "x": 677.721558021022,
+                "y": 351.86153837342016
+              },
+              "b": {
+                "x": 513.1275354158531,
+                "y": 351.86153837342033
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e47",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 513.1275354158533,
+                "y": 419.9365976291832
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.7052124816842882,
+                  "type": "door",
+                  "width": 85.21,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-9"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.300286856662724,
+                  "type": "window",
+                  "width": 214.11,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:302:7"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.300286856662724,
+                  "type": "window",
+                  "width": 214.11,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:307+308:1"
+                }
+              ]
+            },
+            {
+              "guid": "e48",
+              "a": {
+                "x": 1266.9036433511985,
+                "y": 848.9197496408817
+              },
+              "b": {
+                "x": 1266.9036433511988,
+                "y": 796.6150018419283
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e49",
+              "a": {
+                "x": 1499.468139711304,
+                "y": 493.3820710254697
+              },
+              "b": {
+                "x": 1499.468139711304,
+                "y": 292.39187439732876
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.4921652610701926,
+                  "type": "door",
+                  "width": 101.61,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    1,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-5"
+                }
+              ]
+            },
+            {
+              "guid": "e50",
+              "a": {
+                "x": 1276.3793572000625,
+                "y": 510.8229631277014
+              },
+              "b": {
+                "x": 1276.3793572000625,
+                "y": 292.39187439732876
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e51",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 1274.5842748296382
+              },
+              "b": {
+                "x": 513.1275354158532,
+                "y": 866.7330430547825
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.50729195673633,
+                  "type": "door",
+                  "width": 174.73,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-18__door-swing-single-17"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.22285919646735602,
+                  "type": "window",
+                  "width": 48.69,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:481:19"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.22285919646735602,
+                  "type": "window",
+                  "width": 48.69,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:483:20"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.22285919646735602,
+                  "type": "window",
+                  "width": 48.69,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:484+485:12"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.7917247170053039,
+                  "type": "window",
+                  "width": 48.69,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:417:17"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.7917247170053039,
+                  "type": "window",
+                  "width": 48.69,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:419:18"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.7917247170053039,
+                  "type": "window",
+                  "width": 48.69,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:424+425:11"
+                }
+              ]
+            },
+            {
+              "guid": "e52",
+              "a": {
+                "x": 1915.386304806606,
+                "y": 979.9638487075897
+              },
+              "b": {
+                "x": 1915.386304806606,
+                "y": 1274.5842748296382
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e53",
+              "a": {
+                "x": 0,
+                "y": 2.842170943040401e-14
+              },
+              "b": {
+                "x": 677.721558021022,
+                "y": 0
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.3352186705527491,
+                  "type": "window",
+                  "width": 111.96,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:8+16:14"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.514185155949024,
+                  "type": "window",
+                  "width": 113.39,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:10+18:13"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.6020799387176088,
+                  "type": "window",
+                  "width": 486.59,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:23:3"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.6020799387176088,
+                  "type": "window",
+                  "width": 486.59,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:3:2"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.6920926680589305,
+                  "type": "window",
+                  "width": 111.96,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:11+20:15"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.870000180168837,
+                  "type": "window",
+                  "width": 110.52,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:13+21:16"
+                }
+              ]
+            },
+            {
+              "guid": "e54",
+              "a": {
+                "x": 0,
+                "y": 2.842170943040401e-14
+              },
+              "b": {
+                "x": 0,
+                "y": 52.98796760456656
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e55",
+              "a": {
+                "x": 0.1140605833516446,
+                "y": 370.9310276352674
+              },
+              "b": {
+                "x": 0.1140605833516588,
+                "y": 419.9365976291832
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e56",
+              "a": {
+                "x": 600.3832129656986,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 795.594627912659,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.2610294117647059,
+                  "type": "door",
+                  "width": 87.56,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-14"
+                }
+              ]
+            },
+            {
+              "guid": "e57",
+              "a": {
+                "x": 857.9139582970747,
+                "y": 796.6150018419286
+              },
+              "b": {
+                "x": 977.5287958871243,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e58",
+              "a": {
+                "x": 1178.431052126215,
+                "y": 796.6150018419283
+              },
+              "b": {
+                "x": 1266.9036433511988,
+                "y": 796.6150018419283
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e59",
+              "a": {
+                "x": 1485.000173819746,
+                "y": 510.8229631277014
+              },
+              "b": {
+                "x": 1485.000173819746,
+                "y": 796.6150018419286
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e60",
+              "a": {
+                "x": 1178.431052126215,
+                "y": 848.9197496408817
+              },
+              "b": {
+                "x": 1178.431052126215,
+                "y": 925.0291236887033
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e61",
+              "a": {
+                "x": 1276.3793572000625,
+                "y": 510.8229631277014
+              },
+              "b": {
+                "x": 1485.000173819746,
+                "y": 510.8229631277014
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.5163447895615011,
+                  "type": "door",
+                  "width": 87.56,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-8"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.18780949260671256,
+                  "type": "window",
+                  "width": 61,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:window-1-horizontal-280:28"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.8345596059836784,
+                  "type": "window",
+                  "width": 58.13,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:window-1-horizontal-284:29"
+                }
+              ]
+            },
+            {
+              "guid": "e62",
+              "a": {
+                "x": 1276.3793572000625,
+                "y": 292.39187439732876
+              },
+              "b": {
+                "x": 1499.468139711304,
+                "y": 292.39187439732876
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.646928143735428,
+                  "type": "window",
+                  "width": 127.75,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:149+156:4"
+                }
+              ]
+            },
+            {
+              "guid": "e63",
+              "a": {
+                "x": 1183.5123599520218,
+                "y": 396.05688108833715
+              },
+              "b": {
+                "x": 1183.5123599520218,
+                "y": 536.347349407997
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e64",
+              "a": {
+                "x": 977.815947085121,
+                "y": 396.05688108833715
+              },
+              "b": {
+                "x": 1183.5123599520218,
+                "y": 396.05688108833715
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.2899412858172137,
+                  "type": "door",
+                  "width": 119.14,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-angle-rescue-183"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.6580380899335523,
+                  "type": "window",
+                  "width": 35.17,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:window-1-horizontal-225:31"
+                }
+              ]
+            },
+            {
+              "guid": "e65",
+              "a": {
+                "x": 861.003128558539,
+                "y": 506.57151879188257
+              },
+              "b": {
+                "x": 861.003128558539,
+                "y": 641.9086985288297
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e66",
+              "a": {
+                "x": 861.003128558539,
+                "y": 641.9086985288297
+              },
+              "b": {
+                "x": 977.8159470851208,
+                "y": 641.9086985288297
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.48759612966430815,
+                  "type": "door",
+                  "width": 88.28,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-11"
+                }
+              ]
+            },
+            {
+              "guid": "e67",
+              "a": {
+                "x": 483.6595779689578,
+                "y": 419.9365976291832
+              },
+              "b": {
+                "x": 0.1140605833516588,
+                "y": 419.9365976291832
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.0984956951095183,
+                  "type": "door",
+                  "width": 88.99,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-angle-rescue-254"
+                }
+              ]
+            },
+            {
+              "guid": "e68",
+              "a": {
+                "x": 977.815947085121,
+                "y": 396.05688108833715
+              },
+              "b": {
+                "x": 977.815947085121,
+                "y": 506.57151879188257
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 20,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e69",
+              "a": {
+                "x": 1832.7001143825385,
+                "y": 493.3820710254697
+              },
+              "b": {
+                "x": 1832.7001143825385,
+                "y": 903.700479578604
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+                  "t": 0.36736474694589877,
+                  "type": "door",
+                  "width": 175.44,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-10__door-swing-single-12"
+                }
+              ]
+            },
+            {
+              "guid": "e70",
+              "a": {
+                "x": 513.1275354158532,
+                "y": 866.7330430547825
+              },
+              "b": {
+                "x": 600.3832129656986,
+                "y": 866.7330430547825
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            },
+            {
+              "guid": "e71",
+              "a": {
+                "x": 1178.431052126215,
+                "y": 925.0291236887033
+              },
+              "b": {
+                "x": 1266.9036433511988,
+                "y": 925.0291236887033
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.519740271083928,
+                  "type": "door",
+                  "width": 78.23,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    1
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-16"
+                }
+              ]
+            },
+            {
+              "guid": "e72",
+              "a": {
+                "x": 850.1389938537216,
+                "y": 292.39187439732876
+              },
+              "b": {
+                "x": 1276.3793572000625,
+                "y": 292.39187439732876
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 30,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.16248341762125393,
+                  "type": "window",
+                  "width": 78.23,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:141+153:5"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.647408021506447,
+                  "type": "window",
+                  "width": 66.75,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:143+154:9"
+                },
+                {
+                  "refid": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+                  "t": 0.8797677275347686,
+                  "type": "window",
+                  "width": 66.75,
+                  "z_height": 150,
+                  "z": 70,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_FRAME_OUT": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_FRAME_IN": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "window:stack:146+155:8"
+                }
+              ]
+            },
+            {
+              "guid": "e73",
+              "a": {
+                "x": 1176.6241812189535,
+                "y": 1134.7768849741997
+              },
+              "b": {
+                "x": 1267.1163176926332,
+                "y": 1134.7768849741997
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": [
+                {
+                  "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+                  "t": 0.5241427243245333,
+                  "type": "door",
+                  "width": 77.51,
+                  "z_height": 220,
+                  "z": 0,
+                  "mirrored": [
+                    0,
+                    0
+                  ],
+                  "materials": {
+                    "FP_DOOR": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    },
+                    "FP_DOORFRAME": {
+                      "type": "color",
+                      "value": "#ffffff"
+                    }
+                  },
+                  "guid": "door-swing-single-19"
+                }
+              ]
+            },
+            {
+              "guid": "e74",
+              "a": {
+                "x": 1845.9325167908814,
+                "y": 921.3502028008731
+              },
+              "b": {
+                "x": 1856.8772744303712,
+                "y": 921.3502028008731
+              },
+              "c": null,
+              "az": {
+                "z": 0,
+                "h": 280
+              },
+              "bz": {
+                "z": 0,
+                "h": 280
+              },
+              "thickness": 10,
+              "balance": 0.5,
+              "groupMarkerConfig": {
+                "locked": false
+              },
+              "decor": {
+                "left": null,
+                "right": null,
+                "top": null,
+                "outline": 0
+              },
+              "openings": []
+            }
+          ],
+          "settings": {
+            "engineAutoDims": false,
+            "areaLabelMultiplier": 1,
+            "scaleMultiplierDimensions": 1.5,
+            "scaleMultiplierComments": 1,
+            "dimLineLabelHorizontal": false,
+            "showCeilings3D": true,
+            "minWallLength": 4
+          }
+        }
+      ]
+    }
+  ]
+}

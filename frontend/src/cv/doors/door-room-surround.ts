@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import {
   isWallMaskClass,
   resolveClassAtLabel,
@@ -107,10 +108,12 @@ export function filterRoomSurroundedHypotheses(params: {
     })
     // ESC:D-27 (B)
     if (isHypothesisSurroundedByWall(neighbors, params.parentMap, params.classificationByLabel)) {
+      tally('D-27', 'surrounded_by_wall')
       rejected.push({ hypothesis, reason: 'surrounded_by_wall' })
       continue
     }
     if (isHypothesisSurroundedByRoom(neighbors, params.parentMap, params.classificationByLabel)) {
+      tally('D-27', 'surrounded_by_room')
       rejected.push({ hypothesis, reason: 'surrounded_by_room' })
       continue
     }
@@ -173,6 +176,7 @@ export function filterWallUntouchedHypotheses(params: {
       continue
     }
     // ESC:D-28 (B)
+    tally('D-28', 'no_wall_touch')
     rejected.push({ hypothesis, reason: 'no_wall_touch' })
   }
 

@@ -371,8 +371,8 @@ Startcase: `Kinderdijkstraat 53 1` — 1 verdieping, 53 muren, `drawing.url` aan
 | Tag-vorm | `// ESC:<ID> (<Cat>)` op eigen regel boven tak/tuning-key |
 | Omvang | 228 inventaris-ID's, 249 tags in `frontend/src` |
 | Checker | `npm run esc:check` — CI-poort na Lint |
-| Tagindex | `.cursor/docs/escalatiepaden-tagindex.md` (gegenereerd) |
-| Ledger | `.cursor/docs/escalatie-ledger.md` — verdicts (nog leeg) |
+| Tagindex | `.cursor/docs/archive/escalatie/tagindex.md` (gegenereerd) |
+| Living doc | `.cursor/docs/escalatie.md` — aanpak + verdicts + grootboek |
 | E2E-reservering | `EscalationLedger` in `tests/e2e/harness/`; layers-snapshot heeft vanaf eerste fixture een `escalations`-sleutel |
 | Waarom | Inventaris-regelnummers schuiven; zonder tags is het document binnen twee refactors archeologie |
 
@@ -390,6 +390,22 @@ Startcase: `Kinderdijkstraat 53 1` — 1 verdieping, 53 muren, `drawing.url` aan
 | Gedegradeerd | Alleen een ingeslikte exceptie zet die vlag; zichtbaar in status-regel en in `journal` van het layer-debug-rapport |
 | Buiten de inventaris | Aparte `DiagnosticCode` (nu `REF_COUNT_BELOW_ADVICE`), blijft buiten `escalations` — geen verzonnen ESC-ID's in de bevroren inventaris |
 | Harde grens | Geen drempel gewijzigd, geen pad verwijderd |
+
+---
+
+## E2E fixtures — gebakken/getest + CI-split (2026-07-31)
+
+| Beslissing | Detail |
+|------------|--------|
+| Doel | Verandering-detector late lagen; geen kwaliteitscijfer |
+| Gebakken | Stap 1–2, L0/L1, deur-/raampas als lijsten |
+| Draait | L2–L10, L11/L12, L14, FML + dikte-harmonisatie |
+| Referentie | Alleen `fixtures/<slug>/reference.fml` (handwerk, één verdieping); Detectie-export ≠ referentie |
+| Snapshots | Poort `.fml.json` / `.walls.fml.json`; vindplaats `.layers.json` (+ escalatie-grootboek); snapshot ≠ oordeel |
+| Grove vloer | Lengte ±25% vs ref, ≥5 openingen, `degraded===false` |
+| CI | `npm test` exclude `tests/e2e/**`; apart `npm run test:e2e` via `vitest.e2e.config.ts` na unit-tests in CI |
+| Set | `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`; Kinderdijkstraat later |
+| Doc | `.cursor/docs/e2e-fixtures.md` |
 
 ---
 

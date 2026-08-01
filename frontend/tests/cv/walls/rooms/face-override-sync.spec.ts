@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   syncDoorBridgeWallOverrides,
+  syncDoorSwingFaceOverrides,
   syncDoorframeFaceOverrides,
   syncWindowFaceOverrides,
 } from '@/cv/walls/rooms/face-override-sync'
@@ -48,5 +49,41 @@ describe('face-override-sync sticky doorframe', () => {
     expect(cache.faceOverrides.get(10)).toBe('doorframe')
     expect(cache.faceOverrides.has(11)).toBe(false)
     expect(cache.faceOverrides.get(12)).toBe('doorframe')
+  })
+})
+
+describe('syncDoorSwingFaceOverrides wall-rescue', () => {
+  it('overschrijft gepinde wall → door (wall-rescue seed)', () => {
+    const cache = emptyCache()
+    cache.faceOverrides.set(234, 'wall')
+    cache.pinnedRoots.add(234)
+
+    const result = syncDoorSwingFaceOverrides(cache, [234])
+    expect(result.applied).toBe(1)
+    expect(cache.faceOverrides.get(234)).toBe('door')
+    expect(cache.pinnedRoots.has(234)).toBe(true)
+  })
+
+  it('overschrijft gepinde autoclass-window strook → door (absorb)', () => {
+    const cache = emptyCache()
+    cache.faceOverrides.set(225, 'window')
+    cache.pinnedRoots.add(225)
+    cache.faceOverrides.set(234, 'wall')
+    cache.pinnedRoots.add(234)
+
+    syncDoorSwingFaceOverrides(cache, [225, 234])
+    expect(cache.faceOverrides.get(225)).toBe('door')
+    expect(cache.faceOverrides.get(234)).toBe('door')
+  })
+
+  it('laat sticky doorframe met rust', () => {
+    const cache = emptyCache()
+    cache.faceOverrides.set(27, 'doorframe')
+    cache.pinnedRoots.add(27)
+
+    const result = syncDoorSwingFaceOverrides(cache, [27, 234])
+    expect(cache.faceOverrides.get(27)).toBe('doorframe')
+    expect(cache.faceOverrides.get(234)).toBe('door')
+    expect(result.applied).toBe(1)
   })
 })

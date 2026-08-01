@@ -350,6 +350,14 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
               layers: Object.fromEntries(
                 Object.entries(raw.pipelineV3Debug.layers).map(([key, layer]) => {
                   if (!layer) return [key, layer]
+                  const faces =
+                    layer.faces && work.scale < 1
+                      ? layer.faces.map((face) => ({
+                          ...face,
+                          bbox: scaleBoxesToOriginal([face.bbox], work.scale)[0],
+                          areaPx: Math.round(face.areaPx / (work.scale * work.scale)),
+                        }))
+                      : layer.faces
                   return [
                     key,
                     {
@@ -360,6 +368,7 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
                         x: work.scale >= 1 ? junction.x : Math.round(junction.x / work.scale),
                         y: work.scale >= 1 ? junction.y : Math.round(junction.y / work.scale),
                       })),
+                      ...(faces ? { faces } : {}),
                     },
                   ]
                 }),

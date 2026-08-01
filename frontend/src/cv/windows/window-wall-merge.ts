@@ -1,4 +1,5 @@
 import { unionFaceBBox } from '@/cv/walls/rooms/face-dual-space'
+import { noteCascadeLevel } from '@/core/diagnostics'
 import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
 import type { BoundWindow } from './types'
 
@@ -110,7 +111,7 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
   }
 }
 
-// ESC:R-27 (A)
+// ESC:R-27 (A) — blijft; later settings-toggle met double doors (2026-07-31).
 /**
  * Per segment, van voor naar achter (stijgende `t`): greedy 3 → 2 → 1.
  * Zes gelijke aanliggende ramen → twee triples.
@@ -137,12 +138,18 @@ export function mergeAdjacentBoundWindows(windows: BoundWindow[]): BoundWindow[]
     while (i < sorted.length) {
       const triple = sorted.slice(i, i + 3)
       if (triple.length === 3 && canMergeChain(triple)) {
+        noteCascadeLevel('R-27', 'window-wall-merge.mergeAdjacentBoundWindows', 'triple', {
+          segmentIndex,
+        })
         out.push(mergeGroup(triple))
         i += 3
         continue
       }
       const pair = sorted.slice(i, i + 2)
       if (pair.length === 2 && canMergeChain(pair)) {
+        noteCascadeLevel('R-27', 'window-wall-merge.mergeAdjacentBoundWindows', 'pair', {
+          segmentIndex,
+        })
         out.push(mergeGroup(pair))
         i += 2
         continue

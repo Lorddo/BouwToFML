@@ -81,6 +81,9 @@ export type WorkspaceFacadeContext = {
   overlays: ReturnType<typeof useWorkspaceOverlays>
   debugProbe: ReturnType<typeof useWorkspaceDebugProbe>
   exports: ReturnType<typeof useWorkspaceExports>
+  e2eFixture: ReturnType<
+    typeof import('./useWorkspaceE2eFixtureExport').useWorkspaceE2eFixtureExport
+  >
   fmlUnderlayOpacity: Ref<number>
   fmlContentOpacity: Ref<number>
   fmlUnderlaySrc: ComputedRef<string | null>
@@ -209,7 +212,7 @@ function sliceOverlays(ctx: WorkspaceFacadeContext) {
 }
 
 function sliceExports(ctx: WorkspaceFacadeContext) {
-  return { ...ctx.exports }
+  return { ...ctx.exports, ...ctx.e2eFixture }
 }
 
 function sliceFml(ctx: WorkspaceFacadeContext) {
@@ -277,6 +280,8 @@ function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
     resolvedWindows: ctx.windowFaces?.resolvedWindows ?? [],
     boundWindows: ctx.windowFaces?.boundWindows ?? [],
     windowBindRejections: ctx.windowFaces?.windowBindRejections ?? [],
+    stage1WindowRejections: ctx.windowFaces?.stage1Rejections ?? [],
+    stage1WindowCandidateEvals: ctx.windowFaces?.stage1CandidateEvals ?? [],
     wallsClassifyReadyForWindows: ctx.windowFaces?.wallsClassifyReady ?? null,
     windowInitialPassReady: computed(() => ctx.windowFaces?.initialPassReady.value ?? true),
     gapsInkMode: ctx.gapsInkMode,

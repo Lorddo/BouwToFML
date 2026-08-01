@@ -1,4 +1,5 @@
 /** V3 Laag 5 — Copy(6) cleanup + dangling/near weld (geen seal / geen L6-weld). */
+import { noteRollback, tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
@@ -33,7 +34,9 @@ const LAYER5_ACCEPT_IDENTITY = { gridPx: 0.01, includeTemplateIndex: true } as c
  */
 function compactCandidate(segments: Segment[], policy: Layer5CleanupPolicy): Segment[] {
   const compacted = dropZeroLengthSegments(segments, policy.weld.endpointEpsPx)
-  return dedupeExactSegments(compacted.segments, policy.weld.endpointEpsPx).segments
+  const deduped = dedupeExactSegments(compacted.segments, policy.weld.endpointEpsPx).segments
+  tally('W-16', deduped.length !== segments.length ? 'compacted' : 'noop')
+  return deduped
 }
 
 // ESC:W-17 (B)
@@ -43,9 +46,16 @@ function tryAcceptStep(
   policy: Layer5CleanupPolicy,
 ): Segment[] | null {
   const compacted = compactCandidate(candidate, policy)
-  if (!segmentSetChanged(before, compacted, LAYER5_ACCEPT_IDENTITY)) return null
+  if (!segmentSetChanged(before, compacted, LAYER5_ACCEPT_IDENTITY)) {
+    tally('W-17', 'unchanged')
+    return null
+  }
   const guard = validateConnectivity(before, compacted, policy.topology, policy.weld)
-  if (!guard.ok) return null
+  if (!guard.ok) {
+    tally('W-17', 'connectivity_reject')
+    return null
+  }
+  tally('W-17', 'accepted')
   return compacted
 }
 
@@ -70,6 +80,7 @@ export function runLayer5Cleanup(params: {
 
   for (const face of params.layer4.facesPositioned) {
     let work = cloneSegments(face.segments)
+    let convergedEarly = false
 
     for (let iter = 0; iter < policy.maxIterations; iter += 1) {
       iterations += 1
@@ -150,8 +161,13 @@ export function runLayer5Cleanup(params: {
         }
       }
 
-      if (!changed) break
+      if (!changed) {
+        convergedEarly = true
+        break
+      }
     }
+    // ESC:W-24 (A)
+    tally('W-24', convergedEarly ? 'converged' : 'max_iterations')
 
     // ESC:W-18 (B)
     const finalCompacted = compactCandidate(work, policy)
@@ -161,7 +177,18 @@ export function runLayer5Cleanup(params: {
       policy.topology,
       policy.weld,
     )
-    work = finalGuard.ok ? finalCompacted : cloneSegments(face.segments)
+    if (finalGuard.ok) {
+      tally('W-18', 'accepted')
+      work = finalCompacted
+    } else {
+      tally('W-18', 'rolled_back_to_L4')
+      noteRollback(
+        'W-18',
+        'layer-5-cleanup.runLayer5Cleanup',
+        'finale connectivity-guard afgekeurd; terug naar L4-face',
+      )
+      work = cloneSegments(face.segments)
+    }
 
     const cleanedFace = rebuildFaceFromSegments(face, work, policy.weld, policy.junction)
     facesCleaned.push(cleanedFace)

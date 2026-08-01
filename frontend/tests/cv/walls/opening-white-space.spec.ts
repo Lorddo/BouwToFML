@@ -124,4 +124,54 @@ describe('resolveReferenceTargetStripHeightPx micro-strip', () => {
     // Bounded to max 2 * 3 = 6
     expect(calibrated).toBe(6)
   })
+
+  it('calibrates past Stage-1 max when REF-overlap faces are tilt-inflated', () => {
+    // 2D-1E-achtig: deskewed REF target 4px, Stage-1 max = 4+max(2,2.8)=6.8,
+    // maar floor AABB bij dezelfde REF is ~10–11px (scheve muur).
+    const ref: WindowAxelRefBand = {
+      refIndex: 0,
+      stripCount: 3,
+      stripHeightsPx: [4, 4, 5],
+      targetStripHeightPx: 4,
+      targetStripHeightRatio: 4 / 17,
+      axisBandHeightPx: 17,
+      orientation: 'horizontal',
+      fullStripCount: 3,
+      fullStripHeightsPx: [4, 4, 5],
+      framingSizeRange: null,
+      topRailRange: null,
+      bottomRailRange: null,
+    }
+    const roots = [
+      {
+        root: 142,
+        areaPx: 1900,
+        bbox: { x: 349, y: 2820, width: 191, height: 10 },
+        className: 'outside' as const,
+      },
+      {
+        root: 143,
+        areaPx: 2100,
+        bbox: { x: 348, y: 2826, width: 192, height: 11 },
+        className: 'outside' as const,
+      },
+      {
+        root: 145,
+        areaPx: 2100,
+        bbox: { x: 348, y: 2832, width: 191, height: 11 },
+        className: 'outside' as const,
+      },
+    ]
+    const stage1Max = 4 + Math.max(2, 4 * 0.7) // 6.8 — oude sample-plafond
+    const calibrated = resolveReferenceTargetStripHeightPx({
+      roots,
+      ref,
+      refRect: { x: 314, y: 2774, width: 263, height: 111 },
+      minSpanPx: 48,
+      maxHeightPx: stage1Max,
+    })
+    expect(calibrated).toBeGreaterThan(stage1Max)
+    expect(calibrated).toBeLessThanOrEqual(12) // 4 * 3
+    expect(calibrated).toBeGreaterThanOrEqual(10)
+  })
 })

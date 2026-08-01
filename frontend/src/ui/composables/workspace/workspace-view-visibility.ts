@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import {
   usesWallDetectionOverlays,
@@ -37,11 +38,14 @@ export function isTemplatesInitialDetectionBusy(params: {
     params.roomPhase === 'recalculating' ||
     params.classifyingInFlight
   ) {
+    tally('O-43', 'busy_classifying')
     return true
   }
   if (params.roomPhase === 'review') {
     if (params.initialDetectionSettled) return false
-    return !params.doorInitialPassReady || !params.windowInitialPassReady
+    const busy = !params.doorInitialPassReady || !params.windowInitialPassReady
+    if (busy) tally('O-43', 'busy_initial_pass')
+    return busy
   }
   return false
 }

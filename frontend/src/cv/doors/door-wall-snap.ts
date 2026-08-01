@@ -1,16 +1,14 @@
 import type { SemanticWallSegment } from '@/core/extraction/types'
+import { noteCascadeLevel } from '@/core/diagnostics'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import { buildLabelAdjacency } from '@/cv/walls/rooms/label-adjacency'
 import { collectDirectionalAdjacentClassRoots } from './door-attach-doorframes'
-import { tryBindDoorToAnchorSegment, tryBindDoorToBounds } from './door-wall-snap-bind'
 import {
   buildClassBBoxesByRoot,
-  findAdjacentDoorframeUnionBounds,
   growDoorframeUnionAlongAxis,
   resolveExplicitDoorframeUnion,
   tryPathABind,
-  unionBBoxBounds,
 } from './door-wall-snap-doorframe'
 import { bboxContainsDoorFacePixel, clampBounds } from './door-wall-snap-geom'
 import { tryBindDoorViaSwingMaskContact } from './door-wall-snap-path-b'
@@ -21,7 +19,7 @@ const T = DOOR_WALL_SNAP_TUNING
 
 /**
  * L11: bind resolved doors to wall segments.
- * Path A (doorframe) → Path B swing-mask → wall-union → legacy wallMask.
+ * Path A (doorframe) → Path B swing-mask (D-48). Legacy wall-union/bbox (D-50..D-52) weg.
  */
 export function snapDoorsToWalls(params: {
   doors: ResolvedDoorCandidate[]
@@ -86,38 +84,27 @@ export function snapDoorsToWalls(params: {
     })
     if (!hasDoorFacePixel) continue
 
-    // ESC:D-44 (P)
-    // Path A: explicit IDs → 1-hop/bbox discovery → as-grow → bind.
+    // ESC:D-44 (P) — sticky doorframeFaceIds alleen (geen zoekpad); Path A primair.
+    // Path A: expliciete doorframeFaceIds → as-grow → bind.
+    // ESC:D-45 (A) — VERWIJDERD 2026-07-31: 1-hop discovery; geen losse doorframes zonder sticky IDs.
     let doorframeUnion: BBoxBounds | null = null
+    let pathASource: 'D-44' | 'D-46' | null = null
     if (door.doorframeFaceIds && door.doorframeFaceIds.length > 0) {
       doorframeUnion = resolveExplicitDoorframeUnion({
         doorframeFaceIds: door.doorframeFaceIds,
         parentMap: params.parentMap,
         doorframeBBoxByRoot,
       })
+      if (doorframeUnion) pathASource = 'D-44'
     }
-    // ESC:D-45 (A)
-    if (!doorframeUnion) {
-      doorframeUnion = findAdjacentDoorframeUnionBounds({
-        doorBounds: bounds,
-        faceSet,
-        labelsData: params.labelsData,
-        width: params.width,
-        height: params.height,
-        parentMap: params.parentMap,
-        classificationByLabel,
-        doorframeBBoxByRoot,
-        expandPx,
-      })
-    }
-    // ESC:D-46 (A)
+    // ESC:D-46 (A) — as-grow; bij hit → sticky IDs + class doorframe (volgende keer D-44).
     if (!doorframeUnion && doorframeBBoxByRoot.size > 0) {
       const doorRoots = new Set<number>()
       for (const id of faceSet) {
         const root = resolveMergedLabel(id, params.parentMap)
         doorRoots.add(root > 0 ? root : id)
       }
-      doorframeUnion = growDoorframeUnionAlongAxis({
+      const grown = growDoorframeUnionAlongAxis({
         doorBounds: bounds,
         doorRoots,
         adjacency: ensureAdjacency(),
@@ -126,6 +113,16 @@ export function snapDoorsToWalls(params: {
         doorframeBBoxByRoot,
         expandPx,
       })
+      if (grown) {
+        doorframeUnion = grown.union
+        pathASource = 'D-46'
+        const sticky = new Set<number>(door.doorframeFaceIds ?? [])
+        for (const root of grown.roots) {
+          sticky.add(root)
+          classificationByLabel.set(root, 'doorframe')
+        }
+        door.doorframeFaceIds = [...sticky]
+      }
     }
 
     if (doorframeUnion) {
@@ -140,13 +137,20 @@ export function snapDoorsToWalls(params: {
         referenceWallThicknessPx: params.referenceWallThicknessPx,
       })
       if (pathA) {
+        if (pathASource) {
+          noteCascadeLevel(pathASource, 'door-wall-snap.snapDoorsToWalls', 'path_a_hit', {
+            doorId: door.id,
+          })
+        }
         results.push(pathA)
         continue
       }
     }
 
-    // Path B: eerst gemergde swing-mask ↔ muur (as uit contact), daarna legacy
-    // wall-union aspect / wallMask. Voorkomt hoek-FP (verticale wall-component wint).
+    // Path B: swing-mask ↔ muur (as uit contact). ESC:D-48.
+    // ESC:D-50 (A) — VERWIJDERD 2026-07-31: wall-union → segment-bind
+    // ESC:D-51 (A) — VERWIJDERD 2026-07-31: wall-union → wallMask bounds
+    // ESC:D-52 (A) — VERWIJDERD 2026-07-31: legacy wallMask op deur-bbox
     const adjacentWallBBoxes: BBoxBounds[] = []
     if (wallBBoxByRoot.size > 0) {
       const wallRoots = collectDirectionalAdjacentClassRoots({
@@ -179,74 +183,7 @@ export function snapDoorsToWalls(params: {
     })
     if (pathBSwing) {
       results.push(pathBSwing)
-      continue
     }
-
-    const wallUnion =
-      adjacentWallBBoxes.length > 0
-        ? adjacentWallBBoxes.reduce(
-            (acc, box) => (acc ? unionBBoxBounds(acc, box) : { ...box }),
-            null as BBoxBounds | null,
-          )
-        : null
-    if (wallUnion) {
-      // ESC:D-50 (A)
-      const pathBSeg = tryBindDoorToAnchorSegment({
-        door,
-        doorBounds: bounds,
-        anchorUnion: wallUnion,
-        segments: params.segments,
-        referenceWallThicknessPx: params.referenceWallThicknessPx,
-      })
-      if (pathBSeg) {
-        results.push(pathBSeg)
-        continue
-      }
-      // Segment-miss: wallMask op wall-unie (+ swing span), niet op pure white swing.
-      const wuW = wallUnion.x1 - wallUnion.x0
-      const wuH = wallUnion.y1 - wallUnion.y0
-      const pathBBounds: BBoxBounds =
-        wuH >= wuW
-          ? {
-              x0: bounds.x0,
-              x1: bounds.x1,
-              y0: Math.min(bounds.y0, wallUnion.y0),
-              y1: Math.max(bounds.y1, wallUnion.y1),
-            }
-          : {
-              x0: Math.min(bounds.x0, wallUnion.x0),
-              x1: Math.max(bounds.x1, wallUnion.x1),
-              y0: bounds.y0,
-              y1: bounds.y1,
-            }
-      // ESC:D-51 (A)
-      const pathBMask = tryBindDoorToBounds({
-        door,
-        bounds: pathBBounds,
-        wallMask: params.wallMask,
-        width: params.width,
-        height: params.height,
-        segments: params.segments,
-        referenceWallThicknessPx: params.referenceWallThicknessPx,
-      })
-      if (pathBMask) {
-        results.push(pathBMask)
-        continue
-      }
-    }
-
-    // ESC:D-52 (A)
-    // Legacy: geen ink-wall adjacency → wallMask op deur-bbox (unit tests / oude fixtures).
-    const pathBLegacy = tryBindDoorToBounds({
-      door,
-      bounds,
-      wallMask: params.wallMask,
-      width: params.width,
-      height: params.height,
-      segments: params.segments,
-      referenceWallThicknessPx: params.referenceWallThicknessPx,
-    })
-    if (pathBLegacy) results.push(pathBLegacy)
   }
   return results
 }

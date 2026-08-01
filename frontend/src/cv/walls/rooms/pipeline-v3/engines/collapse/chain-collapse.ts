@@ -1,6 +1,7 @@
 /**
  * Inter-junction chain collapse — CURRENT L7 golden (policy-driven).
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import {
@@ -144,6 +145,7 @@ function pickChainExtension(params: {
   })
   if (compatible.length === 1) {
     const next = compatible[0]
+    tally('W-45', 'direct')
     return {
       segIndices: [next.segIndex],
       endPoint: otherEndpoint(params.segments[next.segIndex], params.atPoint),
@@ -204,6 +206,7 @@ function pickChainExtension(params: {
     return null
   }
 
+  tally('W-45', 'bridge')
   return {
     segIndices: [bridgeIndex, beyondIndex],
     endPoint: otherEndpoint(params.segments[beyondIndex], bridgeOther),

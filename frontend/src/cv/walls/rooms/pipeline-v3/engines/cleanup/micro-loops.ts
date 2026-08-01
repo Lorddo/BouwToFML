@@ -1,6 +1,7 @@
 /**
  * L5 cleanup — Copy(6) parallel micro-loop removal.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments, incidentAt, removeSegmentAt } from '../segment-ops'
@@ -63,11 +64,15 @@ export function cleanupMicroLoops(
         // continuation — deleting would strand an I (BouwTek11 export-62).
         const degA = incidentAt(work, endA).length
         const degB = incidentAt(work, endB).length
-        if (degA !== 1 || degB !== 1) continue
+        if (degA !== 1 || degB !== 1) {
+          tally('W-21', 'guard_degree')
+          continue
+        }
 
         const removeIndex = lenA <= lenB ? i : j
         removeSegmentAt(work, removeIndex)
         removedCount += 1
+        tally('W-21', 'removed')
         changed = true
         break
       }

@@ -1,7 +1,7 @@
 /**
  * Run-journaal — één plek waar escalatiepaden en verzwegen fouten zichtbaar worden.
  *
- * Batch nul uit `.cursor/docs/escalatiepaden-aanpak.md` §5: **observeren, niets veranderen.**
+ * Batch nul uit `.cursor/docs/escalatie.md`: **observeren, niets veranderen.**
  * Geen drempel, geen pad, geen gedrag — alleen vastleggen wat er gebeurde.
  *
  * Ontwerp:

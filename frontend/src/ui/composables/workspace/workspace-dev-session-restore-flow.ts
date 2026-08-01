@@ -54,7 +54,7 @@ export function createWorkspaceDevSessionRestoreFlow(
         (session.detectionExact?.roomPhase === 'review' ||
           session.detectionExact?.roomPhase === 'done')
       ) {
-        await detection.rebuildDoorsFromRestoredFaces()
+        await detection.rerunOpeningsAfterRestore()
       }
       return
     }
@@ -76,7 +76,7 @@ export function createWorkspaceDevSessionRestoreFlow(
       (session.detectionExact?.roomPhase === 'review' ||
         session.detectionExact?.roomPhase === 'done')
     ) {
-      await detection.rebuildDoorsFromRestoredFaces()
+      await detection.rerunOpeningsAfterRestore()
       void deps.snapResolvedDoorsToWalls()
     }
     await deps.onEnterResultStep()

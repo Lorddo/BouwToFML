@@ -193,9 +193,12 @@ export function bindWindowsToWalls(params: {
       continue
     }
     const span = resolveOpeningSpan({ bbox: openingBBox, segment })
-    // ESC:R-26 (E)
-    // Breedte: Stage-4 widthPx (strip_stack = langste strip); fallback op geprojecteerde span.
-    const widthPx = candidate.widthPx > 0 ? candidate.widthPx : span.widthPx
+    // ESC:R-26 (E) — VERWIJDERD 2026-07-31: Stage-4 widthPx is verplicht; geen bbox-span-fallback.
+    if (!(candidate.widthPx > 0)) {
+      rejected.push({ candidate, reason: 'no_width' satisfies WindowBindRejectReason })
+      continue
+    }
+    const widthPx = candidate.widthPx
     bound.push({
       windowId: candidate.id,
       segmentIndex: picked.segmentIndex,

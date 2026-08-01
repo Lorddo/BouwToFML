@@ -71,8 +71,8 @@ describe('buildFmlV3 — Floorplanner-valid formaat', () => {
     const wall = raw.floors[0].designs[0].walls[0]
     expect(wall.guid).toBe('w1')
     expect(wall.c).toBeNull()
-    expect(wall.az).toEqual({ z: 0, h: 266 })
-    expect(wall.bz).toEqual({ z: 0, h: 266 })
+    expect(wall.az).toEqual({ z: 0, h: 280 })
+    expect(wall.bz).toEqual({ z: 0, h: 280 })
     expect(wall.groupMarkerConfig).toEqual({ locked: false })
     expect(wall.decor).toEqual({ left: null, right: null, top: null, outline: 0 })
   })
@@ -88,7 +88,7 @@ describe('buildFmlV3 — Floorplanner-valid formaat', () => {
     const raw = JSON.parse(buildFmlV3(plan))
     expect(raw.settings.wallHeight).toBe(300)
     expect(raw.floors[0].height).toBe(300)
-    expect(raw.floors[0].designs[0].walls[0].az.h).toBe(286)
+    expect(raw.floors[0].designs[0].walls[0].az.h).toBe(300)
   })
 
   it('voegt juiste materials + guid toe per openingstype', () => {

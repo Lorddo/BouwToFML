@@ -1,6 +1,7 @@
 /**
  * V3 Laag 9 — dissolve: chain + stair-stub + parallel-cover (CURRENT + cover).
  */
+import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -71,6 +72,7 @@ export function runLayer9Dissolve(params: {
         }),
     })
     let segmentsOut = chainGuard.segments
+    tally('W-49', chainGuard.preserved ? 'chain_accepted' : 'chain_rolled_back')
     if (!chainGuard.preserved) {
       facesSkippedTopology += 1
     } else {
@@ -84,6 +86,7 @@ export function runLayer9Dissolve(params: {
       policy: policy.collapse,
       apply: (segments) => collapseOrthoStairStubs(segments, policy.collapse),
     })
+    tally('W-49', stubGuard.preserved ? 'stub_accepted' : 'stub_rolled_back')
     if (stubGuard.preserved) {
       segmentsOut = stubGuard.segments
       if (stubGuard.result.stats.stubsCollapsed > 0) {
@@ -99,6 +102,7 @@ export function runLayer9Dissolve(params: {
       policy: policy.collapse,
       apply: (segments) => parallelCoverAbsorb(segments, policy.collapse),
     })
+    tally('W-49', coverGuard.preserved ? 'cover_accepted' : 'cover_rolled_back')
     if (coverGuard.preserved) {
       segmentsOut = coverGuard.segments
       if (coverGuard.result.stats.coveredCount > 0) {

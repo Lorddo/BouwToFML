@@ -123,6 +123,26 @@ describe('window-axel-filter', () => {
       bottomRailRange: null,
     })
     expect(result.hypotheses).toHaveLength(0)
+    expect(result.candidateEvals.length).toBeGreaterThan(0)
+    expect(result.candidateEvals.every((row) => !row.eligible)).toBe(true)
+    expect(result.rejections.some((r) => r.reason === 'strip_height_above_max')).toBe(true)
+  })
+
+  it('registreert pre-filter rejects (span_below_min) als candidateEval + rejection', () => {
+    const result = runWindowAxelFilter({
+      dual: dualFrom({
+        components: [component(1, { x: 20, y: 20, width: 10, height: 8 })],
+        classes: [[1, 'unknown']],
+      }),
+      refBands: [multiStripRef({ stripCount: 1, stripHeightsPx: [8], fullStripCount: 1 })],
+    })
+    expect(result.hypotheses).toHaveLength(0)
+    const evals = result.candidateEvals.filter((row) => row.faceId === 1)
+    expect(evals.length).toBeGreaterThan(0)
+    expect(evals.some((row) => row.rejectReason === 'span_below_min')).toBe(true)
+    expect(result.rejections.some((r) => r.reason === 'span_below_min' && r.faceIds[0] === 1)).toBe(
+      true,
+    )
   })
 
   it('accepteert multi-strip cluster op wall-faces via ink-brug', () => {
@@ -272,5 +292,7 @@ describe('window-axel-filter', () => {
       ]),
     })
     expect(result.hypotheses).toHaveLength(0)
+    expect(result.rejections.some((r) => r.reason === 'strip_height_above_max')).toBe(true)
+    expect(result.candidateEvals.every((row) => !row.eligible)).toBe(true)
   })
 })

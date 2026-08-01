@@ -1,6 +1,7 @@
 /**
  * L6 junction-repair — diagonal / unretractable-chamfer helpers + arm endpoint snap.
  */
+import { tally } from '@/core/diagnostics'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { incidentAt, removeSegmentAt, replaceSegmentEndpoint } from '../segment-ops'
@@ -70,7 +71,10 @@ export function removeShortDiagonalIncidents(params: {
   const toRemove: number[] = []
   for (const incident of params.incidents) {
     if (incident.kind !== 'D') continue
-    if (segmentLength(incident.segment) > params.maxConnectorPx) continue
+    if (segmentLength(incident.segment) > params.maxConnectorPx) {
+      tally('W-41', 'skip_too_long')
+      continue
+    }
     if (
       isLandingChamferAtJunction({
         segments: params.segments,
@@ -83,6 +87,7 @@ export function removeShortDiagonalIncidents(params: {
         hvBandPx: params.hvBandPx,
       })
     ) {
+      tally('W-41', 'skip_landing')
       continue
     }
     // Alleen stub-diagonalen waarvan BEIDE eindpunten nabij de (geweld) junction liggen.
@@ -96,12 +101,16 @@ export function removeShortDiagonalIncidents(params: {
         lengthPx: incident.lengthPx,
       })
     ) {
+      tally('W-41', 'skip_unretractable')
       continue
     }
     toRemove.push(incident.segIndex)
   }
   toRemove.sort((a, b) => b - a)
-  for (const segIndex of toRemove) removeSegmentAt(params.segments, segIndex)
+  for (const segIndex of toRemove) {
+    tally('W-41', 'removed')
+    removeSegmentAt(params.segments, segIndex)
+  }
   return toRemove.length
 }
 

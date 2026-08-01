@@ -1,3 +1,4 @@
+import { noteRollback } from '@/core/diagnostics'
 import { resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import type { ResolvedDoorCandidate } from './types'
 
@@ -126,6 +127,12 @@ export function filterDoorsByKeptWallMaskContact(params: {
       kept.push(door)
       continue
     }
+    noteRollback(
+      'D-56',
+      'filterDoorsByKeptWallMaskContact',
+      'deur zonder contact met kept wall mask verwijderd',
+      { doorId: door.id, searchRadiusPx },
+    )
     rejected.push({ door, reason: 'no_kept_wall_mask_contact' })
   }
 

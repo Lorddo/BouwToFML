@@ -1,5 +1,5 @@
 /** V3 Laag 2 � native jitter merge (own types + policy; no pipeline-v2 import). */
-import { tally } from '@/core/diagnostics'
+import { isEscalationEnabled, tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
@@ -141,7 +141,9 @@ function sampleLocalThicknessPx(params: {
       }
     }
   }
-  // ESC:W-07 (E)
+  // ESC:W-07 (E) — PROMOVEREN 2026-07-31: sampled is hoofdweg; fallback `reference`/`zero` mag blijven
+  // (safety-net bij ontbrekende distanceMap). Dode niveaus later niet knippen zonder aparte go.
+  if (!isEscalationEnabled('W-07')) return 0
   tally('W-07', params.referenceWallThicknessPx != null ? 'reference' : 'zero')
   return params.referenceWallThicknessPx ?? 0
 }
@@ -257,6 +259,7 @@ export function mergeLayer2JitterSegments(params: {
       if (angleDeg >= policy.structuralAngleDeg) continue
       if (angleDeg >= policy.preserveMinAngleDeg && spreadPx > tolerancePx) continue
       if (spreadPx > tolerancePx) continue
+      if (angleDeg >= policy.preserveMinAngleDeg) tally('W-08', 'relaxed_merge')
 
       // ESC:W-09 (B)
       if (
@@ -270,6 +273,7 @@ export function mergeLayer2JitterSegments(params: {
           policy.tArmMinBranchPx,
         )
       ) {
+        tally('W-09', 'branch_guard_skip')
         continue
       }
 
@@ -277,6 +281,7 @@ export function mergeLayer2JitterSegments(params: {
       work.splice(j, 1)
       mergedJunctionCount += 1
       changed = true
+      tally('W-10', 'merged')
       break
     }
   }

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { clearEscalationOff } from '@/core/diagnostics'
 import type { SemanticWallSegment } from '@/core/extraction/types'
 import { snapDoorsToWalls, type ResolvedDoorCandidate } from '@/cv/doors'
 
@@ -58,6 +59,10 @@ function makeSegment(params: {
 }
 
 describe('door-wall-snap', () => {
+  afterEach(() => {
+    clearEscalationOff()
+  })
+
   it('kiest de zijde met beste contact en snapt naar parallel segment', () => {
     const width = 120
     const height = 120
@@ -268,15 +273,15 @@ describe('door-wall-snap', () => {
     expect(snapped[0]?.openingAxis).toBe('h')
   })
 
-  it('relaxed pass bindt alsnog bij same-axis segment met kleine span-gap', () => {
+  it('Path B zonder D-49 bindt niet bij same-axis span-gap (legacy uit)', () => {
     const width = 220
     const height = 140
     const wallMask = new Uint8Array(width * height)
     const labels = new Int32Array(width * height)
     fillRect(labels, width, { x0: 40, y0: 40, x1: 100, y1: 70 }, 1)
-    fillRect(wallMask, width, { x0: 40, y0: 38, x1: 100, y1: 40 }, 255) // top touch
+    fillRect(wallMask, width, { x0: 40, y0: 38, x1: 100, y1: 40 }, 255)
     const doors = [
-      makeDoor({ id: 'door-relaxed-span-gap', bbox: { x: 40, y: 40, width: 60, height: 30 } }),
+      makeDoor({ id: 'door-no-relaxed-span-gap', bbox: { x: 40, y: 40, width: 60, height: 30 } }),
     ]
     const segments = [
       makeSegment({ a: { x: 110, y: 39 }, b: { x: 170, y: 39 }, thicknessPxMax: 6 }),
@@ -293,29 +298,26 @@ describe('door-wall-snap', () => {
       referenceWallThicknessPx: 6,
     })
 
-    expect(snapped).toHaveLength(1)
-    expect(snapped[0]?.segmentIndex).toBe(0)
-    expect(snapped[0]?.openingAxis).toBe('h')
+    expect(snapped).toHaveLength(0)
   })
 
-  it('gebruikt volle bbox-zijde dekking i.p.v. alleen boogrand-pixels', () => {
+  it('Path B (D-48): kiest swing-zijde met beste wallMask-dekking', () => {
+    // Face is klein; wallMask moet de swing-face raken (niet alleen de deur-bbox — D-52 weg).
     const width = 140
     const height = 140
     const wallMask = new Uint8Array(width * height)
     const labels = new Int32Array(width * height)
 
-    // BBox is groot, maar face-labels zitten alleen in een klein binnenvlak (boogfragment).
     fillRect(labels, width, { x0: 54, y0: 54, x1: 66, y1: 66 }, 1)
-    fillRect(wallMask, width, { x0: 38, y0: 40, x1: 40, y1: 80 }, 255) // links volledige dekking
-    fillRect(wallMask, width, { x0: 40, y0: 38, x1: 80, y1: 40 }, 255) // boven basis
-    fillRect(wallMask, width, { x0: 62, y0: 38, x1: 80, y1: 40 }, 0) // boven deels weg
+    fillRect(wallMask, width, { x0: 52, y0: 54, x1: 54, y1: 66 }, 255) // links: volle face-hoogte
+    fillRect(wallMask, width, { x0: 54, y0: 52, x1: 60, y1: 54 }, 255) // boven: deels (kortere dekking)
 
     const doors = [
-      makeDoor({ id: 'door-bbox-coverage', bbox: { x: 40, y: 40, width: 40, height: 40 } }),
+      makeDoor({ id: 'door-swing-coverage', bbox: { x: 40, y: 40, width: 40, height: 40 } }),
     ]
     const segments = [
-      makeSegment({ a: { x: 39, y: 20 }, b: { x: 39, y: 100 }, thicknessPxMax: 6 }),
-      makeSegment({ a: { x: 20, y: 39 }, b: { x: 110, y: 39 }, thicknessPxMax: 6 }),
+      makeSegment({ a: { x: 53, y: 20 }, b: { x: 53, y: 100 }, thicknessPxMax: 6 }),
+      makeSegment({ a: { x: 20, y: 53 }, b: { x: 110, y: 53 }, thicknessPxMax: 6 }),
     ]
 
     const snapped = snapDoorsToWalls({

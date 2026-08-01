@@ -99,11 +99,12 @@ function sampleSegmentThicknessFromMaskPx(params: {
   return median(values)
 }
 
-// ESC:W-14 (E)
+// ESC:W-14 (E) — AFBAKENEN: sampled + faceMedian.
+// Escalatie-niveaus `reference`/`policyFallback` weg 2026-08-01 (0/6 E2E).
+// Geen DT op heel face → operationele floor `thicknessFallbackPx` (geen W-14-teller).
 function resolveSegmentThicknessPx(params: {
   sampledThicknessPx: number | null
   faceThicknessPx: number
-  referenceWallThicknessPx?: number
   policy: HvPolicy
 }): number {
   if (params.sampledThicknessPx != null && params.sampledThicknessPx > 0) {
@@ -114,11 +115,6 @@ function resolveSegmentThicknessPx(params: {
     tally('W-14', 'faceMedian')
     return params.faceThicknessPx
   }
-  if (params.referenceWallThicknessPx != null) {
-    tally('W-14', 'reference')
-    return params.referenceWallThicknessPx
-  }
-  tally('W-14', 'policyFallback')
   return params.policy.thicknessFallbackPx
 }
 
@@ -191,7 +187,6 @@ export function positionSegmentsHv(params: {
     resolveSegmentThicknessPx({
       sampledThicknessPx: sampledThicknessBySegment[index] ?? null,
       faceThicknessPx,
-      referenceWallThicknessPx: params.referenceWallThicknessPx,
       policy: params.policy,
     }),
   )
@@ -247,11 +242,23 @@ export function positionSegmentsHv(params: {
 
     // ESC:W-15 (B)
     if (axis.orientation === 'H' && axis.targetAxis != null) {
-      if (refs.aJunctionIndex == null) next.a.y = axis.targetAxis
-      if (refs.bJunctionIndex == null) next.b.y = axis.targetAxis
+      if (refs.aJunctionIndex == null) {
+        next.a.y = axis.targetAxis
+        tally('W-15', 'axis_only')
+      }
+      if (refs.bJunctionIndex == null) {
+        next.b.y = axis.targetAxis
+        tally('W-15', 'axis_only')
+      }
     } else if (axis.orientation === 'V' && axis.targetAxis != null) {
-      if (refs.aJunctionIndex == null) next.a.x = axis.targetAxis
-      if (refs.bJunctionIndex == null) next.b.x = axis.targetAxis
+      if (refs.aJunctionIndex == null) {
+        next.a.x = axis.targetAxis
+        tally('W-15', 'axis_only')
+      }
+      if (refs.bJunctionIndex == null) {
+        next.b.x = axis.targetAxis
+        tally('W-15', 'axis_only')
+      }
     }
     return next
   })

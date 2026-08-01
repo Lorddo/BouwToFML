@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { tally } from '@/core/diagnostics'
 import { useImageUpload } from '@/platform/upload'
 import { useExampleSelection } from '@/platform/selection'
 import { DEFAULT_PREPROCESS } from '@/platform/image'
@@ -15,6 +16,7 @@ import { useHScaleCalibration } from '@/platform/calibration'
 import { useWorkspaceSignaturePreview } from './useWorkspaceSignaturePreview'
 import { useWorkspaceOverlays } from './useWorkspaceOverlays'
 import { useWorkspaceExports } from './useWorkspaceExports'
+import { useWorkspaceE2eFixtureExport } from './workspace/useWorkspaceE2eFixtureExport'
 import { useWorkspaceFml } from './useWorkspaceFml'
 import { useWorkspacePipeline } from './workspace/useWorkspacePipeline'
 import { useWorkspaceScale } from './workspace/useWorkspaceScale'
@@ -315,6 +317,7 @@ export function useWorkspace() {
       },
       // ESC:O-27 (D)
       onAfterFinalize: async () => {
+        tally('O-27', 'post_finalize_openings')
         void doorSwingFacesApi?.snapResolvedDoorsToWalls()
         windowFacesApi?.bindResolvedWindowsToWalls()
       },
@@ -361,6 +364,8 @@ export function useWorkspace() {
     referenceWallThicknessPx,
     getBaseWallBw,
     onDoorFacesApplied: () => roomFaces.refreshClassificationPreview(),
+    onDoorSwingDemotePruned: (orphanedDoorframeFaceIds) =>
+      windowFacesApi?.acknowledgeDoorSwingDemotePrune(orphanedDoorframeFaceIds),
     devSessionRestoring,
   })
   doorSwingFacesApi = doorSwingFaces
@@ -434,6 +439,22 @@ export function useWorkspace() {
     windowAxelStage: windowFaces.windowAxelStage,
     referenceWallThicknessPx,
     getBaseWallBw,
+  })
+
+  const e2eFixture = useWorkspaceE2eFixtureExport({
+    imageName,
+    tabOutputs,
+    scale,
+    referenceWallThicknessPx,
+    resolvedDoors: doorSwingFaces.resolvedDoors,
+    resolvedWindows: windowFaces.resolvedWindows,
+    appliedFmlThicknessLimits: fml.appliedFmlThicknessLimits,
+    appliedFmlBandBoundaries: fml.appliedFmlBandBoundaries,
+    appliedFmlWallHeightCm: fml.appliedFmlWallHeightCm,
+    appliedFmlDoorHeightCm: fml.appliedFmlDoorHeightCm,
+    appliedFmlWindowHeightCm: fml.appliedFmlWindowHeightCm,
+    appliedFmlWindowSillZCm: fml.appliedFmlWindowSillZCm,
+    setLocalError,
   })
 
   const overlays = useWorkspaceOverlays({
@@ -595,6 +616,7 @@ export function useWorkspace() {
       devSessionRestoring,
       setLocalError,
       doorSwingFaces,
+      windowFaces,
     }),
   )
 
@@ -646,6 +668,7 @@ export function useWorkspace() {
     overlays,
     debugProbe,
     exports,
+    e2eFixture,
     fmlUnderlayOpacity,
     fmlContentOpacity,
     fmlUnderlaySrc,

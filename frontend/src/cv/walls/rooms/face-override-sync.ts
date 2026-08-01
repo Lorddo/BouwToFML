@@ -83,12 +83,13 @@ export function syncPinnedClassOverrides(
 
 /**
  * Stage-2 deurfaces → pinned `door`-overrides op de muren-cache.
- * Overschrijft autoclass (incl. foutieve / gepinde `wall` van wall-seed/fill);
+ * Overschrijft autoclass (incl. foutieve / gepinde `wall` van wall-seed/fill
+ * én autoclass-`window` stroken die wall-rescue absorbeert);
  * stale auto-deuren verdwijnen. Pinned → blijven bij Herbereken.
  *
  * `previousAutoFaceIds`: alleen die auto-deurfaces mogen verdwijnen bij her-sync.
- * Handmatige `door`-pins (niet in previous) blijven. Gepinde window/doorframe
- * blijven leidend (niet in upgradeFrom).
+ * Handmatige `door`-pins (niet in previous) blijven. Gepinde `doorframe` blijft
+ * leidend (niet in upgradeFrom) — sticky kozijn wint van re-push.
  *
  * Geen ink-reresolve hier: tot L11/L12 is `door` class/UI; afronden ziet door als
  * unknown via `toWallPipelineClass`. Ink-topologie blijft wall/unknown/surface.
@@ -104,8 +105,8 @@ export function syncDoorSwingFaceOverrides(
     faceIds: doorFaceIds,
     targetClass: 'door',
     removeClasses: ['door'],
-    // Wall-seed Stage-1 (face 254) pin’t vaak al `wall` — moet naar door kunnen.
-    upgradeFrom: ['wall', 'unknown', 'surface'],
+    // Wall-rescue seeds + geabsorbeerde autoclass-window strips → door.
+    upgradeFrom: ['wall', 'unknown', 'surface', 'window'],
     previousAutoFaceIds,
   })
 }

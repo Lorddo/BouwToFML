@@ -1,0 +1,273 @@
+{
+  "escalations": {
+    "degraded": false,
+    "diagnostics": {},
+    "escalations": {
+      "D-44": 1,
+      "D-47": 1,
+      "D-48": 12,
+      "D-54": 3,
+      "D-55": 7024,
+      "D-57": 13,
+      "D-58": 13,
+      "R-27": 3,
+      "REF-13": 15,
+      "W-07": 79160,
+      "W-08": 4,
+      "W-10": 606,
+      "W-11": 3783,
+      "W-12": 40,
+      "W-13": 2,
+      "W-14": 340,
+      "W-15": 20,
+      "W-16": 10,
+      "W-17": 9,
+      "W-18": 1,
+      "W-19": 4,
+      "W-20": 35,
+      "W-22": 77,
+      "W-23": 48,
+      "W-24": 1,
+      "W-26": 6,
+      "W-27": 7,
+      "W-28": 102,
+      "W-29": 29,
+      "W-30": 8,
+      "W-31": 39,
+      "W-32": 6,
+      "W-33": 123,
+      "W-34": 37,
+      "W-35": 12,
+      "W-37": 20,
+      "W-38": 89,
+      "W-39": 73,
+      "W-40": 41,
+      "W-41": 13,
+      "W-42": 185,
+      "W-43": 68,
+      "W-44": 1,
+      "W-45": 73,
+      "W-47": 1,
+      "W-48": 1,
+      "W-49": 3,
+      "W-50": 1,
+      "W-51": 1,
+      "W-52": 1,
+      "X-01": 110,
+      "X-02": 110,
+      "X-06": 2,
+      "X-11": 8,
+      "X-13": 2,
+      "X-14": 2,
+      "X-15": 2,
+      "X-16": 2,
+      "X-22": 55,
+      "X-27": 1
+    },
+    "levels": {
+      "D-44:path_a_hit": 1,
+      "D-47:segment": 1,
+      "D-48:swing_mask": 12,
+      "D-54:multi_face_closed": 3,
+      "D-55:bbox": 5800,
+      "D-55:mask": 1224,
+      "D-57:kept": 9,
+      "D-57:rotated": 4,
+      "D-58:pathA_doorframe": 1,
+      "D-58:pathB_hinge_resolve": 12,
+      "R-27:pair": 3,
+      "REF-13:wall_axis_corner": 15,
+      "W-07:sampled": 79160,
+      "W-08:relaxed_merge": 4,
+      "W-10:merged": 606,
+      "W-11:unified": 3783,
+      "W-12:iterated": 40,
+      "W-13:missing_measurement": 2,
+      "W-14:faceMedian": 15,
+      "W-14:sampled": 325,
+      "W-15:axis_only": 20,
+      "W-16:noop": 10,
+      "W-17:accepted": 8,
+      "W-17:connectivity_reject": 1,
+      "W-18:accepted": 1,
+      "W-19:near_weld": 2,
+      "W-19:noop": 1,
+      "W-19:pair_repair": 1,
+      "W-20:accepted": 35,
+      "W-22:merged": 63,
+      "W-22:skip_no_short": 14,
+      "W-23:collapsed": 24,
+      "W-23:skip_not_ll": 24,
+      "W-24:converged": 1,
+      "W-26:sanitize_skipped_raw_ok": 6,
+      "W-27:connector": 2,
+      "W-27:converged": 1,
+      "W-27:junction": 2,
+      "W-27:landing": 2,
+      "W-28:accepted": 69,
+      "W-28:i_explosion": 33,
+      "W-29:accepted": 4,
+      "W-29:kind_validate": 25,
+      "W-30:extras_appended": 2,
+      "W-30:landing_only_skip": 6,
+      "W-31:index_ok": 29,
+      "W-31:reindexed": 9,
+      "W-31:seed_missing": 1,
+      "W-32:skipped_stuck": 6,
+      "W-33:hv_bridge": 17,
+      "W-33:landing": 49,
+      "W-33:local_hv": 57,
+      "W-34:landing": 17,
+      "W-34:multi": 10,
+      "W-34:null": 6,
+      "W-34:simple_L": 2,
+      "W-34:skip_shallow_steep": 2,
+      "W-35:incomplete": 6,
+      "W-35:near_scan": 6,
+      "W-37:skip_would_zero": 8,
+      "W-37:snapped": 12,
+      "W-38:allow_long_ok": 9,
+      "W-38:snapped": 80,
+      "W-39:accepted": 65,
+      "W-39:rollback": 8,
+      "W-40:l_repaired": 21,
+      "W-40:skip_landing_chamfer": 20,
+      "W-41:removed": 5,
+      "W-41:skip_landing": 8,
+      "W-42:repaired": 21,
+      "W-42:skip_long_landing_diag": 16,
+      "W-42:skip_no_hv_arms": 146,
+      "W-42:skip_unretractable": 2,
+      "W-43:scaled": 68,
+      "W-44:accepted": 1,
+      "W-45:bridge": 1,
+      "W-45:direct": 72,
+      "W-47:repositioned": 1,
+      "W-48:pruned": 1,
+      "W-49:chain_accepted": 1,
+      "W-49:cover_accepted": 1,
+      "W-49:stub_accepted": 1,
+      "W-50:accepted": 1,
+      "W-51:straightened": 1,
+      "W-52:accepted": 1,
+      "X-01:measurement_discarded": 110,
+      "X-02:measurement_discarded": 110,
+      "X-06:semantic": 2,
+      "X-11:no_mirrored": 8,
+      "X-13:hardcoded_metadata": 2,
+      "X-14:empty_collections": 2,
+      "X-15:hardcoded_settings": 2,
+      "X-16:full_height": 2,
+      "X-22:measured": 55,
+      "X-27:dead_flag_false": 1
+    }
+  },
+  "layers": {
+    "layer10": {
+      "junctions": 45,
+      "kinds": {
+        "I": 3,
+        "L": 15,
+        "T": 27,
+        "X": 0
+      },
+      "segments": 57
+    },
+    "layer2": {
+      "junctions": 343,
+      "kinds": {
+        "I": 44,
+        "L": 233,
+        "T": 64,
+        "X": 2
+      },
+      "segments": 355
+    },
+    "layer3": {
+      "junctions": 235,
+      "kinds": {
+        "I": 4,
+        "L": 203,
+        "T": 28,
+        "X": 0
+      },
+      "segments": 262
+    },
+    "layer4": {
+      "invariantReport": {
+        "errors": [],
+        "junctionKindCountsAfter": {
+          "I": 4,
+          "L": 203,
+          "T": 28,
+          "X": 0
+        },
+        "junctionKindCountsBefore": {
+          "I": 4,
+          "L": 203,
+          "T": 28,
+          "X": 0
+        },
+        "ok": true
+      },
+      "junctions": 235,
+      "kinds": {
+        "I": 4,
+        "L": 203,
+        "T": 28,
+        "X": 0
+      },
+      "segments": 262
+    },
+    "layer5": {
+      "junctions": 144,
+      "kinds": {
+        "I": 6,
+        "L": 110,
+        "T": 28,
+        "X": 0
+      },
+      "segments": 155
+    },
+    "layer6": {
+      "junctions": 134,
+      "kinds": {
+        "I": 8,
+        "L": 96,
+        "T": 29,
+        "X": 1
+      },
+      "segments": 146
+    },
+    "layer7": {
+      "junctions": 66,
+      "kinds": {
+        "I": 8,
+        "L": 28,
+        "T": 29,
+        "X": 1
+      },
+      "segments": 78
+    },
+    "layer8": {
+      "junctions": 59,
+      "kinds": {
+        "I": 3,
+        "L": 29,
+        "T": 27,
+        "X": 0
+      },
+      "segments": 71
+    },
+    "layer9": {
+      "junctions": 49,
+      "kinds": {
+        "I": 3,
+        "L": 19,
+        "T": 27,
+        "X": 0
+      },
+      "segments": 61
+    }
+  }
+}

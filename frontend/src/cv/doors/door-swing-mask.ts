@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { directionalCloseForeground } from '@/cv/port/morphClose'
 import { clampRefBBoxToImage, type BBoxBounds } from './door-geometry-utils'
@@ -172,6 +173,7 @@ export function buildDoorSwingMask(params: {
   if (!painted) return null
   // ESC:D-54 (A)
   if (params.cv && countUniqueSwingFaceIds(params.faceIds) > 1) {
+    tally('D-54', 'multi_face_closed')
     painted = closeClusterSwingMaskGaps({
       cv: params.cv,
       maskData: painted.maskData,
@@ -306,6 +308,7 @@ export function measureSwingMaskSideContacts(params: {
       // ESC:D-55 (C)
       const distancePx = Math.min(dMask, dBox)
       if (!Number.isFinite(distancePx)) return
+      tally('D-55', dMask <= dBox ? 'mask' : 'bbox')
       distanceSum += distancePx
       distanceHits += 1
       if (distancePx <= depth) contactCount += 1

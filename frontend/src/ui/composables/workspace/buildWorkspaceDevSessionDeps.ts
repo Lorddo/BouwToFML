@@ -89,8 +89,12 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     markAutoDoorPassApplied: () => void
     resetAutoDoorPassGate: () => void
     refreshDoorSwingOverlay: () => Promise<void>
-    refreshDoorSwingFromExistingDoors: () => Promise<void>
     snapResolvedDoorsToWalls: () => void | Promise<void>
+  }
+  windowFaces: {
+    markAutoWindowPassApplied: () => void
+    invalidateAutoWindowPass: () => void
+    refreshWindowOverlay: () => Promise<void>
   }
 }): WorkspaceDevSessionDeps {
   return {
@@ -173,9 +177,11 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     devSessionRestoring: ctx.devSessionRestoring,
     setLocalError: ctx.setLocalError,
     markAutoDoorPassApplied: () => ctx.doorSwingFaces.markAutoDoorPassApplied(),
+    markAutoWindowPassApplied: () => ctx.windowFaces.markAutoWindowPassApplied(),
     resetAutoDoorPassGate: () => ctx.doorSwingFaces.resetAutoDoorPassGate(),
     refreshDoorSwingOverlay: () => ctx.doorSwingFaces.refreshDoorSwingOverlay(),
-    refreshDoorSwingFromExistingDoors: () => ctx.doorSwingFaces.refreshDoorSwingFromExistingDoors(),
+    invalidateAutoWindowPass: () => ctx.windowFaces.invalidateAutoWindowPass(),
+    refreshWindowOverlay: () => ctx.windowFaces.refreshWindowOverlay(),
     snapResolvedDoorsToWalls: () => ctx.doorSwingFaces.snapResolvedDoorsToWalls(),
   }
 }

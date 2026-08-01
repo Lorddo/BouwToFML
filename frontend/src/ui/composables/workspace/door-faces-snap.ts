@@ -1,4 +1,4 @@
-import { noteSwallowedError } from '@/core/diagnostics'
+import { noteSwallowedError, tally } from '@/core/diagnostics'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { formatCvError } from '@/cv/formatCvError'
@@ -31,6 +31,7 @@ export function filterResolvedDoorsStillClassifiedAsDoor(params: {
   roomRasterCache: RoomRasterCache | null
   wallsMeta: TabDetectionOutputs['walls'] | null | undefined
 }): ResolvedDoorCandidate[] {
+  tally('O-20', 'filter_class_door')
   const stateRaw = params.wallsMeta?.meta?.roomClassifyState
   if (!params.roomRasterCache && !stateRaw) return params.resolved
   const classification = resolveEffectiveWallClassification({
@@ -59,6 +60,7 @@ export function reattachStickyDoorframesToResolved(params: {
   roomRasterCache: RoomRasterCache | null
   referenceWallThicknessPx?: number
 }): ResolvedDoorCandidate[] | null {
+  tally('O-10', 'reattach_sticky')
   const stateRaw = params.walls?.meta?.roomClassifyState
   if (!stateRaw?.labelsData || params.resolvedDoors.length <= 0 || !params.walls) return null
   const state = normalizeDoorSwingState(stateRaw)
@@ -157,6 +159,7 @@ export async function snapResolvedDoorsToWalls(
 
   // ESC:O-11 (D)
   // Verse sticky pins (window) meenemen vóór Path A.
+  tally('O-11', 'pre_path_a_sticky')
   const stickyNext = reattachStickyDoorframesToResolved({
     resolvedDoors: params.resolvedDoors,
     walls,
@@ -179,6 +182,7 @@ export async function snapResolvedDoorsToWalls(
   const thickness = params.referenceWallThicknessPx
   // ESC:O-21 (B)
   // Post-L0: alleen deuren die de kept wall mask raken → L11; orphan auto-doors unpin.
+  tally('O-21', 'kept_wall_mask')
   const maskFiltered = filterDoorsByKeptWallMaskContact({
     doors: enriched,
     wallMask,

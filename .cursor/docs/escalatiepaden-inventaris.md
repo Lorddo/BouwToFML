@@ -1,10 +1,12 @@
 # Escalatiepaden — inventaris
 
-Peildatum: 2026-07-29 · Aanleiding: risico 5 uit `audit-2026-07-29.md` ("Omvang zonder rem — 78.800 regels, waarvan een groeiend deel projectspecifieke escalatiepaden")
+Peildatum: 2026-07-29 · Aanleiding: risico 5 uit `audit-2026-07-29.md`
 
-**Anker (sinds 2026-07-29):** elke ID is als `// ESC:<ID> (<Cat>)` in de code geplaatst. Regelnummers in dit document zijn historisch; actuele vindplaats = [`escalatiepaden-tagindex.md`](escalatiepaden-tagindex.md) (`npm run esc:index`). CI-poort: `npm run esc:check`.
+**Living doc (aanpak + verdicts):** [`escalatie.md`](escalatie.md). Dit bestand is een **bevroren** momentopname — geen voorstellen of besluiten hier bijwerken.
 
-**Dit document brengt alleen in kaart.** Er staan geen voorstellen, prioriteiten of ingrepen in. Het is bedoeld als bron voor een later op te stellen plan; de ID's zijn stabiel zodat dat plan ernaar kan verwijzen.
+**Anker:** elke ID als `// ESC:<ID> (<Cat>)` in de code. Regelnummers hier zijn historisch; actuele vindplaats = [`archive/escalatie/tagindex.md`](archive/escalatie/tagindex.md) (`npm run esc:index`). CI: `npm run esc:check`.
+
+**Flowcharts (archief):** [`archive/escalatie/lagen-diagrammen.md`](archive/escalatie/lagen-diagrammen.md).
 
 ---
 
@@ -267,14 +269,14 @@ Dit is de langste keten in de codebase. Eén deur wordt via maximaal negen opeen
 | D-47 | Path A bind: segment-first → bounds | `door-wall-snap-doorframe.ts:313-365` | A · **anker Project4 twin** |
 | D-48 | Path B: swing-mask zijcontact | `door-wall-snap-path-b.ts:36-174` | A |
 | D-49 | Path B: relaxed segment-match | `door-wall-snap-scoring.ts:193-259`, tuning `door-wall-snap-tuning.ts:8-25` | A |
-| D-50 | Path B: wall-union anchor segment | `door-wall-snap.ts:182-200` | A |
-| D-51 | Path B: wallMask op union-bounds | `door-wall-snap.ts:201-230` | A |
-| D-52 | Legacy: wallMask op deur-bbox | `door-wall-snap.ts:233-243` | A — comment: *"unit tests / oude fixtures"* |
+| D-50 | Path B: wall-union anchor segment | `door-wall-snap.ts` | A — **VERWIJDERD 2026-07-31** |
+| D-51 | Path B: wallMask op union-bounds | `door-wall-snap.ts` | A — **VERWIJDERD 2026-07-31** |
+| D-52 | Legacy: wallMask op deur-bbox | `door-wall-snap.ts` | A — **VERWIJDERD 2026-07-31** |
 | D-53 | Anchor relaxed fallback | `door-wall-snap-bind.ts:117-131` | A |
 | D-54 | Cluster morph-close | `door-swing-mask.ts:161-183` | A |
 | D-55 | Dubbele afstandsmeting `min(mask, bbox)` | `door-swing-mask.ts:293-305` | C |
 
-D-52 is opvallend: een escalatiepad dat volgens het eigen commentaar alleen nog voor oude tests bestaat, maar in productie het laatste redmiddel is.
+D-50..D-52 zijn **verwijderd 2026-07-31** (0/6 E2E + kill-switch gelijk); Path B is alleen D-48.
 
 ### 5.8 L12 en orkestratie-gate
 

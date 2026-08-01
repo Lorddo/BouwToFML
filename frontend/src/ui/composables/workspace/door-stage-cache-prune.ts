@@ -60,3 +60,28 @@ export function pruneDoorStageCacheByClassification<T extends DoorSwingStageCach
     clusterCount: stage2AcceptedHypotheses.filter((h) => (h.faceIds?.length ?? 0) > 1).length,
   }
 }
+
+/**
+ * Doorframe-faces van weggeprunde deuren die niet meer aan een surviving deur hangen.
+ * Twin/shared DF blijft behouden zolang één swing nog class=`door` is.
+ */
+export function collectOrphanedDoorframeFaceIdsAfterDoorPrune(
+  before: readonly Pick<ResolvedDoorCandidate, 'id' | 'doorframeFaceIds'>[],
+  after: readonly Pick<ResolvedDoorCandidate, 'id' | 'doorframeFaceIds'>[],
+): number[] {
+  const survivingIds = new Set(after.map((door) => door.id))
+  const survivingDoorframes = new Set<number>()
+  for (const door of after) {
+    for (const id of door.doorframeFaceIds ?? []) {
+      if (id > 0) survivingDoorframes.add(id)
+    }
+  }
+  const orphaned = new Set<number>()
+  for (const door of before) {
+    if (survivingIds.has(door.id)) continue
+    for (const id of door.doorframeFaceIds ?? []) {
+      if (id > 0 && !survivingDoorframes.has(id)) orphaned.add(id)
+    }
+  }
+  return [...orphaned]
+}

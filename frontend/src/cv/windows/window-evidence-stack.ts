@@ -1,3 +1,4 @@
+import { tally } from '@/core/diagnostics'
 import type { RootFace } from './window-axel-strip-geometry'
 import {
   axisCenter,
@@ -115,6 +116,7 @@ export function growFullStackFromSeedFaces(params: {
   expectedHeightsPx: number[]
   maxFaceCount: number
 }): number[] {
+  tally('R-17', 'grow_stack')
   const {
     seedFaceIds,
     orientation,
@@ -133,6 +135,7 @@ export function growFullStackFromSeedFaces(params: {
   const seedMedianSpan = medianNumber(seedSpans)
   // ESC:R-20 (B)
   if (!(seedMedianSpan > 0) || expectedHeightsPx.length <= 0) {
+    tally('R-20', 'seed_guard_skip')
     return seedIds.sort((a, b) => a - b)
   }
   const maxSpan = seedMedianSpan * WINDOW_EVIDENCE_TUNING.maxStripAxisSpanRatio
