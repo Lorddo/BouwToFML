@@ -57,6 +57,7 @@ export function useWorkspaceFml(deps: {
       fmlDoorHeightCm: thickness.fmlDoorHeightCm,
       fmlWindowHeightCm: thickness.fmlWindowHeightCm,
       fmlWindowSillZCm: thickness.fmlWindowSillZCm,
+      fmlBovenlichtDefault: thickness.fmlBovenlichtDefault,
     },
   )
 
@@ -83,6 +84,7 @@ export function useWorkspaceFml(deps: {
     fmlDoorHeightCm: thickness.fmlDoorHeightCm,
     fmlWindowHeightCm: thickness.fmlWindowHeightCm,
     fmlWindowSillZCm: thickness.fmlWindowSillZCm,
+    fmlBovenlichtDefault: thickness.fmlBovenlichtDefault,
     appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,
     appliedFmlBandBoundaries: thickness.appliedFmlBandBoundaries,
     appliedFmlWallHeightCm: thickness.appliedFmlWallHeightCm,
@@ -101,6 +103,7 @@ export function useWorkspaceFml(deps: {
     setFmlDoorHeightCm: thickness.setFmlDoorHeightCm,
     setFmlWindowHeightCm: thickness.setFmlWindowHeightCm,
     setFmlWindowSillZCm: thickness.setFmlWindowSillZCm,
+    setFmlBovenlichtDefault: thickness.setFmlBovenlichtDefault,
     setFmlBandMidBoundaryCm: thickness.setFmlBandMidBoundaryCm,
     setFmlBandMaxBoundaryCm: thickness.setFmlBandMaxBoundaryCm,
     fmlThicknessPickTier: thickness.fmlThicknessPickTier,

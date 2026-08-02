@@ -65,6 +65,7 @@ export function useFmlPreviewInteraction(options: {
   shiftPressed: Ref<boolean>
   spacePressed: Ref<boolean>
   thicknessPickTier: Ref<FmlThicknessBand | null>
+  bovenlichtDefault?: Ref<boolean>
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
 }) {
@@ -78,6 +79,7 @@ export function useFmlPreviewInteraction(options: {
     shiftPressed,
     spacePressed,
     thicknessPickTier,
+    bovenlichtDefault,
     onKeyDown,
     onKeyUp,
   } = options
@@ -188,6 +190,7 @@ export function useFmlPreviewInteraction(options: {
     syncPlanToParent,
     cancelMoveDragPending: wallDrag.cancelMoveDragPending,
     cancelOpeningDragPending: openingDrag.cancelOpeningDragPending,
+    bovenlichtDefault,
   })
 
   const {
@@ -201,8 +204,11 @@ export function useFmlPreviewInteraction(options: {
     openingHingeMixed,
     openingSwingRightDraft,
     openingSwingMixed,
+    openingBovenlichtDraft,
+    openingBovenlichtMixed,
     clearOpeningSelectionState,
     toggleSettingsOpening,
+    syncOpeningDraftFromSelection,
     onOpeningWidthInput,
     commitOpeningWidth,
     onOpeningHeightInput,
@@ -211,9 +217,16 @@ export function useFmlPreviewInteraction(options: {
     commitOpeningSillZ,
     toggleOpeningHingeAtStart,
     toggleOpeningSwingRight,
+    onOpeningBovenlichtChange,
     copySelectedOpening,
     deleteSelectedOpenings,
   } = openingSelection
+
+  if (bovenlichtDefault) {
+    watch(bovenlichtDefault, () => {
+      syncOpeningDraftFromSelection()
+    })
+  }
 
   const { draggingJunction, draggingWall } = wallDrag
   const { draggingOpening } = openingDrag
@@ -482,6 +495,8 @@ export function useFmlPreviewInteraction(options: {
     openingHingeMixed,
     openingSwingRightDraft,
     openingSwingMixed,
+    openingBovenlichtDraft,
+    openingBovenlichtMixed,
     addDoorSubtype,
     addDoorWidthCm,
     addWindowSubtype,
@@ -503,6 +518,7 @@ export function useFmlPreviewInteraction(options: {
     commitOpeningSillZ,
     toggleOpeningHingeAtStart,
     toggleOpeningSwingRight,
+    onOpeningBovenlichtChange,
     copySelectedOpening,
     deleteSelectedOpenings,
     splitSelectedWall,

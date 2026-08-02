@@ -70,6 +70,8 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   const fmlDoorHeightCm = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
   const fmlWindowHeightCm = ref(DEFAULT_FML_WINDOW_HEIGHT_CM)
   const fmlWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
+  /** Export-only: bovenlicht op alle deuren tenzij per-deur override. */
+  const fmlBovenlichtDefault = ref(false)
   const appliedFmlThicknessLimits = ref<FmlWallThicknessLimits>({ ...storedLimits })
   const appliedFmlBandBoundaries = ref<FmlThicknessBandBoundaries>({ ...storedBandBoundaries })
   const appliedFmlWallHeightCm = ref(DEFAULT_FML_WALL_HEIGHT_CM)
@@ -154,6 +156,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlDoorHeightCm.value = DEFAULT_FML_DOOR_HEIGHT_CM
     fmlWindowHeightCm.value = DEFAULT_FML_WINDOW_HEIGHT_CM
     fmlWindowSillZCm.value = DEFAULT_FML_WINDOW_SILL_Z_CM
+    fmlBovenlichtDefault.value = false
     appliedFmlThicknessLimits.value = { ...DEFAULT_FML_WALL_THICKNESS_LIMITS }
     appliedFmlBandBoundaries.value = { ...DEFAULT_FML_BAND_BOUNDARIES }
     appliedFmlWallHeightCm.value = DEFAULT_FML_WALL_HEIGHT_CM
@@ -194,6 +197,10 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   function setFmlWindowSillZCm(value: number): void {
     if (!Number.isFinite(value) || value < 0) return
     fmlWindowSillZCm.value = Math.round(value)
+  }
+
+  function setFmlBovenlichtDefault(value: boolean): void {
+    fmlBovenlichtDefault.value = value === true
   }
 
   function setFmlBandMidBoundaryCm(value: number): void {
@@ -283,6 +290,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlDoorHeightCm,
     fmlWindowHeightCm,
     fmlWindowSillZCm,
+    fmlBovenlichtDefault,
     appliedFmlThicknessLimits,
     appliedFmlBandBoundaries,
     appliedFmlWallHeightCm,
@@ -303,6 +311,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     setFmlDoorHeightCm,
     setFmlWindowHeightCm,
     setFmlWindowSillZCm,
+    setFmlBovenlichtDefault,
     setFmlBandMidBoundaryCm,
     setFmlBandMaxBoundaryCm,
     startFmlThicknessPick,

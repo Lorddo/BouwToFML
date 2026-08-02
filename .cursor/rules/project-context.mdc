@@ -52,6 +52,7 @@ Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse mark
 | **V3 L7 decision** | `.cursor/docs/v3-layer-7-decision.md` |
 | **L6 connector fragiliteits-audit** | `.cursor/docs/l6-connector-fragility-audit.md` |
 | **E2E fixtures (opname + CI)** | `.cursor/docs/e2e-fixtures.md` |
+| **Detectie initial bespreken (L0 / deur / raam)** | `.cursor/docs/detectie-initial-bespreken.md` |
 | Sessie-geheugen (lopende staat) | `.cursor/rules/memory.mdc` |
 
 ## Stack (V1)

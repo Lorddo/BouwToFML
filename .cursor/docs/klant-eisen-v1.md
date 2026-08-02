@@ -16,8 +16,8 @@ Context: eisenpakket van een mislukt AI-project; wij leveren **semi-automatisch*
 | Deuren & ramen **toevoegen** (icoon) + **refresh** (learn-by-example) | ✓ | |
 | **Structureel openingstype** (refid: enkel/dubbel/schuif/schuifpui/garage/opening; raam 1/2/3-delig/rond) | ✓ | visuele stijl per makelaar V2 |
 | **Slimme clustering** deuren/ramen (voorstel + batch-bevestiging) | ✓ | valideren in POC; fallback handmatig menu |
-| **Deur-tags**: voordeur / achterdeur / binnendeur | ✓ | |
-| **Bovenlicht** bij binnendeur | ○ V1 indien haalbaar | anders V2 |
+| **Deur-tags**: voordeur / achterdeur / binnendeur | ○ deferred (geen FML-veld) | roundtrip FP |
+| **Bovenlicht** bij deur | ✓ export-only (40×10 cm boven deur; viewer toont niet) | |
 | **Maatdefaults per deur-tag** (breedte, hoogte, z) | ✓ | |
 | Per-opening vrij bewerken (alle maten los) | ○ minimaal bij tag | volledig V2 |
 | **Roomtags** (`areas[]` naam uit vaste lijst) | ○ onderzoek | |
@@ -63,7 +63,8 @@ Openingen hebben **twee onafhankelijke classificaties** — niet in één menu m
 | Laag | Bepaalt | Voorbeelden |
 |------|---------|-------------|
 | **Structureel type** → `refid` | FP-symbool / catalogus-item | Enkel draaideur, dubbel openslaand, schuifdeur, schuifpui, garagedeur, opening (zonder deur); raam enkel/dubbel/driedelig/rond |
-| **Semantische tag** | Betekenis in dossier (FP-metadata) | Voordeur, achterdeur, binnendeur, bovenlicht |
+| **Semantische tag** | Betekenis in dossier (FP-metadata) | Voordeur,  binnendeur, 
+Structureel addons > bovenlicht 
 
 Een schuifpui kan tegelijk **achterdeur** zijn. Tags gelden op **deuren met symbool**; een kale opening (uitsparing) heeft geen voor/achter/binnen-tag.
 
@@ -137,8 +138,9 @@ Contextmenu bij geselecteerde deur:
 | Tag | Opmerking |
 |-----|-----------|
 | Voordeur | Exclusief t.o.v. achterdeur |
-| Achterdeur | Exclusief t.o.v. voordeur |
 | Binnendeur | Default; resterende deuren |
+
+Extra components
 | Bovenlicht | Optioneel; vaak raam boven binnendeur — zie open vragen |
 
 Referentie UI: Floorplanner toont “Front door” / “Internal door” checkboxes; wij breiden uit met **achterdeur** en **bovenlicht** conform klant.
@@ -232,7 +234,7 @@ Bestaande makelaar-examples: `examples/FML(current)/` — zie `examples-inventor
 
 1. **FML-deurtags:** Welk JSON-veld gebruikt Floorplanner persistent voor “Front door” / “Internal door”? Geen veld in huidige exports → **roundtrip-test verplicht** (handmatig taggen in FP → FML downloaden).
 2. **Achterdeur in FP:** Is dit een derde tag naast front/internal, of een `customName` / ander mechanisme?
-3. **Bovenlicht:** Apart raam-opening boven deur, gecombineerd symbool, of tag op deur? Heeft klant voorbeeld in uitgewerkt FML?
+3. **Bovenlicht:** ✅ Besloten 2026-08-02 — aparte window-opening bij export (`z = deur.z_height + 10`, `z_height = 40`, zelfde `width`/`t`); projectdefault + per-deur override; **niet** in FML-viewer.
 4. **Vaste roomtag-lijst:** Graag tekenprotocol-document van klant (lijst + eventuele `role`-mapping).
 5. **Default muurdiktes (cm):** Exacte waarden voor buiten / woningsscheidend / binnen voor dit klanttemplate?
 6. **Default deurmaten (cm):** Breedte + hoogte voor voordeur / achterdeur / binnendeur?

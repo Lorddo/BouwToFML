@@ -158,7 +158,9 @@ export function findOpeningById(walls: Wall[], openingId: string): OpeningLocati
   return null
 }
 
-type OpeningPatch = Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored'>>
+type OpeningPatch = Partial<
+  Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht'>
+>
 
 export function updateOpeningById(walls: Wall[], openingId: string, patch: OpeningPatch): Wall[] {
   const located = findOpeningById(walls, openingId)
@@ -209,6 +211,14 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
     const current = nextOpening.mirrored ?? [0, 0]
     if (current[0] !== mirrored[0] || current[1] !== mirrored[1]) {
       nextOpening.mirrored = mirrored
+      changed = true
+    }
+  }
+
+  if (patch.bovenlicht !== undefined && nextOpening.type === 'door') {
+    const next = patch.bovenlicht
+    if (nextOpening.bovenlicht !== next) {
+      nextOpening.bovenlicht = next
       changed = true
     }
   }

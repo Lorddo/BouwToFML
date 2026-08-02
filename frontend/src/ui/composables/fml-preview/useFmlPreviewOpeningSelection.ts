@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import {
   resolveDoorSubtypeFromRefid,
   resolveWindowSubtypeFromRefid,
@@ -31,9 +31,16 @@ export function useFmlPreviewOpeningSelection(options: {
   syncPlanToParent: () => void
   cancelMoveDragPending: () => void
   cancelOpeningDragPending: () => void
+  bovenlichtDefault?: Ref<boolean>
 }) {
-  const { editor, selection, syncPlanToParent, cancelMoveDragPending, cancelOpeningDragPending } =
-    options
+  const {
+    editor,
+    selection,
+    syncPlanToParent,
+    cancelMoveDragPending,
+    cancelOpeningDragPending,
+    bovenlichtDefault,
+  } = options
 
   const {
     settingsWallIds,
@@ -61,6 +68,8 @@ export function useFmlPreviewOpeningSelection(options: {
   const openingHingeMixed = ref(false)
   const openingSwingRightDraft = ref(false)
   const openingSwingMixed = ref(false)
+  const openingBovenlichtDraft = ref(false)
+  const openingBovenlichtMixed = ref(false)
 
   function selectedOpenings() {
     return settingsOpeningIds.value
@@ -76,9 +85,14 @@ export function useFmlPreviewOpeningSelection(options: {
       openingSillZMixed.value = false
       openingHingeMixed.value = false
       openingSwingMixed.value = false
+      openingBovenlichtMixed.value = false
+      openingBovenlichtDraft.value = bovenlichtDefault?.value === true
       return
     }
-    const draft = computeOpeningDraftState(selected.map((item) => item.opening))
+    const draft = computeOpeningDraftState(
+      selected.map((item) => item.opening),
+      { bovenlichtDefault: bovenlichtDefault?.value === true },
+    )
     if (!draft) return
 
     openingWidthMixed.value = draft.widthMixed
@@ -91,6 +105,8 @@ export function useFmlPreviewOpeningSelection(options: {
     openingHingeAtStartDraft.value = draft.hingeAtStart
     openingSwingMixed.value = draft.swingMixed
     openingSwingRightDraft.value = draft.swingRight
+    openingBovenlichtMixed.value = draft.bovenlichtMixed
+    openingBovenlichtDraft.value = draft.bovenlichtOn
   }
 
   function clearOpeningSelectionState(): void {
@@ -102,6 +118,7 @@ export function useFmlPreviewOpeningSelection(options: {
     openingSillZMixed.value = false
     openingHingeMixed.value = false
     openingSwingMixed.value = false
+    openingBovenlichtMixed.value = false
   }
 
   function toggleSettingsOpening(openingId: string): void {
@@ -215,6 +232,24 @@ export function useFmlPreviewOpeningSelection(options: {
     applyOpeningMirrorPatch({ swingRight: next })
   }
 
+  function setOpeningBovenlicht(on: boolean): void {
+    if (settingsOpeningIds.value.length === 0) return
+    openingBovenlichtDraft.value = on
+    openingBovenlichtMixed.value = false
+    editor.pushUndo()
+    for (const openingId of settingsOpeningIds.value) {
+      const located = editor.resolveOpening(openingId)
+      if (!located || located.opening.type !== 'door') continue
+      editor.updateOpening(openingId, { bovenlicht: on })
+    }
+    syncOpeningDraftFromSelection()
+    syncPlanToParent()
+  }
+
+  function onOpeningBovenlichtChange(event: Event): void {
+    setOpeningBovenlicht((event.target as HTMLInputElement).checked)
+  }
+
   function deleteSelectedOpenings(): void {
     if (settingsOpeningIds.value.length === 0) return
     editor.pushUndo()
@@ -275,6 +310,8 @@ export function useFmlPreviewOpeningSelection(options: {
     openingHingeMixed,
     openingSwingRightDraft,
     openingSwingMixed,
+    openingBovenlichtDraft,
+    openingBovenlichtMixed,
     syncOpeningDraftFromSelection,
     clearOpeningSelectionState,
     toggleSettingsOpening,
@@ -286,6 +323,7 @@ export function useFmlPreviewOpeningSelection(options: {
     commitOpeningSillZ,
     toggleOpeningHingeAtStart,
     toggleOpeningSwingRight,
+    onOpeningBovenlichtChange,
     copySelectedOpening,
     deleteSelectedOpenings,
   }

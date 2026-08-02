@@ -5,7 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-01 (escalatie-docs → 2 bestanden)
+Laatste update: 2026-08-02 (bovenlicht export-only)
+
+## Bovenlicht FML (2026-08-02)
+
+Export-only linked windows: 40 cm hoog, 10 cm boven deur,zelfde breedte/`t`. Projectdefault checkbox + per-deur override (`Opening.bovenlicht`). Synthese in `buildFmlV3` — **niet** in viewer. Deur-tags (voor/binnen) deferred (geen FML-veld).
+
+## Detectie initial bespreken (2026-08-01)
+
+Doc: `.cursor/docs/detectie-initial-bespreken.md` — **Ronde A–G klaar** (L0 + deur/raam + REF + orkestratie). Geen code-knip; klaar voor ontwikkeling. Bekende schuld: sticky asymmetrie, O-23 volledige raam-herstart.
 
 ## Escalatie-docs (2026-08-01)
 
@@ -32,7 +40,7 @@ Harnas-ronde L2–L10 + bind + FML **doorsproken** — verdicts in `escalatie.md
 
 Zes fixtures: `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`. Shared `defineE2eSuite`. Doc: `.cursor/docs/e2e-fixtures.md`.
 
-**Open:** judging-skill; Kinderdijkstraat 53-1; mop-up ~20 stil; Stage 1/2 + orkestratie buiten harnas.
+**Open:** judging-skill; Kinderdijkstraat 53-1; mop-up ~20 stil.
 
 ## E2E referentie-metrics (2026-07-30)
 

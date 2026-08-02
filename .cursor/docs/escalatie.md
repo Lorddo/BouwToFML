@@ -100,12 +100,13 @@ ID’s in code: `// ESC:<ID> (<Cat>)`. Inventarisregelnummers zijn historisch; a
 
 **Buiten harnas** (alleen journaal tot eigen meetdekking): deur Stage 1/2, raam Stage 1–4, REF-analyse, UI-orkestratie (~113 geïnstrumenteerd).
 
+**Initial detectie (bespreken, geen meet-poort):** [`detectie-initial-bespreken.md`](detectie-initial-bespreken.md) — **rondes A–G klaar**. Klaar voor ontwikkeling; geen VERWIJDEREN-batch uit deze ronde.
+
 **Open**
 
 - Mop-up ~20 stille A–E-ID’s.
-- Stage 1/2 + orkestratie-cascades (eigen ronde).
 - AFBAKENEN ≠ verwijderd — precondities in code/comment waar nog dun.
-- Optioneel: judging-skill; idempotentie orkestratie (inventaris §10.5).
+- Optioneel: judging-skill; idempotentie orkestratie (inventaris §10.5); O-23 leaner invalidatie / sticky asymmetrie (schuld, geen blokker).
 
 Spelregels: kill-switch vóór code-VERWIJDEREN; inventaris niet bijwerken met besluiten (alleen hier / `decisions.md` bij formele keuzes).
 

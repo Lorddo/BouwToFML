@@ -16,6 +16,7 @@ defineProps<{
   fmlDoorHeightCm: number
   fmlWindowHeightCm: number
   fmlWindowSillZCm: number
+  fmlBovenlichtDefault: boolean
   fmlThicknessMinCm: number
   fmlThicknessMidCm: number
   fmlThicknessMaxCm: number
@@ -40,6 +41,7 @@ const emit = defineEmits<{
   'update:fmlDoorHeightCm': [value: number]
   'update:fmlWindowHeightCm': [value: number]
   'update:fmlWindowSillZCm': [value: number]
+  'update:fmlBovenlichtDefault': [value: boolean]
   'update:fmlThicknessMinCm': [value: number]
   'update:fmlThicknessMidCm': [value: number]
   'update:fmlThicknessMaxCm': [value: number]
@@ -65,6 +67,7 @@ const emit = defineEmits<{
     :fml-door-height-cm="fmlDoorHeightCm"
     :fml-window-height-cm="fmlWindowHeightCm"
     :fml-window-sill-z-cm="fmlWindowSillZCm"
+    :fml-bovenlicht-default="fmlBovenlichtDefault"
     :fml-thickness-min-cm="fmlThicknessMinCm"
     :fml-thickness-mid-cm="fmlThicknessMidCm"
     :fml-thickness-max-cm="fmlThicknessMaxCm"
@@ -86,6 +89,7 @@ const emit = defineEmits<{
     @update:fml-door-height-cm="emit('update:fmlDoorHeightCm', $event)"
     @update:fml-window-height-cm="emit('update:fmlWindowHeightCm', $event)"
     @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
+    @update:fml-bovenlicht-default="emit('update:fmlBovenlichtDefault', $event)"
     @update:fml-thickness-min-cm="emit('update:fmlThicknessMinCm', $event)"
     @update:fml-thickness-mid-cm="emit('update:fmlThicknessMidCm', $event)"
     @update:fml-thickness-max-cm="emit('update:fmlThicknessMaxCm', $event)"

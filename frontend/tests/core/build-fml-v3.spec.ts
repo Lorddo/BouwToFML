@@ -139,3 +139,62 @@ describe('buildFmlV3 — Floorplanner-valid formaat', () => {
     expect(door.guid).toBe('abcdef')
   })
 })
+
+describe('buildFmlV3 — bovenlicht export', () => {
+  function doorOnlyPlan(overrides: Partial<Opening> = {}): FloorPlan {
+    const plan = planWithDoors()
+    plan.floors[0].walls[0].openings = [
+      {
+        refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+        t: 0.4,
+        width: 90,
+        type: 'door',
+        z_height: 220,
+        guid: 'door001',
+        ...overrides,
+      },
+    ]
+    return plan
+  }
+
+  it('voegt bovenlicht-window toe bij default on', () => {
+    const raw = JSON.parse(buildFmlV3(doorOnlyPlan(), { bovenlichtDefault: true }))
+    const openings = raw.floors[0].designs[0].walls[0].openings
+    expect(openings).toHaveLength(2)
+    expect(openings[0].type).toBe('door')
+    expect(openings[1]).toMatchObject({
+      type: 'window',
+      t: 0.4,
+      width: 90,
+      z: 230,
+      z_height: 40,
+      guid: 'door001-bovenlicht',
+    })
+  })
+
+  it('slaat bovenlicht over bij override false ondanks default on', () => {
+    const raw = JSON.parse(
+      buildFmlV3(doorOnlyPlan({ bovenlicht: false }), { bovenlichtDefault: true }),
+    )
+    const openings = raw.floors[0].designs[0].walls[0].openings
+    expect(openings).toHaveLength(1)
+    expect(openings[0].type).toBe('door')
+  })
+
+  it('voegt bovenlicht toe bij override true ondanks default off', () => {
+    const raw = JSON.parse(
+      buildFmlV3(doorOnlyPlan({ bovenlicht: true }), { bovenlichtDefault: false }),
+    )
+    const openings = raw.floors[0].designs[0].walls[0].openings
+    expect(openings).toHaveLength(2)
+    expect(openings[1].type).toBe('window')
+  })
+
+  it('emitteert geen bovenlicht-veld op de deur zelf', () => {
+    const raw = JSON.parse(
+      buildFmlV3(doorOnlyPlan({ bovenlicht: true }), { bovenlichtDefault: false }),
+    )
+    const door = raw.floors[0].designs[0].walls[0].openings[0]
+    expect(door.bovenlicht).toBeUndefined()
+  })
+})

@@ -4,6 +4,7 @@ import {
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
+import { resolveDoorBovenlicht } from '@/core/fml/bovenlicht'
 import { resolveHingeAtStart, resolveSwingSign } from '@/ui/components/fml-preview-doors'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/fml-preview-openings'
 
@@ -21,12 +22,23 @@ export interface OpeningDraftState {
   hingeMixed: boolean
   swingRight: boolean
   swingMixed: boolean
+  /** Effectieve bovenlicht (override of projectdefault). */
+  bovenlichtOn: boolean
+  bovenlichtMixed: boolean
+}
+
+export interface OpeningDraftOptions {
+  bovenlichtDefault?: boolean
 }
 
 /** Mixed/first draft van geselecteerde openings (editor sync + panel). */
-export function computeOpeningDraftState(openings: Opening[]): OpeningDraftState | null {
+export function computeOpeningDraftState(
+  openings: Opening[],
+  options: OpeningDraftOptions = {},
+): OpeningDraftState | null {
   if (openings.length === 0) return null
 
+  const bovenlichtDefault = options.bovenlichtDefault === true
   const types = new Set(openings.map((opening) => opening.type))
   const openingType: OpeningDraftType = types.size === 1 ? openings[0].type : 'mixed'
 
@@ -38,6 +50,9 @@ export function computeOpeningDraftState(openings: Opening[]): OpeningDraftState
   const doorOpenings = openings.filter((opening) => opening.type === 'door')
   const hinges = doorOpenings.map((opening) => resolveHingeAtStart(opening.mirrored))
   const swings = doorOpenings.map((opening) => resolveSwingSign(opening.mirrored) > 0)
+  const bovenlichtFlags = doorOpenings.map((opening) =>
+    resolveDoorBovenlicht(opening, bovenlichtDefault),
+  )
 
   const widthFirst = widths[0] ?? 90
   const heightFirst =
@@ -46,6 +61,7 @@ export function computeOpeningDraftState(openings: Opening[]): OpeningDraftState
   const sillFirst = sillZs[0] ?? DEFAULT_FML_WINDOW_SILL_Z_CM
   const hingeFirst = hinges[0] ?? true
   const swingFirst = swings[0] ?? false
+  const bovenlichtFirst = bovenlichtFlags[0] ?? bovenlichtDefault
 
   return {
     openingType,
@@ -59,5 +75,7 @@ export function computeOpeningDraftState(openings: Opening[]): OpeningDraftState
     hingeMixed: hinges.some((value) => value !== hingeFirst),
     swingRight: swingFirst,
     swingMixed: swings.some((value) => value !== swingFirst),
+    bovenlichtOn: bovenlichtFirst,
+    bovenlichtMixed: bovenlichtFlags.some((value) => value !== bovenlichtFirst),
   }
 }

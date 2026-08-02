@@ -71,6 +71,7 @@ export type WorkspaceFmlGenerateApplied = {
   fmlDoorHeightCm: Ref<number>
   fmlWindowHeightCm: Ref<number>
   fmlWindowSillZCm: Ref<number>
+  fmlBovenlichtDefault: Ref<boolean>
 }
 
 /**
@@ -151,7 +152,10 @@ export function createWorkspaceFmlGenerate(
 
   const generatedFmlText = computed(() => {
     if (!previewPlan.value) return ''
-    return buildFmlV3(previewPlan.value, { name: previewPlan.value.name })
+    return buildFmlV3(previewPlan.value, {
+      name: previewPlan.value.name,
+      bovenlichtDefault: applied.fmlBovenlichtDefault.value,
+    })
   })
 
   const generatedStats = computed(() => countPlanElements(previewPlan.value))

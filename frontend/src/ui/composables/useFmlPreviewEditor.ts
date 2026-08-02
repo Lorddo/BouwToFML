@@ -178,7 +178,7 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   function updateOpening(
     openingId: string,
-    patch: Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored'>>,
+    patch: Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht'>>,
   ): void {
     setWalls(updateOpeningById(walls.value, openingId, patch))
   }
@@ -186,7 +186,7 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   /** @deprecated Prefer updateOpening */
   function updateDoorOpening(
     openingId: string,
-    patch: Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored'>>,
+    patch: Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht'>>,
   ): void {
     updateOpening(openingId, patch)
   }

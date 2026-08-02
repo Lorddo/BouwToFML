@@ -9,12 +9,14 @@ withDefaults(
     fmlDoorHeightCm?: number
     fmlWindowHeightCm?: number
     fmlWindowSillZCm?: number
+    fmlBovenlichtDefault?: boolean
   }>(),
   {
     fmlWallHeightCm: 280,
     fmlDoorHeightCm: 220,
     fmlWindowHeightCm: 150,
     fmlWindowSillZCm: 70,
+    fmlBovenlichtDefault: false,
   },
 )
 
@@ -23,6 +25,7 @@ const emit = defineEmits<{
   'update:fmlDoorHeightCm': [value: number]
   'update:fmlWindowHeightCm': [value: number]
   'update:fmlWindowSillZCm': [value: number]
+  'update:fmlBovenlichtDefault': [value: boolean]
 }>()
 
 function metersFromCm(cm: number): string {
@@ -48,6 +51,10 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
   if (emitName === 'update:fmlWallHeightCm') emit('update:fmlWallHeightCm', cm)
   else if (emitName === 'update:fmlDoorHeightCm') emit('update:fmlDoorHeightCm', cm)
   else emit('update:fmlWindowHeightCm', cm)
+}
+
+function onBovenlichtChange(event: Event): void {
+  emit('update:fmlBovenlichtDefault', (event.target as HTMLInputElement).checked)
 }
 </script>
 
@@ -111,6 +118,18 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
         @input="onHeightMetersInput($event, 'update:fmlWindowHeightCm')"
       />
     </label>
+    <label
+      class="fml-limit-field fml-limit-field--checkbox"
+      title="40 cm hoog, 10 cm boven de deur,zelfde breedte. Alleen in FML-export (niet in preview). Per deur overschrijfbaar via Ctrl+klik."
+    >
+      <input
+        type="checkbox"
+        :checked="fmlBovenlichtDefault"
+        :disabled="!scaleConfirmed || !hasCombinedOutput"
+        @change="onBovenlichtChange"
+      />
+      <span>Bovenlicht op alle deuren</span>
+    </label>
   </div>
   <p class="fml-band-hint">Per opening overschrijven: Ctrl+klik in de preview → maat/hoogte.</p>
 </template>
@@ -121,5 +140,17 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
   flex-direction: column;
   gap: 4px;
   margin: 0 0 8px;
+}
+
+.fml-limit-field--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-direction: row;
+}
+
+.fml-limit-field--checkbox input[type='checkbox'] {
+  width: auto;
+  margin: 0;
 }
 </style>

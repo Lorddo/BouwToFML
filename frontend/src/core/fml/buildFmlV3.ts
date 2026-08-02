@@ -1,4 +1,5 @@
 import { tally } from '@/core/diagnostics'
+import { buildBovenlichtOpening, resolveDoorBovenlicht } from './bovenlicht'
 import type { FloorPlan, Opening } from './types'
 import { CONCEPT_DOOR_REFID, CONCEPT_WINDOW_REFID } from './types'
 import {
@@ -8,8 +9,10 @@ import {
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 
-interface BuildOptions {
+export interface BuildFmlV3Options {
   name?: string
+  /** Projectdefault: bovenlicht op deuren zonder per-deur override. */
+  bovenlichtDefault?: boolean
 }
 
 /**
@@ -47,7 +50,44 @@ function openingGuid(opening: Opening): string {
   return opening.guid ?? shortGuid()
 }
 
-export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string {
+function serializeOpening(op: Opening): Record<string, unknown> {
+  return {
+    refid: op.refid || (op.type === 'window' ? CONCEPT_WINDOW_REFID : CONCEPT_DOOR_REFID),
+    t: op.t,
+    type: op.type,
+    width: op.width,
+    // ESC:X-17 (E)
+    z_height:
+      op.z_height ??
+      (op.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM),
+    z: op.z ?? (op.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0),
+    mirrored: op.mirrored ?? [0, 0],
+    materials: openingMaterials(op),
+    guid: openingGuid(op),
+  }
+}
+
+function expandOpeningsForExport(
+  openings: Opening[],
+  floorHeightCm: number,
+  bovenlichtDefault: boolean,
+): Opening[] {
+  const out: Opening[] = []
+  for (const op of openings) {
+    out.push(op)
+    if (op.type !== 'door') continue
+    if (!resolveDoorBovenlicht(op, bovenlichtDefault)) continue
+    const doorGuid = openingGuid(op)
+    const bovenlicht = buildBovenlichtOpening(op, {
+      floorHeightCm,
+      doorGuid,
+    })
+    if (bovenlicht) out.push(bovenlicht)
+  }
+  return out
+}
+
+export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): string {
   // ESC:X-13 (E) — vaste project/floor/design-id's + timestamps; geen multi-verdieping-identiteit.
   tally('X-13', 'hardcoded_metadata')
   // ESC:X-14 (E) — areas/surfaces altijd leeg (verplicht voor Floorplanner.com-import).
@@ -68,6 +108,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
   }
   const projectId = 900000001
   const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
+  const bovenlichtDefault = options.bovenlichtDefault === true
   const output = {
     id: projectId,
     name: options.name ?? plan.name,
@@ -158,20 +199,9 @@ export function buildFmlV3(plan: FloorPlan, options: BuildOptions = {}): string 
             balance: wall.balance ?? 0.5,
             groupMarkerConfig: { locked: false },
             decor: { left: null, right: null, top: null, outline: 0 },
-            openings: wall.openings.map((op) => ({
-              refid: op.refid || (op.type === 'window' ? CONCEPT_WINDOW_REFID : CONCEPT_DOOR_REFID),
-              t: op.t,
-              type: op.type,
-              width: op.width,
-              // ESC:X-17 (E)
-              z_height:
-                op.z_height ??
-                (op.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM),
-              z: op.z ?? (op.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0),
-              mirrored: op.mirrored ?? [0, 0],
-              materials: openingMaterials(op),
-              guid: openingGuid(op),
-            })),
+            openings: expandOpeningsForExport(wall.openings, floor.height, bovenlichtDefault).map(
+              serializeOpening,
+            ),
           })),
           settings: {
             engineAutoDims: false,

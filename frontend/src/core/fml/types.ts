@@ -16,6 +16,11 @@ export interface Opening {
   guid?: string
   materials?: Record<string, { type: string; value: string }>
   /**
+   * Session-only: bovenlicht bij FML-export (niet in viewer).
+   * `null`/`undefined` = erf projectdefault; `true`/`false` = force.
+   */
+  bovenlicht?: boolean | null
+  /**
    * @deprecated FML-viewer leest boog-inset uit opening-refid-catalog (`swingInsetCm`).
    * Velden blijven optioneel voor oude in-memory plans; worden genegeerd bij render.
    */

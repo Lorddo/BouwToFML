@@ -35,6 +35,7 @@ const props = withDefaults(
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
+    bovenlichtDefault?: boolean
   }>(),
   {
     floorIndex: 0,
@@ -50,6 +51,7 @@ const props = withDefaults(
     thicknessMinCm: 10,
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
+    bovenlichtDefault: false,
   },
 )
 
@@ -75,6 +77,7 @@ function interactionEmit(
 }
 
 const thicknessPickTierRef = toRef(props, 'thicknessPickTier')
+const bovenlichtDefaultRef = toRef(props, 'bovenlichtDefault')
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<{ getNode: () => Konva.Stage } | null>(null)
@@ -123,6 +126,7 @@ const interaction = useFmlPreviewInteraction({
   shiftPressed,
   spacePressed,
   thicknessPickTier: thicknessPickTierRef,
+  bovenlichtDefault: bovenlichtDefaultRef,
   onKeyDown,
   onKeyUp,
 })
@@ -177,6 +181,8 @@ const {
   openingHingeMixed,
   openingSwingRightDraft,
   openingSwingMixed,
+  openingBovenlichtDraft,
+  openingBovenlichtMixed,
   addDoorSubtype,
   addDoorWidthCm,
   addWindowSubtype,
@@ -197,6 +203,7 @@ const {
   commitOpeningSillZ,
   toggleOpeningHingeAtStart,
   toggleOpeningSwingRight,
+  onOpeningBovenlichtChange,
   copySelectedOpening,
   deleteSelectedOpenings,
   splitSelectedWall,
@@ -276,6 +283,8 @@ watch(
       :opening-hinge-mixed="openingHingeMixed"
       :opening-swing-right-draft="openingSwingRightDraft"
       :opening-swing-mixed="openingSwingMixed"
+      :opening-bovenlicht-draft="openingBovenlichtDraft"
+      :opening-bovenlicht-mixed="openingBovenlichtMixed"
       :thickness-min-cm="thicknessMinCm"
       :thickness-mid-cm="thicknessMidCm"
       :thickness-max-cm="thicknessMaxCm"
@@ -293,6 +302,7 @@ watch(
       @commit-opening-sill-z="commitOpeningSillZ"
       @toggle-opening-hinge="toggleOpeningHingeAtStart"
       @toggle-opening-swing="toggleOpeningSwingRight"
+      @opening-bovenlicht-change="onOpeningBovenlichtChange"
       @copy-opening="copySelectedOpening"
       @delete-openings="deleteSelectedOpenings"
       @split-wall="splitSelectedWall"

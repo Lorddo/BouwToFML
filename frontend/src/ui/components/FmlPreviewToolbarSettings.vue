@@ -50,6 +50,8 @@ const props = withDefaults(
     openingHingeMixed: boolean
     openingSwingRightDraft: boolean
     openingSwingMixed: boolean
+    openingBovenlichtDraft: boolean
+    openingBovenlichtMixed: boolean
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
@@ -77,6 +79,7 @@ const emit = defineEmits<{
   commitOpeningSillZ: []
   toggleOpeningHinge: []
   toggleOpeningSwing: []
+  openingBovenlichtChange: [event: Event]
   copyOpening: []
   deleteOpenings: []
   splitWall: []
@@ -371,6 +374,20 @@ const showMeasureStrip = computed(
           <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
+      <label
+        v-if="isDoorSelection"
+        class="fml-toolbelt__field fml-toolbelt__field--checkbox"
+        title="40 cm hoog, 10 cm boven de deur — alleen in FML-export, niet in preview"
+      >
+        <input
+          type="checkbox"
+          :checked="openingBovenlichtDraft"
+          :indeterminate.prop="openingBovenlichtMixed"
+          aria-label="Bovenlicht"
+          @change="emit('openingBovenlichtChange', $event)"
+        />
+        <span class="fml-toolbelt__field-label">Bovenlicht</span>
+      </label>
       <div v-if="isWindowSelection" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">Vloer</span>
         <div class="fml-toolbelt__field-controls">
@@ -616,6 +633,18 @@ const showMeasureStrip = computed(
   font-size: 10px;
   color: #64748b;
   min-width: 18px;
+}
+
+.fml-toolbelt__field--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fml-toolbelt__field--checkbox input[type='checkbox'] {
+  margin: 0;
 }
 
 .fml-toolbelt__presets {

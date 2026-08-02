@@ -52,6 +52,8 @@ const props = withDefaults(
     openingHingeMixed: boolean
     openingSwingRightDraft: boolean
     openingSwingMixed: boolean
+    openingBovenlichtDraft: boolean
+    openingBovenlichtMixed: boolean
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
@@ -79,6 +81,7 @@ const emit = defineEmits<{
   commitOpeningSillZ: []
   toggleOpeningHinge: []
   toggleOpeningSwing: []
+  openingBovenlichtChange: [event: Event]
   copyOpening: []
   deleteOpenings: []
   splitWall: []
@@ -178,6 +181,8 @@ const hint = computed(() => {
         :opening-hinge-mixed="openingHingeMixed"
         :opening-swing-right-draft="openingSwingRightDraft"
         :opening-swing-mixed="openingSwingMixed"
+        :opening-bovenlicht-draft="openingBovenlichtDraft"
+        :opening-bovenlicht-mixed="openingBovenlichtMixed"
         :thickness-min-cm="thicknessMinCm"
         :thickness-mid-cm="thicknessMidCm"
         :thickness-max-cm="thicknessMaxCm"
@@ -195,6 +200,7 @@ const hint = computed(() => {
         @commit-opening-sill-z="emit('commitOpeningSillZ')"
         @toggle-opening-hinge="emit('toggleOpeningHinge')"
         @toggle-opening-swing="emit('toggleOpeningSwing')"
+        @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
         @copy-opening="emit('copyOpening')"
         @delete-openings="emit('deleteOpenings')"
         @split-wall="emit('splitWall')"
