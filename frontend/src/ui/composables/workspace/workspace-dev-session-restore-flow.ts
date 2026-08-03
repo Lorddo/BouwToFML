@@ -1,4 +1,5 @@
 import type { Ref } from 'vue'
+import type { FloorPlan } from '@/core/fml/types'
 import {
   isSessionV2,
   resolveRestoreMode,
@@ -9,12 +10,20 @@ import type { WorkspaceFlowStep } from './constants'
 import type { createWorkspaceDevSessionRestoreBase } from './workspace-dev-session-restore-base'
 import type { createWorkspaceDevSessionRestoreDetection } from './workspace-dev-session-restore-detection'
 
+export type RestoreSessionOptions = {
+  /** Floor-switch naar result: skip dure deur/raam her-pipeline. */
+  skipOpeningsRerun?: boolean
+  /** Herstel bewerkte FML-preview i.p.v. opnieuw uit detectie te bouwen. */
+  applyPreviewPlan?: FloorPlan | null
+}
+
 export type WorkspaceDevSessionRestoreFlowDeps = {
   flowStep: Ref<WorkspaceFlowStep>
   refreshAllDetectionUnderlays: () => Promise<void>
   ensureVectorCacheIfNeeded: () => Promise<void>
   onEnterResultStep: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
+  updatePreviewPlan?: (plan: FloorPlan) => void
 }
 
 export function createWorkspaceDevSessionRestoreFlow(
@@ -22,12 +31,16 @@ export function createWorkspaceDevSessionRestoreFlow(
   base: ReturnType<typeof createWorkspaceDevSessionRestoreBase>,
   detection: ReturnType<typeof createWorkspaceDevSessionRestoreDetection>,
 ) {
-  async function restoreSession(session: DevWorkspaceSession): Promise<void> {
+  async function restoreSession(
+    session: DevWorkspaceSession,
+    options?: RestoreSessionOptions,
+  ): Promise<void> {
     await base.restoreBaseSession(session)
     base.applyFlowUiFromSession(session)
 
     const targetStep = resolveTargetFlowStep(session)
     const restoreMode = resolveRestoreMode(session)
+    const skipOpenings = options?.skipOpeningsRerun === true
 
     if (targetStep === 'input') {
       deps.flowStep.value = 'input'
@@ -49,6 +62,7 @@ export function createWorkspaceDevSessionRestoreFlow(
       await deps.refreshAllDetectionUnderlays()
       await deps.ensureVectorCacheIfNeeded()
       if (
+        !skipOpenings &&
         restoreMode === 'exact' &&
         isSessionV2(session) &&
         (session.detectionExact?.roomPhase === 'review' ||
@@ -59,7 +73,7 @@ export function createWorkspaceDevSessionRestoreFlow(
       return
     }
 
-    // result — altijd replay met huidige code
+    // result — DevSession-opname default replay; floor-blobs forceExact → exact
     if (restoreMode === 'replay') {
       await detection.replayDetection(session)
     } else if (isSessionV2(session) && session.detectionExact) {
@@ -71,6 +85,7 @@ export function createWorkspaceDevSessionRestoreFlow(
 
     deps.flowStep.value = 'result'
     if (
+      !skipOpenings &&
       restoreMode === 'exact' &&
       isSessionV2(session) &&
       (session.detectionExact?.roomPhase === 'review' ||
@@ -80,6 +95,9 @@ export function createWorkspaceDevSessionRestoreFlow(
       void deps.snapResolvedDoorsToWalls()
     }
     await deps.onEnterResultStep()
+    if (options?.applyPreviewPlan && deps.updatePreviewPlan) {
+      deps.updatePreviewPlan(options.applyPreviewPlan)
+    }
   }
 
   return { restoreSession }

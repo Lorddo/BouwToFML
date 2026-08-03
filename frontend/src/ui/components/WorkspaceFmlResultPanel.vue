@@ -51,6 +51,7 @@ const emit = defineEmits<{
   cancelThicknessPick: []
   regenerate: []
   downloadGenerated: []
+  downloadProject: []
 }>()
 </script>
 
@@ -96,5 +97,6 @@ const emit = defineEmits<{
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
     @download-generated="emit('downloadGenerated')"
+    @download-project="emit('downloadProject')"
   />
 </template>

@@ -656,5 +656,6 @@ export function useWorkspaceWindowFaces(deps: {
     invalidateAutoWindowPass,
     markAutoWindowPassApplied,
     bindResolvedWindowsToWalls,
+    resetWindowState,
   }
 }

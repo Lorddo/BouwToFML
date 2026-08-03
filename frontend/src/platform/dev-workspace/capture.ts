@@ -66,7 +66,12 @@ export function captureDevWorkspaceSession(input: DevSessionCaptureInput): DevWo
     ocrMaskBase64 = encodeMaskBase64(input.ocrMask)
   }
 
-  const restoreMode = input.targetFlowStep === 'result' ? 'replay' : 'exact'
+  const restoreMode =
+    input.forceExactRestore === true
+      ? 'exact'
+      : input.targetFlowStep === 'result'
+        ? 'replay'
+        : 'exact'
   const flow = {
     targetFlowStep: input.targetFlowStep,
     templateTab: input.templateTab,
@@ -80,7 +85,10 @@ export function captureDevWorkspaceSession(input: DevSessionCaptureInput): DevWo
   let detectionExact: DevWorkspaceSessionV2['detectionExact']
   let detectionReplay: DevWorkspaceSessionV2['detectionReplay']
 
-  if (restoreMode === 'exact' && input.targetFlowStep === 'templates') {
+  const shouldStoreExact =
+    restoreMode === 'exact' &&
+    (input.targetFlowStep === 'templates' || input.targetFlowStep === 'result')
+  if (shouldStoreExact) {
     detectionExact = {
       ...buildRoomSnapshot(input),
       tabOutputs: buildTabOutputsSnapshot(input),

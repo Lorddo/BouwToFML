@@ -121,7 +121,10 @@ function toDevRoomPhase(phase: RoomPhase): DevRoomPhase {
 }
 
 export function createWorkspaceDevSessionCapture(deps: WorkspaceDevSessionCaptureDeps) {
-  function captureCurrentSession(label?: string): DevWorkspaceSession {
+  function captureCurrentSession(
+    label?: string,
+    options?: { forceExactRestore?: boolean },
+  ): DevWorkspaceSession {
     const img = deps.originalImageEl.value
     if (!img?.complete || img.naturalWidth <= 0) {
       throw new Error('Laad eerst een tekening.')
@@ -165,6 +168,7 @@ export function createWorkspaceDevSessionCapture(deps: WorkspaceDevSessionCaptur
         return cache ? serializeLiveRoomClassifyState(cache) : undefined
       })(),
       inkOverlayRle: deps.serializeInkOverlay() ?? undefined,
+      forceExactRestore: options?.forceExactRestore === true,
     })
   }
 

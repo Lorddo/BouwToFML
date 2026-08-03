@@ -35,6 +35,8 @@ export interface ExtractionToPlanOptions {
   pxPerMmY: number
   planName?: string
   floorName?: string
+  /** FML `floors[].level` (default 0). */
+  level?: number
   defaultThicknessCm?: number
   /** Verdiepingshoogte / muurhoogte in cm (default 280). */
   floorHeightCm?: number

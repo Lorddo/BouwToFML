@@ -14,6 +14,7 @@ withDefaults(
 
 const emit = defineEmits<{
   downloadGenerated: []
+  downloadProject: []
   regenerate: []
 }>()
 </script>
@@ -29,8 +30,9 @@ const emit = defineEmits<{
       Regenereren
     </button>
     <button type="button" :disabled="!generatedFmlText" @click="emit('downloadGenerated')">
-      Download .fml
+      Download .fml (verdieping)
     </button>
+    <button type="button" @click="emit('downloadProject')">Download .fml (project)</button>
   </div>
   <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">
     Hoogte/dikte gewijzigd — klik Regenereren om de FML bij te werken.

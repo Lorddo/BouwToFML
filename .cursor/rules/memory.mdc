@@ -5,7 +5,13 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-02 (OCR muren-flow)
+Laatste update: 2026-08-03 (project-container V1)
+
+## Project-container V1 (2026-08-03)
+
+Stap 0 `project` + `ProjectState` / floor-blobs (`ui/composables/project/`). Floor-switch via DevSession capture/restore in memory. Knoppen: Onderlegger overnemen (stap 1), B/W+REF overnemen (stap 2). Detectie solo. FML: `mergeFloorPlans` + Download project. Geen IndexedDB nog.
+
+**Floor-switch persist:** capture met `forceExactRestore` + `previewPlan`; result-switch = snelle image+FML (geen detectie/BW). Bron-onderlegger = duurzame PNG bij schaal-bevestigen (geen blob:-URL). Lege floor wist imageSrc. B/W-overname zonder LBE-rects.
 
 ## OCR muren-flow (2026-08-02)
 

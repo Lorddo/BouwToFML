@@ -714,5 +714,6 @@ export function useWorkspaceDoorSwingFaces(deps: {
     snapResolvedDoorsToWalls,
     reattachStickyDoorframesToResolved,
     getStage2DoorArcFaceIds,
+    resetDoorSwingState,
   }
 }

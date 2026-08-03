@@ -2,11 +2,33 @@
 
 **Elke wijziging hoort in precies één stap.** Hergebruik `layer-flow.ts` + `layer-preprocess.ts` — geen per-element copy-paste.
 
+Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + per-floor blobs; CV blijft single-floor op de actieve verdieping.
+
+## Stap 0 — Project (`flowStep: project`)
+
+| Actie | Waar |
+|--------|------|
+| Naam, adres | `ProjectSetupPanel` |
+| Verdiepingen toevoegen/hernoemen/ordenen | `ProjectSetupPanel` + `WorkspaceFloorRail` |
+| FML-hoogtes per verdieping | `ProjectSetupPanel` → `FloorMeta.defaults` (`ProjectFmlDefaults`) |
+
+**Gate naar stap 1:** naam + adres + ≥1 verdieping + activeFloor. Bij «Volgende»: hydrate actieve floor (lege floor → upload).
+
+## Overname tussen verdiepingen (expliciete knoppen)
+
+| Stap | Knop | Wat |
+|------|------|-----|
+| 1 | «Onderlegger overnemen» | Projectbron: originele scan + schaal (geen crop); daarna per-floor crop → `transformHScaleState` |
+| 2 | «B/W overnemen» | Alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
+| 3 | — | Solo: geen detectie-state delen |
+| 4 | «Download .fml (project)» | `mergeFloorPlans` met floor-namen/`level` |
+
 ## Stap 1 — Onderlegger (`flowStep: input`)
 
 | Actie | Waar |
 |--------|------|
 | Upload tekening | `DrawingUploadPanel` |
+| Onderlegger overnemen (keuze) | `reuseUnderlayFromProject` |
 | Schaal (mm) | `ScaleConfirmBar`, `useWorkspaceScale` |
 | Rotatie (native resolutie, min 3000px) | `OriginalSetupPanel` |
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
@@ -31,6 +53,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | Actie | Waar |
 |--------|------|
 | B/W tunen | `PreprocessPanel` |
+| B/W + REF overnemen (keuze) | `copyPreprocessAndRefsFromDonor` |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
 | Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); tekenen uitzetten via opnieuw klikken of Escape |
 | OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) — auto-scan op Muren in stap 3 |
@@ -85,6 +108,8 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 | vector / FML (canvas) | `useWorkspaceFml` ← `combinedOutput` (`mergeTabOutputs`); muren via semantic post-finalize — zie [`fml-layer8-conversion-plan.md`](./fml-layer8-conversion-plan.md) |
 | walls (Dev) | `tabOutputs.walls` + layer overlays (`ResultWallsLayerPanel` / Layer Debug) |
 
+**Project-export:** «Download .fml (project)» → `mergeFloorPlans` over alle floors met `generatedFloor` (namen/`level` uit `FloorMeta`). Per-verdieping download blijft beschikbaar.
+
 **Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 
 ## Architectuur (DRY)
@@ -94,6 +119,7 @@ compose-wall-bw.ts    → effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay
 layer-preprocess.ts   → per-laag B/W-tuning (resolveLayerPreprocess) = baseBw
 layer-flow.ts         → tab-volgorde, detectTargets, validatie output
 merge-tab-outputs.ts  → muur-output voor vector/FML
+project/*             → ProjectState, floor-blobs, mergeFloorPlans
 useWorkspace*.ts      → één composable per flow-stap
 geometry-pipeline.ts  → room-first CV; precomposedWallBw skip rethreshold; geen OCR-scan
 ```

@@ -103,4 +103,43 @@ describe('captureDevWorkspaceSession room snapshot', () => {
     expect(session.detectionReplay?.faceOverrides).toEqual([[5, 'surface']])
     expect(session.detectionReplay?.wallsPhase).toBe('finalize')
   })
+
+  it('forceExactRestore on result stores detectionExact (floor-switch persistence)', () => {
+    const session = captureDevWorkspaceSession({
+      targetFlowStep: 'result',
+      templateTab: 'walls',
+      preprocessTab: 'walls',
+      resultTab: 'vector',
+      profileConfirmed: true,
+      wallPipelineVersion: 'v3',
+      imageName: 'test.png',
+      originalImageEl: fakeImage(100, 100),
+      preprocess: { ...DEFAULT_PREPROCESS },
+      drawingProfileId: 'open',
+      scale: {
+        state: { xLeft: 1, xRight: 9, xGuideY: 5, yTop: 1, yBottom: 9, yGuideX: 5 },
+        distanceMmX: 3000,
+        distanceMmY: 3000,
+        confirmed: true,
+      },
+      eraserMask: null,
+      eraserTouched: false,
+      ocrMask: null,
+      ocrMaskedRegions: [],
+      ocrApplied: false,
+      tabOutputs: { walls: null },
+      roomPhase: 'done',
+      wallsDetectionComplete: true,
+      faceOverrides: [[5, 'wall']],
+      forceExactRestore: true,
+      workingImagePng: 'data:image/png;base64,AA==',
+    })
+
+    expect(session.flow.restoreMode).toBe('exact')
+    expect(session.flow.targetFlowStep).toBe('result')
+    expect(session.detectionExact?.roomPhase).toBe('done')
+    expect(session.detectionExact?.wallsDetectionComplete).toBe(true)
+    expect(session.detectionExact?.faceOverrides).toEqual([[5, 'wall']])
+    expect(session.detectionReplay).toBeUndefined()
+  })
 })

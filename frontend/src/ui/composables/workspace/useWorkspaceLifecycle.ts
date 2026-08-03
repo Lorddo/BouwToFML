@@ -20,12 +20,27 @@ export function useWorkspaceLifecycle(deps: {
   profileConfirmed: Ref<boolean>
   showOcrDetails: Ref<boolean>
   roomFaces: { resetRoomState: () => void }
+  doorSwingFaces?: {
+    resetDoorSwingState: () => void
+    resetAutoDoorPassGate: () => void
+  }
+  windowFaces?: {
+    resetWindowState: () => void
+    invalidateAutoWindowPass: () => void
+  }
   referenceWallThicknessPx: Ref<number | null>
   wallsDetectionComplete: Ref<boolean>
   flowStep: Ref<WorkspaceFlowStep>
   preprocessUi: { clearLivePreviewTimer: () => void }
   image: { resetImageSource: () => void }
 }) {
+  function clearOpeningOverlays(): void {
+    deps.doorSwingFaces?.resetDoorSwingState()
+    deps.doorSwingFaces?.resetAutoDoorPassGate()
+    deps.windowFaces?.resetWindowState()
+    deps.windowFaces?.invalidateAutoWindowPass()
+  }
+
   function clearWorkspaceForSession() {
     deps.clearRects()
     deps.extractionLastOutput.value = null
@@ -35,6 +50,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.fml.clearImportedFml()
     deps.showOcrDetails.value = false
     deps.roomFaces.resetRoomState()
+    clearOpeningOverlays()
     deps.referenceWallThicknessPx.value = null
     deps.wallsDetectionComplete.value = false
   }
@@ -54,6 +70,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.preprocessUi.clearLivePreviewTimer()
     deps.preprocessPreview.clearPreview()
     deps.preprocessVectorCache.clear()
+    deps.clearRects()
     deps.image.resetImageSource()
     deps.scaleUi.resetScaleUi()
     deps.inputMask.resetMaskState()
@@ -65,6 +82,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.profileConfirmed.value = true
     deps.showOcrDetails.value = false
     deps.roomFaces.resetRoomState()
+    clearOpeningOverlays()
     deps.referenceWallThicknessPx.value = null
     deps.wallsDetectionComplete.value = false
     deps.flowStep.value = 'input'

@@ -30,6 +30,7 @@ import { createWorkspaceDevSessionCapture } from './workspace-dev-session-captur
 import { createWorkspaceDevSessionRestoreBase } from './workspace-dev-session-restore-base'
 import { createWorkspaceDevSessionRestoreDetection } from './workspace-dev-session-restore-detection'
 import { createWorkspaceDevSessionRestoreFlow } from './workspace-dev-session-restore-flow'
+import type { RestoreSessionOptions } from './workspace-dev-session-restore-flow'
 
 interface DevSessionOption {
   id: string
@@ -112,6 +113,7 @@ export type UseWorkspaceDevSessionDeps = {
   /** Ramen Stage-3/4 direct draaien. */
   refreshWindowOverlay: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
+  updatePreviewPlan?: (plan: import('@/core/fml/types').FloorPlan) => void
 }
 
 export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
@@ -266,5 +268,19 @@ export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
     selectDevSession,
     recordDevSession,
     restoreDevSession,
+    captureCurrentSession: (options?: { forceExactRestore?: boolean }) =>
+      capture.captureCurrentSession(undefined, options),
+    restoreSessionInMemory: async (
+      session: DevWorkspaceSession,
+      options?: RestoreSessionOptions,
+    ) => {
+      deps.devSessionRestoring.value = true
+      try {
+        await restoreFlow.restoreSession(session, options)
+      } finally {
+        await nextTick()
+        deps.devSessionRestoring.value = false
+      }
+    },
   }
 }

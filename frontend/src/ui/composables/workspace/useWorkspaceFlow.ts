@@ -56,6 +56,10 @@ export function useWorkspaceFlow(deps: {
   onEnterResultStep?: () => Promise<void> | void
   setLocalError?: (message: string | null) => void
   resetInkOverlay?: () => void
+  /** Stap 0 project-gates. */
+  projectCanProceed?: () => boolean
+  onLeaveProjectStep?: () => Promise<void> | void
+  onEnterProjectStep?: () => void
 }) {
   const flowOrder = WORKSPACE_FLOW_ORDER
   const flowLabels = WORKSPACE_FLOW_LABELS
@@ -80,6 +84,8 @@ export function useWorkspaceFlow(deps: {
   const canGoNext = computed(() => {
     if (deps.running.value) return false
     switch (deps.flowStep.value) {
+      case 'project':
+        return deps.projectCanProceed?.() ?? false
       case 'input':
         return inputStepCanProceed({
           imageSrc: deps.imageSrc.value,
@@ -108,6 +114,8 @@ export function useWorkspaceFlow(deps: {
   const flowNextBlockedHint = computed(() => {
     if (canGoNext.value || deps.running.value) return ''
     switch (deps.flowStep.value) {
+      case 'project':
+        return 'Vul projectnaam, adres en minstens één verdieping in.'
       case 'input':
         if (!deps.imageSrc.value) return 'Upload eerst een tekening.'
         if (!deps.scaleConfirmed.value) return 'Bevestig de schaal om verder te gaan.'
@@ -128,11 +136,22 @@ export function useWorkspaceFlow(deps: {
   function goToPreviousStep() {
     const idx = flowOrder.indexOf(deps.flowStep.value)
     if (idx <= 0) return
-    deps.flowStep.value = flowOrder[idx - 1]
+    const prev = flowOrder[idx - 1]
+    if (prev === 'project') {
+      deps.onEnterProjectStep?.()
+    }
+    deps.flowStep.value = prev
   }
 
   async function goToNextStep() {
     if (!canGoNext.value) return
+    if (deps.flowStep.value === 'project') {
+      await deps.onLeaveProjectStep?.()
+      // Hydrate kan al naar input/preprocess/… gezet hebben.
+      if (deps.flowStep.value !== 'project') return
+      deps.flowStep.value = 'input'
+      return
+    }
     if (deps.flowStep.value === 'input') {
       deps.refreshMaskedWorkingImage()
       await deps.commitInputStepImage()

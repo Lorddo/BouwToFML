@@ -166,7 +166,7 @@ export function extractionToPlanWithOrigin(
       floors: [
         {
           name: options.floorName ?? 'Begane grond',
-          level: 0,
+          level: options.level ?? 0,
           height: floorHeightCm,
           walls,
         },

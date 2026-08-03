@@ -21,6 +21,9 @@ export function useWorkspaceFml(deps: {
     referenceWallThicknessPx: Ref<number | null>
     devSessionRestoring: Ref<boolean>
   }
+  planName?: Ref<string | null>
+  floorName?: Ref<string | null>
+  floorLevel?: Ref<number | null>
 }) {
   const thickness = createWorkspaceFmlThicknessUi({
     scale: deps.scale,
@@ -40,6 +43,9 @@ export function useWorkspaceFml(deps: {
       setLocalError: deps.setLocalError,
       orientedDoors: deps.orientedDoors,
       boundWindows: deps.boundWindows,
+      planName: deps.planName,
+      floorName: deps.floorName,
+      floorLevel: deps.floorLevel,
     },
     {
       appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,

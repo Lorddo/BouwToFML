@@ -1,5 +1,5 @@
 ---
-description: Vast 4-stappen workspace-flow — elke code-wijziging hoort in de juiste stap
+description: Vast workspace-flow (stap 0 project + 1–4 per floor) — elke code-wijziging hoort in de juiste stap
 alwaysApply: true
 ---
 
@@ -9,15 +9,17 @@ Lees `.cursor/docs/workspace-flow.md` vóór UI/CV-wijzigingen aan upload, prepr
 
 ## Vaste stappen
 
-1. **Onderlegger** — schaal, rotatie, gum/crop (`input`)
-2. **Voorbewerking** — B/W muren (+ int muur) + referentievakken muur/deur/raam; OCR-toggle; muurdikte bij afronden (`preprocess`)
-3. **Detectie** — optioneel OCR scan+mask, daarna muren (room-first) genereren (`templates` → `tabOutputs.walls`)
-4. **Resultaat** — gecombineerde view + FML uit `mergeTabOutputs` (`result`)
+0. **Project** — naam, adres, verdiepingen, FML-defaults (`project`)
+1. **Onderlegger** — schaal, rotatie, gum/crop (`input`); knop onderlegger overnemen
+2. **Voorbewerking** — B/W muren (+ int muur) + referentievakken; knop B/W+REF overnemen; OCR-toggle; muurdikte bij afronden (`preprocess`)
+3. **Detectie** — optioneel OCR scan+mask, daarna muren (room-first) genereren (`templates` → `tabOutputs.walls`) — **solo per floor**
+4. **Resultaat** — gecombineerde view + FML; project-download = `mergeFloorPlans` (`result`)
 
 ## Verplichte bronnen (DRY)
 
 | Concern | Module |
 |---------|--------|
+| Project / floors | `frontend/src/ui/composables/project/` |
 | Laagvolgorde + detect-targets | `frontend/src/cv/workspace/layer-flow.ts` |
 | Per-laag preprocess | `frontend/src/cv/preprocess/layer-preprocess.ts` |
 | Tab-output merge | `frontend/src/cv/pipeline/merge-tab-outputs.ts` |
@@ -30,3 +32,4 @@ Lees `.cursor/docs/workspace-flow.md` vóór UI/CV-wijzigingen aan upload, prepr
 - Nieuwe laag-tab → uitbreiden `WORKSPACE_ELEMENT_LAYER_ORDER` + `resolveLayerPreprocess`, niet aparte composable kopiëren.
 - `tabOutputs` alleen vullen in stap 3 detectie-run; valideer met `isValidTabOutput`.
 - Worker-wijzigingen: `registerAllExtractors` + `canvasEnv` (geen `HTMLImageElement` / `document`).
+- Floor-switch: capture/hydrate via DevSession-vorm in `FloorWorkspaceBlob`; CV blijft single-floor.

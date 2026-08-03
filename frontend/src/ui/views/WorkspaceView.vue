@@ -25,6 +25,8 @@ import WorkspaceGapsDevPanel from '../components/WorkspaceGapsDevPanel.vue'
 import WorkspaceDoorsDevPanel from '../components/WorkspaceDoorsDevPanel.vue'
 import WorkspaceWindowsDevPanel from '../components/WorkspaceWindowsDevPanel.vue'
 import WorkspaceDevViewPanel from '../components/WorkspaceDevViewPanel.vue'
+import ProjectSetupPanel from '../components/ProjectSetupPanel.vue'
+import WorkspaceFloorRail from '../components/WorkspaceFloorRail.vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useWorkspaceViewUi } from '../composables/workspace/useWorkspaceViewUi'
 
@@ -86,6 +88,22 @@ defineExpose<{
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-scroll sidebar-compact">
+        <ProjectSetupPanel
+          v-if="ws.flowStep === 'project'"
+          :meta="ws.projectMeta"
+          :floors="ws.projectFloors"
+          :active-floor-id="ws.activeFloorId"
+          :active-floor-defaults="ws.activeFloorDefaults"
+          @update:meta="ws.updateProjectMeta"
+          @update:floor-defaults="ws.updateActiveFloorDefaults"
+          @reset-floor-defaults="ws.resetActiveFloorDefaults"
+          @add-floor="ws.addFloor()"
+          @remove-floor="ws.removeFloor"
+          @rename-floor="(id, name) => ws.renameFloor(id, name)"
+          @select-floor="ws.switchFloor"
+          @move-floor="ws.reorderFloors"
+        />
+
         <DrawingUploadPanel
           v-if="ws.flowStep === 'input'"
           :image-name="ws.imageName ?? ''"
@@ -105,6 +123,7 @@ defineExpose<{
           :crop-include-enabled="ws.cropIncludeEnabled"
           :eraser-touched="ws.eraserTouched"
           :can-undo-mask="ws.canUndoMask"
+          :can-reuse-underlay="ws.canReuseUnderlay"
           @update-mm-x="ws.updateMmX"
           @update-mm-y="ws.updateMmY"
           @confirm-scale="ws.onConfirmScale"
@@ -116,6 +135,7 @@ defineExpose<{
           @reset-mask="ws.onResetMask"
           @undo="ws.undoMaskEdit"
           @download-underlay="ws.downloadUnderlay"
+          @reuse-underlay="ws.reuseUnderlayFromProject"
         />
 
         <WorkspaceSidebarPreprocessStep
@@ -130,12 +150,14 @@ defineExpose<{
           :counts="ws.counts"
           :scale-confirmed="ws.scale.confirmed.value"
           :rects="ws.rects"
+          :can-copy-preprocess-refs="ws.canCopyPreprocessRefs"
           @reset-preview="ws.onResetPreview"
           @layer-copied="ws.onLayerTuneCopied"
           @download-preprocessed-underlay="ws.downloadPreprocessedUnderlay"
           @set-reference-draw-mode="ws.setReferenceDrawMode"
           @set-reference-pan-mode="ws.setReferencePanMode"
           @update-door-fml-ref-id="ws.onDoorFmlRefIdChange"
+          @copy-preprocess-refs="ws.copyPreprocessAndRefsFromDonor"
         />
 
         <WorkspaceSidebarTemplatesStep
@@ -283,6 +305,7 @@ defineExpose<{
           @cancel-thickness-pick="ws.cancelFmlThicknessPick"
           @regenerate="ws.regenerateFml"
           @download-generated="ws.downloadGeneratedFml"
+          @download-project="ws.downloadProjectFml"
         />
       </div>
 
@@ -300,9 +323,21 @@ defineExpose<{
     </aside>
 
     <div class="canvas-area">
-      <DrawingProfilePicker v-if="!ws.imageSrc" @file-input="ws.onFileInput" />
+      <WorkspaceFloorRail
+        v-if="ws.flowStep !== 'project'"
+        :floors="ws.projectFloors"
+        :active-floor-id="ws.activeFloorId"
+        :busy="ws.switchingFloor"
+        @select-floor="ws.switchFloor"
+        @add-floor="ws.addFloor()"
+      />
 
-      <template v-else>
+      <DrawingProfilePicker
+        v-if="!ws.imageSrc && ws.flowStep !== 'project'"
+        @file-input="ws.onFileInput"
+      />
+
+      <template v-else-if="ws.imageSrc && ws.flowStep !== 'project'">
         <WorkspaceCanvasTabs
           v-model:preprocess-tab="ws.preprocessTab"
           v-model:template-tab="ws.templateTab"

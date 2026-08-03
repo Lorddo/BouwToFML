@@ -17,6 +17,7 @@ defineProps<{
   cropIncludeEnabled: boolean
   eraserTouched: boolean
   canUndoMask: boolean
+  canReuseUnderlay?: boolean
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
@@ -34,6 +35,7 @@ defineEmits<{
   resetMask: []
   undo: []
   downloadUnderlay: []
+  reuseUnderlay: []
 }>()
 </script>
 
@@ -76,6 +78,21 @@ defineEmits<{
       Download de huidige afbeelding (crop/gum + rotatie) als PNG. Bewerk lokaal en upload opnieuw —
       zet rotatie dan op 0° (al in de PNG). Schaal blijft per upload instellen. Referenties teken je
       in stap 2 (Voorbewerking).
+    </p>
+    <button
+      type="button"
+      class="secondary"
+      :disabled="!canReuseUnderlay"
+      @click="$emit('reuseUnderlay')"
+    >
+      Onderlegger overnemen
+    </button>
+    <p v-if="canReuseUnderlay" class="hint">
+      Neemt de projectbron over (originele scan + schaallijnen, zonder crop). Beschikbaar na schaal
+      bevestigen op een eerdere verdieping. Crop daarna deze verdieping opnieuw.
+    </p>
+    <p v-else class="hint">
+      Bevestig eerst de schaal op een verdieping (vóór crop) om de projectbron te bewaren.
     </p>
     <button type="button" class="primary" :disabled="!imageSrc" @click="$emit('downloadUnderlay')">
       Download onderlegger (PNG)

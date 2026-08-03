@@ -70,6 +70,7 @@ withDefaults(
 
 const emit = defineEmits<{
   downloadGenerated: []
+  downloadProject: []
   regenerate: []
   'update:fmlWallHeightCm': [value: number]
   'update:fmlDoorHeightCm': [value: number]
@@ -165,6 +166,7 @@ function onBovenlichtChange(event: Event): void {
       :generated-fml-text="generatedFmlText"
       :fml-limits-dirty="fmlLimitsDirty"
       @download-generated="emit('downloadGenerated')"
+      @download-project="emit('downloadProject')"
       @regenerate="emit('regenerate')"
     />
   </div>

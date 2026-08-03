@@ -34,15 +34,18 @@ export function countPlanElements(plan: FloorPlan | null): {
   windows: number
 } {
   if (!plan) return { walls: 0, doors: 0, windows: 0 }
-  const floor = plan.floors[0]
-  if (!floor) return { walls: 0, doors: 0, windows: 0 }
-  const walls = floor.walls.length
-  const doors = floor.walls
-    .flatMap((wall) => wall.openings)
-    .filter((opening) => opening.type === 'door').length
-  const windows = floor.walls
-    .flatMap((wall) => wall.openings)
-    .filter((opening) => opening.type === 'window').length
+  let walls = 0
+  let doors = 0
+  let windows = 0
+  for (const floor of plan.floors) {
+    walls += floor.walls.length
+    for (const wall of floor.walls) {
+      for (const opening of wall.openings) {
+        if (opening.type === 'door') doors += 1
+        else if (opening.type === 'window') windows += 1
+      }
+    }
+  }
   return { walls, doors, windows }
 }
 
@@ -53,6 +56,10 @@ export type WorkspaceFmlGenerateDeps = {
   setLocalError: (message: string | null) => void
   orientedDoors?: Ref<OrientedDoor[]>
   boundWindows?: Ref<BoundWindow[]>
+  /** Project/floor meta voor export-naamgeving. */
+  planName?: Ref<string | null>
+  floorName?: Ref<string | null>
+  floorLevel?: Ref<number | null>
 }
 
 export type WorkspaceFmlGenerateApplied = {
@@ -113,8 +120,9 @@ export function createWorkspaceFmlGenerate(
       const { plan, origin } = extractionToPlanWithOrigin(output, {
         pxPerMmX,
         pxPerMmY,
-        planName: stripFileExtension(deps.imageName.value),
-        floorName: 'Detectie',
+        planName: deps.planName?.value?.trim() || stripFileExtension(deps.imageName.value),
+        floorName: deps.floorName?.value?.trim() || 'Detectie',
+        level: deps.floorLevel?.value ?? 0,
         defaultThicknessCm: 10,
         floorHeightCm: applied.appliedFmlWallHeightCm.value,
         defaultDoorHeightCm: applied.appliedFmlDoorHeightCm.value,

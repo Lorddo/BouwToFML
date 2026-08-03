@@ -252,6 +252,7 @@ export function useWorkspaceImage(deps: {
   function resetImageSource() {
     optimizationBaseSrc.value = null
     suppressNextSrcWatch.value = false
+    deps.originalImageEl.value = null
   }
 
   return {

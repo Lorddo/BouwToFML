@@ -6,12 +6,13 @@ import {
   WORKSPACE_TEMPLATE_LAYER_ORDER,
 } from '@/cv/workspace/layer-flow'
 
-export type WorkspaceFlowStep = 'input' | 'preprocess' | 'templates' | 'result'
+export type WorkspaceFlowStep = 'project' | 'input' | 'preprocess' | 'templates' | 'result'
 
 /** Debounce voor live B/W-preview bij tune-wijzigingen in stap 2. */
 export const PREPROCESS_PREVIEW_DEBOUNCE_MS = 220
 
 export const WORKSPACE_FLOW_ORDER: WorkspaceFlowStep[] = [
+  'project',
   'input',
   'preprocess',
   'templates',
@@ -19,6 +20,7 @@ export const WORKSPACE_FLOW_ORDER: WorkspaceFlowStep[] = [
 ]
 
 export const WORKSPACE_FLOW_LABELS: Record<WorkspaceFlowStep, string> = {
+  project: '0. Project',
   input: '1. Onderlegger',
   preprocess: '2. Voorbewerking',
   templates: '3. Detectie',
@@ -100,6 +102,20 @@ export function visibleResultLayerTabs(): Array<(typeof RESULT_LAYER_TABS)[numbe
     if (tab === 'walls' && !RESULT_WALLS_TAB_VISIBLE) return false
     return true
   })
+}
+
+export function projectStepCanProceed(params: {
+  name: string
+  address: string
+  floorCount: number
+  activeFloorId: string | null
+}): boolean {
+  return (
+    params.name.trim().length > 0 &&
+    params.address.trim().length > 0 &&
+    params.floorCount >= 1 &&
+    !!params.activeFloorId
+  )
 }
 
 export function inputStepCanProceed(params: {

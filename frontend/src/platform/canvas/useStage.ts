@@ -9,6 +9,16 @@ export function useStage() {
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.code === 'Space') {
+      const target = e.target
+      if (
+        target instanceof HTMLElement &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return
+      }
       spacePressed.value = true
       e.preventDefault()
     }

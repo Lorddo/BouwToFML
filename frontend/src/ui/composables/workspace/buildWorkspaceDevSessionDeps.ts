@@ -75,6 +75,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     restoreOcrFromRegions: (regions: OcrTextCandidate[]) => void
   }
   semanticWalls: { buildForResultStep: () => Promise<void> }
+  fml: { updatePreviewPlan: (plan: import('@/core/fml/types').FloorPlan) => void }
   referenceWallThicknessPx: Ref<number | null>
   rects: Ref<SelectionRect[]>
   clearRectsByType: (type: ElementClass) => void
@@ -144,6 +145,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     autoClassifyWalls: (force) => ctx.roomFaces.autoClassifyWalls(force),
     finalizeWallDetection: () => ctx.roomFaces.finalizeWallDetection(),
     onEnterResultStep: () => ctx.semanticWalls.buildForResultStep(),
+    updatePreviewPlan: (plan) => ctx.fml.updatePreviewPlan(plan),
     serializeFaceOverrides: () => {
       const cache = ctx.roomFaces.roomRasterCache.value
       return cache ? serializeFaceOverrides(cache) : []

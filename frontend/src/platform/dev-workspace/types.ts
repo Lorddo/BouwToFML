@@ -119,9 +119,9 @@ export interface DevWorkspaceDetectionReplay extends DevWorkspaceRoomSnapshot {
 export interface DevWorkspaceSessionV2 extends DevWorkspaceSessionBase {
   schemaVersion: typeof DEV_WORKSPACE_SESSION_VERSION
   flow: DevWorkspaceFlowSnapshot
-  /** Exacte detectie-output — alleen bij restoreMode exact op stap 3. */
+  /** Exacte detectie-output — restoreMode exact (stap 3, of stap 4 met forceExactRestore). */
   detectionExact?: DevWorkspaceDetectionExact
-  /** Detectie-inputs om opnieuw te draaien — bij restoreMode replay (stap 4). */
+  /** Detectie-inputs om opnieuw te draaien — bij restoreMode replay (stap 4 DevSession). */
   detectionReplay?: DevWorkspaceDetectionReplay
 }
 
@@ -166,6 +166,11 @@ export interface DevSessionCaptureInput {
   workingImagePng?: string
   /** Inkt-overlay RLE (NONE/BLACK/WHITE codes) — niet gebakken in kleur-onderlegger. */
   inkOverlayRle?: number[]
+  /**
+   * Floor-switch / persistentie: forceer exact restore (ook op stap 4).
+   * DevSession-opname op result blijft default `replay` (opnieuw draaien met huidige code).
+   */
+  forceExactRestore?: boolean
 }
 
 /** Bepaal walls-replay-fase uit huidige UI/pipeline-staat. */

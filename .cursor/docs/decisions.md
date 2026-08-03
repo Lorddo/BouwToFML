@@ -255,11 +255,15 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Beslissing | Status |
 |------------|--------|
-| Scope | **Meerdere verdiepingen per project** |
-| Werkwijze | **Per verdieping** werken |
-| Hergebruik | Alleen **herkenningsinstellingen** optioneel overnemen (overschrijfbaar) |
-| Keuze bij nieuwe verdieping | **Herkenningen overnemen** of **nieuwe input** |
-| Schaal | **Altijd per verdieping** — niet overnemen |
+| Scope | **Meerdere verdiepingen per project** (`ProjectState` V1) |
+| Werkwijze | **Per verdieping** detectie-flow (stap 1–4); stap 0 = projectmeta |
+| Stap 1 overname | Expliciete knop «Onderlegger overnemen» — projectbron (pre-crop) + schaal |
+| Stap 2 overname | Expliciete knop «B/W overnemen» — tune only; LBE-rects opnieuw tekenen na crop |
+| Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
+| Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
+| Floor-switch | Exact restore + opgeslagen `previewPlan` (geen openings-rerun / geen regenerate) |
+| Defaults | Per verdieping (`FloorMeta.defaults`); per component in FML-editor |
+| Persistentie | **Niet** in V1 (IndexedDB later) |
 | V2 | Template opslag + Makelaar Huisstijl — zie `v2-roadmap.md` |
 
 ---

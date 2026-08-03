@@ -1,12 +1,14 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { tally } from '@/core/diagnostics'
 import { useImageUpload } from '@/platform/upload'
+import { imageElementToPngDataUrl } from '@/platform/dev-workspace/image-capture'
 import { useExampleSelection } from '@/platform/selection'
 import { DEFAULT_PREPROCESS } from '@/platform/image'
 import {
   detectionPresetForProfile,
   getDrawingProfile,
   loadStoredProfileId,
+  storeProfileId,
   type DrawingProfileId,
 } from '@/platform/profile'
 import { useExtraction } from './useExtraction'
@@ -41,6 +43,10 @@ import { useWorkspaceWindowFaces } from './workspace/useWorkspaceWindowFaces'
 import { assembleWorkspaceFacadeReturn } from './workspace/assembleWorkspaceFacadeReturn'
 import { useGapsInkModePersistence } from './workspace/useGapsInkModePersistence'
 import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
+import { useWorkspaceProject } from './project/useWorkspaceProject'
+import { buildFmlV3 } from '@/core/fml/buildFmlV3'
+import { downloadFml } from '@/core/fml/downloadFml'
+import { sanitizeFilename } from './workspace/workspace-fml-generate'
 import {
   emptyTabOutputs,
   type ResultViewTab,
@@ -54,7 +60,7 @@ import {
 
 export function useWorkspace() {
   const canvasRef = ref<unknown>(null)
-  const { imageSrc, imageName, loadFile, setImageSource } = useImageUpload()
+  const { imageSrc, imageName, loadFile, setImageSource, clearImageSource } = useImageUpload()
 
   const drawingProfileId = ref<DrawingProfileId>(loadStoredProfileId())
   const profileConfirmed = ref(true)
@@ -85,7 +91,7 @@ export function useWorkspace() {
   const templateTab = ref<TemplateTab>('ocr')
   const resultTab = ref<ResultViewTab>('vector')
   const tabOutputs = ref<TabDetectionOutputs>(emptyTabOutputs())
-  const flowStep = ref<WorkspaceFlowStep>('input')
+  const flowStep = ref<WorkspaceFlowStep>('project')
   const wallsDetectionComplete = ref(false)
   const referenceWallThicknessPx = ref<number | null>(null)
   const devSessionRestoring = ref(false)
@@ -397,6 +403,10 @@ export function useWorkspace() {
   })
   windowFacesApi = windowFaces
 
+  const fmlPlanName = ref<string | null>(null)
+  const fmlFloorName = ref<string | null>(null)
+  const fmlFloorLevel = ref<number | null>(null)
+
   const fml = useWorkspaceFml({
     imageName,
     combinedOutput: pipeline.combinedOutput,
@@ -411,6 +421,9 @@ export function useWorkspace() {
       referenceWallThicknessPx,
       devSessionRestoring,
     },
+    planName: fmlPlanName,
+    floorName: fmlFloorName,
+    floorLevel: fmlFloorLevel,
   })
   fmlApi = fml
 
@@ -518,43 +531,6 @@ export function useWorkspace() {
     roomRasterCache: roomFaces.roomRasterCache,
   })
 
-  const flow = useWorkspaceFlow({
-    flowStep,
-    imageSrc,
-    running: extraction.running,
-    scaleConfirmed: scale.confirmed,
-    profileConfirmed,
-    preprocessTab,
-    templateTab,
-    resultTab,
-    showOcrDetails,
-    activeClass,
-    rects,
-    referenceWallThicknessPx,
-    ocrEnabled: computed(() => preprocess.value.ocrEnabled ?? false),
-    preprocessPreview,
-    clearPolygonToolMode: inputMask.clearPolygonToolMode,
-    clearRects,
-    refreshMaskedWorkingImage: inputMask.refreshMaskedWorkingImage,
-    commitInputStepImage: image.commitInputStepImage,
-    commitInkEdits: inkEdit.commitInkEdits,
-    refreshLayerUnderlayPreview: preprocessUi.refreshLayerUnderlayPreview,
-    refreshAllDetectionUnderlays: preprocessUi.refreshAllDetectionUnderlays,
-    refreshOcrUnderlayPreview: preprocessUi.refreshOcrUnderlayPreview,
-    refreshSignaturePreview: signature.refreshSignaturePreview,
-    onApplyPreprocessPreview: preprocessUi.onApplyPreprocessPreview,
-    ensureVectorCacheIfNeeded: preprocessUi.ensureVectorCacheIfNeeded,
-    vectorCacheLoading: preprocessVectorCache.loading,
-    autoClassifyWalls: () => roomFaces.autoClassifyWalls(),
-    runOcrScan: () => ocr.runOcrScan(),
-    measureWallReferenceThickness: (rect) => detection.measureWallReferenceThickness(rect),
-    wallsDetectionComplete: () => wallsDetectionComplete.value,
-    devSessionRestoring,
-    onEnterResultStep: () => semanticWalls.buildForResultStep(),
-    setLocalError,
-    resetInkOverlay: () => inkEdit.resetInkEdit(),
-  })
-
   const lifecycle = useWorkspaceLifecycle({
     clearRects,
     extractionLastOutput: extraction.lastOutput,
@@ -571,6 +547,8 @@ export function useWorkspace() {
     profileConfirmed,
     showOcrDetails,
     roomFaces,
+    doorSwingFaces,
+    windowFaces,
     referenceWallThicknessPx,
     wallsDetectionComplete,
     flowStep,
@@ -611,6 +589,7 @@ export function useWorkspace() {
       preprocessUi,
       ocr,
       semanticWalls,
+      fml,
       referenceWallThicknessPx,
       rects,
       clearRectsByType,
@@ -622,6 +601,148 @@ export function useWorkspace() {
       windowFaces,
     }),
   )
+
+  const project = useWorkspaceProject({
+    flowStep,
+    imageSrc,
+    imageName,
+    preprocess,
+    drawingProfileId,
+    rects,
+    captureCurrentSession: (options) => devSession.captureCurrentSession(options),
+    restoreSession: (session, options) => devSession.restoreSessionInMemory(session, options),
+    resetToEmptyFloor: () => {
+      lifecycle.applyNewUnderlayReset()
+      clearImageSource()
+      image.resetImageSource()
+      flowStep.value = 'input'
+    },
+    loadUnderlayWithScale: async (src, name, scaleSnapshot) => {
+      clearRects()
+      doorSwingFaces.resetDoorSwingState()
+      doorSwingFaces.resetAutoDoorPassGate()
+      windowFaces.resetWindowState()
+      windowFaces.invalidateAutoWindowPass()
+      roomFaces.resetRoomState()
+      tabOutputs.value = emptyTabOutputs()
+      wallsDetectionComplete.value = false
+      image.prepareExactImageSrcLoad()
+      setImageSource(src, name)
+      await image.loadExactWorkingImage(src)
+      if (scaleSnapshot) {
+        scaleUi.restoreFromSessionSnapshot(scaleSnapshot)
+      }
+    },
+    restoreResultFloorFast: async ({
+      workingImagePng,
+      imageName: name,
+      scale: scaleSnap,
+      previewPlan,
+    }) => {
+      lifecycle.clearWorkspaceForSession()
+      image.prepareExactImageSrcLoad()
+      setImageSource(workingImagePng, name)
+      await image.loadExactWorkingImage(workingImagePng)
+      if (scaleSnap) {
+        scaleUi.restoreFromSessionSnapshot(scaleSnap)
+      }
+      flowStep.value = 'result'
+      resultTab.value = 'vector'
+      fml.updatePreviewPlan(previewPlan)
+    },
+    applyPreprocessTune: ({
+      preprocess: nextPreprocess,
+      drawingProfileId: nextProfile,
+      referenceWallThicknessPx: thickness,
+    }) => {
+      preprocess.value = normalizeStoredPreprocess({ ...nextPreprocess })
+      drawingProfileId.value = nextProfile
+      storeProfileId(nextProfile)
+      clearRects()
+      referenceWallThicknessPx.value = thickness != null && thickness > 0 ? thickness : null
+      void preprocessUi.refreshLayerUnderlayPreview('walls')
+    },
+    setLocalError,
+    getPreviewPlan: () => fml.previewPlan.value ?? null,
+    applyFmlDefaultsToUi: (defaults) => {
+      fml.setFmlWallHeightCm(defaults.wallHeightCm)
+      fml.setFmlDoorHeightCm(defaults.doorHeightCm)
+      fml.setFmlWindowHeightCm(defaults.windowHeightCm)
+      fml.setFmlWindowSillZCm(defaults.windowSillZCm)
+      fml.setFmlBovenlichtDefault(defaults.bovenlichtDefault)
+      fml.setFmlThicknessMinCm(defaults.thicknessMinCm)
+      fml.setFmlThicknessMidCm(defaults.thicknessMidCm)
+      fml.setFmlThicknessMaxCm(defaults.thicknessMaxCm)
+      fml.setFmlBandMidBoundaryCm(defaults.bandMidBoundaryCm)
+      fml.setFmlBandMaxBoundaryCm(defaults.bandMaxBoundaryCm)
+    },
+  })
+
+  watch(
+    () => fml.previewPlan.value,
+    (plan) => {
+      if (project.switchingFloor.value || devSessionRestoring.value) return
+      if (flowStep.value === 'result' && plan?.floors[0]) {
+        project.storeGeneratedFloorForActive(plan.floors[0])
+      }
+    },
+  )
+
+  watch(
+    [project.projectMeta, project.activeFloor],
+    () => {
+      fmlPlanName.value = project.projectMeta.value.name.trim() || null
+      fmlFloorName.value = project.activeFloor.value?.name ?? null
+      fmlFloorLevel.value = project.activeFloor.value?.level ?? null
+    },
+    { immediate: true, deep: true },
+  )
+
+  const flow = useWorkspaceFlow({
+    flowStep,
+    imageSrc,
+    running: extraction.running,
+    scaleConfirmed: scale.confirmed,
+    profileConfirmed,
+    preprocessTab,
+    templateTab,
+    resultTab,
+    showOcrDetails,
+    activeClass,
+    rects,
+    referenceWallThicknessPx,
+    ocrEnabled: computed(() => preprocess.value.ocrEnabled ?? false),
+    preprocessPreview,
+    clearPolygonToolMode: inputMask.clearPolygonToolMode,
+    clearRects,
+    refreshMaskedWorkingImage: inputMask.refreshMaskedWorkingImage,
+    commitInputStepImage: image.commitInputStepImage,
+    commitInkEdits: inkEdit.commitInkEdits,
+    refreshLayerUnderlayPreview: preprocessUi.refreshLayerUnderlayPreview,
+    refreshAllDetectionUnderlays: preprocessUi.refreshAllDetectionUnderlays,
+    refreshOcrUnderlayPreview: preprocessUi.refreshOcrUnderlayPreview,
+    refreshSignaturePreview: signature.refreshSignaturePreview,
+    onApplyPreprocessPreview: preprocessUi.onApplyPreprocessPreview,
+    ensureVectorCacheIfNeeded: preprocessUi.ensureVectorCacheIfNeeded,
+    vectorCacheLoading: preprocessVectorCache.loading,
+    autoClassifyWalls: () => roomFaces.autoClassifyWalls(),
+    runOcrScan: () => ocr.runOcrScan(),
+    measureWallReferenceThickness: (rect) => detection.measureWallReferenceThickness(rect),
+    wallsDetectionComplete: () => wallsDetectionComplete.value,
+    devSessionRestoring,
+    onEnterResultStep: () => semanticWalls.buildForResultStep(),
+    setLocalError,
+    resetInkOverlay: () => inkEdit.resetInkEdit(),
+    projectCanProceed: () => project.canProceedFromProject.value,
+    onLeaveProjectStep: () => project.enterActiveFloorFromProject(),
+    onEnterProjectStep: () => project.leaveFloorToProject(),
+  })
+
+  function resetWorkspace() {
+    project.resetProject()
+    lifecycle.resetWorkspace()
+    flowStep.value = 'project'
+  }
 
   const recalculateFaces = async () => {
     const ok = await roomFaces.recalculateFaces()
@@ -657,7 +778,21 @@ export function useWorkspace() {
     }
   }
 
-  return assembleWorkspaceFacadeReturn({
+  function downloadProjectFml(): void {
+    const plan = project.buildMergedProjectPlan()
+    if (!plan) {
+      setLocalError('Nog geen verdieping klaar voor FML-export.')
+      return
+    }
+    const defaults = project.activeFloorDefaults.value
+    const text = buildFmlV3(plan, {
+      name: plan.name,
+      bovenlichtDefault: defaults.bovenlichtDefault,
+    })
+    downloadFml(text, `${sanitizeFilename(plan.name)}.fml`)
+  }
+
+  const facade = assembleWorkspaceFacadeReturn({
     canvasRef,
     imageSrc,
     imageName,
@@ -719,11 +854,65 @@ export function useWorkspace() {
     clearOcrWithFaceRefresh,
     ocr,
     flow,
-    resetWorkspace: lifecycle.resetWorkspace,
+    resetWorkspace,
     pdfUpload,
     devSession,
     gapsInkMode,
     gapsInkModeManual,
     setGapsInkModeManual,
   })
+
+  return {
+    ...facade,
+    onConfirmScale: () => {
+      scaleUi.onConfirmScale()
+      if (!scale.confirmed.value) return
+      // Duurzame PNG — nooit blob:-URL (die wordt revoked bij crop/nieuwe upload).
+      const img = originalImageEl.value
+      if (!img?.complete || img.naturalWidth <= 0) return
+      try {
+        const durableSrc = imageElementToPngDataUrl(img)
+        project.ensureSourceUnderlay({
+          src: durableSrc,
+          name: imageName.value ?? 'onderlegger.png',
+          scale: {
+            state: scale.state.value ? { ...scale.state.value } : undefined,
+            distanceMmX: scale.distanceMmX.value,
+            distanceMmY: scale.distanceMmY.value,
+            confirmed: scale.confirmed.value,
+            ...(scale.confirmedPixelsPerMillimeterX.value != null
+              ? { confirmedPixelsPerMillimeterX: scale.confirmedPixelsPerMillimeterX.value }
+              : {}),
+            ...(scale.confirmedPixelsPerMillimeterY.value != null
+              ? { confirmedPixelsPerMillimeterY: scale.confirmedPixelsPerMillimeterY.value }
+              : {}),
+          },
+        })
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
+        setLocalError(`Kon projectbron niet bewaren: ${message}`)
+      }
+    },
+    projectMeta: project.projectMeta,
+    projectFloors: project.projectFloors,
+    activeFloorId: project.activeFloorId,
+    activeFloor: project.activeFloor,
+    sourceUnderlay: project.sourceUnderlay,
+    activeFloorDefaults: project.activeFloorDefaults,
+    canProceedFromProject: project.canProceedFromProject,
+    canReuseUnderlay: project.canReuseUnderlay,
+    canCopyPreprocessRefs: project.canCopyPreprocessRefs,
+    switchingFloor: project.switchingFloor,
+    updateProjectMeta: project.updateProjectMeta,
+    updateActiveFloorDefaults: project.updateActiveFloorDefaults,
+    resetActiveFloorDefaults: project.resetActiveFloorDefaults,
+    switchFloor: project.switchFloor,
+    addFloor: project.addFloor,
+    removeFloor: project.removeFloor,
+    renameFloor: project.renameFloor,
+    reorderFloors: project.reorderFloors,
+    reuseUnderlayFromProject: project.reuseUnderlayFromProject,
+    copyPreprocessAndRefsFromDonor: project.copyPreprocessAndRefsFromDonor,
+    downloadProjectFml,
+  }
 }

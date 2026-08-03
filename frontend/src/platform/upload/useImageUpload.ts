@@ -43,9 +43,17 @@ export function useImageUpload(
     imageName.value = name
   }
 
+  /** Leeg canvas / volgende verdieping zonder vorige onderlegger. */
+  function clearImageSource() {
+    if (objectUrl) URL.revokeObjectURL(objectUrl)
+    objectUrl = null
+    imageSrc.value = ''
+    imageName.value = ''
+  }
+
   onUnmounted(() => {
     if (objectUrl) URL.revokeObjectURL(objectUrl)
   })
 
-  return { imageSrc, imageName, loadFile, onFileInput, snapshot, setImageSource }
+  return { imageSrc, imageName, loadFile, onFileInput, snapshot, setImageSource, clearImageSource }
 }

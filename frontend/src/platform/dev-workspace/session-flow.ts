@@ -6,7 +6,10 @@ export function isSessionV2(session: DevWorkspaceSession): session is DevWorkspa
 }
 
 export function resolveTargetFlowStep(session: DevWorkspaceSession): WorkspaceFlowStep {
-  if (isSessionV2(session)) return session.flow.targetFlowStep
+  if (isSessionV2(session)) {
+    const step = session.flow.targetFlowStep
+    return step === 'project' ? 'input' : step
+  }
   return 'templates'
 }
 

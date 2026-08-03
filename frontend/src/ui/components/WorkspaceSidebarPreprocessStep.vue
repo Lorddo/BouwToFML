@@ -20,6 +20,7 @@ const props = defineProps<{
   counts: Partial<Record<ElementClass, number>>
   scaleConfirmed: boolean
   rects: SelectionRect[]
+  canCopyPreprocessRefs?: boolean
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
@@ -31,6 +32,7 @@ defineEmits<{
   setReferenceDrawMode: [type: 'wall' | 'door' | 'window']
   setReferencePanMode: []
   updateDoorFmlRefId: [id: string, fmlRefId: string]
+  copyPreprocessRefs: []
 }>()
 
 const showTunePanel = computed(() => isPreprocessLayerId(props.preprocessTab))
@@ -78,6 +80,18 @@ const isInkWallTab = computed(() => props.preprocessTab === 'inkWall')
   />
 
   <div class="panel">
+    <button
+      type="button"
+      class="secondary"
+      :disabled="!canCopyPreprocessRefs"
+      @click="$emit('copyPreprocessRefs')"
+    >
+      B/W overnemen
+    </button>
+    <p v-if="canCopyPreprocessRefs" class="hint">
+      Kopieert alleen B/W-tune (en gemeten muurdikte indien bekend). Referentievakken teken je
+      opnieuw na crop — coordinaten van een andere verdieping kloppen niet.
+    </p>
     <button
       type="button"
       class="primary"
