@@ -11,7 +11,7 @@ import {
 import type { WorkspaceFlowStep } from './constants'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 
-export type TemplatesInitialDetectionStepId = 'walls' | 'doors' | 'windows'
+export type TemplatesInitialDetectionStepId = 'ocr' | 'walls' | 'doors' | 'windows'
 
 export type TemplatesInitialDetectionStep = {
   id: TemplatesInitialDetectionStepId
@@ -31,8 +31,15 @@ export function isTemplatesInitialDetectionBusy(params: {
    * Voorkomt dat latere invalidate (face-edit, ref-wijziging) de overlay opnieuw toont.
    */
   initialDetectionSettled?: boolean
+  ocrEnabled?: boolean
+  ocrScanning?: boolean
+  ocrInitialPassReady?: boolean
 }): boolean {
   if (params.flowStep !== 'templates') return false
+  if (params.ocrEnabled && (params.ocrScanning || params.ocrInitialPassReady === false)) {
+    tally('O-43', 'busy_ocr')
+    return true
+  }
   if (
     params.roomPhase === 'classifying' ||
     params.roomPhase === 'recalculating' ||
@@ -55,12 +62,21 @@ export function resolveTemplatesInitialDetectionSteps(params: {
   classifyingInFlight: boolean
   doorInitialPassReady: boolean
   windowInitialPassReady: boolean
+  ocrEnabled?: boolean
+  ocrScanning?: boolean
+  ocrInitialPassReady?: boolean
 }): TemplatesInitialDetectionStep[] {
+  const ocrEnabled = params.ocrEnabled === true
+  const ocrDone = !ocrEnabled || (params.ocrInitialPassReady !== false && !params.ocrScanning)
+  const ocrActive = ocrEnabled && !ocrDone
+
   const wallsRunning =
-    params.roomPhase === 'classifying' ||
-    params.roomPhase === 'recalculating' ||
-    params.classifyingInFlight
+    ocrDone &&
+    (params.roomPhase === 'classifying' ||
+      params.roomPhase === 'recalculating' ||
+      params.classifyingInFlight)
   const wallsDone =
+    ocrDone &&
     !wallsRunning &&
     (params.roomPhase === 'review' ||
       params.roomPhase === 'done' ||
@@ -71,7 +87,15 @@ export function resolveTemplatesInitialDetectionSteps(params: {
   const windowsDone = wallsDone && params.windowInitialPassReady
   const windowsActive = wallsDone && !params.windowInitialPassReady
 
-  return [
+  const steps: TemplatesInitialDetectionStep[] = []
+  if (ocrEnabled) {
+    steps.push({
+      id: 'ocr',
+      label: 'OCR tekst',
+      status: ocrDone ? 'done' : ocrActive ? 'active' : 'pending',
+    })
+  }
+  steps.push(
     {
       id: 'walls',
       label: 'Muren classificeren',
@@ -87,7 +111,8 @@ export function resolveTemplatesInitialDetectionSteps(params: {
       label: 'Ramen detecteren',
       status: windowsDone ? 'done' : windowsActive ? 'active' : 'pending',
     },
-  ]
+  )
+  return steps
 }
 
 export function isFaceSelectEnabled(
@@ -110,12 +135,15 @@ export function isOcrHitRemoveEnabled(params: {
   preprocessTab: PreprocessPanelLayer
   templateTab: TemplateTab
   showOcrText: boolean
+  ocrEnabled?: boolean
 }): boolean {
   if (params.ocrOverlayCount === 0) return false
   const onOcrTab =
     (params.flowStep === 'preprocess' && params.preprocessTab === 'ocr') ||
     (params.flowStep === 'templates' && params.templateTab === 'ocr')
-  return onOcrTab || params.showOcrText
+  const onWallsWithOcr =
+    params.flowStep === 'templates' && params.templateTab === 'walls' && params.ocrEnabled === true
+  return onOcrTab || params.showOcrText || onWallsWithOcr
 }
 
 export function isLayerDebugVisible(
@@ -163,6 +191,11 @@ export function isWindowsDevPanelVisible(
   return flowStep === 'templates' && usesWindowOverlay(templateTab)
 }
 
+/** Dev-view switcher voor verborgen canvas-tabs (stap 2–4). */
+export function isDevViewPanelVisible(flowStep: WorkspaceFlowStep): boolean {
+  return flowStep === 'preprocess' || flowStep === 'templates' || flowStep === 'result'
+}
+
 export function isDebugSidebarEmpty(params: {
   isDev: boolean
   layerDebugVisible: boolean
@@ -172,6 +205,7 @@ export function isDebugSidebarEmpty(params: {
   gapsDevPanelVisible?: boolean
   doorsDevPanelVisible?: boolean
   windowsDevPanelVisible?: boolean
+  devViewPanelVisible?: boolean
 }): boolean {
   return (
     !params.isDev &&
@@ -181,6 +215,7 @@ export function isDebugSidebarEmpty(params: {
     !params.fmlDevPanelVisible &&
     !params.gapsDevPanelVisible &&
     !params.doorsDevPanelVisible &&
-    !params.windowsDevPanelVisible
+    !params.windowsDevPanelVisible &&
+    !params.devViewPanelVisible
   )
 }

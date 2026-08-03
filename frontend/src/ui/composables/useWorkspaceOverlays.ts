@@ -60,6 +60,7 @@ export function useWorkspaceOverlays(deps: {
   showLayer12?: Ref<boolean>
   showLayer14?: Ref<boolean>
   showOcrText: Ref<boolean>
+  ocrEnabled?: Ref<boolean> | ComputedRef<boolean>
   roomPreviewMaskCanvas?: Ref<CanvasLike | null>
   roomPreviewMaskRevision?: Ref<number>
   gapsPreviewMaskCanvas?: Ref<CanvasLike | null>
@@ -444,7 +445,11 @@ export function useWorkspaceOverlays(deps: {
     const onOcrTab =
       (deps.flowStep.value === 'preprocess' && deps.preprocessTab.value === 'ocr') ||
       (deps.flowStep.value === 'templates' && deps.templateTab.value === 'ocr')
-    if (!onOcrTab && !deps.showOcrText.value) return []
+    const onWallsWithOcr =
+      deps.flowStep.value === 'templates' &&
+      deps.templateTab.value === 'walls' &&
+      deps.ocrEnabled?.value === true
+    if (!onOcrTab && !deps.showOcrText.value && !onWallsWithOcr) return []
 
     const regions =
       deps.ocrMaskedRegions.value.length > 0

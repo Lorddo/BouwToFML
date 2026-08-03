@@ -8,6 +8,7 @@ import {
   isDoorsDevPanelVisible,
   isDebugExportsVisible,
   isDebugSidebarEmpty,
+  isDevViewPanelVisible,
   isFaceSelectEnabled,
   isGapsDevPanelVisible,
   isLayerDebugVisible,
@@ -35,6 +36,9 @@ export function useWorkspaceViewUi(deps: {
   probeVisible: Ref<boolean>
   resetWorkspace: () => void
   isDev?: boolean
+  ocrEnabled?: Ref<boolean> | ComputedRef<boolean>
+  ocrScanning?: Ref<boolean>
+  ocrInitialPassReady?: Ref<boolean>
 }) {
   const isDev = deps.isDev ?? import.meta.env.DEV
 
@@ -74,6 +78,9 @@ export function useWorkspaceViewUi(deps: {
       doorInitialPassReady: deps.doorInitialPassReady.value,
       windowInitialPassReady: deps.windowInitialPassReady.value,
       initialDetectionSettled: initialDetectionSettled.value,
+      ocrEnabled: deps.ocrEnabled?.value === true,
+      ocrScanning: deps.ocrScanning?.value === true,
+      ocrInitialPassReady: deps.ocrInitialPassReady?.value,
     }),
   )
 
@@ -83,6 +90,9 @@ export function useWorkspaceViewUi(deps: {
       classifyingInFlight: deps.classifyingInFlight.value,
       doorInitialPassReady: deps.doorInitialPassReady.value,
       windowInitialPassReady: deps.windowInitialPassReady.value,
+      ocrEnabled: deps.ocrEnabled?.value === true,
+      ocrScanning: deps.ocrScanning?.value === true,
+      ocrInitialPassReady: deps.ocrInitialPassReady?.value,
     }),
   )
 
@@ -99,6 +109,7 @@ export function useWorkspaceViewUi(deps: {
       preprocessTab: deps.preprocessTab.value,
       templateTab: deps.templateTab.value,
       showOcrText: deps.showOcrText.value,
+      ocrEnabled: deps.ocrEnabled?.value === true,
     }),
   )
 
@@ -128,6 +139,8 @@ export function useWorkspaceViewUi(deps: {
     isWindowsDevPanelVisible(deps.flowStep.value, deps.templateTab.value),
   )
 
+  const devViewPanelVisible = computed(() => isDevViewPanelVisible(deps.flowStep.value))
+
   const debugSidebarEmpty = computed(() =>
     isDebugSidebarEmpty({
       isDev,
@@ -138,6 +151,7 @@ export function useWorkspaceViewUi(deps: {
       gapsDevPanelVisible: gapsDevPanelVisible.value,
       doorsDevPanelVisible: doorsDevPanelVisible.value,
       windowsDevPanelVisible: windowsDevPanelVisible.value,
+      devViewPanelVisible: devViewPanelVisible.value,
     }),
   )
 
@@ -160,6 +174,7 @@ export function useWorkspaceViewUi(deps: {
     gapsDevPanelVisible,
     doorsDevPanelVisible,
     windowsDevPanelVisible,
+    devViewPanelVisible,
     debugSidebarEmpty,
     startNewWorkspace,
   } satisfies {
@@ -177,6 +192,7 @@ export function useWorkspaceViewUi(deps: {
     gapsDevPanelVisible: ComputedRef<boolean>
     doorsDevPanelVisible: ComputedRef<boolean>
     windowsDevPanelVisible: ComputedRef<boolean>
+    devViewPanelVisible: ComputedRef<boolean>
     debugSidebarEmpty: ComputedRef<boolean>
     startNewWorkspace: () => void
   }

@@ -34,7 +34,7 @@ withDefaults(
         </div>
       </label>
     </template>
-    <p v-else class="hint">OCR staat uit — schakel aan op stap 1 (Onderlegger).</p>
+    <p v-else class="hint">OCR staat uit — schakel aan op stap 2 (Voorbewerking).</p>
   </div>
 </template>
 

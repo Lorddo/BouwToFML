@@ -59,8 +59,24 @@ export function composeWallBw(params: {
 }
 
 /**
+ * Bake OCR mask into ink overlay as WHITE (in-place). Does not clear the OCR mask.
+ * @returns true if any pixels were written.
+ */
+export function bakeOcrMaskIntoInkOverlay(ocrMask: Uint8Array, inkOverlay: Uint8Array): boolean {
+  if (ocrMask.length !== inkOverlay.length) return false
+  let changed = false
+  for (let i = 0; i < ocrMask.length; i += 1) {
+    if ((ocrMask[i] ?? 0) > 0) {
+      inkOverlay[i] = INK_OVERLAY_WHITE
+      changed = true
+    }
+  }
+  return changed
+}
+
+/**
  * Bake live inkOverlay into baseBw (in-place). Clears baked pixels on overlay to NONE.
- * OCR blijft een aparte compose-laag — niet meebakken.
+ * OCR blijft een aparte compose-laag — niet meebakken (gebruik bakeOcrMaskIntoInkOverlay).
  * @returns true als er pixels zijn gebakken.
  */
 export function bakeInkOverlayIntoBaseBw(baseBw: Uint8Array, inkOverlay: Uint8Array): boolean {

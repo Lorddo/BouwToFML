@@ -9,6 +9,7 @@ import {
   applyInkOverlayBrush,
   applyInkOverlayErase,
   bakeInkOverlayIntoBaseBw,
+  bakeOcrMaskIntoInkOverlay,
   composeWallBw,
   createInkOverlay,
   decodeInkOverlayRle,
@@ -66,6 +67,29 @@ describe('composeWallBw', () => {
     const ink = new Uint8Array([INK_OVERLAY_NONE, INK_OVERLAY_NONE])
     expect(bakeInkOverlayIntoBaseBw(base, ink)).toBe(false)
     expect(Array.from(base)).toEqual([WALL_BW_WHITE, WALL_BW_INK])
+  })
+
+  it('bakeOcrMaskIntoInkOverlay schrijft WHITE op OCR-pixels', () => {
+    const ocr = new Uint8Array([0, 255, 0, 255])
+    const ink = new Uint8Array([
+      INK_OVERLAY_NONE,
+      INK_OVERLAY_NONE,
+      INK_OVERLAY_BLACK,
+      INK_OVERLAY_NONE,
+    ])
+    expect(bakeOcrMaskIntoInkOverlay(ocr, ink)).toBe(true)
+    expect(Array.from(ink)).toEqual([
+      INK_OVERLAY_NONE,
+      INK_OVERLAY_WHITE,
+      INK_OVERLAY_BLACK,
+      INK_OVERLAY_WHITE,
+    ])
+  })
+
+  it('bakeOcrMaskIntoInkOverlay no-op bij lengte-mismatch', () => {
+    const ocr = new Uint8Array([255])
+    const ink = new Uint8Array([INK_OVERLAY_NONE, INK_OVERLAY_NONE])
+    expect(bakeOcrMaskIntoInkOverlay(ocr, ink)).toBe(false)
   })
 
   it('mergeInkOverlayInto overschrijft alleen non-NONE', () => {

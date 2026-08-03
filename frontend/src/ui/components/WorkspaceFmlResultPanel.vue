@@ -51,9 +51,6 @@ const emit = defineEmits<{
   cancelThicknessPick: []
   regenerate: []
   downloadGenerated: []
-  copyGenerated: []
-  importFile: [file: File]
-  clearImport: []
 }>()
 </script>
 
@@ -99,8 +96,5 @@ const emit = defineEmits<{
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
     @download-generated="emit('downloadGenerated')"
-    @copy-generated="emit('copyGenerated')"
-    @import-file="emit('importFile', $event)"
-    @clear-import="emit('clearImport')"
   />
 </template>

@@ -5,9 +5,9 @@ import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { TemplateTab, PreprocessPanelLayer } from '@/cv/preprocess/layer-preprocess'
 import {
-  RESULT_LAYER_TABS,
   RESULT_TAB_LABELS,
   visiblePreprocessLayerTabs,
+  visibleResultLayerTabs,
   visibleTemplateLayerTabs,
   type WorkspaceFlowStep,
 } from './constants'
@@ -101,6 +101,8 @@ export type WorkspaceFacadeContext = {
   windowFaces?: ReturnType<typeof import('./useWorkspaceWindowFaces').useWorkspaceWindowFaces>
   toolbelt: ReturnType<typeof useWorkspaceToolbelt>
   recalculateFaces: () => Promise<boolean>
+  bakeOcrIntoInk: () => Promise<boolean>
+  clearOcrWithFaceRefresh: () => Promise<void>
   ocr: ReturnType<typeof useWorkspaceOcr>
   flow: ReturnType<typeof useWorkspaceFlow>
   resetWorkspace: () => void
@@ -133,7 +135,7 @@ function sliceCore(ctx: WorkspaceFacadeContext) {
     templateLayerTabs: computed(() =>
       visibleTemplateLayerTabs(ctx.preprocess.value.ocrEnabled ?? false),
     ),
-    resultLayerTabs: RESULT_LAYER_TABS,
+    resultLayerTabs: computed(() => visibleResultLayerTabs()),
     RESULT_TAB_LABELS,
   }
 }
@@ -301,7 +303,8 @@ function sliceOcr(ctx: WorkspaceFacadeContext) {
     ocrMaskedRegionCount: computed(() => ctx.inputMask.ocrMaskedRegions.value.length),
     ocrHitList: ctx.ocr.ocrHitList,
     runOcrScan: ctx.ocr.runOcrScan,
-    clearOcrCandidates: ctx.ocr.clearOcrScan,
+    clearOcrCandidates: ctx.clearOcrWithFaceRefresh,
+    bakeOcrIntoInk: ctx.bakeOcrIntoInk,
     removeOcrHit: ctx.ocr.removeOcrHit,
   }
 }

@@ -60,7 +60,12 @@ onUnmounted(() => {
       <input v-model="preprocess.ocrEnabled" type="checkbox" />
       OCR tekstdetectie
     </label>
-    <p v-if="!preprocess.ocrEnabled" class="hint subtle">OCR-tab blijft verborgen in detectie.</p>
+    <p v-if="!preprocess.ocrEnabled" class="hint subtle">
+      OCR uit: geen auto-scan op Muren. Details later via Dev-view.
+    </p>
+    <p v-else class="hint subtle">
+      OCR aan: auto-scan op Muren bij detectie; details via Dev-view.
+    </p>
 
     <div class="icon-row">
       <button

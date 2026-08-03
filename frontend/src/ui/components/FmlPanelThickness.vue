@@ -12,7 +12,6 @@ withDefaults(
     fmlThicknessMaxCm?: number
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
-    fmlLimitsDirty?: boolean
     fmlThicknessPickTier?: FmlThicknessPickTier | null
     fmlThicknessPickMessage?: string | null
     fmlThicknessPickBusy?: boolean
@@ -24,7 +23,6 @@ withDefaults(
     fmlThicknessMaxCm: 30,
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
-    fmlLimitsDirty: false,
     fmlThicknessPickTier: null,
     fmlThicknessPickMessage: null,
     fmlThicknessPickBusy: false,
@@ -73,114 +71,114 @@ function onBandMaxBoundaryInput(event: Event): void {
 </script>
 
 <template>
-  <div class="fml-thickness-limits">
-    <label class="fml-limit-field">
-      <span title="Exportdikte voor muren in de min-band">Min. FML-dikte (cm)</span>
-      <div class="fml-limit-input-row">
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="fmlThicknessMinCm"
-          :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onThicknessMinInput"
-        />
-        <button
-          type="button"
-          class="pick-btn"
-          title="Meet min-bandgrens op onderlegger (gemeten × 1.10)"
-          :class="{ active: fmlThicknessPickTier === 'min' }"
-          :disabled="
-            !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
-          "
-          @click="emit('startThicknessPick', 'min')"
-        >
-          ⊕
-        </button>
-        <input
-          type="number"
-          class="band-input"
-          min="1"
-          step="0.1"
-          title="Meetband: min &lt; deze waarde (cm)"
-          :value="fmlBandMidBoundaryCm"
-          :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onBandMidBoundaryInput"
-        />
-      </div>
-    </label>
-    <label class="fml-limit-field">
-      <span title="Exportdikte voor muren in de mid-band">Mid. FML-dikte (cm)</span>
-      <div class="fml-limit-input-row">
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="fmlThicknessMidCm"
-          :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onThicknessMidInput"
-        />
-        <span class="fml-limit-spacer" aria-hidden="true" />
-        <span class="fml-limit-spacer band-spacer" aria-hidden="true" />
-      </div>
-    </label>
-    <label class="fml-limit-field">
-      <span title="Exportdikte voor muren in de max-band">Max. FML-dikte (cm)</span>
-      <div class="fml-limit-input-row">
-        <input
-          type="number"
-          min="1"
-          step="1"
-          :value="fmlThicknessMaxCm"
-          :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onThicknessMaxInput"
-        />
-        <button
-          type="button"
-          class="pick-btn"
-          title="Meet max-bandgrens op onderlegger (gemeten × 0.90)"
-          :class="{ active: fmlThicknessPickTier === 'max' }"
-          :disabled="
-            !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
-          "
-          @click="emit('startThicknessPick', 'max')"
-        >
-          ⊕
-        </button>
-        <input
-          type="number"
-          class="band-input"
-          min="1"
-          step="0.1"
-          title="Meetband: max &gt; deze waarde (cm)"
-          :value="fmlBandMaxBoundaryCm"
-          :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onBandMaxBoundaryInput"
-        />
-      </div>
-    </label>
-  </div>
-  <p class="fml-band-hint">
-    Meetband: min &lt; {{ fmlBandMidBoundaryCm }} · mid {{ fmlBandMidBoundaryCm }}–{{
-      fmlBandMaxBoundaryCm
-    }}
-    · max &gt; {{ fmlBandMaxBoundaryCm }} cm
-    <span class="fml-band-ratio">(export links · bandgrens rechts van ⊕)</span>
-  </p>
-  <p v-if="fmlThicknessPickMessage" class="fml-hint fml-pick-hint">
-    {{ fmlThicknessPickMessage }}
-    <button
-      v-if="fmlThicknessPickTier"
-      type="button"
-      class="link-btn"
-      @click="emit('cancelThicknessPick')"
-    >
-      Annuleren
-    </button>
-  </p>
-  <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">
-    Hoogte/dikte gewijzigd — klik Regenereren om de FML bij te werken.
-  </p>
+  <details class="fml-fold">
+    <summary>Muur diktes &amp; banden</summary>
+    <div class="fml-thickness-limits">
+      <label class="fml-limit-field">
+        <span title="Exportdikte voor muren in de min-band">Min. FML-dikte (cm)</span>
+        <div class="fml-limit-input-row">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="fmlThicknessMinCm"
+            :disabled="!scaleConfirmed || !hasCombinedOutput"
+            @input="onThicknessMinInput"
+          />
+          <button
+            type="button"
+            class="pick-btn"
+            title="Meet min-bandgrens op onderlegger (gemeten × 1.10)"
+            :class="{ active: fmlThicknessPickTier === 'min' }"
+            :disabled="
+              !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
+            "
+            @click="emit('startThicknessPick', 'min')"
+          >
+            ⊕
+          </button>
+          <input
+            type="number"
+            class="band-input"
+            min="1"
+            step="0.1"
+            title="Meetband: min &lt; deze waarde (cm)"
+            :value="fmlBandMidBoundaryCm"
+            :disabled="!scaleConfirmed || !hasCombinedOutput"
+            @input="onBandMidBoundaryInput"
+          />
+        </div>
+      </label>
+      <label class="fml-limit-field">
+        <span title="Exportdikte voor muren in de mid-band">Mid. FML-dikte (cm)</span>
+        <div class="fml-limit-input-row">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="fmlThicknessMidCm"
+            :disabled="!scaleConfirmed || !hasCombinedOutput"
+            @input="onThicknessMidInput"
+          />
+          <span class="fml-limit-spacer" aria-hidden="true" />
+          <span class="fml-limit-spacer band-spacer" aria-hidden="true" />
+        </div>
+      </label>
+      <label class="fml-limit-field">
+        <span title="Exportdikte voor muren in de max-band">Max. FML-dikte (cm)</span>
+        <div class="fml-limit-input-row">
+          <input
+            type="number"
+            min="1"
+            step="1"
+            :value="fmlThicknessMaxCm"
+            :disabled="!scaleConfirmed || !hasCombinedOutput"
+            @input="onThicknessMaxInput"
+          />
+          <button
+            type="button"
+            class="pick-btn"
+            title="Meet max-bandgrens op onderlegger (gemeten × 0.90)"
+            :class="{ active: fmlThicknessPickTier === 'max' }"
+            :disabled="
+              !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
+            "
+            @click="emit('startThicknessPick', 'max')"
+          >
+            ⊕
+          </button>
+          <input
+            type="number"
+            class="band-input"
+            min="1"
+            step="0.1"
+            title="Meetband: max &gt; deze waarde (cm)"
+            :value="fmlBandMaxBoundaryCm"
+            :disabled="!scaleConfirmed || !hasCombinedOutput"
+            @input="onBandMaxBoundaryInput"
+          />
+        </div>
+      </label>
+    </div>
+    <p class="fml-band-hint">
+      Meetband: min &lt; {{ fmlBandMidBoundaryCm }} · mid {{ fmlBandMidBoundaryCm }}–{{
+        fmlBandMaxBoundaryCm
+      }}
+      · max &gt; {{ fmlBandMaxBoundaryCm }} cm
+      <span class="fml-band-ratio">(export links · bandgrens rechts van ⊕)</span>
+    </p>
+    <p v-if="fmlThicknessPickMessage" class="fml-hint fml-pick-hint">
+      {{ fmlThicknessPickMessage }}
+      <button
+        v-if="fmlThicknessPickTier"
+        type="button"
+        class="link-btn"
+        @click="emit('cancelThicknessPick')"
+      >
+        Annuleren
+      </button>
+    </p>
+  </details>
 </template>
 
 <style scoped>
@@ -188,7 +186,7 @@ function onBandMaxBoundaryInput(event: Event): void {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 0 0 8px;
+  margin: 4px 0 0;
 }
 
 .pick-btn {
@@ -225,10 +223,6 @@ function onBandMaxBoundaryInput(event: Event): void {
   font-size: 12px;
   color: #475569;
   line-height: 1.4;
-}
-
-.fml-dirty-hint {
-  color: #b45309;
 }
 
 .fml-pick-hint {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { proxyRefs } from 'vue'
+import { proxyRefs, computed } from 'vue'
 import FloorplanCanvas from '../components/FloorplanCanvas.vue'
 import DrawingUploadPanel from '../components/DrawingUploadPanel.vue'
 import DrawingProfilePicker from '../components/DrawingProfilePicker.vue'
@@ -24,6 +24,7 @@ import WorkspaceFmlDevPanel from '../components/WorkspaceFmlDevPanel.vue'
 import WorkspaceGapsDevPanel from '../components/WorkspaceGapsDevPanel.vue'
 import WorkspaceDoorsDevPanel from '../components/WorkspaceDoorsDevPanel.vue'
 import WorkspaceWindowsDevPanel from '../components/WorkspaceWindowsDevPanel.vue'
+import WorkspaceDevViewPanel from '../components/WorkspaceDevViewPanel.vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useWorkspaceViewUi } from '../composables/workspace/useWorkspaceViewUi'
 
@@ -51,6 +52,7 @@ const {
   gapsDevPanelVisible,
   doorsDevPanelVisible,
   windowsDevPanelVisible,
+  devViewPanelVisible,
   debugSidebarEmpty,
   startNewWorkspace,
 } = useWorkspaceViewUi({
@@ -68,6 +70,9 @@ const {
   imageSrc: api.imageSrc,
   probeVisible: api.probeVisible,
   resetWorkspace: api.resetWorkspace,
+  ocrEnabled: computed(() => api.preprocess.value.ocrEnabled ?? false),
+  ocrScanning: api.ocrScanning,
+  ocrInitialPassReady: api.ocrInitialPassReady,
 })
 
 defineExpose<{
@@ -162,6 +167,7 @@ defineExpose<{
           @profile-selected="ws.onProfileSelected"
           @run-ocr-scan="ws.runOcrScan"
           @clear-ocr-candidates="ws.clearOcrCandidates"
+          @bake-ocr-into-ink="ws.bakeOcrIntoInk"
           @remove-ocr-hit="ws.removeOcrHit"
           @autoclassify-walls="ws.autoclassifyWalls"
           @set-template-pan-mode="ws.setTemplatePanMode"
@@ -277,9 +283,6 @@ defineExpose<{
           @cancel-thickness-pick="ws.cancelFmlThicknessPick"
           @regenerate="ws.regenerateFml"
           @download-generated="ws.downloadGeneratedFml"
-          @copy-generated="ws.copyGeneratedFml"
-          @import-file="ws.importFmlFile"
-          @clear-import="ws.clearImportedFml"
         />
       </div>
 
@@ -417,6 +420,15 @@ defineExpose<{
     </div>
 
     <WorkspaceDebugSidebar :visible="debugSidebarVisible">
+      <WorkspaceDevViewPanel
+        v-if="devViewPanelVisible"
+        v-model:preprocess-tab="ws.preprocessTab"
+        v-model:template-tab="ws.templateTab"
+        v-model:result-tab="ws.resultTab"
+        :flow-step="ws.flowStep"
+        :ocr-enabled="ws.preprocess.ocrEnabled"
+      />
+
       <DevSessionPanel
         v-if="isDev"
         :busy="ws.devSessionBusy"

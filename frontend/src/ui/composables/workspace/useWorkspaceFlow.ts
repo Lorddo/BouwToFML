@@ -1,5 +1,5 @@
 import { tally } from '@/core/diagnostics'
-import { computed, watch, type Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import type { ElementClass } from '@/core/extraction/types'
 import type { SelectionRect } from '@/platform/selection'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
@@ -49,6 +49,7 @@ export function useWorkspaceFlow(deps: {
   ensureVectorCacheIfNeeded: () => Promise<void>
   vectorCacheLoading: Ref<boolean>
   autoClassifyWalls: () => Promise<boolean>
+  runOcrScan: () => Promise<void>
   measureWallReferenceThickness: (rect: SelectionRect) => Promise<number | null>
   wallsDetectionComplete?: () => boolean
   devSessionRestoring?: Ref<boolean>
@@ -59,6 +60,10 @@ export function useWorkspaceFlow(deps: {
   const flowOrder = WORKSPACE_FLOW_ORDER
   const flowLabels = WORKSPACE_FLOW_LABELS
   const flowStepCount = flowOrder.length
+  /** True tot auto-OCR (+ start classify) bij enter stap 3 klaar is. */
+  const ocrInitialPassReady = ref(true)
+  /** Onderdrukt templateTab-watch autoClassify tijdens enter-bootstrap. */
+  let bootstrappingTemplates = false
 
   const canGoBack = computed(() => flowOrder.indexOf(deps.flowStep.value) > 0)
   const flowStepIndex = computed(() => flowOrder.indexOf(deps.flowStep.value))
@@ -153,7 +158,7 @@ export function useWorkspaceFlow(deps: {
     if (idx < flowOrder.length - 1) {
       const nextStep = flowOrder[idx + 1]
       if (nextStep === 'result') {
-        deps.resultTab.value = 'walls'
+        deps.resultTab.value = 'vector'
       }
       deps.flowStep.value = nextStep
     }
@@ -177,7 +182,7 @@ export function useWorkspaceFlow(deps: {
   }
 
   watch(deps.templateTab, () => {
-    if (shouldSkipAutoClassify()) return
+    if (shouldSkipAutoClassify() || bootstrappingTemplates) return
     if (deps.flowStep.value === 'templates') {
       const tab = deps.templateTab.value
       if (tab === 'ocr') {
@@ -211,7 +216,7 @@ export function useWorkspaceFlow(deps: {
   watch(
     () => deps.profileConfirmed.value,
     (confirmed) => {
-      if (shouldSkipAutoClassify()) return
+      if (shouldSkipAutoClassify() || bootstrappingTemplates) return
       if (confirmed && deps.flowStep.value === 'templates' && deps.templateTab.value === 'walls') {
         void deps.autoClassifyWalls()
       }
@@ -233,20 +238,28 @@ export function useWorkspaceFlow(deps: {
       deps.resetInkOverlay?.()
     }
     if (prev === 'preprocess' && step === 'templates') {
-      const startTab: TemplateTab = deps.ocrEnabled.value ? 'ocr' : 'walls'
-      const tabUnchanged = deps.templateTab.value === startTab
-      deps.templateTab.value = startTab
+      deps.templateTab.value = 'walls'
       deps.preprocessTab.value = 'walls'
       deps.activeClass.value = null
-      // Als OCR uit stond, stond templateTab vaak al op 'walls' (ocrEnabled-watch) —
-      // dan vuurt de templateTab-watch niet en moet autoclassify hier starten.
-      if (
-        startTab === 'walls' &&
-        tabUnchanged &&
-        deps.profileConfirmed.value &&
-        !shouldSkipAutoClassify()
-      ) {
-        void deps.autoClassifyWalls()
+      if (!shouldSkipAutoClassify()) {
+        bootstrappingTemplates = true
+        ocrInitialPassReady.value = !deps.ocrEnabled.value
+        void (async () => {
+          try {
+            if (deps.ocrEnabled.value) {
+              await deps.runOcrScan()
+              ocrInitialPassReady.value = true
+            }
+            if (deps.profileConfirmed.value && !shouldSkipAutoClassify()) {
+              await deps.autoClassifyWalls()
+            }
+          } finally {
+            ocrInitialPassReady.value = true
+            bootstrappingTemplates = false
+          }
+        })()
+      } else {
+        ocrInitialPassReady.value = true
       }
     }
     if (step === 'templates') {
@@ -271,7 +284,8 @@ export function useWorkspaceFlow(deps: {
     },
   )
 
-  // Sticky OCR/gaps → walls (zie stickyPreprocessTab / stickyTemplateTab). GAPS_TAB_VISIBLE = F.
+  // Sticky OCR/gaps → walls (zie stickyPreprocessTab / stickyTemplateTab).
+  // GAPS sticky; inkWall/doors/windows/ocr blijven bereikbaar via Dev-view (geen sticky).
   watch(
     [deps.preprocessTab, deps.templateTab],
     () => {
@@ -295,5 +309,6 @@ export function useWorkspaceFlow(deps: {
     flowNextBlockedHint,
     goToPreviousStep,
     goToNextStep,
+    ocrInitialPassReady,
   }
 }

@@ -97,6 +97,7 @@ defineEmits<{
   profileSelected: [id: DrawingProfileId]
   runOcrScan: []
   clearOcrCandidates: []
+  bakeOcrIntoInk: []
   removeOcrHit: [key: string]
   autoclassifyWalls: []
   recalculateFaces: []
@@ -176,6 +177,51 @@ function swatchStyle(color: string): Record<string, string> {
       Wis OCR
     </button>
     <OcrHitListPanel :hits="ocrHitList" @remove="$emit('removeOcrHit', $event)" />
+  </div>
+
+  <div v-if="templateTab === 'walls' && preprocess.ocrEnabled" class="panel">
+    <h3>OCR</h3>
+    <p class="hint">
+      Tekst-highlights zijn actief (nog niet gebakken). Pas confidence aan, wis, of bak naar inkt.
+    </p>
+    <label>
+      OCR min confidence:
+      <div class="field-row">
+        <input
+          v-model.number="preprocess.ocrMinConfidence"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+        />
+        <input
+          v-model.number="preprocess.ocrMinConfidence"
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          class="num-input"
+        />
+      </div>
+    </label>
+    <div class="ocr-wall-actions">
+      <button
+        type="button"
+        class="action-btn"
+        :disabled="ocrCandidateCount === 0 && ocrMaskedRegionCount === 0"
+        @click="$emit('clearOcrCandidates')"
+      >
+        Wis OCR
+      </button>
+      <button
+        type="button"
+        class="action-btn primary"
+        :disabled="classifyingInFlight || (ocrCandidateCount === 0 && ocrMaskedRegionCount === 0)"
+        @click="$emit('bakeOcrIntoInk')"
+      >
+        Bake OCR
+      </button>
+    </div>
   </div>
 
   <div v-if="templateTab === 'gaps'" class="panel">
@@ -347,6 +393,43 @@ function swatchStyle(color: string): Record<string, string> {
 
 .wall-actions .action-btn.primary {
   font-weight: 600;
+}
+
+.ocr-wall-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ocr-wall-actions .action-btn {
+  width: 100%;
+  text-align: left;
+}
+
+.ocr-wall-actions .action-btn.primary {
+  font-weight: 600;
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.field-row input[type='range'] {
+  flex: 1;
+}
+
+.num-input {
+  width: 74px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  margin: 6px 0;
 }
 
 .wall-actions .metric {

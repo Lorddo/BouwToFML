@@ -23,6 +23,7 @@ import { useWorkspaceScale } from './workspace/useWorkspaceScale'
 import { useWorkspaceRoomPipeline } from './workspace/useWorkspaceRoomPipeline'
 import { useWorkspaceFlow } from './workspace/useWorkspaceFlow'
 import { useWorkspaceOcr } from './workspace/useWorkspaceOcr'
+import { bakeOcrMaskIntoInkOverlay } from '@/cv/preprocess/compose-wall-bw'
 import { useWorkspaceDevSession } from './workspace/useWorkspaceDevSession'
 import { useWorkspaceWallPipeline } from './workspace/useWorkspaceWallPipeline'
 import type { WorkspaceFlowStep } from './workspace/constants'
@@ -82,7 +83,7 @@ export function useWorkspace() {
   const preprocessTab = ref<PreprocessPanelLayer>('walls')
   const inputTab = ref<'origineel'>('origineel')
   const templateTab = ref<TemplateTab>('ocr')
-  const resultTab = ref<ResultViewTab>('walls')
+  const resultTab = ref<ResultViewTab>('vector')
   const tabOutputs = ref<TabDetectionOutputs>(emptyTabOutputs())
   const flowStep = ref<WorkspaceFlowStep>('input')
   const wallsDetectionComplete = ref(false)
@@ -484,6 +485,7 @@ export function useWorkspace() {
     showLayer12,
     showLayer14,
     showOcrText,
+    ocrEnabled: computed(() => preprocess.value.ocrEnabled ?? false),
     roomPreviewMaskCanvas: roomFaces.roomPreviewMaskCanvas,
     roomPreviewMaskRevision: roomFaces.roomPreviewMaskRevision,
     gapsPreviewMaskCanvas: gapsFaces.gapsPreviewMaskCanvas,
@@ -544,6 +546,7 @@ export function useWorkspace() {
     ensureVectorCacheIfNeeded: preprocessUi.ensureVectorCacheIfNeeded,
     vectorCacheLoading: preprocessVectorCache.loading,
     autoClassifyWalls: () => roomFaces.autoClassifyWalls(),
+    runOcrScan: () => ocr.runOcrScan(),
     measureWallReferenceThickness: (rect) => detection.measureWallReferenceThickness(rect),
     wallsDetectionComplete: () => wallsDetectionComplete.value,
     devSessionRestoring,
@@ -626,6 +629,34 @@ export function useWorkspace() {
     return ok
   }
 
+  async function bakeOcrIntoInk(): Promise<boolean> {
+    const mask = inputMask.ocrMask.value
+    const ready = await ensureWallBwReady()
+    if (!ready) return false
+    const w = wallBw.baseBwWidth.value
+    const h = wallBw.baseBwHeight.value
+    if (w <= 0 || h <= 0) return false
+    if (mask) {
+      const overlay = wallBw.ensureInkOverlaySize(w, h)
+      bakeOcrMaskIntoInkOverlay(mask, overlay)
+    }
+    ocr.clearOcrScan()
+    await wallBw.composeAndPublish({ includeOcr: false })
+    const phase = roomFaces.roomPhase.value
+    if (phase === 'review' || phase === 'done') {
+      return recalculateFaces()
+    }
+    return true
+  }
+
+  async function clearOcrWithFaceRefresh(): Promise<void> {
+    ocr.clearOcrScan()
+    const phase = roomFaces.roomPhase.value
+    if (phase === 'review' || phase === 'done') {
+      await recalculateFaces()
+    }
+  }
+
   return assembleWorkspaceFacadeReturn({
     canvasRef,
     imageSrc,
@@ -684,6 +715,8 @@ export function useWorkspace() {
     windowFaces,
     toolbelt,
     recalculateFaces,
+    bakeOcrIntoInk,
+    clearOcrWithFaceRefresh,
     ocr,
     flow,
     resetWorkspace: lifecycle.resetWorkspace,

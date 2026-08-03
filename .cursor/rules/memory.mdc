@@ -5,7 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-02 (bovenlicht export-only)
+Laatste update: 2026-08-02 (OCR muren-flow)
+
+## OCR muren-flow (2026-08-02)
+
+Stap 2: checkbox `ocrEnabled`. Stap 3: altijd land op Muren; bij OCR-aan auto-scan in initial flow (highlights + compose, niet gebakken). Muren-sidebar: confidence-slider, Wis OCR, Bake OCR (`ocrMask`→ink WHITE→recalculateFaces). OCR-tab → Dev-view (`OCR_TAB_VISIBLE=false`).
+
+## Canvas-tabs → Dev (2026-08-02)
+
+Productie: 1 canvas-tab per stap. Verborgen: Int muur, OCR, Deuren, Ramen, Resultaat-Muren — via `WorkspaceDevViewPanel`. Flags in `constants.ts`; enter result → `vector`.
 
 ## Bovenlicht FML (2026-08-02)
 
@@ -156,9 +164,9 @@ Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.
 
 **Stap 1:** schaal/rotatie/crop/gum. Geen refs. Floor **min 3000px** (`OPTIMIZATION_BASE_DIMENSION`); upscale high-quality.
 
-**Stap 2:** tabs Muren + Int muur; B/W-tune + **LBE-refs** (muur/deur/raam) + OCR-toggle (**default uit**) + deur Template ID. Gate naar stap 3: muur-rect; bij afronden meet dikte/stijl op post-bake **`baseBw`**. Ref-crops = **`baseBw`** (gebakken inkt mee; nooit `effectiveBw`/OCR; fallback rebuild wallLayer zonder UI-state).
+**Stap 2:** canvas alleen Voorbewerking; Int muur via Dev-view. B/W-tune + **LBE-refs** (muur/deur/raam) + OCR-toggle (**default uit**) + deur Template ID. Gate naar stap 3: muur-rect; bij afronden meet dikte/stijl op post-bake **`baseBw`**. Ref-crops = **`baseBw`** (gebakken inkt mee; nooit `effectiveBw`/OCR; fallback rebuild wallLayer zonder UI-state).
 
-**Stap 3 detectie:** (optioneel OCR) → Muren (room-first; bij review: deuren+ramen mee) → Deuren → Ramen. Gaten-tab hidden. Na afronden → Vector/FML.
+**Stap 3 detectie:** altijd Muren; bij OCR-aan auto-scan in initial flow (highlights) → muren→deuren→ramen. OCR/Deuren/Ramen → Dev-view. Gaten-tab hidden. Na afronden → Vector/FML.
 
 **Muren:** enig pad = room-first → pipeline-V3 L1–L10 (`fmlReady`). Face-class flow: `wall` = L0 mask; V3 ziet alleen binary mask — zie `wall-face-class-flow.md`.
 

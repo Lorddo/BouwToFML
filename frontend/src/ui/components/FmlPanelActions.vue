@@ -13,19 +13,9 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  importFile: [file: File]
   downloadGenerated: []
-  copyGenerated: []
   regenerate: []
 }>()
-
-function onFileInput(event: Event): void {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  emit('importFile', file)
-  input.value = ''
-}
 </script>
 
 <template>
@@ -41,19 +31,10 @@ function onFileInput(event: Event): void {
     <button type="button" :disabled="!generatedFmlText" @click="emit('downloadGenerated')">
       Download .fml
     </button>
-    <button type="button" :disabled="!generatedFmlText" @click="emit('copyGenerated')">
-      Kopieer FML
-    </button>
-    <label class="upload-btn" :class="{ disabled: !scaleConfirmed || !hasCombinedOutput }">
-      Upload FML
-      <input
-        type="file"
-        accept=".fml,.json,.json.fml"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
-        @change="onFileInput"
-      />
-    </label>
   </div>
+  <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">
+    Hoogte/dikte gewijzigd — klik Regenereren om de FML bij te werken.
+  </p>
 </template>
 
 <style scoped>
@@ -69,25 +50,13 @@ function onFileInput(event: Event): void {
   color: #92400e;
 }
 
-.upload-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  padding: 4px 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
+.fml-hint {
+  margin: 6px 0 0;
   font-size: 12px;
-  cursor: pointer;
+  line-height: 1.4;
 }
 
-.upload-btn input {
-  display: none;
-}
-
-.upload-btn.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.fml-dirty-hint {
+  color: #b45309;
 }
 </style>

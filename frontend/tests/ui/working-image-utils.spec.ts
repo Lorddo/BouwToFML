@@ -13,6 +13,7 @@ import {
   preprocessStepCanProceed,
   OPTIMIZATION_BASE_DIMENSION,
   visiblePreprocessLayerTabs,
+  visibleResultLayerTabs,
   visibleTemplateLayerTabs,
 } from '@/ui/composables/workspace/constants'
 
@@ -198,11 +199,11 @@ describe('workspace input gates and OCR tabs', () => {
     expect(OPTIMIZATION_BASE_DIMENSION).toBe(3000)
   })
 
-  it('filters OCR (template) and hides Gaten from preprocess/template tabs', () => {
-    expect(visiblePreprocessLayerTabs()).toEqual(['walls', 'inkWall'])
-    expect(visiblePreprocessLayerTabs()).toEqual(['walls', 'inkWall'])
-    expect(visibleTemplateLayerTabs(true)).toEqual(['ocr', 'walls', 'doors', 'windows'])
-    expect(visibleTemplateLayerTabs(false)).toEqual(['walls', 'doors', 'windows'])
+  it('hides Int muur / Deuren / Ramen / OCR / Resultaat-Muren from canvas tabs (Dev-only)', () => {
+    expect(visiblePreprocessLayerTabs()).toEqual(['walls'])
+    expect(visibleTemplateLayerTabs(true)).toEqual(['walls'])
+    expect(visibleTemplateLayerTabs(false)).toEqual(['walls'])
+    expect(visibleResultLayerTabs()).toEqual(['vector'])
   })
 
   it('allows leaving input without wall reference; preprocess requires wall rect', () => {

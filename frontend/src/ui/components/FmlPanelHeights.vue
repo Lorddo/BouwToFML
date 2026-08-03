@@ -9,14 +9,12 @@ withDefaults(
     fmlDoorHeightCm?: number
     fmlWindowHeightCm?: number
     fmlWindowSillZCm?: number
-    fmlBovenlichtDefault?: boolean
   }>(),
   {
     fmlWallHeightCm: 280,
     fmlDoorHeightCm: 220,
     fmlWindowHeightCm: 150,
     fmlWindowSillZCm: 70,
-    fmlBovenlichtDefault: false,
   },
 )
 
@@ -25,7 +23,6 @@ const emit = defineEmits<{
   'update:fmlDoorHeightCm': [value: number]
   'update:fmlWindowHeightCm': [value: number]
   'update:fmlWindowSillZCm': [value: number]
-  'update:fmlBovenlichtDefault': [value: boolean]
 }>()
 
 function metersFromCm(cm: number): string {
@@ -52,86 +49,73 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
   else if (emitName === 'update:fmlDoorHeightCm') emit('update:fmlDoorHeightCm', cm)
   else emit('update:fmlWindowHeightCm', cm)
 }
-
-function onBovenlichtChange(event: Event): void {
-  emit('update:fmlBovenlichtDefault', (event.target as HTMLInputElement).checked)
-}
 </script>
 
 <template>
-  <div class="fml-height-limits">
-    <label class="fml-limit-field">
-      <span>Muurhoogte (m)</span>
-      <input
-        type="number"
-        min="1"
-        max="6"
-        step="0.01"
-        :value="metersFromCm(fmlWallHeightCm)"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
-        @input="onHeightMetersInput($event, 'update:fmlWallHeightCm')"
-      />
-    </label>
-    <label class="fml-limit-field">
-      <span
-        title="Standaard voor alle deuren; per deur overschrijfbaar via Ctrl+klik in de preview"
-      >
-        Deurhoogte (m)
-      </span>
-      <input
-        type="number"
-        min="0.5"
-        max="4"
-        step="0.01"
-        :value="metersFromCm(fmlDoorHeightCm)"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
-        @input="onHeightMetersInput($event, 'update:fmlDoorHeightCm')"
-      />
-    </label>
-    <label class="fml-limit-field">
-      <span
-        title="Standaard afstand vloer → onderkant raam; per raam overschrijfbaar via Ctrl+klik"
-      >
-        Raam vloer (m)
-      </span>
-      <input
-        type="number"
-        min="0"
-        max="3"
-        step="0.01"
-        :value="metersFromCm(fmlWindowSillZCm)"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
-        @input="onHeightMetersInput($event, 'update:fmlWindowSillZCm')"
-      />
-    </label>
-    <label class="fml-limit-field">
-      <span title="Standaard glashoogte; per raam overschrijfbaar via Ctrl+klik in de preview">
-        Raam glas (m)
-      </span>
-      <input
-        type="number"
-        min="0.3"
-        max="4"
-        step="0.01"
-        :value="metersFromCm(fmlWindowHeightCm)"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
-        @input="onHeightMetersInput($event, 'update:fmlWindowHeightCm')"
-      />
-    </label>
-    <label
-      class="fml-limit-field fml-limit-field--checkbox"
-      title="40 cm hoog, 10 cm boven de deur,zelfde breedte. Alleen in FML-export (niet in preview). Per deur overschrijfbaar via Ctrl+klik."
-    >
-      <input
-        type="checkbox"
-        :checked="fmlBovenlichtDefault"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
-        @change="onBovenlichtChange"
-      />
-      <span>Bovenlicht op alle deuren</span>
-    </label>
-  </div>
-  <p class="fml-band-hint">Per opening overschrijven: Ctrl+klik in de preview → maat/hoogte.</p>
+  <details class="fml-fold">
+    <summary>Hoogtes</summary>
+    <div class="fml-height-limits">
+      <label class="fml-limit-field">
+        <span>Muurhoogte (m)</span>
+        <input
+          type="number"
+          min="1"
+          max="6"
+          step="0.01"
+          :value="metersFromCm(fmlWallHeightCm)"
+          :disabled="!scaleConfirmed || !hasCombinedOutput"
+          @input="onHeightMetersInput($event, 'update:fmlWallHeightCm')"
+        />
+      </label>
+      <label class="fml-limit-field">
+        <span
+          title="Standaard voor alle deuren; per deur overschrijfbaar via Ctrl+klik in de preview"
+        >
+          Deurhoogte (m)
+        </span>
+        <input
+          type="number"
+          min="0.5"
+          max="4"
+          step="0.01"
+          :value="metersFromCm(fmlDoorHeightCm)"
+          :disabled="!scaleConfirmed || !hasCombinedOutput"
+          @input="onHeightMetersInput($event, 'update:fmlDoorHeightCm')"
+        />
+      </label>
+      <label class="fml-limit-field">
+        <span
+          title="Standaard afstand vloer → onderkant raam; per raam overschrijfbaar via Ctrl+klik"
+        >
+          Raam vloer (m)
+        </span>
+        <input
+          type="number"
+          min="0"
+          max="3"
+          step="0.01"
+          :value="metersFromCm(fmlWindowSillZCm)"
+          :disabled="!scaleConfirmed || !hasCombinedOutput"
+          @input="onHeightMetersInput($event, 'update:fmlWindowSillZCm')"
+        />
+      </label>
+      <label class="fml-limit-field">
+        <span title="Standaard glashoogte; per raam overschrijfbaar via Ctrl+klik in de preview">
+          Raam glas (m)
+        </span>
+        <input
+          type="number"
+          min="0.3"
+          max="4"
+          step="0.01"
+          :value="metersFromCm(fmlWindowHeightCm)"
+          :disabled="!scaleConfirmed || !hasCombinedOutput"
+          @input="onHeightMetersInput($event, 'update:fmlWindowHeightCm')"
+        />
+      </label>
+    </div>
+    <p class="fml-band-hint">Per opening overschrijven: Ctrl+klik in de preview → maat/hoogte.</p>
+  </details>
 </template>
 
 <style scoped>
@@ -139,18 +123,6 @@ function onBovenlichtChange(event: Event): void {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 0 0 8px;
-}
-
-.fml-limit-field--checkbox {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-direction: row;
-}
-
-.fml-limit-field--checkbox input[type='checkbox'] {
-  width: auto;
-  margin: 0;
+  margin: 4px 0 0;
 }
 </style>

@@ -20,12 +20,12 @@ Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop, transformeert schaal
 
 ## Stap 2 — Voorbewerking (`flowStep: preprocess`)
 
-Tabs: **Muren → Int muur** (`visiblePreprocessLayerTabs`) — Gaten in order maar UI-verborgen (`GAPS_TAB_VISIBLE = false`). OCR deelt muur-tune (geen aparte tab).
+Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`). **Int muur** + **Gaten** UI-verborgen (`INK_WALL_TAB_VISIBLE` / `GAPS_TAB_VISIBLE = false`); Int muur bereikbaar via Dev-view switcher (zet intern `preprocessTab`). OCR deelt muur-tune (geen aparte tab).
 
 | Per tab | Opslag | Pipeline |
 |---------|--------|----------|
-| Muren | `preprocess.wallLayer` | `resolveLayerPreprocess(..., 'walls')` — baseBw-recipe; OCR-scan én (via `baseBw`) **ref-crops** |
-| Int muur | — (read-only) | `buildRoomReferenceMat` (Otsu-inkt voor classify) |
+| Muren (canvas) | `preprocess.wallLayer` | `resolveLayerPreprocess(..., 'walls')` — baseBw-recipe; OCR-scan én (via `baseBw`) **ref-crops** |
+| Int muur (Dev) | — (read-only) | `buildRoomReferenceMat` (Otsu-inkt voor classify) |
 | Gaten (hidden) | `preprocess.gapsLayer` | `resolveLayerPreprocess(..., 'gaps')` |
 
 | Actie | Waar |
@@ -33,7 +33,7 @@ Tabs: **Muren → Int muur** (`visiblePreprocessLayerTabs`) — Gaten in order m
 | B/W tunen | `PreprocessPanel` |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
 | Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); tekenen uitzetten via opnieuw klikken of Escape |
-| OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) |
+| OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) — auto-scan op Muren in stap 3 |
 | Deur FML Template ID | per deur-ref dropdown (`fmlRefId`) |
 | Muurdikte + muurstijl | bij afronden: bake ink→`baseBw`, daarna `measureReferenceWallThicknessPx` + `classifyWallRefStyleFromBw` op **baseBw** (wall + gebakken ink; geen OCR) |
 | Download B/W | `downloadPreprocessedUnderlay` → `effectiveBw` (base ⊕ OCR ⊕ ink) |
@@ -46,15 +46,19 @@ Tabs: **Muren → Int muur** (`visiblePreprocessLayerTabs`) — Gaten in order m
 
 ## Stap 3 — Detectie (`flowStep: templates`)
 
-Tabs: **Muren → Deuren → Ramen** (`visibleTemplateLayerTabs`); met OCR aan: **OCR → Muren → Deuren → Ramen**. Gaten UI-verborgen. Zonder OCR (default) start de flow op Muren.
+Canvas-tabs: alleen **Muren** (`visibleTemplateLayerTabs`). **OCR / Deuren / Ramen / Gaten** UI-verborgen (`OCR_TAB_VISIBLE` / `DOORS_TAB_VISIBLE` / `WINDOWS_TAB_VISIBLE` / `GAPS_TAB_VISIBLE = false`); OCR/Deuren/Ramen via Dev-view switcher (zet intern `templateTab`). Start altijd op Muren.
 
 | Tab | UI-actie | Output |
 |-----|----------|--------|
-| OCR | Scan + mask (`useWorkspaceOcr`) op **baseBw** (zonder ink/OCR) | `ocrMask` + `ocrMaskedRegions` → compose-laag (niet merge in eraser voor wall-B/W) |
-| Muren | **Auto-classify** op `effectiveBw` (precomposed) → face-klik → **Afronden**. Bij review: deur- én raam-detectie mee | `tabOutputs.walls` |
+| OCR (Dev) | Scan + mask (`useWorkspaceOcr`) op **baseBw** (zonder ink/OCR); hitlist | `ocrMask` + `ocrMaskedRegions` → compose-laag (niet merge in eraser voor wall-B/W) |
+| Muren (canvas) | Bij `ocrEnabled`: auto-OCR in initial flow (highlights, niet gebakken) → **Auto-classify** op `effectiveBw` → face-klik → **Afronden**. Sidebar: confidence-slider, Wis OCR, Bake OCR. Bij review: deur- én raam-detectie mee | `tabOutputs.walls` |
 | Gaten (hidden) | Solid face-demote: Muren-vlakken + `gapsLayer` → muurvlakken = outside | geen `tabOutputs` (`detectTargetsForTab('gaps')` → `{}`) |
-| Deuren | Stage-2 swing-filter (ook al gestart vanaf Muren-tab) | geen `tabOutputs` |
-| Ramen | Stage 1–3 axel/evidence (ook al gestart vanaf Muren-tab); eigen overlay | geen `tabOutputs` |
+| Deuren (Dev) | Stage-2 swing-filter (ook al gestart vanaf Muren-tab) | geen `tabOutputs` |
+| Ramen (Dev) | Stage 1–3 axel/evidence (ook al gestart vanaf Muren-tab); eigen overlay | geen `tabOutputs` |
+
+**Initial detection (spinner):** bij OCR-aan: OCR → Muren → Deuren → Ramen; anders Muren → Deuren → Ramen.
+
+**OCR op Muren:** na auto-scan zichtbaar als highlights + compose force-white. **Bake OCR** = `ocrMask` → `inkOverlay` WHITE → clear OCR → `recalculateFaces` (zelfde pad als Verwerk inkt). **Wis OCR** = clear mask/hits; in review ook faces herberekenen.
 
 **Verwerk inkt:** diff op `effectiveBw` vs `baselineWallBwData` — **geen** kleur-rethreshold, **geen** OCR-scan. Inkt-edits bakken **niet** in de kleur-onderlegger (FML-underlay blijft kleur).
 
@@ -65,7 +69,7 @@ Tabs: **Muren → Deuren → Ramen** (`visibleTemplateLayerTabs`); met OCR aan: 
 - Deur/raam-referentievakken (stap 2) voeden Stage-2 deuren + Stage-1–3 ramen (starten mee vanaf Muren-tab in review); ref-B/W = post-bake `baseBw` (zelfde pixels als dikte).
 - **FaceDualSpace:** zodra Muren-classify klaar is, `RoomRasterCache.ensureFaceDualSpace` — opening-wit + wall-ink voor muren/deuren/ramen/probe. Stage 1 openings meten op wit; zie `.cursor/docs/window-detection-flow.md`, `door-detection-flow.md`, `archive/wall-face-class-flow.md` § Dual-space. REF: `RefFaceDualSpace` op wallLayer-crop.
 - Gaten-tab: Solid face-demote — canvas-onderlegger = **muur-B/W** (zelfde als Muren); `gapsLayer` alleen tegenaan gehouden voor demote (zoals Int muur/Otsu bij classify). Vlakken met hoge dekking → `outside`; floors/gaten blijven gekleurd. Vereist Muren-classify (geen L10).
-- Deuren-tab: Stage-2 swing-overlay; face-class `door` (amber). Ramen-tab: Stage-1–3 overlay; face-class `window` (cyaan). Deur-flow: `.cursor/docs/door-detection-flow.md`. Raam-flow: `.cursor/docs/window-detection-flow.md`. Face-class: `.cursor/docs/archive/wall-face-class-flow.md`.
+- Deuren/Ramen (Dev-view): Stage-2 swing-overlay / Stage-1–3 axel; face-class `door` (amber) / `window` (cyaan). Deur-flow: `.cursor/docs/door-detection-flow.md`. Raam-flow: `.cursor/docs/window-detection-flow.md`. Face-class: `.cursor/docs/archive/wall-face-class-flow.md`.
 - Handmatige face-overrides worden niet overschreven door `refineWallClassificationByKeptMask`.
 - Detectieprofiel geldt voor muren (`DetectionProfileDialog`).
 - **Geen OCR in geometry-pipeline** — tekst is al gemaskeerd via `ocrMask` uit stap 3.
@@ -74,12 +78,14 @@ Tabs: **Muren → Deuren → Ramen** (`visibleTemplateLayerTabs`); met OCR aan: 
 
 ## Stap 4 — Resultaat (`flowStep: result`)
 
-Tabs: **Muren** / Vector-FML.
+Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-verborgen (`RESULT_WALLS_TAB_VISIBLE = false`); bereikbaar via Dev-view (zet intern `resultTab`). Enter result default = `vector`.
 
 | Tab | Bron |
 |-----|------|
-| walls | `tabOutputs.walls` |
-| vector / FML | `useWorkspaceFml` ← `combinedOutput` (`mergeTabOutputs`); muren via semantic post-finalize — zie [`fml-layer8-conversion-plan.md`](./fml-layer8-conversion-plan.md) |
+| vector / FML (canvas) | `useWorkspaceFml` ← `combinedOutput` (`mergeTabOutputs`); muren via semantic post-finalize — zie [`fml-layer8-conversion-plan.md`](./fml-layer8-conversion-plan.md) |
+| walls (Dev) | `tabOutputs.walls` + layer overlays (`ResultWallsLayerPanel` / Layer Debug) |
+
+**Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 
 ## Architectuur (DRY)
 

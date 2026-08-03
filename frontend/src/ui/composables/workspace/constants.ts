@@ -37,8 +37,21 @@ export const RESULT_LAYER_TABS = ['walls', 'vector'] as const
 export const GAPS_TAB_VISIBLE = false
 
 /**
+ * Canvas-tabs verborgen voor productie; bereikbaar via Dev-view switcher
+ * (zet intern nog steeds preprocessTab / templateTab / resultTab).
+ * Geen sticky-redirect voor deze tabs — anders kan Dev niet op de view blijven.
+ * Gaps wél sticky (zie sticky* hieronder).
+ */
+export const INK_WALL_TAB_VISIBLE = false
+export const DOORS_TAB_VISIBLE = false
+export const WINDOWS_TAB_VISIBLE = false
+export const OCR_TAB_VISIBLE = false
+export const RESULT_WALLS_TAB_VISIBLE = false
+
+/**
  * Sticky redirect voor verborgen preprocess-tabs.
  * OCR is alleen stap 3 (`useWorkspaceOcr`); gaps-UI uit (`GAPS_TAB_VISIBLE`).
+ * inkWall blijft bereikbaar via Dev (geen redirect).
  * DevSession restore mapt ook — deze helper is de gedeelde safety-net voor live assigns.
  */
 // ESC:O-13 (D)
@@ -50,7 +63,10 @@ export function stickyPreprocessTab(tab: PreprocessPanelLayer): PreprocessPanelL
   return tab
 }
 
-/** Gaps template-tab → muren zolang `GAPS_TAB_VISIBLE` false is. */
+/**
+ * Gaps template-tab → muren zolang `GAPS_TAB_VISIBLE` false is.
+ * doors/windows/ocr blijven bereikbaar via Dev (geen redirect).
+ */
 export function stickyTemplateTab(tab: TemplateTab): TemplateTab {
   if (tab === 'gaps') return 'walls'
   return tab
@@ -59,15 +75,29 @@ export function stickyTemplateTab(tab: TemplateTab): TemplateTab {
 export function visiblePreprocessLayerTabs(): Array<(typeof PREPROCESS_LAYER_TABS)[number]> {
   const tabs = [...PREPROCESS_LAYER_TABS]
   if (!GAPS_TAB_VISIBLE) tally('O-46', 'gaps_hidden')
-  return GAPS_TAB_VISIBLE ? tabs : tabs.filter((tab) => tab !== 'gaps')
+  return tabs.filter((tab) => {
+    if (tab === 'gaps' && !GAPS_TAB_VISIBLE) return false
+    if (tab === 'inkWall' && !INK_WALL_TAB_VISIBLE) return false
+    return true
+  })
 }
 
 export function visibleTemplateLayerTabs(
-  ocrEnabled: boolean,
+  _ocrEnabled: boolean,
 ): Array<(typeof TEMPLATE_LAYER_TABS)[number]> {
   return TEMPLATE_LAYER_TABS.filter((tab) => {
-    if (tab === 'ocr' && !ocrEnabled) return false
+    // OCR-canvas-tab uit; Dev-view zet intern `templateTab = 'ocr'` als ocrEnabled.
+    if (tab === 'ocr' && !OCR_TAB_VISIBLE) return false
     if (tab === 'gaps' && !GAPS_TAB_VISIBLE) return false
+    if (tab === 'doors' && !DOORS_TAB_VISIBLE) return false
+    if (tab === 'windows' && !WINDOWS_TAB_VISIBLE) return false
+    return true
+  })
+}
+
+export function visibleResultLayerTabs(): Array<(typeof RESULT_LAYER_TABS)[number]> {
+  return RESULT_LAYER_TABS.filter((tab) => {
+    if (tab === 'walls' && !RESULT_WALLS_TAB_VISIBLE) return false
     return true
   })
 }
