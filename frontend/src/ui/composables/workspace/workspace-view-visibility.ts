@@ -10,6 +10,7 @@ import {
 } from '@/cv/preprocess/layer-preprocess'
 import type { WorkspaceFlowStep } from './constants'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
+import { tGlobal } from '@/ui/i18n'
 
 export type TemplatesInitialDetectionStepId = 'ocr' | 'walls' | 'doors' | 'windows'
 
@@ -91,24 +92,24 @@ export function resolveTemplatesInitialDetectionSteps(params: {
   if (ocrEnabled) {
     steps.push({
       id: 'ocr',
-      label: 'OCR tekst',
+      label: tGlobal('templates.detectionOverlay.stepOcr'),
       status: ocrDone ? 'done' : ocrActive ? 'active' : 'pending',
     })
   }
   steps.push(
     {
       id: 'walls',
-      label: 'Muren classificeren',
+      label: tGlobal('templates.detectionOverlay.stepWalls'),
       status: wallsDone ? 'done' : wallsRunning ? 'active' : 'pending',
     },
     {
       id: 'doors',
-      label: 'Deuren detecteren',
+      label: tGlobal('templates.detectionOverlay.stepDoors'),
       status: doorsDone ? 'done' : doorsActive ? 'active' : 'pending',
     },
     {
       id: 'windows',
-      label: 'Ramen detecteren',
+      label: tGlobal('templates.detectionOverlay.stepWindows'),
       status: windowsDone ? 'done' : windowsActive ? 'active' : 'pending',
     },
   )

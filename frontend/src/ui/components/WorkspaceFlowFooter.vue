@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { WorkspaceFlowStep } from '../composables/workspace/constants'
 
 defineProps<{
@@ -15,6 +16,8 @@ const emit = defineEmits<{
   back: []
   next: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -33,7 +36,7 @@ const emit = defineEmits<{
     <p v-if="flowNextBlockedHint" class="flow-footer-hint">{{ flowNextBlockedHint }}</p>
     <div class="flow-nav">
       <button type="button" class="flow-nav-back" :disabled="!canGoBack" @click="emit('back')">
-        Vorige
+        {{ t('flow.previous') }}
       </button>
       <button
         type="button"

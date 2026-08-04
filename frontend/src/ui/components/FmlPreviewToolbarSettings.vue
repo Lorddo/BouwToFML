@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import type { FmlToolId } from './canvas/fmlToolbeltItems'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './canvas/canvas-toolbelt.css'
+
+const { t } = useI18n()
 
 const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
@@ -89,9 +93,9 @@ const emit = defineEmits<{
 }>()
 
 const thicknessPresets = computed(() => [
-  { id: 'min' as const, label: 'Min', cm: props.thicknessMinCm },
-  { id: 'mid' as const, label: 'Middel', cm: props.thicknessMidCm },
-  { id: 'max' as const, label: 'Max', cm: props.thicknessMaxCm },
+  { id: 'min' as const, label: t('result.toolbar.presetMin'), cm: props.thicknessMinCm },
+  { id: 'mid' as const, label: t('result.toolbar.presetMid'), cm: props.thicknessMidCm },
+  { id: 'max' as const, label: t('result.toolbar.presetMax'), cm: props.thicknessMaxCm },
 ])
 
 const isDrawWallOrRoom = computed(
@@ -115,34 +119,60 @@ function onDrawThicknessBandChange(event: Event): void {
   emit('applyWallThickness', preset.cm)
 }
 
-const doorSubtypeOptions: { value: DoorAddSubtype; label: string }[] = [
-  { value: 'standard', label: 'Standaard' },
-  { value: 'closet', label: 'Kast' },
-  { value: 'double', label: 'Dubbel' },
-  { value: 'pocket', label: 'Pocketdeur' },
-  { value: 'sliding_single', label: 'Schuifpui (1)' },
-  { value: 'sliding', label: 'Schuifpui (2)' },
-  { value: 'garage', label: 'Garagedeur' },
-]
+const doorSubtypeOptions = computed(() =>
+  (
+    [
+      'standard',
+      'closet',
+      'double',
+      'pocket',
+      'sliding_single',
+      'sliding',
+      'garage',
+    ] as const satisfies readonly DoorAddSubtype[]
+  ).map((value) => ({
+    value,
+    label: t(`result.toolbar.doorSubtypes.${value}`),
+  })),
+)
 
-const windowSubtypeOptions: { value: WindowAddSubtype; label: string }[] = [
-  { value: 'single', label: 'Enkel' },
-  { value: 'double', label: 'Dubbel' },
-  { value: 'triple', label: 'Triple' },
-  { value: 'round', label: 'Rond' },
-  { value: 'half_round', label: 'Half-rond' },
-]
+const windowSubtypeOptions = computed(() =>
+  (
+    [
+      'single',
+      'double',
+      'triple',
+      'round',
+      'half_round',
+    ] as const satisfies readonly WindowAddSubtype[]
+  ).map((value) => ({
+    value,
+    label: t(`result.toolbar.windowSubtypes.${value}`),
+  })),
+)
+
+const wallCountLabel = computed(() => {
+  const panel = props.selectedWallPanel
+  if (!panel) return ''
+  return panel.count === 1
+    ? t('result.toolbar.wallOne')
+    : t('result.toolbar.wallMany', { count: panel.count })
+})
 
 const openingKindLabel = computed(() => {
   const panel = props.selectedOpeningPanel
   if (!panel) return ''
   if (panel.openingType === 'window') {
-    return panel.count === 1 ? '1 raam' : `${panel.count} ramen`
+    return panel.count === 1
+      ? t('result.toolbar.windowOne')
+      : t('result.toolbar.windowMany', { count: panel.count })
   }
   if (panel.openingType === 'mixed') {
-    return `${panel.count} openingen`
+    return t('result.toolbar.openingMany', { count: panel.count })
   }
-  return panel.count === 1 ? '1 deur' : `${panel.count} deuren`
+  return panel.count === 1
+    ? t('result.toolbar.doorOne')
+    : t('result.toolbar.doorMany', { count: panel.count })
 })
 
 const isDoorSelection = computed(() => props.selectedOpeningPanel?.openingType === 'door')
@@ -150,17 +180,37 @@ const isWindowSelection = computed(() => props.selectedOpeningPanel?.openingType
 const canCopyOpening = computed(() => props.selectedOpeningPanel?.count === 1)
 
 const openingHingeTitle = computed(() => {
-  if (props.openingHingeMixed) return 'Scharnier: gemengd — klik om te wisselen'
+  if (props.openingHingeMixed) return t('result.toolbar.hingeMixed')
   return props.openingHingeAtStartDraft
-    ? 'Scharnier: start — klik om naar eind te zetten'
-    : 'Scharnier: eind — klik om naar start te zetten'
+    ? t('result.toolbar.hingeAtStart')
+    : t('result.toolbar.hingeAtEnd')
 })
 
 const openingSwingTitle = computed(() => {
-  if (props.openingSwingMixed) return 'Zwaai: gemengd — klik om te wisselen'
+  if (props.openingSwingMixed) return t('result.toolbar.swingMixed')
   return props.openingSwingRightDraft
-    ? 'Zwaai: rechts — klik om naar links te zetten'
-    : 'Zwaai: links — klik om naar rechts te zetten'
+    ? t('result.toolbar.swingRight')
+    : t('result.toolbar.swingLeft')
+})
+
+const deleteWallTitle = computed(() =>
+  props.selectedWallPanel?.count === 1
+    ? t('result.toolbar.deleteWall')
+    : t('result.toolbar.deleteWalls'),
+)
+
+const deleteOpeningTitle = computed(() => {
+  const panel = props.selectedOpeningPanel
+  if (!panel) return ''
+  if (panel.count !== 1) return t('result.toolbar.deleteOpenings')
+  return isWindowSelection.value ? t('result.toolbar.deleteWindow') : t('result.toolbar.deleteDoor')
+})
+
+const measureCountLabel = computed(() => {
+  const count = props.measureLineCount ?? 0
+  return count === 1
+    ? t('result.toolbar.measureCountOne', { count })
+    : t('result.toolbar.measureCountMany', { count })
 })
 
 const showSettings = computed(
@@ -183,22 +233,26 @@ const showMeasureStrip = computed(
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
     <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
       <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
-        {{ selectedWallPanel.count === 1 ? '1 muur' : `${selectedWallPanel.count} muren` }}
+        {{ wallCountLabel }}
       </span>
       <span v-if="selectedOpeningPanel" class="fml-toolbelt__meta">
         {{ openingKindLabel }}
       </span>
       <div v-if="selectedWallPanel || isDrawWallOrRoom" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ isDrawWallOrRoom ? 'Muurtype' : 'Dikte' }}</span>
+        <span class="fml-toolbelt__field-label">{{
+          isDrawWallOrRoom ? t('result.toolbar.wallType') : t('result.toolbar.thickness')
+        }}</span>
         <div class="fml-toolbelt__field-controls">
           <select
             v-if="isDrawWallOrRoom"
             class="fml-toolbelt__select fml-toolbelt__select--thickness"
-            aria-label="Muurtype (dikte)"
+            :aria-label="t('result.toolbar.wallTypeAria')"
             :value="drawThicknessBand"
             @change="onDrawThicknessBandChange"
           >
-            <option v-if="drawThicknessBand === ''" value="" disabled>Aangepast</option>
+            <option v-if="drawThicknessBand === ''" value="" disabled>
+              {{ t('result.toolbar.custom') }}
+            </option>
             <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
               {{ preset.label }} ({{ preset.cm }} cm)
             </option>
@@ -209,7 +263,7 @@ const showMeasureStrip = computed(
             max="200"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Muurdikte in cm"
+            :aria-label="t('result.toolbar.wallThicknessAria')"
             :value="wallThicknessMixed ? '' : wallThicknessDraft"
             :placeholder="wallThicknessMixed ? '—' : undefined"
             @input="emit('wallThicknessInput', $event)"
@@ -220,15 +274,17 @@ const showMeasureStrip = computed(
             v-if="selectedWallPanel"
             class="fml-toolbelt__presets"
             role="group"
-            aria-label="Dikte presets"
+            :aria-label="t('result.toolbar.thicknessPresetsAria')"
           >
             <button
               v-for="preset in thicknessPresets"
               :key="preset.id"
               type="button"
               class="fml-toolbelt__preset-btn"
-              :title="`Zet geselecteerde muren op ${preset.label.toLowerCase()} (${preset.cm} cm)`"
-              :aria-label="`${preset.label} dikte ${preset.cm} cm`"
+              :title="t('result.toolbar.applyPresetTitle', { label: preset.label, cm: preset.cm })"
+              :aria-label="
+                t('result.toolbar.applyPresetAria', { label: preset.label, cm: preset.cm })
+              "
               @click="emit('applyWallThickness', preset.cm)"
             >
               {{ preset.label }}
@@ -237,9 +293,9 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="selectedWallPanel" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label" title="Hartlijn-offset in muurband"
-          >Uitlijning</span
-        >
+        <span class="fml-toolbelt__field-label" :title="t('result.toolbar.alignmentTitle')">{{
+          t('result.toolbar.alignment')
+        }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             type="range"
@@ -247,7 +303,7 @@ const showMeasureStrip = computed(
             max="0.8"
             step="0.05"
             class="fml-toolbelt__balance-input"
-            aria-label="Muuruitlijning (balance)"
+            :aria-label="t('result.toolbar.alignmentAria')"
             :value="wallBalanceMixed ? 0.5 : wallBalanceDraft"
             :disabled="wallBalanceMixed"
             @input="emit('wallBalanceInput', $event)"
@@ -259,7 +315,7 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="selectedOpeningPanel" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Breedte</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.width') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             type="number"
@@ -267,7 +323,11 @@ const showMeasureStrip = computed(
             max="400"
             step="1"
             class="fml-toolbelt__thickness-input"
-            :aria-label="isWindowSelection ? 'Raambreedte in cm' : 'Deurbreedte in cm'"
+            :aria-label="
+              isWindowSelection
+                ? t('result.toolbar.windowWidthAria')
+                : t('result.toolbar.doorWidthAria')
+            "
             :value="openingWidthMixed ? '' : openingWidthDraft"
             :placeholder="openingWidthMixed ? '—' : undefined"
             @input="emit('openingWidthInput', $event)"
@@ -277,9 +337,13 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="activeTool === 'add_door'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Deurtype</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.doorType') }}</span>
         <div class="fml-toolbelt__field-controls">
-          <select v-model="addDoorSubtype" class="fml-toolbelt__select" aria-label="Deurtype">
+          <select
+            v-model="addDoorSubtype"
+            class="fml-toolbelt__select"
+            :aria-label="t('result.toolbar.doorType')"
+          >
             <option v-for="opt in doorSubtypeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
@@ -287,7 +351,7 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="activeTool === 'add_door'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Maat</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.size') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             v-model.number="addDoorWidthCm"
@@ -296,15 +360,19 @@ const showMeasureStrip = computed(
             max="400"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Deurmaat in cm"
+            :aria-label="t('result.toolbar.doorSizeAria')"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Raamtype</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.windowType') }}</span>
         <div class="fml-toolbelt__field-controls">
-          <select v-model="addWindowSubtype" class="fml-toolbelt__select" aria-label="Raamtype">
+          <select
+            v-model="addWindowSubtype"
+            class="fml-toolbelt__select"
+            :aria-label="t('result.toolbar.windowType')"
+          >
             <option v-for="opt in windowSubtypeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
@@ -312,7 +380,7 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Maat</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.size') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             v-model.number="addWindowWidthCm"
@@ -321,13 +389,13 @@ const showMeasureStrip = computed(
             max="400"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Raammaat in cm"
+            :aria-label="t('result.toolbar.windowSizeAria')"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Vloer</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             v-model.number="addWindowSillZCm"
@@ -336,13 +404,13 @@ const showMeasureStrip = computed(
             max="400"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Afstand van vloer in cm"
+            :aria-label="t('result.toolbar.floorAria')"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Glas</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.glass') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             v-model.number="addWindowHeightCm"
@@ -351,13 +419,13 @@ const showMeasureStrip = computed(
             max="500"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Glashoogte in cm"
+            :aria-label="t('result.toolbar.glassAria')"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <div v-if="isDoorSelection" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Hoogte</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.height') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             type="number"
@@ -365,7 +433,7 @@ const showMeasureStrip = computed(
             max="500"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Deurhoogte in cm"
+            :aria-label="t('result.toolbar.doorHeightAria')"
             :value="openingHeightMixed ? '' : openingHeightDraft"
             :placeholder="openingHeightMixed ? '—' : undefined"
             @input="emit('openingHeightInput', $event)"
@@ -377,19 +445,19 @@ const showMeasureStrip = computed(
       <label
         v-if="isDoorSelection"
         class="fml-toolbelt__field fml-toolbelt__field--checkbox"
-        title="40 cm hoog, 10 cm boven de deur — alleen in FML-export, niet in preview"
+        :title="t('result.toolbar.bovenlichtTitle')"
       >
         <input
           type="checkbox"
           :checked="openingBovenlichtDraft"
           :indeterminate.prop="openingBovenlichtMixed"
-          aria-label="Bovenlicht"
+          :aria-label="t('result.toolbar.bovenlicht')"
           @change="emit('openingBovenlichtChange', $event)"
         />
-        <span class="fml-toolbelt__field-label">Bovenlicht</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.bovenlicht') }}</span>
       </label>
       <div v-if="isWindowSelection" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Vloer</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             type="number"
@@ -397,7 +465,7 @@ const showMeasureStrip = computed(
             max="400"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Afstand van vloer in cm"
+            :aria-label="t('result.toolbar.floorAria')"
             :value="openingSillZMixed ? '' : openingSillZDraft"
             :placeholder="openingSillZMixed ? '—' : undefined"
             @input="emit('openingSillZInput', $event)"
@@ -407,7 +475,7 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <div v-if="isWindowSelection" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">Glas</span>
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.glass') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
             type="number"
@@ -415,7 +483,7 @@ const showMeasureStrip = computed(
             max="500"
             step="1"
             class="fml-toolbelt__thickness-input"
-            aria-label="Glashoogte in cm"
+            :aria-label="t('result.toolbar.glassAria')"
             :value="openingHeightMixed ? '' : openingHeightDraft"
             :placeholder="openingHeightMixed ? '—' : undefined"
             @input="emit('openingHeightInput', $event)"
@@ -428,17 +496,12 @@ const showMeasureStrip = computed(
         v-if="selectedWallPanel?.count === 1"
         type="button"
         class="canvas-toolbelt__btn"
-        title="Muur splitsen"
-        aria-label="Muur splitsen"
+        :title="t('result.toolbar.splitWall')"
+        :aria-label="t('result.toolbar.splitWall')"
         :disabled="!selectedWallPanel?.canSplit"
         @click="emit('splitWall')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M3 5v14h8V5H3zm10 0v14h8V5h-8zM5 7h4v10H5V7zm12 0h4v10h-4V7z"
-          />
-        </svg>
+        <ToolbeltIcon name="split" />
       </button>
       <button
         v-if="isDoorSelection"
@@ -449,12 +512,7 @@ const showMeasureStrip = computed(
         :aria-label="openingHingeTitle"
         @click="emit('toggleOpeningHinge')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M7 4h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7V4zm2 2v12h6V6H9zm-4 1h2v2H5V7zm0 4h2v2H5v-2zm0 4h2v2H5v-2z"
-          />
-        </svg>
+        <ToolbeltIcon name="hinge" />
       </button>
       <button
         v-if="isDoorSelection"
@@ -465,88 +523,47 @@ const showMeasureStrip = computed(
         :aria-label="openingSwingTitle"
         @click="emit('toggleOpeningSwing')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M12 4a8 8 0 0 1 8 8h-2a6 6 0 0 0-6-6V4zm1 7.5V20h-2v-8.5L7.4 15l-1.4-1.4L12 7.6l6 6-1.4 1.4L13 11.5z"
-          />
-        </svg>
+        <ToolbeltIcon name="swing" />
       </button>
       <button
         v-if="selectedOpeningPanel && canCopyOpening"
         type="button"
         class="canvas-toolbelt__btn"
-        title="Kopieer — activeert plaats-tool met dezelfde settings"
-        aria-label="Opening kopiëren"
+        :title="t('result.toolbar.copyOpeningTitle')"
+        :aria-label="t('result.toolbar.copyOpening')"
         @click="emit('copyOpening')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"
-          />
-        </svg>
+        <ToolbeltIcon name="copy" />
       </button>
       <button
         v-if="selectedWallPanel"
         type="button"
         class="canvas-toolbelt__btn"
-        :title="
-          selectedWallPanel.count === 1 ? 'Muur verwijderen' : 'Geselecteerde muren verwijderen'
-        "
-        :aria-label="
-          selectedWallPanel.count === 1 ? 'Muur verwijderen' : 'Geselecteerde muren verwijderen'
-        "
+        :title="deleteWallTitle"
+        :aria-label="deleteWallTitle"
         @click="emit('deleteWalls')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-          />
-        </svg>
+        <ToolbeltIcon name="delete" />
       </button>
       <button
         v-if="selectedOpeningPanel"
         type="button"
         class="canvas-toolbelt__btn"
-        :title="
-          selectedOpeningPanel.count === 1
-            ? isWindowSelection
-              ? 'Raam verwijderen'
-              : 'Deur verwijderen'
-            : 'Geselecteerde openingen verwijderen'
-        "
-        :aria-label="
-          selectedOpeningPanel.count === 1
-            ? isWindowSelection
-              ? 'Raam verwijderen'
-              : 'Deur verwijderen'
-            : 'Geselecteerde openingen verwijderen'
-        "
+        :title="deleteOpeningTitle"
+        :aria-label="deleteOpeningTitle"
         @click="emit('deleteOpenings')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-          />
-        </svg>
+        <ToolbeltIcon name="delete" />
       </button>
       <button
         v-if="selectedWallPanel || selectedOpeningPanel"
         type="button"
         class="canvas-toolbelt__btn"
-        title="Deselecteer (Esc)"
-        aria-label="Deselecteer"
+        :title="t('result.toolbar.deselectTitle')"
+        :aria-label="t('result.toolbar.deselect')"
         @click="emit('clearSelection')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
-          />
-        </svg>
+        <ToolbeltIcon name="clear" />
       </button>
     </div>
   </template>
@@ -554,22 +571,15 @@ const showMeasureStrip = computed(
   <template v-if="showMeasureStrip">
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
     <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <span class="fml-toolbelt__meta"
-        >{{ measureLineCount }} maatlijn{{ measureLineCount === 1 ? '' : 'en' }}</span
-      >
+      <span class="fml-toolbelt__meta">{{ measureCountLabel }}</span>
       <button
         type="button"
         class="canvas-toolbelt__btn"
-        title="Alle maatlijnen wissen"
-        aria-label="Alle maatlijnen wissen"
+        :title="t('result.toolbar.clearMeasures')"
+        :aria-label="t('result.toolbar.clearMeasures')"
         @click="emit('clearMeasures')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"
-          />
-        </svg>
+        <ToolbeltIcon name="clear" />
       </button>
     </div>
   </template>

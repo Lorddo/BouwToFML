@@ -1,5 +1,4 @@
 import { tally } from '@/core/diagnostics'
-import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import type { PreprocessPanelLayer, TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import {
   WORKSPACE_PREPROCESS_LAYER_ORDER,
@@ -19,13 +18,13 @@ export const WORKSPACE_FLOW_ORDER: WorkspaceFlowStep[] = [
   'result',
 ]
 
-export const WORKSPACE_FLOW_LABELS: Record<WorkspaceFlowStep, string> = {
-  project: '0. Project',
-  input: '1. Onderlegger',
-  preprocess: '2. Voorbewerking',
-  templates: '3. Detectie',
-  result: '4. Resultaat',
-}
+export {
+  WORKSPACE_FLOW_LABELS,
+  RESULT_TAB_LABELS,
+  workspaceFlowLabel,
+  resultTabLabel,
+  getWorkspaceFlowLabels,
+} from '@/ui/i18n/labels'
 
 export const TEMPLATE_LAYER_TABS = WORKSPACE_TEMPLATE_LAYER_ORDER
 export const PREPROCESS_LAYER_TABS = [...WORKSPACE_PREPROCESS_LAYER_ORDER] as const
@@ -127,11 +126,6 @@ export function preprocessStepCanProceed(params: {
   vectorCacheLoading?: boolean
 }): boolean {
   return !!params.imageSrc && params.hasWallRect && !params.vectorCacheLoading
-}
-
-export const RESULT_TAB_LABELS: Record<ResultViewTab, string> = {
-  walls: 'Muren',
-  vector: 'Vector / FML',
 }
 
 /** Upscale-floor: langste zijde min. zoveel px (geen downscale). Compromis 3k (4k was te zwaar voor canvas). */

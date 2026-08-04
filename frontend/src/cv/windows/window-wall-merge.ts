@@ -111,14 +111,18 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
   }
 }
 
-// ESC:R-27 (A) — blijft; later settings-toggle met double doors (2026-07-31).
+// ESC:R-27 (A) — FML-conversie; settings-toggle mergeMultiWindows.
 /**
  * Per segment, van voor naar achter (stijgende `t`): greedy 3 → 2 → 1.
  * Zes gelijke aanliggende ramen → twee triples.
  * Alleen singles (`CONCEPT_WINDOW_REFID`) met rake/overlappende bbox + ≤5% maatverschil.
+ * `enabled: false` → identity (geen merge).
  */
-export function mergeAdjacentBoundWindows(windows: BoundWindow[]): BoundWindow[] {
-  if (windows.length <= 1) return windows
+export function mergeAdjacentBoundWindows(
+  windows: BoundWindow[],
+  options?: { enabled?: boolean },
+): BoundWindow[] {
+  if (options?.enabled === false || windows.length <= 1) return windows
 
   const bySegment = new Map<number, BoundWindow[]>()
   for (const window of windows) {

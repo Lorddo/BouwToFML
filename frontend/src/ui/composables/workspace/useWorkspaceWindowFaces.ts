@@ -77,6 +77,13 @@ export function useWorkspaceWindowFaces(deps: {
   getImageEl: () => Promise<HTMLImageElement | HTMLCanvasElement>
   openingRects: () => SelectionRect[]
   getDoorArcFaceIds: () => ReadonlySet<number>
+  /** L12 oriented doors — 1D deur↔raam suppress bij L14-bind. */
+  getOrientedDoors?: () => ReadonlyArray<{
+    segmentIndex: number
+    openingAxis: 'h' | 'v'
+    openingStartPx: { x: number; y: number }
+    openingEndPx: { x: number; y: number }
+  }>
   getPxPerMm: () => { x: number; y: number }
   setLocalError: (message: string | null) => void
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
@@ -187,6 +194,7 @@ export function useWorkspaceWindowFaces(deps: {
       stageCache: stageCache.value,
       walls: deps.tabOutputs.value.walls,
       roomRasterCache: deps.roomRasterCache.value,
+      doors: deps.getOrientedDoors?.() ?? [],
     })
     if (result.nextStage4Resolved) {
       stageCache.value = { ...stageCache.value, stage4ResolvedWindows: result.nextStage4Resolved }

@@ -2,6 +2,7 @@ import type { HScaleState } from '@/platform/calibration'
 import { ROTATION_EPS_DEG, uiRotationToCvDegrees } from '@/cv/tools/rotateMat'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import { OPTIMIZATION_BASE_DIMENSION } from './constants'
+import { tGlobal } from '@/ui/i18n'
 
 export interface PixelBounds {
   left: number
@@ -378,7 +379,7 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
     const img = new Image()
     img.crossOrigin = 'anonymous'
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('Kon afbeelding niet laden.'))
+    img.onerror = () => reject(new Error(tGlobal('input.errors.imageLoadFailed')))
     img.src = src
   })
 }

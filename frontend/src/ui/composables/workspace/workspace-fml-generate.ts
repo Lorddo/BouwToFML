@@ -2,13 +2,9 @@ import { computed, ref, watch, type Ref } from 'vue'
 import { noteSwallowedError } from '@/core/diagnostics'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
-import {
-  extractionToPlanWithOrigin,
-  type Layer12DoorForFml,
-  type Layer14WindowForFml,
-} from '@/core/fml/extractionToPlan'
+import { extractionToPlanWithOrigin, type Layer12DoorForFml } from '@/core/fml/extractionToPlan'
 import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
-import { toLayer12DoorForFml, toLayer14WindowForFml } from '@/core/fml/layer-openings-to-fml'
+import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
 import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
@@ -18,15 +14,17 @@ import type { useHScaleCalibration } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import { tGlobal } from '@/ui/i18n'
 
 export function stripFileExtension(name: string | null | undefined): string {
-  if (!name) return 'Detectie-export'
-  return name.replace(/\.[^.]+$/i, '') || 'Detectie-export'
+  const fallback = tGlobal('result.defaultExportName')
+  if (!name) return fallback
+  return name.replace(/\.[^.]+$/i, '') || fallback
 }
 
 export function sanitizeFilename(name: string): string {
   const safe = name.replace(/[^\w.\- ()]/g, '_').trim()
-  return safe || 'Detectie-export'
+  return safe || tGlobal('result.defaultExportName')
 }
 
 export function countPlanElements(plan: FloorPlan | null): {
@@ -57,6 +55,10 @@ export type WorkspaceFmlGenerateDeps = {
   setLocalError: (message: string | null) => void
   orientedDoors?: Ref<OrientedDoor[]>
   boundWindows?: Ref<BoundWindow[]>
+  /** Twin→double_wide bij FML-conversie (X-10). */
+  mergeDoubleDoors?: Ref<boolean>
+  /** Pair/triple-merge bij FML-conversie (R-27). */
+  mergeMultiWindows?: Ref<boolean>
   /** Project/floor meta voor export-naamgeving. */
   planName?: Ref<string | null>
   floorName?: Ref<string | null>
@@ -116,10 +118,10 @@ export function createWorkspaceFmlGenerate(
         deps.orientedDoors?.value
           .map((door) => toLayer12DoorForFml(door, pxPerMmX, pxPerMmY))
           .filter((door): door is Layer12DoorForFml => !!door) ?? []
-      const layer14Windows =
-        deps.boundWindows?.value
-          .map((window) => toLayer14WindowForFml(window))
-          .filter((window): window is Layer14WindowForFml => !!window) ?? []
+      const layer14Windows = toLayer14WindowsForFml(deps.boundWindows?.value ?? [], {
+        mergeMultiWindows: deps.mergeMultiWindows?.value !== false,
+        doors: deps.orientedDoors?.value ?? [],
+      })
       const { plan, origin } = extractionToPlanWithOrigin(output, {
         pxPerMmX,
         pxPerMmY,
@@ -131,6 +133,7 @@ export function createWorkspaceFmlGenerate(
         defaultDoorHeightCm: applied.appliedFmlDoorHeightCm.value,
         defaultWindowHeightCm: applied.appliedFmlWindowHeightCm.value,
         defaultWindowSillZCm: applied.appliedFmlWindowSillZCm.value,
+        mergeDoubleDoors: deps.mergeDoubleDoors?.value !== false,
         layer12Doors,
         layer14Windows,
       })
@@ -261,7 +264,7 @@ export function createWorkspaceFmlGenerate(
     try {
       await navigator.clipboard.writeText(generatedFmlText.value)
     } catch {
-      deps.setLocalError('Kopieren naar klembord is niet beschikbaar in deze browser/context.')
+      deps.setLocalError(tGlobal('result.clipboardUnavailable'))
     }
   }
 

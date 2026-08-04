@@ -1,6 +1,39 @@
 import { ref } from 'vue'
 import type Konva from 'konva'
 
+/** Velden waar Space tekst/activatie is — niet canvas-pannen. */
+function shouldIgnoreSpaceForTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  const tag = target.tagName
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if (tag !== 'INPUT') return false
+  const type = ((target as HTMLInputElement).type || 'text').toLowerCase()
+  // Range mag Space niet vasthouden: anders blijft de slider “actief” en faalt Space+pan.
+  if (type === 'range') return false
+  return (
+    type === 'text' ||
+    type === 'search' ||
+    type === 'password' ||
+    type === 'email' ||
+    type === 'number' ||
+    type === 'url' ||
+    type === 'tel' ||
+    type === 'date' ||
+    type === 'time' ||
+    type === 'datetime-local' ||
+    type === 'month' ||
+    type === 'week' ||
+    type === 'checkbox' ||
+    type === 'radio' ||
+    type === 'button' ||
+    type === 'submit' ||
+    type === 'reset' ||
+    type === 'file' ||
+    type === 'color'
+  )
+}
+
 export function useStage() {
   const scale = ref(1)
   const position = ref({ x: 0, y: 0 })
@@ -9,16 +42,7 @@ export function useStage() {
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.code === 'Space') {
-      const target = e.target
-      if (
-        target instanceof HTMLElement &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' ||
-          target.isContentEditable)
-      ) {
-        return
-      }
+      if (shouldIgnoreSpaceForTarget(e.target)) return
       spacePressed.value = true
       e.preventDefault()
     }

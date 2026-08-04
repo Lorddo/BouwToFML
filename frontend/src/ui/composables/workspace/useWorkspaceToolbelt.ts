@@ -1,6 +1,7 @@
 import { computed, watch, type ComputedRef, type Ref } from 'vue'
 import { resolveInkToolbeltHint } from '@/ui/components/canvas/canvas-toolbelt-hints'
 import type { InkToolId, FaceToolId } from '@/ui/components/canvas/canvas-toolbelt.types'
+import { tGlobal } from '@/ui/i18n'
 import type { WorkspaceFlowStep } from './constants'
 
 export function useWorkspaceToolbelt(deps: {
@@ -32,7 +33,7 @@ export function useWorkspaceToolbelt(deps: {
   const toolbeltCanvasHint = computed(() => {
     if (!deps.inkEdit.inkToolbeltVisible.value) return ''
     if (deps.inkEdit.inkEditStale.value && deps.flowStep.value === 'templates') {
-      return 'Onderlegger gewijzigd — klik «Verwerk wijzigingen» in de sidebar'
+      return tGlobal('toolbelt.hints.staleUnderlay')
     }
     if (deps.inkEdit.activeInkTool.value) {
       return resolveInkToolbeltHint(deps.inkEdit.activeInkTool.value)

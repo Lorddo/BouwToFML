@@ -46,6 +46,11 @@ export interface ExtractionToPlanOptions {
   defaultWindowHeightCm?: number
   /** Standaard afstand vloer→dorpel in cm (default 70); per raam overschrijfbaar via `z`. */
   defaultWindowSillZCm?: number
+  /**
+   * Twin→double_wide merge (X-10). Default true.
+   * Uit = elke standaarddeur blijft een single opening.
+   */
+  mergeDoubleDoors?: boolean
   layer12Doors?: Layer12DoorForFml[]
   layer14Windows?: Layer14WindowForFml[]
 }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 defineProps<{
   imageName: string
 }>()
@@ -6,14 +8,16 @@ defineProps<{
 const emit = defineEmits<{
   fileInput: [e: Event]
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="panel">
-    <h3>Bouwtekening</h3>
+    <h3>{{ t('input.drawingTitle') }}</h3>
     <p class="filename">{{ imageName }}</p>
     <label class="file-btn">
-      Kies PNG/JPG/PDF…
+      {{ t('input.chooseFile') }}
       <input
         type="file"
         accept="image/png,image/jpeg,image/jpg,application/pdf,.pdf"

@@ -25,6 +25,7 @@ import {
 } from './imageUtils'
 import { resolveDisplayImageSrc } from './resolveDisplayImageSrc'
 import type { SelectionRect } from '@/platform/selection'
+import { tGlobal } from '@/ui/i18n'
 
 export function useWorkspaceImage(deps: {
   imageSrc: Ref<string | null>
@@ -77,7 +78,7 @@ export function useWorkspaceImage(deps: {
     }
     const img = deps.originalImageEl.value
     if (img?.complete && img.naturalWidth > 0) return img
-    throw new Error('Laad eerst een PNG/JPG bouwtekening.')
+    throw new Error(tGlobal('input.errors.loadDrawingFirst'))
   }
 
   /** Werk-onderlegger na upload/commit (niet tab-afhankelijk) — gebruik voor FML/export. */

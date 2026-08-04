@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
 import type { ImportWarning } from '@/core/fml/types'
+import { useI18n } from 'vue-i18n'
 import FmlPanelActions from './FmlPanelActions.vue'
 import FmlPanelHeights from './FmlPanelHeights.vue'
 import FmlPanelOpacity from './FmlPanelOpacity.vue'
 import FmlPanelThickness from './FmlPanelThickness.vue'
 import './fml-panel-fields.css'
+
+const { t } = useI18n()
 
 /**
  * Public contract for WorkspaceView — keep props/emits stable.
@@ -93,14 +96,18 @@ function onBovenlichtChange(event: Event): void {
 <template>
   <div class="panel fml-panel">
     <p v-if="generatedStats.walls > 0" class="fml-stats">
-      Preview: <strong>{{ generatedStats.walls }}</strong> muren
-      <template v-if="generatedStats.doors > 0"> · {{ generatedStats.doors }} deuren</template>
-      <template v-if="generatedStats.windows > 0"> · {{ generatedStats.windows }} ramen</template>
+      {{ t('result.previewStats', { walls: generatedStats.walls })
+      }}<template v-if="generatedStats.doors > 0">{{
+        t('result.previewDoors', { n: generatedStats.doors })
+      }}</template
+      ><template v-if="generatedStats.windows > 0">{{
+        t('result.previewWindows', { n: generatedStats.windows })
+      }}</template>
     </p>
     <p v-else-if="!scaleConfirmed" class="fml-hint">
-      Bevestig eerst de schaal om de FML-preview te zien.
+      {{ t('result.needScale') }}
     </p>
-    <p v-else-if="!hasCombinedOutput" class="fml-hint">Rond muurdetectie af voor de FML-preview.</p>
+    <p v-else-if="!hasCombinedOutput" class="fml-hint">{{ t('result.needFinalize') }}</p>
 
     <FmlPanelOpacity
       :underlay-opacity="underlayOpacity"
@@ -110,17 +117,14 @@ function onBovenlichtChange(event: Event): void {
       @update:fml-opacity="emit('update:fmlOpacity', $event)"
     />
 
-    <label
-      class="fml-limit-field fml-bovenlicht"
-      title="40 cm hoog, 10 cm boven de deur,zelfde breedte. Alleen in FML-export (niet in preview). Per deur overschrijfbaar via Ctrl+klik."
-    >
+    <label class="fml-limit-field fml-bovenlicht" :title="t('result.bovenlichtTitle')">
       <input
         type="checkbox"
         :checked="fmlBovenlichtDefault"
         :disabled="!scaleConfirmed || !hasCombinedOutput"
         @change="onBovenlichtChange"
       />
-      <span>Bovenlicht op alle deuren</span>
+      <span>{{ t('result.bovenlichtAllDoors') }}</span>
     </label>
 
     <FmlPanelThickness

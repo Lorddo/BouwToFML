@@ -129,6 +129,8 @@ export function mapLayer12DoorsToOpenings(params: {
   defaultDoorHeightCm: number
   /** Deuren die al op een eerdere muur gezet zijn — voorkomt double+singles duplicaat. */
   consumedDoorIds: Set<string>
+  /** Twin→double_wide (X-10). Default true. */
+  mergeDoubleDoors?: boolean
 }): Opening[] {
   const sourceDoors = filterOpeningsForEdge({
     openings: params.layer12Doors,
@@ -138,10 +140,13 @@ export function mapLayer12DoorsToOpenings(params: {
     consumedIds: params.consumedDoorIds,
   })
   if (sourceDoors.length <= 0) return []
-  const normalizedDoors = mergeAdjacentStandardDoors({
-    doors: sourceDoors,
-    edgeSegment: params.edgeSegment,
-  })
+  const normalizedDoors =
+    params.mergeDoubleDoors === false
+      ? sourceDoors
+      : mergeAdjacentStandardDoors({
+          doors: sourceDoors,
+          edgeSegment: params.edgeSegment,
+        })
 
   const targetUnit = normalize({
     x: params.edgeSegment.b.x - params.edgeSegment.a.x,

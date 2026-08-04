@@ -1,19 +1,23 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 const emit = defineEmits<{
   fileInput: [e: Event]
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="welcome">
     <div class="welcome-header">
-      <h2>Upload een plattegrond</h2>
-      <p class="lead">Start met je onderlegger. Je kiest het detectieprofiel pas in stap 3.</p>
+      <h2>{{ t('input.welcomeTitle') }}</h2>
+      <p class="lead">{{ t('input.welcomeLead') }}</p>
     </div>
 
     <div class="upload-block">
       <label class="upload-btn">
-        Kies PNG/JPG/PDF…
+        {{ t('input.chooseFile') }}
         <input
           type="file"
           accept="image/png,image/jpeg,image/jpg,application/pdf,.pdf"
@@ -21,7 +25,7 @@ const emit = defineEmits<{
           @change="emit('fileInput', $event)"
         />
       </label>
-      <p class="upload-hint">Na upload ga je via Onderlegger en Voorbewerking naar Detectie.</p>
+      <p class="upload-hint">{{ t('input.welcomeHint') }}</p>
     </div>
   </div>
 </template>

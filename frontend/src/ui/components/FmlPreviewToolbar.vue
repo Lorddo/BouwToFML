@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
-import { FML_EDIT_TOOLS, FML_SELECT_TOOLS, type FmlToolId } from './canvas/fmlToolbeltItems'
+import { getFmlEditTools, getFmlSelectTools, type FmlToolId } from './canvas/fmlToolbeltItems'
 import './canvas/canvas-toolbelt.css'
+
+const { t, locale } = useI18n()
 
 const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
@@ -90,46 +93,38 @@ const emit = defineEmits<{
   clearMeasures: []
 }>()
 
+const selectTools = computed(() => {
+  void locale.value
+  return getFmlSelectTools()
+})
+
+const editTools = computed(() => {
+  void locale.value
+  return getFmlEditTools()
+})
+
 const hint = computed(() => {
-  if (activeTool.value === 'measure') {
-    return 'Sleep tussen 2 punten voor maatlijn · Shift = horizontaal/verticaal · snapt aan hoekpunten · Esc = annuleren/maatlijnen wissen · spatie + sleep = pan'
-  }
-  if (activeTool.value === 'draw_wall') {
-    return 'Sleep muurlijn · soft-snap naar hoekpunten · Shift = horizontaal/verticaal · spatie + sleep = pan · Esc = annuleren'
-  }
-  if (activeTool.value === 'draw_room') {
-    return 'Sleep rechthoekige kamer · soft-snap naar hoekpunten · begin op bestaand eindpunt voor directe koppeling · hoek op bestaande muur splitst die muur · Shift = vierkant · Esc = annuleren'
-  }
-  if (activeTool.value === 'add_door') {
-    return 'Klik op een muur om een deur te plaatsen · kies type en maat · spatie + sleep = pan'
-  }
-  if (activeTool.value === 'add_window') {
-    return 'Klik op een muur om een raam te plaatsen · kies type, breedte, vloerafstand en glashoogte · spatie + sleep = pan'
-  }
-  if (activeTool.value === 'box_select') {
-    return 'Sleep box — muren volledig binnen selectie · Shift/Ctrl+box = toevoegen · Ctrl+klik = (de)selecteer · Esc = deselecteer · spatie + sleep = pan'
-  }
+  if (activeTool.value === 'measure') return t('result.toolbar.hintMeasure')
+  if (activeTool.value === 'draw_wall') return t('result.toolbar.hintDrawWall')
+  if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom')
+  if (activeTool.value === 'add_door') return t('result.toolbar.hintAddDoor')
+  if (activeTool.value === 'add_window') return t('result.toolbar.hintAddWindow')
+  if (activeTool.value === 'box_select') return t('result.toolbar.hintBoxSelect')
   if (props.selectedWallPanel) {
     const count = props.selectedWallPanel.count
-    if (count === 1) {
-      return '1 muur geselecteerd · pas dikte/uitlijning aan · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteer · Ctrl+hoekpunt-sleep = zonder snap'
-    }
-    return `${count} muren geselecteerd · pas dikte/uitlijning aan of verwijder de groep · spatie + sleep = pan`
+    if (count === 1) return t('result.toolbar.hintWallOne')
+    return t('result.toolbar.hintWallMany', { count })
   }
   if (props.selectedOpeningPanel) {
     const count = props.selectedOpeningPanel.count
     if (props.selectedOpeningPanel.openingType === 'window') {
-      if (count === 1) {
-        return '1 raam geselecteerd · pas breedte/vloerafstand/glashoogte aan · kopieer om opnieuw te plaatsen · sleep = verplaatsen langs muur · Ctrl+klik = (de)selecteer'
-      }
-      return `${count} ramen geselecteerd · pas instellingen aan of verwijder selectie · spatie + sleep = pan`
+      if (count === 1) return t('result.toolbar.hintWindowOne')
+      return t('result.toolbar.hintWindowMany', { count })
     }
-    if (count === 1) {
-      return '1 deur geselecteerd · pas maat/hoogte/spiegelen aan · kopieer om opnieuw te plaatsen · sleep = verplaatsen langs muur · Ctrl+klik = (de)selecteer'
-    }
-    return `${count} deuren geselecteerd · pas instellingen aan of verwijder selectie · spatie + sleep = pan`
+    if (count === 1) return t('result.toolbar.hintDoorOne')
+    return t('result.toolbar.hintDoorMany', { count })
   }
-  return 'Kies selectie-tool · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteer · Esc = deselecteer · hoekpunt = verslepen (snapt aan andere uiteinden) · Ctrl+sleep = zonder snap'
+  return t('result.toolbar.hintDefault')
 })
 </script>
 
@@ -140,7 +135,7 @@ const hint = computed(() => {
       <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face">
         <CanvasToolbelt
           embedded
-          :tools="FML_SELECT_TOOLS"
+          :tools="selectTools"
           :active-tool="activeTool"
           :show-undo="false"
           @update:active-tool="activeTool = $event as FmlToolId | null"
@@ -150,7 +145,7 @@ const hint = computed(() => {
       <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
         <CanvasToolbelt
           embedded
-          :tools="FML_EDIT_TOOLS"
+          :tools="editTools"
           :active-tool="activeTool"
           :show-undo="false"
           @update:active-tool="activeTool = $event as FmlToolId | null"

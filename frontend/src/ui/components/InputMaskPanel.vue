@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 withDefaults(
   defineProps<{
     eraserEnabled?: boolean
@@ -26,40 +28,42 @@ const emit = defineEmits<{
   resetMask: []
   undo: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="panel">
-    <h3>Crop &amp; gum</h3>
+    <h3>{{ t('input.cropGumTitle') }}</h3>
     <div class="section">
       <div class="section-head">
-        <p class="section-title">Crop</p>
+        <p class="section-title">{{ t('input.cropSection') }}</p>
         <button
           type="button"
           :class="{ primary: cropIncludeEnabled }"
           @click="emit('toggleCropInclude')"
         >
-          Crop polygon
+          {{ t('input.cropPolygon') }}
         </button>
       </div>
     </div>
 
     <div class="section section-divider">
       <div class="section-head">
-        <p class="section-title">Gum</p>
+        <p class="section-title">{{ t('input.gumSection') }}</p>
         <button type="button" :class="{ primary: eraserEnabled }" @click="emit('toggleEraser')">
-          Gum penseel
+          {{ t('input.gumBrush') }}
         </button>
         <button
           type="button"
           :class="{ primary: polygonEraserEnabled }"
           @click="emit('togglePolygonEraser')"
         >
-          Gum polygon
+          {{ t('input.gumPolygon') }}
         </button>
       </div>
       <div v-if="eraserEnabled" class="setting-row">
-        <span class="setting-label">Gumdikte</span>
+        <span class="setting-label">{{ t('input.gumThickness') }}</span>
         <div class="field-row">
           <input
             :value="eraserRadius"

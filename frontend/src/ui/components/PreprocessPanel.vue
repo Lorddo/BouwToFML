@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { PreprocessConfig, PreprocessLayerTune } from '@/core/extraction/types'
 import {
   copyLayerTuneBetween,
@@ -156,6 +157,8 @@ function ensureLayerRecords(): void {
   }
 }
 ensureLayerRecords()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -163,7 +166,7 @@ ensureLayerRecords()
     <!-- Eenvoudige flow: één slider (vooraf vast B/W). -->
     <section class="simple-section">
       <div class="setting-row">
-        <span class="setting-label">B/W-drempel</span>
+        <span class="setting-label">{{ t('preprocess.bwThreshold') }}</span>
         <div class="field-row">
           <input
             :value="readField('preBinarizeThreshold', DEFAULT_PRE_BINARIZE_THRESHOLD)"
@@ -184,18 +187,16 @@ ensureLayerRecords()
           />
         </div>
       </div>
-      <p class="hint">
-        Vaste B/W (default 150), daarna automatisch adaptive. Geen grijswaarden naar detectie.
-      </p>
+      <p class="hint">{{ t('preprocess.bwHint') }}</p>
     </section>
 
     <button type="button" class="advanced-toggle" @click="advancedOpen = !advancedOpen">
-      {{ advancedOpen ? 'Geavanceerd verbergen' : 'Geavanceerd…' }}
+      {{ advancedOpen ? t('preprocess.advancedHide') : t('preprocess.advancedShow') }}
     </button>
 
     <div v-show="advancedOpen" class="advanced-panel">
       <PreprocessActionGroup
-        title="Kleur (Z/W)"
+        :title="t('preprocess.groups.colorZw')"
         :model-value="readColorThresholdEnabled()"
         @update:model-value="writeColorThresholdEnabled"
       >
@@ -205,17 +206,17 @@ ensureLayerRecords()
             type="checkbox"
             @change="setChecked('preBinarizeEnabled', $event)"
           />
-          Vooraf vast B/W (geen grijs → daarna altijd adaptive)
+          {{ t('preprocess.preBinarizeCheck') }}
         </label>
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Aanpassen"
+        :title="t('preprocess.groups.adjust')"
         :model-value="readField('adjustBrightnessContrastEnabled', true)"
         @update:model-value="(next) => writeField('adjustBrightnessContrastEnabled', next)"
       >
         <div class="setting-row">
-          <span class="setting-label">Helderheid</span>
+          <span class="setting-label">{{ t('preprocess.brightness') }}</span>
           <div class="field-row">
             <input
               :value="readField('brightness', 50)"
@@ -236,7 +237,7 @@ ensureLayerRecords()
           </div>
         </div>
         <div class="setting-row">
-          <span class="setting-label">Contrast</span>
+          <span class="setting-label">{{ t('preprocess.contrast') }}</span>
           <div class="field-row">
             <input
               :value="readField('contrast', 1)"
@@ -263,19 +264,19 @@ ensureLayerRecords()
             type="checkbox"
             @change="setChecked('adjustNegativeEnabled', $event)"
           />
-          Negatief omkeren (vóór drempel)</label
+          {{ t('preprocess.invertBeforeThreshold') }}</label
         >
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Speckles verwijderen"
+        :title="t('preprocess.groups.removeSpeckles')"
         :model-value="readField('removeSpecklesEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('removeSpecklesEnabled', next, { despeckleMinPx: 32 })
         "
       >
         <div class="setting-row">
-          <span class="setting-label">Min. oppervlakte (px)</span>
+          <span class="setting-label">{{ t('preprocess.minAreaPx') }}</span>
           <div class="field-row">
             <input
               :value="readField('despeckleMinPx', 0)"
@@ -299,14 +300,14 @@ ensureLayerRecords()
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Holes vullen (zwart/wit)"
+        :title="t('preprocess.groups.fillHoles')"
         :model-value="readField('removeHolesEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('removeHolesEnabled', next, { removeHolesMaxPx: 4 })
         "
       >
         <div class="setting-row">
-          <span class="setting-label">Zwart vullen (px)</span>
+          <span class="setting-label">{{ t('preprocess.fillBlackPx') }}</span>
           <div class="field-row">
             <input
               :value="readField('removeHolesMaxPx', 0)"
@@ -328,7 +329,7 @@ ensureLayerRecords()
           </div>
         </div>
         <div class="setting-row">
-          <span class="setting-label">Wit openen (px)</span>
+          <span class="setting-label">{{ t('preprocess.openWhitePx') }}</span>
           <div class="field-row">
             <input
               :value="readField('despeckleOpen', 0)"
@@ -352,14 +353,14 @@ ensureLayerRecords()
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Gaten overbruggen"
+        :title="t('preprocess.groups.bridgeGaps')"
         :model-value="readField('bridgeGapsEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('bridgeGapsEnabled', next, { bridgeGaps: 1 })
         "
       >
         <div class="setting-row">
-          <span class="setting-label">Brug (px)</span>
+          <span class="setting-label">{{ t('preprocess.bridgePx') }}</span>
           <div class="field-row">
             <input
               :value="readField('bridgeGaps', 1)"
@@ -383,14 +384,14 @@ ensureLayerRecords()
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Randen gladstrijken"
+        :title="t('preprocess.groups.smoothEdges')"
         :model-value="readField('smoothLinesEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('smoothLinesEnabled', next, { smoothLines: 1 })
         "
       >
         <div class="setting-row">
-          <span class="setting-label">Sterkte (px)</span>
+          <span class="setting-label">{{ t('preprocess.smoothStrengthPx') }}</span>
           <div class="field-row">
             <input
               :value="readField('smoothLines', 1)"
@@ -414,14 +415,14 @@ ensureLayerRecords()
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Lijnen verdikken"
+        :title="t('preprocess.groups.thickenLines')"
         :model-value="readField('thickenLinesEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('thickenLinesEnabled', next, { thickenLinesPx: 1 })
         "
       >
         <div class="setting-row">
-          <span class="setting-label">Dikte (px)</span>
+          <span class="setting-label">{{ t('preprocess.thicknessPx') }}</span>
           <div class="field-row">
             <input
               :value="readField('thickenLinesPx', 1)"
@@ -445,14 +446,14 @@ ensureLayerRecords()
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Lijnen afschaven"
+        :title="t('preprocess.groups.erodeLines')"
         :model-value="readField('erodeLinesEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('erodeLinesEnabled', next, { erodeLinesPx: 1 })
         "
       >
         <div class="setting-row">
-          <span class="setting-label">Afschaven (px)</span>
+          <span class="setting-label">{{ t('preprocess.erodePx') }}</span>
           <div class="field-row">
             <input
               :value="readField('erodeLinesPx', 1)"
@@ -476,15 +477,15 @@ ensureLayerRecords()
       </PreprocessActionGroup>
 
       <PreprocessActionGroup
-        title="Negatief"
+        :title="t('preprocess.groups.negative')"
         :model-value="readField('finalNegativeEnabled', false)"
         @update:model-value="(next) => writeField('finalNegativeEnabled', next)"
       >
-        <p class="hint">Keert de bewerkte Z/W-plattegrond om als laatste stap (ná opschonen).</p>
+        <p class="hint">{{ t('preprocess.negativeHint') }}</p>
       </PreprocessActionGroup>
 
       <section v-if="copyTargetLayers.length > 0" class="copy-section">
-        <h4>Instellingen kopiëren</h4>
+        <h4>{{ t('preprocess.copySettings') }}</h4>
         <div class="copy-buttons">
           <button
             v-for="target in copyTargetLayers"
@@ -492,13 +493,15 @@ ensureLayerRecords()
             type="button"
             @click="copyTuneTo(target)"
           >
-            → {{ PREPROCESS_TAB_LABELS[target] }}
+            {{ t('preprocess.copyTo', { tab: PREPROCESS_TAB_LABELS[target] }) }}
           </button>
         </div>
       </section>
 
       <div class="actions">
-        <button type="button" @click="emit('resetPreview')">Reset preview</button>
+        <button type="button" @click="emit('resetPreview')">
+          {{ t('preprocess.resetPreview') }}
+        </button>
       </div>
     </div>
   </div>

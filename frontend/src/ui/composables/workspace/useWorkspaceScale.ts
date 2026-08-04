@@ -1,17 +1,24 @@
 import { ref, computed, type Ref } from 'vue'
 import type { HScaleState, useHScaleCalibration } from '@/platform/calibration'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 
 export function useWorkspaceScale(deps: {
   scale: ReturnType<typeof useHScaleCalibration>
   originalImageEl: Ref<HTMLImageElement | null>
 }) {
   const scalePanelOpen = ref(true)
+  const scaleInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
 
   const scaleLocked = computed(() => !deps.scale.confirmed.value)
 
   const showScaleOverlay = computed(
     () => !!deps.scale.state.value && (!deps.scale.confirmed.value || scalePanelOpen.value),
   )
+
+  function applyScaleInputUnitFromSettings(): void {
+    scaleInputUnit.value = loadUserSettings().scaleInputUnit
+  }
 
   function onMoveScaleHandle(
     handle: 'xLeft' | 'xRight' | 'xGuideY' | 'yTop' | 'yBottom' | 'yGuideX',
@@ -22,6 +29,7 @@ export function useWorkspaceScale(deps: {
     deps.scale.updatePartial({ [handle]: value }, img.naturalWidth, img.naturalHeight)
   }
 
+  /** Canonical mm from ScaleConfirmBar (unit conversion already applied). */
   function updateMmX(value: number) {
     deps.scale.distanceMmX.value = Number.isFinite(value) ? value : deps.scale.distanceMmX.value
     deps.scale.recomputeConfirmedFromDistances()
@@ -96,8 +104,10 @@ export function useWorkspaceScale(deps: {
 
   return {
     scalePanelOpen,
+    scaleInputUnit,
     scaleLocked,
     showScaleOverlay,
+    applyScaleInputUnitFromSettings,
     onMoveScaleHandle,
     updateMmX,
     updateMmY,

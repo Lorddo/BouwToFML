@@ -128,6 +128,7 @@ export function extractionToPlanWithOrigin(
       pxPerMmY: options.pxPerMmY,
       defaultDoorHeightCm,
       consumedDoorIds,
+      mergeDoubleDoors: options.mergeDoubleDoors,
     })
     const windowOpenings = mapLayer14WindowsToOpenings({
       layer14Windows: options.layer14Windows ?? [],

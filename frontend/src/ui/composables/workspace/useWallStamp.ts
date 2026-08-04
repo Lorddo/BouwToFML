@@ -33,6 +33,7 @@ import { applyBrushStroke, applyPolygonErase, createEraserMask } from '@/cv/tool
 import type { PolygonPoint } from '@/cv/tools/polygon'
 import { encodeMaskBase64, decodeMaskBase64 } from '@/platform/dev-workspace/mask-codec'
 import type { useOpenCvLoader } from '../useOpenCvLoader'
+import { tGlobal } from '@/ui/i18n'
 
 export type WallStampSerialized = {
   donorFloorId: string
@@ -217,7 +218,8 @@ export function useWallStamp(deps: {
       } catch (err) {
         // Fallback: solid als adaptive faalt (tests zonder OpenCV-assets).
         stampBw.value = new Uint8Array(solid)
-        error.value = err instanceof Error ? err.message : 'Stempel adaptive B/W mislukt'
+        error.value =
+          err instanceof Error ? err.message : tGlobal('preprocess.stampErrors.adaptiveFailed')
       } finally {
         busy.value = false
       }
@@ -245,13 +247,13 @@ export function useWallStamp(deps: {
     error.value = null
     const size = imageSize()
     if (!size) {
-      error.value = 'Geen onderlegger-afmetingen.'
+      error.value = tGlobal('preprocess.stampErrors.noUnderlaySize')
       return false
     }
     const pxPerMmX = deps.pxPerMmX()
     const pxPerMmY = deps.pxPerMmY()
     if (!(pxPerMmX > 0) || !(pxPerMmY > 0)) {
-      error.value = 'Bevestig eerst de schaal (px/mm).'
+      error.value = tGlobal('preprocess.stampErrors.confirmScale')
       return false
     }
     const boundaries = deps.bandBoundaries?.() ?? DEFAULT_FML_BAND_BOUNDARIES
@@ -262,7 +264,7 @@ export function useWallStamp(deps: {
     }))
     const filtered = filterWallsByBands(allWalls, bands.value, boundaries)
     if (filtered.length === 0) {
-      error.value = 'Geen muren in de geselecteerde diktebanden.'
+      error.value = tGlobal('preprocess.stampErrors.noWallsInBands')
       return false
     }
     const origin = params.originCm ?? { x: 0, y: 0 }
@@ -274,7 +276,7 @@ export function useWallStamp(deps: {
     })
     const box = computeWallsBBox(px)
     if (!box) {
-      error.value = 'Kon stempel-bbox niet berekenen.'
+      error.value = tGlobal('preprocess.stampErrors.bboxFailed')
       return false
     }
     const aligned = centerAlignBounds(box, size.width, size.height)
@@ -299,7 +301,7 @@ export function useWallStamp(deps: {
     bands.value = { ...next }
     if (!active.value && !baked.value) return
     if (!recomputePxFromSource()) {
-      error.value = 'Geen muren in de geselecteerde diktebanden.'
+      error.value = tGlobal('preprocess.stampErrors.noWallsInBands')
       stampBw.value = null
       stampMask.value = null
       previewUrl.value = null
@@ -347,7 +349,7 @@ export function useWallStamp(deps: {
   async function bake(): Promise<boolean> {
     error.value = null
     if (!active.value && !baked.value) {
-      error.value = 'Geen actieve stempel om te bakken.'
+      error.value = tGlobal('preprocess.stampErrors.noActiveStamp')
       return false
     }
     // baked=true vóór rebuild: getComposeStampBw levert pas dan stampBw aan compose.
@@ -355,7 +357,7 @@ export function useWallStamp(deps: {
     await rebuildOutputs({ adaptive: true })
     if (!stampMaskHasInk(stampBw.value) && !stampMaskHasInk(stampMask.value)) {
       baked.value = false
-      error.value = 'Geen stempel-inkt om te bakken.'
+      error.value = tGlobal('preprocess.stampErrors.noStampInk')
       return false
     }
     active.value = false

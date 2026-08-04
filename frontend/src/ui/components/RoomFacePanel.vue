@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { RoomPhase } from '@/ui/composables/workspace/useWorkspaceRoomFaces'
 
 const props = defineProps<{
@@ -15,22 +16,24 @@ const props = defineProps<{
   } | null
 }>()
 
+const { t } = useI18n()
+
 const phaseLabel = computed(() => {
   switch (props.roomPhase) {
     case 'awaiting_reference':
-      return 'Wacht op referentie'
+      return t('templates.roomFace.awaitingReference')
     case 'classifying':
-      return 'Classificeren…'
+      return t('templates.roomFace.classifying')
     case 'recalculating':
-      return 'Inkt verwerken…'
+      return t('templates.roomFace.recalculating')
     case 'review':
-      return 'Controle'
+      return t('templates.roomFace.review')
     case 'finalizing':
-      return 'Afronden…'
+      return t('templates.roomFace.finalizing')
     case 'done':
-      return 'Afgerond'
+      return t('templates.roomFace.done')
     default:
-      return 'Wachten…'
+      return t('templates.roomFace.idle')
   }
 })
 </script>
@@ -39,12 +42,25 @@ const phaseLabel = computed(() => {
   <div class="panel">
     <p class="phase">{{ phaseLabel }}</p>
     <p v-if="stats" class="stats">
-      {{ stats.wallCount }} muur · {{ stats.surfaceCount }} vloer ·
-      {{ stats.unknownCount }} onbekend
-      <span v-if="(stats.doorCount ?? 0) > 0"> · {{ stats.doorCount }} deur</span>
-      <span v-if="(stats.windowCount ?? 0) > 0"> · {{ stats.windowCount }} raam</span>
-      <span v-if="(stats.doorframeCount ?? 0) > 0"> · {{ stats.doorframeCount }} kozijn</span>
-      <span v-if="stats.overrideCount > 0"> · {{ stats.overrideCount }} handmatig</span>
+      {{
+        t('templates.roomFace.stats', {
+          walls: stats.wallCount,
+          surfaces: stats.surfaceCount,
+          unknown: stats.unknownCount,
+        })
+      }}
+      <span v-if="(stats.doorCount ?? 0) > 0">{{
+        t('templates.roomFace.statDoor', { n: stats.doorCount })
+      }}</span>
+      <span v-if="(stats.windowCount ?? 0) > 0">{{
+        t('templates.roomFace.statWindow', { n: stats.windowCount })
+      }}</span>
+      <span v-if="(stats.doorframeCount ?? 0) > 0">{{
+        t('templates.roomFace.statDoorframe', { n: stats.doorframeCount })
+      }}</span>
+      <span v-if="stats.overrideCount > 0">{{
+        t('templates.roomFace.statManual', { n: stats.overrideCount })
+      }}</span>
     </p>
   </div>
 </template>

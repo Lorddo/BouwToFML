@@ -67,6 +67,8 @@ ID’s in code: `// ESC:<ID> (<Cat>)`. Inventarisregelnummers zijn historisch; a
 | D-46 | **AFBAKENEN** + sticky promote | As-grow + class doorframe; 2/6 | 2026-08-01 |
 | W-25, W-35, W-36 | **AFBAKENEN** | L6 face/hv/seed; k/6 | 2026-08-01 |
 | X-10 | **AFBAKENEN** | Twin→double_wide; later toggle zoals R-27 | 2026-08-01 |
+| R-28 | **AFBAKENEN** | L14 1D muurgat-NMS vóór R-27 (smaller-first) | 2026-08-04 |
+| X-28 | **AFBAKENEN** | Deur wint bijna-coïncident raam (strak) | 2026-08-04 |
 | W-09, W-21 | **AFBAKENEN** | T-arm / micro-loop guards; 0/6 = zeldzaam | 2026-08-01 |
 | W-46 | **AFBAKENEN**; zero-length weg | DT-miss blijft; geteld | 2026-08-01 |
 | W-53 | **AFBAKENEN** | fmlReady-gate | 2026-08-01 |

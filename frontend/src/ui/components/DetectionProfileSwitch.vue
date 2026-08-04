@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { DRAWING_PROFILES, type DrawingProfileId } from '@/platform/profile'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   modelValue: DrawingProfileId
@@ -9,9 +10,15 @@ const emit = defineEmits<{
   profileSelected: [id: DrawingProfileId]
 }>()
 
+const { t } = useI18n()
+
 function selectProfile(id: DrawingProfileId): void {
   if (id === props.modelValue) return
   emit('profileSelected', id)
+}
+
+function profileLabel(id: DrawingProfileId): string {
+  return t(`templates.profiles.${id}`)
 }
 </script>
 
@@ -24,7 +31,7 @@ function selectProfile(id: DrawingProfileId): void {
       :class="{ active: modelValue === profile.id }"
       @click="selectProfile(profile.id)"
     >
-      {{ profile.label }}
+      {{ profileLabel(profile.id) }}
     </button>
   </div>
 </template>

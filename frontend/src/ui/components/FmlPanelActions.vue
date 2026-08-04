@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 withDefaults(
   defineProps<{
     scaleConfirmed: boolean
@@ -24,12 +28,14 @@ const emit = defineEmits<{
       :disabled="!hasCombinedOutput || !scaleConfirmed || !fmlLimitsDirty"
       @click="emit('regenerate')"
     >
-      Regenereren
+      {{ t('result.regenerate') }}
     </button>
-    <button type="button" @click="emit('downloadProject')">Download .fml (project)</button>
+    <button type="button" @click="emit('downloadProject')">
+      {{ t('result.downloadProject') }}
+    </button>
   </div>
   <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">
-    Hoogte/dikte gewijzigd — klik Regenereren om de FML bij te werken.
+    {{ t('result.dirtyHint') }}
   </p>
 </template>
 

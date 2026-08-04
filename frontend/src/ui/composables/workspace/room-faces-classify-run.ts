@@ -6,6 +6,7 @@ import type { SelectionRect } from '@/platform/selection'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
+import { tGlobal } from '@/ui/i18n'
 import {
   applySerializedFaceOverrides,
   invalidateFaceDualSpace,
@@ -148,17 +149,17 @@ export async function recalculateFaces(ctx: {
   nextTabOutputs: TabDetectionOutputs | null
 }> {
   if (!ctx.referenceWallThicknessPx || ctx.referenceWallThicknessPx <= 0) {
-    ctx.setStatus?.('Meet eerst een referentie muur via Autoclassificeer.')
+    ctx.setStatus?.(tGlobal('templates.status.needReference'))
     return { success: false, nextCache: null, nextTabOutputs: null }
   }
 
   const cache = ctx.roomRasterCache ?? ctx.restoreCacheFromOutput(ctx.wallsOutput)
   if (!cache) {
-    ctx.setStatus?.('Geen classificatie-state — eerst autoclassificeren.')
+    ctx.setStatus?.(tGlobal('templates.status.noClassifyState'))
     return { success: false, nextCache: null, nextTabOutputs: null }
   }
 
-  ctx.setStatus?.('Inktwijzigingen verwerken…')
+  ctx.setStatus?.(tGlobal('templates.status.processingInkChanges'))
   const started = performance.now()
   await ctx.ensureOpenCv()
   const cv = await waitForOpenCV()
@@ -167,7 +168,7 @@ export async function recalculateFaces(ctx: {
   ctx.ensureScaleInitialized(img)
   const precomposedWallBw = ctx.getEffectiveWallBwBytes?.()
   if (!precomposedWallBw) {
-    throw new Error('Geen muur-B/W beschikbaar voor inkt verwerken.')
+    throw new Error(tGlobal('templates.errors.noBwForInk'))
   }
 
   const result = await runRoomRecalculateLocal({
@@ -247,7 +248,7 @@ export function createClassifyRunner(deps: ClassifyRunDeps) {
       setClassifyingInFlight(true)
       deps.setRoomPhase('classifying')
       clearPreview()
-      deps.setStatus?.('Muurclassificatie uitvoeren…')
+      deps.setStatus?.(tGlobal('templates.status.runningClassify'))
       try {
         const ok = await deps.onExtractTargets(
           { walls: true, wallJunctionStrategy: 'room_first' },
@@ -258,7 +259,7 @@ export function createClassifyRunner(deps: ClassifyRunDeps) {
           deps.syncDetectionComplete()
           return false
         }
-        deps.setStatus?.('Classificatie klaar — kleuren opbouwen…')
+        deps.setStatus?.(tGlobal('templates.status.classifyColors'))
         return deps.ingestClassifyOutput(deps.getWallsOutput() ?? null)
       } finally {
         setClassifyingInFlight(false)

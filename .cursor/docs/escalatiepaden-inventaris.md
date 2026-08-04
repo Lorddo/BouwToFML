@@ -324,6 +324,7 @@ D-50..D-52 zijn **verwijderd 2026-07-31** (0/6 E2E + kill-switch gelijk); Path B
 | R-25 | Framing de-dupe op score | `window-resolve.ts:209-214` | B | Hoogste score claimt glas-faces |
 | R-26 | L14 breedte-fallback | `window-wall-bind.ts:196-197` | E | `widthPx ≤ 0` → geprojecteerde bbox-span |
 | R-27 | Aangrenzende ramen mergen | `window-wall-merge.ts:113-154` | A | 2–3 buren, ≤5% maatverschil → double/triple refid · **anker 2D_3E** |
+| R-28 | L14 1D muurgat-dedupe | `window-wall-dedupe.ts` | A | Overlappende/nested BoundWindows per segment → smaller-first NMS vóór R-27 |
 
 **R-16 verdient aparte aandacht:** het derde niveau van die cascade laat Stage-1-vlakken door *als `strip_stack` zonder dat er rails of framing in de referentie zijn gevonden*. Dat is een escalatiepad dat het bewijs waar de hele stage om draait, overslaat.
 
@@ -484,6 +485,7 @@ Dit cluster bestaat bijna volledig uit categorie E: er *is* gemeten, en er gaat 
 | X-25 | Import-defaults | `importFmlV3.ts:86-180` | F | thickness 10, height 280, naam `'Onbekend'` |
 | X-26 | L12-skip-inferentie | `platform/export/.../build-layer-debug-report.ts:108-116` | E | Bound zonder oriented → reden `orient_failed` geraden |
 | X-27 | `semanticUsedLayerBFallback` | `build-semantic-walls-output.ts:41,88` | — | **Dode vlag**: altijd `false`, geen setter; wel een waarschuwingsbanner in `format-layer-diff-markdown.ts:120-121` |
+| X-28 | Deur wint overlapping raam | `window-wall-dedupe.ts` | A | Strakke 1D-IoU/midpoint op gedeeld segment; raam naast deur blijft |
 
 **X-01 en X-11 zijn de twee items in dit cluster waar detectie-informatie aantoonbaar verloren gaat** en die niet als bewuste keuze zijn gedocumenteerd. Ze staan ook in de audit (E6); hier is de keten bevestigd: berekend in `extractionToPlan.ts:149`, weggegooid in `harmonize-fml-wall-thickness.ts:223`.
 

@@ -8,6 +8,7 @@ import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { SelectionRect } from '@/platform/selection'
 import type { FaceToolId } from '@/ui/components/canvas/canvas-toolbelt.types'
 import { resolveFaceToolbeltHint } from '@/ui/components/canvas/canvas-toolbelt-hints'
+import { tGlobal } from '@/ui/i18n'
 import {
   classificationAtLabel,
   classificationStats,
@@ -133,7 +134,7 @@ export function useWorkspaceRoomFaces(deps: {
   function refreshPreviewMaskAsync(cache: RoomRasterCache): void {
     try {
       refreshPreviewMask(cache)
-      deps.setStatus?.('Kleuren klaar — controleer vlakken en rond detectie af.')
+      deps.setStatus?.(tGlobal('templates.status.colorsReady'))
     } catch (error) {
       // foutmelding loopt via detectiepipeline
       noteSwallowedError('O-37', 'useWorkspaceRoomFaces.refreshPreviewMaskAsync', error)
@@ -179,10 +180,10 @@ export function useWorkspaceRoomFaces(deps: {
     roomRasterCache.value = createRoomRasterCache(state)
     roomPhase.value = 'review'
     syncDetectionComplete()
-    deps.setStatus?.('Kleuren opbouwen…')
+    deps.setStatus?.(tGlobal('templates.status.classifyColors'))
     pendingPreviewAfterClassify = false
     refreshPreviewMask(roomRasterCache.value)
-    deps.setStatus?.('Kleuren klaar — controleer vlakken en rond detectie af.')
+    deps.setStatus?.(tGlobal('templates.status.colorsReady'))
     return true
   }
 
@@ -298,9 +299,9 @@ export function useWorkspaceRoomFaces(deps: {
       if (deps.referenceWallThicknessPx.value && deps.referenceWallThicknessPx.value > 0) {
         return runClassifyPhase(true)
       }
-      deps.setStatus?.('Referentiemuur meten en classificeren…')
+      deps.setStatus?.(tGlobal('templates.status.measuringReference'))
       if (!deps.cvLoader.ready.value) {
-        deps.setStatus?.('OpenCV laden…')
+        deps.setStatus?.(tGlobal('templates.status.loadingOpenCv'))
         await deps.cvLoader.ensureOpenCv()
         if (!deps.cvLoader.ready.value) {
           deps.referenceWallThicknessPx.value = null
@@ -317,22 +318,20 @@ export function useWorkspaceRoomFaces(deps: {
         height: rect.height,
       })
       if (!classified) {
-        deps.setStatus?.(
-          'Muurclassificatie niet gestart — controleer profiel (Solid/Open) en probeer opnieuw.',
-        )
+        deps.setStatus?.(tGlobal('templates.status.classifyNotStarted'))
         roomPhase.value = 'awaiting_reference'
         syncDetectionComplete()
         return false
       }
       if (!deps.referenceWallThicknessPx.value || deps.referenceWallThicknessPx.value <= 0) {
-        deps.setStatus?.('Referentiemuur niet herkend — pas het vak aan en probeer opnieuw.')
+        deps.setStatus?.(tGlobal('templates.status.needReference'))
         roomPhase.value = 'awaiting_reference'
         syncDetectionComplete()
         return false
       }
       return true
     }
-    deps.setStatus?.('Autoclassificatie uitvoeren…')
+    deps.setStatus?.(tGlobal('templates.status.runningClassify'))
     return runClassifyPhase(true)
   }
 
@@ -363,7 +362,7 @@ export function useWorkspaceRoomFaces(deps: {
           height: rect.height,
         })
       }
-      deps.setStatus?.('Meet eerst een referentie muur via het vak of Autoclassificeer.')
+      deps.setStatus?.(tGlobal('templates.status.needReferenceOrBox'))
       roomPhase.value = 'awaiting_reference'
       syncDetectionComplete()
       return false
@@ -398,17 +397,17 @@ export function useWorkspaceRoomFaces(deps: {
         roomRasterCache.value = result.nextCache
         roomPhase.value = 'review'
         syncDetectionComplete()
-        deps.setStatus?.('Kleuren opbouwen…')
+        deps.setStatus?.(tGlobal('templates.status.classifyColors'))
         refreshPreviewMask(roomRasterCache.value)
-        deps.setStatus?.('Inktwijzigingen verwerkt — controleer vlakken en rond af.')
+        deps.setStatus?.(tGlobal('templates.status.colorsReady'))
         return true
       }
       roomPhase.value = 'review'
-      deps.setStatus?.('Inkt verwerken mislukt — probeer opnieuw.')
+      deps.setStatus?.(tGlobal('templates.errors.noBwForInk'))
       return false
     } catch {
       roomPhase.value = 'review'
-      deps.setStatus?.('Inkt verwerken mislukt — probeer opnieuw.')
+      deps.setStatus?.(tGlobal('templates.errors.noBwForInk'))
       return false
     } finally {
       suspendWallBwPreviewWatch = false

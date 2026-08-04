@@ -1,4 +1,6 @@
 /** Target longest edge for PDF rasterization (vector source → higher than PNG upload floor). */
+import { tGlobal } from '@/ui/i18n'
+
 export const DEFAULT_MIN_MAX_EDGE = 4000
 /** Browser canvas safety cap (never exceed on longest edge). */
 const MAX_PDF_RENDER_MAX_EDGE = 8192
@@ -45,16 +47,16 @@ export function formatPdfPageImageName(
   numPages: number,
 ): string {
   if (numPages <= 1) return fileName
-  return `${fileName} (pagina ${pageNumber})`
+  return tGlobal('input.pdf.pageImageName', { fileName, pageNumber })
 }
 
 export function pdfLoadErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error)
   if (/password/i.test(message)) {
-    return 'Deze PDF is beveiligd met een wachtwoord. Exporteer eerst een onbeveiligde versie.'
+    return tGlobal('input.pdf.passwordProtected')
   }
   if (import.meta.env.DEV && message) {
-    return `Kon PDF niet laden: ${message}`
+    return tGlobal('input.pdf.loadFailedWithMessage', { message })
   }
-  return 'Kon PDF niet laden. Controleer of het bestand geldig is.'
+  return tGlobal('input.pdf.loadFailed')
 }

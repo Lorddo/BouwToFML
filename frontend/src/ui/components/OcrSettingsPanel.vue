@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { PreprocessConfig } from '@/core/extraction/types'
 
 const model = defineModel<PreprocessConfig>({ required: true })
@@ -9,18 +10,20 @@ withDefaults(
   }>(),
   { compact: true },
 )
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="panel">
-    <h3 v-if="!compact">OCR</h3>
+    <h3 v-if="!compact">{{ t('preprocess.ocrSettings.title') }}</h3>
     <template v-if="model.ocrEnabled">
       <label>
         <input v-model="model.ocrDetectVertical" type="checkbox" />
-        Zoek ook verticale tekst (90°/270°)
+        {{ t('preprocess.ocrSettings.verticalText') }}
       </label>
       <label>
-        OCR min confidence:
+        {{ t('preprocess.ocrSettings.minConfidence') }}
         <div class="field-row">
           <input v-model.number="model.ocrMinConfidence" type="range" min="0" max="100" step="1" />
           <input
@@ -34,7 +37,7 @@ withDefaults(
         </div>
       </label>
     </template>
-    <p v-else class="hint">OCR staat uit — schakel aan op stap 2 (Voorbewerking).</p>
+    <p v-else class="hint">{{ t('preprocess.ocrSettings.disabledHint') }}</p>
   </div>
 </template>
 

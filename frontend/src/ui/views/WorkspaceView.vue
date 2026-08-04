@@ -78,8 +78,10 @@ const {
 
 defineExpose<{
   startNewWorkspace: () => void
+  applyUserViewerSettings: () => void
 }>({
   startNewWorkspace,
+  applyUserViewerSettings: () => api.applyUserViewerSettings(),
 })
 </script>
 
@@ -115,6 +117,7 @@ defineExpose<{
           v-model:eraser-radius="ws.eraserRadius"
           :scale="ws.scale"
           :scale-panel-open="ws.scalePanelOpen"
+          :scale-input-unit="ws.scaleInputUnit"
           :cv-loader="ws.cvLoader"
           :image-src="ws.imageSrc"
           :eraser-enabled="ws.eraserEnabled"

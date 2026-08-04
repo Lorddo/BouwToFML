@@ -38,6 +38,7 @@ import { measureReferenceWallThicknessPx } from '@/cv/walls/measure-reference-wa
 import { classifyWallRefStyleFromBw } from '@/cv/refs/classify-wall-ref-style'
 import type { GapsInkMode } from '@/cv/gaps'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
+import { tGlobal } from '@/ui/i18n'
 import type { useExtraction } from '../useExtraction'
 import type { useOpenCvLoader } from '../useOpenCvLoader'
 import type { WorkspaceFlowStep } from './constants'
@@ -130,7 +131,7 @@ export function useWorkspaceDetection(deps: {
     deps.tabOutputs.value = emptyTabOutputs()
     deps.onRoomPipelineReset?.()
     if (deps.flowStep.value === 'templates') {
-      status.value = 'Profiel aangepast — genereer detectie opnieuw per tab.'
+      status.value = tGlobal('templates.status.profileChanged')
       void deps.refreshSignaturePreview()
       void deps.refreshAllDetectionUnderlays()
     }
@@ -216,7 +217,7 @@ export function useWorkspaceDetection(deps: {
       if (!deps.cvLoader.ready.value) {
         await deps.cvLoader.ensureOpenCv()
         if (!deps.cvLoader.ready.value) {
-          throw new Error(deps.cvLoader.error.value ?? 'OpenCV kon niet geladen worden.')
+          throw new Error(deps.cvLoader.error.value ?? tGlobal('common.opencvLoadFailed'))
         }
       }
       const cv = await waitForOpenCV()
@@ -228,7 +229,7 @@ export function useWorkspaceDetection(deps: {
       }
       const baseBw = deps.getBaseWallBw?.()
       if (!baseBw) {
-        deps.setLocalError('Muur-B/W niet beschikbaar voor diktemeting.')
+        deps.setLocalError(tGlobal('preprocess.errors.bwUnavailableForMeasure'))
         deps.referenceWallThicknessPx.value = null
         return null
       }
@@ -253,7 +254,11 @@ export function useWorkspaceDetection(deps: {
         })
         deps.applyAutoGapsInkMode?.(style.gapsInkMode)
         if (thickness != null) {
-          status.value = `Muurdikte ${thickness}px · ${style.renderStyle} (${style.faceCount} faces)`
+          status.value = tGlobal('templates.status.thicknessWithStyle', {
+            px: thickness,
+            style: style.renderStyle,
+            faces: style.faceCount,
+          })
         }
         // ESC:O-31 (D)
       } catch (error) {
@@ -263,13 +268,11 @@ export function useWorkspaceDetection(deps: {
         })
       }
       if (thickness == null) {
-        deps.setLocalError(
-          'Kon muurdikte niet meten in het referentievak. Teken opnieuw over een duidelijke muur.',
-        )
+        deps.setLocalError(tGlobal('preprocess.errors.measureThicknessFailed'))
       } else {
         deps.setLocalError(null)
-        if (!status.value.startsWith('Muurdikte')) {
-          status.value = `Muurdikte gemeten: ${thickness}px`
+        if (!status.value.includes(String(thickness))) {
+          status.value = tGlobal('templates.status.thicknessMeasured', { px: thickness })
         }
       }
       return thickness
@@ -355,13 +358,13 @@ export function useWorkspaceDetection(deps: {
       if (!deps.cvLoader.ready.value) {
         await deps.cvLoader.ensureOpenCv()
         if (!deps.cvLoader.ready.value) {
-          throw new Error(deps.cvLoader.error.value ?? 'OpenCV kon niet geladen worden.')
+          throw new Error(deps.cvLoader.error.value ?? tGlobal('common.opencvLoadFailed'))
         }
       }
       const img = await deps.getImageEl()
       deps.ensureScaleInitialized(img)
       if (!deps.scaleConfirmed.value) {
-        throw new Error('Bevestig eerst de schaal met ✓ voordat je detectie start.')
+        throw new Error(tGlobal('templates.errors.confirmScaleFirst'))
       }
       if (
         options?.phase === 'classify' ||
@@ -372,7 +375,7 @@ export function useWorkspaceDetection(deps: {
       }
       if (options?.phase === 'classify') {
         deps.setLocalError(null)
-        status.value = 'Beeld voorbereiden voor classificatie…'
+        status.value = tGlobal('templates.status.prepareClassify')
       }
       const requiresExamples = options?.requireExamples === true
       const allRects = deps.rects.value.map((rect) => ({
@@ -381,7 +384,7 @@ export function useWorkspaceDetection(deps: {
       }))
       const runRects = requiresExamples ? examplesForTargets(targets, allRects) : []
       if (requiresExamples && runRects.length === 0) {
-        deps.setLocalError('Teken minstens één voorbeeldvak voor muur.')
+        deps.setLocalError(tGlobal('preprocess.errors.drawWallRef'))
         return false
       }
       const output = await run(
@@ -409,9 +412,7 @@ export function useWorkspaceDetection(deps: {
         ? attachPreprocessVectorCacheToOutput(output, deps.preprocessVectorCache.value)
         : output
       if (outputWithVectorDebug.meta?.extractorId === 'noop') {
-        throw new Error(
-          'Detectie-pipeline niet geladen (noop). Herstart de app — worker moet geometry-lbe registreren.',
-        )
+        throw new Error(tGlobal('templates.errors.pipelineNotLoaded'))
       }
       lastOutput.value = outputWithVectorDebug
       const tabKey = tabFromDetectTargets(targets)
@@ -427,16 +428,17 @@ export function useWorkspaceDetection(deps: {
           if (previous) {
             deps.tabOutputs.value = { ...deps.tabOutputs.value, [tabKey]: previous }
           }
-          throw new Error(
-            'Afronden detectie mislukt — classificatie is behouden. Probeer opnieuw of herlaad de pagina.',
-          )
+          throw new Error(tGlobal('templates.errors.finalizeFailed'))
         }
         deps.tabOutputs.value = { ...deps.tabOutputs.value, [tabKey]: outputWithVectorDebug }
       }
       const journal = getRunJournal()
       if (journal.degraded) {
         const swallowed = journal.events.filter((event) => event.kind === 'swallowed_error')
-        status.value = `Detectie klaar, maar ${swallowed.length} fout(en) verzwegen — zie Layer Debug journaal (${swallowed[0]?.where ?? 'onbekend'}).`
+        status.value = tGlobal('templates.status.swallowedErrors', {
+          count: swallowed.length,
+          where: swallowed[0]?.where ?? 'unknown',
+        })
       }
       return true
       // ESC:O-33 (D)

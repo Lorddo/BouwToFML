@@ -6,11 +6,13 @@ import type { DrawingProfileId } from '@/platform/profile'
 import type { SelectionRect } from '@/platform/selection'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RestoreSessionOptions } from '@/ui/composables/workspace/workspace-dev-session-restore-flow'
+import { tGlobal } from '@/ui/i18n'
 import {
   createDefaultFloorFmlDefaults,
   createDefaultFloorMeta,
   createEmptyProjectState,
   createFloorId,
+  floorNameIndexedNl,
 } from './defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
 import { mergeFloorPlans } from './merge-floor-plans'
@@ -269,7 +271,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   async function switchFloor(floorId: string): Promise<void> {
     if (floorId === state.value.activeFloorId) return
     if (!state.value.floors.some((f) => f.id === floorId)) {
-      deps.setLocalError('Verdieping niet gevonden.')
+      deps.setLocalError(tGlobal('project.errors.floorNotFound'))
       return
     }
     switchingFloor.value = true
@@ -299,7 +301,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const donorDefaults = effectiveDefaultsForFloor(state.value.activeFloorId)
     const floor = createDefaultFloorMeta({
       id: createFloorId(),
-      name: params?.name ?? `Verdieping ${state.value.floors.length}`,
+      name: params?.name ?? floorNameIndexedNl(state.value.floors.length),
       level: params?.level ?? maxLevel + 1,
       status: 'empty',
       defaults: { ...donorDefaults },
@@ -320,7 +322,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
 
   function removeFloor(floorId: string): void {
     if (state.value.floors.length <= 1) {
-      deps.setLocalError('Er moet minstens één verdieping blijven.')
+      deps.setLocalError(tGlobal('project.errors.keepOneFloor'))
       return
     }
     const nextFloors = state.value.floors.filter((f) => f.id !== floorId)
@@ -384,22 +386,18 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const source = state.value.sourceUnderlay
     if (source?.src) {
       if (source.src.startsWith('blob:')) {
-        deps.setLocalError(
-          'Projectbron is verlopen (blob-URL). Bevestig opnieuw de schaal op de eerste verdieping, of upload de scan opnieuw.',
-        )
+        deps.setLocalError(tGlobal('input.errors.projectSourceExpired'))
         return
       }
       try {
         await deps.loadUnderlayWithScale(source.src, source.name, source.scale)
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
-        deps.setLocalError(`Onderlegger overnemen mislukt: ${message}`)
+        deps.setLocalError(tGlobal('input.errors.reuseFailed', { message }))
       }
       return
     }
-    deps.setLocalError(
-      'Nog geen projectbron. Bevestig eerst de schaal op een verdieping (vóór crop) — dan kun je die hier overnemen.',
-    )
+    deps.setLocalError(tGlobal('input.errors.noProjectSource'))
   }
 
   /**
@@ -410,7 +408,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const donorId = resolveDonorFloorId()
     const session = donorId ? state.value.blobs[donorId]?.session : null
     if (!session) {
-      deps.setLocalError('Geen verdieping met voorbewerking om over te nemen.')
+      deps.setLocalError(tGlobal('preprocess.errors.noDonorPreprocess'))
       return
     }
     deps.applyPreprocessTune({

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
+import { useI18n } from 'vue-i18n'
 import './fml-panel-fields.css'
+
+const { t } = useI18n()
 
 withDefaults(
   defineProps<{
@@ -72,10 +75,10 @@ function onBandMaxBoundaryInput(event: Event): void {
 
 <template>
   <details class="fml-fold">
-    <summary>Muur diktes &amp; banden</summary>
+    <summary>{{ t('result.thicknessFold') }}</summary>
     <div class="fml-thickness-limits">
       <label class="fml-limit-field">
-        <span title="Exportdikte voor muren in de min-band">Min. FML-dikte (cm)</span>
+        <span :title="t('result.thicknessMinTitle')">{{ t('result.thicknessMin') }}</span>
         <div class="fml-limit-input-row">
           <input
             type="number"
@@ -88,7 +91,7 @@ function onBandMaxBoundaryInput(event: Event): void {
           <button
             type="button"
             class="pick-btn"
-            title="Meet min-bandgrens op onderlegger (gemeten × 1.10)"
+            :title="t('result.pickMinTitle')"
             :class="{ active: fmlThicknessPickTier === 'min' }"
             :disabled="
               !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
@@ -102,7 +105,7 @@ function onBandMaxBoundaryInput(event: Event): void {
             class="band-input"
             min="1"
             step="0.1"
-            title="Meetband: min &lt; deze waarde (cm)"
+            :title="t('result.bandMidTitle')"
             :value="fmlBandMidBoundaryCm"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
             @input="onBandMidBoundaryInput"
@@ -110,7 +113,7 @@ function onBandMaxBoundaryInput(event: Event): void {
         </div>
       </label>
       <label class="fml-limit-field">
-        <span title="Exportdikte voor muren in de mid-band">Mid. FML-dikte (cm)</span>
+        <span :title="t('result.thicknessMidTitle')">{{ t('result.thicknessMid') }}</span>
         <div class="fml-limit-input-row">
           <input
             type="number"
@@ -125,7 +128,7 @@ function onBandMaxBoundaryInput(event: Event): void {
         </div>
       </label>
       <label class="fml-limit-field">
-        <span title="Exportdikte voor muren in de max-band">Max. FML-dikte (cm)</span>
+        <span :title="t('result.thicknessMaxTitle')">{{ t('result.thicknessMax') }}</span>
         <div class="fml-limit-input-row">
           <input
             type="number"
@@ -138,7 +141,7 @@ function onBandMaxBoundaryInput(event: Event): void {
           <button
             type="button"
             class="pick-btn"
-            title="Meet max-bandgrens op onderlegger (gemeten × 0.90)"
+            :title="t('result.pickMaxTitle')"
             :class="{ active: fmlThicknessPickTier === 'max' }"
             :disabled="
               !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || fmlThicknessPickBusy
@@ -152,7 +155,7 @@ function onBandMaxBoundaryInput(event: Event): void {
             class="band-input"
             min="1"
             step="0.1"
-            title="Meetband: max &gt; deze waarde (cm)"
+            :title="t('result.bandMaxTitle')"
             :value="fmlBandMaxBoundaryCm"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
             @input="onBandMaxBoundaryInput"
@@ -161,11 +164,13 @@ function onBandMaxBoundaryInput(event: Event): void {
       </label>
     </div>
     <p class="fml-band-hint">
-      Meetband: min &lt; {{ fmlBandMidBoundaryCm }} · mid {{ fmlBandMidBoundaryCm }}–{{
-        fmlBandMaxBoundaryCm
+      {{
+        t('result.bandHint', {
+          mid: fmlBandMidBoundaryCm,
+          max: fmlBandMaxBoundaryCm,
+        })
       }}
-      · max &gt; {{ fmlBandMaxBoundaryCm }} cm
-      <span class="fml-band-ratio">(export links · bandgrens rechts van ⊕)</span>
+      <span class="fml-band-ratio">{{ t('result.bandHintRatio') }}</span>
     </p>
     <p v-if="fmlThicknessPickMessage" class="fml-hint fml-pick-hint">
       {{ fmlThicknessPickMessage }}
@@ -175,7 +180,7 @@ function onBandMaxBoundaryInput(event: Event): void {
         class="link-btn"
         @click="emit('cancelThicknessPick')"
       >
-        Annuleren
+        {{ t('result.pickCancel') }}
       </button>
     </p>
   </details>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import OcrSettingsPanel from './OcrSettingsPanel.vue'
 import OcrHitListPanel from './OcrHitListPanel.vue'
 import RoomFacePanel from './RoomFacePanel.vue'
@@ -109,6 +110,8 @@ defineEmits<{
   redetectRenderStyle: [sourceExampleId: string]
 }>()
 
+const { t } = useI18n()
+
 const canAutoclassify = computed(
   () =>
     !props.running &&
@@ -118,10 +121,14 @@ const canAutoclassify = computed(
 )
 
 const autoclassifyButtonLabel = computed(() => {
-  if (props.initialDetectionBusy) return 'Detectie loopt…'
-  if (props.classifyingInFlight && props.roomPhase === 'classifying') return 'Classificeren…'
-  if (props.roomPhase === 'review' || props.roomPhase === 'done') return 'Opnieuw autoclassificeren'
-  return 'Autoclassificeer'
+  if (props.initialDetectionBusy) return t('templates.walls.detectionRunning')
+  if (props.classifyingInFlight && props.roomPhase === 'classifying') {
+    return t('templates.walls.classifying')
+  }
+  if (props.roomPhase === 'review' || props.roomPhase === 'done') {
+    return t('templates.walls.autoclassifyAgain')
+  }
+  return t('templates.walls.autoclassify')
 })
 
 const canProcessChanges = computed(
@@ -163,10 +170,10 @@ function swatchStyle(color: string): Record<string, string> {
     >
       {{
         ocrScanning
-          ? 'Scannen…'
+          ? t('templates.ocrTab.scanning')
           : ocrCandidateCount > 0
-            ? `Opnieuw scannen (${ocrCandidateCount})`
-            : 'Scan tekst'
+            ? t('templates.ocrTab.rescan', { count: ocrCandidateCount })
+            : t('templates.ocrTab.scan')
       }}
     </button>
     <button
@@ -174,18 +181,16 @@ function swatchStyle(color: string): Record<string, string> {
       :disabled="ocrCandidateCount === 0 && ocrMaskedRegionCount === 0"
       @click="$emit('clearOcrCandidates')"
     >
-      Wis OCR
+      {{ t('templates.ocrTab.clear') }}
     </button>
     <OcrHitListPanel :hits="ocrHitList" @remove="$emit('removeOcrHit', $event)" />
   </div>
 
   <div v-if="templateTab === 'walls' && preprocess.ocrEnabled" class="panel">
-    <h3>OCR</h3>
-    <p class="hint">
-      Tekst-highlights zijn actief (nog niet gebakken). Pas confidence aan, wis, of bak naar inkt.
-    </p>
+    <h3>{{ t('templates.ocrOnWalls.title') }}</h3>
+    <p class="hint">{{ t('templates.ocrOnWalls.hint') }}</p>
     <label>
-      OCR min confidence:
+      {{ t('templates.ocrOnWalls.minConfidence') }}
       <div class="field-row">
         <input
           v-model.number="preprocess.ocrMinConfidence"
@@ -211,7 +216,7 @@ function swatchStyle(color: string): Record<string, string> {
         :disabled="ocrCandidateCount === 0 && ocrMaskedRegionCount === 0"
         @click="$emit('clearOcrCandidates')"
       >
-        Wis OCR
+        {{ t('templates.ocrOnWalls.clear') }}
       </button>
       <button
         type="button"
@@ -219,7 +224,7 @@ function swatchStyle(color: string): Record<string, string> {
         :disabled="classifyingInFlight || (ocrCandidateCount === 0 && ocrMaskedRegionCount === 0)"
         @click="$emit('bakeOcrIntoInk')"
       >
-        Bake OCR
+        {{ t('templates.ocrOnWalls.bake') }}
       </button>
     </div>
   </div>
@@ -306,8 +311,8 @@ function swatchStyle(color: string): Record<string, string> {
     <p class="metric">
       {{
         referenceWallThicknessPx != null
-          ? `Referentie muurdikte: ${referenceWallThicknessPx}px · banden &lt;40% / 40–80% / &gt;80%`
-          : 'Geen muurdikte — teken een referentievak op stap 1.'
+          ? t('templates.walls.thicknessKnown', { px: referenceWallThicknessPx })
+          : t('templates.walls.thicknessMissing')
       }}
     </p>
     <button
@@ -324,18 +329,22 @@ function swatchStyle(color: string): Record<string, string> {
       :disabled="!canProcessChanges"
       @click="$emit('recalculateFaces')"
     >
-      {{ classifyingInFlight ? 'Inkt verwerken…' : 'Verwerk inkt' }}
+      {{
+        classifyingInFlight ? t('templates.walls.processingInk') : t('templates.walls.processInk')
+      }}
     </button>
-    <p v-if="inkEditStale" class="metric warning">
-      Toolbar-inkt gewijzigd: verwerk inkt — alleen geraakte vlakken worden opnieuw geclassificeerd.
-    </p>
+    <p v-if="inkEditStale" class="metric warning">{{ t('templates.walls.inkStale') }}</p>
     <button
       type="button"
       class="action-btn primary"
       :disabled="!canFinalize"
       @click="$emit('finalizeWallDetection')"
     >
-      {{ running && roomPhase === 'finalizing' ? 'Afronden…' : 'Afronden' }}
+      {{
+        running && roomPhase === 'finalizing'
+          ? t('templates.walls.finalizing')
+          : t('templates.walls.finalize')
+      }}
     </button>
   </div>
 

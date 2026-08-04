@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import type { CanvasToolId, ToolbeltItem } from './canvas-toolbelt.types'
 import CanvasToolbeltButtons from './CanvasToolbeltButtons.vue'
+import ToolbeltIcon from './ToolbeltIcon.vue'
 import './canvas-toolbelt.css'
 
 const props = withDefaults(
@@ -76,12 +77,7 @@ function onBrushSizeInput(event: Event) {
         :disabled="!canUndo"
         @click="emit('undo')"
       >
-        <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M12.5 8c-2.65 0-5.05 1.16-6.7 3h2.15v2H3.5V5.5h2V7.35C7.45 5.01 9.82 4 12.5 4c4.14 0 7.5 3.36 7.5 7.5h-2c0-3.03-2.47-5.5-5.5-5.5z"
-          />
-        </svg>
+        <ToolbeltIcon name="undo" />
       </button>
     </div>
     <p v-if="hint" class="canvas-toolbelt__hint">{{ hint }}</p>
@@ -109,12 +105,7 @@ function onBrushSizeInput(event: Event) {
       :disabled="!canUndo"
       @click="emit('undo')"
     >
-      <svg class="canvas-toolbelt__icon" viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          fill="currentColor"
-          d="M12.5 8c-2.65 0-5.05 1.16-6.7 3h2.15v2H3.5V5.5h2V7.35C7.45 5.01 9.82 4 12.5 4c4.14 0 7.5 3.36 7.5 7.5h-2c0-3.03-2.47-5.5-5.5-5.5z"
-        />
-      </svg>
+      <ToolbeltIcon name="undo" />
     </button>
   </div>
 </template>

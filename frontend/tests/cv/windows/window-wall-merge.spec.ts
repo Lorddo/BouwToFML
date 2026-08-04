@@ -64,6 +64,27 @@ describe('mergeAdjacentBoundWindows', () => {
     expect(merged[0].windowId).toBe('a__b')
   })
 
+  it('enabled:false laat singles ongemoeid', () => {
+    const windows = [
+      makeBound({
+        windowId: 'a',
+        t: 0.2,
+        openingBBox: { x: 10, y: 40, width: 40, height: 20 },
+        widthPx: 40,
+      }),
+      makeBound({
+        windowId: 'b',
+        t: 0.4,
+        openingBBox: { x: 50, y: 40, width: 40, height: 20 },
+        widthPx: 40,
+      }),
+    ]
+    const merged = mergeAdjacentBoundWindows(windows, { enabled: false })
+    expect(merged).toHaveLength(2)
+    expect(merged[0].fmlRefId).toBe(CONCEPT_WINDOW_REFID)
+    expect(merged[1].fmlRefId).toBe(CONCEPT_WINDOW_REFID)
+  })
+
   it('houdt losse ramen bij >5% maatverschil', () => {
     const merged = mergeAdjacentBoundWindows([
       makeBound({

@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { PreprocessConfig } from '@/core/extraction/types'
 
 const model = defineModel<PreprocessConfig>({ required: true })
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="panel">
-    <h3>Rotatie</h3>
+    <h3>{{ t('input.rotationTitle') }}</h3>
     <div class="setting-row">
-      <span class="setting-label">Rotatie (graden)</span>
+      <span class="setting-label">{{ t('input.rotationLabel') }}</span>
       <div class="field-row">
         <input v-model.number="model.rotationDeg" type="range" min="-180" max="180" step="0.1" />
         <input

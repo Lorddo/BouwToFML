@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import ScaleConfirmBar from './ScaleConfirmBar.vue'
 import OriginalSetupPanel from './OriginalSetupPanel.vue'
 import InputMaskPanel from './InputMaskPanel.vue'
 import OpenCvStatusPanel from './OpenCvStatusPanel.vue'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { useHScaleCalibration } from '@/platform/calibration'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { useOpenCvLoader } from '../composables/useOpenCvLoader'
 
 defineProps<{
   scale: ReturnType<typeof useHScaleCalibration>
   scalePanelOpen: boolean
+  scaleInputUnit: ScaleInputUnit
   cvLoader: ReturnType<typeof useOpenCvLoader>
   imageSrc: string | null
   eraserEnabled: boolean
@@ -37,6 +40,8 @@ defineEmits<{
   downloadUnderlay: []
   reuseUnderlay: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
@@ -48,6 +53,7 @@ defineEmits<{
     :can-confirm="scale.canConfirm.value"
     :confirmed="scale.confirmed.value"
     :open="scalePanelOpen"
+    :unit="scaleInputUnit"
     @update-mm-x="$emit('updateMmX', $event)"
     @update-mm-y="$emit('updateMmY', $event)"
     @confirm="$emit('confirmScale')"
@@ -73,29 +79,20 @@ defineEmits<{
   />
 
   <div class="panel">
-    <h3>Onderlegger</h3>
-    <p class="hint">
-      Download de huidige afbeelding (crop/gum + rotatie) als PNG. Bewerk lokaal en upload opnieuw —
-      zet rotatie dan op 0° (al in de PNG). Schaal blijft per upload instellen. Referenties teken je
-      in stap 2 (Voorbewerking).
-    </p>
+    <h3>{{ t('input.underlayTitle') }}</h3>
+    <p class="hint">{{ t('input.underlayHint') }}</p>
     <button
       type="button"
       class="secondary"
       :disabled="!canReuseUnderlay"
       @click="$emit('reuseUnderlay')"
     >
-      Onderlegger overnemen
+      {{ t('input.reuseUnderlay') }}
     </button>
-    <p v-if="canReuseUnderlay" class="hint">
-      Neemt de projectbron over (originele scan + schaallijnen, zonder crop). Beschikbaar na schaal
-      bevestigen op een eerdere verdieping. Crop daarna deze verdieping opnieuw.
-    </p>
-    <p v-else class="hint">
-      Bevestig eerst de schaal op een verdieping (vóór crop) om de projectbron te bewaren.
-    </p>
+    <p v-if="canReuseUnderlay" class="hint">{{ t('input.reuseUnderlayHintOk') }}</p>
+    <p v-else class="hint">{{ t('input.reuseUnderlayHintBlocked') }}</p>
     <button type="button" class="primary" :disabled="!imageSrc" @click="$emit('downloadUnderlay')">
-      Download onderlegger (PNG)
+      {{ t('input.downloadUnderlay') }}
     </button>
   </div>
 

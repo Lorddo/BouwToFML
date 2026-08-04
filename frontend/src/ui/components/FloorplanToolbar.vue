@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { PolygonToolMode } from '@/cv/tools/polygon'
 import type { ElementClass } from '@/core/extraction/types'
 import type { InkToolId, FaceToolId } from '@/ui/components/canvas/canvas-toolbelt.types'
@@ -23,83 +24,78 @@ defineProps<{
 defineEmits<{
   fit: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="canvas-toolbar">
-    <button type="button" @click="$emit('fit')">Passend maken</button>
+    <button type="button" @click="$emit('fit')">{{ t('common.fitToView') }}</button>
     <span v-if="!relocateToolHints" class="hint">
       <template v-if="polygonToolMode">
-        Klik punten · dubbelklik of eerste punt = sluiten · Enter = klaar · Esc = annuleren
+        {{ t('result.canvasHints.polygon') }}
       </template>
       <template v-else-if="isEraserMode">
-        Klik + sleep om te gummen · spatie + sleep = pan · scroll = zoom
+        {{ t('result.canvasHints.eraserMode') }}
       </template>
       <template v-else-if="inkTool === 'brush'">
-        Klik + sleep om inkt te tekenen · spatie + sleep = pan · scroll = zoom
+        {{ t('toolbelt.hints.inkBrush') }}{{ t('toolbelt.hints.panZoomSuffix') }}
       </template>
       <template v-else-if="inkTool === 'eraser'">
-        Klik + sleep om inkt te wissen · spatie + sleep = pan · scroll = zoom
+        {{ t('toolbelt.hints.inkEraser') }}{{ t('toolbelt.hints.panZoomSuffix') }}
       </template>
       <template v-else-if="inkTool === 'line'">
-        Sleep een lijn · spatie + sleep = pan · scroll = zoom
+        {{ t('toolbelt.hints.inkLine') }}{{ t('toolbelt.hints.panZoomSuffix') }}
       </template>
       <template v-else-if="inkTool === 'rect'">
-        Sleep een rechthoek · spatie + sleep = pan · scroll = zoom
+        {{ t('toolbelt.hints.inkRect') }}{{ t('toolbelt.hints.panZoomSuffix') }}
       </template>
       <template v-else-if="isDrawMode">
-        Sleep vak op tekening ({{ drawType }}) · spatie + sleep = pan · Shift+klik op vak =
-        verwijderen
+        {{ t('result.canvasHints.drawRef', { type: drawType }) }}
       </template>
       <template v-else-if="isFaceBoxMode">
         <template v-if="faceBoxTool === 'box_unknown'">
-          Sleep een box — vlakken volledig binnen selectie worden onbekend · spatie + sleep = pan ·
-          scroll = zoom
+          {{ t('toolbelt.hints.faceUnknown') }}{{ t('toolbelt.hints.panZoomSuffix') }}
         </template>
         <template v-else>
-          Sleep een box — vlakken volledig binnen selectie worden muur · spatie + sleep = pan ·
-          scroll = zoom
+          {{ t('toolbelt.hints.faceWall') }}{{ t('toolbelt.hints.panZoomSuffix') }}
         </template>
       </template>
       <template v-else-if="isFaceSelectMode">
-        Shift + klik op een wit vlak = classificatie wisselen · sleep = pan · spatie + sleep = pan ·
-        scroll = zoom
+        {{ t('result.canvasHints.faceSelect') }}
       </template>
       <template v-else-if="isProbeMode">
         <template v-if="probeMode === 'point'">
-          Klik op de tekening voor pixel-coördinaten · spatie + sleep = pan · scroll = zoom
+          {{ t('result.canvasHints.probePoint') }}
         </template>
         <template v-else>
-          Sleep een venster op de tekening · spatie + sleep = pan · scroll = zoom
+          {{ t('result.canvasHints.probeRegion') }}
         </template>
       </template>
       <template v-else-if="isSelectionMode">
-        Klik vak om te selecteren · sleep randen = wijzigen · Shift+klik = verwijderen · icoon
-        rechts = verwijderen
+        {{ t('result.canvasHints.selection') }}
       </template>
-      <template v-else>Sleep = pan · scroll = zoom · kies type links om vak te tekenen</template>
+      <template v-else>{{ t('result.canvasHints.panZoomChooseType') }}</template>
     </span>
     <span v-else class="hint">
       <template v-if="isFaceSelectMode">
-        Shift + klik op een wit vlak = classificatie wisselen · sleep = pan · spatie + sleep = pan ·
-        scroll = zoom
+        {{ t('result.canvasHints.faceSelect') }}
       </template>
       <template v-else-if="isProbeMode">
         <template v-if="probeMode === 'point'">
-          Klik op de tekening voor pixel-coördinaten · spatie + sleep = pan · scroll = zoom
+          {{ t('result.canvasHints.probePoint') }}
         </template>
         <template v-else>
-          Sleep een venster op de tekening · spatie + sleep = pan · scroll = zoom
+          {{ t('result.canvasHints.probeRegion') }}
         </template>
       </template>
       <template v-else-if="isSelectionMode">
-        Klik vak om te selecteren · sleep randen = wijzigen · icoon links = verplaatsen · icoon
-        rechts = verwijderen
+        {{ t('result.canvasHints.selectionWithMove') }}
       </template>
       <template v-else-if="isDrawMode">
-        Sleep vak op tekening ({{ drawType }}) · spatie + sleep = pan
+        {{ t('result.canvasHints.drawRefShort', { type: drawType }) }}
       </template>
-      <template v-else>Sleep = pan · scroll = zoom</template>
+      <template v-else>{{ t('result.canvasHints.panZoom') }}</template>
     </span>
   </div>
 </template>

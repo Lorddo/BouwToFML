@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { FloorMeta, ProjectFmlDefaults, ProjectMeta } from '../composables/project/types'
 
 const props = defineProps<{
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   moveFloor: [orderedIds: string[]]
 }>()
 
+const { t } = useI18n()
 const activeFloor = computed(() => props.floors.find((f) => f.id === props.activeFloorId) ?? null)
 
 function moveUp(index: number) {
@@ -54,32 +56,32 @@ function onRenameBlur(floorId: string, event: Event) {
 
 <template>
   <div class="panel project-setup">
-    <h3>Project</h3>
-    <p class="hint">
-      Projectnaam en verdiepingen. Adres is optioneel. Daarna per verdieping de detectie-flow.
-    </p>
+    <h3>{{ t('project.title') }}</h3>
+    <p class="hint">{{ t('project.hint') }}</p>
 
     <label class="field">
-      <span>Projectnaam</span>
+      <span>{{ t('project.name') }}</span>
       <input
         type="text"
         :value="meta.name"
-        placeholder="Bijv. Kinderdijkstraat 53"
+        :placeholder="t('project.namePlaceholder')"
         @input="emit('update:meta', { name: ($event.target as HTMLInputElement).value })"
       />
     </label>
 
     <label class="field">
-      <span>Adres <span class="optional">(optioneel)</span></span>
+      <span
+        >{{ t('project.address') }} <span class="optional">{{ t('common.optional') }}</span></span
+      >
       <input
         type="text"
         :value="meta.address"
-        placeholder="Straat, plaats"
+        :placeholder="t('project.addressPlaceholder')"
         @input="emit('update:meta', { address: ($event.target as HTMLInputElement).value })"
       />
     </label>
 
-    <h4>Verdiepingen</h4>
+    <h4>{{ t('project.floors') }}</h4>
     <ul class="floor-list">
       <li
         v-for="(floor, index) in floors"
@@ -90,7 +92,7 @@ function onRenameBlur(floorId: string, event: Event) {
         <button
           type="button"
           class="floor-select"
-          :title="`Selecteer ${floor.name}`"
+          :title="t('project.selectFloor', { name: floor.name })"
           @click="emit('selectFloor', floor.id)"
         >
           <span class="floor-level">L{{ floor.level }}</span>
@@ -100,7 +102,7 @@ function onRenameBlur(floorId: string, event: Event) {
           type="text"
           class="floor-name"
           :value="floor.name"
-          placeholder="Naam verdieping"
+          :placeholder="t('project.floorNamePlaceholder')"
           @click.stop
           @mousedown.stop
           @keydown.stop
@@ -110,13 +112,18 @@ function onRenameBlur(floorId: string, event: Event) {
           @focus="emit('selectFloor', floor.id)"
         />
         <div class="floor-actions">
-          <button type="button" :disabled="index === 0" title="Omhoog" @click="moveUp(index)">
+          <button
+            type="button"
+            :disabled="index === 0"
+            :title="t('project.moveUp')"
+            @click="moveUp(index)"
+          >
             ↑
           </button>
           <button
             type="button"
             :disabled="index >= floors.length - 1"
-            title="Omlaag"
+            :title="t('project.moveDown')"
             @click="moveDown(index)"
           >
             ↓
@@ -125,7 +132,7 @@ function onRenameBlur(floorId: string, event: Event) {
             type="button"
             class="danger"
             :disabled="floors.length <= 1"
-            title="Verwijderen"
+            :title="t('project.removeFloor')"
             @click="emit('removeFloor', floor.id)"
           >
             ×
@@ -135,16 +142,16 @@ function onRenameBlur(floorId: string, event: Event) {
     </ul>
 
     <div class="add-floor">
-      <button type="button" class="primary" @click="emit('addFloor')">+ Verdieping</button>
+      <button type="button" class="primary" @click="emit('addFloor')">
+        {{ t('project.addFloor') }}
+      </button>
     </div>
 
-    <h4 v-if="activeFloor">Hoogtes — {{ activeFloor.name }}</h4>
-    <p v-if="activeFloor" class="hint">
-      Per verdieping. Nieuwe verdiepingen starten met de waarden van de actieve verdieping.
-    </p>
+    <h4 v-if="activeFloor">{{ t('project.heightsTitle', { name: activeFloor.name }) }}</h4>
+    <p v-if="activeFloor" class="hint">{{ t('project.heightsHint') }}</p>
     <div v-if="activeFloor" class="defaults-grid">
       <label class="field compact">
-        <span>Muurhoogte cm</span>
+        <span>{{ t('project.wallHeightCm') }}</span>
         <input
           type="number"
           :value="activeFloorDefaults.wallHeightCm"
@@ -156,7 +163,7 @@ function onRenameBlur(floorId: string, event: Event) {
         />
       </label>
       <label class="field compact">
-        <span>Deurhoogte cm</span>
+        <span>{{ t('project.doorHeightCm') }}</span>
         <input
           type="number"
           :value="activeFloorDefaults.doorHeightCm"
@@ -168,7 +175,7 @@ function onRenameBlur(floorId: string, event: Event) {
         />
       </label>
       <label class="field compact">
-        <span>Raamhoogte cm</span>
+        <span>{{ t('project.windowHeightCm') }}</span>
         <input
           type="number"
           :value="activeFloorDefaults.windowHeightCm"
@@ -180,7 +187,7 @@ function onRenameBlur(floorId: string, event: Event) {
         />
       </label>
       <label class="field compact">
-        <span>Dorpel z cm</span>
+        <span>{{ t('project.sillZCm') }}</span>
         <input
           type="number"
           :value="activeFloorDefaults.windowSillZCm"
@@ -201,11 +208,11 @@ function onRenameBlur(floorId: string, event: Event) {
             })
           "
         />
-        <span>Bovenlicht</span>
+        <span>{{ t('project.bovenlicht') }}</span>
       </label>
     </div>
     <button v-if="activeFloor" type="button" class="secondary" @click="emit('resetFloorDefaults')">
-      Reset naar standaard
+      {{ t('project.resetDefaults') }}
     </button>
   </div>
 </template>

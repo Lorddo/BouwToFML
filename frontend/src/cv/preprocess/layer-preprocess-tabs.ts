@@ -9,20 +9,12 @@ export type OpeningTemplateTab = 'doors' | 'windows'
 export type PreprocessPanelLayer = PreprocessLayerId | 'inkWall'
 export type TemplateTab = 'ocr' | WallTechniqueTab | 'gaps' | OpeningTemplateTab
 
-export const TEMPLATE_TAB_LABELS: Record<TemplateTab, string> = {
-  ocr: 'OCR / Tekst',
-  walls: 'Muren',
-  gaps: 'Gaten',
-  doors: 'Deuren',
-  windows: 'Ramen',
-}
-
-export const PREPROCESS_TAB_LABELS: Record<PreprocessPanelLayer, string> = {
-  ocr: 'OCR / Tekst',
-  walls: 'Voorbewerking',
-  inkWall: 'Int muur',
-  gaps: 'Gaten',
-}
+export {
+  TEMPLATE_TAB_LABELS,
+  PREPROCESS_TAB_LABELS,
+  templateTabLabel,
+  preprocessTabLabel,
+} from '@/ui/i18n/labels'
 
 export function isPreprocessLayerId(layer: string): layer is PreprocessLayerId {
   return layer === 'walls' || layer === 'ocr' || layer === 'gaps'

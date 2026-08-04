@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import {
   closePdfSession,
   openPdfDocument,
@@ -19,6 +20,8 @@ const emit = defineEmits<{
   confirm: [pageNumber: number]
   cancel: []
 }>()
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const renderingPreview = ref(false)
@@ -146,7 +149,9 @@ function onConfirm() {
   emit('confirm', pageNumber.value)
 }
 
-const pageLabel = computed(() => `Pagina ${pageNumber.value} van ${numPages.value}`)
+const pageLabel = computed(() =>
+  t('input.pdf.pageOf', { current: pageNumber.value, total: numPages.value }),
+)
 const canNavigatePages = computed(() => numPages.value > 1)
 const confirmDisabled = computed(
   () =>
@@ -165,7 +170,7 @@ watch(
       return
     }
     if (!file) {
-      errorMessage.value = 'Geen PDF-bestand geselecteerd.'
+      errorMessage.value = t('input.pdf.noFile')
       return
     }
     resetState()
@@ -180,21 +185,26 @@ watch(
     <div v-if="open" class="dialog-backdrop" @click.self="onCancel">
       <div class="dialog" role="dialog" aria-labelledby="pdf-page-select-title" aria-modal="true">
         <header class="dialog-header">
-          <h2 id="pdf-page-select-title">PDF-pagina kiezen</h2>
+          <h2 id="pdf-page-select-title">{{ t('input.pdf.title') }}</h2>
           <p v-if="fileName" class="dialog-lead">{{ fileName }} — {{ pageLabel }}</p>
-          <p v-else class="dialog-lead">
-            Selecteer de pagina die je als onderlegger wilt gebruiken.
-          </p>
+          <p v-else class="dialog-lead">{{ t('input.pdf.lead') }}</p>
         </header>
 
-        <div v-if="loading" class="state-box">PDF laden…</div>
+        <div v-if="loading" class="state-box">{{ t('input.pdf.loading') }}</div>
         <div v-else-if="errorMessage" class="state-box error">{{ errorMessage }}</div>
 
         <template v-else>
           <div class="preview-wrap">
-            <img v-if="previewUrl" :src="previewUrl" alt="PDF preview" class="preview-image" />
-            <div v-else class="state-box">Preview laden…</div>
-            <div v-if="renderingPreview" class="preview-overlay">Preview bijwerken…</div>
+            <img
+              v-if="previewUrl"
+              :src="previewUrl"
+              :alt="t('input.pdf.previewAlt')"
+              class="preview-image"
+            />
+            <div v-else class="state-box">{{ t('input.pdf.previewLoading') }}</div>
+            <div v-if="renderingPreview" class="preview-overlay">
+              {{ t('input.pdf.previewUpdating') }}
+            </div>
           </div>
 
           <div v-if="canNavigatePages" class="page-controls">
@@ -204,10 +214,10 @@ watch(
               :disabled="pageNumber <= 1"
               @click="goToPreviousPage"
             >
-              Vorige
+              {{ t('input.pdf.previous') }}
             </button>
             <label class="page-input-label">
-              Pagina
+              {{ t('input.pdf.pageLabel') }}
               <input
                 type="number"
                 class="page-input"
@@ -223,7 +233,7 @@ watch(
               :disabled="pageNumber >= numPages"
               @click="goToNextPage"
             >
-              Volgende
+              {{ t('input.pdf.next') }}
             </button>
           </div>
         </template>
@@ -231,14 +241,16 @@ watch(
         <p v-if="confirmError" class="confirm-error">{{ confirmError }}</p>
 
         <footer class="dialog-footer">
-          <button type="button" class="dialog-btn" @click="onCancel">Annuleren</button>
+          <button type="button" class="dialog-btn" @click="onCancel">
+            {{ t('input.pdf.cancel') }}
+          </button>
           <button
             type="button"
             class="dialog-btn primary"
             :disabled="confirmDisabled"
             @click="onConfirm"
           >
-            {{ confirmBusy ? 'Pagina voorbereiden…' : 'Gebruik pagina' }}
+            {{ confirmBusy ? t('input.pdf.preparingPage') : t('input.pdf.usePage') }}
           </button>
         </footer>
       </div>

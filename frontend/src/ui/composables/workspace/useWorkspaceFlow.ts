@@ -11,6 +11,7 @@ import {
   usesWindowOverlay,
 } from '@/cv/preprocess/layer-preprocess'
 import type { usePreprocessPreview } from '../usePreprocessPreview'
+import { tGlobal } from '@/ui/i18n'
 import {
   WORKSPACE_FLOW_LABELS,
   WORKSPACE_FLOW_ORDER,
@@ -75,10 +76,10 @@ export function useWorkspaceFlow(deps: {
   const nextFlowStep = computed(() => flowOrder[flowStepIndex.value + 1] ?? null)
 
   const nextStepButtonLabel = computed(() => {
-    if (deps.flowStep.value === 'result') return 'Klaar'
+    if (deps.flowStep.value === 'result') return tGlobal('flow.done')
     const next = nextFlowStep.value
-    if (!next) return 'Volgende'
-    return `Volgende: ${flowLabels[next]}`
+    if (!next) return tGlobal('flow.next')
+    return tGlobal('flow.nextWithStep', { step: flowLabels[next] })
   })
 
   const canGoNext = computed(() => {
@@ -115,19 +116,19 @@ export function useWorkspaceFlow(deps: {
     if (canGoNext.value || deps.running.value) return ''
     switch (deps.flowStep.value) {
       case 'project':
-        return 'Vul projectnaam en minstens één verdieping in.'
+        return tGlobal('flow.blocked.project')
       case 'input':
-        if (!deps.imageSrc.value) return 'Upload eerst een tekening.'
-        if (!deps.scaleConfirmed.value) return 'Bevestig de schaal om verder te gaan.'
+        if (!deps.imageSrc.value) return tGlobal('flow.blocked.upload')
+        if (!deps.scaleConfirmed.value) return tGlobal('flow.blocked.confirmScale')
         return ''
       case 'preprocess':
         if (!deps.rects.value.some((rect) => rect.type === 'wall')) {
-          return 'Teken een referentievak op een muur.'
+          return tGlobal('flow.blocked.wallRef')
         }
         return ''
       default:
         if (deps.flowStep.value === 'templates' && deps.templateTab.value === 'walls') {
-          return 'Rond muurclassificatie af via «Afronden detectie».'
+          return tGlobal('flow.blocked.finalizeWalls')
         }
         return ''
     }
@@ -162,7 +163,7 @@ export function useWorkspaceFlow(deps: {
       await deps.ensureVectorCacheIfNeeded()
       const wallRect = [...deps.rects.value].reverse().find((rect) => rect.type === 'wall')
       if (!wallRect) {
-        deps.setLocalError?.('Teken een referentievak op een muur.')
+        deps.setLocalError?.(tGlobal('flow.blocked.wallRef'))
         return
       }
       const thickness = await deps.measureWallReferenceThickness(wallRect)

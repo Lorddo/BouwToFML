@@ -1,8 +1,10 @@
 :root {
   font-family:
+    'Segoe UI',
+    'Noto Sans Thai',
+    'ThaiSangThep',
     system-ui,
     -apple-system,
-    'Segoe UI',
     Roboto,
     sans-serif;
   line-height: 1.5;

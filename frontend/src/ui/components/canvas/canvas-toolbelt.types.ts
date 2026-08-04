@@ -1,8 +1,29 @@
 export type CanvasToolId = string
 
+/** Shared toolbelt / FML-context icon keys (`ToolbeltIcon.vue`). */
+export type ToolbeltIconName =
+  | 'eraser'
+  | 'brush'
+  | 'line'
+  | 'rect'
+  | 'unknown'
+  | 'wall'
+  | 'door'
+  | 'window'
+  | 'room'
+  | 'delete'
+  | 'split'
+  | 'ruler'
+  | 'fit'
+  | 'undo'
+  | 'copy'
+  | 'clear'
+  | 'hinge'
+  | 'swing'
+
 export interface ToolbeltItem {
   id: CanvasToolId
-  icon: string
+  icon: ToolbeltIconName | string
   label: string
   showSize?: boolean
 }

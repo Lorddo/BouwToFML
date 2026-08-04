@@ -69,7 +69,7 @@ Policy-constante: `frontend/src/cv/windows/window-space-policy.ts` (`WINDOW_SPAC
 2. **Stage 2** — deurboog-touch → doorframe-kandidaten (ink adjacency).
 3. **Stage 3** — `filterWindowsByRefEvidence({ dual })` — strip_stack of framing OR; doorframe framing-only. Modules: `window-evidence-filter` (orchestratie) + `geom` / `stack` / `framing`; ratios in `WINDOW_EVIDENCE_TUNING` (geen policy-merge met space-keys).
 4. **Stage 4** — `resolveWindowCandidates({ dual })` — glas/kozijn bbox via policy prefers → class push.
-5. **L14** — bind + merge → FML windows.
+5. **L14** — bind → 1D muurgat-dedupe (R-28) → optioneel deur-suppress (X-28) → FML pair/triple-merge (R-27) → openings.
 
 UI: `useWorkspaceWindowFaces` — overlay = `pipeDual.ink.labelsData`.
 

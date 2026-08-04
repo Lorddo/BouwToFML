@@ -26,6 +26,7 @@ import {
 import type { FloorPlan } from '@/core/fml/types'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
+import { tGlobal } from '@/ui/i18n'
 
 const THICKNESS_PICK_LABELS: Record<FmlThicknessPickTier, string> = {
   min: 'min',
@@ -214,12 +215,14 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   function startFmlThicknessPick(tier: FmlThicknessPickTier): void {
     if (!deps.scale.confirmed.value || !deps.combinedOutput.value) return
     if (!deps.underlaySrc.value || !deps.underlaySize.value) {
-      deps.setLocalError('Onderlegger ontbreekt — upload en bevestig schaal vóór meten.')
+      deps.setLocalError(tGlobal('result.thicknessPick.noUnderlay'))
       return
     }
     fmlThicknessPickTier.value = tier
     if (deps.underlayOpacity.value <= 0) deps.underlayOpacity.value = 25
-    fmlThicknessPickMessage.value = `Klik een muur om de ${THICKNESS_PICK_LABELS[tier]}-meetband te bepalen (±10%).`
+    fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.clickWall', {
+      tier: THICKNESS_PICK_LABELS[tier],
+    })
     deps.setLocalError(null)
   }
 
@@ -240,12 +243,12 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       const underlaySrc = deps.underlaySrc.value
       const underlaySize = deps.underlaySize.value
       if (!wall || !layout || !underlaySrc || !underlaySize) {
-        deps.setLocalError('Meten mislukt — onderlegger of muur niet beschikbaar.')
+        deps.setLocalError(tGlobal('result.thicknessPick.measureFailed'))
         return
       }
 
       fmlThicknessPickBusy.value = true
-      fmlThicknessPickMessage.value = 'Meten op onderlegger…'
+      fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.measuring')
       try {
         const measuredCm = await measureWallThicknessCmOnUnderlay({
           imageSrc: underlaySrc,
@@ -269,11 +272,20 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
         })
         fmlBandMidBoundaryCm.value = applied.bandBoundaries.midBoundaryCm
         fmlBandMaxBoundaryCm.value = applied.bandBoundaries.maxBoundaryCm
-        fmlThicknessPickMessage.value = `${THICKNESS_PICK_LABELS[tier]}-band: ${applied.measuredCm} cm (±10%) — klik Regenereren.`
+        fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.applied', {
+          tier: THICKNESS_PICK_LABELS[tier],
+          cm: applied.measuredCm,
+        })
         fmlThicknessPickTier.value = null
       } catch (error) {
-        deps.setLocalError(error instanceof Error ? error.message : 'Muurdiktemeting mislukt.')
-        fmlThicknessPickMessage.value = `Klik opnieuw een muur voor de ${THICKNESS_PICK_LABELS[tier]}-meetband.`
+        deps.setLocalError(
+          error instanceof Error
+            ? error.message
+            : tGlobal('result.thicknessPick.measureFailedGeneric'),
+        )
+        fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.retry', {
+          tier: THICKNESS_PICK_LABELS[tier],
+        })
       } finally {
         fmlThicknessPickBusy.value = false
       }

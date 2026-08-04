@@ -137,6 +137,7 @@ export const ESCALATION_IDS = [
   'R-25',
   'R-26',
   'R-27',
+  'R-28',
   'REF-01',
   'REF-02',
   'REF-03',
@@ -231,6 +232,7 @@ export const ESCALATION_IDS = [
   'X-25',
   'X-26',
   'X-27',
+  'X-28',
 ] as const
 
 export type EscalationId = (typeof ESCALATION_IDS)[number]
@@ -372,6 +374,7 @@ export const ESCALATION_CATEGORY: Record<EscalationId, EscalationCategory> = {
   'R-25': 'B',
   'R-26': 'E',
   'R-27': 'A',
+  'R-28': 'A',
   'REF-01': 'A',
   'REF-02': 'A',
   'REF-03': 'A',
@@ -466,4 +469,5 @@ export const ESCALATION_CATEGORY: Record<EscalationId, EscalationCategory> = {
   'X-25': 'F',
   'X-26': 'E',
   'X-27': 'P',
+  'X-28': 'A',
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import {
   PREPROCESS_TAB_LABELS,
   TEMPLATE_TAB_LABELS,
@@ -23,6 +24,8 @@ const templateTab = defineModel<TemplateTab>('templateTab', { required: true })
 const resultTab = defineModel<ResultViewTab>('resultTab', { required: true })
 const showWallLines = defineModel<boolean>('showWallLines', { required: true })
 const showLines = defineModel<boolean>('showLines', { required: true })
+
+const { t, locale } = useI18n()
 </script>
 
 <template>
@@ -36,12 +39,12 @@ const showLines = defineModel<boolean>('showLines', { required: true })
     class="canvas-tabs"
   >
     <div v-if="flowStep === 'input'" class="layer-tabs">
-      <button type="button" class="active">Origineel</button>
+      <button type="button" class="active">{{ t('tabs.canvas.original') }}</button>
     </div>
     <div v-else-if="flowStep === 'preprocess'" class="layer-tabs">
       <button
         v-for="tab in preprocessLayerTabs"
-        :key="tab"
+        :key="`${locale}-${tab}`"
         type="button"
         :class="{ active: preprocessTab === tab }"
         @click="preprocessTab = tab"
@@ -52,7 +55,7 @@ const showLines = defineModel<boolean>('showLines', { required: true })
     <div v-else-if="flowStep === 'templates'" class="layer-tabs">
       <button
         v-for="tab in templateLayerTabs"
-        :key="tab"
+        :key="`${locale}-${tab}`"
         type="button"
         :class="{
           active: templateTab === tab,
@@ -66,7 +69,7 @@ const showLines = defineModel<boolean>('showLines', { required: true })
     <div v-else-if="flowStep === 'result'" class="layer-tabs">
       <button
         v-for="tab in resultLayerTabs"
-        :key="tab"
+        :key="`${locale}-${tab}`"
         type="button"
         :class="{
           active: resultTab === tab,
@@ -78,14 +81,14 @@ const showLines = defineModel<boolean>('showLines', { required: true })
       </button>
     </div>
     <div v-if="wallOverlayTogglesVisible && flowStep !== 'result'" class="overlay-toggles">
-      <span class="overlay-toggles-label">Muur-overlay</span>
+      <span class="overlay-toggles-label">{{ t('tabs.wallOverlay.label') }}</span>
       <label>
         <input v-model="showWallLines" type="checkbox" />
-        Centerlines
+        {{ t('tabs.wallOverlay.centerlines') }}
       </label>
       <label v-if="flowStep === 'templates'">
         <input v-model="showLines" type="checkbox" />
-        Ruwe Hough
+        {{ t('tabs.wallOverlay.rawHough') }}
       </label>
     </div>
   </div>

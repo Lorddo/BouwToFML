@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
-import { DOOR_FML_TEMPLATE_OPTIONS, resolveDoorFmlTemplateRefId } from '@/core/fml/types'
+import {
+  CLOSET_DOOR_REFID,
+  DOOR_FML_TEMPLATE_OPTIONS,
+  resolveDoorFmlTemplateRefId,
+} from '@/core/fml/types'
 import { SELECTION_COLORS } from '@/platform/selection'
 import type { SelectionRect } from '@/platform/selection'
 
@@ -22,13 +27,33 @@ const emit = defineEmits<{
   updateDoorFmlRefId: [id: string, fmlRefId: string]
 }>()
 
-const REF_TYPES = [
-  { type: 'wall' as const, label: 'Muur', title: 'Referentie muur (1 vak)' },
-  { type: 'door' as const, label: 'Deur', title: 'Referentie deur (meerdere)' },
-  { type: 'window' as const, label: 'Raam', title: 'Referentie raam (meerdere)' },
-]
+const { t } = useI18n()
+
+const REF_TYPES = computed(() => [
+  {
+    type: 'wall' as const,
+    label: t('preprocess.refs.wall'),
+    title: t('preprocess.refs.wallTitle'),
+  },
+  {
+    type: 'door' as const,
+    label: t('preprocess.refs.door'),
+    title: t('preprocess.refs.doorTitle'),
+  },
+  {
+    type: 'window' as const,
+    label: t('preprocess.refs.window'),
+    title: t('preprocess.refs.windowTitle'),
+  },
+])
 
 const doorRects = computed(() => props.rects.filter((rect) => rect.type === 'door'))
+
+function doorTemplateLabel(refid: string): string {
+  return refid === CLOSET_DOOR_REFID
+    ? t('preprocess.refs.templateCloset')
+    : t('preprocess.refs.templateStandard')
+}
 
 function onEscapeKey(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
@@ -47,25 +72,15 @@ onUnmounted(() => {
 
 <template>
   <div class="panel">
-    <h3>Referenties</h3>
-    <p class="hint">
-      Tune eerst de B/W, teken daarna referentievakken op dezelfde bewerking. Muur: 1 selectie
-      (dikte wordt gemeten bij afronden). Deur/raam: meerdere. Na een vak terug naar pan; opnieuw
-      klikken op Muur/Deur/Raam om verder te tekenen. Escape of opnieuw op de actieve knop stopt
-      tekenen. Shift+klik verwijdert een vak. Referentie-analyse: Debug-sidebar → «Exporteer
-      referentie-analyse».
-    </p>
+    <h3>{{ t('preprocess.refs.title') }}</h3>
+    <p class="hint">{{ t('preprocess.refs.hint') }}</p>
 
     <label class="ocr-toggle">
       <input v-model="preprocess.ocrEnabled" type="checkbox" />
-      OCR tekstdetectie
+      {{ t('preprocess.refs.ocrToggle') }}
     </label>
-    <p v-if="!preprocess.ocrEnabled" class="hint subtle">
-      OCR uit: geen auto-scan op Muren. Details later via Dev-view.
-    </p>
-    <p v-else class="hint subtle">
-      OCR aan: auto-scan op Muren bij detectie; details via Dev-view.
-    </p>
+    <p v-if="!preprocess.ocrEnabled" class="hint subtle">{{ t('preprocess.refs.ocrOffHint') }}</p>
+    <p v-else class="hint subtle">{{ t('preprocess.refs.ocrOnHint') }}</p>
 
     <div class="icon-row">
       <button
@@ -90,22 +105,19 @@ onUnmounted(() => {
       class="metric"
       :class="{ warning: referenceWallThicknessPx == null && (counts.wall ?? 0) > 0 }"
     >
-      <template v-if="measuring">Muurdikte meten…</template>
+      <template v-if="measuring">{{ t('preprocess.refs.measuringThickness') }}</template>
       <template v-else-if="referenceWallThicknessPx != null">
-        Gemeten muurdikte: {{ referenceWallThicknessPx }}px
+        {{ t('preprocess.refs.measuredThickness', { px: referenceWallThicknessPx }) }}
       </template>
-      <template v-else>Nog geen muurdikte — wordt gemeten bij afronden voorbewerking.</template>
+      <template v-else>{{ t('preprocess.refs.noThicknessYet') }}</template>
     </p>
 
     <div v-if="doorRects.length > 0" class="door-list">
-      <h4>Deur Template ID</h4>
-      <p class="hint subtle">
-        Per referentie: standaard deur of kastdeur. Dubbele deuren en ramen worden later
-        algoritmisch bepaald.
-      </p>
+      <h4>{{ t('preprocess.refs.doorTemplateTitle') }}</h4>
+      <p class="hint subtle">{{ t('preprocess.refs.doorTemplateHint') }}</p>
       <ul>
         <li v-for="(rect, index) in doorRects" :key="rect.id">
-          <span class="door-label">Deur {{ index + 1 }}</span>
+          <span class="door-label">{{ t('preprocess.refs.doorN', { n: index + 1 }) }}</span>
           <select
             :value="resolveDoorFmlTemplateRefId(rect.fmlRefId)"
             @change="
@@ -113,7 +125,7 @@ onUnmounted(() => {
             "
           >
             <option v-for="opt in DOOR_FML_TEMPLATE_OPTIONS" :key="opt.refid" :value="opt.refid">
-              {{ opt.label }}
+              {{ doorTemplateLabel(opt.refid) }}
             </option>
           </select>
         </li>

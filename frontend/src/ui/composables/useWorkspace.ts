@@ -13,6 +13,7 @@ import {
 } from '@/platform/profile'
 import { useExtraction } from './useExtraction'
 import { useOpenCvLoader } from './useOpenCvLoader'
+import { tGlobal } from '@/ui/i18n'
 import { usePreprocessPreview } from './usePreprocessPreview'
 import { useHScaleCalibration } from '@/platform/calibration'
 import { useWorkspaceSignaturePreview } from './useWorkspaceSignaturePreview'
@@ -45,6 +46,7 @@ import { assembleWorkspaceFacadeReturn } from './workspace/assembleWorkspaceFaca
 import { useGapsInkModePersistence } from './workspace/useGapsInkModePersistence'
 import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
 import { useWorkspaceProject } from './project/useWorkspaceProject'
+import { loadUserSettings } from './settings/user-settings'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
 import { sanitizeFilename } from './workspace/workspace-fml-generate'
@@ -274,9 +276,22 @@ export function useWorkspace() {
     setLocalError,
   })
 
-  const fmlUnderlayOpacity = ref(25)
+  const initialViewer = loadUserSettings().fmlViewer
+  const initialConversion = loadUserSettings().fmlConversion
+  const fmlUnderlayOpacity = ref(initialViewer.underlayOpacityPct)
   /** FML-geometrie opacity in de viewer (percent 0–100). */
-  const fmlContentOpacity = ref(80)
+  const fmlContentOpacity = ref(initialViewer.fmlOpacityPct)
+  const mergeDoubleDoors = ref(initialConversion.mergeDoubleDoors)
+  const mergeMultiWindows = ref(initialConversion.mergeMultiWindows)
+
+  function applyUserViewerSettings(): void {
+    const settings = loadUserSettings()
+    fmlUnderlayOpacity.value = settings.fmlViewer.underlayOpacityPct
+    fmlContentOpacity.value = settings.fmlViewer.fmlOpacityPct
+    mergeDoubleDoors.value = settings.fmlConversion.mergeDoubleDoors
+    mergeMultiWindows.value = settings.fmlConversion.mergeMultiWindows
+    scaleUi.applyScaleInputUnitFromSettings()
+  }
   const fmlUnderlaySrc = computed(() => image.workingImageSrc.value ?? null)
   const fmlUnderlaySize = computed(() => {
     const img = originalImageEl.value
@@ -423,6 +438,7 @@ export function useWorkspace() {
     getImageEl,
     openingRects: () => rects.value,
     getDoorArcFaceIds: () => doorSwingFaces.getStage2DoorArcFaceIds(),
+    getOrientedDoors: () => doorSwingFaces.orientedDoors.value,
     getPxPerMm: () => ({
       x: scale.pixelsPerMillimeterX.value,
       y: scale.pixelsPerMillimeterY.value,
@@ -451,6 +467,8 @@ export function useWorkspace() {
     setLocalError,
     orientedDoors: doorSwingFaces.orientedDoors,
     boundWindows: windowFaces.boundWindows,
+    mergeDoubleDoors,
+    mergeMultiWindows,
     referenceWallBandSync: {
       referenceWallThicknessPx,
       devSessionRestoring,
@@ -825,7 +843,7 @@ export function useWorkspace() {
   function downloadProjectFml(): void {
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
-      setLocalError('Nog geen verdieping klaar voor FML-export.')
+      setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
       return
     }
     // Per verdieping: floor.defaults; actieve vloer volgt live FmlPanel-checkbox.
@@ -916,6 +934,7 @@ export function useWorkspace() {
 
   return {
     ...facade,
+    applyUserViewerSettings,
     onConfirmScale: () => {
       scaleUi.onConfirmScale()
       if (!scale.confirmed.value) return
@@ -942,7 +961,7 @@ export function useWorkspace() {
         })
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
-        setLocalError(`Kon projectbron niet bewaren: ${message}`)
+        setLocalError(tGlobal('input.errors.couldNotSaveProjectSource', { message }))
       }
     },
     projectMeta: project.projectMeta,
@@ -991,7 +1010,7 @@ export function useWorkspace() {
     startWallStamp: (donorFloorId: string) => {
       const donor = project.getStampDonorWalls(donorFloorId)
       if (!donor) {
-        setLocalError('Geen FML-muren op de gekozen verdieping.')
+        setLocalError(tGlobal('preprocess.stampErrors.noFmlWalls'))
         return false
       }
       return wallStamp.beginFromDonor({

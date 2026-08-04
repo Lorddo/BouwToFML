@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import './fml-panel-fields.css'
+
+const { t } = useI18n()
 
 withDefaults(
   defineProps<{
@@ -53,10 +56,10 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
 
 <template>
   <details class="fml-fold">
-    <summary>Hoogtes</summary>
+    <summary>{{ t('result.heightsFold') }}</summary>
     <div class="fml-height-limits">
       <label class="fml-limit-field">
-        <span>Muurhoogte (m)</span>
+        <span>{{ t('result.wallHeightM') }}</span>
         <input
           type="number"
           min="1"
@@ -68,10 +71,8 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
         />
       </label>
       <label class="fml-limit-field">
-        <span
-          title="Standaard voor alle deuren; per deur overschrijfbaar via Ctrl+klik in de preview"
-        >
-          Deurhoogte (m)
+        <span :title="t('result.doorHeightTitle')">
+          {{ t('result.doorHeightM') }}
         </span>
         <input
           type="number"
@@ -84,10 +85,8 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
         />
       </label>
       <label class="fml-limit-field">
-        <span
-          title="Standaard afstand vloer → onderkant raam; per raam overschrijfbaar via Ctrl+klik"
-        >
-          Raam vloer (m)
+        <span :title="t('result.windowSillTitle')">
+          {{ t('result.windowSillM') }}
         </span>
         <input
           type="number"
@@ -100,8 +99,8 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
         />
       </label>
       <label class="fml-limit-field">
-        <span title="Standaard glashoogte; per raam overschrijfbaar via Ctrl+klik in de preview">
-          Raam glas (m)
+        <span :title="t('result.windowGlassTitle')">
+          {{ t('result.windowGlassM') }}
         </span>
         <input
           type="number"
@@ -114,7 +113,7 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
         />
       </label>
     </div>
-    <p class="fml-band-hint">Per opening overschrijven: Ctrl+klik in de preview → maat/hoogte.</p>
+    <p class="fml-band-hint">{{ t('result.overrideHint') }}</p>
   </details>
 </template>
 

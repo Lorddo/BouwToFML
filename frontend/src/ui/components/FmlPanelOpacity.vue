@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 withDefaults(
   defineProps<{
     underlayOpacity?: number
@@ -16,12 +20,18 @@ const emit = defineEmits<{
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
 }>()
+
+/** Focus loslaten na sleep — voorkomt dat Space+pan geblokkeerd blijft. */
+function releaseSliderFocus(event: Event): void {
+  const el = event.target
+  if (el instanceof HTMLInputElement) el.blur()
+}
 </script>
 
 <template>
   <div v-if="underlayAvailable" class="underlay-opacity">
     <div class="underlay-opacity__label">
-      <span>Onderlegger</span>
+      <span>{{ t('result.underlayOpacity') }}</span>
       <span>{{ underlayOpacity }}%</span>
     </div>
     <input
@@ -30,13 +40,15 @@ const emit = defineEmits<{
       max="100"
       step="1"
       :value="underlayOpacity"
-      aria-label="Onderlegger opacity"
+      :aria-label="t('result.underlayOpacityAria')"
       @input="emit('update:underlayOpacity', Number(($event.target as HTMLInputElement).value))"
+      @change="releaseSliderFocus"
+      @pointerup="releaseSliderFocus"
     />
   </div>
   <div class="underlay-opacity">
     <div class="underlay-opacity__label">
-      <span>FML</span>
+      <span>{{ t('result.fmlOpacity') }}</span>
       <span>{{ fmlOpacity }}%</span>
     </div>
     <input
@@ -45,8 +57,10 @@ const emit = defineEmits<{
       max="100"
       step="1"
       :value="fmlOpacity"
-      aria-label="FML opacity"
+      :aria-label="t('result.fmlOpacityAria')"
       @input="emit('update:fmlOpacity', Number(($event.target as HTMLInputElement).value))"
+      @change="releaseSliderFocus"
+      @pointerup="releaseSliderFocus"
     />
   </div>
 </template>

@@ -1,23 +1,24 @@
+import { tGlobal } from '@/ui/i18n'
 import type { FaceToolId, InkToolId } from './canvas-toolbelt.types'
 
-const PAN_ZOOM = ' · spatie + sleep = pan · scroll = zoom'
-
 export function resolveInkToolbeltHint(tool: InkToolId): string {
+  const suffix = tGlobal('toolbelt.hints.panZoomSuffix')
   switch (tool) {
     case 'brush':
-      return `Klik + sleep om inkt te tekenen${PAN_ZOOM}`
+      return `${tGlobal('toolbelt.hints.inkBrush')}${suffix}`
     case 'eraser':
-      return `Klik + sleep om inkt te wissen${PAN_ZOOM}`
+      return `${tGlobal('toolbelt.hints.inkEraser')}${suffix}`
     case 'line':
-      return `Sleep een lijn${PAN_ZOOM}`
+      return `${tGlobal('toolbelt.hints.inkLine')}${suffix}`
     case 'rect':
-      return `Sleep een rechthoek${PAN_ZOOM}`
+      return `${tGlobal('toolbelt.hints.inkRect')}${suffix}`
   }
 }
 
 export function resolveFaceToolbeltHint(tool: FaceToolId): string {
+  const suffix = tGlobal('toolbelt.hints.panZoomSuffix')
   if (tool === 'box_unknown') {
-    return `Sleep een box — vlakken volledig binnen de selectie worden onbekend${PAN_ZOOM}`
+    return `${tGlobal('toolbelt.hints.faceUnknown')}${suffix}`
   }
-  return `Sleep een box — vlakken volledig binnen de selectie worden muur${PAN_ZOOM}`
+  return `${tGlobal('toolbelt.hints.faceWall')}${suffix}`
 }

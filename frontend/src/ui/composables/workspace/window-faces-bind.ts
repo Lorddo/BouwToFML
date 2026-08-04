@@ -3,9 +3,11 @@ import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import {
   bindWindowsToWalls,
-  mergeAdjacentBoundWindows,
+  dedupeOverlappingBoundWindows,
+  suppressWindowsNearDoors,
   type BoundWindow,
   type ResolvedWindowCandidate,
+  type WallOpeningSpan,
   type WindowBindRejection,
 } from '@/cv/windows'
 import { windowCandidateStillClassifiedAsWindow } from './window-stage-cache-prune'
@@ -45,12 +47,15 @@ export type BindResolvedWindowsResult = {
 
 /**
  * L14-bind van Stage-4 resolved ramen op semantic wall graph.
- * Class-still filter vóór bind; geen Stage-herdetectie.
+ * Class-still filter vóór bind; 1D muurgat-dedupe (+ optioneel deur-suppress).
+ * R-27 pair/triple-merge gebeurt in FML-conversie (`toLayer14WindowsForFml`).
  */
 export function bindResolvedWindowsToWalls(params: {
   stageCache: WindowAxelStageCache
   walls: TabDetectionOutputs['walls'] | null | undefined
   roomRasterCache: RoomRasterCache | null
+  /** Oriented doors (L12 spans); leeg/null → geen deur↔raam suppress. */
+  doors?: readonly WallOpeningSpan[] | null
 }): BindResolvedWindowsResult {
   const graph = params.walls?.semanticWallGraph
   const segments = graph?.segments ?? []
@@ -74,8 +79,9 @@ export function bindResolvedWindowsToWalls(params: {
     segments,
     junctions,
   })
+  const deduped = dedupeOverlappingBoundWindows(result.bound)
   return {
-    bound: mergeAdjacentBoundWindows(result.bound),
+    bound: suppressWindowsNearDoors(deduped, params.doors ?? []),
     rejected: result.rejected,
     nextStage4Resolved,
   }

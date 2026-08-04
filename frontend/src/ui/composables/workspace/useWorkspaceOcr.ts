@@ -12,6 +12,7 @@ import { ocrHitKey } from '@/cv/port/ocrHitKey'
 import type { OcrWordHit } from '@/cv/port/ocrTextFilters'
 import { formatCvError } from '@/cv/formatCvError'
 import { preparePreprocessMasks, type PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
+import { tGlobal } from '@/ui/i18n'
 import type { useOpenCvLoader } from '../useOpenCvLoader'
 
 function scaleOcrHits<T extends OcrTextCandidate>(words: T[], inv: number): T[] {
@@ -68,7 +69,7 @@ export function useWorkspaceOcr(deps: {
     if (filtered.length === 0) {
       deps.clearOcrTextMask()
       if (options?.reportEmpty) {
-        deps.setLocalError('Geen tekst gevonden — pas confidence of modus aan.')
+        deps.setLocalError(tGlobal('templates.errors.noTextFound'))
       }
       return
     }
@@ -109,7 +110,7 @@ export function useWorkspaceOcr(deps: {
   async function runOcrScan(): Promise<void> {
     deps.setLocalError(null)
     if (!deps.preprocess.value.ocrEnabled) {
-      deps.setLocalError('Schakel OCR tekstdetectie in om te scannen.')
+      deps.setLocalError(tGlobal('templates.errors.enableOcr'))
       return
     }
     ocrScanning.value = true

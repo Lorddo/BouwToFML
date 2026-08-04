@@ -56,6 +56,6 @@ describe('formatPdfPageImageName', () => {
   })
 
   it('appends page number for multi-page pdf', () => {
-    expect(formatPdfPageImageName('plattegrond.pdf', 3, 12)).toBe('plattegrond.pdf (pagina 3)')
+    expect(formatPdfPageImageName('plattegrond.pdf', 3, 12)).toBe('plattegrond.pdf (page 3)')
   })
 })

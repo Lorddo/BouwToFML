@@ -110,6 +110,20 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
+    // Sidebar-controls (opacity e.d.) verliezen focus zodat Space+pan meteen werkt.
+    const active = document.activeElement
+    if (
+      active instanceof HTMLElement &&
+      active !== target &&
+      !target.contains(active) &&
+      (active.tagName === 'INPUT' ||
+        active.tagName === 'TEXTAREA' ||
+        active.tagName === 'SELECT' ||
+        active.isContentEditable)
+    ) {
+      active.blur()
+    }
+
     if (spacePressed.value) {
       actions.beginPanDrag(event)
       return

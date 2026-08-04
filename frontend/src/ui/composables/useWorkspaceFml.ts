@@ -17,6 +17,8 @@ export function useWorkspaceFml(deps: {
   setLocalError: (message: string | null) => void
   orientedDoors?: Ref<OrientedDoor[]>
   boundWindows?: Ref<BoundWindow[]>
+  mergeDoubleDoors?: Ref<boolean>
+  mergeMultiWindows?: Ref<boolean>
   referenceWallBandSync?: {
     referenceWallThicknessPx: Ref<number | null>
     devSessionRestoring: Ref<boolean>
@@ -43,6 +45,8 @@ export function useWorkspaceFml(deps: {
       setLocalError: deps.setLocalError,
       orientedDoors: deps.orientedDoors,
       boundWindows: deps.boundWindows,
+      mergeDoubleDoors: deps.mergeDoubleDoors,
+      mergeMultiWindows: deps.mergeMultiWindows,
       planName: deps.planName,
       floorName: deps.floorName,
       floorLevel: deps.floorLevel,

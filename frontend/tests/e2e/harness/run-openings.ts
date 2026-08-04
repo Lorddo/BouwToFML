@@ -3,10 +3,10 @@ import { summarizeRunJournal } from '@/core/diagnostics'
 import { extractionToPlanWithOrigin } from '@/core/fml/extractionToPlan'
 import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { toLayer12DoorForFml, toLayer14WindowForFml } from '@/core/fml/layer-openings-to-fml'
+import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
 import { decodeMaskRle } from '@/cv/util/binary-mask-rle'
 import { snapDoorsToWalls, orientBoundDoors } from '@/cv/doors'
-import { bindWindowsToWalls, mergeAdjacentBoundWindows } from '@/cv/windows'
+import { bindWindowsToWalls } from '@/cv/windows'
 import { bootstrapCv } from './bootstrap-cv'
 import { ledgerFromJournal } from './escalation-ledger-types'
 import {
@@ -77,14 +77,12 @@ export async function runOpenings(walls: WallsHarnessResult): Promise<OpeningsHa
     segments: graph.segments,
     junctions: graph.junctions,
   })
-  const boundWindows = mergeAdjacentBoundWindows(windowBind.bound)
+  const boundWindows = windowBind.bound
 
   const layer12Doors = orientedDoors
     .map((door) => toLayer12DoorForFml(door, fixture.pxPerMmX, fixture.pxPerMmY))
     .filter((door): door is NonNullable<typeof door> => !!door)
-  const layer14Windows = boundWindows
-    .map((window) => toLayer14WindowForFml(window))
-    .filter((window): window is NonNullable<typeof window> => !!window)
+  const layer14Windows = toLayer14WindowsForFml(boundWindows)
 
   const { plan } = extractionToPlanWithOrigin(wallsOutput, {
     pxPerMmX: fixture.pxPerMmX,

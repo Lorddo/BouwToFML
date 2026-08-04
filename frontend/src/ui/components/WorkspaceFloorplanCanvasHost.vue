@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TemplatesInitialDetectionStep } from '@/ui/composables/workspace/workspace-view-visibility'
 import CanvasToolbeltDock from './canvas/CanvasToolbeltDock.vue'
 import type { FaceToolId, InkToolId } from './canvas/canvas-toolbelt.types'
-import { INK_TOOLBELT_ITEMS } from './canvas/inkToolbeltItems'
-import { FACE_TOOLBELT_ITEMS } from './canvas/faceToolbeltItems'
+import { getFaceToolbeltItems } from './canvas/faceToolbeltItems'
+import { getInkToolbeltItems } from './canvas/inkToolbeltItems'
 
 /**
  * Presentational shell around FloorplanCanvas: initial-detection overlay + toolbelt.
@@ -26,6 +28,16 @@ const emit = defineEmits<{
   'update:inkBrushSize': [value: number]
   inkUndo: []
 }>()
+
+const { t, locale } = useI18n()
+const faceTools = computed(() => {
+  void locale.value
+  return getFaceToolbeltItems()
+})
+const inkTools = computed(() => {
+  void locale.value
+  return getInkToolbeltItems()
+})
 </script>
 
 <template>
@@ -38,7 +50,7 @@ const emit = defineEmits<{
   >
     <div class="initial-detection-card">
       <div class="initial-detection-spinner" aria-hidden="true" />
-      <p class="initial-detection-title">Eerste detectie loopt…</p>
+      <p class="initial-detection-title">{{ t('templates.detectionOverlay.title') }}</p>
       <ul class="initial-detection-steps">
         <li v-for="step in initialDetectionSteps" :key="step.id" :class="`step-${step.status}`">
           <span class="step-mark" aria-hidden="true" />
@@ -50,11 +62,11 @@ const emit = defineEmits<{
   <CanvasToolbeltDock
     :face-visible="faceToolbeltVisible && !initialDetectionBusy"
     :face-active-tool="activeFaceBoxTool"
-    :face-tools="FACE_TOOLBELT_ITEMS"
+    :face-tools="faceTools"
     :ink-visible="inkToolbeltVisible && !initialDetectionBusy"
     :ink-active-tool="activeInkTool"
     :ink-brush-size="inkBrushSize"
-    :ink-tools="INK_TOOLBELT_ITEMS"
+    :ink-tools="inkTools"
     :ink-can-undo="canUndoInkEdit"
     @update:face-active-tool="emit('update:activeFaceBoxTool', $event as FaceToolId | null)"
     @update:ink-active-tool="emit('update:activeInkTool', $event as InkToolId | null)"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { FloorMeta } from '../composables/project/types'
 
 defineProps<{
@@ -11,11 +12,13 @@ defineEmits<{
   selectFloor: [id: string]
   addFloor: []
 }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <div class="floor-rail" :aria-busy="busy ? 'true' : undefined">
-    <span class="rail-label">Verdieping</span>
+    <span class="rail-label">{{ t('project.railLabel') }}</span>
     <div class="rail-floors">
       <button
         v-for="floor in floors"

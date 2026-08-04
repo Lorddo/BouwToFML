@@ -1,30 +1,95 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import WorkspaceView from './views/WorkspaceView.vue'
+import UserSettingsView from './views/UserSettingsView.vue'
 
+const { t } = useI18n()
+
+type AppView = 'workspace' | 'settings'
+
+const appView = ref<AppView>('workspace')
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
 
 function onNewWorkspace(): void {
   workspaceRef.value?.startNewWorkspace()
 }
+
+function openSettings(): void {
+  appView.value = 'settings'
+}
+
+function backToWorkspace(): void {
+  appView.value = 'workspace'
+}
+
+function onSettingsSaved(): void {
+  workspaceRef.value?.applyUserViewerSettings()
+}
 </script>
 
 <template>
-  <header>
-    <div class="header-title">
-      <h1>BouwToFML</h1>
-      <span class="subtitle">Bouwtekening naar Floorplanner</span>
-    </div>
-    <nav class="header-nav">
-      <button type="button" class="primary" @click="onNewWorkspace">Nieuwe tekening</button>
-    </nav>
-  </header>
+  <div class="app-shell">
+    <header>
+      <div
+        class="header-title"
+        role="button"
+        tabindex="0"
+        @click="backToWorkspace"
+        @keydown.enter="backToWorkspace"
+      >
+        <h1>{{ t('app.title') }}</h1>
+        <span class="subtitle">{{ t('app.subtitle') }}</span>
+      </div>
+      <nav class="header-nav">
+        <button
+          v-if="appView === 'workspace'"
+          type="button"
+          class="primary"
+          @click="onNewWorkspace"
+        >
+          {{ t('app.newDrawing') }}
+        </button>
+        <button
+          type="button"
+          class="icon-btn"
+          :class="{ active: appView === 'settings' }"
+          :title="t('app.settings')"
+          :aria-label="t('app.settings')"
+          @click="openSettings"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54A.49.49 0 0 0 13.9 2h-3.8a.49.49 0 0 0-.49.42l-.36 2.54c-.59.22-1.14.53-1.63.94l-2.39-.96a.49.49 0 0 0-.59.22L2.72 8.48a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.84 14.52a.49.49 0 0 0-.12.61l1.92 3.32c.13.22.39.31.59.22l2.39-.96c.49.41 1.04.72 1.63.94l.36 2.54c.05.24.25.42.49.42h3.8c.24 0 .44-.18.49-.42l.36-2.54c.59-.22 1.14-.53 1.63-.94l2.39.96c.22.09.46 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"
+            />
+          </svg>
+        </button>
+      </nav>
+    </header>
 
-  <WorkspaceView ref="workspaceRef" />
+    <main class="app-main">
+      <!-- Wrapper: WorkspaceView is multi-root; v-show op de component zelf verbergt het canvas niet. -->
+      <div v-show="appView === 'workspace'" class="app-page app-page--workspace">
+        <WorkspaceView ref="workspaceRef" />
+      </div>
+      <div v-if="appView === 'settings'" class="app-page app-page--settings">
+        <UserSettingsView @back="backToWorkspace" @saved="onSettingsSaved" />
+      </div>
+    </main>
+  </div>
 </template>
 
 <style scoped>
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f4f5f7;
+}
+
 header {
+  flex-shrink: 0;
   background: #fff;
   border-bottom: 1px solid #e2e8f0;
   padding: 12px 16px;
@@ -32,12 +97,14 @@ header {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  z-index: 20;
 }
 
 .header-title {
   display: flex;
   align-items: baseline;
   gap: 12px;
+  cursor: pointer;
 }
 
 .header-title h1 {
@@ -64,5 +131,37 @@ header {
   background: #e2e8f0;
   border-color: #94a3b8;
   font-weight: 600;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: #334155;
+}
+
+.icon-btn:hover {
+  background: #f1f5f9;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.app-page--workspace {
+  height: 100%;
+}
+
+.app-page--settings {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  background: #f4f5f7;
+  z-index: 10;
 }
 </style>

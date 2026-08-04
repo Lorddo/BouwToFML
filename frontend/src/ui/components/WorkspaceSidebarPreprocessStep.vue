@@ -9,6 +9,7 @@ import {
 import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
 import type { SelectionRect } from '@/platform/selection'
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   preprocessTab: PreprocessPanelLayer
@@ -52,6 +53,8 @@ const emit = defineEmits<{
   clearWallStamp: []
 }>()
 
+const { t } = useI18n()
+
 const showTunePanel = computed(() => isPreprocessLayerId(props.preprocessTab))
 const isInkWallTab = computed(() => props.preprocessTab === 'inkWall')
 
@@ -92,16 +95,13 @@ function onStartStamp() {
   />
 
   <div v-else-if="isInkWallTab" class="panel">
-    <h3>Int muur</h3>
-    <p class="hint">
-      Read-only B/W die bij muurclassificatie voor inktvergelijking op witte vlakken wordt gebruikt
-      (Otsu-referentie). Dit is niet de B/W van Voorbewerking — die tune je op die tab.
-    </p>
+    <h3>{{ t('preprocess.inkWallTitle') }}</h3>
+    <p class="hint">{{ t('preprocess.inkWallHint') }}</p>
     <ul class="params">
-      <li>Drempel: Otsu</li>
-      <li>Helderheid: 150 · bridgeGaps: 8</li>
+      <li>{{ t('preprocess.inkWallParams.thresholdOtsu') }}</li>
+      <li>{{ t('preprocess.inkWallParams.brightnessBridge') }}</li>
       <li>
-        Hole-fill / thicken: geschaald op muurdikte
+        {{ t('preprocess.inkWallParams.holeFill') }}
         <template v-if="referenceWallThicknessPx != null">
           ({{ referenceWallThicknessPx }}px)</template
         >
@@ -129,40 +129,43 @@ function onStartStamp() {
       :disabled="!canCopyPreprocessRefs"
       @click="$emit('copyPreprocessRefs')"
     >
-      B/W overnemen
+      {{ t('preprocess.copyBw') }}
     </button>
-    <p v-if="canCopyPreprocessRefs" class="hint">
-      Kopieert alleen B/W-tune (en gemeten muurdikte indien bekend). Referentievakken teken je
-      opnieuw na crop — coordinaten van een andere verdieping kloppen niet.
-    </p>
+    <p v-if="canCopyPreprocessRefs" class="hint">{{ t('preprocess.copyBwHint') }}</p>
   </div>
 
   <details class="panel stamp-panel">
     <summary class="stamp-summary">
-      Muurstempel
+      {{ t('preprocess.stamp.title') }}
       <span v-if="wallStampActive || wallStampBaked" class="stamp-badge">
-        {{ wallStampActive ? 'actief' : 'gebakken' }}
+        {{ wallStampActive ? t('preprocess.stamp.badgeActive') : t('preprocess.stamp.badgeBaked') }}
       </span>
     </summary>
-    <p class="hint">
-      FML-muren van een andere verdieping als stempel op deze B/W. Uitlijnen op canvas (handles),
-      gummen, daarna bakken → adaptive B/W + zwarte Otsu-OR.
-    </p>
+    <p class="hint">{{ t('preprocess.stamp.hint') }}</p>
 
     <label class="field">
-      <span>Donor-verdieping</span>
+      <span>{{ t('preprocess.stamp.donor') }}</span>
       <select v-model="donorId" :disabled="!!wallStampActive">
-        <option disabled value="">Kies verdieping…</option>
+        <option disabled value="">{{ t('preprocess.stamp.donorPlaceholder') }}</option>
         <option v-for="opt in wallStampDonorOptions ?? []" :key="opt.id" :value="opt.id">
-          {{ opt.name }} ({{ opt.wallCount }} muren)
+          {{ t('preprocess.stamp.donorOption', { name: opt.name, count: opt.wallCount }) }}
         </option>
       </select>
     </label>
 
     <div class="bands">
-      <label><input type="checkbox" :checked="bands.min" @change="toggleBand('min')" /> min</label>
-      <label><input type="checkbox" :checked="bands.mid" @change="toggleBand('mid')" /> mid</label>
-      <label><input type="checkbox" :checked="bands.max" @change="toggleBand('max')" /> max</label>
+      <label
+        ><input type="checkbox" :checked="bands.min" @change="toggleBand('min')" />
+        {{ t('preprocess.stamp.bandMin') }}</label
+      >
+      <label
+        ><input type="checkbox" :checked="bands.mid" @change="toggleBand('mid')" />
+        {{ t('preprocess.stamp.bandMid') }}</label
+      >
+      <label
+        ><input type="checkbox" :checked="bands.max" @change="toggleBand('max')" />
+        {{ t('preprocess.stamp.bandMax') }}</label
+      >
     </div>
 
     <div class="row">
@@ -172,41 +175,41 @@ function onStartStamp() {
         :disabled="!canStartWallStamp || !donorId || wallStampBusy"
         @click="onStartStamp"
       >
-        {{ wallStampActive ? 'Stempel herstarten' : 'Stempel starten' }}
+        {{ wallStampActive ? t('preprocess.stamp.restart') : t('preprocess.stamp.start') }}
       </button>
     </div>
 
     <template v-if="wallStampActive || wallStampBaked">
-      <p v-if="wallStampBusy" class="hint">Stempel herberekenen…</p>
+      <p v-if="wallStampBusy" class="hint">{{ t('preprocess.stamp.recomputing') }}</p>
       <p v-if="wallStampError" class="error">{{ wallStampError }}</p>
 
       <div v-if="wallStampActive" class="gum-tools">
-        <span class="label">Gum (alleen stempel)</span>
+        <span class="label">{{ t('preprocess.stamp.gumLabel') }}</span>
         <div class="row">
           <button
             type="button"
             :class="wallStampGumMode === 'off' ? 'primary' : 'secondary'"
             @click="$emit('setWallStampGumMode', 'off')"
           >
-            Uitlijnen
+            {{ t('preprocess.stamp.align') }}
           </button>
           <button
             type="button"
             :class="wallStampGumMode === 'brush' ? 'primary' : 'secondary'"
             @click="$emit('setWallStampGumMode', 'brush')"
           >
-            Penseel
+            {{ t('preprocess.stamp.brush') }}
           </button>
           <button
             type="button"
             :class="wallStampGumMode === 'polygon' ? 'primary' : 'secondary'"
             @click="$emit('setWallStampGumMode', 'polygon')"
           >
-            Polygoon
+            {{ t('preprocess.stamp.polygon') }}
           </button>
         </div>
         <label v-if="wallStampGumMode === 'brush'" class="field">
-          <span>Penseelstraal {{ wallStampBrushRadius ?? 12 }}px</span>
+          <span>{{ t('preprocess.stamp.brushRadius', { px: wallStampBrushRadius ?? 12 }) }}</span>
           <input
             type="range"
             min="4"
@@ -227,7 +230,7 @@ function onStartStamp() {
           :disabled="wallStampBusy"
           @click="$emit('bakeWallStamp')"
         >
-          Stempel bakken
+          {{ t('preprocess.stamp.bake') }}
         </button>
         <button
           v-if="wallStampActive"
@@ -235,7 +238,7 @@ function onStartStamp() {
           class="secondary"
           @click="$emit('cancelWallStamp')"
         >
-          Annuleren
+          {{ t('preprocess.stamp.cancel') }}
         </button>
         <button
           v-if="wallStampBaked"
@@ -243,10 +246,12 @@ function onStartStamp() {
           class="secondary"
           @click="$emit('clearWallStamp')"
         >
-          Stempel wissen
+          {{ t('preprocess.stamp.clear') }}
         </button>
       </div>
-      <p v-if="wallStampBaked && !wallStampActive" class="hint">Stempel gebakken in B/W + Otsu.</p>
+      <p v-if="wallStampBaked && !wallStampActive" class="hint">
+        {{ t('preprocess.stamp.bakedHint') }}
+      </p>
     </template>
   </details>
 
@@ -259,8 +264,8 @@ function onStartStamp() {
     >
       {{
         preprocessPreviewLoading
-          ? 'Voorbewerken…'
-          : `Download ${PREPROCESS_TAB_LABELS[preprocessTab]} PNG`
+          ? t('preprocess.downloading')
+          : t('preprocess.downloadPng', { tab: PREPROCESS_TAB_LABELS[preprocessTab] })
       }}
     </button>
   </div>

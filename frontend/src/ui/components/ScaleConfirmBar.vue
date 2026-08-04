@@ -1,5 +1,14 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {
+  mmToScaleInput,
+  scaleInputStep,
+  scaleInputToMm,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
+
+const props = defineProps<{
   mmX: number
   mmY: number
   pxX: number
@@ -7,6 +16,7 @@ defineProps<{
   canConfirm: boolean
   confirmed: boolean
   open: boolean
+  unit: ScaleInputUnit
 }>()
 
 const emit = defineEmits<{
@@ -16,47 +26,72 @@ const emit = defineEmits<{
   cancel: []
   toggleOpen: []
 }>()
+
+const { t } = useI18n()
+
+const unitLabel = computed(() => t(`common.${props.unit}`))
+const inputStep = computed(() => scaleInputStep(props.unit))
+const displayX = computed(() => mmToScaleInput(props.mmX, props.unit))
+const displayY = computed(() => mmToScaleInput(props.mmY, props.unit))
+
+function onUpdateX(raw: string) {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return
+  emit('updateMmX', scaleInputToMm(n, props.unit))
+}
+
+function onUpdateY(raw: string) {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return
+  emit('updateMmY', scaleInputToMm(n, props.unit))
+}
 </script>
 
 <template>
   <div class="panel">
-    <h3>Schalen</h3>
+    <h3>{{ t('input.scaleTitle') }}</h3>
     <template v-if="open">
       <div class="scale-grid">
         <label>
-          <span>H (mm)</span>
+          <span>{{ t('input.scaleH', { unit: unitLabel }) }}</span>
           <div class="row">
             <input
               type="number"
-              min="1"
-              :value="mmX"
-              @input="emit('updateMmX', Number(($event.target as HTMLInputElement).value))"
+              min="0"
+              :step="inputStep"
+              :value="displayX"
+              @input="onUpdateX(($event.target as HTMLInputElement).value)"
             />
-            <span class="px">{{ pxX.toFixed(1) }}px</span>
+            <span class="unit">{{ unitLabel }}</span>
+            <span class="px">{{ pxX.toFixed(1) }}{{ t('common.px') }}</span>
           </div>
         </label>
         <label>
-          <span>V (mm)</span>
+          <span>{{ t('input.scaleV', { unit: unitLabel }) }}</span>
           <div class="row">
             <input
               type="number"
-              min="1"
-              :value="mmY"
-              @input="emit('updateMmY', Number(($event.target as HTMLInputElement).value))"
+              min="0"
+              :step="inputStep"
+              :value="displayY"
+              @input="onUpdateY(($event.target as HTMLInputElement).value)"
             />
-            <span class="px">{{ pxY.toFixed(1) }}px</span>
+            <span class="unit">{{ unitLabel }}</span>
+            <span class="px">{{ pxY.toFixed(1) }}{{ t('common.px') }}</span>
           </div>
         </label>
       </div>
       <div class="actions">
         <button type="button" class="primary" :disabled="!canConfirm" @click="emit('confirm')">
-          ✓ Toepassen
+          {{ t('input.scaleApply') }}
         </button>
-        <button type="button" @click="emit('cancel')">✕ Annuleren</button>
+        <button type="button" @click="emit('cancel')">{{ t('input.scaleCancel') }}</button>
       </div>
     </template>
     <template v-else>
-      <button type="button" class="primary" @click="emit('toggleOpen')">Schalen openen</button>
+      <button type="button" class="primary" @click="emit('toggleOpen')">
+        {{ t('input.scaleOpen') }}
+      </button>
     </template>
   </div>
 </template>
@@ -82,6 +117,12 @@ label {
 
 .row input {
   width: 72px;
+}
+
+.unit {
+  font-size: 11px;
+  color: #475569;
+  min-width: 1.5em;
 }
 
 .px {
