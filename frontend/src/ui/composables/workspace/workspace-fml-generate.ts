@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import { noteSwallowedError } from '@/core/diagnostics'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
@@ -17,6 +17,7 @@ import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
+import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 
 export function stripFileExtension(name: string | null | undefined): string {
   if (!name) return 'Detectie-export'
@@ -96,6 +97,8 @@ export function createWorkspaceFmlGenerate(
   const importedWarnings = ref<ImportWarning[]>([])
   const importedFmlText = ref('')
   const editedPreviewPlan = ref<FloorPlan | null>(null)
+  /** Layout bij snelle floor-restore (zonder live generatedBundle). */
+  const persistedUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
 
   /** Één plan-build + cm-origin per generate-pass (geen tweede resolveGraph voor underlay). */
   const generatedBundle = computed(() => {
@@ -169,14 +172,29 @@ export function createWorkspaceFmlGenerate(
   const generatedStats = computed(() => countPlanElements(previewPlan.value))
   const importedStats = computed(() => countPlanElements(importedPlan.value))
 
-  const previewUnderlayLayout = computed(() => {
+  watch(
+    generatedBundle,
+    (bundle) => {
+      if (!bundle) return
+      persistedUnderlayLayout.value = {
+        origin: { ...bundle.origin },
+        pxPerMmX: bundle.pxPerMmX,
+        pxPerMmY: bundle.pxPerMmY,
+      }
+    },
+    { flush: 'sync' },
+  )
+
+  const previewUnderlayLayout = computed((): PreviewUnderlayLayout | null => {
     const bundle = generatedBundle.value
-    if (!bundle) return null
-    return {
-      origin: bundle.origin,
-      pxPerMmX: bundle.pxPerMmX,
-      pxPerMmY: bundle.pxPerMmY,
+    if (bundle) {
+      return {
+        origin: bundle.origin,
+        pxPerMmX: bundle.pxPerMmX,
+        pxPerMmY: bundle.pxPerMmY,
+      }
     }
+    return persistedUnderlayLayout.value
   })
 
   function syncAppliedFromDraft(): void {
@@ -195,11 +213,30 @@ export function createWorkspaceFmlGenerate(
     applied.appliedFmlWindowSillZCm.value = applied.fmlWindowSillZCm.value
   }
 
-  function updatePreviewPlan(plan: FloorPlan): void {
+  function updatePreviewPlan(plan: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
     editedPreviewPlan.value = plan
+    if (layout !== undefined) {
+      persistedUnderlayLayout.value = layout
+        ? {
+            origin: { ...layout.origin },
+            pxPerMmX: layout.pxPerMmX,
+            pxPerMmY: layout.pxPerMmY,
+          }
+        : null
+    }
     if (importedPlan.value) {
       importedPlan.value = plan
     }
+  }
+
+  function setPreviewUnderlayLayout(layout: PreviewUnderlayLayout | null): void {
+    persistedUnderlayLayout.value = layout
+      ? {
+          origin: { ...layout.origin },
+          pxPerMmX: layout.pxPerMmX,
+          pxPerMmY: layout.pxPerMmY,
+        }
+      : null
   }
 
   /** Na opnieuw afronden: toon verse detectie i.p.v. oude canvas-bewerkingen. */
@@ -247,6 +284,7 @@ export function createWorkspaceFmlGenerate(
     editedPreviewPlan.value = null
     importedWarnings.value = []
     importedFmlText.value = ''
+    persistedUnderlayLayout.value = null
   }
 
   return {
@@ -263,6 +301,7 @@ export function createWorkspaceFmlGenerate(
     editedPreviewPlan,
     syncAppliedFromDraft,
     updatePreviewPlan,
+    setPreviewUnderlayLayout,
     resetGeneratedPreview,
     regenerateFml,
     downloadGeneratedFml,

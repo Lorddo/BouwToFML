@@ -1,41 +1,38 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 
-const STORAGE_KEY = 'bouw-workspace-debug-sidebar-open'
-
-defineProps<{
-  visible?: boolean
-}>()
-
-const open = ref(true)
-
-onMounted(() => {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored !== null) open.value = stored === 'true'
-})
-
-watch(open, (value) => {
-  localStorage.setItem(STORAGE_KEY, String(value))
-})
+const open = defineModel<boolean>('open', { default: false })
 
 function toggle() {
   open.value = !open.value
 }
+
+function onKeydown(event: KeyboardEvent) {
+  if (!event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey) return
+  if (event.key.toLowerCase() !== 'h') return
+  event.preventDefault()
+  toggle()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
-  <aside v-if="visible !== false" class="debug-sidebar" :class="{ open }">
-    <button
-      type="button"
-      class="debug-sidebar-toggle"
-      :title="open ? 'Debug-paneel inklappen' : 'Debug-paneel uitklappen'"
-      :aria-expanded="open"
-      @click="toggle"
-    >
-      <span class="chevron" aria-hidden="true">{{ open ? '›' : '‹' }}</span>
-      <span v-if="!open" class="collapsed-label">Debug</span>
-    </button>
-    <div v-show="open" class="debug-sidebar-scroll">
+  <aside v-if="open" class="debug-sidebar" aria-label="DevTools">
+    <div class="debug-sidebar-header">
+      <h2>DevTools</h2>
+      <span class="hotkey-hint" title="Sneltoets">Ctrl+Shift+H</span>
+      <button type="button" class="close-btn" title="Sluiten (Ctrl+Shift+H)" @click="toggle">
+        ×
+      </button>
+    </div>
+    <div class="debug-sidebar-scroll">
       <slot />
     </div>
   </aside>
@@ -45,66 +42,52 @@ function toggle() {
 .debug-sidebar {
   flex-shrink: 0;
   display: flex;
-  flex-direction: row-reverse;
-  align-items: stretch;
+  flex-direction: column;
+  width: 300px;
   border-left: 1px solid #e2e8f0;
   background: #f8fafc;
   min-height: 0;
 }
 
-.debug-sidebar.open {
-  width: 300px;
-}
-
-.debug-sidebar:not(.open) {
-  width: 0;
-  border-left: none;
-  background: transparent;
-  overflow: visible;
-}
-
-.debug-sidebar:not(.open) .debug-sidebar-toggle {
-  transform: translateX(-36px);
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-}
-
-.debug-sidebar-toggle {
-  flex-shrink: 0;
-  width: 36px;
+.debug-sidebar-header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 8px 4px;
-  border: none;
-  border-left: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
   background: #f1f5f9;
-  color: #475569;
+}
+
+.debug-sidebar-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  flex: 1;
+}
+
+.hotkey-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: ui-monospace, monospace;
+}
+
+.close-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #64748b;
+  font-size: 20px;
+  line-height: 1;
   cursor: pointer;
 }
 
-.debug-sidebar-toggle:hover {
+.close-btn:hover {
   background: #e2e8f0;
   color: #0f172a;
-}
-
-.chevron {
-  font-size: 18px;
-  line-height: 1;
-  font-weight: 600;
-}
-
-.collapsed-label {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  transform: rotate(180deg);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #64748b;
 }
 
 .debug-sidebar-scroll {

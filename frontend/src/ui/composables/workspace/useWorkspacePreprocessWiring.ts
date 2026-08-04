@@ -75,6 +75,8 @@ export function useWorkspacePreprocessWiring(deps: {
     },
   })
 
+  let getStampBw: () => Uint8Array | null = () => null
+
   const wallBw = useWorkspaceWallBwCompose({
     originalImageEl: deps.originalImageEl,
     preprocess: deps.preprocess,
@@ -84,7 +86,12 @@ export function useWorkspacePreprocessWiring(deps: {
       return inputMask.preprocessMaskArgs().eraserMask ?? undefined
     },
     ocrMask: inputMask.ocrMask,
+    getStampBw: () => getStampBw(),
   })
+
+  function bindStampBwGetter(getter: () => Uint8Array | null): void {
+    getStampBw = getter
+  }
 
   let preprocessVectorCacheClear: () => void = () => {}
   const ensureWallBwReady = () => wallBw.rebuildBaseWallBw()
@@ -208,5 +215,6 @@ export function useWorkspacePreprocessWiring(deps: {
     resetBakedRotation,
     bindSignaturePreview,
     setRemasureWallAfterInputCommit,
+    bindStampBwGetter,
   }
 }

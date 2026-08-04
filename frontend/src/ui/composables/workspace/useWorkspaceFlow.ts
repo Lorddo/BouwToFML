@@ -115,7 +115,7 @@ export function useWorkspaceFlow(deps: {
     if (canGoNext.value || deps.running.value) return ''
     switch (deps.flowStep.value) {
       case 'project':
-        return 'Vul projectnaam, adres en minstens één verdieping in.'
+        return 'Vul projectnaam en minstens één verdieping in.'
       case 'input':
         if (!deps.imageSrc.value) return 'Upload eerst een tekening.'
         if (!deps.scaleConfirmed.value) return 'Bevestig de schaal om verder te gaan.'

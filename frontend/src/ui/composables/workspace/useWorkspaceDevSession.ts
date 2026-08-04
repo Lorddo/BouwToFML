@@ -57,6 +57,12 @@ export type UseWorkspaceDevSessionDeps = {
   resetInkEdit: () => void
   serializeInkOverlay: () => number[] | null
   hydrateInkOverlay: (runs: number[] | null | undefined, width: number, height: number) => void
+  serializeWallStamp: () => import('./useWallStamp').WallStampSerialized | null
+  hydrateWallStamp: (
+    data: import('./useWallStamp').WallStampSerialized | null | undefined,
+    width: number,
+    height: number,
+  ) => void
   rebuildBaseWallBw: (options?: { force?: boolean }) => Promise<boolean>
   composeWallBwPublish: () => Promise<void>
   hydrateMaskState: (args: {
@@ -113,7 +119,10 @@ export type UseWorkspaceDevSessionDeps = {
   /** Ramen Stage-3/4 direct draaien. */
   refreshWindowOverlay: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
-  updatePreviewPlan?: (plan: import('@/core/fml/types').FloorPlan) => void
+  updatePreviewPlan?: (
+    plan: import('@/core/fml/types').FloorPlan,
+    layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
+  ) => void
 }
 
 export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {

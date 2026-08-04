@@ -38,6 +38,8 @@ export function composeWallBw(params: {
   baseBw: Uint8Array
   ocrMask?: Uint8Array | null
   inkOverlay?: Uint8Array | null
+  /** Adaptive stempel-B/W (0 = inkt) — onder live ink. */
+  stampBw?: Uint8Array | null
 }): Uint8Array {
   const { baseBw } = params
   const out = new Uint8Array(baseBw)
@@ -45,6 +47,12 @@ export function composeWallBw(params: {
   if (ocr && ocr.length === baseBw.length && maskHasInk(ocr)) {
     for (let i = 0; i < out.length; i += 1) {
       if ((ocr[i] ?? 0) > 0) out[i] = WALL_BW_WHITE
+    }
+  }
+  const stamp = params.stampBw
+  if (stamp && stamp.length === baseBw.length) {
+    for (let i = 0; i < out.length; i += 1) {
+      if ((stamp[i] ?? WALL_BW_WHITE) < 128) out[i] = WALL_BW_INK
     }
   }
   const ink = params.inkOverlay

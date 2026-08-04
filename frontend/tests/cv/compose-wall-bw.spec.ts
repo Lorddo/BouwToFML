@@ -54,6 +54,17 @@ describe('composeWallBw', () => {
     ])
   })
 
+  it('stampBw OR onder live ink', () => {
+    const base = new Uint8Array([WALL_BW_WHITE, WALL_BW_WHITE, WALL_BW_WHITE])
+    const stamp = new Uint8Array([WALL_BW_INK, WALL_BW_INK, WALL_BW_WHITE])
+    const ink = new Uint8Array([INK_OVERLAY_NONE, INK_OVERLAY_WHITE, INK_OVERLAY_NONE])
+    expect(Array.from(composeWallBw({ baseBw: base, stampBw: stamp, inkOverlay: ink }))).toEqual([
+      WALL_BW_INK,
+      WALL_BW_WHITE,
+      WALL_BW_WHITE,
+    ])
+  })
+
   it('bakeInkOverlayIntoBaseBw schrijft in-place en wist overlay', () => {
     const base = new Uint8Array([WALL_BW_WHITE, WALL_BW_INK, WALL_BW_WHITE])
     const ink = new Uint8Array([INK_OVERLAY_BLACK, INK_OVERLAY_WHITE, INK_OVERLAY_NONE])

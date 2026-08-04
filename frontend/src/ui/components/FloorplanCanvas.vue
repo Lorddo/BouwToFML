@@ -19,6 +19,7 @@ import FloorplanPolygonDraftLayer from './FloorplanPolygonDraftLayer.vue'
 import FloorplanOverlayLayers from './FloorplanOverlayLayers.vue'
 import FloorplanSelectionLayer from './FloorplanSelectionLayer.vue'
 import FloorplanProbeLayer from './FloorplanProbeLayer.vue'
+import WallStampCanvasLayer from './WallStampCanvasLayer.vue'
 import {
   FLOORPLAN_CANVAS_PROP_DEFAULTS,
   type FloorplanCanvasEmits,
@@ -415,6 +416,14 @@ defineExpose({ fit, imageObj, imgSize })
             :on-resize-handle-down="onResizeHandleDown"
             :on-move-icon-down="onMoveIconDown"
             :on-delete-icon-click="onDeleteIconClick"
+          />
+          <WallStampCanvasLayer
+            v-if="wallStampBounds && wallStampInteractive"
+            :bounds="wallStampBounds"
+            :interactive="wallStampInteractive"
+            :handle-size="handleSize"
+            :ghost-src="wallStampGhostSrc"
+            @bounds-change="(b) => emit('wallStampBoundsChange', b)"
           />
         </v-group>
       </v-layer>

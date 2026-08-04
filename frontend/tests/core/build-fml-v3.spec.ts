@@ -172,6 +172,27 @@ describe('buildFmlV3 — bovenlicht export', () => {
     })
   })
 
+  it('ondersteunt per-floor bovenlicht via resolver', () => {
+    const plan = doorOnlyPlan()
+    plan.floors.push({
+      ...plan.floors[0],
+      name: '1e',
+      level: 1,
+      walls: plan.floors[0].walls.map((wall) => ({
+        ...wall,
+        id: `${wall.id}-1e`,
+        openings: wall.openings.map((op) => ({ ...op, guid: `${op.guid}-1e` })),
+      })),
+    })
+    const raw = JSON.parse(
+      buildFmlV3(plan, {
+        bovenlichtDefault: (floor) => floor.level === 0,
+      }),
+    )
+    expect(raw.floors[0].designs[0].walls[0].openings).toHaveLength(2)
+    expect(raw.floors[1].designs[0].walls[0].openings).toHaveLength(1)
+  })
+
   it('slaat bovenlicht over bij override false ondanks default on', () => {
     const raw = JSON.parse(
       buildFmlV3(doorOnlyPlan({ bovenlicht: false }), { bovenlichtDefault: true }),

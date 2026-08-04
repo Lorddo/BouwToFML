@@ -127,6 +127,7 @@ export function useWorkspaceFml(deps: {
     previewPlan: generate.previewPlan,
     previewUnderlayLayout: generate.previewUnderlayLayout,
     updatePreviewPlan: generate.updatePreviewPlan,
+    setPreviewUnderlayLayout: generate.setPreviewUnderlayLayout,
     resetGeneratedPreview: generate.resetGeneratedPreview,
     downloadGeneratedFml: generate.downloadGeneratedFml,
     copyGeneratedFml: generate.copyGeneratedFml,

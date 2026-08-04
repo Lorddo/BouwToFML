@@ -318,6 +318,8 @@ export interface ExtractionInput {
   eraserMask?: Uint8Array
   /** Al gecomposeerde muur-B/W — skip wall-rethreshold in geometry-pipeline. */
   precomposedWallBw?: Uint8Array
+  /** Pure zwarte muurstempel voor Otsu OR. */
+  wallStampMask?: Uint8Array
   detectTargets?: {
     walls?: boolean
     doors?: boolean

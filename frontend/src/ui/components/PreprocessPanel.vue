@@ -415,7 +415,7 @@ ensureLayerRecords()
 
       <PreprocessActionGroup
         title="Lijnen verdikken"
-        :model-value="readField('thickenLinesEnabled', true)"
+        :model-value="readField('thickenLinesEnabled', false)"
         @update:model-value="
           (next) => setEnabledWithDefaults('thickenLinesEnabled', next, { thickenLinesPx: 1 })
         "

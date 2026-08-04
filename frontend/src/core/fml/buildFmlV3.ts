@@ -1,6 +1,6 @@
 import { tally } from '@/core/diagnostics'
 import { buildBovenlichtOpening, resolveDoorBovenlicht } from './bovenlicht'
-import type { FloorPlan, Opening } from './types'
+import type { Floor, FloorPlan, Opening } from './types'
 import { CONCEPT_DOOR_REFID, CONCEPT_WINDOW_REFID } from './types'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
@@ -9,10 +9,15 @@ import {
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 
+export type BovenlichtDefaultResolver = boolean | ((floor: Floor, floorIndex: number) => boolean)
+
 export interface BuildFmlV3Options {
   name?: string
-  /** Projectdefault: bovenlicht op deuren zonder per-deur override. */
-  bovenlichtDefault?: boolean
+  /**
+   * Project-/vloerdefault: bovenlicht op deuren zonder per-deur override.
+   * Boolean = zelfde default voor alle verdiepingen; functie = per floor.
+   */
+  bovenlichtDefault?: BovenlichtDefaultResolver
 }
 
 /**
@@ -108,7 +113,11 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
   }
   const projectId = 900000001
   const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
-  const bovenlichtDefault = options.bovenlichtDefault === true
+  const resolveBovenlichtDefault = (floor: Floor, floorIndex: number): boolean => {
+    const option = options.bovenlichtDefault
+    if (typeof option === 'function') return option(floor, floorIndex) === true
+    return option === true
+  }
   const output = {
     id: projectId,
     name: options.name ?? plan.name,
@@ -199,9 +208,11 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
             balance: wall.balance ?? 0.5,
             groupMarkerConfig: { locked: false },
             decor: { left: null, right: null, top: null, outline: 0 },
-            openings: expandOpeningsForExport(wall.openings, floor.height, bovenlichtDefault).map(
-              serializeOpening,
-            ),
+            openings: expandOpeningsForExport(
+              wall.openings,
+              floor.height,
+              resolveBovenlichtDefault(floor, floorIndex),
+            ).map(serializeOpening),
           })),
           settings: {
             engineAutoDims: false,

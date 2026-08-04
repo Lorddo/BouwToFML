@@ -259,6 +259,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Werkwijze | **Per verdieping** detectie-flow (stap 1–4); stap 0 = projectmeta |
 | Stap 1 overname | Expliciete knop «Onderlegger overnemen» — projectbron (pre-crop) + schaal |
 | Stap 2 overname | Expliciete knop «B/W overnemen» — tune only; LBE-rects opnieuw tekenen na crop |
+| Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (adaptive `stampBw` in wall-B/W + pure zwarte OR in Otsu); geen openings |
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
 | Floor-switch | Exact restore + opgeslagen `previewPlan` (geen openings-rerun / geen regenerate) |

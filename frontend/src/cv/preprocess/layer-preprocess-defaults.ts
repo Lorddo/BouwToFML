@@ -1,7 +1,7 @@
 import type { PreprocessLayerTune } from '@/core/extraction/types'
 import type { PreprocessLayerId } from './layer-preprocess-tabs'
 
-/** Defaults: vooraf B/W 150 → adaptive; thicken 1; despeckle uit. */
+/** Defaults: vooraf B/W 150 → adaptive; thicken uit; despeckle uit. */
 export const WALL_LAYER_DEFAULTS: PreprocessLayerTune = {
   adjustBrightnessContrastEnabled: true,
   adjustNegativeEnabled: false,
@@ -22,7 +22,7 @@ export const WALL_LAYER_DEFAULTS: PreprocessLayerTune = {
   removeSpecklesEnabled: false,
   removeHolesEnabled: false,
   removeHolesMaxPx: 0,
-  thickenLinesEnabled: true,
+  thickenLinesEnabled: false,
   thickenLinesPx: 1,
   bridgeGapsEnabled: false,
   /** Topologie tussen faces via resolveInkBetweenFaces — niet wallLayer bridgeGaps. */

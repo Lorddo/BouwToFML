@@ -55,7 +55,9 @@ function onRenameBlur(floorId: string, event: Event) {
 <template>
   <div class="panel project-setup">
     <h3>Project</h3>
-    <p class="hint">Naam, adres en verdiepingen. Daarna per verdieping de detectie-flow.</p>
+    <p class="hint">
+      Projectnaam en verdiepingen. Adres is optioneel. Daarna per verdieping de detectie-flow.
+    </p>
 
     <label class="field">
       <span>Projectnaam</span>
@@ -68,7 +70,7 @@ function onRenameBlur(floorId: string, event: Event) {
     </label>
 
     <label class="field">
-      <span>Adres</span>
+      <span>Adres <span class="optional">(optioneel)</span></span>
       <input
         type="text"
         :value="meta.address"
@@ -228,6 +230,10 @@ function onRenameBlur(floorId: string, event: Event) {
   gap: 4px;
   margin-bottom: 10px;
   font-size: 12px;
+}
+.optional {
+  font-weight: 400;
+  color: #94a3b8;
 }
 .field input[type='text'],
 .field input[type='number'] {

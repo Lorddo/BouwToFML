@@ -3,6 +3,7 @@ export type {
   FloorMeta,
   FloorStatus,
   FloorWorkspaceBlob,
+  PreviewUnderlayLayout,
   ProjectFmlDefaults,
   ProjectMeta,
   ProjectSourceUnderlay,

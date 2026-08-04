@@ -38,6 +38,7 @@ const geometryExtractor: ExtractorPlugin = {
       },
       eraserMask: input.eraserMask,
       precomposedWallBw: input.precomposedWallBw,
+      wallStampMask: input.wallStampMask,
       workScale: input.workScale ?? 1,
       originalWidth: input.originalWidth,
       originalHeight: input.originalHeight,

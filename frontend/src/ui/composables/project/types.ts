@@ -37,6 +37,12 @@ export type FloorMeta = {
  * `session` = DevSession-vorm (image + scale + preprocess + detectie).
  * Lege floor: session null.
  */
+export type PreviewUnderlayLayout = {
+  origin: { x: number; y: number }
+  pxPerMmX: number
+  pxPerMmY: number
+}
+
 export type FloorWorkspaceBlob = {
   session: DevWorkspaceSession | null
   /** Gegenereerde/bewerkte FML-floor na stap 4 (vóór project-merge). */
@@ -46,6 +52,11 @@ export type FloorWorkspaceBlob = {
    * Zonder dit zou restore opnieuw genereren en edits kwijtraken.
    */
   previewPlan: FloorPlan | null
+  /**
+   * Underlay-layout die bij previewPlan hoort (origin + px/mm bij generate).
+   * Nodig bij snelle result-restore zonder extraction/generatedBundle.
+   */
+  previewUnderlayLayout: PreviewUnderlayLayout | null
 }
 
 export type ProjectSourceUnderlay = {

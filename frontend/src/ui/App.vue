@@ -1,23 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import WorkspaceView from './views/WorkspaceView.vue'
-import FmlViewerView from './views/FmlViewerView.vue'
 
-type AppView = 'workspace' | 'fml-viewer'
-
-const activeView = ref<AppView>('workspace')
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
 
-function openWorkspace(): void {
-  activeView.value = 'workspace'
-}
-
-function openFmlViewer(): void {
-  activeView.value = 'fml-viewer'
-}
-
 function onNewWorkspace(): void {
-  openWorkspace()
   workspaceRef.value?.startNewWorkspace()
 }
 </script>
@@ -29,25 +16,11 @@ function onNewWorkspace(): void {
       <span class="subtitle">Bouwtekening naar Floorplanner</span>
     </div>
     <nav class="header-nav">
-      <button type="button" :class="{ active: activeView === 'workspace' }" @click="openWorkspace">
-        Nieuw
-      </button>
-      <button type="button" :class="{ active: activeView === 'fml-viewer' }" @click="openFmlViewer">
-        FML viewer
-      </button>
-      <button
-        v-if="activeView === 'workspace'"
-        type="button"
-        class="primary"
-        @click="onNewWorkspace"
-      >
-        Nieuwe tekening
-      </button>
+      <button type="button" class="primary" @click="onNewWorkspace">Nieuwe tekening</button>
     </nav>
   </header>
 
-  <WorkspaceView v-if="activeView === 'workspace'" ref="workspaceRef" />
-  <FmlViewerView v-else />
+  <WorkspaceView ref="workspaceRef" />
 </template>
 
 <style scoped>

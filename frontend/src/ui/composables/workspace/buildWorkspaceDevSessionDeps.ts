@@ -45,6 +45,12 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     rebuildBaseWallBw: (options?: { force?: boolean }) => Promise<boolean>
     composeAndPublish: (options?: { includeOcr?: boolean }) => Promise<string | null>
   }
+  serializeWallStamp: () => import('./useWallStamp').WallStampSerialized | null
+  hydrateWallStamp: (
+    data: import('./useWallStamp').WallStampSerialized | null | undefined,
+    width: number,
+    height: number,
+  ) => void
   image: {
     loadExactWorkingImage: (dataUrl: string) => Promise<HTMLImageElement>
     prepareExactImageSrcLoad: () => void
@@ -75,7 +81,12 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     restoreOcrFromRegions: (regions: OcrTextCandidate[]) => void
   }
   semanticWalls: { buildForResultStep: () => Promise<void> }
-  fml: { updatePreviewPlan: (plan: import('@/core/fml/types').FloorPlan) => void }
+  fml: {
+    updatePreviewPlan: (
+      plan: import('@/core/fml/types').FloorPlan,
+      layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
+    ) => void
+  }
   referenceWallThicknessPx: Ref<number | null>
   rects: Ref<SelectionRect[]>
   clearRectsByType: (type: ElementClass) => void
@@ -114,6 +125,8 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     resetInkEdit: ctx.inkEdit.resetInkEdit,
     serializeInkOverlay: ctx.wallBw.serializeInkOverlay,
     hydrateInkOverlay: ctx.wallBw.hydrateInkOverlay,
+    serializeWallStamp: ctx.serializeWallStamp,
+    hydrateWallStamp: ctx.hydrateWallStamp,
     rebuildBaseWallBw: ctx.wallBw.rebuildBaseWallBw,
     composeWallBwPublish: async () => {
       await ctx.wallBw.composeAndPublish({ includeOcr: true })
@@ -145,7 +158,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     autoClassifyWalls: (force) => ctx.roomFaces.autoClassifyWalls(force),
     finalizeWallDetection: () => ctx.roomFaces.finalizeWallDetection(),
     onEnterResultStep: () => ctx.semanticWalls.buildForResultStep(),
-    updatePreviewPlan: (plan) => ctx.fml.updatePreviewPlan(plan),
+    updatePreviewPlan: (plan, layout) => ctx.fml.updatePreviewPlan(plan, layout),
     serializeFaceOverrides: () => {
       const cache = ctx.roomFaces.roomRasterCache.value
       return cache ? serializeFaceOverrides(cache) : []

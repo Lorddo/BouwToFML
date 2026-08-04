@@ -66,7 +66,7 @@ describe('project defaults + gates', () => {
     expect(floor.defaults.doorHeightCm).toBe(createDefaultFloorFmlDefaults().doorHeightCm)
   })
 
-  it('projectStepCanProceed requires name address floors', () => {
+  it('projectStepCanProceed requires name and floors (adres optioneel)', () => {
     expect(
       projectStepCanProceed({
         name: '',
@@ -75,6 +75,14 @@ describe('project defaults + gates', () => {
         activeFloorId: 'a',
       }),
     ).toBe(false)
+    expect(
+      projectStepCanProceed({
+        name: 'P',
+        address: '',
+        floorCount: 1,
+        activeFloorId: 'a',
+      }),
+    ).toBe(true)
     expect(
       projectStepCanProceed({
         name: 'P',

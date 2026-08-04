@@ -17,6 +17,7 @@ import { mergeFloorPlans } from './merge-floor-plans'
 import type {
   FloorMeta,
   FloorWorkspaceBlob,
+  PreviewUnderlayLayout,
   ProjectFmlDefaults,
   ProjectMeta,
   ProjectSourceUnderlay,
@@ -52,25 +53,51 @@ export type WorkspaceProjectDeps = {
     imageName: string
     scale: DevWorkspaceSession['scale']
     previewPlan: FloorPlan
+    previewUnderlayLayout?: PreviewUnderlayLayout | null
   }) => Promise<void>
   /**
-   * Pas B/W-tune + profile toe (geen LBE-rects — die kloppen niet na per-floor crop).
-   * Optioneel gemeten muurdikte overnemen.
+   * Pas alleen B/W-tune + profile toe (geen LBE-rects, geen gemeten muurdikte —
+   * die wijkt na per-floor crop af).
    */
   applyPreprocessTune: (params: {
     preprocess: PreprocessConfig
     drawingProfileId: DrawingProfileId
-    referenceWallThicknessPx?: number | null
   }) => void
   setLocalError: (message: string | null) => void
   /** Huidige FML-preview (incl. edits), of null. */
   getPreviewPlan: () => FloorPlan | null
+  /** Underlay-layout bij huidige preview (origin + px/mm). */
+  getPreviewUnderlayLayout: () => PreviewUnderlayLayout | null
   /** Sync FML UI-defaults vanuit effectieve floor defaults. */
   applyFmlDefaultsToUi?: (defaults: ProjectFmlDefaults) => void
 }
 
 function emptyBlob(): FloorWorkspaceBlob {
-  return { session: null, generatedFloor: null, previewPlan: null }
+  return {
+    session: null,
+    generatedFloor: null,
+    previewPlan: null,
+    previewUnderlayLayout: null,
+  }
+}
+
+/** Fallback als oude blob nog geen layout had — origin 0; px/mm uit schaal-snapshot. */
+function layoutFromSessionScale(
+  scale: DevWorkspaceSession['scale'] | null | undefined,
+): PreviewUnderlayLayout | null {
+  if (!scale?.confirmed) return null
+  const pxPerMmX =
+    'confirmedPixelsPerMillimeterX' in scale &&
+    typeof scale.confirmedPixelsPerMillimeterX === 'number'
+      ? scale.confirmedPixelsPerMillimeterX
+      : 0
+  const pxPerMmY =
+    'confirmedPixelsPerMillimeterY' in scale &&
+    typeof scale.confirmedPixelsPerMillimeterY === 'number'
+      ? scale.confirmedPixelsPerMillimeterY
+      : pxPerMmX
+  if (!(pxPerMmX > 0) || !(pxPerMmY > 0)) return null
+  return { origin: { x: 0, y: 0 }, pxPerMmX, pxPerMmY }
 }
 
 export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
@@ -129,7 +156,10 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     }
   }
 
-  function updateActiveFloorDefaults(patch: Partial<ProjectFmlDefaults>): void {
+  function updateActiveFloorDefaults(
+    patch: Partial<ProjectFmlDefaults>,
+    options?: { syncUi?: boolean },
+  ): void {
     const id = state.value.activeFloorId
     state.value = {
       ...state.value,
@@ -137,6 +167,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         f.id === id ? { ...f, defaults: { ...f.defaults, ...patch } } : f,
       ),
     }
+    if (options?.syncUi === false) return
     syncActiveFloorDefaultsToUi()
   }
 
@@ -182,6 +213,10 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
 
     const livePlan = deps.getPreviewPlan()
     const previewPlan = livePlan ? clonePlain(livePlan) : (prev.previewPlan ?? null)
+    const liveLayout = deps.getPreviewUnderlayLayout()
+    const previewUnderlayLayout = liveLayout
+      ? clonePlain(liveLayout)
+      : (prev.previewUnderlayLayout ?? null)
     const generatedFloor = previewPlan?.floors[0] ?? prev.generatedFloor
     const status = floorStatusFromFlowStep(deps.flowStep.value)
     const floorStatus = session ? (status === 'empty' ? 'input' : status) : 'empty'
@@ -195,6 +230,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           session,
           generatedFloor,
           previewPlan,
+          previewUnderlayLayout,
         },
       },
     }
@@ -218,12 +254,15 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         imageName: blob.session.imageName,
         scale: blob.session.scale,
         previewPlan: blob.previewPlan,
+        previewUnderlayLayout:
+          blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale),
       })
       return
     }
     await deps.restoreSession(blob.session, {
       skipOpeningsRerun: isResult,
       applyPreviewPlan: isResult ? (blob.previewPlan ?? null) : null,
+      applyPreviewUnderlayLayout: isResult ? (blob.previewUnderlayLayout ?? null) : null,
     })
   }
 
@@ -364,8 +403,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   /**
-   * Expliciete knop stap 2: alleen B/W-tune (+ optioneel gemeten dikte).
-   * Geen LBE-rects — na per-floor crop kloppen coordinaten niet.
+   * Expliciete knop stap 2: alleen B/W-tune (+ drawing profile).
+   * Geen LBE-rects, geen gemeten muurdikte — na per-floor crop kloppen die niet.
    */
   function copyPreprocessAndRefsFromDonor(): void {
     const donorId = resolveDonorFloorId()
@@ -377,7 +416,6 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     deps.applyPreprocessTune({
       preprocess: session.preprocess,
       drawingProfileId: session.drawingProfileId,
-      referenceWallThicknessPx: session.referenceWallThicknessPx ?? null,
     })
   }
 
@@ -426,6 +464,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const id = state.value.activeFloorId
     const prev = state.value.blobs[id] ?? emptyBlob()
     const livePlan = deps.getPreviewPlan()
+    const liveLayout = deps.getPreviewUnderlayLayout()
     state.value = {
       ...state.value,
       blobs: {
@@ -434,12 +473,37 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           ...prev,
           generatedFloor: floor,
           previewPlan: livePlan ? clonePlain(livePlan) : prev.previewPlan,
+          previewUnderlayLayout: liveLayout ? clonePlain(liveLayout) : prev.previewUnderlayLayout,
         },
       },
       floors: state.value.floors.map((f) =>
         f.id === id && floor ? { ...f, status: 'result' } : f,
       ),
     }
+  }
+
+  /** Floors (niet actief) met FML-muren voor muurstempel. */
+  function listStampDonorFloors(): Array<{ id: string; name: string; wallCount: number }> {
+    const activeId = state.value.activeFloorId
+    const out: Array<{ id: string; name: string; wallCount: number }> = []
+    for (const meta of state.value.floors) {
+      if (meta.id === activeId) continue
+      const blob = state.value.blobs[meta.id]
+      const floor = blob?.previewPlan?.floors[0] ?? blob?.generatedFloor
+      const wallCount = floor?.walls?.length ?? 0
+      if (wallCount <= 0) continue
+      out.push({ id: meta.id, name: meta.name, wallCount })
+    }
+    return out
+  }
+
+  function getStampDonorWalls(
+    donorFloorId: string,
+  ): { walls: Floor['walls']; originCm: { x: number; y: number } } | null {
+    const blob = state.value.blobs[donorFloorId]
+    const floor = blob?.previewPlan?.floors[0] ?? blob?.generatedFloor
+    if (!floor?.walls?.length) return null
+    return { walls: floor.walls, originCm: { x: 0, y: 0 } }
   }
 
   return {
@@ -468,6 +532,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     ensureSourceUnderlay,
     reuseUnderlayFromProject,
     copyPreprocessAndRefsFromDonor,
+    listStampDonorFloors,
+    getStampDonorWalls,
     enterActiveFloorFromProject,
     leaveFloorToProject,
     captureActiveFloorIntoBlob,

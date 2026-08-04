@@ -32,6 +32,7 @@ export type WorkspaceDevSessionCaptureDeps = {
   ocrMask: Ref<Uint8Array | null>
   ocrMaskedRegions: Ref<OcrTextCandidate[]>
   serializeInkOverlay: () => number[] | null
+  serializeWallStamp: () => import('./useWallStamp').WallStampSerialized | null
   flowStep: Ref<WorkspaceFlowStep>
   templateTab: Ref<TemplateTab>
   preprocessTab: Ref<PreprocessPanelLayer>
@@ -168,6 +169,7 @@ export function createWorkspaceDevSessionCapture(deps: WorkspaceDevSessionCaptur
         return cache ? serializeLiveRoomClassifyState(cache) : undefined
       })(),
       inkOverlayRle: deps.serializeInkOverlay() ?? undefined,
+      wallStamp: deps.serializeWallStamp() ?? undefined,
       forceExactRestore: options?.forceExactRestore === true,
     })
   }

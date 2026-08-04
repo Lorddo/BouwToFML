@@ -13,6 +13,7 @@ export function useWorkspaceLifecycle(deps: {
   preprocessVectorCache: { clear: () => void }
   inputMask: { resetMaskState: () => void; onMaskUndoKeydown: (event: KeyboardEvent) => void }
   inkEdit: { resetInkEdit: () => void; onInkUndoKeydown: (event: KeyboardEvent) => void }
+  clearWallStamp?: () => void
   scaleUi: { resetScaleFull: () => void; resetScaleUi: () => void }
   signature: { resetSignaturePreview: () => void }
   tabOutputs: Ref<TabDetectionOutputs>
@@ -61,6 +62,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.preprocessPreview.clearPreview()
     deps.inputMask.resetMaskState()
     deps.inkEdit.resetInkEdit()
+    deps.clearWallStamp?.()
     deps.scaleUi.resetScaleFull()
     deps.profileConfirmed.value = true
     deps.flowStep.value = 'input'
@@ -75,6 +77,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.scaleUi.resetScaleUi()
     deps.inputMask.resetMaskState()
     deps.inkEdit.resetInkEdit()
+    deps.clearWallStamp?.()
     deps.signature.resetSignaturePreview()
     deps.tabOutputs.value = emptyTabOutputs()
     deps.fml.clearImportedFml()

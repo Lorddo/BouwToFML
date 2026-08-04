@@ -5,6 +5,8 @@ export interface PreprocessMaskInput {
   ocrMask?: Uint8Array | null
   /** Al gecomposeerde muur-B/W (originele resolutie); skip OCR-merge + wall-rethreshold. */
   precomposedWallBw?: Uint8Array | null
+  /** Pure zwarte muurstempel (originele resolutie) voor Otsu OR. */
+  wallStampMask?: Uint8Array | null
 }
 
 export function preparePreprocessMasks(params: {

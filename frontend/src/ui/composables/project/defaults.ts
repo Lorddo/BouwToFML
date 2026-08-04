@@ -55,7 +55,12 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
     sourceUnderlay: null,
     floors: [floor],
     blobs: {
-      [floor.id]: { session: null, generatedFloor: null, previewPlan: null },
+      [floor.id]: {
+        session: null,
+        generatedFloor: null,
+        previewPlan: null,
+        previewUnderlayLayout: null,
+      },
     },
     activeFloorId: floor.id,
   }

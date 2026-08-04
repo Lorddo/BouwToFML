@@ -39,6 +39,7 @@ export function useWorkspaceRoomPipeline(deps: {
   preprocessMaskArgs: () => import('@/cv/tools/preparePreprocessMasks').PreprocessMaskInput
   ensureWallBwReady?: () => Promise<boolean>
   getEffectiveWallBwBytes?: () => Uint8Array | null
+  getWallStampMask?: () => Uint8Array | null
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
   clearRectsByType: (type: ElementClass) => void
   removeRect: (id: string) => void
@@ -153,6 +154,7 @@ export function useWorkspaceRoomPipeline(deps: {
     preprocessMaskArgs: deps.preprocessMaskArgs,
     ensureWallBwReady: deps.ensureWallBwReady,
     getEffectiveWallBwBytes: deps.getEffectiveWallBwBytes,
+    getWallStampMask: deps.getWallStampMask,
     onExtractTargets: detection.onExtractTargets,
     setStatus: (message) => {
       detection.status.value = message

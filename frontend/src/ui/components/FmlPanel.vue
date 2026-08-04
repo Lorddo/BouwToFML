@@ -20,7 +20,6 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    generatedFmlText?: string
     generatedStats: { walls: number; doors: number; windows: number }
     importedFmlText?: string
     importedStats: { walls: number; doors: number; windows: number }
@@ -45,7 +44,6 @@ withDefaults(
     fmlThicknessPickBusy?: boolean
   }>(),
   {
-    generatedFmlText: '',
     importedFmlText: '',
     importedWarnings: () => [],
     underlayOpacity: 25,
@@ -69,7 +67,6 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  downloadGenerated: []
   downloadProject: []
   regenerate: []
   'update:fmlWallHeightCm': [value: number]
@@ -163,9 +160,7 @@ function onBovenlichtChange(event: Event): void {
     <FmlPanelActions
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
-      :generated-fml-text="generatedFmlText"
       :fml-limits-dirty="fmlLimitsDirty"
-      @download-generated="emit('downloadGenerated')"
       @download-project="emit('downloadProject')"
       @regenerate="emit('regenerate')"
     />

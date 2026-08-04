@@ -264,6 +264,22 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
                 work.workHeight,
               )
       }
+      let wallStampMask: Uint8Array | undefined
+      if (
+        masks?.wallStampMask != null &&
+        masks.wallStampMask.length === work.originalWidth * work.originalHeight
+      ) {
+        wallStampMask =
+          work.scale >= 1
+            ? masks.wallStampMask
+            : scaleMaskToSize(
+                masks.wallStampMask,
+                work.originalWidth,
+                work.originalHeight,
+                work.workWidth,
+                work.workHeight,
+              )
+      }
       const scaledExamples: ExampleSample[] = examples.map((e) => ({
         ...e,
         bbox: scaleBoxesToWork([e.bbox], work.scale)[0],
@@ -281,6 +297,7 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
         detectTargets,
         eraserMask: preparedMasks.eraserMask,
         precomposedWallBw,
+        wallStampMask,
         pipelineOptions: safePipelineOptions,
       }
 
@@ -305,6 +322,7 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
             detectTargets,
             eraserMask: preparedMasks.eraserMask,
             precomposedWallBw,
+            wallStampMask,
             pipelineOptions: safePipelineOptions,
           },
         })

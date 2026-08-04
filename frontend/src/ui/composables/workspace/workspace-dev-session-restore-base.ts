@@ -31,6 +31,11 @@ export type WorkspaceDevSessionRestoreBaseDeps = {
   >
   resetInkEdit: () => void
   hydrateInkOverlay: (runs: number[] | null | undefined, width: number, height: number) => void
+  hydrateWallStamp: (
+    data: import('./useWallStamp').WallStampSerialized | null | undefined,
+    width: number,
+    height: number,
+  ) => void
   rebuildBaseWallBw: (options?: { force?: boolean }) => Promise<boolean>
   composeWallBwPublish: () => Promise<void>
   hydrateMaskState: (args: {
@@ -96,6 +101,7 @@ export function createWorkspaceDevSessionRestoreBase(deps: WorkspaceDevSessionRe
     })
     deps.resetInkEdit()
     deps.hydrateInkOverlay(session.inkOverlayRle, session.imageWidth, session.imageHeight)
+    deps.hydrateWallStamp(session.wallStamp, session.imageWidth, session.imageHeight)
     if (session.ocrMaskedRegions?.length) {
       deps.restoreOcrFromRegions(session.ocrMaskedRegions)
     } else {

@@ -137,6 +137,7 @@ export function captureDevWorkspaceSession(input: DevSessionCaptureInput): DevWo
     ...(input.inkOverlayRle && input.inkOverlayRle.length > 0
       ? { inkOverlayRle: input.inkOverlayRle }
       : {}),
+    ...(input.wallStamp ? { wallStamp: input.wallStamp } : {}),
     ...(input.referenceWallThicknessPx != null && input.referenceWallThicknessPx > 0
       ? { referenceWallThicknessPx: input.referenceWallThicknessPx }
       : {}),

@@ -137,6 +137,7 @@ export async function recalculateFaces(ctx: {
   ensureOpenCv: () => Promise<void>
   ensureWallBwReady?: () => Promise<boolean>
   getEffectiveWallBwBytes?: () => Uint8Array | null
+  getWallStampMask?: () => Uint8Array | null
   getImageEl: () => Promise<HTMLImageElement | HTMLCanvasElement>
   ensureScaleInitialized: (img: HTMLImageElement | HTMLCanvasElement) => void
   setStatus?: (message: string) => void
@@ -173,6 +174,7 @@ export async function recalculateFaces(ctx: {
     cv,
     image: img,
     precomposedWallBw,
+    wallStampMask: ctx.getWallStampMask?.() ?? undefined,
     preprocess: ctx.preprocess,
     eraserMask: ctx.preprocessMaskArgs().eraserMask ?? undefined,
     wallStyle: ctx.preprocess.wallStyle,

@@ -5,13 +5,17 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-03 (project-container V1)
+Laatste update: 2026-08-04 (muurstempel ghost + underlay)
+
+## Muurstempel (2026-08-04)
+
+Stap 2: donor-FML → REF-handles + gum → bake. **Live align = ghost PNG** (`buildStampGhostDataUrl` + Konva stretch); OpenCV adaptive + compose **alleen bij bake/retune**. `stampBw` in effectiveBw na bake; `stampMask` OR in Otsu. B/W overnemen = alleen preprocess-tune (geen muurdikte, geen LBE).
 
 ## Project-container V1 (2026-08-03)
 
-Stap 0 `project` + `ProjectState` / floor-blobs (`ui/composables/project/`). Floor-switch via DevSession capture/restore in memory. Knoppen: Onderlegger overnemen (stap 1), B/W+REF overnemen (stap 2). Detectie solo. FML: `mergeFloorPlans` + Download project. Geen IndexedDB nog.
+Stap 0 `project` + `ProjectState` / floor-blobs (`ui/composables/project/`). Floor-switch via DevSession capture/restore in memory. Knoppen: Onderlegger overnemen (stap 1), B/W overnemen (stap 2), Muurstempel (stap 2). Detectie solo. FML: `mergeFloorPlans` + Download project. Geen IndexedDB nog.
 
-**Floor-switch persist:** capture met `forceExactRestore` + `previewPlan`; result-switch = snelle image+FML (geen detectie/BW). Bron-onderlegger = duurzame PNG bij schaal-bevestigen (geen blob:-URL). Lege floor wist imageSrc. B/W-overname zonder LBE-rects.
+**Floor-switch persist:** capture met `forceExactRestore` + `previewPlan` + `previewUnderlayLayout` (origin+px/mm); result-switch = image+schaal+FML+underlay-layout. Bron-onderlegger = duurzame PNG bij schaal-bevestigen. B/W-overname zonder LBE/muurdikte.
 
 ## OCR muren-flow (2026-08-02)
 

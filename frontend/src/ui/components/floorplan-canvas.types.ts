@@ -54,6 +54,10 @@ export type FloorplanCanvasProps = {
   /** Vlak-classificatie via box-selectie op stap 3. */
   faceTool?: FaceToolId | null
   /** Tool-instructie in balk boven canvas (stap 2/3 toolbelt). */
+  wallStampBounds?: { x: number; y: number; width: number; height: number } | null
+  wallStampInteractive?: boolean
+  /** Ghost PNG (baseBounds) — live stretch naar wallStampBounds. */
+  wallStampGhostSrc?: string | null
   instructionHint?: string
   instructionHintStale?: boolean
   relocateToolHints?: boolean
@@ -94,6 +98,9 @@ export const FLOORPLAN_CANVAS_PROP_DEFAULTS = {
   instructionHint: '',
   instructionHintStale: false,
   relocateToolHints: false,
+  wallStampBounds: null,
+  wallStampInteractive: false,
+  wallStampGhostSrc: null,
 }
 
 export type FloorplanCanvasEmits = {
@@ -125,4 +132,5 @@ export type FloorplanCanvasEmits = {
   inkEraseStroke: [points: Array<{ x: number; y: number }>, radius: number]
   inkLine: [start: { x: number; y: number }, end: { x: number; y: number }, lineWidth: number]
   inkRect: [bounds: { x: number; y: number; width: number; height: number }, lineWidth: number]
+  wallStampBoundsChange: [bounds: { x: number; y: number; width: number; height: number }]
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { proxyRefs, computed } from 'vue'
+import { proxyRefs, computed, ref } from 'vue'
 import FloorplanCanvas from '../components/FloorplanCanvas.vue'
 import DrawingUploadPanel from '../components/DrawingUploadPanel.vue'
 import DrawingProfilePicker from '../components/DrawingProfilePicker.vue'
@@ -14,7 +14,6 @@ import WorkspaceFloorplanCanvasHost from '../components/WorkspaceFloorplanCanvas
 import ResultWallsLayerPanel from '../components/ResultWallsLayerPanel.vue'
 import DevSessionPanel from '../components/DevSessionPanel.vue'
 import WorkspaceFlowFooter from '../components/WorkspaceFlowFooter.vue'
-import WorkspaceCanvasTabs from '../components/WorkspaceCanvasTabs.vue'
 import WorkspaceDetectionStatusPanel from '../components/WorkspaceDetectionStatusPanel.vue'
 import WorkspaceDebugSidebar from '../components/WorkspaceDebugSidebar.vue'
 import WorkspaceDebugExportsPanel from '../components/WorkspaceDebugExportsPanel.vue'
@@ -38,6 +37,7 @@ import { useWorkspaceViewUi } from '../composables/workspace/useWorkspaceViewUi'
 const api = useWorkspace()
 const ws = proxyRefs(api)
 const canvasRef = api.canvasRef
+const debugSidebarOpen = ref(false)
 
 const {
   isDev,
@@ -48,7 +48,6 @@ const {
   layerDebugVisible,
   debugExportsVisible,
   hasUsedWallMask,
-  debugSidebarVisible,
   onFmlResultTab,
   fmlDevPanelVisible,
   gapsDevPanelVisible,
@@ -151,6 +150,16 @@ defineExpose<{
           :scale-confirmed="ws.scale.confirmed.value"
           :rects="ws.rects"
           :can-copy-preprocess-refs="ws.canCopyPreprocessRefs"
+          :can-start-wall-stamp="ws.canStartWallStamp"
+          :wall-stamp-active="ws.wallStampActive"
+          :wall-stamp-baked="ws.wallStampBaked"
+          :wall-stamp-busy="ws.wallStampBusy"
+          :wall-stamp-error="ws.wallStampError"
+          :wall-stamp-bands="ws.wallStampBands"
+          :wall-stamp-gum-mode="ws.wallStampGumMode"
+          :wall-stamp-brush-radius="ws.wallStampBrushRadius"
+          :wall-stamp-donor-options="ws.wallStampDonorOptions"
+          :wall-stamp-donor-floor-id="ws.wallStampDonorFloorId"
           @reset-preview="ws.onResetPreview"
           @layer-copied="ws.onLayerTuneCopied"
           @download-preprocessed-underlay="ws.downloadPreprocessedUnderlay"
@@ -158,6 +167,13 @@ defineExpose<{
           @set-reference-pan-mode="ws.setReferencePanMode"
           @update-door-fml-ref-id="ws.onDoorFmlRefIdChange"
           @copy-preprocess-refs="ws.copyPreprocessAndRefsFromDonor"
+          @start-wall-stamp="ws.startWallStamp"
+          @set-wall-stamp-bands="ws.setWallStampBands"
+          @set-wall-stamp-gum-mode="ws.setWallStampGumMode"
+          @set-wall-stamp-brush-radius="ws.setWallStampBrushRadius"
+          @bake-wall-stamp="ws.bakeWallStamp"
+          @cancel-wall-stamp="ws.cancelWallStamp"
+          @clear-wall-stamp="ws.clearWallStamp"
         />
 
         <WorkspaceSidebarTemplatesStep
@@ -267,7 +283,6 @@ defineExpose<{
           v-if="ws.flowStep === 'result' && ws.resultTab === 'vector'"
           :scale-confirmed="ws.scale.confirmed.value"
           :has-combined-output="!!ws.combinedOutput"
-          :generated-fml-text="ws.generatedFmlText"
           :generated-stats="ws.generatedStats"
           :fml-wall-height-cm="ws.fmlWallHeightCm"
           :fml-door-height-cm="ws.fmlDoorHeightCm"
@@ -304,7 +319,6 @@ defineExpose<{
           @start-thickness-pick="ws.startFmlThicknessPick"
           @cancel-thickness-pick="ws.cancelFmlThicknessPick"
           @regenerate="ws.regenerateFml"
-          @download-generated="ws.downloadGeneratedFml"
           @download-project="ws.downloadProjectFml"
         />
       </div>
@@ -338,21 +352,6 @@ defineExpose<{
       />
 
       <template v-else-if="ws.imageSrc && ws.flowStep !== 'project'">
-        <WorkspaceCanvasTabs
-          v-model:preprocess-tab="ws.preprocessTab"
-          v-model:template-tab="ws.templateTab"
-          v-model:result-tab="ws.resultTab"
-          v-model:show-wall-lines="ws.showWallLines"
-          v-model:show-lines="ws.showLines"
-          :flow-step="ws.flowStep"
-          :preprocess-layer-tabs="ws.preprocessLayerTabs"
-          :template-layer-tabs="ws.templateLayerTabs"
-          :result-layer-tabs="ws.resultLayerTabs"
-          :ocr-masked-region-count="ws.ocrMaskedRegionCount"
-          :tab-output-ready="ws.tabOutputReady"
-          :wall-overlay-toggles-visible="ws.wallOverlayTogglesVisible"
-        />
-
         <div class="canvas-main">
           <WorkspaceFmlPreviewHost
             v-if="onFmlResultTab"
@@ -407,25 +406,36 @@ defineExpose<{
               :raster-overlay-src="ws.rasterOverlaySrc"
               :raster-overlay-revision="ws.rasterOverlayRevision"
               :show-raster-overlay="ws.showRasterOverlay"
-              :face-select-enabled="faceSelectEnabled"
-              :lbe-enabled="ws.lbeEnabled"
-              :draw-type="ws.activeClass"
+              :face-select-enabled="faceSelectEnabled && !ws.wallStampActive"
+              :lbe-enabled="ws.lbeEnabled && !ws.wallStampActive"
+              :draw-type="ws.wallStampActive ? null : ws.activeClass"
               :image-dimmed="ws.scaleLocked"
-              :eraser-enabled="ws.canvasEraserEnabled"
-              :eraser-radius="ws.eraserRadius"
-              :polygon-tool-mode="ws.canvasPolygonToolMode"
+              :eraser-enabled="
+                ws.wallStampCanvasEraserEnabled || (!ws.wallStampActive && ws.canvasEraserEnabled)
+              "
+              :eraser-radius="
+                ws.wallStampCanvasEraserEnabled ? (ws.wallStampBrushRadius ?? 12) : ws.eraserRadius
+              "
+              :polygon-tool-mode="ws.wallStampCanvasPolygonMode ?? ws.canvasPolygonToolMode"
               :polygon-draft-points="ws.polygonDraftPoints"
               :show-scale-overlay="ws.showScaleOverlay"
               :scale-state="ws.scale.state.value"
               :selected-rect-id="ws.selectedRectId"
-              :ink-tool="templatesInitialDetectionBusy ? null : ws.canvasInkTool"
+              :ink-tool="
+                templatesInitialDetectionBusy || ws.wallStampActive ? null : ws.canvasInkTool
+              "
               :ink-brush-size="ws.brushSizePx"
-              :face-tool="templatesInitialDetectionBusy ? null : ws.canvasFaceTool"
+              :face-tool="
+                templatesInitialDetectionBusy || ws.wallStampActive ? null : ws.canvasFaceTool
+              "
               :instruction-hint="templatesInitialDetectionBusy ? '' : ws.toolbeltCanvasHint"
               :instruction-hint-stale="ws.toolbeltCanvasHintStale"
               :relocate-tool-hints="ws.inkToolbeltVisible && !templatesInitialDetectionBusy"
               :probe-enabled="ws.probeActive"
               :probe-mode="ws.probeMode"
+              :wall-stamp-bounds="ws.wallStampActive ? ws.wallStampBounds : null"
+              :wall-stamp-ghost-src="ws.wallStampActive ? ws.wallStampPreviewUrl : null"
+              :wall-stamp-interactive="!!ws.wallStampActive && ws.wallStampGumMode === 'off'"
               @lbe-start="ws.startDraw"
               @lbe-move="ws.updateDraw"
               @lbe-end="ws.onLbeEndDraw"
@@ -433,9 +443,23 @@ defineExpose<{
               @select-rect="ws.selectRect"
               @rect-update="ws.onRectUpdate"
               @rect-delete="ws.onRectDelete"
-              @erase-stroke="ws.onEraseStroke"
+              @erase-stroke="
+                (pts, radius) =>
+                  ws.wallStampCanvasEraserEnabled
+                    ? ws.applyWallStampBrushErase(pts)
+                    : ws.onEraseStroke(pts, radius)
+              "
               @polygon-point="ws.onPolygonPoint"
-              @polygon-complete="ws.onPolygonComplete"
+              @polygon-complete="
+                (pts) => {
+                  if (ws.wallStampCanvasPolygonMode) {
+                    ws.applyWallStampPolygonErase(pts)
+                    ws.onPolygonCancel()
+                  } else {
+                    ws.onPolygonComplete(pts)
+                  }
+                }
+              "
               @polygon-cancel="ws.onPolygonCancel"
               @polygon-undo-point="ws.onPolygonUndoPoint"
               @move-scale-handle="ws.onMoveScaleHandle"
@@ -448,13 +472,14 @@ defineExpose<{
               @ink-line="ws.onInkLine"
               @ink-rect="ws.onInkRect"
               @probe-sample="ws.onProbeSample"
+              @wall-stamp-bounds-change="ws.setWallStampBounds"
             />
           </WorkspaceFloorplanCanvasHost>
         </div>
       </template>
     </div>
 
-    <WorkspaceDebugSidebar :visible="debugSidebarVisible">
+    <WorkspaceDebugSidebar v-model:open="debugSidebarOpen">
       <WorkspaceDevViewPanel
         v-if="devViewPanelVisible"
         v-model:preprocess-tab="ws.preprocessTab"
@@ -539,11 +564,13 @@ defineExpose<{
       <WorkspaceFmlDevPanel
         v-if="fmlDevPanelVisible"
         :enabled="ws.scale.confirmed.value && !!ws.combinedOutput"
+        :generated-fml-text="ws.generatedFmlText"
         :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
         :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
         :fml-band-dirty="ws.fmlBandDirty"
         @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
         @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
+        @download-generated="ws.downloadGeneratedFml"
       />
 
       <WorkspaceGapsDevPanel

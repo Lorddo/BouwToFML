@@ -14,6 +14,7 @@ import { asSegmentCandidates } from '@/cv/walls/strategy-utils'
 import { reportPipelineProgress } from './pipeline-progress'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import { buildRoomReferenceMat } from '@/cv/walls/rooms/room-reference-preprocess'
+import { orStampMaskIntoReference } from '@/cv/preprocess/wall-stamp-raster'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { WallStrategyResult } from '@/cv/walls/strategy-utils'
@@ -37,8 +38,10 @@ export async function runGeometryPipeline(params: {
   examples: ExampleSample[]
   preprocess: PreprocessConfig
   eraserMask?: Uint8Array
-  /** Al gecomposeerde muur-B/W (base ⊕ OCR ⊕ ink) — skip wall-rethreshold. */
+  /** Al gecomposeerde muur-B/W (base ⊕ OCR ⊕ ink ⊕ stamp) — skip wall-rethreshold. */
   precomposedWallBw?: Uint8Array
+  /** Pure zwarte muurstempel voor Otsu-reference OR. */
+  wallStampMask?: Uint8Array
   workScale?: number
   originalWidth?: number
   originalHeight?: number
@@ -96,6 +99,7 @@ export async function runGeometryPipeline(params: {
           wallStyle: params.config?.wallStyle,
         })
         prebuiltReferenceMat = referenceResult.mat
+        orStampMaskIntoReference(prebuiltReferenceMat.data as Uint8Array, params.wallStampMask)
       }
     } else if (phase === 'classify' || phase === 'recalculate') {
       const sharedGray = buildGrayscalePreMat(layerCtx)
@@ -112,6 +116,7 @@ export async function runGeometryPipeline(params: {
           sharedGrayscale: sharedGray,
         })
         prebuiltReferenceMat = referenceResult.mat
+        orStampMaskIntoReference(prebuiltReferenceMat.data as Uint8Array, params.wallStampMask)
       } finally {
         sharedGray.delete()
       }

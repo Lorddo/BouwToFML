@@ -20,6 +20,7 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 |------|------|-----|
 | 1 | «Onderlegger overnemen» | Projectbron: originele scan + schaal (geen crop); daarna per-floor crop → `transformHScaleState` |
 | 2 | «B/W overnemen» | Alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
+| 2 | «Muurstempel» | FML-muren van donor-floor → canvas-align (REF-handles) + gum → bake: adaptive `stampBw` in `effectiveBw` + pure zwarte `stampMask` OR in Otsu |
 | 3 | — | Solo: geen detectie-state delen |
 | 4 | «Download .fml (project)» | `mergeFloorPlans` met floor-namen/`level` |
 
@@ -53,15 +54,16 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | Actie | Waar |
 |--------|------|
 | B/W tunen | `PreprocessPanel` |
-| B/W + REF overnemen (keuze) | `copyPreprocessAndRefsFromDonor` |
+| B/W overnemen (keuze) | `copyPreprocessAndRefsFromDonor` |
+| Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren, band min/mid/max, REF-handles, penseel/polygoon-gum, bake |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
 | Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); tekenen uitzetten via opnieuw klikken of Escape |
 | OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) — auto-scan op Muren in stap 3 |
 | Deur FML Template ID | per deur-ref dropdown (`fmlRefId`) |
 | Muurdikte + muurstijl | bij afronden: bake ink→`baseBw`, daarna `measureReferenceWallThicknessPx` + `classifyWallRefStyleFromBw` op **baseBw** (wall + gebakken ink; geen OCR) |
-| Download B/W | `downloadPreprocessedUnderlay` → `effectiveBw` (base ⊕ OCR ⊕ ink) |
+| Download B/W | `downloadPreprocessedUnderlay` → `effectiveBw` (base ⊕ OCR ⊕ ink ⊕ stampBw) |
 
-**Wall-B/W compose (stap 2+3):** `effectiveBw = baseBw → forceWhite(ocrMask) → apply(inkOverlay)` met inkt boven OCR. Module: `cv/preprocess/compose-wall-bw.ts`, state: `useWorkspaceWallBwCompose`. Retune herbouwt alleen `baseBw` en zet `bakedInkOverlay` opnieuw op base; live overlay blijft. Terug naar stap 1 wist ink + baked.
+**Wall-B/W compose (stap 2+3):** `effectiveBw = baseBw → forceWhite(ocrMask) → OR stampBw → apply(inkOverlay)` (inkt boven stamp). Module: `cv/preprocess/compose-wall-bw.ts` + `wall-stamp-raster.ts`. Stempel-bake schrijft ook pure zwarte `stampMask` die na Otsu in classify wordt ge-OR'd (`geometry-pipeline` / `room-recalculate-local`).
 
 **Bij afronden stap 2 («Volgende»):** live `inkOverlay` wordt **gebakken in `baseBw`** (+ bewaard in `bakedInkOverlay` voor retune); live overlay leeg; daarna muurdikte meten op die `baseBw`. Geen bake naar kleur-onderlegger. Stap-3 first-pass classify ziet de inkt dus als vaste muur-B/W (aparte vlakken).
 

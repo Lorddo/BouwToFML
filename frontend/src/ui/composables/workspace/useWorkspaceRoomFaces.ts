@@ -70,6 +70,7 @@ export function useWorkspaceRoomFaces(deps: {
   preprocessMaskArgs: () => PreprocessMaskInput
   ensureWallBwReady?: () => Promise<boolean>
   getEffectiveWallBwBytes?: () => Uint8Array | null
+  getWallStampMask?: () => Uint8Array | null
   onExtractTargets: (
     targets: { walls?: boolean; wallJunctionStrategy?: WallJunctionStrategy },
     options?: {
@@ -386,6 +387,7 @@ export function useWorkspaceRoomFaces(deps: {
         ensureOpenCv: () => deps.cvLoader.ensureOpenCv(),
         ensureWallBwReady: deps.ensureWallBwReady,
         getEffectiveWallBwBytes: deps.getEffectiveWallBwBytes,
+        getWallStampMask: deps.getWallStampMask,
         getImageEl: deps.getImageEl,
         ensureScaleInitialized: deps.ensureScaleInitialized,
         setStatus: deps.setStatus,

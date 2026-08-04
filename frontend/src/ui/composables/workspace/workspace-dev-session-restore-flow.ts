@@ -15,6 +15,8 @@ export type RestoreSessionOptions = {
   skipOpeningsRerun?: boolean
   /** Herstel bewerkte FML-preview i.p.v. opnieuw uit detectie te bouwen. */
   applyPreviewPlan?: FloorPlan | null
+  /** Underlay origin+px/mm bij applyPreviewPlan. */
+  applyPreviewUnderlayLayout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null
 }
 
 export type WorkspaceDevSessionRestoreFlowDeps = {
@@ -23,7 +25,10 @@ export type WorkspaceDevSessionRestoreFlowDeps = {
   ensureVectorCacheIfNeeded: () => Promise<void>
   onEnterResultStep: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
-  updatePreviewPlan?: (plan: FloorPlan) => void
+  updatePreviewPlan?: (
+    plan: FloorPlan,
+    layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
+  ) => void
 }
 
 export function createWorkspaceDevSessionRestoreFlow(
@@ -96,7 +101,7 @@ export function createWorkspaceDevSessionRestoreFlow(
     }
     await deps.onEnterResultStep()
     if (options?.applyPreviewPlan && deps.updatePreviewPlan) {
-      deps.updatePreviewPlan(options.applyPreviewPlan)
+      deps.updatePreviewPlan(options.applyPreviewPlan, options.applyPreviewUnderlayLayout ?? null)
     }
   }
 

@@ -2,12 +2,14 @@
 withDefaults(
   defineProps<{
     enabled?: boolean
+    generatedFmlText?: string
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
     fmlBandDirty?: boolean
   }>(),
   {
     enabled: false,
+    generatedFmlText: '',
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
     fmlBandDirty: false,
@@ -17,6 +19,7 @@ withDefaults(
 const emit = defineEmits<{
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
+  downloadGenerated: []
 }>()
 
 function parsePositiveCm(event: Event): number | null {
@@ -70,6 +73,16 @@ function onBandMaxBoundaryInput(event: Event): void {
       {{ fmlBandMaxBoundaryCm }} · max: ≥ {{ fmlBandMaxBoundaryCm }}
     </p>
     <p v-if="fmlBandDirty" class="dirty-hint">Bandgrenzen gewijzigd — Regenereren in FML-paneel.</p>
+
+    <h3 class="section-title">Export</h3>
+    <button
+      type="button"
+      class="download-btn"
+      :disabled="!generatedFmlText"
+      @click="emit('downloadGenerated')"
+    >
+      Download .fml (verdieping)
+    </button>
   </div>
 </template>
 
@@ -94,6 +107,28 @@ h3 {
 
 .dirty-hint {
   color: #b45309;
+}
+
+.section-title {
+  margin: 12px 0 6px;
+  font-size: 13px;
+}
+
+.download-btn {
+  width: 100%;
+  height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fff;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .field {

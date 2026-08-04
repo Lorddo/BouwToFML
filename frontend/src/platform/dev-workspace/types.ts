@@ -50,6 +50,8 @@ export interface DevWorkspaceSessionBase {
   ocrMaskedRegions?: OcrTextCandidate[]
   /** Inkt-overlay RLE (codes NONE/BLACK/WHITE). */
   inkOverlayRle?: number[]
+  /** Muurstempel (stap 2) — vector + bake outputs. */
+  wallStamp?: import('@/ui/composables/workspace/useWallStamp').WallStampSerialized
   /** Stap-1 referentievakken (muur + deur/raam) — ook buiten detectie-snapshots. */
   referenceWallThicknessPx?: number
   referenceWallRect?: DevWallReferenceRect
@@ -166,6 +168,7 @@ export interface DevSessionCaptureInput {
   workingImagePng?: string
   /** Inkt-overlay RLE (NONE/BLACK/WHITE codes) — niet gebakken in kleur-onderlegger. */
   inkOverlayRle?: number[]
+  wallStamp?: import('@/ui/composables/workspace/useWallStamp').WallStampSerialized
   /**
    * Floor-switch / persistentie: forceer exact restore (ook op stap 4).
    * DevSession-opname op result blijft default `replay` (opnieuw draaien met huidige code).

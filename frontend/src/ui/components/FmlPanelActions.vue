@@ -3,17 +3,14 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    generatedFmlText?: string
     fmlLimitsDirty?: boolean
   }>(),
   {
-    generatedFmlText: '',
     fmlLimitsDirty: false,
   },
 )
 
 const emit = defineEmits<{
-  downloadGenerated: []
   downloadProject: []
   regenerate: []
 }>()
@@ -28,9 +25,6 @@ const emit = defineEmits<{
       @click="emit('regenerate')"
     >
       Regenereren
-    </button>
-    <button type="button" :disabled="!generatedFmlText" @click="emit('downloadGenerated')">
-      Download .fml (verdieping)
     </button>
     <button type="button" @click="emit('downloadProject')">Download .fml (project)</button>
   </div>

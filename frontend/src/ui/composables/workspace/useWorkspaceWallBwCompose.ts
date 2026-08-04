@@ -26,6 +26,8 @@ export function useWorkspaceWallBwCompose(deps: {
   /** Stap-1 eraser (na bake meestal leeg); géén OCR. */
   step1EraserMask: () => Uint8Array | undefined
   ocrMask: Ref<Uint8Array | null>
+  /** Adaptive muurstempel (0 = inkt); optioneel. */
+  getStampBw?: () => Uint8Array | null
 }) {
   const baseBwData = ref<Uint8Array | null>(null)
   const baseBwWidth = ref(0)
@@ -95,6 +97,7 @@ export function useWorkspaceWallBwCompose(deps: {
       baseBw: base,
       ocrMask: includeOcr ? deps.ocrMask.value : null,
       inkOverlay: overlay,
+      stampBw: deps.getStampBw?.() ?? null,
     })
     effectiveBwData.value = composed
     const canvas = effectiveBwToCanvas(composed, w, h) as HTMLCanvasElement

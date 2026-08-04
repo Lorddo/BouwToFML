@@ -56,7 +56,7 @@ describe('resolveLayerPreprocess', () => {
     expect(isColorThresholdEnabled(walls)).toBe(true)
   })
 
-  it('muur-defaults: pre-B/W 150, adaptive, thicken 1, despeckle uit', () => {
+  it('muur-defaults: pre-B/W 150, adaptive, thicken uit, despeckle uit', () => {
     const wall = createDefaultWallLayerTune()
     expect(wall.thresholdMode).toBe('adaptive')
     expect(wall.useAdaptive).toBe(true)
@@ -65,11 +65,11 @@ describe('resolveLayerPreprocess', () => {
     expect(wall.preBinarizeEnabled).toBe(true)
     expect(wall.preBinarizeThreshold).toBe(150)
     expect(wall.removeSpecklesEnabled).toBe(false)
-    expect(wall.thickenLinesEnabled).toBe(true)
+    expect(wall.thickenLinesEnabled).toBe(false)
     expect(wall.thickenLinesPx).toBe(1)
     expect(wall.bridgeGapsEnabled).toBe(false)
     expect(DEFAULT_PREPROCESS.removeSpecklesEnabled).toBe(false)
-    expect(DEFAULT_PREPROCESS.thickenLinesEnabled).toBe(true)
+    expect(DEFAULT_PREPROCESS.thickenLinesEnabled).toBe(false)
     expect(DEFAULT_PREPROCESS.preBinarizeEnabled).toBe(true)
   })
 

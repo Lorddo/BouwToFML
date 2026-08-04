@@ -110,12 +110,7 @@ export function projectStepCanProceed(params: {
   floorCount: number
   activeFloorId: string | null
 }): boolean {
-  return (
-    params.name.trim().length > 0 &&
-    params.address.trim().length > 0 &&
-    params.floorCount >= 1 &&
-    !!params.activeFloorId
-  )
+  return params.name.trim().length > 0 && params.floorCount >= 1 && !!params.activeFloorId
 }
 
 export function inputStepCanProceed(params: {

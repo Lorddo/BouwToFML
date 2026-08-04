@@ -10,7 +10,6 @@ import FmlPanel from './FmlPanel.vue'
 defineProps<{
   scaleConfirmed: boolean
   hasCombinedOutput: boolean
-  generatedFmlText: string
   generatedStats: { walls: number; doors: number; windows: number }
   fmlWallHeightCm: number
   fmlDoorHeightCm: number
@@ -50,7 +49,6 @@ const emit = defineEmits<{
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
   regenerate: []
-  downloadGenerated: []
   downloadProject: []
 }>()
 </script>
@@ -59,7 +57,6 @@ const emit = defineEmits<{
   <FmlPanel
     :scale-confirmed="scaleConfirmed"
     :has-combined-output="hasCombinedOutput"
-    :generated-fml-text="generatedFmlText"
     :generated-stats="generatedStats"
     :fml-wall-height-cm="fmlWallHeightCm"
     :fml-door-height-cm="fmlDoorHeightCm"
@@ -96,7 +93,6 @@ const emit = defineEmits<{
     @start-thickness-pick="emit('startThicknessPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
-    @download-generated="emit('downloadGenerated')"
     @download-project="emit('downloadProject')"
   />
 </template>

@@ -37,6 +37,7 @@ import { useWorkspaceToolbelt } from './workspace/useWorkspaceToolbelt'
 import { buildWorkspaceDevSessionDeps } from './workspace/buildWorkspaceDevSessionDeps'
 import { buildWorkspaceRoomPipelineDeps } from './workspace/buildWorkspaceRoomPipelineDeps'
 import { useWorkspacePreprocessWiring } from './workspace/useWorkspacePreprocessWiring'
+import { useWallStamp } from './workspace/useWallStamp'
 import { useWorkspaceGapsFaces } from './workspace/useWorkspaceGapsFaces'
 import { useWorkspaceDoorSwingFaces } from './workspace/useWorkspaceDoorSwingFaces'
 import { useWorkspaceWindowFaces } from './workspace/useWorkspaceWindowFaces'
@@ -188,12 +189,44 @@ export function useWorkspace() {
     getBaseWallBw,
     bindSignaturePreview,
     setRemasureWallAfterInputCommit,
+    bindStampBwGetter,
   } = preprocessWiring
+
+  const wallStamp = useWallStamp({
+    cvLoader,
+    preprocess,
+    imageWidth: () => originalImageEl.value?.naturalWidth ?? 0,
+    imageHeight: () => originalImageEl.value?.naturalHeight ?? 0,
+    pxPerMmX: () => scale.pixelsPerMillimeterX.value,
+    pxPerMmY: () => scale.pixelsPerMillimeterY.value,
+    onStampBwChanged: () => {
+      void wallBw.composeAndPublish()
+      void preprocessUi.publishWallBwUnderlay()
+    },
+  })
+  bindStampBwGetter(() => wallStamp.getComposeStampBw())
+
+  watch(
+    () => [
+      preprocess.value.wallLayer?.brightness,
+      preprocess.value.wallLayer?.contrast,
+      preprocess.value.wallLayer?.threshold,
+      preprocess.value.wallLayer?.useAdaptive,
+      preprocess.value.brightness,
+      preprocess.value.contrast,
+      preprocess.value.threshold,
+      preprocess.value.useAdaptive,
+    ],
+    () => {
+      wallStamp.retuneFromPreprocess()
+    },
+  )
 
   function detectionMaskArgs() {
     return {
       ...inputMask.preprocessMaskArgs(),
       precomposedWallBw: getEffectiveWallBwBytes() ?? undefined,
+      wallStampMask: wallStamp.getOtsuStampMask() ?? undefined,
     }
   }
 
@@ -280,6 +313,7 @@ export function useWorkspace() {
       preprocessMaskArgs: detectionMaskArgs,
       ensureWallBwReady,
       getEffectiveWallBwBytes,
+      getWallStampMask: () => wallStamp.getOtsuStampMask(),
       getBaseWallBw,
       clearRectsByType,
       removeRect,
@@ -540,6 +574,7 @@ export function useWorkspace() {
     preprocessVectorCache,
     inputMask,
     inkEdit,
+    clearWallStamp: () => wallStamp.clear(),
     scaleUi,
     signature,
     tabOutputs,
@@ -575,6 +610,8 @@ export function useWorkspace() {
       inputMask,
       inkEdit,
       wallBw,
+      serializeWallStamp: () => wallStamp.serialize(),
+      hydrateWallStamp: (data, width, height) => wallStamp.hydrate(data, width, height),
       image,
       flowStep,
       templateTab,
@@ -638,6 +675,7 @@ export function useWorkspace() {
       imageName: name,
       scale: scaleSnap,
       previewPlan,
+      previewUnderlayLayout,
     }) => {
       lifecycle.clearWorkspaceForSession()
       image.prepareExactImageSrcLoad()
@@ -648,22 +686,18 @@ export function useWorkspace() {
       }
       flowStep.value = 'result'
       resultTab.value = 'vector'
-      fml.updatePreviewPlan(previewPlan)
+      fml.updatePreviewPlan(previewPlan, previewUnderlayLayout ?? null)
     },
-    applyPreprocessTune: ({
-      preprocess: nextPreprocess,
-      drawingProfileId: nextProfile,
-      referenceWallThicknessPx: thickness,
-    }) => {
+    applyPreprocessTune: ({ preprocess: nextPreprocess, drawingProfileId: nextProfile }) => {
       preprocess.value = normalizeStoredPreprocess({ ...nextPreprocess })
       drawingProfileId.value = nextProfile
       storeProfileId(nextProfile)
       clearRects()
-      referenceWallThicknessPx.value = thickness != null && thickness > 0 ? thickness : null
       void preprocessUi.refreshLayerUnderlayPreview('walls')
     },
     setLocalError,
     getPreviewPlan: () => fml.previewPlan.value ?? null,
+    getPreviewUnderlayLayout: () => fml.previewUnderlayLayout.value ?? null,
     applyFmlDefaultsToUi: (defaults) => {
       fml.setFmlWallHeightCm(defaults.wallHeightCm)
       fml.setFmlDoorHeightCm(defaults.doorHeightCm)
@@ -778,16 +812,34 @@ export function useWorkspace() {
     }
   }
 
+  /**
+   * FmlPanel-checkbox → UI-ref + actieve vloer-defaults (zonder UI-resync-loop).
+   * Zonder write-through bleef project-download op defaults.bovenlichtDefault=false.
+   */
+  function setFmlBovenlichtDefault(value: boolean): void {
+    const on = value === true
+    fml.setFmlBovenlichtDefault(on)
+    project.updateActiveFloorDefaults({ bovenlichtDefault: on }, { syncUi: false })
+  }
+
   function downloadProjectFml(): void {
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
       setLocalError('Nog geen verdieping klaar voor FML-export.')
       return
     }
-    const defaults = project.activeFloorDefaults.value
+    // Per verdieping: floor.defaults; actieve vloer volgt live FmlPanel-checkbox.
+    const floorsMeta = project.projectFloors.value
+    const activeId = project.activeFloorId.value
+    const liveBovenlicht = fml.fmlBovenlichtDefault.value
     const text = buildFmlV3(plan, {
       name: plan.name,
-      bovenlichtDefault: defaults.bovenlichtDefault,
+      bovenlichtDefault: (floor) => {
+        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
+        if (!meta) return liveBovenlicht
+        if (meta.id === activeId) return liveBovenlicht
+        return meta.defaults.bovenlichtDefault === true
+      },
     })
     downloadFml(text, `${sanitizeFilename(plan.name)}.fml`)
   }
@@ -914,5 +966,54 @@ export function useWorkspace() {
     reuseUnderlayFromProject: project.reuseUnderlayFromProject,
     copyPreprocessAndRefsFromDonor: project.copyPreprocessAndRefsFromDonor,
     downloadProjectFml,
+    setFmlBovenlichtDefault,
+    // Muurstempel (stap 2)
+    wallStampActive: wallStamp.active,
+    wallStampBaked: wallStamp.baked,
+    wallStampBands: wallStamp.bands,
+    wallStampBounds: wallStamp.bounds,
+    wallStampPreviewUrl: wallStamp.previewUrl,
+    wallStampGumMode: wallStamp.gumMode,
+    wallStampBrushRadius: wallStamp.brushRadius,
+    wallStampBusy: wallStamp.busy,
+    wallStampError: wallStamp.error,
+    wallStampHasInk: wallStamp.hasStamp,
+    wallStampDonorFloorId: wallStamp.donorFloorId,
+    canStartWallStamp: computed(() => project.listStampDonorFloors().length > 0),
+    wallStampDonorOptions: computed(() => project.listStampDonorFloors()),
+    /** Canvas: polygoon-gum tijdens stempel-mode (stap 2). */
+    wallStampCanvasPolygonMode: computed(() =>
+      wallStamp.active.value && wallStamp.gumMode.value === 'polygon' ? ('erase' as const) : null,
+    ),
+    wallStampCanvasEraserEnabled: computed(
+      () => wallStamp.active.value && wallStamp.gumMode.value === 'brush',
+    ),
+    startWallStamp: (donorFloorId: string) => {
+      const donor = project.getStampDonorWalls(donorFloorId)
+      if (!donor) {
+        setLocalError('Geen FML-muren op de gekozen verdieping.')
+        return false
+      }
+      return wallStamp.beginFromDonor({
+        donorFloorId,
+        walls: donor.walls,
+        originCm: donor.originCm,
+      })
+    },
+    setWallStampBands: wallStamp.setBands,
+    setWallStampBounds: wallStamp.setBounds,
+    setWallStampGumMode: (mode: 'off' | 'brush' | 'polygon') => {
+      wallStamp.gumMode.value = mode
+    },
+    setWallStampBrushRadius: (radius: number) => {
+      wallStamp.brushRadius.value = Math.max(1, Math.round(radius))
+    },
+    applyWallStampBrushErase: wallStamp.applyBrushErase,
+    applyWallStampPolygonErase: wallStamp.applyPolygonErasePoints,
+    bakeWallStamp: wallStamp.bake,
+    cancelWallStamp: wallStamp.cancelActive,
+    clearWallStamp: wallStamp.clear,
+    serializeWallStamp: wallStamp.serialize,
+    hydrateWallStamp: wallStamp.hydrate,
   }
 }
