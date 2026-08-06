@@ -4,18 +4,8 @@ import { tGlobal } from '@/ui/i18n'
 
 type FlowStep = 'project' | 'input' | 'preprocess' | 'templates' | 'result'
 
-export function workspaceFlowLabel(step: FlowStep): string {
+function workspaceFlowLabel(step: FlowStep): string {
   return tGlobal(`tabs.flow.${step}`)
-}
-
-export function getWorkspaceFlowLabels(): Record<FlowStep, string> {
-  return {
-    project: workspaceFlowLabel('project'),
-    input: workspaceFlowLabel('input'),
-    preprocess: workspaceFlowLabel('preprocess'),
-    templates: workspaceFlowLabel('templates'),
-    result: workspaceFlowLabel('result'),
-  }
 }
 
 /** Live lookup so Dev/legacy call sites pick up locale changes when re-read. */
@@ -40,7 +30,7 @@ export const WORKSPACE_FLOW_LABELS: Record<FlowStep, string> = new Proxy(
   },
 )
 
-export function resultTabLabel(tab: ResultViewTab): string {
+function resultTabLabel(tab: ResultViewTab): string {
   return tGlobal(`tabs.canvas.result.${tab}`)
 }
 
@@ -61,11 +51,11 @@ export const RESULT_TAB_LABELS: Record<ResultViewTab, string> = new Proxy(
   },
 )
 
-export function preprocessTabLabel(tab: PreprocessPanelLayer): string {
+function preprocessTabLabel(tab: PreprocessPanelLayer): string {
   return tGlobal(`tabs.canvas.preprocess.${tab}`)
 }
 
-export function templateTabLabel(tab: TemplateTab): string {
+function templateTabLabel(tab: TemplateTab): string {
   return tGlobal(`tabs.canvas.templates.${tab}`)
 }
 

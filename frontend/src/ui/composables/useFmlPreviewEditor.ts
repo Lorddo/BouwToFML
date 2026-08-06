@@ -59,6 +59,11 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     { immediate: true },
   )
 
+  // Undo snapshots zijn walls van de actieve floor — bij switch niet op een andere floor toepassen.
+  watch(floorIndex, () => {
+    undoStack.value = []
+  })
+
   function prepareParentSync(): void {
     skipNextPlanReset = true
   }

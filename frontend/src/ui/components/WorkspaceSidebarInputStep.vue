@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ScaleConfirmBar from './ScaleConfirmBar.vue'
 import OriginalSetupPanel from './OriginalSetupPanel.vue'
@@ -9,7 +10,7 @@ import type { useHScaleCalibration } from '@/platform/calibration'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { useOpenCvLoader } from '../composables/useOpenCvLoader'
 
-defineProps<{
+const props = defineProps<{
   scale: ReturnType<typeof useHScaleCalibration>
   scalePanelOpen: boolean
   scaleInputUnit: ScaleInputUnit
@@ -21,12 +22,13 @@ defineProps<{
   eraserTouched: boolean
   canUndoMask: boolean
   canReuseUnderlay?: boolean
+  underlayDonorOptions?: Array<{ id: string; name: string }>
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
 const eraserRadius = defineModel<number>('eraserRadius', { required: true })
 
-defineEmits<{
+const emit = defineEmits<{
   updateMmX: [value: number]
   updateMmY: [value: number]
   confirmScale: []
@@ -38,10 +40,31 @@ defineEmits<{
   resetMask: []
   undo: []
   downloadUnderlay: []
-  reuseUnderlay: []
+  reuseUnderlay: [donorFloorId: string]
 }>()
 
 const { t } = useI18n()
+
+const donorId = ref('')
+
+watch(
+  () => props.underlayDonorOptions,
+  (opts) => {
+    if (!opts?.length) {
+      donorId.value = ''
+      return
+    }
+    if (!opts.some((o) => o.id === donorId.value)) {
+      donorId.value = opts[0]?.id ?? ''
+    }
+  },
+  { immediate: true },
+)
+
+function onReuseUnderlay() {
+  if (!donorId.value) return
+  emit('reuseUnderlay', donorId.value)
+}
 </script>
 
 <template>
@@ -81,11 +104,19 @@ const { t } = useI18n()
   <div class="panel">
     <h3>{{ t('input.underlayTitle') }}</h3>
     <p class="hint">{{ t('input.underlayHint') }}</p>
+    <label v-if="(underlayDonorOptions?.length ?? 0) > 0" class="field">
+      <span>{{ t('input.reuseUnderlayDonor') }}</span>
+      <select v-model="donorId">
+        <option v-for="opt in underlayDonorOptions" :key="opt.id" :value="opt.id">
+          {{ opt.name }}
+        </option>
+      </select>
+    </label>
     <button
       type="button"
       class="secondary"
-      :disabled="!canReuseUnderlay"
-      @click="$emit('reuseUnderlay')"
+      :disabled="!canReuseUnderlay || !donorId"
+      @click="onReuseUnderlay"
     >
       {{ t('input.reuseUnderlay') }}
     </button>
@@ -118,6 +149,23 @@ const { t } = useI18n()
 .panel button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.field select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
 }
 
 .hint {

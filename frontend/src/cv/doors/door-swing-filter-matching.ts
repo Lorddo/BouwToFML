@@ -19,14 +19,14 @@ export const DOOR_SWING_TUNING = {
   refAxisMaxRelaxRatio: 2.0,
   wallRescueAxisMinRelaxRatio: 0.65,
   // ESC:D-10 (A)
-  // Ondiepe plan-fragmenten liggen vaak ~55% van de ref-swing (2D_3E kast).
+  // Ondiepe plan-fragmenten liggen vaak ~55% van de ref-swing (kast/meubel-FP).
   // 0.55 liet 44px net zakken (0.55×81=44.55) terwijl 45px wel door kwam.
   shallowRescueAxisMinRelaxRatio: 0.5,
   shallowRescueAspectToleranceBonus: 0.03,
   // Cluster-groei mag de ref-target licht overschrijden (clipped-arc deuren
   // zijn soms ~15% breder), maar tip-faces die ver voorbij de target-as
   // schieten (dubbele-deur vrije tip) worden geweigerd — anders wint pure
-  // underfill-greedy en verziekt de aspect (probe-1 rechter vleugel).
+  // underfill-greedy en verziekt de aspect (vrije tip van dubbele-deur).
   growMaxOvershootRatio: 1.2,
   // ESC:D-09 (A)
   // Stage-2 wall-fill (pass A): Otsu-ingekleurde deuren zijn vaak iets "dikker"

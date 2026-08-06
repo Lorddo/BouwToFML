@@ -53,7 +53,13 @@ describe('buildBovenlichtOpening', () => {
     expect(opening?.z_height).toBe(20)
   })
 
-  it('slaat over als z >= floorHeight', () => {
+  it('plaatst zonder gap als 10 cm erbij niet past', () => {
+    // Deur 275, vloer 280: gap zou z=285 → plaats op deur, 5 cm glas
+    const opening = buildBovenlichtOpening(door({ z_height: 275 }), { floorHeightCm: 280 })
+    expect(opening).toMatchObject({ z: 275, z_height: 5 })
+  })
+
+  it('slaat over als deur tot plafond reikt', () => {
     expect(buildBovenlichtOpening(door({ z_height: 280 }), { floorHeightCm: 280 })).toBeNull()
   })
 })

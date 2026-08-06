@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { OcrTextCandidate } from '@/core/extraction'
 import { ocrHitKey } from '@/cv/port/ocrHitKey'
 
@@ -11,16 +12,19 @@ const emit = defineEmits<{
   remove: [key: string]
 }>()
 
+const { t } = useI18n()
 const open = ref(false)
 </script>
 
 <template>
   <div v-if="hits.length > 0" class="ocr-hit-list">
     <button type="button" class="toggle" :aria-expanded="open" @click="open = !open">
-      <span class="toggle-label">Gevonden woorden ({{ hits.length }})</span>
+      <span class="toggle-label">{{
+        t('templates.ocrHits.foundWords', { count: hits.length })
+      }}</span>
       <span class="chevron" aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
     </button>
-    <p v-show="open" class="hint">Shift+klik op een vak op het canvas om te verwijderen.</p>
+    <p v-show="open" class="hint">{{ t('templates.ocrHits.shiftClickHint') }}</p>
     <ul v-show="open" class="hits">
       <li v-for="hit in hits" :key="ocrHitKey(hit)" class="hit-row">
         <span class="hit-text" :title="hit.text">{{ hit.text }}</span>
@@ -28,8 +32,8 @@ const open = ref(false)
         <button
           type="button"
           class="hit-remove"
-          title="Verwijder uit tekstmasker"
-          aria-label="Verwijder uit tekstmasker"
+          :title="t('templates.ocrHits.removeFromMask')"
+          :aria-label="t('templates.ocrHits.removeFromMask')"
           @click="emit('remove', ocrHitKey(hit))"
         >
           ×

@@ -166,17 +166,3 @@ export async function runPipelineV3(params: {
     },
   }
 }
-
-export type { PipelineV3Result } from './types'
-export type {
-  PipelineV3Layer1Result,
-  PipelineV3Layer2Result,
-  PipelineV3Layer3Result,
-  PipelineV3Layer4Result,
-  PipelineV3Layer5Result,
-  PipelineV3Layer6Result,
-  PipelineV3Layer7Result,
-  PipelineV3Layer8Result,
-  PipelineV3Layer9Result,
-  PipelineV3Layer10Result,
-} from './types'

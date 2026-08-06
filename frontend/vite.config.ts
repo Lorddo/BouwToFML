@@ -43,7 +43,16 @@ function serveExamples() {
   }
 }
 
+/** Host headers for static deploy + `vite preview` (match COOP/COEP from `server`). */
+const isolationHeaders = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+} as const
+
 export default defineConfig({
+  // Root of (sub)domain. For a subpath host, set e.g. base: '/bouwtofml/'.
+  base: '/',
   plugins: [vue(), serveExamples(), pdfJsAssetsPlugin(__dirname), tesseractAssetsPlugin(__dirname)],
   optimizeDeps: {
     exclude: ['@opencvjs/web', 'pdfjs-dist', 'pdfjs-dist/legacy/build/pdf.mjs'],
@@ -56,6 +65,8 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
+    // Source maps off for customer test builds (smaller, no source leak).
+    sourcemap: false,
   },
   resolve: {
     alias: {
@@ -63,16 +74,10 @@ export default defineConfig({
     },
   },
   preview: {
-    headers: {
-      'Cross-Origin-Resource-Policy': 'same-origin',
-    },
+    headers: { ...isolationHeaders },
   },
   server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Resource-Policy': 'same-origin',
-    },
+    headers: { ...isolationHeaders },
   },
   worker: {
     format: 'es',

@@ -50,8 +50,7 @@ export function cleanupTxMicroSegments(
       continue
     }
     // Junction↔junction micro (both ends hubs) is a short wall between real T/X,
-    // not a T-stub. Collapsing merges opposite T's into X and yanks hosts (2D_3E
-    // @(221.7,1355)↔(230.9,1355)).
+    // not a T-stub. Collapsing merges opposite T's into X and yanks hosts.
     if (atA.length >= 2 && atB.length >= 2) {
       i += 1
       continue

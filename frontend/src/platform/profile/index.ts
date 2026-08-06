@@ -6,7 +6,6 @@ export {
   getDrawingProfile,
   loadStoredProfileId,
   storeProfileId,
-  type DetectionPreset,
   type DrawingProfile,
   type DrawingProfileId,
 } from './drawing-profiles'

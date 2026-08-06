@@ -6,7 +6,9 @@ function shouldIgnoreSpaceForTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   if (target.isContentEditable) return true
   const tag = target.tagName
-  if (tag === 'TEXTAREA' || tag === 'SELECT') return true
+  if (tag === 'TEXTAREA') return true
+  // Select/range: focus mag Space+pan niet vasthouden (toolbelt/sidebar leftovers).
+  if (tag === 'SELECT') return false
   if (tag !== 'INPUT') return false
   const type = ((target as HTMLInputElement).type || 'text').toLowerCase()
   // Range mag Space niet vasthouden: anders blijft de slider “actief” en faalt Space+pan.
@@ -43,6 +45,8 @@ export function useStage() {
   function onKeyDown(e: KeyboardEvent) {
     if (e.code === 'Space') {
       if (shouldIgnoreSpaceForTarget(e.target)) return
+      // Select leftover-focus: blur zodat Space niet de dropdown opent maar pan’t.
+      if (e.target instanceof HTMLSelectElement) e.target.blur()
       spacePressed.value = true
       e.preventDefault()
     }

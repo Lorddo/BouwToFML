@@ -4,6 +4,8 @@
 
 Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + per-floor blobs; CV blijft single-floor op de actieve verdieping.
 
+**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap.
+
 ## Stap 0 — Project (`flowStep: project`)
 
 | Actie | Waar |
@@ -18,8 +20,8 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 
 | Stap | Knop | Wat |
 |------|------|-----|
-| 1 | «Onderlegger overnemen» | Projectbron: originele scan + schaal (geen crop); daarna per-floor crop → `transformHScaleState` |
-| 2 | «B/W overnemen» | Alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
+| 1 | «Onderlegger overnemen» | Donor-keuze: bronscan + schaal van gekozen verdieping (geen crop; laatste schaal-bevestiging per floor); daarna per-floor crop → `transformHScaleState` |
+| 2 | «B/W overnemen» | Donor-keuze: alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
 | 2 | «Muurstempel» | FML-muren van donor-floor → canvas-align (REF-handles) + gum → bake: adaptive `stampBw` in `effectiveBw` + pure zwarte `stampMask` OR in Otsu |
 | 3 | — | Solo: geen detectie-state delen |
 | 4 | «Download .fml (project)» | `mergeFloorPlans` met floor-namen/`level` |
@@ -29,7 +31,7 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 | Actie | Waar |
 |--------|------|
 | Upload tekening | `DrawingUploadPanel` |
-| Onderlegger overnemen (keuze) | `reuseUnderlayFromProject` |
+| Onderlegger overnemen (donor-keuze) | `reuseUnderlayFromProject(donorFloorId)` |
 | Schaal (mm) | `ScaleConfirmBar`, `useWorkspaceScale` |
 | Rotatie (native resolutie, min 3000px) | `OriginalSetupPanel` |
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
@@ -54,7 +56,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | Actie | Waar |
 |--------|------|
 | B/W tunen | `PreprocessPanel` |
-| B/W overnemen (keuze) | `copyPreprocessAndRefsFromDonor` |
+| B/W overnemen (donor-keuze) | `copyPreprocessAndRefsFromDonor(donorFloorId)` |
 | Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren, band min/mid/max, REF-handles, penseel/polygoon-gum, bake |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
 | Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); tekenen uitzetten via opnieuw klikken of Escape |
@@ -110,7 +112,7 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 | vector / FML (canvas) | `useWorkspaceFml` ← `combinedOutput` (`mergeTabOutputs`); muren via semantic post-finalize — zie [`fml-layer8-conversion-plan.md`](./fml-layer8-conversion-plan.md) |
 | walls (Dev) | `tabOutputs.walls` + layer overlays (`ResultWallsLayerPanel` / Layer Debug) |
 
-**Project-export:** «Download .fml (project)» → `mergeFloorPlans` over alle floors met `generatedFloor` (namen/`level` uit `FloorMeta`). Per-verdieping download blijft beschikbaar.
+**Project-export:** «Download .fml (project)» (footer op stap 4) → `mergeFloorPlans` over alle floors met preview/generated FML (namen/`level` uit `FloorMeta`). Geen per-verdieping download in de productie-UI.
 
 **Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 

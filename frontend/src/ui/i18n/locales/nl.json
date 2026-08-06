@@ -17,16 +17,29 @@
     "percent": "%",
     "loading": "Laden…",
     "errorGeneric": "Er ging iets mis",
+    "dismiss": "Sluiten",
     "opencvLoadFailed": "OpenCV kon niet geladen worden.",
     "fitToView": "Passend maken",
     "lineThickness": "Lijndikte",
-    "undoAction": "Ongedaan maken"
+    "undoAction": "Ongedaan maken",
+    "unsavedWorkWarning": "Je hebt niet-opgeslagen werk. Deze pagina verlaten?"
   },
   "app": {
     "title": "BouwToFML",
     "subtitle": "Bouwtekening naar Floorplanner",
     "newDrawing": "Nieuwe tekening",
-    "settings": "Instellingen"
+    "settings": "Instellingen",
+    "debugEmptyHint": "Geen debug-tools op deze stap. Open opnieuw bij voorbewerking (muren), detectie of resultaat."
+  },
+  "access": {
+    "subtitle": "Voer het toegangswachtwoord in om door te gaan.",
+    "password": "Wachtwoord",
+    "submit": "Doorgaan",
+    "incorrect": "Onjuist wachtwoord."
+  },
+  "diagnosis": {
+    "fabTooltip": "Download diagnose-pakket voor support (alles wat er tot nu toe is)",
+    "fabAria": "Download diagnose-pakket"
   },
   "flow": {
     "previous": "Vorige",
@@ -79,7 +92,7 @@
     "title": "Project",
     "hint": "Projectnaam en verdiepingen. Adres is optioneel. Daarna per verdieping de detectie-flow.",
     "name": "Projectnaam",
-    "namePlaceholder": "Bijv. Kinderdijkstraat 53",
+    "namePlaceholder": "Bijv. Hoofdstraat 12",
     "address": "Adres",
     "addressPlaceholder": "Straat, plaats",
     "floors": "Verdiepingen",
@@ -100,10 +113,21 @@
     "bovenlicht": "Bovenlicht",
     "resetDefaults": "Reset naar standaard",
     "railLabel": "Verdieping",
+    "resume": {
+      "title": "Opgeslagen project",
+      "untitled": "Naamloos project",
+      "meta": "{floors} verdieping(en) · laatst bewerkt {updated}",
+      "continue": "Verder werken",
+      "newProject": "Nieuw project"
+    },
     "errors": {
       "floorNotFound": "Verdieping niet gevonden.",
       "keepOneFloor": "Er moet minstens één verdieping blijven.",
-      "noFloorReadyForFml": "Nog geen verdieping klaar voor FML-export."
+      "noFloorReadyForFml": "Nog geen verdieping klaar voor FML-export.",
+      "persistFailed": "Project kon niet worden opgeslagen (lokaal).",
+      "persistQuota": "Opslag vol — project kon niet worden bewaard.",
+      "resumeFailed": "Opgeslagen project kon niet worden geladen.",
+      "resumeFailedDetail": "Opgeslagen project kon niet worden geladen: {message}"
     }
   },
   "input": {
@@ -130,8 +154,9 @@
     "underlayTitle": "Onderlegger",
     "underlayHint": "Download de huidige afbeelding (crop/gum + rotatie) als PNG. Bewerk lokaal en upload opnieuw — zet rotatie dan op 0° (al in de PNG). Schaal blijft per upload instellen. Referenties teken je in stap 2 (Voorbewerking).",
     "reuseUnderlay": "Onderlegger overnemen",
-    "reuseUnderlayHintOk": "Neemt de projectbron over (originele scan + schaallijnen, zonder crop). Beschikbaar na schaal bevestigen op een eerdere verdieping. Crop daarna deze verdieping opnieuw.",
-    "reuseUnderlayHintBlocked": "Bevestig eerst de schaal op een verdieping (vóór crop) om de projectbron te bewaren.",
+    "reuseUnderlayDonor": "Overnemen van verdieping",
+    "reuseUnderlayHintOk": "Neemt de originele scan + schaallijnen van de gekozen verdieping over (zonder crop). Beschikbaar na schaal bevestigen op die verdieping. Crop daarna deze verdieping opnieuw.",
+    "reuseUnderlayHintBlocked": "Bevestig eerst de schaal op een verdieping (vóór crop) zodat die als bron beschikbaar is.",
     "downloadUnderlay": "Download onderlegger (PNG)",
     "opencvLoading": "OpenCV laden...",
     "opencvReset": "Reset loader",
@@ -232,7 +257,8 @@
       "disabledHint": "OCR staat uit — zet aan in stap 2 (Voorbewerking)."
     },
     "copyBw": "B/W overnemen",
-    "copyBwHint": "Kopieert alleen B/W-tune (en gemeten muurdikte indien bekend). Teken referentievakken opnieuw na crop — coördinaten van een andere verdieping kloppen niet.",
+    "copyBwDonor": "Overnemen van verdieping",
+    "copyBwHint": "Kopieert alleen B/W-tune (en gemeten muurdikte indien bekend) van de gekozen verdieping. Teken referentievakken opnieuw na crop — coördinaten van een andere verdieping kloppen niet.",
     "downloadPng": "Download {tab} PNG",
     "downloading": "Voorbewerken…",
     "stamp": {
@@ -315,6 +341,38 @@
       "rescan": "Opnieuw scannen ({count})",
       "clear": "Wis OCR"
     },
+    "ocrHits": {
+      "foundWords": "Gevonden woorden ({count})",
+      "shiftClickHint": "Shift+klik op een vak op het canvas om te verwijderen.",
+      "removeFromMask": "Verwijder uit tekstmasker"
+    },
+    "gaps": {
+      "title": "Gaten",
+      "hint": "Solid: dezelfde vlakken als Muren, maar vlakken die onder het Gaten-muurmasker (stap 2, zwart) vallen worden als buiten gezet — vloeren en gaten blijven gekleurd. Vlakken groter dan 3× het grootste deur/raam-refvlak (head/interior, geen buitenrand) worden ook wit. Eerst Muren classificeren. Detail-modus (debug-sidebar): Otsu-wit alleen in gaten-zwart carveën.",
+      "loading": "Vlakken laden…",
+      "needWalls": "Eerst muren classificeren op de Muren-tab.",
+      "demoted": "Muurvlakken weg: {demoted} · behouden: {kept}",
+      "oversized": " · te groot weg: {count} (cap {cap} px)",
+      "refMax": " · ref-max {px} px"
+    },
+    "doors": {
+      "title": "Deuren",
+      "hint": "Fase 1 draaiboog-filter: ref-gestuurde kandidaten op face-niveau (non-outside seeds, shared-edge clustering, schaalband 40-120 cm en aspect ±5%).",
+      "loading": "Deurkandidaten laden…",
+      "needWalls": "Eerst muren classificeren op de Muren-tab.",
+      "noRef": "Geen bruikbare draaiboog-ref gevonden. Teken een deur-ref met draaicirkel op stap 1.",
+      "stats": "Actief {stage}: {hypotheses} · stage1 totaal: {stage1} · accepted: {accepted} · rejected: {rejected} · single: {single} · clusters: {clusters} · refs: {refs} · seeds: {seeds}",
+      "sizeBand": "Muur-as px-band: {min}-{max} (diepte uit deur-ref)"
+    },
+    "windows": {
+      "title": "Ramen",
+      "hint": "Stage 1 axel-filter + Stage 2 deurboog-reject + Stage 3 evidence-filter (framing op as-uiteinden, fallback top+bottom).",
+      "loading": "Raamkandidaten laden…",
+      "needWalls": "Eerst muren classificeren op de Muren-tab.",
+      "noRef": "Geen bruikbare raam-axel-ref gevonden. Teken een raam-ref met duidelijke binnenstrips op stap 1.",
+      "stats": "Actief {stage}: {hypotheses} · stage1 totaal: {stage1} · stage2 accepted: {stage2Accepted} · doorframe: shared {share}, adjacent {adjacent}, directional {directional} · stage3 accepted: {stage3Accepted} (framing {framing}, strip-stack {stripStack}) · stage3 rejected: {stage3Rejected} · doorframes: {doorframes} · stage4 windows: {stage4Windows} · doorframes: {stage4Doorframes} · refs: {refs} · candidate faces: {candidates} · accepted: {accepted} · rejected: {rejected}",
+      "refRow": "Ref {n}: {matches} matches · patroon {strips} strips · h {height}px"
+    },
     "roomFace": {
       "awaitingReference": "Wacht op referentie",
       "classifying": "Classificeren…",
@@ -394,14 +452,15 @@
     "overrideHint": "Overschrijven per opening: Ctrl+klik in de preview → maat/hoogte.",
     "regenerate": "Regenereren",
     "downloadProject": "Download .fml (project)",
-    "dirtyHint": "Hoogte/dikte gewijzigd — klik Regenereren om de FML bij te werken.",
+    "dirtyHint": "Hoogte/dikte gewijzigd — klik Regenereren om de preview bij te werken.",
     "thicknessPick": {
       "clickWall": "Klik een muur om de {tier}-meetband (±10%) te zetten.",
-      "measuring": "Meten op onderlegger…",
+      "measuring": "Meten op muur-B/W…",
       "applied": "{tier}-band: {cm} cm (±10%) — klik Regenereren.",
       "retry": "Klik opnieuw een muur voor de {tier}-meetband.",
       "noUnderlay": "Onderlegger ontbreekt — upload en bevestig schaal vóór meten.",
-      "measureFailed": "Meting mislukt — onderlegger of muur niet beschikbaar.",
+      "noWallBw": "Muur-B/W ontbreekt — rond voorbewerking (stap 2) af vóór bandmeten.",
+      "measureFailed": "Meting mislukt — muur-B/W of muur niet beschikbaar.",
       "measureFailedGeneric": "Muurdiktemeting mislukt."
     },
     "toolbar": {
@@ -537,6 +596,9 @@
     "underlayOpacityAria": "Onderlegger opacity",
     "fmlOpacity": "FML",
     "fmlOpacityAria": "FML opacity",
+    "openFmlViewer": "Open FML-viewer",
+    "openFmlViewerHint": "Losse viewer om een bestaand .fml-bestand te openen, bewerken en opnieuw te exporteren (buiten de projectflow).",
+    "backToSettings": "Terug naar instellingen",
     "save": "Opslaan",
     "resetFactory": "Reset naar fabriekswaarden",
     "export": "Exporteer",

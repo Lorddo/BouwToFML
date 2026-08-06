@@ -63,7 +63,7 @@
       "X-15": 2,
       "X-16": 2,
       "X-22": 32,
-      "X-27": 1
+      "X-27": 1,
     },
     "levels": {
       "D-44:path_a_hit": 4,
@@ -157,8 +157,8 @@
       "X-15:hardcoded_settings": 2,
       "X-16:full_height": 2,
       "X-22:measured": 32,
-      "X-27:dead_flag_false": 1
-    }
+      "X-27:dead_flag_false": 1,
+    },
   },
   "layers": {
     "layer10": {
@@ -167,9 +167,9 @@
         "I": 2,
         "L": 15,
         "T": 10,
-        "X": 1
+        "X": 1,
       },
-      "segments": 33
+      "segments": 33,
     },
     "layer2": {
       "junctions": 155,
@@ -177,9 +177,9 @@
         "I": 13,
         "L": 117,
         "T": 25,
-        "X": 0
+        "X": 0,
       },
-      "segments": 161
+      "segments": 161,
     },
     "layer3": {
       "junctions": 124,
@@ -187,9 +187,9 @@
         "I": 1,
         "L": 110,
         "T": 13,
-        "X": 0
+        "X": 0,
       },
-      "segments": 139
+      "segments": 139,
     },
     "layer4": {
       "invariantReport": {
@@ -198,24 +198,24 @@
           "I": 1,
           "L": 110,
           "T": 13,
-          "X": 0
+          "X": 0,
         },
         "junctionKindCountsBefore": {
           "I": 1,
           "L": 110,
           "T": 13,
-          "X": 0
+          "X": 0,
         },
-        "ok": true
+        "ok": true,
       },
       "junctions": 124,
       "kinds": {
         "I": 1,
         "L": 110,
         "T": 13,
-        "X": 0
+        "X": 0,
       },
-      "segments": 139
+      "segments": 139,
     },
     "layer5": {
       "junctions": 76,
@@ -223,9 +223,9 @@
         "I": 4,
         "L": 58,
         "T": 14,
-        "X": 0
+        "X": 0,
       },
-      "segments": 81
+      "segments": 81,
     },
     "layer6": {
       "junctions": 66,
@@ -233,9 +233,9 @@
         "I": 2,
         "L": 52,
         "T": 12,
-        "X": 0
+        "X": 0,
       },
-      "segments": 71
+      "segments": 71,
     },
     "layer7": {
       "junctions": 39,
@@ -243,9 +243,9 @@
         "I": 2,
         "L": 25,
         "T": 12,
-        "X": 0
+        "X": 0,
       },
-      "segments": 44
+      "segments": 44,
     },
     "layer8": {
       "junctions": 38,
@@ -253,9 +253,9 @@
         "I": 2,
         "L": 24,
         "T": 12,
-        "X": 0
+        "X": 0,
       },
-      "segments": 43
+      "segments": 43,
     },
     "layer9": {
       "junctions": 31,
@@ -263,9 +263,9 @@
         "I": 2,
         "L": 17,
         "T": 12,
-        "X": 0
+        "X": 0,
       },
-      "segments": 36
-    }
-  }
+      "segments": 36,
+    },
+  },
 }

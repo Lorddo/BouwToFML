@@ -3,7 +3,7 @@
  * No connectivity rollback (validateLayer5Connectivity / validateConnectivity).
  *
  * Face-accept: bij I-explosie na junction niet de hele face naar L5 terugrollen —
- * behoud laatste connector-only state die wél face-ok is (2D_3E top-chamfers).
+ * behoud laatste connector-only state die wél face-ok is (bv. top-edge chamfers).
  */
 import type { Segment } from '@/cv/port/wallGraph'
 import { noteCascadeLevel, noteRollback, tally } from '@/core/diagnostics'

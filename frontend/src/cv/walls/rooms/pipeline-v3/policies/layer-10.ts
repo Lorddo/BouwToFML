@@ -14,7 +14,7 @@ export const layer10CollapsePolicy: CollapsePolicy = baseCollapsePolicy(10, {
   enableParallelCover: false,
   enableMicroCornerAbsorb: true,
   enableChainAxisStraighten: true,
-  /** Cover BouwTek11 T/L micro-jog (~4.5px) without merging true double walls. */
+  /** Cover T/L micro-jog (~4.5px) without merging true double walls. */
   chainAxisMaxSpreadPx: SCALE_REF30.collapseChainAxisMaxSpreadPx,
 })
 

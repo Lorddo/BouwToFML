@@ -49,7 +49,6 @@ const emit = defineEmits<{
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
   regenerate: []
-  downloadProject: []
 }>()
 </script>
 
@@ -93,6 +92,5 @@ const emit = defineEmits<{
     @start-thickness-pick="emit('startThicknessPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
-    @download-project="emit('downloadProject')"
   />
 </template>

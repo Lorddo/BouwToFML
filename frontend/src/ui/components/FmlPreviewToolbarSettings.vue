@@ -112,11 +112,48 @@ const drawThicknessBand = computed<'min' | 'mid' | 'max' | ''>(() => {
   return ''
 })
 
+/** Focus loslaten na toolbar-interactie — voorkomt dat Space+pan geblokkeerd blijft (zoals opacity-slider). */
+function releaseControlFocus(event: Event): void {
+  const el = event.target
+  if (el instanceof HTMLElement) el.blur()
+}
+
 function onDrawThicknessBandChange(event: Event): void {
   const band = (event.target as HTMLSelectElement).value as 'min' | 'mid' | 'max' | ''
   const preset = thicknessPresets.value.find((item) => item.id === band)
   if (!preset) return
   emit('applyWallThickness', preset.cm)
+  releaseControlFocus(event)
+}
+
+function onWallThicknessChange(event: Event): void {
+  emit('commitWallThickness')
+  releaseControlFocus(event)
+}
+
+function onWallBalanceChange(event: Event): void {
+  emit('commitWallBalance')
+  releaseControlFocus(event)
+}
+
+function onOpeningWidthChange(event: Event): void {
+  emit('commitOpeningWidth')
+  releaseControlFocus(event)
+}
+
+function onOpeningHeightChange(event: Event): void {
+  emit('commitOpeningHeight')
+  releaseControlFocus(event)
+}
+
+function onOpeningSillZChange(event: Event): void {
+  emit('commitOpeningSillZ')
+  releaseControlFocus(event)
+}
+
+function onOpeningBovenlichtChange(event: Event): void {
+  emit('openingBovenlichtChange', event)
+  releaseControlFocus(event)
 }
 
 const doorSubtypeOptions = computed(() =>
@@ -267,7 +304,7 @@ const showMeasureStrip = computed(
             :value="wallThicknessMixed ? '' : wallThicknessDraft"
             :placeholder="wallThicknessMixed ? '—' : undefined"
             @input="emit('wallThicknessInput', $event)"
-            @change="emit('commitWallThickness')"
+            @change="onWallThicknessChange"
           />
           <span class="fml-toolbelt__unit">cm</span>
           <div
@@ -286,6 +323,7 @@ const showMeasureStrip = computed(
                 t('result.toolbar.applyPresetAria', { label: preset.label, cm: preset.cm })
               "
               @click="emit('applyWallThickness', preset.cm)"
+              @pointerup="releaseControlFocus"
             >
               {{ preset.label }}
             </button>
@@ -307,7 +345,8 @@ const showMeasureStrip = computed(
             :value="wallBalanceMixed ? 0.5 : wallBalanceDraft"
             :disabled="wallBalanceMixed"
             @input="emit('wallBalanceInput', $event)"
-            @change="emit('commitWallBalance')"
+            @change="onWallBalanceChange"
+            @pointerup="releaseControlFocus"
           />
           <span class="fml-toolbelt__unit">{{
             wallBalanceMixed ? '—' : wallBalanceDraft.toFixed(2)
@@ -331,7 +370,7 @@ const showMeasureStrip = computed(
             :value="openingWidthMixed ? '' : openingWidthDraft"
             :placeholder="openingWidthMixed ? '—' : undefined"
             @input="emit('openingWidthInput', $event)"
-            @change="emit('commitOpeningWidth')"
+            @change="onOpeningWidthChange"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -343,6 +382,7 @@ const showMeasureStrip = computed(
             v-model="addDoorSubtype"
             class="fml-toolbelt__select"
             :aria-label="t('result.toolbar.doorType')"
+            @change="releaseControlFocus"
           >
             <option v-for="opt in doorSubtypeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
@@ -361,6 +401,7 @@ const showMeasureStrip = computed(
             step="1"
             class="fml-toolbelt__thickness-input"
             :aria-label="t('result.toolbar.doorSizeAria')"
+            @change="releaseControlFocus"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -372,6 +413,7 @@ const showMeasureStrip = computed(
             v-model="addWindowSubtype"
             class="fml-toolbelt__select"
             :aria-label="t('result.toolbar.windowType')"
+            @change="releaseControlFocus"
           >
             <option v-for="opt in windowSubtypeOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
@@ -390,6 +432,7 @@ const showMeasureStrip = computed(
             step="1"
             class="fml-toolbelt__thickness-input"
             :aria-label="t('result.toolbar.windowSizeAria')"
+            @change="releaseControlFocus"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -405,6 +448,7 @@ const showMeasureStrip = computed(
             step="1"
             class="fml-toolbelt__thickness-input"
             :aria-label="t('result.toolbar.floorAria')"
+            @change="releaseControlFocus"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -420,6 +464,7 @@ const showMeasureStrip = computed(
             step="1"
             class="fml-toolbelt__thickness-input"
             :aria-label="t('result.toolbar.glassAria')"
+            @change="releaseControlFocus"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -437,7 +482,7 @@ const showMeasureStrip = computed(
             :value="openingHeightMixed ? '' : openingHeightDraft"
             :placeholder="openingHeightMixed ? '—' : undefined"
             @input="emit('openingHeightInput', $event)"
-            @change="emit('commitOpeningHeight')"
+            @change="onOpeningHeightChange"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -452,7 +497,7 @@ const showMeasureStrip = computed(
           :checked="openingBovenlichtDraft"
           :indeterminate.prop="openingBovenlichtMixed"
           :aria-label="t('result.toolbar.bovenlicht')"
-          @change="emit('openingBovenlichtChange', $event)"
+          @change="onOpeningBovenlichtChange"
         />
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.bovenlicht') }}</span>
       </label>
@@ -469,7 +514,7 @@ const showMeasureStrip = computed(
             :value="openingSillZMixed ? '' : openingSillZDraft"
             :placeholder="openingSillZMixed ? '—' : undefined"
             @input="emit('openingSillZInput', $event)"
-            @change="emit('commitOpeningSillZ')"
+            @change="onOpeningSillZChange"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>
@@ -487,7 +532,7 @@ const showMeasureStrip = computed(
             :value="openingHeightMixed ? '' : openingHeightDraft"
             :placeholder="openingHeightMixed ? '—' : undefined"
             @input="emit('openingHeightInput', $event)"
-            @change="emit('commitOpeningHeight')"
+            @change="onOpeningHeightChange"
           />
           <span class="fml-toolbelt__unit">cm</span>
         </div>

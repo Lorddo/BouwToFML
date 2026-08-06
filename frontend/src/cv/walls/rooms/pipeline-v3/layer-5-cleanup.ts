@@ -30,7 +30,7 @@ const LAYER5_ACCEPT_IDENTITY = { gridPx: 0.01, includeTemplateIndex: true } as c
  * Compact incidental ≤eps zeros/dupes before connectivity guard.
  * Without this, same-line/tx/ll-stair are rejected on large faces because a
  * crushed micro elsewhere yields `zero-length segment ontstaan`, and the
- * useful T-stub reconnect never lands (BouwTek11 @645,243).
+ * useful T-stub reconnect never lands (stranded I before a long through-V).
  */
 function compactCandidate(segments: Segment[], policy: Layer5CleanupPolicy): Segment[] {
   const compacted = dropZeroLengthSegments(segments, policy.weld.endpointEpsPx)

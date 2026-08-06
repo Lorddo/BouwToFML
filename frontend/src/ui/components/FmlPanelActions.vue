@@ -15,7 +15,6 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  downloadProject: []
   regenerate: []
 }>()
 </script>
@@ -29,9 +28,6 @@ const emit = defineEmits<{
       @click="emit('regenerate')"
     >
       {{ t('result.regenerate') }}
-    </button>
-    <button type="button" @click="emit('downloadProject')">
-      {{ t('result.downloadProject') }}
     </button>
   </div>
   <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">

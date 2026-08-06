@@ -184,7 +184,7 @@ export function mergeSameLineSegments(
         const from = sortedCuts[i]
         const to = sortedCuts[i + 1]
         // Skip sub-eps spans — otherwise same-line merge recreates 1px mid-chain stubs
-        // (BouwTek11 @1202–1203) that incidentAt cannot clean up.
+        // that incidentAt cannot clean up.
         if (to - from <= policy.weld.endpointEpsPx) continue
         const mid = (from + to) / 2
         if (!coveredByCluster(mid, ranges)) continue

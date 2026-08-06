@@ -9,7 +9,10 @@ import {
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extractionToPlan'
-import { measureWallThicknessCmOnUnderlay } from '@/core/fml/measure-underlay-wall-thickness'
+import {
+  FML_THICKNESS_PICK_SEARCH_CM,
+  measureWallThicknessCmOnUnderlay,
+} from '@/core/fml/measure-underlay-wall-thickness'
 import {
   DEFAULT_FML_BAND_BOUNDARIES,
   deriveFmlBandBoundariesCmFromRefPx,
@@ -26,6 +29,7 @@ import {
 import type { FloorPlan } from '@/core/fml/types'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { tGlobal } from '@/ui/i18n'
 
 const THICKNESS_PICK_LABELS: Record<FmlThicknessPickTier, string> = {
@@ -41,6 +45,8 @@ export type WorkspaceFmlThicknessUiDeps = {
   underlayOpacity: Ref<number>
   setLocalError: (message: string | null) => void
   combinedOutput: Ref<ExtractionOutput | null>
+  /** Canonieke muur-B/W (0 = inkt) voor band-pick meting. */
+  getBaseWallBw: () => { data: Uint8Array; width: number; height: number } | null
   referenceWallBandSync?: {
     referenceWallThicknessPx: Ref<number | null>
     devSessionRestoring: Ref<boolean>
@@ -71,8 +77,8 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   const fmlDoorHeightCm = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
   const fmlWindowHeightCm = ref(DEFAULT_FML_WINDOW_HEIGHT_CM)
   const fmlWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
-  /** Export-only: bovenlicht op alle deuren tenzij per-deur override. */
-  const fmlBovenlichtDefault = ref(false)
+  /** Export-only: bovenlicht op alle deuren tenzij per-deur override. Start vanuit user/project defaults. */
+  const fmlBovenlichtDefault = ref(loadUserSettings().defaults.bovenlichtDefault === true)
   const appliedFmlThicknessLimits = ref<FmlWallThicknessLimits>({ ...storedLimits })
   const appliedFmlBandBoundaries = ref<FmlThicknessBandBoundaries>({ ...storedBandBoundaries })
   const appliedFmlWallHeightCm = ref(DEFAULT_FML_WALL_HEIGHT_CM)
@@ -157,7 +163,8 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlDoorHeightCm.value = DEFAULT_FML_DOOR_HEIGHT_CM
     fmlWindowHeightCm.value = DEFAULT_FML_WINDOW_HEIGHT_CM
     fmlWindowSillZCm.value = DEFAULT_FML_WINDOW_SILL_Z_CM
-    fmlBovenlichtDefault.value = false
+    // Niet hard false: onderlegger-reset wist anders project-/settings-bovenlicht tot sync.
+    fmlBovenlichtDefault.value = loadUserSettings().defaults.bovenlichtDefault === true
     appliedFmlThicknessLimits.value = { ...DEFAULT_FML_WALL_THICKNESS_LIMITS }
     appliedFmlBandBoundaries.value = { ...DEFAULT_FML_BAND_BOUNDARIES }
     appliedFmlWallHeightCm.value = DEFAULT_FML_WALL_HEIGHT_CM
@@ -218,6 +225,10 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       deps.setLocalError(tGlobal('result.thicknessPick.noUnderlay'))
       return
     }
+    if (!deps.getBaseWallBw()) {
+      deps.setLocalError(tGlobal('result.thicknessPick.noWallBw'))
+      return
+    }
     fmlThicknessPickTier.value = tier
     if (deps.underlayOpacity.value <= 0) deps.underlayOpacity.value = 25
     fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.clickWall', {
@@ -240,9 +251,8 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       const plan = preview.previewPlan.value ?? preview.generatedPlan.value
       const wall = plan?.floors[0]?.walls.find((item) => item.id === wallId)
       const layout = preview.previewUnderlayLayout.value
-      const underlaySrc = deps.underlaySrc.value
-      const underlaySize = deps.underlaySize.value
-      if (!wall || !layout || !underlaySrc || !underlaySize) {
+      const wallBw = deps.getBaseWallBw()
+      if (!wall || !layout || !wallBw) {
         deps.setLocalError(tGlobal('result.thicknessPick.measureFailed'))
         return
       }
@@ -250,14 +260,13 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       fmlThicknessPickBusy.value = true
       fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.measuring')
       try {
-        const measuredCm = await measureWallThicknessCmOnUnderlay({
-          imageSrc: underlaySrc,
-          imageWidthPx: underlaySize.width,
-          imageHeightPx: underlaySize.height,
+        const measuredCm = measureWallThicknessCmOnUnderlay({
+          wallBw,
           wall,
           origin: layout.origin,
           pxPerMmX: layout.pxPerMmX,
           pxPerMmY: layout.pxPerMmY,
+          maxSearchCm: FML_THICKNESS_PICK_SEARCH_CM[tier],
         })
         const applied = applyFmlThicknessPick(tier, measuredCm, {
           limits: {

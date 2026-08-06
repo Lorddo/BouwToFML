@@ -60,7 +60,7 @@ export function resolveSimpleLChamferGeometry(params: {
     vTouch: { x: number; y: number },
   ) => {
     // Through-T (≥2 H of ≥2 V op één eind): geen simple-L — trekt de through-arm los → T→I
-    // (BouwTek11 @1489: through-V T + H-landing diagonaal).
+    // (through-V T + H-landing diagonaal).
     if (hArms.h.length >= 2 || vArms.h.length >= 2 || hArms.v.length >= 2 || vArms.v.length >= 2) {
       return null
     }

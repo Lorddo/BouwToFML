@@ -4,9 +4,10 @@ import { clamp01 } from '@/core/fml/extraction-to-plan-geom'
 
 export { clamp01 }
 
+/** Zelfde tint als detectie-faces: `DOOR_FACE_RGBA` / `WINDOW_FACE_RGBA`. */
 export function openingFillColor(type: OpeningType, selected: boolean): string {
   if (selected) return '#f97316'
-  return type === 'door' ? '#38bdf8' : '#e879f9'
+  return type === 'door' ? '#f59e0b' : '#06b6d4'
 }
 
 export function buildOpeningGapPolygon(params: {

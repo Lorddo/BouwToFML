@@ -3,7 +3,7 @@
     "maxX": 607.7,
     "maxY": 1085.8,
     "minX": 0,
-    "minY": 0
+    "minY": 0,
   },
   "reference": {
     "filteredZeroThickness": 2,
@@ -11,19 +11,19 @@
     "openingRecall": {
       "door": 100,
       "overall": 100,
-      "window": 100
+      "window": 100,
     },
     "referenceDoorCount": 6,
     "referenceLengthCm": 6172,
     "referenceWallCount": 48,
     "referenceWindowCount": 7,
     "wallCoveragePct": 99.7,
-    "wallPrecisionPct": 98
+    "wallPrecisionPct": 98,
   },
   "thicknessBands": {
     "max": 6,
     "mid": 24,
-    "min": 22
+    "min": 22,
   },
   "totalLengthCm": 6195,
   "wallCount": 52,
@@ -31,705 +31,723 @@
     {
       "a": {
         "x": 0,
-        "y": 184.9
+        "y": 184.9,
       },
       "b": {
         "x": 0,
-        "y": 0
+        "y": 0,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 0,
-        "y": 184.9
+        "y": 184.9,
       },
       "b": {
         "x": 0,
-        "y": 434.6
+        "y": 434.6,
       },
       "openings": [],
-      "thickness": 20
-    },
-    {
-      "a": {
-        "x": 0,
-        "y": 434.6
-      },
-      "b": {
-        "x": 0,
-        "y": 507.3
-      },
-      "openings": [],
-      "thickness": 20
-    },
-    {
-      "a": {
-        "x": 11.5,
-        "y": 748.8
-      },
-      "b": {
-        "x": 11.5,
-        "y": 778.1
-      },
-      "openings": [],
-      "thickness": 20
-    },
-    {
-      "a": {
-        "x": 11.5,
-        "y": 778.1
-      },
-      "b": {
-        "x": 11.5,
-        "y": 1029.3
-      },
-      "openings": [],
-      "thickness": 20
-    },
-    {
-      "a": {
-        "x": 11.5,
-        "y": 1029.3
-      },
-      "b": {
-        "x": 11.5,
-        "y": 1064.9
-      },
-      "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 0,
-        "y": 434.6
+        "y": 434.6,
+      },
+      "b": {
+        "x": 0,
+        "y": 507.3,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 11.5,
+        "y": 748.8,
+      },
+      "b": {
+        "x": 11.5,
+        "y": 778.1,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 11.5,
+        "y": 778.1,
+      },
+      "b": {
+        "x": 11.5,
+        "y": 1029.3,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 11.5,
+        "y": 1029.3,
+      },
+      "b": {
+        "x": 11.5,
+        "y": 1064.9,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 0,
+        "y": 434.6,
       },
       "b": {
         "x": 44.1,
-        "y": 434.6
+        "y": 434.6,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 0,
-        "y": 507.3
+        "y": 507.3,
       },
       "b": {
         "x": 44.1,
-        "y": 507.3
+        "y": 507.3,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 0,
-        "y": 184.9
+        "y": 184.9,
       },
       "b": {
         "x": 45.5,
-        "y": 184.9
+        "y": 184.9,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 11.5,
-        "y": 748.8
+        "y": 748.8,
       },
       "b": {
         "x": 37.8,
-        "y": 748.8
+        "y": 748.8,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 11.5,
-        "y": 778.1
+        "y": 778.1,
       },
       "b": {
         "x": 37.8,
-        "y": 778.1
+        "y": 778.1,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 11.5,
-        "y": 1029.3
+        "y": 1029.3,
       },
       "b": {
         "x": 37.8,
-        "y": 1029.3
+        "y": 1029.3,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 37.8,
-        "y": 1064.9
+        "y": 1064.9,
       },
       "b": {
         "x": 11.5,
-        "y": 1064.9
+        "y": 1064.9,
       },
       "openings": [],
-      "thickness": 30
+      "thickness": 30,
     },
     {
       "a": {
         "x": 37.8,
-        "y": 748.8
+        "y": 748.8,
       },
       "b": {
         "x": 37.8,
-        "y": 778.1
+        "y": 778.1,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 37.8,
-        "y": 1064.9
+        "y": 1064.9,
       },
       "b": {
         "x": 37.8,
-        "y": 1029.3
+        "y": 1029.3,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 44.1,
-        "y": 507.3
+        "y": 507.3,
       },
       "b": {
         "x": 44.1,
-        "y": 434.6
+        "y": 434.6,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 80.7,
-        "y": 1064.9
+        "y": 1064.9,
       },
       "b": {
         "x": 37.8,
-        "y": 1064.9
+        "y": 1064.9,
       },
       "openings": [],
-      "thickness": 30
+      "thickness": 30,
     },
     {
       "a": {
         "x": 86.3,
-        "y": 1069.2
+        "y": 1069.2,
       },
       "b": {
         "x": 80.7,
-        "y": 1064.9
+        "y": 1064.9,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 0,
-        "y": 0
+        "y": 0,
       },
       "b": {
         "x": 240.8,
-        "y": 0
+        "y": 0,
       },
       "openings": [
         {
-          "mirrored": [0, 0],
+          "mirrored": [
+            0,
+            0,
+          ],
           "t": 0.5,
           "type": "door",
-          "width": 91.1
+          "width": 91.1,
         },
         {
           "t": 0.8,
           "type": "window",
-          "width": 47.8
-        }
+          "width": 47.8,
+        },
       ],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 37.8,
-        "y": 748.8
+        "y": 748.8,
       },
       "b": {
         "x": 203.2,
-        "y": 748.8
+        "y": 748.8,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 44.1,
-        "y": 507.3
+        "y": 507.3,
       },
       "b": {
         "x": 203.2,
-        "y": 507.3
+        "y": 507.3,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 193.6,
-        "y": 1069.5
+        "y": 1069.5,
       },
       "b": {
         "x": 86.3,
-        "y": 1069.2
+        "y": 1069.2,
       },
       "openings": [
         {
           "t": 0.5,
           "type": "window",
-          "width": 96.5
-        }
+          "width": 96.5,
+        },
       ],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 199.7,
-        "y": 1073
+        "y": 1073,
       },
       "b": {
         "x": 193.6,
-        "y": 1069.5
+        "y": 1069.5,
       },
       "openings": [],
-      "thickness": 30
+      "thickness": 30,
     },
     {
       "a": {
         "x": 203.2,
-        "y": 507.3
+        "y": 507.3,
       },
       "b": {
         "x": 203.2,
-        "y": 604.8
+        "y": 604.8,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 203.2,
-        "y": 604.8
+        "y": 604.8,
       },
       "b": {
         "x": 203.2,
-        "y": 748.8
+        "y": 748.8,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 203.2,
-        "y": 776.9
+        "y": 776.9,
       },
       "b": {
         "x": 203.2,
-        "y": 748.8
+        "y": 748.8,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 203.2,
-        "y": 507.3
-      },
-      "b": {
-        "x": 232.6,
-        "y": 507.3
-      },
-      "openings": [],
-      "thickness": 10
-    },
-    {
-      "a": {
-        "x": 203.2,
-        "y": 604.8
+        "y": 507.3,
       },
       "b": {
         "x": 232.6,
-        "y": 604.8
+        "y": 507.3,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
-        "x": 232.6,
-        "y": 507.3
+        "x": 203.2,
+        "y": 604.8,
       },
       "b": {
         "x": 232.6,
-        "y": 516.5
+        "y": 604.8,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 10,
     },
     {
       "a": {
         "x": 232.6,
-        "y": 516.5
+        "y": 507.3,
       },
       "b": {
         "x": 232.6,
-        "y": 604.8
+        "y": 516.5,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 232.6,
+        "y": 516.5,
+      },
+      "b": {
+        "x": 232.6,
+        "y": 604.8,
+      },
+      "openings": [],
+      "thickness": 10,
     },
     {
       "a": {
         "x": 235.6,
-        "y": 391.2
+        "y": 391.2,
       },
       "b": {
         "x": 236.1,
-        "y": 193.6
+        "y": 193.6,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 236.1,
-        "y": 193.6
+        "y": 193.6,
       },
       "b": {
         "x": 240.6,
-        "y": 188
+        "y": 188,
       },
       "openings": [],
-      "thickness": 30
+      "thickness": 30,
     },
     {
       "a": {
         "x": 240.6,
-        "y": 188
+        "y": 188,
       },
       "b": {
         "x": 240.8,
-        "y": 0
+        "y": 0,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 304.2,
-        "y": 1073
+        "y": 1073,
       },
       "b": {
         "x": 199.7,
-        "y": 1073
+        "y": 1073,
       },
       "openings": [],
-      "thickness": 30
+      "thickness": 30,
     },
     {
       "a": {
         "x": 203.2,
-        "y": 776.9
+        "y": 776.9,
       },
       "b": {
         "x": 304.2,
-        "y": 776.9
+        "y": 776.9,
       },
       "openings": [
         {
-          "mirrored": [0, 0],
+          "mirrored": [
+            0,
+            0,
+          ],
           "t": 0.5,
           "type": "door",
-          "width": 85.7
-        }
+          "width": 85.7,
+        },
       ],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 232.6,
-        "y": 516.5
+        "y": 516.5,
       },
       "b": {
         "x": 333.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [
         {
-          "mirrored": [0, 1],
+          "mirrored": [
+            0,
+            1,
+          ],
           "t": 0.5,
           "type": "door",
-          "width": 89.9
-        }
+          "width": 89.9,
+        },
       ],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 235.6,
-        "y": 391.2
+        "y": 391.2,
       },
       "b": {
         "x": 333.7,
-        "y": 391.2
+        "y": 391.2,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 304.2,
-        "y": 1073
+        "y": 1073,
       },
       "b": {
         "x": 304.2,
-        "y": 776.9
+        "y": 776.9,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 333.7,
-        "y": 391.2
+        "y": 391.2,
       },
       "b": {
         "x": 333.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 333.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "b": {
         "x": 493.5,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [
         {
-          "mirrored": [0, 0],
+          "mirrored": [
+            0,
+            0,
+          ],
           "t": 0.4,
           "type": "door",
-          "width": 89.4
-        }
+          "width": 89.4,
+        },
       ],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 240.8,
-        "y": 0
+        "y": 0,
       },
       "b": {
         "x": 607.7,
-        "y": 17.9
+        "y": 17.9,
       },
       "openings": [
         {
-          "mirrored": [0, 0],
+          "mirrored": [
+            0,
+            0,
+          ],
           "t": 0.5,
           "type": "door",
-          "width": 174.2
+          "width": 174.2,
         },
         {
           "t": 0.2,
           "type": "window",
-          "width": 80
+          "width": 80,
         },
         {
           "t": 0.8,
           "type": "window",
-          "width": 80.8
-        }
+          "width": 80.8,
+        },
       ],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 607.7,
-        "y": 776.9
+        "y": 776.9,
       },
       "b": {
         "x": 304.2,
-        "y": 776.9
+        "y": 776.9,
       },
       "openings": [
         {
-          "mirrored": [1, 0],
+          "mirrored": [
+            1,
+            0,
+          ],
           "t": 0.8,
           "type": "door",
-          "width": 89.9
-        }
+          "width": 89.9,
+        },
       ],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 304.2,
-        "y": 1073
+        "y": 1073,
       },
       "b": {
         "x": 607.7,
-        "y": 1085.8
+        "y": 1085.8,
       },
       "openings": [
         {
           "t": 0.1,
           "type": "window",
-          "width": 66.2
+          "width": 66.2,
         },
         {
           "t": 0.4,
           "type": "window",
-          "width": 103.2
+          "width": 103.2,
         },
         {
           "t": 0.6,
           "type": "window",
-          "width": 67
-        }
+          "width": 67,
+        },
       ],
-      "thickness": 30
+      "thickness": 30,
     },
     {
       "a": {
         "x": 493.5,
-        "y": 403.9
+        "y": 403.9,
       },
       "b": {
         "x": 493.5,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 493.5,
-        "y": 516.5
+        "y": 516.5,
       },
       "b": {
         "x": 508.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 508.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "b": {
         "x": 508.7,
-        "y": 668.9
+        "y": 668.9,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 508.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "b": {
         "x": 607.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 568.8,
-        "y": 401.4
+        "y": 401.4,
       },
       "b": {
         "x": 607.7,
-        "y": 401.4
+        "y": 401.4,
       },
       "openings": [],
-      "thickness": 10
+      "thickness": 10,
     },
     {
       "a": {
         "x": 607.7,
-        "y": 17.9
+        "y": 17.9,
       },
       "b": {
         "x": 607.7,
-        "y": 401.4
+        "y": 401.4,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 607.7,
-        "y": 401.4
+        "y": 401.4,
       },
       "b": {
         "x": 607.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 607.7,
-        "y": 516.5
+        "y": 516.5,
       },
       "b": {
         "x": 607.7,
-        "y": 776.9
+        "y": 776.9,
       },
       "openings": [],
-      "thickness": 20
+      "thickness": 20,
     },
     {
       "a": {
         "x": 607.7,
-        "y": 776.9
+        "y": 776.9,
       },
       "b": {
         "x": 607.7,
-        "y": 1085.8
+        "y": 1085.8,
       },
       "openings": [],
-      "thickness": 20
-    }
-  ]
+      "thickness": 20,
+    },
+  ],
 }

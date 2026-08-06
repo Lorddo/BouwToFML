@@ -64,7 +64,7 @@ export function pointLineDistance(point: RefPoint, lineOrigin: RefPoint, lineDir
   return Math.abs(cross(delta, lineDir))
 }
 
-export function segmentMidpoint(a: RefPoint, b: RefPoint): RefPoint {
+function segmentMidpoint(a: RefPoint, b: RefPoint): RefPoint {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
 }
 
@@ -154,7 +154,7 @@ export function distToNearestBBoxCorner(point: RefPoint, bbox: RefBBox): number 
   return closestPointDistance(point, corners)
 }
 
-export function distancePointToSegment(point: RefPoint, a: RefPoint, b: RefPoint): number {
+function distancePointToSegment(point: RefPoint, a: RefPoint, b: RefPoint): number {
   const ab = subtract(b, a)
   const ap = subtract(point, a)
   const denom = dot(ab, ab)
@@ -164,11 +164,7 @@ export function distancePointToSegment(point: RefPoint, a: RefPoint, b: RefPoint
   return Math.hypot(point.x - q.x, point.y - q.y)
 }
 
-export function pointOnPolygonEdge(
-  point: RefPoint,
-  polygon: RefPoint[],
-  tolerancePx: number,
-): boolean {
+function pointOnPolygonEdge(point: RefPoint, polygon: RefPoint[], tolerancePx: number): boolean {
   if (polygon.length < 2) return false
   for (let i = 0; i < polygon.length; i += 1) {
     const a = polygon[i]

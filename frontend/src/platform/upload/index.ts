@@ -1,4 +1,3 @@
-export type { UploadedImage, UploadMime } from './types'
 export { useImageUpload } from './useImageUpload'
 export {
   closePdfSession,
@@ -9,4 +8,3 @@ export {
   renderPdfPagePreviewForFile,
   renderPdfPageToBlobUrlForFile,
 } from './pdfToImage'
-export type { OpenPdfDocumentResult } from './pdfToImage'

@@ -4,9 +4,7 @@ import {
   syncDoorBridgeWallOverrides as syncDoorBridgeWallOverridesBase,
   syncDoorSwingFaceOverrides as syncDoorSwingFaceOverridesBase,
   syncDoorframeFaceOverrides as syncDoorframeFaceOverridesBase,
-  syncPinnedClassOverrides as syncPinnedClassOverridesBase,
   syncWindowFaceOverrides as syncWindowFaceOverridesBase,
-  type SyncPinnedClassOverridesParams,
   type SyncPinnedClassResult,
 } from './face-override-sync'
 import type { RoomRasterCache } from './room-raster-cache-types'
@@ -22,13 +20,6 @@ function afterPinnedSync(
 ): SyncPinnedClassResult {
   if (result.changed) bumpFaceDualClassEpoch(cache)
   return result
-}
-
-export function syncPinnedClassOverrides(
-  cache: RoomRasterCache,
-  params: SyncPinnedClassOverridesParams,
-): SyncPinnedClassResult {
-  return afterPinnedSync(cache, syncPinnedClassOverridesBase(cache, params))
 }
 
 export function syncDoorSwingFaceOverrides(

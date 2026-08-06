@@ -9,3 +9,5 @@ vite.config.d.ts
 vite/*.js
 vite/*.d.ts
 .vitest-report.json
+# Vitest file snapshots use trailing commas; Prettier would strip them and break e2e.
+tests/e2e/fixtures/**/snapshot/

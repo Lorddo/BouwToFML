@@ -9,7 +9,7 @@ import { resolveLayer6HvConsensusTarget } from './consensus'
 import { otherEndpoint } from './junction-repair-diagonals'
 import { classifyLayer6Segment } from './segment-classify'
 
-/** L op chamfer-landing naar nog niet gerepareerde T overslaan (bv. 644,61 → T@659). */
+/** L op chamfer-landing naar nog niet gerepareerde T overslaan (landing vóór T-node). */
 export function isChamferLandingForTNode(params: {
   segments: Segment[]
   point: { x: number; y: number }

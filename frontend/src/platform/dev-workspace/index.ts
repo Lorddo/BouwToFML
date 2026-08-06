@@ -1,8 +1,5 @@
 export {
   type DevWorkspaceSession,
-  type DevWorkspaceSessionV1,
-  type DevWorkspaceSessionV2,
-  type DevSessionCaptureInput,
   type DevWorkspaceRoomSnapshot,
   type DevWallReferenceRect,
   type DevOpeningReferenceRect,
@@ -10,6 +7,7 @@ export {
 export { captureDevWorkspaceSession } from './capture'
 export { restoreTabOutputsFromSnapshot } from './tab-outputs-serialize'
 export { clonePlain } from './clone-plain'
+export { toStorableDevSession } from './storable'
 export { decodeMaskBase64 } from './mask-codec'
 export { isDevWorkspaceSession } from './validate'
 export {

@@ -16,7 +16,7 @@ const DIR_DELTA: Record<CardinalDir, readonly [number, number]> = {
 
 const ALL_DIRS: readonly CardinalDir[] = ['left', 'right', 'up', 'down']
 
-/** Max doorframe→doorframe hops in de eerste-hop richting (twin-helft 27 naast 28). */
+/** Max doorframe→doorframe hops in de eerste-hop richting (aangrenzende twin-helften). */
 const DIRECTIONAL_GROW_HOP_CAP = 4
 
 /** Sticky/window/bridge doorframes: missing → undefined (niet `'surface'`). */

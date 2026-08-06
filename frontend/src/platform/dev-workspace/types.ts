@@ -8,7 +8,7 @@ import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
-import type { JsonTabDetectionOutputs } from './tab-outputs-serialize'
+import type { StorableTabDetectionOutputs } from './tab-outputs-serialize'
 
 export type DevRoomPhase =
   'idle' | 'awaiting_reference' | 'classifying' | 'review' | 'finalizing' | 'done'
@@ -107,8 +107,8 @@ export interface DevWorkspaceRoomSnapshot {
 }
 
 export interface DevWorkspaceDetectionExact extends DevWorkspaceRoomSnapshot {
-  /** Opgeslagen vorm: TypedArrays als number[] (zie tab-outputs-serialize). */
-  tabOutputs: JsonTabDetectionOutputs
+  /** Opgeslagen vorm: TypedArrays intact (zie tab-outputs-serialize). */
+  tabOutputs: StorableTabDetectionOutputs
   roomPhase: DevRoomPhase
   wallsDetectionComplete: boolean
 }

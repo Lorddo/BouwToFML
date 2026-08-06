@@ -297,13 +297,3 @@ export function setFacesFullyInBBox(
   return setFaceClassificationForLabels(cache, labels, target, referenceWallThicknessPx)
     .changedLabels.length
 }
-
-export function setFacesFullyInBBoxDetailed(
-  cache: RoomRasterCache,
-  bbox: RasterBBox,
-  target: RoomRasterClass,
-  referenceWallThicknessPx?: number,
-): FaceClassChangeResult {
-  const labels = findFaceLabelsFullyInBBox(cache, bbox, referenceWallThicknessPx)
-  return setFaceClassificationForLabels(cache, labels, target, referenceWallThicknessPx)
-}

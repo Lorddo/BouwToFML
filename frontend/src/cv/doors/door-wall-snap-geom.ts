@@ -5,7 +5,7 @@ import { DOOR_WALL_SNAP_TUNING, type BBoxBounds, type DoorSide } from './door-wa
 
 const T = DOOR_WALL_SNAP_TUNING
 
-export function clamp(value: number, min: number, max: number): number {
+function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
 }
 
@@ -48,7 +48,7 @@ export function resolveCandidateSides(bounds: BBoxBounds): DoorSide[] {
   return ['left', 'right', 'top', 'bottom']
 }
 
-export function pointOnSegment(
+function pointOnSegment(
   seg: SemanticWallSegment,
   tRaw: number,
 ): { t: number; x: number; y: number } {
@@ -129,7 +129,7 @@ export function resolveMaxSnapPx(params: {
   )
 }
 
-export function isMaskInk(mask: Uint8Array, width: number, x: number, y: number): boolean {
+function isMaskInk(mask: Uint8Array, width: number, x: number, y: number): boolean {
   return (mask[y * width + x] ?? 0) >= T.maskInkThreshold
 }
 
@@ -173,19 +173,4 @@ export function bboxContainsDoorFacePixel(params: {
     }
   }
   return false
-}
-
-export function expandBounds(
-  bounds: BBoxBounds,
-  marginPx: number,
-  width: number,
-  height: number,
-): BBoxBounds {
-  const margin = Math.max(0, Math.round(marginPx))
-  return {
-    x0: clamp(bounds.x0 - margin, 0, width - 1),
-    y0: clamp(bounds.y0 - margin, 0, height - 1),
-    x1: clamp(bounds.x1 + margin, 0, width),
-    y1: clamp(bounds.y1 + margin, 0, height),
-  }
 }

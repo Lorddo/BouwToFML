@@ -8,7 +8,6 @@ defineProps<{
   flowNextBlockedHint: string | null
   canGoBack: boolean
   canGoNext: boolean
-  flowStep: WorkspaceFlowStep
   nextStepButtonLabel: string
 }>()
 
@@ -41,7 +40,7 @@ const { t } = useI18n()
       <button
         type="button"
         class="flow-nav-next primary"
-        :disabled="!canGoNext || flowStep === 'result'"
+        :disabled="!canGoNext"
         @click="emit('next')"
       >
         {{ nextStepButtonLabel }}

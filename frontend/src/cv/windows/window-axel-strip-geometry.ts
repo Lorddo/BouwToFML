@@ -310,7 +310,7 @@ export function resolveReferenceTargetStripHeightPx(params: {
 }): number {
   const referenceTargetPx = denormalizeTargetStripHeightPx(params.ref, params.ref.axisBandHeightPx)
   // Voor single-strip refs blijft de referentie leidend:
-  // anders krijg je precies het De Roemer-probleem (13px -> ~8.9px drift).
+  // anders drift de strip-hoogte weg van de single-strip referentie.
   if (params.ref.stripCount <= 1) return referenceTargetPx
   if (!params.refRect) return referenceTargetPx
   const target = Math.max(1, referenceTargetPx)

@@ -41,7 +41,7 @@ export function applyLtChamferGroup(params: {
   /**
    * L/T-groep → één H×V-hit binnen muurdikte-marge.
    * Korte stubs op de T-touch (H tussen V en diag) verwijderen — niet naar hit
-   * draaien tot V-stub (BouwTek11 @1509: H@908 → valse T blijven).
+   * draaien tot V-stub (korte H tussen V en diag → valse T blijven).
    * Lange H/V mogen meeschuiven (tikje scheef); L7+ orthogonaliseert.
    */
   const thicknessMargin = scale.thicknessMarginPx
@@ -54,7 +54,7 @@ export function applyLtChamferGroup(params: {
       const onDiag = diagEndpoints.some((p) => Math.hypot(p.x - end.x, p.y - end.y) <= nearbyWeldPx)
       if (!onDiag) continue
       const shift = Math.hypot(end.x - hit.x, end.y - hit.y)
-      // Nooit een arm plat trekken naar een verre hit (2D_3E: H@587→hit@572 → zero + gat).
+      // Nooit een arm plat trekken naar een verre hit (zero-length segment + gat).
       if (shift > Math.min(maxArmShift, thicknessMargin)) continue
       const other = end === seg.a ? seg.b : seg.a
       if (Math.hypot(other.x - hit.x, other.y - hit.y) <= nearbyWeldPx) {
@@ -121,7 +121,7 @@ export function applyLtChamferGroup(params: {
     snapAnyEndpointNearDiagToHit(segIndex, geometry.hit)
   }
 
-  // Collinear H-overlap na snap (export 47 oost-T: stub 1058→1044 onder langere H).
+  // Collinear H-overlap na snap (korte stub onder langere H op oost-T).
   const hForCover = new Set<number>(geometry.hSegIndices)
   for (let i = 0; i < work.length; i += 1) {
     if (diagSet.has(i) || removeSet.has(i)) continue

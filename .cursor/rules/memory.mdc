@@ -5,7 +5,35 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-04 (L14 1D NMS)
+Laatste update: 2026-08-06 (stap-terug preserve)
+
+## Stap-terug / flow-preserve (2026-08-06)
+
+Bug: terug van preprocess→input wiste refs/dikte/inkt; opnieuw enter templates herstartte OCR/classify (UI-lock via `ocrInitialPassReady`); remasure bij elke vooruit. Download project kon stil falen (FML niet opgeslagen vóór `flowStep=result`). Fix: stap-terug bewaart state; bootstrap/remasure skip bij bestaande detectie; result wipe alleen bij her-autoclassify; enter-result store + FML-paneel download-knop; dirty sync bij download (bovenlicht blijft export-only, geen regen nodig).
+
+## Onderlegger / B/W overnemen (2026-08-06)
+
+Bug: `ensureSourceUnderlay` schreef alleen de **eerste** schaal-bevestiging → her-upload opzelfde floor bleef oude bron. Fix: per-floor `blob.sourceUnderlay` + altijd overschrijven bij schaal-bevestigen; donor-dropdown voor «Onderlegger overnemen» en «B/W overnemen» (zoals muurstempel). Legacy: project-level source blijft fallback als geen floor-bronnen.
+
+## Vue soft access-gate (2026-08-05)
+
+Hosted test: `VITE_APP_ACCESS_PASSWORD` → `AppAccessGate` vóór shell; leeg = geen gate. Unlock: `sessionStorage` (`bouwToFml.accessUnlocked`). Soft only; Zero Trust later.
+
+## Customer-test audit (2026-08-05)
+
+Rapport: `.cursor/docs/audit-2026-08-05-customer-test.md` — **Go**. Live: https://floorplan-fml.lorddo3066.workers.dev/ — COOP/COEP/CORP geverifieerd; P1 dry-run user-OK (multi-floor, settings, FML-viewer). Klaar voor klanttesters.
+
+## Diagnose-export FAB (2026-08-05)
+
+Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, B/W, refs, deuren/ramen, compact L10/L12/L14, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts`.
+
+## Projectpersistentie IndexedDB (2026-08-05)
+
+`ProjectState` + per-floor DevSession-blobs naar IndexedDB (`projects` + `projectIndex`, DB v2). Checkpoints: stap-overgang, floor-CRUD, muren-afronden, FML-preview; meta gedebounced. Geen autosave binnen een stap. Stap 0: resume-kaart «Verder werken» / «Nieuw project». Serialisatie: TypedArrays intact (`toStorableDevSession` deep clone), PNG/masks als `Uint8Array`. `resetProject` / «Nieuwe tekening» wist het record.
+
+## Customer test delivery (2026-08-04 → 08-05)
+
+Statische host-klaar: lege start, `base: '/'`, sourcemap uit, error-banner, `beforeunload`, privacy-scrub. COOP/COEP: Vite preview/server **én** `public/_headers` voor Cloudflare Pages. Guide: `.cursor/docs/customer-test-delivery.md`. Devtools blijven. Bundle ~11 MB OpenCV + ~2 MB app.
 
 ## L14 1D muurgat-dedupe (2026-08-04)
 
@@ -114,6 +142,8 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
+**Customer-test (2026-08-05) — Go.** Live https://floorplan-fml.lorddo3066.workers.dev/ ; headers OK; dry-run OK. Klaar voor klant.
+
 **L14 1D NMS (2026-08-04).** R-28/X-28 in bind + `toLayer14WindowsForFml` vóór R-27.
 
 **FML merge toggles (2026-08-04).** Settings `fmlConversion.mergeDoubleDoors` / `mergeMultiWindows`; raam-merge in FML-pad.
@@ -122,7 +152,7 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 **Escalatie-grootboek instrument klaar (2026-07-31).** Batch VERWIJDEREN deels gedaan: D-45, D-49, D-53, R-26 weg. Rest: D-50..D-52 of FML cat-E (X-01/X-11/…). Geen drempel én pad in dezelfde diff.
 
-Dev-default onderlegger = **Project4 bg** (`examples/Bouwtekeningen/Project4/bg.jpg`, 1500×1000). Refs + preprocess: LBE in **stap 2**; abs-px besluiten gedaan (R7/R8 Later open). Production-refactor: **ronde 1–22 gedaan**. **Lean/DRY pass:** clusters leeg / Cat C product-F. Open: `hasFmlSemanticSource` gate = F; UI-smokes Project4.
+Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg). Refs + preprocess: LBE in **stap 2**; abs-px besluiten gedaan (R7/R8 Later open). Production-refactor: **ronde 1–22 gedaan**. **Lean/DRY pass:** clusters leeg / Cat C product-F. Open: `hasFmlSemanticSource` gate = F.
 
 **Open / handmatig checken**
 

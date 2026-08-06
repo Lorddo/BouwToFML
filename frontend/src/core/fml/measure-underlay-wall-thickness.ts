@@ -1,15 +1,22 @@
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import type { Point2D, Wall } from './types'
 
-const INK_LUMINANCE_THRESHOLD = 140
 /**
  * De getekende inktband is iets breder dan de werkelijke muur (lijndikte/anti-alias).
  * Neem 90% van de gemeten dikte zodat de bandgrens niet stelselmatig te dik uitvalt.
  */
 // ESC:X-18 (E)
 const INK_THICKNESS_FACTOR = 0.9
-/** Zoekvenster per zijde loodrecht op de muur — geen muur is dikker dan dit (cm). */
-const MAX_WALL_SEARCH_CM = 60
+/**
+ * Zoekvenster per zijde loodrecht op de muur (cm), per band-pick tier.
+ * Buitenste-inkt in deze box — bewust niet hartlijn-walk (arcering).
+ */
+export const FML_THICKNESS_PICK_SEARCH_CM = {
+  min: 20,
+  max: 50,
+} as const
+/** Fallback als geen tier-zoekvenster is meegegeven. */
+const DEFAULT_WALL_SEARCH_CM = FML_THICKNESS_PICK_SEARCH_CM.max
 /** Overbrug interne witgaten bij diagonale fallback (cm). */
 const INTERNAL_GAP_TOLERANCE_CM = 6
 /** Korte box-lengte langs de muur-as (px). */
@@ -20,6 +27,15 @@ const PROBE_ALONG_AXIS_RATIO = 0.15
 const PROBE_SCAN_COUNT = 5
 /** Binnen deze graden van H/V: as-aligned bbox; anders diagonale fallback. */
 const ORTHO_ANGLE_EPS_DEG = 15
+
+/** Muur-B/W (0 = inkt, 255 = wit) → meetmask (255 = inkt). */
+export function wallBwToInkMask(wallBw: Uint8Array): Uint8Array {
+  const mask = new Uint8Array(wallBw.length)
+  for (let i = 0; i < wallBw.length; i += 1) {
+    mask[i] = (wallBw[i] ?? 255) < 128 ? 255 : 0
+  }
+  return mask
+}
 
 function medianOf(values: number[]): number {
   if (values.length === 0) return 0
@@ -357,78 +373,35 @@ export function imagePxThicknessToCm(
   return Math.max(1, thicknessPx / pxPerMmAvg / 10)
 }
 
-function buildInkMask(imageData: ImageData): Uint8Array {
-  const { width, height, data } = imageData
-  const mask = new Uint8Array(width * height)
-  for (let i = 0; i < width * height; i += 1) {
-    const offset = i * 4
-    const lum = 0.299 * data[offset] + 0.587 * data[offset + 1] + 0.114 * data[offset + 2]
-    mask[i] = lum < INK_LUMINANCE_THRESHOLD ? 255 : 0
-  }
-  return mask
-}
-
-const imageMaskCache = new Map<
-  string,
-  Promise<{ mask: Uint8Array; width: number; height: number }>
->()
-
-async function loadInkMask(
-  imageSrc: string,
-  width: number,
-  height: number,
-): Promise<{ mask: Uint8Array; width: number; height: number }> {
-  const key = `${imageSrc}|${width}|${height}`
-  const cached = imageMaskCache.get(key)
-  if (cached) return cached
-
-  const promise = new Promise<{ mask: Uint8Array; width: number; height: number }>(
-    (resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        if (!ctx) {
-          reject(new Error('Canvas niet beschikbaar voor muurdiktemeting.'))
-          return
-        }
-        ctx.drawImage(img, 0, 0, width, height)
-        const imageData = ctx.getImageData(0, 0, width, height)
-        resolve({ mask: buildInkMask(imageData), width, height })
-      }
-      img.onerror = () => reject(new Error('Onderlegger kon niet geladen worden voor meting.'))
-      img.src = imageSrc
-    },
-  )
-
-  imageMaskCache.set(key, promise)
-  return promise
-}
-
-/** Meet muurdikte loodrecht op de hartlijn via de onderlegger (px → cm). */
-export async function measureWallThicknessCmOnUnderlay(params: {
-  imageSrc: string
-  imageWidthPx: number
-  imageHeightPx: number
+/**
+ * Meet muurdikte loodrecht op de hartlijn via muur-B/W (0 = inkt).
+ * Ortho: buitenste inkt in probe-box (arcering/dubbele lijn blijft één band).
+ */
+export function measureWallThicknessCmOnUnderlay(params: {
+  /** Canonieke muur-B/W (ná bake; OpenCV: 0 = inkt, 255 = wit). */
+  wallBw: { data: Uint8Array; width: number; height: number }
   wall: Pick<Wall, 'a' | 'b'>
   origin: Point2D
   pxPerMmX: number
   pxPerMmY: number
-}): Promise<number> {
-  const { mask, width, height } = await loadInkMask(
-    params.imageSrc,
-    params.imageWidthPx,
-    params.imageHeightPx,
-  )
+  /** Zoekvenster per zijde loodrecht op de muur (cm). */
+  maxSearchCm?: number
+}): number {
+  const { width, height } = params.wallBw
+  if (width <= 0 || height <= 0 || params.wallBw.data.length < width * height) {
+    throw new Error('Muur-B/W ontbreekt of heeft ongeldige afmetingen.')
+  }
+  const mask = wallBwToInkMask(params.wallBw.data)
   const a = cmPointToImagePx(params.wall.a, params.origin, params.pxPerMmX, params.pxPerMmY)
   const b = cmPointToImagePx(params.wall.b, params.origin, params.pxPerMmX, params.pxPerMmY)
   const pxPerMmAvg =
     (Math.max(0, params.pxPerMmX) + Math.max(0, params.pxPerMmY)) / 2 ||
     Math.max(params.pxPerMmX, params.pxPerMmY)
-  const maxSearchPx = pxPerMmAvg > 0 ? Math.round(MAX_WALL_SEARCH_CM * 10 * pxPerMmAvg) : 512
+  const searchCm =
+    Number.isFinite(params.maxSearchCm) && (params.maxSearchCm as number) > 0
+      ? (params.maxSearchCm as number)
+      : DEFAULT_WALL_SEARCH_CM
+  const maxSearchPx = pxPerMmAvg > 0 ? Math.round(searchCm * 10 * pxPerMmAvg) : 512
   const gapTolerancePx =
     pxPerMmAvg > 0 ? Math.round(INTERNAL_GAP_TOLERANCE_CM * 10 * pxPerMmAvg) : 4
   const { values, nx, ny } = sampleThicknessPxOnMask({
@@ -441,13 +414,14 @@ export async function measureWallThicknessCmOnUnderlay(params: {
     gapTolerancePx,
   })
   if (!values.length) {
-    throw new Error('Geen muur-inkt gevonden op de onderlegger bij deze muur.')
+    throw new Error('Geen muur-inkt gevonden op de muur-B/W bij deze muur.')
   }
   const measuredPx = medianOf(values)
   const thicknessPx = measuredPx * INK_THICKNESS_FACTOR
   noteDiscardedMeasurement('X-18', 'measureUnderlayWallThickness', measuredPx, thicknessPx, {
     factor: INK_THICKNESS_FACTOR,
     samples: values.length,
+    maxSearchCm: searchCm,
   })
   const cm = imagePxThicknessToCmAlongNormal(thicknessPx, nx, ny, params.pxPerMmX, params.pxPerMmY)
   return Math.round(cm * 10) / 10

@@ -107,7 +107,7 @@ function preferredWallAxisFromBBox(bbox: { width: number; height: number }): 'h'
 /**
  * Height-gate Either (ink óf white in diepte-band).
  * Hoek/hinge: altijd white wanneer beschikbaar; ink-fallback alleen zonder white-geom
- * (wall-fill seeds zoals face 262).
+ * (wall-fill seeds zonder white-geom).
  */
 function resolveMeasureGeom(params: {
   dual: FaceDualSpace

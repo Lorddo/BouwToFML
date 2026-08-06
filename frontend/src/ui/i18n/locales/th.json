@@ -17,16 +17,29 @@
     "percent": "%",
     "loading": "กำลังโหลด…",
     "errorGeneric": "เกิดข้อผิดพลาด",
+    "dismiss": "ปิด",
     "opencvLoadFailed": "โหลด OpenCV ไม่ได้",
     "fitToView": "พอดีกับมุมมอง",
     "lineThickness": "ความหนาเส้น",
-    "undoAction": "เลิกทำ"
+    "undoAction": "เลิกทำ",
+    "unsavedWorkWarning": "คุณมีงานที่ยังไม่ได้บันทึก ออกจากหน้านี้หรือไม่?"
   },
   "app": {
     "title": "BouwToFML",
     "subtitle": "แบบแปลนสู่ Floorplanner",
     "newDrawing": "แบบใหม่",
-    "settings": "การตั้งค่า"
+    "settings": "การตั้งค่า",
+    "debugEmptyHint": "ไม่มีเครื่องมือดีบักในขั้นตอนนี้ เปิดอีกครั้งที่ preprocess (walls), detection หรือ result"
+  },
+  "access": {
+    "subtitle": "กรอกรหัสผ่านเพื่อดำเนินการต่อ",
+    "password": "รหัสผ่าน",
+    "submit": "ดำเนินการต่อ",
+    "incorrect": "รหัสผ่านไม่ถูกต้อง"
+  },
+  "diagnosis": {
+    "fabTooltip": "ดาวน์โหลดแพ็กเกจวินิจฉัยสำหรับฝ่ายสนับสนุน (สิ่งที่มีอยู่ตอนนี้)",
+    "fabAria": "ดาวน์โหลดแพ็กเกจวินิจฉัย"
   },
   "flow": {
     "previous": "ก่อนหน้า",
@@ -79,7 +92,7 @@
     "title": "โครงการ",
     "hint": "ชื่อโครงการและชั้น ที่อยู่ไม่บังคับ จากนั้นตรวจจับทีละชั้น",
     "name": "ชื่อโครงการ",
-    "namePlaceholder": "เช่น Kinderdijkstraat 53",
+    "namePlaceholder": "เช่น Main Street 12",
     "address": "ที่อยู่",
     "addressPlaceholder": "ถนน, เมือง",
     "floors": "ชั้น",
@@ -100,10 +113,21 @@
     "bovenlicht": "ช่องแสงเหนือประตู",
     "resetDefaults": "รีเซ็ตเป็นค่าเริ่มต้น",
     "railLabel": "ชั้น",
+    "resume": {
+      "title": "โปรเจกต์ที่บันทึกไว้",
+      "untitled": "โปรเจกต์ไม่มีชื่อ",
+      "meta": "{floors} ชั้น · แก้ไขล่าสุด {updated}",
+      "continue": "ทำงานต่อ",
+      "newProject": "โปรเจกต์ใหม่"
+    },
     "errors": {
       "floorNotFound": "ไม่พบชั้น",
       "keepOneFloor": "ต้องเหลืออย่างน้อยหนึ่งชั้น",
-      "noFloorReadyForFml": "ยังไม่มีชั้นพร้อมส่งออก FML"
+      "noFloorReadyForFml": "ยังไม่มีชั้นพร้อมส่งออก FML",
+      "persistFailed": "บันทึกโปรเจกต์ในเครื่องไม่ได้",
+      "persistQuota": "พื้นที่เก็บข้อมูลเต็ม — บันทึกโปรเจกต์ไม่ได้",
+      "resumeFailed": "โหลดโปรเจกต์ที่บันทึกไว้ไม่ได้",
+      "resumeFailedDetail": "โหลดโปรเจกต์ที่บันทึกไว้ไม่ได้: {message}"
     }
   },
   "input": {
@@ -130,8 +154,9 @@
     "underlayTitle": "ภาพพื้น",
     "underlayHint": "ดาวน์โหลดภาพปัจจุบัน (ครอป/ลบ + หมุน) เป็น PNG แก้แล้วอัปโหลดใหม่ — ตั้งหมุนเป็น 0° (อยู่ใน PNG แล้ว) ตั้งมาตราส่วนต่อการอัปโหลด วาดอ้างอิงในขั้นตอนที่ 2",
     "reuseUnderlay": "ใช้ภาพพื้นซ้ำ",
-    "reuseUnderlayHintOk": "ใช้แหล่งโครงการ (สแกนต้นฉบับ + เส้นมาตราส่วน โดยไม่ครอป) ใช้ได้หลังยืนยันมาตราส่วนบนชั้นก่อนหน้า จากนั้นครอปชั้นนี้อีกครั้ง",
-    "reuseUnderlayHintBlocked": "ยืนยันมาตราส่วนบนชั้นก่อน (ก่อนครอป) เพื่อเก็บแหล่งโครงการ",
+    "reuseUnderlayDonor": "คัดลอกจากชั้น",
+    "reuseUnderlayHintOk": "ใช้สแกนต้นฉบับ + เส้นมาตราส่วนของชั้นที่เลือก (โดยไม่ครอป) ใช้ได้หลังยืนยันมาตราส่วนบนชั้นนั้น จากนั้นครอปชั้นนี้อีกครั้ง",
+    "reuseUnderlayHintBlocked": "ยืนยันมาตราส่วนบนชั้นก่อน (ก่อนครอป) เพื่อให้ชั้นนั้นใช้เป็นแหล่งได้",
     "downloadUnderlay": "ดาวน์โหลดภาพพื้น (PNG)",
     "opencvLoading": "กำลังโหลด OpenCV...",
     "opencvReset": "รีเซ็ตตัวโหลด",
@@ -232,7 +257,8 @@
       "disabledHint": "OCR ปิด — เปิดในขั้นตอนที่ 2 (เตรียมภาพ)"
     },
     "copyBw": "ใช้ขาวดำซ้ำ",
-    "copyBwHint": "คัดลอกเฉพาะการปรับขาวดำ (และความหนาผนังถ้ามี) วาดกล่องอ้างอิงใหม่หลังครอป — พิกัดจากชั้นอื่นไม่ตรง",
+    "copyBwDonor": "คัดลอกจากชั้น",
+    "copyBwHint": "คัดลอกเฉพาะการปรับขาวดำ (และความหนาผนังถ้ามี) จากชั้นที่เลือก วาดกล่องอ้างอิงใหม่หลังครอป — พิกัดจากชั้นอื่นไม่ตรง",
     "downloadPng": "ดาวน์โหลด {tab} PNG",
     "downloading": "กำลังเตรียมภาพ…",
     "stamp": {
@@ -315,6 +341,38 @@
       "rescan": "สแกนอีกครั้ง ({count})",
       "clear": "ล้าง OCR"
     },
+    "ocrHits": {
+      "foundWords": "คำที่พบ ({count})",
+      "shiftClickHint": "Shift+คลิกกล่องบนแคนวาสเพื่อลบ",
+      "removeFromMask": "ลบออกจากมาสก์ข้อความ"
+    },
+    "gaps": {
+      "title": "ช่องว่าง",
+      "hint": "Solid: พื้นผิวเดียวกับ Walls แต่พื้นผิวใต้มาสก์ Gaps (ขั้น 2 สีดำ) ถูกตั้งเป็นภายนอก — พื้นและช่องว่างยังมีสี พื้นผิวที่ใหญ่กว่า 3× อ้างอิงประตู/หน้าต่างที่ใหญ่สุด (head/interior ไม่ใช่ขอบนอก) จะถูกล้างด้วย จำแนก Walls ก่อน โหมดละเอียด (debug sidebar): ตัด Otsu-ขาวเฉพาะใน gaps-ดำ",
+      "loading": "กำลังโหลดพื้นผิว…",
+      "needWalls": "จำแนกผนังในแท็บ Walls ก่อน",
+      "demoted": "พื้นผิวผนังที่ลบ: {demoted} · คงไว้: {kept}",
+      "oversized": " · ใหญ่เกินไปที่ลบ: {count} (cap {cap} px)",
+      "refMax": " · ref-max {px} px"
+    },
+    "doors": {
+      "title": "ประตู",
+      "hint": "Stage 1 swing filter: ผู้สมัครตามอ้างอิงระดับพื้นผิว (non-outside seeds, shared-edge clustering, ช่วงขนาด 40–120 ซม. และ aspect ±5%)",
+      "loading": "กำลังโหลดผู้สมัครประตู…",
+      "needWalls": "จำแนกผนังในแท็บ Walls ก่อน",
+      "noRef": "ไม่พบอ้างอิง swing ที่ใช้ได้ วาดอ้างอิงประตูพร้อมส่วนโค้งในขั้น 1",
+      "stats": "ใช้งาน {stage}: {hypotheses} · stage1 รวม: {stage1} · accepted: {accepted} · rejected: {rejected} · single: {single} · clusters: {clusters} · refs: {refs} · seeds: {seeds}",
+      "sizeBand": "ช่วง px แกนผนัง: {min}-{max} (ความลึกจากอ้างอิงประตู)"
+    },
+    "windows": {
+      "title": "หน้าต่าง",
+      "hint": "Stage 1 axel filter + Stage 2 door-arc reject + Stage 3 evidence filter (framing ที่ปลายแกน, สำรอง top+bottom)",
+      "loading": "กำลังโหลดผู้สมัครหน้าต่าง…",
+      "needWalls": "จำแนกผนังในแท็บ Walls ก่อน",
+      "noRef": "ไม่พบอ้างอิง axel หน้าต่างที่ใช้ได้ วาดอ้างอิงหน้าต่างพร้อมแถบด้านในในขั้น 1",
+      "stats": "ใช้งาน {stage}: {hypotheses} · stage1 รวม: {stage1} · stage2 accepted: {stage2Accepted} · doorframe: shared {share}, adjacent {adjacent}, directional {directional} · stage3 accepted: {stage3Accepted} (framing {framing}, strip-stack {stripStack}) · stage3 rejected: {stage3Rejected} · doorframes: {doorframes} · stage4 windows: {stage4Windows} · doorframes: {stage4Doorframes} · refs: {refs} · candidate faces: {candidates} · accepted: {accepted} · rejected: {rejected}",
+      "refRow": "Ref {n}: {matches} matches · แบบ {strips} strips · h {height}px"
+    },
     "roomFace": {
       "awaitingReference": "รออ้างอิง",
       "classifying": "กำลังจำแนก…",
@@ -394,14 +452,15 @@
     "overrideHint": "แก้ทีละช่องเปิด: Ctrl+คลิกในตัวอย่าง → ขนาด/ความสูง",
     "regenerate": "สร้างใหม่",
     "downloadProject": "ดาวน์โหลด .fml (โครงการ)",
-    "dirtyHint": "ความสูง/ความหนาเปลี่ยน — กดสร้างใหม่เพื่ออัปเดต FML",
+    "dirtyHint": "ความสูง/ความหนาเปลี่ยน — กดสร้างใหม่เพื่ออัปเดตตัวอย่าง",
     "thicknessPick": {
       "clickWall": "คลิกผนังเพื่อตั้งแถบวัด {tier} (±10%)",
-      "measuring": "กำลังวัดบนภาพพื้น…",
+      "measuring": "กำลังวัดบนผนังขาวดำ…",
       "applied": "แถบ {tier}: {cm} ซม. (±10%) — กดสร้างใหม่",
       "retry": "คลิกผนังอีกครั้งสำหรับแถบวัด {tier}",
       "noUnderlay": "ไม่มีภาพพื้น — อัปโหลดและยืนยันมาตราส่วนก่อนวัด",
-      "measureFailed": "การวัดล้มเหลว — ไม่มีภาพพื้นหรือผนัง",
+      "noWallBw": "ไม่มีผนังขาวดำ — ทำขั้นเตรียม (ขั้น 2) ให้เสร็จก่อนวัดแถบ",
+      "measureFailed": "การวัดล้มเหลว — ไม่มีผนังขาวดำหรือผนัง",
       "measureFailedGeneric": "วัดความหนาผนังล้มเหลว"
     },
     "toolbar": {
@@ -537,6 +596,9 @@
     "underlayOpacityAria": "ความทึบภาพพื้น",
     "fmlOpacity": "FML",
     "fmlOpacityAria": "ความทึบ FML",
+    "openFmlViewer": "เปิดตัวดู FML",
+    "openFmlViewerHint": "ตัวดูแยกสำหรับเปิด แก้ไข และส่งออกไฟล์ .fml ที่มีอยู่ (นอกเวิร์กโฟลว์โครงการ)",
+    "backToSettings": "กลับไปที่การตั้งค่า",
     "save": "บันทึก",
     "resetFactory": "รีเซ็ตเป็นค่าโรงงาน",
     "export": "ส่งออก",

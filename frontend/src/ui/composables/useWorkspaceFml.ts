@@ -15,6 +15,7 @@ export function useWorkspaceFml(deps: {
   /** 0 = uit, 100 = volledig opaque. */
   underlayOpacity: Ref<number>
   setLocalError: (message: string | null) => void
+  getBaseWallBw: () => { data: Uint8Array; width: number; height: number } | null
   orientedDoors?: Ref<OrientedDoor[]>
   boundWindows?: Ref<BoundWindow[]>
   mergeDoubleDoors?: Ref<boolean>
@@ -34,6 +35,7 @@ export function useWorkspaceFml(deps: {
     underlayOpacity: deps.underlayOpacity,
     setLocalError: deps.setLocalError,
     combinedOutput: deps.combinedOutput,
+    getBaseWallBw: deps.getBaseWallBw,
     referenceWallBandSync: deps.referenceWallBandSync,
   })
 
@@ -106,6 +108,7 @@ export function useWorkspaceFml(deps: {
     applyBandBoundariesFromReferenceWall: thickness.applyBandBoundariesFromReferenceWall,
     resetFmlSessionDefaults: thickness.resetFmlSessionDefaults,
     regenerateFml: generate.regenerateFml,
+    syncAppliedFromDraft: generate.syncAppliedFromDraft,
     setFmlThicknessMinCm: thickness.setFmlThicknessMinCm,
     setFmlThicknessMidCm: thickness.setFmlThicknessMidCm,
     setFmlThicknessMaxCm: thickness.setFmlThicknessMaxCm,

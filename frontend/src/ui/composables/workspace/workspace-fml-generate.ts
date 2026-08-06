@@ -254,7 +254,10 @@ export function createWorkspaceFmlGenerate(
   }
 
   function downloadGeneratedFml(): void {
-    if (!generatedFmlText.value) return
+    if (!generatedFmlText.value) {
+      deps.setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      return
+    }
     const name = sanitizeFilename(stripFileExtension(deps.imageName.value))
     downloadFml(generatedFmlText.value, `${name}.fml`)
   }

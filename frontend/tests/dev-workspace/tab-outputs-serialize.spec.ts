@@ -5,7 +5,7 @@ import {
   cloneTabOutputsForSnapshot,
   enrichWallsOutputWithFaceState,
   restoreTabOutputsFromSnapshot,
-  type JsonTabDetectionOutputs,
+  type StorableTabDetectionOutputs,
 } from '@/platform/dev-workspace/tab-outputs-serialize'
 
 function wallsOutputWithLabels(labels: number[]): ExtractionOutput {
@@ -33,19 +33,53 @@ function wallsOutputWithLabels(labels: number[]): ExtractionOutput {
 }
 
 describe('tab-outputs-serialize', () => {
-  it('roundtrips Int32Array labels through JSON', () => {
+  it('roundtrips Int32Array labels keeping TypedArrays', () => {
     const outputs: TabDetectionOutputs = {
       walls: wallsOutputWithLabels([0, 1, 0, 2]),
     }
     const snapshot = cloneTabOutputsForSnapshot(outputs)
-    const json = JSON.parse(JSON.stringify(snapshot)) as JsonTabDetectionOutputs
-    const restored = restoreTabOutputsFromSnapshot(json)
+    const labels = snapshot.walls?.meta?.roomClassifyState?.labelsData
+    expect(labels).toBeInstanceOf(Int32Array)
+    expect(Array.from(labels ?? [])).toEqual([0, 1, 0, 2])
+
+    const restored = restoreTabOutputsFromSnapshot(snapshot)
     const state = restored.walls?.meta?.roomClassifyState
     expect(state?.labelsData).toBeInstanceOf(Int32Array)
     expect(Array.from(state?.labelsData ?? [])).toEqual([0, 1, 0, 2])
     expect(state?.rawLabelsData).toBeInstanceOf(Int32Array)
     expect(state?.baselineWallBwData).toBeInstanceOf(Uint8Array)
     expect(Array.from(state?.baselineWallBwData ?? [])).toEqual([255, 0, 255, 0])
+  })
+
+  it('restores legacy number[] snapshots', () => {
+    const legacy: StorableTabDetectionOutputs = {
+      walls: {
+        candidates: [],
+        segments: [],
+        masks: [],
+        meta: {
+          extractorId: 'geometry-lbe',
+          elapsedMs: 0,
+          roomPipelinePhase: 'classify',
+          roomClassifyState: {
+            width: 2,
+            height: 2,
+            labelsData: [0, 1, 0, 2],
+            rawLabelsData: [0, 1, 0, 2],
+            baselineWallBwData: [255, 0, 255, 0],
+            parentMap: [[1, 0]],
+            classificationByLabel: [[1, 'surface']],
+            threshold: 0.7,
+            mergedFaceCount: 1,
+          },
+        },
+      },
+    }
+    const restored = restoreTabOutputsFromSnapshot(legacy)
+    const state = restored.walls?.meta?.roomClassifyState
+    expect(state?.labelsData).toBeInstanceOf(Int32Array)
+    expect(Array.from(state?.labelsData ?? [])).toEqual([0, 1, 0, 2])
+    expect(state?.baselineWallBwData).toBeInstanceOf(Uint8Array)
   })
 
   it('merges live overrides into walls output', () => {

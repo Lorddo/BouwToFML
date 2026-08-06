@@ -24,20 +24,6 @@ export function segmentAngleDeg(seg: Segment): number {
   return (Math.atan2(seg.b.y - seg.a.y, seg.b.x - seg.a.x) * 180) / Math.PI
 }
 
-export function yOnWallAtX(wall: Segment, x: number): number {
-  const dx = wall.b.x - wall.a.x
-  if (Math.abs(dx) < 1e-6) return (wall.a.y + wall.b.y) / 2
-  const t = (x - wall.a.x) / dx
-  return wall.a.y + t * (wall.b.y - wall.a.y)
-}
-
-export function xOnWallAtY(wall: Segment, y: number): number {
-  const dy = wall.b.y - wall.a.y
-  if (Math.abs(dy) < 1e-6) return (wall.a.x + wall.b.x) / 2
-  const t = (y - wall.a.y) / dy
-  return wall.a.x + t * (wall.b.x - wall.a.x)
-}
-
 function normalizeDirection(seg: Segment): { x: number; y: number } {
   const dx = seg.b.x - seg.a.x
   const dy = seg.b.y - seg.a.y

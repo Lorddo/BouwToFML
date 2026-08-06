@@ -159,6 +159,10 @@ export function useWorkspaceRoomPipeline(deps: {
     setStatus: (message) => {
       detection.status.value = message
     },
+    onInvalidateResult: () => {
+      deps.resetFmlPreview()
+      deps.wallsDetectionComplete.value = false
+    },
     onFinalizeSuccess: async () => {
       deps.showLayer7.value = false
       deps.showLayer8.value = false

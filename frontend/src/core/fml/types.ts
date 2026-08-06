@@ -121,7 +121,7 @@ export const SLIDING_SINGLE_DOOR_REFID = 'd2785cc45c9c0ec86644135d22fa9ac9c49bca
 /** Pocketdeur (1 schuifpijl). */
 export const POCKET_DOOR_REFID = '216'
 /**
- * Garagedeur — kandidaat uit Benedendorpsweg (188 cm bij Garage-ruimtes).
+ * Garage door — candidate for garage-labelled rooms (~188 cm).
  * Visuele FP-check via editor-plaatsen + FML-export nog open.
  */
 export const GARAGE_DOOR_REFID = '9c1479d9dfc482859aea10b9dd67f5e7773fff6d'

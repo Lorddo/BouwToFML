@@ -31,7 +31,6 @@ interface CatalogEntry {
   benaming?: string
   subtype?: string
   kind?: string
-  notities?: string
   /** Kozijn-inset per zijde (cm) voor FML-boog/blad; gap blijft volle opening.width. */
   swingInsetCm?: number
   /** Vaste paneel-telling voor ramen (1|2|3); anders breedte-heuristiek bij multi. */

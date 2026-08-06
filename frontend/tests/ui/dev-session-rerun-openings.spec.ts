@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { createWorkspaceDevSessionRestoreDetection } from '@/ui/composables/workspace/workspace-dev-session-restore-detection'
-import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
+import { emptyTabOutputs, type TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RoomPhase } from '@/ui/composables/workspace/useWorkspaceRoomFaces'
@@ -19,7 +19,7 @@ describe('rerunOpeningsAfterRestore', () => {
       flowStep,
       templateTab,
       profileConfirmed: ref(true),
-      tabOutputs: ref<TabDetectionOutputs>({}),
+      tabOutputs: ref<TabDetectionOutputs>(emptyTabOutputs()),
       roomPhase,
       wallsDetectionComplete: ref(false),
       getRoomRasterCache: () => null,
@@ -72,7 +72,7 @@ describe('rerunOpeningsAfterRestore', () => {
       flowStep,
       templateTab,
       profileConfirmed: ref(true),
-      tabOutputs: ref<TabDetectionOutputs>({}),
+      tabOutputs: ref<TabDetectionOutputs>(emptyTabOutputs()),
       roomPhase,
       wallsDetectionComplete: ref(true),
       getRoomRasterCache: () => null,

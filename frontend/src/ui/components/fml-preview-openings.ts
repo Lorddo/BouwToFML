@@ -62,9 +62,6 @@ export function clampOpeningWidth(widthCm: number): number {
   return Math.max(MIN_OPENING_WIDTH_CM, Math.min(MAX_OPENING_WIDTH_CM, Math.round(widthCm)))
 }
 
-/** @deprecated Prefer clampOpeningWidth — zelfde clamp voor deur én raam. */
-export const clampDoorOpeningWidth = clampOpeningWidth
-
 function clampDoorOpeningHeight(heightCm: number): number {
   if (!Number.isFinite(heightCm)) return DEFAULT_FML_DOOR_HEIGHT_CM
   return Math.max(MIN_OPENING_HEIGHT_CM, Math.min(MAX_OPENING_HEIGHT_CM, Math.round(heightCm)))

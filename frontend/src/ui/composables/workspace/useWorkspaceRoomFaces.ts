@@ -84,6 +84,8 @@ export function useWorkspaceRoomFaces(deps: {
     },
   ) => Promise<boolean>
   onFinalizeSuccess?: () => void | Promise<void>
+  /** Bij expliciete her-autoclassify: wis FML-resultaat (niet bij stap-terug). */
+  onInvalidateResult?: () => void
   onDoorFacesDemoted?: () => void | Promise<void>
   onWindowFacesDemoted?: () => void | Promise<void>
   setStatus?: (message: string) => void
@@ -344,12 +346,14 @@ export function useWorkspaceRoomFaces(deps: {
   }
 
   async function requestAutoclassifyWalls(): Promise<boolean> {
-    if (
+    const hadDetection =
       roomPhase.value === 'review' ||
       roomPhase.value === 'done' ||
       isWallsClassifyOutput(deps.tabOutputs.value.walls) ||
       isWallsOutputFinalized(deps.tabOutputs.value.walls)
-    ) {
+    if (hadDetection) {
+      // Her-classify = resultaat wissen; stap-terug bewaart juist wél.
+      deps.onInvalidateResult?.()
       const rect = resolveReferenceWallRect(deps.rects.value, deps.selectedRectId.value)
       if (deps.referenceWallThicknessPx.value && deps.referenceWallThicknessPx.value > 0) {
         return runClassifyPhase(true)

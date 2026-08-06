@@ -57,9 +57,9 @@ export function pipelineResultToDebug(pipeline: PipelineV3Result): PipelineV3Deb
     segCount: number,
     juncCount: number,
   ) => {
-    segmentCounts[key] = segCount
-    junctionCounts[key] = juncCount
-    junctionKindCounts[key] = countJunctionKinds(juncs)
+    segmentCounts[key as string] = segCount
+    junctionCounts[key as string] = juncCount
+    junctionKindCounts[key as string] = countJunctionKinds(juncs)
     layers[key] = {
       segments: asSegmentCandidates(segs),
       junctions: mapJunctions(juncs),
@@ -159,6 +159,7 @@ export function extractionFromPipeline(params: {
   maskRle: ExtractionOutput['roomWallMaskRle']
 }): ExtractionOutput {
   return {
+    candidates: [],
     pipelineV3Debug: pipelineResultToDebug(params.pipeline),
     roomWallMaskRle: params.maskRle,
     meta: { extractorId: 'e2e-fixture', elapsedMs: 0 },

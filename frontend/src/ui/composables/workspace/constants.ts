@@ -18,13 +18,7 @@ export const WORKSPACE_FLOW_ORDER: WorkspaceFlowStep[] = [
   'result',
 ]
 
-export {
-  WORKSPACE_FLOW_LABELS,
-  RESULT_TAB_LABELS,
-  workspaceFlowLabel,
-  resultTabLabel,
-  getWorkspaceFlowLabels,
-} from '@/ui/i18n/labels'
+export { WORKSPACE_FLOW_LABELS, RESULT_TAB_LABELS } from '@/ui/i18n/labels'
 
 export const TEMPLATE_LAYER_TABS = WORKSPACE_TEMPLATE_LAYER_ORDER
 export const PREPROCESS_LAYER_TABS = [...WORKSPACE_PREPROCESS_LAYER_ORDER] as const

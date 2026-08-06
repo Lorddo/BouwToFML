@@ -142,15 +142,3 @@ export function applyInkRect(
     ctx.fillRect(x1 - thickness, y0, thickness, h)
   })
 }
-
-export function snapshotEditCanvas(canvas: HTMLCanvasElement): ImageData | null {
-  const ctx = getInkEditContext(canvas)
-  if (!ctx) return null
-  return ctx.getImageData(0, 0, canvas.width, canvas.height)
-}
-
-export function restoreEditCanvasSnapshot(canvas: HTMLCanvasElement, snapshot: ImageData): void {
-  const ctx = getInkEditContext(canvas)
-  if (!ctx || snapshot.width !== canvas.width || snapshot.height !== canvas.height) return
-  ctx.putImageData(snapshot, 0, 0)
-}

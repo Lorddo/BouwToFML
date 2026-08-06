@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { tally } from '@/core/diagnostics'
 import { useImageUpload } from '@/platform/upload'
 import { imageElementToPngDataUrl } from '@/platform/dev-workspace/image-capture'
@@ -48,8 +48,15 @@ import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
 import { useWorkspaceProject } from './project/useWorkspaceProject'
 import { loadUserSettings } from './settings/user-settings'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
+import {
+  deleteProject,
+  listProjectIndex,
+  loadProject,
+  type PersistedProjectIndexEntry,
+} from '@/platform/project-store'
 import { downloadFml } from '@/core/fml/downloadFml'
 import { sanitizeFilename } from './workspace/workspace-fml-generate'
+import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
 import {
   emptyTabOutputs,
   type ResultViewTab,
@@ -456,6 +463,7 @@ export function useWorkspace() {
   const fmlPlanName = ref<string | null>(null)
   const fmlFloorName = ref<string | null>(null)
   const fmlFloorLevel = ref<number | null>(null)
+  const fmlFloorId = ref<string | null>(null)
 
   const fml = useWorkspaceFml({
     imageName,
@@ -465,6 +473,7 @@ export function useWorkspace() {
     underlaySize: fmlUnderlaySize,
     underlayOpacity: fmlUnderlayOpacity,
     setLocalError,
+    getBaseWallBw,
     orientedDoors: doorSwingFaces.orientedDoors,
     boundWindows: windowFaces.boundWindows,
     mergeDoubleDoors,
@@ -481,6 +490,7 @@ export function useWorkspace() {
 
   const exports = useWorkspaceExports({
     imageName,
+    flowStep,
     preprocess,
     preprocessTab,
     preprocessPreview,
@@ -500,11 +510,19 @@ export function useWorkspace() {
     resolvedDoors: doorSwingFaces.resolvedDoors,
     orientedDoors: doorSwingFaces.orientedDoors,
     boundWindows: windowFaces.boundWindows,
+    resolvedWindows: windowFaces.resolvedWindows,
     windowBindRejections: windowFaces.windowBindRejections,
     getDoorArcFaceIds: () => doorSwingFaces.getStage2DoorArcFaceIds(),
     windowAxelStage: windowFaces.windowAxelStage,
     referenceWallThicknessPx,
     getBaseWallBw,
+    projectName: fmlPlanName,
+    floorId: fmlFloorId,
+    floorName: fmlFloorName,
+    floorLevel: fmlFloorLevel,
+    getPreviewPlan: () => fml.previewPlan.value ?? null,
+    getGeneratedFmlText: () => fml.generatedFmlText.value ?? '',
+    appVersion: '1.0.0',
   })
 
   const e2eFixture = useWorkspaceE2eFixtureExport({
@@ -583,6 +601,8 @@ export function useWorkspace() {
     roomRasterCache: roomFaces.roomRasterCache,
   })
 
+  /** Late-bound: project bestaat pas ná lifecycle; nodig na underlay-reset. */
+  let restoreFmlDefaultsFromActiveFloor: (() => void) | null = null
   const lifecycle = useWorkspaceLifecycle({
     clearRects,
     extractionLastOutput: extraction.lastOutput,
@@ -607,6 +627,8 @@ export function useWorkspace() {
     flowStep,
     preprocessUi,
     image,
+    imageSrc,
+    restoreFmlDefaultsFromActiveFloor: () => restoreFmlDefaultsFromActiveFloor?.(),
   })
 
   const pdfUpload = useWorkspacePdfUpload({
@@ -725,10 +747,59 @@ export function useWorkspace() {
       fml.setFmlThicknessMinCm(defaults.thicknessMinCm)
       fml.setFmlThicknessMidCm(defaults.thicknessMidCm)
       fml.setFmlThicknessMaxCm(defaults.thicknessMaxCm)
-      fml.setFmlBandMidBoundaryCm(defaults.bandMidBoundaryCm)
-      fml.setFmlBandMaxBoundaryCm(defaults.bandMaxBoundaryCm)
+      // Meetbanden blijven uit muur-REF (niet floor-defaults) — anders false dirty na meting.
+      // Programmatische sync = geen «gewijzigd»-hint; alleen handmatige FmlPanel-edits.
+      fml.syncAppliedFromDraft()
     },
+    shouldSkipPersist: () => extraction.running.value || devSessionRestoring.value,
   })
+
+  restoreFmlDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()
+  // Eerste sync: factory-FML-UI → actieve vloer-/user-defaults (o.a. bovenlicht).
+  restoreFmlDefaultsFromActiveFloor()
+
+  const resumeCandidate = ref<PersistedProjectIndexEntry | null>(null)
+
+  onMounted(() => {
+    void listProjectIndex()
+      .then((entries) => {
+        resumeCandidate.value = entries[0] ?? null
+      })
+      .catch((error) => {
+        console.warn('[project-store] list index failed', error)
+      })
+  })
+
+  async function resumePersistedProject(): Promise<void> {
+    const candidate = resumeCandidate.value
+    if (!candidate) return
+    setLocalError(null)
+    try {
+      const restored = await loadProject(candidate.id)
+      if (!restored) {
+        resumeCandidate.value = null
+        setLocalError(tGlobal('project.errors.resumeFailed'))
+        return
+      }
+      project.applyPersistedState(restored)
+      resumeCandidate.value = null
+      await project.enterActiveFloorFromProject({ keepActiveFloor: true })
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      setLocalError(tGlobal('project.errors.resumeFailedDetail', { message }))
+    }
+  }
+
+  async function discardPersistedProject(): Promise<void> {
+    const candidate = resumeCandidate.value
+    if (!candidate) return
+    try {
+      await deleteProject(candidate.id)
+    } catch (error) {
+      console.warn('[project-store] discard failed', error)
+    }
+    resumeCandidate.value = null
+  }
 
   watch(
     () => fml.previewPlan.value,
@@ -741,9 +812,19 @@ export function useWorkspace() {
   )
 
   watch(
+    () => wallsDetectionComplete.value,
+    (complete, wasComplete) => {
+      if (complete && !wasComplete && !devSessionRestoring.value && !project.switchingFloor.value) {
+        project.persistProject('wallsDetectionComplete')
+      }
+    },
+  )
+
+  watch(
     [project.projectMeta, project.activeFloor],
     () => {
       fmlPlanName.value = project.projectMeta.value.name.trim() || null
+      fmlFloorId.value = project.activeFloor.value?.id ?? null
       fmlFloorName.value = project.activeFloor.value?.name ?? null
       fmlFloorLevel.value = project.activeFloor.value?.level ?? null
     },
@@ -781,17 +862,33 @@ export function useWorkspace() {
     runOcrScan: () => ocr.runOcrScan(),
     measureWallReferenceThickness: (rect) => detection.measureWallReferenceThickness(rect),
     wallsDetectionComplete: () => wallsDetectionComplete.value,
+    hasTemplatesDetection: () => {
+      const phase = roomFaces.roomPhase.value
+      if (phase === 'review' || phase === 'done' || phase === 'finalizing') return true
+      const walls = tabOutputs.value.walls
+      return isWallsClassifyOutput(walls) || isWallsOutputFinalized(walls)
+    },
     devSessionRestoring,
-    onEnterResultStep: () => semanticWalls.buildForResultStep(),
+    onEnterResultStep: async () => {
+      await semanticWalls.buildForResultStep()
+      // Store vóór download: previewPlan kan al bestaan vóór flowStep=result (watch mist dan).
+      const plan = fml.previewPlan.value
+      if (plan?.floors[0]) {
+        project.storeGeneratedFloorForActive(plan.floors[0])
+      }
+    },
     setLocalError,
     resetInkOverlay: () => inkEdit.resetInkEdit(),
     projectCanProceed: () => project.canProceedFromProject.value,
     onLeaveProjectStep: () => project.enterActiveFloorFromProject(),
     onEnterProjectStep: () => project.leaveFloorToProject(),
+    onFlowCheckpoint: () => project.persistProject('flowCheckpoint'),
+    onResultDownload: () => downloadProjectFml(),
   })
 
   function resetWorkspace() {
     project.resetProject()
+    resumeCandidate.value = null
     lifecycle.resetWorkspace()
     flowStep.value = 'project'
   }
@@ -841,24 +938,29 @@ export function useWorkspace() {
   }
 
   function downloadProjectFml(): void {
+    // Dirty hoogte/dikte meenemen zonder canvas-edits te wissen (bovenlicht is live).
+    if (fml.fmlLimitsDirty.value) {
+      fml.syncAppliedFromDraft()
+    }
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
       setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
       return
     }
-    // Per verdieping: floor.defaults; actieve vloer volgt live FmlPanel-checkbox.
+    // Bron van waarheid = floor.defaults (schrijft FmlPanel write-through + project-setup).
+    // Live UI alleen als fallback wanneer floor-meta niet matcht (niet actieve-floor override:
+    // underlay-reset wist UI naar false terwijl defaults true konden blijven).
     const floorsMeta = project.projectFloors.value
-    const activeId = project.activeFloorId.value
     const liveBovenlicht = fml.fmlBovenlichtDefault.value
     const text = buildFmlV3(plan, {
       name: plan.name,
       bovenlichtDefault: (floor) => {
         const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
         if (!meta) return liveBovenlicht
-        if (meta.id === activeId) return liveBovenlicht
         return meta.defaults.bovenlichtDefault === true
       },
     })
+    setLocalError(null)
     downloadFml(text, `${sanitizeFilename(plan.name)}.fml`)
   }
 
@@ -972,8 +1074,13 @@ export function useWorkspace() {
     activeFloorDefaults: project.activeFloorDefaults,
     canProceedFromProject: project.canProceedFromProject,
     canReuseUnderlay: project.canReuseUnderlay,
+    underlayDonorOptions: computed(() => project.listUnderlayDonorFloors()),
     canCopyPreprocessRefs: project.canCopyPreprocessRefs,
+    preprocessDonorOptions: computed(() => project.listPreprocessDonorFloors()),
     switchingFloor: project.switchingFloor,
+    resumeCandidate,
+    resumePersistedProject,
+    discardPersistedProject,
     updateProjectMeta: project.updateProjectMeta,
     updateActiveFloorDefaults: project.updateActiveFloorDefaults,
     resetActiveFloorDefaults: project.resetActiveFloorDefaults,
@@ -982,10 +1089,12 @@ export function useWorkspace() {
     removeFloor: project.removeFloor,
     renameFloor: project.renameFloor,
     reorderFloors: project.reorderFloors,
-    reuseUnderlayFromProject: project.reuseUnderlayFromProject,
-    copyPreprocessAndRefsFromDonor: project.copyPreprocessAndRefsFromDonor,
-    downloadProjectFml,
+    reuseUnderlayFromProject: (donorFloorId: string) =>
+      project.reuseUnderlayFromProject(donorFloorId),
+    copyPreprocessAndRefsFromDonor: (donorFloorId: string) =>
+      project.copyPreprocessAndRefsFromDonor(donorFloorId),
     setFmlBovenlichtDefault,
+    downloadProjectFml,
     // Muurstempel (stap 2)
     wallStampActive: wallStamp.active,
     wallStampBaked: wallStamp.baked,

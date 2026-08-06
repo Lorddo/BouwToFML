@@ -34,6 +34,13 @@ export function useWorkspaceLifecycle(deps: {
   flowStep: Ref<WorkspaceFlowStep>
   preprocessUi: { clearLivePreviewTimer: () => void }
   image: { resetImageSource: () => void }
+  /** Non-empty underlay → warn on tab close/refresh. */
+  imageSrc: Ref<string>
+  /**
+   * Na factory-reset van FML-sessie-defaults: herstel actieve vloer-defaults
+   * (o.a. bovenlicht). Late-bound — project composable bestaat pas na lifecycle.
+   */
+  restoreFmlDefaultsFromActiveFloor?: () => void
 }) {
   function clearOpeningOverlays(): void {
     deps.doorSwingFaces?.resetDoorSwingState()
@@ -82,6 +89,8 @@ export function useWorkspaceLifecycle(deps: {
     deps.tabOutputs.value = emptyTabOutputs()
     deps.fml.clearImportedFml()
     deps.fml.resetFmlSessionDefaults()
+    // resetFmlSessionDefaults zet o.a. bovenlicht op factory-false; project-/vloerdefault terugzetten.
+    deps.restoreFmlDefaultsFromActiveFloor?.()
     deps.profileConfirmed.value = true
     deps.showOcrDetails.value = false
     deps.roomFaces.resetRoomState()
@@ -91,9 +100,16 @@ export function useWorkspaceLifecycle(deps: {
     deps.flowStep.value = 'input'
   }
 
+  function onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (!deps.imageSrc.value) return
+    event.preventDefault()
+    event.returnValue = ''
+  }
+
   onMounted(() => {
     window.addEventListener('keydown', deps.inputMask.onMaskUndoKeydown)
     window.addEventListener('keydown', deps.inkEdit.onInkUndoKeydown)
+    window.addEventListener('beforeunload', onBeforeUnload)
     if (deps.preprocess.value.ocrEnabled) {
       void warmUpOcrWorker(resolveOcrLanguage(deps.preprocess.value.ocrLanguages))
     }
@@ -103,6 +119,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.preprocessUi.clearLivePreviewTimer()
     window.removeEventListener('keydown', deps.inputMask.onMaskUndoKeydown)
     window.removeEventListener('keydown', deps.inkEdit.onInkUndoKeydown)
+    window.removeEventListener('beforeunload', onBeforeUnload)
   })
 
   return {

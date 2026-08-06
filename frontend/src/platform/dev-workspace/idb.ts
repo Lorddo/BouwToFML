@@ -1,6 +1,6 @@
-const DB_NAME = 'bouw-dev-workspace'
-const DB_VERSION = 1
-const STORE = 'sessions'
+import { openBouwDb, SESSIONS_STORE } from '@/platform/idb/bouw-db'
+import { toStorableDevSession } from './storable'
+
 const LAST_SESSION_KEY = 'last'
 const SESSION_KEY_PREFIX = 'session:'
 const LEGACY_SESSION_ID = 'legacy:last'
@@ -15,35 +15,18 @@ function fromStoreKey(key: string): string | null {
   return key.slice(SESSION_KEY_PREFIX.length)
 }
 
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-    request.onerror = () => reject(request.error ?? new Error('IndexedDB open mislukt.'))
-    request.onsuccess = () => resolve(request.result)
-    request.onupgradeneeded = () => {
-      const db = request.result
-      if (!db.objectStoreNames.contains(STORE)) {
-        db.createObjectStore(STORE)
-      }
-    }
-  })
-}
-
-import { toStorableDevSession } from './storable'
-
 export async function saveDevSession(sessionId: string, session: unknown): Promise<void> {
   const storable = toStorableDevSession(session)
-  const db = await openDb()
+  const db = await openBouwDb()
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readwrite')
+    const tx = db.transaction(SESSIONS_STORE, 'readwrite')
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error ?? new Error('IndexedDB schrijven mislukt.'))
-    const store = tx.objectStore(STORE)
+    const store = tx.objectStore(SESSIONS_STORE)
     store.put(storable, toStoreKey(sessionId))
     // Backward compatible pointer: laatst opgeslagen snapshot.
     store.put(storable, LAST_SESSION_KEY)
   })
-  db.close()
 }
 
 export async function loadLastDevSession<T>(): Promise<T | null> {
@@ -51,24 +34,23 @@ export async function loadLastDevSession<T>(): Promise<T | null> {
 }
 
 export async function loadDevSessionById<T>(sessionId: string): Promise<T | null> {
-  const db = await openDb()
+  const db = await openBouwDb()
   const value = await new Promise<unknown>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readonly')
+    const tx = db.transaction(SESSIONS_STORE, 'readonly')
     tx.onerror = () => reject(tx.error ?? new Error('IndexedDB lezen mislukt.'))
-    const request = tx.objectStore(STORE).get(toStoreKey(sessionId))
+    const request = tx.objectStore(SESSIONS_STORE).get(toStoreKey(sessionId))
     request.onsuccess = () => resolve(request.result ?? null)
     request.onerror = () => reject(request.error ?? new Error('IndexedDB lezen mislukt.'))
   })
-  db.close()
   return (value as T | null) ?? null
 }
 
 export async function listDevSessions<T>(): Promise<Array<{ id: string; session: T }>> {
-  const db = await openDb()
+  const db = await openBouwDb()
   const entries = await new Promise<Array<{ id: string; session: T }>>((resolve, reject) => {
-    const tx = db.transaction(STORE, 'readonly')
+    const tx = db.transaction(SESSIONS_STORE, 'readonly')
     tx.onerror = () => reject(tx.error ?? new Error('IndexedDB lezen mislukt.'))
-    const request = tx.objectStore(STORE).openCursor()
+    const request = tx.objectStore(SESSIONS_STORE).openCursor()
     const results: Array<{ id: string; session: T }> = []
     request.onerror = () => reject(request.error ?? new Error('IndexedDB cursor lezen mislukt.'))
     request.onsuccess = () => {
@@ -89,6 +71,5 @@ export async function listDevSessions<T>(): Promise<Array<{ id: string; session:
       cursor.continue()
     }
   })
-  db.close()
   return entries
 }

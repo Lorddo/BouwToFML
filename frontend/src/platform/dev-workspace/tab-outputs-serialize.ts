@@ -3,42 +3,54 @@ import type { DetectionLayerId } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
-import { clonePlain } from './clone-plain'
-
-type JsonRoomClassifyState = Omit<
-  SerializedRoomClassifyState,
-  'labelsData' | 'rawLabelsData' | 'baselineWallBwData'
-> & {
-  labelsData: number[]
-  rawLabelsData?: number[]
-  baselineWallBwData?: number[]
-}
+import { toStorableDevSession } from './storable'
 
 type ExtractionMeta = NonNullable<ExtractionOutput['meta']>
 
 /**
- * Opgeslagen variant van een detectie-output: TypedArrays zijn number[] zodat
- * JSON.stringify werkt. Bewust een eigen type — de snapshot en de runtime-vorm
- * zijn niet uitwisselbaar, ook al lijken ze op elkaar.
+ * Opgeslagen room-classify-state: TypedArrays blijven TypedArrays (structured clone /
+ * IndexedDB). Legacy number[] uit oude JSON-snapshots blijft ook leesbaar.
  */
-export type JsonExtractionOutput = Omit<ExtractionOutput, 'meta'> & {
+export type StorableRoomClassifyState = Omit<
+  SerializedRoomClassifyState,
+  'labelsData' | 'rawLabelsData' | 'baselineWallBwData'
+> & {
+  labelsData: Int32Array | number[]
+  rawLabelsData?: Int32Array | number[]
+  baselineWallBwData?: Uint8Array | number[]
+}
+
+/**
+ * Opgeslagen variant van een detectie-output: TypedArrays blijven intact.
+ * Alias `JsonExtractionOutput` blijft voor backward-compat imports.
+ */
+export type StorableExtractionOutput = Omit<ExtractionOutput, 'meta'> & {
   meta?: Omit<ExtractionMeta, 'roomClassifyState'> & {
-    roomClassifyState?: JsonRoomClassifyState
+    roomClassifyState?: StorableRoomClassifyState
   }
 }
 
-export type JsonTabDetectionOutputs = Record<DetectionLayerId, JsonExtractionOutput | null>
+/** @deprecated Gebruik StorableExtractionOutput — TypedArrays, geen JSON number[]. */
+export type JsonExtractionOutput = StorableExtractionOutput
 
-function serializeRoomClassifyState(state: SerializedRoomClassifyState): JsonRoomClassifyState {
+export type StorableTabDetectionOutputs = Record<DetectionLayerId, StorableExtractionOutput | null>
+
+/** @deprecated Gebruik StorableTabDetectionOutputs. */
+export type JsonTabDetectionOutputs = StorableTabDetectionOutputs
+
+function serializeRoomClassifyState(state: SerializedRoomClassifyState): StorableRoomClassifyState {
   return {
     ...state,
-    labelsData: Array.from(state.labelsData),
-    rawLabelsData: state.rawLabelsData ? Array.from(state.rawLabelsData) : undefined,
-    baselineWallBwData: state.baselineWallBwData ? Array.from(state.baselineWallBwData) : undefined,
+    labelsData: state.labelsData.slice(),
+    rawLabelsData: state.rawLabelsData ? state.rawLabelsData.slice() : undefined,
+    baselineWallBwData: state.baselineWallBwData ? state.baselineWallBwData.slice() : undefined,
   }
 }
 
-function deserializeRoomClassifyState(state: JsonRoomClassifyState): SerializedRoomClassifyState {
+function deserializeRoomClassifyState(
+  state: StorableRoomClassifyState,
+): SerializedRoomClassifyState {
+  // `new Int32Array(x)` accepteert number[] én TypedArray — legacy JSON blijft laden.
   return {
     ...state,
     labelsData: new Int32Array(state.labelsData),
@@ -49,14 +61,13 @@ function deserializeRoomClassifyState(state: JsonRoomClassifyState): SerializedR
   }
 }
 
-function serializeOutput(output: ExtractionOutput | null): JsonExtractionOutput | null {
+function serializeOutput(output: ExtractionOutput | null): StorableExtractionOutput | null {
   if (!output) return null
   const state = output.meta?.roomClassifyState
   if (!state) {
-    // Zonder classify-state verschilt de snapshot-vorm niet van de runtime-vorm.
-    return clonePlain(output as JsonExtractionOutput)
+    return toStorableDevSession(output)
   }
-  const prepared: JsonExtractionOutput = {
+  const prepared: StorableExtractionOutput = {
     ...output,
     meta: {
       ...output.meta,
@@ -65,28 +76,29 @@ function serializeOutput(output: ExtractionOutput | null): JsonExtractionOutput 
       roomClassifyState: serializeRoomClassifyState(state),
     },
   }
-  return clonePlain(prepared)
+  return toStorableDevSession(prepared)
 }
 
-/** JSON-veilige kopie van tabOutputs — behoudt Int32Array-labels als number[]. */
-export function cloneTabOutputsForSnapshot(outputs: TabDetectionOutputs): JsonTabDetectionOutputs {
-  const next = {} as JsonTabDetectionOutputs
+/** Snapshot-kopie van tabOutputs — TypedArrays blijven TypedArrays. */
+export function cloneTabOutputsForSnapshot(
+  outputs: TabDetectionOutputs,
+): StorableTabDetectionOutputs {
+  const next = {} as StorableTabDetectionOutputs
   for (const key of Object.keys(outputs) as DetectionLayerId[]) {
     next[key] = serializeOutput(outputs[key])
   }
   return next
 }
 
-/** Herstel tabOutputs na JSON-parse — zet labels terug naar Int32Array. */
+/** Herstel tabOutputs na snapshot — zet labels terug naar Int32Array/Uint8Array. */
 export function restoreTabOutputsFromSnapshot(
-  outputs: JsonTabDetectionOutputs,
+  outputs: StorableTabDetectionOutputs,
 ): TabDetectionOutputs {
   const next = {} as TabDetectionOutputs
   for (const key of Object.keys(outputs) as DetectionLayerId[]) {
     const output = outputs[key]
     const meta = output?.meta
     if (!output || !meta?.roomClassifyState) {
-      // Zonder classify-state verschilt de snapshot-vorm niet van de runtime-vorm.
       next[key] = output as ExtractionOutput | null
       continue
     }

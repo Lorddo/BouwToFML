@@ -1,18 +1,40 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FmlPreviewCanvas from '../components/FmlPreviewCanvas.vue'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
 
+const { t } = useI18n()
+
+const emit = defineEmits<{
+  back: []
+}>()
+
 const plan = ref<FloorPlan | null>(null)
 const warnings = ref<ImportWarning[]>([])
 const error = ref<string | null>(null)
 const fileName = ref<string | null>(null)
+const activeFloorIndex = ref(0)
+
+const floors = computed(() => plan.value?.floors ?? [])
+const multiFloor = computed(() => floors.value.length > 1)
+const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
+
+watch(floors, (list) => {
+  if (list.length === 0) {
+    activeFloorIndex.value = 0
+    return
+  }
+  if (activeFloorIndex.value >= list.length) {
+    activeFloorIndex.value = list.length - 1
+  }
+})
 
 const stats = computed(() => {
-  const floor = plan.value?.floors[0]
+  const floor = activeFloor.value
   if (!floor) return { walls: 0, doors: 0, windows: 0 }
   const openings = floor.walls.flatMap((wall) => wall.openings)
   return {
@@ -27,6 +49,19 @@ const fmlText = computed(() => {
   return buildFmlV3(plan.value, { name: plan.value.name })
 })
 
+function floorLabel(index: number): string {
+  const floor = floors.value[index]
+  if (!floor) return t('project.floorNameIndexed', { n: index + 1 })
+  const name = floor.name?.trim()
+  if (name) return name
+  return t('project.floorNameIndexed', { n: index + 1 })
+}
+
+function selectFloor(index: number): void {
+  if (index < 0 || index >= floors.value.length) return
+  activeFloorIndex.value = index
+}
+
 async function onFileInput(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -40,10 +75,12 @@ async function onFileInput(event: Event): Promise<void> {
     plan.value = parsed.plan
     warnings.value = parsed.warnings
     fileName.value = file.name
+    activeFloorIndex.value = 0
   } catch (err) {
     plan.value = null
     warnings.value = []
     fileName.value = null
+    activeFloorIndex.value = 0
     error.value = err instanceof Error ? err.message : 'FML import mislukt.'
   }
 }
@@ -53,6 +90,7 @@ function clearPlan(): void {
   warnings.value = []
   fileName.value = null
   error.value = null
+  activeFloorIndex.value = 0
 }
 
 function downloadCurrentFml(): void {
@@ -79,7 +117,12 @@ function onPlanUpdate(next: FloorPlan): void {
   <div class="fml-viewer-layout">
     <aside class="sidebar">
       <div class="panel">
-        <h3>FML viewer</h3>
+        <div class="viewer-header">
+          <h3>FML viewer</h3>
+          <button type="button" class="secondary back-btn" @click="emit('back')">
+            {{ t('settings.backToSettings') }}
+          </button>
+        </div>
         <p class="hint">Open een bestaand .fml-bestand om te bekijken en te bewerken.</p>
         <label class="upload-btn">
           FML uploaden
@@ -92,6 +135,9 @@ function onPlanUpdate(next: FloorPlan): void {
 
       <div v-if="plan" class="panel">
         <p v-if="fileName" class="file-name">{{ fileName }}</p>
+        <p v-if="multiFloor" class="floor-meta">
+          {{ floors.length }} verdiepingen · actief: {{ floorLabel(activeFloorIndex) }}
+        </p>
         <p class="stats">
           <strong>{{ stats.walls }}</strong> muren
           <template v-if="stats.doors > 0"> · {{ stats.doors }} deuren</template>
@@ -108,7 +154,36 @@ function onPlanUpdate(next: FloorPlan): void {
     </aside>
 
     <main class="viewer-main">
-      <FmlPreviewCanvas v-if="plan" :plan="plan" @plan-update="onPlanUpdate" />
+      <template v-if="plan">
+        <div
+          v-if="multiFloor"
+          class="floor-rail"
+          role="tablist"
+          :aria-label="t('project.railLabel')"
+        >
+          <span class="rail-label">{{ t('project.railLabel') }}</span>
+          <div class="rail-floors">
+            <button
+              v-for="(floor, index) in floors"
+              :key="`${floor.level}-${index}`"
+              type="button"
+              role="tab"
+              class="floor-chip"
+              :class="{ active: index === activeFloorIndex }"
+              :aria-selected="index === activeFloorIndex"
+              :title="floorLabel(index)"
+              @click="selectFloor(index)"
+            >
+              {{ floorLabel(index) }}
+            </button>
+          </div>
+        </div>
+        <FmlPreviewCanvas
+          :plan="plan"
+          :floor-index="activeFloorIndex"
+          @plan-update="onPlanUpdate"
+        />
+      </template>
       <div v-else class="empty-state">
         <p>Upload een FML-bestand om de plattegrond te bekijken.</p>
         <label class="upload-btn primary">
@@ -123,7 +198,25 @@ function onPlanUpdate(next: FloorPlan): void {
 <style scoped>
 .fml-viewer-layout {
   display: flex;
-  height: calc(100vh - 56px);
+  height: 100%;
+}
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.viewer-header h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.back-btn {
+  flex-shrink: 0;
+  font-size: 12px;
 }
 
 .sidebar {
@@ -147,6 +240,59 @@ function onPlanUpdate(next: FloorPlan): void {
 .viewer-main > :deep(.fml-preview-wrap) {
   flex: 1;
   min-height: 0;
+}
+
+.floor-rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.rail-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.rail-floors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.floor-chip {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floor-chip.active {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.floor-meta {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #334155;
 }
 
 .panel {

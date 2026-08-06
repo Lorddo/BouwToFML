@@ -56,12 +56,12 @@ export function cleanupMicroLoops(
         if (Math.max(lenA, lenB) > ref) continue
         const angA = angleDeg(a, aFromStart)
         const angB = angleDeg(b, bFromStart)
-        // Directed: opposite T-arm stubs (@645,243) are ~180° and must not match.
+        // Directed: opposite T-arm stubs are ~180° and must not match.
         if (directedAbsDiffDeg(angA, angB) > 25) continue
 
         // ESC:W-21 (B)
         // Far ends must be leaves (only this segment). Degree≥2 means a through-wall
-        // continuation — deleting would strand an I (BouwTek11 export-62).
+        // continuation — deleting would strand an I at a through-wall joint.
         const degA = incidentAt(work, endA).length
         const degB = incidentAt(work, endB).length
         if (degA !== 1 || degB !== 1) {

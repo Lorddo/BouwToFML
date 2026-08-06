@@ -1,6 +1,6 @@
 /**
  * Parallel-cover absorb — redundant H/V segments whose span is covered by
- * the union of other same-axis segments (BouwTek11 short-V on through-V).
+ * the union of other same-axis segments (short-V covered by through-V).
  */
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'

@@ -2,7 +2,6 @@ export type {
   DetectionOverlay,
   GapOverlay,
   JunctionOverlay,
-  JunctionOverlayKind,
   OcrTextOverlay,
   SegmentOverlay,
   WallMatchOverlay,

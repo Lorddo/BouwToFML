@@ -17,16 +17,29 @@
     "percent": "%",
     "loading": "Loading…",
     "errorGeneric": "Something went wrong",
+    "dismiss": "Dismiss",
     "opencvLoadFailed": "OpenCV could not be loaded.",
     "fitToView": "Fit to view",
     "lineThickness": "Stroke width",
-    "undoAction": "Undo"
+    "undoAction": "Undo",
+    "unsavedWorkWarning": "You have unsaved work. Leave this page?"
   },
   "app": {
     "title": "BouwToFML",
     "subtitle": "Floor plan to Floorplanner",
     "newDrawing": "New drawing",
-    "settings": "Settings"
+    "settings": "Settings",
+    "debugEmptyHint": "No debug tools on this step. Open again on preprocess (walls), detection, or result."
+  },
+  "access": {
+    "subtitle": "Enter the access password to continue.",
+    "password": "Password",
+    "submit": "Continue",
+    "incorrect": "Incorrect password."
+  },
+  "diagnosis": {
+    "fabTooltip": "Download diagnosis package for support (what is available so far)",
+    "fabAria": "Download diagnosis package"
   },
   "flow": {
     "previous": "Previous",
@@ -79,7 +92,7 @@
     "title": "Project",
     "hint": "Project name and floors. Address is optional. Then run detection per floor.",
     "name": "Project name",
-    "namePlaceholder": "e.g. Kinderdijkstraat 53",
+    "namePlaceholder": "e.g. Main Street 12",
     "address": "Address",
     "addressPlaceholder": "Street, city",
     "floors": "Floors",
@@ -100,10 +113,21 @@
     "bovenlicht": "Transom light",
     "resetDefaults": "Reset to defaults",
     "railLabel": "Floor",
+    "resume": {
+      "title": "Saved project",
+      "untitled": "Untitled project",
+      "meta": "{floors} floor(s) · last edited {updated}",
+      "continue": "Continue working",
+      "newProject": "New project"
+    },
     "errors": {
       "floorNotFound": "Floor not found.",
       "keepOneFloor": "At least one floor must remain.",
-      "noFloorReadyForFml": "No floor ready for FML export yet."
+      "noFloorReadyForFml": "No floor ready for FML export yet.",
+      "persistFailed": "Could not save the project locally.",
+      "persistQuota": "Storage full — project could not be saved.",
+      "resumeFailed": "Could not load the saved project.",
+      "resumeFailedDetail": "Could not load the saved project: {message}"
     }
   },
   "input": {
@@ -130,8 +154,9 @@
     "underlayTitle": "Underlay",
     "underlayHint": "Download the current image (crop/erase + rotation) as PNG. Edit locally and re-upload — then set rotation to 0° (already baked into the PNG). Scale is set per upload. Draw references in step 2 (Preprocess).",
     "reuseUnderlay": "Reuse underlay",
-    "reuseUnderlayHintOk": "Takes the project source (original scan + scale lines, without crop). Available after confirming scale on an earlier floor. Crop this floor again afterward.",
-    "reuseUnderlayHintBlocked": "First confirm scale on a floor (before crop) to keep the project source.",
+    "reuseUnderlayDonor": "Copy from floor",
+    "reuseUnderlayHintOk": "Takes the selected floor’s original scan + scale lines (without crop). Available after confirming scale on that floor. Crop this floor again afterward.",
+    "reuseUnderlayHintBlocked": "First confirm scale on a floor (before crop) so that floor can be used as source.",
     "downloadUnderlay": "Download underlay (PNG)",
     "opencvLoading": "Loading OpenCV...",
     "opencvReset": "Reset loader",
@@ -232,7 +257,8 @@
       "disabledHint": "OCR is off — enable it in step 2 (Preprocess)."
     },
     "copyBw": "Reuse B/W",
-    "copyBwHint": "Copies B/W tune only (and measured wall thickness if known). Redraw reference boxes after crop — coordinates from another floor won’t match.",
+    "copyBwDonor": "Copy from floor",
+    "copyBwHint": "Copies B/W tune only (and measured wall thickness if known) from the selected floor. Redraw reference boxes after crop — coordinates from another floor won’t match.",
     "downloadPng": "Download {tab} PNG",
     "downloading": "Preprocessing…",
     "stamp": {
@@ -315,6 +341,38 @@
       "rescan": "Scan again ({count})",
       "clear": "Clear OCR"
     },
+    "ocrHits": {
+      "foundWords": "Found words ({count})",
+      "shiftClickHint": "Shift+click a box on the canvas to remove it.",
+      "removeFromMask": "Remove from text mask"
+    },
+    "gaps": {
+      "title": "Gaps",
+      "hint": "Solid: same faces as Walls, but faces under the Gaps wall mask (step 2, black) are set to exterior — floors and gaps stay colored. Faces larger than 3× the largest door/window reference face (head/interior, not outer rim) are also cleared. Classify Walls first. Detail mode (debug sidebar): carve Otsu-white only inside gaps-black.",
+      "loading": "Loading faces…",
+      "needWalls": "Classify walls on the Walls tab first.",
+      "demoted": "Wall faces removed: {demoted} · kept: {kept}",
+      "oversized": " · oversized removed: {count} (cap {cap} px)",
+      "refMax": " · ref-max {px} px"
+    },
+    "doors": {
+      "title": "Doors",
+      "hint": "Stage 1 swing filter: reference-driven face candidates (non-outside seeds, shared-edge clustering, size band 40–120 cm and aspect ±5%).",
+      "loading": "Loading door candidates…",
+      "needWalls": "Classify walls on the Walls tab first.",
+      "noRef": "No usable swing reference found. Draw a door reference with swing arc in step 1.",
+      "stats": "Active {stage}: {hypotheses} · stage1 total: {stage1} · accepted: {accepted} · rejected: {rejected} · single: {single} · clusters: {clusters} · refs: {refs} · seeds: {seeds}",
+      "sizeBand": "Wall-axis px band: {min}-{max} (depth from door reference)"
+    },
+    "windows": {
+      "title": "Windows",
+      "hint": "Stage 1 axel filter + Stage 2 door-arc reject + Stage 3 evidence filter (framing at axis ends, fallback top+bottom).",
+      "loading": "Loading window candidates…",
+      "needWalls": "Classify walls on the Walls tab first.",
+      "noRef": "No usable window axel reference found. Draw a window reference with clear inner strips in step 1.",
+      "stats": "Active {stage}: {hypotheses} · stage1 total: {stage1} · stage2 accepted: {stage2Accepted} · doorframe: shared {share}, adjacent {adjacent}, directional {directional} · stage3 accepted: {stage3Accepted} (framing {framing}, strip-stack {stripStack}) · stage3 rejected: {stage3Rejected} · doorframes: {doorframes} · stage4 windows: {stage4Windows} · doorframes: {stage4Doorframes} · refs: {refs} · candidate faces: {candidates} · accepted: {accepted} · rejected: {rejected}",
+      "refRow": "Ref {n}: {matches} matches · pattern {strips} strips · h {height}px"
+    },
     "roomFace": {
       "awaitingReference": "Waiting for reference",
       "classifying": "Classifying…",
@@ -394,14 +452,15 @@
     "overrideHint": "Override per opening: Ctrl+click in the preview → size/height.",
     "regenerate": "Regenerate",
     "downloadProject": "Download .fml (project)",
-    "dirtyHint": "Height/thickness changed — click Regenerate to update the FML.",
+    "dirtyHint": "Height/thickness changed — click Regenerate to update the preview.",
     "thicknessPick": {
       "clickWall": "Click a wall to set the {tier} measure band (±10%).",
-      "measuring": "Measuring on underlay…",
+      "measuring": "Measuring on wall B/W…",
       "applied": "{tier} band: {cm} cm (±10%) — click Regenerate.",
       "retry": "Click a wall again for the {tier} measure band.",
       "noUnderlay": "Underlay missing — upload and confirm scale before measuring.",
-      "measureFailed": "Measurement failed — underlay or wall unavailable.",
+      "noWallBw": "Wall B/W missing — finish preprocess (step 2) before measuring bands.",
+      "measureFailed": "Measurement failed — wall B/W or wall unavailable.",
       "measureFailedGeneric": "Wall thickness measurement failed."
     },
     "toolbar": {
@@ -537,6 +596,9 @@
     "underlayOpacityAria": "Underlay opacity",
     "fmlOpacity": "FML",
     "fmlOpacityAria": "FML opacity",
+    "openFmlViewer": "Open FML viewer",
+    "openFmlViewerHint": "Standalone viewer to open, edit and re-export an existing .fml file (outside the project workflow).",
+    "backToSettings": "Back to settings",
     "save": "Save",
     "resetFactory": "Reset to factory defaults",
     "export": "Export",

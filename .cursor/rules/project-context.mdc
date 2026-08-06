@@ -53,6 +53,8 @@ Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse mark
 | **L6 connector fragiliteits-audit** | `.cursor/docs/l6-connector-fragility-audit.md` |
 | **E2E fixtures (opname + CI)** | `.cursor/docs/e2e-fixtures.md` |
 | **Detectie initial bespreken (L0 / deur / raam)** | `.cursor/docs/detectie-initial-bespreken.md` |
+| **Customer test delivery (host + guide)** | `.cursor/docs/customer-test-delivery.md` |
+| **Audit Cloudflare klanttest 2026-08-05** | `.cursor/docs/audit-2026-08-05-customer-test.md` |
 | Sessie-geheugen (lopende staat) | `.cursor/rules/memory.mdc` |
 
 ## Stack (V1)

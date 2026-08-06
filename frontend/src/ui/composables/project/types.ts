@@ -57,6 +57,11 @@ export type FloorWorkspaceBlob = {
    * Nodig bij snelle result-restore zonder extraction/generatedBundle.
    */
   previewUnderlayLayout: PreviewUnderlayLayout | null
+  /**
+   * Laatste bevestigde bronscan + schaal van deze verdieping (vóór crop).
+   * Gebruikt door «Onderlegger overnemen» als donor; overschrijft bij elke schaal-bevestiging.
+   */
+  sourceUnderlay?: ProjectSourceUnderlay | null
 }
 
 export type ProjectSourceUnderlay = {

@@ -22,6 +22,7 @@ const { t } = useI18n()
 const emit = defineEmits<{
   saved: []
   back: []
+  openFmlViewer: []
 }>()
 
 function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
@@ -365,6 +366,10 @@ function onBack() {
           "
         />
       </div>
+      <p class="hint">{{ t('settings.openFmlViewerHint') }}</p>
+      <button type="button" class="secondary" @click="emit('openFmlViewer')">
+        {{ t('settings.openFmlViewer') }}
+      </button>
     </section>
 
     <div class="actions">

@@ -150,7 +150,7 @@ export function rankSwingSectorFaces(
 
 /**
  * Zone-aware swing pick: kopeinde-`below` eerst, dan rank; full-width blob
- * wijkt voor een smallere kandidaat (Project4 Otsu-deur: 4915 vs 1072).
+ * wijkt voor een smallere kandidaat (volle breedte-blob vs smalle swing-sector).
  */
 export function rankSwingSectorFacesForPick(
   faces: RefFace[],

@@ -147,7 +147,7 @@ export function replaceLongArmEndpointAtJunction(params: {
 
 /**
  * All-or-nothing: geen arm-snap als er een chamfer-diagonaal hangt die we niet mogen
- * verwijderen (verre tip buiten armDetect). Dat half-pad maakt I's (2D_3E SE-hoek).
+ * verwijderen (verre tip buiten armDetect). Dat half-pad maakt I's op hoek-junctions.
  * Zulke cases horen bij connector/chamfer-group, niet bij junction-snap.
  */
 export function hasUnretractableChamferAtPoint(params: {

@@ -48,6 +48,7 @@
       "W-43": 95,
       "W-44": 1,
       "W-45": 102,
+      "W-46": 3,
       "W-47": 1,
       "W-48": 1,
       "W-49": 3,
@@ -64,7 +65,7 @@
       "X-15": 2,
       "X-16": 2,
       "X-22": 73,
-      "X-27": 1
+      "X-27": 1,
     },
     "levels": {
       "D-44:path_a_hit": 2,
@@ -147,6 +148,7 @@
       "W-43:scaled": 95,
       "W-44:accepted": 1,
       "W-45:direct": 102,
+      "W-46:sample_miss": 3,
       "W-47:repositioned": 1,
       "W-48:pruned": 1,
       "W-49:chain_accepted": 1,
@@ -165,8 +167,8 @@
       "X-15:hardcoded_settings": 2,
       "X-16:full_height": 2,
       "X-22:measured": 73,
-      "X-27:dead_flag_false": 1
-    }
+      "X-27:dead_flag_false": 1,
+    },
   },
   "layers": {
     "layer10": {
@@ -175,9 +177,9 @@
         "I": 11,
         "L": 27,
         "T": 27,
-        "X": 1
+        "X": 1,
       },
-      "segments": 75
+      "segments": 75,
     },
     "layer2": {
       "junctions": 444,
@@ -185,9 +187,9 @@
         "I": 79,
         "L": 276,
         "T": 81,
-        "X": 8
+        "X": 8,
       },
-      "segments": 453
+      "segments": 453,
     },
     "layer3": {
       "junctions": 308,
@@ -195,9 +197,9 @@
         "I": 10,
         "L": 270,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 337
+      "segments": 337,
     },
     "layer4": {
       "invariantReport": {
@@ -206,24 +208,24 @@
           "I": 10,
           "L": 270,
           "T": 28,
-          "X": 0
+          "X": 0,
         },
         "junctionKindCountsBefore": {
           "I": 10,
           "L": 270,
           "T": 28,
-          "X": 0
+          "X": 0,
         },
-        "ok": true
+        "ok": true,
       },
       "junctions": 308,
       "kinds": {
         "I": 10,
         "L": 270,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 337
+      "segments": 337,
     },
     "layer5": {
       "junctions": 207,
@@ -231,9 +233,9 @@
         "I": 11,
         "L": 169,
         "T": 27,
-        "X": 0
+        "X": 0,
       },
-      "segments": 215
+      "segments": 215,
     },
     "layer6": {
       "junctions": 191,
@@ -241,9 +243,9 @@
         "I": 17,
         "L": 144,
         "T": 26,
-        "X": 4
+        "X": 4,
       },
-      "segments": 200
+      "segments": 200,
     },
     "layer7": {
       "junctions": 93,
@@ -251,9 +253,9 @@
         "I": 17,
         "L": 46,
         "T": 26,
-        "X": 4
+        "X": 4,
       },
-      "segments": 102
+      "segments": 102,
     },
     "layer8": {
       "junctions": 80,
@@ -261,9 +263,9 @@
         "I": 11,
         "L": 41,
         "T": 27,
-        "X": 1
+        "X": 1,
       },
-      "segments": 89
+      "segments": 89,
     },
     "layer9": {
       "junctions": 70,
@@ -271,9 +273,9 @@
         "I": 11,
         "L": 31,
         "T": 27,
-        "X": 1
+        "X": 1,
       },
-      "segments": 79
-    }
-  }
+      "segments": 79,
+    },
+  },
 }

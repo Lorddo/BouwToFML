@@ -5,20 +5,29 @@ import type { PreprocessPanelLayer } from '@/cv/preprocess/layer-preprocess'
 import type { SelectionRect } from '@/platform/selection'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { ExtractionOutput } from '@/core/extraction'
+import type { FloorPlan } from '@/core/fml/types'
 import type { usePreprocessPreview } from './usePreprocessPreview'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
-import type { BoundWindow, WindowBindRejection, WindowAxelStage } from '@/cv/windows'
+import type {
+  BoundWindow,
+  WindowBindRejection,
+  WindowAxelStage,
+  ResolvedWindowCandidate,
+} from '@/cv/windows'
 import type { GapsInkMode } from '@/cv/gaps'
+import type { WorkspaceFlowStep } from './workspace/constants'
 import { createWorkspaceExportUnderlay } from './workspace/workspace-export-underlay'
 import { createWorkspaceExportLayerDebug } from './workspace/workspace-export-layer-debug'
 import { createWorkspaceExportReferenceAnalysis } from './workspace/workspace-export-reference-analysis'
 import { createWorkspaceExportDoorSwingReport } from './workspace/workspace-export-door-swing-report'
 import { createWorkspaceExportWindowFaceReport } from './workspace/workspace-export-window-face-report'
+import { createWorkspaceExportDiagnosis } from './workspace/workspace-export-diagnosis'
 
 export type UseWorkspaceExportsDeps = {
   imageName: Ref<string | null>
+  flowStep: Ref<WorkspaceFlowStep>
   preprocess: Ref<PreprocessConfig>
   preprocessTab: Ref<PreprocessPanelLayer>
   preprocessPreview: ReturnType<typeof usePreprocessPreview>
@@ -45,11 +54,19 @@ export type UseWorkspaceExportsDeps = {
   resolvedDoors?: Ref<ResolvedDoorCandidate[]>
   orientedDoors?: Ref<OrientedDoor[]>
   boundWindows?: Ref<BoundWindow[]>
+  resolvedWindows?: Ref<ResolvedWindowCandidate[]>
   windowBindRejections?: Ref<WindowBindRejection[]>
   getDoorArcFaceIds?: () => ReadonlySet<number>
   windowAxelStage?: Ref<WindowAxelStage>
   referenceWallThicknessPx?: Ref<number | null>
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
+  projectName?: Ref<string | null>
+  floorId?: Ref<string | null>
+  floorName?: Ref<string | null>
+  floorLevel?: Ref<number | null>
+  getPreviewPlan?: () => FloorPlan | null
+  getGeneratedFmlText?: () => string
+  appVersion?: string
 }
 
 export function useWorkspaceExports(deps: UseWorkspaceExportsDeps) {
@@ -58,6 +75,7 @@ export function useWorkspaceExports(deps: UseWorkspaceExportsDeps) {
   const referenceAnalysis = createWorkspaceExportReferenceAnalysis(deps)
   const doorSwingReport = createWorkspaceExportDoorSwingReport(deps)
   const windowFaceReport = createWorkspaceExportWindowFaceReport(deps)
+  const diagnosis = createWorkspaceExportDiagnosis(deps)
 
   return {
     downloadUnderlay: underlay.downloadUnderlay,
@@ -67,5 +85,6 @@ export function useWorkspaceExports(deps: UseWorkspaceExportsDeps) {
     exportReferenceAnalysis: referenceAnalysis.exportReferenceAnalysis,
     exportDoorSwingReport: doorSwingReport.exportDoorSwingReport,
     exportWindowFaceReport: windowFaceReport.exportWindowFaceReport,
+    exportDiagnosisReport: diagnosis.exportDiagnosisReport,
   }
 }

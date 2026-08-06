@@ -6,9 +6,6 @@ export function createDefaultFloorFmlDefaults(): ProjectFmlDefaults {
   return { ...loadUserSettings().defaults }
 }
 
-/** @deprecated alias — gebruik createDefaultFloorFmlDefaults */
-export const createDefaultProjectFmlDefaults = createDefaultFloorFmlDefaults
-
 export function createProjectId(): string {
   return `proj-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
@@ -50,6 +47,7 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
         generatedFloor: null,
         previewPlan: null,
         previewUnderlayLayout: null,
+        sourceUnderlay: null,
       },
     },
     activeFloorId: floor.id,

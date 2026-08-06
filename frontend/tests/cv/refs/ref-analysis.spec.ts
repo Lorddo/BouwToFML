@@ -829,37 +829,44 @@ describe('ref-door-orient', () => {
   })
 
   it('deskew op muur-band-lijnen negeert onderste swing-chords', () => {
+    const lines: Array<{
+      a: { x: number; y: number }
+      b: { x: number; y: number }
+      lengthPx: number
+      angleDeg: number
+      relation: 'parallel' | 'perp' | 'arc' | 'other'
+    }> = [
+      {
+        a: { x: 0, y: 8 },
+        b: { x: 100, y: 13.2 },
+        lengthPx: 100,
+        angleDeg: 3,
+        relation: 'parallel',
+      },
+      {
+        a: { x: 0, y: 18 },
+        b: { x: 100, y: 23.2 },
+        lengthPx: 100,
+        angleDeg: 3,
+        relation: 'parallel',
+      },
+      {
+        a: { x: 10, y: 70 },
+        b: { x: 90, y: 70 },
+        lengthPx: 80,
+        angleDeg: 0,
+        relation: 'parallel',
+      },
+      {
+        a: { x: 15, y: 78 },
+        b: { x: 85, y: 78 },
+        lengthPx: 70,
+        angleDeg: 0,
+        relation: 'parallel',
+      },
+    ]
     const correction = estimateDeskewCorrectionFromLines(
-      [
-        {
-          a: { x: 0, y: 8 },
-          b: { x: 100, y: 13.2 },
-          lengthPx: 100,
-          angleDeg: 3,
-          relation: 'parallel',
-        },
-        {
-          a: { x: 0, y: 18 },
-          b: { x: 100, y: 23.2 },
-          lengthPx: 100,
-          angleDeg: 3,
-          relation: 'parallel',
-        },
-        {
-          a: { x: 10, y: 70 },
-          b: { x: 90, y: 70 },
-          lengthPx: 80,
-          angleDeg: 0,
-          relation: 'parallel',
-        },
-        {
-          a: { x: 15, y: 78 },
-          b: { x: 85, y: 78 },
-          lengthPx: 70,
-          angleDeg: 0,
-          relation: 'parallel',
-        },
-      ].filter((line) => (line.a.y + line.b.y) / 2 < 80 * 0.55),
+      lines.filter((line) => (line.a.y + line.b.y) / 2 < 80 * 0.55),
       'horizontal',
       5,
       { preferParallel: true, minAbsDeg: 0.35, minLengthPx: 8 },
@@ -868,7 +875,6 @@ describe('ref-door-orient', () => {
     expect(Math.abs(correction)).toBeGreaterThanOrEqual(2.5)
   })
 })
-
 describe('draaicirkel', () => {
   it('detecteert gevulde sector als draaicirkel ja', () => {
     const w = 80

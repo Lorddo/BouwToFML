@@ -92,7 +92,7 @@ export function isLandingChamferAtJunction(params: {
 /**
  * Through-T landing:
  * - klassiek: lange H op landing, V (+optionele H-stub) op junction
- * - inverted: through-H (2×H) op junction, V op landing (west @653)
+ * - inverted: through-H (2×H) op junction, V op landing
  */
 export function resolveLandingChamferGeometry(params: {
   segments: Segment[]
@@ -144,7 +144,7 @@ export function resolveLandingChamferGeometry(params: {
     )
     const vAtJunction = incidentAt(params.segments, junctionPoint, endpointSnapPx).filter((inc) => {
       const kind = classifyLayer6Segment(inc.segment, inc.segIndex, hvBandPx).kind
-      // Korte V-stubs op T (bv. y-jog 2px @660) tellen mee voor landing.
+      // Korte V-stubs op T (bv. y-jog ~2px) tellen mee voor landing.
       return kind === 'V' && inc.lengthPx >= Math.min(minArm, scale.jogEpsilonPx)
     })
     const hAtLanding = incidentAt(params.segments, landingPoint, endpointSnapPx).filter((inc) => {
@@ -195,7 +195,7 @@ export function resolveLandingChamferGeometry(params: {
       }
     }
 
-    // T-jog: korte H+V stubs op junction + lange V op landing (export 49 @660, y-jog).
+    // T-jog: korte H+V stubs op junction + lange V op landing (y-jog).
     // Geen lange V-stam op junction — dat is oost-T / classic through-T.
     if (
       hAtJunctionLoose.length >= 1 &&
@@ -240,7 +240,7 @@ export function resolveLandingChamferGeometry(params: {
     }
 
     // Echte L-hoek (één V-stam, géén H op junction): simple-L, niet landing.
-    // Through-V (≥2 V) is wel classic through-T — diagonaal naar H-landing (BouwTek11 @1489).
+    // Through-V (≥2 V) is wel classic through-T — diagonaal naar H-landing.
     if (
       hAtLanding.length >= 1 &&
       vAtLandingList.length === 0 &&

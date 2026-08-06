@@ -312,7 +312,7 @@ export function resolveChamferGroupGeometry(params: {
       if (reach > maxConnectorPx * 2) continue
 
       // T of through-H op het H-eind: niet simple-L yanken.
-      // Landing-brug alleen bij korte V-jog-stub of ≥2 H (west @660).
+      // Landing-brug alleen bij korte V-jog-stub of ≥2 H.
       // Lange V op hetzelfde eind = echte T-stam → gewoon naar H×V lassen (oost-T).
       const shortVAtH = hSide.v.filter(
         (inc) => inc.lengthPx <= Math.min(maxConnectorPx, scale.stubCapPx),
@@ -481,7 +481,7 @@ export function resolveChamferGroupGeometry(params: {
     return null
   }
 
-  // Seed-diagonaal moet aan H- of V-touch hangen — geen T@572 repareren via diag@587.
+  // Seed-diagonaal moet aan H- of V-touch hangen — geen verre T via losse diag repareren.
   const seed = params.segments[params.connectorIndex]
   const seedTouches = (point: { x: number; y: number }) =>
     Math.hypot(seed.a.x - point.x, seed.a.y - point.y) <= nearbyWeldPx ||

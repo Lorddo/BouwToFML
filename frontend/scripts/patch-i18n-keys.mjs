@@ -3,8 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 const patches = {
   en: {
     'common.opencvLoadFailed': 'OpenCV could not be loaded.',
-    'result.clipboardUnavailable':
-      'Copy to clipboard is not available in this browser/context.',
+    'result.clipboardUnavailable': 'Copy to clipboard is not available in this browser/context.',
     'templates.status.measuringReference': 'Measuring reference wall and classifying…',
     'templates.status.loadingOpenCv': 'Loading OpenCV…',
     'templates.status.processingInkChanges': 'Processing ink changes…',
@@ -21,8 +20,7 @@ const patches = {
   },
   th: {
     'common.opencvLoadFailed': 'โหลด OpenCV ไม่ได้',
-    'result.clipboardUnavailable':
-      'คัดลอกไปยังคลิปบอร์ดใช้ไม่ได้ในเบราว์เซอร์/บริบทนี้',
+    'result.clipboardUnavailable': 'คัดลอกไปยังคลิปบอร์ดใช้ไม่ได้ในเบราว์เซอร์/บริบทนี้',
     'templates.status.measuringReference': 'กำลังวัดผนังอ้างอิงและจำแนก…',
     'templates.status.loadingOpenCv': 'กำลังโหลด OpenCV…',
     'templates.status.processingInkChanges': 'กำลังประมวลผลการเปลี่ยนแปลงหมึก…',

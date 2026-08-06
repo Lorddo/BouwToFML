@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FloorMeta, ProjectFmlDefaults, ProjectMeta } from '../composables/project/types'
+import type { PersistedProjectIndexEntry } from '@/platform/project-store'
 
 const props = defineProps<{
   meta: ProjectMeta
@@ -9,6 +10,8 @@ const props = defineProps<{
   activeFloorId: string
   /** Hoogtes voor de geselecteerde verdieping. */
   activeFloorDefaults: ProjectFmlDefaults
+  /** Opgeslagen project in IndexedDB (stap 0 resume-kaart). */
+  resumeCandidate?: PersistedProjectIndexEntry | null
 }>()
 
 const emit = defineEmits<{
@@ -20,10 +23,20 @@ const emit = defineEmits<{
   renameFloor: [id: string, name: string]
   selectFloor: [id: string]
   moveFloor: [orderedIds: string[]]
+  resumeProject: []
+  discardProject: []
 }>()
 
 const { t } = useI18n()
 const activeFloor = computed(() => props.floors.find((f) => f.id === props.activeFloorId) ?? null)
+
+const resumeUpdatedLabel = computed(() => {
+  const iso = props.resumeCandidate?.updatedAt
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return date.toLocaleString()
+})
 
 function moveUp(index: number) {
   if (index <= 0) return
@@ -56,6 +69,29 @@ function onRenameBlur(floorId: string, event: Event) {
 
 <template>
   <div class="panel project-setup">
+    <div v-if="resumeCandidate" class="resume-card">
+      <h3>{{ t('project.resume.title') }}</h3>
+      <p class="resume-name">
+        {{ resumeCandidate.name.trim() || t('project.resume.untitled') }}
+      </p>
+      <p class="hint">
+        {{
+          t('project.resume.meta', {
+            floors: resumeCandidate.floorCount,
+            updated: resumeUpdatedLabel,
+          })
+        }}
+      </p>
+      <div class="resume-actions">
+        <button type="button" class="primary" @click="emit('resumeProject')">
+          {{ t('project.resume.continue') }}
+        </button>
+        <button type="button" class="secondary" @click="emit('discardProject')">
+          {{ t('project.resume.newProject') }}
+        </button>
+      </div>
+    </div>
+
     <h3>{{ t('project.title') }}</h3>
     <p class="hint">{{ t('project.hint') }}</p>
 
@@ -231,6 +267,24 @@ function onRenameBlur(floorId: string, event: Event) {
   font-size: 12px;
   color: #64748b;
 }
+.resume-card {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #93c5fd;
+  border-radius: 6px;
+  background: #eff6ff;
+}
+.resume-name {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e3a8a;
+}
+.resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .field {
   display: flex;
   flex-direction: column;
@@ -355,5 +409,8 @@ function onRenameBlur(floorId: string, event: Event) {
   border: 1px solid #cbd5e1;
   background: #fff;
   color: #334155;
+}
+.resume-actions .secondary {
+  margin-top: 0;
 }
 </style>

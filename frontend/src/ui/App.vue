@@ -3,13 +3,22 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WorkspaceView from './views/WorkspaceView.vue'
 import UserSettingsView from './views/UserSettingsView.vue'
+import FmlViewerView from './views/FmlViewerView.vue'
+import AppAccessGate from './components/AppAccessGate.vue'
+import { appFatalError, clearAppError } from '@/ui/app-error'
+import { isAccessPasswordRequired, isAccessUnlocked } from '@/ui/access-gate'
 
 const { t } = useI18n()
 
-type AppView = 'workspace' | 'settings'
+type AppView = 'workspace' | 'settings' | 'fml-viewer'
 
+const accessGranted = ref(!isAccessPasswordRequired() || isAccessUnlocked())
 const appView = ref<AppView>('workspace')
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
+
+function onAccessUnlocked(): void {
+  accessGranted.value = true
+}
 
 function onNewWorkspace(): void {
   workspaceRef.value?.startNewWorkspace()
@@ -19,17 +28,36 @@ function openSettings(): void {
   appView.value = 'settings'
 }
 
+function openFmlViewer(): void {
+  appView.value = 'fml-viewer'
+}
+
 function backToWorkspace(): void {
   appView.value = 'workspace'
+}
+
+function backToSettings(): void {
+  appView.value = 'settings'
 }
 
 function onSettingsSaved(): void {
   workspaceRef.value?.applyUserViewerSettings()
 }
+
+function dismissFatalError(): void {
+  clearAppError()
+}
 </script>
 
 <template>
-  <div class="app-shell">
+  <AppAccessGate v-if="!accessGranted" @unlocked="onAccessUnlocked" />
+  <div v-else class="app-shell">
+    <div v-if="appFatalError" class="app-error-banner" role="alert">
+      <span class="app-error-banner__text">{{ appFatalError }}</span>
+      <button type="button" class="app-error-banner__dismiss" @click="dismissFatalError">
+        {{ t('common.dismiss') }}
+      </button>
+    </div>
     <header>
       <div
         class="header-title"
@@ -74,7 +102,14 @@ function onSettingsSaved(): void {
         <WorkspaceView ref="workspaceRef" />
       </div>
       <div v-if="appView === 'settings'" class="app-page app-page--settings">
-        <UserSettingsView @back="backToWorkspace" @saved="onSettingsSaved" />
+        <UserSettingsView
+          @back="backToWorkspace"
+          @saved="onSettingsSaved"
+          @open-fml-viewer="openFmlViewer"
+        />
+      </div>
+      <div v-if="appView === 'fml-viewer'" class="app-page app-page--fml-viewer">
+        <FmlViewerView @back="backToSettings" />
       </div>
     </main>
   </div>
@@ -86,6 +121,41 @@ function onSettingsSaved(): void {
   display: flex;
   flex-direction: column;
   background: #f4f5f7;
+}
+
+.app-error-banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+  z-index: 30;
+}
+
+.app-error-banner__text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.app-error-banner__dismiss {
+  flex-shrink: 0;
+  font-size: 13px;
+  padding: 4px 10px;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  background: #fff;
+  color: #991b1b;
+  cursor: pointer;
+}
+
+.app-error-banner__dismiss:hover {
+  background: #fee2e2;
 }
 
 header {
@@ -162,6 +232,14 @@ header {
   inset: 0;
   overflow: auto;
   background: #f4f5f7;
+  z-index: 10;
+}
+
+.app-page--fml-viewer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #f1f5f9;
   z-index: 10;
 }
 </style>

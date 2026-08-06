@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { proxyRefs, computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FloorplanCanvas from '../components/FloorplanCanvas.vue'
 import DrawingUploadPanel from '../components/DrawingUploadPanel.vue'
 import DrawingProfilePicker from '../components/DrawingProfilePicker.vue'
@@ -24,6 +25,7 @@ import WorkspaceGapsDevPanel from '../components/WorkspaceGapsDevPanel.vue'
 import WorkspaceDoorsDevPanel from '../components/WorkspaceDoorsDevPanel.vue'
 import WorkspaceWindowsDevPanel from '../components/WorkspaceWindowsDevPanel.vue'
 import WorkspaceDevViewPanel from '../components/WorkspaceDevViewPanel.vue'
+import WorkspaceDiagnosisFab from '../components/WorkspaceDiagnosisFab.vue'
 import ProjectSetupPanel from '../components/ProjectSetupPanel.vue'
 import WorkspaceFloorRail from '../components/WorkspaceFloorRail.vue'
 import { useWorkspace } from '../composables/useWorkspace'
@@ -38,6 +40,7 @@ const api = useWorkspace()
 const ws = proxyRefs(api)
 const canvasRef = api.canvasRef
 const debugSidebarOpen = ref(false)
+const { t } = useI18n()
 
 const {
   isDev,
@@ -95,6 +98,7 @@ defineExpose<{
           :floors="ws.projectFloors"
           :active-floor-id="ws.activeFloorId"
           :active-floor-defaults="ws.activeFloorDefaults"
+          :resume-candidate="ws.resumeCandidate"
           @update:meta="ws.updateProjectMeta"
           @update:floor-defaults="ws.updateActiveFloorDefaults"
           @reset-floor-defaults="ws.resetActiveFloorDefaults"
@@ -103,6 +107,8 @@ defineExpose<{
           @rename-floor="(id, name) => ws.renameFloor(id, name)"
           @select-floor="ws.switchFloor"
           @move-floor="ws.reorderFloors"
+          @resume-project="ws.resumePersistedProject()"
+          @discard-project="ws.discardPersistedProject()"
         />
 
         <DrawingUploadPanel
@@ -126,6 +132,7 @@ defineExpose<{
           :eraser-touched="ws.eraserTouched"
           :can-undo-mask="ws.canUndoMask"
           :can-reuse-underlay="ws.canReuseUnderlay"
+          :underlay-donor-options="ws.underlayDonorOptions"
           @update-mm-x="ws.updateMmX"
           @update-mm-y="ws.updateMmY"
           @confirm-scale="ws.onConfirmScale"
@@ -153,6 +160,7 @@ defineExpose<{
           :scale-confirmed="ws.scale.confirmed.value"
           :rects="ws.rects"
           :can-copy-preprocess-refs="ws.canCopyPreprocessRefs"
+          :preprocess-donor-options="ws.preprocessDonorOptions"
           :can-start-wall-stamp="ws.canStartWallStamp"
           :wall-stamp-active="ws.wallStampActive"
           :wall-stamp-baked="ws.wallStampBaked"
@@ -322,7 +330,6 @@ defineExpose<{
           @start-thickness-pick="ws.startFmlThicknessPick"
           @cancel-thickness-pick="ws.cancelFmlThicknessPick"
           @regenerate="ws.regenerateFml"
-          @download-project="ws.downloadProjectFml"
         />
       </div>
 
@@ -332,7 +339,6 @@ defineExpose<{
         :flow-next-blocked-hint="ws.flowNextBlockedHint"
         :can-go-back="ws.canGoBack"
         :can-go-next="ws.canGoNext"
-        :flow-step="ws.flowStep"
         :next-step-button-label="ws.nextStepButtonLabel"
         @back="ws.goToPreviousStep"
         @next="ws.goToNextStep"
@@ -567,13 +573,11 @@ defineExpose<{
       <WorkspaceFmlDevPanel
         v-if="fmlDevPanelVisible"
         :enabled="ws.scale.confirmed.value && !!ws.combinedOutput"
-        :generated-fml-text="ws.generatedFmlText"
         :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
         :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
         :fml-band-dirty="ws.fmlBandDirty"
         @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
         @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
-        @download-generated="ws.downloadGeneratedFml"
       />
 
       <WorkspaceGapsDevPanel
@@ -622,10 +626,14 @@ defineExpose<{
       />
 
       <p v-if="debugSidebarEmpty" class="debug-empty-hint">
-        Geen debug-tools op deze stap. Open opnieuw bij voorbewerking (muren), detectie of
-        resultaat.
+        {{ t('app.debugEmptyHint') }}
       </p>
     </WorkspaceDebugSidebar>
+
+    <WorkspaceDiagnosisFab
+      :visible="!!ws.imageSrc && ws.flowStep !== 'project'"
+      :export-diagnosis-report="ws.exportDiagnosisReport"
+    />
   </div>
 
   <PdfPageSelectDialog

@@ -25,7 +25,8 @@ function openingGapFill(openingId: string, type: 'door' | 'window'): string {
 function openingStrokeColor(openingId: string, type: 'door' | 'window'): string {
   if (isOpeningSettings(openingId)) return '#ea580c'
   if (isOpeningMove(openingId)) return '#2563eb'
-  return type === 'door' ? '#0c4a6e' : '#701a75'
+  // Donkere variant van detectie-amber (deur) / -cyaan (raam).
+  return type === 'door' ? '#b45309' : '#0e7490'
 }
 </script>
 

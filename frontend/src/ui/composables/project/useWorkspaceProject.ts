@@ -4,6 +4,12 @@ import type { PreprocessConfig } from '@/platform/image'
 import { clonePlain, type DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { DrawingProfileId } from '@/platform/profile'
 import type { SelectionRect } from '@/platform/selection'
+import {
+  createProjectPersistController,
+  deleteOtherProjects,
+  deleteProject,
+  saveProject,
+} from '@/platform/project-store'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RestoreSessionOptions } from '@/ui/composables/workspace/workspace-dev-session-restore-flow'
 import { tGlobal } from '@/ui/i18n'
@@ -72,6 +78,8 @@ export type WorkspaceProjectDeps = {
   getPreviewUnderlayLayout: () => PreviewUnderlayLayout | null
   /** Sync FML UI-defaults vanuit effectieve floor defaults. */
   applyFmlDefaultsToUi?: (defaults: ProjectFmlDefaults) => void
+  /** Skip IndexedDB-write tijdens running / restoring. */
+  shouldSkipPersist?: () => boolean
 }
 
 function emptyBlob(): FloorWorkspaceBlob {
@@ -80,7 +88,12 @@ function emptyBlob(): FloorWorkspaceBlob {
     generatedFloor: null,
     previewPlan: null,
     previewUnderlayLayout: null,
+    sourceUnderlay: null,
   }
+}
+
+function isDurableUnderlaySrc(src: string | null | undefined): boolean {
+  return !!src && !src.startsWith('blob:')
 }
 
 /** Fallback als oude blob nog geen layout had — origin 0; px/mm uit schaal-snapshot. */
@@ -100,6 +113,12 @@ function layoutFromSessionScale(
       : pxPerMmX
   if (!(pxPerMmX > 0) || !(pxPerMmY > 0)) return null
   return { origin: { x: 0, y: 0 }, pxPerMmX, pxPerMmY }
+}
+
+function isQuotaExceeded(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const e = error as { name?: string; code?: number }
+  return e.name === 'QuotaExceededError' || e.code === 22
 }
 
 export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
@@ -124,17 +143,54 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     }),
   )
 
-  const canReuseUnderlay = computed(() => {
-    const src = state.value.sourceUnderlay?.src
-    return !!src && !src.startsWith('blob:')
+  const canReuseUnderlay = computed(() => listUnderlayDonorFloors().length > 0)
+
+  const canCopyPreprocessRefs = computed(() => listPreprocessDonorFloors().length > 0)
+
+  async function writeProjectToIdb(): Promise<void> {
+    try {
+      await saveProject(state.value)
+      // Eén actief projectrecord tegelijk.
+      await deleteOtherProjects(state.value.meta.id).catch(() => undefined)
+    } catch (error) {
+      if (isQuotaExceeded(error)) {
+        try {
+          await deleteOtherProjects(state.value.meta.id)
+          await saveProject(state.value)
+          return
+        } catch (retryError) {
+          deps.setLocalError(tGlobal('project.errors.persistQuota'))
+          console.warn('[project-store] quota exceeded after cleanup', retryError)
+          return
+        }
+      }
+      deps.setLocalError(tGlobal('project.errors.persistFailed'))
+      console.warn('[project-store] save failed', error)
+    }
+  }
+
+  const persistCtrl = createProjectPersistController({
+    save: writeProjectToIdb,
+    shouldSkip: () => switchingFloor.value || deps.shouldSkipPersist?.() === true,
+    onError: (error) => {
+      console.warn('[project-store] persist controller error', error)
+    },
   })
 
-  const canCopyPreprocessRefs = computed(() => {
-    const donor = resolveDonorFloorId()
-    if (!donor) return false
-    const session = state.value.blobs[donor]?.session
-    return !!session?.preprocess
-  })
+  /**
+   * Capture actieve floor + schrijf ProjectState naar IndexedDB.
+   * Geen throw naar de UI — mislukte save breekt de flow niet.
+   */
+  function persistProject(_reason?: string): void {
+    if (deps.flowStep.value !== 'project') {
+      captureActiveFloorIntoBlob()
+    }
+    persistCtrl.persistNow()
+  }
+
+  function persistProjectDebounced(): void {
+    persistCtrl.persistDebounced()
+  }
 
   function resolveDonorFloorId(): string | null {
     const active = state.value.activeFloorId
@@ -151,11 +207,49 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     return withSession[0]?.id ?? null
   }
 
+  /** Bronscan van een floor; legacy fallback op project-level sourceUnderlay. */
+  function getFloorSourceUnderlay(floorId: string): ProjectSourceUnderlay | null {
+    const fromFloor = state.value.blobs[floorId]?.sourceUnderlay
+    if (fromFloor && isDurableUnderlaySrc(fromFloor.src)) return fromFloor
+    // Oude saves: alleen project-level bron — gebruik als donor voor eerdere floors met session.
+    const projectSrc = state.value.sourceUnderlay
+    if (!projectSrc || !isDurableUnderlaySrc(projectSrc.src)) return null
+    const hasAnyFloorSource = state.value.floors.some((f) =>
+      isDurableUnderlaySrc(state.value.blobs[f.id]?.sourceUnderlay?.src),
+    )
+    if (hasAnyFloorSource) return null
+    if (!state.value.blobs[floorId]?.session) return null
+    return projectSrc
+  }
+
+  function listUnderlayDonorFloors(): Array<{ id: string; name: string }> {
+    const activeId = state.value.activeFloorId
+    const out: Array<{ id: string; name: string }> = []
+    for (const meta of state.value.floors) {
+      if (meta.id === activeId) continue
+      if (!getFloorSourceUnderlay(meta.id)) continue
+      out.push({ id: meta.id, name: meta.name })
+    }
+    return out
+  }
+
+  function listPreprocessDonorFloors(): Array<{ id: string; name: string }> {
+    const activeId = state.value.activeFloorId
+    const out: Array<{ id: string; name: string }> = []
+    for (const meta of state.value.floors) {
+      if (meta.id === activeId) continue
+      if (!state.value.blobs[meta.id]?.session?.preprocess) continue
+      out.push({ id: meta.id, name: meta.name })
+    }
+    return out
+  }
+
   function updateProjectMeta(patch: Partial<ProjectMeta>): void {
     state.value = {
       ...state.value,
       meta: { ...state.value.meta, ...patch },
     }
+    persistProjectDebounced()
   }
 
   function updateActiveFloorDefaults(
@@ -169,8 +263,12 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         f.id === id ? { ...f, defaults: { ...f.defaults, ...patch } } : f,
       ),
     }
-    if (options?.syncUi === false) return
+    if (options?.syncUi === false) {
+      persistProjectDebounced()
+      return
+    }
     syncActiveFloorDefaultsToUi()
+    persistProjectDebounced()
   }
 
   function resetActiveFloorDefaults(): void {
@@ -182,6 +280,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       ),
     }
     syncActiveFloorDefaultsToUi()
+    persistProjectDebounced()
   }
 
   function effectiveDefaultsForFloor(floorId: string): ProjectFmlDefaults {
@@ -233,6 +332,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           generatedFloor,
           previewPlan,
           previewUnderlayLayout,
+          // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
+          sourceUnderlay: prev.sourceUnderlay ?? null,
         },
       },
     }
@@ -276,6 +377,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     }
     switchingFloor.value = true
     deps.setLocalError(null)
+    let shouldPersist = false
     try {
       if (deps.flowStep.value !== 'project') {
         captureActiveFloorIntoBlob()
@@ -283,15 +385,18 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       state.value = { ...state.value, activeFloorId: floorId }
       if (deps.flowStep.value === 'project') {
         // Stay on project; hydrate when leaving stap 0.
+        shouldPersist = true
         return
       }
       await hydrateFloor(floorId)
+      shouldPersist = true
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       deps.setLocalError(message)
       throw e
     } finally {
       switchingFloor.value = false
+      if (shouldPersist) persistCtrl.persistNow()
     }
   }
 
@@ -317,6 +422,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       deps.flowStep.value = 'input'
     }
     syncActiveFloorDefaultsToUi()
+    persistCtrl.persistNow()
     return floor
   }
 
@@ -338,7 +444,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       activeFloorId: nextActive,
     }
     if (nextActive !== floorId && deps.flowStep.value !== 'project') {
-      void hydrateFloor(nextActive)
+      void hydrateFloor(nextActive).then(() => persistCtrl.persistNow())
+    } else {
+      persistCtrl.persistNow()
     }
   }
 
@@ -350,6 +458,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       ...state.value,
       floors: state.value.floors.map((f) => (f.id === floorId ? { ...f, name } : f)),
     }
+    persistProjectDebounced()
   }
 
   function reorderFloors(orderedIds: string[]): void {
@@ -366,24 +475,43 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       ...state.value,
       floors: next.map((f, index) => ({ ...f, level: index })),
     }
+    persistProjectDebounced()
   }
 
   function setSourceUnderlay(underlay: ProjectSourceUnderlay | null): void {
     state.value = { ...state.value, sourceUnderlay: underlay }
+    persistCtrl.persistNow()
   }
 
   /**
-   * Eerste bevestigde schaal op de nog-niet-gecropte scan → projectbron.
-   * Nooit overschrijven met post-crop working image.
+   * Schaal bevestigd op actieve floor → bronscan per floor (+ project-level legacy).
+   * Altijd overschrijven: her-upload + opnieuw bevestigen moet de donor bijwerken.
+   * Alleen aanroepen met de nog-niet-gecropte original (duurzame PNG).
    */
   function ensureSourceUnderlay(underlay: ProjectSourceUnderlay): void {
-    if (state.value.sourceUnderlay?.src) return
-    state.value = { ...state.value, sourceUnderlay: { ...underlay } }
+    if (!isDurableUnderlaySrc(underlay.src)) return
+    const id = state.value.activeFloorId
+    const prev = state.value.blobs[id] ?? emptyBlob()
+    const next = { ...underlay }
+    state.value = {
+      ...state.value,
+      sourceUnderlay: next,
+      blobs: {
+        ...state.value.blobs,
+        [id]: { ...prev, sourceUnderlay: next },
+      },
+    }
+    persistCtrl.persistNow()
   }
 
-  /** Expliciete knop stap 1: bronscan + schaal (geen crop van een eerdere floor). */
-  async function reuseUnderlayFromProject(): Promise<void> {
-    const source = state.value.sourceUnderlay
+  /** Expliciete knop stap 1: bronscan + schaal van donor-floor (geen crop). */
+  async function reuseUnderlayFromProject(donorFloorId?: string): Promise<void> {
+    const donors = listUnderlayDonorFloors()
+    const preferred =
+      donorFloorId && donors.some((d) => d.id === donorFloorId)
+        ? donorFloorId
+        : (resolveDonorFloorId() ?? donors[0]?.id ?? null)
+    const source = preferred ? getFloorSourceUnderlay(preferred) : null
     if (source?.src) {
       if (source.src.startsWith('blob:')) {
         deps.setLocalError(tGlobal('input.errors.projectSourceExpired'))
@@ -404,9 +532,13 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
    * Expliciete knop stap 2: alleen B/W-tune (+ drawing profile).
    * Geen LBE-rects, geen gemeten muurdikte — na per-floor crop kloppen die niet.
    */
-  function copyPreprocessAndRefsFromDonor(): void {
-    const donorId = resolveDonorFloorId()
-    const session = donorId ? state.value.blobs[donorId]?.session : null
+  function copyPreprocessAndRefsFromDonor(donorFloorId?: string): void {
+    const donors = listPreprocessDonorFloors()
+    const preferred =
+      donorFloorId && donors.some((d) => d.id === donorFloorId)
+        ? donorFloorId
+        : (resolveDonorFloorId() ?? donors[0]?.id ?? null)
+    const session = preferred ? state.value.blobs[preferred]?.session : null
     if (!session) {
       deps.setLocalError(tGlobal('preprocess.errors.noDonorPreprocess'))
       return
@@ -417,12 +549,16 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     })
   }
 
-  /** Bij verlaten stap 0 → altijd F0 (eerste in lijst), daarna hydrate. */
-  async function enterActiveFloorFromProject(): Promise<void> {
-    const firstId = state.value.floors[0]?.id
-    if (firstId && firstId !== state.value.activeFloorId) {
-      state.value = { ...state.value, activeFloorId: firstId }
-      syncActiveFloorDefaultsToUi()
+  /** Bij verlaten stap 0 → standaard F0; bij resume `keepActiveFloor` behouden. */
+  async function enterActiveFloorFromProject(options?: {
+    keepActiveFloor?: boolean
+  }): Promise<void> {
+    if (!options?.keepActiveFloor) {
+      const firstId = state.value.floors[0]?.id
+      if (firstId && firstId !== state.value.activeFloorId) {
+        state.value = { ...state.value, activeFloorId: firstId }
+        syncActiveFloorDefaultsToUi()
+      }
     }
     await hydrateFloor(state.value.activeFloorId)
   }
@@ -430,13 +566,24 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   /** Bij terug naar stap 0: capture huidige floor (flowStep zet de caller). */
   function leaveFloorToProject(): void {
     captureActiveFloorIntoBlob()
+    persistCtrl.persistNow()
+  }
+
+  function applyPersistedState(next: ProjectState): void {
+    state.value = next
+    syncActiveFloorDefaultsToUi()
   }
 
   function resetProject(): void {
+    const previousId = state.value.meta.id
+    persistCtrl.dispose()
     state.value = createEmptyProjectState()
     deps.resetToEmptyFloor()
     deps.flowStep.value = 'project'
     syncActiveFloorDefaultsToUi()
+    void deleteProject(previousId).catch((error) => {
+      console.warn('[project-store] delete on reset failed', error)
+    })
   }
 
   function buildMergedProjectPlan(): ReturnType<typeof mergeFloorPlans> | null {
@@ -478,6 +625,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         f.id === id && floor ? { ...f, status: 'result' } : f,
       ),
     }
+    persistCtrl.persistNow()
   }
 
   /** Floors (niet actief) met FML-muren voor muurstempel. */
@@ -530,11 +678,15 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     ensureSourceUnderlay,
     reuseUnderlayFromProject,
     copyPreprocessAndRefsFromDonor,
+    listUnderlayDonorFloors,
+    listPreprocessDonorFloors,
     listStampDonorFloors,
     getStampDonorWalls,
     enterActiveFloorFromProject,
     leaveFloorToProject,
     captureActiveFloorIntoBlob,
+    persistProject,
+    applyPersistedState,
     resetProject,
     buildMergedProjectPlan,
     storeGeneratedFloorForActive,

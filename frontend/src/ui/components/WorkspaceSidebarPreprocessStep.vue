@@ -22,6 +22,7 @@ const props = defineProps<{
   scaleConfirmed: boolean
   rects: SelectionRect[]
   canCopyPreprocessRefs?: boolean
+  preprocessDonorOptions?: Array<{ id: string; name: string }>
   canStartWallStamp?: boolean
   wallStampActive?: boolean
   wallStampBaked?: boolean
@@ -43,7 +44,7 @@ const emit = defineEmits<{
   setReferenceDrawMode: [type: 'wall' | 'door' | 'window']
   setReferencePanMode: []
   updateDoorFmlRefId: [id: string, fmlRefId: string]
-  copyPreprocessRefs: []
+  copyPreprocessRefs: [donorFloorId: string]
   startWallStamp: [donorFloorId: string]
   setWallStampBands: [bands: { min: boolean; mid: boolean; max: boolean }]
   setWallStampGumMode: [mode: 'off' | 'brush' | 'polygon']
@@ -73,6 +74,21 @@ watch(
   { immediate: true },
 )
 
+const preprocessDonorId = ref('')
+watch(
+  () => props.preprocessDonorOptions,
+  (opts) => {
+    if (!opts?.length) {
+      preprocessDonorId.value = ''
+      return
+    }
+    if (!opts.some((o) => o.id === preprocessDonorId.value)) {
+      preprocessDonorId.value = opts[0]?.id ?? ''
+    }
+  },
+  { immediate: true },
+)
+
 const bands = computed(() => props.wallStampBands ?? { min: false, mid: true, max: true })
 
 function toggleBand(key: 'min' | 'mid' | 'max') {
@@ -82,6 +98,11 @@ function toggleBand(key: 'min' | 'mid' | 'max') {
 function onStartStamp() {
   if (!donorId.value) return
   emit('startWallStamp', donorId.value)
+}
+
+function onCopyPreprocessRefs() {
+  if (!preprocessDonorId.value) return
+  emit('copyPreprocessRefs', preprocessDonorId.value)
 }
 </script>
 
@@ -123,11 +144,19 @@ function onStartStamp() {
   />
 
   <div class="panel">
+    <label v-if="(preprocessDonorOptions?.length ?? 0) > 0" class="field">
+      <span>{{ t('preprocess.copyBwDonor') }}</span>
+      <select v-model="preprocessDonorId">
+        <option v-for="opt in preprocessDonorOptions" :key="opt.id" :value="opt.id">
+          {{ opt.name }}
+        </option>
+      </select>
+    </label>
     <button
       type="button"
       class="secondary"
-      :disabled="!canCopyPreprocessRefs"
-      @click="$emit('copyPreprocessRefs')"
+      :disabled="!canCopyPreprocessRefs || !preprocessDonorId"
+      @click="onCopyPreprocessRefs"
     >
       {{ t('preprocess.copyBw') }}
     </button>

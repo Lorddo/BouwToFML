@@ -1,14 +1,7 @@
 import { ref, onUnmounted } from 'vue'
-import { POC_DEFAULT_IMAGE, POC_DEFAULT_IMAGE_NAME } from '@/platform/poc-reference'
 import type { UploadedImage } from './types'
 
-const DEFAULT_BOUWTEKENING = POC_DEFAULT_IMAGE
-const DEFAULT_BOUWTEKENING_NAME = POC_DEFAULT_IMAGE_NAME
-
-export function useImageUpload(
-  defaultSrc = DEFAULT_BOUWTEKENING,
-  defaultName = DEFAULT_BOUWTEKENING_NAME,
-) {
+export function useImageUpload(defaultSrc = '', defaultName = '') {
   const imageSrc = ref(defaultSrc)
   const imageName = ref(defaultName)
   let objectUrl: string | null = null
@@ -43,7 +36,7 @@ export function useImageUpload(
     imageName.value = name
   }
 
-  /** Leeg canvas / volgende verdieping zonder vorige onderlegger. */
+  /** Empty canvas / next floor without previous underlay. */
   function clearImageSource() {
     if (objectUrl) URL.revokeObjectURL(objectUrl)
     objectUrl = null

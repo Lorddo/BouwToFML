@@ -1,15 +1,6 @@
-export type {
-  FaceOverridePinTarget,
-  SyncPinnedClassOverridesParams,
-  SyncPinnedClassResult,
-  SyncPinnedTargetClass,
-  RoomRasterCache,
-  FaceClassChangeResult,
-  RasterBBox,
-} from './room-raster-cache-types'
+export type { RoomRasterCache, RasterBBox } from './room-raster-cache-types'
 
 export {
-  syncPinnedClassOverrides,
   syncDoorSwingFaceOverrides,
   syncDoorBridgeWallOverrides,
   syncWindowFaceOverrides,
@@ -39,7 +30,6 @@ export {
   findFaceLabelsFullyInBBox,
   setFaceClassificationForLabels,
   setFacesFullyInBBox,
-  setFacesFullyInBBoxDetailed,
 } from './room-raster-cache-mutate'
 
 export { updateRoomRasterPreviewMask } from './room-raster-cache-preview'

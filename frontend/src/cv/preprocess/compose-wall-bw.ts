@@ -128,9 +128,6 @@ export function bwBytesToCanvas(data: Uint8Array, width: number, height: number)
   return canvas
 }
 
-/** @deprecated Prefer `bwBytesToCanvas` — alias voor bestaande callers. */
-export const effectiveBwToCanvas = bwBytesToCanvas
-
 /**
  * Full-image muur-B/W via wallLayer-tune (geen OCR/inkt).
  * Caller moet `mat.delete()` aanroepen.

@@ -7,7 +7,7 @@ import {
   composeWallBw,
   createInkOverlay,
   decodeInkOverlayRle,
-  effectiveBwToCanvas,
+  bwBytesToCanvas,
   encodeInkOverlayRle,
   inkOverlayHasEdits,
   mergeInkOverlayInto,
@@ -100,7 +100,7 @@ export function useWorkspaceWallBwCompose(deps: {
       stampBw: deps.getStampBw?.() ?? null,
     })
     effectiveBwData.value = composed
-    const canvas = effectiveBwToCanvas(composed, w, h) as HTMLCanvasElement
+    const canvas = bwBytesToCanvas(composed, w, h) as HTMLCanvasElement
     effectiveBwCanvas.value = canvas
     effectiveBwUrl.value = canvasToDataUrl(canvas)
     return composed

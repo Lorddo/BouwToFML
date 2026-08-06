@@ -230,69 +230,97 @@ function swatchStyle(color: string): Record<string, string> {
   </div>
 
   <div v-if="templateTab === 'gaps'" class="panel">
-    <h3>Gaten</h3>
-    <p class="hint">
-      Solid: dezelfde vlakken als Muren, maar vlakken die onder het Gaten-muurmasker (stap 2, zwart)
-      vallen worden als buiten gezet — vloeren en gaten blijven gekleurd. Vlakken groter dan 3× het
-      grootste deur/raam-refvlak (head/interior, geen buitenrand) worden ook wit. Eerst Muren
-      classificeren. Detail-modus (debug-sidebar): Otsu-wit alleen in gaten-zwart carveën.
-    </p>
+    <h3>{{ t('templates.gaps.title') }}</h3>
+    <p class="hint">{{ t('templates.gaps.hint') }}</p>
     <p class="metric">
       {{
         currentTabDetected
           ? gapsDemoteStats
-            ? `Muurvlakken weg: ${gapsDemoteStats.demotedCount} · behouden: ${gapsDemoteStats.keptCount}${
-                gapsDemoteStats.oversizedDemotedCount
-                  ? ` · te groot weg: ${gapsDemoteStats.oversizedDemotedCount} (cap ${Math.round(gapsDemoteStats.refFaceAreaCapPx ?? 0)} px)`
-                  : gapsDemoteStats.maxRefFaceAreaPx
-                    ? ` · ref-max ${Math.round(gapsDemoteStats.maxRefFaceAreaPx)} px`
-                    : ''
-              }`
-            : 'Vlakken laden…'
-          : 'Eerst muren classificeren op de Muren-tab.'
+            ? t('templates.gaps.demoted', {
+                demoted: gapsDemoteStats.demotedCount,
+                kept: gapsDemoteStats.keptCount,
+              }) +
+              (gapsDemoteStats.oversizedDemotedCount
+                ? t('templates.gaps.oversized', {
+                    count: gapsDemoteStats.oversizedDemotedCount,
+                    cap: Math.round(gapsDemoteStats.refFaceAreaCapPx ?? 0),
+                  })
+                : gapsDemoteStats.maxRefFaceAreaPx
+                  ? t('templates.gaps.refMax', {
+                      px: Math.round(gapsDemoteStats.maxRefFaceAreaPx),
+                    })
+                  : '')
+            : t('templates.gaps.loading')
+          : t('templates.gaps.needWalls')
       }}
     </p>
   </div>
 
   <div v-if="templateTab === 'doors'" class="panel">
-    <h3>Deuren</h3>
-    <p class="hint">
-      Fase 1 draaiboog-filter: ref-gestuurde kandidaten op face-niveau (non-outside seeds,
-      shared-edge clustering, schaalband 40-120 cm en aspect ±5%).
-    </p>
+    <h3>{{ t('templates.doors.title') }}</h3>
+    <p class="hint">{{ t('templates.doors.hint') }}</p>
     <p class="metric">
       {{
         currentTabDetected
           ? doorSwingStats
             ? doorSwingStats.refBandCount === 0
-              ? 'Geen bruikbare draaiboog-ref gevonden. Teken een deur-ref met draaicirkel op stap 1.'
-              : `Actief ${doorSwingStats.stage}: ${doorSwingStats.hypothesisCount} · stage1 totaal: ${doorSwingStats.stage1HypothesisCount} · accepted: ${doorSwingStats.acceptedCount} · rejected: ${doorSwingStats.rejectedCount} · single: ${doorSwingStats.singleCount} · clusters: ${doorSwingStats.clusterCount} · refs: ${doorSwingStats.refBandCount} · seeds: ${doorSwingStats.seedCount}`
-            : 'Deurkandidaten laden…'
-          : 'Eerst muren classificeren op de Muren-tab.'
+              ? t('templates.doors.noRef')
+              : t('templates.doors.stats', {
+                  stage: doorSwingStats.stage,
+                  hypotheses: doorSwingStats.hypothesisCount,
+                  stage1: doorSwingStats.stage1HypothesisCount,
+                  accepted: doorSwingStats.acceptedCount,
+                  rejected: doorSwingStats.rejectedCount,
+                  single: doorSwingStats.singleCount,
+                  clusters: doorSwingStats.clusterCount,
+                  refs: doorSwingStats.refBandCount,
+                  seeds: doorSwingStats.seedCount,
+                })
+            : t('templates.doors.loading')
+          : t('templates.doors.needWalls')
       }}
     </p>
     <p v-if="doorSwingStats?.sizeBandPx" class="metric">
       {{
-        `Muur-as px-band: ${doorSwingStats.sizeBandPx.wallMinPx}-${doorSwingStats.sizeBandPx.wallMaxPx} (diepte uit deur-ref)`
+        t('templates.doors.sizeBand', {
+          min: doorSwingStats.sizeBandPx.wallMinPx,
+          max: doorSwingStats.sizeBandPx.wallMaxPx,
+        })
       }}
     </p>
   </div>
 
   <div v-if="templateTab === 'windows'" class="panel">
-    <h3>Ramen</h3>
-    <p class="hint">
-      Stage 1 axel-filter + Stage 2 deurboog-reject + Stage 3 evidence-filter (framing op
-      as-uiteinden, fallback top+bottom).
-    </p>
+    <h3>{{ t('templates.windows.title') }}</h3>
+    <p class="hint">{{ t('templates.windows.hint') }}</p>
     <p class="metric">
       {{
         currentTabDetected
           ? windowFaceStats
             ? windowFaceStats.refBandCount === 0
-              ? 'Geen bruikbare raam-axel-ref gevonden. Teken een raam-ref met duidelijke binnenstrips op stap 1.'
-              : `Actief ${windowFaceStats.stage}: ${windowFaceStats.hypothesisCount} · stage1 totaal: ${windowFaceStats.stage1HypothesisCount} · stage2 accepted: ${windowFaceStats.stage2AcceptedCount} · doorframe: shared ${windowFaceStats.stage2RejectedShare}, adjacent ${windowFaceStats.stage2RejectedAdjacent}, directional ${windowFaceStats.stage2RejectedDirectional} · stage3 accepted: ${windowFaceStats.stage3AcceptedCount} (framing ${windowFaceStats.stage3AcceptedByFraming}, strip-stack ${windowFaceStats.stage3AcceptedByStripStack}) · stage3 rejected: ${windowFaceStats.stage3RejectedNoEvidence} · doorframes: ${windowFaceStats.stage3DoorframeAcceptedCount ?? 0} · stage4 windows: ${windowFaceStats.stage4ResolvedCount} · doorframes: ${windowFaceStats.stage4DoorframeCount ?? 0} · refs: ${windowFaceStats.refBandCount} · candidate faces: ${windowFaceStats.candidateRootCount} · accepted: ${windowFaceStats.acceptedCount} · rejected: ${windowFaceStats.rejectedCount}`
-            : 'Raamkandidaten laden…'
-          : 'Eerst muren classificeren op de Muren-tab.'
+              ? t('templates.windows.noRef')
+              : t('templates.windows.stats', {
+                  stage: windowFaceStats.stage,
+                  hypotheses: windowFaceStats.hypothesisCount,
+                  stage1: windowFaceStats.stage1HypothesisCount,
+                  stage2Accepted: windowFaceStats.stage2AcceptedCount,
+                  share: windowFaceStats.stage2RejectedShare,
+                  adjacent: windowFaceStats.stage2RejectedAdjacent,
+                  directional: windowFaceStats.stage2RejectedDirectional,
+                  stage3Accepted: windowFaceStats.stage3AcceptedCount,
+                  framing: windowFaceStats.stage3AcceptedByFraming,
+                  stripStack: windowFaceStats.stage3AcceptedByStripStack,
+                  stage3Rejected: windowFaceStats.stage3RejectedNoEvidence,
+                  doorframes: windowFaceStats.stage3DoorframeAcceptedCount ?? 0,
+                  stage4Windows: windowFaceStats.stage4ResolvedCount,
+                  stage4Doorframes: windowFaceStats.stage4DoorframeCount ?? 0,
+                  refs: windowFaceStats.refBandCount,
+                  candidates: windowFaceStats.candidateRootCount,
+                  accepted: windowFaceStats.acceptedCount,
+                  rejected: windowFaceStats.rejectedCount,
+                })
+            : t('templates.windows.loading')
+          : t('templates.windows.needWalls')
       }}
     </p>
     <div v-if="windowFaceStats?.byRef?.length" class="ref-list">
@@ -300,13 +328,17 @@ function swatchStyle(color: string): Record<string, string> {
         <span class="swatch" :style="swatchStyle(ref.color)" />
         <span class="metric">
           {{
-            `Ref ${ref.refIndex + 1}: ${ref.matches} matches · patroon ${ref.stripCount} strips · h ${Math.round(ref.targetHeightPx)}px`
+            t('templates.windows.refRow', {
+              n: ref.refIndex + 1,
+              matches: ref.matches,
+              strips: ref.stripCount,
+              height: Math.round(ref.targetHeightPx),
+            })
           }}
         </span>
       </div>
     </div>
   </div>
-
   <div v-if="templateTab === 'walls'" class="panel wall-actions">
     <p class="metric">
       {{

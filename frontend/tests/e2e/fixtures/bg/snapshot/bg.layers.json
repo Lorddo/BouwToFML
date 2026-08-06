@@ -10,6 +10,7 @@
       "D-55": 332,
       "D-57": 20,
       "D-58": 20,
+      "R-28": 7,
       "REF-13": 20,
       "W-07": 18928,
       "W-08": 2,
@@ -58,13 +59,13 @@
       "X-02": 150,
       "X-06": 2,
       "X-10": 4,
-      "X-11": 21,
+      "X-11": 14,
       "X-13": 2,
       "X-14": 2,
       "X-15": 2,
       "X-16": 2,
       "X-22": 75,
-      "X-27": 1
+      "X-27": 1,
     },
     "levels": {
       "D-44:path_a_hit": 16,
@@ -77,6 +78,8 @@
       "D-57:rotated": 9,
       "D-58:pathA_doorframe": 19,
       "D-58:pathB_hinge_resolve": 1,
+      "R-28:dropped_duplicate": 5,
+      "R-28:dropped_overlap": 2,
       "REF-13:wall_axis_corner": 20,
       "W-07:sampled": 18928,
       "W-08:relaxed_merge": 2,
@@ -160,14 +163,14 @@
       "X-02:measurement_discarded": 150,
       "X-06:semantic": 2,
       "X-10:double_wide_merged": 4,
-      "X-11:no_mirrored": 21,
+      "X-11:no_mirrored": 14,
       "X-13:hardcoded_metadata": 2,
       "X-14:empty_collections": 2,
       "X-15:hardcoded_settings": 2,
       "X-16:full_height": 2,
       "X-22:measured": 75,
-      "X-27:dead_flag_false": 1
-    }
+      "X-27:dead_flag_false": 1,
+    },
   },
   "layers": {
     "layer10": {
@@ -176,9 +179,9 @@
         "I": 4,
         "L": 32,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 76
+      "segments": 76,
     },
     "layer2": {
       "junctions": 303,
@@ -186,9 +189,9 @@
         "I": 46,
         "L": 193,
         "T": 60,
-        "X": 4
+        "X": 4,
       },
-      "segments": 314
+      "segments": 314,
     },
     "layer3": {
       "junctions": 213,
@@ -196,9 +199,9 @@
         "I": 4,
         "L": 181,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 242
+      "segments": 242,
     },
     "layer4": {
       "invariantReport": {
@@ -207,24 +210,24 @@
           "I": 4,
           "L": 181,
           "T": 28,
-          "X": 0
+          "X": 0,
         },
         "junctionKindCountsBefore": {
           "I": 4,
           "L": 181,
           "T": 28,
-          "X": 0
+          "X": 0,
         },
-        "ok": true
+        "ok": true,
       },
       "junctions": 213,
       "kinds": {
         "I": 4,
         "L": 181,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 242
+      "segments": 242,
     },
     "layer5": {
       "junctions": 146,
@@ -232,9 +235,9 @@
         "I": 5,
         "L": 113,
         "T": 27,
-        "X": 1
+        "X": 1,
       },
-      "segments": 158
+      "segments": 158,
     },
     "layer6": {
       "junctions": 131,
@@ -242,9 +245,9 @@
         "I": 4,
         "L": 98,
         "T": 28,
-        "X": 1
+        "X": 1,
       },
-      "segments": 144
+      "segments": 144,
     },
     "layer7": {
       "junctions": 78,
@@ -252,9 +255,9 @@
         "I": 4,
         "L": 45,
         "T": 28,
-        "X": 1
+        "X": 1,
       },
-      "segments": 91
+      "segments": 91,
     },
     "layer8": {
       "junctions": 74,
@@ -262,9 +265,9 @@
         "I": 4,
         "L": 42,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 86
+      "segments": 86,
     },
     "layer9": {
       "junctions": 70,
@@ -272,9 +275,9 @@
         "I": 4,
         "L": 38,
         "T": 28,
-        "X": 0
+        "X": 0,
       },
-      "segments": 82
-    }
-  }
+      "segments": 82,
+    },
+  },
 }

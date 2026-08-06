@@ -70,7 +70,6 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  downloadProject: []
   regenerate: []
   'update:fmlWallHeightCm': [value: number]
   'update:fmlDoorHeightCm': [value: number]
@@ -165,7 +164,6 @@ function onBovenlichtChange(event: Event): void {
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
       :fml-limits-dirty="fmlLimitsDirty"
-      @download-project="emit('downloadProject')"
       @regenerate="emit('regenerate')"
     />
   </div>

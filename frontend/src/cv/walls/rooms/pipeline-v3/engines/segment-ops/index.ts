@@ -164,7 +164,7 @@ export function replaceEndpoint(
 ): number {
   // Snapshot — callers often pass a live seg.a/seg.b; mutating that endpoint
   // mid-loop would retarget `oldPoint` to `newPoint` and skip other matches
-  // (BouwTek11 @645,243: T-stub before long V → moved=1, stranded I).
+  // (T-stub before long V → moved=1, stranded I).
   const from = { x: oldPoint.x, y: oldPoint.y }
   const to = { x: newPoint.x, y: newPoint.y }
   let replaced = 0
@@ -300,7 +300,7 @@ function groupMaxPairwiseDistance(group: EndpointGroupMember[]): number {
  * Snap near-coincident endpoints to one byte-identical coordinate.
  * Unlike the old micro-weld skip (`maxD <= 1e-6`), ULP drift is forced equal so
  * snap=0 junction graphs do not explode a through-joint into two I's
- * (2D_3E @726.64,516 after same-line rewrite).
+ * (collinear hub after same-line rewrite).
  */
 export function unifyNearEndpoints(
   segments: Segment[],

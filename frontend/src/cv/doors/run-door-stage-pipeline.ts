@@ -217,7 +217,7 @@ export function runDoorStagePipeline(
     for (const faceId of hyp.faceIds) claimedFaceIds.add(faceId)
   }
   // existingDoorsOnly: géén unknown→deur via angle-rescue, wél reeds class=door
-  // (twins die alleen via angle-rescue in Stage-1 zaten — face 32 / 360/361).
+  // (twins die alleen via angle-rescue in Stage-1 class=door kregen).
   const angleRescue = runDoorSwingAngleRescue({
     cv: params.cv,
     dual: pipeDual,

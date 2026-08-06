@@ -221,6 +221,7 @@ const {
   handleExternalPlanChange,
   mountKeyboardListeners,
   unmountInteraction,
+  resetView,
 } = interaction
 
 const { drawWallPreviewScreen, drawRoomPreviewScreen, drawRoomPreviewPolygon, cmToScreen } =
@@ -246,6 +247,15 @@ watch(
   () => props.plan,
   () => {
     handleExternalPlanChange()
+  },
+)
+
+watch(
+  () => props.floorIndex,
+  () => {
+    clearSelection()
+    clearMeasureLines()
+    resetView()
   },
 )
 </script>

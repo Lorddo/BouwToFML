@@ -30,17 +30,19 @@ export interface BuildBovenlichtOptions {
 /**
  * Bouwt een export-only raam boven de deur.
  * `z = deurhoogte + gap`; hoogte 40 cm (geclampt binnen floorHeight indien gezet).
+ * Past de gap niet: plaats direct op de deur. Skip alleen als deur tot plafond reikt.
  */
 export function buildBovenlichtOpening(
   door: Pick<Opening, 't' | 'width' | 'z_height' | 'guid'>,
   options: BuildBovenlichtOptions = {},
 ): Opening | null {
   const doorHeight = door.z_height ?? DEFAULT_FML_DOOR_HEIGHT_CM
-  const z = doorHeight + BOVENLICHT_GAP_CM
+  let z = doorHeight + BOVENLICHT_GAP_CM
   let zHeight = BOVENLICHT_HEIGHT_CM
   const floorHeight = options.floorHeightCm
   if (floorHeight != null && Number.isFinite(floorHeight)) {
-    if (z >= floorHeight) return null
+    if (!(doorHeight < floorHeight)) return null
+    if (z >= floorHeight) z = doorHeight
     zHeight = Math.min(zHeight, floorHeight - z)
     if (zHeight <= 0) return null
   }

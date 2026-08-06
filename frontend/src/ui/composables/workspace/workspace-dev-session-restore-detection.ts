@@ -9,9 +9,9 @@ import {
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import {
-  clonePlain,
   isSessionV2,
   restoreTabOutputsFromSnapshot,
+  toStorableDevSession,
   type DevWorkspaceRoomSnapshot,
   type DevWorkspaceSession,
   type DevOpeningReferenceRect,
@@ -113,7 +113,7 @@ export function createWorkspaceDevSessionRestoreDetection(
     const exact = session.detectionExact
     const hasClassifyState = !!exact.tabOutputs.walls?.meta?.roomClassifyState
 
-    deps.tabOutputs.value = restoreTabOutputsFromSnapshot(clonePlain(exact.tabOutputs))
+    deps.tabOutputs.value = restoreTabOutputsFromSnapshot(toStorableDevSession(exact.tabOutputs))
     deps.roomPhase.value = exact.roomPhase
     deps.wallsDetectionComplete.value = exact.wallsDetectionComplete
     applyRoomSnapshot(exact, { restoreReferenceWallRect: !hasClassifyState })

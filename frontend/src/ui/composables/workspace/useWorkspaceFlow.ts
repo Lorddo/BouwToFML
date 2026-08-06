@@ -53,6 +53,11 @@ export function useWorkspaceFlow(deps: {
   runOcrScan: () => Promise<void>
   measureWallReferenceThickness: (rect: SelectionRect) => Promise<number | null>
   wallsDetectionComplete?: () => boolean
+  /**
+   * True als stap 3 al classify/finalize-output heeft — geen OCR/classify-bootstrap
+   * bij opnieuw binnenkomen (stap terug → vooruit).
+   */
+  hasTemplatesDetection?: () => boolean
   devSessionRestoring?: Ref<boolean>
   onEnterResultStep?: () => Promise<void> | void
   setLocalError?: (message: string | null) => void
@@ -61,6 +66,10 @@ export function useWorkspaceFlow(deps: {
   projectCanProceed?: () => boolean
   onLeaveProjectStep?: () => Promise<void> | void
   onEnterProjectStep?: () => void
+  /** Checkpoint na stap-overgang (IndexedDB persist). */
+  onFlowCheckpoint?: (step: WorkspaceFlowStep) => void
+  /** Stap 4 primary: download project-FML i.p.v. dode «Klaar». */
+  onResultDownload?: () => void
 }) {
   const flowOrder = WORKSPACE_FLOW_ORDER
   const flowLabels = WORKSPACE_FLOW_LABELS
@@ -76,7 +85,7 @@ export function useWorkspaceFlow(deps: {
   const nextFlowStep = computed(() => flowOrder[flowStepIndex.value + 1] ?? null)
 
   const nextStepButtonLabel = computed(() => {
-    if (deps.flowStep.value === 'result') return tGlobal('flow.done')
+    if (deps.flowStep.value === 'result') return tGlobal('result.downloadProject')
     const next = nextFlowStep.value
     if (!next) return tGlobal('flow.next')
     return tGlobal('flow.nextWithStep', { step: flowLabels[next] })
@@ -106,7 +115,7 @@ export function useWorkspaceFlow(deps: {
         }
         return true
       case 'result':
-        return false
+        return true
       default:
         return false
     }
@@ -142,15 +151,24 @@ export function useWorkspaceFlow(deps: {
       deps.onEnterProjectStep?.()
     }
     deps.flowStep.value = prev
+    deps.onFlowCheckpoint?.(prev)
   }
 
   async function goToNextStep() {
     if (!canGoNext.value) return
+    if (deps.flowStep.value === 'result') {
+      deps.onResultDownload?.()
+      return
+    }
     if (deps.flowStep.value === 'project') {
       await deps.onLeaveProjectStep?.()
       // Hydrate kan al naar input/preprocess/… gezet hebben.
-      if (deps.flowStep.value !== 'project') return
+      if (deps.flowStep.value !== 'project') {
+        deps.onFlowCheckpoint?.(deps.flowStep.value)
+        return
+      }
       deps.flowStep.value = 'input'
+      deps.onFlowCheckpoint?.('input')
       return
     }
     if (deps.flowStep.value === 'input') {
@@ -166,10 +184,15 @@ export function useWorkspaceFlow(deps: {
         deps.setLocalError?.(tGlobal('flow.blocked.wallRef'))
         return
       }
-      const thickness = await deps.measureWallReferenceThickness(wallRect)
-      if (thickness == null || thickness <= 0) {
-        // measureWallReferenceThickness zet al een foutmelding
-        return
+      // Detectie al gedaan: dikte niet opnieuw meten (voorkomt band-churn + UI-lock).
+      // Alleen meten wanneer nog geen geldige referentiedikte.
+      const existingPx = deps.referenceWallThicknessPx.value
+      if (existingPx == null || existingPx <= 0) {
+        const thickness = await deps.measureWallReferenceThickness(wallRect)
+        if (thickness == null || thickness <= 0) {
+          // measureWallReferenceThickness zet al een foutmelding
+          return
+        }
       }
     } else if (deps.flowStep.value === 'templates') {
       await deps.commitInkEdits()
@@ -181,6 +204,7 @@ export function useWorkspaceFlow(deps: {
         deps.resultTab.value = 'vector'
       }
       deps.flowStep.value = nextStep
+      deps.onFlowCheckpoint?.(nextStep)
     }
   }
 
@@ -251,17 +275,16 @@ export function useWorkspaceFlow(deps: {
       deps.preprocessPreview.clearPreview()
     }
     if (prev === 'preprocess' && step === 'input') {
-      // Refs liggen op gebakken onderlegger; terug naar stap 1 → opnieuw tekenen.
-      deps.clearRects()
-      deps.referenceWallThicknessPx.value = null
+      // Bewaar refs / dikte / inkt — stap terug mag afgerond werk niet wissen.
+      // Wipe alleen bij nieuwe onderlegger / expliciete her-classify (elders).
       deps.activeClass.value = null
-      deps.resetInkOverlay?.()
     }
     if (prev === 'preprocess' && step === 'templates') {
       deps.templateTab.value = 'walls'
       deps.preprocessTab.value = 'walls'
       deps.activeClass.value = null
-      if (!shouldSkipAutoClassify()) {
+      const skipBootstrap = shouldSkipAutoClassify() || deps.hasTemplatesDetection?.() === true
+      if (!skipBootstrap) {
         bootstrappingTemplates = true
         ocrInitialPassReady.value = !deps.ocrEnabled.value
         void (async () => {

@@ -64,7 +64,11 @@ const tree = {
   },
   app: {
     title: t('BouwToFML', 'BouwToFML', 'BouwToFML'),
-    subtitle: t('Floor plan to Floorplanner', 'Bouwtekening naar Floorplanner', 'แบบแปลนสู่ Floorplanner'),
+    subtitle: t(
+      'Floor plan to Floorplanner',
+      'Bouwtekening naar Floorplanner',
+      'แบบแปลนสู่ Floorplanner',
+    ),
     newDrawing: t('New drawing', 'Nieuwe tekening', 'แบบใหม่'),
     settings: t('Settings', 'Instellingen', 'การตั้งค่า'),
   },
@@ -139,7 +143,11 @@ const tree = {
       'ชื่อโครงการและชั้น ที่อยู่ไม่บังคับ จากนั้นตรวจจับทีละชั้น',
     ),
     name: t('Project name', 'Projectnaam', 'ชื่อโครงการ'),
-    namePlaceholder: t('e.g. Kinderdijkstraat 53', 'Bijv. Kinderdijkstraat 53', 'เช่น Kinderdijkstraat 53'),
+    namePlaceholder: t(
+      'e.g. Kinderdijkstraat 53',
+      'Bijv. Kinderdijkstraat 53',
+      'เช่น Kinderdijkstraat 53',
+    ),
     address: t('Address', 'Adres', 'ที่อยู่'),
     addressPlaceholder: t('Street, city', 'Straat, plaats', 'ถนน, เมือง'),
     floors: t('Floors', 'Verdiepingen', 'ชั้น'),
@@ -214,17 +222,22 @@ const tree = {
       'ดาวน์โหลดภาพปัจจุบัน (ครอป/ลบ + หมุน) เป็น PNG แก้แล้วอัปโหลดใหม่ — ตั้งหมุนเป็น 0° (อยู่ใน PNG แล้ว) ตั้งมาตราส่วนต่อการอัปโหลด วาดอ้างอิงในขั้นตอนที่ 2',
     ),
     reuseUnderlay: t('Reuse underlay', 'Onderlegger overnemen', 'ใช้ภาพพื้นซ้ำ'),
+    reuseUnderlayDonor: t('Copy from floor', 'Overnemen van verdieping', 'คัดลอกจากชั้น'),
     reuseUnderlayHintOk: t(
-      'Takes the project source (original scan + scale lines, without crop). Available after confirming scale on an earlier floor. Crop this floor again afterward.',
-      'Neemt de projectbron over (originele scan + schaallijnen, zonder crop). Beschikbaar na schaal bevestigen op een eerdere verdieping. Crop daarna deze verdieping opnieuw.',
-      'ใช้แหล่งโครงการ (สแกนต้นฉบับ + เส้นมาตราส่วน โดยไม่ครอป) ใช้ได้หลังยืนยันมาตราส่วนบนชั้นก่อนหน้า จากนั้นครอปชั้นนี้อีกครั้ง',
+      'Takes the selected floor’s original scan + scale lines (without crop). Available after confirming scale on that floor. Crop this floor again afterward.',
+      'Neemt de originele scan + schaallijnen van de gekozen verdieping over (zonder crop). Beschikbaar na schaal bevestigen op die verdieping. Crop daarna deze verdieping opnieuw.',
+      'ใช้สแกนต้นฉบับ + เส้นมาตราส่วนของชั้นที่เลือก (โดยไม่ครอป) ใช้ได้หลังยืนยันมาตราส่วนบนชั้นนั้น จากนั้นครอปชั้นนี้อีกครั้ง',
     ),
     reuseUnderlayHintBlocked: t(
-      'First confirm scale on a floor (before crop) to keep the project source.',
-      'Bevestig eerst de schaal op een verdieping (vóór crop) om de projectbron te bewaren.',
-      'ยืนยันมาตราส่วนบนชั้นก่อน (ก่อนครอป) เพื่อเก็บแหล่งโครงการ',
+      'First confirm scale on a floor (before crop) so that floor can be used as source.',
+      'Bevestig eerst de schaal op een verdieping (vóór crop) zodat die als bron beschikbaar is.',
+      'ยืนยันมาตราส่วนบนชั้นก่อน (ก่อนครอป) เพื่อให้ชั้นนั้นใช้เป็นแหล่งได้',
     ),
-    downloadUnderlay: t('Download underlay (PNG)', 'Download onderlegger (PNG)', 'ดาวน์โหลดภาพพื้น (PNG)'),
+    downloadUnderlay: t(
+      'Download underlay (PNG)',
+      'Download onderlegger (PNG)',
+      'ดาวน์โหลดภาพพื้น (PNG)',
+    ),
     opencvLoading: t('Loading OpenCV...', 'OpenCV laden...', 'กำลังโหลด OpenCV...'),
     opencvReset: t('Reset loader', 'Reset loader', 'รีเซ็ตตัวโหลด'),
     pdf: {
@@ -234,7 +247,11 @@ const tree = {
         'Selecteer de pagina die je als onderlegger wilt gebruiken.',
         'เลือกหน้าที่ใช้เป็นภาพพื้น',
       ),
-      pageOf: t('Page {current} of {total}', 'Pagina {current} van {total}', 'หน้า {current} จาก {total}'),
+      pageOf: t(
+        'Page {current} of {total}',
+        'Pagina {current} van {total}',
+        'หน้า {current} จาก {total}',
+      ),
       loading: t('Loading PDF…', 'PDF laden…', 'กำลังโหลด PDF…'),
       previewLoading: t('Loading preview…', 'Preview laden…', 'กำลังโหลดตัวอย่าง…'),
       previewUpdating: t('Updating preview…', 'Preview bijwerken…', 'กำลังอัปเดตตัวอย่าง…'),
@@ -271,7 +288,11 @@ const tree = {
         'Kon PDF niet naar afbeelding converteren.',
         'แปลง PDF เป็นภาพไม่ได้',
       ),
-      pageImageName: t('{fileName} (page {pageNumber})', '{fileName} (pagina {pageNumber})', '{fileName} (หน้า {pageNumber})'),
+      pageImageName: t(
+        '{fileName} (page {pageNumber})',
+        '{fileName} (pagina {pageNumber})',
+        '{fileName} (หน้า {pageNumber})',
+      ),
     },
     errors: {
       projectSourceExpired: t(
@@ -390,7 +411,11 @@ const tree = {
       door: t('Door', 'Deur', 'ประตู'),
       window: t('Window', 'Raam', 'หน้าต่าง'),
       wallTitle: t('Wall reference (1 box)', 'Muurreferentie (1 vak)', 'อ้างอิงผนัง (1 กล่อง)'),
-      doorTitle: t('Door reference (multiple)', 'Deurreferentie (meerdere)', 'อ้างอิงประตู (หลายกล่อง)'),
+      doorTitle: t(
+        'Door reference (multiple)',
+        'Deurreferentie (meerdere)',
+        'อ้างอิงประตู (หลายกล่อง)',
+      ),
       windowTitle: t(
         'Window reference (multiple)',
         'Raamreferentie (meerdere)',
@@ -436,10 +461,11 @@ const tree = {
       ),
     },
     copyBw: t('Reuse B/W', 'B/W overnemen', 'ใช้ขาวดำซ้ำ'),
+    copyBwDonor: t('Copy from floor', 'Overnemen van verdieping', 'คัดลอกจากชั้น'),
     copyBwHint: t(
-      'Copies B/W tune only (and measured wall thickness if known). Redraw reference boxes after crop — coordinates from another floor won’t match.',
-      'Kopieert alleen B/W-tune (en gemeten muurdikte indien bekend). Teken referentievakken opnieuw na crop — coördinaten van een andere verdieping kloppen niet.',
-      'คัดลอกเฉพาะการปรับขาวดำ (และความหนาผนังถ้ามี) วาดกล่องอ้างอิงใหม่หลังครอป — พิกัดจากชั้นอื่นไม่ตรง',
+      'Copies B/W tune only (and measured wall thickness if known) from the selected floor. Redraw reference boxes after crop — coordinates from another floor won’t match.',
+      'Kopieert alleen B/W-tune (en gemeten muurdikte indien bekend) van de gekozen verdieping. Teken referentievakken opnieuw na crop — coördinaten van een andere verdieping kloppen niet.',
+      'คัดลอกเฉพาะการปรับขาวดำ (และความหนาผนังถ้ามี) จากชั้นที่เลือก วาดกล่องอ้างอิงใหม่หลังครอป — พิกัดจากชั้นอื่นไม่ตรง',
     ),
     downloadPng: t('Download {tab} PNG', 'Download {tab} PNG', 'ดาวน์โหลด {tab} PNG'),
     downloading: t('Preprocessing…', 'Voorbewerken…', 'กำลังเตรียมภาพ…'),
@@ -476,17 +502,41 @@ const tree = {
       ),
     },
     stampErrors: {
-      adaptiveFailed: t('Stamp adaptive B/W failed', 'Stempel adaptive B/W mislukt', 'ตราขาวดำปรับอัตโนมัติล้มเหลว'),
-      noUnderlaySize: t('No underlay dimensions.', 'Geen onderlegger-afmetingen.', 'ไม่มีขนาดภาพพื้น'),
-      confirmScale: t('Confirm scale first (px/mm).', 'Bevestig eerst de schaal (px/mm).', 'ยืนยันมาตราส่วนก่อน (px/มม.)'),
+      adaptiveFailed: t(
+        'Stamp adaptive B/W failed',
+        'Stempel adaptive B/W mislukt',
+        'ตราขาวดำปรับอัตโนมัติล้มเหลว',
+      ),
+      noUnderlaySize: t(
+        'No underlay dimensions.',
+        'Geen onderlegger-afmetingen.',
+        'ไม่มีขนาดภาพพื้น',
+      ),
+      confirmScale: t(
+        'Confirm scale first (px/mm).',
+        'Bevestig eerst de schaal (px/mm).',
+        'ยืนยันมาตราส่วนก่อน (px/มม.)',
+      ),
       noWallsInBands: t(
         'No walls in the selected thickness bands.',
         'Geen muren in de geselecteerde diktebanden.',
         'ไม่มีผนังในแถบความหนาที่เลือก',
       ),
-      bboxFailed: t('Could not compute stamp bbox.', 'Kon stempel-bbox niet berekenen.', 'คำนวณ bbox ตราไม่ได้'),
-      noActiveStamp: t('No active stamp to bake.', 'Geen actieve stempel om te bakken.', 'ไม่มีตราที่ใช้งานเพื่ออบ'),
-      noStampInk: t('No stamp ink to bake.', 'Geen stempelinkt om te bakken.', 'ไม่มีหมึกตราเพื่ออบ'),
+      bboxFailed: t(
+        'Could not compute stamp bbox.',
+        'Kon stempel-bbox niet berekenen.',
+        'คำนวณ bbox ตราไม่ได้',
+      ),
+      noActiveStamp: t(
+        'No active stamp to bake.',
+        'Geen actieve stempel om te bakken.',
+        'ไม่มีตราที่ใช้งานเพื่ออบ',
+      ),
+      noStampInk: t(
+        'No stamp ink to bake.',
+        'Geen stempelinkt om te bakken.',
+        'ไม่มีหมึกตราเพื่ออบ',
+      ),
       noFmlWalls: t(
         'No FML walls on the chosen floor.',
         'Geen FML-muren op de gekozen verdieping.',
@@ -540,7 +590,11 @@ const tree = {
         'ไม่มีความหนาผนัง — วาดกล่องอ้างอิงในขั้นตอนที่ 1',
       ),
       autoclassify: t('Auto-classify', 'Autoclassificeer', 'จำแนกอัตโนมัติ'),
-      autoclassifyAgain: t('Re-run auto-classify', 'Opnieuw autoclassificeren', 'จำแนกอัตโนมัติอีกครั้ง'),
+      autoclassifyAgain: t(
+        'Re-run auto-classify',
+        'Opnieuw autoclassificeren',
+        'จำแนกอัตโนมัติอีกครั้ง',
+      ),
       detectionRunning: t('Detection running…', 'Detectie bezig…', 'กำลังตรวจจับ…'),
       classifying: t('Classifying…', 'Classificeren…', 'กำลังจำแนก…'),
       processInk: t('Process ink', 'Verwerk inkt', 'ประมวลผลหมึก'),
@@ -805,7 +859,11 @@ const tree = {
       'แก้ทีละช่องเปิด: Ctrl+คลิกในตัวอย่าง → ขนาด/ความสูง',
     ),
     regenerate: t('Regenerate', 'Regenereren', 'สร้างใหม่'),
-    downloadProject: t('Download .fml (project)', 'Download .fml (project)', 'ดาวน์โหลด .fml (โครงการ)'),
+    downloadProject: t(
+      'Download .fml (project)',
+      'Download .fml (project)',
+      'ดาวน์โหลด .fml (โครงการ)',
+    ),
     dirtyHint: t(
       'Height/thickness changed — click Regenerate to update the FML.',
       'Hoogte/dikte gewijzigd — klik Regenereren om de FML bij te werken.',
@@ -942,7 +1000,11 @@ const tree = {
         'Hartlijn-offset in muurband',
         'ออฟเซ็ตเส้นกลางในแถบผนัง',
       ),
-      alignmentAria: t('Wall alignment (balance)', 'Muuruitlijning (balance)', 'การจัดแนวผนัง (balance)'),
+      alignmentAria: t(
+        'Wall alignment (balance)',
+        'Muuruitlijning (balance)',
+        'การจัดแนวผนัง (balance)',
+      ),
       width: t('Width', 'Breedte', 'ความกว้าง'),
       doorWidthAria: t('Door width in cm', 'Deurbreedte in cm', 'ความกว้างประตูเป็นซม.'),
       windowWidthAria: t('Window width in cm', 'Raambreedte in cm', 'ความกว้างหน้าต่างเป็นซม.'),
@@ -1133,11 +1195,7 @@ const tree = {
     import: t('Import', 'Importeer', 'นำเข้า'),
     reload: t('Reload saved', 'Herlaad opgeslagen', 'โหลดที่บันทึกไว้'),
     saved: t('Settings saved', 'Instellingen opgeslagen', 'บันทึกการตั้งค่าแล้ว'),
-    factoryRestored: t(
-      'Factory defaults restored',
-      'Fabriekswaarden hersteld',
-      'คืนค่าโรงงานแล้ว',
-    ),
+    factoryRestored: t('Factory defaults restored', 'Fabriekswaarden hersteld', 'คืนค่าโรงงานแล้ว'),
     exportDownloaded: t('Export downloaded', 'Export gedownload', 'ดาวน์โหลดการส่งออกแล้ว'),
     imported: t('Imported: {name}', 'Geïmporteerd: {name}', 'นำเข้าแล้ว: {name}'),
     importFailed: t('Import failed', 'Importeren mislukt', 'นำเข้าล้มเหลว'),
@@ -1166,7 +1224,11 @@ const tree = {
       rect: t('Rectangle', 'Rechthoek', 'สี่เหลี่ยม'),
     },
     face: {
-      boxUnknown: t('Faces as unknown (box)', 'Vlakken als onbekend (box)', 'พื้นผิวเป็นไม่ทราบ (กล่อง)'),
+      boxUnknown: t(
+        'Faces as unknown (box)',
+        'Vlakken als onbekend (box)',
+        'พื้นผิวเป็นไม่ทราบ (กล่อง)',
+      ),
       boxWall: t('Faces as wall (box)', 'Vlakken als muur (box)', 'พื้นผิวเป็นผนัง (กล่อง)'),
     },
     fml: {
@@ -1191,8 +1253,16 @@ const tree = {
         ' · spatie + sleep = pan · scroll = zoom',
         ' · space + ลาก = เลื่อน · สกรอล = ซูม',
       ),
-      inkBrush: t('Click + drag to draw ink', 'Klik + sleep om inkt te tekenen', 'คลิก + ลากเพื่อวาดหมึก'),
-      inkEraser: t('Click + drag to erase ink', 'Klik + sleep om inkt te gummen', 'คลิก + ลากเพื่อลบหมึก'),
+      inkBrush: t(
+        'Click + drag to draw ink',
+        'Klik + sleep om inkt te tekenen',
+        'คลิก + ลากเพื่อวาดหมึก',
+      ),
+      inkEraser: t(
+        'Click + drag to erase ink',
+        'Klik + sleep om inkt te gummen',
+        'คลิก + ลากเพื่อลบหมึก',
+      ),
       inkLine: t('Drag a line', 'Sleep een lijn', 'ลากเส้น'),
       inkRect: t('Drag a rectangle', 'Sleep een rechthoek', 'ลากสี่เหลี่ยม'),
       faceUnknown: t(

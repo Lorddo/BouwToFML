@@ -28,6 +28,8 @@ dist/
 /frontend/vite.config.d.ts
 /frontend/vite/*.js
 /frontend/vite/*.d.ts
+/frontend/vitest.e2e.config.js
+/frontend/vitest.e2e.config.d.ts
 
 # Runtime-assets: gedownload of gegenereerd, niet in de repo
 /frontend/public/tesseract/
@@ -38,6 +40,7 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.production
 
 # ── Test- en debug-artifacts ──
 coverage/

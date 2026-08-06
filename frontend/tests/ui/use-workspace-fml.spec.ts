@@ -26,6 +26,7 @@ function createFmlHarness() {
     underlaySrc: ref<string | null>(null),
     underlaySize: ref<{ width: number; height: number } | null>(null),
     underlayOpacity: ref(0),
+    getBaseWallBw: () => null,
     setLocalError: (message) => {
       lastError = message
     },
@@ -62,5 +63,19 @@ describe('useWorkspaceFml — export volgt canvas-bewerkingen', () => {
 
     const after = JSON.parse(api.generatedFmlText.value)
     expect(after.floors[0].designs[0].walls[0].b.x).toBe(originalB + 77)
+  })
+
+  it('fmlLimitsDirty alleen na handmatige edit, niet na sync / bovenlicht', () => {
+    const { api } = createFmlHarness()
+    expect(api.fmlLimitsDirty.value).toBe(false)
+
+    api.setFmlWallHeightCm(api.fmlWallHeightCm.value + 10)
+    expect(api.fmlLimitsDirty.value).toBe(true)
+
+    api.syncAppliedFromDraft()
+    expect(api.fmlLimitsDirty.value).toBe(false)
+
+    api.setFmlBovenlichtDefault(true)
+    expect(api.fmlLimitsDirty.value).toBe(false)
   })
 })

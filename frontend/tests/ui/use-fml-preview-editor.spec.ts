@@ -150,6 +150,43 @@ describe('useFmlPreviewEditor', () => {
     scope.stop()
   })
 
+  it('clears undo stack when floor index changes', async () => {
+    const scope = effectScope()
+    const plan = ref<FloorPlan | null>({
+      name: 'Multi',
+      floors: [
+        samplePlan().floors[0],
+        {
+          name: '1e',
+          level: 1,
+          height: 280,
+          walls: [
+            {
+              id: 'w2',
+              a: { x: 0, y: 0 },
+              b: { x: 50, y: 0 },
+              thickness: 10,
+              openings: [],
+            },
+          ],
+        },
+      ],
+    })
+    const floorIndex = ref(0)
+
+    const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
+    editor.pushUndo()
+    expect(editor.canUndo()).toBe(true)
+
+    floorIndex.value = 1
+    await nextTick()
+
+    expect(editor.canUndo()).toBe(false)
+    expect(editor.walls.value[0]?.id).toBe('w2')
+
+    scope.stop()
+  })
+
   it('applyWallSlideAlongAxis updates wall geometry', () => {
     const scope = effectScope()
     const plan = ref<FloorPlan | null>(samplePlan())
