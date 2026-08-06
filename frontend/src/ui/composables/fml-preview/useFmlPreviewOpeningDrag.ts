@@ -81,15 +81,12 @@ export function useFmlPreviewOpeningDrag(options: {
     if (!openingDrag) return
     const cm = hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    const located = editor.resolveOpening(openingDrag.openingId)
-    if (!located) return
-
-    const dx = located.wall.b.x - located.wall.a.x
-    const dy = located.wall.b.y - located.wall.a.y
-    const lenSq = dx * dx + dy * dy
-    if (lenSq < 1e-6) return
-    const t = ((cm.x - located.wall.a.x) * dx + (cm.y - located.wall.a.y) * dy) / lenSq
-    editor.updateOpening(openingDrag.openingId, { t })
+    const nextId = editor.applyOpeningDragMove(openingDrag.openingId, cm)
+    if (!nextId) return
+    if (nextId !== openingDrag.openingId) {
+      openingDrag.openingId = nextId
+      moveOpeningId.value = nextId
+    }
   }
 
   function endOpeningDrag(): void {

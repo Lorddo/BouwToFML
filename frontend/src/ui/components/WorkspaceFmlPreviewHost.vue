@@ -22,6 +22,7 @@ defineProps<{
   thicknessMidCm: number
   thicknessMaxCm: number
   bovenlichtDefault?: boolean
+  windowBovenlichtDefault?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -48,6 +49,7 @@ const emit = defineEmits<{
     :thickness-mid-cm="thicknessMidCm"
     :thickness-max-cm="thicknessMaxCm"
     :bovenlicht-default="bovenlichtDefault"
+    :window-bovenlicht-default="windowBovenlichtDefault"
     @plan-update="emit('planUpdate', $event)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"

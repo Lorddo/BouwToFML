@@ -66,6 +66,7 @@ export function useFmlPreviewInteraction(options: {
   spacePressed: Ref<boolean>
   thicknessPickTier: Ref<FmlThicknessBand | null>
   bovenlichtDefault?: Ref<boolean>
+  windowBovenlichtDefault?: Ref<boolean>
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
 }) {
@@ -80,6 +81,7 @@ export function useFmlPreviewInteraction(options: {
     spacePressed,
     thicknessPickTier,
     bovenlichtDefault,
+    windowBovenlichtDefault,
     onKeyDown,
     onKeyUp,
   } = options
@@ -191,9 +193,12 @@ export function useFmlPreviewInteraction(options: {
     cancelMoveDragPending: wallDrag.cancelMoveDragPending,
     cancelOpeningDragPending: openingDrag.cancelOpeningDragPending,
     bovenlichtDefault,
+    windowBovenlichtDefault,
   })
 
   const {
+    openingSubtypeDraft,
+    openingSubtypeMixed,
     openingWidthDraft,
     openingWidthMixed,
     openingHeightDraft,
@@ -209,6 +214,7 @@ export function useFmlPreviewInteraction(options: {
     clearOpeningSelectionState,
     toggleSettingsOpening,
     syncOpeningDraftFromSelection,
+    commitOpeningSubtype,
     onOpeningWidthInput,
     commitOpeningWidth,
     onOpeningHeightInput,
@@ -224,6 +230,11 @@ export function useFmlPreviewInteraction(options: {
 
   if (bovenlichtDefault) {
     watch(bovenlichtDefault, () => {
+      syncOpeningDraftFromSelection()
+    })
+  }
+  if (windowBovenlichtDefault) {
+    watch(windowBovenlichtDefault, () => {
       syncOpeningDraftFromSelection()
     })
   }
@@ -485,6 +496,8 @@ export function useFmlPreviewInteraction(options: {
     wallThicknessMixed,
     wallBalanceDraft,
     wallBalanceMixed,
+    openingSubtypeDraft,
+    openingSubtypeMixed,
     openingWidthDraft,
     openingWidthMixed,
     openingHeightDraft,
@@ -510,6 +523,7 @@ export function useFmlPreviewInteraction(options: {
     applyWallsThicknessCm,
     onWallBalanceInput,
     commitWallBalance,
+    commitOpeningSubtype,
     onOpeningWidthInput,
     commitOpeningWidth,
     onOpeningHeightInput,

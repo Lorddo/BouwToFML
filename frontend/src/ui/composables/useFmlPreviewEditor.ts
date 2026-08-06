@@ -30,6 +30,7 @@ import {
   updateOpeningById,
   type OpeningLocation,
 } from '@/ui/components/fml-preview-openings'
+import { applyOpeningDragMove as applyOpeningDragMoveWalls } from '@/ui/components/fml-preview-opening-drag-geom'
 
 const MAX_UNDO = 50
 
@@ -183,15 +184,27 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   function updateOpening(
     openingId: string,
-    patch: Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht'>>,
+    patch: Partial<
+      Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht' | 'refid'>
+    >,
   ): void {
     setWalls(updateOpeningById(walls.value, openingId, patch))
+  }
+
+  /** Soft-t / segment-hop / sticky transfer tijdens openings-drag. */
+  function applyOpeningDragMove(openingId: string, pointCm: Point2D): string | null {
+    const result = applyOpeningDragMoveWalls(walls.value, openingId, pointCm)
+    if (!result) return null
+    if (result.walls !== walls.value) setWalls(result.walls)
+    return result.openingId
   }
 
   /** @deprecated Prefer updateOpening */
   function updateDoorOpening(
     openingId: string,
-    patch: Partial<Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht'>>,
+    patch: Partial<
+      Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht' | 'refid'>
+    >,
   ): void {
     updateOpening(openingId, patch)
   }
@@ -243,6 +256,7 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     resolveDoorOpening,
     updateOpening,
     updateDoorOpening,
+    applyOpeningDragMove,
     removeOpenings,
     removeDoorOpenings,
     findMergeTarget: (sourceRefs: WallEndRef[], position: { x: number; y: number }) =>

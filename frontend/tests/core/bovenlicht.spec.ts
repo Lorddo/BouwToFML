@@ -4,6 +4,7 @@ import {
   BOVENLICHT_HEIGHT_CM,
   buildBovenlichtOpening,
   resolveDoorBovenlicht,
+  resolveWindowBovenlicht,
 } from '@/core/fml/bovenlicht'
 import { CONCEPT_WINDOW_REFID, type Opening } from '@/core/fml/types'
 
@@ -13,6 +14,16 @@ const door = (overrides: Partial<Opening> = {}): Opening => ({
   width: 90,
   type: 'door',
   z_height: 220,
+  ...overrides,
+})
+
+const windowOpening = (overrides: Partial<Opening> = {}): Opening => ({
+  refid: CONCEPT_WINDOW_REFID,
+  t: 0.5,
+  width: 120,
+  type: 'window',
+  z: 70,
+  z_height: 150,
   ...overrides,
 })
 
@@ -32,6 +43,22 @@ describe('resolveDoorBovenlicht', () => {
   })
 })
 
+describe('resolveWindowBovenlicht', () => {
+  it('erft projectdefault zonder override', () => {
+    expect(resolveWindowBovenlicht(windowOpening(), false)).toBe(false)
+    expect(resolveWindowBovenlicht(windowOpening(), true)).toBe(true)
+  })
+
+  it('forceert true/false override', () => {
+    expect(resolveWindowBovenlicht(windowOpening({ bovenlicht: true }), false)).toBe(true)
+    expect(resolveWindowBovenlicht(windowOpening({ bovenlicht: false }), true)).toBe(false)
+  })
+
+  it('negeert deuren', () => {
+    expect(resolveWindowBovenlicht(door({ bovenlicht: true }), true)).toBe(false)
+  })
+})
+
 describe('buildBovenlichtOpening', () => {
   it('plaatst raam 10 cm boven deur, 40 cm hoog, zelfde breedte/t', () => {
     const opening = buildBovenlichtOpening(door({ guid: 'abcdef' }))
@@ -44,6 +71,30 @@ describe('buildBovenlichtOpening', () => {
       z_height: BOVENLICHT_HEIGHT_CM,
       guid: 'abcdef-bovenlicht',
       mirrored: [0, 0],
+    })
+  })
+
+  it('plaatst raam 10 cm boven bestaand raam (sill + hoogte)', () => {
+    const opening = buildBovenlichtOpening(windowOpening({ guid: 'win001' }))
+    expect(opening).toMatchObject({
+      type: 'window',
+      t: 0.5,
+      width: 120,
+      z: 70 + 150 + BOVENLICHT_GAP_CM,
+      z_height: BOVENLICHT_HEIGHT_CM,
+      guid: 'win001-bovenlicht',
+    })
+  })
+
+  it('respecteert custom gapCm en heightCm', () => {
+    const opening = buildBovenlichtOpening(door({ guid: 'custom' }), {
+      gapCm: 5,
+      heightCm: 30,
+    })
+    expect(opening).toMatchObject({
+      z: 225,
+      z_height: 30,
+      guid: 'custom-bovenlicht',
     })
   })
 

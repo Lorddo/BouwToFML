@@ -319,7 +319,7 @@ describe('resolveOpeningCatalog', () => {
       'sliding_single',
     )
     expect(resolveOpeningCatalog('9c1479d9dfc482859aea10b9dd67f5e7773fff6d', 'door').kind).toBe(
-      'garage',
+      'double_wide',
     )
     expect(resolveOpeningCatalog('2cb4a1c74ec301ab0fdc762deb37eaf0e28d9ecc', 'door').kind).toBe(
       'single',

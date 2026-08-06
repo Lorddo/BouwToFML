@@ -30,6 +30,13 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const activeFloor = computed(() => props.floors.find((f) => f.id === props.activeFloorId) ?? null)
 
+/** Gap/hoogte alleen tonen als minstens één bovenlicht-default aan staat. */
+const showBovenlichtMeasures = computed(
+  () =>
+    props.activeFloorDefaults.bovenlichtDefault === true ||
+    props.activeFloorDefaults.windowBovenlichtDefault === true,
+)
+
 const resumeUpdatedLabel = computed(() => {
   const iso = props.resumeCandidate?.updatedAt
   if (!iso) return ''
@@ -183,73 +190,187 @@ function onRenameBlur(floorId: string, event: Event) {
       </button>
     </div>
 
-    <h4 v-if="activeFloor">{{ t('project.heightsTitle', { name: activeFloor.name }) }}</h4>
-    <p v-if="activeFloor" class="hint">{{ t('project.heightsHint') }}</p>
-    <div v-if="activeFloor" class="defaults-grid">
-      <label class="field compact">
-        <span>{{ t('project.wallHeightCm') }}</span>
-        <input
-          type="number"
-          :value="activeFloorDefaults.wallHeightCm"
-          @change="
-            emit('update:floorDefaults', {
-              wallHeightCm: Number(($event.target as HTMLInputElement).value),
-            })
-          "
-        />
-      </label>
-      <label class="field compact">
-        <span>{{ t('project.doorHeightCm') }}</span>
-        <input
-          type="number"
-          :value="activeFloorDefaults.doorHeightCm"
-          @change="
-            emit('update:floorDefaults', {
-              doorHeightCm: Number(($event.target as HTMLInputElement).value),
-            })
-          "
-        />
-      </label>
-      <label class="field compact">
-        <span>{{ t('project.windowHeightCm') }}</span>
-        <input
-          type="number"
-          :value="activeFloorDefaults.windowHeightCm"
-          @change="
-            emit('update:floorDefaults', {
-              windowHeightCm: Number(($event.target as HTMLInputElement).value),
-            })
-          "
-        />
-      </label>
-      <label class="field compact">
-        <span>{{ t('project.sillZCm') }}</span>
-        <input
-          type="number"
-          :value="activeFloorDefaults.windowSillZCm"
-          @change="
-            emit('update:floorDefaults', {
-              windowSillZCm: Number(($event.target as HTMLInputElement).value),
-            })
-          "
-        />
-      </label>
-      <label class="field compact check">
-        <input
-          type="checkbox"
-          :checked="activeFloorDefaults.bovenlichtDefault"
-          @change="
-            emit('update:floorDefaults', {
-              bovenlichtDefault: ($event.target as HTMLInputElement).checked,
-            })
-          "
-        />
-        <span>{{ t('project.bovenlicht') }}</span>
-      </label>
-    </div>
-    <button v-if="activeFloor" type="button" class="secondary" @click="emit('resetFloorDefaults')">
-      {{ t('project.resetDefaults') }}
-    </button>
+    <template v-if="activeFloor">
+      <h4>{{ t('project.thicknessesTitle', { name: activeFloor.name }) }}</h4>
+      <p class="hint">{{ t('project.thicknessesHint') }}</p>
+      <div class="triple-measure">
+        <label class="measure-cell">
+          <span class="measure-cell__label">{{ t('project.thicknessMinCm') }}</span>
+          <input
+            type="number"
+            min="1"
+            :value="activeFloorDefaults.thicknessMinCm"
+            @change="
+              emit('update:floorDefaults', {
+                thicknessMinCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-cell__unit">cm</span>
+        </label>
+        <label class="measure-cell">
+          <span class="measure-cell__label">{{ t('project.thicknessMidCm') }}</span>
+          <input
+            type="number"
+            min="1"
+            :value="activeFloorDefaults.thicknessMidCm"
+            @change="
+              emit('update:floorDefaults', {
+                thicknessMidCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-cell__unit">cm</span>
+        </label>
+        <label class="measure-cell">
+          <span class="measure-cell__label">{{ t('project.thicknessMaxCm') }}</span>
+          <input
+            type="number"
+            min="1"
+            :value="activeFloorDefaults.thicknessMaxCm"
+            @change="
+              emit('update:floorDefaults', {
+                thicknessMaxCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-cell__unit">cm</span>
+        </label>
+      </div>
+
+      <h4>{{ t('project.heightsTitle', { name: activeFloor.name }) }}</h4>
+      <p class="hint">{{ t('project.heightsHint') }}</p>
+
+      <div class="measure-category">
+        <h5 class="measure-category__title">{{ t('project.categoryWall') }}</h5>
+        <label class="measure-row">
+          <span class="measure-row__label">{{ t('project.wallHeightCm') }}</span>
+          <input
+            type="number"
+            :value="activeFloorDefaults.wallHeightCm"
+            @change="
+              emit('update:floorDefaults', {
+                wallHeightCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-row__unit">cm</span>
+        </label>
+      </div>
+
+      <div class="measure-category">
+        <h5 class="measure-category__title">{{ t('project.categoryDoor') }}</h5>
+        <label class="measure-row">
+          <span class="measure-row__label">{{ t('project.doorHeightCm') }}</span>
+          <input
+            type="number"
+            :value="activeFloorDefaults.doorHeightCm"
+            @change="
+              emit('update:floorDefaults', {
+                doorHeightCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-row__unit">cm</span>
+        </label>
+      </div>
+
+      <div class="measure-category">
+        <h5 class="measure-category__title">{{ t('project.categoryWindow') }}</h5>
+        <label class="measure-row">
+          <span class="measure-row__label">{{ t('project.windowKozijnHeightCm') }}</span>
+          <input
+            type="number"
+            :value="activeFloorDefaults.windowSillZCm"
+            @change="
+              emit('update:floorDefaults', {
+                windowSillZCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-row__unit">cm</span>
+        </label>
+        <label class="measure-row">
+          <span class="measure-row__label">{{ t('project.windowGlassHeightCm') }}</span>
+          <input
+            type="number"
+            :value="activeFloorDefaults.windowHeightCm"
+            @change="
+              emit('update:floorDefaults', {
+                windowHeightCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+          <span class="measure-row__unit">cm</span>
+        </label>
+      </div>
+
+      <div class="measure-category">
+        <h5 class="measure-category__title">{{ t('project.categoryBovenlicht') }}</h5>
+        <label class="field compact check">
+          <input
+            type="checkbox"
+            :checked="activeFloorDefaults.bovenlichtDefault"
+            @change="
+              emit('update:floorDefaults', {
+                bovenlichtDefault: ($event.target as HTMLInputElement).checked,
+              })
+            "
+          />
+          <span>{{ t('project.bovenlichtDoors') }}</span>
+        </label>
+        <label class="field compact check">
+          <input
+            type="checkbox"
+            :checked="activeFloorDefaults.windowBovenlichtDefault"
+            @change="
+              emit('update:floorDefaults', {
+                windowBovenlichtDefault: ($event.target as HTMLInputElement).checked,
+              })
+            "
+          />
+          <span>{{ t('project.bovenlichtWindows') }}</span>
+        </label>
+        <template v-if="showBovenlichtMeasures">
+          <label class="measure-row">
+            <span class="measure-row__label" :title="t('project.bovenlichtGapTitle')">{{
+              t('project.bovenlichtGapCm')
+            }}</span>
+            <input
+              type="number"
+              min="0"
+              :value="activeFloorDefaults.bovenlichtGapCm"
+              @change="
+                emit('update:floorDefaults', {
+                  bovenlichtGapCm: Number(($event.target as HTMLInputElement).value),
+                })
+              "
+            />
+            <span class="measure-row__unit">cm</span>
+          </label>
+          <label class="measure-row">
+            <span class="measure-row__label" :title="t('project.bovenlichtHeightTitle')">{{
+              t('project.bovenlichtHeightCm')
+            }}</span>
+            <input
+              type="number"
+              min="1"
+              :value="activeFloorDefaults.bovenlichtHeightCm"
+              @change="
+                emit('update:floorDefaults', {
+                  bovenlichtHeightCm: Number(($event.target as HTMLInputElement).value),
+                })
+              "
+            />
+            <span class="measure-row__unit">cm</span>
+          </label>
+        </template>
+      </div>
+
+      <button type="button" class="secondary" @click="emit('resetFloorDefaults')">
+        {{ t('project.resetDefaults') }}
+      </button>
+    </template>
   </div>
 </template>
 
@@ -297,7 +418,9 @@ function onRenameBlur(floorId: string, event: Event) {
   color: #94a3b8;
 }
 .field input[type='text'],
-.field input[type='number'] {
+.field input[type='number'],
+.measure-cell input,
+.measure-row input {
   padding: 6px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
@@ -310,10 +433,70 @@ function onRenameBlur(floorId: string, event: Event) {
   align-items: center;
   gap: 8px;
 }
-.defaults-grid {
+.triple-measure {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 10px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.measure-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  text-align: center;
+}
+.measure-cell__label {
+  color: #475569;
+  font-weight: 500;
+}
+.measure-cell input {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+.measure-cell__unit {
+  color: #94a3b8;
+  font-size: 11px;
+}
+.measure-category {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+}
+.measure-category__title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.measure-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.measure-row:last-child {
+  margin-bottom: 0;
+}
+.measure-row__label {
+  color: #475569;
+}
+.measure-row input {
+  width: 72px;
+  text-align: right;
+}
+.measure-row__unit {
+  color: #94a3b8;
+  font-size: 11px;
+  min-width: 1.5em;
 }
 .floor-list {
   list-style: none;

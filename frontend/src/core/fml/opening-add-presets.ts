@@ -2,8 +2,8 @@ import {
   CLOSET_DOOR_REFID,
   CONCEPT_DOOR_REFID,
   CONCEPT_WINDOW_REFID,
+  DOUBLE_SOLID_DOOR_REFID,
   DOUBLE_WIDE_DOOR_REFID,
-  GARAGE_DOOR_REFID,
   POCKET_DOOR_REFID,
   SLIDING_DOUBLE_DOOR_REFID,
   SLIDING_SINGLE_DOOR_REFID,
@@ -15,7 +15,7 @@ import {
 } from './types'
 
 export type DoorAddSubtype =
-  'standard' | 'closet' | 'double' | 'pocket' | 'sliding_single' | 'sliding' | 'garage'
+  'standard' | 'closet' | 'double' | 'double_solid' | 'pocket' | 'sliding_single' | 'sliding'
 
 export type WindowAddSubtype = 'single' | 'double' | 'triple' | 'round' | 'half_round'
 
@@ -29,10 +29,10 @@ const DOOR_ADD_PRESETS: Record<DoorAddSubtype, OpeningAddPreset> = {
   standard: { type: 'door', refid: CONCEPT_DOOR_REFID, defaultWidthCm: 90 },
   closet: { type: 'door', refid: CLOSET_DOOR_REFID, defaultWidthCm: 80 },
   double: { type: 'door', refid: DOUBLE_WIDE_DOOR_REFID, defaultWidthCm: 140 },
+  double_solid: { type: 'door', refid: DOUBLE_SOLID_DOOR_REFID, defaultWidthCm: 140 },
   pocket: { type: 'door', refid: POCKET_DOOR_REFID, defaultWidthCm: 100 },
   sliding_single: { type: 'door', refid: SLIDING_SINGLE_DOOR_REFID, defaultWidthCm: 180 },
   sliding: { type: 'door', refid: SLIDING_DOUBLE_DOOR_REFID, defaultWidthCm: 180 },
-  garage: { type: 'door', refid: GARAGE_DOOR_REFID, defaultWidthCm: 240 },
 }
 
 const WINDOW_ADD_PRESETS: Record<WindowAddSubtype, OpeningAddPreset> = {

@@ -82,6 +82,8 @@ export function buildSelectedOpeningPanel(model: RenderModel, ids: string[]) {
     openingIds: selected.map((item) => item.id),
     count: selected.length,
     openingType,
+    subtype: draft.subtypeMixed ? null : draft.subtype,
+    subtypeMixed: draft.subtypeMixed,
     widthCm: draft.widthMixed ? null : draft.widthCm,
     widthMixed: draft.widthMixed,
     heightCm: draft.heightMixed ? null : draft.heightCm,

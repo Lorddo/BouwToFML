@@ -128,6 +128,9 @@ describe('user-settings', () => {
         windowHeightCm: 'x',
         windowSillZCm: 50,
         bovenlichtDefault: true,
+        windowBovenlichtDefault: true,
+        bovenlichtHeightCm: 35,
+        bovenlichtGapCm: 8,
         thicknessMinCm: 0,
         thicknessMidCm: 15,
         thicknessMaxCm: 25,
@@ -142,6 +145,9 @@ describe('user-settings', () => {
       createFactoryUserSettings().defaults.windowHeightCm,
     )
     expect(normalized.defaults.bovenlichtDefault).toBe(true)
+    expect(normalized.defaults.windowBovenlichtDefault).toBe(true)
+    expect(normalized.defaults.bovenlichtHeightCm).toBe(35)
+    expect(normalized.defaults.bovenlichtGapCm).toBe(8)
     expect(normalized.fmlViewer.underlayOpacityPct).toBe(100)
     expect(normalized.fmlViewer.fmlOpacityPct).toBe(0)
   })

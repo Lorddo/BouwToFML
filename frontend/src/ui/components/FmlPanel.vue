@@ -31,11 +31,14 @@ withDefaults(
     /** FML-geometrie opacity 0–100. */
     fmlOpacity?: number
     underlayAvailable?: boolean
+    /** Actieve verdiepingsnaam (bewerkbaar na toevoegen via floor-rail). */
+    floorName?: string
     fmlWallHeightCm?: number
     fmlDoorHeightCm?: number
     fmlWindowHeightCm?: number
     fmlWindowSillZCm?: number
     fmlBovenlichtDefault?: boolean
+    fmlWindowBovenlichtDefault?: boolean
     fmlThicknessMinCm?: number
     fmlThicknessMidCm?: number
     fmlThicknessMaxCm?: number
@@ -52,11 +55,13 @@ withDefaults(
     underlayOpacity: 25,
     fmlOpacity: 80,
     underlayAvailable: false,
+    floorName: '',
     fmlWallHeightCm: 280,
     fmlDoorHeightCm: 220,
     fmlWindowHeightCm: 150,
     fmlWindowSillZCm: 70,
     fmlBovenlichtDefault: false,
+    fmlWindowBovenlichtDefault: false,
     fmlThicknessMinCm: 10,
     fmlThicknessMidCm: 20,
     fmlThicknessMaxCm: 30,
@@ -71,11 +76,13 @@ withDefaults(
 
 const emit = defineEmits<{
   regenerate: []
+  'update:floorName': [value: string]
   'update:fmlWallHeightCm': [value: number]
   'update:fmlDoorHeightCm': [value: number]
   'update:fmlWindowHeightCm': [value: number]
   'update:fmlWindowSillZCm': [value: number]
   'update:fmlBovenlichtDefault': [value: boolean]
+  'update:fmlWindowBovenlichtDefault': [value: boolean]
   'update:fmlThicknessMinCm': [value: number]
   'update:fmlThicknessMidCm': [value: number]
   'update:fmlThicknessMaxCm': [value: number]
@@ -87,13 +94,40 @@ const emit = defineEmits<{
   cancelThicknessPick: []
 }>()
 
+function onFloorNameInput(event: Event): void {
+  emit('update:floorName', (event.target as HTMLInputElement).value)
+}
+
+function onFloorNameBlur(event: Event): void {
+  const raw = (event.target as HTMLInputElement).value
+  const trimmed = raw.trim()
+  if (trimmed !== raw) emit('update:floorName', trimmed || raw)
+}
+
 function onBovenlichtChange(event: Event): void {
   emit('update:fmlBovenlichtDefault', (event.target as HTMLInputElement).checked)
+}
+
+function onWindowBovenlichtChange(event: Event): void {
+  emit('update:fmlWindowBovenlichtDefault', (event.target as HTMLInputElement).checked)
 }
 </script>
 
 <template>
   <div class="panel fml-panel">
+    <label class="fml-floor-name">
+      <span>{{ t('result.floorName') }}</span>
+      <input
+        type="text"
+        :value="floorName"
+        :placeholder="t('project.floorNamePlaceholder')"
+        @input="onFloorNameInput"
+        @blur="onFloorNameBlur"
+        @keydown.stop
+        @keyup.stop
+      />
+    </label>
+
     <p v-if="generatedStats.walls > 0" class="fml-stats">
       {{ t('result.previewStats', { walls: generatedStats.walls })
       }}<template v-if="generatedStats.doors > 0">{{
@@ -124,6 +158,16 @@ function onBovenlichtChange(event: Event): void {
         @change="onBovenlichtChange"
       />
       <span>{{ t('result.bovenlichtAllDoors') }}</span>
+    </label>
+
+    <label class="fml-limit-field fml-bovenlicht" :title="t('result.bovenlichtWindowsTitle')">
+      <input
+        type="checkbox"
+        :checked="fmlWindowBovenlichtDefault"
+        :disabled="!scaleConfirmed || !hasCombinedOutput"
+        @change="onWindowBovenlichtChange"
+      />
+      <span>{{ t('result.bovenlichtAllWindows') }}</span>
     </label>
 
     <FmlPanelThickness
@@ -173,6 +217,30 @@ function onBovenlichtChange(event: Event): void {
 .fml-panel {
   padding-top: 8px;
   padding-bottom: 8px;
+}
+
+.fml-floor-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 10px;
+  font-size: 11px;
+  color: #334155;
+}
+
+.fml-floor-name input {
+  width: 100%;
+  height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.fml-floor-name input:focus {
+  border-color: #3b82f6;
+  outline: none;
 }
 
 .fml-stats,

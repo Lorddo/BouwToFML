@@ -243,6 +243,34 @@ function onBack() {
             "
           />
         </label>
+        <label class="field compact">
+          <span :title="t('settings.bovenlichtGapTitle')">{{ t('settings.bovenlichtGapCm') }}</span>
+          <input
+            type="number"
+            min="0"
+            :value="draft.defaults.bovenlichtGapCm"
+            @change="
+              patchDefaults({
+                bovenlichtGapCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span :title="t('settings.bovenlichtHeightTitle')">{{
+            t('settings.bovenlichtHeightCm')
+          }}</span>
+          <input
+            type="number"
+            min="1"
+            :value="draft.defaults.bovenlichtHeightCm"
+            @change="
+              patchDefaults({
+                bovenlichtHeightCm: Number(($event.target as HTMLInputElement).value),
+              })
+            "
+          />
+        </label>
         <label class="field compact check">
           <input
             type="checkbox"
@@ -253,7 +281,19 @@ function onBack() {
               })
             "
           />
-          <span>{{ t('settings.bovenlicht') }}</span>
+          <span>{{ t('settings.bovenlichtDoors') }}</span>
+        </label>
+        <label class="field compact check">
+          <input
+            type="checkbox"
+            :checked="draft.defaults.windowBovenlichtDefault"
+            @change="
+              patchDefaults({
+                windowBovenlichtDefault: ($event.target as HTMLInputElement).checked,
+              })
+            "
+          />
+          <span>{{ t('settings.bovenlichtWindows') }}</span>
         </label>
       </div>
     </section>

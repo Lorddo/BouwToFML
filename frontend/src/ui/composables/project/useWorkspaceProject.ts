@@ -53,17 +53,6 @@ export type WorkspaceProjectDeps = {
     scale?: DevWorkspaceSession['scale'],
   ) => Promise<void>
   /**
-   * Snelle floor-switch naar stap 4: image + schaal + opgeslagen FML-preview.
-   * Geen detectie/BW/openings-herpipeline.
-   */
-  restoreResultFloorFast: (params: {
-    workingImagePng: string
-    imageName: string
-    scale: DevWorkspaceSession['scale']
-    previewPlan: FloorPlan
-    previewUnderlayLayout?: PreviewUnderlayLayout | null
-  }) => Promise<void>
-  /**
    * Pas alleen B/W-tune + profile toe (geen LBE-rects, geen gemeten muurdikte —
    * die wijkt na per-floor crop af).
    */
@@ -285,7 +274,10 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
 
   function effectiveDefaultsForFloor(floorId: string): ProjectFmlDefaults {
     const floor = state.value.floors.find((f) => f.id === floorId)
-    return floor ? { ...floor.defaults } : createDefaultFloorFmlDefaults()
+    // Merge met factory: oude persisted floors missen nieuwe keys (bv. windowBovenlichtDefault).
+    return floor
+      ? { ...createDefaultFloorFmlDefaults(), ...floor.defaults }
+      : createDefaultFloorFmlDefaults()
   }
 
   function syncActiveFloorDefaultsToUi(): void {
@@ -350,22 +342,15 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const targetStep =
       blob.session.schemaVersion === 2 ? blob.session.flow.targetFlowStep : 'templates'
     const isResult = targetStep === 'result'
-    // Snelle pad: result + bewaard FML → geen detectie/BW rebuild.
-    if (isResult && blob.previewPlan) {
-      await deps.restoreResultFloorFast({
-        workingImagePng: blob.session.workingImagePng,
-        imageName: blob.session.imageName,
-        scale: blob.session.scale,
-        previewPlan: blob.previewPlan,
-        previewUnderlayLayout:
-          blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale),
-      })
-      return
-    }
+    // Altijd volledige session-restore (refs/dikte/detectie/B/W).
+    // Oude «fast result»-pad wiste LBE-refs via clearWorkspaceForSession — breekt
+    // stap-terug preserve na floor-switch/resume.
     await deps.restoreSession(blob.session, {
       skipOpeningsRerun: isResult,
       applyPreviewPlan: isResult ? (blob.previewPlan ?? null) : null,
-      applyPreviewUnderlayLayout: isResult ? (blob.previewUnderlayLayout ?? null) : null,
+      applyPreviewUnderlayLayout: isResult
+        ? (blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale))
+        : null,
     })
   }
 

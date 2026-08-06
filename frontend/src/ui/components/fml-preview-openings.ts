@@ -104,6 +104,63 @@ export function projectPointToWallT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D)
   return Math.max(0, Math.min(1, tRaw))
 }
 
+/** Wereldpositie van het openingscentrum op de muur (parameter `t`). */
+export function openingWorldCenter(wall: Pick<Wall, 'a' | 'b'>, t: number): Point2D {
+  const clamped = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0.5))
+  return {
+    x: wall.a.x + (wall.b.x - wall.a.x) * clamped,
+    y: wall.a.y + (wall.b.y - wall.a.y) * clamped,
+  }
+}
+
+/**
+ * Herbereken `t` zodat de opening op dezelfde wereldpositie blijft na een
+ * muurgeometrie-wijziging (split / knooppunt-verslepen).
+ * Geen breedte-clamp: anders schuiven te brede openingen mee i.p.v. vast te blijven.
+ */
+export function reprojectOpeningT(wall: Pick<Wall, 'a' | 'b'>, worldCenter: Point2D): number {
+  return projectPointToWallT(wall, worldCenter)
+}
+
+/** Herprojecteer alle openingen van een muur vanuit vastgelegde wereldcentra. */
+export function reprojectWallOpenings(wall: Wall, worldCenters: readonly Point2D[]): Opening[] {
+  return wall.openings.map((opening, index) => {
+    const world = worldCenters[index] ?? openingWorldCenter(wall, opening.t)
+    const t = reprojectOpeningT(wall, world)
+    return Math.abs(opening.t - t) > 1e-9 ? { ...opening, t } : opening
+  })
+}
+
+/**
+ * Verdeel openingen over twee split-segmenten en herbereken `t` naar de
+ * oorspronkelijke wereldpositie op het nieuwe segment.
+ */
+export function redistributeOpeningsAcrossSplit(params: {
+  openings: readonly Opening[]
+  sourceWall: Pick<Wall, 'a' | 'b'>
+  tSplit: number
+  firstWall: Pick<Wall, 'a' | 'b'>
+  secondWall: Pick<Wall, 'a' | 'b'>
+}): { first: Opening[]; second: Opening[] } {
+  const first: Opening[] = []
+  const second: Opening[] = []
+  for (const opening of params.openings) {
+    const world = openingWorldCenter(params.sourceWall, opening.t)
+    if (opening.t <= params.tSplit) {
+      first.push({
+        ...opening,
+        t: reprojectOpeningT(params.firstWall, world),
+      })
+    } else {
+      second.push({
+        ...opening,
+        t: reprojectOpeningT(params.secondWall, world),
+      })
+    }
+  }
+  return { first, second }
+}
+
 export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening): Wall[] {
   const wallIndex = walls.findIndex((wall) => wall.id === wallId)
   if (wallIndex < 0) return walls
@@ -156,7 +213,7 @@ export function findOpeningById(walls: Wall[], openingId: string): OpeningLocati
 }
 
 type OpeningPatch = Partial<
-  Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht'>
+  Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht' | 'refid'>
 >
 
 export function updateOpeningById(walls: Wall[], openingId: string, patch: OpeningPatch): Wall[] {
@@ -175,6 +232,11 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
   if (!nextOpening) return walls
 
   let changed = false
+
+  if (patch.refid != null && patch.refid !== '' && nextOpening.refid !== patch.refid) {
+    nextOpening.refid = patch.refid
+    changed = true
+  }
 
   if (patch.width != null) {
     const width = clampOpeningWidth(patch.width)
@@ -212,7 +274,10 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
     }
   }
 
-  if (patch.bovenlicht !== undefined && nextOpening.type === 'door') {
+  if (
+    patch.bovenlicht !== undefined &&
+    (nextOpening.type === 'door' || nextOpening.type === 'window')
+  ) {
     const next = patch.bovenlicht
     if (nextOpening.bovenlicht !== next) {
       nextOpening.bovenlicht = next

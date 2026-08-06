@@ -3,6 +3,7 @@ import {
   applyFmlThicknessPick,
   type FmlThicknessPickTier,
 } from '@/core/fml/apply-fml-thickness-pick'
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WALL_HEIGHT_CM,
@@ -79,6 +80,14 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   const fmlWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
   /** Export-only: bovenlicht op alle deuren tenzij per-deur override. Start vanuit user/project defaults. */
   const fmlBovenlichtDefault = ref(loadUserSettings().defaults.bovenlichtDefault === true)
+  /** Export-only: bovenlicht op alle ramen tenzij per-raam override. */
+  const fmlWindowBovenlichtDefault = ref(
+    loadUserSettings().defaults.windowBovenlichtDefault === true,
+  )
+  const fmlBovenlichtHeightCm = ref(
+    loadUserSettings().defaults.bovenlichtHeightCm ?? BOVENLICHT_HEIGHT_CM,
+  )
+  const fmlBovenlichtGapCm = ref(loadUserSettings().defaults.bovenlichtGapCm ?? BOVENLICHT_GAP_CM)
   const appliedFmlThicknessLimits = ref<FmlWallThicknessLimits>({ ...storedLimits })
   const appliedFmlBandBoundaries = ref<FmlThicknessBandBoundaries>({ ...storedBandBoundaries })
   const appliedFmlWallHeightCm = ref(DEFAULT_FML_WALL_HEIGHT_CM)
@@ -165,6 +174,10 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlWindowSillZCm.value = DEFAULT_FML_WINDOW_SILL_Z_CM
     // Niet hard false: onderlegger-reset wist anders project-/settings-bovenlicht tot sync.
     fmlBovenlichtDefault.value = loadUserSettings().defaults.bovenlichtDefault === true
+    fmlWindowBovenlichtDefault.value = loadUserSettings().defaults.windowBovenlichtDefault === true
+    fmlBovenlichtHeightCm.value =
+      loadUserSettings().defaults.bovenlichtHeightCm ?? BOVENLICHT_HEIGHT_CM
+    fmlBovenlichtGapCm.value = loadUserSettings().defaults.bovenlichtGapCm ?? BOVENLICHT_GAP_CM
     appliedFmlThicknessLimits.value = { ...DEFAULT_FML_WALL_THICKNESS_LIMITS }
     appliedFmlBandBoundaries.value = { ...DEFAULT_FML_BAND_BOUNDARIES }
     appliedFmlWallHeightCm.value = DEFAULT_FML_WALL_HEIGHT_CM
@@ -209,6 +222,20 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
 
   function setFmlBovenlichtDefault(value: boolean): void {
     fmlBovenlichtDefault.value = value === true
+  }
+
+  function setFmlWindowBovenlichtDefault(value: boolean): void {
+    fmlWindowBovenlichtDefault.value = value === true
+  }
+
+  function setFmlBovenlichtHeightCm(value: number): void {
+    if (!Number.isFinite(value) || value <= 0) return
+    fmlBovenlichtHeightCm.value = Math.round(value)
+  }
+
+  function setFmlBovenlichtGapCm(value: number): void {
+    if (!Number.isFinite(value) || value < 0) return
+    fmlBovenlichtGapCm.value = Math.round(value)
   }
 
   function setFmlBandMidBoundaryCm(value: number): void {
@@ -312,6 +339,9 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlWindowHeightCm,
     fmlWindowSillZCm,
     fmlBovenlichtDefault,
+    fmlWindowBovenlichtDefault,
+    fmlBovenlichtHeightCm,
+    fmlBovenlichtGapCm,
     appliedFmlThicknessLimits,
     appliedFmlBandBoundaries,
     appliedFmlWallHeightCm,
@@ -333,6 +363,9 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     setFmlWindowHeightCm,
     setFmlWindowSillZCm,
     setFmlBovenlichtDefault,
+    setFmlWindowBovenlichtDefault,
+    setFmlBovenlichtHeightCm,
+    setFmlBovenlichtGapCm,
     setFmlBandMidBoundaryCm,
     setFmlBandMaxBoundaryCm,
     startFmlThicknessPick,

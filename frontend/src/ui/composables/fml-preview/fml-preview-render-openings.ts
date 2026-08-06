@@ -5,6 +5,10 @@ import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
 import { groupDoorOpeningsOnWall } from '@/ui/components/fml-preview-doors'
 import { buildWindowOpeningId } from '@/ui/components/fml-preview-openings'
 import {
+  offsetFlatPointsByWallBalance,
+  offsetPointByWallBalance,
+} from '@/ui/components/fml-preview-wall-polygons'
+import {
   buildOpeningGapPolygon,
   buildWindowSymbol,
   clamp01,
@@ -36,6 +40,9 @@ export function buildRenderDoorGroupsAndWindows(
     if (len < 1e-6) return
     const ux = dx / len
     const uy = dy / len
+    const wallUnit = { x: ux, y: uy }
+    const thicknessCm = wallLine.wall.thickness
+    const balance = wallLine.wall.balance
 
     const groupedDoors = groupDoorOpeningsOnWall(
       wallLine.id,
@@ -44,8 +51,11 @@ export function buildRenderDoorGroupsAndWindows(
       wallLine.wall.openings,
     )
     groupedDoors.forEach((group) => {
-      const start = toStagePoint(group.startCm.x, group.startCm.y)
-      const end = toStagePoint(group.endCm.x, group.endCm.y)
+      // Balance verschuift de muur t.o.v. de hartlijn — openingen mee naar mid-dikte.
+      const startCm = offsetPointByWallBalance(group.startCm, wallUnit, thicknessCm, balance)
+      const endCm = offsetPointByWallBalance(group.endCm, wallUnit, thicknessCm, balance)
+      const start = toStagePoint(startCm.x, startCm.y)
+      const end = toStagePoint(endCm.x, endCm.y)
       doorGroups.push({
         id: group.id,
         wallId: wallLine.id,
@@ -54,27 +64,47 @@ export function buildRenderDoorGroupsAndWindows(
         openings: group.openings,
         hitPoints: [start.x, start.y, end.x, end.y],
         gapPoints: buildOpeningGapPolygon({
-          startCm: group.startCm,
-          endCm: group.endCm,
-          wallUnit: { x: ux, y: uy },
-          thicknessCm: wallLine.wall.thickness,
+          startCm,
+          endCm,
+          wallUnit,
+          thicknessCm,
           toStagePoint,
         }),
         label: group.catalogLabel,
         detail: doorGroupDetail(group),
-        leafLines: group.leafLines.map((line) => flattenStagePoints(line, toStagePoint)),
-        arcPoints: group.arcPoints.map((arc) => flattenStagePoints(arc, toStagePoint)),
-        arrowPoints: group.arrowPoints.map((arrow) => flattenStagePoints(arrow, toStagePoint)),
+        leafLines: group.leafLines.map((line) =>
+          flattenStagePoints(
+            offsetFlatPointsByWallBalance(line, wallUnit, thicknessCm, balance),
+            toStagePoint,
+          ),
+        ),
+        arcPoints: group.arcPoints.map((arc) =>
+          flattenStagePoints(
+            offsetFlatPointsByWallBalance(arc, wallUnit, thicknessCm, balance),
+            toStagePoint,
+          ),
+        ),
+        arrowPoints: group.arrowPoints.map((arrow) =>
+          flattenStagePoints(
+            offsetFlatPointsByWallBalance(arrow, wallUnit, thicknessCm, balance),
+            toStagePoint,
+          ),
+        ),
       })
     })
 
     wallLine.wall.openings.forEach((opening, openingIndex) => {
       if (opening.type !== 'window') return
 
-      const center = {
-        x: wallLine.a.x + clamp01(opening.t) * dx,
-        y: wallLine.a.y + clamp01(opening.t) * dy,
-      }
+      const center = offsetPointByWallBalance(
+        {
+          x: wallLine.a.x + clamp01(opening.t) * dx,
+          y: wallLine.a.y + clamp01(opening.t) * dy,
+        },
+        wallUnit,
+        thicknessCm,
+        balance,
+      )
       const half = Math.max(0.5, opening.width / 2)
       const startCm = { x: center.x - ux * half, y: center.y - uy * half }
       const endCm = { x: center.x + ux * half, y: center.y + uy * half }
@@ -85,7 +115,7 @@ export function buildRenderDoorGroupsAndWindows(
       const windowSymbol = buildWindowSymbol({
         startCm,
         endCm,
-        thicknessCm: wallLine.wall.thickness,
+        thicknessCm,
         toStagePoint,
         panelCount: panels,
         kind: catalog.kind,
@@ -98,8 +128,8 @@ export function buildRenderDoorGroupsAndWindows(
         gapPoints: buildOpeningGapPolygon({
           startCm,
           endCm,
-          wallUnit: { x: ux, y: uy },
-          thicknessCm: wallLine.wall.thickness,
+          wallUnit,
+          thicknessCm,
           toStagePoint,
         }),
         label: catalog.label,

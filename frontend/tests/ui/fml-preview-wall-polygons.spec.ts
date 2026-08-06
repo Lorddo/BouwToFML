@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildWallRenderGeometry,
+  offsetPointByWallBalance,
   pointInFillComponents,
   maxFillVertexDistanceFromWallEnds,
+  resolveWallExtents,
+  wallBalanceMidOffsetCm,
 } from '@/ui/components/fml-preview-wall-polygons'
 
 function hasVertex(
@@ -20,6 +23,21 @@ function allFillPoints(
 ): { x: number; y: number }[] {
   return geometry.fillComponents.flatMap((component) => component.rings.flat())
 }
+
+describe('wall balance extents', () => {
+  it('centers at 0.5 and shifts mid-line with balance', () => {
+    expect(resolveWallExtents({ thickness: 20, balance: 0.5 })).toEqual({ plus: 10, minus: 10 })
+    expect(wallBalanceMidOffsetCm(20, 0.5)).toBeCloseTo(0, 6)
+    expect(wallBalanceMidOffsetCm(20, 0.8)).toBeCloseTo(6, 6)
+    expect(wallBalanceMidOffsetCm(20, 0.25)).toBeCloseTo(-5, 6)
+
+    const wallUnit = { x: 1, y: 0 }
+    const mid = offsetPointByWallBalance({ x: 50, y: 0 }, wallUnit, 20, 0.8)
+    // left normal = (0, 1) → mid shifts +y
+    expect(mid.x).toBeCloseTo(50, 6)
+    expect(mid.y).toBeCloseTo(6, 6)
+  })
+})
 
 describe('buildWallRenderGeometry', () => {
   it('equal-thickness L merges to a single union component', () => {

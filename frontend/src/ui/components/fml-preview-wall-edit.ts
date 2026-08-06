@@ -9,6 +9,7 @@ import {
   stableJunctionId,
   type SplitWallResult,
 } from './fml-preview-junction-core'
+import { redistributeOpeningsAcrossSplit } from './fml-preview-openings'
 
 export function clampBalance(balance: number): number {
   if (!Number.isFinite(balance)) return BALANCE_DEFAULT
@@ -95,12 +96,15 @@ export function splitWallAtT(walls: Wall[], wallId: string, tSplit = 0.5): Split
   }
   const secondWallId = `${wallId}-split-${crypto.randomUUID().slice(0, 8)}`
 
-  const firstOpenings = wall.openings
-    .filter((opening) => opening.t <= t)
-    .map((opening) => ({ ...opening, t: t > 1e-6 ? opening.t / t : 0.5 }))
-  const secondOpenings = wall.openings
-    .filter((opening) => opening.t > t)
-    .map((opening) => ({ ...opening, t: (opening.t - t) / (1 - t) }))
+  const firstEndpoints = { a: wall.a, b: { ...splitPoint } }
+  const secondEndpoints = { a: { ...splitPoint }, b: wall.b }
+  const { first: firstOpenings, second: secondOpenings } = redistributeOpeningsAcrossSplit({
+    openings: wall.openings,
+    sourceWall: wall,
+    tSplit: t,
+    firstWall: firstEndpoints,
+    secondWall: secondEndpoints,
+  })
 
   const firstWall: Wall = {
     ...wall,

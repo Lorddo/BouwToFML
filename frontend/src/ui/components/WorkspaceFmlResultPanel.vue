@@ -11,11 +11,13 @@ defineProps<{
   scaleConfirmed: boolean
   hasCombinedOutput: boolean
   generatedStats: { walls: number; doors: number; windows: number }
+  floorName: string
   fmlWallHeightCm: number
   fmlDoorHeightCm: number
   fmlWindowHeightCm: number
   fmlWindowSillZCm: number
   fmlBovenlichtDefault: boolean
+  fmlWindowBovenlichtDefault: boolean
   fmlThicknessMinCm: number
   fmlThicknessMidCm: number
   fmlThicknessMaxCm: number
@@ -34,6 +36,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
+  'update:floorName': [value: string]
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
   'update:fmlWallHeightCm': [value: number]
@@ -41,6 +44,7 @@ const emit = defineEmits<{
   'update:fmlWindowHeightCm': [value: number]
   'update:fmlWindowSillZCm': [value: number]
   'update:fmlBovenlichtDefault': [value: boolean]
+  'update:fmlWindowBovenlichtDefault': [value: boolean]
   'update:fmlThicknessMinCm': [value: number]
   'update:fmlThicknessMidCm': [value: number]
   'update:fmlThicknessMaxCm': [value: number]
@@ -57,11 +61,13 @@ const emit = defineEmits<{
     :scale-confirmed="scaleConfirmed"
     :has-combined-output="hasCombinedOutput"
     :generated-stats="generatedStats"
+    :floor-name="floorName"
     :fml-wall-height-cm="fmlWallHeightCm"
     :fml-door-height-cm="fmlDoorHeightCm"
     :fml-window-height-cm="fmlWindowHeightCm"
     :fml-window-sill-z-cm="fmlWindowSillZCm"
     :fml-bovenlicht-default="fmlBovenlichtDefault"
+    :fml-window-bovenlicht-default="fmlWindowBovenlichtDefault"
     :fml-thickness-min-cm="fmlThicknessMinCm"
     :fml-thickness-mid-cm="fmlThicknessMidCm"
     :fml-thickness-max-cm="fmlThicknessMaxCm"
@@ -77,6 +83,7 @@ const emit = defineEmits<{
     :underlay-opacity="underlayOpacity"
     :fml-opacity="fmlOpacity"
     :underlay-available="underlayAvailable"
+    @update:floor-name="emit('update:floorName', $event)"
     @update:underlay-opacity="emit('update:underlayOpacity', $event)"
     @update:fml-opacity="emit('update:fmlOpacity', $event)"
     @update:fml-wall-height-cm="emit('update:fmlWallHeightCm', $event)"
@@ -84,6 +91,7 @@ const emit = defineEmits<{
     @update:fml-window-height-cm="emit('update:fmlWindowHeightCm', $event)"
     @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
     @update:fml-bovenlicht-default="emit('update:fmlBovenlichtDefault', $event)"
+    @update:fml-window-bovenlicht-default="emit('update:fmlWindowBovenlichtDefault', $event)"
     @update:fml-thickness-min-cm="emit('update:fmlThicknessMinCm', $event)"
     @update:fml-thickness-mid-cm="emit('update:fmlThicknessMidCm', $event)"
     @update:fml-thickness-max-cm="emit('update:fmlThicknessMaxCm', $event)"

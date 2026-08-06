@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
 import { getFmlEditTools, getFmlSelectTools, type FmlToolId } from './canvas/fmlToolbeltItems'
@@ -30,6 +31,8 @@ const props = withDefaults(
       openingIds: string[]
       count: number
       openingType: 'door' | 'window' | 'mixed'
+      subtype: OpeningSubtypeDraft | null
+      subtypeMixed: boolean
       widthCm: number | null
       widthMixed: boolean
       heightCm: number | null
@@ -45,6 +48,8 @@ const props = withDefaults(
     wallThicknessMixed: boolean
     wallBalanceDraft: number
     wallBalanceMixed: boolean
+    openingSubtypeDraft: OpeningSubtypeDraft
+    openingSubtypeMixed: boolean
     openingWidthDraft: number
     openingWidthMixed: boolean
     openingHeightDraft: number
@@ -76,6 +81,7 @@ const emit = defineEmits<{
   applyWallThickness: [thicknessCm: number]
   wallBalanceInput: [event: Event]
   commitWallBalance: []
+  commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
   openingWidthInput: [event: Event]
   commitOpeningWidth: []
   openingHeightInput: [event: Event]
@@ -166,6 +172,8 @@ const hint = computed(() => {
         :wall-thickness-mixed="wallThicknessMixed"
         :wall-balance-draft="wallBalanceDraft"
         :wall-balance-mixed="wallBalanceMixed"
+        :opening-subtype-draft="openingSubtypeDraft"
+        :opening-subtype-mixed="openingSubtypeMixed"
         :opening-width-draft="openingWidthDraft"
         :opening-width-mixed="openingWidthMixed"
         :opening-height-draft="openingHeightDraft"
@@ -187,6 +195,7 @@ const hint = computed(() => {
         @apply-wall-thickness="emit('applyWallThickness', $event)"
         @wall-balance-input="emit('wallBalanceInput', $event)"
         @commit-wall-balance="emit('commitWallBalance')"
+        @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
         @opening-width-input="emit('openingWidthInput', $event)"
         @commit-opening-width="emit('commitOpeningWidth')"
         @opening-height-input="emit('openingHeightInput', $event)"

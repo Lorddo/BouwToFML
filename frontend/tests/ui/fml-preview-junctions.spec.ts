@@ -79,6 +79,74 @@ describe('moveJunction', () => {
     expect(moved.find((wall) => wall.id === 'w1')?.a).toEqual({ x: 10, y: 5 })
     expect(moved.find((wall) => wall.id === 'w2')?.a).toEqual({ x: 10, y: 5 })
   })
+
+  it('reprojects openings to keep their world position when an endpoint moves', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        openings: [
+          { refid: 'door', t: 0.3, width: 10, type: 'door' as const },
+          { refid: 'window', t: 0.7, width: 12, type: 'window' as const },
+        ],
+      },
+    ]
+    const endB = buildJunctions(walls).find((junction) =>
+      junction.refs.some((ref) => ref.wallId === 'w1' && ref.end === 'b'),
+    )!
+    const moved = moveJunction(walls, endB, { x: 50, y: 0 })
+    const wall = moved.find((item) => item.id === 'w1')!
+    expect(wall.b).toEqual({ x: 50, y: 0 })
+    // Was x=30 en x=70 op 0→100; na inkorten naar 0→50 blijft x=30, x=70 clampt naar eind.
+    expect(wall.openings[0]?.t).toBeCloseTo(0.6, 5)
+    expect(wall.openings[0].t * 50).toBeCloseTo(30, 5)
+    expect(wall.openings[1]?.t).toBeCloseTo(1, 5)
+  })
+
+  it('reprojects openings onto the new wall axis when a corner junction moves', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        openings: [{ refid: 'door', t: 0.4, width: 10, type: 'door' as const }],
+      },
+      {
+        id: 'w2',
+        a: { x: 0, y: 0 },
+        b: { x: 0, y: 80 },
+        thickness: 20,
+        openings: [{ refid: 'window', t: 0.5, width: 10, type: 'window' as const }],
+      },
+    ]
+    const corner = buildJunctions(walls).find((junction) => junction.refs.length === 2)!
+    const moved = moveJunction(walls, corner, { x: 20, y: 10 })
+    const w1 = moved.find((wall) => wall.id === 'w1')!
+    const w2 = moved.find((wall) => wall.id === 'w2')!
+
+    const project = (
+      wall: { a: { x: number; y: number }; b: { x: number; y: number } },
+      point: { x: number; y: number },
+    ) => {
+      const dx = wall.b.x - wall.a.x
+      const dy = wall.b.y - wall.a.y
+      const lenSq = dx * dx + dy * dy
+      const t = Math.max(
+        0,
+        Math.min(1, ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / lenSq),
+      )
+      return { x: wall.a.x + t * dx, y: wall.a.y + t * dy, t }
+    }
+    const door = project(w1, { x: 40, y: 0 })
+    const win = project(w2, { x: 0, y: 40 })
+    expect(w1.openings[0]?.t).toBeCloseTo(door.t, 5)
+    expect(w2.openings[0]?.t).toBeCloseTo(win.t, 5)
+    // Zonder herprojectie (vaste t) zou de deur mee-schalen i.p.v. dicht bij (40,0) te blijven.
+    expect(w1.openings[0]?.t).not.toBeCloseTo(0.4, 2)
+  })
 })
 
 describe('mergeJunctions', () => {
@@ -187,6 +255,28 @@ describe('splitWallAtMidpoint', () => {
     expect(result.walls[0]?.openings[0]?.t).toBeCloseTo(0.5)
     expect(result.walls[1]?.openings).toHaveLength(1)
     expect(result.walls[1]?.openings[0]?.t).toBeCloseTo(0.5)
+  })
+
+  it('keeps opening world centers when splitting away from openings', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 200, y: 0 },
+        thickness: 20,
+        openings: [
+          { refid: 'door', t: 0.2, width: 10, type: 'door' as const },
+          { refid: 'window', t: 0.8, width: 12, type: 'window' as const },
+        ],
+      },
+    ]
+    const result = splitWallAtT(walls, 'w1', 0.5)!
+    const first = result.walls[0]
+    const second = result.walls[1]
+    const doorX = first.a.x + first.openings[0].t * (first.b.x - first.a.x)
+    const winX = second.a.x + second.openings[0].t * (second.b.x - second.a.x)
+    expect(doorX).toBeCloseTo(40, 5)
+    expect(winX).toBeCloseTo(160, 5)
   })
 
   it('rejects walls that are too short', () => {

@@ -1,5 +1,11 @@
 import { tally } from '@/core/diagnostics'
-import { buildBovenlichtOpening, resolveDoorBovenlicht } from './bovenlicht'
+import {
+  BOVENLICHT_GAP_CM,
+  BOVENLICHT_HEIGHT_CM,
+  buildBovenlichtOpening,
+  resolveDoorBovenlicht,
+  resolveWindowBovenlicht,
+} from './bovenlicht'
 import type { Floor, FloorPlan, Opening } from './types'
 import { CONCEPT_DOOR_REFID, CONCEPT_WINDOW_REFID } from './types'
 import {
@@ -10,6 +16,7 @@ import {
 } from './extraction-to-plan-types'
 
 export type BovenlichtDefaultResolver = boolean | ((floor: Floor, floorIndex: number) => boolean)
+export type BovenlichtCmResolver = number | ((floor: Floor, floorIndex: number) => number)
 
 export interface BuildFmlV3Options {
   name?: string
@@ -18,6 +25,15 @@ export interface BuildFmlV3Options {
    * Boolean = zelfde default voor alle verdiepingen; functie = per floor.
    */
   bovenlichtDefault?: BovenlichtDefaultResolver
+  /**
+   * Project-/vloerdefault: bovenlicht op ramen zonder per-raam override.
+   * Boolean = zelfde default voor alle verdiepingen; functie = per floor.
+   */
+  windowBovenlichtDefault?: BovenlichtDefaultResolver
+  /** Glashoogte bovenlicht (cm); default fabriek 40. */
+  bovenlichtHeightCm?: BovenlichtCmResolver
+  /** Afstand boven opening / dorpel-offset (cm); default fabriek 10. */
+  bovenlichtGapCm?: BovenlichtCmResolver
 }
 
 /**
@@ -72,24 +88,57 @@ function serializeOpening(op: Opening): Record<string, unknown> {
   }
 }
 
+function resolveBovenlichtOn(op: Opening, doorDefault: boolean, windowDefault: boolean): boolean {
+  if (op.type === 'door') return resolveDoorBovenlicht(op, doorDefault)
+  if (op.type === 'window') return resolveWindowBovenlicht(op, windowDefault)
+  return false
+}
+
 function expandOpeningsForExport(
   openings: Opening[],
   floorHeightCm: number,
-  bovenlichtDefault: boolean,
+  doorBovenlichtDefault: boolean,
+  windowBovenlichtDefault: boolean,
+  bovenlichtHeightCm: number,
+  bovenlichtGapCm: number,
 ): Opening[] {
   const out: Opening[] = []
   for (const op of openings) {
     out.push(op)
-    if (op.type !== 'door') continue
-    if (!resolveDoorBovenlicht(op, bovenlichtDefault)) continue
-    const doorGuid = openingGuid(op)
+    if (!resolveBovenlichtOn(op, doorBovenlichtDefault, windowBovenlichtDefault)) continue
+    const sourceGuid = openingGuid(op)
     const bovenlicht = buildBovenlichtOpening(op, {
       floorHeightCm,
-      doorGuid,
+      sourceGuid,
+      heightCm: bovenlichtHeightCm,
+      gapCm: bovenlichtGapCm,
     })
     if (bovenlicht) out.push(bovenlicht)
   }
   return out
+}
+
+function resolveDefaultOption(
+  option: BovenlichtDefaultResolver | undefined,
+  floor: Floor,
+  floorIndex: number,
+): boolean {
+  if (typeof option === 'function') return option(floor, floorIndex) === true
+  return option === true
+}
+
+function resolveCmOption(
+  option: BovenlichtCmResolver | undefined,
+  floor: Floor,
+  floorIndex: number,
+  fallback: number,
+): number {
+  if (typeof option === 'function') {
+    const value = option(floor, floorIndex)
+    return Number.isFinite(value) ? value : fallback
+  }
+  if (typeof option === 'number' && Number.isFinite(option)) return option
+  return fallback
 }
 
 export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): string {
@@ -113,11 +162,6 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
   }
   const projectId = 900000001
   const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
-  const resolveBovenlichtDefault = (floor: Floor, floorIndex: number): boolean => {
-    const option = options.bovenlichtDefault
-    if (typeof option === 'function') return option(floor, floorIndex) === true
-    return option === true
-  }
   const output = {
     id: projectId,
     name: options.name ?? plan.name,
@@ -211,7 +255,10 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
             openings: expandOpeningsForExport(
               wall.openings,
               floor.height,
-              resolveBovenlichtDefault(floor, floorIndex),
+              resolveDefaultOption(options.bovenlichtDefault, floor, floorIndex),
+              resolveDefaultOption(options.windowBovenlichtDefault, floor, floorIndex),
+              resolveCmOption(options.bovenlichtHeightCm, floor, floorIndex, BOVENLICHT_HEIGHT_CM),
+              resolveCmOption(options.bovenlichtGapCm, floor, floorIndex, BOVENLICHT_GAP_CM),
             ).map(serializeOpening),
           })),
           settings: {

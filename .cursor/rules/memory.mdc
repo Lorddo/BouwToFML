@@ -5,7 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-06 (stap-terug preserve)
+Laatste update: 2026-08-06 (result-hydrate refs)
+
+## Result-hydrate behoudt refs (2026-08-06)
+
+Bug: `restoreResultFloorFast` bij floor-switch/resume op result deed `clearWorkspaceForSession` zonder LBE-refs/dikte terug te zetten → stap-terug naar detectie/preprocess leeg. Fix: hydrate altijd volledige `restoreSession` (skip openings-rerun + apply previewPlan); enter-result `persistProject` captured session met refs.
+
+## Bovenlicht op ramen (2026-08-06)
+
+Zelfde patroon als deuren: vloerdefault `windowBovenlichtDefault` (los van deur-`bovenlichtDefault`) + per-raam `Opening.bovenlicht` override. Export-only via `buildBovenlichtOpening` (top = sill+hoogte+gap). UI: FmlPanel + project-setup + settings aparte checkboxes; Ctrl+klik toolbar ook bij raamselectie. Maten: `bovenlichtGapCm` (dorpel-offset) + `bovenlichtHeightCm` (glas) in settings/project-defaults (fabriek 10/40).
 
 ## Stap-terug / flow-preserve (2026-08-06)
 

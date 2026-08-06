@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import type { FmlToolId } from './canvas/fmlToolbeltItems'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './canvas/canvas-toolbelt.css'
@@ -29,6 +30,8 @@ const props = withDefaults(
       openingIds: string[]
       count: number
       openingType: 'door' | 'window' | 'mixed'
+      subtype: OpeningSubtypeDraft | null
+      subtypeMixed: boolean
       widthCm: number | null
       widthMixed: boolean
       heightCm: number | null
@@ -44,6 +47,8 @@ const props = withDefaults(
     wallThicknessMixed: boolean
     wallBalanceDraft: number
     wallBalanceMixed: boolean
+    openingSubtypeDraft: OpeningSubtypeDraft
+    openingSubtypeMixed: boolean
     openingWidthDraft: number
     openingWidthMixed: boolean
     openingHeightDraft: number
@@ -75,6 +80,7 @@ const emit = defineEmits<{
   applyWallThickness: [thicknessCm: number]
   wallBalanceInput: [event: Event]
   commitWallBalance: []
+  commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
   openingWidthInput: [event: Event]
   commitOpeningWidth: []
   openingHeightInput: [event: Event]
@@ -151,6 +157,13 @@ function onOpeningSillZChange(event: Event): void {
   releaseControlFocus(event)
 }
 
+function onOpeningSubtypeChange(event: Event): void {
+  const value = (event.target as HTMLSelectElement).value as OpeningSubtypeDraft
+  if (!value) return
+  emit('commitOpeningSubtype', value)
+  releaseControlFocus(event)
+}
+
 function onOpeningBovenlichtChange(event: Event): void {
   emit('openingBovenlichtChange', event)
   releaseControlFocus(event)
@@ -162,10 +175,10 @@ const doorSubtypeOptions = computed(() =>
       'standard',
       'closet',
       'double',
+      'double_solid',
       'pocket',
       'sliding_single',
       'sliding',
-      'garage',
     ] as const satisfies readonly DoorAddSubtype[]
   ).map((value) => ({
     value,
@@ -214,6 +227,13 @@ const openingKindLabel = computed(() => {
 
 const isDoorSelection = computed(() => props.selectedOpeningPanel?.openingType === 'door')
 const isWindowSelection = computed(() => props.selectedOpeningPanel?.openingType === 'window')
+const canChangeOpeningSubtype = computed(() => isDoorSelection.value || isWindowSelection.value)
+const selectedSubtypeOptions = computed(() =>
+  isWindowSelection.value ? windowSubtypeOptions.value : doorSubtypeOptions.value,
+)
+const selectedSubtypeAria = computed(() =>
+  isWindowSelection.value ? t('result.toolbar.windowType') : t('result.toolbar.doorType'),
+)
 const canCopyOpening = computed(() => props.selectedOpeningPanel?.count === 1)
 
 const openingHingeTitle = computed(() => {
@@ -272,9 +292,27 @@ const showMeasureStrip = computed(
       <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
         {{ wallCountLabel }}
       </span>
-      <span v-if="selectedOpeningPanel" class="fml-toolbelt__meta">
+      <span v-if="selectedOpeningPanel && !canChangeOpeningSubtype" class="fml-toolbelt__meta">
         {{ openingKindLabel }}
       </span>
+      <div v-if="selectedOpeningPanel && canChangeOpeningSubtype" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ selectedSubtypeAria }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <select
+            class="fml-toolbelt__select"
+            :aria-label="selectedSubtypeAria"
+            :value="openingSubtypeMixed ? '' : openingSubtypeDraft"
+            @change="onOpeningSubtypeChange"
+          >
+            <option v-if="openingSubtypeMixed" value="" disabled>
+              {{ t('result.toolbar.custom') }}
+            </option>
+            <option v-for="opt in selectedSubtypeOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+      </div>
       <div v-if="selectedWallPanel || isDrawWallOrRoom" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{
           isDrawWallOrRoom ? t('result.toolbar.wallType') : t('result.toolbar.thickness')
@@ -488,7 +526,7 @@ const showMeasureStrip = computed(
         </div>
       </div>
       <label
-        v-if="isDoorSelection"
+        v-if="isDoorSelection || isWindowSelection"
         class="fml-toolbelt__field fml-toolbelt__field--checkbox"
         :title="t('result.toolbar.bovenlichtTitle')"
       >

@@ -1,8 +1,13 @@
 import { ref, type Ref } from 'vue'
 import {
+  resolveDoorAddPreset,
   resolveDoorSubtypeFromRefid,
+  resolveWindowAddPreset,
   resolveWindowSubtypeFromRefid,
+  type DoorAddSubtype,
+  type WindowAddSubtype,
 } from '@/core/fml/opening-add-presets'
+import type { OpeningSubtypeDraft } from './fml-preview-opening-draft'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
@@ -32,6 +37,7 @@ export function useFmlPreviewOpeningSelection(options: {
   cancelMoveDragPending: () => void
   cancelOpeningDragPending: () => void
   bovenlichtDefault?: Ref<boolean>
+  windowBovenlichtDefault?: Ref<boolean>
 }) {
   const {
     editor,
@@ -40,6 +46,7 @@ export function useFmlPreviewOpeningSelection(options: {
     cancelMoveDragPending,
     cancelOpeningDragPending,
     bovenlichtDefault,
+    windowBovenlichtDefault,
   } = options
 
   const {
@@ -58,6 +65,8 @@ export function useFmlPreviewOpeningSelection(options: {
     pinnedJunctionId,
   } = selection
 
+  const openingSubtypeDraft = ref<OpeningSubtypeDraft>('standard')
+  const openingSubtypeMixed = ref(false)
   const openingWidthDraft = ref(90)
   const openingWidthMixed = ref(false)
   const openingHeightDraft = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
@@ -80,6 +89,8 @@ export function useFmlPreviewOpeningSelection(options: {
   function syncOpeningDraftFromSelection(): void {
     const selected = selectedOpenings()
     if (selected.length === 0) {
+      openingSubtypeMixed.value = false
+      openingSubtypeDraft.value = 'standard'
       openingWidthMixed.value = false
       openingHeightMixed.value = false
       openingSillZMixed.value = false
@@ -91,10 +102,15 @@ export function useFmlPreviewOpeningSelection(options: {
     }
     const draft = computeOpeningDraftState(
       selected.map((item) => item.opening),
-      { bovenlichtDefault: bovenlichtDefault?.value === true },
+      {
+        doorBovenlichtDefault: bovenlichtDefault?.value === true,
+        windowBovenlichtDefault: windowBovenlichtDefault?.value === true,
+      },
     )
     if (!draft) return
 
+    openingSubtypeMixed.value = draft.subtypeMixed
+    openingSubtypeDraft.value = draft.subtype
     openingWidthMixed.value = draft.widthMixed
     openingWidthDraft.value = draft.widthCm
     openingHeightMixed.value = draft.heightMixed
@@ -113,6 +129,7 @@ export function useFmlPreviewOpeningSelection(options: {
     settingsOpeningIds.value = []
     moveOpeningId.value = null
     hoveredOpeningId.value = null
+    openingSubtypeMixed.value = false
     openingWidthMixed.value = false
     openingHeightMixed.value = false
     openingSillZMixed.value = false
@@ -142,6 +159,31 @@ export function useFmlPreviewOpeningSelection(options: {
       settingsOpeningIds.value = [...current, openingId]
     }
     syncOpeningDraftFromSelection()
+  }
+
+  function commitOpeningSubtype(subtype: OpeningSubtypeDraft): void {
+    if (settingsOpeningIds.value.length === 0) return
+    const selected = selectedOpenings()
+    if (selected.length === 0) return
+    const openingType = selected[0].opening.type
+    if (openingType !== 'door' && openingType !== 'window') return
+    if (!selected.every((item) => item.opening.type === openingType)) return
+
+    const refid =
+      openingType === 'window'
+        ? resolveWindowAddPreset(subtype as WindowAddSubtype).refid
+        : resolveDoorAddPreset(subtype as DoorAddSubtype).refid
+
+    openingSubtypeDraft.value = subtype
+    openingSubtypeMixed.value = false
+    editor.pushUndo()
+    for (const openingId of settingsOpeningIds.value) {
+      const located = editor.resolveOpening(openingId)
+      if (!located || located.opening.type !== openingType) continue
+      editor.updateOpening(openingId, { refid })
+    }
+    syncOpeningDraftFromSelection()
+    syncPlanToParent()
   }
 
   function onOpeningWidthInput(event: Event): void {
@@ -239,7 +281,8 @@ export function useFmlPreviewOpeningSelection(options: {
     editor.pushUndo()
     for (const openingId of settingsOpeningIds.value) {
       const located = editor.resolveOpening(openingId)
-      if (!located || located.opening.type !== 'door') continue
+      if (!located) continue
+      if (located.opening.type !== 'door' && located.opening.type !== 'window') continue
       editor.updateOpening(openingId, { bovenlicht: on })
     }
     syncOpeningDraftFromSelection()
@@ -300,6 +343,8 @@ export function useFmlPreviewOpeningSelection(options: {
   }
 
   return {
+    openingSubtypeDraft,
+    openingSubtypeMixed,
     openingWidthDraft,
     openingWidthMixed,
     openingHeightDraft,
@@ -315,6 +360,7 @@ export function useFmlPreviewOpeningSelection(options: {
     syncOpeningDraftFromSelection,
     clearOpeningSelectionState,
     toggleSettingsOpening,
+    commitOpeningSubtype,
     onOpeningWidthInput,
     commitOpeningWidth,
     onOpeningHeightInput,

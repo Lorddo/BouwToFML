@@ -1,3 +1,4 @@
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WALL_HEIGHT_CM,
@@ -67,6 +68,12 @@ function positiveCm(raw: unknown, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback
 }
 
+/** Gap/dorpel-offset: 0 toegestaan (direct op de opening). */
+function nonNegativeCm(raw: unknown, fallback: number): number {
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? n : fallback
+}
+
 function clampOpacityPct(raw: unknown, fallback: number): number {
   const n = Number(raw)
   if (!Number.isFinite(n)) return fallback
@@ -80,6 +87,9 @@ export function createFactoryFmlDefaults(): ProjectFmlDefaults {
     windowHeightCm: DEFAULT_FML_WINDOW_HEIGHT_CM,
     windowSillZCm: DEFAULT_FML_WINDOW_SILL_Z_CM,
     bovenlichtDefault: false,
+    windowBovenlichtDefault: false,
+    bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
+    bovenlichtGapCm: BOVENLICHT_GAP_CM,
     thicknessMinCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.minCm,
     thicknessMidCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.midCm,
     thicknessMaxCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.maxCm,
@@ -128,6 +138,10 @@ function normalizeDefaults(
     windowHeightCm: positiveCm(src.windowHeightCm, factory.windowHeightCm),
     windowSillZCm: positiveCm(src.windowSillZCm, factory.windowSillZCm),
     bovenlichtDefault: typeof src.bovenlichtDefault === 'boolean' ? src.bovenlichtDefault : false,
+    windowBovenlichtDefault:
+      typeof src.windowBovenlichtDefault === 'boolean' ? src.windowBovenlichtDefault : false,
+    bovenlichtHeightCm: positiveCm(src.bovenlichtHeightCm, factory.bovenlichtHeightCm),
+    bovenlichtGapCm: nonNegativeCm(src.bovenlichtGapCm, factory.bovenlichtGapCm),
     thicknessMinCm: positiveCm(src.thicknessMinCm, factory.thicknessMinCm),
     thicknessMidCm: positiveCm(src.thicknessMidCm, factory.thicknessMidCm),
     thicknessMaxCm: positiveCm(src.thicknessMaxCm, factory.thicknessMaxCm),

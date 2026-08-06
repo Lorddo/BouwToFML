@@ -1,4 +1,9 @@
 import type { Point2D, Wall } from '@/core/fml/types'
+import {
+  openingWorldCenter,
+  redistributeOpeningsAcrossSplit,
+  reprojectWallOpenings,
+} from './fml-preview-openings'
 
 const JUNCTION_SNAP_CM = 2
 const JUNCTION_MERGE_CM = 3
@@ -120,12 +125,15 @@ export function splitWallAtPoint(
   const wallIndex = walls.findIndex((item) => item.id === wall.id)
   if (wallIndex < 0) return false
 
-  const firstOpenings = wall.openings
-    .filter((opening) => opening.t <= tSplit)
-    .map((opening) => ({ ...opening, t: tSplit > 1e-6 ? opening.t / tSplit : 0.5 }))
-  const secondOpenings = wall.openings
-    .filter((opening) => opening.t > tSplit)
-    .map((opening) => ({ ...opening, t: (opening.t - tSplit) / (1 - tSplit) }))
+  const firstEndpoints = { a: wall.a, b: { x: splitPoint.x, y: splitPoint.y } }
+  const secondEndpoints = { a: { x: splitPoint.x, y: splitPoint.y }, b: wall.b }
+  const { first: firstOpenings, second: secondOpenings } = redistributeOpeningsAcrossSplit({
+    openings: wall.openings,
+    sourceWall: wall,
+    tSplit,
+    firstWall: firstEndpoints,
+    secondWall: secondEndpoints,
+  })
 
   const firstWall: Wall = {
     ...wall,
@@ -181,10 +189,24 @@ export function buildJunctions(walls: Wall[]): JunctionNode[] {
 
 export function moveJunction(walls: Wall[], node: JunctionNode, position: Point2D): Wall[] {
   const next = cloneWalls(walls)
+  const openingWorldByWallId = new Map<string, Point2D[]>()
+  for (const ref of node.refs) {
+    const wall = next.find((item) => item.id === ref.wallId)
+    if (!wall || openingWorldByWallId.has(wall.id)) continue
+    openingWorldByWallId.set(
+      wall.id,
+      wall.openings.map((opening) => openingWorldCenter(wall, opening.t)),
+    )
+  }
   for (const ref of node.refs) {
     const wall = next.find((item) => item.id === ref.wallId)
     if (!wall) continue
     wall[ref.end] = { ...position }
+  }
+  for (const [wallId, worldCenters] of openingWorldByWallId) {
+    const wall = next.find((item) => item.id === wallId)
+    if (!wall || wall.openings.length === 0) continue
+    wall.openings = reprojectWallOpenings(wall, worldCenters)
   }
   return pruneCollapsedWalls(next)
 }

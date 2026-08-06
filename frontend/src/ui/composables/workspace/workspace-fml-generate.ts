@@ -82,6 +82,9 @@ export type WorkspaceFmlGenerateApplied = {
   fmlWindowHeightCm: Ref<number>
   fmlWindowSillZCm: Ref<number>
   fmlBovenlichtDefault: Ref<boolean>
+  fmlWindowBovenlichtDefault: Ref<boolean>
+  fmlBovenlichtHeightCm: Ref<number>
+  fmlBovenlichtGapCm: Ref<number>
 }
 
 /**
@@ -169,6 +172,9 @@ export function createWorkspaceFmlGenerate(
     return buildFmlV3(previewPlan.value, {
       name: previewPlan.value.name,
       bovenlichtDefault: applied.fmlBovenlichtDefault.value,
+      windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
+      bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
+      bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
     })
   })
 

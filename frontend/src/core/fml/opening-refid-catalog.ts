@@ -113,7 +113,7 @@ function defaultLabel(kind: OpeningAssetKind, type: OpeningType): string {
   }
   switch (kind) {
     case 'double_wide':
-      return 'Deur (dubbel)'
+      return 'Dubbele deur'
     case 'sliding':
       return 'Schuifpui (2 schuivend)'
     case 'sliding_single':

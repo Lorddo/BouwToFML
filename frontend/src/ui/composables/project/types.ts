@@ -16,7 +16,14 @@ export type ProjectFmlDefaults = {
   doorHeightCm: number
   windowHeightCm: number
   windowSillZCm: number
+  /** Bovenlicht op alle deuren (per-deur override via Opening.bovenlicht). */
   bovenlichtDefault: boolean
+  /** Bovenlicht op alle ramen (per-raam override via Opening.bovenlicht). */
+  windowBovenlichtDefault: boolean
+  /** Glashoogte gesynthetiseerd bovenlicht (cm). */
+  bovenlichtHeightCm: number
+  /** Afstand tussen bovenzijde opening en onderkant bovenlicht (cm) — bepaalt de dorpel. */
+  bovenlichtGapCm: number
   thicknessMinCm: number
   thicknessMidCm: number
   thicknessMaxCm: number

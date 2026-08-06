@@ -132,4 +132,38 @@ describe('useWorkspaceFlow — stap-terug bewaart werk', () => {
     await nextTick()
     expect(h.flowStep.value).toBe('result')
   })
+
+  it('bewaart refs/dikte bij result→templates→preprocess', async () => {
+    const h = createFlowHarness({ wallsDetectionComplete: () => true })
+    h.flowStep.value = 'result'
+    await nextTick()
+
+    h.flow.goToPreviousStep()
+    await nextTick()
+    expect(h.flowStep.value).toBe('templates')
+    expect(h.clearRects).not.toHaveBeenCalled()
+    expect(h.rects.value).toHaveLength(1)
+    expect(h.referenceWallThicknessPx.value).toBe(42)
+
+    h.flow.goToPreviousStep()
+    await nextTick()
+    expect(h.flowStep.value).toBe('preprocess')
+    expect(h.clearRects).not.toHaveBeenCalled()
+    expect(h.rects.value).toHaveLength(1)
+    expect(h.referenceWallThicknessPx.value).toBe(42)
+  })
+
+  it('herstart geen OCR/classify bij result→templates (bestaande detectie)', async () => {
+    const h = createFlowHarness({ hasTemplatesDetection: () => true })
+    h.flowStep.value = 'result'
+    await nextTick()
+
+    h.flow.goToPreviousStep()
+    await nextTick()
+    await Promise.resolve()
+
+    expect(h.flowStep.value).toBe('templates')
+    expect(h.runOcrScan).not.toHaveBeenCalled()
+    expect(h.autoClassifyWalls).not.toHaveBeenCalled()
+  })
 })

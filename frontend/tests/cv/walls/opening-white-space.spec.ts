@@ -174,4 +174,63 @@ describe('resolveReferenceTargetStripHeightPx micro-strip', () => {
     expect(calibrated).toBeLessThanOrEqual(12) // 4 * 3
     expect(calibrated).toBeGreaterThanOrEqual(10)
   })
+
+  it('ignores 1px hairline; calibrates to floor faces when REF crop measured thin glass', () => {
+    // bg.jpg: REF-crop glas-witten 3px, floor bij REF-rect 8–9px + 1px haarlijn.
+    // Oude nearest-to-ref pakte [1,8] → median 4.5 → maxStrip 7.65 → 8px faalt.
+    const ref: WindowAxelRefBand = {
+      refIndex: 0,
+      stripCount: 2,
+      stripHeightsPx: [3, 3],
+      targetStripHeightPx: 3,
+      targetStripHeightRatio: 3 / 9,
+      axisBandHeightPx: 9,
+      orientation: 'horizontal',
+      fullStripCount: 4,
+      fullStripHeightsPx: [3, 3, 10, 13],
+      framingSizeRange: null,
+      topRailRange: null,
+      bottomRailRange: null,
+    }
+    const roots = [
+      {
+        root: 180,
+        areaPx: 1400,
+        bbox: { x: 2050, y: 552, width: 178, height: 8 },
+        className: 'outside' as const,
+      },
+      {
+        root: 183,
+        areaPx: 1400,
+        bbox: { x: 2056, y: 565, width: 166, height: 9 },
+        className: 'outside' as const,
+      },
+      {
+        root: 204,
+        areaPx: 1400,
+        bbox: { x: 2050, y: 579, width: 179, height: 8 },
+        className: 'outside' as const,
+      },
+      {
+        root: 196,
+        areaPx: 155,
+        bbox: { x: 2062, y: 566, width: 155, height: 1 },
+        className: 'outside' as const,
+      },
+    ]
+    const refTarget = 3
+    const oldNearestMedian = 4.5
+    const calibrated = resolveReferenceTargetStripHeightPx({
+      roots,
+      ref,
+      refRect: { x: 2036, y: 540, width: 207, height: 64 },
+      minSpanPx: 28,
+      maxHeightPx: refTarget + Math.max(2, refTarget * 0.7),
+    })
+    expect(calibrated).toBeGreaterThan(oldNearestMedian)
+    expect(calibrated).toBeGreaterThanOrEqual(8)
+    expect(calibrated).toBeLessThanOrEqual(9) // clamp maxBound = 3*3
+    const maxStrip = calibrated + Math.max(2, calibrated * 0.7)
+    expect(maxStrip).toBeGreaterThanOrEqual(8)
+  })
 })

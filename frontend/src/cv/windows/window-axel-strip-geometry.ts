@@ -300,6 +300,10 @@ export function median(values: number[]): number {
 /**
  * Kalibreer target striphoogte op echte px in dezelfde ruimte als room-faces,
  * op basis van roots die het referentievak snijden.
+ *
+ * REF-crop kan dunne glas-witten meten (2–3px) terwijl floor-CC’s op dezelfde
+ * plek ~2–3× dikker zijn. Kalibratie moet naar die floor-faces; niet “dichtst
+ * bij REF-target” (dat trekt haarlijnen van 1px aan en laat 8px falen).
  */
 export function resolveReferenceTargetStripHeightPx(params: {
   roots: RootFace[]
@@ -321,6 +325,8 @@ export function resolveReferenceTargetStripHeightPx(params: {
   // stripdikte) vallen buiten Stage-1-max en kalibratie blijft op ref-target →
   // dezelfde faces falen daarna opnieuw op strip_height_above_max.
   const sampleMaxHeightPx = Math.max(params.maxHeightPx, maxBound)
+  // Haarlijnen / noise: dichter bij REF-crop micro-strips dan bij echte floor-faces.
+  const minSampleHeightPx = Math.max(2, target * 0.5)
   const refSpan = axisSpan(params.refRect, params.ref.orientation)
   const local = params.roots
     .map((face) => {
@@ -337,7 +343,7 @@ export function resolveReferenceTargetStripHeightPx(params: {
       const span = axisSpan(face.bbox, params.ref.orientation)
       const height = entry.sampledHeight
       if (!(span >= params.minSpanPx)) return false
-      if (!(height > 0) || height > sampleMaxHeightPx) return false
+      if (!(height >= minSampleHeightPx) || height > sampleMaxHeightPx) return false
       return true
     })
     .sort((a, b) => {
@@ -346,15 +352,12 @@ export function resolveReferenceTargetStripHeightPx(params: {
       return as - bs
     })
   if (local.length < params.ref.stripCount) return referenceTargetPx
+  // Span-dichtste floor-faces bij de REF — mediaan = floor-ruimte, niet REF-crop.
   const sampled = local
     .slice(0, Math.max(params.ref.stripCount * 2, params.ref.stripCount + 2))
     .map((entry) => entry.sampledHeight)
-    .filter((heightPx) => heightPx > 0)
   if (sampled.length < params.ref.stripCount) return referenceTargetPx
-  const nearestToRef = [...sampled]
-    .sort((a, b) => Math.abs(a - referenceTargetPx) - Math.abs(b - referenceTargetPx))
-    .slice(0, Math.max(params.ref.stripCount, 2))
-  const calibrated = median(nearestToRef)
+  const calibrated = median(sampled)
   if (!(calibrated > 0)) return referenceTargetPx
   // Gebonden herschalen ([0.7×, 3×] target): micro-strip refs (2px) mogen
   // meeschalen naar echte wit-faces (~6px) i.p.v. hard terug naar ref-target.

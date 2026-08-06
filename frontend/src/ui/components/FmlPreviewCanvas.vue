@@ -36,6 +36,7 @@ const props = withDefaults(
     thicknessMidCm?: number
     thicknessMaxCm?: number
     bovenlichtDefault?: boolean
+    windowBovenlichtDefault?: boolean
   }>(),
   {
     floorIndex: 0,
@@ -52,6 +53,7 @@ const props = withDefaults(
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
     bovenlichtDefault: false,
+    windowBovenlichtDefault: false,
   },
 )
 
@@ -78,6 +80,7 @@ function interactionEmit(
 
 const thicknessPickTierRef = toRef(props, 'thicknessPickTier')
 const bovenlichtDefaultRef = toRef(props, 'bovenlichtDefault')
+const windowBovenlichtDefaultRef = toRef(props, 'windowBovenlichtDefault')
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<{ getNode: () => Konva.Stage } | null>(null)
@@ -127,6 +130,7 @@ const interaction = useFmlPreviewInteraction({
   spacePressed,
   thicknessPickTier: thicknessPickTierRef,
   bovenlichtDefault: bovenlichtDefaultRef,
+  windowBovenlichtDefault: windowBovenlichtDefaultRef,
   onKeyDown,
   onKeyUp,
 })
@@ -171,6 +175,8 @@ const {
   wallThicknessMixed,
   wallBalanceDraft,
   wallBalanceMixed,
+  openingSubtypeDraft,
+  openingSubtypeMixed,
   openingWidthDraft,
   openingWidthMixed,
   openingHeightDraft,
@@ -195,6 +201,7 @@ const {
   applyWallsThicknessCm,
   onWallBalanceInput,
   commitWallBalance,
+  commitOpeningSubtype,
   onOpeningWidthInput,
   commitOpeningWidth,
   onOpeningHeightInput,
@@ -283,6 +290,8 @@ watch(
       :wall-thickness-mixed="wallThicknessMixed"
       :wall-balance-draft="wallBalanceDraft"
       :wall-balance-mixed="wallBalanceMixed"
+      :opening-subtype-draft="openingSubtypeDraft"
+      :opening-subtype-mixed="openingSubtypeMixed"
       :opening-width-draft="openingWidthDraft"
       :opening-width-mixed="openingWidthMixed"
       :opening-height-draft="openingHeightDraft"
@@ -304,6 +313,7 @@ watch(
       @apply-wall-thickness="applyWallsThicknessCm"
       @wall-balance-input="onWallBalanceInput"
       @commit-wall-balance="commitWallBalance"
+      @commit-opening-subtype="commitOpeningSubtype"
       @opening-width-input="onOpeningWidthInput"
       @commit-opening-width="commitOpeningWidth"
       @opening-height-input="onOpeningHeightInput"

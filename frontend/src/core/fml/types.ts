@@ -16,8 +16,8 @@ export interface Opening {
   guid?: string
   materials?: Record<string, { type: string; value: string }>
   /**
-   * Session-only: bovenlicht bij FML-export (niet in viewer).
-   * `null`/`undefined` = erf projectdefault; `true`/`false` = force.
+   * Session-only: bovenlicht bij FML-export (niet in viewer) voor deur of raam.
+   * `null`/`undefined` = erf vloerdefault (deur/raam apart); `true`/`false` = force.
    */
   bovenlicht?: boolean | null
   /**
@@ -110,8 +110,8 @@ export const CONCEPT_DOOR_REFID = '0434246537840a3326e305dbe7b9c355743e6e93'
 /** Kastdeur (45°) — handmatig kiesbaar per deur-referentie. */
 export const CLOSET_DOOR_REFID = 'd34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9'
 /**
- * Dubbele openslaande deur — niet handmatig in de ref-UI;
- * algoritmisch gekozen t.o.v. standaard-deur referenties.
+ * Dubbele deur (glas) — X-10 twin-merge en editor-preset `double`.
+ * Niet in stap-2 ref-UI; algoritmisch of handmatig in FML-editor.
  */
 export const DOUBLE_WIDE_DOOR_REFID = '5ae0ee3c682e32c8c7ac15a6136d692df5737b22'
 /** Schuifpui met 2 schuivende delen. */
@@ -121,10 +121,10 @@ export const SLIDING_SINGLE_DOOR_REFID = 'd2785cc45c9c0ec86644135d22fa9ac9c49bca
 /** Pocketdeur (1 schuifpijl). */
 export const POCKET_DOOR_REFID = '216'
 /**
- * Garage door — candidate for garage-labelled rooms (~188 cm).
- * Visuele FP-check via editor-plaatsen + FML-export nog open.
+ * Dubbele deur (vol / dicht) — editor-preset `double_solid`.
+ * Was eerder foutief als garagedeur gelabeld; garagedeur-REFID volgt later.
  */
-export const GARAGE_DOOR_REFID = '9c1479d9dfc482859aea10b9dd67f5e7773fff6d'
+export const DOUBLE_SOLID_DOOR_REFID = '9c1479d9dfc482859aea10b9dd67f5e7773fff6d'
 /** @lintignore — gebruikt door buildFmlV3 (nog niet in UI) */
 export const CONCEPT_WINDOW_REFID = 'b88cd3f479455fbf57205a91c613c02b7e6dc2df'
 export const WINDOW_DOUBLE_REFID = 'bbf86e131112adca8869e9970229a71d7ff3fc28'

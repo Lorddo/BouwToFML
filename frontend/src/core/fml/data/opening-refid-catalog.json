@@ -14,7 +14,7 @@
   "kind_hints": {
     "deur": {
       "single": "Enkele draaideur — 1 vleugel + 90° kwartcirkel (default voor onbekende refids).",
-      "double_wide": "Eén brede opening met twee vleugels vanuit het midden + twee 90° bogen (bijv. Franse balkondeuren).",
+      "double_wide": "Eén brede opening met twee vleugels vanuit het midden + twee 90° bogen. Glas (5ae0ee3c…) of vol/dicht (9c1479d9…).",
       "sliding": "Schuifpui 2 schuivende delen — middenstreep + twee pijlen naar elkaar toe, geen draaicirkel.",
       "sliding_single": "Schuifpui 2 delen met 1 schuivend deel — middenstreep + 1 pijl op linker deel naar rechts.",
       "sliding_pocket": "Pocketdeur — 1 schuifpijl (vaak in muurpocket), geen draaicirkel.",
@@ -34,6 +34,8 @@
     "deur": [
       "enkel",
       "dubbel",
+      "dubbel_glas",
+      "dubbel_vol",
       "pocket",
       "schuif_enkel",
       "schuifpui",
@@ -107,8 +109,8 @@
     {
       "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
       "type": "door",
-      "benaming": "Deur dubbel openslaand (breed)",
-      "subtype": "dubbel",
+      "benaming": "Dubbele deur (glas)",
+      "subtype": "dubbel_glas",
       "kind": "double_wide",
       "swingInsetCm": 5,
       "bronnen": ["FML(current)"],
@@ -125,10 +127,10 @@
     {
       "refid": "9c1479d9dfc482859aea10b9dd67f5e7773fff6d",
       "type": "door",
-      "benaming": "Garagedeur",
-      "subtype": "garage",
-      "kind": "garage",
-      "swingInsetCm": 0,
+      "benaming": "Dubbele deur (vol)",
+      "subtype": "dubbel_vol",
+      "kind": "double_wide",
+      "swingInsetCm": 5,
       "bronnen": ["FML(current)"],
       "aantal_in_fml_current": 15
     },

@@ -710,24 +710,6 @@ export function useWorkspace() {
         scaleUi.restoreFromSessionSnapshot(scaleSnapshot)
       }
     },
-    restoreResultFloorFast: async ({
-      workingImagePng,
-      imageName: name,
-      scale: scaleSnap,
-      previewPlan,
-      previewUnderlayLayout,
-    }) => {
-      lifecycle.clearWorkspaceForSession()
-      image.prepareExactImageSrcLoad()
-      setImageSource(workingImagePng, name)
-      await image.loadExactWorkingImage(workingImagePng)
-      if (scaleSnap) {
-        scaleUi.restoreFromSessionSnapshot(scaleSnap)
-      }
-      flowStep.value = 'result'
-      resultTab.value = 'vector'
-      fml.updatePreviewPlan(previewPlan, previewUnderlayLayout ?? null)
-    },
     applyPreprocessTune: ({ preprocess: nextPreprocess, drawingProfileId: nextProfile }) => {
       preprocess.value = normalizeStoredPreprocess({ ...nextPreprocess })
       drawingProfileId.value = nextProfile
@@ -744,6 +726,9 @@ export function useWorkspace() {
       fml.setFmlWindowHeightCm(defaults.windowHeightCm)
       fml.setFmlWindowSillZCm(defaults.windowSillZCm)
       fml.setFmlBovenlichtDefault(defaults.bovenlichtDefault)
+      fml.setFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
+      fml.setFmlBovenlichtHeightCm(defaults.bovenlichtHeightCm)
+      fml.setFmlBovenlichtGapCm(defaults.bovenlichtGapCm)
       fml.setFmlThicknessMinCm(defaults.thicknessMinCm)
       fml.setFmlThicknessMidCm(defaults.thicknessMidCm)
       fml.setFmlThicknessMaxCm(defaults.thicknessMaxCm)
@@ -876,6 +861,8 @@ export function useWorkspace() {
       if (plan?.floors[0]) {
         project.storeGeneratedFloorForActive(plan.floors[0])
       }
+      // Capture refs/dikte/detectie op result — preserve bij floor-switch/resume/stap-terug.
+      project.persistProject('enterResult')
     },
     setLocalError,
     resetInkOverlay: () => inkEdit.resetInkEdit(),
@@ -937,6 +924,12 @@ export function useWorkspace() {
     project.updateActiveFloorDefaults({ bovenlichtDefault: on }, { syncUi: false })
   }
 
+  function setFmlWindowBovenlichtDefault(value: boolean): void {
+    const on = value === true
+    fml.setFmlWindowBovenlichtDefault(on)
+    project.updateActiveFloorDefaults({ windowBovenlichtDefault: on }, { syncUi: false })
+  }
+
   function downloadProjectFml(): void {
     // Dirty hoogte/dikte meenemen zonder canvas-edits te wissen (bovenlicht is live).
     if (fml.fmlLimitsDirty.value) {
@@ -952,12 +945,30 @@ export function useWorkspace() {
     // underlay-reset wist UI naar false terwijl defaults true konden blijven).
     const floorsMeta = project.projectFloors.value
     const liveBovenlicht = fml.fmlBovenlichtDefault.value
+    const liveWindowBovenlicht = fml.fmlWindowBovenlichtDefault.value
+    const liveBovenlichtHeight = fml.fmlBovenlichtHeightCm.value
+    const liveBovenlichtGap = fml.fmlBovenlichtGapCm.value
     const text = buildFmlV3(plan, {
       name: plan.name,
       bovenlichtDefault: (floor) => {
         const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
         if (!meta) return liveBovenlicht
         return meta.defaults.bovenlichtDefault === true
+      },
+      windowBovenlichtDefault: (floor) => {
+        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
+        if (!meta) return liveWindowBovenlicht
+        return meta.defaults.windowBovenlichtDefault === true
+      },
+      bovenlichtHeightCm: (floor) => {
+        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
+        if (!meta) return liveBovenlichtHeight
+        return meta.defaults.bovenlichtHeightCm
+      },
+      bovenlichtGapCm: (floor) => {
+        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
+        if (!meta) return liveBovenlichtGap
+        return meta.defaults.bovenlichtGapCm
       },
     })
     setLocalError(null)
@@ -1094,6 +1105,7 @@ export function useWorkspace() {
     copyPreprocessAndRefsFromDonor: (donorFloorId: string) =>
       project.copyPreprocessAndRefsFromDonor(donorFloorId),
     setFmlBovenlichtDefault,
+    setFmlWindowBovenlichtDefault,
     downloadProjectFml,
     // Muurstempel (stap 2)
     wallStampActive: wallStamp.active,

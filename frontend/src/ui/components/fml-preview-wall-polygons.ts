@@ -79,7 +79,8 @@ function pointAtEnd(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
   return end === 'a' ? wall.a : wall.b
 }
 
-function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'balance'>): {
+/** Left (+normal) / right (−normal) thickness extents from centerline (Floorplanner balance). */
+export function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'balance'>): {
   plus: number
   minus: number
 } {
@@ -89,6 +90,47 @@ function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'balance'
     plus: wall.thickness * clamped,
     minus: wall.thickness * (1 - clamped),
   }
+}
+
+/** cm along left normal from centerline to mid-thickness (0 when balance = 0.5). */
+export function wallBalanceMidOffsetCm(thickness: number, balance?: number): number {
+  const { plus, minus } = resolveWallExtents({ thickness, balance })
+  return (plus - minus) / 2
+}
+
+/** Shift a centerline point onto the wall body mid-line for the given balance. */
+export function offsetPointByWallBalance(
+  point: Point2D,
+  wallUnit: Point2D,
+  thickness: number,
+  balance?: number,
+): Point2D {
+  const mid = wallBalanceMidOffsetCm(thickness, balance)
+  if (Math.abs(mid) < 1e-9) return point
+  const nx = -wallUnit.y
+  const ny = wallUnit.x
+  return { x: point.x + nx * mid, y: point.y + ny * mid }
+}
+
+/** Flat `[x,y,…]` polyline in cm — same mid-line shift as {@link offsetPointByWallBalance}. */
+export function offsetFlatPointsByWallBalance(
+  points: number[],
+  wallUnit: Point2D,
+  thickness: number,
+  balance?: number,
+): number[] {
+  const mid = wallBalanceMidOffsetCm(thickness, balance)
+  if (Math.abs(mid) < 1e-9 || points.length < 2) return points
+  const nx = -wallUnit.y
+  const ny = wallUnit.x
+  const ox = nx * mid
+  const oy = ny * mid
+  const out = points.slice()
+  for (let i = 0; i + 1 < out.length; i += 2) {
+    out[i] += ox
+    out[i + 1] += oy
+  }
+  return out
 }
 
 function buildAdjacency(

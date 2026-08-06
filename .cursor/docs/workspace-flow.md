@@ -4,7 +4,7 @@
 
 Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + per-floor blobs; CV blijft single-floor op de actieve verdieping.
 
-**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap.
+**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap. Floor-switch/resume op result → volledige session-restore (geen «fast» wipe van LBE-refs).
 
 ## Stap 0 — Project (`flowStep: project`)
 
@@ -113,6 +113,8 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 | walls (Dev) | `tabOutputs.walls` + layer overlays (`ResultWallsLayerPanel` / Layer Debug) |
 
 **Project-export:** «Download .fml (project)» (footer op stap 4) → `mergeFloorPlans` over alle floors met preview/generated FML (namen/`level` uit `FloorMeta`). Geen per-verdieping download in de productie-UI.
+
+**Verdiepingsnaam:** bewerkbaar bovenaan `FmlPanel` (actieve floor → `renameFloor`); zelfde bron als stap 0 / floor-rail.
 
 **Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 
