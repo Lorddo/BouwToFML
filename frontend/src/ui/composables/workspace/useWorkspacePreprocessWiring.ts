@@ -125,6 +125,7 @@ export function useWorkspacePreprocessWiring(deps: {
     scale: deps.scale,
     preprocessPreview: deps.preprocessPreview,
     eraserTouched: inputMask.eraserTouched,
+    eraserMask: inputMask.eraserMask,
     maskedWorkingSrc: inputMask.maskedWorkingSrc,
     maskedWorkingCanvas: inputMask.maskedWorkingCanvas,
     effectiveBwUrl: wallBw.effectiveBwUrl,

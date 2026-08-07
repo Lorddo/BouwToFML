@@ -243,7 +243,7 @@
     "inkWallHint": "ขาวดำอ่านอย่างเดียวตอนจำแนกผนังเพื่อเปรียบเทียบหมึกบนพื้นขาว (อ้างอิง Otsu) ไม่ใช่ขาวดำของเตรียมภาพ — ปรับที่แท็บนั้น",
     "inkWallParams": {
       "thresholdOtsu": "เกณฑ์: Otsu",
-      "brightnessBridge": "ความสว่าง: 150 · bridgeGaps: 8",
+      "brightnessBridge": "ความสว่าง: 150 · bridge/thicken × wall REF",
       "holeFill": "เติมรู / ทำให้หนา: ตามความหนาผนัง"
     },
     "refs": {

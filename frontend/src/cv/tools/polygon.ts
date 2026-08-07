@@ -97,3 +97,24 @@ export function scaleMaskToSize(
   }
   return out
 }
+
+/** Crop AABB from mask, then nearest-neighbour scale to destination size. */
+export function cropAndScaleMask(
+  mask: Uint8Array,
+  srcWidth: number,
+  srcHeight: number,
+  bounds: { left: number; top: number; width: number; height: number },
+  dstWidth: number,
+  dstHeight: number,
+): Uint8Array {
+  const left = Math.max(0, Math.min(srcWidth - 1, Math.floor(bounds.left)))
+  const top = Math.max(0, Math.min(srcHeight - 1, Math.floor(bounds.top)))
+  const width = Math.max(1, Math.min(srcWidth - left, Math.round(bounds.width)))
+  const height = Math.max(1, Math.min(srcHeight - top, Math.round(bounds.height)))
+  const cropped = new Uint8Array(width * height)
+  for (let y = 0; y < height; y += 1) {
+    const srcRow = (top + y) * srcWidth + left
+    cropped.set(mask.subarray(srcRow, srcRow + width), y * width)
+  }
+  return scaleMaskToSize(cropped, width, height, dstWidth, dstHeight)
+}

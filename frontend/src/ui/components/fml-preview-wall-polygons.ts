@@ -85,7 +85,7 @@ export function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'b
   minus: number
 } {
   const balance = wall.balance ?? 0.5
-  const clamped = Math.min(0.8, Math.max(0.25, balance))
+  const clamped = Math.min(1, Math.max(0, balance))
   return {
     plus: wall.thickness * clamped,
     minus: wall.thickness * (1 - clamped),

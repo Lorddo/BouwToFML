@@ -420,9 +420,9 @@ const tree = {
     inkWallParams: {
       thresholdOtsu: t('Threshold: Otsu', 'Threshold: Otsu', 'เกณฑ์: Otsu'),
       brightnessBridge: t(
-        'Brightness: 150 · bridgeGaps: 8',
-        'Brightness: 150 · bridgeGaps: 8',
-        'ความสว่าง: 150 · bridgeGaps: 8',
+        'Brightness: 150 · bridge/thicken × wall REF',
+        'Brightness: 150 · bridge/thicken × muur-REF',
+        'ความสว่าง: 150 · bridge/thicken × wall REF',
       ),
       holeFill: t(
         'Hole-fill / thicken: scaled to wall thickness',

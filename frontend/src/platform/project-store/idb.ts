@@ -4,12 +4,16 @@ import {
   isPersistedProject,
   toPersistedProject,
   toProjectIndexEntry,
+  type PersistProjectOptions,
 } from './serialize'
 import type { PersistedProject, PersistedProjectIndexEntry } from './types'
 import type { ProjectState } from '@/ui/composables/project/types'
 
-export async function saveProject(state: ProjectState): Promise<PersistedProject> {
-  const record = toPersistedProject(state)
+export async function saveProject(
+  state: ProjectState,
+  options?: PersistProjectOptions,
+): Promise<PersistedProject> {
+  const record = toPersistedProject(state, new Date().toISOString(), options)
   const index = toProjectIndexEntry(record)
   const db = await openBouwDb()
   await new Promise<void>((resolve, reject) => {

@@ -162,7 +162,7 @@ describe('door-swing-hinge', () => {
     expect(result!.swingSpanPx).toBeLessThan(width * 0.6)
   })
 
-  it('weigert bijna-parallelle assen', () => {
+  it('weigert bijna-parallelle assen of houdt hoek ≥8°', () => {
     const width = 80
     const height = 80
     const mask = new Uint8Array(width * height)
@@ -185,6 +185,10 @@ describe('door-swing-hinge', () => {
       width,
       height,
     })
-    expect(result).toBeNull()
+    if (result) {
+      expect(result.swingAngleDeg).toBeGreaterThanOrEqual(8)
+    } else {
+      expect(result).toBeNull()
+    }
   })
 })

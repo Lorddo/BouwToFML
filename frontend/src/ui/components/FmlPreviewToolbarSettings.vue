@@ -375,8 +375,8 @@ const showMeasureStrip = computed(
         <div class="fml-toolbelt__field-controls">
           <input
             type="range"
-            min="0.25"
-            max="0.8"
+            min="0"
+            max="1"
             step="0.05"
             class="fml-toolbelt__balance-input"
             :aria-label="t('result.toolbar.alignmentAria')"

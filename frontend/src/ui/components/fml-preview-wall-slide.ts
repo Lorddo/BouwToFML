@@ -16,11 +16,40 @@ import {
   type JunctionNode,
   type WallEndRef,
 } from './fml-preview-junction-core'
+import { openingWorldCenter, reprojectWallOpenings } from './fml-preview-openings'
 import {
   addSegmentPathWithJunctionBreaks,
   splitCarrierWallsAtJunctionsOnSegment,
   splitCrossedWallsAlongSegment,
 } from './fml-preview-wall-draw-geom'
+
+const RIGID_TRANSLATION_EPS_CM = 1e-6
+
+/**
+ * Na endpoint-slide: openingen op asymmetrisch gewijzigde muren herprojecteren
+ * (wereldpositie vast, zoals `moveJunction`). Rigide getransleerde muren houden `t`
+ * (openingen schuiven mee met het segment).
+ */
+function reprojectOpeningsAfterEndpointSlide(
+  walls: Wall[],
+  beforeById: ReadonlyMap<string, { a: Point2D; b: Point2D; worldCenters: Point2D[] }>,
+): void {
+  for (const wall of walls) {
+    const before = beforeById.get(wall.id)
+    if (!before || before.worldCenters.length === 0 || wall.openings.length === 0) continue
+
+    const dAx = wall.a.x - before.a.x
+    const dAy = wall.a.y - before.a.y
+    const dBx = wall.b.x - before.b.x
+    const dBy = wall.b.y - before.b.y
+    const rigid =
+      Math.abs(dAx - dBx) <= RIGID_TRANSLATION_EPS_CM &&
+      Math.abs(dAy - dBy) <= RIGID_TRANSLATION_EPS_CM
+    if (rigid) continue
+
+    wall.openings = reprojectWallOpenings(wall, before.worldCenters)
+  }
+}
 
 export { splitWallAtPoint }
 
@@ -305,6 +334,15 @@ export function slideWallSegmentAlongAxis(
   const moveDir = slideDir ?? axisU
   const next = cloneWalls(walls)
 
+  const beforeById = new Map<string, { a: Point2D; b: Point2D; worldCenters: Point2D[] }>()
+  for (const item of next) {
+    beforeById.set(item.id, {
+      a: { ...item.a },
+      b: { ...item.b },
+      worldCenters: item.openings.map((opening) => openingWorldCenter(item, opening.t)),
+    })
+  }
+
   applyEndpointSlideAlongAxis(next, wallId, 'a', deltaT, moveDir)
   applyEndpointSlideAlongAxis(next, wallId, 'b', deltaT, moveDir)
 
@@ -313,5 +351,6 @@ export function slideWallSegmentAlongAxis(
     return walls
   }
 
+  reprojectOpeningsAfterEndpointSlide(next, beforeById)
   return pruneCollapsedWalls(next)
 }

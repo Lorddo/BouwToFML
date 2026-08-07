@@ -1,5 +1,6 @@
 import { computed, ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
+import { clampBalance } from '@/ui/components/fml-preview-wall-edit'
 import { projectPointToWallT } from '@/ui/components/fml-preview-openings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -139,7 +140,7 @@ export function useFmlPreviewWallSelection(options: {
 
   function commitWallBalance(): void {
     if (settingsWallIds.value.length === 0) return
-    const balance = Math.min(0.8, Math.max(0.25, Math.round(wallBalanceDraft.value * 100) / 100))
+    const balance = clampBalance(wallBalanceDraft.value)
     wallBalanceDraft.value = balance
     wallBalanceMixed.value = false
     editor.pushUndo()

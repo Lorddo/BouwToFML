@@ -10,6 +10,7 @@ import {
   deleteProject,
   saveProject,
 } from '@/platform/project-store'
+import { clearDevSessionsStore } from '@/platform/dev-workspace/idb'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RestoreSessionOptions } from '@/ui/composables/workspace/workspace-dev-session-restore-flow'
 import { tGlobal } from '@/ui/i18n'
@@ -22,6 +23,7 @@ import {
 } from './defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
 import { mergeFloorPlans } from './merge-floor-plans'
+import type { PdfUnderlaySource } from '@/platform/upload'
 import type {
   FloorMeta,
   FloorWorkspaceBlob,
@@ -69,6 +71,9 @@ export type WorkspaceProjectDeps = {
   applyFmlDefaultsToUi?: (defaults: ProjectFmlDefaults) => void
   /** Skip IndexedDB-write tijdens running / restoring. */
   shouldSkipPersist?: () => boolean
+  /** Runtime PDF source for ROI re-render (memory-only across floor switch). */
+  getPdfUnderlaySource?: () => PdfUnderlaySource | null
+  setPdfUnderlaySource?: (source: PdfUnderlaySource | null) => void
 }
 
 function emptyBlob(): FloorWorkspaceBlob {
@@ -78,6 +83,7 @@ function emptyBlob(): FloorWorkspaceBlob {
     previewPlan: null,
     previewUnderlayLayout: null,
     sourceUnderlay: null,
+    pdfUnderlaySource: null,
   }
 }
 
@@ -106,8 +112,11 @@ function layoutFromSessionScale(
 
 function isQuotaExceeded(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false
-  const e = error as { name?: string; code?: number }
-  return e.name === 'QuotaExceededError' || e.code === 22
+  const e = error as { name?: string; code?: number; message?: string }
+  if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') return true
+  if (e.code === 22 || e.code === 1014) return true
+  const msg = typeof e.message === 'string' ? e.message.toLowerCase() : ''
+  return msg.includes('quota') || (msg.includes('storage') && msg.includes('full'))
 }
 
 export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
@@ -137,25 +146,53 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   const canCopyPreprocessRefs = computed(() => listPreprocessDonorFloors().length > 0)
 
   async function writeProjectToIdb(): Promise<void> {
-    try {
-      await saveProject(state.value)
-      // Eén actief projectrecord tegelijk.
-      await deleteOtherProjects(state.value.meta.id).catch(() => undefined)
-    } catch (error) {
-      if (isQuotaExceeded(error)) {
-        try {
-          await deleteOtherProjects(state.value.meta.id)
-          await saveProject(state.value)
-          return
-        } catch (retryError) {
-          deps.setLocalError(tGlobal('project.errors.persistQuota'))
-          console.warn('[project-store] quota exceeded after cleanup', retryError)
-          return
+    const attempts: Array<{
+      label: string
+      before?: () => Promise<void>
+      options?: Parameters<typeof saveProject>[1]
+    }> = [
+      { label: 'default', options: { omitResultDetection: true, omitLegacyProjectSource: true } },
+      {
+        label: 'quota-cleanup',
+        before: async () => {
+          await deleteOtherProjects(state.value.meta.id).catch(() => undefined)
+          await clearDevSessionsStore().catch(() => undefined)
+        },
+        options: {
+          omitResultDetection: true,
+          omitLegacyProjectSource: true,
+          stripClassifyRasters: true,
+        },
+      },
+    ]
+
+    let lastError: unknown = null
+    for (const attempt of attempts) {
+      try {
+        await attempt.before?.()
+        await saveProject(state.value, attempt.options)
+        // Eén actief projectrecord tegelijk.
+        await deleteOtherProjects(state.value.meta.id).catch(() => undefined)
+        return
+      } catch (error) {
+        lastError = error
+        if (!isQuotaExceeded(error) && attempt.label === 'default') {
+          // Non-quota: still try cleanup once (DataClone / transient), then fail.
+          continue
+        }
+        if (!isQuotaExceeded(error) && attempt.label !== 'default') {
+          break
         }
       }
-      deps.setLocalError(tGlobal('project.errors.persistFailed'))
-      console.warn('[project-store] save failed', error)
     }
+
+    if (isQuotaExceeded(lastError)) {
+      deps.setLocalError(tGlobal('project.errors.persistQuota'))
+      console.warn('[project-store] quota exceeded after cleanup', lastError)
+      return
+    }
+    deps.setLocalError(tGlobal('project.errors.persistFailed'))
+    console.warn('[project-store] save failed', lastError)
   }
 
   const persistCtrl = createProjectPersistController({
@@ -326,6 +363,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           previewUnderlayLayout,
           // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
           sourceUnderlay: prev.sourceUnderlay ?? null,
+          // Memory-only; not persisted to IndexedDB.
+          pdfUnderlaySource: deps.getPdfUnderlaySource?.() ?? prev.pdfUnderlaySource ?? null,
         },
       },
     }
@@ -335,6 +374,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const blob = state.value.blobs[floorId] ?? emptyBlob()
     syncActiveFloorDefaultsToUi()
     if (!blob.session) {
+      deps.setPdfUnderlaySource?.(null)
       deps.resetToEmptyFloor()
       deps.flowStep.value = 'input'
       return
@@ -352,6 +392,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         ? (blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale))
         : null,
     })
+    deps.setPdfUnderlaySource?.(blob.pdfUnderlaySource ?? null)
   }
 
   async function switchFloor(floorId: string): Promise<void> {

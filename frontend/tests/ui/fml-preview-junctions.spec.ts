@@ -984,6 +984,79 @@ describe('slideWallSegmentAlongAxis', () => {
     expect(moved.find((wall) => wall.id === 'wBranch')?.a).toEqual({ x: 50, y: 0 })
   })
 
+  it('aligning junction: openingen op buur houden wereldpositie; op gesleepte muur schuiven mee', () => {
+    const walls = [
+      {
+        id: 'wLeft',
+        a: { x: 0, y: 0 },
+        b: { x: 50, y: 0 },
+        thickness: 20,
+        openings: [{ refid: 'door-left', t: 0.4, width: 10, type: 'door' as const }],
+      },
+      {
+        id: 'wDrag',
+        a: { x: 50, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        openings: [{ refid: 'door-drag', t: 0.5, width: 10, type: 'door' as const }],
+      },
+    ]
+
+    // Haakse slide: shared aligning junction beweegt mee → wLeft asymmetrisch, wDrag rigide.
+    const moved = slideWallSegmentAlongAxis(walls, 'wDrag', 10, { x: 0, y: 1 })
+    const left = moved.find((wall) => wall.id === 'wLeft')!
+    const drag = moved.find((wall) => wall.id === 'wDrag')!
+
+    expect(drag.a).toEqual({ x: 50, y: 10 })
+    expect(drag.b).toEqual({ x: 100, y: 10 })
+    expect(left.a).toEqual({ x: 0, y: 0 })
+    expect(left.b).toEqual({ x: 50, y: 10 })
+
+    // Buur: herprojectie vanaf oude wereldpositie (20,0) op nieuwe as (niet vaste t=0.4).
+    const dx = left.b.x - left.a.x
+    const dy = left.b.y - left.a.y
+    const lenSq = dx * dx + dy * dy
+    const expectedT = Math.max(0, Math.min(1, ((20 - left.a.x) * dx + (0 - left.a.y) * dy) / lenSq))
+    expect(left.openings[0].t).toBeCloseTo(expectedT, 5)
+    expect(left.openings[0].t).not.toBeCloseTo(0.4, 2)
+
+    // Gesleepte muur: deur schuift rigide mee (t blijft 0.5 → y=10).
+    expect(drag.openings[0].t).toBeCloseTo(0.5, 5)
+    expect(drag.a.y + (drag.b.y - drag.a.y) * drag.openings[0].t).toBeCloseTo(10, 4)
+  })
+
+  it('L-hoek slide: opening op stilstaande been houdt wereldpositie', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 0 },
+        b: { x: 50, y: 0 },
+        thickness: 20,
+        openings: [{ refid: 'door', t: 0.4, width: 10, type: 'door' as const }],
+      },
+      {
+        id: 'v1',
+        a: { x: 50, y: 0 },
+        b: { x: 50, y: 80 },
+        thickness: 20,
+        openings: [{ refid: 'win', t: 0.5, width: 10, type: 'window' as const }],
+      },
+    ]
+
+    const moved = slideWallSegmentAlongAxis(walls, 'v1', 10, { x: 1, y: 0 })
+    const h1 = moved.find((wall) => wall.id === 'h1')!
+    const v1 = moved.find((wall) => wall.id === 'v1')!
+
+    expect(h1.b).toEqual({ x: 60, y: 0 })
+    expect(v1.a).toEqual({ x: 60, y: 0 })
+    expect(v1.b).toEqual({ x: 60, y: 80 })
+
+    // Horizontaal been verlengd: deur blijft op x=20 (was t=0.4 op 0→50).
+    expect(h1.openings[0].t * (h1.b.x - h1.a.x)).toBeCloseTo(20, 4)
+    // Verticaal been rigide: raam schuift mee op t=0.5.
+    expect(v1.openings[0].t).toBeCloseTo(0.5, 5)
+  })
+
   it('schuine muur: rigide translatie langs eigen as', () => {
     const walls = [
       {
@@ -1141,7 +1214,7 @@ describe('snapToNearbyEndpointAxes', () => {
 })
 
 describe('setWallBalance', () => {
-  it('clamped balance 0.25–0.8', () => {
+  it('clamped balance 0–1', () => {
     const walls = [
       {
         id: 'w1',
@@ -1151,8 +1224,10 @@ describe('setWallBalance', () => {
         openings: [],
       },
     ]
-    expect(clampBalance(0.1)).toBe(0.25)
-    expect(clampBalance(0.9)).toBe(0.8)
+    expect(clampBalance(-0.1)).toBe(0)
+    expect(clampBalance(1.1)).toBe(1)
+    expect(clampBalance(0)).toBe(0)
+    expect(clampBalance(1)).toBe(1)
     const updated = setWallBalance(walls, 'w1', 0.72)
     expect(updated[0]?.balance).toBe(0.72)
   })

@@ -1,6 +1,6 @@
 {
   "beschrijving": "Invulbare catalogus van opening-refids voor BouwToFML. Vul benaming, subtype en kind in na visuele controle. FML-preview: 'kind' kiest het symbool; 'swingInsetCm' (of swing_inset_defaults per kind) = vaste kozijn-inset per zijde zodat gap=volle breedte en boog/blad iets smaller — plattegrond-onafhankelijk. Ramen: optioneel 'panels' (1|2|3) voor vaste indeling i.p.v. breedte-heuristiek.",
-  "laatste_update": "2026-07-25",
+  "laatste_update": "2026-08-07",
   "swing_inset_defaults": {
     "single": 5,
     "closet45": 5,
@@ -105,6 +105,16 @@
       "swingInsetCm": 5,
       "bronnen": ["FML(current)"],
       "aantal_in_fml_current": 7
+    },
+    {
+      "refid": "37bb0bbe45ba0a5efda34f3f1e0b7ace63084e7f",
+      "type": "door",
+      "benaming": "Garagedeur",
+      "subtype": "garage",
+      "kind": "garage",
+      "swingInsetCm": 0,
+      "bronnen": ["MT tool test plaform.json (1).fml"],
+      "aantal_in_fml_current": 0
     },
     {
       "refid": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",

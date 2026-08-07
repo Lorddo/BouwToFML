@@ -48,6 +48,7 @@ export {
   hasArcLikeContour,
   resolveMinAxisSeparationDeg,
   resolveSwingHingeFromPolygon,
+  SWING_HINGE_SIMPLIFY_EPS_RATIOS,
 } from './ref-swing-hinge-resolve'
 
 export { renderSwingHingeOverlayRgba } from './ref-swing-hinge-render'

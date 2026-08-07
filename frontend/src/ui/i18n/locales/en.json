@@ -243,7 +243,7 @@
     "inkWallHint": "Read-only B/W used during wall classification for ink comparison on white faces (Otsu reference). This is not the Preprocess B/W — tune that on that tab.",
     "inkWallParams": {
       "thresholdOtsu": "Threshold: Otsu",
-      "brightnessBridge": "Brightness: 150 · bridgeGaps: 8",
+      "brightnessBridge": "Brightness: 150 · bridge/thicken × wall REF",
       "holeFill": "Hole-fill / thicken: scaled to wall thickness"
     },
     "refs": {

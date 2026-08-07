@@ -10,10 +10,13 @@ import { bakeUnderlayCanvas } from '@/cv/tools/bakeUnderlayCanvas'
 import { ROTATION_EPS_DEG } from '@/cv/tools/rotateMat'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { canvasToDataUrl } from '@/cv/tools/maskImage'
+import type { PdfUnderlaySource } from '@/platform/upload'
+import { tryBuildPdfRoiCanvas } from './commitPdfRoiUnderlay'
 import {
   applyPixelScaleFactorToCalibration,
   buildOptimizationBase,
   canvasLikeToHtmlCanvas,
+  findContentBounds,
   imageDimensions,
   imageSourceToCanvas,
   loadImage,
@@ -38,6 +41,7 @@ export function useWorkspaceImage(deps: {
   scale: ReturnType<typeof useHScaleCalibration>
   preprocessPreview: ReturnType<typeof usePreprocessPreview>
   eraserTouched: Ref<boolean>
+  eraserMask: Ref<Uint8Array | null>
   maskedWorkingSrc: Ref<string | null>
   maskedWorkingCanvas: Ref<HTMLCanvasElement | null>
   /** Composed wall B/W (base ⊕ OCR ⊕ ink) — preferred underlay on stap 2/3. */
@@ -54,8 +58,18 @@ export function useWorkspaceImage(deps: {
 }) {
   const optimizationBaseSrc = ref<string | null>(null)
   const suppressNextSrcWatch = ref(false)
+  /** PDF bytes for ROI re-render at input commit (memory-only). */
+  const pdfUnderlaySource = ref<PdfUnderlaySource | null>(null)
   /** Guards against stale async upscale completing after a newer upload. */
   let imageSrcLoadGeneration = 0
+
+  function setPdfUnderlaySource(source: PdfUnderlaySource | null): void {
+    pdfUnderlaySource.value = source
+  }
+
+  function clearPdfUnderlaySource(): void {
+    pdfUnderlaySource.value = null
+  }
 
   function onImageLoaded(width: number, height: number): void {
     if (!deps.scale.state.value) {
@@ -175,9 +189,39 @@ export function useWorkspaceImage(deps: {
     const sourceWidth = source.width
     const sourceHeight = source.height
 
+    let bakeSource = source
+    let densityFactor = 1
+    let roiCropOffset = { x: 0, y: 0 }
+    let usedPdfRoi = false
+
+    const pdfSource = pdfUnderlaySource.value
+    if (hadMask && pdfSource) {
+      const bounds = findContentBounds(source)
+      if (bounds) {
+        try {
+          const roi = await tryBuildPdfRoiCanvas({
+            pdfSource,
+            bounds,
+            sourceWidth,
+            sourceHeight,
+            eraserMask: deps.eraserMask.value,
+          })
+          if (roi) {
+            bakeSource = roi.canvas
+            densityFactor = roi.densityFactor
+            roiCropOffset = { x: bounds.left, y: bounds.top }
+            usedPdfRoi = true
+          }
+        } catch {
+          // Fallback: legacy bake + blur-upscale.
+        }
+      }
+    }
+
     const cv = await waitForOpenCV()
-    const baked = canvasLikeToHtmlCanvas(bakeUnderlayCanvas(cv, source, preprocess))
+    const baked = canvasLikeToHtmlCanvas(bakeUnderlayCanvas(cv, bakeSource, preprocess))
     const normalized = normalizeWorkingCanvas(baked)
+    const totalScale = densityFactor * normalized.scale
     const dataUrl = canvasToDataUrl(normalized.canvas)
     const name = deps.imageName.value ?? 'onderlegger.png'
 
@@ -191,54 +235,119 @@ export function useWorkspaceImage(deps: {
 
     if (deps.scale.confirmed.value) {
       // Bevestigde px/mm = dichtheid in pre-bake ruimte. Rotatie wijzigt geen densiteit,
-      // wel as-rollen bij 90°/270°; daarna alleen commit-upscale meenemen.
-      // (Liniaal-transform na 90° zou H-span inklappen → ppm≈0 — daarom niet herberekend.)
+      // wel as-rollen bij 90°/270°; daarna commit-upscale / PDF-ROI densiteit meenemen.
       const bakedRotation = totalRotation + (preprocess.rotate180 ? 180 : 0)
       deps.scale.applyCardinalAxisSwapToConfirmedScale(bakedRotation)
-      deps.scale.applyUpscaleToConfirmedScale(normalized.scale)
+      deps.scale.applyUpscaleToConfirmedScale(totalScale)
     } else if (deps.scale.state.value) {
       let state = deps.scale.state.value
-      if (preprocess.rotate180) {
-        state = transformHScaleStateRotate180(state, sourceWidth, sourceHeight)
-      }
-      if (Math.abs(totalRotation) > ROTATION_EPS_DEG) {
-        state = transformHScaleStateRotation(
+      if (usedPdfRoi) {
+        state = transformHScaleState(
           state,
-          sourceWidth,
-          sourceHeight,
-          totalRotation,
-          baked.width,
-          baked.height,
+          {
+            offsetX: roiCropOffset.x,
+            offsetY: roiCropOffset.y,
+            scale: densityFactor,
+          },
+          bakeSource.width,
+          bakeSource.height,
+        )
+        if (preprocess.rotate180) {
+          state = transformHScaleStateRotate180(state, bakeSource.width, bakeSource.height)
+        }
+        if (Math.abs(totalRotation) > ROTATION_EPS_DEG) {
+          state = transformHScaleStateRotation(
+            state,
+            bakeSource.width,
+            bakeSource.height,
+            totalRotation,
+            baked.width,
+            baked.height,
+          )
+        }
+        deps.scale.state.value = transformHScaleState(
+          state,
+          {
+            offsetX: normalized.cropOffset.x,
+            offsetY: normalized.cropOffset.y,
+            scale: normalized.scale,
+          },
+          img.naturalWidth,
+          img.naturalHeight,
+        )
+      } else {
+        if (preprocess.rotate180) {
+          state = transformHScaleStateRotate180(state, sourceWidth, sourceHeight)
+        }
+        if (Math.abs(totalRotation) > ROTATION_EPS_DEG) {
+          state = transformHScaleStateRotation(
+            state,
+            sourceWidth,
+            sourceHeight,
+            totalRotation,
+            baked.width,
+            baked.height,
+          )
+        }
+        deps.scale.state.value = transformHScaleState(
+          state,
+          {
+            offsetX: normalized.cropOffset.x,
+            offsetY: normalized.cropOffset.y,
+            scale: normalized.scale,
+          },
+          img.naturalWidth,
+          img.naturalHeight,
         )
       }
-      deps.scale.state.value = transformHScaleState(
-        state,
-        {
-          offsetX: normalized.cropOffset.x,
-          offsetY: normalized.cropOffset.y,
-          scale: normalized.scale,
-        },
-        img.naturalWidth,
-        img.naturalHeight,
-      )
     }
 
     if (deps.rects.value.length > 0) {
-      deps.rects.value = deps.rects.value.map((rect) => {
-        const next = transformSelectionRect(rect, {
-          sourceWidth,
-          sourceHeight,
-          rotate180: preprocess.rotate180,
-          uiRotationDeg: totalRotation,
-          bakedWidth: baked.width,
-          bakedHeight: baked.height,
-          cropOffset: normalized.cropOffset,
-          scale: normalized.scale,
-          outWidth: img.naturalWidth,
-          outHeight: img.naturalHeight,
+      if (usedPdfRoi) {
+        deps.rects.value = deps.rects.value.map((rect) => {
+          const inRoi = transformSelectionRect(rect, {
+            sourceWidth,
+            sourceHeight,
+            rotate180: false,
+            uiRotationDeg: 0,
+            bakedWidth: bakeSource.width,
+            bakedHeight: bakeSource.height,
+            cropOffset: roiCropOffset,
+            scale: densityFactor,
+            outWidth: bakeSource.width,
+            outHeight: bakeSource.height,
+          })
+          const next = transformSelectionRect(inRoi, {
+            sourceWidth: bakeSource.width,
+            sourceHeight: bakeSource.height,
+            rotate180: preprocess.rotate180,
+            uiRotationDeg: totalRotation,
+            bakedWidth: baked.width,
+            bakedHeight: baked.height,
+            cropOffset: normalized.cropOffset,
+            scale: normalized.scale,
+            outWidth: img.naturalWidth,
+            outHeight: img.naturalHeight,
+          })
+          return { ...rect, ...next }
         })
-        return { ...rect, ...next }
-      })
+      } else {
+        deps.rects.value = deps.rects.value.map((rect) => {
+          const next = transformSelectionRect(rect, {
+            sourceWidth,
+            sourceHeight,
+            rotate180: preprocess.rotate180,
+            uiRotationDeg: totalRotation,
+            bakedWidth: baked.width,
+            bakedHeight: baked.height,
+            cropOffset: normalized.cropOffset,
+            scale: normalized.scale,
+            outWidth: img.naturalWidth,
+            outHeight: img.naturalHeight,
+          })
+          return { ...rect, ...next }
+        })
+      }
     }
 
     if (hadMask) {
@@ -247,6 +356,11 @@ export function useWorkspaceImage(deps: {
       deps.ensureEraserMask(img.naturalWidth, img.naturalHeight)
     }
     deps.resetBakedRotation()
+    // After crop/gum the working image is no longer full-page raster space —
+    // drop PDF source so a later erase cannot map ROI with stale coords.
+    if (hadMask || usedPdfRoi) {
+      clearPdfUnderlaySource()
+    }
     await deps.onAfterCommit?.()
   }
 
@@ -254,12 +368,16 @@ export function useWorkspaceImage(deps: {
     optimizationBaseSrc.value = null
     suppressNextSrcWatch.value = false
     deps.originalImageEl.value = null
+    clearPdfUnderlaySource()
   }
 
   return {
     optimizationBaseSrc,
     workingImageSrc,
     displayImageSrc,
+    pdfUnderlaySource,
+    setPdfUnderlaySource,
+    clearPdfUnderlaySource,
     getImageEl,
     ensureScaleInitialized,
     onImageLoaded,

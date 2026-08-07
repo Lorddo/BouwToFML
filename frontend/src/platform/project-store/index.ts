@@ -15,6 +15,7 @@ export {
   pngBytesToDataUrl,
   base64ToBytes,
   bytesToBase64,
+  type PersistProjectOptions,
 } from './serialize'
 export {
   saveProject,

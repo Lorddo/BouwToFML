@@ -1,8 +1,8 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { approxContoursFromMask } from '@/cv/refs/ref-face-contour'
 import {
-  hasArcLikeContour,
   resolveSwingHingeFromPolygon,
+  SWING_HINGE_SIMPLIFY_EPS_RATIOS,
   type SwingHingeAxis,
   type SwingHingeOptions,
 } from '@/cv/refs/ref-swing-hinge'
@@ -51,6 +51,20 @@ export function measureSwingSpanPxFromFaceBBox(bbox: { width: number; height: nu
   return Math.max(1, bbox.width, bbox.height)
 }
 
+function scoreDoorHinge(result: DoorSwingHingeResult, expectedAngleDeg?: number | null): number {
+  const balance = Math.min(result.axes[0].supportLength, result.axes[1].supportLength)
+  let score = balance * 2 + result.supportScore
+  if (typeof expectedAngleDeg === 'number' && expectedAngleDeg > 0) {
+    score -= Math.abs(result.swingAngleDeg - expectedAngleDeg) * 4
+  }
+  return score
+}
+
+/**
+ * Hinge uit al gekozen swing-sector-mask.
+ * Geen `hasArcLikeContour`-gate (sector is al bekend); multi-epsilon contour
+ * + RDP in resolve → echte as-hoek voor angle-rescue op strakke én trapjes-bogen.
+ */
 export function computeDoorHingeFromMask(params: {
   cv: OpenCV
   maskData: Uint8Array
@@ -71,37 +85,44 @@ export function computeDoorHingeFromMask(params: {
     height: params.height,
   })
   if (!(swingSpanPx > 0)) return null
-  const polygons = approxContoursFromMask({
-    cv: params.cv,
-    maskData: params.maskData,
-    width: params.width,
-    height: params.height,
-    epsilonFactor: 0.0025,
-  })
+
   let best: DoorSwingHingeResult | null = null
   let bestScore = Number.NEGATIVE_INFINITY
-  for (const polygon of polygons) {
-    if (polygon.length < 3) continue
-    const globalPolygon = polygon.map((point) => ({ x: point.x + offsetX, y: point.y + offsetY }))
-    if (!hasArcLikeContour(globalPolygon)) continue
-    const resolved = resolveSwingHingeFromPolygon({
-      polygon: globalPolygon,
-      options: params.options,
+
+  for (const epsilonFactor of SWING_HINGE_SIMPLIFY_EPS_RATIOS) {
+    const polygons = approxContoursFromMask({
+      cv: params.cv,
+      maskData: params.maskData,
+      width: params.width,
+      height: params.height,
+      epsilonFactor,
     })
-    if (!resolved) continue
-    // Gebalanceerde radii prefereren (zelfde idee als pickBestAxes).
-    const balance = Math.min(resolved.axes[0].supportLength, resolved.axes[1].supportLength)
-    const supportScore =
-      balance * 2 + resolved.axes[0].supportLength + resolved.axes[1].supportLength
-    if (supportScore < bestScore) continue
-    bestScore = supportScore
-    best = {
-      hingePx: resolved.hinge,
-      axes: resolved.axes,
-      swingAngleDeg: resolved.angleDeg,
-      swingSpanPx,
-      sectorPolygon: resolved.sectorPolygon,
-      supportScore,
+    for (const polygon of polygons) {
+      if (polygon.length < 3) continue
+      const globalPolygon = polygon.map((point) => ({
+        x: point.x + offsetX,
+        y: point.y + offsetY,
+      }))
+      const resolved = resolveSwingHingeFromPolygon({
+        polygon: globalPolygon,
+        options: params.options,
+      })
+      if (!resolved) continue
+      const balance = Math.min(resolved.axes[0].supportLength, resolved.axes[1].supportLength)
+      const supportScore =
+        balance * 2 + resolved.axes[0].supportLength + resolved.axes[1].supportLength
+      const candidate: DoorSwingHingeResult = {
+        hingePx: resolved.hinge,
+        axes: resolved.axes,
+        swingAngleDeg: resolved.angleDeg,
+        swingSpanPx,
+        sectorPolygon: resolved.sectorPolygon,
+        supportScore,
+      }
+      const score = scoreDoorHinge(candidate, params.options?.expectedAngleDeg)
+      if (score <= bestScore) continue
+      best = candidate
+      bestScore = score
     }
   }
   return best

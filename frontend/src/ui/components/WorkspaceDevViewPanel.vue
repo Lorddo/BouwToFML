@@ -22,9 +22,10 @@ type PreprocessDevView = 'walls' | 'inkWall'
 type TemplateDevView = 'ocr' | 'walls' | 'doors' | 'windows'
 type ResultDevView = 'vector' | 'walls'
 
+/** Dev-only labels; Otsu-inkt expliciet zodat de verborgen Int-muur-tab vindbaar blijft. */
 const preprocessOptions: Array<{ id: PreprocessDevView; label: string }> = [
   { id: 'walls', label: PREPROCESS_TAB_LABELS.walls },
-  { id: 'inkWall', label: PREPROCESS_TAB_LABELS.inkWall },
+  { id: 'inkWall', label: 'Otsu inkt' },
 ]
 
 const templateOptions = computed((): Array<{ id: TemplateDevView; label: string }> => {
@@ -73,8 +74,8 @@ function isResultActive(id: ResultDevView): boolean {
   <div class="panel">
     <h3>Dev view</h3>
     <p class="hint">
-      Verborgen canvas-tabs: intern schakelen voor overlays / sidebars. OCR via Dev wanneer aangezet
-      op stap 2.
+      Verborgen canvas-tabs: intern schakelen voor overlays / sidebars. Op stap 2: «Otsu inkt» =
+      Int-muur-referentie (classify). OCR via Dev wanneer aangezet op stap 2.
     </p>
 
     <div
@@ -83,16 +84,17 @@ function isResultActive(id: ResultDevView): boolean {
       role="group"
       aria-label="Dev view stap 2"
     >
-      <label v-for="opt in preprocessOptions" :key="opt.id" class="mode-option">
-        <input
-          type="radio"
-          name="dev-view-preprocess"
-          :value="opt.id"
-          :checked="isPreprocessActive(opt.id)"
-          @change="pickPreprocess(opt.id)"
-        />
+      <button
+        v-for="opt in preprocessOptions"
+        :key="opt.id"
+        type="button"
+        class="mode-btn"
+        :class="{ active: isPreprocessActive(opt.id) }"
+        :aria-pressed="isPreprocessActive(opt.id)"
+        @click="pickPreprocess(opt.id)"
+      >
         {{ opt.label }}
-      </label>
+      </button>
     </div>
 
     <div
@@ -101,16 +103,17 @@ function isResultActive(id: ResultDevView): boolean {
       role="group"
       aria-label="Dev view stap 3"
     >
-      <label v-for="opt in templateOptions" :key="opt.id" class="mode-option">
-        <input
-          type="radio"
-          name="dev-view-templates"
-          :value="opt.id"
-          :checked="isTemplateActive(opt.id)"
-          @change="pickTemplate(opt.id)"
-        />
+      <button
+        v-for="opt in templateOptions"
+        :key="opt.id"
+        type="button"
+        class="mode-btn"
+        :class="{ active: isTemplateActive(opt.id) }"
+        :aria-pressed="isTemplateActive(opt.id)"
+        @click="pickTemplate(opt.id)"
+      >
         {{ opt.label }}
-      </label>
+      </button>
     </div>
 
     <div
@@ -119,16 +122,17 @@ function isResultActive(id: ResultDevView): boolean {
       role="group"
       aria-label="Dev view stap 4"
     >
-      <label v-for="opt in resultOptions" :key="opt.id" class="mode-option">
-        <input
-          type="radio"
-          name="dev-view-result"
-          :value="opt.id"
-          :checked="isResultActive(opt.id)"
-          @change="pickResult(opt.id)"
-        />
+      <button
+        v-for="opt in resultOptions"
+        :key="opt.id"
+        type="button"
+        class="mode-btn"
+        :class="{ active: isResultActive(opt.id) }"
+        :aria-pressed="isResultActive(opt.id)"
+        @click="pickResult(opt.id)"
+      >
         {{ opt.label }}
-      </label>
+      </button>
     </div>
   </div>
 </template>
@@ -149,15 +153,29 @@ function isResultActive(id: ResultDevView): boolean {
 .mode-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 12px;
+  gap: 8px;
 }
 
-.mode-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+.mode-btn {
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
   color: #334155;
+  font-size: 13px;
+  line-height: 1.2;
   cursor: pointer;
+}
+
+.mode-btn:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.mode-btn.active {
+  border-color: #0f766e;
+  background: #ccfbf1;
+  color: #115e59;
+  font-weight: 600;
 }
 </style>

@@ -37,11 +37,13 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
 | Download onderlegger PNG | `downloadUnderlay` |
 
+**PDF-crop:** bij «Volgende» met in-memory PDF-bron + meaningful crop → ROI her-raster uit PDF (≥4000px langste zijde) i.p.v. blur-upscale van het full-page PNG-crop. PNG/JPG-crops ongewijzigd; PDF-bytes niet in IndexedDB.
+
 **Output:** `originalImageEl` + optioneel `maskedWorkingCanvas` (gum/crop). Geen referentievakken.
 
 **Gate naar stap 2:** schaal bevestigd (+ image).
 
-Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop, transformeert schaallinialen.
+Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen.
 
 ## Stap 2 — Voorbewerking (`flowStep: preprocess`)
 

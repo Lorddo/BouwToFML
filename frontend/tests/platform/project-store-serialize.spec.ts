@@ -88,7 +88,8 @@ describe('project-store serialize', () => {
     expect(isPersistedProject(persisted)).toBe(true)
     expect(persisted.blobs[floorId]?.session?.workingImagePngBytes).toBeInstanceOf(Uint8Array)
     expect(persisted.blobs[floorId]?.session?.eraserMaskBytes).toBeInstanceOf(Uint8Array)
-    expect(persisted.sourceUnderlay?.pngBytes).toBeInstanceOf(Uint8Array)
+    // Legacy project-level source weggelaten als floors al een bron hebben (quota).
+    expect(persisted.sourceUnderlay).toBeNull()
     expect(persisted.blobs[floorId]?.sourceUnderlay?.pngBytes).toBeInstanceOf(Uint8Array)
     expect(persisted.blobs[floorId]?.sourceUnderlay?.name).toBe('floor-src.png')
     expect('workingImagePng' in (persisted.blobs[floorId]?.session ?? {})).toBe(false)
@@ -99,7 +100,7 @@ describe('project-store serialize', () => {
     expect(restored.blobs[floorId]?.session?.eraserMaskBase64).toBe(
       bytesToBase64(new Uint8Array([0, 1, 0, 1])),
     )
-    expect(restored.sourceUnderlay?.src).toBe(png)
+    expect(restored.sourceUnderlay).toBeNull()
     expect(restored.blobs[floorId]?.sourceUnderlay?.src).toBe(png)
     expect(restored.blobs[floorId]?.sourceUnderlay?.name).toBe('floor-src.png')
 
@@ -113,7 +114,57 @@ describe('project-store serialize', () => {
     })
   })
 
-  it('rejects wrong schemaVersion', () => {
-    expect(isPersistedProject({ schemaVersion: 99, id: 'x' })).toBe(false)
+  it('omits detectionExact for result floors with previewPlan', () => {
+    const png = minimalPngDataUrl()
+    const empty = createEmptyProjectState({ id: 'proj-2', name: 'Test', address: 'Street 1' })
+    const floorId = empty.floors[0].id
+    const session = sessionStub(png)
+    const withDetection: DevWorkspaceSessionV2 = {
+      ...session,
+      flow: {
+        ...session.flow,
+        targetFlowStep: 'result',
+        restoreMode: 'exact',
+      },
+      detectionExact: {
+        tabOutputs: {
+          walls: null,
+        },
+        roomPhase: 'done',
+        wallsDetectionComplete: true,
+      },
+    }
+    const state: ProjectState = {
+      ...empty,
+      sourceUnderlay: { src: png, name: 'legacy.png' },
+      blobs: {
+        [floorId]: {
+          session: withDetection,
+          generatedFloor: null,
+          previewPlan: {
+            name: 'Test',
+            floors: [
+              {
+                name: 'F0',
+                level: 0,
+                height: 260,
+                walls: [],
+              },
+            ],
+          },
+          previewUnderlayLayout: null,
+          sourceUnderlay: { src: png, name: 'floor-src.png' },
+        },
+      },
+    }
+
+    const persisted = toPersistedProject(state)
+    const persistedSession = persisted.blobs[floorId]?.session
+    expect(persistedSession).toBeTruthy()
+    // detectionExact alleen op V2; na omitResultDetection mag de key niet meer aanwezig zijn.
+    expect(persistedSession != null && 'detectionExact' in persistedSession).toBe(false)
+    expect(persisted.blobs[floorId]?.previewPlan).toBeTruthy()
+    // Legacy project source weggelaten als floors al een bron hebben.
+    expect(persisted.sourceUnderlay).toBeNull()
   })
 })

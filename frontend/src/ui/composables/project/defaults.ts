@@ -48,6 +48,7 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
         previewPlan: null,
         previewUnderlayLayout: null,
         sourceUnderlay: null,
+        pdfUnderlaySource: null,
       },
     },
     activeFloorId: floor.id,

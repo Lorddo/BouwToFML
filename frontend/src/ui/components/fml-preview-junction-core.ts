@@ -9,8 +9,8 @@ const JUNCTION_SNAP_CM = 2
 const JUNCTION_MERGE_CM = 3
 export const ENDPOINT_SNAP_RADIUS_CM = 3
 
-export const BALANCE_MIN = 0.25
-export const BALANCE_MAX = 0.8
+export const BALANCE_MIN = 0
+export const BALANCE_MAX = 1
 export const BALANCE_DEFAULT = 0.5
 
 export const COLLINEAR_DOT_THRESHOLD = 0.99

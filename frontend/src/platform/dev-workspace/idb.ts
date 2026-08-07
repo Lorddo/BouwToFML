@@ -45,6 +45,17 @@ export async function loadDevSessionById<T>(sessionId: string): Promise<T | null
   return (value as T | null) ?? null
 }
 
+/** Quota-recovery: wis DevSession-snapshots (niet ProjectState). */
+export async function clearDevSessionsStore(): Promise<void> {
+  const db = await openBouwDb()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(SESSIONS_STORE, 'readwrite')
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error ?? new Error('IndexedDB sessions wissen mislukt.'))
+    tx.objectStore(SESSIONS_STORE).clear()
+  })
+}
+
 export async function listDevSessions<T>(): Promise<Array<{ id: string; session: T }>> {
   const db = await openBouwDb()
   const entries = await new Promise<Array<{ id: string; session: T }>>((resolve, reject) => {

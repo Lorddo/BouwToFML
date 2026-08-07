@@ -6,12 +6,14 @@ import {
   openPdfDocument,
   pdfLoadErrorMessage,
   renderPdfPageToBlobUrlForFile,
+  type PdfUnderlaySource,
 } from '@/platform/upload'
 
 export function useWorkspacePdfUpload(deps: {
   loadFile: (file: File) => void
   setImageSource: (src: string, name: string) => void
   applyNewUnderlayReset: () => void
+  setPdfUnderlaySource: (source: PdfUnderlaySource | null) => void
 }) {
   const showPdfPageDialog = ref(false)
   const pendingPdfFile = ref<File | null>(null)
@@ -33,6 +35,7 @@ export function useWorkspacePdfUpload(deps: {
 
     // Eerst sessie resetten, daarna nieuwe src — voorkomt dat reset de verse load wist.
     deps.applyNewUnderlayReset()
+    deps.setPdfUnderlaySource(null)
     deps.loadFile(file)
   }
 
@@ -44,12 +47,21 @@ export function useWorkspacePdfUpload(deps: {
     pdfPageConfirmError.value = null
 
     try {
+      const bytes = new Uint8Array(await file.arrayBuffer())
       const { numPages, fileName } = await openPdfDocument(file)
-      const blobUrl = await renderPdfPageToBlobUrlForFile(file, pageNumber)
+      const rendered = await renderPdfPageToBlobUrlForFile(file, pageNumber)
       await closePdfSession()
 
       deps.applyNewUnderlayReset()
-      deps.setImageSource(blobUrl, formatPdfPageImageName(fileName, pageNumber, numPages))
+      deps.setImageSource(rendered.blobUrl, formatPdfPageImageName(fileName, pageNumber, numPages))
+      deps.setPdfUnderlaySource({
+        bytes,
+        pageNumber,
+        fileName,
+        pageRenderScale: rendered.pageRenderScale,
+        pageWidthPx: rendered.pageWidthPx,
+        pageHeightPx: rendered.pageHeightPx,
+      })
       showPdfPageDialog.value = false
       pendingPdfFile.value = null
     } catch (error) {

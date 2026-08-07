@@ -105,6 +105,65 @@ function restoreWallStamp(stamp: PersistedWallStamp): RuntimeWallStamp {
   }
 }
 
+export type PersistProjectOptions = {
+  /**
+   * Result-floors met previewPlan: sla detectionExact/Replay niet op.
+   * FML komt uit previewPlan; image/schaal/refs/preprocess blijven in de session.
+   * Scheelt tientallen MB face-rasters per afgeronde verdieping (quota).
+   */
+  omitResultDetection?: boolean
+  /**
+   * Strip labelsData / rawLabelsData / baselineWallBwData uit roomClassifyState.
+   * Face-raster moet na restore opnieuw geclassificeerd worden.
+   */
+  stripClassifyRasters?: boolean
+  /** Geen project-level sourceUnderlay wanneer floors al een bron hebben. */
+  omitLegacyProjectSource?: boolean
+}
+
+/** Quota-slim: drop face-raster buffers (tientallen MB) — classify opnieuw na restore. */
+function stripClassifyRastersFromSession(session: DevWorkspaceSession): DevWorkspaceSession {
+  if (session.schemaVersion !== 2 || !session.detectionExact?.tabOutputs) return session
+  const tabOutputs = { ...session.detectionExact.tabOutputs }
+  for (const key of Object.keys(tabOutputs) as Array<keyof typeof tabOutputs>) {
+    const output = tabOutputs[key]
+    if (!output?.meta?.roomClassifyState) continue
+    const { roomClassifyState: _rcs, ...metaRest } = output.meta
+    tabOutputs[key] = {
+      ...output,
+      meta: metaRest,
+    }
+  }
+  return {
+    ...session,
+    detectionExact: {
+      ...session.detectionExact,
+      tabOutputs,
+    },
+  }
+}
+
+function sessionForPersist(
+  session: DevWorkspaceSession,
+  blob: FloorWorkspaceBlob,
+  options?: PersistProjectOptions,
+): DevWorkspaceSession {
+  let next = session
+  if (
+    options?.omitResultDetection !== false &&
+    next.schemaVersion === 2 &&
+    next.flow.targetFlowStep === 'result' &&
+    blob.previewPlan
+  ) {
+    const { detectionExact: _de, detectionReplay: _dr, ...rest } = next
+    next = rest
+  }
+  if (options?.stripClassifyRasters) {
+    next = stripClassifyRastersFromSession(next)
+  }
+  return next
+}
+
 function persistSession(session: DevWorkspaceSession): PersistedDevSession | null {
   const pngBytes = dataUrlToPngBytes(session.workingImagePng)
   if (!pngBytes) return null
@@ -138,9 +197,13 @@ function restoreSession(persisted: PersistedDevSession): DevWorkspaceSession {
   return session as DevWorkspaceSession
 }
 
-function persistBlob(blob: FloorWorkspaceBlob): PersistedFloorBlob {
+function persistBlob(
+  blob: FloorWorkspaceBlob,
+  options?: PersistProjectOptions,
+): PersistedFloorBlob {
+  const session = blob.session ? sessionForPersist(blob.session, blob, options) : null
   return {
-    session: blob.session ? persistSession(blob.session) : null,
+    session: session ? persistSession(session) : null,
     generatedFloor: blob.generatedFloor ? toStorableDevSession(blob.generatedFloor) : null,
     previewPlan: blob.previewPlan ? toStorableDevSession(blob.previewPlan) : null,
     previewUnderlayLayout: blob.previewUnderlayLayout
@@ -181,11 +244,14 @@ function restoreSourceUnderlay(underlay: PersistedSourceUnderlay): ProjectSource
 export function toPersistedProject(
   state: ProjectState,
   updatedAt = new Date().toISOString(),
+  options?: PersistProjectOptions,
 ): PersistedProject {
   const blobs: Record<string, PersistedFloorBlob> = {}
   for (const [id, blob] of Object.entries(state.blobs)) {
-    blobs[id] = persistBlob(blob)
+    blobs[id] = persistBlob(blob, options)
   }
+  const hasFloorSource = Object.values(state.blobs).some((b) => !!b.sourceUnderlay)
+  const omitLegacy = options?.omitLegacyProjectSource !== false && hasFloorSource
   return {
     schemaVersion: PERSISTED_PROJECT_SCHEMA_VERSION,
     id: state.meta.id,
@@ -193,7 +259,8 @@ export function toPersistedProject(
     meta: toStorableDevSession(state.meta),
     floors: toStorableDevSession(state.floors),
     activeFloorId: state.activeFloorId,
-    sourceUnderlay: state.sourceUnderlay ? persistSourceUnderlay(state.sourceUnderlay) : null,
+    sourceUnderlay:
+      omitLegacy || !state.sourceUnderlay ? null : persistSourceUnderlay(state.sourceUnderlay),
     blobs,
   }
 }

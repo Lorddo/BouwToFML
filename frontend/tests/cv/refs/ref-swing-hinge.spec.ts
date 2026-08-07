@@ -355,4 +355,38 @@ describe('ref-swing-hinge', () => {
     expect(left!.angleDeg).toBeLessThan(22)
     expect(right!.angleDeg).toBeLessThan(22)
   })
+
+  it('vindt scharnier op schematische wedge met weinig punten (PDF-strak)', () => {
+    // Kwart-sector met grove stappen — 3–4 segmenten, geen 6+ “arc-like” trapjes.
+    const hinge = { x: 40, y: 20 }
+    const polygon = buildQuarterSectorPolygon({
+      hinge,
+      radius: 60,
+      arcStepDeg: 30,
+      staircase: false,
+    })
+    expect(polygon.length).toBeLessThan(8)
+    const result = resolveSwingHingeFromPolygon({ polygon })
+    expect(result).not.toBeNull()
+    expect(result!.hinge.x).toBeCloseTo(hinge.x, 0)
+    expect(result!.hinge.y).toBeCloseTo(hinge.y, 0)
+    expect(result!.angleDeg).toBeGreaterThan(50)
+    expect(result!.angleDeg).toBeLessThan(120)
+  })
+
+  it('ondiepe trapjes-wedge blijft hinge leveren (geen arc-punt-gate)', () => {
+    // Shallow diagonaal ≈17° — geometrie van het symbool, geen detectie-fout.
+    const hinge = { x: 39, y: 24 }
+    const polygon: RefPoint[] = [hinge, { x: 39, y: 80 }]
+    for (let i = 0; i <= 45; i += 1) {
+      polygon.push({
+        x: 39 + Math.round(i * 4.2),
+        y: 80 - Math.round(i * 1.2),
+      })
+    }
+    polygon.push({ x: 228, y: 24 })
+    const result = resolveSwingHingeFromPolygon({ polygon })
+    expect(result).not.toBeNull()
+    expect(result!.angleDeg).toBeGreaterThanOrEqual(8)
+  })
 })

@@ -17,7 +17,12 @@ export function createProjectPersistController(options: ProjectPersistController
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
   async function flush(): Promise<void> {
-    if (options.shouldSkip?.()) return
+    // Skip mag een write niet stil laten vallen: markeer pending zodat de
+    // volgende persistNow (na floor-switch / running) alsnog flusht.
+    if (options.shouldSkip?.()) {
+      pending = true
+      return
+    }
     if (inFlight) {
       pending = true
       return

@@ -34,7 +34,7 @@ function isContentPixel(
   return r < threshold || g < threshold || b < threshold
 }
 
-function findContentBounds(
+export function findContentBounds(
   canvas: HTMLCanvasElement,
   options?: { threshold?: number; padding?: number },
 ): PixelBounds | null {

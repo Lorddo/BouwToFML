@@ -5,7 +5,27 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-06 (result-hydrate refs)
+Laatste update: 2026-08-07 (IDB persist quota)
+
+## Project-persist quota / FML kwijt na refresh (2026-08-07)
+
+Symptom: «Could not save the project locally» → floor-switch in-memory nog FML, browser-refresh → oude preprocess-checkpoint. Oorzaak: IndexedDB-save faalde (quota) door zware `detectionExact` face-rasters + dubbele PNG’s per floor; laatste geslaagde write bleef stap-2. Fix: result-floors met `previewPlan` slaan geen detectionExact op; legacy project-`sourceUnderlay` weglaten als floors al bron hebben; quota-retry wist DevSessions + strip classify-rasters; persist-controller dropt pending niet meer bij `shouldSkip`.
+
+## Door hinge: geen hasArcLikeContour-gate (2026-08-07)
+
+`hasArcLikeContour` (≥6 pts + gradual turns) gooide PDF-strakke deursymbolen stil weg ná swing-pick → `refs:0`. Fix: gate weg (sector al bekend); multi-epsilon contour (0.005/0.01/0.0025); RDP-simplify als raw geen wall-corner heeft; wall-corner-first behoudt ondiepe ~14° (Project4). Geen bbox-fallback (angle-rescue nodig).
+
+## PDF render opaque white (2026-08-07)
+
+Bug: PDF.js canvas zonder page-fill → `rgba(0,0,0,0)` → UI lichtblauw/transparant, B/W als muur (slider nutteloos). Fix: vóór `page.render` wit fill + na render alpha flatten op wit (`compositeRgbaOntoWhiteInPlace`) in full-page én ROI (`pdfToImage.ts`).
+
+## Otsu ink-coverage REF-scaling (2026-08-06)
+
+Int-muur Otsu (`room-reference-preprocess`): thicken + bridgeGaps schalen op muur-REF, geen caps. Solid: thicken 0.15× / bridge 0.2×. Open: thicken 0.25× / bridge 0.3×. Fallback zonder REF: thicken 2 / bridge 8. `removeHoles` blijft uit.
+
+## PDF ROI re-render bij crop (2026-08-06)
+
+Stap 1→2: PDF-bytes in-memory na page-confirm; bij meaningful crop her-raster ROI uit PDF (≥4000px) i.p.v. blur-upscale. `pdfUnderlaySource` op floor-blob runtime-only (geen IDB). Fallback = legacy normalize. ppm × `roiScale/pageRenderScale`. Opaque white underlay (2026-08-07).
 
 ## Result-hydrate behoudt refs (2026-08-06)
 

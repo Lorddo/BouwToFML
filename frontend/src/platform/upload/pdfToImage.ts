@@ -8,11 +8,23 @@ import { pdfJsDocumentOptions } from './pdfJsAssets'
 import {
   DEFAULT_MIN_MAX_EDGE,
   DEFAULT_PREVIEW_MAX_EDGE,
+  compositeRgbaOntoWhiteInPlace,
   computePreviewScale,
   computeRenderScale,
+  type PdfRect,
 } from './pdfUploadUtils'
 
 export { formatPdfPageImageName, isPdfFile, pdfLoadErrorMessage } from './pdfUploadUtils'
+export type { PdfUnderlaySource, PdfRect, RasterRect } from './pdfUploadUtils'
+export {
+  computeRoiRenderScale,
+  pdfRoiDensityFactor,
+  rasterRectToPdfRect,
+  shouldReRenderPdfRoi,
+  DEFAULT_MIN_MAX_EDGE,
+  MAX_PDF_RENDER_MAX_EDGE,
+  PDF_ROI_MAX_EDGE_RATIO,
+} from './pdfUploadUtils'
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -60,20 +72,55 @@ export async function openPdfDocument(file: File): Promise<OpenPdfDocumentResult
   }
 }
 
-async function renderPageToBlobUrl(
+export type RenderPdfPageResult = {
+  blobUrl: string
+  pageRenderScale: number
+  pageWidthPx: number
+  pageHeightPx: number
+}
+
+/**
+ * PDF pages often have no page-white fill. Empty canvas pixels stay rgba(0,0,0,0);
+ * UI shows them as "transparent/light blue", B/W (RGBA→gray) sees black = wall.
+ * Paint white first, then flatten leftover alpha onto white after render.
+ */
+function fillCanvasWhite(context: CanvasRenderingContext2D, width: number, height: number): void {
+  context.save()
+  context.setTransform(1, 0, 0, 1, 0, 0)
+  context.globalCompositeOperation = 'source-over'
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, width, height)
+  context.restore()
+}
+
+function flattenCanvasAlphaOntoWhite(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): void {
+  const image = context.getImageData(0, 0, width, height)
+  compositeRgbaOntoWhiteInPlace(image.data)
+  context.putImageData(image, 0, 0)
+}
+
+async function renderPageToCanvas(
   pdf: PDFDocumentProxy,
   pageNumber: number,
   scale: number,
-): Promise<string> {
+): Promise<HTMLCanvasElement> {
   const page = await pdf.getPage(pageNumber)
   const viewport = page.getViewport({ scale })
   const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round(viewport.width))
-  canvas.height = Math.max(1, Math.round(viewport.height))
+  const width = Math.max(1, Math.round(viewport.width))
+  const height = Math.max(1, Math.round(viewport.height))
+  canvas.width = width
+  canvas.height = height
   const context = canvas.getContext('2d')
   if (!context) {
     throw new Error('Kon PDF-canvas niet maken.')
   }
+
+  fillCanvasWhite(context, width, height)
 
   const optionalContentConfig = await buildVisibleOptionalContentConfig(pdf)
   const renderParams: Parameters<typeof page.render>[0] = {
@@ -87,7 +134,11 @@ async function renderPageToBlobUrl(
   }
 
   await page.render(renderParams).promise
+  flattenCanvasAlphaOntoWhite(context, width, height)
+  return canvas
+}
 
+function canvasToBlobUrl(canvas: HTMLCanvasElement): Promise<string> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) {
@@ -97,6 +148,15 @@ async function renderPageToBlobUrl(
       resolve(URL.createObjectURL(blob))
     }, 'image/png')
   })
+}
+
+async function renderPageToBlobUrl(
+  pdf: PDFDocumentProxy,
+  pageNumber: number,
+  scale: number,
+): Promise<string> {
+  const canvas = await renderPageToCanvas(pdf, pageNumber, scale)
+  return canvasToBlobUrl(canvas)
 }
 
 export async function renderPdfPagePreviewForFile(
@@ -115,12 +175,70 @@ export async function renderPdfPageToBlobUrlForFile(
   file: File,
   pageNumber: number,
   minMaxEdge = DEFAULT_MIN_MAX_EDGE,
-): Promise<string> {
+): Promise<RenderPdfPageResult> {
   const pdf = await ensurePdfForFile(file)
   const page = await pdf.getPage(pageNumber)
   const baseViewport = page.getViewport({ scale: 1 })
-  const scale = computeRenderScale(baseViewport.width, baseViewport.height, minMaxEdge)
-  return renderPageToBlobUrl(pdf, pageNumber, scale)
+  const pageRenderScale = computeRenderScale(baseViewport.width, baseViewport.height, minMaxEdge)
+  const canvas = await renderPageToCanvas(pdf, pageNumber, pageRenderScale)
+  const blobUrl = await canvasToBlobUrl(canvas)
+  return {
+    blobUrl,
+    pageRenderScale,
+    pageWidthPx: canvas.width,
+    pageHeightPx: canvas.height,
+  }
+}
+
+/**
+ * Re-raster a PDF page crop at `scale` (PDF user units × scale → pixels).
+ * Canvas is sized to the ROI; full-page content is translated so the crop is at (0,0).
+ */
+export async function renderPdfPageRoiToCanvas(params: {
+  bytes: Uint8Array
+  pageNumber: number
+  pdfRect: PdfRect
+  scale: number
+}): Promise<HTMLCanvasElement> {
+  const { bytes, pageNumber, pdfRect, scale } = params
+  const pdf = await getDocument(pdfJsDocumentOptions(bytes)).promise
+  try {
+    const page = await pdf.getPage(pageNumber)
+    const viewport = page.getViewport({ scale })
+    const width = Math.max(1, Math.round(pdfRect.width * scale))
+    const height = Math.max(1, Math.round(pdfRect.height * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const context = canvas.getContext('2d')
+    if (!context) {
+      throw new Error('Kon PDF-ROI-canvas niet maken.')
+    }
+
+    // White in canvas space (before ROI translate) so empty PDF areas stay opaque.
+    fillCanvasWhite(context, width, height)
+
+    context.save()
+    context.translate(-pdfRect.x * scale, -pdfRect.y * scale)
+
+    const optionalContentConfig = await buildVisibleOptionalContentConfig(pdf)
+    const renderParams: Parameters<typeof page.render>[0] = {
+      canvas,
+      canvasContext: context,
+      viewport,
+      intent: 'any',
+    }
+    if (optionalContentConfig) {
+      renderParams.optionalContentConfigPromise = Promise.resolve(optionalContentConfig)
+    }
+
+    await page.render(renderParams).promise
+    context.restore()
+    flattenCanvasAlphaOntoWhite(context, width, height)
+    return canvas
+  } finally {
+    await pdf.cleanup()
+  }
 }
 
 export async function closePdfSession(): Promise<void> {

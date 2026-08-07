@@ -21,9 +21,13 @@ const ROOM_REFERENCE_LAYER_TUNE = {
   removeSpecklesEnabled: true,
   removeHolesEnabled: false,
   removeHolesMaxPx: 15,
+  /**
+   * Prefilter thicken staat in buildRoomReferencePreprocess op true (REF × factor).
+   * Hier false zodat finalizeRoomReferenceMat niet dubbel verdikt.
+   */
   thickenLinesEnabled: false,
-  thickenLinesPx: 10,
-  /** Topologie via resolveInkBetweenFaces — niet bridgeGaps op referentielaag. */
+  thickenLinesPx: 2,
+  /** Morph-close: aan; px via resolveReferenceBridgeGapsPx (REF × factor). */
   bridgeGapsEnabled: true,
   bridgeGaps: 8,
   erodeLinesEnabled: false,
@@ -37,6 +41,30 @@ const ROOM_REFERENCE_LAYER_TUNE = {
    */
   despeckleMinPx: 0,
 } satisfies Partial<PreprocessConfig>
+
+/** Solid 0.15×REF / open 0.25×REF — geen cap. Fallback zonder REF = 2. */
+export function resolveReferencePrefilterThickenPx(
+  referenceWallThicknessPx?: number,
+  wallStyle?: 'solid' | 'open',
+): number {
+  if (!referenceWallThicknessPx || referenceWallThicknessPx <= 0) {
+    return ROOM_REFERENCE_LAYER_TUNE.thickenLinesPx ?? 2
+  }
+  const factor = wallStyle === 'open' ? 0.25 : 0.15
+  return Math.max(0, Math.round(referenceWallThicknessPx * factor))
+}
+
+/** Solid 0.2×REF / open 0.3×REF — geen cap. Fallback zonder REF = 8. */
+export function resolveReferenceBridgeGapsPx(
+  referenceWallThicknessPx?: number,
+  wallStyle?: 'solid' | 'open',
+): number {
+  if (!referenceWallThicknessPx || referenceWallThicknessPx <= 0) {
+    return ROOM_REFERENCE_LAYER_TUNE.bridgeGaps ?? 8
+  }
+  const factor = wallStyle === 'open' ? 0.3 : 0.2
+  return Math.max(0, Math.round(referenceWallThicknessPx * factor))
+}
 
 export function resolveReferenceRemoveHolesPx(
   referenceWallThicknessPx?: number,
@@ -54,17 +82,6 @@ export function resolveReferenceRemoveHolesPx(
   return Math.min(max, Math.max(min, scaled))
 }
 
-function resolveReferencePrefilterThickenPx(
-  referenceWallThicknessPx?: number,
-  wallStyle?: 'solid' | 'open',
-): number {
-  if (!referenceWallThicknessPx || referenceWallThicknessPx <= 0) return 2
-  const factor = wallStyle === 'open' ? 0.08 : 0.1
-  const min = 2
-  const max = wallStyle === 'open' ? 6 : 7
-  return Math.min(max, Math.max(min, Math.round(referenceWallThicknessPx * factor)))
-}
-
 function buildRoomReferencePreprocess(
   preprocess: PreprocessConfig,
   referenceWallThicknessPx?: number,
@@ -75,10 +92,14 @@ function buildRoomReferencePreprocess(
     ...wallPreprocess,
     ...ROOM_REFERENCE_LAYER_TUNE,
     removeHolesMaxPx: resolveReferenceRemoveHolesPx(referenceWallThicknessPx, wallStyle),
+    thickenLinesEnabled: true,
+    thickenLinesPx: resolveReferencePrefilterThickenPx(referenceWallThicknessPx, wallStyle),
+    bridgeGapsEnabled: true,
+    bridgeGaps: resolveReferenceBridgeGapsPx(referenceWallThicknessPx, wallStyle),
   }
 }
 
-/** Otsu + gatenvullen + lichte lijnverdikking vóór finale thicken. */
+/** Otsu + REF-geschaalde bridge/thicken voor ink-coverage classify. */
 export function buildRoomReferenceMat(params: {
   cv: OpenCV
   image: HTMLCanvasElement | HTMLImageElement | OffscreenCanvas
@@ -94,18 +115,11 @@ export function buildRoomReferenceMat(params: {
     image: params.image,
     examples: [],
     eraserMask: params.eraserMask,
-    preprocess: {
-      ...buildRoomReferencePreprocess(
-        params.preprocess,
-        params.referenceWallThicknessPx,
-        params.wallStyle,
-      ),
-      thickenLinesEnabled: true,
-      thickenLinesPx: resolveReferencePrefilterThickenPx(
-        params.referenceWallThicknessPx,
-        params.wallStyle,
-      ),
-    },
+    preprocess: buildRoomReferencePreprocess(
+      params.preprocess,
+      params.referenceWallThicknessPx,
+      params.wallStyle,
+    ),
   }
   if (params.sharedGrayscale) {
     return runPreprocessLayerFromGrayscale(layerCtx, params.sharedGrayscale)

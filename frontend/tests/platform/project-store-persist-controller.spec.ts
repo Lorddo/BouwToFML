@@ -52,15 +52,22 @@ describe('createProjectPersistController', () => {
     ctrl.dispose()
   })
 
-  it('skips when shouldSkip returns true', async () => {
+  it('skips when shouldSkip returns true but keeps pending for a later flush', async () => {
+    let skip = true
     const save = vi.fn(async () => undefined)
     const ctrl = createProjectPersistController({
       save,
-      shouldSkip: () => true,
+      shouldSkip: () => skip,
     })
     ctrl.persistNow()
     await Promise.resolve()
     expect(save).toHaveBeenCalledTimes(0)
+
+    skip = false
+    ctrl.persistNow()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(save).toHaveBeenCalledTimes(1)
     ctrl.dispose()
   })
 })

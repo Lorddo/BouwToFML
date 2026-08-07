@@ -635,6 +635,7 @@ export function useWorkspace() {
     loadFile,
     setImageSource,
     applyNewUnderlayReset: lifecycle.applyNewUnderlayReset,
+    setPdfUnderlaySource: image.setPdfUnderlaySource,
   })
 
   const devSession = useWorkspaceDevSession(
@@ -703,6 +704,7 @@ export function useWorkspace() {
       roomFaces.resetRoomState()
       tabOutputs.value = emptyTabOutputs()
       wallsDetectionComplete.value = false
+      image.clearPdfUnderlaySource()
       image.prepareExactImageSrcLoad()
       setImageSource(src, name)
       await image.loadExactWorkingImage(src)
@@ -737,6 +739,8 @@ export function useWorkspace() {
       fml.syncAppliedFromDraft()
     },
     shouldSkipPersist: () => extraction.running.value || devSessionRestoring.value,
+    getPdfUnderlaySource: () => image.pdfUnderlaySource.value,
+    setPdfUnderlaySource: image.setPdfUnderlaySource,
   })
 
   restoreFmlDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()

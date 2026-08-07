@@ -1,5 +1,6 @@
 import type { Floor, FloorPlan } from '@/core/fml/types'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
+import type { PdfUnderlaySource } from '@/platform/upload'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 
 export type FloorStatus = 'empty' | 'input' | 'preprocess' | 'templates' | 'result'
@@ -69,6 +70,11 @@ export type FloorWorkspaceBlob = {
    * Gebruikt door «Onderlegger overnemen» als donor; overschrijft bij elke schaal-bevestiging.
    */
   sourceUnderlay?: ProjectSourceUnderlay | null
+  /**
+   * Runtime-only PDF bytes for ROI re-render at input commit.
+   * Never written to IndexedDB (`persistBlob` omits this field).
+   */
+  pdfUnderlaySource?: PdfUnderlaySource | null
 }
 
 export type ProjectSourceUnderlay = {

@@ -3,9 +3,9 @@ export interface Point2D {
   y: number
 }
 
-/** Hinge-balance clamp op semantic `balancePx` (zelfde waarden als pre-split). */
-export const FML_WALL_BALANCE_MIN = 0.25
-export const FML_WALL_BALANCE_MAX = 0.8
+/** Hinge-balance clamp op semantic `balancePx` (Floorplanner FML: 0..1). */
+export const FML_WALL_BALANCE_MIN = 0
+export const FML_WALL_BALANCE_MAX = 1
 export const FML_WALL_BALANCE_FALLBACK = 0.5
 
 export function toCmX(px: number, pxPerMmX: number): number {

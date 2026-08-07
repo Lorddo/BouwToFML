@@ -195,3 +195,65 @@ export function pointInOrOnPolygon(
   if (pointInPolygon(point, polygon)) return true
   return pointOnPolygonEdge(point, polygon, tolerancePx)
 }
+
+export function polygonPerimeter(points: RefPoint[]): number {
+  if (points.length < 2) return 0
+  let sum = 0
+  for (let i = 0; i < points.length; i += 1) {
+    const a = points[i]
+    const b = points[(i + 1) % points.length]
+    sum += Math.hypot(b.x - a.x, b.y - a.y)
+  }
+  return sum
+}
+
+/**
+ * Ramer–Douglas–Peucker op een gesloten contour.
+ * `epsilonPx` = max afwijking van de vereenvoudigde polyline (typisch 0.5–1% perimeter).
+ */
+export function simplifyClosedPolygonRdp(points: RefPoint[], epsilonPx: number): RefPoint[] {
+  if (points.length <= 3) return points.map((p) => ({ ...p }))
+  const eps = Math.max(0.5, epsilonPx)
+  // Open ring: drop duplicate close-point if present.
+  let ring = points
+  if (ring.length >= 2) {
+    const first = ring[0]
+    const last = ring[ring.length - 1]
+    if (first && last && first.x === last.x && first.y === last.y) {
+      ring = ring.slice(0, -1)
+    }
+  }
+  if (ring.length <= 3) return ring.map((p) => ({ ...p }))
+
+  const keep = new Uint8Array(ring.length)
+  keep[0] = 1
+  keep[ring.length - 1] = 1
+
+  const stack: Array<{ start: number; end: number }> = [{ start: 0, end: ring.length - 1 }]
+  while (stack.length > 0) {
+    const { start, end } = stack.pop()!
+    if (end - start <= 1) continue
+    const a = ring[start]
+    const b = ring[end]
+    let maxDist = 0
+    let maxIdx = -1
+    for (let i = start + 1; i < end; i += 1) {
+      const d = distancePointToSegment(ring[i], a, b)
+      if (d > maxDist) {
+        maxDist = d
+        maxIdx = i
+      }
+    }
+    if (maxIdx >= 0 && maxDist > eps) {
+      keep[maxIdx] = 1
+      stack.push({ start, end: maxIdx }, { start: maxIdx, end })
+    }
+  }
+
+  const out: RefPoint[] = []
+  for (let i = 0; i < ring.length; i += 1) {
+    if (keep[i]) out.push({ ...ring[i] })
+  }
+  // Closed polygons need ≥3 verts; if over-simplified, keep original.
+  return out.length >= 3 ? out : points.map((p) => ({ ...p }))
+}
