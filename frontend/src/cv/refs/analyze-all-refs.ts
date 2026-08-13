@@ -7,6 +7,13 @@ import type { OpeningRefProfile, ReferenceAnalysisReport, RefRect, WallRefProfil
 
 export type AnalyzeRefsInputRect = RefRect & {
   type: 'wall' | 'door' | 'window'
+  wallThicknessBand?: 'min' | 'mid' | 'max'
+}
+
+function pickPrimaryWall(walls: WallRefProfile[]): WallRefProfile | null {
+  if (walls.length === 0) return null
+  const maxTagged = [...walls].reverse().find((w) => w.wallThicknessBand === 'max')
+  return maxTagged ?? walls[walls.length - 1]
 }
 
 export async function analyzeAllReferenceRects(params: {
@@ -19,7 +26,7 @@ export async function analyzeAllReferenceRects(params: {
   /** Canonieke bron na bake (gebakken inkt); anders rebuild vanaf kleur. */
   baseBw?: { data: Uint8Array; width: number; height: number }
 }): Promise<ReferenceAnalysisReport> {
-  const wallRect = [...params.rects].reverse().find((r) => r.type === 'wall') ?? null
+  const wallRects = params.rects.filter((r) => r.type === 'wall')
   const openingRects = params.rects.filter((r) => r.type === 'door' || r.type === 'window')
 
   const sharedWallBwMat = params.baseBw
@@ -31,9 +38,9 @@ export async function analyzeAllReferenceRects(params: {
         eraserMask: params.eraserMask,
       })
   try {
-    let wall: WallRefProfile | null = null
-    if (wallRect) {
-      wall = await analyzeWallRef({
+    const walls: WallRefProfile[] = []
+    for (const wallRect of wallRects) {
+      const profile = await analyzeWallRef({
         cv: params.cv,
         image: params.image,
         rect: wallRect,
@@ -41,6 +48,11 @@ export async function analyzeAllReferenceRects(params: {
         eraserMask: params.eraserMask,
         sharedWallBwMat,
       })
+      walls.push(
+        wallRect.wallThicknessBand
+          ? { ...profile, wallThicknessBand: wallRect.wallThicknessBand }
+          : profile,
+      )
     }
 
     const openings: OpeningRefProfile[] = []
@@ -62,7 +74,8 @@ export async function analyzeAllReferenceRects(params: {
     return {
       exportedAt: new Date().toISOString(),
       drawing: params.drawing ?? null,
-      wall,
+      wall: pickPrimaryWall(walls),
+      walls,
       openings,
     }
   } finally {

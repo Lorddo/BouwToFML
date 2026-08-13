@@ -20,6 +20,15 @@ export type TemplatesInitialDetectionStep = {
   status: 'pending' | 'active' | 'done'
 }
 
+/** Hoog-niveau afrond-fase (geen per-laag pipeline-stappen). */
+export type TemplatesFinalizePhase = 'walls' | 'doors' | 'windows'
+
+export type TemplatesBusyStep = {
+  id: string
+  label: string
+  status: 'pending' | 'active' | 'done'
+}
+
 // ESC:O-43 (B)
 export function isTemplatesInitialDetectionBusy(params: {
   flowStep: WorkspaceFlowStep
@@ -114,6 +123,34 @@ export function resolveTemplatesInitialDetectionSteps(params: {
     },
   )
   return steps
+}
+
+export function isTemplatesFinalizeBusy(finalizePhase: TemplatesFinalizePhase | null): boolean {
+  return finalizePhase != null
+}
+
+export function resolveTemplatesFinalizeSteps(
+  finalizePhase: TemplatesFinalizePhase | null,
+): TemplatesBusyStep[] {
+  const order: TemplatesFinalizePhase[] = ['walls', 'doors', 'windows']
+  const activeIndex = finalizePhase ? order.indexOf(finalizePhase) : -1
+  const labels: Record<TemplatesFinalizePhase, string> = {
+    walls: tGlobal('templates.finalizeOverlay.stepWalls'),
+    doors: tGlobal('templates.finalizeOverlay.stepDoors'),
+    windows: tGlobal('templates.finalizeOverlay.stepWindows'),
+  }
+  return order.map((id, index) => ({
+    id,
+    label: labels[id],
+    status:
+      activeIndex < 0
+        ? 'pending'
+        : index < activeIndex
+          ? 'done'
+          : index === activeIndex
+            ? 'active'
+            : 'pending',
+  }))
 }
 
 export function isFaceSelectEnabled(

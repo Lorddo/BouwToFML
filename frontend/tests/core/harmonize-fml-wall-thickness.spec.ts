@@ -108,7 +108,7 @@ describe('buildFmlThicknessChains', () => {
 })
 
 describe('harmonizeFmlWallThickness', () => {
-  it('harmoniseert naar absolute tier-waarde (min) en forceert balance 0.5', () => {
+  it('harmoniseert naar absolute tier-waarde (min) en forceert balance 0.5 zonder diktewissel', () => {
     const plan = planWithWalls([
       wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10, 0.34),
       wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 11, 0.62),
@@ -119,6 +119,35 @@ describe('harmonizeFmlWallThickness', () => {
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
     expect(thicknesses).toEqual([10, 10, 10, 10])
     expect(harmonized.floors[0]?.walls.every((item) => item.balance === 0.5)).toBe(true)
+  })
+
+  it('aligns flush balance on collinear diktewissel na tier-map', () => {
+    const plan = planWithWalls([
+      wall('thick', { x: 0, y: 0 }, { x: 100, y: 0 }, 26, 0.5),
+      wall('thin', { x: 100, y: 0 }, { x: 200, y: 0 }, 10, 0.5),
+    ])
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
+    const walls = harmonized.floors[0]?.walls ?? []
+    expect(walls[0]?.thickness).toBe(30)
+    expect(walls[1]?.thickness).toBe(10)
+    // Equal length → upper-median thickness band (30) anchors at 0.5;
+    // thin flushes to shared world face (default faceLo → B=0).
+    expect(walls[0]?.balance).toBe(0.5)
+    expect(walls[1]?.balance).toBe(0)
+  })
+
+  it('chain-flushes with longest band at 0.5 after tiers (not thick-hint anchor)', () => {
+    const plan = planWithWalls([
+      wall('thick', { x: 0, y: 0 }, { x: 120, y: 0 }, 47, 0.34),
+      wall('thin', { x: 120, y: 0 }, { x: 220, y: 0 }, 11, 0.41),
+    ])
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
+    const walls = harmonized.floors[0]?.walls ?? []
+    expect(walls[0]?.thickness).toBe(30)
+    expect(walls[1]?.thickness).toBe(10)
+    // 47→30 is longer band → B=0.5; thin flushes to half of 30 (hint 0.41 → minus → 0)
+    expect(walls[0]?.balance).toBe(0.5)
+    expect(walls[1]?.balance).toBe(0)
   })
 
   it('splitst 10–12 en 20 op verschillende banden en mapt naar min/mid', () => {

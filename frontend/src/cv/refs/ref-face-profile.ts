@@ -137,7 +137,12 @@ export function labelWhiteFaces(
       const bh = maxY - minY + 1
       const bboxArea = bw * bh
       const centroid = { x: sumX / area, y: sumY / area }
-      const touchesBorder = minX <= 0 || minY <= 0 || maxX >= cropW - 1 || maxY >= cropH - 1
+      // Zonder seal: echte crop-rand. Met seal: 1px-frame → rand bij ≤1 / ≥w-2.
+      // touchesBorder hier = «raakt een rand»; rol-classificatie (3-kanten) volgt apart.
+      const borderHits = options?.sealBorders
+        ? countSealedBorderHits(minX, maxX, minY, maxY, cropW, cropH)
+        : countRawBorderHits(minX, maxX, minY, maxY, cropW, cropH)
+      const touchesBorder = borderHits > 0
 
       faces.push({
         label,
@@ -160,24 +165,76 @@ export function labelWhiteFaces(
   return { labels, faces }
 }
 
-function countTouchedBorders(face: RefFace, width: number, height: number): number {
+/** Aantal crop-kanten (0–4) dat de face-bbox raakt (zonder seal). */
+function countRawBorderHits(
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  cropW: number,
+  cropH: number,
+): number {
+  let count = 0
+  if (minX <= 0) count += 1
+  if (minY <= 0) count += 1
+  if (maxX >= cropW - 1) count += 1
+  if (maxY >= cropH - 1) count += 1
+  return count
+}
+
+/**
+ * Na 1px seal: white faces starten bij ≤1 / ≥w-2.
+ * Telt hoeveel crop-kanten de bbox raakt (0–4).
+ */
+function countSealedBorderHits(
+  minX: number,
+  maxX: number,
+  minY: number,
+  maxY: number,
+  cropW: number,
+  cropH: number,
+): number {
+  let count = 0
+  if (minY <= 1) count += 1
+  if (maxY >= cropH - 2) count += 1
+  if (minX <= 1) count += 1
+  if (maxX >= cropW - 2) count += 1
+  return count
+}
+
+function countTouchedBorders(
+  face: RefFace,
+  width: number,
+  height: number,
+  options?: { sealBorders?: boolean },
+): number {
   const minX = Math.floor(face.bbox.x)
   const minY = Math.floor(face.bbox.y)
   const maxX = Math.floor(face.bbox.x + face.bbox.width) - 1
   const maxY = Math.floor(face.bbox.y + face.bbox.height) - 1
-  let count = 0
-  if (minX <= 0) count += 1
-  if (minY <= 0) count += 1
-  if (maxX >= width - 1) count += 1
-  if (maxY >= height - 1) count += 1
-  return count
+  if (options?.sealBorders === true) {
+    return countSealedBorderHits(minX, maxX, minY, maxY, width, height)
+  }
+  return countRawBorderHits(minX, maxX, minY, maxY, width, height)
 }
 
-export function classifyFaceRoles(faces: RefFace[], width: number, height: number): RefFace[] {
+/**
+ * Muur (sealBorders): ≥3 crop-kanten → outside (vloer die om LBE heen loopt).
+ * Minder dan 3 → interior (muurcellen / arcering-vakken).
+ * Openingen (geen seal): elk randcontact → outside (bestaand gedrag).
+ */
+export function classifyFaceRoles(
+  faces: RefFace[],
+  width: number,
+  height: number,
+  options?: { sealBorders?: boolean },
+): RefFace[] {
   if (faces.length === 0) return []
+  const seal = options?.sealBorders === true
   return faces.map((face) => {
-    const borderHits = countTouchedBorders(face, width, height)
-    const role: RefFaceRole = face.touchesBorder || borderHits > 0 ? 'outside' : 'interior'
+    const borderHits = countTouchedBorders(face, width, height, options)
+    const isOutside = seal ? borderHits >= 3 : face.touchesBorder || borderHits > 0
+    const role: RefFaceRole = isOutside ? 'outside' : 'interior'
     return { ...face, role }
   })
 }
@@ -202,7 +259,7 @@ export function buildFaceProfile(
   })
   const minAreaPx = options?.minAreaPx ?? 4
   const filtered = faces.filter((f) => f.areaPx >= minAreaPx)
-  const roles = classifyFaceRoles(filtered, cropW, cropH)
+  const roles = classifyFaceRoles(filtered, cropW, cropH, { sealBorders })
   const dual = attachRefFaceDualFromWhiteLabels({
     data,
     width,
@@ -238,7 +295,7 @@ export function renderFaceOverlayRgba(
     sealBorders,
     connectivity: options?.connectivity ?? (sealBorders ? 4 : 8),
   })
-  const roles = classifyFaceRoles(faces, cropW, cropH)
+  const roles = classifyFaceRoles(faces, cropW, cropH, { sealBorders })
   const roleByLabel = new Map<number, RefFaceRole>()
   for (const face of roles) roleByLabel.set(face.label, face.role)
   const out = new Uint8ClampedArray(cropW * cropH * 4)

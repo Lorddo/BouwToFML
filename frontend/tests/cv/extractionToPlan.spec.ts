@@ -134,7 +134,7 @@ describe('extractionToPlan', () => {
     expect(plan.floors[0].walls[0]?.balance).toBe(0.5)
   })
 
-  it('clamped balance blijft binnen Floorplanner bereik', () => {
+  it('laat gemeten balance door binnen Floorplanner bereik 0..1', () => {
     const output: ExtractionOutput = {
       candidates: [],
       semanticWallGraph: {
@@ -161,7 +161,7 @@ describe('extractionToPlan', () => {
       pxPerMmX: 2,
       pxPerMmY: 2,
     })
-    expect(plan.floors[0].walls[0]?.balance).toBe(0.8)
+    expect(plan.floors[0].walls[0]?.balance).toBe(0.94)
   })
 
   it('vertaalt laag-12 deuren naar FML-openings met mirrored op muurrichting', () => {

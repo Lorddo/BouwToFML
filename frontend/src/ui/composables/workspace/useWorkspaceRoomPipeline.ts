@@ -49,6 +49,21 @@ export function useWorkspaceRoomPipeline(deps: {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
+  updateRectWallThicknessBand: (
+    id: string,
+    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
+  ) => void
+  /** Project/export diktes voor max-equivalent schaal. */
+  getWallThicknessLimits: () => import('@/core/fml/fml-wall-thickness-limits').FmlWallThicknessLimits
+  setWallThicknessCm?: (
+    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
+    cm: number,
+  ) => void
+  /** Laatste multi-ref metingen (voor bandgrenzen). */
+  wallRefThicknessMeasures: Ref<
+    import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+  >
+  wallThicknessBandBoundariesPx?: Ref<{ midBoundaryPx: number; maxBoundaryPx: number } | null>
   endDraw: () => void
   cancelDraw: () => void
   clearSignatureForRect: (id: string) => void
@@ -79,7 +94,9 @@ export function useWorkspaceRoomPipeline(deps: {
   clearGapsInkModeManual?: () => void
   onDoorFacesDemoted?: () => void | Promise<void>
   onWindowFacesDemoted?: () => void | Promise<void>
-  onAfterFinalize?: () => void | Promise<void>
+  onAfterFinalize?: (
+    setFinalizePhase: (phase: import('./workspace-view-visibility').TemplatesFinalizePhase) => void,
+  ) => void | Promise<void>
 }) {
   const roomFacesRef = ref<ReturnType<typeof useWorkspaceRoomFaces> | null>(null)
 
@@ -111,6 +128,11 @@ export function useWorkspaceRoomPipeline(deps: {
     selectRect: deps.selectRect,
     updateRectBounds: deps.updateRectBounds,
     updateRectFmlRefId: deps.updateRectFmlRefId,
+    updateRectWallThicknessBand: deps.updateRectWallThicknessBand,
+    getWallThicknessLimits: deps.getWallThicknessLimits,
+    setWallThicknessCm: deps.setWallThicknessCm,
+    wallRefThicknessMeasures: deps.wallRefThicknessMeasures,
+    wallThicknessBandBoundariesPx: deps.wallThicknessBandBoundariesPx,
     endDraw: deps.endDraw,
     cancelDraw: deps.cancelDraw,
     clearSignatureForRect: deps.clearSignatureForRect,
@@ -174,7 +196,10 @@ export function useWorkspaceRoomPipeline(deps: {
       deps.showLayer14.value = true
       deps.resetFmlPreview()
       await semanticWalls.buildAfterFinalize()
-      await deps.onAfterFinalize?.()
+      await deps.onAfterFinalize?.((phase) => {
+        roomFacesRef.value?.setFinalizePhase(phase)
+      })
+      roomFacesRef.value?.setFinalizePhase(null)
       deps.resultTab.value = 'vector'
       deps.flowStep.value = 'result'
     },

@@ -377,8 +377,8 @@ const showMeasureStrip = computed(
             type="range"
             min="0"
             max="1"
-            step="0.05"
-            class="fml-toolbelt__balance-input"
+            step="0.01"
+            class="fml-toolbelt__balance-slider"
             :aria-label="t('result.toolbar.alignmentAria')"
             :value="wallBalanceMixed ? 0.5 : wallBalanceDraft"
             :disabled="wallBalanceMixed"
@@ -386,9 +386,18 @@ const showMeasureStrip = computed(
             @change="onWallBalanceChange"
             @pointerup="releaseControlFocus"
           />
-          <span class="fml-toolbelt__unit">{{
-            wallBalanceMixed ? '—' : wallBalanceDraft.toFixed(2)
-          }}</span>
+          <input
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+            class="fml-toolbelt__thickness-input"
+            :aria-label="t('result.toolbar.alignmentAria')"
+            :value="wallBalanceMixed ? '' : wallBalanceDraft"
+            :placeholder="wallBalanceMixed ? '—' : undefined"
+            @input="emit('wallBalanceInput', $event)"
+            @change="onWallBalanceChange"
+          />
         </div>
       </div>
       <div v-if="selectedOpeningPanel" class="fml-toolbelt__field">
@@ -703,8 +712,8 @@ const showMeasureStrip = computed(
   border-radius: 4px;
 }
 
-.fml-toolbelt__balance-input {
-  width: 64px;
+.fml-toolbelt__balance-slider {
+  width: 72px;
 }
 
 .fml-toolbelt__select {

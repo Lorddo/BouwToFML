@@ -16,11 +16,15 @@ import {
 } from '@/core/fml/measure-underlay-wall-thickness'
 import {
   DEFAULT_FML_BAND_BOUNDARIES,
+  bandBoundariesCmToPx,
   deriveFmlBandBoundariesCmFromRefPx,
+  deriveFmlBandBoundariesFromWallRefMeasures,
   loadFmlThicknessBandBoundaries,
   saveFmlThicknessBandBoundaries,
   type FmlThicknessBandBoundaries,
 } from '@/core/fml/fml-wall-thickness-tiers'
+import type { WallRefThicknessMeasure } from '@/platform/selection/wall-thickness-ref'
+import type { WallThicknessBandBoundariesPx } from '@/core/fml/wall-thickness-chain'
 import {
   DEFAULT_FML_WALL_THICKNESS_LIMITS,
   loadFmlWallThicknessLimits,
@@ -50,6 +54,8 @@ export type WorkspaceFmlThicknessUiDeps = {
   getBaseWallBw: () => { data: Uint8Array; width: number; height: number } | null
   referenceWallBandSync?: {
     referenceWallThicknessPx: Ref<number | null>
+    wallRefThicknessMeasures?: Ref<WallRefThicknessMeasure[]>
+    wallThicknessBandBoundariesPx?: Ref<WallThicknessBandBoundariesPx | null>
     devSessionRestoring: Ref<boolean>
   }
 }
@@ -136,11 +142,29 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     referenceWallThicknessPx: number,
     pxPerMmX: number,
     pxPerMmY: number,
+    measures?: WallRefThicknessMeasure[],
   ): void {
-    const derived = deriveFmlBandBoundariesCmFromRefPx(referenceWallThicknessPx, pxPerMmX, pxPerMmY)
+    const derived =
+      measures && measures.length > 0
+        ? deriveFmlBandBoundariesFromWallRefMeasures({
+            measures,
+            referenceWallThicknessPx,
+            pxPerMmX,
+            pxPerMmY,
+            limitsCm: {
+              minCm: fmlThicknessMinCm.value,
+              midCm: fmlThicknessMidCm.value,
+              maxCm: fmlThicknessMaxCm.value,
+            },
+          })
+        : deriveFmlBandBoundariesCmFromRefPx(referenceWallThicknessPx, pxPerMmX, pxPerMmY)
     fmlBandMidBoundaryCm.value = derived.midBoundaryCm
     fmlBandMaxBoundaryCm.value = derived.maxBoundaryCm
     appliedFmlBandBoundaries.value = { ...derived }
+    const pxBounds = bandBoundariesCmToPx(derived, pxPerMmX, pxPerMmY)
+    if (deps.referenceWallBandSync?.wallThicknessBandBoundariesPx) {
+      deps.referenceWallBandSync.wallThicknessBandBoundariesPx.value = pxBounds
+    }
   }
 
   if (deps.referenceWallBandSync) {
@@ -148,15 +172,21 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       () =>
         [
           deps.referenceWallBandSync!.referenceWallThicknessPx.value,
+          deps.referenceWallBandSync!.wallRefThicknessMeasures?.value,
           deps.scale.confirmed.value,
           deps.scale.pixelsPerMillimeterX.value,
           deps.scale.pixelsPerMillimeterY.value,
           deps.referenceWallBandSync!.devSessionRestoring.value,
         ] as const,
-      ([refPx, confirmed, pxX, pxY, restoring]) => {
+      ([refPx, measures, confirmed, pxX, pxY, restoring]) => {
         if (restoring) return
         if (!confirmed || refPx == null || refPx <= 0 || pxX <= 0 || pxY <= 0) return
-        applyBandBoundariesFromReferenceWall(refPx, pxX, pxY)
+        applyBandBoundariesFromReferenceWall(
+          refPx,
+          pxX,
+          pxY,
+          Array.isArray(measures) ? measures : undefined,
+        )
       },
     )
   }

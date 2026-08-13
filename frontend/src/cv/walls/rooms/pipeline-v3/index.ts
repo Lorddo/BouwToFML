@@ -36,6 +36,8 @@ export async function runPipelineV3(params: {
   layer1?: PipelineV3Layer1Result
   maskRle: RoomWallMaskRle
   referenceWallThicknessPx?: number
+  /** Absolute meetbandgrenzen uit multi muur-ref (L7/L9/L10 classify). */
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
 }): Promise<PipelineV3Result> {
   const incompleteLayers = listIncompleteLayers(V3_NATIVE_THROUGH_LAYER)
   const fmlReady = isV3FmlReady(V3_NATIVE_THROUGH_LAYER)
@@ -82,6 +84,7 @@ export async function runPipelineV3(params: {
     cv: params.cv,
     maskRle: params.maskRle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
+    bandBoundariesPx: params.bandBoundariesPx,
     distanceMap,
   })
   const layer8 = runLayer8Finalize({
@@ -96,6 +99,7 @@ export async function runPipelineV3(params: {
     cv: params.cv,
     maskRle: params.maskRle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
+    bandBoundariesPx: params.bandBoundariesPx,
     distanceMap,
   })
   const layer10 = runLayer10Fml({
@@ -103,6 +107,7 @@ export async function runPipelineV3(params: {
     cv: params.cv,
     maskRle: params.maskRle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
+    bandBoundariesPx: params.bandBoundariesPx,
     distanceMap,
   })
 

@@ -18,6 +18,7 @@ import {
   type CollapseAxis,
   type ExactPoint,
 } from './adjacency'
+import { segmentsThicknessCompatible } from './thickness'
 
 export interface ChainAxisStraightenStats {
   chainsStraightened: number
@@ -92,6 +93,9 @@ function collectAxisClusters(params: {
   maxSpreadPx: number
   maxBridgePx: number
   hvBandPx: number
+  thicknessBySegment?: number[]
+  policy: CollapsePolicy
+  referenceWallThicknessPx?: number
 }): number[][] {
   const { segments, axis, maxSpreadPx, maxBridgePx } = params
   const members: number[] = []
@@ -104,6 +108,14 @@ function collectAxisClusters(params: {
   const { find, union } = buildUnionFind(segments.length)
   const adjacency = buildExactAdjacency(segments)
 
+  const bandOk = (indices: number[]) =>
+    segmentsThicknessCompatible(
+      indices,
+      params.thicknessBySegment,
+      params.policy,
+      params.referenceWallThicknessPx,
+    )
+
   // 1) Direct: same-axis (or 0px) segments that share an exact endpoint.
   for (const node of adjacency.values()) {
     const local = [...new Set(node.incidents.map((inc) => inc.segIndex))].filter((idx) =>
@@ -114,7 +126,9 @@ function collectAxisClusters(params: {
         const a = local[i]
         const b = local[j]
         const spread = Math.abs(axisValueOf(segments[a], axis) - axisValueOf(segments[b], axis))
-        if (spread <= maxSpreadPx) union(a, b)
+        if (spread > maxSpreadPx) continue
+        if (!bandOk([a, b])) continue
+        union(a, b)
       }
     }
   }
@@ -154,7 +168,10 @@ function collectAxisClusters(params: {
       for (const b of armsB) {
         if (a === b) continue
         const spread = Math.abs(axisValueOf(segments[a], axis) - axisValueOf(segments[b], axis))
-        if (spread <= maxSpreadPx) union(a, b)
+        if (spread > maxSpreadPx) continue
+        // Refuse cross-band façade steps (arms + stub) so FML balance can use the jog.
+        if (!bandOk([a, b, stubIndex])) continue
+        union(a, b)
       }
     }
   }
@@ -287,10 +304,13 @@ function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: n
 /**
  * Straighten collinear H/V chains onto one consensus axis.
  * L10 only (`enableChainAxisStraighten`).
+ * Weigert axis-union over dikteband-wissel wanneer thicknessBySegment is meegegeven.
  */
 export function straightenCollinearAxisChains(
   segments: Segment[],
   policy: CollapsePolicy,
+  thicknessBySegment?: number[],
+  referenceWallThicknessPx?: number,
 ): { segments: Segment[]; stats: ChainAxisStraightenStats } {
   if (!policy.enableChainAxisStraighten) {
     throw new Error('V3 straightenCollinearAxisChains: disabled for this layer policy')
@@ -309,6 +329,9 @@ export function straightenCollinearAxisChains(
       maxSpreadPx: policy.chainAxisMaxSpreadPx,
       maxBridgePx: policy.microCornerMaxPx,
       hvBandPx,
+      thicknessBySegment,
+      policy,
+      referenceWallThicknessPx,
     })
 
     for (const clusterIndices of clusters) {

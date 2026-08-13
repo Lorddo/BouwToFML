@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isTemplatesFinalizeBusy,
   isTemplatesInitialDetectionBusy,
+  resolveTemplatesFinalizeSteps,
   resolveTemplatesInitialDetectionSteps,
 } from '@/ui/composables/workspace/workspace-view-visibility'
 
@@ -122,5 +124,46 @@ describe('resolveTemplatesInitialDetectionSteps', () => {
       ocrInitialPassReady: true,
     })
     expect(steps.map((s) => s.status)).toEqual(['done', 'active', 'pending', 'pending'])
+  })
+})
+
+describe('isTemplatesFinalizeBusy', () => {
+  it('is busy zolang finalizePhase gezet is', () => {
+    expect(isTemplatesFinalizeBusy(null)).toBe(false)
+    expect(isTemplatesFinalizeBusy('walls')).toBe(true)
+    expect(isTemplatesFinalizeBusy('doors')).toBe(true)
+    expect(isTemplatesFinalizeBusy('windows')).toBe(true)
+  })
+})
+
+describe('resolveTemplatesFinalizeSteps', () => {
+  it('markeert muren active bij walls-fase', () => {
+    const steps = resolveTemplatesFinalizeSteps('walls')
+    expect(steps.map((s) => s.id)).toEqual(['walls', 'doors', 'windows'])
+    expect(steps.map((s) => s.status)).toEqual(['active', 'pending', 'pending'])
+  })
+
+  it('markeert deuren active na muren', () => {
+    expect(resolveTemplatesFinalizeSteps('doors').map((s) => s.status)).toEqual([
+      'done',
+      'active',
+      'pending',
+    ])
+  })
+
+  it('markeert ramen active na deuren', () => {
+    expect(resolveTemplatesFinalizeSteps('windows').map((s) => s.status)).toEqual([
+      'done',
+      'done',
+      'active',
+    ])
+  })
+
+  it('houdt alles pending zonder fase', () => {
+    expect(resolveTemplatesFinalizeSteps(null).map((s) => s.status)).toEqual([
+      'pending',
+      'pending',
+      'pending',
+    ])
   })
 })

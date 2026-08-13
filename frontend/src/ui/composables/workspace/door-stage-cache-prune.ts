@@ -1,6 +1,8 @@
 import { resolveClassAtLabel, type RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { DoorSwingHypothesis, ResolvedDoorCandidate } from '@/cv/doors'
 import type { DoorSwingStageCache } from './useWorkspaceDoorSwingHelpers'
+import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
+import { reconcileResolvedDoorsForClassification } from './door-faces-reconcile-classification'
 
 function faceStillClassifiedAs(
   faceIds: readonly number[],
@@ -32,13 +34,15 @@ export function resolvedDoorStillClassifiedAsDoor(
 }
 
 /**
- * Na handmatige demote: drop hypotheses/resolved zonder class=`door`.
+ * Na handmatige demote: drop hypotheses zonder class=`door`; resolved strippen tot
+ * alleen nog-door faces + alleen nog-doorframe DF-ids (wees-DF→window vallen af).
  * Geen Stage-herdetectie — alleen cache-prune (zelfde contract als windows).
  */
 export function pruneDoorStageCacheByClassification<T extends DoorSwingStageCache>(
   cache: T,
   classification: Map<number, RoomRasterClass>,
   parentMap: Map<number, number>,
+  dual: FaceDualSpace | null = null,
 ): T {
   const stage1Hypotheses = cache.stage1Hypotheses.filter((hyp) =>
     doorHypothesisStillClassifiedAsDoor(hyp, classification, parentMap),
@@ -46,9 +50,12 @@ export function pruneDoorStageCacheByClassification<T extends DoorSwingStageCach
   const stage2AcceptedHypotheses = cache.stage2AcceptedHypotheses.filter((hyp) =>
     doorHypothesisStillClassifiedAsDoor(hyp, classification, parentMap),
   )
-  const resolvedDoors = cache.resolvedDoors.filter((door) =>
-    resolvedDoorStillClassifiedAsDoor(door, classification, parentMap),
-  )
+  const resolvedDoors = reconcileResolvedDoorsForClassification({
+    resolved: cache.resolvedDoors,
+    classification,
+    parentMap,
+    dual,
+  })
 
   return {
     ...cache,

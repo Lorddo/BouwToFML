@@ -1,4 +1,5 @@
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
+import { alignWallJunctionBalance } from './align-wall-junction-balance'
 import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import { resolveEffectiveFmlWallThicknessLimits } from './fml-wall-thickness-limits'
@@ -185,9 +186,6 @@ function resolveBandThicknessCm(band: FmlThicknessBand, limits: FmlWallThickness
   return effective.maxCm
 }
 
-/** Elke geharmoniseerde muur krijgt deze balans; overschrijft de gemeten waarde (ESC:X-01). */
-const HARMONIZED_WALL_BALANCE = 0.5
-
 // ESC:X-05 (E)
 /** Afronden op 1 decimaal — discrete FML-waarde uit ketengemiddelde. */
 export function roundFmlThicknessCm(value: number): number {
@@ -198,11 +196,12 @@ export function roundFmlThicknessCm(value: number): number {
   return Math.round(value * 10) / 10
 }
 
-// ESC:X-02 (E)
+// ESC:X-02 (E) + ESC:X-01 (E)
 /**
  * Harmoniseert muurdikte per keten en mapt naar absolute min/mid/max exportdiktes.
  * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits (bewust beleid).
- * Balance: altijd 0.5 bij export (ESC:X-01 AFBAKENEN) — gemeten hinge niet meenemen.
+ * Balance: default 0.5; collineaire diktewissel-ketens krijgen gedeelde flush-face
+ * op alle leden (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
  */
 export function harmonizeFmlWallThickness(
   plan: FloorPlan,
@@ -221,39 +220,31 @@ export function harmonizeFmlWallThickness(
         for (const index of chain) thicknessByIndex.set(index, exportThickness)
       }
 
+      const thicknessAssigned = floor.walls.map((wall, index) => {
+        const exportThickness =
+          thicknessByIndex.get(index) ??
+          resolveBandThicknessCm(
+            classifyFmlThicknessBand(roundFmlThicknessCm(wall.thickness), boundaries),
+            limits,
+          )
+        if (exportThickness !== wall.thickness) {
+          noteDiscardedMeasurement(
+            'X-02',
+            'harmonizeFmlWallThickness',
+            wall.thickness,
+            exportThickness,
+            { chained: thicknessByIndex.has(index) },
+          )
+        }
+        return {
+          ...wall,
+          thickness: exportThickness,
+        }
+      })
+
       return {
         ...floor,
-        walls: floor.walls.map((wall, index) => {
-          const exportThickness =
-            thicknessByIndex.get(index) ??
-            resolveBandThicknessCm(
-              classifyFmlThicknessBand(roundFmlThicknessCm(wall.thickness), boundaries),
-              limits,
-            )
-          if (exportThickness !== wall.thickness) {
-            noteDiscardedMeasurement(
-              'X-02',
-              'harmonizeFmlWallThickness',
-              wall.thickness,
-              exportThickness,
-              { chained: thicknessByIndex.has(index) },
-            )
-          }
-          if (wall.balance != null && wall.balance !== HARMONIZED_WALL_BALANCE) {
-            noteDiscardedMeasurement(
-              'X-01',
-              'harmonizeFmlWallThickness',
-              wall.balance,
-              HARMONIZED_WALL_BALANCE,
-            )
-          }
-          return {
-            ...wall,
-            thickness: exportThickness,
-            // ESC:X-01 (E) — AFBAKENEN: export altijd 0.5 (geen gemeten hinge-balance).
-            balance: HARMONIZED_WALL_BALANCE,
-          }
-        }),
+        walls: alignWallJunctionBalance(thicknessAssigned),
       }
     }),
   }

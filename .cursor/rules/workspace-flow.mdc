@@ -10,7 +10,7 @@ Lees `.cursor/docs/workspace-flow.md` vóór UI/CV-wijzigingen aan upload, prepr
 ## Vaste stappen
 
 0. **Project** — naam, adres, verdiepingen, FML-defaults (`project`)
-1. **Onderlegger** — schaal, rotatie, gum/crop (`input`); knop onderlegger overnemen
+1. **Onderlegger** — schaal, rotatie (optioneel vastzetten), gum/crop (`input`); knop onderlegger overnemen
 2. **Voorbewerking** — B/W muren (+ int muur) + referentievakken; knop B/W overnemen; optioneel Muurstempel (FML→B/W+Otsu); OCR-toggle; muurdikte bij afronden (`preprocess`)
 3. **Detectie** — optioneel OCR scan+mask, daarna muren (room-first) genereren (`templates` → `tabOutputs.walls`) — **solo per floor**
 4. **Resultaat** — gecombineerde view + FML; project-download = `mergeFloorPlans` (`result`)

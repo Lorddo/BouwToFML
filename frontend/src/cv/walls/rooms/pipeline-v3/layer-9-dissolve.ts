@@ -24,11 +24,15 @@ export function runLayer9Dissolve(params: {
   cv: OpenCV
   maskRle: RoomWallMaskRle
   referenceWallThicknessPx?: number
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
 }): PipelineV3Layer9Result {
   reportPipelineProgress('Skeleton Laag 9 — dissolve (chain/stub/cover)…')
-  const policy = resolveLayer9DissolvePolicy(params.referenceWallThicknessPx)
+  const policy = resolveLayer9DissolvePolicy(
+    params.referenceWallThicknessPx,
+    params.bandBoundariesPx,
+  )
   const distanceMap =
     params.distanceMap !== undefined
       ? params.distanceMap
@@ -81,10 +85,25 @@ export function runLayer9Dissolve(params: {
       fakeLRemoved += chainGuard.result.stats.fakeLRemoved
     }
 
+    // Re-sample after chain: indices no longer match the pre-chain thickness array.
+    const thicknessForStub = buildThicknessBySegment({
+      segments: segmentsOut,
+      cv: params.cv,
+      maskRle: params.maskRle,
+      policy: policy.collapse,
+      referenceWallThicknessPx: params.referenceWallThicknessPx,
+      distanceMap,
+    })
     const stubGuard = withTopologyGuard({
       segments: segmentsOut,
       policy: policy.collapse,
-      apply: (segments) => collapseOrthoStairStubs(segments, policy.collapse),
+      apply: (segments) =>
+        collapseOrthoStairStubs(
+          segments,
+          policy.collapse,
+          thicknessForStub,
+          params.referenceWallThicknessPx,
+        ),
     })
     tally('W-49', stubGuard.preserved ? 'stub_accepted' : 'stub_rolled_back')
     if (stubGuard.preserved) {

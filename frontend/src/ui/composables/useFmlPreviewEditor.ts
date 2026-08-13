@@ -5,8 +5,9 @@ import {
   addWallSegment,
   buildJunctions,
   findMergeTarget,
+  JUNCTION_POINT_SNAP_CM,
   mergeJunctions,
-  moveJunction,
+  moveJunctionWithWallJoins,
   removeWall,
   removeWalls,
   setWallBalance,
@@ -15,6 +16,7 @@ import {
   setWallsThickness,
   slideWallSegmentAlongAxis,
   snapPointToJunctions,
+  snapPointToWallCenters,
   snapToNearbyEndpointAxes,
   stableJunctionId,
   splitWallAtT,
@@ -93,7 +95,15 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   }
 
   function applyJunctionMove(node: JunctionNode, position: { x: number; y: number }): void {
-    setWalls(moveJunction(walls.value, node, position))
+    setWalls(moveJunctionWithWallJoins(walls.value, node, position))
+  }
+
+  function previewJunctionMove(
+    baseWalls: Wall[],
+    node: JunctionNode,
+    position: { x: number; y: number },
+  ): void {
+    setWalls(moveJunctionWithWallJoins(baseWalls, node, position))
   }
 
   function applyJunctionMerge(source: JunctionNode, target: JunctionNode): void {
@@ -239,6 +249,7 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     prepareParentSync,
     addWallSegment,
     applyJunctionMove,
+    previewJunctionMove,
     applyJunctionMerge,
     applyWallThickness,
     applyWallsThickness,
@@ -261,11 +272,19 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     removeDoorOpenings,
     findMergeTarget: (sourceRefs: WallEndRef[], position: { x: number; y: number }) =>
       findMergeTarget(junctions.value, sourceRefs, position),
-    snapJunctionPoint: (refs: WallEndRef[], candidate: { x: number; y: number }) => {
-      const axisSnap = snapToNearbyEndpointAxes(walls.value, refs, candidate)
+    snapJunctionPoint: (
+      refs: WallEndRef[],
+      candidate: { x: number; y: number },
+      snapWalls?: Wall[],
+    ) => {
+      const sourceWalls = snapWalls ?? walls.value
+      const axisSnap = snapToNearbyEndpointAxes(sourceWalls, refs, candidate)
       const sourceId = stableJunctionId(refs)
-      const otherJunctions = junctions.value.filter((item) => item.id !== sourceId)
-      return snapPointToJunctions(otherJunctions, axisSnap, 4)
+      const sourceJunctions = snapWalls ? buildJunctions(snapWalls) : junctions.value
+      const otherJunctions = sourceJunctions.filter((item) => item.id !== sourceId)
+      const junctionSnap = snapPointToJunctions(otherJunctions, axisSnap, JUNCTION_POINT_SNAP_CM)
+      const exclude = new Set(refs.map((ref) => ref.wallId))
+      return snapPointToWallCenters(sourceWalls, junctionSnap, JUNCTION_POINT_SNAP_CM, exclude)
     },
     undo,
     canUndo,

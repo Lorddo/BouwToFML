@@ -4,7 +4,7 @@ import { computed } from 'vue'
 import type Konva from 'konva'
 
 import type { SelectionRect } from '@/platform/selection'
-
+import { resolveWallThicknessBand } from '@/platform/selection/wall-thickness-ref'
 import type { ElementClass } from '@/core/extraction/types'
 
 import type { ResizeHandle } from '../composables/useFloorplanRectInteraction'
@@ -23,6 +23,9 @@ const props = defineProps<{
   isSelectionMode: boolean
 
   typeColors: Partial<Record<ElementClass, string>>
+
+  /** Project export-cm for wall LBE labels (min/mid/max). */
+  wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number } | null
 
   iconSize: number
 
@@ -53,6 +56,29 @@ function colorFor(type: ElementClass): string {
   return props.typeColors[type] ?? '#64748b'
 }
 
+function wallBandLabel(rect: SelectionRect): string | null {
+  if (rect.type !== 'wall') return null
+  const band = resolveWallThicknessBand(rect)
+  const limits = props.wallThicknessLimits
+  if (!limits) return band
+  const cm = band === 'min' ? limits.minCm : band === 'mid' ? limits.midCm : limits.maxCm
+  return `${cm}`
+}
+
+function wallLabelConfig(rect: SelectionRect) {
+  const text = wallBandLabel(rect)
+  if (!text) return null
+  return {
+    x: rect.x + 4,
+    y: rect.y + 4,
+    text,
+    fontSize: Math.max(11, Math.min(16, Math.min(rect.width, rect.height) * 0.35)),
+    fontStyle: 'bold',
+    fill: '#1e3a8a',
+    listening: false,
+  }
+}
+
 function rectConfig(rect: SelectionRect) {
   const stroke = colorFor(rect.type)
 
@@ -76,6 +102,18 @@ function rectConfig(rect: SelectionRect) {
     onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => props.onRectMouseDown(e, rect.id),
   }
 }
+
+const wallLabelConfigs = computed(() =>
+  props.lbeRects
+    .map((rect) => {
+      const config = wallLabelConfig(rect)
+      return config ? { id: rect.id, config } : null
+    })
+    .filter(
+      (row): row is { id: string; config: NonNullable<ReturnType<typeof wallLabelConfig>> } =>
+        row != null,
+    ),
+)
 
 const previewConfig = computed(() => {
   const rect = props.previewRect
@@ -248,6 +286,7 @@ const deleteIconGroupConfig = computed(() => {
 <template>
   <v-group>
     <v-rect v-for="rect in lbeRects" :key="rect.id" :config="rectConfig(rect)" />
+    <v-text v-for="row in wallLabelConfigs" :key="'lbl-' + row.id" :config="row.config" />
     <v-rect v-if="previewConfig" :config="previewConfig" />
 
     <template v-if="selectedRect && isSelectionMode">

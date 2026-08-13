@@ -57,7 +57,10 @@ export type WorkspaceDevSessionRestoreBaseDeps = {
   clearPreprocessPreview: () => void
   restoreOcrFromRegions: (regions: OcrTextCandidate[]) => void
   referenceWallThicknessPx: Ref<number | null>
-  restoreWallReferenceRect: (rect: DevWallReferenceRect) => void
+  wallRefThicknessMeasures: Ref<
+    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+  >
+  restoreWallReferenceRects: (rects: DevWallReferenceRect[]) => void
   restoreOpeningReferenceRects: (rects: DevOpeningReferenceRect[]) => void
   setLocalError: (message: string | null) => void
   resetAutoDoorPassGate: () => void
@@ -113,8 +116,24 @@ export function createWorkspaceDevSessionRestoreBase(deps: WorkspaceDevSessionRe
     if (session.referenceWallThicknessPx != null && session.referenceWallThicknessPx > 0) {
       deps.referenceWallThicknessPx.value = session.referenceWallThicknessPx
     }
-    if (session.referenceWallRect) {
-      deps.restoreWallReferenceRect(session.referenceWallRect)
+    if (session.wallRefThicknessMeasures?.length) {
+      deps.wallRefThicknessMeasures.value = session.wallRefThicknessMeasures
+        .filter(
+          (m) =>
+            (m.band === 'min' || m.band === 'mid' || m.band === 'max') &&
+            Number.isFinite(m.thicknessPx) &&
+            m.thicknessPx > 0,
+        )
+        .map((m) => ({ band: m.band, thicknessPx: m.thicknessPx }))
+    }
+    const wallRects =
+      session.referenceWallRects && session.referenceWallRects.length > 0
+        ? session.referenceWallRects
+        : session.referenceWallRect
+          ? [session.referenceWallRect]
+          : []
+    if (wallRects.length > 0) {
+      deps.restoreWallReferenceRects(wallRects)
     }
     if (session.openingRects?.length) {
       deps.restoreOpeningReferenceRects(session.openingRects)

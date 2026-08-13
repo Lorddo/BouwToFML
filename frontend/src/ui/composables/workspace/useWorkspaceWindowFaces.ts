@@ -10,6 +10,7 @@ import { formatCvError } from '@/cv/formatCvError'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import {
   effectiveClassification,
+  ensureFaceDualSpace,
   resolveFloorDual,
   setFaceClassificationForLabels,
   type RoomRasterCache,
@@ -29,7 +30,10 @@ import {
 import type { SelectionRect } from '@/platform/selection'
 import type { WorkspaceFlowStep } from './constants'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
-import { pruneWindowStageCacheByClassification } from './window-stage-cache-prune'
+import {
+  promoteOrphanedDoorframesToWindowsInStageCache,
+  pruneWindowStageCacheByClassification,
+} from './window-stage-cache-prune'
 import { bindResolvedWindowsToWalls as bindResolvedWindowsToWallsCore } from './window-faces-bind'
 import {
   resolveEffectiveWallClassification,
@@ -219,10 +223,12 @@ export function useWorkspaceWindowFaces(deps: {
       roomRasterCache: deps.roomRasterCache.value,
       wallsMeta: deps.tabOutputs.value.walls,
     })
+    const dual = deps.roomRasterCache.value ? ensureFaceDualSpace(deps.roomRasterCache.value) : null
     stageCache.value = pruneWindowStageCacheByClassification(
       stageCache.value,
       classification,
       parentMap,
+      dual,
     )
     autoPass.lastAutoWindowFaceIds = collectWindowClassFaceIds({
       stage: 'stage3',
@@ -261,8 +267,8 @@ export function useWorkspaceWindowFaces(deps: {
   }
 
   /**
-   * Na deur-demote prune: sync door-arc sig (geen volle Stage 1–4) en ruim
-   * wees-doorframes op die niet meer aan een surviving swing hangen.
+   * Na deur-demote prune: sync door-arc sig (geen volle Stage 1–4) en promoveer
+   * wees-doorframes (niet meer aan een surviving swing) terug naar window.
    */
   // ESC:O-23 (D)
   async function acknowledgeDoorSwingDemotePrune(
@@ -282,6 +288,9 @@ export function useWorkspaceWindowFaces(deps: {
     const orphaned = [...new Set(orphanedDoorframeFaceIds.filter((id) => id > 0))]
     if (orphaned.length <= 0) return
 
+    // Eerst stage-promotie (vóór prune), anders verdwijnen DF-entries zonder window-tegenhanger.
+    stageCache.value = promoteOrphanedDoorframesToWindowsInStageCache(stageCache.value, orphaned)
+
     const cache = deps.roomRasterCache.value
     if (cache) {
       const stillDoorframe = orphaned.filter((id) => cache.faceOverrides.get(id) === 'doorframe')
@@ -289,7 +298,7 @@ export function useWorkspaceWindowFaces(deps: {
         setFaceClassificationForLabels(
           cache,
           stillDoorframe,
-          'wall',
+          'window',
           deps.referenceWallThicknessPx?.value ?? undefined,
         )
         persistOverrides(cache)
@@ -299,6 +308,7 @@ export function useWorkspaceWindowFaces(deps: {
     autoPass.lastAutoDoorframeFaceIds = autoPass.lastAutoDoorframeFaceIds.filter(
       (id) => !orphaned.includes(id),
     )
+    autoPass.lastAutoWindowFaceIds = [...new Set([...autoPass.lastAutoWindowFaceIds, ...orphaned])]
     await refreshWindowsFromExistingClasses()
   }
 

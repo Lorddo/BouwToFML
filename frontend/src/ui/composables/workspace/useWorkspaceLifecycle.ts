@@ -30,6 +30,9 @@ export function useWorkspaceLifecycle(deps: {
     invalidateAutoWindowPass: () => void
   }
   referenceWallThicknessPx: Ref<number | null>
+  wallRefThicknessMeasures?: Ref<
+    import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+  >
   wallsDetectionComplete: Ref<boolean>
   flowStep: Ref<WorkspaceFlowStep>
   preprocessUi: { clearLivePreviewTimer: () => void }
@@ -60,6 +63,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.roomFaces.resetRoomState()
     clearOpeningOverlays()
     deps.referenceWallThicknessPx.value = null
+    if (deps.wallRefThicknessMeasures) deps.wallRefThicknessMeasures.value = []
     deps.wallsDetectionComplete.value = false
   }
 
@@ -96,6 +100,7 @@ export function useWorkspaceLifecycle(deps: {
     deps.roomFaces.resetRoomState()
     clearOpeningOverlays()
     deps.referenceWallThicknessPx.value = null
+    if (deps.wallRefThicknessMeasures) deps.wallRefThicknessMeasures.value = []
     deps.wallsDetectionComplete.value = false
     deps.flowStep.value = 'input'
   }

@@ -50,6 +50,7 @@ describe('captureDevWorkspaceSession room snapshot', () => {
     expect(session.referenceWallThicknessPx).toBe(14)
     expect(session.inkOverlayRle).toEqual([0, 100, 1, 4])
     expect(session.openingRects).toEqual([{ type: 'door', x: 40, y: 50, width: 20, height: 12 }])
+    expect(session.referenceWallRects).toEqual([{ x: 10, y: 20, width: 30, height: 8 }])
     expect(session.detectionExact?.referenceWallThicknessPx).toBe(14)
     expect(session.detectionExact?.referenceWallRect).toEqual({
       x: 10,
@@ -57,12 +58,74 @@ describe('captureDevWorkspaceSession room snapshot', () => {
       width: 30,
       height: 8,
     })
+    expect(session.detectionExact?.referenceWallRects).toEqual([
+      { x: 10, y: 20, width: 30, height: 8 },
+    ])
     expect(session.detectionExact?.openingRects).toEqual([
       { type: 'door', x: 40, y: 50, width: 20, height: 12 },
     ])
     expect(session.detectionExact?.faceOverrides).toEqual([[3, 'wall']])
     expect(session.detectionExact?.roomInkCoverageThreshold).toBe(0.72)
     expect(session.flow.restoreMode).toBe('exact')
+  })
+
+  it('stores all multi wall + door/window refs', () => {
+    const wallRects = [
+      { x: 1, y: 2, width: 10, height: 4, wallThicknessBand: 'min' as const },
+      { x: 20, y: 2, width: 12, height: 5, wallThicknessBand: 'mid' as const },
+      { x: 40, y: 2, width: 14, height: 6, wallThicknessBand: 'max' as const },
+    ]
+    const openingRects = [
+      { type: 'door' as const, x: 5, y: 50, width: 20, height: 12 },
+      { type: 'door' as const, x: 30, y: 50, width: 18, height: 12 },
+      { type: 'window' as const, x: 60, y: 10, width: 25, height: 8 },
+      { type: 'window' as const, x: 90, y: 10, width: 22, height: 8 },
+    ]
+    const session = captureDevWorkspaceSession({
+      targetFlowStep: 'preprocess',
+      templateTab: 'walls',
+      preprocessTab: 'walls',
+      resultTab: 'walls',
+      profileConfirmed: true,
+      wallPipelineVersion: 'v3',
+      imageName: 'multi-ref.png',
+      originalImageEl: fakeImage(200, 100),
+      preprocess: { ...DEFAULT_PREPROCESS },
+      drawingProfileId: 'open',
+      scale: {
+        state: { xLeft: 1, xRight: 9, xGuideY: 5, yTop: 1, yBottom: 9, yGuideX: 5 },
+        distanceMmX: 3000,
+        distanceMmY: 3000,
+        confirmed: true,
+      },
+      eraserMask: null,
+      eraserTouched: false,
+      ocrMask: null,
+      ocrMaskedRegions: [],
+      ocrApplied: false,
+      tabOutputs: { walls: null },
+      roomPhase: 'idle',
+      wallsDetectionComplete: false,
+      referenceWallThicknessPx: 47,
+      wallRefThicknessMeasures: [
+        { band: 'min', thicknessPx: 7 },
+        { band: 'mid', thicknessPx: 30 },
+        { band: 'max', thicknessPx: 47 },
+      ],
+      referenceWallRect: wallRects[2],
+      referenceWallRects: wallRects,
+      openingRects,
+      workingImagePng: 'data:image/png;base64,AA==',
+    })
+
+    expect(session.referenceWallRects).toEqual(wallRects)
+    expect(session.referenceWallRect).toEqual(wallRects[2])
+    expect(session.openingRects).toEqual(openingRects)
+    expect(session.wallRefThicknessMeasures).toEqual([
+      { band: 'min', thicknessPx: 7 },
+      { band: 'mid', thicknessPx: 30 },
+      { band: 'max', thicknessPx: 47 },
+    ])
   })
 
   it('stores room snapshot in replay detection for result step', () => {

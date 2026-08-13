@@ -3,7 +3,7 @@ import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { formatCvError } from '@/cv/formatCvError'
 import { decodeMaskRle } from '@/cv/util/binary-mask-rle'
-import { type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
+import { ensureFaceDualSpace, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import {
   attachDoorframesToResolvedDoors,
   filterDoorsByKeptWallMaskContact,
@@ -14,16 +14,18 @@ import {
   type ResolvedDoorCandidate,
 } from '@/cv/doors'
 import { normalizeDoorSwingState } from './useWorkspaceDoorSwingHelpers'
-import { resolvedDoorStillClassifiedAsDoor } from './door-stage-cache-prune'
+import {
+  reconcileResolvedDoorsForClassification,
+  resolvedDoorsListChanged,
+} from './door-faces-reconcile-classification'
 import {
   resolveEffectiveWallClassification,
   resolveEffectiveWallParentMap,
 } from './faces-effective-classification'
 
 /**
- * Houd alleen resolved deuren waarvan minstens één face nog `door` is.
- * Voorkomt dat stale Stage-2-hits (handmatig teruggezet naar unknown/wall)
- * bij afronden alsnog als L11/L12-symbolen verschijnen.
+ * L11/L12-prep: handmatig gedemote faces + wees-doorframes (nu window) strippen.
+ * Voorkomt dat stale Stage-2-hits / DF-breedte bij afronden meelopen.
  */
 // ESC:O-20 (B)
 export function filterResolvedDoorsStillClassifiedAsDoor(params: {
@@ -43,9 +45,13 @@ export function filterResolvedDoorsStillClassifiedAsDoor(params: {
     roomRasterCache: params.roomRasterCache,
     wallsMeta: params.wallsMeta,
   })
-  return params.resolved.filter((door) =>
-    resolvedDoorStillClassifiedAsDoor(door, classification, parentMap),
-  )
+  const dual = params.roomRasterCache ? ensureFaceDualSpace(params.roomRasterCache) : null
+  return reconcileResolvedDoorsForClassification({
+    resolved: params.resolved,
+    classification,
+    parentMap,
+    dual,
+  })
 }
 
 /**
@@ -174,6 +180,9 @@ export async function snapResolvedDoorsToWalls(
     roomRasterCache: params.roomRasterCache,
     wallsMeta: walls,
   })
+  if (resolvedDoorsListChanged(afterSticky, enriched)) {
+    nextResolvedDoors = enriched
+  }
   if (enriched.length <= 0) {
     return empty(nextResolvedDoors)
   }

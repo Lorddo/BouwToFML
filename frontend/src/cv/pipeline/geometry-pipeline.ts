@@ -23,6 +23,8 @@ export interface GeometryPipelineConfig {
   detectWalls?: boolean
   wallStyle?: 'solid' | 'open'
   referenceWallThicknessPx?: number
+  /** Absolute meetbandgrenzen (multi muur-ref) voor L7/L9/L10. */
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   referenceWallMeasureRect?: { x: number; y: number; width: number; height: number }
   roomInkCoverageThreshold?: number
   roomPipelinePhase?: 'classify' | 'recalculate' | 'finalize' | 'full'
@@ -157,6 +159,7 @@ export async function runGeometryPipeline(params: {
         eraserMask: params.eraserMask,
         wallStyle: params.config?.wallStyle,
         referenceWallThicknessPx,
+        bandBoundariesPx: params.config?.bandBoundariesPx,
         roomInkCoverageThreshold: params.config?.roomInkCoverageThreshold,
         roomPipelinePhase: phase,
         wallPipelineVersion: params.config?.wallPipelineVersion,

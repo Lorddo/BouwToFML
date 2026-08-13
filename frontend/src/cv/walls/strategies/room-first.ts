@@ -341,6 +341,7 @@ export async function runRoomFinalizePhase(params: {
   preprocess?: PreprocessConfig
   wallStyle?: 'solid' | 'open'
   referenceWallThicknessPx?: number
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   wallPipelineVersion?: WallPipelineVersion
   faceOverrides?: Map<number, RoomRasterClass>
   pinnedRoots?: Set<number>
@@ -373,6 +374,7 @@ export async function runRoomFinalizePhase(params: {
     cv,
     prep,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
+    bandBoundariesPx: params.bandBoundariesPx,
   })
   const lastFaces =
     finalizedV3.layer10?.facesReady ??

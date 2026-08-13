@@ -60,7 +60,7 @@ ID’s in code: `// ESC:<ID> (<Cat>)`. Inventarisregelnummers zijn historisch; a
 | W-14 | **AFBAKENEN**; dode niveaus weg | `sampled`+`faceMedian`; reference/policyFallback geknipt | 2026-08-01 |
 | D-44, D-47, D-48 | **AFBAKENEN** | Path A sticky / segment / Path B swing-mask | 2026-07-31 |
 | W-13 | **AFBAKENEN** | Spur zonder meting | 2026-07-31 |
-| X-01 | **AFBAKENEN** | Export altijd `balance: 0.5` | 2026-07-31 |
+| X-01 | **AFBAKENEN** | Default `balance: 0.5`; collineaire diktewissel = world-face flush (a→b-onafhankelijk); jog-stubs dikte=max armen | 2026-08-12 |
 | X-02 | **AFBAKENEN** | Dikte → vaste tier (beleid) | 2026-07-31 |
 | X-11, X-13…X-15, X-17 | **BEHOUDEN (F)** | Metadata/settings/lege collecties/`mirrored` ramen | 2026-07-31 |
 | X-16 | **HERLEIDEN** | `h = floor.height` (geen −14) | 2026-08-01 |

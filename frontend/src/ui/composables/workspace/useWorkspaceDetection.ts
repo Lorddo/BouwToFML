@@ -19,6 +19,15 @@ import {
 import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import type { SelectionRect } from '@/platform/selection'
 import {
+  enforceWallRefLimit,
+  resolveReferenceWallThicknessDetail,
+  resolveStyleWallRect,
+  resolveWallThicknessBand,
+  type WallRefThicknessMeasure,
+} from '@/platform/selection/wall-thickness-ref'
+import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
+import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import {
   emptyTabOutputs,
   tabFromDetectTargets,
   type TabDetectionOutputs,
@@ -87,6 +96,13 @@ export function useWorkspaceDetection(deps: {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
+  updateRectWallThicknessBand: (id: string, band: FmlThicknessBand) => void
+  /** Project/export diktes voor max-equivalent schaal. */
+  getWallThicknessLimits: () => FmlWallThicknessLimits
+  setWallThicknessCm?: (band: FmlThicknessBand, cm: number) => void
+  /** Laatste multi-ref metingen (voor bandgrenzen). */
+  wallRefThicknessMeasures: Ref<WallRefThicknessMeasure[]>
+  wallThicknessBandBoundariesPx?: Ref<{ midBoundaryPx: number; maxBoundaryPx: number } | null>
   endDraw: () => void
   cancelDraw: () => void
   clearSignatureForRect: (id: string) => void
@@ -184,6 +200,21 @@ export function useWorkspaceDetection(deps: {
     deps.updateRectFmlRefId(id, fmlRefId)
   }
 
+  function onWallThicknessBandChange(id: string, band: FmlThicknessBand) {
+    deps.updateRectWallThicknessBand(id, band)
+    deps.referenceWallThicknessPx.value = null
+    deps.wallRefThicknessMeasures.value = []
+    deps.onRoomPipelineReset?.()
+  }
+
+  function onWallThicknessCmChange(band: FmlThicknessBand, cm: number) {
+    if (!(cm > 0)) return
+    deps.setWallThicknessCm?.(band, cm)
+    deps.referenceWallThicknessPx.value = null
+    deps.wallRefThicknessMeasures.value = []
+    deps.onRoomPipelineReset?.()
+  }
+
   function clearTemplateTypeRects() {
     const cls = deps.templateElementClass.value
     if (!cls) return
@@ -191,6 +222,7 @@ export function useWorkspaceDetection(deps: {
     if (cls === 'wall') {
       clearWallOutputs()
       deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
     } else {
       const tabKey = elementClassToDetectionLayer(cls)
       deps.tabOutputs.value = { ...deps.tabOutputs.value, [tabKey]: null }
@@ -198,20 +230,24 @@ export function useWorkspaceDetection(deps: {
     deps.pruneSignaturePreview()
   }
 
-  function keepSingleWallRect(): SelectionRect | null {
-    const wallRects = deps.rects.value.filter((rect) => rect.type === 'wall')
-    const keep = wallRects[wallRects.length - 1] ?? null
-    if (keep) {
-      for (const rect of wallRects) {
-        if (rect.id === keep.id) continue
-        deps.removeRect(rect.id)
+  function enforceWallRefsAfterDraw(): SelectionRect | null {
+    const before = deps.rects.value
+    const { rects: next, removedIds } = enforceWallRefLimit(before)
+    if (removedIds.length > 0 || next.length !== before.length) {
+      for (const id of removedIds) {
+        deps.clearSignatureForRect(id)
       }
-      deps.selectRect(null)
+      deps.rects.value = next
     }
-    return keep
+    deps.selectRect(null)
+    return resolveStyleWallRect(deps.rects.value)
   }
 
-  async function measureWallReferenceThickness(rect: SelectionRect): Promise<number | null> {
+  /**
+   * Meet alle muur-refs → max-equivalent `referenceWallThicknessPx`.
+   * Optionele `rect` (legacy): genegeerd voor selectie; alle wall-rects worden gemeten.
+   */
+  async function measureWallReferenceThickness(_rect?: SelectionRect): Promise<number | null> {
     measuringReferenceWall.value = true
     try {
       if (!deps.cvLoader.ready.value) {
@@ -231,34 +267,81 @@ export function useWorkspaceDetection(deps: {
       if (!baseBw) {
         deps.setLocalError(tGlobal('preprocess.errors.bwUnavailableForMeasure'))
         deps.referenceWallThicknessPx.value = null
+        deps.wallRefThicknessMeasures.value = []
         return null
       }
-      const thickness = measureReferenceWallThicknessPx({
-        cv,
-        baseBw,
-        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      })
-      deps.referenceWallThicknessPx.value = thickness
-      try {
-        const style = classifyWallRefStyleFromBw({
-          bw: baseBw.data,
-          width: baseBw.width,
-          height: baseBw.height,
+
+      const wallRects = deps.rects.value.filter((r) => r.type === 'wall')
+      if (wallRects.length === 0) {
+        deps.setLocalError(tGlobal('preprocess.errors.drawWallRef'))
+        deps.referenceWallThicknessPx.value = null
+        deps.wallRefThicknessMeasures.value = []
+        return null
+      }
+
+      const measures: WallRefThicknessMeasure[] = []
+      for (const wallRect of wallRects) {
+        const thickness = measureReferenceWallThicknessPx({
+          cv,
+          baseBw,
           rect: {
-            id: rect.id,
-            x: rect.x,
-            y: rect.y,
-            width: rect.width,
-            height: rect.height,
+            x: wallRect.x,
+            y: wallRect.y,
+            width: wallRect.width,
+            height: wallRect.height,
           },
         })
-        deps.applyAutoGapsInkMode?.(style.gapsInkMode)
-        if (thickness != null) {
-          status.value = tGlobal('templates.status.thicknessWithStyle', {
-            px: thickness,
-            style: style.renderStyle,
-            faces: style.faceCount,
+        if (thickness != null && thickness > 0) {
+          measures.push({
+            band: resolveWallThicknessBand(wallRect),
+            thicknessPx: thickness,
+            rectId: wallRect.id,
           })
+        }
+      }
+
+      deps.wallRefThicknessMeasures.value = measures
+      const limits = deps.getWallThicknessLimits()
+      let referencePx: number | null = null
+      try {
+        const resolved = resolveReferenceWallThicknessDetail({ measures, limits })
+        referencePx = resolved?.referenceWallThicknessPx ?? null
+        if (resolved?.usedScaledFallback) {
+          status.value = tGlobal('templates.status.thicknessScaledFromBand', {
+            px: Math.round(referencePx ?? 0),
+            band: resolved.sourceBand,
+          })
+        }
+      } catch (error) {
+        deps.setLocalError(formatCvError(error))
+        deps.referenceWallThicknessPx.value = null
+        return null
+      }
+      deps.referenceWallThicknessPx.value = referencePx
+
+      const styleRect = resolveStyleWallRect(deps.rects.value)
+      try {
+        if (styleRect) {
+          const style = classifyWallRefStyleFromBw({
+            bw: baseBw.data,
+            width: baseBw.width,
+            height: baseBw.height,
+            rect: {
+              id: styleRect.id,
+              x: styleRect.x,
+              y: styleRect.y,
+              width: styleRect.width,
+              height: styleRect.height,
+            },
+          })
+          deps.applyAutoGapsInkMode?.(style.gapsInkMode)
+          if (referencePx != null) {
+            status.value = tGlobal('templates.status.thicknessWithStyle', {
+              px: Math.round(referencePx),
+              style: style.renderStyle,
+              faces: style.faceCount,
+            })
+          }
         }
         // ESC:O-31 (D)
       } catch (error) {
@@ -267,17 +350,20 @@ export function useWorkspaceDetection(deps: {
           effect: 'muurstijl-classificatie overgeslagen',
         })
       }
-      if (thickness == null) {
+      if (referencePx == null || referencePx <= 0) {
         deps.setLocalError(tGlobal('preprocess.errors.measureThicknessFailed'))
       } else {
         deps.setLocalError(null)
-        if (!status.value.includes(String(thickness))) {
-          status.value = tGlobal('templates.status.thicknessMeasured', { px: thickness })
+        if (!status.value.includes(String(Math.round(referencePx)))) {
+          status.value = tGlobal('templates.status.thicknessMeasured', {
+            px: Math.round(referencePx),
+          })
         }
       }
-      return thickness
+      return referencePx
     } catch (e) {
       deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
       deps.setLocalError(formatCvError(e))
       return null
     } finally {
@@ -293,6 +379,7 @@ export function useWorkspaceDetection(deps: {
     const rect = deps.rects.value.find((item) => item.id === id)
     if (rect?.type === 'wall') {
       deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
       deps.onRoomPipelineReset?.()
       // Dikte pas meten bij afronden stap 2 — niet live bij resize.
     }
@@ -306,6 +393,7 @@ export function useWorkspaceDetection(deps: {
     deps.removeRect(id)
     if (rect?.type === 'wall') {
       deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
       clearWallOutputs()
       deps.onRoomPipelineReset?.()
     } else if (rect && deps.flowStep.value === 'templates') {
@@ -321,8 +409,9 @@ export function useWorkspaceDetection(deps: {
 
     const drawnType = deps.rects.value[deps.rects.value.length - 1]?.type
     if (drawnType === 'wall') {
-      const keep = keepSingleWallRect()
+      const keep = enforceWallRefsAfterDraw()
       deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
       clearWallOutputs()
       deps.onRoomPipelineReset?.()
       deps.clearGapsInkModeManual?.()
@@ -397,6 +486,7 @@ export function useWorkspaceDetection(deps: {
           roomInkCoverageThreshold: roomInkCoverageThreshold.value,
           wallStyle: deps.preprocess.value.wallStyle,
           referenceWallThicknessPx: deps.referenceWallThicknessPx.value ?? undefined,
+          bandBoundariesPx: deps.wallThicknessBandBoundariesPx?.value ?? undefined,
           referenceWallMeasureRect: options?.referenceWallMeasureRect,
           roomPipelinePhase: options?.phase ?? 'full',
           wallPipelineVersion: deps.wallPipelineVersion.value,
@@ -462,6 +552,8 @@ export function useWorkspaceDetection(deps: {
     setReferencePanMode,
     setReferenceDrawMode,
     onDoorFmlRefIdChange,
+    onWallThicknessBandChange,
+    onWallThicknessCmChange,
     clearTemplateTypeRects,
     measureWallReferenceThickness,
     onRectUpdate,

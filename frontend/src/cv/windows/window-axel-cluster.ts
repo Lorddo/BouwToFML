@@ -20,8 +20,11 @@ import {
 export { areLinkedViaWallInkBridge }
 
 // ESC:R-12 (B)
-/** Max max/min as-span binnen één Stage-1 k-tuple (weer lange rail×kort glas). */
-const MAX_PAIR_AXIS_SPAN_RATIO = 1.5
+/**
+ * Max max/min as-span binnen één Stage-1 k-tuple (weer lange rail×kort glas).
+ * 1.25: top/bottom kozijn-rails mogen iets breder dan glas, niet over de mullion heen.
+ */
+export const MAX_PAIR_AXIS_SPAN_RATIO = 1.25
 
 export type CandidateLinkParams = {
   orientation: WindowAxelOrientation

@@ -408,6 +408,7 @@ defineExpose({ fit, imageObj, imgSize })
             :selected-rect="selectedRect"
             :is-selection-mode="isSelectionMode"
             :type-colors="typeColors"
+            :wall-thickness-limits="wallThicknessLimits"
             :icon-size="iconSize"
             :handle-size="handleSize"
             :handle-position="handlePosition"

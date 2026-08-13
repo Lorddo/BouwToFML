@@ -1,5 +1,6 @@
 import type { ElementClass } from '@/core/extraction/types'
 import type { GeometricSignature } from '@/core/extraction/geometric-signature'
+import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 
 export type { ElementClass }
 
@@ -16,6 +17,11 @@ export interface SelectionRect {
    * Alleen relevant voor `door` (standaard/kastdeur); ramen/dubbele deuren algoritmisch.
    */
   fmlRefId?: string
+  /**
+   * Export-dikteband (min/mid/max) voor muur-LBE.
+   * Alleen relevant voor `wall`; pipeline schaalt naar max-equivalent.
+   */
+  wallThicknessBand?: FmlThicknessBand
 }
 
 export const SELECTION_COLORS: Record<ElementClass, string> = {

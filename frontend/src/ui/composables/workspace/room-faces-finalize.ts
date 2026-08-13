@@ -9,6 +9,7 @@ import {
 } from '@/cv/walls/rooms/room-raster-cache'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
+import type { TemplatesFinalizePhase } from './workspace-view-visibility'
 
 export function wallsFinalizeOutputValid(output: ExtractionOutput | null | undefined): boolean {
   return isFinalizeTabOutput(output)
@@ -18,6 +19,7 @@ export async function finalizeWallDetection(ctx: {
   roomRasterCache: RoomRasterCache | null
   roomPhase: RoomPhase
   setRoomPhase: (phase: RoomPhase) => void
+  setFinalizePhase: (phase: TemplatesFinalizePhase | null) => void
   setStatus?: (message: string) => void
   syncDetectionComplete: () => void
   getWallsOutput: () => ExtractionOutput | null | undefined
@@ -38,6 +40,7 @@ export async function finalizeWallDetection(ctx: {
   if (!cache || (ctx.roomPhase !== 'review' && ctx.roomPhase !== 'done')) return false
 
   ctx.setRoomPhase('finalizing')
+  ctx.setFinalizePhase('walls')
   ctx.setStatus?.('Afronden detectie…')
   const ok = await ctx.onExtractTargets(
     { walls: true, wallJunctionStrategy: 'room_first' },
@@ -57,6 +60,7 @@ export async function finalizeWallDetection(ctx: {
     return true
   }
   ctx.setRoomPhase('review')
+  ctx.setFinalizePhase(null)
   if (!wallsFinalizeOutputValid(finalized) && cache) {
     ctx.refreshPreviewMask(cache)
   }

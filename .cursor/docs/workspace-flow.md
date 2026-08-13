@@ -33,7 +33,8 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 | Upload tekening | `DrawingUploadPanel` |
 | Onderlegger overnemen (donor-keuze) | `reuseUnderlayFromProject(donorFloorId)` |
 | Schaal (mm) | `ScaleConfirmBar`, `useWorkspaceScale` |
-| Rotatie (native resolutie, min 3000px) | `OriginalSetupPanel` |
+| Rotatie (native resolutie, min 3000px) | `OriginalSetupPanel` — niet geblokkeerd door onbevestigde schaal |
+| Rotatie vastzetten (optioneel) | `bakeInputRotation` → zelfde pad als `commitInputStepImage`; auto bij «Volgende» |
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
 | Download onderlegger PNG | `downloadUnderlay` |
 
@@ -41,9 +42,9 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 
 **Output:** `originalImageEl` + optioneel `maskedWorkingCanvas` (gum/crop). Geen referentievakken.
 
-**Gate naar stap 2:** schaal bevestigd (+ image).
+**Gate naar stap 2:** schaal bevestigd (+ image). Rotatie-bake is niet verplicht op stap 1.
 
-Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen.
+Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen. Optionele knop «Rotatie vastzetten» doet hetzelfde pad eerder, zodat H/V-linialen op een rechtgetrokken beeld gezet kunnen worden (scheve scans). Onbevestigde schaal → verse linialen na rotatie-bake (mm blijft).
 
 ## Stap 2 — Voorbewerking (`flowStep: preprocess`)
 

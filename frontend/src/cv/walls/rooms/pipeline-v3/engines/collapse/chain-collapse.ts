@@ -201,6 +201,7 @@ function pickChainExtension(params: {
       bridgeLengthPx: segmentLength(bridgeSeg),
       neighborLengthPx: Math.max(viaLen, beyondLen),
       referenceWallThicknessPx: params.referenceWallThicknessPx,
+      absoluteBoundaries: params.policy.bandBoundariesPx,
     })
   ) {
     return null

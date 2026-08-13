@@ -4,6 +4,7 @@ import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening
 import type { FloorPlan, Point2D } from '@/core/fml/types'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import {
+  JUNCTION_POINT_SNAP_CM,
   snapDrawWallEndpoint,
   snapPointToJunctions,
   snapToNearbyEndpointAxes,
@@ -247,7 +248,7 @@ export function useFmlPreviewInteraction(options: {
     let point = junction ? { x: junction.cmX, y: junction.cmY } : cm
     if (!junction) {
       point = snapToNearbyEndpointAxes(editor.walls.value, [], point)
-      point = snapPointToJunctions(editor.junctions.value, point, 4)
+      point = snapPointToJunctions(editor.junctions.value, point, JUNCTION_POINT_SNAP_CM)
     }
     if (axisAnchor) {
       point = snapDrawWallEndpoint(axisAnchor, point, shiftPressed.value)

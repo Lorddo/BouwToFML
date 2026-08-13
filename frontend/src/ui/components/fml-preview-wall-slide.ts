@@ -8,6 +8,7 @@ import {
   buildJunctions,
   cloneWalls,
   distance,
+  moveJunction,
   normalizeDir,
   pointParamOnSegment,
   pruneCollapsedWalls,
@@ -19,6 +20,8 @@ import {
 import { openingWorldCenter, reprojectWallOpenings } from './fml-preview-openings'
 import {
   addSegmentPathWithJunctionBreaks,
+  materializeCrossingsAlongWall,
+  materializeEndpointJoinsAtPoint,
   splitCarrierWallsAtJunctionsOnSegment,
   splitCrossedWallsAlongSegment,
 } from './fml-preview-wall-draw-geom'
@@ -352,5 +355,59 @@ export function slideWallSegmentAlongAxis(
   }
 
   reprojectOpeningsAfterEndpointSlide(next, beforeById)
+
+  // Zelfde als nieuwe muur tekenen: verschoven segmenten die een andere muur
+  // doorsnijden krijgen een echte junction (beide muren splitsen).
+  const movedIds: string[] = []
+  for (const wall of next) {
+    const before = beforeById.get(wall.id)
+    if (!before) continue
+    const moved =
+      Math.abs(before.a.x - wall.a.x) > RIGID_TRANSLATION_EPS_CM ||
+      Math.abs(before.a.y - wall.a.y) > RIGID_TRANSLATION_EPS_CM ||
+      Math.abs(before.b.x - wall.b.x) > RIGID_TRANSLATION_EPS_CM ||
+      Math.abs(before.b.y - wall.b.y) > RIGID_TRANSLATION_EPS_CM
+    if (moved) movedIds.push(wall.id)
+  }
+  for (const wallId of movedIds) {
+    materializeCrossingsAlongWall(next, wallId)
+    const wall = next.find((item) => item.id === wallId)
+    if (!wall) continue
+    const exclude = new Set([wallId])
+    materializeEndpointJoinsAtPoint(next, wall.a, {
+      excludeWallIds: exclude,
+      skipCollinearWith: wall,
+    })
+    materializeEndpointJoinsAtPoint(next, wall.b, {
+      excludeWallIds: exclude,
+      skipCollinearWith: wall,
+    })
+  }
+
+  return pruneCollapsedWalls(next)
+}
+
+/**
+ * Junction verplaatsen + kruisingen/T-joins materialiseren (zoals muur tekenen).
+ * Aanroepen vanaf baseWalls bij live drag zodat splits de sleep niet breken.
+ */
+export function moveJunctionWithWallJoins(
+  walls: Wall[],
+  node: JunctionNode,
+  position: Point2D,
+): Wall[] {
+  const next = moveJunction(walls, node, position)
+  const involved = new Set(node.refs.map((ref) => ref.wallId))
+  for (const wallId of involved) {
+    materializeCrossingsAlongWall(next, wallId)
+  }
+  for (const wallId of involved) {
+    const wall = next.find((item) => item.id === wallId)
+    if (!wall) continue
+    materializeEndpointJoinsAtPoint(next, position, {
+      excludeWallIds: involved,
+      skipCollinearWith: wall,
+    })
+  }
   return pruneCollapsedWalls(next)
 }

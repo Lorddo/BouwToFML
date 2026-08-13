@@ -51,6 +51,19 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
+  updateRectWallThicknessBand: (
+    id: string,
+    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
+  ) => void
+  getWallThicknessLimits: () => import('@/core/fml/fml-wall-thickness-limits').FmlWallThicknessLimits
+  setWallThicknessCm?: (
+    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
+    cm: number,
+  ) => void
+  wallRefThicknessMeasures: Ref<
+    import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+  >
+  wallThicknessBandBoundariesPx?: Ref<{ midBoundaryPx: number; maxBoundaryPx: number } | null>
   endDraw: () => void
   cancelDraw: () => void
   clearSignatureForRect: (id: string) => void
@@ -82,7 +95,9 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
   clearGapsInkModeManual?: () => void
   onDoorFacesDemoted?: () => void | Promise<void>
   onWindowFacesDemoted?: () => void | Promise<void>
-  onAfterFinalize?: () => void | Promise<void>
+  onAfterFinalize?: (
+    setFinalizePhase: (phase: import('./workspace-view-visibility').TemplatesFinalizePhase) => void,
+  ) => void | Promise<void>
 }): WorkspaceRoomPipelineDeps {
   return {
     flowStep: ctx.flowStep,
@@ -114,6 +129,11 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
     selectRect: ctx.selectRect,
     updateRectBounds: ctx.updateRectBounds,
     updateRectFmlRefId: ctx.updateRectFmlRefId,
+    updateRectWallThicknessBand: ctx.updateRectWallThicknessBand,
+    getWallThicknessLimits: ctx.getWallThicknessLimits,
+    setWallThicknessCm: ctx.setWallThicknessCm,
+    wallRefThicknessMeasures: ctx.wallRefThicknessMeasures,
+    wallThicknessBandBoundariesPx: ctx.wallThicknessBandBoundariesPx,
     endDraw: ctx.endDraw,
     cancelDraw: ctx.cancelDraw,
     clearSignatureForRect: ctx.clearSignatureForRect,

@@ -42,3 +42,12 @@ export function totalInputRotationDeg(config: {
 }): number {
   return (config.autoRotationDeg ?? 0) + (config.rotationDeg ?? 0) + (config.rotate180 ? 180 : 0)
 }
+
+/** Live preview still needs a pixel bake (slider / 180°) — independent of scale confirm. */
+export function hasPendingInputRotation(config: {
+  rotate180?: boolean
+  rotationDeg?: number
+  autoRotationDeg?: number
+}): boolean {
+  return Math.abs(totalInputRotationDeg(config)) > 0.001
+}

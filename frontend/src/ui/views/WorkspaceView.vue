@@ -44,8 +44,9 @@ const { t } = useI18n()
 
 const {
   isDev,
-  templatesInitialDetectionBusy,
-  templatesInitialDetectionSteps,
+  templatesBusyOverlay,
+  templatesBusyOverlayTitle,
+  templatesBusyOverlaySteps,
   faceSelectEnabled,
   ocrHitRemoveEnabled,
   layerDebugVisible,
@@ -65,6 +66,7 @@ const {
   templateTab: api.templateTab,
   resultTab: api.resultTab,
   roomPhase: api.roomPhase,
+  finalizePhase: api.finalizePhase,
   classifyingInFlight: api.classifyingInFlight,
   doorInitialPassReady: api.doorInitialPassReady,
   windowInitialPassReady: api.windowInitialPassReady,
@@ -133,6 +135,8 @@ defineExpose<{
           :can-undo-mask="ws.canUndoMask"
           :can-reuse-underlay="ws.canReuseUnderlay"
           :underlay-donor-options="ws.underlayDonorOptions"
+          :can-bake-rotation="ws.canBakeInputRotation"
+          :baking-rotation="ws.inputCommitBusy"
           @update-mm-x="ws.updateMmX"
           @update-mm-y="ws.updateMmY"
           @confirm-scale="ws.onConfirmScale"
@@ -145,6 +149,7 @@ defineExpose<{
           @undo="ws.undoMaskEdit"
           @download-underlay="ws.downloadUnderlay"
           @reuse-underlay="ws.reuseUnderlayFromProject"
+          @bake-rotation="ws.bakeInputRotation"
         />
 
         <WorkspaceSidebarPreprocessStep
@@ -159,6 +164,13 @@ defineExpose<{
           :counts="ws.counts"
           :scale-confirmed="ws.scale.confirmed.value"
           :rects="ws.rects"
+          :wall-thickness-limits="{
+            minCm: ws.fmlThicknessMinCm,
+            midCm: ws.fmlThicknessMidCm,
+            maxCm: ws.fmlThicknessMaxCm,
+          }"
+          :wall-ref-thickness-measures="ws.wallRefThicknessMeasures"
+          :selected-rect-id="ws.selectedRectId"
           :can-copy-preprocess-refs="ws.canCopyPreprocessRefs"
           :preprocess-donor-options="ws.preprocessDonorOptions"
           :can-start-wall-stamp="ws.canStartWallStamp"
@@ -177,6 +189,9 @@ defineExpose<{
           @set-reference-draw-mode="ws.setReferenceDrawMode"
           @set-reference-pan-mode="ws.setReferencePanMode"
           @update-door-fml-ref-id="ws.onDoorFmlRefIdChange"
+          @update-wall-thickness-band="ws.onWallThicknessBandChange"
+          @update-wall-thickness-cm="ws.onWallThicknessCmChange"
+          @select-wall-ref="ws.selectRect"
           @copy-preprocess-refs="ws.copyPreprocessAndRefsFromDonor"
           @start-wall-stamp="ws.startWallStamp"
           @set-wall-stamp-bands="ws.setWallStampBands"
@@ -196,7 +211,7 @@ defineExpose<{
           :reference-wall-thickness-px="ws.referenceWallThicknessPx"
           :has-reference-wall-rect="ws.hasReferenceWallRect"
           :classifying-in-flight="ws.classifyingInFlight"
-          :initial-detection-busy="templatesInitialDetectionBusy"
+          :initial-detection-busy="templatesBusyOverlay"
           :ocr-scanning="ws.ocrScanning"
           :image-src="ws.imageSrc"
           :ocr-candidate-count="ws.ocrCandidateCount"
@@ -238,6 +253,7 @@ defineExpose<{
           :walls-tab-output-ready="ws.tabOutputReady('walls')"
           :running="ws.running"
           :status="ws.status"
+          :hide-status="templatesBusyOverlay"
           :error="ws.error"
           :preprocess-preview-error="ws.preprocessPreview.error.value"
           :scale-locked="ws.scaleLocked"
@@ -391,8 +407,9 @@ defineExpose<{
           />
           <WorkspaceFloorplanCanvasHost
             v-else
-            :initial-detection-busy="templatesInitialDetectionBusy"
-            :initial-detection-steps="templatesInitialDetectionSteps"
+            :busy-overlay="templatesBusyOverlay"
+            :busy-overlay-title="templatesBusyOverlayTitle"
+            :busy-overlay-steps="templatesBusyOverlaySteps"
             :face-toolbelt-visible="ws.faceToolbeltVisible"
             :ink-toolbelt-visible="ws.inkToolbeltVisible"
             :active-face-box-tool="ws.activeFaceBoxTool"
@@ -411,6 +428,15 @@ defineExpose<{
               :rotation-preview-deg="ws.inputRotationPreviewDeg"
               :lbe-rects="ws.flowStep === 'preprocess' ? ws.rects : []"
               :preview-rect="ws.flowStep === 'preprocess' ? ws.previewRect : null"
+              :wall-thickness-limits="
+                ws.flowStep === 'preprocess'
+                  ? {
+                      minCm: ws.fmlThicknessMinCm,
+                      midCm: ws.fmlThicknessMidCm,
+                      maxCm: ws.fmlThicknessMaxCm,
+                    }
+                  : null
+              "
               :type-colors="ws.typeColors"
               :detection-overlays="ws.detectionOverlays"
               :segment-overlays="ws.segmentOverlays"
@@ -435,16 +461,12 @@ defineExpose<{
               :show-scale-overlay="ws.showScaleOverlay"
               :scale-state="ws.scale.state.value"
               :selected-rect-id="ws.selectedRectId"
-              :ink-tool="
-                templatesInitialDetectionBusy || ws.wallStampActive ? null : ws.canvasInkTool
-              "
+              :ink-tool="templatesBusyOverlay || ws.wallStampActive ? null : ws.canvasInkTool"
               :ink-brush-size="ws.brushSizePx"
-              :face-tool="
-                templatesInitialDetectionBusy || ws.wallStampActive ? null : ws.canvasFaceTool
-              "
-              :instruction-hint="templatesInitialDetectionBusy ? '' : ws.toolbeltCanvasHint"
+              :face-tool="templatesBusyOverlay || ws.wallStampActive ? null : ws.canvasFaceTool"
+              :instruction-hint="templatesBusyOverlay ? '' : ws.toolbeltCanvasHint"
               :instruction-hint-stale="ws.toolbeltCanvasHintStale"
-              :relocate-tool-hints="ws.inkToolbeltVisible && !templatesInitialDetectionBusy"
+              :relocate-tool-hints="ws.inkToolbeltVisible && !templatesBusyOverlay"
               :probe-enabled="ws.probeActive"
               :probe-mode="ws.probeMode"
               :wall-stamp-bounds="ws.wallStampActive ? ws.wallStampBounds : null"

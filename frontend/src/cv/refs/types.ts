@@ -187,6 +187,8 @@ export type OpeningRefProfile = {
 export type WallRefProfile = {
   kind: 'wall'
   rect: RefRect
+  /** min/mid/max — aanwezig bij multi muur-refs. */
+  wallThicknessBand?: 'min' | 'mid' | 'max'
   cropWidth: number
   cropHeight: number
   orientation: 'horizontal' | 'vertical'
@@ -208,7 +210,13 @@ export type WallRefProfile = {
 export type ReferenceAnalysisReport = {
   exportedAt: string
   drawing: string | null
+  /**
+   * Primaire muur-ref (max-band indien aanwezig, anders laatste) — gaps-ink / legacy.
+   * Prefer `walls` voor multi-ref exports.
+   */
   wall: WallRefProfile | null
+  /** Alle muur-LBE’s (max 3), tekenvolgorde. */
+  walls?: WallRefProfile[]
   openings: OpeningRefProfile[]
 }
 

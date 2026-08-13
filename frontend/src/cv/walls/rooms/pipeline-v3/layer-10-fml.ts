@@ -24,11 +24,12 @@ export function runLayer10Fml(params: {
   cv: OpenCV
   maskRle: RoomWallMaskRle
   referenceWallThicknessPx?: number
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
 }): PipelineV3Layer10Result {
   reportPipelineProgress('Skeleton Laag 10 — FML input…')
-  const policy = resolveLayer10FmlPolicy(params.referenceWallThicknessPx)
+  const policy = resolveLayer10FmlPolicy(params.referenceWallThicknessPx, params.bandBoundariesPx)
   const distanceMap =
     params.distanceMap !== undefined
       ? params.distanceMap
@@ -81,9 +82,25 @@ export function runLayer10Fml(params: {
       fakeLRemoved += chainGuard.result.stats.fakeLRemoved
     }
 
+    // Re-sample after chain: indices no longer match the pre-chain thickness array.
+    const thicknessForStraighten = buildThicknessBySegment({
+      segments: segmentsOut,
+      cv: params.cv,
+      maskRle: params.maskRle,
+      policy: policy.collapse,
+      referenceWallThicknessPx: params.referenceWallThicknessPx,
+      distanceMap,
+    })
+
     // ESC:W-51 (A)
     // Axis polish before micro-corner so 0px / near-collinear H/V share one line.
-    const straightened = straightenCollinearAxisChains(segmentsOut, policy.collapse)
+    // Cross-band arms stay on separate CLs for post-L10 FML balance.
+    const straightened = straightenCollinearAxisChains(
+      segmentsOut,
+      policy.collapse,
+      thicknessForStraighten,
+      params.referenceWallThicknessPx,
+    )
     segmentsOut = straightened.segments
     tally('W-51', straightened.stats.chainsStraightened > 0 ? 'straightened' : 'noop')
     if (straightened.stats.chainsStraightened > 0) {

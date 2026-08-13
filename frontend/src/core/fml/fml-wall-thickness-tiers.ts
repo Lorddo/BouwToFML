@@ -112,3 +112,99 @@ export function deriveFmlBandBoundariesCmFromRefPx(
     maxBoundaryCm: roundBoundaryCm(refCm * maxRatio),
   })
 }
+
+function pxToCm(thicknessPx: number, pxPerMm: number): number {
+  return thicknessPx / pxPerMm / 10
+}
+
+function halfway(a: number, b: number): number {
+  return (a + b) / 2
+}
+
+/**
+ * Meetbandgrenzen uit 1–3 muur-ref metingen.
+ * ≥2 bands: halfway tussen opeenvolgende gemeten px→cm.
+ * 1 band: 40/80 op max-equivalent px (zelfde als deriveFmlBandBoundariesCmFromRefPx).
+ */
+export function deriveFmlBandBoundariesFromWallRefMeasures(params: {
+  measures: Array<{ band: FmlThicknessBand; thicknessPx: number }>
+  referenceWallThicknessPx: number
+  pxPerMmX: number
+  pxPerMmY: number
+  /** Project-export cm — vult ontbrekende bands bij gedeeltelijke meting. */
+  limitsCm?: { minCm: number; midCm: number; maxCm: number }
+}): FmlThicknessBandBoundaries {
+  const pxPerMm = averagePxPerMm(params.pxPerMmX, params.pxPerMmY)
+  if (params.referenceWallThicknessPx <= 0 || pxPerMm <= 0) {
+    tally('REF-14', 'rejected')
+    throw new Error(
+      'Diktebanden vereisen een geldige muur-referentie en schaal (pixels per millimeter).',
+    )
+  }
+
+  const byBand = new Map<FmlThicknessBand, number>()
+  for (const m of params.measures) {
+    if (m.thicknessPx > 0) byBand.set(m.band, pxToCm(m.thicknessPx, pxPerMm))
+  }
+
+  if (byBand.size < 2) {
+    tally('REF-14', 'from_ref_px')
+    return deriveFmlBandBoundariesCmFromRefPx(
+      params.referenceWallThicknessPx,
+      params.pxPerMmX,
+      params.pxPerMmY,
+    )
+  }
+
+  tally('REF-14', 'from_multi_ref')
+  const limits = params.limitsCm
+  const minCm = byBand.get('min') ?? limits?.minCm
+  const midCm = byBand.get('mid') ?? limits?.midCm
+  const maxCm =
+    byBand.get('max') ?? limits?.maxCm ?? pxToCm(params.referenceWallThicknessPx, pxPerMm)
+
+  let midBoundaryCm: number
+  let maxBoundaryCm: number
+
+  if (minCm != null && midCm != null && maxCm != null) {
+    midBoundaryCm = halfway(minCm, midCm)
+    maxBoundaryCm = halfway(midCm, maxCm)
+  } else if (midCm != null && maxCm != null) {
+    midBoundaryCm =
+      minCm != null ? halfway(minCm, midCm) : roundBoundaryCm(midCm * FML_BAND_MID_RATIO)
+    maxBoundaryCm = halfway(midCm, maxCm)
+  } else if (minCm != null && maxCm != null) {
+    midBoundaryCm = halfway(minCm, maxCm)
+    maxBoundaryCm = halfway(midBoundaryCm, maxCm)
+  } else if (minCm != null && midCm != null) {
+    midBoundaryCm = halfway(minCm, midCm)
+    maxBoundaryCm =
+      maxCm != null ? halfway(midCm, maxCm) : (midCm / FML_BAND_MID_RATIO) * FML_BAND_MAX_RATIO
+  } else {
+    return deriveFmlBandBoundariesCmFromRefPx(
+      params.referenceWallThicknessPx,
+      params.pxPerMmX,
+      params.pxPerMmY,
+    )
+  }
+
+  return resolveEffectiveFmlBandBoundaries({
+    midBoundaryCm: roundBoundaryCm(midBoundaryCm),
+    maxBoundaryCm: roundBoundaryCm(maxBoundaryCm),
+  })
+}
+
+/** Absolute px-grenzen uit cm-banden + schaal (voor CV classify). */
+export function bandBoundariesCmToPx(
+  boundaries: FmlThicknessBandBoundaries,
+  pxPerMmX: number,
+  pxPerMmY: number,
+): { midBoundaryPx: number; maxBoundaryPx: number } | null {
+  const pxPerMm = averagePxPerMm(pxPerMmX, pxPerMmY)
+  if (pxPerMm <= 0) return null
+  const effective = resolveEffectiveFmlBandBoundaries(boundaries)
+  return {
+    midBoundaryPx: effective.midBoundaryCm * pxPerMm * 10,
+    maxBoundaryPx: effective.maxBoundaryCm * pxPerMm * 10,
+  }
+}

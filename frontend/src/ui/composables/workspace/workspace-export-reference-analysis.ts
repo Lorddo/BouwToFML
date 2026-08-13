@@ -47,8 +47,12 @@ export function createWorkspaceExportReferenceAnalysis(deps: WorkspaceExportRefe
           y: r.y,
           width: r.width,
           height: r.height,
+          ...(r.type === 'wall' && r.wallThicknessBand
+            ? { wallThicknessBand: r.wallThicknessBand }
+            : {}),
         })),
       })
+      // Gaps-ink: primaire muur (max-band / legacy `wall`).
       if (report.wall) {
         deps.applyAutoGapsInkMode?.(report.wall.renderStyle === 'details' ? 'detail' : 'solid')
       }

@@ -340,6 +340,8 @@ export interface ExtractionInput {
     roomInkCoverageThreshold?: number
     wallStyle?: 'solid' | 'open'
     referenceWallThicknessPx?: number
+    /** Absolute meetbandgrenzen (multi muur-ref) voor L7/L9/L10. */
+    bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
     /** Meet dikte uit wall B/W in worker (voorkomt dubbele preprocess op main thread). */
     referenceWallMeasureRect?: { x: number; y: number; width: number; height: number }
     roomPipelinePhase?: 'classify' | 'recalculate' | 'finalize' | 'full'

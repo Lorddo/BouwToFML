@@ -99,8 +99,11 @@ export type UseWorkspaceDevSessionDeps = {
   serializeFaceOverrides: () => Array<[number, RoomRasterClass]>
   serializePinnedRoots: () => number[]
   referenceWallThicknessPx: Ref<number | null>
+  wallRefThicknessMeasures: Ref<
+    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+  >
   rects: Ref<Array<{ type: string; x: number; y: number; width: number; height: number }>>
-  restoreWallReferenceRect: (rect: DevWallReferenceRect) => void
+  restoreWallReferenceRects: (rects: DevWallReferenceRect[]) => void
   restoreOpeningReferenceRects: (rects: DevOpeningReferenceRect[]) => void
   roomInkCoverageThreshold: Ref<number>
   setRoomInkCoverageThreshold: (value: number) => void
@@ -112,12 +115,14 @@ export type UseWorkspaceDevSessionDeps = {
   markAutoWindowPassApplied: () => void
   /** Na restore: Stage-2 opnieuw toestaan. */
   resetAutoDoorPassGate: () => void
-  /** Deuren Stage-2 direct draaien (niet via debounce-race). */
-  refreshDoorSwingOverlay: () => Promise<void>
+  /** Deuren: alleen class=`door` herbouwen (geen demotes terug). */
+  refreshDoorSwingOverlayExistingOnly: () => Promise<void>
+  refreshDoorSwingFromExistingDoors: () => Promise<void>
   /** Ramen Stage-3/4 opnieuw toestaan. */
   invalidateAutoWindowPass: () => void
   /** Ramen Stage-3/4 direct draaien. */
   refreshWindowOverlay: () => Promise<void>
+  refreshWindowsFromExistingClasses: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
   updatePreviewPlan?: (
     plan: import('@/core/fml/types').FloorPlan,
@@ -249,7 +254,7 @@ export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {
         isSessionV2(session) &&
         (session.detectionExact?.roomPhase === 'review' ||
           session.detectionExact?.roomPhase === 'done')
-          ? ' — deuren+ramen opnieuw'
+          ? ' — deuren+ramen herbonden (face-class)'
           : ''
       devSessionMessage.value = `Hersteld: ${session.imageName} → ${flowStepLabel(target)}${modeHint}${openingsHint} (${session.imageWidth}×${session.imageHeight}).`
     } catch (e) {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   axisAlignedBoundsForRotation,
+  hasPendingInputRotation,
   layerPointToImagePoint,
   totalInputRotationDeg,
 } from '@/platform/canvas/rotationPreview'
@@ -14,6 +15,13 @@ describe('rotationPreview', () => {
         rotate180: true,
       }),
     ).toBe(192)
+  })
+
+  it('hasPendingInputRotation is independent of scale confirm', () => {
+    expect(hasPendingInputRotation({ rotationDeg: -30.7 })).toBe(true)
+    expect(hasPendingInputRotation({ rotationDeg: 0 })).toBe(false)
+    expect(hasPendingInputRotation({ rotationDeg: 0, rotate180: true })).toBe(true)
+    expect(hasPendingInputRotation({ rotationDeg: 0.0004 })).toBe(false)
   })
 
   it('expands bounds for diagonal rotation', () => {

@@ -257,4 +257,28 @@ describe('window-axel-ref', () => {
     expect(band!.topRailRange).not.toBeNull()
     expect(band!.framingSizeRange).not.toBeNull()
   })
+
+  it('3 glas-strips met overlappende AABB (na skew) → stripCount=3, niet 1', () => {
+    // WhatsApp 2026-08-11: valse deskew → AABB Y-overlap; oude merge → 1 strip van 29px.
+    const faces = [
+      makeFace({ label: 4, x: 6, y: 27, width: 10, height: 24 }), // L kozijn
+      makeFace({ label: 7, x: 276, y: 34, width: 11, height: 24 }), // R kozijn
+      makeFace({ label: 5, x: 23, y: 28, width: 248, height: 12 }), // glas 1
+      makeFace({ label: 9, x: 26, y: 39, width: 241, height: 7 }), // glas 2 (AABB raakt 1+3)
+      makeFace({ label: 10, x: 22, y: 44, width: 248, height: 13 }), // glas 3
+      makeFace({ label: 2, x: 7, y: 6, width: 280, height: 23 }), // top rail buiten as
+      makeFace({ label: 13, x: 6, y: 56, width: 280, height: 25 }), // bottom rail
+    ]
+    // areaPx in makeFace = w*h; echte export had iets minder — voldoende voor telling.
+    const band = analyzeWindowAxelRef({
+      refIndex: 0,
+      profile: buildProfile({ faces, cropWidth: 293, cropHeight: 99 }),
+    })
+    expect(band).not.toBeNull()
+    expect(band!.stripCount).toBe(3)
+    expect(band!.stripHeightsPx).toHaveLength(3)
+    // Geen geplakte 29px-AABB: elke strip ≈ area/width (bbox-hoogte).
+    expect(band!.targetStripHeightPx).toBeLessThan(20)
+    expect(band!.framingSizeRange).not.toBeNull()
+  })
 })

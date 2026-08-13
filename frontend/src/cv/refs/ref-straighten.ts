@@ -378,16 +378,18 @@ export function straightenRefLast(params: {
   }
 
   // ESC:REF-03 (A)
-  // Openingen: as recht houden > micro-deskew. Korte kozijnen + aliasing geven
-  // vaak ~0.5–1° valse skew; PCA op asymmetrische eindstukken maakt het erger.
+  // Ramen: as recht houden > micro-deskew. Korte kozijnen + aliasing geven
+  // vaak ~0.5–1.5° valse skew; die rotatie laat AABB's van glas-strips overlappen
+  // → stripCount inzakt naar 1 → Stage-1 false positives. Alleen echte scheefstand
+  // (≥~2°) corrigeren. PCA op asymmetrische eindstukken maakt het erger.
   const isOpening = params.kind === 'window'
   let deskew = estimateDeskewCorrectionFromLines(params.lines, params.orientation, 5, {
     preferParallel: isOpening,
-    minAbsDeg: isOpening ? 0.25 : 0.15,
+    minAbsDeg: isOpening ? 2.0 : 0.15,
     minLengthPx: isOpening ? 8 : 4,
   })
   if (params.kind === 'window' && Math.abs(deskew) < 0.15) {
-    // Alleen bij duidelijke scheefstand; micro-PCA (<~1°) maakt horizontale ramen schuin.
+    // Alleen bij duidelijke scheefstand; micro-PCA maakt horizontale ramen schuin.
     const pcaDeskew = estimateDeskewCorrectionFromInkPca(
       params.bwData,
       params.width,
@@ -395,7 +397,7 @@ export function straightenRefLast(params: {
       params.orientation,
       8,
     )
-    if (Math.abs(pcaDeskew) >= 1.0) deskew = pcaDeskew
+    if (Math.abs(pcaDeskew) >= 2.5) deskew = pcaDeskew
   }
   let state = rotateByDegrees({
     cv: params.cv,

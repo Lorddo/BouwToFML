@@ -21,6 +21,9 @@ const props = defineProps<{
   counts: Partial<Record<ElementClass, number>>
   scaleConfirmed: boolean
   rects: SelectionRect[]
+  wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number }
+  wallRefThicknessMeasures?: import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+  selectedRectId?: string | null
   canCopyPreprocessRefs?: boolean
   preprocessDonorOptions?: Array<{ id: string; name: string }>
   canStartWallStamp?: boolean
@@ -44,6 +47,9 @@ const emit = defineEmits<{
   setReferenceDrawMode: [type: 'wall' | 'door' | 'window']
   setReferencePanMode: []
   updateDoorFmlRefId: [id: string, fmlRefId: string]
+  updateWallThicknessBand: [id: string, band: 'min' | 'mid' | 'max']
+  updateWallThicknessCm: [band: 'min' | 'mid' | 'max', cm: number]
+  selectWallRef: [id: string]
   copyPreprocessRefs: [donorFloorId: string]
   startWallStamp: [donorFloorId: string]
   setWallStampBands: [bands: { min: boolean; mid: boolean; max: boolean }]
@@ -138,9 +144,15 @@ function onCopyPreprocessRefs() {
     :measuring="measuringReferenceWall"
     :scale-confirmed="scaleConfirmed"
     :rects="rects"
+    :wall-thickness-limits="wallThicknessLimits"
+    :wall-ref-thickness-measures="wallRefThicknessMeasures"
+    :selected-rect-id="selectedRectId"
     @set-draw-mode="$emit('setReferenceDrawMode', $event)"
     @deactivate-draw-mode="$emit('setReferencePanMode')"
     @update-door-fml-ref-id="(id, refId) => $emit('updateDoorFmlRefId', id, refId)"
+    @update-wall-thickness-band="(id, band) => $emit('updateWallThicknessBand', id, band)"
+    @update-wall-thickness-cm="(band, cm) => $emit('updateWallThicknessCm', band, cm)"
+    @select-rect="(id) => $emit('selectWallRef', id)"
   />
 
   <div class="panel">

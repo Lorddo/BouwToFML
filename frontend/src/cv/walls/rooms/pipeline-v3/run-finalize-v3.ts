@@ -143,6 +143,7 @@ export async function runFinalizePipelineV3(params: {
   cv: OpenCV
   prep: RoomFinalizeSharedPrepResult
   referenceWallThicknessPx?: number
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
 }): Promise<FinalizeV3Result> {
   const roomWallMaskRle = encodeMaskRle(
     params.prep.splitBlobs.keptWallMaskData,
@@ -154,6 +155,7 @@ export async function runFinalizePipelineV3(params: {
     blobs: params.prep.splitBlobs.blobs,
     maskRle: roomWallMaskRle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
+    bandBoundariesPx: params.bandBoundariesPx,
   })
 
   const { layer1, layer2, layer3, layer4, layer5, layer6, layer7, layer8, layer9, layer10 } =

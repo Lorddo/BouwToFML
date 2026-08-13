@@ -40,6 +40,7 @@ export function groupDoorOpeningsOnWall(
   wallA: Point,
   wallB: Point,
   openings: Opening[],
+  wallThicknessCm?: number,
 ): DoorDisplayGroup[] {
   const dx = wallB.x - wallA.x
   const dy = wallB.y - wallA.y
@@ -69,6 +70,7 @@ export function groupDoorOpeningsOnWall(
       width: swing.width,
       mirrored: opening.mirrored,
       leafLength: swing.width,
+      wallThickness: wallThicknessCm,
     })
     return {
       id: buildDoorOpeningId(wallId, opening, openingIndex),

@@ -48,6 +48,7 @@ import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
 import { useWorkspaceProject } from './project/useWorkspaceProject'
 import { loadUserSettings } from './settings/user-settings'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
+import { loadFmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import {
   deleteProject,
   listProjectIndex,
@@ -104,6 +105,13 @@ export function useWorkspace() {
   const flowStep = ref<WorkspaceFlowStep>('project')
   const wallsDetectionComplete = ref(false)
   const referenceWallThicknessPx = ref<number | null>(null)
+  const wallRefThicknessMeasures = ref<
+    import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+  >([])
+  const wallThicknessBandBoundariesPx = ref<{
+    midBoundaryPx: number
+    maxBoundaryPx: number
+  } | null>(null)
   const devSessionRestoring = ref(false)
 
   const layerToggles = useWorkspaceLayerToggles()
@@ -155,11 +163,13 @@ export function useWorkspace() {
     counts,
     clearRects,
     clearRectsByType,
+    replaceWallRects,
     addRect,
     removeRect,
     selectRect,
     updateRectBounds,
     updateRectFmlRefId,
+    updateRectWallThicknessBand,
     startDraw,
     updateDraw,
     endDraw,
@@ -308,6 +318,8 @@ export function useWorkspace() {
 
   /** Late-bind: FML na door/window faces (directe refs; geen mirror-watches). */
   let fmlApi: ReturnType<typeof useWorkspaceFml> | null = null
+  let syncThicknessCmToFloorDefaults: ((band: 'min' | 'mid' | 'max', cm: number) => void) | null =
+    null
   let doorSwingFacesApi: ReturnType<typeof useWorkspaceDoorSwingFaces> | null = null
   let windowFacesApi: ReturnType<typeof useWorkspaceWindowFaces> | null = null
 
@@ -342,6 +354,28 @@ export function useWorkspace() {
       selectRect,
       updateRectBounds,
       updateRectFmlRefId,
+      updateRectWallThicknessBand,
+      getWallThicknessLimits: () => {
+        if (fmlApi) {
+          return {
+            minCm: fmlApi.fmlThicknessMinCm.value,
+            midCm: fmlApi.fmlThicknessMidCm.value,
+            maxCm: fmlApi.fmlThicknessMaxCm.value,
+          }
+        }
+        return loadFmlWallThicknessLimits()
+      },
+      setWallThicknessCm: (band, cm) => {
+        if (!fmlApi || !(cm > 0)) return
+        if (band === 'min') fmlApi.setFmlThicknessMinCm(cm)
+        else if (band === 'mid') fmlApi.setFmlThicknessMidCm(cm)
+        else fmlApi.setFmlThicknessMaxCm(cm)
+        // Floor-defaults meenemen — anders overschrijft resume/sync de stap-2 override
+        // weer met oude project-defaults.
+        syncThicknessCmToFloorDefaults?.(band, cm)
+      },
+      wallRefThicknessMeasures,
+      wallThicknessBandBoundariesPx,
       endDraw,
       cancelDraw,
       clearSignatureForRect: signature.clearSignatureForRect,
@@ -379,9 +413,11 @@ export function useWorkspace() {
         windowFacesApi?.scheduleRefreshWindowsFromExistingClasses()
       },
       // ESC:O-27 (D)
-      onAfterFinalize: async () => {
+      onAfterFinalize: async (setFinalizePhase) => {
         tally('O-27', 'post_finalize_openings')
-        void doorSwingFacesApi?.snapResolvedDoorsToWalls()
+        setFinalizePhase('doors')
+        await doorSwingFacesApi?.snapResolvedDoorsToWalls()
+        setFinalizePhase('windows')
         windowFacesApi?.bindResolvedWindowsToWalls()
       },
     }),
@@ -480,6 +516,8 @@ export function useWorkspace() {
     mergeMultiWindows,
     referenceWallBandSync: {
       referenceWallThicknessPx,
+      wallRefThicknessMeasures,
+      wallThicknessBandBoundariesPx,
       devSessionRestoring,
     },
     planName: fmlPlanName,
@@ -623,6 +661,7 @@ export function useWorkspace() {
     doorSwingFaces,
     windowFaces,
     referenceWallThicknessPx,
+    wallRefThicknessMeasures,
     wallsDetectionComplete,
     flowStep,
     preprocessUi,
@@ -669,8 +708,10 @@ export function useWorkspace() {
       semanticWalls,
       fml,
       referenceWallThicknessPx,
+      wallRefThicknessMeasures,
       rects,
       clearRectsByType,
+      replaceWallRects,
       addRect,
       detection,
       devSessionRestoring,
@@ -746,6 +787,13 @@ export function useWorkspace() {
   restoreFmlDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()
   // Eerste sync: factory-FML-UI → actieve vloer-/user-defaults (o.a. bovenlicht).
   restoreFmlDefaultsFromActiveFloor()
+  syncThicknessCmToFloorDefaults = (band, cm) => {
+    if (!(cm > 0)) return
+    if (band === 'min') project.updateActiveFloorDefaults({ thicknessMinCm: cm }, { syncUi: false })
+    else if (band === 'mid')
+      project.updateActiveFloorDefaults({ thicknessMidCm: cm }, { syncUi: false })
+    else project.updateActiveFloorDefaults({ thicknessMaxCm: cm }, { syncUi: false })
+  }
 
   const resumeCandidate = ref<PersistedProjectIndexEntry | null>(null)
 
@@ -987,6 +1035,7 @@ export function useWorkspace() {
     profileConfirmed,
     activeDrawingProfile,
     referenceWallThicknessPx,
+    wallRefThicknessMeasures,
     wallPipelineVersion,
     showOcrDetails,
     preprocess,

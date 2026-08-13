@@ -6,6 +6,7 @@ import type {
   WindowEvidenceAcceptance,
 } from '@/cv/windows'
 import {
+  promoteOrphanedDoorframesToWindowsInStageCache,
   pruneWindowStageCacheByClassification,
   windowCandidateStillClassifiedAsWindow,
 } from '@/ui/composables/workspace/window-stage-cache-prune'
@@ -161,6 +162,53 @@ describe('window-stage-cache-prune', () => {
     expect(pruned.stage1AcceptedCount).toBe(1)
   })
 
+  it('strips demoted face from stage4 strip_stack but keeps sibling glass', () => {
+    const cache = {
+      ...emptyCache(),
+      stage4ResolvedWindows: [resolved('stack', [590, 603, 722], 'strip_stack', [590, 603, 722])],
+    }
+    // Override bbox/width to mimic inflated Stage-4 candidate.
+    cache.stage4ResolvedWindows[0] = {
+      ...cache.stage4ResolvedWindows[0],
+      bbox: { x: 405, y: 2276, width: 408, height: 100 },
+      widthPx: 378,
+      widthCm: 378,
+    }
+    const classification = new Map<number, RoomRasterClass>([
+      [590, 'unknown'],
+      [603, 'window'],
+      [722, 'window'],
+    ])
+    const pruned = pruneWindowStageCacheByClassification(cache, classification)
+    expect(pruned.stage4ResolvedWindows).toHaveLength(1)
+    expect(pruned.stage4ResolvedWindows[0].faceIds).toEqual([603, 722])
+    expect(pruned.stage4ResolvedWindows[0].evidenceFaceIds).toEqual([603, 722])
+    // Zonder dual blijft bbox staan; L14-bind herberekent met dual.
+    expect(pruned.stage4ResolvedWindows[0].bbox.width).toBe(408)
+  })
+
+  it('strips doorframe evidence from framing stage4 after wees-deur demote', () => {
+    const cache = {
+      ...emptyCache(),
+      stage4ResolvedWindows: [resolved('framing', [79, 93, 192], 'framing', [76, 188])],
+    }
+    cache.stage4ResolvedWindows[0] = {
+      ...cache.stage4ResolvedWindows[0],
+      bbox: { x: 1762, y: 356, width: 251, height: 65 },
+      widthPx: 251,
+    }
+    const classification = new Map<number, RoomRasterClass>([
+      [79, 'window'],
+      [93, 'window'],
+      [192, 'window'],
+      [76, 'wall'],
+      [188, 'door'], // stale deur-face in framing evidence
+    ])
+    const pruned = pruneWindowStageCacheByClassification(cache, classification)
+    expect(pruned.stage4ResolvedWindows[0].evidenceFaceIds).toEqual([76])
+    expect(pruned.stage4ResolvedWindows[0].faceIds).toEqual([79, 93, 192])
+  })
+
   it('drops doorframe entries when doorframe faces are demoted', () => {
     const cache = {
       ...emptyCache(),
@@ -180,5 +228,70 @@ describe('window-stage-cache-prune', () => {
     expect(pruned.stage3AcceptedDoorframes).toEqual([])
     expect(pruned.stage4ResolvedDoorframes).toEqual([])
     expect(pruned.stage3DoorframeAcceptedCount).toBe(0)
+  })
+})
+
+describe('promoteOrphanedDoorframesToWindowsInStageCache', () => {
+  it('moves orphaned doorframe entries into window stage lists', () => {
+    const cache = {
+      ...emptyCache(),
+      stage3Accepted: [acceptance('w1', [10], 'framing', [11])],
+      stage3AcceptedHypotheses: [hyp('w1', [10])],
+      stage3AcceptedDoorframes: [
+        acceptance('df1', [30], 'framing', [31]),
+        acceptance('df2', [40], 'strip_stack', [41]),
+      ],
+      stage4ResolvedWindows: [resolved('w1', [10], 'framing', [11])],
+      stage4ResolvedDoorframes: [
+        resolved('df1', [30], 'framing', [31]),
+        resolved('df2', [40], 'strip_stack', [41]),
+      ],
+      stage3AcceptedByFraming: 1,
+      stage3DoorframeAcceptedCount: 2,
+    }
+
+    const next = promoteOrphanedDoorframesToWindowsInStageCache(cache, [30])
+
+    expect(next.stage3Accepted.map((e) => e.hypothesis.id).sort()).toEqual(['df1', 'w1'])
+    expect(next.stage3AcceptedDoorframes.map((e) => e.hypothesis.id)).toEqual(['df2'])
+    expect(next.stage4ResolvedWindows.map((w) => w.id).sort()).toEqual(['df1', 'w1'])
+    expect(next.stage4ResolvedDoorframes.map((w) => w.id)).toEqual(['df2'])
+    expect(next.stage2AcceptedHypotheses.map((h) => h.id)).toEqual(['df1'])
+    expect(next.stage3AcceptedByFraming).toBe(2)
+    expect(next.stage3AcceptedByStripStack).toBe(0)
+    expect(next.stage3DoorframeAcceptedCount).toBe(1)
+  })
+
+  it('keeps shared doorframes that were not orphaned', () => {
+    const cache = {
+      ...emptyCache(),
+      stage3AcceptedDoorframes: [acceptance('df1', [30], 'framing')],
+      stage4ResolvedDoorframes: [resolved('df1', [30], 'framing')],
+      stage3DoorframeAcceptedCount: 1,
+    }
+    const next = promoteOrphanedDoorframesToWindowsInStageCache(cache, [99])
+    expect(next.stage3Accepted).toEqual([])
+    expect(next.stage3AcceptedDoorframes.map((e) => e.hypothesis.id)).toEqual(['df1'])
+    expect(next.stage4ResolvedDoorframes.map((w) => w.id)).toEqual(['df1'])
+  })
+
+  it('does not duplicate when window entry already exists', () => {
+    const cache = {
+      ...emptyCache(),
+      stage2AcceptedHypotheses: [hyp('df1', [30])],
+      stage3Accepted: [acceptance('df1', [30], 'framing')],
+      stage3AcceptedHypotheses: [hyp('df1', [30])],
+      stage3AcceptedDoorframes: [acceptance('df1', [30], 'framing')],
+      stage4ResolvedWindows: [resolved('df1', [30], 'framing')],
+      stage4ResolvedDoorframes: [resolved('df1', [30], 'framing')],
+      stage3AcceptedByFraming: 1,
+      stage3DoorframeAcceptedCount: 1,
+    }
+    const next = promoteOrphanedDoorframesToWindowsInStageCache(cache, [30])
+    expect(next.stage3Accepted).toHaveLength(1)
+    expect(next.stage4ResolvedWindows).toHaveLength(1)
+    expect(next.stage2AcceptedHypotheses).toHaveLength(1)
+    expect(next.stage3AcceptedDoorframes).toEqual([])
+    expect(next.stage4ResolvedDoorframes).toEqual([])
   })
 })

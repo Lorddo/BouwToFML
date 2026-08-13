@@ -7,7 +7,10 @@ import {
 
 const JUNCTION_SNAP_CM = 2
 const JUNCTION_MERGE_CM = 3
-export const ENDPOINT_SNAP_RADIUS_CM = 3
+/** Soft H/V-snap naar andere muuruiteinden (cm); Ctrl/Cmd schakelt uit. */
+export const ENDPOINT_SNAP_RADIUS_CM = 15
+/** Soft snap naar andere knooppunten bij junction-drag / tekenen (cm). */
+export const JUNCTION_POINT_SNAP_CM = 15
 
 export const BALANCE_MIN = 0
 export const BALANCE_MAX = 1

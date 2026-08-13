@@ -20,6 +20,21 @@ export interface BuildDoorSwingSymbolInput {
   mirrored?: [number, number]
   /** Optioneel: exacte bladlengte (default 0.9×width). FML-viewer gebruikt volle clear span. */
   leafLength?: number
+  /**
+   * Muurdikte (zelfde eenheid als start/end: cm in FML, px in L12-overlay).
+   * Schuifpijlen gaan net buiten de muurgap (zoals rond/half-rond raam-ornament).
+   */
+  wallThickness?: number
+}
+
+/** Extra buiten de muurgap — analoog aan window-ornament `radius + 2`. */
+const SLIDING_ARROW_OUTSIDE_GAP = 10
+const SLIDING_ARROW_FALLBACK_THICKNESS = 10
+
+function slidingArrowOffset(wallThickness?: number): number {
+  const thickness =
+    wallThickness != null && wallThickness > 0 ? wallThickness : SLIDING_ARROW_FALLBACK_THICKNESS
+  return thickness / 2 + SLIDING_ARROW_OUTSIDE_GAP
 }
 
 function midpoint(a: DoorSwingPoint, b: DoorSwingPoint): DoorSwingPoint {
@@ -188,22 +203,34 @@ function arrowAlongWall(
   return buildArrowLine(center, dir, length)
 }
 
+/** Pijl-lane loodrecht op de muur; `mirrored[1]` kiest de zichtzijde (±normaal). */
+function slidingArrowLane(
+  center: DoorSwingPoint,
+  wallUnit: DoorSwingPoint,
+  offset: number,
+  mirrored?: [number, number],
+): DoorSwingPoint {
+  const normal = wallNormal(wallUnit)
+  const sign = resolveSwingSign(mirrored)
+  return {
+    x: center.x + normal.x * sign * offset,
+    y: center.y + normal.y * sign * offset,
+  }
+}
+
 /** Pocketdeur: één pijl (richting via mirrored[0]; default naar eind/b = rechts bij a→b). */
 function buildSlidingPocketSymbol(params: {
   start: DoorSwingPoint
   end: DoorSwingPoint
   wallUnit: DoorSwingPoint
   mirrored?: [number, number]
+  wallThickness?: number
 }): DoorSymbol {
   const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
   const arrowLen = Math.max(18, span * 0.35)
-  const normal = wallNormal(params.wallUnit)
   const center = midpoint(params.start, params.end)
-  const offset = 5
-  const lane = {
-    x: center.x - normal.x * offset,
-    y: center.y - normal.y * offset,
-  }
+  const offset = slidingArrowOffset(params.wallThickness)
+  const lane = slidingArrowLane(center, params.wallUnit, offset, params.mirrored)
   const towardEnd = !resolveHingeAtStart(params.mirrored)
   return {
     leafLines: [],
@@ -213,28 +240,32 @@ function buildSlidingPocketSymbol(params: {
 }
 
 /**
- * Schuifpui 1 schuivend deel: middenstreep + 1 pijl boven linker deel naar rechts
- * (spiegelbaar via mirrored[0]).
+ * Schuifpui 1 schuivend deel: middenstreep + 1 pijl (along via mirrored[0],
+ * muurzijde via mirrored[1]).
  */
 function buildSlidingSingleSymbol(params: {
   start: DoorSwingPoint
   end: DoorSwingPoint
   wallUnit: DoorSwingPoint
   mirrored?: [number, number]
+  wallThickness?: number
 }): DoorSymbol {
   const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
   const arrowLen = Math.max(16, span * 0.2)
-  const normal = wallNormal(params.wallUnit)
   const mid = midpoint(params.start, params.end)
-  const offset = 5
-  const leftCenter = {
-    x: (params.start.x + mid.x) / 2 - normal.x * offset,
-    y: (params.start.y + mid.y) / 2 - normal.y * offset,
-  }
-  const rightCenter = {
-    x: (mid.x + params.end.x) / 2 - normal.x * offset,
-    y: (mid.y + params.end.y) / 2 - normal.y * offset,
-  }
+  const offset = slidingArrowOffset(params.wallThickness)
+  const leftCenter = slidingArrowLane(
+    { x: (params.start.x + mid.x) / 2, y: (params.start.y + mid.y) / 2 },
+    params.wallUnit,
+    offset,
+    params.mirrored,
+  )
+  const rightCenter = slidingArrowLane(
+    { x: (mid.x + params.end.x) / 2, y: (mid.y + params.end.y) / 2 },
+    params.wallUnit,
+    offset,
+    params.mirrored,
+  )
   const hingeAtStart = resolveHingeAtStart(params.mirrored)
   // Default [0,0]: pijl op linker deel naar rechts t.o.v. muur a→b (omgekeerd van hingeAtStart-mapping).
   const arrowCenter = hingeAtStart ? rightCenter : leftCenter
@@ -248,27 +279,31 @@ function buildSlidingSingleSymbol(params: {
 
 /**
  * Schuifpui 2 schuivende delen: middenstreep + twee pijlen naar elkaar toe
- * (boven de panelen; spiegelbaar via mirrored[0] = omwisselen).
+ * (along via mirrored[0], muurzijde via mirrored[1]).
  */
 function buildSlidingDoubleSymbol(params: {
   start: DoorSwingPoint
   end: DoorSwingPoint
   wallUnit: DoorSwingPoint
   mirrored?: [number, number]
+  wallThickness?: number
 }): DoorSymbol {
   const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
   const arrowLen = Math.max(16, span * 0.18)
-  const normal = wallNormal(params.wallUnit)
   const mid = midpoint(params.start, params.end)
-  const offset = 5
-  const leftCenter = {
-    x: (params.start.x + mid.x) / 2 - normal.x * offset,
-    y: (params.start.y + mid.y) / 2 - normal.y * offset,
-  }
-  const rightCenter = {
-    x: (mid.x + params.end.x) / 2 - normal.x * offset,
-    y: (mid.y + params.end.y) / 2 - normal.y * offset,
-  }
+  const offset = slidingArrowOffset(params.wallThickness)
+  const leftCenter = slidingArrowLane(
+    { x: (params.start.x + mid.x) / 2, y: (params.start.y + mid.y) / 2 },
+    params.wallUnit,
+    offset,
+    params.mirrored,
+  )
+  const rightCenter = slidingArrowLane(
+    { x: (mid.x + params.end.x) / 2, y: (mid.y + params.end.y) / 2 },
+    params.wallUnit,
+    offset,
+    params.mirrored,
+  )
   const swap = !resolveHingeAtStart(params.mirrored)
   const a = swap ? rightCenter : leftCenter
   const b = swap ? leftCenter : rightCenter
@@ -339,6 +374,7 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         end: params.end,
         wallUnit: params.wallUnit,
         mirrored: params.mirrored,
+        wallThickness: params.wallThickness,
       })
     case 'sliding_single':
       return buildSlidingSingleSymbol({
@@ -346,6 +382,7 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         end: params.end,
         wallUnit: params.wallUnit,
         mirrored: params.mirrored,
+        wallThickness: params.wallThickness,
       })
     case 'sliding_pocket':
       return buildSlidingPocketSymbol({
@@ -353,6 +390,7 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         end: params.end,
         wallUnit: params.wallUnit,
         mirrored: params.mirrored,
+        wallThickness: params.wallThickness,
       })
     case 'garage':
       return buildGarageSymbol({

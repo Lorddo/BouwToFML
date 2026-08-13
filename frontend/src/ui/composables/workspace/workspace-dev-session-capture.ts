@@ -45,17 +45,53 @@ export type WorkspaceDevSessionCaptureDeps = {
   serializeFaceOverrides: () => Array<[number, RoomRasterClass]>
   serializePinnedRoots: () => number[]
   referenceWallThicknessPx: Ref<number | null>
+  wallRefThicknessMeasures: Ref<
+    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+  >
   rects: Ref<Array<{ type: string; x: number; y: number; width: number; height: number }>>
   roomInkCoverageThreshold: Ref<number>
 }
 
 export function resolveReferenceWallRect(
-  rects: Array<{ type: string; x: number; y: number; width: number; height: number }>,
+  rects: Array<{
+    type: string
+    x: number
+    y: number
+    width: number
+    height: number
+    wallThicknessBand?: string
+  }>,
 ): DevWallReferenceRect | undefined {
-  const wallRects = rects.filter((rect) => rect.type === 'wall')
-  const last = wallRects[wallRects.length - 1]
-  if (!last) return undefined
-  return { x: last.x, y: last.y, width: last.width, height: last.height }
+  const all = resolveReferenceWallRects(rects)
+  if (all.length === 0) return undefined
+  const maxTagged = [...all].reverse().find((r) => r.wallThicknessBand === 'max')
+  return maxTagged ?? all[all.length - 1]
+}
+
+/** Alle muur-LBE’s met band — tekenvolgorde behouden. */
+export function resolveReferenceWallRects(
+  rects: Array<{
+    type: string
+    x: number
+    y: number
+    width: number
+    height: number
+    wallThicknessBand?: string
+  }>,
+): DevWallReferenceRect[] {
+  return rects
+    .filter((rect) => rect.type === 'wall')
+    .map((pick) => ({
+      x: pick.x,
+      y: pick.y,
+      width: pick.width,
+      height: pick.height,
+      ...(pick.wallThicknessBand === 'min' ||
+      pick.wallThicknessBand === 'mid' ||
+      pick.wallThicknessBand === 'max'
+        ? { wallThicknessBand: pick.wallThicknessBand }
+        : {}),
+    }))
 }
 
 export function resolveOpeningRects(
@@ -161,7 +197,12 @@ export function createWorkspaceDevSessionCapture(deps: WorkspaceDevSessionCaptur
       faceOverrides: deps.serializeFaceOverrides(),
       pinnedRoots: deps.serializePinnedRoots(),
       referenceWallThicknessPx: deps.referenceWallThicknessPx.value,
+      wallRefThicknessMeasures: deps.wallRefThicknessMeasures.value.map((m) => ({
+        band: m.band,
+        thicknessPx: m.thicknessPx,
+      })),
       referenceWallRect: resolveReferenceWallRect(deps.rects.value),
+      referenceWallRects: resolveReferenceWallRects(deps.rects.value),
       openingRects: resolveOpeningRects(deps.rects.value),
       roomInkCoverageThreshold: deps.roomInkCoverageThreshold.value,
       liveRoomClassifyState: (() => {

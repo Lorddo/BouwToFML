@@ -89,6 +89,8 @@ export interface CollapsePolicy {
   thicknessMatchMinRatio: number
   thicknessFallbackPx: number
   thicknessSampleInsetPx: number
+  /** Absolute meetbandgrenzen (multi muur-ref); anders ratios × ref. */
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** L9 only — L7/L10 must be false. */
   enableStubCollapse: boolean
   /** L9 only — axis-cluster coverage absorb. */

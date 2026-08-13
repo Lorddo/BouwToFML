@@ -13,6 +13,8 @@ defineProps<{
   wallsTabOutputReady: boolean
   running: boolean
   status: string | null
+  /** Verberg statusregel tijdens canvas busy-overlay (detectie/afronden). */
+  hideStatus?: boolean
   error: string | null
   preprocessPreviewError: string | null
   scaleLocked: boolean
@@ -23,8 +25,8 @@ defineProps<{
 
 <template>
   <div v-if="flowStep === 'templates' || flowStep === 'result'" class="panel">
-    <p v-if="running && status" class="status">{{ status }}</p>
-    <p v-else-if="status" class="status">{{ status }}</p>
+    <p v-if="!hideStatus && running && status" class="status">{{ status }}</p>
+    <p v-else-if="!hideStatus && status" class="status">{{ status }}</p>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="preprocessPreviewError" class="error">{{ preprocessPreviewError }}</p>
   </div>

@@ -5,7 +5,51 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-07 (IDB persist quota)
+Laatste update: 2026-08-13 (stap-1 rotatie vastzetten)
+
+## Stap 1 rotatie-bake vóór schaal (2026-08-13)
+
+Scheve scans: H/V-linialen blijven as-aligned terwijl preview roteert. Optionele knop «Rotatie vastzetten» bakt pixels (`commitInputStepImage`); auto bij 1→2. Rotatie-UI niet geblokkeerd door onbevestigde schaal. Na bake zonder bevestigde schaal: verse linialen (mm blijft).
+
+## Verder werken: demoted deuren + muur-ref defaults (2026-08-12)
+
+Bug: exact-restore deed volle deur/raam-herdetectie → demoted deuren terug; `wallRefThicknessMeasures` werd gewist → bandgrenzen 40/80 i.p.v. multi-ref; stap-2 dikte-cm alleen in FML-UI/localStorage → resume overschreef via floor-defaults. Fix: openings-rerun = existing-doors-only + face-override reassert/prune; measures in DevSession capture/restore; `setWallThicknessCm` schrijft floor-defaults mee.
+
+**Vervolg (zelfde dag):** referentie-analyse HTML analyseerde alleen de *laatste* muur-LBE → mid/max ontbraken in export; exact-restore skipte wall-rects bij classify-state. Fix: `analyzeAllReferenceRects` → alle walls + HTML multi-cards; restore altijd wall-rects uit exact; `replaceWallRects` bulk-restore.
+
+**Diagnose + wall outside (2026-08-12):** diagnose REF-beelden = muur `faceOverlay` + opening contouren (`referenceRefImages`); sealBorders outside-rol via seal-ring heuristiek; wall face-crop bbox = ink-bounds (geen vloer).
+
+## Framing-fallback L14 + wees-DF (2026-08-12)
+
+Widest-strip (`strip_stack` max as-span) raakt framing-pad niet. Framing-fallback mistte kozijn doordat L14-reconcile wall-evidence glas-only forceerde. Fix: framing = glas+wall kozijn (Stage-4 parity); ids unchanged → Stage-4 behouden; `door`/`doorframe` evidence blijft strippen (wees-deur). strip_stack blijft langste window-strip.
+
+## Wees-doorframe / L14 (2026-08-11)
+
+Na deur-demote: `door`/`doorframe` evidence strippen uit framing-L14. Deur L11/L12: `reconcileResolvedDoorForClassification` stript non-door faces + DF-ids die niet meer `doorframe` zijn (promoted DF→window).
+
+## L14: handmatige raam-demote strip uit bind (2026-08-11)
+
+Bug: Stage-4 hyp `590+603+722` (doorlopende rail 408px) bleef na demote van 590 in L14-bbox → junction_in_window. Stage 1–4 draaien vóór face-edit — niet daar fixen. Fix: `reconcileResolvedWindowForClassification` in demote-prune + L14-bind (strip non-window faces, bbox/width via dual). R-12 `MAX_PAIR_AXIS_SPAN_RATIO` 1.5→1.25 (kozijn iets breder dan glas OK).
+
+## Multi-ref persist bij «Verder werken» (2026-08-11)
+
+Bug: DevSession bewaarde alleen 1× `referenceWallRect` → na resume verdwenen mid/min muur-LBE’s. Fix: `referenceWallRects[]` + `wallThicknessBand` in capture/restore; legacy singular blijft fallback. Deur/raam `openingRects` gingen al als array mee.
+
+## Wees-doorframe na deur-demote → window (2026-08-11)
+
+Bug: deur weg → gekoppelde doorframe (false deur) werd `wall` + stage-prune → verdween. Fix: `acknowledgeDoorSwingDemotePrune` zet class `window` + `promoteOrphanedDoorframesToWindowsInStageCache` (Stage-3/4 DF → window); twin/shared DF blijft.
+
+## Raam REF stripCount + valse deskew (2026-08-11)
+
+Valse ~1.4° as-align op recht raam → glas-AABB’s overlappen → merge tot stripCount=1 → Stage-1 ~90 false hits. Fix: window deskew minAbsDeg 2.0° + PCA ≥2.5°; strip-telling op centroid-Y + area/span (geen AABB-Y-merge).
+
+## Multi muur-dikte refs (2026-08-11)
+
+Stap 2: tot 3 muur-LBE (unieke min/mid/max-tag); ≥1 verplicht. `referenceWallThicknessPx` = max-meting of `measuredPx × maxCm/bandCm`. Optionele mid/min zetten meetbandgrenzen (halfway) i.p.v. alleen 40/80. Export-cm blijven project-limits. L7/L9/L10 krijgen optioneel `bandBoundariesPx`.
+
+## Diagnose-export volle pipeline (2026-08-11)
+
+Diagnosis FAB: volledige `buildLayerDebugReport` (L1–L10 + transitions + L11/L12/L14 + journal) + semanticWallGraph + markdown + opening REF «Gegroepeerde contouren los» (zelfde pipeline als referentie-analyse, alleen die PNG). Zelfde wall-bron als `*-layer-debug.json`.
 
 ## Project-persist quota / FML kwijt na refresh (2026-08-07)
 
@@ -51,9 +95,9 @@ Hosted test: `VITE_APP_ACCESS_PASSWORD` → `AppAccessGate` vóór shell; leeg =
 
 Rapport: `.cursor/docs/audit-2026-08-05-customer-test.md` — **Go**. Live: https://floorplan-fml.lorddo3066.workers.dev/ — COOP/COEP/CORP geverifieerd; P1 dry-run user-OK (multi-floor, settings, FML-viewer). Klaar voor klanttesters.
 
-## Diagnose-export FAB (2026-08-05)
+## Diagnose-export FAB (2026-08-05 → 08-11)
 
-Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, B/W, refs, deuren/ramen, compact L10/L12/L14, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts`.
+Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, B/W, refs, deuren/ramen, **volle L1–L10 + transitions + L11/L12/L14**, semantic graph, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts` via `buildLayerDebugReport`.
 
 ## Projectpersistentie IndexedDB (2026-08-05)
 
@@ -170,6 +214,8 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
+**Stap 1 rotatie-bake (2026-08-13).** Optionele knop «Rotatie vastzetten» + auto bij 1→2; schaal blijft onafhankelijk.
+
 **Customer-test (2026-08-05) — Go.** Live https://floorplan-fml.lorddo3066.workers.dev/ ; headers OK; dry-run OK. Klaar voor klant.
 
 **L14 1D NMS (2026-08-04).** R-28/X-28 in bind + `toLayer14WindowsForFml` vóór R-27.
@@ -184,7 +230,7 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 **Open / handmatig checken**
 
-- **Door-demote → window cascade (code gedaan 2026-07-31)** — face-edit deur-prune sync’t door-arc sig; geen volle raam-pipeline. Wees-`doorframeFaceIds` → class `wall` + window stage-prune only. UI-smoke: Project4 demote deur zonder/met DF → geen Raamkandidaten-herstart.
+- **Door-demote → window cascade (code gedaan 2026-07-31; wees-DF→window 2026-08-11)** — face-edit deur-prune sync’t door-arc sig; geen volle raam-pipeline. Wees-`doorframeFaceIds` → class `window` + stage DF→window promote. UI-smoke: Project4 demote deur naast DF → DF wordt cyaan raam (geen herstart).
 - **Face-edit perf (code gedaan)** — dirty-rect preview + claim-detach bounds; region-sized ink nearest + in-place prior; demote prune 80 ms coalesce. Specs face-overlay-perf + demote guards groen. UI-smoke Project4: Shift-klik wall↔unknown / box / demote overlays.
 - **Lean Walls W3+B4 (code gedaan)** — `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (plan “Expliciet later”); 122 pipeline-v3 groen. Planned lean walls items **empty**.
 - **Lean Walls dist-map pass-through (code gedaan)** — `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; scaffold v2=false + arm via scale; UI-smoke Project4 L7–L10 user-OK.
@@ -248,7 +294,7 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 **Wall-B/W overlay:** `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay` (`compose-wall-bw.ts`); stap 2/3 inkt-tools op overlay; afronden stap 2 bakt ink→`baseBw` (+ `bakedInkOverlay`); classify/finalize/Verwerk inkt via `precomposedWallBw`; geen bake naar kleur.
 
-**Stap 1:** schaal/rotatie/crop/gum. Geen refs. Floor **min 3000px** (`OPTIMIZATION_BASE_DIMENSION`); upscale high-quality.
+**Stap 1:** schaal/rotatie/crop/gum. Optionele «Rotatie vastzetten» (zelfde bake als 1→2) zodat scheve scans daarna geschaald kunnen. Geen refs. Floor **min 3000px** (`OPTIMIZATION_BASE_DIMENSION`); upscale high-quality.
 
 **Stap 2:** canvas alleen Voorbewerking; Int muur via Dev-view. B/W-tune + **LBE-refs** (muur/deur/raam) + OCR-toggle (**default uit**) + deur Template ID. Gate naar stap 3: muur-rect; bij afronden meet dikte/stijl op post-bake **`baseBw`**. Ref-crops = **`baseBw`** (gebakken inkt mee; nooit `effectiveBw`/OCR; fallback rebuild wallLayer zonder UI-state).
 

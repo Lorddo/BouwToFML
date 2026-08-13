@@ -37,6 +37,15 @@ describe('wall balance extents', () => {
     expect(mid.x).toBeCloseTo(50, 6)
     expect(mid.y).toBeCloseTo(6, 6)
   })
+
+  it('opening mid-offset follows wall balance (viewer doors/windows use this)', () => {
+    const wallUnit = { x: 1, y: 0 }
+    const hinge = { x: 40, y: 0 }
+    const offset = offsetPointByWallBalance(hinge, wallUnit, 30, 0.8)
+    // mid = (plus-minus)/2 = (24-6)/2 = 9 along left normal
+    expect(offset).toEqual({ x: 40, y: 9 })
+    expect(offsetPointByWallBalance(hinge, wallUnit, 30, 0.5)).toEqual({ x: 40, y: 0 })
+  })
 })
 
 describe('buildWallRenderGeometry', () => {
@@ -167,6 +176,40 @@ describe('buildWallRenderGeometry', () => {
     const w1 = geometry.wallPolygons.find((polygon) => polygon.id === 'w1')!
     expect(hasVertex(w1.points, { x: 110, y: 15 })).toBe(true)
     expect(hasVertex(w1.points, { x: 110, y: -5 })).toBe(true)
+  })
+
+  it('flush balance=0 L has no false exterior ear beyond the join', () => {
+    // Both walls entirely on −normal (H below, V to the right) → exterior (−x,−y) empty.
+    const geometry = buildWallRenderGeometry([
+      { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0 },
+      { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 20, balance: 0 },
+    ])
+    expect(geometry.fillComponents.length).toBe(1)
+    expect(pointInFillComponents({ x: -8, y: -8 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: 50, y: -8 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 8, y: 40 }, geometry.fillComponents)).toBe(true)
+  })
+
+  it('centered balance L still fills the outer corner', () => {
+    const geometry = buildWallRenderGeometry([
+      { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0.5 },
+      { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 20, balance: 0.5 },
+    ])
+    expect(pointInFillComponents({ x: -8, y: -8 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: -15, y: -15 }, geometry.fillComponents)).toBe(false)
+  })
+
+  it('shifting one wall balance removes overhang on the emptied side', () => {
+    // Thick V mostly to the right (balance 0.1); H must not keep a half-thick left ear.
+    const geometry = buildWallRenderGeometry([
+      { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0.5 },
+      { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 30, balance: 0.1 },
+    ])
+    expect(geometry.fillComponents.length).toBe(1)
+    expect(pointInFillComponents({ x: -12, y: -8 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: -12, y: 40 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: 12, y: 40 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 50, y: 0 }, geometry.fillComponents)).toBe(true)
   })
 
   it('does not produce extreme spikes on nearly collinear joins', () => {

@@ -9,7 +9,7 @@ import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { formatCvError } from '@/cv/formatCvError'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import type { RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
-import { effectiveClassification } from '@/cv/walls/rooms/room-raster-cache'
+import { effectiveClassification, ensureFaceDualSpace } from '@/cv/walls/rooms/room-raster-cache'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
 import type { SelectionRect } from '@/platform/selection'
 import {
@@ -81,7 +81,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
   onDoorFacesApplied?: () => void | Promise<void>
   /**
-   * Na demote-prune: sync window door-arc sig + optionele wees-doorframe cleanup.
+   * Na demote-prune: sync window door-arc sig + wees-doorframe → window.
    * Geen volle raam-pipeline.
    */
   onDoorSwingDemotePruned?: (orphanedDoorframeFaceIds: readonly number[]) => void | Promise<void>
@@ -433,10 +433,12 @@ export function useWorkspaceDoorSwingFaces(deps: {
       wallsMeta: deps.tabOutputs.value.walls,
     })
     const beforeResolved = stageCache.value.resolvedDoors
+    const dual = deps.roomRasterCache.value ? ensureFaceDualSpace(deps.roomRasterCache.value) : null
     stageCache.value = pruneDoorStageCacheByClassification(
       stageCache.value,
       classification,
       parentMap,
+      dual,
     )
     const orphanedDoorframeFaceIds = collectOrphanedDoorframeFaceIdsAfterDoorPrune(
       beforeResolved,
@@ -453,7 +455,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     if (deps.tabOutputs.value.walls?.roomWallMaskRle) {
       await snapResolvedDoorsToWalls()
     }
-    // Window: arc-sig sync + wees-DF cleanup — nooit volle raam-pipeline via deze prune.
+    // Window: arc-sig sync + wees-DF → window — nooit volle raam-pipeline via deze prune.
     await deps.onDoorSwingDemotePruned?.(orphanedDoorframeFaceIds)
   }
 
@@ -499,6 +501,33 @@ export function useWorkspaceDoorSwingFaces(deps: {
         rerunRequested = false
         refreshQueued.value = false
         await runDoorSwingOverlayRefreshPass()
+      } while (rerunRequested || refreshQueued.value)
+    } finally {
+      refreshInFlight = false
+      refreshQueued.value = false
+      rerunRequested = false
+    }
+  }
+
+  /**
+   * Herbouw Stage-2 alleen vanuit faces die al class=`door` zijn.
+   * Voor DevSession/project-restore: geen demoted deuren terugzetten.
+   */
+  async function refreshDoorSwingOverlayExistingOnly(): Promise<void> {
+    if (refreshTimer.value) {
+      clearTimeout(refreshTimer.value)
+      refreshTimer.value = null
+    }
+    if (refreshInFlight) {
+      rerunRequested = true
+      return
+    }
+    refreshInFlight = true
+    try {
+      do {
+        rerunRequested = false
+        refreshQueued.value = false
+        await runDoorSwingOverlayRefreshPass({ mode: 'existing-doors-only' })
       } while (rerunRequested || refreshQueued.value)
     } finally {
       refreshInFlight = false
@@ -705,6 +734,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     initialPassReady: autoPassApplied,
     refreshing,
     refreshDoorSwingOverlay,
+    refreshDoorSwingOverlayExistingOnly,
     refreshDoorSwingFromExistingDoors,
     scheduleRefreshDoorSwingFromExistingDoors,
     onWallsClassified,

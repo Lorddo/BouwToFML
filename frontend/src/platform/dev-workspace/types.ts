@@ -54,7 +54,17 @@ export interface DevWorkspaceSessionBase {
   wallStamp?: import('@/ui/composables/workspace/useWallStamp').WallStampSerialized
   /** Stap-1 referentievakken (muur + deur/raam) — ook buiten detectie-snapshots. */
   referenceWallThicknessPx?: number
+  /**
+   * Gemeten muur-ref diktes (min/mid/max) — nodig om na resume bandgrenzen te herleiden
+   * i.p.v. 40/80-defaults op alleen `referenceWallThicknessPx`.
+   */
+  wallRefThicknessMeasures?: Array<{
+    band: 'min' | 'mid' | 'max'
+    thicknessPx: number
+  }>
+  /** @deprecated Prefer `referenceWallRects` (multi muur-refs). */
   referenceWallRect?: DevWallReferenceRect
+  referenceWallRects?: DevWallReferenceRect[]
   openingRects?: DevOpeningReferenceRect[]
 }
 
@@ -84,6 +94,8 @@ export interface DevWallReferenceRect {
   y: number
   width: number
   height: number
+  /** min/mid/max — alleen relevant bij multi muur-refs. */
+  wallThicknessBand?: 'min' | 'mid' | 'max'
 }
 
 export interface DevOpeningReferenceRect {
@@ -98,7 +110,18 @@ export interface DevOpeningReferenceRect {
 
 export interface DevWorkspaceRoomSnapshot {
   referenceWallThicknessPx?: number
+  /** Gemeten muur-ref diktes (band + px) voor meetbandgrenzen na restore. */
+  wallRefThicknessMeasures?: Array<{
+    band: 'min' | 'mid' | 'max'
+    thicknessPx: number
+  }>
+  /**
+   * Legacy single muur-ref (style/max pick). Nieuwe snapshots zetten ook
+   * `referenceWallRects` — restore prefereert die array.
+   */
   referenceWallRect?: DevWallReferenceRect
+  /** Alle muur-LBE’s (max 3) met band-tag. */
+  referenceWallRects?: DevWallReferenceRect[]
   /** Deur-/raamreferentievakken van stap 1. */
   openingRects?: DevOpeningReferenceRect[]
   roomInkCoverageThreshold?: number
@@ -160,7 +183,12 @@ export interface DevSessionCaptureInput {
   faceOverrides?: Array<[number, RoomRasterClass]>
   pinnedRoots?: number[]
   referenceWallThicknessPx?: number | null
+  wallRefThicknessMeasures?: Array<{
+    band: 'min' | 'mid' | 'max'
+    thicknessPx: number
+  }>
   referenceWallRect?: DevWallReferenceRect
+  referenceWallRects?: DevWallReferenceRect[]
   openingRects?: DevOpeningReferenceRect[]
   roomInkCoverageThreshold?: number
   liveRoomClassifyState?: SerializedRoomClassifyState

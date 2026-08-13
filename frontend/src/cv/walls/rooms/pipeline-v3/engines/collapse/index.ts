@@ -1,5 +1,10 @@
 export { collapseInterJunctionChains, type ChainCollapseStats } from './chain-collapse'
-export { buildThicknessBySegment, thicknessCompatible } from './thickness'
+export {
+  buildThicknessBySegment,
+  thicknessCompatible,
+  segmentsThicknessCompatible,
+  capOffsetTolerancePx,
+} from './thickness'
 export {
   countJunctionKindsFromSegments,
   topologyPreservedAfterCollapse,

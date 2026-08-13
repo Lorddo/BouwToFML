@@ -72,6 +72,59 @@ export function splitCrossedWallsAlongSegment(walls: Wall[], a: Point2D, b: Poin
   }
 }
 
+/**
+ * Zelfde effect als tekenen over een muur: interior-kruisingen van `wallId`
+ * (en stukken na split) met andere muren worden echte junctions (beide muren splitsen).
+ * Shared with wall-slide; not part of public barrel API.
+ */
+export function materializeCrossingsAlongWall(walls: Wall[], wallId: string): void {
+  const involved = new Set<string>([wallId])
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const id of [...involved]) {
+      const wall = walls.find((item) => item.id === id)
+      if (!wall) continue
+      for (const other of [...walls]) {
+        if (other.id === wall.id) continue
+        const hit = segmentIntersectionParams(wall.a, wall.b, other.a, other.b)
+        if (!hit) continue
+        if (hit.t <= SEGMENT_PARAM_EPS || hit.t >= 1 - SEGMENT_PARAM_EPS) continue
+        if (hit.u <= SEGMENT_PARAM_EPS || hit.u >= 1 - SEGMENT_PARAM_EPS) continue
+
+        const wallRef = walls.find((item) => item.id === id)
+        if (!wallRef) continue
+        const tWall = pointParamOnSegment(wallRef.a, wallRef.b, hit.point, SEGMENT_POINT_EPS_CM)
+        if (tWall == null || tWall <= SEGMENT_PARAM_EPS || tWall >= 1 - SEGMENT_PARAM_EPS) {
+          continue
+        }
+
+        const idsBefore = new Set(walls.map((item) => item.id))
+        if (!splitWallAtPoint(walls, wallRef, hit.point, tWall)) continue
+        for (const item of walls) {
+          if (!idsBefore.has(item.id)) involved.add(item.id)
+        }
+
+        const otherRef = walls.find((item) => item.id === other.id)
+        if (otherRef) {
+          const tOther = pointParamOnSegment(
+            otherRef.a,
+            otherRef.b,
+            hit.point,
+            SEGMENT_POINT_EPS_CM,
+          )
+          if (tOther != null && tOther > SEGMENT_PARAM_EPS && tOther < 1 - SEGMENT_PARAM_EPS) {
+            splitWallAtPoint(walls, otherRef, hit.point, tOther)
+          }
+        }
+        changed = true
+        break
+      }
+      if (changed) break
+    }
+  }
+}
+
 function isWallCollinearWithSegment(wall: Wall, a: Point2D, b: Point2D): boolean {
   const segVec = { x: b.x - a.x, y: b.y - a.y }
   const wallVec = { x: wall.b.x - wall.a.x, y: wall.b.y - wall.a.y }
@@ -165,27 +218,29 @@ export function addWallSegment(
   a: Point2D,
   b: Point2D,
   thicknessCm: number,
-): { walls: Wall[]; wallId: string } | null {
+): { walls: Wall[]; wallId: string; wallIds: string[] } | null {
   if (distance(a, b) < MIN_WALL_LENGTH_CM) return null
-  const wallId = `wall-${crypto.randomUUID().slice(0, 8)}`
-  const wall: Wall = {
-    id: wallId,
-    a: { ...a },
-    b: { ...b },
-    thickness: Math.max(1, Math.min(200, Math.round(thicknessCm))),
-    openings: [],
-  }
-  return { walls: [...walls, wall], wallId }
+  const next = cloneWalls(walls)
+  const thickness = Math.max(1, Math.min(200, Math.round(thicknessCm)))
+  const wallIds = addSegmentPathWithJunctionBreaks(next, a, b, {
+    thickness,
+    idPrefix: 'wall',
+    minLengthCm: MIN_WALL_LENGTH_CM,
+  })
+  if (wallIds.length === 0) return null
+  return { walls: next, wallId: wallIds[0], wallIds }
 }
 
 export function findWallAtPoint(
   walls: Wall[],
   point: Point2D,
   toleranceCm = 1.5,
+  excludeWallIds?: ReadonlySet<string>,
 ): WallPointMatch | null {
   let best: WallPointMatch | null = null
   let bestDistance = Number.POSITIVE_INFINITY
   for (const wall of walls) {
+    if (excludeWallIds?.has(wall.id)) continue
     const t = pointParamOnSegment(wall.a, wall.b, point, toleranceCm)
     if (t == null) continue
     if (t <= ROOM_CORNER_ENDPOINT_EPS_T || t >= 1 - ROOM_CORNER_ENDPOINT_EPS_T) continue
@@ -205,6 +260,44 @@ export function findWallAtPoint(
     }
   }
   return best
+}
+
+/**
+ * Als `point` op het binnenste van een muur ligt, split die muur (T-junction).
+ * Shared with wall-slide / junction-move; not part of public barrel API.
+ */
+export function materializeEndpointJoinsAtPoint(
+  walls: Wall[],
+  point: Point2D,
+  options?: {
+    excludeWallIds?: ReadonlySet<string>
+    toleranceCm?: number
+    /** Voorkom parallelle dubbele muren na collinear relink/slide. */
+    skipCollinearWith?: { a: Point2D; b: Point2D }
+  },
+): void {
+  const toleranceCm = options?.toleranceCm ?? SEGMENT_POINT_EPS_CM * 4
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const wall of [...walls]) {
+      if (options?.excludeWallIds?.has(wall.id)) continue
+      if (
+        options?.skipCollinearWith &&
+        isWallCollinearWithSegment(wall, options.skipCollinearWith.a, options.skipCollinearWith.b)
+      ) {
+        continue
+      }
+      const t = pointParamOnSegment(wall.a, wall.b, point, toleranceCm)
+      if (t == null || t <= SEGMENT_PARAM_EPS || t >= 1 - SEGMENT_PARAM_EPS) continue
+      const projected = pointAtT(wall.a, wall.b, t)
+      if (distance(point, projected) > toleranceCm) continue
+      if (splitWallAtPoint(walls, wall, projected, t)) {
+        changed = true
+        break
+      }
+    }
+  }
 }
 
 /**

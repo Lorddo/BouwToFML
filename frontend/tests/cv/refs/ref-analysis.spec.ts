@@ -295,7 +295,7 @@ describe('ref-face-profile', () => {
     expect(profile.faces.some((face) => face.role === 'outside')).toBe(true)
   })
 
-  it('sealBorders + 4-connect splitst buiten-faces die via de crop-rand verbonden waren', () => {
+  it('sealBorders: ≥3 crop-kanten → outside; midden tussen H-lijnen = interior', () => {
     // Dubbele H-lijn tot aan de seal-rand (zoals een strakke LBE) → boven / midden / onder.
     const w = 24
     const h = 16
@@ -309,6 +309,39 @@ describe('ref-face-profile', () => {
     expect(sealed.faceCount).toBeGreaterThanOrEqual(3)
     expect(sealed.faceCount).toBeLessThanOrEqual(5)
     expect(classifyWallRenderStyleFromFaceCount(sealed.faceCount).renderStyle).toBe('solid')
+    // Boven/onder: top+L+R of bottom+L+R (≥3) → outside; midden raakt alleen L+R → interior.
+    expect(sealed.faces.some((face) => face.role === 'outside')).toBe(true)
+    expect(sealed.faces.some((face) => face.role === 'interior')).toBe(true)
+    const mid = sealed.faces.find(
+      (f) => f.role === 'interior' && f.bbox.y > 5 && f.bbox.y + f.bbox.height < 11,
+    )
+    expect(mid).toBeTruthy()
+  })
+
+  it('sealBorders: arcering-cel die alleen top raakt blijft interior (niet outside)', () => {
+    // Verticale muurband + één wit vakje bovenin tussen de lijnen (raakt alleen top-seal).
+    const w = 20
+    const h = 30
+    const data = makeBw(w, h, (set) => {
+      for (let y = 1; y <= h - 2; y += 1) {
+        set(6, y)
+        set(13, y)
+      }
+      // Horizontale schotten → aparte cellen; top-cel raakt seal (y≤1) maar niet L/R/bottom.
+      for (let x = 7; x <= 12; x += 1) {
+        set(x, 8)
+        set(x, 16)
+        set(x, 24)
+      }
+    })
+    const sealed = buildFaceProfile(data, w, h, undefined, { sealBorders: true, minAreaPx: 1 })
+    const topCell = sealed.faces.find(
+      (f) => f.bbox.x >= 7 && f.bbox.x + f.bbox.width <= 13 && f.bbox.y <= 2,
+    )
+    expect(topCell).toBeTruthy()
+    expect(topCell!.role).toBe('interior')
+    // Vloer links/rechts raakt ≥3 kanten → outside.
+    expect(sealed.faces.some((f) => f.role === 'outside')).toBe(true)
   })
 })
 
@@ -520,6 +553,37 @@ describe('ref-face-crop', () => {
     expect(result.primary?.source).toBe('kozijn_span')
   })
 
+  it('muur face-crop bbox volgt inktband — niet buiten-vloer-white in LBE', () => {
+    const width = 40
+    const height = 60
+    // Horizontale muurband midden; grote vloer-white boven/onder (LBE-achtig).
+    const data = makeBw(width, height, (set) => {
+      for (let x = 2; x < width - 2; x += 1) {
+        set(x, 28)
+        set(x, 29)
+        set(x, 30)
+        set(x, 31)
+      }
+    })
+    const faceProfile = buildFaceProfile(data, width, height, undefined, {
+      sealBorders: true,
+      minAreaPx: 1,
+    })
+    expect(faceProfile.faces.some((f) => f.role === 'outside')).toBe(true)
+    const result = resolveFaceCropBBox({
+      kind: 'wall',
+      data,
+      width,
+      height,
+      faceProfile,
+      padPx: 2,
+    })
+    // Crop ≈ inktband (± pad), niet de volle LBE-hoogte met vloer.
+    expect(result.cropBBox.height).toBeLessThanOrEqual(12)
+    expect(result.cropBBox.y).toBeGreaterThanOrEqual(24)
+    expect(result.cropBBox.y + result.cropBBox.height).toBeLessThanOrEqual(36)
+  })
+
   it('brengt afgesneden buiten-inkt niet terug na face-mask', () => {
     const width = 120
     const height = 90
@@ -647,7 +711,7 @@ describe('ref-straighten', () => {
   })
 
   it('negeert micro-skew op bijna-horizontale parallelrails (raam-as recht houden)', () => {
-    // Lange H-rails ~0.15° door pixel-aliasing — onder openings-minAbsDeg (0.25).
+    // Lange H-rails ~0.15° door pixel-aliasing — onder openings-minAbsDeg (2.0).
     const correction = estimateDeskewCorrectionFromLines(
       [
         {
@@ -675,7 +739,40 @@ describe('ref-straighten', () => {
       ],
       'horizontal',
       5,
-      { preferParallel: true, minAbsDeg: 0.25, minLengthPx: 8 },
+      { preferParallel: true, minAbsDeg: 2.0, minLengthPx: 8 },
+    )
+    expect(correction).toBe(0)
+  })
+
+  it('negeert valse ~1.4° skew op parallelrails (WhatsApp-raam: AABB-merge-valkuil)', () => {
+    // Alias/korte eindstukken → ~1.36°; deskew zou glas-AABB’s laten overlappen.
+    const correction = estimateDeskewCorrectionFromLines(
+      [
+        {
+          a: { x: 20, y: 30 },
+          b: { x: 260, y: 36.2 },
+          lengthPx: 240,
+          angleDeg: 1.36,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 20, y: 42 },
+          b: { x: 260, y: 48.1 },
+          lengthPx: 240,
+          angleDeg: 1.35,
+          relation: 'parallel',
+        },
+        {
+          a: { x: 18, y: 28 },
+          b: { x: 20, y: 52 },
+          lengthPx: 24,
+          angleDeg: 85.2,
+          relation: 'perp',
+        },
+      ],
+      'horizontal',
+      5,
+      { preferParallel: true, minAbsDeg: 2.0, minLengthPx: 8 },
     )
     expect(correction).toBe(0)
   })
@@ -701,7 +798,7 @@ describe('ref-straighten', () => {
       ],
       'horizontal',
       5,
-      { preferParallel: true, minAbsDeg: 0.25, minLengthPx: 8 },
+      { preferParallel: true, minAbsDeg: 2.0, minLengthPx: 8 },
     )
     expect(correction).toBeLessThan(0)
     expect(Math.abs(correction)).toBeGreaterThanOrEqual(2.5)
@@ -1153,6 +1250,53 @@ describe('reference-analysis-report', () => {
     expect(buildReferenceAnalysisHtml(report)).toContain('Solid')
     expect(buildReferenceAnalysisHtml(report)).toContain('Algemene categorieën')
     expect(buildReferenceAnalysisHtml(report)).toContain('Kozijn links')
+  })
+
+  it('HTML toont alle multi muur-refs', () => {
+    const baseWall = {
+      kind: 'wall' as const,
+      rect: { x: 0, y: 0, width: 10, height: 10 },
+      cropWidth: 10,
+      cropHeight: 10,
+      orientation: 'horizontal' as const,
+      bwMode: 'otsu' as const,
+      skewCorrectedDeg: 0,
+      thicknessPx: 8,
+      renderStyle: 'solid' as const,
+      renderStyleLabel: wallRenderStyleLabel('solid'),
+      renderStyleConfidence: 0.9,
+      renderStyleScores: { solid: 0.9, parallel_lines: 0.1, details: 0.05 },
+      primaryBlob: null,
+      units: [],
+      lineProfile: { lines: [], parallelCount: 0, perpCount: 0, arcCount: 0, otherCount: 0 },
+      faceProfile: { faces: [], totalAreaPx: 0, faceCount: 0 },
+      images: {
+        originalCropPng: 'data:image/png;base64,aaa',
+        bwCropPng: 'data:image/png;base64,bbb',
+        faceOverlayPng: 'data:image/png;base64,ccc',
+        faceCropPng: 'data:image/png;base64,ccf',
+        lineOverlayPng: 'data:image/png;base64,ddd',
+        straightenedPng: 'data:image/png;base64,eee',
+      },
+    }
+    const report: ReferenceAnalysisReport = {
+      exportedAt: '2026-08-12T00:00:00.000Z',
+      drawing: 'multi-wall.png',
+      wall: { ...baseWall, wallThicknessBand: 'max', thicknessPx: 47 },
+      walls: [
+        { ...baseWall, wallThicknessBand: 'max', thicknessPx: 47 },
+        { ...baseWall, wallThicknessBand: 'mid', thicknessPx: 30 },
+        { ...baseWall, wallThicknessBand: 'min', thicknessPx: 7 },
+      ],
+      openings: [],
+    }
+    const html = buildReferenceAnalysisHtml(report)
+    expect(html).toContain('Muur-referentie #1')
+    expect(html).toContain('Muur-referentie #2')
+    expect(html).toContain('Muur-referentie #3')
+    expect(html).toContain('(max)')
+    expect(html).toContain('(mid)')
+    expect(html).toContain('(min)')
   })
 
   it('toont opening face-polygonen in HTML', () => {

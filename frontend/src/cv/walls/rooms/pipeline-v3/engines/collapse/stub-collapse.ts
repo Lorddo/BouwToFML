@@ -15,6 +15,7 @@ import {
   type ExactPoint,
   type CollapseAxis,
 } from './adjacency'
+import { segmentsThicknessCompatible } from './thickness'
 
 export interface StubCollapseStats {
   stubsCollapsed: number
@@ -37,6 +38,9 @@ function walkStairFromFarEnd(params: {
   stubMaxPx: number
   tierMaxPx: number
   hvBandPx: number
+  thicknessBySegment?: number[]
+  policy: CollapsePolicy
+  referenceWallThicknessPx?: number
 }): ExactPoint {
   let currentArmIndex = params.armIndex
   let currentPoint = params.farEnd
@@ -69,6 +73,17 @@ function walkStairFromFarEnd(params: {
     )
     if (tierDelta > params.tierMaxPx) break
 
+    if (
+      !segmentsThicknessCompatible(
+        [currentArmIndex, stubIndex, nextArmIndex],
+        params.thicknessBySegment,
+        params.policy,
+        params.referenceWallThicknessPx,
+      )
+    ) {
+      break
+    }
+
     params.chain.add(stubIndex)
     params.chain.add(nextArmIndex)
     currentArmIndex = nextArmIndex
@@ -85,6 +100,9 @@ function collectOrthoStairChain(params: {
   stubMaxPx: number
   tierMaxPx: number
   hvBandPx: number
+  thicknessBySegment?: number[]
+  policy: CollapsePolicy
+  referenceWallThicknessPx?: number
 }): { chain: Set<number>; farA: ExactPoint; farB: ExactPoint } | null {
   const stub = params.segments[params.stubIndex]
   const stubLen = segmentLength(stub)
@@ -120,6 +138,17 @@ function collectOrthoStairChain(params: {
     return null
   }
 
+  if (
+    !segmentsThicknessCompatible(
+      [params.stubIndex, armAIndex, armBIndex],
+      params.thicknessBySegment,
+      params.policy,
+      params.referenceWallThicknessPx,
+    )
+  ) {
+    return null
+  }
+
   const chain = new Set<number>([params.stubIndex, armAIndex, armBIndex])
   let farA = otherEndpoint(armA, joinA)
   let farB = otherEndpoint(armB, joinB)
@@ -135,6 +164,9 @@ function collectOrthoStairChain(params: {
     stubMaxPx: params.stubMaxPx,
     tierMaxPx: params.tierMaxPx,
     hvBandPx: params.hvBandPx,
+    thicknessBySegment: params.thicknessBySegment,
+    policy: params.policy,
+    referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
   farB = walkStairFromFarEnd({
     farEnd: farB,
@@ -147,7 +179,21 @@ function collectOrthoStairChain(params: {
     stubMaxPx: params.stubMaxPx,
     tierMaxPx: params.tierMaxPx,
     hvBandPx: params.hvBandPx,
+    thicknessBySegment: params.thicknessBySegment,
+    policy: params.policy,
+    referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
+
+  if (
+    !segmentsThicknessCompatible(
+      chain,
+      params.thicknessBySegment,
+      params.policy,
+      params.referenceWallThicknessPx,
+    )
+  ) {
+    return null
+  }
 
   return { chain, farA, farB }
 }
@@ -195,10 +241,13 @@ function chainExtremeDiagonal(
 /**
  * Vouw H—(korte V)—H—… en V—(korte H)—V—… trap-ketens naar één schuine muur.
  * Alleen degree-2 knopen (geen T/X). L9 only (`enableStubCollapse`).
+ * Weigert cross-band arms/stubs wanneer thicknessBySegment is meegegeven.
  */
 export function collapseOrthoStairStubs(
   segments: Segment[],
   policy: CollapsePolicy,
+  thicknessBySegment?: number[],
+  referenceWallThicknessPx?: number,
 ): { segments: Segment[]; stats: StubCollapseStats } {
   if (!policy.enableStubCollapse) {
     throw new Error('V3 collapseOrthoStairStubs: disabled for this layer policy')
@@ -229,6 +278,9 @@ export function collapseOrthoStairStubs(
         stubMaxPx,
         tierMaxPx,
         hvBandPx,
+        thicknessBySegment,
+        policy,
+        referenceWallThicknessPx,
       })
       if (!collected || collected.chain.size < 3) continue
 

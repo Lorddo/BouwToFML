@@ -221,6 +221,21 @@ export function mapPointAfterUiRotation(
   }
 }
 
+/**
+ * After baking a live rotation, unconfirmed H/V rulers no longer sit on walls.
+ * Re-init them on the straightened image (mm values stay). Confirmed scale keeps
+ * locked px/mm and only transforms existing handles.
+ */
+export function resolveScaleAfterInputBake(opts: {
+  scaleConfirmed: boolean
+  hasRotation: boolean
+  hasScaleState: boolean
+}): 'reinit' | 'transform' | 'none' {
+  if (!opts.scaleConfirmed && opts.hasRotation) return 'reinit'
+  if (opts.hasScaleState) return 'transform'
+  return 'none'
+}
+
 export function transformHScaleStateRotation(
   state: HScaleState,
   width: number,

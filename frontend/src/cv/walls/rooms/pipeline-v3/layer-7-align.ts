@@ -23,11 +23,12 @@ export function runLayer7Align(params: {
   cv: OpenCV
   maskRle: RoomWallMaskRle
   referenceWallThicknessPx?: number
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
 }): PipelineV3Layer7Result {
   reportPipelineProgress('Skeleton Laag 7 — keten-collapse…')
-  const policy = resolveLayer7AlignPolicy(params.referenceWallThicknessPx)
+  const policy = resolveLayer7AlignPolicy(params.referenceWallThicknessPx, params.bandBoundariesPx)
   const distanceMap =
     params.distanceMap !== undefined
       ? params.distanceMap

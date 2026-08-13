@@ -1,5 +1,6 @@
 import type { CollapsePolicy, JunctionGraphPolicy, WeldPolicy } from '../engines/policy-types'
 import { resolvePipelineScale } from '../engines/scale'
+import { capOffsetTolerancePx } from '../engines/collapse/thickness'
 import {
   baseCollapsePolicy,
   collapseJunctionPolicy,
@@ -27,11 +28,18 @@ export interface Layer9DissolvePolicy {
 
 export function resolveLayer9DissolvePolicy(
   referenceWallThicknessPx?: number,
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number },
 ): Layer9DissolvePolicy {
   const scale = resolvePipelineScale(referenceWallThicknessPx)
+  const scaled = scaleCollapsePolicy(layer9CollapsePolicy, scale)
   return {
     layerId: 9,
-    collapse: scaleCollapsePolicy(layer9CollapsePolicy, scale),
+    collapse: {
+      ...scaled,
+      ...(bandBoundariesPx ? { bandBoundariesPx } : {}),
+      // Mid-cap so max-ref does not inflate stub tier enough to eat façade jogs.
+      orthoStubTierMaxPx: capOffsetTolerancePx(scaled.orthoStubTierMaxPx, bandBoundariesPx),
+    },
     weld: { ...layer9WeldPolicy },
     junction: { ...layer9JunctionPolicy },
   }

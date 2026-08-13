@@ -4,6 +4,7 @@ import {
   type JunctionNode,
   type WallEndRef,
   resolveWallSlidePointerDelta,
+  stableJunctionId,
 } from '@/ui/components/fml-preview-junctions'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
@@ -31,6 +32,8 @@ export function useFmlPreviewWallDrag(options: {
   let junctionDrag: {
     refs: WallEndRef[]
     originCm: Point2D
+    lastCm: Point2D
+    baseWalls: Wall[]
     /** Laatste Ctrl/Meta tijdens sleep — ook gebruikt bij mouseup (merge skip). */
     snapDisabled: boolean
   } | null = null
@@ -99,6 +102,8 @@ export function useFmlPreviewWallDrag(options: {
     junctionDrag = {
       refs: junction.refs.map((ref) => ({ ...ref })),
       originCm: { x: junction.cmX, y: junction.cmY },
+      lastCm: { x: junction.cmX, y: junction.cmY },
+      baseWalls: JSON.parse(JSON.stringify(editor.walls.value)) as Wall[],
       snapDisabled: evt.ctrlKey || evt.metaKey,
     }
     window.addEventListener('mousemove', onJunctionPointerMove)
@@ -109,22 +114,33 @@ export function useFmlPreviewWallDrag(options: {
     if (!junctionDrag) return
     const pointer = hitTest.clientToCm(evt.clientX, evt.clientY)
     if (!pointer) return
-    const node = findJunctionByRefs(junctionDrag.refs)
-    if (!node) return
     junctionDrag.snapDisabled = evt.ctrlKey || evt.metaKey
+    const node: JunctionNode = {
+      id: stableJunctionId(junctionDrag.refs),
+      refs: junctionDrag.refs,
+      x: junctionDrag.originCm.x,
+      y: junctionDrag.originCm.y,
+    }
     const next = junctionDrag.snapDisabled
       ? pointer
-      : editor.snapJunctionPoint(junctionDrag.refs, pointer)
-    editor.applyJunctionMove(node, next)
+      : editor.snapJunctionPoint(junctionDrag.refs, pointer, junctionDrag.baseWalls)
+    junctionDrag.lastCm = next
+    editor.previewJunctionMove(junctionDrag.baseWalls, node, next)
   }
 
   function onJunctionPointerUp(evt: MouseEvent): void {
     window.removeEventListener('mousemove', onJunctionPointerMove)
     if (junctionDrag) {
       const snapDisabled = junctionDrag.snapDisabled || evt.ctrlKey || evt.metaKey
-      const current = findJunctionByRefs(junctionDrag.refs)
+      const pos = junctionDrag.lastCm
+      // Na crossing-split wijzen de originele refs mogelijk naar een mid-junction;
+      // zoek daarom op eindpositie.
+      const current =
+        editor.junctions.value.find(
+          (junction) => Math.hypot(junction.x - pos.x, junction.y - pos.y) <= 3,
+        ) ?? findJunctionByRefs(junctionDrag.refs)
       if (current && !snapDisabled) {
-        const mergeTarget = editor.findMergeTarget(junctionDrag.refs, {
+        const mergeTarget = editor.findMergeTarget(current.refs, {
           x: current.x,
           y: current.y,
         })
@@ -185,6 +201,7 @@ export function useFmlPreviewWallDrag(options: {
 
   function cleanupWallDrag(): void {
     window.removeEventListener('mousemove', onJunctionPointerMove)
+    draggingJunctionId.value = null
     draggingJunction.value = false
     junctionDrag = null
     endWallDrag()

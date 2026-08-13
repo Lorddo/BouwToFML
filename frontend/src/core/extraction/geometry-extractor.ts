@@ -28,6 +28,7 @@ const geometryExtractor: ExtractorPlugin = {
         detectWalls: input.detectTargets?.walls !== false,
         wallStyle: input.pipelineOptions?.wallStyle,
         referenceWallThicknessPx: input.pipelineOptions?.referenceWallThicknessPx,
+        bandBoundariesPx: input.pipelineOptions?.bandBoundariesPx,
         referenceWallMeasureRect: input.pipelineOptions?.referenceWallMeasureRect,
         roomInkCoverageThreshold: input.pipelineOptions?.roomInkCoverageThreshold,
         roomPipelinePhase: input.pipelineOptions?.roomPipelinePhase,

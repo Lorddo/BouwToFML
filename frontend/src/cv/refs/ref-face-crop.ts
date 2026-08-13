@@ -150,7 +150,9 @@ function buildEnclosureFaceMask(
     sealBorders: options.sealBorders,
     connectivity: options.sealBorders ? 4 : 8,
   })
-  const roles = classifyFaceRoles(faces, width, height)
+  const roles = classifyFaceRoles(faces, width, height, {
+    sealBorders: options.sealBorders === true,
+  })
   const byLabel = new Map<number, string>()
   for (const face of roles) byLabel.set(face.label, face.role)
   const targetLabels = new Set<number>()
@@ -292,8 +294,8 @@ export function resolveFaceCropBBox(params: {
   const maxInkDistancePx = params.maxInkDistancePx ?? 3
 
   if (params.kind === 'wall') {
-    // Muur: zelfde inkt-sluiting als openingen, maar buitenranden (outside faces) tellen
-    // ook als afsluiting — solid fill heeft vaak geen interior-witte faces.
+    // Muur: outside faces helpen inkt-sluiting (solid zonder interior-white),
+    // maar crop-bbox = inktband — niet outside-white (vloer in LBE).
     const faceMask = buildEnclosureFaceMask(
       params.data,
       params.width,
@@ -301,7 +303,7 @@ export function resolveFaceCropBBox(params: {
       params.faceProfile,
       { includeOutside: true, sealBorders: true },
     )
-    const { maskedData, regionMask } = buildPolygonMaskedData(
+    const { maskedData } = buildPolygonMaskedData(
       params.data,
       params.width,
       params.height,
@@ -319,17 +321,13 @@ export function resolveFaceCropBBox(params: {
       )
     }
     const useData = hasInk ? maskedData : params.data
-    const useMask = hasInk ? regionMask : undefined
     const fallbackBounds = findInkBounds(useData, params.width, params.height, padPx) ?? {
       x: 0,
       y: 0,
       width: params.width,
       height: params.height,
     }
-    const polygonBounds = useMask
-      ? (bboxFromMask(useMask, params.width, params.height, padPx) ?? fallbackBounds)
-      : fallbackBounds
-    const cropBBox = clampBBox(polygonBounds, params.width, params.height)
+    const cropBBox = clampBBox(fallbackBounds, params.width, params.height)
     const unit = buildComponentUnit(useData, params.width, params.height)
     return {
       cropBBox,

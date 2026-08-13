@@ -7,6 +7,7 @@ import {
   type JunctionNode,
   type WallEndRef,
 } from './fml-preview-junction-core'
+import { findWallAtPoint } from './fml-preview-wall-draw-geom'
 
 function isWallSegmentHorizontal(wall: { a: Point2D; b: Point2D }): boolean {
   const dx = Math.abs(wall.b.x - wall.a.x)
@@ -138,6 +139,18 @@ export function snapPointToJunctions(
     }
   }
   return best
+}
+
+/** Soft snap naar hartlijn van een bestaande muur (T-junction landings). */
+export function snapPointToWallCenters(
+  walls: Wall[],
+  point: Point2D,
+  maxDistCm: number,
+  excludeWallIds?: ReadonlySet<string>,
+): Point2D {
+  const match = findWallAtPoint(walls, point, maxDistCm, excludeWallIds)
+  if (!match) return point
+  return { x: match.projected.x, y: match.projected.y }
 }
 
 export function snapDrawWallEndpoint(

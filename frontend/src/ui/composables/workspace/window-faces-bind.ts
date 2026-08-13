@@ -1,5 +1,6 @@
 import { tally } from '@/core/diagnostics'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
+import { ensureFaceDualSpace } from '@/cv/walls/rooms/room-raster-cache'
 import type { RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import {
   bindWindowsToWalls,
@@ -10,7 +11,10 @@ import {
   type WallOpeningSpan,
   type WindowBindRejection,
 } from '@/cv/windows'
-import { windowCandidateStillClassifiedAsWindow } from './window-stage-cache-prune'
+import {
+  reconcileResolvedWindowsForClassification,
+  resolvedWindowsListChanged,
+} from './window-faces-reconcile-classification'
 import {
   resolveEffectiveWallClassification,
   resolveEffectiveWallParentMap,
@@ -18,6 +22,10 @@ import {
 import type { WindowAxelStageCache } from './window-faces-helpers'
 
 // ESC:O-22 (B)
+/**
+ * L14-prep: handmatig gedemote faces (niet langer `window`) strippen + bbox/width
+ * herberekenen. Stage 1–4 cache blijft historisch; alleen wat naar bind/FML gaat.
+ */
 export function filterResolvedWindowsStillClassifiedAsWindow(params: {
   resolved: ResolvedWindowCandidate[]
   roomRasterCache: RoomRasterCache | null
@@ -33,21 +41,25 @@ export function filterResolvedWindowsStillClassifiedAsWindow(params: {
     roomRasterCache: params.roomRasterCache,
     wallsMeta: params.wallsMeta,
   })
-  return params.resolved.filter((window) =>
-    windowCandidateStillClassifiedAsWindow(window, classification, parentMap),
-  )
+  const dual = params.roomRasterCache ? ensureFaceDualSpace(params.roomRasterCache) : null
+  return reconcileResolvedWindowsForClassification({
+    resolved: params.resolved,
+    classification,
+    parentMap,
+    dual,
+  })
 }
 
 export type BindResolvedWindowsResult = {
   bound: BoundWindow[]
   rejected: WindowBindRejection[]
-  /** Filtered Stage-4 list when class-still dropped candidates; null = unchanged. */
+  /** Reconciled Stage-4 list when demote/filter changed candidates; null = unchanged. */
   nextStage4Resolved: ResolvedWindowCandidate[] | null
 }
 
 /**
  * L14-bind van Stage-4 resolved ramen op semantic wall graph.
- * Class-still filter vóór bind; 1D muurgat-dedupe (+ optioneel deur-suppress).
+ * Class-reconcile (strip demoted faces) vóór bind; 1D muurgat-dedupe (+ optioneel deur-suppress).
  * R-27 pair/triple-merge gebeurt in FML-conversie (`toLayer14WindowsForFml`).
  */
 export function bindResolvedWindowsToWalls(params: {
@@ -63,13 +75,13 @@ export function bindResolvedWindowsToWalls(params: {
   if (segments.length <= 0) {
     return { bound: [], rejected: [], nextStage4Resolved: null }
   }
+  const source = params.stageCache.stage4ResolvedWindows
   const resolved = filterResolvedWindowsStillClassifiedAsWindow({
-    resolved: params.stageCache.stage4ResolvedWindows,
+    resolved: source,
     roomRasterCache: params.roomRasterCache,
     wallsMeta: params.walls,
   })
-  const nextStage4Resolved =
-    resolved.length !== params.stageCache.stage4ResolvedWindows.length ? resolved : null
+  const nextStage4Resolved = resolvedWindowsListChanged(source, resolved) ? resolved : null
   if (resolved.length <= 0) {
     return { bound: [], rejected: [], nextStage4Resolved }
   }

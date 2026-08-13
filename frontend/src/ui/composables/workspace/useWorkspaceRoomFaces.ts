@@ -50,6 +50,7 @@ import {
   shouldRefreshPreviewForPhase,
   refreshPreviewMask as refreshPreviewMaskCore,
 } from './room-faces-preview'
+import type { TemplatesFinalizePhase } from './workspace-view-visibility'
 
 export type RoomPhase =
   'idle' | 'awaiting_reference' | 'classifying' | 'recalculating' | 'review' | 'finalizing' | 'done'
@@ -92,6 +93,7 @@ export function useWorkspaceRoomFaces(deps: {
   refreshWallUnderlayPreview?: () => Promise<void>
 }) {
   const roomPhase = ref<RoomPhase>('idle')
+  const finalizePhase = ref<TemplatesFinalizePhase | null>(null)
   const activeFaceBoxTool = ref<FaceToolId | null>(null)
   const roomRasterCache = ref<RoomRasterCache | null>(null)
   const classifyingInFlight = ref(false)
@@ -420,6 +422,10 @@ export function useWorkspaceRoomFaces(deps: {
   }
 
   // --- finalize ---
+  function setFinalizePhase(phase: TemplatesFinalizePhase | null): void {
+    finalizePhase.value = phase
+  }
+
   async function finalizeWallDetection(): Promise<boolean> {
     return finalizeWallDetectionCore({
       roomRasterCache: roomRasterCache.value,
@@ -427,6 +433,7 @@ export function useWorkspaceRoomFaces(deps: {
       setRoomPhase: (p) => {
         roomPhase.value = p
       },
+      setFinalizePhase,
       setStatus: deps.setStatus,
       syncDetectionComplete,
       getWallsOutput: () => deps.tabOutputs.value.walls,
@@ -513,6 +520,7 @@ export function useWorkspaceRoomFaces(deps: {
   // --- reset ---
   function resetRoomState() {
     roomPhase.value = 'idle'
+    finalizePhase.value = null
     activeFaceBoxTool.value = null
     roomRasterCache.value = null
     roomPreviewMaskCanvas.value = null
@@ -530,6 +538,8 @@ export function useWorkspaceRoomFaces(deps: {
 
   return {
     roomPhase,
+    finalizePhase,
+    setFinalizePhase,
     activeFaceBoxTool,
     faceToolbeltVisible,
     faceToolbeltHint,

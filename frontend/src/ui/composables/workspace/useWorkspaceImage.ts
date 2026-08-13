@@ -8,6 +8,7 @@ import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import { bakeUnderlayCanvas } from '@/cv/tools/bakeUnderlayCanvas'
 import { ROTATION_EPS_DEG } from '@/cv/tools/rotateMat'
+import { hasPendingInputRotation } from '@/platform/canvas/rotationPreview'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { canvasToDataUrl } from '@/cv/tools/maskImage'
 import type { PdfUnderlaySource } from '@/platform/upload'
@@ -21,6 +22,7 @@ import {
   imageSourceToCanvas,
   loadImage,
   normalizeWorkingCanvas,
+  resolveScaleAfterInputBake,
   transformHScaleState,
   transformHScaleStateRotate180,
   transformHScaleStateRotation,
@@ -60,8 +62,10 @@ export function useWorkspaceImage(deps: {
   const suppressNextSrcWatch = ref(false)
   /** PDF bytes for ROI re-render at input commit (memory-only). */
   const pdfUnderlaySource = ref<PdfUnderlaySource | null>(null)
+  const inputCommitBusy = ref(false)
   /** Guards against stale async upscale completing after a newer upload. */
   let imageSrcLoadGeneration = 0
+  let inputCommitInFlight: Promise<void> | null = null
 
   function setPdfUnderlaySource(source: PdfUnderlaySource | null): void {
     pdfUnderlaySource.value = source
@@ -165,14 +169,47 @@ export function useWorkspaceImage(deps: {
     suppressNextSrcWatch.value = true
   }
 
+  const canBakeInputRotation = computed(
+    () =>
+      !inputCommitBusy.value &&
+      !!(deps.originalImageEl.value || deps.imageSrc.value) &&
+      hasPendingInputRotation(deps.preprocess.value),
+  )
+
   /** Rotatie (uitgebreid canvas) → trim/upscale → masker/rotatie in beeld bakken. */
   async function commitInputStepImage(): Promise<void> {
+    if (inputCommitInFlight) return inputCommitInFlight
+    inputCommitInFlight = runInputStepCommit().finally(() => {
+      inputCommitInFlight = null
+    })
+    return inputCommitInFlight
+  }
+
+  async function bakeInputRotation(): Promise<void> {
+    if (!hasPendingInputRotation(deps.preprocess.value)) return
+    await commitInputStepImage()
+  }
+
+  async function runInputStepCommit(): Promise<void> {
     const preprocess = deps.preprocess.value
     const totalRotation = (preprocess.autoRotationDeg ?? 0) + (preprocess.rotationDeg ?? 0)
     const hasRotation = preprocess.rotate180 || Math.abs(totalRotation) > ROTATION_EPS_DEG
     const needsCommit = deps.eraserTouched.value || hasRotation
     if (!needsCommit) return
 
+    inputCommitBusy.value = true
+    try {
+      await runInputStepCommitBody(preprocess, totalRotation, hasRotation)
+    } finally {
+      inputCommitBusy.value = false
+    }
+  }
+
+  async function runInputStepCommitBody(
+    preprocess: PreprocessConfig,
+    totalRotation: number,
+    hasRotation: boolean,
+  ): Promise<void> {
     const hadMask = deps.eraserTouched.value
     deps.refreshMaskedWorkingImage()
 
@@ -239,7 +276,17 @@ export function useWorkspaceImage(deps: {
       const bakedRotation = totalRotation + (preprocess.rotate180 ? 180 : 0)
       deps.scale.applyCardinalAxisSwapToConfirmedScale(bakedRotation)
       deps.scale.applyUpscaleToConfirmedScale(totalScale)
-    } else if (deps.scale.state.value) {
+    }
+
+    const scaleAfterBake = resolveScaleAfterInputBake({
+      scaleConfirmed: deps.scale.confirmed.value,
+      hasRotation,
+      hasScaleState: !!deps.scale.state.value,
+    })
+    if (scaleAfterBake === 'reinit') {
+      // Rotate-then-scale: verse H/V-linialen op rechtgetrokken beeld; mm blijft.
+      deps.scale.init(img.naturalWidth, img.naturalHeight)
+    } else if (scaleAfterBake === 'transform' && deps.scale.state.value) {
       let state = deps.scale.state.value
       if (usedPdfRoi) {
         state = transformHScaleState(
@@ -385,6 +432,9 @@ export function useWorkspaceImage(deps: {
     loadExactWorkingImage,
     prepareExactImageSrcLoad,
     commitInputStepImage,
+    bakeInputRotation,
+    canBakeInputRotation,
+    inputCommitBusy,
     imageDimensions,
   }
 }

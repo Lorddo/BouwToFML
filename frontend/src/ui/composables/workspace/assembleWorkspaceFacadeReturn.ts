@@ -47,6 +47,9 @@ export type WorkspaceFacadeContext = {
     ReturnType<typeof import('@/platform/profile').getDrawingProfile>
   >
   referenceWallThicknessPx: Ref<number | null>
+  wallRefThicknessMeasures?: Ref<
+    import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+  >
   wallPipelineVersion: Ref<WallPipelineVersion>
   showOcrDetails: Ref<boolean>
   preprocess: Ref<PreprocessConfig>
@@ -123,6 +126,7 @@ function sliceCore(ctx: WorkspaceFacadeContext) {
     profileConfirmed: ctx.profileConfirmed,
     activeDrawingProfile: ctx.activeDrawingProfile,
     referenceWallThicknessPx: ctx.referenceWallThicknessPx,
+    wallRefThicknessMeasures: ctx.wallRefThicknessMeasures ?? ref([]),
     wallPipelineVersion: ctx.wallPipelineVersion,
     showOcrDetails: ctx.showOcrDetails,
     preprocess: ctx.preprocess,
@@ -202,6 +206,9 @@ function sliceInput(ctx: WorkspaceFacadeContext) {
     inputRotationPreviewDeg: ctx.inputRotationPreviewDeg,
     originalImageEl: ctx.originalImageEl,
     onImageLoaded: ctx.image.onImageLoaded,
+    bakeInputRotation: ctx.image.bakeInputRotation,
+    canBakeInputRotation: ctx.image.canBakeInputRotation,
+    inputCommitBusy: ctx.image.inputCommitBusy,
     ...ctx.signature,
   }
 }
@@ -249,6 +256,8 @@ function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
     setReferencePanMode: ctx.detection.setReferencePanMode,
     setReferenceDrawMode: ctx.detection.setReferenceDrawMode,
     onDoorFmlRefIdChange: ctx.detection.onDoorFmlRefIdChange,
+    onWallThicknessBandChange: ctx.detection.onWallThicknessBandChange,
+    onWallThicknessCmChange: ctx.detection.onWallThicknessCmChange,
     clearTemplateTypeRects: ctx.detection.clearTemplateTypeRects,
     measuringReferenceWall: ctx.detection.measuringReferenceWall,
     onRectUpdate: ctx.detection.onRectUpdate,
@@ -256,6 +265,7 @@ function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
     onLbeEndDraw: ctx.detection.onLbeEndDraw,
     onDetectTemplateTab: ctx.detection.onDetectTemplateTab,
     roomPhase: ctx.roomFaces.roomPhase,
+    finalizePhase: ctx.roomFaces.finalizePhase,
     roomClassificationStats: ctx.roomFaces.roomClassificationStats,
     hasReferenceWallRect: ctx.roomFaces.hasReferenceWallRect,
     classifyingInFlight: ctx.roomFaces.classifyingInFlight,

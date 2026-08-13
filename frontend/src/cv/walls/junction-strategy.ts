@@ -24,6 +24,7 @@ export async function runWallJunctionStrategy(params: {
   eraserMask?: Uint8Array
   wallStyle?: 'solid' | 'open'
   referenceWallThicknessPx?: number
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   roomInkCoverageThreshold?: number
   roomPipelinePhase?: RoomPipelinePhase
   wallPipelineVersion?: WallPipelineVersion
@@ -133,6 +134,7 @@ export async function runWallJunctionStrategy(params: {
       preprocess: params.preprocess,
       wallStyle: params.wallStyle,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
+      bandBoundariesPx: params.bandBoundariesPx,
       wallPipelineVersion: params.wallPipelineVersion ?? DEFAULT_WALL_PIPELINE_VERSION,
       faceOverrides: new Map(params.faceOverrides ?? []),
       pinnedRoots: new Set(params.pinnedRoots ?? []),

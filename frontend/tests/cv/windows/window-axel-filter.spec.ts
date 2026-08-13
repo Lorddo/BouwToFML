@@ -271,6 +271,52 @@ describe('window-axel-filter', () => {
     expect(result.rejections.some((r) => r.reason === 'axis_span_spread')).toBe(true)
   })
 
+  it('verwerpt rail ~1.4× glas (R-12 ratio 1.25; kozijn mag iets breder)', () => {
+    // 378/266 ≈ 1.42 — typische doorlopende top-rail over mullion (WhatsApp 2026-08-11).
+    const result = runWindowAxelFilter({
+      dual: dualFrom({
+        components: [
+          component(590, { x: 435, y: 2276, width: 378, height: 17 }),
+          component(603, { x: 405, y: 2311, width: 266, height: 16 }),
+          component(722, { x: 405, y: 2359, width: 266, height: 17 }),
+        ],
+        classes: [
+          [590, 'window'],
+          [603, 'window'],
+          [722, 'window'],
+        ],
+        wallInkAdjacency: new Map([
+          [590, new Set([603])],
+          [603, new Set([590, 722])],
+          [722, new Set([603])],
+        ]),
+        wallInkClassificationByLabel: new Map([
+          [590, 'window'],
+          [603, 'window'],
+          [722, 'window'],
+        ]),
+      }),
+      refBands: [
+        {
+          refIndex: 0,
+          stripCount: 3,
+          stripHeightsPx: [6, 6, 6],
+          targetStripHeightPx: 11.5,
+          targetStripHeightRatio: 11.5 / 40,
+          axisBandHeightPx: 40,
+          orientation: 'horizontal',
+          fullStripCount: 5,
+          fullStripHeightsPx: [6, 6, 6, 16, 17],
+          framingSizeRange: null,
+          topRailRange: null,
+          bottomRailRange: null,
+        },
+      ],
+    })
+    expect(result.hypotheses.some((h) => h.faceIds.includes(590))).toBe(false)
+    expect(result.rejections.some((r) => r.reason === 'axis_span_spread')).toBe(true)
+  })
+
   it('verwerpt dikke panelen (~36px) bij dunne strip-target (as-band×1.8 telt niet per strip)', () => {
     const result = runMulti({
       components: [

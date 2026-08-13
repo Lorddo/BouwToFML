@@ -28,11 +28,17 @@ export interface Layer10FmlPolicy {
   junction: JunctionGraphPolicy
 }
 
-export function resolveLayer10FmlPolicy(referenceWallThicknessPx?: number): Layer10FmlPolicy {
+export function resolveLayer10FmlPolicy(
+  referenceWallThicknessPx?: number,
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number },
+): Layer10FmlPolicy {
   const scale = resolvePipelineScale(referenceWallThicknessPx)
   return {
     layerId: 10,
-    collapse: scaleCollapsePolicy(layer10CollapsePolicy, scale, scale.collapseChainAxisMaxSpreadPx),
+    collapse: {
+      ...scaleCollapsePolicy(layer10CollapsePolicy, scale, scale.collapseChainAxisMaxSpreadPx),
+      ...(bandBoundariesPx ? { bandBoundariesPx } : {}),
+    },
     weld: { ...layer10WeldPolicy },
     junction: { ...layer10JunctionPolicy },
   }

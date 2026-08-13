@@ -64,13 +64,55 @@ export function thicknessCompatible(
   referenceWallThicknessPx?: number,
 ): boolean {
   if (referenceWallThicknessPx != null && referenceWallThicknessPx > 0) {
-    return wallThicknessBandsCompatible(thicknessA, thicknessB, referenceWallThicknessPx)
+    return wallThicknessBandsCompatible(
+      thicknessA,
+      thicknessB,
+      referenceWallThicknessPx,
+      policy.bandBoundariesPx,
+    )
   }
   if (thicknessA <= 0 || thicknessB <= 0) return true
   const min = Math.min(thicknessA, thicknessB)
   const max = Math.max(thicknessA, thicknessB)
   if (max <= 0) return true
   return min / max >= policy.thicknessMatchMinRatio
+}
+
+/** True when all indexed segments share a compatible thickness band (or thickness unknown). */
+export function segmentsThicknessCompatible(
+  indices: Iterable<number>,
+  thicknessBySegment: number[] | undefined,
+  policy: CollapsePolicy,
+  referenceWallThicknessPx?: number,
+): boolean {
+  if (!thicknessBySegment || thicknessBySegment.length === 0) return true
+  const list = [...indices]
+  for (let i = 0; i < list.length; i += 1) {
+    const thicknessA = thicknessBySegment[list[i]]
+    if (thicknessA == null) continue
+    for (let j = i + 1; j < list.length; j += 1) {
+      const thicknessB = thicknessBySegment[list[j]]
+      if (thicknessB == null) continue
+      if (!thicknessCompatible(thicknessA, thicknessB, policy, referenceWallThicknessPx)) {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+/**
+ * Cap parallel-offset tolerances on mid-band scale so max-ref does not inflate
+ * stub tier enough to swallow façade jogs (~20px) between thinner bands.
+ */
+export function capOffsetTolerancePx(
+  scaledPx: number,
+  bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number },
+): number {
+  const mid = bandBoundariesPx?.midBoundaryPx
+  if (mid == null || !(mid > 0) || !Number.isFinite(scaledPx)) return scaledPx
+  const midCap = Math.max(1, Math.round(mid * (8 / 30)))
+  return Math.min(scaledPx, midCap)
 }
 
 export function buildThicknessBySegment(params: {

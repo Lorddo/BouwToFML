@@ -55,7 +55,9 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
-| `balance` | Vast 0.5 in V2a |
+| `balance` | Default 0.5 (X-01); collineaire diktewissel: **langste dikteband** blijft B=0.5; overige flushen tegen **één wereld-face** (a→b-onafhankelijk; default faceLo); jog-stubs &lt;25 cm (kortere keten → langere hartlijn); stub-dikte=max(armen) ook als stub blijft; collinear stubs &lt;15 cm |
+| L9 stub | Bewaart cross-band + parallel CL-offset (thickness-gate + `orthoStubTierMaxPx` mid-capped) |
+| L10 straighten | Geen axis-union over dikteband-wissel (thickness-gate op direct + bridge); FML balance blijft post-L10 consument |
 | Legacy min/max clamp | Vervangen door tier-model |
 
 ### Coördinaten
@@ -238,6 +240,15 @@ Per verdieping **inputvelden**:
 | **V2** | Online opslaan + meenemen in FML als `floors[].drawing` (URL/base64) |
 
 POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat geen drawing.
+
+### Stap 1 rotatie-bake (2026-08-13)
+
+| Beslissing | Keuze |
+|------------|-------|
+| Rotatie vs schaal | Onafhankelijk; rotatie-UI niet geblokkeerd door onbevestigde schaal |
+| Optionele bake | Knop «Rotatie vastzetten» bakt pixels (`commitInputStepImage`) zodat H/V-linialen langs muren kunnen |
+| Auto | Zelfde bake bij 1→2; niet verplicht op stap 1 |
+| Onbevestigde schaal | Na rotatie-bake: verse linialen op rechtgetrokken beeld; mm blijft |
 
 ---
 

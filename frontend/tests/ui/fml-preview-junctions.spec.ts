@@ -9,7 +9,9 @@ import {
   setWallBalance,
   slideWallSegmentAlongAxis,
   resolveWallSlidePointerDelta,
+  moveJunctionWithWallJoins,
   snapPointToJunctions,
+  snapPointToWallCenters,
   snapToNearbyEndpointAxes,
   buildJunctions,
   junctionIdsForWall,
@@ -533,10 +535,82 @@ describe('addWallSegment', () => {
     expect(result?.walls).toHaveLength(1)
     expect(result?.walls[0]?.thickness).toBe(20)
     expect(result?.wallId).toMatch(/^wall-/)
+    expect(result?.wallIds).toEqual([result?.wallId])
   })
 
   it('weigert te korte segmenten', () => {
     expect(addWallSegment([], { x: 0, y: 0 }, { x: 1, y: 0 }, 20)).toBeNull()
+  })
+
+  it('splits host and new wall at crossing into a shared junction', () => {
+    const walls = [
+      {
+        id: 'host',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const result = addWallSegment(walls, { x: 50, y: -40 }, { x: 50, y: 40 }, 14)
+    expect(result).not.toBeNull()
+    expect(result!.wallIds).toHaveLength(2)
+    expect(result!.walls).toHaveLength(4)
+
+    const fullCrossing = result!.walls.find(
+      (wall) =>
+        ((Math.abs(wall.a.y + 40) < 0.01 && Math.abs(wall.b.y - 40) < 0.01) ||
+          (Math.abs(wall.a.y - 40) < 0.01 && Math.abs(wall.b.y + 40) < 0.01)) &&
+        Math.abs(wall.a.x - 50) < 0.01 &&
+        Math.abs(wall.b.x - 50) < 0.01,
+    )
+    expect(fullCrossing).toBeUndefined()
+
+    const hostLeft = result!.walls.find(
+      (wall) =>
+        ((Math.abs(wall.a.x) < 0.01 && Math.abs(wall.b.x - 50) < 0.01) ||
+          (Math.abs(wall.a.x - 50) < 0.01 && Math.abs(wall.b.x) < 0.01)) &&
+        Math.abs(wall.a.y) < 0.01 &&
+        Math.abs(wall.b.y) < 0.01,
+    )
+    const hostRight = result!.walls.find(
+      (wall) =>
+        ((Math.abs(wall.a.x - 50) < 0.01 && Math.abs(wall.b.x - 100) < 0.01) ||
+          (Math.abs(wall.a.x - 100) < 0.01 && Math.abs(wall.b.x - 50) < 0.01)) &&
+        Math.abs(wall.a.y) < 0.01 &&
+        Math.abs(wall.b.y) < 0.01,
+    )
+    expect(hostLeft).toBeTruthy()
+    expect(hostRight).toBeTruthy()
+
+    const junctions = buildJunctions(result!.walls)
+    const cross = junctions.find((item) => Math.abs(item.x - 50) < 0.1 && Math.abs(item.y) < 0.1)
+    expect(cross?.refs.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('keeps host openings on the correct piece after cross-cut', () => {
+    const walls = [
+      {
+        id: 'host',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        openings: [{ refid: 'host-door', t: 0.8, width: 90, type: 'door' as const }],
+      },
+    ]
+    const result = addWallSegment(walls, { x: 50, y: -40 }, { x: 50, y: 40 }, 14)
+    expect(result).not.toBeNull()
+
+    const withDoor = result!.walls.filter((wall) =>
+      wall.openings.some((opening) => opening.refid === 'host-door'),
+    )
+    expect(withDoor).toHaveLength(1)
+    const hostPiece = withDoor[0]
+    const door = hostPiece.openings[0]
+    const doorX = hostPiece.a.x + door.t * (hostPiece.b.x - hostPiece.a.x)
+    expect(doorX).toBeCloseTo(80, 5)
+    expect(Math.min(hostPiece.a.x, hostPiece.b.x)).toBeCloseTo(50, 5)
+    expect(Math.max(hostPiece.a.x, hostPiece.b.x)).toBeCloseTo(100, 5)
   })
 })
 
@@ -1163,6 +1237,123 @@ describe('slideWallSegmentAlongAxis', () => {
       )
     })
     expect(connectors.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('bestaande muur over andere slepen: beide splitsen tot junction', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 40, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'v1',
+        a: { x: 20, y: 0 },
+        b: { x: 20, y: 80 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+
+    const moved = slideWallSegmentAlongAxis(walls, 'v1', 30, { x: 1, y: 0 })
+    expect(moved).toHaveLength(4)
+
+    const junctions = buildJunctions(moved)
+    const cross = junctions.find(
+      (junction) => Math.abs(junction.x - 50) < 0.01 && Math.abs(junction.y - 40) < 0.01,
+    )
+    expect(cross?.refs.length).toBeGreaterThanOrEqual(4)
+
+    const coversCross = (wall: { a: { x: number; y: number }; b: { x: number; y: number } }) => {
+      const onSeg =
+        Math.min(wall.a.x, wall.b.x) - 0.01 <= 50 &&
+        50 <= Math.max(wall.a.x, wall.b.x) + 0.01 &&
+        Math.min(wall.a.y, wall.b.y) - 0.01 <= 40 &&
+        40 <= Math.max(wall.a.y, wall.b.y) + 0.01
+      return onSeg
+    }
+    expect(moved.filter(coversCross).length).toBe(4)
+  })
+})
+
+describe('moveJunctionWithWallJoins', () => {
+  it('eindpunt over muur slepen: host splitst tot T-junction', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'v1',
+        a: { x: 50, y: 0 },
+        b: { x: 50, y: 10 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const node = buildJunctions(walls).find((junction) =>
+      junction.refs.some((ref) => ref.wallId === 'v1' && ref.end === 'b'),
+    )!
+    const moved = moveJunctionWithWallJoins(walls, node, { x: 50, y: 40 })
+    expect(moved.length).toBeGreaterThanOrEqual(3)
+
+    const junctions = buildJunctions(moved)
+    const tee = junctions.find(
+      (junction) => Math.abs(junction.x - 50) < 0.01 && Math.abs(junction.y - 40) < 0.01,
+    )
+    expect(tee?.refs.length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('eindpunt door muur slepen: kruising wordt X-junction', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'v1',
+        a: { x: 50, y: 0 },
+        b: { x: 50, y: 10 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const node = buildJunctions(walls).find((junction) =>
+      junction.refs.some((ref) => ref.wallId === 'v1' && ref.end === 'b'),
+    )!
+    const moved = moveJunctionWithWallJoins(walls, node, { x: 50, y: 80 })
+    expect(moved).toHaveLength(4)
+
+    const junctions = buildJunctions(moved)
+    const cross = junctions.find(
+      (junction) => Math.abs(junction.x - 50) < 0.01 && Math.abs(junction.y - 40) < 0.01,
+    )
+    expect(cross?.refs.length).toBeGreaterThanOrEqual(4)
+  })
+})
+
+describe('snapPointToWallCenters', () => {
+  it('snapt naar hartlijn van muur binnen radius', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const snapped = snapPointToWallCenters(walls, { x: 50, y: 45 }, 15)
+    expect(snapped.x).toBeCloseTo(50, 4)
+    expect(snapped.y).toBeCloseTo(40, 4)
   })
 })
 

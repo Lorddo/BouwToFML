@@ -550,6 +550,7 @@ export function measureSegmentThicknessMax(params: {
       a: segment.a,
       b: segment.b,
       sampleStepPx,
+      junctionMarginPx,
     })
     const plusMedian = median(normalExtents.map((sample) => sample.plus))
     const minusMedian = median(normalExtents.map((sample) => sample.minus))

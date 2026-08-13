@@ -51,7 +51,7 @@ export function useWorkspaceFlow(deps: {
   vectorCacheLoading: Ref<boolean>
   autoClassifyWalls: () => Promise<boolean>
   runOcrScan: () => Promise<void>
-  measureWallReferenceThickness: (rect: SelectionRect) => Promise<number | null>
+  measureWallReferenceThickness: (rect?: SelectionRect) => Promise<number | null>
   wallsDetectionComplete?: () => boolean
   /**
    * True als stap 3 al classify/finalize-output heeft — geen OCR/classify-bootstrap
@@ -179,8 +179,8 @@ export function useWorkspaceFlow(deps: {
       await deps.commitInkEdits()
       await deps.refreshAllDetectionUnderlays()
       await deps.ensureVectorCacheIfNeeded()
-      const wallRect = [...deps.rects.value].reverse().find((rect) => rect.type === 'wall')
-      if (!wallRect) {
+      const hasWall = deps.rects.value.some((rect) => rect.type === 'wall')
+      if (!hasWall) {
         deps.setLocalError?.(tGlobal('flow.blocked.wallRef'))
         return
       }
@@ -188,7 +188,7 @@ export function useWorkspaceFlow(deps: {
       // Alleen meten wanneer nog geen geldige referentiedikte.
       const existingPx = deps.referenceWallThicknessPx.value
       if (existingPx == null || existingPx <= 0) {
-        const thickness = await deps.measureWallReferenceThickness(wallRect)
+        const thickness = await deps.measureWallReferenceThickness()
         if (thickness == null || thickness <= 0) {
           // measureWallReferenceThickness zet al een foutmelding
           return

@@ -203,24 +203,41 @@ function findMidspanHosts(
   return hosts
 }
 
-function neighborThicknessesAtEnd(
+function neighborsAtEnd(
   wall: WallPolygonInput,
   end: 'a' | 'b',
   adj: Map<string, Array<{ wallId: string; end: 'a' | 'b' }>>,
   wallById: Map<string, WallPolygonInput>,
-): number[] {
+): WallPolygonInput[] {
   const key = endpointKey(pointAtEnd(wall, end))
   const entries = adj.get(key) ?? []
   return entries
     .filter((entry) => entry.wallId !== wall.id)
-    .map((entry) => wallById.get(entry.wallId)!.thickness)
+    .map((entry) => wallById.get(entry.wallId)!)
+}
+
+/**
+ * How far `wall`'s body extends from its centerline in direction `dir`.
+ * Balance-aware: balance=0.5 → thickness/2; flush-to-one-side → 0 on the empty side.
+ */
+function extentAlongDirection(wall: WallPolygonInput, dir: Point2D): number {
+  const unit = normalize(dir)
+  const n = leftNormal(alongWallDir(wall))
+  const { plus, minus } = resolveWallExtents(wall)
+  const normalDot = n.x * unit.x + n.y * unit.y
+  return Math.max(0, plus * normalDot, -minus * normalDot)
+}
+
+function endOutDir(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
+  const along = alongWallDir(wall)
+  return end === 'a' ? scale(along, -1) : along
 }
 
 /**
  * Free end: half self thickness (square cap).
- * Joined end: half of *neighbor* thickness — thick walls flush with thin legs,
- * thin walls penetrate into thick hosts (covers outer corner for union).
- * Mid-span T into host: half host thickness + seal.
+ * Joined end: neighbor body extent along this wall's out-dir (balance-aware) —
+ * flush faces do not grow a false exterior ear; centered walls keep thickness/2.
+ * Mid-span T into host: same extent into host + seal.
  */
 function resolveEndExtendCm(
   wall: WallPolygonInput,
@@ -229,16 +246,17 @@ function resolveEndExtendCm(
   wallById: Map<string, WallPolygonInput>,
   walls: WallPolygonInput[],
 ): number {
-  const neighborThicks = neighborThicknessesAtEnd(wall, end, adj, wallById)
-  if (neighborThicks.length > 0) {
-    const maxNeighbor = Math.max(...neighborThicks)
-    return Math.max(maxNeighbor * END_EXTEND_FACTOR, UNION_SEAL_CM)
+  const out = endOutDir(wall, end)
+  const neighbors = neighborsAtEnd(wall, end, adj, wallById)
+  if (neighbors.length > 0) {
+    const needed = Math.max(...neighbors.map((neighbor) => extentAlongDirection(neighbor, out)))
+    return Math.max(needed, UNION_SEAL_CM)
   }
 
   const hosts = findMidspanHosts(wall, end, walls)
   if (hosts.length > 0) {
-    const maxHost = Math.max(...hosts.map((h) => h.thickness))
-    return Math.max(maxHost * END_EXTEND_FACTOR, UNION_SEAL_CM) + UNION_SEAL_CM
+    const needed = Math.max(...hosts.map((host) => extentAlongDirection(host, out)))
+    return Math.max(needed, UNION_SEAL_CM) + UNION_SEAL_CM
   }
 
   return Math.max(wall.thickness * END_EXTEND_FACTOR, UNION_SEAL_CM)
@@ -246,7 +264,7 @@ function resolveEndExtendCm(
 
 /**
  * Oriented rectangle along the centerline with square ends.
- * Join-extend is neighbor-aware so unequal thickness does not overhang.
+ * Join-extend is neighbor+balance-aware so flush faces do not grow exterior ears.
  */
 function buildWallRectPolygon(
   wall: WallPolygonInput,

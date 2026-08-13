@@ -11,13 +11,35 @@ import { clonePlain } from './clone-plain'
 import { toStorableDevSession } from './storable'
 import { cloneTabOutputsForSnapshot, enrichWallsOutputWithFaceState } from './tab-outputs-serialize'
 
+function sanitizeWallRefThicknessMeasures(
+  measures: DevSessionCaptureInput['wallRefThicknessMeasures'],
+): DevWorkspaceRoomSnapshot['wallRefThicknessMeasures'] {
+  if (!measures?.length) return undefined
+  const next = measures
+    .filter(
+      (m) =>
+        (m.band === 'min' || m.band === 'mid' || m.band === 'max') &&
+        Number.isFinite(m.thicknessPx) &&
+        m.thicknessPx > 0,
+    )
+    .map((m) => ({ band: m.band, thicknessPx: m.thicknessPx }))
+  return next.length > 0 ? next : undefined
+}
+
 function buildRoomSnapshot(input: DevSessionCaptureInput): DevWorkspaceRoomSnapshot {
   const snapshot: DevWorkspaceRoomSnapshot = {}
   if (input.referenceWallThicknessPx != null && input.referenceWallThicknessPx > 0) {
     snapshot.referenceWallThicknessPx = input.referenceWallThicknessPx
   }
-  if (input.referenceWallRect) {
+  const measures = sanitizeWallRefThicknessMeasures(input.wallRefThicknessMeasures)
+  if (measures) snapshot.wallRefThicknessMeasures = measures
+  if (input.referenceWallRects && input.referenceWallRects.length > 0) {
+    snapshot.referenceWallRects = input.referenceWallRects.map((rect) => ({ ...rect }))
+    const primary = input.referenceWallRect ?? input.referenceWallRects[0]
+    snapshot.referenceWallRect = { ...primary }
+  } else if (input.referenceWallRect) {
     snapshot.referenceWallRect = { ...input.referenceWallRect }
+    snapshot.referenceWallRects = [{ ...input.referenceWallRect }]
   }
   if (input.openingRects && input.openingRects.length > 0) {
     snapshot.openingRects = input.openingRects.map((rect) => ({ ...rect }))
@@ -141,7 +163,26 @@ export function captureDevWorkspaceSession(input: DevSessionCaptureInput): DevWo
     ...(input.referenceWallThicknessPx != null && input.referenceWallThicknessPx > 0
       ? { referenceWallThicknessPx: input.referenceWallThicknessPx }
       : {}),
-    ...(input.referenceWallRect ? { referenceWallRect: { ...input.referenceWallRect } } : {}),
+    ...(() => {
+      const measures = sanitizeWallRefThicknessMeasures(input.wallRefThicknessMeasures)
+      return measures ? { wallRefThicknessMeasures: measures } : {}
+    })(),
+    ...(() => {
+      if (input.referenceWallRects && input.referenceWallRects.length > 0) {
+        const primary = input.referenceWallRect ?? input.referenceWallRects[0]
+        return {
+          referenceWallRects: input.referenceWallRects.map((rect) => ({ ...rect })),
+          referenceWallRect: { ...primary },
+        }
+      }
+      if (input.referenceWallRect) {
+        return {
+          referenceWallRect: { ...input.referenceWallRect },
+          referenceWallRects: [{ ...input.referenceWallRect }],
+        }
+      }
+      return {}
+    })(),
     ...(input.openingRects && input.openingRects.length > 0
       ? { openingRects: input.openingRects.map((rect) => ({ ...rect })) }
       : {}),

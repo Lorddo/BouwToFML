@@ -88,8 +88,20 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     ) => void
   }
   referenceWallThicknessPx: Ref<number | null>
+  wallRefThicknessMeasures: Ref<
+    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+  >
   rects: Ref<SelectionRect[]>
   clearRectsByType: (type: ElementClass) => void
+  replaceWallRects: (
+    walls: Array<{
+      x: number
+      y: number
+      width: number
+      height: number
+      wallThicknessBand?: 'min' | 'mid' | 'max'
+    }>,
+  ) => void
   addRect: (rect: Omit<SelectionRect, 'id'>) => void
   detection: {
     roomInkCoverageThreshold: Ref<number>
@@ -100,13 +112,15 @@ export function buildWorkspaceDevSessionDeps(ctx: {
   doorSwingFaces: {
     markAutoDoorPassApplied: () => void
     resetAutoDoorPassGate: () => void
-    refreshDoorSwingOverlay: () => Promise<void>
+    refreshDoorSwingOverlayExistingOnly: () => Promise<void>
+    refreshDoorSwingFromExistingDoors: () => Promise<void>
     snapResolvedDoorsToWalls: () => void | Promise<void>
   }
   windowFaces: {
     markAutoWindowPassApplied: () => void
     invalidateAutoWindowPass: () => void
     refreshWindowOverlay: () => Promise<void>
+    refreshWindowsFromExistingClasses: () => Promise<void>
   }
 }): WorkspaceDevSessionDeps {
   return {
@@ -168,10 +182,18 @@ export function buildWorkspaceDevSessionDeps(ctx: {
       return cache ? serializePinnedRoots(cache) : []
     },
     referenceWallThicknessPx: ctx.referenceWallThicknessPx,
+    wallRefThicknessMeasures: ctx.wallRefThicknessMeasures,
     rects: ctx.rects,
-    restoreWallReferenceRect: (rect: DevWallReferenceRect) => {
-      ctx.clearRectsByType('wall')
-      ctx.addRect({ type: 'wall', ...rect })
+    restoreWallReferenceRects: (rects: DevWallReferenceRect[]) => {
+      ctx.replaceWallRects(
+        rects.map((rect) => ({
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+          ...(rect.wallThicknessBand ? { wallThicknessBand: rect.wallThicknessBand } : {}),
+        })),
+      )
     },
     restoreOpeningReferenceRects: (rects) => {
       ctx.clearRectsByType('door')
@@ -194,9 +216,12 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     markAutoDoorPassApplied: () => ctx.doorSwingFaces.markAutoDoorPassApplied(),
     markAutoWindowPassApplied: () => ctx.windowFaces.markAutoWindowPassApplied(),
     resetAutoDoorPassGate: () => ctx.doorSwingFaces.resetAutoDoorPassGate(),
-    refreshDoorSwingOverlay: () => ctx.doorSwingFaces.refreshDoorSwingOverlay(),
+    refreshDoorSwingOverlayExistingOnly: () =>
+      ctx.doorSwingFaces.refreshDoorSwingOverlayExistingOnly(),
+    refreshDoorSwingFromExistingDoors: () => ctx.doorSwingFaces.refreshDoorSwingFromExistingDoors(),
     invalidateAutoWindowPass: () => ctx.windowFaces.invalidateAutoWindowPass(),
     refreshWindowOverlay: () => ctx.windowFaces.refreshWindowOverlay(),
+    refreshWindowsFromExistingClasses: () => ctx.windowFaces.refreshWindowsFromExistingClasses(),
     snapResolvedDoorsToWalls: () => ctx.doorSwingFaces.snapResolvedDoorsToWalls(),
   }
 }

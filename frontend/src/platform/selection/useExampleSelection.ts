@@ -1,6 +1,13 @@
 import { ref, computed } from 'vue'
 import { CONCEPT_DOOR_REFID } from '@/core/fml/types'
+import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import { SELECTION_COLORS, type ElementClass, type SelectionRect } from './types'
+import {
+  assignWallThicknessBand,
+  enforceWallRefLimit,
+  isWallThicknessBand,
+  resolveWallThicknessBand,
+} from './wall-thickness-ref'
 
 const ACTIVE_SELECTION_CLASSES: ElementClass[] = ['wall', 'door', 'window']
 
@@ -19,9 +26,26 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
   const typeColors = SELECTION_COLORS
 
   function addRect(rect: Omit<SelectionRect, 'id'>) {
-    const withDefaults: Omit<SelectionRect, 'id'> =
+    let withDefaults: Omit<SelectionRect, 'id'> =
       rect.type === 'door' ? { ...rect, fmlRefId: rect.fmlRefId ?? CONCEPT_DOOR_REFID } : rect
+    if (rect.type === 'wall') {
+      const used = new Set(
+        rects.value.filter((r) => r.type === 'wall').map((r) => resolveWallThicknessBand(r)),
+      )
+      const preferred = isWallThicknessBand(rect.wallThicknessBand)
+        ? rect.wallThicknessBand
+        : ('max' as FmlThicknessBand)
+      const fallbackOrder: FmlThicknessBand[] = ['max', 'mid', 'min']
+      const band =
+        !used.has(preferred) && used.size < 3
+          ? preferred
+          : (fallbackOrder.find((b) => !used.has(b)) ?? preferred)
+      withDefaults = { ...withDefaults, wallThicknessBand: band }
+    }
     rects.value.push({ ...withDefaults, id: `sel-${nextId++}` })
+    if (rect.type === 'wall') {
+      rects.value = enforceWallRefLimit(rects.value).rects
+    }
   }
 
   function removeRect(id: string) {
@@ -58,12 +82,51 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     rects.value = next
   }
 
+  function updateRectWallThicknessBand(id: string, band: FmlThicknessBand) {
+    if (!isWallThicknessBand(band)) return
+    rects.value = assignWallThicknessBand(rects.value, id, band)
+  }
+
   function clearRects() {
     rects.value = []
   }
 
   function clearRectsByType(cls: ElementClass) {
     rects.value = rects.value.filter((r) => r.type !== cls)
+  }
+
+  /**
+   * Vervang alle muur-refs in één keer (restore). Unieke bands + max 3 via enforce.
+   * Voorkomt sequentiële addRect-race waarbij ontbrekende bands tot collapse leiden.
+   */
+  function replaceWallRects(
+    walls: Array<
+      Omit<SelectionRect, 'id' | 'type'> & {
+        wallThicknessBand?: FmlThicknessBand
+      }
+    >,
+  ) {
+    const nonWall = rects.value.filter((r) => r.type !== 'wall')
+    const used = new Set<FmlThicknessBand>()
+    const fallbackOrder: FmlThicknessBand[] = ['max', 'mid', 'min']
+    const nextWalls: SelectionRect[] = []
+    for (const wall of walls) {
+      const preferred = isWallThicknessBand(wall.wallThicknessBand)
+        ? wall.wallThicknessBand
+        : ('max' as FmlThicknessBand)
+      const band =
+        !used.has(preferred) && used.size < 3
+          ? preferred
+          : (fallbackOrder.find((b) => !used.has(b)) ?? preferred)
+      used.add(band)
+      nextWalls.push({
+        ...wall,
+        type: 'wall',
+        wallThicknessBand: band,
+        id: `sel-${nextId++}`,
+      })
+    }
+    rects.value = enforceWallRefLimit([...nonWall, ...nextWalls]).rects
   }
 
   function rectsByClass(cls: ElementClass) {
@@ -163,8 +226,10 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     selectRect,
     updateRectBounds,
     updateRectFmlRefId,
+    updateRectWallThicknessBand,
     clearRects,
     clearRectsByType,
+    replaceWallRects,
     rectsByClass,
     limitToN,
     startDraw,

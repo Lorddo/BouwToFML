@@ -6,8 +6,42 @@ import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RoomPhase } from '@/ui/composables/workspace/useWorkspaceRoomFaces'
 
+function createBaseDeps(overrides: Record<string, unknown> = {}) {
+  return {
+    flowStep: ref<WorkspaceFlowStep>('templates'),
+    templateTab: ref<TemplateTab>('ocr'),
+    profileConfirmed: ref(true),
+    tabOutputs: ref<TabDetectionOutputs>(emptyTabOutputs()),
+    roomPhase: ref<RoomPhase>('review'),
+    wallsDetectionComplete: ref(false),
+    getRoomRasterCache: () => null,
+    refreshAllDetectionUnderlays: async () => undefined,
+    ensureVectorCacheIfNeeded: async () => undefined,
+    syncFromTabOutputs: async () => undefined,
+    runOcrScan: async () => undefined,
+    autoClassifyWalls: async () => true,
+    finalizeWallDetection: async () => true,
+    referenceWallThicknessPx: ref<number | null>(null),
+    wallRefThicknessMeasures: ref<
+      Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+    >([]),
+    restoreWallReferenceRects: () => undefined,
+    restoreOpeningReferenceRects: () => undefined,
+    setRoomInkCoverageThreshold: () => undefined,
+    markAutoDoorPassApplied: vi.fn(),
+    markAutoWindowPassApplied: vi.fn(),
+    resetAutoDoorPassGate: vi.fn(),
+    refreshDoorSwingOverlayExistingOnly: vi.fn(async () => undefined),
+    refreshDoorSwingFromExistingDoors: vi.fn(async () => undefined),
+    invalidateAutoWindowPass: vi.fn(),
+    refreshWindowOverlay: vi.fn(async () => undefined),
+    refreshWindowsFromExistingClasses: vi.fn(async () => undefined),
+    ...overrides,
+  }
+}
+
 describe('rerunOpeningsAfterRestore', () => {
-  it('draait deuren vóór ramen en forceert walls/review gates', async () => {
+  it('draait existing-doors-only vóór ramen en forceert walls/review gates', async () => {
     const order: string[] = []
     const flowStep = ref<WorkspaceFlowStep>('templates')
     const templateTab = ref<TemplateTab>('ocr')
@@ -15,33 +49,14 @@ describe('rerunOpeningsAfterRestore', () => {
     let tabDuringDoor: TemplateTab | null = null
     let phaseDuringDoor: RoomPhase | null = null
 
-    const deps = {
+    const deps = createBaseDeps({
       flowStep,
       templateTab,
-      profileConfirmed: ref(true),
-      tabOutputs: ref<TabDetectionOutputs>(emptyTabOutputs()),
       roomPhase,
-      wallsDetectionComplete: ref(false),
-      getRoomRasterCache: () => null,
-      refreshAllDetectionUnderlays: async () => undefined,
-      ensureVectorCacheIfNeeded: async () => undefined,
-      syncFromTabOutputs: async () => undefined,
-      runOcrScan: async () => undefined,
-      autoClassifyWalls: async () => true,
-      finalizeWallDetection: async () => true,
-      referenceWallThicknessPx: ref<number | null>(null),
-      restoreWallReferenceRect: () => undefined,
-      restoreOpeningReferenceRects: () => undefined,
-      setRoomInkCoverageThreshold: () => undefined,
-      markAutoDoorPassApplied: vi.fn(),
-      markAutoWindowPassApplied: vi.fn(),
-      resetAutoDoorPassGate: () => {
-        order.push('reset-door')
-      },
-      refreshDoorSwingOverlay: async () => {
+      refreshDoorSwingOverlayExistingOnly: async () => {
         tabDuringDoor = templateTab.value
         phaseDuringDoor = roomPhase.value
-        order.push('door')
+        order.push('door-existing')
       },
       invalidateAutoWindowPass: () => {
         order.push('invalidate-window')
@@ -49,12 +64,12 @@ describe('rerunOpeningsAfterRestore', () => {
       refreshWindowOverlay: async () => {
         order.push('window')
       },
-    }
+    })
 
     const detection = createWorkspaceDevSessionRestoreDetection(deps)
     await detection.rerunOpeningsAfterRestore()
 
-    expect(order).toEqual(['reset-door', 'door', 'invalidate-window', 'window'])
+    expect(order).toEqual(['door-existing', 'invalidate-window', 'window'])
     expect(tabDuringDoor).toBe('walls')
     expect(phaseDuringDoor).toBe('review')
     expect(templateTab.value).toBe('ocr')
@@ -68,36 +83,20 @@ describe('rerunOpeningsAfterRestore', () => {
     const roomPhase = ref<RoomPhase>('done')
     let sawReview = false
 
-    const detection = createWorkspaceDevSessionRestoreDetection({
-      flowStep,
-      templateTab,
-      profileConfirmed: ref(true),
-      tabOutputs: ref<TabDetectionOutputs>(emptyTabOutputs()),
-      roomPhase,
-      wallsDetectionComplete: ref(true),
-      getRoomRasterCache: () => null,
-      refreshAllDetectionUnderlays: async () => undefined,
-      ensureVectorCacheIfNeeded: async () => undefined,
-      syncFromTabOutputs: async () => undefined,
-      runOcrScan: async () => undefined,
-      autoClassifyWalls: async () => true,
-      finalizeWallDetection: async () => true,
-      referenceWallThicknessPx: ref<number | null>(null),
-      restoreWallReferenceRect: () => undefined,
-      restoreOpeningReferenceRects: () => undefined,
-      setRoomInkCoverageThreshold: () => undefined,
-      markAutoDoorPassApplied: vi.fn(),
-      markAutoWindowPassApplied: vi.fn(),
-      resetAutoDoorPassGate: vi.fn(),
-      refreshDoorSwingOverlay: async () => {
-        expect(flowStep.value).toBe('templates')
-        expect(templateTab.value).toBe('walls')
-        expect(roomPhase.value).toBe('review')
-        sawReview = true
-      },
-      invalidateAutoWindowPass: vi.fn(),
-      refreshWindowOverlay: async () => undefined,
-    })
+    const detection = createWorkspaceDevSessionRestoreDetection(
+      createBaseDeps({
+        flowStep,
+        templateTab,
+        roomPhase,
+        wallsDetectionComplete: ref(true),
+        refreshDoorSwingOverlayExistingOnly: async () => {
+          expect(flowStep.value).toBe('templates')
+          expect(templateTab.value).toBe('walls')
+          expect(roomPhase.value).toBe('review')
+          sawReview = true
+        },
+      }),
+    )
 
     await detection.rerunOpeningsAfterRestore()
 

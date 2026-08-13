@@ -73,4 +73,53 @@ describe('door-swing-symbol', () => {
     expect(passage.arcPoints).toHaveLength(0)
     expect(passage.arrowPoints).toHaveLength(0)
   })
+
+  it('sliding-pijlen liggen buiten de muurgap (dikte/2 + marge)', () => {
+    const wallThickness = 20
+    const base = {
+      start: { x: 10, y: 10 },
+      end: { x: 160, y: 10 },
+      wallUnit: { x: 1, y: 0 },
+      width: 150,
+      mirrored: [0, 0] as [number, number],
+      wallThickness,
+    }
+    // -normal (mirrored[1]=0) → as-y = 10 - (10 + 10) = -10; gap-rand y=0.
+    const gapEdgeY = 10 - wallThickness / 2
+    const sliding = buildDoorSwingSymbol({ ...base, kind: 'sliding' })
+    const single = buildDoorSwingSymbol({ ...base, kind: 'sliding_single' })
+    const pocket = buildDoorSwingSymbol({ ...base, kind: 'sliding_pocket' })
+    for (const arrow of [...sliding.arrowPoints, ...single.arrowPoints, ...pocket.arrowPoints]) {
+      // As = tail→tip (eerste 4 coords); vleugels mogen iets uitsteken.
+      const shaftY = (arrow[1] + arrow[3]) / 2
+      expect(shaftY).toBeLessThan(gapEdgeY)
+    }
+  })
+
+  it('sliding-pijlen springen mee bij spiegelen op muurzijde (mirrored[1])', () => {
+    const wallThickness = 20
+    const base = {
+      start: { x: 10, y: 10 },
+      end: { x: 160, y: 10 },
+      wallUnit: { x: 1, y: 0 },
+      width: 150,
+      wallThickness,
+    }
+    const gapEdgeNeg = 10 - wallThickness / 2
+    const gapEdgePos = 10 + wallThickness / 2
+    const defaultSide = buildDoorSwingSymbol({
+      ...base,
+      kind: 'sliding',
+      mirrored: [0, 0],
+    })
+    const flippedSide = buildDoorSwingSymbol({
+      ...base,
+      kind: 'sliding',
+      mirrored: [0, 1],
+    })
+    const defaultY = (defaultSide.arrowPoints[0][1] + defaultSide.arrowPoints[0][3]) / 2
+    const flippedY = (flippedSide.arrowPoints[0][1] + flippedSide.arrowPoints[0][3]) / 2
+    expect(defaultY).toBeLessThan(gapEdgeNeg)
+    expect(flippedY).toBeGreaterThan(gapEdgePos)
+  })
 })

@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { TemplatesInitialDetectionStep } from '@/ui/composables/workspace/workspace-view-visibility'
+import type { TemplatesBusyStep } from '@/ui/composables/workspace/workspace-view-visibility'
 import CanvasToolbeltDock from './canvas/CanvasToolbeltDock.vue'
 import type { FaceToolId, InkToolId } from './canvas/canvas-toolbelt.types'
 import { getFaceToolbeltItems } from './canvas/faceToolbeltItems'
 import { getInkToolbeltItems } from './canvas/inkToolbeltItems'
 
 /**
- * Presentational shell around FloorplanCanvas: initial-detection overlay + toolbelt.
+ * Presentational shell around FloorplanCanvas: busy overlay (detectie/afronden) + toolbelt.
  * Canvas stays in WorkspaceView (ref + multi-arg emits) — no state move.
  */
 defineProps<{
-  initialDetectionBusy: boolean
-  initialDetectionSteps: TemplatesInitialDetectionStep[]
+  busyOverlay: boolean
+  busyOverlayTitle: string
+  busyOverlaySteps: TemplatesBusyStep[]
   faceToolbeltVisible: boolean
   inkToolbeltVisible: boolean
   activeFaceBoxTool: FaceToolId | null
@@ -29,7 +30,7 @@ const emit = defineEmits<{
   inkUndo: []
 }>()
 
-const { t, locale } = useI18n()
+const { locale } = useI18n()
 const faceTools = computed(() => {
   void locale.value
   return getFaceToolbeltItems()
@@ -42,17 +43,12 @@ const inkTools = computed(() => {
 
 <template>
   <slot />
-  <div
-    v-if="initialDetectionBusy"
-    class="initial-detection-overlay"
-    aria-live="polite"
-    aria-busy="true"
-  >
+  <div v-if="busyOverlay" class="initial-detection-overlay" aria-live="polite" aria-busy="true">
     <div class="initial-detection-card">
       <div class="initial-detection-spinner" aria-hidden="true" />
-      <p class="initial-detection-title">{{ t('templates.detectionOverlay.title') }}</p>
+      <p class="initial-detection-title">{{ busyOverlayTitle }}</p>
       <ul class="initial-detection-steps">
-        <li v-for="step in initialDetectionSteps" :key="step.id" :class="`step-${step.status}`">
+        <li v-for="step in busyOverlaySteps" :key="step.id" :class="`step-${step.status}`">
           <span class="step-mark" aria-hidden="true" />
           <span>{{ step.label }}</span>
         </li>
@@ -60,10 +56,10 @@ const inkTools = computed(() => {
     </div>
   </div>
   <CanvasToolbeltDock
-    :face-visible="faceToolbeltVisible && !initialDetectionBusy"
+    :face-visible="faceToolbeltVisible && !busyOverlay"
     :face-active-tool="activeFaceBoxTool"
     :face-tools="faceTools"
-    :ink-visible="inkToolbeltVisible && !initialDetectionBusy"
+    :ink-visible="inkToolbeltVisible && !busyOverlay"
     :ink-active-tool="activeInkTool"
     :ink-brush-size="inkBrushSize"
     :ink-tools="inkTools"

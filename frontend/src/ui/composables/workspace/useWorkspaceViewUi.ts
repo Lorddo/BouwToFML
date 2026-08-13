@@ -2,6 +2,7 @@ import { tally } from '@/core/diagnostics'
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 import type { ResultViewTab } from '@/cv/pipeline/merge-tab-outputs'
 import type { PreprocessPanelLayer, TemplateTab } from '@/cv/preprocess/layer-preprocess'
+import { tGlobal } from '@/ui/i18n'
 import type { WorkspaceFlowStep } from './constants'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 import {
@@ -14,10 +15,13 @@ import {
   isLayerDebugVisible,
   isOcrHitRemoveEnabled,
   isOnFmlResultTab,
+  isTemplatesFinalizeBusy,
   isTemplatesInitialDetectionBusy,
   isWindowsDevPanelVisible,
+  resolveTemplatesFinalizeSteps,
   resolveTemplatesInitialDetectionSteps,
-  type TemplatesInitialDetectionStep,
+  type TemplatesBusyStep,
+  type TemplatesFinalizePhase,
 } from './workspace-view-visibility'
 
 export function useWorkspaceViewUi(deps: {
@@ -26,6 +30,7 @@ export function useWorkspaceViewUi(deps: {
   templateTab: Ref<TemplateTab>
   resultTab: Ref<ResultViewTab>
   roomPhase: Ref<RoomPhase>
+  finalizePhase: Ref<TemplatesFinalizePhase | null>
   classifyingInFlight: Ref<boolean>
   doorInitialPassReady: Ref<boolean>
   windowInitialPassReady: Ref<boolean>
@@ -84,8 +89,24 @@ export function useWorkspaceViewUi(deps: {
     }),
   )
 
-  const templatesInitialDetectionSteps = computed((): TemplatesInitialDetectionStep[] =>
-    resolveTemplatesInitialDetectionSteps({
+  const templatesFinalizeBusy = computed(() => isTemplatesFinalizeBusy(deps.finalizePhase.value))
+
+  /** Detectie- of afrond-overlay actief (zelfde canvas-card). */
+  const templatesBusyOverlay = computed(
+    () => templatesInitialDetectionBusy.value || templatesFinalizeBusy.value,
+  )
+
+  const templatesBusyOverlayTitle = computed(() =>
+    templatesFinalizeBusy.value
+      ? tGlobal('templates.finalizeOverlay.title')
+      : tGlobal('templates.detectionOverlay.title'),
+  )
+
+  const templatesBusyOverlaySteps = computed((): TemplatesBusyStep[] => {
+    if (templatesFinalizeBusy.value) {
+      return resolveTemplatesFinalizeSteps(deps.finalizePhase.value)
+    }
+    return resolveTemplatesInitialDetectionSteps({
       roomPhase: deps.roomPhase.value,
       classifyingInFlight: deps.classifyingInFlight.value,
       doorInitialPassReady: deps.doorInitialPassReady.value,
@@ -93,12 +114,12 @@ export function useWorkspaceViewUi(deps: {
       ocrEnabled: deps.ocrEnabled?.value === true,
       ocrScanning: deps.ocrScanning?.value === true,
       ocrInitialPassReady: deps.ocrInitialPassReady?.value,
-    }),
-  )
+    })
+  })
 
   const faceSelectEnabled = computed(() =>
     isFaceSelectEnabled(deps.flowStep.value, deps.templateTab.value, deps.roomPhase.value, {
-      initialDetectionBusy: templatesInitialDetectionBusy.value,
+      initialDetectionBusy: templatesBusyOverlay.value,
     }),
   )
 
@@ -162,7 +183,9 @@ export function useWorkspaceViewUi(deps: {
   return {
     isDev,
     templatesInitialDetectionBusy,
-    templatesInitialDetectionSteps,
+    templatesBusyOverlay,
+    templatesBusyOverlayTitle,
+    templatesBusyOverlaySteps,
     faceSelectEnabled,
     ocrHitRemoveEnabled,
     layerDebugVisible,
@@ -180,7 +203,9 @@ export function useWorkspaceViewUi(deps: {
   } satisfies {
     isDev: boolean
     templatesInitialDetectionBusy: ComputedRef<boolean>
-    templatesInitialDetectionSteps: ComputedRef<TemplatesInitialDetectionStep[]>
+    templatesBusyOverlay: ComputedRef<boolean>
+    templatesBusyOverlayTitle: ComputedRef<string>
+    templatesBusyOverlaySteps: ComputedRef<TemplatesBusyStep[]>
     faceSelectEnabled: ComputedRef<boolean>
     ocrHitRemoveEnabled: ComputedRef<boolean>
     layerDebugVisible: ComputedRef<boolean>

@@ -49,6 +49,7 @@ export function buildRenderDoorGroupsAndWindows(
       wallLine.a,
       wallLine.b,
       wallLine.wall.openings,
+      thicknessCm,
     )
     groupedDoors.forEach((group) => {
       // Balance verschuift de muur t.o.v. de hartlijn — openingen mee naar mid-dikte.

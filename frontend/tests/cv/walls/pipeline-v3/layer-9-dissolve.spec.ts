@@ -3,12 +3,19 @@ import type { Segment } from '@/cv/port/wallGraph'
 import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
 import {
   absorbMicroCornerJogs,
+  capOffsetTolerancePx,
   collapseOrthoStairStubs,
   parallelCoverAbsorb,
   straightenCollinearAxisChains,
 } from '@/cv/walls/rooms/pipeline-v3/engines/collapse'
-import { layer9CollapsePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
-import { layer10CollapsePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
+import {
+  layer9CollapsePolicy,
+  resolveLayer9DissolvePolicy,
+} from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
+import {
+  layer10CollapsePolicy,
+  resolveLayer10FmlPolicy,
+} from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
 import {
   V3_NATIVE_THROUGH_LAYER,
   V3_PIPELINE_LAST_LAYER,
@@ -104,6 +111,70 @@ describe('V3 L9/L10 dissolve → FML', () => {
     expect(result.stats.chainsCollapsed).toBe(1)
     const seg = result.segments[0]
     expect(Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y)).toBeGreaterThan(150)
+  })
+
+  it('capOffsetTolerancePx: mid-boundary caps max-ref inflation', () => {
+    expect(capOffsetTolerancePx(24)).toBe(24)
+    expect(capOffsetTolerancePx(24, { midBoundaryPx: 40, maxBoundaryPx: 70 })).toBe(11)
+    expect(capOffsetTolerancePx(8, { midBoundaryPx: 40, maxBoundaryPx: 70 })).toBe(8)
+  })
+
+  it('L9 policy: orthoStubTierMaxPx mid-capped when bandBoundariesPx set', () => {
+    const uncapped = resolveLayer9DissolvePolicy(90).collapse.orthoStubTierMaxPx
+    const capped = resolveLayer9DissolvePolicy(90, {
+      midBoundaryPx: 40,
+      maxBoundaryPx: 70,
+    }).collapse.orthoStubTierMaxPx
+    expect(uncapped).toBeGreaterThan(capped)
+    expect(capped).toBe(11)
+  })
+
+  it('stair-stub: cross-band arms → preserve jog (noop)', () => {
+    // Small offset within tier, but max vs min band → must not diagonalize.
+    const jog: Segment[] = [
+      { a: { x: 100, y: 0 }, b: { x: 100, y: 100 } },
+      { a: { x: 100, y: 100 }, b: { x: 105, y: 100 } },
+      { a: { x: 105, y: 100 }, b: { x: 105, y: 200 } },
+    ]
+    const policy = resolveLayer9DissolvePolicy(90, {
+      midBoundaryPx: 40,
+      maxBoundaryPx: 70,
+    }).collapse
+    const result = collapseOrthoStairStubs(jog, policy, [80, 50, 25], 90)
+    expect(result.stats.chainsCollapsed).toBe(0)
+    expect(result.segments).toHaveLength(3)
+  })
+
+  it('stair-stub: same-band micro offset still collapses', () => {
+    const jog: Segment[] = [
+      { a: { x: 100, y: 0 }, b: { x: 100, y: 100 } },
+      { a: { x: 100, y: 100 }, b: { x: 105, y: 100 } },
+      { a: { x: 105, y: 100 }, b: { x: 105, y: 200 } },
+    ]
+    const policy = resolveLayer9DissolvePolicy(90, {
+      midBoundaryPx: 40,
+      maxBoundaryPx: 70,
+    }).collapse
+    const result = collapseOrthoStairStubs(jog, policy, [80, 78, 82], 90)
+    expect(result.stats.chainsCollapsed).toBe(1)
+    expect(result.segments).toHaveLength(1)
+  })
+
+  it('stair-stub: large parallel offset above mid-capped tier → preserve', () => {
+    // Linker-gevel-achtig: ~23px CL-offset; mid-cap @40 → tier 11.
+    const jog: Segment[] = [
+      { a: { x: 246, y: 2343 }, b: { x: 246, y: 2082 } },
+      { a: { x: 246, y: 2082 }, b: { x: 269, y: 2082 } },
+      { a: { x: 269, y: 2082 }, b: { x: 269, y: 1800 } },
+    ]
+    const policy = resolveLayer9DissolvePolicy(90, {
+      midBoundaryPx: 40,
+      maxBoundaryPx: 70,
+    }).collapse
+    expect(policy.orthoStubTierMaxPx).toBeLessThan(23)
+    const result = collapseOrthoStairStubs(jog, policy)
+    expect(result.stats.chainsCollapsed).toBe(0)
+    expect(result.segments).toHaveLength(3)
   })
 
   it('BouwTek11: parallel-cover verwijdert short-V; H wordt T op through (offset-invariant)', () => {
@@ -309,6 +380,42 @@ describe('V3 L9/L10 dissolve → FML', () => {
     expect(vs).toHaveLength(2)
     const xs = vs.map((seg) => seg.a.x).sort((a, b) => a - b)
     expect(xs[1] - xs[0]).toBeGreaterThan(5)
+  })
+
+  it('L10 axis-straighten: cross-band jog → geen shared axis (ook bij grote spread)', () => {
+    // Linker-gevel-achtig: ~23px offset binnen geschaalde spread @ ref 160, maar max vs mid band.
+    const jog: Segment[] = [
+      { a: { x: 246, y: 2343 }, b: { x: 246, y: 2082 } },
+      { a: { x: 246, y: 2082 }, b: { x: 269, y: 2082 } },
+      { a: { x: 269, y: 2082 }, b: { x: 269, y: 1800 } },
+    ]
+    const policy = resolveLayer10FmlPolicy(160, {
+      midBoundaryPx: 40,
+      maxBoundaryPx: 70,
+    }).collapse
+    expect(policy.chainAxisMaxSpreadPx).toBeGreaterThanOrEqual(23)
+
+    const crossBand = straightenCollinearAxisChains(jog, policy, [80, 50, 25], 160)
+    const xsCross = [
+      ...new Set(
+        crossBand.segments
+          .filter((seg) => Math.abs(seg.a.x - seg.b.x) < 1e-6 && Math.abs(seg.a.y - seg.b.y) > 10)
+          .map((seg) => Math.round(seg.a.x)),
+      ),
+    ].sort((a, b) => a - b)
+    expect(xsCross).toEqual([246, 269])
+    expect(crossBand.stats.zeroStubsDropped).toBe(0)
+
+    const sameBand = straightenCollinearAxisChains(jog, policy, [80, 78, 82], 160)
+    const xsSame = [
+      ...new Set(
+        sameBand.segments
+          .filter((seg) => Math.abs(seg.a.x - seg.b.x) < 1e-6 && Math.abs(seg.a.y - seg.b.y) > 10)
+          .map((seg) => Math.round(seg.a.x)),
+      ),
+    ]
+    expect(xsSame).toHaveLength(1)
+    expect(sameBand.stats.zeroStubsDropped).toBeGreaterThanOrEqual(1)
   })
 
   it('FML reads L10 only when fmlReady', () => {

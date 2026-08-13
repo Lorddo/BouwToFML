@@ -22,6 +22,13 @@ export function useWorkspaceFml(deps: {
   mergeMultiWindows?: Ref<boolean>
   referenceWallBandSync?: {
     referenceWallThicknessPx: Ref<number | null>
+    wallRefThicknessMeasures?: Ref<
+      import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
+    >
+    wallThicknessBandBoundariesPx?: Ref<{
+      midBoundaryPx: number
+      maxBoundaryPx: number
+    } | null>
     devSessionRestoring: Ref<boolean>
   }
   planName?: Ref<string | null>

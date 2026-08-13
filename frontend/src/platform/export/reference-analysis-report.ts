@@ -220,10 +220,15 @@ function unitBlock(unit: OpeningRefUnitProfile, kind: 'door' | 'window'): string
   </section>`
 }
 
-function wallSection(wall: WallRefProfile): string {
+function wallSection(wall: WallRefProfile, index: number, total: number): string {
   const bwLabel = wall.bwMode === 'otsu' ? 'B/W (Otsu)' : 'B/W (adaptief)'
+  const bandLabel = wall.wallThicknessBand
+    ? ` <span class="muted">(${wall.wallThicknessBand})</span>`
+    : ''
+  const title =
+    total > 1 ? `Muur-referentie #${index + 1}${bandLabel}` : `Muur-referentie${bandLabel}`
   return `<article class="ref-card wall">
-    <h2>Muur-referentie</h2>
+    <h2>${title}</h2>
     <p><strong>Stijl:</strong> ${escapeHtml(wall.renderStyleLabel)} <span class="muted">(${wall.renderStyle}, conf ${wall.renderStyleConfidence.toFixed(2)})</span>
       · dikte ${wall.thicknessPx ?? '—'}px
       · oriëntatie ${wall.orientation}
@@ -238,6 +243,7 @@ function wallSection(wall: WallRefProfile): string {
     <details open>
       <summary>Muur JSON</summary>
       <pre class="json">${formatJson({
+        wallThicknessBand: wall.wallThicknessBand ?? null,
         rect: wall.rect,
         bwMode: wall.bwMode,
         skewCorrectedDeg: wall.skewCorrectedDeg,
@@ -288,9 +294,12 @@ function openingSection(opening: OpeningRefProfile, index: number): string {
 /** Self-contained HTML met embedded PNG data-URLs voor stap-1 referentie-analyse. */
 export function buildReferenceAnalysisHtml(report: ReferenceAnalysisReport): string {
   const categoriesHtml = buildGeneralCategoriesSection(report)
-  const wallHtml = report.wall
-    ? wallSection(report.wall)
-    : '<p class="muted">Geen muur-referentie.</p>'
+  const wallList =
+    report.walls && report.walls.length > 0 ? report.walls : report.wall ? [report.wall] : []
+  const wallHtml =
+    wallList.length > 0
+      ? wallList.map((w, i) => wallSection(w, i, wallList.length)).join('\n')
+      : '<p class="muted">Geen muur-referentie.</p>'
   const openingsHtml =
     report.openings.length > 0
       ? report.openings.map((o, i) => openingSection(o, i)).join('\n')

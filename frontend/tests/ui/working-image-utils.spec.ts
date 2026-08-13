@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { expandedSizeForRotation, uiRotationToCvDegrees } from '@/cv/tools/rotateMat'
 import {
   applyPixelScaleFactorToCalibration,
+  resolveScaleAfterInputBake,
   transformHScaleState,
   transformHScaleStateRotate180,
   transformHScaleStateRotation,
@@ -31,6 +32,40 @@ describe('rotation convention', () => {
 })
 
 describe('working image utils', () => {
+  it('re-inits unconfirmed scale after rotation bake so H/V can follow walls', () => {
+    expect(
+      resolveScaleAfterInputBake({
+        scaleConfirmed: false,
+        hasRotation: true,
+        hasScaleState: true,
+      }),
+    ).toBe('reinit')
+  })
+
+  it('keeps transforming confirmed or crop-only scale handles', () => {
+    expect(
+      resolveScaleAfterInputBake({
+        scaleConfirmed: true,
+        hasRotation: true,
+        hasScaleState: true,
+      }),
+    ).toBe('transform')
+    expect(
+      resolveScaleAfterInputBake({
+        scaleConfirmed: false,
+        hasRotation: false,
+        hasScaleState: true,
+      }),
+    ).toBe('transform')
+    expect(
+      resolveScaleAfterInputBake({
+        scaleConfirmed: false,
+        hasRotation: false,
+        hasScaleState: false,
+      }),
+    ).toBe('none')
+  })
+
   it('transforms scale handles after crop and upscale', () => {
     const next = transformHScaleState(
       {

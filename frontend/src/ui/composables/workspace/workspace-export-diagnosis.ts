@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
+import type { ExtractionOutput } from '@/core/extraction'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type {
@@ -8,6 +9,8 @@ import type {
   WindowBindRejection,
   ResolvedWindowCandidate,
 } from '@/cv/windows'
+import type { PreprocessConfig } from '@/platform/image'
+import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import type { SelectionRect } from '@/platform/selection'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { usePreprocessPreview } from '../usePreprocessPreview'
@@ -15,21 +18,32 @@ import type { WorkspaceFlowStep } from './constants'
 import { downloadText } from '@/core/fml/downloadFml'
 import { bwBytesToCanvas } from '@/cv/preprocess/compose-wall-bw'
 import { formatCvError } from '@/cv/formatCvError'
+import { waitForOpenCV } from '@/cv/loadOpenCV'
+import { analyzeAllReferenceRects } from '@/cv/refs/analyze-all-refs'
 import {
   buildDiagnosisReportHtml,
+  type DiagnosisRefImage,
   type DiagnosisReportPayload,
 } from '@/platform/export/diagnosis-report'
+import {
+  buildLayerDebugReport,
+  formatLayerDebugMarkdown,
+} from '@/platform/export/layer-debug-report'
 import { canvasLikeToHtmlCanvas } from './imageUtils'
 import { exportBasename } from './workspace-export-shared'
 
 export type WorkspaceExportDiagnosisDeps = {
   imageName: Ref<string | null>
   flowStep: Ref<WorkspaceFlowStep>
+  preprocess: Ref<PreprocessConfig>
   preprocessPreview: ReturnType<typeof usePreprocessPreview>
   effectiveBwUrl?: Ref<string | null>
   tabOutputs: Ref<TabDetectionOutputs>
+  combinedOutput: Ref<ExtractionOutput | null>
   scale: ReturnType<typeof useHScaleCalibration>
   rects: Ref<SelectionRect[]>
+  getImageEl: () => Promise<HTMLImageElement | HTMLCanvasElement>
+  preprocessMaskArgs: () => PreprocessMaskInput
   setLocalError: (message: string | null) => void
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
   boundDoors?: Ref<BoundDoor[]>
@@ -87,7 +101,96 @@ function compactSemanticWalls(tabOutputs: TabDetectionOutputs): unknown | null {
   }
 }
 
-function buildPayload(deps: WorkspaceExportDiagnosisDeps): DiagnosisReportPayload {
+function hasAnyWallLayer(report: ReturnType<typeof buildLayerDebugReport>): boolean {
+  const layers = report.layers
+  return WALL_LAYER_KEYS.some((key) => layers[key] != null)
+}
+
+const WALL_LAYER_KEYS = [
+  'layer1',
+  'layer2',
+  'layer3',
+  'layer4',
+  'layer5',
+  'layer6',
+  'layer7',
+  'layer8',
+  'layer9',
+  'layer10',
+] as const
+
+/**
+ * Best-effort: same REF pipeline as «Exporteer referentie-analyse».
+ * Walls → faceOverlay (buiten grijs); openings → Gegroepeerde contouren los.
+ */
+async function resolveReferenceRefImages(
+  deps: WorkspaceExportDiagnosisDeps,
+): Promise<DiagnosisRefImage[] | null> {
+  const refRects = deps.rects.value.filter(
+    (r) => r.type === 'wall' || r.type === 'door' || r.type === 'window',
+  )
+  if (refRects.length === 0) return null
+
+  try {
+    const img = await deps.getImageEl()
+    const cv = await waitForOpenCV()
+    const report = await analyzeAllReferenceRects({
+      cv,
+      image: img,
+      drawing: deps.imageName.value,
+      preprocess: deps.preprocess.value,
+      eraserMask: deps.preprocessMaskArgs().eraserMask ?? undefined,
+      baseBw: deps.getBaseWallBw?.() ?? undefined,
+      rects: refRects.map((r) => ({
+        id: r.id,
+        type: r.type as 'wall' | 'door' | 'window',
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        height: r.height,
+        ...(r.type === 'wall' && r.wallThicknessBand
+          ? { wallThicknessBand: r.wallThicknessBand }
+          : {}),
+      })),
+    })
+
+    const out: DiagnosisRefImage[] = []
+    const walls = report.walls?.length ? report.walls : report.wall ? [report.wall] : []
+    for (const wall of walls) {
+      const png =
+        wall.images.faceOverlayPng || wall.images.straightenedPng || wall.images.bwCropPng || ''
+      if (!png) continue
+      const imageKind = wall.images.faceOverlayPng
+        ? ('faceOverlay' as const)
+        : wall.images.straightenedPng
+          ? ('straightened' as const)
+          : ('bwCrop' as const)
+      out.push({
+        id: wall.rect.id ?? `wall-${out.length + 1}`,
+        kind: 'wall',
+        ...(wall.wallThicknessBand ? { wallThicknessBand: wall.wallThicknessBand } : {}),
+        png,
+        imageKind,
+      })
+    }
+    for (const opening of report.openings) {
+      const png = opening.images.groupedPolygonCleanPng
+      if (!png) continue
+      out.push({
+        id: opening.rect.id ?? `${opening.kind}-${out.length + 1}`,
+        kind: opening.kind,
+        png,
+        imageKind: 'groupedPolygonClean',
+      })
+    }
+    return out.length > 0 ? out : null
+  } catch (e) {
+    console.warn('[exportDiagnosisReport] REF images skipped', e)
+    return null
+  }
+}
+
+async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<DiagnosisReportPayload> {
   const resolved = deps.resolvedDoors?.value ?? []
   const boundDoors = deps.boundDoors?.value ?? []
   const oriented = deps.orientedDoors?.value ?? []
@@ -115,6 +218,25 @@ function buildPayload(deps: WorkspaceExportDiagnosisDeps): DiagnosisReportPayloa
   const fmlText = deps.getGeneratedFmlText?.() ?? ''
   const previewPlan = deps.getPreviewPlan?.() ?? null
 
+  const wallOutput = deps.tabOutputs.value.walls ?? deps.combinedOutput.value
+  const layerDebug = buildLayerDebugReport({
+    drawing: deps.imageName.value,
+    output: wallOutput,
+    openings: {
+      resolvedDoors: resolved,
+      boundDoors,
+      orientedDoors: oriented,
+      boundWindows,
+      windowBindRejections: bindRejections,
+    },
+  })
+  const layerDebugUseful =
+    hasAnyWallLayer(layerDebug) ||
+    layerDebug.openings != null ||
+    (layerDebug.wallTransitions?.length ?? 0) > 0
+
+  const referenceRefImages = await resolveReferenceRefImages(deps)
+
   return {
     meta: {
       exportedAtIso: new Date().toISOString(),
@@ -130,6 +252,7 @@ function buildPayload(deps: WorkspaceExportDiagnosisDeps): DiagnosisReportPayloa
     },
     bwPng: resolveBwPng(deps),
     references: refRects.length > 0 ? refRects : null,
+    referenceRefImages,
     doors: hasDoorData
       ? { resolved: [...resolved], bound: [...boundDoors], oriented: [...oriented] }
       : null,
@@ -142,10 +265,10 @@ function buildPayload(deps: WorkspaceExportDiagnosisDeps): DiagnosisReportPayloa
         }
       : null,
     layers: {
-      l10SemanticWalls: compactSemanticWalls(deps.tabOutputs.value),
-      l12OrientedDoors: oriented.length > 0 ? [...oriented] : null,
-      l14BoundWindows: boundWindows.length > 0 ? [...boundWindows] : null,
+      layerDebug: layerDebugUseful ? layerDebug : null,
+      semanticWallGraph: compactSemanticWalls(deps.tabOutputs.value),
     },
+    layerDebugMarkdown: layerDebugUseful ? formatLayerDebugMarkdown(layerDebug) : null,
     fmlText: fmlText.trim() ? fmlText : null,
     previewPlan,
   }
@@ -155,13 +278,15 @@ export function createWorkspaceExportDiagnosis(deps: WorkspaceExportDiagnosisDep
   async function exportDiagnosisReport() {
     deps.setLocalError(null)
     try {
-      const payload = buildPayload(deps)
+      const payload = await buildPayload(deps)
       const hasAnythingUseful =
         payload.bwPng != null ||
         payload.references != null ||
+        payload.referenceRefImages != null ||
         payload.doors != null ||
         payload.windows != null ||
-        payload.layers.l10SemanticWalls != null ||
+        payload.layers.layerDebug != null ||
+        payload.layers.semanticWallGraph != null ||
         payload.fmlText != null ||
         payload.previewPlan != null ||
         payload.meta.imageName != null ||

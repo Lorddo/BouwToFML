@@ -12,7 +12,9 @@ export type {
 
 export {
   buildJunctions,
+  ENDPOINT_SNAP_RADIUS_CM,
   findMergeTarget,
+  JUNCTION_POINT_SNAP_CM,
   junctionIdsForWall,
   mergeJunctions,
   moveJunction,
@@ -25,12 +27,14 @@ export {
   applyShiftSnapFromOppositeEnd,
   snapDrawWallEndpoint,
   snapPointToJunctions,
+  snapPointToWallCenters,
   snapToNearbyEndpointAxes,
 } from './fml-preview-junction-snap'
 
 export {
   resolveWallSlidePointerDelta,
   slideWallSegmentAlongAxis,
+  moveJunctionWithWallJoins,
   splitWallAtPoint,
 } from './fml-preview-wall-slide'
 

@@ -37,10 +37,8 @@ function hasInkGeom(face: RefFace, faceProfile: RefFaceProfile): boolean {
 }
 
 const CENTER_BAND_WIDTH_PX = 5
-const MERGE_GAP_PX = 0
 const SIZE_RANGE_MARGIN_RATIO = 0.4
 
-type AxisInterval = { start: number; end: number }
 /** Met as-band: top en/of bottom (asymmetrisch OK). Zonder as-band: beide verplicht. */
 type TopBottomRails = { top: RefFace | null; bottom: RefFace | null }
 
@@ -152,6 +150,14 @@ function rangeFromFaces(
   return normalizeSizeRange(absolute, axisBandHeightPx)
 }
 
+/**
+ * Strip-hoogtes langs hartlijn (centerX).
+ *
+ * Niet AABB-Y mergen: na (kleine) skew overlappen bounding boxes van aparte
+ * glas-strips → één geplakte interval → stripCount=1. I.p.v. dat: faces met
+ * gescheiden centroid-Y als aparte strips (zelfde idee als Stage-1 centroid-sample).
+ * Hoogte = area/span (stabieler dan bbox-hoogte bij scheve strips).
+ */
 function collectVerticalBandHeights(params: {
   faces: RefFace[]
   centerX: number
@@ -162,7 +168,8 @@ function collectVerticalBandHeights(params: {
   const bandCenter = Math.round(params.centerX)
   const bandMin = bandCenter - half
   const bandMax = bandMin + CENTER_BAND_WIDTH_PX - 1
-  const intervals: AxisInterval[] = []
+  type BandHit = { centerY: number; heightPx: number }
+  const hits: BandHit[] = []
   for (const face of params.faces) {
     const faceXMin = face.bbox.x
     const faceXMax = face.bbox.x + face.bbox.width - 1
@@ -170,21 +177,32 @@ function collectVerticalBandHeights(params: {
     const y0 = Math.max(face.bbox.y, params.axisYMin)
     const y1 = Math.min(face.bbox.y + face.bbox.height - 1, params.axisYMax)
     if (y1 < y0) continue
-    intervals.push({ start: y0, end: y1 })
+    const spanW = Math.max(1, face.bbox.width)
+    // area/span ≈ werkelijke stripdikte; AABB-hoogte blaast op bij skew.
+    const heightPx = Math.max(1, face.areaPx / spanW)
+    const centerY = face.centroid.y
+    if (centerY < params.axisYMin || centerY > params.axisYMax) continue
+    hits.push({ centerY, heightPx })
   }
-  if (intervals.length <= 0) return []
-  intervals.sort((a, b) => a.start - b.start || a.end - b.end)
-  const merged: AxisInterval[] = []
-  for (const interval of intervals) {
-    const last = merged[merged.length - 1]
-    if (!last || interval.start > last.end + MERGE_GAP_PX + 1) {
-      merged.push({ ...interval })
+  if (hits.length <= 0) return []
+  hits.sort((a, b) => a.centerY - b.centerY)
+  // Gap: faces met dicht-op-elkaar centroids = fragmenten van dezelfde strip.
+  // Gescheiden strips (typisch ≥ halve stripdikte uit elkaar) blijven apart.
+  const medianHeight = median(hits.map((h) => h.heightPx))
+  const groupGapPx = Math.max(1, medianHeight * 0.5)
+  const groups: Array<{ meanCenter: number; count: number; heights: number[] }> = []
+  for (const hit of hits) {
+    const last = groups[groups.length - 1]
+    if (!last || Math.abs(hit.centerY - last.meanCenter) > groupGapPx) {
+      groups.push({ meanCenter: hit.centerY, count: 1, heights: [hit.heightPx] })
       continue
     }
-    if (interval.end > last.end) last.end = interval.end
+    last.heights.push(hit.heightPx)
+    last.meanCenter = (last.meanCenter * last.count + hit.centerY) / (last.count + 1)
+    last.count += 1
   }
-  return merged
-    .map((interval) => interval.end - interval.start + 1)
+  return groups
+    .map((group) => median(group.heights))
     .filter((heightPx) => heightPx > 0)
     .sort((a, b) => a - b)
 }

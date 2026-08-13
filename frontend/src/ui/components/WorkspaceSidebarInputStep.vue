@@ -23,6 +23,8 @@ const props = defineProps<{
   canUndoMask: boolean
   canReuseUnderlay?: boolean
   underlayDonorOptions?: Array<{ id: string; name: string }>
+  canBakeRotation?: boolean
+  bakingRotation?: boolean
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
@@ -41,6 +43,7 @@ const emit = defineEmits<{
   undo: []
   downloadUnderlay: []
   reuseUnderlay: [donorFloorId: string]
+  bakeRotation: []
 }>()
 
 const { t } = useI18n()
@@ -84,7 +87,12 @@ function onReuseUnderlay() {
     @toggle-open="$emit('toggleScalePanel')"
   />
 
-  <OriginalSetupPanel v-model="preprocess" />
+  <OriginalSetupPanel
+    v-model="preprocess"
+    :can-bake="canBakeRotation"
+    :baking="bakingRotation"
+    @bake-rotation="$emit('bakeRotation')"
+  />
 
   <InputMaskPanel
     :eraser-enabled="eraserEnabled"
