@@ -241,7 +241,7 @@
     "negativeHint": "Inverts the processed B/W plan as the last step (after cleanup).",
     "copySettings": "Copy settings",
     "copyTo": "→ {tab}",
-    "resetPreview": "Reset preview",
+    "resetFactory": "Reset to factory defaults",
     "inkWallTitle": "Int. wall",
     "inkWallHint": "Read-only B/W used during wall classification for ink comparison on white faces (Otsu reference). This is not the Preprocess B/W — tune that on that tab.",
     "inkWallParams": {

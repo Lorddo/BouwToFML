@@ -103,6 +103,20 @@ export function mirrorWallTuneToRoot(
   }
 }
 
+/** Zet B/W-tuning van één preprocess-tab terug naar fabrieksdefaults (refs/OCR/inkt blijven). */
+export function resetLayerTuneToFactory(
+  config: PreprocessConfig,
+  layer: PreprocessLayerId,
+): PreprocessConfig {
+  const stored = normalizeStoredPreprocess(config)
+  const key = layerTuneStorageKey(layer)
+  const withTarget = normalizeStoredPreprocess({ ...stored, [key]: defaultLayerTune(layer) })
+  if (layer === 'walls' && withTarget.wallLayer) {
+    return mirrorWallTuneToRoot(withTarget, withTarget.wallLayer)
+  }
+  return withTarget
+}
+
 /** Kopieer B/W-tuning van één preprocess-tab naar een andere (stap 2). */
 export function copyLayerTuneBetween(
   config: PreprocessConfig,

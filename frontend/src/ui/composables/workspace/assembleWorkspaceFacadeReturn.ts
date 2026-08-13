@@ -238,7 +238,6 @@ function slicePipelineScale(ctx: WorkspaceFacadeContext) {
   return {
     ...ctx.pipeline,
     ...ctx.scaleUi,
-    onResetPreview: ctx.preprocessUi.onResetPreview,
     onLayerTuneCopied: ctx.preprocessUi.onLayerTuneCopied,
     onBuildVectorDebug: ctx.preprocessUi.onBuildVectorDebug,
     preprocessVectorCacheLoading: ctx.preprocessVectorCacheLoading,

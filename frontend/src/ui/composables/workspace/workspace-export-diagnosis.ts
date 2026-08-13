@@ -29,7 +29,7 @@ import {
   buildLayerDebugReport,
   formatLayerDebugMarkdown,
 } from '@/platform/export/layer-debug-report'
-import { canvasLikeToHtmlCanvas } from './imageUtils'
+import { canvasLikeToHtmlCanvas, imageDimensions, imageSourceToCanvas } from './imageUtils'
 import { exportBasename } from './workspace-export-shared'
 
 export type WorkspaceExportDiagnosisDeps = {
@@ -76,6 +76,32 @@ function slugPart(raw: string | null | undefined, fallback: string): string {
     .replace(/[^\w.\- ()]+/g, '_')
     .replace(/\s+/g, '-')
   return cleaned || fallback
+}
+
+/** JPEG quality for the colour stap-1 underlay — keeps diagnosis HTML shareable. */
+const ORIGINAL_UNDERLAY_JPEG_QUALITY = 0.85
+
+type OriginalUnderlaySnapshot = {
+  dataUrl: string
+  width: number
+  height: number
+}
+
+async function resolveOriginalUnderlay(
+  deps: WorkspaceExportDiagnosisDeps,
+): Promise<OriginalUnderlaySnapshot | null> {
+  try {
+    const img = await deps.getImageEl()
+    const { width, height } = imageDimensions(img)
+    if (width <= 0 || height <= 0) return null
+    const canvas = imageSourceToCanvas(img)
+    const dataUrl = canvas.toDataURL('image/jpeg', ORIGINAL_UNDERLAY_JPEG_QUALITY)
+    if (!dataUrl.startsWith('data:image/')) return null
+    return { dataUrl, width, height }
+  } catch (e) {
+    console.warn('[exportDiagnosisReport] original underlay skipped', e)
+    return null
+  }
 }
 
 function resolveBwPng(deps: WorkspaceExportDiagnosisDeps): string | null {
@@ -236,6 +262,7 @@ async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<Diagnos
     (layerDebug.wallTransitions?.length ?? 0) > 0
 
   const referenceRefImages = await resolveReferenceRefImages(deps)
+  const originalUnderlay = await resolveOriginalUnderlay(deps)
 
   return {
     meta: {
@@ -249,7 +276,10 @@ async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<Diagnos
       pxPerMmX: pxX > 0 ? pxX : null,
       pxPerMmY: pxY > 0 ? pxY : null,
       appVersion: deps.appVersion ?? null,
+      originalWidth: originalUnderlay?.width ?? null,
+      originalHeight: originalUnderlay?.height ?? null,
     },
+    originalPng: originalUnderlay?.dataUrl ?? null,
     bwPng: resolveBwPng(deps),
     references: refRects.length > 0 ? refRects : null,
     referenceRefImages,
@@ -280,6 +310,7 @@ export function createWorkspaceExportDiagnosis(deps: WorkspaceExportDiagnosisDep
     try {
       const payload = await buildPayload(deps)
       const hasAnythingUseful =
+        payload.originalPng != null ||
         payload.bwPng != null ||
         payload.references != null ||
         payload.referenceRefImages != null ||

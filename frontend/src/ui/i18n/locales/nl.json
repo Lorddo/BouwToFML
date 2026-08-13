@@ -241,7 +241,7 @@
     "negativeHint": "Keert de bewerkte Z/W-plattegrond om als laatste stap (ná opschonen).",
     "copySettings": "Instellingen kopiëren",
     "copyTo": "→ {tab}",
-    "resetPreview": "Reset preview",
+    "resetFactory": "Reset naar fabriekswaarden",
     "inkWallTitle": "Int muur",
     "inkWallHint": "Alleen-lezen B/W tijdens muurclassificatie voor inktvergelijking op witte vlakken (Otsu-referentie). Dit is niet de Voorbewerking-B/W — stel die in op die tab.",
     "inkWallParams": {

@@ -59,6 +59,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | Actie | Waar |
 |--------|------|
 | B/W tunen | `PreprocessPanel` |
+| Reset naar fabriekswaarden | `PreprocessPanel` — B/W-tune van de actieve laag (`defaultLayerTune`); refs, inkt, OCR en stempel blijven |
 | B/W overnemen (donor-keuze) | `copyPreprocessAndRefsFromDonor(donorFloorId)` |
 | Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren, band min/mid/max, REF-handles, penseel/polygoon-gum, bake |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |

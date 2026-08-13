@@ -5,7 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-13 (stap-1 rotatie vastzetten)
+Laatste update: 2026-08-13 (stap-2 fabrieksreset B/W)
+
+## Stap 2 fabrieksreset B/W (2026-08-13)
+
+«Reset preview» deed alleen preview-URL + vector-cache wissen (geen sliders). Vervangen door «Reset naar fabriekswaarden»: actieve laag-tune → `defaultLayerTune` (`resetLayerTuneToFactory`); refs/inkt/OCR/stempel blijven. Live preview volgt via bestaande preprocess-watch.
+
+## Diagnose: stap-1 onderlegger (2026-08-13)
+
+Alarmbel-HTML krijgt nu de kleur-onderlegger van stap 1 (na rotatie/crop/gum) naast B/W — JPEG q0.85 volle resolutie + px-maat in meta. Zo is te zien of de bronscan zelf het probleem is.
 
 ## Stap 1 rotatie-bake vóór schaal (2026-08-13)
 
@@ -97,7 +105,7 @@ Rapport: `.cursor/docs/audit-2026-08-05-customer-test.md` — **Go**. Live: http
 
 ## Diagnose-export FAB (2026-08-05 → 08-11)
 
-Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, B/W, refs, deuren/ramen, **volle L1–L10 + transitions + L11/L12/L14**, semantic graph, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts` via `buildLayerDebugReport`.
+Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, **stap-1 kleur-onderlegger (JPEG)**, B/W, refs, deuren/ramen, **volle L1–L10 + transitions + L11/L12/L14**, semantic graph, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts` via `buildLayerDebugReport`.
 
 ## Projectpersistentie IndexedDB (2026-08-05)
 
@@ -213,6 +221,10 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 **Volgorde:** ~~git init → build groen → CI-poort~~ · ~~lint/format-poort~~ (klaar) → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
 
 ## Huidige focus
+
+**Stap 2 fabrieksreset B/W (2026-08-13).** «Reset naar fabriekswaarden» zet actieve laag-tune terug; refs/inkt/OCR/stempel blijven.
+
+**Diagnose stap-1 onderlegger (2026-08-13).** Alarmbel-HTML bevat nu kleur-scan (JPEG) naast B/W.
 
 **Stap 1 rotatie-bake (2026-08-13).** Optionele knop «Rotatie vastzetten» + auto bij 1→2; schaal blijft onafhankelijk.
 

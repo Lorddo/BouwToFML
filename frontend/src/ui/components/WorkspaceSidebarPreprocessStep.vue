@@ -41,7 +41,6 @@ const props = defineProps<{
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
 
 const emit = defineEmits<{
-  resetPreview: []
   downloadPreprocessedUnderlay: []
   layerCopied: [target: PreprocessPanelLayer]
   setReferenceDrawMode: [type: 'wall' | 'door' | 'window']
@@ -117,7 +116,6 @@ function onCopyPreprocessRefs() {
     v-if="showTunePanel"
     v-model="preprocess"
     :active-layer="preprocessTab"
-    @reset-preview="$emit('resetPreview')"
     @layer-copied="$emit('layerCopied', $event)"
   />
 

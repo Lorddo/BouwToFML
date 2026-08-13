@@ -12,6 +12,9 @@ export type DiagnosisReportMeta = {
   pxPerMmX: number | null
   pxPerMmY: number | null
   appVersion: string | null
+  /** Stap-1 working underlay size (after rotation/crop/gum), if available. */
+  originalWidth?: number | null
+  originalHeight?: number | null
 }
 
 /** REF end-result image for diagnosis (wall face-overlay or opening grouped contours). */
@@ -33,6 +36,11 @@ export type DiagnosisRefGroupedContour = DiagnosisRefImage & {
 
 export type DiagnosisReportPayload = {
   meta: DiagnosisReportMeta
+  /**
+   * Stap-1 colour underlay (rotation/crop/gum baked) as JPEG/PNG data-URL.
+   * JPEG is used at export to keep the HTML shareable.
+   */
+  originalPng: string | null
   /** Effective or base wall B/W as PNG data-URL. */
   bwPng: string | null
   /** Live reference boxes (rect metadata). */
@@ -125,6 +133,12 @@ function metaList(meta: DiagnosisReportMeta): string {
         ? `${meta.pxPerMmX.toFixed(4)} × ${meta.pxPerMmY.toFixed(4)}`
         : '—',
     ],
+    [
+      'Original size',
+      meta.originalWidth != null && meta.originalHeight != null
+        ? `${meta.originalWidth} × ${meta.originalHeight} px`
+        : '—',
+    ],
     ['App version', meta.appVersion ?? '—'],
   ]
   return `<dl class="meta">
@@ -132,12 +146,39 @@ ${rows.map(([k, v]) => `  <dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).j
 </dl>`
 }
 
-function figureBw(png: string | null): string {
-  if (!png) return unavailable('B/W onderlegger')
+function figureUnderlay(
+  png: string | null,
+  emptyLabel: string,
+  alt: string,
+  caption: string,
+): string {
+  if (!png) return unavailable(emptyLabel)
   return `<figure class="bw-figure">
-  <img src="${png}" alt="B/W wall underlay" />
-  <figcaption>Effective / base wall B/W</figcaption>
+  <img src="${png}" alt="${escapeHtml(alt)}" />
+  <figcaption>${escapeHtml(caption)}</figcaption>
 </figure>`
+}
+
+function figureOriginal(png: string | null, meta: DiagnosisReportMeta): string {
+  const size =
+    meta.originalWidth != null && meta.originalHeight != null
+      ? ` · ${meta.originalWidth}×${meta.originalHeight} px`
+      : ''
+  return figureUnderlay(
+    png,
+    'Originele onderlegger',
+    'Step 1 colour underlay',
+    `Stap 1 kleur-onderlegger (na rotatie/crop/gum; JPEG volle resolutie)${size}`,
+  )
+}
+
+function figureBw(png: string | null): string {
+  return figureUnderlay(
+    png,
+    'B/W onderlegger',
+    'B/W wall underlay',
+    'Stap 2 effective / base wall B/W',
+  )
 }
 
 function referencesBody(references: unknown | null, refImages: DiagnosisRefImage[] | null): string {
@@ -436,6 +477,7 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
   const title = `BouwToFML diagnosis — ${payload.meta.projectName ?? payload.meta.imageName ?? 'untitled'}`
   const toc = `<nav class="toc">
   <a href="#meta">Meta</a>
+  <a href="#original">Origineel</a>
   <a href="#bw">B/W</a>
   <a href="#refs">Referenties</a>
   <a href="#doors">Deuren</a>
@@ -464,6 +506,7 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
     .meta dd { margin: 0; font-size: 13px; }
     .bw-figure { margin: 0; }
     .bw-figure img { max-width: min(100%, 960px); height: auto; border: 1px solid #e2e8f0; background: #fff; }
+    .bw-figure figcaption { margin-top: 6px; font-size: 12px; color: #64748b; }
     .ref-img-grid { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 12px; }
     .ref-contour-figure { margin: 0; max-width: min(100%, 420px); }
     .ref-contour-figure img { display: block; max-width: 100%; height: auto; border: 1px solid #e2e8f0; background: #fff; }
@@ -479,9 +522,10 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
-  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10).</p>
+  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = stap 1 kleur-scan; B/W = stap 2 muur-onderlegger.</p>
   ${toc}
   ${section('meta', 'Meta', metaList(payload.meta))}
+  ${section('original', 'Originele onderlegger (stap 1)', figureOriginal(payload.originalPng, payload.meta))}
   ${section('bw', 'B/W onderlegger', figureBw(payload.bwPng))}
   ${section(
     'refs',

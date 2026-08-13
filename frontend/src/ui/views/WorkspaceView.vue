@@ -183,7 +183,6 @@ defineExpose<{
           :wall-stamp-brush-radius="ws.wallStampBrushRadius"
           :wall-stamp-donor-options="ws.wallStampDonorOptions"
           :wall-stamp-donor-floor-id="ws.wallStampDonorFloorId"
-          @reset-preview="ws.onResetPreview"
           @layer-copied="ws.onLayerTuneCopied"
           @download-preprocessed-underlay="ws.downloadPreprocessedUnderlay"
           @set-reference-draw-mode="ws.setReferenceDrawMode"

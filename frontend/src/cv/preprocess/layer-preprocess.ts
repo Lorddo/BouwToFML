@@ -34,6 +34,7 @@ export {
 
 export {
   mirrorWallTuneToRoot,
+  resetLayerTuneToFactory,
   copyLayerTuneBetween,
   underlayPreviewFingerprint,
   layerTuneFingerprintParts,

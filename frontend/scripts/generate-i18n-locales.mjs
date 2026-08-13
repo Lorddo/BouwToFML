@@ -176,16 +176,8 @@ const tree = {
     windowKozijnHeightCm: t('Frame height', 'Kozijnhoogte', 'ความสูงวงกบ'),
     windowGlassHeightCm: t('Glass height', 'Glashoogte', 'ความสูงกระจก'),
     bovenlicht: t('Transom light', 'Bovenlicht', 'ช่องแสงเหนือประตู'),
-    bovenlichtDoors: t(
-      'Transom light (doors)',
-      'Bovenlicht deuren',
-      'ช่องแสงเหนือประตู',
-    ),
-    bovenlichtWindows: t(
-      'Transom light (windows)',
-      'Bovenlicht ramen',
-      'ช่องแสงเหนือหน้าต่าง',
-    ),
+    bovenlichtDoors: t('Transom light (doors)', 'Bovenlicht deuren', 'ช่องแสงเหนือประตู'),
+    bovenlichtWindows: t('Transom light (windows)', 'Bovenlicht ramen', 'ช่องแสงเหนือหน้าต่าง'),
     bovenlichtGapCm: t('Dorpel gap', 'Dorpel-gap', 'ช่องว่างขอบ'),
     bovenlichtGapTitle: t(
       'Distance between top of door/window and bottom of transom (cm)',
@@ -198,11 +190,7 @@ const tree = {
       'Glashoogte van het gesynthetiseerde bovenlicht (cm)',
       'ความสูงกระจกของช่องแสงที่สร้างขึ้น (ซม.)',
     ),
-    thicknessesTitle: t(
-      'Wall thicknesses — {name}',
-      'Muurdiktes — {name}',
-      'ความหนาผนัง — {name}',
-    ),
+    thicknessesTitle: t('Wall thicknesses — {name}', 'Muurdiktes — {name}', 'ความหนาผนัง — {name}'),
     thicknessesHint: t(
       'FML export thicknesses (min/mid/max). Measure bands stay from the wall reference.',
       'FML-exportdiktes (min/mid/max). Meetbanden blijven uit de muur-referentie.',
@@ -410,7 +398,11 @@ const tree = {
     ),
     copySettings: t('Copy settings', 'Instellingen kopiëren', 'คัดลอกการตั้งค่า'),
     copyTo: t('→ {tab}', '→ {tab}', '→ {tab}'),
-    resetPreview: t('Reset preview', 'Reset preview', 'รีเซ็ตตัวอย่าง'),
+    resetFactory: t(
+      'Reset to factory defaults',
+      'Reset naar fabriekswaarden',
+      'รีเซ็ตเป็นค่าโรงงาน',
+    ),
     inkWallTitle: t('Int. wall', 'Int muur', 'ผนังภายใน'),
     inkWallHint: t(
       'Read-only B/W used during wall classification for ink comparison on white faces (Otsu reference). This is not the Preprocess B/W — tune that on that tab.',
@@ -1222,21 +1214,9 @@ const tree = {
     windowHeightCm: t('Window height cm', 'Raamhoogte cm', 'ความสูงหน้าต่าง ซม.'),
     sillZCm: t('Sill z cm', 'Dorpel z cm', 'ขอบหน้าต่าง z ซม.'),
     bovenlicht: t('Transom light', 'Bovenlicht', 'ช่องแสงเหนือประตู'),
-    bovenlichtDoors: t(
-      'Transom light (doors)',
-      'Bovenlicht deuren',
-      'ช่องแสงเหนือประตู',
-    ),
-    bovenlichtWindows: t(
-      'Transom light (windows)',
-      'Bovenlicht ramen',
-      'ช่องแสงเหนือหน้าต่าง',
-    ),
-    bovenlichtGapCm: t(
-      'Transom gap cm',
-      'Bovenlicht dorpel-gap cm',
-      'ช่องว่างเหนือช่องเปิด ซม.',
-    ),
+    bovenlichtDoors: t('Transom light (doors)', 'Bovenlicht deuren', 'ช่องแสงเหนือประตู'),
+    bovenlichtWindows: t('Transom light (windows)', 'Bovenlicht ramen', 'ช่องแสงเหนือหน้าต่าง'),
+    bovenlichtGapCm: t('Transom gap cm', 'Bovenlicht dorpel-gap cm', 'ช่องว่างเหนือช่องเปิด ซม.'),
     bovenlichtGapTitle: t(
       'Distance between top of door/window and bottom of transom (cm)',
       'Afstand tussen bovenzijde deur/raam en onderkant bovenlicht (cm)',

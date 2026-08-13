@@ -195,11 +195,6 @@ export function useWorkspacePreprocess(deps: {
     await refreshLayerUnderlayPreview(deps.preprocessTab.value)
   }
 
-  function onResetPreview() {
-    deps.preprocessPreview.clearPreview()
-    deps.preprocessVectorCache.clear()
-  }
-
   function clearLivePreviewTimer() {
     if (livePreviewTimer) clearTimeout(livePreviewTimer)
   }
@@ -287,7 +282,6 @@ export function useWorkspacePreprocess(deps: {
     onBuildVectorDebug,
     ensureVectorCacheIfNeeded,
     scheduleLivePreprocessPreview,
-    onResetPreview,
     onLayerTuneCopied,
     clearLivePreviewTimer,
     refreshOcrUnderlayPreview,

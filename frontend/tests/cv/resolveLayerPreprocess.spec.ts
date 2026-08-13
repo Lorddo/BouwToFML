@@ -7,6 +7,7 @@ import {
   layerTuneFingerprintParts,
   mirrorWallTuneToRoot,
   normalizeStoredPreprocess,
+  resetLayerTuneToFactory,
   resolveLayerPreprocess,
   underlayPreviewFingerprint,
 } from '@/cv/preprocess/layer-preprocess'
@@ -237,5 +238,49 @@ describe('resolveLayerPreprocess', () => {
     expect(mirrored.edgeAwareEdgeBoost).toBe(7)
     expect(normalizeStoredPreprocess(mirrored).wallLayer?.thresholdMode).toBe('edgeAware')
     expect(normalizeStoredPreprocess(mirrored).edgeAwareEdgeBoost).toBe(7)
+  })
+
+  it('resetLayerTuneToFactory zet muur-tune terug en laat OCR/gaps staan', () => {
+    const base = {
+      ...DEFAULT_PREPROCESS,
+      ocrEnabled: true,
+      wallLayer: {
+        ...createDefaultWallLayerTune(),
+        brightness: 12,
+        preBinarizeThreshold: 200,
+        thickenLinesEnabled: true,
+        thickenLinesPx: 4,
+      },
+      gapsLayer: {
+        ...createDefaultWallLayerTune(),
+        brightness: 77,
+      },
+    }
+    const reset = resetLayerTuneToFactory(base, 'walls')
+    expect(reset.ocrEnabled).toBe(true)
+    expect(reset.wallLayer?.brightness).toBe(50)
+    expect(reset.wallLayer?.preBinarizeThreshold).toBe(150)
+    expect(reset.wallLayer?.thickenLinesEnabled).toBe(false)
+    expect(reset.brightness).toBe(50)
+    expect(reset.gapsLayer?.brightness).toBe(77)
+  })
+
+  it('resetLayerTuneToFactory op gaps raakt wallLayer niet', () => {
+    const base = {
+      ...DEFAULT_PREPROCESS,
+      wallLayer: {
+        ...createDefaultWallLayerTune(),
+        brightness: 12,
+      },
+      gapsLayer: {
+        ...createDefaultWallLayerTune(),
+        brightness: 77,
+        bridgeGapsEnabled: true,
+      },
+    }
+    const reset = resetLayerTuneToFactory(base, 'gaps')
+    expect(reset.wallLayer?.brightness).toBe(12)
+    expect(reset.gapsLayer?.brightness).toBe(50)
+    expect(reset.gapsLayer?.bridgeGapsEnabled).toBe(false)
   })
 })

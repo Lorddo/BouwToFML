@@ -89,6 +89,7 @@ describe('buildDiagnosisReportHtml', () => {
         pxPerMmY: 0.2,
         appVersion: '1.0.0',
       },
+      originalPng: null,
       bwPng: null,
       references: null,
       referenceRefImages: null,
@@ -114,6 +115,8 @@ describe('buildDiagnosisReportHtml', () => {
     expect(html).toContain('Complete layer-debug report')
     expect(html).toContain('Semantic wall graph')
     expect(html).toContain('Layer-debug markdown')
+    expect(html).toContain('Originele onderlegger (stap 1)')
+    expect(html).toContain('href="#original"')
   })
 
   it('renders Gegroepeerde contouren los for opening REFs', () => {
@@ -130,6 +133,7 @@ describe('buildDiagnosisReportHtml', () => {
         pxPerMmY: 0.2,
         appVersion: '1.0.0',
       },
+      originalPng: null,
       bwPng: null,
       references: [{ id: 'door-1', type: 'door', x: 0, y: 0, width: 40, height: 20 }],
       referenceRefImages: [
@@ -169,6 +173,7 @@ describe('buildDiagnosisReportHtml', () => {
         pxPerMmY: 0.2,
         appVersion: '1.0.0',
       },
+      originalPng: null,
       bwPng: null,
       references: [
         { id: 'w-max', type: 'wall', wallThicknessBand: 'max' },
@@ -204,5 +209,42 @@ describe('buildDiagnosisReportHtml', () => {
     expect(html).toContain('wall · mid · w-mid')
     expect(html).toContain('data:image/png;base64,wallmax')
     expect(html).toContain('data:image/png;base64,wallmid')
+  })
+
+  it('renders step-1 original underlay with size in meta', () => {
+    const payload: DiagnosisReportPayload = {
+      meta: {
+        exportedAtIso: '2026-08-13T00:00:00.000Z',
+        projectName: 'Test',
+        floorId: 'f1',
+        floorName: 'BG',
+        floorLevel: 0,
+        imageName: 'scan.png',
+        flowStep: 'templates',
+        pxPerMmX: 0.2,
+        pxPerMmY: 0.2,
+        appVersion: '1.0.0',
+        originalWidth: 4120,
+        originalHeight: 3000,
+      },
+      originalPng: 'data:image/jpeg;base64,origscan',
+      bwPng: 'data:image/png;base64,bwscan',
+      references: null,
+      referenceRefImages: null,
+      doors: null,
+      windows: null,
+      layers: { layerDebug: null, semanticWallGraph: null },
+      layerDebugMarkdown: null,
+      fmlText: null,
+      previewPlan: null,
+    }
+
+    const html = buildDiagnosisReportHtml(payload)
+    expect(html).toContain('Originele onderlegger (stap 1)')
+    expect(html).toContain('data:image/jpeg;base64,origscan')
+    expect(html).toContain('4120×3000 px')
+    expect(html).toContain('4120 × 3000 px')
+    expect(html).toContain('data:image/png;base64,bwscan')
+    expect(html).toContain('Stap 2 effective / base wall B/W')
   })
 })

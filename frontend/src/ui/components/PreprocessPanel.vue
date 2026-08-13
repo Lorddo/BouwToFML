@@ -13,6 +13,7 @@ import {
   layerTuneStorageKey,
   mirrorWallTuneToRoot,
   PREPROCESS_TAB_LABELS,
+  resetLayerTuneToFactory,
   type PreprocessLayerId,
   type PreprocessPanelLayer,
 } from '@/cv/preprocess/layer-preprocess'
@@ -29,7 +30,7 @@ const model = defineModel<PreprocessConfig>({ required: true })
 const props = withDefaults(defineProps<{ activeLayer?: PreprocessPanelLayer }>(), {
   activeLayer: 'walls',
 })
-const emit = defineEmits<{ resetPreview: []; layerCopied: [target: PreprocessLayerId] }>()
+const emit = defineEmits<{ layerCopied: [target: PreprocessLayerId] }>()
 
 const advancedOpen = ref(false)
 
@@ -122,6 +123,10 @@ const copyTargetLayers = computed(() =>
 function copyTuneTo(target: PreprocessLayerId): void {
   model.value = copyLayerTuneBetween(model.value, currentLayerId.value, target)
   emit('layerCopied', target)
+}
+
+function resetActiveTuneToFactory(): void {
+  model.value = resetLayerTuneToFactory(model.value, currentLayerId.value)
 }
 
 function ensureLayerRecords(): void {
@@ -497,12 +502,12 @@ const { t } = useI18n()
           </button>
         </div>
       </section>
+    </div>
 
-      <div class="actions">
-        <button type="button" @click="emit('resetPreview')">
-          {{ t('preprocess.resetPreview') }}
-        </button>
-      </div>
+    <div class="actions">
+      <button type="button" @click="resetActiveTuneToFactory">
+        {{ t('preprocess.resetFactory') }}
+      </button>
     </div>
   </div>
 </template>
