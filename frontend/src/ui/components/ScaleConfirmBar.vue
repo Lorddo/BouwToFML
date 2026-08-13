@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { SCALE_AXIS_MISMATCH_WARN_PCT } from '@/platform/calibration'
 import {
   mmToScaleInput,
   scaleInputStep,
@@ -17,6 +18,8 @@ const props = defineProps<{
   confirmed: boolean
   open: boolean
   unit: ScaleInputUnit
+  /** Verschil tussen horizontale en verticale px/mm, in procent. */
+  axisMismatchPct: number
 }>()
 
 const emit = defineEmits<{
@@ -30,6 +33,12 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const unitLabel = computed(() => t(`common.${props.unit}`))
+const axisMismatch = computed(() => props.axisMismatchPct >= SCALE_AXIS_MISMATCH_WARN_PCT)
+const axisMismatchLabel = computed(() =>
+  props.axisMismatchPct >= 100
+    ? `${(props.axisMismatchPct / 100 + 1).toFixed(1)}×`
+    : `${props.axisMismatchPct.toFixed(1)}%`,
+)
 const inputStep = computed(() => scaleInputStep(props.unit))
 const displayX = computed(() => mmToScaleInput(props.mmX, props.unit))
 const displayY = computed(() => mmToScaleInput(props.mmY, props.unit))
@@ -93,6 +102,9 @@ function onUpdateY(raw: string) {
         {{ t('input.scaleOpen') }}
       </button>
     </template>
+    <p v-if="axisMismatch" class="warning">
+      {{ t('input.scaleAxisMismatch', { diff: axisMismatchLabel }) }}
+    </p>
   </div>
 </template>
 
@@ -133,5 +145,15 @@ label {
   display: flex;
   gap: 6px;
   margin-top: 6px;
+}
+
+.warning {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-left: 3px solid #d97706;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  line-height: 1.35;
 }
 </style>

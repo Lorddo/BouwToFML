@@ -1,0 +1,336 @@
+{
+  "bbox": {
+    "maxX": 601.9,
+    "maxY": 1216.7,
+    "minX": 0,
+    "minY": 0,
+  },
+  "reference": {
+    "filteredZeroThickness": 0,
+    "matchDistCm": 20,
+    "openingRecall": {
+      "door": 100,
+      "overall": 100,
+      "window": 0,
+    },
+    "referenceDoorCount": 4,
+    "referenceLengthCm": 4830.8,
+    "referenceWallCount": 26,
+    "referenceWindowCount": 0,
+    "wallCoveragePct": 100,
+    "wallPrecisionPct": 100,
+  },
+  "thicknessBands": {
+    "max": 7,
+    "mid": 9,
+    "min": 6,
+  },
+  "totalLengthCm": 4726.1,
+  "wallCount": 22,
+  "walls": [
+    {
+      "a": {
+        "x": 0,
+        "y": 684,
+      },
+      "b": {
+        "x": 0,
+        "y": 1216.7,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 0,
+        "y": 684,
+      },
+      "b": {
+        "x": 159.1,
+        "y": 684,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 159.1,
+        "y": 0,
+      },
+      "b": {
+        "x": 159.1,
+        "y": 456.8,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 159.1,
+        "y": 456.8,
+      },
+      "b": {
+        "x": 159.1,
+        "y": 684,
+      },
+      "openings": [
+        {
+          "mirrored": [
+            0,
+            0,
+          ],
+          "t": 0.5,
+          "type": "door",
+          "width": 97.5,
+        },
+      ],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 159.1,
+        "y": 456.8,
+      },
+      "b": {
+        "x": 293.1,
+        "y": 456.8,
+      },
+      "openings": [
+        {
+          "mirrored": [
+            0,
+            0,
+          ],
+          "t": 0.5,
+          "type": "door",
+          "width": 105.3,
+        },
+      ],
+      "thickness": 7,
+    },
+    {
+      "a": {
+        "x": 0,
+        "y": 1216.7,
+      },
+      "b": {
+        "x": 483,
+        "y": 1216.7,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+    {
+      "a": {
+        "x": 159.1,
+        "y": 684,
+      },
+      "b": {
+        "x": 345,
+        "y": 684,
+      },
+      "openings": [
+        {
+          "mirrored": [
+            1,
+            1,
+          ],
+          "t": 0.3,
+          "type": "door",
+          "width": 90.1,
+        },
+      ],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 293.1,
+        "y": 456.8,
+      },
+      "b": {
+        "x": 293.1,
+        "y": 499.9,
+      },
+      "openings": [],
+      "thickness": 7,
+    },
+    {
+      "a": {
+        "x": 293.1,
+        "y": 499.9,
+      },
+      "b": {
+        "x": 345,
+        "y": 499.9,
+      },
+      "openings": [],
+      "thickness": 7,
+    },
+    {
+      "a": {
+        "x": 293.1,
+        "y": 456.8,
+      },
+      "b": {
+        "x": 346.4,
+        "y": 456.1,
+      },
+      "openings": [],
+      "thickness": 7,
+    },
+    {
+      "a": {
+        "x": 345,
+        "y": 499.9,
+      },
+      "b": {
+        "x": 345,
+        "y": 643.3,
+      },
+      "openings": [
+        {
+          "mirrored": [
+            0,
+            1,
+          ],
+          "t": 0.3,
+          "type": "door",
+          "width": 76.6,
+        },
+      ],
+      "thickness": 7,
+    },
+    {
+      "a": {
+        "x": 345,
+        "y": 643.3,
+      },
+      "b": {
+        "x": 345,
+        "y": 684,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 346.4,
+        "y": 456.1,
+      },
+      "b": {
+        "x": 345,
+        "y": 499.9,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 345,
+        "y": 643.3,
+      },
+      "b": {
+        "x": 409,
+        "y": 643.3,
+      },
+      "openings": [],
+      "thickness": 7,
+    },
+    {
+      "a": {
+        "x": 345,
+        "y": 684,
+      },
+      "b": {
+        "x": 409,
+        "y": 684,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 159.1,
+        "y": 0,
+      },
+      "b": {
+        "x": 601.9,
+        "y": 0,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+    {
+      "a": {
+        "x": 409,
+        "y": 684,
+      },
+      "b": {
+        "x": 409,
+        "y": 643.3,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+    {
+      "a": {
+        "x": 557.4,
+        "y": 455.2,
+      },
+      "b": {
+        "x": 346.4,
+        "y": 456.1,
+      },
+      "openings": [],
+      "thickness": 25,
+    },
+    {
+      "a": {
+        "x": 409,
+        "y": 684,
+      },
+      "b": {
+        "x": 535.1,
+        "y": 684,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+    {
+      "a": {
+        "x": 535.1,
+        "y": 684,
+      },
+      "b": {
+        "x": 483,
+        "y": 1216.7,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+    {
+      "a": {
+        "x": 557.4,
+        "y": 455.2,
+      },
+      "b": {
+        "x": 535.1,
+        "y": 684,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+    {
+      "a": {
+        "x": 601.9,
+        "y": 0,
+      },
+      "b": {
+        "x": 557.4,
+        "y": 455.2,
+      },
+      "openings": [],
+      "thickness": 45,
+    },
+  ],
+}

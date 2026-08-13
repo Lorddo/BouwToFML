@@ -54,6 +54,36 @@ export interface HvPolicy {
   collinearChainMaxSpreadPx: number
 }
 
+/**
+ * Werkelijk schuine muren (gevel uit lood). Gelezen op L3 waar de keten nog
+ * ongesnapt is, toegepast aan het eind van L10. Geen hypothese = niets doen.
+ */
+export interface ObliquePolicy {
+  layerId: LayerId
+  /** Binnen deze afwijking van 0/90 blijft een segment H/V — houdt scanscheefheid buiten. */
+  deadzoneDeg: number
+  /** Hoekspreiding waarbinnen segmenten tot dezelfde as horen. */
+  angleToleranceDeg: number
+  /** Korter dan dit draagt geen bewijs (micro-connectors uit L1-compressie). */
+  minMemberLengthPx: number
+  minMemberCount: number
+  /** Gewogen bewijslengte die een as moet halen om te bestaan. */
+  minEvidencePx: number
+  /** Loodrechte spreiding waarbinnen leden op dezelfde lijn liggen. */
+  maxMemberOffsetPx: number
+  /** Verificatie tegen de hartlijn van de muur. */
+  maxRidgeOffsetMedianPx: number
+  maxRidgeOffsetP90Px: number
+  minInInkRatio: number
+  /** Band waarbinnen L10-segmenten bij de as worden getrokken. */
+  captureBandPx: number
+  /** Hoe ver een knooppunt mag opschuiven; spiegelt `junctionAnchorPx` van de guard. */
+  maxAnchorShiftPx: number
+  /** Bovengrens voor de loodrechte klim van de rug-sonde. */
+  ridgeMaxSearchPx: number
+  ridgeSampleStepPx: number
+}
+
 export interface JunctionGraphPolicy {
   layerId: LayerId
   snapPx: number

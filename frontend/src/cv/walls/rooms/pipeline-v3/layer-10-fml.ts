@@ -15,8 +15,14 @@ import {
   straightenCollinearAxisChains,
   withTopologyGuard,
 } from './engines/collapse'
-import { dedupeExactSegments, rebuildFaceFromSegments } from './engines/segment-ops'
+import { type ObliqueAxis, OBLIQUE_STUB_MAX_PX, rebuildObliqueChains } from './engines/oblique'
+import {
+  dedupeExactSegments,
+  dropZeroLengthSegments,
+  rebuildFaceFromSegments,
+} from './engines/segment-ops'
 import { resolveLayer10FmlPolicy } from './policies/layer-10'
+import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer9Result, PipelineV3Layer10Result } from './types'
 
 export function runLayer10Fml(params: {
@@ -27,6 +33,8 @@ export function runLayer10Fml(params: {
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
+  /** Op laag 3 gelezen schuine assen; leeg = orthogonale tekening, niets te doen. */
+  obliqueAxes?: ObliqueAxis[]
 }): PipelineV3Layer10Result {
   reportPipelineProgress('Skeleton Laag 10 — FML input…')
   const policy = resolveLayer10FmlPolicy(params.referenceWallThicknessPx, params.bandBoundariesPx)
@@ -50,6 +58,14 @@ export function runLayer10Fml(params: {
   let dedupedCount = 0
   let facesSkippedTopology = 0
   let facesSkippedMicroTopology = 0
+  let obliqueChainsRebuilt = 0
+  let obliqueSegmentsCreated = 0
+  let obliqueSegmentsRemoved = 0
+  let obliqueStubsRemoved = 0
+  let facesSkippedObliqueTopology = 0
+
+  const obliqueAxes = params.obliqueAxes ?? []
+  const obliquePolicy = resolveObliquePolicy(params.referenceWallThicknessPx)
 
   for (const face of params.layer9.facesCollapsed) {
     const thicknessBySegment = buildThicknessBySegment({
@@ -126,6 +142,32 @@ export function runLayer10Fml(params: {
       facesSkippedMicroTopology += 1
     }
 
+    // Als laatste stap: de trap die laag 4 van een schuine gevel maakte terug
+    // naar één rechte lijn. Pas hier, omdat alle ruis en stubs nu weg zijn.
+    if (obliqueAxes.length > 0) {
+      // Vóór de guard, want een sub-pixel restje weegt in `before` mee als T+I
+      // en houdt zo een verder correcte herbouw tegen.
+      const stubs = dropZeroLengthSegments(segmentsOut, OBLIQUE_STUB_MAX_PX)
+      segmentsOut = stubs.segments
+      obliqueStubsRemoved += stubs.removed
+
+      const obliqueGuard = withTopologyGuard({
+        segments: segmentsOut,
+        policy: policy.collapse,
+        apply: (segments) =>
+          rebuildObliqueChains({ segments, axes: obliqueAxes, policy: obliquePolicy }),
+      })
+      tally('W-55', obliqueGuard.preserved ? 'accepted' : 'rolled_back')
+      if (obliqueGuard.preserved) {
+        segmentsOut = obliqueGuard.segments
+        obliqueChainsRebuilt += obliqueGuard.result.stats.chainsRebuilt
+        obliqueSegmentsCreated += obliqueGuard.result.stats.segmentsCreated
+        obliqueSegmentsRemoved += obliqueGuard.result.stats.segmentsRemoved
+      } else {
+        facesSkippedObliqueTopology += 1
+      }
+    }
+
     const deduped = dedupeExactSegments(segmentsOut, 0)
     dedupedCount += deduped.removed
 
@@ -153,6 +195,11 @@ export function runLayer10Fml(params: {
       dedupedCount,
       facesSkippedTopology,
       facesSkippedMicroTopology,
+      obliqueChainsRebuilt,
+      obliqueSegmentsCreated,
+      obliqueSegmentsRemoved,
+      obliqueStubsRemoved,
+      facesSkippedObliqueTopology,
     },
   }
 }

@@ -9,6 +9,14 @@ export interface HScaleState {
   yGuideX: number
 }
 
+/**
+ * Een scan heeft in x en y dezelfde pixeldichtheid, dus beide linialen horen op dezelfde
+ * px/mm uit te komen. Meer verschil dan dit is een meetfout die nergens opvalt: de detectie
+ * rekent in pixels en blijft goed, pas de FML komt platgeknepen uit de omrekening naar cm.
+ * Gemeten geval: 2,359 tegen 0,229 px/mm gaf een plan van 1,1 bij 10,5 m.
+ */
+export const SCALE_AXIS_MISMATCH_WARN_PCT = 2
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
@@ -64,6 +72,14 @@ export function useHScaleCalibration() {
     }
     if (distanceMmY.value <= 0 || pxDistanceY.value <= 0) return 0
     return pxDistanceY.value / distanceMmY.value
+  })
+
+  /** Verschil tussen de twee assen in procent; 0 als er nog geen schaal is. */
+  const axisMismatchPct = computed(() => {
+    const x = pixelsPerMillimeterX.value
+    const y = pixelsPerMillimeterY.value
+    if (!(x > 0) || !(y > 0)) return 0
+    return (Math.abs(x - y) / Math.min(x, y)) * 100
   })
 
   const canConfirm = computed(
@@ -186,6 +202,7 @@ export function useHScaleCalibration() {
     pxDistanceY,
     pixelsPerMillimeterX,
     pixelsPerMillimeterY,
+    axisMismatchPct,
     canConfirm,
     confirmed,
     init,

@@ -22,11 +22,11 @@
   },
   "thicknessBands": {
     "max": 6,
-    "mid": 24,
-    "min": 22,
+    "mid": 26,
+    "min": 18,
   },
-  "totalLengthCm": 6195,
-  "wallCount": 52,
+  "totalLengthCm": 6180.7,
+  "wallCount": 50,
   "walls": [
     {
       "a": {
@@ -110,7 +110,7 @@
         "y": 434.6,
       },
       "openings": [],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {
@@ -170,7 +170,7 @@
         "y": 1029.3,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 30,
     },
     {
       "a": {
@@ -194,7 +194,7 @@
         "y": 778.1,
       },
       "openings": [],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {
@@ -206,7 +206,7 @@
         "y": 1029.3,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 30,
     },
     {
       "a": {
@@ -298,11 +298,11 @@
     {
       "a": {
         "x": 193.6,
-        "y": 1069.5,
+        "y": 1073,
       },
       "b": {
         "x": 86.3,
-        "y": 1069.2,
+        "y": 1073,
       },
       "openings": [
         {
@@ -312,18 +312,6 @@
         },
       ],
       "thickness": 10,
-    },
-    {
-      "a": {
-        "x": 199.7,
-        "y": 1073,
-      },
-      "b": {
-        "x": 193.6,
-        "y": 1069.5,
-      },
-      "openings": [],
-      "thickness": 30,
     },
     {
       "a": {
@@ -359,7 +347,7 @@
         "y": 748.8,
       },
       "openings": [],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {
@@ -383,7 +371,7 @@
         "y": 604.8,
       },
       "openings": [],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {
@@ -408,6 +396,18 @@
       },
       "openings": [],
       "thickness": 10,
+    },
+    {
+      "a": {
+        "x": 235.8,
+        "y": 188,
+      },
+      "b": {
+        "x": 235.8,
+        "y": 0,
+      },
+      "openings": [],
+      "thickness": 20,
     },
     {
       "a": {
@@ -420,30 +420,6 @@
       },
       "openings": [],
       "thickness": 10,
-    },
-    {
-      "a": {
-        "x": 236.1,
-        "y": 193.6,
-      },
-      "b": {
-        "x": 240.6,
-        "y": 188,
-      },
-      "openings": [],
-      "thickness": 30,
-    },
-    {
-      "a": {
-        "x": 240.6,
-        "y": 188,
-      },
-      "b": {
-        "x": 240.8,
-        "y": 0,
-      },
-      "openings": [],
-      "thickness": 20,
     },
     {
       "a": {

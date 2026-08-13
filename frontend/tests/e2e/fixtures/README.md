@@ -11,6 +11,7 @@ Eén map per tekening. Harness-slug = mapnaam.
     <slug>.walls.fml.json
     <slug>.fml.json          # inclusief reference-metrics
     <slug>.layers.json
+    <slug>.oblique.json      # alleen fixtures met een `oblique`-poort
     detected.fml             # optioneel: app-export, niet gebruikt door harness
 ```
 
@@ -31,3 +32,4 @@ Eén map per tekening. Harness-slug = mapnaam.
 | `staedion-10`             | Aangepaste manual (unit) |
 | `bouwtek11`               | BouwTek11                |
 | `bg`                      | Project4 begane grond    |
+| `schuine-gevel-bg`        | Schuine oostgevel (~5°)  |

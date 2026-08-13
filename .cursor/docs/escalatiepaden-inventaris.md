@@ -171,6 +171,8 @@ Belangrijk detail: **de coördinaten staan in commentaar, niet in `if`-condities
 | W-51 | **L10 as-rechttrekking zónder guard** | `layer-10-fml.ts:81-88` | A | `straightenCollinearAxisChains` — geen rollback · **anker BouwTek11** |
 | W-52 | Micro-corner absorb guard | `layer-10-fml.ts:90-103` | B | Topologie-degradatie → micro-pass overslaan |
 | W-53 | Geen L8/L9-fallback voor FML | `rooms/build-semantic-walls-source.ts:17-31` | B | `fmlReady !== true` → `undefined`, bewust geen lagere laag |
+| W-54 | Schuine-as hypothese op L3 | `engines/oblique/axis-inventory.ts` | B | Te weinig bewijs / fit in dodezone / rug afgekeurd → geen as, trap blijft |
+| W-55 | Schuine keten-herbouw op L10 | `engines/oblique/chain-rebuild.ts`, `layer-10-fml.ts` | B | Geen keten / anker te ver / topologie-degradatie → input-clone terug |
 
 **Wat opvalt aan de muur-pipeline:** L5 en L6 bevatten samen 27 van de 49 escalatiepaden. Dat is consistent met de bestaande fragiliteitsaudits. W-51 is het enige transformatiepad in L7–L10 zonder rollback-guard, terwijl alle buren er wel een hebben — dat is een asymmetrie die uitleg verdient.
 

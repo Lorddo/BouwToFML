@@ -26,39 +26,61 @@ Zie ook `frontend/tests/e2e/fixtures/README.md`.
 
 ## Wat de harness draait
 
-| Stap | Bron | Module |
-|---|---|---|
-| L2–L10 | `fixture.layer1` + `maskRle` | `runWalls` → `runPipelineV3` |
-| Semantic + FML (muren) | L10 | `buildSemanticWallsForOutput` → `extractionToPlan` → harmonize |
-| L11/L12 | `fixture.resolvedDoors` | `snapDoorsToWalls` → `orientBoundDoors` |
-| L14 | `fixture.stage4ResolvedWindows` | `bindWindowsToWalls` → merge |
-| Metrics | `reference.fml` | `reference-report.ts` |
+| Stap                   | Bron                            | Module                                                         |
+| ---------------------- | ------------------------------- | -------------------------------------------------------------- |
+| L2–L10                 | `fixture.layer1` + `maskRle`    | `runWalls` → `runPipelineV3`                                   |
+| Semantic + FML (muren) | L10                             | `buildSemanticWallsForOutput` → `extractionToPlan` → harmonize |
+| L11/L12                | `fixture.resolvedDoors`         | `snapDoorsToWalls` → `orientBoundDoors`                        |
+| L14                    | `fixture.stage4ResolvedWindows` | `bindWindowsToWalls` → merge                                   |
+| Metrics                | `reference.fml`                 | `reference-report.ts`                                          |
 
 **Niet in de harness:** deur Stage 1/2, raam Stage 1–4, REF-analyse, UI-orkestratie — die zitten als lijsten in `fixture.json`. Escalatiepaden daar zijn alleen meetbaar via app-runs + journaal (zie [`escalatie.md`](escalatie.md) §2–4).
 
 ## Poorten
 
-| Check | Drempel |
-|---|---|
-| `fmlReady` | true |
-| Muursegmenten L10 | > 0 |
-| Openingen | ≥ 5 (deuren + ramen) |
-| Lengte vs `reference.fml` | ±25% |
-| Journaal | `degraded === false` |
-| Snapshots | `toMatchFileSnapshot` op walls/fml/layers |
+| Check                     | Drempel                                   |
+| ------------------------- | ----------------------------------------- |
+| `fmlReady`                | true                                      |
+| Muursegmenten L10         | > 0                                       |
+| Openingen                 | ≥ 5 (deuren + ramen)                      |
+| Lengte vs `reference.fml` | ±25%                                      |
+| Journaal                  | `degraded === false`                      |
+| Snapshots                 | `toMatchFileSnapshot` op walls/fml/layers |
 
 ## Huidige set
 
-| Slug | Referentie |
-|------|------------|
-| `kromme-mijdrecht-3e` | Derde verdieping |
-| `amstelveenseweg-1092-bg` | Begane grond |
-| `amstelveenseweg-1092-1e` | Eerste verdieping |
-| `staedion-10` | Aangepaste manual |
-| `bouwtek11` | BouwTek11 |
-| `bg` | Project4 begane grond |
+| Slug                      | Referentie                                         |
+| ------------------------- | -------------------------------------------------- |
+| `kromme-mijdrecht-3e`     | Derde verdieping                                   |
+| `amstelveenseweg-1092-bg` | Begane grond                                       |
+| `amstelveenseweg-1092-1e` | Eerste verdieping                                  |
+| `staedion-10`             | Aangepaste manual                                  |
+| `bouwtek11`               | BouwTek11                                          |
+| `bg`                      | Project4 begane grond                              |
+| `schuine-gevel-bg`        | Begane grond met werkelijk schuine oostgevel (~5°) |
 
 Open: Kinderdijkstraat 53-1.
+
+## Schuine muren
+
+`REFERENCE_MATCH_DIST_CM` = 20 is blind voor trapjes: een H/V-trap langs een schuine
+gevel blijft binnen 20 cm van de rechte lijn en haalt 100% dekking én 100% precisie.
+Vandaar een tweede poort (`oblique` in `defineE2eSuite`, module `oblique-metrics.ts`)
+die alleen naar muren kijkt die meer dan 1° uit de as staan, met een matchafstand van 5 cm.
+
+| Maat                                        | Trap (was) | Nu      | Poort   |
+| ------------------------------------------- | ---------- | ------- | ------- |
+| schuine lengte / referentie                 | 0.4        | 1.0     | ≥ 0.9   |
+| dekking schuine referentiemuren binnen 5 cm | 57.8%      | 100%    | ≥ 95%   |
+| max afwijking detectie → referentie         | 18.5 cm    | 1.6 cm  | ≤ 10 cm |
+| schuine muren                               | 2 (3.8°)   | 3 (5.6°) | ref: 3 (5.2–5.7°) |
+
+Een tweede tekening (1e verdieping, gevel 12,6° met knik) is **niet** als fixture opgenomen:
+haar `pxPerMmX` staat een factor 10,3 naast `pxPerMmY`, dus elke cm-maat in de snapshot zou
+een platgeknepen plan vastleggen. Wat die tekening opleverde — een sub-pixel stub die de
+guard liet terugdraaien — zit als synthetische regressietest in
+`tests/cv/walls/pipeline-v3/oblique-axis-rebuild.spec.ts`. Opnemen kan zodra de schaal
+klopt en er een `reference.fml` bij zit.
 
 ## Opname (UI → fixture)
 

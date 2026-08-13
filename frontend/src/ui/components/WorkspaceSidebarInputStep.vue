@@ -78,6 +78,7 @@ function onReuseUnderlay() {
     :px-y="scale.pxDistanceY.value"
     :can-confirm="scale.canConfirm.value"
     :confirmed="scale.confirmed.value"
+    :axis-mismatch-pct="scale.axisMismatchPct.value"
     :open="scalePanelOpen"
     :unit="scaleInputUnit"
     @update-mm-x="$emit('updateMmX', $event)"

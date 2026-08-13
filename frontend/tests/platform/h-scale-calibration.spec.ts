@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { useHScaleCalibration } from '@/platform/calibration'
+import { SCALE_AXIS_MISMATCH_WARN_PCT, useHScaleCalibration } from '@/platform/calibration'
 
 describe('useHScaleCalibration', () => {
   it('locks px/mm on confirm and keeps it under mm edits via recompute', () => {
@@ -78,5 +78,47 @@ describe('useHScaleCalibration', () => {
     scale.applyUpscaleToConfirmedScale(2)
     expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.2)
     expect(scale.pixelsPerMillimeterY.value).toBeCloseTo(0.2)
+  })
+
+  /** Gemeten geval: 2,359 tegen 0,229 px/mm → FML van 1,1 bij 10,5 m. */
+  describe('axisMismatchPct', () => {
+    function scaleWithRulers(pxX: number, mmX: number, pxY: number, mmY: number) {
+      const scale = useHScaleCalibration()
+      scale.init(3000, 3000)
+      scale.state.value = {
+        xLeft: 0,
+        xRight: pxX,
+        xGuideY: 100,
+        yTop: 0,
+        yBottom: pxY,
+        yGuideX: 100,
+      }
+      scale.distanceMmX.value = mmX
+      scale.distanceMmY.value = mmY
+      return scale
+    }
+
+    it('is 0 zonder schaal', () => {
+      expect(useHScaleCalibration().axisMismatchPct.value).toBe(0)
+    })
+
+    it('blijft onder de grens bij normale meetruis', () => {
+      const scale = scaleWithRulers(1000, 5000, 1010, 5000)
+      expect(scale.axisMismatchPct.value).toBeLessThan(SCALE_AXIS_MISMATCH_WARN_PCT)
+    })
+
+    it('haalt de grens bij een verkeerd ingevulde eenheid', () => {
+      const scale = scaleWithRulers(1000, 500, 1000, 5000)
+      expect(scale.axisMismatchPct.value).toBeCloseTo(900)
+      expect(scale.axisMismatchPct.value).toBeGreaterThan(SCALE_AXIS_MISMATCH_WARN_PCT)
+    })
+
+    it('kijkt naar de bevestigde px/mm, niet naar de liniaalspan', () => {
+      const scale = scaleWithRulers(1000, 5000, 1000, 5000)
+      scale.confirm()
+      expect(scale.axisMismatchPct.value).toBe(0)
+      scale.confirmedPixelsPerMillimeterX.value = 0.4
+      expect(scale.axisMismatchPct.value).toBeCloseTo(100)
+    })
   })
 })

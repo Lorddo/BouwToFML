@@ -164,6 +164,7 @@
     "scaleApply": "✓ Toepassen",
     "scaleCancel": "✕ Annuleren",
     "scaleOpen": "Schalen openen",
+    "scaleAxisMismatch": "Horizontale en verticale schaal verschillen {diff}. Een scan heeft in beide richtingen dezelfde pixeldichtheid, dus controleer beide linialen — de detectie blijft goed, maar de FML komt platgeknepen uit.",
     "cropGumTitle": "Crop & gum",
     "cropSection": "Crop",
     "cropPolygon": "Crop polygon",

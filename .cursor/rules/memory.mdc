@@ -5,7 +5,36 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-13 (stap-2 fabrieksreset B/W)
+Laatste update: 2026-08-13 (schuine gevels L3→L10)
+
+## Schuine gevels: lezen op L3, herbouwen op L10 (2026-08-13)
+
+Werkelijk schuine gevel kwam als H/V-trap uit de pipeline (L4 snapt, L5–L10 poetsen de
+zaagtand op). Nieuw: `engines/oblique/` — `ridge-probe` (loodrechte afstand tot de DT-rug
+via **bergopwaartse klim**, geen venster-maximum), `axis-inventory` (lengte-gewogen
+hoekcluster + offsetcluster op `layer3.allSegmentsPruned`, dodezone 2,5° voor scanrest,
+verificatie op de rug), `chain-rebuild` (band = halve muurdikte, graafwandeling per
+component, ankers = snijpunt as × vreemde tak, tak schuift mee). Toepassing: eind L10 na
+`absorbMicroCornerJogs`, in `withTopologyGuard`. Policy `policies/oblique.ts` + ratio's in
+`scale.ts`. ESC **W-54** (hypothese) / **W-55** (herbouw).
+
+`schuine-gevel-bg`: lengte-ratio 0.4 → **1.0**, dekking 57,8 → **100%**, max afwijking
+18,5 → **1,6 cm**; gevel = 3 muren op 5,6° (ref 3 op 5,2–5,7°), alle t=45. Grootboek:
+1× `axis_accepted`, 1× `rebuilt`, 0 rollbacks. Vijf orthogonale fixtures **byte-identiek**
+(enige diff = W-54-tellers). 1274 unit + 27 e2e groen.
+
+**Tweede tekening (1e verdieping, gevel 12,6° met knik):** as werd gevonden en keten
+correct herbouwd, maar `W-55:rolled_back` — één restsegment van 0,5 px in een trap-hoek is
+in de guard-graaf een schijn-T + losse I; die verdwijnen bij de herbouw → T-telling daalt.
+Fix: laag 10 prunet ≤ 1 px (`OBLIQUE_STUB_MAX_PX`) **vóór** de guard meet, alleen binnen
+het schuine blok. Gevel wordt nu één segment van 1712 px op 12,57°. Regressietest =
+synthetische trap mét stub (guard faalt) en zonder (guard haalt).
+
+**Baseline-schuld gevonden:** de zes snapshots liepen achter op `main` sinds 2026-07-31
+(FML opening-merge toggles + L14 dedupe van 4 aug). Ververst; `bg` verloor daarbij muur
+`(1276.4,510.8)→(1485,510.8)` die 17,4 cm opschoof naar y=493,4 om op de buur aan te
+sluiten — hoekstuk weg, maar nu los van de verticaal op x=1485 en 3 openingen (1 deur,
+2 ramen) buiten de 20 cm matchafstand. Open, los van dit werk.
 
 ## Stap 2 fabrieksreset B/W (2026-08-13)
 
@@ -222,6 +251,10 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
+**Schuine gevels (2026-08-13).** L3 lezen → L10 herbouwen; poort `schuine-gevel-bg` haalt; sub-pixel stubs vóór de guard weg (tweede tekening). Open: `bg` muur-shift 17,4 cm uit de baseline-verversing.
+
+**Stap 1 schaal-asymmetrie waarschuwing (2026-08-13).** Fixture van de 1e verdieping had `pxPerMmX` 2,359 vs `pxPerMmY` 0,229 — factor 10,3; detectie (pixels) bleef goed, FML werd 10× platgeknepen (bbox 1,1 × 10,5 m) en een gevel van 12,57° kwam als 1,24° uit. Nieuw: `axisMismatchPct` in `useHScaleCalibration` + gele waarschuwing in `ScaleConfirmBar` boven `SCALE_AXIS_MISMATCH_WARN_PCT` (2%), zichtbaar ook met dicht paneel. Alleen waarschuwen; niets geblokkeerd, geen automatisch gelijktrekken.
+
 **Stap 2 fabrieksreset B/W (2026-08-13).** «Reset naar fabriekswaarden» zet actieve laag-tune terug; refs/inkt/OCR/stempel blijven.
 
 **Diagnose stap-1 onderlegger (2026-08-13).** Alarmbel-HTML bevat nu kleur-scan (JPEG) naast B/W.
@@ -350,6 +383,7 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 ## Recente besluiten (samenvatting)
 
+- **2026-08-13** — Schuine gevels: lezen op L3 (ongesnapt), toepassen eind L10 (ruis weg); lidmaatschap via DT-rug met bergopwaartse klim i.p.v. vorm — macro-stair op vorm faalde omdat op L10 niet meer te zien is welke knik echt was.
 - **2026-07-30** — Run-journaal (batch nul): module-scoped sink in `core/diagnostics` + worker-transport; `counts` per ESC-ID = grootboek-veld, events begrensd (3/ID, 400/run); alleen observatie, geen drempel/pad geraakt.
 - **2026-07-29** — Escalatiepaden: doel = precondititie per tak + herleidbare drempel. E2E-plan ongewijzigd → gedrag eerst L2–L10 + FML. Batch nul = stille fouten luid. Eenheid = cascade. Grootboek vóór interview. (Living: `escalatie.md` sinds 2026-08-01.)
 - **2026-07-29** — Fase 1: git + CI-poort + groene build. Typecheck = `vue-tsc -b`; alle assets binnen `frontend/`; root-`examples` blijft buiten de repo.

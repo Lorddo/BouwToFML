@@ -164,6 +164,11 @@ export interface PipelineV3Layer10Result {
     dedupedCount: number
     facesSkippedTopology: number
     facesSkippedMicroTopology: number
+    obliqueChainsRebuilt: number
+    obliqueSegmentsCreated: number
+    obliqueSegmentsRemoved: number
+    obliqueStubsRemoved: number
+    facesSkippedObliqueTopology: number
   }
 }
 

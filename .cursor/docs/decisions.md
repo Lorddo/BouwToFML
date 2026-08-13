@@ -420,8 +420,44 @@ Startcase: `Kinderdijkstraat 53 1` — 1 verdieping, 53 muren, `drawing.url` aan
 | Snapshots | Poort `.fml.json` / `.walls.fml.json`; vindplaats `.layers.json` (+ escalatie-grootboek); snapshot ≠ oordeel |
 | Grove vloer | Lengte ±25% vs ref, ≥5 openingen, `degraded===false` |
 | CI | `npm test` exclude `tests/e2e/**`; apart `npm run test:e2e` via `vitest.e2e.config.ts` na unit-tests in CI |
-| Set | `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`; Kinderdijkstraat later |
+| Set | `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`, `schuine-gevel-bg`; Kinderdijkstraat later |
 | Doc | `.cursor/docs/e2e-fixtures.md` |
+
+---
+
+## Schuine gevels — lezen op laag 3, toepassen op laag 10 (2026-08-13)
+
+Een gevel die werkelijk uit lood staat kwam als H/V-trap uit de pipeline: laag 4 trekt
+elk stuk naar de dichtstbijzijnde as en laag 5–10 poetsen de zaagtand netjes op in plaats
+van weg. Een eerdere poging repareerde dat op laag 10 alleen op vorm (macro-stair) en
+faalde, omdat daar niet meer te zien is welke knik echt was.
+
+| Beslissing | Detail |
+|------------|--------|
+| Lezen | Laag 3 — laatste punt waar de keten ongesnapt op de hartlijn ligt |
+| Toepassen | Eind laag 10, na `absorbMicroCornerJogs` — alle ruis en stubs zijn dan weg |
+| Lidmaatschap | Loodrechte afstand tot de DT-rug via bergopwaartse klim (`ridge-probe`), niet bbox-spreiding |
+| Bewijs | Lengte-gewogen hoekcluster + offsetcluster; dodezone 2,5° houdt scanrest buiten |
+| Ankers | Snijpunt van de as met de vreemde tak; die tak schuift mee, dus knopen en graden blijven |
+| Guard | `withTopologyGuard` (W-55); afkeur = input-clone terug |
+| Meting `schuine-gevel-bg` | lengte-ratio 0.4 → 1.0; dekking 57,8% → 100%; max afwijking 18,5 → 1,6 cm |
+| Neveneffect | Vijf orthogonale fixtures byte-identiek; enige diff is de W-54-boekhouding |
+
+Waarom de rug en niet de vorm: op deze tekening liggen de gevelstukken van laag 3
+0–1,5 px van de hartlijn, terwijl trap-treden er 12–26 px vanaf zitten en stootborden
+63–70 px. Bergopwaarts klimmen is nodig omdat een venster-maximum bij een dunne muur
+naast een dikke gevel de rug van de buur pakt (valse 70 px op controlemuur
+`(837,1585)→(970,1585)`).
+
+**Sub-pixel stubs vóór de guard weg (2026-08-13, tweede tekening).** Op een tweede
+verdieping (gevel 12,6° uit lood, met knik) werd de herbouw correct berekend maar door de
+guard teruggedraaid: één restsegment van 0,5 px in een trap-hoek levert in de guard-graaf
+(`weldNearEndpoints` eps 1 → `buildJunctionGraph` snap 0) twee knopen op — een schijn-T
+plus een losse I. De herbouw haalt die weg, dus de T-telling daalde en het I-eindpunt lag
+191 px van het dichtstbijzijnde nieuwe eindpunt. Laag 10 prunet nu segmenten ≤ 1 px
+(`OBLIQUE_STUB_MAX_PX`) **vóór** de guard zijn `before`-meting doet, alleen binnen het
+schuine blok, dus orthogonale tekeningen blijven onaangeroerd. Resultaat op die tekening:
+gevel = één segment van 1712 px op 12,57°, `facesSkippedObliqueTopology` 1 → 0.
 
 ---
 

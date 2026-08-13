@@ -38,6 +38,17 @@ const COLLAPSE_ORTHO_STUB_TIER_MAX_RATIO = 8 / 30
 const COLLAPSE_MICRO_CORNER_MAX_RATIO = 8 / 30
 const COLLAPSE_CHAIN_AXIS_SPREAD_RATIO = 5 / 30
 
+/** Schuine assen: banden en drempels als ratio van de muur-referentie. */
+const OBLIQUE_MIN_MEMBER_LENGTH_RATIO = 4 / 30
+const OBLIQUE_MIN_EVIDENCE_RATIO = 6
+const OBLIQUE_MAX_MEMBER_OFFSET_RATIO = 0.25
+/** Halve muurdikte: een trap blijft binnen zijn eigen muur. */
+const OBLIQUE_CAPTURE_BAND_RATIO = 0.5
+const OBLIQUE_MAX_ANCHOR_SHIFT_RATIO = COLLAPSE_JUNCTION_ANCHOR_RATIO
+const OBLIQUE_RIDGE_OFFSET_MEDIAN_RATIO = 1 / 30
+const OBLIQUE_RIDGE_MAX_SEARCH_RATIO = 0.75
+const OBLIQUE_RIDGE_SAMPLE_STEP_RATIO = 2 / 30
+
 const LAYER5_SAME_LINE_OFFSET_RATIO = 1.5 / 30
 const LAYER5_REPAIR_MAX_GAP_RATIO = 4 / 30
 const LAYER5_TX_STUB_MAX_RATIO = 3 / 30
@@ -74,6 +85,14 @@ export interface PipelineScale {
   layer5SameLineMaxOffsetPx: number
   layer5RepairMaxGapPx: number
   layer5TxStubMaxPx: number
+  obliqueMinMemberLengthPx: number
+  obliqueMinEvidencePx: number
+  obliqueMaxMemberOffsetPx: number
+  obliqueCaptureBandPx: number
+  obliqueMaxAnchorShiftPx: number
+  obliqueRidgeOffsetMedianPx: number
+  obliqueRidgeMaxSearchPx: number
+  obliqueRidgeSampleStepPx: number
 }
 
 function resolvePipelineReferencePx(referenceWallThicknessPx?: number): number {
@@ -106,5 +125,13 @@ export function resolvePipelineScale(referenceWallThicknessPx?: number): Pipelin
     layer5SameLineMaxOffsetPx: scaleFloat(refPx, LAYER5_SAME_LINE_OFFSET_RATIO, 0.5),
     layer5RepairMaxGapPx: scaleRounded(refPx, LAYER5_REPAIR_MAX_GAP_RATIO),
     layer5TxStubMaxPx: scaleRounded(refPx, LAYER5_TX_STUB_MAX_RATIO),
+    obliqueMinMemberLengthPx: scaleRounded(refPx, OBLIQUE_MIN_MEMBER_LENGTH_RATIO, 3),
+    obliqueMinEvidencePx: scaleRounded(refPx, OBLIQUE_MIN_EVIDENCE_RATIO),
+    obliqueMaxMemberOffsetPx: scaleRounded(refPx, OBLIQUE_MAX_MEMBER_OFFSET_RATIO),
+    obliqueCaptureBandPx: scaleRounded(refPx, OBLIQUE_CAPTURE_BAND_RATIO),
+    obliqueMaxAnchorShiftPx: scaleRounded(refPx, OBLIQUE_MAX_ANCHOR_SHIFT_RATIO),
+    obliqueRidgeOffsetMedianPx: scaleFloat(refPx, OBLIQUE_RIDGE_OFFSET_MEDIAN_RATIO, 2),
+    obliqueRidgeMaxSearchPx: scaleRounded(refPx, OBLIQUE_RIDGE_MAX_SEARCH_RATIO),
+    obliqueRidgeSampleStepPx: scaleFloat(refPx, OBLIQUE_RIDGE_SAMPLE_STEP_RATIO, 2),
   }
 }

@@ -1,11 +1,11 @@
 # Escalatiepaden — tagindex
 
-Gegenereerd: 2026-08-04 · Bron: `npm run esc:index`
+Gegenereerd: 2026-08-13 · Bron: `npm run esc:index`
 
 Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 `escalatiepaden-inventaris.md` zijn historisch; dit bestand is het anker.
 
-## Muren (W) — 53/53
+## Muren (W) — 55/55
 
 | ID | Cat | Locaties |
 |---|---|---|
@@ -28,7 +28,7 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | W-17 | B | `cv/walls/rooms/pipeline-v3/layer-5-cleanup.ts:42` |
 | W-18 | B | `cv/walls/rooms/pipeline-v3/layer-5-cleanup.ts:172` |
 | W-19 | A | `cv/walls/rooms/pipeline-v3/engines/weld/index.ts:67` |
-| W-20 | B | `cv/walls/rooms/pipeline-v3/engines/cleanup/tx-micro.ts:67` |
+| W-20 | B | `cv/walls/rooms/pipeline-v3/engines/cleanup/tx-micro.ts:66` |
 | W-21 | B | `cv/walls/rooms/pipeline-v3/engines/cleanup/micro-loops.ts:62` |
 | W-22 | A | `cv/walls/rooms/pipeline-v3/engines/cleanup/same-line.ts:144` |
 | W-23 | A | `cv/walls/rooms/pipeline-v3/engines/cleanup/ll-stair.ts:31` |
@@ -52,16 +52,18 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | W-41 | B | `cv/walls/rooms/pipeline-v3/engines/connector/junction-repair-diagonals.ts:47` |
 | W-42 | B | `cv/walls/rooms/pipeline-v3/engines/connector/junction-repair-l.ts:32` |
 | W-43 | E | `cv/walls/rooms/pipeline-v3/engines/connector/constants.ts:4` |
-| W-44 | B | `cv/walls/rooms/pipeline-v3/layer-7-align.ts:55` |
+| W-44 | B | `cv/walls/rooms/pipeline-v3/layer-7-align.ts:56` |
 | W-45 | A | `cv/walls/rooms/pipeline-v3/engines/collapse/chain-collapse.ts:91` |
 | W-46 | E | `cv/walls/rooms/pipeline-v3/engines/collapse/thickness.ts:39` |
 | W-47 | A | `cv/walls/rooms/pipeline-v3/layer-8-finalize.ts:66` |
 | W-48 | B | `cv/walls/rooms/pipeline-v3/layer-8-finalize.ts:80` |
-| W-49 | B | `cv/walls/rooms/pipeline-v3/layer-9-dissolve.ts:62` |
-| W-50 | B | `cv/walls/rooms/pipeline-v3/layer-10-fml.ts:62` |
-| W-51 | A | `cv/walls/rooms/pipeline-v3/layer-10-fml.ts:84` |
-| W-52 | B | `cv/walls/rooms/pipeline-v3/layer-10-fml.ts:95` |
+| W-49 | B | `cv/walls/rooms/pipeline-v3/layer-9-dissolve.ts:66` |
+| W-50 | B | `cv/walls/rooms/pipeline-v3/layer-10-fml.ts:79` |
+| W-51 | A | `cv/walls/rooms/pipeline-v3/layer-10-fml.ts:111` |
+| W-52 | B | `cv/walls/rooms/pipeline-v3/layer-10-fml.ts:128` |
 | W-53 | B | `cv/walls/rooms/build-semantic-walls-source.ts:18` |
+| W-54 | B | `cv/walls/rooms/pipeline-v3/engines/oblique/axis-inventory.ts:91` |
+| W-55 | B | `cv/walls/rooms/pipeline-v3/engines/oblique/chain-rebuild.ts:203` |
 
 ## Deuren (D) — 61/61
 
@@ -134,18 +136,18 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | ID | Cat | Locaties |
 |---|---|---|
 | R-01 | C | `cv/walls/rooms/opening-pipe-dual.ts:22` |
-| R-02 | A | `cv/windows/window-axel-ref.ts:90`, `cv/windows/window-axel-ref.ts:339` |
-| R-03 | A | `cv/windows/window-axel-ref.ts:264` |
-| R-04 | C | `cv/windows/window-axel-ref.ts:357` |
-| R-05 | E | `cv/windows/window-axel-ref.ts:321` |
+| R-02 | A | `cv/windows/window-axel-ref.ts:88`, `cv/windows/window-axel-ref.ts:357` |
+| R-03 | A | `cv/windows/window-axel-ref.ts:282` |
+| R-04 | C | `cv/windows/window-axel-ref.ts:375` |
+| R-05 | E | `cv/windows/window-axel-ref.ts:339` |
 | R-06 | A | `cv/windows/window-axel-filter.ts:57` |
 | R-07 | E | `cv/windows/window-axel-filter.ts:98` |
 | R-08 | A | `cv/windows/window-axel-strip-geometry.ts:299` |
-| R-09 | A | `cv/windows/window-axel-cluster.ts:232` |
-| R-10 | A | `cv/windows/window-axel-cluster.ts:256` |
-| R-11 | E | `cv/windows/window-axel-cluster.ts:41` |
+| R-09 | A | `cv/windows/window-axel-cluster.ts:235` |
+| R-10 | A | `cv/windows/window-axel-cluster.ts:259` |
+| R-11 | E | `cv/windows/window-axel-cluster.ts:44` |
 | R-12 | B | `cv/windows/window-axel-cluster.ts:22` |
-| R-13 | C | `cv/windows/window-axel-cluster.ts:69` |
+| R-13 | C | `cv/windows/window-axel-cluster.ts:72` |
 | R-14 | C | `cv/windows/window-door-arc-filter.ts:85` |
 | R-15 | A | `cv/windows/window-door-arc-filter.ts:239` |
 | R-16 | A | `cv/windows/window-evidence-filter.ts:105`, `cv/windows/window-evidence-filter.ts:183` |
@@ -171,14 +173,14 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | REF-03 | A | `cv/refs/ref-straighten.ts:380` |
 | REF-04 | A | `cv/refs/ref-blob-units.ts:160` |
 | REF-05 | E | `cv/refs/ref-blob-units.ts:279`, `cv/refs/ref-stages.ts:243` |
-| REF-06 | E | `cv/refs/ref-face-crop.ts:311` |
-| REF-07 | E | `cv/refs/ref-face-crop.ts:239` |
-| REF-08 | E | `cv/refs/ref-face-crop.ts:163` |
+| REF-06 | E | `cv/refs/ref-face-crop.ts:313` |
+| REF-07 | E | `cv/refs/ref-face-crop.ts:241` |
+| REF-08 | E | `cv/refs/ref-face-crop.ts:165` |
 | REF-09 | A | `cv/refs/ref-pipeline.ts:236` |
 | REF-10 | E | `cv/refs/ref-pipeline.ts:407` |
 | REF-11 | A | `cv/refs/classify-wall-ref-style.ts:57` |
 | REF-12 | A | `cv/refs/ref-swing-arc.ts:99` |
-| REF-13 | A | `cv/refs/ref-swing-hinge-resolve.ts:255` |
+| REF-13 | A | `cv/refs/ref-swing-hinge-resolve.ts:275`, `cv/refs/ref-swing-hinge-resolve.ts:318` |
 | REF-14 | E | `core/fml/fml-wall-thickness-tiers.ts:98` |
 
 ## Orkestratie (O) — 46/46
@@ -194,53 +196,53 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | O-07 | D | `ui/composables/workspace/window-faces-auto-pass.ts:44` |
 | O-08 | D | `ui/composables/workspace/window-faces-auto-pass.ts:97` |
 | O-09 | D | `ui/composables/workspace/window-faces-auto-pass.ts:86` |
-| O-10 | D | `ui/composables/workspace/door-faces-snap.ts:56` |
-| O-11 | D | `ui/composables/workspace/door-faces-snap.ts:160` |
-| O-12 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:153` |
-| O-13 | D | `ui/composables/workspace/constants.ts:58` |
+| O-10 | D | `ui/composables/workspace/door-faces-snap.ts:62` |
+| O-11 | D | `ui/composables/workspace/door-faces-snap.ts:166` |
+| O-12 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:157` |
+| O-13 | D | `ui/composables/workspace/constants.ts:52` |
 | O-14 | D | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:413` |
-| O-15 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:207` |
-| O-16 | D | `ui/composables/workspace/useWorkspaceRoomFaces.ts:452` |
+| O-15 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:211` |
+| O-16 | D | `ui/composables/workspace/useWorkspaceRoomFaces.ts:463` |
 | O-17 | B | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:330` |
 | O-18 | B | `ui/composables/workspace/useWorkspaceDoorSwingComputationCache.ts:72` |
 | O-19 | D | `ui/composables/workspace/useWorkspaceDoorSwingComputationCache.ts:85` |
-| O-20 | B | `ui/composables/workspace/door-faces-snap.ts:28` |
-| O-21 | B | `ui/composables/workspace/door-faces-snap.ts:183` |
-| O-22 | B | `ui/composables/workspace/window-faces-bind.ts:20` |
-| O-23 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:267`, `ui/composables/workspace/useWorkspaceWindowFaces.ts:603` |
-| O-24 | D | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:621` |
-| O-25 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:561` |
-| O-26 | D | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:656` |
-| O-27 | D | `ui/composables/useWorkspace.ts:374` |
+| O-20 | B | `ui/composables/workspace/door-faces-snap.ts:30` |
+| O-21 | B | `ui/composables/workspace/door-faces-snap.ts:192` |
+| O-22 | B | `ui/composables/workspace/window-faces-bind.ts:24` |
+| O-23 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:273`, `ui/composables/workspace/useWorkspaceWindowFaces.ts:613` |
+| O-24 | D | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:650` |
+| O-25 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:571` |
+| O-26 | D | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:685` |
+| O-27 | D | `ui/composables/useWorkspace.ts:415` |
 | O-28 | D | `ui/composables/workspace/useWorkspaceDoorSwingHelpers.ts:16` |
-| O-29 | D | `ui/composables/workspace/workspace-dev-session-restore-detection.ts:160` |
-| O-30 | D | `ui/composables/workspace/workspace-dev-session-restore-detection.ts:120` |
-| O-31 | D | `ui/composables/workspace/useWorkspaceDetection.ts:263` |
-| O-32 | D | `ui/composables/workspace/useWorkspaceDetection.ts:422` |
-| O-33 | D | `ui/composables/workspace/useWorkspaceDetection.ts:444` |
+| O-29 | D | `ui/composables/workspace/workspace-dev-session-restore-detection.ts:212` |
+| O-30 | D | `ui/composables/workspace/workspace-dev-session-restore-detection.ts:172` |
+| O-31 | D | `ui/composables/workspace/useWorkspaceDetection.ts:346` |
+| O-32 | D | `ui/composables/workspace/useWorkspaceDetection.ts:512` |
+| O-33 | D | `ui/composables/workspace/useWorkspaceDetection.ts:534` |
 | O-34 | D | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:396` |
-| O-35 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:474` |
-| O-36 | D | `ui/composables/workspace/door-faces-snap.ts:248` |
-| O-37 | D | `ui/composables/workspace/useWorkspaceRoomFaces.ts:133` |
+| O-35 | D | `ui/composables/workspace/useWorkspaceWindowFaces.ts:484` |
+| O-36 | D | `ui/composables/workspace/door-faces-snap.ts:257` |
+| O-37 | D | `ui/composables/workspace/useWorkspaceRoomFaces.ts:137` |
 | O-38 | D | `ui/composables/workspace/workspace-fml-generate.ts:144` |
 | O-39 | D | `ui/composables/workspace/useWorkspaceDebugProbe.ts:120` |
-| O-40 | D | `ui/composables/workspace/assembleWorkspaceFacadeReturn.ts:242` |
+| O-40 | D | `ui/composables/workspace/assembleWorkspaceFacadeReturn.ts:248` |
 | O-41 | D | `ui/composables/workspace/workspace-export-door-swing-report.ts:176` |
-| O-42 | B | `ui/composables/workspace/useWorkspaceFlow.ts:101` |
-| O-43 | B | `ui/composables/workspace/workspace-view-visibility.ts:23` |
-| O-44 | B | `ui/composables/workspace/useWorkspaceViewUi.ts:45` |
-| O-45 | B | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:140`, `ui/composables/workspace/useWorkspaceWindowFaces.ts:141` |
-| O-46 | B | `ui/composables/workspace/constants.ts:37` |
+| O-42 | B | `ui/composables/workspace/useWorkspaceFlow.ts:110` |
+| O-43 | B | `ui/composables/workspace/workspace-view-visibility.ts:32` |
+| O-44 | B | `ui/composables/workspace/useWorkspaceViewUi.ts:50` |
+| O-45 | B | `ui/composables/workspace/useWorkspaceDoorSwingFaces.ts:140`, `ui/composables/workspace/useWorkspaceWindowFaces.ts:145` |
+| O-46 | B | `ui/composables/workspace/constants.ts:31` |
 
 ## Conversie/export (X) — 28/28
 
 | ID | Cat | Locaties |
 |---|---|---|
-| X-01 | E | `core/fml/buildFmlV3.ts:207`, `core/fml/harmonize-fml-wall-thickness.ts:253` |
-| X-02 | E | `core/fml/harmonize-fml-wall-thickness.ts:201` |
-| X-03 | E | `core/fml/harmonize-fml-wall-thickness.ts:157` |
-| X-04 | A | `core/fml/harmonize-fml-wall-thickness.ts:103` |
-| X-05 | E | `core/fml/harmonize-fml-wall-thickness.ts:191` |
+| X-01 | E | `core/fml/buildFmlV3.ts:251`, `core/fml/harmonize-fml-wall-thickness.ts:199` |
+| X-02 | E | `core/fml/harmonize-fml-wall-thickness.ts:199` |
+| X-03 | E | `core/fml/harmonize-fml-wall-thickness.ts:158` |
+| X-04 | A | `core/fml/harmonize-fml-wall-thickness.ts:104` |
+| X-05 | E | `core/fml/harmonize-fml-wall-thickness.ts:189` |
 | X-06 | A | `core/fml/extraction-to-plan-walls.ts:20` |
 | X-07 | E | `core/fml/extraction-to-plan-walls.ts:39`, `core/fml/extractionToPlan.ts:148` |
 | X-08 | E | `core/fml/extractionToPlan.ts:95` |
@@ -248,14 +250,14 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | X-10 | A | `core/fml/extraction-to-plan-doors.ts:14` |
 | X-11 | E | `core/fml/extraction-to-plan-windows.ts:35` |
 | X-12 | A | `core/fml/extraction-to-plan-doors.ts:169` |
-| X-13 | E | `core/fml/buildFmlV3.ts:96` |
-| X-14 | E | `core/fml/buildFmlV3.ts:98`, `core/fml/buildFmlV3.ts:180` |
-| X-15 | E | `core/fml/buildFmlV3.ts:100`, `core/fml/buildFmlV3.ts:126` |
-| X-16 | E | `core/fml/buildFmlV3.ts:103`, `core/fml/buildFmlV3.ts:203` |
-| X-17 | E | `core/fml/buildFmlV3.ts:64`, `core/fml/buildFmlV3.ts:108` |
-| X-18 | E | `core/fml/measure-underlay-wall-thickness.ts:9` |
-| X-19 | A | `core/fml/measure-underlay-wall-thickness.ts:278` |
-| X-20 | E | `core/fml/measure-underlay-wall-thickness.ts:333` |
+| X-13 | E | `core/fml/buildFmlV3.ts:145` |
+| X-14 | E | `core/fml/buildFmlV3.ts:147`, `core/fml/buildFmlV3.ts:224` |
+| X-15 | E | `core/fml/buildFmlV3.ts:149`, `core/fml/buildFmlV3.ts:170` |
+| X-16 | E | `core/fml/buildFmlV3.ts:152`, `core/fml/buildFmlV3.ts:247` |
+| X-17 | E | `core/fml/buildFmlV3.ts:80`, `core/fml/buildFmlV3.ts:157` |
+| X-18 | E | `core/fml/measure-underlay-wall-thickness.ts:8` |
+| X-19 | A | `core/fml/measure-underlay-wall-thickness.ts:294` |
+| X-20 | E | `core/fml/measure-underlay-wall-thickness.ts:349` |
 | X-21 | B | `cv/walls/rooms/build-semantic-walls-source.ts:19` |
 | X-22 | E | `cv/walls/rooms/build-semantic-walls-output.ts:83`, `cv/walls/rooms/build-semantic-walls-source.ts:78` |
 | X-23 | E | `cv/walls/rooms/build-semantic-walls-output.ts:50` |
@@ -263,5 +265,5 @@ Actuele vindplaats van elke ESC-ID in de code. De regelnummers in
 | X-25 | F | `core/fml/importFmlV3.ts:122` |
 | X-26 | E | `platform/export/layer-debug-report/build-layer-debug-report.ts:111` |
 | X-27 | P | `cv/walls/rooms/build-semantic-walls-output.ts:93` |
-| X-28 | A | `cv/windows/window-wall-dedupe.ts:119` |
+| X-28 | A | `cv/windows/window-wall-dedupe.ts:121` |
 

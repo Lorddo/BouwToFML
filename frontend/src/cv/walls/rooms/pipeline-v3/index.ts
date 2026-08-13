@@ -12,7 +12,9 @@ import { runLayer7Align } from './layer-7-align'
 import { runLayer8Finalize } from './layer-8-finalize'
 import { runLayer9Dissolve } from './layer-9-dissolve'
 import { runLayer10Fml } from './layer-10-fml'
+import { collectObliqueAxes } from './engines/oblique'
 import { listIncompleteLayers, isV3FmlReady, V3_NATIVE_THROUGH_LAYER } from './native-layers'
+import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer1Result, PipelineV3Result } from './types'
 
 function requireBlobsForLayer1(blobs: ConnectedWallBlob[] | undefined): ConnectedWallBlob[] {
@@ -64,6 +66,23 @@ export async function runPipelineV3(params: {
     layer2,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
+  // Laag 3 is het laatste punt waar een schuine gevel nog op zijn hartlijn ligt:
+  // laag 4 trekt hem naar H/V. Hier alleen lezen; herstellen doet laag 10.
+  const obliquePolicy = resolveObliquePolicy(params.referenceWallThicknessPx)
+  const obliqueAxes = distanceMap
+    ? collectObliqueAxes({
+        segments: layer3.allSegmentsPruned,
+        policy: obliquePolicy,
+        field: {
+          distanceMap,
+          width: params.maskRle.width,
+          height: params.maskRle.height,
+          maxSearchPx: obliquePolicy.ridgeMaxSearchPx,
+          sampleStepPx: obliquePolicy.ridgeSampleStepPx,
+        },
+      })
+    : []
+
   const layer4 = runLayer4PositionHv({
     layer3,
     cv: params.cv,
@@ -109,6 +128,7 @@ export async function runPipelineV3(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     bandBoundariesPx: params.bandBoundariesPx,
     distanceMap,
+    obliqueAxes,
   })
 
   return {

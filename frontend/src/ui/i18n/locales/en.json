@@ -164,6 +164,7 @@
     "scaleApply": "✓ Apply",
     "scaleCancel": "✕ Cancel",
     "scaleOpen": "Open scale",
+    "scaleAxisMismatch": "Horizontal and vertical scale differ by {diff}. A scan has the same pixel density in both directions, so check both rulers — detection stays correct, but the FML would come out squashed.",
     "cropGumTitle": "Crop & erase",
     "cropSection": "Crop",
     "cropPolygon": "Crop polygon",

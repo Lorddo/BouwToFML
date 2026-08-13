@@ -84,6 +84,29 @@ export function coveredLengthCm(
   return covered
 }
 
+/** Grootste afstand van een `source`-punt tot de dichtstbijzijnde `target`-muur. */
+export function maxDistToWallsCm(
+  source: Wall[],
+  target: Wall[],
+  stepCm = REFERENCE_SAMPLE_STEP_CM,
+): number {
+  if (source.length <= 0 || target.length <= 0) return 0
+  let worst = 0
+  for (const wall of source) {
+    const len = wallLengthCm(wall)
+    const steps = Math.max(1, Math.ceil(len / stepCm))
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps
+      const p = {
+        x: wall.a.x + (wall.b.x - wall.a.x) * t,
+        y: wall.a.y + (wall.b.y - wall.a.y) * t,
+      }
+      worst = Math.max(worst, minDistToWalls(p, target))
+    }
+  }
+  return worst
+}
+
 export function openingCenterCm(wall: Wall, opening: Opening): Point2 {
   const t = Number.isFinite(opening.t) ? opening.t : 0.5
   return {

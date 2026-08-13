@@ -1,0 +1,27 @@
+{
+  "detected": {
+    "lengthCm": 1266.3,
+    "offAxisDeg": [
+      1.8,
+      5.6,
+      5.6,
+      5.6,
+    ],
+    "wallCount": 4,
+  },
+  "lengthRatio": 1,
+  "maxDeviationCm": 1.6,
+  "minOffAxisDeg": 1,
+  "reference": {
+    "lengthCm": 1222.4,
+    "offAxisDeg": [
+      5.2,
+      5.6,
+      5.7,
+    ],
+    "wallCount": 3,
+  },
+  "referenceAllCoveragePct": 98.1,
+  "referenceObliqueCoveragePct": 100,
+  "tightMatchDistCm": 5,
+}
