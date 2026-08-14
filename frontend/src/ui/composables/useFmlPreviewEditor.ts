@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { FloorPlan, Opening, Point2D, Wall } from '@/core/fml/types'
+import type { FloorItem, FloorPlan, Opening, Point2D, Wall } from '@/core/fml/types'
 import {
   addRoomRect,
   addWallSegment,
@@ -36,6 +36,13 @@ import { applyOpeningDragMove as applyOpeningDragMoveWalls } from '@/ui/componen
 
 const MAX_UNDO = 50
 
+export type FmlPreviewUndoSnapshot = {
+  walls: Wall[]
+  items?: FloorItem[]
+  /** Underlay origin bij nulpunt-edits; undefined = layout ongemoeid bij undo. */
+  layoutOrigin?: Point2D | null
+}
+
 function clonePlan(plan: FloorPlan): FloorPlan {
   return JSON.parse(JSON.stringify(plan)) as FloorPlan
 }
@@ -46,7 +53,9 @@ function cloneWallsSnapshot(walls: Wall[]): Wall[] {
 
 export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref<number>) {
   const localPlan = ref<FloorPlan | null>(null)
-  const undoStack = ref<Wall[][]>([])
+  const undoStack = ref<FmlPreviewUndoSnapshot[]>([])
+  /** Layout die bij laatste nulpunt-undo hoort (parent sync). */
+  const pendingUndoLayoutOrigin = ref<Point2D | null | undefined>(undefined)
   let skipNextPlanReset = false
 
   watch(
@@ -54,10 +63,18 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     (value) => {
       if (skipNextPlanReset) {
         skipNextPlanReset = false
+        // Floor-switch / clearWorkspace zet plan op null terwijl een parent-echo-skip
+        // van de vorige verdieping nog open kan staan — nooit oude muren bewaren.
+        if (value == null) {
+          localPlan.value = null
+          undoStack.value = []
+          pendingUndoLayoutOrigin.value = undefined
+        }
         return
       }
       localPlan.value = value ? clonePlan(value) : null
       undoStack.value = []
+      pendingUndoLayoutOrigin.value = undefined
     },
     { immediate: true },
   )
@@ -65,10 +82,24 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   // Undo snapshots zijn walls van de actieve floor — bij switch niet op een andere floor toepassen.
   watch(floorIndex, () => {
     undoStack.value = []
+    pendingUndoLayoutOrigin.value = undefined
   })
 
   function prepareParentSync(): void {
     skipNextPlanReset = true
+  }
+
+  /** Forceer localPlan (nulpunt-apply vanaf parent). */
+  function replaceLocalPlan(
+    plan: FloorPlan | null,
+    options?: { keepUndo?: boolean; keepParentSyncSkip?: boolean },
+  ): void {
+    if (!options?.keepParentSyncSkip) skipNextPlanReset = false
+    localPlan.value = plan ? clonePlan(plan) : null
+    if (!options?.keepUndo) {
+      undoStack.value = []
+      pendingUndoLayoutOrigin.value = undefined
+    }
   }
 
   const walls = computed(() => {
@@ -78,8 +109,17 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   const junctions = computed(() => buildJunctions(walls.value))
 
-  function pushUndo(): void {
-    const snapshot = JSON.parse(JSON.stringify(walls.value)) as Wall[]
+  function pushUndo(options?: { layoutOrigin?: Point2D | null }): void {
+    const floor = localPlan.value?.floors[floorIndex.value] ?? localPlan.value?.floors[0]
+    const snapshot: FmlPreviewUndoSnapshot = {
+      walls: JSON.parse(JSON.stringify(walls.value)) as Wall[],
+      items: floor?.items ? (JSON.parse(JSON.stringify(floor.items)) as FloorItem[]) : undefined,
+    }
+    if (options && 'layoutOrigin' in options) {
+      snapshot.layoutOrigin = options.layoutOrigin
+        ? { x: options.layoutOrigin.x, y: options.layoutOrigin.y }
+        : options.layoutOrigin
+    }
     undoStack.value = [...undoStack.value.slice(-(MAX_UNDO - 1)), snapshot]
   }
 
@@ -90,6 +130,23 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
       ...localPlan.value,
       floors: localPlan.value.floors.map((floor, floorIdx) =>
         floorIdx === idx ? { ...floor, walls: nextWalls } : floor,
+      ),
+    }
+  }
+
+  function setFloorGeometry(nextWalls: Wall[], nextItems?: FloorItem[]): void {
+    if (!localPlan.value) return
+    const idx = floorIndex.value
+    localPlan.value = {
+      ...localPlan.value,
+      floors: localPlan.value.floors.map((floor, floorIdx) =>
+        floorIdx === idx
+          ? {
+              ...floor,
+              walls: nextWalls,
+              items: nextItems !== undefined ? nextItems : floor.items,
+            }
+          : floor,
       ),
     }
   }
@@ -231,8 +288,19 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   function undo(): boolean {
     const previous = undoStack.value.pop()
     if (!previous) return false
-    setWalls(previous)
+    if (previous.items !== undefined) {
+      setFloorGeometry(previous.walls, previous.items)
+    } else {
+      setWalls(previous.walls)
+    }
+    pendingUndoLayoutOrigin.value = 'layoutOrigin' in previous ? previous.layoutOrigin : undefined
     return true
+  }
+
+  function consumePendingUndoLayoutOrigin(): Point2D | null | undefined {
+    const value = pendingUndoLayoutOrigin.value
+    pendingUndoLayoutOrigin.value = undefined
+    return value
   }
 
   function canUndo(): boolean {
@@ -243,10 +311,14 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   return {
     localPlan,
+    floorIndex,
     walls,
     junctions,
     pushUndo,
     prepareParentSync,
+    replaceLocalPlan,
+    consumePendingUndoLayoutOrigin,
+    setFloorGeometry,
     addWallSegment,
     applyJunctionMove,
     previewJunctionMove,

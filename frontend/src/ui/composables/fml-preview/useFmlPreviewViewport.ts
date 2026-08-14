@@ -87,6 +87,23 @@ export function useFmlPreviewViewport(
     contentLayout.value = buildContentLayout(walls.value, items.value)
   }
 
+  /**
+   * Na nulpunt-translate: schuif de content-layout mee i.p.v. herfitten.
+   * Zo blijft de tekening op het scherm staan (alleen FML-(0,0) verandert).
+   */
+  function nudgeContentLayout(dxCm: number, dyCm: number): void {
+    const current = contentLayout.value
+    if (!current) {
+      refitContentLayout()
+      return
+    }
+    contentLayout.value = {
+      ...current,
+      minX: current.minX + dxCm,
+      minY: current.minY + dyCm,
+    }
+  }
+
   function ensureContentLayout(): void {
     if (walls.value.length === 0) {
       contentLayout.value = null
@@ -148,6 +165,7 @@ export function useFmlPreviewViewport(
     contentLayout,
     renderTransform,
     refitContentLayout,
+    nudgeContentLayout,
     ensureContentLayout,
     resetView,
     updateStageSize,

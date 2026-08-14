@@ -7,8 +7,10 @@ import FmlPreviewCanvas from './FmlPreviewCanvas.vue'
  * Presentational FML canvas host for WorkspaceView.
  * Sidebar panel is `WorkspaceFmlResultPanel` (layout keeps them apart; same FML result step).
  */
-defineProps<{
+const props = defineProps<{
   plan: FloorPlan | null
+  /** Remount FML-canvas per verdieping — voorkomt stale localPlan/nulpunt van vorige floor. */
+  floorId?: string | null
   underlaySrc: string | null
   underlayOpacity: number
   contentOpacity: number
@@ -23,10 +25,14 @@ defineProps<{
   thicknessMaxCm: number
   bovenlichtDefault?: boolean
   windowBovenlichtDefault?: boolean
+  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
 }>()
 
 const emit = defineEmits<{
-  planUpdate: [plan: FloorPlan]
+  planUpdate: [
+    plan: FloorPlan,
+    layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
+  ]
   thicknessWallPick: [wallId: string]
   cancelThicknessPick: []
 }>()
@@ -34,7 +40,7 @@ const emit = defineEmits<{
 
 <template>
   <FmlPreviewCanvas
-    key="fml-preview"
+    :key="floorId ? `fml-preview:${floorId}` : 'fml-preview'"
     :plan="plan"
     :underlay-src="underlaySrc"
     :underlay-opacity="underlayOpacity"
@@ -50,7 +56,8 @@ const emit = defineEmits<{
     :thickness-max-cm="thicknessMaxCm"
     :bovenlicht-default="bovenlichtDefault"
     :window-bovenlicht-default="windowBovenlichtDefault"
-    @plan-update="emit('planUpdate', $event)"
+    :set-fml-nulpunt-image-cm="props.setFmlNulpuntImageCm"
+    @plan-update="(plan, layout) => emit('planUpdate', plan, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
   />

@@ -58,7 +58,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 
 | Actie | Waar |
 |--------|------|
-| B/W tunen | `PreprocessPanel` |
+| B/W tunen | `PreprocessPanel` — vaste drempel + Geavanceerd: adaptive aan/uit + kernel (`adaptiveBlockSize` 3–51) |
 | Reset naar fabriekswaarden | `PreprocessPanel` — B/W-tune van de actieve laag (`defaultLayerTune`); refs, inkt, OCR en stempel blijven |
 | B/W overnemen (donor-keuze) | `copyPreprocessAndRefsFromDonor(donorFloorId)` |
 | Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren, band min/mid/max, REF-handles, penseel/polygoon-gum, bake |
@@ -117,6 +117,8 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 | walls (Dev) | `tabOutputs.walls` + layer overlays (`ResultWallsLayerPanel` / Layer Debug) |
 
 **Project-export:** «Download .fml (project)» (footer op stap 4) → `mergeFloorPlans` over alle floors met preview/generated FML (namen/`level` uit `FloorMeta`). Geen per-verdieping download in de productie-UI.
+
+**Nulpunt (uitlijning multi-floor):** select-tool «Nulpunt» — versleepbaar kruis op FML `(0,0)`. Na loslaten: ✓ bakken (alleen **actieve** floor: muren − P, `layout.origin` += P; onderlegger blijft op de scan) of ✕/Esc annuleren. Per verdieping hetzelfde anker kiezen zodat floors in 3D stapelen. Persist: `fmlNulpuntImageCm` op die floor-blob.
 
 **Verdiepingsnaam:** bewerkbaar bovenaan `FmlPanel` (actieve floor → `renameFloor`); zelfde bron als stap 0 / floor-rail.
 

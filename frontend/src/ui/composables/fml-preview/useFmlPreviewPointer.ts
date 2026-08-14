@@ -17,6 +17,7 @@ interface PointerToolModes {
   addDoorMode: ComputedRef<boolean>
   addWindowMode: ComputedRef<boolean>
   measureMode: ComputedRef<boolean>
+  nulpuntMode: ComputedRef<boolean>
   selectionBoxMode: ComputedRef<boolean>
 }
 
@@ -27,6 +28,7 @@ interface PointerDragState {
   isDrawWallDragging: () => boolean
   isDrawRoomDragging: () => boolean
   isMeasureDragging: () => boolean
+  isNulpuntDragging: () => boolean
   isPanDragging: Ref<boolean>
 }
 
@@ -35,6 +37,7 @@ interface PointerActions {
   beginDrawWall: (event: MouseEvent) => void
   beginMeasure: (event: MouseEvent) => void
   beginDrawRoom: (event: MouseEvent) => void
+  beginNulpuntDrag: (event: MouseEvent) => boolean
   placeDoor: (wallId: string, cm: Point2D) => string | null
   placeWindow: (wallId: string, cm: Point2D) => string | null
   startJunctionDrag: (junction: RenderJunction, event: MouseEvent) => void
@@ -78,6 +81,9 @@ export function useFmlPreviewPointer(options: {
   const canvasCursor = computed(() => {
     if (modes.measureMode.value && !spacePressed.value && !thicknessPickTier.value)
       return 'crosshair'
+    if (modes.nulpuntMode.value && !spacePressed.value && !thicknessPickTier.value) {
+      return drag.isNulpuntDragging() ? 'grabbing' : 'grab'
+    }
     if (modes.drawWallMode.value && !spacePressed.value && !thicknessPickTier.value)
       return 'crosshair'
     if (modes.drawRoomMode.value && !spacePressed.value && !thicknessPickTier.value)
@@ -142,6 +148,11 @@ export function useFmlPreviewPointer(options: {
 
     if (modes.measureMode.value) {
       actions.beginMeasure(event)
+      return
+    }
+
+    if (modes.nulpuntMode.value) {
+      actions.beginNulpuntDrag(event)
       return
     }
 
@@ -230,6 +241,7 @@ export function useFmlPreviewPointer(options: {
       drag.isDrawWallDragging() ||
       drag.isDrawRoomDragging() ||
       drag.isMeasureDragging() ||
+      drag.isNulpuntDragging() ||
       spacePressed.value
     ) {
       return

@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
 import type { FloorPlan } from '@/core/fml/types'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { useStage } from '@/platform/canvas'
 import { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import { useFmlPreviewViewport } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
@@ -37,6 +38,7 @@ const props = withDefaults(
     thicknessMaxCm?: number
     bovenlichtDefault?: boolean
     windowBovenlichtDefault?: boolean
+    setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
   }>(),
   {
     floorIndex: 0,
@@ -54,11 +56,12 @@ const props = withDefaults(
     thicknessMaxCm: 30,
     bovenlichtDefault: false,
     windowBovenlichtDefault: false,
+    setFmlNulpuntImageCm: undefined,
   },
 )
 
 const emit = defineEmits<{
-  planUpdate: [plan: FloorPlan]
+  planUpdate: [plan: FloorPlan, layout?: PreviewUnderlayLayout | null]
   thicknessWallPick: [wallId: string]
   cancelThicknessPick: []
 }>()
@@ -66,9 +69,10 @@ const emit = defineEmits<{
 function interactionEmit(
   event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick',
   payload?: FloorPlan | string,
+  layout?: PreviewUnderlayLayout | null,
 ): void {
   if (event === 'planUpdate') {
-    emit('planUpdate', payload as FloorPlan)
+    emit('planUpdate', payload as FloorPlan, layout)
     return
   }
   if (event === 'thicknessWallPick') {
@@ -131,6 +135,23 @@ const interaction = useFmlPreviewInteraction({
   thicknessPickTier: thicknessPickTierRef,
   bovenlichtDefault: bovenlichtDefaultRef,
   windowBovenlichtDefault: windowBovenlichtDefaultRef,
+  getUnderlayLayout: () => {
+    // Origin mag (0,0) zijn — object is altijd truthy; alleen null/undefined blokkeert.
+    if (props.cmOrigin == null) {
+      // Fallback zodat nulpunt niet stil faalt zonder underlay-layout prop.
+      return {
+        origin: { x: 0, y: 0 },
+        pxPerMmX: props.pxPerMmX ?? 1,
+        pxPerMmY: props.pxPerMmY ?? 1,
+      }
+    }
+    return {
+      origin: { x: props.cmOrigin.x, y: props.cmOrigin.y },
+      pxPerMmX: props.pxPerMmX ?? 1,
+      pxPerMmY: props.pxPerMmY ?? 1,
+    }
+  },
+  setFmlNulpuntImageCm: (point) => props.setFmlNulpuntImageCm?.(point),
   onKeyDown,
   onKeyUp,
 })
@@ -167,6 +188,12 @@ const {
   drawRoomPreview,
   measurePreview,
   measureLines,
+  nulpuntMode,
+  nulpuntDisplayCm,
+  nulpuntHasPending,
+  nulpuntShowBakeActions,
+  confirmNulpuntBake,
+  cancelNulpuntPending,
   settingsWallIds,
   moveWallId,
   settingsOpeningIds,
@@ -239,6 +266,12 @@ const { drawWallPreviewScreen, drawRoomPreviewScreen, drawRoomPreviewPolygon, cm
     viewPosition,
     viewScale,
   })
+
+const nulpuntScreen = computed(() => {
+  if (!nulpuntMode.value) return null
+  const p = nulpuntDisplayCm.value
+  return cmToScreen(p.x, p.y)
+})
 
 onMounted(() => {
   mountResizeObserver()
@@ -338,6 +371,61 @@ watch(
       :to-screen="cmToScreen"
       :dashed="true"
     />
+    <svg
+      v-if="nulpuntScreen"
+      class="nulpunt-overlay"
+      :class="{ 'nulpunt-overlay--pending': nulpuntHasPending }"
+      :width="stageSize.width"
+      :height="stageSize.height"
+    >
+      <line
+        class="nulpunt-axis"
+        :x1="0"
+        :y1="nulpuntScreen.y"
+        :x2="stageSize.width"
+        :y2="nulpuntScreen.y"
+      />
+      <line
+        class="nulpunt-axis"
+        :x1="nulpuntScreen.x"
+        :y1="0"
+        :x2="nulpuntScreen.x"
+        :y2="stageSize.height"
+      />
+      <g class="nulpunt-cross" :transform="`translate(${nulpuntScreen.x} ${nulpuntScreen.y})`">
+        <circle class="nulpunt-hit" r="14" />
+        <line x1="-18" y1="0" x2="18" y2="0" />
+        <line x1="0" y1="-18" x2="0" y2="18" />
+        <circle r="4" />
+      </g>
+    </svg>
+    <div
+      v-if="nulpuntScreen && nulpuntShowBakeActions"
+      class="nulpunt-actions"
+      :style="{
+        left: `${nulpuntScreen.x + 22}px`,
+        top: `${nulpuntScreen.y - 18}px`,
+      }"
+    >
+      <button
+        type="button"
+        class="nulpunt-action nulpunt-action--confirm"
+        :title="$t('result.toolbar.nulpuntConfirm')"
+        @pointerdown.stop
+        @click.stop.prevent="confirmNulpuntBake"
+      >
+        ✓
+      </button>
+      <button
+        type="button"
+        class="nulpunt-action nulpunt-action--cancel"
+        :title="$t('result.toolbar.nulpuntCancel')"
+        @pointerdown.stop
+        @click.stop.prevent="cancelNulpuntPending"
+      >
+        ✕
+      </button>
+    </div>
     <svg
       v-if="drawWallPreviewScreen"
       class="draw-wall-preview"
@@ -457,5 +545,89 @@ watch(
   stroke: #f97316;
   stroke-width: 2;
   stroke-dasharray: 6 4;
+}
+
+.nulpunt-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.nulpunt-overlay--pending .nulpunt-cross line {
+  stroke: #ea580c;
+}
+
+.nulpunt-overlay--pending .nulpunt-cross circle:not(.nulpunt-hit) {
+  fill: #ea580c;
+}
+
+.nulpunt-axis {
+  stroke: #0ea5e9;
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+
+.nulpunt-overlay--pending .nulpunt-axis {
+  stroke: #ea580c;
+}
+
+.nulpunt-cross line {
+  stroke: #0284c7;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.nulpunt-cross circle:not(.nulpunt-hit) {
+  fill: #0284c7;
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.nulpunt-hit {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: none;
+}
+
+.nulpunt-actions {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.nulpunt-action {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.18);
+}
+
+.nulpunt-action--confirm {
+  color: #15803d;
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.nulpunt-action--confirm:hover {
+  background: #dcfce7;
+}
+
+.nulpunt-action--cancel {
+  color: #b91c1c;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.nulpunt-action--cancel:hover {
+  background: #fee2e2;
 }
 </style>

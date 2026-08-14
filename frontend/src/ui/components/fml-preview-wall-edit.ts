@@ -57,6 +57,11 @@ export function setWallsThickness(
       wall.thickness = clamped
       changed = true
     }
+    // Ook bij dezelfde maat: flush 0/1 hoort bij de vorige uitlijning.
+    if (wall.balance !== BALANCE_DEFAULT) {
+      wall.balance = BALANCE_DEFAULT
+      changed = true
+    }
   }
   return changed ? next : walls
 }

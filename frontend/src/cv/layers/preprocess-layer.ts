@@ -79,13 +79,15 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
 
   let mat = gray.clone()
 
-  // Stap 1 (optioneel): vaste B/W — geen grijs meer; daarna stap 2 (adaptive/…).
   const preBinarize = thresholdEnabled && (preprocess.preBinarizeEnabled ?? false)
+  const useAdaptive = thresholdEnabled && (preprocess.useAdaptive ?? false)
+  const preThreshold = Math.max(
+    0,
+    Math.min(255, Math.round(preprocess.preBinarizeThreshold ?? 150)),
+  )
+
+  // Stap 1 (optioneel): vaste B/W — geen grijs meer; daarna stap 2 (adaptive).
   if (preBinarize) {
-    const preThreshold = Math.max(
-      0,
-      Math.min(255, Math.round(preprocess.preBinarizeThreshold ?? 150)),
-    )
     mat = binarizeMat(cv, mat, {
       applyThreshold: true,
       thresholdMode: 'fixed',
@@ -94,14 +96,24 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
     })
   }
 
-  mat = binarizeMat(cv, mat, {
-    threshold: preprocess.threshold,
-    applyThreshold: thresholdEnabled,
-    useAdaptive: preprocess.useAdaptive,
-    thresholdMode: preprocess.thresholdMode,
-    adaptiveBlockSize: preprocess.adaptiveBlockSize,
-    edgeAwareEdgeBoost: preprocess.edgeAwareEdgeBoost ?? 0,
-  })
+  // Stap 2: adaptive alleen als aangezet. Beide uit → vaste drempel (geen grijs naar detectie).
+  if (useAdaptive) {
+    mat = binarizeMat(cv, mat, {
+      threshold: preprocess.threshold,
+      applyThreshold: true,
+      useAdaptive: true,
+      thresholdMode: 'adaptive',
+      adaptiveBlockSize: preprocess.adaptiveBlockSize,
+      edgeAwareEdgeBoost: preprocess.edgeAwareEdgeBoost ?? 0,
+    })
+  } else if (thresholdEnabled && !preBinarize) {
+    mat = binarizeMat(cv, mat, {
+      applyThreshold: true,
+      thresholdMode: 'fixed',
+      useAdaptive: false,
+      threshold: preThreshold,
+    })
+  }
 
   if (thresholdEnabled) {
     ensureBlackInkOnWhiteBackground(cv, mat)

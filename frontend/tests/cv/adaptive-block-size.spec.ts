@@ -20,6 +20,11 @@ describe('clampAdaptiveBlockSize', () => {
     expect(clampAdaptiveBlockSize(25)).toBe(25)
   })
 
+  it('even kernel 10 → 11 (UI/OpenCV oneven)', () => {
+    expect(clampAdaptiveBlockSize(10)).toBe(11)
+    expect(clampAdaptiveBlockSize(20)).toBe(21)
+  })
+
   it('wall defaults include adaptiveBlockSize 11', () => {
     expect(createDefaultWallLayerTune().adaptiveBlockSize).toBe(11)
   })

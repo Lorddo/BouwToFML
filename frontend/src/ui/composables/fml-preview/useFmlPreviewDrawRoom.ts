@@ -35,7 +35,8 @@ export function useFmlPreviewDrawRoom(options: {
   hoveredJunctionId: Ref<string | null>
   wallThicknessDraft: Ref<number>
   shiftPressed: Ref<boolean>
-  resolvePoint: (cm: Point2D) => Point2D
+  resolveStartPoint: (cm: Point2D) => Point2D
+  resolveEndPoint: (cm: Point2D, start: Point2D) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
 }) {
@@ -48,8 +49,8 @@ export function useFmlPreviewDrawRoom(options: {
     drawRoomPreview.value = null
   }
 
-  function resolveEndPoint(cm: Point2D, start: Point2D): Point2D {
-    const snapped = options.resolvePoint(cm)
+  function lockEndPoint(cm: Point2D, start: Point2D): Point2D {
+    const snapped = options.resolveEndPoint(cm, start)
     return options.shiftPressed.value ? applySquareLock(start, snapped) : snapped
   }
 
@@ -58,7 +59,7 @@ export function useFmlPreviewDrawRoom(options: {
     if (!cm) return
     cancelDrawRoomDrag()
     options.beforeBegin()
-    const startCm = options.resolvePoint(cm)
+    const startCm = options.resolveStartPoint(cm)
     drawRoomDrag = { startCm }
     drawRoomPreview.value = buildRectCorners(startCm, startCm)
     window.addEventListener('mousemove', onDrawRoomPointerMove)
@@ -69,7 +70,7 @@ export function useFmlPreviewDrawRoom(options: {
     if (!drawRoomDrag) return
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    const endCm = resolveEndPoint(cm, drawRoomDrag.startCm)
+    const endCm = lockEndPoint(cm, drawRoomDrag.startCm)
     drawRoomPreview.value = buildRectCorners(drawRoomDrag.startCm, endCm)
     const junction = options.hitTest.hitTestJunctionAtCm(cm)
     options.hoveredJunctionId.value = junction?.id ?? null
@@ -85,7 +86,7 @@ export function useFmlPreviewDrawRoom(options: {
     if (!drag || !preview) return
 
     const pointerCm = options.hitTest.clientToCm(event.clientX, event.clientY) ?? preview[2]
-    const endCm = resolveEndPoint(pointerCm, drag.startCm)
+    const endCm = lockEndPoint(pointerCm, drag.startCm)
     const corners = buildRectCorners(drag.startCm, endCm)
 
     options.editor.pushUndo()

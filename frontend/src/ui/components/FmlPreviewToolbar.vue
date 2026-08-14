@@ -111,6 +111,7 @@ const editTools = computed(() => {
 
 const hint = computed(() => {
   if (activeTool.value === 'measure') return t('result.toolbar.hintMeasure')
+  if (activeTool.value === 'nulpunt') return t('result.toolbar.hintNulpunt')
   if (activeTool.value === 'draw_wall') return t('result.toolbar.hintDrawWall')
   if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom')
   if (activeTool.value === 'add_door') return t('result.toolbar.hintAddDoor')

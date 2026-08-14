@@ -6,7 +6,8 @@ import { extractionToPlanWithOrigin, type Layer12DoorForFml } from '@/core/fml/e
 import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
 import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import type { FloorPlan, ImportWarning } from '@/core/fml/types'
+import { applyNulpunt, reapplyNulpuntImageCm } from '@/core/fml/translate-floor-plan'
+import type { FloorPlan, ImportWarning, Point2D } from '@/core/fml/types'
 import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import type { ExtractionOutput } from '@/core/extraction'
@@ -104,6 +105,8 @@ export function createWorkspaceFmlGenerate(
   const editedPreviewPlan = ref<FloorPlan | null>(null)
   /** Layout bij snelle floor-restore (zonder live generatedBundle). */
   const persistedUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
+  /** Gebruikers-nulpunt in scant-cm; overleeft regenerate. */
+  const fmlNulpuntImageCm = ref<Point2D | null>(null)
 
   /** Één plan-build + cm-origin per generate-pass (geen tweede resolveGraph voor underlay). */
   const generatedBundle = computed(() => {
@@ -152,14 +155,18 @@ export function createWorkspaceFmlGenerate(
 
   const generatedPlan = computed<FloorPlan | null>(() => generatedBundle.value?.plan ?? null)
 
-  const fmlExportPlan = computed<FloorPlan | null>(() => {
-    const raw = generatedPlan.value
-    if (!raw) return null
+  function harmonizePlan(plan: FloorPlan): FloorPlan {
     return harmonizeFmlWallThickness(
-      raw,
+      plan,
       applied.appliedFmlThicknessLimits.value,
       applied.appliedFmlBandBoundaries.value,
     )
+  }
+
+  const fmlExportPlan = computed<FloorPlan | null>(() => {
+    const raw = generatedPlan.value
+    if (!raw) return null
+    return harmonizePlan(raw)
   })
 
   /** Actuele preview + export: canvas-bewerkingen > geïmporteerd > gegenereerd. */
@@ -181,20 +188,45 @@ export function createWorkspaceFmlGenerate(
   const generatedStats = computed(() => countPlanElements(previewPlan.value))
   const importedStats = computed(() => countPlanElements(importedPlan.value))
 
+  function applyStoredNulpuntToPlan(
+    plan: FloorPlan,
+    baseLayout: PreviewUnderlayLayout,
+  ): { plan: FloorPlan; layout: PreviewUnderlayLayout } | null {
+    const nulpunt = fmlNulpuntImageCm.value
+    if (!nulpunt) return null
+    return reapplyNulpuntImageCm(plan, baseLayout, nulpunt)
+  }
+
   watch(
     generatedBundle,
     (bundle) => {
       if (!bundle) return
-      persistedUnderlayLayout.value = {
+      // Canvas-/floor-restore plan is leidend — niet layout herschrijven t.o.v. raw bundle
+      // (dat desynct origin t.o.v. al-vertaalde muren, o.a. na nulpunt of floor-switch).
+      if (editedPreviewPlan.value) return
+      const baseLayout: PreviewUnderlayLayout = {
         origin: { ...bundle.origin },
         pxPerMmX: bundle.pxPerMmX,
         pxPerMmY: bundle.pxPerMmY,
+      }
+      const nulpunt = fmlNulpuntImageCm.value
+      if (nulpunt) {
+        const appliedNulpunt = reapplyNulpuntImageCm(
+          harmonizePlan(bundle.plan),
+          baseLayout,
+          nulpunt,
+        )
+        editedPreviewPlan.value = appliedNulpunt.plan
+        persistedUnderlayLayout.value = appliedNulpunt.layout
+      } else {
+        persistedUnderlayLayout.value = baseLayout
       }
     },
     { flush: 'sync' },
   )
 
   const previewUnderlayLayout = computed((): PreviewUnderlayLayout | null => {
+    if (persistedUnderlayLayout.value) return persistedUnderlayLayout.value
     const bundle = generatedBundle.value
     if (bundle) {
       return {
@@ -203,7 +235,7 @@ export function createWorkspaceFmlGenerate(
         pxPerMmY: bundle.pxPerMmY,
       }
     }
-    return persistedUnderlayLayout.value
+    return null
   })
 
   function syncAppliedFromDraft(): void {
@@ -223,7 +255,8 @@ export function createWorkspaceFmlGenerate(
   }
 
   function updatePreviewPlan(plan: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
-    editedPreviewPlan.value = plan
+    // Altijd clonen — hydrate geeft vaak blob.previewPlan; gedeelde refs muteren anders de blob.
+    editedPreviewPlan.value = JSON.parse(JSON.stringify(plan)) as FloorPlan
     if (layout !== undefined) {
       persistedUnderlayLayout.value = layout
         ? {
@@ -234,7 +267,7 @@ export function createWorkspaceFmlGenerate(
         : null
     }
     if (importedPlan.value) {
-      importedPlan.value = plan
+      importedPlan.value = JSON.parse(JSON.stringify(plan)) as FloorPlan
     }
   }
 
@@ -248,15 +281,91 @@ export function createWorkspaceFmlGenerate(
       : null
   }
 
+  function setFmlNulpuntImageCm(point: Point2D | null): void {
+    fmlNulpuntImageCm.value = point ? { x: point.x, y: point.y } : null
+  }
+
+  /**
+   * Nulpunt-drop op de actuele preview (workspace source of truth — niet canvas-localPlan).
+   * Zet plan + layout + nulpuntImageCm atomisch.
+   * @param layoutOverride canvas-layout (getUnderlayLayout) — voorkomt mismatch met null previewUnderlayLayout
+   */
+  function applyNulpuntAtFmlCm(
+    dropCm: Point2D,
+    layoutOverride?: PreviewUnderlayLayout | null,
+    planOverride?: FloorPlan | null,
+  ): {
+    plan: FloorPlan
+    layout: PreviewUnderlayLayout
+    nulpuntImageCm: Point2D
+  } | null {
+    const plan =
+      planOverride ?? editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    const layout = layoutOverride ?? previewUnderlayLayout.value
+    if (!plan || !layout) return null
+    if (Math.hypot(dropCm.x, dropCm.y) < 0.05) return null
+    const applied = applyNulpunt(plan, layout, dropCm)
+    editedPreviewPlan.value = applied.plan
+    persistedUnderlayLayout.value = {
+      origin: { ...applied.layout.origin },
+      pxPerMmX: applied.layout.pxPerMmX,
+      pxPerMmY: applied.layout.pxPerMmY,
+    }
+    fmlNulpuntImageCm.value = { ...applied.nulpuntImageCm }
+    return {
+      plan: applied.plan,
+      layout: persistedUnderlayLayout.value,
+      nulpuntImageCm: fmlNulpuntImageCm.value,
+    }
+  }
+
+  /** Wis live FML-preview (na capture, vóór floor-id wissel) — voorkomt remount met vorige plan. */
+  function clearLiveFmlPreview(): void {
+    editedPreviewPlan.value = null
+    importedPlan.value = null
+    importedWarnings.value = []
+    importedFmlText.value = ''
+    persistedUnderlayLayout.value = null
+    fmlNulpuntImageCm.value = null
+  }
+
   /** Na opnieuw afronden: toon verse detectie i.p.v. oude canvas-bewerkingen. */
   function resetGeneratedPreview(): void {
     editedPreviewPlan.value = null
+    const bundle = generatedBundle.value
+    if (!bundle) return
+    const baseLayout: PreviewUnderlayLayout = {
+      origin: { ...bundle.origin },
+      pxPerMmX: bundle.pxPerMmX,
+      pxPerMmY: bundle.pxPerMmY,
+    }
+    const appliedNulpunt = applyStoredNulpuntToPlan(harmonizePlan(bundle.plan), baseLayout)
+    if (appliedNulpunt) {
+      editedPreviewPlan.value = appliedNulpunt.plan
+      persistedUnderlayLayout.value = appliedNulpunt.layout
+    } else {
+      persistedUnderlayLayout.value = baseLayout
+    }
   }
 
   function regenerateFml(): void {
     if (!generatedPlan.value) return
     syncAppliedFromDraft()
     editedPreviewPlan.value = null
+    const bundle = generatedBundle.value
+    if (!bundle) return
+    const baseLayout: PreviewUnderlayLayout = {
+      origin: { ...bundle.origin },
+      pxPerMmX: bundle.pxPerMmX,
+      pxPerMmY: bundle.pxPerMmY,
+    }
+    const appliedNulpunt = applyStoredNulpuntToPlan(harmonizePlan(bundle.plan), baseLayout)
+    if (appliedNulpunt) {
+      editedPreviewPlan.value = appliedNulpunt.plan
+      persistedUnderlayLayout.value = appliedNulpunt.layout
+    } else {
+      persistedUnderlayLayout.value = baseLayout
+    }
   }
 
   function downloadGeneratedFml(): void {
@@ -292,11 +401,7 @@ export function createWorkspaceFmlGenerate(
   }
 
   function clearImportedFml(): void {
-    importedPlan.value = null
-    editedPreviewPlan.value = null
-    importedWarnings.value = []
-    importedFmlText.value = ''
-    persistedUnderlayLayout.value = null
+    clearLiveFmlPreview()
   }
 
   return {
@@ -311,9 +416,13 @@ export function createWorkspaceFmlGenerate(
     importedStats,
     previewUnderlayLayout,
     editedPreviewPlan,
+    fmlNulpuntImageCm,
     syncAppliedFromDraft,
     updatePreviewPlan,
     setPreviewUnderlayLayout,
+    setFmlNulpuntImageCm,
+    applyNulpuntAtFmlCm,
+    clearLiveFmlPreview,
     resetGeneratedPreview,
     regenerateFml,
     downloadGeneratedFml,

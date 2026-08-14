@@ -383,6 +383,7 @@ defineExpose<{
         <div class="canvas-main">
           <WorkspaceFmlPreviewHost
             v-if="onFmlResultTab"
+            :floor-id="ws.activeFloorId"
             :plan="ws.previewPlan"
             :underlay-src="
               ws.fmlUnderlayOpacity > 0 || ws.fmlThicknessPickTier ? ws.fmlUnderlaySrc : null
@@ -400,6 +401,7 @@ defineExpose<{
             :thickness-max-cm="ws.fmlThicknessMaxCm"
             :bovenlicht-default="ws.fmlBovenlichtDefault"
             :window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
+            :set-fml-nulpunt-image-cm="ws.setFmlNulpuntImageCm"
             @plan-update="ws.updatePreviewPlan"
             @thickness-wall-pick="ws.handleFmlThicknessWallPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"

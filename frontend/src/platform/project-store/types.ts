@@ -58,6 +58,8 @@ export type PersistedFloorBlob = {
   generatedFloor: Floor | null
   previewPlan: FloorPlan | null
   previewUnderlayLayout: PreviewUnderlayLayout | null
+  /** Gebruikers-nulpunt in scant-cm; optioneel voor oude records. */
+  fmlNulpuntImageCm?: { x: number; y: number } | null
   /** Per-floor bronscan (vóór crop); optioneel voor oude records. */
   sourceUnderlay?: PersistedSourceUnderlay | null
 }

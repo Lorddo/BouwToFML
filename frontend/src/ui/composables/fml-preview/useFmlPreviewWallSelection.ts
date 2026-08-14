@@ -128,6 +128,7 @@ export function useFmlPreviewWallSelection(options: {
     if (settingsWallIds.value.length === 0) return
     editor.pushUndo()
     editor.applyWallsThickness(settingsWallIds.value, thickness)
+    syncWallThicknessDraftFromSelection()
     syncPlanToParent()
   }
 

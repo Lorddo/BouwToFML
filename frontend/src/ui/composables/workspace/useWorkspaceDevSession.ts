@@ -128,6 +128,7 @@ export type UseWorkspaceDevSessionDeps = {
     plan: import('@/core/fml/types').FloorPlan,
     layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
   ) => void
+  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
 }
 
 export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {

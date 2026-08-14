@@ -113,6 +113,13 @@ const strokeAttrs = {
       <line x1="19" y1="9" x2="19" y2="13.5" />
     </g>
 
+    <!-- NEW: origin crosshair (nulpunt) -->
+    <g v-else-if="name === 'origin'" v-bind="strokeAttrs">
+      <line x1="12" y1="3" x2="12" y2="21" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <circle cx="12" cy="12" r="3.5" />
+    </g>
+
     <!-- KEEP -->
     <path
       v-else-if="name === 'fit'"

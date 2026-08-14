@@ -231,10 +231,12 @@ export function useWorkspace() {
       preprocess.value.wallLayer?.contrast,
       preprocess.value.wallLayer?.threshold,
       preprocess.value.wallLayer?.useAdaptive,
+      preprocess.value.wallLayer?.adaptiveBlockSize,
       preprocess.value.brightness,
       preprocess.value.contrast,
       preprocess.value.threshold,
       preprocess.value.useAdaptive,
+      preprocess.value.adaptiveBlockSize,
     ],
     () => {
       wallStamp.retuneFromPreprocess()
@@ -763,6 +765,9 @@ export function useWorkspace() {
     setLocalError,
     getPreviewPlan: () => fml.previewPlan.value ?? null,
     getPreviewUnderlayLayout: () => fml.previewUnderlayLayout.value ?? null,
+    getFmlNulpuntImageCm: () => fml.fmlNulpuntImageCm.value ?? null,
+    setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
+    clearLiveFmlPreview: () => fml.clearLiveFmlPreview(),
     applyFmlDefaultsToUi: (defaults) => {
       fml.setFmlWallHeightCm(defaults.wallHeightCm)
       fml.setFmlDoorHeightCm(defaults.doorHeightCm)
@@ -1159,6 +1164,9 @@ export function useWorkspace() {
       project.copyPreprocessAndRefsFromDonor(donorFloorId),
     setFmlBovenlichtDefault,
     setFmlWindowBovenlichtDefault,
+    setFmlNulpuntImageCm: (point: { x: number; y: number } | null) =>
+      fml.setFmlNulpuntImageCm(point),
+    updatePreviewPlan: fml.updatePreviewPlan,
     downloadProjectFml,
     // Muurstempel (stap 2)
     wallStampActive: wallStamp.active,

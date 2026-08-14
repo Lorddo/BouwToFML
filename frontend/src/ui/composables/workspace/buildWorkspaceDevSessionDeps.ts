@@ -86,6 +86,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
       plan: import('@/core/fml/types').FloorPlan,
       layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
     ) => void
+    setFmlNulpuntImageCm: (point: { x: number; y: number } | null) => void
   }
   referenceWallThicknessPx: Ref<number | null>
   wallRefThicknessMeasures: Ref<
@@ -173,6 +174,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     finalizeWallDetection: () => ctx.roomFaces.finalizeWallDetection(),
     onEnterResultStep: () => ctx.semanticWalls.buildForResultStep(),
     updatePreviewPlan: (plan, layout) => ctx.fml.updatePreviewPlan(plan, layout),
+    setFmlNulpuntImageCm: (point) => ctx.fml.setFmlNulpuntImageCm(point),
     serializeFaceOverrides: () => {
       const cache = ctx.roomFaces.roomRasterCache.value
       return cache ? serializeFaceOverrides(cache) : []

@@ -66,6 +66,11 @@ export type FloorWorkspaceBlob = {
    */
   previewUnderlayLayout: PreviewUnderlayLayout | null
   /**
+   * Gebruikers-nulpunt in scant-cm (imageCm = FML + layout.origin).
+   * Overleeft regenerate: opnieuw toepassen i.p.v. bbox-min origin.
+   */
+  fmlNulpuntImageCm?: { x: number; y: number } | null
+  /**
    * Laatste bevestigde bronscan + schaal van deze verdieping (vóór crop).
    * Gebruikt door «Onderlegger overnemen» als donor; overschrijft bij elke schaal-bevestiging.
    */

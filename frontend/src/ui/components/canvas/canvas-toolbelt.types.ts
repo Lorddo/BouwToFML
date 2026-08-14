@@ -14,6 +14,7 @@ export type ToolbeltIconName =
   | 'delete'
   | 'split'
   | 'ruler'
+  | 'origin'
   | 'fit'
   | 'undo'
   | 'copy'

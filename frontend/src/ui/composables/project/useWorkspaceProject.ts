@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, nextTick, ref, type Ref } from 'vue'
 import type { Floor, FloorPlan } from '@/core/fml/types'
 import type { PreprocessConfig } from '@/platform/image'
 import { clonePlain, type DevWorkspaceSession } from '@/platform/dev-workspace'
@@ -67,6 +67,15 @@ export type WorkspaceProjectDeps = {
   getPreviewPlan: () => FloorPlan | null
   /** Underlay-layout bij huidige preview (origin + px/mm). */
   getPreviewUnderlayLayout: () => PreviewUnderlayLayout | null
+  /** Gebruikers-nulpunt in scant-cm, of null. */
+  getFmlNulpuntImageCm: () => { x: number; y: number } | null
+  /** Zet nulpunt bij floor-hydrate (na restore). */
+  setFmlNulpuntImageCm: (point: { x: number; y: number } | null) => void
+  /**
+   * Wis live FML-preview ná capture, vóór activeFloorId-wissel —
+   * anders remount de canvas met de vorige verdieping als plan.
+   */
+  clearLiveFmlPreview: () => void
   /** Sync FML UI-defaults vanuit effectieve floor defaults. */
   applyFmlDefaultsToUi?: (defaults: ProjectFmlDefaults) => void
   /** Skip IndexedDB-write tijdens running / restoring. */
@@ -82,6 +91,7 @@ function emptyBlob(): FloorWorkspaceBlob {
     generatedFloor: null,
     previewPlan: null,
     previewUnderlayLayout: null,
+    fmlNulpuntImageCm: null,
     sourceUnderlay: null,
     pdfUnderlaySource: null,
   }
@@ -342,11 +352,22 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     }
 
     const livePlan = deps.getPreviewPlan()
-    const previewPlan = livePlan ? clonePlain(livePlan) : (prev.previewPlan ?? null)
+    // Per-floor blob: alleen floors[0] van de live preview (workspace = single-floor).
+    // Voorkomt dat een multi-floor import/plan andere verdiepingen meeschrijft.
+    const previewPlan = livePlan
+      ? clonePlain({
+          ...livePlan,
+          floors: livePlan.floors[0] ? [livePlan.floors[0]] : [],
+        })
+      : (prev.previewPlan ?? null)
     const liveLayout = deps.getPreviewUnderlayLayout()
     const previewUnderlayLayout = liveLayout
       ? clonePlain(liveLayout)
       : (prev.previewUnderlayLayout ?? null)
+    // Live nulpunt is source of truth voor déze floor (ook null) — geen prev lekken
+    // naar een andere verdieping bij switch.
+    const liveNulpunt = deps.getFmlNulpuntImageCm()
+    const fmlNulpuntImageCm = liveNulpunt ? clonePlain(liveNulpunt) : null
     const generatedFloor = previewPlan?.floors[0] ?? prev.generatedFloor
     const status = floorStatusFromFlowStep(deps.flowStep.value)
     const floorStatus = session ? (status === 'empty' ? 'input' : status) : 'empty'
@@ -361,6 +382,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           generatedFloor,
           previewPlan,
           previewUnderlayLayout,
+          fmlNulpuntImageCm,
           // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
           sourceUnderlay: prev.sourceUnderlay ?? null,
           // Memory-only; not persisted to IndexedDB.
@@ -391,7 +413,11 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       applyPreviewUnderlayLayout: isResult
         ? (blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale))
         : null,
+      applyFmlNulpuntImageCm: isResult ? (blob.fmlNulpuntImageCm ?? null) : null,
     })
+    if (!isResult) {
+      deps.setFmlNulpuntImageCm(null)
+    }
     deps.setPdfUnderlaySource?.(blob.pdfUnderlaySource ?? null)
   }
 
@@ -407,6 +433,10 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     try {
       if (deps.flowStep.value !== 'project') {
         captureActiveFloorIntoBlob()
+        // Ná capture: live preview wissen vóór activeFloorId-wissel. Remount (key=floorId)
+        // zou anders nog de vorige previewPlan als props krijgen — nulpunt-apply bakte
+        // die stale geometrie daarna in de nieuwe floor.
+        deps.clearLiveFmlPreview()
       }
       state.value = { ...state.value, activeFloorId: floorId }
       if (deps.flowStep.value === 'project') {
@@ -415,6 +445,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         return
       }
       await hydrateFloor(floorId)
+      // Laat Vue prop-updates (plan/nulpunt/underlay) flushen vóór watches weer mogen
+      // schrijven naar de actieve blob — voorkomt vorige-floor lek in previewPlan.
+      await nextTick()
       shouldPersist = true
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
@@ -636,15 +669,23 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const prev = state.value.blobs[id] ?? emptyBlob()
     const livePlan = deps.getPreviewPlan()
     const liveLayout = deps.getPreviewUnderlayLayout()
+    const liveNulpunt = deps.getFmlNulpuntImageCm()
+    const previewPlan = livePlan
+      ? clonePlain({
+          ...livePlan,
+          floors: livePlan.floors[0] ? [livePlan.floors[0]] : [],
+        })
+      : prev.previewPlan
     state.value = {
       ...state.value,
       blobs: {
         ...state.value.blobs,
         [id]: {
           ...prev,
-          generatedFloor: floor,
-          previewPlan: livePlan ? clonePlain(livePlan) : prev.previewPlan,
+          generatedFloor: floor ? clonePlain(floor) : null,
+          previewPlan,
           previewUnderlayLayout: liveLayout ? clonePlain(liveLayout) : prev.previewUnderlayLayout,
+          fmlNulpuntImageCm: liveNulpunt ? clonePlain(liveNulpunt) : null,
         },
       },
       floors: state.value.floors.map((f) =>

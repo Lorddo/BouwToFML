@@ -214,7 +214,7 @@
   },
   "preprocess": {
     "bwThreshold": "B/W threshold",
-    "bwHint": "Fixed B/W (default 150), then automatic adaptive. No grayscale to detection.",
+    "bwHint": "Fixed B/W (default 150). Adaptive is on by default (Advanced). No grayscale to detection.",
     "advancedShow": "Advanced…",
     "advancedHide": "Hide advanced",
     "groups": {
@@ -228,7 +228,10 @@
       "erodeLines": "Erode lines",
       "negative": "Invert"
     },
-    "preBinarizeCheck": "Pre-binarize to B/W (no gray → always adaptive after)",
+    "preBinarizeCheck": "Pre-binarize to B/W (do not keep gray)",
+    "adaptiveCheck": "Adaptive B/W",
+    "adaptiveKernel": "Kernel (neighbourhood)",
+    "adaptiveHint": "Adaptive uses local contrast. For heavy hatching: turn off or raise the kernel (21–31).",
     "brightness": "Brightness",
     "contrast": "Contrast",
     "invertBeforeThreshold": "Invert (before threshold)",
@@ -507,6 +510,9 @@
     "toolbar": {
       "hintDefault": "Choose selection tool · space + drag = pan · double-click + drag = slide (perpendicular to wall) · Ctrl+click = (de)select · Esc = deselect · corner = drag (snaps to other ends) · Ctrl+drag = without snap",
       "hintMeasure": "Drag between 2 points for a dimension · Shift = horizontal/vertical · snaps to corners · Esc = cancel/clear dimensions · space + drag = pan",
+      "hintNulpunt": "Drag the cross to the alignment point · ✓ bake as FML (0,0) · ✕ / Esc cancel · space + drag = pan",
+      "nulpuntConfirm": "Bake origin",
+      "nulpuntCancel": "Cancel placement",
       "hintDrawWall": "Drag wall line · soft-snap to corners · Shift = horizontal/vertical · space + drag = pan · Esc = cancel",
       "hintDrawRoom": "Drag rectangular room · soft-snap to corners · start on existing endpoint to link · corner on existing wall splits that wall · Shift = square · Esc = cancel",
       "hintAddDoor": "Click a wall to place a door · choose type and size · space + drag = pan",
@@ -675,6 +681,7 @@
     "fml": {
       "boxSelect": "Select walls (box)",
       "measure": "Place dimension",
+      "nulpunt": "Origin (0,0)",
       "drawWall": "Single wall (2 endpoints)",
       "drawRoom": "Room tool (4 connected endpoints)",
       "addDoor": "Add door",

@@ -23,6 +23,10 @@ import {
   UI_BRIGHTNESS_MAX,
   UI_BRIGHTNESS_MIN,
   DEFAULT_PRE_BINARIZE_THRESHOLD,
+  DEFAULT_ADAPTIVE_BLOCK_SIZE,
+  MIN_ADAPTIVE_BLOCK_SIZE,
+  MAX_ADAPTIVE_BLOCK_SIZE,
+  clampAdaptiveBlockSize,
 } from '@/cv/port/preprocess'
 import PreprocessActionGroup from '@/ui/components/PreprocessActionGroup.vue'
 
@@ -96,18 +100,29 @@ function readColorThresholdEnabled(): boolean {
   return isColorThresholdEnabled(readActiveTune())
 }
 function writeColorThresholdEnabled(next: boolean): void {
+  // Adaptive-voorkeur blijft staan — alleen de kleur-groep zelf.
   patchActiveTune({
     colorThresholdEnabled: next,
     thresholdEnabled: next,
-    useAdaptive: next,
-    thresholdMode: 'adaptive',
   })
+}
+function writeUseAdaptive(next: boolean): void {
+  patchActiveTune({
+    useAdaptive: next,
+    thresholdMode: next ? 'adaptive' : 'fixed',
+  })
+}
+function writeAdaptiveBlockSize(raw: number): void {
+  writeField('adaptiveBlockSize', clampAdaptiveBlockSize(raw))
 }
 function setChecked(field: TuneField, event: Event): void {
   writeField(field, (event.target as HTMLInputElement).checked)
 }
 function setNumber(field: TuneField, event: Event): void {
   writeField(field, Number((event.target as HTMLInputElement).value))
+}
+function setAdaptiveBlockSize(event: Event): void {
+  writeAdaptiveBlockSize(Number((event.target as HTMLInputElement).value))
 }
 
 /** Stap 2 toont ook `inkWall`, dat geen eigen B/W-tune heeft en dus niet kopieerbaar is. */
@@ -143,18 +158,6 @@ function ensureLayerRecords(): void {
   }
   if (!next.gapsLayer) {
     next.gapsLayer = createDefaultGapsLayerTune()
-    changed = true
-  }
-  // Muur-tab: 2e pass altijd adaptive (modus-UI is weg).
-  if (
-    next.wallLayer &&
-    (next.wallLayer.thresholdMode !== 'adaptive' || next.wallLayer.useAdaptive !== true)
-  ) {
-    next.wallLayer = {
-      ...next.wallLayer,
-      thresholdMode: 'adaptive',
-      useAdaptive: true,
-    }
     changed = true
   }
   if (changed) {
@@ -213,6 +216,37 @@ const { t } = useI18n()
           />
           {{ t('preprocess.preBinarizeCheck') }}
         </label>
+        <label class="check-row">
+          <input
+            :checked="readField('useAdaptive', true)"
+            type="checkbox"
+            @change="writeUseAdaptive(($event.target as HTMLInputElement).checked)"
+          />
+          {{ t('preprocess.adaptiveCheck') }}
+        </label>
+        <div v-if="readField('useAdaptive', true)" class="setting-row">
+          <span class="setting-label">{{ t('preprocess.adaptiveKernel') }}</span>
+          <div class="field-row">
+            <input
+              :value="readField('adaptiveBlockSize', DEFAULT_ADAPTIVE_BLOCK_SIZE)"
+              type="range"
+              :min="MIN_ADAPTIVE_BLOCK_SIZE"
+              :max="MAX_ADAPTIVE_BLOCK_SIZE"
+              step="2"
+              @input="setAdaptiveBlockSize($event)"
+            />
+            <input
+              :value="readField('adaptiveBlockSize', DEFAULT_ADAPTIVE_BLOCK_SIZE)"
+              type="number"
+              :min="MIN_ADAPTIVE_BLOCK_SIZE"
+              :max="MAX_ADAPTIVE_BLOCK_SIZE"
+              step="2"
+              class="num-input"
+              @input="setAdaptiveBlockSize($event)"
+            />
+          </div>
+        </div>
+        <p class="hint">{{ t('preprocess.adaptiveHint') }}</p>
       </PreprocessActionGroup>
 
       <PreprocessActionGroup

@@ -17,6 +17,8 @@ export type RestoreSessionOptions = {
   applyPreviewPlan?: FloorPlan | null
   /** Underlay origin+px/mm bij applyPreviewPlan. */
   applyPreviewUnderlayLayout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null
+  /** Gebruikers-nulpunt in scant-cm bij floor-restore. */
+  applyFmlNulpuntImageCm?: { x: number; y: number } | null
 }
 
 export type WorkspaceDevSessionRestoreFlowDeps = {
@@ -29,6 +31,7 @@ export type WorkspaceDevSessionRestoreFlowDeps = {
     plan: FloorPlan,
     layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
   ) => void
+  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
 }
 
 export function createWorkspaceDevSessionRestoreFlow(
@@ -100,8 +103,13 @@ export function createWorkspaceDevSessionRestoreFlow(
       void deps.snapResolvedDoorsToWalls()
     }
     await deps.onEnterResultStep()
+    // Plan+layout van déze floor eerst; nulpunt-ref daarna (hoort bij blob, niet herberekenen).
+    // Volgorde voorkomt dat een stale nulpunt van de vorige verdieping op raw generate landt.
     if (options?.applyPreviewPlan && deps.updatePreviewPlan) {
       deps.updatePreviewPlan(options.applyPreviewPlan, options.applyPreviewUnderlayLayout ?? null)
+    }
+    if (options?.applyFmlNulpuntImageCm !== undefined) {
+      deps.setFmlNulpuntImageCm?.(options.applyFmlNulpuntImageCm)
     }
   }
 

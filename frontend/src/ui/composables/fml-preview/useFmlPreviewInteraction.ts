@@ -5,8 +5,10 @@ import type { FloorPlan, Point2D } from '@/core/fml/types'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import {
   JUNCTION_POINT_SNAP_CM,
+  ROOM_DRAW_SNAP_CM,
   snapDrawWallEndpoint,
   snapPointToJunctions,
+  snapPointToWallCenters,
   snapToNearbyEndpointAxes,
 } from '@/ui/components/fml-preview-junctions'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
@@ -15,6 +17,7 @@ import { useFmlPreviewAddOpening } from './useFmlPreviewAddOpening'
 import { useFmlPreviewDrawWall } from './useFmlPreviewDrawWall'
 import { useFmlPreviewDrawRoom } from './useFmlPreviewDrawRoom'
 import { useFmlPreviewMeasure } from './useFmlPreviewMeasure'
+import { useFmlPreviewNulpunt } from './useFmlPreviewNulpunt'
 import { useFmlPreviewOpeningDrag } from './useFmlPreviewOpeningDrag'
 import { useFmlPreviewOpeningSelection } from './useFmlPreviewOpeningSelection'
 import { useFmlPreviewPanZoom } from './useFmlPreviewPanZoom'
@@ -27,6 +30,7 @@ export { createFmlPreviewSelection } from './fml-preview-selection'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 import type { ContentLayout } from './useFmlPreviewViewport'
+import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
@@ -36,6 +40,7 @@ interface ViewportApi {
   contentLayout: Ref<ContentLayout | null>
   resetView: () => void
   refitContentLayout: () => void
+  nudgeContentLayout: (dxCm: number, dyCm: number) => void
 }
 
 interface HitTestApi {
@@ -60,6 +65,7 @@ export function useFmlPreviewInteraction(options: {
   emit: (
     event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick',
     payload?: FloorPlan | string,
+    layout?: PreviewUnderlayLayout | null,
   ) => void
   containerRef: Ref<HTMLDivElement | null>
   contentGroupRef: Ref<{ getNode: () => Konva.Group } | null>
@@ -68,6 +74,9 @@ export function useFmlPreviewInteraction(options: {
   thicknessPickTier: Ref<FmlThicknessBand | null>
   bovenlichtDefault?: Ref<boolean>
   windowBovenlichtDefault?: Ref<boolean>
+  /** Huidige underlay-layout (voor nulpunt + undo). */
+  getUnderlayLayout?: () => PreviewUnderlayLayout | null
+  setFmlNulpuntImageCm?: (point: Point2D | null) => void
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
 }) {
@@ -83,6 +92,8 @@ export function useFmlPreviewInteraction(options: {
     thicknessPickTier,
     bovenlichtDefault,
     windowBovenlichtDefault,
+    getUnderlayLayout,
+    setFmlNulpuntImageCm,
     onKeyDown,
     onKeyUp,
   } = options
@@ -109,6 +120,7 @@ export function useFmlPreviewInteraction(options: {
   const addDoorMode = computed(() => activeFmlTool.value === 'add_door')
   const addWindowMode = computed(() => activeFmlTool.value === 'add_window')
   const measureMode = computed(() => activeFmlTool.value === 'measure')
+  const nulpuntMode = computed(() => activeFmlTool.value === 'nulpunt')
   const isPanDragging = ref(false)
 
   watch(addDoorSubtype, (subtype) => {
@@ -127,15 +139,38 @@ export function useFmlPreviewInteraction(options: {
     cancelDrawWallDrag: () => {},
     cancelDrawRoomDrag: () => {},
     cancelMeasureDrag: () => {},
+    cancelNulpuntDrag: () => {},
   }
 
-  function syncPlanToParent(): void {
+  function syncPlanToParent(layout?: PreviewUnderlayLayout | null): void {
     if (!editor.localPlan.value) return
     // +2: parent kan edited + imported in één tick zetten; extra marge tegen dubbele watch.
     ignoreNextPlanWatch.value = true
     pendingPlanSyncSkips.value = Math.max(pendingPlanSyncSkips.value, 2)
     editor.prepareParentSync()
-    emit('planUpdate', JSON.parse(JSON.stringify(editor.localPlan.value)) as FloorPlan)
+    emit('planUpdate', JSON.parse(JSON.stringify(editor.localPlan.value)) as FloorPlan, layout)
+  }
+
+  function syncPlanToParentAfterUndo(): void {
+    const layoutOrigin = editor.consumePendingUndoLayoutOrigin()
+    if (layoutOrigin === undefined) {
+      syncPlanToParent()
+      return
+    }
+    const current = getUnderlayLayout?.() ?? null
+    if (!current) {
+      syncPlanToParent()
+      return
+    }
+    const nextLayout: PreviewUnderlayLayout = {
+      ...current,
+      origin: layoutOrigin ? { ...layoutOrigin } : current.origin,
+    }
+    // FML (0,0) ↔ imageCm = layout.origin
+    setFmlNulpuntImageCm?.(nextLayout.origin)
+    // Zelfde contentLayout-refit als bij nulpunt-apply.
+    viewport.refitContentLayout()
+    syncPlanToParent(nextLayout)
   }
 
   const wallDrag = useFmlPreviewWallDrag({
@@ -256,6 +291,29 @@ export function useFmlPreviewInteraction(options: {
     return point
   }
 
+  /** Maatlijn: exact het klikpunt. Alleen Shift lockt H/V t.o.v. het startpunt. */
+  function resolveMeasurePoint(cm: Point2D, axisAnchor?: Point2D): Point2D {
+    if (axisAnchor) {
+      return snapDrawWallEndpoint(axisAnchor, cm, shiftPressed.value)
+    }
+    return cm
+  }
+
+  /**
+   * Kamer-start: junction-hit zodat je makkelijk op een knoop bindt.
+   * Daarna krappe hartlijn — de 15 cm as-magnet trekt kleine schachten dicht.
+   */
+  function resolveRoomStartPoint(cm: Point2D): Point2D {
+    const junction = hitTest.hitTestJunctionAtCm(cm)
+    if (junction) return { x: junction.cmX, y: junction.cmY }
+    return snapPointToJunctions(editor.junctions.value, cm, ROOM_DRAW_SNAP_CM)
+  }
+
+  function resolveRoomEndPoint(cm: Point2D): Point2D {
+    const junctionSnap = snapPointToJunctions(editor.junctions.value, cm, ROOM_DRAW_SNAP_CM)
+    return snapPointToWallCenters(editor.walls.value, junctionSnap, ROOM_DRAW_SNAP_CM)
+  }
+
   const drawWall = useFmlPreviewDrawWall({
     hitTest,
     editor,
@@ -276,7 +334,8 @@ export function useFmlPreviewInteraction(options: {
     hoveredJunctionId,
     wallThicknessDraft,
     shiftPressed,
-    resolvePoint: (cm) => resolveDrawPoint(cm),
+    resolveStartPoint: resolveRoomStartPoint,
+    resolveEndPoint: resolveRoomEndPoint,
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
@@ -289,7 +348,7 @@ export function useFmlPreviewInteraction(options: {
   const measure = useFmlPreviewMeasure({
     hitTest,
     hoveredJunctionId,
-    resolvePoint: resolveDrawPoint,
+    resolvePoint: resolveMeasurePoint,
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
@@ -318,9 +377,37 @@ export function useFmlPreviewInteraction(options: {
   drawMeasureCancels.cancelDrawRoomDrag = drawRoom.cancelDrawRoomDrag
   drawMeasureCancels.cancelMeasureDrag = measure.cancelMeasureDrag
 
+  const nulpunt = useFmlPreviewNulpunt({
+    hitTest,
+    editor,
+    nulpuntMode,
+    getUnderlayLayout: () => getUnderlayLayout?.() ?? null,
+    getFloorIndex: () => editor.floorIndex.value,
+    setFmlNulpuntImageCm: (point) => setFmlNulpuntImageCm?.(point),
+    markParentPlanSync: () => {
+      ignoreNextPlanWatch.value = true
+      pendingPlanSyncSkips.value = Math.max(pendingPlanSyncSkips.value, 2)
+    },
+    nudgeContentLayout: (dx, dy) => viewport.nudgeContentLayout(dx, dy),
+    beforeBegin: () => {
+      cancelSelectionBoxDrag()
+      wallDrag.cancelMoveDragPending()
+      clearSelection()
+    },
+  })
+  drawMeasureCancels.cancelNulpuntDrag = nulpunt.cancelNulpuntPending
+
+  function confirmNulpuntBake(): boolean {
+    const applied = nulpunt.confirmNulpuntBake()
+    if (!applied) return false
+    // Alleen actieve preview → parent; andere project-floors zitten in eigen blobs.
+    syncPlanToParent(applied.layout)
+    return true
+  }
+
   function undoEdit(): void {
     if (editor.undo()) {
-      syncPlanToParent()
+      syncPlanToParentAfterUndo()
       syncWallThicknessDraftFromSelection()
     }
   }
@@ -341,6 +428,7 @@ export function useFmlPreviewInteraction(options: {
       addDoorMode,
       addWindowMode,
       measureMode,
+      nulpuntMode,
       selectionBoxMode,
     },
     drag: {
@@ -350,6 +438,7 @@ export function useFmlPreviewInteraction(options: {
       isDrawWallDragging: () => drawWall.isDragging(),
       isDrawRoomDragging: () => drawRoom.isDragging(),
       isMeasureDragging: () => measure.isDragging(),
+      isNulpuntDragging: () => nulpunt.isDragging(),
       isPanDragging,
     },
     actions: {
@@ -357,6 +446,7 @@ export function useFmlPreviewInteraction(options: {
       beginDrawWall: drawWall.beginDrawWall,
       beginMeasure: measure.beginMeasure,
       beginDrawRoom: drawRoom.beginDrawRoom,
+      beginNulpuntDrag: nulpunt.beginNulpuntDrag,
       placeDoor: addOpening.placeDoor,
       placeWindow: addOpening.placeWindow,
       startJunctionDrag: wallDrag.startJunctionDrag,
@@ -413,8 +503,20 @@ export function useFmlPreviewInteraction(options: {
         measure.cancelMeasureDrag()
         return
       }
+      if (nulpunt.isDragging()) {
+        nulpunt.cancelNulpuntPending()
+        return
+      }
+      if (nulpunt.nulpuntHasPending.value) {
+        nulpunt.cancelNulpuntPending()
+        return
+      }
       if (measureMode.value && measure.measureLines.value.length > 0) {
         measure.clearMeasureLines()
+        return
+      }
+      if (nulpuntMode.value) {
+        activeFmlTool.value = null
         return
       }
       clearSelection()
@@ -424,7 +526,7 @@ export function useFmlPreviewInteraction(options: {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
       event.preventDefault()
       if (editor.undo()) {
-        syncPlanToParent()
+        syncPlanToParentAfterUndo()
       }
     }
   }
@@ -467,6 +569,7 @@ export function useFmlPreviewInteraction(options: {
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
     measure.cancelMeasureDrag()
+    nulpunt.cancelNulpuntPending()
     panZoom.endPanDrag()
     window.removeEventListener('keydown', onEditorKeyDown)
     window.removeEventListener('keyup', onEditorKeyUp)
@@ -480,12 +583,18 @@ export function useFmlPreviewInteraction(options: {
     addDoorMode,
     addWindowMode,
     measureMode,
+    nulpuntMode,
     selectionBoxPreview,
     drawWallPreview: drawWall.drawWallPreview,
     drawRoomPreview: drawRoom.drawRoomPreview,
     measurePreview: measure.measurePreview,
     measureLines: measure.measureLines,
     clearMeasureLines: measure.clearMeasureLines,
+    nulpuntDisplayCm: nulpunt.nulpuntDisplayCm,
+    nulpuntHasPending: nulpunt.nulpuntHasPending,
+    nulpuntShowBakeActions: nulpunt.nulpuntShowBakeActions,
+    confirmNulpuntBake,
+    cancelNulpuntPending: nulpunt.cancelNulpuntPending,
     toggleSelectionBoxMode,
     canUndoEdit: editor.canUndoEdit,
     undoEdit,

@@ -56,6 +56,7 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
 | `balance` | Default 0.5 (X-01); collineaire diktewissel: **langste dikteband** blijft B=0.5; overige flushen tegen **één wereld-face** (a→b-onafhankelijk; default faceLo); jog-stubs &lt;25 cm (kortere keten → langere hartlijn); stub-dikte=max(armen) ook als stub blijft; collinear stubs &lt;15 cm |
+| Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning |
 | L9 stub | Bewaart cross-band + parallel CL-offset (thickness-gate + `orthoStubTierMaxPx` mid-capped) |
 | L10 straighten | Geen axis-union over dikteband-wissel (thickness-gate op direct + bridge); FML balance blijft post-L10 consument |
 | Legacy min/max clamp | Vervangen door tier-model |
@@ -273,6 +274,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (adaptive `stampBw` in wall-B/W + pure zwarte OR in Otsu); geen openings |
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
+| Stap 4 nulpunt | Tool «Nulpunt»: sleep kruis → ✓ bakken als FML `(0,0)` (of ✕/Esc annuleren); `fmlNulpuntImageCm` persist (scant-cm); underlay-origin synchroon; per floor eigen anker voor 3D-stack |
 | Floor-switch | Exact restore + opgeslagen `previewPlan` (geen openings-rerun / geen regenerate) |
 | Defaults | Per verdieping (`FloorMeta.defaults`); per component in FML-editor |
 | Persistentie | **Niet** in V1 (IndexedDB later) |
@@ -458,6 +460,21 @@ plus een losse I. De herbouw haalt die weg, dus de T-telling daalde en het I-ein
 (`OBLIQUE_STUB_MAX_PX`) **vóór** de guard zijn `before`-meting doet, alleen binnen het
 schuine blok, dus orthogonale tekeningen blijven onaangeroerd. Resultaat op die tekening:
 gevel = één segment van 1712 px op 12,57°, `facesSkippedObliqueTopology` 1 → 0.
+
+---
+
+## FML near-ortho snap (2026-08-14)
+
+Na `extractionToPlan` (8 px junction-cluster) kunnen “rechte” muren nog 0,3–1° restjitter
+houden; de viewer-union verbergt dat, Floorplanner niet. Fix in cm, ná thickness/balance:
+
+| Beslissing | Detail |
+|------------|--------|
+| Plek | `orthogonalizeNearAxisWalls` eind `harmonizeFmlWallThickness` (viewer = export) |
+| Drempel | Dominant H/V én hoek tot as **&lt; 1,5°** (onder oblique-dodezone 2,5°) |
+| Methode | Knoop-gewijs: H-ketens → gedeelde Y, V-ketens → gedeelde X; L/T = `(Vx, Hy)` |
+| Oblique | Knoop met oblique muur bevroren; H met één bevroren eind → as = bevroren Y |
+| Niet | L4/L10 `hvBandPx` retune; geen her-run op `editedPreviewPlan` / import |
 
 ---
 

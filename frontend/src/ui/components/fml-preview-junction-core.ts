@@ -11,6 +11,11 @@ const JUNCTION_MERGE_CM = 3
 export const ENDPOINT_SNAP_RADIUS_CM = 15
 /** Soft snap naar andere knooppunten bij junction-drag / tekenen (cm). */
 export const JUNCTION_POINT_SNAP_CM = 15
+/**
+ * Kamer-tekenen: krappe snap naar knoop/hartlijn (cm).
+ * Geen 15 cm as-magnet — start zit al op een junction; kleine schachten moeten vrij blijven.
+ */
+export const ROOM_DRAW_SNAP_CM = 4
 
 export const BALANCE_MIN = 0
 export const BALANCE_MAX = 1

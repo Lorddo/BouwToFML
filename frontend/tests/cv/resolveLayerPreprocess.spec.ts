@@ -65,6 +65,7 @@ describe('resolveLayerPreprocess', () => {
     expect(wall.contrast).toBe(1)
     expect(wall.preBinarizeEnabled).toBe(true)
     expect(wall.preBinarizeThreshold).toBe(150)
+    expect(wall.adaptiveBlockSize).toBe(11)
     expect(wall.removeSpecklesEnabled).toBe(false)
     expect(wall.thickenLinesEnabled).toBe(false)
     expect(wall.thickenLinesPx).toBe(1)
@@ -72,6 +73,32 @@ describe('resolveLayerPreprocess', () => {
     expect(DEFAULT_PREPROCESS.removeSpecklesEnabled).toBe(false)
     expect(DEFAULT_PREPROCESS.thickenLinesEnabled).toBe(false)
     expect(DEFAULT_PREPROCESS.preBinarizeEnabled).toBe(true)
+  })
+
+  it('behoudt useAdaptive false via resolve + normalize (geen force-aan)', () => {
+    const base = {
+      ...DEFAULT_PREPROCESS,
+      wallLayer: {
+        ...createDefaultWallLayerTune(),
+        useAdaptive: false,
+        thresholdMode: 'fixed' as const,
+        preBinarizeEnabled: true,
+        adaptiveBlockSize: 21,
+      },
+    }
+    const walls = resolveLayerPreprocess(base, 'walls')
+    expect(walls.useAdaptive).toBe(false)
+    expect(walls.thresholdMode).toBe('fixed')
+    expect(walls.preBinarizeEnabled).toBe(true)
+    expect(walls.adaptiveBlockSize).toBe(21)
+
+    const normalized = normalizeStoredPreprocess(base)
+    expect(normalized.wallLayer?.useAdaptive).toBe(false)
+    expect(normalized.wallLayer?.thresholdMode).toBe('fixed')
+
+    const mirrored = mirrorWallTuneToRoot(base, base.wallLayer)
+    expect(mirrored.useAdaptive).toBe(false)
+    expect(mirrored.thresholdMode).toBe('fixed')
   })
 
   it('ocrEnabled default false in DEFAULT_PREPROCESS en normalize', () => {

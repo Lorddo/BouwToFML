@@ -15,6 +15,7 @@ export {
   ENDPOINT_SNAP_RADIUS_CM,
   findMergeTarget,
   JUNCTION_POINT_SNAP_CM,
+  ROOM_DRAW_SNAP_CM,
   junctionIdsForWall,
   mergeJunctions,
   moveJunction,

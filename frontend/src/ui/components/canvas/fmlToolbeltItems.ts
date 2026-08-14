@@ -2,12 +2,13 @@ import { tGlobal } from '@/ui/i18n'
 import type { ToolbeltItem } from './canvas-toolbelt.types'
 
 export type FmlToolId =
-  'box_select' | 'measure' | 'draw_wall' | 'draw_room' | 'add_door' | 'add_window'
+  'box_select' | 'measure' | 'nulpunt' | 'draw_wall' | 'draw_room' | 'add_door' | 'add_window'
 
 export function getFmlSelectTools(): ToolbeltItem[] {
   return [
     { id: 'box_select', icon: 'rect', label: tGlobal('toolbelt.fml.boxSelect') },
     { id: 'measure', icon: 'ruler', label: tGlobal('toolbelt.fml.measure') },
+    { id: 'nulpunt', icon: 'origin', label: tGlobal('toolbelt.fml.nulpunt') },
   ]
 }
 

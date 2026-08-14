@@ -17,6 +17,7 @@ import {
   junctionIdsForWall,
   mergeJunctions,
   moveJunction,
+  ROOM_DRAW_SNAP_CM,
   setWallThickness,
   setWallsThickness,
   removeWalls,
@@ -502,6 +503,38 @@ describe('setWallThickness', () => {
     const next = setWallThickness(walls, 'w1', 35)
     expect(next[0]?.thickness).toBe(35)
   })
+
+  it('resets balance to 0.5 when thickness changes', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        balance: 0,
+        openings: [],
+      },
+    ]
+    const next = setWallThickness(walls, 'w1', 35)
+    expect(next[0]?.thickness).toBe(35)
+    expect(next[0]?.balance).toBe(0.5)
+  })
+
+  it('resets balance to 0.5 even when thickness is unchanged', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        balance: 0,
+        openings: [],
+      },
+    ]
+    const next = setWallThickness(walls, 'w1', 20)
+    expect(next[0]?.thickness).toBe(20)
+    expect(next[0]?.balance).toBe(0.5)
+  })
 })
 
 describe('setWallsThickness', () => {
@@ -515,6 +548,39 @@ describe('setWallsThickness', () => {
     expect(next[0]?.thickness).toBe(24)
     expect(next[1]?.thickness).toBe(12)
     expect(next[2]?.thickness).toBe(24)
+  })
+
+  it('resets balance on selected walls even if some already have that thickness', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        balance: 0,
+        openings: [],
+      },
+      {
+        id: 'w2',
+        a: { x: 0, y: 100 },
+        b: { x: 100, y: 100 },
+        thickness: 12,
+        balance: 1,
+        openings: [],
+      },
+      {
+        id: 'w3',
+        a: { x: 0, y: 200 },
+        b: { x: 100, y: 200 },
+        thickness: 24,
+        balance: 0.25,
+        openings: [],
+      },
+    ]
+    const next = setWallsThickness(walls, ['w1', 'w2', 'w3'], 24)
+    expect(next[0]?.balance).toBe(0.5)
+    expect(next[1]?.balance).toBe(0.5)
+    expect(next[2]?.balance).toBe(0.5)
   })
 })
 
@@ -1352,6 +1418,35 @@ describe('snapPointToWallCenters', () => {
       },
     ]
     const snapped = snapPointToWallCenters(walls, { x: 50, y: 45 }, 15)
+    expect(snapped.x).toBeCloseTo(50, 4)
+    expect(snapped.y).toBeCloseTo(40, 4)
+  })
+
+  it('kamer-snap: 12 cm naast hartlijn blijft vrij (kleine schacht)', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const snapped = snapPointToWallCenters(walls, { x: 50, y: 52 }, ROOM_DRAW_SNAP_CM)
+    expect(snapped).toEqual({ x: 50, y: 52 })
+  })
+
+  it('kamer-snap: dicht op hartlijn landt op de muur', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const snapped = snapPointToWallCenters(walls, { x: 50, y: 43 }, ROOM_DRAW_SNAP_CM)
     expect(snapped.x).toBeCloseTo(50, 4)
     expect(snapped.y).toBeCloseTo(40, 4)
   })

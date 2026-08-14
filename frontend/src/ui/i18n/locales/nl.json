@@ -214,7 +214,7 @@
   },
   "preprocess": {
     "bwThreshold": "B/W-drempel",
-    "bwHint": "Vaste B/W (default 150), daarna automatisch adaptive. Geen grijswaarden naar detectie.",
+    "bwHint": "Vaste B/W (default 150). Adaptive staat standaard aan (Geavanceerd). Geen grijswaarden naar detectie.",
     "advancedShow": "Geavanceerd…",
     "advancedHide": "Geavanceerd verbergen",
     "groups": {
@@ -228,7 +228,10 @@
       "erodeLines": "Lijnen afschaven",
       "negative": "Negatief"
     },
-    "preBinarizeCheck": "Vooraf vast B/W (geen grijs → daarna altijd adaptive)",
+    "preBinarizeCheck": "Vooraf vast B/W (geen grijs bewaren)",
+    "adaptiveCheck": "Adaptive B/W",
+    "adaptiveKernel": "Kernel (buurt)",
+    "adaptiveHint": "Adaptive kijkt lokaal naar contrast. Bij zware arcering: uitzetten of kernel vergroten (21–31).",
     "brightness": "Helderheid",
     "contrast": "Contrast",
     "invertBeforeThreshold": "Negatief omkeren (vóór drempel)",
@@ -507,6 +510,9 @@
     "toolbar": {
       "hintDefault": "Kies selectietool · spatie + sleep = pan · dubbelklik + sleep = schuiven (loodrecht op muur) · Ctrl+klik = (de)selecteren · Esc = deselecteren · hoek = slepen (snapt naar andere einden) · Ctrl+sleep = zonder snap",
       "hintMeasure": "Sleep tussen 2 punten voor een maatlijn · Shift = horizontaal/verticaal · snapt naar hoeken · Esc = annuleren/wis maatlijnen · spatie + sleep = pan",
+      "hintNulpunt": "Sleep het kruis naar het uitlijnpunt · ✓ bakken als FML (0,0) · ✕ / Esc annuleren · spatie + sleep = pan",
+      "nulpuntConfirm": "Nulpunt bakken",
+      "nulpuntCancel": "Plaatsing annuleren",
       "hintDrawWall": "Sleep muurlijn · soft-snap naar hoeken · Shift = horizontaal/verticaal · spatie + sleep = pan · Esc = annuleren",
       "hintDrawRoom": "Sleep rechthoekige kamer · soft-snap naar hoeken · start op bestaand eindpunt om te koppelen · hoek op bestaande muur splitst die muur · Shift = vierkant · Esc = annuleren",
       "hintAddDoor": "Klik een muur om een deur te plaatsen · kies type en maat · spatie + sleep = pan",
@@ -675,6 +681,7 @@
     "fml": {
       "boxSelect": "Muren selecteren (box)",
       "measure": "Maatlijn plaatsen",
+      "nulpunt": "Nulpunt (0,0)",
       "drawWall": "Losse muur (2 eindpunten)",
       "drawRoom": "Kamer tool (4 verbonden eindpunten)",
       "addDoor": "Deur toevoegen",
