@@ -105,6 +105,17 @@ describe('buildFmlThicknessChains', () => {
     const chains = buildFmlThicknessChains(walls)
     expect(chains).toHaveLength(2)
   })
+
+  it('houdt keten heel bij meetruis rond bandgrens (hysterese)', () => {
+    // midBoundary=23 → 22=mid, 24=max; relatief Δ≈8% ≤ 15% → één keten.
+    const walls = [
+      wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 22),
+      wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 24),
+    ]
+    const chains = buildFmlThicknessChains(walls)
+    expect(chains).toHaveLength(1)
+    expect(chains[0]?.sort()).toEqual([0, 1])
+  })
 })
 
 describe('harmonizeFmlWallThickness', () => {
@@ -121,7 +132,25 @@ describe('harmonizeFmlWallThickness', () => {
     expect(harmonized.floors[0]?.walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('aligns flush balance on collinear diktewissel na tier-map', () => {
+  it('aligns flush balance on collinear diktewissel only with face evidence', () => {
+    const plan = planWithWalls([
+      wall('thick', { x: 0, y: 0 }, { x: 100, y: 0 }, 26, 0.5),
+      wall('thin', { x: 100, y: 0 }, { x: 200, y: 0 }, 10, 0.5),
+    ])
+    // After tiers: 30 and 10. Shared CL: thick 15/15, thin flush_minus 0/10.
+    const evidence = new Map([
+      ['thick', { plusCm: 15, minusCm: 15 }],
+      ['thin', { plusCm: 0, minusCm: 10 }],
+    ])
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits, undefined, evidence)
+    const walls = harmonized.floors[0]?.walls ?? []
+    expect(walls[0]?.thickness).toBe(30)
+    expect(walls[1]?.thickness).toBe(10)
+    expect(walls[0]?.balance).toBe(0.5)
+    expect(walls[1]?.balance).not.toBe(0.5)
+  })
+
+  it('keeps balance 0.5 on diktewissel without face evidence', () => {
     const plan = planWithWalls([
       wall('thick', { x: 0, y: 0 }, { x: 100, y: 0 }, 26, 0.5),
       wall('thin', { x: 100, y: 0 }, { x: 200, y: 0 }, 10, 0.5),
@@ -130,24 +159,25 @@ describe('harmonizeFmlWallThickness', () => {
     const walls = harmonized.floors[0]?.walls ?? []
     expect(walls[0]?.thickness).toBe(30)
     expect(walls[1]?.thickness).toBe(10)
-    // Equal length → upper-median thickness band (30) anchors at 0.5;
-    // thin flushes to shared world face (default faceLo → B=0).
     expect(walls[0]?.balance).toBe(0.5)
-    expect(walls[1]?.balance).toBe(0)
+    expect(walls[1]?.balance).toBe(0.5)
   })
 
-  it('chain-flushes with longest band at 0.5 after tiers (not thick-hint anchor)', () => {
+  it('chain-flushes with longest band at 0.5 after tiers when evidence confirms', () => {
     const plan = planWithWalls([
       wall('thick', { x: 0, y: 0 }, { x: 120, y: 0 }, 47, 0.34),
       wall('thin', { x: 120, y: 0 }, { x: 220, y: 0 }, 11, 0.41),
     ])
-    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
+    const evidence = new Map([
+      ['thick', { plusCm: 15, minusCm: 15 }],
+      ['thin', { plusCm: 0, minusCm: 10 }],
+    ])
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits, undefined, evidence)
     const walls = harmonized.floors[0]?.walls ?? []
     expect(walls[0]?.thickness).toBe(30)
     expect(walls[1]?.thickness).toBe(10)
-    // 47→30 is longer band → B=0.5; thin flushes to half of 30 (hint 0.41 → minus → 0)
     expect(walls[0]?.balance).toBe(0.5)
-    expect(walls[1]?.balance).toBe(0)
+    expect(walls[1]?.balance).not.toBe(0.5)
   })
 
   it('splitst 10–12 en 20 op verschillende banden en mapt naar min/mid', () => {

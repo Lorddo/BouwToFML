@@ -5,7 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-14 (FML dikte → balance 0.5)
+Laatste update: 2026-08-14 (FML dikte typical + balance-bewijs)
+
+## FML dikte typical + balance-bewijs (2026-08-14)
+
+Valse balances kwamen uit `thicknessPxMax` (knoop/schuine-hoek blobs). Fix in 2 batches:
+1. `thicknessPxTypical` = mediaan; kern-sample korte stubs; marge × ref; keten-hysterese 15%; jog-stub bump alleen bij gemeten nabijheid.
+2. Face-evidence (`facePlusPx`/`faceMinusPx`) → flush alleen bij bewezen trap; geen faceLo-gok; `quantizeBalance` + shift ≤ Δt/2.
+
+E2E: 21 snapshots ververst (dikteband-herschikking; geen xy-geometry in `bg`). `schuine-gevel-bg` meer muren in min-band (mediaan vs max) — gevel-hoek-poort blijft groen.
 
 ## Schuine gevels: lezen op L3, herbouwen op L10 (2026-08-13)
 
@@ -250,6 +258,8 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 **Volgorde:** ~~git init → build groen → CI-poort~~ · ~~lint/format-poort~~ (klaar) → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
 
 ## Huidige focus
+
+**FML dikte typical + balance-bewijs (2026-08-14).** Mediaan-dikte voor export; flush alleen bij face-evidence. E2E snapshots ververst.
 
 **FML editor dikte → balance (2026-08-14).** Handmatige muurdikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5.
 

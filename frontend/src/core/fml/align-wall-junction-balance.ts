@@ -2,11 +2,11 @@
  * Late FML junction-balance pass (na dikte-tiers).
  *
  * X-01: default balance = 0.5 (geen raw balancePx-ruis in export).
- * Collineaire diktewissel-ketens: dikteband met de meeste hartlijnlengte blijft B=0.5;
- * overige banden flushen tegen één gedeelde WERELD-face (niet directed plus/minus —
- * voorkomt top/onder spiegelen bij omgekeerde a→b).
+ * Collineaire diktewissel-ketens: alleen flushen bij aantoonbare gezichtstrap
+ * (face-evidence); zonder bewijs blijft alles 0.5 — geen faceLo-gok.
  * Mini-stubs: collinear same-T, of ortho jog (kortere keten → langere hartlijn;
- * stub-dikte = max van de armen). Geen merge van lange collineaire muren.
+ * stub-dikte = max van de armen alleen bij gemeten nabijheid). Geen merge van
+ * lange collineaire muren.
  */
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import {
@@ -17,6 +17,11 @@ import {
 } from './extraction-to-plan-geom'
 import { wallLengthCm } from './fml-wall-geom'
 import type { Opening, Wall } from './types'
+import {
+  resolveChainFaceStepVerdict,
+  type FaceStepVerdict,
+  type WallFaceExtentsCm,
+} from './wall-face-step-evidence'
 
 const ENDPOINT_KEY_DECIMALS = 4
 const COLLINEAR_EPS_DEG = 12
@@ -25,6 +30,11 @@ const THICKNESS_EPS_CM = 0.05
 export const JUNCTION_BALANCE_STUB_MAX_CM = 15
 /** Ortho jog-stubs bij diktewissel (offset tussen parallelle CLs) mogen iets langer. */
 export const JUNCTION_BALANCE_JOG_STUB_MAX_CM = 25
+/**
+ * Relatieve hysterese: jog-stub mag alleen bumpen naar max-arm als de eigen
+ * meting al dichtbij is (geen topologische dikte-uitvinding).
+ */
+const JOG_STUB_BUMP_HYSTERESIS_RATIO = 0.15
 const BALANCE_QUANTIZE_STEPS = [0, 0.25, 0.5, 0.75, 1] as const
 
 function endpointKey(point: Point2D): string {
@@ -377,7 +387,9 @@ function tryAbsorbThicknessChangeJogStub(
 
 /**
  * Remaining ortho jog connectors inherit max thickness of the parallel arms
- * they bridge (even when too long to absorb).
+ * they bridge (even when too long to absorb) — but only when the stub's own
+ * measurement is already compatible (same band / hysteresis). Do not invent
+ * thickness from topology alone.
  */
 function bumpRemainingJogStubThickness(walls: Wall[]): void {
   const wallsAtPoint = buildEndpointIndex(walls)
@@ -404,6 +416,15 @@ function bumpRemainingJogStubThickness(walls: Wall[]): void {
       }
     }
     if (!matched || !(maxArmT > stub.thickness + THICKNESS_EPS_CM)) continue
+    // Measured stub must already be near maxArm (relative hysteresis) — no topology override.
+    const larger = Math.max(stub.thickness, maxArmT)
+    if (
+      larger > 0 &&
+      Math.abs(stub.thickness - maxArmT) / larger > JOG_STUB_BUMP_HYSTERESIS_RATIO
+    ) {
+      tally('X-01', 'jog_stub_bump_rejected')
+      continue
+    }
     stub.thickness = maxArmT
     tally('X-01', 'jog_stub_thickness_bumped')
   }
@@ -459,15 +480,6 @@ function groupHasThicknessChange(indices: number[], walls: Wall[]): boolean {
   return indices.some((index) => thicknessesDiffer(walls[index]?.thickness ?? 0, first))
 }
 
-function hintForWall(
-  wall: Wall,
-  hintById: Map<string, number>,
-  fallback = FML_WALL_BALANCE_FALLBACK,
-): number {
-  if (wall.id && hintById.has(wall.id)) return hintById.get(wall.id) ?? fallback
-  return fallback
-}
-
 /** Thickness band with the most hartlijn length in the group (ties → upper-median thickness). */
 function pickAnchorThicknessCm(indices: number[], walls: Wall[]): number {
   const lengthByThickness = new Map<number, number>()
@@ -517,8 +529,9 @@ function faceCrossCoord(wall: Wall, side: FlushSide, balance = wall.balance): nu
 /**
  * Balance so a wall face lands on a shared world cross-coordinate.
  * Encodes a→b direction: same world face can be B≈0.32 or B≈0.68.
+ * Clamped so the CL shift never exceeds half the real Δt (vs anchor).
  */
-function balanceForWorldFlushFace(wall: Wall, flushCross: number): number {
+function balanceForWorldFlushFace(wall: Wall, flushCross: number, maxShiftCm: number): number {
   const cl = axisValueOfWall(wall)
   const vertical = wallIsVertical(wall)
   const c = crossAxisComponent(leftNormal(wallDirectionUnit(wall)), vertical)
@@ -530,69 +543,94 @@ function balanceForWorldFlushFace(wall: Wall, flushCross: number): number {
   const fromMinus = clampBalance(1 + delta / (c * thickness))
   const errPlus = Math.abs(faceCrossCoord(wall, 'plus', fromPlus) - flushCross)
   const errMinus = Math.abs(faceCrossCoord(wall, 'minus', fromMinus) - flushCross)
-  const next = errPlus <= errMinus ? fromPlus : fromMinus
-  return Math.round(next * 100) / 100
+  let next = errPlus <= errMinus ? fromPlus : fromMinus
+
+  // Clamp shift from 0.5 to at most maxShiftCm / thickness.
+  if (maxShiftCm > 0 && thickness > 0) {
+    const maxDeltaB = Math.min(0.5, maxShiftCm / thickness)
+    next = Math.min(0.5 + maxDeltaB, Math.max(0.5 - maxDeltaB, next))
+  }
+  return quantizeBalance(next)
 }
 
 /**
- * Pick one world-space flush face for the whole chain (not directed plus/minus).
- * Votes from measured hints: which world face carries more thickness.
+ * Pick world-space flush face from verdict (not directed plus/minus guess).
+ * flush_plus → anchor plus face; flush_minus → anchor minus face.
  */
-function pickWorldFlushCross(
+function pickWorldFlushCrossFromVerdict(
   indices: number[],
   walls: Wall[],
-  hintById: Map<string, number>,
   anchorT: number,
   targetCm: number,
-): number {
+  verdict: FaceStepVerdict,
+): number | null {
+  if (verdict !== 'flush_plus' && verdict !== 'flush_minus') return null
   const anchorIndex =
     indices.find((index) => !thicknessesDiffer(walls[index]?.thickness ?? 0, anchorT)) ?? indices[0]
   const cl = axisValueOfWall(walls[anchorIndex])
   const faceLo = cl - targetCm
   const faceHi = cl + targetCm
-
-  let loVotes = 0
-  let hiVotes = 0
-  for (const index of indices) {
-    const wall = walls[index]
-    const hint = hintForWall(wall, hintById)
-    if (Math.abs(hint - FML_WALL_BALANCE_FALLBACK) < 0.05) continue
-    const plusFace = faceCrossCoord(wall, 'plus', hint)
-    const minusFace = faceCrossCoord(wall, 'minus', hint)
-    const plusExtent = wall.thickness * clampBalance(hint)
-    const minusExtent = wall.thickness * (1 - clampBalance(hint))
-    const heavyFace = plusExtent >= minusExtent ? plusFace : minusFace
-    const len = Math.max(1, wallLengthCm(wall))
-    if (Math.abs(heavyFace - faceLo) <= Math.abs(heavyFace - faceHi)) loVotes += len
-    else hiVotes += len
+  // Map geometric plus/minus onto world lo/hi via the anchor's left-normal sign.
+  const anchor = walls[anchorIndex]
+  const vertical = wallIsVertical(anchor)
+  const c = crossAxisComponent(leftNormal(wallDirectionUnit(anchor)), vertical)
+  if (verdict === 'flush_plus') {
+    return c >= 0 ? faceHi : faceLo
   }
-
-  // Default: outer/min cross (typical left/bottom façade flush).
-  return loVotes >= hiVotes ? faceLo : faceHi
+  return c >= 0 ? faceLo : faceHi
 }
 
 /**
- * Longest thickness band stays B=0.5. Others flush to one shared WORLD face
- * (avoids top/bottom flipping when a→b directions oppose).
+ * Longest thickness band stays B=0.5. Others flush only when face-evidence
+ * confirms a continuous world face. No evidence → identity 0.5.
  */
 function applyChainFlushBalances(
   indices: number[],
   walls: Wall[],
-  hintById: Map<string, number>,
+  faceEvidenceById?: Map<string, WallFaceExtentsCm>,
 ): void {
+  const verdict = resolveChainFaceStepVerdict({
+    indices,
+    thicknessCm: (index) => walls[index]?.thickness ?? 0,
+    evidence: (index) => {
+      const id = walls[index]?.id
+      if (!id || !faceEvidenceById) return undefined
+      return faceEvidenceById.get(id)
+    },
+    lengthCm: (index) => wallLengthCm(walls[index]),
+  })
+
+  if (verdict === 'no_evidence' || verdict === 'centered') {
+    tally('X-01', verdict === 'centered' ? 'centered_no_flush' : 'no_evidence')
+    for (const index of indices) {
+      walls[index].balance = FML_WALL_BALANCE_FALLBACK
+      tally('X-01', 'preserved')
+    }
+    return
+  }
+
   const anchorT = pickAnchorThicknessCm(indices, walls)
   const target = anchorT * 0.5
-  const flushCross = pickWorldFlushCross(indices, walls, hintById, anchorT, target)
+  const flushCross = pickWorldFlushCrossFromVerdict(indices, walls, anchorT, target, verdict)
+  if (flushCross == null) {
+    tally('X-01', 'no_evidence')
+    return
+  }
+
+  tally('X-01', 'flush_applied')
   for (const index of indices) {
     const wall = walls[index]
     const prev = wall.balance ?? FML_WALL_BALANCE_FALLBACK
+    const deltaT = Math.abs(wall.thickness - anchorT)
     const next = !thicknessesDiffer(wall.thickness, anchorT)
       ? FML_WALL_BALANCE_FALLBACK
-      : balanceForWorldFlushFace(wall, flushCross)
+      : balanceForWorldFlushFace(wall, flushCross, deltaT * 0.5)
     wall.balance = next
     if (Math.abs(prev - next) > 1e-9) {
       tally('X-01', 'aligned')
-      noteDiscardedMeasurement('X-01', 'alignWallJunctionBalance.chainFlush', prev, next)
+      noteDiscardedMeasurement('X-01', 'alignWallJunctionBalance.chainFlush', prev, next, {
+        verdict,
+      })
     } else {
       tally('X-01', 'preserved')
     }
@@ -601,16 +639,13 @@ function applyChainFlushBalances(
 
 /**
  * After export thickness tiers: wipe balance to 0.5, absorb junction stubs,
- * then flush entire collinear diktewissel-ketens (all members, not thin-only).
+ * then flush collinear diktewissel-ketens only when face-evidence confirms a trap.
  */
-export function alignWallJunctionBalance(walls: Wall[]): Wall[] {
+export function alignWallJunctionBalance(
+  walls: Wall[],
+  faceEvidenceById?: Map<string, WallFaceExtentsCm>,
+): Wall[] {
   if (walls.length === 0) return walls
-
-  const hintById = new Map<string, number>()
-  for (const wall of walls) {
-    if (!wall.id) continue
-    hintById.set(wall.id, clampBalance(wall.balance ?? FML_WALL_BALANCE_FALLBACK))
-  }
 
   // ESC:X-01 — default export balance 0.5 (geen meet-ruis).
   let result: Wall[] = walls.map((wall) => {
@@ -639,7 +674,7 @@ export function alignWallJunctionBalance(walls: Wall[]): Wall[] {
       for (const _index of indices) tally('X-01', 'preserved')
       continue
     }
-    applyChainFlushBalances(indices, result, hintById)
+    applyChainFlushBalances(indices, result, faceEvidenceById)
   }
 
   return result

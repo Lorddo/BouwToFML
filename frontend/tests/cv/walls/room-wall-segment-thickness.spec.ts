@@ -186,4 +186,133 @@ describe('room-wall-segment-thickness', () => {
     expect(harmonized[0]?.thicknessPxMax).toBe(12)
     expect(harmonized[1]?.thicknessPxMax).toBe(6)
   })
+
+  it('typical (mediaan) negeert knoopblob op T-stub; max blijft hoog', () => {
+    const width = 120
+    const height = 80
+    const data = new Uint8Array(width * height)
+    // Horizontale muur y=30..40, x=10..110
+    for (let y = 30; y <= 40; y += 1) {
+      for (let x = 10; x < 110; x += 1) data[y * width + x] = 255
+    }
+    // Verticale stub x=55..65, y=40..70 — T-knoop maakt dikke blob
+    for (let y = 40; y <= 70; y += 1) {
+      for (let x = 55; x <= 65; x += 1) data[y * width + x] = 255
+    }
+    const maskRle = encodeMaskRle(data, width, height)
+    // Korte stub die in de T-knoop eindigt (zou zonder kern-trim max oppikken)
+    const graph = {
+      segments: [
+        {
+          a: { x: 60, y: 42 },
+          b: { x: 60, y: 68 },
+          thicknessPxMax: 0,
+        },
+      ],
+      junctions: [],
+      meta: {
+        rawJunctionCount: 0,
+        semanticJunctionCount: 0,
+        cornerClustersMerged: 0,
+        collinearSegmentsMerged: 0,
+        angleAtLeast25Count: 0,
+      },
+    }
+    const measured = measureSegmentThicknessMax({ graph, maskRle })
+    const typical = measured.segments[0]?.thicknessPxTypical ?? 0
+    const max = measured.segments[0]?.thicknessPxMax ?? 0
+    // Stub-breedte ~10px; typical moet dichtbij blijven, max mag knoopblob meenemen.
+    expect(typical).toBeGreaterThanOrEqual(8)
+    expect(typical).toBeLessThanOrEqual(14)
+    expect(max).toBeGreaterThanOrEqual(typical)
+  })
+
+  it('typical negeert schuine-gevelhoek-blob; max explodeert', () => {
+    const width = 200
+    const height = 100
+    const data = new Uint8Array(width * height)
+    // Horizontale band y=40..52, x=10..160 (dikte ~12)
+    for (let y = 40; y <= 52; y += 1) {
+      for (let x = 10; x <= 160; x += 1) data[y * width + x] = 255
+    }
+    // Grote blob bij x≈140 (binnen sample-venster na 30px trim van x=160)
+    for (let y = 20; y <= 72; y += 1) {
+      for (let x = 125; x <= 155; x += 1) {
+        if ((x - 140) * (x - 140) + (y - 46) * (y - 46) < 26 * 26) {
+          data[y * width + x] = 255
+        }
+      }
+    }
+    const maskRle = encodeMaskRle(data, width, height)
+    const graph = {
+      segments: [
+        {
+          a: { x: 20, y: 46 },
+          b: { x: 160, y: 46 },
+          thicknessPxMax: 0,
+        },
+      ],
+      junctions: [],
+      meta: {
+        rawJunctionCount: 0,
+        semanticJunctionCount: 0,
+        cornerClustersMerged: 0,
+        collinearSegmentsMerged: 0,
+        angleAtLeast25Count: 0,
+      },
+    }
+    const measured = measureSegmentThicknessMax({
+      graph,
+      maskRle,
+      referenceWallThicknessPx: 30,
+    })
+    const typical = measured.segments[0]?.thicknessPxTypical ?? 0
+    const max = measured.segments[0]?.thicknessPxMax ?? 0
+    const p90 = measured.segments[0]?.thicknessPxP90 ?? 0
+    expect(typical).toBeGreaterThanOrEqual(10)
+    expect(typical).toBeLessThanOrEqual(16)
+    expect(max).toBeGreaterThan(typical)
+    expect(p90).toBeGreaterThanOrEqual(typical)
+  })
+
+  it('korte stub gebruikt kern-sampling i.p.v. volle knoopmeting', () => {
+    const width = 80
+    const height = 80
+    const data = new Uint8Array(width * height)
+    // Dunne verticale muur x=35..41
+    for (let y = 10; y < 70; y += 1) {
+      for (let x = 35; x <= 41; x += 1) data[y * width + x] = 255
+    }
+    // Dikke horizontale blob bij y=10 (knoop)
+    for (let y = 5; y <= 25; y += 1) {
+      for (let x = 20; x <= 55; x += 1) data[y * width + x] = 255
+    }
+    const maskRle = encodeMaskRle(data, width, height)
+    // Segment korter dan 2×marge → vroeger: geen trim → max=blob
+    const graph = {
+      segments: [
+        {
+          a: { x: 38, y: 10 },
+          b: { x: 38, y: 50 },
+          thicknessPxMax: 0,
+        },
+      ],
+      junctions: [],
+      meta: {
+        rawJunctionCount: 0,
+        semanticJunctionCount: 0,
+        cornerClustersMerged: 0,
+        collinearSegmentsMerged: 0,
+        angleAtLeast25Count: 0,
+      },
+    }
+    const measured = measureSegmentThicknessMax({
+      graph,
+      maskRle,
+      referenceWallThicknessPx: 30,
+    })
+    const typical = measured.segments[0]?.thicknessPxTypical ?? 0
+    expect(typical).toBeGreaterThanOrEqual(4)
+    expect(typical).toBeLessThanOrEqual(10)
+  })
 })

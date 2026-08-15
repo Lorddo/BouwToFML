@@ -42,7 +42,11 @@ export interface SemanticWallSegmentRecord {
   a: { x: number; y: number }
   b: { x: number; y: number }
   thicknessPxMax: number
+  thicknessPxTypical?: number
+  thicknessPxP90?: number
   balancePx?: number
+  facePlusPx?: number
+  faceMinusPx?: number
   junctionAId?: string
   junctionBId?: string
 }

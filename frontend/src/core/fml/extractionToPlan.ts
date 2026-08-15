@@ -17,6 +17,7 @@ import {
 } from './extraction-to-plan-walls'
 import { mapLayer12DoorsToOpenings } from './extraction-to-plan-doors'
 import { mapLayer14WindowsToOpenings } from './extraction-to-plan-windows'
+import type { WallFaceExtentsCm } from './wall-face-step-evidence'
 
 export type {
   ExtractionToPlanOptions,
@@ -30,6 +31,8 @@ export {
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
+
+export type FaceEvidenceByWallId = Map<string, WallFaceExtentsCm>
 
 /** CM-origin from een al-opgeloste graph (geen tweede resolveGraph). */
 export function resolveExtractionCmOriginFromGraph(
@@ -60,7 +63,11 @@ export function resolveExtractionCmOrigin(
 export function extractionToPlanWithOrigin(
   output: ExtractionOutput,
   options: ExtractionToPlanOptions,
-): { plan: FloorPlan; origin: { x: number; y: number } } {
+): {
+  plan: FloorPlan
+  origin: { x: number; y: number }
+  faceEvidenceById: FaceEvidenceByWallId
+} {
   const defaultThicknessCm = options.defaultThicknessCm ?? 10
   const floorHeightCm =
     Number.isFinite(options.floorHeightCm) && (options.floorHeightCm ?? 0) > 0
@@ -88,6 +95,8 @@ export function extractionToPlanWithOrigin(
   const { x: minX, y: minY } = origin
   const consumedDoorIds = new Set<string>()
   const consumedWindowIds = new Set<string>()
+  const faceEvidenceById: FaceEvidenceByWallId = new Map()
+  const pxPerMmAvg = (options.pxPerMmX + options.pxPerMmY) / 2
 
   const walls: Wall[] = graph.edges.map((edge, index) => {
     const aNode = nodeById.get(edge.a)
@@ -109,9 +118,12 @@ export function extractionToPlanWithOrigin(
       edgeSegment: edge.segment,
     })
     const semanticSegment = semanticMatch?.segment
-    const semanticThicknessPx = semanticSegment?.thicknessPxMax
-    const pxPerMmAvg = (options.pxPerMmX + options.pxPerMmY) / 2
-    // ESC:X-22 — thicknessPxMax≤0 telt niet als meting (zero-fallback weg); dan resolveThicknessCm.
+    // Prefer robust typical (median); fall back to max for legacy graphs without typical.
+    const semanticThicknessPx =
+      (semanticSegment?.thicknessPxTypical ?? 0) > 0
+        ? semanticSegment?.thicknessPxTypical
+        : semanticSegment?.thicknessPxMax
+    // ESC:X-22 — thicknessPx≤0 telt niet als meting (zero-fallback weg); dan resolveThicknessCm.
     const semanticThicknessCm =
       Number.isFinite(semanticThicknessPx) &&
       (semanticThicknessPx ?? 0) > 0 &&
@@ -141,8 +153,23 @@ export function extractionToPlanWithOrigin(
       defaultWindowSillZCm,
       consumedWindowIds,
     })
+    const wallId = edge.id || `wall-${index}`
+    const plusPx = semanticSegment?.facePlusPx
+    const minusPx = semanticSegment?.faceMinusPx
+    if (
+      pxPerMmAvg > 0 &&
+      Number.isFinite(plusPx) &&
+      Number.isFinite(minusPx) &&
+      (plusPx ?? 0) >= 0 &&
+      (minusPx ?? 0) >= 0
+    ) {
+      faceEvidenceById.set(wallId, {
+        plusCm: (plusPx as number) / pxPerMmAvg / 10,
+        minusCm: (minusPx as number) / pxPerMmAvg / 10,
+      })
+    }
     return {
-      id: edge.id || `wall-${index}`,
+      id: wallId,
       a,
       b,
       // ESC:X-07 (E)
@@ -174,6 +201,7 @@ export function extractionToPlanWithOrigin(
       ],
     },
     origin,
+    faceEvidenceById,
   }
 }
 

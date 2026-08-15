@@ -434,6 +434,7 @@ function layersBody(
   }
 
   parts.push('<h3>Semantic wall graph (FML-bron, met dikte)</h3>')
+  parts.push(semanticThicknessSummaryHtml(layers.semanticWallGraph))
   parts.push(
     layers.semanticWallGraph
       ? jsonBlock(layers.semanticWallGraph, 'Semantic walls', {
@@ -452,6 +453,52 @@ function layersBody(
   }
 
   return parts.join('\n')
+}
+
+function semanticThicknessSummaryHtml(graph: unknown | null): string {
+  if (!graph || typeof graph !== 'object') return ''
+  const segments = (graph as { segments?: unknown }).segments
+  if (!Array.isArray(segments) || segments.length === 0) return ''
+  const rows: string[] = []
+  for (let i = 0; i < segments.length; i += 1) {
+    const seg = segments[i] as {
+      thicknessPxMax?: number
+      thicknessPxTypical?: number
+      thicknessPxP90?: number
+      balancePx?: number
+      facePlusPx?: number
+      faceMinusPx?: number
+      a?: { x: number; y: number }
+      b?: { x: number; y: number }
+    }
+    const len = seg.a && seg.b ? Math.hypot(seg.b.x - seg.a.x, seg.b.y - seg.a.y) : Number.NaN
+    rows.push(
+      `<tr>
+        <td>${i}</td>
+        <td>${Number.isFinite(len) ? len.toFixed(1) : '—'}</td>
+        <td>${fmtPx(seg.thicknessPxTypical)}</td>
+        <td>${fmtPx(seg.thicknessPxMax)}</td>
+        <td>${fmtPx(seg.thicknessPxP90)}</td>
+        <td>${fmtPx(seg.facePlusPx)}</td>
+        <td>${fmtPx(seg.faceMinusPx)}</td>
+        <td>${seg.balancePx != null && Number.isFinite(seg.balancePx) ? seg.balancePx.toFixed(2) : '—'}</td>
+      </tr>`,
+    )
+  }
+  return `<details open>
+  <summary>Dikte-samenvatting (typical / max / p90 / faces) — ${segments.length} segmenten</summary>
+  <table class="meta">
+    <thead><tr>
+      <th>#</th><th>len px</th><th>typical</th><th>max</th><th>p90</th>
+      <th>face+</th><th>face−</th><th>balance</th>
+    </tr></thead>
+    <tbody>${rows.join('')}</tbody>
+  </table>
+</details>`
+}
+
+function fmtPx(value: number | undefined): string {
+  return value != null && Number.isFinite(value) ? value.toFixed(1) : '—'
 }
 
 function fmlBody(fmlText: string | null, previewPlan: unknown | null): string {

@@ -114,8 +114,19 @@ export interface SemanticWallSegment {
   a: { x: number; y: number }
   b: { x: number; y: number }
   thicknessPxMax: number
+  /**
+   * Robuuste typische dikte (mediaan van DT-samples).
+   * Prefereren voor FML-export; `thicknessPxMax` blijft bovengrens voor opening-snap.
+   */
+  thicknessPxTypical?: number
+  /** p90 van DT-samples — ruismaat voor diagnose/grootboek. */
+  thicknessPxP90?: number
   /** 0..1 verdeling van dikte rond centerline (0.5 = gecentreerd). */
   balancePx?: number
+  /** Absolute plus-normal extent vanaf centerline (px). */
+  facePlusPx?: number
+  /** Absolute minus-normal extent vanaf centerline (px). */
+  faceMinusPx?: number
   junctionAId?: string
   junctionBId?: string
 }

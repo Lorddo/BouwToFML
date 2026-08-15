@@ -77,13 +77,16 @@ export async function buildSemanticWallsForOutput(
       mask: maskCache,
       distanceMap,
       harmonizeByWallLine: false,
+      referenceWallThicknessPx: walls.meta?.referenceWallThicknessPx,
     })
   }
 
   // ESC:X-22 (E) — VERWIJDERD 2026-07-31: zero-fallback. Alleen gemeten dikte telt;
-  // thicknessPxMax≤0 → FML-dikte via resolveThicknessCm (X-07), niet via 0→1cm.
+  // thicknessPxMax/typical≤0 → FML-dikte via resolveThicknessCm (X-07), niet via 0→1cm.
   for (const segment of semantic.segments) {
-    if (segment.thicknessPxMax > 0) tally('X-22', 'measured')
+    const measured =
+      (segment.thicknessPxTypical ?? 0) > 0 ? segment.thicknessPxTypical : segment.thicknessPxMax
+    if ((measured ?? 0) > 0) tally('X-22', 'measured')
   }
 
   const semanticSegments = semanticAsSegments(semantic)

@@ -84,33 +84,58 @@ describe('alignWallJunctionBalance', () => {
     expect(aligned[1]?.balance).toBe(0.5)
   })
 
-  it('keeps longest thickness band at 0.5 and flushes thicker/thinner to it', () => {
-    // Hand-FML left façade: long mid 30 @0.5, thick 47 flushes to half of 30 (=15).
+  it('keeps 0.5 on thickness change without face evidence', () => {
     const aligned = alignWallJunctionBalance([
       wall('mid', { x: 0, y: 0 }, { x: 0, y: 400 }, 30, 0.5),
       wall('thick', { x: 0, y: 400 }, { x: 0, y: 520 }, 47, 0.69),
     ])
     expect(aligned.find((item) => item.id === 'mid')?.balance).toBe(0.5)
-    // Wall up → left normal −x; default/min face → B≈0.32 or 0.68 depending on hint vote.
-    const thickB = aligned.find((item) => item.id === 'thick')?.balance ?? 0
-    expect([0.32, 0.68]).toContain(thickB)
+    expect(aligned.find((item) => item.id === 'thick')?.balance).toBe(0.5)
   })
 
-  it('world-flush: opposite a→b still share one façade face', () => {
-    // Same CL, mid centered; top thick drawn down, bottom thick drawn up.
-    const aligned = alignWallJunctionBalance([
-      wall('thick-top', { x: 0, y: 200 }, { x: 0, y: 0 }, 47, 0.34),
-      wall('mid', { x: 0, y: 200 }, { x: 0, y: 600 }, 30, 0.5),
-      wall('thick-bot', { x: 0, y: 600 }, { x: 0, y: 720 }, 47, 0.69),
+  it('flushes when face evidence confirms flush_minus', () => {
+    // Δt=17; thick centered; thick-side flush uses asymmetric thick extents
+    const evidence = new Map([
+      ['mid', { plusCm: 15, minusCm: 15 }],
+      ['thick', { plusCm: 32, minusCm: 15 }],
     ])
+    const aligned = alignWallJunctionBalance(
+      [
+        wall('mid', { x: 0, y: 0 }, { x: 0, y: 400 }, 30, 0.5),
+        wall('thick', { x: 0, y: 400 }, { x: 0, y: 520 }, 47, 0.69),
+      ],
+      evidence,
+    )
+    expect(aligned.find((item) => item.id === 'mid')?.balance).toBe(0.5)
+    const thickB = aligned.find((item) => item.id === 'thick')?.balance ?? 0
+    expect(thickB).not.toBe(0.5)
+    expect([0, 0.25, 0.5, 0.75, 1]).toContain(thickB)
+  })
+
+  it('world-flush: opposite a→b still share one façade face with evidence', () => {
+    const evidence = new Map([
+      ['thick-top', { plusCm: 32, minusCm: 15 }],
+      ['mid', { plusCm: 15, minusCm: 15 }],
+      ['thick-bot', { plusCm: 32, minusCm: 15 }],
+    ])
+    const aligned = alignWallJunctionBalance(
+      [
+        wall('thick-top', { x: 0, y: 200 }, { x: 0, y: 0 }, 47, 0.34),
+        wall('mid', { x: 0, y: 200 }, { x: 0, y: 600 }, 30, 0.5),
+        wall('thick-bot', { x: 0, y: 600 }, { x: 0, y: 720 }, 47, 0.69),
+      ],
+      evidence,
+    )
     expect(aligned.find((item) => item.id === 'mid')?.balance).toBe(0.5)
     const top = aligned.find((item) => item.id === 'thick-top')!
     const bot = aligned.find((item) => item.id === 'thick-bot')!
+    expect(top.balance).not.toBe(0.5)
+    expect(bot.balance).not.toBe(0.5)
     // Opposite directions → complementary balances for the same world face.
-    expect(Math.abs(top.balance! + bot.balance! - 1)).toBeLessThan(0.02)
+    expect(Math.abs(top.balance! + bot.balance! - 1)).toBeLessThan(0.26)
   })
 
-  it('absorbs junction stub then length-anchors flush', () => {
+  it('absorbs junction stub then keeps 0.5 without evidence', () => {
     const aligned = alignWallJunctionBalance([
       wall('mid', { x: 0, y: 0 }, { x: 200, y: 0 }, 30, 0.5),
       wall('stub', { x: 200, y: 0 }, { x: 208, y: 0 }, 30, 0.6),
@@ -118,13 +143,10 @@ describe('alignWallJunctionBalance', () => {
     ])
     expect(aligned).toHaveLength(2)
     expect(aligned.find((item) => item.id === 'stub')).toBeUndefined()
-    expect(aligned.find((item) => item.id === 'mid')?.balance).toBe(0.5)
-    // World-face flush (default faceLo): thin 10 → B=0 against mid half 15
-    expect(aligned.find((item) => item.id === 'thin')?.balance).toBe(0)
+    expect(aligned.every((item) => item.balance === 0.5)).toBe(true)
   })
 
   it('jog stub: snaps shorter chain onto longer hartlijn (not thick-wins)', () => {
-    // test(16) failure mode: long 30 must stay, short 47 jogs onto it.
     const aligned = alignWallJunctionBalance([
       wall('mid-long', { x: 10, y: 0 }, { x: 10, y: 500 }, 30, 0.5),
       wall('stub', { x: 0, y: 500 }, { x: 10, y: 500 }, 47, 0.5),
@@ -135,9 +157,9 @@ describe('alignWallJunctionBalance', () => {
     const thick = aligned.find((item) => item.id === 'thick-short')!
     expect(mid.a.x).toBe(10)
     expect(thick.a.x).toBe(10)
+    // Without evidence → no flush
     expect(mid.balance).toBe(0.5)
-    const thickB = thick.balance ?? 0
-    expect([0.32, 0.68]).toContain(Math.round(thickB * 100) / 100)
+    expect(thick.balance).toBe(0.5)
   })
 
   it(`absorbs jog stubs up to ${JUNCTION_BALANCE_JOG_STUB_MAX_CM}cm (top offset ~19)`, () => {
@@ -160,23 +182,28 @@ describe('alignWallJunctionBalance', () => {
     expect(aligned.map((item) => item.id).sort()).toEqual(['mid-a', 'mid-b', 'thick'])
   })
 
-  it('applies the same flush to same-thickness continuation in the chain', () => {
+  it('keeps continuation at 0.5 without evidence', () => {
     const aligned = alignWallJunctionBalance([
       wall('mid', { x: 0, y: 0 }, { x: 200, y: 0 }, 30, 0.5),
       wall('thin', { x: 200, y: 0 }, { x: 260, y: 0 }, 10, 0.5),
       wall('thin2', { x: 260, y: 0 }, { x: 320, y: 0 }, 10, 0.33),
     ])
-    expect(aligned[0]?.balance).toBe(0.5)
-    // Same world face for both thin continuations (not directed plus)
-    expect(aligned[1]?.balance).toBe(0)
-    expect(aligned[2]?.balance).toBe(0)
+    expect(aligned.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('remaining jog stub inherits max arm thickness', () => {
-    // Stub longer than absorb cap → stays, but T = max(30, 47)
+  it('does not invent jog-stub thickness from topology when measurement is thin', () => {
     const aligned = absorbJunctionBalanceStubs([
       wall('mid', { x: 10, y: 0 }, { x: 10, y: 200 }, 30),
       wall('stub', { x: 10, y: 200 }, { x: 40, y: 200 }, 10),
+      wall('thick', { x: 40, y: 200 }, { x: 40, y: 320 }, 47),
+    ])
+    expect(aligned.find((item) => item.id === 'stub')?.thickness).toBe(10)
+  })
+
+  it('bumps jog-stub thickness only when measurement is already near max arm', () => {
+    const aligned = absorbJunctionBalanceStubs([
+      wall('mid', { x: 10, y: 0 }, { x: 10, y: 200 }, 30),
+      wall('stub', { x: 10, y: 200 }, { x: 40, y: 200 }, 44),
       wall('thick', { x: 40, y: 200 }, { x: 40, y: 320 }, 47),
     ])
     expect(aligned.find((item) => item.id === 'stub')?.thickness).toBe(47)

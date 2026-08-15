@@ -51,12 +51,14 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Beslissing | Keuze |
 |------------|-------|
 | Plan | `.cursor/docs/fml-layer8-conversion-plan.md` |
-| Keten | Laag 7 adjacency; **door T/L/X**; breuk alleen bij andere dikteband |
+| Keten | Laag 7 adjacency; **door T/L/X**; breuk bij echte diktestap (15% hysterese over bandgrens) |
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
-| `balance` | Default 0.5 (X-01); collineaire diktewissel: **langste dikteband** blijft B=0.5; overige flushen tegen **één wereld-face** (a→b-onafhankelijk; default faceLo); jog-stubs &lt;25 cm (kortere keten → langere hartlijn); stub-dikte=max(armen) ook als stub blijft; collinear stubs &lt;15 cm |
+| `balance` | Default 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence** (plus/minus extents); zonder bewijs blijft 0.5 (geen faceLo-gok); `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm; stub-bump alleen bij gemeten nabijheid |
 | Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning |
+| Diktemeting | `thicknessPxTypical` = mediaan DT-samples (FML-export); `thicknessPxMax` blijft opening-snap bovengrens; korte stubs kern-sample t∈[0.3,0.7]; junction-marge schaalt met `referenceWallThicknessPx` |
+| Keten-union | Gemeten gelijkenis + 15% hysterese over bandgrens (niet alleen band-identiteit) |
 | L9 stub | Bewaart cross-band + parallel CL-offset (thickness-gate + `orthoStubTierMaxPx` mid-capped) |
 | L10 straighten | Geen axis-union over dikteband-wissel (thickness-gate op direct + bridge); FML balance blijft post-L10 consument |
 | Legacy min/max clamp | Vervangen door tier-model |

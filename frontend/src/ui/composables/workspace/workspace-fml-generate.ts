@@ -128,7 +128,7 @@ export function createWorkspaceFmlGenerate(
         mergeMultiWindows: deps.mergeMultiWindows?.value !== false,
         doors: deps.orientedDoors?.value ?? [],
       })
-      const { plan, origin } = extractionToPlanWithOrigin(output, {
+      const { plan, origin, faceEvidenceById } = extractionToPlanWithOrigin(output, {
         pxPerMmX,
         pxPerMmY,
         planName: deps.planName?.value?.trim() || stripFileExtension(deps.imageName.value),
@@ -143,7 +143,7 @@ export function createWorkspaceFmlGenerate(
         layer12Doors,
         layer14Windows,
       })
-      return { plan, origin, pxPerMmX, pxPerMmY }
+      return { plan, origin, pxPerMmX, pxPerMmY, faceEvidenceById }
       // ESC:O-38 (D)
     } catch (error) {
       noteSwallowedError('O-38', 'workspace-fml-generate.generatedBundle', error, {
@@ -160,6 +160,7 @@ export function createWorkspaceFmlGenerate(
       plan,
       applied.appliedFmlThicknessLimits.value,
       applied.appliedFmlBandBoundaries.value,
+      generatedBundle.value?.faceEvidenceById,
     )
   }
 

@@ -11,12 +11,18 @@ import {
   type FmlThicknessBandBoundaries,
 } from './fml-wall-thickness-tiers'
 import { wallLengthCm } from './fml-wall-geom'
+import type { WallFaceExtentsCm } from './wall-face-step-evidence'
 
 const ENDPOINT_KEY_DECIMALS = 4
 import { WALL_CHAIN_BRIDGE_MAX_RATIO } from './wall-thickness-chain'
 
 const CHAIN_BRIDGE_MAX_CM = 40
 const COLLINEAR_EPS_DEG = 12
+/**
+ * Relatieve hysterese bij keten-union over een bandgrens.
+ * 15%: 10 vs 12 blijft gesplitst (~17%), 35 vs 38 blijft één keten (~8%).
+ */
+export const CHAIN_THICKNESS_HYSTERESIS_RATIO = 0.15
 
 function endpointKey(point: { x: number; y: number }): string {
   const factor = 10 ** ENDPOINT_KEY_DECIMALS
@@ -67,8 +73,24 @@ function areCollinearWalls(a: Wall, b: Wall): boolean {
 }
 
 /**
- * Groepeer muren in dikte-ketens: gedeeld knooppunt (incl. T/L/X) + dezelfde meetband.
- * Keten loopt door junctions; breekt alleen bij andere band.
+ * Zelfde meetband, of naburige banden binnen hysterese (meetruis rond bandgrens).
+ */
+export function thicknessesCompatibleForChain(
+  aCm: number,
+  bCm: number,
+  boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
+): boolean {
+  if (!(aCm > 0) || !(bCm > 0)) return true
+  if (classifyFmlThicknessBand(aCm, boundaries) === classifyFmlThicknessBand(bCm, boundaries)) {
+    return true
+  }
+  const larger = Math.max(aCm, bCm)
+  return Math.abs(aCm - bCm) / larger <= CHAIN_THICKNESS_HYSTERESIS_RATIO
+}
+
+/**
+ * Groepeer muren in dikte-ketens: gedeeld knooppunt (incl. T/L/X) + gemeten gelijkenis.
+ * Keten loopt door junctions; breekt alleen bij echte diktestap (niet bandgrens-ruis).
  */
 export function buildFmlThicknessChains(
   walls: Wall[],
@@ -95,9 +117,11 @@ export function buildFmlThicknessChains(
       for (let j = i + 1; j < indices.length; j += 1) {
         const left = indices[i]
         const right = indices[j]
-        const bandLeft = classifyFmlThicknessBand(walls[left].thickness, boundaries)
-        const bandRight = classifyFmlThicknessBand(walls[right].thickness, boundaries)
-        if (bandLeft === bandRight) uf.union(left, right)
+        if (
+          thicknessesCompatibleForChain(walls[left].thickness, walls[right].thickness, boundaries)
+        ) {
+          uf.union(left, right)
+        }
       }
     }
   }
@@ -201,14 +225,15 @@ export function roundFmlThicknessCm(value: number): number {
 /**
  * Harmoniseert muurdikte per keten en mapt naar absolute min/mid/max exportdiktes.
  * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits (bewust beleid).
- * Balance: default 0.5; collineaire diktewissel-ketens krijgen gedeelde flush-face
- * op alle leden (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
+ * Balance: default 0.5; collineaire diktewissel-ketens flushen alleen bij face-evidence
+ * (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
  * Daarna near-H/V restjitter exact op as (viewer = export).
  */
 export function harmonizeFmlWallThickness(
   plan: FloorPlan,
   limits: FmlWallThicknessLimits,
   boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
+  faceEvidenceById?: Map<string, WallFaceExtentsCm>,
 ): FloorPlan {
   return {
     ...plan,
@@ -246,7 +271,9 @@ export function harmonizeFmlWallThickness(
 
       return {
         ...floor,
-        walls: orthogonalizeNearAxisWalls(alignWallJunctionBalance(thicknessAssigned)),
+        walls: orthogonalizeNearAxisWalls(
+          alignWallJunctionBalance(thicknessAssigned, faceEvidenceById),
+        ),
       }
     }),
   }

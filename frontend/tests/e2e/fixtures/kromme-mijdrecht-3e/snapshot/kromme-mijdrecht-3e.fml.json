@@ -2,7 +2,7 @@
   "bbox": {
     "maxX": 624.1,
     "maxY": 1120.4,
-    "minX": 0.1,
+    "minX": 0,
     "minY": 0,
   },
   "reference": {
@@ -17,24 +17,24 @@
     "referenceLengthCm": 6372.1,
     "referenceWallCount": 54,
     "referenceWindowCount": 5,
-    "wallCoveragePct": 99.2,
+    "wallCoveragePct": 98.8,
     "wallPrecisionPct": 100,
   },
   "thicknessBands": {
-    "max": 2,
-    "mid": 22,
-    "min": 25,
+    "max": 0,
+    "mid": 14,
+    "min": 34,
   },
-  "totalLengthCm": 6248,
-  "wallCount": 49,
+  "totalLengthCm": 6227.8,
+  "wallCount": 48,
   "walls": [
     {
       "a": {
-        "x": 0.1,
+        "x": 20.3,
         "y": 129.4,
       },
       "b": {
-        "x": 0.1,
+        "x": 20.3,
         "y": 8.5,
       },
       "openings": [],
@@ -42,27 +42,15 @@
     },
     {
       "a": {
-        "x": 0.1,
-        "y": 557.6,
-      },
-      "b": {
-        "x": 0.1,
-        "y": 129.4,
-      },
-      "openings": [],
-      "thickness": 15,
-    },
-    {
-      "a": {
-        "x": 0.1,
+        "x": 20.3,
         "y": 557.6,
       },
       "b": {
         "x": 20.3,
-        "y": 557.6,
+        "y": 129.4,
       },
       "openings": [],
-      "thickness": 15,
+      "thickness": 10,
     },
     {
       "a": {
@@ -196,7 +184,7 @@
     },
     {
       "a": {
-        "x": 0.1,
+        "x": 0,
         "y": 129.4,
       },
       "b": {
@@ -214,7 +202,7 @@
           "width": 146.2,
         },
       ],
-      "thickness": 15,
+      "thickness": 10,
     },
     {
       "a": {
@@ -287,19 +275,7 @@
         "y": 129.4,
       },
       "openings": [],
-      "thickness": 15,
-    },
-    {
-      "a": {
-        "x": 235.9,
-        "y": 129.4,
-      },
-      "b": {
-        "x": 255.2,
-        "y": 129.4,
-      },
-      "openings": [],
-      "thickness": 15,
+      "thickness": 10,
     },
     {
       "a": {
@@ -309,6 +285,18 @@
       "b": {
         "x": 262.8,
         "y": 97.9,
+      },
+      "openings": [],
+      "thickness": 10,
+    },
+    {
+      "a": {
+        "x": 235.9,
+        "y": 129.4,
+      },
+      "b": {
+        "x": 262.8,
+        "y": 129.4,
       },
       "openings": [],
       "thickness": 15,
@@ -467,11 +455,11 @@
           "width": 147.4,
         },
       ],
-      "thickness": 30,
+      "thickness": 10,
     },
     {
       "a": {
-        "x": 255.2,
+        "x": 262.8,
         "y": 129.4,
       },
       "b": {
@@ -489,12 +477,12 @@
           "width": 72.9,
         },
         {
-          "t": 0.3,
+          "t": 0.2,
           "type": "window",
           "width": 56.9,
         },
       ],
-      "thickness": 15,
+      "thickness": 10,
     },
     {
       "a": {
@@ -552,7 +540,7 @@
           "width": 100.1,
         },
       ],
-      "thickness": 15,
+      "thickness": 10,
     },
     {
       "a": {
@@ -659,7 +647,7 @@
           "width": 136.6,
         },
       ],
-      "thickness": 30,
+      "thickness": 10,
     },
     {
       "a": {
@@ -695,7 +683,7 @@
         "y": 440.1,
       },
       "openings": [],
-      "thickness": 15,
+      "thickness": 10,
     },
     {
       "a": {

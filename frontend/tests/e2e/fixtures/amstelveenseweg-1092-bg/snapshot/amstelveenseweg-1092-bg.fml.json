@@ -2,55 +2,43 @@
   "bbox": {
     "maxX": 614.1,
     "maxY": 1298.4,
-    "minX": 0.2,
-    "minY": 7.7,
+    "minX": 0,
+    "minY": 0,
   },
   "reference": {
     "filteredZeroThickness": 2,
     "matchDistCm": 20,
     "openingRecall": {
       "door": 83.3,
-      "overall": 75,
-      "window": 66.7,
+      "overall": 83.3,
+      "window": 83.3,
     },
     "referenceDoorCount": 6,
     "referenceLengthCm": 5945.8,
     "referenceWallCount": 36,
     "referenceWindowCount": 6,
-    "wallCoveragePct": 99.1,
-    "wallPrecisionPct": 98.6,
+    "wallCoveragePct": 100,
+    "wallPrecisionPct": 100,
   },
   "thicknessBands": {
-    "max": 3,
-    "mid": 20,
-    "min": 11,
+    "max": 2,
+    "mid": 7,
+    "min": 23,
   },
-  "totalLengthCm": 5899.2,
-  "wallCount": 34,
+  "totalLengthCm": 5879.5,
+  "wallCount": 32,
   "walls": [
     {
       "a": {
-        "x": 0.2,
-        "y": 394.3,
-      },
-      "b": {
-        "x": 0.2,
-        "y": 7.7,
-      },
-      "openings": [],
-      "thickness": 20,
-    },
-    {
-      "a": {
         "x": 8.4,
-        "y": 406.3,
-      },
-      "b": {
-        "x": 0.2,
         "y": 394.3,
       },
+      "b": {
+        "x": 8.4,
+        "y": 0,
+      },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -98,7 +86,7 @@
         "y": 837.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -192,7 +180,7 @@
         "y": 837.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -272,7 +260,7 @@
         "y": 1118.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -296,7 +284,7 @@
         "y": 1118.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -366,11 +354,11 @@
         "y": 1289.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
-        "x": 0.2,
+        "x": 0,
         "y": 7.7,
       },
       "b": {
@@ -398,7 +386,7 @@
           "width": 80.9,
         },
       ],
-      "thickness": 30,
+      "thickness": 10,
     },
     {
       "a": {
@@ -426,7 +414,7 @@
           "width": 57,
         },
       ],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -442,18 +430,6 @@
     },
     {
       "a": {
-        "x": 601.1,
-        "y": 132.2,
-      },
-      "b": {
-        "x": 601.1,
-        "y": 437.7,
-      },
-      "openings": [],
-      "thickness": 20,
-    },
-    {
-      "a": {
         "x": 606,
         "y": 132.2,
       },
@@ -462,7 +438,7 @@
         "y": 132.2,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -474,19 +450,19 @@
         "y": 132.2,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
-        "x": 601.1,
-        "y": 437.7,
+        "x": 614.1,
+        "y": 132.2,
       },
       "b": {
         "x": 614.1,
         "y": 437.7,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -510,7 +486,7 @@
         "y": 752.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
   ],
 }

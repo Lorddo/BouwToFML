@@ -21,11 +21,11 @@
     "wallPrecisionPct": 98,
   },
   "thicknessBands": {
-    "max": 6,
-    "mid": 26,
-    "min": 18,
+    "max": 3,
+    "mid": 6,
+    "min": 41,
   },
-  "totalLengthCm": 6180.5,
+  "totalLengthCm": 6180.4,
   "wallCount": 50,
   "walls": [
     {
@@ -38,7 +38,7 @@
         "y": 0,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -74,7 +74,7 @@
         "y": 778.1,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -86,7 +86,7 @@
         "y": 1029.3,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -98,7 +98,7 @@
         "y": 1064.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -110,7 +110,7 @@
         "y": 434.6,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -122,7 +122,7 @@
         "y": 507.3,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -146,7 +146,7 @@
         "y": 748.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -170,16 +170,16 @@
         "y": 1029.3,
       },
       "openings": [],
-      "thickness": 30,
+      "thickness": 10,
     },
     {
       "a": {
         "x": 37.8,
-        "y": 1064.9,
+        "y": 1069.4,
       },
       "b": {
         "x": 11.5,
-        "y": 1064.9,
+        "y": 1069.4,
       },
       "openings": [],
       "thickness": 30,
@@ -194,7 +194,7 @@
         "y": 778.1,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -206,7 +206,7 @@
         "y": 1029.3,
       },
       "openings": [],
-      "thickness": 30,
+      "thickness": 10,
     },
     {
       "a": {
@@ -223,26 +223,14 @@
     {
       "a": {
         "x": 80.7,
-        "y": 1064.9,
+        "y": 1069.4,
       },
       "b": {
         "x": 37.8,
-        "y": 1064.9,
+        "y": 1069.4,
       },
       "openings": [],
       "thickness": 30,
-    },
-    {
-      "a": {
-        "x": 86.3,
-        "y": 1069.2,
-      },
-      "b": {
-        "x": 80.7,
-        "y": 1064.9,
-      },
-      "openings": [],
-      "thickness": 20,
     },
     {
       "a": {
@@ -269,7 +257,7 @@
           "width": 47.8,
         },
       ],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -281,7 +269,7 @@
         "y": 748.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -293,16 +281,16 @@
         "y": 507.3,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
         "x": 193.6,
-        "y": 1073,
+        "y": 1069.4,
       },
       "b": {
         "x": 86.3,
-        "y": 1073,
+        "y": 1069.4,
       },
       "openings": [
         {
@@ -323,7 +311,7 @@
         "y": 604.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -335,7 +323,7 @@
         "y": 748.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -347,7 +335,7 @@
         "y": 748.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -371,7 +359,7 @@
         "y": 604.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -383,7 +371,7 @@
         "y": 516.5,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -399,23 +387,11 @@
     },
     {
       "a": {
-        "x": 235.8,
-        "y": 188,
-      },
-      "b": {
-        "x": 235.8,
-        "y": 0,
-      },
-      "openings": [],
-      "thickness": 20,
-    },
-    {
-      "a": {
-        "x": 235.8,
+        "x": 236.1,
         "y": 391.2,
       },
       "b": {
-        "x": 235.8,
+        "x": 236.1,
         "y": 193.6,
       },
       "openings": [],
@@ -423,12 +399,36 @@
     },
     {
       "a": {
+        "x": 236.1,
+        "y": 193.6,
+      },
+      "b": {
+        "x": 240.6,
+        "y": 188,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 240.6,
+        "y": 188,
+      },
+      "b": {
+        "x": 240.8,
+        "y": 0,
+      },
+      "openings": [],
+      "thickness": 10,
+    },
+    {
+      "a": {
         "x": 304.2,
-        "y": 1073,
+        "y": 1069.4,
       },
       "b": {
         "x": 199.7,
-        "y": 1073,
+        "y": 1069.4,
       },
       "openings": [],
       "thickness": 30,
@@ -479,7 +479,7 @@
     },
     {
       "a": {
-        "x": 235.8,
+        "x": 236.1,
         "y": 391.2,
       },
       "b": {
@@ -565,7 +565,7 @@
           "width": 80.8,
         },
       ],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -615,7 +615,7 @@
           "width": 67,
         },
       ],
-      "thickness": 30,
+      "thickness": 10,
     },
     {
       "a": {
@@ -711,7 +711,7 @@
         "y": 776.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
     {
       "a": {
@@ -723,7 +723,7 @@
         "y": 1085.8,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 10,
     },
   ],
 }

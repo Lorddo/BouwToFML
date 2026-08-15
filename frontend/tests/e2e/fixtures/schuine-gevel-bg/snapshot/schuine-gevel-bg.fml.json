@@ -21,9 +21,9 @@
     "wallPrecisionPct": 100,
   },
   "thicknessBands": {
-    "max": 7,
-    "mid": 9,
-    "min": 6,
+    "max": 5,
+    "mid": 5,
+    "min": 12,
   },
   "totalLengthCm": 4726.1,
   "wallCount": 22,
@@ -84,7 +84,7 @@
           "width": 97.5,
         },
       ],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {
@@ -140,7 +140,7 @@
           "width": 90.1,
         },
       ],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {
@@ -210,7 +210,7 @@
         "y": 684,
       },
       "openings": [],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {
@@ -222,7 +222,7 @@
         "y": 499.9,
       },
       "openings": [],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {
@@ -270,7 +270,7 @@
         "y": 643.3,
       },
       "openings": [],
-      "thickness": 45,
+      "thickness": 7,
     },
     {
       "a": {
@@ -282,7 +282,7 @@
         "y": 456.1,
       },
       "openings": [],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {
@@ -294,7 +294,7 @@
         "y": 684,
       },
       "openings": [],
-      "thickness": 45,
+      "thickness": 25,
     },
     {
       "a": {

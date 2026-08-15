@@ -105,6 +105,36 @@ describe('extractionToPlan', () => {
     expect(wall?.balance).toBe(0.79)
   })
 
+  it('prefereert thicknessPxTypical boven thicknessPxMax voor FML-dikte', () => {
+    const output: ExtractionOutput = {
+      candidates: [],
+      semanticWallGraph: {
+        segments: [
+          {
+            a: { x: 0, y: 0 },
+            b: { x: 100, y: 0 },
+            thicknessPxMax: 48,
+            thicknessPxTypical: 24,
+          },
+        ],
+        junctions: [],
+        meta: {
+          rawJunctionCount: 0,
+          semanticJunctionCount: 0,
+          cornerClustersMerged: 0,
+          collinearSegmentsMerged: 0,
+          angleAtLeast25Count: 0,
+        },
+      },
+      meta: { extractorId: 'test', elapsedMs: 0, templateKernels: [8] },
+    }
+    const plan = extractionToPlan(output, {
+      pxPerMmX: 2,
+      pxPerMmY: 2,
+    })
+    expect(plan.floors[0].walls[0]?.thickness).toBeCloseTo(1.2, 1)
+  })
+
   it('valt terug op balance 0.5 als semantic balance ontbreekt', () => {
     const output: ExtractionOutput = {
       candidates: [],

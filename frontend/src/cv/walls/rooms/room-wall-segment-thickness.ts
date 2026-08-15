@@ -17,11 +17,22 @@ function segmentLength(a: { x: number; y: number }, b: { x: number; y: number })
 
 const MEDIAN_THICKNESS_SAMPLE_CAP = 40
 const THICKNESS_REF_FALLBACK_PX = 30
+/**
+ * Kern-fractie voor korte segmenten: i.p.v. junction-trim uit te zetten
+ * (dan meet je 100% in knopen) sampelen we t ∈ [f, 1−f].
+ */
+export const THICKNESS_CORE_FRACTION = 0.3
 
 function resolveThicknessRefPx(referenceWallThicknessPx?: number): number {
   return referenceWallThicknessPx && referenceWallThicknessPx > 0
     ? referenceWallThicknessPx
     : THICKNESS_REF_FALLBACK_PX
+}
+
+function quantileSorted(sorted: number[], p: number): number {
+  if (sorted.length === 0) return 0
+  const index = Math.min(sorted.length - 1, Math.floor(p * sorted.length))
+  return sorted[index] ?? 0
 }
 
 /** Blijf weg van knooppunten bij diktemeting: 1 × ref (was vaste 30). */
@@ -77,8 +88,17 @@ function trimSegmentEndsForThickness(
   marginPx: number,
 ): { a: { x: number; y: number }; b: { x: number; y: number } } {
   const len = segmentLength(a, b)
-  if (marginPx <= 0 || len <= marginPx * 2 + 1) {
+  if (len <= 1e-6) {
     return { a: { ...a }, b: { ...b } }
+  }
+  // Korte segmenten: kern sampelen i.p.v. trim uitzetten (anders meet je knoopblobs).
+  if (marginPx <= 0 || len <= marginPx * 2 + 1) {
+    const t0 = THICKNESS_CORE_FRACTION
+    const t1 = 1 - THICKNESS_CORE_FRACTION
+    return {
+      a: { x: a.x + (b.x - a.x) * t0, y: a.y + (b.y - a.y) * t0 },
+      b: { x: a.x + (b.x - a.x) * t1, y: a.y + (b.y - a.y) * t1 },
+    }
   }
   const t0 = marginPx / len
   const t1 = 1 - marginPx / len
@@ -486,17 +506,29 @@ export function harmonizeThicknessPerWallLine(
     if (group.length <= 1) continue
     let bestIndex = group[0]
     for (const index of group) {
-      if ((result[index]?.thicknessPxMax ?? 0) > (result[bestIndex]?.thicknessPxMax ?? 0)) {
+      const typical = result[index]?.thicknessPxTypical ?? result[index]?.thicknessPxMax ?? 0
+      const bestTypical =
+        result[bestIndex]?.thicknessPxTypical ?? result[bestIndex]?.thicknessPxMax ?? 0
+      if (typical > bestTypical) {
         bestIndex = index
       }
     }
-    const thicknessPxMax = result[bestIndex]?.thicknessPxMax ?? 0
-    const balancePx = result[bestIndex]?.balancePx
+    const best = result[bestIndex]
+    const thicknessPxMax = best?.thicknessPxMax ?? 0
+    const thicknessPxTypical = best?.thicknessPxTypical
+    const thicknessPxP90 = best?.thicknessPxP90
+    const balancePx = best?.balancePx
+    const facePlusPx = best?.facePlusPx
+    const faceMinusPx = best?.faceMinusPx
     for (const index of group) {
       result[index] = {
         ...result[index],
         thicknessPxMax,
+        thicknessPxTypical,
+        thicknessPxP90,
         balancePx,
+        facePlusPx,
+        faceMinusPx,
       }
     }
   }
@@ -543,6 +575,9 @@ export function measureSegmentThicknessMax(params: {
       referenceWallThicknessPx: params.referenceWallThicknessPx,
     })
     const thicknessPxMax = samples.length ? Math.max(...samples) : 0
+    const thicknessPxTypical = samples.length ? median(samples) : 0
+    const sortedSamples = samples.length ? [...samples].sort((a, b) => a - b) : []
+    const thicknessPxP90 = samples.length ? quantileSorted(sortedSamples, 0.9) : 0
     const normalExtents = sampleNormalExtents({
       mask,
       width,
@@ -562,7 +597,11 @@ export function measureSegmentThicknessMax(params: {
     return {
       ...segment,
       thicknessPxMax,
+      thicknessPxTypical,
+      thicknessPxP90,
       balancePx,
+      facePlusPx: normalExtents.length > 0 ? plusMedian : undefined,
+      faceMinusPx: normalExtents.length > 0 ? minusMedian : undefined,
     }
   })
 
