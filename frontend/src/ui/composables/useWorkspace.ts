@@ -767,6 +767,8 @@ export function useWorkspace() {
     getPreviewUnderlayLayout: () => fml.previewUnderlayLayout.value ?? null,
     getFmlNulpuntImageCm: () => fml.fmlNulpuntImageCm.value ?? null,
     setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
+    getFmlOrient: () => fml.persistOrientState(),
+    setFmlOrient: (state) => fml.setFmlOrient(state),
     clearLiveFmlPreview: () => fml.clearLiveFmlPreview(),
     applyFmlDefaultsToUi: (defaults) => {
       fml.setFmlWallHeightCm(defaults.wallHeightCm)

@@ -7,38 +7,49 @@ import FmlPanel from './FmlPanel.vue'
  * Presentational FML sidebar block for WorkspaceView — props/emits mirror FmlPanel.
  * No workspace state lives here; parent keeps useWorkspace wiring.
  */
-defineProps<{
-  scaleConfirmed: boolean
-  hasCombinedOutput: boolean
-  generatedStats: { walls: number; doors: number; windows: number }
-  floorName: string
-  fmlWallHeightCm: number
-  fmlDoorHeightCm: number
-  fmlWindowHeightCm: number
-  fmlWindowSillZCm: number
-  fmlBovenlichtDefault: boolean
-  fmlWindowBovenlichtDefault: boolean
-  fmlThicknessMinCm: number
-  fmlThicknessMidCm: number
-  fmlThicknessMaxCm: number
-  fmlBandMidBoundaryCm: number
-  fmlBandMaxBoundaryCm: number
-  fmlLimitsDirty: boolean
-  fmlThicknessPickTier: FmlThicknessPickTier | null
-  fmlThicknessPickMessage: string | null
-  fmlThicknessPickBusy: boolean
-  importedFmlText: string
-  importedStats: { walls: number; doors: number; windows: number }
-  importedWarnings: ImportWarning[]
-  underlayOpacity: number
-  fmlOpacity: number
-  underlayAvailable: boolean
-}>()
+withDefaults(
+  defineProps<{
+    scaleConfirmed: boolean
+    hasCombinedOutput: boolean
+    generatedStats: { walls: number; doors: number; windows: number }
+    floorName: string
+    fmlWallHeightCm: number
+    fmlDoorHeightCm: number
+    fmlWindowHeightCm: number
+    fmlWindowSillZCm: number
+    fmlBovenlichtDefault: boolean
+    fmlWindowBovenlichtDefault: boolean
+    fmlThicknessMinCm: number
+    fmlThicknessMidCm: number
+    fmlThicknessMaxCm: number
+    fmlBandMidBoundaryCm: number
+    fmlBandMaxBoundaryCm: number
+    fmlLimitsDirty: boolean
+    fmlThicknessPickTier: FmlThicknessPickTier | null
+    fmlThicknessPickMessage: string | null
+    fmlThicknessPickBusy: boolean
+    importedFmlText: string
+    importedStats: { walls: number; doors: number; windows: number }
+    importedWarnings: ImportWarning[]
+    underlayOpacity: number
+    fmlOpacity: number
+    underlayAvailable: boolean
+    fmlOrientFlipX?: boolean
+    underlayMoveMode?: boolean
+    underlayFlipX?: boolean
+  }>(),
+  {
+    fmlOrientFlipX: false,
+    underlayMoveMode: false,
+    underlayFlipX: false,
+  },
+)
 
 const emit = defineEmits<{
   'update:floorName': [value: string]
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
+  'update:underlayMoveMode': [value: boolean]
   'update:fmlWallHeightCm': [value: number]
   'update:fmlDoorHeightCm': [value: number]
   'update:fmlWindowHeightCm': [value: number]
@@ -53,6 +64,12 @@ const emit = defineEmits<{
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
   regenerate: []
+  mirrorVertical: []
+  rotate90Cw: []
+  rotate90Ccw: []
+  underlayRotate90Cw: []
+  underlayRotate90Ccw: []
+  underlayMirrorVertical: []
 }>()
 </script>
 
@@ -83,9 +100,13 @@ const emit = defineEmits<{
     :underlay-opacity="underlayOpacity"
     :fml-opacity="fmlOpacity"
     :underlay-available="underlayAvailable"
+    :fml-orient-flip-x="fmlOrientFlipX"
+    :underlay-move-mode="underlayMoveMode"
+    :underlay-flip-x="underlayFlipX"
     @update:floor-name="emit('update:floorName', $event)"
     @update:underlay-opacity="emit('update:underlayOpacity', $event)"
     @update:fml-opacity="emit('update:fmlOpacity', $event)"
+    @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
     @update:fml-wall-height-cm="emit('update:fmlWallHeightCm', $event)"
     @update:fml-door-height-cm="emit('update:fmlDoorHeightCm', $event)"
     @update:fml-window-height-cm="emit('update:fmlWindowHeightCm', $event)"
@@ -100,5 +121,11 @@ const emit = defineEmits<{
     @start-thickness-pick="emit('startThicknessPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
+    @mirror-vertical="emit('mirrorVertical')"
+    @rotate90-cw="emit('rotate90Cw')"
+    @rotate90-ccw="emit('rotate90Ccw')"
+    @underlay-rotate90-cw="emit('underlayRotate90Cw')"
+    @underlay-rotate90-ccw="emit('underlayRotate90Ccw')"
+    @underlay-mirror-vertical="emit('underlayMirrorVertical')"
   />
 </template>

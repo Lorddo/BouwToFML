@@ -67,8 +67,14 @@ export interface RenderFixture {
   ellipses: number[][]
   circles: number[][]
   polylines: number[][]
+  arrowPolylines: number[][]
   stroke: string
   fill: string
+  circleFill?: string
+  strokeWidth: number
+  arrowStrokeWidth?: number
+  dash?: number[]
+  overWalls: boolean
 }
 
 export interface RenderModel {

@@ -15,7 +15,7 @@ import {
   FML_WALL_BALANCE_MIN,
   type Point2D,
 } from './extraction-to-plan-geom'
-import { wallLengthCm } from './fml-wall-geom'
+import { floorplannerLeftNormal, wallLengthCm } from './fml-wall-geom'
 import type { Opening, Wall } from './types'
 import {
   resolveChainFaceStepVerdict,
@@ -507,9 +507,9 @@ function wallDirectionUnit(wall: Wall): Point2D {
   return { x: dx / len, y: dy / len }
 }
 
-/** Left normal of a→b (Floorplanner plus-side). */
+/** Left normal of a→b (Floorplanner plus-side, Y-down). */
 function leftNormal(unit: Point2D): Point2D {
-  return { x: -unit.y, y: unit.x }
+  return floorplannerLeftNormal(unit)
 }
 
 function crossAxisComponent(normal: Point2D, vertical: boolean): number {

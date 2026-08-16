@@ -212,6 +212,7 @@ function persistBlob(
     fmlNulpuntImageCm: blob.fmlNulpuntImageCm
       ? toStorableDevSession(blob.fmlNulpuntImageCm)
       : (blob.fmlNulpuntImageCm ?? null),
+    fmlOrient: blob.fmlOrient ? toStorableDevSession(blob.fmlOrient) : (blob.fmlOrient ?? null),
     sourceUnderlay: blob.sourceUnderlay ? persistSourceUnderlay(blob.sourceUnderlay) : null,
   }
 }
@@ -223,6 +224,7 @@ function restoreBlob(blob: PersistedFloorBlob): FloorWorkspaceBlob {
     previewPlan: blob.previewPlan,
     previewUnderlayLayout: blob.previewUnderlayLayout,
     fmlNulpuntImageCm: blob.fmlNulpuntImageCm ?? null,
+    fmlOrient: blob.fmlOrient ?? null,
     sourceUnderlay: blob.sourceUnderlay ? restoreSourceUnderlay(blob.sourceUnderlay) : null,
   }
 }

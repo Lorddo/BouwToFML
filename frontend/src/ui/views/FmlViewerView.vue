@@ -1,11 +1,24 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FmlPreviewCanvas from '../components/FmlPreviewCanvas.vue'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
+import {
+  cloneUnderlayOriginLayout,
+  previewUnderlayLayoutFromDrawing,
+} from '@/core/fml/drawing-to-underlay-layout'
+import {
+  applyFloorOrientOp,
+  composeFloorOrient,
+  defaultFloorOrient,
+  type FloorOrientOp,
+  type FloorOrientState,
+} from '@/core/fml/floor-plan-orient'
 import { downloadFml } from '@/core/fml/downloadFml'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
+import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import { imageDimensions, loadImage } from '@/ui/composables/workspace/imageUtils'
 
 const { t } = useI18n()
 
@@ -16,12 +29,37 @@ const emit = defineEmits<{
 const plan = ref<FloorPlan | null>(null)
 const warnings = ref<ImportWarning[]>([])
 const error = ref<string | null>(null)
+const underlayHint = ref<string | null>(null)
 const fileName = ref<string | null>(null)
 const activeFloorIndex = ref(0)
+
+const underlaySrc = ref<string | null>(null)
+const underlayWidthPx = ref(0)
+const underlayHeightPx = ref(0)
+const underlayLayout = ref<PreviewUnderlayLayout | null>(null)
+const underlayOpacity = ref(0.5)
+/** FML-geometrie opacity 0–1; 0 = uit. */
+const fmlOpacity = ref(0.8)
+/** Per-floor FML-oriëntatie (viewer heeft geen regenerate-from-detectie). */
+const orientByFloor = ref<Record<number, FloorOrientState>>({})
+const underlayMoveMode = ref(false)
+
+const underlayAvailable = computed(() => !!underlaySrc.value && !!underlayLayout.value)
+const activeFmlOrient = computed(
+  () => orientByFloor.value[activeFloorIndex.value] ?? defaultFloorOrient(),
+)
+
+/** Object-URL van lokale fallback-PNG; revoke bij clear/switch. */
+let localUnderlayObjectUrl: string | null = null
+let underlayLoadGen = 0
 
 const floors = computed(() => plan.value?.floors ?? [])
 const multiFloor = computed(() => floors.value.length > 1)
 const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
+const hasDrawingMeta = computed(() => {
+  const d = activeFloor.value?.drawing
+  return !!d && d.width > 0 && d.height > 0
+})
 
 watch(floors, (list) => {
   if (list.length === 0) {
@@ -31,6 +69,11 @@ watch(floors, (list) => {
   if (activeFloorIndex.value >= list.length) {
     activeFloorIndex.value = list.length - 1
   }
+})
+
+watch(activeFloorIndex, () => {
+  underlayMoveMode.value = false
+  void syncUnderlayForActiveFloor()
 })
 
 const stats = computed(() => {
@@ -62,6 +105,129 @@ function selectFloor(index: number): void {
   activeFloorIndex.value = index
 }
 
+function revokeLocalUnderlay(): void {
+  if (localUnderlayObjectUrl) {
+    URL.revokeObjectURL(localUnderlayObjectUrl)
+    localUnderlayObjectUrl = null
+  }
+}
+
+function clearUnderlayState(): void {
+  underlayLoadGen += 1
+  revokeLocalUnderlay()
+  underlaySrc.value = null
+  underlayWidthPx.value = 0
+  underlayHeightPx.value = 0
+  underlayLayout.value = null
+  underlayOpacity.value = 0.5
+  underlayHint.value = null
+  underlayMoveMode.value = false
+}
+
+function resolveDrawingOpacity(alpha: number | undefined): number {
+  // Floorplanner alpha is 0–100; ontbrekend → 50.
+  const pct = typeof alpha === 'number' && Number.isFinite(alpha) ? alpha : 50
+  return Math.min(1, Math.max(0, pct / 100))
+}
+
+function applyImageToUnderlay(
+  src: string,
+  width: number,
+  height: number,
+  drawing: NonNullable<(typeof floors.value)[number]['drawing']>,
+): boolean {
+  const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
+  if (!layout) return false
+  underlaySrc.value = src
+  underlayWidthPx.value = width
+  underlayHeightPx.value = height
+  underlayLayout.value = cloneUnderlayOriginLayout(layout)
+  underlayOpacity.value = resolveDrawingOpacity(drawing.alpha)
+  return true
+}
+
+async function tryLoadDrawingUrl(
+  url: string,
+  drawing: NonNullable<(typeof floors.value)[number]['drawing']>,
+  gen: number,
+): Promise<boolean> {
+  try {
+    const img = await loadImage(url)
+    if (gen !== underlayLoadGen) return false
+    const { width, height } = imageDimensions(img)
+    return applyImageToUnderlay(url, width, height, drawing)
+  } catch {
+    return false
+  }
+}
+
+async function syncUnderlayForActiveFloor(): Promise<void> {
+  const drawing = activeFloor.value?.drawing
+  underlayLoadGen += 1
+  const gen = underlayLoadGen
+  revokeLocalUnderlay()
+  underlaySrc.value = null
+  underlayWidthPx.value = 0
+  underlayHeightPx.value = 0
+  underlayLayout.value = null
+  underlayHint.value = null
+
+  if (!drawing || !(drawing.width > 0) || !(drawing.height > 0)) {
+    underlayOpacity.value = 0.5
+    return
+  }
+
+  underlayOpacity.value = resolveDrawingOpacity(drawing.alpha)
+
+  if (drawing.url) {
+    const ok = await tryLoadDrawingUrl(drawing.url, drawing, gen)
+    if (gen !== underlayLoadGen) return
+    if (ok) {
+      underlayHint.value = null
+      return
+    }
+    underlayHint.value =
+      'Onderlegger-URL kon niet laden (COEP/CORS). Kies lokaal een PNG/JPG van dezelfde scan.'
+    return
+  }
+
+  underlayHint.value = 'Deze FML heeft een drawing zonder URL — kies lokaal een PNG/JPG.'
+}
+
+async function onLocalUnderlayInput(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  const drawing = activeFloor.value?.drawing
+  if (!drawing || !(drawing.width > 0) || !(drawing.height > 0)) {
+    underlayHint.value = 'Geen drawing-meta in deze verdieping — onderlegger niet uit te lijnen.'
+    return
+  }
+
+  underlayLoadGen += 1
+  const gen = underlayLoadGen
+  revokeLocalUnderlay()
+  const objectUrl = URL.createObjectURL(file)
+  localUnderlayObjectUrl = objectUrl
+
+  try {
+    const img = await loadImage(objectUrl)
+    if (gen !== underlayLoadGen) return
+    const { width, height } = imageDimensions(img)
+    if (!applyImageToUnderlay(objectUrl, width, height, drawing)) {
+      underlayHint.value = 'Onderlegger kon niet worden uitgelijnd (ongeldige drawing-maten).'
+      return
+    }
+    underlayHint.value = null
+  } catch {
+    if (gen !== underlayLoadGen) return
+    underlayHint.value = 'Lokale onderlegger laden mislukt.'
+    revokeLocalUnderlay()
+    underlaySrc.value = null
+  }
+}
+
 async function onFileInput(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -69,6 +235,7 @@ async function onFileInput(event: Event): Promise<void> {
   if (!file) return
 
   error.value = null
+  clearUnderlayState()
   try {
     const rawText = await file.text()
     const parsed = importFmlV3(rawText)
@@ -76,11 +243,15 @@ async function onFileInput(event: Event): Promise<void> {
     warnings.value = parsed.warnings
     fileName.value = file.name
     activeFloorIndex.value = 0
+    orientByFloor.value = {}
+    await syncUnderlayForActiveFloor()
   } catch (err) {
     plan.value = null
     warnings.value = []
     fileName.value = null
     activeFloorIndex.value = 0
+    orientByFloor.value = {}
+    clearUnderlayState()
     error.value = err instanceof Error ? err.message : 'FML import mislukt.'
   }
 }
@@ -91,6 +262,40 @@ function clearPlan(): void {
   fileName.value = null
   error.value = null
   activeFloorIndex.value = 0
+  orientByFloor.value = {}
+  fmlOpacity.value = 0.8
+  clearUnderlayState()
+}
+
+function applyViewerFloorOrient(op: FloorOrientOp): void {
+  if (!plan.value) return
+  const idx = activeFloorIndex.value
+  const prev = orientByFloor.value[idx] ?? defaultFloorOrient()
+  orientByFloor.value = {
+    ...orientByFloor.value,
+    [idx]: composeFloorOrient(prev, op),
+  }
+  plan.value = applyFloorOrientOp(plan.value, op, idx)
+  underlayMoveMode.value = false
+}
+
+function applyViewerUnderlayOrient(op: 'rotCw' | 'rotCcw' | 'flipX'): void {
+  const layout = underlayLayout.value
+  if (!layout) return
+  const next = cloneUnderlayOriginLayout(layout)
+  if (op === 'flipX') {
+    next.flipX = !next.flipX
+    if (!next.flipX) delete next.flipX
+  } else {
+    const delta = op === 'rotCw' ? 90 : -90
+    const current = next.rotationDeg ?? 0
+    let rotationDeg = current + delta
+    while (rotationDeg > 180) rotationDeg -= 360
+    while (rotationDeg <= -180) rotationDeg += 360
+    if (Math.abs(rotationDeg) < 0.001) delete next.rotationDeg
+    else next.rotationDeg = rotationDeg
+  }
+  underlayLayout.value = next
 }
 
 function downloadCurrentFml(): void {
@@ -108,9 +313,16 @@ async function copyCurrentFml(): Promise<void> {
   }
 }
 
-function onPlanUpdate(next: FloorPlan): void {
+function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
   plan.value = next
+  if (layout !== undefined) {
+    underlayLayout.value = layout ? cloneUnderlayOriginLayout(layout) : null
+  }
 }
+
+onBeforeUnmount(() => {
+  clearUnderlayState()
+})
 </script>
 
 <template>
@@ -146,6 +358,129 @@ function onPlanUpdate(next: FloorPlan): void {
         <div v-if="warnings.length > 0" class="warnings">
           <p v-for="(warning, index) in warnings" :key="index">{{ warning.message }}</p>
         </div>
+        <div class="orient-block opacity-block">
+          <div v-if="underlayAvailable" class="opacity-row">
+            <div class="opacity-row__label">
+              <span>{{ t('result.underlayOpacity') }}</span>
+              <span>{{ Math.round(underlayOpacity * 100) }}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              :value="Math.round(underlayOpacity * 100)"
+              :aria-label="t('result.underlayOpacityAria')"
+              @input="
+                underlayOpacity = Number(($event.target as HTMLInputElement).value) / 100
+                if (underlayOpacity <= 0) underlayMoveMode = false
+              "
+            />
+          </div>
+          <div class="opacity-row">
+            <div class="opacity-row__label">
+              <span>{{ t('result.fmlOpacity') }}</span>
+              <span>{{ Math.round(fmlOpacity * 100) }}%</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              :value="Math.round(fmlOpacity * 100)"
+              :aria-label="t('result.fmlOpacityAria')"
+              @input="fmlOpacity = Number(($event.target as HTMLInputElement).value) / 100"
+            />
+          </div>
+        </div>
+
+        <div v-if="hasDrawingMeta" class="underlay-block">
+          <p v-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
+          <p v-else-if="underlaySrc" class="underlay-ok">Onderlegger uit drawing actief.</p>
+          <label class="upload-btn">
+            Lokale onderlegger
+            <input
+              type="file"
+              accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+              @change="onLocalUnderlayInput"
+            />
+          </label>
+          <div v-if="underlayAvailable" class="orient-block">
+            <p class="orient-label">{{ t('result.underlayOrientLabel') }}</p>
+            <div class="orient-actions">
+              <button
+                type="button"
+                class="orient-btn"
+                :disabled="underlayOpacity <= 0"
+                :title="t('result.underlayRotate90CcwHint')"
+                @click="applyViewerUnderlayOrient('rotCcw')"
+              >
+                {{ t('result.underlayRotate90Ccw') }}
+              </button>
+              <button
+                type="button"
+                class="orient-btn"
+                :disabled="underlayOpacity <= 0"
+                :title="t('result.underlayRotate90CwHint')"
+                @click="applyViewerUnderlayOrient('rotCw')"
+              >
+                {{ t('result.underlayRotate90Cw') }}
+              </button>
+              <button
+                type="button"
+                class="orient-btn"
+                :class="{ 'orient-btn--active': underlayLayout?.flipX === true }"
+                :disabled="underlayOpacity <= 0"
+                :title="t('result.underlayMirrorVerticalHint')"
+                @click="applyViewerUnderlayOrient('flipX')"
+              >
+                {{ t('result.underlayMirrorVertical') }}
+              </button>
+              <button
+                type="button"
+                class="orient-btn"
+                :class="{ 'orient-btn--active': underlayMoveMode }"
+                :disabled="underlayOpacity <= 0"
+                :title="t('result.underlayMoveHint')"
+                @click="underlayMoveMode = !underlayMoveMode"
+              >
+                {{ t('result.underlayMove') }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="orient-block">
+          <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
+          <div class="orient-actions">
+            <button
+              type="button"
+              class="orient-btn"
+              :class="{ 'orient-btn--active': activeFmlOrient.flipX }"
+              :title="t('result.mirrorVerticalHint')"
+              @click="applyViewerFloorOrient('flipX')"
+            >
+              {{ t('result.mirrorVertical') }}
+            </button>
+            <button
+              type="button"
+              class="orient-btn"
+              :title="t('result.rotate90CcwHint')"
+              @click="applyViewerFloorOrient('rotCcw')"
+            >
+              {{ t('result.rotate90Ccw') }}
+            </button>
+            <button
+              type="button"
+              class="orient-btn"
+              :title="t('result.rotate90CwHint')"
+              @click="applyViewerFloorOrient('rotCw')"
+            >
+              {{ t('result.rotate90Cw') }}
+            </button>
+          </div>
+        </div>
+
         <div class="actions">
           <button type="button" @click="downloadCurrentFml">Download .fml</button>
           <button type="button" @click="copyCurrentFml">Kopieer FML</button>
@@ -181,7 +516,19 @@ function onPlanUpdate(next: FloorPlan): void {
         <FmlPreviewCanvas
           :plan="plan"
           :floor-index="activeFloorIndex"
+          :underlay-src="underlaySrc"
+          :underlay-width-px="underlayWidthPx"
+          :underlay-height-px="underlayHeightPx"
+          :underlay-opacity="underlaySrc ? underlayOpacity : 0"
+          :content-opacity="fmlOpacity"
+          :cm-origin="underlayLayout?.origin ?? null"
+          :px-per-mm-x="underlayLayout?.pxPerMmX ?? 1"
+          :px-per-mm-y="underlayLayout?.pxPerMmY ?? 1"
+          :rotation-deg="underlayLayout?.rotationDeg ?? 0"
+          :flip-x="underlayLayout?.flipX === true"
+          :underlay-move-mode="underlayMoveMode && underlayOpacity > 0"
           @plan-update="onPlanUpdate"
+          @update:underlay-move-mode="underlayMoveMode = $event"
         />
       </template>
       <div v-else class="empty-state">
@@ -333,6 +680,91 @@ function onPlanUpdate(next: FloorPlan): void {
 
 .warnings p {
   margin: 0 0 4px;
+}
+
+.underlay-block {
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.underlay-hint {
+  margin: 0;
+  font-size: 11px;
+  color: #b45309;
+  line-height: 1.4;
+}
+
+.underlay-ok {
+  margin: 0;
+  font-size: 11px;
+  color: #15803d;
+}
+
+.orient-block {
+  margin: 10px 0 0;
+}
+
+.opacity-block {
+  margin-top: 8px;
+}
+
+.opacity-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #334155;
+  user-select: none;
+}
+
+.opacity-row__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.opacity-row input[type='range'] {
+  width: 100%;
+  min-width: 0;
+}
+
+.orient-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.orient-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.orient-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.orient-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.orient-btn--active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .actions {

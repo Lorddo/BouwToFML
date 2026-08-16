@@ -18,6 +18,7 @@ import { useFmlPreviewDrawWall } from './useFmlPreviewDrawWall'
 import { useFmlPreviewDrawRoom } from './useFmlPreviewDrawRoom'
 import { useFmlPreviewMeasure } from './useFmlPreviewMeasure'
 import { useFmlPreviewNulpunt } from './useFmlPreviewNulpunt'
+import { useFmlPreviewUnderlayMove } from './useFmlPreviewUnderlayMove'
 import { useFmlPreviewOpeningDrag } from './useFmlPreviewOpeningDrag'
 import { useFmlPreviewOpeningSelection } from './useFmlPreviewOpeningSelection'
 import { useFmlPreviewPanZoom } from './useFmlPreviewPanZoom'
@@ -77,6 +78,8 @@ export function useFmlPreviewInteraction(options: {
   /** Huidige underlay-layout (voor nulpunt + undo). */
   getUnderlayLayout?: () => PreviewUnderlayLayout | null
   setFmlNulpuntImageCm?: (point: Point2D | null) => void
+  /** Extern: onderlegger-verplaats-modus (sidebar toggle). */
+  underlayMoveMode?: Ref<boolean>
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
 }) {
@@ -94,6 +97,7 @@ export function useFmlPreviewInteraction(options: {
     windowBovenlichtDefault,
     getUnderlayLayout,
     setFmlNulpuntImageCm,
+    underlayMoveMode: underlayMoveModeProp,
     onKeyDown,
     onKeyUp,
   } = options
@@ -121,7 +125,23 @@ export function useFmlPreviewInteraction(options: {
   const addWindowMode = computed(() => activeFmlTool.value === 'add_window')
   const measureMode = computed(() => activeFmlTool.value === 'measure')
   const nulpuntMode = computed(() => activeFmlTool.value === 'nulpunt')
+  const underlayMoveModeInternal = ref(false)
+  const underlayMoveMode = computed({
+    get: () => underlayMoveModeProp?.value ?? underlayMoveModeInternal.value,
+    set: (on: boolean) => {
+      if (underlayMoveModeProp) underlayMoveModeProp.value = on
+      else underlayMoveModeInternal.value = on
+    },
+  })
   const isPanDragging = ref(false)
+
+  // Exclusive: nulpunt-tool ↔ underlay-move
+  watch(nulpuntMode, (on) => {
+    if (on && underlayMoveMode.value) underlayMoveMode.value = false
+  })
+  watch(underlayMoveMode, (on) => {
+    if (on && nulpuntMode.value) activeFmlTool.value = null
+  })
 
   watch(addDoorSubtype, (subtype) => {
     addDoorWidthCm.value = resolveDoorAddPreset(subtype).defaultWidthCm
@@ -140,6 +160,7 @@ export function useFmlPreviewInteraction(options: {
     cancelDrawRoomDrag: () => {},
     cancelMeasureDrag: () => {},
     cancelNulpuntDrag: () => {},
+    cancelUnderlayMoveDrag: () => {},
   }
 
   function syncPlanToParent(layout?: PreviewUnderlayLayout | null): void {
@@ -397,6 +418,20 @@ export function useFmlPreviewInteraction(options: {
   })
   drawMeasureCancels.cancelNulpuntDrag = nulpunt.cancelNulpuntPending
 
+  const underlayMove = useFmlPreviewUnderlayMove({
+    hitTest,
+    underlayMoveMode,
+    getUnderlayLayout: () => getUnderlayLayout?.() ?? null,
+    setFmlNulpuntImageCm: (point) => setFmlNulpuntImageCm?.(point),
+    syncLayoutToParent: (layout) => syncPlanToParent(layout),
+    beforeBegin: () => {
+      cancelSelectionBoxDrag()
+      wallDrag.cancelMoveDragPending()
+      clearSelection()
+    },
+  })
+  drawMeasureCancels.cancelUnderlayMoveDrag = underlayMove.cancelUnderlayMoveDrag
+
   function confirmNulpuntBake(): boolean {
     const applied = nulpunt.confirmNulpuntBake()
     if (!applied) return false
@@ -429,6 +464,7 @@ export function useFmlPreviewInteraction(options: {
       addWindowMode,
       measureMode,
       nulpuntMode,
+      underlayMoveMode,
       selectionBoxMode,
     },
     drag: {
@@ -439,6 +475,7 @@ export function useFmlPreviewInteraction(options: {
       isDrawRoomDragging: () => drawRoom.isDragging(),
       isMeasureDragging: () => measure.isDragging(),
       isNulpuntDragging: () => nulpunt.isDragging(),
+      isUnderlayMoveDragging: () => underlayMove.isDragging(),
       isPanDragging,
     },
     actions: {
@@ -447,6 +484,7 @@ export function useFmlPreviewInteraction(options: {
       beginMeasure: measure.beginMeasure,
       beginDrawRoom: drawRoom.beginDrawRoom,
       beginNulpuntDrag: nulpunt.beginNulpuntDrag,
+      beginUnderlayMoveDrag: underlayMove.beginUnderlayMoveDrag,
       placeDoor: addOpening.placeDoor,
       placeWindow: addOpening.placeWindow,
       startJunctionDrag: wallDrag.startJunctionDrag,
@@ -507,6 +545,10 @@ export function useFmlPreviewInteraction(options: {
         nulpunt.cancelNulpuntPending()
         return
       }
+      if (underlayMove.isDragging()) {
+        underlayMove.cancelUnderlayMoveDrag()
+        return
+      }
       if (nulpunt.nulpuntHasPending.value) {
         nulpunt.cancelNulpuntPending()
         return
@@ -517,6 +559,10 @@ export function useFmlPreviewInteraction(options: {
       }
       if (nulpuntMode.value) {
         activeFmlTool.value = null
+        return
+      }
+      if (underlayMoveMode.value) {
+        underlayMoveMode.value = false
         return
       }
       clearSelection()
@@ -570,6 +616,7 @@ export function useFmlPreviewInteraction(options: {
     drawRoom.cancelDrawRoomDrag()
     measure.cancelMeasureDrag()
     nulpunt.cancelNulpuntPending()
+    underlayMove.cancelUnderlayMoveDrag()
     panZoom.endPanDrag()
     window.removeEventListener('keydown', onEditorKeyDown)
     window.removeEventListener('keyup', onEditorKeyUp)
@@ -584,6 +631,7 @@ export function useFmlPreviewInteraction(options: {
     addWindowMode,
     measureMode,
     nulpuntMode,
+    underlayMoveMode,
     selectionBoxPreview,
     drawWallPreview: drawWall.drawWallPreview,
     drawRoomPreview: drawRoom.drawRoomPreview,

@@ -13,7 +13,34 @@ export type FixtureAssetKind =
   | 'sink_large'
   | 'boiler'
   | 'heat_pump'
+  | 'stair_winder_180'
+  | 'canopy'
+  | 'chimney'
+  | 'railing'
+  | 'skylight'
+  | 'roof_eave'
+  | 'hidden'
+  | 'standpipe'
   | 'generic'
+
+const KNOWN_KINDS = new Set<FixtureAssetKind>([
+  'countertop',
+  'toilet',
+  'sink_small',
+  'shower_head',
+  'sink_large',
+  'boiler',
+  'heat_pump',
+  'stair_winder_180',
+  'canopy',
+  'chimney',
+  'railing',
+  'skylight',
+  'roof_eave',
+  'hidden',
+  'standpipe',
+  'generic',
+])
 
 interface CatalogEntry {
   refid: string
@@ -22,25 +49,16 @@ interface CatalogEntry {
   kind?: string
   categorie?: string
   notities?: string
+  fill?: string
+  stroke?: string
 }
 
 const entries = (catalogData.entries ?? []) as CatalogEntry[]
 const byRefid = new Map(entries.map((entry) => [entry.refid, entry]))
 
 function inferKind(entry: CatalogEntry | undefined): FixtureAssetKind {
-  const k = (entry?.kind ?? '').trim().toLowerCase()
-  if (
-    k === 'countertop' ||
-    k === 'toilet' ||
-    k === 'sink_small' ||
-    k === 'shower_head' ||
-    k === 'sink_large' ||
-    k === 'boiler' ||
-    k === 'heat_pump'
-  ) {
-    return k
-  }
-  return 'generic'
+  const k = (entry?.kind ?? '').trim().toLowerCase() as FixtureAssetKind
+  return KNOWN_KINDS.has(k) ? k : 'generic'
 }
 
 export interface FixtureCatalogInfo {
@@ -48,6 +66,8 @@ export interface FixtureCatalogInfo {
   label: string
   kind: FixtureAssetKind
   categorie: string
+  fill?: string
+  stroke?: string
 }
 
 export function resolveFixtureCatalog(refid: string): FixtureCatalogInfo {
@@ -55,5 +75,12 @@ export function resolveFixtureCatalog(refid: string): FixtureCatalogInfo {
   const kind = inferKind(entry)
   const label = entry?.benaming?.trim() || 'Object'
   const categorie = entry?.categorie?.trim() || 'overig'
-  return { refid, label, kind, categorie }
+  return {
+    refid,
+    label,
+    kind,
+    categorie,
+    fill: entry?.fill?.trim() || undefined,
+    stroke: entry?.stroke?.trim() || undefined,
+  }
 }

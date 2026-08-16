@@ -4,6 +4,10 @@ export type UnderlayOriginLayout = {
   origin: Point2D
   pxPerMmX: number
   pxPerMmY: number
+  /** Onderlegger-rotatie in graden (FML drawing.rotation); ontbrekend = 0. */
+  rotationDeg?: number
+  /** Display-only: Konva scaleX −1 om bitmap-midden. */
+  flipX?: boolean
 }
 
 function translatePoint(p: Point2D, dx: number, dy: number): Point2D {

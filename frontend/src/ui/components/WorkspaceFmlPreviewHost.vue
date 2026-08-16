@@ -19,6 +19,10 @@ const props = defineProps<{
   cmOrigin: { x: number; y: number } | null
   pxPerMmX: number
   pxPerMmY: number
+  /** Onderlegger-rotatie in graden; default 0. */
+  rotationDeg?: number
+  flipX?: boolean
+  underlayMoveMode?: boolean
   thicknessPickTier: FmlThicknessBand | null
   thicknessMinCm: number
   thicknessMidCm: number
@@ -35,6 +39,7 @@ const emit = defineEmits<{
   ]
   thicknessWallPick: [wallId: string]
   cancelThicknessPick: []
+  'update:underlayMoveMode': [value: boolean]
 }>()
 </script>
 
@@ -50,6 +55,9 @@ const emit = defineEmits<{
     :cm-origin="cmOrigin"
     :px-per-mm-x="pxPerMmX"
     :px-per-mm-y="pxPerMmY"
+    :rotation-deg="rotationDeg ?? 0"
+    :flip-x="flipX === true"
+    :underlay-move-mode="underlayMoveMode === true"
     :thickness-pick-tier="thicknessPickTier"
     :thickness-min-cm="thicknessMinCm"
     :thickness-mid-cm="thicknessMidCm"
@@ -60,5 +68,6 @@ const emit = defineEmits<{
     @plan-update="(plan, layout) => emit('planUpdate', plan, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
+    @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
   />
 </template>

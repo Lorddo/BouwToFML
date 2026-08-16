@@ -32,6 +32,12 @@ const props = withDefaults(
     cmOrigin?: { x: number; y: number } | null
     pxPerMmX?: number
     pxPerMmY?: number
+    /** Onderlegger-rotatie in graden (FML drawing); default 0. */
+    rotationDeg?: number
+    /** Display-only X-flip van de onderlegger. */
+    flipX?: boolean
+    /** Sidebar: onderlegger verslepen. */
+    underlayMoveMode?: boolean
     thicknessPickTier?: FmlThicknessBand | null
     thicknessMinCm?: number
     thicknessMidCm?: number
@@ -50,6 +56,9 @@ const props = withDefaults(
     cmOrigin: null,
     pxPerMmX: 1,
     pxPerMmY: 1,
+    rotationDeg: 0,
+    flipX: false,
+    underlayMoveMode: false,
     thicknessPickTier: null,
     thicknessMinCm: 10,
     thicknessMidCm: 20,
@@ -64,6 +73,7 @@ const emit = defineEmits<{
   planUpdate: [plan: FloorPlan, layout?: PreviewUnderlayLayout | null]
   thicknessWallPick: [wallId: string]
   cancelThicknessPick: []
+  'update:underlayMoveMode': [value: boolean]
 }>()
 
 function interactionEmit(
@@ -85,6 +95,16 @@ function interactionEmit(
 const thicknessPickTierRef = toRef(props, 'thicknessPickTier')
 const bovenlichtDefaultRef = toRef(props, 'bovenlichtDefault')
 const windowBovenlichtDefaultRef = toRef(props, 'windowBovenlichtDefault')
+const underlayMoveModeRef = ref(props.underlayMoveMode ?? false)
+watch(
+  () => props.underlayMoveMode,
+  (on) => {
+    underlayMoveModeRef.value = on ?? false
+  },
+)
+watch(underlayMoveModeRef, (on) => {
+  if (on !== props.underlayMoveMode) emit('update:underlayMoveMode', on)
+})
 
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<{ getNode: () => Konva.Stage } | null>(null)
@@ -108,6 +128,8 @@ const underlayProps = computed(() => ({
   cmOrigin: props.cmOrigin ?? null,
   pxPerMmX: props.pxPerMmX ?? 1,
   pxPerMmY: props.pxPerMmY ?? 1,
+  rotationDeg: props.rotationDeg ?? 0,
+  flipX: props.flipX === true,
 }))
 
 const render = useFmlPreviewRenderModel(viewport, editor, floor, underlayProps, selection)
@@ -143,15 +165,24 @@ const interaction = useFmlPreviewInteraction({
         origin: { x: 0, y: 0 },
         pxPerMmX: props.pxPerMmX ?? 1,
         pxPerMmY: props.pxPerMmY ?? 1,
+        ...(props.rotationDeg != null && Math.abs(props.rotationDeg) >= 0.001
+          ? { rotationDeg: props.rotationDeg }
+          : {}),
+        ...(props.flipX ? { flipX: true } : {}),
       }
     }
     return {
       origin: { x: props.cmOrigin.x, y: props.cmOrigin.y },
       pxPerMmX: props.pxPerMmX ?? 1,
       pxPerMmY: props.pxPerMmY ?? 1,
+      ...(props.rotationDeg != null && Math.abs(props.rotationDeg) >= 0.001
+        ? { rotationDeg: props.rotationDeg }
+        : {}),
+      ...(props.flipX ? { flipX: true } : {}),
     }
   },
   setFmlNulpuntImageCm: (point) => props.setFmlNulpuntImageCm?.(point),
+  underlayMoveMode: underlayMoveModeRef,
   onKeyDown,
   onKeyUp,
 })

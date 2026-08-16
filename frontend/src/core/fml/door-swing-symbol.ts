@@ -44,6 +44,7 @@ function midpoint(a: DoorSwingPoint, b: DoorSwingPoint): DoorSwingPoint {
 /**
  * Normaal op muur a→b in schermcoördinaten (Y omlaag).
  * +normal = rechterzijde als je op a staat en naar b kijkt.
+ * Dit is het tegengestelde van `floorplannerLeftNormal` (wall `balance`).
  */
 function wallNormal(wallUnit: DoorSwingPoint): DoorSwingPoint {
   return { x: -wallUnit.y, y: wallUnit.x }

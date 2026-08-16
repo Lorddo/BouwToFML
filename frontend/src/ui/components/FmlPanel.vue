@@ -48,6 +48,9 @@ withDefaults(
     fmlThicknessPickTier?: FmlThicknessPickTier | null
     fmlThicknessPickMessage?: string | null
     fmlThicknessPickBusy?: boolean
+    fmlOrientFlipX?: boolean
+    underlayMoveMode?: boolean
+    underlayFlipX?: boolean
   }>(),
   {
     importedFmlText: '',
@@ -71,11 +74,20 @@ withDefaults(
     fmlThicknessPickTier: null,
     fmlThicknessPickMessage: null,
     fmlThicknessPickBusy: false,
+    fmlOrientFlipX: false,
+    underlayMoveMode: false,
+    underlayFlipX: false,
   },
 )
 
 const emit = defineEmits<{
   regenerate: []
+  mirrorVertical: []
+  rotate90Cw: []
+  rotate90Ccw: []
+  underlayRotate90Cw: []
+  underlayRotate90Ccw: []
+  underlayMirrorVertical: []
   'update:floorName': [value: string]
   'update:fmlWallHeightCm': [value: number]
   'update:fmlDoorHeightCm': [value: number]
@@ -90,6 +102,7 @@ const emit = defineEmits<{
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
+  'update:underlayMoveMode': [value: boolean]
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
 }>()
@@ -146,8 +159,14 @@ function onWindowBovenlichtChange(event: Event): void {
       :underlay-opacity="underlayOpacity"
       :fml-opacity="fmlOpacity"
       :underlay-available="underlayAvailable"
+      :underlay-move-mode="underlayMoveMode"
+      :underlay-flip-x="underlayFlipX"
       @update:underlay-opacity="emit('update:underlayOpacity', $event)"
       @update:fml-opacity="emit('update:fmlOpacity', $event)"
+      @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
+      @underlay-rotate90-cw="emit('underlayRotate90Cw')"
+      @underlay-rotate90-ccw="emit('underlayRotate90Ccw')"
+      @underlay-mirror-vertical="emit('underlayMirrorVertical')"
     />
 
     <label class="fml-limit-field fml-bovenlicht" :title="t('result.bovenlichtTitle')">
@@ -208,7 +227,11 @@ function onWindowBovenlichtChange(event: Event): void {
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
       :fml-limits-dirty="fmlLimitsDirty"
+      :fml-orient-flip-x="fmlOrientFlipX"
       @regenerate="emit('regenerate')"
+      @mirror-vertical="emit('mirrorVertical')"
+      @rotate90-cw="emit('rotate90Cw')"
+      @rotate90-ccw="emit('rotate90Ccw')"
     />
   </div>
 </template>

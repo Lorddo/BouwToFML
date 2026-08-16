@@ -1,4 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
+import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout'
 import { applyNulpunt } from '@/core/fml/translate-floor-plan'
 import type { FloorPlan, Point2D } from '@/core/fml/types'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
@@ -153,11 +154,7 @@ export function useFmlPreviewNulpunt(options: {
 
     return {
       plan: applied.plan,
-      layout: {
-        origin: { ...applied.layout.origin },
-        pxPerMmX: applied.layout.pxPerMmX,
-        pxPerMmY: applied.layout.pxPerMmY,
-      },
+      layout: cloneUnderlayOriginLayout(applied.layout),
       nulpuntImageCm: { ...applied.nulpuntImageCm },
       wallDeltaCm: { x: -dropCm.x, y: -dropCm.y },
     }

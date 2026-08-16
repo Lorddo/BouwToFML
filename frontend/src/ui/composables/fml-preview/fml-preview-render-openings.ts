@@ -146,8 +146,9 @@ export function buildRenderDoorGroupsAndWindows(
 }
 
 export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): RenderFixture[] {
-  return (floor.items ?? []).map((item, index) => {
+  return (floor.items ?? []).flatMap((item, index) => {
     const catalog = resolveFixtureCatalog(item.refid)
+    if (catalog.kind === 'hidden') return []
     const symbol = buildFixtureSymbol(catalog.kind, item.width, item.height)
     const center = toStagePoint(item.x, item.y)
     const origin = toStagePoint(0, 0)
@@ -155,21 +156,29 @@ export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): R
     const cmToStage = Math.hypot(unit.x - origin.x, unit.y - origin.y) || 1
     const mirroredX = item.mirrored?.[0] === 1 ? -1 : 1
     const mirroredY = item.mirrored?.[1] === 1 ? -1 : 1
-    return {
-      id: item.guid ?? `fixture-${index}`,
-      label: catalog.label,
-      detail: catalog.categorie,
-      x: center.x,
-      y: center.y,
-      rotationDeg: item.rotation ?? 0,
-      scaleX: cmToStage * mirroredX,
-      scaleY: cmToStage * mirroredY,
-      rects: symbol.rects,
-      ellipses: symbol.ellipses,
-      circles: symbol.circles,
-      polylines: symbol.polylines,
-      stroke: symbol.stroke,
-      fill: symbol.fill,
-    }
+    return [
+      {
+        id: item.guid ?? `fixture-${index}`,
+        label: catalog.label,
+        detail: catalog.categorie,
+        x: center.x,
+        y: center.y,
+        rotationDeg: item.rotation ?? 0,
+        scaleX: cmToStage * mirroredX,
+        scaleY: cmToStage * mirroredY,
+        rects: symbol.rects,
+        ellipses: symbol.ellipses,
+        circles: symbol.circles,
+        polylines: symbol.polylines,
+        arrowPolylines: symbol.arrowPolylines ?? [],
+        stroke: catalog.stroke ?? symbol.stroke,
+        fill: catalog.fill ?? symbol.fill,
+        circleFill: symbol.circleFill,
+        strokeWidth: symbol.strokeWidth ?? 1.2,
+        arrowStrokeWidth: symbol.arrowStrokeWidth,
+        dash: symbol.dash,
+        overWalls: symbol.overWalls,
+      },
+    ]
   })
 }

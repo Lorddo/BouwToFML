@@ -1,15 +1,39 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import type { RenderFixture } from '@/ui/composables/fml-preview/fml-preview-render-types'
 import type { RenderModel } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
 
-defineProps<{
-  renderModel: RenderModel
-}>()
+const props = withDefaults(
+  defineProps<{
+    renderModel: RenderModel
+    /** under = meubels achter muurfill; over = dak/gevel-symbolen. */
+    layer?: 'under' | 'over' | 'all'
+  }>(),
+  { layer: 'all' },
+)
+
+const fixtures = computed(() => {
+  const all = props.renderModel.fixtures
+  if (props.layer === 'under') return all.filter((item) => !item.overWalls)
+  if (props.layer === 'over') return all.filter((item) => item.overWalls)
+  return all
+})
+
+function localStroke(fixture: RenderFixture, px = fixture.strokeWidth): number {
+  return px / Math.max(Math.abs(fixture.scaleX), 0.001)
+}
+
+function localDash(fixture: RenderFixture): number[] | undefined {
+  if (!fixture.dash?.length) return undefined
+  const s = Math.max(Math.abs(fixture.scaleX), 0.001)
+  return fixture.dash.map((d) => d / s)
+}
 </script>
 
 <template>
   <v-group :config="{ listening: false }">
     <v-group
-      v-for="fixture in renderModel.fixtures"
+      v-for="fixture in fixtures"
       :key="fixture.id"
       :config="{
         x: fixture.x,
@@ -30,7 +54,8 @@ defineProps<{
           height: rect[3],
           fill: fixture.fill,
           stroke: fixture.stroke,
-          strokeWidth: 1.2 / Math.max(Math.abs(fixture.scaleX), 0.001),
+          strokeWidth: localStroke(fixture),
+          dash: localDash(fixture),
           listening: false,
         }"
       />
@@ -44,7 +69,7 @@ defineProps<{
           radiusY: ell[3],
           fill: fixture.fill,
           stroke: fixture.stroke,
-          strokeWidth: 1.2 / Math.max(Math.abs(fixture.scaleX), 0.001),
+          strokeWidth: localStroke(fixture),
           listening: false,
         }"
       />
@@ -55,9 +80,9 @@ defineProps<{
           x: cir[0],
           y: cir[1],
           radius: cir[2],
-          fill: fixture.fill,
+          fill: fixture.circleFill ?? fixture.fill,
           stroke: fixture.stroke,
-          strokeWidth: 1.2 / Math.max(Math.abs(fixture.scaleX), 0.001),
+          strokeWidth: localStroke(fixture),
           listening: false,
         }"
       />
@@ -67,8 +92,20 @@ defineProps<{
         :config="{
           points: poly,
           stroke: fixture.stroke,
-          strokeWidth: 1.2 / Math.max(Math.abs(fixture.scaleX), 0.001),
+          strokeWidth: localStroke(fixture),
           lineCap: 'round',
+          listening: false,
+        }"
+      />
+      <v-line
+        v-for="(poly, polyIdx) in fixture.arrowPolylines"
+        :key="`${fixture.id}-a-${polyIdx}`"
+        :config="{
+          points: poly,
+          stroke: fixture.stroke,
+          strokeWidth: localStroke(fixture, fixture.arrowStrokeWidth ?? fixture.strokeWidth),
+          lineCap: 'butt',
+          lineJoin: 'miter',
           listening: false,
         }"
       />

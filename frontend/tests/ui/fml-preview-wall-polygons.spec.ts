@@ -33,17 +33,17 @@ describe('wall balance extents', () => {
 
     const wallUnit = { x: 1, y: 0 }
     const mid = offsetPointByWallBalance({ x: 50, y: 0 }, wallUnit, 20, 0.8)
-    // left normal = (0, 1) → mid shifts +y
+    // a→b naar rechts: links = −Y (Y-down). balance 0.8 → midden verschuift omhoog.
     expect(mid.x).toBeCloseTo(50, 6)
-    expect(mid.y).toBeCloseTo(6, 6)
+    expect(mid.y).toBeCloseTo(-6, 6)
   })
 
   it('opening mid-offset follows wall balance (viewer doors/windows use this)', () => {
     const wallUnit = { x: 1, y: 0 }
     const hinge = { x: 40, y: 0 }
     const offset = offsetPointByWallBalance(hinge, wallUnit, 30, 0.8)
-    // mid = (plus-minus)/2 = (24-6)/2 = 9 along left normal
-    expect(offset).toEqual({ x: 40, y: 9 })
+    // mid = (plus-minus)/2 = (24-6)/2 = 9 along left normal (−Y)
+    expect(offset).toEqual({ x: 40, y: -9 })
     expect(offsetPointByWallBalance(hinge, wallUnit, 30, 0.5)).toEqual({ x: 40, y: 0 })
   })
 })
@@ -174,20 +174,21 @@ describe('buildWallRenderGeometry', () => {
     ])
 
     const w1 = geometry.wallPolygons.find((polygon) => polygon.id === 'w1')!
-    expect(hasVertex(w1.points, { x: 110, y: 15 })).toBe(true)
-    expect(hasVertex(w1.points, { x: 110, y: -5 })).toBe(true)
+    // a→b +X: plus (balance 0.75) = links = −Y; minus = +Y
+    expect(hasVertex(w1.points, { x: 110, y: -15 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 110, y: 5 })).toBe(true)
   })
 
   it('flush balance=0 L has no false exterior ear beyond the join', () => {
-    // Both walls entirely on −normal (H below, V to the right) → exterior (−x,−y) empty.
+    // balance=0 = alles rechts van a→b: H naar +Y, V naar −X → buitenhoek (−x,−y) leeg.
     const geometry = buildWallRenderGeometry([
       { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0 },
       { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 20, balance: 0 },
     ])
     expect(geometry.fillComponents.length).toBe(1)
     expect(pointInFillComponents({ x: -8, y: -8 }, geometry.fillComponents)).toBe(false)
-    expect(pointInFillComponents({ x: 50, y: -8 }, geometry.fillComponents)).toBe(true)
-    expect(pointInFillComponents({ x: 8, y: 40 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 50, y: 8 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: -8, y: 40 }, geometry.fillComponents)).toBe(true)
   })
 
   it('centered balance L still fills the outer corner', () => {
@@ -200,16 +201,57 @@ describe('buildWallRenderGeometry', () => {
   })
 
   it('shifting one wall balance removes overhang on the emptied side', () => {
-    // Thick V mostly to the right (balance 0.1); H must not keep a half-thick left ear.
+    // Thick V a→b omlaag: balance 0.1 = bijna alles rechts = −X. H mag geen +X-oor houden.
     const geometry = buildWallRenderGeometry([
       { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0.5 },
       { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 30, balance: 0.1 },
     ])
     expect(geometry.fillComponents.length).toBe(1)
-    expect(pointInFillComponents({ x: -12, y: -8 }, geometry.fillComponents)).toBe(false)
-    expect(pointInFillComponents({ x: -12, y: 40 }, geometry.fillComponents)).toBe(false)
-    expect(pointInFillComponents({ x: 12, y: 40 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 12, y: -12 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: 12, y: 40 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: -12, y: 40 }, geometry.fillComponents)).toBe(true)
     expect(pointInFillComponents({ x: 50, y: 0 }, geometry.fillComponents)).toBe(true)
+  })
+
+  it('balance=0 follows a→b: opposite directions flush the same world face (Mooiland gevels)', () => {
+    // Bovengevel: a rechts→b links, balance 0 = alles visueel-rechts = −Y (naar buiten).
+    const top = buildWallRenderGeometry([
+      {
+        id: 'top',
+        a: { x: 250, y: 100 },
+        b: { x: 0, y: 100 },
+        thickness: 30,
+        balance: 0,
+      },
+    ])
+    expect(pointInFillComponents({ x: 125, y: 85 }, top.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 125, y: 115 }, top.fillComponents)).toBe(false)
+
+    // Ondergevel: a links→b rechts, balance 0 = alles visueel-rechts = +Y (naar buiten).
+    const bot = buildWallRenderGeometry([
+      {
+        id: 'bot',
+        a: { x: 0, y: 850 },
+        b: { x: 250, y: 850 },
+        thickness: 30,
+        balance: 0,
+      },
+    ])
+    expect(pointInFillComponents({ x: 125, y: 865 }, bot.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 125, y: 835 }, bot.fillComponents)).toBe(false)
+  })
+
+  it('reversing a→b with complementary balance keeps the same world body', () => {
+    const forward = buildWallRenderGeometry([
+      { id: 'w', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0 },
+    ])
+    const reversed = buildWallRenderGeometry([
+      { id: 'w', a: { x: 100, y: 0 }, b: { x: 0, y: 0 }, thickness: 20, balance: 1 },
+    ])
+    expect(pointInFillComponents({ x: 50, y: 8 }, forward.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 50, y: -8 }, forward.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: 50, y: 8 }, reversed.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 50, y: -8 }, reversed.fillComponents)).toBe(false)
   })
 
   it('does not produce extreme spikes on nearly collinear joins', () => {

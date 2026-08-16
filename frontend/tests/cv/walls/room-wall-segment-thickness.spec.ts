@@ -97,7 +97,7 @@ describe('room-wall-segment-thickness', () => {
     const width = 140
     const height = 80
     const data = new Uint8Array(width * height)
-    // Segment ligt op y=30; inkt loopt veel verder door naar +normal (beneden).
+    // a→b naar rechts; inkt loopt verder naar +Y = visueel rechts → balance (links-fractie) laag.
     for (let y = 26; y <= 42; y += 1) {
       for (let x = 15; x < 125; x += 1) data[y * width + x] = 255
     }
@@ -121,8 +121,8 @@ describe('room-wall-segment-thickness', () => {
     }
     const measured = measureSegmentThicknessMax({ graph, maskRle })
     const balance = measured.segments[0]?.balancePx ?? 0
-    expect(balance).toBeGreaterThan(0.7)
-    expect(balance).toBeLessThan(0.9)
+    expect(balance).toBeGreaterThan(0.15)
+    expect(balance).toBeLessThan(0.35)
   })
 
   it('harmoniseert dikte over collineaire segmenten op één muurlijn', () => {

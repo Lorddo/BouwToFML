@@ -21,6 +21,7 @@ import {
   buildSelectedOpeningPanel,
   buildSelectedWallPanel,
 } from './fml-preview-selected-panels'
+import { buildUnderlayStageGeom } from './fml-preview-underlay-layout'
 
 export type {
   RenderDoorGroup,
@@ -57,6 +58,10 @@ interface UnderlayProps {
   cmOrigin: { x: number; y: number } | null
   pxPerMmX: number
   pxPerMmY: number
+  /** Onderlegger-rotatie in graden; ontbrekend/0 = as-aligned. */
+  rotationDeg?: number
+  /** Display-only X-flip om bitmap-midden. */
+  flipX?: boolean
   /** 0 = uit, 1 = volledig opaque. */
   opacity: number
 }
@@ -172,12 +177,16 @@ export function useFmlPreviewRenderModel(
     }
     const topLeft = toStagePoint(topLeftCm.x, topLeftCm.y)
     const bottomRight = toStagePoint(topLeftCm.x + sizeCm.w, topLeftCm.y + sizeCm.h)
+    const geom = buildUnderlayStageGeom({
+      topLeftStage: topLeft,
+      widthStage: bottomRight.x - topLeft.x,
+      heightStage: bottomRight.y - topLeft.y,
+      rotationDeg: props.rotationDeg,
+      flipX: props.flipX,
+    })
     return {
       image,
-      x: topLeft.x,
-      y: topLeft.y,
-      width: bottomRight.x - topLeft.x,
-      height: bottomRight.y - topLeft.y,
+      ...geom,
       opacity,
       listening: false,
     }

@@ -5,6 +5,7 @@ import type {
 } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { decodeMaskRle } from '@/cv/util/binary-mask-rle'
+import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
 import {
   isDominantHorizontal,
   isDominantVertical,
@@ -208,8 +209,9 @@ function sampleNormalExtents(params: {
   const dy = trimmed.b.y - trimmed.a.y
   const len = Math.hypot(dx, dy)
   if (len <= 1e-6) return []
-  const nx = -dy / len
-  const ny = dx / len
+  const n = floorplannerLeftNormal({ x: dx / len, y: dy / len })
+  const nx = n.x
+  const ny = n.y
   const samples = sampleSegmentPoints(trimmed.a, trimmed.b, sampleStepPx, 0)
   const values: NormalExtentSample[] = []
   for (const sample of samples) {
@@ -590,6 +592,7 @@ export function measureSegmentThicknessMax(params: {
     const plusMedian = median(normalExtents.map((sample) => sample.plus))
     const minusMedian = median(normalExtents.map((sample) => sample.minus))
     const balanceDenominator = plusMedian + minusMedian
+    // Floorplanner: balance = fractie aan de linkerzijde van a→b (Y-down).
     const balancePx =
       Number.isFinite(balanceDenominator) && balanceDenominator > 0
         ? plusMedian / balanceDenominator

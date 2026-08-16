@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { FML_ORIENT_CONTROLS_VISIBLE } from '@/ui/composables/workspace/constants'
 
 const { t } = useI18n()
 
@@ -8,19 +9,56 @@ withDefaults(
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
     fmlLimitsDirty?: boolean
+    /** FML X-spiegel actief (toggle-uiterlijk). */
+    fmlOrientFlipX?: boolean
   }>(),
   {
     fmlLimitsDirty: false,
+    fmlOrientFlipX: false,
   },
 )
 
 const emit = defineEmits<{
   regenerate: []
+  mirrorVertical: []
+  rotate90Cw: []
+  rotate90Ccw: []
 }>()
 </script>
 
 <template>
   <div class="fml-actions">
+    <button
+      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      type="button"
+      class="orient-btn"
+      :class="{ 'orient-btn--active': fmlOrientFlipX }"
+      :disabled="!hasCombinedOutput || !scaleConfirmed"
+      :title="t('result.mirrorVerticalHint')"
+      @click="emit('mirrorVertical')"
+    >
+      {{ t('result.mirrorVertical') }}
+    </button>
+    <button
+      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      type="button"
+      class="orient-btn"
+      :disabled="!hasCombinedOutput || !scaleConfirmed"
+      :title="t('result.rotate90CcwHint')"
+      @click="emit('rotate90Ccw')"
+    >
+      {{ t('result.rotate90Ccw') }}
+    </button>
+    <button
+      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      type="button"
+      class="orient-btn"
+      :disabled="!hasCombinedOutput || !scaleConfirmed"
+      :title="t('result.rotate90CwHint')"
+      @click="emit('rotate90Cw')"
+    >
+      {{ t('result.rotate90Cw') }}
+    </button>
     <button
       type="button"
       class="regenerate-btn"
@@ -40,6 +78,27 @@ const emit = defineEmits<{
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.orient-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.orient-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.orient-btn--active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .regenerate-btn:not(:disabled) {

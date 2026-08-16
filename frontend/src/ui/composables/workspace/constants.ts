@@ -44,6 +44,12 @@ export const OCR_TAB_VISIBLE = false
 export const RESULT_WALLS_TAB_VISIBLE = false
 
 /**
+ * FML/onderlegger spiegel + 90° in het resultaat-paneel.
+ * Techniek (`floor-plan-orient`, persist) blijft; UI uit tot klant goedkeurt.
+ */
+export const FML_ORIENT_CONTROLS_VISIBLE = false
+
+/**
  * Sticky redirect voor verborgen preprocess-tabs.
  * OCR is alleen stap 3 (`useWorkspaceOcr`); gaps-UI uit (`GAPS_TAB_VISIBLE`).
  * inkWall blijft bereikbaar via Dev (geen redirect).

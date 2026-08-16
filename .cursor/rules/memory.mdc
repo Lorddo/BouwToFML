@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-14 (FML dikte typical + balance-bewijs)
+Laatste update: 2026-08-16 (FML orient-knoppen verborgen)
 
 ## FML dikte typical + balance-bewijs (2026-08-14)
 
@@ -259,6 +259,10 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
+**FML fixture-symbolen (2026-08-16).** Catalogus + viewer: spiltrap 180° (zelfde refid kelder/BG/1e/2e), keukenblad onder muurfill (flush), beton afdak dashed, chimney/koof, traphek, dakraam, knieschot; 1e douchekop teal tint. Meubels achter muren, dak/gevel-symbolen ervoor.
+
+**FML-verdieping oriënteren (2026-08-16).** Techniek blijft (`floor-plan-orient`, persist). Productie-UI verborgen via `FML_ORIENT_CONTROLS_VISIBLE=false` tot klant goedkeurt. Underlay-verplaatsen blijft zichtbaar.
+
 **FML dikte typical + balance-bewijs (2026-08-14).** Mediaan-dikte voor export; flush alleen bij face-evidence. E2E snapshots ververst.
 
 **FML editor dikte → balance (2026-08-14).** Handmatige muurdikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5.
@@ -399,6 +403,9 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 ## Recente besluiten (samenvatting)
 
+- **2026-08-16** — FML/onderlegger spiegel+90° UI verborgen (`FML_ORIENT_CONTROLS_VISIBLE`); techniek blijft tot klant goedkeurt.
+- **2026-08-16** — FML fixture-catalogus: Mooiland-refids (spiltrap 180°, keukenblad, afdak, chimney, railing, dakraam); meubels onder muurfill zodat flush-bladen niet door de muur steken.
+- **2026-08-16** — FML-oriëntatie: spiegel/90° om nulpunt `(0,0)`; underlay display-only rot/flip + verplaats-toggle; `fmlOrient` persist.
 - **2026-08-14** — FML editor: handmatige dikte (ook dezelfde maat aanklikken) reset `balance` naar 0.5.
 - **2026-08-14** — FML maatlijn: geen snap (klikpunt). Kamer-tool: geen 15 cm as-magnet; sleep-eind 4 cm hartlijn/knoop zodat kleine schachten blijven.
 - **2026-08-13** — Schuine gevels: lezen op L3 (ongesnapt), toepassen eind L10 (ruis weg); lidmaatschap via DT-rug met bergopwaartse klim i.p.v. vorm — macro-stair op vorm faalde omdat op L10 niet meer te zien is welke knik echt was.

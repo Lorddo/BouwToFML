@@ -48,6 +48,7 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
         previewPlan: null,
         previewUnderlayLayout: null,
         fmlNulpuntImageCm: null,
+        fmlOrient: null,
         sourceUnderlay: null,
         pdfUnderlaySource: null,
       },

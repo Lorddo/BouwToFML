@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { FML_ORIENT_CONTROLS_VISIBLE } from '@/ui/composables/workspace/constants'
 
 const { t } = useI18n()
 
@@ -8,17 +9,25 @@ withDefaults(
     underlayOpacity?: number
     fmlOpacity?: number
     underlayAvailable?: boolean
+    underlayMoveMode?: boolean
+    underlayFlipX?: boolean
   }>(),
   {
     underlayOpacity: 25,
     fmlOpacity: 80,
     underlayAvailable: false,
+    underlayMoveMode: false,
+    underlayFlipX: false,
   },
 )
 
 const emit = defineEmits<{
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
+  'update:underlayMoveMode': [value: boolean]
+  underlayRotate90Cw: []
+  underlayRotate90Ccw: []
+  underlayMirrorVertical: []
 }>()
 
 /** Focus loslaten na sleep — voorkomt dat Space+pan geblokkeerd blijft. */
@@ -45,6 +54,45 @@ function releaseSliderFocus(event: Event): void {
       @change="releaseSliderFocus"
       @pointerup="releaseSliderFocus"
     />
+    <div class="underlay-orient">
+      <button
+        v-if="FML_ORIENT_CONTROLS_VISIBLE"
+        type="button"
+        class="underlay-orient__btn"
+        :title="t('result.underlayRotate90CcwHint')"
+        @click="emit('underlayRotate90Ccw')"
+      >
+        {{ t('result.underlayRotate90Ccw') }}
+      </button>
+      <button
+        v-if="FML_ORIENT_CONTROLS_VISIBLE"
+        type="button"
+        class="underlay-orient__btn"
+        :title="t('result.underlayRotate90CwHint')"
+        @click="emit('underlayRotate90Cw')"
+      >
+        {{ t('result.underlayRotate90Cw') }}
+      </button>
+      <button
+        v-if="FML_ORIENT_CONTROLS_VISIBLE"
+        type="button"
+        class="underlay-orient__btn"
+        :class="{ 'underlay-orient__btn--active': underlayFlipX }"
+        :title="t('result.underlayMirrorVerticalHint')"
+        @click="emit('underlayMirrorVertical')"
+      >
+        {{ t('result.underlayMirrorVertical') }}
+      </button>
+      <button
+        type="button"
+        class="underlay-orient__btn"
+        :class="{ 'underlay-orient__btn--active': underlayMoveMode }"
+        :title="t('result.underlayMoveHint')"
+        @click="emit('update:underlayMoveMode', !underlayMoveMode)"
+      >
+        {{ t('result.underlayMove') }}
+      </button>
+    </div>
   </div>
   <div class="underlay-opacity">
     <div class="underlay-opacity__label">
@@ -86,5 +134,28 @@ function releaseSliderFocus(event: Event): void {
 .underlay-opacity input[type='range'] {
   width: 100%;
   min-width: 0;
+}
+
+.underlay-orient {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.underlay-orient__btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.underlay-orient__btn--active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 </style>

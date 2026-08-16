@@ -121,11 +121,11 @@ export interface SemanticWallSegment {
   thicknessPxTypical?: number
   /** p90 van DT-samples — ruismaat voor diagnose/grootboek. */
   thicknessPxP90?: number
-  /** 0..1 verdeling van dikte rond centerline (0.5 = gecentreerd). */
+  /** 0..1 Floorplanner: fractie van de dikte links van a→b (0.5 = gecentreerd). */
   balancePx?: number
-  /** Absolute plus-normal extent vanaf centerline (px). */
+  /** Absolute plus-normal extent vanaf centerline (px) — links van a→b. */
   facePlusPx?: number
-  /** Absolute minus-normal extent vanaf centerline (px). */
+  /** Absolute minus-normal extent vanaf centerline (px) — rechts van a→b. */
   faceMinusPx?: number
   junctionAId?: string
   junctionBId?: string

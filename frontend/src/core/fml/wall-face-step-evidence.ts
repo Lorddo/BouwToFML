@@ -6,9 +6,12 @@
  */
 
 export type WallFaceExtentsCm = {
-  /** Absolute plus-normal extent vanaf centerline (cm). */
+  /**
+   * Absolute plus-normal extent vanaf centerline (cm).
+   * Plus = Floorplanner-links van a→b (Y-down).
+   */
   plusCm: number
-  /** Absolute minus-normal extent vanaf centerline (cm). */
+  /** Absolute minus-normal extent vanaf centerline (cm) — rechts van a→b. */
   minusCm: number
 }
 

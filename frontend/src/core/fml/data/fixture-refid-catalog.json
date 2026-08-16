@@ -1,14 +1,22 @@
 {
-  "beschrijving": "Catalogus van Floorplanner item/fixture-refids (keuken, sanitair, installaties). Alleen weergave bij FML-import; nog geen place-tool.",
-  "laatste_update": "2026-07-21",
+  "beschrijving": "Catalogus van Floorplanner item/fixture-refids (keuken, sanitair, installaties, trap, dak). Alleen weergave bij FML-import; nog geen place-tool.",
+  "laatste_update": "2026-08-16",
   "kind_hints": {
-    "countertop": "Keukenblad — rechthoekige top-view.",
+    "countertop": "Keukenblad — rechthoekige top-view; onder de muurfill (flush tegen binnenkant).",
     "toilet": "Toilet — reservoir + ovale pot (top-view).",
     "sink_small": "Wasbak (klein) — ovaal met kraan-stip.",
     "shower_head": "Douchekop — steel + ronde kop.",
     "sink_large": "Wasbak (groot) — afgerond vierkant met kraan.",
     "boiler": "CV-ketel — vierkant met twee aansluitcirkels.",
-    "heat_pump": "Warmtepomp — hoge kast met grill-lijnen."
+    "heat_pump": "Warmtepomp — hoge kast met grill-lijnen.",
+    "stair_winder_180": "Spiltrap 180° — voetafdruk, spil, treden + U-pijl. Zelfde refid over verdiepingen.",
+    "canopy": "Beton afdak — grijs vlak met dashed outline.",
+    "hidden": "Niet tekenen in 2D (bijv. armatuur in afdak).",
+    "chimney": "Schoorsteen op koof — dikke omlijning, cirkel + kruis.",
+    "railing": "Traphek — donkere balk met spijlen.",
+    "skylight": "Dakraam — dashed vierkant.",
+    "roof_eave": "Knieschot / dakrand — lichte balk.",
+    "standpipe": "Waterstandsleiding — twee concentrische cirkels."
   },
   "entries": [
     {
@@ -21,6 +29,15 @@
       "bronnen": ["Template ID objects.json (1).fml"]
     },
     {
+      "refid": "db74ce14813eb0d5c54c8992806b22fb846ee34c",
+      "type": "fixture",
+      "benaming": "Keukenblad",
+      "kind": "countertop",
+      "categorie": "keuken",
+      "notities": "Mooiland 3090 A_M4 — BG rechterbovenhoek 180×60",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
       "refid": "17e3ab9295832bd22e220a7f861580bb5aaeb007",
       "type": "fixture",
       "benaming": "Toilet",
@@ -28,6 +45,15 @@
       "categorie": "sanitair",
       "notities": "Template ID objects — Sanitair",
       "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "0c4ab4d4ccdc801b4093f10a9aa9c0bfd08ab584",
+      "type": "fixture",
+      "benaming": "Toilet",
+      "kind": "toilet",
+      "categorie": "sanitair",
+      "notities": "Mooiland 3090 A_M4 — BG toilet onder trap",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     },
     {
       "refid": "e96698fedd2611ba51fff989e8ff2e764e106b85",
@@ -48,12 +74,23 @@
       "bronnen": ["Template ID objects.json (1).fml"]
     },
     {
+      "refid": "a816372ed69d80b54927513990336c750ca6f2b0",
+      "type": "fixture",
+      "benaming": "Douchekop",
+      "kind": "shower_head",
+      "categorie": "sanitair",
+      "fill": "#99f6e4",
+      "stroke": "#0f766e",
+      "notities": "Mooiland 3090 A_M4 — 1e badkamer; zelfde symbool, teal tint (ander asset)",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
       "refid": "7b5d656c72b56ae0e8200132ec92a1ae03869b93",
       "type": "fixture",
       "benaming": "Wasbak (groot)",
       "kind": "sink_large",
       "categorie": "sanitair",
-      "notities": "Template ID objects — Sanitair",
+      "notities": "Template ID objects — Sanitair; Mooiland 1e voorkamer",
       "bronnen": ["Template ID objects.json (1).fml"]
     },
     {
@@ -62,7 +99,7 @@
       "benaming": "CV-ketel",
       "kind": "boiler",
       "categorie": "installaties",
-      "notities": "Template ID objects — Installaties",
+      "notities": "Template ID objects — Installaties; Mooiland 2e zijgevel",
       "bronnen": ["Template ID objects.json (1).fml"]
     },
     {
@@ -73,6 +110,78 @@
       "categorie": "installaties",
       "notities": "Template ID objects — Installaties",
       "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "4536785e9e82fc33642fa523ed85a4520bd4a91a",
+      "type": "fixture",
+      "benaming": "Spiltrap 180°",
+      "kind": "stair_winder_180",
+      "categorie": "trap",
+      "notities": "Mooiland 3090 A_M4 — zelfde refid op kelder, BG, 1e en 2e",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "d8dfd3e5683d86a7d9db8a8f7d3260b87ea8213f",
+      "type": "fixture",
+      "benaming": "Beton afdak",
+      "kind": "canopy",
+      "categorie": "buiten",
+      "notities": "Mooiland 3090 A_M4 — BG boven voordeur, z≈220",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "7518d7dd885df41f7caddb870d2561bdc5a1a861",
+      "type": "fixture",
+      "benaming": "Afdak-armatuur",
+      "kind": "hidden",
+      "categorie": "buiten",
+      "notities": "Mooiland 3090 A_M4 — klein object in het afdak, niet tonen in 2D",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "72752422845c99169f50216772287e8471e2ff48",
+      "type": "fixture",
+      "benaming": "Schoorsteen",
+      "kind": "chimney",
+      "categorie": "dak",
+      "notities": "Mooiland 3090 A_M4 — 2e op koof linkerzijde",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "0bcc0bc80f610a0cb428012520b7006d7fcb1ce8",
+      "type": "fixture",
+      "benaming": "Traphek",
+      "kind": "railing",
+      "categorie": "trap",
+      "notities": "Mooiland 3090 A_M4 — 2e drie hekken om de trap",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "a88fc7b43bb9e44a54c400a9ab8071dc1a0b2032",
+      "type": "fixture",
+      "benaming": "Dakraam",
+      "kind": "skylight",
+      "categorie": "dak",
+      "notities": "Mooiland 3090 A_M4 — 2e links van CV-ketel",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "679e3878a0937739c161fec224cb3e7ab9eaf131",
+      "type": "fixture",
+      "benaming": "Knieschot",
+      "kind": "roof_eave",
+      "categorie": "dak",
+      "notities": "Mooiland 3090 A_M4 — 2e dakrand boven/onder, z=floor.height",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "4e58355312c1de13eb2b1b29b4dfbf0a8dbabefd",
+      "type": "fixture",
+      "benaming": "Waterstandsleiding",
+      "kind": "standpipe",
+      "categorie": "installaties",
+      "notities": "Mooiland 3090 A_M4 — linkerbovenhoek, alle verdiepingen, ~8×8",
+      "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     }
   ]
 }

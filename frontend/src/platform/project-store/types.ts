@@ -2,6 +2,7 @@ import type { Floor, FloorPlan } from '@/core/fml/types'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type {
   FloorMeta,
+  FloorOrientPersist,
   FloorWorkspaceBlob,
   PreviewUnderlayLayout,
   ProjectMeta,
@@ -60,6 +61,8 @@ export type PersistedFloorBlob = {
   previewUnderlayLayout: PreviewUnderlayLayout | null
   /** Gebruikers-nulpunt in scant-cm; optioneel voor oude records. */
   fmlNulpuntImageCm?: { x: number; y: number } | null
+  /** FML-oriëntatie; optioneel voor oude records. */
+  fmlOrient?: FloorOrientPersist | null
   /** Per-floor bronscan (vóór crop); optioneel voor oude records. */
   sourceUnderlay?: PersistedSourceUnderlay | null
 }

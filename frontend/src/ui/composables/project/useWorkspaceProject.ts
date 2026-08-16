@@ -26,6 +26,7 @@ import { mergeFloorPlans } from './merge-floor-plans'
 import type { PdfUnderlaySource } from '@/platform/upload'
 import type {
   FloorMeta,
+  FloorOrientPersist,
   FloorWorkspaceBlob,
   PreviewUnderlayLayout,
   ProjectFmlDefaults,
@@ -71,6 +72,9 @@ export type WorkspaceProjectDeps = {
   getFmlNulpuntImageCm: () => { x: number; y: number } | null
   /** Zet nulpunt bij floor-hydrate (na restore). */
   setFmlNulpuntImageCm: (point: { x: number; y: number } | null) => void
+  /** FML-oriëntatie (spiegel/90°) t.o.v. canonieke generate. */
+  getFmlOrient: () => FloorOrientPersist | null
+  setFmlOrient: (state: FloorOrientPersist | null) => void
   /**
    * Wis live FML-preview ná capture, vóór activeFloorId-wissel —
    * anders remount de canvas met de vorige verdieping als plan.
@@ -92,6 +96,7 @@ function emptyBlob(): FloorWorkspaceBlob {
     previewPlan: null,
     previewUnderlayLayout: null,
     fmlNulpuntImageCm: null,
+    fmlOrient: null,
     sourceUnderlay: null,
     pdfUnderlaySource: null,
   }
@@ -368,6 +373,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     // naar een andere verdieping bij switch.
     const liveNulpunt = deps.getFmlNulpuntImageCm()
     const fmlNulpuntImageCm = liveNulpunt ? clonePlain(liveNulpunt) : null
+    const liveOrient = deps.getFmlOrient()
+    const fmlOrient = liveOrient ? clonePlain(liveOrient) : null
     const generatedFloor = previewPlan?.floors[0] ?? prev.generatedFloor
     const status = floorStatusFromFlowStep(deps.flowStep.value)
     const floorStatus = session ? (status === 'empty' ? 'input' : status) : 'empty'
@@ -383,6 +390,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           previewPlan,
           previewUnderlayLayout,
           fmlNulpuntImageCm,
+          fmlOrient,
           // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
           sourceUnderlay: prev.sourceUnderlay ?? null,
           // Memory-only; not persisted to IndexedDB.
@@ -414,9 +422,11 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         ? (blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale))
         : null,
       applyFmlNulpuntImageCm: isResult ? (blob.fmlNulpuntImageCm ?? null) : null,
+      applyFmlOrient: isResult ? (blob.fmlOrient ?? null) : null,
     })
     if (!isResult) {
       deps.setFmlNulpuntImageCm(null)
+      deps.setFmlOrient(null)
     }
     deps.setPdfUnderlaySource?.(blob.pdfUnderlaySource ?? null)
   }
@@ -670,6 +680,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const livePlan = deps.getPreviewPlan()
     const liveLayout = deps.getPreviewUnderlayLayout()
     const liveNulpunt = deps.getFmlNulpuntImageCm()
+    const liveOrient = deps.getFmlOrient()
     const previewPlan = livePlan
       ? clonePlain({
           ...livePlan,
@@ -686,6 +697,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           previewPlan,
           previewUnderlayLayout: liveLayout ? clonePlain(liveLayout) : prev.previewUnderlayLayout,
           fmlNulpuntImageCm: liveNulpunt ? clonePlain(liveNulpunt) : null,
+          fmlOrient: liveOrient ? clonePlain(liveOrient) : null,
         },
       },
       floors: state.value.floors.map((f) =>

@@ -6,7 +6,20 @@ import { extractionToPlanWithOrigin, type Layer12DoorForFml } from '@/core/fml/e
 import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
 import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
+import {
+  cloneUnderlayOriginLayout,
+  copyUnderlayDisplayOrient,
+} from '@/core/fml/drawing-to-underlay-layout'
 import { applyNulpunt, reapplyNulpuntImageCm } from '@/core/fml/translate-floor-plan'
+import {
+  applyFloorOrientFromCanonical,
+  applyFloorOrientOp,
+  composeFloorOrient,
+  defaultFloorOrient,
+  isIdentityFloorOrient,
+  type FloorOrientOp,
+  type FloorOrientState,
+} from '@/core/fml/floor-plan-orient'
 import type { FloorPlan, ImportWarning, Point2D } from '@/core/fml/types'
 import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
@@ -14,7 +27,7 @@ import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
-import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import type { FloorOrientPersist, PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { tGlobal } from '@/ui/i18n'
 
 export function stripFileExtension(name: string | null | undefined): string {
@@ -107,6 +120,42 @@ export function createWorkspaceFmlGenerate(
   const persistedUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
   /** Gebruikers-nulpunt in scant-cm; overleeft regenerate. */
   const fmlNulpuntImageCm = ref<Point2D | null>(null)
+  /** FML D4-oriëntatie t.o.v. canonieke generate; overleeft regenerate. */
+  const fmlOrient = ref<FloorOrientState>(defaultFloorOrient())
+  /** Sidebar: onderlegger verslepen. */
+  const underlayMoveMode = ref(false)
+
+  function persistOrientState(): FloorOrientPersist | null {
+    if (isIdentityFloorOrient(fmlOrient.value)) return null
+    return {
+      quarterTurnsCw: fmlOrient.value.quarterTurnsCw,
+      flipX: fmlOrient.value.flipX,
+    }
+  }
+
+  function setFmlOrient(state: FloorOrientPersist | FloorOrientState | null | undefined): void {
+    if (!state) {
+      fmlOrient.value = defaultFloorOrient()
+      return
+    }
+    fmlOrient.value = {
+      quarterTurnsCw: state.quarterTurnsCw,
+      flipX: state.flipX,
+    }
+  }
+
+  function applyOrientAndPreserveUnderlayDisplay(
+    plan: FloorPlan,
+    layoutAfterNulpunt: PreviewUnderlayLayout,
+    previousLayout: PreviewUnderlayLayout | null,
+  ): { plan: FloorPlan; layout: PreviewUnderlayLayout } {
+    const oriented = applyFloorOrientFromCanonical(plan, fmlOrient.value, 0)
+    const layout = copyUnderlayDisplayOrient(
+      cloneUnderlayOriginLayout(layoutAfterNulpunt),
+      previousLayout,
+    )
+    return { plan: oriented, layout }
+  }
 
   /** Één plan-build + cm-origin per generate-pass (geen tweede resolveGraph voor underlay). */
   const generatedBundle = computed(() => {
@@ -205,6 +254,7 @@ export function createWorkspaceFmlGenerate(
       // Canvas-/floor-restore plan is leidend — niet layout herschrijven t.o.v. raw bundle
       // (dat desynct origin t.o.v. al-vertaalde muren, o.a. na nulpunt of floor-switch).
       if (editedPreviewPlan.value) return
+      const prevDisplay = persistedUnderlayLayout.value
       const baseLayout: PreviewUnderlayLayout = {
         origin: { ...bundle.origin },
         pxPerMmX: bundle.pxPerMmX,
@@ -217,10 +267,21 @@ export function createWorkspaceFmlGenerate(
           baseLayout,
           nulpunt,
         )
-        editedPreviewPlan.value = appliedNulpunt.plan
-        persistedUnderlayLayout.value = appliedNulpunt.layout
+        const oriented = applyOrientAndPreserveUnderlayDisplay(
+          appliedNulpunt.plan,
+          appliedNulpunt.layout,
+          prevDisplay,
+        )
+        editedPreviewPlan.value = oriented.plan
+        persistedUnderlayLayout.value = oriented.layout
       } else {
-        persistedUnderlayLayout.value = baseLayout
+        const oriented = applyOrientAndPreserveUnderlayDisplay(
+          harmonizePlan(bundle.plan),
+          baseLayout,
+          prevDisplay,
+        )
+        editedPreviewPlan.value = isIdentityFloorOrient(fmlOrient.value) ? null : oriented.plan
+        persistedUnderlayLayout.value = oriented.layout
       }
     },
     { flush: 'sync' },
@@ -259,13 +320,7 @@ export function createWorkspaceFmlGenerate(
     // Altijd clonen — hydrate geeft vaak blob.previewPlan; gedeelde refs muteren anders de blob.
     editedPreviewPlan.value = JSON.parse(JSON.stringify(plan)) as FloorPlan
     if (layout !== undefined) {
-      persistedUnderlayLayout.value = layout
-        ? {
-            origin: { ...layout.origin },
-            pxPerMmX: layout.pxPerMmX,
-            pxPerMmY: layout.pxPerMmY,
-          }
-        : null
+      persistedUnderlayLayout.value = layout ? cloneUnderlayOriginLayout(layout) : null
     }
     if (importedPlan.value) {
       importedPlan.value = JSON.parse(JSON.stringify(plan)) as FloorPlan
@@ -273,13 +328,7 @@ export function createWorkspaceFmlGenerate(
   }
 
   function setPreviewUnderlayLayout(layout: PreviewUnderlayLayout | null): void {
-    persistedUnderlayLayout.value = layout
-      ? {
-          origin: { ...layout.origin },
-          pxPerMmX: layout.pxPerMmX,
-          pxPerMmY: layout.pxPerMmY,
-        }
-      : null
+    persistedUnderlayLayout.value = layout ? cloneUnderlayOriginLayout(layout) : null
   }
 
   function setFmlNulpuntImageCm(point: Point2D | null): void {
@@ -307,11 +356,7 @@ export function createWorkspaceFmlGenerate(
     if (Math.hypot(dropCm.x, dropCm.y) < 0.05) return null
     const applied = applyNulpunt(plan, layout, dropCm)
     editedPreviewPlan.value = applied.plan
-    persistedUnderlayLayout.value = {
-      origin: { ...applied.layout.origin },
-      pxPerMmX: applied.layout.pxPerMmX,
-      pxPerMmY: applied.layout.pxPerMmY,
-    }
+    persistedUnderlayLayout.value = cloneUnderlayOriginLayout(applied.layout)
     fmlNulpuntImageCm.value = { ...applied.nulpuntImageCm }
     return {
       plan: applied.plan,
@@ -328,13 +373,14 @@ export function createWorkspaceFmlGenerate(
     importedFmlText.value = ''
     persistedUnderlayLayout.value = null
     fmlNulpuntImageCm.value = null
+    fmlOrient.value = defaultFloorOrient()
+    underlayMoveMode.value = false
   }
 
-  /** Na opnieuw afronden: toon verse detectie i.p.v. oude canvas-bewerkingen. */
-  function resetGeneratedPreview(): void {
-    editedPreviewPlan.value = null
+  function rebuildPreviewFromCanonical(preserveUnderlayDisplay: boolean): void {
     const bundle = generatedBundle.value
     if (!bundle) return
+    const prevDisplay = preserveUnderlayDisplay ? persistedUnderlayLayout.value : null
     const baseLayout: PreviewUnderlayLayout = {
       origin: { ...bundle.origin },
       pxPerMmX: bundle.pxPerMmX,
@@ -342,31 +388,69 @@ export function createWorkspaceFmlGenerate(
     }
     const appliedNulpunt = applyStoredNulpuntToPlan(harmonizePlan(bundle.plan), baseLayout)
     if (appliedNulpunt) {
-      editedPreviewPlan.value = appliedNulpunt.plan
-      persistedUnderlayLayout.value = appliedNulpunt.layout
+      const oriented = applyOrientAndPreserveUnderlayDisplay(
+        appliedNulpunt.plan,
+        appliedNulpunt.layout,
+        prevDisplay,
+      )
+      editedPreviewPlan.value = oriented.plan
+      persistedUnderlayLayout.value = oriented.layout
     } else {
-      persistedUnderlayLayout.value = baseLayout
+      const oriented = applyOrientAndPreserveUnderlayDisplay(
+        harmonizePlan(bundle.plan),
+        baseLayout,
+        prevDisplay,
+      )
+      editedPreviewPlan.value = isIdentityFloorOrient(fmlOrient.value) ? null : oriented.plan
+      persistedUnderlayLayout.value = oriented.layout
     }
+  }
+
+  /** Na opnieuw afronden: toon verse detectie i.p.v. oude canvas-bewerkingen. */
+  function resetGeneratedPreview(): void {
+    editedPreviewPlan.value = null
+    rebuildPreviewFromCanonical(true)
   }
 
   function regenerateFml(): void {
     if (!generatedPlan.value) return
     syncAppliedFromDraft()
     editedPreviewPlan.value = null
-    const bundle = generatedBundle.value
-    if (!bundle) return
-    const baseLayout: PreviewUnderlayLayout = {
-      origin: { ...bundle.origin },
-      pxPerMmX: bundle.pxPerMmX,
-      pxPerMmY: bundle.pxPerMmY,
-    }
-    const appliedNulpunt = applyStoredNulpuntToPlan(harmonizePlan(bundle.plan), baseLayout)
-    if (appliedNulpunt) {
-      editedPreviewPlan.value = appliedNulpunt.plan
-      persistedUnderlayLayout.value = appliedNulpunt.layout
+    rebuildPreviewFromCanonical(true)
+  }
+
+  function applyFloorOrientOpToPreview(op: FloorOrientOp): boolean {
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    if (!plan) return false
+    fmlOrient.value = composeFloorOrient(fmlOrient.value, op)
+    editedPreviewPlan.value = applyFloorOrientOp(plan, op, 0)
+    underlayMoveMode.value = false
+    return true
+  }
+
+  function applyUnderlayOrientOp(op: 'rotCw' | 'rotCcw' | 'flipX'): PreviewUnderlayLayout | null {
+    const layout = previewUnderlayLayout.value
+    if (!layout) return null
+    const next = cloneUnderlayOriginLayout(layout)
+    if (op === 'flipX') {
+      next.flipX = !next.flipX
+      if (!next.flipX) delete next.flipX
     } else {
-      persistedUnderlayLayout.value = baseLayout
+      const delta = op === 'rotCw' ? 90 : -90
+      const current = next.rotationDeg ?? 0
+      let rotationDeg = current + delta
+      // Normaliseer naar (−180, 180]
+      while (rotationDeg > 180) rotationDeg -= 360
+      while (rotationDeg <= -180) rotationDeg += 360
+      if (Math.abs(rotationDeg) < 0.001) delete next.rotationDeg
+      else next.rotationDeg = rotationDeg
     }
+    persistedUnderlayLayout.value = next
+    return next
+  }
+
+  function setUnderlayMoveMode(on: boolean): void {
+    underlayMoveMode.value = on
   }
 
   function downloadGeneratedFml(): void {
@@ -418,10 +502,17 @@ export function createWorkspaceFmlGenerate(
     previewUnderlayLayout,
     editedPreviewPlan,
     fmlNulpuntImageCm,
+    fmlOrient,
+    underlayMoveMode,
     syncAppliedFromDraft,
     updatePreviewPlan,
     setPreviewUnderlayLayout,
     setFmlNulpuntImageCm,
+    setFmlOrient,
+    persistOrientState,
+    applyFloorOrientOpToPreview,
+    applyUnderlayOrientOp,
+    setUnderlayMoveMode,
     applyNulpuntAtFmlCm,
     clearLiveFmlPreview,
     resetGeneratedPreview,

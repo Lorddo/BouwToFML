@@ -55,7 +55,7 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
-| `balance` | Default 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence** (plus/minus extents); zonder bewijs blijft 0.5 (geen faceLo-gok); `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm; stub-bump alleen bij gemeten nabijheid |
+| `balance` | Floorplanner a→b (Y-down): `0` = alles **rechts**, `1` = alles **links** (`floorplannerLeftNormal`); default export 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence**; zonder bewijs blijft 0.5; `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm; stub-bump alleen bij gemeten nabijheid |
 | Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning |
 | Diktemeting | `thicknessPxTypical` = mediaan DT-samples (FML-export); `thicknessPxMax` blijft opening-snap bovengrens; korte stubs kern-sample t∈[0.3,0.7]; junction-marge schaalt met `referenceWallThicknessPx` |
 | Keten-union | Gemeten gelijkenis + 15% hysterese over bandgrens (niet alleen band-identiteit) |
@@ -277,6 +277,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
 | Stap 4 nulpunt | Tool «Nulpunt»: sleep kruis → ✓ bakken als FML `(0,0)` (of ✕/Esc annuleren); `fmlNulpuntImageCm` persist (scant-cm); underlay-origin synchroon; per floor eigen anker voor 3D-stack |
+| Stap 4 oriëntatie | FML spiegel/90° om nulpunt `(0,0)` (`fmlOrient` D4-persist); underlay apart (rot/flip + verplaats-toggle op `previewUnderlayLayout`); geometrie ≠ scan-midden |
 | Floor-switch | Exact restore + opgeslagen `previewPlan` (geen openings-rerun / geen regenerate) |
 | Defaults | Per verdieping (`FloorMeta.defaults`); per component in FML-editor |
 | Persistentie | **Niet** in V1 (IndexedDB later) |

@@ -1,4 +1,5 @@
 import polygonClipping from 'polygon-clipping'
+import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
 import type { Point2D } from '@/core/fml/types'
 
 export interface WallPolygonInput {
@@ -67,7 +68,7 @@ function normalize(v: Point2D): Point2D {
 }
 
 function leftNormal(dir: Point2D): Point2D {
-  return { x: -dir.y, y: dir.x }
+  return floorplannerLeftNormal(dir)
 }
 
 function endpointKey(point: Point2D): string {
@@ -79,7 +80,7 @@ function pointAtEnd(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
   return end === 'a' ? wall.a : wall.b
 }
 
-/** Left (+normal) / right (−normal) thickness extents from centerline (Floorplanner balance). */
+/** Left (+normal) / right (−normal) thickness extents from centerline (Floorplanner a→b). */
 export function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'balance'>): {
   plus: number
   minus: number
@@ -107,9 +108,8 @@ export function offsetPointByWallBalance(
 ): Point2D {
   const mid = wallBalanceMidOffsetCm(thickness, balance)
   if (Math.abs(mid) < 1e-9) return point
-  const nx = -wallUnit.y
-  const ny = wallUnit.x
-  return { x: point.x + nx * mid, y: point.y + ny * mid }
+  const n = floorplannerLeftNormal(wallUnit)
+  return { x: point.x + n.x * mid, y: point.y + n.y * mid }
 }
 
 /** Flat `[x,y,…]` polyline in cm — same mid-line shift as {@link offsetPointByWallBalance}. */
@@ -121,10 +121,9 @@ export function offsetFlatPointsByWallBalance(
 ): number[] {
   const mid = wallBalanceMidOffsetCm(thickness, balance)
   if (Math.abs(mid) < 1e-9 || points.length < 2) return points
-  const nx = -wallUnit.y
-  const ny = wallUnit.x
-  const ox = nx * mid
-  const oy = ny * mid
+  const n = floorplannerLeftNormal(wallUnit)
+  const ox = n.x * mid
+  const oy = n.y * mid
   const out = points.slice()
   for (let i = 0; i + 1 < out.length; i += 2) {
     out[i] += ox

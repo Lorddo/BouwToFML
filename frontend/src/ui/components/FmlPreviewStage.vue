@@ -24,6 +24,9 @@ defineProps<{
     height: number
     opacity: number
     listening: boolean
+    offsetX?: number
+    offsetY?: number
+    rotation?: number
   } | null
   /** 0–1; FML-geometrie opacity. */
   contentOpacity: number
@@ -126,6 +129,7 @@ onBeforeUnmount(unbindGroupDrag)
         />
         <v-image v-if="underlayConfig" :config="underlayConfig" />
         <v-group :config="{ opacity: contentOpacity, listening: true }">
+          <FmlPreviewStageFixtures :render-model="renderModel" layer="under" />
           <FmlPreviewStageWalls
             :render-model="renderModel"
             :move-wall-polygon="moveWallPolygon"
@@ -138,7 +142,7 @@ onBeforeUnmount(unbindGroupDrag)
             :settings-opening-ids="settingsOpeningIds"
             :move-opening-id="moveOpeningId"
           />
-          <FmlPreviewStageFixtures :render-model="renderModel" />
+          <FmlPreviewStageFixtures :render-model="renderModel" layer="over" />
         </v-group>
       </v-group>
     </v-layer>

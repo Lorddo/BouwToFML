@@ -49,6 +49,16 @@ export type PreviewUnderlayLayout = {
   origin: { x: number; y: number }
   pxPerMmX: number
   pxPerMmY: number
+  /** Onderlegger-rotatie in graden (FML drawing.rotation); ontbrekend = 0. */
+  rotationDeg?: number
+  /** Display-only: Konva scaleX −1 om bitmap-midden. */
+  flipX?: boolean
+}
+
+/** D4 FML-geometrie t.o.v. canonieke generate (na nulpunt). */
+export type FloorOrientPersist = {
+  quarterTurnsCw: 0 | 1 | 2 | 3
+  flipX: boolean
 }
 
 export type FloorWorkspaceBlob = {
@@ -70,6 +80,11 @@ export type FloorWorkspaceBlob = {
    * Overleeft regenerate: opnieuw toepassen i.p.v. bbox-min origin.
    */
   fmlNulpuntImageCm?: { x: number; y: number } | null
+  /**
+   * FML-oriëntatie t.o.v. canonieke generate (spiegel + 90°).
+   * Overleeft regenerate: opnieuw toepassen ná nulpunt.
+   */
+  fmlOrient?: FloorOrientPersist | null
   /**
    * Laatste bevestigde bronscan + schaal van deze verdieping (vóór crop).
    * Gebruikt door «Onderlegger overnemen» als donor; overschrijft bij elke schaal-bevestiging.

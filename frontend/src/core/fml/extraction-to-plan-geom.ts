@@ -3,7 +3,7 @@ export interface Point2D {
   y: number
 }
 
-/** Hinge-balance clamp op semantic `balancePx` (Floorplanner FML: 0..1). */
+/** Clamp semantic `balancePx` naar Floorplanner FML 0..1 (fractie links van a→b). */
 export const FML_WALL_BALANCE_MIN = 0
 export const FML_WALL_BALANCE_MAX = 1
 export const FML_WALL_BALANCE_FALLBACK = 0.5

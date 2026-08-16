@@ -332,9 +332,13 @@ defineExpose<{
           :underlay-opacity="ws.fmlUnderlayOpacity"
           :fml-opacity="ws.fmlContentOpacity"
           :underlay-available="!!ws.fmlUnderlaySrc && !!ws.previewUnderlayLayout"
+          :fml-orient-flip-x="ws.fmlOrient?.flipX === true"
+          :underlay-move-mode="ws.underlayMoveMode"
+          :underlay-flip-x="ws.previewUnderlayLayout?.flipX === true"
           @update:floor-name="(name) => ws.activeFloorId && ws.renameFloor(ws.activeFloorId, name)"
           @update:underlay-opacity="ws.fmlUnderlayOpacity = $event"
           @update:fml-opacity="ws.fmlContentOpacity = $event"
+          @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
           @update:fml-wall-height-cm="ws.setFmlWallHeightCm"
           @update:fml-door-height-cm="ws.setFmlDoorHeightCm"
           @update:fml-window-height-cm="ws.setFmlWindowHeightCm"
@@ -349,6 +353,12 @@ defineExpose<{
           @start-thickness-pick="ws.startFmlThicknessPick"
           @cancel-thickness-pick="ws.cancelFmlThicknessPick"
           @regenerate="ws.regenerateFml"
+          @mirror-vertical="ws.applyFloorOrientOpToPreview('flipX')"
+          @rotate90-cw="ws.applyFloorOrientOpToPreview('rotCw')"
+          @rotate90-ccw="ws.applyFloorOrientOpToPreview('rotCcw')"
+          @underlay-rotate90-cw="ws.applyUnderlayOrientOp('rotCw')"
+          @underlay-rotate90-ccw="ws.applyUnderlayOrientOp('rotCcw')"
+          @underlay-mirror-vertical="ws.applyUnderlayOrientOp('flipX')"
         />
       </div>
 
@@ -395,6 +405,9 @@ defineExpose<{
             :cm-origin="ws.previewUnderlayLayout?.origin ?? null"
             :px-per-mm-x="ws.previewUnderlayLayout?.pxPerMmX ?? 1"
             :px-per-mm-y="ws.previewUnderlayLayout?.pxPerMmY ?? 1"
+            :rotation-deg="ws.previewUnderlayLayout?.rotationDeg ?? 0"
+            :flip-x="ws.previewUnderlayLayout?.flipX === true"
+            :underlay-move-mode="ws.underlayMoveMode"
             :thickness-pick-tier="ws.fmlThicknessPickTier"
             :thickness-min-cm="ws.fmlThicknessMinCm"
             :thickness-mid-cm="ws.fmlThicknessMidCm"
@@ -405,6 +418,7 @@ defineExpose<{
             @plan-update="ws.updatePreviewPlan"
             @thickness-wall-pick="ws.handleFmlThicknessWallPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"
+            @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
           />
           <WorkspaceFloorplanCanvasHost
             v-else

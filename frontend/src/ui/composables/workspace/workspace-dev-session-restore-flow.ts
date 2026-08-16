@@ -19,6 +19,8 @@ export type RestoreSessionOptions = {
   applyPreviewUnderlayLayout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null
   /** Gebruikers-nulpunt in scant-cm bij floor-restore. */
   applyFmlNulpuntImageCm?: { x: number; y: number } | null
+  /** FML-oriëntatie bij floor-restore. */
+  applyFmlOrient?: import('@/ui/composables/project/types').FloorOrientPersist | null
 }
 
 export type WorkspaceDevSessionRestoreFlowDeps = {
@@ -32,6 +34,7 @@ export type WorkspaceDevSessionRestoreFlowDeps = {
     layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
   ) => void
   setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+  setFmlOrient?: (state: import('@/ui/composables/project/types').FloorOrientPersist | null) => void
 }
 
 export function createWorkspaceDevSessionRestoreFlow(
@@ -110,6 +113,9 @@ export function createWorkspaceDevSessionRestoreFlow(
     }
     if (options?.applyFmlNulpuntImageCm !== undefined) {
       deps.setFmlNulpuntImageCm?.(options.applyFmlNulpuntImageCm)
+    }
+    if (options?.applyFmlOrient !== undefined) {
+      deps.setFmlOrient?.(options.applyFmlOrient)
     }
   }
 
