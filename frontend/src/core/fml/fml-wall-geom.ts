@@ -1,4 +1,9 @@
 import type { Point2D, Wall } from './types'
+import {
+  FML_WALL_BALANCE_FALLBACK,
+  FML_WALL_BALANCE_MAX,
+  FML_WALL_BALANCE_MIN,
+} from './extraction-to-plan-geom'
 
 /**
  * Floorplanner-linkernormaal in FML-ruimte (Y omlaag, zoals het scherm).
@@ -12,12 +17,15 @@ import type { Point2D, Wall } from './types'
  *
  * De Y-omhoog-rotatie `{ x: -dy, y: dx }` is hier de **rechter** normaal
  * (zie `wallNormal` bij deur-swing) — die niet gebruiken voor balance.
+ *
+ * Belangrijk: `a`/`b` is de Floorplanner-**as** (niet altijd het lichaam-midden).
+ * Visueel midden = as + leftNormal × thickness × (balance − 0.5).
  */
 export function floorplannerLeftNormal(dir: Point2D): Point2D {
   return { x: dir.y, y: -dir.x }
 }
 
-/** Hartlijnlengte in cm (Floorplanner-ruimte). */
+/** Hartlijnlengte / aslengte in cm (Floorplanner-ruimte). */
 export function wallLengthCm(wall: Pick<Wall, 'a' | 'b'>): number {
   return Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
 }
@@ -26,4 +34,139 @@ export function totalWallLengthCm(walls: Array<Pick<Wall, 'a' | 'b'>>): number {
   let total = 0
   for (const wall of walls) total += wallLengthCm(wall)
   return total
+}
+
+export function clampWallBalance(balance: number | undefined): number {
+  if (!Number.isFinite(balance)) return FML_WALL_BALANCE_FALLBACK
+  return Math.min(FML_WALL_BALANCE_MAX, Math.max(FML_WALL_BALANCE_MIN, balance as number))
+}
+
+export function wallDirectionUnit(wall: Pick<Wall, 'a' | 'b'>): Point2D {
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const len = Math.hypot(dx, dy)
+  if (len <= 1e-12) return { x: 1, y: 0 }
+  return { x: dx / len, y: dy / len }
+}
+
+/** Linkernormaal van a→b (unit). */
+export function wallLeftNormal(wall: Pick<Wall, 'a' | 'b'>): Point2D {
+  return floorplannerLeftNormal(wallDirectionUnit(wall))
+}
+
+export function resolveWallBalanceExtents(
+  thickness: number,
+  balance?: number,
+): { plus: number; minus: number } {
+  const b = clampWallBalance(balance)
+  return {
+    plus: thickness * b,
+    minus: thickness * (1 - b),
+  }
+}
+
+/** cm langs leftNormal van as → lichaam-midden (0 bij balance 0.5). */
+export function wallBalanceMidOffsetCm(thickness: number, balance?: number): number {
+  const { plus, minus } = resolveWallBalanceExtents(thickness, balance)
+  return (plus - minus) / 2
+}
+
+function lerpPoint(a: Point2D, b: Point2D, t: number): Point2D {
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+  }
+}
+
+function offsetPoint(point: Point2D, n: Point2D, dist: number): Point2D {
+  return { x: point.x + n.x * dist, y: point.y + n.y * dist }
+}
+
+/** Punt op de as bij parameter t (0 = a, 1 = b). */
+export function wallAxisPoint(wall: Pick<Wall, 'a' | 'b'>, t = 0.5): Point2D {
+  return lerpPoint(wall.a, wall.b, t)
+}
+
+/**
+ * Lichaam-midden (visuele hartlijn) bij parameter t.
+ * Gebruik dit i.p.v. `wall.a` wanneer je het midden van de baksteen nodig hebt.
+ */
+export function wallVisualMid(
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  t = 0.5,
+): Point2D {
+  const axis = wallAxisPoint(wall, t)
+  const mid = wallBalanceMidOffsetCm(wall.thickness, wall.balance)
+  if (Math.abs(mid) < 1e-12) return axis
+  return offsetPoint(axis, wallLeftNormal(wall), mid)
+}
+
+/** Alias: hartlijn = visueel midden van het lichaam (niet per se a/b). */
+export function centerlineFromAxis(
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  t = 0.5,
+): Point2D {
+  return wallVisualMid(wall, t)
+}
+
+export type WallFaceSegment = { a: Point2D; b: Point2D }
+
+/** Linker- (+normal) en rechterface (−normal) vanaf de Floorplanner-as. */
+export function wallFaces(wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>): {
+  left: WallFaceSegment
+  right: WallFaceSegment
+} {
+  const n = wallLeftNormal(wall)
+  const { plus, minus } = resolveWallBalanceExtents(wall.thickness, wall.balance)
+  return {
+    left: {
+      a: offsetPoint(wall.a, n, plus),
+      b: offsetPoint(wall.b, n, plus),
+    },
+    right: {
+      a: offsetPoint(wall.a, n, -minus),
+      b: offsetPoint(wall.b, n, -minus),
+    },
+  }
+}
+
+/**
+ * Verschuif a/b loodrecht zodat bij `toBalance` dezelfde faces blijven
+ * (lengte en richting ongewijzigd). Knooppunten worden niet herbouwd.
+ */
+export function offsetWallAxis(
+  wall: Wall,
+  fromBalance: number | undefined,
+  toBalance: number,
+): Wall {
+  const from = clampWallBalance(fromBalance)
+  const to = clampWallBalance(toBalance)
+  const deltaB = to - from
+  if (Math.abs(deltaB) < 1e-12) {
+    return { ...wall, balance: to, a: { ...wall.a }, b: { ...wall.b } }
+  }
+  const shift = -wall.thickness * deltaB
+  const n = wallLeftNormal(wall)
+  return {
+    ...wall,
+    balance: to,
+    a: offsetPoint(wall.a, n, shift),
+    b: offsetPoint(wall.b, n, shift),
+  }
+}
+
+/**
+ * As-punt (bij t) dat hoort bij `targetBalance` terwijl het huidige lichaam vast blijft.
+ * = visualMid − leftNormal × t × (targetBalance − 0.5)
+ */
+export function axisPointKeepingFaces(
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  targetBalance: number,
+  t = 0.5,
+): Point2D {
+  const mid = wallVisualMid(wall, t)
+  const to = clampWallBalance(targetBalance)
+  const offset = -wall.thickness * (to - 0.5)
+  if (Math.abs(offset) < 1e-12) return mid
+  return offsetPoint(mid, wallLeftNormal(wall), offset)
 }

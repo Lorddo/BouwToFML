@@ -276,8 +276,8 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (adaptive `stampBw` in wall-B/W + pure zwarte OR in Otsu); geen openings |
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
-| Stap 4 nulpunt | Tool «Nulpunt»: sleep kruis → ✓ bakken als FML `(0,0)` (of ✕/Esc annuleren); `fmlNulpuntImageCm` persist (scant-cm); underlay-origin synchroon; per floor eigen anker voor 3D-stack |
-| Stap 4 oriëntatie | FML spiegel/90° om nulpunt `(0,0)` (`fmlOrient` D4-persist); underlay apart (rot/flip + verplaats-toggle op `previewUnderlayLayout`); geometrie ≠ scan-midden |
+| Stap 4 nulpunt | Tool «Nulpunt»: sleep kruis → ✓ bakken als FML `(0,0)` (of ✕/Esc annuleren); soft snap naar muurfaces (binnen/buiten, balance-aware), niet naar knoop/hartlijn; Ctrl/Cmd schakelt snap uit; `fmlNulpuntImageCm` persist (scant-cm); underlay-origin synchroon; per floor eigen anker voor 3D-stack. **FML-viewer:** bij openen, als oil-bottle-refid aanwezig en niet al op origin → popup rebase nulpunt naar item-midden op alle floors met die fles |
+| Stap 4 oriëntatie | FML spiegel/90° om nulpunt `(0,0)` (`fmlOrient` D4-persist); underlay apart (rot/flip + verplaats-toggle op `previewUnderlayLayout`); geometrie ≠ scan-midden; **project-spiegel** = alle FML-floors X-flip zonder switch (viewer zichtbaar; workspace achter `FML_ORIENT_CONTROLS_VISIBLE`) |
 | Floor-switch | Exact restore + opgeslagen `previewPlan` (geen openings-rerun / geen regenerate) |
 | Defaults | Per verdieping (`FloorMeta.defaults`); per component in FML-editor |
 | Persistentie | **Niet** in V1 (IndexedDB later) |
@@ -298,6 +298,8 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | FML | v3 `dimensions[]` (`type: custom_dimension`) |
 
 Binnenmaten = meetwaarde; lijnen staan visueel **buiten** footprint (grote offset in cm — zie Kinderdijkstraat dimensions).
+
+**Viewer-maatlijn (stap 4 tool, geen FML-export):** soft snap naar muurfaces (binnen/buiten), zelfde helper als nulpunt; Shift = H/V t.o.v. start; Ctrl/Cmd schakelt snap uit; geen knoop-/hartlijn-snap.
 
 ---
 

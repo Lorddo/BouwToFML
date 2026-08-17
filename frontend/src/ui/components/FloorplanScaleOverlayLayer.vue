@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { HScaleState } from '@/platform/calibration'
+
+const LABEL_FONT_PX = 13
+const LABEL_GAP_PX = 16
 
 const props = defineProps<{
   scaleState: HScaleState
@@ -15,6 +19,39 @@ const emit = defineEmits<{
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
+
+/** Schermconstante H/V-letters bij de handles — schalen niet mee met zoom. */
+const axisEndLabels = computed(() => {
+  const s = props.stageScale || 1
+  const gap = LABEL_GAP_PX / s
+  const { xLeft, xRight, xGuideY, yTop, yBottom, yGuideX } = props.scaleState
+  const base = {
+    fontSize: LABEL_FONT_PX,
+    fontStyle: 'bold',
+    fontFamily: 'system-ui, Segoe UI, sans-serif',
+    align: 'center' as const,
+    offsetX: LABEL_FONT_PX * 0.36,
+    offsetY: LABEL_FONT_PX * 0.48,
+    scaleX: 1 / s,
+    scaleY: 1 / s,
+    stroke: '#ffffff',
+    strokeWidth: 3,
+    fillAfterStrokeEnabled: true,
+    listening: false,
+  }
+  return [
+    { key: 'h-left', config: { ...base, text: 'H', x: xLeft - gap, y: xGuideY, fill: '#0284c7' } },
+    {
+      key: 'h-right',
+      config: { ...base, text: 'H', x: xRight + gap, y: xGuideY, fill: '#0284c7' },
+    },
+    { key: 'v-top', config: { ...base, text: 'V', x: yGuideX, y: yTop - gap, fill: '#d97706' } },
+    {
+      key: 'v-bottom',
+      config: { ...base, text: 'V', x: yGuideX, y: yBottom + gap, fill: '#d97706' },
+    },
+  ]
+})
 
 function bindDragX(currentY: number) {
   return (pos: { x: number; y: number }) => ({
@@ -204,5 +241,6 @@ function bindDragHorizontalLeg() {
       }"
       @dragmove="emit('moveScaleHandle', 'yBottom', ($event.target as any).y())"
     />
+    <v-text v-for="label in axisEndLabels" :key="label.key" :config="label.config" />
   </v-group>
 </template>

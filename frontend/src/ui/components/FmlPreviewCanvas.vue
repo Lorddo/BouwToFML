@@ -219,6 +219,7 @@ const {
   drawRoomPreview,
   measurePreview,
   measureLines,
+  measureHoverCm,
   nulpuntMode,
   nulpuntDisplayCm,
   nulpuntHasPending,
@@ -399,6 +400,7 @@ watch(
       :height="stageSize.height"
       :lines="measureLines"
       :preview="measurePreview"
+      :hover="measureHoverCm"
       :to-screen="cmToScreen"
       :dashed="true"
     />

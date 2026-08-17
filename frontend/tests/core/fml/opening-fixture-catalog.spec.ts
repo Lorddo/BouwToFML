@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
+import { FML_ALIGN_FIXTURE_REFID, resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
+import { importFmlV3 } from '@/core/fml/importFmlV3'
 import {
   buildWindowSymbol,
   resolveWindowPanelCount,
@@ -35,7 +35,8 @@ describe('fixture catalog + symbols', () => {
     )
     expect(resolveFixtureCatalog('a816372ed69d80b54927513990336c750ca6f2b0').stroke).toBe('#0f766e')
     expect(resolveFixtureCatalog('0c4ab4d4ccdc801b4093f10a9aa9c0bfd08ab584').kind).toBe('toilet')
-    expect(resolveFixtureCatalog('4e58355312c1de13eb2b1b29b4dfbf0a8dbabefd').kind).toBe('standpipe')
+    expect(resolveFixtureCatalog(FML_ALIGN_FIXTURE_REFID).kind).toBe('oil_bottle')
+    expect(resolveFixtureCatalog(FML_ALIGN_FIXTURE_REFID).label).toBe('Oil bottle')
   })
 
   it('builds non-empty geometry for known kinds', () => {
@@ -44,10 +45,10 @@ describe('fixture catalog + symbols', () => {
     expect(boiler.circles).toHaveLength(2)
     const heatPump = buildFixtureSymbol('heat_pump', 60, 70)
     expect(heatPump.polylines.length).toBeGreaterThan(0)
-    const standpipe = buildFixtureSymbol('standpipe', 7.582, 7.582)
-    expect(standpipe.circles).toHaveLength(2)
-    expect(standpipe.rects).toHaveLength(0)
-    expect(standpipe.circles[0]?.[2]).toBeGreaterThan(standpipe.circles[1]?.[2] ?? 0)
+    const oilBottle = buildFixtureSymbol('oil_bottle', 7.582, 7.582)
+    expect(oilBottle.circles).toHaveLength(2)
+    expect(oilBottle.rects).toHaveLength(0)
+    expect(oilBottle.circles[0]?.[2]).toBeGreaterThan(oilBottle.circles[1]?.[2] ?? 0)
   })
 
   it('builds stair / canopy / chimney / skylight symbols', () => {
@@ -88,6 +89,32 @@ describe('fixture catalog + symbols', () => {
     expect(arrow[5]).toBe(arrow[7])
     expect(-pivotX).toBeLessThan(-30)
     expect(buildFixtureSymbol('railing', 118, 10).polylines.length).toBeGreaterThan(2)
+  })
+
+  it('builds quarter-turn stairs in the same stroke style as the 180 winder', () => {
+    const winder = buildFixtureSymbol('stair_winder_180', 105, 243)
+    const bg = buildFixtureSymbol('stair_quarter_90', 85, 155)
+    const up = buildFixtureSymbol('stair_quarter_90_up', 85, 155)
+    expect(bg.stroke).toBe(winder.stroke)
+    expect(bg.fill).toBe(winder.fill)
+    expect(bg.strokeWidth).toBe(winder.strokeWidth)
+    expect(bg.arrowStrokeWidth).toBe(winder.arrowStrokeWidth)
+    expect(bg.overWalls).toBe(false)
+    expect(bg.rects).toHaveLength(0)
+    expect(bg.fillPolygons?.length).toBe(1)
+    expect(bg.dashPolylines?.length).toBe(1)
+    expect(bg.arrowPolylines?.length).toBe(2)
+    expect(bg.polylines.length).toBeGreaterThan(6)
+
+    const bgCutY = ((bg.dashPolylines?.[0]?.[1] ?? 0) + (bg.dashPolylines?.[0]?.[3] ?? 0)) / 2
+    const upCutY = ((up.dashPolylines?.[0]?.[1] ?? 0) + (up.dashPolylines?.[0]?.[3] ?? 0)) / 2
+    expect(bgCutY).toBeLessThan(0)
+    expect(upCutY).toBeGreaterThan(0)
+
+    const bgTipY = bg.arrowPolylines?.[0]?.[5] ?? 0
+    const upTipY = up.arrowPolylines?.[0]?.[5] ?? 0
+    expect(bgTipY).toBeLessThan(bg.arrowPolylines?.[0]?.[1] ?? 0)
+    expect(upTipY).toBeLessThan(up.arrowPolylines?.[0]?.[1] ?? 0)
   })
 
   it('fills wastafel/douchekop to the item bbox so they sit on the wall', () => {

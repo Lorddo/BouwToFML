@@ -5,7 +5,32 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-16 (FML orient-knoppen verborgen)
+Laatste update: 2026-08-17 (kwarttrap-symbolen)
+
+## Kwarttrap BG/1e (FML-viewer, 2026-08-17)
+
+Zelfde lijnstijl als spiltrap (`#334155`, stroke 0.55, pijl 1.15).
+`stair_quarter_90` = 90° + 3 rechte, L-pijl omhoog, dashed schuine snede (trapkast).
+`stair_quarter_90_up` = omgekeerde vlucht (3 rechte + 90°), pijl blijft stijgrichting.
+Nog geen Floorplanner-refids (FIN-10508 heeft geen items).
+
+## Oil bottle nulpunt (FML-viewer, 2026-08-17)
+
+Catalogus: waterstandsleiding → **oil bottle** (`oil_bottle`, zelfde refid).
+Bij FML-openen in de losse viewer: popup als fles aanwezig en niet al op `(0,0)`;
+Ja = nulpunt naar item-midden op **alle** floors met die fles (drawing schuift mee).
+Geen auto-apply; workspace ongemoeid.
+
+## FML-as meeschuiven met balance (2026-08-17)
+
+Floorplanner: `a`/`b` = as, `balance` verdeelt dikte vanaf die as (niet hartlijn+extra).
+Keep-faces: as schuift + junction-stitch (`wall-axis-balance.ts`); lichaam blijft.
+Keep-axis: flush X-01 ongewijzigd (gedeelde L10-lijn). Editor slider/dikte → keep-faces;
+`rebasePlanSnap(0|0.5|1)` primitive (default export blijft 0.5, geen auto-rebase na flush).
+
+## Nulpunt + maatlijn wall-face snap (2026-08-17)
+
+Sleep-nulpunt en viewer-maatlijn snappen naar lange binnen-/buitenfaces (`resolveWallExtents` + leftNormal), niet naar knoop/hartlijn. H/V as-onafhankelijk (hoek = face-snijpunt); Ctrl/Cmd uit; maatlijn Shift blijft H/V ná face-snap. Helper: `fml-preview-wall-face-snap.ts`.
 
 ## FML dikte typical + balance-bewijs (2026-08-14)
 
@@ -50,7 +75,7 @@ sluiten — hoekstuk weg, maar nu los van de verticaal op x=1485 en 3 openingen 
 
 ## Diagnose: stap-1 onderlegger (2026-08-13)
 
-Alarmbel-HTML krijgt nu de kleur-onderlegger van stap 1 (na rotatie/crop/gum) naast B/W — JPEG q0.85 volle resolutie + px-maat in meta. Zo is te zien of de bronscan zelf het probleem is.
+Alarmbel-HTML krijgt nu de kleur-onderlegger van stap 1 (na rotatie/crop/gum) naast B/W — JPEG q0.85 volle resolutie + px-maat in meta. Zo is te zien of de bronscan zelf het probleem is. H/V-schaallinialen als SVG-overlay (cyaan/amber, mm+px-labels, JSON handles) op diezelfde scan.
 
 ## Stap 1 rotatie-bake vóór schaal (2026-08-13)
 
@@ -142,7 +167,7 @@ Rapport: `.cursor/docs/audit-2026-08-05-customer-test.md` — **Go**. Live: http
 
 ## Diagnose-export FAB (2026-08-05 → 08-11)
 
-Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, **stap-1 kleur-onderlegger (JPEG)**, B/W, refs, deuren/ramen, **volle L1–L10 + transitions + L11/L12/L14**, semantic graph, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts` via `buildLayerDebugReport`.
+Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, **stap-1 kleur-onderlegger (JPEG) + H/V-schaallinialen (SVG)**, B/W, refs, deuren/ramen, **volle L1–L10 + transitions + L11/L12/L14**, semantic graph, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts` via `buildLayerDebugReport`.
 
 ## Projectpersistentie IndexedDB (2026-08-05)
 
@@ -259,7 +284,7 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
-**FML fixture-symbolen (2026-08-16).** Catalogus + viewer: spiltrap 180° (zelfde refid kelder/BG/1e/2e), keukenblad onder muurfill (flush), beton afdak dashed, chimney/koof, traphek, dakraam, knieschot; 1e douchekop teal tint. Meubels achter muren, dak/gevel-symbolen ervoor.
+**FML fixture-symbolen (2026-08-17).** Spiltrap 180° + kwarttrap BG/1e (zelfde stroke/pijl; 1e = omgekeerde vlucht, pijl omhoog; dashed snede). Keukenblad onder muurfill, afdak/chimney/hek/dakraam/knieschot; 1e douchekop teal. Meubels achter muren, dak/gevel ervoor.
 
 **FML-verdieping oriënteren (2026-08-16).** Techniek blijft (`floor-plan-orient`, persist). Productie-UI verborgen via `FML_ORIENT_CONTROLS_VISIBLE=false` tot klant goedkeurt. Underlay-verplaatsen blijft zichtbaar.
 
@@ -277,7 +302,7 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 **Stap 2 fabrieksreset B/W (2026-08-13).** «Reset naar fabriekswaarden» zet actieve laag-tune terug; refs/inkt/OCR/stempel blijven.
 
-**Diagnose stap-1 onderlegger (2026-08-13).** Alarmbel-HTML bevat nu kleur-scan (JPEG) naast B/W.
+**Diagnose stap-1 onderlegger (2026-08-13, linialen 08-17).** Alarmbel-HTML: kleur-scan (JPEG) naast B/W; H/V-schaallinialen als SVG-overlay (cyaan/amber, mm+px, JSON handles).
 
 **Stap 1 rotatie-bake (2026-08-13).** Optionele knop «Rotatie vastzetten» + auto bij 1→2; schaal blijft onafhankelijk.
 
@@ -403,6 +428,9 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 ## Recente besluiten (samenvatting)
 
+- **2026-08-17** — Kwarttrap-symbolen: zelfde lijnstijl als spiltrap; BG 90°+3 treden + dashed snede; 1e omgekeerde vlucht, pijl blijft omhoog. Geen nieuwe refids tot een Floorplanner-FML die items heeft.
+- **2026-08-17** — Diagnose origineel: H/V-schaallinialen als SVG-overlay (zelfde coords als stap-1 scan) + mm/px/JSON; JPEG blijft schoon.
+- **2026-08-17** — Oil bottle (geen standpipe): FML-viewer popup rebase nulpunt naar item-midden op alle floors met die refid; geen auto-apply, workspace ongemoeid.
 - **2026-08-16** — FML/onderlegger spiegel+90° UI verborgen (`FML_ORIENT_CONTROLS_VISIBLE`); techniek blijft tot klant goedkeurt.
 - **2026-08-16** — FML fixture-catalogus: Mooiland-refids (spiltrap 180°, keukenblad, afdak, chimney, railing, dakraam); meubels onder muurfill zodat flush-bladen niet door de muur steken.
 - **2026-08-16** — FML-oriëntatie: spiegel/90° om nulpunt `(0,0)`; underlay display-only rot/flip + verplaats-toggle; `fmlOrient` persist.

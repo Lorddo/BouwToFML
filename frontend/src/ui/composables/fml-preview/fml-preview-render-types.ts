@@ -66,7 +66,9 @@ export interface RenderFixture {
   rects: number[][]
   ellipses: number[][]
   circles: number[][]
+  fillPolygons: number[][]
   polylines: number[][]
+  dashPolylines: number[][]
   arrowPolylines: number[][]
   stroke: string
   fill: string

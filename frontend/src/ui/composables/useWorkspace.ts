@@ -765,6 +765,7 @@ export function useWorkspace() {
     setLocalError,
     getPreviewPlan: () => fml.previewPlan.value ?? null,
     getPreviewUnderlayLayout: () => fml.previewUnderlayLayout.value ?? null,
+    updatePreviewPlan: (plan, layout) => fml.updatePreviewPlan(plan, layout),
     getFmlNulpuntImageCm: () => fml.fmlNulpuntImageCm.value ?? null,
     setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
     getFmlOrient: () => fml.persistOrientState(),
@@ -1170,6 +1171,16 @@ export function useWorkspace() {
       fml.setFmlNulpuntImageCm(point),
     updatePreviewPlan: fml.updatePreviewPlan,
     downloadProjectFml,
+    applyProjectMirrorVertical: () => {
+      const count = project.applyProjectMirrorVertical()
+      if (count === 0) {
+        setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+        return false
+      }
+      return true
+    },
+    hasAnyFloorFml: computed(() => project.hasAnyFloorFml()),
+    projectOrientFlipX: computed(() => project.projectOrientFlipXActive()),
     // Muurstempel (stap 2)
     wallStampActive: wallStamp.active,
     wallStampBaked: wallStamp.baked,

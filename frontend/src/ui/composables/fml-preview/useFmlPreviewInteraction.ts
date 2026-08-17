@@ -312,14 +312,6 @@ export function useFmlPreviewInteraction(options: {
     return point
   }
 
-  /** Maatlijn: exact het klikpunt. Alleen Shift lockt H/V t.o.v. het startpunt. */
-  function resolveMeasurePoint(cm: Point2D, axisAnchor?: Point2D): Point2D {
-    if (axisAnchor) {
-      return snapDrawWallEndpoint(axisAnchor, cm, shiftPressed.value)
-    }
-    return cm
-  }
-
   /**
    * Kamer-start: junction-hit zodat je makkelijk op een knoop bindt.
    * Daarna krappe hartlijn — de 15 cm as-magnet trekt kleine schachten dicht.
@@ -369,12 +361,17 @@ export function useFmlPreviewInteraction(options: {
   const measure = useFmlPreviewMeasure({
     hitTest,
     hoveredJunctionId,
-    resolvePoint: resolveMeasurePoint,
+    getWalls: () => editor.walls.value,
+    shiftPressed,
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
       clearSelection()
     },
+  })
+
+  watch(measureMode, (on) => {
+    if (!on) measure.clearMeasureHover()
   })
 
   const addOpening = useFmlPreviewAddOpening({
@@ -482,6 +479,8 @@ export function useFmlPreviewInteraction(options: {
       beginPanDrag: panZoom.beginPanDrag,
       beginDrawWall: drawWall.beginDrawWall,
       beginMeasure: measure.beginMeasure,
+      updateMeasureHover: measure.updateMeasureHover,
+      clearMeasureHover: measure.clearMeasureHover,
       beginDrawRoom: drawRoom.beginDrawRoom,
       beginNulpuntDrag: nulpunt.beginNulpuntDrag,
       beginUnderlayMoveDrag: underlayMove.beginUnderlayMoveDrag,
@@ -615,6 +614,7 @@ export function useFmlPreviewInteraction(options: {
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
     measure.cancelMeasureDrag()
+    measure.clearMeasureHover()
     nulpunt.cancelNulpuntPending()
     underlayMove.cancelUnderlayMoveDrag()
     panZoom.endPanDrag()
@@ -637,6 +637,7 @@ export function useFmlPreviewInteraction(options: {
     drawRoomPreview: drawRoom.drawRoomPreview,
     measurePreview: measure.measurePreview,
     measureLines: measure.measureLines,
+    measureHoverCm: measure.measureHoverCm,
     clearMeasureLines: measure.clearMeasureLines,
     nulpuntDisplayCm: nulpunt.nulpuntDisplayCm,
     nulpuntHasPending: nulpunt.nulpuntHasPending,

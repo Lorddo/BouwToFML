@@ -23,6 +23,7 @@ import {
 } from './defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
 import { mergeFloorPlans } from './merge-floor-plans'
+import { mirrorFloorBlobVertical } from './mirror-floor-blob'
 import type { PdfUnderlaySource } from '@/platform/upload'
 import type {
   FloorMeta,
@@ -68,6 +69,8 @@ export type WorkspaceProjectDeps = {
   getPreviewPlan: () => FloorPlan | null
   /** Underlay-layout bij huidige preview (origin + px/mm). */
   getPreviewUnderlayLayout: () => PreviewUnderlayLayout | null
+  /** Zet live FML-preview (na project-spiegel zonder floor-switch). */
+  updatePreviewPlan: (plan: FloorPlan, layout?: PreviewUnderlayLayout | null) => void
   /** Gebruikers-nulpunt in scant-cm, of null. */
   getFmlNulpuntImageCm: () => { x: number; y: number } | null
   /** Zet nulpunt bij floor-hydrate (na restore). */
@@ -674,6 +677,65 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     return mergeFloorPlans(state.value.meta.name, floors)
   }
 
+  /**
+   * Verticale X-flip van alle floors met FML om hun nulpunt — zonder floor-switch.
+   * @returns aantal gespiegelde floors (0 = niets gedaan).
+   */
+  function applyProjectMirrorVertical(): number {
+    captureActiveFloorIntoBlob()
+    const activeId = state.value.activeFloorId
+    const nextBlobs: Record<string, FloorWorkspaceBlob> = { ...state.value.blobs }
+    let count = 0
+    let activeMirrored: FloorWorkspaceBlob | null = null
+    for (const meta of state.value.floors) {
+      const prev = nextBlobs[meta.id] ?? emptyBlob()
+      const { blob, mirrored } = mirrorFloorBlobVertical(prev)
+      if (!mirrored) continue
+      nextBlobs[meta.id] = blob
+      count += 1
+      if (meta.id === activeId) activeMirrored = blob
+    }
+    if (count === 0) return 0
+    state.value = { ...state.value, blobs: nextBlobs }
+    if (activeMirrored) {
+      deps.setFmlOrient(activeMirrored.fmlOrient ?? null)
+      const livePlan =
+        activeMirrored.previewPlan ??
+        (activeMirrored.generatedFloor
+          ? {
+              name: state.value.meta.name,
+              floors: [activeMirrored.generatedFloor],
+            }
+          : null)
+      if (livePlan) {
+        deps.updatePreviewPlan(livePlan, activeMirrored.previewUnderlayLayout)
+      }
+    }
+    persistCtrl.persistNow()
+    return count
+  }
+
+  /** True als ≥1 floor FML heeft (project-spiegel knop). */
+  function hasAnyFloorFml(): boolean {
+    for (const meta of state.value.floors) {
+      const blob = state.value.blobs[meta.id]
+      if (blob?.previewPlan?.floors[0] || blob?.generatedFloor) return true
+    }
+    return false
+  }
+
+  /** True als alle FML-floors flipX aan hebben (toggle-styling). */
+  function projectOrientFlipXActive(): boolean {
+    let seen = 0
+    for (const meta of state.value.floors) {
+      const blob = state.value.blobs[meta.id]
+      if (!blob?.previewPlan?.floors[0] && !blob?.generatedFloor) continue
+      seen += 1
+      if (blob.fmlOrient?.flipX !== true) return false
+    }
+    return seen > 0
+  }
+
   function storeGeneratedFloorForActive(floor: Floor | null): void {
     const id = state.value.activeFloorId
     const prev = state.value.blobs[id] ?? emptyBlob()
@@ -768,6 +830,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     applyPersistedState,
     resetProject,
     buildMergedProjectPlan,
+    applyProjectMirrorVertical,
+    hasAnyFloorFml,
+    projectOrientFlipXActive,
     storeGeneratedFloorForActive,
     resolveDonorFloorId,
   }

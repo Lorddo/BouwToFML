@@ -228,6 +228,9 @@ export function roundFmlThicknessCm(value: number): number {
  * Balance: default 0.5; collineaire diktewissel-ketens flushen alleen bij face-evidence
  * (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
  * Daarna near-H/V restjitter exact op as (viewer = export).
+ *
+ * Geen automatische `rebasePlanSnap`: flush is keep-axis (gedeelde L10-lijn).
+ * Optionele floor-snap 0/0.5/1 = apart via `rebasePlanSnap` (keep-faces).
  */
 export function harmonizeFmlWallThickness(
   plan: FloorPlan,

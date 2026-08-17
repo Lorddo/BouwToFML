@@ -16,6 +16,10 @@ import {
 } from '@/core/fml/floor-plan-orient'
 import { downloadFml } from '@/core/fml/downloadFml'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
+import {
+  rebasePlanToItemRefid,
+  type RebasePlanToItemRefidResult,
+} from '@/core/fml/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { imageDimensions, loadImage } from '@/ui/composables/workspace/imageUtils'
@@ -43,11 +47,18 @@ const fmlOpacity = ref(0.8)
 /** Per-floor FML-oriëntatie (viewer heeft geen regenerate-from-detectie). */
 const orientByFloor = ref<Record<number, FloorOrientState>>({})
 const underlayMoveMode = ref(false)
+const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
 
 const underlayAvailable = computed(() => !!underlaySrc.value && !!underlayLayout.value)
 const activeFmlOrient = computed(
   () => orientByFloor.value[activeFloorIndex.value] ?? defaultFloorOrient(),
 )
+/** Alle floors hebben flipX — voor project-spiegel knop-styling. */
+const projectOrientFlipX = computed(() => {
+  const list = floors.value
+  if (list.length === 0) return false
+  return list.every((_, i) => (orientByFloor.value[i] ?? defaultFloorOrient()).flipX)
+})
 
 /** Object-URL van lokale fallback-PNG; revoke bij clear/switch. */
 let localUnderlayObjectUrl: string | null = null
@@ -56,6 +67,11 @@ let underlayLoadGen = 0
 const floors = computed(() => plan.value?.floors ?? [])
 const multiFloor = computed(() => floors.value.length > 1)
 const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
+const alignFixturePartial = computed(() => {
+  const pending = pendingAlignRebase.value
+  if (!pending) return false
+  return pending.missing.length > 0
+})
 const hasDrawingMeta = computed(() => {
   const d = activeFloor.value?.drawing
   return !!d && d.width > 0 && d.height > 0
@@ -128,6 +144,16 @@ function resolveDrawingOpacity(alpha: number | undefined): number {
   // Floorplanner alpha is 0–100; ontbrekend → 50.
   const pct = typeof alpha === 'number' && Number.isFinite(alpha) ? alpha : 50
   return Math.min(1, Math.max(0, pct / 100))
+}
+
+function onUnderlayOpacityInput(event: Event): void {
+  const next = Number((event.target as HTMLInputElement).value) / 100
+  underlayOpacity.value = next
+  if (next <= 0) underlayMoveMode.value = false
+}
+
+function onFmlOpacityInput(event: Event): void {
+  fmlOpacity.value = Number((event.target as HTMLInputElement).value) / 100
 }
 
 function applyImageToUnderlay(
@@ -244,13 +270,17 @@ async function onFileInput(event: Event): Promise<void> {
     fileName.value = file.name
     activeFloorIndex.value = 0
     orientByFloor.value = {}
+    pendingAlignRebase.value = null
     await syncUnderlayForActiveFloor()
+    const preview = rebasePlanToItemRefid(parsed.plan)
+    pendingAlignRebase.value = preview.moved.length > 0 ? preview : null
   } catch (err) {
     plan.value = null
     warnings.value = []
     fileName.value = null
     activeFloorIndex.value = 0
     orientByFloor.value = {}
+    pendingAlignRebase.value = null
     clearUnderlayState()
     error.value = err instanceof Error ? err.message : 'FML import mislukt.'
   }
@@ -264,7 +294,20 @@ function clearPlan(): void {
   activeFloorIndex.value = 0
   orientByFloor.value = {}
   fmlOpacity.value = 0.8
+  pendingAlignRebase.value = null
   clearUnderlayState()
+}
+
+function applyAlignFixtureRebase(): void {
+  const pending = pendingAlignRebase.value
+  if (!pending) return
+  plan.value = pending.plan
+  pendingAlignRebase.value = null
+  void syncUnderlayForActiveFloor()
+}
+
+function dismissAlignFixtureRebase(): void {
+  pendingAlignRebase.value = null
 }
 
 function applyViewerFloorOrient(op: FloorOrientOp): void {
@@ -276,6 +319,19 @@ function applyViewerFloorOrient(op: FloorOrientOp): void {
     [idx]: composeFloorOrient(prev, op),
   }
   plan.value = applyFloorOrientOp(plan.value, op, idx)
+  underlayMoveMode.value = false
+}
+
+/** Spiegel alle verdiepingen om hun nulpunt (geen floor-switch). */
+function applyViewerProjectOrient(op: 'flipX'): void {
+  if (!plan.value || plan.value.floors.length === 0) return
+  const nextOrient: Record<number, FloorOrientState> = { ...orientByFloor.value }
+  for (let i = 0; i < plan.value.floors.length; i++) {
+    const prev = nextOrient[i] ?? defaultFloorOrient()
+    nextOrient[i] = composeFloorOrient(prev, op)
+  }
+  orientByFloor.value = nextOrient
+  plan.value = applyFloorOrientOp(plan.value, op, null)
   underlayMoveMode.value = false
 }
 
@@ -371,10 +427,7 @@ onBeforeUnmount(() => {
               step="1"
               :value="Math.round(underlayOpacity * 100)"
               :aria-label="t('result.underlayOpacityAria')"
-              @input="
-                underlayOpacity = Number(($event.target as HTMLInputElement).value) / 100
-                if (underlayOpacity <= 0) underlayMoveMode = false
-              "
+              @input="onUnderlayOpacityInput"
             />
           </div>
           <div class="opacity-row">
@@ -389,7 +442,7 @@ onBeforeUnmount(() => {
               step="1"
               :value="Math.round(fmlOpacity * 100)"
               :aria-label="t('result.fmlOpacityAria')"
-              @input="fmlOpacity = Number(($event.target as HTMLInputElement).value) / 100"
+              @input="onFmlOpacityInput"
             />
           </div>
         </div>
@@ -461,6 +514,16 @@ onBeforeUnmount(() => {
               @click="applyViewerFloorOrient('flipX')"
             >
               {{ t('result.mirrorVertical') }}
+            </button>
+            <button
+              type="button"
+              class="orient-btn"
+              :class="{ 'orient-btn--active': projectOrientFlipX }"
+              :disabled="!plan || floors.length === 0"
+              :title="t('result.mirrorProjectHint')"
+              @click="applyViewerProjectOrient('flipX')"
+            >
+              {{ t('result.mirrorProject') }}
             </button>
             <button
               type="button"
@@ -539,11 +602,42 @@ onBeforeUnmount(() => {
         </label>
       </div>
     </main>
+
+    <div
+      v-if="pendingAlignRebase"
+      class="align-dialog-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="align-fixture-title"
+      @click.self="dismissAlignFixtureRebase"
+    >
+      <div class="align-dialog">
+        <h3 id="align-fixture-title">{{ t('viewer.alignFixtureTitle') }}</h3>
+        <p>{{ t('viewer.alignFixtureBody') }}</p>
+        <p v-if="alignFixturePartial" class="align-dialog-partial">
+          {{
+            t('viewer.alignFixtureBodyPartial', {
+              moved: pendingAlignRebase.moved.length,
+              total: floors.length,
+            })
+          }}
+        </p>
+        <div class="align-dialog-actions">
+          <button type="button" class="secondary" @click="dismissAlignFixtureRebase">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="button" class="align-dialog-apply" @click="applyAlignFixtureRebase">
+            {{ t('common.apply') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .fml-viewer-layout {
+  position: relative;
   display: flex;
   height: 100%;
 }
@@ -821,5 +915,68 @@ onBeforeUnmount(() => {
   gap: 12px;
   color: #64748b;
   font-size: 14px;
+}
+
+.align-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(15 23 42 / 0.45);
+}
+
+.align-dialog {
+  width: min(420px, calc(100% - 32px));
+  padding: 16px 18px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 40px rgb(15 23 42 / 0.2);
+}
+
+.align-dialog h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.align-dialog p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.align-dialog-partial {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.align-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.align-dialog-actions .secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.align-dialog-apply {
+  background: #2563eb;
+  color: #fff;
+  border: 1px solid #2563eb;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
 }
 </style>

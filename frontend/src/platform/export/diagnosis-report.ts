@@ -1,5 +1,14 @@
+import { SCALE_AXIS_MISMATCH_WARN_PCT } from '@/platform/calibration'
 import { escapeHtml, formatJson } from './examples-report-html-utils'
 import type { LayerDebugReport, LayerDebugWallTransition } from './layer-debug-report/types'
+import {
+  buildScaleRulerSvg,
+  formatScaleAxisLabel,
+  formatScaleMismatch,
+  type DiagnosisScaleOverlay,
+} from './diagnosis-scale-overlay'
+
+export type { DiagnosisScaleOverlay } from './diagnosis-scale-overlay'
 
 export type DiagnosisReportMeta = {
   exportedAtIso: string
@@ -41,6 +50,8 @@ export type DiagnosisReportPayload = {
    * JPEG is used at export to keep the HTML shareable.
    */
   originalPng: string | null
+  /** Stap-1 H/V schaallinialen in dezelfde pixels als originalPng. */
+  scaleOverlay: DiagnosisScaleOverlay | null
   /** Effective or base wall B/W as PNG data-URL. */
   bwPng: string | null
   /** Live reference boxes (rect metadata). */
@@ -119,7 +130,19 @@ function jsonBlock(
 </details>`
 }
 
-function metaList(meta: DiagnosisReportMeta): string {
+function metaList(meta: DiagnosisReportMeta, scale: DiagnosisScaleOverlay | null): string {
+  const scaleOverlayMetaH = scale
+    ? `${formatScaleAxisLabel('H', scale.distanceMmX, scale.pxDistanceX)}${scale.confirmed ? ' (confirmed)' : ' (unconfirmed)'}`
+    : '—'
+  const scaleOverlayMetaV = scale
+    ? `${formatScaleAxisLabel('V', scale.distanceMmY, scale.pxDistanceY)}${scale.confirmed ? ' (confirmed)' : ' (unconfirmed)'}`
+    : '—'
+  const mismatch = scale ? formatScaleMismatch(scale.axisMismatchPct) : null
+  const scaleOverlayMetaMismatch = scale
+    ? mismatch
+      ? `${mismatch} (warn ≥ ${SCALE_AXIS_MISMATCH_WARN_PCT}%)`
+      : `${scale.axisMismatchPct.toFixed(2)}%`
+    : '—'
   const rows: Array<[string, string]> = [
     ['Exported at', meta.exportedAtIso],
     ['Project', meta.projectName ?? '—'],
@@ -133,6 +156,9 @@ function metaList(meta: DiagnosisReportMeta): string {
         ? `${meta.pxPerMmX.toFixed(4)} × ${meta.pxPerMmY.toFixed(4)}`
         : '—',
     ],
+    ['Scale H', scaleOverlayMetaH],
+    ['Scale V', scaleOverlayMetaV],
+    ['Scale mismatch', scaleOverlayMetaMismatch],
     [
       'Original size',
       meta.originalWidth != null && meta.originalHeight != null
@@ -159,17 +185,46 @@ function figureUnderlay(
 </figure>`
 }
 
-function figureOriginal(png: string | null, meta: DiagnosisReportMeta): string {
+function figureOriginal(
+  png: string | null,
+  meta: DiagnosisReportMeta,
+  scale: DiagnosisScaleOverlay | null,
+): string {
   const size =
     meta.originalWidth != null && meta.originalHeight != null
       ? ` · ${meta.originalWidth}×${meta.originalHeight} px`
       : ''
-  return figureUnderlay(
-    png,
-    'Originele onderlegger',
-    'Step 1 colour underlay',
-    `Stap 1 kleur-onderlegger (na rotatie/crop/gum; JPEG volle resolutie)${size}`,
-  )
+  const caption = `Stap 1 kleur-onderlegger (na rotatie/crop/gum; JPEG volle resolutie)${size}`
+  if (!png) return unavailable('Originele onderlegger')
+
+  const width = meta.originalWidth ?? 0
+  const height = meta.originalHeight ?? 0
+  const svg = scale && width > 0 && height > 0 ? buildScaleRulerSvg(scale, width, height) : ''
+  const mismatch = scale ? formatScaleMismatch(scale.axisMismatchPct) : null
+  const rulerNote = scale
+    ? ` Schaallinialen: cyaan = H (X), amber = V (Y)${scale.confirmed ? ', bevestigd' : ', niet bevestigd'}.${mismatch ? ` As-mismatch ${mismatch}.` : ''}`
+    : ' Geen schaallinialen in de live sessie.'
+
+  const json = scale
+    ? jsonBlock(scale, 'Schaallinialen', {
+        open: false,
+        summary: 'Schaalliniaal JSON (handles + mm/px)',
+      })
+    : ''
+
+  if (!svg) {
+    return `${figureUnderlay(png, 'Originele onderlegger', 'Step 1 colour underlay', caption + rulerNote)}
+${json}`
+  }
+
+  return `<figure class="bw-figure original-figure">
+  <div class="original-wrap" style="aspect-ratio: ${width} / ${height}">
+    <img src="${png}" alt="Step 1 colour underlay" width="${width}" height="${height}" />
+    ${svg}
+  </div>
+  <figcaption>${escapeHtml(caption + rulerNote)}</figcaption>
+</figure>
+${json}`
 }
 
 function figureBw(png: string | null): string {
@@ -554,6 +609,9 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
     .bw-figure { margin: 0; }
     .bw-figure img { max-width: min(100%, 960px); height: auto; border: 1px solid #e2e8f0; background: #fff; }
     .bw-figure figcaption { margin-top: 6px; font-size: 12px; color: #64748b; }
+    .original-wrap { position: relative; display: inline-block; max-width: min(100%, 960px); width: 100%; }
+    .original-wrap img { display: block; width: 100%; height: auto; max-width: 100%; }
+    .original-wrap svg.scale-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .ref-img-grid { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 12px; }
     .ref-contour-figure { margin: 0; max-width: min(100%, 420px); }
     .ref-contour-figure img { display: block; max-width: 100%; height: auto; border: 1px solid #e2e8f0; background: #fff; }
@@ -569,10 +627,10 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
-  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = stap 1 kleur-scan; B/W = stap 2 muur-onderlegger.</p>
+  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = stap 1 kleur-scan met H/V-schaallinialen (cyaan/amber); B/W = stap 2 muur-onderlegger.</p>
   ${toc}
-  ${section('meta', 'Meta', metaList(payload.meta))}
-  ${section('original', 'Originele onderlegger (stap 1)', figureOriginal(payload.originalPng, payload.meta))}
+  ${section('meta', 'Meta', metaList(payload.meta, payload.scaleOverlay))}
+  ${section('original', 'Originele onderlegger (stap 1)', figureOriginal(payload.originalPng, payload.meta, payload.scaleOverlay))}
   ${section('bw', 'B/W onderlegger', figureBw(payload.bwPng))}
   ${section(
     'refs',

@@ -1,6 +1,6 @@
 {
   "beschrijving": "Catalogus van Floorplanner item/fixture-refids (keuken, sanitair, installaties, trap, dak). Alleen weergave bij FML-import; nog geen place-tool.",
-  "laatste_update": "2026-08-16",
+  "laatste_update": "2026-08-17",
   "kind_hints": {
     "countertop": "Keukenblad — rechthoekige top-view; onder de muurfill (flush tegen binnenkant).",
     "toilet": "Toilet — reservoir + ovale pot (top-view).",
@@ -10,13 +10,15 @@
     "boiler": "CV-ketel — vierkant met twee aansluitcirkels.",
     "heat_pump": "Warmtepomp — hoge kast met grill-lijnen.",
     "stair_winder_180": "Spiltrap 180° — voetafdruk, spil, treden + U-pijl. Zelfde refid over verdiepingen.",
+    "stair_quarter_90": "Kwarttrap BG — 90° winder + 3 rechte treden, L-pijl omhoog, dashed schuine snede aan het uiteinde (trapkast).",
+    "stair_quarter_90_up": "Kwarttrap 1e — omgekeerde vlucht (3 rechte + 90°), pijl blijft omhoog; dashed snede waar de trap door de vloer komt.",
     "canopy": "Beton afdak — grijs vlak met dashed outline.",
     "hidden": "Niet tekenen in 2D (bijv. armatuur in afdak).",
     "chimney": "Schoorsteen op koof — dikke omlijning, cirkel + kruis.",
     "railing": "Traphek — donkere balk met spijlen.",
     "skylight": "Dakraam — dashed vierkant.",
     "roof_eave": "Knieschot / dakrand — lichte balk.",
-    "standpipe": "Waterstandsleiding — twee concentrische cirkels."
+    "oil_bottle": "Oil bottle — twee concentrische cirkels (Floorplanner-uitlijningsanker)."
   },
   "entries": [
     {
@@ -177,10 +179,10 @@
     {
       "refid": "4e58355312c1de13eb2b1b29b4dfbf0a8dbabefd",
       "type": "fixture",
-      "benaming": "Waterstandsleiding",
-      "kind": "standpipe",
+      "benaming": "Oil bottle",
+      "kind": "oil_bottle",
       "categorie": "installaties",
-      "notities": "Mooiland 3090 A_M4 — linkerbovenhoek, alle verdiepingen, ~8×8",
+      "notities": "Mooiland 3090 A_M4 — linkerbovenhoek, alle verdiepingen, ~8×8; Floorplanner-uitlijningsanker",
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     }
   ]

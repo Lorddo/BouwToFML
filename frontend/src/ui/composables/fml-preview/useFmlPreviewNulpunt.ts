@@ -2,6 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout'
 import { applyNulpunt } from '@/core/fml/translate-floor-plan'
 import type { FloorPlan, Point2D } from '@/core/fml/types'
+import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/fml-preview-wall-face-snap'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 
@@ -81,6 +82,12 @@ export function useFmlPreviewNulpunt(options: {
     return Math.hypot(cm.x - marker.x, cm.y - marker.y) <= NULPUNT_HIT_RADIUS_CM
   }
 
+  function resolveNulpuntPoint(cm: Point2D, event: MouseEvent): Point2D {
+    return snapPointToWallFaces(options.editor.walls.value, cm, WALL_FACE_SNAP_CM, {
+      disabled: event.ctrlKey || event.metaKey,
+    })
+  }
+
   function beginNulpuntDrag(event: MouseEvent): boolean {
     if (!options.nulpuntMode.value) return false
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
@@ -88,7 +95,9 @@ export function useFmlPreviewNulpunt(options: {
     stopDragListeners()
     options.beforeBegin()
     nulpuntDragging.value = true
-    nulpuntPendingCm.value = hitTestNulpuntAtCm(cm) ? { ...nulpuntDisplayCm.value } : { ...cm }
+    nulpuntPendingCm.value = hitTestNulpuntAtCm(cm)
+      ? { ...nulpuntDisplayCm.value }
+      : resolveNulpuntPoint(cm, event)
     window.addEventListener('mousemove', onNulpuntPointerMove)
     window.addEventListener('mouseup', onNulpuntPointerUp, { once: true })
     return true
@@ -98,24 +107,24 @@ export function useFmlPreviewNulpunt(options: {
     if (!nulpuntDragging.value) return
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    nulpuntPendingCm.value = { ...cm }
+    nulpuntPendingCm.value = resolveNulpuntPoint(cm, event)
   }
 
   function onNulpuntPointerUp(event: MouseEvent): void {
     window.removeEventListener('mousemove', onNulpuntPointerMove)
     if (!nulpuntDragging.value) return
     nulpuntDragging.value = false
-    const dropCm =
-      options.hitTest.clientToCm(event.clientX, event.clientY) ?? nulpuntPendingCm.value
-    if (!dropCm) {
+    const raw = options.hitTest.clientToCm(event.clientX, event.clientY) ?? nulpuntPendingCm.value
+    if (!raw) {
       nulpuntPendingCm.value = null
       return
     }
+    const dropCm = resolveNulpuntPoint(raw, event)
     if (Math.hypot(dropCm.x, dropCm.y) < NULPUNT_EPS_CM) {
       nulpuntPendingCm.value = null
       return
     }
-    nulpuntPendingCm.value = { ...dropCm }
+    nulpuntPendingCm.value = dropCm
   }
 
   function confirmNulpuntBake(): AppliedNulpunt | null {

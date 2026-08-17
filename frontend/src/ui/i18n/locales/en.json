@@ -497,6 +497,8 @@
     "regenerate": "Regenerate",
     "mirrorVertical": "Mirror vertical",
     "mirrorVerticalHint": "Flip the floor left–right around the origin (0,0). Click again to undo.",
+    "mirrorProject": "Mirror project",
+    "mirrorProjectHint": "Flip all floors left–right around each floor origin (0,0). Align origins first. Click again to undo.",
     "floorOrientLabel": "Floor orientation",
     "underlayOrientLabel": "Underlay",
     "rotate90Cw": "90° CW",
@@ -713,5 +715,10 @@
       "faceWall": "Drag a box — faces fully inside the selection become wall",
       "staleUnderlay": "Underlay changed — click «Process changes» in the sidebar"
     }
+  },
+  "viewer": {
+    "alignFixtureTitle": "Move origin to oil bottle?",
+    "alignFixtureBody": "This file has an oil bottle used to align floors in Floorplanner. Move the origin (0,0) to that object on every floor where it is present?",
+    "alignFixtureBodyPartial": "{moved} of {total} floors have an oil bottle. Floors without one stay unchanged."
   }
 }

@@ -14,13 +14,15 @@ export type FixtureAssetKind =
   | 'boiler'
   | 'heat_pump'
   | 'stair_winder_180'
+  | 'stair_quarter_90'
+  | 'stair_quarter_90_up'
   | 'canopy'
   | 'chimney'
   | 'railing'
   | 'skylight'
   | 'roof_eave'
   | 'hidden'
-  | 'standpipe'
+  | 'oil_bottle'
   | 'generic'
 
 const KNOWN_KINDS = new Set<FixtureAssetKind>([
@@ -32,13 +34,15 @@ const KNOWN_KINDS = new Set<FixtureAssetKind>([
   'boiler',
   'heat_pump',
   'stair_winder_180',
+  'stair_quarter_90',
+  'stair_quarter_90_up',
   'canopy',
   'chimney',
   'railing',
   'skylight',
   'roof_eave',
   'hidden',
-  'standpipe',
+  'oil_bottle',
   'generic',
 ])
 
@@ -84,3 +88,6 @@ export function resolveFixtureCatalog(refid: string): FixtureCatalogInfo {
     stroke: entry?.stroke?.trim() || undefined,
   }
 }
+
+/** Mooiland oil bottle — Floorplanner-uitlijningsanker. */
+export const FML_ALIGN_FIXTURE_REFID = '4e58355312c1de13eb2b1b29b4dfbf0a8dbabefd'

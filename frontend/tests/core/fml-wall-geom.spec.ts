@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
+import { floorplannerLeftNormal, wallLeftNormal } from '@/core/fml/fml-wall-geom'
 
 describe('floorplannerLeftNormal', () => {
   it('is visual left in Y-down for each cardinal a→b', () => {
@@ -22,5 +22,12 @@ describe('floorplannerLeftNormal', () => {
     const right = { x: -dir.y, y: dir.x }
     expect(left.x).toBeCloseTo(-right.x, 9)
     expect(left.y).toBeCloseTo(-right.y, 9)
+  })
+
+  it('wallLeftNormal matches floorplannerLeftNormal of a→b', () => {
+    const wall = { a: { x: 0, y: 0 }, b: { x: 10, y: 0 } }
+    const n = wallLeftNormal(wall)
+    expect(n.x).toBeCloseTo(0, 9)
+    expect(n.y).toBeCloseTo(-1, 9)
   })
 })

@@ -11,16 +11,23 @@ withDefaults(
     fmlLimitsDirty?: boolean
     /** FML X-spiegel actief (toggle-uiterlijk). */
     fmlOrientFlipX?: boolean
+    /** ≥1 floor heeft FML (project-spiegel). */
+    hasAnyFloorFml?: boolean
+    /** Alle FML-floors hebben flipX (project-spiegel toggle). */
+    projectOrientFlipX?: boolean
   }>(),
   {
     fmlLimitsDirty: false,
     fmlOrientFlipX: false,
+    hasAnyFloorFml: false,
+    projectOrientFlipX: false,
   },
 )
 
 const emit = defineEmits<{
   regenerate: []
   mirrorVertical: []
+  mirrorProject: []
   rotate90Cw: []
   rotate90Ccw: []
 }>()
@@ -38,6 +45,17 @@ const emit = defineEmits<{
       @click="emit('mirrorVertical')"
     >
       {{ t('result.mirrorVertical') }}
+    </button>
+    <button
+      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      type="button"
+      class="orient-btn"
+      :class="{ 'orient-btn--active': projectOrientFlipX }"
+      :disabled="!hasAnyFloorFml"
+      :title="t('result.mirrorProjectHint')"
+      @click="emit('mirrorProject')"
+    >
+      {{ t('result.mirrorProject') }}
     </button>
     <button
       v-if="FML_ORIENT_CONTROLS_VISIBLE"

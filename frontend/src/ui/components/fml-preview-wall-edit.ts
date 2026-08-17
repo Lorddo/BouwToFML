@@ -1,10 +1,13 @@
 import type { Wall } from '@/core/fml/types'
 import {
+  setWallsBalanceKeepingFaces,
+  setWallsThicknessKeepingFaces,
+} from '@/core/fml/wall-axis-balance'
+import {
   MIN_SPLIT_SEGMENT_CM,
   BALANCE_DEFAULT,
   BALANCE_MAX,
   BALANCE_MIN,
-  cloneWalls,
   distance,
   stableJunctionId,
   type SplitWallResult,
@@ -21,49 +24,28 @@ export function setWallBalance(walls: Wall[], wallId: string, balance: number): 
   return setWallsBalance(walls, [wallId], balance)
 }
 
+/**
+ * Balance-slider = Floorplanner snap: as schuift mee (keep-faces + junction-stitch).
+ * Het muurlichaam blijft liggen; `a`/`b` wordt de as die bij de nieuwe balance hoort.
+ */
 export function setWallsBalance(walls: Wall[], wallIds: Iterable<string>, balance: number): Wall[] {
-  const idSet = new Set(wallIds)
-  if (idSet.size === 0) return walls
-  const clamped = clampBalance(balance)
-  const next = cloneWalls(walls)
-  let changed = false
-  for (const wall of next) {
-    if (!idSet.has(wall.id)) continue
-    if (wall.balance !== clamped) {
-      wall.balance = clamped
-      changed = true
-    }
-  }
-  return changed ? next : walls
+  return setWallsBalanceKeepingFaces(walls, wallIds, clampBalance(balance))
 }
 
 export function setWallThickness(walls: Wall[], wallId: string, thicknessCm: number): Wall[] {
   return setWallsThickness(walls, [wallId], thicknessCm)
 }
 
+/**
+ * Dikte wijzigen: eerst as naar lichaam-midden (B→0.5 keep-faces), daarna dikte.
+ * Voorkomt sprong bij geïmporteerde face-as (B=0/1).
+ */
 export function setWallsThickness(
   walls: Wall[],
   wallIds: Iterable<string>,
   thicknessCm: number,
 ): Wall[] {
-  const idSet = new Set(wallIds)
-  if (idSet.size === 0) return walls
-  const clamped = Math.max(1, Math.min(200, thicknessCm))
-  const next = cloneWalls(walls)
-  let changed = false
-  for (const wall of next) {
-    if (!idSet.has(wall.id)) continue
-    if (wall.thickness !== clamped) {
-      wall.thickness = clamped
-      changed = true
-    }
-    // Ook bij dezelfde maat: flush 0/1 hoort bij de vorige uitlijning.
-    if (wall.balance !== BALANCE_DEFAULT) {
-      wall.balance = BALANCE_DEFAULT
-      changed = true
-    }
-  }
-  return changed ? next : walls
+  return setWallsThicknessKeepingFaces(walls, wallIds, thicknessCm)
 }
 
 /** Verwijder één muursegment (openingen op die muur gaan mee). */

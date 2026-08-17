@@ -7,8 +7,12 @@ export interface FixtureSymbolShape {
   ellipses: number[][]
   /** Circles [cx, cy, r]. */
   circles: number[][]
+  /** Gesloten fill-polygonen [x0,y0,x1,y1,...] (geen stroke). */
+  fillPolygons?: number[][]
   /** Polyline-punten [x0,y0,x1,y1,...]. */
   polylines: number[][]
+  /** Dashed polylines (schuine snede); zelfde stroke, dash [5,4]. */
+  dashPolylines?: number[][]
   /** Pijl-polylines (eigen stroke); leeg = geen. */
   arrowPolylines?: number[][]
   stroke: string
@@ -29,6 +33,10 @@ export interface FixtureSymbolShape {
 
 const STROKE = '#475569'
 const FILL = '#e2e8f0'
+const STAIR_STROKE = '#334155'
+const STAIR_FILL = '#f1f5f9'
+const STAIR_STROKE_W = 0.55
+const STAIR_ARROW_W = 1.15
 
 function emptyShape(
   partial: Partial<FixtureSymbolShape> & Pick<FixtureSymbolShape, 'overWalls'>,
@@ -37,7 +45,9 @@ function emptyShape(
     rects: [],
     ellipses: [],
     circles: [],
+    fillPolygons: [],
     polylines: [],
+    dashPolylines: [],
     arrowPolylines: [],
     stroke: STROKE,
     fill: FILL,
@@ -54,6 +64,8 @@ function isFurnitureKind(kind: FixtureAssetKind): boolean {
     kind === 'sink_large' ||
     kind === 'shower_head' ||
     kind === 'stair_winder_180' ||
+    kind === 'stair_quarter_90' ||
+    kind === 'stair_quarter_90_up' ||
     kind === 'roof_eave'
   )
 }
@@ -119,10 +131,129 @@ function stairWinder180(w: number, h: number): FixtureSymbolShape {
     rects: [[-hw, -hh, w, h]],
     polylines,
     arrowPolylines,
-    stroke: '#334155',
-    fill: '#f1f5f9',
-    strokeWidth: 0.55,
-    arrowStrokeWidth: 1.15,
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
+function mapPairs(pts: number[], f: (x: number, y: number) => [number, number]): number[] {
+  const out: number[] = []
+  for (let i = 0; i + 1 < pts.length; i += 2) {
+    const [x, y] = f(pts[i] ?? 0, pts[i + 1] ?? 0)
+    out.push(x, y)
+  }
+  return out
+}
+
+function arrowHead(fromX: number, fromY: number, toX: number, toY: number, head: number): number[] {
+  const dx = toX - fromX
+  const dy = toY - fromY
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len
+  const uy = dy / len
+  const px = -uy
+  const py = ux
+  return [
+    toX - ux * head + px * head,
+    toY - uy * head + py * head,
+    toX,
+    toY,
+    toX - ux * head - px * head,
+    toY - uy * head - py * head,
+  ]
+}
+
+/**
+ * Kwarttrap in dezelfde lijnstijl als de spiltrap.
+ * BG (`arrival=false`): 90° onder, 3 rechte treden omhoog, dashed snede boven (trapkast).
+ * 1e (`arrival=true`): geometrie 180° (omhoog komen); pijl blijft de stijgrichting volgen.
+ */
+function stairQuarter90(w: number, h: number, arrival: boolean): FixtureSymbolShape {
+  const across = Math.min(w, h)
+  const run = Math.max(w, h)
+  const alongX = w > h
+  const a = across / 2
+  const r = run / 2
+  const winderSide = Math.min(across, run * 0.55)
+  const winderTop = r - winderSide
+  const remain = winderTop + r
+  const cut = Math.min(across * 0.42, Math.max(across * 0.22, remain * 0.32))
+  const cutY = -r + cut
+  const head = Math.min(w, h) * 0.055
+
+  const polylines: number[][] = []
+  polylines.push([-a, r, a, r])
+  polylines.push([a, r, a, -r])
+  polylines.push([-a, r, -a, cutY])
+
+  const pivotX = -a
+  const pivotY = r
+  const winderN = 5
+  for (let i = 1; i < winderN; i += 1) {
+    const ang = 0 + (i / winderN) * (-Math.PI / 2)
+    const outer = rayToRect(pivotX, pivotY, ang, -a, a, winderTop, r)
+    polylines.push([pivotX, pivotY, outer.x, outer.y])
+  }
+  polylines.push([-a, winderTop, a, winderTop])
+
+  for (let i = 1; i <= 2; i += 1) {
+    const yt = winderTop + (i / 3) * (cutY - winderTop)
+    if (yt + 1e-6 >= cutY) {
+      polylines.push([-a, yt, a, yt])
+    } else {
+      const xd = -a + (across * (cutY - yt)) / cut
+      polylines.push([Math.max(xd, -a), yt, a, yt])
+    }
+  }
+
+  const dashPolylines = [[-a, cutY, a, -r]]
+  const fillPolygons = [[-a, r, a, r, a, -r, -a, cutY]]
+
+  const ax0 = a * 0.42
+  const ay0 = r - winderSide * 0.32
+  const ax1 = -a * 0.12
+  const ay1 = ay0
+  const ax2 = ax1
+  const ay2 = cutY + Math.min(winderSide, remain) * 0.18
+  const arrowShaft = [ax0, ay0, ax1, ay1, ax2, ay2]
+  const arrowTip = arrowHead(ax1, ay1, ax2, ay2, head)
+
+  const toBbox = (x: number, y: number): [number, number] => {
+    let cx = x
+    let cy = y
+    if (arrival) {
+      cx = -x
+      cy = -y
+    }
+    if (alongX) return [cy, -cx]
+    return [cx, cy]
+  }
+
+  let shaft = mapPairs(arrowShaft, toBbox)
+  let tip = mapPairs(arrowTip, toBbox)
+  if (arrival) {
+    const sx0 = shaft[0] ?? 0
+    const sy0 = shaft[1] ?? 0
+    const sx1 = shaft[2] ?? 0
+    const sy1 = shaft[3] ?? 0
+    const sx2 = shaft[4] ?? 0
+    const sy2 = shaft[5] ?? 0
+    shaft = [sx2, sy2, sx1, sy1, sx0, sy0]
+    tip = arrowHead(sx1, sy1, sx0, sy0, head)
+  }
+
+  return emptyShape({
+    fillPolygons: fillPolygons.map((poly) => mapPairs(poly, toBbox)),
+    polylines: polylines.map((poly) => mapPairs(poly, toBbox)),
+    dashPolylines: dashPolylines.map((poly) => mapPairs(poly, toBbox)),
+    arrowPolylines: [shaft, tip],
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
     overWalls: false,
   })
 }
@@ -271,6 +402,10 @@ export function buildFixtureSymbol(
     }
     case 'stair_winder_180':
       return stairWinder180(w, h)
+    case 'stair_quarter_90':
+      return stairQuarter90(w, h, false)
+    case 'stair_quarter_90_up':
+      return stairQuarter90(w, h, true)
     case 'canopy':
       return emptyShape({
         rects: [[-w / 2, -h / 2, w, h]],
@@ -302,7 +437,7 @@ export function buildFixtureSymbol(
       })
     case 'hidden':
       return emptyShape({ overWalls: true })
-    case 'standpipe': {
+    case 'oil_bottle': {
       const r = Math.min(w, h) / 2
       return emptyShape({
         circles: [

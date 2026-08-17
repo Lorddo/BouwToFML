@@ -497,6 +497,8 @@
     "regenerate": "Regenereren",
     "mirrorVertical": "Verticaal spiegelen",
     "mirrorVerticalHint": "Spiegel de verdieping links-rechts om het nulpunt (0,0). Opnieuw klikken zet terug.",
+    "mirrorProject": "Project spiegelen",
+    "mirrorProjectHint": "Spiegel alle verdiepingen links-rechts om hun nulpunt (0,0). Lijn eerst de nulpunten uit. Opnieuw klikken zet terug.",
     "floorOrientLabel": "Verdieping oriënteren",
     "underlayOrientLabel": "Onderlegger",
     "rotate90Cw": "90° rechtsom",
@@ -713,5 +715,10 @@
       "faceWall": "Sleep een box — vlakken volledig binnen de selectie worden muur",
       "staleUnderlay": "Onderlegger gewijzigd — klik «Verwerk wijzigingen» in de sidebar"
     }
+  },
+  "viewer": {
+    "alignFixtureTitle": "Nulpunt naar oil bottle verplaatsen?",
+    "alignFixtureBody": "In dit bestand staat een oil bottle die in Floorplanner dient om verdiepingen uit te lijnen. Nulpunt (0,0) verplaatsen naar dit object op alle verdiepingen waar het voorkomt?",
+    "alignFixtureBodyPartial": "{moved} van {total} verdiepingen hebben een oil bottle. Verdiepingen zonder fles blijven ongewijzigd."
   }
 }

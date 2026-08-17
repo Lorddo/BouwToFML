@@ -581,6 +581,9 @@ describe('setWallsThickness', () => {
     expect(next[0]?.balance).toBe(0.5)
     expect(next[1]?.balance).toBe(0.5)
     expect(next[2]?.balance).toBe(0.5)
+    // Face-as (B=0) schuift eerst naar lichaam-midden vóór dikte.
+    expect(next[0]?.a.y).toBeCloseTo(10, 6)
+    expect(next[1]?.a.y).toBeCloseTo(100 - 6, 6)
   })
 })
 
@@ -1500,13 +1503,14 @@ describe('snapToNearbyEndpointAxes', () => {
 })
 
 describe('setWallBalance', () => {
-  it('clamped balance 0–1', () => {
+  it('clamped balance 0–1 and shifts axis keep-faces', () => {
     const walls = [
       {
         id: 'w1',
         a: { x: 0, y: 0 },
         b: { x: 100, y: 0 },
         thickness: 20,
+        balance: 0.5,
         openings: [],
       },
     ]
@@ -1516,6 +1520,9 @@ describe('setWallBalance', () => {
     expect(clampBalance(1)).toBe(1)
     const updated = setWallBalance(walls, 'w1', 0.72)
     expect(updated[0]?.balance).toBe(0.72)
+    // 0.5→0.72: shift = −t·ΔB along left (−Y) → +Y
+    expect(updated[0]?.a.y).toBeCloseTo(20 * (0.72 - 0.5), 6)
+    expect(updated[0]?.b.y).toBeCloseTo(20 * (0.72 - 0.5), 6)
   })
 })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import { useFmlPreviewNulpunt } from '@/ui/composables/fml-preview/useFmlPreviewNulpunt'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
@@ -68,9 +68,11 @@ function installWindowStub(): {
 
 function makeEditor(plan: FloorPlan, floorIndex = 0): ReturnType<typeof useFmlPreviewEditor> {
   const localPlan = ref(plan)
+  const floorIdx = ref(floorIndex)
   return {
     localPlan,
-    floorIndex: ref(floorIndex),
+    floorIndex: floorIdx,
+    walls: computed(() => localPlan.value.floors[floorIdx.value]?.walls ?? []),
     pushUndo: vi.fn(),
     prepareParentSync: vi.fn(),
     replaceLocalPlan: vi.fn((next: FloorPlan) => {

@@ -38,6 +38,8 @@ interface PointerActions {
   beginPanDrag: (event: MouseEvent) => void
   beginDrawWall: (event: MouseEvent) => void
   beginMeasure: (event: MouseEvent) => void
+  updateMeasureHover: (event: MouseEvent) => void
+  clearMeasureHover: () => void
   beginDrawRoom: (event: MouseEvent) => void
   beginNulpuntDrag: (event: MouseEvent) => boolean
   beginUnderlayMoveDrag: (event: MouseEvent) => boolean
@@ -258,6 +260,11 @@ export function useFmlPreviewPointer(options: {
     ) {
       return
     }
+    if (modes.measureMode.value) {
+      actions.updateMeasureHover(event)
+      return
+    }
+    actions.clearMeasureHover()
     const cm = hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
     const junction = hitTest.hitTestJunctionAtCm(cm)

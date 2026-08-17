@@ -497,6 +497,8 @@
     "regenerate": "สร้างใหม่",
     "mirrorVertical": "พลิกแนวตั้ง",
     "mirrorVerticalHint": "พลิกชั้นซ้าย-ขวารอบจุดศูนย์ (0,0) กดอีกครั้งเพื่อยกเลิก",
+    "mirrorProject": "พลิกทั้งโครงการ",
+    "mirrorProjectHint": "พลิกทุกชั้นซ้าย-ขวารอบจุดศูนย์ (0,0) ของแต่ละชั้น จัดจุดศูนย์ให้ตรงก่อน กดอีกครั้งเพื่อยกเลิก",
     "floorOrientLabel": "การวางแนวชั้น",
     "underlayOrientLabel": "พื้นหลัง",
     "rotate90Cw": "90° ตามเข็ม",
@@ -713,5 +715,10 @@
       "faceWall": "ลากกล่อง — พื้นผิวที่อยู่ครบในกรอบกลายเป็นผนัง",
       "staleUnderlay": "ภาพพื้นเปลี่ยน — คลิก «ประมวลผลเปลี่ยนแปลง» ในแถบด้านข้าง"
     }
+  },
+  "viewer": {
+    "alignFixtureTitle": "ย้ายจุดศูนย์ไปที่ oil bottle?",
+    "alignFixtureBody": "ไฟล์นี้มี oil bottle ที่ใช้จัดแนวชั้นใน Floorplanner ย้ายจุดศูนย์ (0,0) ไปที่วัตถุนี้ในทุกชั้นที่มีหรือไม่?",
+    "alignFixtureBodyPartial": "{moved} จาก {total} ชั้นมี oil bottle ชั้นที่ไม่มีจะไม่เปลี่ยน"
   }
 }

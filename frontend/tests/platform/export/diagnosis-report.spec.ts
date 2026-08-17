@@ -90,6 +90,7 @@ describe('buildDiagnosisReportHtml', () => {
         appVersion: '1.0.0',
       },
       originalPng: null,
+      scaleOverlay: null,
       bwPng: null,
       references: null,
       referenceRefImages: null,
@@ -134,6 +135,7 @@ describe('buildDiagnosisReportHtml', () => {
         appVersion: '1.0.0',
       },
       originalPng: null,
+      scaleOverlay: null,
       bwPng: null,
       references: [{ id: 'door-1', type: 'door', x: 0, y: 0, width: 40, height: 20 }],
       referenceRefImages: [
@@ -174,6 +176,7 @@ describe('buildDiagnosisReportHtml', () => {
         appVersion: '1.0.0',
       },
       originalPng: null,
+      scaleOverlay: null,
       bwPng: null,
       references: [
         { id: 'w-max', type: 'wall', wallThicknessBand: 'max' },
@@ -228,6 +231,7 @@ describe('buildDiagnosisReportHtml', () => {
         originalHeight: 3000,
       },
       originalPng: 'data:image/jpeg;base64,origscan',
+      scaleOverlay: null,
       bwPng: 'data:image/png;base64,bwscan',
       references: null,
       referenceRefImages: null,
@@ -246,5 +250,67 @@ describe('buildDiagnosisReportHtml', () => {
     expect(html).toContain('4120 × 3000 px')
     expect(html).toContain('data:image/png;base64,bwscan')
     expect(html).toContain('Stap 2 effective / base wall B/W')
+  })
+
+  it('overlays H/V scale rulers on the original underlay', () => {
+    const payload: DiagnosisReportPayload = {
+      meta: {
+        exportedAtIso: '2026-08-17T00:00:00.000Z',
+        projectName: 'Test',
+        floorId: 'f1',
+        floorName: 'BG',
+        floorLevel: 0,
+        imageName: 'scan.png',
+        flowStep: 'templates',
+        pxPerMmX: 0.04,
+        pxPerMmY: 0.1167,
+        appVersion: '1.0.0',
+        originalWidth: 800,
+        originalHeight: 600,
+      },
+      originalPng: 'data:image/jpeg;base64,origscan',
+      scaleOverlay: {
+        state: {
+          xLeft: 100,
+          xRight: 500,
+          xGuideY: 220,
+          yTop: 40,
+          yBottom: 390,
+          yGuideX: 310,
+        },
+        distanceMmX: 10000,
+        distanceMmY: 3000,
+        pxDistanceX: 400,
+        pxDistanceY: 350,
+        pxPerMmX: 0.04,
+        pxPerMmY: 0.1167,
+        confirmed: true,
+        axisMismatchPct: 191.75,
+      },
+      bwPng: null,
+      references: null,
+      referenceRefImages: null,
+      doors: null,
+      windows: null,
+      layers: { layerDebug: null, semanticWallGraph: null },
+      layerDebugMarkdown: null,
+      fmlText: null,
+      previewPlan: null,
+    }
+
+    const html = buildDiagnosisReportHtml(payload)
+    expect(html).toContain('class="scale-overlay"')
+    expect(html).toContain('viewBox="0 0 800 600"')
+    expect(html).toContain('x1="100"')
+    expect(html).toContain('x1="500"')
+    expect(html).toContain('y1="40"')
+    expect(html).toContain('y1="390"')
+    expect(html).toContain('H 10000 mm · 400.0 px')
+    expect(html).toContain('V 3000 mm · 350.0 px')
+    expect(html).toContain('Schaalliniaal JSON')
+    expect(html).toContain('Scale H')
+    expect(html).toContain('(confirmed)')
+    expect(html).toContain('cyaan = H (X), amber = V (Y), bevestigd')
+    expect(html).toContain('As-mismatch')
   })
 })

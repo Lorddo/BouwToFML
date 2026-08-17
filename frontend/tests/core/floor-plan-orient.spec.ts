@@ -246,4 +246,49 @@ describe('composeFloorOrient / applyFloorOrientFromCanonical', () => {
     expectPoint(next.floors[0].walls[0].a, { x: -20, y: 10 })
     expect(next.floors[1].walls[0].a).toEqual({ x: 5, y: 5 })
   })
+
+  it('applyFloorOrientOp null spiegelt alle floors; 0 alleen de eerste', () => {
+    const plan: FloorPlan = {
+      name: 'Multi',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'bg',
+              a: { x: 10, y: 20 },
+              b: { x: 110, y: 20 },
+              thickness: 10,
+              openings: [],
+            },
+          ],
+        },
+        {
+          name: '1e',
+          level: 1,
+          height: 280,
+          walls: [
+            {
+              id: 'w1',
+              a: { x: 5, y: 5 },
+              b: { x: 15, y: 5 },
+              thickness: 10,
+              openings: [],
+            },
+          ],
+        },
+      ],
+    }
+    const all = applyFloorOrientOp(plan, 'flipX', null)
+    expectPoint(all.floors[0].walls[0].a, { x: -10, y: 20 })
+    expectPoint(all.floors[0].walls[0].b, { x: -110, y: 20 })
+    expectPoint(all.floors[1].walls[0].a, { x: -5, y: 5 })
+    expectPoint(all.floors[1].walls[0].b, { x: -15, y: 5 })
+
+    const onlyFirst = applyFloorOrientOp(plan, 'flipX', 0)
+    expectPoint(onlyFirst.floors[0].walls[0].a, { x: -10, y: 20 })
+    expect(onlyFirst.floors[1].walls[0].a).toEqual({ x: 5, y: 5 })
+  })
 })

@@ -1,5 +1,7 @@
 import { ref, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D, Wall } from '@/core/fml/types'
+import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
+import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/fml-preview-wall-face-snap'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
 import { type MeasureLine, measureDistanceCm } from './fml-preview-measure'
 
@@ -10,15 +12,46 @@ interface MeasureHitTestApi {
   clientToCm: (clientX: number, clientY: number) => Point2D | null
 }
 
+/**
+ * Maatlijn-tool: face-snap zit hier (zelfde helper als nulpunt), niet alleen via
+ * een resolvePoint-indirection — zodat start/eind/hover altijd dezelfde snap krijgen.
+ */
 export function useFmlPreviewMeasure(options: {
   hitTest: MeasureHitTestApi
   hoveredJunctionId: Ref<string | null>
-  resolvePoint: (cm: Point2D, axisAnchor?: Point2D) => Point2D
+  getWalls: () => ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
+  shiftPressed: Ref<boolean>
   beforeBegin: () => void
 }) {
   const measurePreview = ref<{ a: Point2D; b: Point2D } | null>(null)
   const measureLines = ref<MeasureLine[]>([])
+  /** Hover-punt in measure-mode vóór/tijdens tekenen (gesnapte cursor). */
+  const measureHoverCm = ref<Point2D | null>(null)
   let measureDrag: { startCm: Point2D } | null = null
+
+  function resolveMeasureCm(
+    cm: Point2D,
+    opts?: { axisAnchor?: Point2D; snapDisabled?: boolean },
+  ): Point2D {
+    const snapDisabled = opts?.snapDisabled === true
+    let point = snapPointToWallFaces(options.getWalls(), cm, WALL_FACE_SNAP_CM, {
+      disabled: snapDisabled,
+    })
+    const anchor = opts?.axisAnchor
+    if (anchor && options.shiftPressed.value) {
+      point = snapDrawWallEndpoint(anchor, point, true)
+      // Shift lockt één as; face-snap de vrije as opnieuw (parallelle binnenmaten).
+      if (!snapDisabled) {
+        const resnap = snapPointToWallFaces(options.getWalls(), point, WALL_FACE_SNAP_CM)
+        if (Math.abs(point.y - anchor.y) <= 1e-9) {
+          point = { x: resnap.x, y: point.y }
+        } else if (Math.abs(point.x - anchor.x) <= 1e-9) {
+          point = { x: point.x, y: resnap.y }
+        }
+      }
+    }
+    return point
+  }
 
   function cancelMeasureDrag(): void {
     window.removeEventListener('mousemove', onMeasurePointerMove)
@@ -26,13 +59,31 @@ export function useFmlPreviewMeasure(options: {
     measurePreview.value = null
   }
 
+  function updateMeasureHover(event: MouseEvent): void {
+    if (measureDrag) return
+    const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
+    if (!cm) {
+      measureHoverCm.value = null
+      return
+    }
+    measureHoverCm.value = resolveMeasureCm(cm, {
+      snapDisabled: event.ctrlKey || event.metaKey,
+    })
+  }
+
+  function clearMeasureHover(): void {
+    measureHoverCm.value = null
+  }
+
   function beginMeasure(event: MouseEvent): void {
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
     cancelMeasureDrag()
     options.beforeBegin()
-    const startCm = options.resolvePoint(cm)
+    const snapDisabled = event.ctrlKey || event.metaKey
+    const startCm = resolveMeasureCm(cm, { snapDisabled })
     measureDrag = { startCm }
+    measureHoverCm.value = startCm
     measurePreview.value = { a: startCm, b: startCm }
     window.addEventListener('mousemove', onMeasurePointerMove)
     window.addEventListener('mouseup', onMeasurePointerUp, { once: true })
@@ -42,7 +93,12 @@ export function useFmlPreviewMeasure(options: {
     if (!measureDrag) return
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    const endCm = options.resolvePoint(cm, measureDrag.startCm)
+    const snapDisabled = event.ctrlKey || event.metaKey
+    const endCm = resolveMeasureCm(cm, {
+      axisAnchor: measureDrag.startCm,
+      snapDisabled,
+    })
+    measureHoverCm.value = endCm
     measurePreview.value = { a: measureDrag.startCm, b: endCm }
     const junction = options.hitTest.hitTestJunctionAtCm(cm)
     options.hoveredJunctionId.value = junction?.id ?? null
@@ -57,10 +113,13 @@ export function useFmlPreviewMeasure(options: {
     options.hoveredJunctionId.value = null
     if (!drag || !preview) return
 
-    const endCm = options.resolvePoint(
-      options.hitTest.clientToCm(event.clientX, event.clientY) ?? preview.b,
-      drag.startCm,
-    )
+    const snapDisabled = event.ctrlKey || event.metaKey
+    const raw = options.hitTest.clientToCm(event.clientX, event.clientY) ?? preview.b
+    const endCm = resolveMeasureCm(raw, {
+      axisAnchor: drag.startCm,
+      snapDisabled,
+    })
+    measureHoverCm.value = endCm
     if (measureDistanceCm(drag.startCm, endCm) < 1) return
 
     measureLines.value = [
@@ -80,9 +139,14 @@ export function useFmlPreviewMeasure(options: {
   return {
     measurePreview,
     measureLines,
+    measureHoverCm,
     isDragging: () => measureDrag != null,
     beginMeasure,
     cancelMeasureDrag,
     clearMeasureLines,
+    updateMeasureHover,
+    clearMeasureHover,
+    /** Exported for unit tests. */
+    resolveMeasureCm,
   }
 }

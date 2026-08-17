@@ -120,7 +120,7 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 
 **Nulpunt (uitlijning multi-floor):** select-tool «Nulpunt» — versleepbaar kruis op FML `(0,0)`. Na loslaten: ✓ bakken (alleen **actieve** floor: muren − P, `layout.origin` += P; onderlegger blijft op de scan) of ✕/Esc annuleren. Per verdieping hetzelfde anker kiezen zodat floors in 3D stapelen. Persist: `fmlNulpuntImageCm` op die floor-blob.
 
-**Oriëntatie (FML-geometrie):** sidebar-knoppen «Verticaal spiegelen» / «90° linksom» / «90° rechtsom» — transformeren muren/openings/items om het **nulpunt `(0,0)`** (geen onderlegger nodig). Persist: `fmlOrient` op de floor-blob; regenereren past opnieuw toe ná nulpunt. Detectie/B/W blijven de aangeleverde scan.
+**Oriëntatie (FML-geometrie):** sidebar-knoppen «Verticaal spiegelen» / «90° linksom» / «90° rechtsom» — transformeren muren/openings/items om het **nulpunt `(0,0)`** (geen onderlegger nodig). Persist: `fmlOrient` op de floor-blob; regenereren past opnieuw toe ná nulpunt. Detectie/B/W blijven de aangeleverde scan. «Project spiegelen» = dezelfde X-flip op **alle** floors met FML (blobs in-place, geen floor-switch); lijn nulpunten eerst uit. Workspace-UI achter `FML_ORIENT_CONTROLS_VISIBLE`; losse FML-viewer toont de knoppen wél.
 
 **Onderlegger (display-only, los van FML):** bij beschikbare underlay — 90°/spiegelen via `previewUnderlayLayout.rotationDeg` / `flipX` (Konva om bitmap-midden), plus toggle «Onderlegger verplaatsen» (sleep = alleen `origin`; muren vast; Escape/uit = lock; `nulpuntImageCm` volgt origin).
 

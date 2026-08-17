@@ -80,7 +80,10 @@ function pointAtEnd(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
   return end === 'a' ? wall.a : wall.b
 }
 
-/** Left (+normal) / right (−normal) thickness extents from centerline (Floorplanner a→b). */
+/**
+ * Left (+normal) / right (−normal) thickness extents from the Floorplanner **axis**
+ * (`a`/`b` — not always the visual mid of the wall body).
+ */
 export function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'balance'>): {
   plus: number
   minus: number
@@ -93,13 +96,13 @@ export function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'b
   }
 }
 
-/** cm along left normal from centerline to mid-thickness (0 when balance = 0.5). */
+/** cm along left normal from axis to body mid-thickness (0 when balance = 0.5). */
 export function wallBalanceMidOffsetCm(thickness: number, balance?: number): number {
   const { plus, minus } = resolveWallExtents({ thickness, balance })
   return (plus - minus) / 2
 }
 
-/** Shift a centerline point onto the wall body mid-line for the given balance. */
+/** Shift an axis point onto the wall body mid-line for the given balance. */
 export function offsetPointByWallBalance(
   point: Point2D,
   wallUnit: Point2D,
@@ -216,7 +219,7 @@ function neighborsAtEnd(
 }
 
 /**
- * How far `wall`'s body extends from its centerline in direction `dir`.
+ * How far `wall`'s body extends from its Floorplanner axis in direction `dir`.
  * Balance-aware: balance=0.5 → thickness/2; flush-to-one-side → 0 on the empty side.
  */
 function extentAlongDirection(wall: WallPolygonInput, dir: Point2D): number {
@@ -262,7 +265,7 @@ function resolveEndExtendCm(
 }
 
 /**
- * Oriented rectangle along the centerline with square ends.
+ * Oriented rectangle along the Floorplanner axis (`a`/`b`) with square ends.
  * Join-extend is neighbor+balance-aware so flush faces do not grow exterior ears.
  */
 function buildWallRectPolygon(

@@ -8,6 +8,7 @@ const props = defineProps<{
   height: number
   lines: MeasureLine[]
   preview: { a: { x: number; y: number }; b: { x: number; y: number } } | null
+  hover: { x: number; y: number } | null
   toScreen: (x: number, y: number) => { x: number; y: number }
   dashed?: boolean
 }>()
@@ -23,6 +24,11 @@ const screenPreview = computed(() => {
     { id: 'preview', a: props.preview.a, b: props.preview.b },
     props.toScreen,
   )
+})
+
+const screenHover = computed(() => {
+  if (!props.hover) return null
+  return props.toScreen(props.hover.x, props.hover.y)
 })
 </script>
 
@@ -56,6 +62,15 @@ const screenPreview = computed(() => {
       />
       <text :x="screenPreview.labelX" :y="screenPreview.labelY">{{ screenPreview.label }}</text>
     </g>
+    <g
+      v-if="screenHover"
+      class="fml-measure-hover"
+      :transform="`translate(${screenHover.x} ${screenHover.y})`"
+    >
+      <circle r="5" />
+      <line x1="-10" y1="0" x2="10" y2="0" />
+      <line x1="0" y1="-10" x2="0" y2="10" />
+    </g>
   </svg>
 </template>
 
@@ -87,5 +102,18 @@ const screenPreview = computed(() => {
   paint-order: stroke fill;
   stroke: #fff;
   stroke-width: 3px;
+}
+
+.fml-measure-hover circle {
+  fill: #a78bfa;
+  fill-opacity: 0.35;
+  stroke: #7c3aed;
+  stroke-width: 1.5;
+}
+
+.fml-measure-hover line {
+  stroke: #7c3aed;
+  stroke-width: 1.5;
+  stroke-linecap: round;
 }
 </style>

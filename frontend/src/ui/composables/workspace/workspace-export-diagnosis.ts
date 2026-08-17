@@ -24,6 +24,7 @@ import {
   buildDiagnosisReportHtml,
   type DiagnosisRefImage,
   type DiagnosisReportPayload,
+  type DiagnosisScaleOverlay,
 } from '@/platform/export/diagnosis-report'
 import {
   buildLayerDebugReport,
@@ -101,6 +102,22 @@ async function resolveOriginalUnderlay(
   } catch (e) {
     console.warn('[exportDiagnosisReport] original underlay skipped', e)
     return null
+  }
+}
+
+function resolveScaleOverlay(deps: WorkspaceExportDiagnosisDeps): DiagnosisScaleOverlay | null {
+  const state = deps.scale.state.value
+  if (!state) return null
+  return {
+    state: { ...state },
+    distanceMmX: deps.scale.distanceMmX.value,
+    distanceMmY: deps.scale.distanceMmY.value,
+    pxDistanceX: deps.scale.pxDistanceX.value,
+    pxDistanceY: deps.scale.pxDistanceY.value,
+    pxPerMmX: deps.scale.pixelsPerMillimeterX.value,
+    pxPerMmY: deps.scale.pixelsPerMillimeterY.value,
+    confirmed: deps.scale.confirmed.value,
+    axisMismatchPct: deps.scale.axisMismatchPct.value,
   }
 }
 
@@ -263,6 +280,7 @@ async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<Diagnos
 
   const referenceRefImages = await resolveReferenceRefImages(deps)
   const originalUnderlay = await resolveOriginalUnderlay(deps)
+  const scaleOverlay = resolveScaleOverlay(deps)
 
   return {
     meta: {
@@ -280,6 +298,7 @@ async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<Diagnos
       originalHeight: originalUnderlay?.height ?? null,
     },
     originalPng: originalUnderlay?.dataUrl ?? null,
+    scaleOverlay,
     bwPng: resolveBwPng(deps),
     references: refRects.length > 0 ? refRects : null,
     referenceRefImages,

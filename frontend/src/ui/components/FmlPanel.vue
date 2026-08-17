@@ -49,6 +49,8 @@ withDefaults(
     fmlThicknessPickMessage?: string | null
     fmlThicknessPickBusy?: boolean
     fmlOrientFlipX?: boolean
+    hasAnyFloorFml?: boolean
+    projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
   }>(),
@@ -75,6 +77,8 @@ withDefaults(
     fmlThicknessPickMessage: null,
     fmlThicknessPickBusy: false,
     fmlOrientFlipX: false,
+    hasAnyFloorFml: false,
+    projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
   },
@@ -83,6 +87,7 @@ withDefaults(
 const emit = defineEmits<{
   regenerate: []
   mirrorVertical: []
+  mirrorProject: []
   rotate90Cw: []
   rotate90Ccw: []
   underlayRotate90Cw: []
@@ -228,8 +233,11 @@ function onWindowBovenlichtChange(event: Event): void {
       :has-combined-output="hasCombinedOutput"
       :fml-limits-dirty="fmlLimitsDirty"
       :fml-orient-flip-x="fmlOrientFlipX"
+      :has-any-floor-fml="hasAnyFloorFml"
+      :project-orient-flip-x="projectOrientFlipX"
       @regenerate="emit('regenerate')"
       @mirror-vertical="emit('mirrorVertical')"
+      @mirror-project="emit('mirrorProject')"
       @rotate90-cw="emit('rotate90Cw')"
       @rotate90-ccw="emit('rotate90Ccw')"
     />

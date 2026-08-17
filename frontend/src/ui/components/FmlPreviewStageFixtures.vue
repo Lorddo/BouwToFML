@@ -28,6 +28,11 @@ function localDash(fixture: RenderFixture): number[] | undefined {
   const s = Math.max(Math.abs(fixture.scaleX), 0.001)
   return fixture.dash.map((d) => d / s)
 }
+
+function localCutDash(fixture: RenderFixture): number[] {
+  const s = Math.max(Math.abs(fixture.scaleX), 0.001)
+  return [5, 4].map((d) => d / s)
+}
 </script>
 
 <template>
@@ -44,6 +49,17 @@ function localDash(fixture: RenderFixture): number[] | undefined {
         listening: false,
       }"
     >
+      <v-line
+        v-for="(poly, polyIdx) in fixture.fillPolygons"
+        :key="`${fixture.id}-f-${polyIdx}`"
+        :config="{
+          points: poly,
+          closed: true,
+          fill: fixture.fill,
+          strokeEnabled: false,
+          listening: false,
+        }"
+      />
       <v-rect
         v-for="(rect, rectIdx) in fixture.rects"
         :key="`${fixture.id}-r-${rectIdx}`"
@@ -94,6 +110,18 @@ function localDash(fixture: RenderFixture): number[] | undefined {
           stroke: fixture.stroke,
           strokeWidth: localStroke(fixture),
           lineCap: 'round',
+          listening: false,
+        }"
+      />
+      <v-line
+        v-for="(poly, polyIdx) in fixture.dashPolylines"
+        :key="`${fixture.id}-d-${polyIdx}`"
+        :config="{
+          points: poly,
+          stroke: fixture.stroke,
+          strokeWidth: localStroke(fixture),
+          lineCap: 'round',
+          dash: localCutDash(fixture),
           listening: false,
         }"
       />

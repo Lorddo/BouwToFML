@@ -35,11 +35,15 @@ withDefaults(
     fmlOpacity: number
     underlayAvailable: boolean
     fmlOrientFlipX?: boolean
+    hasAnyFloorFml?: boolean
+    projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
   }>(),
   {
     fmlOrientFlipX: false,
+    hasAnyFloorFml: false,
+    projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
   },
@@ -65,6 +69,7 @@ const emit = defineEmits<{
   cancelThicknessPick: []
   regenerate: []
   mirrorVertical: []
+  mirrorProject: []
   rotate90Cw: []
   rotate90Ccw: []
   underlayRotate90Cw: []
@@ -101,6 +106,8 @@ const emit = defineEmits<{
     :fml-opacity="fmlOpacity"
     :underlay-available="underlayAvailable"
     :fml-orient-flip-x="fmlOrientFlipX"
+    :has-any-floor-fml="hasAnyFloorFml"
+    :project-orient-flip-x="projectOrientFlipX"
     :underlay-move-mode="underlayMoveMode"
     :underlay-flip-x="underlayFlipX"
     @update:floor-name="emit('update:floorName', $event)"
@@ -122,6 +129,7 @@ const emit = defineEmits<{
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
     @mirror-vertical="emit('mirrorVertical')"
+    @mirror-project="emit('mirrorProject')"
     @rotate90-cw="emit('rotate90Cw')"
     @rotate90-ccw="emit('rotate90Ccw')"
     @underlay-rotate90-cw="emit('underlayRotate90Cw')"

@@ -25,7 +25,7 @@ function cloneFloorShallow(floor: Floor): Floor {
 
 function mapPlanFloor(
   plan: FloorPlan,
-  floorIndex: number | undefined,
+  floorIndex: number | null | undefined,
   mapFloor: (floor: Floor) => Floor,
 ): FloorPlan {
   if (floorIndex == null) {
@@ -114,7 +114,7 @@ function mirrorFloor(floor: Floor, axisXCm: number): Floor {
 export function mirrorFloorPlanVertical(
   plan: FloorPlan,
   axisXCm = 0,
-  floorIndex?: number,
+  floorIndex?: number | null,
 ): FloorPlan {
   return mapPlanFloor(plan, floorIndex, (floor) => mirrorFloor(floor, axisXCm))
 }
@@ -165,7 +165,7 @@ export function rotateFloorPlan90(
   plan: FloorPlan,
   pivot: Point2D = { x: 0, y: 0 },
   dir: Rotate90Dir = 'cw',
-  floorIndex?: number,
+  floorIndex?: number | null,
 ): FloorPlan {
   return mapPlanFloor(plan, floorIndex, (floor) => rotateFloor90(floor, pivot, dir))
 }
@@ -216,8 +216,15 @@ export function applyFloorOrientFromCanonical(
   return next
 }
 
-/** Incrementele knop op het huidige plan (handmatige edits blijven). */
-export function applyFloorOrientOp(plan: FloorPlan, op: FloorOrientOp, floorIndex = 0): FloorPlan {
+/**
+ * Incrementele knop op het huidige plan (handmatige edits blijven).
+ * `floorIndex = null` = alle verdiepingen; default `0` = alleen floors[0].
+ */
+export function applyFloorOrientOp(
+  plan: FloorPlan,
+  op: FloorOrientOp,
+  floorIndex: number | null = 0,
+): FloorPlan {
   if (op === 'flipX') return mirrorFloorPlanVertical(plan, 0, floorIndex)
   return rotateFloorPlan90(plan, { x: 0, y: 0 }, op === 'rotCw' ? 'cw' : 'ccw', floorIndex)
 }
