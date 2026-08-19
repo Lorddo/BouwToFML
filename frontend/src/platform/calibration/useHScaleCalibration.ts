@@ -17,6 +17,12 @@ export interface HScaleState {
  */
 export const SCALE_AXIS_MISMATCH_WARN_PCT = 2
 
+/** Stap-4 rescale: FML-geometrie factor = trueCm / measuredCm; clamp. */
+export const SCALE_GEOMETRY_FACTOR_MIN = 0.5
+export const SCALE_GEOMETRY_FACTOR_MAX = 2
+/** Minimale maatlijn-lengte (cm) vóór rescale toegestaan. */
+export const SCALE_RESCALE_MIN_MEASURED_CM = 50
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
@@ -168,6 +174,62 @@ export function useHScaleCalibration() {
     }
   }
 
+  /**
+   * Stap-4 rescale: px/mm per as ÷ factor; optioneel absolute distanceMm.
+   * Aparte H/V (zoals stap 1). Minstens één as ≠ 1; elke as in [0.5, 2].
+   */
+  function applyAxisGeometryFactors(
+    factorX: number,
+    factorY: number,
+    distances?: { distanceMmX: number; distanceMmY: number },
+  ): boolean {
+    if (!confirmed.value) return false
+    if (
+      !Number.isFinite(factorX) ||
+      !Number.isFinite(factorY) ||
+      factorX < SCALE_GEOMETRY_FACTOR_MIN ||
+      factorX > SCALE_GEOMETRY_FACTOR_MAX ||
+      factorY < SCALE_GEOMETRY_FACTOR_MIN ||
+      factorY > SCALE_GEOMETRY_FACTOR_MAX
+    ) {
+      return false
+    }
+    if (Math.abs(factorX - 1) < 1e-9 && Math.abs(factorY - 1) < 1e-9) return false
+    if (
+      confirmedPixelsPerMillimeterX.value == null ||
+      confirmedPixelsPerMillimeterY.value == null
+    ) {
+      return false
+    }
+    confirmedPixelsPerMillimeterX.value /= factorX
+    confirmedPixelsPerMillimeterY.value /= factorY
+    if (
+      distances &&
+      Number.isFinite(distances.distanceMmX) &&
+      Number.isFinite(distances.distanceMmY) &&
+      distances.distanceMmX > 0 &&
+      distances.distanceMmY > 0
+    ) {
+      distanceMmX.value = distances.distanceMmX
+      distanceMmY.value = distances.distanceMmY
+    } else {
+      distanceMmX.value *= factorX
+      distanceMmY.value *= factorY
+    }
+    return true
+  }
+
+  /**
+   * Uniforme wrapper (beide assen dezelfde factor).
+   * @returns true als toegepast.
+   */
+  function applyUniformGeometryFactor(
+    factor: number,
+    distances?: { distanceMmX: number; distanceMmY: number },
+  ): boolean {
+    return applyAxisGeometryFactors(factor, factor, distances)
+  }
+
   function restoreFromSnapshot(snapshot: {
     state: HScaleState
     distanceMmX: number
@@ -212,6 +274,8 @@ export function useHScaleCalibration() {
     applyUpscaleToConfirmedScale,
     applyCardinalAxisSwapToConfirmedScale,
     recomputeConfirmedFromDistances,
+    applyUniformGeometryFactor,
+    applyAxisGeometryFactors,
     restoreFromSnapshot,
     confirmedPixelsPerMillimeterX,
     confirmedPixelsPerMillimeterY,

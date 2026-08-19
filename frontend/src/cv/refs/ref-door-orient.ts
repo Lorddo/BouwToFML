@@ -38,11 +38,7 @@ function inkCentroid(
  * Muuras in de huidige crop: inkt geconcentreerd in weinig rijen ⇒ muur horizontaal;
  * in weinig kolommen ⇒ muur verticaal. Geen aanname over LBE-aspect.
  */
-export function resolveDoorWallAxis(params: {
-  bwData: Uint8Array
-  width: number
-  height: number
-}): {
+function resolveDoorWallAxis(params: { bwData: Uint8Array; width: number; height: number }): {
   axis: 'horizontal' | 'vertical' | 'ambiguous'
   rowPeak: number
   colPeak: number
@@ -88,7 +84,7 @@ export function resolveDoorWallAxis(params: {
 }
 
 /** Zwaarste wit-vlak — alle roles (swing raakt vaak de crop-rand → `outside`). */
-export function pickHeaviestFace(faces: RefFace[]): RefFace | null {
+function pickHeaviestFace(faces: RefFace[]): RefFace | null {
   if (faces.length === 0) return null
   let heaviest = faces[0]
   for (let i = 1; i < faces.length; i += 1) {

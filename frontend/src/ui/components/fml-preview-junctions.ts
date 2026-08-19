@@ -12,7 +12,6 @@ export type {
 
 export {
   buildJunctions,
-  ENDPOINT_SNAP_RADIUS_CM,
   findMergeTarget,
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
@@ -40,11 +39,16 @@ export {
 } from './fml-preview-wall-slide'
 
 export {
+  balanceToPercent,
   clampBalance,
+  percentToBalance,
+  sliderPercentFromDraft,
   removeWall,
   removeWalls,
+  setJunctionHeight,
   setWallBalance,
   setWallsBalance,
+  setWallsHeight,
   setWallThickness,
   setWallsThickness,
   splitWallAtMidpoint,

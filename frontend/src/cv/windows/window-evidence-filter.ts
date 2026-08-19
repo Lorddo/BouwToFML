@@ -22,7 +22,6 @@ import type {
 } from './types'
 
 export { growFullStackFromSeedFaces } from './window-evidence-stack'
-export { WINDOW_EVIDENCE_TUNING } from './window-evidence-tuning'
 
 /**
  * Stage-3 stats uit accepted-lijst. Preserve-velden (rejected / strip→framing)

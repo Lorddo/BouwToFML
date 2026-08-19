@@ -10,7 +10,7 @@ import type { RefBBox } from '@/cv/refs/types'
  * cluster-witstroken te dichten. Alleen pixels binnen de faceIds-mask —
  * buur-twins zitten niet in de mask en mergen dus niet mee.
  */
-export const CLUSTER_SWING_CLOSE_KERNEL_PX = 5
+const CLUSTER_SWING_CLOSE_KERNEL_PX = 5
 
 export type SwingMaskCrop = {
   maskData: Uint8Array

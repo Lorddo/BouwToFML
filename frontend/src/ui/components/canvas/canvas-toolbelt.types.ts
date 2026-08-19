@@ -14,19 +14,48 @@ export type ToolbeltIconName =
   | 'delete'
   | 'split'
   | 'ruler'
+  | 'slash'
   | 'origin'
+  | 'text'
   | 'fit'
+  | 'fullscreen'
+  | 'fullscreen_exit'
   | 'undo'
+  | 'redo'
   | 'copy'
   | 'clear'
   | 'hinge'
   | 'swing'
+  | 'grid'
+  | 'dims'
+  | 'mirror_h'
+  | 'mirror_v'
+  | 'rotate_90'
+  | 'menu'
+  | 'upload'
+  | 'download'
+  | 'sanitize'
+  | 'edit'
+  | 'inspect'
+  | 'settings'
+  | 'axis'
+  | 'move'
+  | 'close_menu'
+  | 'close_plan'
+  | 'rescale'
+  | 'mirror_plan'
+  | 'rotate_plan_cw'
+  | 'rotate_plan_ccw'
+  | 'underlay_move'
+  | 'mirror_underlay'
 
 export interface ToolbeltItem {
   id: CanvasToolId
   icon: ToolbeltIconName | string
   label: string
   showSize?: boolean
+  /** Onafhankelijke aan/uit-knop — niet mutually exclusive met activeTool. */
+  toggle?: boolean
 }
 
 export type InkToolId = 'eraser' | 'brush' | 'line' | 'rect'

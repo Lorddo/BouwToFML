@@ -193,7 +193,7 @@ describe('useFmlPreviewEditor', () => {
     const floorIndex = ref(0)
     const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
 
-    editor.applyWallSlideAlongAxis('w1', -10)
+    editor.applyWallSlideAlongAxis('w1', -10, { x: 1, y: 0 })
     expect(editor.walls.value[0]?.a).toEqual({ x: -10, y: 0 })
     expect(editor.walls.value[0]?.b).toEqual({ x: 90, y: 0 })
 
@@ -241,6 +241,28 @@ describe('useFmlPreviewEditor', () => {
     editor.previewWallSlideAlongAxis(baseline, 'wDrag', 0, { x: 1, y: 0 })
     expect(editor.walls.value).toEqual(baseline)
     expect(editor.walls.value.some((wall) => wall.id.startsWith('split-host-'))).toBe(false)
+
+    scope.stop()
+  })
+
+  it('redo restores the snapshot after undo', () => {
+    const scope = effectScope()
+    const plan = ref<FloorPlan | null>(samplePlan())
+    const floorIndex = ref(0)
+    const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
+
+    editor.pushUndo()
+    editor.applyWallsThickness(['w1'], 20)
+    expect(editor.walls.value[0]?.thickness).toBe(20)
+    expect(editor.canRedoEdit.value).toBe(false)
+
+    expect(editor.undo()).toBe(true)
+    expect(editor.walls.value[0]?.thickness).toBe(10)
+    expect(editor.canRedoEdit.value).toBe(true)
+
+    expect(editor.redo()).toBe(true)
+    expect(editor.walls.value[0]?.thickness).toBe(20)
+    expect(editor.canRedoEdit.value).toBe(false)
 
     scope.stop()
   })

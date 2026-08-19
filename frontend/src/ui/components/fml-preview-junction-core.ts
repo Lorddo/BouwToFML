@@ -1,4 +1,5 @@
 import type { Point2D, Wall } from '@/core/fml/types'
+import { splitWallEndpointExtras } from '@/core/fml/wall-endpoint-height'
 import {
   openingWorldCenter,
   redistributeOpeningsAcrossSplit,
@@ -17,8 +18,11 @@ export const JUNCTION_POINT_SNAP_CM = 15
  */
 export const ROOM_DRAW_SNAP_CM = 4
 
+/** Slider-bereik (fractie 0–1 = 0–100%). Invoer mag daarbuiten. */
 export const BALANCE_MIN = 0
 export const BALANCE_MAX = 1
+export const BALANCE_SLIDER_PCT_MIN = 0
+export const BALANCE_SLIDER_PCT_MAX = 100
 export const BALANCE_DEFAULT = 0.5
 
 export const COLLINEAR_DOT_THRESHOLD = 0.99
@@ -67,12 +71,32 @@ export function distance(a: Point2D, b: Point2D): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
+function cloneFmlExtras(extras: Wall['extras']): Wall['extras'] {
+  if (!extras) return undefined
+  const next: NonNullable<Wall['extras']> = { ...extras }
+  if (next.az != null && typeof next.az === 'object') {
+    next.az = { ...(next.az as Record<string, unknown>) }
+  }
+  if (next.bz != null && typeof next.bz === 'object') {
+    next.bz = { ...(next.bz as Record<string, unknown>) }
+  }
+  return next
+}
+
 export function cloneWalls(walls: Wall[]): Wall[] {
   return walls.map((wall) => ({
     ...wall,
     a: { ...wall.a },
     b: { ...wall.b },
-    openings: wall.openings.map((opening) => ({ ...opening })),
+    c: wall.c ? { ...wall.c } : wall.c,
+    openings: wall.openings.map((opening) => ({
+      ...opening,
+      mirrored: opening.mirrored
+        ? ([opening.mirrored[0], opening.mirrored[1]] as [number, number])
+        : undefined,
+      extras: opening.extras ? { ...opening.extras } : undefined,
+    })),
+    extras: cloneFmlExtras(wall.extras),
   }))
 }
 
@@ -143,16 +167,19 @@ export function splitWallAtPoint(
     secondWall: secondEndpoints,
   })
 
+  const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, tSplit)
   const firstWall: Wall = {
     ...wall,
     b: { x: splitPoint.x, y: splitPoint.y },
     openings: firstOpenings,
+    extras: firstExtras,
   }
   const secondWall: Wall = {
     ...wall,
     id: `split-host-${crypto.randomUUID().slice(0, 8)}`,
     a: { x: splitPoint.x, y: splitPoint.y },
     openings: secondOpenings,
+    extras: secondExtras,
   }
 
   walls.splice(wallIndex, 1, firstWall, secondWall)

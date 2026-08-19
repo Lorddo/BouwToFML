@@ -337,6 +337,65 @@ function sampleSwingArc(
 }
 
 /**
+ * Frans balkon: draaideur naar binnen (tegengesteld aan FML mirrored[1])
+ * + balustrade op de FML-zwaaizijde (buiten, pal voor de gevel).
+ * Anna/Ostade: mirrored[1]=0 ⇒ hek op −normaal, blad naar binnen.
+ */
+function buildFrenchBalconySymbol(params: {
+  start: DoorSwingPoint
+  end: DoorSwingPoint
+  wallUnit: DoorSwingPoint
+  width: number
+  mirrored?: [number, number]
+  leafLength?: number
+  wallThickness?: number
+}): DoorSymbol {
+  const railSign = resolveSwingSign(params.mirrored)
+  const inwardSign = railSign === 1 ? -1 : 1
+  const door = buildSingleDoorSymbol({
+    start: params.start,
+    end: params.end,
+    wallUnit: params.wallUnit,
+    width: params.width,
+    mirrored: params.mirrored,
+    leafLength: params.leafLength,
+    swingSignOverride: inwardSign,
+  })
+  const thickness =
+    params.wallThickness != null && params.wallThickness > 0 ? params.wallThickness : 10
+  const face = thickness / 2
+  const railOffset = face + 4
+  const normal = wallNormal(params.wallUnit)
+  const railStart = {
+    x: params.start.x + normal.x * railSign * railOffset,
+    y: params.start.y + normal.y * railSign * railOffset,
+  }
+  const railEnd = {
+    x: params.end.x + normal.x * railSign * railOffset,
+    y: params.end.y + normal.y * railSign * railOffset,
+  }
+  const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
+  const n = Math.max(3, Math.round(span / 16))
+  const balusters: number[][] = []
+  for (let i = 0; i <= n; i += 1) {
+    const t = i / n
+    const ax = params.start.x + (params.end.x - params.start.x) * t
+    const ay = params.start.y + (params.end.y - params.start.y) * t
+    balusters.push([
+      ax + normal.x * railSign * face,
+      ay + normal.y * railSign * face,
+      ax + normal.x * railSign * railOffset,
+      ay + normal.y * railSign * railOffset,
+    ])
+  }
+  return {
+    leafLines: [...door.leafLines, [railStart.x, railStart.y, railEnd.x, railEnd.y], ...balusters],
+    arcPoints: door.arcPoints,
+    arrowPoints: [],
+  }
+}
+
+/**
  * Garagedeur: parallelle paneellijnen langs de opening (geen boog/pijl).
  * Voorlopig preview-symbool; FP-export-check bepaalt of refid klopt.
  */
@@ -411,6 +470,16 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         swingDegrees: 45,
         showArc: true,
         leafLength: params.leafLength,
+      })
+    case 'french_balcony':
+      return buildFrenchBalconySymbol({
+        start: params.start,
+        end: params.end,
+        wallUnit: params.wallUnit,
+        width: params.width,
+        mirrored: params.mirrored,
+        leafLength: params.leafLength,
+        wallThickness: params.wallThickness,
       })
     default:
       return buildSingleDoorSymbol({

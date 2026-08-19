@@ -11,7 +11,9 @@ Focus: walls, doors, windows. Semi-automatic — you confirm scale, preprocess, 
 
 ## Hosting checklist (operators)
 
-### Cloudflare Pages
+### Cloudflare Worker (current host)
+
+Live URL is a Worker with static assets, not Pages. Config: [`frontend/wrangler.toml`](../../frontend/wrangler.toml).
 
 1. Build in `frontend/`. Production builds pick up [`frontend/.env.production`](../../frontend/.env.production) (`VITE_APP_ACCESS_PASSWORD=Test1234!` for now):
 
@@ -24,8 +26,8 @@ Override for one build if needed: `$env:VITE_APP_ACCESS_PASSWORD="…"`. Local `
 
 **Current test password:** `Test1234!` (soft gate only — not secret).
 
-2. Deploy **only** `frontend/dist/` as the Pages output directory (do **not** deploy `frontend/examples/` or the repo root).
-3. Serve at domain root (`base: '/'` in `vite.config.ts`). For a subpath, rebuild with `base` set first.
+2. Deploy **only** `frontend/dist/` (`npx wrangler deploy` from `frontend/`, or dashboard upload). Do **not** deploy `frontend/examples/` or the repo root.
+3. SPA fallback (`/FML-editor` → `index.html`) is `assets.not_found_handling = "single-page-application"`. In the dashboard: Worker → Settings → Assets → **Not found handling** = Single-page application. There is **no** `public/_redirects`: `/* /index.html 200` is rejected on Workers (error 100324, infinite loop).
 4. Isolation headers ship via [`frontend/public/_headers`](../../frontend/public/_headers) (copied into `dist/` by Vite). Confirm on the live URL:
 
 ```
@@ -36,7 +38,11 @@ Cross-Origin-Resource-Policy: same-origin
 
 Without these, OpenCV / SharedArrayBuffer paths can fail in the browser.
 
-5. HTTPS (Pages default). Modern Chromium/Firefox/Safari.
+5. HTTPS (`workers.dev` default). Modern Chromium/Firefox/Safari.
+
+### Cloudflare Pages (alternative)
+
+Same build and `dist/`-only upload. Pages accepts a `_redirects` SPA rule (`/* /index.html 200`); that file is intentionally absent here because the live host is a Worker. Re-add it only if you switch the host to Pages.
 
 **Soft access gate:** the Vue password prompt is only a deterrent — the password is baked into the JS bundle. For real protection at delivery, use Cloudflare Access (Zero Trust). Unlock lasts for the browser tab (`sessionStorage`).
 
@@ -55,7 +61,7 @@ Audit reference: [audit-2026-08-05-customer-test.md](audit-2026-08-05-customer-t
 3. **Detection** — auto wall classify → doors → windows. Review faces (Shift+click). Finish detection.
 4. **Result** — review FML preview, adjust openings, **Download** FML (and project FML for multi-floor).
 
-Settings (gear): language (en/nl/th), FML defaults, viewer opacity, scale input unit. Optional: **Open FML viewer** (standalone, outside the project flow).
+Settings (gear): language (en/nl/th), FML defaults, viewer opacity, scale input unit. Standalone FML editor: `/FML-editor` (outside the project flow).
 
 ## Known limitations (test build)
 

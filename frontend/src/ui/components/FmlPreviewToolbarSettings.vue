@@ -3,9 +3,15 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
-import type { FmlToolId } from './canvas/fmlToolbeltItems'
+import { isFmlToolbarSettingsOpen, type FmlToolId } from './canvas/fmlToolbeltItems'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './canvas/canvas-toolbelt.css'
+import './fml-toolbelt-settings-fields.css'
+import FmlPreviewToolbarSettingsWall from './FmlPreviewToolbarSettingsWall.vue'
+import FmlPreviewToolbarSettingsOpening from './FmlPreviewToolbarSettingsOpening.vue'
+import FmlPreviewToolbarSettingsArea from './FmlPreviewToolbarSettingsArea.vue'
+import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue'
+import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
 
 const { t } = useI18n()
 
@@ -24,7 +30,14 @@ const props = withDefaults(
       count: number
       thicknessMixed: boolean
       balanceMixed: boolean
+      heightMixed?: boolean
       canSplit: boolean
+    } | null
+    selectedJunctionPanel: {
+      junctionId: string
+      wallCount: number
+      heightCm: number | null
+      heightMixed: boolean
     } | null
     selectedOpeningPanel: {
       openingIds: string[]
@@ -43,10 +56,35 @@ const props = withDefaults(
       swingRight: boolean | null
       swingMixed: boolean
     } | null
+    selectedAreaPanel: {
+      kind: 'area' | 'surface'
+      id: string
+      role: number | null
+      name: string | null
+      customName: string
+      color: string
+      canEditPolygon: boolean
+    } | null
+    selectedLabelPanel?: { id: string; text: string } | null
+    selectedItemPanel?: {
+      id: string
+      label: string
+      widthCm: number
+      heightCm: number
+      rotationDeg: number
+      mirroredX: boolean
+      mirroredY: boolean
+    } | null
+    roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
+    surfaceEditActive?: boolean
     wallThicknessDraft: number
     wallThicknessMixed: boolean
     wallBalanceDraft: number
     wallBalanceMixed: boolean
+    wallHeightDraft: number
+    wallHeightMixed: boolean
+    junctionHeightDraft: number
+    junctionHeightMixed: boolean
     openingSubtypeDraft: OpeningSubtypeDraft
     openingSubtypeMixed: boolean
     openingWidthDraft: number
@@ -61,16 +99,36 @@ const props = withDefaults(
     openingSwingMixed: boolean
     openingBovenlichtDraft: boolean
     openingBovenlichtMixed: boolean
+    openingBovenlichtHeightDraft: number
+    openingBovenlichtHeightMixed: boolean
+    openingBovenlichtGapDraft: number
+    openingBovenlichtGapMixed: boolean
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
     measureLineCount?: number
+    drawWallDrafting?: boolean
+    drawWallMeasureLengthCm?: number
+    drawRoomDrafting?: boolean
+    drawRoomMeasureHCm?: number
+    drawRoomMeasureVCm?: number
   }>(),
   {
     thicknessMinCm: 10,
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
     measureLineCount: 0,
+    drawWallDrafting: false,
+    drawWallMeasureLengthCm: 0,
+    drawRoomDrafting: false,
+    drawRoomMeasureHCm: 0,
+    drawRoomMeasureVCm: 0,
+    selectedAreaPanel: null,
+    selectedJunctionPanel: null,
+    selectedLabelPanel: null,
+    selectedItemPanel: null,
+    roomTypes: () => [],
+    surfaceEditActive: false,
   },
 )
 
@@ -80,6 +138,10 @@ const emit = defineEmits<{
   applyWallThickness: [thicknessCm: number]
   wallBalanceInput: [event: Event]
   commitWallBalance: []
+  wallHeightInput: [event: Event]
+  commitWallHeight: []
+  junctionHeightInput: [event: Event]
+  commitJunctionHeight: []
   commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
   openingWidthInput: [event: Event]
   commitOpeningWidth: []
@@ -90,178 +152,71 @@ const emit = defineEmits<{
   toggleOpeningHinge: []
   toggleOpeningSwing: []
   openingBovenlichtChange: [event: Event]
+  openingBovenlichtHeightInput: [event: Event]
+  commitOpeningBovenlichtHeight: []
+  openingBovenlichtGapInput: [event: Event]
+  commitOpeningBovenlichtGap: []
   copyOpening: []
   deleteOpenings: []
   splitWall: []
   deleteWalls: []
   clearSelection: []
   clearMeasures: []
+  applyRoomType: [role: number]
+  areaCustomNameInput: [customName: string]
+  applyAreaCustomName: [customName: string]
+  applyAreaColor: [color: string]
+  deleteTagged: []
+  labelTextInput: [value: string]
+  updateLabelText: [value: string]
+  deleteAnnotation: []
+  beginSurfacePolygonEdit: []
+  endSurfacePolygonEdit: []
+  itemWidthInput: [event: Event]
+  itemHeightInput: [event: Event]
+  itemRotationInput: [event: Event]
+  toggleItemMirrorX: []
+  toggleItemMirrorY: []
+  copyItem: []
+  deleteItem: []
+  drawWallLengthInput: [cm: number | null]
+  commitDrawWallMeasure: []
+  cancelDrawWallDraft: []
+  drawRoomHInput: [cm: number | null]
+  drawRoomVInput: [cm: number | null]
+  commitDrawRoomMeasure: []
+  cancelDrawRoomDraft: []
 }>()
-
-const thicknessPresets = computed(() => [
-  { id: 'min' as const, label: t('result.toolbar.presetMin'), cm: props.thicknessMinCm },
-  { id: 'mid' as const, label: t('result.toolbar.presetMid'), cm: props.thicknessMidCm },
-  { id: 'max' as const, label: t('result.toolbar.presetMax'), cm: props.thicknessMaxCm },
-])
 
 const isDrawWallOrRoom = computed(
   () => activeTool.value === 'draw_wall' || activeTool.value === 'draw_room',
 )
 
-/** Matcht draft op min/mid/max; leeg = handmatige overschrijving. */
-const drawThicknessBand = computed<'min' | 'mid' | 'max' | ''>(() => {
-  if (props.wallThicknessMixed) return ''
-  const cm = Math.round(props.wallThicknessDraft)
-  if (cm === Math.round(props.thicknessMinCm)) return 'min'
-  if (cm === Math.round(props.thicknessMidCm)) return 'mid'
-  if (cm === Math.round(props.thicknessMaxCm)) return 'max'
-  return ''
-})
-
-/** Focus loslaten na toolbar-interactie — voorkomt dat Space+pan geblokkeerd blijft (zoals opacity-slider). */
-function releaseControlFocus(event: Event): void {
-  const el = event.target
-  if (el instanceof HTMLElement) el.blur()
-}
-
-function onDrawThicknessBandChange(event: Event): void {
-  const band = (event.target as HTMLSelectElement).value as 'min' | 'mid' | 'max' | ''
-  const preset = thicknessPresets.value.find((item) => item.id === band)
-  if (!preset) return
-  emit('applyWallThickness', preset.cm)
-  releaseControlFocus(event)
-}
-
-function onWallThicknessChange(event: Event): void {
-  emit('commitWallThickness')
-  releaseControlFocus(event)
-}
-
-function onWallBalanceChange(event: Event): void {
-  emit('commitWallBalance')
-  releaseControlFocus(event)
-}
-
-function onOpeningWidthChange(event: Event): void {
-  emit('commitOpeningWidth')
-  releaseControlFocus(event)
-}
-
-function onOpeningHeightChange(event: Event): void {
-  emit('commitOpeningHeight')
-  releaseControlFocus(event)
-}
-
-function onOpeningSillZChange(event: Event): void {
-  emit('commitOpeningSillZ')
-  releaseControlFocus(event)
-}
-
-function onOpeningSubtypeChange(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value as OpeningSubtypeDraft
-  if (!value) return
-  emit('commitOpeningSubtype', value)
-  releaseControlFocus(event)
-}
-
-function onOpeningBovenlichtChange(event: Event): void {
-  emit('openingBovenlichtChange', event)
-  releaseControlFocus(event)
-}
-
-const doorSubtypeOptions = computed(() =>
-  (
-    [
-      'standard',
-      'closet',
-      'double',
-      'double_solid',
-      'pocket',
-      'sliding_single',
-      'sliding',
-    ] as const satisfies readonly DoorAddSubtype[]
-  ).map((value) => ({
-    value,
-    label: t(`result.toolbar.doorSubtypes.${value}`),
-  })),
+const showWallSettings = computed(
+  () =>
+    props.selectedWallPanel != null ||
+    props.selectedJunctionPanel != null ||
+    isDrawWallOrRoom.value,
 )
 
-const windowSubtypeOptions = computed(() =>
-  (
-    [
-      'single',
-      'double',
-      'triple',
-      'round',
-      'half_round',
-    ] as const satisfies readonly WindowAddSubtype[]
-  ).map((value) => ({
-    value,
-    label: t(`result.toolbar.windowSubtypes.${value}`),
-  })),
+const showOpeningSettings = computed(
+  () =>
+    props.selectedOpeningPanel != null ||
+    activeTool.value === 'add_door' ||
+    activeTool.value === 'add_window',
 )
 
-const wallCountLabel = computed(() => {
-  const panel = props.selectedWallPanel
-  if (!panel) return ''
-  return panel.count === 1
-    ? t('result.toolbar.wallOne')
-    : t('result.toolbar.wallMany', { count: panel.count })
-})
-
-const openingKindLabel = computed(() => {
-  const panel = props.selectedOpeningPanel
-  if (!panel) return ''
-  if (panel.openingType === 'window') {
-    return panel.count === 1
-      ? t('result.toolbar.windowOne')
-      : t('result.toolbar.windowMany', { count: panel.count })
-  }
-  if (panel.openingType === 'mixed') {
-    return t('result.toolbar.openingMany', { count: panel.count })
-  }
-  return panel.count === 1
-    ? t('result.toolbar.doorOne')
-    : t('result.toolbar.doorMany', { count: panel.count })
-})
-
-const isDoorSelection = computed(() => props.selectedOpeningPanel?.openingType === 'door')
-const isWindowSelection = computed(() => props.selectedOpeningPanel?.openingType === 'window')
-const canChangeOpeningSubtype = computed(() => isDoorSelection.value || isWindowSelection.value)
-const selectedSubtypeOptions = computed(() =>
-  isWindowSelection.value ? windowSubtypeOptions.value : doorSubtypeOptions.value,
+const showSettings = computed(() =>
+  isFmlToolbarSettingsOpen({
+    hasWallSelection: props.selectedWallPanel != null,
+    hasJunctionSelection: props.selectedJunctionPanel != null,
+    hasOpeningSelection: props.selectedOpeningPanel != null,
+    hasAreaSelection: props.selectedAreaPanel != null,
+    hasLabelSelection: props.selectedLabelPanel != null,
+    hasItemSelection: props.selectedItemPanel != null,
+    activeTool: activeTool.value,
+  }),
 )
-const selectedSubtypeAria = computed(() =>
-  isWindowSelection.value ? t('result.toolbar.windowType') : t('result.toolbar.doorType'),
-)
-const canCopyOpening = computed(() => props.selectedOpeningPanel?.count === 1)
-
-const openingHingeTitle = computed(() => {
-  if (props.openingHingeMixed) return t('result.toolbar.hingeMixed')
-  return props.openingHingeAtStartDraft
-    ? t('result.toolbar.hingeAtStart')
-    : t('result.toolbar.hingeAtEnd')
-})
-
-const openingSwingTitle = computed(() => {
-  if (props.openingSwingMixed) return t('result.toolbar.swingMixed')
-  return props.openingSwingRightDraft
-    ? t('result.toolbar.swingRight')
-    : t('result.toolbar.swingLeft')
-})
-
-const deleteWallTitle = computed(() =>
-  props.selectedWallPanel?.count === 1
-    ? t('result.toolbar.deleteWall')
-    : t('result.toolbar.deleteWalls'),
-)
-
-const deleteOpeningTitle = computed(() => {
-  const panel = props.selectedOpeningPanel
-  if (!panel) return ''
-  if (panel.count !== 1) return t('result.toolbar.deleteOpenings')
-  return isWindowSelection.value ? t('result.toolbar.deleteWindow') : t('result.toolbar.deleteDoor')
-})
 
 const measureCountLabel = computed(() => {
   const count = props.measureLineCount ?? 0
@@ -270,18 +225,18 @@ const measureCountLabel = computed(() => {
     : t('result.toolbar.measureCountMany', { count })
 })
 
-const showSettings = computed(
-  () =>
-    props.selectedWallPanel != null ||
-    props.selectedOpeningPanel != null ||
-    activeTool.value === 'draw_wall' ||
-    activeTool.value === 'draw_room' ||
-    activeTool.value === 'add_door' ||
-    activeTool.value === 'add_window',
-)
-
 const showMeasureStrip = computed(
   () => activeTool.value === 'measure' && (props.measureLineCount ?? 0) > 0,
+)
+
+const showDeselect = computed(
+  () =>
+    props.selectedWallPanel != null ||
+    props.selectedJunctionPanel != null ||
+    props.selectedOpeningPanel != null ||
+    props.selectedAreaPanel != null ||
+    props.selectedLabelPanel != null ||
+    props.selectedItemPanel != null,
 )
 </script>
 
@@ -289,366 +244,125 @@ const showMeasureStrip = computed(
   <template v-if="showSettings">
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
     <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
-        {{ wallCountLabel }}
-      </span>
-      <span v-if="selectedOpeningPanel && !canChangeOpeningSubtype" class="fml-toolbelt__meta">
-        {{ openingKindLabel }}
-      </span>
-      <div v-if="selectedOpeningPanel && canChangeOpeningSubtype" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ selectedSubtypeAria }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <select
-            class="fml-toolbelt__select"
-            :aria-label="selectedSubtypeAria"
-            :value="openingSubtypeMixed ? '' : openingSubtypeDraft"
-            @change="onOpeningSubtypeChange"
-          >
-            <option v-if="openingSubtypeMixed" value="" disabled>
-              {{ t('result.toolbar.custom') }}
-            </option>
-            <option v-for="opt in selectedSubtypeOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div v-if="selectedWallPanel || isDrawWallOrRoom" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{
-          isDrawWallOrRoom ? t('result.toolbar.wallType') : t('result.toolbar.thickness')
-        }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <select
-            v-if="isDrawWallOrRoom"
-            class="fml-toolbelt__select fml-toolbelt__select--thickness"
-            :aria-label="t('result.toolbar.wallTypeAria')"
-            :value="drawThicknessBand"
-            @change="onDrawThicknessBandChange"
-          >
-            <option v-if="drawThicknessBand === ''" value="" disabled>
-              {{ t('result.toolbar.custom') }}
-            </option>
-            <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
-              {{ preset.label }} ({{ preset.cm }} cm)
-            </option>
-          </select>
-          <input
-            type="number"
-            min="1"
-            max="200"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.wallThicknessAria')"
-            :value="wallThicknessMixed ? '' : wallThicknessDraft"
-            :placeholder="wallThicknessMixed ? '—' : undefined"
-            @input="emit('wallThicknessInput', $event)"
-            @change="onWallThicknessChange"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-          <div
-            v-if="selectedWallPanel"
-            class="fml-toolbelt__presets"
-            role="group"
-            :aria-label="t('result.toolbar.thicknessPresetsAria')"
-          >
-            <button
-              v-for="preset in thicknessPresets"
-              :key="preset.id"
-              type="button"
-              class="fml-toolbelt__preset-btn"
-              :title="t('result.toolbar.applyPresetTitle', { label: preset.label, cm: preset.cm })"
-              :aria-label="
-                t('result.toolbar.applyPresetAria', { label: preset.label, cm: preset.cm })
-              "
-              @click="emit('applyWallThickness', preset.cm)"
-              @pointerup="releaseControlFocus"
-            >
-              {{ preset.label }}
-            </button>
-          </div>
-        </div>
-      </div>
-      <div v-if="selectedWallPanel" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label" :title="t('result.toolbar.alignmentTitle')">{{
-          t('result.toolbar.alignment')
-        }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            class="fml-toolbelt__balance-slider"
-            :aria-label="t('result.toolbar.alignmentAria')"
-            :value="wallBalanceMixed ? 0.5 : wallBalanceDraft"
-            :disabled="wallBalanceMixed"
-            @input="emit('wallBalanceInput', $event)"
-            @change="onWallBalanceChange"
-            @pointerup="releaseControlFocus"
-          />
-          <input
-            type="number"
-            min="0"
-            max="1"
-            step="0.01"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.alignmentAria')"
-            :value="wallBalanceMixed ? '' : wallBalanceDraft"
-            :placeholder="wallBalanceMixed ? '—' : undefined"
-            @input="emit('wallBalanceInput', $event)"
-            @change="onWallBalanceChange"
-          />
-        </div>
-      </div>
-      <div v-if="selectedOpeningPanel" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.width') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="10"
-            max="400"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="
-              isWindowSelection
-                ? t('result.toolbar.windowWidthAria')
-                : t('result.toolbar.doorWidthAria')
-            "
-            :value="openingWidthMixed ? '' : openingWidthDraft"
-            :placeholder="openingWidthMixed ? '—' : undefined"
-            @input="emit('openingWidthInput', $event)"
-            @change="onOpeningWidthChange"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <div v-if="activeTool === 'add_door'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.doorType') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <select
-            v-model="addDoorSubtype"
-            class="fml-toolbelt__select"
-            :aria-label="t('result.toolbar.doorType')"
-            @change="releaseControlFocus"
-          >
-            <option v-for="opt in doorSubtypeOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div v-if="activeTool === 'add_door'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.size') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            v-model.number="addDoorWidthCm"
-            type="number"
-            min="10"
-            max="400"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.doorSizeAria')"
-            @change="releaseControlFocus"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.windowType') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <select
-            v-model="addWindowSubtype"
-            class="fml-toolbelt__select"
-            :aria-label="t('result.toolbar.windowType')"
-            @change="releaseControlFocus"
-          >
-            <option v-for="opt in windowSubtypeOptions" :key="opt.value" :value="opt.value">
-              {{ opt.label }}
-            </option>
-          </select>
-        </div>
-      </div>
-      <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.size') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            v-model.number="addWindowWidthCm"
-            type="number"
-            min="10"
-            max="400"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.windowSizeAria')"
-            @change="releaseControlFocus"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            v-model.number="addWindowSillZCm"
-            type="number"
-            min="0"
-            max="400"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.floorAria')"
-            @change="releaseControlFocus"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.glass') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            v-model.number="addWindowHeightCm"
-            type="number"
-            min="50"
-            max="500"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.glassAria')"
-            @change="releaseControlFocus"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <div v-if="isDoorSelection" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.height') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="50"
-            max="500"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.doorHeightAria')"
-            :value="openingHeightMixed ? '' : openingHeightDraft"
-            :placeholder="openingHeightMixed ? '—' : undefined"
-            @input="emit('openingHeightInput', $event)"
-            @change="onOpeningHeightChange"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <label
-        v-if="isDoorSelection || isWindowSelection"
-        class="fml-toolbelt__field fml-toolbelt__field--checkbox"
-        :title="t('result.toolbar.bovenlichtTitle')"
-      >
-        <input
-          type="checkbox"
-          :checked="openingBovenlichtDraft"
-          :indeterminate.prop="openingBovenlichtMixed"
-          :aria-label="t('result.toolbar.bovenlicht')"
-          @change="onOpeningBovenlichtChange"
-        />
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.bovenlicht') }}</span>
-      </label>
-      <div v-if="isWindowSelection" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="0"
-            max="400"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.floorAria')"
-            :value="openingSillZMixed ? '' : openingSillZDraft"
-            :placeholder="openingSillZMixed ? '—' : undefined"
-            @input="emit('openingSillZInput', $event)"
-            @change="onOpeningSillZChange"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
-      <div v-if="isWindowSelection" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.glass') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="50"
-            max="500"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.glassAria')"
-            :value="openingHeightMixed ? '' : openingHeightDraft"
-            :placeholder="openingHeightMixed ? '—' : undefined"
-            @input="emit('openingHeightInput', $event)"
-            @change="onOpeningHeightChange"
-          />
-          <span class="fml-toolbelt__unit">cm</span>
-        </div>
-      </div>
+      <!-- Order matches prior flat template metas: wall → opening → area → label -->
+      <FmlPreviewToolbarSettingsWall
+        v-if="showWallSettings"
+        :selected-wall-panel="selectedWallPanel"
+        :selected-junction-panel="selectedJunctionPanel"
+        :active-tool="activeTool"
+        :wall-thickness-draft="wallThicknessDraft"
+        :wall-thickness-mixed="wallThicknessMixed"
+        :wall-balance-draft="wallBalanceDraft"
+        :wall-balance-mixed="wallBalanceMixed"
+        :wall-height-draft="wallHeightDraft"
+        :wall-height-mixed="wallHeightMixed"
+        :junction-height-draft="junctionHeightDraft"
+        :junction-height-mixed="junctionHeightMixed"
+        :thickness-min-cm="thicknessMinCm"
+        :thickness-mid-cm="thicknessMidCm"
+        :thickness-max-cm="thicknessMaxCm"
+        :draw-wall-drafting="drawWallDrafting"
+        :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
+        :draw-room-drafting="drawRoomDrafting"
+        :draw-room-measure-h-cm="drawRoomMeasureHCm"
+        :draw-room-measure-v-cm="drawRoomMeasureVCm"
+        @wall-thickness-input="emit('wallThicknessInput', $event)"
+        @commit-wall-thickness="emit('commitWallThickness')"
+        @apply-wall-thickness="emit('applyWallThickness', $event)"
+        @wall-balance-input="emit('wallBalanceInput', $event)"
+        @commit-wall-balance="emit('commitWallBalance')"
+        @wall-height-input="emit('wallHeightInput', $event)"
+        @commit-wall-height="emit('commitWallHeight')"
+        @junction-height-input="emit('junctionHeightInput', $event)"
+        @commit-junction-height="emit('commitJunctionHeight')"
+        @split-wall="emit('splitWall')"
+        @delete-walls="emit('deleteWalls')"
+        @draw-wall-length-input="emit('drawWallLengthInput', $event)"
+        @commit-draw-wall-measure="emit('commitDrawWallMeasure')"
+        @cancel-draw-wall-draft="emit('cancelDrawWallDraft')"
+        @draw-room-h-input="emit('drawRoomHInput', $event)"
+        @draw-room-v-input="emit('drawRoomVInput', $event)"
+        @commit-draw-room-measure="emit('commitDrawRoomMeasure')"
+        @cancel-draw-room-draft="emit('cancelDrawRoomDraft')"
+      />
+      <FmlPreviewToolbarSettingsOpening
+        v-if="showOpeningSettings"
+        v-model:add-door-subtype="addDoorSubtype"
+        v-model:add-door-width-cm="addDoorWidthCm"
+        v-model:add-window-subtype="addWindowSubtype"
+        v-model:add-window-width-cm="addWindowWidthCm"
+        v-model:add-window-sill-z-cm="addWindowSillZCm"
+        v-model:add-window-height-cm="addWindowHeightCm"
+        :selected-opening-panel="selectedOpeningPanel"
+        :active-tool="activeTool"
+        :opening-subtype-draft="openingSubtypeDraft"
+        :opening-subtype-mixed="openingSubtypeMixed"
+        :opening-width-draft="openingWidthDraft"
+        :opening-width-mixed="openingWidthMixed"
+        :opening-height-draft="openingHeightDraft"
+        :opening-height-mixed="openingHeightMixed"
+        :opening-sill-z-draft="openingSillZDraft"
+        :opening-sill-z-mixed="openingSillZMixed"
+        :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+        :opening-hinge-mixed="openingHingeMixed"
+        :opening-swing-right-draft="openingSwingRightDraft"
+        :opening-swing-mixed="openingSwingMixed"
+        :opening-bovenlicht-draft="openingBovenlichtDraft"
+        :opening-bovenlicht-mixed="openingBovenlichtMixed"
+        :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+        :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+        :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+        :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+        @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
+        @opening-width-input="emit('openingWidthInput', $event)"
+        @commit-opening-width="emit('commitOpeningWidth')"
+        @opening-height-input="emit('openingHeightInput', $event)"
+        @commit-opening-height="emit('commitOpeningHeight')"
+        @opening-sill-z-input="emit('openingSillZInput', $event)"
+        @commit-opening-sill-z="emit('commitOpeningSillZ')"
+        @toggle-opening-hinge="emit('toggleOpeningHinge')"
+        @toggle-opening-swing="emit('toggleOpeningSwing')"
+        @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
+        @opening-bovenlicht-height-input="emit('openingBovenlichtHeightInput', $event)"
+        @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
+        @opening-bovenlicht-gap-input="emit('openingBovenlichtGapInput', $event)"
+        @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+        @copy-opening="emit('copyOpening')"
+        @delete-openings="emit('deleteOpenings')"
+      />
+      <FmlPreviewToolbarSettingsArea
+        v-if="selectedAreaPanel"
+        :selected-area-panel="selectedAreaPanel"
+        :room-types="roomTypes"
+        :surface-edit-active="surfaceEditActive"
+        @apply-room-type="emit('applyRoomType', $event)"
+        @area-custom-name-input="emit('areaCustomNameInput', $event)"
+        @apply-area-custom-name="emit('applyAreaCustomName', $event)"
+        @apply-area-color="emit('applyAreaColor', $event)"
+        @delete-tagged="emit('deleteTagged')"
+        @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
+        @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+      />
+      <FmlPreviewToolbarSettingsLabel
+        v-if="selectedLabelPanel"
+        :selected-label-panel="selectedLabelPanel"
+        @label-text-input="emit('labelTextInput', $event)"
+        @update-label-text="emit('updateLabelText', $event)"
+        @delete-annotation="emit('deleteAnnotation')"
+      />
+      <FmlPreviewToolbarSettingsItem
+        v-if="selectedItemPanel"
+        :selected-item-panel="selectedItemPanel"
+        @item-width-input="emit('itemWidthInput', $event)"
+        @item-height-input="emit('itemHeightInput', $event)"
+        @item-rotation-input="emit('itemRotationInput', $event)"
+        @toggle-item-mirror-x="emit('toggleItemMirrorX')"
+        @toggle-item-mirror-y="emit('toggleItemMirrorY')"
+        @copy-item="emit('copyItem')"
+        @delete-item="emit('deleteItem')"
+      />
       <button
-        v-if="selectedWallPanel?.count === 1"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.splitWall')"
-        :aria-label="t('result.toolbar.splitWall')"
-        :disabled="!selectedWallPanel?.canSplit"
-        @click="emit('splitWall')"
-      >
-        <ToolbeltIcon name="split" />
-      </button>
-      <button
-        v-if="isDoorSelection"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :class="{ 'canvas-toolbelt__btn--active': !openingHingeMixed && !openingHingeAtStartDraft }"
-        :title="openingHingeTitle"
-        :aria-label="openingHingeTitle"
-        @click="emit('toggleOpeningHinge')"
-      >
-        <ToolbeltIcon name="hinge" />
-      </button>
-      <button
-        v-if="isDoorSelection"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :class="{ 'canvas-toolbelt__btn--active': !openingSwingMixed && openingSwingRightDraft }"
-        :title="openingSwingTitle"
-        :aria-label="openingSwingTitle"
-        @click="emit('toggleOpeningSwing')"
-      >
-        <ToolbeltIcon name="swing" />
-      </button>
-      <button
-        v-if="selectedOpeningPanel && canCopyOpening"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.copyOpeningTitle')"
-        :aria-label="t('result.toolbar.copyOpening')"
-        @click="emit('copyOpening')"
-      >
-        <ToolbeltIcon name="copy" />
-      </button>
-      <button
-        v-if="selectedWallPanel"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="deleteWallTitle"
-        :aria-label="deleteWallTitle"
-        @click="emit('deleteWalls')"
-      >
-        <ToolbeltIcon name="delete" />
-      </button>
-      <button
-        v-if="selectedOpeningPanel"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="deleteOpeningTitle"
-        :aria-label="deleteOpeningTitle"
-        @click="emit('deleteOpenings')"
-      >
-        <ToolbeltIcon name="delete" />
-      </button>
-      <button
-        v-if="selectedWallPanel || selectedOpeningPanel"
+        v-if="showDeselect"
         type="button"
         class="canvas-toolbelt__btn"
         :title="t('result.toolbar.deselectTitle')"
@@ -676,108 +390,3 @@ const showMeasureStrip = computed(
     </div>
   </template>
 </template>
-
-<style scoped>
-.fml-toolbelt__field {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 0 4px;
-  border-left: 1px solid #e2e8f0;
-  margin-left: 2px;
-}
-
-.fml-toolbelt__field:first-of-type {
-  border-left: none;
-  margin-left: 0;
-}
-
-.fml-toolbelt__field-label {
-  font-size: 10px;
-  line-height: 1.2;
-  color: #64748b;
-}
-
-.fml-toolbelt__field-controls {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.fml-toolbelt__thickness-input {
-  width: 44px;
-  font-size: 12px;
-  padding: 1px 3px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-}
-
-.fml-toolbelt__balance-slider {
-  width: 72px;
-}
-
-.fml-toolbelt__select {
-  min-width: 108px;
-  height: 24px;
-  font-size: 12px;
-  padding: 1px 4px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
-  color: #334155;
-}
-
-.fml-toolbelt__select--thickness {
-  min-width: 118px;
-}
-
-.fml-toolbelt__unit {
-  font-size: 10px;
-  color: #64748b;
-  min-width: 18px;
-}
-
-.fml-toolbelt__field--checkbox {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.fml-toolbelt__field--checkbox input[type='checkbox'] {
-  margin: 0;
-}
-
-.fml-toolbelt__presets {
-  display: flex;
-  gap: 2px;
-  margin-left: 2px;
-}
-
-.fml-toolbelt__preset-btn {
-  min-width: 28px;
-  height: 22px;
-  padding: 0 5px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #f8fafc;
-  color: #334155;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.fml-toolbelt__preset-btn:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-  color: #0369a1;
-}
-
-.canvas-toolbelt__btn--active {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
-  color: #0369a1;
-}
-</style>

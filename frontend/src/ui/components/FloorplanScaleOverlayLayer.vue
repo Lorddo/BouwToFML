@@ -80,13 +80,17 @@ function bindDragHorizontalLeg() {
     y: clamp(pos.y, -10, props.imgHeight - 10),
   })
 }
+
+function legHalfWidth(): number {
+  return Math.max(10, 12 / props.stageScale)
+}
 </script>
 
 <template>
   <v-group>
     <v-rect
       :config="{
-        x: scaleState.xLeft - Math.max(10, 12 / stageScale),
+        x: scaleState.xLeft - legHalfWidth(),
         y: 0,
         width: Math.max(20, 24 / stageScale),
         height: imgHeight,
@@ -94,13 +98,11 @@ function bindDragHorizontalLeg() {
         draggable: true,
         dragBoundFunc: bindDragVerticalLeg(),
       }"
-      @dragmove="
-        emit('moveScaleHandle', 'xLeft', ($event.target as any).x() + Math.max(10, 12 / stageScale))
-      "
+      @dragmove="emit('moveScaleHandle', 'xLeft', ($event.target as any).x() + legHalfWidth())"
     />
     <v-rect
       :config="{
-        x: scaleState.xRight - Math.max(10, 12 / stageScale),
+        x: scaleState.xRight - legHalfWidth(),
         y: 0,
         width: Math.max(20, 24 / stageScale),
         height: imgHeight,
@@ -108,45 +110,31 @@ function bindDragHorizontalLeg() {
         draggable: true,
         dragBoundFunc: bindDragVerticalLeg(),
       }"
-      @dragmove="
-        emit(
-          'moveScaleHandle',
-          'xRight',
-          ($event.target as any).x() + Math.max(10, 12 / stageScale),
-        )
-      "
+      @dragmove="emit('moveScaleHandle', 'xRight', ($event.target as any).x() + legHalfWidth())"
     />
     <v-rect
       :config="{
         x: 0,
-        y: scaleState.yTop - Math.max(10, 12 / stageScale),
+        y: scaleState.yTop - legHalfWidth(),
         width: imgWidth,
         height: Math.max(20, 24 / stageScale),
         fill: '#00000000',
         draggable: true,
         dragBoundFunc: bindDragHorizontalLeg(),
       }"
-      @dragmove="
-        emit('moveScaleHandle', 'yTop', ($event.target as any).y() + Math.max(10, 12 / stageScale))
-      "
+      @dragmove="emit('moveScaleHandle', 'yTop', ($event.target as any).y() + legHalfWidth())"
     />
     <v-rect
       :config="{
         x: 0,
-        y: scaleState.yBottom - Math.max(10, 12 / stageScale),
+        y: scaleState.yBottom - legHalfWidth(),
         width: imgWidth,
         height: Math.max(20, 24 / stageScale),
         fill: '#00000000',
         draggable: true,
         dragBoundFunc: bindDragHorizontalLeg(),
       }"
-      @dragmove="
-        emit(
-          'moveScaleHandle',
-          'yBottom',
-          ($event.target as any).y() + Math.max(10, 12 / stageScale),
-        )
-      "
+      @dragmove="emit('moveScaleHandle', 'yBottom', ($event.target as any).y() + legHalfWidth())"
     />
 
     <v-line

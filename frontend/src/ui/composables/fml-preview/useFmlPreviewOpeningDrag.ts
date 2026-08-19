@@ -35,8 +35,8 @@ export function useFmlPreviewOpeningDrag(options: {
 
   function cancelOpeningDragPending(): void {
     if (!openingDragPending) return
-    window.removeEventListener('mousemove', openingDragPending.onMove)
-    window.removeEventListener('mouseup', openingDragPending.onUp)
+    window.removeEventListener('pointermove', openingDragPending.onMove)
+    window.removeEventListener('pointerup', openingDragPending.onUp)
     openingDragPending = null
   }
 
@@ -55,8 +55,8 @@ export function useFmlPreviewOpeningDrag(options: {
       cancelOpeningDragPending()
     }
     openingDragPending = { openingId, startClientX, startClientY, onMove, onUp }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp, { once: true })
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp, { once: true })
   }
 
   function beginOpeningDrag(openingId: string, event: MouseEvent): void {
@@ -72,8 +72,8 @@ export function useFmlPreviewOpeningDrag(options: {
     moveOpeningId.value = openingId
     draggingOpening.value = true
     openingDrag = { openingId }
-    window.addEventListener('mousemove', onOpeningDragMove)
-    window.addEventListener('mouseup', onOpeningDragEnd, { once: true })
+    window.addEventListener('pointermove', onOpeningDragMove)
+    window.addEventListener('pointerup', onOpeningDragEnd, { once: true })
     onOpeningDragMove(event)
   }
 
@@ -90,7 +90,7 @@ export function useFmlPreviewOpeningDrag(options: {
   }
 
   function endOpeningDrag(): void {
-    window.removeEventListener('mousemove', onOpeningDragMove)
+    window.removeEventListener('pointermove', onOpeningDragMove)
     if (openingDrag) {
       syncPlanToParent()
     }

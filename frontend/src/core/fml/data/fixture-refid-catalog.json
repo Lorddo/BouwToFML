@@ -1,23 +1,45 @@
 {
   "beschrijving": "Catalogus van Floorplanner item/fixture-refids (keuken, sanitair, installaties, trap, dak). Alleen weergave bij FML-import; nog geen place-tool.",
-  "laatste_update": "2026-08-17",
+  "laatste_update": "2026-08-18",
   "kind_hints": {
     "countertop": "Keukenblad — rechthoekige top-view; onder de muurfill (flush tegen binnenkant).",
+    "fridge": "Koelkast — vierkant met vriessymbool; deur = dubbele lijn op lokale +Y (rot/mirror = 3D-deurzijde).",
+    "cabinet_high": "Hoge kast — rechthoek, alleen dubbele deurlijn op lokale +Y (zelfde conventie als koelkast).",
+    "kitchen_sink": "Wasbak (keuken) — metalen rechthoek + kraan; op het keukenblad.",
+    "cooktop": "Kookplaat — grijs vlak met 4 pits.",
+    "dishwasher": "Vaatwasser — vierkant met bord + vork + mes.",
+    "washing_machine": "Wasmachine — ISO waskuip (trapezium + golf) in een vierkant.",
+    "dryer": "Droogtrommel — ISO: buiten vierkant, binnen vierkant + cirkel.",
+    "washer_dryer": "Was-droogcombinatie — ISO: kuip boven, droger (vierkant+cirkel) onder, in één vierkant.",
+    "bathtub": "Losstaand bad — stadiumvorm (rechte zijden, ronde koppen), kraan op lokale −Y.",
+    "sink_double": "Dubbele wastafel — blad met twee kommen + kranen; wandzijde lokale −Y.",
     "toilet": "Toilet — reservoir + ovale pot (top-view).",
-    "sink_small": "Wasbak (klein) — ovaal met kraan-stip.",
+    "toilet_wall_hung": "Hangend toilet — alleen de pot, geen spoelbak (inbouwreservoir).",
+    "glass_wall": "Glazen wand — dun lichtblauw vlak (douchewand).",
+    "entrance_arrow": "Entree-pijl — zwarte driehoek, punt langs lokale +X (Floorplanner-rotatie wijst naar de deur).",
+    "north_cross": "Noordkruis — pijl + N-cirkel, punt langs lokale −Y (Floorplanner-rotatie = noord).",
+    "fuse_box": "Stoppenkast — donker paneel met drie schakelaars op de lange zijde.",
+    "sink_small": "Wasbak (klein) — halve cirkel, platte kant flush op lokale −Y (muur).",
     "shower_head": "Douchekop — steel + ronde kop.",
     "sink_large": "Wasbak (groot) — afgerond vierkant met kraan.",
+    "sink_vanity": "Inbouw wasbak met spiegel — wit blad, kom naar de kamer (lokale +Y), kraan bij de muur (−Y).",
     "boiler": "CV-ketel — vierkant met twee aansluitcirkels.",
     "heat_pump": "Warmtepomp — hoge kast met grill-lijnen.",
     "stair_winder_180": "Spiltrap 180° — voetafdruk, spil, treden + U-pijl. Zelfde refid over verdiepingen.",
-    "stair_quarter_90": "Kwarttrap BG — 90° winder + 3 rechte treden, L-pijl omhoog, dashed schuine snede aan het uiteinde (trapkast).",
-    "stair_quarter_90_up": "Kwarttrap 1e — omgekeerde vlucht (3 rechte + 90°), pijl blijft omhoog; dashed snede waar de trap door de vloer komt.",
+    "stair_quarter_90": "Kwarttrap omhoog — eigen tekening: L-draai onder, spil binnenhoek; 3 rechte treden + dashed boven. mirrored[0] = Ostade vanuit rechtsonder, anders Anna vanuit linksonder.",
+    "stair_quarter_90_up": "Kwarttrap opkomend — eigen tekening: 3 rechte treden + dashed onder; L-draai daarna; spil binnenhoek onderkant opening. mirrored[0] = Ostade rechts, anders Anna links.",
+    "stair_straight": "Rechte trap — treden haaks op de loop, pijl omhoog naar lokale −Y. FML rot/mirror via dezelfde bbox-verankering als kwarttrap. Oosterpoort rot=90 mir[0,0] = omhoog naar rechts.",
+    "stair_straight_double": "Twee aangrenzende rechte trappen in één bbox. Lokale X = loop; +Y-vlucht omhoog naar −X, −Y-vlucht omlaag naar +X. Poort6 rot=270 = links omhoog, rechts omlaag.",
+    "stair_opening": "Trapgat — dashed opening zonder treden (bovenste verdieping zonder vlucht).",
     "canopy": "Beton afdak — grijs vlak met dashed outline.",
     "hidden": "Niet tekenen in 2D (bijv. armatuur in afdak).",
     "chimney": "Schoorsteen op koof — dikke omlijning, cirkel + kruis.",
+    "koof": "Koof / schacht — zwarte omlijning met kruis over de volle rechthoek.",
     "railing": "Traphek — donkere balk met spijlen.",
+    "balustrade": "Balkonbalustrade — zelfde spijlen als traphek, grijs.",
     "skylight": "Dakraam — dashed vierkant.",
     "roof_eave": "Knieschot / dakrand — lichte balk.",
+    "dormer": "Dakkapel — U van muren, open naar de kamer (lokale −Y); buitenmuur (lokale +Y) met 2 ramen.",
     "oil_bottle": "Oil bottle — twee concentrische cirkels (Floorplanner-uitlijningsanker)."
   },
   "entries": [
@@ -40,6 +62,96 @@
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     },
     {
+      "refid": "f6402c587fa67fbdba921024206525ee86432449",
+      "type": "fixture",
+      "benaming": "Keukenblad",
+      "kind": "countertop",
+      "categorie": "keuken",
+      "notities": "Kinderdijkstraat 53-1 — lang blad 241×60",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "bd60660df8e8d48fa3f524a7536d1f78e6e0e21f",
+      "type": "fixture",
+      "benaming": "Koelkast",
+      "kind": "fridge",
+      "categorie": "keuken",
+      "notities": "Kinderdijkstraat 53-1 — 60×60, z_height=200, onderaan keuken",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "c2d966559ee73ca0f88779a2de90d8158f85e4fb",
+      "type": "fixture",
+      "benaming": "Hoge kast",
+      "kind": "cabinet_high",
+      "categorie": "keuken",
+      "notities": "Van Ostadestraat 139-1 — 2e keuken rechtsboven, twee stuks ~65×65, rot=90, z_height=200; deur lokale +Y (links na rotatie)",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "79b71be64f8b275103e264cbd1c070d820bac2b4",
+      "type": "fixture",
+      "benaming": "Wasbak (keuken)",
+      "kind": "kitchen_sink",
+      "categorie": "keuken",
+      "notities": "Kinderdijkstraat 53-1 — 45×39 op keukenblad (z=90)",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "a87ae8e3bd9b8c3c45d3330cbac583baa957c3bb",
+      "type": "fixture",
+      "benaming": "Kookplaat",
+      "kind": "cooktop",
+      "categorie": "keuken",
+      "notities": "Kinderdijkstraat 53-1 — 60×62, 4 pits, bovenaan keukenblad",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "20c1f9e918e3f5c28ea4012347c6d76a3745eecc",
+      "type": "fixture",
+      "benaming": "Kookplaat",
+      "kind": "cooktop",
+      "categorie": "keuken",
+      "notities": "Kromme-Mijdrechtstraat 61-3 — 57×50 op keukenblad (z=90)",
+      "bronnen": ["Kromme-Mijdrechtstraat 61 3, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "cb3dd8f2c8de396606e0794f6effc921aff7235d",
+      "type": "fixture",
+      "benaming": "Vaatwasser",
+      "kind": "dishwasher",
+      "categorie": "keuken",
+      "notities": "Kromme-Mijdrechtstraat 61-3 — 60×60 onderaan keukenblad, z_height=95",
+      "bronnen": ["Kromme-Mijdrechtstraat 61 3, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "416c68a89eda39033eb729fa72f7058802555a9e",
+      "type": "fixture",
+      "benaming": "Koelkast",
+      "kind": "fridge",
+      "categorie": "keuken",
+      "notities": "Kromme-Mijdrechtstraat 61-3 — eetkamer 60×64, rot=180, deur naar boven",
+      "bronnen": ["Kromme-Mijdrechtstraat 61 3, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "856317b238f6a70ae6f0afffed1f6d5e3ab7b80c",
+      "type": "fixture",
+      "benaming": "Wasmachine",
+      "kind": "washing_machine",
+      "categorie": "keuken",
+      "notities": "Kromme-Mijdrechtstraat 61-3 — kast 60×60, z_height=85",
+      "bronnen": ["Kromme-Mijdrechtstraat 61 3, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "faef118ee9bdcf21040eef84cbca59d8dc50a214",
+      "type": "fixture",
+      "benaming": "Was-droogcombinatie",
+      "kind": "washer_dryer",
+      "categorie": "sanitair",
+      "notities": "Van Ostadestraat 139-1 — 1e achter kast 60×60, z_height=152, rot=-90",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
+    },
+    {
       "refid": "17e3ab9295832bd22e220a7f861580bb5aaeb007",
       "type": "fixture",
       "benaming": "Toilet",
@@ -58,6 +170,33 @@
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     },
     {
+      "refid": "fc3f4092037285fb0d17702b7a3920e2910de0cc",
+      "type": "fixture",
+      "benaming": "Toilet",
+      "kind": "toilet",
+      "categorie": "sanitair",
+      "notities": "Oosterpoort 14151 A — BG toilet 39×72, rot=90, spoelbak (zelfde kind als Template ID / Mooiland)",
+      "bronnen": ["3DModel_StOpt_14151_A.json (9).fml"]
+    },
+    {
+      "refid": "b9782bc372e695a56bc5b488f4f9114c8e8c7f28",
+      "type": "fixture",
+      "benaming": "Hangend toilet",
+      "kind": "toilet_wall_hung",
+      "categorie": "sanitair",
+      "notities": "Kinderdijkstraat 53-1 — badkamer rechts, 37×54, z_height≈50, geen spoelbak",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "05dfa289f4a5be6a1be7f0882a4d929060242b5d",
+      "type": "fixture",
+      "benaming": "Wasbak (klein)",
+      "kind": "sink_small",
+      "categorie": "sanitair",
+      "notities": "Anna van den Vondelstraat 13 D — 3e toilet 39×21 tegen bovenmuur rot=0; 4e 45×17 rot=90. Altijd mini (geen large-switch).",
+      "bronnen": ["Anna van den Vondelstraat 13 D, Amsterdam.fml"]
+    },
+    {
       "refid": "e96698fedd2611ba51fff989e8ff2e764e106b85",
       "type": "fixture",
       "benaming": "Wasbak (klein)",
@@ -65,6 +204,48 @@
       "categorie": "sanitair",
       "notities": "Template ID objects — Sanitair",
       "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "acd22f8f5814b4f22ecf1a698a4cadb6c8014739",
+      "type": "fixture",
+      "benaming": "Wasbak (klein)",
+      "benaming_large": "Wasbak (groot)",
+      "kind": "sink_small",
+      "kind_large": "sink_large",
+      "kind_large_min_cm": 42,
+      "categorie": "sanitair",
+      "notities": "Kromme-Mijdrechtstraat 61-3 — zelfde refid: badkamer 35×22 klein, linker slaapkamer 51×34 groot; Van Ostadestraat 1e achter toilet 35×22",
+      "bronnen": [
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam.json.fml",
+        "Van Ostadestraat 139 1, Amsterdam.json.fml"
+      ]
+    },
+    {
+      "refid": "c5686bd0f8ed8a56e5460743c11364c52e79719a",
+      "type": "fixture",
+      "benaming": "Inbouw wasbak",
+      "kind": "sink_vanity",
+      "categorie": "sanitair",
+      "notities": "Anna van den Vondelstraat 13 D — 3e twee badkamers links 90×50 z_height=196 (spiegel tot plafond); derde 72×38 bij toilet. Wand lokale −Y, kom naar +Y.",
+      "bronnen": ["Anna van den Vondelstraat 13 D, Amsterdam.fml"]
+    },
+    {
+      "refid": "d1d3542887f4bc9da14060afc1e332c155a0cd48",
+      "type": "fixture",
+      "benaming": "Dubbele wastafel",
+      "kind": "sink_double",
+      "categorie": "sanitair",
+      "notities": "Van Ostadestraat 139-1 — 1e achter badkamer 195×52, rot=180, wandzijde lokale −Y",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "793b53d25a8b26dbe12430fe86e07f8cdeb3bb2f",
+      "type": "fixture",
+      "benaming": "Losstaand bad",
+      "kind": "bathtub",
+      "categorie": "sanitair",
+      "notities": "Van Ostadestraat 139-1 — 1e achter badkamer rechts, 160×85, rot=90",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
     },
     {
       "refid": "074b112e6d9be8860fce202dd706de49598db82d",
@@ -87,6 +268,24 @@
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     },
     {
+      "refid": "cb00ebb224822113239b0ad246940f7f208570b3",
+      "type": "fixture",
+      "benaming": "Douchekop",
+      "kind": "shower_head",
+      "categorie": "sanitair",
+      "notities": "Kinderdijkstraat 53-1 — badkamer links, 23×46, z≈115",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "06c0e13ac226ebda9c917c6a79ec8e58dd0a9b86",
+      "type": "fixture",
+      "benaming": "Glazen wand",
+      "kind": "glass_wall",
+      "categorie": "sanitair",
+      "notities": "Kinderdijkstraat 53-1 — douchewand 72×3, z_height=220, tussen kop en toilet",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
       "refid": "7b5d656c72b56ae0e8200132ec92a1ae03869b93",
       "type": "fixture",
       "benaming": "Wasbak (groot)",
@@ -94,6 +293,54 @@
       "categorie": "sanitair",
       "notities": "Template ID objects — Sanitair; Mooiland 1e voorkamer",
       "bronnen": ["Template ID objects.json (1).fml"]
+    },
+    {
+      "refid": "8911888116d02e6058deb14839e65290eb9041be",
+      "type": "fixture",
+      "benaming": "Wasbak",
+      "kind": "sink_large",
+      "categorie": "sanitair",
+      "notities": "Kinderdijkstraat 53-1 — rechter slaapkamer onderin, 55×47",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "sym-22",
+      "type": "symbol",
+      "benaming": "Entree-pijl",
+      "kind": "entrance_arrow",
+      "categorie": "annotatie",
+      "notities": "Kinderdijkstraat 53-1 — buiten haldeur, 28×40, zwarte driehoek; punt langs lokale +X",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "sym-350",
+      "type": "symbol",
+      "benaming": "Noordkruis",
+      "kind": "north_cross",
+      "categorie": "annotatie",
+      "notities": "Kromme-Mijdrechtstraat 61-3 — 85×200, rot≈353°, punt lokale −Y = noord; ook Kinderdijk",
+      "bronnen": [
+        "Kromme-Mijdrechtstraat 61 3, Amsterdam.json.fml",
+        "Kinderdijkstraat 53 1, Amsterdam.json.fml"
+      ]
+    },
+    {
+      "refid": "d7ab51af239b365d146fc553319312f4f2d952df",
+      "type": "fixture",
+      "benaming": "Stoppenkast",
+      "kind": "fuse_box",
+      "categorie": "installaties",
+      "notities": "Kinderdijkstraat 53-1 — MK, 50×9, z=120, z_height=146",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "0af9732417cdf12a734bd3133f493b18cfe03e91",
+      "type": "fixture",
+      "benaming": "CV-ketel",
+      "kind": "boiler",
+      "categorie": "installaties",
+      "notities": "Anna van den Vondelstraat 13 D — 3e CV-kast links van toilet, 45×40, z=120, rot=90",
+      "bronnen": ["Anna van den Vondelstraat 13 D, Amsterdam.fml"]
     },
     {
       "refid": "33e2521c0692e52b4fb6a3f1bdc0cb3e7b37a88d",
@@ -123,6 +370,69 @@
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     },
     {
+      "refid": "7f4bebad787178e920c4c7aa11954aad24e457a1",
+      "type": "fixture",
+      "benaming": "Kwarttrap omhoog",
+      "kind": "stair_quarter_90",
+      "categorie": "trap",
+      "notities": "Van Ostadestraat 139-1 — 1e achter 73×131, rot=0, mirrored[1,0]: draai vanuit rechtsonder, spil binnenhoek L, 3 rechte treden + dashed boven. Anna 2e zelfde refid unmirrored = vanuit linksonder. Eigen tekening, niet omgekeerde opkomst.",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "e28361f3a9cdd47134d12b3e183481cfa638668f",
+      "type": "fixture",
+      "benaming": "Kwarttrap van beneden",
+      "kind": "stair_quarter_90_up",
+      "categorie": "trap",
+      "notities": "Van Ostadestraat 139-1 — 2e 121×73, rot=90, mirrored[1,0]: 3 rechte treden + dashed onder, draai rechts, spil binnenhoek L (onderkant opening). Anna 4e zelfde refid unmirrored = draai links. Eigen tekening, niet omgekeerde omhoog-trap.",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "17f4fb9a53843a0e345bfd587144ed48c08bf6f5",
+      "type": "fixture",
+      "benaming": "Rechte trap",
+      "kind": "stair_straight",
+      "categorie": "trap",
+      "notities": "Oosterpoort 14151 A — kelder+BG 85×225, rot=90, mirrored[0,0]: omhoog naar lokale −Y, na rot=90 naar rechts. Geen item op 1e (alleen surface Trapgat isCutout).",
+      "bronnen": ["3DModel_StOpt_14151_A.json (9).fml"]
+    },
+    {
+      "refid": "825bce5ff93725dbd0ab11b82e6a2b13f96475cf",
+      "type": "fixture",
+      "benaming": "Dubbele rechte trap",
+      "kind": "stair_straight_double",
+      "categorie": "trap",
+      "notities": "Poort6 FIN-125 — BG+1e 203×217, rot=270, mirrored[0,0]: twee vluchten naast elkaar, links omhoog / rechts omlaag. 2e alleen surface Trapgat isCutout.",
+      "bronnen": ["3DModel_Stichting Poort6_FIN-125_1.json (36)_2026_06_03_03_17_55.fml"]
+    },
+    {
+      "refid": "c86e7f32a692444a8ff2a19e3cd29ce6ecc9c444",
+      "type": "fixture",
+      "benaming": "Trapgat",
+      "kind": "stair_opening",
+      "categorie": "trap",
+      "notities": "Poort6 FIN-125 — object op het trapgat (dunne floor 0, 110×105, rot=0). Floors 1–3 hebben daarnaast surface Trapgat isCutout (dashed kruis).",
+      "bronnen": ["3DModel_Stichting Poort6_FIN-125_1.json (36)_2026_06_03_03_17_55.fml"]
+    },
+    {
+      "refid": "a8c2aefd352dbcdd65543fa95659b1cc096ad73f",
+      "type": "fixture",
+      "benaming": "Dakkapel",
+      "kind": "dormer",
+      "categorie": "dak",
+      "notities": "Poort6 FIN-125 — 2e, 8× zelfde refid in de kamers (~90–202×25–30, rot 0/180, zh=150). Buitenmuur = lokale +Y (flush op gevel-binnenkant) met 2 ramen + 2 zijwanden.",
+      "bronnen": ["3DModel_Stichting Poort6_FIN-125_1.json (36)_2026_06_03_03_17_55.fml"]
+    },
+    {
+      "refid": "sym-stair-opening",
+      "type": "symbol",
+      "benaming": "Trapgat",
+      "kind": "stair_opening",
+      "categorie": "trap",
+      "notities": "Default object voor een trapgat zonder vlucht (Oosterpoort 1e: surface isCutout customName=Trapgat). Geen Floorplanner-item-refid.",
+      "bronnen": ["3DModel_StOpt_14151_A.json (9).fml"]
+    },
+    {
       "refid": "d8dfd3e5683d86a7d9db8a8f7d3260b87ea8213f",
       "type": "fixture",
       "benaming": "Beton afdak",
@@ -150,6 +460,15 @@
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
     },
     {
+      "refid": "719b88456badf9658c0a2b9afbe6922026b6fd71",
+      "type": "fixture",
+      "benaming": "Koof",
+      "kind": "koof",
+      "categorie": "installaties",
+      "notities": "Anna van den Vondelstraat 13 D — 3e woonkamer tegen linkermuur, 125×28, rot≈270, z_height=255",
+      "bronnen": ["Anna van den Vondelstraat 13 D, Amsterdam.fml"]
+    },
+    {
       "refid": "0bcc0bc80f610a0cb428012520b7006d7fcb1ce8",
       "type": "fixture",
       "benaming": "Traphek",
@@ -157,6 +476,45 @@
       "categorie": "trap",
       "notities": "Mooiland 3090 A_M4 — 2e drie hekken om de trap",
       "bronnen": ["3DModel_Mland_3090_A_M_2026_03_04_10_53_02.fml"]
+    },
+    {
+      "refid": "dbdefc3be5b710a2f123fc1acc137b621eeff0fc",
+      "type": "fixture",
+      "benaming": "Balustrade",
+      "kind": "balustrade",
+      "categorie": "buiten",
+      "notities": "Kinderdijkstraat 53-1 — balkon voorzijde, drie segmenten ~193×6",
+      "bronnen": ["Kinderdijkstraat 53 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "9ab4ec64a812dbdb0848ab5c0267c97edb99a7c8",
+      "type": "fixture",
+      "benaming": "Balustrade",
+      "kind": "balustrade",
+      "categorie": "buiten",
+      "notities": "Kinderdijkstraat 53-1 — balkon zijkant, 105×6; Van Ostadestraat 1e achter balkonzijden 74×6",
+      "bronnen": [
+        "Kinderdijkstraat 53 1, Amsterdam.json.fml",
+        "Van Ostadestraat 139 1, Amsterdam.json.fml"
+      ]
+    },
+    {
+      "refid": "a41b3eefff00293fdf1f5e04cb44295102cb3d57",
+      "type": "fixture",
+      "benaming": "Balustrade",
+      "kind": "balustrade",
+      "categorie": "buiten",
+      "notities": "Van Ostadestraat 139-1 — 1e achter balkon voorzijde, 489×6 (eigen asset zodat spijlen niet oprekken)",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
+    },
+    {
+      "refid": "7292d81f717bee00e2879664e13ca45d081ee856",
+      "type": "fixture",
+      "benaming": "Balustrade",
+      "kind": "balustrade",
+      "categorie": "buiten",
+      "notities": "Van Ostadestraat 139-1 — 2e 80×6",
+      "bronnen": ["Van Ostadestraat 139 1, Amsterdam.json.fml"]
     },
     {
       "refid": "a88fc7b43bb9e44a54c400a9ab8071dc1a0b2032",

@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FmlPreviewCanvas from '../components/FmlPreviewCanvas.vue'
+import FmlOpeningOverflowNotice from '../components/FmlOpeningOverflowNotice.vue'
+import FmlRescalePanel from '../components/FmlRescalePanel.vue'
+import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
+import '../components/fml-panel-fields.css'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
+import {
+  findOpeningHeightOverflows,
+  summarizeOpeningHeightOverflows,
+} from '@/core/fml/opening-height-overflow'
 import {
   cloneUnderlayOriginLayout,
   previewUnderlayLayoutFromDrawing,
@@ -15,20 +23,25 @@ import {
   type FloorOrientState,
 } from '@/core/fml/floor-plan-orient'
 import { downloadFml } from '@/core/fml/downloadFml'
-import { importFmlV3 } from '@/core/fml/importFmlV3'
-import {
-  rebasePlanToItemRefid,
-  type RebasePlanToItemRefidResult,
-} from '@/core/fml/rebase-plan-to-item-refid'
+import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
+import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
+import type { HScaleState } from '@/platform/calibration'
+import { inspectKindLabel } from '@/ui/composables/fml-preview/fml-inspect'
+import { useFmlViewerInspect } from '@/ui/composables/fml-viewer/useFmlViewerInspect'
+import { useFmlViewerLoad } from '@/ui/composables/fml-viewer/useFmlViewerLoad'
+import { useFmlViewerSessionDefaults } from '@/ui/composables/fml-viewer/useFmlViewerSessionDefaults'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import {
+  initFmlRescaleStateFromWalls,
+  measuredCmFromRescaleState,
+  resolveRescaleFactorsFromRulers,
+} from '@/ui/composables/workspace/fml-rescale-from-measure'
 import { imageDimensions, loadImage } from '@/ui/composables/workspace/imageUtils'
 
 const { t } = useI18n()
-
-const emit = defineEmits<{
-  back: []
-}>()
 
 const plan = ref<FloorPlan | null>(null)
 const warnings = ref<ImportWarning[]>([])
@@ -36,6 +49,55 @@ const error = ref<string | null>(null)
 const underlayHint = ref<string | null>(null)
 const fileName = ref<string | null>(null)
 const activeFloorIndex = ref(0)
+const previewCanvasRef = ref<{
+  flushPendingFieldCommits: () => void
+  sanitizeWalls: () => boolean
+  applyCornerMarkerModeFromSettings: () => void
+} | null>(null)
+
+const emit = defineEmits<{
+  'update:canvasFullscreen': [value: boolean]
+}>()
+
+const sidebarOpen = ref(true)
+const coarsePointer = ref(false)
+const canvasFullscreen = ref(false)
+
+watch(canvasFullscreen, (on) => {
+  emit('update:canvasFullscreen', on)
+  if (on) sidebarOpen.value = false
+})
+
+const coarseMq = window.matchMedia('(pointer: coarse)')
+const narrowMq = window.matchMedia('(max-width: 900px)')
+
+function syncCoarsePointer(): void {
+  coarsePointer.value = coarseMq.matches || narrowMq.matches
+  if (coarsePointer.value) sidebarOpen.value = false
+}
+
+function onViewerKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && canvasFullscreen.value) {
+    canvasFullscreen.value = false
+  }
+}
+
+onMounted(() => {
+  syncCoarsePointer()
+  coarseMq.addEventListener('change', syncCoarsePointer)
+  narrowMq.addEventListener('change', syncCoarsePointer)
+  window.addEventListener('keydown', onViewerKeydown)
+})
+
+onBeforeUnmount(() => {
+  coarseMq.removeEventListener('change', syncCoarsePointer)
+  narrowMq.removeEventListener('change', syncCoarsePointer)
+  window.removeEventListener('keydown', onViewerKeydown)
+})
+
+function flushPreviewFieldCommits(): void {
+  previewCanvasRef.value?.flushPendingFieldCommits()
+}
 
 const underlaySrc = ref<string | null>(null)
 const underlayWidthPx = ref(0)
@@ -44,12 +106,89 @@ const underlayLayout = ref<PreviewUnderlayLayout | null>(null)
 const underlayOpacity = ref(0.5)
 /** FML-geometrie opacity 0–1; 0 = uit. */
 const fmlOpacity = ref(0.8)
+/** Sesssie-only: kamer-/FML-labels verbergen. */
+const hidePlanText = ref(false)
 /** Per-floor FML-oriëntatie (viewer heeft geen regenerate-from-detectie). */
 const orientByFloor = ref<Record<number, FloorOrientState>>({})
 const underlayMoveMode = ref(false)
 const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
+const scaleInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
+
+const {
+  viewerMode,
+  inspectColors,
+  lastInspectHit,
+  inspectMode,
+  onInspectSelect,
+  resetInspectState,
+} = useFmlViewerInspect()
+
+const { sessionDefaults, onSessionDefaultNumber, onSessionDefaultBool } =
+  useFmlViewerSessionDefaults({ plan, activeFloorIndex, t })
+
+const fmlRescaleActive = ref(false)
+const fmlRescaleState = ref<HScaleState | null>(null)
+const fmlRescaleDistanceMmX = ref(0)
+const fmlRescaleDistanceMmY = ref(0)
+
+function cancelFmlRescale(): void {
+  fmlRescaleActive.value = false
+  fmlRescaleState.value = null
+}
+
+function beginFmlRescale(): boolean {
+  if (inspectMode.value) return false
+  const walls = plan.value?.floors[activeFloorIndex.value]?.walls ?? []
+  const state = initFmlRescaleStateFromWalls(walls)
+  if (!state) return false
+  const measured = measuredCmFromRescaleState(state)
+  fmlRescaleState.value = state
+  fmlRescaleDistanceMmX.value = measured.x * 10
+  fmlRescaleDistanceMmY.value = measured.y * 10
+  underlayMoveMode.value = false
+  fmlRescaleActive.value = true
+  return true
+}
+
+function updateFmlRescaleState(next: HScaleState): void {
+  if (!fmlRescaleActive.value) return
+  fmlRescaleState.value = { ...next }
+}
+
+function setFmlRescaleDistanceMmX(mm: number): void {
+  if (!(mm > 0) || !Number.isFinite(mm)) return
+  fmlRescaleDistanceMmX.value = mm
+}
+
+function setFmlRescaleDistanceMmY(mm: number): void {
+  if (!(mm > 0) || !Number.isFinite(mm)) return
+  fmlRescaleDistanceMmY.value = mm
+}
+
+function confirmFmlRescale(): boolean {
+  const state = fmlRescaleState.value
+  const current = plan.value
+  if (!state || !fmlRescaleActive.value || !current) return false
+  const measured = measuredCmFromRescaleState(state)
+  const factors = resolveRescaleFactorsFromRulers({
+    measuredCmX: measured.x,
+    measuredCmY: measured.y,
+    trueMmX: fmlRescaleDistanceMmX.value,
+    trueMmY: fmlRescaleDistanceMmY.value,
+  })
+  if (factors == null) return false
+  plan.value = scaleFloorPlan(current, factors, activeFloorIndex.value)
+  if (underlayLayout.value) {
+    underlayLayout.value = scaleUnderlayLayout(underlayLayout.value, factors)
+  }
+  cancelFmlRescale()
+  return true
+}
 
 const underlayAvailable = computed(() => !!underlaySrc.value && !!underlayLayout.value)
+const canStartRescale = computed(
+  () => (plan.value?.floors[activeFloorIndex.value]?.walls.length ?? 0) > 0 && !inspectMode.value,
+)
 const activeFmlOrient = computed(
   () => orientByFloor.value[activeFloorIndex.value] ?? defaultFloorOrient(),
 )
@@ -67,16 +206,12 @@ let underlayLoadGen = 0
 const floors = computed(() => plan.value?.floors ?? [])
 const multiFloor = computed(() => floors.value.length > 1)
 const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
+
 const alignFixturePartial = computed(() => {
   const pending = pendingAlignRebase.value
   if (!pending) return false
   return pending.missing.length > 0
 })
-const hasDrawingMeta = computed(() => {
-  const d = activeFloor.value?.drawing
-  return !!d && d.width > 0 && d.height > 0
-})
-
 watch(floors, (list) => {
   if (list.length === 0) {
     activeFloorIndex.value = 0
@@ -89,37 +224,37 @@ watch(floors, (list) => {
 
 watch(activeFloorIndex, () => {
   underlayMoveMode.value = false
+  lastInspectHit.value = null
   void syncUnderlayForActiveFloor()
 })
 
-const stats = computed(() => {
+watch(viewerMode, (mode) => {
+  if (mode === 'inspect') underlayMoveMode.value = false
+})
+
+const openingOverflow = computed(() => {
   const floor = activeFloor.value
-  if (!floor) return { walls: 0, doors: 0, windows: 0 }
-  const openings = floor.walls.flatMap((wall) => wall.openings)
-  return {
-    walls: floor.walls.length,
-    doors: openings.filter((item) => item.type === 'door').length,
-    windows: openings.filter((item) => item.type === 'window').length,
-  }
+  if (!floor) return null
+  return summarizeOpeningHeightOverflows(
+    findOpeningHeightOverflows(floor, {
+      doorBovenlichtDefault: sessionDefaults.value.bovenlichtDefault,
+      windowBovenlichtDefault: sessionDefaults.value.windowBovenlichtDefault,
+      bovenlichtHeightCm: sessionDefaults.value.bovenlichtHeightCm,
+      bovenlichtGapCm: sessionDefaults.value.bovenlichtGapCm,
+    }),
+  )
 })
 
 const fmlText = computed(() => {
   if (!plan.value) return ''
-  return buildFmlV3(plan.value, { name: plan.value.name })
+  return buildFmlV3(plan.value, {
+    name: plan.value.name,
+    bovenlichtDefault: sessionDefaults.value.bovenlichtDefault,
+    windowBovenlichtDefault: sessionDefaults.value.windowBovenlichtDefault,
+    bovenlichtHeightCm: sessionDefaults.value.bovenlichtHeightCm,
+    bovenlichtGapCm: sessionDefaults.value.bovenlichtGapCm,
+  })
 })
-
-function floorLabel(index: number): string {
-  const floor = floors.value[index]
-  if (!floor) return t('project.floorNameIndexed', { n: index + 1 })
-  const name = floor.name?.trim()
-  if (name) return name
-  return t('project.floorNameIndexed', { n: index + 1 })
-}
-
-function selectFloor(index: number): void {
-  if (index < 0 || index >= floors.value.length) return
-  activeFloorIndex.value = index
-}
 
 function revokeLocalUnderlay(): void {
   if (localUnderlayObjectUrl) {
@@ -217,86 +352,36 @@ async function syncUnderlayForActiveFloor(): Promise<void> {
     return
   }
 
-  underlayHint.value = 'Deze FML heeft een drawing zonder URL — kies lokaal een PNG/JPG.'
+  underlayHint.value = 'Deze FML heeft een drawing zonder URL.'
 }
 
-async function onLocalUnderlayInput(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-  const drawing = activeFloor.value?.drawing
-  if (!drawing || !(drawing.width > 0) || !(drawing.height > 0)) {
-    underlayHint.value = 'Geen drawing-meta in deze verdieping — onderlegger niet uit te lijnen.'
-    return
-  }
-
-  underlayLoadGen += 1
-  const gen = underlayLoadGen
-  revokeLocalUnderlay()
-  const objectUrl = URL.createObjectURL(file)
-  localUnderlayObjectUrl = objectUrl
-
-  try {
-    const img = await loadImage(objectUrl)
-    if (gen !== underlayLoadGen) return
-    const { width, height } = imageDimensions(img)
-    if (!applyImageToUnderlay(objectUrl, width, height, drawing)) {
-      underlayHint.value = 'Onderlegger kon niet worden uitgelijnd (ongeldige drawing-maten).'
-      return
-    }
-    underlayHint.value = null
-  } catch {
-    if (gen !== underlayLoadGen) return
-    underlayHint.value = 'Lokale onderlegger laden mislukt.'
-    revokeLocalUnderlay()
-    underlaySrc.value = null
-  }
-}
-
-async function onFileInput(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file) return
-
-  error.value = null
-  clearUnderlayState()
-  try {
-    const rawText = await file.text()
-    const parsed = importFmlV3(rawText)
-    plan.value = parsed.plan
-    warnings.value = parsed.warnings
-    fileName.value = file.name
-    activeFloorIndex.value = 0
-    orientByFloor.value = {}
-    pendingAlignRebase.value = null
-    await syncUnderlayForActiveFloor()
-    const preview = rebasePlanToItemRefid(parsed.plan)
-    pendingAlignRebase.value = preview.moved.length > 0 ? preview : null
-  } catch (err) {
-    plan.value = null
-    warnings.value = []
-    fileName.value = null
-    activeFloorIndex.value = 0
-    orientByFloor.value = {}
-    pendingAlignRebase.value = null
-    clearUnderlayState()
-    error.value = err instanceof Error ? err.message : 'FML import mislukt.'
-  }
-}
-
-function clearPlan(): void {
-  plan.value = null
-  warnings.value = []
-  fileName.value = null
-  error.value = null
-  activeFloorIndex.value = 0
-  orientByFloor.value = {}
-  fmlOpacity.value = 0.8
-  pendingAlignRebase.value = null
-  clearUnderlayState()
-}
+const {
+  loadFileName,
+  isLoadingFml,
+  loadStatusLabel,
+  floorLabel,
+  selectFloor,
+  onFileInput,
+  clearPlan,
+} = useFmlViewerLoad({
+  plan,
+  warnings,
+  error,
+  fileName,
+  activeFloorIndex,
+  sessionDefaults,
+  orientByFloor,
+  pendingAlignRebase,
+  fmlOpacity,
+  hidePlanText,
+  floors,
+  t,
+  flushPreviewFieldCommits,
+  cancelFmlRescale,
+  clearUnderlayState,
+  syncUnderlayForActiveFloor,
+  resetInspectState,
+})
 
 function applyAlignFixtureRebase(): void {
   const pending = pendingAlignRebase.value
@@ -355,18 +440,10 @@ function applyViewerUnderlayOrient(op: 'rotCw' | 'rotCcw' | 'flipX'): void {
 }
 
 function downloadCurrentFml(): void {
+  flushPreviewFieldCommits()
   if (!fmlText.value) return
   const base = fileName.value?.replace(/\.[^.]+$/i, '') || plan.value?.name || 'fml-export'
   downloadFml(fmlText.value, `${base}.fml`)
-}
-
-async function copyCurrentFml(): Promise<void> {
-  if (!fmlText.value) return
-  try {
-    await navigator.clipboard.writeText(fmlText.value)
-  } catch {
-    error.value = 'Kopieren naar klembord is niet beschikbaar in deze browser/context.'
-  }
 }
 
 function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
@@ -376,44 +453,129 @@ function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): v
   }
 }
 
+watch(inspectMode, (on) => {
+  if (on) cancelFmlRescale()
+})
+
 onBeforeUnmount(() => {
   clearUnderlayState()
+})
+
+defineExpose({
+  applyCornerMarkerModeFromSettings: () =>
+    previewCanvasRef.value?.applyCornerMarkerModeFromSettings(),
 })
 </script>
 
 <template>
-  <div class="fml-viewer-layout">
-    <aside class="sidebar">
+  <div
+    class="fml-viewer-layout"
+    :class="{
+      'fml-viewer-layout--coarse': coarsePointer,
+      'fml-viewer-layout--fullscreen': canvasFullscreen,
+    }"
+  >
+    <div
+      v-if="sidebarOpen && coarsePointer"
+      class="sidebar-backdrop"
+      @click="sidebarOpen = false"
+    />
+    <aside v-show="sidebarOpen" class="sidebar" :class="{ 'sidebar--drawer': coarsePointer }">
+      <div v-if="coarsePointer" class="sidebar-handle" aria-hidden="true" />
       <div class="panel">
         <div class="viewer-header">
           <h3>FML viewer</h3>
-          <button type="button" class="secondary back-btn" @click="emit('back')">
-            {{ t('settings.backToSettings') }}
+          <button
+            type="button"
+            class="sidebar-icon-btn"
+            :aria-label="t('viewer.closeMenu')"
+            :title="t('viewer.closeMenu')"
+            @click="sidebarOpen = false"
+          >
+            <ToolbeltIcon name="close_menu" />
           </button>
         </div>
-        <p class="hint">Open een bestaand .fml-bestand om te bekijken en te bewerken.</p>
-        <label class="upload-btn">
-          FML uploaden
-          <input type="file" accept=".fml,.json,.json.fml" @change="onFileInput" />
-        </label>
-        <button v-if="plan" type="button" class="link-btn" @click="clearPlan">Sluiten</button>
+        <div v-if="plan" class="mode-tabs" role="tablist" aria-label="Viewer-modus">
+          <button
+            type="button"
+            role="tab"
+            class="mode-tab"
+            :class="{ 'mode-tab--active': viewerMode === 'edit' }"
+            :aria-selected="viewerMode === 'edit'"
+            title="Bewerken"
+            @click="viewerMode = 'edit'"
+          >
+            <ToolbeltIcon name="edit" />
+            <span>Bewerken</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="mode-tab"
+            :class="{ 'mode-tab--active': viewerMode === 'inspect' }"
+            :aria-selected="viewerMode === 'inspect'"
+            title="Inspectie"
+            @click="viewerMode = 'inspect'"
+          >
+            <ToolbeltIcon name="inspect" />
+            <span>Inspectie</span>
+          </button>
+        </div>
+        <p class="hint">
+          {{
+            inspectMode
+              ? 'Inspectie: tik een muur, deur, raam, kamer of vlak. Geen detectie of tekenen.'
+              : 'Open een bestaand .fml-bestand om te bekijken en te bewerken.'
+          }}
+        </p>
+        <div class="sidebar-icon-row">
+          <label
+            class="sidebar-icon-btn"
+            :class="{ 'is-disabled': isLoadingFml }"
+            title="FML uploaden"
+          >
+            <ToolbeltIcon name="upload" />
+            <span>FML uploaden</span>
+            <input
+              type="file"
+              accept=".fml,.json,.json.fml"
+              :disabled="isLoadingFml"
+              @change="onFileInput"
+            />
+          </label>
+          <button
+            v-if="plan"
+            type="button"
+            class="sidebar-icon-btn"
+            :disabled="isLoadingFml"
+            title="Sluiten"
+            aria-label="Sluiten"
+            @click="clearPlan"
+          >
+            <ToolbeltIcon name="close_plan" />
+            <span>Sluiten</span>
+          </button>
+          <button
+            v-if="plan"
+            type="button"
+            class="sidebar-icon-btn sidebar-icon-btn--primary"
+            title="Download .fml"
+            aria-label="Download .fml"
+            @click="downloadCurrentFml"
+          >
+            <ToolbeltIcon name="download" />
+            <span>Download .fml</span>
+          </button>
+        </div>
+        <p v-if="isLoadingFml" class="load-status-inline" role="status" aria-live="polite">
+          {{ loadStatusLabel }}
+          <template v-if="loadFileName"> · {{ loadFileName }}</template>
+        </p>
       </div>
 
       <div v-if="error" class="panel error-panel">{{ error }}</div>
 
       <div v-if="plan" class="panel">
-        <p v-if="fileName" class="file-name">{{ fileName }}</p>
-        <p v-if="multiFloor" class="floor-meta">
-          {{ floors.length }} verdiepingen · actief: {{ floorLabel(activeFloorIndex) }}
-        </p>
-        <p class="stats">
-          <strong>{{ stats.walls }}</strong> muren
-          <template v-if="stats.doors > 0"> · {{ stats.doors }} deuren</template>
-          <template v-if="stats.windows > 0"> · {{ stats.windows }} ramen</template>
-        </p>
-        <div v-if="warnings.length > 0" class="warnings">
-          <p v-for="(warning, index) in warnings" :key="index">{{ warning.message }}</p>
-        </div>
         <div class="orient-block opacity-block">
           <div v-if="underlayAvailable" class="opacity-row">
             <div class="opacity-row__label">
@@ -445,116 +607,304 @@ onBeforeUnmount(() => {
               @input="onFmlOpacityInput"
             />
           </div>
+          <label class="hide-plan-text">
+            <input
+              type="checkbox"
+              :checked="hidePlanText"
+              :aria-label="t('result.hidePlanTextAria')"
+              @change="hidePlanText = ($event.target as HTMLInputElement).checked"
+            />
+            <span>{{ t('result.hidePlanText') }}</span>
+          </label>
+        </div>
+        <div v-if="!inspectMode" class="sidebar-icon-row sidebar-plan-actions">
+          <button
+            type="button"
+            class="sidebar-icon-btn"
+            :class="{ 'is-on': fmlRescaleActive }"
+            :disabled="!canStartRescale"
+            :title="t('result.rescaleHint')"
+            :aria-label="t('result.rescale')"
+            :aria-pressed="fmlRescaleActive"
+            @click="fmlRescaleActive ? cancelFmlRescale() : beginFmlRescale()"
+          >
+            <ToolbeltIcon name="rescale" />
+            <span>{{ t('result.rescale') }}</span>
+          </button>
+          <button
+            type="button"
+            class="sidebar-icon-btn"
+            :disabled="!canStartRescale"
+            :title="t('result.sanitizeHint')"
+            :aria-label="t('result.sanitize')"
+            @click="previewCanvasRef?.sanitizeWalls()"
+          >
+            <ToolbeltIcon name="sanitize" />
+            <span>{{ t('result.sanitize') }}</span>
+          </button>
+          <button
+            type="button"
+            class="sidebar-icon-btn"
+            :class="{ 'is-on': projectOrientFlipX }"
+            :disabled="!plan || floors.length === 0"
+            :title="t('result.mirrorProjectHint')"
+            :aria-label="t('result.mirrorProject')"
+            :aria-pressed="projectOrientFlipX"
+            @click="applyViewerProjectOrient('flipX')"
+          >
+            <ToolbeltIcon name="mirror_plan" />
+            <span>{{ t('result.mirrorProject') }}</span>
+          </button>
+        </div>
+        <FmlRescalePanel
+          v-if="!inspectMode"
+          hide-start
+          :active="fmlRescaleActive"
+          :can-start="canStartRescale"
+          :state="fmlRescaleState"
+          :mm-x="fmlRescaleDistanceMmX"
+          :mm-y="fmlRescaleDistanceMmY"
+          :unit="scaleInputUnit"
+          @begin="beginFmlRescale()"
+          @cancel="cancelFmlRescale()"
+          @confirm="confirmFmlRescale()"
+          @update-mm-x="setFmlRescaleDistanceMmX"
+          @update-mm-y="setFmlRescaleDistanceMmY"
+        />
+        <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <summary>{{ t('result.heightsFold') }}</summary>
+          <p class="defaults-hint">{{ t('viewer.defaultsHint') }}</p>
+          <div class="defaults-grid">
+            <label class="defaults-field">
+              <span>{{ t('settings.wallHeightCm') }}</span>
+              <input
+                type="number"
+                min="1"
+                :value="sessionDefaults.wallHeightCm"
+                @change="onSessionDefaultNumber('wallHeightCm', $event)"
+              />
+            </label>
+            <label class="defaults-field">
+              <span>{{ t('settings.doorHeightCm') }}</span>
+              <input
+                type="number"
+                min="1"
+                :value="sessionDefaults.doorHeightCm"
+                @change="onSessionDefaultNumber('doorHeightCm', $event)"
+              />
+            </label>
+            <label class="defaults-field">
+              <span>{{ t('settings.windowHeightCm') }}</span>
+              <input
+                type="number"
+                min="1"
+                :value="sessionDefaults.windowHeightCm"
+                @change="onSessionDefaultNumber('windowHeightCm', $event)"
+              />
+            </label>
+            <label class="defaults-field">
+              <span>{{ t('settings.sillZCm') }}</span>
+              <input
+                type="number"
+                min="0"
+                :value="sessionDefaults.windowSillZCm"
+                @change="onSessionDefaultNumber('windowSillZCm', $event)"
+              />
+            </label>
+            <label class="defaults-field">
+              <span>{{ t('settings.bovenlichtGapCm') }}</span>
+              <input
+                type="number"
+                min="0"
+                :value="sessionDefaults.bovenlichtGapCm"
+                @change="onSessionDefaultNumber('bovenlichtGapCm', $event)"
+              />
+            </label>
+            <label class="defaults-field">
+              <span>{{ t('settings.bovenlichtHeightCm') }}</span>
+              <input
+                type="number"
+                min="1"
+                :value="sessionDefaults.bovenlichtHeightCm"
+                @change="onSessionDefaultNumber('bovenlichtHeightCm', $event)"
+              />
+            </label>
+          </div>
+          <label class="defaults-check">
+            <input
+              type="checkbox"
+              :checked="sessionDefaults.bovenlichtDefault"
+              @change="onSessionDefaultBool('bovenlichtDefault', $event)"
+            />
+            <span>{{ t('settings.bovenlichtDoors') }}</span>
+          </label>
+          <label class="defaults-check">
+            <input
+              type="checkbox"
+              :checked="sessionDefaults.windowBovenlichtDefault"
+              @change="onSessionDefaultBool('windowBovenlichtDefault', $event)"
+            />
+            <span>{{ t('settings.bovenlichtWindows') }}</span>
+          </label>
+        </details>
+        <div v-if="inspectMode" class="inspect-panel">
+          <p class="inspect-hint">
+            Tik cyclet de statuskleur: uit → open (oranje) → klaar (groen) → uit.
+          </p>
+          <dl v-if="lastInspectHit" class="inspect-hit">
+            <div>
+              <dt>Type</dt>
+              <dd>{{ inspectKindLabel(lastInspectHit.kind) }}</dd>
+            </div>
+            <div>
+              <dt>Id</dt>
+              <dd class="inspect-id">{{ lastInspectHit.id }}</dd>
+            </div>
+            <div v-if="lastInspectHit.wallId">
+              <dt>Muur</dt>
+              <dd class="inspect-id">{{ lastInspectHit.wallId }}</dd>
+            </div>
+            <div>
+              <dt>Kleur</dt>
+              <dd>
+                <span
+                  v-if="inspectColors[lastInspectHit.id]"
+                  class="inspect-swatch"
+                  :style="{ background: inspectColors[lastInspectHit.id] }"
+                />
+                {{ inspectColors[lastInspectHit.id] ?? 'geen' }}
+              </dd>
+            </div>
+          </dl>
+          <p v-else class="inspect-empty">Nog geen selectie — tik op de plattegrond.</p>
         </div>
 
-        <div v-if="hasDrawingMeta" class="underlay-block">
-          <p v-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
-          <p v-else-if="underlaySrc" class="underlay-ok">Onderlegger uit drawing actief.</p>
-          <label class="upload-btn">
-            Lokale onderlegger
-            <input
-              type="file"
-              accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-              @change="onLocalUnderlayInput"
-            />
-          </label>
+        <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <summary>{{ t('result.orientFold') }}</summary>
           <div v-if="underlayAvailable" class="orient-block">
             <p class="orient-label">{{ t('result.underlayOrientLabel') }}</p>
             <div class="orient-actions">
               <button
                 type="button"
-                class="orient-btn"
+                class="sidebar-icon-btn"
                 :disabled="underlayOpacity <= 0"
                 :title="t('result.underlayRotate90CcwHint')"
+                :aria-label="t('result.underlayRotate90Ccw')"
                 @click="applyViewerUnderlayOrient('rotCcw')"
               >
-                {{ t('result.underlayRotate90Ccw') }}
+                <ToolbeltIcon name="rotate_plan_ccw" />
+                <span>{{ t('result.underlayRotate90Ccw') }}</span>
               </button>
               <button
                 type="button"
-                class="orient-btn"
+                class="sidebar-icon-btn"
                 :disabled="underlayOpacity <= 0"
                 :title="t('result.underlayRotate90CwHint')"
+                :aria-label="t('result.underlayRotate90Cw')"
                 @click="applyViewerUnderlayOrient('rotCw')"
               >
-                {{ t('result.underlayRotate90Cw') }}
+                <ToolbeltIcon name="rotate_plan_cw" />
+                <span>{{ t('result.underlayRotate90Cw') }}</span>
               </button>
               <button
                 type="button"
-                class="orient-btn"
-                :class="{ 'orient-btn--active': underlayLayout?.flipX === true }"
+                class="sidebar-icon-btn"
+                :class="{ 'is-on': underlayLayout?.flipX === true }"
                 :disabled="underlayOpacity <= 0"
                 :title="t('result.underlayMirrorVerticalHint')"
+                :aria-label="t('result.underlayMirrorVertical')"
+                :aria-pressed="underlayLayout?.flipX === true"
                 @click="applyViewerUnderlayOrient('flipX')"
               >
-                {{ t('result.underlayMirrorVertical') }}
+                <ToolbeltIcon name="mirror_underlay" />
+                <span>{{ t('result.underlayMirrorVertical') }}</span>
               </button>
               <button
                 type="button"
-                class="orient-btn"
-                :class="{ 'orient-btn--active': underlayMoveMode }"
+                class="sidebar-icon-btn"
+                :class="{ 'is-on': underlayMoveMode }"
                 :disabled="underlayOpacity <= 0"
                 :title="t('result.underlayMoveHint')"
+                :aria-label="t('result.underlayMove')"
+                :aria-pressed="underlayMoveMode"
                 @click="underlayMoveMode = !underlayMoveMode"
               >
-                {{ t('result.underlayMove') }}
+                <ToolbeltIcon name="underlay_move" />
+                <span>{{ t('result.underlayMove') }}</span>
               </button>
             </div>
           </div>
-        </div>
+          <div class="orient-block">
+            <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
+            <div class="orient-actions">
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :class="{ 'is-on': activeFmlOrient.flipX }"
+                :title="t('result.mirrorVerticalHint')"
+                :aria-label="t('result.mirrorVertical')"
+                :aria-pressed="activeFmlOrient.flipX"
+                @click="applyViewerFloorOrient('flipX')"
+              >
+                <ToolbeltIcon name="mirror_plan" />
+                <span>{{ t('result.mirrorVertical') }}</span>
+              </button>
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :title="t('result.rotate90CcwHint')"
+                :aria-label="t('result.rotate90Ccw')"
+                @click="applyViewerFloorOrient('rotCcw')"
+              >
+                <ToolbeltIcon name="rotate_plan_ccw" />
+                <span>{{ t('result.rotate90Ccw') }}</span>
+              </button>
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :title="t('result.rotate90CwHint')"
+                :aria-label="t('result.rotate90Cw')"
+                @click="applyViewerFloorOrient('rotCw')"
+              >
+                <ToolbeltIcon name="rotate_plan_cw" />
+                <span>{{ t('result.rotate90Cw') }}</span>
+              </button>
+            </div>
+          </div>
+        </details>
 
-        <div class="orient-block">
-          <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
-          <div class="orient-actions">
-            <button
-              type="button"
-              class="orient-btn"
-              :class="{ 'orient-btn--active': activeFmlOrient.flipX }"
-              :title="t('result.mirrorVerticalHint')"
-              @click="applyViewerFloorOrient('flipX')"
-            >
-              {{ t('result.mirrorVertical') }}
-            </button>
-            <button
-              type="button"
-              class="orient-btn"
-              :class="{ 'orient-btn--active': projectOrientFlipX }"
-              :disabled="!plan || floors.length === 0"
-              :title="t('result.mirrorProjectHint')"
-              @click="applyViewerProjectOrient('flipX')"
-            >
-              {{ t('result.mirrorProject') }}
-            </button>
-            <button
-              type="button"
-              class="orient-btn"
-              :title="t('result.rotate90CcwHint')"
-              @click="applyViewerFloorOrient('rotCcw')"
-            >
-              {{ t('result.rotate90Ccw') }}
-            </button>
-            <button
-              type="button"
-              class="orient-btn"
-              :title="t('result.rotate90CwHint')"
-              @click="applyViewerFloorOrient('rotCw')"
-            >
-              {{ t('result.rotate90Cw') }}
-            </button>
+        <div v-if="openingOverflow || warnings.length > 0" class="download-warnings">
+          <FmlOpeningOverflowNotice v-if="openingOverflow" :summary="openingOverflow" />
+          <div v-if="warnings.length > 0" class="warnings">
+            <p v-for="(warning, index) in warnings" :key="index">{{ warning.message }}</p>
           </div>
         </div>
-
-        <div class="actions">
-          <button type="button" @click="downloadCurrentFml">Download .fml</button>
-          <button type="button" @click="copyCurrentFml">Kopieer FML</button>
+        <div class="actions sidebar-download-row">
+          <button type="button" class="upload-btn primary download-fml" @click="downloadCurrentFml">
+            Download .fml
+          </button>
         </div>
       </div>
     </aside>
 
     <main class="viewer-main">
+      <div
+        v-if="isLoadingFml"
+        class="fml-load-overlay"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <div class="fml-load-card">
+          <div class="fml-load-spinner" aria-hidden="true" />
+          <p class="fml-load-title">{{ loadStatusLabel }}</p>
+          <p v-if="loadFileName" class="fml-load-file">{{ loadFileName }}</p>
+          <p class="fml-load-hint">{{ t('viewer.loadHint') }}</p>
+        </div>
+      </div>
       <template v-if="plan">
         <div
-          v-if="multiFloor"
+          v-if="multiFloor && !canvasFullscreen"
           class="floor-rail"
           role="tablist"
           :aria-label="t('project.railLabel')"
@@ -569,6 +919,7 @@ onBeforeUnmount(() => {
               class="floor-chip"
               :class="{ active: index === activeFloorIndex }"
               :aria-selected="index === activeFloorIndex"
+              :disabled="isLoadingFml"
               :title="floorLabel(index)"
               @click="selectFloor(index)"
             >
@@ -576,29 +927,77 @@ onBeforeUnmount(() => {
             </button>
           </div>
         </div>
-        <FmlPreviewCanvas
-          :plan="plan"
-          :floor-index="activeFloorIndex"
-          :underlay-src="underlaySrc"
-          :underlay-width-px="underlayWidthPx"
-          :underlay-height-px="underlayHeightPx"
-          :underlay-opacity="underlaySrc ? underlayOpacity : 0"
-          :content-opacity="fmlOpacity"
-          :cm-origin="underlayLayout?.origin ?? null"
-          :px-per-mm-x="underlayLayout?.pxPerMmX ?? 1"
-          :px-per-mm-y="underlayLayout?.pxPerMmY ?? 1"
-          :rotation-deg="underlayLayout?.rotationDeg ?? 0"
-          :flip-x="underlayLayout?.flipX === true"
-          :underlay-move-mode="underlayMoveMode && underlayOpacity > 0"
-          @plan-update="onPlanUpdate"
-          @update:underlay-move-mode="underlayMoveMode = $event"
-        />
+        <div class="viewer-canvas-host">
+          <button
+            v-if="!sidebarOpen"
+            type="button"
+            class="sidebar-fab"
+            :aria-label="t('viewer.menu')"
+            :title="t('viewer.menu')"
+            @click="sidebarOpen = true"
+          >
+            <ToolbeltIcon name="menu" />
+          </button>
+          <FmlPreviewCanvas
+            ref="previewCanvasRef"
+            :touch-editor="true"
+            :plan="plan"
+            :floor-index="activeFloorIndex"
+            :underlay-src="underlaySrc"
+            :underlay-width-px="underlayWidthPx"
+            :underlay-height-px="underlayHeightPx"
+            :underlay-opacity="underlaySrc ? underlayOpacity : 0"
+            :content-opacity="fmlOpacity"
+            :labels-visible="!hidePlanText"
+            :cm-origin="underlayLayout?.origin ?? null"
+            :px-per-mm-x="underlayLayout?.pxPerMmX ?? 1"
+            :px-per-mm-y="underlayLayout?.pxPerMmY ?? 1"
+            :rotation-deg="underlayLayout?.rotationDeg ?? 0"
+            :flip-x="underlayLayout?.flipX === true"
+            :underlay-move-mode="!inspectMode && underlayMoveMode && underlayOpacity > 0"
+            :area-surface-edit-enabled="true"
+            :annotation-edit-enabled="!inspectMode"
+            :inspect-mode="inspectMode"
+            :inspect-colors="inspectColors"
+            :canvas-fullscreen="canvasFullscreen"
+            :rescale-mode="fmlRescaleActive"
+            :rescale-state="fmlRescaleState"
+            :bovenlicht-default="sessionDefaults.bovenlichtDefault"
+            :window-bovenlicht-default="sessionDefaults.windowBovenlichtDefault"
+            :bovenlicht-height-cm="sessionDefaults.bovenlichtHeightCm"
+            :bovenlicht-gap-cm="sessionDefaults.bovenlichtGapCm"
+            :default-door-height-cm="sessionDefaults.doorHeightCm"
+            :default-window-height-cm="sessionDefaults.windowHeightCm"
+            :default-window-sill-z-cm="sessionDefaults.windowSillZCm"
+            @plan-update="onPlanUpdate"
+            @update:underlay-move-mode="underlayMoveMode = $event"
+            @update-rescale-state="updateFmlRescaleState"
+            @cancel-rescale="cancelFmlRescale()"
+            @inspect-select="onInspectSelect"
+            @update:canvas-fullscreen="canvasFullscreen = $event"
+          />
+        </div>
       </template>
-      <div v-else class="empty-state">
+      <div v-else class="empty-state viewer-canvas-host">
+        <button
+          v-if="!sidebarOpen"
+          type="button"
+          class="sidebar-fab"
+          :aria-label="t('viewer.menu')"
+          :title="t('viewer.menu')"
+          @click="sidebarOpen = true"
+        >
+          <ToolbeltIcon name="menu" />
+        </button>
         <p>Upload een FML-bestand om de plattegrond te bekijken.</p>
-        <label class="upload-btn primary">
+        <label class="upload-btn primary" :class="{ 'upload-btn--disabled': isLoadingFml }">
           FML kiezen
-          <input type="file" accept=".fml,.json,.json.fml" @change="onFileInput" />
+          <input
+            type="file"
+            accept=".fml,.json,.json.fml"
+            :disabled="isLoadingFml"
+            @change="onFileInput"
+          />
         </label>
       </div>
     </main>
@@ -650,14 +1049,107 @@ onBeforeUnmount(() => {
   margin-bottom: 8px;
 }
 
+.sidebar-fab {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top));
+  left: max(8px, env(safe-area-inset-left));
+  z-index: 28;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.96);
+  color: #0f172a;
+  box-shadow: 0 4px 16px rgb(15 23 42 / 0.12);
+}
+
+.sidebar-fab :deep(.canvas-toolbelt__icon) {
+  width: 18px;
+  height: 18px;
+}
+
+.sidebar-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 22;
+  background: rgb(15 23 42 / 0.28);
+}
+
 .viewer-header h3 {
   margin: 0;
   font-size: 14px;
 }
 
-.back-btn {
-  flex-shrink: 0;
+.sidebar-handle {
+  display: none;
+}
+
+.sidebar-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 36px;
+  height: auto;
+  padding: 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
   font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.viewer-header .sidebar-icon-btn {
+  width: auto;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  justify-content: center;
+  font-weight: 400;
+}
+
+.sidebar-icon-btn input {
+  display: none;
+}
+
+.sidebar-icon-btn.is-on {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
+}
+
+.sidebar-icon-btn--primary {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.sidebar-icon-btn:disabled,
+.sidebar-icon-btn.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.sidebar-icon-btn :deep(.canvas-toolbelt__icon) {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-icon-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 10px;
 }
 
 .sidebar {
@@ -668,7 +1160,44 @@ onBeforeUnmount(() => {
   background: #f8fafc;
 }
 
+.sidebar--drawer {
+  position: absolute;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  left: max(8px, env(safe-area-inset-left, 0px));
+  z-index: 24;
+  width: min(320px, calc(92vw - env(safe-area-inset-left, 0px)));
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.96);
+  box-shadow: 0 4px 16px rgb(15 23 42 / 0.12);
+}
+
+.sidebar-icon-row .sidebar-icon-btn--primary {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .sidebar--drawer {
+    top: auto;
+    right: max(8px, env(safe-area-inset-right, 0px));
+    width: auto;
+    height: min(72vh, 620px);
+    border-radius: 10px;
+  }
+
+  .sidebar--drawer .sidebar-handle {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 8px auto 0;
+    border-radius: 999px;
+    background: #cbd5e1;
+  }
+}
+
 .viewer-main {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -678,7 +1207,99 @@ onBeforeUnmount(() => {
   background: #f1f5f9;
 }
 
-.viewer-main > :deep(.fml-preview-wrap) {
+.fml-viewer-layout--coarse .viewer-main {
+  padding: 8px;
+}
+
+.fml-viewer-layout--fullscreen .viewer-main {
+  padding: 0;
+}
+
+.fml-viewer-layout--fullscreen .viewer-canvas-host > :deep(.fml-preview-wrap) {
+  border: none;
+  border-radius: 0;
+}
+
+.fml-load-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(241, 245, 249, 0.82);
+  backdrop-filter: blur(2px);
+}
+
+.fml-load-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
+  padding: 20px 24px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+.fml-load-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: fml-load-spin 0.7s linear infinite;
+}
+
+@keyframes fml-load-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fml-load-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.fml-load-file {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.fml-load-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.load-status-inline {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #334155;
+}
+
+.upload-btn--disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.viewer-canvas-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.viewer-canvas-host > :deep(.fml-preview-wrap) {
   flex: 1;
   min-height: 0;
 }
@@ -730,8 +1351,45 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.floor-meta {
-  margin: 0 0 6px;
+.defaults-fold {
+  margin-top: 12px;
+}
+
+.defaults-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.defaults-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.defaults-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.defaults-field input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.defaults-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
   font-size: 12px;
   color: #334155;
 }
@@ -739,6 +1397,15 @@ onBeforeUnmount(() => {
 .panel {
   padding: 12px 16px;
   border-bottom: 1px solid #e2e8f0;
+}
+
+.sidebar--drawer .panel {
+  padding: 10px 12px;
+  background: transparent;
+}
+
+.sidebar--drawer .panel:last-child {
+  border-bottom: none;
 }
 
 .panel h3 {
@@ -753,17 +1420,106 @@ onBeforeUnmount(() => {
   line-height: 1.45;
 }
 
-.file-name {
-  margin: 0 0 6px;
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  margin: 0 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mode-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  background: #fff;
+  padding: 6px 8px;
   font-size: 12px;
-  color: #334155;
+  color: #475569;
+  cursor: pointer;
+}
+
+.mode-tab :deep(.canvas-toolbelt__icon) {
+  width: 16px;
+  height: 16px;
+}
+
+.mode-tab + .mode-tab {
+  border-left: 1px solid #cbd5e1;
+}
+
+.mode-tab--active {
+  background: #1e293b;
+  color: #fff;
+  font-weight: 600;
+}
+
+.inspect-panel {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.inspect-hint,
+.inspect-empty {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.inspect-hit {
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspect-hit div {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.inspect-hit dt {
+  margin: 0;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.inspect-hit dd {
+  margin: 0;
+  font-size: 12px;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.inspect-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
   word-break: break-all;
 }
 
-.stats {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: #475569;
+.inspect-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  border: 1px solid rgb(15 23 42 / 0.2);
+  flex-shrink: 0;
+}
+
+.download-warnings {
+  margin: 16px 0 0;
 }
 
 .warnings {
@@ -774,26 +1530,6 @@ onBeforeUnmount(() => {
 
 .warnings p {
   margin: 0 0 4px;
-}
-
-.underlay-block {
-  margin: 0 0 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.underlay-hint {
-  margin: 0;
-  font-size: 11px;
-  color: #b45309;
-  line-height: 1.4;
-}
-
-.underlay-ok {
-  margin: 0;
-  font-size: 11px;
-  color: #15803d;
 }
 
 .orient-block {
@@ -826,6 +1562,21 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
+.hide-plan-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hide-plan-text input {
+  margin: 0;
+}
+
 .orient-label {
   margin: 0 0 6px;
   font-size: 11px;
@@ -836,35 +1587,19 @@ onBeforeUnmount(() => {
 
 .orient-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.orient-btn {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.orient-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.orient-btn--active {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  color: #1d4ed8;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .actions {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.download-fml {
+  min-width: 180px;
+  height: 36px;
 }
 
 .upload-btn {
@@ -888,17 +1623,6 @@ onBeforeUnmount(() => {
   background: #2563eb;
   color: #fff;
   border-color: #2563eb;
-}
-
-.link-btn {
-  display: block;
-  margin-top: 8px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #2563eb;
-  font-size: 12px;
-  cursor: pointer;
 }
 
 .error-panel {

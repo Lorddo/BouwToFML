@@ -49,6 +49,7 @@ describe('user-settings', () => {
     expect(settings.scaleInputUnit).toBe('mm')
     expect(settings.fmlViewer.underlayOpacityPct).toBe(25)
     expect(settings.fmlViewer.fmlOpacityPct).toBe(80)
+    expect(settings.fmlViewer.cornerMarkerMode).toBe('skew')
   })
 
   it('save/load roundtrip', () => {
@@ -64,7 +65,16 @@ describe('user-settings', () => {
     expect(loadUserSettings().scaleInputUnit).toBe('m')
     expect(loadUserSettings().defaults.wallHeightCm).toBe(300)
     expect(loadUserSettings().defaults.thicknessMinCm).toBe(8)
-    expect(loadUserSettings().fmlViewer).toEqual({ underlayOpacityPct: 40, fmlOpacityPct: 90 })
+    expect(loadUserSettings().fmlViewer).toEqual({
+      underlayOpacityPct: 40,
+      fmlOpacityPct: 90,
+      cornerMarkerMode: 'skew',
+      openingColors: {
+        door: '#f59e0b',
+        window: '#06b6d4',
+        bovenlicht: '#16a34a',
+      },
+    })
   })
 
   it('normalize missing/invalid locale → en; accepts nl/th', () => {
@@ -150,6 +160,34 @@ describe('user-settings', () => {
     expect(normalized.defaults.bovenlichtGapCm).toBe(8)
     expect(normalized.fmlViewer.underlayOpacityPct).toBe(100)
     expect(normalized.fmlViewer.fmlOpacityPct).toBe(0)
+    expect(normalized.fmlViewer.cornerMarkerMode).toBe('skew')
+  })
+
+  it('normalize cornerMarkerMode: missing/invalid → skew; accepts off/square', () => {
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.cornerMarkerMode).toBe(
+      'skew',
+    )
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { cornerMarkerMode: 'both' },
+      }).fmlViewer.cornerMarkerMode,
+    ).toBe('skew')
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { cornerMarkerMode: 'off' },
+      }).fmlViewer.cornerMarkerMode,
+    ).toBe('off')
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { cornerMarkerMode: 'square' },
+      }).fmlViewer.cornerMarkerMode,
+    ).toBe('square')
   })
 
   it('parseUserSettingsJson accepts missing fmlViewer', () => {
@@ -158,7 +196,16 @@ describe('user-settings', () => {
       defaults: createFactoryUserSettings().defaults,
     })
     const parsed = parseUserSettingsJson(json)
-    expect(parsed.fmlViewer).toEqual({ underlayOpacityPct: 25, fmlOpacityPct: 80 })
+    expect(parsed.fmlViewer).toEqual({
+      underlayOpacityPct: 25,
+      fmlOpacityPct: 80,
+      cornerMarkerMode: 'skew',
+      openingColors: {
+        door: '#f59e0b',
+        window: '#06b6d4',
+        bovenlicht: '#16a34a',
+      },
+    })
   })
 
   it('parseUserSettingsJson rejects bad version / missing defaults', () => {

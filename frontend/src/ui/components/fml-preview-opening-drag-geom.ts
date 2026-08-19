@@ -38,7 +38,7 @@ export function projectPointToWallTUnclamped(wall: Pick<Wall, 'a' | 'b'>, point:
 }
 
 /** Afstand van punt tot gesloten segment (projectie geclampt op [0,1]). */
-export function distancePointToWallSegment(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
+function distancePointToWallSegment(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
   const t = projectPointToWallT(wall, point)
   const projected = {
     x: wall.a.x + (wall.b.x - wall.a.x) * t,

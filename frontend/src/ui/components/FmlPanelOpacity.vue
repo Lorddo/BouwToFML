@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FML_ORIENT_CONTROLS_VISIBLE } from '@/ui/composables/workspace/constants'
+import {
+  FML_HIDE_PLAN_TEXT_CONTROL_VISIBLE,
+  FML_ORIENT_CONTROLS_VISIBLE,
+} from '@/ui/composables/workspace/constants'
 
 const { t } = useI18n()
 
@@ -11,6 +14,8 @@ withDefaults(
     underlayAvailable?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
+    /** true = kamer-/FML-labels verborgen. */
+    hidePlanText?: boolean
   }>(),
   {
     underlayOpacity: 25,
@@ -18,6 +23,7 @@ withDefaults(
     underlayAvailable: false,
     underlayMoveMode: false,
     underlayFlipX: false,
+    hidePlanText: false,
   },
 )
 
@@ -25,6 +31,7 @@ const emit = defineEmits<{
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
   'update:underlayMoveMode': [value: boolean]
+  'update:hidePlanText': [value: boolean]
   underlayRotate90Cw: []
   underlayRotate90Ccw: []
   underlayMirrorVertical: []
@@ -111,6 +118,15 @@ function releaseSliderFocus(event: Event): void {
       @pointerup="releaseSliderFocus"
     />
   </div>
+  <label v-if="FML_HIDE_PLAN_TEXT_CONTROL_VISIBLE" class="hide-plan-text">
+    <input
+      type="checkbox"
+      :checked="hidePlanText"
+      :aria-label="t('result.hidePlanTextAria')"
+      @change="emit('update:hidePlanText', ($event.target as HTMLInputElement).checked)"
+    />
+    <span>{{ t('result.hidePlanText') }}</span>
+  </label>
 </template>
 
 <style scoped>
@@ -157,5 +173,20 @@ function releaseSliderFocus(event: Event): void {
   border-color: #3b82f6;
   background: #eff6ff;
   color: #1d4ed8;
+}
+
+.hide-plan-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+}
+
+.hide-plan-text input {
+  margin: 0;
 }
 </style>

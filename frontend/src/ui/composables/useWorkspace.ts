@@ -30,6 +30,7 @@ import { bakeOcrMaskIntoInkOverlay } from '@/cv/preprocess/compose-wall-bw'
 import { useWorkspaceDevSession } from './workspace/useWorkspaceDevSession'
 import { useWorkspaceWallPipeline } from './workspace/useWorkspaceWallPipeline'
 import type { WorkspaceFlowStep } from './workspace/constants'
+import { FML_AREA_SURFACE_EDIT_VISIBLE } from './workspace/constants'
 import { useWorkspaceDebugProbeFromContext } from './workspace/useWorkspaceDebugProbe'
 import { useWorkspacePdfUpload } from './workspace/useWorkspacePdfUpload'
 import { useWorkspaceLifecycle } from './workspace/useWorkspaceLifecycle'
@@ -48,6 +49,7 @@ import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
 import { useWorkspaceProject } from './project/useWorkspaceProject'
 import { loadUserSettings } from './settings/user-settings'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
+import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
 import { loadFmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import {
   deleteProject,
@@ -300,6 +302,8 @@ export function useWorkspace() {
   const fmlUnderlayOpacity = ref(initialViewer.underlayOpacityPct)
   /** FML-geometrie opacity in de viewer (percent 0–100). */
   const fmlContentOpacity = ref(initialViewer.fmlOpacityPct)
+  /** Sesssie-only: kamer-/FML-labels verbergen (niet in user-settings). */
+  const fmlHidePlanText = ref(false)
   const mergeDoubleDoors = ref(initialConversion.mergeDoubleDoors)
   const mergeMultiWindows = ref(initialConversion.mergeMultiWindows)
 
@@ -1030,6 +1034,7 @@ export function useWorkspace() {
         if (!meta) return liveBovenlichtGap
         return meta.defaults.bovenlichtGapCm
       },
+      ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
     setLocalError(null)
     downloadFml(text, `${sanitizeFilename(plan.name)}.fml`)
@@ -1039,13 +1044,11 @@ export function useWorkspace() {
     canvasRef,
     imageSrc,
     imageName,
-    drawingProfileId,
     profileConfirmed,
     activeDrawingProfile,
     referenceWallThicknessPx,
     wallRefThicknessMeasures,
     wallPipelineVersion,
-    showOcrDetails,
     preprocess,
     preprocessTab,
     templateTab,
@@ -1081,6 +1084,7 @@ export function useWorkspace() {
     e2eFixture,
     fmlUnderlayOpacity,
     fmlContentOpacity,
+    fmlHidePlanText,
     fmlUnderlaySrc,
     fmlUnderlaySize,
     fml,
@@ -1142,9 +1146,7 @@ export function useWorkspace() {
     projectFloors: project.projectFloors,
     activeFloorId: project.activeFloorId,
     activeFloor: project.activeFloor,
-    sourceUnderlay: project.sourceUnderlay,
     activeFloorDefaults: project.activeFloorDefaults,
-    canProceedFromProject: project.canProceedFromProject,
     canReuseUnderlay: project.canReuseUnderlay,
     underlayDonorOptions: computed(() => project.listUnderlayDonorFloors()),
     canCopyPreprocessRefs: project.canCopyPreprocessRefs,
@@ -1191,7 +1193,6 @@ export function useWorkspace() {
     wallStampBrushRadius: wallStamp.brushRadius,
     wallStampBusy: wallStamp.busy,
     wallStampError: wallStamp.error,
-    wallStampHasInk: wallStamp.hasStamp,
     wallStampDonorFloorId: wallStamp.donorFloorId,
     canStartWallStamp: computed(() => project.listStampDonorFloors().length > 0),
     wallStampDonorOptions: computed(() => project.listStampDonorFloors()),
@@ -1227,7 +1228,5 @@ export function useWorkspace() {
     bakeWallStamp: wallStamp.bake,
     cancelWallStamp: wallStamp.cancelActive,
     clearWallStamp: wallStamp.clear,
-    serializeWallStamp: wallStamp.serialize,
-    hydrateWallStamp: wallStamp.hydrate,
   }
 }

@@ -1,6 +1,6 @@
 {
   "beschrijving": "Invulbare catalogus van opening-refids voor BouwToFML. Vul benaming, subtype en kind in na visuele controle. FML-preview: 'kind' kiest het symbool; 'swingInsetCm' (of swing_inset_defaults per kind) = vaste kozijn-inset per zijde zodat gap=volle breedte en boog/blad iets smaller — plattegrond-onafhankelijk. Ramen: optioneel 'panels' (1|2|3) voor vaste indeling i.p.v. breedte-heuristiek.",
-  "laatste_update": "2026-08-07",
+  "laatste_update": "2026-08-18",
   "swing_inset_defaults": {
     "single": 5,
     "closet45": 5,
@@ -9,7 +9,8 @@
     "sliding_pocket": 0,
     "sliding_single": 0,
     "garage": 0,
-    "passage": 0
+    "passage": 0,
+    "french_balcony": 5
   },
   "kind_hints": {
     "deur": {
@@ -20,7 +21,8 @@
       "sliding_pocket": "Pocketdeur — 1 schuifpijl (vaak in muurpocket), geen draaicirkel.",
       "garage": "Garagedeur — sectionaal/breed, geen draaicirkel; preview: parallelle paneellijnen.",
       "passage": "Kale opening (geen vleugel, geen boog).",
-      "closet45": "Kastdeur — vleugel onder ~45° + 45° boogje (komt overeen met Floorplanner 2D)."
+      "closet45": "Kastdeur — vleugel onder ~45° + 45° boogje (komt overeen met Floorplanner 2D).",
+      "french_balcony": "Frans balkon — draaideur naar binnen + balustrade pal voor de gevel (geen balkonplaat)."
     },
     "raam": {
       "single": "Enkel raam (1 paneel).",
@@ -43,6 +45,7 @@
       "zonder_boog",
       "boog_45",
       "boog_90",
+      "fransbalkon",
       "opening_passage",
       "onbekend"
     ]
@@ -147,9 +150,14 @@
     {
       "refid": "9c845cf2ad8de220b65ee4dedeeb28ba4d750e21",
       "type": "door",
-      "benaming": "",
-      "subtype": "",
-      "bronnen": ["FML(current)"],
+      "benaming": "Frans balkon",
+      "subtype": "fransbalkon",
+      "kind": "french_balcony",
+      "swingInsetCm": 5,
+      "bronnen": [
+        "Anna van den Vondelstraat 13 D, Amsterdam.fml",
+        "Van Ostadestraat 139 1, Amsterdam.json.fml"
+      ],
       "aantal_in_fml_current": 4
     },
     {
@@ -183,9 +191,14 @@
     {
       "refid": "df95e84f01163fe9983d43d088551813e40e3e2f",
       "type": "door",
-      "benaming": "",
-      "subtype": "",
-      "bronnen": ["FML(current)"],
+      "benaming": "Schuifdeur (kast)",
+      "subtype": "pocket",
+      "kind": "sliding_pocket",
+      "swingInsetCm": 0,
+      "bronnen": [
+        "Anna van den Vondelstraat 13 D, Amsterdam.fml",
+        "Benedendorpsweg 51, Oosterbeek.json.fml"
+      ],
       "aantal_in_fml_current": 40
     },
     {

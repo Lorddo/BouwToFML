@@ -22,7 +22,7 @@ const THICKNESS_REF_FALLBACK_PX = 30
  * Kern-fractie voor korte segmenten: i.p.v. junction-trim uit te zetten
  * (dan meet je 100% in knopen) sampelen we t ∈ [f, 1−f].
  */
-export const THICKNESS_CORE_FRACTION = 0.3
+const THICKNESS_CORE_FRACTION = 0.3
 
 function resolveThicknessRefPx(referenceWallThicknessPx?: number): number {
   return referenceWallThicknessPx && referenceWallThicknessPx > 0
@@ -74,7 +74,7 @@ export function buildWallDistanceMap(params: {
 }
 
 /** Distance transform on a raw 0/255 wall mask (no RLE roundtrip). */
-export function buildDistanceMapFromMask(params: {
+function buildDistanceMapFromMask(params: {
   cv: OpenCV
   mask: Uint8Array
   width: number

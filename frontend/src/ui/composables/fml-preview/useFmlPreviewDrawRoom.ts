@@ -1,6 +1,7 @@
-import { ref, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
+import { roomEndFromHv } from './fml-preview-draw-measure'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -29,6 +30,10 @@ function applySquareLock(start: Point2D, end: Point2D): Point2D {
   }
 }
 
+/**
+ * Kamertekenen: klik → verplaats → klik (of typ H/V + Enter).
+ * Oriëntatie = cursor-kwadrant; Shift = vierkant zolang geen H/V-override.
+ */
 export function useFmlPreviewDrawRoom(options: {
   hitTest: DrawRoomHitTestApi
   editor: EditorApi
@@ -41,67 +46,140 @@ export function useFmlPreviewDrawRoom(options: {
   syncPlanToParent: () => void
 }) {
   const drawRoomPreview = ref<Point2D[] | null>(null)
-  let drawRoomDrag: { startCm: Point2D } | null = null
+  const drafting = ref(false)
+  let draft: { startCm: Point2D; hoverCm: Point2D } | null = null
+  const hOverrideCm = ref<number | null>(null)
+  const vOverrideCm = ref<number | null>(null)
 
-  function cancelDrawRoomDrag(): void {
-    window.removeEventListener('mousemove', onDrawRoomPointerMove)
-    drawRoomDrag = null
-    drawRoomPreview.value = null
-  }
+  const measureHCm = computed(() => {
+    const preview = drawRoomPreview.value
+    if (!preview || preview.length < 3) return 0
+    return Math.abs(preview[2].x - preview[0].x)
+  })
 
-  function lockEndPoint(cm: Point2D, start: Point2D): Point2D {
-    const snapped = options.resolveEndPoint(cm, start)
+  const measureVCm = computed(() => {
+    const preview = drawRoomPreview.value
+    if (!preview || preview.length < 3) return 0
+    return Math.abs(preview[2].y - preview[0].y)
+  })
+
+  function resolveEnd(hover: Point2D, start: Point2D): Point2D {
+    const snapped = options.resolveEndPoint(hover, start)
+    const hOv = hOverrideCm.value
+    const vOv = vOverrideCm.value
+    if (hOv != null || vOv != null) {
+      const liveH = Math.abs(snapped.x - start.x)
+      const liveV = Math.abs(snapped.y - start.y)
+      return roomEndFromHv(start, snapped, hOv ?? liveH, vOv ?? liveV)
+    }
     return options.shiftPressed.value ? applySquareLock(start, snapped) : snapped
   }
 
-  function beginDrawRoom(event: MouseEvent): void {
-    const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
-    if (!cm) return
-    cancelDrawRoomDrag()
-    options.beforeBegin()
-    const startCm = options.resolveStartPoint(cm)
-    drawRoomDrag = { startCm }
-    drawRoomPreview.value = buildRectCorners(startCm, startCm)
-    window.addEventListener('mousemove', onDrawRoomPointerMove)
-    window.addEventListener('mouseup', onDrawRoomPointerUp, { once: true })
+  function rebuildPreview(): void {
+    if (!draft) {
+      drawRoomPreview.value = null
+      return
+    }
+    const endCm = resolveEnd(draft.hoverCm, draft.startCm)
+    drawRoomPreview.value = buildRectCorners(draft.startCm, endCm)
   }
 
-  function onDrawRoomPointerMove(event: MouseEvent): void {
-    if (!drawRoomDrag) return
+  function cancelDrawRoomDrag(): void {
+    draft = null
+    drafting.value = false
+    hOverrideCm.value = null
+    vOverrideCm.value = null
+    drawRoomPreview.value = null
+    options.hoveredJunctionId.value = null
+  }
+
+  function updateDrawRoomHover(event: MouseEvent): void {
+    if (!draft) return
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    const endCm = lockEndPoint(cm, drawRoomDrag.startCm)
-    drawRoomPreview.value = buildRectCorners(drawRoomDrag.startCm, endCm)
+    draft.hoverCm = cm
+    rebuildPreview()
     const junction = options.hitTest.hitTestJunctionAtCm(cm)
     options.hoveredJunctionId.value = junction?.id ?? null
   }
 
-  function onDrawRoomPointerUp(event: MouseEvent): void {
-    window.removeEventListener('mousemove', onDrawRoomPointerMove)
-    const drag = drawRoomDrag
-    drawRoomDrag = null
-    const preview = drawRoomPreview.value
-    drawRoomPreview.value = null
-    options.hoveredJunctionId.value = null
-    if (!drag || !preview) return
+  function clearDrawRoomHover(): void {
+    if (!draft) options.hoveredJunctionId.value = null
+  }
 
-    const pointerCm = options.hitTest.clientToCm(event.clientX, event.clientY) ?? preview[2]
-    const endCm = lockEndPoint(pointerCm, drag.startCm)
-    const corners = buildRectCorners(drag.startCm, endCm)
-
+  function placeRoom(endCm: Point2D): boolean {
+    if (!draft) return false
+    const corners = buildRectCorners(draft.startCm, endCm)
     options.editor.pushUndo()
     const wallIds = options.editor.applyRoomRect(corners, options.wallThicknessDraft.value)
     if (!wallIds) {
       options.editor.undo()
-      return
+      return false
     }
     options.syncPlanToParent()
+    cancelDrawRoomDrag()
+    return true
+  }
+
+  function onDrawRoomClick(event: MouseEvent): void {
+    const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
+    if (!cm) return
+
+    if (!draft) {
+      options.beforeBegin()
+      const startCm = options.resolveStartPoint(cm)
+      draft = { startCm, hoverCm: startCm }
+      drafting.value = true
+      hOverrideCm.value = null
+      vOverrideCm.value = null
+      rebuildPreview()
+      return
+    }
+
+    const endCm = resolveEnd(cm, draft.startCm)
+    if (Math.abs(endCm.x - draft.startCm.x) < 1 && Math.abs(endCm.y - draft.startCm.y) < 1) {
+      return
+    }
+    placeRoom(endCm)
+  }
+
+  function setHOverrideCm(cm: number | null): void {
+    if (!draft) return
+    hOverrideCm.value = cm != null && Number.isFinite(cm) && cm > 0 ? cm : null
+    rebuildPreview()
+  }
+
+  function setVOverrideCm(cm: number | null): void {
+    if (!draft) return
+    vOverrideCm.value = cm != null && Number.isFinite(cm) && cm > 0 ? cm : null
+    rebuildPreview()
+  }
+
+  function commitFromMeasure(): boolean {
+    if (!draft) return false
+    const preview = drawRoomPreview.value
+    if (!preview || preview.length < 3) return false
+    const endCm = preview[2]
+    if (Math.abs(endCm.x - draft.startCm.x) < 1 && Math.abs(endCm.y - draft.startCm.y) < 1) {
+      return false
+    }
+    return placeRoom(endCm)
   }
 
   return {
     drawRoomPreview,
-    isDragging: () => drawRoomDrag != null,
-    beginDrawRoom,
+    measureHCm,
+    measureVCm,
+    hOverrideCm,
+    vOverrideCm,
+    isDrafting: () => drafting.value,
+    isDragging: () => drafting.value,
+    onDrawRoomClick,
+    updateDrawRoomHover,
+    clearDrawRoomHover,
+    setHOverrideCm,
+    setVOverrideCm,
+    commitFromMeasure,
     cancelDrawRoomDrag,
   }
 }

@@ -412,23 +412,3 @@ export function countDistinctMergedFaces(
   const roots = new Set(components.map((c) => resolveMergedLabel(c.label, parentMap)))
   return roots.size
 }
-
-export function countMergedSurfaces(
-  components: RasterRoomComponent[],
-  parentMap: Map<number, number>,
-): number {
-  const rootMeta = new Map<number, boolean>()
-  for (const c of components) {
-    const root = resolveMergedLabel(c.label, parentMap)
-    const touchesBorder = rootMeta.get(root)
-    rootMeta.set(
-      root,
-      touchesBorder === undefined ? c.touchesBorder : touchesBorder && c.touchesBorder,
-    )
-  }
-  let count = 0
-  for (const [, touchesBorder] of rootMeta) {
-    if (!touchesBorder) count += 1
-  }
-  return count
-}

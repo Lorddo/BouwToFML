@@ -6,6 +6,10 @@ import {
   projectPointToWallT,
   updateOpeningById,
 } from '@/ui/components/fml-preview-openings'
+import {
+  BOVENLICHT_MARKER_STROKE,
+  BOVENLICHT_MARKER_STROKE_PX,
+} from '@/ui/composables/fml-preview/fml-preview-opening-render'
 
 describe('projectPointToWallT', () => {
   it('projects a point onto wall centerline with clamp 0..1', () => {
@@ -101,5 +105,40 @@ describe('updateOpeningById', () => {
     expect(next[0]?.openings[0]?.z).toBe(90)
     expect(next[0]?.openings[0]?.z_height).toBe(120)
     expect(next[0]?.openings[0]?.width).toBe(110)
+  })
+
+  it('patches per-opening bovenlicht height and gap', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 200, y: 0 },
+        thickness: 20,
+        openings: [
+          {
+            type: 'door' as const,
+            refid: 'door-ref',
+            t: 0.5,
+            width: 90,
+            z_height: 220,
+            guid: 'door-1',
+          },
+        ],
+      },
+    ]
+    const id = 'w1-door-door-1'
+    const next = updateOpeningById(walls, id, {
+      bovenlichtHeightCm: 25.4,
+      bovenlichtGapCm: 0,
+    })
+    expect(next[0]?.openings[0]?.bovenlichtHeightCm).toBe(25)
+    expect(next[0]?.openings[0]?.bovenlichtGapCm).toBe(0)
+  })
+})
+
+describe('bovenlicht marker constants', () => {
+  it('houdt 3 px hartlijn-stroke voor preview-hint', () => {
+    expect(BOVENLICHT_MARKER_STROKE_PX).toBe(3)
+    expect(BOVENLICHT_MARKER_STROKE).toMatch(/^#/)
   })
 })

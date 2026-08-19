@@ -19,6 +19,7 @@ export type DoorAssetKind =
   | 'garage'
   | 'passage'
   | 'closet45'
+  | 'french_balcony'
 export type WindowAssetKind = 'single' | 'multi' | 'round' | 'half_round'
 export type OpeningAssetKind = DoorAssetKind | WindowAssetKind
 
@@ -53,6 +54,7 @@ const DEFAULT_SWING_INSET_CM: Record<DoorAssetKind, number> = {
   sliding_single: 0,
   garage: 0,
   passage: 0,
+  french_balcony: 5,
 }
 
 function inferDoorKind(entry: CatalogEntry | undefined): DoorAssetKind {
@@ -65,8 +67,10 @@ function inferDoorKind(entry: CatalogEntry | undefined): DoorAssetKind {
   if (k === 'sliding' || k === 'schuif' || k === 'schuifpui') return 'sliding'
   if (k === 'garage' || k === 'garagedeur') return 'garage'
   if (k === 'passage' || k === 'opening') return 'passage'
+  if (k === 'french_balcony' || k === 'fransbalkon' || k === 'french') return 'french_balcony'
 
   const sub = `${entry?.subtype ?? ''} ${entry?.benaming ?? ''}`.toLowerCase()
+  if (sub.includes('frans') || sub.includes('french_balcony')) return 'french_balcony'
   if (sub.includes('pocket')) return 'sliding_pocket'
   if (sub.includes('schuif_enkel') || sub.includes('1 schuivend')) return 'sliding_single'
   if (sub.includes('garage')) return 'garage'
@@ -126,6 +130,8 @@ function defaultLabel(kind: OpeningAssetKind, type: OpeningType): string {
       return 'Opening'
     case 'closet45':
       return 'Kastdeur'
+    case 'french_balcony':
+      return 'Frans balkon'
     default:
       return 'Deur'
   }
@@ -170,6 +176,7 @@ export function toCvDoorKind(kind: OpeningAssetKind): DoorResolvedKindCompat {
   if (kind === 'double_wide' || kind === 'passage' || kind === 'closet45' || kind === 'single') {
     return kind
   }
+  if (kind === 'french_balcony') return 'single'
   return 'single'
 }
 

@@ -121,4 +121,52 @@ describe('useHScaleCalibration', () => {
       expect(scale.axisMismatchPct.value).toBeCloseTo(100)
     })
   })
+
+  describe('applyUniformGeometryFactor', () => {
+    it('schaalt px/mm omlaag en distanceMm omhoog bij factor > 1', () => {
+      const scale = useHScaleCalibration()
+      scale.init(1000, 800)
+      scale.state.value = {
+        xLeft: 0,
+        xRight: 200,
+        xGuideY: 100,
+        yTop: 0,
+        yBottom: 200,
+        yGuideX: 100,
+      }
+      scale.distanceMmX.value = 1000
+      scale.distanceMmY.value = 1000
+      scale.confirm()
+      expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.2)
+
+      expect(scale.applyUniformGeometryFactor(1.02)).toBe(true)
+      expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.2 / 1.02)
+      expect(scale.pixelsPerMillimeterY.value).toBeCloseTo(0.2 / 1.02)
+      expect(scale.distanceMmX.value).toBeCloseTo(1020)
+      expect(scale.distanceMmY.value).toBeCloseTo(1020)
+      expect(scale.confirmed.value).toBe(true)
+    })
+
+    it('weigerfactor buiten [0.5, 2] en ongeconfirmeerde schaal', () => {
+      const scale = useHScaleCalibration()
+      scale.init(1000, 800)
+      scale.state.value = {
+        xLeft: 0,
+        xRight: 100,
+        xGuideY: 50,
+        yTop: 0,
+        yBottom: 100,
+        yGuideX: 50,
+      }
+      scale.distanceMmX.value = 1000
+      scale.distanceMmY.value = 1000
+      expect(scale.applyUniformGeometryFactor(1.1)).toBe(false)
+
+      scale.confirm()
+      expect(scale.applyUniformGeometryFactor(0.4)).toBe(false)
+      expect(scale.applyUniformGeometryFactor(2.1)).toBe(false)
+      expect(scale.applyUniformGeometryFactor(1)).toBe(false)
+      expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.1)
+    })
+  })
 })

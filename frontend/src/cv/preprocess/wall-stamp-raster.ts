@@ -32,7 +32,7 @@ export type StampWallCm = {
 export const DEFAULT_STAMP_BANDS: StampBands = { min: false, mid: true, max: true }
 
 /** Donkergrijs op wit — genoeg contrast voor adaptive wall-layer threshold. */
-export const STAMP_GRAY_INK = 32
+const STAMP_GRAY_INK = 32
 
 export function filterWallsByBands(
   walls: readonly Wall[] | readonly StampWallCm[],

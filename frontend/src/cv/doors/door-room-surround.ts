@@ -124,7 +124,7 @@ export function filterRoomSurroundedHypotheses(params: {
 }
 
 /** ≥1 ink-adjacent root is wall-mask class (`wall` / `window` / `doorframe`). */
-export function hypothesisTouchesWall(params: {
+function hypothesisTouchesWall(params: {
   faceIds: readonly number[]
   adjacency: Map<number, Set<number>>
   parentMap: Map<number, number>

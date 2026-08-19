@@ -133,6 +133,55 @@ describe('mirrorFloorPlanVertical', () => {
     expect(resolveHingeAtStart(nextDoor.mirrored)).toBe(true)
     expect(resolveSwingSign(nextDoor.mirrored)).toBe(1)
   })
+
+  it('noordkruis: positie wel, heading en glyph niet', () => {
+    const plan: FloorPlan = {
+      name: 'North',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [],
+          items: [
+            {
+              refid: 'sym-350',
+              x: 80,
+              y: 40,
+              width: 85,
+              height: 200,
+              rotation: -7,
+              mirrored: [0, 0],
+            },
+            {
+              refid: 'item',
+              x: 50,
+              y: 60,
+              width: 40,
+              height: 40,
+              rotation: 30,
+              mirrored: [0, 0],
+            },
+          ],
+        },
+      ],
+    }
+    const next = mirrorFloorPlanVertical(plan)
+    const north = next.floors[0].items![0]
+    const furniture = next.floors[0].items![1]
+    expect(north.x).toBe(-80)
+    expect(north.y).toBe(40)
+    expect(north.rotation).toBe(-7)
+    expect(north.mirrored).toEqual([0, 0])
+    expect(furniture.x).toBe(-50)
+    expect(furniture.rotation).toBe(-30)
+    expect(furniture.mirrored).toEqual([1, 0])
+
+    const twice = mirrorFloorPlanVertical(next)
+    expect(twice.floors[0].items![0].x).toBe(80)
+    expect(twice.floors[0].items![0].rotation).toBe(-7)
+    expect(twice.floors[0].items![0].mirrored).toEqual([0, 0])
+  })
 })
 
 describe('rotateFloorPlan90', () => {
@@ -166,6 +215,35 @@ describe('rotateFloorPlan90', () => {
     expect(next.floors[0].walls[0].openings[0].t).toBe(0.5)
     expectPoint({ x: next.floors[0].items![0].x, y: next.floors[0].items![0].y }, { x: 0, y: 1 })
     expect(next.floors[0].items![0].rotation).toBe(105)
+  })
+
+  it('noordkruis roteert wél mee (wereld-noord t.o.v. de tekening)', () => {
+    const plan: FloorPlan = {
+      name: 'NorthRot',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [],
+          items: [
+            {
+              refid: 'sym-350',
+              x: 1,
+              y: 0,
+              width: 85,
+              height: 200,
+              rotation: -7,
+              mirrored: [0, 0],
+            },
+          ],
+        },
+      ],
+    }
+    const next = rotateFloorPlan90(plan, { x: 0, y: 0 }, 'cw')
+    expectPoint({ x: next.floors[0].items![0].x, y: next.floors[0].items![0].y }, { x: 0, y: 1 })
+    expect(next.floors[0].items![0].rotation).toBe(83)
+    expect(next.floors[0].items![0].mirrored).toEqual([0, 0])
   })
 
   it('4× CW = identiteit; CW+CCW = identiteit', () => {

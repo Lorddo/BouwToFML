@@ -1,11 +1,16 @@
 import type { ComputedRef, Ref } from 'vue'
 import type Konva from 'konva'
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
 import { normalizeCmBBox } from './fml-preview-wall-select'
 import type { ContentLayout } from './useFmlPreviewViewport'
 import type {
+  RenderArea,
   RenderDoorGroup,
+  RenderFixture,
   RenderJunction,
+  RenderLabel,
+  RenderLine,
+  RenderSurface,
   RenderWindowOpening,
 } from './useFmlPreviewRenderModel'
 
@@ -57,7 +62,18 @@ export function useFmlPreviewHitTest(
   containerRef: Ref<HTMLDivElement | null>,
   stageRef: Ref<{ getNode: () => Konva.Stage } | null>,
   renderWindows?: ComputedRef<RenderWindowOpening[]>,
+  renderAreas?: ComputedRef<RenderArea[]>,
+  renderSurfaces?: ComputedRef<RenderSurface[]>,
+  renderLabels?: ComputedRef<RenderLabel[]>,
+  renderLines?: ComputedRef<RenderLine[]>,
+  items?: ComputedRef<FloorItem[]>,
+  coarseHits?: ComputedRef<boolean> | Ref<boolean>,
+  renderFixtures?: ComputedRef<RenderFixture[]>,
 ) {
+  function hitPx(fine: number, coarse: number): number {
+    return coarseHits?.value === true ? coarse : fine
+  }
+
   function screenPxToCmTolerance(px: number): number {
     const layout = viewport.contentLayout.value
     if (!layout) return 10
@@ -67,7 +83,7 @@ export function useFmlPreviewHitTest(
   function hitTestWallAtCm(cm: Point2D): string | null {
     const wallList = walls.value
     if (wallList.length === 0) return null
-    const tol = screenPxToCmTolerance(16)
+    const tol = screenPxToCmTolerance(hitPx(16, 32))
     let bestId: string | null = null
     let bestDist = Number.POSITIVE_INFINITY
     wallList.forEach((wall, index) => {
@@ -83,7 +99,7 @@ export function useFmlPreviewHitTest(
   }
 
   function hitTestJunctionAtCm(cm: Point2D): RenderJunction | null {
-    const tol = screenPxToCmTolerance(18)
+    const tol = screenPxToCmTolerance(hitPx(18, 32))
     let best: RenderJunction | null = null
     let bestDist = tol
     for (const junction of renderJunctions.value) {
@@ -98,7 +114,7 @@ export function useFmlPreviewHitTest(
 
   function hitTestOpeningTargetsAtCm(cm: Point2D, targets: OpeningHitTarget[]): string | null {
     if (targets.length === 0) return null
-    const tol = screenPxToCmTolerance(16)
+    const tol = screenPxToCmTolerance(hitPx(16, 32))
     let bestId: string | null = null
     let bestScore = Number.POSITIVE_INFINITY
 
@@ -195,11 +211,125 @@ export function useFmlPreviewHitTest(
     return viewport.renderTransform.value.toCmPoint(localX, localY)
   }
 
+  function hitTestSurfaceAtCm(cm: Point2D): string | null {
+    const list = renderSurfaces?.value ?? []
+    // Top-most last drawn wins — reverse scan
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      if (pointInPolygon(cm, list[i].polyCm)) return list[i].id
+    }
+    return null
+  }
+
+  function hitTestAreaAtCm(cm: Point2D): string | null {
+    const list = renderAreas?.value ?? []
+    for (let i = list.length - 1; i >= 0; i -= 1) {
+      if (pointInPolygon(cm, list[i].polyCm)) return list[i].id
+    }
+    return null
+  }
+
+  function hitTestItemAtCm(cm: Point2D): string | null {
+    const drawn = renderFixtures?.value ?? []
+    const tol = screenPxToCmTolerance(hitPx(4, 8))
+    const toStage = viewport.renderTransform.value.toStagePoint
+    if (drawn.length > 0) {
+      let bestId: string | null = null
+      let bestDist = Number.POSITIVE_INFINITY
+      const stage = toStage(cm.x, cm.y)
+      for (let i = drawn.length - 1; i >= 0; i -= 1) {
+        const fixture = drawn[i]
+        const scaleX = fixture.scaleX || 1
+        const scaleY = fixture.scaleY || 1
+        const rad = (-fixture.rotationDeg * Math.PI) / 180
+        const dx = stage.x - fixture.x
+        const dy = stage.y - fixture.y
+        const localX = (dx * Math.cos(rad) - dy * Math.sin(rad)) / scaleX
+        const localY = (dx * Math.sin(rad) + dy * Math.cos(rad)) / scaleY
+        if (
+          localX < fixture.localX - tol ||
+          localY < fixture.localY - tol ||
+          localX > fixture.localX + fixture.localWidth + tol ||
+          localY > fixture.localY + fixture.localHeight + tol
+        ) {
+          continue
+        }
+        const dist = Math.hypot(
+          localX - (fixture.localX + fixture.localWidth / 2),
+          localY - (fixture.localY + fixture.localHeight / 2),
+        )
+        if (dist < bestDist) {
+          bestId = fixture.id
+          bestDist = dist
+        }
+      }
+      return bestId
+    }
+
+    const list = items?.value ?? []
+    if (list.length === 0) return null
+    let bestId: string | null = null
+    let bestDist = Number.POSITIVE_INFINITY
+    for (const item of list) {
+      const guid = item.guid?.trim()
+      if (!guid) continue
+      const rot = ((item.rotation ?? 0) * Math.PI) / 180
+      const dx = cm.x - item.x
+      const dy = cm.y - item.y
+      const localX = dx * Math.cos(-rot) - dy * Math.sin(-rot)
+      const localY = dx * Math.sin(-rot) + dy * Math.cos(-rot)
+      const hw = Math.max(0, item.width) / 2 + tol
+      const hh = Math.max(0, item.height) / 2 + tol
+      if (Math.abs(localX) > hw || Math.abs(localY) > hh) continue
+      const dist = Math.hypot(localX, localY)
+      if (dist < bestDist) {
+        bestId = guid
+        bestDist = dist
+      }
+    }
+    return bestId
+  }
+
+  function hitTestLabelAtCm(cm: Point2D): string | null {
+    const list = renderLabels?.value ?? []
+    const tol = screenPxToCmTolerance(hitPx(20, 28))
+    let bestId: string | null = null
+    let bestDist = tol
+    for (const label of list) {
+      const dist = Math.hypot(label.cmX - cm.x, label.cmY - cm.y)
+      if (dist <= bestDist) {
+        bestId = label.id
+        bestDist = dist
+      }
+    }
+    return bestId
+  }
+
+  function hitTestLineAtCm(cm: Point2D): string | null {
+    const list = renderLines?.value ?? []
+    const tol = screenPxToCmTolerance(hitPx(12, 20))
+    let bestId: string | null = null
+    let bestDist = tol
+    for (const line of list) {
+      const dist = distancePointToSegment(cm, line.aCm, line.bCm)
+      if (dist <= bestDist) {
+        bestId = line.id
+        bestDist = dist
+      }
+    }
+    return bestId
+  }
+
   return {
+    screenPxToCmTolerance,
     hitTestWallAtCm,
     hitTestDoorAtCm,
     hitTestOpeningAtCm,
     hitTestJunctionAtCm,
+    hitTestItemAtCm,
+    hitTestSurfaceAtCm,
+    hitTestAreaAtCm,
+    hitTestLabelAtCm,
+    hitTestLineAtCm,
     clientToCm,
     containerPointToCm,
     containerRectToCmBBox,

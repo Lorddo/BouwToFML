@@ -1,3 +1,4 @@
+import type { RenderAreaSideDim } from './fml-preview-area-side-dims'
 import type { Opening, Wall } from '@/core/fml/types'
 import type { WallEndRef } from '@/ui/components/fml-preview-junctions'
 import type { WindowOrnament } from './fml-preview-opening-render'
@@ -73,10 +74,75 @@ export interface RenderFixture {
   stroke: string
   fill: string
   circleFill?: string
+  /** Lijndikte in FML-cm (lokale coords; group scale = cm→stage). */
   strokeWidth: number
   arrowStrokeWidth?: number
+  /** Dash in FML-cm. */
   dash?: number[]
+  cornerRadius?: number
   overWalls: boolean
+  localX: number
+  localY: number
+  localWidth: number
+  localHeight: number
+}
+
+export interface RenderArea {
+  id: string
+  /** Flat stage [x,y,…] */
+  points: number[]
+  fill: string
+  label: string | null
+  labelX: number
+  labelY: number
+  role?: number
+  color: string
+  customName?: string
+  name?: string
+  /** Source poly in cm for hit-test. */
+  polyCm: { x: number; y: number }[]
+}
+
+export interface RenderSurface extends RenderArea {
+  isCutout?: boolean
+}
+
+export interface RenderLabel {
+  id: string
+  x: number
+  y: number
+  text: string
+  fontFamily: string
+  fontSize: number
+  fontColor: string
+  backgroundColor: string
+  align: 'left' | 'center' | 'right'
+  rotation: number
+  bold?: boolean
+  /** Source cm for hit-test. */
+  cmX: number
+  cmY: number
+}
+
+export interface RenderLine {
+  id: string
+  points: number[]
+  stroke: string
+  strokeWidth: number
+  dash?: number[]
+  /** Source cm for hit-test. */
+  aCm: { x: number; y: number }
+  bCm: { x: number; y: number }
+}
+
+export interface RenderDimension {
+  id: string
+  points: number[]
+  tickA: number[]
+  tickB: number[]
+  labelX: number
+  labelY: number
+  label: string
 }
 
 export interface RenderModel {
@@ -88,6 +154,12 @@ export interface RenderModel {
   doorGroups: RenderDoorGroup[]
   windows: RenderWindowOpening[]
   fixtures: RenderFixture[]
+  areas: RenderArea[]
+  surfaces: RenderSurface[]
+  labels: RenderLabel[]
+  lines: RenderLine[]
+  dimensions: RenderDimension[]
+  areaSideDims: RenderAreaSideDim[]
   toCmPoint: (stageX: number, stageY: number) => { x: number; y: number }
   panRect: { x: number; y: number; width: number; height: number }
 }

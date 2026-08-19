@@ -5,14 +5,75 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-17 (kwarttrap-symbolen)
+Laatste update: 2026-08-19 (click-move-click tekenen)
 
-## Kwarttrap BG/1e (FML-viewer, 2026-08-17)
+## FML click-move-click tekenen (2026-08-19)
+
+Muur/kamer: klik → verplaats → klik (geen hold-drag). Draft-maatbalk in meters (override + Enter); kamer H/V. Helpers `fml-preview-draw-measure.ts`. Snap/Shift/Esc/dikte ongewijzigd. Workspace + viewer.
+
+## FML wall sanitize (2026-08-19)
+
+`sanitizeFmlWalls`: weld 0,25 cm + near-ortho + cover (as ≤0,5 cm). Auto alleen generate. Knop «Opschonen» naast Herschalen. Balance keep-axis; geen import-auto, geen wall-add.
+
+## FML-viewer mobile chrome (2026-08-19)
+
+Onderbalk + settings floating (`safe-area`, kaart boven tools). Fit = icoon; fullscreen-icoon verbergt header + floor-rail (`100dvh`). Rail Set/H/V/Move = iconen. Zijmenu houdt labels (icoon + tekst). Alleen `/FML-editor`.
+
+## FML-hoekmarkers (2026-08-19)
+
+Setting `fmlViewer.cornerMarkerMode` (Off / 90° / niet-90°), default **niet-90°** (`!`). Exact H+V = `|_`. Per binnenhoek (L=1, T=2, X=4); plat 180° geen teken. ε=0,1 cm op muur-eindpunten. Overlay in de hoek (bissectrice). Alleen User Settings (geen toolbar); geen export.
+
+## FML area-zijdematen (2026-08-18, merge 08-19)
+
+Toggle «Maten tonen» in FML-toolbelt (geen `FmlToolId`). Overlay op midden van area-zijden ≥50 cm; collinear merge + zelfde lijn (offset ≤8 cm) + micro-jog ≤20 cm + T-inkeping-gat ≤40 cm + shared-edge dedupe; formaat zoals maatlijn; sessie-only (geen FML `dimensions[]`). Workspace + viewer. L/U-vleugels met groot gat blijven los.
+
+## Schaal: stap-4 Herschalen (2026-08-19)
+
+Maatlijn-rescale weg. «Herschalen» bij plan met muren (ook na heropenen; niet gated op detectie-output) + losse FML-viewer: H/V-linialen, face-snap, aparte H/V-factor (**geen** muurdikte). Workspace start op stap-1 handle-plek + mm (`scale.state` → FML via layout.origin; nulpunt telt mee). Zonder handles / viewer: ~70% muur-bbox.
+
+## FML toolbelt field commit (2026-08-18)
+
+Toolbelt number/text: draft + debounce 700 ms + flush-on-leave (Enter/blur/andere selectie/Escape/unmount). Enter is snelle flush, niet enige save. Undo gegroepeerd per veld-sessie. Viewer flusht vóór floor/design/download via `defineExpose`.
+
+## FML-viewer defaults + muur-/knoophoogte (2026-08-18)
+
+Losse viewer: sessie-defaults (muur/deur/raam/dorpel/bovenlicht) uit geladen FML; wijzigen = confirm + overwrite alleen dat veld (alle floors). Nieuwe muur/deur/raam gebruikt sessie-defaults; download geeft bovenlicht-options door.
+Muur Ctrl+klik: hoogte zet beide `az`/`bz`; Ctrl+klik knoop: alleen die ends. Helpers `wall-endpoint-height.ts`; `cloneWalls` + split interpoleren extras.
+Workspace ongemoeid voor defaults-UI (blijft Regenereren).
+
+## Bovenlicht FML-import fold (2026-08-18)
+
+`importFmlV3` vouwt gestapelde bovenlicht-ramen terug naar `Opening.bovenlicht` + gap/height (session-only). Guid-suffix `-bovenlicht` (eigen export) of t/width/z-match (Floorplanner; Δt×L ≤3 cm, Δw ≤2 cm). Gap 0 expliciet. Export blijft inverse via `buildBovenlichtOpening`.
+
+## Poort6 FIN-125 (FML-viewer, 2026-08-18)
+
+Dubbele rechte trap `825bce5f…` BG+1e 203×217 rot=270 mir[0,0]: twee vluchten, lokale X=loop; Konva-270 = links omhoog / rechts omlaag. 2e alleen surface Trapgat `isCutout`.
+Trapgat-object `c86e7f32…` op dunne floor 0 (110×105) → `stair_opening`. Floors 1–3: surface Trapgat dashed kruis.
+Dakkapel `a8c2aefd…` 2e, 8× zelfde refid in de kamers (~90–202×25–30, rot 0/180): U-muren, open naar −Y; buitenmuur +Y (gevel) met 2 ramen.
+
+## Oosterpoort 14151 A (FML-viewer, 2026-08-18)
+
+Rechte trap `17f4fb9a…` kelder+BG 85×225 rot=90 mir[0,0]: loop lokale −Y, Konva-90 = omhoog naar rechts (zelfde bbox-verankering als kwarttrap). Geen trap-item op 1e.
+BG toilet `fc3f4092…` → bestaand `toilet` (spoelbak). 1e = surface Trapgat `isCutout` + dashed kruis (geen extra FML-item); catalogus-default `sym-stair-opening`.
+
+## Anna 3e catalogus (FML-viewer, 2026-08-18)
+
+CV `0af97324…` → bestaand boilersymbool. Toilet mini-wasbak `05dfa289…` → `sink_small` (ook 4e, geen large-switch).
+Frans balkon `9c845cf2…`: blad naar binnen + hek op FML-zwaaizijde (Anna/Ostade `[*,0]` = buiten). Kast-schuif `df95e84f…` = pocketpijl; paar pijlen wijzen naar elkaar.
+Koof `719b8845…` woonkamer linkermuur: zwarte rand + kruis over de volle rechthoek (niet schoorsteen-cirkel).
+Inbouw wasbak `c5686bd0…` twee badkamers links (+ toilet): wit blad, kom naar +Y, kraan bij −Y; z_height=196 = spiegel.
+
+## Kwarttrap BG/1e (FML-viewer, 2026-08-18)
 
 Zelfde lijnstijl als spiltrap (`#334155`, stroke 0.55, pijl 1.15).
-`stair_quarter_90` = 90° + 3 rechte, L-pijl omhoog, dashed schuine snede (trapkast).
-`stair_quarter_90_up` = omgekeerde vlucht (3 rechte + 90°), pijl blijft stijgrichting.
-Nog geen Floorplanner-refids (FIN-10508 heeft geen items).
+Spiegel (`mirrored[0]` X, `mirrored[1]` Y) zit in de geometrie; viewer doet geen Konva-scale voor kwarttrappen.
+`stair_quarter_90` = omhoog (eigen tekening): L-draai onder, spil binnenhoek; 3 rechte + dashed boven. Ostade `[1,0]` vanuit rechtsonder; Anna unmirrored vanuit linksonder.
+`stair_quarter_90_up` = opkomend (eigen tekening): 3 rechte treden + dashed onder; daarna L-draai; spil binnenhoek aan onderkant opening. Ostade `[1,0]` rechts; Anna unmirrored links.
+Van Ostade 1e achter `7f4bebad…` 73×131 rot=0; 2e `e28361f3…` 121×73 rot=90.
+
+## ISO was-symbolen (FML-viewer, 2026-08-18)
+
+Wasmachine = kuip (trapezium + golf) in vierkant. Droogtrommel = binnen-vierkant + cirkel. Combi = kuip boven, droger onder. Geen kroontanden op de trommel.
 
 ## Oil bottle nulpunt (FML-viewer, 2026-08-17)
 
@@ -21,12 +82,11 @@ Bij FML-openen in de losse viewer: popup als fles aanwezig en niet al op `(0,0)`
 Ja = nulpunt naar item-midden op **alle** floors met die fles (drawing schuift mee).
 Geen auto-apply; workspace ongemoeid.
 
-## FML-as meeschuiven met balance (2026-08-17)
+## FML balance keep-axis (2026-08-19)
 
-Floorplanner: `a`/`b` = as, `balance` verdeelt dikte vanaf die as (niet hartlijn+extra).
-Keep-faces: as schuift + junction-stitch (`wall-axis-balance.ts`); lichaam blijft.
-Keep-axis: flush X-01 ongewijzigd (gedeelde L10-lijn). Editor slider/dikte → keep-faces;
-`rebasePlanSnap(0|0.5|1)` primitive (default export blijft 0.5, geen auto-rebase na flush).
+Floorplanner `a`/`b` = hartlijn; `balance` verdeelt dikte links/rechts daarvan (spec).
+Editor-slider = keep-axis (lichaam schuift, knopen blijven) — zelfde als detectie X-01.
+UI in %; slider 0–100%; invoer tot ±1000% (FML-fractie ±10). Keep-faces stitch weg.
 
 ## Nulpunt + maatlijn wall-face snap (2026-08-17)
 
@@ -209,7 +269,7 @@ Productie: 1 canvas-tab per stap. Verborgen: Int muur, OCR, Deuren, Ramen, Resul
 
 ## Bovenlicht FML (2026-08-02)
 
-Export-only linked windows: 40 cm hoog, 10 cm boven deur,zelfde breedte/`t`. Projectdefault checkbox + per-deur override (`Opening.bovenlicht`). Synthese in `buildFmlV3` — **niet** in viewer. Deur-tags (voor/binnen) deferred (geen FML-veld).
+Export-only linked windows: zelfde breedte/`t`. Projectdefault checkbox + per-deur/raam override (`Opening.bovenlicht`). Maten: vloerdefault 40/10 of per-opening `bovenlichtHeightCm`/`bovenlichtGapCm`. Synthese in `buildFmlV3` — **niet** in viewer. Reconstructie bij FML-openen later. Deur-tags (voor/binnen) deferred (geen FML-veld).
 
 ## Detectie initial bespreken (2026-08-01)
 
@@ -283,6 +343,54 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 **Volgorde:** ~~git init → build groen → CI-poort~~ · ~~lint/format-poort~~ (klaar) → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
 
 ## Huidige focus
+
+**FML click-move-click tekenen (2026-08-19).** Muur/kamer: klik-move-klik + overschrijfbare maatbalk (m). Gereed voor UI-smoke.
+
+**FML-viewer project-spiegel (2026-08-19).** «Project spiegelen» als eigen rij in linker menu (naast Herschalen/Opschonen); niet in de Oriënteren-fold. Zelfde X-flip alle floors om nulpunt. Workspace blijft achter `FML_ORIENT_CONTROLS_VISIBLE`.
+
+**FML wall sanitize (2026-08-19).** `sanitizeFmlWalls` = weld 0,25 cm + near-ortho + collinear cover (hartlijn ≤0,5 cm). Auto alleen bij generate (`harmonizeFmlWallThickness`). Openen ongewijzigd; knop «Opschonen» naast Herschalen (undo). Geen wall-add; geen `alignWallJunctionBalance` (balance blijft).
+
+**FML-viewer fixtures (2026-08-19).** Plaats 1× daarna ontwapenen; bibliotheek-klik plaatst niet. Settings: spiegel H/V, 90°, kopie/wis als iconen; kaderpijlen bij selectie.
+
+**FML-viewer mobile chrome (2026-08-19).** Onderbalk + settings-kaart; sidebar-drawer zelfde kaart + iconen; rail iconen.
+
+**FML-hoekmarkers (2026-08-19).** Setting Uit / 90° / niet-90° (default `skew` = `!`). `_` of `!` per binnenhoek (L/T/X), in de sector. ε 0,1 cm H/V.
+
+**Settings converter vs viewer (2026-08-19).** Zelfde `UserSettingsV1`; UI-variant. Converter: taal + schaal + hoogtes/diktes + merge + opacities. Viewer (`/FML-editor`): taal + kamer-kleuren + hoektekens (ook als workspace-flag uit). Tandwiel togglet open/dicht en slaat altijd op; Annuleren gooit draft weg. Viewer-fabrieksreset: locale + kleuren + hoektekens.
+
+**FML-editor touch (2026-08-19).** Alleen `/FML-editor` (`touchEditor`). Desktop-PC: gewone muis (hover + knopen); Set/H/V/Move + touch-nav alleen bij `pointer: coarse`. Move = punten/openingen/fixtures verslepen; Settings is al multi-select. 1 vinger tik/edit, 2 vingers pan, pinch zoom. Fixture-palette + inspect items. Redo (Ctrl+Y) ook in workspace. Extra soft wachtwoord `J0rd!`. Workspace-hosts ongemoeid.
+
+**FML balance keep-axis (2026-08-19).** Slider/invoer: lichaam schuift, hartlijn vast; UI in % (slider 0–100, invoer daarbuiten).
+
+**FML area-zijdematen (2026-08-19).** Toolbelt-toggle «Maten tonen»: overlay op area-zijden ≥50 cm; merge ook over micro-jog / T-inkeping (niet FML-export).
+
+**Stap-4 Herschalen (2026-08-19).** Linker «Herschalen» + H/V-linialen (face-snap); aparte H/V-schaal (geen muurdikte); workspace: stap-1 plek + mm; viewer: bbox.
+
+**FML toolbelt field commit (2026-08-18).** Debounce 700 ms + flush-on-leave voor getypte toolbeltvelden (muur/opening/area/label + muur-/knoophoogte); Enter blijft snelle flush.
+
+**FML-viewer defaults + muur-/knoophoogte (2026-08-18).** Sessie-defaults in losse viewer (confirm overwrite per veld); muurhoogte via `az`/`bz` op segment (beide ends) en knoop (één knoop).
+
+**Opening overflow-hint (2026-08-18).** Niet-blokkerend: deuren/ramen/bovenlicht vs **muur `az`/`bz`** op `t` (niet `floor.height`). Poort6 BG floor.height=55 maar trapmuren 330; 220+bovenlicht=270 past. Export-bovenlicht clamt tegen muurtop. Ook dorpel onder muurbodem.
+
+**Bovenlicht maat-override (2026-08-18).** Per-opening `bovenlichtHeightCm` / `bovenlichtGapCm` (session-only, erf vloerdefault). Ctrl+klik gap+glashoogte als checkmark aan. Export gebruikt override. Reconstructie bij FML-openen nog open.
+
+**FML catalogus Poort6 FIN-125 (2026-08-18).** Dakkapel `a8c2aefd…` 2e 8× zelfde object; U-muren, 2 ramen op buitenmuur (+Y). Dubbele rechte trap `825bce5f…` 203×217 rot=270 = links omhoog / rechts omlaag; trapgat-object `c86e7f32…` → `stair_opening`.
+
+**FML catalogus Oosterpoort A (2026-08-18).** Rechte trap kelder+BG rot=90 → rechts; BG toilet-refid; 1e trapgat-cutout + kruis (geen vlucht).
+
+**FML catalogus Anna 3e (2026-08-18).** CV-refid + toilet mini-wasbak; frans balkon (naar binnen + hek); kast-schuif = pocketpijlen.
+
+**FML roundtrip behoud (2026-08-18).** Upload→download bewaart envelope (ids/settings/drawing/cameras/dimensions/labels/lines/extras/multi-design). Viewer: `draw_label`/`draw_line` + design-switcher in linker sidebar. Workspace-generate zonder `source` = oude rewrite. Tests: `fml-roundtrip.spec.ts` (Kinderdijk + 2-design + nulpunt).
+
+**Noordpijl bij spiegelen (2026-08-18).** `north_cross` (`sym-350`): X-flip spiegelt alleen de positie; rotatie/`mirrored` blijven — pijl wijst wereld-noord, N niet achterstevoren. 90° roteert wél mee.
+
+**FML keuken-fixtures (2026-08-18).** Kinderdijk: koelkast + vriessneeuwvlok, deur = dubbele lijn op lokale +Y (rot/mirror = 3D-deurzijde, geen handel). Keukenwasbak kraan aan −Y. Kromme-Mijdrecht: wasbak klein/groot op maat; vaatwasser; koelkast eetkamer; wasmachine; kookplaat. Noordkruis `sym-350`: pijl+N, punt lokale −Y. Aanrecht = Kinderdijk-blad-refid. Sanitair: hangend toilet, glazen douchewand, entreepijl, stoppenkast, grijze balustrade. Van Ostade 1e achter: losstaand stadium-bad + kraan op lokale −Y; was-droog = trommel+kroon / vierkant+cirkel; kwarttrap-refid, lange balkonbalustrade (spijlen per lengte). Kleine wasbak: platte kant flush op lokale −Y.
+
+**FML inspect-modus (2026-08-18).** Alleen losse viewer: zijbalk Bewerken/Inspectie. Tik opening→surface→muur→kamer; emit FML-guid; demo-kleur uit→oranje→groen. Workspace ongemoeid. Geen box-select/gevel-keten, geen PWA.
+
+**Losse FML-editor via pad (2026-08-18).** `/FML-editor` (niet via settings). Settings-knop weg; terug = workspace `/`. Worker-host: SPA via `not_found_handling`, geen `_redirects`.
+
+**FML areas/surfaces/roomtags (2026-08-17).** Areas uit wall-holes ná balance; surfaces handmatig; House-catalogus NL; Ctrl+klik type/naam/kleur; Instellingen default-kleur per role + fabrieksreset. X-14 = arrays mogen gevuld. Z-order: area → surface → object → tekst (benaming bovenop; meubels blijven onder muurfill).
 
 **FML fixture-symbolen (2026-08-17).** Spiltrap 180° + kwarttrap BG/1e (zelfde stroke/pijl; 1e = omgekeerde vlucht, pijl omhoog; dashed snede). Keukenblad onder muurfill, afdak/chimney/hek/dakraam/knieschot; 1e douchekop teal. Meubels achter muren, dak/gevel ervoor.
 
@@ -428,6 +536,35 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 ## Recente besluiten (samenvatting)
 
+- **2026-08-19** — FML muur/kamer click-move-click + maatbalk (meters, typ + Enter); hold-drag weg. Zelfde composables workspace + viewer.
+- **2026-08-19** — FML-viewer «Project spiegelen»: eigen rij in linker menu (naast Herschalen/Opschonen); niet in Oriënteren-fold. Workspace blijft achter `FML_ORIENT_CONTROLS_VISIBLE`.
+- **2026-08-19** — FML wall sanitize: auto alleen generate; knop bij openen/edits. Weld + orthogonalize + cover; keep-axis balance. Geen import-auto, geen wall-add.
+- **2026-08-19** — FML-viewer mobile: floating onderbalk + settings-kaart + sidebar-kaart (`safe-area`); tool/rail/menu-iconen; fullscreen verbergt header + floor-rail (`100dvh`). Workspace ongemoeid.
+- **2026-08-19** — Instellingen-UI: converter vs viewer (`UserSettingsView` variant). Merge bij converter (stap-4 generate); kamer-kleuren + hoektekens bij losse viewer. Tandwiel sluit en slaat op; Annuleren gooit draft weg.
+- **2026-08-19** — FML-hoekmarkers: `off`/`square`/`skew` (default `skew`). Binnenhoek-sectoren L/T/X; H/V ε 0,1 cm; overlay in de hoek; geen export.
+- **2026-08-19** — `/FML-editor` op PC: muis-path + knopen-hover; rail/touch-nav alleen `pointer: coarse` (Set/H/V/Move, geen Sel). Ctrl+Y redo ook workspace. Extra gate `J0rd!`. Workspace-hosts ongewijzigd.
+- **2026-08-19** — FML balance = Floorplanner-hartlijn (keep-axis). Editor-slider schuift het lichaam, niet `a`/`b`. UI in %; slider 0–100%, invoer tot ±1000%. Keep-faces stitch (`wall-axis-balance`) weg.
+- **2026-08-19** — Stap-4 Herschalen: workspace start op stap-1 handle-plek + mm (`scale.state` → FML via layout.origin; nulpunt telt mee). Viewer/geen handles: muur-bbox.
+- **2026-08-19** — FML «Maten tonen»: één maat per area-zijde, ook over micro-jog (≤20 cm) en T-inkeping (gat ≤40 cm); L/U-vleugels blijven los; geen `dimensions[]`/export.
+- **2026-08-18** — FML toolbelt: debounce 700 ms + flush-on-leave (geen Enter-only commit); undo per veld-sessie.
+- **2026-08-18** — FML-viewer: sessie-defaults + confirm overwrite; muur/knoophoogte via Floorplanner `az`/`bz` (geen wall.height).
+- **2026-08-18** — Bovenlicht FML-import fold: `foldBovenlichtOnWall` in `importFmlV3` (guid `-bovenlicht` + t/width/z); gap 0 expliciet; re-export synthetiseert opnieuw.
+- **2026-08-18** — Opening overflow + export-bovenlicht tegen muur `az`/`bz`.h (niet floor.height). Poort6: 55 cm verdieping, 330 cm trapmuur, 270 cm deur+bovenlicht past.
+- **2026-08-18** — Bovenlicht per-opening hoogte/gap (Ctrl+klik), erf vloerdefault; FML-export gebruikt override; openen vouwt terug (zie fold).
+- **2026-08-18** — Poort6 FIN-125 dakkapel `a8c2aefd…` (2e, 8×): `dormer` = U van muren, 2 ramen op lokale +Y (gevel), open naar de kamer.
+- **2026-08-18** — Poort6 FIN-125: dubbele rechte trap `825bce5f…` rot=270 = links omhoog / rechts omlaag; trapgat-item `c86e7f32…` = `stair_opening`.
+- **2026-08-18** — Oosterpoort 14151 A: rechte trap `17f4fb9a…` rot=90 mir[0,0] = omhoog rechts; toilet `fc3f4092…` = bestaand toilet; 1e geen vlucht, Trapgat-cutout + dashed kruis + `sym-stair-opening`.
+- **2026-08-18** — Anna 3e catalogus: CV `0af97324…` = boiler; mini-wasbak `05dfa289…` = sink_small; frans balkon `9c845cf2…` = naar binnen + hek; kast-schuif `df95e84f…` = pocketpijl; koof `719b8845…` = zwarte rand + kruis; inbouw wasbak `c5686bd0…` = wit blad + kom.
+- **2026-08-18** — ISO was-iconen (kuip / vierkant+cirkel / gestapeld) + kwarttrap-hand: omhoog spil onder-rechts + pijl omhoog; opkomend rechte onder + pijl naar rechts; `mirrored[0]` in geometrie, geen Konva-flip.
+- **2026-08-18** — Noordkruis (`sym-350` / `north_cross`) bij FML X-flip: positie wel, rotatie/`mirrored` niet — pijl blijft wereld-noord, N niet achterstevoren. 90° roteert wél mee.
+- **2026-08-18** — Van Ostadestraat 1e achter: losstaand bad, dubbele wastafel, was-droogcombi; kwarttrap-refid (`stair_quarter_90_up`); lange balkonbalustrade zelfde spijlstijl (aantal volgt lengte). Kleine wasbak flush op lokale −Y.
+- **2026-08-18** — FML preview z-order: area-fill → surface-fill → object → tekst. Surfaces dekken geen fixture-kleur meer; kamer/surface-benaming altijd bovenop.
+- **2026-08-18** — FML roundtrip: typed labels/lijnen/dimensions + `extras`/`source`/`designs[]`; source-aware `buildFmlV3`; viewer annotations + design-switcher; workspace zonder source ongewijzigd.
+- **2026-08-18** — Keuken-fixtures Kinderdijk: koelkast + vriessymbool, metalen keukenwasbak + kraan, 4-pits kookplaat; catalogus-refids + blad onder apparatuur. Sanitair: hangend toilet, glazen wand, slaapkamerwasbak, entreepijl. Balkonbalustrade = grijze traphek-spijlen.
+- **2026-08-19** — Worker-host `floorplan-fml`: geen `_redirects` (`/* /index.html` = 100324-lus). SPA via `assets.not_found_handling = single-page-application` (`frontend/wrangler.toml`); dashboard hetzelfde. `_headers` blijft.
+- **2026-08-18** — FML inspect-modus alleen in losse viewer (zijbalk Bewerken/Inspectie). Read-only tik + `inspectColors`; workspace blijft editor. Geen box-select/gevel.
+- **2026-08-18** — Areas/surfaces product-gate: `FML_AREA_SURFACE_EDIT_VISIBLE=false` (workspace: geen Ctrl+klik/surface-tool/roomtag-settings; export fill = Woonkamer-fabriekskleur). Losse FML-viewer blijft vol. Techniek (auto-areas) blijft.
+- **2026-08-17** — Areas/surfaces/roomtags: hole-ringen ná balance → `Floor.areas`; surfaces handmatig; catalogus NL + settings `roomTagColors`; Ctrl+klik + draw_surface; X-14 arrays mogen gevuld.
 - **2026-08-17** — Kwarttrap-symbolen: zelfde lijnstijl als spiltrap; BG 90°+3 treden + dashed snede; 1e omgekeerde vlucht, pijl blijft omhoog. Geen nieuwe refids tot een Floorplanner-FML die items heeft.
 - **2026-08-17** — Diagnose origineel: H/V-schaallinialen als SVG-overlay (zelfde coords als stap-1 scan) + mm/px/JSON; JPEG blijft schoon.
 - **2026-08-17** — Oil bottle (geen standpipe): FML-viewer popup rebase nulpunt naar item-midden op alle floors met die refid; geen auto-apply, workspace ongemoeid.

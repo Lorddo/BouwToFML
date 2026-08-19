@@ -1,5 +1,5 @@
 import polygonClipping from 'polygon-clipping'
-import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
+import { clampWallBalance, floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
 import type { Point2D } from '@/core/fml/types'
 
 export interface WallPolygonInput {
@@ -88,8 +88,7 @@ export function resolveWallExtents(wall: Pick<WallPolygonInput, 'thickness' | 'b
   plus: number
   minus: number
 } {
-  const balance = wall.balance ?? 0.5
-  const clamped = Math.min(1, Math.max(0, balance))
+  const clamped = clampWallBalance(wall.balance)
   return {
     plus: wall.thickness * clamped,
     minus: wall.thickness * (1 - clamped),
@@ -236,10 +235,19 @@ function endOutDir(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
 }
 
 /**
+ * Join-cap: stop just inside the neighbor face. Union still seals via
+ * {@link UNION_SEAL_CM} inflate; without this inset the incoming cap + inflate
+ * pokes ~0.5 cm past a straight through-wall (1 px at typical junction zoom).
+ */
+function joinExtendCm(needed: number): number {
+  return Math.max(0, needed - UNION_SEAL_CM)
+}
+
+/**
  * Free end: half self thickness (square cap).
  * Joined end: neighbor body extent along this wall's out-dir (balance-aware) —
  * flush faces do not grow a false exterior ear; centered walls keep thickness/2.
- * Mid-span T into host: same extent into host + seal.
+ * Mid-span T into host: same extent, inset so the host façade stays straight.
  */
 function resolveEndExtendCm(
   wall: WallPolygonInput,
@@ -252,13 +260,13 @@ function resolveEndExtendCm(
   const neighbors = neighborsAtEnd(wall, end, adj, wallById)
   if (neighbors.length > 0) {
     const needed = Math.max(...neighbors.map((neighbor) => extentAlongDirection(neighbor, out)))
-    return Math.max(needed, UNION_SEAL_CM)
+    return joinExtendCm(needed)
   }
 
   const hosts = findMidspanHosts(wall, end, walls)
   if (hosts.length > 0) {
     const needed = Math.max(...hosts.map((host) => extentAlongDirection(host, out)))
-    return Math.max(needed, UNION_SEAL_CM) + UNION_SEAL_CM
+    return joinExtendCm(needed)
   }
 
   return Math.max(wall.thickness * END_EXTEND_FACTOR, UNION_SEAL_CM)

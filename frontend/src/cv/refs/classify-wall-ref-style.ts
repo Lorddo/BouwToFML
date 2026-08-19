@@ -1,8 +1,5 @@
-import { tally } from '@/core/diagnostics'
-import type { OpenCV } from '@/cv/loadOpenCV'
-import type { PreprocessConfig } from '@/core/extraction/types'
 import type { WallRenderStyle } from '@/core/extraction/geometric-signature'
-import { cropBwBytesFromRect, cropRectToLocalBw } from './ref-crop-bw'
+import { cropBwBytesFromRect } from './ref-crop-bw'
 import { buildFaceProfile } from './ref-face-profile'
 import {
   classifyWallRenderStyleFromFaceCount,
@@ -52,44 +49,4 @@ export function classifyWallRefStyleFromBw(params: {
     rect: params.rect,
   })
   return classifyFromCropBw(crop.data, crop.width, crop.height)
-}
-
-// ESC:REF-11 (A)
-/**
- * Fallback: cropt uit wallLayer-rebuild of `sharedWallBwMat` / `baseBw`.
- * Prefer `classifyWallRefStyleFromBw` wanneer UI-`baseBw` beschikbaar is.
- */
-export function classifyWallRefStyleFromImage(params: {
-  cv: OpenCV
-  image: HTMLImageElement | HTMLCanvasElement
-  rect: RefRect
-  preprocess: PreprocessConfig
-  eraserMask?: Uint8Array
-  sharedWallBwMat?: OpenCV['Mat']
-  baseBw?: { data: Uint8Array; width: number; height: number }
-}): WallRefStyleClassification {
-  if (params.baseBw) {
-    tally('REF-11', 'base_bw')
-    return classifyWallRefStyleFromBw({
-      bw: params.baseBw.data,
-      width: params.baseBw.width,
-      height: params.baseBw.height,
-      rect: params.rect,
-    })
-  }
-  tally('REF-11', 'image_rebuild')
-  const crop = cropRectToLocalBw({
-    cv: params.cv,
-    image: params.image,
-    rect: params.rect,
-    preprocess: params.preprocess,
-    eraserMask: params.eraserMask,
-    sharedWallBwMat: params.sharedWallBwMat,
-    axisAlign: false,
-  })
-  try {
-    return classifyFromCropBw(crop.bwData, crop.width, crop.height)
-  } finally {
-    crop.bwMat.delete()
-  }
 }

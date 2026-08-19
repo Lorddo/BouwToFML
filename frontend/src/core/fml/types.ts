@@ -3,6 +3,9 @@ export interface Point2D {
   y: number
 }
 
+/** Onbekende Floorplanner-keys die we roundtripten zonder te typen. */
+export type FmlExtras = Record<string, unknown>
+
 export type OpeningType = 'door' | 'window'
 
 export interface Opening {
@@ -21,12 +24,24 @@ export interface Opening {
    */
   bovenlicht?: boolean | null
   /**
+   * Session-only glashoogte van het gesynthetiseerde bovenlicht (cm).
+   * `null`/`undefined` = erf vloerdefault; gezet = force.
+   */
+  bovenlichtHeightCm?: number | null
+  /**
+   * Session-only dorpel-gap boven de opening (cm).
+   * `null`/`undefined` = erf vloerdefault; gezet = force.
+   */
+  bovenlichtGapCm?: number | null
+  /**
    * @deprecated FML-viewer leest boog-inset uit opening-refid-catalog (`swingInsetCm`).
    * Velden blijven optioneel voor oude in-memory plans; worden genegeerd bij render.
    */
   swingHingeInsetCm?: number
   /** @deprecated Zie swingHingeInsetCm. */
   swingFreeInsetCm?: number
+  /** Overige opening-keys (niet getypt). */
+  extras?: FmlExtras
 }
 
 export interface Wall {
@@ -37,6 +52,8 @@ export interface Wall {
   balance?: number
   c?: Point2D | null
   openings: Opening[]
+  /** Overige muur-keys (az/bz/decor/groupMarkerConfig/…). */
+  extras?: FmlExtras
 }
 
 export interface DrawingMeta {
@@ -48,6 +65,8 @@ export interface DrawingMeta {
   url?: string
   alpha?: number
   visible?: boolean
+  /** Overige drawing-keys (id/depth/…). */
+  extras?: FmlExtras
 }
 
 /** Floorplanner design-item (keuken/sanitair/installaties). Alleen display bij import. */
@@ -63,20 +82,150 @@ export interface FloorItem {
   mirrored?: [number, number]
   guid?: string
   name?: string
+  /** Overige item-keys (materials/rotation_x/light/…). */
+  extras?: FmlExtras
+}
+
+/** Gesloten binnenruimte (Floorplanner `areas[]`). */
+export interface FloorArea {
+  id: string
+  poly: Point2D[]
+  role?: number
+  name?: string
+  customName?: string
+  color: string
+  showAreaLabel: boolean
+  showSurfaceArea?: boolean
+  name_x?: number
+  name_y?: number
+  /** Overige area-keys (ceiling/roomstyle_id/texture/…). */
+  extras?: FmlExtras
+}
+
+/** Handmatige polygoon boven areas (Floorplanner `surfaces[]`). */
+export interface FloorSurface {
+  id: string
+  poly: Array<Point2D & { z?: number }>
+  role?: number
+  name?: string
+  customName?: string
+  color: string
+  showAreaLabel: boolean
+  showSurfaceArea?: boolean
+  name_x?: number
+  name_y?: number
+  isCutout?: boolean
+  pattern?: number
+  /** Overige surface-keys (isRoof/transparency/…). */
+  extras?: FmlExtras
+}
+
+export type FloorLineType = 'solid_line' | 'dashed_line' | 'dotted_line' | 'dashdotted_line'
+
+/** Tekstlabel op de plattegrond (Floorplanner `labels[]`). */
+export interface FloorLabel {
+  id: string
+  x: number
+  y: number
+  text: string
+  fontFamily: string
+  fontSize: number
+  letterSpacing: number
+  fontColor: string
+  backgroundColor: string
+  backgroundAlpha?: number
+  align: 'left' | 'center' | 'right'
+  rotation: number
+  outline?: boolean
+  bold?: boolean
+  italic?: boolean
+  extras?: FmlExtras
+}
+
+/** Notatielijn (Floorplanner `lines[]`). color kan number (0) of hex zijn. */
+export interface FloorLine {
+  id: string
+  a: Point2D
+  b: Point2D
+  type: FloorLineType
+  color: number | string
+  thickness: number
+  extras?: FmlExtras
+}
+
+/** Maatlijn (Floorplanner `dimensions[]`) — alleen bewaren/tonen. */
+export interface FloorDimension {
+  id: string
+  type: 'custom_dimension'
+  a: Point2D
+  b: Point2D
+  extras?: FmlExtras
+}
+
+/** Design-meta die we roundtripten zonder te bewerken. */
+export interface FloorDesignSource {
+  id?: number | string
+  settings?: FmlExtras
+  cameras?: unknown[]
+  annotations?: unknown[]
+  leftover?: FmlExtras
+}
+
+/** Één Floorplanner-design op een verdieping. */
+export interface FloorDesign {
+  name: string
+  walls: Wall[]
+  items?: FloorItem[]
+  areas?: FloorArea[]
+  surfaces?: FloorSurface[]
+  labels?: FloorLabel[]
+  lines?: FloorLine[]
+  dimensions?: FloorDimension[]
+  source?: FloorDesignSource
+}
+
+/** Project-meta uit bron-FML. */
+export interface FloorPlanSource {
+  id?: number | string
+  public?: boolean
+  features?: unknown[]
+  settings?: FmlExtras
+  leftover?: FmlExtras
+}
+
+/** Floor-meta uit bron-FML. */
+export interface FloorSource {
+  id?: number | string
+  project_id?: number | string
+  created_at?: string
+  updated_at?: string
+  cameras?: unknown[]
+  leftover?: FmlExtras
 }
 
 export interface Floor {
   name: string
   level: number
   height: number
+  /** Actief design (plat voor editor/canvas). */
   walls: Wall[]
   items?: FloorItem[]
+  areas?: FloorArea[]
+  surfaces?: FloorSurface[]
+  labels?: FloorLabel[]
+  lines?: FloorLine[]
+  dimensions?: FloorDimension[]
   drawing?: DrawingMeta
+  /** Alle designs; actief is ook plat op walls/items/…. */
+  designs?: FloorDesign[]
+  activeDesignIndex?: number
+  source?: FloorSource
 }
 
 export interface FloorPlan {
   name: string
   floors: Floor[]
+  source?: FloorPlanSource
 }
 
 export interface FloorStats {

@@ -7,11 +7,9 @@ import type { DoorHingeAxis } from './types'
 import type { RefBBox, RefPoint } from '@/cv/refs/types'
 
 export {
-  buildDoorSwingMask,
   closeClusterSwingMaskGaps,
   countUniqueSwingFaceIds,
   trimMaskToContent,
-  CLUSTER_SWING_CLOSE_KERNEL_PX,
 } from './door-swing-mask'
 
 type Vec2 = { x: number; y: number }

@@ -24,6 +24,7 @@ export function useFmlPreviewAddOpening(options: {
   editor: EditorApi
   addDoorSubtype: Ref<DoorAddSubtype>
   addDoorWidthCm: Ref<number>
+  addDoorHeightCm: Ref<number>
   addWindowSubtype: Ref<WindowAddSubtype>
   addWindowWidthCm: Ref<number>
   addWindowSillZCm: Ref<number>
@@ -48,10 +49,14 @@ export function useFmlPreviewAddOpening(options: {
     const sillZCm =
       mode === 'window' ? clampOpeningSillZ(options.addWindowSillZCm.value) : undefined
     const heightCm =
-      mode === 'window' ? clampWindowOpeningHeight(options.addWindowHeightCm.value) : undefined
+      mode === 'window'
+        ? clampWindowOpeningHeight(options.addWindowHeightCm.value)
+        : Math.max(1, Math.round(options.addDoorHeightCm.value || DEFAULT_FML_DOOR_HEIGHT_CM))
     if (mode === 'window') {
       options.addWindowSillZCm.value = sillZCm ?? DEFAULT_WINDOW_SILL_Z_CM
       options.addWindowHeightCm.value = heightCm ?? DEFAULT_WINDOW_HEIGHT_CM
+    } else {
+      options.addDoorHeightCm.value = heightCm
     }
 
     const projectedT = projectPointToWallT(wall, cm)
@@ -62,7 +67,7 @@ export function useFmlPreviewAddOpening(options: {
       t: openingT,
       width: widthCm,
       z: sillZCm,
-      z_height: mode === 'door' ? DEFAULT_FML_DOOR_HEIGHT_CM : heightCm,
+      z_height: heightCm,
       mirrored: mode === 'door' ? [0, 0] : undefined,
       guid: crypto.randomUUID(),
     }

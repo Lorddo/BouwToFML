@@ -54,7 +54,7 @@ export function useFmlPreviewMeasure(options: {
   }
 
   function cancelMeasureDrag(): void {
-    window.removeEventListener('mousemove', onMeasurePointerMove)
+    window.removeEventListener('pointermove', onMeasurePointerMove)
     measureDrag = null
     measurePreview.value = null
   }
@@ -85,8 +85,8 @@ export function useFmlPreviewMeasure(options: {
     measureDrag = { startCm }
     measureHoverCm.value = startCm
     measurePreview.value = { a: startCm, b: startCm }
-    window.addEventListener('mousemove', onMeasurePointerMove)
-    window.addEventListener('mouseup', onMeasurePointerUp, { once: true })
+    window.addEventListener('pointermove', onMeasurePointerMove)
+    window.addEventListener('pointerup', onMeasurePointerUp, { once: true })
   }
 
   function onMeasurePointerMove(event: MouseEvent): void {
@@ -105,7 +105,7 @@ export function useFmlPreviewMeasure(options: {
   }
 
   function onMeasurePointerUp(event: MouseEvent): void {
-    window.removeEventListener('mousemove', onMeasurePointerMove)
+    window.removeEventListener('pointermove', onMeasurePointerMove)
     const drag = measureDrag
     measureDrag = null
     const preview = measurePreview.value

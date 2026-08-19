@@ -1,4 +1,18 @@
-import type { Floor, FloorItem, FloorPlan, Point2D, Wall } from './types'
+import { cloneFloorShallow } from './clone-floor-shallow'
+import type {
+  DrawingMeta,
+  Floor,
+  FloorArea,
+  FloorDesign,
+  FloorDimension,
+  FloorItem,
+  FloorLabel,
+  FloorLine,
+  FloorPlan,
+  FloorSurface,
+  Point2D,
+  Wall,
+} from './types'
 
 export type UnderlayOriginLayout = {
   origin: Point2D
@@ -32,26 +46,115 @@ function translateItem(item: FloorItem, dx: number, dy: number): FloorItem {
   }
 }
 
-function translateFloor(floor: Floor, dx: number, dy: number): Floor {
+function translateArea(area: FloorArea, dx: number, dy: number): FloorArea {
   return {
-    ...floor,
-    walls: floor.walls.map((wall) => translateWall(wall, dx, dy)),
-    items: floor.items?.map((item) => translateItem(item, dx, dy)),
+    ...area,
+    poly: area.poly.map((p) => translatePoint(p, dx, dy)),
   }
 }
 
-function cloneFloorShallow(floor: Floor): Floor {
+function translateSurface(surface: FloorSurface, dx: number, dy: number): FloorSurface {
   return {
-    ...floor,
-    walls: floor.walls.map((wall) => ({
-      ...wall,
-      openings: wall.openings.map((op) => ({ ...op })),
+    ...surface,
+    poly: surface.poly.map((p) => ({
+      ...translatePoint(p, dx, dy),
+      z: p.z,
     })),
-    items: floor.items?.map((item) => ({ ...item })),
   }
 }
 
-/** Verschuif floor-coords (muren a/b/c + items). Openings blijven `t`. */
+function translateLabel(label: FloorLabel, dx: number, dy: number): FloorLabel {
+  return {
+    ...label,
+    x: label.x + dx,
+    y: label.y + dy,
+  }
+}
+
+function translateLine(line: FloorLine, dx: number, dy: number): FloorLine {
+  return {
+    ...line,
+    a: translatePoint(line.a, dx, dy),
+    b: translatePoint(line.b, dx, dy),
+  }
+}
+
+function translateDimension(dim: FloorDimension, dx: number, dy: number): FloorDimension {
+  return {
+    ...dim,
+    a: translatePoint(dim.a, dx, dy),
+    b: translatePoint(dim.b, dx, dy),
+  }
+}
+
+function translateDrawing(
+  drawing: DrawingMeta | undefined,
+  dx: number,
+  dy: number,
+): DrawingMeta | undefined {
+  if (!drawing) return drawing
+  return {
+    ...drawing,
+    x: drawing.x + dx,
+    y: drawing.y + dy,
+  }
+}
+
+function translateCamera(camera: unknown, dx: number, dy: number): unknown {
+  if (!camera || typeof camera !== 'object') return camera
+  const c = camera as Record<string, unknown>
+  const next = { ...c }
+  if (typeof c.x === 'number') next.x = c.x + dx
+  if (typeof c.y === 'number') next.y = c.y + dy
+  return next
+}
+
+function translateDesign(design: FloorDesign, dx: number, dy: number): FloorDesign {
+  return {
+    ...design,
+    walls: design.walls.map((wall) => translateWall(wall, dx, dy)),
+    items: design.items?.map((item) => translateItem(item, dx, dy)),
+    areas: design.areas?.map((area) => translateArea(area, dx, dy)),
+    surfaces: design.surfaces?.map((surface) => translateSurface(surface, dx, dy)),
+    labels: design.labels?.map((label) => translateLabel(label, dx, dy)),
+    lines: design.lines?.map((line) => translateLine(line, dx, dy)),
+    dimensions: design.dimensions?.map((dim) => translateDimension(dim, dx, dy)),
+    source: design.source
+      ? {
+          ...design.source,
+          cameras: design.source.cameras?.map((cam) => translateCamera(cam, dx, dy)),
+        }
+      : design.source,
+  }
+}
+
+function translateFloor(floor: Floor, dx: number, dy: number): Floor {
+  const designs = floor.designs?.map((d) => translateDesign(d, dx, dy))
+  const activeIdx = floor.activeDesignIndex ?? 0
+  const active = designs?.[activeIdx]
+  return {
+    ...floor,
+    walls: active?.walls ?? floor.walls.map((wall) => translateWall(wall, dx, dy)),
+    items: active?.items ?? floor.items?.map((item) => translateItem(item, dx, dy)),
+    areas: active?.areas ?? floor.areas?.map((area) => translateArea(area, dx, dy)),
+    surfaces:
+      active?.surfaces ?? floor.surfaces?.map((surface) => translateSurface(surface, dx, dy)),
+    labels: active?.labels ?? floor.labels?.map((label) => translateLabel(label, dx, dy)),
+    lines: active?.lines ?? floor.lines?.map((line) => translateLine(line, dx, dy)),
+    dimensions:
+      active?.dimensions ?? floor.dimensions?.map((dim) => translateDimension(dim, dx, dy)),
+    drawing: translateDrawing(floor.drawing, dx, dy),
+    designs,
+    source: floor.source
+      ? {
+          ...floor.source,
+          cameras: floor.source.cameras?.map((cam) => translateCamera(cam, dx, dy)),
+        }
+      : floor.source,
+  }
+}
+
+/** Verschuif floor-coords (muren + items + areas/surfaces + labels/lijnen/dims + alle designs + drawing). */
 export function translateFloorPlan(
   plan: FloorPlan,
   dx: number,

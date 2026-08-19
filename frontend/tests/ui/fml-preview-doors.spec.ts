@@ -131,6 +131,53 @@ describe('groupDoorOpeningsOnWall', () => {
     expect(groups[0].arrowPoints).toHaveLength(1)
   })
 
+  it('renders Anna kast-schuif (df95e84f) as pocket arrows', () => {
+    const groups = groupDoorOpeningsOnWall('wall-1', { x: 10, y: 0 }, { x: -154, y: 0 }, [
+      doorOpening({
+        refid: 'df95e84f01163fe9983d43d088551813e40e3e2f',
+        t: 0.728,
+        width: 68.6,
+        mirrored: [0, 0],
+      }),
+      doorOpening({
+        refid: 'df95e84f01163fe9983d43d088551813e40e3e2f',
+        t: 0.322,
+        width: 68.6,
+        mirrored: [1, 1],
+      }),
+    ])
+    expect(groups).toHaveLength(2)
+    expect(groups[0].catalogLabel).toBe('Schuifdeur (kast)')
+    expect(groups[0].arrowPoints).toHaveLength(1)
+    expect(groups[0].arcPoints).toHaveLength(0)
+    expect(groups[1].arrowPoints).toHaveLength(1)
+  })
+
+  it('renders french balcony as inward swing + railing in front', () => {
+    const groups = groupDoorOpeningsOnWall(
+      'wall-1',
+      { x: 0, y: 0 },
+      { x: 200, y: 0 },
+      [
+        doorOpening({
+          refid: '9c845cf2ad8de220b65ee4dedeeb28ba4d750e21',
+          t: 0.5,
+          width: 84,
+          mirrored: [0, 0],
+        }),
+      ],
+      20,
+    )
+    expect(groups[0].catalogLabel).toBe('Frans balkon')
+    expect(groups[0].arcPoints).toHaveLength(1)
+    expect(groups[0].leafLines.length).toBeGreaterThan(2)
+    expect(groups[0].arrowPoints).toHaveLength(0)
+    const leaf = groups[0].leafLines[0]
+    expect(leaf[3]).toBeGreaterThan(0)
+    const railY = (groups[0].leafLines[1][1] + groups[0].leafLines[1][3]) / 2
+    expect(railY).toBeLessThan(0)
+  })
+
   it('renders d34e31c as a closet45 door (45° leaf + arc, like Floorplanner 2D)', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
@@ -326,6 +373,12 @@ describe('resolveOpeningCatalog', () => {
     )
     expect(resolveOpeningCatalog('d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9', 'door').kind).toBe(
       'closet45',
+    )
+    expect(resolveOpeningCatalog('9c845cf2ad8de220b65ee4dedeeb28ba4d750e21', 'door').kind).toBe(
+      'french_balcony',
+    )
+    expect(resolveOpeningCatalog('df95e84f01163fe9983d43d088551813e40e3e2f', 'door').kind).toBe(
+      'sliding_pocket',
     )
   })
 

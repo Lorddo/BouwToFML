@@ -12,6 +12,18 @@ registerAllExtractors()
 
 applyLocale(loadUserSettings().locale)
 
+/** Andere Vite-apps op hetzelfde origin (localhost:5173) kunnen een PWA-SW nalaten. */
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      void registration.unregister()
+    }
+  })
+  if ('caches' in window) {
+    void caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+  }
+}
+
 const app = createApp(App)
 
 app.config.errorHandler = (err) => {

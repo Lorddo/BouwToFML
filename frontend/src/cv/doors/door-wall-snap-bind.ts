@@ -21,7 +21,7 @@ import type { BoundDoor, DoorOpeningAxis, ResolvedDoorCandidate } from './types'
 
 const T = DOOR_WALL_SNAP_TUNING
 
-export function maxCentroidSegmentDistancePx(referenceWallThicknessPx?: number): number {
+function maxCentroidSegmentDistancePx(referenceWallThicknessPx?: number): number {
   const thickness = Math.max(1, referenceWallThicknessPx ?? T.expandThicknessFallbackPx)
   return Math.max(
     T.maxCentroidSegmentDistFloorPx,

@@ -2,16 +2,16 @@ import { tally } from '@/core/diagnostics'
 import type { BoundWindow, WindowOpeningAxis } from './types'
 
 /** Fractie van de kleinere span: intersection / min(len) ≥ dit → conflict. */
-export const WINDOW_DEDUPE_OVERLAP_MIN_RATIO = 0.5
+const WINDOW_DEDUPE_OVERLAP_MIN_RATIO = 0.5
 
 /** 1D-IoU ≥ dit → pure dubbel / near-dubbel. */
-export const WINDOW_DEDUPE_IOU = 0.6
+const WINDOW_DEDUPE_IOU = 0.6
 
 /** Deur wint alleen bij bijna-coïncidente spans (strak; kozijn-delen behouden). */
-export const DOOR_WINS_WINDOW_IOU = 0.75
+const DOOR_WINS_WINDOW_IOU = 0.75
 
 /** Midpoint-afstand ≤ dit × min(lenDoor, lenWindow) → deur wint. */
-export const DOOR_WINS_WINDOW_MID_RATIO = 0.1
+const DOOR_WINS_WINDOW_MID_RATIO = 0.1
 
 export type WallOpeningSpan = {
   segmentIndex: number
@@ -22,9 +22,9 @@ export type WallOpeningSpan = {
   widthPx?: number
 }
 
-export type AxisInterval = { a0: number; a1: number; len: number }
+type AxisInterval = { a0: number; a1: number; len: number }
 
-export function wallAxisInterval(span: WallOpeningSpan): AxisInterval {
+function wallAxisInterval(span: WallOpeningSpan): AxisInterval {
   const a0 =
     span.openingAxis === 'h'
       ? Math.min(span.openingStartPx.x, span.openingEndPx.x)
@@ -38,18 +38,18 @@ export function wallAxisInterval(span: WallOpeningSpan): AxisInterval {
   return { a0, a1: a0 + len, len }
 }
 
-export function intervalIntersection(a: AxisInterval, b: AxisInterval): number {
+function intervalIntersection(a: AxisInterval, b: AxisInterval): number {
   return Math.max(0, Math.min(a.a1, b.a1) - Math.max(a.a0, b.a0))
 }
 
-export function intervalIou(a: AxisInterval, b: AxisInterval): number {
+function intervalIou(a: AxisInterval, b: AxisInterval): number {
   const inter = intervalIntersection(a, b)
   const union = a.len + b.len - inter
   if (union <= 1e-6) return inter > 0 ? 1 : 0
   return inter / union
 }
 
-export function intervalOverlapMinRatio(a: AxisInterval, b: AxisInterval): number {
+function intervalOverlapMinRatio(a: AxisInterval, b: AxisInterval): number {
   const inter = intervalIntersection(a, b)
   const minLen = Math.min(a.len, b.len)
   if (minLen <= 1e-6) return inter > 0 ? 1 : 0

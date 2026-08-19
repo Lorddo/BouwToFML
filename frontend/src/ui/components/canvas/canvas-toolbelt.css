@@ -37,6 +37,7 @@
 .canvas-toolbelt-dock__section {
   display: flex;
   align-items: center;
+  gap: 4px;
   padding: 4px 6px;
 }
 
@@ -50,8 +51,6 @@
 
 .canvas-toolbelt-dock__section--fml {
   background: rgb(255 255 255 / 0.96);
-  gap: 2px;
-  padding: 2px 4px;
 }
 
 .fml-toolbelt__meta {

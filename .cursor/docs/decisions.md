@@ -55,8 +55,8 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
-| `balance` | Floorplanner a→b (Y-down): `0` = alles **rechts**, `1` = alles **links** (`floorplannerLeftNormal`); default export 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence**; zonder bewijs blijft 0.5; `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm; stub-bump alleen bij gemeten nabijheid |
-| Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning |
+| `balance` | Floorplanner **hartlijn** `a`/`b` (Y-down): `0` = alles **rechts**, `1` = alles **links** (`floorplannerLeftNormal`); lichaam schuift, as blijft (keep-axis). Default export 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence**; zonder bewijs blijft 0.5; `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm; stub-bump alleen bij gemeten nabijheid. Detectie clamp 0–1; editor-invoer tot ±1000% (slider 0–100%) |
+| Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning; hartlijn `a`/`b` ongewijzigd |
 | Diktemeting | `thicknessPxTypical` = mediaan DT-samples (FML-export); `thicknessPxMax` blijft opening-snap bovengrens; korte stubs kern-sample t∈[0.3,0.7]; junction-marge schaalt met `referenceWallThicknessPx` |
 | Keten-union | Gemeten gelijkenis + 15% hysterese over bandgrens (niet alleen band-identiteit) |
 | L9 stub | Bewaart cross-band + parallel CL-offset (thickness-gate + `orthoStubTierMaxPx` mid-capped) |
@@ -168,7 +168,8 @@ Zie `.cursor/docs/v1-workflow-ui.md` voor volledige flow.
 | Sidebar | **Één linkse rail** die per fase verder openschuift |
 | Schaal-gate | Tekening **greyed** tot schaal bevestigd (✓); **twee H-overlays** direct bij import |
 | Schaal-UI | Horizontale + verticale **H** (poten over volledig scherm); mm op middelstuk; ✓/✕ rechts |
-| Herschalen | Zelfde posities + mm herstellen voor mini-aanpassingen |
+| Stap-4 rescale | «Herschalen» bij plan-met-muren (ook na heropenen + FML-viewer): H/V apart, geen muurdikte |
+| Herschalen | Zelfde posities + mm herstellen voor mini-aanpassingen (workspace: stap-1 handles via layout; viewer: bbox) |
 | Menu (rechtsboven) | **Nieuw project** (bevestiging, sessie wissen) + **Kleuren** (localStorage) |
 | Kleuren local | Muurlijnen, deuren, ramen, linialen H horizontaal/verticaal — per tekenaar, geen server |
 | Onderlegger toggle | Oog-icoon + **spatie vasthouden** tijdelijk verbergen |
@@ -277,7 +278,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
 | Stap 4 nulpunt | Tool «Nulpunt»: sleep kruis → ✓ bakken als FML `(0,0)` (of ✕/Esc annuleren); soft snap naar muurfaces (binnen/buiten, balance-aware), niet naar knoop/hartlijn; Ctrl/Cmd schakelt snap uit; `fmlNulpuntImageCm` persist (scant-cm); underlay-origin synchroon; per floor eigen anker voor 3D-stack. **FML-viewer:** bij openen, als oil-bottle-refid aanwezig en niet al op origin → popup rebase nulpunt naar item-midden op alle floors met die fles |
-| Stap 4 oriëntatie | FML spiegel/90° om nulpunt `(0,0)` (`fmlOrient` D4-persist); underlay apart (rot/flip + verplaats-toggle op `previewUnderlayLayout`); geometrie ≠ scan-midden; **project-spiegel** = alle FML-floors X-flip zonder switch (viewer zichtbaar; workspace achter `FML_ORIENT_CONTROLS_VISIBLE`) |
+| Stap 4 oriëntatie | FML spiegel/90° om nulpunt `(0,0)` (`fmlOrient` D4-persist); underlay apart (rot/flip + verplaats-toggle op `previewUnderlayLayout`); geometrie ≠ scan-midden; **project-spiegel** = alle FML-floors X-flip zonder switch (viewer: eigen rij in linker menu; workspace achter `FML_ORIENT_CONTROLS_VISIBLE`) |
 | Floor-switch | Exact restore + opgeslagen `previewPlan` (geen openings-rerun / geen regenerate) |
 | Defaults | Per verdieping (`FloorMeta.defaults`); per component in FML-editor |
 | Persistentie | **Niet** in V1 (IndexedDB later) |
@@ -289,7 +290,8 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Beslissing | Status |
 |------------|--------|
-| V1 | **Nee** — niet in scope |
+| V1 | **Nee** in FML `dimensions[]` — niet in scope |
+| Viewer-overlay | Toggle «Maten tonen» (niet `FmlToolId`): midden van elke area-zijde ≥ 50 cm; collinear merge (ook micro-jog / T-inkeping ≤40 cm) + shared-edge dedupe; sessie-only, geen export |
 | V2 | Automatisch op **binnenmaten**, **buiten** footprint |
 | Meetwaarde | **Binnenmaten** (tussen binnenwanden / binnenwerks), niet hart-op-hart |
 | Plaatsing | **Buiten** om de verdieping — externe maatketting rondom (zoals in `examples/`) |
@@ -480,6 +482,74 @@ houden; de viewer-union verbergt dat, Floorplanner niet. Fix in cm, ná thicknes
 | Methode | Knoop-gewijs: H-ketens → gedeelde Y, V-ketens → gedeelde X; L/T = `(Vx, Hy)` |
 | Oblique | Knoop met oblique muur bevroren; H met één bevroren eind → as = bevroren Y |
 | Niet | L4/L10 `hvBandPx` retune; geen her-run op `editedPreviewPlan` / import |
+
+---
+
+## FML wall sanitize (2026-08-19)
+
+Near-90° restjitter + muur-onder-muur in cm, ná thickness/balance. Markers blijven QA (ε 0,1 cm).
+
+| Beslissing | Detail |
+|------------|--------|
+| Helper | `sanitizeFmlWalls` = weld 0,25 cm → `orthogonalizeNearAxisWalls` → collinear cover (as ≤0,5 cm) |
+| Auto | Alleen generate: eind `harmonizeFmlWallThickness` (i.p.v. solo orthogonalize) |
+| Handmatig | Knop «Opschonen» naast Herschalen (workspace + viewer); undo; areas regen |
+| Niet | Auto bij FML-openen; niet bij wall-add; geen `alignWallJunctionBalance` (import-balance blijft) |
+| Balance | Keep-axis: overlever houdt `balance`/`thickness`/`extras`; split-stukken erven |
+
+---
+
+## FML-editor touch + wachtwoord (2026-08-19)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Host | Alleen `/FML-editor` (`FmlViewerView`); workspace ongemoeid |
+| Gate | Shared canvas achter `touchEditor` (default false) |
+| Desktop-muis | `/FML-editor` op PC blijft mousedown/mousemove; geen wrap-capture |
+| Touch-nav + rail | Alleen `pointer: coarse` (Set/H/V/Move; geen Sel — Settings is al multi) |
+| Gestures | 1 vinger = tik/edit; 2 vingers = pan; pinch = zoom |
+| Redo | Ctrl+Y / Ctrl+Shift+Z **niet** achter flag — ook workspace |
+| Editor-wachtwoord | Soft gate `J0rd!` (`bouwToFml.fmlEditorUnlocked`), naast app-access |
+
+---
+
+## FML-hoekmarkers (2026-08-19)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Setting | `fmlViewer.cornerMarkerMode`: `off` / `square` / `skew` |
+| Default | `skew` — `!` op binnenhoeken die niet exact H+V zijn |
+| `square` | `|_` op exacte 90° H/V-binnenhoeken |
+| Scope | Elke binnenhoek-sector &lt; 180°: L=1, T=2, X=4; plat T-vlak geen teken |
+| Recht | Muur-eindpunten `|Δx|` of `|Δy|` ≤ 0,1 cm (niet gemiddeld knooppunt) |
+| Plaats | In de sector langs de hoekbissectrice (niet op het knooppunt) |
+| Overlay | Viewer-only; geen FML-export |
+| UI | Alleen Instellingen (geen FML-toolbar) |
+
+---
+
+## FML-viewer mobile chrome (2026-08-19)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Onderbalk | Floating zoals topbar; `safe-area` + 8 px marge (alleen `/FML-editor`) |
+| Settings | Eigen kaart boven de tools, wrap + max-hoogte; niet meer in dezelfde rij |
+| Sidebar | Menu houdt labels (icoon + tekst); geen icon-only |
+| Modifier-rail | Drie knoppen (`settings` / `axis` / `move`) als iconen, zelfde kaartstijl |
+| Fit | Icoon (`ToolbeltIcon` `fit`), geen tekst |
+| Fullscreen | Icoon naast fit; verbergt app-header + verdieping-rail; Escape / icoon uit |
+| Viewport | Viewer op `100dvh` (iOS 100vh-clip) |
+
+---
+
+## Hosted test (Workers, 2026-08-19)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Host | Worker + static assets (`floorplan-fml`, `workers.dev`) — niet Pages |
+| SPA-fallback | `assets.not_found_handling = "single-page-application"` in `frontend/wrangler.toml` |
+| Geen `_redirects` | `/* /index.html 200` geeft Workers-fout 100324 (oneindige lus met HTML-handling) |
+| Headers | `frontend/public/_headers` (COOP/COEP/CORP) blijft in `dist/` |
 
 ---
 

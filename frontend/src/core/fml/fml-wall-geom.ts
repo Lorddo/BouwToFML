@@ -1,16 +1,13 @@
 import type { Point2D, Wall } from './types'
-import {
-  FML_WALL_BALANCE_FALLBACK,
-  FML_WALL_BALANCE_MAX,
-  FML_WALL_BALANCE_MIN,
-} from './extraction-to-plan-geom'
+import { FML_WALL_BALANCE_FALLBACK } from './extraction-to-plan-geom'
 
 /**
  * Floorplanner-linkernormaal in FML-ruimte (Y omlaag, zoals het scherm).
  *
  * Sta op **a**, kijk naar **b**: links = `{ x: dir.y, y: -dir.x }`.
- * `balance` is de fractie van de dikte aan die linkerzijde
- * (`0` = alles rechts, `1` = alles links, `0.5` = gecentreerd).
+ * `balance` is de fractie van de dikte aan die linkerzijde van de **hartlijn**
+ * `a`/`b` (`0` = alles rechts, `1` = alles links, `0.5` = gecentreerd).
+ * Floorplanner staat waarden buiten 0–1 toe; render volgt dat (tot ±1000%).
  *
  * Zelfde a→b-afhankelijkheid als deuren (`mirrored`). Draai a↔b om, dan
  * wisselen links/rechts: dezelfde wereld-face vraagt `1 - balance`.
@@ -18,8 +15,8 @@ import {
  * De Y-omhoog-rotatie `{ x: -dy, y: dx }` is hier de **rechter** normaal
  * (zie `wallNormal` bij deur-swing) — die niet gebruiken voor balance.
  *
- * Belangrijk: `a`/`b` is de Floorplanner-**as** (niet altijd het lichaam-midden).
- * Visueel midden = as + leftNormal × thickness × (balance − 0.5).
+ * Belangrijk: `a`/`b` is de Floorplanner-hartlijn. Het lichaam schuift t.o.v.
+ * die lijn; visueel midden = as + leftNormal × thickness × (balance − 0.5).
  */
 export function floorplannerLeftNormal(dir: Point2D): Point2D {
   return { x: dir.y, y: -dir.x }
@@ -36,9 +33,12 @@ export function totalWallLengthCm(walls: Array<Pick<Wall, 'a' | 'b'>>): number {
   return total
 }
 
+/** Veilige rail voor editor/import (Floorplanner 1000% / −250%). Detectie blijft 0–1. */
+export const FML_WALL_BALANCE_ABS_MAX = 10
+
 export function clampWallBalance(balance: number | undefined): number {
   if (!Number.isFinite(balance)) return FML_WALL_BALANCE_FALLBACK
-  return Math.min(FML_WALL_BALANCE_MAX, Math.max(FML_WALL_BALANCE_MIN, balance as number))
+  return Math.min(FML_WALL_BALANCE_ABS_MAX, Math.max(-FML_WALL_BALANCE_ABS_MAX, balance as number))
 }
 
 export function wallDirectionUnit(wall: Pick<Wall, 'a' | 'b'>): Point2D {
@@ -128,45 +128,4 @@ export function wallFaces(wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>)
       b: offsetPoint(wall.b, n, -minus),
     },
   }
-}
-
-/**
- * Verschuif a/b loodrecht zodat bij `toBalance` dezelfde faces blijven
- * (lengte en richting ongewijzigd). Knooppunten worden niet herbouwd.
- */
-export function offsetWallAxis(
-  wall: Wall,
-  fromBalance: number | undefined,
-  toBalance: number,
-): Wall {
-  const from = clampWallBalance(fromBalance)
-  const to = clampWallBalance(toBalance)
-  const deltaB = to - from
-  if (Math.abs(deltaB) < 1e-12) {
-    return { ...wall, balance: to, a: { ...wall.a }, b: { ...wall.b } }
-  }
-  const shift = -wall.thickness * deltaB
-  const n = wallLeftNormal(wall)
-  return {
-    ...wall,
-    balance: to,
-    a: offsetPoint(wall.a, n, shift),
-    b: offsetPoint(wall.b, n, shift),
-  }
-}
-
-/**
- * As-punt (bij t) dat hoort bij `targetBalance` terwijl het huidige lichaam vast blijft.
- * = visualMid − leftNormal × t × (targetBalance − 0.5)
- */
-export function axisPointKeepingFaces(
-  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
-  targetBalance: number,
-  t = 0.5,
-): Point2D {
-  const mid = wallVisualMid(wall, t)
-  const to = clampWallBalance(targetBalance)
-  const offset = -wall.thickness * (to - 0.5)
-  if (Math.abs(offset) < 1e-12) return mid
-  return offsetPoint(mid, wallLeftNormal(wall), offset)
 }

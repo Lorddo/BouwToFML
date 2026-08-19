@@ -1,14 +1,28 @@
 import type { Opening, OpeningType } from '@/core/fml/types'
 import type { OpeningAssetKind, resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
 import { clamp01 } from '@/core/fml/extraction-to-plan-geom'
+import {
+  FACTORY_OPENING_COLORS,
+  type OpeningDisplayColors,
+} from '@/ui/composables/settings/opening-display-colors'
 
 export { clamp01 }
+export { FACTORY_OPENING_COLORS }
 
 /** Zelfde tint als detectie-faces: `DOOR_FACE_RGBA` / `WINDOW_FACE_RGBA`. */
-export function openingFillColor(type: OpeningType, selected: boolean): string {
+export function openingFillColor(
+  type: OpeningType,
+  selected: boolean,
+  colors: OpeningDisplayColors = FACTORY_OPENING_COLORS,
+): string {
   if (selected) return '#f97316'
-  return type === 'door' ? '#f59e0b' : '#06b6d4'
+  return type === 'door' ? colors.door : colors.window
 }
+
+/** Hartlijn-stroke voor openings met effectief bovenlicht (preview-hint). */
+export const BOVENLICHT_MARKER_STROKE = FACTORY_OPENING_COLORS.bovenlicht
+/** Scherm-pixels; `strokeScaleEnabled: false` zodat zoom de dikte niet verandert. */
+export const BOVENLICHT_MARKER_STROKE_PX = 3
 
 export function buildOpeningGapPolygon(params: {
   startCm: { x: number; y: number }

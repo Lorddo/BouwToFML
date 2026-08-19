@@ -167,18 +167,6 @@ function inkSpan(
   return { horizontal: maxX - minX + 1, vertical: maxY - minY + 1 }
 }
 
-/**
- * @deprecated Gebruik `orientDoorHeaviestFaceToBottom` — behouden als alias voor callers/tests.
- * LBE-conventie: zwaarste wit-vlak (swing) onderaan.
- */
-export function orientDoorBwSwingToBottom(
-  bwData: Uint8Array,
-  width: number,
-  height: number,
-): { bwData: Uint8Array; width: number; height: number; rotated180: boolean } {
-  return orientDoorHeaviestFaceToBottom(bwData, width, height)
-}
-
 function rotateByDegrees(params: {
   cv: OpenCV
   bwData: Uint8Array

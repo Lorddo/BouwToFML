@@ -59,7 +59,7 @@ export function buildClassBBoxesByRoot(params: {
   return { doorframe, wall }
 }
 
-export function unionBBoxBounds(a: BBoxBounds, b: BBoxBounds): BBoxBounds {
+function unionBBoxBounds(a: BBoxBounds, b: BBoxBounds): BBoxBounds {
   return {
     x0: Math.min(a.x0, b.x0),
     y0: Math.min(a.y0, b.y0),

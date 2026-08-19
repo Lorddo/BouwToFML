@@ -34,7 +34,7 @@ export function useFmlPreviewWallDrag(options: {
     originCm: Point2D
     lastCm: Point2D
     baseWalls: Wall[]
-    /** Laatste Ctrl/Meta tijdens sleep — ook gebruikt bij mouseup (merge skip). */
+    /** Laatste Ctrl/Meta tijdens sleep — ook gebruikt bij pointerup (merge skip). */
     snapDisabled: boolean
   } | null = null
 
@@ -55,8 +55,8 @@ export function useFmlPreviewWallDrag(options: {
 
   function cancelMoveDragPending(): void {
     if (!moveDragPending) return
-    window.removeEventListener('mousemove', moveDragPending.onMove)
-    window.removeEventListener('mouseup', moveDragPending.onUp)
+    window.removeEventListener('pointermove', moveDragPending.onMove)
+    window.removeEventListener('pointerup', moveDragPending.onUp)
     moveDragPending = null
   }
 
@@ -75,8 +75,8 @@ export function useFmlPreviewWallDrag(options: {
       cancelMoveDragPending()
     }
     moveDragPending = { wallId, startClientX, startClientY, onMove, onUp }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp, { once: true })
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp, { once: true })
   }
 
   function findJunctionByRefs(refs: WallEndRef[]): JunctionNode | null {
@@ -106,8 +106,8 @@ export function useFmlPreviewWallDrag(options: {
       baseWalls: JSON.parse(JSON.stringify(editor.walls.value)) as Wall[],
       snapDisabled: evt.ctrlKey || evt.metaKey,
     }
-    window.addEventListener('mousemove', onJunctionPointerMove)
-    window.addEventListener('mouseup', onJunctionPointerUp, { once: true })
+    window.addEventListener('pointermove', onJunctionPointerMove)
+    window.addEventListener('pointerup', onJunctionPointerUp, { once: true })
   }
 
   function onJunctionPointerMove(evt: MouseEvent): void {
@@ -129,7 +129,7 @@ export function useFmlPreviewWallDrag(options: {
   }
 
   function onJunctionPointerUp(evt: MouseEvent): void {
-    window.removeEventListener('mousemove', onJunctionPointerMove)
+    window.removeEventListener('pointermove', onJunctionPointerMove)
     if (junctionDrag) {
       const snapDisabled = junctionDrag.snapDisabled || evt.ctrlKey || evt.metaKey
       const pos = junctionDrag.lastCm
@@ -171,8 +171,8 @@ export function useFmlPreviewWallDrag(options: {
       startCm: cm,
       baseWalls: JSON.parse(JSON.stringify(editor.walls.value)) as Wall[],
     }
-    window.addEventListener('mousemove', onWallDragMove)
-    window.addEventListener('mouseup', onWallDragEnd, { once: true })
+    window.addEventListener('pointermove', onWallDragMove)
+    window.addEventListener('pointerup', onWallDragEnd, { once: true })
   }
 
   function onWallDragMove(evt: MouseEvent): void {
@@ -187,7 +187,7 @@ export function useFmlPreviewWallDrag(options: {
   }
 
   function endWallDrag(): void {
-    window.removeEventListener('mousemove', onWallDragMove)
+    window.removeEventListener('pointermove', onWallDragMove)
     if (wallDrag) {
       syncPlanToParent()
     }
@@ -200,7 +200,7 @@ export function useFmlPreviewWallDrag(options: {
   }
 
   function cleanupWallDrag(): void {
-    window.removeEventListener('mousemove', onJunctionPointerMove)
+    window.removeEventListener('pointermove', onJunctionPointerMove)
     draggingJunctionId.value = null
     draggingJunction.value = false
     junctionDrag = null

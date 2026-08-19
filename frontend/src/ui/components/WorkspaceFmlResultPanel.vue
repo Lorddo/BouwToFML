@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
 import type { ImportWarning } from '@/core/fml/types'
+import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
+import type { HScaleState } from '@/platform/calibration'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import FmlPanel from './FmlPanel.vue'
 
 /**
@@ -12,6 +15,7 @@ withDefaults(
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
     generatedStats: { walls: number; doors: number; windows: number }
+    openingHeightOverflow?: OpeningHeightOverflowSummary | null
     floorName: string
     fmlWallHeightCm: number
     fmlDoorHeightCm: number
@@ -39,6 +43,13 @@ withDefaults(
     projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
+    hidePlanText?: boolean
+    fmlRescaleActive?: boolean
+    fmlRescaleState?: HScaleState | null
+    fmlRescaleDistanceMmX?: number
+    fmlRescaleDistanceMmY?: number
+    scaleInputUnit?: ScaleInputUnit
+    canStartRescale?: boolean
   }>(),
   {
     fmlOrientFlipX: false,
@@ -46,6 +57,14 @@ withDefaults(
     projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
+    hidePlanText: false,
+    openingHeightOverflow: null,
+    fmlRescaleActive: false,
+    fmlRescaleState: null,
+    fmlRescaleDistanceMmX: 0,
+    fmlRescaleDistanceMmY: 0,
+    scaleInputUnit: 'mm',
+    canStartRescale: false,
   },
 )
 
@@ -53,6 +72,7 @@ const emit = defineEmits<{
   'update:floorName': [value: string]
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
+  'update:hidePlanText': [value: boolean]
   'update:underlayMoveMode': [value: boolean]
   'update:fmlWallHeightCm': [value: number]
   'update:fmlDoorHeightCm': [value: number]
@@ -65,6 +85,8 @@ const emit = defineEmits<{
   'update:fmlThicknessMaxCm': [value: number]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
+  'update:fmlRescaleDistanceMmX': [value: number]
+  'update:fmlRescaleDistanceMmY': [value: number]
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
   regenerate: []
@@ -75,6 +97,10 @@ const emit = defineEmits<{
   underlayRotate90Cw: []
   underlayRotate90Ccw: []
   underlayMirrorVertical: []
+  beginRescale: []
+  cancelRescale: []
+  confirmRescale: []
+  sanitize: []
 }>()
 </script>
 
@@ -83,6 +109,7 @@ const emit = defineEmits<{
     :scale-confirmed="scaleConfirmed"
     :has-combined-output="hasCombinedOutput"
     :generated-stats="generatedStats"
+    :opening-height-overflow="openingHeightOverflow"
     :floor-name="floorName"
     :fml-wall-height-cm="fmlWallHeightCm"
     :fml-door-height-cm="fmlDoorHeightCm"
@@ -104,15 +131,23 @@ const emit = defineEmits<{
     :imported-warnings="importedWarnings"
     :underlay-opacity="underlayOpacity"
     :fml-opacity="fmlOpacity"
+    :hide-plan-text="hidePlanText"
     :underlay-available="underlayAvailable"
     :fml-orient-flip-x="fmlOrientFlipX"
     :has-any-floor-fml="hasAnyFloorFml"
     :project-orient-flip-x="projectOrientFlipX"
     :underlay-move-mode="underlayMoveMode"
     :underlay-flip-x="underlayFlipX"
+    :fml-rescale-active="fmlRescaleActive"
+    :fml-rescale-state="fmlRescaleState"
+    :fml-rescale-distance-mm-x="fmlRescaleDistanceMmX"
+    :fml-rescale-distance-mm-y="fmlRescaleDistanceMmY"
+    :scale-input-unit="scaleInputUnit"
+    :can-start-rescale="canStartRescale"
     @update:floor-name="emit('update:floorName', $event)"
     @update:underlay-opacity="emit('update:underlayOpacity', $event)"
     @update:fml-opacity="emit('update:fmlOpacity', $event)"
+    @update:hide-plan-text="emit('update:hidePlanText', $event)"
     @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
     @update:fml-wall-height-cm="emit('update:fmlWallHeightCm', $event)"
     @update:fml-door-height-cm="emit('update:fmlDoorHeightCm', $event)"
@@ -125,6 +160,8 @@ const emit = defineEmits<{
     @update:fml-thickness-max-cm="emit('update:fmlThicknessMaxCm', $event)"
     @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
     @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
+    @update:fml-rescale-distance-mm-x="emit('update:fmlRescaleDistanceMmX', $event)"
+    @update:fml-rescale-distance-mm-y="emit('update:fmlRescaleDistanceMmY', $event)"
     @start-thickness-pick="emit('startThicknessPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"
@@ -135,5 +172,9 @@ const emit = defineEmits<{
     @underlay-rotate90-cw="emit('underlayRotate90Cw')"
     @underlay-rotate90-ccw="emit('underlayRotate90Ccw')"
     @underlay-mirror-vertical="emit('underlayMirrorVertical')"
+    @begin-rescale="emit('beginRescale')"
+    @cancel-rescale="emit('cancelRescale')"
+    @confirm-rescale="emit('confirmRescale')"
+    @sanitize="emit('sanitize')"
   />
 </template>

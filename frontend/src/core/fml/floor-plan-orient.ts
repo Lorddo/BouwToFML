@@ -1,4 +1,20 @@
-import type { Floor, FloorItem, FloorPlan, Opening, Point2D, Wall } from './types'
+import { cloneFloorShallow } from './clone-floor-shallow'
+import { resolveFixtureCatalog } from './fixture-refid-catalog'
+import type {
+  DrawingMeta,
+  Floor,
+  FloorArea,
+  FloorDesign,
+  FloorDimension,
+  FloorItem,
+  FloorLabel,
+  FloorLine,
+  FloorPlan,
+  FloorSurface,
+  Opening,
+  Point2D,
+  Wall,
+} from './types'
 
 /** D4-orientatie t.o.v. canonieke generate (vóór spiegel/rotatie). */
 export type FloorOrientState = {
@@ -11,17 +27,6 @@ export type FloorOrientOp = 'flipX' | 'rotCw' | 'rotCcw'
 export type Rotate90Dir = 'cw' | 'ccw'
 
 const IDENTITY_ORIENT: FloorOrientState = { quarterTurnsCw: 0, flipX: false }
-
-function cloneFloorShallow(floor: Floor): Floor {
-  return {
-    ...floor,
-    walls: floor.walls.map((wall) => ({
-      ...wall,
-      openings: wall.openings.map((op) => ({ ...op })),
-    })),
-    items: floor.items?.map((item) => ({ ...item })),
-  }
-}
 
 function mapPlanFloor(
   plan: FloorPlan,
@@ -89,27 +94,129 @@ function normalizeRotationDeg(deg: number): number {
   return next
 }
 
+/** Noordkruis wijst wereld-noord; X-flip mag glyph/heading niet omdraaien (N niet achterstevoren). */
+function keepsWorldHeadingOnMirror(item: FloorItem): boolean {
+  return resolveFixtureCatalog(item.refid).kind === 'north_cross'
+}
+
 function mirrorItem(item: FloorItem, axisXCm: number): FloorItem {
+  const x = 2 * axisXCm - item.x
+  if (keepsWorldHeadingOnMirror(item)) {
+    return { ...item, x }
+  }
   const rotation = item.rotation ?? 0
   return {
     ...item,
-    x: 2 * axisXCm - item.x,
+    x,
     rotation: normalizeRotationDeg(-rotation),
     mirrored: toggleMirroredBit(item.mirrored, 0),
   }
 }
 
+function mirrorArea(area: FloorArea, axisXCm: number): FloorArea {
+  return {
+    ...area,
+    poly: area.poly.map((p) => mirrorPointX(p, axisXCm)),
+    name_x: area.name_x != null ? -area.name_x : area.name_x,
+  }
+}
+
+function mirrorSurface(surface: FloorSurface, axisXCm: number): FloorSurface {
+  return {
+    ...surface,
+    poly: surface.poly.map((p) => ({ ...mirrorPointX(p, axisXCm), z: p.z })),
+    name_x: surface.name_x != null ? -surface.name_x : surface.name_x,
+  }
+}
+
+function mirrorLabel(label: FloorLabel, axisXCm: number): FloorLabel {
+  return {
+    ...label,
+    x: 2 * axisXCm - label.x,
+    rotation: normalizeRotationDeg(-label.rotation),
+  }
+}
+
+function mirrorLine(line: FloorLine, axisXCm: number): FloorLine {
+  return {
+    ...line,
+    a: mirrorPointX(line.a, axisXCm),
+    b: mirrorPointX(line.b, axisXCm),
+  }
+}
+
+function mirrorDimension(dim: FloorDimension, axisXCm: number): FloorDimension {
+  return {
+    ...dim,
+    a: mirrorPointX(dim.a, axisXCm),
+    b: mirrorPointX(dim.b, axisXCm),
+  }
+}
+
+function mirrorDrawing(drawing: DrawingMeta | undefined, axisXCm: number): DrawingMeta | undefined {
+  if (!drawing) return drawing
+  return {
+    ...drawing,
+    x: 2 * axisXCm - drawing.x,
+  }
+}
+
+function mirrorCamera(camera: unknown, axisXCm: number): unknown {
+  if (!camera || typeof camera !== 'object') return camera
+  const c = camera as Record<string, unknown>
+  const next = { ...c }
+  if (typeof c.x === 'number') next.x = 2 * axisXCm - c.x
+  if (typeof c.dx === 'number') next.dx = -c.dx
+  return next
+}
+
+function mirrorDesign(design: FloorDesign, axisXCm: number): FloorDesign {
+  return {
+    ...design,
+    walls: design.walls.map((wall) => mirrorWall(wall, axisXCm)),
+    items: design.items?.map((item) => mirrorItem(item, axisXCm)),
+    areas: design.areas?.map((area) => mirrorArea(area, axisXCm)),
+    surfaces: design.surfaces?.map((surface) => mirrorSurface(surface, axisXCm)),
+    labels: design.labels?.map((label) => mirrorLabel(label, axisXCm)),
+    lines: design.lines?.map((line) => mirrorLine(line, axisXCm)),
+    dimensions: design.dimensions?.map((dim) => mirrorDimension(dim, axisXCm)),
+    source: design.source
+      ? {
+          ...design.source,
+          cameras: design.source.cameras?.map((cam) => mirrorCamera(cam, axisXCm)),
+        }
+      : design.source,
+  }
+}
+
 function mirrorFloor(floor: Floor, axisXCm: number): Floor {
+  const designs = floor.designs?.map((d) => mirrorDesign(d, axisXCm))
+  const activeIdx = floor.activeDesignIndex ?? 0
+  const active = designs?.[activeIdx]
   return {
     ...floor,
-    walls: floor.walls.map((wall) => mirrorWall(wall, axisXCm)),
-    items: floor.items?.map((item) => mirrorItem(item, axisXCm)),
+    walls: active?.walls ?? floor.walls.map((wall) => mirrorWall(wall, axisXCm)),
+    items: active?.items ?? floor.items?.map((item) => mirrorItem(item, axisXCm)),
+    areas: active?.areas ?? floor.areas?.map((area) => mirrorArea(area, axisXCm)),
+    surfaces: active?.surfaces ?? floor.surfaces?.map((surface) => mirrorSurface(surface, axisXCm)),
+    labels: active?.labels ?? floor.labels?.map((label) => mirrorLabel(label, axisXCm)),
+    lines: active?.lines ?? floor.lines?.map((line) => mirrorLine(line, axisXCm)),
+    dimensions: active?.dimensions ?? floor.dimensions?.map((dim) => mirrorDimension(dim, axisXCm)),
+    drawing: mirrorDrawing(floor.drawing, axisXCm),
+    designs,
+    source: floor.source
+      ? {
+          ...floor.source,
+          cameras: floor.source.cameras?.map((cam) => mirrorCamera(cam, axisXCm)),
+        }
+      : floor.source,
   }
 }
 
 /**
  * Reflecteer over verticale as `x = axisXCm` (default nulpunt: Y-as).
  * a/b niet wisselen; Opening.t blijft; mirrored[1] + balance inverteren.
+ * Noordkruis (`north_cross`): positie wel, rotatie/`mirrored` niet — pijl blijft wereld-noord.
  */
 export function mirrorFloorPlanVertical(
   plan: FloorPlan,
@@ -150,11 +257,122 @@ function rotateItem90(item: FloorItem, pivot: Point2D, dir: Rotate90Dir): FloorI
   }
 }
 
+function rotateArea90(area: FloorArea, pivot: Point2D, dir: Rotate90Dir): FloorArea {
+  return {
+    ...area,
+    poly: area.poly.map((p) => rotatePoint90(p, pivot, dir)),
+  }
+}
+
+function rotateSurface90(surface: FloorSurface, pivot: Point2D, dir: Rotate90Dir): FloorSurface {
+  return {
+    ...surface,
+    poly: surface.poly.map((p) => ({ ...rotatePoint90(p, pivot, dir), z: p.z })),
+  }
+}
+
+function rotateLabel90(label: FloorLabel, pivot: Point2D, dir: Rotate90Dir): FloorLabel {
+  const rotated = rotatePoint90({ x: label.x, y: label.y }, pivot, dir)
+  const delta = dir === 'cw' ? 90 : -90
+  return {
+    ...label,
+    x: rotated.x,
+    y: rotated.y,
+    rotation: normalizeRotationDeg(label.rotation + delta),
+  }
+}
+
+function rotateLine90(line: FloorLine, pivot: Point2D, dir: Rotate90Dir): FloorLine {
+  return {
+    ...line,
+    a: rotatePoint90(line.a, pivot, dir),
+    b: rotatePoint90(line.b, pivot, dir),
+  }
+}
+
+function rotateDimension90(dim: FloorDimension, pivot: Point2D, dir: Rotate90Dir): FloorDimension {
+  return {
+    ...dim,
+    a: rotatePoint90(dim.a, pivot, dir),
+    b: rotatePoint90(dim.b, pivot, dir),
+  }
+}
+
+function rotateDrawing90(
+  drawing: DrawingMeta | undefined,
+  pivot: Point2D,
+  dir: Rotate90Dir,
+): DrawingMeta | undefined {
+  if (!drawing) return drawing
+  const rotated = rotatePoint90({ x: drawing.x, y: drawing.y }, pivot, dir)
+  const delta = dir === 'cw' ? 90 : -90
+  return {
+    ...drawing,
+    x: rotated.x,
+    y: rotated.y,
+    rotation: normalizeRotationDeg(drawing.rotation + delta),
+  }
+}
+
+function rotateCamera90(camera: unknown, pivot: Point2D, dir: Rotate90Dir): unknown {
+  if (!camera || typeof camera !== 'object') return camera
+  const c = camera as Record<string, unknown>
+  const next = { ...c }
+  if (typeof c.x === 'number' && typeof c.y === 'number') {
+    const rotated = rotatePoint90({ x: c.x, y: c.y }, pivot, dir)
+    next.x = rotated.x
+    next.y = rotated.y
+  }
+  if (typeof c.dx === 'number' && typeof c.dy === 'number') {
+    const d = rotatePoint90({ x: c.dx, y: c.dy }, { x: 0, y: 0 }, dir)
+    next.dx = d.x
+    next.dy = d.y
+  }
+  return next
+}
+
+function rotateDesign90(design: FloorDesign, pivot: Point2D, dir: Rotate90Dir): FloorDesign {
+  return {
+    ...design,
+    walls: design.walls.map((wall) => rotateWall90(wall, pivot, dir)),
+    items: design.items?.map((item) => rotateItem90(item, pivot, dir)),
+    areas: design.areas?.map((area) => rotateArea90(area, pivot, dir)),
+    surfaces: design.surfaces?.map((surface) => rotateSurface90(surface, pivot, dir)),
+    labels: design.labels?.map((label) => rotateLabel90(label, pivot, dir)),
+    lines: design.lines?.map((line) => rotateLine90(line, pivot, dir)),
+    dimensions: design.dimensions?.map((dim) => rotateDimension90(dim, pivot, dir)),
+    source: design.source
+      ? {
+          ...design.source,
+          cameras: design.source.cameras?.map((cam) => rotateCamera90(cam, pivot, dir)),
+        }
+      : design.source,
+  }
+}
+
 function rotateFloor90(floor: Floor, pivot: Point2D, dir: Rotate90Dir): Floor {
+  const designs = floor.designs?.map((d) => rotateDesign90(d, pivot, dir))
+  const activeIdx = floor.activeDesignIndex ?? 0
+  const active = designs?.[activeIdx]
   return {
     ...floor,
-    walls: floor.walls.map((wall) => rotateWall90(wall, pivot, dir)),
-    items: floor.items?.map((item) => rotateItem90(item, pivot, dir)),
+    walls: active?.walls ?? floor.walls.map((wall) => rotateWall90(wall, pivot, dir)),
+    items: active?.items ?? floor.items?.map((item) => rotateItem90(item, pivot, dir)),
+    areas: active?.areas ?? floor.areas?.map((area) => rotateArea90(area, pivot, dir)),
+    surfaces:
+      active?.surfaces ?? floor.surfaces?.map((surface) => rotateSurface90(surface, pivot, dir)),
+    labels: active?.labels ?? floor.labels?.map((label) => rotateLabel90(label, pivot, dir)),
+    lines: active?.lines ?? floor.lines?.map((line) => rotateLine90(line, pivot, dir)),
+    dimensions:
+      active?.dimensions ?? floor.dimensions?.map((dim) => rotateDimension90(dim, pivot, dir)),
+    drawing: rotateDrawing90(floor.drawing, pivot, dir),
+    designs,
+    source: floor.source
+      ? {
+          ...floor.source,
+          cameras: floor.source.cameras?.map((cam) => rotateCamera90(cam, pivot, dir)),
+        }
+      : floor.source,
   }
 }
 

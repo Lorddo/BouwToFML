@@ -5,11 +5,23 @@ import { layoutTransform, type ContentLayout } from './useFmlPreviewViewport'
 export function useFmlPreviewDrawPreviews(opts: {
   drawWallPreview: Ref<{ a: Point2D; b: Point2D } | null>
   drawRoomPreview: Ref<Point2D[] | null>
+  drawSurfacePoints?: Ref<Point2D[] | null>
+  drawLinePoints?: Ref<Point2D[] | null>
+  drawLineHoverCm?: Ref<Point2D | null>
   contentLayout: Ref<ContentLayout | null>
   viewPosition: Ref<{ x: number; y: number }>
   viewScale: Ref<number>
 }) {
-  const { drawWallPreview, drawRoomPreview, contentLayout, viewPosition, viewScale } = opts
+  const {
+    drawWallPreview,
+    drawRoomPreview,
+    drawSurfacePoints,
+    drawLinePoints,
+    drawLineHoverCm,
+    contentLayout,
+    viewPosition,
+    viewScale,
+  } = opts
 
   const drawWallPreviewScreen = computed(() => {
     const preview = drawWallPreview.value
@@ -45,6 +57,57 @@ export function useFmlPreviewDrawPreviews(opts: {
     return drawRoomPreviewScreen.value.map((point) => `${point.x},${point.y}`).join(' ')
   })
 
+  const drawSurfacePreviewScreen = computed(() => {
+    const pts = drawSurfacePoints?.value
+    const layout = contentLayout.value
+    if (!pts || pts.length === 0 || !layout) return null
+    const { toStagePoint } = layoutTransform(layout)
+    return pts.map((p) => {
+      const stage = toStagePoint(p.x, p.y)
+      return {
+        x: viewPosition.value.x + stage.x * viewScale.value,
+        y: viewPosition.value.y + stage.y * viewScale.value,
+      }
+    })
+  })
+
+  const drawSurfacePreviewPolyline = computed(() => {
+    if (!drawSurfacePreviewScreen.value) return ''
+    return drawSurfacePreviewScreen.value.map((point) => `${point.x},${point.y}`).join(' ')
+  })
+
+  const drawLinePreviewScreen = computed(() => {
+    const pts = drawLinePoints?.value
+    const layout = contentLayout.value
+    if (!pts || pts.length === 0 || !layout) return null
+    const { toStagePoint } = layoutTransform(layout)
+    const placed = pts.map((p) => {
+      const stage = toStagePoint(p.x, p.y)
+      return {
+        x: viewPosition.value.x + stage.x * viewScale.value,
+        y: viewPosition.value.y + stage.y * viewScale.value,
+      }
+    })
+    const hover = drawLineHoverCm?.value
+    let hoverScreen: { x: number; y: number } | null = null
+    if (hover) {
+      const stage = toStagePoint(hover.x, hover.y)
+      hoverScreen = {
+        x: viewPosition.value.x + stage.x * viewScale.value,
+        y: viewPosition.value.y + stage.y * viewScale.value,
+      }
+    }
+    return { placed, hover: hoverScreen }
+  })
+
+  const drawLinePreviewPolyline = computed(() => {
+    const preview = drawLinePreviewScreen.value
+    if (!preview) return ''
+    const pts = [...preview.placed]
+    if (preview.hover) pts.push(preview.hover)
+    return pts.map((point) => `${point.x},${point.y}`).join(' ')
+  })
+
   function cmToScreen(x: number, y: number): { x: number; y: number } {
     const layout = contentLayout.value
     if (!layout) return { x: 0, y: 0 }
@@ -60,6 +123,10 @@ export function useFmlPreviewDrawPreviews(opts: {
     drawWallPreviewScreen,
     drawRoomPreviewScreen,
     drawRoomPreviewPolygon,
+    drawSurfacePreviewScreen,
+    drawSurfacePreviewPolyline,
+    drawLinePreviewScreen,
+    drawLinePreviewPolyline,
     cmToScreen,
   }
 }

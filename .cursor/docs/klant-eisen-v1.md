@@ -20,7 +20,7 @@ Context: eisenpakket van een mislukt AI-project; wij leveren **semi-automatisch*
 | **Bovenlicht** bij deur | ✓ export-only (40×10 cm boven deur; viewer toont niet) | |
 | **Maatdefaults per deur-tag** (breedte, hoogte, z) | ✓ | |
 | Per-opening vrij bewerken (alle maten los) | ○ minimaal bij tag | volledig V2 |
-| **Roomtags** (`areas[]` naam uit vaste lijst) | ○ onderzoek | |
+| **Roomtags** (`areas[]` naam uit vaste lijst) | ✓ gebouwd | House-catalogus NL; Ctrl+klik + surfaces; defaults in Instellingen |
 | **FP-tags export** (deuren, later muren) | ○ roundtrip POC | |
 | Keukenblok detectie (180 cm) | | ✓ |
 | Sanitair detectie (toilet, fontein, wastafel, douche, bad) | | ✓ |
@@ -175,10 +175,11 @@ FML: `areas[]` met `name` (standaardtype) en optioneel `customName` (vrije overr
 | Aspect | Aanpak |
 |--------|--------|
 | Detectie ruimtelabels op tekening | **Niet** in V1 (geen OCR) |
-| Ruimtes genereren | Floorplanner uit muren; wij kunnen `areas[]` meesturen als gesloten polygonen bekend zijn |
-| Handmatig taggen per ruimte | V1-optie: tekenaar kiest ruimte + naam uit lijst vóór export |
+| Ruimtes genereren | Auto uit gesloten muurlussen (ná thickness/balance); IoU behoudt tags |
+| Handmatig taggen per ruimte | Ctrl+klik: type (House-catalogus), customName, kleur; surfaces apart tekenen |
+| Surfaces | Handmatige overlay-polygoon (balkon e.d.); nooit uit detectie |
 
-**Status:** onderzoek + afhankelijk van vaste lijst van klant (open vraag).
+**Status:** gebouwd (2026-08-17) — catalogus `roomtype-catalog.json`; settings default-kleur per role.
 
 ---
 

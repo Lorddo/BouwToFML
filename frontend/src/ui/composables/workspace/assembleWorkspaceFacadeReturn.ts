@@ -1,11 +1,9 @@
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { PreprocessConfig } from '@/platform/image'
-import type { DrawingProfileId } from '@/platform/profile'
 import type { WallPipelineVersion } from '@/platform/wall-pipeline-version'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { TemplateTab, PreprocessPanelLayer } from '@/cv/preprocess/layer-preprocess'
 import {
-  RESULT_TAB_LABELS,
   visiblePreprocessLayerTabs,
   visibleResultLayerTabs,
   visibleTemplateLayerTabs,
@@ -41,7 +39,6 @@ export type WorkspaceFacadeContext = {
   canvasRef: Ref<unknown>
   imageSrc: Ref<string | null>
   imageName: Ref<string | null>
-  drawingProfileId: Ref<DrawingProfileId>
   profileConfirmed: Ref<boolean>
   activeDrawingProfile: ComputedRef<
     ReturnType<typeof import('@/platform/profile').getDrawingProfile>
@@ -51,7 +48,6 @@ export type WorkspaceFacadeContext = {
     import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
   >
   wallPipelineVersion: Ref<WallPipelineVersion>
-  showOcrDetails: Ref<boolean>
   preprocess: Ref<PreprocessConfig>
   preprocessTab: Ref<PreprocessPanelLayer>
   templateTab: Ref<TemplateTab>
@@ -89,6 +85,7 @@ export type WorkspaceFacadeContext = {
   >
   fmlUnderlayOpacity: Ref<number>
   fmlContentOpacity: Ref<number>
+  fmlHidePlanText: Ref<boolean>
   fmlUnderlaySrc: ComputedRef<string | null>
   fmlUnderlaySize: ComputedRef<{ width: number; height: number } | null>
   fml: ReturnType<typeof useWorkspaceFml>
@@ -122,13 +119,11 @@ function sliceCore(ctx: WorkspaceFacadeContext) {
     canvasRef: ctx.canvasRef,
     imageSrc: ctx.imageSrc,
     imageName: ctx.imageName,
-    drawingProfileId: ctx.drawingProfileId,
     profileConfirmed: ctx.profileConfirmed,
     activeDrawingProfile: ctx.activeDrawingProfile,
     referenceWallThicknessPx: ctx.referenceWallThicknessPx,
     wallRefThicknessMeasures: ctx.wallRefThicknessMeasures ?? ref([]),
     wallPipelineVersion: ctx.wallPipelineVersion,
-    showOcrDetails: ctx.showOcrDetails,
     preprocess: ctx.preprocess,
     preprocessTab: ctx.preprocessTab,
     templateTab: ctx.templateTab,
@@ -140,7 +135,6 @@ function sliceCore(ctx: WorkspaceFacadeContext) {
       visibleTemplateLayerTabs(ctx.preprocess.value.ocrEnabled ?? false),
     ),
     resultLayerTabs: computed(() => visibleResultLayerTabs()),
-    RESULT_TAB_LABELS,
   }
 }
 
@@ -193,8 +187,6 @@ function sliceDetectionStatus(ctx: WorkspaceFacadeContext) {
     running: ctx.detection.running,
     status: ctx.detection.status,
     lastOutput: ctx.detection.lastOutput,
-    roomInkCoverageThreshold: ctx.detection.roomInkCoverageThreshold,
-    setRoomInkCoverageThreshold: ctx.detection.setRoomInkCoverageThreshold,
   }
 }
 
@@ -228,6 +220,7 @@ function sliceFml(ctx: WorkspaceFacadeContext) {
   return {
     fmlUnderlayOpacity: ctx.fmlUnderlayOpacity,
     fmlContentOpacity: ctx.fmlContentOpacity,
+    fmlHidePlanText: ctx.fmlHidePlanText,
     fmlUnderlaySrc: ctx.fmlUnderlaySrc,
     fmlUnderlaySize: ctx.fmlUnderlaySize,
     ...ctx.fml,
@@ -239,7 +232,6 @@ function slicePipelineScale(ctx: WorkspaceFacadeContext) {
     ...ctx.pipeline,
     ...ctx.scaleUi,
     onLayerTuneCopied: ctx.preprocessUi.onLayerTuneCopied,
-    onBuildVectorDebug: ctx.preprocessUi.onBuildVectorDebug,
     preprocessVectorCacheLoading: ctx.preprocessVectorCacheLoading,
   }
 }
@@ -274,12 +266,9 @@ function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
     onFaceBoxSelect: ctx.roomFaces.classifyFacesInBox,
     activeFaceBoxTool: ctx.roomFaces.activeFaceBoxTool,
     faceToolbeltVisible: ctx.roomFaces.faceToolbeltVisible,
-    faceToolbeltHint: ctx.roomFaces.faceToolbeltHint,
     gapsDemoteStats: ctx.gapsFaces?.gapsDemoteStats ?? null,
-    wallsClassifyReadyForGaps: ctx.gapsFaces?.wallsClassifyReady ?? null,
     doorSwingStats: ctx.doorSwingFaces?.doorSwingStats ?? null,
     doorSwingStage: ctx.doorSwingFaces?.doorSwingStage ?? fallbackDoorSwingStage,
-    doorSwingHypotheses: ctx.doorSwingFaces?.doorSwingHypotheses ?? [],
     resolvedDoors: ctx.doorSwingFaces?.resolvedDoors ?? [],
     boundDoors: ctx.doorSwingFaces?.boundDoors ?? [],
     orientedDoors: ctx.doorSwingFaces?.orientedDoors ?? [],
@@ -287,7 +276,6 @@ function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
     doorInitialPassReady: computed(() => ctx.doorSwingFaces?.initialPassReady.value ?? true),
     windowFaceStats: ctx.windowFaces?.windowFaceStats ?? null,
     windowAxelStage: ctx.windowFaces?.windowAxelStage ?? fallbackWindowAxelStage,
-    windowHypotheses: ctx.windowFaces?.windowHypotheses ?? [],
     resolvedWindows: ctx.windowFaces?.resolvedWindows ?? [],
     boundWindows: ctx.windowFaces?.boundWindows ?? [],
     windowBindRejections: ctx.windowFaces?.windowBindRejections ?? [],

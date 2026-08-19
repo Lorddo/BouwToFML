@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
 import type { ImportWarning } from '@/core/fml/types'
+import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
+import type { HScaleState } from '@/platform/calibration'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { useI18n } from 'vue-i18n'
 import FmlPanelActions from './FmlPanelActions.vue'
 import FmlPanelHeights from './FmlPanelHeights.vue'
+import FmlOpeningOverflowNotice from './FmlOpeningOverflowNotice.vue'
 import FmlPanelOpacity from './FmlPanelOpacity.vue'
 import FmlPanelThickness from './FmlPanelThickness.vue'
+import FmlRescalePanel from './FmlRescalePanel.vue'
 import './fml-panel-fields.css'
 
 const { t } = useI18n()
@@ -24,6 +29,7 @@ withDefaults(
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
     generatedStats: { walls: number; doors: number; windows: number }
+    openingHeightOverflow?: OpeningHeightOverflowSummary | null
     importedFmlText?: string
     importedStats: { walls: number; doors: number; windows: number }
     importedWarnings?: ImportWarning[]
@@ -53,13 +59,23 @@ withDefaults(
     projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
+    hidePlanText?: boolean
+    fmlRescaleActive?: boolean
+    fmlRescaleState?: HScaleState | null
+    fmlRescaleDistanceMmX?: number
+    fmlRescaleDistanceMmY?: number
+    scaleInputUnit?: ScaleInputUnit
+    /** Herschalen beschikbaar (plan met muren). Default false. */
+    canStartRescale?: boolean
   }>(),
   {
     importedFmlText: '',
     importedWarnings: () => [],
+    openingHeightOverflow: null,
     underlayOpacity: 25,
     fmlOpacity: 80,
     underlayAvailable: false,
+    hidePlanText: false,
     floorName: '',
     fmlWallHeightCm: 280,
     fmlDoorHeightCm: 220,
@@ -81,6 +97,12 @@ withDefaults(
     projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
+    fmlRescaleActive: false,
+    fmlRescaleState: null,
+    fmlRescaleDistanceMmX: 0,
+    fmlRescaleDistanceMmY: 0,
+    scaleInputUnit: 'mm',
+    canStartRescale: false,
   },
 )
 
@@ -107,9 +129,16 @@ const emit = defineEmits<{
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:underlayOpacity': [value: number]
   'update:fmlOpacity': [value: number]
+  'update:hidePlanText': [value: boolean]
   'update:underlayMoveMode': [value: boolean]
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
+  beginRescale: []
+  cancelRescale: []
+  confirmRescale: []
+  sanitize: []
+  'update:fmlRescaleDistanceMmX': [value: number]
+  'update:fmlRescaleDistanceMmY': [value: number]
 }>()
 
 function onFloorNameInput(event: Event): void {
@@ -159,6 +188,7 @@ function onWindowBovenlichtChange(event: Event): void {
       {{ t('result.needScale') }}
     </p>
     <p v-else-if="!hasCombinedOutput" class="fml-hint">{{ t('result.needFinalize') }}</p>
+    <FmlOpeningOverflowNotice v-if="openingHeightOverflow" :summary="openingHeightOverflow" />
 
     <FmlPanelOpacity
       :underlay-opacity="underlayOpacity"
@@ -166,8 +196,10 @@ function onWindowBovenlichtChange(event: Event): void {
       :underlay-available="underlayAvailable"
       :underlay-move-mode="underlayMoveMode"
       :underlay-flip-x="underlayFlipX"
+      :hide-plan-text="hidePlanText"
       @update:underlay-opacity="emit('update:underlayOpacity', $event)"
       @update:fml-opacity="emit('update:fmlOpacity', $event)"
+      @update:hide-plan-text="emit('update:hidePlanText', $event)"
       @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
       @underlay-rotate90-cw="emit('underlayRotate90Cw')"
       @underlay-rotate90-ccw="emit('underlayRotate90Ccw')"
@@ -178,7 +210,7 @@ function onWindowBovenlichtChange(event: Event): void {
       <input
         type="checkbox"
         :checked="fmlBovenlichtDefault"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
+        :disabled="!canStartRescale"
         @change="onBovenlichtChange"
       />
       <span>{{ t('result.bovenlichtAllDoors') }}</span>
@@ -188,7 +220,7 @@ function onWindowBovenlichtChange(event: Event): void {
       <input
         type="checkbox"
         :checked="fmlWindowBovenlichtDefault"
-        :disabled="!scaleConfirmed || !hasCombinedOutput"
+        :disabled="!canStartRescale"
         @change="onWindowBovenlichtChange"
       />
       <span>{{ t('result.bovenlichtAllWindows') }}</span>
@@ -227,6 +259,30 @@ function onWindowBovenlichtChange(event: Event): void {
       @update:fml-window-height-cm="emit('update:fmlWindowHeightCm', $event)"
       @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
     />
+
+    <FmlRescalePanel
+      :active="fmlRescaleActive"
+      :can-start="canStartRescale"
+      :state="fmlRescaleState"
+      :mm-x="fmlRescaleDistanceMmX"
+      :mm-y="fmlRescaleDistanceMmY"
+      :unit="scaleInputUnit"
+      @begin="emit('beginRescale')"
+      @cancel="emit('cancelRescale')"
+      @confirm="emit('confirmRescale')"
+      @update-mm-x="emit('update:fmlRescaleDistanceMmX', $event)"
+      @update-mm-y="emit('update:fmlRescaleDistanceMmY', $event)"
+    />
+
+    <button
+      type="button"
+      class="fml-sanitize-btn"
+      :disabled="!canStartRescale"
+      :title="t('result.sanitizeHint')"
+      @click="emit('sanitize')"
+    >
+      {{ t('result.sanitize') }}
+    </button>
 
     <FmlPanelActions
       :scale-confirmed="scaleConfirmed"
@@ -295,5 +351,23 @@ function onWindowBovenlichtChange(event: Event): void {
   width: auto;
   margin: 0;
   flex-shrink: 0;
+}
+
+.fml-sanitize-btn {
+  width: 100%;
+  margin: 0 0 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fml-sanitize-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

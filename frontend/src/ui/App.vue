@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WorkspaceView from './views/WorkspaceView.vue'
 import UserSettingsView from './views/UserSettingsView.vue'
@@ -7,41 +7,109 @@ import FmlViewerView from './views/FmlViewerView.vue'
 import AppAccessGate from './components/AppAccessGate.vue'
 import { appFatalError, clearAppError } from '@/ui/app-error'
 import { isAccessPasswordRequired, isAccessUnlocked } from '@/ui/access-gate'
+import { FML_EDITOR_PASSWORD, FML_EDITOR_UNLOCK_STORAGE_KEY } from '@/ui/fml-editor-gate'
+import { isFmlEditorPath, syncFmlEditorCanonicalPath } from '@/ui/app-routes'
 
 const { t } = useI18n()
 
 type AppView = 'workspace' | 'settings' | 'fml-viewer'
 
+function viewFromLocation(): AppView {
+  return isFmlEditorPath(window.location.pathname) ? 'fml-viewer' : 'workspace'
+}
+
 const accessGranted = ref(!isAccessPasswordRequired() || isAccessUnlocked())
-const appView = ref<AppView>('workspace')
+const editorGranted = ref(isAccessUnlocked(FML_EDITOR_PASSWORD, FML_EDITOR_UNLOCK_STORAGE_KEY))
+const appView = ref<AppView>(viewFromLocation())
+const settingsReturn = ref<AppView | null>(null)
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
+const fmlViewerRef = ref<{ applyCornerMarkerModeFromSettings: () => void } | null>(null)
+const canvasFullscreen = ref(false)
 
 function onAccessUnlocked(): void {
   accessGranted.value = true
+}
+
+function onEditorUnlocked(): void {
+  editorGranted.value = true
 }
 
 function onNewWorkspace(): void {
   workspaceRef.value?.startNewWorkspace()
 }
 
+function onNewDrawing(): void {
+  if (appView.value === 'fml-viewer') {
+    backToWorkspace()
+    void nextTick(() => {
+      workspaceRef.value?.startNewWorkspace()
+    })
+    return
+  }
+  onNewWorkspace()
+}
+
 function openSettings(): void {
+  if (appView.value === 'settings') {
+    backFromSettings()
+    return
+  }
+  settingsReturn.value = appView.value
   appView.value = 'settings'
 }
 
-function openFmlViewer(): void {
-  appView.value = 'fml-viewer'
+function backFromSettings(): void {
+  const dest = settingsReturn.value ?? 'workspace'
+  if (dest === 'fml-viewer') {
+    appView.value = 'fml-viewer'
+    settingsReturn.value = null
+    return
+  }
+  settingsReturn.value = null
+  backToWorkspace()
 }
 
 function backToWorkspace(): void {
+  settingsReturn.value = null
+  if (isFmlEditorPath(window.location.pathname)) {
+    history.pushState(null, '', '/')
+  }
   appView.value = 'workspace'
 }
 
-function backToSettings(): void {
-  appView.value = 'settings'
+function onPopState(): void {
+  appView.value = viewFromLocation()
+  if (appView.value !== 'fml-viewer') canvasFullscreen.value = false
+  if (appView.value === 'fml-viewer') {
+    editorGranted.value = isAccessUnlocked(FML_EDITOR_PASSWORD, FML_EDITOR_UNLOCK_STORAGE_KEY)
+  }
+  syncViewerLockClass()
 }
+
+function syncViewerLockClass(): void {
+  const lock = appView.value === 'fml-viewer' || settingsReturn.value === 'fml-viewer'
+  document.documentElement.classList.toggle('fml-viewer-lock', lock)
+}
+
+onMounted(() => {
+  syncFmlEditorCanonicalPath()
+  window.addEventListener('popstate', onPopState)
+  syncViewerLockClass()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('popstate', onPopState)
+  document.documentElement.classList.remove('fml-viewer-lock')
+})
+
+watch([appView, settingsReturn], () => {
+  if (appView.value !== 'fml-viewer') canvasFullscreen.value = false
+  syncViewerLockClass()
+})
 
 function onSettingsSaved(): void {
   workspaceRef.value?.applyUserViewerSettings()
+  fmlViewerRef.value?.applyCornerMarkerModeFromSettings()
 }
 
 function dismissFatalError(): void {
@@ -51,7 +119,22 @@ function dismissFatalError(): void {
 
 <template>
   <AppAccessGate v-if="!accessGranted" @unlocked="onAccessUnlocked" />
-  <div v-else class="app-shell">
+  <AppAccessGate
+    v-else-if="appView === 'fml-viewer' && !editorGranted"
+    :expected-password="FML_EDITOR_PASSWORD"
+    :storage-key="FML_EDITOR_UNLOCK_STORAGE_KEY"
+    :title="t('access.editorTitle')"
+    :subtitle="t('access.editorSubtitle')"
+    @unlocked="onEditorUnlocked"
+  />
+  <div
+    v-else
+    class="app-shell"
+    :class="{
+      'app-shell--fml-viewer': appView === 'fml-viewer' || settingsReturn === 'fml-viewer',
+      'app-shell--canvas-fs': canvasFullscreen,
+    }"
+  >
     <div v-if="appFatalError" class="app-error-banner" role="alert">
       <span class="app-error-banner__text">{{ appFatalError }}</span>
       <button type="button" class="app-error-banner__dismiss" @click="dismissFatalError">
@@ -71,10 +154,10 @@ function dismissFatalError(): void {
       </div>
       <nav class="header-nav">
         <button
-          v-if="appView === 'workspace'"
+          v-if="appView === 'workspace' || appView === 'fml-viewer'"
           type="button"
           class="primary"
-          @click="onNewWorkspace"
+          @click="onNewDrawing"
         >
           {{ t('app.newDrawing') }}
         </button>
@@ -84,6 +167,7 @@ function dismissFatalError(): void {
           :class="{ active: appView === 'settings' }"
           :title="t('app.settings')"
           :aria-label="t('app.settings')"
+          :aria-pressed="appView === 'settings'"
           @click="openSettings"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -98,18 +182,26 @@ function dismissFatalError(): void {
 
     <main class="app-main">
       <!-- Wrapper: WorkspaceView is multi-root; v-show op de component zelf verbergt het canvas niet. -->
-      <div v-show="appView === 'workspace'" class="app-page app-page--workspace">
+      <div
+        v-if="appView !== 'fml-viewer'"
+        v-show="appView === 'workspace'"
+        class="app-page app-page--workspace"
+      >
         <WorkspaceView ref="workspaceRef" />
       </div>
       <div v-if="appView === 'settings'" class="app-page app-page--settings">
         <UserSettingsView
-          @back="backToWorkspace"
+          :variant="settingsReturn === 'fml-viewer' ? 'viewer' : 'workspace'"
           @saved="onSettingsSaved"
-          @open-fml-viewer="openFmlViewer"
+          @close="backFromSettings"
         />
       </div>
-      <div v-if="appView === 'fml-viewer'" class="app-page app-page--fml-viewer">
-        <FmlViewerView @back="backToSettings" />
+      <div
+        v-if="appView === 'fml-viewer' || settingsReturn === 'fml-viewer'"
+        v-show="appView === 'fml-viewer'"
+        class="app-page app-page--fml-viewer"
+      >
+        <FmlViewerView ref="fmlViewerRef" @update:canvas-fullscreen="canvasFullscreen = $event" />
       </div>
     </main>
   </div>
@@ -118,9 +210,20 @@ function dismissFatalError(): void {
 <style scoped>
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background: #f4f5f7;
+}
+
+.app-shell--fml-viewer {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-shell--canvas-fs header {
+  display: none;
 }
 
 .app-error-banner {
@@ -241,5 +344,15 @@ header {
   overflow: hidden;
   background: #f1f5f9;
   z-index: 10;
+}
+</style>
+
+<style>
+html.fml-viewer-lock,
+html.fml-viewer-lock body,
+html.fml-viewer-lock #app {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
 }
 </style>

@@ -46,6 +46,11 @@ describe('wall balance extents', () => {
     expect(offset).toEqual({ x: 40, y: -9 })
     expect(offsetPointByWallBalance(hinge, wallUnit, 30, 0.5)).toEqual({ x: 40, y: 0 })
   })
+
+  it('renders overshoot balance outside 0–1', () => {
+    expect(resolveWallExtents({ thickness: 20, balance: -2.5 })).toEqual({ plus: -50, minus: 70 })
+    expect(resolveWallExtents({ thickness: 20, balance: 10 })).toEqual({ plus: 200, minus: -180 })
+  })
 })
 
 describe('buildWallRenderGeometry', () => {
@@ -106,6 +111,18 @@ describe('buildWallRenderGeometry', () => {
     expect(geometryT.fillComponents.length).toBe(1)
     expect(pointInFillComponents({ x: 50, y: 30 }, geometryT.fillComponents)).toBe(true)
     expect(pointInFillComponents({ x: 50, y: -10 }, geometryT.fillComponents)).toBe(true)
+  })
+
+  it('T-branch does not poke past the host outer face', () => {
+    const geometry = buildWallRenderGeometry([
+      { id: 'host', a: { x: 0, y: -80 }, b: { x: 0, y: 80 }, thickness: 30 },
+      { id: 'branch', a: { x: 0, y: 0 }, b: { x: 80, y: 0 }, thickness: 20 },
+    ])
+    expect(geometry.fillComponents.length).toBe(1)
+    // Host left face at x=-15; cap+inflate must not step past that façade.
+    expect(pointInFillComponents({ x: -16.2, y: 0 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: -14, y: 0 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 40, y: 0 }, geometry.fillComponents)).toBe(true)
   })
 
   it('U-shape merges without corner ears beyond thickness', () => {

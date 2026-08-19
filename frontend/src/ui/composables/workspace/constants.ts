@@ -50,6 +50,25 @@ export const RESULT_WALLS_TAB_VISIBLE = false
 export const FML_ORIENT_CONTROLS_VISIBLE = false
 
 /**
+ * Area/surface taggen + draw_surface in de product-workspace (stap 4).
+ * Areas blijven auto-genereren/exporteren; Ctrl+klik + surface-tool
+ * uit tot klant meerwerk goedkeurt. Losse FML-viewer houdt volle edit (default aan).
+ */
+export const FML_AREA_SURFACE_EDIT_VISIBLE = false
+
+/**
+ * «Tekst verbergen» in workspace stap-4 opacity-paneel.
+ * Losse FML-viewer houdt de checkbox. Product-UI uit tot nodig.
+ */
+export const FML_HIDE_PLAN_TEXT_CONTROL_VISIBLE = false
+
+/**
+ * Converter-instellingen → defaultkleuren per roomtag.
+ * Losse FML-viewer toont kleuren altijd (`UserSettingsView` variant=viewer).
+ */
+export const FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE = false
+
+/**
  * Sticky redirect voor verborgen preprocess-tabs.
  * OCR is alleen stap 3 (`useWorkspaceOcr`); gaps-UI uit (`GAPS_TAB_VISIBLE`).
  * inkWall blijft bereikbaar via Dev (geen redirect).

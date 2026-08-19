@@ -39,6 +39,10 @@ import { useWorkspaceViewUi } from '../composables/workspace/useWorkspaceViewUi'
 const api = useWorkspace()
 const ws = proxyRefs(api)
 const canvasRef = api.canvasRef
+const fmlPreviewHostRef = ref<{
+  applyCornerMarkerModeFromSettings: () => void
+  sanitizeWalls: () => boolean
+} | null>(null)
 const debugSidebarOpen = ref(false)
 const { t } = useI18n()
 
@@ -86,7 +90,10 @@ defineExpose<{
   applyUserViewerSettings: () => void
 }>({
   startNewWorkspace,
-  applyUserViewerSettings: () => api.applyUserViewerSettings(),
+  applyUserViewerSettings: () => {
+    api.applyUserViewerSettings()
+    fmlPreviewHostRef.value?.applyCornerMarkerModeFromSettings()
+  },
 })
 </script>
 
@@ -310,6 +317,7 @@ defineExpose<{
           :scale-confirmed="ws.scale.confirmed.value"
           :has-combined-output="!!ws.combinedOutput"
           :generated-stats="ws.generatedStats"
+          :opening-height-overflow="ws.openingHeightOverflow"
           :floor-name="ws.activeFloor?.name ?? ''"
           :fml-wall-height-cm="ws.fmlWallHeightCm"
           :fml-door-height-cm="ws.fmlDoorHeightCm"
@@ -331,15 +339,23 @@ defineExpose<{
           :imported-warnings="ws.importedWarnings"
           :underlay-opacity="ws.fmlUnderlayOpacity"
           :fml-opacity="ws.fmlContentOpacity"
+          :hide-plan-text="ws.fmlHidePlanText"
           :underlay-available="!!ws.fmlUnderlaySrc && !!ws.previewUnderlayLayout"
           :fml-orient-flip-x="ws.fmlOrient?.flipX === true"
           :has-any-floor-fml="ws.hasAnyFloorFml"
           :project-orient-flip-x="ws.projectOrientFlipX"
           :underlay-move-mode="ws.underlayMoveMode"
           :underlay-flip-x="ws.previewUnderlayLayout?.flipX === true"
+          :fml-rescale-active="ws.fmlRescaleActive"
+          :fml-rescale-state="ws.fmlRescaleState"
+          :fml-rescale-distance-mm-x="ws.fmlRescaleDistanceMmX"
+          :fml-rescale-distance-mm-y="ws.fmlRescaleDistanceMmY"
+          :scale-input-unit="ws.scaleInputUnit"
+          :can-start-rescale="(ws.generatedStats?.walls ?? 0) > 0"
           @update:floor-name="(name) => ws.activeFloorId && ws.renameFloor(ws.activeFloorId, name)"
           @update:underlay-opacity="ws.fmlUnderlayOpacity = $event"
           @update:fml-opacity="ws.fmlContentOpacity = $event"
+          @update:hide-plan-text="ws.fmlHidePlanText = $event"
           @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
           @update:fml-wall-height-cm="ws.setFmlWallHeightCm"
           @update:fml-door-height-cm="ws.setFmlDoorHeightCm"
@@ -352,6 +368,8 @@ defineExpose<{
           @update:fml-thickness-max-cm="ws.setFmlThicknessMaxCm"
           @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
           @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
+          @update:fml-rescale-distance-mm-x="ws.setFmlRescaleDistanceMmX"
+          @update:fml-rescale-distance-mm-y="ws.setFmlRescaleDistanceMmY"
           @start-thickness-pick="ws.startFmlThicknessPick"
           @cancel-thickness-pick="ws.cancelFmlThicknessPick"
           @regenerate="ws.regenerateFml"
@@ -362,6 +380,10 @@ defineExpose<{
           @underlay-rotate90-cw="ws.applyUnderlayOrientOp('rotCw')"
           @underlay-rotate90-ccw="ws.applyUnderlayOrientOp('rotCcw')"
           @underlay-mirror-vertical="ws.applyUnderlayOrientOp('flipX')"
+          @begin-rescale="ws.beginFmlRescale()"
+          @cancel-rescale="ws.cancelFmlRescale()"
+          @confirm-rescale="ws.confirmFmlRescale()"
+          @sanitize="fmlPreviewHostRef?.sanitizeWalls()"
         />
       </div>
 
@@ -396,6 +418,7 @@ defineExpose<{
         <div class="canvas-main">
           <WorkspaceFmlPreviewHost
             v-if="onFmlResultTab"
+            ref="fmlPreviewHostRef"
             :floor-id="ws.activeFloorId"
             :plan="ws.previewPlan"
             :underlay-src="
@@ -403,6 +426,7 @@ defineExpose<{
             "
             :underlay-opacity="ws.fmlUnderlayOpacity / 100"
             :content-opacity="ws.fmlContentOpacity / 100"
+            :labels-visible="!ws.fmlHidePlanText"
             :underlay-width-px="ws.fmlUnderlaySize?.width ?? 0"
             :underlay-height-px="ws.fmlUnderlaySize?.height ?? 0"
             :cm-origin="ws.previewUnderlayLayout?.origin ?? null"
@@ -417,11 +441,17 @@ defineExpose<{
             :thickness-max-cm="ws.fmlThicknessMaxCm"
             :bovenlicht-default="ws.fmlBovenlichtDefault"
             :window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
+            :bovenlicht-height-cm="ws.fmlBovenlichtHeightCm"
+            :bovenlicht-gap-cm="ws.fmlBovenlichtGapCm"
             :set-fml-nulpunt-image-cm="ws.setFmlNulpuntImageCm"
+            :rescale-mode="ws.fmlRescaleActive"
+            :rescale-state="ws.fmlRescaleState"
             @plan-update="ws.updatePreviewPlan"
             @thickness-wall-pick="ws.handleFmlThicknessWallPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"
             @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
+            @update-rescale-state="ws.updateFmlRescaleState"
+            @cancel-rescale="ws.cancelFmlRescale()"
           />
           <WorkspaceFloorplanCanvasHost
             v-else

@@ -1,3 +1,4 @@
+import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/fml/bovenlicht'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WINDOW_HEIGHT_CM,
@@ -213,7 +214,18 @@ export function findOpeningById(walls: Wall[], openingId: string): OpeningLocati
 }
 
 type OpeningPatch = Partial<
-  Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'mirrored' | 'bovenlicht' | 'refid'>
+  Pick<
+    Opening,
+    | 't'
+    | 'width'
+    | 'z'
+    | 'z_height'
+    | 'mirrored'
+    | 'bovenlicht'
+    | 'bovenlichtHeightCm'
+    | 'bovenlichtGapCm'
+    | 'refid'
+  >
 >
 
 export function updateOpeningById(walls: Wall[], openingId: string, patch: OpeningPatch): Wall[] {
@@ -281,6 +293,29 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
     const next = patch.bovenlicht
     if (nextOpening.bovenlicht !== next) {
       nextOpening.bovenlicht = next
+      changed = true
+    }
+  }
+
+  if (
+    patch.bovenlichtHeightCm !== undefined &&
+    (nextOpening.type === 'door' || nextOpening.type === 'window')
+  ) {
+    const next =
+      patch.bovenlichtHeightCm == null ? null : clampBovenlichtHeightCm(patch.bovenlichtHeightCm)
+    if (nextOpening.bovenlichtHeightCm !== next) {
+      nextOpening.bovenlichtHeightCm = next
+      changed = true
+    }
+  }
+
+  if (
+    patch.bovenlichtGapCm !== undefined &&
+    (nextOpening.type === 'door' || nextOpening.type === 'window')
+  ) {
+    const next = patch.bovenlichtGapCm == null ? null : clampBovenlichtGapCm(patch.bovenlichtGapCm)
+    if (nextOpening.bovenlichtGapCm !== next) {
+      nextOpening.bovenlichtGapCm = next
       changed = true
     }
   }

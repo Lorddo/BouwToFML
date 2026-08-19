@@ -26,14 +26,14 @@ export type CollapsePolicyFlags = Pick<
 }
 
 /** Weld triplet shared by L7/L9/L10 rebuild (`nearEndpointGapPx: 1`). */
-export const COLLAPSE_WELD_SHARED = {
+const COLLAPSE_WELD_SHARED = {
   nearEndpointGapPx: 1,
   endpointEpsPx: PIPELINE_ENDPOINT_EPS_PX,
   repairMaxGapPx: 0,
 } as const satisfies Omit<WeldPolicy, 'layerId'>
 
 /** Junction triplet shared by L7/L9/L10 (`snapPx: 0`, `weldBeforeGraph: true`). */
-export const COLLAPSE_JUNCTION_SHARED = {
+const COLLAPSE_JUNCTION_SHARED = {
   snapPx: 0,
   weldBeforeGraph: true,
 } as const satisfies Omit<JunctionGraphPolicy, 'layerId'>

@@ -189,6 +189,8 @@ export function addSegmentPathWithJunctionBreaks(
     balance?: number
     idPrefix: string
     minLengthCm: number
+    /** Optionele az/bz (+ overige extras) voor nieuwe segmenten. */
+    endpointExtras?: Wall['extras']
   },
 ): string[] {
   splitCrossedWallsAlongSegment(walls, a, b)
@@ -207,6 +209,7 @@ export function addSegmentPathWithJunctionBreaks(
       thickness: options.thickness,
       balance: options.balance,
       openings: [],
+      extras: options.endpointExtras ? { ...options.endpointExtras } : undefined,
     })
     addedIds.push(wallId)
   }
@@ -218,14 +221,20 @@ export function addWallSegment(
   a: Point2D,
   b: Point2D,
   thicknessCm: number,
+  floorHeightCm?: number,
 ): { walls: Wall[]; wallId: string; wallIds: string[] } | null {
   if (distance(a, b) < MIN_WALL_LENGTH_CM) return null
   const next = cloneWalls(walls)
   const thickness = Math.max(1, Math.min(200, Math.round(thicknessCm)))
+  const endpoint =
+    floorHeightCm != null && Number.isFinite(floorHeightCm) && floorHeightCm > 0
+      ? { z: 0, h: Math.round(floorHeightCm) }
+      : null
   const wallIds = addSegmentPathWithJunctionBreaks(next, a, b, {
     thickness,
     idPrefix: 'wall',
     minLengthCm: MIN_WALL_LENGTH_CM,
+    endpointExtras: endpoint ? { az: endpoint, bz: { ...endpoint } } : undefined,
   })
   if (wallIds.length === 0) return null
   return { walls: next, wallId: wallIds[0], wallIds }
@@ -309,11 +318,17 @@ export function addRoomRect(
   walls: Wall[],
   corners: readonly Point2D[],
   thicknessCm: number,
+  floorHeightCm?: number,
 ): { walls: Wall[]; wallIds: string[] } | null {
   if (corners.length !== 4) return null
   const next = cloneWalls(walls)
   const snappedCorners = corners.map((corner) => ({ x: corner.x, y: corner.y }))
   let changed = false
+  const endpoint =
+    floorHeightCm != null && Number.isFinite(floorHeightCm) && floorHeightCm > 0
+      ? { z: 0, h: Math.round(floorHeightCm) }
+      : null
+  const endpointExtras = endpoint ? { az: endpoint, bz: { ...endpoint } } : undefined
 
   for (let idx = 0; idx < snappedCorners.length; idx += 1) {
     const corner = snappedCorners[idx]
@@ -335,6 +350,7 @@ export function addRoomRect(
       thickness: Math.max(1, Math.min(200, Math.round(thicknessCm))),
       idPrefix: 'wall',
       minLengthCm: MIN_WALL_LENGTH_CM,
+      endpointExtras,
     })
     if (edgeIds.length > 0) changed = true
     addedIds.push(...edgeIds)

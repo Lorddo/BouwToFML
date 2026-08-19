@@ -1,6 +1,6 @@
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import { alignWallJunctionBalance } from './align-wall-junction-balance'
-import { orthogonalizeNearAxisWalls } from './orthogonalize-near-axis-walls'
+import { sanitizeFmlWalls } from './sanitize-fml-walls'
 import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import { resolveEffectiveFmlWallThicknessLimits } from './fml-wall-thickness-limits'
@@ -227,10 +227,9 @@ export function roundFmlThicknessCm(value: number): number {
  * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits (bewust beleid).
  * Balance: default 0.5; collineaire diktewissel-ketens flushen alleen bij face-evidence
  * (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
- * Daarna near-H/V restjitter exact op as (viewer = export).
+ * Daarna sanitize (weld + near-H/V op as + collinear cover). Viewer = export.
  *
- * Geen automatische `rebasePlanSnap`: flush is keep-axis (gedeelde L10-lijn).
- * Optionele floor-snap 0/0.5/1 = apart via `rebasePlanSnap` (keep-faces).
+ * Flush is keep-axis (gedeelde L10-lijn): alleen `balance`, `a`/`b` blijven.
  */
 export function harmonizeFmlWallThickness(
   plan: FloorPlan,
@@ -274,9 +273,7 @@ export function harmonizeFmlWallThickness(
 
       return {
         ...floor,
-        walls: orthogonalizeNearAxisWalls(
-          alignWallJunctionBalance(thicknessAssigned, faceEvidenceById),
-        ),
+        walls: sanitizeFmlWalls(alignWallJunctionBalance(thicknessAssigned, faceEvidenceById)),
       }
     }),
   }

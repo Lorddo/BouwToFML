@@ -1,4 +1,5 @@
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
+import { normalizeRoomTagColors } from '@/core/fml/roomtype-catalog'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WALL_HEIGHT_CM,
@@ -17,6 +18,16 @@ import {
   normalizeScaleInputUnit,
   type ScaleInputUnit,
 } from './scale-input-unit'
+import {
+  DEFAULT_CORNER_MARKER_MODE,
+  normalizeCornerMarkerMode,
+  type CornerMarkerMode,
+} from './corner-marker-mode'
+import {
+  createFactoryOpeningDisplayColors,
+  normalizeOpeningDisplayColors,
+  type OpeningDisplayColors,
+} from './opening-display-colors'
 
 export type { ScaleInputUnit } from './scale-input-unit'
 export {
@@ -27,6 +38,18 @@ export {
   scaleInputStep,
   scaleInputToMm,
 } from './scale-input-unit'
+export type { CornerMarkerMode } from './corner-marker-mode'
+export {
+  CORNER_MARKER_MODES,
+  DEFAULT_CORNER_MARKER_MODE,
+  normalizeCornerMarkerMode,
+} from './corner-marker-mode'
+export type { OpeningDisplayColorKey, OpeningDisplayColors } from './opening-display-colors'
+export {
+  FACTORY_OPENING_COLORS,
+  createFactoryOpeningDisplayColors,
+  normalizeOpeningDisplayColors,
+} from './opening-display-colors'
 
 export const USER_SETTINGS_STORAGE_KEY = 'bouwToFml.userSettings'
 export const USER_SETTINGS_VERSION = 1 as const
@@ -38,6 +61,10 @@ export const DEFAULT_FML_CONTENT_OPACITY_PCT = 80
 export type FmlViewerSettings = {
   underlayOpacityPct: number
   fmlOpacityPct: number
+  /** Overlay: binnenhoeken H+V / scheef. */
+  cornerMarkerMode: CornerMarkerMode
+  /** Preview-kleuren deuren / ramen / bovenlicht-hartlijn. */
+  openingColors: OpeningDisplayColors
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
@@ -54,6 +81,8 @@ export type UserSettingsV1 = {
   defaults: ProjectFmlDefaults
   fmlViewer: FmlViewerSettings
   fmlConversion: FmlConversionSettings
+  /** Per-role kleur-overrides t.o.v. roomtype-catalogus (alleen afwijkingen). */
+  roomTagColors: Record<string, string>
 }
 
 export class UserSettingsParseError extends Error {
@@ -102,6 +131,8 @@ export function createFactoryFmlViewerSettings(): FmlViewerSettings {
   return {
     underlayOpacityPct: DEFAULT_FML_UNDERLAY_OPACITY_PCT,
     fmlOpacityPct: DEFAULT_FML_CONTENT_OPACITY_PCT,
+    cornerMarkerMode: DEFAULT_CORNER_MARKER_MODE,
+    openingColors: createFactoryOpeningDisplayColors(),
   }
 }
 
@@ -120,6 +151,7 @@ export function createFactoryUserSettings(): UserSettingsV1 {
     defaults: createFactoryFmlDefaults(),
     fmlViewer: createFactoryFmlViewerSettings(),
     fmlConversion: createFactoryFmlConversionSettings(),
+    roomTagColors: {},
   }
 }
 
@@ -159,6 +191,8 @@ function normalizeFmlViewer(
   return {
     underlayOpacityPct: clampOpacityPct(src.underlayOpacityPct, factory.underlayOpacityPct),
     fmlOpacityPct: clampOpacityPct(src.fmlOpacityPct, factory.fmlOpacityPct),
+    cornerMarkerMode: normalizeCornerMarkerMode(src.cornerMarkerMode ?? factory.cornerMarkerMode),
+    openingColors: normalizeOpeningDisplayColors(src.openingColors ?? factory.openingColors),
   }
 }
 
@@ -188,6 +222,7 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
     defaults: normalizeDefaults(obj.defaults, factory.defaults),
     fmlViewer: normalizeFmlViewer(obj.fmlViewer, factory.fmlViewer),
     fmlConversion: normalizeFmlConversion(obj.fmlConversion, factory.fmlConversion),
+    roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
 }
 
@@ -219,6 +254,7 @@ export function parseUserSettingsJson(raw: string): UserSettingsV1 {
     defaults: normalizeDefaults(obj.defaults),
     fmlViewer: normalizeFmlViewer(obj.fmlViewer),
     fmlConversion: normalizeFmlConversion(obj.fmlConversion),
+    roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
 }
 

@@ -62,7 +62,8 @@ ID’s in code: `// ESC:<ID> (<Cat>)`. Inventarisregelnummers zijn historisch; a
 | W-13 | **AFBAKENEN** | Spur zonder meting | 2026-07-31 |
 | X-01 | **AFBAKENEN** | Default `balance: 0.5`; flush alleen bij face-evidence (geen faceLo-gok); jog-stub bump alleen bij gemeten nabijheid | 2026-08-14 |
 | X-02 | **AFBAKENEN** | Dikte → vaste tier (beleid) | 2026-07-31 |
-| X-11, X-13…X-15, X-17 | **BEHOUDEN (F)** | Metadata/settings/lege collecties/`mirrored` ramen | 2026-07-31 |
+| X-11, X-13, X-15, X-17 | **BEHOUDEN (F)** | Metadata/settings/`mirrored` ramen | 2026-07-31 |
+| X-14 | **BEHOUDEN (F)** | `areas`/`surfaces`/… altijd arrays; mogen gevuld (roomtags 2026-08-17) | 2026-08-17 |
 | X-16 | **HERLEIDEN** | `h = floor.height` (geen −14) | 2026-08-01 |
 | D-46 | **AFBAKENEN** + sticky promote | As-grow + class doorframe; 2/6 | 2026-08-01 |
 | W-25, W-35, W-36 | **AFBAKENEN** | L6 face/hv/seed; k/6 | 2026-08-01 |

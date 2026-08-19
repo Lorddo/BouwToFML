@@ -1,16 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type {
   RenderModel,
+  RenderWall,
   RenderWallPolygon,
 } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
 
-defineProps<{
+const props = defineProps<{
   renderModel: RenderModel
   moveWallPolygon: RenderWallPolygon | null
   settingsWallPolygons: RenderWallPolygon[]
+  inspectWallPolygons: Array<RenderWallPolygon & { fill: string }>
   settingsWallIds: string[]
   moveWallId: string | null
 }>()
+
+/** Alleen zichtbare hit-strokes — geen opacity:0 node per muur (Staedion-killer). */
+const highlightedWallHits = computed((): RenderWall[] => {
+  const ids = new Set(props.settingsWallIds)
+  if (props.moveWallId) ids.add(props.moveWallId)
+  if (ids.size === 0) return []
+  return props.renderModel.wallLines.filter((line) => ids.has(line.id))
+})
 </script>
 
 <template>
@@ -23,6 +34,7 @@ defineProps<{
         fillRule: 'evenodd',
         strokeEnabled: false,
         listening: false,
+        perfectDrawEnabled: false,
       }"
     />
     <v-line
@@ -33,6 +45,18 @@ defineProps<{
         fill: '#3b82f6',
         strokeEnabled: false,
         opacity: 0.35,
+        listening: false,
+      }"
+    />
+    <v-line
+      v-for="polygon in inspectWallPolygons"
+      :key="`inspect-${polygon.id}`"
+      :config="{
+        points: polygon.points,
+        closed: true,
+        fill: polygon.fill,
+        strokeEnabled: false,
+        opacity: 0.72,
         listening: false,
       }"
     />
@@ -49,17 +73,13 @@ defineProps<{
       }"
     />
     <v-line
-      v-for="line in renderModel.wallLines"
+      v-for="line in highlightedWallHits"
       :key="`${line.id}-hit`"
       :config="{
         points: line.points,
-        stroke: settingsWallIds.includes(line.id)
-          ? '#f97316'
-          : moveWallId === line.id
-            ? '#3b82f6'
-            : '#000000',
+        stroke: settingsWallIds.includes(line.id) ? '#f97316' : '#3b82f6',
         strokeWidth: Math.max(14, line.strokeWidth + 12),
-        opacity: settingsWallIds.includes(line.id) || moveWallId === line.id ? 0.15 : 0,
+        opacity: 0.15,
         lineCap: 'butt',
         listening: false,
       }"

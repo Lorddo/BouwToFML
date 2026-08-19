@@ -17,6 +17,7 @@ import {
   resolveWindowPanelCount,
   windowTypeLabel,
 } from './fml-preview-opening-render'
+import { fixtureSymbolLocalBounds } from './fml-preview-fixture-bounds'
 import type {
   RenderDoorGroup,
   RenderFixture,
@@ -146,16 +147,34 @@ export function buildRenderDoorGroupsAndWindows(
 }
 
 export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): RenderFixture[] {
-  return (floor.items ?? []).flatMap((item, index) => {
-    const catalog = resolveFixtureCatalog(item.refid)
+  const prepared = (floor.items ?? []).map((item, index) => ({
+    item,
+    index,
+    catalog: resolveFixtureCatalog(item.refid, { width: item.width, height: item.height }),
+  }))
+  prepared.sort((a, b) => {
+    const rank = (kind: string) => (kind === 'countertop' ? 0 : kind === 'hidden' ? 99 : 1)
+    return rank(a.catalog.kind) - rank(b.catalog.kind) || a.index - b.index
+  })
+  return prepared.flatMap(({ item, index, catalog }) => {
     if (catalog.kind === 'hidden') return []
-    const symbol = buildFixtureSymbol(catalog.kind, item.width, item.height)
+    const bakeStairMirror =
+      catalog.kind === 'stair_quarter_90' ||
+      catalog.kind === 'stair_quarter_90_up' ||
+      catalog.kind === 'stair_straight' ||
+      catalog.kind === 'stair_straight_double'
+    const symbol = buildFixtureSymbol(catalog.kind, item.width, item.height, {
+      x: item.mirrored?.[0] === 1,
+      y: item.mirrored?.[1] === 1,
+      rotation: item.rotation ?? 0,
+    })
     const center = toStagePoint(item.x, item.y)
     const origin = toStagePoint(0, 0)
     const unit = toStagePoint(1, 0)
     const cmToStage = Math.hypot(unit.x - origin.x, unit.y - origin.y) || 1
-    const mirroredX = item.mirrored?.[0] === 1 ? -1 : 1
-    const mirroredY = item.mirrored?.[1] === 1 ? -1 : 1
+    const mirroredX = bakeStairMirror ? 1 : item.mirrored?.[0] === 1 ? -1 : 1
+    const mirroredY = bakeStairMirror ? 1 : item.mirrored?.[1] === 1 ? -1 : 1
+    const bounds = fixtureSymbolLocalBounds(symbol)
     return [
       {
         id: item.guid ?? `fixture-${index}`,
@@ -176,10 +195,15 @@ export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): R
         stroke: catalog.stroke ?? symbol.stroke,
         fill: catalog.fill ?? symbol.fill,
         circleFill: symbol.circleFill,
-        strokeWidth: symbol.strokeWidth ?? 1.2,
+        strokeWidth: symbol.strokeWidth ?? 1.5,
         arrowStrokeWidth: symbol.arrowStrokeWidth,
         dash: symbol.dash,
+        cornerRadius: symbol.cornerRadius,
         overWalls: symbol.overWalls,
+        localX: bounds.x,
+        localY: bounds.y,
+        localWidth: bounds.width,
+        localHeight: bounds.height,
       },
     ]
   })

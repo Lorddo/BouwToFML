@@ -95,8 +95,6 @@ export function useWorkspaceFml(deps: {
   })
 
   return {
-    generatedPlan: generate.generatedPlan,
-    fmlExportPlan: generate.fmlExportPlan,
     fmlThicknessMinCm: thickness.fmlThicknessMinCm,
     fmlThicknessMidCm: thickness.fmlThicknessMidCm,
     fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
@@ -142,7 +140,7 @@ export function useWorkspaceFml(deps: {
     handleFmlThicknessWallPick,
     generatedFmlText: generate.generatedFmlText,
     generatedStats: generate.generatedStats,
-    importedPlan: generate.importedPlan,
+    openingHeightOverflow: generate.openingHeightOverflow,
     importedWarnings: generate.importedWarnings,
     importedFmlText: generate.importedFmlText,
     importedStats: generate.importedStats,
@@ -163,9 +161,17 @@ export function useWorkspaceFml(deps: {
     clearLiveFmlPreview: generate.clearLiveFmlPreview,
     resetGeneratedPreview: generate.resetGeneratedPreview,
     regenerateFml: generate.regenerateFml,
-    downloadGeneratedFml: generate.downloadGeneratedFml,
-    copyGeneratedFml: generate.copyGeneratedFml,
-    importFmlFile: generate.importFmlFile,
+    fmlRescaleActive: generate.fmlRescaleActive,
+    fmlRescaleState: generate.fmlRescaleState,
+    fmlRescaleDistanceMmX: generate.fmlRescaleDistanceMmX,
+    fmlRescaleDistanceMmY: generate.fmlRescaleDistanceMmY,
+    beginFmlRescale: generate.beginFmlRescale,
+    cancelFmlRescale: generate.cancelFmlRescale,
+    updateFmlRescaleState: generate.updateFmlRescaleState,
+    setFmlRescaleDistanceMmX: generate.setFmlRescaleDistanceMmX,
+    setFmlRescaleDistanceMmY: generate.setFmlRescaleDistanceMmY,
+    confirmFmlRescale: generate.confirmFmlRescale,
+    rescaleFmlFromRulers: generate.rescaleFmlFromRulers,
     clearImportedFml: generate.clearImportedFml,
   }
 }

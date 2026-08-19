@@ -3,6 +3,21 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { tryUnlockAccess } from '@/ui/access-gate'
 
+const props = withDefaults(
+  defineProps<{
+    expectedPassword?: string
+    storageKey?: string
+    title?: string
+    subtitle?: string
+  }>(),
+  {
+    expectedPassword: undefined,
+    storageKey: undefined,
+    title: undefined,
+    subtitle: undefined,
+  },
+)
+
 const emit = defineEmits<{
   unlocked: []
 }>()
@@ -13,7 +28,8 @@ const error = ref(false)
 
 function onSubmit(): void {
   error.value = false
-  if (!tryUnlockAccess(password.value)) {
+  const ok = tryUnlockAccess(password.value, props.expectedPassword, props.storageKey)
+  if (!ok) {
     error.value = true
     password.value = ''
     return
@@ -25,8 +41,8 @@ function onSubmit(): void {
 <template>
   <div class="access-gate">
     <form class="access-gate__panel" @submit.prevent="onSubmit">
-      <h1 class="access-gate__title">{{ t('app.title') }}</h1>
-      <p class="access-gate__subtitle">{{ t('access.subtitle') }}</p>
+      <h1 class="access-gate__title">{{ title ?? t('app.title') }}</h1>
+      <p class="access-gate__subtitle">{{ subtitle ?? t('access.subtitle') }}</p>
       <label class="access-gate__label" for="access-password">
         {{ t('access.password') }}
       </label>

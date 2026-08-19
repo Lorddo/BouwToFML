@@ -1,0 +1,139 @@
+/* Shared field styles for FmlPreviewToolbarSettings* children (unscoped so
+   fragment roots flatten into the dock section and :first-of-type stays correct). */
+.fml-toolbelt__field {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 4px;
+  border-left: 1px solid #e2e8f0;
+  margin-left: 2px;
+}
+
+.fml-toolbelt__field:first-of-type {
+  border-left: none;
+  margin-left: 0;
+}
+
+.fml-toolbelt__field-label {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #64748b;
+}
+
+.fml-toolbelt__field-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.fml-toolbelt__thickness-input {
+  box-sizing: border-box;
+  width: 64px;
+  min-width: 64px;
+  font-size: 12px;
+  /* Right padding keeps digits left of the native spinner (else it covers them / shows white). */
+  padding: 1px 20px 1px 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+}
+
+.fml-toolbelt__thickness-input--balance {
+  width: 72px;
+  min-width: 72px;
+}
+
+.fml-toolbelt__balance-slider {
+  width: 72px;
+}
+
+.fml-toolbelt__select {
+  min-width: 108px;
+  height: 24px;
+  font-size: 12px;
+  padding: 1px 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #334155;
+}
+
+.fml-toolbelt__select--thickness {
+  min-width: 118px;
+}
+
+.fml-toolbelt__unit {
+  font-size: 10px;
+  color: #64748b;
+  min-width: 18px;
+}
+
+.fml-toolbelt__field--checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fml-toolbelt__field--checkbox input[type='checkbox'] {
+  margin: 0;
+}
+
+.fml-toolbelt__presets {
+  display: flex;
+  gap: 2px;
+  margin-left: 2px;
+}
+
+.fml-toolbelt__preset-btn {
+  min-width: 28px;
+  height: 22px;
+  padding: 0 5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fml-toolbelt__preset-btn:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.canvas-toolbelt__btn--active {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0369a1;
+}
+
+.fml-toolbelt__input {
+  width: 64px;
+  height: 24px;
+  font-size: 12px;
+  padding: 1px 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #334155;
+}
+
+.canvas-toolbelt__btn--primary {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 8px;
+  width: auto;
+  min-width: auto;
+}
+
+.canvas-toolbelt__btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

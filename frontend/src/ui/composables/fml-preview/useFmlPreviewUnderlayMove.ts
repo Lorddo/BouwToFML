@@ -31,8 +31,8 @@ export function useFmlPreviewUnderlayMove(options: {
   )
 
   function stopListeners(): void {
-    window.removeEventListener('mousemove', onPointerMove)
-    window.removeEventListener('mouseup', onPointerUp)
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
     dragging.value = false
     dragStartCm.value = null
     dragStartOrigin.value = null
@@ -51,8 +51,8 @@ export function useFmlPreviewUnderlayMove(options: {
     dragging.value = true
     dragStartCm.value = { ...cm }
     dragStartOrigin.value = { ...layout.origin }
-    window.addEventListener('mousemove', onPointerMove)
-    window.addEventListener('mouseup', onPointerUp)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
     return true
   }
 

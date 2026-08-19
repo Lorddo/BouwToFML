@@ -9,6 +9,7 @@ const props = withDefaults(
   defineProps<{
     tools: ToolbeltItem[]
     activeTool?: CanvasToolId | null
+    pressedIds?: readonly string[]
     brushSize?: number
     canUndo?: boolean
     staleHint?: boolean
@@ -19,6 +20,7 @@ const props = withDefaults(
   }>(),
   {
     activeTool: null,
+    pressedIds: () => [],
     brushSize: 4,
     canUndo: false,
     staleHint: false,
@@ -31,6 +33,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   'update:activeTool': [value: CanvasToolId | null]
   'update:brushSize': [value: number]
+  togglePressed: [id: CanvasToolId]
   undo: []
 }>()
 
@@ -40,6 +43,11 @@ const activeToolShowsSize = computed(() => {
 })
 
 function toggleTool(id: CanvasToolId) {
+  const item = props.tools.find((tool) => tool.id === id)
+  if (item?.toggle) {
+    emit('togglePressed', id)
+    return
+  }
   emit('update:activeTool', props.activeTool === id ? null : id)
 }
 
@@ -55,7 +63,12 @@ function onBrushSizeInput(event: Event) {
       Onderlegger gewijzigd — klik «Verwerk wijzigingen» in de sidebar
     </p>
     <div class="canvas-toolbelt__bar">
-      <CanvasToolbeltButtons :tools="tools" :active-tool="activeTool" @toggle="toggleTool" />
+      <CanvasToolbeltButtons
+        :tools="tools"
+        :active-tool="activeTool"
+        :pressed-ids="pressedIds"
+        @toggle="toggleTool"
+      />
       <div v-if="activeToolShowsSize" class="canvas-toolbelt__size">
         <input
           type="range"
@@ -83,7 +96,12 @@ function onBrushSizeInput(event: Event) {
     <p v-if="hint" class="canvas-toolbelt__hint">{{ hint }}</p>
   </div>
   <div v-else class="canvas-toolbelt__bar canvas-toolbelt__bar--embedded">
-    <CanvasToolbeltButtons :tools="tools" :active-tool="activeTool" @toggle="toggleTool" />
+    <CanvasToolbeltButtons
+      :tools="tools"
+      :active-tool="activeTool"
+      :pressed-ids="pressedIds"
+      @toggle="toggleTool"
+    />
     <div v-if="activeToolShowsSize" class="canvas-toolbelt__size">
       <input
         type="range"

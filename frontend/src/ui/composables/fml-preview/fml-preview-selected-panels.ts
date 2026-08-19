@@ -1,8 +1,10 @@
-import type { Opening } from '@/core/fml/types'
+import type { Opening, Wall } from '@/core/fml/types'
+import { wallEndpointHeightCm } from '@/core/fml/wall-endpoint-height'
 import type { RenderModel, RenderWall } from './fml-preview-render-types'
 import { computeOpeningDraftState } from './fml-preview-opening-draft'
+import type { WallEndRef } from '@/ui/components/fml-preview-junction-core'
 
-export function buildSelectedWallPanel(model: RenderModel, ids: string[]) {
+export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorHeightCm: number) {
   if (ids.length === 0) return null
 
   const wallLines = ids
@@ -13,12 +15,19 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[]) {
   const lengths = wallLines.map((line) => Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y))
   const thicknesses = wallLines.map((line) => Math.round(line.wall.thickness))
   const balances = wallLines.map((line) => line.wall.balance ?? 0.5)
+  const heights: number[] = []
+  for (const line of wallLines) {
+    heights.push(Math.round(wallEndpointHeightCm(line.wall, 'a', floorHeightCm)))
+    heights.push(Math.round(wallEndpointHeightCm(line.wall, 'b', floorHeightCm)))
+  }
   const firstThickness = thicknesses[0] ?? 20
   const thicknessMixed = thicknesses.some((value) => value !== firstThickness)
   const firstBalance = Math.round((balances[0] ?? 0.5) * 100) / 100
   const balanceMixed = balances.some(
     (value) => Math.round((value ?? 0.5) * 100) / 100 !== firstBalance,
   )
+  const firstHeight = heights[0] ?? Math.round(floorHeightCm)
+  const heightMixed = heights.some((value) => value !== firstHeight)
   const openingCount = wallLines.reduce((sum, line) => sum + line.wall.openings.length, 0)
   const singleLine = wallLines.length === 1 ? wallLines[0] : null
 
@@ -32,8 +41,34 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[]) {
     thicknessMixed,
     balance: balanceMixed ? null : firstBalance,
     balanceMixed,
+    heightCm: heightMixed ? null : firstHeight,
+    heightMixed,
     openingCount,
     canSplit: singleLine != null && (lengths[0] ?? 0) >= 8,
+  }
+}
+
+export function buildSelectedJunctionPanel(
+  walls: Wall[],
+  junction: { id: string; refs: WallEndRef[] } | null | undefined,
+  floorHeightCm: number,
+) {
+  if (!junction || junction.refs.length === 0) return null
+  const heights = junction.refs
+    .map((ref) => {
+      const wall = walls.find((item) => item.id === ref.wallId)
+      if (!wall) return null
+      return Math.round(wallEndpointHeightCm(wall, ref.end, floorHeightCm))
+    })
+    .filter((value): value is number => value != null)
+  if (heights.length === 0) return null
+  const first = heights[0]
+  const heightMixed = heights.some((value) => value !== first)
+  return {
+    junctionId: junction.id,
+    wallCount: junction.refs.length,
+    heightCm: heightMixed ? null : first,
+    heightMixed,
   }
 }
 

@@ -6,11 +6,18 @@ import {
   type WindowAddSubtype,
 } from '@/core/fml/opening-add-presets'
 import {
+  BOVENLICHT_GAP_CM,
+  BOVENLICHT_HEIGHT_CM,
+  resolveBovenlichtGapCm,
+  resolveBovenlichtHeightCm,
+  resolveDoorBovenlicht,
+  resolveWindowBovenlicht,
+} from '@/core/fml/bovenlicht'
+import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
-import { resolveDoorBovenlicht, resolveWindowBovenlicht } from '@/core/fml/bovenlicht'
 import { resolveHingeAtStart, resolveSwingSign } from '@/ui/components/fml-preview-doors'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/fml-preview-openings'
 
@@ -36,6 +43,12 @@ export interface OpeningDraftState {
   /** Effectieve bovenlicht (override of vloerdefault voor deur/raam). */
   bovenlichtOn: boolean
   bovenlichtMixed: boolean
+  /** Effectieve glashoogte (override of vloerdefault). */
+  bovenlichtHeightCm: number
+  bovenlichtHeightMixed: boolean
+  /** Effectieve dorpel-gap (override of vloerdefault). */
+  bovenlichtGapCm: number
+  bovenlichtGapMixed: boolean
 }
 
 export interface OpeningDraftOptions {
@@ -43,6 +56,8 @@ export interface OpeningDraftOptions {
   windowBovenlichtDefault?: boolean
   /** @deprecated Gebruik doorBovenlichtDefault. */
   bovenlichtDefault?: boolean
+  bovenlichtHeightCm?: number
+  bovenlichtGapCm?: number
 }
 
 /** Mixed/first draft van geselecteerde openings (editor sync + panel). */
@@ -91,6 +106,14 @@ export function computeOpeningDraftState(
   const bovenlichtDefaultFallback =
     openingType === 'window' ? windowBovenlichtDefault : doorBovenlichtDefault
   const bovenlichtFirst = bovenlichtFlags[0] ?? bovenlichtDefaultFallback
+  const floorHeightDefault = options.bovenlichtHeightCm ?? BOVENLICHT_HEIGHT_CM
+  const floorGapDefault = options.bovenlichtGapCm ?? BOVENLICHT_GAP_CM
+  const bovenlichtHeights = openings.map((opening) =>
+    resolveBovenlichtHeightCm(opening, floorHeightDefault),
+  )
+  const bovenlichtGaps = openings.map((opening) => resolveBovenlichtGapCm(opening, floorGapDefault))
+  const bovenlichtHeightFirst = bovenlichtHeights[0] ?? floorHeightDefault
+  const bovenlichtGapFirst = bovenlichtGaps[0] ?? floorGapDefault
 
   return {
     openingType,
@@ -108,5 +131,9 @@ export function computeOpeningDraftState(
     swingMixed: swings.some((value) => value !== swingFirst),
     bovenlichtOn: bovenlichtFirst,
     bovenlichtMixed: bovenlichtFlags.some((value) => value !== bovenlichtFirst),
+    bovenlichtHeightCm: bovenlichtHeightFirst,
+    bovenlichtHeightMixed: bovenlichtHeights.some((value) => value !== bovenlichtHeightFirst),
+    bovenlichtGapCm: bovenlichtGapFirst,
+    bovenlichtGapMixed: bovenlichtGaps.some((value) => value !== bovenlichtGapFirst),
   }
 }

@@ -11,6 +11,7 @@ import {
   copyUnderlayDisplayOrient,
 } from '@/core/fml/drawing-to-underlay-layout'
 import { applyNulpunt, reapplyNulpuntImageCm } from '@/core/fml/translate-floor-plan'
+import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import {
   applyFloorOrientFromCanonical,
   applyFloorOrientOp,
@@ -21,13 +22,27 @@ import {
   type FloorOrientState,
 } from '@/core/fml/floor-plan-orient'
 import type { FloorPlan, ImportWarning, Point2D } from '@/core/fml/types'
+import {
+  findOpeningHeightOverflows,
+  summarizeOpeningHeightOverflows,
+  type OpeningHeightOverflowSummary,
+} from '@/core/fml/opening-height-overflow'
 import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import type { ExtractionOutput } from '@/core/extraction'
-import type { useHScaleCalibration } from '@/platform/calibration'
+import type { useHScaleCalibration, HScaleState } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
 import type { FloorOrientPersist, PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import { regeneratePlanAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
+import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
+import {
+  measuredCmFromRescaleState,
+  resolveFmlRescaleState,
+  resolveRescaleFactorsFromRulers,
+  scaleNulpuntImageCm,
+} from '@/ui/composables/workspace/fml-rescale-from-measure'
+import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
 import { tGlobal } from '@/ui/i18n'
 
 export function stripFileExtension(name: string | null | undefined): string {
@@ -124,6 +139,11 @@ export function createWorkspaceFmlGenerate(
   const fmlOrient = ref<FloorOrientState>(defaultFloorOrient())
   /** Sidebar: onderlegger verslepen. */
   const underlayMoveMode = ref(false)
+  /** Stap-4 Herschalen: H/V-linialen op FML-preview. */
+  const fmlRescaleActive = ref(false)
+  const fmlRescaleState = ref<HScaleState | null>(null)
+  const fmlRescaleDistanceMmX = ref(0)
+  const fmlRescaleDistanceMmY = ref(0)
 
   function persistOrientState(): FloorOrientPersist | null {
     if (isIdentityFloorOrient(fmlOrient.value)) return null
@@ -216,7 +236,7 @@ export function createWorkspaceFmlGenerate(
   const fmlExportPlan = computed<FloorPlan | null>(() => {
     const raw = generatedPlan.value
     if (!raw) return null
-    return harmonizePlan(raw)
+    return regeneratePlanAreas(harmonizePlan(raw))
   })
 
   /** Actuele preview + export: canvas-bewerkingen > geïmporteerd > gegenereerd. */
@@ -232,11 +252,25 @@ export function createWorkspaceFmlGenerate(
       windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
       bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
       bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
+      ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
   })
 
   const generatedStats = computed(() => countPlanElements(previewPlan.value))
   const importedStats = computed(() => countPlanElements(importedPlan.value))
+
+  const openingHeightOverflow = computed((): OpeningHeightOverflowSummary | null => {
+    const floor = previewPlan.value?.floors[0]
+    if (!floor) return null
+    return summarizeOpeningHeightOverflows(
+      findOpeningHeightOverflows(floor, {
+        doorBovenlichtDefault: applied.fmlBovenlichtDefault.value,
+        windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
+        bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
+        bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
+      }),
+    )
+  })
 
   function applyStoredNulpuntToPlan(
     plan: FloorPlan,
@@ -263,7 +297,7 @@ export function createWorkspaceFmlGenerate(
       const nulpunt = fmlNulpuntImageCm.value
       if (nulpunt) {
         const appliedNulpunt = reapplyNulpuntImageCm(
-          harmonizePlan(bundle.plan),
+          regeneratePlanAreas(harmonizePlan(bundle.plan)),
           baseLayout,
           nulpunt,
         )
@@ -375,6 +409,7 @@ export function createWorkspaceFmlGenerate(
     fmlNulpuntImageCm.value = null
     fmlOrient.value = defaultFloorOrient()
     underlayMoveMode.value = false
+    cancelFmlRescale()
   }
 
   function rebuildPreviewFromCanonical(preserveUnderlayDisplay: boolean): void {
@@ -417,6 +452,107 @@ export function createWorkspaceFmlGenerate(
     syncAppliedFromDraft()
     editedPreviewPlan.value = null
     rebuildPreviewFromCanonical(true)
+  }
+
+  /**
+   * Stap-4: anisotrope H/V-schaal van het **huidige** plan (edits blijven).
+   * Geen muurdikte-schaal; underlay per as; kalibratie alleen als schaal confirmed.
+   */
+  function rescaleFmlFromRulers(params: {
+    measuredCmX: number
+    measuredCmY: number
+    trueMmX: number
+    trueMmY: number
+  }): boolean {
+    const factors = resolveRescaleFactorsFromRulers(params)
+    if (factors == null) return false
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    if (!plan) return false
+    const layout = previewUnderlayLayout.value
+
+    // Eerst plan/layout zetten — anders overschrijft generatedBundle-watch (sync) vóór
+    // applyAxisGeometryFactors met een verse generate (dubbele schaal of edits kwijt).
+    const scaledPlan = scaleFloorPlan(plan, factors, 0)
+    editedPreviewPlan.value = scaledPlan
+    if (importedPlan.value) {
+      importedPlan.value = scaledPlan
+    }
+    if (layout) {
+      persistedUnderlayLayout.value = scaleUnderlayLayout(layout, factors)
+    }
+    const nulpunt = fmlNulpuntImageCm.value
+    if (nulpunt) {
+      fmlNulpuntImageCm.value = scaleNulpuntImageCm(nulpunt, factors)
+    }
+    if (deps.scale.confirmed.value) {
+      if (
+        !deps.scale.applyAxisGeometryFactors(factors.x, factors.y, {
+          distanceMmX: params.trueMmX,
+          distanceMmY: params.trueMmY,
+        })
+      ) {
+        return false
+      }
+    } else {
+      // Resume zonder confirmed kalibratie: maten wel bijwerken voor volgende sessie.
+      if (params.trueMmX > 0) deps.scale.distanceMmX.value = params.trueMmX
+      if (params.trueMmY > 0) deps.scale.distanceMmY.value = params.trueMmY
+    }
+    return true
+  }
+
+  function beginFmlRescale(): boolean {
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    const walls = plan?.floors[0]?.walls ?? []
+    const state = resolveFmlRescaleState({
+      walls,
+      imageState: deps.scale.state.value,
+      layout: previewUnderlayLayout.value,
+    })
+    if (!state) return false
+    const measured = measuredCmFromRescaleState(state)
+    fmlRescaleState.value = state
+    const mmX = deps.scale.distanceMmX.value
+    const mmY = deps.scale.distanceMmY.value
+    fmlRescaleDistanceMmX.value = mmX > 0 ? mmX : measured.x * 10
+    fmlRescaleDistanceMmY.value = mmY > 0 ? mmY : measured.y * 10
+    underlayMoveMode.value = false
+    fmlRescaleActive.value = true
+    return true
+  }
+
+  function cancelFmlRescale(): void {
+    fmlRescaleActive.value = false
+    fmlRescaleState.value = null
+  }
+
+  function updateFmlRescaleState(next: HScaleState): void {
+    if (!fmlRescaleActive.value) return
+    fmlRescaleState.value = { ...next }
+  }
+
+  function setFmlRescaleDistanceMmX(mm: number): void {
+    if (!(mm > 0) || !Number.isFinite(mm)) return
+    fmlRescaleDistanceMmX.value = mm
+  }
+
+  function setFmlRescaleDistanceMmY(mm: number): void {
+    if (!(mm > 0) || !Number.isFinite(mm)) return
+    fmlRescaleDistanceMmY.value = mm
+  }
+
+  function confirmFmlRescale(): boolean {
+    const state = fmlRescaleState.value
+    if (!state || !fmlRescaleActive.value) return false
+    const measured = measuredCmFromRescaleState(state)
+    const ok = rescaleFmlFromRulers({
+      measuredCmX: measured.x,
+      measuredCmY: measured.y,
+      trueMmX: fmlRescaleDistanceMmX.value,
+      trueMmY: fmlRescaleDistanceMmY.value,
+    })
+    if (ok) cancelFmlRescale()
+    return ok
   }
 
   function applyFloorOrientOpToPreview(op: FloorOrientOp): boolean {
@@ -495,6 +631,7 @@ export function createWorkspaceFmlGenerate(
     previewPlan: previewPlan,
     generatedFmlText,
     generatedStats,
+    openingHeightOverflow,
     importedPlan,
     importedWarnings,
     importedFmlText,
@@ -517,6 +654,17 @@ export function createWorkspaceFmlGenerate(
     clearLiveFmlPreview,
     resetGeneratedPreview,
     regenerateFml,
+    fmlRescaleActive,
+    fmlRescaleState,
+    fmlRescaleDistanceMmX,
+    fmlRescaleDistanceMmY,
+    beginFmlRescale,
+    cancelFmlRescale,
+    updateFmlRescaleState,
+    setFmlRescaleDistanceMmX,
+    setFmlRescaleDistanceMmY,
+    confirmFmlRescale,
+    rescaleFmlFromRulers,
     downloadGeneratedFml,
     copyGeneratedFml,
     importFmlFile,

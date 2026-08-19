@@ -1,5 +1,5 @@
 import { pickGeomByPrefer, type GeomPrefer } from '@/cv/walls/rooms/face-dual-space'
-import type { RefBBox, RefFace, RefFaceProfile, RefPoint } from './types'
+import type { RefBBox, RefFace, RefPoint } from './types'
 
 const INK_THRESHOLD = 128
 
@@ -253,16 +253,5 @@ export function attachRefFaceDualFromWhiteLabels(params: {
     geom(label, prefer) {
       return pickGeom(whiteByLabel, inkByLabel, label, prefer)
     },
-  }
-}
-
-/** Convenience: profile-vorm met dual (faces = white). */
-export function toRefFaceProfileWithDual(dual: RefFaceDualSpace): RefFaceProfile {
-  return {
-    faces: dual.faces,
-    totalAreaPx: dual.faces.reduce((sum, f) => sum + f.areaPx, 0),
-    faceCount: dual.faces.length,
-    labelsData: dual.labelsData,
-    dual,
   }
 }

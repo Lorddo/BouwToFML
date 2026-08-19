@@ -1,0 +1,9 @@
+# Worker + static assets (live: https://floorplan-fml.lorddo3066.workers.dev/).
+# SPA routes such as /FML-editor must use not_found_handling — do not add
+# `/* /index.html 200` in _redirects (Cloudflare error 100324, infinite loop).
+name = "floorplan-fml"
+compatibility_date = "2026-08-19"
+
+[assets]
+directory = "./dist/"
+not_found_handling = "single-page-application"

@@ -1,0 +1,22 @@
+{
+  "beschrijving": "Floorplanner House roomtypes (nl-NL). Fabriekskleuren uit /api/v2/room_type_sets/defaults.json. User settings kunnen kleur per role overschrijven.",
+  "laatste_update": "2026-08-17",
+  "set": "house",
+  "entries": [
+    { "role": 0, "name": "Woonkamer", "color": "#FFDFBF" },
+    { "role": 1, "name": "Eetkamer", "color": "#E6AC73" },
+    { "role": 2, "name": "Keuken", "color": "#CEEDF3" },
+    { "role": 3, "name": "Slaapkamer", "color": "#FFD1CC" },
+    { "role": 4, "name": "Badkamer", "color": "#C3C3DA" },
+    { "role": 5, "name": "Toilet", "color": "#DCDCE6" },
+    { "role": 7, "name": "Hal", "color": "#FFE699" },
+    { "role": 9, "name": "Berging", "color": "#CCB799" },
+    { "role": 10, "name": "Kast", "color": "#E0BF8F" },
+    { "role": 11, "name": "Overloop", "color": "#ED9B8D" },
+    { "role": 12, "name": "Zolder", "color": "#D99A8D" },
+    { "role": 13, "name": "Balkon", "color": "#A6A695" },
+    { "role": 18, "name": "Garage", "color": "#F5F5EB" },
+    { "role": 19, "name": "Schuur", "color": "#CC7F70" },
+    { "role": 99, "name": "Overig", "color": "#F4F4F4" }
+  ]
+}

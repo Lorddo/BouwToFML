@@ -48,7 +48,7 @@ function maskInkWithinRadius(params: {
  * raakt (binnen search-radius). Zelfde face-match als L11 snap
  * (raw label óf merged root).
  */
-export function doorTouchesKeptWallMask(params: {
+function doorTouchesKeptWallMask(params: {
   door: ResolvedDoorCandidate
   wallMask: Uint8Array
   labelsData: Int32Array

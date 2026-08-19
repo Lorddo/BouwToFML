@@ -10,40 +10,96 @@ import FmlPreviewStageWalls from './FmlPreviewStageWalls.vue'
 import FmlPreviewStageOpenings from './FmlPreviewStageOpenings.vue'
 import FmlPreviewStageFixtures from './FmlPreviewStageFixtures.vue'
 import FmlPreviewStageJunctions from './FmlPreviewStageJunctions.vue'
+import FmlPreviewStageAreas from './FmlPreviewStageAreas.vue'
+import FmlPreviewStageSurfaces from './FmlPreviewStageSurfaces.vue'
+import FmlPreviewStageLabels from './FmlPreviewStageLabels.vue'
+import FmlPreviewStageLines from './FmlPreviewStageLines.vue'
+import FmlPreviewStageAreaDims from './FmlPreviewStageAreaDims.vue'
+import FmlPreviewStageCornerMarkers from './FmlPreviewStageCornerMarkers.vue'
+import type { Point2D } from '@/core/fml/types'
+import type { RenderCornerMarker } from '@/ui/composables/fml-preview/fml-preview-corner-markers'
+import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-mode'
+import {
+  FACTORY_OPENING_COLORS,
+  type OpeningDisplayColors,
+} from '@/ui/composables/settings/opening-display-colors'
 
-defineProps<{
-  stageSize: { width: number; height: number }
-  viewPosition: { x: number; y: number }
-  viewScale: number
-  renderModel: RenderModel
-  underlayConfig: {
-    image: HTMLImageElement
-    x: number
-    y: number
-    width: number
-    height: number
-    opacity: number
-    listening: boolean
-    offsetX?: number
-    offsetY?: number
-    rotation?: number
-  } | null
-  /** 0–1; FML-geometrie opacity. */
-  contentOpacity: number
-  moveWallPolygon: RenderWallPolygon | null
-  settingsWallPolygons: RenderWallPolygon[]
-  settingsWallIds: string[]
-  moveWallId: string | null
-  settingsOpeningIds: string[]
-  moveOpeningId: string | null
-  groupDraggable: boolean
-  visibleJunctions: RenderJunction[]
-  junctionOverlayGroup: { x: number; y: number; scaleX: number; scaleY: number }
-  junctionHitRadius: number
-  junctionMarkerRadius: number
-  junctionMarkerStroke: number
-  activeJunctionId: string | null
-}>()
+withDefaults(
+  defineProps<{
+    stageSize: { width: number; height: number }
+    viewPosition: { x: number; y: number }
+    viewScale: number
+    /** Content-layout scale (cm → stage) voor wereldmaat-labels. */
+    layoutScale?: number
+    /** false = kamer-/FML-labels niet mounten. */
+    labelsVisible?: boolean
+    /** Overlay: maten op area-zijden ≥ 50 cm. */
+    areaSideDimsVisible?: boolean
+    cornerMarkerMode?: CornerMarkerMode
+    cornerMarkers?: RenderCornerMarker[]
+    renderModel: RenderModel
+    underlayConfig: {
+      image: HTMLImageElement
+      x: number
+      y: number
+      width: number
+      height: number
+      opacity: number
+      listening: boolean
+      offsetX?: number
+      offsetY?: number
+      rotation?: number
+    } | null
+    /** 0–1; FML-geometrie opacity. */
+    contentOpacity: number
+    moveWallPolygon: RenderWallPolygon | null
+    settingsWallPolygons: RenderWallPolygon[]
+    inspectWallPolygons: Array<RenderWallPolygon & { fill: string }>
+    settingsWallIds: string[]
+    moveWallId: string | null
+    settingsOpeningIds: string[]
+    moveOpeningId: string | null
+    settingsItemId?: string | null
+    moveItemId?: string | null
+    itemDragPreview?: { id: string; x: number; y: number } | null
+    /** Vloerdefault bovenlicht deuren (preview-badge). */
+    doorBovenlichtDefault?: boolean
+    /** Vloerdefault bovenlicht ramen (preview-badge). */
+    windowBovenlichtDefault?: boolean
+    openingColors?: OpeningDisplayColors
+    settingsAreaId: string | null
+    settingsSurfaceId: string | null
+    settingsLabelId: string | null
+    settingsLineId: string | null
+    hoveredAreaId: string | null
+    hoveredSurfaceId: string | null
+    hoveredLabelId: string | null
+    hoveredLineId: string | null
+    inspectColors: Record<string, string>
+    surfaceEditId: string | null
+    surfaceEditVertices: Point2D[] | null
+    groupDraggable: boolean
+    visibleJunctions: RenderJunction[]
+    junctionOverlayGroup: { x: number; y: number; scaleX: number; scaleY: number }
+    junctionHitRadius: number
+    junctionMarkerRadius: number
+    junctionMarkerStroke: number
+    activeJunctionId: string | null
+  }>(),
+  {
+    layoutScale: 1,
+    labelsVisible: true,
+    areaSideDimsVisible: false,
+    cornerMarkerMode: 'off',
+    cornerMarkers: () => [],
+    doorBovenlichtDefault: false,
+    windowBovenlichtDefault: false,
+    openingColors: () => ({ ...FACTORY_OPENING_COLORS }),
+    settingsItemId: null,
+    moveItemId: null,
+    itemDragPreview: null,
+  },
+)
 
 const emit = defineEmits<{
   groupDragStart: []
@@ -129,11 +185,51 @@ onBeforeUnmount(unbindGroupDrag)
         />
         <v-image v-if="underlayConfig" :config="underlayConfig" />
         <v-group :config="{ opacity: contentOpacity, listening: true }">
-          <FmlPreviewStageFixtures :render-model="renderModel" layer="under" />
+          <!-- Z-order: area → surface → object → tekst. Meubels blijven onder muurfill. -->
+          <FmlPreviewStageAreas
+            :areas="renderModel.areas"
+            :settings-area-id="settingsAreaId"
+            :hovered-area-id="hoveredAreaId"
+            :inspect-colors="inspectColors"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :labels-visible="labelsVisible"
+            layer="fill"
+          />
+          <FmlPreviewStageSurfaces
+            :surfaces="renderModel.surfaces"
+            :settings-surface-id="settingsSurfaceId"
+            :hovered-surface-id="hoveredSurfaceId"
+            :inspect-colors="inspectColors"
+            :surface-edit-id="surfaceEditId"
+            :edit-vertices="surfaceEditVertices"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :labels-visible="labelsVisible"
+            layer="fill"
+          />
+          <FmlPreviewStageFixtures
+            :render-model="renderModel"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :inspect-colors="inspectColors"
+            :settings-item-id="settingsItemId"
+            :move-item-id="moveItemId"
+            :item-drag-preview="itemDragPreview"
+            layer="under"
+          />
+          <FmlPreviewStageLines
+            :lines="renderModel.lines"
+            :dimensions="renderModel.dimensions"
+            :settings-line-id="settingsLineId"
+            :hovered-line-id="hoveredLineId"
+            :view-scale="viewScale"
+          />
           <FmlPreviewStageWalls
             :render-model="renderModel"
             :move-wall-polygon="moveWallPolygon"
             :settings-wall-polygons="settingsWallPolygons"
+            :inspect-wall-polygons="inspectWallPolygons"
             :settings-wall-ids="settingsWallIds"
             :move-wall-id="moveWallId"
           />
@@ -141,8 +237,58 @@ onBeforeUnmount(unbindGroupDrag)
             :render-model="renderModel"
             :settings-opening-ids="settingsOpeningIds"
             :move-opening-id="moveOpeningId"
+            :door-bovenlicht-default="doorBovenlichtDefault"
+            :window-bovenlicht-default="windowBovenlichtDefault"
+            :opening-colors="openingColors"
+            :inspect-colors="inspectColors"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
           />
-          <FmlPreviewStageFixtures :render-model="renderModel" layer="over" />
+          <FmlPreviewStageFixtures
+            :render-model="renderModel"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :inspect-colors="inspectColors"
+            :settings-item-id="settingsItemId"
+            :move-item-id="moveItemId"
+            :item-drag-preview="itemDragPreview"
+            layer="over"
+          />
+          <FmlPreviewStageAreas
+            :areas="renderModel.areas"
+            :settings-area-id="settingsAreaId"
+            :hovered-area-id="hoveredAreaId"
+            :inspect-colors="inspectColors"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :labels-visible="labelsVisible"
+            layer="labels"
+          />
+          <FmlPreviewStageSurfaces
+            :surfaces="renderModel.surfaces"
+            :settings-surface-id="settingsSurfaceId"
+            :hovered-surface-id="hoveredSurfaceId"
+            :inspect-colors="inspectColors"
+            :surface-edit-id="surfaceEditId"
+            :edit-vertices="surfaceEditVertices"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :labels-visible="labelsVisible"
+            layer="labels"
+          />
+          <FmlPreviewStageLabels
+            :labels="renderModel.labels"
+            :settings-label-id="settingsLabelId"
+            :hovered-label-id="hoveredLabelId"
+            :layout-scale="layoutScale"
+            :view-scale="viewScale"
+            :labels-visible="labelsVisible"
+          />
+          <FmlPreviewStageAreaDims
+            v-if="areaSideDimsVisible"
+            :dims="renderModel.areaSideDims"
+            :view-scale="viewScale"
+          />
         </v-group>
       </v-group>
     </v-layer>
@@ -156,6 +302,11 @@ onBeforeUnmount(unbindGroupDrag)
         :active-junction-id="activeJunctionId"
         @junction-hover="emit('junctionHover', $event)"
         @junction-hover-end="emit('junctionHoverEnd')"
+      />
+      <FmlPreviewStageCornerMarkers
+        :markers="cornerMarkers"
+        :mode="cornerMarkerMode"
+        :overlay-group="junctionOverlayGroup"
       />
     </v-layer>
   </v-stage>

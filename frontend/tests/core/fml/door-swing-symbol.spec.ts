@@ -122,4 +122,23 @@ describe('door-swing-symbol', () => {
     expect(defaultY).toBeLessThan(gapEdgeNeg)
     expect(flippedY).toBeGreaterThan(gapEdgePos)
   })
+
+  it('french balcony swings inward and puts the rail on the FML exterior side', () => {
+    const base = {
+      start: { x: 0, y: 0 },
+      end: { x: 80, y: 0 },
+      wallUnit: { x: 1, y: 0 },
+      width: 80,
+      mirrored: [0, 0] as [number, number],
+      wallThickness: 20,
+    }
+    const single = buildDoorSwingSymbol({ ...base, kind: 'single' })
+    const french = buildDoorSwingSymbol({ ...base, kind: 'french_balcony' })
+    expect(single.leafLines[0][3]).toBeLessThan(0)
+    expect(french.leafLines[0][3]).toBeGreaterThan(0)
+    expect(french.arcPoints).toHaveLength(1)
+    expect(french.leafLines.length).toBeGreaterThan(2)
+    const railY = (french.leafLines[1][1] + french.leafLines[1][3]) / 2
+    expect(railY).toBeLessThan(-10)
+  })
 })

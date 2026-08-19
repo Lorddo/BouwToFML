@@ -98,7 +98,7 @@ export function facesTouchDoorArc(params: {
 }
 
 /** Deurboog-faces die hyp-faces delen of 1-hop ink-adjacent raken. */
-export function collectTouchedDoorArcFaceIds(params: {
+function collectTouchedDoorArcFaceIds(params: {
   faceIds: Iterable<number>
   doorArcFaceIds: ReadonlySet<number>
   wallInkAdjacency?: ReadonlyMap<number, ReadonlySet<number>>

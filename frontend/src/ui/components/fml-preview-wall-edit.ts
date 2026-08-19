@@ -1,23 +1,53 @@
 import type { Wall } from '@/core/fml/types'
+import { clampWallBalance } from '@/core/fml/fml-wall-geom'
 import {
-  setWallsBalanceKeepingFaces,
-  setWallsThicknessKeepingFaces,
-} from '@/core/fml/wall-axis-balance'
+  setJunctionHeight as setJunctionEndpointHeight,
+  setWallsUniformHeight as setWallsUniformEndpointHeight,
+  splitWallEndpointExtras,
+} from '@/core/fml/wall-endpoint-height'
 import {
   MIN_SPLIT_SEGMENT_CM,
   BALANCE_DEFAULT,
-  BALANCE_MAX,
-  BALANCE_MIN,
+  BALANCE_SLIDER_PCT_MAX,
+  BALANCE_SLIDER_PCT_MIN,
   distance,
   stableJunctionId,
   type SplitWallResult,
+  type WallEndRef,
 } from './fml-preview-junction-core'
 import { redistributeOpeningsAcrossSplit } from './fml-preview-openings'
 
+/** FML-fractie (0.5 = 50%). Buiten 0–1 toegestaan; rail ±1000%. */
 export function clampBalance(balance: number): number {
-  if (!Number.isFinite(balance)) return BALANCE_DEFAULT
-  const clamped = Math.min(BALANCE_MAX, Math.max(BALANCE_MIN, balance))
-  return Math.round(clamped * 100) / 100
+  return Math.round(clampWallBalance(balance) * 1000) / 1000
+}
+
+export function balanceToPercent(fraction: number): number {
+  return Math.round(clampBalance(fraction) * 1000) / 10
+}
+
+export function percentToBalance(percent: number): number {
+  if (!Number.isFinite(percent)) return BALANCE_DEFAULT
+  return clampBalance(percent / 100)
+}
+
+/** Slider blijft 0–100%; invoer mag daarbuiten. */
+export function sliderPercentFromDraft(percent: number): number {
+  if (!Number.isFinite(percent)) return 50
+  return Math.min(BALANCE_SLIDER_PCT_MAX, Math.max(BALANCE_SLIDER_PCT_MIN, percent))
+}
+
+function cloneWallWith(
+  wall: Wall,
+  patch: Pick<Wall, 'thickness' | 'balance'> & Partial<Pick<Wall, 'a' | 'b'>>,
+): Wall {
+  return {
+    ...wall,
+    ...patch,
+    a: { ...wall.a },
+    b: { ...wall.b },
+    openings: wall.openings.map((opening) => ({ ...opening })),
+  }
 }
 
 export function setWallBalance(walls: Wall[], wallId: string, balance: number): Wall[] {
@@ -25,11 +55,21 @@ export function setWallBalance(walls: Wall[], wallId: string, balance: number): 
 }
 
 /**
- * Balance-slider = Floorplanner snap: as schuift mee (keep-faces + junction-stitch).
- * Het muurlichaam blijft liggen; `a`/`b` wordt de as die bij de nieuwe balance hoort.
+ * Keep-axis: alleen `balance` schrijven. Hartlijn `a`/`b` blijft liggen;
+ * het lichaam schuift (zelfde model als detectie-flush X-01).
  */
 export function setWallsBalance(walls: Wall[], wallIds: Iterable<string>, balance: number): Wall[] {
-  return setWallsBalanceKeepingFaces(walls, wallIds, clampBalance(balance))
+  const target = clampBalance(balance)
+  const idSet = new Set(wallIds)
+  if (idSet.size === 0) return walls
+  let changed = false
+  const next = walls.map((wall) => {
+    if (!idSet.has(wall.id)) return wall
+    if (clampBalance(wall.balance ?? BALANCE_DEFAULT) === target) return wall
+    changed = true
+    return cloneWallWith(wall, { thickness: wall.thickness, balance: target })
+  })
+  return changed ? next : walls
 }
 
 export function setWallThickness(walls: Wall[], wallId: string, thicknessCm: number): Wall[] {
@@ -37,15 +77,49 @@ export function setWallThickness(walls: Wall[], wallId: string, thicknessCm: num
 }
 
 /**
- * Dikte wijzigen: eerst as naar lichaam-midden (B→0.5 keep-faces), daarna dikte.
- * Voorkomt sprong bij geïmporteerde face-as (B=0/1).
+ * Dikte wijzigen: hartlijn vast, balance terug naar 0.5 (flush hoorde bij oude dikte).
  */
 export function setWallsThickness(
   walls: Wall[],
   wallIds: Iterable<string>,
   thicknessCm: number,
 ): Wall[] {
-  return setWallsThicknessKeepingFaces(walls, wallIds, thicknessCm)
+  const idSet = new Set(wallIds)
+  if (idSet.size === 0) return walls
+  const clamped = Math.max(1, Math.min(200, thicknessCm))
+  let changed = false
+  const next = walls.map((wall) => {
+    if (!idSet.has(wall.id)) return wall
+    if (
+      wall.thickness === clamped &&
+      clampBalance(wall.balance ?? BALANCE_DEFAULT) === BALANCE_DEFAULT
+    ) {
+      return wall
+    }
+    changed = true
+    return cloneWallWith(wall, { thickness: clamped, balance: BALANCE_DEFAULT })
+  })
+  return changed ? next : walls
+}
+
+/** Beide uiteinden van geselecteerde muren op dezelfde hoogte (`az`/`bz`). */
+export function setWallsHeight(
+  walls: Wall[],
+  wallIds: Iterable<string>,
+  heightCm: number,
+  floorHeightCm: number,
+): Wall[] {
+  return setWallsUniformEndpointHeight(walls, wallIds, heightCm, floorHeightCm)
+}
+
+/** Alle wall-ends op één knoop op dezelfde hoogte. */
+export function setJunctionHeight(
+  walls: Wall[],
+  refs: ReadonlyArray<WallEndRef>,
+  heightCm: number,
+  floorHeightCm: number,
+): Wall[] {
+  return setJunctionEndpointHeight(walls, refs, heightCm, floorHeightCm)
 }
 
 /** Verwijder één muursegment (openingen op die muur gaan mee). */
@@ -93,16 +167,19 @@ export function splitWallAtT(walls: Wall[], wallId: string, tSplit = 0.5): Split
     secondWall: secondEndpoints,
   })
 
+  const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, t)
   const firstWall: Wall = {
     ...wall,
     b: { ...splitPoint },
     openings: firstOpenings,
+    extras: firstExtras,
   }
   const secondWall: Wall = {
     ...wall,
     id: secondWallId,
     a: { ...splitPoint },
     openings: secondOpenings,
+    extras: secondExtras,
   }
 
   const next = [...walls.slice(0, index), firstWall, secondWall, ...walls.slice(index + 1)]

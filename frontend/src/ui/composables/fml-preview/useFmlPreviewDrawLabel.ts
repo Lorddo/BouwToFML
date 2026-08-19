@@ -1,0 +1,50 @@
+import type { Point2D } from '@/core/fml/types'
+import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
+import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
+
+type EditorApi = ReturnType<typeof useFmlPreviewEditor>
+
+/**
+ * Label-plaats tool: enkele klik → tekstlabel (default styling Kinderdijk).
+ */
+export function useFmlPreviewDrawLabel(options: {
+  selection: FmlPreviewSelectionRefs
+  editor: EditorApi
+  hitTest: { clientToCm: (clientX: number, clientY: number) => Point2D | null }
+  beforeBegin: () => void
+  syncPlanToParent: () => void
+}) {
+  function cancelDrawLabel(): void {
+    // single-click tool — nothing to cancel mid-draw
+  }
+
+  function onDrawLabelClick(event: MouseEvent): void {
+    const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
+    if (!cm) return
+    options.beforeBegin()
+    options.editor.pushUndo()
+    const id = options.editor.addLabel({
+      x: cm.x,
+      y: cm.y,
+      text: 'Tekst',
+      fontFamily: 'arial',
+      fontSize: 16,
+      letterSpacing: 0,
+      fontColor: '#000000',
+      backgroundColor: '#f4f8f4',
+      align: 'left',
+      rotation: 0,
+    })
+    options.selection.settingsLabelId.value = id
+    options.selection.settingsLineId.value = null
+    options.selection.settingsAreaId.value = null
+    options.selection.settingsSurfaceId.value = null
+    options.selection.activeFmlTool.value = null
+    options.syncPlanToParent()
+  }
+
+  return {
+    cancelDrawLabel,
+    onDrawLabelClick,
+  }
+}

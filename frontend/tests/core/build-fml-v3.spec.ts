@@ -172,6 +172,21 @@ describe('buildFmlV3 — bovenlicht export', () => {
     })
   })
 
+  it('plaatst bovenlicht tegen muurtop az/bz, niet tegen floor.height (Poort6)', () => {
+    const plan = doorOnlyPlan()
+    plan.floors[0].height = 55
+    plan.floors[0].walls[0].extras = { az: { z: 0, h: 330 }, bz: { z: 0, h: 330 } }
+    const raw = JSON.parse(buildFmlV3(plan, { bovenlichtDefault: true }))
+    const openings = raw.floors[0].designs[0].walls[0].openings
+    expect(openings).toHaveLength(2)
+    expect(openings[1]).toMatchObject({
+      type: 'window',
+      z: 230,
+      z_height: 40,
+      guid: 'door001-bovenlicht',
+    })
+  })
+
   it('ondersteunt per-floor bovenlicht via resolver', () => {
     const plan = doorOnlyPlan()
     plan.floors.push({
@@ -293,6 +308,74 @@ describe('buildFmlV3 — bovenlicht export', () => {
     expect(raw.floors[0].designs[0].walls[0].openings[1]).toMatchObject({
       z: 225,
       z_height: 25,
+      guid: 'door001-bovenlicht',
+    })
+  })
+
+  it('gebruikt per-opening maat-override naast vloerdefault', () => {
+    const plan = doorOnlyPlan()
+    plan.floors[0].walls[0].openings.push({
+      refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+      t: 0.7,
+      width: 80,
+      type: 'door',
+      z_height: 220,
+      guid: 'door002',
+      bovenlichtHeightCm: 25,
+      bovenlichtGapCm: 5,
+    })
+    const raw = JSON.parse(
+      buildFmlV3(plan, {
+        bovenlichtDefault: true,
+        bovenlichtHeightCm: 40,
+        bovenlichtGapCm: 10,
+      }),
+    )
+    const openings = raw.floors[0].designs[0].walls[0].openings as Array<{
+      guid: string
+      z: number
+      z_height: number
+      bovenlichtHeightCm?: number
+      bovenlichtGapCm?: number
+    }>
+    expect(openings.find((o) => o.guid === 'door001-bovenlicht')).toMatchObject({
+      z: 230,
+      z_height: 40,
+    })
+    expect(openings.find((o) => o.guid === 'door002-bovenlicht')).toMatchObject({
+      z: 225,
+      z_height: 25,
+    })
+    const door002 = openings.find((o) => o.guid === 'door002')
+    expect(door002?.bovenlichtHeightCm).toBeUndefined()
+    expect(door002?.bovenlichtGapCm).toBeUndefined()
+  })
+
+  it('import vouwt export-bovenlicht terug; re-export behoudt maten', () => {
+    const exported = buildFmlV3(
+      doorOnlyPlan({ bovenlicht: true, bovenlichtHeightCm: 30, bovenlichtGapCm: 0 }),
+    )
+    const raw = JSON.parse(exported)
+    expect(raw.floors[0].designs[0].walls[0].openings).toHaveLength(2)
+
+    const parsed = importFmlV3(exported)
+    const openings = parsed.plan.floors[0].walls[0].openings
+    expect(openings).toHaveLength(1)
+    expect(openings[0]).toMatchObject({
+      type: 'door',
+      guid: 'door001',
+      bovenlicht: true,
+      bovenlichtHeightCm: 30,
+      bovenlichtGapCm: 0,
+    })
+
+    const again = JSON.parse(buildFmlV3(parsed.plan))
+    const againOpenings = again.floors[0].designs[0].walls[0].openings
+    expect(againOpenings).toHaveLength(2)
+    expect(againOpenings[1]).toMatchObject({
+      type: 'window',
+      z: 220,
+      z_height: 30,
       guid: 'door001-bovenlicht',
     })
   })

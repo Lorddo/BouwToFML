@@ -67,8 +67,8 @@ export function useFmlPreviewNulpunt(options: {
   )
 
   function stopDragListeners(): void {
-    window.removeEventListener('mousemove', onNulpuntPointerMove)
-    window.removeEventListener('mouseup', onNulpuntPointerUp)
+    window.removeEventListener('pointermove', onNulpuntPointerMove)
+    window.removeEventListener('pointerup', onNulpuntPointerUp)
     nulpuntDragging.value = false
   }
 
@@ -98,8 +98,8 @@ export function useFmlPreviewNulpunt(options: {
     nulpuntPendingCm.value = hitTestNulpuntAtCm(cm)
       ? { ...nulpuntDisplayCm.value }
       : resolveNulpuntPoint(cm, event)
-    window.addEventListener('mousemove', onNulpuntPointerMove)
-    window.addEventListener('mouseup', onNulpuntPointerUp, { once: true })
+    window.addEventListener('pointermove', onNulpuntPointerMove)
+    window.addEventListener('pointerup', onNulpuntPointerUp, { once: true })
     return true
   }
 
@@ -111,7 +111,7 @@ export function useFmlPreviewNulpunt(options: {
   }
 
   function onNulpuntPointerUp(event: MouseEvent): void {
-    window.removeEventListener('mousemove', onNulpuntPointerMove)
+    window.removeEventListener('pointermove', onNulpuntPointerMove)
     if (!nulpuntDragging.value) return
     nulpuntDragging.value = false
     const raw = options.hitTest.clientToCm(event.clientX, event.clientY) ?? nulpuntPendingCm.value

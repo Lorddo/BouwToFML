@@ -137,7 +137,7 @@ function rejectFullWidthWhenNarrowerExists(
   return ranked.filter((row) => row.face.bbox.width < widthLimit)
 }
 
-export function rankSwingSectorFaces(
+function rankSwingSectorFaces(
   faces: RefFace[],
   cropW: number,
   cropH: number,

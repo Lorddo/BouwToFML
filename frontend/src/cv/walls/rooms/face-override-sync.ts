@@ -34,7 +34,7 @@ export interface SyncPinnedClassResult {
  * remove is previousAuto-only wanneer `previousAutoFaceIds` gezet is.
  */
 // ESC:O-05 (D)
-export function syncPinnedClassOverrides(
+function syncPinnedClassOverrides(
   cache: FaceOverridePinTarget,
   params: SyncPinnedClassOverridesParams,
 ): SyncPinnedClassResult {

@@ -1,29 +1,52 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ProjectFmlDefaults } from '@/ui/composables/project/types'
 import {
+  CORNER_MARKER_MODES,
   downloadUserSettingsJson,
   loadUserSettings,
   parseUserSettingsJson,
+  createFactoryUserSettings,
   resetUserSettingsToFactory,
   saveUserSettings,
   SCALE_INPUT_UNITS,
   UserSettingsParseError,
+  type CornerMarkerMode,
   type FmlConversionSettings,
   type FmlViewerSettings,
+  type OpeningDisplayColorKey,
   type ScaleInputUnit,
   type UserSettingsV1,
+  FACTORY_OPENING_COLORS,
 } from '@/ui/composables/settings/user-settings'
+import {
+  effectiveRoomTypeColor,
+  factoryRoomTypeColor,
+  listRoomTypes,
+} from '@/core/fml/roomtype-catalog'
 import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
+import { FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
 
 const { t } = useI18n()
 
+const props = withDefaults(
+  defineProps<{
+    /** Workspace = converter; viewer = losse FML-editor. */
+    variant?: 'workspace' | 'viewer'
+  }>(),
+  { variant: 'workspace' },
+)
+
+const isViewer = computed(() => props.variant === 'viewer')
+const showRoomTags = computed(() => isViewer.value || FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE)
+
 const emit = defineEmits<{
   saved: []
-  back: []
-  openFmlViewer: []
+  close: []
 }>()
+
+const skipSaveOnUnmount = ref(false)
 
 function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
   return {
@@ -31,8 +54,12 @@ function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
     locale: settings.locale,
     scaleInputUnit: settings.scaleInputUnit,
     defaults: { ...settings.defaults },
-    fmlViewer: { ...settings.fmlViewer },
+    fmlViewer: {
+      ...settings.fmlViewer,
+      openingColors: { ...settings.fmlViewer.openingColors },
+    },
     fmlConversion: { ...settings.fmlConversion },
+    roomTagColors: { ...settings.roomTagColors },
   }
 }
 
@@ -40,6 +67,24 @@ const draft = reactive(cloneSettings(loadUserSettings()))
 const statusMessage = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
 const importInputRef = ref<HTMLInputElement | null>(null)
+
+const roomTypeRows = computed(() =>
+  listRoomTypes().map((rt) => {
+    const key = String(rt.role)
+    const effective = effectiveRoomTypeColor(rt.role, draft.roomTagColors)
+    const factory = factoryRoomTypeColor(rt.role)
+    return {
+      role: rt.role,
+      name: rt.name,
+      key,
+      color: effective,
+      hasOverride: Object.prototype.hasOwnProperty.call(draft.roomTagColors, key),
+      factory,
+    }
+  }),
+)
+
+const hasAnyRoomTagOverride = computed(() => Object.keys(draft.roomTagColors).length > 0)
 
 watch(
   () => draft.locale,
@@ -60,6 +105,27 @@ function patchConversion(patch: Partial<FmlConversionSettings>) {
   Object.assign(draft.fmlConversion, patch)
 }
 
+function onRoomTagColorInput(role: number, event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  const key = String(role)
+  const factory = factoryRoomTypeColor(role)
+  if (value.trim().toUpperCase() === factory.toUpperCase()) {
+    delete draft.roomTagColors[key]
+  } else {
+    draft.roomTagColors[key] = value
+  }
+}
+
+function resetRoomTagColor(role: number) {
+  delete draft.roomTagColors[String(role)]
+}
+
+function resetAllRoomTagColors() {
+  for (const key of Object.keys(draft.roomTagColors)) {
+    delete draft.roomTagColors[key]
+  }
+}
+
 function clearMessages() {
   statusMessage.value = null
   errorMessage.value = null
@@ -73,8 +139,45 @@ function onScaleUnitChange(event: Event) {
   draft.scaleInputUnit = (event.target as HTMLSelectElement).value as ScaleInputUnit
 }
 
-function onSave() {
-  clearMessages()
+function onCornerMarkerModeChange(event: Event) {
+  patchViewer({
+    cornerMarkerMode: (event.target as HTMLSelectElement).value as CornerMarkerMode,
+  })
+}
+
+function cornerMarkerModeLabel(mode: CornerMarkerMode): string {
+  if (mode === 'off') return t('settings.cornerMarkersOff')
+  if (mode === 'square') return t('settings.cornerMarkersSquare')
+  return t('settings.cornerMarkersSkew')
+}
+
+const openingColorRows: { key: OpeningDisplayColorKey; labelKey: string }[] = [
+  { key: 'door', labelKey: 'settings.openingColorDoor' },
+  { key: 'window', labelKey: 'settings.openingColorWindow' },
+  { key: 'bovenlicht', labelKey: 'settings.openingColorBovenlicht' },
+]
+
+function openingColorIsOverride(key: OpeningDisplayColorKey): boolean {
+  return draft.fmlViewer.openingColors[key].toLowerCase() !== FACTORY_OPENING_COLORS[key]
+}
+
+const hasAnyOpeningColorOverride = computed(() =>
+  openingColorRows.some((row) => openingColorIsOverride(row.key)),
+)
+
+function onOpeningColorInput(key: OpeningDisplayColorKey, event: Event): void {
+  draft.fmlViewer.openingColors[key] = (event.target as HTMLInputElement).value
+}
+
+function resetOpeningColor(key: OpeningDisplayColorKey): void {
+  draft.fmlViewer.openingColors[key] = FACTORY_OPENING_COLORS[key]
+}
+
+function resetAllOpeningColors(): void {
+  draft.fmlViewer.openingColors = { ...FACTORY_OPENING_COLORS }
+}
+
+function persistDraft(): UserSettingsV1 {
   const saved = saveUserSettings({
     version: 1,
     locale: draft.locale,
@@ -82,15 +185,49 @@ function onSave() {
     defaults: { ...draft.defaults },
     fmlViewer: { ...draft.fmlViewer },
     fmlConversion: { ...draft.fmlConversion },
+    roomTagColors: { ...draft.roomTagColors },
   })
   Object.assign(draft, cloneSettings(saved))
   applyLocale(saved.locale)
-  statusMessage.value = t('settings.saved')
   emit('saved')
+  return saved
+}
+
+function onSave() {
+  clearMessages()
+  persistDraft()
+  statusMessage.value = t('settings.saved')
+}
+
+function onCancel() {
+  skipSaveOnUnmount.value = true
+  const loaded = loadUserSettings()
+  Object.assign(draft, cloneSettings(loaded))
+  applyLocale(loaded.locale)
+  emit('close')
 }
 
 function onResetFactory() {
   clearMessages()
+  if (isViewer.value) {
+    const factory = createFactoryUserSettings()
+    const current = loadUserSettings()
+    const saved = saveUserSettings({
+      ...current,
+      locale: factory.locale,
+      roomTagColors: {},
+      fmlViewer: {
+        ...current.fmlViewer,
+        cornerMarkerMode: factory.fmlViewer.cornerMarkerMode,
+        openingColors: { ...factory.fmlViewer.openingColors },
+      },
+    })
+    Object.assign(draft, cloneSettings(saved))
+    applyLocale(saved.locale)
+    statusMessage.value = t('settings.factoryRestored')
+    emit('saved')
+    return
+  }
   const factory = resetUserSettingsToFactory()
   Object.assign(draft, cloneSettings(factory))
   applyLocale(factory.locale)
@@ -107,6 +244,7 @@ function onExport() {
     defaults: { ...draft.defaults },
     fmlViewer: { ...draft.fmlViewer },
     fmlConversion: { ...draft.fmlConversion },
+    roomTagColors: { ...draft.roomTagColors },
   })
   statusMessage.value = t('settings.exportDownloaded')
 }
@@ -141,29 +279,19 @@ async function onImportFile(event: Event) {
   }
 }
 
-function onReload() {
-  clearMessages()
-  const loaded = loadUserSettings()
-  Object.assign(draft, cloneSettings(loaded))
-  applyLocale(loaded.locale)
-}
-
-function onBack() {
-  applyLocale(loadUserSettings().locale)
-  emit('back')
-}
+onBeforeUnmount(() => {
+  if (skipSaveOnUnmount.value) return
+  persistDraft()
+})
 </script>
 
 <template>
   <div class="settings-page">
     <div class="settings-header">
       <div>
-        <h2>{{ t('settings.title') }}</h2>
-        <p class="hint">{{ t('settings.hint') }}</p>
+        <h2>{{ isViewer ? t('settings.titleViewer') : t('settings.title') }}</h2>
+        <p class="hint">{{ isViewer ? t('settings.hintViewer') : t('settings.hint') }}</p>
       </div>
-      <button type="button" class="secondary" @click="onBack">
-        {{ t('settings.backToWorkspace') }}
-      </button>
     </div>
 
     <p v-if="statusMessage" class="status ok">{{ statusMessage }}</p>
@@ -187,7 +315,7 @@ function onBack() {
       </label>
     </section>
 
-    <section class="panel settings-section">
+    <section v-if="!isViewer" class="panel settings-section">
       <h3>{{ t('settings.scaleUnit') }}</h3>
       <p class="hint">{{ t('settings.scaleUnitHint') }}</p>
       <label class="field compact">
@@ -200,7 +328,7 @@ function onBack() {
       </label>
     </section>
 
-    <section class="panel settings-section">
+    <section v-if="!isViewer" class="panel settings-section">
       <h3>{{ t('settings.heights') }}</h3>
       <div class="defaults-grid">
         <label class="field compact">
@@ -298,7 +426,7 @@ function onBack() {
       </div>
     </section>
 
-    <section class="panel settings-section">
+    <section v-if="!isViewer" class="panel settings-section">
       <h3>{{ t('settings.thicknesses') }}</h3>
       <p class="hint">{{ t('settings.thicknessHint') }}</p>
       <div class="defaults-grid">
@@ -335,7 +463,7 @@ function onBack() {
       </div>
     </section>
 
-    <section class="panel settings-section">
+    <section v-if="!isViewer" class="panel settings-section">
       <h3>{{ t('settings.fmlConversion') }}</h3>
       <p class="hint">{{ t('settings.fmlConversionHint') }}</p>
       <div class="defaults-grid">
@@ -366,7 +494,41 @@ function onBack() {
       </div>
     </section>
 
-    <section class="panel settings-section">
+    <section v-if="showRoomTags" class="panel settings-section">
+      <h3>{{ t('settings.roomTags') }}</h3>
+      <p class="hint">{{ t('settings.roomTagsHint') }}</p>
+      <div class="roomtag-list">
+        <div v-for="row in roomTypeRows" :key="row.role" class="roomtag-row">
+          <span class="roomtag-name">{{ row.name }}</span>
+          <input
+            type="color"
+            :value="row.color"
+            :aria-label="row.name"
+            @input="onRoomTagColorInput(row.role, $event)"
+          />
+          <button
+            v-if="row.hasOverride"
+            type="button"
+            class="secondary roomtag-reset"
+            :title="t('settings.roomTagResetRow')"
+            @click="resetRoomTagColor(row.role)"
+          >
+            {{ t('settings.roomTagResetRow') }}
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="secondary"
+        :disabled="!hasAnyRoomTagOverride"
+        :title="t('settings.roomTagResetAllTitle')"
+        @click="resetAllRoomTagColors"
+      >
+        {{ t('settings.roomTagResetAll') }}
+      </button>
+    </section>
+
+    <section v-if="!isViewer" class="panel settings-section">
       <h3>{{ t('settings.fmlViewer') }}</h3>
       <div class="opacity-row">
         <div class="opacity-label">
@@ -406,18 +568,62 @@ function onBack() {
           "
         />
       </div>
-      <p class="hint">{{ t('settings.openFmlViewerHint') }}</p>
-      <button type="button" class="secondary" @click="emit('openFmlViewer')">
-        {{ t('settings.openFmlViewer') }}
+    </section>
+
+    <section class="panel settings-section">
+      <h3>{{ t('settings.openingColors') }}</h3>
+      <p class="hint">{{ t('settings.openingColorsHint') }}</p>
+      <div class="roomtag-list">
+        <div v-for="row in openingColorRows" :key="row.key" class="roomtag-row">
+          <span class="roomtag-name">{{ t(row.labelKey) }}</span>
+          <input
+            type="color"
+            :value="draft.fmlViewer.openingColors[row.key]"
+            :aria-label="t(row.labelKey)"
+            @input="onOpeningColorInput(row.key, $event)"
+          />
+          <button
+            v-if="openingColorIsOverride(row.key)"
+            type="button"
+            class="secondary roomtag-reset"
+            :title="t('settings.roomTagResetRow')"
+            @click="resetOpeningColor(row.key)"
+          >
+            {{ t('settings.roomTagResetRow') }}
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="secondary"
+        :disabled="!hasAnyOpeningColorOverride"
+        :title="t('settings.openingColorsResetAllTitle')"
+        @click="resetAllOpeningColors"
+      >
+        {{ t('settings.openingColorsResetAll') }}
       </button>
     </section>
 
+    <section class="panel settings-section">
+      <h3>{{ t('settings.cornerMarkers') }}</h3>
+      <p class="hint">{{ t('settings.cornerMarkersHint') }}</p>
+      <label class="field compact">
+        <span>{{ t('settings.cornerMarkers') }}</span>
+        <select :value="draft.fmlViewer.cornerMarkerMode" @change="onCornerMarkerModeChange">
+          <option v-for="mode in CORNER_MARKER_MODES" :key="mode" :value="mode">
+            {{ cornerMarkerModeLabel(mode) }}
+          </option>
+        </select>
+      </label>
+    </section>
+
+    <p class="hint">{{ t('settings.commitHint') }}</p>
     <div class="actions">
       <button type="button" class="primary" @click="onSave">{{ t('settings.save') }}</button>
+      <button type="button" class="secondary" @click="onCancel">{{ t('common.cancel') }}</button>
       <button type="button" @click="onResetFactory">{{ t('settings.resetFactory') }}</button>
       <button type="button" @click="onExport">{{ t('settings.export') }}</button>
       <button type="button" @click="onImportClick">{{ t('settings.import') }}</button>
-      <button type="button" class="secondary" @click="onReload">{{ t('settings.reload') }}</button>
       <input
         ref="importInputRef"
         type="file"
@@ -510,6 +716,30 @@ function onBack() {
 
 .opacity-row input[type='range'] {
   width: 100%;
+}
+
+.roomtag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.roomtag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roomtag-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.roomtag-reset {
+  font-size: 12px;
+  padding: 4px 8px;
 }
 
 .actions {

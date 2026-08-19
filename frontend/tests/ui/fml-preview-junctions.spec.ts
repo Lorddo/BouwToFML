@@ -5,8 +5,11 @@ import {
   applyShiftSnapFromAllOppositeEnds,
   applyShiftSnapFromOppositeEnd,
   addWallSegment,
+  balanceToPercent,
   clampBalance,
+  percentToBalance,
   setWallBalance,
+  sliderPercentFromDraft,
   slideWallSegmentAlongAxis,
   resolveWallSlidePointerDelta,
   moveJunctionWithWallJoins,
@@ -581,9 +584,8 @@ describe('setWallsThickness', () => {
     expect(next[0]?.balance).toBe(0.5)
     expect(next[1]?.balance).toBe(0.5)
     expect(next[2]?.balance).toBe(0.5)
-    // Face-as (B=0) schuift eerst naar lichaam-midden vóór dikte.
-    expect(next[0]?.a.y).toBeCloseTo(10, 6)
-    expect(next[1]?.a.y).toBeCloseTo(100 - 6, 6)
+    expect(next[0]?.a).toEqual({ x: 0, y: 0 })
+    expect(next[1]?.a).toEqual({ x: 0, y: 100 })
   })
 })
 
@@ -1503,7 +1505,7 @@ describe('snapToNearbyEndpointAxes', () => {
 })
 
 describe('setWallBalance', () => {
-  it('clamped balance 0–1 and shifts axis keep-faces', () => {
+  it('writes balance keep-axis (centerline stays, overshoot allowed)', () => {
     const walls = [
       {
         id: 'w1',
@@ -1514,15 +1516,26 @@ describe('setWallBalance', () => {
         openings: [],
       },
     ]
-    expect(clampBalance(-0.1)).toBe(0)
-    expect(clampBalance(1.1)).toBe(1)
+    expect(clampBalance(-2.5)).toBe(-2.5)
+    expect(clampBalance(10)).toBe(10)
+    expect(clampBalance(12)).toBe(10)
     expect(clampBalance(0)).toBe(0)
     expect(clampBalance(1)).toBe(1)
     const updated = setWallBalance(walls, 'w1', 0.72)
     expect(updated[0]?.balance).toBe(0.72)
-    // 0.5→0.72: shift = −t·ΔB along left (−Y) → +Y
-    expect(updated[0]?.a.y).toBeCloseTo(20 * (0.72 - 0.5), 6)
-    expect(updated[0]?.b.y).toBeCloseTo(20 * (0.72 - 0.5), 6)
+    expect(updated[0]?.a).toEqual({ x: 0, y: 0 })
+    expect(updated[0]?.b).toEqual({ x: 100, y: 0 })
+  })
+
+  it('converts percent for the toolbelt (slider 0–100, input may overshoot)', () => {
+    expect(balanceToPercent(0.5)).toBe(50)
+    expect(balanceToPercent(0.72)).toBe(72)
+    expect(percentToBalance(50)).toBe(0.5)
+    expect(percentToBalance(-250)).toBe(-2.5)
+    expect(percentToBalance(1000)).toBe(10)
+    expect(sliderPercentFromDraft(-250)).toBe(0)
+    expect(sliderPercentFromDraft(1000)).toBe(100)
+    expect(sliderPercentFromDraft(72)).toBe(72)
   })
 })
 
