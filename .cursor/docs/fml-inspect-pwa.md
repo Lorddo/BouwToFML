@@ -97,14 +97,26 @@ Kamers / fixtures zonder zichtbare vragen: completeness is 0 vragen = compleet; 
 
 ---
 
-## Gevel (v1-datamodel, groepering bij bouwen)
+## Gevel (project-scope via settings)
 
 Eén FML-muur = één segment tussen knopen. Een EPA-gevel is vaak 3–8 segmenten. **Toch één PWA-subject.**
 
+**BouwToFML-store (v1):** groepen staan in `plan.source.settings.facadeGroups`:
+
+```
+{ id: "G1", code: "VG", name: "Voorgevel", wallGuids: ["…", "…"] }
+```
+
+- Project-breed (alle verdiepingen delen één “Voorgevel”).
+- Muur-GUID blijft de haak; geen suffix in de GUID, geen `facadeGroupId` op de muur (Floorplanner stript wall-extras).
+- In `/FML-editor` (bewerken + inspectie): aanmaken/koppelen/loshalen; tik op een segment selecteert alle leden **op die floor** (`FmlInspectHit.ids`).
+- PWA join: `fmlWallGuids[]` ← `facadeGroups[].wallGuids` (of subset per floor).
+
+Gedrag:
+
 - Tik op elk segment van de groep selecteert dezelfde gevel-asset.
-- Viewer-hit op v1 mag nog één `id` (het getikte segment) emitten; de PWA lost op naar de gevel die die guid in `fmlWallGuids` heeft.
-- API mag later `ids: string[]` emitten; dat is een kleine stap, geen nieuw product.
-- **Hoe** de groep ontstaat (editor in BouwToFML, box-select, collineair, …) is bouwwerk, geen open productvraag. Afspraak: groepen bestaan vóór of bij het openen van de FML in de PWA, zodat eager subject-aanmaak al gevels maakt en niet elk segment.
+- Viewer-hit emit `id` (getikt segment) + optioneel `ids` (leden op floor); de PWA lost op naar de gevel die die guid in `fmlWallGuids` heeft.
+- Groepen bestaan vóór of bij het openen van de FML in de PWA, zodat eager subject-aanmaak al gevels maakt en niet elk segment.
 
 IFC/Vabi later: FML blijft geometrie+guid; observations blijven de tabel; IFC krijgt `FmlGuid=…` of `gevelAssetId → [wallGuid, …]`. VABI leest een muur als **lijst IDs**.
 

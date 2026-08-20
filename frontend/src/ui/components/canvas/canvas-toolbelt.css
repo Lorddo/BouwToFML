@@ -15,18 +15,22 @@
   position: absolute;
   left: 50%;
   bottom: 12px;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--fml-chrome-fit-scale, 1));
+  transform-origin: bottom center;
   z-index: 20;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  max-width: calc(100% - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
   pointer-events: none;
 }
 
 .canvas-toolbelt-dock__row {
   display: flex;
   align-items: stretch;
+  max-width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgb(15 23 42 / 0.1);
@@ -51,6 +55,36 @@
 
 .canvas-toolbelt-dock__section--fml {
   background: rgb(255 255 255 / 0.96);
+}
+
+.fml-toolbelt-settings-stack {
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  row-gap: 4px;
+  max-width: 100%;
+}
+
+.fml-toolbelt-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.fml-toolbelt__row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.fml-toolbelt__row--primary {
+  flex: 0 1 auto;
 }
 
 .fml-toolbelt__meta {
@@ -94,14 +128,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--fml-toolbelt-btn-size, 32px);
+  height: var(--fml-toolbelt-btn-size, 32px);
+  flex: 0 0 auto;
   padding: 0;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
   color: #334155;
   cursor: pointer;
+}
+
+.canvas-toolbelt-dock.is-chrome-compact,
+.fml-editor-topbar.is-chrome-compact {
+  --fml-toolbelt-btn-size: 28px;
+  --fml-toolbelt-input-width: 52px;
+  --fml-toolbelt-select-min: 96px;
 }
 
 .canvas-toolbelt__btn:hover {

@@ -191,4 +191,43 @@ describe('wall-endpoint-height', () => {
     expect(wallEndpointHeightCm(walls[0], 'b', 280)).toBe(250)
     expect(wallEndpointHeightCm(walls[1], 'a', 280)).toBe(250)
   })
+
+  it('overwritePlan* met floorIndex raakt alleen die verdieping', () => {
+    const plan: FloorPlan = {
+      name: 't',
+      floors: [
+        {
+          name: 'bg',
+          level: 0,
+          height: 280,
+          walls: [
+            wall({
+              id: 'w0',
+              a: { x: 0, y: 0 },
+              b: { x: 10, y: 0 },
+              openings: [{ type: 'door', refid: 'd', t: 0.5, width: 90, z_height: 220 }],
+            }),
+          ],
+        },
+        {
+          name: '1e',
+          level: 1,
+          height: 280,
+          walls: [
+            wall({
+              id: 'w1',
+              a: { x: 0, y: 0 },
+              b: { x: 10, y: 0 },
+              openings: [{ type: 'door', refid: 'd', t: 0.5, width: 90, z_height: 220 }],
+            }),
+          ],
+        },
+      ],
+    }
+    const next = overwritePlanDoorHeights(overwritePlanWallHeights(plan, 300, 1), 210, 1)
+    expect(next.floors[0].height).toBe(280)
+    expect(next.floors[1].height).toBe(300)
+    expect(next.floors[0].walls[0].openings[0].z_height).toBe(220)
+    expect(next.floors[1].walls[0].openings[0].z_height).toBe(210)
+  })
 })

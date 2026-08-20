@@ -1,12 +1,14 @@
 /**
  * FML wall sanitize (cm): weld near endpoints → near-H/V exact op as →
- * collinear cover (muur-onder-muur).
+ * T/X junctions → collinear cover (muur-onder-muur).
  *
  * Keep-axis: alleen `a`/`b` (en splits); `balance` / `thickness` / extras blijven
  * van de overlever. Geen `alignWallJunctionBalance` (die wist import-balance).
  */
 import { classifyNearAxisWall, orthogonalizeNearAxisWalls } from './orthogonalize-near-axis-walls'
 import { wallLengthCm } from './fml-wall-geom'
+import type { WallIdRemap } from './facade-groups'
+import { materializeWallJunctionsDetailed } from './materialize-wall-junctions'
 import type { Opening, Point2D, Wall } from './types'
 import { splitWallEndpointExtras } from './wall-endpoint-height'
 
@@ -200,7 +202,11 @@ function splitPointOnAxis(wall: Wall, axis: AxisKind, along: number): Point2D {
     : { x: axisValueOf(wall, 'V'), y: along }
 }
 
-function splitWallAtAlong(wall: Wall, axis: AxisKind, along: number): Wall[] | null {
+function splitWallAtAlong(
+  wall: Wall,
+  axis: AxisKind,
+  along: number,
+): { walls: Wall[]; remap: WallIdRemap } | null {
   const span = alongSpan(wall, axis)
   if (along <= span.lo + SPAN_SLACK_CM || along >= span.hi - SPAN_SLACK_CM) return null
   const t = projectT(wall, splitPointOnAxis(wall, axis, along))
@@ -222,21 +228,25 @@ function splitWallAtAlong(wall: Wall, axis: AxisKind, along: number): Wall[] | n
     }
   }
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, t)
-  return [
-    {
-      ...wall,
-      b: { ...split },
-      openings: firstOpenings,
-      extras: firstExtras,
-    },
-    {
-      ...wall,
-      id: newSplitId(wall.id),
-      a: { ...split },
-      openings: secondOpenings,
-      extras: secondExtras,
-    },
-  ]
+  const newId = newSplitId(wall.id)
+  return {
+    walls: [
+      {
+        ...wall,
+        b: { ...split },
+        openings: firstOpenings,
+        extras: firstExtras,
+      },
+      {
+        ...wall,
+        id: newId,
+        a: { ...split },
+        openings: secondOpenings,
+        extras: secondExtras,
+      },
+    ],
+    remap: { fromId: wall.id, intoIds: [wall.id, newId] },
+  }
 }
 
 function findCoverHost(hosts: Wall[], point: Point2D, axis: AxisKind): Wall | null {
@@ -260,8 +270,12 @@ function findCoverHost(hosts: Wall[], point: Point2D, axis: AxisKind): Wall | nu
   return best
 }
 
-function absorbCoveredCollinearWalls(walls: Wall[]): Wall[] {
+function absorbCoveredCollinearWalls(walls: Wall[]): {
+  walls: Wall[]
+  remaps: WallIdRemap[]
+} {
   let work = walls.map(cloneWall)
+  const remaps: WallIdRemap[] = []
   let guard = 0
   while (guard < work.length + 8) {
     guard += 1
@@ -347,7 +361,12 @@ function absorbCoveredCollinearWalls(walls: Wall[]): Wall[] {
           const rebuilt: Wall[] = []
           for (const piece of pieces) {
             const split = splitWallAtAlong(piece, victim.axis, along)
-            rebuilt.push(...(split ?? [piece]))
+            if (split) {
+              remaps.push(split.remap)
+              rebuilt.push(...split.walls)
+            } else {
+              rebuilt.push(piece)
+            }
           }
           pieces = rebuilt
         }
@@ -369,7 +388,10 @@ function absorbCoveredCollinearWalls(walls: Wall[]): Wall[] {
     work = next
   }
 
-  return work.filter((wall) => wallLengthCm(wall) > SPAN_SLACK_CM)
+  return {
+    walls: work.filter((wall) => wallLengthCm(wall) > SPAN_SLACK_CM),
+    remaps,
+  }
 }
 
 /** True als sanitize geometrie of muur-set wijzigde (voor undo-skip). */
@@ -393,9 +415,26 @@ export function wallsSanitizeChanged(before: Wall[], after: Wall[]): boolean {
 }
 
 /**
- * Weld → orthogonalize → cover. `balance` van elke overlevende muur blijft.
+ * Weld → orthogonalize → T/X junctions → cover. `balance` van elke overlevende muur blijft.
+ * Remaps: host-helften op dezelfde as (T/X + cover); uitstekende T-tak niet.
  */
+export type SanitizeFmlWallsResult = {
+  walls: Wall[]
+  remaps: WallIdRemap[]
+}
+
+export function sanitizeFmlWallsDetailed(walls: Wall[]): SanitizeFmlWallsResult {
+  if (walls.length === 0) return { walls, remaps: [] }
+  const welded = weldNearEndpoints(walls)
+  const ortho = orthogonalizeNearAxisWalls(welded)
+  const junctions = materializeWallJunctionsDetailed(ortho)
+  const cover = absorbCoveredCollinearWalls(junctions.walls)
+  return {
+    walls: cover.walls,
+    remaps: [...junctions.remaps, ...cover.remaps],
+  }
+}
+
 export function sanitizeFmlWalls(walls: Wall[]): Wall[] {
-  if (walls.length === 0) return walls
-  return absorbCoveredCollinearWalls(orthogonalizeNearAxisWalls(weldNearEndpoints(walls)))
+  return sanitizeFmlWallsDetailed(walls).walls
 }

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { isFmlToolbarSettingsOpen } from '@/ui/components/canvas/fmlToolbeltItems'
+import {
+  isFmlOneshotDrawTool,
+  isFmlToolbarSettingsOpen,
+} from '@/ui/components/canvas/fmlToolbeltItems'
 
 describe('isFmlToolbarSettingsOpen', () => {
   const none: {
@@ -21,7 +24,8 @@ describe('isFmlToolbarSettingsOpen', () => {
   it('is uit zonder selectie of teken-tool', () => {
     expect(isFmlToolbarSettingsOpen(none)).toBe(false)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'measure' })).toBe(false)
-    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_label' })).toBe(false)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt' })).toBe(false)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'box_select' })).toBe(false)
   })
 
   it('is aan bij selectie of muur/deur/raam-tool', () => {
@@ -31,7 +35,27 @@ describe('isFmlToolbarSettingsOpen', () => {
     expect(isFmlToolbarSettingsOpen({ ...none, hasAreaSelection: true })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasLabelSelection: true })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_wall' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_line' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_label' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_window' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasItemSelection: true })).toBe(true)
+  })
+
+  it('houdt de fixture-bibliotheek buiten de midden-settingskaart', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_fixture' })).toBe(false)
+  })
+})
+
+describe('isFmlOneshotDrawTool', () => {
+  it('is aan voor teken- en plaats-tools, uit voor select/maat', () => {
+    expect(isFmlOneshotDrawTool('draw_wall')).toBe(true)
+    expect(isFmlOneshotDrawTool('draw_room')).toBe(true)
+    expect(isFmlOneshotDrawTool('draw_line')).toBe(true)
+    expect(isFmlOneshotDrawTool('add_door')).toBe(true)
+    expect(isFmlOneshotDrawTool('measure')).toBe(false)
+    expect(isFmlOneshotDrawTool('nulpunt')).toBe(false)
+    expect(isFmlOneshotDrawTool('box_select')).toBe(false)
+    expect(isFmlOneshotDrawTool(null)).toBe(false)
   })
 })

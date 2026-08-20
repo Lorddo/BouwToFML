@@ -5,7 +5,9 @@ import { downloadFml } from '@/core/fml/downloadFml'
 import { extractionToPlanWithOrigin, type Layer12DoorForFml } from '@/core/fml/extractionToPlan'
 import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
 import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
+import { pruneFacadeGroups } from '@/core/fml/facade-groups'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
+import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import {
   cloneUnderlayOriginLayout,
   copyUnderlayDisplayOrient,
@@ -41,7 +43,7 @@ import {
   resolveFmlRescaleState,
   resolveRescaleFactorsFromRulers,
   scaleNulpuntImageCm,
-} from '@/ui/composables/workspace/fml-rescale-from-measure'
+} from '@/ui/composables/fml-preview/fml-rescale-from-measure'
 import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
 import { tGlobal } from '@/ui/i18n'
 
@@ -612,7 +614,8 @@ export function createWorkspaceFmlGenerate(
     try {
       const rawText = await file.text()
       const parsed = importFmlV3(rawText)
-      importedPlan.value = parsed.plan
+      pruneFacadeGroups(parsed.plan)
+      importedPlan.value = applyJunctionSanitizeToPlan(parsed.plan)
       editedPreviewPlan.value = null
       importedWarnings.value = parsed.warnings
       importedFmlText.value = rawText

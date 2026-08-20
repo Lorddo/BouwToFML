@@ -45,7 +45,7 @@ export { createFmlPreviewSelection } from './fml-preview-selection'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 import type { ContentLayout } from './useFmlPreviewViewport'
-import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
@@ -66,7 +66,7 @@ export function useFmlPreviewInteraction(options: {
   emit: (
     event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick',
     payload?: FloorPlan | string,
-    layout?: PreviewUnderlayLayout | null,
+    layout?: UnderlayOriginLayout | null,
   ) => void
   containerRef: Ref<HTMLDivElement | null>
   contentGroupRef: Ref<{ getNode: () => Konva.Group } | null>
@@ -78,7 +78,7 @@ export function useFmlPreviewInteraction(options: {
   bovenlichtHeightCm?: Ref<number>
   bovenlichtGapCm?: Ref<number>
   /** Huidige underlay-layout (voor nulpunt + undo). */
-  getUnderlayLayout?: () => PreviewUnderlayLayout | null
+  getUnderlayLayout?: () => UnderlayOriginLayout | null
   setFmlNulpuntImageCm?: (point: Point2D | null) => void
   /** Extern: onderlegger-verplaats-modus (sidebar toggle). */
   underlayMoveMode?: Ref<boolean>
@@ -251,7 +251,7 @@ export function useFmlPreviewInteraction(options: {
     cancelUnderlayMoveDrag: () => {},
   }
 
-  function syncPlanToParent(layout?: PreviewUnderlayLayout | null): void {
+  function syncPlanToParent(layout?: UnderlayOriginLayout | null): void {
     if (!editor.localPlan.value) return
     // +2: parent kan edited + imported in één tick zetten; extra marge tegen dubbele watch.
     ignoreNextPlanWatch.value = true
@@ -271,7 +271,7 @@ export function useFmlPreviewInteraction(options: {
       syncPlanToParent()
       return
     }
-    const nextLayout: PreviewUnderlayLayout = {
+    const nextLayout: UnderlayOriginLayout = {
       ...current,
       origin: layoutOrigin ? { ...layoutOrigin } : current.origin,
     }
@@ -336,6 +336,14 @@ export function useFmlPreviewInteraction(options: {
     commitJunctionHeight,
     splitSelectedWall,
     deleteSelectedWalls,
+    facadeGroupOptions,
+    facadeGroupDraft,
+    facadeGroupMixed,
+    facadeMemberIdsOnActiveFloor,
+    applyFacadeGroupSelection,
+    renameSelectedFacadeGroup,
+    selectFacadeGroupMembers,
+    canSelectFacadeMembers,
     clearSelection,
     toggleSelectionBoxMode,
     cancelSelectionBoxDrag,
@@ -402,6 +410,7 @@ export function useFmlPreviewInteraction(options: {
     walls: editor.walls,
     surfaces: editor.surfaces,
     floorIndex: editor.floorIndex,
+    plan: editor.localPlan,
     onInspectSelect,
   })
   const { applyInspectPick, updateInspectHover, clearInspectSelect } = inspect
@@ -436,6 +445,7 @@ export function useFmlPreviewInteraction(options: {
     if (!junction) {
       point = snapToNearbyEndpointAxes(editor.walls.value, [], point)
       point = snapPointToJunctions(editor.junctions.value, point, JUNCTION_POINT_SNAP_CM)
+      point = snapPointToWallCenters(editor.walls.value, point, JUNCTION_POINT_SNAP_CM)
     }
     if (axisAnchor) {
       point = snapDrawWallEndpoint(axisAnchor, point, axisLocked.value)
@@ -477,6 +487,9 @@ export function useFmlPreviewInteraction(options: {
       clearSelection()
     },
     syncPlanToParent,
+    onPlaced: () => {
+      activeFmlTool.value = null
+    },
   })
 
   const drawRoom = useFmlPreviewDrawRoom({
@@ -494,6 +507,9 @@ export function useFmlPreviewInteraction(options: {
       clearSelection()
     },
     syncPlanToParent,
+    onPlaced: () => {
+      activeFmlTool.value = null
+    },
   })
 
   const drawSurface = useFmlPreviewDrawSurface({
@@ -749,6 +765,24 @@ export function useFmlPreviewInteraction(options: {
   watch(drawRoomMode, (on) => {
     if (!on) drawRoom.cancelDrawRoomDrag()
   })
+  watch(drawLineMode, (on) => {
+    if (!on) drawLine.cancelDrawLine()
+  })
+
+  function deactivateDrawTool(): void {
+    drawWall.cancelDrawWallDrag()
+    drawRoom.cancelDrawRoomDrag()
+    drawSurface.cancelDrawSurface()
+    drawLine.cancelDrawLine()
+    activeFmlTool.value = null
+  }
+
+  function acceptDrawDraft(): boolean {
+    if (drawWall.isDrafting()) return drawWall.commitFromMeasure()
+    if (drawRoom.isDrafting()) return drawRoom.commitFromMeasure()
+    if (drawSurface.commitDrawSurface()) return true
+    return drawLine.commitFromHover()
+  }
 
   const nulpunt = useFmlPreviewNulpunt({
     hitTest,
@@ -984,6 +1018,7 @@ export function useFmlPreviewInteraction(options: {
     drawWall,
     drawRoom,
     drawLine,
+    deactivateDrawTool,
     measure,
     nulpunt,
     underlayMove,
@@ -1068,6 +1103,11 @@ export function useFmlPreviewInteraction(options: {
     drawRoomPreview: drawRoom.drawRoomPreview,
     drawWallDrafting: computed(() => drawWall.isDrafting()),
     drawRoomDrafting: computed(() => drawRoom.isDrafting()),
+    drawLineDrafting: computed(() => (selection.drawLinePoints.value?.length ?? 0) > 0),
+    drawSurfaceDrafting: computed(() => (drawSurface.draftPoints.value?.length ?? 0) >= 3),
+    drawSurfacePendingRole: drawSurface.pendingRole,
+    drawLineThickness: drawLine.thickness,
+    drawLabelText: drawLabel.pendingText,
     drawWallMeasureLengthCm: drawWall.measureLengthCm,
     drawRoomMeasureHCm: drawRoom.measureHCm,
     drawRoomMeasureVCm: drawRoom.measureVCm,
@@ -1078,6 +1118,8 @@ export function useFmlPreviewInteraction(options: {
     commitDrawRoomFromMeasure: drawRoom.commitFromMeasure,
     cancelDrawWallDraft: drawWall.cancelDrawWallDrag,
     cancelDrawRoomDraft: drawRoom.cancelDrawRoomDrag,
+    acceptDrawDraft,
+    deactivateDrawTool,
     drawSurfacePoints: drawSurface.draftPoints,
     drawLinePoints: selection.drawLinePoints,
     drawLineHoverCm: drawLine.hoverCm,
@@ -1221,6 +1263,14 @@ export function useFmlPreviewInteraction(options: {
     deleteSelectedOpenings,
     splitSelectedWall,
     deleteSelectedWalls,
+    facadeGroupOptions,
+    facadeGroupDraft,
+    facadeGroupMixed,
+    facadeMemberIdsOnActiveFloor,
+    applyFacadeGroupSelection,
+    renameSelectedFacadeGroup,
+    selectFacadeGroupMembers,
+    canSelectFacadeMembers,
     clearSelection,
     flushPendingFieldCommits,
     sanitizeWalls,

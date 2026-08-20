@@ -14,10 +14,14 @@ export function useFmlViewerInspect() {
   function onInspectSelect(hit: FmlInspectHit | null): void {
     lastInspectHit.value = hit
     if (!hit) return
+    // Gevelgroep: zelfde kleurcyclus op alle leden op deze floor.
+    const targetIds = hit.kind === 'wall' && hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
     const next = cycleInspectColor(inspectColors.value[hit.id])
     const copy = { ...inspectColors.value }
-    if (next) copy[hit.id] = next
-    else delete copy[hit.id]
+    for (const id of targetIds) {
+      if (next) copy[id] = next
+      else delete copy[id]
+    }
     inspectColors.value = copy
   }
 

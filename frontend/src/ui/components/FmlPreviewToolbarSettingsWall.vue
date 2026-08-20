@@ -47,6 +47,14 @@ const props = withDefaults(
     drawRoomDrafting?: boolean
     drawRoomMeasureHCm?: number
     drawRoomMeasureVCm?: number
+    /** Gevelgroepen (alleen editor capability). */
+    facadeGroupsEnabled?: boolean
+    facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
+    /** '' = none, null = mixed, else group id. */
+    facadeGroupDraft?: string | null
+    facadeGroupMixed?: boolean
+    /** True als niet alle groepsleden al geselecteerd zijn. */
+    canSelectFacadeMembers?: boolean
   }>(),
   {
     thicknessMinCm: 10,
@@ -57,6 +65,11 @@ const props = withDefaults(
     drawRoomDrafting: false,
     drawRoomMeasureHCm: 0,
     drawRoomMeasureVCm: 0,
+    facadeGroupsEnabled: false,
+    facadeGroupOptions: () => [],
+    facadeGroupDraft: '',
+    facadeGroupMixed: false,
+    canSelectFacadeMembers: false,
   },
 )
 
@@ -79,6 +92,9 @@ const emit = defineEmits<{
   drawRoomVInput: [cm: number | null]
   commitDrawRoomMeasure: []
   cancelDrawRoomDraft: []
+  facadeGroupChange: [value: string]
+  facadeGroupRename: [name: string]
+  selectFacadeMembers: []
 }>()
 
 const thicknessPresets = computed(() => [
@@ -126,6 +142,46 @@ const deleteWallTitle = computed(() =>
 const wallBalanceSliderValue = computed(() =>
   props.wallBalanceMixed ? 50 : sliderPercentFromDraft(props.wallBalanceDraft),
 )
+
+const facadeSelectValue = computed(() => {
+  if (props.facadeGroupMixed) return ''
+  return props.facadeGroupDraft ?? ''
+})
+
+const facadeRenameText = ref<string | null>(null)
+
+watch(
+  () => [props.facadeGroupDraft, props.facadeGroupMixed] as const,
+  () => {
+    facadeRenameText.value = null
+  },
+)
+
+const facadeNameDisplay = computed(() => {
+  if (facadeRenameText.value != null) return facadeRenameText.value
+  if (props.facadeGroupMixed || !props.facadeGroupDraft) return ''
+  const group = props.facadeGroupOptions.find((entry) => entry.id === props.facadeGroupDraft)
+  return group?.name ?? ''
+})
+
+const showFacadeSelectButton = computed(
+  () => !!props.facadeGroupDraft && !props.facadeGroupMixed && props.facadeGroupDraft.length > 0,
+)
+
+function onFacadeGroupChange(event: Event): void {
+  const select = event.target as HTMLSelectElement
+  const value = select.value
+  if (value === '__new__') select.value = facadeSelectValue.value
+  emit('facadeGroupChange', value)
+  releaseControlFocus(event)
+}
+
+function onFacadeNameChange(event: Event): void {
+  const raw = (event.target as HTMLInputElement).value
+  facadeRenameText.value = raw
+  emit('facadeGroupRename', raw)
+  releaseControlFocus(event)
+}
 
 /** Lokale typ-drafts: null = volg live preview. */
 const lengthEditText = ref<string | null>(null)
@@ -249,226 +305,300 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
-    {{ wallCountLabel }}
-  </span>
-  <span v-if="selectedJunctionPanel" class="fml-toolbelt__meta">
-    {{ junctionCountLabel }}
-  </span>
-  <div v-if="drawWallDrafting" class="fml-toolbelt__field">
-    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawLength') }}</span>
-    <div class="fml-toolbelt__field-controls">
-      <input
-        type="text"
-        inputmode="decimal"
-        class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
-        :aria-label="t('result.toolbar.drawLengthAria')"
-        :value="wallLengthDisplay"
-        @input="onWallLengthInput"
-        @keydown.enter="onWallLengthEnter"
-        @keydown.escape="onWallLengthEscape"
-        @blur="lengthEditText = null"
-      />
-      <span class="fml-toolbelt__unit">m</span>
+  <div class="fml-toolbelt-stack">
+    <div class="fml-toolbelt__row fml-toolbelt__row--primary">
+      <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
+        {{ wallCountLabel }}
+      </span>
+      <span v-if="selectedJunctionPanel" class="fml-toolbelt__meta">
+        {{ junctionCountLabel }}
+      </span>
+      <div v-if="drawWallDrafting" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawLength') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <input
+            type="text"
+            inputmode="decimal"
+            class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
+            :aria-label="t('result.toolbar.drawLengthAria')"
+            :value="wallLengthDisplay"
+            @input="onWallLengthInput"
+            @keydown.enter="onWallLengthEnter"
+            @keydown.escape="onWallLengthEscape"
+            @blur="lengthEditText = null"
+          />
+          <span class="fml-toolbelt__unit">m</span>
+          <button
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.acceptDrawDraft')"
+            :aria-label="t('result.toolbar.acceptDrawDraft')"
+            @click="emit('commitDrawWallMeasure')"
+            @pointerup="releaseControlFocus"
+          >
+            <ToolbeltIcon name="check" />
+          </button>
+          <button
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.deactivateDrawTool')"
+            :aria-label="t('result.toolbar.deactivateDrawTool')"
+            @click="emit('cancelDrawWallDraft')"
+            @pointerup="releaseControlFocus"
+          >
+            <ToolbeltIcon name="clear" />
+          </button>
+        </div>
+      </div>
+      <template v-if="drawRoomDrafting">
+        <div class="fml-toolbelt__field">
+          <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawWidth') }}</span>
+          <div class="fml-toolbelt__field-controls">
+            <input
+              type="text"
+              inputmode="decimal"
+              class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
+              :aria-label="t('result.toolbar.drawWidthAria')"
+              :value="roomHDisplay"
+              @input="onRoomHInput"
+              @keydown.enter="onRoomMeasureEnter"
+              @keydown.escape="onRoomMeasureEscape"
+              @blur="hEditText = null"
+            />
+            <span class="fml-toolbelt__unit">m</span>
+          </div>
+        </div>
+        <div class="fml-toolbelt__field">
+          <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawDepth') }}</span>
+          <div class="fml-toolbelt__field-controls">
+            <input
+              type="text"
+              inputmode="decimal"
+              class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
+              :aria-label="t('result.toolbar.drawDepthAria')"
+              :value="roomVDisplay"
+              @input="onRoomVInput"
+              @keydown.enter="onRoomMeasureEnter"
+              @keydown.escape="onRoomMeasureEscape"
+              @blur="vEditText = null"
+            />
+            <span class="fml-toolbelt__unit">m</span>
+            <button
+              type="button"
+              class="canvas-toolbelt__btn"
+              :title="t('result.toolbar.acceptDrawDraft')"
+              :aria-label="t('result.toolbar.acceptDrawDraft')"
+              @click="emit('commitDrawRoomMeasure')"
+              @pointerup="releaseControlFocus"
+            >
+              <ToolbeltIcon name="check" />
+            </button>
+            <button
+              type="button"
+              class="canvas-toolbelt__btn"
+              :title="t('result.toolbar.deactivateDrawTool')"
+              :aria-label="t('result.toolbar.deactivateDrawTool')"
+              @click="emit('cancelDrawRoomDraft')"
+              @pointerup="releaseControlFocus"
+            >
+              <ToolbeltIcon name="clear" />
+            </button>
+          </div>
+        </div>
+      </template>
+      <div v-if="selectedWallPanel || isDrawWallOrRoom" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{
+          isDrawWallOrRoom ? t('result.toolbar.wallType') : t('result.toolbar.thickness')
+        }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <select
+            v-if="isDrawWallOrRoom"
+            class="fml-toolbelt__select fml-toolbelt__select--thickness"
+            :aria-label="t('result.toolbar.wallTypeAria')"
+            :value="drawThicknessBand"
+            @change="onDrawThicknessBandChange"
+          >
+            <option v-if="drawThicknessBand === ''" value="" disabled>
+              {{ t('result.toolbar.custom') }}
+            </option>
+            <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
+              {{ preset.label }} ({{ preset.cm }} cm)
+            </option>
+          </select>
+          <input
+            type="number"
+            min="1"
+            max="200"
+            step="1"
+            class="fml-toolbelt__thickness-input"
+            :aria-label="t('result.toolbar.wallThicknessAria')"
+            :value="wallThicknessMixed ? '' : wallThicknessDraft"
+            :placeholder="wallThicknessMixed ? '—' : undefined"
+            @input="emit('wallThicknessInput', $event)"
+            @change="onWallThicknessChange"
+          />
+          <span class="fml-toolbelt__unit">cm</span>
+          <div
+            v-if="selectedWallPanel"
+            class="fml-toolbelt__presets"
+            role="group"
+            :aria-label="t('result.toolbar.thicknessPresetsAria')"
+          >
+            <button
+              v-for="preset in thicknessPresets"
+              :key="preset.id"
+              type="button"
+              class="fml-toolbelt__preset-btn"
+              :title="t('result.toolbar.applyPresetTitle', { label: preset.label, cm: preset.cm })"
+              :aria-label="
+                t('result.toolbar.applyPresetAria', { label: preset.label, cm: preset.cm })
+              "
+              @click="emit('applyWallThickness', preset.cm)"
+              @pointerup="releaseControlFocus"
+            >
+              {{ preset.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div v-if="selectedWallPanel" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label" :title="t('result.toolbar.alignmentTitle')">{{
+          t('result.toolbar.alignment')
+        }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            class="fml-toolbelt__balance-slider"
+            :aria-label="t('result.toolbar.alignmentAria')"
+            :value="wallBalanceSliderValue"
+            :disabled="wallBalanceMixed"
+            @input="emit('wallBalanceInput', $event)"
+            @change="onWallBalanceChange"
+            @pointerup="releaseControlFocus"
+          />
+          <input
+            type="number"
+            min="-1000"
+            max="1000"
+            step="1"
+            class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--balance"
+            :aria-label="t('result.toolbar.alignmentAria')"
+            :value="wallBalanceMixed ? '' : wallBalanceDraft"
+            :placeholder="wallBalanceMixed ? '—' : undefined"
+            @input="emit('wallBalanceInput', $event)"
+            @change="onWallBalanceChange"
+          />
+          <span class="fml-toolbelt__unit">%</span>
+        </div>
+      </div>
+      <div v-if="selectedWallPanel" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <input
+            type="number"
+            min="1"
+            max="1000"
+            step="1"
+            class="fml-toolbelt__thickness-input"
+            :aria-label="t('result.toolbar.wallHeightAria')"
+            :value="wallHeightMixed ? '' : wallHeightDraft"
+            :placeholder="wallHeightMixed ? '—' : undefined"
+            @input="emit('wallHeightInput', $event)"
+            @change="onWallHeightChange"
+          />
+          <span class="fml-toolbelt__unit">cm</span>
+        </div>
+      </div>
+      <div v-if="selectedJunctionPanel" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.junctionHeight') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <input
+            type="number"
+            min="1"
+            max="1000"
+            step="1"
+            class="fml-toolbelt__thickness-input"
+            :aria-label="t('result.toolbar.junctionHeightAria')"
+            :value="junctionHeightMixed ? '' : junctionHeightDraft"
+            :placeholder="junctionHeightMixed ? '—' : undefined"
+            @input="emit('junctionHeightInput', $event)"
+            @change="onJunctionHeightChange"
+          />
+          <span class="fml-toolbelt__unit">cm</span>
+        </div>
+      </div>
       <button
+        v-if="selectedWallPanel?.count === 1"
         type="button"
         class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.cancelDrawDraft')"
-        :aria-label="t('result.toolbar.cancelDrawDraft')"
-        @click="emit('cancelDrawWallDraft')"
-        @pointerup="releaseControlFocus"
+        :title="t('result.toolbar.splitWall')"
+        :aria-label="t('result.toolbar.splitWall')"
+        :disabled="!selectedWallPanel?.canSplit"
+        @click="emit('splitWall')"
       >
-        <ToolbeltIcon name="clear" />
+        <ToolbeltIcon name="split" />
       </button>
-    </div>
-  </div>
-  <template v-if="drawRoomDrafting">
-    <div class="fml-toolbelt__field">
-      <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawWidth') }}</span>
-      <div class="fml-toolbelt__field-controls">
-        <input
-          type="text"
-          inputmode="decimal"
-          class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
-          :aria-label="t('result.toolbar.drawWidthAria')"
-          :value="roomHDisplay"
-          @input="onRoomHInput"
-          @keydown.enter="onRoomMeasureEnter"
-          @keydown.escape="onRoomMeasureEscape"
-          @blur="hEditText = null"
-        />
-        <span class="fml-toolbelt__unit">m</span>
-      </div>
-    </div>
-    <div class="fml-toolbelt__field">
-      <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawDepth') }}</span>
-      <div class="fml-toolbelt__field-controls">
-        <input
-          type="text"
-          inputmode="decimal"
-          class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
-          :aria-label="t('result.toolbar.drawDepthAria')"
-          :value="roomVDisplay"
-          @input="onRoomVInput"
-          @keydown.enter="onRoomMeasureEnter"
-          @keydown.escape="onRoomMeasureEscape"
-          @blur="vEditText = null"
-        />
-        <span class="fml-toolbelt__unit">m</span>
-        <button
-          type="button"
-          class="canvas-toolbelt__btn"
-          :title="t('result.toolbar.cancelDrawDraft')"
-          :aria-label="t('result.toolbar.cancelDrawDraft')"
-          @click="emit('cancelDrawRoomDraft')"
-          @pointerup="releaseControlFocus"
-        >
-          <ToolbeltIcon name="clear" />
-        </button>
-      </div>
-    </div>
-  </template>
-  <div v-if="selectedWallPanel || isDrawWallOrRoom" class="fml-toolbelt__field">
-    <span class="fml-toolbelt__field-label">{{
-      isDrawWallOrRoom ? t('result.toolbar.wallType') : t('result.toolbar.thickness')
-    }}</span>
-    <div class="fml-toolbelt__field-controls">
-      <select
-        v-if="isDrawWallOrRoom"
-        class="fml-toolbelt__select fml-toolbelt__select--thickness"
-        :aria-label="t('result.toolbar.wallTypeAria')"
-        :value="drawThicknessBand"
-        @change="onDrawThicknessBandChange"
-      >
-        <option v-if="drawThicknessBand === ''" value="" disabled>
-          {{ t('result.toolbar.custom') }}
-        </option>
-        <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
-          {{ preset.label }} ({{ preset.cm }} cm)
-        </option>
-      </select>
-      <input
-        type="number"
-        min="1"
-        max="200"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.wallThicknessAria')"
-        :value="wallThicknessMixed ? '' : wallThicknessDraft"
-        :placeholder="wallThicknessMixed ? '—' : undefined"
-        @input="emit('wallThicknessInput', $event)"
-        @change="onWallThicknessChange"
-      />
-      <span class="fml-toolbelt__unit">cm</span>
-      <div
+      <button
         v-if="selectedWallPanel"
-        class="fml-toolbelt__presets"
-        role="group"
-        :aria-label="t('result.toolbar.thicknessPresetsAria')"
+        type="button"
+        class="canvas-toolbelt__btn"
+        :title="deleteWallTitle"
+        :aria-label="deleteWallTitle"
+        @click="emit('deleteWalls')"
       >
+        <ToolbeltIcon name="delete" />
+      </button>
+      <slot name="trailing" />
+    </div>
+    <div
+      v-if="selectedWallPanel && facadeGroupsEnabled"
+      class="fml-toolbelt__field fml-toolbelt__field--row"
+    >
+      <span class="fml-toolbelt__field-label">{{ t('result.toolbar.facadeGroup') }}</span>
+      <div class="fml-toolbelt__field-controls">
+        <select
+          class="fml-toolbelt__select fml-toolbelt__select--facade"
+          :aria-label="t('result.toolbar.facadeGroupAria')"
+          :value="facadeSelectValue"
+          @change="onFacadeGroupChange"
+        >
+          <option value="">
+            {{
+              facadeGroupMixed
+                ? t('result.toolbar.facadeGroupMixed')
+                : t('result.toolbar.facadeGroupNone')
+            }}
+          </option>
+          <option v-for="group in facadeGroupOptions" :key="group.id" :value="group.id">
+            {{ group.id }}
+          </option>
+          <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
+        </select>
+        <input
+          v-if="facadeGroupDraft && !facadeGroupMixed"
+          type="text"
+          class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--facade"
+          :aria-label="t('result.toolbar.facadeGroupRenameAria')"
+          :value="facadeNameDisplay"
+          @input="facadeRenameText = ($event.target as HTMLInputElement).value"
+          @change="onFacadeNameChange"
+        />
         <button
-          v-for="preset in thicknessPresets"
-          :key="preset.id"
+          v-if="showFacadeSelectButton"
           type="button"
-          class="fml-toolbelt__preset-btn"
-          :title="t('result.toolbar.applyPresetTitle', { label: preset.label, cm: preset.cm })"
-          :aria-label="t('result.toolbar.applyPresetAria', { label: preset.label, cm: preset.cm })"
-          @click="emit('applyWallThickness', preset.cm)"
+          class="canvas-toolbelt__btn canvas-toolbelt__btn--primary"
+          :title="t('result.toolbar.facadeGroupSelectTitle')"
+          :aria-label="t('result.toolbar.facadeGroupSelect')"
+          :disabled="!canSelectFacadeMembers"
+          @click="emit('selectFacadeMembers')"
           @pointerup="releaseControlFocus"
         >
-          {{ preset.label }}
+          {{ t('result.toolbar.facadeGroupSelect') }}
         </button>
       </div>
     </div>
   </div>
-  <div v-if="selectedWallPanel" class="fml-toolbelt__field">
-    <span class="fml-toolbelt__field-label" :title="t('result.toolbar.alignmentTitle')">{{
-      t('result.toolbar.alignment')
-    }}</span>
-    <div class="fml-toolbelt__field-controls">
-      <input
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        class="fml-toolbelt__balance-slider"
-        :aria-label="t('result.toolbar.alignmentAria')"
-        :value="wallBalanceSliderValue"
-        :disabled="wallBalanceMixed"
-        @input="emit('wallBalanceInput', $event)"
-        @change="onWallBalanceChange"
-        @pointerup="releaseControlFocus"
-      />
-      <input
-        type="number"
-        min="-1000"
-        max="1000"
-        step="1"
-        class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--balance"
-        :aria-label="t('result.toolbar.alignmentAria')"
-        :value="wallBalanceMixed ? '' : wallBalanceDraft"
-        :placeholder="wallBalanceMixed ? '—' : undefined"
-        @input="emit('wallBalanceInput', $event)"
-        @change="onWallBalanceChange"
-      />
-      <span class="fml-toolbelt__unit">%</span>
-    </div>
-  </div>
-  <div v-if="selectedWallPanel" class="fml-toolbelt__field">
-    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
-    <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        min="1"
-        max="1000"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.wallHeightAria')"
-        :value="wallHeightMixed ? '' : wallHeightDraft"
-        :placeholder="wallHeightMixed ? '—' : undefined"
-        @input="emit('wallHeightInput', $event)"
-        @change="onWallHeightChange"
-      />
-      <span class="fml-toolbelt__unit">cm</span>
-    </div>
-  </div>
-  <div v-if="selectedJunctionPanel" class="fml-toolbelt__field">
-    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.junctionHeight') }}</span>
-    <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        min="1"
-        max="1000"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.junctionHeightAria')"
-        :value="junctionHeightMixed ? '' : junctionHeightDraft"
-        :placeholder="junctionHeightMixed ? '—' : undefined"
-        @input="emit('junctionHeightInput', $event)"
-        @change="onJunctionHeightChange"
-      />
-      <span class="fml-toolbelt__unit">cm</span>
-    </div>
-  </div>
-  <button
-    v-if="selectedWallPanel?.count === 1"
-    type="button"
-    class="canvas-toolbelt__btn"
-    :title="t('result.toolbar.splitWall')"
-    :aria-label="t('result.toolbar.splitWall')"
-    :disabled="!selectedWallPanel?.canSplit"
-    @click="emit('splitWall')"
-  >
-    <ToolbeltIcon name="split" />
-  </button>
-  <button
-    v-if="selectedWallPanel"
-    type="button"
-    class="canvas-toolbelt__btn"
-    :title="deleteWallTitle"
-    :aria-label="deleteWallTitle"
-    @click="emit('deleteWalls')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
 </template>

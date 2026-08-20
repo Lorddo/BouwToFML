@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import WorkspaceView from './views/WorkspaceView.vue'
 import UserSettingsView from './views/UserSettingsView.vue'
 import FmlViewerView from './views/FmlViewerView.vue'
 import AppAccessGate from './components/AppAccessGate.vue'
+import FmlChromeDialogHost from './components/FmlChromeDialogHost.vue'
 import { appFatalError, clearAppError } from '@/ui/app-error'
 import { isAccessPasswordRequired, isAccessUnlocked } from '@/ui/access-gate'
 import { FML_EDITOR_PASSWORD, FML_EDITOR_UNLOCK_STORAGE_KEY } from '@/ui/fml-editor-gate'
@@ -23,7 +24,11 @@ const editorGranted = ref(isAccessUnlocked(FML_EDITOR_PASSWORD, FML_EDITOR_UNLOC
 const appView = ref<AppView>(viewFromLocation())
 const settingsReturn = ref<AppView | null>(null)
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
-const fmlViewerRef = ref<{ applyCornerMarkerModeFromSettings: () => void } | null>(null)
+const fmlViewerRef = ref<{
+  startNewPlan: () => void
+  applyViewerSettings: () => void
+  applyCornerMarkerModeFromSettings: () => void
+} | null>(null)
 const canvasFullscreen = ref(false)
 
 function onAccessUnlocked(): void {
@@ -40,10 +45,7 @@ function onNewWorkspace(): void {
 
 function onNewDrawing(): void {
   if (appView.value === 'fml-viewer') {
-    backToWorkspace()
-    void nextTick(() => {
-      workspaceRef.value?.startNewWorkspace()
-    })
+    fmlViewerRef.value?.startNewPlan()
     return
   }
   onNewWorkspace()
@@ -109,7 +111,7 @@ watch([appView, settingsReturn], () => {
 
 function onSettingsSaved(): void {
   workspaceRef.value?.applyUserViewerSettings()
-  fmlViewerRef.value?.applyCornerMarkerModeFromSettings()
+  fmlViewerRef.value?.applyViewerSettings()
 }
 
 function dismissFatalError(): void {
@@ -135,6 +137,7 @@ function dismissFatalError(): void {
       'app-shell--canvas-fs': canvasFullscreen,
     }"
   >
+    <FmlChromeDialogHost />
     <div v-if="appFatalError" class="app-error-banner" role="alert">
       <span class="app-error-banner__text">{{ appFatalError }}</span>
       <button type="button" class="app-error-banner__dismiss" @click="dismissFatalError">

@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { FloorPlan, Point2D, Wall } from '@/core/fml/types'
+import { facadeMemberIdsOnFloor, groupIdForWall } from '@/core/fml/facade-groups'
 import { findOpeningById } from '@/ui/components/fml-preview-openings'
 import type { FmlInspectHit } from './fml-inspect'
 import { pickInspectTarget } from './fml-inspect'
@@ -18,9 +19,10 @@ export function useFmlPreviewInspect(options: {
   walls: Ref<Wall[]> | ComputedRef<Wall[]>
   surfaces: Ref<SurfaceRec[]> | ComputedRef<SurfaceRec[]>
   floorIndex: Ref<number> | ComputedRef<number>
+  plan?: Ref<FloorPlan | null> | ComputedRef<FloorPlan | null>
   onInspectSelect?: (hit: FmlInspectHit | null) => void
 }) {
-  const { hitTest, selection, walls, surfaces, floorIndex, onInspectSelect } = options
+  const { hitTest, selection, walls, surfaces, floorIndex, plan, onInspectSelect } = options
   const {
     settingsWallIds,
     settingsOpeningIds,
@@ -78,7 +80,17 @@ export function useFmlPreviewInspect(options: {
       return
     }
 
-    settingsWallIds.value = picked.kind === 'wall' ? [picked.id] : []
+    let wallIds: string[] = picked.kind === 'wall' ? [picked.id] : []
+    let facadeIds: string[] | undefined
+    if (picked.kind === 'wall' && plan?.value) {
+      const groupId = groupIdForWall(plan.value, picked.id)
+      if (groupId) {
+        facadeIds = facadeMemberIdsOnFloor(plan.value, groupId, floorIndex.value)
+        if (facadeIds.length > 0) wallIds = facadeIds
+      }
+    }
+
+    settingsWallIds.value = wallIds
     settingsOpeningIds.value = picked.compositeOpeningId ? [picked.compositeOpeningId] : []
     selection.settingsAreaId.value = picked.kind === 'area' ? picked.id : null
     selection.settingsSurfaceId.value = picked.kind === 'surface' ? picked.id : null
@@ -88,6 +100,7 @@ export function useFmlPreviewInspect(options: {
       id: picked.id,
       floorIndex: floorIndex.value,
       ...(picked.wallId ? { wallId: picked.wallId } : {}),
+      ...(facadeIds && facadeIds.length > 0 ? { ids: facadeIds } : {}),
     })
   }
 

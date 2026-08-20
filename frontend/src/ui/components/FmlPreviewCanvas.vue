@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import type { FloorPlan } from '@/core/fml/types'
+import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
-import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { useStage } from '@/platform/canvas'
 import { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import { useFmlPreviewViewport } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
@@ -19,23 +19,31 @@ import { inspectColorFor, type FmlInspectHit } from '@/ui/composables/fml-previe
 import {
   applyTwoFingerNav,
   FML_PREVIEW_CHROME_SELECTOR,
+  isTapMove,
   shouldUseTouchNav,
   type GesturePoint,
 } from '@/ui/composables/fml-preview/fml-preview-gestures'
+import {
+  isTouchHoverFollowTool,
+  shouldCommitTouchTap,
+  shouldOneFingerPan,
+  shouldStartTouchHoldDrag,
+} from '@/ui/composables/fml-preview/fml-preview-touch-tap'
 import { clampViewScale } from '@/ui/composables/fml-preview/useFmlPreviewPanZoom'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { itemResizeHandleWorlds } from '@/ui/composables/fml-preview/item-resize-handles'
-import FmlFixturePalette from './FmlFixturePalette.vue'
-import FmlEditorTopbar from './FmlEditorTopbar.vue'
-import FmlEditorModifierRail from './FmlEditorModifierRail.vue'
+import FmlEditorTouchChrome from '@/ui/fml-editor/FmlEditorTouchChrome.vue'
 import type { HScaleState } from '@/platform/calibration'
 import { layoutTransform } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
+import { underlayContentBoundsCm } from '@/ui/composables/fml-preview/fml-preview-underlay-layout'
 import {
   loadUserSettings,
   type CornerMarkerMode,
   type OpeningDisplayColors,
 } from '@/ui/composables/settings/user-settings'
+import { resolveFmlCapabilities, type FmlKind } from '@/ui/composables/fml-preview/fml-capabilities'
 import FmlPreviewToolbar from './FmlPreviewToolbar.vue'
+import FmlFixturePalette from './FmlFixturePalette.vue'
 import FmlPreviewStage from './FmlPreviewStage.vue'
 import FmlPreviewMeasureOverlay from './FmlPreviewMeasureOverlay.vue'
 import FmlRescaleOverlay from './FmlRescaleOverlay.vue'
@@ -74,16 +82,21 @@ const props = withDefaults(
     defaultWindowSillZCm?: number
     setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
     /**
+     * Capability preset. When set, derives area/annotation/inspect/touch flags.
+     * Prefer this over the legacy boolean props below.
+     */
+    kind?: FmlKind
+    /**
      * Area/surface Ctrl+klik + draw_surface. Default **false** (product-safe).
-     * Losse FML-viewer zet true; workspace via `FML_AREA_SURFACE_EDIT_VISIBLE`.
+     * Ignored when `kind` is set (use detection/editor preset).
      */
     areaSurfaceEditEnabled?: boolean
     /**
      * Labels/lijnen plaatsen (Ctrl+klik selecteren). Default **false**.
-     * Losse FML-viewer zet true.
+     * Ignored when `kind` is set.
      */
     annotationEditEnabled?: boolean
-    /** Read-only inspect (losse viewer). Workspace blijft uit. */
+    /** Read-only inspect. Ignored when `kind` is set. */
     inspectMode?: boolean
     /** FML-id → #RRGGBB statusfill. */
     inspectColors?: Record<string, string>
@@ -94,7 +107,7 @@ const props = withDefaults(
     /** Workspace: Herschalen-modus (H/V-linialen). Viewer uit. */
     rescaleMode?: boolean
     rescaleState?: HScaleState | null
-    /** `/FML-editor` only — fixture tool + (on coarse pointer) touch nav / rail. */
+    /** Fixture tool + coarse-pointer rail. Ignored when `kind` is set. */
     touchEditor?: boolean
     /** Viewer: chrome (header/floor-rail) verborgen. */
     canvasFullscreen?: boolean
@@ -124,20 +137,55 @@ const props = withDefaults(
     defaultWindowHeightCm: undefined,
     defaultWindowSillZCm: undefined,
     setFmlNulpuntImageCm: undefined,
-    areaSurfaceEditEnabled: false,
-    annotationEditEnabled: false,
-    inspectMode: false,
+    kind: undefined,
+    areaSurfaceEditEnabled: undefined,
+    annotationEditEnabled: undefined,
+    inspectMode: undefined,
     inspectColors: undefined,
     labelsVisible: true,
     rescaleMode: false,
     rescaleState: null,
-    touchEditor: false,
+    touchEditor: undefined,
     canvasFullscreen: false,
   },
 )
 
+const capabilities = computed(() =>
+  props.kind != null ? resolveFmlCapabilities(props.kind) : null,
+)
+
+/** Explicit prop wins; else kind preset; else false. */
+function flagFromPropOrKind(prop: boolean | undefined, fromKind: boolean | undefined): boolean {
+  if (prop != null) return prop === true
+  if (fromKind != null) return fromKind
+  return false
+}
+
+const areaSurfaceEditEnabled = computed(() =>
+  flagFromPropOrKind(props.areaSurfaceEditEnabled, capabilities.value?.areaSurfaceEdit),
+)
+const annotationEditEnabled = computed(() =>
+  flagFromPropOrKind(props.annotationEditEnabled, capabilities.value?.annotationEdit),
+)
+const inspectMode = computed(() =>
+  flagFromPropOrKind(props.inspectMode, capabilities.value?.inspect),
+)
+const touchEditor = computed(() =>
+  flagFromPropOrKind(props.touchEditor, capabilities.value?.touchChrome),
+)
+const viewportChrome = computed(
+  () => capabilities.value?.viewportChrome === true || touchEditor.value,
+)
+const includeSurfaceTool = computed(() => areaSurfaceEditEnabled.value)
+const includeAnnotationTools = computed(() => annotationEditEnabled.value)
+const includeFixtureTool = computed(
+  () =>
+    touchEditor.value &&
+    (capabilities.value == null || capabilities.value.fixtureLibrary !== false),
+)
+
 const emit = defineEmits<{
-  planUpdate: [plan: FloorPlan, layout?: PreviewUnderlayLayout | null]
+  planUpdate: [plan: FloorPlan, layout?: UnderlayOriginLayout | null]
   thicknessWallPick: [wallId: string]
   cancelThicknessPick: []
   'update:underlayMoveMode': [value: boolean]
@@ -150,7 +198,7 @@ const emit = defineEmits<{
 function interactionEmit(
   event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick',
   payload?: FloorPlan | string,
-  layout?: PreviewUnderlayLayout | null,
+  layout?: UnderlayOriginLayout | null,
 ): void {
   if (event === 'planUpdate') {
     emit('planUpdate', payload as FloorPlan, layout)
@@ -183,9 +231,7 @@ const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<{ getNode: () => Konva.Stage } | null>(null)
 const contentGroupRef = ref<{ getNode: () => Konva.Group } | null>(null)
 const coarsePointer = ref(false)
-const useTouchNav = computed(() =>
-  shouldUseTouchNav(props.touchEditor === true, coarsePointer.value),
-)
+const useTouchNav = computed(() => shouldUseTouchNav(touchEditor.value, coarsePointer.value))
 
 const { shiftPressed, spacePressed, onKeyDown, onKeyUp } = useStage()
 const editor = useFmlPreviewEditor(toRef(props, 'plan'), toRef(props, 'floorIndex'))
@@ -225,7 +271,18 @@ const floor = computed(
 )
 const floorItems = computed(() => floor.value?.items ?? [])
 const rescaleWalls = computed(() => editor.walls.value)
-const viewport = useFmlPreviewViewport(containerRef, editor.walls, floorItems)
+const underlayFitBounds = computed(() =>
+  underlayContentBoundsCm({
+    cmOrigin: props.cmOrigin ?? null,
+    underlayWidthPx: props.underlayWidthPx ?? 0,
+    underlayHeightPx: props.underlayHeightPx ?? 0,
+    pxPerMmX: props.pxPerMmX ?? 1,
+    pxPerMmY: props.pxPerMmY ?? 1,
+    rotationDeg: props.rotationDeg ?? 0,
+    flipX: props.flipX === true,
+  }),
+)
+const viewport = useFmlPreviewViewport(containerRef, editor.walls, floorItems, underlayFitBounds)
 
 const underlayProps = computed(() => ({
   underlaySrc: props.underlaySrc ?? null,
@@ -299,11 +356,11 @@ const interaction = useFmlPreviewInteraction({
   },
   setFmlNulpuntImageCm: (point) => props.setFmlNulpuntImageCm?.(point),
   underlayMoveMode: underlayMoveModeRef,
-  areaSurfaceEditEnabled: toRef(props, 'areaSurfaceEditEnabled'),
-  annotationEditEnabled: toRef(props, 'annotationEditEnabled'),
+  areaSurfaceEditEnabled,
+  annotationEditEnabled,
   labelsVisible: toRef(props, 'labelsVisible'),
-  inspectMode: toRef(props, 'inspectMode'),
-  touchEditor: toRef(props, 'touchEditor'),
+  inspectMode,
+  touchEditor,
   touchNav: useTouchNav,
   onInspectSelect: (hit) => emit('inspectSelect', hit),
   onKeyDown,
@@ -351,7 +408,7 @@ const hoveredLabelId = computed(() => selection.hoveredLabelId.value)
 const hoveredLineId = computed(() => selection.hoveredLineId.value)
 
 const inspectWallPolygons = computed(() => {
-  if (!props.inspectMode || !renderModel.value) return []
+  if (!inspectMode.value || !renderModel.value) return []
   const colors = props.inspectColors
   if (!colors) return []
   return renderModel.value.wallPolygons.flatMap((item) => {
@@ -383,6 +440,11 @@ const {
   drawRoomPreview,
   drawWallDrafting,
   drawRoomDrafting,
+  drawLineDrafting,
+  drawSurfaceDrafting,
+  drawSurfacePendingRole,
+  drawLineThickness,
+  drawLabelText,
   drawWallMeasureLengthCm,
   drawRoomMeasureHCm,
   drawRoomMeasureVCm,
@@ -391,8 +453,8 @@ const {
   setDrawRoomVOverrideCm,
   commitDrawWallFromMeasure,
   commitDrawRoomFromMeasure,
-  cancelDrawWallDraft,
-  cancelDrawRoomDraft,
+  acceptDrawDraft,
+  deactivateDrawTool,
   drawSurfacePoints,
   drawLinePoints,
   drawLineHoverCm,
@@ -469,6 +531,14 @@ const {
   deleteSelectedOpenings,
   splitSelectedWall,
   deleteSelectedWalls,
+  facadeGroupOptions,
+  facadeGroupDraft,
+  facadeGroupMixed,
+  facadeMemberIdsOnActiveFloor,
+  applyFacadeGroupSelection,
+  renameSelectedFacadeGroup,
+  selectFacadeGroupMembers,
+  canSelectFacadeMembers,
   clearSelection,
   flushPendingFieldCommits,
   sanitizeWalls,
@@ -517,9 +587,20 @@ const {
   resetView,
 } = interaction
 
+/** Gevelgroep-leden op deze floor (excl. al geselecteerde muren). */
+const facadeWallPolygons = computed(() => {
+  const model = renderModel.value
+  if (!model) return []
+  const selected = new Set(settingsWallIds.value)
+  const memberIds = facadeMemberIdsOnActiveFloor.value.filter((id) => !selected.has(id))
+  if (memberIds.length === 0) return []
+  const idSet = new Set(memberIds)
+  return model.wallPolygons.filter((item) => idSet.has(item.id))
+})
+
 /** Move-rail: alle knopen tonen (touch heeft geen hover). */
 const inspectVisibleJunctions = computed(() => {
-  if (props.inspectMode) return []
+  if (inspectMode.value) return []
   if (moveMod.value) return render.renderJunctions.value
   return visibleJunctions.value
 })
@@ -539,6 +620,8 @@ function onCanvasPointerDown(event: MouseEvent): void {
 
 function onCanvasPointerMove(event: MouseEvent): void {
   if (props.rescaleMode && !spacePressed.value) return
+  const target = event.target as HTMLElement | null
+  if (target?.closest(FML_PREVIEW_CHROME_SELECTOR)) return
   onWrapPointerMove(event)
 }
 
@@ -557,6 +640,14 @@ const touchPointers = new Map<number, GesturePoint>()
 let touchPrevPair: { a: GesturePoint; b: GesturePoint } | null = null
 let touchCommittedOne = false
 let touchNav = false
+let touchPending: {
+  pointerId: number
+  start: GesturePoint
+  clientX: number
+  clientY: number
+} | null = null
+let touchSloppy = false
+let touchOnePanLast: GesturePoint | null = null
 let coarseMq: MediaQueryList | null = null
 const touchNavListenerOpts: AddEventListenerOptions = { passive: false }
 
@@ -571,6 +662,26 @@ function touchLocalPoint(event: PointerEvent): GesturePoint {
   return { x: event.clientX - rect.left, y: event.clientY - rect.top }
 }
 
+function mouseAtCanvas(clientX: number, clientY: number): MouseEvent {
+  return new MouseEvent('mousedown', {
+    bubbles: false,
+    cancelable: true,
+    view: window,
+    clientX,
+    clientY,
+    button: 0,
+    buttons: 1,
+  })
+}
+
+function resetTouchIdle(): void {
+  if (touchPointers.size > 0) return
+  touchPending = null
+  touchSloppy = false
+  touchCommittedOne = false
+  touchOnePanLast = null
+}
+
 function endTouchEditDrag(): void {
   window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
 }
@@ -583,24 +694,36 @@ function onTouchPointerDown(event: PointerEvent): void {
   event.preventDefault()
   const wrap = containerRef.value
   wrap?.setPointerCapture?.(event.pointerId)
-  touchPointers.set(event.pointerId, touchLocalPoint(event))
+  const local = touchLocalPoint(event)
+  touchPointers.set(event.pointerId, local)
   if (touchPointers.size >= 2) {
     touchNav = true
     touchCommittedOne = false
+    touchPending = null
+    touchSloppy = false
+    touchOnePanLast = null
     endTouchEditDrag()
     const pts = [...touchPointers.values()]
     touchPrevPair = { a: pts[0], b: pts[1] }
     return
   }
-  touchCommittedOne = true
-  onCanvasPointerDown(event)
+  touchPending = {
+    pointerId: event.pointerId,
+    start: local,
+    clientX: event.clientX,
+    clientY: event.clientY,
+  }
+  touchSloppy = false
+  touchCommittedOne = false
+  touchOnePanLast = null
 }
 
 function onTouchPointerMove(event: PointerEvent): void {
   if (!useTouchNav.value) return
   if (!touchPointers.has(event.pointerId)) return
   event.preventDefault()
-  touchPointers.set(event.pointerId, touchLocalPoint(event))
+  const local = touchLocalPoint(event)
+  touchPointers.set(event.pointerId, local)
   if (touchNav && touchPointers.size >= 2 && touchPrevPair) {
     const pts = [...touchPointers.values()]
     const next = applyTwoFingerNav({
@@ -619,20 +742,79 @@ function onTouchPointerMove(event: PointerEvent): void {
     return
   }
   if (touchNav) return
-  if (touchCommittedOne) onCanvasPointerMove(event)
+
+  const tool = activeFmlTool.value
+  if (touchPending && event.pointerId === touchPending.pointerId && !touchSloppy) {
+    if (!isTapMove(touchPending.start, local)) {
+      touchSloppy = true
+      if (
+        shouldStartTouchHoldDrag({
+          sloppy: true,
+          moveMod: moveMod.value,
+          tool,
+          becameNav: false,
+        })
+      ) {
+        touchCommittedOne = true
+        onCanvasPointerDown(mouseAtCanvas(event.clientX, event.clientY))
+      } else if (
+        shouldOneFingerPan({
+          sloppy: true,
+          becameNav: false,
+          holdDragStarted: false,
+          hoverFollow: isTouchHoverFollowTool(tool),
+        })
+      ) {
+        touchOnePanLast = local
+      }
+    }
+  }
+
+  if (touchOnePanLast && !touchCommittedOne) {
+    viewPosition.value = {
+      x: viewPosition.value.x + (local.x - touchOnePanLast.x),
+      y: viewPosition.value.y + (local.y - touchOnePanLast.y),
+    }
+    touchOnePanLast = local
+    return
+  }
+
+  if (touchCommittedOne || isTouchHoverFollowTool(tool)) {
+    onCanvasPointerMove(event)
+  }
 }
 
-function onTouchPointerUp(event: PointerEvent): void {
+function finishTouchPointer(event: PointerEvent, cancelled: boolean): void {
   if (!useTouchNav.value) return
-  touchPointers.delete(event.pointerId)
+  const pending = touchPending
+  const sloppy = touchSloppy
+  const wasNav = touchNav
+  const pointerId = event.pointerId
+  touchPointers.delete(pointerId)
   if (touchNav) {
     if (touchPointers.size < 2) {
       touchNav = false
       touchPrevPair = null
     }
+    resetTouchIdle()
     return
   }
-  touchCommittedOne = false
+  if (
+    pending &&
+    pointerId === pending.pointerId &&
+    shouldCommitTouchTap({ becameNav: wasNav, sloppy, cancelled })
+  ) {
+    onCanvasPointerDown(mouseAtCanvas(pending.clientX, pending.clientY))
+  }
+  resetTouchIdle()
+}
+
+function onTouchPointerUp(event: PointerEvent): void {
+  finishTouchPointer(event, false)
+}
+
+function onTouchPointerCancel(event: PointerEvent): void {
+  finishTouchPointer(event, true)
 }
 
 const selectedItemPanel = computed(() => {
@@ -723,12 +905,12 @@ const surfaceEditVerticesStage = computed(() => {
 })
 
 const taggedSettingsPanel = computed(() => {
-  if (!props.areaSurfaceEditEnabled) return null
+  if (!areaSurfaceEditEnabled.value) return null
   return selectedAreaPanel.value ?? selectedSurfacePanel.value
 })
 
 const surfaceEditActive = computed(
-  () => props.areaSurfaceEditEnabled && surfaceEditId.value != null,
+  () => areaSurfaceEditEnabled.value && surfaceEditId.value != null,
 )
 
 const {
@@ -753,7 +935,7 @@ const {
 
 const itemResizeHandles = computed(() => {
   const guid = settingsItemId.value
-  if (!guid || props.inspectMode) return []
+  if (!guid || inspectMode.value) return []
   const item = editor.items.value.find((entry) => entry.guid === guid)
   if (!item) return []
   return itemResizeHandleWorlds(item).map((handle) => ({
@@ -794,7 +976,7 @@ function attachTouchNavListeners(): void {
   el.addEventListener('pointerdown', onTouchPointerDown, touchNavListenerOpts)
   el.addEventListener('pointermove', onTouchPointerMove, touchNavListenerOpts)
   el.addEventListener('pointerup', onTouchPointerUp)
-  el.addEventListener('pointercancel', onTouchPointerUp)
+  el.addEventListener('pointercancel', onTouchPointerCancel)
 }
 
 function detachTouchNavListeners(): void {
@@ -803,7 +985,7 @@ function detachTouchNavListeners(): void {
   el.removeEventListener('pointerdown', onTouchPointerDown, touchNavListenerOpts)
   el.removeEventListener('pointermove', onTouchPointerMove, touchNavListenerOpts)
   el.removeEventListener('pointerup', onTouchPointerUp)
-  el.removeEventListener('pointercancel', onTouchPointerUp)
+  el.removeEventListener('pointercancel', onTouchPointerCancel)
 }
 
 onMounted(() => {
@@ -873,8 +1055,15 @@ watch(
     @dblclick="onCanvasDblClick"
     @wheel="onCanvasWheel"
   >
-    <FmlEditorTopbar
-      v-if="touchEditor && !rescaleMode"
+    <FmlEditorTouchChrome
+      v-model:settings-mod="settingsMod"
+      v-model:axis-lock-mod="axisLockMod"
+      v-model:move-mod="moveMod"
+      :show-topbar="viewportChrome && !rescaleMode"
+      v-model:active-tool="activeFmlTool"
+      :show-help="!inspectMode"
+      v-model:area-side-dims-visible="areaSideDimsVisible"
+      :show-mod-rail="useTouchNav && !inspectMode && !rescaleMode"
       :can-undo="canUndoEdit && !inspectMode"
       :can-redo="canRedoEdit && !inspectMode"
       :hint="toolbarHint"
@@ -887,12 +1076,6 @@ watch(
       @zoom-out="zoomBy(1 / 1.1)"
       @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
     />
-    <FmlEditorModifierRail
-      v-if="useTouchNav && !inspectMode && !rescaleMode"
-      v-model:settings-mod="settingsMod"
-      v-model:axis-lock-mod="axisLockMod"
-      v-model:move-mod="moveMod"
-    />
     <FmlPreviewToolbar
       v-if="!inspectMode && !rescaleMode"
       ref="fmlToolbarRef"
@@ -904,8 +1087,9 @@ watch(
       v-model:add-window-width-cm="addWindowWidthCm"
       v-model:add-window-sill-z-cm="addWindowSillZCm"
       v-model:add-window-height-cm="addWindowHeightCm"
-      :hide-inline-hint="props.touchEditor === true"
-      :floating-dock="props.touchEditor === true"
+      :hide-inline-hint="touchEditor"
+      :floating-dock="touchEditor"
+      :hide-select-tools="useTouchNav"
       :selected-wall-panel="selectedWallPanel"
       :selected-junction-panel="selectedJunctionPanel"
       :selected-opening-panel="selectedOpeningPanel"
@@ -913,9 +1097,9 @@ watch(
       :selected-label-panel="selectedLabelPanel"
       :room-types="roomTypes"
       :surface-edit-active="surfaceEditActive"
-      :include-surface-tool="props.areaSurfaceEditEnabled === true"
-      :include-annotation-tools="props.annotationEditEnabled === true"
-      :include-fixture-tool="props.touchEditor === true"
+      :include-surface-tool="includeSurfaceTool"
+      :include-annotation-tools="includeAnnotationTools"
+      :include-fixture-tool="includeFixtureTool"
       :selected-item-panel="selectedItemPanel"
       :wall-thickness-draft="wallThicknessDraft"
       :wall-thickness-mixed="wallThicknessMixed"
@@ -949,9 +1133,19 @@ watch(
       :measure-line-count="measureLines.length"
       :draw-wall-drafting="drawWallDrafting"
       :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
+      v-model:draw-surface-role="drawSurfacePendingRole"
       :draw-room-drafting="drawRoomDrafting"
+      v-model:draw-line-thickness="drawLineThickness"
       :draw-room-measure-h-cm="drawRoomMeasureHCm"
+      v-model:draw-label-text="drawLabelText"
       :draw-room-measure-v-cm="drawRoomMeasureVCm"
+      :draw-line-drafting="drawLineDrafting"
+      :draw-surface-drafting="drawSurfaceDrafting"
+      :facade-groups-enabled="capabilities?.facadeGroups === true"
+      :facade-group-options="facadeGroupOptions"
+      :facade-group-draft="facadeGroupDraft"
+      :facade-group-mixed="facadeGroupMixed"
+      :can-select-facade-members="canSelectFacadeMembers"
       @wall-thickness-input="onWallThicknessInput"
       @commit-wall-thickness="commitWallThickness"
       @apply-wall-thickness="applyWallsThicknessCm"
@@ -979,6 +1173,9 @@ watch(
       @delete-openings="deleteSelectedOpenings"
       @split-wall="splitSelectedWall"
       @delete-walls="deleteSelectedWalls"
+      @facade-group-change="applyFacadeGroupSelection"
+      @facade-group-rename="renameSelectedFacadeGroup"
+      @select-facade-members="selectFacadeGroupMembers"
       @clear-selection="clearSelection"
       @clear-measures="clearMeasureLines"
       @apply-room-type="applyRoomTypeToSelection"
@@ -1000,16 +1197,13 @@ watch(
       @delete-item="deleteSelectedItem"
       @draw-wall-length-input="setDrawWallLengthOverrideCm"
       @commit-draw-wall-measure="commitDrawWallFromMeasure"
-      @cancel-draw-wall-draft="cancelDrawWallDraft"
+      @cancel-draw-wall-draft="deactivateDrawTool"
       @draw-room-h-input="setDrawRoomHOverrideCm"
       @draw-room-v-input="setDrawRoomVOverrideCm"
       @commit-draw-room-measure="commitDrawRoomFromMeasure"
-      @cancel-draw-room-draft="cancelDrawRoomDraft"
-    />
-    <FmlFixturePalette
-      v-if="touchEditor && !inspectMode && activeFmlTool === 'add_fixture'"
-      v-model="pendingFixture"
-      class="fixture-palette-dock"
+      @cancel-draw-room-draft="deactivateDrawTool"
+      @accept-draw-draft="acceptDrawDraft"
+      @deactivate-draw-tool="deactivateDrawTool"
     />
     <svg
       v-if="itemResizeHandles.length > 0"
@@ -1192,6 +1386,7 @@ watch(
       :content-opacity="contentOpacity"
       :move-wall-polygon="moveWallPolygon"
       :settings-wall-polygons="settingsWallPolygons"
+      :facade-wall-polygons="facadeWallPolygons"
       :inspect-wall-polygons="inspectWallPolygons"
       :settings-wall-ids="settingsWallIds"
       :move-wall-id="moveWallId"
@@ -1227,19 +1422,27 @@ watch(
       @junction-hover="onJunctionHover"
       @junction-hover-end="onJunctionHoverEnd"
     />
+    <div
+      v-if="includeFixtureTool && !inspectMode && activeFmlTool === 'add_fixture'"
+      class="fixture-palette-dock"
+    >
+      <FmlFixturePalette v-model="pendingFixture" @close="deactivateDrawTool" />
+    </div>
   </div>
 </template>
 
 <style scoped>
+@import '../fml-preview/fml-canvas-tokens.css';
+
 .fml-preview-wrap {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 320px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  min-height: var(--fml-canvas-min-height);
+  border: 1px solid var(--fml-canvas-border);
+  border-radius: var(--fml-canvas-radius);
   overflow: hidden;
-  background: #f8fafc;
+  background: var(--fml-canvas-bg);
 }
 
 .fml-preview-wrap--touch {
@@ -1247,23 +1450,33 @@ watch(
   overscroll-behavior: none;
 }
 
+.fml-preview-wrap--touch :deep(.fml-toolbelt__thickness-input),
+.fml-preview-wrap--touch :deep(.fml-toolbelt__input),
+.fml-preview-wrap--touch :deep(.fml-toolbelt__select) {
+  font-size: var(--fml-touch-input-font-size);
+  touch-action: manipulation;
+}
+
+/* Hardcoded — scoped @import of :root tokens never matches, so var() here
+   made left/bottom/z-index invalid and the Konva stage hid the library. */
 .fixture-palette-dock {
   position: absolute;
   left: max(8px, env(safe-area-inset-left, 0px));
   bottom: calc(max(8px, env(safe-area-inset-bottom, 0px)) + 56px);
-  z-index: 21;
+  z-index: 24;
+  pointer-events: auto;
 }
 
 .item-resize-overlay {
   position: absolute;
   inset: 0;
-  z-index: 11;
+  z-index: var(--fml-z-resize);
   pointer-events: none;
 }
 
 .item-resize-handle {
   fill: #fff;
-  stroke: #ea580c;
+  stroke: var(--fml-accent-warm);
   stroke-width: 2;
 }
 
@@ -1273,13 +1486,13 @@ watch(
   align-items: center;
   justify-content: center;
   font-size: 13px;
-  color: #64748b;
+  color: var(--fml-muted);
 }
 
 .selection-box-preview {
   position: absolute;
-  z-index: 9;
-  border: 1.5px dashed #2563eb;
+  z-index: var(--fml-z-overlay);
+  border: 1.5px dashed var(--fml-accent);
   background: rgb(37 99 235 / 0.12);
   pointer-events: none;
 }

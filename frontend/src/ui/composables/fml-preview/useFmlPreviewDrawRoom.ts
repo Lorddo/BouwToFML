@@ -44,6 +44,7 @@ export function useFmlPreviewDrawRoom(options: {
   resolveEndPoint: (cm: Point2D, start: Point2D) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
+  onPlaced?: () => void
 }) {
   const drawRoomPreview = ref<Point2D[] | null>(null)
   const drafting = ref(false)
@@ -118,6 +119,7 @@ export function useFmlPreviewDrawRoom(options: {
     }
     options.syncPlanToParent()
     cancelDrawRoomDrag()
+    options.onPlaced?.()
     return true
   }
 

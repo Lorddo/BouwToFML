@@ -4,7 +4,7 @@ export const TAP_SLOP_PX = 10
 
 /** Chrome overlays that must not start canvas edit/place. */
 export const FML_PREVIEW_CHROME_SELECTOR =
-  '.fml-preview-hint, .canvas-toolbelt-dock, .canvas-toolbelt, .fixture-palette, .fixture-palette-dock, .fml-editor-topbar, .fml-help-modal, .fml-mod-rail, .item-settings, button, input, label, select'
+  '.fml-preview-hint, .canvas-toolbelt-dock, .canvas-toolbelt, .fixture-palette, .fixture-palette-dock, .fml-editor-topbar, .fml-help-modal, .fml-chrome-dialog, .fml-mod-rail, .item-settings, button, input, label, select'
 
 /** Touch-nav + modifier rail: only real coarse pointers, never a mouse desktop. */
 export function shouldUseTouchNav(touchEditor: boolean, coarsePointer: boolean): boolean {

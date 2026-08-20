@@ -1,12 +1,25 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import {
+  FML_AREA_SIDE_DIMS_TOOL_ID,
+  getFmlSelectTools,
+  type FmlToolId,
+} from './canvas/fmlToolbeltItems'
 
 const settingsMod = defineModel<boolean>('settingsMod', { default: false })
 const axisLockMod = defineModel<boolean>('axisLockMod', { default: false })
 const moveMod = defineModel<boolean>('moveMod', { default: false })
+const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })
+const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { default: false })
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+const selectTools = computed(() => {
+  void locale.value
+  return getFmlSelectTools()
+})
 
 function toggleSettings(): void {
   settingsMod.value = !settingsMod.value
@@ -16,6 +29,21 @@ function toggleSettings(): void {
 function toggleMove(): void {
   moveMod.value = !moveMod.value
   if (moveMod.value) settingsMod.value = false
+}
+
+function isSelectActive(id: string): boolean {
+  if (id === FML_AREA_SIDE_DIMS_TOOL_ID) return areaSideDimsVisible.value
+  return activeTool.value === id
+}
+
+function onSelectTool(id: string): void {
+  if (id === FML_AREA_SIDE_DIMS_TOOL_ID) {
+    areaSideDimsVisible.value = !areaSideDimsVisible.value
+    return
+  }
+  const next = activeTool.value === id ? null : (id as FmlToolId)
+  activeTool.value = next
+  if (next) moveMod.value = false
 }
 </script>
 
@@ -51,19 +79,36 @@ function toggleMove(): void {
     >
       <ToolbeltIcon name="move" />
     </button>
+    <div class="fml-mod-rail__sep" aria-hidden="true" />
+    <button
+      v-for="tool in selectTools"
+      :key="tool.id"
+      type="button"
+      :class="{ 'is-on': isSelectActive(tool.id) }"
+      :aria-pressed="isSelectActive(tool.id)"
+      :title="tool.label"
+      :aria-label="tool.label"
+      @click="onSelectTool(tool.id)"
+    >
+      <ToolbeltIcon :name="tool.icon" />
+    </button>
   </div>
 </template>
 
 <style scoped>
+@import '../fml-preview/fml-canvas-tokens.css';
+
 .fml-mod-rail {
   position: absolute;
-  left: max(8px, env(safe-area-inset-left));
+  left: var(--fml-chrome-safe-left);
   top: 50%;
   transform: translateY(-50%);
-  z-index: 14;
+  z-index: var(--fml-z-mod-rail);
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: calc(100% - 96px);
+  overflow-y: auto;
 }
 .fml-mod-rail button {
   display: inline-flex;
@@ -82,6 +127,11 @@ function toggleMove(): void {
   background: #0f172a;
   color: #fff;
   border-color: #0f172a;
+}
+.fml-mod-rail__sep {
+  height: 1px;
+  margin: 2px 8px;
+  background: #cbd5e1;
 }
 .fml-mod-rail :deep(.canvas-toolbelt__icon) {
   width: 18px;

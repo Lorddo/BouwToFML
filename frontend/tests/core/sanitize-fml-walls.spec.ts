@@ -102,4 +102,50 @@ describe('sanitizeFmlWalls', () => {
       expect(twice[i].b.y).toBeCloseTo(once[i].b.y, 9)
     }
   })
+
+  it('T-fixture: binnenmuur knipt oost/west; tweede run identiek', () => {
+    const walls = [
+      wall('west', { x: 0, y: 0 }, { x: 0, y: 600 }),
+      wall('east', { x: 800, y: 0 }, { x: 800, y: 600 }),
+      wall('north', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      wall('south', { x: 0, y: 600 }, { x: 800, y: 600 }),
+      wall('inner', { x: 0, y: 300 }, { x: 800, y: 300 }),
+    ]
+    const once = sanitizeFmlWalls(walls)
+    expect(once.some((item) => item.id === 'west')).toBe(true)
+    expect(once.some((item) => item.id === 'east')).toBe(true)
+    expect(once.filter((item) => item.id.startsWith('split-host-')).length).toBeGreaterThanOrEqual(
+      2,
+    )
+    const westPieces = once.filter((item) => Math.abs(item.a.x) < 0.01 && Math.abs(item.b.x) < 0.01)
+    const eastPieces = once.filter(
+      (item) => Math.abs(item.a.x - 800) < 0.01 && Math.abs(item.b.x - 800) < 0.01,
+    )
+    expect(westPieces).toHaveLength(2)
+    expect(eastPieces).toHaveLength(2)
+
+    const twice = sanitizeFmlWalls(once)
+    expect(wallsSanitizeChanged(once, twice)).toBe(false)
+    expect(twice.map((item) => item.id)).toEqual(once.map((item) => item.id))
+  })
+
+  it('opening exact op de knip blijft op één stuk, wereldpositie gelijk', () => {
+    const walls = [
+      wall('host', { x: 0, y: 0 }, { x: 100, y: 0 }, 10, {
+        openings: [{ refid: 'on-cut', t: 0.5, width: 80, type: 'window' }],
+      }),
+      wall('branch', { x: 50, y: 0 }, { x: 50, y: 40 }),
+    ]
+    const out = sanitizeFmlWalls(walls)
+    const withOpening = out.filter((item) =>
+      item.openings.some((opening) => opening.refid === 'on-cut'),
+    )
+    expect(withOpening).toHaveLength(1)
+    const host = withOpening[0]
+    const opening = host.openings[0]
+    const worldX = host.a.x + opening.t * (host.b.x - host.a.x)
+    const worldY = host.a.y + opening.t * (host.b.y - host.a.y)
+    expect(worldX).toBeCloseTo(50, 5)
+    expect(worldY).toBeCloseTo(0, 5)
+  })
 })

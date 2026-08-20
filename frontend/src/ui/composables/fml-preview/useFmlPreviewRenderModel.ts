@@ -5,7 +5,7 @@ import {
   buildWallRenderGeometry,
   wallFillComponentsToPathData,
 } from '@/ui/components/fml-preview-wall-polygons'
-import { loadImage } from '@/ui/composables/workspace/imageUtils'
+import { loadImage } from '@/platform/image'
 import type { ContentLayout } from './useFmlPreviewViewport'
 import { layoutTransform } from './useFmlPreviewViewport'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -118,18 +118,6 @@ export function useFmlPreviewRenderModel(
     const activeFloor = floor.value
     if (!layout || !activeFloor) return null
     const walls = editor.walls.value
-    if (
-      walls.length === 0 &&
-      !(
-        activeFloor.areas?.length ||
-        activeFloor.surfaces?.length ||
-        activeFloor.labels?.length ||
-        activeFloor.lines?.length ||
-        activeFloor.dimensions?.length
-      )
-    ) {
-      return null
-    }
     const { toStagePoint, toCmPoint } = layoutTransform(layout)
     const scale = layout.scale
 
@@ -232,10 +220,9 @@ export function useFmlPreviewRenderModel(
       flipX: props.flipX,
     })
     return {
-      image,
-      ...geom,
-      opacity,
-      listening: false,
+      flip: { ...geom.flip, listening: false },
+      rotate: { ...geom.rotate, listening: false },
+      image: { ...geom.image, image, opacity, listening: false },
     }
   })
 

@@ -1,0 +1,30 @@
+/**
+ * Shared FML canvas chrome tokens — editor / inspect / detection hosts.
+ * Host chrome may diverge; canvas + toolbelt/rail/stage stay consistent.
+ */
+:root {
+  --fml-canvas-bg: #f8fafc;
+  --fml-canvas-border: #cbd5e1;
+  --fml-canvas-radius: 8px;
+  --fml-canvas-min-height: 320px;
+  --fml-chrome-gap: 8px;
+  --fml-chrome-safe-left: max(var(--fml-chrome-gap), env(safe-area-inset-left, 0px));
+  --fml-chrome-safe-right: max(var(--fml-chrome-gap), env(safe-area-inset-right, 0px));
+  --fml-chrome-safe-bottom: max(var(--fml-chrome-gap), env(safe-area-inset-bottom, 0px));
+  --fml-chrome-safe-top: max(var(--fml-chrome-gap), env(safe-area-inset-top, 0px));
+  --fml-chrome-dock-bottom: calc(var(--fml-chrome-safe-bottom) + 56px);
+  --fml-z-overlay: 9;
+  --fml-z-resize: 11;
+  --fml-z-toolbelt: 20;
+  --fml-z-fixture-palette: 21;
+  --fml-z-topbar: 22;
+  --fml-z-mod-rail: 23;
+  --fml-muted: #64748b;
+  --fml-accent: #2563eb;
+  --fml-accent-warm: #ea580c;
+  --fml-touch-input-font-size: 16px;
+  --fml-chrome-fit-scale: 1;
+  --fml-toolbelt-btn-size: 32px;
+  --fml-toolbelt-input-width: 64px;
+  --fml-toolbelt-select-min: 108px;
+}

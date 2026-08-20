@@ -237,6 +237,9 @@ export function addWallSegment(
     endpointExtras: endpoint ? { az: endpoint, bz: { ...endpoint } } : undefined,
   })
   if (wallIds.length === 0) return null
+  const excludeAdded = new Set(wallIds)
+  materializeEndpointJoinsAtPoint(next, a, { excludeWallIds: excludeAdded, toleranceCm: 1 })
+  materializeEndpointJoinsAtPoint(next, b, { excludeWallIds: excludeAdded, toleranceCm: 1 })
   return { walls: next, wallId: wallIds[0], wallIds }
 }
 

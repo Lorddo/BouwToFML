@@ -9,6 +9,8 @@ import type { FmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
 import { bindNumericDraftField } from './fml-preview-draft-commit'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 import { findWallsFullyInCmBBox } from './fml-preview-wall-select'
+import { groupIdForWall, listFacadeGroups, type FacadeGroup } from '@/core/fml/facade-groups'
+import { promptFacadeGroupName } from '@/ui/composables/fml-chrome-dialog'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
@@ -393,6 +395,94 @@ export function useFmlPreviewWallSelection(options: {
     syncPlanToParent()
   }
 
+  const facadeGroupOptions = computed((): FacadeGroup[] => listFacadeGroups(editor.localPlan.value))
+
+  /** Shared group id, '' = none, null = mixed. */
+  const facadeGroupDraft = computed((): string | null => {
+    const ids = settingsWallIds.value
+    if (ids.length === 0) return ''
+    const groupIds = ids.map((id) => groupIdForWall(editor.localPlan.value, id))
+    const first = groupIds[0] ?? null
+    if (groupIds.some((id) => id !== first)) return null
+    return first ?? ''
+  })
+
+  const facadeGroupMixed = computed(() => facadeGroupDraft.value === null)
+
+  const facadeMemberIdsOnActiveFloor = computed((): string[] => {
+    const draft = facadeGroupDraft.value
+    if (!draft) return []
+    const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
+    return (
+      listFacadeGroups(editor.localPlan.value)
+        .find((group) => group.id === draft)
+        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
+    )
+  })
+
+  async function applyFacadeGroupSelection(value: string): Promise<void> {
+    flushPendingFieldCommits()
+    const wallIds = [...settingsWallIds.value]
+    if (wallIds.length === 0) return
+
+    if (value === '__new__') {
+      const name = await promptFacadeGroupName()
+      if (name == null) return
+      editor.pushUndo()
+      editor.applyFacadeCreate({ name }, wallIds)
+      syncPlanToParent()
+      return
+    }
+
+    if (value === '' || value === '__none__') {
+      editor.pushUndo()
+      editor.applyFacadeDetach(wallIds)
+      syncPlanToParent()
+      return
+    }
+
+    editor.pushUndo()
+    editor.applyFacadeAssign(value, wallIds)
+    syncPlanToParent()
+  }
+
+  function renameSelectedFacadeGroup(name: string): void {
+    const draft = facadeGroupDraft.value
+    if (!draft) return
+    const trimmed = name.trim()
+    if (!trimmed) return
+    editor.pushUndo()
+    editor.applyFacadeRename(draft, { name: trimmed })
+    syncPlanToParent()
+  }
+
+  /** Zet alle groepsleden op deze floor in de settings-selectie (blauwe/oranje highlight). */
+  function selectFacadeGroupMembers(): void {
+    const ids = facadeMemberIdsOnActiveFloor.value
+    if (ids.length === 0) return
+    flushPendingFieldCommits()
+    settingsWallIds.value = [...ids]
+    settingsWallSplitClickCm.value = null
+    settingsJunctionId.value = null
+    settingsOpeningIds.value = []
+    moveOpeningId.value = null
+    moveWallId.value = null
+    selection.settingsAreaId.value = null
+    selection.settingsSurfaceId.value = null
+    selection.settingsLabelId.value = null
+    selection.settingsLineId.value = null
+    selection.settingsItemId.value = null
+    syncWallThicknessDraftFromSelection()
+  }
+
+  const canSelectFacadeMembers = computed(() => {
+    const members = facadeMemberIdsOnActiveFloor.value
+    if (members.length === 0) return false
+    if (settingsWallIds.value.length !== members.length) return true
+    const selected = new Set(settingsWallIds.value)
+    return members.some((id) => !selected.has(id))
+  })
+
   function clearSelection(opts?: { flush?: boolean }): void {
     if (opts?.flush !== false) flushPendingFieldCommits()
     settingsWallIds.value = []
@@ -538,6 +628,14 @@ export function useFmlPreviewWallSelection(options: {
     commitJunctionHeight,
     splitSelectedWall,
     deleteSelectedWalls,
+    facadeGroupOptions,
+    facadeGroupDraft,
+    facadeGroupMixed,
+    facadeMemberIdsOnActiveFloor,
+    applyFacadeGroupSelection,
+    renameSelectedFacadeGroup,
+    selectFacadeGroupMembers,
+    canSelectFacadeMembers,
     clearSelection,
     toggleSelectionBoxMode,
     cancelSelectionBoxDrag,

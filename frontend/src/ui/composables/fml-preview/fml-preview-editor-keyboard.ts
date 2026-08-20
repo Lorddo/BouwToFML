@@ -1,4 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
+import { isFmlOneshotDrawTool } from '@/ui/components/canvas/fmlToolbeltItems'
 import { isTypingFieldTarget } from './fml-preview-draft-commit'
 import type { MeasureLine } from './fml-preview-measure'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -45,6 +46,7 @@ export function createFmlPreviewEditorKeyHandlers(options: {
     commitFromMeasure: () => boolean
   }
   drawLine: { cancelDrawLine: () => void }
+  deactivateDrawTool: () => void
   measure: {
     isDragging: () => boolean
     cancelMeasureDrag: () => void
@@ -85,6 +87,7 @@ export function createFmlPreviewEditorKeyHandlers(options: {
     drawWall,
     drawRoom,
     drawLine,
+    deactivateDrawTool,
     measure,
     nulpunt,
     underlayMove,
@@ -100,6 +103,10 @@ export function createFmlPreviewEditorKeyHandlers(options: {
         event.preventDefault()
         flushPendingFieldCommits()
         if (event.target instanceof HTMLElement) event.target.blur()
+        if (isFmlOneshotDrawTool(activeFmlTool.value)) {
+          deactivateDrawTool()
+          return
+        }
         clearSelection()
         hoveredOpeningId.value = null
         if (inspectMode.value) clearInspectSelect()
@@ -131,6 +138,11 @@ export function createFmlPreviewEditorKeyHandlers(options: {
       if (thicknessPickTier.value) {
         event.preventDefault()
         emitCancelThicknessPick()
+        return
+      }
+      if (isFmlOneshotDrawTool(activeFmlTool.value)) {
+        event.preventDefault()
+        deactivateDrawTool()
         return
       }
       if (drawWall.isDragging()) {

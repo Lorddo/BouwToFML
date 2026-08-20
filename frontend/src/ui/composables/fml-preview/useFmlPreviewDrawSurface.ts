@@ -1,6 +1,11 @@
-import { type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
-import { UNLABELED_AREA_COLOR } from '@/core/fml/roomtype-catalog'
+import {
+  UNLABELED_AREA_COLOR,
+  effectiveRoomTypeColor,
+  resolveRoomType,
+} from '@/core/fml/roomtype-catalog'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
@@ -21,6 +26,7 @@ export function useFmlPreviewDrawSurface(options: {
   syncPlanToParent: () => void
 }) {
   const draftPoints = options.selection.drawSurfacePoints
+  const pendingRole = ref<number | null>(null)
   const CLOSE_EPS_CM = 8
 
   function cancelDrawSurface(): void {
@@ -48,9 +54,16 @@ export function useFmlPreviewDrawSurface(options: {
     const pts = draftPoints.value
     if (!pts || pts.length < 3) return false
     options.editor.pushUndo()
+    const role = pendingRole.value
+    const rt = role != null ? resolveRoomType(role) : null
+    const color = rt
+      ? effectiveRoomTypeColor(rt.role, loadUserSettings().roomTagColors)
+      : UNLABELED_AREA_COLOR
     options.editor.addSurface({
       poly: pts.map((p) => ({ x: p.x, y: p.y, z: 0 })),
-      color: UNLABELED_AREA_COLOR,
+      role: rt?.role,
+      name: rt?.name,
+      color,
       showAreaLabel: true,
     })
     draftPoints.value = null
@@ -90,6 +103,7 @@ export function useFmlPreviewDrawSurface(options: {
 
   return {
     draftPoints,
+    pendingRole,
     cancelDrawSurface,
     onDrawSurfaceClick,
     onDrawSurfaceDblClick,

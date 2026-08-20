@@ -14,7 +14,7 @@ import type {
 } from '@/core/fml/types'
 import { switchFloorDesign } from '@/core/fml/design-sync'
 import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
-import { sanitizeFmlWalls, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
+import { sanitizeFmlWallsDetailed, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
 import {
   addRoomRect,
   addWallSegment,
@@ -51,6 +51,18 @@ import {
 } from '@/ui/components/fml-preview-openings'
 import { applyOpeningDragMove as applyOpeningDragMoveWalls } from '@/ui/components/fml-preview-opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
+import {
+  applyFacadeGroupRemaps,
+  assignWallsToGroup,
+  createFacadeGroup,
+  detachWalls,
+  listFacadeGroups,
+  pruneFacadeGroups,
+  remapFacadeGroupWallIds,
+  renameFacadeGroup,
+  type FacadeGroup,
+  type FacadeGroupCreateInput,
+} from '@/core/fml/facade-groups'
 
 const MAX_UNDO = 50
 
@@ -64,6 +76,8 @@ export type FmlPreviewUndoSnapshot = {
   dimensions?: FloorDimension[]
   designs?: FloorDesign[]
   activeDesignIndex?: number
+  /** Project-source (facadeGroups e.d.); null = expliciet wissen. */
+  planSource?: FloorPlan['source'] | null
   /** Underlay origin bij nulpunt-edits; undefined = layout ongemoeid bij undo. */
   layoutOrigin?: Point2D | null
 }
@@ -264,6 +278,9 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
         ? (JSON.parse(JSON.stringify(floor.designs)) as FloorDesign[])
         : undefined,
       activeDesignIndex: floor?.activeDesignIndex,
+      planSource: localPlan.value?.source
+        ? (JSON.parse(JSON.stringify(localPlan.value.source)) as FloorPlan['source'])
+        : null,
     }
     if (options && 'layoutOrigin' in options) {
       snapshot.layoutOrigin = options.layoutOrigin
@@ -285,6 +302,12 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
       designs: snapshot.designs,
       activeDesignIndex: snapshot.activeDesignIndex,
     })
+    if (localPlan.value && 'planSource' in snapshot) {
+      localPlan.value = {
+        ...localPlan.value,
+        source: snapshot.planSource ?? undefined,
+      }
+    }
     pendingUndoLayoutOrigin.value = 'layoutOrigin' in snapshot ? snapshot.layoutOrigin : undefined
   }
 
@@ -482,7 +505,49 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     const result = splitWallAtT(walls.value, wallId, t)
     if (!result) return null
     setWalls(result.walls)
+    if (localPlan.value) {
+      remapFacadeGroupWallIds(localPlan.value, wallId, [result.firstWallId, result.secondWallId])
+    }
     return result
+  }
+
+  function applyWallsDelete(wallIds: string[]): void {
+    setWalls(removeWalls(walls.value, wallIds))
+    if (localPlan.value) detachWalls(localPlan.value, wallIds)
+  }
+
+  function facadeGroups(): FacadeGroup[] {
+    return listFacadeGroups(localPlan.value)
+  }
+
+  function applyFacadeAssign(groupId: string, wallGuids: readonly string[]): void {
+    if (!localPlan.value) return
+    assignWallsToGroup(localPlan.value, groupId, wallGuids)
+  }
+
+  function applyFacadeDetach(wallGuids: readonly string[]): void {
+    if (!localPlan.value) return
+    detachWalls(localPlan.value, wallGuids)
+  }
+
+  function applyFacadeCreate(
+    input: FacadeGroupCreateInput,
+    wallGuids?: readonly string[],
+  ): FacadeGroup | null {
+    if (!localPlan.value) return null
+    const group = createFacadeGroup(localPlan.value, input)
+    if (wallGuids && wallGuids.length > 0) {
+      assignWallsToGroup(localPlan.value, group.id, wallGuids)
+    }
+    return listFacadeGroups(localPlan.value).find((g) => g.id === group.id) ?? group
+  }
+
+  function applyFacadeRename(
+    groupId: string,
+    patch: { name?: string; code?: string },
+  ): FacadeGroup | null {
+    if (!localPlan.value) return null
+    return renameFacadeGroup(localPlan.value, groupId, patch)
   }
 
   function applyWallSlideAlongAxis(wallId: string, deltaT: number, slideDir: Point2D): void {
@@ -512,17 +577,18 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   function applyWallDelete(wallId: string): void {
     setWalls(removeWall(walls.value, wallId))
-  }
-
-  function applyWallsDelete(wallIds: string[]): void {
-    setWalls(removeWalls(walls.value, wallIds))
+    if (localPlan.value) detachWalls(localPlan.value, [wallId])
   }
 
   function applyWallsSanitize(): boolean {
-    const next = sanitizeFmlWalls(walls.value)
-    if (!wallsSanitizeChanged(walls.value, next)) return false
+    const detailed = sanitizeFmlWallsDetailed(walls.value)
+    if (!wallsSanitizeChanged(walls.value, detailed.walls)) return false
     pushUndo()
-    setWalls(next)
+    setWalls(detailed.walls)
+    if (localPlan.value) {
+      applyFacadeGroupRemaps(localPlan.value, detailed.remaps)
+      pruneFacadeGroups(localPlan.value)
+    }
     flushAreaRegen()
     return true
   }
@@ -703,6 +769,11 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     applyWallDelete,
     applyWallsDelete,
     applyWallsSanitize,
+    facadeGroups,
+    applyFacadeAssign,
+    applyFacadeDetach,
+    applyFacadeCreate,
+    applyFacadeRename,
     applyWallAdd,
     applyRoomRect,
     applyOpeningAdd,

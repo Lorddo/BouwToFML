@@ -17,9 +17,28 @@ export type FmlToolId =
 const SETTINGS_TOOLS: ReadonlySet<FmlToolId> = new Set([
   'draw_wall',
   'draw_room',
+  'draw_surface',
+  'draw_label',
+  'draw_line',
   'add_door',
   'add_window',
 ])
+
+/** Eenmalige plaats-tools: na gebruik uit, Esc/knop stopt ook zonder startpunt. */
+const ONESHOT_DRAW_TOOLS: ReadonlySet<FmlToolId> = new Set([
+  'draw_wall',
+  'draw_room',
+  'draw_surface',
+  'draw_label',
+  'draw_line',
+  'add_door',
+  'add_window',
+  'add_fixture',
+])
+
+export function isFmlOneshotDrawTool(tool: FmlToolId | null): boolean {
+  return tool != null && ONESHOT_DRAW_TOOLS.has(tool)
+}
 
 /** True when the FML toolbar shows the settings strip (selection or draw/add tool). */
 export function isFmlToolbarSettingsOpen(args: {

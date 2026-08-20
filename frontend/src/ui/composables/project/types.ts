@@ -1,7 +1,10 @@
 import type { Floor, FloorPlan } from '@/core/fml/types'
+import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { PdfUnderlaySource } from '@/platform/upload'
-import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
+
+/** Flow steps shared by project blobs and workspace UI (no CV import). */
+export type WorkspaceFlowStep = 'project' | 'input' | 'preprocess' | 'templates' | 'result'
 
 export type FloorStatus = 'empty' | 'input' | 'preprocess' | 'templates' | 'result'
 
@@ -41,19 +44,10 @@ export type FloorMeta = {
 }
 
 /**
- * Per-floor workspace snapshot.
- * `session` = DevSession-vorm (image + scale + preprocess + detectie).
- * Lege floor: session null.
+ * Per-floor underlay layout for FML preview (origin + px/mm + optional rot/flip).
+ * Canonical type lives in core — project/UI alias for persistence blobs.
  */
-export type PreviewUnderlayLayout = {
-  origin: { x: number; y: number }
-  pxPerMmX: number
-  pxPerMmY: number
-  /** Onderlegger-rotatie in graden (FML drawing.rotation); ontbrekend = 0. */
-  rotationDeg?: number
-  /** Display-only: Konva scaleX −1 om bitmap-midden. */
-  flipX?: boolean
-}
+export type PreviewUnderlayLayout = UnderlayOriginLayout
 
 /** D4 FML-geometrie t.o.v. canonieke generate (na nulpunt). */
 export type FloorOrientPersist = {

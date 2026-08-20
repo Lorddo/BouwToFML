@@ -2,6 +2,8 @@
 import CanvasToolbelt from './CanvasToolbelt.vue'
 import type { CanvasToolId } from './canvas-toolbelt.types'
 import type { ToolbeltItem } from './canvas-toolbelt.types'
+import { ref } from 'vue'
+import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import './canvas-toolbelt.css'
 
 withDefaults(
@@ -33,10 +35,13 @@ const emit = defineEmits<{
   'update:inkBrushSize': [value: number]
   inkUndo: []
 }>()
+
+const dockRef = ref<HTMLElement | null>(null)
+useChromeFitScale(dockRef)
 </script>
 
 <template>
-  <div v-if="faceVisible || inkVisible" class="canvas-toolbelt-dock">
+  <div v-if="faceVisible || inkVisible" ref="dockRef" class="canvas-toolbelt-dock">
     <div class="canvas-toolbelt-dock__row">
       <div
         v-if="faceVisible"

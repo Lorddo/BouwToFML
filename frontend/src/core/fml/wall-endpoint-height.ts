@@ -225,36 +225,59 @@ export function splitWallEndpointExtras(
   }
 }
 
-function mapPlanWalls(plan: FloorPlan, mapWall: (wall: Wall, floor: Floor) => Wall): FloorPlan {
+function floorsInScope(plan: FloorPlan, floorIndex?: number): Floor[] {
+  if (floorIndex == null) return plan.floors
+  const floor = plan.floors[floorIndex]
+  return floor ? [floor] : []
+}
+
+function mapPlanWalls(
+  plan: FloorPlan,
+  mapWall: (wall: Wall, floor: Floor) => Wall,
+  floorIndex?: number,
+): FloorPlan {
   return {
     ...plan,
-    floors: plan.floors.map((floor) => ({
-      ...floor,
-      walls: floor.walls.map((wall) => mapWall(wall, floor)),
-      designs: floor.designs?.map((design) => ({
-        ...design,
-        walls: design.walls.map((wall) => mapWall(wall, floor)),
-      })),
-    })),
+    floors: plan.floors.map((floor, i) => {
+      if (floorIndex != null && i !== floorIndex) return floor
+      return {
+        ...floor,
+        walls: floor.walls.map((wall) => mapWall(wall, floor)),
+        designs: floor.designs?.map((design) => ({
+          ...design,
+          walls: design.walls.map((wall) => mapWall(wall, floor)),
+        })),
+      }
+    }),
   }
 }
 
 function mapPlanOpenings(
   plan: FloorPlan,
   mapOpening: (opening: Opening, floor: Floor) => Opening,
+  floorIndex?: number,
 ): FloorPlan {
-  return mapPlanWalls(plan, (wall, floor) => ({
-    ...wall,
-    openings: wall.openings.map((opening) => mapOpening(opening, floor)),
-  }))
+  return mapPlanWalls(
+    plan,
+    (wall, floor) => ({
+      ...wall,
+      openings: wall.openings.map((opening) => mapOpening(opening, floor)),
+    }),
+    floorIndex,
+  )
 }
 
 /** Overschrijf `floor.height` + alle `az`/`bz` (z behouden). Deuren/ramen ongemoeid. */
-export function overwritePlanWallHeights(plan: FloorPlan, heightCm: number): FloorPlan {
+export function overwritePlanWallHeights(
+  plan: FloorPlan,
+  heightCm: number,
+  floorIndex?: number,
+): FloorPlan {
   const height = clampHeightCm(heightCm)
   return {
     ...plan,
-    floors: plan.floors.map((floor) => {
+    floors: plan.floors.map((floor, i) => {
+      if (floorIndex != null && i !== floorIndex) return floor
       const nextFloor: Floor = { ...floor, height }
       const mapWall = (wall: Wall): Wall => withWallUniformHeight(wall, height, height)
       return {
@@ -269,59 +292,106 @@ export function overwritePlanWallHeights(plan: FloorPlan, heightCm: number): Flo
   }
 }
 
-export function overwritePlanDoorHeights(plan: FloorPlan, heightCm: number): FloorPlan {
+export function overwritePlanDoorHeights(
+  plan: FloorPlan,
+  heightCm: number,
+  floorIndex?: number,
+): FloorPlan {
   const height = clampHeightCm(heightCm)
-  return mapPlanOpenings(plan, (opening) =>
-    opening.type === 'door' ? { ...opening, z_height: height } : opening,
+  return mapPlanOpenings(
+    plan,
+    (opening) => (opening.type === 'door' ? { ...opening, z_height: height } : opening),
+    floorIndex,
   )
 }
 
-export function overwritePlanWindowHeights(plan: FloorPlan, heightCm: number): FloorPlan {
+export function overwritePlanWindowHeights(
+  plan: FloorPlan,
+  heightCm: number,
+  floorIndex?: number,
+): FloorPlan {
   const height = clampHeightCm(heightCm)
-  return mapPlanOpenings(plan, (opening) =>
-    opening.type === 'window' ? { ...opening, z_height: height } : opening,
+  return mapPlanOpenings(
+    plan,
+    (opening) => (opening.type === 'window' ? { ...opening, z_height: height } : opening),
+    floorIndex,
   )
 }
 
-export function overwritePlanWindowSills(plan: FloorPlan, sillZCm: number): FloorPlan {
+export function overwritePlanWindowSills(
+  plan: FloorPlan,
+  sillZCm: number,
+  floorIndex?: number,
+): FloorPlan {
   const sill = Math.max(0, Math.round(sillZCm))
-  return mapPlanOpenings(plan, (opening) =>
-    opening.type === 'window' ? { ...opening, z: sill } : opening,
+  return mapPlanOpenings(
+    plan,
+    (opening) => (opening.type === 'window' ? { ...opening, z: sill } : opening),
+    floorIndex,
   )
 }
 
-export function overwritePlanDoorBovenlicht(plan: FloorPlan, enabled: boolean): FloorPlan {
-  return mapPlanOpenings(plan, (opening) =>
-    opening.type === 'door' ? { ...opening, bovenlicht: enabled } : opening,
+export function overwritePlanDoorBovenlicht(
+  plan: FloorPlan,
+  enabled: boolean,
+  floorIndex?: number,
+): FloorPlan {
+  return mapPlanOpenings(
+    plan,
+    (opening) => (opening.type === 'door' ? { ...opening, bovenlicht: enabled } : opening),
+    floorIndex,
   )
 }
 
-export function overwritePlanWindowBovenlicht(plan: FloorPlan, enabled: boolean): FloorPlan {
-  return mapPlanOpenings(plan, (opening) =>
-    opening.type === 'window' ? { ...opening, bovenlicht: enabled } : opening,
+export function overwritePlanWindowBovenlicht(
+  plan: FloorPlan,
+  enabled: boolean,
+  floorIndex?: number,
+): FloorPlan {
+  return mapPlanOpenings(
+    plan,
+    (opening) => (opening.type === 'window' ? { ...opening, bovenlicht: enabled } : opening),
+    floorIndex,
   )
 }
 
-export function overwritePlanBovenlichtHeight(plan: FloorPlan, heightCm: number): FloorPlan {
+export function overwritePlanBovenlichtHeight(
+  plan: FloorPlan,
+  heightCm: number,
+  floorIndex?: number,
+): FloorPlan {
   const height = clampHeightCm(heightCm)
-  return mapPlanOpenings(plan, (opening) =>
-    opening.bovenlicht === true ? { ...opening, bovenlichtHeightCm: height } : opening,
+  return mapPlanOpenings(
+    plan,
+    (opening) =>
+      opening.bovenlicht === true ? { ...opening, bovenlichtHeightCm: height } : opening,
+    floorIndex,
   )
 }
 
-export function overwritePlanBovenlichtGap(plan: FloorPlan, gapCm: number): FloorPlan {
+export function overwritePlanBovenlichtGap(
+  plan: FloorPlan,
+  gapCm: number,
+  floorIndex?: number,
+): FloorPlan {
   const gap = Math.max(0, Math.round(gapCm))
-  return mapPlanOpenings(plan, (opening) =>
-    opening.bovenlicht === true ? { ...opening, bovenlichtGapCm: gap } : opening,
+  return mapPlanOpenings(
+    plan,
+    (opening) => (opening.bovenlicht === true ? { ...opening, bovenlichtGapCm: gap } : opening),
+    floorIndex,
   )
 }
 
-export function countPlanWalls(plan: FloorPlan): number {
-  return plan.floors.reduce((sum, floor) => sum + floor.walls.length, 0)
+export function countPlanWalls(plan: FloorPlan, floorIndex?: number): number {
+  return floorsInScope(plan, floorIndex).reduce((sum, floor) => sum + floor.walls.length, 0)
 }
 
-export function countPlanOpenings(plan: FloorPlan, type: 'door' | 'window'): number {
-  return plan.floors.reduce(
+export function countPlanOpenings(
+  plan: FloorPlan,
+  type: 'door' | 'window',
+  floorIndex?: number,
+): number {
+  return floorsInScope(plan, floorIndex).reduce(
     (sum, floor) =>
       sum +
       floor.walls.reduce(
@@ -332,8 +402,8 @@ export function countPlanOpenings(plan: FloorPlan, type: 'door' | 'window'): num
   )
 }
 
-export function countPlanBovenlichtOpenings(plan: FloorPlan): number {
-  return plan.floors.reduce(
+export function countPlanBovenlichtOpenings(plan: FloorPlan, floorIndex?: number): number {
+  return floorsInScope(plan, floorIndex).reduce(
     (sum, floor) =>
       sum +
       floor.walls.reduce(

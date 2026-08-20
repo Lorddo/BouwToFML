@@ -31,6 +31,13 @@ export function createFactoryViewerSessionDefaults(): ViewerSessionDefaults {
   }
 }
 
+/** Seed uit user-settings / floor-defaults (leeg plan). Geometrie blijft. */
+export function sessionDefaultsFromPartial(
+  partial: Partial<ViewerSessionDefaults>,
+): ViewerSessionDefaults {
+  return { ...createFactoryViewerSessionDefaults(), ...partial }
+}
+
 function modeNumber(values: number[], fallback: number): number {
   if (values.length === 0) return fallback
   const counts = new Map<number, number>()
@@ -58,8 +65,12 @@ function majorityBool(values: boolean[], fallback: boolean): boolean {
 }
 
 /** Vul sessie-defaults uit het geladen plan (UI only — geometrie blijft). */
-export function seedViewerDefaultsFromPlan(plan: FloorPlan, floorIndex = 0): ViewerSessionDefaults {
-  const factory = createFactoryViewerSessionDefaults()
+export function seedViewerDefaultsFromPlan(
+  plan: FloorPlan,
+  floorIndex = 0,
+  options?: { floorOnly?: boolean; fallback?: ViewerSessionDefaults },
+): ViewerSessionDefaults {
+  const factory = options?.fallback ?? createFactoryViewerSessionDefaults()
   const floor = plan.floors[floorIndex] ?? plan.floors[0]
   const settingsWallHeight =
     typeof plan.source?.settings?.wallHeight === 'number' ? plan.source.settings.wallHeight : null
@@ -72,7 +83,8 @@ export function seedViewerDefaultsFromPlan(plan: FloorPlan, floorIndex = 0): Vie
   const bovenlichtHeights: number[] = []
   const bovenlichtGaps: number[] = []
 
-  for (const f of plan.floors) {
+  const floors = options?.floorOnly ? (floor ? [floor] : []) : plan.floors
+  for (const f of floors) {
     for (const wall of f.walls) {
       for (const opening of wall.openings) {
         if (opening.type === 'door') {

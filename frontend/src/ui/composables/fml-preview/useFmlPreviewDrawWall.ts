@@ -23,6 +23,7 @@ export function useFmlPreviewDrawWall(options: {
   resolvePoint: (cm: Point2D, axisAnchor?: Point2D) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
+  onPlaced?: () => void
 }) {
   const drawWallPreview = ref<{ a: Point2D; b: Point2D } | null>(null)
   const drafting = ref(false)
@@ -90,6 +91,7 @@ export function useFmlPreviewDrawWall(options: {
     }
     options.syncPlanToParent()
     cancelDrawWallDrag()
+    options.onPlaced?.()
     return true
   }
 

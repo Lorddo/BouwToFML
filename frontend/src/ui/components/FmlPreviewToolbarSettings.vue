@@ -3,7 +3,11 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
-import { isFmlToolbarSettingsOpen, type FmlToolId } from './canvas/fmlToolbeltItems'
+import {
+  isFmlOneshotDrawTool,
+  isFmlToolbarSettingsOpen,
+  type FmlToolId,
+} from './canvas/fmlToolbeltItems'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './canvas/canvas-toolbelt.css'
 import './fml-toolbelt-settings-fields.css'
@@ -12,6 +16,7 @@ import FmlPreviewToolbarSettingsOpening from './FmlPreviewToolbarSettingsOpening
 import FmlPreviewToolbarSettingsArea from './FmlPreviewToolbarSettingsArea.vue'
 import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
+import FmlPreviewToolbarSettingsDraw from './FmlPreviewToolbarSettingsDraw.vue'
 
 const { t } = useI18n()
 
@@ -22,6 +27,9 @@ const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { def
 const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 })
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
+const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
+const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
+const drawLabelText = defineModel<string>('drawLabelText', { default: 'Tekst' })
 
 const props = withDefaults(
   defineProps<{
@@ -112,6 +120,13 @@ const props = withDefaults(
     drawRoomDrafting?: boolean
     drawRoomMeasureHCm?: number
     drawRoomMeasureVCm?: number
+    drawLineDrafting?: boolean
+    drawSurfaceDrafting?: boolean
+    facadeGroupsEnabled?: boolean
+    facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
+    facadeGroupDraft?: string | null
+    facadeGroupMixed?: boolean
+    canSelectFacadeMembers?: boolean
   }>(),
   {
     thicknessMinCm: 10,
@@ -123,6 +138,13 @@ const props = withDefaults(
     drawRoomDrafting: false,
     drawRoomMeasureHCm: 0,
     drawRoomMeasureVCm: 0,
+    drawLineDrafting: false,
+    drawSurfaceDrafting: false,
+    facadeGroupsEnabled: false,
+    facadeGroupOptions: () => [],
+    facadeGroupDraft: '',
+    facadeGroupMixed: false,
+    canSelectFacadeMembers: false,
     selectedAreaPanel: null,
     selectedJunctionPanel: null,
     selectedLabelPanel: null,
@@ -161,6 +183,9 @@ const emit = defineEmits<{
   splitWall: []
   deleteWalls: []
   clearSelection: []
+  facadeGroupChange: [value: string]
+  facadeGroupRename: [name: string]
+  selectFacadeMembers: []
   clearMeasures: []
   applyRoomType: [role: number]
   areaCustomNameInput: [customName: string]
@@ -186,7 +211,19 @@ const emit = defineEmits<{
   drawRoomVInput: [cm: number | null]
   commitDrawRoomMeasure: []
   cancelDrawRoomDraft: []
+  acceptDrawDraft: []
+  deactivateDrawTool: []
 }>()
+
+const showDrawToolActions = computed(() => isFmlOneshotDrawTool(activeTool.value))
+
+const canAcceptDrawDraft = computed(
+  () =>
+    (activeTool.value === 'draw_wall' && props.drawWallDrafting === true) ||
+    (activeTool.value === 'draw_room' && props.drawRoomDrafting === true) ||
+    (activeTool.value === 'draw_line' && props.drawLineDrafting === true) ||
+    (activeTool.value === 'draw_surface' && props.drawSurfaceDrafting === true),
+)
 
 const isDrawWallOrRoom = computed(
   () => activeTool.value === 'draw_wall' || activeTool.value === 'draw_room',
@@ -243,8 +280,9 @@ const showDeselect = computed(
 <template>
   <template v-if="showSettings">
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
-    <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <!-- Order matches prior flat template metas: wall → opening → area → label -->
+    <div
+      class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml fml-toolbelt-settings-stack"
+    >
       <FmlPreviewToolbarSettingsWall
         v-if="showWallSettings"
         :selected-wall-panel="selectedWallPanel"
@@ -266,6 +304,11 @@ const showDeselect = computed(
         :draw-room-drafting="drawRoomDrafting"
         :draw-room-measure-h-cm="drawRoomMeasureHCm"
         :draw-room-measure-v-cm="drawRoomMeasureVCm"
+        :facade-groups-enabled="facadeGroupsEnabled"
+        :facade-group-options="facadeGroupOptions"
+        :facade-group-draft="facadeGroupDraft"
+        :facade-group-mixed="facadeGroupMixed"
+        :can-select-facade-members="canSelectFacadeMembers"
         @wall-thickness-input="emit('wallThicknessInput', $event)"
         @commit-wall-thickness="emit('commitWallThickness')"
         @apply-wall-thickness="emit('applyWallThickness', $event)"
@@ -277,6 +320,9 @@ const showDeselect = computed(
         @commit-junction-height="emit('commitJunctionHeight')"
         @split-wall="emit('splitWall')"
         @delete-walls="emit('deleteWalls')"
+        @facade-group-change="emit('facadeGroupChange', $event)"
+        @facade-group-rename="emit('facadeGroupRename', $event)"
+        @select-facade-members="emit('selectFacadeMembers')"
         @draw-wall-length-input="emit('drawWallLengthInput', $event)"
         @commit-draw-wall-measure="emit('commitDrawWallMeasure')"
         @cancel-draw-wall-draft="emit('cancelDrawWallDraft')"
@@ -284,93 +330,160 @@ const showDeselect = computed(
         @draw-room-v-input="emit('drawRoomVInput', $event)"
         @commit-draw-room-measure="emit('commitDrawRoomMeasure')"
         @cancel-draw-room-draft="emit('cancelDrawRoomDraft')"
-      />
-      <FmlPreviewToolbarSettingsOpening
-        v-if="showOpeningSettings"
-        v-model:add-door-subtype="addDoorSubtype"
-        v-model:add-door-width-cm="addDoorWidthCm"
-        v-model:add-window-subtype="addWindowSubtype"
-        v-model:add-window-width-cm="addWindowWidthCm"
-        v-model:add-window-sill-z-cm="addWindowSillZCm"
-        v-model:add-window-height-cm="addWindowHeightCm"
-        :selected-opening-panel="selectedOpeningPanel"
-        :active-tool="activeTool"
-        :opening-subtype-draft="openingSubtypeDraft"
-        :opening-subtype-mixed="openingSubtypeMixed"
-        :opening-width-draft="openingWidthDraft"
-        :opening-width-mixed="openingWidthMixed"
-        :opening-height-draft="openingHeightDraft"
-        :opening-height-mixed="openingHeightMixed"
-        :opening-sill-z-draft="openingSillZDraft"
-        :opening-sill-z-mixed="openingSillZMixed"
-        :opening-hinge-at-start-draft="openingHingeAtStartDraft"
-        :opening-hinge-mixed="openingHingeMixed"
-        :opening-swing-right-draft="openingSwingRightDraft"
-        :opening-swing-mixed="openingSwingMixed"
-        :opening-bovenlicht-draft="openingBovenlichtDraft"
-        :opening-bovenlicht-mixed="openingBovenlichtMixed"
-        :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
-        :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
-        :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
-        :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
-        @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
-        @opening-width-input="emit('openingWidthInput', $event)"
-        @commit-opening-width="emit('commitOpeningWidth')"
-        @opening-height-input="emit('openingHeightInput', $event)"
-        @commit-opening-height="emit('commitOpeningHeight')"
-        @opening-sill-z-input="emit('openingSillZInput', $event)"
-        @commit-opening-sill-z="emit('commitOpeningSillZ')"
-        @toggle-opening-hinge="emit('toggleOpeningHinge')"
-        @toggle-opening-swing="emit('toggleOpeningSwing')"
-        @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
-        @opening-bovenlicht-height-input="emit('openingBovenlichtHeightInput', $event)"
-        @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
-        @opening-bovenlicht-gap-input="emit('openingBovenlichtGapInput', $event)"
-        @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
-        @copy-opening="emit('copyOpening')"
-        @delete-openings="emit('deleteOpenings')"
-      />
-      <FmlPreviewToolbarSettingsArea
-        v-if="selectedAreaPanel"
-        :selected-area-panel="selectedAreaPanel"
-        :room-types="roomTypes"
-        :surface-edit-active="surfaceEditActive"
-        @apply-room-type="emit('applyRoomType', $event)"
-        @area-custom-name-input="emit('areaCustomNameInput', $event)"
-        @apply-area-custom-name="emit('applyAreaCustomName', $event)"
-        @apply-area-color="emit('applyAreaColor', $event)"
-        @delete-tagged="emit('deleteTagged')"
-        @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
-        @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
-      />
-      <FmlPreviewToolbarSettingsLabel
-        v-if="selectedLabelPanel"
-        :selected-label-panel="selectedLabelPanel"
-        @label-text-input="emit('labelTextInput', $event)"
-        @update-label-text="emit('updateLabelText', $event)"
-        @delete-annotation="emit('deleteAnnotation')"
-      />
-      <FmlPreviewToolbarSettingsItem
-        v-if="selectedItemPanel"
-        :selected-item-panel="selectedItemPanel"
-        @item-width-input="emit('itemWidthInput', $event)"
-        @item-height-input="emit('itemHeightInput', $event)"
-        @item-rotation-input="emit('itemRotationInput', $event)"
-        @toggle-item-mirror-x="emit('toggleItemMirrorX')"
-        @toggle-item-mirror-y="emit('toggleItemMirrorY')"
-        @copy-item="emit('copyItem')"
-        @delete-item="emit('deleteItem')"
-      />
-      <button
-        v-if="showDeselect"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.deselectTitle')"
-        :aria-label="t('result.toolbar.deselect')"
-        @click="emit('clearSelection')"
       >
-        <ToolbeltIcon name="clear" />
-      </button>
+        <template #trailing>
+          <button
+            v-if="showDeselect"
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.deselectTitle')"
+            :aria-label="t('result.toolbar.deselect')"
+            @click="emit('clearSelection')"
+          >
+            <ToolbeltIcon name="clear" />
+          </button>
+          <button
+            v-if="canAcceptDrawDraft"
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.acceptDrawDraft')"
+            :aria-label="t('result.toolbar.acceptDrawDraft')"
+            @click="emit('acceptDrawDraft')"
+          >
+            <ToolbeltIcon name="check" />
+          </button>
+          <button
+            v-if="showDrawToolActions"
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.deactivateDrawTool')"
+            :aria-label="t('result.toolbar.deactivateDrawTool')"
+            @click="emit('deactivateDrawTool')"
+          >
+            <ToolbeltIcon name="clear" />
+          </button>
+        </template>
+      </FmlPreviewToolbarSettingsWall>
+      <div v-if="!showWallSettings" class="fml-toolbelt__row fml-toolbelt__row--primary">
+        <FmlPreviewToolbarSettingsDraw
+          v-if="
+            activeTool === 'draw_surface' ||
+            activeTool === 'draw_line' ||
+            activeTool === 'draw_label'
+          "
+          v-model:draw-surface-role="drawSurfaceRole"
+          v-model:draw-line-thickness="drawLineThickness"
+          v-model:draw-label-text="drawLabelText"
+          :active-tool="activeTool"
+          :room-types="roomTypes"
+        />
+        <FmlPreviewToolbarSettingsOpening
+          v-if="showOpeningSettings"
+          v-model:add-door-subtype="addDoorSubtype"
+          v-model:add-door-width-cm="addDoorWidthCm"
+          v-model:add-window-subtype="addWindowSubtype"
+          v-model:add-window-width-cm="addWindowWidthCm"
+          v-model:add-window-sill-z-cm="addWindowSillZCm"
+          v-model:add-window-height-cm="addWindowHeightCm"
+          :selected-opening-panel="selectedOpeningPanel"
+          :active-tool="activeTool"
+          :opening-subtype-draft="openingSubtypeDraft"
+          :opening-subtype-mixed="openingSubtypeMixed"
+          :opening-width-draft="openingWidthDraft"
+          :opening-width-mixed="openingWidthMixed"
+          :opening-height-draft="openingHeightDraft"
+          :opening-height-mixed="openingHeightMixed"
+          :opening-sill-z-draft="openingSillZDraft"
+          :opening-sill-z-mixed="openingSillZMixed"
+          :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+          :opening-hinge-mixed="openingHingeMixed"
+          :opening-swing-right-draft="openingSwingRightDraft"
+          :opening-swing-mixed="openingSwingMixed"
+          :opening-bovenlicht-draft="openingBovenlichtDraft"
+          :opening-bovenlicht-mixed="openingBovenlichtMixed"
+          :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+          :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+          :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+          :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+          @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
+          @opening-width-input="emit('openingWidthInput', $event)"
+          @commit-opening-width="emit('commitOpeningWidth')"
+          @opening-height-input="emit('openingHeightInput', $event)"
+          @commit-opening-height="emit('commitOpeningHeight')"
+          @opening-sill-z-input="emit('openingSillZInput', $event)"
+          @commit-opening-sill-z="emit('commitOpeningSillZ')"
+          @toggle-opening-hinge="emit('toggleOpeningHinge')"
+          @toggle-opening-swing="emit('toggleOpeningSwing')"
+          @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
+          @opening-bovenlicht-height-input="emit('openingBovenlichtHeightInput', $event)"
+          @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
+          @opening-bovenlicht-gap-input="emit('openingBovenlichtGapInput', $event)"
+          @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+          @copy-opening="emit('copyOpening')"
+          @delete-openings="emit('deleteOpenings')"
+        />
+        <FmlPreviewToolbarSettingsArea
+          v-if="selectedAreaPanel"
+          :selected-area-panel="selectedAreaPanel"
+          :room-types="roomTypes"
+          :surface-edit-active="surfaceEditActive"
+          @apply-room-type="emit('applyRoomType', $event)"
+          @area-custom-name-input="emit('areaCustomNameInput', $event)"
+          @apply-area-custom-name="emit('applyAreaCustomName', $event)"
+          @apply-area-color="emit('applyAreaColor', $event)"
+          @delete-tagged="emit('deleteTagged')"
+          @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
+          @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+        />
+        <FmlPreviewToolbarSettingsLabel
+          v-if="selectedLabelPanel"
+          :selected-label-panel="selectedLabelPanel"
+          @label-text-input="emit('labelTextInput', $event)"
+          @update-label-text="emit('updateLabelText', $event)"
+          @delete-annotation="emit('deleteAnnotation')"
+        />
+        <FmlPreviewToolbarSettingsItem
+          v-if="selectedItemPanel"
+          :selected-item-panel="selectedItemPanel"
+          @item-width-input="emit('itemWidthInput', $event)"
+          @item-height-input="emit('itemHeightInput', $event)"
+          @item-rotation-input="emit('itemRotationInput', $event)"
+          @toggle-item-mirror-x="emit('toggleItemMirrorX')"
+          @toggle-item-mirror-y="emit('toggleItemMirrorY')"
+          @copy-item="emit('copyItem')"
+          @delete-item="emit('deleteItem')"
+        />
+        <button
+          v-if="showDeselect"
+          type="button"
+          class="canvas-toolbelt__btn"
+          :title="t('result.toolbar.deselectTitle')"
+          :aria-label="t('result.toolbar.deselect')"
+          @click="emit('clearSelection')"
+        >
+          <ToolbeltIcon name="clear" />
+        </button>
+        <button
+          v-if="canAcceptDrawDraft"
+          type="button"
+          class="canvas-toolbelt__btn"
+          :title="t('result.toolbar.acceptDrawDraft')"
+          :aria-label="t('result.toolbar.acceptDrawDraft')"
+          @click="emit('acceptDrawDraft')"
+        >
+          <ToolbeltIcon name="check" />
+        </button>
+        <button
+          v-if="showDrawToolActions"
+          type="button"
+          class="canvas-toolbelt__btn"
+          :title="t('result.toolbar.deactivateDrawTool')"
+          :aria-label="t('result.toolbar.deactivateDrawTool')"
+          @click="emit('deactivateDrawTool')"
+        >
+          <ToolbeltIcon name="clear" />
+        </button>
+      </div>
     </div>
   </template>
 

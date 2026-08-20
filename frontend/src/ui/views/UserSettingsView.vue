@@ -215,6 +215,8 @@ function onResetFactory() {
     const saved = saveUserSettings({
       ...current,
       locale: factory.locale,
+      scaleInputUnit: factory.scaleInputUnit,
+      defaults: { ...factory.defaults },
       roomTagColors: {},
       fmlViewer: {
         ...current.fmlViewer,
@@ -315,7 +317,7 @@ onBeforeUnmount(() => {
       </label>
     </section>
 
-    <section v-if="!isViewer" class="panel settings-section">
+    <section class="panel settings-section">
       <h3>{{ t('settings.scaleUnit') }}</h3>
       <p class="hint">{{ t('settings.scaleUnitHint') }}</p>
       <label class="field compact">
@@ -328,7 +330,7 @@ onBeforeUnmount(() => {
       </label>
     </section>
 
-    <section v-if="!isViewer" class="panel settings-section">
+    <section class="panel settings-section">
       <h3>{{ t('settings.heights') }}</h3>
       <div class="defaults-grid">
         <label class="field compact">
@@ -426,7 +428,7 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <section v-if="!isViewer" class="panel settings-section">
+    <section class="panel settings-section">
       <h3>{{ t('settings.thicknesses') }}</h3>
       <p class="hint">{{ t('settings.thicknessHint') }}</p>
       <div class="defaults-grid">

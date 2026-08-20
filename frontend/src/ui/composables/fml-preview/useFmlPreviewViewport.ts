@@ -1,7 +1,17 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
 
 const CONTENT_PADDING = 24
+/** Leeg plan zonder onderlegger: tekenwereld zodat 1 cm ≠ 1 stage-px. */
+const EMPTY_WORLD_SPAN_X = 2000
+const EMPTY_WORLD_SPAN_Y = 1500
+
+export type ExtraContentBounds = {
+  minX: number
+  minY: number
+  spanX: number
+  spanY: number
+}
 
 export interface ContentLayout {
   minX: number
@@ -52,10 +62,24 @@ export function layoutTransform(layout: ContentLayout) {
   }
 }
 
+function mergeBounds(
+  a: ExtraContentBounds | null,
+  b: ExtraContentBounds | null,
+): ExtraContentBounds | null {
+  if (!a) return b
+  if (!b) return a
+  const minX = Math.min(a.minX, b.minX)
+  const minY = Math.min(a.minY, b.minY)
+  const maxX = Math.max(a.minX + a.spanX, b.minX + b.spanX)
+  const maxY = Math.max(a.minY + a.spanY, b.minY + b.spanY)
+  return { minX, minY, spanX: Math.max(1, maxX - minX), spanY: Math.max(1, maxY - minY) }
+}
+
 export function useFmlPreviewViewport(
   containerRef: Ref<HTMLDivElement | null>,
   walls: Ref<Wall[]>,
   items: Ref<FloorItem[]> = ref([]),
+  extraBounds: Ref<ExtraContentBounds | null> = ref(null),
 ) {
   const stageSize = ref({ width: 960, height: 640 })
   const viewScale = ref(1)
@@ -64,9 +88,23 @@ export function useFmlPreviewViewport(
 
   let resizeObserver: ResizeObserver | null = null
 
-  function buildContentLayout(wallList: Wall[], itemList: FloorItem[]): ContentLayout | null {
-    if (wallList.length === 0) return null
-    const { minX, minY, spanX, spanY } = contentBounds(wallList, itemList)
+  function resolveBounds(wallList: Wall[], itemList: FloorItem[]): ExtraContentBounds {
+    const extra = extraBounds.value
+    const extraOk = extra && extra.spanX > 0 && extra.spanY > 0 ? extra : null
+    const hasGeom = wallList.length > 0 || itemList.length > 0
+    const geom = hasGeom ? contentBounds(wallList, itemList) : null
+    return (
+      mergeBounds(geom, extraOk) ?? {
+        minX: 0,
+        minY: 0,
+        spanX: EMPTY_WORLD_SPAN_X,
+        spanY: EMPTY_WORLD_SPAN_Y,
+      }
+    )
+  }
+
+  function buildContentLayout(wallList: Wall[], itemList: FloorItem[]): ContentLayout {
+    const { minX, minY, spanX, spanY } = resolveBounds(wallList, itemList)
     const availableW = Math.max(1, stageSize.value.width - CONTENT_PADDING * 2)
     const availableH = Math.max(1, stageSize.value.height - CONTENT_PADDING * 2)
     const scale = Math.min(availableW / spanX, availableH / spanY)
@@ -105,10 +143,6 @@ export function useFmlPreviewViewport(
   }
 
   function ensureContentLayout(): void {
-    if (walls.value.length === 0) {
-      contentLayout.value = null
-      return
-    }
     if (!contentLayout.value) refitContentLayout()
   }
 
@@ -121,7 +155,7 @@ export function useFmlPreviewViewport(
     stageSize.value = { width, height }
     // Alleen herfitten bij echte container-resize of ontbrekende layout —
     // niet bij elke ResizeObserver-callback na muur-edit (dat voelt als uitzoomen).
-    if (walls.value.length > 0 && (sizeChanged || !contentLayout.value)) {
+    if (sizeChanged || !contentLayout.value) {
       refitContentLayout()
     }
   }
@@ -141,6 +175,13 @@ export function useFmlPreviewViewport(
       }
     }
     return layoutTransform(layout)
+  })
+
+  watch(extraBounds, (next, prev) => {
+    if (walls.value.length > 0) return
+    if (!next || next.spanX <= 0 || next.spanY <= 0) return
+    const appeared = !prev || prev.spanX <= 0 || prev.spanY <= 0
+    if (appeared) resetView()
   })
 
   function mountResizeObserver(): void {

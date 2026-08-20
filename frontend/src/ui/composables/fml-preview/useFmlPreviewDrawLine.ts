@@ -20,6 +20,7 @@ export function useFmlPreviewDrawLine(options: {
 }) {
   const draftPoints = options.selection.drawLinePoints
   const hoverCm = ref<Point2D | null>(null)
+  const thickness = ref(2)
 
   function cancelDrawLine(): void {
     draftPoints.value = null
@@ -56,6 +57,28 @@ export function useFmlPreviewDrawLine(options: {
     hoverCm.value = null
   }
 
+  function placeLine(end: Point2D): boolean {
+    const pts = draftPoints.value
+    if (!pts || pts.length === 0) return false
+    const a = pts[0]
+    if (Math.hypot(end.x - a.x, end.y - a.y) < 1) return false
+    options.editor.pushUndo()
+    const id = options.editor.addLine({
+      a,
+      b: end,
+      type: 'solid_line',
+      color: 0,
+      thickness: Math.max(1, Math.round(thickness.value)),
+    })
+    draftPoints.value = null
+    hoverCm.value = null
+    options.selection.settingsLineId.value = id
+    options.selection.settingsLabelId.value = null
+    options.selection.activeFmlTool.value = null
+    options.syncPlanToParent()
+    return true
+  }
+
   function onDrawLineClick(event: MouseEvent): void {
     const locked = resolveClick(event)
     if (!locked) return
@@ -65,22 +88,13 @@ export function useFmlPreviewDrawLine(options: {
       hoverCm.value = locked
       return
     }
-    const a = draftPoints.value[0]
-    if (Math.hypot(locked.x - a.x, locked.y - a.y) < 1) return
-    options.editor.pushUndo()
-    const id = options.editor.addLine({
-      a,
-      b: locked,
-      type: 'solid_line',
-      color: 0,
-      thickness: 2,
-    })
-    draftPoints.value = null
-    hoverCm.value = null
-    options.selection.settingsLineId.value = id
-    options.selection.settingsLabelId.value = null
-    options.selection.activeFmlTool.value = null
-    options.syncPlanToParent()
+    placeLine(locked)
+  }
+
+  function commitFromHover(): boolean {
+    const end = hoverCm.value
+    if (!end) return false
+    return placeLine(end)
   }
 
   return {
@@ -88,6 +102,8 @@ export function useFmlPreviewDrawLine(options: {
     onDrawLineClick,
     updateDrawLineHover,
     clearDrawLineHover,
+    commitFromHover,
     hoverCm,
+    thickness,
   }
 }

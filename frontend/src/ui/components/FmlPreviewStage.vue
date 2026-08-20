@@ -39,21 +39,23 @@ withDefaults(
     cornerMarkers?: RenderCornerMarker[]
     renderModel: RenderModel
     underlayConfig: {
-      image: HTMLImageElement
-      x: number
-      y: number
-      width: number
-      height: number
-      opacity: number
-      listening: boolean
-      offsetX?: number
-      offsetY?: number
-      rotation?: number
+      flip: { x: number; y: number; scaleX: number; listening: boolean }
+      rotate: { x: number; y: number; rotation: number; listening: boolean }
+      image: {
+        image: HTMLImageElement
+        x: number
+        y: number
+        width: number
+        height: number
+        opacity: number
+        listening: boolean
+      }
     } | null
     /** 0–1; FML-geometrie opacity. */
     contentOpacity: number
     moveWallPolygon: RenderWallPolygon | null
     settingsWallPolygons: RenderWallPolygon[]
+    facadeWallPolygons?: RenderWallPolygon[]
     inspectWallPolygons: Array<RenderWallPolygon & { fill: string }>
     settingsWallIds: string[]
     moveWallId: string | null
@@ -183,7 +185,11 @@ onBeforeUnmount(unbindGroupDrag)
             listening: false,
           }"
         />
-        <v-image v-if="underlayConfig" :config="underlayConfig" />
+        <v-group v-if="underlayConfig" :config="underlayConfig.flip">
+          <v-group :config="underlayConfig.rotate">
+            <v-image :config="underlayConfig.image" />
+          </v-group>
+        </v-group>
         <v-group :config="{ opacity: contentOpacity, listening: true }">
           <!-- Z-order: area → surface → object → tekst. Meubels blijven onder muurfill. -->
           <FmlPreviewStageAreas
@@ -229,6 +235,7 @@ onBeforeUnmount(unbindGroupDrag)
             :render-model="renderModel"
             :move-wall-polygon="moveWallPolygon"
             :settings-wall-polygons="settingsWallPolygons"
+            :facade-wall-polygons="facadeWallPolygons"
             :inspect-wall-polygons="inspectWallPolygons"
             :settings-wall-ids="settingsWallIds"
             :move-wall-id="moveWallId"

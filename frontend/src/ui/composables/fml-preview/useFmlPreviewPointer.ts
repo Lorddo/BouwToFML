@@ -3,6 +3,11 @@ import type { Point2D } from '@/core/fml/types'
 import type { ItemResizeSide } from './item-resize-handles'
 import { FML_PREVIEW_CHROME_SELECTOR } from './fml-preview-gestures'
 import { isSettingsMod, wantsRelocate } from './fml-preview-mods'
+import {
+  allowsFmlStickyHit,
+  resolveFmlStickySelectKind,
+  type FmlStickySelectKind,
+} from './fml-preview-sticky-select'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { HitTestApi } from './fml-preview-hit-test-api'
 import type { RenderJunction } from './fml-preview-render-types'
@@ -163,6 +168,18 @@ export function useFmlPreviewPointer(options: {
     return 'default'
   })
 
+  function currentStickyKind(): FmlStickySelectKind | null {
+    return resolveFmlStickySelectKind({
+      hasWall: settingsWallIds.value.length > 0 || moveWallId.value != null,
+      hasJunction: selection.settingsJunctionId.value != null || pinnedJunctionId.value != null,
+      hasOpening: settingsOpeningIds.value.length > 0 || moveOpeningId.value != null,
+      hasItem: settingsItemId.value != null || moveItemId.value != null,
+      hasAnnotation:
+        selection.settingsLabelId.value != null || selection.settingsLineId.value != null,
+      hasArea: selection.settingsAreaId.value != null || selection.settingsSurfaceId.value != null,
+    })
+  }
+
   function onWrapPointerDown(event: MouseEvent): void {
     if (event.button !== 0) return
     const target = event.target as HTMLElement
@@ -266,6 +283,9 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
+    const allowHit = (hit: FmlStickySelectKind): boolean =>
+      allowsFmlStickyHit(currentStickyKind(), hit)
+
     if (settingsItemId.value) {
       const side = actions.hitItemResizeHandle(cm)
       if (side) {
@@ -275,7 +295,7 @@ export function useFmlPreviewPointer(options: {
     }
 
     const junction = hitTest.hitTestJunctionAtCm(cm)
-    if (junction) {
+    if (junction && allowHit('wall')) {
       if (isSettingsMod(event, modes.settingsMod.value)) {
         actions.toggleSettingsJunction(junction.id)
         return
@@ -300,7 +320,7 @@ export function useFmlPreviewPointer(options: {
     }
 
     const openingId = hitTest.hitTestOpeningAtCm(cm)
-    if (openingId) {
+    if (openingId && allowHit('opening')) {
       if (isSettingsMod(event, modes.settingsMod.value)) {
         actions.toggleSettingsOpening(openingId)
         return
@@ -330,7 +350,7 @@ export function useFmlPreviewPointer(options: {
     }
 
     const itemId = hitTest.hitTestItemAtCm(cm)
-    if (itemId) {
+    if (itemId && allowHit('item')) {
       if (isSettingsMod(event, modes.settingsMod.value)) {
         actions.toggleSettingsItem(itemId)
         return
@@ -360,6 +380,7 @@ export function useFmlPreviewPointer(options: {
     if (
       modes.annotationEditEnabled.value &&
       labelId &&
+      allowHit('annotation') &&
       isSettingsMod(event, modes.settingsMod.value)
     ) {
       actions.toggleSettingsLabel(labelId)
@@ -370,6 +391,7 @@ export function useFmlPreviewPointer(options: {
     if (
       modes.annotationEditEnabled.value &&
       lineId &&
+      allowHit('annotation') &&
       isSettingsMod(event, modes.settingsMod.value)
     ) {
       actions.toggleSettingsLine(lineId)
@@ -380,6 +402,7 @@ export function useFmlPreviewPointer(options: {
     if (
       modes.areaSurfaceEditEnabled.value &&
       surfaceId &&
+      allowHit('area') &&
       isSettingsMod(event, modes.settingsMod.value)
     ) {
       actions.toggleSettingsSurface(surfaceId)
@@ -390,6 +413,7 @@ export function useFmlPreviewPointer(options: {
     if (
       modes.areaSurfaceEditEnabled.value &&
       areaId &&
+      allowHit('area') &&
       isSettingsMod(event, modes.settingsMod.value)
     ) {
       actions.toggleSettingsArea(areaId)
@@ -412,6 +436,8 @@ export function useFmlPreviewPointer(options: {
       hoveredOpeningId.value = null
       return
     }
+
+    if (!allowHit('wall')) return
 
     if (isSettingsMod(event, modes.settingsMod.value)) {
       actions.toggleSettingsWall(wallId, cm)
@@ -437,6 +463,8 @@ export function useFmlPreviewPointer(options: {
   }
 
   function onWrapPointerMove(event: MouseEvent): void {
+    const moveTarget = event.target as HTMLElement | null
+    if (moveTarget?.closest(FML_PREVIEW_CHROME_SELECTOR)) return
     if (
       drag.draggingWall.value ||
       drag.draggingJunction.value ||
@@ -484,12 +512,14 @@ export function useFmlPreviewPointer(options: {
       if (!e) return
       const cm = hitTest.clientToCm(e.clientX, e.clientY)
       if (!cm) return
+      const allowHover = (hit: FmlStickySelectKind): boolean =>
+        allowsFmlStickyHit(currentStickyKind(), hit)
       const junction = hitTest.hitTestJunctionAtCm(cm)
-      hoveredJunctionId.value = junction?.id ?? null
+      hoveredJunctionId.value = junction && allowHover('wall') ? junction.id : null
       const doorId = hitTest.hitTestOpeningAtCm(cm)
-      hoveredOpeningId.value = doorId
+      hoveredOpeningId.value = doorId && allowHover('opening') ? doorId : null
       hoveredItemId.value = null
-      hoveredWallId.value = doorId ? null : hitTest.hitTestWallAtCm(cm)
+      hoveredWallId.value = hoveredOpeningId.value != null ? null : hitTest.hitTestWallAtCm(cm)
     })
   }
 

@@ -5,15 +5,55 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-19 (click-move-click tekenen)
+Laatste update: 2026-08-20 (FML fixture-dock CSS)
+
+## FML chrome-dialogs (2026-08-20)
+
+Native `confirm`/`prompt` → FML-kaart (help-modal stijl). Oil-bottle, hoogte-overschrijven, gevelnaam. Host in App + embed-editor; Esc/Enter; zonder host native fallback.
+
+## FML fixture-bibliotheek linksonder (2026-08-20)
+
+Dock in `FmlPreviewCanvas` ná de stage, niet in midden-settings. Scoped `@import` van `:root`-tokens matcht nooit → `left`/`bottom`/`z-index` waren ongeldig → bibliotheek achter Konva. Nu hardcoded px + z-index 24 (toolbelt is 20). add_fixture opent geen center-kaart.
+
+## FML gevelgroepen (2026-08-20)
+
+`plan.source.settings.facadeGroups`: `{ id:G1, code, name, wallGuids }` project-breed. **Max één groep per muur** (assign + first-wins). Editor-muursettings + inspect-dropdown; capability editor+inspect (niet detection). Prune bij openen; undo in editor; muur-wissen = detach. Tik inspect → alle leden op floor (`hit.ids`). Remap bij hand-split, Opschonen én junction-pass (upload/download): alleen host-helften (zelfde as); T-tak blijft buiten. Geen GUID-suffix / wall-extra.
+
+## FML T-junction + hartlijn-snap (2026-08-20)
+
+`materializeWallJunctions`: T (eind op hartlijn) + X (interior-kruis); eerste helft houdt `id`, tweede `split-host-`; remaps voor gevelgroepen. In `sanitizeFmlWalls` ná weld/ortho, vóór cover (cover-splits ook remapped). Import + viewer-download: junction-pass + facade remap/prune. Muur-teken: hartlijn 15 cm + T-split op a/b.
+
+## FML-editor chrome + onderlegger pivot (2026-08-20)
+
+Onderlegger: draai om midden; spiegel over linker rand (rotatie blijft). Project: «FML kiezen». Fold FML → Plattegrond/Floorplan; hoogtes/bovenlicht alleen per verdieping (geen project-wide). Canvas-topbar (undo/redo/fit/fs/zoom) editor-desktop + inspect. Verdiepingenbalk `+`.
+
+## Leeg-plan onderlegger fit + vrije rotatie (2026-08-19)
+
+Viewport fitte alleen op muren → upload op leeg plan: geen/tiny underlay in de hoek. Nu: content-layout uit underlay-AABB (`underlayContentBoundsCm`) of 2000×1500 cm-wereld; canvas rendert zonder muren. Onderlegger: slider+veld −180…180° i.p.v. 90° CW/CCW (spiegel + verplaats blijven).
+
+## FML-viewer teken-start (2026-08-19)
+
+`/FML-editor`: Nieuw plan (leeg + Begane grond), projectnaam, floor add/rename/remove. PNG/JPG-onderlegger + H/V-linialen stretchen alleen `drawing` (geen workspace-image, geen muur-rescale). Header «Nieuwe tekening» reset de viewer. Settings-variant toont hoogtes/diktes/schaal-eenheid; nieuwe muren uit mid-dikte.
+
+## FML selectie sticky + touch-pan (2026-08-19)
+
+Mobiel: tik pas op pointerup; 2-vinger/sloppy 1-vinger deselecteert niet (1-vinger-slop = pan). ✕ in settings blijft wissen. Alle devices: selectie plakt op soort (muur/opening/item); wisselen = leeg/area of ✕. Helpers `fml-preview-sticky-select.ts` + `fml-preview-touch-tap.ts`.
+
+## FML teken-menu cancel + input-lek (2026-08-19)
+
+✕ op alle oneshot-tools (muur/kamer/polygoon/lijn/tekst/deur/raam/fixture). Polygoon = kamertype; lijn = dikte; tekst = veld. Mobiel: chrome-mousemove stopt draft-hover (maatveld sprong naar invoer). Esc blijft tool uit.
+
+## FML teken-tool Esc + accept (2026-08-19)
+
+Esc (ook in invoerveld) + ✕ zetten oneshot-tools uit zonder startpunt. ✓ accepteert huidige draft (muur/kamer/lijn/polygoon). Na plaatsen tool uit. Mobiel: select/maat/maten/nulpunt naar linker rail.
 
 ## FML click-move-click tekenen (2026-08-19)
 
-Muur/kamer: klik → verplaats → klik (geen hold-drag). Draft-maatbalk in meters (override + Enter); kamer H/V. Helpers `fml-preview-draw-measure.ts`. Snap/Shift/Esc/dikte ongewijzigd. Workspace + viewer.
+Muur/kamer: klik → verplaats → klik (geen hold-drag). Draft-maatbalk in meters (override + Enter); kamer H/V. Helpers `fml-preview-draw-measure.ts`. Esc = tool uit. Workspace + viewer.
 
 ## FML wall sanitize (2026-08-19)
 
-`sanitizeFmlWalls`: weld 0,25 cm + near-ortho + cover (as ≤0,5 cm). Auto alleen generate. Knop «Opschonen» naast Herschalen. Balance keep-axis; geen import-auto, geen wall-add.
+`sanitizeFmlWalls`: weld 0,25 cm + near-ortho + T/X + cover (as ≤0,5 cm). Auto alleen generate + knop «Opschonen». Import/download: alleen junction-pass. Muur-teken: hartlijn 15 cm + T op a/b.
 
 ## FML-viewer mobile chrome (2026-08-19)
 
@@ -344,11 +384,21 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 ## Huidige focus
 
-**FML click-move-click tekenen (2026-08-19).** Muur/kamer: klik-move-klik + overschrijfbare maatbalk (m). Gereed voor UI-smoke.
+**FML chrome-dialogs (2026-08-20).** Native confirm/prompt → FML-kaart. Oil-bottle, hoogte-overschrijven, gevelnaam. Gereed voor UI-smoke: FML met fles → kaart i.p.v. browser; Floorplan-hoogte wijzigen → bevestigingskaart; Nieuwe gevelgroep → naamveld.
+
+**FML gevelgroepen (2026-08-20).** `settings.facadeGroups` project-breed; max 1 groep/muur; editor + inspect; prune bij openen; remap bij hand-split + Opschonen + junction upload/download (host-helften, niet T-tak).
+
+**FML T-junction + hartlijn-snap (2026-08-20).** Tekenen: hartlijn 15 cm + T-split. Sanitize (knop/generate) krijgt T/X. Import + viewer-download alleen junction-pass. Gereed voor UI-smoke: Geveltest-doos + binnenmuur west→oost → oost/west geknipt, oude gevel-id blijft; download zonder extra FP-GUIDs.
+
+**FML-editor chrome + onderlegger pivot (2026-08-20).** Draai om midden / spiegel over linkerrand; Choose FML in Project; Floorplan-hoogtes per vloer; topbar editor-desktop + inspect; rail `+`. Gereed voor UI-smoke: upload onderlegger → draaien (center) → spiegel → Project FML kiezen → Floorplan hoogtes deze vloer → `+` verdieping → inspect topbar.
+
+**FML-viewer teken-start (2026-08-19).** Leeg plan + naam + verdiepingen + onderlegger-stretch. Leeg-plan upload fittet nu op canvas; vrije rotatie (één veld).
+
+**FML selectie sticky + touch-pan (2026-08-19).** Mobiel: pan/zoom deselecteert niet; 1-vinger-slop = pan. Type blijft vast tot leeg/area of ✕. Gereed voor UI-smoke.
 
 **FML-viewer project-spiegel (2026-08-19).** «Project spiegelen» als eigen rij in linker menu (naast Herschalen/Opschonen); niet in de Oriënteren-fold. Zelfde X-flip alle floors om nulpunt. Workspace blijft achter `FML_ORIENT_CONTROLS_VISIBLE`.
 
-**FML wall sanitize (2026-08-19).** `sanitizeFmlWalls` = weld 0,25 cm + near-ortho + collinear cover (hartlijn ≤0,5 cm). Auto alleen bij generate (`harmonizeFmlWallThickness`). Openen ongewijzigd; knop «Opschonen» naast Herschalen (undo). Geen wall-add; geen `alignWallJunctionBalance` (balance blijft).
+**FML wall sanitize (2026-08-19, T/X 08-20).** Weld + ortho + T/X + cover. Auto generate + knop. Import/download: alleen junction-pass. Muur-add T-split. Geen `alignWallJunctionBalance`.
 
 **FML-viewer fixtures (2026-08-19).** Plaats 1× daarna ontwapenen; bibliotheek-klik plaatst niet. Settings: spiegel H/V, 90°, kopie/wis als iconen; kaderpijlen bij selectie.
 
@@ -356,7 +406,7 @@ Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) =
 
 **FML-hoekmarkers (2026-08-19).** Setting Uit / 90° / niet-90° (default `skew` = `!`). `_` of `!` per binnenhoek (L/T/X), in de sector. ε 0,1 cm H/V.
 
-**Settings converter vs viewer (2026-08-19).** Zelfde `UserSettingsV1`; UI-variant. Converter: taal + schaal + hoogtes/diktes + merge + opacities. Viewer (`/FML-editor`): taal + kamer-kleuren + hoektekens (ook als workspace-flag uit). Tandwiel togglet open/dicht en slaat altijd op; Annuleren gooit draft weg. Viewer-fabrieksreset: locale + kleuren + hoektekens.
+**Settings converter vs viewer (2026-08-19).** Zelfde `UserSettingsV1`; UI-variant. Converter: taal + schaal + hoogtes/diktes + merge + opacities. Viewer (`/FML-editor`): taal + schaal-eenheid + hoogtes/diktes + kamer-kleuren + hoektekens. Tandwiel slaat op; Annuleren gooit draft weg. Viewer-fabrieksreset: locale + defaults + kleuren + hoektekens.
 
 **FML-editor touch (2026-08-19).** Alleen `/FML-editor` (`touchEditor`). Desktop-PC: gewone muis (hover + knopen); Set/H/V/Move + touch-nav alleen bij `pointer: coarse`. Move = punten/openingen/fixtures verslepen; Settings is al multi-select. 1 vinger tik/edit, 2 vingers pan, pinch zoom. Fixture-palette + inspect items. Redo (Ctrl+Y) ook in workspace. Extra soft wachtwoord `J0rd!`. Workspace-hosts ongemoeid.
 
@@ -536,9 +586,17 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 ## Recente besluiten (samenvatting)
 
+- **2026-08-20** — FML chrome-dialogs: geen `window.confirm`/`prompt`; zelfde kaart als help-modal voor oil-bottle, hoogte-overwrite en gevelnaam.
+- **2026-08-20** — FML gevelgroepen: max 1 groep/muur; remap bij Opschonen + junction-pass (host-helften); hand-split ongewijzigd.
+- **2026-08-20** — FML T/X in sanitize; import + viewer-download alleen junction-pass; muur-hartlijn 15 cm + T-split bij tekenen. Geen volle sanitize-auto bij openen.
+- **2026-08-20** — FML-editor: onderlegger-rotatie om center + spiegel over linker rand; Project krijgt Choose FML; FML-fold = Floorplan; hoogtes/bovenlicht alleen per verdieping (geen project-wide); canvas-topbar ook desktop + inspect; verdiepingenbalk `+`.
+- **2026-08-19** — FML-viewer teken-start: leeg plan + projectnaam + floor CRUD; PNG/JPG-onderlegger stretchen via stap-1-linialen (geen workspace-image); settings-variant krijgt hoogtes/diktes/schaal-eenheid.
+- **2026-08-19** — FML-selectie: sticky per soort (muur/opening/item); wisselen = leeg/area of ✕. Mobiel: tik uitstellen tot geen pan/zoom; 1-vinger-slop = pan (selectie blijft).
+- **2026-08-19** — Teken-menu’s: ✕ op deur/raam/fixture/polygoon/lijn/tekst; polygoon=kamertype, lijn=dikte, tekst=veld. Mobiel: maatveld-tap lekt niet meer naar draft-hover.
+- **2026-08-19** — Teken-tool: Esc/✕ uit zonder startpunt (ook in invoerveld); ✓ accepteert draft; na plaatsen uit. Mobiel: select/maat/maten/nulpunt op linker rail.
 - **2026-08-19** — FML muur/kamer click-move-click + maatbalk (meters, typ + Enter); hold-drag weg. Zelfde composables workspace + viewer.
 - **2026-08-19** — FML-viewer «Project spiegelen»: eigen rij in linker menu (naast Herschalen/Opschonen); niet in Oriënteren-fold. Workspace blijft achter `FML_ORIENT_CONTROLS_VISIBLE`.
-- **2026-08-19** — FML wall sanitize: auto alleen generate; knop bij openen/edits. Weld + orthogonalize + cover; keep-axis balance. Geen import-auto, geen wall-add.
+- **2026-08-19** — FML wall sanitize: auto alleen generate + knop. Weld + ortho + T/X + cover; keep-axis. Import/download = alleen junction-pass.
 - **2026-08-19** — FML-viewer mobile: floating onderbalk + settings-kaart + sidebar-kaart (`safe-area`); tool/rail/menu-iconen; fullscreen verbergt header + floor-rail (`100dvh`). Workspace ongemoeid.
 - **2026-08-19** — Instellingen-UI: converter vs viewer (`UserSettingsView` variant). Merge bij converter (stap-4 generate); kamer-kleuren + hoektekens bij losse viewer. Tandwiel sluit en slaat op; Annuleren gooit draft weg.
 - **2026-08-19** — FML-hoekmarkers: `off`/`square`/`skew` (default `skew`). Binnenhoek-sectoren L/T/X; H/V ε 0,1 cm; overlay in de hoek; geen export.

@@ -7,6 +7,8 @@ export interface FmlInspectHit {
   floorIndex: number
   /** Alleen deur/raam. */
   wallId?: string
+  /** Gevel: wall-guids op deze floor die bij dezelfde groep horen. */
+  ids?: string[]
 }
 
 export const INSPECT_COLOR_OPEN = '#f59e0b'

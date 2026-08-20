@@ -5,7 +5,8 @@ import {
   WORKSPACE_TEMPLATE_LAYER_ORDER,
 } from '@/cv/workspace/layer-flow'
 
-export type WorkspaceFlowStep = 'project' | 'input' | 'preprocess' | 'templates' | 'result'
+export type { WorkspaceFlowStep } from '@/ui/composables/project/types'
+import type { WorkspaceFlowStep } from '@/ui/composables/project/types'
 
 /** Debounce voor live B/W-preview bij tune-wijzigingen in stap 2. */
 export const PREPROCESS_PREVIEW_DEBOUNCE_MS = 220

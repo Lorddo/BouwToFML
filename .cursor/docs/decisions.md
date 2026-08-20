@@ -485,17 +485,64 @@ houden; de viewer-union verbergt dat, Floorplanner niet. Fix in cm, ná thicknes
 
 ---
 
-## FML wall sanitize (2026-08-19)
+## FML wall sanitize (2026-08-19, T/X 2026-08-20)
 
-Near-90° restjitter + muur-onder-muur in cm, ná thickness/balance. Markers blijven QA (ε 0,1 cm).
+Near-90° restjitter + T/X-junctions + muur-onder-muur in cm, ná thickness/balance. Markers blijven QA (ε 0,1 cm).
 
 | Beslissing | Detail |
 |------------|--------|
-| Helper | `sanitizeFmlWalls` = weld 0,25 cm → `orthogonalizeNearAxisWalls` → collinear cover (as ≤0,5 cm) |
-| Auto | Alleen generate: eind `harmonizeFmlWallThickness` (i.p.v. solo orthogonalize) |
-| Handmatig | Knop «Opschonen» naast Herschalen (workspace + viewer); undo; areas regen |
-| Niet | Auto bij FML-openen; niet bij wall-add; geen `alignWallJunctionBalance` (import-balance blijft) |
+| Helper | `sanitizeFmlWalls` = weld 0,25 cm → `orthogonalizeNearAxisWalls` → `materializeWallJunctions` (T+X) → collinear cover (as ≤0,5 cm) |
+| T/X | T = eindpunt op binnenste hartlijn; X = interior-kruising. Eerste helft houdt oude `id`; tweede `split-host-` + 8 hex. ε = param 1e-4 / 0,25 cm; **geen** 4 cm min-segment. Openingen via wereldmiddelpunt; exact op knip = één helft |
+| Auto (vol) | Alleen generate + knop «Opschonen»: volle weld/ortho/T-X/cover |
+| Import / viewer-download | Alleen junction-pass (`applyJunctionSanitizeToPlan`); niet volle sanitize. Download schrijft live plan terug (editor = bestand). Niet in `buildFmlV3` |
+| Muur-teken | Hartlijn-snap 15 cm (`JUNCTION_POINT_SNAP_CM`) ná knoop-snap; `addWallSegment` T-split op a/b. Kamer blijft 4 cm |
+| Niet | Volle sanitize automatisch bij openen; geen auto-gevel uit contour; geen `alignWallJunctionBalance` (import-balance blijft) |
 | Balance | Keep-axis: overlever houdt `balance`/`thickness`/`extras`; split-stukken erven |
+| Gevelgroepen | Editor-split remapt via `remapFacadeGroupWallIds`; download junction-pass remapt (nog) niet — T-split-PR hangt die hook |
+
+---
+
+## FML gevelgroepen (2026-08-20)
+
+Project-brede EPA-gevels zonder GUID-suffix of wall-extras (Floorplanner stript die bij floor-rewrite).
+
+| Beslissing | Detail |
+|------------|--------|
+| Store | Alleen `plan.source.settings.facadeGroups[]`: `{ id, code, name, wallGuids }` |
+| Scope | Project-breed (alle floors); **één muur max één groep** (assign verplaatst; list/write first-wins bij corrupt) |
+| Id | Stabiel `G1`, `G2`, …; `code` vrij (VG/AG), default = id; `name` verplicht |
+| Lege groep | Auto-delete na detach / prune / assign-weg; geen aparte delete-knop |
+| Prune | Bij FML-openen (viewer + workspace-import); niet elke tick |
+| UI | `/FML-editor` muursettings + inspect-panel; workspace stap-4 **niet** |
+| Canvas | Overige leden op actieve floor licht meemarkeren; inspect-tik selecteert alle leden op die floor (`FmlInspectHit.ids`) |
+| Split-remap | Handmatige split, **Opschonen** (`sanitizeFmlWallsDetailed`) en **junction-pass** (upload/download): host → `[blijver, split-id]`; uitstekende T-tak niet |
+| Niet | GUID-suffix; `facadeGroupId` op muur; auto-contour; scores in FML |
+
+---
+
+## FML chrome-dialogs (2026-08-20)
+
+Native `window.confirm` / `window.prompt` (browser-chrome) vervangen door dezelfde kaartstijl als de editor-help.
+
+| Beslissing | Detail |
+|------------|--------|
+| Host | `FmlChromeDialog` + queue (`confirmFmlChrome` / `promptFmlChrome`); host in `App.vue` + embed-`FmlEditor` (eerste wint) |
+| Confirm | Hoogte-overschrijven (per verdieping) + oil-bottle nulpunt |
+| Prompt | Nieuwe gevelgroep-naam (editor + inspect) |
+| Fallback | Zonder host: native dialog (tests / kale embed) |
+| Niet | `beforeunload` (browser-only); Quasar Dialog |
+
+---
+
+## FML-selectie sticky + touch-pan (2026-08-19)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Type-plak | Selectie blijft binnen muur / opening / item / annotatie / area tot leeg of area (zonder muur) of ✕ |
+| Wisselen | Eerst deselecteren; klik nabij een deur terwijl muren geselecteerd zijn blijft muur |
+| Mobiel tik | `pointerdown` plaatst geen selectie; pas stille `pointerup` (geen slop, geen 2e vinger) |
+| Pan met selectie | 2-vinger én 1-vinger voorbij slop; selectie blijft. ✕ in settings-kaart wist bewust |
+| Hold-drag | Move / maatlijn / nulpunt / box-select starten ná slop |
 
 ---
 
@@ -507,7 +554,7 @@ Near-90° restjitter + muur-onder-muur in cm, ná thickness/balance. Markers bli
 | Gate | Shared canvas achter `touchEditor` (default false) |
 | Desktop-muis | `/FML-editor` op PC blijft mousedown/mousemove; geen wrap-capture |
 | Touch-nav + rail | Alleen `pointer: coarse` (Set/H/V/Move; geen Sel — Settings is al multi) |
-| Gestures | 1 vinger = tik/edit; 2 vingers = pan; pinch = zoom |
+| Gestures | Stille tik = edit; 1-vinger-slop = pan (geen deselect); 2 vingers = pan; pinch = zoom |
 | Redo | Ctrl+Y / Ctrl+Shift+Z **niet** achter flag — ook workspace |
 | Editor-wachtwoord | Soft gate `J0rd!` (`bouwToFml.fmlEditorUnlocked`), naast app-access |
 

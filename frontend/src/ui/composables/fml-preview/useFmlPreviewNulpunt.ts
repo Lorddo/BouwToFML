@@ -3,7 +3,7 @@ import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout
 import { applyNulpunt } from '@/core/fml/translate-floor-plan'
 import type { FloorPlan, Point2D } from '@/core/fml/types'
 import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/fml-preview-wall-face-snap'
-import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -17,7 +17,7 @@ interface NulpuntHitTestApi {
 
 export type AppliedNulpunt = {
   plan: FloorPlan
-  layout: PreviewUnderlayLayout
+  layout: UnderlayOriginLayout
   nulpuntImageCm: Point2D
   /** Delta die op muren is toegepast (−P); contentLayout moet +delta nudgen. */
   wallDeltaCm: Point2D
@@ -33,7 +33,7 @@ export function useFmlPreviewNulpunt(options: {
   hitTest: NulpuntHitTestApi
   editor: EditorApi
   nulpuntMode: Ref<boolean>
-  getUnderlayLayout: () => PreviewUnderlayLayout | null
+  getUnderlayLayout: () => UnderlayOriginLayout | null
   /** Actieve floor in localPlan (workspace preview = meestal 0). */
   getFloorIndex: () => number
   setFmlNulpuntImageCm: (point: Point2D | null) => void

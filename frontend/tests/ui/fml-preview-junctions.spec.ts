@@ -16,6 +16,7 @@ import {
   snapPointToJunctions,
   snapPointToWallCenters,
   snapToNearbyEndpointAxes,
+  JUNCTION_POINT_SNAP_CM,
   buildJunctions,
   junctionIdsForWall,
   mergeJunctions,
@@ -682,6 +683,46 @@ describe('addWallSegment', () => {
     expect(doorX).toBeCloseTo(80, 5)
     expect(Math.min(hostPiece.a.x, hostPiece.b.x)).toBeCloseTo(50, 5)
     expect(Math.max(hostPiece.a.x, hostPiece.b.x)).toBeCloseTo(100, 5)
+  })
+
+  it('T-junction (Geveltest): binnenmuur knipt oost/west; oude id op één helft', () => {
+    const walls = [
+      { id: 'west', a: { x: 0, y: 0 }, b: { x: 0, y: 600 }, thickness: 20, openings: [] },
+      { id: 'east', a: { x: 800, y: 0 }, b: { x: 800, y: 600 }, thickness: 20, openings: [] },
+      { id: 'north', a: { x: 0, y: 0 }, b: { x: 800, y: 0 }, thickness: 20, openings: [] },
+      { id: 'south', a: { x: 0, y: 600 }, b: { x: 800, y: 600 }, thickness: 20, openings: [] },
+    ]
+    const result = addWallSegment(walls, { x: 0, y: 300 }, { x: 800, y: 300 }, 14)
+    expect(result).not.toBeNull()
+    expect(result!.walls.some((wall) => wall.id === 'west')).toBe(true)
+    expect(result!.walls.some((wall) => wall.id === 'east')).toBe(true)
+    const splitHosts = result!.walls.filter((wall) => wall.id.startsWith('split-host-'))
+    expect(splitHosts.length).toBeGreaterThanOrEqual(2)
+
+    const westPieces = result!.walls.filter(
+      (wall) =>
+        Math.abs(wall.a.x) < 0.01 &&
+        Math.abs(wall.b.x) < 0.01 &&
+        (Math.abs(wall.a.y - 300) < 0.01 || Math.abs(wall.b.y - 300) < 0.01),
+    )
+    const eastPieces = result!.walls.filter(
+      (wall) =>
+        Math.abs(wall.a.x - 800) < 0.01 &&
+        Math.abs(wall.b.x - 800) < 0.01 &&
+        (Math.abs(wall.a.y - 300) < 0.01 || Math.abs(wall.b.y - 300) < 0.01),
+    )
+    expect(westPieces).toHaveLength(2)
+    expect(eastPieces).toHaveLength(2)
+    expect(westPieces.some((wall) => wall.id === 'west')).toBe(true)
+    expect(eastPieces.some((wall) => wall.id === 'east')).toBe(true)
+
+    const junctions = buildJunctions(result!.walls)
+    const westT = junctions.find((item) => Math.abs(item.x) < 0.1 && Math.abs(item.y - 300) < 0.1)
+    const eastT = junctions.find(
+      (item) => Math.abs(item.x - 800) < 0.1 && Math.abs(item.y - 300) < 0.1,
+    )
+    expect(westT?.refs.length).toBeGreaterThanOrEqual(3)
+    expect(eastT?.refs.length).toBeGreaterThanOrEqual(3)
   })
 })
 
@@ -1439,6 +1480,23 @@ describe('snapPointToWallCenters', () => {
     ]
     const snapped = snapPointToWallCenters(walls, { x: 50, y: 52 }, ROOM_DRAW_SNAP_CM)
     expect(snapped).toEqual({ x: 50, y: 52 })
+  })
+
+  it('muur-teken-snap: 15 cm hartlijn (niet de 4 cm van kamer)', () => {
+    const walls = [
+      {
+        id: 'h1',
+        a: { x: 0, y: 40 },
+        b: { x: 100, y: 40 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const at14 = snapPointToWallCenters(walls, { x: 50, y: 54 }, JUNCTION_POINT_SNAP_CM)
+    expect(at14.x).toBeCloseTo(50, 4)
+    expect(at14.y).toBeCloseTo(40, 4)
+    const at16 = snapPointToWallCenters(walls, { x: 50, y: 56 }, JUNCTION_POINT_SNAP_CM)
+    expect(at16).toEqual({ x: 50, y: 56 })
   })
 
   it('kamer-snap: dicht op hartlijn landt op de muur', () => {

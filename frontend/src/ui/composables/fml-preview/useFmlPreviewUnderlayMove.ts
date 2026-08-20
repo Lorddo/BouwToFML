@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue'
 import type { Point2D } from '@/core/fml/types'
-import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 
 interface UnderlayMoveHitTest {
   clientToCm: (clientX: number, clientY: number) => Point2D | null
@@ -13,9 +13,9 @@ interface UnderlayMoveHitTest {
 export function useFmlPreviewUnderlayMove(options: {
   hitTest: UnderlayMoveHitTest
   underlayMoveMode: { value: boolean }
-  getUnderlayLayout: () => PreviewUnderlayLayout | null
+  getUnderlayLayout: () => UnderlayOriginLayout | null
   setFmlNulpuntImageCm: (point: Point2D | null) => void
-  syncLayoutToParent: (layout: PreviewUnderlayLayout) => void
+  syncLayoutToParent: (layout: UnderlayOriginLayout) => void
   beforeBegin: () => void
 }) {
   const dragging = ref(false)
@@ -63,7 +63,7 @@ export function useFmlPreviewUnderlayMove(options: {
     if (!startCm || !startOrigin || !layout) return
     const dx = cm.x - startCm.x
     const dy = cm.y - startCm.y
-    const next: PreviewUnderlayLayout = {
+    const next: UnderlayOriginLayout = {
       ...layout,
       origin: {
         x: startOrigin.x - dx,

@@ -24,6 +24,7 @@ export type ToolbeltIconName =
   | 'redo'
   | 'copy'
   | 'clear'
+  | 'check'
   | 'hinge'
   | 'swing'
   | 'grid'

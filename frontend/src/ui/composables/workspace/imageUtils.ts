@@ -1,8 +1,11 @@
 import type { HScaleState } from '@/platform/calibration'
+import {
+  imageDimensions as platformImageDimensions,
+  loadImage as platformLoadImage,
+} from '@/platform/image'
 import { ROTATION_EPS_DEG, uiRotationToCvDegrees } from '@/cv/tools/rotateMat'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import { OPTIMIZATION_BASE_DIMENSION } from './constants'
-import { tGlobal } from '@/ui/i18n'
 
 export interface PixelBounds {
   left: number
@@ -383,20 +386,11 @@ export function imageDimensions(img: HTMLImageElement | HTMLCanvasElement): {
   width: number
   height: number
 } {
-  if (img instanceof HTMLCanvasElement) {
-    return { width: img.width, height: img.height }
-  }
-  return { width: img.naturalWidth, height: img.naturalHeight }
+  return platformImageDimensions(img)
 }
 
 export function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error(tGlobal('input.errors.imageLoadFailed')))
-    img.src = src
-  })
+  return platformLoadImage(src)
 }
 
 export interface OptimizationBaseResult {

@@ -28,8 +28,8 @@
 
 .fml-toolbelt__thickness-input {
   box-sizing: border-box;
-  width: 64px;
-  min-width: 64px;
+  width: var(--fml-toolbelt-input-width, 64px);
+  min-width: var(--fml-toolbelt-input-width, 64px);
   font-size: 12px;
   /* Right padding keeps digits left of the native spinner (else it covers them / shows white). */
   padding: 1px 20px 1px 4px;
@@ -47,7 +47,7 @@
 }
 
 .fml-toolbelt__select {
-  min-width: 108px;
+  min-width: var(--fml-toolbelt-select-min, 108px);
   height: 24px;
   font-size: 12px;
   padding: 1px 4px;
@@ -59,6 +59,28 @@
 
 .fml-toolbelt__select--thickness {
   min-width: 118px;
+}
+
+/* Eigen rij onder dikte/split/delete/cancel. */
+.fml-toolbelt__field--row {
+  flex: 1 1 auto;
+  width: 100%;
+  border-left: none;
+  margin-left: 0;
+  padding-left: 0;
+  padding-top: 2px;
+  box-sizing: border-box;
+}
+
+.fml-toolbelt__select--facade {
+  min-width: var(--fml-toolbelt-select-min, 140px);
+  flex: 1 1 auto;
+}
+
+.fml-toolbelt__thickness-input--facade {
+  width: 120px;
+  min-width: 96px;
+  flex: 1 1 auto;
 }
 
 .fml-toolbelt__unit {
@@ -120,6 +142,11 @@
   border-radius: 4px;
   background: #fff;
   color: #334155;
+}
+
+.fml-toolbelt__input--wide {
+  width: 120px;
+  min-width: 120px;
 }
 
 .canvas-toolbelt__btn--primary {

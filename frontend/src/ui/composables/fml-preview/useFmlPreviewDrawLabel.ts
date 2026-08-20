@@ -1,3 +1,4 @@
+import { ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -14,6 +15,8 @@ export function useFmlPreviewDrawLabel(options: {
   beforeBegin: () => void
   syncPlanToParent: () => void
 }) {
+  const pendingText = ref('Tekst')
+
   function cancelDrawLabel(): void {
     // single-click tool — nothing to cancel mid-draw
   }
@@ -23,10 +26,11 @@ export function useFmlPreviewDrawLabel(options: {
     if (!cm) return
     options.beforeBegin()
     options.editor.pushUndo()
+    const text = pendingText.value.trim() || 'Tekst'
     const id = options.editor.addLabel({
       x: cm.x,
       y: cm.y,
-      text: 'Tekst',
+      text,
       fontFamily: 'arial',
       fontSize: 16,
       letterSpacing: 0,
@@ -46,5 +50,6 @@ export function useFmlPreviewDrawLabel(options: {
   return {
     cancelDrawLabel,
     onDrawLabelClick,
+    pendingText,
   }
 }

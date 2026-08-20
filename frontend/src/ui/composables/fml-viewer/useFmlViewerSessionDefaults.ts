@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import {
   countPlanBovenlichtOpenings,
@@ -15,161 +15,232 @@ import {
 } from '@/core/fml/wall-endpoint-height'
 import {
   createFactoryViewerSessionDefaults,
+  seedViewerDefaultsFromPlan,
   type ViewerSessionDefaults,
 } from '@/core/fml/viewer-session-defaults'
+import { confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
 
 /**
- * Viewer-only sessie-defaults: confirm vóór overwrite van alle floors.
- * Geometrie-mutaties via wall-endpoint-height helpers; UX blijft window.confirm.
+ * Viewer-defaults alleen per verdieping (zoals detectie).
+ * Confirm vóór overwrite; geometrie via wall-endpoint-height helpers.
  */
 export function useFmlViewerSessionDefaults(deps: {
   plan: Ref<FloorPlan | null>
   activeFloorIndex: Ref<number>
   // vue-i18n ComposerTranslation — keep loose to avoid coupling the composable to i18n types.
   t: (key: string, ...args: unknown[]) => string
+  confirmOverwrite?: (message: string) => boolean | Promise<boolean>
 }) {
   const sessionDefaults = ref<ViewerSessionDefaults>(createFactoryViewerSessionDefaults())
+  const floorDefaultsByIndex = ref<Record<number, ViewerSessionDefaults>>({})
 
-  function confirmOverwrite(message: string): boolean {
-    return window.confirm(message)
+  function defaultsForFloor(index: number): ViewerSessionDefaults {
+    return floorDefaultsByIndex.value[index] ?? sessionDefaults.value
   }
 
-  function applySessionDefault(field: keyof ViewerSessionDefaults, raw: number | boolean): void {
-    if (!deps.plan.value) return
-    const nextDefaults = { ...sessionDefaults.value }
+  const activeFloorDefaults = computed(() => defaultsForFloor(deps.activeFloorIndex.value))
 
-    if (field === 'wallHeightCm') {
-      const height = Math.max(1, Math.round(Number(raw)))
-      if (height === sessionDefaults.value.wallHeightCm) return
-      const count = countPlanWalls(deps.plan.value)
-      if (!confirmOverwrite(deps.t('viewer.defaultsOverwriteWall', { count, cm: height }))) {
-        return
-      }
-      deps.plan.value = overwritePlanWallHeights(deps.plan.value, height)
-      nextDefaults.wallHeightCm = height
-    } else if (field === 'doorHeightCm') {
-      const height = Math.max(1, Math.round(Number(raw)))
-      if (height === sessionDefaults.value.doorHeightCm) return
-      const count = countPlanOpenings(deps.plan.value, 'door')
-      if (!confirmOverwrite(deps.t('viewer.defaultsOverwriteDoor', { count, cm: height }))) {
-        return
-      }
-      deps.plan.value = overwritePlanDoorHeights(deps.plan.value, height)
-      nextDefaults.doorHeightCm = height
-    } else if (field === 'windowHeightCm') {
-      const height = Math.max(1, Math.round(Number(raw)))
-      if (height === sessionDefaults.value.windowHeightCm) return
-      const count = countPlanOpenings(deps.plan.value, 'window')
-      if (!confirmOverwrite(deps.t('viewer.defaultsOverwriteWindow', { count, cm: height }))) {
-        return
-      }
-      deps.plan.value = overwritePlanWindowHeights(deps.plan.value, height)
-      nextDefaults.windowHeightCm = height
-    } else if (field === 'windowSillZCm') {
-      const sill = Math.max(0, Math.round(Number(raw)))
-      if (sill === sessionDefaults.value.windowSillZCm) return
-      const count = countPlanOpenings(deps.plan.value, 'window')
-      if (!confirmOverwrite(deps.t('viewer.defaultsOverwriteSill', { count, cm: sill }))) {
-        return
-      }
-      deps.plan.value = overwritePlanWindowSills(deps.plan.value, sill)
-      nextDefaults.windowSillZCm = sill
-    } else if (field === 'bovenlichtDefault') {
-      const enabled = Boolean(raw)
-      if (enabled === sessionDefaults.value.bovenlichtDefault) return
-      const count = countPlanOpenings(deps.plan.value, 'door')
-      if (
-        !confirmOverwrite(
-          deps.t('viewer.defaultsOverwriteBovenlichtDoors', {
-            count,
-            state: enabled ? deps.t('viewer.defaultsOn') : deps.t('viewer.defaultsOff'),
-          }),
-        )
-      ) {
-        return
-      }
-      deps.plan.value = overwritePlanDoorBovenlicht(deps.plan.value, enabled)
-      nextDefaults.bovenlichtDefault = enabled
-    } else if (field === 'windowBovenlichtDefault') {
-      const enabled = Boolean(raw)
-      if (enabled === sessionDefaults.value.windowBovenlichtDefault) return
-      const count = countPlanOpenings(deps.plan.value, 'window')
-      if (
-        !confirmOverwrite(
-          deps.t('viewer.defaultsOverwriteBovenlichtWindows', {
-            count,
-            state: enabled ? deps.t('viewer.defaultsOn') : deps.t('viewer.defaultsOff'),
-          }),
-        )
-      ) {
-        return
-      }
-      deps.plan.value = overwritePlanWindowBovenlicht(deps.plan.value, enabled)
-      nextDefaults.windowBovenlichtDefault = enabled
-    } else if (field === 'bovenlichtHeightCm') {
-      const height = Math.max(1, Math.round(Number(raw)))
-      if (height === sessionDefaults.value.bovenlichtHeightCm) return
-      const count = countPlanBovenlichtOpenings(deps.plan.value)
-      if (
-        !confirmOverwrite(deps.t('viewer.defaultsOverwriteBovenlichtHeight', { count, cm: height }))
-      ) {
-        return
-      }
-      deps.plan.value = overwritePlanBovenlichtHeight(deps.plan.value, height)
-      nextDefaults.bovenlichtHeightCm = height
-    } else if (field === 'bovenlichtGapCm') {
-      const gap = Math.max(0, Math.round(Number(raw)))
-      if (gap === sessionDefaults.value.bovenlichtGapCm) return
-      const count = countPlanBovenlichtOpenings(deps.plan.value)
-      if (!confirmOverwrite(deps.t('viewer.defaultsOverwriteBovenlichtGap', { count, cm: gap }))) {
-        return
-      }
-      deps.plan.value = overwritePlanBovenlichtGap(deps.plan.value, gap)
-      nextDefaults.bovenlichtGapCm = gap
+  async function confirmOverwrite(message: string): Promise<boolean> {
+    if (deps.confirmOverwrite) return deps.confirmOverwrite(message)
+    return confirmFmlChrome({
+      title: deps.t('viewer.defaultsOverwriteTitle'),
+      message,
+      confirmLabel: deps.t('common.apply'),
+      cancelLabel: deps.t('common.cancel'),
+    })
+  }
+
+  function overwriteKey(field: keyof ViewerSessionDefaults): string {
+    switch (field) {
+      case 'wallHeightCm':
+        return 'viewer.defaultsOverwriteWallFloor'
+      case 'doorHeightCm':
+        return 'viewer.defaultsOverwriteDoorFloor'
+      case 'windowHeightCm':
+        return 'viewer.defaultsOverwriteWindowFloor'
+      case 'windowSillZCm':
+        return 'viewer.defaultsOverwriteSillFloor'
+      case 'bovenlichtDefault':
+        return 'viewer.defaultsOverwriteBovenlichtDoorsFloor'
+      case 'windowBovenlichtDefault':
+        return 'viewer.defaultsOverwriteBovenlichtWindowsFloor'
+      case 'bovenlichtHeightCm':
+        return 'viewer.defaultsOverwriteBovenlichtHeightFloor'
+      case 'bovenlichtGapCm':
+        return 'viewer.defaultsOverwriteBovenlichtGapFloor'
     }
-
-    sessionDefaults.value = nextDefaults
   }
 
-  function onSessionDefaultNumber(field: keyof ViewerSessionDefaults, event: Event): void {
+  function applyFieldToDefaults(
+    target: ViewerSessionDefaults,
+    field: keyof ViewerSessionDefaults,
+    raw: number | boolean,
+  ): ViewerSessionDefaults {
+    const next = { ...target }
+    if (field === 'bovenlichtDefault' || field === 'windowBovenlichtDefault') {
+      next[field] = Boolean(raw)
+    } else if (field === 'windowSillZCm' || field === 'bovenlichtGapCm') {
+      next[field] = Math.max(0, Math.round(Number(raw)))
+    } else {
+      next[field] = Math.max(1, Math.round(Number(raw)))
+    }
+    return next
+  }
+
+  function applyOverwrite(
+    field: keyof ViewerSessionDefaults,
+    next: ViewerSessionDefaults,
+    floorIndex: number,
+  ): void {
+    if (!deps.plan.value) return
+    if (field === 'wallHeightCm') {
+      deps.plan.value = overwritePlanWallHeights(deps.plan.value, next.wallHeightCm, floorIndex)
+    } else if (field === 'doorHeightCm') {
+      deps.plan.value = overwritePlanDoorHeights(deps.plan.value, next.doorHeightCm, floorIndex)
+    } else if (field === 'windowHeightCm') {
+      deps.plan.value = overwritePlanWindowHeights(deps.plan.value, next.windowHeightCm, floorIndex)
+    } else if (field === 'windowSillZCm') {
+      deps.plan.value = overwritePlanWindowSills(deps.plan.value, next.windowSillZCm, floorIndex)
+    } else if (field === 'bovenlichtDefault') {
+      deps.plan.value = overwritePlanDoorBovenlicht(
+        deps.plan.value,
+        next.bovenlichtDefault,
+        floorIndex,
+      )
+    } else if (field === 'windowBovenlichtDefault') {
+      deps.plan.value = overwritePlanWindowBovenlicht(
+        deps.plan.value,
+        next.windowBovenlichtDefault,
+        floorIndex,
+      )
+    } else if (field === 'bovenlichtHeightCm') {
+      deps.plan.value = overwritePlanBovenlichtHeight(
+        deps.plan.value,
+        next.bovenlichtHeightCm,
+        floorIndex,
+      )
+    } else {
+      deps.plan.value = overwritePlanBovenlichtGap(
+        deps.plan.value,
+        next.bovenlichtGapCm,
+        floorIndex,
+      )
+    }
+  }
+
+  function countForField(field: keyof ViewerSessionDefaults, floorIndex: number): number {
+    const plan = deps.plan.value
+    if (!plan) return 0
+    if (field === 'wallHeightCm') return countPlanWalls(plan, floorIndex)
+    if (field === 'doorHeightCm' || field === 'bovenlichtDefault') {
+      return countPlanOpenings(plan, 'door', floorIndex)
+    }
+    if (
+      field === 'windowHeightCm' ||
+      field === 'windowSillZCm' ||
+      field === 'windowBovenlichtDefault'
+    ) {
+      return countPlanOpenings(plan, 'window', floorIndex)
+    }
+    return countPlanBovenlichtOpenings(plan, floorIndex)
+  }
+
+  async function applyFloorDefault(
+    field: keyof ViewerSessionDefaults,
+    raw: number | boolean,
+  ): Promise<void> {
+    if (!deps.plan.value) return
+    const floorIndex = deps.activeFloorIndex.value
+    const current = activeFloorDefaults.value
+    const next = applyFieldToDefaults(current, field, raw)
+    if (next[field] === current[field]) return
+
+    const count = countForField(field, floorIndex)
+    const enabled = Boolean(next[field])
+    const message = deps.t(overwriteKey(field), {
+      count,
+      cm: next[field],
+      state: enabled ? deps.t('viewer.defaultsOn') : deps.t('viewer.defaultsOff'),
+    })
+    if (!(await confirmOverwrite(message))) return
+
+    applyOverwrite(field, next, floorIndex)
+    floorDefaultsByIndex.value = {
+      ...floorDefaultsByIndex.value,
+      [floorIndex]: next,
+    }
+  }
+
+  async function onFloorDefaultNumber(
+    field: keyof ViewerSessionDefaults,
+    event: Event,
+  ): Promise<void> {
     const input = event.target as HTMLInputElement
     const value = Number(input.value)
-    const before = sessionDefaults.value[field]
+    const before = activeFloorDefaults.value[field]
     if (!Number.isFinite(value)) {
       input.value = String(before)
       return
     }
-    applySessionDefault(field, value)
-    if (sessionDefaults.value[field] === before) {
+    await applyFloorDefault(field, value)
+    if (activeFloorDefaults.value[field] === before) {
       input.value = String(before)
     }
   }
 
-  function onSessionDefaultBool(
+  async function onFloorDefaultBool(
     field: 'bovenlichtDefault' | 'windowBovenlichtDefault',
     event: Event,
-  ): void {
+  ): Promise<void> {
     const input = event.target as HTMLInputElement
-    const before = sessionDefaults.value[field]
-    applySessionDefault(field, input.checked)
-    if (sessionDefaults.value[field] === before) {
+    const before = activeFloorDefaults.value[field]
+    await applyFloorDefault(field, input.checked)
+    if (activeFloorDefaults.value[field] === before) {
       input.checked = before
     }
   }
 
-  /** Floor-switch: muurhoogte-default volgt floor.height (zonder overwrite-confirm). */
-  watch(deps.activeFloorIndex, (idx) => {
-    const floor = deps.plan.value?.floors[idx]
-    if (!floor || !(floor.height > 0)) return
-    const height = Math.round(floor.height)
-    if (height === sessionDefaults.value.wallHeightCm) return
-    sessionDefaults.value = { ...sessionDefaults.value, wallHeightCm: height }
-  })
+  function hydrateFloorDefaultsFromPlan(plan: FloorPlan | null): void {
+    if (!plan) {
+      floorDefaultsByIndex.value = {}
+      return
+    }
+    const next: Record<number, ViewerSessionDefaults> = {}
+    for (let i = 0; i < plan.floors.length; i++) {
+      next[i] = seedViewerDefaultsFromPlan(plan, i, {
+        floorOnly: true,
+        fallback: sessionDefaults.value,
+      })
+    }
+    floorDefaultsByIndex.value = next
+  }
+
+  function addFloorDefaultsSlot(index: number, source?: ViewerSessionDefaults): void {
+    floorDefaultsByIndex.value = {
+      ...floorDefaultsByIndex.value,
+      [index]: { ...(source ?? sessionDefaults.value) },
+    }
+  }
+
+  function removeFloorDefaultsSlot(index: number): void {
+    const next: Record<number, ViewerSessionDefaults> = {}
+    for (const [key, value] of Object.entries(floorDefaultsByIndex.value)) {
+      const from = Number(key)
+      if (!Number.isFinite(from) || from === index) continue
+      const to = from > index ? from - 1 : from
+      next[to] = value
+    }
+    floorDefaultsByIndex.value = next
+  }
 
   return {
     sessionDefaults,
-    applySessionDefault,
-    onSessionDefaultNumber,
-    onSessionDefaultBool,
+    activeFloorDefaults,
+    defaultsForFloor,
+    onFloorDefaultNumber,
+    onFloorDefaultBool,
+    hydrateFloorDefaultsFromPlan,
+    addFloorDefaultsSlot,
+    removeFloorDefaultsSlot,
   }
 }

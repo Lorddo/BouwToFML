@@ -6,3 +6,4 @@ export {
   scaleWallGraphToOriginal,
 } from './scale'
 export { DEFAULT_PREPROCESS, type PreprocessConfig } from './types'
+export { imageDimensions, loadImage } from './loadImage'

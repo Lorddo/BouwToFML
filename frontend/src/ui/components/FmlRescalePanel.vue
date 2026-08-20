@@ -6,7 +6,7 @@ import { SCALE_RESCALE_MIN_MEASURED_CM } from '@/platform/calibration'
 import {
   measuredCmFromRescaleState,
   resolveRescaleFactorsFromRulers,
-} from '@/ui/composables/workspace/fml-rescale-from-measure'
+} from '@/ui/composables/fml-preview/fml-rescale-from-measure'
 import {
   mmToScaleInput,
   scaleInputStep,

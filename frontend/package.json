@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
+    "knip:fml-embed": "vitest run tests/ui/fml-embed-boundary.spec.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

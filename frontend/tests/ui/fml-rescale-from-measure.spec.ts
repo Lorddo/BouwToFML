@@ -4,11 +4,12 @@ import type { FloorPlan } from '@/core/fml/types'
 import {
   fmlRescaleStateFromImageHandles,
   initFmlRescaleStateFromWalls,
+  initImageScaleHandles,
   resolveFmlRescaleState,
   resolveRescaleFactorsFromRulers,
   resolveRescaleGeometryFactor,
   scaleNulpuntImageCm,
-} from '@/ui/composables/workspace/fml-rescale-from-measure'
+} from '@/ui/composables/fml-preview/fml-rescale-from-measure'
 
 describe('fml-rescale-from-measure', () => {
   it('berekent geometryFactor = true / measured', () => {
@@ -263,6 +264,15 @@ describe('scaleFloorPlan', () => {
     expect(v.b.y).toBeCloseTo(1000)
     expect(v.thickness).toBe(15)
     expect(v.openings[0].width).toBeCloseTo(100)
+  })
+
+  it('initImageScaleHandles: 35% span in het midden', () => {
+    const state = initImageScaleHandles(1000, 800)
+    expect(state).not.toBeNull()
+    expect(state!.xRight - state!.xLeft).toBe(350)
+    expect(state!.yBottom - state!.yTop).toBe(280)
+    expect(state!.xGuideY).toBe(400)
+    expect(state!.yGuideX).toBe(500)
   })
 
   it('schaalt underlay origin en px/mm per as', () => {

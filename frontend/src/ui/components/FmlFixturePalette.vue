@@ -2,8 +2,12 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { listFixturePlaceOptions, type FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const selected = defineModel<FixturePlaceOption | null>({ default: null })
+const emit = defineEmits<{
+  close: []
+}>()
 
 const { t } = useI18n()
 const query = ref('')
@@ -26,7 +30,7 @@ const filtered = computed(() => {
 </script>
 
 <template>
-  <div class="fixture-palette">
+  <div class="fixture-palette" @pointerdown.stop @mousedown.stop @mousemove.stop>
     <div class="fixture-palette__row">
       <input
         v-model="query"
@@ -44,6 +48,15 @@ const filtered = computed(() => {
           {{ cat === 'all' ? t('viewer.fixtureAll') : cat }}
         </option>
       </select>
+      <button
+        type="button"
+        class="fixture-palette__close"
+        :title="t('result.toolbar.deactivateDrawTool')"
+        :aria-label="t('result.toolbar.deactivateDrawTool')"
+        @click="emit('close')"
+      >
+        <ToolbeltIcon name="clear" />
+      </button>
     </div>
     <div class="fixture-palette__list" role="listbox">
       <button
@@ -92,6 +105,22 @@ const filtered = computed(() => {
 .fixture-palette__search {
   flex: 1;
   min-width: 0;
+}
+.fixture-palette__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+}
+.fixture-palette__close :deep(.canvas-toolbelt__icon) {
+  width: 18px;
+  height: 18px;
 }
 .fixture-palette__list {
   flex: 1;

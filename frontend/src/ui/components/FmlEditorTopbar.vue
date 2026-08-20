@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const props = defineProps<{
@@ -10,6 +11,8 @@ const props = defineProps<{
   fullscreen?: boolean
   /** Geen app-header: topbar gebruikt safe-area. */
   edgeChrome?: boolean
+  /** Inspect: geen teken-tips. */
+  showHelp?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,6 +27,8 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const helpOpen = ref(false)
 const helpQuery = ref('')
+const topbarRef = ref<HTMLElement | null>(null)
+useChromeFitScale(topbarRef)
 
 const helpKeys = [
   'result.toolbar.hintDefault',
@@ -60,6 +65,7 @@ function toggleHelp(): void {
 
 <template>
   <div
+    ref="topbarRef"
     class="fml-editor-topbar"
     :class="{ 'fml-editor-topbar--edge': props.edgeChrome }"
     role="toolbar"
@@ -118,6 +124,7 @@ function toggleHelp(): void {
       +
     </button>
     <button
+      v-if="props.showHelp !== false"
       type="button"
       class="fml-editor-topbar__info"
       :class="{ 'is-on': helpOpen }"
@@ -158,12 +165,15 @@ function toggleHelp(): void {
 </template>
 
 <style scoped>
+@import '../fml-preview/fml-canvas-tokens.css';
+
 .fml-editor-topbar {
   position: absolute;
-  top: 8px;
+  top: var(--fml-chrome-gap);
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 12;
+  transform: translateX(-50%) scale(var(--fml-chrome-fit-scale, 1));
+  transform-origin: top center;
+  z-index: var(--fml-z-topbar);
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -179,7 +189,7 @@ function toggleHelp(): void {
   pointer-events: auto;
 }
 .fml-editor-topbar--edge {
-  top: max(8px, env(safe-area-inset-top));
+  top: var(--fml-chrome-safe-top);
   max-width: calc(100% - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
 }
 .fml-editor-topbar button {

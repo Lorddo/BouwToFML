@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
+import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
 import {
@@ -16,6 +17,8 @@ import {
 import './canvas/canvas-toolbelt.css'
 
 const { t, locale } = useI18n()
+const dockRef = ref<HTMLElement | null>(null)
+useChromeFitScale(dockRef)
 
 const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
@@ -25,6 +28,9 @@ const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { default: false })
+const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
+const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
+const drawLabelText = defineModel<string>('drawLabelText', { default: 'Tekst' })
 
 const props = withDefaults(
   defineProps<{
@@ -89,6 +95,8 @@ const props = withDefaults(
     hideInlineHint?: boolean
     /** `/FML-editor` touch: floating balk + settings-kaart (niet workspace). */
     floatingDock?: boolean
+    /** Mobiel: select-groep zit in de linker rail. */
+    hideSelectTools?: boolean
     wallThicknessDraft: number
     wallThicknessMixed: boolean
     wallBalanceDraft: number
@@ -124,6 +132,13 @@ const props = withDefaults(
     drawRoomDrafting?: boolean
     drawRoomMeasureHCm?: number
     drawRoomMeasureVCm?: number
+    drawLineDrafting?: boolean
+    drawSurfaceDrafting?: boolean
+    facadeGroupsEnabled?: boolean
+    facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
+    facadeGroupDraft?: string | null
+    facadeGroupMixed?: boolean
+    canSelectFacadeMembers?: boolean
   }>(),
   {
     thicknessMinCm: 10,
@@ -135,6 +150,13 @@ const props = withDefaults(
     drawRoomDrafting: false,
     drawRoomMeasureHCm: 0,
     drawRoomMeasureVCm: 0,
+    drawLineDrafting: false,
+    drawSurfaceDrafting: false,
+    facadeGroupsEnabled: false,
+    facadeGroupOptions: () => [],
+    facadeGroupDraft: '',
+    facadeGroupMixed: false,
+    canSelectFacadeMembers: false,
     selectedAreaPanel: null,
     selectedJunctionPanel: null,
     roomTypes: () => [],
@@ -146,6 +168,7 @@ const props = withDefaults(
     selectedItemPanel: null,
     hideInlineHint: false,
     floatingDock: false,
+    hideSelectTools: false,
   },
 )
 
@@ -178,6 +201,9 @@ const emit = defineEmits<{
   splitWall: []
   deleteWalls: []
   clearSelection: []
+  facadeGroupChange: [value: string]
+  facadeGroupRename: [name: string]
+  selectFacadeMembers: []
   clearMeasures: []
   applyRoomType: [role: number]
   areaCustomNameInput: [customName: string]
@@ -203,6 +229,8 @@ const emit = defineEmits<{
   drawRoomVInput: [cm: number | null]
   commitDrawRoomMeasure: []
   cancelDrawRoomDraft: []
+  acceptDrawDraft: []
+  deactivateDrawTool: []
 }>()
 
 const selectTools = computed(() => {
@@ -302,12 +330,20 @@ defineExpose({ hint })
 <template>
   <p v-if="!hideInlineHint" class="fml-preview-hint">{{ hint }}</p>
   <div
+    ref="dockRef"
     class="canvas-toolbelt-dock fml-preview-toolbelt-dock"
     :class="{ 'fml-preview-toolbelt-dock--float': props.floatingDock }"
+    @pointerdown.stop
+    @mousedown.stop
+    @mousemove.stop
+    @click.stop
   >
     <div class="canvas-toolbelt-dock__row">
       <div v-show="showDrawingTools" class="fml-preview-toolbelt-tools">
-        <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face">
+        <div
+          v-if="!props.hideSelectTools"
+          class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face"
+        >
           <CanvasToolbelt
             embedded
             :tools="selectTools"
@@ -318,7 +354,7 @@ defineExpose({ hint })
             @toggle-pressed="onSelectTogglePressed"
           />
         </div>
-        <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
+        <div v-if="!props.hideSelectTools" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
         <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
           <CanvasToolbelt
             embedded
@@ -389,9 +425,19 @@ defineExpose({ hint })
           :measure-line-count="measureLineCount"
           :draw-wall-drafting="drawWallDrafting"
           :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
+          v-model:draw-surface-role="drawSurfaceRole"
           :draw-room-drafting="drawRoomDrafting"
+          v-model:draw-line-thickness="drawLineThickness"
           :draw-room-measure-h-cm="drawRoomMeasureHCm"
+          v-model:draw-label-text="drawLabelText"
           :draw-room-measure-v-cm="drawRoomMeasureVCm"
+          :draw-line-drafting="drawLineDrafting"
+          :draw-surface-drafting="drawSurfaceDrafting"
+          :facade-groups-enabled="facadeGroupsEnabled"
+          :facade-group-options="facadeGroupOptions"
+          :facade-group-draft="facadeGroupDraft"
+          :facade-group-mixed="facadeGroupMixed"
+          :can-select-facade-members="canSelectFacadeMembers"
           @wall-thickness-input="emit('wallThicknessInput', $event)"
           @commit-wall-thickness="emit('commitWallThickness')"
           @apply-wall-thickness="emit('applyWallThickness', $event)"
@@ -419,6 +465,9 @@ defineExpose({ hint })
           @delete-openings="emit('deleteOpenings')"
           @split-wall="emit('splitWall')"
           @delete-walls="emit('deleteWalls')"
+          @facade-group-change="emit('facadeGroupChange', $event)"
+          @facade-group-rename="emit('facadeGroupRename', $event)"
+          @select-facade-members="emit('selectFacadeMembers')"
           @clear-selection="emit('clearSelection')"
           @clear-measures="emit('clearMeasures')"
           @apply-room-type="emit('applyRoomType', $event)"
@@ -445,6 +494,8 @@ defineExpose({ hint })
           @draw-room-v-input="emit('drawRoomVInput', $event)"
           @commit-draw-room-measure="emit('commitDrawRoomMeasure')"
           @cancel-draw-room-draft="emit('cancelDrawRoomDraft')"
+          @accept-draw-draft="emit('acceptDrawDraft')"
+          @deactivate-draw-tool="emit('deactivateDrawTool')"
         />
       </div>
     </div>
@@ -480,7 +531,6 @@ defineExpose({ hint })
 
 .fml-preview-toolbelt-dock--float {
   bottom: max(8px, env(safe-area-inset-bottom, 0px));
-  max-width: calc(100% - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
 }
 
 .fml-preview-toolbelt-dock--float .canvas-toolbelt-dock__row {
@@ -496,6 +546,7 @@ defineExpose({ hint })
 .fml-preview-toolbelt-dock--float .fml-preview-toolbelt-tools {
   display: flex;
   align-items: stretch;
+  max-width: 100%;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: rgb(255 255 255 / 0.96);
@@ -512,8 +563,8 @@ defineExpose({ hint })
 
 .fml-preview-toolbelt-dock--float .fml-preview-toolbelt-settings.is-open {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   max-height: min(42vh, 300px);
   overflow: auto;
   padding: 4px 6px;
@@ -530,8 +581,6 @@ defineExpose({ hint })
 .fml-preview-toolbelt-dock--float
   .fml-preview-toolbelt-settings
   :deep(.canvas-toolbelt-dock__section) {
-  flex-wrap: wrap;
-  row-gap: 6px;
   background: transparent;
 }
 </style>

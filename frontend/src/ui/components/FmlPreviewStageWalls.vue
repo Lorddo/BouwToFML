@@ -6,14 +6,21 @@ import type {
   RenderWallPolygon,
 } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
 
-const props = defineProps<{
-  renderModel: RenderModel
-  moveWallPolygon: RenderWallPolygon | null
-  settingsWallPolygons: RenderWallPolygon[]
-  inspectWallPolygons: Array<RenderWallPolygon & { fill: string }>
-  settingsWallIds: string[]
-  moveWallId: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    renderModel: RenderModel
+    moveWallPolygon: RenderWallPolygon | null
+    settingsWallPolygons: RenderWallPolygon[]
+    /** Andere leden van dezelfde gevelgroep (niet geselecteerd). */
+    facadeWallPolygons?: RenderWallPolygon[]
+    inspectWallPolygons: Array<RenderWallPolygon & { fill: string }>
+    settingsWallIds: string[]
+    moveWallId: string | null
+  }>(),
+  {
+    facadeWallPolygons: () => [],
+  },
+)
 
 /** Alleen zichtbare hit-strokes — geen opacity:0 node per muur (Staedion-killer). */
 const highlightedWallHits = computed((): RenderWall[] => {
@@ -45,6 +52,18 @@ const highlightedWallHits = computed((): RenderWall[] => {
         fill: '#3b82f6',
         strokeEnabled: false,
         opacity: 0.35,
+        listening: false,
+      }"
+    />
+    <v-line
+      v-for="polygon in facadeWallPolygons"
+      :key="`facade-${polygon.id}`"
+      :config="{
+        points: polygon.points,
+        closed: true,
+        fill: '#38bdf8',
+        strokeEnabled: false,
+        opacity: 0.4,
         listening: false,
       }"
     />

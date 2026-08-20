@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import FmlPreviewCanvas from '../components/FmlPreviewCanvas.vue'
+import FmlEditor from '@/ui/fml-editor/FmlEditor.vue'
+import FmlInspect from '@/ui/fml-inspect/FmlInspect.vue'
 import FmlOpeningOverflowNotice from '../components/FmlOpeningOverflowNotice.vue'
+import FmlViewerDefaultsFields from '../components/FmlViewerDefaultsFields.vue'
 import FmlRescalePanel from '../components/FmlRescalePanel.vue'
+import ScaleConfirmBar from '../components/ScaleConfirmBar.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
 import '../components/fml-panel-fields.css'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
@@ -13,7 +16,11 @@ import {
 } from '@/core/fml/opening-height-overflow'
 import {
   cloneUnderlayOriginLayout,
+  copyUnderlayDisplayOrient,
+  drawingFromImageScale,
   previewUnderlayLayoutFromDrawing,
+  provisionalDrawingFromImage,
+  resolveUnderlayPxPerMmFromRulers,
 } from '@/core/fml/drawing-to-underlay-layout'
 import {
   applyFloorOrientOp,
@@ -23,6 +30,15 @@ import {
   type FloorOrientState,
 } from '@/core/fml/floor-plan-orient'
 import { downloadFml } from '@/core/fml/downloadFml'
+import {
+  assignWallsToGroup,
+  createFacadeGroup,
+  detachWalls,
+  facadeMemberIdsOnFloor,
+  groupIdForWall,
+  listFacadeGroups,
+} from '@/core/fml/facade-groups'
+import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
@@ -31,15 +47,22 @@ import { inspectKindLabel } from '@/ui/composables/fml-preview/fml-inspect'
 import { useFmlViewerInspect } from '@/ui/composables/fml-viewer/useFmlViewerInspect'
 import { useFmlViewerLoad } from '@/ui/composables/fml-viewer/useFmlViewerLoad'
 import { useFmlViewerSessionDefaults } from '@/ui/composables/fml-viewer/useFmlViewerSessionDefaults'
+import {
+  cancelFmlChromeDialog,
+  confirmFmlChrome,
+  promptFacadeGroupName,
+} from '@/ui/composables/fml-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import {
+  fmlRescaleStateFromImageHandles,
   initFmlRescaleStateFromWalls,
+  initImageScaleHandles,
   measuredCmFromRescaleState,
   resolveRescaleFactorsFromRulers,
-} from '@/ui/composables/workspace/fml-rescale-from-measure'
-import { imageDimensions, loadImage } from '@/ui/composables/workspace/imageUtils'
+} from '@/ui/composables/fml-preview/fml-rescale-from-measure'
+import { imageDimensions, loadImage } from '@/platform/image'
 
 const { t } = useI18n()
 
@@ -50,9 +73,10 @@ const underlayHint = ref<string | null>(null)
 const fileName = ref<string | null>(null)
 const activeFloorIndex = ref(0)
 const previewCanvasRef = ref<{
-  flushPendingFieldCommits: () => void
-  sanitizeWalls: () => boolean
-  applyCornerMarkerModeFromSettings: () => void
+  flushPendingFieldCommits?: () => void
+  sanitizeWalls?: () => boolean
+  applyCornerMarkerModeFromSettings?: () => void
+  resetView?: () => void
 } | null>(null)
 
 const emit = defineEmits<{
@@ -96,7 +120,7 @@ onBeforeUnmount(() => {
 })
 
 function flushPreviewFieldCommits(): void {
-  previewCanvasRef.value?.flushPendingFieldCommits()
+  previewCanvasRef.value?.flushPendingFieldCommits?.()
 }
 
 const underlaySrc = ref<string | null>(null)
@@ -112,7 +136,11 @@ const hidePlanText = ref(false)
 const orientByFloor = ref<Record<number, FloorOrientState>>({})
 const underlayMoveMode = ref(false)
 const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
-const scaleInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
+const userSettings = loadUserSettings()
+const scaleInputUnit = ref<ScaleInputUnit>(userSettings.scaleInputUnit)
+const thicknessMinCm = ref(userSettings.defaults.thicknessMinCm)
+const thicknessMidCm = ref(userSettings.defaults.thicknessMidCm)
+const thicknessMaxCm = ref(userSettings.defaults.thicknessMaxCm)
 
 const {
   viewerMode,
@@ -123,17 +151,99 @@ const {
   resetInspectState,
 } = useFmlViewerInspect()
 
-const { sessionDefaults, onSessionDefaultNumber, onSessionDefaultBool } =
-  useFmlViewerSessionDefaults({ plan, activeFloorIndex, t })
+const inspectFacadeGroups = computed(() => listFacadeGroups(plan.value))
+
+const inspectFacadeSelectValue = computed(() => {
+  const hit = lastInspectHit.value
+  if (!hit || hit.kind !== 'wall' || !plan.value) return ''
+  return groupIdForWall(plan.value, hit.id) ?? ''
+})
+
+async function onInspectFacadeGroupChange(event: Event): Promise<void> {
+  const hit = lastInspectHit.value
+  if (!hit || hit.kind !== 'wall' || !plan.value) return
+  const select = event.target as HTMLSelectElement
+  const value = select.value
+  const wallIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
+  if (value === '__new__') select.value = inspectFacadeSelectValue.value
+
+  if (value === '__new__') {
+    const name = await promptFacadeGroupName()
+    if (name == null) return
+    const group = createFacadeGroup(plan.value, { name })
+    assignWallsToGroup(plan.value, group.id, wallIds)
+  } else if (value === '') {
+    detachWalls(plan.value, wallIds)
+  } else {
+    assignWallsToGroup(plan.value, value, wallIds)
+  }
+
+  const groupId = groupIdForWall(plan.value, hit.id)
+  const ids = groupId ? facadeMemberIdsOnFloor(plan.value, groupId, hit.floorIndex) : undefined
+  lastInspectHit.value = {
+    ...hit,
+    ids: ids && ids.length > 0 ? ids : undefined,
+  }
+  // Force plan reactivity for download/settings roundtrip.
+  plan.value = { ...plan.value }
+}
+
+const {
+  sessionDefaults,
+  activeFloorDefaults,
+  defaultsForFloor,
+  onFloorDefaultNumber,
+  onFloorDefaultBool,
+  hydrateFloorDefaultsFromPlan,
+  addFloorDefaultsSlot,
+  removeFloorDefaultsSlot,
+} = useFmlViewerSessionDefaults({ plan, activeFloorIndex, t })
 
 const fmlRescaleActive = ref(false)
 const fmlRescaleState = ref<HScaleState | null>(null)
 const fmlRescaleDistanceMmX = ref(0)
 const fmlRescaleDistanceMmY = ref(0)
+const underlayScaleActive = ref(false)
+const underlayScaleState = ref<HScaleState | null>(null)
+const underlayScaleMmX = ref(3000)
+const underlayScaleMmY = ref(3000)
 
 function cancelFmlRescale(): void {
   fmlRescaleActive.value = false
   fmlRescaleState.value = null
+}
+
+function cancelUnderlayScale(): void {
+  underlayScaleActive.value = false
+  underlayScaleState.value = null
+}
+
+function persistActiveUnderlayDrawing(): void {
+  const current = plan.value
+  const layout = underlayLayout.value
+  const idx = activeFloorIndex.value
+  const floor = current?.floors[idx]
+  if (!current || !floor || !layout) return
+  if (!(underlayWidthPx.value > 0) || !(underlayHeightPx.value > 0)) return
+  const url = floor.drawing?.url ?? underlaySrc.value
+  if (!url) return
+  const drawing = drawingFromImageScale({
+    imageWidthPx: underlayWidthPx.value,
+    imageHeightPx: underlayHeightPx.value,
+    pxPerMmX: layout.pxPerMmX,
+    pxPerMmY: layout.pxPerMmY,
+    origin: layout.origin,
+    url,
+    alpha: Math.round(underlayOpacity.value * 100),
+    rotation: layout.rotationDeg ?? 0,
+  })
+  if (!drawing) return
+  if (floor.drawing?.extras) drawing.extras = floor.drawing.extras
+  if (floor.drawing?.visible != null) drawing.visible = floor.drawing.visible
+  plan.value = {
+    ...current,
+    floors: current.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
+  }
 }
 
 function beginFmlRescale(): boolean {
@@ -146,6 +256,7 @@ function beginFmlRescale(): boolean {
   fmlRescaleDistanceMmX.value = measured.x * 10
   fmlRescaleDistanceMmY.value = measured.y * 10
   underlayMoveMode.value = false
+  cancelUnderlayScale()
   fmlRescaleActive.value = true
   return true
 }
@@ -204,14 +315,8 @@ let localUnderlayObjectUrl: string | null = null
 let underlayLoadGen = 0
 
 const floors = computed(() => plan.value?.floors ?? [])
-const multiFloor = computed(() => floors.value.length > 1)
 const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
 
-const alignFixturePartial = computed(() => {
-  const pending = pendingAlignRebase.value
-  if (!pending) return false
-  return pending.missing.length > 0
-})
 watch(floors, (list) => {
   if (list.length === 0) {
     activeFloorIndex.value = 0
@@ -237,10 +342,10 @@ const openingOverflow = computed(() => {
   if (!floor) return null
   return summarizeOpeningHeightOverflows(
     findOpeningHeightOverflows(floor, {
-      doorBovenlichtDefault: sessionDefaults.value.bovenlichtDefault,
-      windowBovenlichtDefault: sessionDefaults.value.windowBovenlichtDefault,
-      bovenlichtHeightCm: sessionDefaults.value.bovenlichtHeightCm,
-      bovenlichtGapCm: sessionDefaults.value.bovenlichtGapCm,
+      doorBovenlichtDefault: activeFloorDefaults.value.bovenlichtDefault,
+      windowBovenlichtDefault: activeFloorDefaults.value.windowBovenlichtDefault,
+      bovenlichtHeightCm: activeFloorDefaults.value.bovenlichtHeightCm,
+      bovenlichtGapCm: activeFloorDefaults.value.bovenlichtGapCm,
     }),
   )
 })
@@ -249,10 +354,10 @@ const fmlText = computed(() => {
   if (!plan.value) return ''
   return buildFmlV3(plan.value, {
     name: plan.value.name,
-    bovenlichtDefault: sessionDefaults.value.bovenlichtDefault,
-    windowBovenlichtDefault: sessionDefaults.value.windowBovenlichtDefault,
-    bovenlichtHeightCm: sessionDefaults.value.bovenlichtHeightCm,
-    bovenlichtGapCm: sessionDefaults.value.bovenlichtGapCm,
+    bovenlichtDefault: (_floor, index) => defaultsForFloor(index).bovenlichtDefault,
+    windowBovenlichtDefault: (_floor, index) => defaultsForFloor(index).windowBovenlichtDefault,
+    bovenlichtHeightCm: (_floor, index) => defaultsForFloor(index).bovenlichtHeightCm,
+    bovenlichtGapCm: (_floor, index) => defaultsForFloor(index).bovenlichtGapCm,
   })
 })
 
@@ -273,6 +378,7 @@ function clearUnderlayState(): void {
   underlayOpacity.value = 0.5
   underlayHint.value = null
   underlayMoveMode.value = false
+  cancelUnderlayScale()
 }
 
 function resolveDrawingOpacity(alpha: number | undefined): number {
@@ -352,8 +458,170 @@ async function syncUnderlayForActiveFloor(): Promise<void> {
     return
   }
 
-  underlayHint.value = 'Deze FML heeft een drawing zonder URL.'
+  underlayHint.value = t('viewer.underlayMissingUrl')
 }
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result
+      if (typeof result !== 'string') {
+        reject(new Error('read failed'))
+        return
+      }
+      resolve(result)
+    }
+    reader.onerror = () => reject(reader.error ?? new Error('read failed'))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onUnderlayFileInput(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || !plan.value) return
+  cancelFmlRescale()
+  cancelUnderlayScale()
+  try {
+    const dataUrl = await fileToDataUrl(file)
+    const img = await loadImage(dataUrl)
+    const { width, height } = imageDimensions(img)
+    const drawing = provisionalDrawingFromImage(
+      { width, height },
+      { url: dataUrl, alpha: Math.round(underlayOpacity.value * 100) },
+    )
+    if (!drawing) {
+      error.value = t('viewer.underlayInvalid')
+      return
+    }
+    const idx = activeFloorIndex.value
+    plan.value = {
+      ...plan.value,
+      floors: plan.value.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
+    }
+    applyImageToUnderlay(dataUrl, width, height, drawing)
+    underlayHint.value = null
+    error.value = null
+    await nextTick()
+    previewCanvasRef.value?.resetView?.()
+    beginUnderlayScale()
+  } catch {
+    error.value = t('viewer.underlayLoadFailed')
+  }
+}
+
+function beginUnderlayScale(): boolean {
+  if (inspectMode.value || !underlayAvailable.value) return false
+  const layout = underlayLayout.value
+  const handles = initImageScaleHandles(underlayWidthPx.value, underlayHeightPx.value)
+  if (!layout || !handles) return false
+  const cmState = fmlRescaleStateFromImageHandles(handles, layout)
+  if (!cmState) return false
+  const measured = measuredCmFromRescaleState(cmState)
+  cancelFmlRescale()
+  underlayScaleState.value = cmState
+  underlayScaleMmX.value = measured.x * 10
+  underlayScaleMmY.value = measured.y * 10
+  underlayMoveMode.value = false
+  underlayScaleActive.value = true
+  return true
+}
+
+function updateUnderlayScaleState(next: HScaleState): void {
+  if (!underlayScaleActive.value) return
+  underlayScaleState.value = { ...next }
+}
+
+function onRescaleStateUpdate(next: HScaleState): void {
+  if (fmlRescaleActive.value) updateFmlRescaleState(next)
+  else if (underlayScaleActive.value) updateUnderlayScaleState(next)
+}
+
+function confirmUnderlayScale(): boolean {
+  const state = underlayScaleState.value
+  const layout = underlayLayout.value
+  const current = plan.value
+  if (!state || !layout || !current || !underlayScaleActive.value) return false
+  const measured = measuredCmFromRescaleState(state)
+  const nextPpm = resolveUnderlayPxPerMmFromRulers({
+    measuredCmX: measured.x,
+    measuredCmY: measured.y,
+    currentPxPerMmX: layout.pxPerMmX,
+    currentPxPerMmY: layout.pxPerMmY,
+    trueMmX: underlayScaleMmX.value,
+    trueMmY: underlayScaleMmY.value,
+  })
+  if (!nextPpm) return false
+  const idx = activeFloorIndex.value
+  const floor = current.floors[idx]
+  const drawing = drawingFromImageScale({
+    imageWidthPx: underlayWidthPx.value,
+    imageHeightPx: underlayHeightPx.value,
+    pxPerMmX: nextPpm.pxPerMmX,
+    pxPerMmY: nextPpm.pxPerMmY,
+    origin: layout.origin,
+    url: floor?.drawing?.url ?? underlaySrc.value ?? undefined,
+    alpha: Math.round(underlayOpacity.value * 100),
+    rotation: layout.rotationDeg ?? 0,
+  })
+  if (!drawing) return false
+  if (floor?.drawing?.extras) drawing.extras = floor.drawing.extras
+  if (floor?.drawing?.visible != null) drawing.visible = floor.drawing.visible
+  plan.value = {
+    ...current,
+    floors: current.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
+  }
+  const nextLayout = previewUnderlayLayoutFromDrawing(drawing, {
+    width: underlayWidthPx.value,
+    height: underlayHeightPx.value,
+  })
+  if (nextLayout) {
+    underlayLayout.value = copyUnderlayDisplayOrient(nextLayout, layout)
+  }
+  cancelUnderlayScale()
+  if ((floor?.walls.length ?? 0) === 0) {
+    void nextTick().then(() => previewCanvasRef.value?.resetView?.())
+  }
+  return true
+}
+
+const underlayScalePxX = computed(() => {
+  const state = underlayScaleState.value
+  const layout = underlayLayout.value
+  if (!state || !layout) return 0
+  return measuredCmFromRescaleState(state).x * 10 * layout.pxPerMmX
+})
+
+const underlayScalePxY = computed(() => {
+  const state = underlayScaleState.value
+  const layout = underlayLayout.value
+  if (!state || !layout) return 0
+  return measuredCmFromRescaleState(state).y * 10 * layout.pxPerMmY
+})
+
+const underlayScaleCanConfirm = computed(
+  () =>
+    underlayScaleActive.value &&
+    underlayScalePxX.value > 3 &&
+    underlayScalePxY.value > 3 &&
+    underlayScaleMmX.value > 0 &&
+    underlayScaleMmY.value > 0,
+)
+
+const underlayScaleMismatchPct = computed(() => {
+  const x = underlayScalePxX.value / underlayScaleMmX.value
+  const y = underlayScalePxY.value / underlayScaleMmY.value
+  if (!(x > 0) || !(y > 0)) return 0
+  return (Math.abs(x - y) / Math.min(x, y)) * 100
+})
+
+const canStartUnderlayScale = computed(() => underlayAvailable.value && !inspectMode.value)
+const rescaleOverlayActive = computed(() => fmlRescaleActive.value || underlayScaleActive.value)
+const rescaleOverlayState = computed(() =>
+  fmlRescaleActive.value ? fmlRescaleState.value : underlayScaleState.value,
+)
 
 const {
   loadFileName,
@@ -361,8 +629,12 @@ const {
   loadStatusLabel,
   floorLabel,
   selectFloor,
+  setPlanName,
+  renameFloor,
+  addFloor,
+  removeFloor,
+  startNewPlan,
   onFileInput,
-  clearPlan,
 } = useFmlViewerLoad({
   plan,
   warnings,
@@ -378,9 +650,14 @@ const {
   t,
   flushPreviewFieldCommits,
   cancelFmlRescale,
+  cancelUnderlayScale,
+  persistActiveUnderlayDrawing,
   clearUnderlayState,
   syncUnderlayForActiveFloor,
   resetInspectState,
+  hydrateFloorDefaultsFromPlan,
+  addFloorDefaultsSlot,
+  removeFloorDefaultsSlot,
 })
 
 function applyAlignFixtureRebase(): void {
@@ -394,6 +671,29 @@ function applyAlignFixtureRebase(): void {
 function dismissAlignFixtureRebase(): void {
   pendingAlignRebase.value = null
 }
+
+watch(pendingAlignRebase, async (preview) => {
+  if (!preview) {
+    cancelFmlChromeDialog()
+    return
+  }
+  const ok = await confirmFmlChrome({
+    title: t('viewer.alignFixtureTitle'),
+    message: t('viewer.alignFixtureBody'),
+    detail:
+      preview.missing.length > 0
+        ? t('viewer.alignFixtureBodyPartial', {
+            moved: preview.moved.length,
+            total: floors.value.length,
+          })
+        : undefined,
+    confirmLabel: t('common.apply'),
+    cancelLabel: t('common.cancel'),
+  })
+  if (pendingAlignRebase.value !== preview) return
+  if (ok) applyAlignFixtureRebase()
+  else dismissAlignFixtureRebase()
+})
 
 function applyViewerFloorOrient(op: FloorOrientOp): void {
   if (!plan.value) return
@@ -420,29 +720,39 @@ function applyViewerProjectOrient(op: 'flipX'): void {
   underlayMoveMode.value = false
 }
 
-function applyViewerUnderlayOrient(op: 'rotCw' | 'rotCcw' | 'flipX'): void {
+function applyViewerUnderlayOrient(): void {
   const layout = underlayLayout.value
   if (!layout) return
   const next = cloneUnderlayOriginLayout(layout)
-  if (op === 'flipX') {
-    next.flipX = !next.flipX
-    if (!next.flipX) delete next.flipX
-  } else {
-    const delta = op === 'rotCw' ? 90 : -90
-    const current = next.rotationDeg ?? 0
-    let rotationDeg = current + delta
-    while (rotationDeg > 180) rotationDeg -= 360
-    while (rotationDeg <= -180) rotationDeg += 360
-    if (Math.abs(rotationDeg) < 0.001) delete next.rotationDeg
-    else next.rotationDeg = rotationDeg
-  }
+  next.flipX = !next.flipX
+  if (!next.flipX) delete next.flipX
   underlayLayout.value = next
 }
 
+function setUnderlayRotationDeg(raw: number): void {
+  const layout = underlayLayout.value
+  if (!layout || !Number.isFinite(raw)) return
+  const next = cloneUnderlayOriginLayout(layout)
+  let rotationDeg = raw
+  while (rotationDeg > 180) rotationDeg -= 360
+  while (rotationDeg <= -180) rotationDeg += 360
+  if (Math.abs(rotationDeg) < 0.001) delete next.rotationDeg
+  else next.rotationDeg = Math.round(rotationDeg * 10) / 10
+  underlayLayout.value = next
+}
+
+const underlayRotationDeg = computed(() => underlayLayout.value?.rotationDeg ?? 0)
+
 function downloadCurrentFml(): void {
   flushPreviewFieldCommits()
+  persistActiveUnderlayDrawing()
+  if (!plan.value) return
+  const junctioned = applyJunctionSanitizeToPlan(plan.value)
+  if (junctioned !== plan.value) {
+    plan.value = junctioned
+  }
   if (!fmlText.value) return
-  const base = fileName.value?.replace(/\.[^.]+$/i, '') || plan.value?.name || 'fml-export'
+  const base = fileName.value?.replace(/\.[^.]+$/i, '') || plan.value?.name?.trim() || 'fml-export'
   downloadFml(fmlText.value, `${base}.fml`)
 }
 
@@ -454,16 +764,29 @@ function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): v
 }
 
 watch(inspectMode, (on) => {
-  if (on) cancelFmlRescale()
+  if (on) {
+    cancelFmlRescale()
+    cancelUnderlayScale()
+  }
 })
+
+function applyViewerSettings(): void {
+  const settings = loadUserSettings()
+  scaleInputUnit.value = settings.scaleInputUnit
+  thicknessMinCm.value = settings.defaults.thicknessMinCm
+  thicknessMidCm.value = settings.defaults.thicknessMidCm
+  thicknessMaxCm.value = settings.defaults.thicknessMaxCm
+  previewCanvasRef.value?.applyCornerMarkerModeFromSettings?.()
+}
 
 onBeforeUnmount(() => {
   clearUnderlayState()
 })
 
 defineExpose({
-  applyCornerMarkerModeFromSettings: () =>
-    previewCanvasRef.value?.applyCornerMarkerModeFromSettings(),
+  startNewPlan,
+  applyViewerSettings,
+  applyCornerMarkerModeFromSettings: () => applyViewerSettings(),
 })
 </script>
 
@@ -524,37 +847,13 @@ defineExpose({
         <p class="hint">
           {{
             inspectMode
-              ? 'Inspectie: tik een muur, deur, raam, kamer of vlak. Geen detectie of tekenen.'
-              : 'Open een bestaand .fml-bestand om te bekijken en te bewerken.'
+              ? t('viewer.inspectHint')
+              : plan
+                ? t('viewer.editHint')
+                : t('viewer.emptyHint')
           }}
         </p>
         <div class="sidebar-icon-row">
-          <label
-            class="sidebar-icon-btn"
-            :class="{ 'is-disabled': isLoadingFml }"
-            title="FML uploaden"
-          >
-            <ToolbeltIcon name="upload" />
-            <span>FML uploaden</span>
-            <input
-              type="file"
-              accept=".fml,.json,.json.fml"
-              :disabled="isLoadingFml"
-              @change="onFileInput"
-            />
-          </label>
-          <button
-            v-if="plan"
-            type="button"
-            class="sidebar-icon-btn"
-            :disabled="isLoadingFml"
-            title="Sluiten"
-            aria-label="Sluiten"
-            @click="clearPlan"
-          >
-            <ToolbeltIcon name="close_plan" />
-            <span>Sluiten</span>
-          </button>
           <button
             v-if="plan"
             type="button"
@@ -565,6 +864,18 @@ defineExpose({
           >
             <ToolbeltIcon name="download" />
             <span>Download .fml</span>
+          </button>
+          <button
+            v-if="!plan"
+            type="button"
+            class="sidebar-icon-btn sidebar-icon-btn--primary"
+            :title="t('viewer.newPlan')"
+            :aria-label="t('viewer.newPlan')"
+            :disabled="isLoadingFml"
+            @click="startNewPlan"
+          >
+            <ToolbeltIcon name="edit" />
+            <span>{{ t('viewer.newPlan') }}</span>
           </button>
         </div>
         <p v-if="isLoadingFml" class="load-status-inline" role="status" aria-live="polite">
@@ -617,195 +928,159 @@ defineExpose({
             <span>{{ t('result.hidePlanText') }}</span>
           </label>
         </div>
-        <div v-if="!inspectMode" class="sidebar-icon-row sidebar-plan-actions">
-          <button
-            type="button"
-            class="sidebar-icon-btn"
-            :class="{ 'is-on': fmlRescaleActive }"
-            :disabled="!canStartRescale"
-            :title="t('result.rescaleHint')"
-            :aria-label="t('result.rescale')"
-            :aria-pressed="fmlRescaleActive"
-            @click="fmlRescaleActive ? cancelFmlRescale() : beginFmlRescale()"
-          >
-            <ToolbeltIcon name="rescale" />
-            <span>{{ t('result.rescale') }}</span>
-          </button>
-          <button
-            type="button"
-            class="sidebar-icon-btn"
-            :disabled="!canStartRescale"
-            :title="t('result.sanitizeHint')"
-            :aria-label="t('result.sanitize')"
-            @click="previewCanvasRef?.sanitizeWalls()"
-          >
-            <ToolbeltIcon name="sanitize" />
-            <span>{{ t('result.sanitize') }}</span>
-          </button>
-          <button
-            type="button"
-            class="sidebar-icon-btn"
-            :class="{ 'is-on': projectOrientFlipX }"
-            :disabled="!plan || floors.length === 0"
-            :title="t('result.mirrorProjectHint')"
-            :aria-label="t('result.mirrorProject')"
-            :aria-pressed="projectOrientFlipX"
-            @click="applyViewerProjectOrient('flipX')"
-          >
-            <ToolbeltIcon name="mirror_plan" />
-            <span>{{ t('result.mirrorProject') }}</span>
-          </button>
-        </div>
-        <FmlRescalePanel
-          v-if="!inspectMode"
-          hide-start
-          :active="fmlRescaleActive"
-          :can-start="canStartRescale"
-          :state="fmlRescaleState"
-          :mm-x="fmlRescaleDistanceMmX"
-          :mm-y="fmlRescaleDistanceMmY"
-          :unit="scaleInputUnit"
-          @begin="beginFmlRescale()"
-          @cancel="cancelFmlRescale()"
-          @confirm="confirmFmlRescale()"
-          @update-mm-x="setFmlRescaleDistanceMmX"
-          @update-mm-y="setFmlRescaleDistanceMmY"
-        />
-        <details v-if="!inspectMode" class="fml-fold defaults-fold">
-          <summary>{{ t('result.heightsFold') }}</summary>
-          <p class="defaults-hint">{{ t('viewer.defaultsHint') }}</p>
-          <div class="defaults-grid">
-            <label class="defaults-field">
-              <span>{{ t('settings.wallHeightCm') }}</span>
-              <input
-                type="number"
-                min="1"
-                :value="sessionDefaults.wallHeightCm"
-                @change="onSessionDefaultNumber('wallHeightCm', $event)"
-              />
-            </label>
-            <label class="defaults-field">
-              <span>{{ t('settings.doorHeightCm') }}</span>
-              <input
-                type="number"
-                min="1"
-                :value="sessionDefaults.doorHeightCm"
-                @change="onSessionDefaultNumber('doorHeightCm', $event)"
-              />
-            </label>
-            <label class="defaults-field">
-              <span>{{ t('settings.windowHeightCm') }}</span>
-              <input
-                type="number"
-                min="1"
-                :value="sessionDefaults.windowHeightCm"
-                @change="onSessionDefaultNumber('windowHeightCm', $event)"
-              />
-            </label>
-            <label class="defaults-field">
-              <span>{{ t('settings.sillZCm') }}</span>
-              <input
-                type="number"
-                min="0"
-                :value="sessionDefaults.windowSillZCm"
-                @change="onSessionDefaultNumber('windowSillZCm', $event)"
-              />
-            </label>
-            <label class="defaults-field">
-              <span>{{ t('settings.bovenlichtGapCm') }}</span>
-              <input
-                type="number"
-                min="0"
-                :value="sessionDefaults.bovenlichtGapCm"
-                @change="onSessionDefaultNumber('bovenlichtGapCm', $event)"
-              />
-            </label>
-            <label class="defaults-field">
-              <span>{{ t('settings.bovenlichtHeightCm') }}</span>
-              <input
-                type="number"
-                min="1"
-                :value="sessionDefaults.bovenlichtHeightCm"
-                @change="onSessionDefaultNumber('bovenlichtHeightCm', $event)"
-              />
-            </label>
-          </div>
-          <label class="defaults-check">
-            <input
-              type="checkbox"
-              :checked="sessionDefaults.bovenlichtDefault"
-              @change="onSessionDefaultBool('bovenlichtDefault', $event)"
-            />
-            <span>{{ t('settings.bovenlichtDoors') }}</span>
-          </label>
-          <label class="defaults-check">
-            <input
-              type="checkbox"
-              :checked="sessionDefaults.windowBovenlichtDefault"
-              @change="onSessionDefaultBool('windowBovenlichtDefault', $event)"
-            />
-            <span>{{ t('settings.bovenlichtWindows') }}</span>
-          </label>
-        </details>
-        <div v-if="inspectMode" class="inspect-panel">
-          <p class="inspect-hint">
-            Tik cyclet de statuskleur: uit → open (oranje) → klaar (groen) → uit.
-          </p>
-          <dl v-if="lastInspectHit" class="inspect-hit">
-            <div>
-              <dt>Type</dt>
-              <dd>{{ inspectKindLabel(lastInspectHit.kind) }}</dd>
-            </div>
-            <div>
-              <dt>Id</dt>
-              <dd class="inspect-id">{{ lastInspectHit.id }}</dd>
-            </div>
-            <div v-if="lastInspectHit.wallId">
-              <dt>Muur</dt>
-              <dd class="inspect-id">{{ lastInspectHit.wallId }}</dd>
-            </div>
-            <div>
-              <dt>Kleur</dt>
-              <dd>
-                <span
-                  v-if="inspectColors[lastInspectHit.id]"
-                  class="inspect-swatch"
-                  :style="{ background: inspectColors[lastInspectHit.id] }"
-                />
-                {{ inspectColors[lastInspectHit.id] ?? 'geen' }}
-              </dd>
-            </div>
-          </dl>
-          <p v-else class="inspect-empty">Nog geen selectie — tik op de plattegrond.</p>
-        </div>
 
         <details v-if="!inspectMode" class="fml-fold defaults-fold">
-          <summary>{{ t('result.orientFold') }}</summary>
+          <summary>{{ t('project.title') }}</summary>
+          <div class="project-block">
+            <label class="defaults-field">
+              <span>{{ t('project.name') }}</span>
+              <input
+                type="text"
+                :value="plan.name"
+                :placeholder="t('project.namePlaceholder')"
+                @input="setPlanName(($event.target as HTMLInputElement).value)"
+              />
+            </label>
+            <div class="floor-edit-list">
+              <div
+                v-for="(floor, index) in floors"
+                :key="`${floor.level}-${index}`"
+                class="floor-edit-row"
+              >
+                <input
+                  type="text"
+                  class="floor-edit-name"
+                  :class="{ 'is-active': index === activeFloorIndex }"
+                  :value="floor.name"
+                  :placeholder="t('project.floorNamePlaceholder')"
+                  :aria-label="t('project.selectFloor', { name: floorLabel(index) })"
+                  @focus="selectFloor(index)"
+                  @input="renameFloor(index, ($event.target as HTMLInputElement).value)"
+                />
+                <button
+                  v-if="floors.length > 1"
+                  type="button"
+                  class="floor-edit-remove"
+                  :title="t('project.removeFloor')"
+                  :aria-label="t('project.removeFloor')"
+                  @click="removeFloor(index)"
+                >
+                  ×
+                </button>
+              </div>
+              <button type="button" class="sidebar-icon-btn floor-add-btn" @click="addFloor">
+                <span>{{ t('project.addFloor') }}</span>
+              </button>
+            </div>
+            <div class="sidebar-icon-row sidebar-plan-actions">
+              <label
+                class="sidebar-icon-btn"
+                :class="{ 'is-disabled': isLoadingFml }"
+                :title="t('viewer.chooseFml')"
+                :aria-label="t('viewer.chooseFml')"
+              >
+                <ToolbeltIcon name="upload" />
+                <span>{{ t('viewer.chooseFml') }}</span>
+                <input
+                  type="file"
+                  accept=".fml,.json,.json.fml"
+                  :disabled="isLoadingFml"
+                  @change="onFileInput"
+                />
+              </label>
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :class="{ 'is-on': projectOrientFlipX }"
+                :disabled="!plan || floors.length === 0"
+                :title="t('result.mirrorProjectHint')"
+                :aria-label="t('result.mirrorProject')"
+                :aria-pressed="projectOrientFlipX"
+                @click="applyViewerProjectOrient('flipX')"
+              >
+                <ToolbeltIcon name="mirror_plan" />
+                <span>{{ t('result.mirrorProject') }}</span>
+              </button>
+            </div>
+          </div>
+        </details>
+
+        <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <summary>{{ t('viewer.underlayFold') }}</summary>
+          <p v-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
+          <div class="sidebar-icon-row sidebar-plan-actions">
+            <label
+              class="sidebar-icon-btn"
+              :title="t('viewer.uploadUnderlayHint')"
+              :aria-label="t('viewer.uploadUnderlay')"
+            >
+              <ToolbeltIcon name="upload" />
+              <span>{{ t('viewer.uploadUnderlay') }}</span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+                :disabled="isLoadingFml"
+                @change="onUnderlayFileInput"
+              />
+            </label>
+            <button
+              type="button"
+              class="sidebar-icon-btn"
+              :class="{ 'is-on': underlayScaleActive }"
+              :disabled="!canStartUnderlayScale"
+              :title="t('viewer.scaleUnderlayHint')"
+              :aria-label="t('viewer.scaleUnderlay')"
+              :aria-pressed="underlayScaleActive"
+              @click="underlayScaleActive ? cancelUnderlayScale() : beginUnderlayScale()"
+            >
+              <ToolbeltIcon name="ruler" />
+              <span>{{ t('viewer.scaleUnderlay') }}</span>
+            </button>
+          </div>
+          <ScaleConfirmBar
+            v-if="underlayScaleActive"
+            :mm-x="underlayScaleMmX"
+            :mm-y="underlayScaleMmY"
+            :px-x="underlayScalePxX"
+            :px-y="underlayScalePxY"
+            :can-confirm="underlayScaleCanConfirm"
+            :confirmed="false"
+            :open="true"
+            :unit="scaleInputUnit"
+            :axis-mismatch-pct="underlayScaleMismatchPct"
+            @update-mm-x="underlayScaleMmX = $event"
+            @update-mm-y="underlayScaleMmY = $event"
+            @confirm="confirmUnderlayScale()"
+            @cancel="cancelUnderlayScale()"
+          />
           <div v-if="underlayAvailable" class="orient-block">
             <p class="orient-label">{{ t('result.underlayOrientLabel') }}</p>
+            <label class="defaults-field underlay-rotation-field">
+              <span>{{ t('viewer.underlayRotation') }}</span>
+              <div class="underlay-rotation-row">
+                <input
+                  type="range"
+                  min="-180"
+                  max="180"
+                  step="0.5"
+                  :value="underlayRotationDeg"
+                  :disabled="underlayOpacity <= 0"
+                  :aria-label="t('viewer.underlayRotation')"
+                  @input="setUnderlayRotationDeg(Number(($event.target as HTMLInputElement).value))"
+                />
+                <input
+                  type="number"
+                  step="0.5"
+                  :value="underlayRotationDeg"
+                  :disabled="underlayOpacity <= 0"
+                  @change="
+                    setUnderlayRotationDeg(Number(($event.target as HTMLInputElement).value))
+                  "
+                />
+                <span class="underlay-rotation-unit">°</span>
+              </div>
+            </label>
             <div class="orient-actions">
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :disabled="underlayOpacity <= 0"
-                :title="t('result.underlayRotate90CcwHint')"
-                :aria-label="t('result.underlayRotate90Ccw')"
-                @click="applyViewerUnderlayOrient('rotCcw')"
-              >
-                <ToolbeltIcon name="rotate_plan_ccw" />
-                <span>{{ t('result.underlayRotate90Ccw') }}</span>
-              </button>
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :disabled="underlayOpacity <= 0"
-                :title="t('result.underlayRotate90CwHint')"
-                :aria-label="t('result.underlayRotate90Cw')"
-                @click="applyViewerUnderlayOrient('rotCw')"
-              >
-                <ToolbeltIcon name="rotate_plan_cw" />
-                <span>{{ t('result.underlayRotate90Cw') }}</span>
-              </button>
               <button
                 type="button"
                 class="sidebar-icon-btn"
@@ -814,7 +1089,7 @@ defineExpose({
                 :title="t('result.underlayMirrorVerticalHint')"
                 :aria-label="t('result.underlayMirrorVertical')"
                 :aria-pressed="underlayLayout?.flipX === true"
-                @click="applyViewerUnderlayOrient('flipX')"
+                @click="applyViewerUnderlayOrient()"
               >
                 <ToolbeltIcon name="mirror_underlay" />
                 <span>{{ t('result.underlayMirrorVertical') }}</span>
@@ -834,6 +1109,51 @@ defineExpose({
               </button>
             </div>
           </div>
+        </details>
+
+        <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <summary>{{ t('viewer.fmlFold') }}</summary>
+          <div class="sidebar-icon-row sidebar-plan-actions">
+            <button
+              type="button"
+              class="sidebar-icon-btn"
+              :class="{ 'is-on': fmlRescaleActive }"
+              :disabled="!canStartRescale"
+              :title="t('result.rescaleHint')"
+              :aria-label="t('result.rescale')"
+              :aria-pressed="fmlRescaleActive"
+              @click="fmlRescaleActive ? cancelFmlRescale() : beginFmlRescale()"
+            >
+              <ToolbeltIcon name="rescale" />
+              <span>{{ t('result.rescale') }}</span>
+            </button>
+            <button
+              type="button"
+              class="sidebar-icon-btn"
+              :disabled="!canStartRescale"
+              :title="t('result.sanitizeHint')"
+              :aria-label="t('result.sanitize')"
+              @click="previewCanvasRef?.sanitizeWalls?.()"
+            >
+              <ToolbeltIcon name="sanitize" />
+              <span>{{ t('result.sanitize') }}</span>
+            </button>
+          </div>
+          <FmlRescalePanel
+            v-if="!underlayScaleActive"
+            hide-start
+            :active="fmlRescaleActive"
+            :can-start="canStartRescale"
+            :state="fmlRescaleState"
+            :mm-x="fmlRescaleDistanceMmX"
+            :mm-y="fmlRescaleDistanceMmY"
+            :unit="scaleInputUnit"
+            @begin="beginFmlRescale()"
+            @cancel="cancelFmlRescale()"
+            @confirm="confirmFmlRescale()"
+            @update-mm-x="setFmlRescaleDistanceMmX"
+            @update-mm-y="setFmlRescaleDistanceMmY"
+          />
           <div class="orient-block">
             <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
             <div class="orient-actions">
@@ -871,7 +1191,69 @@ defineExpose({
               </button>
             </div>
           </div>
+          <FmlViewerDefaultsFields
+            :defaults="activeFloorDefaults"
+            :hint="t('viewer.defaultsHintFloor')"
+            @number="onFloorDefaultNumber"
+            @bool="onFloorDefaultBool"
+          />
         </details>
+
+        <div v-if="inspectMode" class="inspect-panel">
+          <p class="inspect-hint">
+            Tik cyclet de statuskleur: uit → open (oranje) → klaar (groen) → uit. Muur in een
+            gevelgroep selecteert alle leden op deze verdieping.
+          </p>
+          <dl v-if="lastInspectHit" class="inspect-hit">
+            <div>
+              <dt>Type</dt>
+              <dd>{{ inspectKindLabel(lastInspectHit.kind) }}</dd>
+            </div>
+            <div>
+              <dt>Id</dt>
+              <dd class="inspect-id">{{ lastInspectHit.id }}</dd>
+            </div>
+            <div v-if="lastInspectHit.wallId">
+              <dt>Muur</dt>
+              <dd class="inspect-id">{{ lastInspectHit.wallId }}</dd>
+            </div>
+            <div v-if="lastInspectHit.ids?.length">
+              <dt>Gevel-leden</dt>
+              <dd class="inspect-id">{{ lastInspectHit.ids.length }}</dd>
+            </div>
+            <div>
+              <dt>Kleur</dt>
+              <dd>
+                <span
+                  v-if="inspectColors[lastInspectHit.id]"
+                  class="inspect-swatch"
+                  :style="{ background: inspectColors[lastInspectHit.id] }"
+                />
+                {{ inspectColors[lastInspectHit.id] ?? 'geen' }}
+              </dd>
+            </div>
+          </dl>
+          <div v-if="lastInspectHit?.kind === 'wall'" class="inspect-facade">
+            <label class="inspect-facade-label" for="inspect-facade-select">{{
+              t('result.toolbar.facadeGroup')
+            }}</label>
+            <select
+              id="inspect-facade-select"
+              class="inspect-facade-select"
+              :value="inspectFacadeSelectValue"
+              @change="onInspectFacadeGroupChange"
+            >
+              <option value="">{{ t('result.toolbar.facadeGroupNone') }}</option>
+              <option v-for="group in inspectFacadeGroups" :key="group.id" :value="group.id">
+                {{ group.code }} — {{ group.name }}
+              </option>
+              <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
+            </select>
+          </div>
+          <p v-else-if="!lastInspectHit" class="inspect-empty">
+            Nog geen selectie — tik op de plattegrond.
+          </p>
+        </div>
 
         <div v-if="openingOverflow || warnings.length > 0" class="download-warnings">
           <FmlOpeningOverflowNotice v-if="openingOverflow" :summary="openingOverflow" />
@@ -904,7 +1286,7 @@ defineExpose({
       </div>
       <template v-if="plan">
         <div
-          v-if="multiFloor && !canvasFullscreen"
+          v-if="floors.length > 0 && !canvasFullscreen"
           class="floor-rail"
           role="tablist"
           :aria-label="t('project.railLabel')"
@@ -925,6 +1307,16 @@ defineExpose({
             >
               {{ floorLabel(index) }}
             </button>
+            <button
+              type="button"
+              class="floor-chip add"
+              :disabled="isLoadingFml"
+              :title="t('project.addFloor')"
+              :aria-label="t('project.addFloor')"
+              @click="addFloor"
+            >
+              +
+            </button>
           </div>
         </div>
         <div class="viewer-canvas-host">
@@ -938,9 +1330,9 @@ defineExpose({
           >
             <ToolbeltIcon name="menu" />
           </button>
-          <FmlPreviewCanvas
+          <FmlInspect
+            v-if="inspectMode"
             ref="previewCanvasRef"
-            :touch-editor="true"
             :plan="plan"
             :floor-index="activeFloorIndex"
             :underlay-src="underlaySrc"
@@ -954,26 +1346,45 @@ defineExpose({
             :px-per-mm-y="underlayLayout?.pxPerMmY ?? 1"
             :rotation-deg="underlayLayout?.rotationDeg ?? 0"
             :flip-x="underlayLayout?.flipX === true"
-            :underlay-move-mode="!inspectMode && underlayMoveMode && underlayOpacity > 0"
-            :area-surface-edit-enabled="true"
-            :annotation-edit-enabled="!inspectMode"
-            :inspect-mode="inspectMode"
             :inspect-colors="inspectColors"
             :canvas-fullscreen="canvasFullscreen"
-            :rescale-mode="fmlRescaleActive"
-            :rescale-state="fmlRescaleState"
-            :bovenlicht-default="sessionDefaults.bovenlichtDefault"
-            :window-bovenlicht-default="sessionDefaults.windowBovenlichtDefault"
-            :bovenlicht-height-cm="sessionDefaults.bovenlichtHeightCm"
-            :bovenlicht-gap-cm="sessionDefaults.bovenlichtGapCm"
-            :default-door-height-cm="sessionDefaults.doorHeightCm"
-            :default-window-height-cm="sessionDefaults.windowHeightCm"
-            :default-window-sill-z-cm="sessionDefaults.windowSillZCm"
+            @inspect-select="onInspectSelect"
+            @update:canvas-fullscreen="canvasFullscreen = $event"
+          />
+          <FmlEditor
+            v-else
+            ref="previewCanvasRef"
+            :plan="plan"
+            :floor-index="activeFloorIndex"
+            :underlay-src="underlaySrc"
+            :underlay-width-px="underlayWidthPx"
+            :underlay-height-px="underlayHeightPx"
+            :underlay-opacity="underlaySrc ? underlayOpacity : 0"
+            :content-opacity="fmlOpacity"
+            :labels-visible="!hidePlanText"
+            :cm-origin="underlayLayout?.origin ?? null"
+            :px-per-mm-x="underlayLayout?.pxPerMmX ?? 1"
+            :px-per-mm-y="underlayLayout?.pxPerMmY ?? 1"
+            :rotation-deg="underlayLayout?.rotationDeg ?? 0"
+            :flip-x="underlayLayout?.flipX === true"
+            :underlay-move-mode="underlayMoveMode && underlayOpacity > 0"
+            :canvas-fullscreen="canvasFullscreen"
+            :thickness-min-cm="thicknessMinCm"
+            :thickness-mid-cm="thicknessMidCm"
+            :thickness-max-cm="thicknessMaxCm"
+            :rescale-mode="rescaleOverlayActive"
+            :rescale-state="rescaleOverlayState"
+            :bovenlicht-default="activeFloorDefaults.bovenlichtDefault"
+            :window-bovenlicht-default="activeFloorDefaults.windowBovenlichtDefault"
+            :bovenlicht-height-cm="activeFloorDefaults.bovenlichtHeightCm"
+            :bovenlicht-gap-cm="activeFloorDefaults.bovenlichtGapCm"
+            :default-door-height-cm="activeFloorDefaults.doorHeightCm"
+            :default-window-height-cm="activeFloorDefaults.windowHeightCm"
+            :default-window-sill-z-cm="activeFloorDefaults.windowSillZCm"
             @plan-update="onPlanUpdate"
             @update:underlay-move-mode="underlayMoveMode = $event"
-            @update-rescale-state="updateFmlRescaleState"
-            @cancel-rescale="cancelFmlRescale()"
-            @inspect-select="onInspectSelect"
+            @update-rescale-state="onRescaleStateUpdate"
+            @cancel-rescale="fmlRescaleActive ? cancelFmlRescale() : cancelUnderlayScale()"
             @update:canvas-fullscreen="canvasFullscreen = $event"
           />
         </div>
@@ -989,9 +1400,17 @@ defineExpose({
         >
           <ToolbeltIcon name="menu" />
         </button>
-        <p>Upload een FML-bestand om de plattegrond te bekijken.</p>
-        <label class="upload-btn primary" :class="{ 'upload-btn--disabled': isLoadingFml }">
-          FML kiezen
+        <p>{{ t('viewer.emptyHint') }}</p>
+        <button
+          type="button"
+          class="upload-btn primary"
+          :disabled="isLoadingFml"
+          @click="startNewPlan"
+        >
+          {{ t('viewer.newPlan') }}
+        </button>
+        <label class="upload-btn" :class="{ 'upload-btn--disabled': isLoadingFml }">
+          {{ t('viewer.chooseFml') }}
           <input
             type="file"
             accept=".fml,.json,.json.fml"
@@ -1001,36 +1420,6 @@ defineExpose({
         </label>
       </div>
     </main>
-
-    <div
-      v-if="pendingAlignRebase"
-      class="align-dialog-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="align-fixture-title"
-      @click.self="dismissAlignFixtureRebase"
-    >
-      <div class="align-dialog">
-        <h3 id="align-fixture-title">{{ t('viewer.alignFixtureTitle') }}</h3>
-        <p>{{ t('viewer.alignFixtureBody') }}</p>
-        <p v-if="alignFixturePartial" class="align-dialog-partial">
-          {{
-            t('viewer.alignFixtureBodyPartial', {
-              moved: pendingAlignRebase.moved.length,
-              total: floors.length,
-            })
-          }}
-        </p>
-        <div class="align-dialog-actions">
-          <button type="button" class="secondary" @click="dismissAlignFixtureRebase">
-            {{ t('common.cancel') }}
-          </button>
-          <button type="button" class="align-dialog-apply" @click="applyAlignFixtureRebase">
-            {{ t('common.apply') }}
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -1351,12 +1740,17 @@ defineExpose({
   font-weight: 600;
 }
 
+.floor-chip.add {
+  min-width: 28px;
+  font-weight: 600;
+}
+
 .defaults-fold {
   margin-top: 12px;
 }
 
 .defaults-hint {
-  margin: 0 0 8px;
+  margin: 10px 0 8px;
   font-size: 12px;
   color: #64748b;
   line-height: 1.4;
@@ -1383,6 +1777,88 @@ defineExpose({
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   font-size: 13px;
+}
+
+.project-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.floor-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.floor-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floor-edit-name {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.floor-edit-name.is-active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+
+.floor-edit-remove {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.floor-add-btn {
+  align-self: flex-start;
+}
+
+.underlay-hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: #b45309;
+  line-height: 1.4;
+}
+
+.underlay-rotation-field {
+  margin: 8px 0;
+}
+
+.underlay-rotation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.underlay-rotation-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.underlay-rotation-row input[type='number'] {
+  width: 64px;
+  flex: none;
+}
+
+.underlay-rotation-unit {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .defaults-check {
@@ -1518,6 +1994,28 @@ defineExpose({
   flex-shrink: 0;
 }
 
+.inspect-facade {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspect-facade-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.inspect-facade-select {
+  width: 100%;
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  color: #0f172a;
+}
+
 .download-warnings {
   margin: 16px 0 0;
 }
@@ -1639,68 +2137,5 @@ defineExpose({
   gap: 12px;
   color: #64748b;
   font-size: 14px;
-}
-
-.align-dialog-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgb(15 23 42 / 0.45);
-}
-
-.align-dialog {
-  width: min(420px, calc(100% - 32px));
-  padding: 16px 18px;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 12px 40px rgb(15 23 42 / 0.2);
-}
-
-.align-dialog h3 {
-  margin: 0 0 8px;
-  font-size: 15px;
-  color: #0f172a;
-}
-
-.align-dialog p {
-  margin: 0 0 8px;
-  font-size: 13px;
-  line-height: 1.45;
-  color: #334155;
-}
-
-.align-dialog-partial {
-  color: #64748b;
-  font-size: 12px;
-}
-
-.align-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.align-dialog-actions .secondary {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.align-dialog-apply {
-  background: #2563eb;
-  color: #fff;
-  border: 1px solid #2563eb;
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
 }
 </style>

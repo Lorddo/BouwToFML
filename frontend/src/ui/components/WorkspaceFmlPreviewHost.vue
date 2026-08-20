@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
@@ -7,7 +7,7 @@ import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/consta
 import FmlPreviewCanvas from './FmlPreviewCanvas.vue'
 
 /**
- * Presentational FML canvas host for WorkspaceView.
+ * Presentational FML canvas host for WorkspaceView (detection kind).
  * Sidebar panel is `WorkspaceFmlResultPanel` (layout keeps them apart; same FML result step).
  */
 const props = defineProps<{
@@ -54,6 +54,12 @@ const emit = defineEmits<{
   cancelRescale: []
 }>()
 
+/**
+ * Product gate: when area/surface edit is enabled in workspace, override detection preset.
+ * Canvas `kind` still supplies the rest of the detection profile.
+ */
+const areaSurfaceEditEnabled = computed(() => FML_AREA_SURFACE_EDIT_VISIBLE)
+
 const canvasRef = ref<{
   flushPendingFieldCommits: () => void
   sanitizeWalls: () => boolean
@@ -71,6 +77,8 @@ defineExpose({
   <FmlPreviewCanvas
     ref="canvasRef"
     :key="floorId ? `fml-preview:${floorId}` : 'fml-preview'"
+    kind="detection"
+    :area-surface-edit-enabled="areaSurfaceEditEnabled"
     :plan="plan"
     :underlay-src="underlaySrc"
     :underlay-opacity="underlayOpacity"
@@ -93,7 +101,6 @@ defineExpose({
     :bovenlicht-height-cm="bovenlichtHeightCm"
     :bovenlicht-gap-cm="bovenlichtGapCm"
     :set-fml-nulpunt-image-cm="props.setFmlNulpuntImageCm"
-    :area-surface-edit-enabled="FML_AREA_SURFACE_EDIT_VISIBLE"
     :rescale-mode="rescaleMode === true"
     :rescale-state="rescaleState ?? null"
     @plan-update="(plan, layout) => emit('planUpdate', plan, layout)"
