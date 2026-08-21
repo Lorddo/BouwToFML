@@ -41,7 +41,12 @@ useChromeFitScale(dockRef)
 </script>
 
 <template>
-  <div v-if="faceVisible || inkVisible" ref="dockRef" class="canvas-toolbelt-dock">
+  <div
+    v-if="faceVisible || inkVisible"
+    ref="dockRef"
+    class="canvas-toolbelt-dock"
+    data-fit-chrome="bottom"
+  >
     <div class="canvas-toolbelt-dock__row">
       <div
         v-if="faceVisible"

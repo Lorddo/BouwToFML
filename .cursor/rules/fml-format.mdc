@@ -137,6 +137,15 @@ Placeholders in projectdefaults tot catalogus compleet is (roundtrip FP + `examp
 | V1 | **Niet** in FML — opgepoetste tekening apart downloaden |
 | V2 | `drawing.url` of embedded image in FML |
 
+## Gevel-aanzicht extras (`source.settings`)
+
+Floorplanner negeert onbekende keys. Editor-download houdt ze.
+
+| Key | Inhoud |
+|-----|--------|
+| `floorStack` | `{ nokThicknessCm, floors: [{ level, thicknessCm }] }` — aanzicht-banden; niet `walls[]` |
+| `elevationViews` | `[{ facadeGroupId, drawing? }]` — onderlegger per gevelgroep, niet `floors[].drawing` |
+
 ## Maatlijnen
 
 Drie sporen (exclusieve weergave in editor):

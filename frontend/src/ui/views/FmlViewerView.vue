@@ -3,6 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FmlEditor from '@/ui/fml-editor/FmlEditor.vue'
 import FmlInspect from '@/ui/fml-inspect/FmlInspect.vue'
+import FmlElevationHost from '../components/FmlElevationHost.vue'
+import FmlElevationHeightFields from '../components/FmlElevationHeightFields.vue'
 import FmlOpeningOverflowNotice from '../components/FmlOpeningOverflowNotice.vue'
 import FmlViewerDefaultsFields from '../components/FmlViewerDefaultsFields.vue'
 import FmlViewerDimensionFields from '../components/FmlViewerDimensionFields.vue'
@@ -37,10 +39,15 @@ import {
   detachWalls,
   facadeMemberIdsOnFloor,
   groupIdForWall,
+  hasElevationFacadeGroups,
+  listElevationFacadeGroups,
   listFacadeGroups,
   STAMP_FACADE_GROUP_ID,
   stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
+import { elevationViewForGroup, setElevationViewDrawing } from '@/core/fml/elevation-views'
+import { elevationStackRows, setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
+import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
 import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
 import {
   readDimensionSettings,
@@ -178,6 +185,65 @@ const {
 const inspectFacadeGroups = computed(() =>
   listFacadeGroups(plan.value).filter((group) => group.id !== STAMP_FACADE_GROUP_ID),
 )
+
+const gevelsMode = ref(false)
+const elevationGroupId = ref('')
+const elevationUnderlaySrc = ref<string | null>(null)
+const elevationUnderlayWidthPx = ref(0)
+const elevationUnderlayHeightPx = ref(0)
+const elevationUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
+const elevationFacadeGroups = computed(() => listElevationFacadeGroups(plan.value))
+const showGevelsChip = computed(() => !inspectMode.value && hasElevationFacadeGroups(plan.value))
+const elevationHeightRows = computed(() =>
+  plan.value && gevelsMode.value ? elevationStackRows(plan.value) : [],
+)
+
+function leaveGevelsMode(): void {
+  gevelsMode.value = false
+}
+
+function enterGevelsMode(): void {
+  if (inspectMode.value || !hasElevationFacadeGroups(plan.value)) return
+  const groups = elevationFacadeGroups.value
+  if (!groups.some((group) => group.id === elevationGroupId.value)) {
+    elevationGroupId.value = groups[0]?.id ?? ''
+  }
+  gevelsMode.value = true
+  syncElevationUnderlayFromPlan()
+}
+
+function syncElevationUnderlayFromPlan(): void {
+  if (!plan.value || !elevationGroupId.value) {
+    elevationUnderlaySrc.value = null
+    elevationUnderlayLayout.value = null
+    return
+  }
+  const drawing = elevationViewForGroup(plan.value, elevationGroupId.value)?.drawing
+  if (!drawing?.url) {
+    elevationUnderlaySrc.value = drawing?.url ?? null
+    elevationUnderlayLayout.value = null
+    return
+  }
+  elevationUnderlaySrc.value = drawing.url
+  if (elevationUnderlayWidthPx.value > 0 && elevationUnderlayHeightPx.value > 0) {
+    elevationUnderlayLayout.value = previewUnderlayLayoutFromDrawing(drawing, {
+      width: elevationUnderlayWidthPx.value,
+      height: elevationUnderlayHeightPx.value,
+    })
+  }
+}
+
+watch([gevelsMode, elevationGroupId], () => {
+  if (gevelsMode.value) syncElevationUnderlayFromPlan()
+})
+
+watch(showGevelsChip, (show) => {
+  if (!show) leaveGevelsMode()
+})
+
+watch(inspectMode, (on) => {
+  if (on) leaveGevelsMode()
+})
 
 const inspectFacadeSelectValue = computed(() => {
   const hit = lastInspectHit.value
@@ -383,7 +449,11 @@ function confirmFmlRescale(): boolean {
   return true
 }
 
-const underlayAvailable = computed(() => !!underlaySrc.value && !!underlayLayout.value)
+const underlayAvailable = computed(() =>
+  gevelsMode.value
+    ? !!elevationUnderlaySrc.value && !!elevationUnderlayLayout.value
+    : !!underlaySrc.value && !!underlayLayout.value,
+)
 const canStartRescale = computed(
   () => (plan.value?.floors[activeFloorIndex.value]?.walls.length ?? 0) > 0 && !inspectMode.value,
 )
@@ -584,6 +654,20 @@ async function onUnderlayFileInput(event: Event): Promise<void> {
       error.value = t('viewer.underlayInvalid')
       return
     }
+    if (gevelsMode.value && elevationGroupId.value) {
+      elevationUnderlayWidthPx.value = width
+      elevationUnderlayHeightPx.value = height
+      elevationUnderlaySrc.value = dataUrl
+      plan.value = setElevationViewDrawing(plan.value, elevationGroupId.value, drawing)
+      const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
+      elevationUnderlayLayout.value = layout
+      underlayHint.value = null
+      error.value = null
+      await nextTick()
+      previewCanvasRef.value?.resetView?.()
+      beginUnderlayScale()
+      return
+    }
     const idx = activeFloorIndex.value
     plan.value = {
       ...plan.value,
@@ -602,8 +686,10 @@ async function onUnderlayFileInput(event: Event): Promise<void> {
 
 function beginUnderlayScale(): boolean {
   if (inspectMode.value || !underlayAvailable.value) return false
-  const layout = underlayLayout.value
-  const handles = initImageScaleHandles(underlayWidthPx.value, underlayHeightPx.value)
+  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
+  const widthPx = gevelsMode.value ? elevationUnderlayWidthPx.value : underlayWidthPx.value
+  const heightPx = gevelsMode.value ? elevationUnderlayHeightPx.value : underlayHeightPx.value
+  const handles = initImageScaleHandles(widthPx, heightPx)
   if (!layout || !handles) return false
   const cmState = fmlRescaleStateFromImageHandles(handles, layout)
   if (!cmState) return false
@@ -629,7 +715,7 @@ function onRescaleStateUpdate(next: HScaleState): void {
 
 function confirmUnderlayScale(): boolean {
   const state = underlayScaleState.value
-  const layout = underlayLayout.value
+  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
   const current = plan.value
   if (!state || !layout || !current || !underlayScaleActive.value) return false
   const measured = measuredCmFromRescaleState(state)
@@ -642,19 +728,39 @@ function confirmUnderlayScale(): boolean {
     trueMmY: underlayScaleMmY.value,
   })
   if (!nextPpm) return false
-  const idx = activeFloorIndex.value
-  const floor = current.floors[idx]
+  const widthPx = gevelsMode.value ? elevationUnderlayWidthPx.value : underlayWidthPx.value
+  const heightPx = gevelsMode.value ? elevationUnderlayHeightPx.value : underlayHeightPx.value
+  const url = gevelsMode.value
+    ? (elevationViewForGroup(current, elevationGroupId.value)?.drawing?.url ??
+      elevationUnderlaySrc.value ??
+      undefined)
+    : (current.floors[activeFloorIndex.value]?.drawing?.url ?? underlaySrc.value ?? undefined)
   const drawing = drawingFromImageScale({
-    imageWidthPx: underlayWidthPx.value,
-    imageHeightPx: underlayHeightPx.value,
+    imageWidthPx: widthPx,
+    imageHeightPx: heightPx,
     pxPerMmX: nextPpm.pxPerMmX,
     pxPerMmY: nextPpm.pxPerMmY,
     origin: layout.origin,
-    url: floor?.drawing?.url ?? underlaySrc.value ?? undefined,
+    url,
     alpha: Math.round(underlayOpacity.value * 100),
     rotation: layout.rotationDeg ?? 0,
   })
   if (!drawing) return false
+  if (gevelsMode.value && elevationGroupId.value) {
+    plan.value = setElevationViewDrawing(current, elevationGroupId.value, drawing)
+    const nextLayout = previewUnderlayLayoutFromDrawing(drawing, {
+      width: widthPx,
+      height: heightPx,
+    })
+    if (nextLayout) {
+      elevationUnderlayLayout.value = copyUnderlayDisplayOrient(nextLayout, layout)
+    }
+    cancelUnderlayScale()
+    void nextTick().then(() => previewCanvasRef.value?.resetView?.())
+    return true
+  }
+  const idx = activeFloorIndex.value
+  const floor = current.floors[idx]
   if (floor?.drawing?.extras) drawing.extras = floor.drawing.extras
   if (floor?.drawing?.visible != null) drawing.visible = floor.drawing.visible
   plan.value = {
@@ -757,6 +863,35 @@ const {
   removeFloorDefaultsSlot,
 })
 
+function onSelectFloorChip(index: number): void {
+  leaveGevelsMode()
+  void selectFloor(index)
+}
+
+async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
+  if (!plan.value) return
+  const count = countPlanWalls(plan.value, floorIndex)
+  const ok = await confirmFmlChrome({
+    title: t('viewer.defaultsOverwriteTitle'),
+    message: t('viewer.defaultsOverwriteWallFloor', { cm, count }),
+    confirmLabel: t('common.apply'),
+    cancelLabel: t('common.cancel'),
+  })
+  if (!ok || !plan.value) return
+  plan.value = overwritePlanWallHeights(plan.value, cm, floorIndex)
+}
+
+function onElevationNok(cm: number): void {
+  if (!plan.value) return
+  plan.value = setNokThicknessCm(plan.value, cm)
+}
+
+function onElevationSlab(floorIndex: number, cm: number): void {
+  const floor = plan.value?.floors[floorIndex]
+  if (!plan.value || !floor) return
+  plan.value = setSlabThicknessCm(plan.value, floor.level, cm)
+}
+
 function applyAlignFixtureRebase(): void {
   const pending = pendingAlignRebase.value
   if (!pending) return
@@ -818,16 +953,17 @@ function applyViewerProjectOrient(op: 'flipX'): void {
 }
 
 function applyViewerUnderlayOrient(): void {
-  const layout = underlayLayout.value
+  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
   if (!layout) return
   const next = cloneUnderlayOriginLayout(layout)
   next.flipX = !next.flipX
   if (!next.flipX) delete next.flipX
-  underlayLayout.value = next
+  if (gevelsMode.value) elevationUnderlayLayout.value = next
+  else underlayLayout.value = next
 }
 
 function setUnderlayRotationDeg(raw: number): void {
-  const layout = underlayLayout.value
+  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
   if (!layout || !Number.isFinite(raw)) return
   const next = cloneUnderlayOriginLayout(layout)
   let rotationDeg = raw
@@ -835,10 +971,13 @@ function setUnderlayRotationDeg(raw: number): void {
   while (rotationDeg <= -180) rotationDeg += 360
   if (Math.abs(rotationDeg) < 0.001) delete next.rotationDeg
   else next.rotationDeg = Math.round(rotationDeg * 10) / 10
-  underlayLayout.value = next
+  if (gevelsMode.value) elevationUnderlayLayout.value = next
+  else underlayLayout.value = next
 }
 
-const underlayRotationDeg = computed(() => underlayLayout.value?.rotationDeg ?? 0)
+const underlayRotationDeg = computed(
+  () => (gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value)?.rotationDeg ?? 0,
+)
 
 function downloadCurrentFml(): void {
   flushPreviewFieldCommits()
@@ -1180,11 +1319,16 @@ defineExpose({
                 <button
                   type="button"
                   class="sidebar-icon-btn"
-                  :class="{ 'is-on': underlayLayout?.flipX === true }"
+                  :class="{
+                    'is-on':
+                      (gevelsMode ? elevationUnderlayLayout : underlayLayout)?.flipX === true,
+                  }"
                   :disabled="underlayOpacity <= 0"
                   :title="t('result.underlayMirrorVerticalHint')"
                   :aria-label="t('result.underlayMirrorVertical')"
-                  :aria-pressed="underlayLayout?.flipX === true"
+                  :aria-pressed="
+                    (gevelsMode ? elevationUnderlayLayout : underlayLayout)?.flipX === true
+                  "
                   @click="applyViewerUnderlayOrient()"
                 >
                   <ToolbeltIcon name="mirror_underlay" />
@@ -1207,7 +1351,17 @@ defineExpose({
             </div>
           </details>
 
-          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <details v-if="gevelsMode && !inspectMode" class="fml-fold defaults-fold" open>
+            <summary>{{ t('viewer.elevationHeightsFold') }}</summary>
+            <FmlElevationHeightFields
+              :rows="elevationHeightRows"
+              @nok="onElevationNok"
+              @story="onElevationStoryHeight"
+              @slab="onElevationSlab"
+            />
+          </details>
+
+          <details v-if="!inspectMode && !gevelsMode" class="fml-fold defaults-fold">
             <summary>{{ t('viewer.fmlFold') }}</summary>
             <div class="sidebar-icon-row sidebar-plan-actions">
               <button
@@ -1306,7 +1460,7 @@ defineExpose({
             />
           </details>
 
-          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <details v-if="!inspectMode && !gevelsMode" class="fml-fold defaults-fold">
             <summary>{{ t('viewer.dimensionsFold') }}</summary>
             <FmlViewerDimensionFields
               :settings="dimensionSettings"
@@ -1434,11 +1588,11 @@ defineExpose({
               type="button"
               role="tab"
               class="floor-chip"
-              :class="{ active: index === activeFloorIndex }"
-              :aria-selected="index === activeFloorIndex"
+              :class="{ active: !gevelsMode && index === activeFloorIndex }"
+              :aria-selected="!gevelsMode && index === activeFloorIndex"
               :disabled="isLoadingFml"
               :title="floorLabel(index)"
-              @click="selectFloor(index)"
+              @click="onSelectFloorChip(index)"
             >
               {{ floorLabel(index) }}
             </button>
@@ -1448,9 +1602,25 @@ defineExpose({
               :disabled="isLoadingFml"
               :title="t('project.addFloor')"
               :aria-label="t('project.addFloor')"
-              @click="addFloor"
+              @click="
+                leaveGevelsMode()
+                addFloor()
+              "
             >
               +
+            </button>
+            <button
+              v-if="showGevelsChip"
+              type="button"
+              role="tab"
+              class="floor-chip floor-chip--gevels"
+              :class="{ active: gevelsMode }"
+              :aria-selected="gevelsMode"
+              :disabled="isLoadingFml"
+              :title="t('viewer.elevationTab')"
+              @click="enterGevelsMode()"
+            >
+              {{ t('viewer.elevationTab') }}
             </button>
           </div>
         </div>
@@ -1465,8 +1635,30 @@ defineExpose({
           >
             <ToolbeltIcon name="menu" />
           </button>
+          <FmlElevationHost
+            v-if="gevelsMode && !inspectMode && plan"
+            ref="previewCanvasRef"
+            :plan="plan"
+            :group-id="elevationGroupId"
+            :underlay-src="elevationUnderlaySrc"
+            :underlay-width-px="elevationUnderlayWidthPx"
+            :underlay-height-px="elevationUnderlayHeightPx"
+            :underlay-opacity="elevationUnderlaySrc ? underlayOpacity : 0"
+            :cm-origin="elevationUnderlayLayout?.origin ?? null"
+            :px-per-mm-x="elevationUnderlayLayout?.pxPerMmX ?? 1"
+            :px-per-mm-y="elevationUnderlayLayout?.pxPerMmY ?? 1"
+            :rotation-deg="elevationUnderlayLayout?.rotationDeg ?? 0"
+            :flip-x="elevationUnderlayLayout?.flipX === true"
+            :canvas-fullscreen="canvasFullscreen"
+            :default-door-height-cm="activeFloorDefaults.doorHeightCm"
+            :default-window-height-cm="activeFloorDefaults.windowHeightCm"
+            :default-window-sill-z-cm="activeFloorDefaults.windowSillZCm"
+            @plan-update="onPlanUpdate"
+            @update:group-id="elevationGroupId = $event"
+            @update:canvas-fullscreen="canvasFullscreen = $event"
+          />
           <FmlInspect
-            v-if="inspectMode"
+            v-else-if="inspectMode"
             ref="previewCanvasRef"
             :plan="plan"
             :floor-index="activeFloorIndex"
@@ -1806,6 +1998,7 @@ defineExpose({
   flex-wrap: wrap;
   gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 
 .floor-chip {

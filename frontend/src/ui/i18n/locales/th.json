@@ -793,7 +793,7 @@
     "cornerMarkers": "เครื่องหมายมุม",
     "cornerMarkersHint": "แสดง |_ ที่มุมใน 90° H/V พอดี หรือ ! ที่มุมที่ไม่ฉาก จุดต่อ T และ X ได้เครื่องหมายทุกมุมใน",
     "slicerOffsetSnapCm": "สแนป offset สไลเซอร์ (ซม.)",
-    "slicerOffsetSnapHint": "สแนประยะ P↔M ตามค่านี้และ offset ของสไลซ์อื่น (±15 ซม.) Shift = ปิดขณะลาก",
+    "slicerOffsetSnapHint": "แถบห้ามสูง/กว้างทั้งแคนวาสเทียบ P อื่น (ระยะห่างคงที่ ค่าเริ่ม 50 ซม.) เส้น place เดียวกันไม่ได้ P↔M อิสระ Shift = ปิด",
     "cornerMarkersOff": "ปิด",
     "cornerMarkersSquare": "90° (ฉาก |_ )",
     "cornerMarkersSkew": "ไม่ 90° (!)",
@@ -939,6 +939,15 @@
     "dimensionsOuter": "สร้างขนาดภายนอกรวม",
     "applyStamp": "แสตมป์",
     "applyStampHint": "วางผนังแสตมป์จากชั้นอื่นบนชั้นนี้ (ตำแหน่งเดียวกันเทียบกับจุดศูนย์)",
-    "underlayRotation": "หมุน"
+    "underlayRotation": "หมุน",
+    "elevationTab": "Gevels",
+    "elevationHint": "ลาก = เลื่อน · เลื่อน = ซูม · คลิกหน้าต่างหรือประตู",
+    "elevationOpeningHint": "คลิก = ประเภทและคัดลอก · Ctrl+คลิก = ขนาด · คัดลอกวางช่องเปิดแบบเดียวกัน",
+    "elevationWallHint": "Ctrl+คลิกผนังหรือพื้น = เฉพาะความสูง",
+    "elevationWall": "ด้านหน้า {name}",
+    "elevationHeightsFold": "ความสูง",
+    "elevationHeightsHint": "ความสูงใช้ร่วมกันทุกด้าน. พื้นและสันหลังคาอยู่เฉพาะมุมมองด้านหน้า",
+    "elevationNok": "สันหลังคา",
+    "elevationSlab": "พื้น {name}"
   }
 }

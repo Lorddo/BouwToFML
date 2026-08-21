@@ -198,6 +198,11 @@ function onFacadeNameChange(event: Event): void {
   releaseControlFocus(event)
 }
 
+function onStampGroupChange(event: Event): void {
+  emit('stampGroupChange', (event.target as HTMLInputElement).checked)
+  releaseControlFocus(event)
+}
+
 /** Lokale typ-drafts: null = volg live preview. */
 const lengthEditText = ref<string | null>(null)
 const hEditText = ref<string | null>(null)
@@ -629,10 +634,7 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
                 :checked="stampGroupDraft === true"
                 :indeterminate.prop="stampGroupMixed === true"
                 :aria-label="t('result.toolbar.stampGroupAria')"
-                @change="
-                  emit('stampGroupChange', ($event.target as HTMLInputElement).checked)
-                  releaseControlFocus($event)
-                "
+                @change="onStampGroupChange"
               />
               <span>{{
                 stampGroupMixed

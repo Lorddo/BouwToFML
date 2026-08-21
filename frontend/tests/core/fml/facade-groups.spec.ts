@@ -11,6 +11,7 @@ import {
   detachWallsFromFacade,
   detachWallsFromStamp,
   ensureStampFacadeGroup,
+  hasElevationFacadeGroups,
   groupIdForWall,
   isWallInStampGroup,
   listFacadeGroups,
@@ -57,6 +58,16 @@ describe('facade-groups', () => {
     expect(group).toEqual({ id: 'G1', code: 'VG', name: 'Voorgevel', wallGuids: [] })
     expect(listFacadeGroups(plan)).toHaveLength(1)
     expect(plan.source?.settings?.facadeGroups).toBeTruthy()
+    expect(hasElevationFacadeGroups(plan)).toBe(false)
+  })
+
+  it('hasElevationFacadeGroups alleen bij niet-stamp groep met muren', () => {
+    const plan = planWithWalls(['w1'])
+    ensureStampFacadeGroup(plan)
+    expect(hasElevationFacadeGroups(plan)).toBe(false)
+    const group = createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, group.id, ['w1'])
+    expect(hasElevationFacadeGroups(plan)).toBe(true)
   })
 
   it('assign verplaatst muur van G1 naar G2; G1 verdwijnt als leeg', () => {

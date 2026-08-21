@@ -1,5 +1,11 @@
 import { ref } from 'vue'
 import type Konva from 'konva'
+import {
+  FIT_CONTENT_PAD,
+  layoutInFitInsets,
+  measureFitChromeInsets,
+  resolveFitChromeHost,
+} from './fit-chrome-insets'
 
 /** Velden waar Space tekst/activatie is — niet canvas-pannen. */
 function shouldIgnoreSpaceForTarget(target: EventTarget | null): boolean {
@@ -87,17 +93,24 @@ export function useStage() {
     position.value = newPos
   }
 
-  function fitToScreen(stage: Konva.Stage, imgWidth: number, imgHeight: number, padding = 40) {
+  function fitToScreen(
+    stage: Konva.Stage,
+    imgWidth: number,
+    imgHeight: number,
+    padding = FIT_CONTENT_PAD,
+  ) {
     const container = stage.container()
-    const cw = container.clientWidth
-    const ch = container.clientHeight
-    const s = Math.min((cw - padding) / imgWidth, (ch - padding) / imgHeight)
-    stage.scale({ x: s, y: s })
-    stage.position({
-      x: (cw - imgWidth * s) / 2,
-      y: (ch - imgHeight * s) / 2,
-    })
-    scale.value = s
+    const insets = measureFitChromeInsets(resolveFitChromeHost(container), padding)
+    const fitted = layoutInFitInsets(
+      container.clientWidth,
+      container.clientHeight,
+      imgWidth,
+      imgHeight,
+      insets,
+    )
+    stage.scale({ x: fitted.scale, y: fitted.scale })
+    stage.position({ x: fitted.x, y: fitted.y })
+    scale.value = fitted.scale
     position.value = stage.position()
   }
 

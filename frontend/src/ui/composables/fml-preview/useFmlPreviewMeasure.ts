@@ -6,7 +6,7 @@ import {
   snapPointToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/fml-preview-wall-face-snap'
-import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerOffsetPoint } from '@/core/fml/slice-offset-snap'
+import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/fml/slice-offset-snap'
 import type { BtfSlice } from '@/core/fml/btf-slices'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
 import { type MeasureLine, measureDistanceCm } from './fml-preview-measure'
@@ -75,14 +75,12 @@ export function useFmlPreviewMeasure(options: {
         }
       }
     }
-    // Slicer: soft-snap |P−M| op voorkeur / andere slices (alleen afstand, geen P-op-P)
-    if (mode === 'slicer' && anchor && !snapDisabled) {
-      point = snapSlicerOffsetPoint({
-        anchor,
+    // Slicer: P↔P soft-snap (onderlinge place-offset). P↔M niet forceren.
+    if (mode === 'slicer' && !snapDisabled && !anchor) {
+      point = snapSlicerPPoint({
         point,
         slices: options.getSlicerSlices?.() ?? [],
         preferredCm: options.getSlicerOffsetSnapCm?.() ?? DEFAULT_SLICER_OFFSET_SNAP_CM,
-        snapPCoords: false,
       })
     }
     return point

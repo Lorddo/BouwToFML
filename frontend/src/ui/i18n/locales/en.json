@@ -793,7 +793,7 @@
     "cornerMarkers": "Corner marks",
     "cornerMarkersHint": "Show |_ on exact 90° H/V inner corners, or ! on corners that are not square. T and X junctions get a mark in each inner corner.",
     "slicerOffsetSnapCm": "Slicer offset snap (cm)",
-    "slicerOffsetSnapHint": "Soft-snap P↔M distance to this value and to other slices’ offsets (±15 cm). Does not stack P points. Shift = off while dragging.",
+    "slicerOffsetSnapHint": "Forbidden strip canvas-tall/wide vs other P’s (fixed spacing, default 50 cm). Same place line not allowed. P↔M stays free. Shift = off.",
     "cornerMarkersOff": "Off",
     "cornerMarkersSquare": "90° (square |_ )",
     "cornerMarkersSkew": "Not 90° (!)",
@@ -939,6 +939,15 @@
     "dimensionsOuter": "Generate overall dimensions",
     "applyStamp": "Stamp",
     "applyStampHint": "Place stamp walls from other floors on this floor (same position relative to origin)",
-    "underlayRotation": "Rotation"
+    "underlayRotation": "Rotation",
+    "elevationTab": "Gevels",
+    "elevationHint": "Drag = pan · scroll = zoom · click a window or door",
+    "elevationOpeningHint": "Click = type and copy · Ctrl+click = sizes · copy places the same opening",
+    "elevationWallHint": "Ctrl+click a facade or floor = height only",
+    "elevationWall": "Facade {name}",
+    "elevationHeightsFold": "Heights",
+    "elevationHeightsHint": "Heights are shared across all gevels. Slab and ridge are elevation-only.",
+    "elevationNok": "Ridge",
+    "elevationSlab": "Floor {name}"
   }
 }

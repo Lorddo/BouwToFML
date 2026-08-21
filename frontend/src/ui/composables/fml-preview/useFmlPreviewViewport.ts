@@ -1,7 +1,11 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
+import {
+  FIT_CONTENT_PAD,
+  layoutInFitInsets,
+  measureFitChromeInsets,
+} from '@/platform/canvas/fit-chrome-insets'
 
-const CONTENT_PADDING = 24
 /** Leeg plan zonder onderlegger: tekenwereld zodat 1 cm ≠ 1 stage-px. */
 const EMPTY_WORLD_SPAN_X = 2000
 const EMPTY_WORLD_SPAN_Y = 1500
@@ -119,19 +123,22 @@ export function useFmlPreviewViewport(
 
   function buildContentLayout(wallList: Wall[], itemList: FloorItem[]): ContentLayout {
     const { minX, minY, spanX, spanY } = resolveBounds(wallList, itemList)
-    const availableW = Math.max(1, stageSize.value.width - CONTENT_PADDING * 2)
-    const availableH = Math.max(1, stageSize.value.height - CONTENT_PADDING * 2)
-    const scale = Math.min(availableW / spanX, availableH / spanY)
-    const contentW = spanX * scale
-    const contentH = spanY * scale
+    const insets = measureFitChromeInsets(containerRef.value, FIT_CONTENT_PAD)
+    const fitted = layoutInFitInsets(
+      stageSize.value.width,
+      stageSize.value.height,
+      spanX,
+      spanY,
+      insets,
+    )
     return {
       minX,
       minY,
       spanX,
       spanY,
-      scale,
-      offsetX: CONTENT_PADDING + (availableW - contentW) / 2,
-      offsetY: CONTENT_PADDING + (availableH - contentH) / 2,
+      scale: fitted.scale,
+      offsetX: fitted.x,
+      offsetY: fitted.y,
     }
   }
 

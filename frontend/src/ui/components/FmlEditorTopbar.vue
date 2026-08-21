@@ -72,6 +72,7 @@ function toggleHelp(): void {
     ref="topbarRef"
     class="fml-editor-topbar"
     :class="{ 'fml-editor-topbar--edge': props.edgeChrome }"
+    data-fit-chrome="top"
     role="toolbar"
     :aria-label="t('viewer.topbarLabel')"
   >

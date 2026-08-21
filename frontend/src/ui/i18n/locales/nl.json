@@ -793,7 +793,7 @@
     "cornerMarkers": "Hoektekens",
     "cornerMarkersHint": "Toon |_ op exacte 90° H/V-binnenhoeken, of ! op hoeken die niet haaks zijn. T- en X-knopen krijgen een teken in elke binnenhoek.",
     "slicerOffsetSnapCm": "Slicer-offset snap (cm)",
-    "slicerOffsetSnapHint": "Soft-snap van de P↔M-afstand op deze waarde én op offsets van andere slices (±15 cm). Geen P-op-P. Shift = uit bij slepen.",
+    "slicerOffsetSnapHint": "Verboden strook canvas-hoog/breed t.o.v. andere P's (vaste onderlinge afstand, default 50 cm). Zelfde place-lijn mag niet. P-M blijft vrij. Shift = uit.",
     "cornerMarkersOff": "Uit",
     "cornerMarkersSquare": "90° (haaks |_ )",
     "cornerMarkersSkew": "Niet 90° (!)",
@@ -939,6 +939,15 @@
     "dimensionsOuter": "Genereer buitenmaten",
     "applyStamp": "Stempel",
     "applyStampHint": "Plaats stempelmuren van andere verdiepingen op deze vloer (zelfde positie t.o.v. nulpunt)",
-    "underlayRotation": "Rotatie"
+    "underlayRotation": "Rotatie",
+    "elevationTab": "Gevels",
+    "elevationHint": "Sleep = pan · scroll = zoom · klik een raam of deur",
+    "elevationOpeningHint": "Klik = type en kopie · Ctrl+klik = maten · kopie plaatst dezelfde opening",
+    "elevationWallHint": "Ctrl+klik op gevel of vloer = alleen hoogte",
+    "elevationWall": "Gevel {name}",
+    "elevationHeightsFold": "Hoogtes",
+    "elevationHeightsHint": "Hoogtes gelden voor alle gevels. Vloerdikte en nok zijn alleen aanzicht.",
+    "elevationNok": "Nok",
+    "elevationSlab": "Vloer {name}"
   }
 }

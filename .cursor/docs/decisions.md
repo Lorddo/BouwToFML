@@ -260,9 +260,10 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Versie | Scope |
 |--------|-------|
-| **V1** | **Geen** — alleen plattegrond per verdieping |
-| **V2** | Aanzichten uploaden, schalen, ramen/deuren meten met **square tool** (breedte × hoogte) |
-| **V3** | Herkenning ramen/deuren in aanzicht + hoogte verwerken in FML — **kleine kans** op uitvoering |
+| **2026-08-21** | Openings blijven binnen verdieping + lokale muurtop. Ctrl+klik gevel/vloer = alleen hoogte (geen breedte/sleep). |
+| **2026-08-21** | Openings in aanzicht: **Ctrl+klik** = velden (breedte/hoogte/dorpel); rand-handles als fixtures; snap 8 cm op dorpel/latei/zijde van andere openingen (Ctrl tijdens sleep = uit). |
+| **2026-08-21** | **Editor-only** (`/FML-editor` Bewerken): chip **Gevels** rechts op de verdiepingen-rail, alleen als er niet-stamp gevelgroepen zijn. 1 groep = 1 projectie = 1 design-slot. Hoogtes/`az`/`bz` + vloerdikte/nok gedeeld; openings uniek per GUID. Onderlegger per groep in `settings.elevationViews`. Inspect/detectie later. Geen dakvlak-generator (nok = dikte-band). |
+| **V3 (oud)** | CV-herkenning ramen/deuren in aanzicht — niet in deze poging |
 
 ---
 

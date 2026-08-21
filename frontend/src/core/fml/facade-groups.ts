@@ -178,6 +178,17 @@ export function wallGuidsInGroup(plan: FloorPlan | null | undefined, groupId: st
   return group ? [...group.wallGuids] : []
 }
 
+/** Gevelgroepen die een aanzicht mogen krijgen (geen stamp, minstens één muur). */
+export function listElevationFacadeGroups(plan: FloorPlan | null | undefined): FacadeGroup[] {
+  return listFacadeGroups(plan).filter(
+    (group) => !isStampGroup(group) && group.wallGuids.length > 0,
+  )
+}
+
+export function hasElevationFacadeGroups(plan: FloorPlan | null | undefined): boolean {
+  return listElevationFacadeGroups(plan).length > 0
+}
+
 /** Nieuwe lege groep (`G{n}`); name default = `Gevel G{n}`. */
 export function createFacadeGroup(
   plan: FloorPlan,

@@ -48,7 +48,12 @@ function onSelectTool(id: string): void {
 </script>
 
 <template>
-  <div class="fml-mod-rail" role="toolbar" :aria-label="t('viewer.modRailLabel')">
+  <div
+    class="fml-mod-rail"
+    data-fit-chrome="left"
+    role="toolbar"
+    :aria-label="t('viewer.modRailLabel')"
+  >
     <button
       type="button"
       :class="{ 'is-on': settingsMod }"

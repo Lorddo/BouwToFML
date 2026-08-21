@@ -42,7 +42,11 @@ import type { MeasureDrawMode } from '@/ui/composables/fml-preview/useFmlPreview
 import { buildSliceGuide, bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
 import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
 import { type BtfSlice } from '@/core/fml/btf-slices'
-import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerOffsetPoint } from '@/core/fml/slice-offset-snap'
+import {
+  DEFAULT_SLICER_OFFSET_SNAP_CM,
+  slicePlaceStripAxis,
+  snapSlicerPPoint,
+} from '@/core/fml/slice-offset-snap'
 import {
   loadUserSettings,
   type CornerMarkerMode,
@@ -914,22 +918,26 @@ function onSliceHandleMove(event: MouseEvent): void {
   if (!disableSnap) {
     const anchor = sliceHandleDrag.which === 'm' ? slice.p : slice.m
     point = snapSliceHandleAxis(anchor, point, SLICE_HANDLE_AXIS_SNAP_CM)
-    const preferred =
-      loadUserSettings().fmlViewer.slicerOffsetSnapCm ?? DEFAULT_SLICER_OFFSET_SNAP_CM
-    point = snapSlicerOffsetPoint({
-      anchor,
-      point,
-      slices: editor.btfSlices.value,
-      preferredCm: preferred,
-      excludeIndex: sliceHandleDrag.index,
-      // Alleen afstand, geen P-op-P (voorkomt stapelen)
-      snapPCoords: false,
-    })
+    // Alleen P snapt t.o.v. andere P's (vaste onderlinge offset)
+    if (sliceHandleDrag.which === 'p') {
+      const preferred =
+        loadUserSettings().fmlViewer.slicerOffsetSnapCm ?? DEFAULT_SLICER_OFFSET_SNAP_CM
+      // Strook-as uit huidige M↔P (na axis-lock)
+      const draft = { m: slice.m, p: point }
+      point = snapSlicerPPoint({
+        point,
+        slices: editor.btfSlices.value,
+        preferredCm: preferred,
+        excludeIndex: sliceHandleDrag.index,
+        forceAxis: slicePlaceStripAxis(draft),
+      })
+    }
   }
   const next: BtfSlice =
     sliceHandleDrag.which === 'm'
       ? { m: point, p: { ...slice.p } }
       : { m: { ...slice.m }, p: point }
+  // Degeneraat: meetas verdwijnt — minimale scheiding behouden
   if (Math.hypot(next.p.x - next.m.x, next.p.y - next.m.y) < 1) return
   editor.updateBtfSlice(sliceHandleDrag.index, next)
 }
@@ -1479,39 +1487,39 @@ watch(
       :opening-subtype-draft="openingSubtypeDraft"
       :opening-subtype-mixed="openingSubtypeMixed"
       :opening-width-draft="openingWidthDraft"
-      :opening-width-mixed="openingWidthMixed"
-      :opening-height-draft="openingHeightDraft"
-      :opening-height-mixed="openingHeightMixed"
-      :opening-sill-z-draft="openingSillZDraft"
-      :opening-sill-z-mixed="openingSillZMixed"
-      :opening-hinge-at-start-draft="openingHingeAtStartDraft"
-      :opening-hinge-mixed="openingHingeMixed"
-      :opening-swing-right-draft="openingSwingRightDraft"
-      :opening-swing-mixed="openingSwingMixed"
-      :opening-bovenlicht-draft="openingBovenlichtDraft"
       v-model:measure-draw-mode="measureDrawMode"
-      :opening-bovenlicht-mixed="openingBovenlichtMixed"
+      :opening-width-mixed="openingWidthMixed"
       v-model:slicer-edit-mode="slicerEditMode"
-      :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+      :opening-height-draft="openingHeightDraft"
       v-model:draw-surface-role="drawSurfacePendingRole"
-      :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+      :opening-height-mixed="openingHeightMixed"
       v-model:draw-line-thickness="drawLineThickness"
-      :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+      :opening-sill-z-draft="openingSillZDraft"
       v-model:draw-line-type="drawLineType"
-      :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+      :opening-sill-z-mixed="openingSillZMixed"
       v-model:draw-line-color="drawLineColor"
-      :thickness-min-cm="thicknessMinCm"
+      :opening-hinge-at-start-draft="openingHingeAtStartDraft"
       v-model:draw-label-text="drawLabelText"
-      :thickness-mid-cm="thicknessMidCm"
+      :opening-hinge-mixed="openingHingeMixed"
       v-model:draw-label-font-size="drawLabelFontSize"
-      :thickness-max-cm="thicknessMaxCm"
+      :opening-swing-right-draft="openingSwingRightDraft"
       v-model:draw-label-font-color="drawLabelFontColor"
-      :measure-line-count="measureLines.length"
+      :opening-swing-mixed="openingSwingMixed"
       v-model:draw-label-outline="drawLabelOutline"
-      :measure-persist-enabled="props.kind === 'editor'"
+      :opening-bovenlicht-draft="openingBovenlichtDraft"
       v-model:draw-label-bold="drawLabelBold"
-      :draw-wall-drafting="drawWallDrafting"
+      :opening-bovenlicht-mixed="openingBovenlichtMixed"
       v-model:draw-label-italic="drawLabelItalic"
+      :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+      :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+      :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+      :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+      :thickness-min-cm="thicknessMinCm"
+      :thickness-mid-cm="thicknessMidCm"
+      :thickness-max-cm="thicknessMaxCm"
+      :measure-line-count="measureLines.length"
+      :measure-persist-enabled="props.kind === 'editor'"
+      :draw-wall-drafting="drawWallDrafting"
       :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
       :draw-room-drafting="drawRoomDrafting"
       :draw-room-measure-h-cm="drawRoomMeasureHCm"
