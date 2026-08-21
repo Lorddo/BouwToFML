@@ -99,11 +99,16 @@ export function useFmlPreviewWallDrag(options: {
     editor.pushUndo()
     draggingJunction.value = true
     draggingJunctionId.value = junction.id
+    const ridgeGraph = junction.refs.some((ref) =>
+      editor.ridgeWalls.value.some((wall) => wall.id === ref.wallId),
+    )
     junctionDrag = {
       refs: junction.refs.map((ref) => ({ ...ref })),
       originCm: { x: junction.cmX, y: junction.cmY },
       lastCm: { x: junction.cmX, y: junction.cmY },
-      baseWalls: JSON.parse(JSON.stringify(editor.walls.value)) as Wall[],
+      baseWalls: JSON.parse(
+        JSON.stringify(ridgeGraph ? editor.ridgeWalls.value : editor.walls.value),
+      ) as Wall[],
       snapDisabled: evt.ctrlKey || evt.metaKey,
     }
     window.addEventListener('pointermove', onJunctionPointerMove)
@@ -159,17 +164,20 @@ export function useFmlPreviewWallDrag(options: {
     cancelMoveDragPending()
     const cm = hitTest.clientToCm(evt.clientX, evt.clientY)
     if (!cm) return
-    const wall = editor.walls.value.find((item) => item.id === wallId)
+    const wall = editor.selectableWalls.value.find((item) => item.id === wallId)
     if (!wall) return
     const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
     if (len < 1e-6) return
     editor.pushUndo()
     draggingWall.value = true
+    const sourceWalls = editor.ridgeWalls.value.some((item) => item.id === wallId)
+      ? editor.ridgeWalls.value
+      : editor.walls.value
     wallDrag = {
       wallId,
       wall: { a: wall.a, b: wall.b },
       startCm: cm,
-      baseWalls: JSON.parse(JSON.stringify(editor.walls.value)) as Wall[],
+      baseWalls: JSON.parse(JSON.stringify(sourceWalls)) as Wall[],
     }
     window.addEventListener('pointermove', onWallDragMove)
     window.addEventListener('pointerup', onWallDragEnd, { once: true })

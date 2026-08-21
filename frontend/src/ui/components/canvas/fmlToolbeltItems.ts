@@ -88,7 +88,14 @@ export function getFmlSelectTools(): ToolbeltItem[] {
 export function getFmlDrawTools(options?: {
   includeSurface?: boolean
   includeAnnotations?: boolean
+  dakMode?: boolean
 }): ToolbeltItem[] {
+  if (options?.dakMode === true) {
+    return [
+      { id: 'draw_wall', icon: 'wall', label: tGlobal('result.toolbar.wallKindRidge') },
+      { id: 'draw_surface', icon: 'rect', label: tGlobal('toolbelt.fml.drawSurface') },
+    ]
+  }
   const tools: ToolbeltItem[] = [
     { id: 'draw_wall', icon: 'wall', label: tGlobal('toolbelt.fml.drawWall') },
     { id: 'draw_room', icon: 'room', label: tGlobal('toolbelt.fml.drawRoom') },

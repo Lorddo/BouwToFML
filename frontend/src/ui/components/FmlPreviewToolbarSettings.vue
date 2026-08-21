@@ -15,6 +15,7 @@ import './fml-toolbelt-settings-fields.css'
 import FmlPreviewToolbarSettingsWall from './FmlPreviewToolbarSettingsWall.vue'
 import FmlPreviewToolbarSettingsOpening from './FmlPreviewToolbarSettingsOpening.vue'
 import FmlPreviewToolbarSettingsArea from './FmlPreviewToolbarSettingsArea.vue'
+import FmlPreviewToolbarSettingsRoof from './FmlPreviewToolbarSettingsRoof.vue'
 import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue'
 import FmlPreviewToolbarSettingsLine from './FmlPreviewToolbarSettingsLine.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
@@ -53,12 +54,14 @@ const props = withDefaults(
       balanceMixed: boolean
       heightMixed?: boolean
       canSplit: boolean
+      ridgeCount?: number
     } | null
     selectedJunctionPanel: {
       junctionId: string
       wallCount: number
       heightCm: number | null
       heightMixed: boolean
+      ridgeCount?: number
     } | null
     selectedOpeningPanel: {
       openingIds: string[]
@@ -113,6 +116,8 @@ const props = withDefaults(
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
+    roofVertexZCm?: number | null
+    roofPolyMutate?: boolean
     wallThicknessDraft: number
     wallThicknessMixed: boolean
     wallBalanceDraft: number
@@ -163,6 +168,12 @@ const props = withDefaults(
     stampGroupDraft?: boolean | null
     stampGroupMixed?: boolean
     canSelectStampMembers?: boolean
+    drawWallKind?: 'wall' | 'ridge'
+    dakMode?: boolean
+    ridgeFloorDraft?: number | null
+    ridgeFloorMixed?: boolean
+    ridgeFloorOptions?: ReadonlyArray<{ index: number; name: string }>
+    ridgeZCm?: number | null
   }>(),
   {
     thicknessMinCm: 10,
@@ -187,6 +198,12 @@ const props = withDefaults(
     stampGroupDraft: false,
     stampGroupMixed: false,
     canSelectStampMembers: false,
+    drawWallKind: 'wall',
+    dakMode: false,
+    ridgeFloorDraft: null,
+    ridgeFloorMixed: false,
+    ridgeFloorOptions: () => [],
+    ridgeZCm: null,
     selectedAreaPanel: null,
     selectedJunctionPanel: null,
     selectedLabelPanel: null,
@@ -194,6 +211,8 @@ const props = withDefaults(
     selectedItemPanel: null,
     roomTypes: () => [],
     surfaceEditActive: false,
+    roofVertexZCm: null,
+    roofPolyMutate: false,
   },
 )
 
@@ -231,6 +250,9 @@ const emit = defineEmits<{
   selectFacadeMembers: []
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
+  wallKindChange: [kind: 'wall' | 'ridge']
+  ridgeZInput: [cm: number | null]
+  ridgeFloorChange: [floorIndex: number]
   clearMeasures: []
   applyRoomType: [role: number]
   areaCustomNameInput: [customName: string]
@@ -250,6 +272,7 @@ const emit = defineEmits<{
   updateLineColor: [color: string]
   updateLineThickness: [thickness: number]
   beginSurfacePolygonEdit: []
+  roofVertexZInput: [cm: number]
   endSurfacePolygonEdit: []
   itemWidthInput: [event: Event]
   itemHeightInput: [event: Event]
@@ -329,6 +352,10 @@ const showDeselect = computed(
     props.selectedLinePanel != null ||
     props.selectedItemPanel != null,
 )
+
+const isRoofPanel = computed(
+  () => props.dakMode === true && props.selectedAreaPanel?.kind === 'surface',
+)
 </script>
 
 <template>
@@ -368,6 +395,12 @@ const showDeselect = computed(
         :stamp-group-draft="stampGroupDraft"
         :stamp-group-mixed="stampGroupMixed"
         :can-select-stamp-members="canSelectStampMembers"
+        :draw-wall-kind="drawWallKind"
+        :dak-mode="dakMode"
+        :ridge-z-cm="ridgeZCm"
+        :ridge-floor-draft="ridgeFloorDraft"
+        :ridge-floor-mixed="ridgeFloorMixed"
+        :ridge-floor-options="ridgeFloorOptions"
         @wall-thickness-input="emit('wallThicknessInput', $event)"
         @commit-wall-thickness="emit('commitWallThickness')"
         @apply-wall-thickness="emit('applyWallThickness', $event)"
@@ -384,6 +417,9 @@ const showDeselect = computed(
         @select-facade-members="emit('selectFacadeMembers')"
         @stamp-group-change="emit('stampGroupChange', $event)"
         @select-stamp-members="emit('selectStampMembers')"
+        @wall-kind-change="emit('wallKindChange', $event)"
+        @ridge-z-input="emit('ridgeZInput', $event)"
+        @ridge-floor-change="emit('ridgeFloorChange', $event)"
         @draw-wall-length-input="emit('drawWallLengthInput', $event)"
         @commit-draw-wall-measure="emit('commitDrawWallMeasure')"
         @cancel-draw-wall-draft="emit('cancelDrawWallDraft')"
@@ -490,11 +526,21 @@ const showDeselect = computed(
           @copy-opening="emit('copyOpening')"
           @delete-openings="emit('deleteOpenings')"
         />
+        <FmlPreviewToolbarSettingsRoof
+          v-if="isRoofPanel"
+          :roof-vertex-z-cm="roofVertexZCm"
+          :poly-mutate="roofPolyMutate"
+          @roof-vertex-z-input="emit('roofVertexZInput', $event)"
+          @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
+          @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+          @delete-tagged="emit('deleteTagged')"
+        />
         <FmlPreviewToolbarSettingsArea
-          v-if="selectedAreaPanel"
+          v-else-if="selectedAreaPanel"
           :selected-area-panel="selectedAreaPanel"
           :room-types="roomTypes"
           :surface-edit-active="surfaceEditActive"
+          :roof-vertex-z-cm="roofVertexZCm"
           @apply-room-type="emit('applyRoomType', $event)"
           @area-custom-name-input="emit('areaCustomNameInput', $event)"
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
@@ -503,6 +549,7 @@ const showDeselect = computed(
           @delete-tagged="emit('deleteTagged')"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+          @roof-vertex-z-input="emit('roofVertexZInput', $event)"
         />
         <FmlPreviewToolbarSettingsLabel
           v-if="selectedLabelPanel"

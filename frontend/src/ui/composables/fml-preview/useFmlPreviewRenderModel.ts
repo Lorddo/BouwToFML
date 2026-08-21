@@ -1,5 +1,11 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
-import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
+import {
+  listRidgeWallsOnFloor,
+  listRidgeWallsOnPlan,
+  ridgeDisplayWidthCm,
+} from '@/core/fml/ridge-walls'
+import { listRidgeSurfacesOnPlan } from '@/core/fml/roof-planes'
+import type { Floor, FloorPlan, FloorSurface, Wall } from '@/core/fml/types'
 import { buildAutoDimensionLines } from '@/core/fml/auto-dimension-lines'
 import { filterManualDimensions, readBtfSlices } from '@/core/fml/btf-slices'
 import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
@@ -70,6 +76,8 @@ interface ViewportApi {
 
 interface EditorApi {
   walls: ComputedRef<Wall[]>
+  ridgeWalls: ComputedRef<Wall[]>
+  ridgeSurfaces: ComputedRef<FloorSurface[]>
   floorHeightCm: ComputedRef<number>
   floorIndex: Ref<number>
   junctions: ComputedRef<{ id: string; x: number; y: number; refs: WallEndRef[] }[]>
@@ -98,6 +106,7 @@ export function useFmlPreviewRenderModel(
   underlayProps: Ref<UnderlayProps>,
   selection: FmlPreviewSelectionRefs,
   dimensionVis?: ComputedRef<DimensionVis>,
+  dakMode?: ComputedRef<boolean>,
 ) {
   const underlayImageObj = ref<HTMLImageElement | null>(null)
 
@@ -124,18 +133,82 @@ export function useFmlPreviewRenderModel(
     const layout = viewport.contentLayout.value
     const activeFloor = floor.value
     if (!layout || !activeFloor) return null
-    const walls = editor.walls.value
+    const dak = dakMode?.value === true
+    const walls = dak ? [] : editor.walls.value
     const { toStagePoint, toCmPoint } = layoutTransform(layout)
     const scale = layout.scale
+    const plan = editor.localPlan.value
 
-    const wallLines: RenderWall[] = walls.map((wall, index) => {
+    const mapWallLine = (wall: Wall, index: number, prefix: string): RenderWall => {
       const a = toStagePoint(wall.a.x, wall.a.y)
       const b = toStagePoint(wall.b.x, wall.b.y)
       return {
-        id: wall.id || `wall-${index}`,
+        id: wall.id || `${prefix}-${index}`,
         wall,
         points: [a.x, a.y, b.x, b.y],
         strokeWidth: Math.max(1.5, wall.thickness * scale),
+        a: wall.a,
+        b: wall.b,
+      }
+    }
+
+    const wallLines: RenderWall[] = walls.map((wall, index) => mapWallLine(wall, index, 'wall'))
+    const ghostWallLines: RenderWall[] = []
+    const ghostWallPolygons: RenderWallPolygon[] = []
+    if (dak && plan) {
+      const ghostInputs = plan.floors.flatMap((entry, floorIdx) =>
+        entry.walls
+          .filter((wall) => wall.thickness > 1e-6)
+          .map((wall, index) => ({
+            id: wall.id || `ghost-${floorIdx}-${index}`,
+            a: wall.a,
+            b: wall.b,
+            thickness: wall.thickness,
+            balance: wall.balance,
+          })),
+      )
+      if (ghostInputs.length > 0) {
+        const geometry = buildWallRenderGeometry(ghostInputs)
+        let ringIndex = 0
+        for (const component of geometry.fillComponents) {
+          for (const ring of component.rings) {
+            if (ring.length < 2) continue
+            ghostWallPolygons.push({
+              id: `ghost-ring-${ringIndex}`,
+              points: ring.flatMap((point) => {
+                const stage = toStagePoint(point.x, point.y)
+                return [stage.x, stage.y]
+              }),
+            })
+            ringIndex += 1
+          }
+        }
+      }
+    }
+
+    const displayWidth = ridgeDisplayWidthCm(plan)
+    const half = displayWidth / 2
+    const ridgeSource = dak ? listRidgeWallsOnPlan(plan) : listRidgeWallsOnFloor(activeFloor)
+    const ridgeLines = ridgeSource.map((wall, index) => {
+      const a = toStagePoint(wall.a.x, wall.a.y)
+      const b = toStagePoint(wall.b.x, wall.b.y)
+      const dx = wall.b.x - wall.a.x
+      const dy = wall.b.y - wall.a.y
+      const len = Math.hypot(dx, dy) || 1
+      const nx = (-dy / len) * half
+      const ny = (dx / len) * half
+      const a1 = toStagePoint(wall.a.x + nx, wall.a.y + ny)
+      const b1 = toStagePoint(wall.b.x + nx, wall.b.y + ny)
+      const a2 = toStagePoint(wall.a.x - nx, wall.a.y - ny)
+      const b2 = toStagePoint(wall.b.x - nx, wall.b.y - ny)
+      return {
+        id: wall.id || `ridge-${index}`,
+        wall,
+        points: [a.x, a.y, b.x, b.y],
+        outlinePoints: [
+          [a1.x, a1.y, b1.x, b1.y],
+          [a2.x, a2.y, b2.x, b2.y],
+        ] as [number[], number[]],
         a: wall.a,
         b: wall.b,
       }
@@ -170,21 +243,26 @@ export function useFmlPreviewRenderModel(
       }
     }
 
-    const { doorGroups, windows } = buildRenderDoorGroupsAndWindows(wallLines, toStagePoint)
-    const fixtures = buildRenderFixtures(activeFloor, toStagePoint)
-    const areas = buildRenderAreas(activeFloor.areas, toStagePoint)
-    const surfaces = buildRenderSurfaces(activeFloor.surfaces, toStagePoint)
-    const labels = buildRenderLabels(activeFloor.labels, toStagePoint)
-    const lines = buildRenderLines(activeFloor.lines, toStagePoint)
+    const { doorGroups, windows } = dak
+      ? { doorGroups: [], windows: [] }
+      : buildRenderDoorGroupsAndWindows(wallLines, toStagePoint)
+    const fixtures = dak ? [] : buildRenderFixtures(activeFloor, toStagePoint)
+    const areas = dak ? [] : buildRenderAreas(activeFloor.areas, toStagePoint)
+    const surfaces = buildRenderSurfaces(
+      dak ? listRidgeSurfacesOnPlan(plan) : (activeFloor.surfaces ?? []),
+      toStagePoint,
+    )
+    const labels = dak ? [] : buildRenderLabels(activeFloor.labels, toStagePoint)
+    const lines = dak ? [] : buildRenderLines(activeFloor.lines, toStagePoint)
     const dimSettings = readDimensionSettings(editor.localPlan.value, editor.floorIndex.value)
     const slices = readBtfSlices(activeFloor)
-    const vis = dimensionVis?.value ?? 'none'
+    const vis = dak ? 'none' : (dimensionVis?.value ?? 'none')
 
     const manualDims =
       vis === 'manual' ? filterManualDimensions(activeFloor.dimensions, slices) : []
     const dimensions = buildRenderDimensions(manualDims, toStagePoint)
 
-    const areaSideDims = buildRenderAreaSideDims(activeFloor.areas, toStagePoint)
+    const areaSideDims = dak ? [] : buildRenderAreaSideDims(activeFloor.areas, toStagePoint)
 
     let autoDimensions: ReturnType<typeof buildRenderDimensions> = []
     if (vis === 'autogen' && dimSettings.engineAutoDims) {
@@ -213,6 +291,9 @@ export function useFmlPreviewRenderModel(
 
     return {
       wallLines,
+      ghostWallLines,
+      ghostWallPolygons,
+      ridgeLines,
       wallPolygons,
       wallFillPathData,
       doorGroups,
@@ -273,7 +354,17 @@ export function useFmlPreviewRenderModel(
   const settingsWallPolygons = computed(() => {
     if (!renderModel.value || settingsWallIds.value.length === 0) return []
     const idSet = new Set(settingsWallIds.value)
-    return renderModel.value.wallPolygons.filter((item) => idSet.has(item.id))
+    const fromWalls = renderModel.value.wallPolygons.filter((item) => idSet.has(item.id))
+    const fromRidges = renderModel.value.ridgeLines
+      .filter((line) => idSet.has(line.id))
+      .map((line) => {
+        const [left, right] = line.outlinePoints
+        return {
+          id: line.id,
+          points: [left[0], left[1], left[2], left[3], right[2], right[3], right[0], right[1]],
+        }
+      })
+    return [...fromWalls, ...fromRidges]
   })
 
   const settingsWallPolygon = computed(() => settingsWallPolygons.value[0] ?? null)
@@ -281,9 +372,19 @@ export function useFmlPreviewRenderModel(
   const moveWallPolygon = computed(() => {
     if (!selection.moveWallId.value || !renderModel.value) return null
     if (settingsWallIds.value.includes(selection.moveWallId.value)) return null
-    return (
-      renderModel.value.wallPolygons.find((item) => item.id === selection.moveWallId.value) ?? null
+    const fromWalls = renderModel.value.wallPolygons.find(
+      (item) => item.id === selection.moveWallId.value,
     )
+    if (fromWalls) return fromWalls
+    const ridge = renderModel.value.ridgeLines.find(
+      (line) => line.id === selection.moveWallId.value,
+    )
+    if (!ridge) return null
+    const [left, right] = ridge.outlinePoints
+    return {
+      id: ridge.id,
+      points: [left[0], left[1], left[2], left[3], right[2], right[3], right[0], right[1]],
+    }
   })
 
   const moveOpeningId = computed(() => selection.moveOpeningId.value)
@@ -298,34 +399,50 @@ export function useFmlPreviewRenderModel(
 
   const renderJunctions = computed((): RenderJunction[] => {
     if (!renderModel.value) return []
-    return editor.junctions.value.map((junction) => {
-      const stage = junctionStagePoint(junction.x, junction.y)
-      return {
-        id: junction.id,
-        x: stage.x,
-        y: stage.y,
-        cmX: junction.x,
-        cmY: junction.y,
-        refs: junction.refs,
-        wallCount: junction.refs.length,
-      }
-    })
+    const dak = dakMode?.value === true
+    const visibleIds = new Set<string>()
+    if (dak) {
+      for (const wall of listRidgeWallsOnPlan(editor.localPlan.value)) visibleIds.add(wall.id)
+    } else {
+      for (const wall of editor.walls.value) visibleIds.add(wall.id)
+      for (const wall of listRidgeWallsOnFloor(floor.value)) visibleIds.add(wall.id)
+    }
+    return editor.junctions.value
+      .filter((junction) => junction.refs.some((ref) => visibleIds.has(ref.wallId)))
+      .map((junction) => {
+        const stage = junctionStagePoint(junction.x, junction.y)
+        return {
+          id: junction.id,
+          x: stage.x,
+          y: stage.y,
+          cmX: junction.x,
+          cmY: junction.y,
+          refs: junction.refs,
+          wallCount: junction.refs.length,
+        }
+      })
   })
 
   const visibleJunctionIds = computed(() => {
-    if (
-      selection.activeFmlTool.value === 'draw_wall' ||
-      selection.activeFmlTool.value === 'draw_room'
-    ) {
+    const showAllDrawJunctions =
+      selection.activeFmlTool.value === 'draw_room' ||
+      (selection.activeFmlTool.value === 'draw_wall' && selection.drawWallKind.value !== 'ridge')
+    if (showAllDrawJunctions) {
       return new Set(renderJunctions.value.map((junction) => junction.id))
     }
     const ids = new Set<string>()
-    const walls = editor.walls.value
     const addWall = (wallId: string | null) => {
       if (!wallId) return
-      const wall = walls.find((item) => item.id === wallId)
-      if (!wall) return
-      const [a, b] = junctionIdsForWall(wall, walls)
+      const planWall = editor.walls.value.find((item) => item.id === wallId)
+      if (planWall) {
+        const [a, b] = junctionIdsForWall(planWall, editor.walls.value)
+        ids.add(a)
+        ids.add(b)
+        return
+      }
+      const ridgeWall = editor.ridgeWalls.value.find((item) => item.id === wallId)
+      if (!ridgeWall) return
+      const [a, b] = junctionIdsForWall(ridgeWall, editor.ridgeWalls.value)
       ids.add(a)
       ids.add(b)
     }
@@ -379,7 +496,11 @@ export function useFmlPreviewRenderModel(
     const junctionId = selection.settingsJunctionId.value
     if (!junctionId) return null
     const junction = editor.junctions.value.find((item) => item.id === junctionId)
-    return buildSelectedJunctionPanel(editor.walls.value, junction, editor.floorHeightCm.value)
+    return buildSelectedJunctionPanel(
+      editor.selectableWalls.value,
+      junction,
+      editor.floorHeightCm.value,
+    )
   })
 
   const selectedInfo = computed(() => {

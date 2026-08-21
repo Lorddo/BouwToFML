@@ -143,6 +143,26 @@ export async function promptFmlChrome(
   return typeof result === 'string' ? result : null
 }
 
+export async function confirmFacadeStackedFloors(params: {
+  count: number
+  mode: 'assign' | 'detach'
+}): Promise<boolean> {
+  const messageKey =
+    params.mode === 'detach'
+      ? params.count === 1
+        ? 'result.toolbar.facadeGroupStackedDetachOne'
+        : 'result.toolbar.facadeGroupStackedDetachMany'
+      : params.count === 1
+        ? 'result.toolbar.facadeGroupStackedAssignOne'
+        : 'result.toolbar.facadeGroupStackedAssignMany'
+  return confirmFmlChrome({
+    title: tGlobal('result.toolbar.facadeGroupStackedTitle'),
+    message: tGlobal(messageKey, { count: params.count }),
+    confirmLabel: tGlobal('result.toolbar.facadeGroupStackedYes'),
+    cancelLabel: tGlobal('result.toolbar.facadeGroupStackedNo'),
+  })
+}
+
 export async function promptFacadeGroupName(): Promise<string | null> {
   const name = await promptFmlChrome({
     title: tGlobal('result.toolbar.facadeGroupNameTitle'),

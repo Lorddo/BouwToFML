@@ -1,10 +1,19 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
 import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
+import { countGeneratedRoofPlanesOnPlan } from '@/core/fml/generate-roof-planes'
 import { parseFmlHex } from '@/core/fml/roomtype-catalog'
-import type { FloorItem, FloorLineType, FloorPlan, Point2D } from '@/core/fml/types'
+import { alertFmlChrome, confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+import { tGlobal } from '@/ui/i18n'
+import type { FloorItem, FloorLineType, FloorPlan, Point2D, Wall } from '@/core/fml/types'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
+import { isRidgeWallId, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import {
+  listThickPlanWalls,
+  planFootprintCentroid,
+  snapPointToOuterWallFaces,
+} from '@/core/fml/wall-outer-face'
 import {
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
@@ -17,6 +26,10 @@ import {
   closedRingSegments,
   openPolylineSegments,
 } from '@/ui/components/fml-preview-junctions'
+import {
+  snapDrawPointToWallFaces,
+  WALL_FACE_SNAP_CM,
+} from '@/ui/components/fml-preview-wall-face-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlInspectHit } from './fml-inspect'
 import { createFmlPreviewEditorKeyHandlers } from './fml-preview-editor-keyboard'
@@ -102,6 +115,8 @@ export function useFmlPreviewInteraction(options: {
   touchEditor?: Ref<boolean>
   /** Coarse pointer: Move-rail i.p.v. muis two-step. Default uit. */
   touchNav?: Ref<boolean>
+  /** Dak-tab: geen plattegrond-muren selecteren. */
+  dakMode?: Ref<boolean>
   /** Meet-tool subtype: tape / manual / slicer. */
   measureDrawMode?: Ref<MeasureDrawMode>
   /** Slicer: bewerk bestaande M/P i.p.v. nieuwe plaatsen. */
@@ -170,8 +185,9 @@ export function useFmlPreviewInteraction(options: {
     addWindowSillZCm,
     addWindowHeightCm,
     activeFmlTool,
+    drawWallKind,
   } = selection
-
+  const ridgeZCm = ref<number | undefined>(undefined)
   const drawWallMode = computed(() => activeFmlTool.value === 'draw_wall')
   const drawRoomMode = computed(() => activeFmlTool.value === 'draw_room')
   const drawSurfaceMode = computed(
@@ -197,6 +213,7 @@ export function useFmlPreviewInteraction(options: {
       selection.settingsAreaId.value = null
       selection.settingsSurfaceId.value = null
       selection.surfaceEditId.value = null
+      selection.roofPolyMutate.value = false
       selection.drawSurfacePoints.value = null
     },
     { immediate: true },
@@ -461,7 +478,19 @@ export function useFmlPreviewInteraction(options: {
   const { draggingJunction, draggingWall } = wallDrag
   const { draggingOpening } = openingDrag
 
-  function resolveDrawPoint(cm: Point2D, axisAnchor?: Point2D): Point2D {
+  function ridgeDrawSnapWalls(): ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> {
+    if (options.dakMode?.value === true) return listThickPlanWalls(editor.localPlan.value)
+    return editor.walls.value
+  }
+
+  function resolveDrawPoint(cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean): Point2D {
+    if (drawWallKind.value === 'ridge') {
+      return snapDrawPointToWallFaces(ridgeDrawSnapWalls(), cm, {
+        axisAnchor,
+        lockAxis: axisLocked.value,
+        snapDisabled: snapDisabled === true,
+      })
+    }
     const junction = hitTest.hitTestJunctionAtCm(cm)
     let point = junction ? { x: junction.cmX, y: junction.cmY } : cm
     if (!junction) {
@@ -497,6 +526,15 @@ export function useFmlPreviewInteraction(options: {
     excludeSurfaceId?: string | null,
   ): Point2D {
     if (snapDisabled) return cm
+    if (options.dakMode?.value === true && editor.localPlan.value) {
+      const plan = editor.localPlan.value
+      return snapPointToOuterWallFaces(
+        listThickPlanWalls(plan),
+        planFootprintCentroid(plan),
+        cm,
+        WALL_FACE_SNAP_CM,
+      )
+    }
     const junction = hitTest.hitTestJunctionAtCm(cm)
     if (junction) return { x: junction.cmX, y: junction.cmY }
 
@@ -535,6 +573,8 @@ export function useFmlPreviewInteraction(options: {
     editor,
     hoveredJunctionId,
     wallThicknessDraft,
+    drawKind: drawWallKind,
+    ridgeZCm,
     resolvePoint: resolveDrawPoint,
     beforeBegin: () => {
       cancelSelectionBoxDrag()
@@ -1033,6 +1073,7 @@ export function useFmlPreviewInteraction(options: {
     moveOpeningId.value = null
     selection.pinnedJunctionId.value = null
     selection.surfaceEditId.value = null
+    selection.roofPolyMutate.value = false
     selection.drawSurfacePoints.value = null
     selection.drawLinePoints.value = null
     wallDrag.cancelMoveDragPending()
@@ -1071,6 +1112,8 @@ export function useFmlPreviewInteraction(options: {
         settingsMod,
         moveMod,
         touchNav,
+        dakMode: computed(() => options.dakMode?.value === true),
+        isRidgeWallId: (wallId: string) => isRidgeWallId(editor.localPlan.value, wallId),
       },
       drag: {
         draggingWall,
@@ -1129,6 +1172,7 @@ export function useFmlPreviewInteraction(options: {
         toggleSettingsOpening,
         toggleSettingsArea: areaSelection.toggleSettingsArea,
         toggleSettingsSurface: areaSelection.toggleSettingsSurface,
+        selectRoofSurface: areaSelection.selectRoofSurface,
         toggleSettingsLabel,
         toggleSettingsLine,
         toggleSettingsWall,
@@ -1286,12 +1330,164 @@ export function useFmlPreviewInteraction(options: {
     window.removeEventListener('keyup', onEditorKeyUp)
   }
 
+  function ensureRidgeZDraft(): number {
+    if (ridgeZCm.value == null) {
+      ridgeZCm.value = Math.round(editor.floorHeightCm.value)
+    }
+    return ridgeZCm.value
+  }
+
+  function syncRidgeZFromSelection(): void {
+    const floorH = editor.floorHeightCm.value
+    const ridgeIds = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
+    if (ridgeIds.length > 0) {
+      const zs = ridgeIds
+        .map((id) => editor.ridgeWalls.value.find((wall) => wall.id === id))
+        .filter((wall): wall is NonNullable<typeof wall> => wall != null)
+        .flatMap((wall) => [
+          Math.round(ridgeEndpointZCm(wall, 'a', floorH)),
+          Math.round(ridgeEndpointZCm(wall, 'b', floorH)),
+        ])
+      if (zs.length > 0 && zs.every((value) => value === zs[0])) {
+        ridgeZCm.value = zs[0]
+      }
+      return
+    }
+    const junctionId = selection.settingsJunctionId.value
+    if (!junctionId) {
+      if (drawWallKind.value === 'ridge') ensureRidgeZDraft()
+      return
+    }
+    const junction = editor.junctions.value.find((item) => item.id === junctionId)
+    if (
+      !junction ||
+      !junction.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId))
+    ) {
+      return
+    }
+    const zs = junction.refs
+      .map((ref) => {
+        const wall = editor.ridgeWalls.value.find((item) => item.id === ref.wallId)
+        if (!wall) return null
+        return Math.round(ridgeEndpointZCm(wall, ref.end, floorH))
+      })
+      .filter((value): value is number => value != null)
+    if (zs.length > 0 && zs.every((value) => value === zs[0])) {
+      ridgeZCm.value = zs[0]
+    }
+  }
+
+  function applyRidgeZInput(cm: number | null): void {
+    const z = cm != null && Number.isFinite(cm) ? Math.max(0, Math.round(cm)) : null
+    ridgeZCm.value = z ?? Math.round(editor.floorHeightCm.value)
+    if (z == null) return
+    const selectedRidgeIds = settingsWallIds.value.filter((id) =>
+      isRidgeWallId(editor.localPlan.value, id),
+    )
+    const ridgeIds =
+      selectedRidgeIds.length > 0
+        ? selectedRidgeIds
+        : editor.ridgeWalls.value.map((wall) => wall.id)
+    const junction = editor.junctions.value.find(
+      (item) => item.id === selection.settingsJunctionId.value,
+    )
+    const junctionIsRidge =
+      junction != null &&
+      junction.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId))
+    if (ridgeIds.length === 0 && !junctionIsRidge) return
+    flushPendingFieldCommits()
+    editor.pushUndo()
+    if (ridgeIds.length > 0) editor.applyRidgeZ(ridgeIds, z)
+    if (junctionIsRidge && junction) editor.applyRidgeJunctionZ(junction.refs, z)
+    syncPlanToParent()
+  }
+
+  function applySelectedWallKind(kind: 'wall' | 'ridge'): void {
+    drawWallKind.value = kind
+    if (kind === 'ridge') ensureRidgeZDraft()
+    const ids = settingsWallIds.value
+    if (ids.length === 0) return
+    flushPendingFieldCommits()
+    editor.pushUndo()
+    editor.applyWallKind(ids, kind, wallThicknessDraft.value, ridgeZCm.value)
+    syncWallThicknessDraftFromSelection()
+    syncRidgeZFromSelection()
+    syncPlanToParent()
+  }
+
+  watch([settingsWallIds, () => selection.settingsJunctionId.value], () => {
+    syncRidgeZFromSelection()
+  })
+  watch(drawWallMode, (on) => {
+    if (on && drawWallKind.value === 'ridge') ensureRidgeZDraft()
+  })
+
+  watch(
+    () => options.dakMode?.value === true,
+    (on) => {
+      if (!on) return
+      drawWallKind.value = 'ridge'
+      ensureRidgeZDraft()
+      const tool = activeFmlTool.value
+      if (tool && tool !== 'draw_wall' && tool !== 'draw_surface') activeFmlTool.value = null
+    },
+    { immediate: true },
+  )
+
+  const ridgeFloorDraft = computed(() => {
+    const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
+    if (ids.length === 0) return null
+    const indexes = ids.map((id) => editor.ridgeFloorIndexForWall(id)).filter((index) => index >= 0)
+    if (indexes.length === 0) return null
+    if (indexes.every((index) => index === indexes[0])) return indexes[0]
+    return null
+  })
+
+  const ridgeFloorMixed = computed(() => {
+    const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
+    if (ids.length < 2) return false
+    const indexes = ids.map((id) => editor.ridgeFloorIndexForWall(id))
+    return indexes.some((index) => index !== indexes[0])
+  })
+
+  function applyRidgeFloorInput(floorIndexTarget: number): void {
+    const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
+    if (ids.length === 0) return
+    flushPendingFieldCommits()
+    editor.pushUndo()
+    editor.applyRidgeFloor(ids, floorIndexTarget)
+    syncPlanToParent()
+  }
+
   function sanitizeWalls(): boolean {
     flushPendingFieldCommits()
     const changed = editor.applyWallsSanitize()
     if (!changed) return false
     clearSelection()
     syncPlanToParent()
+    return true
+  }
+
+  async function generateRoofPlanes(): Promise<boolean> {
+    flushPendingFieldCommits()
+    const existing = countGeneratedRoofPlanesOnPlan(editor.localPlan.value)
+    if (existing > 0) {
+      const ok = await confirmFmlChrome({
+        title: tGlobal('result.toolbar.generateRoofPlanesTitle'),
+        message: tGlobal('result.toolbar.generateRoofPlanesConfirm'),
+        confirmLabel: tGlobal('result.toolbar.generateRoofPlanes'),
+      })
+      if (!ok) return false
+    }
+    editor.pushUndo()
+    editor.generateRoofPlanes()
+    syncPlanToParent()
+    if (countGeneratedRoofPlanesOnPlan(editor.localPlan.value) === 0) {
+      await alertFmlChrome({
+        title: tGlobal('result.toolbar.generateRoofPlanesEmptyTitle'),
+        message: tGlobal('result.toolbar.generateRoofPlanesEmpty'),
+      })
+    }
     return true
   }
 
@@ -1428,6 +1624,8 @@ export function useFmlPreviewInteraction(options: {
       editor.updateItem(guid, { mirrored: next })
       syncPlanToParent()
     },
+    drawWallKind,
+    ridgeZCm,
     settingsWallIds,
     moveWallId,
     settingsOpeningIds,
@@ -1510,7 +1708,13 @@ export function useFmlPreviewInteraction(options: {
     canSelectStampMembers,
     clearSelection,
     flushPendingFieldCommits,
+    applySelectedWallKind,
+    applyRidgeZInput,
+    ridgeFloorDraft,
+    ridgeFloorMixed,
+    applyRidgeFloorInput,
     sanitizeWalls,
+    generateRoofPlanes,
     applyStampToActiveFloor,
     canApplyStampOnActiveFloor,
     applyRoomTypeToSelection: areaSelection.applyRoomTypeToSelection,
@@ -1525,7 +1729,10 @@ export function useFmlPreviewInteraction(options: {
     endSurfacePolygonEdit: () => {
       areaSelection.endSurfacePolygonEdit()
       surfaceEdit.cancelDrag()
+      surfaceEdit.selectedVertexIndex.value = null
     },
+    roofVertexIndex: surfaceEdit.selectedVertexIndex,
+    setRoofVertexZ: surfaceEdit.setSelectedVertexZ,
     roomTypes: areaSelection.roomTypes,
     commitDrawSurface: drawSurface.commitDrawSurface,
     cancelDrawSurface: drawSurface.cancelDrawSurface,

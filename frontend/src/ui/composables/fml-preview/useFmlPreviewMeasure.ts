@@ -1,9 +1,8 @@
 import { ref, type Ref } from 'vue'
 import type { Point2D, Wall } from '@/core/fml/types'
-import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
 import {
   MANUAL_DIM_FACE_SNAP_CM,
-  snapPointToWallFaces,
+  snapDrawPointToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/fml-preview-wall-face-snap'
 import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/fml/slice-offset-snap'
@@ -54,27 +53,17 @@ export function useFmlPreviewMeasure(options: {
     const snapDisabled = opts?.snapDisabled === true
     const infiniteAxes = mode === 'manual'
     const radius = mode === 'manual' ? MANUAL_DIM_FACE_SNAP_CM : WALL_FACE_SNAP_CM
-    let point = snapPointToWallFaces(options.getWalls(), cm, radius, {
-      disabled: snapDisabled,
-      infiniteAxes,
-    })
-    const anchor = opts?.axisAnchor
     // Slicer: standaard H/V (offset P–M); Shift uitzetten heeft geen effect — Ctrl = vrij.
     // Overige modes: Shift = H/V.
     const lockAxis = mode === 'slicer' ? !snapDisabled : options.shiftPressed.value
-    if (anchor && lockAxis) {
-      point = snapDrawWallEndpoint(anchor, point, true)
-      if (!snapDisabled) {
-        const resnap = snapPointToWallFaces(options.getWalls(), point, radius, {
-          infiniteAxes,
-        })
-        if (Math.abs(point.y - anchor.y) <= 1e-9) {
-          point = { x: resnap.x, y: point.y }
-        } else if (Math.abs(point.x - anchor.x) <= 1e-9) {
-          point = { x: point.x, y: resnap.y }
-        }
-      }
-    }
+    const anchor = opts?.axisAnchor
+    let point = snapDrawPointToWallFaces(options.getWalls(), cm, {
+      axisAnchor: anchor,
+      lockAxis,
+      snapDisabled,
+      radiusCm: radius,
+      infiniteAxes,
+    })
     // Slicer: P↔P soft-snap (onderlinge place-offset). P↔M niet forceren.
     if (mode === 'slicer' && !snapDisabled && !anchor) {
       point = snapSlicerPPoint({

@@ -260,9 +260,23 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Versie | Scope |
 |--------|-------|
+| **2026-08-22** | Aanzicht-dakvlak: plaatdikte = nokdikte **om het hart** (helft omhoog + helft omlaag). Kopgevel toont goot én kil (rand evenwijdig+dichtbij, geen Z-eis). Vul-oppervlak ná dikte — een rechte kopse projectie is anders een lijn. |
+| **2026-08-22** | Aanzicht-dakvlak projecteert de **getekende XY** (buitenface/hoek), niet terug naar de muurhartlijn. Hartlijn-snap knijpt de goot als alleen die gevel een zolder-muur heeft (FIN-10508 achterkant). |
+| **2026-08-22** | Aanzicht-muren = **volle baksteen** (buiten tot buiten) + binnenkant stippellijn. Alleen de **bovenkant-hoogte** volgt de hartlijn (`az`/`bz`); schuine top tussen xa/xb, oren recht omhoog. Nokbalk ongewijzigd. |
+| **2026-08-21** | Gevel-aanzicht: schuine top alleen tussen hartlijn (oren recht omhoog). Gevelsprong-oor mag de daklijn niet meeslepen (anders een hoekje voorbij de knoop). Binnenkant = verticale stippellijn. Tool **splitsen** + knooplijn voor junction-hoogte. |
+| **2026-08-21** | Gevel-aanzicht tekent de **volle baksteen** (buiten voorbij de hartlijn); **binnenkant** als stippellijn. Openings mogen tot de buitenkant (clamp = halve muurdikte voorbij hartlijn-einde). |
 | **2026-08-21** | Openings blijven binnen verdieping + lokale muurtop. Ctrl+klik gevel/vloer = alleen hoogte (geen breedte/sleep). |
 | **2026-08-21** | Openings in aanzicht: **Ctrl+klik** = velden (breedte/hoogte/dorpel); rand-handles als fixtures; snap 8 cm op dorpel/latei/zijde van andere openingen (Ctrl tijdens sleep = uit). |
-| **2026-08-21** | **Editor-only** (`/FML-editor` Bewerken): chip **Gevels** rechts op de verdiepingen-rail, alleen als er niet-stamp gevelgroepen zijn. 1 groep = 1 projectie = 1 design-slot. Hoogtes/`az`/`bz` + vloerdikte/nok gedeeld; openings uniek per GUID. Onderlegger per groep in `settings.elevationViews`. Inspect/detectie later. Geen dakvlak-generator (nok = dikte-band). |
+| **2026-08-21** | **Editor-only** (`/FML-editor` Bewerken): chip **Gevels** rechts op de verdiepingen-rail, alleen als er niet-stamp gevelgroepen zijn. 1 groep = 1 projectie = 1 design-slot. Hoogtes/`az`/`bz` + vloerdikte/nok gedeeld; openings uniek per GUID. Onderlegger per groep in `settings.elevationViews`. Inspect/detectie later. Dakvlakken later; nok = sibling Dak-design + optionele dikte-band. |
+| **2026-08-21** | **Aanzicht-projectie:** `settings.elevationProjection` `"architect"` (default, vaste H/V-zijde) of `"projective"` (as volgt de gevel). Sidebar-keuze, geldt voor alle gevels. Schuine Amsterdamse gevel: architect = kopse nok; projectief = ware muurlengte. |
+| **2026-08-21** | **Nok-muren:** sibling design `Dak` (`source.settings.btfRole: "ridge"`), niet in de plattegrond-graaf. Geen weld/T/X/cover tussen nok en gevel/binnenmuur. Overlay-tekenen via Muur/Nok-dropdown. `thickness: 0`, identity in `settings.ridgeWalls`. Aanzicht = gevelgroep + alle nokken (geen `ELEVATION_RETURN_MAX_DOT` op nok). Gevelmuren blijven in design 0. |
+| **2026-08-21** | **Nok-tekenen-snap:** binnen-/buitenfaces zoals maatlijnen (`snapDrawPointToWallFaces`), niet junction/hartlijn. Dak-tab = alle dikke plattegrondmuren; Ctrl/Cmd = vrij. Knooppunten niet tonen tijdens nok-draft. |
+| **2026-08-21** | **Dakvlakken** op hetzelfde Dak-design (`surfaces[]`, `isRoof`, z per hoek). Knop-snapshot: geveltop → 2D-dichtstbijzijnde nok of volgende-floor-rand; split bij doelwissel (heup/dal/knik). Kopgevel = nok raakt gevel (geen flag). Regen houdt `manual`. Leeg > fout. Aanzicht = projectie van dakvlak-randen. Later: overstek, dakkapel, workspace. |
+| **2026-08-21** | Dakvlak-snap = **alleen buitenfaces**; hoek = snijpunt van twee goten (niet één face + hartlijn/binnenface). |
+| **2026-08-21** | Aanzicht-dakvlak = alleen het vlak waarvan de goot die gevel raakt (parallel + Z≈muurtop). Geen projectie van alle vlakken. Vul grijs per gevelgroep; kopgevel zonder goot blijft leeg (muurdriehoek volstaat). |
+| **2026-08-21** | Aanzicht-dakvlak simuleert plaatdikte = `nokThicknessCm` (FML-surface heeft geen thickness). Vlak = surface-punten (handles); vul = verticale extrusie **omhoog**. |
+| **2026-08-21** | Aanzicht-dakvlak bewerken: Ctrl+klik = punten; sleep alleen hoogte (X/Y vast). Snap 8 cm op andere punten/muurtop (Ctrl tijdens sleep = uit). Veld = punthoogte t.o.v. vloer. |
+| **2026-08-21** | Geen zijgevel-projectie bij het dakvlak (witte vlakken / foute omtrek). Alleen gevelgroep-muren + het goot-rakende dakvlak. Andere gevels niet bedienen. |
 | **V3 (oud)** | CV-herkenning ramen/deuren in aanzicht — niet in deze poging |
 
 ---

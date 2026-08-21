@@ -20,7 +20,9 @@ export function useFmlPreviewDrawWall(options: {
   editor: EditorApi
   hoveredJunctionId: Ref<string | null>
   wallThicknessDraft: Ref<number>
-  resolvePoint: (cm: Point2D, axisAnchor?: Point2D) => Point2D
+  drawKind?: Ref<'wall' | 'ridge'>
+  ridgeZCm?: Ref<number | undefined>
+  resolvePoint: (cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
   onPlaced?: () => void
@@ -60,15 +62,19 @@ export function useFmlPreviewDrawWall(options: {
   function resolveClick(event: MouseEvent): Point2D | null {
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return null
-    return options.resolvePoint(cm, draft?.startCm)
+    return options.resolvePoint(cm, draft?.startCm, event.ctrlKey || event.metaKey)
   }
 
   function updateDrawWallHover(event: MouseEvent): void {
     if (!draft) return
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    draft.hoverCm = options.resolvePoint(cm, draft.startCm)
+    draft.hoverCm = options.resolvePoint(cm, draft.startCm, event.ctrlKey || event.metaKey)
     rebuildPreview()
+    if (options.drawKind?.value === 'ridge') {
+      options.hoveredJunctionId.value = null
+      return
+    }
     const junction = options.hitTest.hitTestJunctionAtCm(cm)
     options.hoveredJunctionId.value = junction?.id ?? null
   }
@@ -80,10 +86,12 @@ export function useFmlPreviewDrawWall(options: {
   function placeWall(endCm: Point2D): boolean {
     if (!draft) return false
     options.editor.pushUndo()
+    const kind = options.drawKind?.value ?? 'wall'
     const wallId = options.editor.applyWallAdd(
       draft.startCm,
       endCm,
       options.wallThicknessDraft.value,
+      { kind, ridgeZCm: options.ridgeZCm?.value },
     )
     if (!wallId) {
       options.editor.undo()

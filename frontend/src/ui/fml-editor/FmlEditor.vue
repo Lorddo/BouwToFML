@@ -44,6 +44,7 @@ withDefaults(
     rescaleState?: HScaleState | null
     canvasFullscreen?: boolean
     dimensionVis?: DimensionVis
+    dakMode?: boolean
   }>(),
   {
     floorIndex: 0,
@@ -53,6 +54,7 @@ withDefaults(
     labelsVisible: true,
     canvasFullscreen: false,
     dimensionVis: undefined,
+    dakMode: false,
   },
 )
 
@@ -72,6 +74,7 @@ const canvasRef = ref<InstanceType<typeof FmlPreviewCanvas> | null>(null)
 defineExpose({
   flushPendingFieldCommits: () => canvasRef.value?.flushPendingFieldCommits(),
   sanitizeWalls: () => canvasRef.value?.sanitizeWalls() ?? false,
+  generateRoofPlanes: () => canvasRef.value?.generateRoofPlanes() ?? false,
   applyStampToActiveFloor: () => canvasRef.value?.applyStampToActiveFloor() ?? false,
   canApplyStampOnActiveFloor: () => canvasRef.value?.canApplyStampOnActiveFloor() ?? false,
   applyCornerMarkerModeFromSettings: () => canvasRef.value?.applyCornerMarkerModeFromSettings(),
@@ -116,6 +119,7 @@ defineExpose({
     :rescale-state="rescaleState"
     :canvas-fullscreen="canvasFullscreen"
     :dimension-vis="dimensionVis"
+    :dak-mode="dakMode"
     @plan-update="(p, layout) => emit('planUpdate', p, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"

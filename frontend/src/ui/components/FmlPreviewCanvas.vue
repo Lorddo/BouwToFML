@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
+import { listRidgeWallsOnFloor, listRidgeWallsOnPlan } from '@/core/fml/ridge-walls'
 import type { FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
@@ -133,6 +134,8 @@ const props = withDefaults(
     canvasFullscreen?: boolean
     /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */
     dimensionVis?: DimensionVis
+    /** Dak-tab: stippellijn-muren + dakvlakken van alle floors. */
+    dakMode?: boolean
   }>(),
   {
     floorIndex: 0,
@@ -170,6 +173,7 @@ const props = withDefaults(
     touchEditor: undefined,
     canvasFullscreen: false,
     dimensionVis: undefined,
+    dakMode: false,
   },
 )
 
@@ -184,8 +188,10 @@ function flagFromPropOrKind(prop: boolean | undefined, fromKind: boolean | undef
   return false
 }
 
-const areaSurfaceEditEnabled = computed(() =>
-  flagFromPropOrKind(props.areaSurfaceEditEnabled, capabilities.value?.areaSurfaceEdit),
+const areaSurfaceEditEnabled = computed(
+  () =>
+    props.dakMode === true ||
+    flagFromPropOrKind(props.areaSurfaceEditEnabled, capabilities.value?.areaSurfaceEdit),
 )
 const annotationEditEnabled = computed(() =>
   flagFromPropOrKind(props.annotationEditEnabled, capabilities.value?.annotationEdit),
@@ -346,6 +352,8 @@ const underlayProps = computed(() => ({
   flipX: props.flipX === true,
 }))
 
+const dakMode = computed(() => props.dakMode === true)
+
 const render = useFmlPreviewRenderModel(
   viewport,
   editor,
@@ -353,11 +361,18 @@ const render = useFmlPreviewRenderModel(
   underlayProps,
   selection,
   dimensionVis,
+  dakMode,
 )
+
+const hitTestWalls = computed(() => {
+  if (dakMode.value) return listRidgeWallsOnPlan(editor.localPlan.value)
+  const current = floor.value
+  return [...editor.walls.value, ...listRidgeWallsOnFloor(current)]
+})
 
 const hitTest = useFmlPreviewHitTest(
   viewport,
-  editor.walls,
+  hitTestWalls,
   render.renderJunctions,
   computed(() => render.renderModel.value?.doorGroups ?? []),
   containerRef,
@@ -423,6 +438,7 @@ const interaction = useFmlPreviewInteraction({
   slicerEditMode,
   dimensionVis,
   selectedSliceIndex,
+  dakMode,
   onInspectSelect: (hit) => emit('inspectSelect', hit),
   onKeyDown,
   onKeyUp,
@@ -540,6 +556,13 @@ const {
   moveWallId,
   settingsOpeningIds,
   moveOpeningId,
+  drawWallKind,
+  ridgeZCm,
+  applySelectedWallKind,
+  applyRidgeZInput,
+  ridgeFloorDraft,
+  ridgeFloorMixed,
+  applyRidgeFloorInput,
   wallThicknessDraft,
   wallThicknessMixed,
   wallBalanceDraft,
@@ -616,6 +639,7 @@ const {
   clearSelection,
   flushPendingFieldCommits,
   sanitizeWalls,
+  generateRoofPlanes,
   applyStampToActiveFloor,
   canApplyStampOnActiveFloor,
   applyRoomTypeToSelection,
@@ -627,6 +651,8 @@ const {
   deleteSelectedTagged,
   beginSurfacePolygonEdit,
   endSurfacePolygonEdit,
+  roofVertexIndex,
+  setRoofVertexZ,
   roomTypes,
   updateSelectedLabelText,
   onLabelTextInput,
@@ -1280,9 +1306,25 @@ const taggedSettingsPanel = computed(() => {
   return selectedAreaPanel.value ?? selectedSurfacePanel.value
 })
 
+const ridgeFloorOptions = computed(() =>
+  (editor.localPlan.value?.floors ?? []).map((entry, index) => ({
+    index,
+    name: entry.name,
+  })),
+)
+
 const surfaceEditActive = computed(
   () => areaSurfaceEditEnabled.value && surfaceEditId.value != null,
 )
+
+const roofVertexZCm = computed(() => {
+  const idx = roofVertexIndex.value
+  if (idx == null) return null
+  const id = surfaceEditId.value ?? selection.settingsSurfaceId.value
+  const surface = editor.surfaces.value.find((item) => item.id === id)
+  const z = surface?.poly[idx]?.z
+  return typeof z === 'number' && Number.isFinite(z) ? Math.round(z) : null
+})
 
 const {
   drawWallPreviewScreen,
@@ -1386,6 +1428,7 @@ watch(useTouchNav, (on) => {
 defineExpose({
   flushPendingFieldCommits,
   sanitizeWalls,
+  generateRoofPlanes,
   applyStampToActiveFloor,
   canApplyStampOnActiveFloor,
   applyCornerMarkerModeFromSettings,
@@ -1463,7 +1506,8 @@ watch(
       v-model:add-window-height-cm="addWindowHeightCm"
       :hide-inline-hint="viewportChrome"
       :floating-dock="touchEditor"
-      :hide-select-tools="useTouchNav"
+      :hide-select-tools="useTouchNav || dakMode"
+      :dak-mode="dakMode"
       :selected-wall-panel="selectedWallPanel"
       :selected-junction-panel="selectedJunctionPanel"
       :selected-opening-panel="selectedOpeningPanel"
@@ -1472,44 +1516,46 @@ watch(
       :selected-line-panel="selectedLinePanel"
       :room-types="roomTypes"
       :surface-edit-active="surfaceEditActive"
+      :roof-vertex-z-cm="roofVertexZCm"
+      :roof-poly-mutate="selection.roofPolyMutate"
       :include-surface-tool="includeSurfaceTool"
-      :include-annotation-tools="includeAnnotationTools"
-      :include-fixture-tool="includeFixtureTool"
+      :include-annotation-tools="includeAnnotationTools && !dakMode"
+      :include-fixture-tool="includeFixtureTool && !dakMode"
       :selected-item-panel="selectedItemPanel"
       :wall-thickness-draft="wallThicknessDraft"
-      :wall-thickness-mixed="wallThicknessMixed"
-      :wall-balance-draft="wallBalanceDraft"
-      :wall-balance-mixed="wallBalanceMixed"
-      :wall-height-draft="wallHeightDraft"
-      :wall-height-mixed="wallHeightMixed"
-      :junction-height-draft="junctionHeightDraft"
-      :junction-height-mixed="junctionHeightMixed"
-      :opening-subtype-draft="openingSubtypeDraft"
-      :opening-subtype-mixed="openingSubtypeMixed"
-      :opening-width-draft="openingWidthDraft"
       v-model:measure-draw-mode="measureDrawMode"
-      :opening-width-mixed="openingWidthMixed"
+      :wall-thickness-mixed="wallThicknessMixed"
       v-model:slicer-edit-mode="slicerEditMode"
-      :opening-height-draft="openingHeightDraft"
+      :wall-balance-draft="wallBalanceDraft"
       v-model:draw-surface-role="drawSurfacePendingRole"
-      :opening-height-mixed="openingHeightMixed"
+      :wall-balance-mixed="wallBalanceMixed"
       v-model:draw-line-thickness="drawLineThickness"
-      :opening-sill-z-draft="openingSillZDraft"
+      :wall-height-draft="wallHeightDraft"
       v-model:draw-line-type="drawLineType"
-      :opening-sill-z-mixed="openingSillZMixed"
+      :wall-height-mixed="wallHeightMixed"
       v-model:draw-line-color="drawLineColor"
-      :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+      :junction-height-draft="junctionHeightDraft"
       v-model:draw-label-text="drawLabelText"
-      :opening-hinge-mixed="openingHingeMixed"
+      :junction-height-mixed="junctionHeightMixed"
       v-model:draw-label-font-size="drawLabelFontSize"
-      :opening-swing-right-draft="openingSwingRightDraft"
+      :opening-subtype-draft="openingSubtypeDraft"
       v-model:draw-label-font-color="drawLabelFontColor"
-      :opening-swing-mixed="openingSwingMixed"
+      :opening-subtype-mixed="openingSubtypeMixed"
       v-model:draw-label-outline="drawLabelOutline"
-      :opening-bovenlicht-draft="openingBovenlichtDraft"
+      :opening-width-draft="openingWidthDraft"
       v-model:draw-label-bold="drawLabelBold"
-      :opening-bovenlicht-mixed="openingBovenlichtMixed"
+      :opening-width-mixed="openingWidthMixed"
       v-model:draw-label-italic="drawLabelItalic"
+      :opening-height-draft="openingHeightDraft"
+      :opening-height-mixed="openingHeightMixed"
+      :opening-sill-z-draft="openingSillZDraft"
+      :opening-sill-z-mixed="openingSillZMixed"
+      :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+      :opening-hinge-mixed="openingHingeMixed"
+      :opening-swing-right-draft="openingSwingRightDraft"
+      :opening-swing-mixed="openingSwingMixed"
+      :opening-bovenlicht-draft="openingBovenlichtDraft"
+      :opening-bovenlicht-mixed="openingBovenlichtMixed"
       :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
       :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
       :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
@@ -1536,6 +1582,11 @@ watch(
       :stamp-group-draft="stampGroupDraft"
       :stamp-group-mixed="stampGroupMixed"
       :can-select-stamp-members="canSelectStampMembers"
+      :draw-wall-kind="drawWallKind"
+      :ridge-z-cm="ridgeZCm"
+      :ridge-floor-draft="ridgeFloorDraft"
+      :ridge-floor-mixed="ridgeFloorMixed"
+      :ridge-floor-options="ridgeFloorOptions"
       @wall-thickness-input="onWallThicknessInput"
       @commit-wall-thickness="commitWallThickness"
       @apply-wall-thickness="applyWallsThicknessCm"
@@ -1568,6 +1619,9 @@ watch(
       @select-facade-members="selectFacadeGroupMembers"
       @stamp-group-change="applyStampGroupSelection"
       @select-stamp-members="selectStampGroupMembers"
+      @wall-kind-change="applySelectedWallKind"
+      @ridge-z-input="applyRidgeZInput"
+      @ridge-floor-change="applyRidgeFloorInput"
       @clear-selection="clearSelection"
       @clear-measures="clearMeasureLines"
       @apply-room-type="applyRoomTypeToSelection"
@@ -1589,6 +1643,7 @@ watch(
       @update-line-thickness="updateSelectedLineThickness"
       @begin-surface-polygon-edit="beginSurfacePolygonEdit"
       @end-surface-polygon-edit="endSurfacePolygonEdit"
+      @roof-vertex-z-input="setRoofVertexZ"
       @item-width-input="onItemWidthInput"
       @item-height-input="onItemHeightInput"
       @item-rotation-input="onItemRotationInput"
@@ -1722,8 +1777,9 @@ watch(
       :width="stageSize.width"
       :height="stageSize.height"
     >
+      <polygon v-if="drawSurfacePreviewScreen.length >= 3" :points="drawSurfacePreviewPolyline" />
       <polyline
-        v-if="drawSurfacePreviewScreen.length >= 2"
+        v-else-if="drawSurfacePreviewScreen.length >= 2"
         :points="drawSurfacePreviewPolyline"
         fill="none"
       />
@@ -1787,7 +1843,7 @@ watch(
       :layout-scale="layoutScale"
       :labels-visible="labelsVisible"
       :area-side-dims-visible="areaSideDimsVisible"
-      :corner-marker-mode="cornerMarkerMode"
+      :corner-marker-mode="dakMode ? 'off' : cornerMarkerMode"
       :corner-markers="renderCornerMarkers"
       :render-model="renderModel"
       :slice-guides-stage="sliceGuidesStage"
@@ -1819,6 +1875,7 @@ watch(
       :inspect-colors="inspectColors"
       :surface-edit-id="surfaceEditId"
       :surface-edit-vertices="surfaceEditVerticesStage"
+      :selected-vertex-index="roofVertexIndex"
       :group-draggable="groupDraggable"
       :visible-junctions="inspectVisibleJunctions"
       :junction-overlay-group="junctionOverlayGroup"
@@ -1940,6 +1997,13 @@ watch(
   inset: 0;
   z-index: 9;
   pointer-events: none;
+}
+
+.draw-surface-preview polygon {
+  fill: rgb(196 163 106 / 0.38);
+  stroke: #b45309;
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
 }
 
 .draw-surface-preview polyline {

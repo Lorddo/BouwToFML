@@ -17,6 +17,7 @@ import {
   type FacadeGroup,
 } from '@/core/fml/facade-groups'
 import { promptFacadeGroupName } from '@/ui/composables/fml-chrome-dialog'
+import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
@@ -104,14 +105,14 @@ export function useFmlPreviewWallSelection(options: {
     }
     const floorH = floorHeight()
     const thicknesses = ids
-      .map((id) => editor.walls.value.find((item) => item.id === id)?.thickness)
+      .map((id) => editor.selectableWalls.value.find((item) => item.id === id)?.thickness)
       .filter((value): value is number => value != null)
     const balances = ids
-      .map((id) => editor.walls.value.find((item) => item.id === id)?.balance ?? 0.5)
+      .map((id) => editor.selectableWalls.value.find((item) => item.id === id)?.balance ?? 0.5)
       .filter((value): value is number => value != null)
     const heights: number[] = []
     for (const id of ids) {
-      const wall = editor.walls.value.find((item) => item.id === id)
+      const wall = editor.selectableWalls.value.find((item) => item.id === id)
       if (!wall) continue
       heights.push(wallEndpointHeightCm(wall, 'a', floorH))
       heights.push(wallEndpointHeightCm(wall, 'b', floorH))
@@ -156,7 +157,7 @@ export function useFmlPreviewWallSelection(options: {
     const floorH = floorHeight()
     const heights = junction.refs
       .map((ref) => {
-        const wall = editor.walls.value.find((item) => item.id === ref.wallId)
+        const wall = editor.selectableWalls.value.find((item) => item.id === ref.wallId)
         if (!wall) return null
         return wallEndpointHeightCm(wall, ref.end, floorH)
       })
@@ -194,7 +195,7 @@ export function useFmlPreviewWallSelection(options: {
     wallBalanceMixed.value = false
     if (wallIds.length === 0) return { mutated: false }
     const already = wallIds.every((id) => {
-      const wall = editor.walls.value.find((item) => item.id === id)
+      const wall = editor.selectableWalls.value.find((item) => item.id === id)
       if (!wall) return false
       return balanceToPercent(wall.balance ?? 0.5) === balanceToPercent(balance)
     })
@@ -212,7 +213,7 @@ export function useFmlPreviewWallSelection(options: {
     if (wallIds.length === 0) return { mutated: false }
     const floorH = floorHeight()
     const already = wallIds.every((id) => {
-      const wall = editor.walls.value.find((item) => item.id === id)
+      const wall = editor.selectableWalls.value.find((item) => item.id === id)
       if (!wall) return false
       return (
         Math.round(wallEndpointHeightCm(wall, 'a', floorH)) === height &&
@@ -239,7 +240,7 @@ export function useFmlPreviewWallSelection(options: {
     if (!junction || junction.refs.length === 0) return { mutated: false }
     const floorH = floorHeight()
     const already = junction.refs.every((ref) => {
-      const wall = editor.walls.value.find((item) => item.id === ref.wallId)
+      const wall = editor.selectableWalls.value.find((item) => item.id === ref.wallId)
       if (!wall) return false
       return Math.round(wallEndpointHeightCm(wall, ref.end, floorH)) === height
     })
@@ -356,7 +357,7 @@ export function useFmlPreviewWallSelection(options: {
     if (settingsWallIds.value.length === 0) return
     const wallIds = [...settingsWallIds.value]
     const already = wallIds.every((id) => {
-      const wall = editor.walls.value.find((item) => item.id === id)
+      const wall = editor.selectableWalls.value.find((item) => item.id === id)
       return wall != null && Math.round(wall.thickness) === thickness
     })
     if (already) return
@@ -370,7 +371,7 @@ export function useFmlPreviewWallSelection(options: {
     flushPendingFieldCommits()
     if (settingsWallIds.value.length !== 1) return
     const wallId = settingsWallIds.value[0]
-    const wall = editor.walls.value.find((item) => item.id === wallId)
+    const wall = editor.selectableWalls.value.find((item) => item.id === wallId)
     if (!wall) return
     const lengthCm = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
     if (lengthCm < 8) return
@@ -449,12 +450,15 @@ export function useFmlPreviewWallSelection(options: {
 
   async function applyFacadeGroupSelection(value: string): Promise<void> {
     flushPendingFieldCommits()
-    const wallIds = [...settingsWallIds.value]
-    if (wallIds.length === 0) return
+    const selectedIds = [...settingsWallIds.value]
+    if (selectedIds.length === 0) return
+    const plan = editor.localPlan.value
+    if (!plan) return
 
     if (value === '__new__') {
       const name = await promptFacadeGroupName()
       if (name == null) return
+      const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'create')
       editor.pushUndo()
       editor.applyFacadeCreate({ name }, wallIds)
       syncPlanToParent()
@@ -462,6 +466,7 @@ export function useFmlPreviewWallSelection(options: {
     }
 
     if (value === '' || value === '__none__') {
+      const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'detach')
       editor.pushUndo()
       editor.applyFacadeDetach(wallIds)
       syncPlanToParent()
@@ -471,11 +476,12 @@ export function useFmlPreviewWallSelection(options: {
     // Workspace stamp-preset kan nog via applyFacadeGroupSelection komen.
     if (value === STAMP_FACADE_GROUP_ID) {
       editor.pushUndo()
-      editor.applyStampAssign(wallIds)
+      editor.applyStampAssign(selectedIds)
       syncPlanToParent()
       return
     }
 
+    const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'assign', value)
     editor.pushUndo()
     editor.applyFacadeAssign(value, wallIds)
     syncPlanToParent()
@@ -635,7 +641,7 @@ export function useFmlPreviewWallSelection(options: {
       wallHeightMixed.value = false
       return
     }
-    const wallIds = findWallsFullyInCmBBox(editor.walls.value, cmBBox)
+    const wallIds = findWallsFullyInCmBBox(editor.selectableWalls.value, cmBBox)
     settingsWallIds.value = wallIds
     settingsOpeningIds.value = []
     moveOpeningId.value = null
@@ -659,7 +665,7 @@ export function useFmlPreviewWallSelection(options: {
       flushPendingFieldCommits()
       const cmBBox = hitTest.containerRectToCmBBox(preview)
       if (!cmBBox) return
-      const added = new Set(findWallsFullyInCmBBox(editor.walls.value, cmBBox))
+      const added = new Set(findWallsFullyInCmBBox(editor.selectableWalls.value, cmBBox))
       if (added.size === 0) return
       const merged = new Set(settingsWallIds.value)
       for (const id of added) merged.add(id)

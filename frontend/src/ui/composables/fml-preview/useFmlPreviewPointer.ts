@@ -33,6 +33,8 @@ interface PointerToolModes {
   settingsMod: Ref<boolean> | ComputedRef<boolean>
   moveMod: Ref<boolean> | ComputedRef<boolean>
   touchNav: Ref<boolean> | ComputedRef<boolean>
+  dakMode?: ComputedRef<boolean>
+  isRidgeWallId?: (wallId: string) => boolean
 }
 
 interface PointerDragState {
@@ -76,6 +78,7 @@ interface PointerActions {
   toggleSettingsOpening: (openingId: string) => void
   toggleSettingsArea: (areaId: string) => void
   toggleSettingsSurface: (surfaceId: string) => void
+  selectRoofSurface?: (surfaceId: string, mutate: boolean) => void
   toggleSettingsLabel: (labelId: string) => void
   toggleSettingsLine: (lineId: string) => void
   toggleSettingsWall: (wallId: string, cm: Point2D) => void
@@ -297,7 +300,9 @@ export function useFmlPreviewPointer(options: {
     }
 
     const junction = hitTest.hitTestJunctionAtCm(cm)
-    if (junction && allowHit('wall')) {
+    const junctionOnRidge =
+      junction?.refs.some((ref) => modes.isRidgeWallId?.(ref.wallId) === true) === true
+    if (junction && allowHit('wall') && (modes.dakMode?.value !== true || junctionOnRidge)) {
       if (isSettingsMod(event, modes.settingsMod.value)) {
         actions.toggleSettingsJunction(junction.id)
         return
@@ -401,14 +406,16 @@ export function useFmlPreviewPointer(options: {
     }
 
     const surfaceId = hitTest.hitTestSurfaceAtCm(cm)
-    if (
-      modes.areaSurfaceEditEnabled.value &&
-      surfaceId &&
-      allowHit('area') &&
-      isSettingsMod(event, modes.settingsMod.value)
-    ) {
-      actions.toggleSettingsSurface(surfaceId)
-      return
+    if (modes.areaSurfaceEditEnabled.value && surfaceId && allowHit('area')) {
+      const ctrl = isSettingsMod(event, modes.settingsMod.value)
+      if (modes.dakMode?.value === true) {
+        actions.selectRoofSurface?.(surfaceId, ctrl)
+        return
+      }
+      if (ctrl) {
+        actions.toggleSettingsSurface(surfaceId)
+        return
+      }
     }
 
     const areaId = hitTest.hitTestAreaAtCm(cm)
@@ -433,6 +440,11 @@ export function useFmlPreviewPointer(options: {
     }
 
     const wallId = hitTest.hitTestWallAtCm(cm)
+    if (wallId && modes.dakMode?.value === true && modes.isRidgeWallId?.(wallId) !== true) {
+      actions.clearSelection()
+      hoveredOpeningId.value = null
+      return
+    }
     if (!wallId) {
       actions.clearSelection()
       hoveredOpeningId.value = null

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
+import { createBlankFloor, createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
   applyFacadeGroupRemaps,
   assignWallsToGroup,
@@ -11,6 +11,7 @@ import {
   detachWallsFromFacade,
   detachWallsFromStamp,
   ensureStampFacadeGroup,
+  findStackedWallIds,
   hasElevationFacadeGroups,
   groupIdForWall,
   isWallInStampGroup,
@@ -367,5 +368,41 @@ describe('facade-groups', () => {
     expect(second.addedWallIds).toEqual([])
     expect(second.skippedCount).toBe(1)
     expect(second.plan.floors[1].walls).toHaveLength(1)
+  })
+})
+
+describe('findStackedWallIds', () => {
+  function stackedPlan(): FloorPlan {
+    const plan = createEmptyFloorPlan({ name: 'Stack' })
+    plan.floors[0].walls = [
+      wall('bg-front', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('bg-side', { x: 0, y: 0 }, { x: 0, y: 200 }),
+    ]
+    plan.floors.push(createBlankFloor({ name: 'Verdieping 1', level: 1 }))
+    plan.floors[1].walls = [
+      wall('v1-front', { x: 400, y: 0 }, { x: 0, y: 0 }),
+      wall('v1-other', { x: 80, y: 80 }, { x: 180, y: 80 }),
+    ]
+    return plan
+  }
+
+  it('vindt omgekeerd segment op andere floor', () => {
+    const plan = stackedPlan()
+    expect(findStackedWallIds(plan, ['bg-front'])).toEqual(['v1-front'])
+    expect(findStackedWallIds(plan, ['v1-front'])).toEqual(['bg-front'])
+  })
+
+  it('negeert andere coördinaten en dezelfde floor', () => {
+    const plan = stackedPlan()
+    expect(findStackedWallIds(plan, ['bg-side'])).toEqual([])
+    expect(findStackedWallIds(plan, ['bg-front', 'bg-side'])).toEqual(['v1-front'])
+  })
+
+  it('houdt 1 cm tolerantie; 2 cm mist', () => {
+    const plan = stackedPlan()
+    plan.floors[1].walls[0] = wall('v1-front', { x: 400.8, y: 0 }, { x: 0.4, y: 0.6 })
+    expect(findStackedWallIds(plan, ['bg-front'])).toEqual(['v1-front'])
+    plan.floors[1].walls[0] = wall('v1-front', { x: 403, y: 0 }, { x: 0, y: 0 })
+    expect(findStackedWallIds(plan, ['bg-front'])).toEqual([])
   })
 })

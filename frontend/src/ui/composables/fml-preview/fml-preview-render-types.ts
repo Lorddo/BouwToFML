@@ -107,6 +107,7 @@ export interface RenderArea {
 
 export interface RenderSurface extends RenderArea {
   isCutout?: boolean
+  isRoof?: boolean
 }
 
 export interface RenderLabel {
@@ -149,8 +150,22 @@ export interface RenderDimension {
   label: string
 }
 
+export interface RenderRidge {
+  id: string
+  wall: Wall
+  points: number[]
+  outlinePoints: [number[], number[]]
+  a: { x: number; y: number }
+  b: { x: number; y: number }
+}
+
 export interface RenderModel {
   wallLines: RenderWall[]
+  /** Plattegrond-muren als referentie (Dak-tab): alleen stippellijn. */
+  ghostWallLines: RenderWall[]
+  /** Dak-tab: baksteen-afdruk (binnen + buiten) als stippellijn, geen hartlijn. */
+  ghostWallPolygons: RenderWallPolygon[]
+  ridgeLines: RenderRidge[]
   /** Per-wall square-cap rects for move/settings overlays. */
   wallPolygons: RenderWallPolygon[]
   /** Boolean-union wall silhouette (single even-odd SVG path — never per-wall strokes). */

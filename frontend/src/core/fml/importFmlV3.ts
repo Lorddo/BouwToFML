@@ -1,4 +1,6 @@
 import { foldBovenlichtOnWall } from './bovenlicht'
+import { syncRidgeWallGuidsFromDesigns } from './ridge-walls'
+import { syncRoofPlaneGuidsFromDesigns } from './roof-planes'
 import { stripBakedSliceDimensionsFromPlan } from './btf-slices'
 import { wallLengthCm } from './fml-wall-geom'
 import type {
@@ -98,6 +100,7 @@ interface RawArea {
   name_x?: number
   name_y?: number
   isCutout?: boolean
+  isRoof?: boolean
   pattern?: number
   [key: string]: unknown
 }
@@ -220,6 +223,7 @@ const AREA_KNOWN = new Set([
   'name_x',
   'name_y',
   'isCutout',
+  'isRoof',
   'pattern',
 ])
 
@@ -423,6 +427,7 @@ function parseSurface(raw: RawArea, index: number): FloorSurface | null {
     name_x: typeof raw.name_x === 'number' ? raw.name_x : undefined,
     name_y: typeof raw.name_y === 'number' ? raw.name_y : undefined,
     isCutout: raw.isCutout === true ? true : undefined,
+    isRoof: raw.isRoof === true ? true : undefined,
     pattern: typeof raw.pattern === 'number' ? raw.pattern : undefined,
     extras: pickExtras(raw, AREA_KNOWN),
   }
@@ -664,6 +669,8 @@ export function importFmlV3(json: string | object): ImportResult {
     source: parsePlanSource(raw),
   }
 
+  syncRidgeWallGuidsFromDesigns(plan)
+  syncRoofPlaneGuidsFromDesigns(plan)
   // Slicer-bake op P-lijn opnieuw genereren; strip uit dimensions zodat live/export niet dubbelt.
   return { plan: stripBakedSliceDimensionsFromPlan(plan), warnings }
 }

@@ -9,6 +9,7 @@ import {
   resolveWindowBovenlicht,
 } from './bovenlicht'
 import { ensureDesignsSynced } from './design-sync'
+import { dropEmptyRidgeDesign } from './ridge-walls'
 import { BTF_SLICES_SETTINGS_KEY, filterManualDimensions, type BtfSlice } from './btf-slices'
 import { bakeSliceDimensions } from './slice-dimension-lines'
 import type { DimensionMode } from './fml-dimension-settings'
@@ -258,6 +259,7 @@ function serializeSurface(surface: FloorSurface, forceFillColor?: string): Recor
   if (surface.name_x != null) out.name_x = surface.name_x
   if (surface.name_y != null) out.name_y = surface.name_y
   if (surface.isCutout === true) out.isCutout = true
+  if (surface.isRoof === true) out.isRoof = true
   if (surface.pattern != null) out.pattern = surface.pattern
   if (out.roomstyle_id == null) out.roomstyle_id = ''
   return out
@@ -485,7 +487,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
   const fallbackProjectId = typeof plan.source?.id === 'number' ? plan.source.id : 900000001
   const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
 
-  const syncedFloors = plan.floors.map((floor) => ensureDesignsSynced(floor))
+  const syncedFloors = plan.floors.map((floor) => dropEmptyRidgeDesign(ensureDesignsSynced(floor)))
 
   const projectSettings = hasSource
     ? {

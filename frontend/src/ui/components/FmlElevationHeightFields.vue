@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import type { ElevationProjectionMode } from '@/core/fml/elevation-views'
 import type { ElevationStackRow } from '@/core/fml/floor-stack'
 
 defineProps<{
   rows: ElevationStackRow[]
+  ridgeDisplayWidthCm?: number
+  projection?: ElevationProjectionMode
 }>()
 
 const emit = defineEmits<{
   nok: [cm: number]
   story: [floorIndex: number, cm: number]
   slab: [floorIndex: number, cm: number]
+  ridgeDisplayWidth: [cm: number]
+  projection: [mode: ElevationProjectionMode]
 }>()
 
 const { t } = useI18n()
@@ -24,6 +29,39 @@ function onNumber(event: Event): number | null {
 <template>
   <div class="elev-heights">
     <p class="elev-heights__hint">{{ t('viewer.elevationHeightsHint') }}</p>
+    <label class="elev-heights__row elev-heights__row--select">
+      <span>{{ t('viewer.elevationProjection') }}</span>
+      <select
+        :value="projection ?? 'architect'"
+        @change="
+          emit(
+            'projection',
+            ($event.target as HTMLSelectElement).value === 'projective'
+              ? 'projective'
+              : 'architect',
+          )
+        "
+      >
+        <option value="architect">{{ t('viewer.elevationProjectionArchitect') }}</option>
+        <option value="projective">{{ t('viewer.elevationProjectionProjective') }}</option>
+      </select>
+    </label>
+    <p class="elev-heights__hint">{{ t('viewer.elevationProjectionHint') }}</p>
+    <label v-if="ridgeDisplayWidthCm != null" class="elev-heights__row">
+      <span>{{ t('viewer.elevationRidgeWidth') }}</span>
+      <input
+        type="number"
+        min="1"
+        max="80"
+        :value="ridgeDisplayWidthCm"
+        @change="
+          (event) => {
+            const cm = onNumber(event)
+            if (cm != null) emit('ridgeDisplayWidth', cm)
+          }
+        "
+      />
+    </label>
     <label v-for="(row, index) in rows" :key="`${row.kind}-${index}`" class="elev-heights__row">
       <span v-if="row.kind === 'nok'">{{ t('viewer.elevationNok') }}</span>
       <span v-else-if="row.kind === 'story'">{{ row.name }}</span>
@@ -91,8 +129,13 @@ function onNumber(event: Event): number | null {
   color: #334155;
 }
 
-.elev-heights__row input {
+.elev-heights__row input,
+.elev-heights__row select {
   width: 100%;
   box-sizing: border-box;
+}
+
+.elev-heights__row--select {
+  grid-template-columns: 1fr minmax(110px, 1fr);
 }
 </style>

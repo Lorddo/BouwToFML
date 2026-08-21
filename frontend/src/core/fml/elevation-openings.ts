@@ -3,7 +3,9 @@
  */
 import type { FloorPlan, Opening } from './types'
 import { clampOpeningToStory } from './elevation-opening-edit'
-import { setWallsUniformHeight } from './wall-endpoint-height'
+import { remapFacadeGroupWallIds } from './facade-groups'
+import { setJunctionHeight, setWallsUniformHeight, type WallEnd } from './wall-endpoint-height'
+import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
 import {
   addOpeningToWall,
   findOpeningById,
@@ -125,6 +127,69 @@ export function addPlanOpening(
     return updated
   })
   return { plan: next, openingId }
+}
+
+export function splitPlanWallAtT(
+  plan: FloorPlan,
+  wallId: string,
+  t: number,
+): { plan: FloorPlan; firstWallId: string; secondWallId: string; floorIndex: number } | null {
+  let floorIndex = -1
+  let firstWallId = ''
+  let secondWallId = ''
+  const next = mapPlanWalls(plan, (walls, index) => {
+    if (firstWallId) return walls
+    const split = splitWallAtT(walls, wallId, t)
+    if (!split) return walls
+    floorIndex = index
+    firstWallId = split.firstWallId
+    secondWallId = split.secondWallId
+    return split.walls
+  })
+  if (!firstWallId || floorIndex < 0) return null
+  const cloned = cloneFacadeGroupPlan(next)
+  remapFacadeGroupWallIds(cloned, wallId, [firstWallId, secondWallId])
+  return { plan: cloned, firstWallId, secondWallId, floorIndex }
+}
+
+function cloneFacadeGroupPlan(plan: FloorPlan): FloorPlan {
+  const settings = plan.source?.settings
+  if (!settings?.facadeGroups || !plan.source) return plan
+  return {
+    ...plan,
+    source: {
+      ...plan.source,
+      settings: {
+        ...settings,
+        facadeGroups: settings.facadeGroups.map((group) => ({
+          ...group,
+          wallGuids: [...group.wallGuids],
+        })),
+      },
+    },
+  }
+}
+
+export function setPlanJunctionHeight(
+  plan: FloorPlan,
+  floorIndex: number,
+  refs: ReadonlyArray<{ wallId: string; end: WallEnd }>,
+  heightCm: number,
+): FloorPlan {
+  return mapPlanWalls(plan, (walls, index) => {
+    if (index !== floorIndex) return walls
+    const floor = plan.floors[index]
+    if (!floor) return walls
+    const next = setJunctionHeight(walls, refs, heightCm, floor.height)
+    const touched = new Set(refs.map((ref) => ref.wallId))
+    return next.map((wall) => {
+      if (!touched.has(wall.id)) return wall
+      return {
+        ...wall,
+        openings: wall.openings.map((opening) => clampOpeningToStory(opening, wall, floor.height)),
+      }
+    })
+  })
 }
 
 export function setPlanWallHeight(

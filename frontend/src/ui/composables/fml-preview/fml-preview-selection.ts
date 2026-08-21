@@ -26,6 +26,8 @@ export interface FmlPreviewSelectionRefs {
   settingsItemId: Ref<string | null>
   moveItemId: Ref<string | null>
   surfaceEditId: Ref<string | null>
+  /** Ctrl-modus: punten toevoegen/weghalen op het dakvlak. */
+  roofPolyMutate: Ref<boolean>
   drawSurfacePoints: Ref<Point2D[] | null>
   drawLinePoints: Ref<Point2D[] | null>
   pinnedJunctionId: Ref<string | null>
@@ -46,6 +48,7 @@ export interface FmlPreviewSelectionRefs {
   addWindowSillZCm: Ref<number>
   addWindowHeightCm: Ref<number>
   activeFmlTool: Ref<FmlToolId | null>
+  drawWallKind: Ref<'wall' | 'ridge'>
 }
 
 export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
@@ -62,6 +65,7 @@ export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
     settingsItemId: ref<string | null>(null),
     moveItemId: ref<string | null>(null),
     surfaceEditId: ref<string | null>(null),
+    roofPolyMutate: ref(false),
     drawSurfacePoints: ref<Point2D[] | null>(null),
     drawLinePoints: ref<Point2D[] | null>(null),
     pinnedJunctionId: ref<string | null>(null),
@@ -82,5 +86,6 @@ export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
     addWindowSillZCm: ref(DEFAULT_WINDOW_SILL_Z_CM),
     addWindowHeightCm: ref(DEFAULT_WINDOW_HEIGHT_CM),
     activeFmlTool: ref<FmlToolId | null>(null),
+    drawWallKind: ref<'wall' | 'ridge'>('wall'),
   }
 }

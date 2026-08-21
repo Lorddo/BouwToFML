@@ -83,15 +83,16 @@ export function clampOpeningSillZ(zCm: number): number {
 }
 
 export function clampDoorOpeningT(
-  wall: { a: { x: number; y: number }; b: { x: number; y: number } },
+  wall: { a: { x: number; y: number }; b: { x: number; y: number }; thickness?: number },
   widthCm: number,
   t: number,
 ): number {
   const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
   if (!Number.isFinite(t) || len < 1e-6) return 0.5
   const half = Math.max(0.5, widthCm / 2)
-  const minT = half / len
-  const maxT = 1 - half / len
+  const cap = Math.max(0, (wall.thickness ?? 0) / 2)
+  const minT = (half - cap) / len
+  const maxT = 1 - (half - cap) / len
   if (minT > maxT) return 0.5
   return Math.max(minT, Math.min(maxT, t))
 }

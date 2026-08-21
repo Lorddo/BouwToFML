@@ -4,7 +4,10 @@
  *
  * Stempel (`stamp`) is orthogonaal: een muur mag in stamp + max. 1 gevelgroep.
  */
-import type { FloorPlan, FloorPlanSource, FmlExtras, Wall } from './types'
+import type { FloorPlan, FloorPlanSource, FmlExtras, Point2D, Wall } from './types'
+
+/** Zelfde segment op een andere floor (~1 cm), zelfde drempel als stempel-apply. */
+export const STACKED_WALL_EPS_CM = 1
 
 export const FACADE_GROUPS_SETTINGS_KEY = 'facadeGroups'
 
@@ -471,6 +474,60 @@ export function applyFacadeGroupRemaps(plan: FloorPlan, remaps: readonly WallIdR
   for (const remap of remaps) {
     remapFacadeGroupWallIds(plan, remap.fromId, remap.intoIds)
   }
+}
+
+function samePoint(a: Point2D, b: Point2D, epsCm: number): boolean {
+  return Math.abs(a.x - b.x) <= epsCm && Math.abs(a.y - b.y) <= epsCm
+}
+
+function segmentsMatch(a: Wall, b: Pick<Wall, 'a' | 'b'>, epsCm: number): boolean {
+  return (
+    (samePoint(a.a, b.a, epsCm) && samePoint(a.b, b.b, epsCm)) ||
+    (samePoint(a.a, b.b, epsCm) && samePoint(a.b, b.a, epsCm))
+  )
+}
+
+/**
+ * Muren op andere verdiepingen met dezelfde `a`/`b` (of omgekeerd).
+ * Alleen `floor.walls` (geen nok-design). Seed-ids zelf zitten niet in het resultaat.
+ */
+export function findStackedWallIds(
+  plan: FloorPlan | null | undefined,
+  wallGuids: readonly string[],
+  options?: { epsCm?: number },
+): string[] {
+  if (!plan) return []
+  const seedIds = new Set(normalizeWallGuids(wallGuids))
+  if (seedIds.size === 0) return []
+
+  const epsCm = options?.epsCm ?? STACKED_WALL_EPS_CM
+  const seeds: Array<{ wall: Wall; floorIndex: number }> = []
+  for (let floorIndex = 0; floorIndex < plan.floors.length; floorIndex += 1) {
+    const floor = plan.floors[floorIndex]
+    if (!floor) continue
+    for (const wall of floor.walls) {
+      if (!seedIds.has(wall.id)) continue
+      seeds.push({ wall, floorIndex })
+    }
+  }
+  if (seeds.length === 0) return []
+
+  const out: string[] = []
+  const seen = new Set(seedIds)
+  for (let floorIndex = 0; floorIndex < plan.floors.length; floorIndex += 1) {
+    const floor = plan.floors[floorIndex]
+    if (!floor) continue
+    for (const wall of floor.walls) {
+      if (seen.has(wall.id)) continue
+      const hit = seeds.some(
+        (seed) => seed.floorIndex !== floorIndex && segmentsMatch(wall, seed.wall, epsCm),
+      )
+      if (!hit) continue
+      seen.add(wall.id)
+      out.push(wall.id)
+    }
+  }
+  return out
 }
 
 /** Leden van de groep die op `floorIndex` bestaan. */

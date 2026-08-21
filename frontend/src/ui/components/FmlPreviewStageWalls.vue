@@ -45,6 +45,37 @@ const highlightedWallHits = computed((): RenderWall[] => {
       }"
     />
     <v-line
+      v-for="line in renderModel.ghostWallLines"
+      :key="`${line.id}-ghost`"
+      :config="{
+        points: line.points,
+        stroke: '#94a3b8',
+        strokeWidth: 1.25,
+        dash: [7, 5],
+        lineCap: 'butt',
+        opacity: 0.85,
+        listening: false,
+        perfectDrawEnabled: false,
+      }"
+    />
+    <v-line
+      v-for="polygon in renderModel.ghostWallPolygons"
+      :key="`${polygon.id}-ghost-poly`"
+      :config="{
+        points: polygon.points,
+        closed: true,
+        stroke: '#64748b',
+        strokeWidth: 1.35,
+        dash: [7, 5],
+        fillEnabled: false,
+        lineJoin: 'miter',
+        lineCap: 'butt',
+        opacity: 0.95,
+        listening: false,
+        perfectDrawEnabled: false,
+      }"
+    />
+    <v-line
       v-if="moveWallPolygon"
       :config="{
         points: moveWallPolygon.points,
@@ -89,6 +120,34 @@ const highlightedWallHits = computed((): RenderWall[] => {
         strokeEnabled: false,
         opacity: 0.92,
         listening: false,
+      }"
+    />
+    <v-line
+      v-for="ridge in renderModel.ridgeLines"
+      :key="`${ridge.id}-center`"
+      :config="{
+        points: ridge.points,
+        stroke: '#0f766e',
+        strokeWidth: 1.25,
+        dash: [8, 6],
+        lineCap: 'butt',
+        listening: false,
+        perfectDrawEnabled: false,
+      }"
+    />
+    <v-line
+      v-for="outline in renderModel.ridgeLines.flatMap((ridge) =>
+        ridge.outlinePoints.map((points, index) => ({ id: ridge.id, index, points })),
+      )"
+      :key="`${outline.id}-outline-${outline.index}`"
+      :config="{
+        points: outline.points,
+        stroke: '#0f766e',
+        strokeWidth: 1.5,
+        dash: [8, 6],
+        lineCap: 'butt',
+        listening: false,
+        perfectDrawEnabled: false,
       }"
     />
     <v-line

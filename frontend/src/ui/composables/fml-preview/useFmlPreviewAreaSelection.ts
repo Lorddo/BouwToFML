@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { isRoofSurface } from '@/core/fml/roof-planes'
 import type { FloorArea, FloorSurface } from '@/core/fml/types'
 import {
   effectiveRoomTypeColor,
@@ -28,6 +29,7 @@ export function useFmlPreviewAreaSelection(options: {
     settingsAreaId,
     settingsSurfaceId,
     surfaceEditId,
+    roofPolyMutate,
     settingsWallIds,
     moveWallId,
     settingsOpeningIds,
@@ -54,6 +56,7 @@ export function useFmlPreviewAreaSelection(options: {
     settingsAreaId.value = null
     settingsSurfaceId.value = null
     surfaceEditId.value = null
+    roofPolyMutate.value = false
     customNameDraft.value = ''
   }
 
@@ -75,20 +78,31 @@ export function useFmlPreviewAreaSelection(options: {
     clearOtherSelections()
     settingsSurfaceId.value = null
     surfaceEditId.value = null
+    roofPolyMutate.value = false
     settingsAreaId.value = settingsAreaId.value === areaId ? null : areaId
     syncCustomNameDraftFromSelection()
   }
 
   function toggleSettingsSurface(surfaceId: string): void {
+    selectRoofSurface(surfaceId, false)
+  }
+
+  function selectRoofSurface(surfaceId: string, mutate: boolean): void {
     flushPendingFieldCommits()
     clearOtherSelections()
     settingsAreaId.value = null
-    if (settingsSurfaceId.value === surfaceId) {
+    const surface = options.editor.surfaces.value.find((item) => item.id === surfaceId)
+    const roof = surface != null && isRoofSurface(surface)
+    if (settingsSurfaceId.value === surfaceId && !mutate) {
       settingsSurfaceId.value = null
       surfaceEditId.value = null
-    } else {
-      settingsSurfaceId.value = surfaceId
+      roofPolyMutate.value = false
+      syncCustomNameDraftFromSelection()
+      return
     }
+    settingsSurfaceId.value = surfaceId
+    surfaceEditId.value = roof ? surfaceId : mutate ? surfaceId : null
+    roofPolyMutate.value = roof && mutate
     syncCustomNameDraftFromSelection()
   }
 
@@ -96,9 +110,20 @@ export function useFmlPreviewAreaSelection(options: {
     flushPendingFieldCommits()
     if (!settingsSurfaceId.value) return
     surfaceEditId.value = settingsSurfaceId.value
+    roofPolyMutate.value = true
   }
 
   function endSurfacePolygonEdit(): void {
+    if (roofPolyMutate.value) {
+      roofPolyMutate.value = false
+      return
+    }
+    const surface = selectedSurface()
+    if (surface && isRoofSurface(surface)) {
+      settingsSurfaceId.value = null
+      surfaceEditId.value = null
+      return
+    }
     surfaceEditId.value = null
   }
 
@@ -214,6 +239,7 @@ export function useFmlPreviewAreaSelection(options: {
       options.editor.removeSurface(settingsSurfaceId.value)
       settingsSurfaceId.value = null
       surfaceEditId.value = null
+      roofPolyMutate.value = false
     }
     customNameDraft.value = ''
     options.syncPlanToParent()
@@ -236,6 +262,7 @@ export function useFmlPreviewAreaSelection(options: {
     clearTaggedSelection,
     toggleSettingsArea,
     toggleSettingsSurface,
+    selectRoofSurface,
     beginSurfacePolygonEdit,
     endSurfacePolygonEdit,
     applyRoomTypeToSelection,

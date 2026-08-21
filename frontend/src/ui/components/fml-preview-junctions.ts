@@ -60,4 +60,9 @@ export {
   splitWallAtT,
 } from './fml-preview-wall-edit'
 
-export { addRoomRect, addWallSegment, findWallAtPoint } from './fml-preview-wall-draw-geom'
+export {
+  addRidgeSegment,
+  addRoomRect,
+  addWallSegment,
+  findWallAtPoint,
+} from './fml-preview-wall-draw-geom'

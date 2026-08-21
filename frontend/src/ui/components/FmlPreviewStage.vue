@@ -80,6 +80,7 @@ withDefaults(
     inspectColors: Record<string, string>
     surfaceEditId: string | null
     surfaceEditVertices: Point2D[] | null
+    selectedVertexIndex?: number | null
     groupDraggable: boolean
     visibleJunctions: RenderJunction[]
     junctionOverlayGroup: { x: number; y: number; scaleX: number; scaleY: number }
@@ -229,6 +230,7 @@ onBeforeUnmount(unbindGroupDrag)
             :inspect-colors="inspectColors"
             :surface-edit-id="surfaceEditId"
             :edit-vertices="surfaceEditVertices"
+            :selected-vertex-index="selectedVertexIndex"
             :layout-scale="layoutScale"
             :view-scale="viewScale"
             :labels-visible="labelsVisible"
@@ -433,6 +435,7 @@ onBeforeUnmount(unbindGroupDrag)
             :inspect-colors="inspectColors"
             :surface-edit-id="surfaceEditId"
             :edit-vertices="surfaceEditVertices"
+            :selected-vertex-index="selectedVertexIndex"
             :layout-scale="layoutScale"
             :view-scale="viewScale"
             :labels-visible="labelsVisible"

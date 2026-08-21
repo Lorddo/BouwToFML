@@ -1,5 +1,7 @@
 import { ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import { snapRoofVertexZ } from '@/core/fml/generate-roof-planes'
+import { isRoofSurface } from '@/core/fml/roof-planes'
+import type { FloorSurface, Point2D } from '@/core/fml/types'
 import { snapPolygonVertexAxisLock } from '@/ui/components/fml-preview-junction-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -36,19 +38,42 @@ export function useFmlPreviewSurfaceEdit(options: {
   syncPlanToParent: () => void
 }) {
   const draggingVertexIndex = ref<number | null>(null)
+  const selectedVertexIndex = ref<number | null>(null)
   let didPushUndo = false
   let snapDisabled = false
+  let pendingZ: { index: number; z: number } | null = null
+  let dragMoveHandler: ((event: MouseEvent) => void) | null = null
+  const DRAG_START_PX = 4
 
   function isEditing(): boolean {
     return options.selection.surfaceEditId.value != null
   }
 
-  function currentPoly(): Point2D[] | null {
+  function currentSurface(): FloorSurface | undefined {
     const id = options.selection.surfaceEditId.value
-    if (!id) return null
-    const surface = options.editor.surfaces.value.find((s) => s.id === id)
+    if (!id) return undefined
+    return options.editor.surfaces.value.find((s) => s.id === id)
+  }
+
+  function currentPoly(): Point2D[] | null {
+    const surface = currentSurface()
     if (!surface?.poly?.length) return null
     return surface.poly.map((p) => ({ x: p.x, y: p.y }))
+  }
+
+  function resolveVertexZ(point: Point2D, previous?: { x: number; y: number; z?: number }): number {
+    if (previous && Math.hypot(previous.x - point.x, previous.y - point.y) < 0.05) {
+      return previous.z ?? 0
+    }
+    const plan = options.editor.localPlan.value
+    if (plan && isRoofSurface(currentSurface())) {
+      return snapRoofVertexZ({
+        plan,
+        floorIndex: options.editor.floorIndex.value,
+        point,
+      })
+    }
+    return previous?.z ?? 0
   }
 
   function commitPoly(poly: Point2D[]): void {
@@ -58,12 +83,23 @@ export function useFmlPreviewSurfaceEdit(options: {
       options.editor.pushUndo()
       didPushUndo = true
     }
+    const existing = currentSurface()
+    const dragIdx = draggingVertexIndex.value
     options.editor.updateSurface(id, {
-      poly: poly.map((p) => ({ x: p.x, y: p.y, z: 0 })),
+      poly: poly.map((p, index) => ({
+        x: p.x,
+        y: p.y,
+        z:
+          index === dragIdx
+            ? resolveVertexZ(p, existing?.poly[index])
+            : (existing?.poly[index]?.z ?? resolveVertexZ(p)),
+      })),
     })
   }
 
   function cleanupDragListeners(): void {
+    if (dragMoveHandler) window.removeEventListener('pointermove', dragMoveHandler)
+    dragMoveHandler = null
     window.removeEventListener('pointermove', onDragMove)
     window.removeEventListener('pointerup', onDragUp)
   }
@@ -106,20 +142,48 @@ export function useFmlPreviewSurfaceEdit(options: {
   }
 
   function beginVertexDrag(index: number, event: MouseEvent): void {
-    draggingVertexIndex.value = index
+    const startX = event.clientX
+    const startY = event.clientY
+    draggingVertexIndex.value = null
     didPushUndo = false
     snapDisabled = event.ctrlKey || event.metaKey
-    window.addEventListener('pointermove', onDragMove)
-    window.addEventListener('pointerup', onDragUp, { once: true })
+    const onMove = (move: MouseEvent) => {
+      if (draggingVertexIndex.value == null) {
+        if (Math.hypot(move.clientX - startX, move.clientY - startY) < DRAG_START_PX) return
+        draggingVertexIndex.value = index
+      }
+      onDragMove(move)
+    }
+    dragMoveHandler = onMove
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      if (dragMoveHandler === onMove) dragMoveHandler = null
+      onDragUp()
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp, { once: true })
   }
 
   /** @returns true when the event was consumed by edit mode. */
+  function removeVertex(index: number): void {
+    const poly = currentPoly()
+    if (!poly || poly.length <= 3) return
+    if (index < 0 || index >= poly.length) return
+    const next = poly.filter((_, i) => i !== index)
+    commitPoly(next)
+    selectedVertexIndex.value = Math.min(index, next.length - 1)
+    options.syncPlanToParent()
+    didPushUndo = false
+  }
+
   function onPointerDown(event: MouseEvent): boolean {
+    flushPendingVertexZ()
     if (!isEditing()) return false
     const raw = options.hitTest.clientToCm(event.clientX, event.clientY)
-    if (!raw) return true
+    if (!raw) return false
     const poly = currentPoly()
-    if (!poly || poly.length < 3) return true
+    if (!poly || poly.length < 3) return false
+    const mutate = options.selection.roofPolyMutate.value === true || event.ctrlKey || event.metaKey
 
     let bestVi = -1
     let bestVd = Number.POSITIVE_INFINITY
@@ -131,6 +195,12 @@ export function useFmlPreviewSurfaceEdit(options: {
       }
     }
     if (bestVi >= 0 && bestVd <= VERTEX_HIT_CM) {
+      if ((event.ctrlKey || event.metaKey) && poly.length > 3) {
+        removeVertex(bestVi)
+        event.preventDefault()
+        return true
+      }
+      selectedVertexIndex.value = bestVi
       beginVertexDrag(bestVi, event)
       event.preventDefault()
       return true
@@ -149,7 +219,7 @@ export function useFmlPreviewSurfaceEdit(options: {
         bestT = t
       }
     }
-    if (bestEi >= 0 && bestEd <= EDGE_HIT_CM && bestT > 0.05 && bestT < 0.95) {
+    if (mutate && bestEi >= 0 && bestEd <= EDGE_HIT_CM && bestT > 0.05 && bestT < 0.95) {
       const a = poly[bestEi]
       const b = poly[(bestEi + 1) % poly.length]
       const along = {
@@ -165,12 +235,13 @@ export function useFmlPreviewSurfaceEdit(options: {
       )
       const next = [...poly.slice(0, bestEi + 1), inserted, ...poly.slice(bestEi + 1)]
       commitPoly(next)
+      selectedVertexIndex.value = bestEi + 1
       beginVertexDrag(bestEi + 1, event)
       event.preventDefault()
       return true
     }
 
-    return true
+    return false
   }
 
   function cancelDrag(): void {
@@ -180,10 +251,40 @@ export function useFmlPreviewSurfaceEdit(options: {
     didPushUndo = false
   }
 
+  function applyVertexZ(index: number, zCm: number): void {
+    const surface = currentSurface()
+    if (!surface?.poly[index]) return
+    const z = Math.max(0, Math.round(zCm))
+    if (Math.round(surface.poly[index]?.z ?? 0) === z) return
+    if (!didPushUndo) {
+      options.editor.pushUndo()
+      didPushUndo = true
+    }
+    const next = surface.poly.map((point, i) => (i === index ? { ...point, z } : point))
+    options.editor.updateSurface(surface.id, { poly: next })
+    options.syncPlanToParent()
+    didPushUndo = false
+  }
+
+  function flushPendingVertexZ(): void {
+    if (!pendingZ) return
+    applyVertexZ(pendingZ.index, pendingZ.z)
+    pendingZ = null
+  }
+
+  function setSelectedVertexZ(zCm: number): void {
+    const idx = selectedVertexIndex.value
+    if (idx == null) return
+    pendingZ = { index: idx, z: Math.max(0, Math.round(zCm)) }
+    applyVertexZ(idx, pendingZ.z)
+  }
+
   return {
     isEditing,
     onPointerDown,
     cancelDrag,
     draggingVertexIndex,
+    selectedVertexIndex,
+    setSelectedVertexZ,
   }
 }

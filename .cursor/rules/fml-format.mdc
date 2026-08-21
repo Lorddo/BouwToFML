@@ -145,6 +145,9 @@ Floorplanner negeert onbekende keys. Editor-download houdt ze.
 |-----|--------|
 | `floorStack` | `{ nokThicknessCm, floors: [{ level, thicknessCm }] }` — aanzicht-banden; niet `walls[]` |
 | `elevationViews` | `[{ facadeGroupId, drawing? }]` — onderlegger per gevelgroep, niet `floors[].drawing` |
+| `elevationProjection` | `"architect"` \| `"projective"` — vaste H/V-zijde vs mee met de gevel |
+| `ridgeWalls` | `{ wallGuids, displayWidthCm }` — nok-identity; muren staan in sibling design `Dak` (`btfRole: ridge`) |
+| `roofPlanes` | `{ surfaceGuids }` — dakvlak-identity; `surfaces[]` op hetzelfde Dak-design (`isRoof`, z per hoek, `extras.btfOrigin`) |
 
 ## Maatlijnen
 

@@ -1,4 +1,5 @@
 import { displayAreaLabel } from '@/core/fml/roomtype-catalog'
+import { resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
 import type { FloorArea, FloorSurface, Point2D } from '@/core/fml/types'
 import type { RenderArea, RenderSurface } from './fml-preview-render-types'
 
@@ -118,8 +119,16 @@ export function buildRenderSurfaces(
 ): RenderSurface[] {
   return (surfaces ?? [])
     .filter((s) => s.poly.length >= 3)
-    .map((s) => ({
-      ...mapTaggedPoly(s, toStagePoint),
-      isCutout: s.isCutout,
-    }))
+    .map((s) => {
+      const mapped = mapTaggedPoly(s, toStagePoint)
+      const isRoof = s.isRoof === true || s.extras?.isRoof === true
+      const fill = isRoof ? resolveRoofSurfaceColor(s.color) : mapped.fill
+      return {
+        ...mapped,
+        fill,
+        color: isRoof ? fill : mapped.color,
+        isCutout: s.isCutout,
+        isRoof,
+      }
+    })
 }

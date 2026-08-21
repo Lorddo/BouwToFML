@@ -21,10 +21,12 @@ const props = withDefaults(
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
+    roofVertexZCm?: number | null
   }>(),
   {
     roomTypes: () => [],
     surfaceEditActive: false,
+    roofVertexZCm: null,
   },
 )
 
@@ -37,6 +39,7 @@ const emit = defineEmits<{
   deleteTagged: []
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
+  roofVertexZInput: [cm: number]
 }>()
 
 const taggedKindLabel = computed(() => {
@@ -122,6 +125,28 @@ function onHideLabelChange(event: Event): void {
         />
         <span>{{ t('result.toolbar.hideAreaLabel') }}</span>
       </label>
+    </div>
+  </div>
+  <div v-if="selectedAreaPanel?.canEditPolygon && surfaceEditActive" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roofVertexZ') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <input
+        class="fml-toolbelt__input"
+        type="number"
+        min="0"
+        step="1"
+        :disabled="roofVertexZCm == null"
+        :aria-label="t('result.toolbar.roofVertexZAria')"
+        :placeholder="t('result.toolbar.roofVertexZHint')"
+        :value="roofVertexZCm ?? ''"
+        @change="
+          emit(
+            'roofVertexZInput',
+            Math.max(0, Math.round(Number(($event.target as HTMLInputElement).value) || 0)),
+          )
+        "
+      />
+      <span class="fml-toolbelt__suffix">cm</span>
     </div>
   </div>
   <button

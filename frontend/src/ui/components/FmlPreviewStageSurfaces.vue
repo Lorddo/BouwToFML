@@ -18,6 +18,7 @@ const props = withDefaults(
     surfaceEditId: string | null
     /** Stage-space vertex handles when editing. */
     editVertices: Point2D[] | null
+    selectedVertexIndex?: number | null
     /** Content-layout scale (cm → stage); nodig voor wereldmaat-labels. */
     layoutScale?: number
     /** Viewport zoom; LOD filtert te kleine labels. */
@@ -60,10 +61,14 @@ function surfaceFill(surface: RenderSurface): string {
   return resolveInspectFill(surface.id, props.inspectColors, surface.fill)
 }
 
-function surfaceOpacity(surfaceId: string): number {
-  if (props.settingsSurfaceId === surfaceId || props.surfaceEditId === surfaceId) return 0.8
-  if (props.hoveredSurfaceId === surfaceId) return 0.68
-  return 0.55
+function surfaceOpacity(surface: RenderSurface): number {
+  const isRoof = surface.isRoof === true
+  const base = isRoof ? 0.42 : 0.55
+  if (props.settingsSurfaceId === surface.id || props.surfaceEditId === surface.id) {
+    return isRoof ? 0.7 : 0.8
+  }
+  if (props.hoveredSurfaceId === surface.id) return isRoof ? 0.58 : 0.68
+  return base
 }
 
 /** Default trapgat-kruis op een 4-punts cutout (geen extra FML-item). */
@@ -85,11 +90,15 @@ function cutoutDiagonals(points: number[]): number[][] {
         points: surface.points,
         closed: true,
         fill: surfaceFill(surface),
-        opacity: surfaceOpacity(surface.id),
+        opacity: surfaceOpacity(surface),
         stroke:
-          settingsSurfaceId === surface.id || surfaceEditId === surface.id ? '#f97316' : '#64748b',
+          settingsSurfaceId === surface.id || surfaceEditId === surface.id
+            ? '#f97316'
+            : surface.isRoof
+              ? '#b45309'
+              : '#64748b',
         strokeWidth: settingsSurfaceId === surface.id || surfaceEditId === surface.id ? 2 : 1,
-        dash: surface.isCutout ? [6, 4] : undefined,
+        dash: surface.isCutout ? [6, 4] : surface.isRoof ? [8, 5] : undefined,
         listening: false,
       }"
     />
@@ -124,8 +133,8 @@ function cutoutDiagonals(points: number[]): number[][] {
       :config="{
         x: vertex.x,
         y: vertex.y,
-        radius: 5,
-        fill: '#f97316',
+        radius: selectedVertexIndex === index ? 7 : 5,
+        fill: selectedVertexIndex === index ? '#b45309' : '#f97316',
         stroke: '#fff',
         strokeWidth: 1,
         listening: false,

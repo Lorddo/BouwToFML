@@ -45,8 +45,19 @@ import {
   STAMP_FACADE_GROUP_ID,
   stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
-import { elevationViewForGroup, setElevationViewDrawing } from '@/core/fml/elevation-views'
+import {
+  elevationViewForGroup,
+  readElevationProjection,
+  setElevationProjection,
+  setElevationViewDrawing,
+} from '@/core/fml/elevation-views'
 import { elevationStackRows, setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
+import {
+  findRidgeDesignFloorIndex,
+  overwriteRidgeDakThickness,
+  ridgeDisplayWidthCm,
+  setRidgeDisplayWidthCm,
+} from '@/core/fml/ridge-walls'
 import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
 import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
 import {
@@ -75,6 +86,7 @@ import {
   confirmFmlChrome,
   promptFacadeGroupName,
 } from '@/ui/composables/fml-chrome-dialog'
+import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
@@ -98,6 +110,7 @@ const activeFloorIndex = ref(0)
 const previewCanvasRef = ref<{
   flushPendingFieldCommits?: () => void
   sanitizeWalls?: () => boolean
+  generateRoofPlanes?: () => boolean | Promise<boolean>
   applyStampToActiveFloor?: () => boolean
   canApplyStampOnActiveFloor?: () => boolean
   applyCornerMarkerModeFromSettings?: () => void
@@ -187,6 +200,7 @@ const inspectFacadeGroups = computed(() =>
 )
 
 const gevelsMode = ref(false)
+const dakMode = ref(false)
 const elevationGroupId = ref('')
 const elevationUnderlaySrc = ref<string | null>(null)
 const elevationUnderlayWidthPx = ref(0)
@@ -194,55 +208,109 @@ const elevationUnderlayHeightPx = ref(0)
 const elevationUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
 const elevationFacadeGroups = computed(() => listElevationFacadeGroups(plan.value))
 const showGevelsChip = computed(() => !inspectMode.value && hasElevationFacadeGroups(plan.value))
+const showDakChip = computed(() => !inspectMode.value && findRidgeDesignFloorIndex(plan.value) >= 0)
 const elevationHeightRows = computed(() =>
   plan.value && gevelsMode.value ? elevationStackRows(plan.value) : [],
 )
+const elevationRidgeDisplayWidthCm = computed(() =>
+  plan.value ? ridgeDisplayWidthCm(plan.value) : 10,
+)
+const elevationProjection = computed(() => readElevationProjection(plan.value))
 
 function leaveGevelsMode(): void {
+  if (gevelsMode.value) persistElevationUnderlayDrawing()
+  cancelUnderlayScale()
+  underlayMoveMode.value = false
   gevelsMode.value = false
+}
+
+function leaveDakMode(): void {
+  dakMode.value = false
+}
+
+function onAddFloorChip(): void {
+  leaveGevelsMode()
+  leaveDakMode()
+  void addFloor()
+}
+
+function enterDakMode(): void {
+  if (inspectMode.value) return
+  const idx = findRidgeDesignFloorIndex(plan.value)
+  if (idx < 0) return
+  leaveGevelsMode()
+  dakMode.value = true
 }
 
 function enterGevelsMode(): void {
   if (inspectMode.value || !hasElevationFacadeGroups(plan.value)) return
+  if (gevelsMode.value) return
   const groups = elevationFacadeGroups.value
   if (!groups.some((group) => group.id === elevationGroupId.value)) {
     elevationGroupId.value = groups[0]?.id ?? ''
   }
+  leaveDakMode()
+  cancelUnderlayScale()
+  underlayMoveMode.value = false
   gevelsMode.value = true
-  syncElevationUnderlayFromPlan()
+  void syncElevationUnderlayFromPlan()
 }
 
-function syncElevationUnderlayFromPlan(): void {
+let elevationUnderlayLoadGen = 0
+
+async function syncElevationUnderlayFromPlan(): Promise<void> {
+  elevationUnderlayLoadGen += 1
+  const gen = elevationUnderlayLoadGen
   if (!plan.value || !elevationGroupId.value) {
     elevationUnderlaySrc.value = null
+    elevationUnderlayWidthPx.value = 0
+    elevationUnderlayHeightPx.value = 0
     elevationUnderlayLayout.value = null
     return
   }
   const drawing = elevationViewForGroup(plan.value, elevationGroupId.value)?.drawing
   if (!drawing?.url) {
-    elevationUnderlaySrc.value = drawing?.url ?? null
+    elevationUnderlaySrc.value = null
+    elevationUnderlayWidthPx.value = 0
+    elevationUnderlayHeightPx.value = 0
     elevationUnderlayLayout.value = null
     return
   }
   elevationUnderlaySrc.value = drawing.url
-  if (elevationUnderlayWidthPx.value > 0 && elevationUnderlayHeightPx.value > 0) {
-    elevationUnderlayLayout.value = previewUnderlayLayoutFromDrawing(drawing, {
-      width: elevationUnderlayWidthPx.value,
-      height: elevationUnderlayHeightPx.value,
-    })
+  try {
+    const img = await loadImage(drawing.url)
+    if (gen !== elevationUnderlayLoadGen) return
+    const { width, height } = imageDimensions(img)
+    elevationUnderlayWidthPx.value = width
+    elevationUnderlayHeightPx.value = height
+    elevationUnderlayLayout.value = previewUnderlayLayoutFromDrawing(drawing, { width, height })
+  } catch {
+    if (gen !== elevationUnderlayLoadGen) return
+    elevationUnderlayLayout.value = null
   }
 }
 
-watch([gevelsMode, elevationGroupId], () => {
-  if (gevelsMode.value) syncElevationUnderlayFromPlan()
+watch(elevationGroupId, (_next, prev) => {
+  if (!gevelsMode.value) return
+  if (prev) persistElevationUnderlayDrawing(prev)
+  cancelUnderlayScale()
+  underlayMoveMode.value = false
+  void syncElevationUnderlayFromPlan()
 })
 
 watch(showGevelsChip, (show) => {
   if (!show) leaveGevelsMode()
 })
 
+watch(showDakChip, (show) => {
+  if (!show) leaveDakMode()
+})
+
 watch(inspectMode, (on) => {
-  if (on) leaveGevelsMode()
+  if (on) {
+    leaveGevelsMode()
+    leaveDakMode()
+  }
 })
 
 const inspectFacadeSelectValue = computed(() => {
@@ -256,17 +324,20 @@ async function onInspectFacadeGroupChange(event: Event): Promise<void> {
   if (!hit || hit.kind !== 'wall' || !plan.value) return
   const select = event.target as HTMLSelectElement
   const value = select.value
-  const wallIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
+  const selectedIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
   if (value === '__new__') select.value = inspectFacadeSelectValue.value
 
   if (value === '__new__') {
     const name = await promptFacadeGroupName()
     if (name == null) return
+    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'create')
     const group = createFacadeGroup(plan.value, { name })
     assignWallsToGroup(plan.value, group.id, wallIds)
   } else if (value === '') {
+    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'detach')
     detachWalls(plan.value, wallIds)
   } else {
+    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'assign', value)
     assignWallsToGroup(plan.value, value, wallIds)
   }
 
@@ -371,7 +442,31 @@ function cancelUnderlayScale(): void {
   underlayScaleState.value = null
 }
 
+function persistElevationUnderlayDrawing(groupId = elevationGroupId.value): void {
+  const current = plan.value
+  const layout = elevationUnderlayLayout.value
+  const id = groupId.trim()
+  if (!current || !layout || !id) return
+  if (!(elevationUnderlayWidthPx.value > 0) || !(elevationUnderlayHeightPx.value > 0)) return
+  const url =
+    elevationViewForGroup(current, id)?.drawing?.url ?? elevationUnderlaySrc.value ?? undefined
+  if (!url) return
+  const drawing = drawingFromImageScale({
+    imageWidthPx: elevationUnderlayWidthPx.value,
+    imageHeightPx: elevationUnderlayHeightPx.value,
+    pxPerMmX: layout.pxPerMmX,
+    pxPerMmY: layout.pxPerMmY,
+    origin: layout.origin,
+    url,
+    alpha: Math.round(underlayOpacity.value * 100),
+    rotation: layout.rotationDeg ?? 0,
+  })
+  if (!drawing) return
+  plan.value = setElevationViewDrawing(current, id, drawing)
+}
+
 function persistActiveUnderlayDrawing(): void {
+  persistElevationUnderlayDrawing()
   const current = plan.value
   const layout = underlayLayout.value
   const idx = activeFloorIndex.value
@@ -781,16 +876,20 @@ function confirmUnderlayScale(): boolean {
   return true
 }
 
+const activeUnderlayLayout = computed(() =>
+  gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value,
+)
+
 const underlayScalePxX = computed(() => {
   const state = underlayScaleState.value
-  const layout = underlayLayout.value
+  const layout = activeUnderlayLayout.value
   if (!state || !layout) return 0
   return measuredCmFromRescaleState(state).x * 10 * layout.pxPerMmX
 })
 
 const underlayScalePxY = computed(() => {
   const state = underlayScaleState.value
-  const layout = underlayLayout.value
+  const layout = activeUnderlayLayout.value
   if (!state || !layout) return 0
   return measuredCmFromRescaleState(state).y * 10 * layout.pxPerMmY
 })
@@ -865,7 +964,16 @@ const {
 
 function onSelectFloorChip(index: number): void {
   leaveGevelsMode()
+  leaveDakMode()
   void selectFloor(index)
+}
+
+async function onGenerateRoofPlanes(): Promise<void> {
+  leaveGevelsMode()
+  await nextTick()
+  const ok = await previewCanvasRef.value?.generateRoofPlanes?.()
+  if (ok === false) return
+  enterDakMode()
 }
 
 async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
@@ -883,7 +991,17 @@ async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<v
 
 function onElevationNok(cm: number): void {
   if (!plan.value) return
-  plan.value = setNokThicknessCm(plan.value, cm)
+  plan.value = overwriteRidgeDakThickness(setNokThicknessCm(plan.value, cm), cm)
+}
+
+function onElevationRidgeDisplayWidth(cm: number): void {
+  if (!plan.value) return
+  plan.value = setRidgeDisplayWidthCm(plan.value, cm)
+}
+
+function onElevationProjection(mode: 'architect' | 'projective'): void {
+  if (!plan.value) return
+  plan.value = setElevationProjection(plan.value, mode)
 }
 
 function onElevationSlab(floorIndex: number, cm: number): void {
@@ -997,6 +1115,10 @@ function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): v
   if (layout !== undefined) {
     underlayLayout.value = layout ? cloneUnderlayOriginLayout(layout) : null
   }
+}
+
+function onElevationUnderlayLayout(layout: PreviewUnderlayLayout): void {
+  elevationUnderlayLayout.value = cloneUnderlayOriginLayout(layout)
 }
 
 watch(inspectMode, (on) => {
@@ -1234,6 +1356,17 @@ defineExpose({
                   <ToolbeltIcon name="mirror_plan" />
                   <span>{{ t('result.mirrorProject') }}</span>
                 </button>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :disabled="!plan || floors.length === 0"
+                  :title="t('result.toolbar.generateRoofPlanesAria')"
+                  :aria-label="t('result.toolbar.generateRoofPlanesAria')"
+                  @click="onGenerateRoofPlanes()"
+                >
+                  <ToolbeltIcon name="rect" />
+                  <span>{{ t('result.toolbar.generateRoofPlanes') }}</span>
+                </button>
               </div>
             </div>
           </details>
@@ -1355,9 +1488,13 @@ defineExpose({
             <summary>{{ t('viewer.elevationHeightsFold') }}</summary>
             <FmlElevationHeightFields
               :rows="elevationHeightRows"
+              :ridge-display-width-cm="elevationRidgeDisplayWidthCm"
+              :projection="elevationProjection"
               @nok="onElevationNok"
               @story="onElevationStoryHeight"
               @slab="onElevationSlab"
+              @ridge-display-width="onElevationRidgeDisplayWidth"
+              @projection="onElevationProjection"
             />
           </details>
 
@@ -1588,8 +1725,8 @@ defineExpose({
               type="button"
               role="tab"
               class="floor-chip"
-              :class="{ active: !gevelsMode && index === activeFloorIndex }"
-              :aria-selected="!gevelsMode && index === activeFloorIndex"
+              :class="{ active: !gevelsMode && !dakMode && index === activeFloorIndex }"
+              :aria-selected="!gevelsMode && !dakMode && index === activeFloorIndex"
               :disabled="isLoadingFml"
               :title="floorLabel(index)"
               @click="onSelectFloorChip(index)"
@@ -1602,10 +1739,7 @@ defineExpose({
               :disabled="isLoadingFml"
               :title="t('project.addFloor')"
               :aria-label="t('project.addFloor')"
-              @click="
-                leaveGevelsMode()
-                addFloor()
-              "
+              @click="onAddFloorChip"
             >
               +
             </button>
@@ -1622,9 +1756,32 @@ defineExpose({
             >
               {{ t('viewer.elevationTab') }}
             </button>
+            <button
+              v-if="showDakChip"
+              type="button"
+              role="tab"
+              class="floor-chip floor-chip--dak"
+              :class="{ active: dakMode }"
+              :aria-selected="dakMode"
+              :disabled="isLoadingFml"
+              :title="t('viewer.dakHint')"
+              @click="enterDakMode()"
+            >
+              {{ t('viewer.dakTab') }}
+            </button>
           </div>
         </div>
         <div class="viewer-canvas-host">
+          <div
+            v-if="dakMode && !inspectMode && !gevelsMode"
+            class="dak-groups"
+            role="tablist"
+            :aria-label="t('viewer.dakTab')"
+          >
+            <button type="button" class="dak-group-chip active" disabled>
+              {{ t('viewer.dakTab') }}
+            </button>
+          </div>
           <button
             v-if="!sidebarOpen"
             type="button"
@@ -1649,12 +1806,19 @@ defineExpose({
             :px-per-mm-y="elevationUnderlayLayout?.pxPerMmY ?? 1"
             :rotation-deg="elevationUnderlayLayout?.rotationDeg ?? 0"
             :flip-x="elevationUnderlayLayout?.flipX === true"
+            :underlay-move-mode="underlayMoveMode && underlayOpacity > 0"
+            :rescale-mode="underlayScaleActive"
+            :rescale-state="underlayScaleState"
             :canvas-fullscreen="canvasFullscreen"
             :default-door-height-cm="activeFloorDefaults.doorHeightCm"
             :default-window-height-cm="activeFloorDefaults.windowHeightCm"
             :default-window-sill-z-cm="activeFloorDefaults.windowSillZCm"
             @plan-update="onPlanUpdate"
             @update:group-id="elevationGroupId = $event"
+            @update:underlay-move-mode="underlayMoveMode = $event"
+            @update-rescale-state="onRescaleStateUpdate"
+            @cancel-rescale="cancelUnderlayScale()"
+            @update:underlay-layout="onElevationUnderlayLayout"
             @update:canvas-fullscreen="canvasFullscreen = $event"
           />
           <FmlInspect
@@ -1697,6 +1861,7 @@ defineExpose({
             :underlay-move-mode="underlayMoveMode && underlayOpacity > 0"
             :canvas-fullscreen="canvasFullscreen"
             :dimension-vis="dimensionVis"
+            :dak-mode="dakMode"
             :thickness-min-cm="thicknessMinCm"
             :thickness-mid-cm="thicknessMidCm"
             :thickness-max-cm="thicknessMaxCm"
@@ -2024,6 +2189,31 @@ defineExpose({
 .floor-chip.add {
   min-width: 28px;
   font-weight: 600;
+}
+
+.dak-groups {
+  position: absolute;
+  top: 48px;
+  left: 12px;
+  z-index: 12;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.dak-group-chip {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.dak-group-chip.active {
+  background: #0f172a;
+  color: #fff;
+  border-color: #0f172a;
 }
 
 .defaults-fold {

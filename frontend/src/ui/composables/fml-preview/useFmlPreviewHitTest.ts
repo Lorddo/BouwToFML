@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
 import type Konva from 'konva'
+import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/fml/ridge-walls'
 import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
 import { normalizeCmBBox } from './fml-preview-wall-select'
 import type { ContentLayout } from './useFmlPreviewViewport'
@@ -89,7 +90,8 @@ export function useFmlPreviewHitTest(
     wallList.forEach((wall, index) => {
       const id = wall.id || `wall-${index}`
       const dist = distancePointToSegment(cm, wall.a, wall.b)
-      const hitDist = Math.max(0, dist - wall.thickness / 2)
+      const halfWidth = wall.thickness > 0 ? wall.thickness / 2 : DEFAULT_RIDGE_DISPLAY_WIDTH_CM / 2
+      const hitDist = Math.max(0, dist - halfWidth)
       if (hitDist <= tol && hitDist < bestDist) {
         bestId = id
         bestDist = hitDist

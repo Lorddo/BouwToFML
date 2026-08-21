@@ -1,12 +1,9 @@
 import { ref, type Ref } from 'vue'
+import { snapRoofVertexZ } from '@/core/fml/generate-roof-planes'
+import { resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
+import { resolveRoomType } from '@/core/fml/roomtype-catalog'
 import type { Point2D } from '@/core/fml/types'
-import {
-  UNLABELED_AREA_COLOR,
-  effectiveRoomTypeColor,
-  resolveRoomType,
-} from '@/core/fml/roomtype-catalog'
 import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
-import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
@@ -71,15 +68,19 @@ export function useFmlPreviewDrawSurface(options: {
     options.editor.pushUndo()
     const role = pendingRole.value
     const rt = role != null ? resolveRoomType(role) : null
-    const color = rt
-      ? effectiveRoomTypeColor(rt.role, loadUserSettings().roomTagColors)
-      : UNLABELED_AREA_COLOR
+    const plan = options.editor.localPlan.value
+    const floorIndex = options.editor.floorIndex.value
     options.editor.addSurface({
-      poly: pts.map((p) => ({ x: p.x, y: p.y, z: 0 })),
+      poly: pts.map((p) => ({
+        x: p.x,
+        y: p.y,
+        z: plan ? snapRoofVertexZ({ plan, floorIndex, point: p }) : 0,
+      })),
       role: rt?.role,
       name: rt?.name,
-      color,
-      showAreaLabel: true,
+      color: resolveRoofSurfaceColor(),
+      showAreaLabel: false,
+      isRoof: true,
     })
     draftPoints.value = null
     hoverCm.value = null

@@ -243,6 +243,28 @@ export function addWallSegment(
   return { walls: next, wallId: wallIds[0], wallIds }
 }
 
+/** Nok in eigen graaf: 0-dikte, nok–nok T mag, geen join op plattegrond-muren. */
+export function addRidgeSegment(
+  ridgeWalls: Wall[],
+  a: Point2D,
+  b: Point2D,
+  extras: Wall['extras'],
+): { walls: Wall[]; wallId: string; wallIds: string[] } | null {
+  if (distance(a, b) < MIN_WALL_LENGTH_CM) return null
+  const next = cloneWalls(ridgeWalls)
+  const wallIds = addSegmentPathWithJunctionBreaks(next, a, b, {
+    thickness: 0,
+    idPrefix: 'ridge',
+    minLengthCm: MIN_WALL_LENGTH_CM,
+    endpointExtras: extras,
+  })
+  if (wallIds.length === 0) return null
+  const excludeAdded = new Set(wallIds)
+  materializeEndpointJoinsAtPoint(next, a, { excludeWallIds: excludeAdded, toleranceCm: 1 })
+  materializeEndpointJoinsAtPoint(next, b, { excludeWallIds: excludeAdded, toleranceCm: 1 })
+  return { walls: next, wallId: wallIds[0], wallIds }
+}
+
 export function findWallAtPoint(
   walls: Wall[],
   point: Point2D,

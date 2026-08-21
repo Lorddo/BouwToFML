@@ -27,7 +27,7 @@ describe('projectPointToWallT', () => {
 })
 
 describe('addOpeningToWall', () => {
-  it('adds an opening with guid and clamps t by opening width', () => {
+  it('adds an opening with guid and clamps t tot de buitenkant (halve muurdikte)', () => {
     const walls = [
       {
         id: 'w1',
@@ -48,7 +48,7 @@ describe('addOpeningToWall', () => {
     expect(walls[0]?.openings).toHaveLength(0)
     expect(next[0]?.openings).toHaveLength(1)
     expect(next[0]?.openings[0]?.guid).toBeTruthy()
-    expect(next[0]?.openings[0]?.t).toBeCloseTo(0.4, 6)
+    expect(next[0]?.openings[0]?.t).toBeCloseTo(0.3, 6)
     expect(next[0]?.openings[0]?.z_height).toBe(220)
   })
 

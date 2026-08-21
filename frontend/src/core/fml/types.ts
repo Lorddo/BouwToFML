@@ -115,8 +115,9 @@ export interface FloorSurface {
   name_x?: number
   name_y?: number
   isCutout?: boolean
+  isRoof?: boolean
   pattern?: number
-  /** Overige surface-keys (isRoof/transparency/…). */
+  /** Overige surface-keys (transparency/…). */
   extras?: FmlExtras
 }
 

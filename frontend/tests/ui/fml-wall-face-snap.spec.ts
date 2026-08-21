@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import type { Wall } from '@/core/fml/types'
 import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
 import {
+  snapDrawPointToWallFaces,
   snapPointToWallFaces,
   wallFaceSegments,
   WALL_FACE_SNAP_CM,
@@ -85,6 +86,36 @@ describe('snapPointToWallFaces', () => {
     const walls = [wall({ a: { x: 0, y: 20 }, b: { x: 100, y: 20 }, thickness: 20 })]
     const point = { x: 50, y: 12 }
     expect(snapPointToWallFaces(walls, point, WALL_FACE_SNAP_CM, { disabled: true })).toEqual(point)
+  })
+
+  it('nok-tekenen: face-snap, niet junction/hartlijn', () => {
+    const walls = [
+      wall({ id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 }),
+      wall({ id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 100 }, thickness: 20 }),
+    ]
+    const snapped = snapDrawPointToWallFaces(walls, { x: -8, y: -8 })
+    expect(snapped.x).toBeCloseTo(-10)
+    expect(snapped.y).toBeCloseTo(-10)
+    expect(snapped).not.toEqual({ x: 0, y: 0 })
+  })
+
+  it('nok-tekenen: H/V-lock houdt start-as, vrije as opnieuw op face', () => {
+    const walls = [
+      wall({ id: 'h1', a: { x: 0, y: 0 }, b: { x: 200, y: 0 }, thickness: 20 }),
+      wall({ id: 'v', a: { x: 80, y: 0 }, b: { x: 80, y: 100 }, thickness: 20 }),
+    ]
+    const start = snapDrawPointToWallFaces(walls, { x: 10, y: 8 })
+    expect(start.y).toBeCloseTo(10)
+    const end = snapDrawPointToWallFaces(
+      walls,
+      { x: 78, y: 60 },
+      {
+        axisAnchor: start,
+        lockAxis: true,
+      },
+    )
+    expect(end.y).toBeCloseTo(start.y)
+    expect(end.x).toBeCloseTo(70)
   })
 
   it('maatlijn-flow: face-snap daarna Shift H/V-lock', () => {

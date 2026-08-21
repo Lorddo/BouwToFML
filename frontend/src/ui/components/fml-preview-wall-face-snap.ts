@@ -1,6 +1,7 @@
 import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
 import type { Point2D, Wall } from '@/core/fml/types'
 import { WALL_AXIS_EPS_CM } from './fml-preview-junction-core'
+import { snapDrawWallEndpoint } from './fml-preview-junction-snap'
 import { resolveWallExtents } from './fml-preview-wall-polygons'
 
 /** Soft snap naar lange binnen-/buitenfaces (cm); Ctrl/Cmd schakelt uit. */
@@ -165,6 +166,35 @@ export function snapPointToWallFaces(
   if (bestDx < radiusCm || bestDy < radiusCm) return snapped
   if (bestOblique) return bestOblique
   return point
+}
+
+/**
+ * Face-snap + optionele H/V-lock (zelfde keten als maatlijnen).
+ * Na lock: vrije as opnieuw op een face, zodat een hoek face-snijpunt blijft.
+ */
+export function snapDrawPointToWallFaces(
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+  point: Point2D,
+  opts?: {
+    axisAnchor?: Point2D
+    lockAxis?: boolean
+    snapDisabled?: boolean
+    radiusCm?: number
+    infiniteAxes?: boolean
+  },
+): Point2D {
+  const snapDisabled = opts?.snapDisabled === true
+  const radius = opts?.radiusCm ?? WALL_FACE_SNAP_CM
+  const infiniteAxes = opts?.infiniteAxes === true
+  let next = snapPointToWallFaces(walls, point, radius, { disabled: snapDisabled, infiniteAxes })
+  const anchor = opts?.axisAnchor
+  if (!anchor || !opts?.lockAxis) return next
+  next = snapDrawWallEndpoint(anchor, next, true)
+  if (snapDisabled) return next
+  const resnap = snapPointToWallFaces(walls, next, radius, { infiniteAxes })
+  if (Math.abs(next.y - anchor.y) <= 1e-9) return { x: resnap.x, y: next.y }
+  if (Math.abs(next.x - anchor.x) <= 1e-9) return { x: next.x, y: resnap.y }
+  return next
 }
 
 /** Grotere radius + oneindige H/V-assen voor handmatige maten buiten de footprint. */

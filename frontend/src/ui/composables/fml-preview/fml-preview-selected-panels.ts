@@ -8,7 +8,11 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorH
   if (ids.length === 0) return null
 
   const wallLines = ids
-    .map((id) => model.wallLines.find((item) => item.id === id))
+    .map(
+      (id) =>
+        model.wallLines.find((item) => item.id === id) ??
+        model.ridgeLines.find((item) => item.id === id),
+    )
     .filter((item): item is RenderWall => item != null)
   if (wallLines.length === 0) return null
 
@@ -45,6 +49,9 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorH
     heightMixed,
     openingCount,
     canSplit: singleLine != null && (lengths[0] ?? 0) >= 8,
+    ridgeCount: wallLines.filter(
+      (line) => line.wall.thickness === 0 || line.wall.extras?.ridge === true,
+    ).length,
   }
 }
 
@@ -64,11 +71,16 @@ export function buildSelectedJunctionPanel(
   if (heights.length === 0) return null
   const first = heights[0]
   const heightMixed = heights.some((value) => value !== first)
+  const ridgeCount = junction.refs.filter((ref) => {
+    const wall = walls.find((item) => item.id === ref.wallId)
+    return wall != null && (wall.extras?.ridge === true || wall.thickness === 0)
+  }).length
   return {
     junctionId: junction.id,
     wallCount: junction.refs.length,
     heightCm: heightMixed ? null : first,
     heightMixed,
+    ridgeCount,
   }
 }
 

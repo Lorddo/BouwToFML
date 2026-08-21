@@ -21,12 +21,14 @@ const props = withDefaults(
       balanceMixed: boolean
       heightMixed?: boolean
       canSplit: boolean
+      ridgeCount?: number
     } | null
     selectedJunctionPanel: {
       junctionId: string
       wallCount: number
       heightCm: number | null
       heightMixed: boolean
+      ridgeCount?: number
     } | null
     activeTool: FmlToolId | null
     wallThicknessDraft: number
@@ -63,6 +65,12 @@ const props = withDefaults(
     stampGroupDraft?: boolean | null
     stampGroupMixed?: boolean
     canSelectStampMembers?: boolean
+    drawWallKind?: 'wall' | 'ridge'
+    dakMode?: boolean
+    ridgeFloorDraft?: number | null
+    ridgeFloorMixed?: boolean
+    ridgeFloorOptions?: ReadonlyArray<{ index: number; name: string }>
+    ridgeZCm?: number | null
   }>(),
   {
     thicknessMinCm: 10,
@@ -83,6 +91,12 @@ const props = withDefaults(
     stampGroupDraft: false,
     stampGroupMixed: false,
     canSelectStampMembers: false,
+    drawWallKind: 'wall',
+    dakMode: false,
+    ridgeFloorDraft: null,
+    ridgeFloorMixed: false,
+    ridgeFloorOptions: () => [],
+    ridgeZCm: null,
   },
 )
 
@@ -110,6 +124,9 @@ const emit = defineEmits<{
   selectFacadeMembers: []
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
+  wallKindChange: [kind: 'wall' | 'ridge']
+  ridgeZInput: [cm: number | null]
+  ridgeFloorChange: [floorIndex: number]
 }>()
 
 const thicknessPresets = computed(() => [
@@ -121,6 +138,37 @@ const thicknessPresets = computed(() => [
 const isDrawWallOrRoom = computed(
   () => props.activeTool === 'draw_wall' || props.activeTool === 'draw_room',
 )
+
+const selectedRidgeCount = computed(() => props.selectedWallPanel?.ridgeCount ?? 0)
+const selectedKind = computed<'wall' | 'ridge' | ''>(() => {
+  const panel = props.selectedWallPanel
+  if (!panel) return props.drawWallKind ?? 'wall'
+  if (selectedRidgeCount.value === panel.count) return 'ridge'
+  if (selectedRidgeCount.value === 0) return 'wall'
+  return ''
+})
+const isRidgeJunction = computed(() => {
+  const panel = props.selectedJunctionPanel
+  return panel != null && panel.wallCount > 0 && (panel.ridgeCount ?? 0) === panel.wallCount
+})
+const isRidgeMode = computed(
+  () =>
+    selectedKind.value === 'ridge' ||
+    isRidgeJunction.value ||
+    (props.activeTool === 'draw_wall' && props.drawWallKind === 'ridge'),
+)
+const showKindSelect = computed(
+  () =>
+    props.dakMode !== true && (props.activeTool === 'draw_wall' || props.selectedWallPanel != null),
+)
+const showRidgeFloorSelect = computed(
+  () =>
+    props.dakMode === true &&
+    (props.ridgeFloorOptions?.length ?? 0) > 1 &&
+    (props.selectedWallPanel?.ridgeCount ?? 0) > 0,
+)
+const showThicknessFields = computed(() => !isRidgeMode.value)
+const showFacadeStamp = computed(() => !!props.selectedWallPanel && selectedKind.value === 'wall')
 
 /** Matcht draft op min/mid/max; leeg = handmatige overschrijving. */
 const drawThicknessBand = computed<'min' | 'mid' | 'max' | ''>(() => {
@@ -327,6 +375,50 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
 <template>
   <div class="fml-toolbelt-stack">
     <div class="fml-toolbelt__row fml-toolbelt__row--primary">
+      <div v-if="showRidgeFloorSelect" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.ridgeFloor') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <select
+            class="fml-toolbelt__select"
+            :aria-label="t('result.toolbar.ridgeFloorAria')"
+            :value="ridgeFloorMixed ? '' : (ridgeFloorDraft ?? '')"
+            @change="emit('ridgeFloorChange', Number(($event.target as HTMLSelectElement).value))"
+          >
+            <option v-if="ridgeFloorMixed || ridgeFloorDraft == null" value="" disabled>
+              {{
+                ridgeFloorMixed
+                  ? t('result.toolbar.ridgeFloorMixed')
+                  : t('result.toolbar.ridgeFloorAuto')
+              }}
+            </option>
+            <option v-for="floor in ridgeFloorOptions" :key="floor.index" :value="floor.index">
+              {{ floor.name }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div v-if="showKindSelect" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallKind') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <select
+            class="fml-toolbelt__select"
+            :aria-label="t('result.toolbar.wallKindAria')"
+            :value="selectedKind"
+            @change="
+              emit(
+                'wallKindChange',
+                (($event.target as HTMLSelectElement).value || 'wall') as 'wall' | 'ridge',
+              )
+            "
+          >
+            <option v-if="selectedKind === ''" value="" disabled>
+              {{ t('result.toolbar.custom') }}
+            </option>
+            <option value="wall">{{ t('result.toolbar.wallKindWall') }}</option>
+            <option value="ridge">{{ t('result.toolbar.wallKindRidge') }}</option>
+          </select>
+        </div>
+      </div>
       <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
         {{ wallCountLabel }}
       </span>
@@ -426,7 +518,33 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
           </div>
         </div>
       </template>
-      <div v-if="selectedWallPanel || isDrawWallOrRoom" class="fml-toolbelt__field">
+      <div v-if="isRidgeMode" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.ridgeZ') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <input
+            type="number"
+            min="0"
+            max="2000"
+            step="1"
+            class="fml-toolbelt__thickness-input"
+            :aria-label="t('result.toolbar.ridgeZAria')"
+            :value="ridgeZCm ?? ''"
+            @change="
+              emit(
+                'ridgeZInput',
+                Number.isFinite(Number(($event.target as HTMLInputElement).value))
+                  ? Math.round(Number(($event.target as HTMLInputElement).value))
+                  : null,
+              )
+            "
+          />
+          <span class="fml-toolbelt__unit">cm</span>
+        </div>
+      </div>
+      <div
+        v-if="showThicknessFields && (selectedWallPanel || isDrawWallOrRoom)"
+        class="fml-toolbelt__field"
+      >
         <span class="fml-toolbelt__field-label">{{
           isDrawWallOrRoom ? t('result.toolbar.wallType') : t('result.toolbar.thickness')
         }}</span>
@@ -481,7 +599,7 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
           </div>
         </div>
       </div>
-      <div v-if="selectedWallPanel" class="fml-toolbelt__field">
+      <div v-if="selectedWallPanel && showThicknessFields" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label" :title="t('result.toolbar.alignmentTitle')">{{
           t('result.toolbar.alignment')
         }}</span>
@@ -514,7 +632,7 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
           <span class="fml-toolbelt__unit">%</span>
         </div>
       </div>
-      <div v-if="selectedWallPanel" class="fml-toolbelt__field">
+      <div v-if="selectedWallPanel && !isRidgeMode" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
@@ -532,7 +650,7 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
           <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
-      <div v-if="selectedJunctionPanel" class="fml-toolbelt__field">
+      <div v-if="selectedJunctionPanel && !isRidgeJunction" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.junctionHeight') }}</span>
         <div class="fml-toolbelt__field-controls">
           <input
@@ -574,7 +692,7 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
       <slot name="trailing" />
     </div>
     <div
-      v-if="selectedWallPanel && facadeGroupsEnabled"
+      v-if="showFacadeStamp && facadeGroupsEnabled"
       class="fml-toolbelt__field fml-toolbelt__field--row"
     >
       <div class="fml-toolbelt__pair">

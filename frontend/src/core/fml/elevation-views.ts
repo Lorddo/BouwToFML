@@ -5,10 +5,32 @@
 import type { DrawingMeta, FloorPlan, FmlExtras } from './types'
 
 export const ELEVATION_VIEWS_SETTINGS_KEY = 'elevationViews'
+export const ELEVATION_PROJECTION_SETTINGS_KEY = 'elevationProjection'
+
+/** Vaste H/V-zijde (architect) of mee met de gevel (projectief). */
+export type ElevationProjectionMode = 'architect' | 'projective'
+
+export const DEFAULT_ELEVATION_PROJECTION: ElevationProjectionMode = 'architect'
 
 export type ElevationView = {
   facadeGroupId: string
   drawing?: DrawingMeta
+}
+
+export function readElevationProjection(
+  plan: FloorPlan | null | undefined,
+): ElevationProjectionMode {
+  const raw = plan?.source?.settings?.[ELEVATION_PROJECTION_SETTINGS_KEY]
+  return raw === 'projective' ? 'projective' : DEFAULT_ELEVATION_PROJECTION
+}
+
+export function setElevationProjection(plan: FloorPlan, mode: ElevationProjectionMode): FloorPlan {
+  const settings = cloneSettings(plan.source?.settings)
+  settings[ELEVATION_PROJECTION_SETTINGS_KEY] = mode === 'projective' ? 'projective' : 'architect'
+  return {
+    ...plan,
+    source: plan.source ? { ...plan.source, settings } : { settings },
+  }
 }
 
 function isNonEmptyString(value: unknown): value is string {

@@ -53,12 +53,14 @@ const props = withDefaults(
       balanceMixed: boolean
       heightMixed?: boolean
       canSplit: boolean
+      ridgeCount?: number
     } | null
     selectedJunctionPanel: {
       junctionId: string
       wallCount: number
       heightCm: number | null
       heightMixed: boolean
+      ridgeCount?: number
     } | null
     selectedOpeningPanel: {
       openingIds: string[]
@@ -89,8 +91,11 @@ const props = withDefaults(
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
+    roofVertexZCm?: number | null
     /** draw_surface in toolbelt; default true (viewer). */
     includeSurfaceTool?: boolean
+    dakMode?: boolean
+    roofPolyMutate?: boolean
     /** draw_label + draw_line; default false. */
     includeAnnotationTools?: boolean
     includeFixtureTool?: boolean
@@ -174,6 +179,11 @@ const props = withDefaults(
     stampGroupDraft?: boolean | null
     stampGroupMixed?: boolean
     canSelectStampMembers?: boolean
+    drawWallKind?: 'wall' | 'ridge'
+    ridgeZCm?: number | null
+    ridgeFloorDraft?: number | null
+    ridgeFloorMixed?: boolean
+    ridgeFloorOptions?: ReadonlyArray<{ index: number; name: string }>
   }>(),
   {
     thicknessMinCm: 10,
@@ -198,11 +208,19 @@ const props = withDefaults(
     stampGroupDraft: false,
     stampGroupMixed: false,
     canSelectStampMembers: false,
+    drawWallKind: 'wall',
+    ridgeZCm: null,
+    ridgeFloorDraft: null,
+    ridgeFloorMixed: false,
+    ridgeFloorOptions: () => [],
     selectedAreaPanel: null,
     selectedJunctionPanel: null,
     roomTypes: () => [],
     surfaceEditActive: false,
+    roofVertexZCm: null,
     includeSurfaceTool: false,
+    dakMode: false,
+    roofPolyMutate: false,
     includeAnnotationTools: false,
     includeFixtureTool: false,
     selectedLabelPanel: null,
@@ -248,6 +266,9 @@ const emit = defineEmits<{
   selectFacadeMembers: []
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
+  wallKindChange: [kind: 'wall' | 'ridge']
+  ridgeZInput: [cm: number | null]
+  ridgeFloorChange: [floorIndex: number]
   clearMeasures: []
   applyRoomType: [role: number]
   areaCustomNameInput: [customName: string]
@@ -268,6 +289,7 @@ const emit = defineEmits<{
   updateLineThickness: [thickness: number]
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
+  roofVertexZInput: [cm: number]
   itemWidthInput: [event: Event]
   itemHeightInput: [event: Event]
   itemRotationInput: [event: Event]
@@ -306,6 +328,7 @@ const drawTools = computed(() => {
   return getFmlDrawTools({
     includeSurface: props.includeSurfaceTool === true,
     includeAnnotations: props.includeAnnotationTools === true,
+    dakMode: props.dakMode === true,
   })
 })
 
@@ -363,6 +386,11 @@ const hint = computed(() => {
   }
   if (props.selectedLinePanel && props.includeAnnotationTools === true) {
     return t('result.toolbar.hintLineSelected')
+  }
+  if (props.dakMode && props.selectedAreaPanel?.kind === 'surface') {
+    return props.roofPolyMutate
+      ? t('result.toolbar.hintRoofMutate')
+      : t('result.toolbar.hintRoofSelected')
   }
   if (props.selectedAreaPanel && props.includeSurfaceTool === true) {
     return props.selectedAreaPanel.kind === 'surface'
@@ -425,7 +453,11 @@ defineExpose({ hint })
             @toggle-pressed="onSelectTogglePressed"
           />
         </div>
-        <div v-if="!props.hideSelectTools" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
+        <div
+          v-if="!props.hideSelectTools && !props.dakMode"
+          class="canvas-toolbelt-dock__sep"
+          aria-hidden="true"
+        />
         <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
           <CanvasToolbelt
             embedded
@@ -435,8 +467,11 @@ defineExpose({ hint })
             @update:active-tool="activeTool = $event as FmlToolId | null"
           />
         </div>
-        <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
-        <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face">
+        <div v-if="!props.dakMode" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
+        <div
+          v-if="!props.dakMode"
+          class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face"
+        >
           <CanvasToolbelt
             embedded
             :tools="libraryTools"
@@ -465,40 +500,42 @@ defineExpose({ hint })
           :selected-item-panel="selectedItemPanel"
           :room-types="roomTypes"
           :surface-edit-active="surfaceEditActive"
+          :roof-vertex-z-cm="roofVertexZCm"
+          :roof-poly-mutate="roofPolyMutate"
           :wall-thickness-draft="wallThicknessDraft"
-          :wall-thickness-mixed="wallThicknessMixed"
-          :wall-balance-draft="wallBalanceDraft"
-          :wall-balance-mixed="wallBalanceMixed"
-          :wall-height-draft="wallHeightDraft"
-          :wall-height-mixed="wallHeightMixed"
-          :junction-height-draft="junctionHeightDraft"
-          :junction-height-mixed="junctionHeightMixed"
-          :opening-subtype-draft="openingSubtypeDraft"
-          :opening-subtype-mixed="openingSubtypeMixed"
-          :opening-width-draft="openingWidthDraft"
           v-model:measure-draw-mode="measureDrawMode"
-          :opening-width-mixed="openingWidthMixed"
+          :wall-thickness-mixed="wallThicknessMixed"
           v-model:slicer-edit-mode="slicerEditMode"
-          :opening-height-draft="openingHeightDraft"
+          :wall-balance-draft="wallBalanceDraft"
           v-model:draw-surface-role="drawSurfaceRole"
-          :opening-height-mixed="openingHeightMixed"
+          :wall-balance-mixed="wallBalanceMixed"
           v-model:draw-line-thickness="drawLineThickness"
-          :opening-sill-z-draft="openingSillZDraft"
+          :wall-height-draft="wallHeightDraft"
           v-model:draw-line-type="drawLineType"
-          :opening-sill-z-mixed="openingSillZMixed"
+          :wall-height-mixed="wallHeightMixed"
           v-model:draw-line-color="drawLineColor"
-          :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+          :junction-height-draft="junctionHeightDraft"
           v-model:draw-label-text="drawLabelText"
-          :opening-hinge-mixed="openingHingeMixed"
+          :junction-height-mixed="junctionHeightMixed"
           v-model:draw-label-font-size="drawLabelFontSize"
-          :opening-swing-right-draft="openingSwingRightDraft"
+          :opening-subtype-draft="openingSubtypeDraft"
           v-model:draw-label-font-color="drawLabelFontColor"
-          :opening-swing-mixed="openingSwingMixed"
+          :opening-subtype-mixed="openingSubtypeMixed"
           v-model:draw-label-outline="drawLabelOutline"
-          :opening-bovenlicht-draft="openingBovenlichtDraft"
+          :opening-width-draft="openingWidthDraft"
           v-model:draw-label-bold="drawLabelBold"
-          :opening-bovenlicht-mixed="openingBovenlichtMixed"
+          :opening-width-mixed="openingWidthMixed"
           v-model:draw-label-italic="drawLabelItalic"
+          :opening-height-draft="openingHeightDraft"
+          :opening-height-mixed="openingHeightMixed"
+          :opening-sill-z-draft="openingSillZDraft"
+          :opening-sill-z-mixed="openingSillZMixed"
+          :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+          :opening-hinge-mixed="openingHingeMixed"
+          :opening-swing-right-draft="openingSwingRightDraft"
+          :opening-swing-mixed="openingSwingMixed"
+          :opening-bovenlicht-draft="openingBovenlichtDraft"
+          :opening-bovenlicht-mixed="openingBovenlichtMixed"
           :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
           :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
           :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
@@ -525,6 +562,12 @@ defineExpose({ hint })
           :stamp-group-draft="stampGroupDraft"
           :stamp-group-mixed="stampGroupMixed"
           :can-select-stamp-members="canSelectStampMembers"
+          :draw-wall-kind="drawWallKind"
+          :dak-mode="dakMode"
+          :ridge-floor-draft="ridgeFloorDraft"
+          :ridge-floor-mixed="ridgeFloorMixed"
+          :ridge-floor-options="ridgeFloorOptions"
+          :ridge-z-cm="ridgeZCm"
           @wall-thickness-input="emit('wallThicknessInput', $event)"
           @commit-wall-thickness="emit('commitWallThickness')"
           @apply-wall-thickness="emit('applyWallThickness', $event)"
@@ -557,6 +600,9 @@ defineExpose({ hint })
           @select-facade-members="emit('selectFacadeMembers')"
           @stamp-group-change="emit('stampGroupChange', $event)"
           @select-stamp-members="emit('selectStampMembers')"
+          @wall-kind-change="emit('wallKindChange', $event)"
+          @ridge-z-input="emit('ridgeZInput', $event)"
+          @ridge-floor-change="emit('ridgeFloorChange', $event)"
           @clear-selection="emit('clearSelection')"
           @clear-measures="emit('clearMeasures')"
           @apply-room-type="emit('applyRoomType', $event)"
@@ -578,6 +624,7 @@ defineExpose({ hint })
           @update-line-thickness="emit('updateLineThickness', $event)"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+          @roof-vertex-z-input="emit('roofVertexZInput', $event)"
           @item-width-input="emit('itemWidthInput', $event)"
           @item-height-input="emit('itemHeightInput', $event)"
           @item-rotation-input="emit('itemRotationInput', $event)"
