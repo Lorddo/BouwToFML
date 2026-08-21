@@ -1,7 +1,8 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
 import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
-import type { FloorItem, FloorPlan, Point2D } from '@/core/fml/types'
+import { parseFmlHex } from '@/core/fml/roomtype-catalog'
+import type { FloorItem, FloorLineType, FloorPlan, Point2D } from '@/core/fml/types'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import {
@@ -11,6 +12,10 @@ import {
   snapPointToJunctions,
   snapPointToWallCenters,
   snapToNearbyEndpointAxes,
+  snapToNearbyPointAxes,
+  snapToPolygonGeometry,
+  closedRingSegments,
+  openPolylineSegments,
 } from '@/ui/components/fml-preview-junctions'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlInspectHit } from './fml-inspect'
@@ -25,7 +30,8 @@ import { useFmlPreviewDrawLabel } from './useFmlPreviewDrawLabel'
 import { useFmlPreviewDrawLine } from './useFmlPreviewDrawLine'
 import { useFmlPreviewAreaSelection } from './useFmlPreviewAreaSelection'
 import { useFmlPreviewSurfaceEdit } from './useFmlPreviewSurfaceEdit'
-import { useFmlPreviewMeasure } from './useFmlPreviewMeasure'
+import { useFmlPreviewMeasure, type MeasureDrawMode } from './useFmlPreviewMeasure'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { useFmlPreviewNulpunt } from './useFmlPreviewNulpunt'
 import { useFmlPreviewUnderlayMove } from './useFmlPreviewUnderlayMove'
 import { useFmlPreviewOpeningDrag } from './useFmlPreviewOpeningDrag'
@@ -39,6 +45,7 @@ import { useFmlPreviewItemResize } from './useFmlPreviewItemResize'
 import { useFmlPreviewAddFixture } from './useFmlPreviewAddFixture'
 import type { FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
 import { createFmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
+import { clampLabelFontSize, lineStrokeColor } from './fml-preview-render-annotations'
 
 export type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 export { createFmlPreviewSelection } from './fml-preview-selection'
@@ -56,6 +63,7 @@ interface ViewportApi {
   resetView: () => void
   refitContentLayout: () => void
   nudgeContentLayout: (dxCm: number, dyCm: number) => void
+  worldOverflowsCurrentLayout: () => boolean
 }
 
 export function useFmlPreviewInteraction(options: {
@@ -94,6 +102,14 @@ export function useFmlPreviewInteraction(options: {
   touchEditor?: Ref<boolean>
   /** Coarse pointer: Move-rail i.p.v. muis two-step. Default uit. */
   touchNav?: Ref<boolean>
+  /** Meet-tool subtype: tape / manual / slicer. */
+  measureDrawMode?: Ref<MeasureDrawMode>
+  /** Slicer: bewerk bestaande M/P i.p.v. nieuwe plaatsen. */
+  slicerEditMode?: Ref<boolean>
+  /** Vis-dropdown exclusief; commit schakelt mee. */
+  dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
+  /** Geselecteerde slicer-index (−1 = geen liniaal). */
+  selectedSliceIndex?: Ref<number>
   onInspectSelect?: (hit: FmlInspectHit | null) => void
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
@@ -340,10 +356,16 @@ export function useFmlPreviewInteraction(options: {
     facadeGroupDraft,
     facadeGroupMixed,
     facadeMemberIdsOnActiveFloor,
+    stampGroupDraft,
+    stampGroupMixed,
+    stampMemberIdsOnActiveFloor,
     applyFacadeGroupSelection,
+    applyStampGroupSelection,
     renameSelectedFacadeGroup,
     selectFacadeGroupMembers,
+    selectStampGroupMembers,
     canSelectFacadeMembers,
+    canSelectStampMembers,
     clearSelection,
     toggleSelectionBoxMode,
     cancelSelectionBoxDrag,
@@ -468,11 +490,44 @@ export function useFmlPreviewInteraction(options: {
     return snapPointToWallCenters(editor.walls.value, junctionSnap, ROOM_DRAW_SNAP_CM)
   }
 
-  function resolveSurfacePoint(cm: Point2D, snapDisabled: boolean): Point2D {
+  function resolveSurfacePoint(
+    cm: Point2D,
+    snapDisabled: boolean,
+    extraAxisPoints?: Point2D[],
+    excludeSurfaceId?: string | null,
+  ): Point2D {
     if (snapDisabled) return cm
     const junction = hitTest.hitTestJunctionAtCm(cm)
     if (junction) return { x: junction.cmX, y: junction.cmY }
-    return snapPointToJunctions(editor.junctions.value, cm, JUNCTION_POINT_SNAP_CM)
+
+    const extra = extraAxisPoints ?? []
+    const rings: Point2D[][] = []
+    for (const surface of editor.surfaces.value) {
+      if (excludeSurfaceId && surface.id === excludeSurfaceId) continue
+      if (surface.poly && surface.poly.length >= 2) {
+        rings.push(surface.poly.map((p) => ({ x: p.x, y: p.y })))
+      }
+    }
+    for (const area of editor.areas.value) {
+      if (area.poly && area.poly.length >= 2) rings.push(area.poly)
+    }
+    const ringVerts = rings.flat()
+    const segments = [
+      ...rings.flatMap((ring) => closedRingSegments(ring)),
+      ...openPolylineSegments(extra),
+    ]
+    const polySnap = snapToPolygonGeometry(
+      cm,
+      [...ringVerts, ...extra],
+      segments,
+      JUNCTION_POINT_SNAP_CM,
+    )
+    if (polySnap) return polySnap
+
+    const wallPoints = editor.walls.value.flatMap((wall) => [wall.a, wall.b])
+    const axis = snapToNearbyPointAxes([...wallPoints, ...ringVerts, ...extra], cm)
+    const junctionSnap = snapPointToJunctions(editor.junctions.value, axis, JUNCTION_POINT_SNAP_CM)
+    return snapPointToWallCenters(editor.walls.value, junctionSnap, JUNCTION_POINT_SNAP_CM)
   }
 
   const drawWall = useFmlPreviewDrawWall({
@@ -632,6 +687,65 @@ export function useFmlPreviewInteraction(options: {
     commitLabelText()
   }
 
+  function patchSelectedLabel(patch: {
+    fontSize?: number
+    fontColor?: string
+    outline?: boolean
+    bold?: boolean
+    italic?: boolean
+  }): void {
+    const labelId = selection.settingsLabelId.value
+    if (!labelId) return
+    const label = editor.labels.value.find((item) => item.id === labelId)
+    if (!label) return
+    const nextSize = patch.fontSize != null ? clampLabelFontSize(patch.fontSize) : label.fontSize
+    const nextColor = patch.fontColor ?? label.fontColor
+    const nextOutline = patch.outline ?? label.outline === true
+    const nextBold = patch.bold ?? label.bold === true
+    const nextItalic = patch.italic ?? label.italic === true
+    if (
+      label.fontSize === nextSize &&
+      label.fontColor === nextColor &&
+      (label.outline === true) === nextOutline &&
+      (label.bold === true) === nextBold &&
+      (label.italic === true) === nextItalic
+    ) {
+      return
+    }
+    flushPendingFieldCommits()
+    editor.pushUndo()
+    editor.updateLabel(labelId, {
+      fontSize: nextSize,
+      fontColor: nextColor,
+      outline: nextOutline || undefined,
+      bold: nextBold || undefined,
+      italic: nextItalic || undefined,
+    })
+    syncPlanToParent()
+  }
+
+  function updateSelectedLabelFontSize(fontSize: number): void {
+    patchSelectedLabel({ fontSize })
+  }
+
+  function updateSelectedLabelFontColor(color: string): void {
+    const hex = parseFmlHex(color)
+    if (!hex) return
+    patchSelectedLabel({ fontColor: hex })
+  }
+
+  function updateSelectedLabelOutline(outline: boolean): void {
+    patchSelectedLabel({ outline })
+  }
+
+  function updateSelectedLabelBold(bold: boolean): void {
+    patchSelectedLabel({ bold })
+  }
+
+  function updateSelectedLabelItalic(italic: boolean): void {
+    patchSelectedLabel({ italic })
+  }
+
   function deleteSelectedAnnotation(): void {
     flushPendingFieldCommits()
     if (selection.settingsLabelId.value) {
@@ -650,6 +764,50 @@ export function useFmlPreviewInteraction(options: {
     }
   }
 
+  function patchSelectedLine(patch: {
+    type?: FloorLineType
+    color?: string
+    thickness?: number
+  }): void {
+    const lineId = selection.settingsLineId.value
+    if (!lineId) return
+    const line = editor.lines.value.find((item) => item.id === lineId)
+    if (!line) return
+    const nextType = patch.type ?? line.type
+    const nextColor = patch.color ?? lineStrokeColor(line.color)
+    const nextThickness =
+      patch.thickness != null ? Math.max(1, Math.round(patch.thickness)) : line.thickness
+    if (
+      line.type === nextType &&
+      lineStrokeColor(line.color) === nextColor &&
+      line.thickness === nextThickness
+    ) {
+      return
+    }
+    flushPendingFieldCommits()
+    editor.pushUndo()
+    editor.updateLine(lineId, {
+      type: nextType,
+      color: nextColor,
+      thickness: nextThickness,
+    })
+    syncPlanToParent()
+  }
+
+  function updateSelectedLineType(type: FloorLineType): void {
+    patchSelectedLine({ type })
+  }
+
+  function updateSelectedLineColor(color: string): void {
+    const hex = parseFmlHex(color)
+    if (!hex) return
+    patchSelectedLine({ color: hex })
+  }
+
+  function updateSelectedLineThickness(thickness: number): void {
+    patchSelectedLine({ thickness })
+  }
+
   const areaSelection = useFmlPreviewAreaSelection({
     selection,
     editor,
@@ -665,6 +823,7 @@ export function useFmlPreviewInteraction(options: {
     editor,
     hitTest,
     resolvePoint: resolveSurfacePoint,
+    axisLocked,
     syncPlanToParent,
   })
 
@@ -677,6 +836,30 @@ export function useFmlPreviewInteraction(options: {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
       clearSelection()
+      // Slicer-tool: bestaande linialen blijven zichtbaar (niet deselecteren bij nieuwe sleep).
+      if (options.measureDrawMode?.value !== 'slicer' && options.selectedSliceIndex) {
+        options.selectedSliceIndex.value = -1
+      }
+    },
+    getMode: () => options.measureDrawMode?.value ?? 'tape',
+    canPersist: () => !inspectMode.value,
+    getSlicerSlices: () => editor.btfSlices.value,
+    getSlicerOffsetSnapCm: () => loadUserSettings().fmlViewer.slicerOffsetSnapCm,
+    onCommitManual: (a, b) => {
+      editor.pushUndo()
+      editor.addDimension({ type: 'custom_dimension', a, b })
+      syncPlanToParent()
+      if (options.dimensionVis) options.dimensionVis.value = 'manual'
+    },
+    onCommitSlicer: (p, m) => {
+      editor.pushUndo()
+      const idx = editor.addBtfSlice({ m, p })
+      syncPlanToParent()
+      if (options.dimensionVis) options.dimensionVis.value = 'slicer'
+      // Place-modus: geen selectie (anders lijkt het edit); edit-modus wel.
+      if (options.selectedSliceIndex) {
+        options.selectedSliceIndex.value = options.slicerEditMode?.value ? idx : -1
+      }
     },
   })
 
@@ -774,6 +957,8 @@ export function useFmlPreviewInteraction(options: {
     drawRoom.cancelDrawRoomDrag()
     drawSurface.cancelDrawSurface()
     drawLine.cancelDrawLine()
+    measure.cancelMeasureDrag()
+    if (options.selectedSliceIndex) options.selectedSliceIndex.value = -1
     activeFmlTool.value = null
   }
 
@@ -903,14 +1088,33 @@ export function useFmlPreviewInteraction(options: {
         onDrawWallClick: drawWall.onDrawWallClick,
         updateDrawWallHover: drawWall.updateDrawWallHover,
         clearDrawWallHover: drawWall.clearDrawWallHover,
-        beginMeasure: measure.beginMeasure,
-        updateMeasureHover: measure.updateMeasureHover,
+        beginMeasure: (event) => {
+          if (
+            options.measureDrawMode?.value === 'slicer' &&
+            options.slicerEditMode?.value === true
+          ) {
+            return
+          }
+          measure.beginMeasure(event)
+        },
+        updateMeasureHover: (event) => {
+          if (
+            options.measureDrawMode?.value === 'slicer' &&
+            options.slicerEditMode?.value === true
+          ) {
+            measure.clearMeasureHover()
+            return
+          }
+          measure.updateMeasureHover(event)
+        },
         clearMeasureHover: measure.clearMeasureHover,
         onDrawRoomClick: drawRoom.onDrawRoomClick,
         updateDrawRoomHover: drawRoom.updateDrawRoomHover,
         clearDrawRoomHover: drawRoom.clearDrawRoomHover,
         onDrawSurfaceClick: drawSurface.onDrawSurfaceClick,
         onDrawSurfaceDblClick: drawSurface.onDrawSurfaceDblClick,
+        updateDrawSurfaceHover: drawSurface.updateDrawSurfaceHover,
+        clearDrawSurfaceHover: drawSurface.clearDrawSurfaceHover,
         onDrawLabelClick: drawLabel.onDrawLabelClick,
         onDrawLineClick: drawLine.onDrawLineClick,
         updateDrawLineHover: drawLine.updateDrawLineHover,
@@ -1009,6 +1213,11 @@ export function useFmlPreviewInteraction(options: {
     clearSelection,
     clearInspectSelect,
     emitCancelThicknessPick: () => emit('cancelThicknessPick'),
+    clearSelectedSlice: () => {
+      if (!options.selectedSliceIndex || options.selectedSliceIndex.value < 0) return false
+      options.selectedSliceIndex.value = -1
+      return true
+    },
     undo: () => editor.undo(),
     redo: () => editor.redo(),
     syncPlanToParentAfterUndo,
@@ -1037,12 +1246,13 @@ export function useFmlPreviewInteraction(options: {
     }
     // Echte externe plan-vervanging: pending drafts droppen (plan is weg).
     cancelPendingFieldCommits()
-    // Echte externe plan-vervanging: selectie wissen. Zoom alleen fitten als er
-    // nog geen layout is — anders voelt elke plan-sync als uitzoomen.
+    // Echte externe plan-vervanging: selectie wissen. Herfit als de nieuwe
+    // geometrie buiten de huidige world valt (import/generate/stempel) — niet
+    // bij elke lokale sync, die wordt hierboven al overgeslagen.
     clearSelection({ flush: false })
     hoveredOpeningId.value = null
     measure.clearMeasureLines()
-    if (!viewport.contentLayout.value) {
+    if (!viewport.contentLayout.value || viewport.worldOverflowsCurrentLayout()) {
       viewport.resetView()
     }
   }
@@ -1085,6 +1295,19 @@ export function useFmlPreviewInteraction(options: {
     return true
   }
 
+  function applyStampToActiveFloor(): boolean {
+    flushPendingFieldCommits()
+    const changed = editor.applyStampToActiveFloor()
+    if (!changed) return false
+    clearSelection()
+    syncPlanToParent()
+    return true
+  }
+
+  function canApplyStampOnActiveFloor(): boolean {
+    return editor.canApplyStampOnActiveFloor()
+  }
+
   return {
     activeFmlTool,
     selectionBoxMode,
@@ -1107,7 +1330,14 @@ export function useFmlPreviewInteraction(options: {
     drawSurfaceDrafting: computed(() => (drawSurface.draftPoints.value?.length ?? 0) >= 3),
     drawSurfacePendingRole: drawSurface.pendingRole,
     drawLineThickness: drawLine.thickness,
+    drawLineType: drawLine.lineType,
+    drawLineColor: drawLine.color,
     drawLabelText: drawLabel.pendingText,
+    drawLabelFontSize: drawLabel.fontSize,
+    drawLabelFontColor: drawLabel.fontColor,
+    drawLabelOutline: drawLabel.outline,
+    drawLabelBold: drawLabel.bold,
+    drawLabelItalic: drawLabel.italic,
     drawWallMeasureLengthCm: drawWall.measureLengthCm,
     drawRoomMeasureHCm: drawRoom.measureHCm,
     drawRoomMeasureVCm: drawRoom.measureVCm,
@@ -1121,6 +1351,7 @@ export function useFmlPreviewInteraction(options: {
     acceptDrawDraft,
     deactivateDrawTool,
     drawSurfacePoints: drawSurface.draftPoints,
+    drawSurfaceHoverCm: drawSurface.hoverCm,
     drawLinePoints: selection.drawLinePoints,
     drawLineHoverCm: drawLine.hoverCm,
     measurePreview: measure.measurePreview,
@@ -1267,19 +1498,28 @@ export function useFmlPreviewInteraction(options: {
     facadeGroupDraft,
     facadeGroupMixed,
     facadeMemberIdsOnActiveFloor,
+    stampGroupDraft,
+    stampGroupMixed,
+    stampMemberIdsOnActiveFloor,
     applyFacadeGroupSelection,
+    applyStampGroupSelection,
     renameSelectedFacadeGroup,
     selectFacadeGroupMembers,
+    selectStampGroupMembers,
     canSelectFacadeMembers,
+    canSelectStampMembers,
     clearSelection,
     flushPendingFieldCommits,
     sanitizeWalls,
+    applyStampToActiveFloor,
+    canApplyStampOnActiveFloor,
     applyRoomTypeToSelection: areaSelection.applyRoomTypeToSelection,
     applyAreaCustomName: areaSelection.applyCustomName,
     onAreaCustomNameInput: areaSelection.onCustomNameInput,
     commitAreaCustomName: areaSelection.commitCustomName,
     customNameDraft: areaSelection.customNameDraft,
     applyAreaColor: areaSelection.applyColor,
+    applyShowAreaLabel: areaSelection.applyShowAreaLabel,
     deleteSelectedTagged: areaSelection.deleteSelectedTagged,
     beginSurfacePolygonEdit: areaSelection.beginSurfacePolygonEdit,
     endSurfacePolygonEdit: () => {
@@ -1294,6 +1534,14 @@ export function useFmlPreviewInteraction(options: {
     commitLabelText,
     labelTextDraft,
     deleteSelectedAnnotation,
+    updateSelectedLabelFontSize,
+    updateSelectedLabelFontColor,
+    updateSelectedLabelOutline,
+    updateSelectedLabelBold,
+    updateSelectedLabelItalic,
+    updateSelectedLineType,
+    updateSelectedLineColor,
+    updateSelectedLineThickness,
     settingsLabelId: selection.settingsLabelId,
     settingsLineId: selection.settingsLineId,
     onWrapPointerDown,

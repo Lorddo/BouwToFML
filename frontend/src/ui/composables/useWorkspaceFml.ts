@@ -4,6 +4,7 @@ import type { useHScaleCalibration } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
 import { createWorkspaceFmlGenerate } from './workspace/workspace-fml-generate'
+import type { WorkspaceFmlStampInject } from './workspace/workspace-fml-generate'
 import { createWorkspaceFmlThicknessUi } from './workspace/workspace-fml-thickness-ui'
 
 export function useWorkspaceFml(deps: {
@@ -34,6 +35,7 @@ export function useWorkspaceFml(deps: {
   planName?: Ref<string | null>
   floorName?: Ref<string | null>
   floorLevel?: Ref<number | null>
+  getStampVectorInject?: () => WorkspaceFmlStampInject | null
 }) {
   const thickness = createWorkspaceFmlThicknessUi({
     scale: deps.scale,
@@ -59,6 +61,7 @@ export function useWorkspaceFml(deps: {
       planName: deps.planName,
       floorName: deps.floorName,
       floorLevel: deps.floorLevel,
+      getStampVectorInject: deps.getStampVectorInject,
     },
     {
       appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,

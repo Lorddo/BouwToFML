@@ -5,9 +5,27 @@ import type { RenderDimension, RenderLabel, RenderLine } from './fml-preview-ren
 type ToStage = (x: number, y: number) => { x: number; y: number }
 
 /** Floorplanner line thickness is screen-pixels (niet cm). */
-const LINE_THICKNESS_FALLBACK_PX = 1
+export const LINE_THICKNESS_FALLBACK_PX = 1
+export const DEFAULT_LINE_COLOR = '#000000'
+export const DEFAULT_LINE_THICKNESS_PX = 2
+export const DEFAULT_LABEL_FONT_SIZE_PX = 16
+export const DEFAULT_LABEL_FONT_COLOR = '#000000'
+export const LABEL_FONT_SIZE_MIN_PX = 1
+export const LABEL_FONT_SIZE_MAX_PX = 200
 
-function lineStrokeColor(color: number | string): string {
+export function clampLabelFontSize(raw: number): number {
+  if (!Number.isFinite(raw)) return DEFAULT_LABEL_FONT_SIZE_PX
+  return Math.min(LABEL_FONT_SIZE_MAX_PX, Math.max(LABEL_FONT_SIZE_MIN_PX, Math.round(raw)))
+}
+
+export function labelKonvaFontStyle(bold?: boolean, italic?: boolean): string {
+  if (bold && italic) return 'bold italic'
+  if (bold) return 'bold'
+  if (italic) return 'italic'
+  return 'normal'
+}
+
+export function lineStrokeColor(color: number | string): string {
   if (typeof color === 'number') {
     if (color === 0) return '#111827'
     const hex = color.toString(16).padStart(6, '0')
@@ -16,7 +34,7 @@ function lineStrokeColor(color: number | string): string {
   return color || '#111827'
 }
 
-function lineDash(type: FloorLine['type']): number[] | undefined {
+export function lineDash(type: FloorLine['type']): number[] | undefined {
   if (type === 'dashed_line') return [8, 6]
   if (type === 'dotted_line') return [2, 4]
   if (type === 'dashdotted_line') return [8, 4, 2, 4]
@@ -42,13 +60,15 @@ export function buildRenderLabels(
       y: stage.y,
       text: label.text,
       fontFamily: label.fontFamily,
-      /** Display gebruikt AREA_LABEL_HEIGHT_CM × layout.scale; bronwaarde blijft in FloorLabel. */
-      fontSize: label.fontSize,
+      /** Schermpixels (Floorplanner `fontSize`); Stage deelt door viewScale. */
+      fontSize: clampLabelFontSize(label.fontSize),
       fontColor: label.fontColor,
       backgroundColor: label.backgroundColor,
       align: label.align,
       rotation: label.rotation,
-      bold: label.bold,
+      outline: label.outline === true,
+      bold: label.bold === true,
+      italic: label.italic === true,
       cmX: label.x,
       cmY: label.y,
     }

@@ -132,12 +132,15 @@ function upscaleCanvasToMinMaxEdge(
   return { canvas: out, scale }
 }
 
-/** Snijd witte randen weg en schaal op tot minimaal `minMaxEdge` (default 3000px). */
+/**
+ * Schaal op tot minimaal `minMaxEdge` (default 3000px).
+ * Witruimte blijft staan (canvas 1–4 is wit); `trimWhitespace` alleen opt-in.
+ */
 export function normalizeWorkingCanvas(
   canvas: HTMLCanvasElement,
   options?: { minMaxEdge?: number; trimWhitespace?: boolean },
 ): WorkingCanvasNormalizeResult {
-  const trimWhitespace = options?.trimWhitespace ?? true
+  const trimWhitespace = options?.trimWhitespace ?? false
   const minMaxEdge = options?.minMaxEdge ?? OPTIMIZATION_BASE_DIMENSION
 
   let working = canvas

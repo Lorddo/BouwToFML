@@ -66,11 +66,14 @@ type RuntimeWallStamp = {
   bounds: unknown
   wallsCm: unknown
   sourceWallsCm?: unknown
+  injectWalls?: unknown
   originCm: unknown
   eraseMaskBase64?: string
   stampBwBase64?: string
   stampMaskBase64?: string
   baked: boolean
+  skipBandFilter?: boolean
+  bakeNulpuntImageCm?: { x: number; y: number }
 }
 
 function persistWallStamp(stamp: RuntimeWallStamp): PersistedWallStamp {
@@ -81,11 +84,14 @@ function persistWallStamp(stamp: RuntimeWallStamp): PersistedWallStamp {
     bounds: stamp.bounds,
     wallsCm: stamp.wallsCm,
     sourceWallsCm: stamp.sourceWallsCm,
+    injectWalls: stamp.injectWalls,
     originCm: stamp.originCm,
     eraseMaskBytes: stamp.eraseMaskBase64 ? base64ToBytes(stamp.eraseMaskBase64) : undefined,
     stampBwBytes: stamp.stampBwBase64 ? base64ToBytes(stamp.stampBwBase64) : undefined,
     stampMaskBytes: stamp.stampMaskBase64 ? base64ToBytes(stamp.stampMaskBase64) : undefined,
     baked: stamp.baked,
+    skipBandFilter: stamp.skipBandFilter,
+    bakeNulpuntImageCm: stamp.bakeNulpuntImageCm ? { ...stamp.bakeNulpuntImageCm } : undefined,
   }
 }
 
@@ -97,11 +103,14 @@ function restoreWallStamp(stamp: PersistedWallStamp): RuntimeWallStamp {
     bounds: stamp.bounds,
     wallsCm: stamp.wallsCm,
     sourceWallsCm: stamp.sourceWallsCm,
+    injectWalls: stamp.injectWalls,
     originCm: stamp.originCm,
     eraseMaskBase64: stamp.eraseMaskBytes ? bytesToBase64(stamp.eraseMaskBytes) : undefined,
     stampBwBase64: stamp.stampBwBytes ? bytesToBase64(stamp.stampBwBytes) : undefined,
     stampMaskBase64: stamp.stampMaskBytes ? bytesToBase64(stamp.stampMaskBytes) : undefined,
     baked: stamp.baked,
+    skipBandFilter: stamp.skipBandFilter,
+    bakeNulpuntImageCm: stamp.bakeNulpuntImageCm ? { ...stamp.bakeNulpuntImageCm } : undefined,
   }
 }
 

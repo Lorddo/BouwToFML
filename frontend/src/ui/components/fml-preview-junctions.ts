@@ -28,7 +28,12 @@ export {
   snapDrawWallEndpoint,
   snapPointToJunctions,
   snapPointToWallCenters,
+  snapPolygonVertexAxisLock,
   snapToNearbyEndpointAxes,
+  snapToNearbyPointAxes,
+  snapToPolygonGeometry,
+  closedRingSegments,
+  openPolylineSegments,
 } from './fml-preview-junction-snap'
 
 export {

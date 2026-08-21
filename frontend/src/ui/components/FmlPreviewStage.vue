@@ -87,6 +87,24 @@ withDefaults(
     junctionMarkerRadius: number
     junctionMarkerStroke: number
     activeJunctionId: string | null
+    /** Slicer-constructies (stage coords); selected = handles sleepbaar. */
+    sliceGuidesStage?: Array<{
+      index: number
+      selected: boolean
+      measure: number[]
+      place: number[]
+      link: number[]
+      m: { x: number; y: number }
+      p: { x: number; y: number }
+    }>
+    /** Live preview tijdens slicer-sleep (P→M). */
+    slicePreviewStage?: {
+      measure: number[]
+      place: number[]
+      link: number[]
+      m: { x: number; y: number }
+      p: { x: number; y: number }
+    } | null
   }>(),
   {
     layoutScale: 1,
@@ -100,6 +118,8 @@ withDefaults(
     settingsItemId: null,
     moveItemId: null,
     itemDragPreview: null,
+    sliceGuidesStage: () => [],
+    slicePreviewStage: null,
   },
 )
 
@@ -231,6 +251,141 @@ onBeforeUnmount(unbindGroupDrag)
             :hovered-line-id="hoveredLineId"
             :view-scale="viewScale"
           />
+          <FmlPreviewStageLines
+            :lines="[]"
+            :dimensions="renderModel.autoDimensions"
+            :settings-line-id="null"
+            :hovered-line-id="null"
+            :view-scale="viewScale"
+          />
+          <FmlPreviewStageLines
+            :lines="[]"
+            :dimensions="renderModel.sliceDimensions"
+            :settings-line-id="null"
+            :hovered-line-id="null"
+            :view-scale="viewScale"
+          />
+          <v-group
+            v-for="guide in sliceGuidesStage"
+            :key="`slice-guide-${guide.index}`"
+            :listening="guide.selected"
+          >
+            <v-line
+              :config="{
+                points: guide.measure,
+                stroke: '#2563eb',
+                strokeWidth: guide.selected ? 1.5 : 1,
+                dash: [8, 6],
+                opacity: guide.selected ? 1 : 0.55,
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-line
+              :config="{
+                points: guide.place,
+                stroke: '#ea580c',
+                strokeWidth: guide.selected ? 1.5 : 1,
+                dash: [8, 6],
+                opacity: guide.selected ? 1 : 0.55,
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-line
+              :config="{
+                points: guide.link,
+                stroke: '#64748b',
+                strokeWidth: 1,
+                opacity: guide.selected ? 1 : 0.45,
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-circle
+              :config="{
+                x: guide.m.x,
+                y: guide.m.y,
+                radius: guide.selected ? 7 : 5,
+                fill: '#2563eb',
+                stroke: '#fff',
+                strokeWidth: 2,
+                opacity: guide.selected ? 1 : 0.7,
+                strokeScaleEnabled: false,
+                name: guide.selected ? 'slice-handle-m' : undefined,
+                listening: guide.selected,
+              }"
+            />
+            <v-circle
+              :config="{
+                x: guide.p.x,
+                y: guide.p.y,
+                radius: guide.selected ? 7 : 5,
+                fill: '#ea580c',
+                stroke: '#fff',
+                strokeWidth: 2,
+                opacity: guide.selected ? 1 : 0.7,
+                strokeScaleEnabled: false,
+                name: guide.selected ? 'slice-handle-p' : undefined,
+                listening: guide.selected,
+              }"
+            />
+          </v-group>
+          <v-group v-if="slicePreviewStage" listening="false">
+            <v-line
+              :config="{
+                points: slicePreviewStage.measure,
+                stroke: '#2563eb',
+                strokeWidth: 1.5,
+                dash: [6, 4],
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-line
+              :config="{
+                points: slicePreviewStage.place,
+                stroke: '#ea580c',
+                strokeWidth: 1.5,
+                dash: [6, 4],
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-line
+              :config="{
+                points: slicePreviewStage.link,
+                stroke: '#64748b',
+                strokeWidth: 1.5,
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-circle
+              :config="{
+                x: slicePreviewStage.m.x,
+                y: slicePreviewStage.m.y,
+                radius: 6,
+                fill: '#2563eb',
+                stroke: '#fff',
+                strokeWidth: 2,
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+            <v-circle
+              :config="{
+                x: slicePreviewStage.p.x,
+                y: slicePreviewStage.p.y,
+                radius: 6,
+                fill: '#ea580c',
+                stroke: '#fff',
+                strokeWidth: 2,
+                strokeScaleEnabled: false,
+                listening: false,
+              }"
+            />
+          </v-group>
           <FmlPreviewStageWalls
             :render-model="renderModel"
             :move-wall-polygon="moveWallPolygon"

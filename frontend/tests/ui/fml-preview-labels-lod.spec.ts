@@ -5,6 +5,7 @@ import {
   areaLabelFontSizeStage,
   areaLabelKonvaConfig,
   areaLabelVisibleOnScreen,
+  buildRenderAreas,
 } from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import {
   clampViewScale,
@@ -42,11 +43,33 @@ describe('areaLabelKonvaConfig', () => {
   })
 })
 
+describe('buildRenderAreas showAreaLabel', () => {
+  it('zet showAreaLabel door (default aan)', () => {
+    const toStage = (x: number, y: number) => ({ x, y })
+    const poly = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 80 },
+      { x: 0, y: 80 },
+    ]
+    const [shown] = buildRenderAreas(
+      [{ id: 'a1', poly, color: '#fff', showAreaLabel: true }],
+      toStage,
+    )
+    expect(shown.showAreaLabel).toBe(true)
+    const [hidden] = buildRenderAreas(
+      [{ id: 'a2', poly, color: '#fff', showAreaLabel: false }],
+      toStage,
+    )
+    expect(hidden.showAreaLabel).toBe(false)
+  })
+})
+
 describe('clampViewScale', () => {
   it('clamped tussen VIEW_SCALE_MIN en VIEW_SCALE_MAX', () => {
-    expect(VIEW_SCALE_MIN).toBe(0.3)
+    expect(VIEW_SCALE_MIN).toBe(0.05)
     expect(VIEW_SCALE_MAX).toBe(40)
-    expect(clampViewScale(0.1)).toBe(VIEW_SCALE_MIN)
+    expect(clampViewScale(0.01)).toBe(VIEW_SCALE_MIN)
     expect(clampViewScale(100)).toBe(VIEW_SCALE_MAX)
     expect(clampViewScale(6)).toBe(6)
     expect(clampViewScale(20)).toBe(20)

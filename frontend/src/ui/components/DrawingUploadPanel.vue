@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 defineProps<{
   imageName: string
@@ -16,12 +17,12 @@ const { t } = useI18n()
   <div class="panel">
     <h3>{{ t('input.drawingTitle') }}</h3>
     <p class="filename">{{ imageName }}</p>
-    <label class="file-btn">
-      {{ t('input.chooseFile') }}
+    <label class="sidebar-icon-btn sidebar-icon-btn--primary file-btn">
+      <ToolbeltIcon name="upload" />
+      <span>{{ t('input.chooseFile') }}</span>
       <input
         type="file"
         accept="image/png,image/jpeg,image/jpg,application/pdf,.pdf"
-        hidden
         @change="emit('fileInput', $event)"
       />
     </label>
@@ -37,16 +38,6 @@ const { t } = useI18n()
 }
 
 .file-btn {
-  display: inline-block;
-  padding: 6px 12px;
-  border: 1px solid #2563eb;
-  border-radius: 4px;
-  color: #2563eb;
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.file-btn:hover {
-  background: #eff6ff;
+  margin-top: 4px;
 }
 </style>

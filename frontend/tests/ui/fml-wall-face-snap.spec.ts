@@ -120,6 +120,8 @@ describe('useFmlPreviewMeasure face-snap', () => {
       getWalls: () => walls,
       shiftPressed: ref(false),
       beforeBegin: () => {},
+      getMode: () => 'tape',
+      canPersist: () => false,
     })
 
     const start = api.resolveMeasureCm({ x: 50, y: 12 })

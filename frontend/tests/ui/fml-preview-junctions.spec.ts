@@ -16,6 +16,10 @@ import {
   snapPointToJunctions,
   snapPointToWallCenters,
   snapToNearbyEndpointAxes,
+  snapToNearbyPointAxes,
+  snapPolygonVertexAxisLock,
+  snapToPolygonGeometry,
+  closedRingSegments,
   JUNCTION_POINT_SNAP_CM,
   buildJunctions,
   junctionIdsForWall,
@@ -895,6 +899,30 @@ describe('slideWallSegmentAlongAxis', () => {
     },
   ]
 
+  function hasHorizontalSegment(
+    walls: Array<{ a: { x: number; y: number }; b: { x: number; y: number } }>,
+    x0: number,
+    x1: number,
+    y = 0,
+  ): boolean {
+    const lo = Math.min(x0, x1)
+    const hi = Math.max(x0, x1)
+    const spans = walls
+      .filter((wall) => Math.abs(wall.a.y - y) <= 0.05 && Math.abs(wall.b.y - y) <= 0.05)
+      .map(
+        (wall) => [Math.min(wall.a.x, wall.b.x), Math.max(wall.a.x, wall.b.x)] as [number, number],
+      )
+      .sort((left, right) => left[0] - right[0])
+    let cursor = lo
+    for (const [spanLo, spanHi] of spans) {
+      if (spanHi + 0.05 < cursor) continue
+      if (spanLo - 0.05 > cursor) return false
+      cursor = Math.max(cursor, spanHi)
+      if (cursor + 0.05 >= hi) return true
+    }
+    return cursor + 0.05 >= hi
+  }
+
   it('T→L: middelste segment schuift rigide langs trunk; branch blijft op oude junction', () => {
     const walls = collinearChainWithT()
     const moved = slideWallSegmentAlongAxis(walls, 'w2', 10)
@@ -933,20 +961,14 @@ describe('slideWallSegmentAlongAxis', () => {
     expect(moved.find((wall) => wall.id === 'w1')?.b).toEqual({ x: 10, y: 0 })
     expect(moved.find((wall) => wall.id === 'w2')?.a).toEqual({ x: 10, y: 0 })
     expect(moved.find((wall) => wall.id === 'w2')?.b).toEqual({ x: 40, y: 0 })
-    expect(
-      moved.some(
-        (wall) =>
-          wall.id.startsWith('split-host-') &&
-          ((Math.abs(wall.a.x - 10) < 0.01 && Math.abs(wall.b.x - 50) < 0.01) ||
-            (Math.abs(wall.a.x - 50) < 0.01 && Math.abs(wall.b.x - 10) < 0.01)),
-      ),
-    ).toBe(true)
+    expect(hasHorizontalSegment(moved, 10, 50)).toBe(true)
+    expect(collinearOverlapIds(moved)).toEqual([])
 
     const junctions = buildJunctions(moved)
     const atTen = junctions.find(
       (junction) => Math.abs(junction.x - 10) < 0.01 && Math.abs(junction.y) < 0.01,
     )
-    expect(atTen?.refs.length).toBeGreaterThanOrEqual(3)
+    expect(atTen?.refs.length).toBeGreaterThanOrEqual(2)
 
     const branchJunction = junctions.find((junction) =>
       junction.refs.some((ref) => ref.wallId === 'wBranch'),
@@ -1050,14 +1072,8 @@ describe('slideWallSegmentAlongAxis', () => {
 
     const connector = moved.find((wall) => wall.id.startsWith('slide-relink-'))
     expect(connector).toBeUndefined()
-    expect(
-      moved.some(
-        (wall) =>
-          wall.id.startsWith('split-host-') &&
-          ((Math.abs(wall.a.x - 48) < 0.01 && Math.abs(wall.b.x - 50) < 0.01) ||
-            (Math.abs(wall.a.x - 50) < 0.01 && Math.abs(wall.b.x - 48) < 0.01)),
-      ),
-    ).toBe(true)
+    expect(hasHorizontalSegment(moved, 48, 50)).toBe(true)
+    expect(collinearOverlapIds(moved)).toEqual([])
   })
 
   it('fallback op host-split: geen parallelle stub wanneer old/new op bestaande host liggen', () => {
@@ -1388,6 +1404,110 @@ describe('slideWallSegmentAlongAxis', () => {
     }
     expect(moved.filter(coversCross).length).toBe(4)
   })
+
+  function collinearOverlapIds(
+    walls: Array<{ id: string; a: { x: number; y: number }; b: { x: number; y: number } }>,
+  ): Array<[string, string]> {
+    const pairs: Array<[string, string]> = []
+    for (let i = 0; i < walls.length; i += 1) {
+      for (let j = i + 1; j < walls.length; j += 1) {
+        const left = walls[i]
+        const right = walls[j]
+        const dax = left.b.x - left.a.x
+        const day = left.b.y - left.a.y
+        const dbx = right.b.x - right.a.x
+        const dby = right.b.y - right.a.y
+        const lenA = Math.hypot(dax, day)
+        const lenB = Math.hypot(dbx, dby)
+        if (lenA < 0.5 || lenB < 0.5) continue
+        if (Math.abs(dax * dby - day * dbx) > 0.05 * Math.max(lenA, lenB)) continue
+        const dist = Math.abs((right.a.x - left.a.x) * day - (right.a.y - left.a.y) * dax) / lenA
+        if (dist > 0.5) continue
+        const axis: 'x' | 'y' = Math.abs(dax) >= Math.abs(day) ? 'x' : 'y'
+        const a0 = Math.min(left.a[axis], left.b[axis])
+        const a1 = Math.max(left.a[axis], left.b[axis])
+        const b0 = Math.min(right.a[axis], right.b[axis])
+        const b1 = Math.max(right.a[axis], right.b[axis])
+        if (Math.min(a1, b1) - Math.max(a0, b0) > 1) pairs.push([left.id, right.id])
+      }
+    }
+    return pairs
+  }
+
+  const hallLivingT = () => {
+    const x = 163.23422707243168
+    const tY = 641.6458290819224
+    const southY = 750.6653045768137
+    const northY = 500.2538310675391
+    return [
+      {
+        id: 'vSouth',
+        a: { x, y: southY },
+        b: { x, y: tY },
+        thickness: 10,
+        openings: [],
+      },
+      {
+        id: 'vNorth',
+        a: { x, y: tY },
+        b: { x, y: northY },
+        thickness: 10,
+        openings: [],
+      },
+      {
+        id: 'hStem',
+        a: { x: 0, y: tY },
+        b: { x, y: tY },
+        thickness: 10,
+        openings: [],
+      },
+      {
+        id: 'hBot',
+        a: { x, y: southY },
+        b: { x: 352.57, y: southY },
+        thickness: 10,
+        openings: [],
+      },
+      {
+        id: 'hTop',
+        a: { x, y: northY },
+        b: { x: 299.05, y: northY },
+        thickness: 10,
+        openings: [],
+      },
+      {
+        id: 'vOuter',
+        a: { x: 0, y: 1335.11 },
+        b: { x: 0, y: tY },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'vExt',
+        a: { x, y: northY },
+        b: { x, y: 0 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+  }
+
+  it('hal/woonkamer T: stam-tak voorbij het stam-einde geeft geen dubbele muur', () => {
+    const cases: Array<{ id: string; delta: number; dir: { x: number; y: number } }> = [
+      { id: 'hStem', delta: 20, dir: { x: 0, y: 1 } },
+      { id: 'hStem', delta: 80, dir: { x: 0, y: 1 } },
+      { id: 'hStem', delta: 120, dir: { x: 0, y: 1 } },
+      { id: 'hStem', delta: -80, dir: { x: 0, y: 1 } },
+      { id: 'vSouth', delta: 20, dir: { x: 1, y: 0 } },
+      { id: 'vSouth', delta: -20, dir: { x: 1, y: 0 } },
+      { id: 'vNorth', delta: 20, dir: { x: 1, y: 0 } },
+      { id: 'vNorth', delta: -20, dir: { x: 1, y: 0 } },
+    ]
+    for (const item of cases) {
+      const moved = slideWallSegmentAlongAxis(hallLivingT(), item.id, item.delta, item.dir)
+      expect(collinearOverlapIds(moved), `${item.id} delta=${item.delta}`).toEqual([])
+    }
+  })
 })
 
 describe('moveJunctionWithWallJoins', () => {
@@ -1559,6 +1679,66 @@ describe('snapToNearbyEndpointAxes', () => {
       3,
     )
     expect(snapped).toEqual({ x: 90, y: 90 })
+  })
+})
+
+describe('snapToNearbyPointAxes', () => {
+  it('snapt een bijna-horizontale ribbe op de y van het vorige punt', () => {
+    const snapped = snapToNearbyPointAxes([{ x: 0, y: 0 }], { x: 500, y: 8 }, 15)
+    expect(snapped).toEqual({ x: 500, y: 0 })
+  })
+
+  it('snapt x en y onafhankelijk naar verschillende hoeken (rechthoek sluiten)', () => {
+    const snapped = snapToNearbyPointAxes(
+      [
+        { x: 0, y: 0 },
+        { x: 120, y: 0 },
+        { x: 120, y: 80 },
+      ],
+      { x: 3, y: 78 },
+      15,
+    )
+    expect(snapped).toEqual({ x: 0, y: 80 })
+  })
+})
+
+describe('snapPolygonVertexAxisLock', () => {
+  it('houdt een rechthoekhoek H/V t.o.v. beide buren', () => {
+    const poly = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 80 },
+      { x: 0, y: 80 },
+    ]
+    expect(snapPolygonVertexAxisLock(poly, 2, { x: 98, y: 75 })).toEqual({ x: 100, y: 80 })
+  })
+})
+
+describe('snapToPolygonGeometry', () => {
+  const square = [
+    { x: 0, y: 0 },
+    { x: 100, y: 0 },
+    { x: 100, y: 80 },
+    { x: 0, y: 80 },
+  ]
+  const segs = closedRingSegments(square)
+
+  it('snapt naar een hoek van een andere polygoon', () => {
+    expect(snapToPolygonGeometry({ x: 3, y: 2 }, square, segs, 15)).toEqual({ x: 0, y: 0 })
+  })
+
+  it('snapt naar het midden van een ribbe', () => {
+    const hit = snapToPolygonGeometry({ x: 50, y: 6 }, square, segs, 15)
+    expect(hit).toEqual({ x: 50, y: 0 })
+  })
+
+  it('laat een hoek winnen van een nabije ribbe', () => {
+    const hit = snapToPolygonGeometry({ x: 4, y: 3 }, square, segs, 15)
+    expect(hit).toEqual({ x: 0, y: 0 })
+  })
+
+  it('snapt niet buiten radius', () => {
+    expect(snapToPolygonGeometry({ x: 50, y: 40 }, square, segs, 15)).toBeNull()
   })
 })
 

@@ -176,7 +176,7 @@ export function useWorkspaceImage(deps: {
       hasPendingInputRotation(deps.preprocess.value),
   )
 
-  /** Rotatie (uitgebreid canvas) → trim/upscale → masker/rotatie in beeld bakken. */
+  /** Rotatie (uitgebreid canvas, wit blijft) → upscale → masker/rotatie in beeld bakken. */
   async function commitInputStepImage(): Promise<void> {
     if (inputCommitInFlight) return inputCommitInFlight
     inputCommitInFlight = runInputStepCommit().finally(() => {
@@ -257,7 +257,7 @@ export function useWorkspaceImage(deps: {
 
     const cv = await waitForOpenCV()
     const baked = canvasLikeToHtmlCanvas(bakeUnderlayCanvas(cv, bakeSource, preprocess))
-    const normalized = normalizeWorkingCanvas(baked)
+    const normalized = normalizeWorkingCanvas(baked, { trimWhitespace: false })
     const totalScale = densityFactor * normalized.scale
     const dataUrl = canvasToDataUrl(normalized.canvas)
     const name = deps.imageName.value ?? 'onderlegger.png'

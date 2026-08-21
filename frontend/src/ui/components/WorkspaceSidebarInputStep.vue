@@ -5,6 +5,7 @@ import ScaleConfirmBar from './ScaleConfirmBar.vue'
 import OriginalSetupPanel from './OriginalSetupPanel.vue'
 import InputMaskPanel from './InputMaskPanel.vue'
 import OpenCvStatusPanel from './OpenCvStatusPanel.vue'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
@@ -121,19 +122,28 @@ function onReuseUnderlay() {
         </option>
       </select>
     </label>
-    <button
-      type="button"
-      class="secondary"
-      :disabled="!canReuseUnderlay || !donorId"
-      @click="onReuseUnderlay"
-    >
-      {{ t('input.reuseUnderlay') }}
-    </button>
+    <div class="sidebar-icon-row">
+      <button
+        type="button"
+        class="sidebar-icon-btn"
+        :disabled="!canReuseUnderlay || !donorId"
+        @click="onReuseUnderlay"
+      >
+        <ToolbeltIcon name="copy" />
+        <span>{{ t('input.reuseUnderlay') }}</span>
+      </button>
+      <button
+        type="button"
+        class="sidebar-icon-btn sidebar-icon-btn--primary"
+        :disabled="!imageSrc"
+        @click="$emit('downloadUnderlay')"
+      >
+        <ToolbeltIcon name="download" />
+        <span>{{ t('input.downloadUnderlay') }}</span>
+      </button>
+    </div>
     <p v-if="canReuseUnderlay" class="hint">{{ t('input.reuseUnderlayHintOk') }}</p>
     <p v-else class="hint">{{ t('input.reuseUnderlayHintBlocked') }}</p>
-    <button type="button" class="primary" :disabled="!imageSrc" @click="$emit('downloadUnderlay')">
-      {{ t('input.downloadUnderlay') }}
-    </button>
   </div>
 
   <OpenCvStatusPanel
@@ -149,38 +159,21 @@ function onReuseUnderlay() {
   border-bottom: 1px solid #e2e8f0;
 }
 
-.panel button {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
-}
-
-.panel button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .field {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 4px;
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: #334155;
-}
-
-.field select {
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
+  margin: 8px 0;
+  font-size: 12px;
 }
 
 .hint {
   font-size: 12px;
-  color: #64748b;
-  margin: 0 0 10px;
-  line-height: 1.4;
+  color: #666;
+  margin: 4px 0;
+}
+
+.sidebar-icon-row {
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 </style>

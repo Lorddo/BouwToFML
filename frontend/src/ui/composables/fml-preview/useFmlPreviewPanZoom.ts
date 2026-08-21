@@ -1,8 +1,8 @@
 import type { Ref } from 'vue'
 import type Konva from 'konva'
 
-/** Wheel-zoom clamp (t.o.v. fit-to-view = 1). */
-export const VIEW_SCALE_MIN = 0.3
+/** Wheel-zoom clamp (t.o.v. fit-to-view = 1). 0.05 = zelfde floor als workspace-canvas. */
+export const VIEW_SCALE_MIN = 0.05
 export const VIEW_SCALE_MAX = 40
 
 export function clampViewScale(scale: number): number {

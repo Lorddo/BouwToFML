@@ -41,11 +41,14 @@ export type PersistedWallStamp = {
   bounds: unknown
   wallsCm: unknown
   sourceWallsCm?: unknown
+  injectWalls?: unknown
   originCm: unknown
   eraseMaskBytes?: Uint8Array
   stampBwBytes?: Uint8Array
   stampMaskBytes?: Uint8Array
   baked: boolean
+  skipBandFilter?: boolean
+  bakeNulpuntImageCm?: { x: number; y: number }
 }
 
 export type PersistedSourceUnderlay = {

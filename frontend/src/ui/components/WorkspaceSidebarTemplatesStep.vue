@@ -5,6 +5,7 @@ import OcrSettingsPanel from './OcrSettingsPanel.vue'
 import OcrHitListPanel from './OcrHitListPanel.vue'
 import RoomFacePanel from './RoomFacePanel.vue'
 import DetectionProfileSwitch from './DetectionProfileSwitch.vue'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import type { PreprocessConfig, ElementClass, OcrTextCandidate } from '@/core/extraction/types'
 import type { GeometricSignature } from '@/core/extraction/geometric-signature'
 import type { DrawingProfile } from '@/platform/profile'
@@ -162,27 +163,32 @@ function swatchStyle(color: string): Record<string, string> {
   <OcrSettingsPanel v-if="templateTab === 'ocr'" v-model="preprocess" />
 
   <div v-if="templateTab === 'ocr'" class="panel">
-    <button
-      type="button"
-      class="primary"
-      :disabled="ocrScanning || !imageSrc"
-      @click="$emit('runOcrScan')"
-    >
-      {{
-        ocrScanning
-          ? t('templates.ocrTab.scanning')
-          : ocrCandidateCount > 0
-            ? t('templates.ocrTab.rescan', { count: ocrCandidateCount })
-            : t('templates.ocrTab.scan')
-      }}
-    </button>
-    <button
-      type="button"
-      :disabled="ocrCandidateCount === 0 && ocrMaskedRegionCount === 0"
-      @click="$emit('clearOcrCandidates')"
-    >
-      {{ t('templates.ocrTab.clear') }}
-    </button>
+    <div class="sidebar-icon-row">
+      <button
+        type="button"
+        class="sidebar-icon-btn sidebar-icon-btn--primary"
+        :disabled="ocrScanning || !imageSrc"
+        @click="$emit('runOcrScan')"
+      >
+        <ToolbeltIcon name="text" />
+        <span>{{
+          ocrScanning
+            ? t('templates.ocrTab.scanning')
+            : ocrCandidateCount > 0
+              ? t('templates.ocrTab.rescan', { count: ocrCandidateCount })
+              : t('templates.ocrTab.scan')
+        }}</span>
+      </button>
+      <button
+        type="button"
+        class="sidebar-icon-btn"
+        :disabled="ocrCandidateCount === 0 && ocrMaskedRegionCount === 0"
+        @click="$emit('clearOcrCandidates')"
+      >
+        <ToolbeltIcon name="clear" />
+        <span>{{ t('templates.ocrTab.clear') }}</span>
+      </button>
+    </div>
     <OcrHitListPanel :hits="ocrHitList" @remove="$emit('removeOcrHit', $event)" />
   </div>
 
@@ -209,22 +215,24 @@ function swatchStyle(color: string): Record<string, string> {
         />
       </div>
     </label>
-    <div class="ocr-wall-actions">
+    <div class="ocr-wall-actions sidebar-icon-row">
       <button
         type="button"
-        class="action-btn"
+        class="sidebar-icon-btn"
         :disabled="ocrCandidateCount === 0 && ocrMaskedRegionCount === 0"
         @click="$emit('clearOcrCandidates')"
       >
-        {{ t('templates.ocrOnWalls.clear') }}
+        <ToolbeltIcon name="clear" />
+        <span>{{ t('templates.ocrOnWalls.clear') }}</span>
       </button>
       <button
         type="button"
-        class="action-btn primary"
+        class="sidebar-icon-btn sidebar-icon-btn--primary"
         :disabled="classifyingInFlight || (ocrCandidateCount === 0 && ocrMaskedRegionCount === 0)"
         @click="$emit('bakeOcrIntoInk')"
       >
-        {{ t('templates.ocrOnWalls.bake') }}
+        <ToolbeltIcon name="check" />
+        <span>{{ t('templates.ocrOnWalls.bake') }}</span>
       </button>
     </div>
   </div>
@@ -347,37 +355,42 @@ function swatchStyle(color: string): Record<string, string> {
           : t('templates.walls.thicknessMissing')
       }}
     </p>
-    <button
-      type="button"
-      class="action-btn"
-      :disabled="!canAutoclassify"
-      @click="$emit('autoclassifyWalls')"
-    >
-      {{ autoclassifyButtonLabel }}
-    </button>
-    <button
-      type="button"
-      class="action-btn"
-      :disabled="!canProcessChanges"
-      @click="$emit('recalculateFaces')"
-    >
-      {{
-        classifyingInFlight ? t('templates.walls.processingInk') : t('templates.walls.processInk')
-      }}
-    </button>
+    <div class="sidebar-icon-row">
+      <button
+        type="button"
+        class="sidebar-icon-btn"
+        :disabled="!canAutoclassify"
+        @click="$emit('autoclassifyWalls')"
+      >
+        <ToolbeltIcon name="classify" />
+        <span>{{ autoclassifyButtonLabel }}</span>
+      </button>
+      <button
+        type="button"
+        class="sidebar-icon-btn"
+        :disabled="!canProcessChanges"
+        @click="$emit('recalculateFaces')"
+      >
+        <ToolbeltIcon name="brush" />
+        <span>{{
+          classifyingInFlight ? t('templates.walls.processingInk') : t('templates.walls.processInk')
+        }}</span>
+      </button>
+      <button
+        type="button"
+        class="sidebar-icon-btn sidebar-icon-btn--primary"
+        :disabled="!canFinalize"
+        @click="$emit('finalizeWallDetection')"
+      >
+        <ToolbeltIcon name="check" />
+        <span>{{
+          running && roomPhase === 'finalizing'
+            ? t('templates.walls.finalizing')
+            : t('templates.walls.finalize')
+        }}</span>
+      </button>
+    </div>
     <p v-if="inkEditStale" class="metric warning">{{ t('templates.walls.inkStale') }}</p>
-    <button
-      type="button"
-      class="action-btn primary"
-      :disabled="!canFinalize"
-      @click="$emit('finalizeWallDetection')"
-    >
-      {{
-        running && roomPhase === 'finalizing'
-          ? t('templates.walls.finalizing')
-          : t('templates.walls.finalize')
-      }}
-    </button>
   </div>
 
   <RoomFacePanel
@@ -426,30 +439,8 @@ function swatchStyle(color: string): Record<string, string> {
   flex-shrink: 0;
 }
 
-.wall-actions .action-btn {
-  width: 100%;
-  margin-bottom: 8px;
-  text-align: left;
-}
-
-.wall-actions .action-btn.primary {
-  font-weight: 600;
-}
-
 .ocr-wall-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   margin-top: 10px;
-}
-
-.ocr-wall-actions .action-btn {
-  width: 100%;
-  text-align: left;
-}
-
-.ocr-wall-actions .action-btn.primary {
-  font-weight: 600;
 }
 
 .field-row {

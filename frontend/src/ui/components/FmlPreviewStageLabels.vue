@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { areaLabelKonvaConfig } from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import {
-  areaLabelFontSizeStage,
-  areaLabelKonvaConfig,
-  areaLabelVisibleOnScreen,
-} from '@/ui/composables/fml-preview/fml-preview-render-areas'
+  DEFAULT_LABEL_FONT_SIZE_PX,
+  labelKonvaFontStyle,
+} from '@/ui/composables/fml-preview/fml-preview-render-annotations'
 import type { RenderLabel } from '@/ui/composables/fml-preview/fml-preview-render-types'
 
 const props = withDefaults(
@@ -12,7 +12,7 @@ const props = withDefaults(
     labels: RenderLabel[]
     settingsLabelId: string | null
     hoveredLabelId: string | null
-    /** Content-layout scale (cm → stage). */
+    /** Content-layout scale (cm → stage). Unused for annotation fontSize (scherm-px). */
     layoutScale?: number
     viewScale?: number
     /** false = geen FML draw_label tekst. */
@@ -21,25 +21,43 @@ const props = withDefaults(
   { layoutScale: 1, viewScale: 1, labelsVisible: true },
 )
 
-const fontSizeStage = computed(() => areaLabelFontSizeStage(props.layoutScale))
-const visibleLabels = computed(() => {
-  if (!props.labelsVisible) return []
-  if (!areaLabelVisibleOnScreen(fontSizeStage.value, props.viewScale)) return []
-  return props.labels
-})
+const invView = computed(() => 1 / Math.max(1e-6, props.viewScale))
 
-/** Zelfde lettergrootte + center-anker als kamerbenaming; FML fontSize blijft in model. */
+const visibleLabels = computed(() => (props.labelsVisible ? props.labels : []))
+
+function screenPxToStage(px: number): number {
+  return Math.max(0.01, px * invView.value)
+}
+
+function labelFontPx(label: RenderLabel): number {
+  return Number.isFinite(label.fontSize) && label.fontSize > 0
+    ? label.fontSize
+    : DEFAULT_LABEL_FONT_SIZE_PX
+}
+
+/** Floorplanner fontSize = schermpixels; Stage schaalt met viewScale, dus delen. */
 function labelTextConfig(label: RenderLabel): Record<string, unknown> {
+  const fontSize = screenPxToStage(labelFontPx(label))
+  const fill = label.fontColor || '#1f2937'
+  const cfg = areaLabelKonvaConfig(label.text, 0, 0, fill, fontSize)
+  const outline = label.outline === true
   return {
-    ...areaLabelKonvaConfig(label.text, 0, 0, label.fontColor || '#1f2937', fontSizeStage.value),
+    ...cfg,
     fontFamily: label.fontFamily || 'arial',
-    fontStyle: label.bold ? 'bold' : 'normal',
+    fontStyle: labelKonvaFontStyle(label.bold, label.italic),
+    stroke: outline ? '#ffffff' : undefined,
+    strokeWidth: outline ? screenPxToStage(Math.max(2, labelFontPx(label) * 0.14)) : 0,
+    fillAfterStrokeEnabled: outline,
   }
 }
 
-function labelSelectWidth(text: string): number {
-  const fontSize = fontSizeStage.value
-  return Math.max(fontSize * 4, text.length * fontSize * 0.62)
+function labelSelectWidth(label: RenderLabel): number {
+  const fontSize = screenPxToStage(labelFontPx(label))
+  return Math.max(fontSize * 4, label.text.length * fontSize * 0.62)
+}
+
+function labelSelectHeight(label: RenderLabel): number {
+  return screenPxToStage(labelFontPx(label)) + 4 * invView.value
 }
 </script>
 
@@ -61,12 +79,12 @@ function labelSelectWidth(text: string): number {
         :config="{
           x: 0,
           y: 0,
-          width: labelSelectWidth(label.text),
-          height: fontSizeStage + 4,
-          offsetX: labelSelectWidth(label.text) / 2,
-          offsetY: (fontSizeStage + 4) / 2,
+          width: labelSelectWidth(label),
+          height: labelSelectHeight(label),
+          offsetX: labelSelectWidth(label) / 2,
+          offsetY: labelSelectHeight(label) / 2,
           stroke: settingsLabelId === label.id ? '#f97316' : '#94a3b8',
-          strokeWidth: settingsLabelId === label.id ? 2 : 1,
+          strokeWidth: settingsLabelId === label.id ? 2 * invView : invView,
           listening: false,
         }"
       />

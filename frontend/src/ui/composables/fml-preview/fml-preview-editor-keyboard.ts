@@ -23,6 +23,8 @@ export function createFmlPreviewEditorKeyHandlers(options: {
   clearSelection: () => void
   clearInspectSelect: () => void
   emitCancelThicknessPick: () => void
+  /** Verberg slicer-liniaal (Esc). True als er iets was. */
+  clearSelectedSlice?: () => boolean
   undo: () => boolean
   redo: () => boolean
   syncPlanToParentAfterUndo: () => void
@@ -78,6 +80,7 @@ export function createFmlPreviewEditorKeyHandlers(options: {
     clearSelection,
     clearInspectSelect,
     emitCancelThicknessPick,
+    clearSelectedSlice,
     undo,
     redo,
     syncPlanToParentAfterUndo,
@@ -184,6 +187,15 @@ export function createFmlPreviewEditorKeyHandlers(options: {
       }
       if (measureMode.value && measure.measureLines.value.length > 0) {
         measure.clearMeasureLines()
+        return
+      }
+      if (clearSelectedSlice?.()) {
+        event.preventDefault()
+        return
+      }
+      if (measureMode.value) {
+        event.preventDefault()
+        deactivateDrawTool()
         return
       }
       if (nulpuntMode.value) {

@@ -85,6 +85,28 @@ describe('sanitizeFmlWalls', () => {
     expect(classifyNearAxisWall(out[0])).toBeNull()
   })
 
+  it('ortho maakt een weld die de eerste pass mist; één aanroep is stabiel', () => {
+    // Afstand hoekpunten ≈ 0,30 cm (> weld 0,25). Na ortho ≈ 0,22 cm → tweede pass.
+    const walls = [
+      wall('h', { x: 0, y: 0 }, { x: 80, y: 0.5 }),
+      wall('v', { x: 80.22, y: 0.3 }, { x: 80.22, y: 60 }),
+    ]
+    const once = sanitizeFmlWalls(walls)
+    const h = once.find((item) => item.id === 'h')!
+    const v = once.find((item) => item.id === 'v')!
+    const gap = Math.min(
+      Math.hypot(h.b.x - v.a.x, h.b.y - v.a.y),
+      Math.hypot(h.b.x - v.b.x, h.b.y - v.b.y),
+    )
+    expect(gap).toBeLessThanOrEqual(1e-6)
+    expect(h.a.y).toBe(h.b.y)
+    expect(v.a.x).toBe(v.b.x)
+
+    const twice = sanitizeFmlWalls(once)
+    expect(wallsSanitizeChanged(once, twice)).toBe(false)
+    expect(twice.map((item) => item.id)).toEqual(once.map((item) => item.id))
+  })
+
   it('tweede run is idempotent (geen nieuwe splits)', () => {
     const walls = [
       wall('h', { x: 0, y: 0 }, { x: 80, y: 0.2 }),
@@ -127,6 +149,18 @@ describe('sanitizeFmlWalls', () => {
     const twice = sanitizeFmlWalls(once)
     expect(wallsSanitizeChanged(once, twice)).toBe(false)
     expect(twice.map((item) => item.id)).toEqual(once.map((item) => item.id))
+  })
+
+  it('twee identieke V’s op elkaar → één overlevende', () => {
+    const walls = [
+      wall('a', { x: 10, y: 750 }, { x: 10, y: 640 }),
+      wall('b', { x: 10, y: 640 }, { x: 10, y: 750 }),
+    ]
+    const out = sanitizeFmlWalls(walls)
+    const vertical = out.filter(
+      (item) => Math.abs(item.a.x - 10) < 0.01 && Math.abs(item.b.x - 10) < 0.01,
+    )
+    expect(vertical).toHaveLength(1)
   })
 
   it('opening exact op de knip blijft op één stuk, wereldpositie gelijk', () => {

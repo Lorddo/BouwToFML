@@ -55,6 +55,14 @@ const props = withDefaults(
     facadeGroupMixed?: boolean
     /** True als niet alle groepsleden al geselecteerd zijn. */
     canSelectFacadeMembers?: boolean
+    /** Workspace-detectie: Stempel-preset (geen nieuwe groep / rename). */
+    facadeGroupsStampPreset?: boolean
+    /** Editor: aparte Stempel-checkbox naast gevel. */
+    stampGroupEnabled?: boolean
+    /** true/false/null(mixed). */
+    stampGroupDraft?: boolean | null
+    stampGroupMixed?: boolean
+    canSelectStampMembers?: boolean
   }>(),
   {
     thicknessMinCm: 10,
@@ -70,6 +78,11 @@ const props = withDefaults(
     facadeGroupDraft: '',
     facadeGroupMixed: false,
     canSelectFacadeMembers: false,
+    facadeGroupsStampPreset: false,
+    stampGroupEnabled: false,
+    stampGroupDraft: false,
+    stampGroupMixed: false,
+    canSelectStampMembers: false,
   },
 )
 
@@ -95,6 +108,8 @@ const emit = defineEmits<{
   facadeGroupChange: [value: string]
   facadeGroupRename: [name: string]
   selectFacadeMembers: []
+  stampGroupChange: [enabled: boolean]
+  selectStampMembers: []
 }>()
 
 const thicknessPresets = computed(() => [
@@ -557,47 +572,88 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
       v-if="selectedWallPanel && facadeGroupsEnabled"
       class="fml-toolbelt__field fml-toolbelt__field--row"
     >
-      <span class="fml-toolbelt__field-label">{{ t('result.toolbar.facadeGroup') }}</span>
-      <div class="fml-toolbelt__field-controls">
-        <select
-          class="fml-toolbelt__select fml-toolbelt__select--facade"
-          :aria-label="t('result.toolbar.facadeGroupAria')"
-          :value="facadeSelectValue"
-          @change="onFacadeGroupChange"
+      <div class="fml-toolbelt__pair">
+        <div v-if="!facadeGroupsStampPreset" class="fml-toolbelt__pair-item">
+          <span class="fml-toolbelt__field-label">{{ t('result.toolbar.facadeGroup') }}</span>
+          <div class="fml-toolbelt__field-controls">
+            <select
+              class="fml-toolbelt__select fml-toolbelt__select--facade"
+              :aria-label="t('result.toolbar.facadeGroupAria')"
+              :value="facadeSelectValue"
+              @change="onFacadeGroupChange"
+            >
+              <option value="">
+                {{
+                  facadeGroupMixed
+                    ? t('result.toolbar.facadeGroupMixed')
+                    : t('result.toolbar.facadeGroupNone')
+                }}
+              </option>
+              <option v-for="group in facadeGroupOptions" :key="group.id" :value="group.id">
+                {{ group.id }}
+              </option>
+              <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
+            </select>
+            <input
+              v-if="facadeGroupDraft && !facadeGroupMixed"
+              type="text"
+              class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--facade"
+              :aria-label="t('result.toolbar.facadeGroupRenameAria')"
+              :value="facadeNameDisplay"
+              @input="facadeRenameText = ($event.target as HTMLInputElement).value"
+              @change="onFacadeNameChange"
+            />
+            <button
+              v-if="showFacadeSelectButton"
+              type="button"
+              class="canvas-toolbelt__btn canvas-toolbelt__btn--primary"
+              :title="t('result.toolbar.facadeGroupSelectTitle')"
+              :aria-label="t('result.toolbar.facadeGroupSelect')"
+              :disabled="!canSelectFacadeMembers"
+              @click="emit('selectFacadeMembers')"
+              @pointerup="releaseControlFocus"
+            >
+              {{ t('result.toolbar.facadeGroupSelect') }}
+            </button>
+          </div>
+        </div>
+        <div
+          v-if="stampGroupEnabled"
+          class="fml-toolbelt__pair-item fml-toolbelt__pair-item--stamp"
         >
-          <option value="">
-            {{
-              facadeGroupMixed
-                ? t('result.toolbar.facadeGroupMixed')
-                : t('result.toolbar.facadeGroupNone')
-            }}
-          </option>
-          <option v-for="group in facadeGroupOptions" :key="group.id" :value="group.id">
-            {{ group.id }}
-          </option>
-          <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
-        </select>
-        <input
-          v-if="facadeGroupDraft && !facadeGroupMixed"
-          type="text"
-          class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--facade"
-          :aria-label="t('result.toolbar.facadeGroupRenameAria')"
-          :value="facadeNameDisplay"
-          @input="facadeRenameText = ($event.target as HTMLInputElement).value"
-          @change="onFacadeNameChange"
-        />
-        <button
-          v-if="showFacadeSelectButton"
-          type="button"
-          class="canvas-toolbelt__btn canvas-toolbelt__btn--primary"
-          :title="t('result.toolbar.facadeGroupSelectTitle')"
-          :aria-label="t('result.toolbar.facadeGroupSelect')"
-          :disabled="!canSelectFacadeMembers"
-          @click="emit('selectFacadeMembers')"
-          @pointerup="releaseControlFocus"
-        >
-          {{ t('result.toolbar.facadeGroupSelect') }}
-        </button>
+          <span class="fml-toolbelt__field-label">{{ t('result.toolbar.stampGroup') }}</span>
+          <div class="fml-toolbelt__field-controls">
+            <label class="fml-toolbelt__checkbox">
+              <input
+                type="checkbox"
+                :checked="stampGroupDraft === true"
+                :indeterminate.prop="stampGroupMixed === true"
+                :aria-label="t('result.toolbar.stampGroupAria')"
+                @change="
+                  emit('stampGroupChange', ($event.target as HTMLInputElement).checked)
+                  releaseControlFocus($event)
+                "
+              />
+              <span>{{
+                stampGroupMixed
+                  ? t('result.toolbar.facadeGroupMixed')
+                  : t('result.toolbar.stampGroup')
+              }}</span>
+            </label>
+            <button
+              v-if="stampGroupDraft === true || stampGroupMixed"
+              type="button"
+              class="canvas-toolbelt__btn canvas-toolbelt__btn--primary"
+              :title="t('result.toolbar.stampGroupSelectTitle')"
+              :aria-label="t('result.toolbar.stampGroupSelect')"
+              :disabled="!canSelectStampMembers"
+              @click="emit('selectStampMembers')"
+              @pointerup="releaseControlFocus"
+            >
+              {{ t('result.toolbar.stampGroupSelect') }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

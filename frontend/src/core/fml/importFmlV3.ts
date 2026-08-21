@@ -1,4 +1,5 @@
 import { foldBovenlichtOnWall } from './bovenlicht'
+import { stripBakedSliceDimensionsFromPlan } from './btf-slices'
 import { wallLengthCm } from './fml-wall-geom'
 import type {
   DrawingMeta,
@@ -663,5 +664,6 @@ export function importFmlV3(json: string | object): ImportResult {
     source: parsePlanSource(raw),
   }
 
-  return { plan, warnings }
+  // Slicer-bake op P-lijn opnieuw genereren; strip uit dimensions zodat live/export niet dubbelt.
+  return { plan: stripBakedSliceDimensionsFromPlan(plan), warnings }
 }

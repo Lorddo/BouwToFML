@@ -63,6 +63,7 @@
   flex-wrap: nowrap;
   row-gap: 4px;
   max-width: 100%;
+  overflow: visible;
 }
 
 .fml-toolbelt-stack {

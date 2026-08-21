@@ -14,6 +14,7 @@ import {
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
 import { formatMeasureDistanceCm } from '@/ui/composables/fml-preview/fml-preview-measure'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -80,12 +81,13 @@ function onUpdateY(raw: string) {
     <button
       v-if="!active"
       type="button"
-      class="rescale-btn"
+      class="sidebar-icon-btn"
       :disabled="!canStart"
       :title="t('result.rescaleHint')"
       @click="emit('begin')"
     >
-      {{ t('result.rescale') }}
+      <ToolbeltIcon name="rescale" />
+      <span>{{ t('result.rescale') }}</span>
     </button>
 
     <template v-else>
@@ -137,21 +139,9 @@ function onUpdateY(raw: string) {
   margin: 0 0 10px;
 }
 
-.rescale-btn {
-  width: 100%;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.rescale-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.fml-rescale-panel > .sidebar-icon-btn {
+  justify-content: flex-start;
+  text-align: left;
 }
 
 .rescale-title {

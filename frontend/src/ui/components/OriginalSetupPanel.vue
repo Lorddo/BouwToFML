@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PreprocessConfig } from '@/core/extraction/types'
 import { hasPendingInputRotation } from '@/platform/canvas/rotationPreview'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const model = defineModel<PreprocessConfig>({ required: true })
 const props = withDefaults(
@@ -51,8 +52,14 @@ const bakeDisabled = computed(() => props.baking || !props.canBake || !pendingRo
         />
       </div>
     </div>
-    <button type="button" class="primary" :disabled="bakeDisabled" @click="emit('bakeRotation')">
-      {{ baking ? t('input.bakingRotation') : t('input.bakeRotation') }}
+    <button
+      type="button"
+      class="sidebar-icon-btn sidebar-icon-btn--primary"
+      :disabled="bakeDisabled"
+      @click="emit('bakeRotation')"
+    >
+      <ToolbeltIcon name="rotate_90" />
+      <span>{{ baking ? t('input.bakingRotation') : t('input.bakeRotation') }}</span>
     </button>
   </div>
 </template>
@@ -91,19 +98,11 @@ const bakeDisabled = computed(() => props.baking || !props.canBake || !pendingRo
 
 .hint {
   font-size: 12px;
-  color: #64748b;
-  margin: 0 0 8px;
-  line-height: 1.4;
+  color: #666;
+  margin: 4px 0;
 }
 
-button {
-  display: block;
-  width: 100%;
-  margin-top: 10px;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.sidebar-icon-btn {
+  margin-top: 8px;
 }
 </style>

@@ -37,7 +37,7 @@ const fontSizeStage = computed(() => areaLabelFontSizeStage(props.layoutScale))
 const labeledSurfaces = computed(() => {
   if (!showLabels.value) return []
   if (!areaLabelVisibleOnScreen(fontSizeStage.value, props.viewScale)) return []
-  return props.surfaces.filter((surface) => surface.label)
+  return props.surfaces.filter((surface) => surface.label && surface.showAreaLabel !== false)
 })
 /** Edit-handles blijven zichtbaar ook als benaming uit staat. */
 const editHandleVertices = computed(() =>

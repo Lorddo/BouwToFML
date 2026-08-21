@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+import type { FloorLineType } from '@/core/fml/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import {
   isFmlOneshotDrawTool,
@@ -15,12 +16,17 @@ import FmlPreviewToolbarSettingsWall from './FmlPreviewToolbarSettingsWall.vue'
 import FmlPreviewToolbarSettingsOpening from './FmlPreviewToolbarSettingsOpening.vue'
 import FmlPreviewToolbarSettingsArea from './FmlPreviewToolbarSettingsArea.vue'
 import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue'
+import FmlPreviewToolbarSettingsLine from './FmlPreviewToolbarSettingsLine.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
 import FmlPreviewToolbarSettingsDraw from './FmlPreviewToolbarSettingsDraw.vue'
 
 const { t } = useI18n()
 
 const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })
+const measureDrawMode = defineModel<'tape' | 'manual' | 'slicer'>('measureDrawMode', {
+  default: 'tape',
+})
+const slicerEditMode = defineModel<boolean>('slicerEditMode', { default: false })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
 const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
 const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
@@ -29,7 +35,14 @@ const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 }
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
+const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
+const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
 const drawLabelText = defineModel<string>('drawLabelText', { default: 'Tekst' })
+const drawLabelFontSize = defineModel<number>('drawLabelFontSize', { default: 16 })
+const drawLabelFontColor = defineModel<string>('drawLabelFontColor', { default: '#000000' })
+const drawLabelOutline = defineModel<boolean>('drawLabelOutline', { default: false })
+const drawLabelBold = defineModel<boolean>('drawLabelBold', { default: false })
+const drawLabelItalic = defineModel<boolean>('drawLabelItalic', { default: false })
 
 const props = withDefaults(
   defineProps<{
@@ -71,9 +84,24 @@ const props = withDefaults(
       name: string | null
       customName: string
       color: string
+      showAreaLabel: boolean
       canEditPolygon: boolean
     } | null
-    selectedLabelPanel?: { id: string; text: string } | null
+    selectedLabelPanel?: {
+      id: string
+      text: string
+      fontSize: number
+      fontColor: string
+      outline: boolean
+      bold: boolean
+      italic: boolean
+    } | null
+    selectedLinePanel?: {
+      id: string
+      type: FloorLineType
+      color: string
+      thickness: number
+    } | null
     selectedItemPanel?: {
       id: string
       label: string
@@ -115,6 +143,8 @@ const props = withDefaults(
     thicknessMidCm?: number
     thicknessMaxCm?: number
     measureLineCount?: number
+    /** Alleen editor: manual + slicer beschikbaar. */
+    measurePersistEnabled?: boolean
     drawWallDrafting?: boolean
     drawWallMeasureLengthCm?: number
     drawRoomDrafting?: boolean
@@ -127,12 +157,19 @@ const props = withDefaults(
     facadeGroupDraft?: string | null
     facadeGroupMixed?: boolean
     canSelectFacadeMembers?: boolean
+    facadeGroupsStampPreset?: boolean
+    /** Editor: Stempel-checkbox (niet workspace-preset). */
+    stampGroupEnabled?: boolean
+    stampGroupDraft?: boolean | null
+    stampGroupMixed?: boolean
+    canSelectStampMembers?: boolean
   }>(),
   {
     thicknessMinCm: 10,
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
     measureLineCount: 0,
+    measurePersistEnabled: false,
     drawWallDrafting: false,
     drawWallMeasureLengthCm: 0,
     drawRoomDrafting: false,
@@ -145,9 +182,15 @@ const props = withDefaults(
     facadeGroupDraft: '',
     facadeGroupMixed: false,
     canSelectFacadeMembers: false,
+    facadeGroupsStampPreset: false,
+    stampGroupEnabled: false,
+    stampGroupDraft: false,
+    stampGroupMixed: false,
+    canSelectStampMembers: false,
     selectedAreaPanel: null,
     selectedJunctionPanel: null,
     selectedLabelPanel: null,
+    selectedLinePanel: null,
     selectedItemPanel: null,
     roomTypes: () => [],
     surfaceEditActive: false,
@@ -186,15 +229,26 @@ const emit = defineEmits<{
   facadeGroupChange: [value: string]
   facadeGroupRename: [name: string]
   selectFacadeMembers: []
+  stampGroupChange: [enabled: boolean]
+  selectStampMembers: []
   clearMeasures: []
   applyRoomType: [role: number]
   areaCustomNameInput: [customName: string]
   applyAreaCustomName: [customName: string]
   applyAreaColor: [color: string]
+  applyShowAreaLabel: [show: boolean]
   deleteTagged: []
   labelTextInput: [value: string]
   updateLabelText: [value: string]
+  updateLabelFontSize: [value: number]
+  updateLabelFontColor: [value: string]
+  updateLabelOutline: [value: boolean]
+  updateLabelBold: [value: boolean]
+  updateLabelItalic: [value: boolean]
   deleteAnnotation: []
+  updateLineType: [type: FloorLineType]
+  updateLineColor: [color: string]
+  updateLineThickness: [thickness: number]
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
   itemWidthInput: [event: Event]
@@ -250,6 +304,7 @@ const showSettings = computed(() =>
     hasOpeningSelection: props.selectedOpeningPanel != null,
     hasAreaSelection: props.selectedAreaPanel != null,
     hasLabelSelection: props.selectedLabelPanel != null,
+    hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
     activeTool: activeTool.value,
   }),
@@ -262,9 +317,7 @@ const measureCountLabel = computed(() => {
     : t('result.toolbar.measureCountMany', { count })
 })
 
-const showMeasureStrip = computed(
-  () => activeTool.value === 'measure' && (props.measureLineCount ?? 0) > 0,
-)
+const showMeasureStrip = computed(() => activeTool.value === 'measure')
 
 const showDeselect = computed(
   () =>
@@ -273,6 +326,7 @@ const showDeselect = computed(
     props.selectedOpeningPanel != null ||
     props.selectedAreaPanel != null ||
     props.selectedLabelPanel != null ||
+    props.selectedLinePanel != null ||
     props.selectedItemPanel != null,
 )
 </script>
@@ -309,6 +363,11 @@ const showDeselect = computed(
         :facade-group-draft="facadeGroupDraft"
         :facade-group-mixed="facadeGroupMixed"
         :can-select-facade-members="canSelectFacadeMembers"
+        :facade-groups-stamp-preset="facadeGroupsStampPreset"
+        :stamp-group-enabled="stampGroupEnabled"
+        :stamp-group-draft="stampGroupDraft"
+        :stamp-group-mixed="stampGroupMixed"
+        :can-select-stamp-members="canSelectStampMembers"
         @wall-thickness-input="emit('wallThicknessInput', $event)"
         @commit-wall-thickness="emit('commitWallThickness')"
         @apply-wall-thickness="emit('applyWallThickness', $event)"
@@ -323,6 +382,8 @@ const showDeselect = computed(
         @facade-group-change="emit('facadeGroupChange', $event)"
         @facade-group-rename="emit('facadeGroupRename', $event)"
         @select-facade-members="emit('selectFacadeMembers')"
+        @stamp-group-change="emit('stampGroupChange', $event)"
+        @select-stamp-members="emit('selectStampMembers')"
         @draw-wall-length-input="emit('drawWallLengthInput', $event)"
         @commit-draw-wall-measure="emit('commitDrawWallMeasure')"
         @cancel-draw-wall-draft="emit('cancelDrawWallDraft')"
@@ -373,7 +434,14 @@ const showDeselect = computed(
           "
           v-model:draw-surface-role="drawSurfaceRole"
           v-model:draw-line-thickness="drawLineThickness"
+          v-model:draw-line-type="drawLineType"
+          v-model:draw-line-color="drawLineColor"
           v-model:draw-label-text="drawLabelText"
+          v-model:draw-label-font-size="drawLabelFontSize"
+          v-model:draw-label-font-color="drawLabelFontColor"
+          v-model:draw-label-outline="drawLabelOutline"
+          v-model:draw-label-bold="drawLabelBold"
+          v-model:draw-label-italic="drawLabelItalic"
           :active-tool="activeTool"
           :room-types="roomTypes"
         />
@@ -431,6 +499,7 @@ const showDeselect = computed(
           @area-custom-name-input="emit('areaCustomNameInput', $event)"
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
           @apply-area-color="emit('applyAreaColor', $event)"
+          @apply-show-area-label="emit('applyShowAreaLabel', $event)"
           @delete-tagged="emit('deleteTagged')"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
@@ -440,6 +509,19 @@ const showDeselect = computed(
           :selected-label-panel="selectedLabelPanel"
           @label-text-input="emit('labelTextInput', $event)"
           @update-label-text="emit('updateLabelText', $event)"
+          @update-label-font-size="emit('updateLabelFontSize', $event)"
+          @update-label-font-color="emit('updateLabelFontColor', $event)"
+          @update-label-outline="emit('updateLabelOutline', $event)"
+          @update-label-bold="emit('updateLabelBold', $event)"
+          @update-label-italic="emit('updateLabelItalic', $event)"
+          @delete-annotation="emit('deleteAnnotation')"
+        />
+        <FmlPreviewToolbarSettingsLine
+          v-if="selectedLinePanel"
+          :selected-line-panel="selectedLinePanel"
+          @update-line-type="emit('updateLineType', $event)"
+          @update-line-color="emit('updateLineColor', $event)"
+          @update-line-thickness="emit('updateLineThickness', $event)"
           @delete-annotation="emit('deleteAnnotation')"
         />
         <FmlPreviewToolbarSettingsItem
@@ -490,16 +572,72 @@ const showDeselect = computed(
   <template v-if="showMeasureStrip">
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
     <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <span class="fml-toolbelt__meta">{{ measureCountLabel }}</span>
+      <label class="fml-toolbelt__meta fml-measure-mode">
+        <span>{{ t('result.toolbar.measureModeLabel') }}</span>
+        <select v-model="measureDrawMode" class="fml-measure-mode__select">
+          <option value="tape">{{ t('result.toolbar.measureModeTape') }}</option>
+          <option v-if="measurePersistEnabled" value="manual">
+            {{ t('result.toolbar.measureModeManual') }}
+          </option>
+          <option v-if="measurePersistEnabled" value="slicer">
+            {{ t('result.toolbar.measureModeSlicer') }}
+          </option>
+        </select>
+      </label>
       <button
+        v-if="measureDrawMode === 'slicer'"
+        type="button"
+        class="canvas-toolbelt__btn"
+        :class="{ 'is-active': slicerEditMode }"
+        :title="t('result.toolbar.slicerEditToggle')"
+        :aria-label="t('result.toolbar.slicerEditToggle')"
+        :aria-pressed="slicerEditMode"
+        @click="slicerEditMode = !slicerEditMode"
+      >
+        <ToolbeltIcon name="edit" />
+      </button>
+      <span
+        v-if="measureDrawMode === 'tape' && (measureLineCount ?? 0) > 0"
+        class="fml-toolbelt__meta"
+      >
+        {{ measureCountLabel }}
+      </span>
+      <button
+        v-if="measureDrawMode === 'tape' && (measureLineCount ?? 0) > 0"
         type="button"
         class="canvas-toolbelt__btn"
         :title="t('result.toolbar.clearMeasures')"
         :aria-label="t('result.toolbar.clearMeasures')"
         @click="emit('clearMeasures')"
       >
+        <ToolbeltIcon name="delete" />
+      </button>
+      <button
+        type="button"
+        class="canvas-toolbelt__btn"
+        :title="t('result.toolbar.deactivateDrawTool')"
+        :aria-label="t('result.toolbar.deactivateDrawTool')"
+        @click="emit('deactivateDrawTool')"
+      >
         <ToolbeltIcon name="clear" />
       </button>
     </div>
   </template>
 </template>
+
+<style scoped>
+.fml-measure-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fml-measure-mode__select {
+  height: 26px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 6px;
+  font-size: 12px;
+  background: #fff;
+  color: #334155;
+}
+</style>

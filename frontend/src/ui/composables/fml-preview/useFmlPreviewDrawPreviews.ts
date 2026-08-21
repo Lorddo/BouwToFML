@@ -6,6 +6,7 @@ export function useFmlPreviewDrawPreviews(opts: {
   drawWallPreview: Ref<{ a: Point2D; b: Point2D } | null>
   drawRoomPreview: Ref<Point2D[] | null>
   drawSurfacePoints?: Ref<Point2D[] | null>
+  drawSurfaceHoverCm?: Ref<Point2D | null>
   drawLinePoints?: Ref<Point2D[] | null>
   drawLineHoverCm?: Ref<Point2D | null>
   contentLayout: Ref<ContentLayout | null>
@@ -16,6 +17,7 @@ export function useFmlPreviewDrawPreviews(opts: {
     drawWallPreview,
     drawRoomPreview,
     drawSurfacePoints,
+    drawSurfaceHoverCm,
     drawLinePoints,
     drawLineHoverCm,
     contentLayout,
@@ -62,13 +64,17 @@ export function useFmlPreviewDrawPreviews(opts: {
     const layout = contentLayout.value
     if (!pts || pts.length === 0 || !layout) return null
     const { toStagePoint } = layoutTransform(layout)
-    return pts.map((p) => {
+    const toScreen = (p: Point2D) => {
       const stage = toStagePoint(p.x, p.y)
       return {
         x: viewPosition.value.x + stage.x * viewScale.value,
         y: viewPosition.value.y + stage.y * viewScale.value,
       }
-    })
+    }
+    const screen = pts.map(toScreen)
+    const hover = drawSurfaceHoverCm?.value
+    if (hover) screen.push(toScreen(hover))
+    return screen
   })
 
   const drawSurfacePreviewPolyline = computed(() => {

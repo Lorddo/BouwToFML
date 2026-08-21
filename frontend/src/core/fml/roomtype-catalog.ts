@@ -14,12 +14,17 @@ interface CatalogJson {
 }
 
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/
+const HEX_LOOSE_RE = /^#?([0-9A-Fa-f]{6})$/
+
+/** FML-kleur: `#RRGGBB` (hoofdletters). Zonder `#` of andere casing wordt genormaliseerd. */
+export function parseFmlHex(raw: string | undefined | null): string | null {
+  if (typeof raw !== 'string') return null
+  const m = HEX_LOOSE_RE.exec(raw.trim())
+  return m ? `#${m[1].toUpperCase()}` : null
+}
 
 function normalizeHex(raw: string | undefined, fallback: string): string {
-  const t = (raw ?? '').trim()
-  if (HEX_RE.test(t)) return t.toUpperCase()
-  if (HEX_RE.test(fallback)) return fallback.toUpperCase()
-  return UNLABELED_AREA_COLOR
+  return parseFmlHex(raw) ?? parseFmlHex(fallback) ?? UNLABELED_AREA_COLOR
 }
 
 const entries: RoomTypeEntry[] = ((catalogData as CatalogJson).entries ?? [])

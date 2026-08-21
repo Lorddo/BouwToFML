@@ -10,7 +10,7 @@ import { createByteArrayHistory } from '@/cv/tools/maskHistory'
 import type { InkRectBounds, InkStrokePoint } from '@/cv/tools/inkEdit'
 import type { InkToolId } from '@/ui/components/canvas/canvas-toolbelt.types'
 import type { WorkspaceFlowStep } from './workspace/constants'
-import { isUndoKey } from './workspace/isUndoKey'
+import { isRedoKey, isUndoKey } from './workspace/isUndoKey'
 import type { WorkspaceWallBwCompose } from './workspace/useWorkspaceWallBwCompose'
 
 export function useWorkspaceInkEdit(deps: {
@@ -26,6 +26,7 @@ export function useWorkspaceInkEdit(deps: {
   const inkEditStale = ref(false)
   const editHistory = createByteArrayHistory({ maxSteps: 30 })
   const canUndoInkEdit = ref(false)
+  const canRedoInkEdit = ref(false)
 
   const inkToolbeltVisible = computed(
     () => deps.flowStep.value === 'preprocess' || deps.flowStep.value === 'templates',
@@ -33,8 +34,9 @@ export function useWorkspaceInkEdit(deps: {
 
   const canvasInkTool = computed(() => (inkToolbeltVisible.value ? activeInkTool.value : null))
 
-  function syncCanUndo() {
+  function syncInkHistoryFlags() {
     canUndoInkEdit.value = editHistory.canUndo()
+    canRedoInkEdit.value = editHistory.canRedo()
   }
 
   function ensureOverlay(): { overlay: Uint8Array; width: number; height: number } | null {
@@ -49,7 +51,7 @@ export function useWorkspaceInkEdit(deps: {
     const state = ensureOverlay()
     if (!state) return
     editHistory.push(state.overlay)
-    syncCanUndo()
+    syncInkHistoryFlags()
   }
 
   function notifyChanged() {
@@ -103,12 +105,29 @@ export function useWorkspaceInkEdit(deps: {
     if (deps.flowStep.value === 'templates') {
       inkEditStale.value = true
     }
-    syncCanUndo()
+    syncInkHistoryFlags()
+    deps.onInkChanged?.()
+  }
+
+  function redoInkEdit() {
+    const state = ensureOverlay()
+    if (!state || !editHistory.redo(state.overlay)) return
+    inkEditTouched.value = inkOverlayHasEdits(state.overlay)
+    if (deps.flowStep.value === 'templates') {
+      inkEditStale.value = true
+    }
+    syncInkHistoryFlags()
     deps.onInkChanged?.()
   }
 
   function onInkUndoKeydown(event: KeyboardEvent) {
     if (!inkToolbeltVisible.value) return
+    if (isRedoKey(event)) {
+      if (!canRedoInkEdit.value) return
+      event.preventDefault()
+      redoInkEdit()
+      return
+    }
     if (!isUndoKey(event) || !canUndoInkEdit.value) return
     event.preventDefault()
     undoInkEdit()
@@ -119,7 +138,7 @@ export function useWorkspaceInkEdit(deps: {
     inkEditTouched.value = false
     inkEditStale.value = false
     editHistory.clear()
-    syncCanUndo()
+    syncInkHistoryFlags()
   }
 
   function resetInkEdit() {
@@ -145,7 +164,7 @@ export function useWorkspaceInkEdit(deps: {
       inkEditTouched.value = false
       inkEditStale.value = false
       editHistory.clear()
-      syncCanUndo()
+      syncInkHistoryFlags()
       return
     }
     inkEditTouched.value = inkOverlayHasEdits(deps.wallBw.inkOverlay.value)
@@ -157,6 +176,7 @@ export function useWorkspaceInkEdit(deps: {
     inkEditTouched,
     inkEditStale,
     canUndoInkEdit,
+    canRedoInkEdit,
     inkToolbeltVisible,
     canvasInkTool,
     onInkBrushStroke,
@@ -164,6 +184,7 @@ export function useWorkspaceInkEdit(deps: {
     onInkLine,
     onInkRect,
     undoInkEdit,
+    redoInkEdit,
     onInkUndoKeydown,
     resetInkEdit,
     clearInkEditStale,

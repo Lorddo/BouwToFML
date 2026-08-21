@@ -23,9 +23,18 @@ describe('isFmlToolbarSettingsOpen', () => {
 
   it('is uit zonder selectie of teken-tool', () => {
     expect(isFmlToolbarSettingsOpen(none)).toBe(false)
-    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'measure' })).toBe(false)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt' })).toBe(false)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'box_select' })).toBe(false)
+  })
+
+  it('is aan bij maatlijn-tool (mode-dropdown), ook zonder tape-lijnen', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'measure' })).toBe(true)
+    expect(
+      isFmlToolbarSettingsOpen({ ...none, activeTool: 'measure', hasMeasureLines: true }),
+    ).toBe(true)
+    expect(
+      isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt', hasMeasureLines: true }),
+    ).toBe(false)
   })
 
   it('is aan bij selectie of muur/deur/raam-tool', () => {
@@ -34,6 +43,7 @@ describe('isFmlToolbarSettingsOpen', () => {
     expect(isFmlToolbarSettingsOpen({ ...none, hasOpeningSelection: true })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasAreaSelection: true })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasLabelSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasLineSelection: true })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_wall' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_line' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_label' })).toBe(true)

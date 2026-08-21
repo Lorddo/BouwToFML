@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { FML_ORIENT_CONTROLS_VISIBLE } from '@/ui/composables/workspace/constants'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const { t } = useI18n()
 
@@ -34,56 +35,61 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="fml-actions">
+  <div class="fml-actions sidebar-icon-row">
     <button
       v-if="FML_ORIENT_CONTROLS_VISIBLE"
       type="button"
-      class="orient-btn"
-      :class="{ 'orient-btn--active': fmlOrientFlipX }"
+      class="sidebar-icon-btn"
+      :class="{ 'is-on': fmlOrientFlipX }"
       :disabled="!hasCombinedOutput || !scaleConfirmed"
       :title="t('result.mirrorVerticalHint')"
       @click="emit('mirrorVertical')"
     >
-      {{ t('result.mirrorVertical') }}
+      <ToolbeltIcon name="mirror_plan" />
+      <span>{{ t('result.mirrorVertical') }}</span>
     </button>
     <button
       v-if="FML_ORIENT_CONTROLS_VISIBLE"
       type="button"
-      class="orient-btn"
-      :class="{ 'orient-btn--active': projectOrientFlipX }"
+      class="sidebar-icon-btn"
+      :class="{ 'is-on': projectOrientFlipX }"
       :disabled="!hasAnyFloorFml"
       :title="t('result.mirrorProjectHint')"
       @click="emit('mirrorProject')"
     >
-      {{ t('result.mirrorProject') }}
+      <ToolbeltIcon name="mirror_plan" />
+      <span>{{ t('result.mirrorProject') }}</span>
     </button>
     <button
       v-if="FML_ORIENT_CONTROLS_VISIBLE"
       type="button"
-      class="orient-btn"
+      class="sidebar-icon-btn"
       :disabled="!hasCombinedOutput || !scaleConfirmed"
       :title="t('result.rotate90CcwHint')"
       @click="emit('rotate90Ccw')"
     >
-      {{ t('result.rotate90Ccw') }}
+      <ToolbeltIcon name="rotate_plan_ccw" />
+      <span>{{ t('result.rotate90Ccw') }}</span>
     </button>
     <button
       v-if="FML_ORIENT_CONTROLS_VISIBLE"
       type="button"
-      class="orient-btn"
+      class="sidebar-icon-btn"
       :disabled="!hasCombinedOutput || !scaleConfirmed"
       :title="t('result.rotate90CwHint')"
       @click="emit('rotate90Cw')"
     >
-      {{ t('result.rotate90Cw') }}
+      <ToolbeltIcon name="rotate_plan_cw" />
+      <span>{{ t('result.rotate90Cw') }}</span>
     </button>
     <button
       type="button"
-      class="regenerate-btn"
+      class="sidebar-icon-btn sidebar-icon-btn--primary"
       :disabled="!hasCombinedOutput || !scaleConfirmed || !fmlLimitsDirty"
       @click="emit('regenerate')"
     >
-      {{ t('result.regenerate') }}
+      <ToolbeltIcon name="check" />
+      <span>{{ t('result.regenerate') }}</span>
     </button>
   </div>
   <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">
@@ -93,36 +99,8 @@ const emit = defineEmits<{
 
 <style scoped>
 .fml-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.orient-btn {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  border-radius: 4px;
-  padding: 4px 8px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.orient-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.orient-btn--active {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.regenerate-btn:not(:disabled) {
-  border-color: #f59e0b;
-  background: #fffbeb;
-  color: #92400e;
+  margin-top: 8px;
+  margin-bottom: 0;
 }
 
 .fml-hint {

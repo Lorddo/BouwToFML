@@ -236,20 +236,43 @@ export function harmonizeFmlWallThickness(
   limits: FmlWallThicknessLimits,
   boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
   faceEvidenceById?: Map<string, WallFaceExtentsCm>,
+  pinnedWallIds?: ReadonlySet<string> | readonly string[],
 ): FloorPlan {
+  const pinned =
+    pinnedWallIds == null
+      ? null
+      : pinnedWallIds instanceof Set
+        ? pinnedWallIds
+        : new Set(pinnedWallIds)
+
   return {
     ...plan,
     floors: plan.floors.map((floor) => {
-      const chains = buildFmlThicknessChains(floor.walls, boundaries)
+      const freeIndices: number[] = []
+      for (let index = 0; index < floor.walls.length; index += 1) {
+        const wall = floor.walls[index]
+        if (!wall) continue
+        if (pinned?.has(wall.id)) continue
+        freeIndices.push(index)
+      }
+
+      const freeWalls = freeIndices.map((index) => floor.walls[index])
+      const freeChains = buildFmlThicknessChains(freeWalls, boundaries)
       const thicknessByIndex = new Map<number, number>()
 
-      for (const chain of chains) {
-        const band = resolveChainBand(chain, floor.walls, boundaries)
+      for (const chain of freeChains) {
+        const band = resolveChainBand(chain, freeWalls, boundaries)
         const exportThickness = resolveBandThicknessCm(band, limits)
-        for (const index of chain) thicknessByIndex.set(index, exportThickness)
+        for (const local of chain) {
+          const globalIndex = freeIndices[local]
+          if (globalIndex != null) thicknessByIndex.set(globalIndex, exportThickness)
+        }
       }
 
       const thicknessAssigned = floor.walls.map((wall, index) => {
+        if (pinned?.has(wall.id)) {
+          return wall
+        }
         const exportThickness =
           thicknessByIndex.get(index) ??
           resolveBandThicknessCm(

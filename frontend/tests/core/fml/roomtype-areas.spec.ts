@@ -5,6 +5,7 @@ import {
   factoryRoomTypeColor,
   listRoomTypes,
   normalizeRoomTagColors,
+  parseFmlHex,
   resolveRoomType,
   UNLABELED_AREA_COLOR,
 } from '@/core/fml/roomtype-catalog'
@@ -36,6 +37,14 @@ describe('roomtype-catalog', () => {
     expect(out).toEqual({ '2': '#AABBCC' })
     // gelijke fabriek mag weg
     expect(normalizeRoomTagColors({ '2': factory })).toEqual({})
+  })
+
+  it('parseFmlHex normaliseert naar #RRGGBB', () => {
+    expect(parseFmlHex('#ffdfbf')).toBe('#FFDFBF')
+    expect(parseFmlHex('CEEDF3')).toBe('#CEEDF3')
+    expect(parseFmlHex('#FFF')).toBeNull()
+    expect(parseFmlHex('rgb(255, 223, 191)')).toBeNull()
+    expect(parseFmlHex(undefined)).toBeNull()
   })
 
   it('displayAreaLabel prefer customName', () => {

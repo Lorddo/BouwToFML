@@ -62,6 +62,20 @@ export function layoutTransform(layout: ContentLayout) {
   }
 }
 
+/** true als `bounds` buiten de huidige fit-world valt (import/generate/onderlegger groter). */
+export function worldOverflowsLayout(
+  layout: ContentLayout,
+  bounds: ExtraContentBounds,
+  padCm = 1,
+): boolean {
+  return (
+    bounds.minX < layout.minX - padCm ||
+    bounds.minY < layout.minY - padCm ||
+    bounds.minX + bounds.spanX > layout.minX + layout.spanX + padCm ||
+    bounds.minY + bounds.spanY > layout.minY + layout.spanY + padCm
+  )
+}
+
 function mergeBounds(
   a: ExtraContentBounds | null,
   b: ExtraContentBounds | null,
@@ -166,6 +180,12 @@ export function useFmlPreviewViewport(
     viewPosition.value = { x: 0, y: 0 }
   }
 
+  function worldOverflowsCurrentLayout(): boolean {
+    const layout = contentLayout.value
+    if (!layout) return true
+    return worldOverflowsLayout(layout, resolveBounds(walls.value, items.value))
+  }
+
   const renderTransform = computed(() => {
     const layout = contentLayout.value
     if (!layout) {
@@ -178,10 +198,11 @@ export function useFmlPreviewViewport(
   })
 
   watch(extraBounds, (next, prev) => {
-    if (walls.value.length > 0) return
     if (!next || next.spanX <= 0 || next.spanY <= 0) return
     const appeared = !prev || prev.spanX <= 0 || prev.spanY <= 0
-    if (appeared) resetView()
+    if (!appeared) return
+    // Onderlegger komt later binnen dan muren: herfit alleen als die de world vergroot.
+    if (!contentLayout.value || worldOverflowsCurrentLayout()) resetView()
   })
 
   function mountResizeObserver(): void {
@@ -209,6 +230,7 @@ export function useFmlPreviewViewport(
     nudgeContentLayout,
     ensureContentLayout,
     resetView,
+    worldOverflowsCurrentLayout,
     updateStageSize,
     mountResizeObserver,
     unmountResizeObserver,

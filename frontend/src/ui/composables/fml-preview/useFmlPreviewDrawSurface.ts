@@ -5,6 +5,7 @@ import {
   effectiveRoomTypeColor,
   resolveRoomType,
 } from '@/core/fml/roomtype-catalog'
+import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -12,42 +13,56 @@ import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
 /**
- * Surface-tekentool: klik vertices, Shift = H/V t.o.v. vorig punt,
- * junction-snap (Ctrl/Cmd = uit), sluiten via dubbelklik / eerste punt / Enter.
+ * Surface-tekentool: klik vertices, rubber-band naar cursor.
+ * Soft H/V naar geplaatste punten + muureinden; hoeken/ribben van andere polygonen;
+ * Shift = vast H/V t.o.v. vorig punt; junction-snap (Ctrl/Cmd = uit);
+ * sluiten via dubbelklik / eerste punt / Enter.
  */
 export function useFmlPreviewDrawSurface(options: {
   selection: FmlPreviewSelectionRefs
   editor: EditorApi
   hitTest: { clientToCm: (clientX: number, clientY: number) => Point2D | null }
   shiftPressed: Ref<boolean>
-  /** Snap naar junctions; bij Ctrl/Cmd gewoon raw cm teruggeven. */
-  resolvePoint: (cm: Point2D, snapDisabled: boolean) => Point2D
+  /** Snap naar junctions, andere polygonen (hoek/ribbe) en H/V-assen; Ctrl/Cmd = raw. */
+  resolvePoint: (
+    cm: Point2D,
+    snapDisabled: boolean,
+    extraAxisPoints?: Point2D[],
+    excludeSurfaceId?: string | null,
+  ) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
 }) {
   const draftPoints = options.selection.drawSurfacePoints
+  const hoverCm = ref<Point2D | null>(null)
   const pendingRole = ref<number | null>(null)
   const CLOSE_EPS_CM = 8
 
   function cancelDrawSurface(): void {
     draftPoints.value = null
+    hoverCm.value = null
   }
 
-  function lockAxis(cm: Point2D): Point2D {
+  function maybeCloseSnap(point: Point2D, snapDisabled: boolean): Point2D {
+    if (snapDisabled) return point
     const pts = draftPoints.value
-    if (!options.shiftPressed.value || !pts || pts.length === 0) return cm
-    const last = pts[pts.length - 1]
-    const dx = Math.abs(cm.x - last.x)
-    const dy = Math.abs(cm.y - last.y)
-    if (dx >= dy) return { x: cm.x, y: last.y }
-    return { x: last.x, y: cm.y }
+    if (!pts || pts.length < 3) return point
+    const first = pts[0]
+    if (Math.hypot(point.x - first.x, point.y - first.y) <= CLOSE_EPS_CM) {
+      return { x: first.x, y: first.y }
+    }
+    return point
   }
 
   function resolveClick(event: MouseEvent): Point2D | null {
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return null
     const snapDisabled = event.ctrlKey || event.metaKey
-    return lockAxis(options.resolvePoint(cm, snapDisabled))
+    const pts = draftPoints.value
+    const snapped = options.resolvePoint(cm, snapDisabled, pts ?? undefined)
+    const last = pts && pts.length > 0 ? pts[pts.length - 1] : null
+    const locked = last ? snapDrawWallEndpoint(last, snapped, options.shiftPressed.value) : snapped
+    return maybeCloseSnap(locked, snapDisabled)
   }
 
   function tryClose(): boolean {
@@ -67,9 +82,22 @@ export function useFmlPreviewDrawSurface(options: {
       showAreaLabel: true,
     })
     draftPoints.value = null
+    hoverCm.value = null
     options.selection.activeFmlTool.value = null
     options.syncPlanToParent()
     return true
+  }
+
+  function updateDrawSurfaceHover(event: MouseEvent): void {
+    if (!draftPoints.value?.length) {
+      hoverCm.value = null
+      return
+    }
+    hoverCm.value = resolveClick(event)
+  }
+
+  function clearDrawSurfaceHover(): void {
+    hoverCm.value = null
   }
 
   function onDrawSurfaceClick(event: MouseEvent): void {
@@ -78,6 +106,7 @@ export function useFmlPreviewDrawSurface(options: {
     if (!draftPoints.value) {
       options.beforeBegin()
       draftPoints.value = [locked]
+      hoverCm.value = locked
       return
     }
     const first = draftPoints.value[0]
@@ -89,6 +118,7 @@ export function useFmlPreviewDrawSurface(options: {
       return
     }
     draftPoints.value = [...draftPoints.value, locked]
+    hoverCm.value = locked
   }
 
   function onDrawSurfaceDblClick(event: MouseEvent): void {
@@ -103,10 +133,13 @@ export function useFmlPreviewDrawSurface(options: {
 
   return {
     draftPoints,
+    hoverCm,
     pendingRole,
     cancelDrawSurface,
     onDrawSurfaceClick,
     onDrawSurfaceDblClick,
+    updateDrawSurfaceHover,
+    clearDrawSurfaceHover,
     commitDrawSurface,
   }
 }

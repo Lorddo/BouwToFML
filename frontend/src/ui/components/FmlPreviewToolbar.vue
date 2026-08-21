@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+import type { FloorLineType } from '@/core/fml/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
@@ -21,6 +22,10 @@ const dockRef = ref<HTMLElement | null>(null)
 useChromeFitScale(dockRef)
 
 const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null })
+const measureDrawMode = defineModel<'tape' | 'manual' | 'slicer'>('measureDrawMode', {
+  default: 'tape',
+})
+const slicerEditMode = defineModel<boolean>('slicerEditMode', { default: false })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
 const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
 const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
@@ -30,7 +35,14 @@ const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 15
 const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { default: false })
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
+const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
+const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
 const drawLabelText = defineModel<string>('drawLabelText', { default: 'Tekst' })
+const drawLabelFontSize = defineModel<number>('drawLabelFontSize', { default: 16 })
+const drawLabelFontColor = defineModel<string>('drawLabelFontColor', { default: '#000000' })
+const drawLabelOutline = defineModel<boolean>('drawLabelOutline', { default: false })
+const drawLabelBold = defineModel<boolean>('drawLabelBold', { default: false })
+const drawLabelItalic = defineModel<boolean>('drawLabelItalic', { default: false })
 
 const props = withDefaults(
   defineProps<{
@@ -72,6 +84,7 @@ const props = withDefaults(
       name: string | null
       customName: string
       color: string
+      showAreaLabel: boolean
       canEditPolygon: boolean
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
@@ -81,7 +94,21 @@ const props = withDefaults(
     /** draw_label + draw_line; default false. */
     includeAnnotationTools?: boolean
     includeFixtureTool?: boolean
-    selectedLabelPanel?: { id: string; text: string } | null
+    selectedLabelPanel?: {
+      id: string
+      text: string
+      fontSize: number
+      fontColor: string
+      outline: boolean
+      bold: boolean
+      italic: boolean
+    } | null
+    selectedLinePanel?: {
+      id: string
+      type: FloorLineType
+      color: string
+      thickness: number
+    } | null
     selectedItemPanel?: {
       id: string
       label: string
@@ -91,7 +118,7 @@ const props = withDefaults(
       mirroredX: boolean
       mirroredY: boolean
     } | null
-    /** Viewer: hint zit in de info-modal, niet als balk. */
+    /** Topbar aanwezig: hint zit in de info-modal, niet als balk. */
     hideInlineHint?: boolean
     /** `/FML-editor` touch: floating balk + settings-kaart (niet workspace). */
     floatingDock?: boolean
@@ -127,6 +154,7 @@ const props = withDefaults(
     thicknessMidCm?: number
     thicknessMaxCm?: number
     measureLineCount?: number
+    measurePersistEnabled?: boolean
     drawWallDrafting?: boolean
     drawWallMeasureLengthCm?: number
     drawRoomDrafting?: boolean
@@ -139,12 +167,20 @@ const props = withDefaults(
     facadeGroupDraft?: string | null
     facadeGroupMixed?: boolean
     canSelectFacadeMembers?: boolean
+    /** Workspace: alleen Stempel-preset (geen nieuwe groep / rename). */
+    facadeGroupsStampPreset?: boolean
+    /** Editor: Stempel-select naast gevel. */
+    stampGroupEnabled?: boolean
+    stampGroupDraft?: boolean | null
+    stampGroupMixed?: boolean
+    canSelectStampMembers?: boolean
   }>(),
   {
     thicknessMinCm: 10,
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
     measureLineCount: 0,
+    measurePersistEnabled: false,
     drawWallDrafting: false,
     drawWallMeasureLengthCm: 0,
     drawRoomDrafting: false,
@@ -157,6 +193,11 @@ const props = withDefaults(
     facadeGroupDraft: '',
     facadeGroupMixed: false,
     canSelectFacadeMembers: false,
+    facadeGroupsStampPreset: false,
+    stampGroupEnabled: false,
+    stampGroupDraft: false,
+    stampGroupMixed: false,
+    canSelectStampMembers: false,
     selectedAreaPanel: null,
     selectedJunctionPanel: null,
     roomTypes: () => [],
@@ -165,6 +206,7 @@ const props = withDefaults(
     includeAnnotationTools: false,
     includeFixtureTool: false,
     selectedLabelPanel: null,
+    selectedLinePanel: null,
     selectedItemPanel: null,
     hideInlineHint: false,
     floatingDock: false,
@@ -204,15 +246,26 @@ const emit = defineEmits<{
   facadeGroupChange: [value: string]
   facadeGroupRename: [name: string]
   selectFacadeMembers: []
+  stampGroupChange: [enabled: boolean]
+  selectStampMembers: []
   clearMeasures: []
   applyRoomType: [role: number]
   areaCustomNameInput: [customName: string]
   applyAreaCustomName: [customName: string]
   applyAreaColor: [color: string]
+  applyShowAreaLabel: [show: boolean]
   deleteTagged: []
   labelTextInput: [value: string]
   updateLabelText: [value: string]
+  updateLabelFontSize: [value: number]
+  updateLabelFontColor: [value: string]
+  updateLabelOutline: [value: boolean]
+  updateLabelBold: [value: boolean]
+  updateLabelItalic: [value: boolean]
   deleteAnnotation: []
+  updateLineType: [type: FloorLineType]
+  updateLineColor: [color: string]
+  updateLineThickness: [thickness: number]
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
   itemWidthInput: [event: Event]
@@ -270,7 +323,9 @@ const settingsOpen = computed(() =>
     hasOpeningSelection: props.selectedOpeningPanel != null,
     hasAreaSelection: props.selectedAreaPanel != null,
     hasLabelSelection: props.selectedLabelPanel != null,
+    hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
+    hasMeasureLines: (props.measureLineCount ?? 0) > 0,
     activeTool: activeTool.value,
   }),
 )
@@ -278,7 +333,15 @@ const settingsOpen = computed(() =>
 const showDrawingTools = computed(() => !settingsOpen.value)
 
 const hint = computed(() => {
-  if (activeTool.value === 'measure') return t('result.toolbar.hintMeasure')
+  if (activeTool.value === 'measure') {
+    if (measureDrawMode.value === 'manual') return t('result.toolbar.hintMeasureManual')
+    if (measureDrawMode.value === 'slicer') {
+      return slicerEditMode.value
+        ? t('result.toolbar.hintMeasureSlicerEdit')
+        : t('result.toolbar.hintMeasureSlicer')
+    }
+    return t('result.toolbar.hintMeasureTape')
+  }
   if (activeTool.value === 'nulpunt') return t('result.toolbar.hintNulpunt')
   if (activeTool.value === 'draw_wall') return t('result.toolbar.hintDrawWall')
   if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom')
@@ -297,6 +360,9 @@ const hint = computed(() => {
   if (activeTool.value === 'box_select') return t('result.toolbar.hintBoxSelect')
   if (props.selectedLabelPanel && props.includeAnnotationTools === true) {
     return t('result.toolbar.hintLabelSelected')
+  }
+  if (props.selectedLinePanel && props.includeAnnotationTools === true) {
+    return t('result.toolbar.hintLineSelected')
   }
   if (props.selectedAreaPanel && props.includeSurfaceTool === true) {
     return props.selectedAreaPanel.kind === 'surface'
@@ -390,6 +456,7 @@ defineExpose({ hint })
           :selected-opening-panel="selectedOpeningPanel"
           :selected-area-panel="selectedAreaPanel"
           :selected-label-panel="selectedLabelPanel"
+          :selected-line-panel="selectedLinePanel"
           :selected-item-panel="selectedItemPanel"
           :room-types="roomTypes"
           :surface-edit-active="surfaceEditActive"
@@ -414,22 +481,32 @@ defineExpose({ hint })
           :opening-swing-right-draft="openingSwingRightDraft"
           :opening-swing-mixed="openingSwingMixed"
           :opening-bovenlicht-draft="openingBovenlichtDraft"
+          v-model:measure-draw-mode="measureDrawMode"
           :opening-bovenlicht-mixed="openingBovenlichtMixed"
+          v-model:slicer-edit-mode="slicerEditMode"
           :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
-          :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
-          :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
-          :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
-          :thickness-min-cm="thicknessMinCm"
-          :thickness-mid-cm="thicknessMidCm"
-          :thickness-max-cm="thicknessMaxCm"
-          :measure-line-count="measureLineCount"
-          :draw-wall-drafting="drawWallDrafting"
-          :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
           v-model:draw-surface-role="drawSurfaceRole"
-          :draw-room-drafting="drawRoomDrafting"
+          :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
           v-model:draw-line-thickness="drawLineThickness"
-          :draw-room-measure-h-cm="drawRoomMeasureHCm"
+          :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+          v-model:draw-line-type="drawLineType"
+          :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+          v-model:draw-line-color="drawLineColor"
+          :thickness-min-cm="thicknessMinCm"
           v-model:draw-label-text="drawLabelText"
+          :thickness-mid-cm="thicknessMidCm"
+          v-model:draw-label-font-size="drawLabelFontSize"
+          :thickness-max-cm="thicknessMaxCm"
+          v-model:draw-label-font-color="drawLabelFontColor"
+          :measure-line-count="measureLineCount"
+          v-model:draw-label-outline="drawLabelOutline"
+          :measure-persist-enabled="measurePersistEnabled"
+          v-model:draw-label-bold="drawLabelBold"
+          :draw-wall-drafting="drawWallDrafting"
+          v-model:draw-label-italic="drawLabelItalic"
+          :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
+          :draw-room-drafting="drawRoomDrafting"
+          :draw-room-measure-h-cm="drawRoomMeasureHCm"
           :draw-room-measure-v-cm="drawRoomMeasureVCm"
           :draw-line-drafting="drawLineDrafting"
           :draw-surface-drafting="drawSurfaceDrafting"
@@ -438,6 +515,11 @@ defineExpose({ hint })
           :facade-group-draft="facadeGroupDraft"
           :facade-group-mixed="facadeGroupMixed"
           :can-select-facade-members="canSelectFacadeMembers"
+          :facade-groups-stamp-preset="facadeGroupsStampPreset"
+          :stamp-group-enabled="stampGroupEnabled"
+          :stamp-group-draft="stampGroupDraft"
+          :stamp-group-mixed="stampGroupMixed"
+          :can-select-stamp-members="canSelectStampMembers"
           @wall-thickness-input="emit('wallThicknessInput', $event)"
           @commit-wall-thickness="emit('commitWallThickness')"
           @apply-wall-thickness="emit('applyWallThickness', $event)"
@@ -468,16 +550,27 @@ defineExpose({ hint })
           @facade-group-change="emit('facadeGroupChange', $event)"
           @facade-group-rename="emit('facadeGroupRename', $event)"
           @select-facade-members="emit('selectFacadeMembers')"
+          @stamp-group-change="emit('stampGroupChange', $event)"
+          @select-stamp-members="emit('selectStampMembers')"
           @clear-selection="emit('clearSelection')"
           @clear-measures="emit('clearMeasures')"
           @apply-room-type="emit('applyRoomType', $event)"
           @area-custom-name-input="emit('areaCustomNameInput', $event)"
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
           @apply-area-color="emit('applyAreaColor', $event)"
+          @apply-show-area-label="emit('applyShowAreaLabel', $event)"
           @delete-tagged="emit('deleteTagged')"
           @label-text-input="emit('labelTextInput', $event)"
           @update-label-text="emit('updateLabelText', $event)"
+          @update-label-font-size="emit('updateLabelFontSize', $event)"
+          @update-label-font-color="emit('updateLabelFontColor', $event)"
+          @update-label-outline="emit('updateLabelOutline', $event)"
+          @update-label-bold="emit('updateLabelBold', $event)"
+          @update-label-italic="emit('updateLabelItalic', $event)"
           @delete-annotation="emit('deleteAnnotation')"
+          @update-line-type="emit('updateLineType', $event)"
+          @update-line-color="emit('updateLineColor', $event)"
+          @update-line-thickness="emit('updateLineThickness', $event)"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
           @item-width-input="emit('itemWidthInput', $event)"

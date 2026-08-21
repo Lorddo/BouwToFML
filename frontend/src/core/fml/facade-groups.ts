@@ -1,10 +1,16 @@
 /**
  * Project-brede gevelgroepen in `plan.source.settings.facadeGroups`.
  * Muur-GUID = haak; geen extras op de muur (Floorplanner stript die bij edit).
+ *
+ * Stempel (`stamp`) is orthogonaal: een muur mag in stamp + max. 1 gevelgroep.
  */
 import type { FloorPlan, FloorPlanSource, FmlExtras, Wall } from './types'
 
 export const FACADE_GROUPS_SETTINGS_KEY = 'facadeGroups'
+
+/** Vaste preset in workspace-detectie (stap 4 → muurstempel) en editor-stempel. */
+export const STAMP_FACADE_GROUP_ID = 'stamp'
+export const STAMP_FACADE_GROUP_NAME = 'Stempel'
 
 export interface FacadeGroup {
   id: string
@@ -68,17 +74,32 @@ function normalizeGroup(raw: unknown): FacadeGroup | null {
   }
 }
 
+function isStampGroup(group: FacadeGroup): boolean {
+  return group.id === STAMP_FACADE_GROUP_ID
+}
+
 /**
- * Max één groep per muur-GUID: eerste groep wint.
- * Lege groepen blijven (createFacadeGroup); wissen via removeEmptyGroups.
+ * Max één gevelgroep per muur-GUID (stamp telt niet mee).
+ * Binnen stamp: geen dubbele GUIDs. Lege groepen blijven (createFacadeGroup);
+ * wissen via removeEmptyGroups.
  */
 function enforceUniqueWallMembership(groups: FacadeGroup[]): FacadeGroup[] {
-  const claimed = new Set<string>()
+  const claimedFacade = new Set<string>()
   return groups.map((group) => {
+    if (isStampGroup(group)) {
+      const seen = new Set<string>()
+      const wallGuids: string[] = []
+      for (const id of group.wallGuids) {
+        if (seen.has(id)) continue
+        seen.add(id)
+        wallGuids.push(id)
+      }
+      return { ...group, wallGuids }
+    }
     const wallGuids: string[] = []
     for (const id of group.wallGuids) {
-      if (claimed.has(id)) continue
-      claimed.add(id)
+      if (claimedFacade.has(id)) continue
+      claimedFacade.add(id)
       wallGuids.push(id)
     }
     return { ...group, wallGuids }
@@ -110,10 +131,11 @@ function nextGroupId(existing: FacadeGroup[]): string {
 }
 
 function removeEmptyGroups(groups: FacadeGroup[]): FacadeGroup[] {
-  return groups.filter((group) => group.wallGuids.length > 0)
+  // Preset «Stempel» blijft altijd (lege set = stempel valt terug op diktebanden).
+  return groups.filter((group) => group.wallGuids.length > 0 || group.id === STAMP_FACADE_GROUP_ID)
 }
 
-/** Lees + normaliseer `settings.facadeGroups` (dubbele muur-GUIDs: eerste groep wint). */
+/** Lees + normaliseer `settings.facadeGroups` (dubbele gevel-GUIDs: eerste groep wint). */
 export function listFacadeGroups(plan: FloorPlan | null | undefined): FacadeGroup[] {
   const raw = plan?.source?.settings?.[FACADE_GROUPS_SETTINGS_KEY]
   if (!Array.isArray(raw)) return []
@@ -128,6 +150,10 @@ export function listFacadeGroups(plan: FloorPlan | null | undefined): FacadeGrou
   return enforceUniqueWallMembership(out)
 }
 
+/**
+ * Gevelgroep-id voor een muur (slaat `stamp` over).
+ * Null = geen gevelgroep (kan wél in stamp zitten).
+ */
 export function groupIdForWall(
   plan: FloorPlan | null | undefined,
   wallGuid: string,
@@ -135,9 +161,16 @@ export function groupIdForWall(
   const id = wallGuid.trim()
   if (!id) return null
   for (const group of listFacadeGroups(plan)) {
+    if (isStampGroup(group)) continue
     if (group.wallGuids.includes(id)) return group.id
   }
   return null
+}
+
+export function isWallInStampGroup(plan: FloorPlan | null | undefined, wallGuid: string): boolean {
+  const id = wallGuid.trim()
+  if (!id) return false
+  return wallGuidsInGroup(plan, STAMP_FACADE_GROUP_ID).includes(id)
 }
 
 export function wallGuidsInGroup(plan: FloorPlan | null | undefined, groupId: string): string[] {
@@ -157,6 +190,70 @@ export function createFacadeGroup(
   const next = [...existing, { id, code, name, wallGuids: [] as string[] }]
   writeGroups(plan, next)
   return next[next.length - 1]
+}
+
+/**
+ * Zorg dat workspace-preset «Stempel» bestaat (vaste id `stamp`).
+ * @returns true als de groep net is aangemaakt (caller kan parent syncen).
+ */
+export function ensureStampFacadeGroup(plan: FloorPlan): boolean {
+  const existing = listFacadeGroups(plan)
+  if (existing.some((group) => group.id === STAMP_FACADE_GROUP_ID)) return false
+  writeGroups(plan, [
+    ...existing,
+    {
+      id: STAMP_FACADE_GROUP_ID,
+      code: STAMP_FACADE_GROUP_ID,
+      name: STAMP_FACADE_GROUP_NAME,
+      wallGuids: [],
+    },
+  ])
+  return true
+}
+
+/** Muren op `floorIndex` die in de Stempel-groep zitten. */
+export function wallsInStampGroup(plan: FloorPlan | null | undefined, floorIndex = 0): Wall[] {
+  if (!plan) return []
+  const floor = plan.floors[floorIndex]
+  if (!floor?.walls?.length) return []
+  const ids = new Set(facadeMemberIdsOnFloor(plan, STAMP_FACADE_GROUP_ID, floorIndex))
+  if (ids.size === 0) return []
+  return floor.walls.filter((wall) => ids.has(wall.id))
+}
+
+/** Verwijder `facadeGroups` uit settings (workspace-download). */
+export function stripFacadeGroupsFromPlan(plan: FloorPlan): FloorPlan {
+  const settings = plan.source?.settings
+  if (!settings || !(FACADE_GROUPS_SETTINGS_KEY in settings)) return plan
+  const nextSettings = { ...settings }
+  delete nextSettings[FACADE_GROUPS_SETTINGS_KEY]
+  return {
+    ...plan,
+    source: plan.source ? { ...plan.source, settings: nextSettings } : { settings: nextSettings },
+  }
+}
+
+/** Verwijder alleen `stamp` uit facadeGroups (editor-download; gevelgroepen blijven). */
+export function stripStampGroupFromPlan(plan: FloorPlan): FloorPlan {
+  const groups = listFacadeGroups(plan)
+  if (!groups.some((group) => group.id === STAMP_FACADE_GROUP_ID)) return plan
+  const next = groups.filter((group) => group.id !== STAMP_FACADE_GROUP_ID)
+  const cloned: FloorPlan = {
+    ...plan,
+    source: plan.source
+      ? { ...plan.source, settings: { ...plan.source.settings } }
+      : { settings: {} },
+  }
+  if (next.length === 0) {
+    const settings = { ...(cloned.source?.settings ?? {}) }
+    delete settings[FACADE_GROUPS_SETTINGS_KEY]
+    return {
+      ...cloned,
+      source: { ...cloned.source!, settings },
+    }
+  }
+  writeGroups(cloned, next)
+  return cloned
 }
 
 export function renameFacadeGroup(
@@ -179,8 +276,10 @@ export function renameFacadeGroup(
 }
 
 /**
- * Zet muren in `groupId`. Verplaatst uit andere groepen.
- * Lege groepen verdwijnen.
+ * Zet muren in `groupId`.
+ * - Gevelgroep: verplaatst uit andere gevelgroepen; stamp-lidmaatschap blijft.
+ * - Stamp: voegt toe zonder gevel-lidmaatschap te wissen.
+ * Lege gevelgroepen verdwijnen (stamp blijft).
  */
 export function assignWallsToGroup(
   plan: FloorPlan,
@@ -194,7 +293,9 @@ export function assignWallsToGroup(
   if (!groups.some((group) => group.id === groupId)) return null
 
   const idSet = new Set(ids)
+  const targetIsStamp = groupId === STAMP_FACADE_GROUP_ID
   const emptiedByMove = new Set<string>()
+
   groups = groups.map((group) => {
     if (group.id === groupId) {
       const merged = [...group.wallGuids]
@@ -203,13 +304,16 @@ export function assignWallsToGroup(
       }
       return { ...group, wallGuids: merged }
     }
+    // Stamp-assign raakt andere groepen niet; gevel-assign raakt stamp niet.
+    if (targetIsStamp || isStampGroup(group)) {
+      return group
+    }
     const nextGuids = group.wallGuids.filter((id) => !idSet.has(id))
     if (nextGuids.length === 0 && group.wallGuids.length > 0) {
       emptiedByMove.add(group.id)
     }
     return { ...group, wallGuids: nextGuids }
   })
-  // Alleen groepen die door verplaatsen leeg raakten wissen (niet net-aangemaakte lege G2).
   writeGroups(
     plan,
     groups.filter((group) => !emptiedByMove.has(group.id)),
@@ -217,7 +321,41 @@ export function assignWallsToGroup(
   return listFacadeGroups(plan).find((g) => g.id === groupId) ?? null
 }
 
-/** Haal muren uit alle groepen; lege groepen weg. */
+/** Zet muren in Stempel (zorgt dat stamp-groep bestaat). */
+export function assignWallsToStamp(plan: FloorPlan, wallGuids: readonly string[]): void {
+  ensureStampFacadeGroup(plan)
+  assignWallsToGroup(plan, STAMP_FACADE_GROUP_ID, wallGuids)
+}
+
+/** Haal muren alleen uit Stempel; gevel-lidmaatschap blijft. */
+export function detachWallsFromStamp(plan: FloorPlan, wallGuids: readonly string[]): void {
+  const idSet = new Set(normalizeWallGuids(wallGuids))
+  if (idSet.size === 0) return
+  const groups = listFacadeGroups(plan).map((group) => {
+    if (!isStampGroup(group)) return group
+    return {
+      ...group,
+      wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
+    }
+  })
+  writeGroups(plan, removeEmptyGroups(groups))
+}
+
+/** Haal muren alleen uit gevelgroepen; stamp-lidmaatschap blijft. */
+export function detachWallsFromFacade(plan: FloorPlan, wallGuids: readonly string[]): void {
+  const idSet = new Set(normalizeWallGuids(wallGuids))
+  if (idSet.size === 0) return
+  const groups = listFacadeGroups(plan).map((group) => {
+    if (isStampGroup(group)) return group
+    return {
+      ...group,
+      wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
+    }
+  })
+  writeGroups(plan, removeEmptyGroups(groups))
+}
+
+/** Haal muren uit alle groepen (gevel + stamp); lege groepen weg. */
 export function detachWalls(plan: FloorPlan, wallGuids: readonly string[]): void {
   const idSet = new Set(normalizeWallGuids(wallGuids))
   if (idSet.size === 0) return
@@ -269,9 +407,8 @@ export function pruneFacadeGroups(plan: FloorPlan): FacadeGroup[] {
 }
 
 /**
- * Split-hook: vervang `fromId` door `intoIds` in de groep die `fromId` bevat.
- * Typisch: eerste helft houdt oude id, tweede = nieuwe split-host id.
- * Alleen die ene groep krijgt de nieuwe ids (geen dubbele lidmaatschappen).
+ * Split-hook: vervang `fromId` door `intoIds` in elke groep die `fromId` bevat
+ * (gevel én stamp). Typisch: eerste helft houdt oude id, tweede = nieuwe split-host id.
  */
 export function remapFacadeGroupWallIds(
   plan: FloorPlan,
@@ -283,12 +420,15 @@ export function remapFacadeGroupWallIds(
   const replacements = normalizeWallGuids(intoIds)
   if (replacements.length === 0) return
 
-  const ownerId = groupIdForWall(plan, from)
-  if (!ownerId) return
+  const ownerIds = new Set<string>()
+  for (const group of listFacadeGroups(plan)) {
+    if (group.wallGuids.includes(from)) ownerIds.add(group.id)
+  }
+  if (ownerIds.size === 0) return
 
   const replacementSet = new Set(replacements)
   const groups = listFacadeGroups(plan).map((group) => {
-    if (group.id === ownerId) {
+    if (ownerIds.has(group.id)) {
       const next: string[] = []
       const seen = new Set<string>()
       for (const id of group.wallGuids) {
@@ -306,7 +446,7 @@ export function remapFacadeGroupWallIds(
       }
       return { ...group, wallGuids: next }
     }
-    // Nieuwe split-ids niet in andere groepen laten staan (corrupt import).
+    // Nieuwe split-ids niet in niet-eigenaar-groepen laten staan (corrupt import).
     return {
       ...group,
       wallGuids: group.wallGuids.filter((id) => id !== from && !replacementSet.has(id)),

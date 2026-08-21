@@ -40,6 +40,7 @@ import { buildWorkspaceDevSessionDeps } from './workspace/buildWorkspaceDevSessi
 import { buildWorkspaceRoomPipelineDeps } from './workspace/buildWorkspaceRoomPipelineDeps'
 import { useWorkspacePreprocessWiring } from './workspace/useWorkspacePreprocessWiring'
 import { useWallStamp } from './workspace/useWallStamp'
+import { expandUnderlayForStamp } from './workspace/expand-underlay-for-stamp'
 import { useWorkspaceGapsFaces } from './workspace/useWorkspaceGapsFaces'
 import { useWorkspaceDoorSwingFaces } from './workspace/useWorkspaceDoorSwingFaces'
 import { useWorkspaceWindowFaces } from './workspace/useWorkspaceWindowFaces'
@@ -224,7 +225,15 @@ export function useWorkspace() {
       void wallBw.composeAndPublish()
       void preprocessUi.publishWallBwUnderlay()
     },
+    onBakeNulpunt: (nulpunt) => {
+      // Zaai current nulpunt alleen als leeg; bakeNulpuntImageCm zit in wallStamp.
+      if (fmlApi && fmlApi.fmlNulpuntImageCm.value == null) {
+        fmlApi.setFmlNulpuntImageCm(nulpunt)
+      }
+    },
   })
+  /** Stap-2: Stempelset van donor gebruiken wanneer beschikbaar (default aan). */
+  const wallStampUseStampSet = ref(true)
   bindStampBwGetter(() => wallStamp.getComposeStampBw())
 
   watch(
@@ -529,8 +538,65 @@ export function useWorkspace() {
     planName: fmlPlanName,
     floorName: fmlFloorName,
     floorLevel: fmlFloorLevel,
+    getStampVectorInject: () => {
+      if (!wallStamp.baked.value || !wallStamp.skipBandFilter.value) return null
+      const bake = wallStamp.bakeNulpuntImageCm.value
+      const walls = wallStamp.getFilteredInjectWalls()
+      if (!bake || walls.length === 0) return null
+      const donorId = wallStamp.donorFloorId.value
+      const donor = donorId ? project.getStampDonorWalls(donorId) : null
+      return {
+        walls,
+        bakeNulpuntImageCm: { ...bake },
+        facadeLookupPlan: donor?.plan ?? null,
+      }
+    },
   })
   fmlApi = fml
+
+  async function expandUnderlayForStampIfNeeded() {
+    return expandUnderlayForStamp({
+      originalImageEl,
+      imageName,
+      setImageSource,
+      image,
+      wallStamp,
+      wallBw,
+      scale,
+      rects,
+      eraserMask: inputMask.eraserMask,
+      ocrMask: inputMask.ocrMask,
+      ocrMaskedRegions: inputMask.ocrMaskedRegions,
+      getFmlNulpuntImageCm: () => fml.fmlNulpuntImageCm.value ?? null,
+      setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
+      publishWallBwUnderlay: () => preprocessUi.publishWallBwUnderlay(),
+    })
+  }
+
+  async function startWallStamp(donorFloorId: string, useStampSet?: boolean): Promise<boolean> {
+    const donor = project.getStampDonorWalls(donorFloorId)
+    if (!donor) {
+      setLocalError(tGlobal('preprocess.stampErrors.noFmlWalls'))
+      return false
+    }
+    const preferStamp =
+      (useStampSet ?? wallStampUseStampSet.value) !== false && donor.stampWalls.length > 0
+    const walls = preferStamp ? donor.stampWalls : donor.walls
+    const ok = wallStamp.beginFromDonor({
+      donorFloorId,
+      walls,
+      originCm: donor.originCm,
+      skipBandFilter: preferStamp,
+    })
+    if (ok) await expandUnderlayForStampIfNeeded()
+    return ok
+  }
+
+  async function bakeWallStamp(): Promise<boolean> {
+    const padResult = await expandUnderlayForStampIfNeeded()
+    if (padResult === 'too-large' || padResult === 'failed') return false
+    return wallStamp.bake()
+  }
 
   const exports = useWorkspaceExports({
     imageName,
@@ -1193,7 +1259,11 @@ export function useWorkspace() {
     wallStampBrushRadius: wallStamp.brushRadius,
     wallStampBusy: wallStamp.busy,
     wallStampError: wallStamp.error,
+    wallStampBakedInjectCount: wallStamp.bakedInjectCount,
     wallStampDonorFloorId: wallStamp.donorFloorId,
+    wallStampUseStampSet,
+    /** Stempelset: geen resize-handles (alleen sleep). */
+    wallStampAllowResize: computed(() => !wallStamp.skipBandFilter.value),
     canStartWallStamp: computed(() => project.listStampDonorFloors().length > 0),
     wallStampDonorOptions: computed(() => project.listStampDonorFloors()),
     /** Canvas: polygoon-gum tijdens stempel-mode (stap 2). */
@@ -1203,18 +1273,7 @@ export function useWorkspace() {
     wallStampCanvasEraserEnabled: computed(
       () => wallStamp.active.value && wallStamp.gumMode.value === 'brush',
     ),
-    startWallStamp: (donorFloorId: string) => {
-      const donor = project.getStampDonorWalls(donorFloorId)
-      if (!donor) {
-        setLocalError(tGlobal('preprocess.stampErrors.noFmlWalls'))
-        return false
-      }
-      return wallStamp.beginFromDonor({
-        donorFloorId,
-        walls: donor.walls,
-        originCm: donor.originCm,
-      })
-    },
+    startWallStamp,
     setWallStampBands: wallStamp.setBands,
     setWallStampBounds: wallStamp.setBounds,
     setWallStampGumMode: (mode: 'off' | 'brush' | 'polygon') => {
@@ -1225,7 +1284,7 @@ export function useWorkspace() {
     },
     applyWallStampBrushErase: wallStamp.applyBrushErase,
     applyWallStampPolygonErase: wallStamp.applyPolygonErasePoints,
-    bakeWallStamp: wallStamp.bake,
+    bakeWallStamp,
     cancelWallStamp: wallStamp.cancelActive,
     clearWallStamp: wallStamp.clear,
   }

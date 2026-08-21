@@ -3,7 +3,7 @@
  * Host chrome may diverge; canvas + toolbelt/rail/stage stay consistent.
  */
 :root {
-  --fml-canvas-bg: #f8fafc;
+  --fml-canvas-bg: #ffffff;
   --fml-canvas-border: #cbd5e1;
   --fml-canvas-radius: 8px;
   --fml-canvas-min-height: 320px;

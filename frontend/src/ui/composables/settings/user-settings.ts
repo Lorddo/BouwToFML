@@ -28,6 +28,7 @@ import {
   normalizeOpeningDisplayColors,
   type OpeningDisplayColors,
 } from './opening-display-colors'
+import { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
 
 export type { ScaleInputUnit } from './scale-input-unit'
 export {
@@ -57,6 +58,7 @@ export const USER_SETTINGS_VERSION = 1 as const
 /** Factory FML-viewer opacities (percent 0–100). */
 export const DEFAULT_FML_UNDERLAY_OPACITY_PCT = 25
 export const DEFAULT_FML_CONTENT_OPACITY_PCT = 80
+export { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
 
 export type FmlViewerSettings = {
   underlayOpacityPct: number
@@ -65,6 +67,8 @@ export type FmlViewerSettings = {
   cornerMarkerMode: CornerMarkerMode
   /** Preview-kleuren deuren / ramen / bovenlicht-hartlijn. */
   openingColors: OpeningDisplayColors
+  /** Soft-snap P↔M-offset (voorkeur + andere slices). */
+  slicerOffsetSnapCm: number
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
@@ -133,6 +137,7 @@ export function createFactoryFmlViewerSettings(): FmlViewerSettings {
     fmlOpacityPct: DEFAULT_FML_CONTENT_OPACITY_PCT,
     cornerMarkerMode: DEFAULT_CORNER_MARKER_MODE,
     openingColors: createFactoryOpeningDisplayColors(),
+    slicerOffsetSnapCm: DEFAULT_SLICER_OFFSET_SNAP_CM,
   }
 }
 
@@ -193,6 +198,7 @@ function normalizeFmlViewer(
     fmlOpacityPct: clampOpacityPct(src.fmlOpacityPct, factory.fmlOpacityPct),
     cornerMarkerMode: normalizeCornerMarkerMode(src.cornerMarkerMode ?? factory.cornerMarkerMode),
     openingColors: normalizeOpeningDisplayColors(src.openingColors ?? factory.openingColors),
+    slicerOffsetSnapCm: positiveCm(src.slicerOffsetSnapCm, factory.slicerOffsetSnapCm),
   }
 }
 

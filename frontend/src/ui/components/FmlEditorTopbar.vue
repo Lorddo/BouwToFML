@@ -4,33 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
-const props = defineProps<{
-  canUndo: boolean
-  canRedo: boolean
-  hint?: string
-  fullscreen?: boolean
-  /** Geen app-header: topbar gebruikt safe-area. */
-  edgeChrome?: boolean
-  /** Inspect: geen teken-tips. */
-  showHelp?: boolean
-}>()
-
-const emit = defineEmits<{
-  undo: []
-  redo: []
-  fit: []
-  zoomIn: []
-  zoomOut: []
-  toggleFullscreen: []
-}>()
-
-const { t } = useI18n()
-const helpOpen = ref(false)
-const helpQuery = ref('')
-const topbarRef = ref<HTMLElement | null>(null)
-useChromeFitScale(topbarRef)
-
-const helpKeys = [
+const DEFAULT_FML_HELP_KEYS = [
   'result.toolbar.hintDefault',
   'result.toolbar.hintMeasure',
   'result.toolbar.hintNulpunt',
@@ -50,9 +24,39 @@ const helpKeys = [
   'result.toolbar.hintWindowOne',
 ] as const
 
+const props = defineProps<{
+  canUndo: boolean
+  canRedo: boolean
+  hint?: string
+  fullscreen?: boolean
+  /** Geen app-header: topbar gebruikt safe-area. */
+  edgeChrome?: boolean
+  /** Inspect: geen teken-tips. */
+  showHelp?: boolean
+  /** i18n-keys voor de zoekbare help-lijst (default = FML editor). */
+  helpKeys?: readonly string[]
+}>()
+
+const emit = defineEmits<{
+  undo: []
+  redo: []
+  fit: []
+  zoomIn: []
+  zoomOut: []
+  toggleFullscreen: []
+}>()
+
+const { t } = useI18n()
+const helpOpen = ref(false)
+const helpQuery = ref('')
+const topbarRef = ref<HTMLElement | null>(null)
+useChromeFitScale(topbarRef)
+
+const resolvedHelpKeys = computed(() => props.helpKeys ?? DEFAULT_FML_HELP_KEYS)
+
 const helpItems = computed(() => {
   const q = helpQuery.value.trim().toLowerCase()
-  const items = helpKeys.map((key) => t(key, { count: 2 }))
+  const items = resolvedHelpKeys.value.map((key) => t(key, { count: 2, type: '…' }))
   if (!q) return items
   return items.filter((text) => text.toLowerCase().includes(q))
 })

@@ -60,6 +60,8 @@ interface PointerActions {
   clearDrawRoomHover: () => void
   onDrawSurfaceClick: (event: MouseEvent) => void
   onDrawSurfaceDblClick: (event: MouseEvent) => void
+  updateDrawSurfaceHover: (event: MouseEvent) => void
+  clearDrawSurfaceHover: () => void
   onDrawLabelClick: (event: MouseEvent) => void
   onDrawLineClick: (event: MouseEvent) => void
   updateDrawLineHover: (event: MouseEvent) => void
@@ -494,6 +496,10 @@ export function useFmlPreviewPointer(options: {
       actions.updateDrawRoomHover(event)
       return
     }
+    if (modes.drawSurfaceMode.value) {
+      actions.updateDrawSurfaceHover(event)
+      return
+    }
     if (modes.drawLineMode.value) {
       actions.updateDrawLineHover(event)
       return
@@ -501,6 +507,7 @@ export function useFmlPreviewPointer(options: {
     actions.clearMeasureHover()
     actions.clearDrawWallHover()
     actions.clearDrawRoomHover()
+    actions.clearDrawSurfaceHover()
     actions.clearDrawLineHover()
 
     pendingMoveEvent = event

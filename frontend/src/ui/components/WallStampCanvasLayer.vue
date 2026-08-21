@@ -10,6 +10,8 @@ const props = defineProps<{
   handleSize: number
   /** Ghost PNG in baseBounds-ruimte; wordt gestretcht naar live bounds. */
   ghostSrc?: string | null
+  /** false = alleen sleep (stempelset); default true (band-stempel). */
+  allowResize?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +21,7 @@ const emit = defineEmits<{
 const stroke = '#ea580c'
 const MIN = 8
 const ghostImageObj = ref<HTMLImageElement | null>(null)
+const resizeEnabled = computed(() => props.allowResize !== false)
 
 watch(
   () => props.ghostSrc,
@@ -82,8 +85,9 @@ function handlePos(
   }
 }
 
-const handleConfigs = computed(() =>
-  RESIZE_HANDLES.map((handle) => {
+const handleConfigs = computed(() => {
+  if (!resizeEnabled.value) return []
+  return RESIZE_HANDLES.map((handle) => {
     const p = handlePos(props.bounds, handle, props.handleSize)
     return {
       handle,
@@ -94,8 +98,8 @@ const handleConfigs = computed(() =>
       fill: '#fff',
       stroke,
     }
-  }),
-)
+  })
+})
 
 function applyResize(
   handle: ResizeHandle,
@@ -156,7 +160,7 @@ function onMoveDown(e: Konva.KonvaEventObject<MouseEvent>) {
 }
 
 function onHandleDown(e: Konva.KonvaEventObject<MouseEvent>, handle: ResizeHandle) {
-  if (!props.interactive) return
+  if (!props.interactive || !resizeEnabled.value) return
   e.cancelBubble = true
   const stage = stageFromEvent(e)
   const pos = stage ? pointerOnStage(stage) : null

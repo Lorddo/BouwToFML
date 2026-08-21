@@ -113,5 +113,27 @@ export function useFloorplanCanvasImage(deps: {
     }
   }
 
-  return { imageObj, rasterOverlayObj, rasterOverlayKey, imgSize, stageScale, fit }
+  /** Zoom around stage center (same factor as FML topbar ±). */
+  function zoomBy(factor: number) {
+    const stage = deps.getStage()
+    if (!stage) return
+    const oldScale = stage.scaleX()
+    const next = Math.max(0.05, Math.min(20, oldScale * factor))
+    const center = {
+      x: stage.width() / 2,
+      y: stage.height() / 2,
+    }
+    const mousePointTo = {
+      x: (center.x - stage.x()) / oldScale,
+      y: (center.y - stage.y()) / oldScale,
+    }
+    stage.scale({ x: next, y: next })
+    stage.position({
+      x: center.x - mousePointTo.x * next,
+      y: center.y - mousePointTo.y * next,
+    })
+    stageScale.value = next
+  }
+
+  return { imageObj, rasterOverlayObj, rasterOverlayKey, imgSize, stageScale, fit, zoomBy }
 }

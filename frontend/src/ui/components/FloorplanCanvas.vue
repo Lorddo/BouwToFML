@@ -13,13 +13,13 @@ import { useFloorplanFacePointer } from '../composables/useFloorplanFacePointer'
 import { useFloorplanMaskPointer } from '../composables/useFloorplanMaskPointer'
 import { useFloorplanPolygonPointer } from '../composables/useFloorplanPolygonPointer'
 import { useFloorplanPointerRouter } from '../composables/useFloorplanPointerRouter'
-import FloorplanToolbar from './FloorplanToolbar.vue'
 import FloorplanScaleOverlayLayer from './FloorplanScaleOverlayLayer.vue'
 import FloorplanPolygonDraftLayer from './FloorplanPolygonDraftLayer.vue'
 import FloorplanOverlayLayers from './FloorplanOverlayLayers.vue'
 import FloorplanSelectionLayer from './FloorplanSelectionLayer.vue'
 import FloorplanProbeLayer from './FloorplanProbeLayer.vue'
 import WallStampCanvasLayer from './WallStampCanvasLayer.vue'
+import FmlEditorTopbar from './FmlEditorTopbar.vue'
 import {
   FLOORPLAN_CANVAS_PROP_DEFAULTS,
   type FloorplanCanvasEmits,
@@ -40,7 +40,7 @@ const containerSize = ref({ width: 800, height: 600 })
 
 const { spacePressed, shiftPressed, onKeyDown, onKeyUp, wheelZoom, fitToScreen } = useStage()
 
-const { imageObj, rasterOverlayObj, imgSize, stageScale, fit } = useFloorplanCanvasImage({
+const { imageObj, rasterOverlayObj, imgSize, stageScale, fit, zoomBy } = useFloorplanCanvasImage({
   imageSrc: () => props.imageSrc,
   rasterOverlaySrc: () => props.rasterOverlaySrc,
   rasterOverlayRevision: () => props.rasterOverlayRevision,
@@ -58,7 +58,6 @@ const {
   isInkBrushMode,
   isInkLineMode,
   isInkRectMode,
-  isEraserMode,
   isPolygonMode,
   stageConfig,
   wrapClass,
@@ -255,33 +254,25 @@ const pointer = useFloorplanPointerRouter({
   emit,
 })
 
-defineExpose({ fit, imageObj, imgSize })
+defineExpose({ fit, zoomBy, imageObj, imgSize })
 </script>
 
 <template>
   <div ref="containerRef" class="canvas-wrap" :class="wrapClass">
-    <FloorplanToolbar
-      :polygon-tool-mode="polygonToolMode"
-      :is-eraser-mode="isEraserMode"
-      :is-draw-mode="isDrawMode"
-      :is-face-select-mode="isFaceSelectMode"
-      :is-face-box-mode="isFaceBoxMode"
-      :face-box-tool="faceTool"
-      :is-selection-mode="isSelectionMode"
-      :is-probe-mode="isProbeMode"
-      :probe-mode="probeMode"
-      :draw-type="drawType"
-      :ink-tool="inkTool"
-      :relocate-tool-hints="relocateToolHints"
+    <FmlEditorTopbar
+      :can-undo="canUndo"
+      :can-redo="canRedo"
+      :hint="instructionHint || undefined"
+      :fullscreen="canvasFullscreen"
+      :edge-chrome="canvasFullscreen"
+      :help-keys="helpKeys?.length ? helpKeys : undefined"
+      @undo="emit('undo')"
+      @redo="emit('redo')"
       @fit="fit"
+      @zoom-in="zoomBy(1.1)"
+      @zoom-out="zoomBy(1 / 1.1)"
+      @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
     />
-    <p
-      v-if="instructionHint"
-      class="canvas-instruction-hint"
-      :class="{ 'canvas-instruction-hint--stale': instructionHintStale }"
-    >
-      {{ instructionHint }}
-    </p>
     <v-stage
       ref="stageRef"
       :config="stageConfig"
@@ -296,6 +287,17 @@ defineExpose({ fit, imageObj, imgSize })
     >
       <v-layer>
         <v-group ref="underlayGroupRef" :config="underlayGroupConfig">
+          <v-rect
+            v-if="imgSize.w > 0 && imgSize.h > 0"
+            :config="{
+              x: 0,
+              y: 0,
+              width: imgSize.w,
+              height: imgSize.h,
+              fill: '#ffffff',
+              listening: false,
+            }"
+          />
           <v-image v-if="imageObj" :config="baseImageConfig" />
           <v-image
             v-if="rasterOverlayObj && showRasterOverlay"
@@ -424,6 +426,7 @@ defineExpose({ fit, imageObj, imgSize })
             :interactive="wallStampInteractive"
             :handle-size="handleSize"
             :ghost-src="wallStampGhostSrc"
+            :allow-resize="wallStampAllowResize !== false"
             @bounds-change="(b) => emit('wallStampBoundsChange', b)"
           />
         </v-group>

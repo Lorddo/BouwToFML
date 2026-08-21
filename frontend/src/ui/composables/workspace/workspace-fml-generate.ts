@@ -5,7 +5,7 @@ import { downloadFml } from '@/core/fml/downloadFml'
 import { extractionToPlanWithOrigin, type Layer12DoorForFml } from '@/core/fml/extractionToPlan'
 import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
 import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
-import { pruneFacadeGroups } from '@/core/fml/facade-groups'
+import { pruneFacadeGroups, stripFacadeGroupsFromPlan } from '@/core/fml/facade-groups'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import {
@@ -23,7 +23,11 @@ import {
   type FloorOrientOp,
   type FloorOrientState,
 } from '@/core/fml/floor-plan-orient'
-import type { FloorPlan, ImportWarning, Point2D } from '@/core/fml/types'
+import { injectStampWallsIntoPlan } from '@/core/fml/apply-stamp-to-floor'
+import { collectStampOwnedWallIds } from '@/core/fml/stamp-owned'
+import { resolveStampOwnership } from '@/core/fml/resolve-stamp-ownership'
+import { resolveStampInjectOffsetCm } from '@/core/fml/stamp-nulpunt'
+import type { FloorPlan, ImportWarning, Point2D, Wall } from '@/core/fml/types'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
@@ -79,6 +83,12 @@ export function countPlanElements(plan: FloorPlan | null): {
   return { walls, doors, windows }
 }
 
+export type WorkspaceFmlStampInject = {
+  walls: Wall[]
+  bakeNulpuntImageCm: Point2D
+  facadeLookupPlan?: FloorPlan | null
+}
+
 export type WorkspaceFmlGenerateDeps = {
   imageName: Ref<string | null>
   combinedOutput: Ref<ExtractionOutput | null>
@@ -94,6 +104,11 @@ export type WorkspaceFmlGenerateDeps = {
   planName?: Ref<string | null>
   floorName?: Ref<string | null>
   floorLevel?: Ref<number | null>
+  /**
+   * Stempelset vector-inject (stap 2 bake). null = geen inject.
+   * bakeNulpunt zaait fmlNulpuntImageCm als die leeg is.
+   */
+  getStampVectorInject?: () => WorkspaceFmlStampInject | null
 }
 
 export type WorkspaceFmlGenerateApplied = {
@@ -226,19 +241,92 @@ export function createWorkspaceFmlGenerate(
 
   const generatedPlan = computed<FloorPlan | null>(() => generatedBundle.value?.plan ?? null)
 
-  function harmonizePlan(plan: FloorPlan): FloorPlan {
-    return harmonizeFmlWallThickness(
-      plan,
-      applied.appliedFmlThicknessLimits.value,
-      applied.appliedFmlBandBoundaries.value,
-      generatedBundle.value?.faceEvidenceById,
+  function resolveStampInject(): WorkspaceFmlStampInject | null {
+    return deps.getStampVectorInject?.() ?? null
+  }
+
+  function ensureNulpuntSeededFromStamp(stamp: WorkspaceFmlStampInject | null): Point2D | null {
+    if (fmlNulpuntImageCm.value) return fmlNulpuntImageCm.value
+    if (!stamp) return null
+    fmlNulpuntImageCm.value = { ...stamp.bakeNulpuntImageCm }
+    return fmlNulpuntImageCm.value
+  }
+
+  /**
+   * Na nulpunt-frame: inject stempelset + harmonize (pinned dikte) + areas.
+   * Inject-offset = bakeNulpunt − currentNulpunt zodat scan-pixels vast blijven.
+   */
+  function finalizePlanInNulpuntFrame(
+    plan: FloorPlan,
+    faceEvidenceById?: Map<string, import('@/core/fml/wall-face-step-evidence').WallFaceExtentsCm>,
+  ): FloorPlan {
+    const stamp = resolveStampInject()
+    let next = plan
+    if (stamp && stamp.walls.length > 0) {
+      const current = fmlNulpuntImageCm.value ?? stamp.bakeNulpuntImageCm
+      const offsetCm = resolveStampInjectOffsetCm(stamp.bakeNulpuntImageCm, current)
+      const injected = injectStampWallsIntoPlan(next, 0, stamp.walls, {
+        offsetCm,
+        replaceOverlap: false,
+        facadeLookupPlan: stamp.facadeLookupPlan ?? null,
+      })
+      next = injected.plan
+      const owned = resolveStampOwnership(next.floors[0]?.walls ?? [])
+      next = {
+        ...next,
+        floors: next.floors.map((f, i) => (i === 0 ? { ...f, walls: owned.walls } : f)),
+      }
+    }
+    const pinnedWallIds = collectStampOwnedWallIds(next.floors[0]?.walls ?? [])
+    return regeneratePlanAreas(
+      harmonizeFmlWallThickness(
+        next,
+        applied.appliedFmlThicknessLimits.value,
+        applied.appliedFmlBandBoundaries.value,
+        faceEvidenceById,
+        pinnedWallIds,
+      ),
     )
   }
 
+  function buildPreviewFromRawBundle(
+    bundle: {
+      plan: FloorPlan
+      origin: Point2D
+      pxPerMmX: number
+      pxPerMmY: number
+      faceEvidenceById?: Map<string, import('@/core/fml/wall-face-step-evidence').WallFaceExtentsCm>
+    },
+    options?: { seedNulpunt?: boolean },
+  ): { plan: FloorPlan; layout: PreviewUnderlayLayout } {
+    const stamp = resolveStampInject()
+    const seed = options?.seedNulpunt !== false
+    let nulpunt = fmlNulpuntImageCm.value
+    if (!nulpunt && stamp) {
+      nulpunt = seed ? ensureNulpuntSeededFromStamp(stamp) : { ...stamp.bakeNulpuntImageCm }
+    }
+    const baseLayout: PreviewUnderlayLayout = {
+      origin: { ...bundle.origin },
+      pxPerMmX: bundle.pxPerMmX,
+      pxPerMmY: bundle.pxPerMmY,
+    }
+    if (nulpunt) {
+      const appliedNulpunt = reapplyNulpuntImageCm(bundle.plan, baseLayout, nulpunt)
+      return {
+        plan: finalizePlanInNulpuntFrame(appliedNulpunt.plan, bundle.faceEvidenceById),
+        layout: appliedNulpunt.layout,
+      }
+    }
+    return {
+      plan: finalizePlanInNulpuntFrame(bundle.plan, bundle.faceEvidenceById),
+      layout: baseLayout,
+    }
+  }
+
   const fmlExportPlan = computed<FloorPlan | null>(() => {
-    const raw = generatedPlan.value
-    if (!raw) return null
-    return regeneratePlanAreas(harmonizePlan(raw))
+    const bundle = generatedBundle.value
+    if (!bundle) return null
+    return buildPreviewFromRawBundle(bundle, { seedNulpunt: false }).plan
   })
 
   /** Actuele preview + export: canvas-bewerkingen > geïmporteerd > gegenereerd. */
@@ -248,7 +336,8 @@ export function createWorkspaceFmlGenerate(
 
   const generatedFmlText = computed(() => {
     if (!previewPlan.value) return ''
-    return buildFmlV3(previewPlan.value, {
+    const planForExport = stripFacadeGroupsFromPlan(previewPlan.value)
+    return buildFmlV3(planForExport, {
       name: previewPlan.value.name,
       bovenlichtDefault: applied.fmlBovenlichtDefault.value,
       windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
@@ -274,13 +363,17 @@ export function createWorkspaceFmlGenerate(
     )
   })
 
-  function applyStoredNulpuntToPlan(
-    plan: FloorPlan,
-    baseLayout: PreviewUnderlayLayout,
-  ): { plan: FloorPlan; layout: PreviewUnderlayLayout } | null {
-    const nulpunt = fmlNulpuntImageCm.value
-    if (!nulpunt) return null
-    return reapplyNulpuntImageCm(plan, baseLayout, nulpunt)
+  function rebuildPreviewFromCanonical(preserveUnderlayDisplay: boolean): void {
+    const bundle = generatedBundle.value
+    if (!bundle) return
+    const prevDisplay = preserveUnderlayDisplay ? persistedUnderlayLayout.value : null
+    const built = buildPreviewFromRawBundle(bundle)
+    const oriented = applyOrientAndPreserveUnderlayDisplay(built.plan, built.layout, prevDisplay)
+    const stamp = resolveStampInject()
+    const hasNulpunt = fmlNulpuntImageCm.value != null || stamp != null
+    editedPreviewPlan.value =
+      hasNulpunt || !isIdentityFloorOrient(fmlOrient.value) ? oriented.plan : null
+    persistedUnderlayLayout.value = oriented.layout
   }
 
   watch(
@@ -289,36 +382,17 @@ export function createWorkspaceFmlGenerate(
       if (!bundle) return
       // Canvas-/floor-restore plan is leidend — niet layout herschrijven t.o.v. raw bundle
       // (dat desynct origin t.o.v. al-vertaalde muren, o.a. na nulpunt of floor-switch).
+      // Afronden wist edited via resetGeneratedPreview ná semantic, zodat stamp
+      // + sanitize op de definitieve graph landen i.p.v. een bevroren pre-semantic plan.
       if (editedPreviewPlan.value) return
       const prevDisplay = persistedUnderlayLayout.value
-      const baseLayout: PreviewUnderlayLayout = {
-        origin: { ...bundle.origin },
-        pxPerMmX: bundle.pxPerMmX,
-        pxPerMmY: bundle.pxPerMmY,
-      }
-      const nulpunt = fmlNulpuntImageCm.value
-      if (nulpunt) {
-        const appliedNulpunt = reapplyNulpuntImageCm(
-          regeneratePlanAreas(harmonizePlan(bundle.plan)),
-          baseLayout,
-          nulpunt,
-        )
-        const oriented = applyOrientAndPreserveUnderlayDisplay(
-          appliedNulpunt.plan,
-          appliedNulpunt.layout,
-          prevDisplay,
-        )
-        editedPreviewPlan.value = oriented.plan
-        persistedUnderlayLayout.value = oriented.layout
-      } else {
-        const oriented = applyOrientAndPreserveUnderlayDisplay(
-          harmonizePlan(bundle.plan),
-          baseLayout,
-          prevDisplay,
-        )
-        editedPreviewPlan.value = isIdentityFloorOrient(fmlOrient.value) ? null : oriented.plan
-        persistedUnderlayLayout.value = oriented.layout
-      }
+      const built = buildPreviewFromRawBundle(bundle)
+      const oriented = applyOrientAndPreserveUnderlayDisplay(built.plan, built.layout, prevDisplay)
+      const stamp = resolveStampInject()
+      const hasNulpunt = fmlNulpuntImageCm.value != null || stamp != null
+      editedPreviewPlan.value =
+        hasNulpunt || !isIdentityFloorOrient(fmlOrient.value) ? oriented.plan : null
+      persistedUnderlayLayout.value = oriented.layout
     },
     { flush: 'sync' },
   )
@@ -412,35 +486,6 @@ export function createWorkspaceFmlGenerate(
     fmlOrient.value = defaultFloorOrient()
     underlayMoveMode.value = false
     cancelFmlRescale()
-  }
-
-  function rebuildPreviewFromCanonical(preserveUnderlayDisplay: boolean): void {
-    const bundle = generatedBundle.value
-    if (!bundle) return
-    const prevDisplay = preserveUnderlayDisplay ? persistedUnderlayLayout.value : null
-    const baseLayout: PreviewUnderlayLayout = {
-      origin: { ...bundle.origin },
-      pxPerMmX: bundle.pxPerMmX,
-      pxPerMmY: bundle.pxPerMmY,
-    }
-    const appliedNulpunt = applyStoredNulpuntToPlan(harmonizePlan(bundle.plan), baseLayout)
-    if (appliedNulpunt) {
-      const oriented = applyOrientAndPreserveUnderlayDisplay(
-        appliedNulpunt.plan,
-        appliedNulpunt.layout,
-        prevDisplay,
-      )
-      editedPreviewPlan.value = oriented.plan
-      persistedUnderlayLayout.value = oriented.layout
-    } else {
-      const oriented = applyOrientAndPreserveUnderlayDisplay(
-        harmonizePlan(bundle.plan),
-        baseLayout,
-        prevDisplay,
-      )
-      editedPreviewPlan.value = isIdentityFloorOrient(fmlOrient.value) ? null : oriented.plan
-      persistedUnderlayLayout.value = oriented.layout
-    }
   }
 
   /** Na opnieuw afronden: toon verse detectie i.p.v. oude canvas-bewerkingen. */

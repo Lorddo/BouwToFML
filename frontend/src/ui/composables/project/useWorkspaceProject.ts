@@ -1,5 +1,6 @@
 import { computed, nextTick, ref, type Ref } from 'vue'
 import type { Floor, FloorPlan } from '@/core/fml/types'
+import { wallsInStampGroup } from '@/core/fml/facade-groups'
 import type { PreprocessConfig } from '@/platform/image'
 import { clonePlain, type DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { DrawingProfileId } from '@/platform/profile'
@@ -770,27 +771,44 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   /** Floors (niet actief) met FML-muren voor muurstempel. */
-  function listStampDonorFloors(): Array<{ id: string; name: string; wallCount: number }> {
+  function listStampDonorFloors(): Array<{
+    id: string
+    name: string
+    wallCount: number
+    stampWallCount: number
+  }> {
     const activeId = state.value.activeFloorId
-    const out: Array<{ id: string; name: string; wallCount: number }> = []
+    const out: Array<{
+      id: string
+      name: string
+      wallCount: number
+      stampWallCount: number
+    }> = []
     for (const meta of state.value.floors) {
       if (meta.id === activeId) continue
       const blob = state.value.blobs[meta.id]
-      const floor = blob?.previewPlan?.floors[0] ?? blob?.generatedFloor
+      const plan = blob?.previewPlan ?? null
+      const floor = plan?.floors[0] ?? blob?.generatedFloor
       const wallCount = floor?.walls?.length ?? 0
       if (wallCount <= 0) continue
-      out.push({ id: meta.id, name: meta.name, wallCount })
+      const stampWallCount = plan != null ? wallsInStampGroup(plan, 0).length : 0
+      out.push({ id: meta.id, name: meta.name, wallCount, stampWallCount })
     }
     return out
   }
 
-  function getStampDonorWalls(
-    donorFloorId: string,
-  ): { walls: Floor['walls']; originCm: { x: number; y: number } } | null {
+  function getStampDonorWalls(donorFloorId: string): {
+    walls: Floor['walls']
+    stampWalls: Floor['walls']
+    originCm: { x: number; y: number }
+    plan: import('@/core/fml/types').FloorPlan | null
+  } | null {
     const blob = state.value.blobs[donorFloorId]
-    const floor = blob?.previewPlan?.floors[0] ?? blob?.generatedFloor
+    const plan = blob?.previewPlan ?? null
+    const floor = plan?.floors[0] ?? blob?.generatedFloor
     if (!floor?.walls?.length) return null
-    return { walls: floor.walls, originCm: { x: 0, y: 0 } }
+    const stampWalls = plan != null ? wallsInStampGroup(plan, 0) : []
+    return { walls: floor.walls, stampWalls, originCm: { x: 0, y: 0 }, plan }
   }
 
   return {

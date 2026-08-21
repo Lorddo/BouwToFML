@@ -22,7 +22,7 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 |------|------|-----|
 | 1 | «Onderlegger overnemen» | Donor-keuze: bronscan + schaal van gekozen verdieping (geen crop; laatste schaal-bevestiging per floor); daarna per-floor crop → `transformHScaleState` |
 | 2 | «B/W overnemen» | Donor-keuze: alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
-| 2 | «Muurstempel» | FML-muren van donor-floor → canvas-align (REF-handles) + gum → bake: adaptive `stampBw` in `effectiveBw` + pure zwarte `stampMask` OR in Otsu |
+| 2 | «Muurstempel» | FML-muren van donor-floor → canvas-align (REF-handles) + gum → bake: adaptive `stampBw` in `effectiveBw` + pure zwarte `stampMask` OR in Otsu. Optioneel Stempelset (groep `stamp` op donor): translate-only, nulpunt-zaad, vector-inject op stap 4 (donor-dikte pinned); anders diktebanden + stretch. Stempel buiten de scan → wit pad op de kleur-onderlegger (linialen/refs/masks/nulpunt schuiven mee) |
 | 3 | — | Solo: geen detectie-state delen |
 | 4 | «Download .fml (project)» | `mergeFloorPlans` met floor-namen/`level` |
 
@@ -38,13 +38,15 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
 | Download onderlegger PNG | `downloadUnderlay` |
 
+**Canvas:** stap 1–4 hebben een wit vlak (stap 4 = infinity-stage; 1–3 = witte stage-achtergrond). Geen auto-trim van witte randen bij bake (`normalizeWorkingCanvas` laat wit staan). Detectie negeert wit. Gum/crop blijft user-actie; PDF-ROI blijft een echte crop.
+
 **PDF-crop:** bij «Volgende» met in-memory PDF-bron + meaningful crop → ROI her-raster uit PDF (≥4000px langste zijde) i.p.v. blur-upscale van het full-page PNG-crop. PNG/JPG-crops ongewijzigd; PDF-bytes niet in IndexedDB.
 
 **Output:** `originalImageEl` + optioneel `maskedWorkingCanvas` (gum/crop). Geen referentievakken.
 
 **Gate naar stap 2:** schaal bevestigd (+ image). Rotatie-bake is niet verplicht op stap 1.
 
-Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen. Optionele knop «Rotatie vastzetten» doet hetzelfde pad eerder, zodat H/V-linialen op een rechtgetrokken beeld gezet kunnen worden (scheve scans). Onbevestigde schaal → verse linialen na rotatie-bake (mm blijft).
+Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen. Geen wit-trim na bake (rotatiehoek blijft wit). Optionele knop «Rotatie vastzetten» doet hetzelfde pad eerder, zodat H/V-linialen op een rechtgetrokken beeld gezet kunnen worden (scheve scans). Onbevestigde schaal → verse linialen na rotatie-bake (mm blijft).
 
 ## Stap 2 — Voorbewerking (`flowStep: preprocess`)
 
@@ -61,7 +63,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | B/W tunen | `PreprocessPanel` — vaste drempel + Geavanceerd: adaptive aan/uit + kernel (`adaptiveBlockSize` 3–51) |
 | Reset naar fabriekswaarden | `PreprocessPanel` — B/W-tune van de actieve laag (`defaultLayerTune`); refs, inkt, OCR en stempel blijven |
 | B/W overnemen (donor-keuze) | `copyPreprocessAndRefsFromDonor(donorFloorId)` |
-| Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren, band min/mid/max, REF-handles, penseel/polygoon-gum, bake |
+| Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren of Stempelset (`stamp`), band min/mid/max (uit bij Stempelset), REF-handles (geen resize bij Stempelset), penseel/polygoon-gum, bake → `bakeNulpuntImageCm` + `injectStampWallsIntoPlan`. Overflow buiten de scan: `expandUnderlayForStamp` (wit pad, max-edge 12k) |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
 | Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); tekenen uitzetten via opnieuw klikken of Escape |
 | OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) — auto-scan op Muren in stap 3 |
@@ -127,6 +129,8 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 **Onderlegger (display-only, los van FML):** bij beschikbare underlay — 90°/spiegelen via `previewUnderlayLayout.rotationDeg` / `flipX` (Konva om bitmap-midden), plus toggle «Onderlegger verplaatsen» (sleep = alleen `origin`; muren vast; Escape/uit = lock; `nulpuntImageCm` volgt origin).
 
 **Verdiepingsnaam:** bewerkbaar bovenaan `FmlPanel` (actieve floor → `renameFloor`); zelfde bron als stap 0 / floor-rail.
+
+**Stempelset:** muursettings → vaste groep «Stempel» (`settings.facadeGroups` id `stamp`); leden meenemen naar stap-2 Muurstempel. Bake zaait nulpunt; stap-4 generate (ná semantic + deuren/ramen) injecteert vectoren (offset = bake − current nulpunt), daarna **ownership-corridor** (`resolve-stamp-ownership`, `extras.stampOwned`: trim parallellen, T-snap, openings overzetten), en sanitizet tot stabiel. Gum filtert inject-lijst bij generate. Workspace-download stript `facadeGroups` én `stampOwned`.
 
 **Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 

@@ -213,6 +213,19 @@ describe('harmonizeFmlWallThickness', () => {
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
     expect(thicknesses).toEqual([30, 30, 30])
   })
+
+  it('slaat pinned wall ids over (dikte + keten-vote)', () => {
+    const plan = planWithWalls([
+      wall('pinned', { x: 0, y: 0 }, { x: 100, y: 0 }, 35),
+      wall('free', { x: 100, y: 0 }, { x: 200, y: 0 }, 11),
+    ])
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits, undefined, undefined, [
+      'pinned',
+    ])
+    const byId = new Map(harmonized.floors[0]?.walls.map((w) => [w.id, w.thickness]))
+    expect(byId.get('pinned')).toBe(35)
+    expect(byId.get('free')).toBe(10)
+  })
 })
 
 describe('roundFmlThicknessCm', () => {

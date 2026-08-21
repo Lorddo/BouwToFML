@@ -33,7 +33,7 @@ const fontSizeStage = computed(() => areaLabelFontSizeStage(props.layoutScale))
 const labeledAreas = computed(() => {
   if (!showLabels.value) return []
   if (!areaLabelVisibleOnScreen(fontSizeStage.value, props.viewScale)) return []
-  return props.areas.filter((area) => area.label)
+  return props.areas.filter((area) => area.label && area.showAreaLabel !== false)
 })
 
 function areaFill(area: RenderArea): string {

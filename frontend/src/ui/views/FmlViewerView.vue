@@ -5,6 +5,7 @@ import FmlEditor from '@/ui/fml-editor/FmlEditor.vue'
 import FmlInspect from '@/ui/fml-inspect/FmlInspect.vue'
 import FmlOpeningOverflowNotice from '../components/FmlOpeningOverflowNotice.vue'
 import FmlViewerDefaultsFields from '../components/FmlViewerDefaultsFields.vue'
+import FmlViewerDimensionFields from '../components/FmlViewerDimensionFields.vue'
 import FmlRescalePanel from '../components/FmlRescalePanel.vue'
 import ScaleConfirmBar from '../components/ScaleConfirmBar.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
@@ -37,7 +38,22 @@ import {
   facadeMemberIdsOnFloor,
   groupIdForWall,
   listFacadeGroups,
+  STAMP_FACADE_GROUP_ID,
+  stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
+import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
+import {
+  readDimensionSettings,
+  writeDimensionSettings,
+  type DimensionMode,
+} from '@/core/fml/fml-dimension-settings'
+import { defaultDimensionVis, type DimensionVis } from '@/core/fml/fml-dimension-vis'
+import {
+  filterManualDimensions,
+  readBtfSlices,
+  writeBtfSlices,
+  dimensionLiesOnAnySlice,
+} from '@/core/fml/btf-slices'
 import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
@@ -75,6 +91,8 @@ const activeFloorIndex = ref(0)
 const previewCanvasRef = ref<{
   flushPendingFieldCommits?: () => void
   sanitizeWalls?: () => boolean
+  applyStampToActiveFloor?: () => boolean
+  canApplyStampOnActiveFloor?: () => boolean
   applyCornerMarkerModeFromSettings?: () => void
   resetView?: () => void
 } | null>(null)
@@ -84,12 +102,18 @@ const emit = defineEmits<{
 }>()
 
 const sidebarOpen = ref(true)
+const sidebarOpenBeforeFullscreen = ref(true)
 const coarsePointer = ref(false)
 const canvasFullscreen = ref(false)
 
 watch(canvasFullscreen, (on) => {
   emit('update:canvasFullscreen', on)
-  if (on) sidebarOpen.value = false
+  if (on) {
+    sidebarOpenBeforeFullscreen.value = sidebarOpen.value
+    sidebarOpen.value = false
+    return
+  }
+  sidebarOpen.value = sidebarOpenBeforeFullscreen.value
 })
 
 const coarseMq = window.matchMedia('(pointer: coarse)')
@@ -151,7 +175,9 @@ const {
   resetInspectState,
 } = useFmlViewerInspect()
 
-const inspectFacadeGroups = computed(() => listFacadeGroups(plan.value))
+const inspectFacadeGroups = computed(() =>
+  listFacadeGroups(plan.value).filter((group) => group.id !== STAMP_FACADE_GROUP_ID),
+)
 
 const inspectFacadeSelectValue = computed(() => {
   const hit = lastInspectHit.value
@@ -198,6 +224,67 @@ const {
   addFloorDefaultsSlot,
   removeFloorDefaultsSlot,
 } = useFmlViewerSessionDefaults({ plan, activeFloorIndex, t })
+
+const dimensionSettings = computed(() => readDimensionSettings(plan.value, activeFloorIndex.value))
+
+const dimensionVis = ref<DimensionVis>('none')
+
+watch(
+  () => [plan.value, activeFloorIndex.value] as const,
+  () => {
+    dimensionVis.value = defaultDimensionVis(plan.value, activeFloorIndex.value)
+  },
+  { immediate: true },
+)
+
+const canClearActiveDimensions = computed(() => {
+  const vis = dimensionVis.value
+  if (vis === 'none') return false
+  if (vis === 'autogen') return dimensionSettings.value.engineAutoDims
+  const floor = plan.value?.floors[activeFloorIndex.value]
+  if (vis === 'slicer') return readBtfSlices(floor).length > 0
+  if (vis === 'manual') {
+    return filterManualDimensions(floor?.dimensions, readBtfSlices(floor)).length > 0
+  }
+  return false
+})
+
+function patchDimensionSettings(patch: {
+  engineAutoDims?: boolean
+  dimensionMode?: DimensionMode
+  generateOuterDimension?: boolean
+}): void {
+  if (!plan.value) return
+  plan.value = writeDimensionSettings(plan.value, patch)
+}
+
+function clearActiveDimensionType(): void {
+  if (!plan.value) return
+  const vis = dimensionVis.value
+  if (vis === 'autogen') {
+    plan.value = writeDimensionSettings(plan.value, { engineAutoDims: false })
+    return
+  }
+  if (vis === 'slicer') {
+    plan.value = writeBtfSlices(plan.value, [], activeFloorIndex.value)
+    return
+  }
+  if (vis === 'manual') {
+    const floor = plan.value.floors[activeFloorIndex.value]
+    if (!floor) return
+    const slices = readBtfSlices(floor)
+    // Wis alleen handmatige dims (niet op P-lijn); P-lijn-bake hoort bij slicer.
+    const nextDims = (floor.dimensions ?? []).filter((d) => dimensionLiesOnAnySlice(d, slices))
+    plan.value = {
+      ...plan.value,
+      floors: plan.value.floors.map((f, i) =>
+        i === activeFloorIndex.value
+          ? { ...f, dimensions: nextDims.length > 0 ? nextDims : undefined }
+          : f,
+      ),
+    }
+  }
+}
 
 const fmlRescaleActive = ref(false)
 const fmlRescaleState = ref<HScaleState | null>(null)
@@ -352,8 +439,9 @@ const openingOverflow = computed(() => {
 
 const fmlText = computed(() => {
   if (!plan.value) return ''
-  return buildFmlV3(plan.value, {
-    name: plan.value.name,
+  const exportPlan = stripStampGroupFromPlan(plan.value)
+  return buildFmlV3(exportPlan, {
+    name: exportPlan.name,
     bovenlichtDefault: (_floor, index) => defaultsForFloor(index).bovenlichtDefault,
     windowBovenlichtDefault: (_floor, index) => defaultsForFloor(index).windowBovenlichtDefault,
     bovenlichtHeightCm: (_floor, index) => defaultsForFloor(index).bovenlichtHeightCm,
@@ -617,6 +705,15 @@ const underlayScaleMismatchPct = computed(() => {
   return (Math.abs(x - y) / Math.min(x, y)) * 100
 })
 
+const canApplyStamp = computed(
+  () =>
+    !inspectMode.value && !!plan.value && canApplyStampToFloor(plan.value, activeFloorIndex.value),
+)
+
+function applyStampFromSidebar(): void {
+  previewCanvasRef.value?.applyStampToActiveFloor?.()
+}
+
 const canStartUnderlayScale = computed(() => underlayAvailable.value && !inspectMode.value)
 const rescaleOverlayActive = computed(() => fmlRescaleActive.value || underlayScaleActive.value)
 const rescaleOverlayState = computed(() =>
@@ -803,471 +900,509 @@ defineExpose({
       class="sidebar-backdrop"
       @click="sidebarOpen = false"
     />
-    <aside v-show="sidebarOpen" class="sidebar" :class="{ 'sidebar--drawer': coarsePointer }">
-      <div v-if="coarsePointer" class="sidebar-handle" aria-hidden="true" />
-      <div class="panel">
-        <div class="viewer-header">
-          <h3>FML viewer</h3>
-          <button
-            type="button"
-            class="sidebar-icon-btn"
-            :aria-label="t('viewer.closeMenu')"
-            :title="t('viewer.closeMenu')"
-            @click="sidebarOpen = false"
-          >
-            <ToolbeltIcon name="close_menu" />
-          </button>
-        </div>
-        <div v-if="plan" class="mode-tabs" role="tablist" aria-label="Viewer-modus">
-          <button
-            type="button"
-            role="tab"
-            class="mode-tab"
-            :class="{ 'mode-tab--active': viewerMode === 'edit' }"
-            :aria-selected="viewerMode === 'edit'"
-            title="Bewerken"
-            @click="viewerMode = 'edit'"
-          >
-            <ToolbeltIcon name="edit" />
-            <span>Bewerken</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            class="mode-tab"
-            :class="{ 'mode-tab--active': viewerMode === 'inspect' }"
-            :aria-selected="viewerMode === 'inspect'"
-            title="Inspectie"
-            @click="viewerMode = 'inspect'"
-          >
-            <ToolbeltIcon name="inspect" />
-            <span>Inspectie</span>
-          </button>
-        </div>
-        <p class="hint">
-          {{
-            inspectMode
-              ? t('viewer.inspectHint')
-              : plan
-                ? t('viewer.editHint')
-                : t('viewer.emptyHint')
-          }}
-        </p>
-        <div class="sidebar-icon-row">
-          <button
-            v-if="plan"
-            type="button"
-            class="sidebar-icon-btn sidebar-icon-btn--primary"
-            title="Download .fml"
-            aria-label="Download .fml"
-            @click="downloadCurrentFml"
-          >
-            <ToolbeltIcon name="download" />
-            <span>Download .fml</span>
-          </button>
-          <button
-            v-if="!plan"
-            type="button"
-            class="sidebar-icon-btn sidebar-icon-btn--primary"
-            :title="t('viewer.newPlan')"
-            :aria-label="t('viewer.newPlan')"
-            :disabled="isLoadingFml"
-            @click="startNewPlan"
-          >
-            <ToolbeltIcon name="edit" />
-            <span>{{ t('viewer.newPlan') }}</span>
-          </button>
-        </div>
-        <p v-if="isLoadingFml" class="load-status-inline" role="status" aria-live="polite">
-          {{ loadStatusLabel }}
-          <template v-if="loadFileName"> · {{ loadFileName }}</template>
-        </p>
-      </div>
-
-      <div v-if="error" class="panel error-panel">{{ error }}</div>
-
-      <div v-if="plan" class="panel">
-        <div class="orient-block opacity-block">
-          <div v-if="underlayAvailable" class="opacity-row">
-            <div class="opacity-row__label">
-              <span>{{ t('result.underlayOpacity') }}</span>
-              <span>{{ Math.round(underlayOpacity * 100) }}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              :value="Math.round(underlayOpacity * 100)"
-              :aria-label="t('result.underlayOpacityAria')"
-              @input="onUnderlayOpacityInput"
-            />
+    <div
+      v-show="sidebarOpen"
+      class="sidebar-wrap"
+      :class="{ 'sidebar-wrap--drawer': coarsePointer }"
+    >
+      <aside class="sidebar" :class="{ 'sidebar--drawer': coarsePointer }">
+        <div v-if="coarsePointer" class="sidebar-handle" aria-hidden="true" />
+        <div class="panel">
+          <div class="viewer-header">
+            <h3>FML viewer</h3>
           </div>
-          <div class="opacity-row">
-            <div class="opacity-row__label">
-              <span>{{ t('result.fmlOpacity') }}</span>
-              <span>{{ Math.round(fmlOpacity * 100) }}%</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              :value="Math.round(fmlOpacity * 100)"
-              :aria-label="t('result.fmlOpacityAria')"
-              @input="onFmlOpacityInput"
-            />
+          <div v-if="plan" class="mode-tabs" role="tablist" aria-label="Viewer-modus">
+            <button
+              type="button"
+              role="tab"
+              class="mode-tab"
+              :class="{ 'mode-tab--active': viewerMode === 'edit' }"
+              :aria-selected="viewerMode === 'edit'"
+              title="Bewerken"
+              @click="viewerMode = 'edit'"
+            >
+              <ToolbeltIcon name="edit" />
+              <span>Bewerken</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              class="mode-tab"
+              :class="{ 'mode-tab--active': viewerMode === 'inspect' }"
+              :aria-selected="viewerMode === 'inspect'"
+              title="Inspectie"
+              @click="viewerMode = 'inspect'"
+            >
+              <ToolbeltIcon name="inspect" />
+              <span>Inspectie</span>
+            </button>
           </div>
-          <label class="hide-plan-text">
-            <input
-              type="checkbox"
-              :checked="hidePlanText"
-              :aria-label="t('result.hidePlanTextAria')"
-              @change="hidePlanText = ($event.target as HTMLInputElement).checked"
-            />
-            <span>{{ t('result.hidePlanText') }}</span>
-          </label>
+          <p class="hint">
+            {{
+              inspectMode
+                ? t('viewer.inspectHint')
+                : plan
+                  ? t('viewer.editHint')
+                  : t('viewer.emptyHint')
+            }}
+          </p>
+          <div class="sidebar-icon-row">
+            <button
+              v-if="plan"
+              type="button"
+              class="sidebar-icon-btn sidebar-icon-btn--primary"
+              title="Download .fml"
+              aria-label="Download .fml"
+              @click="downloadCurrentFml"
+            >
+              <ToolbeltIcon name="download" />
+              <span>Download .fml</span>
+            </button>
+            <button
+              v-if="!plan"
+              type="button"
+              class="sidebar-icon-btn sidebar-icon-btn--primary"
+              :title="t('viewer.newPlan')"
+              :aria-label="t('viewer.newPlan')"
+              :disabled="isLoadingFml"
+              @click="startNewPlan"
+            >
+              <ToolbeltIcon name="edit" />
+              <span>{{ t('viewer.newPlan') }}</span>
+            </button>
+          </div>
+          <p v-if="isLoadingFml" class="load-status-inline" role="status" aria-live="polite">
+            {{ loadStatusLabel }}
+            <template v-if="loadFileName"> · {{ loadFileName }}</template>
+          </p>
         </div>
 
-        <details v-if="!inspectMode" class="fml-fold defaults-fold">
-          <summary>{{ t('project.title') }}</summary>
-          <div class="project-block">
-            <label class="defaults-field">
-              <span>{{ t('project.name') }}</span>
+        <div v-if="error" class="panel error-panel">{{ error }}</div>
+
+        <div v-if="plan" class="panel">
+          <div class="orient-block opacity-block">
+            <div v-if="underlayAvailable" class="opacity-row">
+              <div class="opacity-row__label">
+                <span>{{ t('result.underlayOpacity') }}</span>
+                <span>{{ Math.round(underlayOpacity * 100) }}%</span>
+              </div>
               <input
-                type="text"
-                :value="plan.name"
-                :placeholder="t('project.namePlaceholder')"
-                @input="setPlanName(($event.target as HTMLInputElement).value)"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                :value="Math.round(underlayOpacity * 100)"
+                :aria-label="t('result.underlayOpacityAria')"
+                @input="onUnderlayOpacityInput"
               />
+            </div>
+            <div class="opacity-row">
+              <div class="opacity-row__label">
+                <span>{{ t('result.fmlOpacity') }}</span>
+                <span>{{ Math.round(fmlOpacity * 100) }}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                :value="Math.round(fmlOpacity * 100)"
+                :aria-label="t('result.fmlOpacityAria')"
+                @input="onFmlOpacityInput"
+              />
+            </div>
+            <label class="hide-plan-text">
+              <input
+                type="checkbox"
+                :checked="hidePlanText"
+                :aria-label="t('result.hidePlanTextAria')"
+                @change="hidePlanText = ($event.target as HTMLInputElement).checked"
+              />
+              <span>{{ t('result.hidePlanText') }}</span>
             </label>
-            <div class="floor-edit-list">
-              <div
-                v-for="(floor, index) in floors"
-                :key="`${floor.level}-${index}`"
-                class="floor-edit-row"
-              >
+          </div>
+
+          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+            <summary>{{ t('project.title') }}</summary>
+            <div class="project-block">
+              <label class="defaults-field">
+                <span>{{ t('project.name') }}</span>
                 <input
                   type="text"
-                  class="floor-edit-name"
-                  :class="{ 'is-active': index === activeFloorIndex }"
-                  :value="floor.name"
-                  :placeholder="t('project.floorNamePlaceholder')"
-                  :aria-label="t('project.selectFloor', { name: floorLabel(index) })"
-                  @focus="selectFloor(index)"
-                  @input="renameFloor(index, ($event.target as HTMLInputElement).value)"
+                  :value="plan.name"
+                  :placeholder="t('project.namePlaceholder')"
+                  @input="setPlanName(($event.target as HTMLInputElement).value)"
                 />
-                <button
-                  v-if="floors.length > 1"
-                  type="button"
-                  class="floor-edit-remove"
-                  :title="t('project.removeFloor')"
-                  :aria-label="t('project.removeFloor')"
-                  @click="removeFloor(index)"
+              </label>
+              <div class="floor-edit-list">
+                <div
+                  v-for="(floor, index) in floors"
+                  :key="`${floor.level}-${index}`"
+                  class="floor-edit-row"
                 >
-                  ×
+                  <input
+                    type="text"
+                    class="floor-edit-name"
+                    :class="{ 'is-active': index === activeFloorIndex }"
+                    :value="floor.name"
+                    :placeholder="t('project.floorNamePlaceholder')"
+                    :aria-label="t('project.selectFloor', { name: floorLabel(index) })"
+                    @focus="selectFloor(index)"
+                    @input="renameFloor(index, ($event.target as HTMLInputElement).value)"
+                  />
+                  <button
+                    v-if="floors.length > 1"
+                    type="button"
+                    class="floor-edit-remove"
+                    :title="t('project.removeFloor')"
+                    :aria-label="t('project.removeFloor')"
+                    @click="removeFloor(index)"
+                  >
+                    ×
+                  </button>
+                </div>
+                <button type="button" class="sidebar-icon-btn floor-add-btn" @click="addFloor">
+                  <ToolbeltIcon name="add" />
+                  <span>{{ t('project.addFloor') }}</span>
                 </button>
               </div>
-              <button type="button" class="sidebar-icon-btn floor-add-btn" @click="addFloor">
-                <span>{{ t('project.addFloor') }}</span>
-              </button>
+              <div class="sidebar-icon-row sidebar-plan-actions">
+                <label
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-disabled': isLoadingFml }"
+                  :title="t('viewer.chooseFml')"
+                  :aria-label="t('viewer.chooseFml')"
+                >
+                  <ToolbeltIcon name="upload" />
+                  <span>{{ t('viewer.chooseFml') }}</span>
+                  <input
+                    type="file"
+                    accept=".fml,.json,.json.fml"
+                    :disabled="isLoadingFml"
+                    @change="onFileInput"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': projectOrientFlipX }"
+                  :disabled="!plan || floors.length === 0"
+                  :title="t('result.mirrorProjectHint')"
+                  :aria-label="t('result.mirrorProject')"
+                  :aria-pressed="projectOrientFlipX"
+                  @click="applyViewerProjectOrient('flipX')"
+                >
+                  <ToolbeltIcon name="mirror_plan" />
+                  <span>{{ t('result.mirrorProject') }}</span>
+                </button>
+              </div>
             </div>
+          </details>
+
+          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+            <summary>{{ t('viewer.underlayFold') }}</summary>
+            <p v-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
             <div class="sidebar-icon-row sidebar-plan-actions">
               <label
                 class="sidebar-icon-btn"
-                :class="{ 'is-disabled': isLoadingFml }"
-                :title="t('viewer.chooseFml')"
-                :aria-label="t('viewer.chooseFml')"
+                :title="t('viewer.uploadUnderlayHint')"
+                :aria-label="t('viewer.uploadUnderlay')"
               >
                 <ToolbeltIcon name="upload" />
-                <span>{{ t('viewer.chooseFml') }}</span>
+                <span>{{ t('viewer.uploadUnderlay') }}</span>
                 <input
                   type="file"
-                  accept=".fml,.json,.json.fml"
+                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                   :disabled="isLoadingFml"
-                  @change="onFileInput"
+                  @change="onUnderlayFileInput"
                 />
               </label>
               <button
                 type="button"
                 class="sidebar-icon-btn"
-                :class="{ 'is-on': projectOrientFlipX }"
-                :disabled="!plan || floors.length === 0"
-                :title="t('result.mirrorProjectHint')"
-                :aria-label="t('result.mirrorProject')"
-                :aria-pressed="projectOrientFlipX"
-                @click="applyViewerProjectOrient('flipX')"
+                :class="{ 'is-on': underlayScaleActive }"
+                :disabled="!canStartUnderlayScale"
+                :title="t('viewer.scaleUnderlayHint')"
+                :aria-label="t('viewer.scaleUnderlay')"
+                :aria-pressed="underlayScaleActive"
+                @click="underlayScaleActive ? cancelUnderlayScale() : beginUnderlayScale()"
               >
-                <ToolbeltIcon name="mirror_plan" />
-                <span>{{ t('result.mirrorProject') }}</span>
+                <ToolbeltIcon name="ruler" />
+                <span>{{ t('viewer.scaleUnderlay') }}</span>
               </button>
             </div>
-          </div>
-        </details>
-
-        <details v-if="!inspectMode" class="fml-fold defaults-fold">
-          <summary>{{ t('viewer.underlayFold') }}</summary>
-          <p v-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
-          <div class="sidebar-icon-row sidebar-plan-actions">
-            <label
-              class="sidebar-icon-btn"
-              :title="t('viewer.uploadUnderlayHint')"
-              :aria-label="t('viewer.uploadUnderlay')"
-            >
-              <ToolbeltIcon name="upload" />
-              <span>{{ t('viewer.uploadUnderlay') }}</span>
-              <input
-                type="file"
-                accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-                :disabled="isLoadingFml"
-                @change="onUnderlayFileInput"
-              />
-            </label>
-            <button
-              type="button"
-              class="sidebar-icon-btn"
-              :class="{ 'is-on': underlayScaleActive }"
-              :disabled="!canStartUnderlayScale"
-              :title="t('viewer.scaleUnderlayHint')"
-              :aria-label="t('viewer.scaleUnderlay')"
-              :aria-pressed="underlayScaleActive"
-              @click="underlayScaleActive ? cancelUnderlayScale() : beginUnderlayScale()"
-            >
-              <ToolbeltIcon name="ruler" />
-              <span>{{ t('viewer.scaleUnderlay') }}</span>
-            </button>
-          </div>
-          <ScaleConfirmBar
-            v-if="underlayScaleActive"
-            :mm-x="underlayScaleMmX"
-            :mm-y="underlayScaleMmY"
-            :px-x="underlayScalePxX"
-            :px-y="underlayScalePxY"
-            :can-confirm="underlayScaleCanConfirm"
-            :confirmed="false"
-            :open="true"
-            :unit="scaleInputUnit"
-            :axis-mismatch-pct="underlayScaleMismatchPct"
-            @update-mm-x="underlayScaleMmX = $event"
-            @update-mm-y="underlayScaleMmY = $event"
-            @confirm="confirmUnderlayScale()"
-            @cancel="cancelUnderlayScale()"
-          />
-          <div v-if="underlayAvailable" class="orient-block">
-            <p class="orient-label">{{ t('result.underlayOrientLabel') }}</p>
-            <label class="defaults-field underlay-rotation-field">
-              <span>{{ t('viewer.underlayRotation') }}</span>
-              <div class="underlay-rotation-row">
-                <input
-                  type="range"
-                  min="-180"
-                  max="180"
-                  step="0.5"
-                  :value="underlayRotationDeg"
+            <ScaleConfirmBar
+              v-if="underlayScaleActive"
+              :mm-x="underlayScaleMmX"
+              :mm-y="underlayScaleMmY"
+              :px-x="underlayScalePxX"
+              :px-y="underlayScalePxY"
+              :can-confirm="underlayScaleCanConfirm"
+              :confirmed="false"
+              :open="true"
+              :unit="scaleInputUnit"
+              :axis-mismatch-pct="underlayScaleMismatchPct"
+              @update-mm-x="underlayScaleMmX = $event"
+              @update-mm-y="underlayScaleMmY = $event"
+              @confirm="confirmUnderlayScale()"
+              @cancel="cancelUnderlayScale()"
+            />
+            <div v-if="underlayAvailable" class="orient-block">
+              <p class="orient-label">{{ t('result.underlayOrientLabel') }}</p>
+              <label class="defaults-field underlay-rotation-field">
+                <span>{{ t('viewer.underlayRotation') }}</span>
+                <div class="underlay-rotation-row">
+                  <input
+                    type="range"
+                    min="-180"
+                    max="180"
+                    step="0.5"
+                    :value="underlayRotationDeg"
+                    :disabled="underlayOpacity <= 0"
+                    :aria-label="t('viewer.underlayRotation')"
+                    @input="
+                      setUnderlayRotationDeg(Number(($event.target as HTMLInputElement).value))
+                    "
+                  />
+                  <input
+                    type="number"
+                    step="0.5"
+                    :value="underlayRotationDeg"
+                    :disabled="underlayOpacity <= 0"
+                    @change="
+                      setUnderlayRotationDeg(Number(($event.target as HTMLInputElement).value))
+                    "
+                  />
+                  <span class="underlay-rotation-unit">°</span>
+                </div>
+              </label>
+              <div class="orient-actions">
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': underlayLayout?.flipX === true }"
                   :disabled="underlayOpacity <= 0"
-                  :aria-label="t('viewer.underlayRotation')"
-                  @input="setUnderlayRotationDeg(Number(($event.target as HTMLInputElement).value))"
-                />
-                <input
-                  type="number"
-                  step="0.5"
-                  :value="underlayRotationDeg"
+                  :title="t('result.underlayMirrorVerticalHint')"
+                  :aria-label="t('result.underlayMirrorVertical')"
+                  :aria-pressed="underlayLayout?.flipX === true"
+                  @click="applyViewerUnderlayOrient()"
+                >
+                  <ToolbeltIcon name="mirror_underlay" />
+                  <span>{{ t('result.underlayMirrorVertical') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': underlayMoveMode }"
                   :disabled="underlayOpacity <= 0"
-                  @change="
-                    setUnderlayRotationDeg(Number(($event.target as HTMLInputElement).value))
-                  "
-                />
-                <span class="underlay-rotation-unit">°</span>
+                  :title="t('result.underlayMoveHint')"
+                  :aria-label="t('result.underlayMove')"
+                  :aria-pressed="underlayMoveMode"
+                  @click="underlayMoveMode = !underlayMoveMode"
+                >
+                  <ToolbeltIcon name="underlay_move" />
+                  <span>{{ t('result.underlayMove') }}</span>
+                </button>
               </div>
-            </label>
-            <div class="orient-actions">
+            </div>
+          </details>
+
+          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+            <summary>{{ t('viewer.fmlFold') }}</summary>
+            <div class="sidebar-icon-row sidebar-plan-actions">
               <button
                 type="button"
                 class="sidebar-icon-btn"
-                :class="{ 'is-on': underlayLayout?.flipX === true }"
-                :disabled="underlayOpacity <= 0"
-                :title="t('result.underlayMirrorVerticalHint')"
-                :aria-label="t('result.underlayMirrorVertical')"
-                :aria-pressed="underlayLayout?.flipX === true"
-                @click="applyViewerUnderlayOrient()"
+                :class="{ 'is-on': fmlRescaleActive }"
+                :disabled="!canStartRescale"
+                :title="t('result.rescaleHint')"
+                :aria-label="t('result.rescale')"
+                :aria-pressed="fmlRescaleActive"
+                @click="fmlRescaleActive ? cancelFmlRescale() : beginFmlRescale()"
               >
-                <ToolbeltIcon name="mirror_underlay" />
-                <span>{{ t('result.underlayMirrorVertical') }}</span>
+                <ToolbeltIcon name="rescale" />
+                <span>{{ t('result.rescale') }}</span>
               </button>
               <button
                 type="button"
                 class="sidebar-icon-btn"
-                :class="{ 'is-on': underlayMoveMode }"
-                :disabled="underlayOpacity <= 0"
-                :title="t('result.underlayMoveHint')"
-                :aria-label="t('result.underlayMove')"
-                :aria-pressed="underlayMoveMode"
-                @click="underlayMoveMode = !underlayMoveMode"
+                :disabled="!canStartRescale"
+                :title="t('result.sanitizeHint')"
+                :aria-label="t('result.sanitize')"
+                @click="previewCanvasRef?.sanitizeWalls?.()"
               >
-                <ToolbeltIcon name="underlay_move" />
-                <span>{{ t('result.underlayMove') }}</span>
+                <ToolbeltIcon name="sanitize" />
+                <span>{{ t('result.sanitize') }}</span>
+              </button>
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :disabled="!canApplyStamp"
+                :title="t('viewer.applyStampHint')"
+                :aria-label="t('viewer.applyStamp')"
+                @click="applyStampFromSidebar"
+              >
+                <ToolbeltIcon name="edit" />
+                <span>{{ t('viewer.applyStamp') }}</span>
               </button>
             </div>
-          </div>
-        </details>
+            <FmlRescalePanel
+              v-if="!underlayScaleActive"
+              hide-start
+              :active="fmlRescaleActive"
+              :can-start="canStartRescale"
+              :state="fmlRescaleState"
+              :mm-x="fmlRescaleDistanceMmX"
+              :mm-y="fmlRescaleDistanceMmY"
+              :unit="scaleInputUnit"
+              @begin="beginFmlRescale()"
+              @cancel="cancelFmlRescale()"
+              @confirm="confirmFmlRescale()"
+              @update-mm-x="setFmlRescaleDistanceMmX"
+              @update-mm-y="setFmlRescaleDistanceMmY"
+            />
+            <div class="orient-block">
+              <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
+              <div class="orient-actions">
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': activeFmlOrient.flipX }"
+                  :title="t('result.mirrorVerticalHint')"
+                  :aria-label="t('result.mirrorVertical')"
+                  :aria-pressed="activeFmlOrient.flipX"
+                  @click="applyViewerFloorOrient('flipX')"
+                >
+                  <ToolbeltIcon name="mirror_plan" />
+                  <span>{{ t('result.mirrorVertical') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :title="t('result.rotate90CcwHint')"
+                  :aria-label="t('result.rotate90Ccw')"
+                  @click="applyViewerFloorOrient('rotCcw')"
+                >
+                  <ToolbeltIcon name="rotate_plan_ccw" />
+                  <span>{{ t('result.rotate90Ccw') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :title="t('result.rotate90CwHint')"
+                  :aria-label="t('result.rotate90Cw')"
+                  @click="applyViewerFloorOrient('rotCw')"
+                >
+                  <ToolbeltIcon name="rotate_plan_cw" />
+                  <span>{{ t('result.rotate90Cw') }}</span>
+                </button>
+              </div>
+            </div>
+            <FmlViewerDefaultsFields
+              :defaults="activeFloorDefaults"
+              :hint="t('viewer.defaultsHintFloor')"
+              @number="onFloorDefaultNumber"
+              @bool="onFloorDefaultBool"
+            />
+          </details>
 
-        <details v-if="!inspectMode" class="fml-fold defaults-fold">
-          <summary>{{ t('viewer.fmlFold') }}</summary>
-          <div class="sidebar-icon-row sidebar-plan-actions">
+          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+            <summary>{{ t('viewer.dimensionsFold') }}</summary>
+            <FmlViewerDimensionFields
+              :settings="dimensionSettings"
+              :vis="dimensionVis"
+              :can-clear="canClearActiveDimensions"
+              @update:vis="dimensionVis = $event"
+              @auto="patchDimensionSettings({ engineAutoDims: $event })"
+              @mode="patchDimensionSettings({ dimensionMode: $event })"
+              @outer="patchDimensionSettings({ generateOuterDimension: $event })"
+              @clear-active="clearActiveDimensionType"
+            />
+          </details>
+
+          <div v-if="inspectMode" class="inspect-panel">
+            <p class="inspect-hint">
+              Tik cyclet de statuskleur: uit → open (oranje) → klaar (groen) → uit. Muur in een
+              gevelgroep selecteert alle leden op deze verdieping.
+            </p>
+            <dl v-if="lastInspectHit" class="inspect-hit">
+              <div>
+                <dt>Type</dt>
+                <dd>{{ inspectKindLabel(lastInspectHit.kind) }}</dd>
+              </div>
+              <div>
+                <dt>Id</dt>
+                <dd class="inspect-id">{{ lastInspectHit.id }}</dd>
+              </div>
+              <div v-if="lastInspectHit.wallId">
+                <dt>Muur</dt>
+                <dd class="inspect-id">{{ lastInspectHit.wallId }}</dd>
+              </div>
+              <div v-if="lastInspectHit.ids?.length">
+                <dt>Gevel-leden</dt>
+                <dd class="inspect-id">{{ lastInspectHit.ids.length }}</dd>
+              </div>
+              <div>
+                <dt>Kleur</dt>
+                <dd>
+                  <span
+                    v-if="inspectColors[lastInspectHit.id]"
+                    class="inspect-swatch"
+                    :style="{ background: inspectColors[lastInspectHit.id] }"
+                  />
+                  {{ inspectColors[lastInspectHit.id] ?? 'geen' }}
+                </dd>
+              </div>
+            </dl>
+            <div v-if="lastInspectHit?.kind === 'wall'" class="inspect-facade">
+              <label class="inspect-facade-label" for="inspect-facade-select">{{
+                t('result.toolbar.facadeGroup')
+              }}</label>
+              <select
+                id="inspect-facade-select"
+                class="inspect-facade-select"
+                :value="inspectFacadeSelectValue"
+                @change="onInspectFacadeGroupChange"
+              >
+                <option value="">{{ t('result.toolbar.facadeGroupNone') }}</option>
+                <option v-for="group in inspectFacadeGroups" :key="group.id" :value="group.id">
+                  {{ group.code }} — {{ group.name }}
+                </option>
+                <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
+              </select>
+            </div>
+            <p v-else-if="!lastInspectHit" class="inspect-empty">
+              Nog geen selectie — tik op de plattegrond.
+            </p>
+          </div>
+
+          <div v-if="openingOverflow || warnings.length > 0" class="download-warnings">
+            <FmlOpeningOverflowNotice v-if="openingOverflow" :summary="openingOverflow" />
+            <div v-if="warnings.length > 0" class="warnings">
+              <p v-for="(warning, index) in warnings" :key="index">{{ warning.message }}</p>
+            </div>
+          </div>
+          <div class="actions sidebar-download-row">
             <button
               type="button"
-              class="sidebar-icon-btn"
-              :class="{ 'is-on': fmlRescaleActive }"
-              :disabled="!canStartRescale"
-              :title="t('result.rescaleHint')"
-              :aria-label="t('result.rescale')"
-              :aria-pressed="fmlRescaleActive"
-              @click="fmlRescaleActive ? cancelFmlRescale() : beginFmlRescale()"
+              class="upload-btn primary download-fml"
+              @click="downloadCurrentFml"
             >
-              <ToolbeltIcon name="rescale" />
-              <span>{{ t('result.rescale') }}</span>
-            </button>
-            <button
-              type="button"
-              class="sidebar-icon-btn"
-              :disabled="!canStartRescale"
-              :title="t('result.sanitizeHint')"
-              :aria-label="t('result.sanitize')"
-              @click="previewCanvasRef?.sanitizeWalls?.()"
-            >
-              <ToolbeltIcon name="sanitize" />
-              <span>{{ t('result.sanitize') }}</span>
+              Download .fml
             </button>
           </div>
-          <FmlRescalePanel
-            v-if="!underlayScaleActive"
-            hide-start
-            :active="fmlRescaleActive"
-            :can-start="canStartRescale"
-            :state="fmlRescaleState"
-            :mm-x="fmlRescaleDistanceMmX"
-            :mm-y="fmlRescaleDistanceMmY"
-            :unit="scaleInputUnit"
-            @begin="beginFmlRescale()"
-            @cancel="cancelFmlRescale()"
-            @confirm="confirmFmlRescale()"
-            @update-mm-x="setFmlRescaleDistanceMmX"
-            @update-mm-y="setFmlRescaleDistanceMmY"
-          />
-          <div class="orient-block">
-            <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
-            <div class="orient-actions">
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :class="{ 'is-on': activeFmlOrient.flipX }"
-                :title="t('result.mirrorVerticalHint')"
-                :aria-label="t('result.mirrorVertical')"
-                :aria-pressed="activeFmlOrient.flipX"
-                @click="applyViewerFloorOrient('flipX')"
-              >
-                <ToolbeltIcon name="mirror_plan" />
-                <span>{{ t('result.mirrorVertical') }}</span>
-              </button>
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :title="t('result.rotate90CcwHint')"
-                :aria-label="t('result.rotate90Ccw')"
-                @click="applyViewerFloorOrient('rotCcw')"
-              >
-                <ToolbeltIcon name="rotate_plan_ccw" />
-                <span>{{ t('result.rotate90Ccw') }}</span>
-              </button>
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :title="t('result.rotate90CwHint')"
-                :aria-label="t('result.rotate90Cw')"
-                @click="applyViewerFloorOrient('rotCw')"
-              >
-                <ToolbeltIcon name="rotate_plan_cw" />
-                <span>{{ t('result.rotate90Cw') }}</span>
-              </button>
-            </div>
-          </div>
-          <FmlViewerDefaultsFields
-            :defaults="activeFloorDefaults"
-            :hint="t('viewer.defaultsHintFloor')"
-            @number="onFloorDefaultNumber"
-            @bool="onFloorDefaultBool"
-          />
-        </details>
-
-        <div v-if="inspectMode" class="inspect-panel">
-          <p class="inspect-hint">
-            Tik cyclet de statuskleur: uit → open (oranje) → klaar (groen) → uit. Muur in een
-            gevelgroep selecteert alle leden op deze verdieping.
-          </p>
-          <dl v-if="lastInspectHit" class="inspect-hit">
-            <div>
-              <dt>Type</dt>
-              <dd>{{ inspectKindLabel(lastInspectHit.kind) }}</dd>
-            </div>
-            <div>
-              <dt>Id</dt>
-              <dd class="inspect-id">{{ lastInspectHit.id }}</dd>
-            </div>
-            <div v-if="lastInspectHit.wallId">
-              <dt>Muur</dt>
-              <dd class="inspect-id">{{ lastInspectHit.wallId }}</dd>
-            </div>
-            <div v-if="lastInspectHit.ids?.length">
-              <dt>Gevel-leden</dt>
-              <dd class="inspect-id">{{ lastInspectHit.ids.length }}</dd>
-            </div>
-            <div>
-              <dt>Kleur</dt>
-              <dd>
-                <span
-                  v-if="inspectColors[lastInspectHit.id]"
-                  class="inspect-swatch"
-                  :style="{ background: inspectColors[lastInspectHit.id] }"
-                />
-                {{ inspectColors[lastInspectHit.id] ?? 'geen' }}
-              </dd>
-            </div>
-          </dl>
-          <div v-if="lastInspectHit?.kind === 'wall'" class="inspect-facade">
-            <label class="inspect-facade-label" for="inspect-facade-select">{{
-              t('result.toolbar.facadeGroup')
-            }}</label>
-            <select
-              id="inspect-facade-select"
-              class="inspect-facade-select"
-              :value="inspectFacadeSelectValue"
-              @change="onInspectFacadeGroupChange"
-            >
-              <option value="">{{ t('result.toolbar.facadeGroupNone') }}</option>
-              <option v-for="group in inspectFacadeGroups" :key="group.id" :value="group.id">
-                {{ group.code }} — {{ group.name }}
-              </option>
-              <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
-            </select>
-          </div>
-          <p v-else-if="!lastInspectHit" class="inspect-empty">
-            Nog geen selectie — tik op de plattegrond.
-          </p>
         </div>
-
-        <div v-if="openingOverflow || warnings.length > 0" class="download-warnings">
-          <FmlOpeningOverflowNotice v-if="openingOverflow" :summary="openingOverflow" />
-          <div v-if="warnings.length > 0" class="warnings">
-            <p v-for="(warning, index) in warnings" :key="index">{{ warning.message }}</p>
-          </div>
-        </div>
-        <div class="actions sidebar-download-row">
-          <button type="button" class="upload-btn primary download-fml" @click="downloadCurrentFml">
-            Download .fml
-          </button>
-        </div>
-      </div>
-    </aside>
+      </aside>
+      <button
+        type="button"
+        class="sidebar-edge-close"
+        :aria-label="t('viewer.closeMenu')"
+        :title="t('viewer.closeMenu')"
+        @click="sidebarOpen = false"
+      >
+        <ToolbeltIcon name="close_menu" />
+      </button>
+    </div>
 
     <main class="viewer-main">
       <div
@@ -1369,6 +1504,7 @@ defineExpose({
             :flip-x="underlayLayout?.flipX === true"
             :underlay-move-mode="underlayMoveMode && underlayOpacity > 0"
             :canvas-fullscreen="canvasFullscreen"
+            :dimension-vis="dimensionVis"
             :thickness-min-cm="thicknessMinCm"
             :thickness-mid-cm="thicknessMidCm"
             :thickness-max-cm="thicknessMaxCm"
@@ -1386,6 +1522,7 @@ defineExpose({
             @update-rescale-state="onRescaleStateUpdate"
             @cancel-rescale="fmlRescaleActive ? cancelFmlRescale() : cancelUnderlayScale()"
             @update:canvas-fullscreen="canvasFullscreen = $event"
+            @update:dimension-vis="dimensionVis = $event"
           />
         </div>
       </template>
@@ -1478,84 +1615,32 @@ defineExpose({
   display: none;
 }
 
-.sidebar-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  height: auto;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #0f172a;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.viewer-header .sidebar-icon-btn {
-  width: auto;
-  min-width: 36px;
-  height: 36px;
-  padding: 0 8px;
-  justify-content: center;
-  font-weight: 400;
-}
-
-.sidebar-icon-btn input {
-  display: none;
-}
-
-.sidebar-icon-btn.is-on {
-  background: #0f172a;
-  color: #fff;
-  border-color: #0f172a;
-}
-
-.sidebar-icon-btn--primary {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #fff;
-}
-
-.sidebar-icon-btn:disabled,
-.sidebar-icon-btn.is-disabled {
-  opacity: 0.45;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-.sidebar-icon-btn :deep(.canvas-toolbelt__icon) {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.sidebar-icon-row {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0 0 10px;
-}
-
-.sidebar {
+.sidebar-wrap {
+  position: relative;
   width: 300px;
   flex-shrink: 0;
-  overflow-y: auto;
-  border-right: 1px solid #e2e8f0;
-  background: #f8fafc;
+  height: 100%;
+  z-index: 5;
 }
 
-.sidebar--drawer {
+.sidebar-wrap--drawer {
   position: absolute;
   top: max(8px, env(safe-area-inset-top, 0px));
   bottom: max(8px, env(safe-area-inset-bottom, 0px));
   left: max(8px, env(safe-area-inset-left, 0px));
   z-index: 24;
   width: min(320px, calc(92vw - env(safe-area-inset-left, 0px)));
+}
+
+.sidebar {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.sidebar--drawer {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: rgb(255 255 255 / 0.96);
@@ -1567,11 +1652,14 @@ defineExpose({
 }
 
 @media (max-width: 600px) {
-  .sidebar--drawer {
+  .sidebar-wrap--drawer {
     top: auto;
     right: max(8px, env(safe-area-inset-right, 0px));
     width: auto;
     height: min(72vh, 620px);
+  }
+
+  .sidebar--drawer {
     border-radius: 10px;
   }
 

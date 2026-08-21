@@ -194,11 +194,13 @@ export function useWorkspaceRoomPipeline(deps: {
       deps.showLayer11.value = false
       deps.showLayer12.value = true
       deps.showLayer14.value = true
-      deps.resetFmlPreview()
       await semanticWalls.buildAfterFinalize()
       await deps.onAfterFinalize?.((phase) => {
         roomFacesRef.value?.setFinalizePhase(phase)
       })
+      // Ná semantic + deuren/ramen: anders zet stamp/nulpunt editedPreviewPlan
+      // vast op de pre-semantic graph en slaat de generate-watch over.
+      deps.resetFmlPreview()
       roomFacesRef.value?.setFinalizePhase(null)
       deps.resultTab.value = 'vector'
       deps.flowStep.value = 'result'

@@ -1,11 +1,19 @@
 import { ref, type Ref } from 'vue'
 import type { Point2D, Wall } from '@/core/fml/types'
 import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
-import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/fml-preview-wall-face-snap'
+import {
+  MANUAL_DIM_FACE_SNAP_CM,
+  snapPointToWallFaces,
+  WALL_FACE_SNAP_CM,
+} from '@/ui/components/fml-preview-wall-face-snap'
+import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerOffsetPoint } from '@/core/fml/slice-offset-snap'
+import type { BtfSlice } from '@/core/fml/btf-slices'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
 import { type MeasureLine, measureDistanceCm } from './fml-preview-measure'
 
 let measureIdCounter = 0
+
+export type MeasureDrawMode = 'tape' | 'manual' | 'slicer'
 
 interface MeasureHitTestApi {
   hitTestJunctionAtCm: (cm: Point2D) => RenderJunction | null
@@ -13,8 +21,8 @@ interface MeasureHitTestApi {
 }
 
 /**
- * Maatlijn-tool: face-snap zit hier (zelfde helper als nulpunt), niet alleen via
- * een resolvePoint-indirection — zodat start/eind/hover altijd dezelfde snap krijgen.
+ * Maatlijn-tool.
+ * Tape = sessie; Manual = dimensions[]; Slicer = eerste punt P (plaats), tweede M (meet).
  */
 export function useFmlPreviewMeasure(options: {
   hitTest: MeasureHitTestApi
@@ -22,6 +30,15 @@ export function useFmlPreviewMeasure(options: {
   getWalls: () => ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
   shiftPressed: Ref<boolean>
   beforeBegin: () => void
+  getMode: () => MeasureDrawMode
+  /** Alleen editor: commit permanente maten. */
+  canPersist: () => boolean
+  onCommitManual?: (a: Point2D, b: Point2D) => void
+  /** p = plaatsing (eerste), m = meten (tweede). */
+  onCommitSlicer?: (p: Point2D, m: Point2D) => void
+  /** Slicer offset-snap: bestaande slices + voorkeursafstand. */
+  getSlicerSlices?: () => ReadonlyArray<BtfSlice>
+  getSlicerOffsetSnapCm?: () => number
 }) {
   const measurePreview = ref<{ a: Point2D; b: Point2D } | null>(null)
   const measureLines = ref<MeasureLine[]>([])
@@ -33,22 +50,40 @@ export function useFmlPreviewMeasure(options: {
     cm: Point2D,
     opts?: { axisAnchor?: Point2D; snapDisabled?: boolean },
   ): Point2D {
+    const mode = options.getMode()
     const snapDisabled = opts?.snapDisabled === true
-    let point = snapPointToWallFaces(options.getWalls(), cm, WALL_FACE_SNAP_CM, {
+    const infiniteAxes = mode === 'manual'
+    const radius = mode === 'manual' ? MANUAL_DIM_FACE_SNAP_CM : WALL_FACE_SNAP_CM
+    let point = snapPointToWallFaces(options.getWalls(), cm, radius, {
       disabled: snapDisabled,
+      infiniteAxes,
     })
     const anchor = opts?.axisAnchor
-    if (anchor && options.shiftPressed.value) {
+    // Slicer: standaard H/V (offset P–M); Shift uitzetten heeft geen effect — Ctrl = vrij.
+    // Overige modes: Shift = H/V.
+    const lockAxis = mode === 'slicer' ? !snapDisabled : options.shiftPressed.value
+    if (anchor && lockAxis) {
       point = snapDrawWallEndpoint(anchor, point, true)
-      // Shift lockt één as; face-snap de vrije as opnieuw (parallelle binnenmaten).
       if (!snapDisabled) {
-        const resnap = snapPointToWallFaces(options.getWalls(), point, WALL_FACE_SNAP_CM)
+        const resnap = snapPointToWallFaces(options.getWalls(), point, radius, {
+          infiniteAxes,
+        })
         if (Math.abs(point.y - anchor.y) <= 1e-9) {
           point = { x: resnap.x, y: point.y }
         } else if (Math.abs(point.x - anchor.x) <= 1e-9) {
           point = { x: point.x, y: resnap.y }
         }
       }
+    }
+    // Slicer: soft-snap |P−M| op voorkeur / andere slices (alleen afstand, geen P-op-P)
+    if (mode === 'slicer' && anchor && !snapDisabled) {
+      point = snapSlicerOffsetPoint({
+        anchor,
+        point,
+        slices: options.getSlicerSlices?.() ?? [],
+        preferredCm: options.getSlicerOffsetSnapCm?.() ?? DEFAULT_SLICER_OFFSET_SNAP_CM,
+        snapPCoords: false,
+      })
     }
     return point
   }
@@ -121,6 +156,17 @@ export function useFmlPreviewMeasure(options: {
     })
     measureHoverCm.value = endCm
     if (measureDistanceCm(drag.startCm, endCm) < 1) return
+
+    const mode = options.getMode()
+    if (mode === 'manual' && options.canPersist()) {
+      options.onCommitManual?.(drag.startCm, endCm)
+      return
+    }
+    if (mode === 'slicer' && options.canPersist()) {
+      // Eerste = P (plaats), tweede = M (meet)
+      options.onCommitSlicer?.(drag.startCm, endCm)
+      return
+    }
 
     measureLines.value = [
       ...measureLines.value,

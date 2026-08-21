@@ -1,6 +1,6 @@
 /**
  * FML wall sanitize (cm): weld near endpoints → near-H/V exact op as →
- * T/X junctions → collinear cover (muur-onder-muur).
+ * T/X junctions → collinear cover (muur-onder-muur), herhaald tot stabiel.
  *
  * Keep-axis: alleen `a`/`b` (en splits); `balance` / `thickness` / extras blijven
  * van de overlever. Geen `alignWallJunctionBalance` (die wist import-balance).
@@ -17,6 +17,9 @@ export const SANITIZE_WELD_EPS_CM = 0.25
 
 /** Hartlijnen binnen dit (cm) tellen als dezelfde as (niet dikte — gang blijft). */
 export const SANITIZE_AXIS_CLUSTER_EPS_CM = 0.5
+
+/** Max weld→ortho→T/X→cover-passen tot vast punt (ortho kan nieuwe welds maken). */
+export const SANITIZE_MAX_PASSES = 4
 
 const SPAN_SLACK_CM = 0.05
 const MIN_SPLIT_T = 1e-6
@@ -270,7 +273,15 @@ function findCoverHost(hosts: Wall[], point: Point2D, axis: AxisKind): Wall | nu
   return best
 }
 
-function absorbCoveredCollinearWalls(walls: Wall[]): {
+/**
+ * Muur volledig onder een collineaire buur → slachtoffer weg; host knipt op
+ * uitstekende einden. Live slide/junction-move gebruikt dit om T-tak-voorbij-stam
+ * geen dubbele muur te laten bakken.
+ */
+export function absorbCoveredCollinearWalls(
+  walls: Wall[],
+  options?: { keepIds?: ReadonlySet<string> },
+): {
   walls: Wall[]
   remaps: WallIdRemap[]
 } {
@@ -311,6 +322,7 @@ function absorbCoveredCollinearWalls(walls: Wall[]): {
         return { index, lo: span.lo, hi: span.hi }
       })
       for (const candidate of spans) {
+        if (options?.keepIds?.has(work[candidate.index].id)) continue
         const others = spans
           .filter((s) => s.index !== candidate.index)
           .map((s): [number, number] => [s.lo, s.hi])
@@ -415,7 +427,8 @@ export function wallsSanitizeChanged(before: Wall[], after: Wall[]): boolean {
 }
 
 /**
- * Weld → orthogonalize → T/X junctions → cover. `balance` van elke overlevende muur blijft.
+ * Weld → orthogonalize → T/X junctions → cover, herhaald tot geometrie stabiel is.
+ * `balance` van elke overlevende muur blijft.
  * Remaps: host-helften op dezelfde as (T/X + cover); uitstekende T-tak niet.
  */
 export type SanitizeFmlWallsResult = {
@@ -423,8 +436,7 @@ export type SanitizeFmlWallsResult = {
   remaps: WallIdRemap[]
 }
 
-export function sanitizeFmlWallsDetailed(walls: Wall[]): SanitizeFmlWallsResult {
-  if (walls.length === 0) return { walls, remaps: [] }
+function runSanitizePass(walls: Wall[]): SanitizeFmlWallsResult {
   const welded = weldNearEndpoints(walls)
   const ortho = orthogonalizeNearAxisWalls(welded)
   const junctions = materializeWallJunctionsDetailed(ortho)
@@ -433,6 +445,21 @@ export function sanitizeFmlWallsDetailed(walls: Wall[]): SanitizeFmlWallsResult 
     walls: cover.walls,
     remaps: [...junctions.remaps, ...cover.remaps],
   }
+}
+
+export function sanitizeFmlWallsDetailed(walls: Wall[]): SanitizeFmlWallsResult {
+  if (walls.length === 0) return { walls, remaps: [] }
+  let current = walls
+  const remaps: WallIdRemap[] = []
+  for (let pass = 0; pass < SANITIZE_MAX_PASSES; pass += 1) {
+    const next = runSanitizePass(current)
+    remaps.push(...next.remaps)
+    if (!wallsSanitizeChanged(current, next.walls)) {
+      return { walls: next.walls, remaps }
+    }
+    current = next.walls
+  }
+  return { walls: current, remaps }
 }
 
 export function sanitizeFmlWalls(walls: Wall[]): Wall[] {

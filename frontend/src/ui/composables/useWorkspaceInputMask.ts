@@ -14,7 +14,7 @@ import { maskHasInk } from '@/cv/tools/polygon'
 import { yieldToMain } from '@/platform/image'
 import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import type { WorkspaceFlowStep } from './workspace/constants'
-import { isUndoKey } from './workspace/isUndoKey'
+import { isRedoKey, isUndoKey } from './workspace/isUndoKey'
 
 export function useWorkspaceInputMask(deps: {
   flowStep: Ref<WorkspaceFlowStep>
@@ -29,6 +29,7 @@ export function useWorkspaceInputMask(deps: {
   const maskedWorkingSrc = ref<string | null>(null)
   const maskHistory = createByteArrayHistory({ maxSteps: 40 })
   const canUndoMask = ref(false)
+  const canRedoMask = ref(false)
   const eraserMask = ref<Uint8Array | null>(null)
   const ocrMask = ref<Uint8Array | null>(null)
   const ocrMaskedRegions = ref<OcrTextCandidate[]>([])
@@ -50,14 +51,15 @@ export function useWorkspaceInputMask(deps: {
       : null,
   )
 
-  function syncCanUndoMask() {
+  function syncMaskHistoryFlags() {
     canUndoMask.value = maskHistory.canUndo()
+    canRedoMask.value = maskHistory.canRedo()
   }
 
   function pushMaskUndoSnapshot() {
     if (!eraserMask.value) return
     maskHistory.push(eraserMask.value)
-    syncCanUndoMask()
+    syncMaskHistoryFlags()
   }
 
   function refreshMaskedWorkingImage() {
@@ -80,7 +82,16 @@ export function useWorkspaceInputMask(deps: {
   function undoMaskEdit() {
     if (!eraserMask.value || !maskHistory.undo(eraserMask.value)) return
     eraserTouched.value = maskHasInk(eraserMask.value)
-    syncCanUndoMask()
+    syncMaskHistoryFlags()
+    refreshMaskedWorkingImage()
+    deps.preprocessPreview.clearPreview()
+    deps.onMaskChanged?.()
+  }
+
+  function redoMaskEdit() {
+    if (!eraserMask.value || !maskHistory.redo(eraserMask.value)) return
+    eraserTouched.value = maskHasInk(eraserMask.value)
+    syncMaskHistoryFlags()
     refreshMaskedWorkingImage()
     deps.preprocessPreview.clearPreview()
     deps.onMaskChanged?.()
@@ -88,11 +99,17 @@ export function useWorkspaceInputMask(deps: {
 
   function clearMaskHistory() {
     maskHistory.clear()
-    syncCanUndoMask()
+    syncMaskHistoryFlags()
   }
 
   function onMaskUndoKeydown(event: KeyboardEvent) {
     if (deps.flowStep.value !== 'input') return
+    if (isRedoKey(event)) {
+      if (!canRedoMask.value) return
+      event.preventDefault()
+      redoMaskEdit()
+      return
+    }
     if (!isUndoKey(event) || !canUndoMask.value) return
     event.preventDefault()
     undoMaskEdit()
@@ -336,6 +353,7 @@ export function useWorkspaceInputMask(deps: {
     maskedWorkingCanvas,
     maskedWorkingSrc,
     canUndoMask,
+    canRedoMask,
     eraserMask,
     ocrMask,
     ocrMaskedRegions,
@@ -365,6 +383,7 @@ export function useWorkspaceInputMask(deps: {
     toggleEraser,
     onEraseStroke,
     undoMaskEdit,
+    redoMaskEdit,
     applyOcrTextMask,
     clearOcrTextMask,
     hydrateMaskState,

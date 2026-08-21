@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 withDefaults(
   defineProps<{
@@ -36,30 +37,38 @@ const { t } = useI18n()
   <div class="panel">
     <h3>{{ t('input.cropGumTitle') }}</h3>
     <div class="section">
-      <div class="section-head">
-        <p class="section-title">{{ t('input.cropSection') }}</p>
-        <button
-          type="button"
-          :class="{ primary: cropIncludeEnabled }"
-          @click="emit('toggleCropInclude')"
-        >
-          {{ t('input.cropPolygon') }}
-        </button>
-      </div>
+      <p class="section-title">{{ t('input.cropSection') }}</p>
+      <button
+        type="button"
+        class="sidebar-icon-btn"
+        :class="{ 'is-on': cropIncludeEnabled }"
+        @click="emit('toggleCropInclude')"
+      >
+        <ToolbeltIcon name="crop" />
+        <span>{{ t('input.cropPolygon') }}</span>
+      </button>
     </div>
 
     <div class="section section-divider">
-      <div class="section-head">
-        <p class="section-title">{{ t('input.gumSection') }}</p>
-        <button type="button" :class="{ primary: eraserEnabled }" @click="emit('toggleEraser')">
-          {{ t('input.gumBrush') }}
+      <p class="section-title">{{ t('input.gumSection') }}</p>
+      <div class="sidebar-icon-row">
+        <button
+          type="button"
+          class="sidebar-icon-btn"
+          :class="{ 'is-on': eraserEnabled }"
+          @click="emit('toggleEraser')"
+        >
+          <ToolbeltIcon name="brush" />
+          <span>{{ t('input.gumBrush') }}</span>
         </button>
         <button
           type="button"
-          :class="{ primary: polygonEraserEnabled }"
+          class="sidebar-icon-btn"
+          :class="{ 'is-on': polygonEraserEnabled }"
           @click="emit('togglePolygonEraser')"
         >
-          {{ t('input.gumPolygon') }}
+          <ToolbeltIcon name="eraser" />
+          <span>{{ t('input.gumPolygon') }}</span>
         </button>
       </div>
       <div v-if="eraserEnabled" class="setting-row">
@@ -89,28 +98,8 @@ const { t } = useI18n()
 </template>
 
 <style scoped>
-label {
-  display: block;
-  font-size: 12px;
-  margin: 4px 0;
-}
-
-.actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
 .section-title {
-  margin: 0;
+  margin: 0 0 6px;
   font-size: 11px;
   font-weight: 600;
   color: #475569;
@@ -157,13 +146,7 @@ label {
   min-width: 74px;
 }
 
-.hint {
-  font-size: 12px;
-  color: #666;
-  margin: 4px 0;
-}
-
-button.primary {
-  font-weight: 600;
+.sidebar-icon-row {
+  margin-bottom: 0;
 }
 </style>

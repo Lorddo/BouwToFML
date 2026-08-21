@@ -60,9 +60,14 @@ export type FloorplanCanvasProps = {
   wallStampInteractive?: boolean
   /** Ghost PNG (baseBounds) — live stretch naar wallStampBounds. */
   wallStampGhostSrc?: string | null
+  /** false = stempelset (alleen sleep); default true. */
+  wallStampAllowResize?: boolean
+  /** Huidige tool-hint voor topbar i-modal. */
   instructionHint?: string
-  instructionHintStale?: boolean
-  relocateToolHints?: boolean
+  canUndo?: boolean
+  canRedo?: boolean
+  canvasFullscreen?: boolean
+  helpKeys?: readonly string[]
 }
 
 export const FLOORPLAN_CANVAS_PROP_DEFAULTS = {
@@ -98,11 +103,14 @@ export const FLOORPLAN_CANVAS_PROP_DEFAULTS = {
   inkBrushSize: 4,
   faceTool: null,
   instructionHint: '',
-  instructionHintStale: false,
-  relocateToolHints: false,
+  canUndo: false,
+  canRedo: false,
+  canvasFullscreen: false,
+  helpKeys: () => [] as string[],
   wallStampBounds: null,
   wallStampInteractive: false,
   wallStampGhostSrc: null,
+  wallStampAllowResize: true,
 }
 
 export type FloorplanCanvasEmits = {
@@ -135,4 +143,7 @@ export type FloorplanCanvasEmits = {
   inkLine: [start: { x: number; y: number }, end: { x: number; y: number }, lineWidth: number]
   inkRect: [bounds: { x: number; y: number; width: number; height: number }, lineWidth: number]
   wallStampBoundsChange: [bounds: { x: number; y: number; width: number; height: number }]
+  undo: []
+  redo: []
+  'update:canvasFullscreen': [value: boolean]
 }

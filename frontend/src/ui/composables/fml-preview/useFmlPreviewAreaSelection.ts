@@ -1,6 +1,11 @@
 import { ref } from 'vue'
 import type { FloorArea, FloorSurface } from '@/core/fml/types'
-import { effectiveRoomTypeColor, listRoomTypes, resolveRoomType } from '@/core/fml/roomtype-catalog'
+import {
+  effectiveRoomTypeColor,
+  listRoomTypes,
+  parseFmlHex,
+  resolveRoomType,
+} from '@/core/fml/roomtype-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { FmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -172,12 +177,29 @@ export function useFmlPreviewAreaSelection(options: {
   }
 
   function applyColor(color: string): void {
+    const hex = parseFmlHex(color)
+    if (!hex) return
     flushPendingFieldCommits()
     options.editor.pushUndo()
     if (settingsAreaId.value) {
-      options.editor.updateArea(settingsAreaId.value, { color })
+      options.editor.updateArea(settingsAreaId.value, { color: hex })
     } else if (settingsSurfaceId.value) {
-      options.editor.updateSurface(settingsSurfaceId.value, { color })
+      options.editor.updateSurface(settingsSurfaceId.value, { color: hex })
+    }
+    options.syncPlanToParent()
+  }
+
+  function applyShowAreaLabel(show: boolean): void {
+    flushPendingFieldCommits()
+    const current = selectedArea() ?? selectedSurface()
+    if (!current) return
+    const shown = current.showAreaLabel !== false
+    if (shown === show) return
+    options.editor.pushUndo()
+    if (settingsAreaId.value) {
+      options.editor.updateArea(settingsAreaId.value, { showAreaLabel: show })
+    } else if (settingsSurfaceId.value) {
+      options.editor.updateSurface(settingsSurfaceId.value, { showAreaLabel: show })
     }
     options.syncPlanToParent()
   }
@@ -221,6 +243,7 @@ export function useFmlPreviewAreaSelection(options: {
     commitCustomName,
     applyCustomName,
     applyColor,
+    applyShowAreaLabel,
     deleteSelectedTagged,
     selectedArea,
     selectedSurface,
@@ -234,5 +257,6 @@ export type AreaSelectionPanel = {
   name: string | null
   customName: string
   color: string
+  showAreaLabel: boolean
   canEditPolygon: boolean
 }

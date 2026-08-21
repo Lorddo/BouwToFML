@@ -17,6 +17,7 @@ defineProps<{
   hint?: string
   fullscreen?: boolean
   edgeChrome?: boolean
+  helpKeys?: readonly string[]
 }>()
 
 const emit = defineEmits<{
@@ -44,6 +45,7 @@ const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { defaul
     :hint="hint"
     :fullscreen="fullscreen"
     :edge-chrome="edgeChrome"
+    :help-keys="helpKeys"
     @undo="emit('undo')"
     @redo="emit('redo')"
     @fit="emit('fit')"

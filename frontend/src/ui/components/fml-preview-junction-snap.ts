@@ -81,6 +81,33 @@ export function applyShiftSnapFromAllOppositeEnds(
   return applyShiftSnapAxisAligned(walls, refs, candidate)
 }
 
+/** Lichte H/V-snap naar punten (onafhankelijk per as) — zelfde magnet als muureinden. */
+export function snapToNearbyPointAxes(
+  points: ReadonlyArray<Point2D>,
+  candidate: Point2D,
+  radiusCm = ENDPOINT_SNAP_RADIUS_CM,
+): Point2D {
+  let x = candidate.x
+  let y = candidate.y
+  let bestDx = radiusCm
+  let bestDy = radiusCm
+
+  for (const point of points) {
+    const dx = Math.abs(candidate.x - point.x)
+    if (dx < bestDx) {
+      bestDx = dx
+      x = point.x
+    }
+    const dy = Math.abs(candidate.y - point.y)
+    if (dy < bestDy) {
+      bestDy = dy
+      y = point.y
+    }
+  }
+
+  return { x, y }
+}
+
 /** Lichte H/V-snap naar andere muuruiteinden (onafhankelijk per as). */
 export function snapToNearbyEndpointAxes(
   walls: Wall[],
@@ -89,39 +116,138 @@ export function snapToNearbyEndpointAxes(
   radiusCm = ENDPOINT_SNAP_RADIUS_CM,
 ): Point2D {
   const movingKeys = new Set(movingRefs.map((ref) => refKey(ref)))
-  const snapXs: number[] = []
-  const snapYs: number[] = []
+  const points: Point2D[] = []
 
   for (const wall of walls) {
     for (const end of ['a', 'b'] as const) {
       const key = `${wall.id}:${end}`
       if (movingKeys.has(key)) continue
-      snapXs.push(wall[end].x)
-      snapYs.push(wall[end].y)
+      points.push(wall[end])
     }
   }
 
-  let x = candidate.x
-  let y = candidate.y
-  let bestDx = radiusCm
-  let bestDy = radiusCm
+  return snapToNearbyPointAxes(points, candidate, radiusCm)
+}
 
-  for (const targetX of snapXs) {
-    const dx = Math.abs(candidate.x - targetX)
-    if (dx < bestDx) {
-      bestDx = dx
-      x = targetX
+/**
+ * Shift bij polygoon-vertex: elke aanliggende ribbe wordt H of V
+ * (zelfde idee als muur-eind Shift t.o.v. het andere uiteinde).
+ */
+export function snapPolygonVertexAxisLock(
+  poly: ReadonlyArray<Point2D>,
+  index: number,
+  candidate: Point2D,
+): Point2D {
+  if (poly.length < 2 || index < 0 || index >= poly.length) return candidate
+  const prev = poly[(index - 1 + poly.length) % poly.length]
+  const next = poly[(index + 1) % poly.length]
+  const anchors = prev === next || (prev.x === next.x && prev.y === next.y) ? [prev] : [prev, next]
+  const horizontalYs: number[] = []
+  const verticalXs: number[] = []
+  for (const anchor of anchors) {
+    const dx = Math.abs(candidate.x - anchor.x)
+    const dy = Math.abs(candidate.y - anchor.y)
+    if (dx >= dy) horizontalYs.push(anchor.y)
+    else verticalXs.push(anchor.x)
+  }
+  return {
+    x: verticalXs.length > 0 ? verticalXs[0] : candidate.x,
+    y: horizontalYs.length > 0 ? horizontalYs[0] : candidate.y,
+  }
+}
+
+const VERTEX_EDGE_ENDPOINT_T = 0.05
+
+function projectOnSegment(
+  p: Point2D,
+  a: Point2D,
+  b: Point2D,
+): { dist: number; t: number; projected: Point2D } {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const lenSq = dx * dx + dy * dy
+  if (lenSq < 1e-9) {
+    return { dist: distance(p, a), t: 0, projected: { x: a.x, y: a.y } }
+  }
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq))
+  const projected = { x: a.x + t * dx, y: a.y + t * dy }
+  return { dist: distance(p, projected), t, projected }
+}
+
+/** Dichtstbijzijnde punt binnen radius, anders null. */
+export function closestPointInRadius(
+  points: ReadonlyArray<Point2D>,
+  candidate: Point2D,
+  maxDistCm: number,
+): Point2D | null {
+  let best: Point2D | null = null
+  let bestDist = maxDistCm
+  for (const point of points) {
+    const dist = distance(candidate, point)
+    if (dist <= bestDist) {
+      bestDist = dist
+      best = { x: point.x, y: point.y }
     }
   }
-  for (const targetY of snapYs) {
-    const dy = Math.abs(candidate.y - targetY)
-    if (dy < bestDy) {
-      bestDy = dy
-      y = targetY
+  return best
+}
+
+/** Projectie op het midden van een segment (uiteinden laten vertex-snap winnen). */
+export function closestSegmentProjection(
+  segments: ReadonlyArray<{ a: Point2D; b: Point2D }>,
+  candidate: Point2D,
+  maxDistCm: number,
+): Point2D | null {
+  let best: Point2D | null = null
+  let bestDist = maxDistCm
+  for (const seg of segments) {
+    const { dist, t, projected } = projectOnSegment(candidate, seg.a, seg.b)
+    if (t <= VERTEX_EDGE_ENDPOINT_T || t >= 1 - VERTEX_EDGE_ENDPOINT_T) continue
+    if (dist <= bestDist) {
+      bestDist = dist
+      best = projected
     }
   }
+  return best
+}
 
-  return { x, y }
+export function closedRingSegments(
+  ring: ReadonlyArray<Point2D>,
+): Array<{ a: Point2D; b: Point2D }> {
+  if (ring.length < 2) return []
+  const segs: Array<{ a: Point2D; b: Point2D }> = []
+  for (let i = 0; i < ring.length; i++) {
+    const a = ring[i]
+    const b = ring[(i + 1) % ring.length]
+    segs.push({ a, b })
+  }
+  if (ring.length === 2) return segs.slice(0, 1)
+  return segs
+}
+
+export function openPolylineSegments(
+  points: ReadonlyArray<Point2D>,
+): Array<{ a: Point2D; b: Point2D }> {
+  const segs: Array<{ a: Point2D; b: Point2D }> = []
+  for (let i = 1; i < points.length; i++) {
+    segs.push({ a: points[i - 1], b: points[i] })
+  }
+  return segs
+}
+
+/**
+ * Hoek eerst, daarna ribbe. Null = niets binnen radius.
+ */
+export function snapToPolygonGeometry(
+  candidate: Point2D,
+  vertices: ReadonlyArray<Point2D>,
+  segments: ReadonlyArray<{ a: Point2D; b: Point2D }>,
+  radiusCm: number,
+): Point2D | null {
+  return (
+    closestPointInRadius(vertices, candidate, radiusCm) ??
+    closestSegmentProjection(segments, candidate, radiusCm)
+  )
 }
 
 export function snapPointToJunctions(

@@ -5,574 +5,68 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-20 (FML fixture-dock CSS)
-
-## FML chrome-dialogs (2026-08-20)
-
-Native `confirm`/`prompt` → FML-kaart (help-modal stijl). Oil-bottle, hoogte-overschrijven, gevelnaam. Host in App + embed-editor; Esc/Enter; zonder host native fallback.
-
-## FML fixture-bibliotheek linksonder (2026-08-20)
-
-Dock in `FmlPreviewCanvas` ná de stage, niet in midden-settings. Scoped `@import` van `:root`-tokens matcht nooit → `left`/`bottom`/`z-index` waren ongeldig → bibliotheek achter Konva. Nu hardcoded px + z-index 24 (toolbelt is 20). add_fixture opent geen center-kaart.
-
-## FML gevelgroepen (2026-08-20)
-
-`plan.source.settings.facadeGroups`: `{ id:G1, code, name, wallGuids }` project-breed. **Max één groep per muur** (assign + first-wins). Editor-muursettings + inspect-dropdown; capability editor+inspect (niet detection). Prune bij openen; undo in editor; muur-wissen = detach. Tik inspect → alle leden op floor (`hit.ids`). Remap bij hand-split, Opschonen én junction-pass (upload/download): alleen host-helften (zelfde as); T-tak blijft buiten. Geen GUID-suffix / wall-extra.
-
-## FML T-junction + hartlijn-snap (2026-08-20)
-
-`materializeWallJunctions`: T (eind op hartlijn) + X (interior-kruis); eerste helft houdt `id`, tweede `split-host-`; remaps voor gevelgroepen. In `sanitizeFmlWalls` ná weld/ortho, vóór cover (cover-splits ook remapped). Import + viewer-download: junction-pass + facade remap/prune. Muur-teken: hartlijn 15 cm + T-split op a/b.
-
-## FML-editor chrome + onderlegger pivot (2026-08-20)
-
-Onderlegger: draai om midden; spiegel over linker rand (rotatie blijft). Project: «FML kiezen». Fold FML → Plattegrond/Floorplan; hoogtes/bovenlicht alleen per verdieping (geen project-wide). Canvas-topbar (undo/redo/fit/fs/zoom) editor-desktop + inspect. Verdiepingenbalk `+`.
-
-## Leeg-plan onderlegger fit + vrije rotatie (2026-08-19)
-
-Viewport fitte alleen op muren → upload op leeg plan: geen/tiny underlay in de hoek. Nu: content-layout uit underlay-AABB (`underlayContentBoundsCm`) of 2000×1500 cm-wereld; canvas rendert zonder muren. Onderlegger: slider+veld −180…180° i.p.v. 90° CW/CCW (spiegel + verplaats blijven).
-
-## FML-viewer teken-start (2026-08-19)
-
-`/FML-editor`: Nieuw plan (leeg + Begane grond), projectnaam, floor add/rename/remove. PNG/JPG-onderlegger + H/V-linialen stretchen alleen `drawing` (geen workspace-image, geen muur-rescale). Header «Nieuwe tekening» reset de viewer. Settings-variant toont hoogtes/diktes/schaal-eenheid; nieuwe muren uit mid-dikte.
-
-## FML selectie sticky + touch-pan (2026-08-19)
-
-Mobiel: tik pas op pointerup; 2-vinger/sloppy 1-vinger deselecteert niet (1-vinger-slop = pan). ✕ in settings blijft wissen. Alle devices: selectie plakt op soort (muur/opening/item); wisselen = leeg/area of ✕. Helpers `fml-preview-sticky-select.ts` + `fml-preview-touch-tap.ts`.
-
-## FML teken-menu cancel + input-lek (2026-08-19)
-
-✕ op alle oneshot-tools (muur/kamer/polygoon/lijn/tekst/deur/raam/fixture). Polygoon = kamertype; lijn = dikte; tekst = veld. Mobiel: chrome-mousemove stopt draft-hover (maatveld sprong naar invoer). Esc blijft tool uit.
-
-## FML teken-tool Esc + accept (2026-08-19)
-
-Esc (ook in invoerveld) + ✕ zetten oneshot-tools uit zonder startpunt. ✓ accepteert huidige draft (muur/kamer/lijn/polygoon). Na plaatsen tool uit. Mobiel: select/maat/maten/nulpunt naar linker rail.
-
-## FML click-move-click tekenen (2026-08-19)
-
-Muur/kamer: klik → verplaats → klik (geen hold-drag). Draft-maatbalk in meters (override + Enter); kamer H/V. Helpers `fml-preview-draw-measure.ts`. Esc = tool uit. Workspace + viewer.
-
-## FML wall sanitize (2026-08-19)
-
-`sanitizeFmlWalls`: weld 0,25 cm + near-ortho + T/X + cover (as ≤0,5 cm). Auto alleen generate + knop «Opschonen». Import/download: alleen junction-pass. Muur-teken: hartlijn 15 cm + T op a/b.
-
-## FML-viewer mobile chrome (2026-08-19)
-
-Onderbalk + settings floating (`safe-area`, kaart boven tools). Fit = icoon; fullscreen-icoon verbergt header + floor-rail (`100dvh`). Rail Set/H/V/Move = iconen. Zijmenu houdt labels (icoon + tekst). Alleen `/FML-editor`.
-
-## FML-hoekmarkers (2026-08-19)
-
-Setting `fmlViewer.cornerMarkerMode` (Off / 90° / niet-90°), default **niet-90°** (`!`). Exact H+V = `|_`. Per binnenhoek (L=1, T=2, X=4); plat 180° geen teken. ε=0,1 cm op muur-eindpunten. Overlay in de hoek (bissectrice). Alleen User Settings (geen toolbar); geen export.
-
-## FML area-zijdematen (2026-08-18, merge 08-19)
-
-Toggle «Maten tonen» in FML-toolbelt (geen `FmlToolId`). Overlay op midden van area-zijden ≥50 cm; collinear merge + zelfde lijn (offset ≤8 cm) + micro-jog ≤20 cm + T-inkeping-gat ≤40 cm + shared-edge dedupe; formaat zoals maatlijn; sessie-only (geen FML `dimensions[]`). Workspace + viewer. L/U-vleugels met groot gat blijven los.
-
-## Schaal: stap-4 Herschalen (2026-08-19)
-
-Maatlijn-rescale weg. «Herschalen» bij plan met muren (ook na heropenen; niet gated op detectie-output) + losse FML-viewer: H/V-linialen, face-snap, aparte H/V-factor (**geen** muurdikte). Workspace start op stap-1 handle-plek + mm (`scale.state` → FML via layout.origin; nulpunt telt mee). Zonder handles / viewer: ~70% muur-bbox.
-
-## FML toolbelt field commit (2026-08-18)
-
-Toolbelt number/text: draft + debounce 700 ms + flush-on-leave (Enter/blur/andere selectie/Escape/unmount). Enter is snelle flush, niet enige save. Undo gegroepeerd per veld-sessie. Viewer flusht vóór floor/design/download via `defineExpose`.
-
-## FML-viewer defaults + muur-/knoophoogte (2026-08-18)
-
-Losse viewer: sessie-defaults (muur/deur/raam/dorpel/bovenlicht) uit geladen FML; wijzigen = confirm + overwrite alleen dat veld (alle floors). Nieuwe muur/deur/raam gebruikt sessie-defaults; download geeft bovenlicht-options door.
-Muur Ctrl+klik: hoogte zet beide `az`/`bz`; Ctrl+klik knoop: alleen die ends. Helpers `wall-endpoint-height.ts`; `cloneWalls` + split interpoleren extras.
-Workspace ongemoeid voor defaults-UI (blijft Regenereren).
-
-## Bovenlicht FML-import fold (2026-08-18)
-
-`importFmlV3` vouwt gestapelde bovenlicht-ramen terug naar `Opening.bovenlicht` + gap/height (session-only). Guid-suffix `-bovenlicht` (eigen export) of t/width/z-match (Floorplanner; Δt×L ≤3 cm, Δw ≤2 cm). Gap 0 expliciet. Export blijft inverse via `buildBovenlichtOpening`.
-
-## Poort6 FIN-125 (FML-viewer, 2026-08-18)
-
-Dubbele rechte trap `825bce5f…` BG+1e 203×217 rot=270 mir[0,0]: twee vluchten, lokale X=loop; Konva-270 = links omhoog / rechts omlaag. 2e alleen surface Trapgat `isCutout`.
-Trapgat-object `c86e7f32…` op dunne floor 0 (110×105) → `stair_opening`. Floors 1–3: surface Trapgat dashed kruis.
-Dakkapel `a8c2aefd…` 2e, 8× zelfde refid in de kamers (~90–202×25–30, rot 0/180): U-muren, open naar −Y; buitenmuur +Y (gevel) met 2 ramen.
-
-## Oosterpoort 14151 A (FML-viewer, 2026-08-18)
-
-Rechte trap `17f4fb9a…` kelder+BG 85×225 rot=90 mir[0,0]: loop lokale −Y, Konva-90 = omhoog naar rechts (zelfde bbox-verankering als kwarttrap). Geen trap-item op 1e.
-BG toilet `fc3f4092…` → bestaand `toilet` (spoelbak). 1e = surface Trapgat `isCutout` + dashed kruis (geen extra FML-item); catalogus-default `sym-stair-opening`.
-
-## Anna 3e catalogus (FML-viewer, 2026-08-18)
-
-CV `0af97324…` → bestaand boilersymbool. Toilet mini-wasbak `05dfa289…` → `sink_small` (ook 4e, geen large-switch).
-Frans balkon `9c845cf2…`: blad naar binnen + hek op FML-zwaaizijde (Anna/Ostade `[*,0]` = buiten). Kast-schuif `df95e84f…` = pocketpijl; paar pijlen wijzen naar elkaar.
-Koof `719b8845…` woonkamer linkermuur: zwarte rand + kruis over de volle rechthoek (niet schoorsteen-cirkel).
-Inbouw wasbak `c5686bd0…` twee badkamers links (+ toilet): wit blad, kom naar +Y, kraan bij −Y; z_height=196 = spiegel.
-
-## Kwarttrap BG/1e (FML-viewer, 2026-08-18)
-
-Zelfde lijnstijl als spiltrap (`#334155`, stroke 0.55, pijl 1.15).
-Spiegel (`mirrored[0]` X, `mirrored[1]` Y) zit in de geometrie; viewer doet geen Konva-scale voor kwarttrappen.
-`stair_quarter_90` = omhoog (eigen tekening): L-draai onder, spil binnenhoek; 3 rechte + dashed boven. Ostade `[1,0]` vanuit rechtsonder; Anna unmirrored vanuit linksonder.
-`stair_quarter_90_up` = opkomend (eigen tekening): 3 rechte treden + dashed onder; daarna L-draai; spil binnenhoek aan onderkant opening. Ostade `[1,0]` rechts; Anna unmirrored links.
-Van Ostade 1e achter `7f4bebad…` 73×131 rot=0; 2e `e28361f3…` 121×73 rot=90.
-
-## ISO was-symbolen (FML-viewer, 2026-08-18)
-
-Wasmachine = kuip (trapezium + golf) in vierkant. Droogtrommel = binnen-vierkant + cirkel. Combi = kuip boven, droger onder. Geen kroontanden op de trommel.
-
-## Oil bottle nulpunt (FML-viewer, 2026-08-17)
-
-Catalogus: waterstandsleiding → **oil bottle** (`oil_bottle`, zelfde refid).
-Bij FML-openen in de losse viewer: popup als fles aanwezig en niet al op `(0,0)`;
-Ja = nulpunt naar item-midden op **alle** floors met die fles (drawing schuift mee).
-Geen auto-apply; workspace ongemoeid.
-
-## FML balance keep-axis (2026-08-19)
-
-Floorplanner `a`/`b` = hartlijn; `balance` verdeelt dikte links/rechts daarvan (spec).
-Editor-slider = keep-axis (lichaam schuift, knopen blijven) — zelfde als detectie X-01.
-UI in %; slider 0–100%; invoer tot ±1000% (FML-fractie ±10). Keep-faces stitch weg.
-
-## Nulpunt + maatlijn wall-face snap (2026-08-17)
-
-Sleep-nulpunt en viewer-maatlijn snappen naar lange binnen-/buitenfaces (`resolveWallExtents` + leftNormal), niet naar knoop/hartlijn. H/V as-onafhankelijk (hoek = face-snijpunt); Ctrl/Cmd uit; maatlijn Shift blijft H/V ná face-snap. Helper: `fml-preview-wall-face-snap.ts`.
-
-## FML dikte typical + balance-bewijs (2026-08-14)
-
-Valse balances kwamen uit `thicknessPxMax` (knoop/schuine-hoek blobs). Fix in 2 batches:
-1. `thicknessPxTypical` = mediaan; kern-sample korte stubs; marge × ref; keten-hysterese 15%; jog-stub bump alleen bij gemeten nabijheid.
-2. Face-evidence (`facePlusPx`/`faceMinusPx`) → flush alleen bij bewezen trap; geen faceLo-gok; `quantizeBalance` + shift ≤ Δt/2.
-
-E2E: 21 snapshots ververst (dikteband-herschikking; geen xy-geometry in `bg`). `schuine-gevel-bg` meer muren in min-band (mediaan vs max) — gevel-hoek-poort blijft groen.
-
-## Schuine gevels: lezen op L3, herbouwen op L10 (2026-08-13)
-
-Werkelijk schuine gevel kwam als H/V-trap uit de pipeline (L4 snapt, L5–L10 poetsen de
-zaagtand op). Nieuw: `engines/oblique/` — `ridge-probe` (loodrechte afstand tot de DT-rug
-via **bergopwaartse klim**, geen venster-maximum), `axis-inventory` (lengte-gewogen
-hoekcluster + offsetcluster op `layer3.allSegmentsPruned`, dodezone 2,5° voor scanrest,
-verificatie op de rug), `chain-rebuild` (band = halve muurdikte, graafwandeling per
-component, ankers = snijpunt as × vreemde tak, tak schuift mee). Toepassing: eind L10 na
-`absorbMicroCornerJogs`, in `withTopologyGuard`. Policy `policies/oblique.ts` + ratio's in
-`scale.ts`. ESC **W-54** (hypothese) / **W-55** (herbouw).
-
-`schuine-gevel-bg`: lengte-ratio 0.4 → **1.0**, dekking 57,8 → **100%**, max afwijking
-18,5 → **1,6 cm**; gevel = 3 muren op 5,6° (ref 3 op 5,2–5,7°), alle t=45. Grootboek:
-1× `axis_accepted`, 1× `rebuilt`, 0 rollbacks. Vijf orthogonale fixtures **byte-identiek**
-(enige diff = W-54-tellers). 1274 unit + 27 e2e groen.
-
-**Tweede tekening (1e verdieping, gevel 12,6° met knik):** as werd gevonden en keten
-correct herbouwd, maar `W-55:rolled_back` — één restsegment van 0,5 px in een trap-hoek is
-in de guard-graaf een schijn-T + losse I; die verdwijnen bij de herbouw → T-telling daalt.
-Fix: laag 10 prunet ≤ 1 px (`OBLIQUE_STUB_MAX_PX`) **vóór** de guard meet, alleen binnen
-het schuine blok. Gevel wordt nu één segment van 1712 px op 12,57°. Regressietest =
-synthetische trap mét stub (guard faalt) en zonder (guard haalt).
-
-**Baseline-schuld gevonden:** de zes snapshots liepen achter op `main` sinds 2026-07-31
-(FML opening-merge toggles + L14 dedupe van 4 aug). Ververst; `bg` verloor daarbij muur
-`(1276.4,510.8)→(1485,510.8)` die 17,4 cm opschoof naar y=493,4 om op de buur aan te
-sluiten — hoekstuk weg, maar nu los van de verticaal op x=1485 en 3 openingen (1 deur,
-2 ramen) buiten de 20 cm matchafstand. Open, los van dit werk.
-
-## Stap 2 fabrieksreset B/W (2026-08-13)
-
-«Reset preview» deed alleen preview-URL + vector-cache wissen (geen sliders). Vervangen door «Reset naar fabriekswaarden»: actieve laag-tune → `defaultLayerTune` (`resetLayerTuneToFactory`); refs/inkt/OCR/stempel blijven. Live preview volgt via bestaande preprocess-watch.
-
-## Diagnose: stap-1 onderlegger (2026-08-13)
-
-Alarmbel-HTML krijgt nu de kleur-onderlegger van stap 1 (na rotatie/crop/gum) naast B/W — JPEG q0.85 volle resolutie + px-maat in meta. Zo is te zien of de bronscan zelf het probleem is. H/V-schaallinialen als SVG-overlay (cyaan/amber, mm+px-labels, JSON handles) op diezelfde scan.
-
-## Stap 1 rotatie-bake vóór schaal (2026-08-13)
-
-Scheve scans: H/V-linialen blijven as-aligned terwijl preview roteert. Optionele knop «Rotatie vastzetten» bakt pixels (`commitInputStepImage`); auto bij 1→2. Rotatie-UI niet geblokkeerd door onbevestigde schaal. Na bake zonder bevestigde schaal: verse linialen (mm blijft).
-
-## Verder werken: demoted deuren + muur-ref defaults (2026-08-12)
-
-Bug: exact-restore deed volle deur/raam-herdetectie → demoted deuren terug; `wallRefThicknessMeasures` werd gewist → bandgrenzen 40/80 i.p.v. multi-ref; stap-2 dikte-cm alleen in FML-UI/localStorage → resume overschreef via floor-defaults. Fix: openings-rerun = existing-doors-only + face-override reassert/prune; measures in DevSession capture/restore; `setWallThicknessCm` schrijft floor-defaults mee.
-
-**Vervolg (zelfde dag):** referentie-analyse HTML analyseerde alleen de *laatste* muur-LBE → mid/max ontbraken in export; exact-restore skipte wall-rects bij classify-state. Fix: `analyzeAllReferenceRects` → alle walls + HTML multi-cards; restore altijd wall-rects uit exact; `replaceWallRects` bulk-restore.
-
-**Diagnose + wall outside (2026-08-12):** diagnose REF-beelden = muur `faceOverlay` + opening contouren (`referenceRefImages`); sealBorders outside-rol via seal-ring heuristiek; wall face-crop bbox = ink-bounds (geen vloer).
-
-## Framing-fallback L14 + wees-DF (2026-08-12)
-
-Widest-strip (`strip_stack` max as-span) raakt framing-pad niet. Framing-fallback mistte kozijn doordat L14-reconcile wall-evidence glas-only forceerde. Fix: framing = glas+wall kozijn (Stage-4 parity); ids unchanged → Stage-4 behouden; `door`/`doorframe` evidence blijft strippen (wees-deur). strip_stack blijft langste window-strip.
-
-## Wees-doorframe / L14 (2026-08-11)
-
-Na deur-demote: `door`/`doorframe` evidence strippen uit framing-L14. Deur L11/L12: `reconcileResolvedDoorForClassification` stript non-door faces + DF-ids die niet meer `doorframe` zijn (promoted DF→window).
-
-## L14: handmatige raam-demote strip uit bind (2026-08-11)
-
-Bug: Stage-4 hyp `590+603+722` (doorlopende rail 408px) bleef na demote van 590 in L14-bbox → junction_in_window. Stage 1–4 draaien vóór face-edit — niet daar fixen. Fix: `reconcileResolvedWindowForClassification` in demote-prune + L14-bind (strip non-window faces, bbox/width via dual). R-12 `MAX_PAIR_AXIS_SPAN_RATIO` 1.5→1.25 (kozijn iets breder dan glas OK).
-
-## Multi-ref persist bij «Verder werken» (2026-08-11)
-
-Bug: DevSession bewaarde alleen 1× `referenceWallRect` → na resume verdwenen mid/min muur-LBE’s. Fix: `referenceWallRects[]` + `wallThicknessBand` in capture/restore; legacy singular blijft fallback. Deur/raam `openingRects` gingen al als array mee.
-
-## Wees-doorframe na deur-demote → window (2026-08-11)
-
-Bug: deur weg → gekoppelde doorframe (false deur) werd `wall` + stage-prune → verdween. Fix: `acknowledgeDoorSwingDemotePrune` zet class `window` + `promoteOrphanedDoorframesToWindowsInStageCache` (Stage-3/4 DF → window); twin/shared DF blijft.
-
-## Raam REF stripCount + valse deskew (2026-08-11)
-
-Valse ~1.4° as-align op recht raam → glas-AABB’s overlappen → merge tot stripCount=1 → Stage-1 ~90 false hits. Fix: window deskew minAbsDeg 2.0° + PCA ≥2.5°; strip-telling op centroid-Y + area/span (geen AABB-Y-merge).
-
-## Multi muur-dikte refs (2026-08-11)
-
-Stap 2: tot 3 muur-LBE (unieke min/mid/max-tag); ≥1 verplicht. `referenceWallThicknessPx` = max-meting of `measuredPx × maxCm/bandCm`. Optionele mid/min zetten meetbandgrenzen (halfway) i.p.v. alleen 40/80. Export-cm blijven project-limits. L7/L9/L10 krijgen optioneel `bandBoundariesPx`.
-
-## Diagnose-export volle pipeline (2026-08-11)
-
-Diagnosis FAB: volledige `buildLayerDebugReport` (L1–L10 + transitions + L11/L12/L14 + journal) + semanticWallGraph + markdown + opening REF «Gegroepeerde contouren los» (zelfde pipeline als referentie-analyse, alleen die PNG). Zelfde wall-bron als `*-layer-debug.json`.
-
-## Project-persist quota / FML kwijt na refresh (2026-08-07)
-
-Symptom: «Could not save the project locally» → floor-switch in-memory nog FML, browser-refresh → oude preprocess-checkpoint. Oorzaak: IndexedDB-save faalde (quota) door zware `detectionExact` face-rasters + dubbele PNG’s per floor; laatste geslaagde write bleef stap-2. Fix: result-floors met `previewPlan` slaan geen detectionExact op; legacy project-`sourceUnderlay` weglaten als floors al bron hebben; quota-retry wist DevSessions + strip classify-rasters; persist-controller dropt pending niet meer bij `shouldSkip`.
-
-## Door hinge: geen hasArcLikeContour-gate (2026-08-07)
-
-`hasArcLikeContour` (≥6 pts + gradual turns) gooide PDF-strakke deursymbolen stil weg ná swing-pick → `refs:0`. Fix: gate weg (sector al bekend); multi-epsilon contour (0.005/0.01/0.0025); RDP-simplify als raw geen wall-corner heeft; wall-corner-first behoudt ondiepe ~14° (Project4). Geen bbox-fallback (angle-rescue nodig).
-
-## PDF render opaque white (2026-08-07)
-
-Bug: PDF.js canvas zonder page-fill → `rgba(0,0,0,0)` → UI lichtblauw/transparant, B/W als muur (slider nutteloos). Fix: vóór `page.render` wit fill + na render alpha flatten op wit (`compositeRgbaOntoWhiteInPlace`) in full-page én ROI (`pdfToImage.ts`).
-
-## Otsu ink-coverage REF-scaling (2026-08-06)
-
-Int-muur Otsu (`room-reference-preprocess`): thicken + bridgeGaps schalen op muur-REF, geen caps. Solid: thicken 0.15× / bridge 0.2×. Open: thicken 0.25× / bridge 0.3×. Fallback zonder REF: thicken 2 / bridge 8. `removeHoles` blijft uit.
-
-## PDF ROI re-render bij crop (2026-08-06)
-
-Stap 1→2: PDF-bytes in-memory na page-confirm; bij meaningful crop her-raster ROI uit PDF (≥4000px) i.p.v. blur-upscale. `pdfUnderlaySource` op floor-blob runtime-only (geen IDB). Fallback = legacy normalize. ppm × `roiScale/pageRenderScale`. Opaque white underlay (2026-08-07).
-
-## Result-hydrate behoudt refs (2026-08-06)
-
-Bug: `restoreResultFloorFast` bij floor-switch/resume op result deed `clearWorkspaceForSession` zonder LBE-refs/dikte terug te zetten → stap-terug naar detectie/preprocess leeg. Fix: hydrate altijd volledige `restoreSession` (skip openings-rerun + apply previewPlan); enter-result `persistProject` captured session met refs.
-
-## Bovenlicht op ramen (2026-08-06)
-
-Zelfde patroon als deuren: vloerdefault `windowBovenlichtDefault` (los van deur-`bovenlichtDefault`) + per-raam `Opening.bovenlicht` override. Export-only via `buildBovenlichtOpening` (top = sill+hoogte+gap). UI: FmlPanel + project-setup + settings aparte checkboxes; Ctrl+klik toolbar ook bij raamselectie. Maten: `bovenlichtGapCm` (dorpel-offset) + `bovenlichtHeightCm` (glas) in settings/project-defaults (fabriek 10/40).
-
-## Stap-terug / flow-preserve (2026-08-06)
-
-Bug: terug van preprocess→input wiste refs/dikte/inkt; opnieuw enter templates herstartte OCR/classify (UI-lock via `ocrInitialPassReady`); remasure bij elke vooruit. Download project kon stil falen (FML niet opgeslagen vóór `flowStep=result`). Fix: stap-terug bewaart state; bootstrap/remasure skip bij bestaande detectie; result wipe alleen bij her-autoclassify; enter-result store + FML-paneel download-knop; dirty sync bij download (bovenlicht blijft export-only, geen regen nodig).
-
-## Onderlegger / B/W overnemen (2026-08-06)
-
-Bug: `ensureSourceUnderlay` schreef alleen de **eerste** schaal-bevestiging → her-upload opzelfde floor bleef oude bron. Fix: per-floor `blob.sourceUnderlay` + altijd overschrijven bij schaal-bevestigen; donor-dropdown voor «Onderlegger overnemen» en «B/W overnemen» (zoals muurstempel). Legacy: project-level source blijft fallback als geen floor-bronnen.
-
-## Vue soft access-gate (2026-08-05)
-
-Hosted test: `VITE_APP_ACCESS_PASSWORD` → `AppAccessGate` vóór shell; leeg = geen gate. Unlock: `sessionStorage` (`bouwToFml.accessUnlocked`). Soft only; Zero Trust later.
-
-## Customer-test audit (2026-08-05)
-
-Rapport: `.cursor/docs/audit-2026-08-05-customer-test.md` — **Go**. Live: https://floorplan-fml.lorddo3066.workers.dev/ — COOP/COEP/CORP geverifieerd; P1 dry-run user-OK (multi-floor, settings, FML-viewer). Klaar voor klanttesters.
-
-## Diagnose-export FAB (2026-08-05 → 08-11)
-
-Tekenaar: alarmbel rechtsonder → één HTML (`diagnosis-*.html`) met live best-effort snapshot (meta, **stap-1 kleur-onderlegger (JPEG) + H/V-schaallinialen (SVG)**, B/W, refs, deuren/ramen, **volle L1–L10 + transitions + L11/L12/L14**, semantic graph, FML). Geen flow-gate (ook mid stap 3). Intern: Ctrl+Shift+H ongewijzigd. Builder: `platform/export/diagnosis-report.ts`; export: `workspace-export-diagnosis.ts` via `buildLayerDebugReport`.
-
-## Projectpersistentie IndexedDB (2026-08-05)
-
-`ProjectState` + per-floor DevSession-blobs naar IndexedDB (`projects` + `projectIndex`, DB v2). Checkpoints: stap-overgang, floor-CRUD, muren-afronden, FML-preview; meta gedebounced. Geen autosave binnen een stap. Stap 0: resume-kaart «Verder werken» / «Nieuw project». Serialisatie: TypedArrays intact (`toStorableDevSession` deep clone), PNG/masks als `Uint8Array`. `resetProject` / «Nieuwe tekening» wist het record.
-
-## Customer test delivery (2026-08-04 → 08-05)
-
-Statische host-klaar: lege start, `base: '/'`, sourcemap uit, error-banner, `beforeunload`, privacy-scrub. COOP/COEP: Vite preview/server **én** `public/_headers` voor Cloudflare Pages. Guide: `.cursor/docs/customer-test-delivery.md`. Devtools blijven. Bundle ~11 MB OpenCV + ~2 MB app.
-
-## L14 1D muurgat-dedupe (2026-08-04)
-
-`window-wall-dedupe.ts`: R-28 smaller-first NMS + X-28 deur-wint-raam (strak IoU/mid). Bind (overlays) + vóór R-27 in `toLayer14WindowsForFml`. Geen bbox.
-
-## FML opening-merge toggles (2026-08-04)
-
-User settings `fmlConversion`: `mergeDoubleDoors` + `mergeMultiWindows` (factory aan). X-10 in `mapLayer12DoorsToOpenings`; R-27 via `toLayer14WindowsForFml` (niet meer bij L14-bind). Live via `applyUserViewerSettings`. Handmatige editor-presets ongemoeid.
-
-## User settings (2026-08-04)
-
-Gear in topnav → `UserSettingsView` (geen router; workspace `v-show`). localStorage `bouwToFml.userSettings`: FML-defaults (hoogtes/diktes/bovenlicht) + viewer opacities + **`scaleInputUnit` (mm|cm|m, alleen schaalliniaal-invoer)**. Intern schaal blijft mm (`distanceMm*` / px/mm). `createDefaultFloorFmlDefaults` leest settings; opslaan write-through dikte-keys; export/import JSON.
-
-## Muurstempel (2026-08-04)
-
-Stap 2: donor-FML → REF-handles + gum → bake. **Live align = ghost PNG** (`buildStampGhostDataUrl` + Konva stretch); OpenCV adaptive + compose **alleen bij bake/retune**. `stampBw` in effectiveBw na bake; `stampMask` OR in Otsu. B/W overnemen = alleen preprocess-tune (geen muurdikte, geen LBE).
-
-## Project-container V1 (2026-08-03)
-
-Stap 0 `project` + `ProjectState` / floor-blobs (`ui/composables/project/`). Floor-switch via DevSession capture/restore in memory. Knoppen: Onderlegger overnemen (stap 1), B/W overnemen (stap 2), Muurstempel (stap 2). Detectie solo. FML: `mergeFloorPlans` + Download project. Geen IndexedDB nog.
-
-**Floor-switch persist:** capture met `forceExactRestore` + `previewPlan` + `previewUnderlayLayout` (origin+px/mm); result-switch = image+schaal+FML+underlay-layout. Bron-onderlegger = duurzame PNG bij schaal-bevestigen. B/W-overname zonder LBE/muurdikte.
-
-## OCR muren-flow (2026-08-02)
-
-Stap 2: checkbox `ocrEnabled`. Stap 3: altijd land op Muren; bij OCR-aan auto-scan in initial flow (highlights + compose, niet gebakken). Muren-sidebar: confidence-slider, Wis OCR, Bake OCR (`ocrMask`→ink WHITE→recalculateFaces). OCR-tab → Dev-view (`OCR_TAB_VISIBLE=false`).
-
-## Canvas-tabs → Dev (2026-08-02)
-
-Productie: 1 canvas-tab per stap. Verborgen: Int muur, OCR, Deuren, Ramen, Resultaat-Muren — via `WorkspaceDevViewPanel`. Flags in `constants.ts`; enter result → `vector`.
-
-## Bovenlicht FML (2026-08-02)
-
-Export-only linked windows: zelfde breedte/`t`. Projectdefault checkbox + per-deur/raam override (`Opening.bovenlicht`). Maten: vloerdefault 40/10 of per-opening `bovenlichtHeightCm`/`bovenlichtGapCm`. Synthese in `buildFmlV3` — **niet** in viewer. Reconstructie bij FML-openen later. Deur-tags (voor/binnen) deferred (geen FML-veld).
-
-## Detectie initial bespreken (2026-08-01)
-
-Doc: `.cursor/docs/detectie-initial-bespreken.md` — **Ronde A–G klaar** (L0 + deur/raam + REF + orkestratie). Geen code-knip; klaar voor ontwikkeling. Bekende schuld: sticky asymmetrie, O-23 volledige raam-herstart.
-
-## Escalatie-docs (2026-08-01)
-
-Living: `.cursor/docs/escalatie.md`. Bevroren inventaris: `escalatiepaden-inventaris.md`. Rest in `archive/escalatie/` (aanpak, ledger, doorspreken, luid-maken, diagrammen + gegenereerd).
-
-## ESC luid-maken Golf 0–7 (2026-07-31)
-
-- **PR0:** multiline journal-detectie + Golf 2–7 checklists + O-40/VERWIJDEREN skip-loud.
-- **Golf 1–7:** alle checklists **0 stil** · ~198 geïnstrumenteerd · E2E 6 fixtures (escalations) · `esc:grootboek`.
-- **Skip-loud:** Cat F (W-05, X-25), O-40, VERWIJDEREN-weg (D-45/49–53, R-26).
-- **Open mop-up:** ~20 A–E stil buiten golf-sets (buiten harnas).
-
-## Escalatie besluiten batch (2026-07-31 → 2026-08-01)
-
-Harnas-ronde L2–L10 + bind + FML **doorsproken** — verdicts in `escalatie.md`. Weg: D-45/49–53, R-26, W-14 dode niveaus, W-46 zero-length, X-22 zero, REF-14 stil→throw, X-16 −14→floor.height. Rest AFBAKENEN / BEHOUDEN (F) / PROMOVEREN zoals ledger.
-
-## Escalatie-grootboek instrument (2026-07-31)
-
-- **`isEscalationEnabled` / `ESC_OFF`** + guards
-- **Scripts:** `esc:coverage`, `esc:grootboek`, `esc:killswitch` → schrijven naar `escalatie.md` / `archive/escalatie/`
-- **Docs:** `escalatie.md` + `e2e-fixtures.md`
-
-## E2E fixtures (2026-07-31)
-
-Zes fixtures: `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`. Shared `defineE2eSuite`. Doc: `.cursor/docs/e2e-fixtures.md`.
-
-**Open:** judging-skill; Kinderdijkstraat 53-1; mop-up ~20 stil.
-
-## E2E referentie-metrics (2026-07-30)
-
-Harness: `plan-metrics.ts` + `reference-report.ts` (alléén `reference.fml`); grove vloer lengte ±25% + ≥5 openings + `degraded===false`.
-
-## Batch nul escalatiepaden afgerond (2026-07-30)
-
-ESC-tags + run-journaal. Zie `escalatie.md`. Geen drempel/pad weg in batch nul.
-
-## Lint/format-poort afgerond (2026-07-29)
-
-Prettier (`printWidth` 100, no semi, single quotes) + ESLint 9 flat (`recommended` + `recommendedTypeChecked` + vue) + husky/lint-staged + CI `format:check`/`lint` vóór tests.
-
-**Uitzonderingen (config, met reden):** `no-unsafe-*` + `no-redundant-type-constituents` (OpenCV=`any`); `require-await` (async API-shapes); `unbound-method` (Vue composable destructure). `_`-prefix voor unused vars. Scripts buiten type-aware lint.
-
-**Bandgrens:** `FML_BAND_MAX_RATIO = 0.80` vastgelegd in `decisions.md`; UI-tekst 85%→80%.
-
-**Volgende:** mop-up stil A–E · Stage 1/2 + orkestratie (buiten harnas) — zie `escalatie.md`.
-
-## Fase 1 afgerond (2026-07-29): git + groene build + CI
-
-Repo: **https://github.com/Lorddo/BouwToFML** (publiek, `main`). Alleen `frontend/` + `.cursor/{rules,docs}` + `.github/`; whitelist-`.gitignore`. CI (`.github/workflows/ci.yml`) draait `npm ci` → `format:check` → `lint` → `npm test` → `npm run build` op elke push.
-
-**Gedaan:** 134 TS-fouten → 0 (~600 regels dode code weg uit `src/`, incl. `wall-segment-geometry-constants.ts`) · 981 tests groen · `vite build` slaagt · typecheck via `vue-tsc -b` (niet `--noEmit`: `tsconfig.node.json` is composite → anders TS6305) · voorbeeldbestanden binnen `frontend/examples` gehaald (root-`examples` staat niet in git; productiecode importeerde daaruit) · hardgecodeerde `c:/Pranimate/...`-paden in `fml-preview-wall-polygons-kinderdijk.spec.ts` weg — die test draaide voorheen nooit.
-
-**Twee opgeloste testfouten (beide: code hertuned, test bleef achter):** `FML_BAND_MAX_RATIO` staat op 0.80, test/comments zeiden 85% → test leidt grenzen nu af uit de constanten · rapport-figuur "Gegroepeerde contouren op faces" werd nog berekend maar niet meer getoond → terug in `reference-analysis-report.ts`.
-
-## Audit-uitkomst (2026-07-29)
-
-Rapport: `.cursor/docs/audit-2026-07-29.md`. Blokkerend 1–3 (git, build, CI) = **klaar**. Lint/format-poort = **klaar**.
-
-**Nog open — blokkerend:** detectiekwaliteit onmeetbaar — 981 tests zijn synthetisch, geen E2E-fixture op echte scan. (Infra fase 0–2 klaar: OpenCV-spike, layer1-inject, exportknop; eerste echte fixture = Kromme-Mijdrecht nog open.)
-
-**Ingetrokken:** `keepLargestOnly: true` = **bewuste keuze** (losstaande garage → eigen plattegrond; aanbouw zit vast) — alleen comment op aanroep ontbreekt.
-
-**Nog open — ernstig:** geen sessie-persistentie · `core ↔ cv` cirkel · `useWorkspace` 184-key facade · vaste px-drempels schalen niet · FML zonder validatie, `balance` altijd 0.5, ramen zonder `mirrored` · CV op UI-thread · Mat-lek zonder try/finally · 78.800 regels moet fors omlaag (projectspecifieke fixes wegpoetsen).
-
-**Vastgesteld met gebruiker:** muurtypering = min/mid/max diktebanden (gebouwd) · tabs Deuren/Ramen worden vóór oplevering verborgen → gate-lek `useWorkspaceFlow.ts:89` afgedekt, maar correctiepad deuren/ramen verschuift volledig naar FML-editor (open vraag) · backups op .101.
-
-**Volgorde:** ~~git init → build groen → CI-poort~~ · ~~lint/format-poort~~ (klaar) → E2E-fixtures → correctheid (balance, FML-validatie) → persistentie/worker → pas daarna structureel (core↔cv, facade, regelreductie).
+Laatste update: 2026-08-21 (slicer P→M UX)
 
 ## Huidige focus
 
-**FML chrome-dialogs (2026-08-20).** Native confirm/prompt → FML-kaart. Oil-bottle, hoogte-overschrijven, gevelnaam. Gereed voor UI-smoke: FML met fles → kaart i.p.v. browser; Floorplan-hoogte wijzigen → bevestigingskaart; Nieuwe gevelgroep → naamveld.
+**Editor maatlijnen** — drie types: Autogen (FP-flags + bestaande overlay, niet verder tunen), Slicer (`btfSlices` `{m,p}` live + bake export), Handmatig (`dimensions[]`). Vis exclusief (none/autogen/slicer/manual). Meet-tool: Tape / Manual / Slicer.
 
-**FML gevelgroepen (2026-08-20).** `settings.facadeGroups` project-breed; max 1 groep/muur; editor + inspect; prune bij openen; remap bij hand-split + Opschonen + junction upload/download (host-helften, niet T-tak).
-
-**FML T-junction + hartlijn-snap (2026-08-20).** Tekenen: hartlijn 15 cm + T-split. Sanitize (knop/generate) krijgt T/X. Import + viewer-download alleen junction-pass. Gereed voor UI-smoke: Geveltest-doos + binnenmuur west→oost → oost/west geknipt, oude gevel-id blijft; download zonder extra FP-GUIDs.
-
-**FML-editor chrome + onderlegger pivot (2026-08-20).** Draai om midden / spiegel over linkerrand; Choose FML in Project; Floorplan-hoogtes per vloer; topbar editor-desktop + inspect; rail `+`. Gereed voor UI-smoke: upload onderlegger → draaien (center) → spiegel → Project FML kiezen → Floorplan hoogtes deze vloer → `+` verdieping → inspect topbar.
-
-**FML-viewer teken-start (2026-08-19).** Leeg plan + naam + verdiepingen + onderlegger-stretch. Leeg-plan upload fittet nu op canvas; vrije rotatie (één veld).
-
-**FML selectie sticky + touch-pan (2026-08-19).** Mobiel: pan/zoom deselecteert niet; 1-vinger-slop = pan. Type blijft vast tot leeg/area of ✕. Gereed voor UI-smoke.
-
-**FML-viewer project-spiegel (2026-08-19).** «Project spiegelen» als eigen rij in linker menu (naast Herschalen/Opschonen); niet in de Oriënteren-fold. Zelfde X-flip alle floors om nulpunt. Workspace blijft achter `FML_ORIENT_CONTROLS_VISIBLE`.
-
-**FML wall sanitize (2026-08-19, T/X 08-20).** Weld + ortho + T/X + cover. Auto generate + knop. Import/download: alleen junction-pass. Muur-add T-split. Geen `alignWallJunctionBalance`.
-
-**FML-viewer fixtures (2026-08-19).** Plaats 1× daarna ontwapenen; bibliotheek-klik plaatst niet. Settings: spiegel H/V, 90°, kopie/wis als iconen; kaderpijlen bij selectie.
-
-**FML-viewer mobile chrome (2026-08-19).** Onderbalk + settings-kaart; sidebar-drawer zelfde kaart + iconen; rail iconen.
-
-**FML-hoekmarkers (2026-08-19).** Setting Uit / 90° / niet-90° (default `skew` = `!`). `_` of `!` per binnenhoek (L/T/X), in de sector. ε 0,1 cm H/V.
-
-**Settings converter vs viewer (2026-08-19).** Zelfde `UserSettingsV1`; UI-variant. Converter: taal + schaal + hoogtes/diktes + merge + opacities. Viewer (`/FML-editor`): taal + schaal-eenheid + hoogtes/diktes + kamer-kleuren + hoektekens. Tandwiel slaat op; Annuleren gooit draft weg. Viewer-fabrieksreset: locale + defaults + kleuren + hoektekens.
-
-**FML-editor touch (2026-08-19).** Alleen `/FML-editor` (`touchEditor`). Desktop-PC: gewone muis (hover + knopen); Set/H/V/Move + touch-nav alleen bij `pointer: coarse`. Move = punten/openingen/fixtures verslepen; Settings is al multi-select. 1 vinger tik/edit, 2 vingers pan, pinch zoom. Fixture-palette + inspect items. Redo (Ctrl+Y) ook in workspace. Extra soft wachtwoord `J0rd!`. Workspace-hosts ongemoeid.
-
-**FML balance keep-axis (2026-08-19).** Slider/invoer: lichaam schuift, hartlijn vast; UI in % (slider 0–100, invoer daarbuiten).
-
-**FML area-zijdematen (2026-08-19).** Toolbelt-toggle «Maten tonen»: overlay op area-zijden ≥50 cm; merge ook over micro-jog / T-inkeping (niet FML-export).
-
-**Stap-4 Herschalen (2026-08-19).** Linker «Herschalen» + H/V-linialen (face-snap); aparte H/V-schaal (geen muurdikte); workspace: stap-1 plek + mm; viewer: bbox.
-
-**FML toolbelt field commit (2026-08-18).** Debounce 700 ms + flush-on-leave voor getypte toolbeltvelden (muur/opening/area/label + muur-/knoophoogte); Enter blijft snelle flush.
-
-**FML-viewer defaults + muur-/knoophoogte (2026-08-18).** Sessie-defaults in losse viewer (confirm overwrite per veld); muurhoogte via `az`/`bz` op segment (beide ends) en knoop (één knoop).
-
-**Opening overflow-hint (2026-08-18).** Niet-blokkerend: deuren/ramen/bovenlicht vs **muur `az`/`bz`** op `t` (niet `floor.height`). Poort6 BG floor.height=55 maar trapmuren 330; 220+bovenlicht=270 past. Export-bovenlicht clamt tegen muurtop. Ook dorpel onder muurbodem.
-
-**Bovenlicht maat-override (2026-08-18).** Per-opening `bovenlichtHeightCm` / `bovenlichtGapCm` (session-only, erf vloerdefault). Ctrl+klik gap+glashoogte als checkmark aan. Export gebruikt override. Reconstructie bij FML-openen nog open.
-
-**FML catalogus Poort6 FIN-125 (2026-08-18).** Dakkapel `a8c2aefd…` 2e 8× zelfde object; U-muren, 2 ramen op buitenmuur (+Y). Dubbele rechte trap `825bce5f…` 203×217 rot=270 = links omhoog / rechts omlaag; trapgat-object `c86e7f32…` → `stair_opening`.
-
-**FML catalogus Oosterpoort A (2026-08-18).** Rechte trap kelder+BG rot=90 → rechts; BG toilet-refid; 1e trapgat-cutout + kruis (geen vlucht).
-
-**FML catalogus Anna 3e (2026-08-18).** CV-refid + toilet mini-wasbak; frans balkon (naar binnen + hek); kast-schuif = pocketpijlen.
-
-**FML roundtrip behoud (2026-08-18).** Upload→download bewaart envelope (ids/settings/drawing/cameras/dimensions/labels/lines/extras/multi-design). Viewer: `draw_label`/`draw_line` + design-switcher in linker sidebar. Workspace-generate zonder `source` = oude rewrite. Tests: `fml-roundtrip.spec.ts` (Kinderdijk + 2-design + nulpunt).
-
-**Noordpijl bij spiegelen (2026-08-18).** `north_cross` (`sym-350`): X-flip spiegelt alleen de positie; rotatie/`mirrored` blijven — pijl wijst wereld-noord, N niet achterstevoren. 90° roteert wél mee.
-
-**FML keuken-fixtures (2026-08-18).** Kinderdijk: koelkast + vriessneeuwvlok, deur = dubbele lijn op lokale +Y (rot/mirror = 3D-deurzijde, geen handel). Keukenwasbak kraan aan −Y. Kromme-Mijdrecht: wasbak klein/groot op maat; vaatwasser; koelkast eetkamer; wasmachine; kookplaat. Noordkruis `sym-350`: pijl+N, punt lokale −Y. Aanrecht = Kinderdijk-blad-refid. Sanitair: hangend toilet, glazen douchewand, entreepijl, stoppenkast, grijze balustrade. Van Ostade 1e achter: losstaand stadium-bad + kraan op lokale −Y; was-droog = trommel+kroon / vierkant+cirkel; kwarttrap-refid, lange balkonbalustrade (spijlen per lengte). Kleine wasbak: platte kant flush op lokale −Y.
-
-**FML inspect-modus (2026-08-18).** Alleen losse viewer: zijbalk Bewerken/Inspectie. Tik opening→surface→muur→kamer; emit FML-guid; demo-kleur uit→oranje→groen. Workspace ongemoeid. Geen box-select/gevel-keten, geen PWA.
-
-**Losse FML-editor via pad (2026-08-18).** `/FML-editor` (niet via settings). Settings-knop weg; terug = workspace `/`. Worker-host: SPA via `not_found_handling`, geen `_redirects`.
-
-**FML areas/surfaces/roomtags (2026-08-17).** Areas uit wall-holes ná balance; surfaces handmatig; House-catalogus NL; Ctrl+klik type/naam/kleur; Instellingen default-kleur per role + fabrieksreset. X-14 = arrays mogen gevuld. Z-order: area → surface → object → tekst (benaming bovenop; meubels blijven onder muurfill).
-
-**FML fixture-symbolen (2026-08-17).** Spiltrap 180° + kwarttrap BG/1e (zelfde stroke/pijl; 1e = omgekeerde vlucht, pijl omhoog; dashed snede). Keukenblad onder muurfill, afdak/chimney/hek/dakraam/knieschot; 1e douchekop teal. Meubels achter muren, dak/gevel ervoor.
-
-**FML-verdieping oriënteren (2026-08-16).** Techniek blijft (`floor-plan-orient`, persist). Productie-UI verborgen via `FML_ORIENT_CONTROLS_VISIBLE=false` tot klant goedkeurt. Underlay-verplaatsen blijft zichtbaar.
-
-**FML dikte typical + balance-bewijs (2026-08-14).** Mediaan-dikte voor export; flush alleen bij face-evidence. E2E snapshots ververst.
-
-**FML editor dikte → balance (2026-08-14).** Handmatige muurdikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5.
-
-**FML nulpunt (2026-08-14).** Sleep → ✓ bakken / ✕ Esc. Bake = alleen actieve floor (`applyNulpunt(..., floorIndex)`); viewport nudge (geen herfit-jump); blob store strip naar single-floor. Per floor eigen `fmlNulpuntImageCm`.
-
-**FML viewer snap (2026-08-14).** Maatlijn plaatst exact het klikpunt (geen hartlijn/as-magnet; Shift blijft H/V-lock). Kamer-tekenen: start bindt op junction, sleep-eind alleen krappe 4 cm knoop/hartlijn (`ROOM_DRAW_SNAP_CM`) — kleine schachten niet meer tegen de buurmuur. Muur-tekenen ongewijzigd (15 cm).
-
-**Schuine gevels (2026-08-13).** L3 lezen → L10 herbouwen; poort `schuine-gevel-bg` haalt; sub-pixel stubs vóór de guard weg (tweede tekening). Open: `bg` muur-shift 17,4 cm uit de baseline-verversing.
-
-**Stap 1 schaal-asymmetrie waarschuwing (2026-08-13).** Fixture van de 1e verdieping had `pxPerMmX` 2,359 vs `pxPerMmY` 0,229 — factor 10,3; detectie (pixels) bleef goed, FML werd 10× platgeknepen (bbox 1,1 × 10,5 m) en een gevel van 12,57° kwam als 1,24° uit. Nieuw: `axisMismatchPct` in `useHScaleCalibration` + gele waarschuwing in `ScaleConfirmBar` boven `SCALE_AXIS_MISMATCH_WARN_PCT` (2%), zichtbaar ook met dicht paneel. Alleen waarschuwen; niets geblokkeerd, geen automatisch gelijktrekken.
-
-**Stap 2 fabrieksreset B/W (2026-08-13).** «Reset naar fabriekswaarden» zet actieve laag-tune terug; refs/inkt/OCR/stempel blijven.
-
-**Diagnose stap-1 onderlegger (2026-08-13, linialen 08-17).** Alarmbel-HTML: kleur-scan (JPEG) naast B/W; H/V-schaallinialen als SVG-overlay (cyaan/amber, mm+px, JSON handles).
-
-**Stap 1 rotatie-bake (2026-08-13).** Optionele knop «Rotatie vastzetten» + auto bij 1→2; schaal blijft onafhankelijk.
-
-**Customer-test (2026-08-05) — Go.** Live https://floorplan-fml.lorddo3066.workers.dev/ ; headers OK; dry-run OK. Klaar voor klant.
-
-**L14 1D NMS (2026-08-04).** R-28/X-28 in bind + `toLayer14WindowsForFml` vóór R-27.
-
-**FML merge toggles (2026-08-04).** Settings `fmlConversion.mergeDoubleDoors` / `mergeMultiWindows`; raam-merge in FML-pad.
-
-**Productie-UI i18n (2026-08-04).** `vue-i18n`: default `en`, optioneel `nl`/`th`. Locale in `UserSettingsV1` + Settings Language-sectie. Dev-panels buiten scope.
-
-**Escalatie-grootboek instrument klaar (2026-07-31).** Batch VERWIJDEREN deels gedaan: D-45, D-49, D-53, R-26 weg. Rest: D-50..D-52 of FML cat-E (X-01/X-11/…). Geen drempel én pad in dezelfde diff.
-
-Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg). Refs + preprocess: LBE in **stap 2**; abs-px besluiten gedaan (R7/R8 Later open). Production-refactor: **ronde 1–22 gedaan**. **Lean/DRY pass:** clusters leeg / Cat C product-F. Open: `hasFmlSemanticSource` gate = F.
-
-**Open / handmatig checken**
-
-- **Door-demote → window cascade (code gedaan 2026-07-31; wees-DF→window 2026-08-11)** — face-edit deur-prune sync’t door-arc sig; geen volle raam-pipeline. Wees-`doorframeFaceIds` → class `window` + stage DF→window promote. UI-smoke: Project4 demote deur naast DF → DF wordt cyaan raam (geen herstart).
-- **Face-edit perf (code gedaan)** — dirty-rect preview + claim-detach bounds; region-sized ink nearest + in-place prior; demote prune 80 ms coalesce. Specs face-overlay-perf + demote guards groen. UI-smoke Project4: Shift-klik wall↔unknown / box / demote overlays.
-- **Lean Walls W3+B4 (code gedaan)** — `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (plan “Expliciet later”); 122 pipeline-v3 groen. Planned lean walls items **empty**.
-- **Lean Walls dist-map pass-through (code gedaan)** — `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; scaffold v2=false + arm via scale; UI-smoke Project4 L7–L10 user-OK.
-- **Lean FML B1–B4 (code gedaan)** — DEFAULT_FML_*/clamps; `computeOpeningDraftState`; `extractionToPlanWithOrigin` + underlay bundle; `filterOpeningsForEdge`. hasFmlSemanticSource-gate = F. 53 FML vitest groen. UI-smoke: Project4 select/move/spiegel/copy + underlay + twin double_wide + download.
-- **Lean Windows B2 (code gedaan)** — `buildEvidenceStats` + `window-stage3-retarget`; unalias dual → `resolveFloorDual`; B3 L14↔L11 segment-geom = F. 71 window-tests groen. UI-smoke: Project4 Stage 3 → afronden → L14 cyaan + FML; doorframe class (geen L14).
-- **Lean Doors doorframe-preview (code gedaan)** — `pushStageClassesOntoWalls` → assign `roomRasterCache` → pas daarna `onWindowFacesApplied` (preview/reattach). Was: preview op stale cache zonder DF tot face-edit. UI-smoke: Project4 na raam-pass DF donker oranje **zonder** vlakklik.
-- **Lean Stap2 B2–B4 (code gedaan)** — één publish; masks/debounce DRY; shared `buildWallLayerBwMat`/`bwBytesToCanvas`; style+REF vanaf post-bake `baseBw` (gebakken inkt mee, nooit `effectiveBw`). 14 compose/ref tests groen. UI-smoke: Project4 B/W-tune, inkt in LBE → Volgende dikte+style, REF-export, FML-underlay kleur.
-- **Lean Doors demote-wipe hotfix** — face-edit riep `existingDoorsOnly` pipeline + door-arc → window herdetectie → pins weg. Nu: deur-demote = prune-only; window invalidate bewaart lastAuto; lege herdetectie wist geen window/doorframe pins; full face-preview na edit.
-- **Lean Doors D1 hotfix (dual-cache)** — ComputationCache epoch bij live cache veroorzaakte stale dual → existingDoorsOnly leeg → door/window wipe bij vlakklik. Fix: live cache → altijd `ensureFaceDualSpace`; + guard tegen lege stage bij nog-class=`door`. UI-smoke opnieuw: Project4 detectie → raam-pass doorframes → 1 vlak wijzigen → deuren/ramen blijven.
-- **Lean Doors D1 rest (code gedaan)** — `resolveClassAtLabel` (missing expliciet: attach/Path A `undefined`, surround `'surface'`); snap `applyFaceClassificationOverrides`; `BBoxBounds` → geometry-utils; L12 `normalizeVector`; dual epoch-cache; D2 = F. 145 door-tests groen. UI-smoke: Project4 na raam-pass sticky window-DF → Path A/FML.
-- **Lean Stap1 B2–B3 (code gedaan)** — affine DRY + `ROTATION_EPS_DEG`; `createByteArrayHistory` shared (mask 40 / ink 30); `resolveDisplayImageSrc`. UI-smoke: schaal/rotatie/gum undo → Volgende; stap2 inkt Ctrl+Z + underlay.
-- **Lean/DRY Batch 1 (code gedaan)** — merge/`semanticAsSegments`; dode median; unused deps; `buildCombinedPreview` weg; labels DRY; door geom; window evidence-geom; faces recalculate inklap. UI-smoke: Project4 4 stappen → afronden → FML.
-- **Cleanup ronde 18–22 (code gedaan)** — `pipelineV2Debug` weg; `layer-debug-report` + `PipelineLayerDebug`; `room-raster-cache` / `ref-swing-hinge` / faces gesplit. UI-smoke: Project4 afronden → Layer Debug L1–L10 → FML; Shift-klik faces; DevSession (oude V2-blobs = breaking, alleen V3).
-- **Stap4 Batch 3 (code gedaan)** — deur-swing export prefer live `orientedDoors`; `build-semantic-walls-source` + `hasFmlSemanticSource`. UI-smoke: Project4 afronden → DevPanel L12 → deur-swing rapport L12-count gelijk; FML ongewijzigd.
-- **Refactor ronde 17 (code gedaan)** — consumer-chain: finalize canvases/`parallelPairs` weg; FML-DTO zonder `openingBBox`; semantic `lengthPx`/`angleDeg` weg; docs sync. UI-smoke: Project4 afronden → Result overlays L1–L10 → FML + Layer Debug; geen double-wide regressie.
-- **Refactor ronde 16 (code gedaan)** — `room-ink-classify` → mapping/effective/autoclass/render + lean barrel ~42; `ROOM_INK_CLASSIFY_TUNING`; pickers DRY; exterior BFS private; refineWall F; 77 classify-specs. UI-smoke: Project4 classify → Shift-klik/box → inkt-edit → afronden → L10.
-- **L5 endpoint-bake ULP (code gedaan)** — `unifyNearEndpoints` + bake in `rebuildFaceFromSegments`; weld skip `maxD≤1e-6` weg. 2D_3E @516: collinear hub → geen 2×I. Specs L5+L6 groen. UI-check: 2D_3E probe (716,488) L5→L10 geen diagonale stam.
-- **Refactor ronde 15 (code gedaan)** — `useWorkspaceDevSession` → capture/restore-base/detection/flow; lean ~264; dode `wallBwPreviewUrl`; return-keys + exact/replay 1:1; 16/16 dev-workspace. UI-smoke: Project4 DevSession opnemen/herstellen.
-- **Refactor ronde 14 (code gedaan)** — `useWorkspaceExports` → shared/underlay/layer-debug/ref/deur/raam; lean entry ~70; dode deps + DRY; return-keys stabiel; vite + platform export specs. UI-smoke: Project4 downloads + debug-panel exports.
-- **Refactor ronde 13 (code gedaan)** — sticky helpers; assemble construction-slices (flat keys); View → FmlResultPanel/PreviewHost/FloorplanCanvasHost; gaps-ink persistence; 12 UI specs. UI-smoke: Project4 4 stappen + sticky restore + FML panel/preview.
-- **Refactor ronde 12 (code gedaan)** — Canvas draw-previews + dead `resetView`; Stage → Walls/Openings/Fixtures/Junctions; Canvas ~436 / Stage ~167; 93 fml-preview specs. UI-smoke: Project4 select/move/spiegel/copy/draw/measure/pan/dikte-pick/download.
-- **Refactor ronde 11 (code gedaan)** — FmlPanel → Heights/Thickness/Opacity/Actions; import-props F; 7 UI specs. UI-smoke: Project4 Panel hoogtes/dikte/bands/pick/opacity/regenerate/download.
-- **Refactor ronde 10 (code gedaan)** — FML editor: Render types/openings/panels; Interaction `useFmlPreviewPointer`; Toolbar → `FmlPreviewToolbarSettings`; entries ~293/487/225; 93 fml-preview specs. UI-smoke: Project4 select/move/spiegel/copy/download.
-- **Refactor ronde 9 (code gedaan)** — FML conversie: `extractionToPlan` → types/geom/walls/doors/windows; `useWorkspaceFml` → generate + thickness-ui + `layer-openings-to-fml`; 33 specs groen. UI-smoke: Project4 afronden → vector preview → download.
-- **Refactor ronde 8 (code + functioneel OK)** — UI faces: demote/helpers/bind/snap; Project4 smoke bevestigd.
-- **Refactor ronde 7 (code gedaan)** — L11 snap-split; 25 specs. UI-smoke Project4 twin Path A/B.
-- **Archive leeg (code gedaan)** — `src/archive` + `tests/archive` parking lot; `room-first` V3-only. Ronde 1–17 gedaan.
-- **Deur wall-touch gate (code gedaan)** — Stage-2 ná surround+angle-rescue: ink-adjacent `wall|window|doorframe` verplicht (`no_wall_touch`); existingDoorsOnly skip. UI-check Project4 garage: losse/meubel FPs weg, muur-deuren + poort blijven.
-- **existingDoorsOnly + angle-rescue (code gedaan)** — demote/restore wiste angle-rescue → twin 32 / 360·361 wel class=door in probe, niet in Deuren-overlay/FML; export kleurde wel (volle pipeline). Fix: angle-rescue aan in existingDoorsOnly alleen class=`door` + snap na refresh. UI-check Project4: demote auto-valse deur → bovenste twin blijft rood + 2 FML-openingen (geen double_wide).
-- **L12 doorframe leidende maat (code gedaan)** — L11 clear = deurblad; FML = clear + REF framing; display = clear. UI-check Project4 twin/single met kozijn → FML-breedte = df+framing.
-- **L11 Path B dual/ink (code gedaan)** — Path B = ink-adjacent `wall` → segment-first (geen white+wallMask); UI-check Project4 swings zonder doorframe na afronden → L12 bind.
-- **Sticky doorframeFaceIds (code gedaan)** — bridge koppelt sticky `doorframe` → `byHypothesisId`; attach peelt cluster-kozijn uit `faceIds`; reattach na window-pass (geen Stage-2 her-run). UI-check Project4 twin 32+df27/28 + single-3 79+df77/78 → export `doorframeFaceIds` gevuld; afronden Path A.
-- **Face bbox-index (code gedaan)** — classify toggle/box via `faceBBox` (geen dual-rebuild); dual alleen deur/raam/probe. UI-check Project4 Shift-klik + box. Wall↔unknown nog regionale ink-resolve (verwacht).
-- **Stap-3 initial-detection gate (code gedaan)** — face/ink UI + afronden geblokkeerd tot muur+deur+raam eerste pass klaar; canvas-spinner met stappen. UI-check Project4: land stap 3 → overlay tot alles klaar → pas dan face-klik.
-- **Wall B/W overlay Pad B (code gedaan)** — `composeWallBw` = base ⊕ OCR ⊕ ink; Verwerk inkt zonder kleur-rethreshold; geen bake naar kleur. UI-check Project4: penseel/gum op B/W stap 2+3, Verwerk inkt, OCR aan/uit, download B/W, FML-underlay nog kleur, retune behoudt ink.
-- **L11 doorframe-first + sticky (code gedaan)** — Path A **segment-first** langs ink/bbox-near doorframe (geen wallMask-gate); sticky pins. UI-check Project4 twin boven face 32 + df 27/28 na afronden → L12.
-- **Stage-2 angle-rescue (code gedaan)** — diepte ±15% Either; hoek white + `expectedAngleDeg` + H/V-prefer; fill &lt;0.80; hinge L/R met expected → dichtste hoek (twin 360). UI-check twin 360/361, shallow 373/374.
-- **Deur REF via rechte face-crop (code gedaan)** — `analyzeDoorSwingRef` = `runRefStages` → swing-pick; verticale REFs (90° LBE) komen in `refBands`. UI-check Project4 deur #3 / face 32 naast horizontale REF.
-- **Wall-rescue Either (code gedaan)** — Stage-1 probeert ink óf white (`wallRescueMatchSpaces`); UI-check Project4 twin onder raam (face ~439) naast gevonden 485. Kleine deuren boven (opgeslokt in wall) → later apart.
-- **claimFacesFromParentMap** — muur refine/classify + deur/raam/doorframe push claimen enclosed children als individuele roots; UI-check Project4 draaibogen vindbaar in Stage 1.
-- **Deur dual-space (fase 1 gedaan)** — `DOOR_SPACE_POLICY` + `runDoorStagePipeline` + `rebindFaceDualWhite`; **cluster-brug = ink** (wit–inkt–wit). UI-check Project4 / BouwTek11 clustered swings. **Nog open:** shallow underdeeps.
-- **Project4 bg** — end-to-end; raam REF alleen-top → strip_stack (asymmetrische rails fix 2026-07-23); UI-check Stage 3. **Opening-wit dual-space**: deur/raam Stage 1 wit — dunne ramen. **Doorframe**: UI-check 2D_3E / Project4.
-- **Abs-px smoke** — BouwTek11 + De Roemer na L6/ramen-schaal (ref≈30 vs dikkere ref / 3k floor).
-- **Refs in stap 2** — tekenen op muur-B/W; dikte bij afronden; BouwTek11 + De Roemer.
-- **3k floor + preprocess** — canvas-performance; deur/raam dicht-op-elkaar.
-- **OCR op muur-B/W** — kwaliteit dunne tekst na pre-B/W/thicken (opt-in OCR); O2/O4 ×underlay.
-- **FML-editor ramen** — Ctrl+klik settings (vloer/glas), sleep verplaatsen, copy→plaats-tool; UI-check.
-- **FML-editor deuren** — spiegel als iconen + copy-icoon; UI-check.
-- **L14 ramen** — na afronden: cyaan bbox/opening-lijn; junction-in-window rejects; FML windows met concept-refid.
-- **Template ID FML in viewer** — pocket/schuif/rond/half-rond + fixtures visueel checken.
-- **Ramen op Muren-tab** — window-faces cyaan in classify-overlay; Stage-3 push; handmatige check De Roemer e.d.
-- **De Roemer Hal/mk raam** — Stage-3: 4 strip_stack leden → Stage-4 merge; UI-check Hal/mk.
-- **BouwTek11 swing-span/hinge 2026-07-19** — handmatige UI-check probes open.
-- Snapshot exact-restore: Deuren-tab overlay + geen unknown→deur over restore.
-- Deur-swing schaal / FML double-door / Stage-2 wall-fill — POC’s open.
-- Kinderdijkstraat / smoke end-to-end nog niet handmatig gevalideerd.
-
-## Wat WERKT (huidige staat)
+## Wat WERKT
 
 **Flow:** Onderlegger → Voorbewerking → Detectie → Resultaat. Contract: `.cursor/docs/workspace-flow.md` + `layer-flow.ts`.
 
-**Wall-B/W overlay:** `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay` (`compose-wall-bw.ts`); stap 2/3 inkt-tools op overlay; afronden stap 2 bakt ink→`baseBw` (+ `bakedInkOverlay`); classify/finalize/Verwerk inkt via `precomposedWallBw`; geen bake naar kleur.
+**Canvas chrome:** `FmlEditorTopbar` op stap 1–4 (raster + FML). Hints via **i**-modal (`workspace-canvas-help.ts`); geen hint-balk. Fullscreen op alle canvas-stappen. Mask/inkt-history met redo (Ctrl+Shift+Z/Y). Sidebar: `sidebar-chrome.css` icon+naam, zebra weg.
 
-**Stap 1:** schaal/rotatie/crop/gum. Optionele «Rotatie vastzetten» (zelfde bake als 1→2) zodat scheve scans daarna geschaald kunnen. Geen refs. Floor **min 3000px** (`OPTIMIZATION_BASE_DIMENSION`); upscale high-quality.
+**Stap 1:** schaal/rotatie/crop/gum. Optionele «Rotatie vastzetten» (zelfde bake als 1→2). Geen auto-trim van witte randen; canvas wit. Geen refs. Floor **min 3000px**. Asymmetrie-waarschuwing H/V >2%.
 
-**Stap 2:** canvas alleen Voorbewerking; Int muur via Dev-view. B/W-tune + **LBE-refs** (muur/deur/raam) + OCR-toggle (**default uit**) + deur Template ID. Gate naar stap 3: muur-rect; bij afronden meet dikte/stijl op post-bake **`baseBw`**. Ref-crops = **`baseBw`** (gebakken inkt mee; nooit `effectiveBw`/OCR; fallback rebuild wallLayer zonder UI-state).
+**Stap 2:** B/W-tune + **LBE-refs** (max 3 muur min/mid/max) + OCR-toggle (default uit). Afronden meet dikte/stijl op post-bake **`baseBw`**. `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay`. Muurstempel (opt. Stempelset: translate-only + nulpunt-zaad) + B/W-overnemen. Stempel buiten scan → wit pad (`expandUnderlayForStamp`). Fabrieksreset = alleen laag-tune.
 
-**Stap 3 detectie:** altijd Muren; bij OCR-aan auto-scan in initial flow (highlights) → muren→deuren→ramen. OCR/Deuren/Ramen → Dev-view. Gaten-tab hidden. Na afronden → Vector/FML.
+**Stap 3:** altijd Muren; OCR/Deuren/Ramen → Dev-view. Muren = room-first → V3 L1–L10. Deuren Stage-2 → L11/L12. Ramen Stage 1–4 → L14. Face-class: V3 ziet alleen binary mask. Stempel-inkt blijft zichtbaar in classify.
 
-**Muren:** enig pad = room-first → pipeline-V3 L1–L10 (`fmlReady`). Face-class flow: `wall` = L0 mask; V3 ziet alleen binary mask — zie `wall-face-class-flow.md`.
+**Stap 4 / persist:** `previewPlan` + IndexedDB (`projects` + `projectIndex`). Resume «Verder werken». Diagnose-FAB = HTML met stap-1 scan + linialen + L1–L14. Stempelset-inject na nulpunt (`injectStampWallsIntoPlan` add-only) + ownership ronde 2 (`resolve-stamp-ownership`, stamp frozen cm/dikte, det→stamp); dikte pinned. Generate ná semantic + deuren/ramen; sanitize weld/ortho/T-X/cover tot vast punt (max 4).
 
-**Deuren:** Stage-2 → class `door` (amber); finalize `door`≡`unknown` in mask; L11/L12 → FML. Floor dual via `runDoorStagePipeline` + `DOOR_SPACE_POLICY` (Stage 1 white, cluster white, rescue/resolve ink).
+**FML workspace:** generate + editor (select/move/spiegel/copy/draw). Canvas-top = zelfde topbar als editor/inspect (geen hint-balk; undo/fit/fullscreen/zoom). Sidebar sluiten + menu-FAB (fullscreen sluit sidebar). Areas/surfaces-edit **uit** (`FML_AREA_SURFACE_EDIT_VISIBLE`). Oriëntatie-UI **uit** (`FML_ORIENT_CONTROLS_VISIBLE`); techniek blijft. Herschalen = H/V-linialen (geen muurdikte).
 
-**Ramen:** Stage 1–4 via `pipeDual` (`rebindFaceDualWhite` na detach) + `WINDOW_SPACE_POLICY`/`dual.geom`; starten op Muren- of Ramen-tab; faces → class `window` (cyaan); finalize `window`→`wall` in mask. L14 bind + merge → FML. REF: `RefFaceDualSpace` (strips white, framing ink). Doc: `window-detection-flow.md`.
+**FML `/FML-editor`:** leeg plan + floor CRUD + onderlegger-stretch (alleen `drawing`). Inspect-modus. Mobile chrome + touch alleen `pointer: coarse`. Extra gate `J0rd!`. Sessie-defaults + `az`/`bz`. Sanitize-knop (weld+ortho+T/X+cover tot stabiel); import/download = junction-pass. Gevelgroepen. Chrome-dialogs. Fixture-dock linksonder. Sticky select; click-move-click tekenen. Balance keep-axis. Roundtrip bewaart envelope als `source` er is. **Stempel:** checkbox naast gevel; Plattegrond «Stempel» kopieert bron-muren naar actieve floor; download stript `stamp`. **Afmetingen:** Autogen/Slicer/Handmatig (vis exclusief); slicer `btfSlices` + M/P-handles; meet-tool Tape/Manual/Slicer. **Muur-slide:** T-tak voorbij stam-einde absorbeert overlap (geen dubbele muur). **Surface-polygoon:** rubber-band + H/V-snap; hoeken/ribben van andere surfaces/areas (Shift = vast, Ctrl = uit).
 
-**FML:** preview + download via `previewPlan`; `buildFmlV3`; dikte-harmonize; wall boolean union; deuren L12 + ramen L14 openings. Editor: deuren én ramen selecteerbaar/verplaatsbaar; raam settings vloer (`z`) + glas (`z_height`); copy → create-tool; deur spiegel via iconen.
+**Host:** `floorplan-fml` workers.dev; SPA via `not_found_handling` (geen `_redirects`). Soft access-gate. i18n `en`/`nl`/`th`.
 
-**UI:** `useWorkspace` + `workspace/*` composables; Layer Debug toont eindlagen L10/L12/L14 (tussenlagen in details; na finalize die drie aan).
+## Open / handmatig checken
+
+- Editor maatlijnen: Autogen/Slicer/Handmatig; slicer P→M + H/V; linialen zichtbaar bij slicer-tool; handmatig oneindige face-as-snap; meettype-dropdown direct bij tool.
+- Muur-slide voorbij T: linker hal/woonkamer-muur niet verdubbelen; bestaande dubbele → Opschonen of opnieuw slepen.
+- Stempel ownership A+r2: freeze stamp cm/dikte; det→stamp junction; full-drop ≥50%; bake inject-count. Band raster-only.
+- UI-polish: stap 0 één +; close-bulge; stap 2 geen B/W-overnemen; classify-icoon; rescale left+icon.
+- UI-cleanup: stap 0 icon-knoppen; stap 1 crop/gum undo-redo + FS; stap 2 B/W/stempel + zoom; stap 3 classify + i-tips; stap 4 topbar ongewijzigd.
+- Stempelset: donor met stamp-leden → stap 2 bake → detect → stap 4: diktes = donor; nulpunt-sleep + regenerate houdt scan-pixels; Opschonen na afronden = no-op (sanitize al stabiel).
+- Canvas 1–4 wit: rotatie-bake houdt witte hoeken; gum vult wit zonder canvas te krimpen; stamp overflow groeit nog als de stempel buiten de scan valt.
+- Stempel buiten de tekening: onderlegger groeit met wit; bake/download neemt die lijnen mee; linialen/refs blijven op de scan.
+- Editor-stempel: markeer muren → andere floor → Plattegrond Stempel; gevel+stamp dual; download zonder stamp.
+- Stap-4 FML-topbar: geen tooltip, zelfde chrome als editor/inspect; fullscreen verbergt sidebar+header.
+- Recente FML-smoke (dialogs, T-split+gevel, underlay-pivot, fixture-dock, sticky/touch).
+- `bg` muur-shift 17,4 cm uit E2E-baseline-verversing (los van schuine-gevels).
+- Kinderdijkstraat / smoke end-to-end nog niet handmatig.
+- Ramen: per-ref Template ID UI; L14+merge+FML wel actief.
+- Deur dual-space: shallow underdeeps.
+- `hasFmlSemanticSource` gate = F.
+- `vitest run` hangt soms na laatste test op Windows (inhoud OK).
 
 ## Wat NIET / half
 
-- Ramen: L14 + merge + FML actief; per-ref Template ID UI nog niet; handmatige POC open.
-- Ink-resolve/gaps demote: window formeel als wall-boost nog niet aangescherpt (mask-mapping wel).
-- Oude archive openings (`src/archive/openings/**`) ≠ actieve deurpad.
-- Wall-orientation-audit findings nog open (doc).
-- `vitest run` hangt soms na laatste test op Windows (inhoud OK; kill proces).
-- Diverse handmatige POC’s boven (snapshot/deuren/FML) nog open.
+- Ink-resolve/gaps: window als wall-boost nog niet aangescherpt.
+- Archive-openings ≠ actieve deurpad.
+- Wall-orientation-audit findings (doc).
+- Diverse detectie-POC’s (deur-hoek, raam-clustering, gearceerde muren) — zie `decisions.md` «Nog open».
+- Band-stempel (zonder set) blijft raster-only — geen vector-inject.
 
-## Technische schuld (kort)
+## Technische schuld
 
-- Layer-preprocess tuning handmatig; opening-layer defaults conservatief.
+- Layer-preprocess tuning handmatig; opening-defaults conservatief.
 - Raw-ink overlay = alle zwarte inkt (incl. tekst/ruis).
-- L6 connector ~35 files (L5–L6 lean A–E); Cat C generalisatie = product-F (geen lean-batch).
-- Pipeline-V3 Cat C + meer fixtures buiten BouwTek11/2D_3E (apart product-go).
+- L6 connector ~35 files; Cat C generalisatie = product-F.
+- Pipeline-V3 Cat C + meer fixtures buiten BouwTek11/2D_3E = apart product-go.
+- Lean/DRY + production-refactor ronde 1–22 **klaar**; clusters leeg.
+- `FloorplanToolbar.vue` ongebruikt (vervangen door `FmlEditorTopbar`).
 
 ## Architectuur (niet wijzigen zonder overleg)
 
@@ -584,74 +78,27 @@ Cold start = **lege onderlegger** (geen Project4-default; `poc-reference.ts` weg
 
 - `frontend/src/cv/port/baseline.ts` Hough-baseline parameters.
 
-## Recente besluiten (samenvatting)
+## Recente besluiten
 
-- **2026-08-20** — FML chrome-dialogs: geen `window.confirm`/`prompt`; zelfde kaart als help-modal voor oil-bottle, hoogte-overwrite en gevelnaam.
-- **2026-08-20** — FML gevelgroepen: max 1 groep/muur; remap bij Opschonen + junction-pass (host-helften); hand-split ongewijzigd.
-- **2026-08-20** — FML T/X in sanitize; import + viewer-download alleen junction-pass; muur-hartlijn 15 cm + T-split bij tekenen. Geen volle sanitize-auto bij openen.
-- **2026-08-20** — FML-editor: onderlegger-rotatie om center + spiegel over linker rand; Project krijgt Choose FML; FML-fold = Floorplan; hoogtes/bovenlicht alleen per verdieping (geen project-wide); canvas-topbar ook desktop + inspect; verdiepingenbalk `+`.
-- **2026-08-19** — FML-viewer teken-start: leeg plan + projectnaam + floor CRUD; PNG/JPG-onderlegger stretchen via stap-1-linialen (geen workspace-image); settings-variant krijgt hoogtes/diktes/schaal-eenheid.
-- **2026-08-19** — FML-selectie: sticky per soort (muur/opening/item); wisselen = leeg/area of ✕. Mobiel: tik uitstellen tot geen pan/zoom; 1-vinger-slop = pan (selectie blijft).
-- **2026-08-19** — Teken-menu’s: ✕ op deur/raam/fixture/polygoon/lijn/tekst; polygoon=kamertype, lijn=dikte, tekst=veld. Mobiel: maatveld-tap lekt niet meer naar draft-hover.
-- **2026-08-19** — Teken-tool: Esc/✕ uit zonder startpunt (ook in invoerveld); ✓ accepteert draft; na plaatsen uit. Mobiel: select/maat/maten/nulpunt op linker rail.
-- **2026-08-19** — FML muur/kamer click-move-click + maatbalk (meters, typ + Enter); hold-drag weg. Zelfde composables workspace + viewer.
-- **2026-08-19** — FML-viewer «Project spiegelen»: eigen rij in linker menu (naast Herschalen/Opschonen); niet in Oriënteren-fold. Workspace blijft achter `FML_ORIENT_CONTROLS_VISIBLE`.
-- **2026-08-19** — FML wall sanitize: auto alleen generate + knop. Weld + ortho + T/X + cover; keep-axis. Import/download = alleen junction-pass.
-- **2026-08-19** — FML-viewer mobile: floating onderbalk + settings-kaart + sidebar-kaart (`safe-area`); tool/rail/menu-iconen; fullscreen verbergt header + floor-rail (`100dvh`). Workspace ongemoeid.
-- **2026-08-19** — Instellingen-UI: converter vs viewer (`UserSettingsView` variant). Merge bij converter (stap-4 generate); kamer-kleuren + hoektekens bij losse viewer. Tandwiel sluit en slaat op; Annuleren gooit draft weg.
-- **2026-08-19** — FML-hoekmarkers: `off`/`square`/`skew` (default `skew`). Binnenhoek-sectoren L/T/X; H/V ε 0,1 cm; overlay in de hoek; geen export.
-- **2026-08-19** — `/FML-editor` op PC: muis-path + knopen-hover; rail/touch-nav alleen `pointer: coarse` (Set/H/V/Move, geen Sel). Ctrl+Y redo ook workspace. Extra gate `J0rd!`. Workspace-hosts ongewijzigd.
-- **2026-08-19** — FML balance = Floorplanner-hartlijn (keep-axis). Editor-slider schuift het lichaam, niet `a`/`b`. UI in %; slider 0–100%, invoer tot ±1000%. Keep-faces stitch (`wall-axis-balance`) weg.
-- **2026-08-19** — Stap-4 Herschalen: workspace start op stap-1 handle-plek + mm (`scale.state` → FML via layout.origin; nulpunt telt mee). Viewer/geen handles: muur-bbox.
-- **2026-08-19** — FML «Maten tonen»: één maat per area-zijde, ook over micro-jog (≤20 cm) en T-inkeping (gat ≤40 cm); L/U-vleugels blijven los; geen `dimensions[]`/export.
-- **2026-08-18** — FML toolbelt: debounce 700 ms + flush-on-leave (geen Enter-only commit); undo per veld-sessie.
-- **2026-08-18** — FML-viewer: sessie-defaults + confirm overwrite; muur/knoophoogte via Floorplanner `az`/`bz` (geen wall.height).
-- **2026-08-18** — Bovenlicht FML-import fold: `foldBovenlichtOnWall` in `importFmlV3` (guid `-bovenlicht` + t/width/z); gap 0 expliciet; re-export synthetiseert opnieuw.
-- **2026-08-18** — Opening overflow + export-bovenlicht tegen muur `az`/`bz`.h (niet floor.height). Poort6: 55 cm verdieping, 330 cm trapmuur, 270 cm deur+bovenlicht past.
-- **2026-08-18** — Bovenlicht per-opening hoogte/gap (Ctrl+klik), erf vloerdefault; FML-export gebruikt override; openen vouwt terug (zie fold).
-- **2026-08-18** — Poort6 FIN-125 dakkapel `a8c2aefd…` (2e, 8×): `dormer` = U van muren, 2 ramen op lokale +Y (gevel), open naar de kamer.
-- **2026-08-18** — Poort6 FIN-125: dubbele rechte trap `825bce5f…` rot=270 = links omhoog / rechts omlaag; trapgat-item `c86e7f32…` = `stair_opening`.
-- **2026-08-18** — Oosterpoort 14151 A: rechte trap `17f4fb9a…` rot=90 mir[0,0] = omhoog rechts; toilet `fc3f4092…` = bestaand toilet; 1e geen vlucht, Trapgat-cutout + dashed kruis + `sym-stair-opening`.
-- **2026-08-18** — Anna 3e catalogus: CV `0af97324…` = boiler; mini-wasbak `05dfa289…` = sink_small; frans balkon `9c845cf2…` = naar binnen + hek; kast-schuif `df95e84f…` = pocketpijl; koof `719b8845…` = zwarte rand + kruis; inbouw wasbak `c5686bd0…` = wit blad + kom.
-- **2026-08-18** — ISO was-iconen (kuip / vierkant+cirkel / gestapeld) + kwarttrap-hand: omhoog spil onder-rechts + pijl omhoog; opkomend rechte onder + pijl naar rechts; `mirrored[0]` in geometrie, geen Konva-flip.
-- **2026-08-18** — Noordkruis (`sym-350` / `north_cross`) bij FML X-flip: positie wel, rotatie/`mirrored` niet — pijl blijft wereld-noord, N niet achterstevoren. 90° roteert wél mee.
-- **2026-08-18** — Van Ostadestraat 1e achter: losstaand bad, dubbele wastafel, was-droogcombi; kwarttrap-refid (`stair_quarter_90_up`); lange balkonbalustrade zelfde spijlstijl (aantal volgt lengte). Kleine wasbak flush op lokale −Y.
-- **2026-08-18** — FML preview z-order: area-fill → surface-fill → object → tekst. Surfaces dekken geen fixture-kleur meer; kamer/surface-benaming altijd bovenop.
-- **2026-08-18** — FML roundtrip: typed labels/lijnen/dimensions + `extras`/`source`/`designs[]`; source-aware `buildFmlV3`; viewer annotations + design-switcher; workspace zonder source ongewijzigd.
-- **2026-08-18** — Keuken-fixtures Kinderdijk: koelkast + vriessymbool, metalen keukenwasbak + kraan, 4-pits kookplaat; catalogus-refids + blad onder apparatuur. Sanitair: hangend toilet, glazen wand, slaapkamerwasbak, entreepijl. Balkonbalustrade = grijze traphek-spijlen.
-- **2026-08-19** — Worker-host `floorplan-fml`: geen `_redirects` (`/* /index.html` = 100324-lus). SPA via `assets.not_found_handling = single-page-application` (`frontend/wrangler.toml`); dashboard hetzelfde. `_headers` blijft.
-- **2026-08-18** — FML inspect-modus alleen in losse viewer (zijbalk Bewerken/Inspectie). Read-only tik + `inspectColors`; workspace blijft editor. Geen box-select/gevel.
-- **2026-08-18** — Areas/surfaces product-gate: `FML_AREA_SURFACE_EDIT_VISIBLE=false` (workspace: geen Ctrl+klik/surface-tool/roomtag-settings; export fill = Woonkamer-fabriekskleur). Losse FML-viewer blijft vol. Techniek (auto-areas) blijft.
-- **2026-08-17** — Areas/surfaces/roomtags: hole-ringen ná balance → `Floor.areas`; surfaces handmatig; catalogus NL + settings `roomTagColors`; Ctrl+klik + draw_surface; X-14 arrays mogen gevuld.
-- **2026-08-17** — Kwarttrap-symbolen: zelfde lijnstijl als spiltrap; BG 90°+3 treden + dashed snede; 1e omgekeerde vlucht, pijl blijft omhoog. Geen nieuwe refids tot een Floorplanner-FML die items heeft.
-- **2026-08-17** — Diagnose origineel: H/V-schaallinialen als SVG-overlay (zelfde coords als stap-1 scan) + mm/px/JSON; JPEG blijft schoon.
-- **2026-08-17** — Oil bottle (geen standpipe): FML-viewer popup rebase nulpunt naar item-midden op alle floors met die refid; geen auto-apply, workspace ongemoeid.
-- **2026-08-16** — FML/onderlegger spiegel+90° UI verborgen (`FML_ORIENT_CONTROLS_VISIBLE`); techniek blijft tot klant goedkeurt.
-- **2026-08-16** — FML fixture-catalogus: Mooiland-refids (spiltrap 180°, keukenblad, afdak, chimney, railing, dakraam); meubels onder muurfill zodat flush-bladen niet door de muur steken.
-- **2026-08-16** — FML-oriëntatie: spiegel/90° om nulpunt `(0,0)`; underlay display-only rot/flip + verplaats-toggle; `fmlOrient` persist.
-- **2026-08-14** — FML editor: handmatige dikte (ook dezelfde maat aanklikken) reset `balance` naar 0.5.
-- **2026-08-14** — FML maatlijn: geen snap (klikpunt). Kamer-tool: geen 15 cm as-magnet; sleep-eind 4 cm hartlijn/knoop zodat kleine schachten blijven.
-- **2026-08-13** — Schuine gevels: lezen op L3 (ongesnapt), toepassen eind L10 (ruis weg); lidmaatschap via DT-rug met bergopwaartse klim i.p.v. vorm — macro-stair op vorm faalde omdat op L10 niet meer te zien is welke knik echt was.
-- **2026-07-30** — Run-journaal (batch nul): module-scoped sink in `core/diagnostics` + worker-transport; `counts` per ESC-ID = grootboek-veld, events begrensd (3/ID, 400/run); alleen observatie, geen drempel/pad geraakt.
-- **2026-07-29** — Escalatiepaden: doel = precondititie per tak + herleidbare drempel. E2E-plan ongewijzigd → gedrag eerst L2–L10 + FML. Batch nul = stille fouten luid. Eenheid = cascade. Grootboek vóór interview. (Living: `escalatie.md` sinds 2026-08-01.)
-- **2026-07-29** — Fase 1: git + CI-poort + groene build. Typecheck = `vue-tsc -b`; alle assets binnen `frontend/`; root-`examples` blijft buiten de repo.
-- **2026-07-29** — Face-edit perf: dirty-rect UI + region ink alloc + demote schedule; geen detectie-tuning.
-- **2026-07-29** — Lean Walls W3+B4 finish: `rebuildFaceJunctionsOnly` L2/L3; `withTopologyGuard` L7/L9/L10; Cat C skip (L5–L6 “Expliciet later” / geen batch-todo); 122 pipeline-v3 groen; planned lean walls empty.
-- **2026-07-29** — Lean Walls dist-map pass-through: `distanceMap?` L2/L4/L7–L10; `runPipelineV3` 1× inject; UI-smoke Project4 user-OK; scaffold v2=false + arm via scale (geen L6 retune).
-- **2026-07-29** — Lean Walls L5–L6 structural go (A–E): cleanup/junction/detect/apply/chamfer splits + dead knip; behavior freeze; **Cat C product-F**.
-- **2026-07-29** — Lean Walls L7–L10 core: B1–B4 + dist-map; behavior freeze.
-- **2026-07-28** — Lean Stap2 B2–B4: dikte/style/REF-crops = post-bake `baseBw` (gebakken inkt mee); nooit `effectiveBw`; shared `buildWallLayerBwMat` in compose.
-- **2026-07-28** — Lean Stap1 B2–B3: `ROTATION_EPS_DEG` in `rotateMat`; undo = `createByteArrayHistory({ maxSteps })` in `maskHistory.ts` (mask+ink); display underlay = `resolveDisplayImageSrc`.
-- **2026-07-28** — Cleanup Batch 1–6 / ronde 18–22: knip dode HTML/aliases; `pipelineV2Debug` V3-only; naming `PipelineLayerDebug` / `layer-debug-report` / `WallPipelineVersion='v3'`; splits `room-raster-cache`, `ref-swing-hinge`, faces (~476/472/416). Oude V2-only DevSessions = breaking.
-- **2026-07-28** — Lean/DRY pass: skill + 8 inventaris; Batch 1 (I/R/O/D) cross-cluster — geen tuning.
-- **2026-07-28** — Stap4 Batch 3: deur-swing export = live L12 (re-snap fallback); `build-semantic-walls-source` + `hasFmlSemanticSource` i.p.v. `-v2` naming.
-- **2026-07-28** — Refactor ronde 17: consumer-chain hot-path X — geen finalize canvas-alloc/`parallelPairs`; FML-DTO zonder `openingBBox`; semantic `lengthPx`/`angleDeg` weg (`junctions` blijven L14).
-- **2026-07-28** — Refactor ronde 16: L0 `room-ink-classify` → mapping/effective/autoclass/render + lean barrel; TUNING.
-- **2026-07-28** — L5 bake endpoint-unification: ULP-near hubs → byte-identiek in segmentcoords (`unifyNearEndpoints` + `rebuildFace`); voorkomt 2×I @516 → L6-diagonaal (2D_3E ref=77).
-- **2026-07-27** — Refactor ronde 13–15: facade slices; exports; DevSession capture/restore.
-- **2026-07-27** — Refactor ronde 9–12: FML conversie/editor/panel/canvas/stage.
-- **2026-07-27** — Refactor ronde 7–8: L11 snap-split; UI faces demote/helpers/bind/snap.
-Detailbesluiten → `.cursor/docs/decisions.md` / layer-decision docs. Changelog-achtige sessienotities horen hier niet meer.
+- **2026-08-21** — Drie maatlijn-types: Autogen (flags, overlay niet verder tunen), Slicer (`btfSlices` alleen `{m,p}`, live + export-bake), Handmatig (`dimensions[]`). Vis exclusief; meet-tool Tape/Manual/Slicer.
+- **2026-08-21** — Muur-slide voorbij T-stam: collineaire overlap na generate-T-split; `absorbCoveredCollinearWalls` na slide/junction-move (keepIds = sleepdoel). Cleanup materialiseert T’s, daarna rekken stam-helften over elkaar.
+- **2026-08-21** — Auto-maatlijnen = area-gevelband (W/E/N/S over volle objectspan + restmaat), niet silhouet/T-junction. Flags in FML; overlay niet `dimensions[]`. (Autogen-spoor behouden, niet verder patchen.)
+- **2026-08-20** — Stempel ownership ronde 2: freeze stamp a/b/dikte; geen stamp→det snap; parallel ≥50% drop; bake inject-count; 3D = donor-cm én donor-dikte.
+- **2026-08-20** — Stempel ownership A gebouwd: `resolve-stamp-ownership` + `extras.stampOwned`; inject zonder replaceOverlap; gum filtert inject; Opschonen herhaalt pass. Band blijft raster-only.
+- **2026-08-20** — Stempel↔detectie: optie A gekozen (ownership-pass in FML-laag, corridor per stempelmuur, slack 8 cm, trim + openings-overdracht + T-snap, collineaire voortzetting erft stempeldikte, markering moet split/cover overleven). B/C/D/E afgewezen; band-modus blijft raster-only. Doc: `stamp-detectie-dubbele-muren.md` §13–§15.
+- **2026-08-20** — Workspace UI-cleanup: editor-topbar op stap 1–4; sidebar icon+naam; hints in i; mask/inkt redo.
+- **2026-08-20** — Canvas stap 1–4 uniform wit: geen auto-trim van witte randen bij bake (`normalizeWorkingCanvas`); stage-achtergrond `#fff`. Stempel-overflow mag nog pad toevoegen. Detectie negeert wit. PDF-ROI-crop blijft.
+- **2026-08-20** — FML sanitize tot vast punt (max 4); generate ná semantic+openings zodat stamp/nulpunt niet op pre-semantic plan bevriest.
+- **2026-08-20** — Stempel buiten scan: automatisch wit pad op kleur-onderlegger (plaatsen + bake); schaal vast; max-edge 12k.
+- **2026-08-20** — Detectie-FML (stap 4): zelfde canvas-chrome als editor/inspect — hint weg, topbar aan, sidebar sluiten + menu-FAB.
+- **2026-08-20** — Stempelset workspace: nulpunt uit bake + vector-inject op stap 4; dikte pinned; band-stempel ongewijzigd (stretch/raster).
+- **2026-08-20** — Editor-stempel: dual membership gevel+stamp; Plattegrond-apply op actieve floor; export stript alleen stamp.
+- **2026-08-20** — Workspace Stempelset: stap-4 preset-groep `stamp` (zelfde `facadeGroups`-store); stap-2 checkbox; download stript groepen.
+- **2026-08-20** — Chrome-dialogs i.p.v. native confirm/prompt (oil-bottle, hoogte-overwrite, gevelnaam); zonder host native fallback.
+- **2026-08-20** — Fixture-bibliotheek dock in canvas linksonder (z=24); scoped CSS-tokens matchten `:root` niet → achter Konva.
+- **2026-08-20** — Gevelgroepen in `settings.facadeGroups`; max 1 groep/muur; remap host-helften bij split/Opschonen/junction (T-tak niet).
+
+Detailbesluiten → `.cursor/docs/decisions.md`. Catalogus-refids (Poort6, Anna, Ostade, Kinderdijk) staan daar / in eerdere sessies, niet hier.
 
 ---
 

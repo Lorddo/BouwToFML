@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { FloorLineType, Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
+import { DEFAULT_LINE_COLOR, DEFAULT_LINE_THICKNESS_PX } from './fml-preview-render-annotations'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -20,7 +21,9 @@ export function useFmlPreviewDrawLine(options: {
 }) {
   const draftPoints = options.selection.drawLinePoints
   const hoverCm = ref<Point2D | null>(null)
-  const thickness = ref(2)
+  const thickness = ref(DEFAULT_LINE_THICKNESS_PX)
+  const lineType = ref<FloorLineType>('solid_line')
+  const color = ref(DEFAULT_LINE_COLOR)
 
   function cancelDrawLine(): void {
     draftPoints.value = null
@@ -66,8 +69,8 @@ export function useFmlPreviewDrawLine(options: {
     const id = options.editor.addLine({
       a,
       b: end,
-      type: 'solid_line',
-      color: 0,
+      type: lineType.value,
+      color: color.value,
       thickness: Math.max(1, Math.round(thickness.value)),
     })
     draftPoints.value = null
@@ -105,5 +108,7 @@ export function useFmlPreviewDrawLine(options: {
     commitFromHover,
     hoverCm,
     thickness,
+    lineType,
+    color,
   }
 }

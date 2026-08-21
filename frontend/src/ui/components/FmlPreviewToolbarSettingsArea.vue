@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import HexColorField from './HexColorField.vue'
 import './fml-toolbelt-settings-fields.css'
 
 const { t } = useI18n()
@@ -15,6 +16,7 @@ const props = withDefaults(
       name: string | null
       customName: string
       color: string
+      showAreaLabel: boolean
       canEditPolygon: boolean
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
@@ -31,6 +33,7 @@ const emit = defineEmits<{
   areaCustomNameInput: [customName: string]
   applyAreaCustomName: [customName: string]
   applyAreaColor: [color: string]
+  applyShowAreaLabel: [show: boolean]
   deleteTagged: []
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
@@ -57,8 +60,12 @@ function onCustomNameChange(event: Event): void {
   emit('applyAreaCustomName', (event.target as HTMLInputElement).value)
 }
 
-function onAreaColorInput(event: Event): void {
-  emit('applyAreaColor', (event.target as HTMLInputElement).value)
+function onAreaColorInput(color: string): void {
+  emit('applyAreaColor', color)
+}
+
+function onHideLabelChange(event: Event): void {
+  emit('applyShowAreaLabel', !(event.target as HTMLInputElement).checked)
 }
 </script>
 
@@ -96,12 +103,25 @@ function onAreaColorInput(event: Event): void {
   <div v-if="selectedAreaPanel" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.areaColor') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="color"
+      <HexColorField
+        :model-value="selectedAreaPanel.color"
         :aria-label="t('result.toolbar.areaColor')"
-        :value="selectedAreaPanel.color"
-        @input="onAreaColorInput"
+        @update:model-value="onAreaColorInput"
       />
+    </div>
+  </div>
+  <div v-if="selectedAreaPanel" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.areaLabel') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <label class="fml-toolbelt__checkbox">
+        <input
+          type="checkbox"
+          :checked="selectedAreaPanel.showAreaLabel === false"
+          :aria-label="t('result.toolbar.hideAreaLabel')"
+          @change="onHideLabelChange"
+        />
+        <span>{{ t('result.toolbar.hideAreaLabel') }}</span>
+      </label>
     </div>
   </div>
   <button

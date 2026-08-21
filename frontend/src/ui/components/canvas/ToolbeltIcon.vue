@@ -137,6 +137,46 @@ const strokeAttrs = {
       abc
     </text>
 
+    <text
+      v-else-if="name === 'text_bold'"
+      x="12"
+      y="17"
+      text-anchor="middle"
+      fill="currentColor"
+      font-size="14"
+      font-weight="700"
+      font-family="Georgia, 'Times New Roman', serif"
+    >
+      B
+    </text>
+    <text
+      v-else-if="name === 'text_italic'"
+      x="12"
+      y="17"
+      text-anchor="middle"
+      fill="currentColor"
+      font-size="14"
+      font-style="italic"
+      font-weight="600"
+      font-family="Georgia, 'Times New Roman', serif"
+    >
+      I
+    </text>
+    <text
+      v-else-if="name === 'text_outline'"
+      x="12"
+      y="17"
+      text-anchor="middle"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.15"
+      font-size="14"
+      font-weight="700"
+      font-family="Georgia, 'Times New Roman', serif"
+    >
+      A
+    </text>
+
     <!-- KEEP -->
     <path
       v-else-if="name === 'fit'"
@@ -302,6 +342,16 @@ const strokeAttrs = {
       <path d="M17.8 9.2 L20.8 12 L17.8 14.8" />
     </g>
 
+    <!-- Sidebar: re-run wall/door/window classify -->
+    <g v-else-if="name === 'classify'" v-bind="strokeAttrs">
+      <path d="M4.5 12 A7.5 7.5 0 1 0 12 4.5" />
+      <path d="M12 2.2 L12 6.2 L8.6 4.6" />
+      <rect x="8.2" y="9.2" width="3.2" height="7.2" rx="0.5" />
+      <rect x="12.6" y="11.4" width="3.2" height="5" rx="0.5" />
+      <path d="M16.8 14.2 H19.2" />
+      <path d="M16.8 16.4 H19.2" />
+    </g>
+
     <!-- Sidebar: collapse panel -->
     <g v-else-if="name === 'close_menu'" v-bind="strokeAttrs">
       <rect x="3.5" y="4.5" width="9.5" height="15" rx="1.4" />
@@ -358,6 +408,23 @@ const strokeAttrs = {
       <line x1="12" y1="5.4" x2="12" y2="18.6" stroke-dasharray="1.5 1.4" />
       <path d="M5.2 16.4 L8 12.2 L10.2 14.4 L11.4 13.2" />
       <path d="M18.8 16.4 L16 12.2 L13.8 14.4 L12.6 13.2" />
+    </g>
+
+    <g v-else-if="name === 'crop'" v-bind="strokeAttrs">
+      <path d="M7 3 V17 H21" />
+      <path d="M17 21 V7 H3" />
+    </g>
+
+    <g v-else-if="name === 'stamp'" v-bind="strokeAttrs">
+      <path d="M8 4 H16 V10 H8 Z" />
+      <path d="M10 10 V13 H14 V10" />
+      <path d="M6 15 H18 V18 H6 Z" />
+      <path d="M5 20 H19" />
+    </g>
+
+    <g v-else-if="name === 'add'" v-bind="strokeAttrs">
+      <path d="M12 5 V19" />
+      <path d="M5 12 H19" />
     </g>
   </svg>
 </template>

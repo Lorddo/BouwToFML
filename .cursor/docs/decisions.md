@@ -274,7 +274,8 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Werkwijze | **Per verdieping** detectie-flow (stap 1–4); stap 0 = projectmeta |
 | Stap 1 overname | Expliciete knop «Onderlegger overnemen» — projectbron (pre-crop) + schaal |
 | Stap 2 overname | Expliciete knop «B/W overnemen» — tune only; LBE-rects opnieuw tekenen na crop |
-| Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (adaptive `stampBw` in wall-B/W + pure zwarte OR in Otsu); geen openings |
+| Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (adaptive `stampBw` in wall-B/W + pure zwarte OR in Otsu); geen openings. Optioneel **Stempelset** = muren uit vaste gevelgroep `stamp` op donor (stap 4); aan = die muren zonder band-filter, **translate-only**, nulpunt-zaad + vector-inject op stap 4 (dikte pinned t.o.v. `harmonizeFmlWallThickness`); uit/leeg = diktebanden + stretch zoals nu. **Overflow:** stempel buiten de scan → automatisch wit pad op de kleur-onderlegger (plaatsen + bake); schaal blijft; linialen/refs/masks/nulpunt schuiven; geen auto-trim van wit op stap 1–3 (canvas blijft wit, zelfde als stap-4 infinity); max langste zijde 12k px |
+| Stempel-eigendom (methode) | **Geïmplementeerd (optie A + ronde 2).** Stempel = waarheid in corridor — geometrie én dikte (3D: donor-cm én donor-dikte). Module `resolve-stamp-ownership.ts`; `extras.stampOwned`; inject `replaceOverlap: false`; ownership ná inject vóór `harmonize`; stamp coords/dikte frozen; detectie snapt/weldt op stamp (niet andersom); parallel ≥50% overlap → drop; gum filtert inject; bake toont inject-count; Opschonen herhaalt ownership. Band blijft raster-only. Uitwerking: `stamp-detectie-dubbele-muren.md` §13–§15 |
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
 | Stap 4 nulpunt | Tool «Nulpunt»: sleep kruis → ✓ bakken als FML `(0,0)` (of ✕/Esc annuleren); soft snap naar muurfaces (binnen/buiten, balance-aware), niet naar knoop/hartlijn; Ctrl/Cmd schakelt snap uit; `fmlNulpuntImageCm` persist (scant-cm); underlay-origin synchroon; per floor eigen anker voor 3D-stack. **FML-viewer:** bij openen, als oil-bottle-refid aanwezig en niet al op origin → popup rebase nulpunt naar item-midden op alle floors met die fles |
@@ -290,18 +291,16 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Beslissing | Status |
 |------------|--------|
-| V1 | **Nee** in FML `dimensions[]` — niet in scope |
-| Viewer-overlay | Toggle «Maten tonen» (niet `FmlToolId`): midden van elke area-zijde ≥ 50 cm; collinear merge (ook micro-jog / T-inkeping ≤40 cm) + shared-edge dedupe; sessie-only, geen export |
-| V2 | Automatisch op **binnenmaten**, **buiten** footprint |
-| Meetwaarde | **Binnenmaten** (tussen binnenwanden / binnenwerks), niet hart-op-hart |
-| Plaatsing | **Buiten** om de verdieping — externe maatketting rondom (zoals in `examples/`) |
-| Generatie | Automatisch afgeleid uit muurgeometrie / footprint |
-| Correctie | Tekenaar past aan in Floorplanner na import |
-| FML | v3 `dimensions[]` (`type: custom_dimension`) |
+| Drie types | **Autogen** (FP-flags + overlay), **Slicer** (`btfSlices` `{m,p}` + live P-lijn maten), **Handmatig** (`dimensions[]`) |
+| Weergave | Exclusief session-dropdown: none / autogen / slicer / manual |
+| Autogen | Flags roundtrip; overlay niet verder tunen (geen gevelband-patches) |
+| Slicer | Design-settings `btfSlices: [{m,p}]`; meetas = loodrecht op P−M; ticks = wallFaces ∩ meetlijn; interior skipzelfde-muur dikte; export baket `custom_dimension` op P-lijn |
+| Handmatig | Meet-tool «Handmatig» → `dimensions[]`; imported custom dims zonder btfSlices |
+| Terugkoppelen | Dim op P-lijn (≤1 cm) = slicer-bake; strip bij import als `btfSlices` aanwezig |
+| Area-zijde overlay | Toggle «Maten tonen» (niet `FmlToolId`): sessie-only |
+| FML flags | project: `dimensionMode`, `generateOuterDimension`, `showDims`; design: `engineAutoDims`, `btfSlices` |
 
-Binnenmaten = meetwaarde; lijnen staan visueel **buiten** footprint (grote offset in cm — zie Kinderdijkstraat dimensions).
-
-**Viewer-maatlijn (stap 4 tool, geen FML-export):** soft snap naar muurfaces (binnen/buiten), zelfde helper als nulpunt; Shift = H/V t.o.v. start; Ctrl/Cmd schakelt snap uit; geen knoop-/hartlijn-snap.
+**Viewer-maatlijn-tool:** Tape (tijdelijk) / Manual / Slicer (M→P). Shift = H/V; Ctrl = geen snap.
 
 ---
 
@@ -491,9 +490,9 @@ Near-90° restjitter + T/X-junctions + muur-onder-muur in cm, ná thickness/bala
 
 | Beslissing | Detail |
 |------------|--------|
-| Helper | `sanitizeFmlWalls` = weld 0,25 cm → `orthogonalizeNearAxisWalls` → `materializeWallJunctions` (T+X) → collinear cover (as ≤0,5 cm) |
+| Helper | `sanitizeFmlWalls` = weld 0,25 cm → `orthogonalizeNearAxisWalls` → `materializeWallJunctions` (T+X) → collinear cover (as ≤0,5 cm), **herhaald tot stabiel** (max 4) |
 | T/X | T = eindpunt op binnenste hartlijn; X = interior-kruising. Eerste helft houdt oude `id`; tweede `split-host-` + 8 hex. ε = param 1e-4 / 0,25 cm; **geen** 4 cm min-segment. Openingen via wereldmiddelpunt; exact op knip = één helft |
-| Auto (vol) | Alleen generate + knop «Opschonen»: volle weld/ortho/T-X/cover |
+| Auto (vol) | Alleen generate + knop «Opschonen»: volle weld/ortho/T-X/cover tot vast punt. Generate ná semantic + deuren/ramen (stamp/nulpunt mag pre-semantic plan niet bevriezen) |
 | Import / viewer-download | Alleen junction-pass (`applyJunctionSanitizeToPlan`); niet volle sanitize. Download schrijft live plan terug (editor = bestand). Niet in `buildFmlV3` |
 | Muur-teken | Hartlijn-snap 15 cm (`JUNCTION_POINT_SNAP_CM`) ná knoop-snap; `addWallSegment` T-split op a/b. Kamer blijft 4 cm |
 | Niet | Volle sanitize automatisch bij openen; geen auto-gevel uit contour; geen `alignWallJunctionBalance` (import-balance blijft) |
@@ -509,13 +508,15 @@ Project-brede EPA-gevels zonder GUID-suffix of wall-extras (Floorplanner stript 
 | Beslissing | Detail |
 |------------|--------|
 | Store | Alleen `plan.source.settings.facadeGroups[]`: `{ id, code, name, wallGuids }` |
-| Scope | Project-breed (alle floors); **één muur max één groep** (assign verplaatst; list/write first-wins bij corrupt) |
+| Scope | Project-breed (alle floors); **één muur max één gevelgroep**; Stempel (`stamp`) is **orthogonaal** (mag samen met één gevel) |
 | Id | Stabiel `G1`, `G2`, …; `code` vrij (VG/AG), default = id; `name` verplicht |
-| Lege groep | Auto-delete na detach / prune / assign-weg; geen aparte delete-knop |
+| Lege groep | Auto-delete na detach / prune / assign-weg; **uitzondering:** vaste id `stamp` (Stempel-preset) blijft leeg |
 | Prune | Bij FML-openen (viewer + workspace-import); niet elke tick |
-| UI | `/FML-editor` muursettings + inspect-panel; workspace stap-4 **niet** |
+| UI | `/FML-editor` muursettings (gevel + Stempel-checkbox) + inspect-panel (geen stamp); workspace stap-4: **alleen** preset «Stempel» — geen nieuwe groep / rename |
 | Canvas | Overige leden op actieve floor licht meemarkeren; inspect-tik selecteert alle leden op die floor (`FmlInspectHit.ids`) |
-| Split-remap | Handmatige split, **Opschonen** (`sanitizeFmlWallsDetailed`) en **junction-pass** (upload/download): host → `[blijver, split-id]`; uitstekende T-tak niet |
+| Split-remap | Handmatige split, **Opschonen** en **junction-pass**: remap in **alle** groepen die de GUID bevatten (gevel én stamp); uitstekende T-tak niet |
+| Stempel (detectie) | Stap-4 koppeling → stap-2 checkbox «Stempelset»; workspace-download **stript** `facadeGroups` |
+| Stempel (editor) | Plattegrond-knop «Stempel»: kopieer stamp-muren van andere floors naar actieve floor (zelfde `a`/`b`, nieuwe GUIDs, gevel mee, niet in stamp); editor-download stript **alleen** `stamp` |
 | Niet | GUID-suffix; `facadeGroupId` op muur; auto-contour; scores in FML |
 
 ---
@@ -602,6 +603,7 @@ Native `window.confirm` / `window.prompt` (browser-chrome) vervangen door dezelf
 
 ## Nog open
 
+- **Stempel ↔ detectie (dubbele muren):** ownership A geïmplementeerd (`resolve-stamp-ownership`); band-unificatie + fixture-tuning nog open — `.cursor/docs/stamp-detectie-dubbele-muren.md`
 - Geschikte OpenCV browser-build/versie
 - **Deur-rotatiestrategie:** 45° vs 5° vs 90° + 2e schuin voorbeeld (POC)
 - **Raam-detectie:** heel raam + schaal vs kozijnstijl + clustering (POC)

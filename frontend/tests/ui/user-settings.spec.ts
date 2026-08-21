@@ -74,6 +74,7 @@ describe('user-settings', () => {
         window: '#06b6d4',
         bovenlicht: '#16a34a',
       },
+      slicerOffsetSnapCm: 50,
     })
   })
 
@@ -205,6 +206,7 @@ describe('user-settings', () => {
         window: '#06b6d4',
         bovenlicht: '#16a34a',
       },
+      slicerOffsetSnapCm: 50,
     })
   })
 

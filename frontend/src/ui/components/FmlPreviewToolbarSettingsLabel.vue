@@ -1,17 +1,31 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import FmlPreviewToolbarLabelStyle from './FmlPreviewToolbarLabelStyle.vue'
 import './fml-toolbelt-settings-fields.css'
 
 const { t } = useI18n()
 
 defineProps<{
-  selectedLabelPanel: { id: string; text: string } | null
+  selectedLabelPanel: {
+    id: string
+    text: string
+    fontSize: number
+    fontColor: string
+    outline: boolean
+    bold: boolean
+    italic: boolean
+  } | null
 }>()
 
 const emit = defineEmits<{
   labelTextInput: [value: string]
   updateLabelText: [value: string]
+  updateLabelFontSize: [value: number]
+  updateLabelFontColor: [value: string]
+  updateLabelOutline: [value: boolean]
+  updateLabelBold: [value: boolean]
+  updateLabelItalic: [value: boolean]
   deleteAnnotation: []
 }>()
 
@@ -41,6 +55,19 @@ function onLabelTextChange(event: Event): void {
       />
     </div>
   </div>
+  <FmlPreviewToolbarLabelStyle
+    v-if="selectedLabelPanel"
+    :font-size="selectedLabelPanel.fontSize"
+    :font-color="selectedLabelPanel.fontColor"
+    :outline="selectedLabelPanel.outline"
+    :bold="selectedLabelPanel.bold"
+    :italic="selectedLabelPanel.italic"
+    @update:font-size="emit('updateLabelFontSize', $event)"
+    @update:font-color="emit('updateLabelFontColor', $event)"
+    @update:outline="emit('updateLabelOutline', $event)"
+    @update:bold="emit('updateLabelBold', $event)"
+    @update:italic="emit('updateLabelItalic', $event)"
+  />
   <button
     v-if="selectedLabelPanel"
     type="button"

@@ -90,14 +90,17 @@ function tInPaddedRange(t: number, padAlong: number, len: number): boolean {
  * Soft snap naar muurfaces (binnen/buiten), niet naar hartlijn of knoop.
  * Orthogonaal: X en Y onafhankelijk → hoek = face-snijpunt.
  * Schuin: dichtstbijzijnde punt op de face (beide assen).
+ *
+ * `infiniteAxes`: H/V-faces als oneindige assen (handmatig buiten footprint).
  */
 export function snapPointToWallFaces(
   walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
   point: Point2D,
   radiusCm = WALL_FACE_SNAP_CM,
-  opts?: { disabled?: boolean },
+  opts?: { disabled?: boolean; infiniteAxes?: boolean },
 ): Point2D {
   if (opts?.disabled || walls.length === 0 || radiusCm <= 0) return point
+  const infinite = opts?.infiniteAxes === true
 
   let bestX = point.x
   let bestY = point.y
@@ -116,9 +119,11 @@ export function snapPointToWallFaces(
         const y = (face.a.y + face.b.y) / 2
         const dy = Math.abs(point.y - y)
         if (dy >= bestDy) continue
-        const minX = Math.min(face.a.x, face.b.x) - pad
-        const maxX = Math.max(face.a.x, face.b.x) + pad
-        if (point.x < minX || point.x > maxX) continue
+        if (!infinite) {
+          const minX = Math.min(face.a.x, face.b.x) - pad
+          const maxX = Math.max(face.a.x, face.b.x) + pad
+          if (point.x < minX || point.x > maxX) continue
+        }
         bestDy = dy
         bestY = y
         continue
@@ -128,9 +133,11 @@ export function snapPointToWallFaces(
         const x = (face.a.x + face.b.x) / 2
         const dx = Math.abs(point.x - x)
         if (dx >= bestDx) continue
-        const minY = Math.min(face.a.y, face.b.y) - pad
-        const maxY = Math.max(face.a.y, face.b.y) + pad
-        if (point.y < minY || point.y > maxY) continue
+        if (!infinite) {
+          const minY = Math.min(face.a.y, face.b.y) - pad
+          const maxY = Math.max(face.a.y, face.b.y) + pad
+          if (point.y < minY || point.y > maxY) continue
+        }
         bestDx = dx
         bestX = x
         continue
@@ -138,6 +145,12 @@ export function snapPointToWallFaces(
 
       const hit = projectOnSegment(point, face.a, face.b)
       if (hit.dist >= bestObliqueDist) continue
+      if (infinite) {
+        // Schuin: projectie op oneindige face-lijn
+        bestObliqueDist = hit.dist
+        bestOblique = { x: hit.projected.x, y: hit.projected.y }
+        continue
+      }
       if (!tInPaddedRange(hit.t, pad, len)) continue
       bestObliqueDist = hit.dist
       bestOblique = { x: hit.projected.x, y: hit.projected.y }
@@ -153,3 +166,6 @@ export function snapPointToWallFaces(
   if (bestOblique) return bestOblique
   return point
 }
+
+/** Grotere radius + oneindige H/V-assen voor handmatige maten buiten de footprint. */
+export const MANUAL_DIM_FACE_SNAP_CM = 60

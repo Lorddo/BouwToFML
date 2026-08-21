@@ -81,7 +81,7 @@ function backToWorkspace(): void {
 
 function onPopState(): void {
   appView.value = viewFromLocation()
-  if (appView.value !== 'fml-viewer') canvasFullscreen.value = false
+  canvasFullscreen.value = false
   if (appView.value === 'fml-viewer') {
     editorGranted.value = isAccessUnlocked(FML_EDITOR_PASSWORD, FML_EDITOR_UNLOCK_STORAGE_KEY)
   }
@@ -104,8 +104,11 @@ onBeforeUnmount(() => {
   document.documentElement.classList.remove('fml-viewer-lock')
 })
 
+watch(appView, () => {
+  canvasFullscreen.value = false
+})
+
 watch([appView, settingsReturn], () => {
-  if (appView.value !== 'fml-viewer') canvasFullscreen.value = false
   syncViewerLockClass()
 })
 
@@ -190,7 +193,7 @@ function dismissFatalError(): void {
         v-show="appView === 'workspace'"
         class="app-page app-page--workspace"
       >
-        <WorkspaceView ref="workspaceRef" />
+        <WorkspaceView ref="workspaceRef" v-model:canvas-fullscreen="canvasFullscreen" />
       </div>
       <div v-if="appView === 'settings'" class="app-page app-page--settings">
         <UserSettingsView
@@ -220,6 +223,12 @@ function dismissFatalError(): void {
 }
 
 .app-shell--fml-viewer {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-shell--canvas-fs {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;

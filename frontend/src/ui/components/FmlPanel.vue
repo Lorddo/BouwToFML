@@ -11,6 +11,7 @@ import FmlOpeningOverflowNotice from './FmlOpeningOverflowNotice.vue'
 import FmlPanelOpacity from './FmlPanelOpacity.vue'
 import FmlPanelThickness from './FmlPanelThickness.vue'
 import FmlRescalePanel from './FmlRescalePanel.vue'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-panel-fields.css'
 
 const { t } = useI18n()
@@ -276,12 +277,13 @@ function onWindowBovenlichtChange(event: Event): void {
 
     <button
       type="button"
-      class="fml-sanitize-btn"
+      class="sidebar-icon-btn"
       :disabled="!canStartRescale"
       :title="t('result.sanitizeHint')"
       @click="emit('sanitize')"
     >
-      {{ t('result.sanitize') }}
+      <ToolbeltIcon name="sanitize" />
+      <span>{{ t('result.sanitize') }}</span>
     </button>
 
     <FmlPanelActions
@@ -353,21 +355,7 @@ function onWindowBovenlichtChange(event: Event): void {
   flex-shrink: 0;
 }
 
-.fml-sanitize-btn {
-  width: 100%;
+.sidebar-icon-btn {
   margin: 0 0 10px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #334155;
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.fml-sanitize-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

@@ -40,6 +40,7 @@ const props = defineProps<{
   /** Workspace: Herschalen H/V-linialen. */
   rescaleMode?: boolean
   rescaleState?: HScaleState | null
+  canvasFullscreen?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -52,6 +53,7 @@ const emit = defineEmits<{
   'update:underlayMoveMode': [value: boolean]
   updateRescaleState: [state: HScaleState]
   cancelRescale: []
+  'update:canvasFullscreen': [value: boolean]
 }>()
 
 /**
@@ -103,11 +105,13 @@ defineExpose({
     :set-fml-nulpunt-image-cm="props.setFmlNulpuntImageCm"
     :rescale-mode="rescaleMode === true"
     :rescale-state="rescaleState ?? null"
+    :canvas-fullscreen="canvasFullscreen === true"
     @plan-update="(plan, layout) => emit('planUpdate', plan, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
     @update-rescale-state="emit('updateRescaleState', $event)"
     @cancel-rescale="emit('cancelRescale')"
+    @update:canvas-fullscreen="emit('update:canvasFullscreen', $event)"
   />
 </template>

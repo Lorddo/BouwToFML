@@ -24,9 +24,11 @@ import {
   effectiveRoomTypeColor,
   factoryRoomTypeColor,
   listRoomTypes,
+  parseFmlHex,
 } from '@/core/fml/roomtype-catalog'
 import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
 import { FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
+import HexColorField from '@/ui/components/HexColorField.vue'
 
 const { t } = useI18n()
 
@@ -105,14 +107,15 @@ function patchConversion(patch: Partial<FmlConversionSettings>) {
   Object.assign(draft.fmlConversion, patch)
 }
 
-function onRoomTagColorInput(role: number, event: Event) {
-  const value = (event.target as HTMLInputElement).value
+function onRoomTagColorInput(role: number, value: string) {
+  const hex = parseFmlHex(value)
+  if (!hex) return
   const key = String(role)
   const factory = factoryRoomTypeColor(role)
-  if (value.trim().toUpperCase() === factory.toUpperCase()) {
+  if (hex === factory) {
     delete draft.roomTagColors[key]
   } else {
-    draft.roomTagColors[key] = value
+    draft.roomTagColors[key] = hex
   }
 }
 
@@ -165,8 +168,10 @@ const hasAnyOpeningColorOverride = computed(() =>
   openingColorRows.some((row) => openingColorIsOverride(row.key)),
 )
 
-function onOpeningColorInput(key: OpeningDisplayColorKey, event: Event): void {
-  draft.fmlViewer.openingColors[key] = (event.target as HTMLInputElement).value
+function onOpeningColorInput(key: OpeningDisplayColorKey, value: string): void {
+  const hex = parseFmlHex(value)
+  if (!hex) return
+  draft.fmlViewer.openingColors[key] = hex
 }
 
 function resetOpeningColor(key: OpeningDisplayColorKey): void {
@@ -222,6 +227,7 @@ function onResetFactory() {
         ...current.fmlViewer,
         cornerMarkerMode: factory.fmlViewer.cornerMarkerMode,
         openingColors: { ...factory.fmlViewer.openingColors },
+        slicerOffsetSnapCm: factory.fmlViewer.slicerOffsetSnapCm,
       },
     })
     Object.assign(draft, cloneSettings(saved))
@@ -502,11 +508,10 @@ onBeforeUnmount(() => {
       <div class="roomtag-list">
         <div v-for="row in roomTypeRows" :key="row.role" class="roomtag-row">
           <span class="roomtag-name">{{ row.name }}</span>
-          <input
-            type="color"
-            :value="row.color"
+          <HexColorField
+            :model-value="row.color"
             :aria-label="row.name"
-            @input="onRoomTagColorInput(row.role, $event)"
+            @update:model-value="onRoomTagColorInput(row.role, $event)"
           />
           <button
             v-if="row.hasOverride"
@@ -578,11 +583,10 @@ onBeforeUnmount(() => {
       <div class="roomtag-list">
         <div v-for="row in openingColorRows" :key="row.key" class="roomtag-row">
           <span class="roomtag-name">{{ t(row.labelKey) }}</span>
-          <input
-            type="color"
-            :value="draft.fmlViewer.openingColors[row.key]"
+          <HexColorField
+            :model-value="draft.fmlViewer.openingColors[row.key]"
             :aria-label="t(row.labelKey)"
-            @input="onOpeningColorInput(row.key, $event)"
+            @update:model-value="onOpeningColorInput(row.key, $event)"
           />
           <button
             v-if="openingColorIsOverride(row.key)"
@@ -617,6 +621,23 @@ onBeforeUnmount(() => {
           </option>
         </select>
       </label>
+      <label class="field compact">
+        <span>{{ t('settings.slicerOffsetSnapCm') }}</span>
+        <input
+          type="number"
+          min="1"
+          max="500"
+          step="1"
+          :value="draft.fmlViewer.slicerOffsetSnapCm"
+          :aria-label="t('settings.slicerOffsetSnapCm')"
+          @change="
+            patchViewer({
+              slicerOffsetSnapCm: Number(($event.target as HTMLInputElement).value),
+            })
+          "
+        />
+      </label>
+      <p class="hint">{{ t('settings.slicerOffsetSnapHint') }}</p>
     </section>
 
     <p class="hint">{{ t('settings.commitHint') }}</p>

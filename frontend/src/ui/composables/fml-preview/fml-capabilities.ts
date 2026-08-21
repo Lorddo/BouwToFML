@@ -17,12 +17,12 @@ export type FmlCapabilities = {
   fixtureLibrary: boolean
   /** Current `touchEditor` — floating dock, fixture tool, coarse-pointer rail. */
   touchChrome: boolean
-  /** Undo/redo/fit/fullscreen/zoom topbar (editor desktop + inspect). */
+  /** Undo/redo/fit/fullscreen/zoom topbar (editor, inspect, detection). */
   viewportChrome: boolean
   rescale: boolean
   thicknessPick: boolean
   underlayMove: boolean
-  /** Gevelgroepen in muursettings / inspect-panel. */
+  /** Gevelgroepen in muursettings / inspect-panel (geen Stempel in inspect). */
   facadeGroups: boolean
   settingsVariant: FmlSettingsVariant
 }
@@ -81,6 +81,7 @@ export const FML_CAPABILITIES_INSPECT: FmlCapabilities = Object.freeze({
 /**
  * Workspace stap-4 FML result. Matches product gates:
  * `FML_AREA_SURFACE_EDIT_VISIBLE=false`, no fixture/annotation tools, no touch chrome.
+ * Same canvas top chrome as editor/inspect (topbar, no inline hint).
  */
 export const FML_CAPABILITIES_DETECTION: FmlCapabilities = Object.freeze({
   mutate: true,
@@ -96,11 +97,12 @@ export const FML_CAPABILITIES_DETECTION: FmlCapabilities = Object.freeze({
   annotationEdit: false,
   fixtureLibrary: false,
   touchChrome: false,
-  viewportChrome: false,
+  viewportChrome: true,
   rescale: true,
   thicknessPick: true,
   underlayMove: true,
-  facadeGroups: false,
+  /** Stempel-preset via checkbox (zelfde store als editor; geen gevel-UI). */
+  facadeGroups: true,
   settingsVariant: 'workspace',
 })
 

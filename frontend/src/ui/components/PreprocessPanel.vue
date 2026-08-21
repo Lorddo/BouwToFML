@@ -29,6 +29,7 @@ import {
   clampAdaptiveBlockSize,
 } from '@/cv/port/preprocess'
 import PreprocessActionGroup from '@/ui/components/PreprocessActionGroup.vue'
+import ToolbeltIcon from '@/ui/components/canvas/ToolbeltIcon.vue'
 
 const model = defineModel<PreprocessConfig>({ required: true })
 const props = withDefaults(defineProps<{ activeLayer?: PreprocessPanelLayer }>(), {
@@ -539,8 +540,9 @@ const { t } = useI18n()
     </div>
 
     <div class="actions">
-      <button type="button" @click="resetActiveTuneToFactory">
-        {{ t('preprocess.resetFactory') }}
+      <button type="button" class="sidebar-icon-btn" @click="resetActiveTuneToFactory">
+        <ToolbeltIcon name="clear" />
+        <span>{{ t('preprocess.resetFactory') }}</span>
       </button>
     </div>
   </div>

@@ -1,5 +1,10 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
-import type { Floor, Wall } from '@/core/fml/types'
+import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
+import { buildAutoDimensionLines } from '@/core/fml/auto-dimension-lines'
+import { filterManualDimensions, readBtfSlices } from '@/core/fml/btf-slices'
+import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
+import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
+import { bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
 import { junctionIdsForWall, type WallEndRef } from '@/ui/components/fml-preview-junctions'
 import {
   buildWallRenderGeometry,
@@ -66,8 +71,9 @@ interface ViewportApi {
 interface EditorApi {
   walls: ComputedRef<Wall[]>
   floorHeightCm: ComputedRef<number>
+  floorIndex: Ref<number>
   junctions: ComputedRef<{ id: string; x: number; y: number; refs: WallEndRef[] }[]>
-  localPlan: Ref<{ floors: Floor[] } | null>
+  localPlan: Ref<FloorPlan | null>
 }
 
 interface UnderlayProps {
@@ -91,6 +97,7 @@ export function useFmlPreviewRenderModel(
   floor: ComputedRef<Floor | null>,
   underlayProps: Ref<UnderlayProps>,
   selection: FmlPreviewSelectionRefs,
+  dimensionVis?: ComputedRef<DimensionVis>,
 ) {
   const underlayImageObj = ref<HTMLImageElement | null>(null)
 
@@ -169,8 +176,40 @@ export function useFmlPreviewRenderModel(
     const surfaces = buildRenderSurfaces(activeFloor.surfaces, toStagePoint)
     const labels = buildRenderLabels(activeFloor.labels, toStagePoint)
     const lines = buildRenderLines(activeFloor.lines, toStagePoint)
-    const dimensions = buildRenderDimensions(activeFloor.dimensions, toStagePoint)
+    const dimSettings = readDimensionSettings(editor.localPlan.value, editor.floorIndex.value)
+    const slices = readBtfSlices(activeFloor)
+    const vis = dimensionVis?.value ?? 'none'
+
+    const manualDims =
+      vis === 'manual' ? filterManualDimensions(activeFloor.dimensions, slices) : []
+    const dimensions = buildRenderDimensions(manualDims, toStagePoint)
+
     const areaSideDims = buildRenderAreaSideDims(activeFloor.areas, toStagePoint)
+
+    let autoDimensions: ReturnType<typeof buildRenderDimensions> = []
+    if (vis === 'autogen' && dimSettings.engineAutoDims) {
+      const autoLines = buildAutoDimensionLines(walls, activeFloor.areas, {
+        dimensionMode: dimSettings.dimensionMode,
+        generateOuterDimension: dimSettings.generateOuterDimension,
+      })
+      autoDimensions = buildRenderDimensions(
+        autoLines.map((line, index) => ({
+          id: `auto-dim-${index}`,
+          type: 'custom_dimension' as const,
+          a: line.a,
+          b: line.b,
+        })),
+        toStagePoint,
+      )
+    }
+
+    let sliceDimensions: ReturnType<typeof buildRenderDimensions> = []
+    if (vis === 'slicer' && slices.length > 0) {
+      sliceDimensions = buildRenderDimensions(
+        bakeSliceDimensions(slices, walls, dimSettings.dimensionMode, 'slice-live'),
+        toStagePoint,
+      )
+    }
 
     return {
       wallLines,
@@ -184,6 +223,8 @@ export function useFmlPreviewRenderModel(
       labels,
       lines,
       dimensions,
+      autoDimensions,
+      sliceDimensions,
       areaSideDims,
       toCmPoint,
       panRect: {

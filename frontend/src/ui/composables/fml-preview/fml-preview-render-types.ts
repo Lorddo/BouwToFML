@@ -99,6 +99,8 @@ export interface RenderArea {
   color: string
   customName?: string
   name?: string
+  /** Floorplanner `showAreaLabel`; default true. */
+  showAreaLabel: boolean
   /** Source poly in cm for hit-test. */
   polyCm: { x: number; y: number }[]
 }
@@ -118,7 +120,9 @@ export interface RenderLabel {
   backgroundColor: string
   align: 'left' | 'center' | 'right'
   rotation: number
+  outline?: boolean
   bold?: boolean
+  italic?: boolean
   /** Source cm for hit-test. */
   cmX: number
   cmY: number
@@ -159,6 +163,10 @@ export interface RenderModel {
   labels: RenderLabel[]
   lines: RenderLine[]
   dimensions: RenderDimension[]
+  /** Viewer-overlay uit engineAutoDims; niet floor.dimensions. */
+  autoDimensions: RenderDimension[]
+  /** Live slicer-maten op P-lijn. */
+  sliceDimensions: RenderDimension[]
   areaSideDims: RenderAreaSideDim[]
   toCmPoint: (stageX: number, stageY: number) => { x: number; y: number }
   panRect: { x: number; y: number; width: number; height: number }

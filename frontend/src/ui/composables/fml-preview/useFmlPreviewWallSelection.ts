@@ -9,7 +9,13 @@ import type { FmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
 import { bindNumericDraftField } from './fml-preview-draft-commit'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 import { findWallsFullyInCmBBox } from './fml-preview-wall-select'
-import { groupIdForWall, listFacadeGroups, type FacadeGroup } from '@/core/fml/facade-groups'
+import {
+  groupIdForWall,
+  isWallInStampGroup,
+  listFacadeGroups,
+  STAMP_FACADE_GROUP_ID,
+  type FacadeGroup,
+} from '@/core/fml/facade-groups'
 import { promptFacadeGroupName } from '@/ui/composables/fml-chrome-dialog'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -397,7 +403,7 @@ export function useFmlPreviewWallSelection(options: {
 
   const facadeGroupOptions = computed((): FacadeGroup[] => listFacadeGroups(editor.localPlan.value))
 
-  /** Shared group id, '' = none, null = mixed. */
+  /** Shared gevelgroep-id, '' = none, null = mixed. Stamp zit hier niet in (aparte checkbox). */
   const facadeGroupDraft = computed((): string | null => {
     const ids = settingsWallIds.value
     if (ids.length === 0) return ''
@@ -409,6 +415,18 @@ export function useFmlPreviewWallSelection(options: {
 
   const facadeGroupMixed = computed(() => facadeGroupDraft.value === null)
 
+  /** Stempel-lidmaatschap: true/false/null(mixed). */
+  const stampGroupDraft = computed((): boolean | null => {
+    const ids = settingsWallIds.value
+    if (ids.length === 0) return false
+    const flags = ids.map((id) => isWallInStampGroup(editor.localPlan.value, id))
+    const first = flags[0] ?? false
+    if (flags.some((flag) => flag !== first)) return null
+    return first
+  })
+
+  const stampGroupMixed = computed(() => stampGroupDraft.value === null)
+
   const facadeMemberIdsOnActiveFloor = computed((): string[] => {
     const draft = facadeGroupDraft.value
     if (!draft) return []
@@ -416,6 +434,15 @@ export function useFmlPreviewWallSelection(options: {
     return (
       listFacadeGroups(editor.localPlan.value)
         .find((group) => group.id === draft)
+        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
+    )
+  })
+
+  const stampMemberIdsOnActiveFloor = computed((): string[] => {
+    const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
+    return (
+      listFacadeGroups(editor.localPlan.value)
+        .find((group) => group.id === STAMP_FACADE_GROUP_ID)
         ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
     )
   })
@@ -441,14 +468,32 @@ export function useFmlPreviewWallSelection(options: {
       return
     }
 
+    // Workspace stamp-preset kan nog via applyFacadeGroupSelection komen.
+    if (value === STAMP_FACADE_GROUP_ID) {
+      editor.pushUndo()
+      editor.applyStampAssign(wallIds)
+      syncPlanToParent()
+      return
+    }
+
     editor.pushUndo()
     editor.applyFacadeAssign(value, wallIds)
     syncPlanToParent()
   }
 
+  function applyStampGroupSelection(enabled: boolean): void {
+    flushPendingFieldCommits()
+    const wallIds = [...settingsWallIds.value]
+    if (wallIds.length === 0) return
+    editor.pushUndo()
+    if (enabled) editor.applyStampAssign(wallIds)
+    else editor.applyStampDetach(wallIds)
+    syncPlanToParent()
+  }
+
   function renameSelectedFacadeGroup(name: string): void {
     const draft = facadeGroupDraft.value
-    if (!draft) return
+    if (!draft || draft === STAMP_FACADE_GROUP_ID) return
     const trimmed = name.trim()
     if (!trimmed) return
     editor.pushUndo()
@@ -475,8 +520,34 @@ export function useFmlPreviewWallSelection(options: {
     syncWallThicknessDraftFromSelection()
   }
 
+  function selectStampGroupMembers(): void {
+    const ids = stampMemberIdsOnActiveFloor.value
+    if (ids.length === 0) return
+    flushPendingFieldCommits()
+    settingsWallIds.value = [...ids]
+    settingsWallSplitClickCm.value = null
+    settingsJunctionId.value = null
+    settingsOpeningIds.value = []
+    moveOpeningId.value = null
+    moveWallId.value = null
+    selection.settingsAreaId.value = null
+    selection.settingsSurfaceId.value = null
+    selection.settingsLabelId.value = null
+    selection.settingsLineId.value = null
+    selection.settingsItemId.value = null
+    syncWallThicknessDraftFromSelection()
+  }
+
   const canSelectFacadeMembers = computed(() => {
     const members = facadeMemberIdsOnActiveFloor.value
+    if (members.length === 0) return false
+    if (settingsWallIds.value.length !== members.length) return true
+    const selected = new Set(settingsWallIds.value)
+    return members.some((id) => !selected.has(id))
+  })
+
+  const canSelectStampMembers = computed(() => {
+    const members = stampMemberIdsOnActiveFloor.value
     if (members.length === 0) return false
     if (settingsWallIds.value.length !== members.length) return true
     const selected = new Set(settingsWallIds.value)
@@ -632,10 +703,16 @@ export function useFmlPreviewWallSelection(options: {
     facadeGroupDraft,
     facadeGroupMixed,
     facadeMemberIdsOnActiveFloor,
+    stampGroupDraft,
+    stampGroupMixed,
+    stampMemberIdsOnActiveFloor,
     applyFacadeGroupSelection,
+    applyStampGroupSelection,
     renameSelectedFacadeGroup,
     selectFacadeGroupMembers,
+    selectStampGroupMembers,
     canSelectFacadeMembers,
+    canSelectStampMembers,
     clearSelection,
     toggleSelectionBoxMode,
     cancelSelectionBoxDrag,

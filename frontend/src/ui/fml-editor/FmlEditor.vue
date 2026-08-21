@@ -8,6 +8,7 @@ import type { FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
+import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
 import FmlPreviewCanvas from '@/ui/components/FmlPreviewCanvas.vue'
 import FmlChromeDialogHost from '@/ui/components/FmlChromeDialogHost.vue'
 
@@ -42,6 +43,7 @@ withDefaults(
     rescaleMode?: boolean
     rescaleState?: HScaleState | null
     canvasFullscreen?: boolean
+    dimensionVis?: DimensionVis
   }>(),
   {
     floorIndex: 0,
@@ -50,6 +52,7 @@ withDefaults(
     contentOpacity: 0.8,
     labelsVisible: true,
     canvasFullscreen: false,
+    dimensionVis: undefined,
   },
 )
 
@@ -61,6 +64,7 @@ const emit = defineEmits<{
   updateRescaleState: [state: HScaleState]
   cancelRescale: []
   'update:canvasFullscreen': [value: boolean]
+  'update:dimensionVis': [value: DimensionVis]
 }>()
 
 const canvasRef = ref<InstanceType<typeof FmlPreviewCanvas> | null>(null)
@@ -68,6 +72,8 @@ const canvasRef = ref<InstanceType<typeof FmlPreviewCanvas> | null>(null)
 defineExpose({
   flushPendingFieldCommits: () => canvasRef.value?.flushPendingFieldCommits(),
   sanitizeWalls: () => canvasRef.value?.sanitizeWalls() ?? false,
+  applyStampToActiveFloor: () => canvasRef.value?.applyStampToActiveFloor() ?? false,
+  canApplyStampOnActiveFloor: () => canvasRef.value?.canApplyStampOnActiveFloor() ?? false,
   applyCornerMarkerModeFromSettings: () => canvasRef.value?.applyCornerMarkerModeFromSettings(),
   undoEdit: () => canvasRef.value?.undoEdit(),
   redoEdit: () => canvasRef.value?.redoEdit(),
@@ -109,6 +115,7 @@ defineExpose({
     :rescale-mode="rescaleMode"
     :rescale-state="rescaleState"
     :canvas-fullscreen="canvasFullscreen"
+    :dimension-vis="dimensionVis"
     @plan-update="(p, layout) => emit('planUpdate', p, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
@@ -116,5 +123,6 @@ defineExpose({
     @update-rescale-state="emit('updateRescaleState', $event)"
     @cancel-rescale="emit('cancelRescale')"
     @update:canvas-fullscreen="emit('update:canvasFullscreen', $event)"
+    @update:dimension-vis="emit('update:dimensionVis', $event)"
   />
 </template>

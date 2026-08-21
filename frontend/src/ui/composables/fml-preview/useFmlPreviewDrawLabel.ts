@@ -1,6 +1,11 @@
 import { ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
+import {
+  clampLabelFontSize,
+  DEFAULT_LABEL_FONT_COLOR,
+  DEFAULT_LABEL_FONT_SIZE_PX,
+} from './fml-preview-render-annotations'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -16,6 +21,11 @@ export function useFmlPreviewDrawLabel(options: {
   syncPlanToParent: () => void
 }) {
   const pendingText = ref('Tekst')
+  const fontSize = ref(DEFAULT_LABEL_FONT_SIZE_PX)
+  const fontColor = ref(DEFAULT_LABEL_FONT_COLOR)
+  const outline = ref(false)
+  const bold = ref(false)
+  const italic = ref(false)
 
   function cancelDrawLabel(): void {
     // single-click tool — nothing to cancel mid-draw
@@ -32,12 +42,15 @@ export function useFmlPreviewDrawLabel(options: {
       y: cm.y,
       text,
       fontFamily: 'arial',
-      fontSize: 16,
+      fontSize: clampLabelFontSize(fontSize.value),
       letterSpacing: 0,
-      fontColor: '#000000',
+      fontColor: fontColor.value,
       backgroundColor: '#f4f8f4',
       align: 'left',
       rotation: 0,
+      outline: outline.value || undefined,
+      bold: bold.value || undefined,
+      italic: italic.value || undefined,
     })
     options.selection.settingsLabelId.value = id
     options.selection.settingsLineId.value = null
@@ -51,5 +64,10 @@ export function useFmlPreviewDrawLabel(options: {
     cancelDrawLabel,
     onDrawLabelClick,
     pendingText,
+    fontSize,
+    fontColor,
+    outline,
+    bold,
+    italic,
   }
 }

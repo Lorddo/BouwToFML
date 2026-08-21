@@ -36,12 +36,28 @@ import FmlEditorTouchChrome from '@/ui/fml-editor/FmlEditorTouchChrome.vue'
 import type { HScaleState } from '@/platform/calibration'
 import { layoutTransform } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
 import { underlayContentBoundsCm } from '@/ui/composables/fml-preview/fml-preview-underlay-layout'
+import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
+import { defaultDimensionVis } from '@/core/fml/fml-dimension-vis'
+import type { MeasureDrawMode } from '@/ui/composables/fml-preview/useFmlPreviewMeasure'
+import { buildSliceGuide, bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
+import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
+import { type BtfSlice } from '@/core/fml/btf-slices'
+import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerOffsetPoint } from '@/core/fml/slice-offset-snap'
 import {
   loadUserSettings,
   type CornerMarkerMode,
   type OpeningDisplayColors,
 } from '@/ui/composables/settings/user-settings'
 import { resolveFmlCapabilities, type FmlKind } from '@/ui/composables/fml-preview/fml-capabilities'
+import {
+  clampLabelFontSize,
+  DEFAULT_LABEL_FONT_COLOR,
+  DEFAULT_LABEL_FONT_SIZE_PX,
+  DEFAULT_LINE_THICKNESS_PX,
+  lineDash,
+  lineStrokeColor,
+} from '@/ui/composables/fml-preview/fml-preview-render-annotations'
+import { STAMP_FACADE_GROUP_ID } from '@/core/fml/facade-groups'
 import FmlPreviewToolbar from './FmlPreviewToolbar.vue'
 import FmlFixturePalette from './FmlFixturePalette.vue'
 import FmlPreviewStage from './FmlPreviewStage.vue'
@@ -111,6 +127,8 @@ const props = withDefaults(
     touchEditor?: boolean
     /** Viewer: chrome (header/floor-rail) verborgen. */
     canvasFullscreen?: boolean
+    /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */
+    dimensionVis?: DimensionVis
   }>(),
   {
     floorIndex: 0,
@@ -147,6 +165,7 @@ const props = withDefaults(
     rescaleState: null,
     touchEditor: undefined,
     canvasFullscreen: false,
+    dimensionVis: undefined,
   },
 )
 
@@ -193,7 +212,31 @@ const emit = defineEmits<{
   updateRescaleState: [state: HScaleState]
   cancelRescale: []
   'update:canvasFullscreen': [value: boolean]
+  'update:dimensionVis': [value: DimensionVis]
 }>()
+
+const measureDrawMode = ref<MeasureDrawMode>('tape')
+/** Slicer: true = handles bewerken, false = nieuwe P→M plaatsen. */
+const slicerEditMode = ref(false)
+const selectedSliceIndex = ref(-1)
+const internalDimensionVis = ref<DimensionVis>(
+  defaultDimensionVis(props.plan, props.floorIndex ?? 0),
+)
+const dimensionVis = computed({
+  get: () => props.dimensionVis ?? internalDimensionVis.value,
+  set: (value: DimensionVis) => {
+    internalDimensionVis.value = value
+    emit('update:dimensionVis', value)
+  },
+})
+
+watch(
+  () => [props.plan, props.floorIndex] as const,
+  () => {
+    if (props.dimensionVis != null) return
+    internalDimensionVis.value = defaultDimensionVis(props.plan, props.floorIndex ?? 0)
+  },
+)
 
 function interactionEmit(
   event: 'planUpdate' | 'thicknessWallPick' | 'cancelThicknessPick',
@@ -234,7 +277,10 @@ const coarsePointer = ref(false)
 const useTouchNav = computed(() => shouldUseTouchNav(touchEditor.value, coarsePointer.value))
 
 const { shiftPressed, spacePressed, onKeyDown, onKeyUp } = useStage()
-const editor = useFmlPreviewEditor(toRef(props, 'plan'), toRef(props, 'floorIndex'))
+const ensureStampPreset = computed(() => props.kind === 'detection' || props.kind === 'editor')
+const editor = useFmlPreviewEditor(toRef(props, 'plan'), toRef(props, 'floorIndex'), {
+  ensureStampPreset,
+})
 const selection = createFmlPreviewSelection()
 
 watch(
@@ -296,7 +342,14 @@ const underlayProps = computed(() => ({
   flipX: props.flipX === true,
 }))
 
-const render = useFmlPreviewRenderModel(viewport, editor, floor, underlayProps, selection)
+const render = useFmlPreviewRenderModel(
+  viewport,
+  editor,
+  floor,
+  underlayProps,
+  selection,
+  dimensionVis,
+)
 
 const hitTest = useFmlPreviewHitTest(
   viewport,
@@ -362,6 +415,10 @@ const interaction = useFmlPreviewInteraction({
   inspectMode,
   touchEditor,
   touchNav: useTouchNav,
+  measureDrawMode,
+  slicerEditMode,
+  dimensionVis,
+  selectedSliceIndex,
   onInspectSelect: (hit) => emit('inspectSelect', hit),
   onKeyDown,
   onKeyUp,
@@ -444,7 +501,14 @@ const {
   drawSurfaceDrafting,
   drawSurfacePendingRole,
   drawLineThickness,
+  drawLineType,
+  drawLineColor,
   drawLabelText,
+  drawLabelFontSize,
+  drawLabelFontColor,
+  drawLabelOutline,
+  drawLabelBold,
+  drawLabelItalic,
   drawWallMeasureLengthCm,
   drawRoomMeasureHCm,
   drawRoomMeasureVCm,
@@ -456,6 +520,7 @@ const {
   acceptDrawDraft,
   deactivateDrawTool,
   drawSurfacePoints,
+  drawSurfaceHoverCm,
   drawLinePoints,
   drawLineHoverCm,
   measurePreview,
@@ -535,18 +600,26 @@ const {
   facadeGroupDraft,
   facadeGroupMixed,
   facadeMemberIdsOnActiveFloor,
+  stampGroupDraft,
+  stampGroupMixed,
   applyFacadeGroupSelection,
+  applyStampGroupSelection,
   renameSelectedFacadeGroup,
   selectFacadeGroupMembers,
+  selectStampGroupMembers,
   canSelectFacadeMembers,
+  canSelectStampMembers,
   clearSelection,
   flushPendingFieldCommits,
   sanitizeWalls,
+  applyStampToActiveFloor,
+  canApplyStampOnActiveFloor,
   applyRoomTypeToSelection,
   applyAreaCustomName,
   onAreaCustomNameInput,
   customNameDraft,
   applyAreaColor,
+  applyShowAreaLabel,
   deleteSelectedTagged,
   beginSurfacePolygonEdit,
   endSurfacePolygonEdit,
@@ -555,6 +628,14 @@ const {
   onLabelTextInput,
   labelTextDraft,
   deleteSelectedAnnotation,
+  updateSelectedLabelFontSize,
+  updateSelectedLabelFontColor,
+  updateSelectedLabelOutline,
+  updateSelectedLabelBold,
+  updateSelectedLabelItalic,
+  updateSelectedLineType,
+  updateSelectedLineColor,
+  updateSelectedLineThickness,
   clearMeasureLines,
   canUndoEdit,
   canRedoEdit,
@@ -587,6 +668,47 @@ const {
   resetView,
 } = interaction
 
+watch(activeFmlTool, (tool, prev) => {
+  if (prev === 'measure' && tool !== 'measure') {
+    selectedSliceIndex.value = -1
+  }
+})
+
+watch(measureDrawMode, (mode) => {
+  if (mode !== 'slicer') slicerEditMode.value = false
+})
+
+watch(slicerEditMode, (edit) => {
+  if (!edit) {
+    selectedSliceIndex.value = -1
+    return
+  }
+  if (measureDrawMode.value !== 'slicer') return
+  const slices = editor.btfSlices.value
+  if (slices.length === 0) return
+  if (selectedSliceIndex.value < 0 || selectedSliceIndex.value >= slices.length) {
+    selectedSliceIndex.value = slices.length - 1
+  }
+})
+
+/** Workspace-detectie: alleen Stempel (geen gevel-UI). */
+const facadeGroupsStampPreset = computed(() => capabilities.value?.settingsVariant === 'workspace')
+/** Editor + detectie: Stempel-checkbox. Inspect: uit. */
+const stampGroupUiEnabled = computed(() => {
+  const caps = capabilities.value
+  if (!caps?.facadeGroups) return false
+  return caps.settingsVariant === 'viewer' || caps.settingsVariant === 'workspace'
+})
+/** Editor: gevelgroepen zonder stamp. Detectie: gevel-UI verborgen. */
+const facadeGroupOptionsForUi = computed(() => {
+  const all = facadeGroupOptions.value
+  if (facadeGroupsStampPreset.value) return []
+  return all.filter((group) => group.id !== STAMP_FACADE_GROUP_ID)
+})
+const facadeGroupDraftForUi = computed((): string | null => facadeGroupDraft.value)
+const facadeGroupMixedForUi = computed(() => facadeGroupMixed.value)
+const canSelectFacadeMembersForUi = computed(() => canSelectFacadeMembers.value)
+
 /** Gevelgroep-leden op deze floor (excl. al geselecteerde muren). */
 const facadeWallPolygons = computed(() => {
   const model = renderModel.value
@@ -612,10 +734,217 @@ const itemDragPreviewStage = computed(() => {
   return { id: preview.guid, x: stage.x, y: stage.y }
 })
 
+const sliceGuidesStage = computed(() => {
+  // Linialen alleen tijdens actieve slicer-meettool; maten blijven via sliceDimensions.
+  if (activeFmlTool.value !== 'measure' || measureDrawMode.value !== 'slicer') return []
+  const slices = editor.btfSlices.value
+  if (slices.length === 0) return []
+  const toStage = renderTransform.value.toStagePoint
+  const walls = editor.walls.value
+  const selected = selectedSliceIndex.value
+  const out: Array<{
+    index: number
+    selected: boolean
+    measure: number[]
+    place: number[]
+    link: number[]
+    m: { x: number; y: number }
+    p: { x: number; y: number }
+  }> = []
+  for (let i = 0; i < slices.length; i += 1) {
+    const guide = buildSliceGuide(slices[i], walls)
+    if (!guide) continue
+    const m = toStage(guide.m.x, guide.m.y)
+    const p = toStage(guide.p.x, guide.p.y)
+    const mA = toStage(guide.measureA.x, guide.measureA.y)
+    const mB = toStage(guide.measureB.x, guide.measureB.y)
+    const pA = toStage(guide.placeA.x, guide.placeA.y)
+    const pB = toStage(guide.placeB.x, guide.placeB.y)
+    out.push({
+      index: i,
+      selected: i === selected,
+      measure: [mA.x, mA.y, mB.x, mB.y],
+      place: [pA.x, pA.y, pB.x, pB.y],
+      link: [m.x, m.y, p.x, p.y],
+      m,
+      p,
+    })
+  }
+  return out
+})
+
+const slicePreviewStage = computed(() => {
+  if (activeFmlTool.value !== 'measure' || measureDrawMode.value !== 'slicer') return null
+  if (slicerEditMode.value) return null
+  const preview = measurePreview.value
+  if (!preview) return null
+  if (Math.hypot(preview.b.x - preview.a.x, preview.b.y - preview.a.y) < 1) return null
+  // Sleep: a = P, b = M
+  const guide = buildSliceGuide({ p: preview.a, m: preview.b }, editor.walls.value)
+  if (!guide) return null
+  const toStage = renderTransform.value.toStagePoint
+  const m = toStage(guide.m.x, guide.m.y)
+  const p = toStage(guide.p.x, guide.p.y)
+  const mA = toStage(guide.measureA.x, guide.measureA.y)
+  const mB = toStage(guide.measureB.x, guide.measureB.y)
+  const pA = toStage(guide.placeA.x, guide.placeA.y)
+  const pB = toStage(guide.placeB.x, guide.placeB.y)
+  return {
+    measure: [mA.x, mA.y, mB.x, mB.y],
+    place: [pA.x, pA.y, pB.x, pB.y],
+    link: [m.x, m.y, p.x, p.y],
+    m,
+    p,
+  }
+})
+
+const sliceGuideStage = computed(() => sliceGuidesStage.value.find((g) => g.selected) ?? null)
+
+function hitSliceIndexAtCm(cm: { x: number; y: number }): number {
+  const slices = editor.btfSlices.value
+  if (slices.length === 0) return -1
+  if (activeFmlTool.value !== 'measure' || measureDrawMode.value !== 'slicer') return -1
+  const settings = readDimensionSettings(editor.localPlan.value, editor.floorIndex.value)
+  for (let i = 0; i < slices.length; i += 1) {
+    const dims = bakeSliceDimensions(
+      [slices[i]],
+      editor.walls.value,
+      settings.dimensionMode,
+      `hit-${i}`,
+    )
+    for (const dim of dims) {
+      const dx = dim.b.x - dim.a.x
+      const dy = dim.b.y - dim.a.y
+      const len2 = dx * dx + dy * dy
+      if (len2 < 1e-6) continue
+      let t = ((cm.x - dim.a.x) * dx + (cm.y - dim.a.y) * dy) / len2
+      t = Math.max(0, Math.min(1, t))
+      const px = dim.a.x + t * dx
+      const py = dim.a.y + t * dy
+      if (Math.hypot(cm.x - px, cm.y - py) <= 8) return i
+    }
+  }
+  return -1
+}
+
+let sliceHandleDrag: { index: number; which: 'm' | 'p' } | null = null
+
+/** Soft H/V t.o.v. de andere handle; Shift = uit. */
+const SLICE_HANDLE_AXIS_SNAP_CM = 50
+
+function snapSliceHandleAxis(
+  anchor: { x: number; y: number },
+  point: { x: number; y: number },
+  thresholdCm: number,
+): { x: number; y: number } {
+  const dx = Math.abs(point.x - anchor.x)
+  const dy = Math.abs(point.y - anchor.y)
+  if (dx <= thresholdCm && dy <= thresholdCm) {
+    return dx <= dy ? { x: anchor.x, y: point.y } : { x: point.x, y: anchor.y }
+  }
+  if (dx <= thresholdCm) return { x: anchor.x, y: point.y }
+  if (dy <= thresholdCm) return { x: point.x, y: anchor.y }
+  return point
+}
+
 function onCanvasPointerDown(event: MouseEvent): void {
   // Herschalen: alleen space+drag pan doorlaten (geen edit/select).
   if (props.rescaleMode && !spacePressed.value) return
+
+  if (
+    props.kind === 'editor' &&
+    activeFmlTool.value === 'measure' &&
+    measureDrawMode.value === 'slicer' &&
+    slicerEditMode.value &&
+    !spacePressed.value
+  ) {
+    const cm = hitTest.clientToCm(event.clientX, event.clientY)
+    if (cm) {
+      if (selectedSliceIndex.value >= 0 && sliceGuideStage.value) {
+        const toStage = renderTransform.value.toStagePoint
+        const m = toStage(
+          editor.btfSlices.value[selectedSliceIndex.value].m.x,
+          editor.btfSlices.value[selectedSliceIndex.value].m.y,
+        )
+        const p = toStage(
+          editor.btfSlices.value[selectedSliceIndex.value].p.x,
+          editor.btfSlices.value[selectedSliceIndex.value].p.y,
+        )
+        const local = toStage(cm.x, cm.y)
+        if (Math.hypot(local.x - m.x, local.y - m.y) <= 12) {
+          sliceHandleDrag = { index: selectedSliceIndex.value, which: 'm' }
+          editor.pushUndo()
+          window.addEventListener('pointermove', onSliceHandleMove)
+          window.addEventListener('pointerup', onSliceHandleUp, { once: true })
+          event.preventDefault()
+          return
+        }
+        if (Math.hypot(local.x - p.x, local.y - p.y) <= 12) {
+          sliceHandleDrag = { index: selectedSliceIndex.value, which: 'p' }
+          editor.pushUndo()
+          window.addEventListener('pointermove', onSliceHandleMove)
+          window.addEventListener('pointerup', onSliceHandleUp, { once: true })
+          event.preventDefault()
+          return
+        }
+      }
+      const hit = hitSliceIndexAtCm(cm)
+      if (hit >= 0) {
+        selectedSliceIndex.value = hit
+        event.preventDefault()
+        return
+      }
+      if (selectedSliceIndex.value >= 0) {
+        selectedSliceIndex.value = -1
+      }
+    }
+  }
+
   onWrapPointerDown(event)
+}
+
+function onSliceHandleMove(event: MouseEvent): void {
+  if (!sliceHandleDrag) return
+  const cm = hitTest.clientToCm(event.clientX, event.clientY)
+  if (!cm) return
+  const slice = editor.btfSlices.value[sliceHandleDrag.index]
+  if (!slice) return
+  const disableSnap = shiftPressed.value || event.shiftKey
+  let point = { ...cm }
+  if (!disableSnap) {
+    const anchor = sliceHandleDrag.which === 'm' ? slice.p : slice.m
+    point = snapSliceHandleAxis(anchor, point, SLICE_HANDLE_AXIS_SNAP_CM)
+    const preferred =
+      loadUserSettings().fmlViewer.slicerOffsetSnapCm ?? DEFAULT_SLICER_OFFSET_SNAP_CM
+    point = snapSlicerOffsetPoint({
+      anchor,
+      point,
+      slices: editor.btfSlices.value,
+      preferredCm: preferred,
+      excludeIndex: sliceHandleDrag.index,
+      // Alleen afstand, geen P-op-P (voorkomt stapelen)
+      snapPCoords: false,
+    })
+  }
+  const next: BtfSlice =
+    sliceHandleDrag.which === 'm'
+      ? { m: point, p: { ...slice.p } }
+      : { m: { ...slice.m }, p: point }
+  if (Math.hypot(next.p.x - next.m.x, next.p.y - next.m.y) < 1) return
+  editor.updateBtfSlice(sliceHandleDrag.index, next)
+}
+
+function onSliceHandleUp(): void {
+  window.removeEventListener('pointermove', onSliceHandleMove)
+  if (sliceHandleDrag) {
+    sliceHandleDrag = null
+    // sync via interaction helper — emit plan update
+    const plan = editor.localPlan.value
+    if (plan) {
+      editor.prepareParentSync()
+      emit('planUpdate', plan)
+    }
+  }
 }
 
 function onCanvasPointerMove(event: MouseEvent): void {
@@ -865,6 +1194,7 @@ const selectedAreaPanel = computed(() => {
     name: area.name ?? null,
     customName: customNameDraft.value,
     color: area.color,
+    showAreaLabel: area.showAreaLabel !== false,
     canEditPolygon: false,
   }
 })
@@ -881,6 +1211,7 @@ const selectedSurfacePanel = computed(() => {
     name: surface.name ?? null,
     customName: customNameDraft.value,
     color: surface.color,
+    showAreaLabel: surface.showAreaLabel !== false,
     canEditPolygon: true,
   }
 })
@@ -888,9 +1219,41 @@ const selectedSurfacePanel = computed(() => {
 const selectedLabelPanel = computed(() => {
   const id = settingsLabelId.value
   if (!id) return null
-  if (!floor.value?.labels?.some((l) => l.id === id) && !labelTextDraft.value) return null
-  return { id, text: labelTextDraft.value }
+  const label = floor.value?.labels?.find((item) => item.id === id)
+  if (!label && !labelTextDraft.value) return null
+  return {
+    id,
+    text: labelTextDraft.value,
+    fontSize: clampLabelFontSize(label?.fontSize ?? DEFAULT_LABEL_FONT_SIZE_PX),
+    fontColor: label?.fontColor || DEFAULT_LABEL_FONT_COLOR,
+    outline: label?.outline === true,
+    bold: label?.bold === true,
+    italic: label?.italic === true,
+  }
 })
+
+const selectedLinePanel = computed(() => {
+  const id = settingsLineId.value
+  if (!id) return null
+  const line = floor.value?.lines?.find((item) => item.id === id)
+  if (!line) return null
+  return {
+    id: line.id,
+    type: line.type,
+    color: lineStrokeColor(line.color),
+    thickness:
+      Number.isFinite(line.thickness) && line.thickness > 0
+        ? line.thickness
+        : DEFAULT_LINE_THICKNESS_PX,
+  }
+})
+
+const drawLinePreviewDash = computed(() => {
+  const dash = lineDash(drawLineType.value)
+  return dash ? dash.join(' ') : undefined
+})
+
+const drawLinePreviewStroke = computed(() => lineStrokeColor(drawLineColor.value))
 
 const surfaceEditVerticesStage = computed(() => {
   const id = surfaceEditId.value
@@ -926,6 +1289,7 @@ const {
   drawWallPreview,
   drawRoomPreview,
   drawSurfacePoints,
+  drawSurfaceHoverCm,
   drawLinePoints,
   drawLineHoverCm,
   contentLayout,
@@ -1014,6 +1378,8 @@ watch(useTouchNav, (on) => {
 defineExpose({
   flushPendingFieldCommits,
   sanitizeWalls,
+  applyStampToActiveFloor,
+  canApplyStampOnActiveFloor,
   applyCornerMarkerModeFromSettings,
   undoEdit,
   redoEdit,
@@ -1059,10 +1425,10 @@ watch(
       v-model:settings-mod="settingsMod"
       v-model:axis-lock-mod="axisLockMod"
       v-model:move-mod="moveMod"
-      :show-topbar="viewportChrome && !rescaleMode"
       v-model:active-tool="activeFmlTool"
-      :show-help="!inspectMode"
       v-model:area-side-dims-visible="areaSideDimsVisible"
+      :show-topbar="viewportChrome && !rescaleMode"
+      :show-help="!inspectMode"
       :show-mod-rail="useTouchNav && !inspectMode && !rescaleMode"
       :can-undo="canUndoEdit && !inspectMode"
       :can-redo="canRedoEdit && !inspectMode"
@@ -1087,7 +1453,7 @@ watch(
       v-model:add-window-width-cm="addWindowWidthCm"
       v-model:add-window-sill-z-cm="addWindowSillZCm"
       v-model:add-window-height-cm="addWindowHeightCm"
-      :hide-inline-hint="touchEditor"
+      :hide-inline-hint="viewportChrome"
       :floating-dock="touchEditor"
       :hide-select-tools="useTouchNav"
       :selected-wall-panel="selectedWallPanel"
@@ -1095,6 +1461,7 @@ watch(
       :selected-opening-panel="selectedOpeningPanel"
       :selected-area-panel="taggedSettingsPanel"
       :selected-label-panel="selectedLabelPanel"
+      :selected-line-panel="selectedLinePanel"
       :room-types="roomTypes"
       :surface-edit-active="surfaceEditActive"
       :include-surface-tool="includeSurfaceTool"
@@ -1122,30 +1489,45 @@ watch(
       :opening-swing-right-draft="openingSwingRightDraft"
       :opening-swing-mixed="openingSwingMixed"
       :opening-bovenlicht-draft="openingBovenlichtDraft"
+      v-model:measure-draw-mode="measureDrawMode"
       :opening-bovenlicht-mixed="openingBovenlichtMixed"
+      v-model:slicer-edit-mode="slicerEditMode"
       :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
-      :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
-      :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
-      :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
-      :thickness-min-cm="thicknessMinCm"
-      :thickness-mid-cm="thicknessMidCm"
-      :thickness-max-cm="thicknessMaxCm"
-      :measure-line-count="measureLines.length"
-      :draw-wall-drafting="drawWallDrafting"
-      :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
       v-model:draw-surface-role="drawSurfacePendingRole"
-      :draw-room-drafting="drawRoomDrafting"
+      :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
       v-model:draw-line-thickness="drawLineThickness"
-      :draw-room-measure-h-cm="drawRoomMeasureHCm"
+      :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+      v-model:draw-line-type="drawLineType"
+      :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+      v-model:draw-line-color="drawLineColor"
+      :thickness-min-cm="thicknessMinCm"
       v-model:draw-label-text="drawLabelText"
+      :thickness-mid-cm="thicknessMidCm"
+      v-model:draw-label-font-size="drawLabelFontSize"
+      :thickness-max-cm="thicknessMaxCm"
+      v-model:draw-label-font-color="drawLabelFontColor"
+      :measure-line-count="measureLines.length"
+      v-model:draw-label-outline="drawLabelOutline"
+      :measure-persist-enabled="props.kind === 'editor'"
+      v-model:draw-label-bold="drawLabelBold"
+      :draw-wall-drafting="drawWallDrafting"
+      v-model:draw-label-italic="drawLabelItalic"
+      :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
+      :draw-room-drafting="drawRoomDrafting"
+      :draw-room-measure-h-cm="drawRoomMeasureHCm"
       :draw-room-measure-v-cm="drawRoomMeasureVCm"
       :draw-line-drafting="drawLineDrafting"
       :draw-surface-drafting="drawSurfaceDrafting"
       :facade-groups-enabled="capabilities?.facadeGroups === true"
-      :facade-group-options="facadeGroupOptions"
-      :facade-group-draft="facadeGroupDraft"
-      :facade-group-mixed="facadeGroupMixed"
-      :can-select-facade-members="canSelectFacadeMembers"
+      :facade-group-options="facadeGroupOptionsForUi"
+      :facade-group-draft="facadeGroupDraftForUi"
+      :facade-group-mixed="facadeGroupMixedForUi"
+      :can-select-facade-members="canSelectFacadeMembersForUi"
+      :facade-groups-stamp-preset="facadeGroupsStampPreset"
+      :stamp-group-enabled="stampGroupUiEnabled"
+      :stamp-group-draft="stampGroupDraft"
+      :stamp-group-mixed="stampGroupMixed"
+      :can-select-stamp-members="canSelectStampMembers"
       @wall-thickness-input="onWallThicknessInput"
       @commit-wall-thickness="commitWallThickness"
       @apply-wall-thickness="applyWallsThicknessCm"
@@ -1176,16 +1558,27 @@ watch(
       @facade-group-change="applyFacadeGroupSelection"
       @facade-group-rename="renameSelectedFacadeGroup"
       @select-facade-members="selectFacadeGroupMembers"
+      @stamp-group-change="applyStampGroupSelection"
+      @select-stamp-members="selectStampGroupMembers"
       @clear-selection="clearSelection"
       @clear-measures="clearMeasureLines"
       @apply-room-type="applyRoomTypeToSelection"
       @area-custom-name-input="onAreaCustomNameInput"
       @apply-area-custom-name="applyAreaCustomName"
       @apply-area-color="applyAreaColor"
+      @apply-show-area-label="applyShowAreaLabel"
       @delete-tagged="deleteSelectedTagged"
       @label-text-input="onLabelTextInput"
       @update-label-text="updateSelectedLabelText"
+      @update-label-font-size="updateSelectedLabelFontSize"
+      @update-label-font-color="updateSelectedLabelFontColor"
+      @update-label-outline="updateSelectedLabelOutline"
+      @update-label-bold="updateSelectedLabelBold"
+      @update-label-italic="updateSelectedLabelItalic"
       @delete-annotation="deleteSelectedAnnotation"
+      @update-line-type="updateSelectedLineType"
+      @update-line-color="updateSelectedLineColor"
+      @update-line-thickness="updateSelectedLineThickness"
       @begin-surface-polygon-edit="beginSurfacePolygonEdit"
       @end-surface-polygon-edit="endSurfacePolygonEdit"
       @item-width-input="onItemWidthInput"
@@ -1223,8 +1616,8 @@ watch(
     <FmlPreviewMeasureOverlay
       :width="stageSize.width"
       :height="stageSize.height"
-      :lines="measureLines"
-      :preview="measurePreview"
+      :lines="measureDrawMode === 'tape' ? measureLines : []"
+      :preview="measureDrawMode === 'slicer' ? null : measurePreview"
       :hover="measureHoverCm"
       :to-screen="cmToScreen"
       :dashed="true"
@@ -1341,7 +1734,14 @@ watch(
       :width="stageSize.width"
       :height="stageSize.height"
     >
-      <polyline v-if="drawLinePreviewPolyline" :points="drawLinePreviewPolyline" fill="none" />
+      <polyline
+        v-if="drawLinePreviewPolyline"
+        :points="drawLinePreviewPolyline"
+        fill="none"
+        :stroke="drawLinePreviewStroke"
+        :stroke-width="Math.max(1, drawLineThickness)"
+        :stroke-dasharray="drawLinePreviewDash"
+      />
       <circle
         v-for="(pt, idx) in drawLinePreviewScreen.placed"
         :key="`dl-${idx}`"
@@ -1382,6 +1782,8 @@ watch(
       :corner-marker-mode="cornerMarkerMode"
       :corner-markers="renderCornerMarkers"
       :render-model="renderModel"
+      :slice-guides-stage="sliceGuidesStage"
+      :slice-preview-stage="slicePreviewStage"
       :underlay-config="underlayConfig"
       :content-opacity="contentOpacity"
       :move-wall-polygon="moveWallPolygon"
@@ -1558,9 +1960,6 @@ watch(
 }
 
 .draw-line-preview polyline {
-  stroke: #f97316;
-  stroke-width: 1.5;
-  stroke-dasharray: 6 4;
   fill: none;
 }
 

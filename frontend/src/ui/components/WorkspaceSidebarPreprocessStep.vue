@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PreprocessPanel from './PreprocessPanel.vue'
 import InputReferencePanel from './InputReferencePanel.vue'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import {
   isPreprocessLayerId,
   PREPROCESS_TAB_LABELS,
@@ -24,18 +25,23 @@ const props = defineProps<{
   wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number }
   wallRefThicknessMeasures?: import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
   selectedRectId?: string | null
-  canCopyPreprocessRefs?: boolean
-  preprocessDonorOptions?: Array<{ id: string; name: string }>
   canStartWallStamp?: boolean
   wallStampActive?: boolean
   wallStampBaked?: boolean
   wallStampBusy?: boolean
   wallStampError?: string | null
+  wallStampBakedInjectCount?: number | null
   wallStampBands?: { min: boolean; mid: boolean; max: boolean }
   wallStampGumMode?: 'off' | 'brush' | 'polygon'
   wallStampBrushRadius?: number
-  wallStampDonorOptions?: Array<{ id: string; name: string; wallCount: number }>
+  wallStampDonorOptions?: Array<{
+    id: string
+    name: string
+    wallCount: number
+    stampWallCount?: number
+  }>
   wallStampDonorFloorId?: string | null
+  wallStampUseStampSet?: boolean
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
@@ -49,14 +55,14 @@ const emit = defineEmits<{
   updateWallThicknessBand: [id: string, band: 'min' | 'mid' | 'max']
   updateWallThicknessCm: [band: 'min' | 'mid' | 'max', cm: number]
   selectWallRef: [id: string]
-  copyPreprocessRefs: [donorFloorId: string]
-  startWallStamp: [donorFloorId: string]
+  startWallStamp: [donorFloorId: string, useStampSet: boolean]
   setWallStampBands: [bands: { min: boolean; mid: boolean; max: boolean }]
   setWallStampGumMode: [mode: 'off' | 'brush' | 'polygon']
   setWallStampBrushRadius: [radius: number]
   bakeWallStamp: []
   cancelWallStamp: []
   clearWallStamp: []
+  'update:wallStampUseStampSet': [value: boolean]
 }>()
 
 const { t } = useI18n()
@@ -79,35 +85,27 @@ watch(
   { immediate: true },
 )
 
-const preprocessDonorId = ref('')
-watch(
-  () => props.preprocessDonorOptions,
-  (opts) => {
-    if (!opts?.length) {
-      preprocessDonorId.value = ''
-      return
-    }
-    if (!opts.some((o) => o.id === preprocessDonorId.value)) {
-      preprocessDonorId.value = opts[0]?.id ?? ''
-    }
-  },
-  { immediate: true },
-)
-
 const bands = computed(() => props.wallStampBands ?? { min: false, mid: true, max: true })
 
+const selectedDonorStampCount = computed(() => {
+  const opt = (props.wallStampDonorOptions ?? []).find((o) => o.id === donorId.value)
+  return opt?.stampWallCount ?? 0
+})
+
+const stampSetAvailable = computed(() => selectedDonorStampCount.value > 0)
+
+const useStampSetEffective = computed(
+  () => props.wallStampUseStampSet !== false && stampSetAvailable.value,
+)
+
 function toggleBand(key: 'min' | 'mid' | 'max') {
+  if (useStampSetEffective.value) return
   emit('setWallStampBands', { ...bands.value, [key]: !bands.value[key] })
 }
 
 function onStartStamp() {
   if (!donorId.value) return
-  emit('startWallStamp', donorId.value)
-}
-
-function onCopyPreprocessRefs() {
-  if (!preprocessDonorId.value) return
-  emit('copyPreprocessRefs', preprocessDonorId.value)
+  emit('startWallStamp', donorId.value, useStampSetEffective.value)
 }
 </script>
 
@@ -153,26 +151,6 @@ function onCopyPreprocessRefs() {
     @select-rect="(id) => $emit('selectWallRef', id)"
   />
 
-  <div class="panel">
-    <label v-if="(preprocessDonorOptions?.length ?? 0) > 0" class="field">
-      <span>{{ t('preprocess.copyBwDonor') }}</span>
-      <select v-model="preprocessDonorId">
-        <option v-for="opt in preprocessDonorOptions" :key="opt.id" :value="opt.id">
-          {{ opt.name }}
-        </option>
-      </select>
-    </label>
-    <button
-      type="button"
-      class="secondary"
-      :disabled="!canCopyPreprocessRefs || !preprocessDonorId"
-      @click="onCopyPreprocessRefs"
-    >
-      {{ t('preprocess.copyBw') }}
-    </button>
-    <p v-if="canCopyPreprocessRefs" class="hint">{{ t('preprocess.copyBwHint') }}</p>
-  </div>
-
   <details class="panel stamp-panel">
     <summary class="stamp-summary">
       {{ t('preprocess.stamp.title') }}
@@ -183,7 +161,7 @@ function onCopyPreprocessRefs() {
     <p class="hint">{{ t('preprocess.stamp.hint') }}</p>
 
     <label class="field">
-      <span>{{ t('preprocess.stamp.donor') }}</span>
+      <span>{{ t('preprocess.copyBwDonor') }}</span>
       <select v-model="donorId" :disabled="!!wallStampActive">
         <option disabled value="">{{ t('preprocess.stamp.donorPlaceholder') }}</option>
         <option v-for="opt in wallStampDonorOptions ?? []" :key="opt.id" :value="opt.id">
@@ -192,29 +170,57 @@ function onCopyPreprocessRefs() {
       </select>
     </label>
 
-    <div class="bands">
+    <label v-if="stampSetAvailable" class="stamp-set-check">
+      <input
+        type="checkbox"
+        :checked="wallStampUseStampSet !== false"
+        :disabled="!!wallStampActive"
+        @change="$emit('update:wallStampUseStampSet', ($event.target as HTMLInputElement).checked)"
+      />
+      {{ t('preprocess.stamp.useStampSet', { count: selectedDonorStampCount }) }}
+    </label>
+
+    <div class="bands" :class="{ 'bands--disabled': useStampSetEffective }">
       <label
-        ><input type="checkbox" :checked="bands.min" @change="toggleBand('min')" />
+        ><input
+          type="checkbox"
+          :checked="bands.min"
+          :disabled="useStampSetEffective"
+          @change="toggleBand('min')"
+        />
         {{ t('preprocess.stamp.bandMin') }}</label
       >
       <label
-        ><input type="checkbox" :checked="bands.mid" @change="toggleBand('mid')" />
+        ><input
+          type="checkbox"
+          :checked="bands.mid"
+          :disabled="useStampSetEffective"
+          @change="toggleBand('mid')"
+        />
         {{ t('preprocess.stamp.bandMid') }}</label
       >
       <label
-        ><input type="checkbox" :checked="bands.max" @change="toggleBand('max')" />
+        ><input
+          type="checkbox"
+          :checked="bands.max"
+          :disabled="useStampSetEffective"
+          @change="toggleBand('max')"
+        />
         {{ t('preprocess.stamp.bandMax') }}</label
       >
     </div>
 
-    <div class="row">
+    <div class="sidebar-icon-row">
       <button
         type="button"
-        class="secondary"
+        class="sidebar-icon-btn"
         :disabled="!canStartWallStamp || !donorId || wallStampBusy"
         @click="onStartStamp"
       >
-        {{ wallStampActive ? t('preprocess.stamp.restart') : t('preprocess.stamp.start') }}
+        <ToolbeltIcon name="stamp" />
+        <span>{{
+          wallStampActive ? t('preprocess.stamp.restart') : t('preprocess.stamp.start')
+        }}</span>
       </button>
     </div>
 
@@ -224,27 +230,33 @@ function onCopyPreprocessRefs() {
 
       <div v-if="wallStampActive" class="gum-tools">
         <span class="label">{{ t('preprocess.stamp.gumLabel') }}</span>
-        <div class="row">
+        <div class="sidebar-icon-row">
           <button
             type="button"
-            :class="wallStampGumMode === 'off' ? 'primary' : 'secondary'"
+            class="sidebar-icon-btn"
+            :class="{ 'is-on': wallStampGumMode === 'off' }"
             @click="$emit('setWallStampGumMode', 'off')"
           >
-            {{ t('preprocess.stamp.align') }}
+            <ToolbeltIcon name="move" />
+            <span>{{ t('preprocess.stamp.align') }}</span>
           </button>
           <button
             type="button"
-            :class="wallStampGumMode === 'brush' ? 'primary' : 'secondary'"
+            class="sidebar-icon-btn"
+            :class="{ 'is-on': wallStampGumMode === 'brush' }"
             @click="$emit('setWallStampGumMode', 'brush')"
           >
-            {{ t('preprocess.stamp.brush') }}
+            <ToolbeltIcon name="brush" />
+            <span>{{ t('preprocess.stamp.brush') }}</span>
           </button>
           <button
             type="button"
-            :class="wallStampGumMode === 'polygon' ? 'primary' : 'secondary'"
+            class="sidebar-icon-btn"
+            :class="{ 'is-on': wallStampGumMode === 'polygon' }"
             @click="$emit('setWallStampGumMode', 'polygon')"
           >
-            {{ t('preprocess.stamp.polygon') }}
+            <ToolbeltIcon name="eraser" />
+            <span>{{ t('preprocess.stamp.polygon') }}</span>
           </button>
         </div>
         <label v-if="wallStampGumMode === 'brush'" class="field">
@@ -261,35 +273,42 @@ function onCopyPreprocessRefs() {
         </label>
       </div>
 
-      <div class="row">
+      <div class="sidebar-icon-row">
         <button
           v-if="wallStampActive"
           type="button"
-          class="primary"
+          class="sidebar-icon-btn sidebar-icon-btn--primary"
           :disabled="wallStampBusy"
           @click="$emit('bakeWallStamp')"
         >
-          {{ t('preprocess.stamp.bake') }}
+          <ToolbeltIcon name="check" />
+          <span>{{ t('preprocess.stamp.bake') }}</span>
         </button>
         <button
           v-if="wallStampActive"
           type="button"
-          class="secondary"
+          class="sidebar-icon-btn"
           @click="$emit('cancelWallStamp')"
         >
-          {{ t('preprocess.stamp.cancel') }}
+          <ToolbeltIcon name="clear" />
+          <span>{{ t('preprocess.stamp.cancel') }}</span>
         </button>
         <button
           v-if="wallStampBaked"
           type="button"
-          class="secondary"
+          class="sidebar-icon-btn"
           @click="$emit('clearWallStamp')"
         >
-          {{ t('preprocess.stamp.clear') }}
+          <ToolbeltIcon name="delete" />
+          <span>{{ t('preprocess.stamp.clear') }}</span>
         </button>
       </div>
       <p v-if="wallStampBaked && !wallStampActive" class="hint">
-        {{ t('preprocess.stamp.bakedHint') }}
+        {{
+          wallStampBakedInjectCount != null
+            ? t('preprocess.stamp.bakedHintInject', { count: wallStampBakedInjectCount })
+            : t('preprocess.stamp.bakedHint')
+        }}
       </p>
     </template>
   </details>
@@ -297,15 +316,16 @@ function onCopyPreprocessRefs() {
   <div class="panel">
     <button
       type="button"
-      class="primary"
+      class="sidebar-icon-btn sidebar-icon-btn--primary"
       :disabled="!imageSrc || preprocessPreviewLoading"
       @click="$emit('downloadPreprocessedUnderlay')"
     >
-      {{
+      <ToolbeltIcon name="download" />
+      <span>{{
         preprocessPreviewLoading
           ? t('preprocess.downloading')
           : t('preprocess.downloadPng', { tab: PREPROCESS_TAB_LABELS[preprocessTab] })
-      }}
+      }}</span>
     </button>
   </div>
 </template>
@@ -396,15 +416,22 @@ function onCopyPreprocessRefs() {
 .bands {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
   font-size: 12px;
   margin-bottom: 8px;
 }
 
-.row {
+.bands--disabled {
+  opacity: 0.45;
+}
+
+.stamp-set-check {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+  font-size: 12px;
   margin-bottom: 8px;
+  color: #0f172a;
 }
 
 .gum-tools .label {
@@ -412,10 +439,5 @@ function onCopyPreprocessRefs() {
   font-size: 12px;
   margin-bottom: 4px;
   color: #475569;
-}
-
-button.primary,
-button.secondary {
-  font-size: 12px;
 }
 </style>

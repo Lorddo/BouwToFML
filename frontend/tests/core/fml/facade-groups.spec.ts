@@ -4,16 +4,26 @@ import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
   applyFacadeGroupRemaps,
   assignWallsToGroup,
+  assignWallsToStamp,
   createFacadeGroup,
   deleteFacadeGroup,
   detachWalls,
+  detachWallsFromFacade,
+  detachWallsFromStamp,
+  ensureStampFacadeGroup,
   groupIdForWall,
+  isWallInStampGroup,
   listFacadeGroups,
   pruneFacadeGroups,
   remapFacadeGroupWallIds,
   renameFacadeGroup,
+  STAMP_FACADE_GROUP_ID,
+  stripFacadeGroupsFromPlan,
+  stripStampGroupFromPlan,
   wallGuidsInGroup,
+  wallsInStampGroup,
 } from '@/core/fml/facade-groups'
+import { applyStampToFloor, canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import { sanitizeFmlWallsDetailed } from '@/core/fml/sanitize-fml-walls'
@@ -218,5 +228,133 @@ describe('facade-groups', () => {
     expect(members).toContain('east')
     expect(members.some((id) => id.startsWith('split-host-'))).toBe(true)
     expect(members).not.toContain('branch')
+  })
+
+  it('ensureStampFacadeGroup maakt vaste id stamp eenmalig', () => {
+    const plan = planWithWalls(['w1', 'w2'])
+    expect(ensureStampFacadeGroup(plan)).toBe(true)
+    expect(ensureStampFacadeGroup(plan)).toBe(false)
+    const groups = listFacadeGroups(plan)
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.id).toBe(STAMP_FACADE_GROUP_ID)
+    expect(groups[0]?.name).toBe('Stempel')
+  })
+
+  it('wallsInStampGroup filtert op Stempel-leden; detach houdt lege stamp', () => {
+    const plan = planWithWalls(['w1', 'w2', 'w3'])
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, STAMP_FACADE_GROUP_ID, ['w1', 'w3'])
+    expect(
+      wallsInStampGroup(plan, 0)
+        .map((w) => w.id)
+        .sort(),
+    ).toEqual(['w1', 'w3'])
+    detachWalls(plan, ['w1', 'w3'])
+    expect(listFacadeGroups(plan).map((g) => g.id)).toEqual([STAMP_FACADE_GROUP_ID])
+    expect(wallsInStampGroup(plan, 0)).toEqual([])
+  })
+
+  it('stripFacadeGroupsFromPlan verwijdert settings-key voor export', () => {
+    const plan = planWithWalls(['w1'])
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, STAMP_FACADE_GROUP_ID, ['w1'])
+    const stripped = stripFacadeGroupsFromPlan(plan)
+    expect(stripped.source?.settings?.facadeGroups).toBeUndefined()
+    expect(listFacadeGroups(plan)).toHaveLength(1)
+    const json = buildFmlV3(stripped, { name: 'Export' })
+    expect(json).not.toContain('facadeGroups')
+  })
+
+  it('muur mag in gevel + stamp tegelijk', () => {
+    const plan = planWithWalls(['w1', 'w2'])
+    createFacadeGroup(plan, { name: 'Voor' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    assignWallsToStamp(plan, ['w1', 'w2'])
+    expect(groupIdForWall(plan, 'w1')).toBe('G1')
+    expect(isWallInStampGroup(plan, 'w1')).toBe(true)
+    expect(isWallInStampGroup(plan, 'w2')).toBe(true)
+    expect(groupIdForWall(plan, 'w2')).toBeNull()
+    expect(wallGuidsInGroup(plan, 'G1')).toEqual(['w1'])
+    expect(wallGuidsInGroup(plan, STAMP_FACADE_GROUP_ID).sort()).toEqual(['w1', 'w2'])
+  })
+
+  it('gevel-detach laat stamp staan; detach wis beide', () => {
+    const plan = planWithWalls(['w1'])
+    createFacadeGroup(plan, { name: 'Voor' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    assignWallsToStamp(plan, ['w1'])
+    detachWallsFromFacade(plan, ['w1'])
+    expect(groupIdForWall(plan, 'w1')).toBeNull()
+    expect(isWallInStampGroup(plan, 'w1')).toBe(true)
+    detachWallsFromStamp(plan, ['w1'])
+    expect(isWallInStampGroup(plan, 'w1')).toBe(false)
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    assignWallsToStamp(plan, ['w1'])
+    detachWalls(plan, ['w1'])
+    expect(groupIdForWall(plan, 'w1')).toBeNull()
+    expect(isWallInStampGroup(plan, 'w1')).toBe(false)
+  })
+
+  it('stripStampGroupFromPlan houdt gevel, verwijdert stamp', () => {
+    const plan = planWithWalls(['w1'])
+    createFacadeGroup(plan, { name: 'Voor', code: 'VG' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    assignWallsToStamp(plan, ['w1'])
+    const stripped = stripStampGroupFromPlan(plan)
+    expect(listFacadeGroups(stripped).map((g) => g.id)).toEqual(['G1'])
+    expect(wallGuidsInGroup(stripped, 'G1')).toEqual(['w1'])
+    expect(isWallInStampGroup(stripped, 'w1')).toBe(false)
+    // Bron-plan ongemoeid
+    expect(isWallInStampGroup(plan, 'w1')).toBe(true)
+  })
+
+  it('remap split-id in gevel én stamp', () => {
+    const plan = planWithWalls(['host', 'split-host-abc'])
+    createFacadeGroup(plan, { name: 'Voor' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, 'G1', ['host'])
+    assignWallsToStamp(plan, ['host'])
+    remapFacadeGroupWallIds(plan, 'host', ['host', 'split-host-abc'])
+    expect(wallGuidsInGroup(plan, 'G1').sort()).toEqual(['host', 'split-host-abc'])
+    expect(wallGuidsInGroup(plan, STAMP_FACADE_GROUP_ID).sort()).toEqual(['host', 'split-host-abc'])
+  })
+
+  it('applyStampToFloor kopieert muren; tweede apply is no-op', () => {
+    const plan = createEmptyFloorPlan({ name: 'Multi' })
+    plan.floors[0].walls = [wall('src', { x: 0, y: 0 }, { x: 200, y: 0 })]
+    plan.floors[0].height = 280
+    plan.floors.push({
+      name: '1e',
+      level: 1,
+      height: 260,
+      walls: [],
+    })
+    createFacadeGroup(plan, { name: 'Voor' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, 'G1', ['src'])
+    assignWallsToStamp(plan, ['src'])
+
+    expect(canApplyStampToFloor(plan, 1)).toBe(true)
+    const first = applyStampToFloor(plan, 1)
+    expect(first.addedWallIds).toHaveLength(1)
+    expect(first.skippedCount).toBe(0)
+    const addedId = first.addedWallIds[0]
+    const added = first.plan.floors[1].walls.find((w) => w.id === addedId)!
+    expect(added.a).toEqual({ x: 0, y: 0 })
+    expect(added.b).toEqual({ x: 200, y: 0 })
+    expect(added.openings).toEqual([])
+    expect(added.extras?.az).toEqual({ z: 0, h: 260 })
+    expect(groupIdForWall(first.plan, addedId)).toBe('G1')
+    expect(isWallInStampGroup(first.plan, addedId)).toBe(false)
+    expect(isWallInStampGroup(first.plan, 'src')).toBe(true)
+
+    expect(canApplyStampToFloor(first.plan, 1)).toBe(false)
+    const second = applyStampToFloor(first.plan, 1)
+    expect(second.addedWallIds).toEqual([])
+    expect(second.skippedCount).toBe(1)
+    expect(second.plan.floors[1].walls).toHaveLength(1)
   })
 })

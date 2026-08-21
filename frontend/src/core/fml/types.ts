@@ -122,6 +122,13 @@ export interface FloorSurface {
 
 export type FloorLineType = 'solid_line' | 'dashed_line' | 'dotted_line' | 'dashdotted_line'
 
+export const FLOOR_LINE_TYPES: readonly FloorLineType[] = [
+  'solid_line',
+  'dashed_line',
+  'dotted_line',
+  'dashdotted_line',
+] as const
+
 /** Tekstlabel op de plattegrond (Floorplanner `labels[]`). */
 export interface FloorLabel {
   id: string

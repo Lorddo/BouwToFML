@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FloorMeta, ProjectFmlDefaults, ProjectMeta } from '../composables/project/types'
 import type { PersistedProjectIndexEntry } from '@/platform/project-store'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const props = defineProps<{
   meta: ProjectMeta
@@ -89,12 +90,18 @@ function onRenameBlur(floorId: string, event: Event) {
           })
         }}
       </p>
-      <div class="resume-actions">
-        <button type="button" class="primary" @click="emit('resumeProject')">
-          {{ t('project.resume.continue') }}
+      <div class="resume-actions sidebar-icon-row">
+        <button
+          type="button"
+          class="sidebar-icon-btn sidebar-icon-btn--primary"
+          @click="emit('resumeProject')"
+        >
+          <ToolbeltIcon name="check" />
+          <span>{{ t('project.resume.continue') }}</span>
         </button>
-        <button type="button" class="secondary" @click="emit('discardProject')">
-          {{ t('project.resume.newProject') }}
+        <button type="button" class="sidebar-icon-btn" @click="emit('discardProject')">
+          <ToolbeltIcon name="clear" />
+          <span>{{ t('project.resume.newProject') }}</span>
         </button>
       </div>
     </div>
@@ -185,8 +192,13 @@ function onRenameBlur(floorId: string, event: Event) {
     </ul>
 
     <div class="add-floor">
-      <button type="button" class="primary" @click="emit('addFloor')">
-        {{ t('project.addFloor') }}
+      <button
+        type="button"
+        class="sidebar-icon-btn sidebar-icon-btn--primary"
+        @click="emit('addFloor')"
+      >
+        <ToolbeltIcon name="add" />
+        <span>{{ t('project.addFloor') }}</span>
       </button>
     </div>
 

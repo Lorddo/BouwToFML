@@ -1,4 +1,5 @@
 @import './ui/fml-preview/fml-canvas-tokens.css';
+@import './ui/components/sidebar-chrome.css';
 
 :root {
   font-family:
@@ -145,15 +146,11 @@ select {
   font-size: 12px;
 }
 
-.sidebar-compact .panel:nth-of-type(even) {
-  background: #e2e2e3;
-}
-
 .sidebar-compact .hint {
   display: none;
 }
 
-.sidebar-compact button {
+.sidebar-compact button:not(.sidebar-icon-btn) {
   padding: 4px 8px;
   font-size: 12px;
 }

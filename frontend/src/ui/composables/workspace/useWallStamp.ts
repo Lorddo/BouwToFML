@@ -12,6 +12,7 @@ import {
 import type { PreprocessConfig } from '@/core/extraction/types'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { buildWallLayerBwMat } from '@/cv/preprocess/compose-wall-bw'
+import { resolveBakeNulpuntImageCm } from '@/core/fml/stamp-nulpunt'
 import {
   DEFAULT_STAMP_BANDS,
   buildStampGhostDataUrl,
@@ -29,6 +30,15 @@ import {
   type StampWallCm,
   type StampWallPx,
 } from '@/cv/preprocess/wall-stamp-raster'
+import { filterInjectWallsByEraseMask } from '@/cv/preprocess/stamp-inject-erase-filter'
+import {
+  canvasPadIsEmpty,
+  padPlaneIfSized,
+  translateNulpuntImageCm,
+  translateStampBounds,
+  type CanvasPad,
+} from '@/cv/preprocess/stamp-underlay-pad'
+import { WALL_BW_WHITE } from '@/cv/preprocess/compose-wall-bw'
 import { applyBrushStroke, applyPolygonErase, createEraserMask } from '@/cv/tools/eraser'
 import type { PolygonPoint } from '@/cv/tools/polygon'
 import { encodeMaskBase64, decodeMaskBase64 } from '@/platform/dev-workspace/mask-codec'
@@ -43,11 +53,16 @@ export type WallStampSerialized = {
   wallsCm: StampWallCm[]
   /** Unfiltered donor walls (band-filter bij restore/rebuild). */
   sourceWallsCm?: StampWallCm[]
+  /** Volledige donor-muren voor vector-inject (stempelset); ids/balance/extras. */
+  injectWalls?: Wall[]
   originCm: Point2D
   eraseMaskBase64?: string
   stampBwBase64?: string
   stampMaskBase64?: string
   baked: boolean
+  skipBandFilter?: boolean
+  /** FML (0,0) op deze scan bij bake (scant-cm); stempelset. */
+  bakeNulpuntImageCm?: Point2D
 }
 
 export type WallStampDonorOption = {
@@ -66,6 +81,11 @@ export function useWallStamp(deps: {
   bandBoundaries?: () => FmlThicknessBandBoundaries
   /** Na bake/retune — hercompose effectiveBw. */
   onStampBwChanged: () => void
+  /**
+   * Stempelset-bake: zaai current nulpunt als leeg (stap-4 sleep blijft leidend).
+   * Opnieuw bake overschrijft het zaad via bakeNulpuntImageCm.
+   */
+  onBakeNulpunt?: (bakeNulpuntImageCm: Point2D) => void
 }) {
   const active = ref(false)
   const baked = ref(false)
@@ -76,6 +96,8 @@ export function useWallStamp(deps: {
   const wallsCm = ref<StampWallCm[]>([])
   /** Unfiltered donor snapshot — band-filter bij rebuild. */
   const sourceWallsCm = ref<StampWallCm[]>([])
+  /** Stempelset: volledige muren voor FML-inject. */
+  const injectWalls = ref<Wall[]>([])
   const originCm = ref<Point2D>({ x: 0, y: 0 })
   const wallsPxBase = ref<StampWallPx[]>([])
   const eraseMask = ref<Uint8Array | null>(null)
@@ -87,6 +109,9 @@ export function useWallStamp(deps: {
   const brushRadius = ref(12)
   const busy = ref(false)
   const error = ref<string | null>(null)
+  /** true na beginFromDonor met Stempelset — setBands past geen dikteband-filter toe. */
+  const skipBandFilter = ref(false)
+  const bakeNulpuntImageCm = ref<Point2D | null>(null)
 
   let rebuildTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -140,7 +165,13 @@ export function useWallStamp(deps: {
     if (!size || !(pxPerMmX > 0) || !(pxPerMmY > 0) || sourceWallsCm.value.length === 0)
       return false
     const boundaries = deps.bandBoundaries?.() ?? DEFAULT_FML_BAND_BOUNDARIES
-    const filtered = filterWallsByBands(sourceWallsCm.value, bands.value, boundaries)
+    const filtered = skipBandFilter.value
+      ? sourceWallsCm.value.map((w) => ({
+          a: { ...w.a },
+          b: { ...w.b },
+          thickness: w.thickness,
+        }))
+      : filterWallsByBands(sourceWallsCm.value, bands.value, boundaries)
     wallsCm.value = filtered
     if (filtered.length === 0) {
       wallsPxBase.value = []
@@ -243,6 +274,8 @@ export function useWallStamp(deps: {
     donorFloorId: string
     walls: Wall[]
     originCm?: Point2D
+    /** true = geen dikteband-filter (Stempelset-leden). */
+    skipBandFilter?: boolean
   }): boolean {
     error.value = null
     const size = imageSize()
@@ -262,7 +295,8 @@ export function useWallStamp(deps: {
       b: { ...w.b },
       thickness: w.thickness,
     }))
-    const filtered = filterWallsByBands(allWalls, bands.value, boundaries)
+    const useStampSet = params.skipBandFilter === true
+    const filtered = useStampSet ? allWalls : filterWallsByBands(allWalls, bands.value, boundaries)
     if (filtered.length === 0) {
       error.value = tGlobal('preprocess.stampErrors.noWallsInBands')
       return false
@@ -283,6 +317,15 @@ export function useWallStamp(deps: {
     donorFloorId.value = params.donorFloorId
     sourceWallsCm.value = allWalls
     wallsCm.value = filtered
+    injectWalls.value = useStampSet
+      ? params.walls.map((w) => ({
+          ...w,
+          a: { ...w.a },
+          b: { ...w.b },
+          openings: [],
+          ...(w.c != null ? { c: { ...w.c } } : {}),
+        }))
+      : []
     originCm.value = origin
     wallsPxBase.value = px
     baseBounds.value = { ...box }
@@ -290,9 +333,11 @@ export function useWallStamp(deps: {
     eraseMask.value = createEraserMask(size.width, size.height)
     stampBw.value = null
     stampMask.value = null
+    bakeNulpuntImageCm.value = null
     baked.value = false
     active.value = true
     gumMode.value = 'off'
+    skipBandFilter.value = useStampSet
     rebuildGhost()
     return true
   }
@@ -312,8 +357,43 @@ export function useWallStamp(deps: {
     if (baked.value) scheduleHeavyRebuild({ adaptive: true })
   }
 
-  /** Live align: alleen bounds — ghost stretcht mee, geen OpenCV/compose. */
+  /**
+   * Na onderlegger-pad: live bounds + image-space masks verschuiven.
+   * `wallsPxBase` / `baseBounds` blijven in donor-px (transform via live bounds).
+   */
+  function applyCanvasPad(pad: CanvasPad, srcWidth: number, srcHeight: number): void {
+    if (canvasPadIsEmpty(pad) || !(srcWidth > 0) || !(srcHeight > 0)) return
+    if (bounds.value) bounds.value = translateStampBounds(bounds.value, pad)
+    eraseMask.value = padPlaneIfSized(eraseMask.value, srcWidth, srcHeight, pad, 0)
+    stampBw.value = padPlaneIfSized(stampBw.value, srcWidth, srcHeight, pad, WALL_BW_WHITE)
+    stampMask.value = padPlaneIfSized(stampMask.value, srcWidth, srcHeight, pad, WALL_BW_WHITE)
+    if (bakeNulpuntImageCm.value) {
+      const pxPerMmX = deps.pxPerMmX()
+      const pxPerMmY = deps.pxPerMmY()
+      if (pxPerMmX > 0 && pxPerMmY > 0) {
+        bakeNulpuntImageCm.value = translateNulpuntImageCm(
+          bakeNulpuntImageCm.value,
+          pad,
+          pxPerMmX,
+          pxPerMmY,
+        )
+      }
+    }
+    rebuildGhost()
+  }
+
+  /** Live align: stempelset = alleen translatie; band-mode mag stretchen. */
   function setBounds(next: StampBounds) {
+    const base = baseBounds.value
+    if (skipBandFilter.value && base) {
+      bounds.value = {
+        x: next.x,
+        y: next.y,
+        width: base.width,
+        height: base.height,
+      }
+      return
+    }
     bounds.value = { ...next }
   }
 
@@ -330,6 +410,7 @@ export function useWallStamp(deps: {
     })
     rebuildGhost()
     if (baked.value) scheduleHeavyRebuild({ adaptive: true })
+    refreshBakedInjectCount()
   }
 
   function applyPolygonErasePoints(points: PolygonPoint[]) {
@@ -344,6 +425,18 @@ export function useWallStamp(deps: {
     })
     rebuildGhost()
     if (baked.value) scheduleHeavyRebuild({ adaptive: true })
+    refreshBakedInjectCount()
+  }
+
+  /** Stempelset: aantal inject-muren ná gum (bake/hint). */
+  const bakedInjectCount = ref<number | null>(null)
+
+  function refreshBakedInjectCount() {
+    if (!baked.value || !skipBandFilter.value) {
+      bakedInjectCount.value = null
+      return
+    }
+    bakedInjectCount.value = getFilteredInjectWalls().length
   }
 
   async function bake(): Promise<boolean> {
@@ -357,11 +450,31 @@ export function useWallStamp(deps: {
     await rebuildOutputs({ adaptive: true })
     if (!stampMaskHasInk(stampBw.value) && !stampMaskHasInk(stampMask.value)) {
       baked.value = false
+      bakeNulpuntImageCm.value = null
+      bakedInjectCount.value = null
       error.value = tGlobal('preprocess.stampErrors.noStampInk')
       return false
     }
+    const base = baseBounds.value
+    const live = bounds.value
+    const pxPerMmX = deps.pxPerMmX()
+    const pxPerMmY = deps.pxPerMmY()
+    if (skipBandFilter.value && base && live && pxPerMmX > 0 && pxPerMmY > 0) {
+      const nulpunt = resolveBakeNulpuntImageCm({
+        originCm: originCm.value,
+        baseBounds: base,
+        bounds: live,
+        pxPerMmX,
+        pxPerMmY,
+      })
+      bakeNulpuntImageCm.value = nulpunt
+      deps.onBakeNulpunt?.(nulpunt)
+    } else {
+      bakeNulpuntImageCm.value = null
+    }
     active.value = false
     gumMode.value = 'off'
+    refreshBakedInjectCount()
     // Compose opnieuw — rebuildOutputs kan al gepubliceerd hebben; zeker na active=false.
     deps.onStampBwChanged()
     return true
@@ -387,6 +500,7 @@ export function useWallStamp(deps: {
     bounds.value = null
     wallsCm.value = []
     sourceWallsCm.value = []
+    injectWalls.value = []
     originCm.value = { x: 0, y: 0 }
     wallsPxBase.value = []
     eraseMask.value = null
@@ -395,6 +509,9 @@ export function useWallStamp(deps: {
     previewUrl.value = null
     gumMode.value = 'off'
     error.value = null
+    skipBandFilter.value = false
+    bakeNulpuntImageCm.value = null
+    bakedInjectCount.value = null
     deps.onStampBwChanged()
   }
 
@@ -426,6 +543,19 @@ export function useWallStamp(deps: {
       })),
       originCm: { ...originCm.value },
       baked: baked.value,
+      skipBandFilter: skipBandFilter.value || undefined,
+      ...(bakeNulpuntImageCm.value ? { bakeNulpuntImageCm: { ...bakeNulpuntImageCm.value } } : {}),
+      ...(injectWalls.value.length > 0
+        ? {
+            injectWalls: injectWalls.value.map((w) => ({
+              ...w,
+              a: { ...w.a },
+              b: { ...w.b },
+              openings: [],
+              ...(w.c != null ? { c: { ...w.c } } : {}),
+            })),
+          }
+        : {}),
     }
     if (size && eraseMask.value && eraseMask.value.some((v) => v > 0)) {
       out.eraseMaskBase64 = encodeMaskBase64(eraseMask.value)
@@ -456,8 +586,17 @@ export function useWallStamp(deps: {
       b: { ...w.b },
       thickness: w.thickness,
     }))
+    injectWalls.value = (data.injectWalls ?? []).map((w) => ({
+      ...w,
+      a: { ...w.a },
+      b: { ...w.b },
+      openings: [],
+      ...(w.c != null ? { c: { ...w.c } } : {}),
+    }))
     originCm.value = { ...data.originCm }
     baked.value = data.baked
+    skipBandFilter.value = data.skipBandFilter === true
+    bakeNulpuntImageCm.value = data.bakeNulpuntImageCm ? { ...data.bakeNulpuntImageCm } : null
     active.value = false
     const pxPerMmX = deps.pxPerMmX()
     const pxPerMmY = deps.pxPerMmY()
@@ -469,6 +608,34 @@ export function useWallStamp(deps: {
         pxPerMmY,
       })
     }
+    // Oude sessies zonder bakeNulpunt: afleiden uit bounds na Stempelset-bake.
+    if (
+      !bakeNulpuntImageCm.value &&
+      skipBandFilter.value &&
+      baked.value &&
+      baseBounds.value &&
+      bounds.value &&
+      pxPerMmX > 0 &&
+      pxPerMmY > 0
+    ) {
+      bakeNulpuntImageCm.value = resolveBakeNulpuntImageCm({
+        originCm: originCm.value,
+        baseBounds: baseBounds.value,
+        bounds: bounds.value,
+        pxPerMmX,
+        pxPerMmY,
+      })
+    }
+    // injectWalls ontbreekt op oude sessies: rebuild uit wallsCm (geen extras/gevel).
+    if (skipBandFilter.value && injectWalls.value.length === 0 && wallsCm.value.length > 0) {
+      injectWalls.value = wallsCm.value.map((w, i) => ({
+        id: `stamp-hydrate-${i}`,
+        a: { ...w.a },
+        b: { ...w.b },
+        thickness: w.thickness,
+        openings: [],
+      }))
+    }
     const len = width * height
     eraseMask.value = data.eraseMaskBase64
       ? decodeMaskBase64(data.eraseMaskBase64, len)
@@ -477,6 +644,7 @@ export function useWallStamp(deps: {
     stampMask.value = data.stampMaskBase64 ? decodeMaskBase64(data.stampMaskBase64, len) : null
     rebuildGhost()
     if (baked.value) deps.onStampBwChanged()
+    refreshBakedInjectCount()
   }
 
   /** Compose: alleen gebakken stempel — tijdens align alleen ghost-overlay. */
@@ -488,6 +656,31 @@ export function useWallStamp(deps: {
   function getOtsuStampMask(): Uint8Array | null {
     if (baked.value) return stampMask.value
     return null
+  }
+
+  /**
+   * Inject-lijst voor generate: gum-filter op eraseMask (hydrate blijft compleet).
+   */
+  function getFilteredInjectWalls(): Wall[] {
+    const walls = injectWalls.value
+    if (walls.length === 0) return []
+    const size = imageSize()
+    const base = baseBounds.value
+    const live = bounds.value
+    const pxPerMmX = deps.pxPerMmX()
+    const pxPerMmY = deps.pxPerMmY()
+    if (!size || !base || !live) return walls.map((w) => ({ ...w, a: { ...w.a }, b: { ...w.b } }))
+    return filterInjectWallsByEraseMask({
+      walls,
+      eraseMask: eraseMask.value,
+      imageWidth: size.width,
+      imageHeight: size.height,
+      originCm: originCm.value,
+      baseBounds: base,
+      bounds: live,
+      pxPerMmX,
+      pxPerMmY,
+    })
   }
 
   return {
@@ -506,9 +699,14 @@ export function useWallStamp(deps: {
     busy,
     error,
     hasStamp,
+    skipBandFilter,
+    bakeNulpuntImageCm,
+    bakedInjectCount,
+    injectWalls,
     beginFromDonor,
     setBands,
     setBounds,
+    applyCanvasPad,
     applyBrushErase,
     applyPolygonErasePoints,
     bake,
@@ -519,6 +717,7 @@ export function useWallStamp(deps: {
     hydrate,
     getComposeStampBw,
     getOtsuStampMask,
+    getFilteredInjectWalls,
     rebuildOutputs,
     rebuildGhost,
   }

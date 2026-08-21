@@ -100,13 +100,11 @@ const dimensionsWithLabel = computed(() =>
       :key="line.id"
       :config="{
         points: line.points,
-        stroke:
-          settingsLineId === line.id
-            ? '#f97316'
-            : hoveredLineId === line.id
-              ? '#334155'
-              : line.stroke,
-        strokeWidth: settingsLineId === line.id ? line.strokeWidth + 1 : line.strokeWidth,
+        stroke: line.stroke,
+        strokeWidth:
+          settingsLineId === line.id || hoveredLineId === line.id
+            ? line.strokeWidth + 1
+            : line.strokeWidth,
         strokeScaleEnabled: false,
         dash: line.dash,
         listening: false,

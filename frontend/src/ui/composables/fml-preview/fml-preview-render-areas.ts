@@ -100,6 +100,7 @@ function mapTaggedPoly(
     color: item.color,
     customName: item.customName,
     name: item.name,
+    showAreaLabel: item.showAreaLabel !== false,
     polyCm,
   }
 }

@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
+import { snapPolygonVertexAxisLock } from '@/ui/components/fml-preview-junction-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
@@ -18,14 +19,20 @@ function distPointSeg(p: Point2D, a: Point2D, b: Point2D): { dist: number; t: nu
 }
 
 /**
- * Surface polygoon-edit: sleep vertices (junction-snap, Ctrl/Cmd = uit),
- * klik op rand → punt invoegen.
+ * Surface polygoon-edit: sleep vertices (andere polygonen hoek/ribbe + H/V,
+ * Shift = ribben H/V, Ctrl/Cmd = uit), klik op rand → punt invoegen.
  */
 export function useFmlPreviewSurfaceEdit(options: {
   selection: FmlPreviewSelectionRefs
   editor: EditorApi
   hitTest: { clientToCm: (clientX: number, clientY: number) => Point2D | null }
-  resolvePoint: (cm: Point2D, snapDisabled: boolean) => Point2D
+  resolvePoint: (
+    cm: Point2D,
+    snapDisabled: boolean,
+    extraAxisPoints?: Point2D[],
+    excludeSurfaceId?: string | null,
+  ) => Point2D
+  axisLocked: { value: boolean }
   syncPlanToParent: () => void
 }) {
   const draggingVertexIndex = ref<number | null>(null)
@@ -65,7 +72,14 @@ export function useFmlPreviewSurfaceEdit(options: {
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return null
     const disabled = snapDisabled || event.ctrlKey || event.metaKey
-    return options.resolvePoint(cm, disabled)
+    const poly = currentPoly()
+    const idx = draggingVertexIndex.value
+    const extra = poly && idx != null ? poly.filter((_, i) => i !== idx) : undefined
+    let point = options.resolvePoint(cm, disabled, extra, options.selection.surfaceEditId.value)
+    if (options.axisLocked.value && poly && idx != null) {
+      point = snapPolygonVertexAxisLock(poly, idx, point)
+    }
+    return point
   }
 
   function onDragMove(event: MouseEvent): void {
@@ -143,7 +157,12 @@ export function useFmlPreviewSurfaceEdit(options: {
         y: a.y + (b.y - a.y) * bestT,
       }
       const snapDisabledNow = event.ctrlKey || event.metaKey
-      const inserted = options.resolvePoint(along, snapDisabledNow)
+      const inserted = options.resolvePoint(
+        along,
+        snapDisabledNow,
+        poly,
+        options.selection.surfaceEditId.value,
+      )
       const next = [...poly.slice(0, bestEi + 1), inserted, ...poly.slice(bestEi + 1)]
       commitPoly(next)
       beginVertexDrag(bestEi + 1, event)

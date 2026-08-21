@@ -13,8 +13,11 @@ import type {
   Wall,
 } from '@/core/fml/types'
 import { switchFloorDesign } from '@/core/fml/design-sync'
+import { readBtfSlices, writeBtfSlices, type BtfSlice } from '@/core/fml/btf-slices'
 import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import { sanitizeFmlWallsDetailed, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
+import { isStampOwnedWall } from '@/core/fml/stamp-owned'
+import { resolveStampOwnership } from '@/core/fml/resolve-stamp-ownership'
 import {
   addRoomRect,
   addWallSegment,
@@ -51,11 +54,16 @@ import {
 } from '@/ui/components/fml-preview-openings'
 import { applyOpeningDragMove as applyOpeningDragMoveWalls } from '@/ui/components/fml-preview-opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
+import { applyStampToFloor, canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
 import {
   applyFacadeGroupRemaps,
   assignWallsToGroup,
+  assignWallsToStamp,
   createFacadeGroup,
   detachWalls,
+  detachWallsFromFacade,
+  detachWallsFromStamp,
+  ensureStampFacadeGroup,
   listFacadeGroups,
   pruneFacadeGroups,
   remapFacadeGroupWallIds,
@@ -63,6 +71,7 @@ import {
   type FacadeGroup,
   type FacadeGroupCreateInput,
 } from '@/core/fml/facade-groups'
+import { materializeEndpointJoinsAtPoint } from '@/ui/components/fml-preview-wall-draw-geom'
 
 const MAX_UNDO = 50
 
@@ -96,7 +105,14 @@ function shortGuid(): string {
     .padStart(6, '0')
 }
 
-export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref<number>) {
+export function useFmlPreviewEditor(
+  plan: Ref<FloorPlan | null>,
+  floorIndex: Ref<number>,
+  options?: {
+    /** Editor + workspace-detectie: vaste Stempel-groep in settings.facadeGroups. */
+    ensureStampPreset?: Ref<boolean> | { readonly value: boolean }
+  },
+) {
   const localPlan = ref<FloorPlan | null>(null)
   const undoStack = ref<FmlPreviewUndoSnapshot[]>([])
   const redoStack = ref<FmlPreviewUndoSnapshot[]>([])
@@ -121,6 +137,9 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
         return
       }
       localPlan.value = value ? clonePlan(value) : null
+      if (localPlan.value && options?.ensureStampPreset?.value === true) {
+        ensureStampFacadeGroup(localPlan.value)
+      }
       undoStack.value = []
       redoStack.value = []
       pendingUndoLayoutOrigin.value = undefined
@@ -142,11 +161,14 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   /** Forceer localPlan (nulpunt-apply vanaf parent). */
   function replaceLocalPlan(
     plan: FloorPlan | null,
-    options?: { keepUndo?: boolean; keepParentSyncSkip?: boolean },
+    optionsReplace?: { keepUndo?: boolean; keepParentSyncSkip?: boolean },
   ): void {
-    if (!options?.keepParentSyncSkip) skipNextPlanReset = false
+    if (!optionsReplace?.keepParentSyncSkip) skipNextPlanReset = false
     localPlan.value = plan ? clonePlan(plan) : null
-    if (!options?.keepUndo) {
+    if (localPlan.value && options?.ensureStampPreset?.value === true) {
+      ensureStampFacadeGroup(localPlan.value)
+    }
+    if (!optionsReplace?.keepUndo) {
       undoStack.value = []
       redoStack.value = []
       pendingUndoLayoutOrigin.value = undefined
@@ -434,7 +456,12 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   function updateLabel(
     labelId: string,
-    patch: Partial<Pick<FloorLabel, 'text' | 'x' | 'y'>>,
+    patch: Partial<
+      Pick<
+        FloorLabel,
+        'text' | 'x' | 'y' | 'fontSize' | 'fontColor' | 'outline' | 'bold' | 'italic'
+      >
+    >,
   ): void {
     const next = labels.value.map((l) => (l.id === labelId ? { ...l, ...patch } : l))
     setFloorLabels(next)
@@ -452,9 +479,58 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     return id
   }
 
+  function updateLine(
+    lineId: string,
+    patch: Partial<Pick<FloorLine, 'type' | 'color' | 'thickness'>>,
+  ): void {
+    const next = lines.value.map((l) => (l.id === lineId ? { ...l, ...patch } : l))
+    setFloorLines(next)
+  }
+
   function removeLine(lineId: string): void {
     const next = lines.value.filter((l) => l.id !== lineId)
     setFloorLines(next.length > 0 ? next : undefined)
+  }
+
+  function setFloorDimensions(next: FloorDimension[] | undefined): void {
+    patchActiveFloor({ dimensions: next })
+  }
+
+  function addDimension(dim: Omit<FloorDimension, 'id'> & { id?: string }): string {
+    const id = dim.id?.trim() || `dim-${shortGuid()}`
+    const next: FloorDimension = { ...dim, id, type: 'custom_dimension' }
+    setFloorDimensions([...(dimensions.value ?? []), next])
+    return id
+  }
+
+  function removeDimension(dimensionId: string): void {
+    const next = (dimensions.value ?? []).filter((d) => d.id !== dimensionId)
+    setFloorDimensions(next.length > 0 ? next : undefined)
+  }
+
+  const btfSlices = computed(() => readBtfSlices(localPlan.value?.floors[floorIndex.value]))
+
+  function setBtfSlices(slices: BtfSlice[]): void {
+    if (!localPlan.value) return
+    localPlan.value = writeBtfSlices(localPlan.value, slices, floorIndex.value)
+  }
+
+  function addBtfSlice(slice: BtfSlice): number {
+    const next = [...btfSlices.value, { m: { ...slice.m }, p: { ...slice.p } }]
+    setBtfSlices(next)
+    return next.length - 1
+  }
+
+  function updateBtfSlice(index: number, slice: BtfSlice): void {
+    if (index < 0 || index >= btfSlices.value.length) return
+    const next = btfSlices.value.map((s, i) =>
+      i === index ? { m: { ...slice.m }, p: { ...slice.p } } : s,
+    )
+    setBtfSlices(next)
+  }
+
+  function clearBtfSlices(): void {
+    setBtfSlices([])
   }
 
   function setActiveDesignIndex(designIndex: number): void {
@@ -527,7 +603,17 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
 
   function applyFacadeDetach(wallGuids: readonly string[]): void {
     if (!localPlan.value) return
-    detachWalls(localPlan.value, wallGuids)
+    detachWallsFromFacade(localPlan.value, wallGuids)
+  }
+
+  function applyStampAssign(wallGuids: readonly string[]): void {
+    if (!localPlan.value) return
+    assignWallsToStamp(localPlan.value, wallGuids)
+  }
+
+  function applyStampDetach(wallGuids: readonly string[]): void {
+    if (!localPlan.value) return
+    detachWallsFromStamp(localPlan.value, wallGuids)
   }
 
   function applyFacadeCreate(
@@ -548,6 +634,39 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   ): FacadeGroup | null {
     if (!localPlan.value) return null
     return renameFacadeGroup(localPlan.value, groupId, patch)
+  }
+
+  /** Stempelmuren van andere floors → actieve floor (zelfde a/b t.o.v. nulpunt). */
+  function applyStampToActiveFloor(): boolean {
+    if (!localPlan.value) return false
+    if (!canApplyStampToFloor(localPlan.value, floorIndex.value)) return false
+    pushUndo()
+    const result = applyStampToFloor(localPlan.value, floorIndex.value)
+    if (result.addedWallIds.length === 0) {
+      undoStack.value.pop()
+      return false
+    }
+    localPlan.value = result.plan
+    const nextWalls = [...(localPlan.value.floors[floorIndex.value]?.walls ?? [])]
+    const added = new Set(result.addedWallIds)
+    for (const wall of nextWalls) {
+      if (!added.has(wall.id)) continue
+      materializeEndpointJoinsAtPoint(nextWalls, wall.a, {
+        excludeWallIds: added,
+        toleranceCm: 1,
+      })
+      materializeEndpointJoinsAtPoint(nextWalls, wall.b, {
+        excludeWallIds: added,
+        toleranceCm: 1,
+      })
+    }
+    patchActiveFloor({ walls: nextWalls })
+    flushAreaRegen()
+    return true
+  }
+
+  function canApplyStampOnActiveFloor(): boolean {
+    return canApplyStampToFloor(localPlan.value, floorIndex.value)
   }
 
   function applyWallSlideAlongAxis(wallId: string, deltaT: number, slideDir: Point2D): void {
@@ -581,7 +700,11 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
   }
 
   function applyWallsSanitize(): boolean {
-    const detailed = sanitizeFmlWallsDetailed(walls.value)
+    let working = walls.value
+    if (working.some(isStampOwnedWall)) {
+      working = resolveStampOwnership(working).walls
+    }
+    const detailed = sanitizeFmlWallsDetailed(working)
     if (!wallsSanitizeChanged(walls.value, detailed.walls)) return false
     pushUndo()
     setWalls(detailed.walls)
@@ -751,7 +874,16 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     updateLabel,
     removeLabel,
     addLine,
+    updateLine,
     removeLine,
+    setFloorDimensions,
+    addDimension,
+    removeDimension,
+    btfSlices,
+    setBtfSlices,
+    addBtfSlice,
+    updateBtfSlice,
+    clearBtfSlices,
     setActiveDesignIndex,
     addWallSegment,
     applyJunctionMove,
@@ -772,8 +904,12 @@ export function useFmlPreviewEditor(plan: Ref<FloorPlan | null>, floorIndex: Ref
     facadeGroups,
     applyFacadeAssign,
     applyFacadeDetach,
+    applyStampAssign,
+    applyStampDetach,
     applyFacadeCreate,
     applyFacadeRename,
+    applyStampToActiveFloor,
+    canApplyStampOnActiveFloor,
     applyWallAdd,
     applyRoomRect,
     applyOpeningAdd,

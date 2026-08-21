@@ -9,6 +9,9 @@ import {
   resolveWindowBovenlicht,
 } from './bovenlicht'
 import { ensureDesignsSynced } from './design-sync'
+import { BTF_SLICES_SETTINGS_KEY, filterManualDimensions, type BtfSlice } from './btf-slices'
+import { bakeSliceDimensions } from './slice-dimension-lines'
+import type { DimensionMode } from './fml-dimension-settings'
 import type {
   DrawingMeta,
   Floor,
@@ -32,6 +35,7 @@ import {
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 import { wallElevationAtT } from './wall-endpoint-height'
+import { STAMP_OWNED_EXTRA } from './stamp-owned'
 
 export type BovenlichtDefaultResolver = boolean | ((floor: Floor, floorIndex: number) => boolean)
 export type BovenlichtCmResolver = number | ((floor: Floor, floorIndex: number) => number)
@@ -337,6 +341,8 @@ function serializeWall(
   delete restExtras.bz
   delete restExtras.decor
   delete restExtras.groupMarkerConfig
+  // Session-only stempel-ownership — niet naar Floorplanner.
+  delete restExtras[STAMP_OWNED_EXTRA]
 
   if (!hasSource) {
     // ESC:X-16 (E) — volle floor.height zonder bron-extras
@@ -382,6 +388,46 @@ function serializeDrawing(drawing: DrawingMeta | undefined): Record<string, unkn
   }
 }
 
+function isDimensionMode(value: unknown): value is DimensionMode {
+  return value === 'interior' || value === 'exterior'
+}
+
+function readSlicesFromDesignSettings(settings: Record<string, unknown> | undefined): BtfSlice[] {
+  const raw = settings?.[BTF_SLICES_SETTINGS_KEY]
+  if (!Array.isArray(raw)) return []
+  const out: BtfSlice[] = []
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const record = entry as Record<string, unknown>
+    const m = record.m as { x?: number; y?: number } | undefined
+    const p = record.p as { x?: number; y?: number } | undefined
+    if (
+      !m ||
+      !p ||
+      !Number.isFinite(m.x) ||
+      !Number.isFinite(m.y) ||
+      !Number.isFinite(p.x) ||
+      !Number.isFinite(p.y)
+    ) {
+      continue
+    }
+    if (Math.hypot(p.x! - m.x!, p.y! - m.y!) < 1e-6) continue
+    out.push({ m: { x: m.x!, y: m.y! }, p: { x: p.x!, y: p.y! } })
+  }
+  return out
+}
+
+function serializeDimensionsForDesign(design: FloorDesign, plan: FloorPlan): FloorDimension[] {
+  const settings = design.source?.settings
+  const slices = readSlicesFromDesignSettings(settings)
+  const rawMode = plan.source?.settings?.dimensionMode
+  const mode: DimensionMode = isDimensionMode(rawMode) ? rawMode : 'interior'
+  const manual = filterManualDimensions(design.dimensions, slices)
+  if (slices.length === 0) return manual
+  const baked = bakeSliceDimensions(slices, design.walls, mode, `slice-${design.name || 'd'}`)
+  return [...manual, ...baked]
+}
+
 function serializeDesign(
   design: FloorDesign,
   floor: Floor,
@@ -390,6 +436,7 @@ function serializeDesign(
   options: BuildFmlV3Options,
   hasSource: boolean,
   fallbackProjectId: number,
+  plan: FloorPlan,
 ): Record<string, unknown> {
   const source = design.source
   const out: Record<string, unknown> = {
@@ -397,7 +444,7 @@ function serializeDesign(
     id: source?.id ?? 1 + floorIndex * 100 + designIndex,
     name: design.name || floor.name,
     lines: (design.lines ?? []).map(serializeLine),
-    dimensions: (design.dimensions ?? []).map(serializeDimension),
+    dimensions: serializeDimensionsForDesign(design, plan).map(serializeDimension),
     labels: (design.labels ?? []).map(serializeLabel),
     // ESC:X-14 (E)
     areas: (design.areas ?? []).map((a) => serializeArea(a, options.forceAreaFillColor)),
@@ -492,6 +539,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
             options,
             hasSource,
             fallbackProjectId,
+            plan,
           ),
         ),
       }

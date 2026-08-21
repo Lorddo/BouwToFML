@@ -1,3 +1,4 @@
+import { absorbCoveredCollinearWalls } from '@/core/fml/sanitize-fml-walls'
 import type { Point2D, Wall } from '@/core/fml/types'
 import {
   COLLINEAR_DOT_THRESHOLD,
@@ -369,11 +370,11 @@ export function slideWallSegmentAlongAxis(
       Math.abs(before.b.y - wall.b.y) > RIGID_TRANSLATION_EPS_CM
     if (moved) movedIds.push(wall.id)
   }
-  for (const wallId of movedIds) {
-    materializeCrossingsAlongWall(next, wallId)
-    const wall = next.find((item) => item.id === wallId)
+  for (const id of movedIds) {
+    materializeCrossingsAlongWall(next, id)
+    const wall = next.find((item) => item.id === id)
     if (!wall) continue
-    const exclude = new Set([wallId])
+    const exclude = new Set([id])
     materializeEndpointJoinsAtPoint(next, wall.a, {
       excludeWallIds: exclude,
       skipCollinearWith: wall,
@@ -384,7 +385,8 @@ export function slideWallSegmentAlongAxis(
     })
   }
 
-  return pruneCollapsedWalls(next)
+  const pruned = pruneCollapsedWalls(next)
+  return absorbCoveredCollinearWalls(pruned, { keepIds: new Set([wallId]) }).walls
 }
 
 /**
@@ -409,5 +411,6 @@ export function moveJunctionWithWallJoins(
       skipCollinearWith: wall,
     })
   }
-  return pruneCollapsedWalls(next)
+  const pruned = pruneCollapsedWalls(next)
+  return absorbCoveredCollinearWalls(pruned, { keepIds: involved }).walls
 }

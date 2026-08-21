@@ -9,7 +9,7 @@ alwaysApply: false
 Primair: **muren, deuren, ramen** via JSON v3 (`walls[]` + `openings[]`).
 Muurclassificatie (buiten / woningsscheidend / binnen) → `walls[].thickness` via 3 projectdefaults.
 Deur-tags (voor/achter/binnen) + **structurele openingstypes** + maatdefaults — zie `klant-eisen-v1.md`.
-Maatlijnen: **V2**. Onderlegger: **V1 apart download**, **V2 in FML**. Roomtags: onderzoek.
+Maatlijnen: Autogen (flags + overlay), Slicer (`btfSlices` `{m,p}` + bake `dimensions[]`), Handmatig (`dimensions[]`). Onderlegger: **V1 apart download**, **V2 in FML**. Roomtags: onderzoek.
 V1: **structurele types** (refid per soort deur/raam); POC start met standaard enkeldeur + standaard raam. Visuele stijl per makelaar: V2.
 
 Referentie-examples: `examples/FML(current)/` — zie `examples-inventory.md`.
@@ -137,14 +137,32 @@ Placeholders in projectdefaults tot catalogus compleet is (roundtrip FP + `examp
 | V1 | **Niet** in FML — opgepoetste tekening apart downloaden |
 | V2 | `drawing.url` of embedded image in FML |
 
-## Maatlijnen (V2)
+## Maatlijnen
+
+Drie sporen (exclusieve weergave in editor):
+
+| Type | Bron | Persist |
+|------|------|---------|
+| Autogen | `engineAutoDims` + overlay | flags only |
+| Slicer | `settings.btfSlices: [{m,p}]` | extras + bake naar `dimensions[]` bij export |
+| Handmatig | `dimensions[]` | custom_dimension |
+
+| UI | FML | Laag |
+|---|---|---|
+| Genereer maatlijnen (autogen) | `engineAutoDims` | **design** `settings` |
+| Interior / Exterior | `dimensionMode` `"interior"` \| `"exterior"` | **project** `settings` |
+| Genereer buitenmaten | `generateOuterDimension` | **project** `settings` (alleen autogen) |
+| Slicers | `btfSlices` | **design** `settings` |
+
+Slicer: M = meetlijn (loodrecht op P−M), P = plaatslijn. Interior slaat muurdikte (zelfde muur) over.
 
 ```json
 { "type": "custom_dimension", "a": { "x": 0, "y": 0 }, "b": { "x": 300, "y": 0 } }
 ```
 
-- Binnenmaten (`dimensionMode: "interior"`)
-- Plaatsing visueel **buiten** footprint (offset in cm)
+```json
+{ "btfSlices": [{ "m": { "x": 200, "y": 150 }, "p": { "x": -50, "y": 150 } }] }
+```
 
 ## Intern model → FML
 
