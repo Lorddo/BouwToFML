@@ -4,9 +4,9 @@
  * X-01: default balance = 0.5 (geen raw balancePx-ruis in export).
  * Collineaire diktewissel-ketens: alleen flushen bij aantoonbare gezichtstrap
  * (face-evidence); zonder bewijs blijft alles 0.5 — geen faceLo-gok.
- * Mini-stubs: collinear same-T, of ortho jog (kortere keten → langere hartlijn;
- * stub-dikte = max van de armen alleen bij gemeten nabijheid). Geen merge van
- * lange collineaire muren.
+ * Mini-stubs: collinear same-T, of near-ortho jog (kortere keten → langere
+ * hartlijn; stub-dikte = max van de armen alleen bij gemeten nabijheid).
+ * Geen schuine chamfer (≥12° uit lood). Geen merge van lange collineaire muren.
  */
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import {
@@ -15,15 +15,21 @@ import {
   FML_WALL_BALANCE_MIN,
   type Point2D,
 } from './extraction-to-plan-geom'
-import { floorplannerLeftNormal, wallLengthCm } from './fml-wall-geom'
-import type { Opening, Wall } from './types'
+import {
+  floorplannerLeftNormal,
+  openingWorldCenter,
+  projectOpeningT,
+  reprojectWallOpenings,
+  wallEndpointKey,
+  wallLengthCm,
+} from './fml-wall-geom'
+import type { Wall } from './types'
 import {
   resolveChainFaceStepVerdict,
   type FaceStepVerdict,
   type WallFaceExtentsCm,
 } from './wall-face-step-evidence'
 
-const ENDPOINT_KEY_DECIMALS = 4
 const COLLINEAR_EPS_DEG = 12
 const THICKNESS_EPS_CM = 0.05
 /** Alleen stubs korter dan dit (cm) mogen in junction-balance-scope verdwijnen. */
@@ -36,13 +42,6 @@ export const JUNCTION_BALANCE_JOG_STUB_MAX_CM = 25
  */
 const JOG_STUB_BUMP_HYSTERESIS_RATIO = 0.15
 const BALANCE_QUANTIZE_STEPS = [0, 0.25, 0.5, 0.75, 1] as const
-
-function endpointKey(point: Point2D): string {
-  const factor = 10 ** ENDPOINT_KEY_DECIMALS
-  const rx = Math.round(point.x * factor) / factor
-  const ry = Math.round(point.y * factor) / factor
-  return `${rx}:${ry}`
-}
 
 function wallAngleDeg(wall: Wall): number {
   return (Math.atan2(wall.b.y - wall.a.y, wall.b.x - wall.a.x) * 180) / Math.PI
@@ -60,6 +59,11 @@ export function areCollinearWalls(a: Wall, b: Wall): boolean {
 
 function areOrthogonalWalls(a: Wall, b: Wall): boolean {
   return undirectedAngleDiffDeg(wallAngleDeg(a), wallAngleDeg(b)) >= 90 - COLLINEAR_EPS_DEG
+}
+
+/** Jog-connector alleen bij bijna-loodrechte stub (zelfde ε als `areOrthogonalWalls`). */
+function isNearOrthoJogConnector(stub: Wall, arm: Wall): boolean {
+  return areOrthogonalWalls(stub, arm)
 }
 
 function clampBalance(value: number): number {
@@ -94,35 +98,12 @@ function cloneWall(wall: Wall): Wall {
   }
 }
 
-function openingWorldCenter(wall: Wall, t: number): Point2D {
-  return {
-    x: wall.a.x + t * (wall.b.x - wall.a.x),
-    y: wall.a.y + t * (wall.b.y - wall.a.y),
-  }
-}
-
-function projectT(wall: Wall, point: Point2D): number {
-  const dx = wall.b.x - wall.a.x
-  const dy = wall.b.y - wall.a.y
-  const len2 = dx * dx + dy * dy
-  if (len2 <= 1e-12) return 0
-  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
-  return Math.max(0, Math.min(1, t))
-}
-
-function reprojectOpenings(wall: Wall, worldCenters: Point2D[]): Opening[] {
-  return wall.openings.map((opening, index) => ({
-    ...opening,
-    t: projectT(wall, worldCenters[index] ?? openingWorldCenter(wall, opening.t)),
-  }))
-}
-
 function buildEndpointIndex(walls: Wall[]): Map<string, number[]> {
   const wallsAtPoint = new Map<string, number[]>()
   for (let index = 0; index < walls.length; index += 1) {
     const wall = walls[index]
     for (const point of [wall.a, wall.b]) {
-      const key = endpointKey(point)
+      const key = wallEndpointKey(point)
       const bucket = wallsAtPoint.get(key) ?? []
       bucket.push(index)
       wallsAtPoint.set(key, bucket)
@@ -149,7 +130,7 @@ function snapWallOntoAxis(wall: Wall, targetAxis: number, vertical: boolean): vo
     wall.a = { x: wall.a.x, y: targetAxis }
     wall.b = { x: wall.b.x, y: targetAxis }
   }
-  wall.openings = reprojectOpenings(wall, centers)
+  wall.openings = reprojectWallOpenings(wall, centers)
 }
 
 /** Walls that share any endpoint, grouped for tests / diagnostics. */
@@ -203,7 +184,7 @@ function touchesThicknessChange(
 ): boolean {
   const wall = walls[index]
   for (const point of [wall.a, wall.b]) {
-    const neighbors = wallsAtPoint.get(endpointKey(point)) ?? []
+    const neighbors = wallsAtPoint.get(wallEndpointKey(point)) ?? []
     for (const other of neighbors) {
       if (other === index) continue
       if (thicknessesDiffer(wall.thickness, walls[other].thickness)) return true
@@ -221,7 +202,7 @@ function findAbsorbHost(
   let best: number | null = null
   let bestLen = 0
   for (const point of [stub.a, stub.b]) {
-    const neighbors = wallsAtPoint.get(endpointKey(point)) ?? []
+    const neighbors = wallsAtPoint.get(wallEndpointKey(point)) ?? []
     for (const other of neighbors) {
       if (other === stubIndex) continue
       const host = walls[other]
@@ -238,10 +219,10 @@ function findAbsorbHost(
 }
 
 function absorbStubIntoHost(host: Wall, stub: Wall): void {
-  const hostKeyA = endpointKey(host.a)
-  const hostKeyB = endpointKey(host.b)
-  const stubKeyA = endpointKey(stub.a)
-  const stubKeyB = endpointKey(stub.b)
+  const hostKeyA = wallEndpointKey(host.a)
+  const hostKeyB = wallEndpointKey(host.b)
+  const stubKeyA = wallEndpointKey(stub.a)
+  const stubKeyB = wallEndpointKey(stub.b)
 
   const hostCenters = host.openings.map((opening) => openingWorldCenter(host, opening.t))
   const stubCenters = stub.openings.map((opening) => openingWorldCenter(stub, opening.t))
@@ -262,10 +243,10 @@ function absorbStubIntoHost(host: Wall, stub: Wall): void {
     else host.b = { ...(dBa <= dBb ? stub.b : stub.a) }
   }
 
-  const hostOpenings = reprojectOpenings({ ...host, openings: host.openings }, hostCenters)
+  const hostOpenings = reprojectWallOpenings({ ...host, openings: host.openings }, hostCenters)
   const stubOpenings = stub.openings.map((opening, index) => ({
     ...opening,
-    t: projectT(host, stubCenters[index] ?? openingWorldCenter(stub, opening.t)),
+    t: projectOpeningT(host, stubCenters[index] ?? openingWorldCenter(stub, opening.t)),
   }))
   host.openings = [...hostOpenings, ...stubOpenings]
 }
@@ -285,7 +266,7 @@ function collectCollinearSameThicknessChain(
     const current = queue.pop()!
     const wall = walls[current]
     for (const point of [wall.a, wall.b]) {
-      for (const other of wallsAtPoint.get(endpointKey(point)) ?? []) {
+      for (const other of wallsAtPoint.get(wallEndpointKey(point)) ?? []) {
         if (chain.has(other)) continue
         const candidate = walls[other]
         if (thicknessesDiffer(seed.thickness, candidate.thickness)) continue
@@ -303,7 +284,7 @@ function neighborsAtEndpoint(
   point: Point2D,
   wallsAtPoint: Map<string, number[]>,
 ): number[] {
-  return (wallsAtPoint.get(endpointKey(point)) ?? []).filter((index) => index !== stubIndex)
+  return (wallsAtPoint.get(wallEndpointKey(point)) ?? []).filter((index) => index !== stubIndex)
 }
 
 function chainLengthCm(indices: number[], walls: Wall[]): number {
@@ -341,9 +322,8 @@ function tryAbsorbThicknessChangeJogStub(
       if (!thicknessesDiffer(armA.thickness, armB.thickness)) continue
       // Bridge stub should not itself be collinear with the façade arms.
       if (areCollinearWalls(stub, armA) || areCollinearWalls(stub, armB)) continue
-      // Prefer clear jog connectors (near-ortho); allow mild diagonal bridges.
-      const stubVsArm = undirectedAngleDiffDeg(wallAngleDeg(stub), wallAngleDeg(armA))
-      if (!areOrthogonalWalls(stub, armA) && stubVsArm < 25) continue
+      // Alleen near-ortho jog (H tussen V's). Schuine chamfer (~45–60°) blijft staan.
+      if (!isNearOrthoJogConnector(stub, armA) || !isNearOrthoJogConnector(stub, armB)) continue
 
       const chainA = collectCollinearSameThicknessChain(a, walls, wallsAtPoint)
       const chainB = collectCollinearSameThicknessChain(b, walls, wallsAtPoint)
@@ -376,7 +356,7 @@ function tryAbsorbThicknessChangeJogStub(
       ...keep.openings,
       ...stub.openings.map((opening, index) => ({
         ...opening,
-        t: projectT(keep, stubCenters[index] ?? openingWorldCenter(stub, opening.t)),
+        t: projectOpeningT(keep, stubCenters[index] ?? openingWorldCenter(stub, opening.t)),
       })),
     ]
   }
@@ -409,8 +389,7 @@ function bumpRemainingJogStubThickness(walls: Wall[]): void {
         if (!areCollinearWalls(armA, armB)) continue
         if (!thicknessesDiffer(armA.thickness, armB.thickness)) continue
         if (areCollinearWalls(stub, armA) || areCollinearWalls(stub, armB)) continue
-        const stubVsArm = undirectedAngleDiffDeg(wallAngleDeg(stub), wallAngleDeg(armA))
-        if (!areOrthogonalWalls(stub, armA) && stubVsArm < 25) continue
+        if (!isNearOrthoJogConnector(stub, armA) || !isNearOrthoJogConnector(stub, armB)) continue
         matched = true
         maxArmT = Math.max(maxArmT, armA.thickness, armB.thickness)
       }
@@ -433,7 +412,7 @@ function bumpRemainingJogStubThickness(walls: Wall[]): void {
 /**
  * Eat short stubs in junction-balance scope:
  * - collinear same-thickness continuation into a host
- * - ortho/bridge jog between parallel arms with a thickness change (shorter→longer axis)
+ * - near-ortho jog between parallel arms with a thickness change (shorter→longer axis)
  * Does not merge long collinear walls into a single segment.
  * Leftover jog stubs get thickness = max(connected arms).
  */

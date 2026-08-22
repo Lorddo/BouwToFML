@@ -5,6 +5,7 @@ import {
   DEFAULT_EMPTY_FLOOR_NAME,
   emptyFloorNameIndexed,
 } from '@/core/fml/empty-floor-plan'
+import { findRidgeDesignIndex, isRidgeDesign } from '@/core/fml/ridge-walls'
 
 describe('createEmptyFloorPlan', () => {
   it('één begane grond, geen muren, hoogte uit opts', () => {
@@ -15,6 +16,7 @@ describe('createEmptyFloorPlan', () => {
     expect(plan.floors[0]?.level).toBe(0)
     expect(plan.floors[0]?.height).toBe(275)
     expect(plan.floors[0]?.walls).toEqual([])
+    expect(findRidgeDesignIndex(plan.floors[0])).toBeGreaterThanOrEqual(0)
   })
 
   it('createBlankFloor + indexed naam voor extra verdieping', () => {
@@ -27,5 +29,9 @@ describe('createEmptyFloorPlan', () => {
     expect(floor.level).toBe(1)
     expect(floor.height).toBe(260)
     expect(floor.walls).toEqual([])
+    const dakIndex = findRidgeDesignIndex(floor)
+    expect(dakIndex).toBeGreaterThanOrEqual(0)
+    expect(isRidgeDesign(floor.designs?.[dakIndex])).toBe(true)
+    expect(floor.activeDesignIndex ?? 0).toBe(0)
   })
 })

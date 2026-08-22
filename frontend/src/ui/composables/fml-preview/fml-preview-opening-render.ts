@@ -1,5 +1,5 @@
 import type { Opening, OpeningType } from '@/core/fml/types'
-import type { OpeningAssetKind, resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
+import { resolveWindowPanelCount, type OpeningAssetKind } from '@/core/fml/opening-refid-catalog'
 import { clamp01 } from '@/core/fml/extraction-to-plan-geom'
 import {
   FACTORY_OPENING_COLORS,
@@ -57,36 +57,22 @@ export function buildOpeningGapPolygon(params: {
   })
 }
 
-function windowPanelCount(widthCm: number): 1 | 2 | 3 {
-  if (widthCm >= 220) return 3
-  if (widthCm >= 140) return 2
-  return 1
-}
-
 export function windowTypeLabel(panelCount: 1 | 2 | 3, kind?: OpeningAssetKind): string {
   if (kind === 'round') return 'rond raam'
   if (kind === 'half_round') return 'half-rond raam'
+  if (kind === 'triangle') return 'driehoekraam'
   if (panelCount === 1) return 'enkel raam'
   if (panelCount === 2) return 'dubbel raam'
   return 'driedelig raam'
 }
 
-export function resolveWindowPanelCount(
-  widthCm: number,
-  kind: ReturnType<typeof resolveOpeningCatalog>['kind'],
-  panels?: 1 | 2 | 3,
-): 1 | 2 | 3 {
-  if (kind === 'round' || kind === 'half_round') return 1
-  if (panels === 1 || panels === 2 || panels === 3) return panels
-  if (kind !== 'multi') return 1
-  return windowPanelCount(widthCm)
-}
+export { resolveWindowPanelCount }
 
 /** Vaste UI-diameter voor rond/half-rond ornament (px), ongeacht raamformaat. */
 export const WINDOW_ORNAMENT_DIAMETER_PX = 10
 
 export interface WindowOrnament {
-  kind: 'round' | 'half_round'
+  kind: 'round' | 'half_round' | 'triangle'
   centerX: number
   centerY: number
   radius: number
@@ -101,9 +87,13 @@ export function buildWindowSymbol(params: {
   toStagePoint: (x: number, y: number) => { x: number; y: number }
   panelCount: 1 | 2 | 3
   kind?: OpeningAssetKind
+  frameLeftCm?: number
+  frameRightCm?: number
+  mirrored?: [number, number]
 }): {
   basePoints: number[]
   mullions: number[][]
+  frameQuads: number[][]
   ornament: WindowOrnament | null
 } {
   const start = params.toStagePoint(params.startCm.x, params.startCm.y)
@@ -116,15 +106,23 @@ export function buildWindowSymbol(params: {
   const span = Math.hypot(dx, dy) || 1
   const wallUnit = { x: dx / span, y: dy / span }
   const normal = { x: -wallUnit.y, y: wallUnit.x }
+  const leftCm = Math.max(0, params.frameLeftCm ?? 0)
+  const rightCm = Math.max(0, params.frameRightCm ?? 0)
+  const innerStart = {
+    x: params.startCm.x + wallUnit.x * leftCm,
+    y: params.startCm.y + wallUnit.y * leftCm,
+  }
+  const innerDx = dx - wallUnit.x * (leftCm + rightCm)
+  const innerDy = dy - wallUnit.y * (leftCm + rightCm)
 
-  // Begin-, eind- en (bij multi) indelingstrepen binnen de muurgap.
+  // Begin-, eind- en (bij multi) indelingstrepen op de inner-span (ná kozijn).
   const halfThicknessCm = Math.max(0.5, params.thicknessCm / 2)
 
   for (let i = 0; i <= segmentCount; i += 1) {
     const t = i / segmentCount
     const anchor = {
-      x: params.startCm.x + dx * t,
-      y: params.startCm.y + dy * t,
+      x: innerStart.x + innerDx * t,
+      y: innerStart.y + innerDy * t,
     }
     const m0 = params.toStagePoint(
       anchor.x - normal.x * halfThicknessCm,
@@ -145,9 +143,37 @@ export function buildWindowSymbol(params: {
     normal,
     toStagePoint: params.toStagePoint,
     kind: params.kind,
+    mirrored: params.mirrored,
   })
 
-  return { basePoints, mullions, ornament }
+  const frameQuads: number[][] = []
+  const pushBand = (along0: number, along1: number) => {
+    if (along1 - along0 < 0.2) return
+    const a = {
+      x: params.startCm.x + wallUnit.x * along0,
+      y: params.startCm.y + wallUnit.y * along0,
+    }
+    const b = {
+      x: params.startCm.x + wallUnit.x * along1,
+      y: params.startCm.y + wallUnit.y * along1,
+    }
+    const corners = [
+      { x: a.x - normal.x * halfThicknessCm, y: a.y - normal.y * halfThicknessCm },
+      { x: b.x - normal.x * halfThicknessCm, y: b.y - normal.y * halfThicknessCm },
+      { x: b.x + normal.x * halfThicknessCm, y: b.y + normal.y * halfThicknessCm },
+      { x: a.x + normal.x * halfThicknessCm, y: a.y + normal.y * halfThicknessCm },
+    ]
+    frameQuads.push(
+      corners.flatMap((corner) => {
+        const point = params.toStagePoint(corner.x, corner.y)
+        return [point.x, point.y]
+      }),
+    )
+  }
+  pushBand(0, leftCm)
+  pushBand(span - rightCm, span)
+
+  return { basePoints, mullions, frameQuads, ornament }
 }
 
 function buildWindowOrnament(params: {
@@ -158,8 +184,11 @@ function buildWindowOrnament(params: {
   normal: { x: number; y: number }
   toStagePoint: (x: number, y: number) => { x: number; y: number }
   kind?: OpeningAssetKind
+  mirrored?: [number, number]
 }): WindowOrnament | null {
-  if (params.kind !== 'round' && params.kind !== 'half_round') return null
+  if (params.kind !== 'round' && params.kind !== 'half_round' && params.kind !== 'triangle') {
+    return null
+  }
 
   const midCm = {
     x: (params.startCm.x + params.endCm.x) / 2,
@@ -180,6 +209,46 @@ function buildWindowOrnament(params: {
   const center = {
     x: gapEdge.x + unitN.x * (radius + 2),
     y: gapEdge.y + unitN.y * (radius + 2),
+  }
+
+  if (params.kind === 'triangle') {
+    const wallStage = {
+      x: params.toStagePoint(params.endCm.x, params.endCm.y).x - mid.x,
+      y: params.toStagePoint(params.endCm.x, params.endCm.y).y - mid.y,
+    }
+    const wLen = Math.hypot(wallStage.x, wallStage.y) || 1
+    const unitW = { x: wallStage.x / wLen, y: wallStage.y / wLen }
+    const apexAtStart = params.mirrored?.[0] !== 1
+    const along = apexAtStart ? -radius : radius
+    const near = -radius * 0.35
+    const rightAngle = {
+      x: center.x + unitW.x * along + unitN.x * near,
+      y: center.y + unitW.y * along + unitN.y * near,
+    }
+    const apex = {
+      x: center.x + unitW.x * along + unitN.x * radius,
+      y: center.y + unitW.y * along + unitN.y * radius,
+    }
+    const baseFar = {
+      x: center.x - unitW.x * along + unitN.x * near,
+      y: center.y - unitW.y * along + unitN.y * near,
+    }
+    return {
+      kind: 'triangle',
+      centerX: center.x,
+      centerY: center.y,
+      radius,
+      points: [
+        rightAngle.x,
+        rightAngle.y,
+        apex.x,
+        apex.y,
+        baseFar.x,
+        baseFar.y,
+        rightAngle.x,
+        rightAngle.y,
+      ],
+    }
   }
 
   if (params.kind === 'round') {

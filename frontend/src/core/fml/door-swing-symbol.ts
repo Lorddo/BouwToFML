@@ -417,6 +417,89 @@ function buildGarageSymbol(params: {
   return { leafLines, arcPoints: [], arrowPoints: [] }
 }
 
+/** Vouwdeur: twee bladen in een V (vouwpunt in de kamer). */
+function buildBifoldPair(params: {
+  hinge: DoorSwingPoint
+  along: DoorSwingPoint
+  wallUnit: DoorSwingPoint
+  leafLength: number
+  swingSign: 1 | -1
+}): DoorSymbol {
+  const normal = wallNormal(params.wallUnit)
+  const fold: DoorSwingPoint = {
+    x:
+      params.hinge.x +
+      params.along.x * params.leafLength * 0.5 +
+      normal.x * params.swingSign * params.leafLength * 0.5,
+    y:
+      params.hinge.y +
+      params.along.y * params.leafLength * 0.5 +
+      normal.y * params.swingSign * params.leafLength * 0.5,
+  }
+  const lead: DoorSwingPoint = {
+    x: params.hinge.x + params.along.x * params.leafLength,
+    y: params.hinge.y + params.along.y * params.leafLength,
+  }
+  return {
+    leafLines: [
+      [params.hinge.x, params.hinge.y, fold.x, fold.y],
+      [fold.x, fold.y, lead.x, lead.y],
+    ],
+    arcPoints: [],
+    arrowPoints: [],
+  }
+}
+
+function buildBifoldSymbol(params: {
+  start: DoorSwingPoint
+  end: DoorSwingPoint
+  wallUnit: DoorSwingPoint
+  width: number
+  mirrored?: [number, number]
+  leafLength?: number
+  double: boolean
+}): DoorSymbol {
+  const swingSign = resolveSwingSign(params.mirrored)
+  const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
+  const baseWidth = params.width > 0 ? params.width : span
+  if (!params.double) {
+    const hingeAtStart = resolveHingeAtStart(params.mirrored)
+    const hinge = hingeAtStart ? params.start : params.end
+    const along = hingeAtStart ? params.wallUnit : { x: -params.wallUnit.x, y: -params.wallUnit.y }
+    const leafLength = params.leafLength ?? Math.max(12, baseWidth * 0.92)
+    return buildBifoldPair({
+      hinge,
+      along,
+      wallUnit: params.wallUnit,
+      leafLength,
+      swingSign,
+    })
+  }
+  const mid = midpoint(params.start, params.end)
+  const halfSpan = Math.hypot(mid.x - params.start.x, mid.y - params.start.y)
+  const leafLength =
+    params.leafLength != null ? Math.max(10, params.leafLength / 2) : Math.max(10, halfSpan * 0.92)
+  const left = buildBifoldPair({
+    hinge: params.start,
+    along: params.wallUnit,
+    wallUnit: params.wallUnit,
+    leafLength,
+    swingSign,
+  })
+  const right = buildBifoldPair({
+    hinge: params.end,
+    along: { x: -params.wallUnit.x, y: -params.wallUnit.y },
+    wallUnit: params.wallUnit,
+    leafLength,
+    swingSign,
+  })
+  return {
+    leafLines: [...left.leafLines, ...right.leafLines],
+    arcPoints: [],
+    arrowPoints: [],
+  }
+}
+
 export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSymbol {
   switch (params.kind) {
     case 'double_wide':
@@ -459,6 +542,7 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         wallUnit: params.wallUnit,
       })
     case 'passage':
+    case 'archway':
       return { leafLines: [], arcPoints: [], arrowPoints: [] }
     case 'closet45':
       return buildSingleDoorSymbol({
@@ -480,6 +564,17 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         mirrored: params.mirrored,
         leafLength: params.leafLength,
         wallThickness: params.wallThickness,
+      })
+    case 'bifold':
+    case 'bifold_double':
+      return buildBifoldSymbol({
+        start: params.start,
+        end: params.end,
+        wallUnit: params.wallUnit,
+        width: params.width,
+        mirrored: params.mirrored,
+        leafLength: params.leafLength,
+        double: params.kind === 'bifold_double',
       })
     default:
       return buildSingleDoorSymbol({

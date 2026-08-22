@@ -29,6 +29,10 @@ export function useFmlPreviewDrawSurface(options: {
   ) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
+  /** Dak-tab: punt moet op de uitslag van de actieve floor liggen. */
+  acceptPoint?: (point: Point2D) => boolean
+  /** Dakvlak-tool: geen roomtype, altijd dakvlak. */
+  isDak?: () => boolean
 }) {
   const draftPoints = options.selection.drawSurfacePoints
   const hoverCm = ref<Point2D | null>(null)
@@ -66,7 +70,8 @@ export function useFmlPreviewDrawSurface(options: {
     const pts = draftPoints.value
     if (!pts || pts.length < 3) return false
     options.editor.pushUndo()
-    const role = pendingRole.value
+    const dak = options.isDak?.() === true
+    const role = dak ? null : pendingRole.value
     const rt = role != null ? resolveRoomType(role) : null
     const plan = options.editor.localPlan.value
     const floorIndex = options.editor.floorIndex.value
@@ -104,6 +109,7 @@ export function useFmlPreviewDrawSurface(options: {
   function onDrawSurfaceClick(event: MouseEvent): void {
     const locked = resolveClick(event)
     if (!locked) return
+    if (options.acceptPoint && !options.acceptPoint(locked)) return
     if (!draftPoints.value) {
       options.beforeBegin()
       draftPoints.value = [locked]

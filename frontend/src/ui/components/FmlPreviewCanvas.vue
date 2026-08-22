@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
-import { listRidgeWallsOnFloor, listRidgeWallsOnPlan } from '@/core/fml/ridge-walls'
+import { listRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
 import type { FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
@@ -17,20 +17,8 @@ import {
 } from '@/ui/composables/fml-preview/useFmlPreviewInteraction'
 import { useFmlPreviewDrawPreviews } from '@/ui/composables/fml-preview/useFmlPreviewDrawPreviews'
 import { inspectColorFor, type FmlInspectHit } from '@/ui/composables/fml-preview/fml-inspect'
-import {
-  applyTwoFingerNav,
-  FML_PREVIEW_CHROME_SELECTOR,
-  isTapMove,
-  shouldUseTouchNav,
-  type GesturePoint,
-} from '@/ui/composables/fml-preview/fml-preview-gestures'
-import {
-  isTouchHoverFollowTool,
-  shouldCommitTouchTap,
-  shouldOneFingerPan,
-  shouldStartTouchHoldDrag,
-} from '@/ui/composables/fml-preview/fml-preview-touch-tap'
-import { clampViewScale } from '@/ui/composables/fml-preview/useFmlPreviewPanZoom'
+import { FML_PREVIEW_CHROME_SELECTOR } from '@/ui/composables/fml-preview/fml-preview-gestures'
+import { useFmlCanvasTouch, useFmlTouchNav } from '@/ui/composables/fml-preview/useFmlCanvasTouch'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { itemResizeHandleWorlds } from '@/ui/composables/fml-preview/item-resize-handles'
 import FmlEditorTouchChrome from '@/ui/fml-editor/FmlEditorTouchChrome.vue'
@@ -40,14 +28,8 @@ import { underlayContentBoundsCm } from '@/ui/composables/fml-preview/fml-previe
 import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
 import { defaultDimensionVis } from '@/core/fml/fml-dimension-vis'
 import type { MeasureDrawMode } from '@/ui/composables/fml-preview/useFmlPreviewMeasure'
-import { buildSliceGuide, bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
-import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
-import { type BtfSlice } from '@/core/fml/btf-slices'
-import {
-  DEFAULT_SLICER_OFFSET_SNAP_CM,
-  slicePlaceStripAxis,
-  snapSlicerPPoint,
-} from '@/core/fml/slice-offset-snap'
+import { buildSliceGuide } from '@/core/fml/slice-dimension-lines'
+import { useFmlPreviewSlicer } from '@/ui/composables/fml-preview/useFmlPreviewSlicer'
 import {
   loadUserSettings,
   type CornerMarkerMode,
@@ -97,6 +79,8 @@ const props = withDefaults(
     windowBovenlichtDefault?: boolean
     bovenlichtHeightCm?: number
     bovenlichtGapCm?: number
+    /** true = flags+groen; false = losse ramen. Default true. */
+    bovenlichtPacked?: boolean
     /** Sessie-default voor nieuwe deuren (viewer). */
     defaultDoorHeightCm?: number
     defaultWindowHeightCm?: number
@@ -134,7 +118,7 @@ const props = withDefaults(
     canvasFullscreen?: boolean
     /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */
     dimensionVis?: DimensionVis
-    /** Dak-tab: stippellijn-muren + dakvlakken van alle floors. */
+    /** Dak-tab: uitslag van de actieve floor (nok + dakvlakken). */
     dakMode?: boolean
   }>(),
   {
@@ -158,6 +142,7 @@ const props = withDefaults(
     windowBovenlichtDefault: false,
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
     bovenlichtGapCm: BOVENLICHT_GAP_CM,
+    bovenlichtPacked: true,
     defaultDoorHeightCm: undefined,
     defaultWindowHeightCm: undefined,
     defaultWindowSillZCm: undefined,
@@ -269,6 +254,7 @@ const bovenlichtDefaultRef = toRef(props, 'bovenlichtDefault')
 const windowBovenlichtDefaultRef = toRef(props, 'windowBovenlichtDefault')
 const bovenlichtHeightCmRef = toRef(props, 'bovenlichtHeightCm')
 const bovenlichtGapCmRef = toRef(props, 'bovenlichtGapCm')
+const bovenlichtPackedRef = toRef(props, 'bovenlichtPacked')
 const underlayMoveModeRef = ref(props.underlayMoveMode ?? false)
 watch(
   () => props.underlayMoveMode,
@@ -283,8 +269,7 @@ watch(underlayMoveModeRef, (on) => {
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<{ getNode: () => Konva.Stage } | null>(null)
 const contentGroupRef = ref<{ getNode: () => Konva.Group } | null>(null)
-const coarsePointer = ref(false)
-const useTouchNav = computed(() => shouldUseTouchNav(touchEditor.value, coarsePointer.value))
+const { useTouchNav } = useFmlTouchNav(touchEditor)
 
 const { shiftPressed, spacePressed, onKeyDown, onKeyUp } = useStage()
 const ensureStampPreset = computed(() => props.kind === 'detection' || props.kind === 'editor')
@@ -365,8 +350,8 @@ const render = useFmlPreviewRenderModel(
 )
 
 const hitTestWalls = computed(() => {
-  if (dakMode.value) return listRidgeWallsOnPlan(editor.localPlan.value)
   const current = floor.value
+  if (dakMode.value) return listRidgeWallsOnFloor(current)
   return [...editor.walls.value, ...listRidgeWallsOnFloor(current)]
 })
 
@@ -402,6 +387,7 @@ const interaction = useFmlPreviewInteraction({
   windowBovenlichtDefault: windowBovenlichtDefaultRef,
   bovenlichtHeightCm: bovenlichtHeightCmRef,
   bovenlichtGapCm: bovenlichtGapCmRef,
+  bovenlichtPacked: bovenlichtPackedRef,
   getUnderlayLayout: () => {
     // Origin mag (0,0) zijn — object is altijd truthy; alleen null/undefined blokkeert.
     if (props.cmOrigin == null) {
@@ -828,54 +814,25 @@ const slicePreviewStage = computed(() => {
   }
 })
 
-const sliceGuideStage = computed(() => sliceGuidesStage.value.find((g) => g.selected) ?? null)
-
-function hitSliceIndexAtCm(cm: { x: number; y: number }): number {
-  const slices = editor.btfSlices.value
-  if (slices.length === 0) return -1
-  if (activeFmlTool.value !== 'measure' || measureDrawMode.value !== 'slicer') return -1
-  const settings = readDimensionSettings(editor.localPlan.value, editor.floorIndex.value)
-  for (let i = 0; i < slices.length; i += 1) {
-    const dims = bakeSliceDimensions(
-      [slices[i]],
-      editor.walls.value,
-      settings.dimensionMode,
-      `hit-${i}`,
-    )
-    for (const dim of dims) {
-      const dx = dim.b.x - dim.a.x
-      const dy = dim.b.y - dim.a.y
-      const len2 = dx * dx + dy * dy
-      if (len2 < 1e-6) continue
-      let t = ((cm.x - dim.a.x) * dx + (cm.y - dim.a.y) * dy) / len2
-      t = Math.max(0, Math.min(1, t))
-      const px = dim.a.x + t * dx
-      const py = dim.a.y + t * dy
-      if (Math.hypot(cm.x - px, cm.y - py) <= 8) return i
+const slicer = useFmlPreviewSlicer({
+  getSlices: () => editor.btfSlices.value,
+  getWalls: () => editor.walls.value,
+  getPlan: () => editor.localPlan.value,
+  getFloorIndex: () => editor.floorIndex.value,
+  selectedSliceIndex,
+  clientToCm: (x, y) => hitTest.clientToCm(x, y),
+  toStagePoint: (x, y) => renderTransform.value.toStagePoint(x, y),
+  shiftPressed,
+  pushUndo: () => editor.pushUndo(),
+  updateSlice: (index, slice) => editor.updateBtfSlice(index, slice),
+  syncPlan: () => {
+    const plan = editor.localPlan.value
+    if (plan) {
+      editor.prepareParentSync()
+      emit('planUpdate', plan)
     }
-  }
-  return -1
-}
-
-let sliceHandleDrag: { index: number; which: 'm' | 'p' } | null = null
-
-/** Soft H/V t.o.v. de andere handle; Shift = uit. */
-const SLICE_HANDLE_AXIS_SNAP_CM = 50
-
-function snapSliceHandleAxis(
-  anchor: { x: number; y: number },
-  point: { x: number; y: number },
-  thresholdCm: number,
-): { x: number; y: number } {
-  const dx = Math.abs(point.x - anchor.x)
-  const dy = Math.abs(point.y - anchor.y)
-  if (dx <= thresholdCm && dy <= thresholdCm) {
-    return dx <= dy ? { x: anchor.x, y: point.y } : { x: point.x, y: anchor.y }
-  }
-  if (dx <= thresholdCm) return { x: anchor.x, y: point.y }
-  if (dy <= thresholdCm) return { x: point.x, y: anchor.y }
-  return point
-}
+  },
+})
 
 function onCanvasPointerDown(event: MouseEvent): void {
   // Herschalen: alleen space+drag pan doorlaten (geen edit/select).
@@ -886,99 +843,13 @@ function onCanvasPointerDown(event: MouseEvent): void {
     activeFmlTool.value === 'measure' &&
     measureDrawMode.value === 'slicer' &&
     slicerEditMode.value &&
-    !spacePressed.value
+    !spacePressed.value &&
+    slicer.tryPointerDown(event)
   ) {
-    const cm = hitTest.clientToCm(event.clientX, event.clientY)
-    if (cm) {
-      if (selectedSliceIndex.value >= 0 && sliceGuideStage.value) {
-        const toStage = renderTransform.value.toStagePoint
-        const m = toStage(
-          editor.btfSlices.value[selectedSliceIndex.value].m.x,
-          editor.btfSlices.value[selectedSliceIndex.value].m.y,
-        )
-        const p = toStage(
-          editor.btfSlices.value[selectedSliceIndex.value].p.x,
-          editor.btfSlices.value[selectedSliceIndex.value].p.y,
-        )
-        const local = toStage(cm.x, cm.y)
-        if (Math.hypot(local.x - m.x, local.y - m.y) <= 12) {
-          sliceHandleDrag = { index: selectedSliceIndex.value, which: 'm' }
-          editor.pushUndo()
-          window.addEventListener('pointermove', onSliceHandleMove)
-          window.addEventListener('pointerup', onSliceHandleUp, { once: true })
-          event.preventDefault()
-          return
-        }
-        if (Math.hypot(local.x - p.x, local.y - p.y) <= 12) {
-          sliceHandleDrag = { index: selectedSliceIndex.value, which: 'p' }
-          editor.pushUndo()
-          window.addEventListener('pointermove', onSliceHandleMove)
-          window.addEventListener('pointerup', onSliceHandleUp, { once: true })
-          event.preventDefault()
-          return
-        }
-      }
-      const hit = hitSliceIndexAtCm(cm)
-      if (hit >= 0) {
-        selectedSliceIndex.value = hit
-        event.preventDefault()
-        return
-      }
-      if (selectedSliceIndex.value >= 0) {
-        selectedSliceIndex.value = -1
-      }
-    }
+    return
   }
 
   onWrapPointerDown(event)
-}
-
-function onSliceHandleMove(event: MouseEvent): void {
-  if (!sliceHandleDrag) return
-  const cm = hitTest.clientToCm(event.clientX, event.clientY)
-  if (!cm) return
-  const slice = editor.btfSlices.value[sliceHandleDrag.index]
-  if (!slice) return
-  const disableSnap = shiftPressed.value || event.shiftKey
-  let point = { ...cm }
-  if (!disableSnap) {
-    const anchor = sliceHandleDrag.which === 'm' ? slice.p : slice.m
-    point = snapSliceHandleAxis(anchor, point, SLICE_HANDLE_AXIS_SNAP_CM)
-    // Alleen P snapt t.o.v. andere P's (vaste onderlinge offset)
-    if (sliceHandleDrag.which === 'p') {
-      const preferred =
-        loadUserSettings().fmlViewer.slicerOffsetSnapCm ?? DEFAULT_SLICER_OFFSET_SNAP_CM
-      // Strook-as uit huidige M↔P (na axis-lock)
-      const draft = { m: slice.m, p: point }
-      point = snapSlicerPPoint({
-        point,
-        slices: editor.btfSlices.value,
-        preferredCm: preferred,
-        excludeIndex: sliceHandleDrag.index,
-        forceAxis: slicePlaceStripAxis(draft),
-      })
-    }
-  }
-  const next: BtfSlice =
-    sliceHandleDrag.which === 'm'
-      ? { m: point, p: { ...slice.p } }
-      : { m: { ...slice.m }, p: point }
-  // Degeneraat: meetas verdwijnt — minimale scheiding behouden
-  if (Math.hypot(next.p.x - next.m.x, next.p.y - next.m.y) < 1) return
-  editor.updateBtfSlice(sliceHandleDrag.index, next)
-}
-
-function onSliceHandleUp(): void {
-  window.removeEventListener('pointermove', onSliceHandleMove)
-  if (sliceHandleDrag) {
-    sliceHandleDrag = null
-    // sync via interaction helper — emit plan update
-    const plan = editor.localPlan.value
-    if (plan) {
-      editor.prepareParentSync()
-      emit('planUpdate', plan)
-    }
-  }
 }
 
 function onCanvasPointerMove(event: MouseEvent): void {
@@ -999,186 +870,17 @@ function onCanvasWheel(event: WheelEvent): void {
   onWheel(event)
 }
 
-const touchPointers = new Map<number, GesturePoint>()
-let touchPrevPair: { a: GesturePoint; b: GesturePoint } | null = null
-let touchCommittedOne = false
-let touchNav = false
-let touchPending: {
-  pointerId: number
-  start: GesturePoint
-  clientX: number
-  clientY: number
-} | null = null
-let touchSloppy = false
-let touchOnePanLast: GesturePoint | null = null
-let coarseMq: MediaQueryList | null = null
-const touchNavListenerOpts: AddEventListenerOptions = { passive: false }
-
-function touchIgnoreTarget(event: PointerEvent): boolean {
-  const target = event.target as HTMLElement
-  return Boolean(target.closest(FML_PREVIEW_CHROME_SELECTOR))
-}
-
-function touchLocalPoint(event: PointerEvent): GesturePoint {
-  const rect = containerRef.value?.getBoundingClientRect()
-  if (!rect) return { x: event.clientX, y: event.clientY }
-  return { x: event.clientX - rect.left, y: event.clientY - rect.top }
-}
-
-function mouseAtCanvas(clientX: number, clientY: number): MouseEvent {
-  return new MouseEvent('mousedown', {
-    bubbles: false,
-    cancelable: true,
-    view: window,
-    clientX,
-    clientY,
-    button: 0,
-    buttons: 1,
-  })
-}
-
-function resetTouchIdle(): void {
-  if (touchPointers.size > 0) return
-  touchPending = null
-  touchSloppy = false
-  touchCommittedOne = false
-  touchOnePanLast = null
-}
-
-function endTouchEditDrag(): void {
-  window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
-}
-
-function onTouchPointerDown(event: PointerEvent): void {
-  if (!useTouchNav.value) return
-  if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return
-  if (touchIgnoreTarget(event)) return
-  if (props.rescaleMode && !spacePressed.value) return
-  event.preventDefault()
-  const wrap = containerRef.value
-  wrap?.setPointerCapture?.(event.pointerId)
-  const local = touchLocalPoint(event)
-  touchPointers.set(event.pointerId, local)
-  if (touchPointers.size >= 2) {
-    touchNav = true
-    touchCommittedOne = false
-    touchPending = null
-    touchSloppy = false
-    touchOnePanLast = null
-    endTouchEditDrag()
-    const pts = [...touchPointers.values()]
-    touchPrevPair = { a: pts[0], b: pts[1] }
-    return
-  }
-  touchPending = {
-    pointerId: event.pointerId,
-    start: local,
-    clientX: event.clientX,
-    clientY: event.clientY,
-  }
-  touchSloppy = false
-  touchCommittedOne = false
-  touchOnePanLast = null
-}
-
-function onTouchPointerMove(event: PointerEvent): void {
-  if (!useTouchNav.value) return
-  if (!touchPointers.has(event.pointerId)) return
-  event.preventDefault()
-  const local = touchLocalPoint(event)
-  touchPointers.set(event.pointerId, local)
-  if (touchNav && touchPointers.size >= 2 && touchPrevPair) {
-    const pts = [...touchPointers.values()]
-    const next = applyTwoFingerNav({
-      prevA: touchPrevPair.a,
-      prevB: touchPrevPair.b,
-      nextA: pts[0],
-      nextB: pts[1],
-      viewScale: viewScale.value,
-      viewX: viewPosition.value.x,
-      viewY: viewPosition.value.y,
-      clampScale: clampViewScale,
-    })
-    viewScale.value = next.scale
-    viewPosition.value = { x: next.x, y: next.y }
-    touchPrevPair = { a: pts[0], b: pts[1] }
-    return
-  }
-  if (touchNav) return
-
-  const tool = activeFmlTool.value
-  if (touchPending && event.pointerId === touchPending.pointerId && !touchSloppy) {
-    if (!isTapMove(touchPending.start, local)) {
-      touchSloppy = true
-      if (
-        shouldStartTouchHoldDrag({
-          sloppy: true,
-          moveMod: moveMod.value,
-          tool,
-          becameNav: false,
-        })
-      ) {
-        touchCommittedOne = true
-        onCanvasPointerDown(mouseAtCanvas(event.clientX, event.clientY))
-      } else if (
-        shouldOneFingerPan({
-          sloppy: true,
-          becameNav: false,
-          holdDragStarted: false,
-          hoverFollow: isTouchHoverFollowTool(tool),
-        })
-      ) {
-        touchOnePanLast = local
-      }
-    }
-  }
-
-  if (touchOnePanLast && !touchCommittedOne) {
-    viewPosition.value = {
-      x: viewPosition.value.x + (local.x - touchOnePanLast.x),
-      y: viewPosition.value.y + (local.y - touchOnePanLast.y),
-    }
-    touchOnePanLast = local
-    return
-  }
-
-  if (touchCommittedOne || isTouchHoverFollowTool(tool)) {
-    onCanvasPointerMove(event)
-  }
-}
-
-function finishTouchPointer(event: PointerEvent, cancelled: boolean): void {
-  if (!useTouchNav.value) return
-  const pending = touchPending
-  const sloppy = touchSloppy
-  const wasNav = touchNav
-  const pointerId = event.pointerId
-  touchPointers.delete(pointerId)
-  if (touchNav) {
-    if (touchPointers.size < 2) {
-      touchNav = false
-      touchPrevPair = null
-    }
-    resetTouchIdle()
-    return
-  }
-  if (
-    pending &&
-    pointerId === pending.pointerId &&
-    shouldCommitTouchTap({ becameNav: wasNav, sloppy, cancelled })
-  ) {
-    onCanvasPointerDown(mouseAtCanvas(pending.clientX, pending.clientY))
-  }
-  resetTouchIdle()
-}
-
-function onTouchPointerUp(event: PointerEvent): void {
-  finishTouchPointer(event, false)
-}
-
-function onTouchPointerCancel(event: PointerEvent): void {
-  finishTouchPointer(event, true)
-}
+useFmlCanvasTouch({
+  containerRef,
+  enabled: useTouchNav,
+  viewScale,
+  viewPosition,
+  getTool: () => activeFmlTool.value,
+  moveMod,
+  blockEdit: () => Boolean(props.rescaleMode && !spacePressed.value),
+  onEditPointerDown: onCanvasPointerDown,
+  onEditPointerMove: onCanvasPointerMove,
+})
 
 const selectedItemPanel = computed(() => {
   const guid = settingsItemId.value
@@ -1380,49 +1082,16 @@ function onRescaleKeyDown(event: KeyboardEvent): void {
   }
 }
 
-function syncCoarsePointer(): void {
-  coarsePointer.value = coarseMq?.matches === true
-}
-
-function attachTouchNavListeners(): void {
-  const el = containerRef.value
-  if (!el) return
-  el.addEventListener('pointerdown', onTouchPointerDown, touchNavListenerOpts)
-  el.addEventListener('pointermove', onTouchPointerMove, touchNavListenerOpts)
-  el.addEventListener('pointerup', onTouchPointerUp)
-  el.addEventListener('pointercancel', onTouchPointerCancel)
-}
-
-function detachTouchNavListeners(): void {
-  const el = containerRef.value
-  if (!el) return
-  el.removeEventListener('pointerdown', onTouchPointerDown, touchNavListenerOpts)
-  el.removeEventListener('pointermove', onTouchPointerMove, touchNavListenerOpts)
-  el.removeEventListener('pointerup', onTouchPointerUp)
-  el.removeEventListener('pointercancel', onTouchPointerCancel)
-}
-
 onMounted(() => {
   mountResizeObserver()
   mountKeyboardListeners()
   window.addEventListener('keydown', onRescaleKeyDown)
-  coarseMq = window.matchMedia('(pointer: coarse)')
-  syncCoarsePointer()
-  coarseMq.addEventListener('change', syncCoarsePointer)
 })
 
 onUnmounted(() => {
-  detachTouchNavListeners()
-  coarseMq?.removeEventListener('change', syncCoarsePointer)
-  coarseMq = null
   unmountResizeObserver()
   unmountInteraction()
   window.removeEventListener('keydown', onRescaleKeyDown)
-})
-
-watch(useTouchNav, (on) => {
-  if (on) attachTouchNavListeners()
-  else detachTouchNavListeners()
 })
 
 defineExpose({
@@ -1441,6 +1110,7 @@ defineExpose({
   settingsMod,
   axisLockMod,
   moveMod,
+  pushUndo: () => editor.pushUndo(),
 })
 
 watch(
@@ -1513,39 +1183,39 @@ watch(
       :selected-opening-panel="selectedOpeningPanel"
       :selected-area-panel="taggedSettingsPanel"
       :selected-label-panel="selectedLabelPanel"
-      :selected-line-panel="selectedLinePanel"
-      :room-types="roomTypes"
-      :surface-edit-active="surfaceEditActive"
-      :roof-vertex-z-cm="roofVertexZCm"
-      :roof-poly-mutate="selection.roofPolyMutate"
-      :include-surface-tool="includeSurfaceTool"
-      :include-annotation-tools="includeAnnotationTools && !dakMode"
-      :include-fixture-tool="includeFixtureTool && !dakMode"
-      :selected-item-panel="selectedItemPanel"
-      :wall-thickness-draft="wallThicknessDraft"
       v-model:measure-draw-mode="measureDrawMode"
-      :wall-thickness-mixed="wallThicknessMixed"
+      :selected-line-panel="selectedLinePanel"
       v-model:slicer-edit-mode="slicerEditMode"
-      :wall-balance-draft="wallBalanceDraft"
+      :room-types="roomTypes"
       v-model:draw-surface-role="drawSurfacePendingRole"
-      :wall-balance-mixed="wallBalanceMixed"
+      :surface-edit-active="surfaceEditActive"
       v-model:draw-line-thickness="drawLineThickness"
-      :wall-height-draft="wallHeightDraft"
+      :roof-vertex-z-cm="roofVertexZCm"
       v-model:draw-line-type="drawLineType"
-      :wall-height-mixed="wallHeightMixed"
+      :roof-poly-mutate="selection.roofPolyMutate.value"
       v-model:draw-line-color="drawLineColor"
-      :junction-height-draft="junctionHeightDraft"
+      :include-surface-tool="includeSurfaceTool"
       v-model:draw-label-text="drawLabelText"
-      :junction-height-mixed="junctionHeightMixed"
+      :include-annotation-tools="includeAnnotationTools && !dakMode"
       v-model:draw-label-font-size="drawLabelFontSize"
-      :opening-subtype-draft="openingSubtypeDraft"
+      :include-fixture-tool="includeFixtureTool && !dakMode"
       v-model:draw-label-font-color="drawLabelFontColor"
-      :opening-subtype-mixed="openingSubtypeMixed"
+      :selected-item-panel="selectedItemPanel"
       v-model:draw-label-outline="drawLabelOutline"
-      :opening-width-draft="openingWidthDraft"
+      :wall-thickness-draft="wallThicknessDraft"
       v-model:draw-label-bold="drawLabelBold"
-      :opening-width-mixed="openingWidthMixed"
+      :wall-thickness-mixed="wallThicknessMixed"
       v-model:draw-label-italic="drawLabelItalic"
+      :wall-balance-draft="wallBalanceDraft"
+      :wall-balance-mixed="wallBalanceMixed"
+      :wall-height-draft="wallHeightDraft"
+      :wall-height-mixed="wallHeightMixed"
+      :junction-height-draft="junctionHeightDraft"
+      :junction-height-mixed="junctionHeightMixed"
+      :opening-subtype-draft="openingSubtypeDraft"
+      :opening-subtype-mixed="openingSubtypeMixed"
+      :opening-width-draft="openingWidthDraft"
+      :opening-width-mixed="openingWidthMixed"
       :opening-height-draft="openingHeightDraft"
       :opening-height-mixed="openingHeightMixed"
       :opening-sill-z-draft="openingSillZDraft"
@@ -1560,6 +1230,7 @@ watch(
       :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
       :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
       :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+      :bovenlicht-packed="bovenlichtPacked"
       :thickness-min-cm="thicknessMinCm"
       :thickness-mid-cm="thicknessMidCm"
       :thickness-max-cm="thicknessMaxCm"
@@ -1788,7 +1459,7 @@ watch(
         :key="`ds-${idx}`"
         :cx="pt.x"
         :cy="pt.y"
-        :r="idx === 0 ? 6 : 5"
+        :r="idx === 0 ? 3.5 : 3"
         :class="{ 'draw-surface-preview__first': idx === 0 }"
       />
     </svg>
@@ -1861,8 +1532,8 @@ watch(
       :settings-item-id="settingsItemId"
       :move-item-id="moveItemId"
       :item-drag-preview="itemDragPreviewStage"
-      :door-bovenlicht-default="bovenlichtDefault"
-      :window-bovenlicht-default="windowBovenlichtDefault"
+      :door-bovenlicht-default="bovenlichtPacked !== false && bovenlichtDefault"
+      :window-bovenlicht-default="bovenlichtPacked !== false && windowBovenlichtDefault"
       :opening-colors="openingColors"
       :settings-area-id="settingsAreaId"
       :settings-surface-id="settingsSurfaceId"
@@ -1873,6 +1544,7 @@ watch(
       :hovered-label-id="hoveredLabelId"
       :hovered-line-id="hoveredLineId"
       :inspect-colors="inspectColors"
+      :dak-mode="dakMode"
       :surface-edit-id="surfaceEditId"
       :surface-edit-vertices="surfaceEditVerticesStage"
       :selected-vertex-index="roofVertexIndex"
@@ -2014,13 +1686,13 @@ watch(
 }
 
 .draw-surface-preview circle {
-  fill: #f97316;
+  fill: #7c3aed;
   stroke: #fff;
   stroke-width: 1.5;
 }
 
 .draw-surface-preview__first {
-  fill: #ea580c;
+  fill: #c084fc;
   stroke-width: 2;
 }
 

@@ -135,6 +135,19 @@ export function elevationFaceXs(
  * Kopgevel (along≈0) = gecentreerde dikte; langs gevel = lengte.
  * Niet `max(projectie, dikte)` — dat maakt een iets scheve as tot een blok.
  */
+/** Meer dwars dan langs → kopse kant (eindvlak), niet de lange nokbalk. */
+export const ELEVATION_RIDGE_END_ON_ALONG = 0.5
+
+export function elevationRidgeAlong(xa: number, xb: number, wallLengthCm: number): number {
+  const projLen = Math.abs(xb - xa)
+  const len = Math.max(projLen, wallLengthCm)
+  return len < 1e-6 ? 0 : Math.min(1, projLen / len)
+}
+
+export function elevationRidgeIsEndOn(xa: number, xb: number, wallLengthCm: number): boolean {
+  return elevationRidgeAlong(xa, xb, wallLengthCm) < ELEVATION_RIDGE_END_ON_ALONG
+}
+
 export function ridgeElevationFaceXs(
   xa: number,
   xb: number,
@@ -143,8 +156,7 @@ export function ridgeElevationFaceXs(
 ): { xOuterA: number; xOuterB: number; xInnerA: number; xInnerB: number } {
   const width = Math.max(1, displayWidthCm)
   const projLen = Math.abs(xb - xa)
-  const len = Math.max(projLen, wallLengthCm)
-  const along = len < 1e-6 ? 0 : Math.min(1, projLen / len)
+  const along = elevationRidgeAlong(xa, xb, wallLengthCm)
   const across = Math.sqrt(Math.max(0, 1 - along * along))
   const half = (projLen + width * across) / 2
   const mid = (xa + xb) / 2
@@ -154,4 +166,18 @@ export function ridgeElevationFaceXs(
     return { xOuterA: x0, xOuterB: x1, xInnerA: x0, xInnerB: x1 }
   }
   return { xOuterA: x1, xOuterB: x0, xInnerA: x1, xInnerB: x0 }
+}
+
+/** Inverse van `ridgeElevationFaceXs` voor kopse resize. */
+export function displayWidthFromRidgeElevationRect(
+  rectWidthCm: number,
+  xa: number,
+  xb: number,
+  wallLengthCm: number,
+): number {
+  const projLen = Math.abs(xb - xa)
+  const along = elevationRidgeAlong(xa, xb, wallLengthCm)
+  const across = Math.sqrt(Math.max(0, 1 - along * along))
+  if (across < 0.2) return Math.max(1, Math.round(rectWidthCm))
+  return Math.max(1, Math.round((Math.max(projLen, rectWidthCm) - projLen) / across))
 }

@@ -891,6 +891,27 @@ describe('window panels + ornament', () => {
     })
     expect(round.ornament?.kind).toBe('round')
     expect(round.ornament?.radius).toBe(WINDOW_ORNAMENT_DIAMETER_PX / 2)
+
+    const triangle = buildWindowSymbol({
+      startCm: { x: 0, y: 0 },
+      endCm: { x: 110, y: 0 },
+      thicknessCm: 15,
+      toStagePoint: identity,
+      panelCount: 1,
+      kind: 'triangle',
+    })
+    const triangleFlip = buildWindowSymbol({
+      startCm: { x: 0, y: 0 },
+      endCm: { x: 110, y: 0 },
+      thicknessCm: 15,
+      toStagePoint: identity,
+      panelCount: 1,
+      kind: 'triangle',
+      mirrored: [1, 0],
+    })
+    expect(triangle.ornament?.kind).toBe('triangle')
+    expect(triangle.ornament?.points.length).toBe(8)
+    expect(triangleFlip.ornament?.points).not.toEqual(triangle.ornament?.points)
   })
 })
 

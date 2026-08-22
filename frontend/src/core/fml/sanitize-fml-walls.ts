@@ -6,7 +6,12 @@
  * van de overlever. Geen `alignWallJunctionBalance` (die wist import-balance).
  */
 import { classifyNearAxisWall, orthogonalizeNearAxisWalls } from './orthogonalize-near-axis-walls'
-import { wallLengthCm } from './fml-wall-geom'
+import {
+  openingWorldCenter,
+  projectOpeningT,
+  reprojectWallOpenings,
+  wallLengthCm,
+} from './fml-wall-geom'
 import type { WallIdRemap } from './facade-groups'
 import { materializeWallJunctionsDetailed } from './materialize-wall-junctions'
 import type { Opening, Point2D, Wall } from './types'
@@ -47,29 +52,6 @@ function cloneWall(wall: Wall): Wall {
     openings: wall.openings.map(cloneOpening),
     extras: wall.extras ? { ...wall.extras } : undefined,
   }
-}
-
-function openingWorldCenter(wall: Wall, t: number): Point2D {
-  return {
-    x: wall.a.x + t * (wall.b.x - wall.a.x),
-    y: wall.a.y + t * (wall.b.y - wall.a.y),
-  }
-}
-
-function projectT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
-  const dx = wall.b.x - wall.a.x
-  const dy = wall.b.y - wall.a.y
-  const len2 = dx * dx + dy * dy
-  if (len2 <= 1e-12) return 0
-  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
-  return Math.max(0, Math.min(1, t))
-}
-
-function reprojectOpenings(wall: Wall, worldCenters: Point2D[]): Opening[] {
-  return wall.openings.map((opening, index) => ({
-    ...opening,
-    t: projectT(wall, worldCenters[index] ?? openingWorldCenter(wall, opening.t)),
-  }))
 }
 
 function newSplitId(sourceId: string): string {
@@ -139,7 +121,7 @@ function weldNearEndpoints(walls: Wall[]): Wall[] {
     const wall = work[idx]
     if (wallLengthCm(wall) <= MIN_DIR_CM) continue
     const centers = wall.openings.map((opening) => openingWorldCenter(walls[idx], opening.t))
-    wall.openings = reprojectOpenings(wall, centers)
+    wall.openings = reprojectWallOpenings(wall, centers)
   }
 
   return work
@@ -212,7 +194,7 @@ function splitWallAtAlong(
 ): { walls: Wall[]; remap: WallIdRemap } | null {
   const span = alongSpan(wall, axis)
   if (along <= span.lo + SPAN_SLACK_CM || along >= span.hi - SPAN_SLACK_CM) return null
-  const t = projectT(wall, splitPointOnAxis(wall, axis, along))
+  const t = projectOpeningT(wall, splitPointOnAxis(wall, axis, along))
   if (t <= MIN_SPLIT_T || t >= 1 - MIN_SPLIT_T) return null
 
   const split = splitPointOnAxis(wall, axis, along)
@@ -225,9 +207,9 @@ function splitWallAtAlong(
     const center = centers[i]
     const opening = cloneOpening(wall.openings[i])
     if (alongCoord(center, axis) <= along + SPAN_SLACK_CM) {
-      firstOpenings.push({ ...opening, t: projectT(firstGeom, center) })
+      firstOpenings.push({ ...opening, t: projectOpeningT(firstGeom, center) })
     } else {
-      secondOpenings.push({ ...opening, t: projectT(secondGeom, center) })
+      secondOpenings.push({ ...opening, t: projectOpeningT(secondGeom, center) })
     }
   }
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, t)
@@ -256,7 +238,7 @@ function findCoverHost(hosts: Wall[], point: Point2D, axis: AxisKind): Wall | nu
   let best: Wall | null = null
   let bestDist = Number.POSITIVE_INFINITY
   for (const host of hosts) {
-    const t = projectT(host, point)
+    const t = projectOpeningT(host, point)
     const on = {
       x: host.a.x + t * (host.b.x - host.a.x),
       y: host.a.y + t * (host.b.y - host.a.y),
@@ -393,7 +375,7 @@ export function absorbCoveredCollinearWalls(
       if (!host) continue
       host.openings.push({
         ...cloneOpening(opening),
-        t: projectT(host, center),
+        t: projectOpeningT(host, center),
       })
     }
 

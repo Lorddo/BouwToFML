@@ -2,50 +2,44 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { OpeningType } from '@/core/fml/types'
-import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+import { DOOR_ADD_SUBTYPES, WINDOW_ADD_SUBTYPES } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
 
-const props = defineProps<{
-  type: OpeningType
-  subtype: OpeningSubtypeDraft
-}>()
+const props = withDefaults(
+  defineProps<{
+    type: OpeningType
+    subtype: OpeningSubtypeDraft
+    hingeAtStart?: boolean
+    swingRight?: boolean
+    showDoorButtons?: boolean
+  }>(),
+  {
+    hingeAtStart: true,
+    swingRight: false,
+    showDoorButtons: true,
+  },
+)
 
 const emit = defineEmits<{
   subtype: [subtype: OpeningSubtypeDraft]
   copy: []
+  toggleHinge: []
+  toggleSwing: []
 }>()
 
 const { t } = useI18n()
 
 const doorOptions = computed(() =>
-  (
-    [
-      'standard',
-      'closet',
-      'double',
-      'double_solid',
-      'pocket',
-      'sliding_single',
-      'sliding',
-    ] as const satisfies readonly DoorAddSubtype[]
-  ).map((value) => ({
+  DOOR_ADD_SUBTYPES.map((value) => ({
     value,
     label: t(`result.toolbar.doorSubtypes.${value}`),
   })),
 )
 
 const windowOptions = computed(() =>
-  (
-    [
-      'single',
-      'double',
-      'triple',
-      'round',
-      'half_round',
-    ] as const satisfies readonly WindowAddSubtype[]
-  ).map((value) => ({
+  WINDOW_ADD_SUBTYPES.map((value) => ({
     value,
     label: t(`result.toolbar.windowSubtypes.${value}`),
   })),
@@ -54,6 +48,19 @@ const windowOptions = computed(() =>
 const options = computed(() => (props.type === 'window' ? windowOptions.value : doorOptions.value))
 const typeAria = computed(() =>
   props.type === 'window' ? t('result.toolbar.windowType') : t('result.toolbar.doorType'),
+)
+const isDoor = computed(() => props.type === 'door')
+const showMirror = computed(() => props.subtype === 'triangle')
+const hingeTitle = computed(() =>
+  props.hingeAtStart ? t('result.toolbar.hingeAtStart') : t('result.toolbar.hingeAtEnd'),
+)
+const mirrorTitle = computed(() =>
+  props.hingeAtStart
+    ? t('result.toolbar.mirrorOpeningStart')
+    : t('result.toolbar.mirrorOpeningEnd'),
+)
+const swingTitle = computed(() =>
+  props.swingRight ? t('result.toolbar.swingRight') : t('result.toolbar.swingLeft'),
 )
 
 function onSubtype(event: Event): void {
@@ -83,6 +90,39 @@ function onSubtype(event: Event): void {
       </select>
     </div>
   </div>
+  <button
+    v-if="showMirror && showDoorButtons"
+    type="button"
+    class="canvas-toolbelt__btn"
+    :class="{ 'canvas-toolbelt__btn--active': !hingeAtStart }"
+    :title="mirrorTitle"
+    :aria-label="mirrorTitle"
+    @click="emit('toggleHinge')"
+  >
+    <ToolbeltIcon name="mirror_h" />
+  </button>
+  <button
+    v-if="isDoor && showDoorButtons"
+    type="button"
+    class="canvas-toolbelt__btn"
+    :class="{ 'canvas-toolbelt__btn--active': !hingeAtStart }"
+    :title="hingeTitle"
+    :aria-label="hingeTitle"
+    @click="emit('toggleHinge')"
+  >
+    <ToolbeltIcon name="hinge" />
+  </button>
+  <button
+    v-if="isDoor && showDoorButtons"
+    type="button"
+    class="canvas-toolbelt__btn"
+    :class="{ 'canvas-toolbelt__btn--active': swingRight }"
+    :title="swingTitle"
+    :aria-label="swingTitle"
+    @click="emit('toggleSwing')"
+  >
+    <ToolbeltIcon name="swing" />
+  </button>
   <button
     type="button"
     class="canvas-toolbelt__btn"

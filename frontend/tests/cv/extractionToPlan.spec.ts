@@ -36,6 +36,7 @@ describe('extractionToPlan', () => {
     })
 
     expect(plan.floors[0].walls).toHaveLength(1)
+    expect(plan.floors[0].designs?.some((d) => d.source?.settings?.btfRole === 'ridge')).toBe(true)
     const wall = plan.floors[0].walls[0]
     expect(wall.a.y).toBeCloseTo(0, 4)
     expect(wall.b.x).toBeCloseTo(10, 4)

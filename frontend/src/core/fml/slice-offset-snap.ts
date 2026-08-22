@@ -12,6 +12,24 @@ export const SLICE_OFFSET_SOFT_SNAP_CM = 15
 
 export const DEFAULT_SLICER_OFFSET_SNAP_CM = 50
 
+/** Soft H/V van P/M-handle t.o.v. de andere handle. */
+export const SLICE_HANDLE_AXIS_SNAP_CM = 50
+
+export function snapSliceHandleAxis(
+  anchor: Point2D,
+  point: Point2D,
+  thresholdCm: number = SLICE_HANDLE_AXIS_SNAP_CM,
+): Point2D {
+  const dx = Math.abs(point.x - anchor.x)
+  const dy = Math.abs(point.y - anchor.y)
+  if (dx <= thresholdCm && dy <= thresholdCm) {
+    return dx <= dy ? { x: anchor.x, y: point.y } : { x: point.x, y: anchor.y }
+  }
+  if (dx <= thresholdCm) return { x: anchor.x, y: point.y }
+  if (dy <= thresholdCm) return { x: point.x, y: anchor.y }
+  return point
+}
+
 /** 'x' = verticale place-lijn (strook canvas-hoog); 'y' = horizontale place-lijn. */
 export type SlicePlaceStripAxis = 'x' | 'y'
 

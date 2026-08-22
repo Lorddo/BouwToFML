@@ -1,4 +1,4 @@
-import type { Point2D, Wall } from './types'
+import type { Opening, Point2D, Wall } from './types'
 import { FML_WALL_BALANCE_FALLBACK } from './extraction-to-plan-geom'
 
 /**
@@ -128,4 +128,41 @@ export function wallFaces(wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>)
       b: offsetPoint(wall.b, n, -minus),
     },
   }
+}
+
+/** Junction-clustering / keten-index: 0,0001 cm-afronding. */
+export const ENDPOINT_KEY_DECIMALS = 4
+
+/** Stabiele knoop-key voor Map-index (niet voor hit-test; zie elevation-wall-faces). */
+export function wallEndpointKey(point: Point2D): string {
+  const factor = 10 ** ENDPOINT_KEY_DECIMALS
+  const rx = Math.round(point.x * factor) / factor
+  const ry = Math.round(point.y * factor) / factor
+  return `${rx}:${ry}`
+}
+
+/** Wereldpositie van openingscentrum op de hartlijn (`t` 0=a … 1=b). */
+export function openingWorldCenter(wall: Pick<Wall, 'a' | 'b'>, t: number): Point2D {
+  return wallAxisPoint(wall, t)
+}
+
+/**
+ * Projecteer wereldpunt op muur-as → `t` in [0,1].
+ * Degenerate muur (nul-lengte) → 0 (core sanitize/align-contract).
+ */
+export function projectOpeningT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const len2 = dx * dx + dy * dy
+  if (len2 <= 1e-12) return 0
+  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
+  return Math.max(0, Math.min(1, t))
+}
+
+/** Herprojecteer openingen vanaf vastgelegde wereldcentra (zelfde index-volgorde). */
+export function reprojectWallOpenings(wall: Wall, worldCenters: ReadonlyArray<Point2D>): Opening[] {
+  return wall.openings.map((opening, index) => ({
+    ...opening,
+    t: projectOpeningT(wall, worldCenters[index] ?? openingWorldCenter(wall, opening.t)),
+  }))
 }

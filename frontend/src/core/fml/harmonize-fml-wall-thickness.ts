@@ -10,10 +10,9 @@ import {
   type FmlThicknessBand,
   type FmlThicknessBandBoundaries,
 } from './fml-wall-thickness-tiers'
-import { wallLengthCm } from './fml-wall-geom'
+import { wallEndpointKey, wallLengthCm } from './fml-wall-geom'
 import type { WallFaceExtentsCm } from './wall-face-step-evidence'
 
-const ENDPOINT_KEY_DECIMALS = 4
 import { WALL_CHAIN_BRIDGE_MAX_RATIO } from './wall-thickness-chain'
 
 const CHAIN_BRIDGE_MAX_CM = 40
@@ -23,13 +22,6 @@ const COLLINEAR_EPS_DEG = 12
  * 15%: 10 vs 12 blijft gesplitst (~17%), 35 vs 38 blijft één keten (~8%).
  */
 export const CHAIN_THICKNESS_HYSTERESIS_RATIO = 0.15
-
-function endpointKey(point: { x: number; y: number }): string {
-  const factor = 10 ** ENDPOINT_KEY_DECIMALS
-  const rx = Math.round(point.x * factor) / factor
-  const ry = Math.round(point.y * factor) / factor
-  return `${rx}:${ry}`
-}
 
 class UnionFind {
   private parent: number[]
@@ -105,7 +97,7 @@ export function buildFmlThicknessChains(
   for (let index = 0; index < count; index += 1) {
     const wall = walls[index]
     for (const point of [wall.a, wall.b]) {
-      const key = endpointKey(point)
+      const key = wallEndpointKey(point)
       const bucket = wallsAtPoint.get(key) ?? []
       bucket.push(index)
       wallsAtPoint.set(key, bucket)
@@ -133,8 +125,8 @@ export function buildFmlThicknessChains(
     const bridge = walls[bridgeIndex]
     const bridgeBand = classifyFmlThicknessBand(bridge.thickness, boundaries)
     const bridgeLength = wallLengthCm(bridge)
-    const pointA = wallsAtPoint.get(endpointKey(bridge.a)) ?? []
-    const pointB = wallsAtPoint.get(endpointKey(bridge.b)) ?? []
+    const pointA = wallsAtPoint.get(wallEndpointKey(bridge.a)) ?? []
+    const pointB = wallsAtPoint.get(wallEndpointKey(bridge.b)) ?? []
     if (pointA.length < 2 || pointB.length < 2) continue
 
     const neighborsA = pointA.filter(

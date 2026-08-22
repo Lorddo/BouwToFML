@@ -8,7 +8,12 @@ export function shouldCommitTouchTap(args: {
   return args.becameNav !== true && args.sloppy !== true && args.cancelled !== true
 }
 
-/** Click-move-click: vinger volgt hover, tik op pointerup. */
+/**
+ * Click-move-click: vinger volgt hover, tik op pointerup.
+ * Nok = `draw_wall` + `drawWallKind=ridge`; dakvlak = `draw_surface` + `dakMode`.
+ * Elevation `split` / `add_*` horen hier ook (zelfde plaats-tik).
+ * Measure/slicer/nulpunt/box_select = hold-drag (`shouldStartTouchHoldDrag`), geen hover-follow.
+ */
 export function isTouchHoverFollowTool(tool: string | null): boolean {
   return (
     tool === 'draw_wall' ||
@@ -18,7 +23,8 @@ export function isTouchHoverFollowTool(tool: string | null): boolean {
     tool === 'draw_line' ||
     tool === 'add_door' ||
     tool === 'add_window' ||
-    tool === 'add_fixture'
+    tool === 'add_fixture' ||
+    tool === 'split'
   )
 }
 

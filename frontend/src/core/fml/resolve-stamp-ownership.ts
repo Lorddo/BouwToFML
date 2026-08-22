@@ -6,7 +6,12 @@
  * @see .cursor/docs/stamp-detectie-dubbele-muren.md §13–§15
  */
 import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from './door-swing-symbol'
-import { wallDirectionUnit, wallLengthCm } from './fml-wall-geom'
+import {
+  openingWorldCenter,
+  projectOpeningT,
+  wallDirectionUnit,
+  wallLengthCm,
+} from './fml-wall-geom'
 import { isStampOwnedWall } from './stamp-owned'
 import { splitWallEndpointExtras } from './wall-endpoint-height'
 import type { Opening, Point2D, Wall } from './types'
@@ -74,22 +79,6 @@ function shortGuid(): string {
   return Math.floor(Math.random() * 0xffffff)
     .toString(16)
     .padStart(6, '0')
-}
-
-function openingWorldCenter(wall: Pick<Wall, 'a' | 'b'>, t: number): Point2D {
-  return {
-    x: wall.a.x + t * (wall.b.x - wall.a.x),
-    y: wall.a.y + t * (wall.b.y - wall.a.y),
-  }
-}
-
-function projectT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
-  const dx = wall.b.x - wall.a.x
-  const dy = wall.b.y - wall.a.y
-  const len2 = dx * dx + dy * dy
-  if (len2 <= 1e-12) return 0
-  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
-  return Math.max(0, Math.min(1, t))
 }
 
 function alongFromA(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
@@ -228,7 +217,7 @@ function stampsCoveringParallel(victim: Wall, stamps: readonly StampMeta[]): Sta
 export function transferOpeningToStampWall(opening: Opening, from: Wall, to: Wall): Opening {
   const center = openingWorldCenter(from, opening.t)
   const next = cloneOpening(opening)
-  next.t = projectT(to, center)
+  next.t = projectOpeningT(to, center)
   if (!directionsOppose(from, to)) return next
 
   const hingeAtStart = resolveHingeAtStart(opening.mirrored)
@@ -241,7 +230,7 @@ function findStampHostForOpening(center: Point2D, stamps: readonly StampMeta[]):
   let best: StampMeta | null = null
   let bestDist = Number.POSITIVE_INFINITY
   for (const stamp of stamps) {
-    const t = projectT(stamp.wall, center)
+    const t = projectOpeningT(stamp.wall, center)
     const on = openingWorldCenter(stamp.wall, t)
     const along = alongFromA(stamp.wall, center)
     const span = ownSpan(stamp.wall)
@@ -269,7 +258,7 @@ function pieceFromAlong(wall: Wall, lo: number, hi: number, thickness?: number):
     if (along < lo - SPAN_SLACK_CM || along > hi + SPAN_SLACK_CM) continue
     openings.push({
       ...cloneOpening(wall.openings[i]),
-      t: projectT({ a, b }, centers[i]),
+      t: projectOpeningT({ a, b }, centers[i]),
     })
   }
   const midT = (t0 + t1) / 2
@@ -398,7 +387,7 @@ function snapWallToStamps(wall: Wall, stamps: readonly StampMeta[]): boolean {
   if (snapped && wall.openings.length > 0) {
     wall.openings = wall.openings.map((opening, i) => ({
       ...opening,
-      t: projectT(wall, centers[i]),
+      t: projectOpeningT(wall, centers[i]),
     }))
   }
   return snapped

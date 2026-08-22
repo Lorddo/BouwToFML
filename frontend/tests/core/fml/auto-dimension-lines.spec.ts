@@ -5,6 +5,7 @@ import {
   AUTO_DIM_CHAIN_OFFSET_CM,
   AUTO_DIM_OUTER_EXTRA_CM,
   buildAutoDimensionLines,
+  buildBlockedRoofOuterDimensionLines,
   type AutoDimensionLine,
 } from '@/core/fml/auto-dimension-lines'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
@@ -303,5 +304,27 @@ describe('buildAutoDimensionLines', () => {
     expect(west.length).toBeGreaterThan(0)
     expect(east.length).toBeGreaterThan(0)
     expect(westTicks).not.toEqual(eastTicks)
+  })
+})
+
+describe('buildBlockedRoofOuterDimensionLines', () => {
+  it('plaatst 1× H + 1× V op de buitencontour', () => {
+    const { walls } = rectanglePlan()
+    const lines = buildBlockedRoofOuterDimensionLines(walls)
+    expect(lines).toHaveLength(2)
+    const sides = classify(lines, RECT_OUTER)
+    expect(sides.N).toEqual([420])
+    expect(sides.W).toEqual([320])
+    expect(sides.E).toEqual([])
+    expect(sides.S).toEqual([])
+    const offset = AUTO_DIM_CHAIN_OFFSET_CM
+    const horizontal = lines.find((line) => !isVertical(line))
+    const vertical = lines.find((line) => isVertical(line))
+    expect(horizontal?.a.y).toBeCloseTo(RECT_OUTER.minY - offset, 4)
+    expect(vertical?.a.x).toBeCloseTo(RECT_OUTER.minX - offset, 4)
+  })
+
+  it('geen muren → geen lijnen', () => {
+    expect(buildBlockedRoofOuterDimensionLines([])).toEqual([])
   })
 })

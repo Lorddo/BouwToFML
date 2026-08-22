@@ -3,9 +3,13 @@ import { ref } from 'vue'
 import type { Wall } from '@/core/fml/types'
 import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
 import {
+  isOnDakBoundary,
+  snapDakDrawPoint,
   snapDrawPointToWallFaces,
   snapPointToWallFaces,
+  snapToNearestDakBoundary,
   wallFaceSegments,
+  DAK_FACE_SNAP_CM,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/fml-preview-wall-face-snap'
 import { useFmlPreviewMeasure } from '@/ui/composables/fml-preview/useFmlPreviewMeasure'
@@ -132,6 +136,88 @@ describe('snapPointToWallFaces', () => {
     const locked = snapDrawWallEndpoint(start, rawEnd, true)
     expect(locked.x).toBe(rawEnd.x)
     expect(locked.y).toBe(start.y)
+  })
+})
+
+describe('snapDakDrawPoint', () => {
+  it('snapt naar binnen- én buitenface, niet alleen de buitenhoek', () => {
+    const walls = [wall({ a: { x: 0, y: 20 }, b: { x: 100, y: 20 }, thickness: 20 })]
+    const outer = snapDakDrawPoint({ x: 50, y: 12 }, { walls })
+    const inner = snapDakDrawPoint({ x: 50, y: 28 }, { walls })
+    expect(outer.y).toBeCloseTo(10)
+    expect(inner.y).toBeCloseTo(30)
+  })
+
+  it('nok: snapt naar hoek (eindpunten) van andere nokken', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 })]
+    const ridges = [
+      { a: { x: 40, y: 10 }, b: { x: 40, y: 80 } },
+      { a: { x: 40, y: 80 }, b: { x: 90, y: 80 } },
+    ]
+    const snapped = snapDakDrawPoint({ x: 43, y: 78 }, { walls, ridges })
+    expect(snapped.x).toBeCloseTo(40)
+    expect(snapped.y).toBeCloseTo(80)
+  })
+
+  it('dakvlak: snapt naar hoek van een bestaand dakvlak', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 200, y: 0 }, thickness: 20 })]
+    const roofRings = [
+      [
+        { x: 20, y: 10 },
+        { x: 120, y: 10 },
+        { x: 70, y: 90 },
+      ],
+    ]
+    const snapped = snapDakDrawPoint({ x: 73, y: 87 }, { walls, roofRings })
+    expect(snapped.x).toBeCloseTo(70)
+    expect(snapped.y).toBeCloseTo(90)
+  })
+
+  it('trekt een bedekt punt naar de dichtstbijzijnde muurface', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 })]
+    const snapped = snapToNearestDakBoundary(walls, [], { x: 50, y: 80 })
+    expect(snapped?.x).toBeCloseTo(50)
+    expect(snapped?.y).toBeCloseTo(10)
+  })
+
+  it('dakvlak: krapper face-bereik dan gewone muur-snap', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 200, y: 0 }, thickness: 20 })]
+    const mid = { x: 80, y: 10 + 12 }
+    expect(snapPointToWallFaces(walls, mid, WALL_FACE_SNAP_CM).y).toBeCloseTo(10)
+    expect(snapDakDrawPoint(mid, { walls })).toEqual(mid)
+    const near = snapDakDrawPoint({ x: 80, y: 10 + 6 }, { walls })
+    expect(near.y).toBeCloseTo(10)
+    expect(DAK_FACE_SNAP_CM).toBeLessThan(WALL_FACE_SNAP_CM)
+  })
+
+  it('bedekt punt op een dakvlak-rand telt als toegestane landing', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 200, y: 0 }, thickness: 20 })]
+    const roofRings = [
+      [
+        { x: 20, y: 10 },
+        { x: 180, y: 10 },
+        { x: 100, y: 90 },
+      ],
+    ]
+    const clamped = snapToNearestDakBoundary(walls, [], { x: 100, y: 50 }, roofRings)
+    expect(clamped).not.toBeNull()
+    expect(isOnDakBoundary(walls, [], clamped!, roofRings)).toBe(true)
+  })
+
+  it('nok zonder dakvlak-ringen: geen snap naar een dakhoek', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 })]
+    const ridges = [{ a: { x: 10, y: 10 }, b: { x: 90, y: 10 } }]
+    const roofRings = [
+      [
+        { x: 200, y: 200 },
+        { x: 260, y: 200 },
+        { x: 230, y: 250 },
+      ],
+    ]
+    const snapped = snapDakDrawPoint({ x: 202, y: 198 }, { walls, ridges })
+    expect(snapped).toEqual({ x: 202, y: 198 })
+    const withRoof = snapDakDrawPoint({ x: 202, y: 198 }, { walls, ridges, roofRings })
+    expect(withRoof).toEqual({ x: 200, y: 200 })
   })
 })
 

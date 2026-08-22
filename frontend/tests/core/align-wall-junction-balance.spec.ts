@@ -208,4 +208,24 @@ describe('alignWallJunctionBalance', () => {
     ])
     expect(aligned.find((item) => item.id === 'stub')?.thickness).toBe(47)
   })
+
+  it('keeps a ~54° chamfer between offset H walls (not a near-ortho jog)', () => {
+    // Diagnose-hoek: twee T's + 20 cm schuine connector, Δy ≈ 16 cm, bands 10 vs 33.
+    const aligned = absorbJunctionBalanceStubs([
+      wall('west-h', { x: 1279.75, y: 513.59 }, { x: 1489.3, y: 513.59 }, 10),
+      wall('south-v', { x: 1489.3, y: 513.59 }, { x: 1489.3, y: 802.6 }, 10),
+      wall('chamfer', { x: 1489.3, y: 513.59 }, { x: 1501.08, y: 497.31 }, 10),
+      wall('east-h', { x: 1501.08, y: 497.31 }, { x: 1836.48, y: 497.31 }, 33),
+      wall('north-v', { x: 1501.08, y: 497.31 }, { x: 1501.08, y: 295.54 }, 10),
+    ])
+    expect(aligned.map((item) => item.id).sort()).toEqual([
+      'chamfer',
+      'east-h',
+      'north-v',
+      'south-v',
+      'west-h',
+    ])
+    expect(aligned.find((item) => item.id === 'west-h')?.a.y).toBeCloseTo(513.59, 2)
+    expect(aligned.find((item) => item.id === 'east-h')?.a.y).toBeCloseTo(497.31, 2)
+  })
 })

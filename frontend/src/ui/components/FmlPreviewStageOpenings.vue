@@ -151,6 +151,20 @@ const windowBovenlichtMarkers = computed(() =>
 
     <template v-for="door in doorGroups" :key="door.id">
       <v-line
+        v-for="(jamb, jambIdx) in door.jambPoints"
+        :key="`${door.id}-jamb-${jambIdx}`"
+        :config="{
+          points: jamb,
+          closed: true,
+          fill: openingStrokeColor(door.id, 'door'),
+          opacity: 0.35,
+          stroke: openingStrokeColor(door.id, 'door'),
+          strokeWidth: stroke,
+          listening: false,
+          perfectDrawEnabled: false,
+        }"
+      />
+      <v-line
         v-for="(leaf, leafIdx) in door.leafLines"
         :key="`${door.id}-leaf-${leafIdx}`"
         :config="{
@@ -204,6 +218,20 @@ const windowBovenlichtMarkers = computed(() =>
     </template>
 
     <template v-for="window in windows" :key="window.id">
+      <v-line
+        v-for="(frame, frameIdx) in window.framePoints ?? []"
+        :key="`${window.id}-frame-${frameIdx}`"
+        :config="{
+          points: frame,
+          closed: true,
+          fill: openingStrokeColor(window.id, 'window'),
+          opacity: 0.35,
+          stroke: openingStrokeColor(window.id, 'window'),
+          strokeWidth: stroke,
+          listening: false,
+          perfectDrawEnabled: false,
+        }"
+      />
       <v-line
         v-if="window.basePoints"
         :config="{

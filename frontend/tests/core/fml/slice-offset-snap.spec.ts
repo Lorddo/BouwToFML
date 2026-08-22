@@ -4,6 +4,7 @@ import {
   DEFAULT_SLICER_OFFSET_SNAP_CM,
   slicePlaceStripAxis,
   snapCoordAwayFromStrips,
+  snapSliceHandleAxis,
   snapSlicerPPoint,
 } from '@/core/fml/slice-offset-snap'
 
@@ -54,5 +55,10 @@ describe('slice-offset-snap (stroken)', () => {
     })
     expect(out.x).toBe(900)
     expect(out.y).toBeCloseTo(150, 5)
+  })
+
+  it('snapSliceHandleAxis lockt H/V binnen drempel', () => {
+    expect(snapSliceHandleAxis({ x: 0, y: 0 }, { x: 10, y: 40 }, 50)).toEqual({ x: 0, y: 40 })
+    expect(snapSliceHandleAxis({ x: 0, y: 0 }, { x: 80, y: 10 }, 50)).toEqual({ x: 80, y: 0 })
   })
 })

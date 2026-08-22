@@ -19,10 +19,14 @@ const drawLabelOutline = defineModel<boolean>('drawLabelOutline', { default: fal
 const drawLabelBold = defineModel<boolean>('drawLabelBold', { default: false })
 const drawLabelItalic = defineModel<boolean>('drawLabelItalic', { default: false })
 
-defineProps<{
-  activeTool: FmlToolId | null
-  roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
-}>()
+withDefaults(
+  defineProps<{
+    activeTool: FmlToolId | null
+    roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
+    dakMode?: boolean
+  }>(),
+  { dakMode: false },
+)
 
 function onRoleChange(event: Event): void {
   const raw = (event.target as HTMLSelectElement).value
@@ -47,7 +51,7 @@ function onLabelInput(event: Event): void {
 </script>
 
 <template>
-  <div v-if="activeTool === 'draw_surface'" class="fml-toolbelt__field">
+  <div v-if="activeTool === 'draw_surface' && !dakMode" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roomType') }}</span>
     <div class="fml-toolbelt__field-controls">
       <select

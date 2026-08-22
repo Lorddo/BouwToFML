@@ -1,4 +1,5 @@
 import { cloneFloorShallow } from './clone-floor-shallow'
+import { mirrorObjectLabelX, rotateObjectLabel90 } from './object-label'
 import { resolveFixtureCatalog } from './fixture-refid-catalog'
 import type {
   DrawingMeta,
@@ -62,7 +63,7 @@ function toggleMirroredBit(
 
 function mirrorOpening(op: Opening): Opening {
   return {
-    ...op,
+    ...mirrorObjectLabelX(op),
     mirrored: toggleMirroredBit(op.mirrored, 1),
   }
 }
@@ -102,11 +103,11 @@ function keepsWorldHeadingOnMirror(item: FloorItem): boolean {
 function mirrorItem(item: FloorItem, axisXCm: number): FloorItem {
   const x = 2 * axisXCm - item.x
   if (keepsWorldHeadingOnMirror(item)) {
-    return { ...item, x }
+    return { ...mirrorObjectLabelX(item), x }
   }
   const rotation = item.rotation ?? 0
   return {
-    ...item,
+    ...mirrorObjectLabelX(item),
     x,
     rotation: normalizeRotationDeg(-rotation),
     mirrored: toggleMirroredBit(item.mirrored, 0),
@@ -115,17 +116,15 @@ function mirrorItem(item: FloorItem, axisXCm: number): FloorItem {
 
 function mirrorArea(area: FloorArea, axisXCm: number): FloorArea {
   return {
-    ...area,
+    ...mirrorObjectLabelX(area),
     poly: area.poly.map((p) => mirrorPointX(p, axisXCm)),
-    name_x: area.name_x != null ? -area.name_x : area.name_x,
   }
 }
 
 function mirrorSurface(surface: FloorSurface, axisXCm: number): FloorSurface {
   return {
-    ...surface,
+    ...mirrorObjectLabelX(surface),
     poly: surface.poly.map((p) => ({ ...mirrorPointX(p, axisXCm), z: p.z })),
-    name_x: surface.name_x != null ? -surface.name_x : surface.name_x,
   }
 }
 
@@ -242,7 +241,7 @@ function rotateWall90(wall: Wall, pivot: Point2D, dir: Rotate90Dir): Wall {
     a: rotatePoint90(wall.a, pivot, dir),
     b: rotatePoint90(wall.b, pivot, dir),
     c: wall.c ? rotatePoint90(wall.c, pivot, dir) : wall.c,
-    openings: wall.openings.map((op) => ({ ...op })),
+    openings: wall.openings.map((op) => rotateObjectLabel90(op, dir)),
   }
 }
 
@@ -250,7 +249,7 @@ function rotateItem90(item: FloorItem, pivot: Point2D, dir: Rotate90Dir): FloorI
   const rotated = rotatePoint90({ x: item.x, y: item.y }, pivot, dir)
   const delta = dir === 'cw' ? 90 : -90
   return {
-    ...item,
+    ...rotateObjectLabel90(item, dir),
     x: rotated.x,
     y: rotated.y,
     rotation: normalizeRotationDeg((item.rotation ?? 0) + delta),
@@ -259,14 +258,14 @@ function rotateItem90(item: FloorItem, pivot: Point2D, dir: Rotate90Dir): FloorI
 
 function rotateArea90(area: FloorArea, pivot: Point2D, dir: Rotate90Dir): FloorArea {
   return {
-    ...area,
+    ...rotateObjectLabel90(area, dir),
     poly: area.poly.map((p) => rotatePoint90(p, pivot, dir)),
   }
 }
 
 function rotateSurface90(surface: FloorSurface, pivot: Point2D, dir: Rotate90Dir): FloorSurface {
   return {
-    ...surface,
+    ...rotateObjectLabel90(surface, dir),
     poly: surface.poly.map((p) => ({ ...rotatePoint90(p, pivot, dir), z: p.z })),
   }
 }

@@ -1,11 +1,14 @@
-import type { Opening, Point2D, Wall } from '@/core/fml/types'
+import type { Point2D, Wall } from '@/core/fml/types'
+import { moveOpeningToWall, type OpeningDragMoveResult } from '@/core/fml/opening-wall-ops'
 import {
   buildJunctions,
   COLLINEAR_DOT_THRESHOLD,
   distance,
   normalizeDir,
 } from './fml-preview-junction-core'
-import { buildOpeningId, findOpeningById, projectPointToWallT } from './fml-preview-openings'
+import { findOpeningById, projectPointToWallT } from './fml-preview-openings'
+
+export { moveOpeningToWall }
 
 /** Loodrechte leave-drempel: daarbinnen sticky op huidig segment (cm). */
 export const OPENING_DRAG_LEAVE_CM = 12
@@ -18,10 +21,7 @@ export type OpeningDragTarget = {
   t: number
 }
 
-export type OpeningDragMoveResult = {
-  walls: Wall[]
-  openingId: string
-}
+export type { OpeningDragMoveResult }
 
 function clamp01(t: number): number {
   if (!Number.isFinite(t)) return 0.5
@@ -133,56 +133,6 @@ export function resolveOpeningDragTarget(
   if (snapped) return snapped
 
   return { wallId: current.id, t: clamp01(tRaw) }
-}
-
-function cloneWallsForOpenings(walls: Wall[]): Wall[] {
-  return walls.map((wall) => ({
-    ...wall,
-    a: { ...wall.a },
-    b: { ...wall.b },
-    openings: wall.openings.map((opening) => ({ ...opening })),
-  }))
-}
-
-/**
- * Verplaats opening naar een andere muur (guid/mirrored/… behouden).
- * Zelfde muur → alleen soft-`t` update.
- */
-export function moveOpeningToWall(
-  walls: Wall[],
-  openingId: string,
-  targetWallId: string,
-  t: number,
-): OpeningDragMoveResult | null {
-  const located = findOpeningById(walls, openingId)
-  if (!located) return null
-  const targetIndex = walls.findIndex((wall) => wall.id === targetWallId)
-  if (targetIndex < 0) return null
-
-  const softT = clamp01(t)
-
-  if (located.wallId === targetWallId) {
-    if (Math.abs(located.opening.t - softT) <= 1e-9) {
-      return { walls, openingId }
-    }
-    const nextWalls = cloneWallsForOpenings(walls)
-    const wall = nextWalls[located.wallIndex]
-    wall.openings[located.openingIndex] = { ...wall.openings[located.openingIndex], t: softT }
-    return { walls: nextWalls, openingId }
-  }
-
-  const nextWalls = cloneWallsForOpenings(walls)
-  const sourceWall = nextWalls[located.wallIndex]
-  const targetWall = nextWalls[targetIndex]
-  if (!sourceWall || !targetWall) return null
-
-  const [moved] = sourceWall.openings.splice(located.openingIndex, 1)
-  if (!moved) return null
-  const placed: Opening = { ...moved, t: softT }
-  targetWall.openings.push(placed)
-  const newIndex = targetWall.openings.length - 1
-  const newId = buildOpeningId(targetWall.id, placed, newIndex)
-  return { walls: nextWalls, openingId: newId }
 }
 
 /** Combineer resolve + soft-t / transfer voor één drag-frame. */

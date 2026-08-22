@@ -1,5 +1,6 @@
 import type { Opening } from '@/core/fml/types'
 import { resolveOpeningCatalog, type DoorAssetKind } from '@/core/fml/opening-refid-catalog'
+import { insetOpeningRect, resolveOpeningFrame } from '@/core/fml/opening-display-geom'
 import {
   buildDoorSwingSymbol,
   buildMirrored,
@@ -25,6 +26,8 @@ export interface DoorDisplayGroup {
   leafLines: number[][]
   arcPoints: number[][]
   arrowPoints: number[][]
+  /** Kozijnbanden in de gap (cm, plat [x,y…]). */
+  jambLines: number[][]
 }
 
 type Point = { x: number; y: number }
@@ -72,6 +75,11 @@ export function groupDoorOpeningsOnWall(
       leafLength: swing.width,
       wallThickness: wallThicknessCm,
     })
+    const span = Math.hypot(fullSpan.end.x - fullSpan.start.x, fullSpan.end.y - fullSpan.start.y)
+    const frame = insetOpeningRect(
+      { width: span, height: 100 },
+      resolveOpeningFrame(opening, catalog),
+    ).frame
     return {
       id: buildDoorOpeningId(wallId, opening, openingIndex),
       openingIndex,
@@ -84,6 +92,7 @@ export function groupDoorOpeningsOnWall(
       leafLines: symbol.leafLines,
       arcPoints: symbol.arcPoints,
       arrowPoints: symbol.arrowPoints,
+      jambLines: buildPlanJambQuads(fullSpan.start, wallUnit, span, wallThicknessCm ?? 10, frame),
     }
   })
 }
@@ -137,4 +146,50 @@ export function resolveSwingSpanWithinOpening(params: {
   }
   const width = Math.max(1, Math.hypot(end.x - start.x, end.y - start.y))
   return { start, end, width }
+}
+
+function buildPlanJambQuads(
+  startCm: Point,
+  wallUnit: Point,
+  spanCm: number,
+  thicknessCm: number,
+  frame: { leftCm: number; rightCm: number },
+): number[][] {
+  const quads: number[][] = []
+  if (frame.leftCm > 0.2) {
+    quads.push(thicknessBandQuad(startCm, wallUnit, 0, frame.leftCm, thicknessCm))
+  }
+  if (frame.rightCm > 0.2) {
+    quads.push(thicknessBandQuad(startCm, wallUnit, spanCm - frame.rightCm, spanCm, thicknessCm))
+  }
+  return quads
+}
+
+function thicknessBandQuad(
+  startCm: Point,
+  wallUnit: Point,
+  along0: number,
+  along1: number,
+  thicknessCm: number,
+): number[] {
+  const half = Math.max(0.5, thicknessCm / 2)
+  const normal = { x: -wallUnit.y, y: wallUnit.x }
+  const a = {
+    x: startCm.x + wallUnit.x * along0,
+    y: startCm.y + wallUnit.y * along0,
+  }
+  const b = {
+    x: startCm.x + wallUnit.x * along1,
+    y: startCm.y + wallUnit.y * along1,
+  }
+  return [
+    a.x + normal.x * half,
+    a.y + normal.y * half,
+    b.x + normal.x * half,
+    b.y + normal.y * half,
+    b.x - normal.x * half,
+    b.y - normal.y * half,
+    a.x - normal.x * half,
+    a.y - normal.y * half,
+  ]
 }

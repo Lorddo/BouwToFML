@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  displayWidthFromRidgeElevationRect,
   elevationFaceXs,
+  elevationRidgeIsEndOn,
   resolveElevationWallEndFaces,
   ridgeElevationFaceXs,
 } from '@/core/fml/elevation-wall-faces'
@@ -74,5 +76,15 @@ describe('ridgeElevationFaceXs', () => {
     const xs = ridgeElevationFaceXs(200, 220, 200, 10)
     expect(xs.xOuterB - xs.xOuterA).toBeCloseTo(20 + 10 * Math.sqrt(1 - (20 / 200) ** 2), 5)
     expect(xs.xOuterB - xs.xOuterA).toBeLessThan(40)
+  })
+
+  it('herkent kopse vs lange nok', () => {
+    expect(elevationRidgeIsEndOn(200, 200, 200)).toBe(true)
+    expect(elevationRidgeIsEndOn(50, 350, 300)).toBe(false)
+  })
+
+  it('displayWidth inverse van kopse silhouet', () => {
+    const xs = ridgeElevationFaceXs(200, 200, 200, 16)
+    expect(displayWidthFromRidgeElevationRect(xs.xOuterB - xs.xOuterA, 200, 200, 200)).toBe(16)
   })
 })

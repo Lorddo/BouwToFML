@@ -6,6 +6,7 @@ import {
   clampBovenlichtHeightCm,
 } from '@/core/fml/bovenlicht'
 import {
+  isTriangleWindow,
   resolveDoorAddPreset,
   resolveDoorSubtypeFromRefid,
   resolveWindowAddPreset,
@@ -421,9 +422,16 @@ export function useFmlPreviewOpeningSelection(options: {
     editor.pushUndo()
     for (const openingId of settingsOpeningIds.value) {
       const located = editor.resolveOpening(openingId)
-      if (!located || located.opening.type !== 'door') continue
+      if (!located) continue
+      const canMirror =
+        located.opening.type === 'door' ||
+        isTriangleWindow(located.opening.type, located.opening.refid)
+      if (!canMirror) continue
       const hingeAtStart = params.hingeAtStart ?? resolveHingeAtStart(located.opening.mirrored)
-      const swingRight = params.swingRight ?? resolveSwingSign(located.opening.mirrored) > 0
+      const swingRight =
+        located.opening.type === 'door'
+          ? (params.swingRight ?? resolveSwingSign(located.opening.mirrored) > 0)
+          : false
       editor.updateOpening(openingId, { mirrored: buildMirrored(hingeAtStart, swingRight) })
     }
     syncOpeningDraftFromSelection()

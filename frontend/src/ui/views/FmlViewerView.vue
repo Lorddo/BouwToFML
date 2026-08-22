@@ -39,39 +39,34 @@ import {
   detachWalls,
   facadeMemberIdsOnFloor,
   groupIdForWall,
-  hasElevationFacadeGroups,
-  listElevationFacadeGroups,
   listFacadeGroups,
   STAMP_FACADE_GROUP_ID,
   stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
 import {
   elevationViewForGroup,
-  readElevationProjection,
   setElevationProjection,
   setElevationViewDrawing,
 } from '@/core/fml/elevation-views'
-import { elevationStackRows, setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
+import { setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
 import {
-  findRidgeDesignFloorIndex,
   overwriteRidgeDakThickness,
-  ridgeDisplayWidthCm,
+  setFloorRidgeHeights,
   setRidgeDisplayWidthCm,
 } from '@/core/fml/ridge-walls'
 import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
+import {
+  countExpandableBovenlicht,
+  countFoldableBovenlicht,
+  expandBovenlichtOnPlan,
+  foldBovenlichtOnPlan,
+  readBovenlichtPacked,
+  writeBovenlichtPacked,
+} from '@/core/fml/bovenlicht'
 import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
-import {
-  readDimensionSettings,
-  writeDimensionSettings,
-  type DimensionMode,
-} from '@/core/fml/fml-dimension-settings'
-import { defaultDimensionVis, type DimensionVis } from '@/core/fml/fml-dimension-vis'
-import {
-  filterManualDimensions,
-  readBtfSlices,
-  writeBtfSlices,
-  dimensionLiesOnAnySlice,
-} from '@/core/fml/btf-slices'
+import { useFmlViewerDak } from '@/ui/composables/fml-viewer/useFmlViewerDak'
+import { useFmlViewerDimensions } from '@/ui/composables/fml-viewer/useFmlViewerDimensions'
+import { useFmlViewerGevels } from '@/ui/composables/fml-viewer/useFmlViewerGevels'
 import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
@@ -115,6 +110,7 @@ const previewCanvasRef = ref<{
   canApplyStampOnActiveFloor?: () => boolean
   applyCornerMarkerModeFromSettings?: () => void
   resetView?: () => void
+  pushUndo?: () => void
 } | null>(null)
 
 const emit = defineEmits<{
@@ -199,95 +195,59 @@ const inspectFacadeGroups = computed(() =>
   listFacadeGroups(plan.value).filter((group) => group.id !== STAMP_FACADE_GROUP_ID),
 )
 
-const gevelsMode = ref(false)
-const dakMode = ref(false)
-const elevationGroupId = ref('')
-const elevationUnderlaySrc = ref<string | null>(null)
-const elevationUnderlayWidthPx = ref(0)
-const elevationUnderlayHeightPx = ref(0)
-const elevationUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
-const elevationFacadeGroups = computed(() => listElevationFacadeGroups(plan.value))
-const showGevelsChip = computed(() => !inspectMode.value && hasElevationFacadeGroups(plan.value))
-const showDakChip = computed(() => !inspectMode.value && findRidgeDesignFloorIndex(plan.value) >= 0)
-const elevationHeightRows = computed(() =>
-  plan.value && gevelsMode.value ? elevationStackRows(plan.value) : [],
-)
-const elevationRidgeDisplayWidthCm = computed(() =>
-  plan.value ? ridgeDisplayWidthCm(plan.value) : 10,
-)
-const elevationProjection = computed(() => readElevationProjection(plan.value))
+let selectFloorLater: (index: number) => void | Promise<void> = () => {}
+let leaveGevelsLater = (): void => {}
 
-function leaveGevelsMode(): void {
-  if (gevelsMode.value) persistElevationUnderlayDrawing()
-  cancelUnderlayScale()
-  underlayMoveMode.value = false
-  gevelsMode.value = false
-}
+const dak = useFmlViewerDak({
+  plan,
+  activeFloorIndex,
+  inspectMode,
+  selectFloor: (index) => selectFloorLater(index),
+  leaveGevelsMode: () => leaveGevelsLater(),
+})
+const gevels = useFmlViewerGevels({
+  plan,
+  inspectMode,
+  planUnderlayLayout: underlayLayout,
+  planUnderlayWidthPx: underlayWidthPx,
+  planUnderlayHeightPx: underlayHeightPx,
+  leaveDakMode: () => dak.leaveDakMode(),
+  onLeaveGevels: (wasOn) => {
+    if (wasOn) persistElevationUnderlayDrawing()
+    cancelUnderlayScale()
+    underlayMoveMode.value = false
+  },
+  onEnterGevels: () => {
+    cancelUnderlayScale()
+    underlayMoveMode.value = false
+  },
+})
 
-function leaveDakMode(): void {
-  dakMode.value = false
-}
+const { dakMode, showDakChip, dakDesignTabs, leaveDakMode, enterDakMode } = dak
+const {
+  gevelsMode,
+  elevationGroupId,
+  elevationUnderlaySrc,
+  elevationUnderlayWidthPx,
+  elevationUnderlayHeightPx,
+  elevationUnderlayLayout,
+  showGevelsChip,
+  elevationHeightRows,
+  elevationRidgeDisplayWidthCm,
+  elevationProjection,
+  activeUnderlayLayout,
+  activeUnderlayWidthPx,
+  activeUnderlayHeightPx,
+  leaveGevelsMode,
+  enterGevelsMode,
+  syncElevationUnderlayFromPlan,
+} = gevels
+leaveGevelsLater = leaveGevelsMode
 
 function onAddFloorChip(): void {
   leaveGevelsMode()
   leaveDakMode()
   void addFloor()
-}
-
-function enterDakMode(): void {
-  if (inspectMode.value) return
-  const idx = findRidgeDesignFloorIndex(plan.value)
-  if (idx < 0) return
-  leaveGevelsMode()
-  dakMode.value = true
-}
-
-function enterGevelsMode(): void {
-  if (inspectMode.value || !hasElevationFacadeGroups(plan.value)) return
-  if (gevelsMode.value) return
-  const groups = elevationFacadeGroups.value
-  if (!groups.some((group) => group.id === elevationGroupId.value)) {
-    elevationGroupId.value = groups[0]?.id ?? ''
-  }
-  leaveDakMode()
-  cancelUnderlayScale()
-  underlayMoveMode.value = false
-  gevelsMode.value = true
-  void syncElevationUnderlayFromPlan()
-}
-
-let elevationUnderlayLoadGen = 0
-
-async function syncElevationUnderlayFromPlan(): Promise<void> {
-  elevationUnderlayLoadGen += 1
-  const gen = elevationUnderlayLoadGen
-  if (!plan.value || !elevationGroupId.value) {
-    elevationUnderlaySrc.value = null
-    elevationUnderlayWidthPx.value = 0
-    elevationUnderlayHeightPx.value = 0
-    elevationUnderlayLayout.value = null
-    return
-  }
-  const drawing = elevationViewForGroup(plan.value, elevationGroupId.value)?.drawing
-  if (!drawing?.url) {
-    elevationUnderlaySrc.value = null
-    elevationUnderlayWidthPx.value = 0
-    elevationUnderlayHeightPx.value = 0
-    elevationUnderlayLayout.value = null
-    return
-  }
-  elevationUnderlaySrc.value = drawing.url
-  try {
-    const img = await loadImage(drawing.url)
-    if (gen !== elevationUnderlayLoadGen) return
-    const { width, height } = imageDimensions(img)
-    elevationUnderlayWidthPx.value = width
-    elevationUnderlayHeightPx.value = height
-    elevationUnderlayLayout.value = previewUnderlayLayoutFromDrawing(drawing, { width, height })
-  } catch {
-    if (gen !== elevationUnderlayLoadGen) return
-    elevationUnderlayLayout.value = null
-  }
 }
 
 watch(elevationGroupId, (_next, prev) => {
@@ -296,21 +256,6 @@ watch(elevationGroupId, (_next, prev) => {
   cancelUnderlayScale()
   underlayMoveMode.value = false
   void syncElevationUnderlayFromPlan()
-})
-
-watch(showGevelsChip, (show) => {
-  if (!show) leaveGevelsMode()
-})
-
-watch(showDakChip, (show) => {
-  if (!show) leaveDakMode()
-})
-
-watch(inspectMode, (on) => {
-  if (on) {
-    leaveGevelsMode()
-    leaveDakMode()
-  }
 })
 
 const inspectFacadeSelectValue = computed(() => {
@@ -362,66 +307,47 @@ const {
   removeFloorDefaultsSlot,
 } = useFmlViewerSessionDefaults({ plan, activeFloorIndex, t })
 
-const dimensionSettings = computed(() => readDimensionSettings(plan.value, activeFloorIndex.value))
+const bovenlichtPacked = computed(() => readBovenlichtPacked(plan.value))
 
-const dimensionVis = ref<DimensionVis>('none')
-
-watch(
-  () => [plan.value, activeFloorIndex.value] as const,
-  () => {
-    dimensionVis.value = defaultDimensionVis(plan.value, activeFloorIndex.value)
-  },
-  { immediate: true },
-)
-
-const canClearActiveDimensions = computed(() => {
-  const vis = dimensionVis.value
-  if (vis === 'none') return false
-  if (vis === 'autogen') return dimensionSettings.value.engineAutoDims
-  const floor = plan.value?.floors[activeFloorIndex.value]
-  if (vis === 'slicer') return readBtfSlices(floor).length > 0
-  if (vis === 'manual') {
-    return filterManualDimensions(floor?.dimensions, readBtfSlices(floor)).length > 0
-  }
-  return false
-})
-
-function patchDimensionSettings(patch: {
-  engineAutoDims?: boolean
-  dimensionMode?: DimensionMode
-  generateOuterDimension?: boolean
-}): void {
+async function onBovenlichtPackedChange(nextPacked: boolean): Promise<void> {
   if (!plan.value) return
-  plan.value = writeDimensionSettings(plan.value, patch)
-}
+  if (nextPacked === readBovenlichtPacked(plan.value)) return
 
-function clearActiveDimensionType(): void {
-  if (!plan.value) return
-  const vis = dimensionVis.value
-  if (vis === 'autogen') {
-    plan.value = writeDimensionSettings(plan.value, { engineAutoDims: false })
-    return
-  }
-  if (vis === 'slicer') {
-    plan.value = writeBtfSlices(plan.value, [], activeFloorIndex.value)
-    return
-  }
-  if (vis === 'manual') {
-    const floor = plan.value.floors[activeFloorIndex.value]
-    if (!floor) return
-    const slices = readBtfSlices(floor)
-    // Wis alleen handmatige dims (niet op P-lijn); P-lijn-bake hoort bij slicer.
-    const nextDims = (floor.dimensions ?? []).filter((d) => dimensionLiesOnAnySlice(d, slices))
-    plan.value = {
-      ...plan.value,
-      floors: plan.value.floors.map((f, i) =>
-        i === activeFloorIndex.value
-          ? { ...f, dimensions: nextDims.length > 0 ? nextDims : undefined }
-          : f,
-      ),
+  const defaultsResolver = (floorIndex: number) => {
+    const d = defaultsForFloor(floorIndex)
+    return {
+      doorDefault: d.bovenlichtDefault,
+      windowDefault: d.windowBovenlichtDefault,
+      heightCm: d.bovenlichtHeightCm,
+      gapCm: d.bovenlichtGapCm,
     }
   }
+  const count = nextPacked
+    ? countFoldableBovenlicht(plan.value)
+    : countExpandableBovenlicht(plan.value, defaultsResolver)
+  const ok = await confirmFmlChrome({
+    title: t('viewer.bovenlichtPackedTitle'),
+    message: nextPacked
+      ? t('viewer.bovenlichtPackedFold', { count })
+      : t('viewer.bovenlichtPackedExpand', { count }),
+    confirmLabel: t('common.apply'),
+    cancelLabel: t('common.cancel'),
+  })
+  if (!ok || !plan.value) return
+
+  previewCanvasRef.value?.pushUndo?.()
+  let next = plan.value
+  next = nextPacked ? foldBovenlichtOnPlan(next) : expandBovenlichtOnPlan(next, defaultsResolver)
+  plan.value = writeBovenlichtPacked(next, nextPacked)
 }
+
+const {
+  dimensionVis,
+  dimensionSettings,
+  canClearActiveDimensions,
+  patchDimensionSettings,
+  clearActiveDimensionType,
+} = useFmlViewerDimensions({ plan, activeFloorIndex })
 
 const fmlRescaleActive = ref(false)
 const fmlRescaleState = ref<HScaleState | null>(null)
@@ -781,9 +707,9 @@ async function onUnderlayFileInput(event: Event): Promise<void> {
 
 function beginUnderlayScale(): boolean {
   if (inspectMode.value || !underlayAvailable.value) return false
-  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
-  const widthPx = gevelsMode.value ? elevationUnderlayWidthPx.value : underlayWidthPx.value
-  const heightPx = gevelsMode.value ? elevationUnderlayHeightPx.value : underlayHeightPx.value
+  const layout = activeUnderlayLayout.value
+  const widthPx = activeUnderlayWidthPx.value
+  const heightPx = activeUnderlayHeightPx.value
   const handles = initImageScaleHandles(widthPx, heightPx)
   if (!layout || !handles) return false
   const cmState = fmlRescaleStateFromImageHandles(handles, layout)
@@ -810,7 +736,7 @@ function onRescaleStateUpdate(next: HScaleState): void {
 
 function confirmUnderlayScale(): boolean {
   const state = underlayScaleState.value
-  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
+  const layout = activeUnderlayLayout.value
   const current = plan.value
   if (!state || !layout || !current || !underlayScaleActive.value) return false
   const measured = measuredCmFromRescaleState(state)
@@ -823,8 +749,8 @@ function confirmUnderlayScale(): boolean {
     trueMmY: underlayScaleMmY.value,
   })
   if (!nextPpm) return false
-  const widthPx = gevelsMode.value ? elevationUnderlayWidthPx.value : underlayWidthPx.value
-  const heightPx = gevelsMode.value ? elevationUnderlayHeightPx.value : underlayHeightPx.value
+  const widthPx = activeUnderlayWidthPx.value
+  const heightPx = activeUnderlayHeightPx.value
   const url = gevelsMode.value
     ? (elevationViewForGroup(current, elevationGroupId.value)?.drawing?.url ??
       elevationUnderlaySrc.value ??
@@ -875,10 +801,6 @@ function confirmUnderlayScale(): boolean {
   }
   return true
 }
-
-const activeUnderlayLayout = computed(() =>
-  gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value,
-)
 
 const underlayScalePxX = computed(() => {
   const state = underlayScaleState.value
@@ -938,6 +860,8 @@ const {
   startNewPlan,
   onFileInput,
 } = useFmlViewerLoad({
+  // assigned after load; dak-enter uses this via selectFloorLater
+
   plan,
   warnings,
   error,
@@ -961,11 +885,17 @@ const {
   addFloorDefaultsSlot,
   removeFloorDefaultsSlot,
 })
+selectFloorLater = selectFloor
 
 function onSelectFloorChip(index: number): void {
   leaveGevelsMode()
   leaveDakMode()
   void selectFloor(index)
+}
+
+function onSelectDakDesign(floorIndex: number): void {
+  if (!dakMode.value) enterDakMode()
+  if (floorIndex !== activeFloorIndex.value) void selectFloor(floorIndex)
 }
 
 async function onGenerateRoofPlanes(): Promise<void> {
@@ -992,6 +922,11 @@ async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<v
 function onElevationNok(cm: number): void {
   if (!plan.value) return
   plan.value = overwriteRidgeDakThickness(setNokThicknessCm(plan.value, cm), cm)
+}
+
+function onElevationRidgeZ(floorIndex: number, cm: number): void {
+  if (!plan.value) return
+  plan.value = setFloorRidgeHeights(plan.value, floorIndex, cm)
 }
 
 function onElevationRidgeDisplayWidth(cm: number): void {
@@ -1071,7 +1006,7 @@ function applyViewerProjectOrient(op: 'flipX'): void {
 }
 
 function applyViewerUnderlayOrient(): void {
-  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
+  const layout = activeUnderlayLayout.value
   if (!layout) return
   const next = cloneUnderlayOriginLayout(layout)
   next.flipX = !next.flipX
@@ -1081,7 +1016,7 @@ function applyViewerUnderlayOrient(): void {
 }
 
 function setUnderlayRotationDeg(raw: number): void {
-  const layout = gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value
+  const layout = activeUnderlayLayout.value
   if (!layout || !Number.isFinite(raw)) return
   const next = cloneUnderlayOriginLayout(layout)
   let rotationDeg = raw
@@ -1093,9 +1028,7 @@ function setUnderlayRotationDeg(raw: number): void {
   else underlayLayout.value = next
 }
 
-const underlayRotationDeg = computed(
-  () => (gevelsMode.value ? elevationUnderlayLayout.value : underlayLayout.value)?.rotationDeg ?? 0,
-)
+const underlayRotationDeg = computed(() => activeUnderlayLayout.value?.rotationDeg ?? 0)
 
 function downloadCurrentFml(): void {
   flushPreviewFieldCommits()
@@ -1453,15 +1386,12 @@ defineExpose({
                   type="button"
                   class="sidebar-icon-btn"
                   :class="{
-                    'is-on':
-                      (gevelsMode ? elevationUnderlayLayout : underlayLayout)?.flipX === true,
+                    'is-on': activeUnderlayLayout?.flipX === true,
                   }"
                   :disabled="underlayOpacity <= 0"
                   :title="t('result.underlayMirrorVerticalHint')"
                   :aria-label="t('result.underlayMirrorVertical')"
-                  :aria-pressed="
-                    (gevelsMode ? elevationUnderlayLayout : underlayLayout)?.flipX === true
-                  "
+                  :aria-pressed="activeUnderlayLayout?.flipX === true"
                   @click="applyViewerUnderlayOrient()"
                 >
                   <ToolbeltIcon name="mirror_underlay" />
@@ -1492,6 +1422,7 @@ defineExpose({
               :projection="elevationProjection"
               @nok="onElevationNok"
               @story="onElevationStoryHeight"
+              @ridge="onElevationRidgeZ"
               @slab="onElevationSlab"
               @ridge-display-width="onElevationRidgeDisplayWidth"
               @projection="onElevationProjection"
@@ -1591,13 +1522,15 @@ defineExpose({
             </div>
             <FmlViewerDefaultsFields
               :defaults="activeFloorDefaults"
+              :bovenlicht-packed="bovenlichtPacked"
               :hint="t('viewer.defaultsHintFloor')"
               @number="onFloorDefaultNumber"
               @bool="onFloorDefaultBool"
+              @packed="onBovenlichtPackedChange"
             />
           </details>
 
-          <details v-if="!inspectMode && !gevelsMode" class="fml-fold defaults-fold">
+          <details v-if="!inspectMode && !gevelsMode && !dakMode" class="fml-fold defaults-fold">
             <summary>{{ t('viewer.dimensionsFold') }}</summary>
             <FmlViewerDimensionFields
               :settings="dimensionSettings"
@@ -1778,8 +1711,17 @@ defineExpose({
             role="tablist"
             :aria-label="t('viewer.dakTab')"
           >
-            <button type="button" class="dak-group-chip active" disabled>
-              {{ t('viewer.dakTab') }}
+            <button
+              v-for="tab in dakDesignTabs"
+              :key="`dak-${tab.floorIndex}`"
+              type="button"
+              role="tab"
+              class="dak-group-chip"
+              :class="{ active: tab.floorIndex === activeFloorIndex }"
+              :aria-selected="tab.floorIndex === activeFloorIndex"
+              @click="onSelectDakDesign(tab.floorIndex)"
+            >
+              {{ tab.name }}
             </button>
           </div>
           <button
@@ -1813,6 +1755,22 @@ defineExpose({
             :default-door-height-cm="activeFloorDefaults.doorHeightCm"
             :default-window-height-cm="activeFloorDefaults.windowHeightCm"
             :default-window-sill-z-cm="activeFloorDefaults.windowSillZCm"
+            :bovenlicht-default="activeFloorDefaults.bovenlichtDefault"
+            :window-bovenlicht-default="activeFloorDefaults.windowBovenlichtDefault"
+            :bovenlicht-height-cm="activeFloorDefaults.bovenlichtHeightCm"
+            :bovenlicht-gap-cm="activeFloorDefaults.bovenlichtGapCm"
+            :bovenlicht-packed="bovenlichtPacked"
+            :resolve-bovenlicht-defaults="
+              (floorIndex) => {
+                const d = defaultsForFloor(floorIndex)
+                return {
+                  doorDefault: d.bovenlichtDefault,
+                  windowDefault: d.windowBovenlichtDefault,
+                  heightCm: d.bovenlichtHeightCm,
+                  gapCm: d.bovenlichtGapCm,
+                }
+              }
+            "
             @plan-update="onPlanUpdate"
             @update:group-id="elevationGroupId = $event"
             @update:underlay-move-mode="underlayMoveMode = $event"
@@ -1871,6 +1829,7 @@ defineExpose({
             :window-bovenlicht-default="activeFloorDefaults.windowBovenlichtDefault"
             :bovenlicht-height-cm="activeFloorDefaults.bovenlichtHeightCm"
             :bovenlicht-gap-cm="activeFloorDefaults.bovenlichtGapCm"
+            :bovenlicht-packed="bovenlichtPacked"
             :default-door-height-cm="activeFloorDefaults.doorHeightCm"
             :default-window-height-cm="activeFloorDefaults.windowHeightCm"
             :default-window-sill-z-cm="activeFloorDefaults.windowSillZCm"
@@ -2199,7 +2158,6 @@ defineExpose({
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  pointer-events: none;
 }
 
 .dak-group-chip {
@@ -2208,6 +2166,7 @@ defineExpose({
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 12px;
+  cursor: pointer;
 }
 
 .dak-group-chip.active {

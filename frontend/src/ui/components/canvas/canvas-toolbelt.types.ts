@@ -8,6 +8,8 @@ export type ToolbeltIconName =
   | 'rect'
   | 'unknown'
   | 'wall'
+  | 'ridge'
+  | 'roof'
   | 'door'
   | 'window'
   | 'room'

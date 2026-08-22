@@ -135,20 +135,14 @@ describe('generate-roof-planes', () => {
     expect(surfaces.length).toBeGreaterThanOrEqual(4)
   })
 
-  it('zelfde omtrek erboven + nok → dak naar nok, niet naar volgende vloer', () => {
+  it('zelfde omtrek erboven → geen dak op de lagere floor', () => {
     const plan = housePlan({ ridge: { x0: 0, x1: 800, y: 400, z: 450 } })
     const upper = createBlankFloor({ name: 'Verdieping 1', level: 1, wallHeightCm: H })
     upper.walls = rectWalls('u', 0, 0, 800, 800)
     plan.floors.push(upper)
-    const surfaces = generateRoofPlanesForFloor(plan, 0)
-    expect(surfaces).toHaveLength(2)
-    expect(vertexCount(surfaces)).toEqual([4, 4])
-    expect(surfaces.every((surface) => surface.poly.some((p) => Math.abs(p.y - 400) < 1))).toBe(
-      true,
-    )
+    expect(generateRoofPlanesForFloor(plan, 0)).toEqual([])
     const applied = applyGeneratedRoofPlanesForPlan(plan)
-    expect(listRidgeSurfacesOnFloor(applied.floors[0])).toHaveLength(2)
-    expect(listRidgeSurfacesOnFloor(applied.floors[1])).toHaveLength(0)
+    expect(listRidgeSurfacesOnFloor(applied.floors[0])).toHaveLength(0)
   })
 
   it('nok alleen op bovenverdieping → geen vlakken op lagere floors', () => {
@@ -171,6 +165,27 @@ describe('generate-roof-planes', () => {
     const applied = applyGeneratedRoofPlanesForPlan(plan)
     expect(listRidgeSurfacesOnFloor(applied.floors[0])).toHaveLength(0)
     expect(listRidgeSurfacesOnFloor(applied.floors[1]).length).toBeGreaterThan(0)
+  })
+
+  it('aanbouw-nok: alleen uitslag buiten de bovenste floor', () => {
+    const plan = housePlan({ ridge: { x0: 0, x1: 800, y: 900, z: 400 } })
+    plan.floors[0].walls = rectWalls('g', 0, 0, 800, 1000)
+    const group = listElevationFacadeGroups(plan)[0]
+    if (group) {
+      assignWallsToGroup(
+        plan,
+        group.id,
+        plan.floors[0].walls.map((item) => item.id),
+      )
+    }
+    const upper = createBlankFloor({ name: '2e', level: 1, wallHeightCm: H })
+    upper.walls = rectWalls('u', 0, 0, 800, 700)
+    plan.floors.push(upper)
+    const surfaces = generateRoofPlanesForFloor(plan, 0)
+    expect(surfaces.length).toBeGreaterThan(0)
+    expect(surfaces.every((surface) => surface.poly.every((point) => (point.y ?? 0) >= 690))).toBe(
+      true,
+    )
   })
 
   it('kleinere floor erboven → lean-to tot die omtrek', () => {

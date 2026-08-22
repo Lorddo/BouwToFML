@@ -3,7 +3,7 @@
  * Dakvlakken liggen/snappen hier — niet op de hartlijn.
  * Hoek = snijpunt van twee buitenfaces (niet face-eind + hartlijn).
  */
-import { wallFaces, type WallFaceSegment } from './fml-wall-geom'
+import { wallEndpointKey, wallFaces, type WallFaceSegment } from './fml-wall-geom'
 import type { Floor, FloorPlan, Point2D, Wall } from './types'
 
 export const OUTER_FACE_SNAP_CM = 15
@@ -129,6 +129,50 @@ function lineIntersection(
 export function listThickPlanWalls(plan: FloorPlan | null | undefined): Wall[] {
   if (!plan) return []
   return plan.floors.flatMap((floor) => floor.walls.filter((wall) => wall.thickness > 1e-6))
+}
+
+/**
+ * Buitenhoeken van een floor: snijpunt van twee buitenfaces bij een knoop.
+ * Face-einden alleen liggen op de hartlijn-hoek en geven een schuin knikje.
+ */
+export function listFloorOuterFaceCorners(floor: Floor | null | undefined): Point2D[] {
+  if (!floor) return []
+  const walls = floor.walls.filter((wall) => wall.thickness > 1e-6)
+  if (walls.length < 2) return []
+  const centroid = floorFootprintCentroid(floor)
+  const atJunction = new Map<string, Wall[]>()
+  for (const wall of walls) {
+    for (const end of [wall.a, wall.b]) {
+      const key = wallEndpointKey(end)
+      const group = atJunction.get(key)
+      if (group) group.push(wall)
+      else atJunction.set(key, [wall])
+    }
+  }
+  const corners: Point2D[] = []
+  const seen = new Set<string>()
+  for (const group of atJunction.values()) {
+    if (group.length < 2) continue
+    for (let i = 0; i < group.length; i += 1) {
+      for (let j = i + 1; j < group.length; j += 1) {
+        const a = group[i]
+        const b = group[j]
+        const fa = wallOuterFace(a, centroid)
+        const fb = wallOuterFace(b, centroid)
+        const hit = lineIntersection(fa.a, fa.b, fb.a, fb.b)
+        if (!hit) continue
+        const padA = a.thickness
+        const padB = b.thickness
+        if (!tInPaddedRange(hit.tA, padA, dist(fa.a, fa.b))) continue
+        if (!tInPaddedRange(hit.tB, padB, dist(fb.a, fb.b))) continue
+        const key = wallEndpointKey(hit.point)
+        if (seen.has(key)) continue
+        seen.add(key)
+        corners.push(hit.point)
+      }
+    }
+  }
+  return corners
 }
 
 /**

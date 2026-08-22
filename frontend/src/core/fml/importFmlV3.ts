@@ -1,8 +1,7 @@
-import { foldBovenlichtOnWall } from './bovenlicht'
-import { syncRidgeWallGuidsFromDesigns } from './ridge-walls'
+import { foldBovenlichtOnPlan, readBovenlichtPacked } from './bovenlicht'
+import { ensureRidgeDesignsOnPlan, syncRidgeWallGuidsFromDesigns } from './ridge-walls'
 import { syncRoofPlaneGuidsFromDesigns } from './roof-planes'
 import { stripBakedSliceDimensionsFromPlan } from './btf-slices'
-import { wallLengthCm } from './fml-wall-geom'
 import type {
   DrawingMeta,
   Floor,
@@ -28,6 +27,7 @@ import type {
 } from './types'
 import { WINDOW_REFIDS } from './types'
 import { UNLABELED_AREA_COLOR, isValidRoomTagHex, resolveRoomType } from './roomtype-catalog'
+import { OBJECT_LABEL_KEYS, parseObjectLabel } from './object-label'
 
 interface RawPoint {
   x?: number
@@ -192,6 +192,7 @@ const OPENING_KNOWN = new Set([
   'z_height',
   'guid',
   'materials',
+  ...OBJECT_LABEL_KEYS,
 ])
 
 const WALL_KNOWN = new Set(['guid', 'a', 'b', 'c', 'thickness', 'balance', 'openings'])
@@ -207,7 +208,7 @@ const ITEM_KNOWN = new Set([
   'rotation',
   'mirrored',
   'guid',
-  'name',
+  ...OBJECT_LABEL_KEYS,
 ])
 
 const AREA_KNOWN = new Set([
@@ -320,6 +321,7 @@ function parseOpening(raw: RawOpening): Opening {
     z_height: raw.z_height,
     guid: raw.guid,
     materials: raw.materials,
+    ...parseObjectLabel(raw),
     extras: pickExtras(raw, OPENING_KNOWN),
   }
 }
@@ -335,10 +337,8 @@ function parseWall(raw: RawWall, warnings: ImportWarning[], floorName: string): 
 
   const a = point(raw.a)
   const b = point(raw.b)
-  const openings = foldBovenlichtOnWall(
-    (raw.openings ?? []).map(parseOpening),
-    wallLengthCm({ a, b }),
-  )
+  // Fold gebeurt na project-settings (bovenlichtPacked); hier raw openings bewaren.
+  const openings = (raw.openings ?? []).map(parseOpening)
   return {
     id: raw.guid ?? `${raw.a?.x ?? 0},${raw.a?.y ?? 0}-${raw.b?.x ?? 0},${raw.b?.y ?? 0}`,
     a,
@@ -364,7 +364,7 @@ function parseItem(raw: RawItem): FloorItem {
     rotation: raw.rotation,
     mirrored: raw.mirrored,
     guid: raw.guid,
-    name: raw.name,
+    ...parseObjectLabel(raw),
     extras: pickExtras(raw, ITEM_KNOWN),
   }
 }
@@ -663,14 +663,19 @@ export function importFmlV3(json: string | object): ImportResult {
   const warnings: ImportWarning[] = []
   const raw: RawFmlV3 = typeof json === 'string' ? JSON.parse(json) : json
 
-  const plan: FloorPlan = {
+  const planBase: FloorPlan = {
     name: raw.name ?? 'Onbekend',
     floors: (raw.floors ?? []).map((f) => parseFloor(f, warnings)),
     source: parsePlanSource(raw),
   }
 
+  let plan = ensureRidgeDesignsOnPlan(planBase)
   syncRidgeWallGuidsFromDesigns(plan)
   syncRoofPlaneGuidsFromDesigns(plan)
+  // Packed (default): fold `-bovenlicht` siblings naar flags. Unpacked: losse ramen behouden.
+  if (readBovenlichtPacked(plan)) {
+    plan = foldBovenlichtOnPlan(plan)
+  }
   // Slicer-bake op P-lijn opnieuw genereren; strip uit dimensions zodat live/export niet dubbelt.
   return { plan: stripBakedSliceDimensionsFromPlan(plan), warnings }
 }

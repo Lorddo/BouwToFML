@@ -9,23 +9,20 @@
  * dat een rechte muur schever wordt). Alleen snappen als de keten één as heeft.
  */
 import type { Point2D } from './extraction-to-plan-geom'
-import { wallLengthCm } from './fml-wall-geom'
-import type { Opening, Wall } from './types'
+import {
+  openingWorldCenter,
+  reprojectWallOpenings,
+  wallEndpointKey,
+  wallLengthCm,
+} from './fml-wall-geom'
+import type { Wall } from './types'
 
 /** Near-ortho max afwijking t.o.v. H/V — strak onder OBLIQUE_DEADZONE_DEG (2,5°). */
 export const NEAR_ORTHO_MAX_DEG = 1.5
 
-const ENDPOINT_KEY_DECIMALS = 4
 const AXIS_EPS_CM = 1e-6
 
 type AxisKind = 'H' | 'V'
-
-function endpointKey(point: Point2D): string {
-  const factor = 10 ** ENDPOINT_KEY_DECIMALS
-  const rx = Math.round(point.x * factor) / factor
-  const ry = Math.round(point.y * factor) / factor
-  return `${rx}:${ry}`
-}
 
 function cloneWall(wall: Wall): Wall {
   return {
@@ -34,29 +31,6 @@ function cloneWall(wall: Wall): Wall {
     b: { ...wall.b },
     openings: wall.openings.map((opening) => ({ ...opening })),
   }
-}
-
-function openingWorldCenter(wall: Wall, t: number): Point2D {
-  return {
-    x: wall.a.x + t * (wall.b.x - wall.a.x),
-    y: wall.a.y + t * (wall.b.y - wall.a.y),
-  }
-}
-
-function projectT(wall: Wall, point: Point2D): number {
-  const dx = wall.b.x - wall.a.x
-  const dy = wall.b.y - wall.a.y
-  const len2 = dx * dx + dy * dy
-  if (len2 <= 1e-12) return 0
-  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
-  return Math.max(0, Math.min(1, t))
-}
-
-function reprojectOpenings(wall: Wall, worldCenters: Point2D[]): Opening[] {
-  return wall.openings.map((opening, index) => ({
-    ...opening,
-    t: projectT(wall, worldCenters[index] ?? openingWorldCenter(wall, opening.t)),
-  }))
 }
 
 /** Kleinste hoek tot H (0°/180°) of V (90°). */
@@ -111,7 +85,7 @@ function uniqueFrozenValues(
   for (const idx of memberIndices) {
     const wall = walls[idx]
     for (const point of [wall.a, wall.b]) {
-      if (!frozenKeys.has(endpointKey(point))) continue
+      if (!frozenKeys.has(wallEndpointKey(point))) continue
       const value = frozenAxisValue(point, axis)
       if (!values.some((existing) => Math.abs(existing - value) <= AXIS_EPS_CM)) {
         values.push(value)
@@ -147,7 +121,7 @@ export function orthogonalizeNearAxisWalls(walls: Wall[]): Wall[] {
   for (let index = 0; index < work.length; index += 1) {
     const wall = work[index]
     for (const point of [wall.a, wall.b]) {
-      const key = endpointKey(point)
+      const key = wallEndpointKey(point)
       const bucket = wallsAtPoint.get(key) ?? []
       bucket.push(index)
       wallsAtPoint.set(key, bucket)
@@ -195,8 +169,8 @@ export function orthogonalizeNearAxisWalls(walls: Wall[]): Wall[] {
       // een vrij eind dat niet met een andere H/V-muur uit deze component deelt.
       for (const idx of members) {
         const wall = work[idx]
-        const keyA = endpointKey(wall.a)
-        const keyB = endpointKey(wall.b)
+        const keyA = wallEndpointKey(wall.a)
+        const keyB = wallEndpointKey(wall.b)
         const aFrozen = frozenKeys.has(keyA)
         const bFrozen = frozenKeys.has(keyB)
         if (aFrozen === bFrozen) continue // beide of geen
@@ -216,8 +190,8 @@ export function orthogonalizeNearAxisWalls(walls: Wall[]): Wall[] {
     if (target == null) continue
     for (const idx of members) {
       const wall = work[idx]
-      const aFrozen = frozenKeys.has(endpointKey(wall.a))
-      const bFrozen = frozenKeys.has(endpointKey(wall.b))
+      const aFrozen = frozenKeys.has(wallEndpointKey(wall.a))
+      const bFrozen = frozenKeys.has(wallEndpointKey(wall.b))
       if (aFrozen && bFrozen) continue
       wallTarget.set(idx, target)
     }
@@ -229,7 +203,11 @@ export function orthogonalizeNearAxisWalls(walls: Wall[]): Wall[] {
   for (const [key, indices] of wallsAtPoint) {
     const sample = work[indices[0]]
     const samplePoint =
-      endpointKey(sample.a) === key ? sample.a : endpointKey(sample.b) === key ? sample.b : sample.a
+      wallEndpointKey(sample.a) === key
+        ? sample.a
+        : wallEndpointKey(sample.b) === key
+          ? sample.b
+          : sample.a
 
     if (frozenKeys.has(key)) {
       nodePose.set(key, { x: samplePoint.x, y: samplePoint.y })
@@ -271,8 +249,8 @@ export function orthogonalizeNearAxisWalls(walls: Wall[]): Wall[] {
     if (axis == null || target == null) continue
 
     const wall = work[i]
-    const keyA = endpointKey(wall.a)
-    const keyB = endpointKey(wall.b)
+    const keyA = wallEndpointKey(wall.a)
+    const keyB = wallEndpointKey(wall.b)
     if (frozenKeys.has(keyA) && frozenKeys.has(keyB)) continue
 
     const centers = wall.openings.map((opening) => openingWorldCenter(wall, opening.t))
@@ -292,7 +270,7 @@ export function orthogonalizeNearAxisWalls(walls: Wall[]): Wall[] {
       if (!frozenKeys.has(keyB)) wall.b = { x, y: wall.b.y }
     }
 
-    wall.openings = reprojectOpenings(wall, centers)
+    wall.openings = reprojectWallOpenings(wall, centers)
   }
 
   return work

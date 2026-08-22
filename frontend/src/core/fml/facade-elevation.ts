@@ -12,6 +12,7 @@ import { listElevationFacadeGroups, wallGuidsInGroup } from './facade-groups'
 import { floorSlabWorldRange, floorWallBaseWorldZ, readFloorStack } from './floor-stack'
 import {
   elevationFaceXs,
+  elevationRidgeIsEndOn,
   resolveElevationWallEndFaces,
   ridgeElevationFaceXs,
 } from './elevation-wall-faces'
@@ -20,16 +21,49 @@ import {
   listRidgeWallsOnFloor,
   ridgeAwareNokWorldRange,
   ridgeDisplayWidthCm,
+  ridgeEndpointZCm,
 } from './ridge-walls'
+import {
+  BOVENLICHT_GAP_CM,
+  BOVENLICHT_HEIGHT_CM,
+  buildBovenlichtOpening,
+  readBovenlichtPacked,
+  resolveBovenlichtGapCm,
+  resolveBovenlichtHeightCm,
+  resolveDoorBovenlicht,
+  resolveWindowBovenlicht,
+} from './bovenlicht'
 import { ROOF_TOUCH_SLACK_CM, listRidgeSurfacesOnFloor } from './roof-planes'
-import type { Floor, FloorPlan, FloorSurface, Opening, OpeningType, Point2D, Wall } from './types'
+import { buildLocalOpeningId, encodePlanOpeningId } from './opening-ids'
+import {
+  CONCEPT_WINDOW_REFID,
+  type Floor,
+  type FloorPlan,
+  type FloorSurface,
+  type FmlExtras,
+  type Opening,
+  type OpeningType,
+  type Point2D,
+  type Wall,
+} from './types'
 import {
   parseEndpoint3D,
+  wallElevationAtT,
   wallEndpointHeightCm,
   type Endpoint3D,
   type WallEnd,
 } from './wall-endpoint-height'
 import { planFootprintCentroid, wallInnerFace, wallOuterFace } from './wall-outer-face'
+
+/** Per-floor defaults voor effectieve bovenlicht-flag in het aanzicht. */
+export type ElevationBovenlichtDefaults = {
+  doorDefault: boolean
+  windowDefault: boolean
+  heightCm: number
+  gapCm: number
+}
+
+export type ElevationBovenlichtResolver = (floorIndex: number) => ElevationBovenlichtDefaults
 
 /** Hoek t.o.v. loodrecht: kleiner → return-wand, weglaten. */
 export const ELEVATION_RETURN_MAX_DOT = Math.cos((65 * Math.PI) / 180)
@@ -47,6 +81,8 @@ export type ElevationWallRect = ElevationRect & {
   xa: number
   xb: number
   ridge?: boolean
+  /** Kopse kant: eindvlak i.p.v. lange balk — sleepbaar zoals een opening. */
+  endOn?: boolean
   /** Eindpunt A/B in aanzicht-cm (Y = −worldZ); X = buitenkant, top-Y volgt hartlijn `az`/`bz`. */
   aTop: Point2D
   aBottom: Point2D
@@ -57,6 +93,8 @@ export type ElevationWallRect = ElevationRect & {
   innerABottom: Point2D
   innerBTop: Point2D
   innerBBottom: Point2D
+  /** Diepte t.o.v. gebouw-centroid langs de kijkrichting; groter = dichter bij de kijker. */
+  depthCm: number
 }
 
 export type ElevationOpeningRect = ElevationRect & {
@@ -65,6 +103,15 @@ export type ElevationOpeningRect = ElevationRect & {
   wallId: string
   floorIndex: number
   type: OpeningType
+  refid: string
+  mirrored?: [number, number]
+  /** FML-breedte (cm), ongeprojecteerd — kozijn-X schalen met (x1−x0)/widthCm. */
+  widthCm: number
+  extras?: FmlExtras
+  /** Muur-a ligt links in het aanzicht (`xa <= xb`); scharnier/kruk-X. */
+  startOnLeft?: boolean
+  /** Zelfde diepte als de host-muur; groter = vóór. */
+  depthCm: number
 }
 
 export type ElevationBand = ElevationRect & {
@@ -110,6 +157,8 @@ export type ElevationJunction = {
   yBot: number
   heightCm: number
   refs: Array<{ wallId: string; end: WallEnd }>
+  /** Nok-uiteinde: `heightCm` = onderkant (`az`/`bz`.z), niet muurtop. */
+  ridge?: boolean
 }
 
 export type FacadeElevation = {
@@ -118,6 +167,8 @@ export type FacadeElevation = {
   origin: Point2D
   walls: ElevationWallRect[]
   openings: ElevationOpeningRect[]
+  /** Afgeleide bovenlichten (zelfde openingId als ouder). */
+  transoms: ElevationOpeningRect[]
   bands: ElevationBand[]
   roofPlanes: ElevationRoofPlane[]
   junctions: ElevationJunction[]
@@ -145,6 +196,41 @@ function projectOnAxis(point: Point2D, origin: Point2D, axis: Point2D): number {
   return (point.x - origin.x) * axis.x + (point.y - origin.y) * axis.y
 }
 
+function wallPlanMid(wall: Pick<Wall, 'a' | 'b'>): Point2D {
+  return { x: (wall.a.x + wall.b.x) / 2, y: (wall.a.y + wall.b.y) / 2 }
+}
+
+/**
+ * Kijkrichting loodrecht op de gevel-as, naar buiten (weg van de centroid).
+ * Parallelle gevels in één groep: serre verder naar buiten = grotere diepte = vóór.
+ */
+export function elevationOutwardPerp(
+  axis: Point2D,
+  centroid: Point2D,
+  mids: readonly Point2D[],
+): Point2D {
+  const perp = { x: -axis.y, y: axis.x }
+  let sum = 0
+  for (const mid of mids) {
+    sum += (mid.x - centroid.x) * perp.x + (mid.y - centroid.y) * perp.y
+  }
+  return sum < -1e-6 ? { x: -perp.x, y: -perp.y } : perp
+}
+
+export function elevationDepthCm(mid: Point2D, centroid: Point2D, outward: Point2D): number {
+  return (mid.x - centroid.x) * outward.x + (mid.y - centroid.y) * outward.y
+}
+
+export function compareElevationPainter(
+  a: { depthCm: number; floorIndex: number; wallId: string },
+  b: { depthCm: number; floorIndex: number; wallId: string },
+): number {
+  return a.depthCm - b.depthCm || a.floorIndex - b.floorIndex || a.wallId.localeCompare(b.wallId)
+}
+
+/** Muren/openingen binnen deze diepte horen bij hetzelfde gevelvlak (gesplitste muur). */
+export const ELEVATION_SAME_PLANE_CM = 8
+
 export function elevationRoofFillColor(groupId: string, groupIndex = -1): string {
   const slot =
     groupIndex >= 0
@@ -155,15 +241,6 @@ export function elevationRoofFillColor(groupId: string, groupIndex = -1): string
 
 function hypot2(ax: number, ay: number, bx: number, by: number): number {
   return Math.hypot(bx - ax, by - ay)
-}
-
-function pointOnSeg(p: Point2D, a: Point2D, b: Point2D): { dist: number; t: number } {
-  const dx = b.x - a.x
-  const dy = b.y - a.y
-  const lenSq = dx * dx + dy * dy
-  if (lenSq < 1e-9) return { dist: hypot2(p.x, p.y, a.x, a.y), t: 0 }
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq))
-  return { dist: hypot2(p.x, p.y, a.x + dx * t, a.y + dy * t), t }
 }
 
 function distPointToInfiniteLine(point: Point2D, a: Point2D, b: Point2D): number {
@@ -343,10 +420,22 @@ function openingSillCm(opening: Opening): number {
   return opening.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0
 }
 
-export function elevationOpeningId(wallId: string, opening: Opening, openingIndex: number): string {
-  return opening.type === 'window'
-    ? `${wallId}-window-${opening.guid ?? openingIndex}`
-    : `${wallId}-door-${opening.guid ?? openingIndex}`
+export function localElevationOpeningId(
+  wallId: string,
+  opening: Opening,
+  openingIndex: number,
+): string {
+  return buildLocalOpeningId(wallId, opening, openingIndex)
+}
+
+/** Uniek over floors: zelfde muur-id + guid komt voor bij gestapelde gevels. */
+export function elevationOpeningId(
+  wallId: string,
+  opening: Opening,
+  openingIndex: number,
+  floorIndex: number,
+): string {
+  return encodePlanOpeningId(floorIndex, localElevationOpeningId(wallId, opening, openingIndex))
 }
 
 function wallEndpoints(wall: Wall, floorHeightCm: number): { az: Endpoint3D; bz: Endpoint3D } {
@@ -418,7 +507,11 @@ function unionBounds(rects: ElevationRect[]): ElevationRect {
   return { x0, y0, x1: Math.max(x1, x0 + 1), y1: Math.max(y1, y0 + 1) }
 }
 
-export function projectFacadeElevation(plan: FloorPlan, groupId: string): FacadeElevation | null {
+export function projectFacadeElevation(
+  plan: FloorPlan,
+  groupId: string,
+  bovenlichtDefaults?: ElevationBovenlichtResolver,
+): FacadeElevation | null {
   const group = listElevationFacadeGroups(plan).find((entry) => entry.id === groupId)
   if (!group) return null
   const members = collectGroupWalls(plan, groupId)
@@ -433,6 +526,7 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
       origin: { x: 0, y: 0 },
       walls: [],
       openings: [],
+      transoms: [],
       bands: [],
       roofPlanes: [],
       junctions: [],
@@ -443,9 +537,26 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
   const elevAxis = axis
   /** X = p · axis zodat nulpunt (0,0) op X=0 ligt. */
   const lineOrigin: Point2D = { x: 0, y: 0 }
+  const centroid = planFootprintCentroid(plan)
+  const outward = elevationOutwardPerp(
+    elevAxis,
+    centroid,
+    members.map((item) => wallPlanMid(item.wall)),
+  )
 
   const walls: ElevationWallRect[] = []
   const openings: ElevationOpeningRect[] = []
+  const transoms: ElevationOpeningRect[] = []
+
+  function resolveFloorBovenlicht(floorIndex: number): ElevationBovenlichtDefaults {
+    if (bovenlichtDefaults) return bovenlichtDefaults(floorIndex)
+    return {
+      doorDefault: false,
+      windowDefault: false,
+      heightCm: BOVENLICHT_HEIGHT_CM,
+      gapCm: BOVENLICHT_GAP_CM,
+    }
+  }
 
   function pushWallRect(
     wall: Wall,
@@ -477,9 +588,11 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
     walls.push({
       wallId: wall.id,
       floorIndex,
+      depthCm: elevationDepthCm(wallPlanMid(wall), centroid, outward),
       xa,
       xb,
       ridge,
+      endOn: ridge ? elevationRidgeIsEndOn(xa, xb, wallLen(wall)) : undefined,
       aTop,
       aBottom,
       bTop,
@@ -515,16 +628,64 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
       const z0 = base + sill
       const z1 = z0 + height
       const guid = opening.guid?.trim() || `${wall.id}:${openingIndex}`
+      const openingId = elevationOpeningId(wall.id, opening, openingIndex, floorIndex)
+      const x0 = xCenter - projWidth / 2
+      const x1 = xCenter + projWidth / 2
+      const startOnLeft = xa <= xb
+      const depthCm = elevationDepthCm(wallPlanMid(wall), centroid, outward)
       openings.push({
-        openingId: elevationOpeningId(wall.id, opening, openingIndex),
+        openingId,
         openingGuid: guid,
         wallId: wall.id,
         floorIndex,
         type: opening.type,
-        x0: xCenter - projWidth / 2,
-        x1: xCenter + projWidth / 2,
+        refid: opening.refid,
+        mirrored: opening.mirrored,
+        widthCm: width,
+        extras: opening.extras,
+        startOnLeft,
+        depthCm,
+        x0,
+        x1,
         y0: elevY(z1),
         y1: elevY(z0),
+      })
+
+      const floorDefaults = resolveFloorBovenlicht(floorIndex)
+      const on =
+        readBovenlichtPacked(plan) &&
+        (opening.type === 'door'
+          ? resolveDoorBovenlicht(opening, floorDefaults.doorDefault)
+          : opening.type === 'window'
+            ? resolveWindowBovenlicht(opening, floorDefaults.windowDefault)
+            : false)
+      if (!on) return
+      const wallTopCm = wallElevationAtT(wall, t, floor.height).h
+      const transom = buildBovenlichtOpening(opening, {
+        floorHeightCm: wallTopCm,
+        sourceGuid: opening.guid,
+        heightCm: resolveBovenlichtHeightCm(opening, floorDefaults.heightCm),
+        gapCm: resolveBovenlichtGapCm(opening, floorDefaults.gapCm),
+      })
+      if (!transom) return
+      const tz0 = base + (transom.z ?? 0)
+      const tz1 = tz0 + (transom.z_height ?? 0)
+      if (!(tz1 > tz0)) return
+      transoms.push({
+        openingId,
+        openingGuid: guid,
+        wallId: wall.id,
+        floorIndex,
+        type: 'window',
+        refid: transom.refid || CONCEPT_WINDOW_REFID,
+        mirrored: transom.mirrored,
+        widthCm: transom.width,
+        startOnLeft,
+        depthCm,
+        x0,
+        x1,
+        y0: elevY(tz1),
+        y1: elevY(tz0),
       })
     })
   }
@@ -535,11 +696,14 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
     }
   })
 
+  walls.sort(compareElevationPainter)
+  openings.sort(compareElevationPainter)
+  transoms.sort(compareElevationPainter)
+
   const facadeGroupIndex = listElevationFacadeGroups(plan).findIndex(
     (entry) => entry.id === groupId,
   )
   const roofColor = elevationRoofFillColor(groupId, facadeGroupIndex)
-  const centroid = planFootprintCentroid(plan)
   const facadeWalls: ElevationFacadeWall[] = members.map((item) => ({
     wall: item.wall,
     floorIndex: item.floorIndex,
@@ -572,16 +736,20 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
   const facadeXs = walls.filter((w) => !w.ridge).flatMap((w) => [w.x0, w.x1])
   const xs =
     facadeXs.length > 0 ? facadeXs : walls.length > 0 ? walls.flatMap((w) => [w.x0, w.x1]) : [0, 1]
-  const x0 = Math.min(...xs)
-  const x1 = Math.max(...xs)
+  const fallbackX0 = Math.min(...xs)
+  const fallbackX1 = Math.max(...xs)
   plan.floors.forEach((_, floorIndex) => {
     const range = floorSlabWorldRange(plan, floorIndex)
     if (!range) return
+    const floorXs = walls
+      .filter((w) => !w.ridge && w.floorIndex === floorIndex)
+      .flatMap((w) => [w.x0, w.x1])
+    if (floorXs.length === 0) return
     bands.push({
       kind: 'slab',
       floorIndex,
-      x0,
-      x1,
+      x0: Math.min(...floorXs),
+      x1: Math.max(...floorXs),
       y0: elevY(range.z1),
       y1: elevY(range.z0),
     })
@@ -601,8 +769,8 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
     const nok = ridgeAwareNokWorldRange(plan)
     bands.push({
       kind: 'nok',
-      x0,
-      x1,
+      x0: fallbackX0,
+      x1: fallbackX1,
       y0: elevY(nok.z1),
       y1: elevY(nok.z0),
     })
@@ -616,12 +784,14 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
     origin: lineOrigin,
     walls,
     openings,
+    transoms,
     bands,
     roofPlanes,
     junctions,
     bounds: unionBounds([
       ...walls,
       ...openings,
+      ...transoms,
       ...bands,
       ...roofPlanes.map((plane) => {
         const ring = plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points
@@ -636,6 +806,18 @@ export function projectFacadeElevation(plan: FloorPlan, groupId: string): Facade
   }
 }
 
+function findElevationSrcWall(
+  plan: FloorPlan,
+  wall: ElevationWallRect,
+): { floor: Floor; src: Wall } | null {
+  const floor = plan.floors[wall.floorIndex]
+  if (!floor) return null
+  const src = wall.ridge
+    ? listRidgeWallsOnFloor(floor).find((item) => item.id === wall.wallId)
+    : floor.walls.find((item) => item.id === wall.wallId)
+  return src ? { floor, src } : null
+}
+
 function collectElevationJunctions(
   walls: readonly ElevationWallRect[],
   plan: FloorPlan,
@@ -647,20 +829,23 @@ function collectElevationJunctions(
     yBot: number
     refs: Array<{ wallId: string; end: WallEnd }>
     heights: number[]
+    ridge: boolean
   }
   const grouped = new Map<string, Acc>()
   for (const wall of walls) {
-    if (wall.ridge) continue
-    const floor = plan.floors[wall.floorIndex]
-    const src = floor?.walls.find((item) => item.id === wall.wallId)
-    if (!floor || !src) continue
+    if (wall.ridge && wall.endOn) continue
+    const located = findElevationSrcWall(plan, wall)
+    if (!located) continue
+    const ridge = wall.ridge === true
     const ends: Array<{ end: WallEnd; x: number; yTop: number; yBot: number }> = [
       { end: 'a', x: wall.xa, yTop: wall.aTop.y, yBot: wall.aBottom.y },
       { end: 'b', x: wall.xb, yTop: wall.bTop.y, yBot: wall.bBottom.y },
     ]
     for (const item of ends) {
-      const key = `${wall.floorIndex}:${Math.round(item.x * 2) / 2}`
-      const heightCm = wallEndpointHeightCm(src, item.end, floor.height)
+      const key = `${ridge ? 'r' : 'w'}:${wall.floorIndex}:${Math.round(item.x * 2) / 2}`
+      const heightCm = ridge
+        ? ridgeEndpointZCm(located.src, item.end, located.floor.height)
+        : wallEndpointHeightCm(located.src, item.end, located.floor.height)
       const existing = grouped.get(key)
       if (!existing) {
         grouped.set(key, {
@@ -670,6 +855,7 @@ function collectElevationJunctions(
           yBot: item.yBot,
           refs: [{ wallId: wall.wallId, end: item.end }],
           heights: [heightCm],
+          ridge,
         })
         continue
       }
@@ -680,46 +866,21 @@ function collectElevationJunctions(
     }
   }
   return [...grouped.values()].map((item) => ({
-    id: `j-${item.floorIndex}-${Math.round(item.x)}`,
+    id: `${item.ridge ? 'rj' : 'j'}-${item.floorIndex}-${Math.round(item.x)}`,
     x: item.x,
     floorIndex: item.floorIndex,
     yTop: item.yTop,
     yBot: item.yBot,
     heightCm: Math.round(item.heights.reduce((sum, h) => sum + h, 0) / item.heights.length),
     refs: item.refs,
+    ridge: item.ridge ? true : undefined,
   }))
 }
 
-export function hitElevationBand(
-  elevation: FacadeElevation,
-  point: Point2D,
-  kind: ElevationBand['kind'] = 'slab',
-): ElevationBand | null {
-  for (let i = elevation.bands.length - 1; i >= 0; i -= 1) {
-    const band = elevation.bands[i]
-    if (!band || band.kind !== kind) continue
-    if (point.x >= band.x0 && point.x <= band.x1 && point.y >= band.y0 && point.y <= band.y1) {
-      return band
-    }
-  }
-  return null
-}
-
-export function hitElevationOpening(
-  elevation: FacadeElevation,
-  point: Point2D,
-): ElevationOpeningRect | null {
-  for (let i = elevation.openings.length - 1; i >= 0; i -= 1) {
-    const rect = elevation.openings[i]
-    if (!rect) continue
-    if (point.x >= rect.x0 && point.x <= rect.x1 && point.y >= rect.y0 && point.y <= rect.y1) {
-      return rect
-    }
-  }
-  return null
-}
-
-function wallElevYsAtX(wall: ElevationWallRect, x: number): { top: number; bot: number } | null {
+export function elevationWallYsAtX(
+  wall: ElevationWallRect,
+  x: number,
+): { top: number; bot: number } | null {
   const outerLo = Math.min(wall.aTop.x, wall.bTop.x)
   const outerHi = Math.max(wall.aTop.x, wall.bTop.x)
   if (x < outerLo - 1e-6 || x > outerHi + 1e-6) return null
@@ -741,246 +902,4 @@ function wallElevYsAtX(wall: ElevationWallRect, x: number): { top: number; bot: 
     top: wall.aTop.y + (wall.bTop.y - wall.aTop.y) * t,
     bot: wall.aBottom.y + (wall.bBottom.y - wall.aBottom.y) * t,
   }
-}
-
-function pointOnWallElevation(wall: ElevationWallRect, point: Point2D): boolean {
-  const ys = wallElevYsAtX(wall, point.x)
-  if (!ys) return false
-  const lo = Math.min(ys.top, ys.bot)
-  const hi = Math.max(ys.top, ys.bot)
-  return point.y >= lo && point.y <= hi
-}
-
-export function hitElevationWall(
-  elevation: FacadeElevation,
-  point: Point2D,
-): ElevationWallRect | null {
-  for (let i = elevation.walls.length - 1; i >= 0; i -= 1) {
-    const rect = elevation.walls[i]
-    if (!rect) continue
-    if (pointOnWallElevation(rect, point)) return rect
-  }
-  return null
-}
-
-function overlapArea(a: ElevationRect, b: ElevationRect): number {
-  const x0 = Math.max(Math.min(a.x0, a.x1), Math.min(b.x0, b.x1))
-  const x1 = Math.min(Math.max(a.x0, a.x1), Math.max(b.x0, b.x1))
-  const y0 = Math.max(Math.min(a.y0, a.y1), Math.min(b.y0, b.y1))
-  const y1 = Math.min(Math.max(a.y0, a.y1), Math.max(b.y0, b.y1))
-  const w = x1 - x0
-  const h = y1 - y0
-  if (w <= 0 || h <= 0) return 0
-  return w * h
-}
-
-export function openingOverlapRatio(a: ElevationRect, b: ElevationRect): number {
-  const areaA = Math.abs(a.x1 - a.x0) * Math.abs(a.y1 - a.y0)
-  if (areaA < 1e-6) return 0
-  return overlapArea(a, b) / areaA
-}
-
-export type ElevationOpeningPatch = {
-  t: number
-  width: number
-  z: number
-  z_height: number
-}
-
-/** AABB in elevatie-cm → opening-velden op de geraakte muur. */
-export function openingPatchFromElevationRect(
-  wall: ElevationWallRect,
-  rect: ElevationRect,
-  floorBaseWorldZ: number,
-): ElevationOpeningPatch {
-  const xSpan = wall.xb - wall.xa
-  const xCenter = (rect.x0 + rect.x1) / 2
-  const t = Math.abs(xSpan) < 1e-6 ? 0.5 : (xCenter - wall.xa) / xSpan
-  const width = Math.max(1, Math.abs(rect.x1 - rect.x0))
-  const zTop = -Math.min(rect.y0, rect.y1)
-  const zBottom = -Math.max(rect.y0, rect.y1)
-  const z = Math.max(0, zBottom - floorBaseWorldZ)
-  const z_height = Math.max(1, zTop - zBottom)
-  return {
-    t: Number.isFinite(t) ? t : 0.5,
-    width: Math.round(width),
-    z: Math.round(z),
-    z_height: Math.round(z_height),
-  }
-}
-
-/** Hartlijn + binnen-/buitenkant voor snap tijdens opening-sleep. */
-export function collectElevationWallSnapXs(walls: readonly ElevationWallRect[]): number[] {
-  const xs: number[] = []
-  for (const wall of walls) {
-    if (wall.ridge) continue
-    xs.push(wall.xa, wall.xb, wall.aTop.x, wall.bTop.x, wall.innerATop.x, wall.innerBTop.x)
-  }
-  return xs
-}
-
-export function elevationWallHasInnerFace(wall: ElevationWallRect): boolean {
-  return elevationWallInnerStrokes(wall).length > 0
-}
-
-/**
- * Baksteen: oren recht omhoog, schuine top alleen tussen de hartlijn.
- * Hoogte komt van `az`/`bz` (hartlijn); X = buiten tot buiten.
- */
-export function elevationWallFillPoints(wall: ElevationWallRect): Point2D[] {
-  const points: Point2D[] = [wall.aBottom, wall.aTop]
-  if (Math.abs(wall.aTop.x - wall.xa) > 0.5) points.push({ x: wall.xa, y: wall.aTop.y })
-  if (Math.abs(wall.bTop.x - wall.xb) > 0.5) points.push({ x: wall.xb, y: wall.bTop.y })
-  points.push(wall.bTop, wall.bBottom)
-  return points
-}
-
-/** Binnenkant: staanders + top (hoogte = hartlijn-einde). Hartlijn blijft onzichtbaar. */
-export function elevationWallInnerStrokes(
-  wall: ElevationWallRect,
-): Array<{ a: Point2D; b: Point2D }> {
-  if (wall.ridge) return []
-  const strokes: Array<{ a: Point2D; b: Point2D }> = []
-  const hasA = Math.abs(wall.innerATop.x - wall.aTop.x) > 0.5
-  const hasB = Math.abs(wall.innerBTop.x - wall.bTop.x) > 0.5
-  if (hasA) {
-    strokes.push({
-      a: { x: wall.innerATop.x, y: wall.aBottom.y },
-      b: { x: wall.innerATop.x, y: wall.innerATop.y },
-    })
-  }
-  if (hasB) {
-    strokes.push({
-      a: { x: wall.innerBTop.x, y: wall.bBottom.y },
-      b: { x: wall.innerBTop.x, y: wall.innerBTop.y },
-    })
-  }
-  const top: Point2D[] = [wall.innerATop]
-  if (Math.abs(wall.innerATop.x - wall.xa) > 0.5) top.push({ x: wall.xa, y: wall.innerATop.y })
-  if (Math.abs(wall.innerBTop.x - wall.xb) > 0.5) top.push({ x: wall.xb, y: wall.innerBTop.y })
-  top.push(wall.innerBTop)
-  for (let i = 0; i < top.length - 1; i += 1) {
-    const a = top[i]
-    const b = top[i + 1]
-    if (!a || !b) continue
-    if (Math.hypot(b.x - a.x, b.y - a.y) > 0.5) strokes.push({ a, b })
-  }
-  return strokes
-}
-
-export const ELEVATION_JUNCTION_HIT_CM = 8
-export const ELEVATION_ROOF_VERTEX_HIT_CM = 12
-export const ELEVATION_ROOF_Z_SNAP_CM = 8
-const ELEVATION_ROOF_EDGE_HIT_CM = 6
-
-function pointInPoly(point: Point2D, poly: readonly Point2D[]): boolean {
-  let inside = false
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const a = poly[i]
-    const b = poly[j]
-    if (!a || !b) continue
-    const denom = b.y - a.y
-    if (a.y > point.y === b.y > point.y || Math.abs(denom) < 1e-12) continue
-    if (point.x < ((b.x - a.x) * (point.y - a.y)) / denom + a.x) inside = !inside
-  }
-  return inside
-}
-
-function distToPolyEdges(point: Point2D, poly: readonly Point2D[]): number {
-  let best = Number.POSITIVE_INFINITY
-  for (let i = 0; i < poly.length; i += 1) {
-    const a = poly[i]
-    const b = poly[(i + 1) % poly.length]
-    if (!a || !b) continue
-    best = Math.min(best, pointOnSeg(point, a, b).dist)
-  }
-  return best
-}
-
-export function hitElevationRoofPlane(
-  elevation: FacadeElevation,
-  point: Point2D,
-): ElevationRoofPlane | null {
-  for (let i = elevation.roofPlanes.length - 1; i >= 0; i -= 1) {
-    const plane = elevation.roofPlanes[i]
-    if (!plane || plane.points.length < 3) continue
-    const fill = plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points
-    if (pointInPoly(point, fill) || distToPolyEdges(point, fill) <= ELEVATION_ROOF_EDGE_HIT_CM) {
-      return plane
-    }
-  }
-  return null
-}
-
-export function hitElevationRoofVertex(
-  plane: ElevationRoofPlane,
-  point: Point2D,
-  tolCm = ELEVATION_ROOF_VERTEX_HIT_CM,
-): number | null {
-  let best = -1
-  let bestDist = tolCm
-  for (let i = 0; i < plane.points.length; i += 1) {
-    const vertex = plane.points[i]
-    if (!vertex) continue
-    const dist = Math.hypot(point.x - vertex.x, point.y - vertex.y)
-    if (dist <= bestDist) {
-      best = i
-      bestDist = dist
-    }
-  }
-  return best >= 0 ? best : null
-}
-
-export function collectElevationRoofSnapYs(
-  elevation: FacadeElevation,
-  skip?: { planeId: string; vertexIndex: number },
-): number[] {
-  const ys: number[] = []
-  for (const wall of elevation.walls) {
-    ys.push(wall.aTop.y, wall.bTop.y)
-  }
-  for (const plane of elevation.roofPlanes) {
-    plane.points.forEach((point, index) => {
-      if (skip && plane.id === skip.planeId && index === skip.vertexIndex) return
-      ys.push(point.y)
-    })
-  }
-  return ys
-}
-
-export function snapElevationY(
-  y: number,
-  candidates: readonly number[],
-  slackCm = ELEVATION_ROOF_Z_SNAP_CM,
-): number {
-  let best = y
-  let bestDist = slackCm
-  for (const candidate of candidates) {
-    const dist = Math.abs(candidate - y)
-    if (dist <= bestDist) {
-      best = candidate
-      bestDist = dist
-    }
-  }
-  return best
-}
-
-export function hitElevationJunction(
-  elevation: FacadeElevation,
-  point: Point2D,
-  tolCm = ELEVATION_JUNCTION_HIT_CM,
-): ElevationJunction | null {
-  let best: ElevationJunction | null = null
-  let bestDist = tolCm
-  for (const junction of elevation.junctions) {
-    const lo = Math.min(junction.yTop, junction.yBot)
-    const hi = Math.max(junction.yTop, junction.yBot)
-    if (point.y < lo - tolCm || point.y > hi + tolCm) continue
-    const dist = Math.abs(point.x - junction.x)
-    if (dist <= bestDist) {
-      best = junction
-      bestDist = dist
-    }
-  }
-  return best
 }

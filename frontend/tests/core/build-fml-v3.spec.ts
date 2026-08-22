@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import type { FloorPlan, Opening } from '@/core/fml/types'
+import { CONCEPT_WINDOW_REFID, type FloorPlan, type Opening } from '@/core/fml/types'
 
 function planWithDoors(): FloorPlan {
   const door: Opening = {
@@ -378,5 +378,45 @@ describe('buildFmlV3 — bovenlicht export', () => {
       z_height: 30,
       guid: 'door001-bovenlicht',
     })
+  })
+
+  it('packed false: export geen expand; import behoudt los raam', () => {
+    const plan = doorOnlyPlan({ bovenlicht: true })
+    plan.source = { settings: { bovenlichtPacked: false } }
+    // Unpacked plan: los raam al aanwezig, geen flags nodig voor export-shape.
+    plan.floors[0].walls[0].openings = [
+      {
+        refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+        t: 0.4,
+        width: 90,
+        type: 'door',
+        z_height: 220,
+        guid: 'door001',
+      },
+      {
+        refid: CONCEPT_WINDOW_REFID,
+        t: 0.4,
+        width: 90,
+        type: 'window',
+        z: 230,
+        z_height: 40,
+        guid: 'door001-bovenlicht',
+      },
+    ]
+    const exported = buildFmlV3(plan, { bovenlichtDefault: true })
+    const raw = JSON.parse(exported)
+    expect(raw.settings.bovenlichtPacked).toBe(false)
+    expect(raw.floors[0].designs[0].walls[0].openings).toHaveLength(2)
+    // Geen derde sibling door expand.
+    expect(
+      raw.floors[0].designs[0].walls[0].openings.filter((o: { guid?: string }) =>
+        o.guid?.endsWith('-bovenlicht'),
+      ),
+    ).toHaveLength(1)
+
+    const parsed = importFmlV3(exported)
+    expect(parsed.plan.source?.settings?.bovenlichtPacked).toBe(false)
+    expect(parsed.plan.floors[0].walls[0].openings).toHaveLength(2)
+    expect(parsed.plan.floors[0].walls[0].openings[1]?.guid).toBe('door001-bovenlicht')
   })
 })

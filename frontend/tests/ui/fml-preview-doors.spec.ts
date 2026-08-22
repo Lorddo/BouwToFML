@@ -261,6 +261,8 @@ describe('groupDoorOpeningsOnWall', () => {
     const arc = groups[0].arcPoints[0]
     const arcEnd = { x: arc[arc.length - 2], y: arc[arc.length - 1] }
     expect(Math.hypot(arcEnd.x - hinge.x, arcEnd.y - hinge.y)).toBeCloseTo(90, 5)
+
+    expect(groups[0].jambLines).toHaveLength(2)
   })
 })
 
@@ -377,8 +379,17 @@ describe('resolveOpeningCatalog', () => {
     expect(resolveOpeningCatalog('9c845cf2ad8de220b65ee4dedeeb28ba4d750e21', 'door').kind).toBe(
       'french_balcony',
     )
+    expect(resolveOpeningCatalog('37bb0bbe45ba0a5efda34f3f1e0b7ace63084e7f', 'door').kind).toBe(
+      'garage',
+    )
     expect(resolveOpeningCatalog('df95e84f01163fe9983d43d088551813e40e3e2f', 'door').kind).toBe(
       'sliding_pocket',
+    )
+    expect(resolveOpeningCatalog('e7ef286f1690491cf28bf8586c2b9624be881dba', 'door').kind).toBe(
+      'bifold',
+    )
+    expect(resolveOpeningCatalog('919e3f1aaa05cd6b38b843f44573261442e38caa', 'door').kind).toBe(
+      'bifold_double',
     )
   })
 

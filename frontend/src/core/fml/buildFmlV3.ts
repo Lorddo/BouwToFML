@@ -3,13 +3,14 @@ import {
   BOVENLICHT_GAP_CM,
   BOVENLICHT_HEIGHT_CM,
   buildBovenlichtOpening,
+  readBovenlichtPacked,
   resolveBovenlichtGapCm,
   resolveBovenlichtHeightCm,
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
 } from './bovenlicht'
 import { ensureDesignsSynced } from './design-sync'
-import { dropEmptyRidgeDesign } from './ridge-walls'
+import { dropEmptyRidgeDesign, isRidgeDesign } from './ridge-walls'
 import { BTF_SLICES_SETTINGS_KEY, filterManualDimensions, type BtfSlice } from './btf-slices'
 import { bakeSliceDimensions } from './slice-dimension-lines'
 import type { DimensionMode } from './fml-dimension-settings'
@@ -37,6 +38,7 @@ import {
 } from './extraction-to-plan-types'
 import { wallElevationAtT } from './wall-endpoint-height'
 import { STAMP_OWNED_EXTRA } from './stamp-owned'
+import { writeObjectLabel } from './object-label'
 
 export type BovenlichtDefaultResolver = boolean | ((floor: Floor, floorIndex: number) => boolean)
 export type BovenlichtCmResolver = number | ((floor: Floor, floorIndex: number) => number)
@@ -144,7 +146,7 @@ function openingGuid(opening: Opening): string {
 }
 
 function serializeOpening(op: Opening): Record<string, unknown> {
-  return {
+  const out: Record<string, unknown> = {
     ...(op.extras ?? {}),
     refid: op.refid || (op.type === 'window' ? CONCEPT_WINDOW_REFID : CONCEPT_DOOR_REFID),
     t: op.t,
@@ -159,6 +161,8 @@ function serializeOpening(op: Opening): Record<string, unknown> {
     materials: openingMaterials(op),
     guid: openingGuid(op),
   }
+  writeObjectLabel(out, op)
+  return out
 }
 
 function resolveBovenlichtOn(op: Opening, doorDefault: boolean, windowDefault: boolean): boolean {
@@ -307,7 +311,7 @@ function serializeDimension(dim: FloorDimension): Record<string, unknown> {
 }
 
 function serializeItem(item: FloorItem): Record<string, unknown> {
-  return {
+  const out: Record<string, unknown> = {
     ...(item.extras ?? {}),
     refid: item.refid,
     x: item.x,
@@ -319,8 +323,9 @@ function serializeItem(item: FloorItem): Record<string, unknown> {
     rotation: item.rotation ?? 0,
     mirrored: item.mirrored ?? [0, 0],
     guid: item.guid ?? shortGuid(),
-    ...(item.name ? { name: item.name } : {}),
   }
+  writeObjectLabel(out, item)
+  return out
 }
 
 function serializeWall(
@@ -329,6 +334,7 @@ function serializeWall(
   floorIndex: number,
   options: BuildFmlV3Options,
   hasSource: boolean,
+  expandBovenlicht: boolean,
 ): Record<string, unknown> {
   const extras = wall.extras ?? {}
   const az = extras.az != null ? extras.az : { z: 0, h: floor.height }
@@ -364,13 +370,16 @@ function serializeWall(
     balance: wall.balance ?? 0.5,
     groupMarkerConfig,
     decor,
-    openings: expandOpeningsForExport(
-      wall,
-      floor.height,
-      resolveDefaultOption(options.bovenlichtDefault, floor, floorIndex),
-      resolveDefaultOption(options.windowBovenlichtDefault, floor, floorIndex),
-      resolveCmOption(options.bovenlichtHeightCm, floor, floorIndex, BOVENLICHT_HEIGHT_CM),
-      resolveCmOption(options.bovenlichtGapCm, floor, floorIndex, BOVENLICHT_GAP_CM),
+    openings: (expandBovenlicht
+      ? expandOpeningsForExport(
+          wall,
+          floor.height,
+          resolveDefaultOption(options.bovenlichtDefault, floor, floorIndex),
+          resolveDefaultOption(options.windowBovenlichtDefault, floor, floorIndex),
+          resolveCmOption(options.bovenlichtHeightCm, floor, floorIndex, BOVENLICHT_HEIGHT_CM),
+          resolveCmOption(options.bovenlichtGapCm, floor, floorIndex, BOVENLICHT_GAP_CM),
+        )
+      : wall.openings
     ).map(serializeOpening),
   }
 }
@@ -446,7 +455,9 @@ function serializeDesign(
     id: source?.id ?? 1 + floorIndex * 100 + designIndex,
     name: design.name || floor.name,
     lines: (design.lines ?? []).map(serializeLine),
-    dimensions: serializeDimensionsForDesign(design, plan).map(serializeDimension),
+    dimensions: isRidgeDesign(design)
+      ? []
+      : serializeDimensionsForDesign(design, plan).map(serializeDimension),
     labels: (design.labels ?? []).map(serializeLabel),
     // ESC:X-14 (E)
     areas: (design.areas ?? []).map((a) => serializeArea(a, options.forceAreaFillColor)),
@@ -454,8 +465,12 @@ function serializeDesign(
     items: (design.items ?? []).map(serializeItem),
     annotations: source?.annotations ?? [],
     cameras: source?.cameras ?? [],
-    walls: design.walls.map((wall) => serializeWall(wall, floor, floorIndex, options, hasSource)),
-    settings: source?.settings ?? { ...DEFAULT_DESIGN_SETTINGS },
+    walls: design.walls.map((wall) =>
+      serializeWall(wall, floor, floorIndex, options, hasSource, readBovenlichtPacked(plan)),
+    ),
+    settings: isRidgeDesign(design)
+      ? { ...(source?.settings ?? {}), engineAutoDims: false }
+      : (source?.settings ?? { ...DEFAULT_DESIGN_SETTINGS }),
   }
   void fallbackProjectId
   return out
@@ -496,9 +511,11 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
           typeof plan.source?.settings?.wallHeight === 'number'
             ? plan.source.settings.wallHeight
             : wallHeightCm,
+        bovenlichtPacked: readBovenlichtPacked(plan),
       }
     : {
         wallHeight: wallHeightCm,
+        bovenlichtPacked: readBovenlichtPacked(plan),
         ...DEFAULT_PROJECT_SETTINGS,
       }
 

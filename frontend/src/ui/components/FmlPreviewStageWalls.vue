@@ -5,6 +5,7 @@ import type {
   RenderWall,
   RenderWallPolygon,
 } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
+import { SELECTION_HIGHLIGHT_PAD_PX } from '@/ui/composables/fml-preview/fml-preview-world-stroke'
 
 const props = withDefaults(
   defineProps<{
@@ -16,11 +17,21 @@ const props = withDefaults(
     inspectWallPolygons: Array<RenderWallPolygon & { fill: string }>
     settingsWallIds: string[]
     moveWallId: string | null
+    /** Dak-tab: dunne schermvaste lijnen, geen oranje nok-vulling. */
+    dakMode?: boolean
+    viewScale?: number
   }>(),
   {
     facadeWallPolygons: () => [],
+    dakMode: false,
+    viewScale: 1,
   },
 )
+
+function wallHighlightStroke(line: RenderWall): number {
+  const pad = SELECTION_HIGHLIGHT_PAD_PX / Math.max(props.viewScale, 0.01)
+  return line.strokeWidth + pad
+}
 
 /** Alleen zichtbare hit-strokes — geen opacity:0 node per muur (Staedion-killer). */
 const highlightedWallHits = computed((): RenderWall[] => {
@@ -50,12 +61,13 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :config="{
         points: line.points,
         stroke: '#94a3b8',
-        strokeWidth: 1.25,
+        strokeWidth: 1,
         dash: [7, 5],
         lineCap: 'butt',
         opacity: 0.85,
         listening: false,
         perfectDrawEnabled: false,
+        strokeScaleEnabled: false,
       }"
     />
     <v-line
@@ -65,7 +77,7 @@ const highlightedWallHits = computed((): RenderWall[] => {
         points: polygon.points,
         closed: true,
         stroke: '#64748b',
-        strokeWidth: 1.35,
+        strokeWidth: 1,
         dash: [7, 5],
         fillEnabled: false,
         lineJoin: 'miter',
@@ -73,10 +85,11 @@ const highlightedWallHits = computed((): RenderWall[] => {
         opacity: 0.95,
         listening: false,
         perfectDrawEnabled: false,
+        strokeScaleEnabled: false,
       }"
     />
     <v-line
-      v-if="moveWallPolygon"
+      v-if="moveWallPolygon && !dakMode"
       :config="{
         points: moveWallPolygon.points,
         closed: true,
@@ -111,7 +124,7 @@ const highlightedWallHits = computed((): RenderWall[] => {
       }"
     />
     <v-line
-      v-for="polygon in settingsWallPolygons"
+      v-for="polygon in dakMode ? [] : settingsWallPolygons"
       :key="`settings-${polygon.id}`"
       :config="{
         points: polygon.points,
@@ -127,12 +140,13 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :key="`${ridge.id}-center`"
       :config="{
         points: ridge.points,
-        stroke: '#0f766e',
-        strokeWidth: 1.25,
+        stroke: settingsWallIds.includes(ridge.id) ? '#f97316' : '#0f766e',
+        strokeWidth: settingsWallIds.includes(ridge.id) ? 1.5 : 1,
         dash: [8, 6],
         lineCap: 'butt',
         listening: false,
         perfectDrawEnabled: false,
+        strokeScaleEnabled: false,
       }"
     />
     <v-line
@@ -142,12 +156,13 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :key="`${outline.id}-outline-${outline.index}`"
       :config="{
         points: outline.points,
-        stroke: '#0f766e',
-        strokeWidth: 1.5,
+        stroke: settingsWallIds.includes(outline.id) ? '#f97316' : '#0f766e',
+        strokeWidth: 1,
         dash: [8, 6],
         lineCap: 'butt',
         listening: false,
         perfectDrawEnabled: false,
+        strokeScaleEnabled: false,
       }"
     />
     <v-line
@@ -156,7 +171,7 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :config="{
         points: line.points,
         stroke: settingsWallIds.includes(line.id) ? '#f97316' : '#3b82f6',
-        strokeWidth: Math.max(14, line.strokeWidth + 12),
+        strokeWidth: wallHighlightStroke(line),
         opacity: 0.15,
         lineCap: 'butt',
         listening: false,

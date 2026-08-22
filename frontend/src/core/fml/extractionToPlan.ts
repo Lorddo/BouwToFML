@@ -17,6 +17,7 @@ import {
 } from './extraction-to-plan-walls'
 import { mapLayer12DoorsToOpenings } from './extraction-to-plan-doors'
 import { mapLayer14WindowsToOpenings } from './extraction-to-plan-windows'
+import { ensureRidgeDesign } from './ridge-walls'
 import type { WallFaceExtentsCm } from './wall-face-step-evidence'
 
 export type {
@@ -192,12 +193,12 @@ export function extractionToPlanWithOrigin(
     plan: {
       name: options.planName ?? 'Detectie-export',
       floors: [
-        {
+        ensureRidgeDesign({
           name: options.floorName ?? 'Begane grond',
           level: options.level ?? 0,
           height: floorHeightCm,
           walls,
-        },
+        }).floor,
       ],
     },
     origin,

@@ -12,6 +12,8 @@ export const DEFAULT_NOK_THICKNESS_CM = 30
 export type FloorStackEntry = {
   level: number
   thicknessCm: number
+  /** Default nok-onderkant t.o.v. deze vloer; ontbreekt → floor.height. */
+  ridgeZCm?: number
 }
 
 export type FloorStack = {
@@ -22,6 +24,7 @@ export type FloorStack = {
 export type ElevationStackRow =
   | { kind: 'nok'; thicknessCm: number }
   | { kind: 'story'; floorIndex: number; name: string; heightCm: number }
+  | { kind: 'ridge'; floorIndex: number; name: string; zCm: number }
   | { kind: 'slab'; floorIndex: number; name: string; thicknessCm: number }
 
 function clampPositiveCm(value: unknown, fallback: number): number {
@@ -48,9 +51,14 @@ function normalizeStack(raw: unknown): FloorStack {
       const level = Math.round(row.level)
       if (seen.has(level)) continue
       seen.add(level)
+      const ridgeZCm =
+        typeof row.ridgeZCm === 'number' && Number.isFinite(row.ridgeZCm) && row.ridgeZCm >= 0
+          ? Math.round(row.ridgeZCm)
+          : undefined
       floors.push({
         level,
         thicknessCm: clampPositiveCm(row.thicknessCm, DEFAULT_FLOOR_THICKNESS_CM),
+        ...(ridgeZCm != null ? { ridgeZCm } : {}),
       })
     }
   }
@@ -76,6 +84,7 @@ export function writeFloorStack(plan: FloorPlan, next: FloorStack): FloorPlan {
     floors: next.floors.map((entry) => ({
       level: Math.round(entry.level),
       thicknessCm: clampPositiveCm(entry.thicknessCm, DEFAULT_FLOOR_THICKNESS_CM),
+      ...(entry.ridgeZCm != null ? { ridgeZCm: clampPositiveCm(entry.ridgeZCm, 0) } : {}),
     })),
   }
   return {
@@ -94,10 +103,29 @@ export function setNokThicknessCm(plan: FloorPlan, thicknessCm: number): FloorPl
 
 export function setSlabThicknessCm(plan: FloorPlan, level: number, thicknessCm: number): FloorPlan {
   const stack = readFloorStack(plan)
+  const prev = stack.floors.find((entry) => entry.level === level)
   const floors = stack.floors.filter((entry) => entry.level !== level)
   floors.push({
     level: Math.round(level),
     thicknessCm: clampPositiveCm(thicknessCm, DEFAULT_FLOOR_THICKNESS_CM),
+    ...(prev?.ridgeZCm != null ? { ridgeZCm: prev.ridgeZCm } : {}),
+  })
+  floors.sort((a, b) => a.level - b.level)
+  return writeFloorStack(plan, { ...stack, floors })
+}
+
+export function storedRidgeZCm(stack: FloorStack, level: number): number | undefined {
+  return stack.floors.find((entry) => entry.level === level)?.ridgeZCm
+}
+
+export function setFloorRidgeZCm(plan: FloorPlan, level: number, ridgeZCm: number): FloorPlan {
+  const stack = readFloorStack(plan)
+  const prev = stack.floors.find((entry) => entry.level === level)
+  const floors = stack.floors.filter((entry) => entry.level !== level)
+  floors.push({
+    level: Math.round(level),
+    thicknessCm: prev?.thicknessCm ?? DEFAULT_FLOOR_THICKNESS_CM,
+    ridgeZCm: clampPositiveCm(ridgeZCm, 0),
   })
   floors.sort((a, b) => a.level - b.level)
   return writeFloorStack(plan, { ...stack, floors })
@@ -115,6 +143,12 @@ export function elevationStackRows(plan: FloorPlan): ElevationStackRow[] {
       floorIndex: i,
       name: floor.name,
       heightCm: Math.round(floor.height),
+    })
+    rows.push({
+      kind: 'ridge',
+      floorIndex: i,
+      name: floor.name,
+      zCm: storedRidgeZCm(stack, floor.level) ?? Math.round(floor.height),
     })
     rows.push({
       kind: 'slab',

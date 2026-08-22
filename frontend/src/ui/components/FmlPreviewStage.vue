@@ -78,6 +78,7 @@ withDefaults(
     hoveredLabelId: string | null
     hoveredLineId: string | null
     inspectColors: Record<string, string>
+    dakMode?: boolean
     surfaceEditId: string | null
     surfaceEditVertices: Point2D[] | null
     selectedVertexIndex?: number | null
@@ -121,6 +122,7 @@ withDefaults(
     itemDragPreview: null,
     sliceGuidesStage: () => [],
     slicePreviewStage: null,
+    dakMode: false,
   },
 )
 
@@ -213,6 +215,18 @@ onBeforeUnmount(unbindGroupDrag)
         </v-group>
         <v-group :config="{ opacity: contentOpacity, listening: true }">
           <!-- Z-order: area → surface → object → tekst. Meubels blijven onder muurfill. -->
+          <v-line
+            v-for="polygon in renderModel.blockedRoofPolygons ?? []"
+            :key="polygon.id"
+            :config="{
+              points: polygon.points,
+              closed: true,
+              fill: '#94a3b8',
+              opacity: 0.38,
+              listening: false,
+              perfectDrawEnabled: false,
+            }"
+          />
           <FmlPreviewStageAreas
             :areas="renderModel.areas"
             :settings-area-id="settingsAreaId"
@@ -396,6 +410,8 @@ onBeforeUnmount(unbindGroupDrag)
             :inspect-wall-polygons="inspectWallPolygons"
             :settings-wall-ids="settingsWallIds"
             :move-wall-id="moveWallId"
+            :dak-mode="dakMode"
+            :view-scale="viewScale"
           />
           <FmlPreviewStageOpenings
             :render-model="renderModel"

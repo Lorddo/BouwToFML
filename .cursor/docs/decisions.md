@@ -55,7 +55,7 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
-| `balance` | Floorplanner **hartlijn** `a`/`b` (Y-down): `0` = alles **rechts**, `1` = alles **links** (`floorplannerLeftNormal`); lichaam schuift, as blijft (keep-axis). Default export 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence**; zonder bewijs blijft 0.5; `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm; stub-bump alleen bij gemeten nabijheid. Detectie clamp 0–1; editor-invoer tot ±1000% (slider 0–100%) |
+| `balance` | Floorplanner **hartlijn** `a`/`b` (Y-down): `0` = alles **rechts**, `1` = alles **links** (`floorplannerLeftNormal`); lichaam schuift, as blijft (keep-axis). Default export 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence**; zonder bewijs blijft 0.5; `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm **én near-ortho connector** (zelfde 12°-ε als collinear; geen 45–60°-chamfer); stub-bump alleen bij gemeten nabijheid. Detectie clamp 0–1; editor-invoer tot ±1000% (slider 0–100%) |
 | Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning; hartlijn `a`/`b` ongewijzigd |
 | Diktemeting | `thicknessPxTypical` = mediaan DT-samples (FML-export); `thicknessPxMax` blijft opening-snap bovengrens; korte stubs kern-sample t∈[0.3,0.7]; junction-marge schaalt met `referenceWallThicknessPx` |
 | Keten-union | Gemeten gelijkenis + 15% hysterese over bandgrens (niet alleen band-identiteit) |
@@ -217,6 +217,14 @@ Zie `klant-eisen-v1.md` §2 voor volledige specificatie.
 
 **Refids:** placeholder-tabel in projectdefaults; invullen uit `FML(current)/` (11 deur + 3 raam uniek) + roundtrip FP. POC Kinderdijkstraat kan starten met alleen concept-enkeldeur + concept-raam.
 
+**2026-08-22 — Editor-dropdown:** alle catalogus-kinds met bekende FP-refid, incl. garagedeur (`37bb0bbe…`), Frans balkon (`9c845cf2…`) en doorgang/archway (`047a2a4a…`). Eén lijst: `DOOR_ADD_SUBTYPES` / `WINDOW_ADD_SUBTYPES`. Subtype-resolve via catalogus-kind (ook alternatieve pocket-hash).
+
+**2026-08-22 — FML invoer-catalogus:** deuren/ramen gelabeld in Floorplanner (`FML invoer.json.fml`). Presets dubbel + schuif blijven `9c1479d9…` / `5ae0ee3c…` / `1cdb4e60…` / `d2785cc4…`; extra hashes (`568f1c99…`, `f54db5ad…`) alleen herkennen. Entry way = rechthoekige kale opening (`181e49d1…`); archway = ronde bovenzijde zonder kozijn (`047a2a4a…`). Driehoekraam = driehoek-kozijn+glas; blind = kozijn+solid plaat. Roomtypes woning+kantoor+buiten later als aparte sets. Fixtures nog niet. Objectlabels (`name`/`showLabel`/`name_x`/`name_y`) roundtrippen + meeschalen/spiegelen/roteren; geen eigen UI. Grijs vlak in die FML = driehoekraam-mal, geen surface-type.
+
+**2026-08-22 — Driehoekraam spiegel:** plattegrond krijgt een klein driehoek-ornament (zoals rond); glyph + baksteen-gat zijn een rechthoekige driehoek. Eén spiegelknop (`mirrored[0]`, icoon `mirror_h`) in plattegrond + aanzicht. Overige ramen blijven symmetrisch zonder knop.
+
+**2026-08-22 — Vouwdeuren in menu:** `bifold` (`e7ef286f…`, 2-delig) en `bifold_double` (`919e3f1a…`, 4-delig) in `DOOR_ADD_SUBTYPES`. Aanzicht: 2/4 panelen + scharnier tussen de twee delen per deur. Plattegrond: V-vouw (2 of 4 bladlijnen).
+
 ---
 
 ## Verdiepingsparameters (V1)
@@ -260,6 +268,13 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Versie | Scope |
 |--------|-------|
+| **2026-08-22** | Aanzicht meerlaags: painter back→front + evenodd-gaten in de baksteen (deur/raam/bovenlicht). Geen dest-out; goedkoop. |
+| **2026-08-22** | Aanzicht-deursettings: scharnier + draai-knoppen (zelfde als plattegrond) in quick- én edit-rij. Write via `updatePlanOpening` + `mirrored`. |
+| **2026-08-22** | Aanzicht-deurkruk: rozet+hefboom op de sluitkant (tegenover scharnier; `mirrored[0]` + `startOnLeft`). Schuif: pocket = grijpkant; 1-schuivend = schuivend deel; 2-schuivend = beide middenstijlen. Geen kruk op passage/garage/raam. |
+| **2026-08-22** | Aanzicht-nok **kopse kant**: sleep/resize zoals raam/deur. Verplaatsen: alleen het midden snapt op muurjunctions (8 cm), geen face/dak/opening-snap. N/Z-handle = dakspan; O/W-handle = `displayWidthCm`. Lange nok blijft knooplijn. |
+| **2026-08-22** | Aanzicht-nokbalk: zelfde junction-handles als gevel (`az`/`bz`.z). Balk aantikken/slepen = beide uiteinden; handle = één einde. Split-tool = twee klikken: 1e kiest segment, preview-lijn volgt muis en snapt 8 cm op andere knopen, 2e snijdt. |
+| **2026-08-22** | Dak/nok/aanzicht **per uitslag**: vloerband = alleen die floor; nokhoogte in de hoogtetabel per verdieping (niet world-Z over floors); Dak-tab = actieve floor + alleen onbedekte afdruk (aanbouw/voorportaal/main). Generate/tekenen weigert waar een hogere floor zit. |
+| **2026-08-22** | Dak geblokkeerd vlak (hogere floor): hoeken = snijpunt van twee buitenfaces, niet convex hull van face-einden (anders een schuin knikje op de hartlijn-hoek). |
 | **2026-08-22** | Aanzicht-dakvlak: plaatdikte = nokdikte **om het hart** (helft omhoog + helft omlaag). Kopgevel toont goot én kil (rand evenwijdig+dichtbij, geen Z-eis). Vul-oppervlak ná dikte — een rechte kopse projectie is anders een lijn. |
 | **2026-08-22** | Aanzicht-dakvlak projecteert de **getekende XY** (buitenface/hoek), niet terug naar de muurhartlijn. Hartlijn-snap knijpt de goot als alleen die gevel een zolder-muur heeft (FIN-10508 achterkant). |
 | **2026-08-22** | Aanzicht-muren = **volle baksteen** (buiten tot buiten) + binnenkant stippellijn. Alleen de **bovenkant-hoogte** volgt de hartlijn (`az`/`bz`); schuine top tussen xa/xb, oren recht omhoog. Nokbalk ongewijzigd. |
@@ -269,10 +284,13 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | **2026-08-21** | Openings in aanzicht: **Ctrl+klik** = velden (breedte/hoogte/dorpel); rand-handles als fixtures; snap 8 cm op dorpel/latei/zijde van andere openingen (Ctrl tijdens sleep = uit). |
 | **2026-08-21** | **Editor-only** (`/FML-editor` Bewerken): chip **Gevels** rechts op de verdiepingen-rail, alleen als er niet-stamp gevelgroepen zijn. 1 groep = 1 projectie = 1 design-slot. Hoogtes/`az`/`bz` + vloerdikte/nok gedeeld; openings uniek per GUID. Onderlegger per groep in `settings.elevationViews`. Inspect/detectie later. Dakvlakken later; nok = sibling Dak-design + optionele dikte-band. |
 | **2026-08-21** | **Aanzicht-projectie:** `settings.elevationProjection` `"architect"` (default, vaste H/V-zijde) of `"projective"` (as volgt de gevel). Sidebar-keuze, geldt voor alle gevels. Schuine Amsterdamse gevel: architect = kopse nok; projectief = ware muurlengte. |
+| **2026-08-22** | Dak-design altijd bij floor-create/import/generate (niet pas bij eerste nok). Dak-tab zichtbaar zonder nok (platte daken). Export stript nog steeds een leeg Dak-design; import zet het terug. |
 | **2026-08-21** | **Nok-muren:** sibling design `Dak` (`source.settings.btfRole: "ridge"`), niet in de plattegrond-graaf. Geen weld/T/X/cover tussen nok en gevel/binnenmuur. Overlay-tekenen via Muur/Nok-dropdown. `thickness: 0`, identity in `settings.ridgeWalls`. Aanzicht = gevelgroep + alle nokken (geen `ELEVATION_RETURN_MAX_DOT` op nok). Gevelmuren blijven in design 0. |
+| **2026-08-22** | Dak-tekenen tot de gevel: hogere floor dekt alleen het **interieur** (geen 40 cm slack). Klik in bedekt gebied → automatisch dichtstbijzijnde toegestane face/nok. Punten en muur/nok-lijnen zijn schermvast dun (`strokeScaleEnabled: false`). |
+| **2026-08-22** | Dak-tab: **Dakvlak** is een eigen teken-tool (geen roomtype). Snap = binnen-/buitenface + andere dakvlakken + nokken (ribbe én hoek). **Nok**-snap = binnen-/buitenface + andere nokken (ribbe én hoek). Geen hartlijn/junction. |
 | **2026-08-21** | **Nok-tekenen-snap:** binnen-/buitenfaces zoals maatlijnen (`snapDrawPointToWallFaces`), niet junction/hartlijn. Dak-tab = alle dikke plattegrondmuren; Ctrl/Cmd = vrij. Knooppunten niet tonen tijdens nok-draft. |
 | **2026-08-21** | **Dakvlakken** op hetzelfde Dak-design (`surfaces[]`, `isRoof`, z per hoek). Knop-snapshot: geveltop → 2D-dichtstbijzijnde nok of volgende-floor-rand; split bij doelwissel (heup/dal/knik). Kopgevel = nok raakt gevel (geen flag). Regen houdt `manual`. Leeg > fout. Aanzicht = projectie van dakvlak-randen. Later: overstek, dakkapel, workspace. |
-| **2026-08-21** | Dakvlak-snap = **alleen buitenfaces**; hoek = snijpunt van twee goten (niet één face + hartlijn/binnenface). |
+| **2026-08-21** | Dakvlak-snap (aanzicht/goot): hoek = snijpunt van twee goten. Tekenen (2026-08-22): binnen- + buitenface + nok + andere dakvlakken. |
 | **2026-08-21** | Aanzicht-dakvlak = alleen het vlak waarvan de goot die gevel raakt (parallel + Z≈muurtop). Geen projectie van alle vlakken. Vul grijs per gevelgroep; kopgevel zonder goot blijft leeg (muurdriehoek volstaat). |
 | **2026-08-21** | Aanzicht-dakvlak simuleert plaatdikte = `nokThicknessCm` (FML-surface heeft geen thickness). Vlak = surface-punten (handles); vul = verticale extrusie **omhoog**. |
 | **2026-08-21** | Aanzicht-dakvlak bewerken: Ctrl+klik = punten; sleep alleen hoogte (X/Y vast). Snap 8 cm op andere punten/muurtop (Ctrl tijdens sleep = uit). Veld = punthoogte t.o.v. vloer. |
@@ -313,7 +331,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Handmatig | Meet-tool «Handmatig» → `dimensions[]`; imported custom dims zonder btfSlices |
 | Terugkoppelen | Dim op P-lijn (≤1 cm) = slicer-bake; strip bij import als `btfSlices` aanwezig |
 | Area-zijde overlay | Toggle «Maten tonen» (niet `FmlToolId`): sessie-only |
-| FML flags | project: `dimensionMode`, `generateOuterDimension`, `showDims`; design: `engineAutoDims`, `btfSlices` |
+| FML flags | project: `dimensionMode`, `generateOuterDimension`, `showDims`; design: `engineAutoDims`, `btfSlices` — Autogen alleen op het plattegrond-design van de actieve floor; Dak altijd `engineAutoDims: false` (geen `dimensions[]`) |
 
 **Viewer-maatlijn-tool:** Tape (tijdelijk) / Manual / Slicer (M→P). Shift = H/V; Ctrl = geen snap.
 

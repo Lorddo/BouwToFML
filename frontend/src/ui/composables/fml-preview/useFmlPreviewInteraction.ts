@@ -1,5 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
 import { countGeneratedRoofPlanesOnPlan } from '@/core/fml/generate-roof-planes'
 import { parseFmlHex } from '@/core/fml/roomtype-catalog'
@@ -7,19 +8,16 @@ import { alertFmlChrome, confirmFmlChrome } from '@/ui/composables/fml-chrome-di
 import { tGlobal } from '@/ui/i18n'
 import type { FloorItem, FloorLineType, FloorPlan, Point2D, Wall } from '@/core/fml/types'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
-import { isRidgeWallId, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
+import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
-import {
-  listThickPlanWalls,
-  planFootprintCentroid,
-  snapPointToOuterWallFaces,
-} from '@/core/fml/wall-outer-face'
+import { listDakSnapWalls } from '@/core/fml/ridge-floor'
 import {
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
   snapDrawWallEndpoint,
   snapPointToJunctions,
   snapPointToWallCenters,
+  snapRoomDrawEndPoint,
   snapToNearbyEndpointAxes,
   snapToNearbyPointAxes,
   snapToPolygonGeometry,
@@ -27,9 +25,10 @@ import {
   openPolylineSegments,
 } from '@/ui/components/fml-preview-junctions'
 import {
-  snapDrawPointToWallFaces,
-  WALL_FACE_SNAP_CM,
-} from '@/ui/components/fml-preview-wall-face-snap'
+  isAllowedDakDrawPoint,
+  resolveDakSurfacePoint,
+  resolveRidgeDrawPoint,
+} from '@/ui/components/fml-preview-dak-draw-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlInspectHit } from './fml-inspect'
 import { createFmlPreviewEditorKeyHandlers } from './fml-preview-editor-keyboard'
@@ -98,6 +97,7 @@ export function useFmlPreviewInteraction(options: {
   windowBovenlichtDefault?: Ref<boolean>
   bovenlichtHeightCm?: Ref<number>
   bovenlichtGapCm?: Ref<number>
+  bovenlichtPacked?: Ref<boolean>
   /** Huidige underlay-layout (voor nulpunt + undo). */
   getUnderlayLayout?: () => UnderlayOriginLayout | null
   setFmlNulpuntImageCm?: (point: Point2D | null) => void
@@ -143,6 +143,7 @@ export function useFmlPreviewInteraction(options: {
     windowBovenlichtDefault,
     bovenlichtHeightCm,
     bovenlichtGapCm,
+    bovenlichtPacked,
     getUnderlayLayout,
     setFmlNulpuntImageCm,
     underlayMoveMode: underlayMoveModeProp,
@@ -479,16 +480,22 @@ export function useFmlPreviewInteraction(options: {
   const { draggingOpening } = openingDrag
 
   function ridgeDrawSnapWalls(): ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> {
-    if (options.dakMode?.value === true) return listThickPlanWalls(editor.localPlan.value)
+    const plan = editor.localPlan.value
+    if (options.dakMode?.value === true && plan) {
+      return listDakSnapWalls(plan, editor.floorIndex.value)
+    }
     return editor.walls.value
   }
 
   function resolveDrawPoint(cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean): Point2D {
     if (drawWallKind.value === 'ridge') {
-      return snapDrawPointToWallFaces(ridgeDrawSnapWalls(), cm, {
+      return resolveRidgeDrawPoint(cm, {
+        plan: editor.localPlan.value,
+        floorIndex: editor.floorIndex.value,
+        walls: ridgeDrawSnapWalls(),
         axisAnchor,
         lockAxis: axisLocked.value,
-        snapDisabled: snapDisabled === true,
+        snapDisabled,
       })
     }
     const junction = hitTest.hitTestJunctionAtCm(cm)
@@ -506,7 +513,7 @@ export function useFmlPreviewInteraction(options: {
 
   /**
    * Kamer-start: junction-hit zodat je makkelijk op een knoop bindt.
-   * Daarna krappe hartlijn — de 15 cm as-magnet trekt kleine schachten dicht.
+   * Eindhoek: 8 cm H/V op andere knopen — geen 15 cm as-magnet (schachten).
    */
   function resolveRoomStartPoint(cm: Point2D): Point2D {
     const junction = hitTest.hitTestJunctionAtCm(cm)
@@ -514,9 +521,8 @@ export function useFmlPreviewInteraction(options: {
     return snapPointToJunctions(editor.junctions.value, cm, ROOM_DRAW_SNAP_CM)
   }
 
-  function resolveRoomEndPoint(cm: Point2D): Point2D {
-    const junctionSnap = snapPointToJunctions(editor.junctions.value, cm, ROOM_DRAW_SNAP_CM)
-    return snapPointToWallCenters(editor.walls.value, junctionSnap, ROOM_DRAW_SNAP_CM)
+  function resolveRoomEndPoint(cm: Point2D, start: Point2D): Point2D {
+    return snapRoomDrawEndPoint(editor.junctions.value, editor.walls.value, cm, start)
   }
 
   function resolveSurfacePoint(
@@ -527,13 +533,15 @@ export function useFmlPreviewInteraction(options: {
   ): Point2D {
     if (snapDisabled) return cm
     if (options.dakMode?.value === true && editor.localPlan.value) {
-      const plan = editor.localPlan.value
-      return snapPointToOuterWallFaces(
-        listThickPlanWalls(plan),
-        planFootprintCentroid(plan),
-        cm,
-        WALL_FACE_SNAP_CM,
-      )
+      const extra = extraAxisPoints ?? []
+      return resolveDakSurfacePoint(cm, {
+        plan: editor.localPlan.value,
+        floorIndex: editor.floorIndex.value,
+        extraAxisPoints: extra,
+        axisAnchor: extra.length > 0 ? extra[extra.length - 1] : undefined,
+        lockAxis: axisLocked.value,
+        excludeSurfaceId,
+      })
     }
     const junction = hitTest.hitTestJunctionAtCm(cm)
     if (junction) return { x: junction.cmX, y: junction.cmY }
@@ -575,6 +583,8 @@ export function useFmlPreviewInteraction(options: {
     wallThicknessDraft,
     drawKind: drawWallKind,
     ridgeZCm,
+    requireFloorIndex: () =>
+      options.dakMode?.value === true ? editor.floorIndex.value : undefined,
     resolvePoint: resolveDrawPoint,
     beforeBegin: () => {
       cancelSelectionBoxDrag()
@@ -613,6 +623,11 @@ export function useFmlPreviewInteraction(options: {
     hitTest,
     shiftPressed: axisLocked,
     resolvePoint: resolveSurfacePoint,
+    acceptPoint: (point) => {
+      if (options.dakMode?.value !== true || !editor.localPlan.value) return true
+      return isAllowedDakDrawPoint(editor.localPlan.value, editor.floorIndex.value, point)
+    },
+    isDak: () => options.dakMode?.value === true,
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
@@ -916,6 +931,13 @@ export function useFmlPreviewInteraction(options: {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    bovenlichtPacked,
+    bovenlichtDefaults: computed(() => ({
+      doorDefault: bovenlichtDefault?.value === true,
+      windowDefault: windowBovenlichtDefault?.value === true,
+      heightCm: bovenlichtHeightCm?.value ?? BOVENLICHT_HEIGHT_CM,
+      gapCm: bovenlichtGapCm?.value ?? BOVENLICHT_GAP_CM,
+    })),
     beforePlace: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
@@ -1384,10 +1406,11 @@ export function useFmlPreviewInteraction(options: {
     const selectedRidgeIds = settingsWallIds.value.filter((id) =>
       isRidgeWallId(editor.localPlan.value, id),
     )
+    const floor = editor.localPlan.value?.floors[editor.floorIndex.value]
     const ridgeIds =
       selectedRidgeIds.length > 0
         ? selectedRidgeIds
-        : editor.ridgeWalls.value.map((wall) => wall.id)
+        : listRidgeWallsOnFloor(floor).map((wall) => wall.id)
     const junction = editor.junctions.value.find(
       (item) => item.id === selection.settingsJunctionId.value,
     )
@@ -1425,14 +1448,23 @@ export function useFmlPreviewInteraction(options: {
   watch(
     () => options.dakMode?.value === true,
     (on) => {
-      if (!on) return
-      drawWallKind.value = 'ridge'
-      ensureRidgeZDraft()
-      const tool = activeFmlTool.value
-      if (tool && tool !== 'draw_wall' && tool !== 'draw_surface') activeFmlTool.value = null
+      if (on) {
+        drawWallKind.value = 'ridge'
+        ensureRidgeZDraft()
+        const tool = activeFmlTool.value
+        if (tool && tool !== 'draw_wall' && tool !== 'draw_surface') activeFmlTool.value = null
+        return
+      }
+      drawWallKind.value = 'wall'
+      deactivateDrawTool()
     },
     { immediate: true },
   )
+
+  watch(editor.floorIndex, () => {
+    if (options.dakMode?.value === true) return
+    deactivateDrawTool()
+  })
 
   const ridgeFloorDraft = computed(() => {
     const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))

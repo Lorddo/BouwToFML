@@ -84,8 +84,5 @@ export function switchFloorDesign(floor: Floor, designIndex: number): Floor {
 
 /** Zorg dat designs[] synchroon is met platte velden vóór export. */
 export function ensureDesignsSynced(floor: Floor): Floor {
-  if (!floor.designs || floor.designs.length === 0) {
-    return flushActiveDesign(floor)
-  }
   return flushActiveDesign(floor)
 }

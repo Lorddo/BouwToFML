@@ -48,6 +48,9 @@ describe('isFmlToolbarSettingsOpen', () => {
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_line' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_label' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface', dakMode: true })).toBe(
+      false,
+    )
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_window' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasItemSelection: true })).toBe(true)
   })

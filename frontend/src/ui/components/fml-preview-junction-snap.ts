@@ -1,6 +1,8 @@
 import type { Point2D, Wall } from '@/core/fml/types'
 import {
   ENDPOINT_SNAP_RADIUS_CM,
+  ROOM_DRAW_END_SNAP_CM,
+  ROOM_DRAW_SNAP_CM,
   WALL_AXIS_EPS_CM,
   distance,
   refKey,
@@ -250,8 +252,28 @@ export function snapToPolygonGeometry(
   )
 }
 
+/**
+ * Kamer-eindhoek: 8 cm H/V naar andere knopen, daarna knoop-landing.
+ * Assen van de startknoop tellen niet mee — anders klapt een smalle kamer dicht.
+ */
+export function snapRoomDrawEndPoint(
+  junctions: ReadonlyArray<Pick<JunctionNode, 'x' | 'y'>>,
+  walls: Wall[],
+  candidate: Point2D,
+  start: Point2D,
+): Point2D {
+  const xAnchors = junctions.filter((junction) => Math.abs(junction.x - start.x) > 1)
+  const yAnchors = junctions.filter((junction) => Math.abs(junction.y - start.y) > 1)
+  const axis = {
+    x: snapToNearbyPointAxes(xAnchors, candidate, ROOM_DRAW_END_SNAP_CM).x,
+    y: snapToNearbyPointAxes(yAnchors, candidate, ROOM_DRAW_END_SNAP_CM).y,
+  }
+  const junctionSnap = snapPointToJunctions(junctions, axis, ROOM_DRAW_END_SNAP_CM)
+  return snapPointToWallCenters(walls, junctionSnap, ROOM_DRAW_SNAP_CM)
+}
+
 export function snapPointToJunctions(
-  junctions: JunctionNode[],
+  junctions: ReadonlyArray<Pick<JunctionNode, 'x' | 'y'>>,
   point: Point2D,
   maxDistCm: number,
 ): Point2D {

@@ -1,11 +1,17 @@
 import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
 import type { Point2D, Wall } from '@/core/fml/types'
 import { WALL_AXIS_EPS_CM } from './fml-preview-junction-core'
-import { snapDrawWallEndpoint } from './fml-preview-junction-snap'
+import { closestPointInRadius, snapDrawWallEndpoint } from './fml-preview-junction-snap'
 import { resolveWallExtents } from './fml-preview-wall-polygons'
 
 /** Soft snap naar lange binnen-/buitenfaces (cm); Ctrl/Cmd schakelt uit. */
 export const WALL_FACE_SNAP_CM = 15
+/** Dak-tekenen: krappe face-magnet zodat faces/nok/vlakken niet overlappen. */
+export const DAK_FACE_SNAP_CM = 8
+/** Nok-/dakvlak-hoek wint van een ribbe als de pointer zo dichtbij is. */
+export const DAK_CORNER_SNAP_CM = 5
+/** Na clamp: punt telt als op de rand (sky-exposed-gate mag dit niet afwijzen). */
+export const DAK_BOUNDARY_ACCEPT_CM = 2
 
 export interface WallFaceSegment {
   a: Point2D
@@ -58,8 +64,8 @@ export function wallFaceSegments(
   ]
 }
 
-function facePadCm(wall: Pick<Wall, 'thickness'>): number {
-  return WALL_FACE_SNAP_CM + Math.max(0, wall.thickness)
+function facePadCm(wall: Pick<Wall, 'thickness'>, radiusCm: number): number {
+  return radiusCm + Math.max(0, wall.thickness)
 }
 
 /** Projectie op oneindige lijn; t in [0,1] = op segment. */
@@ -111,7 +117,7 @@ export function snapPointToWallFaces(
   let bestObliqueDist = radiusCm
 
   for (const wall of walls) {
-    const pad = facePadCm(wall)
+    const pad = facePadCm(wall, radiusCm)
     const faces = wallFaceSegments(wall)
     for (const face of faces) {
       const len = Math.hypot(face.b.x - face.a.x, face.b.y - face.a.y)
@@ -199,3 +205,149 @@ export function snapDrawPointToWallFaces(
 
 /** Grotere radius + oneindige H/V-assen voor handmatige maten buiten de footprint. */
 export const MANUAL_DIM_FACE_SNAP_CM = 60
+
+function asZeroThicknessWall(
+  a: Point2D,
+  b: Point2D,
+): Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'> {
+  return { a, b, thickness: 0, balance: 0.5 }
+}
+
+function collectDakSnapWalls(opts: {
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
+  ridges?: ReadonlyArray<Pick<Wall, 'a' | 'b'>>
+  roofRings?: ReadonlyArray<ReadonlyArray<Point2D>>
+}): Array<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> {
+  const extras: Array<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> = [...opts.walls]
+  for (const ridge of opts.ridges ?? []) {
+    extras.push(asZeroThicknessWall(ridge.a, ridge.b))
+  }
+  for (const ring of opts.roofRings ?? []) {
+    if (ring.length < 2) continue
+    const closed = ring.length >= 3
+    const last = closed ? ring.length : ring.length - 1
+    for (let i = 0; i < last; i++) {
+      const a = ring[i]
+      const b = ring[(i + 1) % ring.length]
+      if (a && b) extras.push(asZeroThicknessWall(a, b))
+    }
+  }
+  return extras
+}
+
+function collectDakSnapCorners(opts: {
+  ridges?: ReadonlyArray<Pick<Wall, 'a' | 'b'>>
+  roofRings?: ReadonlyArray<ReadonlyArray<Point2D>>
+  extraCorners?: ReadonlyArray<Point2D>
+}): Point2D[] {
+  const corners: Point2D[] = []
+  for (const ridge of opts.ridges ?? []) {
+    corners.push(ridge.a, ridge.b)
+  }
+  for (const ring of opts.roofRings ?? []) {
+    for (const point of ring) corners.push(point)
+  }
+  for (const point of opts.extraCorners ?? []) corners.push(point)
+  return corners
+}
+
+/**
+ * Dak-teken-snap: binnen-/buitenfaces van muren + ribben/hoeken van nokken
+ * en (optioneel) dakvlakken. Geen hartlijn- of junction-snap.
+ */
+export function snapDakDrawPoint(
+  point: Point2D,
+  opts: {
+    walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
+    ridges?: ReadonlyArray<Pick<Wall, 'a' | 'b'>>
+    roofRings?: ReadonlyArray<ReadonlyArray<Point2D>>
+    extraCorners?: ReadonlyArray<Point2D>
+    axisAnchor?: Point2D
+    lockAxis?: boolean
+    snapDisabled?: boolean
+    radiusCm?: number
+  },
+): Point2D {
+  if (opts.snapDisabled === true) return point
+  const radius = opts.radiusCm ?? DAK_FACE_SNAP_CM
+  const corners = collectDakSnapCorners(opts)
+  const corner = closestPointInRadius(corners, point, radius)
+  const applyCorner = (): Point2D => {
+    if (!corner) return point
+    if (opts.axisAnchor && opts.lockAxis === true) {
+      return snapDrawWallEndpoint(opts.axisAnchor, corner, true)
+    }
+    return corner
+  }
+  if (corner) {
+    const cornerDist = Math.hypot(point.x - corner.x, point.y - corner.y)
+    if (cornerDist <= DAK_CORNER_SNAP_CM) return applyCorner()
+  }
+  const face = snapDrawPointToWallFaces(collectDakSnapWalls(opts), point, {
+    axisAnchor: opts.axisAnchor,
+    lockAxis: opts.lockAxis,
+    radiusCm: radius,
+  })
+  if (face !== point) return face
+  return corner ? applyCorner() : point
+}
+
+function closestOnSegment(point: Point2D, a: Point2D, b: Point2D): Point2D {
+  const hit = projectOnSegment(point, a, b)
+  const t = Math.max(0, Math.min(1, hit.t))
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+  }
+}
+
+/**
+ * Dichtstbijzijnde toegestane dak-rand: binnen-/buitenface of nok.
+ * Voor klikken in een bedekte uitslag (hogere floor) zonder pixel-aimen.
+ */
+export function snapToNearestDakBoundary(
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+  ridges: ReadonlyArray<Pick<Wall, 'a' | 'b'>>,
+  point: Point2D,
+  roofRings?: ReadonlyArray<ReadonlyArray<Point2D>>,
+): Point2D | null {
+  let best: Point2D | null = null
+  let bestDist = Infinity
+  const consider = (candidate: Point2D) => {
+    const dist = Math.hypot(point.x - candidate.x, point.y - candidate.y)
+    if (dist >= bestDist) return
+    bestDist = dist
+    best = candidate
+  }
+  for (const wall of walls) {
+    for (const face of wallFaceSegments(wall)) {
+      consider(closestOnSegment(point, face.a, face.b))
+    }
+  }
+  for (const ridge of ridges) {
+    consider(closestOnSegment(point, ridge.a, ridge.b))
+  }
+  for (const ring of roofRings ?? []) {
+    if (ring.length < 2) continue
+    const last = ring.length >= 3 ? ring.length : ring.length - 1
+    for (let i = 0; i < last; i++) {
+      const a = ring[i]
+      const b = ring[(i + 1) % ring.length]
+      if (a && b) consider(closestOnSegment(point, a, b))
+    }
+  }
+  return best
+}
+
+/** True als het punt op een toegestane dak-rand ligt (na clamp). */
+export function isOnDakBoundary(
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+  ridges: ReadonlyArray<Pick<Wall, 'a' | 'b'>>,
+  point: Point2D,
+  roofRings?: ReadonlyArray<ReadonlyArray<Point2D>>,
+  slackCm = DAK_BOUNDARY_ACCEPT_CM,
+): boolean {
+  const boundary = snapToNearestDakBoundary(walls, ridges, point, roofRings)
+  if (!boundary) return false
+  return Math.hypot(point.x - boundary.x, point.y - boundary.y) <= slackCm
+}

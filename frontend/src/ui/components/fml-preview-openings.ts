@@ -4,26 +4,26 @@ import {
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
+import {
+  openingWorldCenter as openingWorldCenterOnAxis,
+  projectOpeningT,
+} from '@/core/fml/fml-wall-geom'
+import { buildLocalOpeningId } from '@/core/fml/opening-ids'
+import { findOpeningById, type OpeningLocation } from '@/core/fml/opening-wall-ops'
 import type { Opening, OpeningType, Point2D, Wall } from '@/core/fml/types'
+
+export type { OpeningLocation }
 
 const MIN_OPENING_WIDTH_CM = 10
 const MAX_OPENING_WIDTH_CM = 400
-const MIN_OPENING_HEIGHT_CM = 50
+/** Kozijn-rondom; ook ventilatierooster (~10 cm). */
+export const MIN_OPENING_HEIGHT_CM = 10
 const MAX_OPENING_HEIGHT_CM = 500
 const MIN_OPENING_SILL_Z_CM = 0
 const MAX_OPENING_SILL_Z_CM = 400
 
-export interface OpeningLocation {
-  id: string
-  wallId: string
-  wallIndex: number
-  wall: Wall
-  openingIndex: number
-  opening: Opening
-}
-
 export function buildDoorOpeningId(wallId: string, opening: Opening, openingIndex: number): string {
-  return `${wallId}-door-${opening.guid ?? openingIndex}`
+  return buildLocalOpeningId(wallId, { ...opening, type: 'door' }, openingIndex)
 }
 
 export function buildWindowOpeningId(
@@ -31,13 +31,11 @@ export function buildWindowOpeningId(
   opening: Opening,
   openingIndex: number,
 ): string {
-  return `${wallId}-window-${opening.guid ?? openingIndex}`
+  return buildLocalOpeningId(wallId, { ...opening, type: 'window' }, openingIndex)
 }
 
 export function buildOpeningId(wallId: string, opening: Opening, openingIndex: number): string {
-  return opening.type === 'window'
-    ? buildWindowOpeningId(wallId, opening, openingIndex)
-    : buildDoorOpeningId(wallId, opening, openingIndex)
+  return buildLocalOpeningId(wallId, opening, openingIndex)
 }
 
 function resolveDoorOpeningHeight(opening: Opening): number {
@@ -82,17 +80,87 @@ export function clampOpeningSillZ(zCm: number): number {
   return Math.max(MIN_OPENING_SILL_Z_CM, Math.min(MAX_OPENING_SILL_Z_CM, Math.round(zCm)))
 }
 
+export type OpeningCollinearEnds = { a: boolean; b: boolean }
+
+const COLLINEAR_DOT = 0.99
+const ENDPOINT_EPS_CM = 0.05
+
+function wallAxisUnit(wall: Pick<Wall, 'a' | 'b'>): Point2D | null {
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-6) return null
+  return { x: dx / len, y: dy / len }
+}
+
+function sameEndpoint(a: Point2D, b: Point2D): boolean {
+  return Math.abs(a.x - b.x) <= ENDPOINT_EPS_CM && Math.abs(a.y - b.y) <= ENDPOINT_EPS_CM
+}
+
+function wallsCollinearNeighbors(a: Pick<Wall, 'a' | 'b'>, b: Pick<Wall, 'a' | 'b'>): boolean {
+  const ua = wallAxisUnit(a)
+  const ub = wallAxisUnit(b)
+  if (!ua || !ub) return false
+  if (Math.abs(ua.x * ub.x + ua.y * ub.y) < COLLINEAR_DOT) return false
+  return (
+    sameEndpoint(a.a, b.a) ||
+    sameEndpoint(a.a, b.b) ||
+    sameEndpoint(a.b, b.a) ||
+    sameEndpoint(a.b, b.b)
+  )
+}
+
+/** Collineaire buur op een einde: daar mag een opening op de naad (zoals 2D-hop). */
+export function wallCollinearEnds(
+  walls: readonly Pick<Wall, 'id' | 'a' | 'b'>[],
+  wallId: string,
+): OpeningCollinearEnds {
+  const wall = walls.find((item) => item.id === wallId)
+  if (!wall) return { a: false, b: false }
+  let a = false
+  let b = false
+  for (const other of walls) {
+    if (other.id === wallId || !wallsCollinearNeighbors(wall, other)) continue
+    if (sameEndpoint(wall.a, other.a) || sameEndpoint(wall.a, other.b)) a = true
+    if (sameEndpoint(wall.b, other.a) || sameEndpoint(wall.b, other.b)) b = true
+  }
+  return { a, b }
+}
+
+export function collectCollinearWallIds(
+  walls: readonly Pick<Wall, 'id' | 'a' | 'b'>[],
+  startId: string,
+): string[] {
+  const ids = new Set<string>([startId])
+  const list = [...walls]
+  let grew = true
+  while (grew) {
+    grew = false
+    for (const id of [...ids]) {
+      const wall = list.find((item) => item.id === id)
+      if (!wall) continue
+      for (const other of list) {
+        if (ids.has(other.id) || !wallsCollinearNeighbors(wall, other)) continue
+        ids.add(other.id)
+        grew = true
+      }
+    }
+  }
+  return [...ids]
+}
+
 export function clampDoorOpeningT(
   wall: { a: { x: number; y: number }; b: { x: number; y: number }; thickness?: number },
   widthCm: number,
   t: number,
+  ends?: OpeningCollinearEnds,
 ): number {
   const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
   if (!Number.isFinite(t) || len < 1e-6) return 0.5
   const half = Math.max(0.5, widthCm / 2)
   const cap = Math.max(0, (wall.thickness ?? 0) / 2)
-  const minT = (half - cap) / len
-  const maxT = 1 - (half - cap) / len
+  const minT = ends?.a ? 0 : (half - cap) / len
+  const maxT = ends?.b ? 1 : 1 - (half - cap) / len
   if (minT > maxT) return 0.5
   return Math.max(minT, Math.min(maxT, t))
 }
@@ -101,18 +169,15 @@ export function projectPointToWallT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D)
   const dx = wall.b.x - wall.a.x
   const dy = wall.b.y - wall.a.y
   const lenSq = dx * dx + dy * dy
+  // Editor: degeneraat → midden; core sanitize gebruikt 0 via projectOpeningT.
   if (lenSq < 1e-9) return 0.5
-  const tRaw = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / lenSq
-  return Math.max(0, Math.min(1, tRaw))
+  return projectOpeningT(wall, point)
 }
 
 /** Wereldpositie van het openingscentrum op de muur (parameter `t`). */
 export function openingWorldCenter(wall: Pick<Wall, 'a' | 'b'>, t: number): Point2D {
   const clamped = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0.5))
-  return {
-    x: wall.a.x + (wall.b.x - wall.a.x) * clamped,
-    y: wall.a.y + (wall.b.y - wall.a.y) * clamped,
-  }
+  return openingWorldCenterOnAxis(wall, clamped)
 }
 
 /**
@@ -169,7 +234,7 @@ export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening
   const wall = walls[wallIndex]
 
   const width = Math.max(1, Math.round(opening.width))
-  const t = clampDoorOpeningT(wall, width, opening.t)
+  const t = clampDoorOpeningT(wall, width, opening.t, wallCollinearEnds(walls, wallId))
   const normalized: Opening = {
     ...opening,
     guid: opening.guid ?? crypto.randomUUID(),
@@ -193,26 +258,7 @@ export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening
   return nextWalls
 }
 
-export function findOpeningById(walls: Wall[], openingId: string): OpeningLocation | null {
-  for (let wallIndex = 0; wallIndex < walls.length; wallIndex += 1) {
-    const wall = walls[wallIndex]
-    for (let openingIndex = 0; openingIndex < wall.openings.length; openingIndex += 1) {
-      const opening = wall.openings[openingIndex]
-      const wallId = wall.id || `wall-${wallIndex}`
-      const id = buildOpeningId(wallId, opening, openingIndex)
-      if (id !== openingId) continue
-      return {
-        id,
-        wallId,
-        wallIndex,
-        wall,
-        openingIndex,
-        opening,
-      }
-    }
-  }
-  return null
-}
+export { findOpeningById }
 
 type OpeningPatch = Partial<
   Pick<
@@ -275,7 +321,7 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
     }
   }
 
-  if (patch.mirrored != null && nextOpening.type === 'door') {
+  if (patch.mirrored != null && (nextOpening.type === 'door' || nextOpening.type === 'window')) {
     const mirrored: [number, number] = [
       patch.mirrored[0] === 1 ? 1 : 0,
       patch.mirrored[1] === 1 ? 1 : 0,
@@ -323,7 +369,7 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
 
   if (patch.t != null) {
     const width = patch.width != null ? clampOpeningWidth(patch.width) : nextOpening.width
-    const t = clampDoorOpeningT(nextWall, width, patch.t)
+    const t = clampDoorOpeningT(nextWall, width, patch.t, wallCollinearEnds(nextWalls, nextWall.id))
     if (Math.abs(nextOpening.t - t) > 1e-6) {
       nextOpening.t = t
       changed = true

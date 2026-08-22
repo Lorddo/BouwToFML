@@ -18,6 +18,11 @@ export interface Opening {
   z_height?: number
   guid?: string
   materials?: Record<string, { type: string; value: string }>
+  /** Floorplanner-objectlabel; geen eigen UI, wel roundtrip. */
+  name?: string
+  showLabel?: boolean
+  name_x?: number
+  name_y?: number
   /**
    * Session-only: bovenlicht bij FML-export (niet in viewer) voor deur of raam.
    * `null`/`undefined` = erf vloerdefault (deur/raam apart); `true`/`false` = force.
@@ -82,6 +87,9 @@ export interface FloorItem {
   mirrored?: [number, number]
   guid?: string
   name?: string
+  showLabel?: boolean
+  name_x?: number
+  name_y?: number
   /** Overige item-keys (materials/rotation_x/light/…). */
   extras?: FmlExtras
 }
@@ -260,6 +268,8 @@ export const WINDOW_REFIDS = new Set([
   '14980facdeef5985d186e6767ee5300a1845abbc',
   '65d378c39d0183c82927e4ed7f8be6b224cf1df8',
   '6da47b0a60330d19716d716046ec6c72c19d2cdb',
+  'db1a3a6fceaae4487bda6b761df83ea75d9996c5',
+  '327e76e3a132e358fef8757471f4989e93323b03',
 ])
 
 /** Standaard enkele deur (90° draaicirkel) — default bij deur-referenties. */
@@ -279,15 +289,29 @@ export const SLIDING_SINGLE_DOOR_REFID = 'd2785cc45c9c0ec86644135d22fa9ac9c49bca
 export const POCKET_DOOR_REFID = '216'
 /**
  * Dubbele deur (vol / dicht) — editor-preset `double_solid`.
- * Was eerder foutief als garagedeur gelabeld; garagedeur-REFID volgt later.
+ * Was eerder foutief als garagedeur gelabeld.
  */
 export const DOUBLE_SOLID_DOOR_REFID = '9c1479d9dfc482859aea10b9dd67f5e7773fff6d'
+/** Garagedeur (sectionaal, geen draaicirkel). */
+export const GARAGE_DOOR_REFID = '37bb0bbe45ba0a5efda34f3f1e0b7ace63084e7f'
+/** Frans balkon — draaideur + balustrade. */
+export const FRENCH_BALCONY_DOOR_REFID = '9c845cf2ad8de220b65ee4dedeeb28ba4d750e21'
+/** Kale rechthoekige doorgang (entry way). */
+export const PASSAGE_DOOR_REFID = '181e49d1e848e8668befb4ee93bb5a2ec86b017c'
+/** Kale doorgang met ronde bovenzijde (archway). */
+export const ARCHWAY_DOOR_REFID = '047a2a4afa369865012e7925b94c11a817ff0c69'
+/** Vouwdeur enkel (2 delen). */
+export const BIFOLD_DOOR_REFID = 'e7ef286f1690491cf28bf8586c2b9624be881dba'
+/** Vouwdeur dubbel (4 delen). */
+export const BIFOLD_DOUBLE_DOOR_REFID = '919e3f1aaa05cd6b38b843f44573261442e38caa'
 /** @lintignore — gebruikt door buildFmlV3 (nog niet in UI) */
 export const CONCEPT_WINDOW_REFID = 'b88cd3f479455fbf57205a91c613c02b7e6dc2df'
 export const WINDOW_DOUBLE_REFID = 'bbf86e131112adca8869e9970229a71d7ff3fc28'
 export const WINDOW_TRIPLE_REFID = 'e3296a727699a3fc70e70dfec4ab715ed368ef63'
 export const WINDOW_ROUND_REFID = '6da47b0a60330d19716d716046ec6c72c19d2cdb'
 export const WINDOW_HALF_ROUND_REFID = '65d378c39d0183c82927e4ed7f8be6b224cf1df8'
+export const WINDOW_TRIANGLE_REFID = 'db1a3a6fceaae4487bda6b761df83ea75d9996c5'
+export const WINDOW_BLIND_REFID = '327e76e3a132e358fef8757471f4989e93323b03'
 
 /** Keuzes in stap-1 deur-referentie Template ID dropdown. */
 export const DOOR_FML_TEMPLATE_OPTIONS = [

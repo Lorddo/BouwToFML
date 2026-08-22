@@ -1,5 +1,6 @@
 import type { Opening, OpeningType } from '@/core/fml/types'
 import {
+  isTriangleWindow,
   resolveDoorSubtypeFromRefid,
   resolveWindowSubtypeFromRefid,
   type DoorAddSubtype,
@@ -89,7 +90,10 @@ export function computeOpeningDraftState(
     .map((opening) => resolveWindowSillZ(opening))
   const doorOpenings = openings.filter((opening) => opening.type === 'door')
   const windowOpenings = openings.filter((opening) => opening.type === 'window')
-  const hinges = doorOpenings.map((opening) => resolveHingeAtStart(opening.mirrored))
+  const mirrorable = openings.filter(
+    (opening) => opening.type === 'door' || isTriangleWindow(opening.type, opening.refid),
+  )
+  const hinges = mirrorable.map((opening) => resolveHingeAtStart(opening.mirrored))
   const swings = doorOpenings.map((opening) => resolveSwingSign(opening.mirrored) > 0)
   const bovenlichtFlags =
     openingType === 'window'

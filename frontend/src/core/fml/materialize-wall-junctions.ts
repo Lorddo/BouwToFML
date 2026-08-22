@@ -11,6 +11,7 @@
  */
 import { ensureDesignsSynced } from './design-sync'
 import { applyFacadeGroupRemaps, pruneFacadeGroups, type WallIdRemap } from './facade-groups'
+import { openingWorldCenter, projectOpeningT, reprojectWallOpenings } from './fml-wall-geom'
 import type { Floor, FloorPlan, Opening, Point2D, Wall } from './types'
 import { splitWallEndpointExtras } from './wall-endpoint-height'
 
@@ -60,19 +61,6 @@ function pointAtT(a: Point2D, b: Point2D, t: number): Point2D {
   }
 }
 
-function openingWorldCenter(wall: Pick<Wall, 'a' | 'b'>, t: number): Point2D {
-  return pointAtT(wall.a, wall.b, t)
-}
-
-function projectT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {
-  const dx = wall.b.x - wall.a.x
-  const dy = wall.b.y - wall.a.y
-  const len2 = dx * dx + dy * dy
-  if (len2 <= 1e-12) return 0
-  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
-  return Math.max(0, Math.min(1, t))
-}
-
 function pointParamOnSegment(a: Point2D, b: Point2D, point: Point2D, epsCm: number): number | null {
   const ab = { x: b.x - a.x, y: b.y - a.y }
   const lenSq = ab.x * ab.x + ab.y * ab.y
@@ -110,13 +98,6 @@ function newSplitId(): string {
   return `split-host-${crypto.randomUUID().slice(0, 8)}`
 }
 
-function reprojectOpenings(wall: Wall, worldCenters: Point2D[]): void {
-  wall.openings = wall.openings.map((opening, index) => ({
-    ...opening,
-    t: projectT(wall, worldCenters[index] ?? openingWorldCenter(wall, opening.t)),
-  }))
-}
-
 function redistributeOpenings(
   source: Pick<Wall, 'a' | 'b' | 'openings'>,
   tSplit: number,
@@ -130,9 +111,9 @@ function redistributeOpenings(
     const copy = cloneOpening(opening)
     // Exact op de knip: één helft (eerste); wereldpositie blijft.
     if (opening.t <= tSplit) {
-      firstOpenings.push({ ...copy, t: projectT(first, world) })
+      firstOpenings.push({ ...copy, t: projectOpeningT(first, world) })
     } else {
-      secondOpenings.push({ ...copy, t: projectT(second, world) })
+      secondOpenings.push({ ...copy, t: projectOpeningT(second, world) })
     }
   }
   return { first: firstOpenings, second: secondOpenings }
@@ -187,7 +168,7 @@ function snapEndpointTo(walls: Wall[], wallId: string, end: 'a' | 'b', point: Po
   if (distance(wall[end], point) <= 1e-12) return
   const centers = wall.openings.map((opening) => openingWorldCenter(wall, opening.t))
   wall[end] = { ...point }
-  reprojectOpenings(wall, centers)
+  wall.openings = reprojectWallOpenings(wall, centers)
 }
 
 function materializeTJoins(walls: Wall[], remaps: WallIdRemap[]): boolean {

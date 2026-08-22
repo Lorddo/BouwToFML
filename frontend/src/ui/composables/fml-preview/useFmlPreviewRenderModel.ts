@@ -1,10 +1,7 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
-import {
-  listRidgeWallsOnFloor,
-  listRidgeWallsOnPlan,
-  ridgeDisplayWidthCm,
-} from '@/core/fml/ridge-walls'
-import { listRidgeSurfacesOnPlan } from '@/core/fml/roof-planes'
+import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/fml/ridge-walls'
+import { listBlockedRoofRings, listSkyExposedWalls } from '@/core/fml/ridge-floor'
+import { listRidgeSurfacesOnFloor } from '@/core/fml/roof-planes'
 import type { Floor, FloorPlan, FloorSurface, Wall } from '@/core/fml/types'
 import { buildAutoDimensionLines } from '@/core/fml/auto-dimension-lines'
 import { filterManualDimensions, readBtfSlices } from '@/core/fml/btf-slices'
@@ -77,6 +74,7 @@ interface ViewportApi {
 interface EditorApi {
   walls: ComputedRef<Wall[]>
   ridgeWalls: ComputedRef<Wall[]>
+  selectableWalls: ComputedRef<Wall[]>
   ridgeSurfaces: ComputedRef<FloorSurface[]>
   floorHeightCm: ComputedRef<number>
   floorIndex: Ref<number>
@@ -155,18 +153,25 @@ export function useFmlPreviewRenderModel(
     const wallLines: RenderWall[] = walls.map((wall, index) => mapWallLine(wall, index, 'wall'))
     const ghostWallLines: RenderWall[] = []
     const ghostWallPolygons: RenderWallPolygon[] = []
+    const blockedRoofPolygons: RenderWallPolygon[] = []
     if (dak && plan) {
-      const ghostInputs = plan.floors.flatMap((entry, floorIdx) =>
-        entry.walls
-          .filter((wall) => wall.thickness > 1e-6)
-          .map((wall, index) => ({
-            id: wall.id || `ghost-${floorIdx}-${index}`,
-            a: wall.a,
-            b: wall.b,
-            thickness: wall.thickness,
-            balance: wall.balance,
-          })),
-      )
+      listBlockedRoofRings(plan, editor.floorIndex.value).forEach((ring, index) => {
+        if (ring.length < 3) return
+        blockedRoofPolygons.push({
+          id: `blocked-roof-${index}`,
+          points: ring.flatMap((point) => {
+            const stage = toStagePoint(point.x, point.y)
+            return [stage.x, stage.y]
+          }),
+        })
+      })
+      const ghostInputs = listSkyExposedWalls(plan, editor.floorIndex.value).map((wall, index) => ({
+        id: wall.id || `ghost-${index}`,
+        a: wall.a,
+        b: wall.b,
+        thickness: wall.thickness,
+        balance: wall.balance,
+      }))
       if (ghostInputs.length > 0) {
         const geometry = buildWallRenderGeometry(ghostInputs)
         let ringIndex = 0
@@ -188,7 +193,7 @@ export function useFmlPreviewRenderModel(
 
     const displayWidth = ridgeDisplayWidthCm(plan)
     const half = displayWidth / 2
-    const ridgeSource = dak ? listRidgeWallsOnPlan(plan) : listRidgeWallsOnFloor(activeFloor)
+    const ridgeSource = listRidgeWallsOnFloor(activeFloor)
     const ridgeLines = ridgeSource.map((wall, index) => {
       const a = toStagePoint(wall.a.x, wall.a.y)
       const b = toStagePoint(wall.b.x, wall.b.y)
@@ -249,7 +254,7 @@ export function useFmlPreviewRenderModel(
     const fixtures = dak ? [] : buildRenderFixtures(activeFloor, toStagePoint)
     const areas = dak ? [] : buildRenderAreas(activeFloor.areas, toStagePoint)
     const surfaces = buildRenderSurfaces(
-      dak ? listRidgeSurfacesOnPlan(plan) : (activeFloor.surfaces ?? []),
+      dak ? listRidgeSurfacesOnFloor(activeFloor) : (activeFloor.surfaces ?? []),
       toStagePoint,
     )
     const labels = dak ? [] : buildRenderLabels(activeFloor.labels, toStagePoint)
@@ -265,7 +270,7 @@ export function useFmlPreviewRenderModel(
     const areaSideDims = dak ? [] : buildRenderAreaSideDims(activeFloor.areas, toStagePoint)
 
     let autoDimensions: ReturnType<typeof buildRenderDimensions> = []
-    if (vis === 'autogen' && dimSettings.engineAutoDims) {
+    if (!dak && vis === 'autogen' && dimSettings.engineAutoDims) {
       const autoLines = buildAutoDimensionLines(walls, activeFloor.areas, {
         dimensionMode: dimSettings.dimensionMode,
         generateOuterDimension: dimSettings.generateOuterDimension,
@@ -293,6 +298,7 @@ export function useFmlPreviewRenderModel(
       wallLines,
       ghostWallLines,
       ghostWallPolygons,
+      blockedRoofPolygons,
       ridgeLines,
       wallPolygons,
       wallFillPathData,
@@ -402,7 +408,7 @@ export function useFmlPreviewRenderModel(
     const dak = dakMode?.value === true
     const visibleIds = new Set<string>()
     if (dak) {
-      for (const wall of listRidgeWallsOnPlan(editor.localPlan.value)) visibleIds.add(wall.id)
+      for (const wall of listRidgeWallsOnFloor(floor.value)) visibleIds.add(wall.id)
     } else {
       for (const wall of editor.walls.value) visibleIds.add(wall.id)
       for (const wall of listRidgeWallsOnFloor(floor.value)) visibleIds.add(wall.id)

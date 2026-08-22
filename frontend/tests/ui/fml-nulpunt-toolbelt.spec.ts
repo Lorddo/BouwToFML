@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   FML_AREA_SIDE_DIMS_TOOL_ID,
+  getFmlDrawTools,
   getFmlSelectTools,
   type FmlToolId,
 } from '@/ui/components/canvas/fmlToolbeltItems'
@@ -23,5 +24,18 @@ describe('FML nulpunt toolbelt', () => {
     const dims = tools.find((t) => t.id === FML_AREA_SIDE_DIMS_TOOL_ID)
     expect(dims?.toggle).toBe(true)
     expect(dims?.icon).toBe('dims')
+  })
+})
+
+describe('FML dak-tab tools', () => {
+  it('geeft nok en dakvlak een eigen icoon', () => {
+    const dak = getFmlDrawTools({ dakMode: true })
+    expect(dak).toEqual([
+      expect.objectContaining({ id: 'draw_wall', icon: 'ridge' }),
+      expect.objectContaining({ id: 'draw_surface', icon: 'roof' }),
+    ])
+    const plan = getFmlDrawTools()
+    expect(plan.find((tool) => tool.id === 'draw_wall')?.icon).toBe('wall')
+    expect(plan.find((tool) => tool.id === 'draw_surface')).toBeUndefined()
   })
 })

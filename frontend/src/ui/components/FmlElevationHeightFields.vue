@@ -12,6 +12,7 @@ defineProps<{
 const emit = defineEmits<{
   nok: [cm: number]
   story: [floorIndex: number, cm: number]
+  ridge: [floorIndex: number, cm: number]
   slab: [floorIndex: number, cm: number]
   ridgeDisplayWidth: [cm: number]
   projection: [mode: ElevationProjectionMode]
@@ -65,6 +66,9 @@ function onNumber(event: Event): number | null {
     <label v-for="(row, index) in rows" :key="`${row.kind}-${index}`" class="elev-heights__row">
       <span v-if="row.kind === 'nok'">{{ t('viewer.elevationNok') }}</span>
       <span v-else-if="row.kind === 'story'">{{ row.name }}</span>
+      <span v-else-if="row.kind === 'ridge'">{{
+        t('viewer.elevationRidgeZ', { name: row.name })
+      }}</span>
       <span v-else>{{ t('viewer.elevationSlab', { name: row.name }) }}</span>
       <input
         v-if="row.kind === 'nok'"
@@ -87,6 +91,18 @@ function onNumber(event: Event): number | null {
           (event) => {
             const cm = onNumber(event)
             if (cm != null) emit('story', row.floorIndex, cm)
+          }
+        "
+      />
+      <input
+        v-else-if="row.kind === 'ridge'"
+        type="number"
+        min="0"
+        :value="row.zCm"
+        @change="
+          (event) => {
+            const cm = onNumber(event)
+            if (cm != null) emit('ridge', row.floorIndex, cm)
           }
         "
       />

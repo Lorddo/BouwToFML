@@ -9,8 +9,18 @@ import {
   floorWallBaseWorldZ,
   nokWorldRange,
   readFloorStack,
+  setFloorRidgeZCm,
+  storedRidgeZCm,
 } from './floor-stack'
-import type { Floor, FloorDesign, FloorPlan, FloorPlanSource, FmlExtras, Wall } from './types'
+import type {
+  Floor,
+  FloorDesign,
+  FloorPlan,
+  FloorPlanSource,
+  FmlExtras,
+  Point2D,
+  Wall,
+} from './types'
 import {
   endpointHeightCm,
   makeEndpoint3D,
@@ -130,6 +140,16 @@ export function findRidgeDesignIndex(floor: Floor): number {
   return designs.findIndex(isRidgeDesign)
 }
 
+/** Floors met plattegrondmuren — elk heeft (of krijgt) een eigen Dak-design. */
+export function listDakDesignFloors(
+  plan: FloorPlan | null | undefined,
+): Array<{ floorIndex: number; name: string }> {
+  if (!plan) return []
+  return plan.floors.flatMap((floor, floorIndex) =>
+    floor.walls.some((wall) => wall.thickness > 1e-6) ? [{ floorIndex, name: floor.name }] : [],
+  )
+}
+
 /** Floor met Dak-inhoud (nok/vlakken); anders eerste lege Dak-design. */
 export function findRidgeDesignFloorIndex(plan: FloorPlan | null | undefined): number {
   if (!plan) return -1
@@ -233,7 +253,7 @@ function emptyRidgeDesign(): FloorDesign {
     name: RIDGE_DESIGN_NAME,
     walls: [],
     surfaces: [],
-    source: { settings: { btfRole: RIDGE_DESIGN_ROLE } },
+    source: { settings: { btfRole: RIDGE_DESIGN_ROLE, engineAutoDims: false } },
   }
 }
 
@@ -250,6 +270,17 @@ export function ensureRidgeDesign(floor: Floor): { floor: Floor; designIndex: nu
     floor: { ...flushed, designs },
     designIndex: designs.length - 1,
   }
+}
+
+/** Sibling Dak-design op elke verdieping (platte daken zonder nok). */
+export function ensureRidgeDesignsOnPlan(plan: FloorPlan): FloorPlan {
+  let changed = false
+  const floors = plan.floors.map((floor) => {
+    if (findRidgeDesignIndex(floor) >= 0) return floor
+    changed = true
+    return ensureRidgeDesign(floor).floor
+  })
+  return changed ? { ...plan, floors } : plan
 }
 
 export function setRidgeWallsOnFloor(floor: Floor, walls: Wall[]): Floor {
@@ -322,6 +353,39 @@ export function ridgeWorldBottomZ(
   const floor = plan.floors[floorIndex]
   if (!floor) return 0
   return floorWallBaseWorldZ(plan, floorIndex) + ridgeEndpointZCm(wall, end, floor.height)
+}
+
+/** Default nok-z van een floor: opgeslagen default, anders floor.height. */
+export function ridgeDefaultZCm(plan: FloorPlan, floorIndex: number): number {
+  const floor = plan.floors[floorIndex]
+  if (!floor) return 0
+  const stored = storedRidgeZCm(readFloorStack(plan), floor.level)
+  if (stored != null) return stored
+  return Math.round(floor.height)
+}
+
+/** Zet default + alle nokken van één floor (niet world-Z van andere floors). */
+export function setFloorRidgeHeights(plan: FloorPlan, floorIndex: number, zCm: number): FloorPlan {
+  const floor = plan.floors[floorIndex]
+  if (!floor) return plan
+  const z = Math.max(0, Math.round(zCm))
+  const withDefault = setFloorRidgeZCm(plan, floor.level, z)
+  const target = withDefault.floors[floorIndex]
+  if (!target) return withDefault
+  const ridges = listRidgeWallsOnFloor(target)
+  if (ridges.length === 0) return withDefault
+  const next = setRidgeWallsZ(
+    ridges,
+    ridges.map((wall) => wall.id),
+    z,
+    target.height,
+  )
+  return {
+    ...withDefault,
+    floors: withDefault.floors.map((entry, index) =>
+      index === floorIndex ? setRidgeWallsOnFloor(entry, next) : entry,
+    ),
+  }
 }
 
 /** Relatieve nok-z t.o.v. `targetFloor` vanuit een draft op `sourceFloor`. */
@@ -416,6 +480,61 @@ export function overwriteRidgeDakThickness(plan: FloorPlan, thicknessCm: number)
     return setRidgeWallsOnFloor(floor, next)
   })
   return changed ? { ...plan, floors } : plan
+}
+
+/** Zet nok-uiteinden op één floor (sibling Dak-design). */
+export function setPlanRidgeJunctionZ(
+  plan: FloorPlan,
+  floorIndex: number,
+  refs: ReadonlyArray<{ wallId: string; end: WallEnd }>,
+  zCm: number,
+): FloorPlan {
+  const floor = plan.floors[floorIndex]
+  if (!floor) return plan
+  const ridges = listRidgeWallsOnFloor(floor)
+  const next = setRidgeJunctionZ(ridges, refs, zCm, floor.height)
+  if (next === ridges) return plan
+  return {
+    ...plan,
+    floors: plan.floors.map((entry, index) =>
+      index === floorIndex ? setRidgeWallsOnFloor(entry, next) : entry,
+    ),
+  }
+}
+
+/** Vervang XY + z/span van één nok in het Dak-design. */
+export function setRidgeWallPlanPose(
+  plan: FloorPlan,
+  floorIndex: number,
+  wallId: string,
+  pose: { a: Point2D; b: Point2D; zA: number; zB: number; spanCm: number },
+): FloorPlan {
+  const floor = plan.floors[floorIndex]
+  if (!floor) return plan
+  const ridges = listRidgeWallsOnFloor(floor)
+  const index = ridges.findIndex((item) => item.id === wallId)
+  const current = ridges[index]
+  if (!current) return plan
+  const span = Math.max(1, Math.round(pose.spanCm))
+  const nextWall: Wall = {
+    ...current,
+    a: { x: pose.a.x, y: pose.a.y },
+    b: { x: pose.b.x, y: pose.b.y },
+    extras: {
+      ...(current.extras ?? {}),
+      az: makeEndpoint3D(Math.max(0, Math.round(pose.zA)), span),
+      bz: makeEndpoint3D(Math.max(0, Math.round(pose.zB)), span),
+      [RIDGE_WALL_EXTRA]: true,
+    },
+  }
+  const next = ridges.slice()
+  next[index] = nextWall
+  return {
+    ...plan,
+    floors: plan.floors.map((entry, i) =>
+      i === floorIndex ? setRidgeWallsOnFloor(entry, next) : entry,
+    ),
+  }
 }
 
 export function setRidgeJunctionZ(

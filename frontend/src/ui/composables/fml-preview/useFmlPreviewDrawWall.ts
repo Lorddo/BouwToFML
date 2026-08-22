@@ -22,6 +22,7 @@ export function useFmlPreviewDrawWall(options: {
   wallThicknessDraft: Ref<number>
   drawKind?: Ref<'wall' | 'ridge'>
   ridgeZCm?: Ref<number | undefined>
+  requireFloorIndex?: () => number | undefined
   resolvePoint: (cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean) => Point2D
   beforeBegin: () => void
   syncPlanToParent: () => void
@@ -91,7 +92,7 @@ export function useFmlPreviewDrawWall(options: {
       draft.startCm,
       endCm,
       options.wallThicknessDraft.value,
-      { kind, ridgeZCm: options.ridgeZCm?.value },
+      { kind, ridgeZCm: options.ridgeZCm?.value, requireFloorIndex: options.requireFloorIndex?.() },
     )
     if (!wallId) {
       options.editor.undo()

@@ -17,6 +17,8 @@ export const JUNCTION_POINT_SNAP_CM = 15
  * Geen 15 cm as-magnet — start zit al op een junction; kleine schachten moeten vrij blijven.
  */
 export const ROOM_DRAW_SNAP_CM = 4
+/** Tweede hoek: H/V-uitlijning + knoop-landing (cm), krapper dan muur-teken 15 cm. */
+export const ROOM_DRAW_END_SNAP_CM = 8
 
 /** Slider-bereik (fractie 0–1 = 0–100%). Invoer mag daarbuiten. */
 export const BALANCE_MIN = 0

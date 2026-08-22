@@ -4,12 +4,15 @@ import type { ViewerSessionDefaults } from '@/core/fml/viewer-session-defaults'
 
 defineProps<{
   defaults: ViewerSessionDefaults
+  /** Project-flag: flags+export-expand (true) vs losse ramen (false). Default true. */
+  bovenlichtPacked?: boolean
   hint?: string
 }>()
 
 const emit = defineEmits<{
   number: [field: keyof ViewerSessionDefaults, event: Event]
   bool: [field: 'bovenlichtDefault' | 'windowBovenlichtDefault', event: Event]
+  packed: [packed: boolean]
 }>()
 
 const { t } = useI18n()
@@ -74,6 +77,15 @@ const { t } = useI18n()
         />
       </label>
     </div>
+    <label class="defaults-check" :title="t('settings.bovenlichtPackedHint')">
+      <input
+        type="checkbox"
+        :checked="bovenlichtPacked !== false"
+        @change="emit('packed', ($event.target as HTMLInputElement).checked)"
+      />
+      <span>{{ t('settings.bovenlichtPacked') }}</span>
+    </label>
+    <p class="defaults-packed-hint">{{ t('settings.bovenlichtPackedHint') }}</p>
     <label class="defaults-check">
       <input
         type="checkbox"
@@ -136,5 +148,12 @@ const { t } = useI18n()
   margin-top: 8px;
   font-size: 12px;
   color: #334155;
+}
+
+.defaults-packed-hint {
+  margin: 2px 0 0 22px;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
 }
 </style>

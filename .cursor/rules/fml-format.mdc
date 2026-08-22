@@ -100,7 +100,8 @@ Deur of raam **op** muurlijn — niet los zwevend.
 - **`t`:** 0..1 — positie langs muur (0 bij `a`, 1 bij `b`)
 - **`width`:** breedte in cm
 - **`refid`:** SHA-hash uit Floorplanner-catalogus (geen korte IDs)
-- **`mirrored`:** draairichting
+- **`mirrored`:** deuren = scharnier/draai; driehoekraam = L/R via `mirrored[0]` (overige ramen symmetrisch)
+- **Objectlabel (optioneel):** `name`, `showLabel`, `name_x`, `name_y` — vastgemaakt aan de opening (geen `labels[]`). Roundtrip + schaal/spiegel/rotatie; geen eigen UI.
 - **Deur-tags** (voor/achter/binnen): persistent FML-veld nog te bevestigen via roundtrip — `klant-eisen-v1.md`
 - Raam: `z` + `z_height` voor sill en hoogte
 
@@ -114,10 +115,12 @@ Twee lagen: **structureel type** → `refid`; **deur-tag** (voor/achter/binnen) 
 | Dubbel openslaand | vaak **2** openings, zelfde refid | TBD — o.a. `df95e84f…` in examples |
 | Schuifdeur / schuifpui | 1 brede of 2 segmenten | TBD — o.a. `5ae0ee3c…`, `1cdb4e60…` |
 | Garagedeur | 1 brede opening | `9c1479d9dfc482859aea10b9dd67f5e7773fff6d` (kandidaat; FP-export-check open) |
-| Opening (geen deur) | 1 opening, ander refid | TBD |
+| Opening (geen deur) | 1 opening, ander refid | `047a2a4a…` archway (preset); `181e49d1…` entry way |
+| Vouwdeur 2/4-delig | 1 opening | `e7ef286f…` / `919e3f1a…` (FML invoer) |
 | Raam enkel | 1 opening | `b88cd3f479455fbf57205a91c613c02b7e6dc2df` ✓ |
-| Raam dubbel/driedelig | 1 brede opening | TBD — o.a. `bbf86e13…` |
-| Raam rond/halfrond | 1 opening | TBD |
+| Raam dubbel/driedelig | 1 brede opening | `bbf86e13…` / `e3296a72…` ✓ |
+| Raam rond/halfrond | 1 opening | `6da47b0a…` / `65d378c3…` ✓ |
+| Raam driehoek / blind | 1 opening | `db1a3a6f…` / `327e76e3…` (FML invoer) |
 
 FML v3 heeft **geen pane-count** — meerdelig raam = `t` + totale `width` + juiste refid.
 
@@ -143,7 +146,7 @@ Floorplanner negeert onbekende keys. Editor-download houdt ze.
 
 | Key | Inhoud |
 |-----|--------|
-| `floorStack` | `{ nokThicknessCm, floors: [{ level, thicknessCm }] }` — aanzicht-banden; niet `walls[]` |
+| `floorStack` | `{ nokThicknessCm, floors: [{ level, thicknessCm, ridgeZCm? }] }` — aanzicht-banden + default nokhoogte per floor; niet `walls[]` |
 | `elevationViews` | `[{ facadeGroupId, drawing? }]` — onderlegger per gevelgroep, niet `floors[].drawing` |
 | `elevationProjection` | `"architect"` \| `"projective"` — vaste H/V-zijde vs mee met de gevel |
 | `ridgeWalls` | `{ wallGuids, displayWidthCm }` — nok-identity; muren staan in sibling design `Dak` (`btfRole: ridge`) |
@@ -161,7 +164,7 @@ Drie sporen (exclusieve weergave in editor):
 
 | UI | FML | Laag |
 |---|---|---|
-| Genereer maatlijnen (autogen) | `engineAutoDims` | **design** `settings` |
+| Genereer maatlijnen (autogen) | `engineAutoDims` | **design** `settings` (alleen plattegrond van die floor; Dak altijd `false`) |
 | Interior / Exterior | `dimensionMode` `"interior"` \| `"exterior"` | **project** `settings` |
 | Genereer buitenmaten | `generateOuterDimension` | **project** `settings` (alleen autogen) |
 | Slicers | `btfSlices` | **design** `settings` |

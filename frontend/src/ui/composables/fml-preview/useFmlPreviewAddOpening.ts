@@ -1,20 +1,20 @@
 import type { Ref } from 'vue'
+import {
+  maybeAddSiblingBovenlicht,
+  type ExpandBovenlichtFloorDefaults,
+} from '@/core/fml/bovenlicht'
 import { DEFAULT_FML_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import type { Opening, Point2D } from '@/core/fml/types'
-import {
-  resolveDoorAddPreset,
-  resolveWindowAddPreset,
-  type DoorAddSubtype,
-  type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
+import { buildOpeningFromPreset } from '@/core/fml/opening-from-preset'
+import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
 import {
   clampDoorOpeningT,
   clampOpeningSillZ,
   clampOpeningWidth,
   clampWindowOpeningHeight,
-  DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
   projectPointToWallT,
+  wallCollinearEnds,
 } from '@/ui/components/fml-preview-openings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 
@@ -29,6 +29,9 @@ export function useFmlPreviewAddOpening(options: {
   addWindowWidthCm: Ref<number>
   addWindowSillZCm: Ref<number>
   addWindowHeightCm: Ref<number>
+  /** Unpacked: place sibling-raam als floor-default aan. */
+  bovenlichtPacked?: Ref<boolean>
+  bovenlichtDefaults?: Ref<ExpandBovenlichtFloorDefaults>
   beforePlace: () => void
   syncPlanToParent: () => void
 }) {
@@ -36,10 +39,6 @@ export function useFmlPreviewAddOpening(options: {
     const wall = options.editor.walls.value.find((item) => item.id === wallId)
     if (!wall) return null
 
-    const preset =
-      mode === 'door'
-        ? resolveDoorAddPreset(options.addDoorSubtype.value)
-        : resolveWindowAddPreset(options.addWindowSubtype.value)
     const widthCm = clampOpeningWidth(
       mode === 'door' ? options.addDoorWidthCm.value : options.addWindowWidthCm.value,
     )
@@ -47,30 +46,36 @@ export function useFmlPreviewAddOpening(options: {
     else options.addWindowWidthCm.value = widthCm
 
     const sillZCm =
-      mode === 'window' ? clampOpeningSillZ(options.addWindowSillZCm.value) : undefined
+      mode === 'window'
+        ? clampOpeningSillZ(options.addWindowSillZCm.value)
+        : DEFAULT_WINDOW_SILL_Z_CM
     const heightCm =
       mode === 'window'
         ? clampWindowOpeningHeight(options.addWindowHeightCm.value)
         : Math.max(1, Math.round(options.addDoorHeightCm.value || DEFAULT_FML_DOOR_HEIGHT_CM))
     if (mode === 'window') {
-      options.addWindowSillZCm.value = sillZCm ?? DEFAULT_WINDOW_SILL_Z_CM
-      options.addWindowHeightCm.value = heightCm ?? DEFAULT_WINDOW_HEIGHT_CM
+      options.addWindowSillZCm.value = sillZCm
+      options.addWindowHeightCm.value = heightCm
     } else {
       options.addDoorHeightCm.value = heightCm
     }
 
     const projectedT = projectPointToWallT(wall, cm)
-    const openingT = clampDoorOpeningT(wall, widthCm, projectedT)
-    const opening: Opening = {
-      type: preset.type,
-      refid: preset.refid,
+    const openingT = clampDoorOpeningT(
+      wall,
+      widthCm,
+      projectedT,
+      wallCollinearEnds(options.editor.walls.value, wallId),
+    )
+    const opening: Opening = buildOpeningFromPreset({
+      type: mode,
+      doorSubtype: options.addDoorSubtype.value,
+      windowSubtype: options.addWindowSubtype.value,
+      widthCm,
+      heightCm,
+      sillZCm,
       t: openingT,
-      width: widthCm,
-      z: sillZCm,
-      z_height: heightCm,
-      mirrored: mode === 'door' ? [0, 0] : undefined,
-      guid: crypto.randomUUID(),
-    }
+    })
 
     options.beforePlace()
     options.editor.pushUndo()
@@ -79,6 +84,18 @@ export function useFmlPreviewAddOpening(options: {
       options.editor.undo()
       return null
     }
+
+    if (options.bovenlichtPacked?.value === false && options.bovenlichtDefaults) {
+      const host = options.editor.walls.value.find((item) => item.id === wallId) ?? wall
+      const sibling = maybeAddSiblingBovenlicht(
+        host,
+        opening,
+        options.editor.floorHeightCm.value,
+        options.bovenlichtDefaults.value,
+      )
+      if (sibling) options.editor.applyOpeningAdd(wallId, sibling)
+    }
+
     options.syncPlanToParent()
     return openingId
   }

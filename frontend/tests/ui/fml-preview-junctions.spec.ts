@@ -15,6 +15,7 @@ import {
   moveJunctionWithWallJoins,
   snapPointToJunctions,
   snapPointToWallCenters,
+  snapRoomDrawEndPoint,
   snapToNearbyEndpointAxes,
   snapToNearbyPointAxes,
   snapPolygonVertexAxisLock,
@@ -1632,6 +1633,44 @@ describe('snapPointToWallCenters', () => {
     const snapped = snapPointToWallCenters(walls, { x: 50, y: 43 }, ROOM_DRAW_SNAP_CM)
     expect(snapped.x).toBeCloseTo(50, 4)
     expect(snapped.y).toBeCloseTo(40, 4)
+  })
+})
+
+describe('snapRoomDrawEndPoint', () => {
+  const walls = [
+    {
+      id: 'h1',
+      a: { x: 0, y: 0 },
+      b: { x: 400, y: 0 },
+      thickness: 20,
+      openings: [],
+    },
+    {
+      id: 'v1',
+      a: { x: 400, y: 0 },
+      b: { x: 400, y: 300 },
+      thickness: 20,
+      openings: [],
+    },
+  ]
+  const junctions = buildJunctions(walls)
+  const start = { x: 0, y: 0 }
+
+  it('lijnt de 2e hoek H/V uit met een andere knoop binnen 8 cm', () => {
+    const snapped = snapRoomDrawEndPoint(junctions, walls, { x: 393, y: 250 }, start)
+    expect(snapped.x).toBeCloseTo(400, 4)
+    expect(snapped.y).toBeCloseTo(250, 4)
+  })
+
+  it('landt op een knoop als beide assen binnen 8 cm vallen', () => {
+    const snapped = snapRoomDrawEndPoint(junctions, walls, { x: 394, y: 294 }, start)
+    expect(snapped.x).toBeCloseTo(400, 4)
+    expect(snapped.y).toBeCloseTo(300, 4)
+  })
+
+  it('klapt niet dicht op de start-as bij een smalle kamer', () => {
+    const snapped = snapRoomDrawEndPoint(junctions, walls, { x: 200, y: 6 }, start)
+    expect(snapped).toEqual({ x: 200, y: 6 })
   })
 })
 

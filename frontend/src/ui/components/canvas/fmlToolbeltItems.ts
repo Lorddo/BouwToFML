@@ -52,6 +52,8 @@ export function isFmlToolbarSettingsOpen(args: {
   /** Viewer-maatlijnen: strip met wissen, ook in de floating settings-kaart. */
   hasMeasureLines?: boolean
   activeTool: FmlToolId | null
+  /** Dakvlak-tool heeft geen roomtype-settings. */
+  dakMode?: boolean
 }): boolean {
   if (
     args.hasWallSelection ||
@@ -65,6 +67,7 @@ export function isFmlToolbarSettingsOpen(args: {
     return true
   }
   if (args.activeTool === 'measure') return true
+  if (args.dakMode === true && args.activeTool === 'draw_surface') return false
   return args.activeTool != null && SETTINGS_TOOLS.has(args.activeTool)
 }
 
@@ -92,8 +95,8 @@ export function getFmlDrawTools(options?: {
 }): ToolbeltItem[] {
   if (options?.dakMode === true) {
     return [
-      { id: 'draw_wall', icon: 'wall', label: tGlobal('result.toolbar.wallKindRidge') },
-      { id: 'draw_surface', icon: 'rect', label: tGlobal('toolbelt.fml.drawSurface') },
+      { id: 'draw_wall', icon: 'ridge', label: tGlobal('result.toolbar.wallKindRidge') },
+      { id: 'draw_surface', icon: 'roof', label: tGlobal('toolbelt.fml.drawRoof') },
     ]
   }
   const tools: ToolbeltItem[] = [

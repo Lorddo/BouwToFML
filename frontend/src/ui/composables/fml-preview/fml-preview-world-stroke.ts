@@ -15,6 +15,9 @@ export const OPENING_STROKE_MID_CM = 1.6
 /** Deur-zwaai dash in cm. */
 export const OPENING_ARC_DASH_CM: readonly [number, number] = [5, 4]
 
+/** Extra gloed rond selectie, in schermpixels (niet meezoomen). */
+export const SELECTION_HIGHLIGHT_PAD_PX = 5
+
 /** Onzichtbare hit-stroke in schermpixels (niet meezoomen). */
 export const OPENING_HIT_STROKE_PX = 14
 

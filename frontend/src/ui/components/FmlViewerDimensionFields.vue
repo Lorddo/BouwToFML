@@ -49,22 +49,17 @@ const { t } = useI18n()
         <span class="dim-mode-label">{{ t('viewer.dimensionsMode') }}</span>
         <div class="dim-mode-seg">
           <button
+            v-for="mode in ['interior', 'exterior'] as const"
+            :key="mode"
             type="button"
             class="dim-mode-btn"
-            :class="{ 'is-on': settings.dimensionMode === 'interior' }"
+            :class="{ 'is-on': settings.dimensionMode === mode }"
             :disabled="!settings.engineAutoDims"
-            @click="emit('mode', 'interior')"
+            @click="emit('mode', mode)"
           >
-            {{ t('viewer.dimensionsInterior') }}
-          </button>
-          <button
-            type="button"
-            class="dim-mode-btn"
-            :class="{ 'is-on': settings.dimensionMode === 'exterior' }"
-            :disabled="!settings.engineAutoDims"
-            @click="emit('mode', 'exterior')"
-          >
-            {{ t('viewer.dimensionsExterior') }}
+            {{
+              mode === 'interior' ? t('viewer.dimensionsInterior') : t('viewer.dimensionsExterior')
+            }}
           </button>
         </div>
       </div>
@@ -84,20 +79,16 @@ const { t } = useI18n()
         <span class="dim-mode-label">{{ t('viewer.dimensionsMode') }}</span>
         <div class="dim-mode-seg">
           <button
+            v-for="mode in ['interior', 'exterior'] as const"
+            :key="mode"
             type="button"
             class="dim-mode-btn"
-            :class="{ 'is-on': settings.dimensionMode === 'interior' }"
-            @click="emit('mode', 'interior')"
+            :class="{ 'is-on': settings.dimensionMode === mode }"
+            @click="emit('mode', mode)"
           >
-            {{ t('viewer.dimensionsInterior') }}
-          </button>
-          <button
-            type="button"
-            class="dim-mode-btn"
-            :class="{ 'is-on': settings.dimensionMode === 'exterior' }"
-            @click="emit('mode', 'exterior')"
-          >
-            {{ t('viewer.dimensionsExterior') }}
+            {{
+              mode === 'interior' ? t('viewer.dimensionsInterior') : t('viewer.dimensionsExterior')
+            }}
           </button>
         </div>
       </div>

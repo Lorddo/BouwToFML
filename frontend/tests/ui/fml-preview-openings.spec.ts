@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addOpeningToWall,
   buildWindowOpeningId,
+  clampOpeningHeight,
   findOpeningById,
   projectPointToWallT,
   updateOpeningById,
@@ -50,6 +51,33 @@ describe('addOpeningToWall', () => {
     expect(next[0]?.openings[0]?.guid).toBeTruthy()
     expect(next[0]?.openings[0]?.t).toBeCloseTo(0.3, 6)
     expect(next[0]?.openings[0]?.z_height).toBe(220)
+  })
+
+  it('laat een raam op een collineaire splitsing staan', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 200, y: 0 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'w2',
+        a: { x: 200, y: 0 },
+        b: { x: 400, y: 0 },
+        thickness: 20,
+        openings: [],
+      },
+    ]
+    const next = addOpeningToWall(walls, 'w1', {
+      type: 'window',
+      refid: 'window-ref',
+      t: 1,
+      width: 80,
+    })
+    expect(next[0]?.openings[0]?.t).toBeCloseTo(1, 6)
+    expect(next[0]?.openings[0]?.width).toBe(80)
   })
 
   it('adds a window with default sill z and glass height', () => {
@@ -133,6 +161,57 @@ describe('updateOpeningById', () => {
     })
     expect(next[0]?.openings[0]?.bovenlichtHeightCm).toBe(25)
     expect(next[0]?.openings[0]?.bovenlichtGapCm).toBe(0)
+  })
+
+  it('houdt een 10 cm-raamhoogte bij breedte-wijziging', () => {
+    expect(clampOpeningHeight(10, 'window')).toBe(10)
+    expect(clampOpeningHeight(9, 'window')).toBe(10)
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 200, y: 0 },
+        thickness: 20,
+        openings: [
+          {
+            type: 'window' as const,
+            refid: 'window-ref',
+            t: 0.5,
+            width: 100,
+            z: 220,
+            z_height: 10,
+            guid: 'win-low',
+          },
+        ],
+      },
+    ]
+    const next = updateOpeningById(walls, 'w1-window-win-low', { width: 140, z_height: 10 })
+    expect(next[0]?.openings[0]?.width).toBe(140)
+    expect(next[0]?.openings[0]?.z_height).toBe(10)
+  })
+
+  it('schrijft mirrored ook op een raam (driehoek)', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 200, y: 0 },
+        thickness: 20,
+        openings: [
+          {
+            type: 'window' as const,
+            refid: 'window-ref',
+            t: 0.5,
+            width: 110,
+            z: 70,
+            z_height: 110,
+            guid: 'win-tri',
+          },
+        ],
+      },
+    ]
+    const next = updateOpeningById(walls, 'w1-window-win-tri', { mirrored: [1, 0] })
+    expect(next[0]?.openings[0]?.mirrored).toEqual([1, 0])
   })
 })
 

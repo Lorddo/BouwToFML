@@ -4,7 +4,8 @@
  */
 import { listElevationFacadeGroups } from './facade-groups'
 import { readFloorStack, slabThicknessCm } from './floor-stack'
-import { listRidgeWallsOnFloor, listRidgeWallsOnPlan } from './ridge-walls'
+import { listDakSnapWalls, wallIsSkyExposed } from './ridge-floor'
+import { listRidgeWallsOnFloor } from './ridge-walls'
 import {
   listThickPlanWalls,
   planFootprintCentroid,
@@ -100,10 +101,10 @@ function wallTopAtPoint(wall: Wall, point: Point2D, floorHeightCm: number): numb
   return za + (zb - za) * hit.t
 }
 
-function facadeWallsOnFloor(plan: FloorPlan, floor: Floor): Wall[] {
+function facadeWallsOnFloor(plan: FloorPlan, floor: Floor, floorIndex: number): Wall[] {
   const ids = new Set(listElevationFacadeGroups(plan).flatMap((group) => group.wallGuids))
-  if (ids.size === 0) return []
-  return floor.walls.filter((wall) => ids.has(wall.id))
+  const source = ids.size > 0 ? floor.walls.filter((wall) => ids.has(wall.id)) : floor.walls
+  return source.filter((wall) => wallIsSkyExposed(plan, floorIndex, wall))
 }
 
 function ridgeTargetsOnFloor(floor: Floor, floorHeightCm: number): TargetSeg[] {
@@ -309,15 +310,11 @@ function loftRidgeToHigher(
 export function generateRoofPlanesForFloor(plan: FloorPlan, floorIndex: number): FloorSurface[] {
   const floor = plan.floors[floorIndex]
   if (!floor) return []
-  const facades = facadeWallsOnFloor(plan, floor)
+  const facades = facadeWallsOnFloor(plan, floor, floorIndex)
   if (facades.length === 0) return []
   const centroid = planFootprintCentroid(plan)
   const ridges = ridgeTargetsOnFloor(floor, floor.height)
-  // Alleen lean-to als er nergens een nok is. Anders alleen floors mét nok.
-  const next =
-    ridges.length > 0 || listRidgeWallsOnPlan(plan).length > 0
-      ? []
-      : nextFloorTargets(plan, floorIndex)
+  const next = nextFloorTargets(plan, floorIndex)
   const eaveTargets = [...ridges, ...next]
   const searchPoints = [
     ...facades.flatMap((wall) => [wall.a, wall.b]),
@@ -399,14 +396,24 @@ export function snapRoofVertexToWallFace(params: {
   plan: FloorPlan
   point: Point2D
   maxDist?: number
+  floorIndex?: number
 }): { x: number; y: number; z: number } | null {
   const maxDist = params.maxDist ?? ROOF_TOUCH_SLACK_CM * 2
   const centroid = planFootprintCentroid(params.plan)
-  const walls = listThickPlanWalls(params.plan)
+  const walls =
+    params.floorIndex != null
+      ? listDakSnapWalls(params.plan, params.floorIndex)
+      : listThickPlanWalls(params.plan)
   if (walls.length === 0) return null
   const snapped = snapPointToOuterWallFaces(walls, centroid, params.point, maxDist)
   let best: { z: number; dist: number } | null = null
-  for (const floor of params.plan.floors) {
+  const floors =
+    params.floorIndex != null
+      ? [params.plan.floors[params.floorIndex], params.plan.floors[params.floorIndex + 1]].filter(
+          (floor): floor is NonNullable<typeof floor> => floor != null,
+        )
+      : params.plan.floors
+  for (const floor of floors) {
     for (const wall of floor.walls) {
       if (!(wall.thickness > 1e-6)) continue
       const face = wallOuterFace(wall, centroid)
@@ -426,7 +433,11 @@ export function snapRoofVertexZ(params: {
   floorIndex: number
   point: Point2D
 }): number {
-  const face = snapRoofVertexToWallFace({ plan: params.plan, point: params.point })
+  const face = snapRoofVertexToWallFace({
+    plan: params.plan,
+    point: params.point,
+    floorIndex: params.floorIndex,
+  })
   if (face) return face.z
   const floor = params.plan.floors[params.floorIndex]
   return floor ? Math.round(floor.height) : 0

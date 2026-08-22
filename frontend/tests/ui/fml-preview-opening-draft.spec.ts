@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_WINDOW_REFID, type Opening } from '@/core/fml/types'
+import { CONCEPT_WINDOW_REFID, WINDOW_TRIANGLE_REFID, type Opening } from '@/core/fml/types'
 import { computeOpeningDraftState } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({
@@ -52,5 +52,14 @@ describe('computeOpeningDraftState — bovenlicht measures', () => {
     expect(draft?.bovenlichtHeightCm).toBe(30)
     expect(draft?.bovenlichtGapCm).toBe(12)
     expect(draft?.bovenlichtHeightMixed).toBe(false)
+  })
+
+  it('leest spiegelstand van een driehoekraam', () => {
+    const draft = computeOpeningDraftState([
+      windowOpening({ refid: WINDOW_TRIANGLE_REFID, mirrored: [1, 0] }),
+    ])
+    expect(draft?.subtype).toBe('triangle')
+    expect(draft?.hingeAtStart).toBe(false)
+    expect(draft?.hingeMixed).toBe(false)
   })
 })

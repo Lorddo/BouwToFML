@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { createBlankFloor } from '@/core/fml/empty-floor-plan'
 import {
   OUTER_FACE_SNAP_CM,
+  listFloorOuterFaceCorners,
   snapPointToOuterWallFaces,
   wallOuterFace,
 } from '@/core/fml/wall-outer-face'
@@ -60,5 +62,22 @@ describe('snapPointToOuterWallFaces', () => {
   it('ver van faces blijft vrij', () => {
     const point = { x: 50, y: 50 }
     expect(snapPointToOuterWallFaces(box, centroid, point, OUTER_FACE_SNAP_CM)).toEqual(point)
+  })
+})
+
+describe('listFloorOuterFaceCorners', () => {
+  it('rechthoek: echte buitenhoek, geen face-eind-knikje', () => {
+    const floor = createBlankFloor({ name: '1e', level: 1, wallHeightCm: 280 })
+    floor.walls = [
+      wall({ id: 's', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 }),
+      wall({ id: 'e', a: { x: 100, y: 0 }, b: { x: 100, y: 100 }, thickness: 20 }),
+      wall({ id: 'n', a: { x: 100, y: 100 }, b: { x: 0, y: 100 }, thickness: 20 }),
+      wall({ id: 'w', a: { x: 0, y: 100 }, b: { x: 0, y: 0 }, thickness: 20 }),
+    ]
+    const corners = listFloorOuterFaceCorners(floor)
+    expect(corners).toHaveLength(4)
+    const keys = corners.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).sort()
+    expect(keys).toEqual(['-10.00,-10.00', '-10.00,110.00', '110.00,-10.00', '110.00,110.00'])
+    expect(corners.some((point) => point.x === 0 && point.y === -10)).toBe(false)
   })
 })

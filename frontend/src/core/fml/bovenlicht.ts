@@ -1,10 +1,11 @@
-import type { Opening, Wall } from './types'
+import type { FloorPlan, Opening, Wall } from './types'
 import { CONCEPT_WINDOW_REFID } from './types'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WINDOW_HEIGHT_CM,
 } from './extraction-to-plan-types'
 import { wallLengthCm } from './fml-wall-geom'
+import { wallElevationAtT } from './wall-endpoint-height'
 
 /** Fabrieks-glashoogte van een gesynthetiseerd bovenlicht (cm). */
 export const BOVENLICHT_HEIGHT_CM = 40
@@ -250,4 +251,184 @@ export function foldBovenlichtOnWalls(walls: Wall[]): Wall[] {
     ...wall,
     openings: foldBovenlichtOnWall(wall.openings, wallLengthCm(wall)),
   }))
+}
+
+/** Ontbrekend / niet-false → packed (huidige default). */
+export function readBovenlichtPacked(plan: FloorPlan | null | undefined): boolean {
+  return plan?.source?.settings?.bovenlichtPacked !== false
+}
+
+export function writeBovenlichtPacked(plan: FloorPlan, packed: boolean): FloorPlan {
+  return {
+    ...plan,
+    source: {
+      ...plan.source,
+      settings: {
+        ...(plan.source?.settings ?? {}),
+        bovenlichtPacked: packed,
+      },
+    },
+  }
+}
+
+export type ExpandBovenlichtFloorDefaults = {
+  doorDefault: boolean
+  windowDefault: boolean
+  heightCm: number
+  gapCm: number
+}
+
+function stripBovenlichtFlags(opening: Opening): Opening {
+  const next = { ...opening }
+  delete next.bovenlicht
+  delete next.bovenlichtHeightCm
+  delete next.bovenlichtGapCm
+  return next
+}
+
+function openingWantsBovenlicht(
+  opening: Opening,
+  defaults: ExpandBovenlichtFloorDefaults,
+): boolean {
+  if (opening.type === 'door') return resolveDoorBovenlicht(opening, defaults.doorDefault)
+  if (opening.type === 'window') return resolveWindowBovenlicht(opening, defaults.windowDefault)
+  return false
+}
+
+/**
+ * Zet effectieve bovenlicht-flags om naar losse ramen; wist flags op de ouder.
+ * Skip als er al een `{guid}-bovenlicht` sibling bestaat.
+ */
+export function expandBovenlichtOnWall(
+  wall: Wall,
+  floorHeightCm: number,
+  defaults: ExpandBovenlichtFloorDefaults,
+): Wall {
+  const existingGuids = new Set(
+    wall.openings.map((op) => op.guid).filter((guid): guid is string => Boolean(guid)),
+  )
+  const nextOpenings: Opening[] = []
+  for (const opening of wall.openings) {
+    if (!openingWantsBovenlicht(opening, defaults)) {
+      nextOpenings.push(stripBovenlichtFlags(opening))
+      continue
+    }
+    const wallTopCm = wallElevationAtT(wall, opening.t, floorHeightCm).h
+    const sibling = buildBovenlichtOpening(opening, {
+      floorHeightCm: wallTopCm,
+      sourceGuid: opening.guid,
+      heightCm: resolveBovenlichtHeightCm(opening, defaults.heightCm),
+      gapCm: resolveBovenlichtGapCm(opening, defaults.gapCm),
+    })
+    nextOpenings.push(stripBovenlichtFlags(opening))
+    if (!sibling) continue
+    if (sibling.guid && existingGuids.has(sibling.guid)) continue
+    nextOpenings.push(sibling)
+    if (sibling.guid) existingGuids.add(sibling.guid)
+  }
+  return { ...wall, openings: nextOpenings }
+}
+
+export function expandBovenlichtOnPlan(
+  plan: FloorPlan,
+  defaultsForFloor: (floorIndex: number) => ExpandBovenlichtFloorDefaults,
+): FloorPlan {
+  return {
+    ...plan,
+    floors: plan.floors.map((floor, floorIndex) => {
+      const defaults = defaultsForFloor(floorIndex)
+      const designs = floor.designs?.map((design) => ({
+        ...design,
+        walls: design.walls.map((wall) => expandBovenlichtOnWall(wall, floor.height, defaults)),
+      }))
+      const activeIndex = floor.activeDesignIndex ?? 0
+      const walls = designs
+        ? (designs[activeIndex]?.walls ?? floor.walls)
+        : floor.walls.map((wall) => expandBovenlichtOnWall(wall, floor.height, defaults))
+      return { ...floor, walls, designs }
+    }),
+  }
+}
+
+/** Fold op alle floors + alle designs (toggle packed aan / import). */
+export function foldBovenlichtOnPlan(plan: FloorPlan): FloorPlan {
+  return {
+    ...plan,
+    floors: plan.floors.map((floor) => {
+      const designs = floor.designs?.map((design) => ({
+        ...design,
+        walls: foldBovenlichtOnWalls(design.walls),
+      }))
+      const activeIndex = floor.activeDesignIndex ?? 0
+      const walls = designs
+        ? (designs[activeIndex]?.walls ?? foldBovenlichtOnWalls(floor.walls))
+        : foldBovenlichtOnWalls(floor.walls)
+      return { ...floor, walls, designs }
+    }),
+  }
+}
+
+/** Aantal ouders die bij expand een sibling zouden krijgen. */
+export function countExpandableBovenlicht(
+  plan: FloorPlan,
+  defaultsForFloor: (floorIndex: number) => ExpandBovenlichtFloorDefaults,
+): number {
+  let count = 0
+  plan.floors.forEach((floor, floorIndex) => {
+    const defaults = defaultsForFloor(floorIndex)
+    for (const wall of floor.walls) {
+      const existingGuids = new Set(
+        wall.openings.map((op) => op.guid).filter((guid): guid is string => Boolean(guid)),
+      )
+      for (const opening of wall.openings) {
+        if (!openingWantsBovenlicht(opening, defaults)) continue
+        const wallTopCm = wallElevationAtT(wall, opening.t, floor.height).h
+        const sibling = buildBovenlichtOpening(opening, {
+          floorHeightCm: wallTopCm,
+          sourceGuid: opening.guid,
+          heightCm: resolveBovenlichtHeightCm(opening, defaults.heightCm),
+          gapCm: resolveBovenlichtGapCm(opening, defaults.gapCm),
+        })
+        if (!sibling) continue
+        if (sibling.guid && existingGuids.has(sibling.guid)) continue
+        count += 1
+      }
+    }
+  })
+  return count
+}
+
+/** Aantal openingen die bij fold zouden verdwijnen (guid- of geometrie-match). */
+export function countFoldableBovenlicht(plan: FloorPlan): number {
+  let count = 0
+  for (const floor of plan.floors) {
+    for (const wall of floor.walls) {
+      const before = wall.openings.length
+      const after = foldBovenlichtOnWall(wall.openings, wallLengthCm(wall)).length
+      count += Math.max(0, before - after)
+    }
+  }
+  return count
+}
+
+/**
+ * Unpacked place: zet direct een sibling-raam als floor-default voor dit type aan.
+ * Geen flags op de ouder.
+ */
+export function maybeAddSiblingBovenlicht(
+  wall: Wall,
+  parent: Opening,
+  floorHeightCm: number,
+  defaults: ExpandBovenlichtFloorDefaults,
+): Opening | null {
+  if (parent.type === 'door' && !defaults.doorDefault) return null
+  if (parent.type === 'window' && !defaults.windowDefault) return null
+  if (parent.type !== 'door' && parent.type !== 'window') return null
+  const wallTopCm = wallElevationAtT(wall, parent.t, floorHeightCm).h
+  return buildBovenlichtOpening(parent, {
+    floorHeightCm: wallTopCm,
+    sourceGuid: parent.guid,
+    heightCm: defaults.heightCm,
+    gapCm: defaults.gapCm,
+  })
 }

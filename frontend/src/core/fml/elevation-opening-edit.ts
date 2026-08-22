@@ -7,14 +7,17 @@ import {
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 import type { Opening, Point2D, Wall } from './types'
-import type { ElevationOpeningRect, ElevationRect } from './facade-elevation'
+import type { ElevationOpeningRect, ElevationRect, ElevationWallRect } from './facade-elevation'
+import { elevationWallYsAtX } from './facade-elevation'
+import type { ElevationOpeningPatch } from './elevation-hit'
 import { wallElevationAtT } from './wall-endpoint-height'
+import { collectCollinearWallIds, wallCollinearEnds } from '@/ui/components/fml-preview-openings'
 
 export type ElevResizeSide = 'n' | 'e' | 's' | 'w'
 
 export const ELEVATION_OPENING_SNAP_CM = 8
 export const ELEVATION_OPENING_MIN_WIDTH_CM = 10
-export const ELEVATION_OPENING_MIN_HEIGHT_CM = 50
+export const ELEVATION_OPENING_MIN_HEIGHT_CM = 10
 
 export type ElevationSnapTargets = {
   xs: number[]
@@ -43,6 +46,13 @@ export function elevationHandlePoints(rect: ElevationRect): Array<{
     { side: 'e', x: x1, y: my },
     { side: 'w', x: x0, y: my },
   ]
+}
+
+export function elevationRectCenter(rect: ElevationRect): Point2D {
+  return {
+    x: (Math.min(rect.x0, rect.x1) + Math.max(rect.x0, rect.x1)) / 2,
+    y: (Math.min(rect.y0, rect.y1) + Math.max(rect.y0, rect.y1)) / 2,
+  }
 }
 
 export function hitElevationHandle(
@@ -84,6 +94,171 @@ export function resizeElevationRect(
   return { x0: nextW, x1: nextE, y0: nextN, y1: nextS }
 }
 
+function openingEdgesAlongWall(
+  wall: Pick<Wall, 'a' | 'b'>,
+  t: number,
+  widthCm: number,
+): { left: number; right: number; len: number } {
+  const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
+  const center = (Number.isFinite(t) ? t : 0.5) * len
+  const half = Math.max(0.5, widthCm / 2)
+  return { left: center - half, right: center + half, len }
+}
+
+/**
+ * Versleepte kant stopt op de muur; de tegenoverliggende kant blijft staan.
+ */
+export function elevationCollinearXBounds(
+  walls: readonly ElevationWallRect[],
+  wall: ElevationWallRect,
+  planWalls: readonly Pick<Wall, 'id' | 'a' | 'b'>[],
+): { left: number; right: number } {
+  const chain = new Set(collectCollinearWallIds(planWalls, wall.wallId))
+  const members = walls.filter(
+    (item) => item.floorIndex === wall.floorIndex && !item.ridge && chain.has(item.wallId),
+  )
+  const list = members.length > 0 ? members : [wall]
+  let left = Number.POSITIVE_INFINITY
+  let right = Number.NEGATIVE_INFINITY
+  for (const item of list) {
+    left = Math.min(left, item.aTop.x, item.bTop.x)
+    right = Math.max(right, item.aTop.x, item.bTop.x)
+  }
+  return { left, right }
+}
+
+export function pickElevationWallForOpeningX(
+  walls: readonly ElevationWallRect[],
+  current: ElevationWallRect,
+  x: number,
+  planWalls: readonly Pick<Wall, 'id' | 'a' | 'b'>[],
+): ElevationWallRect {
+  const chain = new Set(collectCollinearWallIds(planWalls, current.wallId))
+  const members = walls.filter(
+    (item) => item.floorIndex === current.floorIndex && !item.ridge && chain.has(item.wallId),
+  )
+  const list = members.length > 0 ? members : [current]
+  let best = current
+  let bestDist = Number.POSITIVE_INFINITY
+  for (const item of list) {
+    const lo = Math.min(item.xa, item.xb)
+    const hi = Math.max(item.xa, item.xb)
+    const dist = x < lo ? lo - x : x > hi ? x - hi : 0
+    if (dist < bestDist) {
+      best = item
+      bestDist = dist
+    }
+  }
+  return best
+}
+
+export function clampElevationOpeningResize(
+  wall: ElevationWallRect,
+  rect: ElevationRect,
+  side: ElevResizeSide,
+  minW = ELEVATION_OPENING_MIN_WIDTH_CM,
+  minH = ELEVATION_OPENING_MIN_HEIGHT_CM,
+  xBounds?: { left: number; right: number },
+): ElevationRect {
+  const wallLeft = xBounds?.left ?? Math.min(wall.aTop.x, wall.bTop.x)
+  const wallRight = xBounds?.right ?? Math.max(wall.aTop.x, wall.bTop.x)
+  let nextW = Math.min(rect.x0, rect.x1)
+  let nextE = Math.max(rect.x0, rect.x1)
+  let nextN = Math.min(rect.y0, rect.y1)
+  let nextS = Math.max(rect.y0, rect.y1)
+  if (side === 'e') nextE = Math.min(nextE, wallRight)
+  else if (side === 'w') nextW = Math.max(nextW, wallLeft)
+  const sampleXs = [
+    Math.min(wallRight, Math.max(wallLeft, nextW)),
+    Math.min(wallRight, Math.max(wallLeft, nextE)),
+  ]
+  let wallTop = wall.y0
+  let wallBot = wall.y1
+  for (const x of sampleXs) {
+    const ys = elevationWallYsAtX(wall, x)
+    if (!ys) continue
+    wallTop = Math.max(wallTop, ys.top)
+    wallBot = Math.min(wallBot, ys.bot)
+  }
+  if (side === 'n') nextN = Math.max(nextN, wallTop)
+  else if (side === 's') nextS = Math.min(nextS, wallBot)
+  if (nextE - nextW < minW) {
+    if (side === 'e') nextE = nextW + minW
+    else if (side === 'w') nextW = nextE - minW
+  }
+  if (nextS - nextN < minH) {
+    if (side === 'n') nextN = nextS - minH
+    else if (side === 's') nextS = nextN + minH
+  }
+  return { x0: nextW, x1: nextE, y0: nextN, y1: nextS }
+}
+
+/**
+ * Houd de vaste kant van een resize; knip alleen de versleepte zijde af.
+ */
+export function clampOpeningPatchKeepOppositeEdge(
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'extras'> & { id?: string },
+  start: Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'type'>,
+  patch: ElevationOpeningPatch,
+  side: ElevResizeSide,
+  floorHeightCm: number,
+  planWalls: readonly Pick<Wall, 'id' | 'a' | 'b'>[] = [],
+): ElevationOpeningPatch {
+  const startEdges = openingEdgesAlongWall(wall, start.t, start.width)
+  const nextEdges = openingEdgesAlongWall(wall, patch.t, patch.width)
+  const cap = Math.max(0, (wall.thickness ?? 0) / 2)
+  const ends = wall.id ? wallCollinearEnds(planWalls, wall.id) : { a: false, b: false }
+  const minW = ELEVATION_OPENING_MIN_WIDTH_CM
+  let left = nextEdges.left
+  let right = nextEdges.right
+  if (side === 'e') {
+    left = startEdges.left
+    const maxRight = ends.b ? Number.POSITIVE_INFINITY : startEdges.len + cap
+    right = Math.min(Math.max(left + minW, nextEdges.right), maxRight)
+  } else if (side === 'w') {
+    right = startEdges.right
+    const minLeft = ends.a ? Number.NEGATIVE_INFINITY : -cap
+    left = Math.max(Math.min(right - minW, nextEdges.left), minLeft)
+  }
+  const width = Math.max(minW, right - left)
+  const t = startEdges.len < 1e-6 ? 0.5 : (left + right) / 2 / startEdges.len
+  const elev = wallElevationAtT(wall as Wall, t, floorHeightCm)
+  const minZ = Math.max(0, elev.z)
+  const maxTop = Math.max(minZ + ELEVATION_OPENING_MIN_HEIGHT_CM, Math.min(elev.h, floorHeightCm))
+  const startZ =
+    typeof start.z === 'number' && Number.isFinite(start.z)
+      ? start.z
+      : start.type === 'window'
+        ? DEFAULT_FML_WINDOW_SILL_Z_CM
+        : 0
+  const startH =
+    typeof start.z_height === 'number' && Number.isFinite(start.z_height)
+      ? start.z_height
+      : start.type === 'window'
+        ? DEFAULT_FML_WINDOW_HEIGHT_CM
+        : DEFAULT_FML_DOOR_HEIGHT_CM
+  let z = patch.z
+  let height = patch.z_height
+  if (side === 'n') {
+    z = startZ
+    height = Math.min(
+      Math.max(ELEVATION_OPENING_MIN_HEIGHT_CM, patch.z_height),
+      Math.max(1, maxTop - z),
+    )
+  } else if (side === 's') {
+    const top = startZ + startH
+    z = Math.max(minZ, Math.min(patch.z, top - ELEVATION_OPENING_MIN_HEIGHT_CM))
+    height = Math.max(ELEVATION_OPENING_MIN_HEIGHT_CM, top - z)
+    if (z + height > maxTop) height = Math.max(ELEVATION_OPENING_MIN_HEIGHT_CM, maxTop - z)
+  }
+  return {
+    t: Number.isFinite(t) ? t : 0.5,
+    width: Math.round(width),
+    z: Math.round(z),
+    z_height: Math.round(height),
+  }
+}
+
 export function translateElevationRect(
   start: ElevationRect,
   dx: number,
@@ -116,8 +291,8 @@ export function clampOpeningToStory(opening: Opening, wall: Wall, floorHeightCm:
       : fallbackH
   z = Math.max(minZ, z)
   height = Math.max(1, Math.min(height, span))
-  if (z + height > maxTop) z = Math.max(minZ, maxTop - height)
   if (z + height > maxTop) height = Math.max(1, maxTop - z)
+  if (z + height > maxTop) z = Math.max(minZ, maxTop - height)
   return {
     ...opening,
     z: Math.round(z),

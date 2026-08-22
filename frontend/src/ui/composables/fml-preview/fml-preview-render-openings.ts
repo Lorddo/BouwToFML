@@ -1,5 +1,6 @@
 import type { Floor } from '@/core/fml/types'
 import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
+import { insetOpeningRect, resolveOpeningFrame } from '@/core/fml/opening-display-geom'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
 import { groupDoorOpeningsOnWall } from '@/ui/components/fml-preview-doors'
@@ -92,6 +93,12 @@ export function buildRenderDoorGroupsAndWindows(
             toStagePoint,
           ),
         ),
+        jambPoints: group.jambLines.map((jamb) =>
+          flattenStagePoints(
+            offsetFlatPointsByWallBalance(jamb, wallUnit, thicknessCm, balance),
+            toStagePoint,
+          ),
+        ),
       })
     })
 
@@ -114,6 +121,10 @@ export function buildRenderDoorGroupsAndWindows(
       const end = toStagePoint(endCm.x, endCm.y)
       const catalog = resolveOpeningCatalog(opening.refid, 'window')
       const panels = resolveWindowPanelCount(opening.width, catalog.kind, catalog.panels)
+      const frame = insetOpeningRect(
+        { width: opening.width, height: 100 },
+        resolveOpeningFrame(opening, catalog),
+      ).frame
       const windowSymbol = buildWindowSymbol({
         startCm,
         endCm,
@@ -121,6 +132,9 @@ export function buildRenderDoorGroupsAndWindows(
         toStagePoint,
         panelCount: panels,
         kind: catalog.kind,
+        frameLeftCm: frame.leftCm,
+        frameRightCm: frame.rightCm,
+        mirrored: opening.mirrored,
       })
       windows.push({
         id: buildWindowOpeningId(wallLine.id, opening, openingIndex),
@@ -138,6 +152,7 @@ export function buildRenderDoorGroupsAndWindows(
         detail: `${windowTypeLabel(panels, catalog.kind)} · ${Math.round(opening.width)} cm`,
         basePoints: windowSymbol.basePoints,
         mullions: windowSymbol.mullions,
+        framePoints: windowSymbol.frameQuads,
         ornament: windowSymbol.ornament,
       })
     })

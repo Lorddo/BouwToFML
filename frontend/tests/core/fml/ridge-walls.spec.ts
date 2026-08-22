@@ -10,8 +10,12 @@ import {
   assignRidgeWallGuids,
   dropEmptyRidgeDesign,
   ensureRidgeDesign,
+  ensureRidgeDesignsOnPlan,
+  findRidgeDesignFloorIndex,
+  findRidgeDesignIndex,
   isRidgeDesign,
   isRidgeWallId,
+  listDakDesignFloors,
   listRidgeWallsOnFloor,
   markWallAsRidge,
   overwriteRidgeDakThickness,
@@ -22,6 +26,8 @@ import {
   ridgeWorldBottomZ,
   ridgeZForTargetFloor,
   setRidgeJunctionZ,
+  setPlanRidgeJunctionZ,
+  setFloorRidgeHeights,
   setRidgeWallsOnFloor,
   setRidgeWallsZ,
   syncRidgeWallGuidsFromDesigns,
@@ -41,6 +47,34 @@ function planWithWall(id = 'w1'): FloorPlan {
 }
 
 describe('ridge-walls', () => {
+  it('listDakDesignFloors somt floors met muren', () => {
+    const plan = createEmptyFloorPlan({ name: 'Dakchips', wallHeightCm: 250 })
+    plan.floors[0].name = 'BG'
+    plan.floors[0].walls = [wall('bg')]
+    plan.floors.push(createBlankFloor({ name: '1e', level: 1, wallHeightCm: 250 }))
+    plan.floors[1].walls = [wall('e1')]
+    plan.floors.push(createBlankFloor({ name: 'leeg', level: 2, wallHeightCm: 250 }))
+    expect(listDakDesignFloors(plan)).toEqual([
+      { floorIndex: 0, name: 'BG' },
+      { floorIndex: 1, name: '1e' },
+    ])
+  })
+
+  it('leeg plan heeft al een Dak-design (tab zonder nok)', () => {
+    const plan = createEmptyFloorPlan({ name: 'Plat dak' })
+    expect(findRidgeDesignIndex(plan.floors[0])).toBeGreaterThanOrEqual(0)
+    expect(findRidgeDesignFloorIndex(plan)).toBe(0)
+  })
+
+  it('ensureRidgeDesignsOnPlan vult ontbrekende Dak-designs', () => {
+    const plan = createEmptyFloorPlan({ name: 'Import' })
+    plan.floors[0] = { name: 'BG', level: 0, height: 280, walls: [wall('w1')] }
+    const next = ensureRidgeDesignsOnPlan(plan)
+    expect(findRidgeDesignIndex(next.floors[0])).toBeGreaterThanOrEqual(0)
+    expect(next.floors[0].walls[0]?.id).toBe('w1')
+    expect(ensureRidgeDesignsOnPlan(next)).toBe(next)
+  })
+
   it('ensureRidgeDesign maakt sibling Dak-design zonder floor.walls te overschrijven', () => {
     const plan = planWithWall()
     const { floor, designIndex } = ensureRidgeDesign(plan.floors[0])
@@ -57,6 +91,14 @@ describe('ridge-walls', () => {
     const next = setRidgeWallsOnFloor(plan.floors[0], [ridge])
     expect(next.walls.map((item) => item.id)).toEqual(['w1'])
     expect(listRidgeWallsOnFloor(next).map((item) => item.id)).toEqual(['r1'])
+  })
+
+  it('import na export zonder nok krijgt weer een leeg Dak-design', () => {
+    const exported = buildFmlV3(createEmptyFloorPlan({ name: 'Plat' }))
+    const raw = JSON.parse(exported) as { floors: Array<{ designs?: Array<{ name?: string }> }> }
+    expect(raw.floors[0]?.designs?.some((design) => design.name === 'Dak')).toBe(false)
+    const imported = importFmlV3(exported).plan
+    expect(findRidgeDesignIndex(imported.floors[0])).toBeGreaterThanOrEqual(0)
   })
 
   it('dropEmptyRidgeDesign laat leeg Dak-design weg', () => {
@@ -246,5 +288,33 @@ describe('ridge-walls', () => {
     const next = setRidgeJunctionZ([ridge], [{ wallId: 'r1', end: 'b' }], 480, 280)
     expect(ridgeEndpointZCm(next[0], 'a', 280)).toBe(350)
     expect(ridgeEndpointZCm(next[0], 'b', 280)).toBe(480)
+  })
+
+  it('setPlanRidgeJunctionZ schrijft naar het Dak-design', () => {
+    const plan = createEmptyFloorPlan({ name: 'Nokplan', wallHeightCm: 280 })
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [
+      markWallAsRidge(
+        wall('r1', { x: 0, y: 0 }, { x: 200, y: 0 }),
+        ridgeEndpointExtras(280, 20, 350),
+      ),
+    ])
+    const next = setPlanRidgeJunctionZ(plan, 0, [{ wallId: 'r1', end: 'a' }], 410)
+    const written = listRidgeWallsOnFloor(next.floors[0])[0]
+    expect(ridgeEndpointZCm(written, 'a', 280)).toBe(410)
+    expect(ridgeEndpointZCm(written, 'b', 280)).toBe(350)
+  })
+
+  it('setFloorRidgeHeights wijzigt alleen nokken van die floor', () => {
+    const plan = createEmptyFloorPlan({ name: 'Nokhoogte', wallHeightCm: 250 })
+    plan.floors.push(createBlankFloor({ name: '1e', level: 1, wallHeightCm: 250 }))
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [
+      markWallAsRidge(wall('r0'), ridgeEndpointExtras(250, 30, 250)),
+    ])
+    plan.floors[1] = setRidgeWallsOnFloor(plan.floors[1], [
+      markWallAsRidge(wall('r1'), ridgeEndpointExtras(250, 30, 250)),
+    ])
+    const next = setFloorRidgeHeights(plan, 1, 520)
+    expect(ridgeEndpointZCm(listRidgeWallsOnFloor(next.floors[0])[0], 'a', 250)).toBe(250)
+    expect(ridgeEndpointZCm(listRidgeWallsOnFloor(next.floors[1])[0], 'a', 250)).toBe(520)
   })
 })

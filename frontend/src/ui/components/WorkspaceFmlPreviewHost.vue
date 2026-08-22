@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
+import { readBovenlichtPacked } from '@/core/fml/bovenlicht'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
 import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
@@ -61,6 +62,7 @@ const emit = defineEmits<{
  * Canvas `kind` still supplies the rest of the detection profile.
  */
 const areaSurfaceEditEnabled = computed(() => FML_AREA_SURFACE_EDIT_VISIBLE)
+const bovenlichtPacked = computed(() => readBovenlichtPacked(props.plan))
 
 const canvasRef = ref<{
   flushPendingFieldCommits: () => void
@@ -102,6 +104,7 @@ defineExpose({
     :window-bovenlicht-default="windowBovenlichtDefault"
     :bovenlicht-height-cm="bovenlichtHeightCm"
     :bovenlicht-gap-cm="bovenlichtGapCm"
+    :bovenlicht-packed="bovenlichtPacked"
     :set-fml-nulpunt-image-cm="props.setFmlNulpuntImageCm"
     :rescale-mode="rescaleMode === true"
     :rescale-state="rescaleState ?? null"

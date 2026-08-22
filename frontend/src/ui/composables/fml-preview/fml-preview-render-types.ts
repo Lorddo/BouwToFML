@@ -40,6 +40,7 @@ export interface RenderDoorGroup {
   leafLines: number[][]
   arcPoints: number[][]
   arrowPoints: number[][]
+  jambPoints: number[][]
 }
 
 export interface RenderWindowOpening {
@@ -52,6 +53,7 @@ export interface RenderWindowOpening {
   detail: string
   basePoints?: number[]
   mullions?: number[][]
+  framePoints?: number[][]
   ornament?: WindowOrnament | null
 }
 
@@ -165,6 +167,8 @@ export interface RenderModel {
   ghostWallLines: RenderWall[]
   /** Dak-tab: baksteen-afdruk (binnen + buiten) als stippellijn, geen hartlijn. */
   ghostWallPolygons: RenderWallPolygon[]
+  /** Dak-tab: interieur van de hogere floor (geen dak), één grijs vlak. */
+  blockedRoofPolygons: RenderWallPolygon[]
   ridgeLines: RenderRidge[]
   /** Per-wall square-cap rects for move/settings overlays. */
   wallPolygons: RenderWallPolygon[]

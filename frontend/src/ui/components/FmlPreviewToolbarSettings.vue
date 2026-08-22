@@ -144,6 +144,7 @@ const props = withDefaults(
     openingBovenlichtHeightMixed: boolean
     openingBovenlichtGapDraft: number
     openingBovenlichtGapMixed: boolean
+    bovenlichtPacked?: boolean
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
@@ -330,6 +331,7 @@ const showSettings = computed(() =>
     hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
     activeTool: activeTool.value,
+    dakMode: props.dakMode === true,
   }),
 )
 
@@ -464,7 +466,7 @@ const isRoofPanel = computed(
       <div v-if="!showWallSettings" class="fml-toolbelt__row fml-toolbelt__row--primary">
         <FmlPreviewToolbarSettingsDraw
           v-if="
-            activeTool === 'draw_surface' ||
+            (activeTool === 'draw_surface' && !dakMode) ||
             activeTool === 'draw_line' ||
             activeTool === 'draw_label'
           "
@@ -480,6 +482,7 @@ const isRoofPanel = computed(
           v-model:draw-label-italic="drawLabelItalic"
           :active-tool="activeTool"
           :room-types="roomTypes"
+          :dak-mode="dakMode"
         />
         <FmlPreviewToolbarSettingsOpening
           v-if="showOpeningSettings"
@@ -509,6 +512,7 @@ const isRoofPanel = computed(
           :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
           :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
           :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+          :bovenlicht-packed="bovenlichtPacked"
           @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
           @opening-width-input="emit('openingWidthInput', $event)"
           @commit-opening-width="emit('commitOpeningWidth')"

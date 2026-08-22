@@ -35,6 +35,7 @@ withDefaults(
     windowBovenlichtDefault?: boolean
     bovenlichtHeightCm?: number
     bovenlichtGapCm?: number
+    bovenlichtPacked?: boolean
     defaultDoorHeightCm?: number
     defaultWindowHeightCm?: number
     defaultWindowSillZCm?: number
@@ -81,6 +82,7 @@ defineExpose({
   undoEdit: () => canvasRef.value?.undoEdit(),
   redoEdit: () => canvasRef.value?.redoEdit(),
   resetView: () => canvasRef.value?.resetView(),
+  pushUndo: () => canvasRef.value?.pushUndo?.(),
 })
 </script>
 
@@ -110,6 +112,7 @@ defineExpose({
     :window-bovenlicht-default="windowBovenlichtDefault"
     :bovenlicht-height-cm="bovenlichtHeightCm"
     :bovenlicht-gap-cm="bovenlichtGapCm"
+    :bovenlicht-packed="bovenlichtPacked"
     :default-door-height-cm="defaultDoorHeightCm"
     :default-window-height-cm="defaultWindowHeightCm"
     :default-window-sill-z-cm="defaultWindowSillZCm"

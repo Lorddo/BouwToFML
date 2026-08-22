@@ -31,6 +31,7 @@
   display: flex;
   align-items: stretch;
   max-width: 100%;
+  background: rgb(255 255 255 / 0.96);
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgb(15 23 42 / 0.1);

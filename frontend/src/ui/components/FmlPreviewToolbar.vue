@@ -6,6 +6,7 @@ import type { FloorLineType } from '@/core/fml/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
 import {
   FML_AREA_SIDE_DIMS_TOOL_ID,
@@ -155,6 +156,7 @@ const props = withDefaults(
     openingBovenlichtHeightMixed: boolean
     openingBovenlichtGapDraft: number
     openingBovenlichtGapMixed: boolean
+    bovenlichtPacked?: boolean
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
@@ -350,10 +352,11 @@ const settingsOpen = computed(() =>
     hasItemSelection: props.selectedItemPanel != null,
     hasMeasureLines: (props.measureLineCount ?? 0) > 0,
     activeTool: activeTool.value,
+    dakMode: props.dakMode === true,
   }),
 )
 
-const showDrawingTools = computed(() => !settingsOpen.value)
+const showDrawingTools = computed(() => props.dakMode === true || !settingsOpen.value)
 
 const hint = computed(() => {
   if (activeTool.value === 'measure') {
@@ -368,8 +371,8 @@ const hint = computed(() => {
   if (activeTool.value === 'nulpunt') return t('result.toolbar.hintNulpunt')
   if (activeTool.value === 'draw_wall') return t('result.toolbar.hintDrawWall')
   if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom')
-  if (activeTool.value === 'draw_surface' && props.includeSurfaceTool === true) {
-    return t('result.toolbar.hintDrawSurface')
+  if (activeTool.value === 'draw_surface' && (props.dakMode || props.includeSurfaceTool === true)) {
+    return props.dakMode ? t('result.toolbar.hintDrawRoof') : t('result.toolbar.hintDrawSurface')
   }
   if (activeTool.value === 'draw_label' && props.includeAnnotationTools === true) {
     return t('result.toolbar.hintDrawLabel')
@@ -466,6 +469,16 @@ defineExpose({ hint })
             :show-undo="false"
             @update:active-tool="activeTool = $event as FmlToolId | null"
           />
+          <button
+            v-if="props.dakMode && activeTool"
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.deactivateDrawTool')"
+            :aria-label="t('result.toolbar.deactivateDrawTool')"
+            @click="emit('deactivateDrawTool')"
+          >
+            <ToolbeltIcon name="clear" />
+          </button>
         </div>
         <div v-if="!props.dakMode" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
         <div
@@ -493,39 +506,39 @@ defineExpose({ hint })
           v-model:add-window-height-cm="addWindowHeightCm"
           :selected-wall-panel="selectedWallPanel"
           :selected-junction-panel="selectedJunctionPanel"
-          :selected-opening-panel="selectedOpeningPanel"
-          :selected-area-panel="selectedAreaPanel"
-          :selected-label-panel="selectedLabelPanel"
-          :selected-line-panel="selectedLinePanel"
-          :selected-item-panel="selectedItemPanel"
-          :room-types="roomTypes"
-          :surface-edit-active="surfaceEditActive"
-          :roof-vertex-z-cm="roofVertexZCm"
-          :roof-poly-mutate="roofPolyMutate"
-          :wall-thickness-draft="wallThicknessDraft"
           v-model:measure-draw-mode="measureDrawMode"
-          :wall-thickness-mixed="wallThicknessMixed"
+          :selected-opening-panel="selectedOpeningPanel"
           v-model:slicer-edit-mode="slicerEditMode"
-          :wall-balance-draft="wallBalanceDraft"
+          :selected-area-panel="selectedAreaPanel"
           v-model:draw-surface-role="drawSurfaceRole"
-          :wall-balance-mixed="wallBalanceMixed"
+          :selected-label-panel="selectedLabelPanel"
           v-model:draw-line-thickness="drawLineThickness"
-          :wall-height-draft="wallHeightDraft"
+          :selected-line-panel="selectedLinePanel"
           v-model:draw-line-type="drawLineType"
-          :wall-height-mixed="wallHeightMixed"
+          :selected-item-panel="selectedItemPanel"
           v-model:draw-line-color="drawLineColor"
-          :junction-height-draft="junctionHeightDraft"
+          :room-types="roomTypes"
           v-model:draw-label-text="drawLabelText"
-          :junction-height-mixed="junctionHeightMixed"
+          :surface-edit-active="surfaceEditActive"
           v-model:draw-label-font-size="drawLabelFontSize"
-          :opening-subtype-draft="openingSubtypeDraft"
+          :roof-vertex-z-cm="roofVertexZCm"
           v-model:draw-label-font-color="drawLabelFontColor"
-          :opening-subtype-mixed="openingSubtypeMixed"
+          :roof-poly-mutate="roofPolyMutate"
           v-model:draw-label-outline="drawLabelOutline"
-          :opening-width-draft="openingWidthDraft"
+          :wall-thickness-draft="wallThicknessDraft"
           v-model:draw-label-bold="drawLabelBold"
-          :opening-width-mixed="openingWidthMixed"
+          :wall-thickness-mixed="wallThicknessMixed"
           v-model:draw-label-italic="drawLabelItalic"
+          :wall-balance-draft="wallBalanceDraft"
+          :wall-balance-mixed="wallBalanceMixed"
+          :wall-height-draft="wallHeightDraft"
+          :wall-height-mixed="wallHeightMixed"
+          :junction-height-draft="junctionHeightDraft"
+          :junction-height-mixed="junctionHeightMixed"
+          :opening-subtype-draft="openingSubtypeDraft"
+          :opening-subtype-mixed="openingSubtypeMixed"
+          :opening-width-draft="openingWidthDraft"
+          :opening-width-mixed="openingWidthMixed"
           :opening-height-draft="openingHeightDraft"
           :opening-height-mixed="openingHeightMixed"
           :opening-sill-z-draft="openingSillZDraft"
@@ -540,6 +553,7 @@ defineExpose({ hint })
           :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
           :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
           :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+          :bovenlicht-packed="bovenlichtPacked"
           :thickness-min-cm="thicknessMinCm"
           :thickness-mid-cm="thicknessMidCm"
           :thickness-max-cm="thicknessMaxCm"

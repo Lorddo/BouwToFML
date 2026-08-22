@@ -63,6 +63,19 @@ const strokeAttrs = {
       <line x1="15" y1="16" x2="15" y2="20" />
     </g>
 
+    <!-- NEW: ridge beam on a pitched roof (nok) -->
+    <g v-else-if="name === 'ridge'" v-bind="strokeAttrs">
+      <path d="M5.2 8.2 H18.8" />
+      <path d="M4 18.6 L8.4 8.2 H15.6 L20 18.6" />
+      <path d="M9.6 8.2 V6.2 H14.4 V8.2" />
+    </g>
+
+    <!-- NEW: single roof plane (dakvlak) -->
+    <g v-else-if="name === 'roof'" v-bind="strokeAttrs">
+      <path d="M3.6 15.4 L10.2 6.2 L20.4 8.6 L13.8 17.8 Z" />
+      <path d="M10.2 6.2 L13.8 17.8" />
+    </g>
+
     <!-- KEEP -->
     <path
       v-else-if="name === 'door'"

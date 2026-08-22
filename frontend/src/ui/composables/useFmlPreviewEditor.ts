@@ -24,25 +24,26 @@ import {
   listRidgeWallsOnFloor,
   listRidgeWallsOnPlan,
   markWallAsRidge,
-  overwriteRidgeWorldBottomZ,
   pruneRidgeWalls,
   rejectRidgeGuids,
+  ridgeDefaultZCm,
   ridgeEndpointExtras,
-  ridgeZForTargetFloor,
   setRidgeJunctionZ,
+  setRidgeWallsOnFloor,
   setRidgeWallsZ,
   unmarkWallAsRidge,
 } from '@/core/fml/ridge-walls'
-import { floorWallBaseWorldZ } from '@/core/fml/floor-stack'
 import { applyGeneratedRoofPlanesForPlan } from '@/core/fml/generate-roof-planes'
 import {
   findFloorIndexForRidgeWall,
+  isPointSkyExposedOnFloor,
   moveRidgeWallsToFloor,
   resolveFloorIndexForRidgeSegment,
   writeRidgeWallsOnPlan,
 } from '@/core/fml/ridge-floor'
 import {
   isRidgeSurfaceId,
+  listRidgeSurfacesOnFloor,
   listRidgeSurfacesOnPlan,
   mapRidgeSurfaceOnPlan,
   markRoofSurfaceManual,
@@ -489,7 +490,8 @@ export function useFmlPreviewEditor(
       isRoof: true,
       color: resolveRoofSurfaceColor(surface.color),
     })
-    setRidgeSurfaces([...ridgeSurfaces.value, next])
+    const floor = localPlan.value?.floors[floorIndex.value]
+    setRidgeSurfaces([...listRidgeSurfacesOnFloor(floor), next])
     return id
   }
 
@@ -723,9 +725,20 @@ export function useFmlPreviewEditor(
       setRidgeWalls(setRidgeWallsZ(ridgeWalls.value, ridgeIds, zCm, floorH))
       return
     }
-    const refFloor = Math.max(...uniqueFloors)
-    const world = floorWallBaseWorldZ(localPlan.value, refFloor) + zCm
-    localPlan.value = overwriteRidgeWorldBottomZ(localPlan.value, world, ridgeIds)
+    let next = localPlan.value
+    for (const owner of uniqueFloors) {
+      const floor = next.floors[owner]
+      if (!floor) continue
+      const ids = ridgeIds.filter((id) => findFloorIndexForRidgeWall(next, id) === owner)
+      const updated = setRidgeWallsZ(listRidgeWallsOnFloor(floor), ids, zCm, floor.height)
+      next = {
+        ...next,
+        floors: next.floors.map((entry, index) =>
+          index === owner ? setRidgeWallsOnFloor(entry, updated) : entry,
+        ),
+      }
+    }
+    localPlan.value = next
   }
 
   function applyRidgeJunctionZ(refs: ReadonlyArray<WallEndRef>, zCm: number): void {
@@ -911,15 +924,24 @@ export function useFmlPreviewEditor(
     return true
   }
 
-  function applyRidgeAdd(a: Point2D, b: Point2D, zCm?: number): string | null {
+  function applyRidgeAdd(
+    a: Point2D,
+    b: Point2D,
+    zCm?: number,
+    optionsAdd?: { requireFloorIndex?: number },
+  ): string | null {
     if (!localPlan.value) return null
-    const targetIndex = resolveFloorIndexForRidgeSegment(localPlan.value, a, b)
+    const resolved = resolveFloorIndexForRidgeSegment(localPlan.value, a, b)
+    const required = optionsAdd?.requireFloorIndex
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+    const targetIndex = required ?? resolved
+    if (!isPointSkyExposedOnFloor(localPlan.value, targetIndex, mid)) return null
     const targetFloor = localPlan.value.floors[targetIndex]
     if (!targetFloor) return null
     const extras = ridgeEndpointExtras(
       targetFloor.height,
       dakThicknessCmForPlan(localPlan.value),
-      ridgeZForTargetFloor(localPlan.value, floorIndex.value, zCm, targetIndex),
+      zCm ?? ridgeDefaultZCm(localPlan.value, targetIndex),
     )
     const existing = listRidgeWallsOnFloor(targetFloor)
     const result = addRidgeSegment(existing, a, b, extras)
@@ -943,9 +965,13 @@ export function useFmlPreviewEditor(
     a: Point2D,
     b: Point2D,
     thicknessCm: number,
-    options?: { kind?: 'wall' | 'ridge'; ridgeZCm?: number },
+    options?: { kind?: 'wall' | 'ridge'; ridgeZCm?: number; requireFloorIndex?: number },
   ): string | null {
-    if (options?.kind === 'ridge') return applyRidgeAdd(a, b, options.ridgeZCm)
+    if (options?.kind === 'ridge') {
+      return applyRidgeAdd(a, b, options.ridgeZCm, {
+        requireFloorIndex: options.requireFloorIndex,
+      })
+    }
     const result = addWallSegment(walls.value, a, b, thicknessCm, floorHeightCm.value)
     if (!result) return null
     setWalls(result.walls)

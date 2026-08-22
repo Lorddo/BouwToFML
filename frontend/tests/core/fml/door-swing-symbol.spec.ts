@@ -72,6 +72,12 @@ describe('door-swing-symbol', () => {
     expect(passage.leafLines).toHaveLength(0)
     expect(passage.arcPoints).toHaveLength(0)
     expect(passage.arrowPoints).toHaveLength(0)
+    const bifold = buildDoorSwingSymbol({ ...base, kind: 'bifold' })
+    const bifoldDouble = buildDoorSwingSymbol({ ...base, kind: 'bifold_double' })
+    expect(bifold.leafLines).toHaveLength(2)
+    expect(bifoldDouble.leafLines).toHaveLength(4)
+    expect(bifold.arcPoints).toHaveLength(0)
+    expect(bifoldDouble.arcPoints).toHaveLength(0)
   })
 
   it('sliding-pijlen liggen buiten de muurgap (dikte/2 + marge)', () => {

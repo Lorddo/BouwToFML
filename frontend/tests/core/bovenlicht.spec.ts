@@ -3,13 +3,17 @@ import {
   BOVENLICHT_GAP_CM,
   BOVENLICHT_HEIGHT_CM,
   buildBovenlichtOpening,
+  expandBovenlichtOnWall,
+  foldBovenlichtOnPlan,
   foldBovenlichtOnWall,
+  readBovenlichtPacked,
+  writeBovenlichtPacked,
   resolveBovenlichtGapCm,
   resolveBovenlichtHeightCm,
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
 } from '@/core/fml/bovenlicht'
-import { CONCEPT_WINDOW_REFID, type Opening } from '@/core/fml/types'
+import { CONCEPT_WINDOW_REFID, type FloorPlan, type Opening, type Wall } from '@/core/fml/types'
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({
   refid: '0434246537840a3326e305dbe7b9c355743e6e93',
@@ -232,5 +236,106 @@ describe('foldBovenlichtOnWall', () => {
       WALL_LEN,
     )
     expect(far).toHaveLength(2)
+  })
+})
+
+describe('bovenlichtPacked expand/fold', () => {
+  const defaults = {
+    doorDefault: false,
+    windowDefault: false,
+    heightCm: BOVENLICHT_HEIGHT_CM,
+    gapCm: BOVENLICHT_GAP_CM,
+  }
+
+  it('readBovenlichtPacked default true', () => {
+    expect(readBovenlichtPacked(null)).toBe(true)
+    expect(readBovenlichtPacked({ name: 'x', floors: [] })).toBe(true)
+    expect(readBovenlichtPacked({ name: 'x', floors: [], source: { settings: {} } })).toBe(true)
+    expect(
+      readBovenlichtPacked({
+        name: 'x',
+        floors: [],
+        source: { settings: { bovenlichtPacked: false } },
+      }),
+    ).toBe(false)
+  })
+
+  it('expand → los raam + flags weg; fold → flags terug (guid)', () => {
+    const wall: Wall = {
+      id: 'w1',
+      a: { x: 0, y: 0 },
+      b: { x: 200, y: 0 },
+      thickness: 20,
+      openings: [door({ guid: 'd1', bovenlicht: true })],
+    }
+    const expanded = expandBovenlichtOnWall(wall, 280, defaults)
+    expect(expanded.openings).toHaveLength(2)
+    expect(expanded.openings[0]?.bovenlicht).toBeUndefined()
+    expect(expanded.openings[1]).toMatchObject({
+      type: 'window',
+      guid: 'd1-bovenlicht',
+    })
+
+    const folded = foldBovenlichtOnWall(expanded.openings, 200)
+    expect(folded).toHaveLength(1)
+    expect(folded[0]).toMatchObject({
+      guid: 'd1',
+      bovenlicht: true,
+      bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
+      bovenlichtGapCm: BOVENLICHT_GAP_CM,
+    })
+  })
+
+  it('expand↔fold roundtrip op rechthoek-deur', () => {
+    const plan: FloorPlan = {
+      name: 't',
+      floors: [
+        {
+          name: 'bg',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'w1',
+              a: { x: 0, y: 0 },
+              b: { x: 300, y: 0 },
+              thickness: 20,
+              openings: [
+                door({
+                  guid: 'door-rt',
+                  bovenlicht: true,
+                  bovenlichtHeightCm: 30,
+                  bovenlichtGapCm: 0,
+                }),
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const expanded = {
+      ...plan,
+      floors: plan.floors.map((floor) => ({
+        ...floor,
+        walls: floor.walls.map((w) => expandBovenlichtOnWall(w, floor.height, defaults)),
+      })),
+    }
+    expect(expanded.floors[0].walls[0].openings).toHaveLength(2)
+    const folded = foldBovenlichtOnPlan(expanded)
+    const op = folded.floors[0].walls[0].openings[0]
+    expect(folded.floors[0].walls[0].openings).toHaveLength(1)
+    expect(op).toMatchObject({
+      guid: 'door-rt',
+      bovenlicht: true,
+      bovenlichtHeightCm: 30,
+      bovenlichtGapCm: 0,
+    })
+  })
+
+  it('writeBovenlichtPacked zet settings', () => {
+    const plan: FloorPlan = { name: 't', floors: [] }
+    const next = writeBovenlichtPacked(plan, false)
+    expect(readBovenlichtPacked(next)).toBe(false)
+    expect(next.source?.settings?.bovenlichtPacked).toBe(false)
   })
 })

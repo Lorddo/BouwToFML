@@ -61,6 +61,11 @@ function surfaceFill(surface: RenderSurface): string {
   return resolveInspectFill(surface.id, props.inspectColors, surface.fill)
 }
 
+const handleScale = computed(() => 1 / Math.max(0.35, props.viewScale))
+const handleRadius = computed(() => 3.5 * handleScale.value)
+const handleRadiusSelected = computed(() => 4.5 * handleScale.value)
+const handleStroke = computed(() => 1.25 * handleScale.value)
+
 function surfaceOpacity(surface: RenderSurface): number {
   const isRoof = surface.isRoof === true
   const base = isRoof ? 0.42 : 0.55
@@ -97,9 +102,10 @@ function cutoutDiagonals(points: number[]): number[][] {
             : surface.isRoof
               ? '#b45309'
               : '#64748b',
-        strokeWidth: settingsSurfaceId === surface.id || surfaceEditId === surface.id ? 2 : 1,
+        strokeWidth: settingsSurfaceId === surface.id || surfaceEditId === surface.id ? 1.5 : 1,
         dash: surface.isCutout ? [6, 4] : surface.isRoof ? [8, 5] : undefined,
         listening: false,
+        strokeScaleEnabled: false,
       }"
     />
     <v-line
@@ -133,11 +139,12 @@ function cutoutDiagonals(points: number[]): number[][] {
       :config="{
         x: vertex.x,
         y: vertex.y,
-        radius: selectedVertexIndex === index ? 7 : 5,
-        fill: selectedVertexIndex === index ? '#b45309' : '#f97316',
+        radius: selectedVertexIndex === index ? handleRadiusSelected : handleRadius,
+        fill: selectedVertexIndex === index ? '#5b21b6' : '#7c3aed',
         stroke: '#fff',
-        strokeWidth: 1,
+        strokeWidth: handleStroke,
         listening: false,
+        strokeScaleEnabled: false,
       }"
     />
   </v-group>

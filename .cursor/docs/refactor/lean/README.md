@@ -1,14 +1,22 @@
 # Lean/DRY code-review — index
 
-**Datum:** 2026-08-18 (VERBETER uitgevoerd)  
-**Status:** Campagne **VERBETER gedaan** (Cleanup B + clusters 1–3 + 5). Cluster 4 skip. Product-gates / hidden meerwerk-UI **niet** verwijderd.  
+**Datum:** 2026-08-22 (FML editor lean + touch)  
+**Status:** Campagne **2026-08-22** (plan-canvas touch, opening-velden, slicer, elevation, viewer-shell). Product-gates / hidden meerwerk-UI **niet** verwijderd.  
 **Skill:** [`.cursor/skills/lean-dry-review/SKILL.md`](../../skills/lean-dry-review/SKILL.md)  
 **Voorafgaand:** [production-refactor README](../README.md)  
-**Campagne-plan:** [`.cursor/plans/lean_dry_campagne_1dd74cf7.plan.md`](../../plans/lean_dry_campagne_1dd74cf7.plan.md)
+**Campagne-plan:** [`.cursor/plans/fml_lean_touch_e0de74d4.plan.md`](../../plans/fml_lean_touch_e0de74d4.plan.md)
 
 ## Verschil
 
 Beoordeelt **logica** (DRY, lean, geen dubbel werk, juiste home) — niet opnieuw god-files splitten.
+
+## Campagne 2026-08-22 — FML editor + touch
+
+| Fase / Cluster | Rapport | Status |
+|----------------|---------|--------|
+| FML editor/elevation/touch | [`fml-editor-2026-08-22.md`](./fml-editor-2026-08-22.md) | B1–B8 |
+
+Zie rapport voor snap-tabel, touch-matrix en batchlog.
 
 ## Campagne 2026-08-18 — VERBETER-log
 
@@ -17,7 +25,7 @@ Beoordeelt **logica** (DRY, lean, geen dubbel werk, juiste home) — niet opnieu
 | 0 Knip baseline | [`app-cleanup-2026-08-18.md`](./app-cleanup-2026-08-18.md) | Done |
 | Cleanup B1+P2 | window-dedupe / stamp / ref-door + CV orphans; dode leafs weg | **Done** |
 | 1 FML editor/viewer | [`fml-editor-viewer-2026-08-18.md`](./fml-editor-viewer-2026-08-18.md) | **B1–B5 Done** (B4=F doc) |
-| 2 FML core | [`stap4-fml-core-2026-08-18.md`](./stap4-fml-core-2026-08-18.md) | `cloneFloorShallow` shared; fixture-symbols split = **F later** |
+| 2 FML core | [`stap4-fml-core-2026-08-18.md`](./stap4-fml-core-2026-08-18.md) | Batch 1+1b+2+2b+4 **done**; CRUD add/update/remove nog UI; Batch 3 fixture-symbols = **F later** |
 | 3 Workspace facade | [`workspace-facade-2026-08-18.md`](./workspace-facade-2026-08-18.md) | **B1 Done** — 11 dead return keys |
 | 4 UI panels | [`ui-panels-2026-08-18.md`](./ui-panels-2026-08-18.md) | Skip |
 | 5 CV delta | [`cv-delta-2026-08-18.md`](./cv-delta-2026-08-18.md) | **B Done** |

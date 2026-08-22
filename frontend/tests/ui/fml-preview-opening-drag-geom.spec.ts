@@ -57,9 +57,9 @@ describe('applyOpeningDragMove soft t', () => {
       }),
     ]
     const id = 'w1-door-door-1'
-    // Panel update would clamp wide door away from the end.
+    // Panel update clamps wide door away from the end (half-width − half-thickness).
     const panelClamped = updateOpeningById(walls, id, { t: 0.05 })
-    expect(panelClamped[0]?.openings[0]?.t).toBeGreaterThan(0.4)
+    expect(panelClamped[0]?.openings[0]?.t).toBeCloseTo(0.35, 5)
 
     const dragged = applyOpeningDragMove(walls, id, { x: 5, y: 0 })
     expect(dragged).not.toBeNull()

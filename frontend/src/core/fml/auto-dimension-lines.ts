@@ -326,6 +326,13 @@ function placeTotal(
   return lines
 }
 
+/** Totale buitenmaat (1× H + 1× V) van een muurcontour — Dak-tab geblokkeerd vlak. */
+export function buildBlockedRoofOuterDimensionLines(walls: Wall[]): AutoDimensionLine[] {
+  const outer = wallOuterAabb(walls)
+  if (!outer) return []
+  return placeTotal(outer, outer, 'exterior', AUTO_DIM_CHAIN_OFFSET_CM)
+}
+
 export function buildAutoDimensionLines(
   walls: Wall[],
   areas: FloorArea[] | undefined,

@@ -13,6 +13,7 @@ import type {
   Wall,
 } from './types'
 import type { UnderlayOriginLayout } from './translate-floor-plan'
+import { scaleObjectLabel } from './object-label'
 
 /** Anisotrope plan-schaal (stap-1 H/V-achtig). */
 export type PlanScaleFactors = { x: number; y: number }
@@ -52,7 +53,7 @@ function scaleWall(wall: Wall, f: PlanScaleFactors): Wall {
     c: wall.c ? scalePoint(wall.c, f) : wall.c,
     // Muurdikte blijft — alleen plan-geometry (assen), zoals stap-1 H/V.
     openings: wall.openings.map((op) => ({
-      ...op,
+      ...scaleObjectLabel(op, f),
       width: op.width * along,
       // t stays normalized; z / z_height stay (vertical defaults, not scan-scale).
     })),
@@ -67,7 +68,7 @@ function scaleItem(item: FloorItem, f: PlanScaleFactors): FloorItem {
   const alongLocalX = lengthScaleAlong(cos, sin, f)
   const alongLocalY = lengthScaleAlong(-sin, cos, f)
   return {
-    ...item,
+    ...scaleObjectLabel(item, f),
     x: item.x * f.x,
     y: item.y * f.y,
     width: item.width * alongLocalX,
@@ -77,22 +78,18 @@ function scaleItem(item: FloorItem, f: PlanScaleFactors): FloorItem {
 
 function scaleArea(area: FloorArea, f: PlanScaleFactors): FloorArea {
   return {
-    ...area,
+    ...scaleObjectLabel(area, f),
     poly: area.poly.map((p) => scalePoint(p, f)),
-    name_x: area.name_x != null ? area.name_x * f.x : area.name_x,
-    name_y: area.name_y != null ? area.name_y * f.y : area.name_y,
   }
 }
 
 function scaleSurface(surface: FloorSurface, f: PlanScaleFactors): FloorSurface {
   return {
-    ...surface,
+    ...scaleObjectLabel(surface, f),
     poly: surface.poly.map((p) => ({
       ...scalePoint(p, f),
       z: p.z,
     })),
-    name_x: surface.name_x != null ? surface.name_x * f.x : surface.name_x,
-    name_y: surface.name_y != null ? surface.name_y * f.y : surface.name_y,
   }
 }
 

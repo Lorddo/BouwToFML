@@ -106,6 +106,7 @@ describe('touch tap vs pan', () => {
 
   it('herkent click-move-click tools', () => {
     expect(isTouchHoverFollowTool('draw_wall')).toBe(true)
+    expect(isTouchHoverFollowTool('split')).toBe(true)
     expect(isTouchHoverFollowTool('measure')).toBe(false)
     expect(isTouchHoverFollowTool('box_select')).toBe(false)
     expect(isTouchHoverFollowTool(null)).toBe(false)
