@@ -229,6 +229,24 @@ export function useFmlPreviewAreaSelection(options: {
     options.syncPlanToParent()
   }
 
+  function applyCutout(isCutout: boolean): void {
+    flushPendingFieldCommits()
+    const surfaceId = settingsSurfaceId.value
+    if (!surfaceId) return
+    const surface = selectedSurface()
+    if (!surface || isRoofSurface(surface)) return
+    if ((surface.isCutout === true) === isCutout) return
+    options.editor.pushUndo()
+    const customName =
+      isCutout && !(surface.customName ?? '').trim() ? 'Trapgat' : surface.customName
+    options.editor.updateSurface(surfaceId, {
+      isCutout: isCutout ? true : undefined,
+      customName,
+    })
+    if (customName !== undefined) customNameDraft.value = customName
+    options.syncPlanToParent()
+  }
+
   function deleteSelectedTagged(): void {
     flushPendingFieldCommits()
     options.editor.pushUndo()
@@ -271,6 +289,7 @@ export function useFmlPreviewAreaSelection(options: {
     applyCustomName,
     applyColor,
     applyShowAreaLabel,
+    applyCutout,
     deleteSelectedTagged,
     selectedArea,
     selectedSurface,
@@ -286,4 +305,5 @@ export type AreaSelectionPanel = {
   color: string
   showAreaLabel: boolean
   canEditPolygon: boolean
+  isCutout: boolean
 }

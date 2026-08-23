@@ -1,5 +1,6 @@
 import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
 import type { Point2D, Wall } from '@/core/fml/types'
+import { snapPointToOuterWallFaces } from '@/core/fml/wall-outer-face'
 import { WALL_AXIS_EPS_CM } from './fml-preview-junction-core'
 import { closestPointInRadius, snapDrawWallEndpoint } from './fml-preview-junction-snap'
 import { resolveWallExtents } from './fml-preview-wall-polygons'
@@ -253,7 +254,8 @@ function collectDakSnapCorners(opts: {
 
 /**
  * Dak-teken-snap: binnen-/buitenfaces van muren + ribben/hoeken van nokken
- * en (optioneel) dakvlakken. Geen hartlijn- of junction-snap.
+ * en (optioneel) dakvlakken. Geen hartlijn- of plattegrond-junction-snap.
+ * `preferOuterFaces`: eerst buitenhoek/goot (eerste dakvlak-punt).
  */
 export function snapDakDrawPoint(
   point: Point2D,
@@ -266,6 +268,8 @@ export function snapDakDrawPoint(
     lockAxis?: boolean
     snapDisabled?: boolean
     radiusCm?: number
+    preferOuterFaces?: boolean
+    centroid?: Point2D
   },
 ): Point2D {
   if (opts.snapDisabled === true) return point
@@ -282,6 +286,15 @@ export function snapDakDrawPoint(
   if (corner) {
     const cornerDist = Math.hypot(point.x - corner.x, point.y - corner.y)
     if (cornerDist <= DAK_CORNER_SNAP_CM) return applyCorner()
+  }
+  if (opts.preferOuterFaces === true && opts.centroid) {
+    const outer = snapPointToOuterWallFaces(opts.walls, opts.centroid, point, radius)
+    if (outer !== point) {
+      if (opts.axisAnchor && opts.lockAxis === true) {
+        return snapDrawWallEndpoint(opts.axisAnchor, outer, true)
+      }
+      return outer
+    }
   }
   const face = snapDrawPointToWallFaces(collectDakSnapWalls(opts), point, {
     axisAnchor: opts.axisAnchor,

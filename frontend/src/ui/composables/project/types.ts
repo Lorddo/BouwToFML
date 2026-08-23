@@ -31,6 +31,10 @@ export type ProjectFmlDefaults = {
   thicknessMinCm: number
   thicknessMidCm: number
   thicknessMaxCm: number
+  /** Default dakplaat (nokspan) voor nieuwe plannen / generate. */
+  dakThicknessCm: number
+  /** Default vloerplaat per verdieping (alleen aanzicht-stack). */
+  slabThicknessCm: number
   bandMidBoundaryCm: number
   bandMaxBoundaryCm: number
 }

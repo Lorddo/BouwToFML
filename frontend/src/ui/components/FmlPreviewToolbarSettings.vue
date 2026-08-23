@@ -20,6 +20,7 @@ import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue
 import FmlPreviewToolbarSettingsLine from './FmlPreviewToolbarSettingsLine.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
 import FmlPreviewToolbarSettingsDraw from './FmlPreviewToolbarSettingsDraw.vue'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 
 const { t } = useI18n()
 
@@ -35,6 +36,7 @@ const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
+const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
 const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
 const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
@@ -47,6 +49,7 @@ const drawLabelItalic = defineModel<boolean>('drawLabelItalic', { default: false
 
 const props = withDefaults(
   defineProps<{
+    unit: ScaleInputUnit
     selectedWallPanel: {
       wallIds: string[]
       count: number
@@ -89,6 +92,7 @@ const props = withDefaults(
       color: string
       showAreaLabel: boolean
       canEditPolygon: boolean
+      isCutout?: boolean
     } | null
     selectedLabelPanel?: {
       id: string
@@ -153,6 +157,7 @@ const props = withDefaults(
     measurePersistEnabled?: boolean
     drawWallDrafting?: boolean
     drawWallMeasureLengthCm?: number
+    wallMoveDrafting?: boolean
     drawRoomDrafting?: boolean
     drawRoomMeasureHCm?: number
     drawRoomMeasureVCm?: number
@@ -184,6 +189,7 @@ const props = withDefaults(
     measurePersistEnabled: false,
     drawWallDrafting: false,
     drawWallMeasureLengthCm: 0,
+    wallMoveDrafting: false,
     drawRoomDrafting: false,
     drawRoomMeasureHCm: 0,
     drawRoomMeasureVCm: 0,
@@ -218,28 +224,28 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  wallThicknessInput: [event: Event]
+  wallThicknessCm: [cm: number]
   commitWallThickness: []
   applyWallThickness: [thicknessCm: number]
   wallBalanceInput: [event: Event]
   commitWallBalance: []
-  wallHeightInput: [event: Event]
+  wallHeightCm: [cm: number]
   commitWallHeight: []
-  junctionHeightInput: [event: Event]
+  junctionHeightCm: [cm: number]
   commitJunctionHeight: []
   commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
-  openingWidthInput: [event: Event]
+  openingWidthCm: [cm: number]
   commitOpeningWidth: []
-  openingHeightInput: [event: Event]
+  openingHeightCm: [cm: number]
   commitOpeningHeight: []
-  openingSillZInput: [event: Event]
+  openingSillZCm: [cm: number]
   commitOpeningSillZ: []
   toggleOpeningHinge: []
   toggleOpeningSwing: []
   openingBovenlichtChange: [event: Event]
-  openingBovenlichtHeightInput: [event: Event]
+  openingBovenlichtHeightCm: [cm: number]
   commitOpeningBovenlichtHeight: []
-  openingBovenlichtGapInput: [event: Event]
+  openingBovenlichtGapCm: [cm: number]
   commitOpeningBovenlichtGap: []
   copyOpening: []
   deleteOpenings: []
@@ -247,7 +253,7 @@ const emit = defineEmits<{
   deleteWalls: []
   clearSelection: []
   facadeGroupChange: [value: string]
-  facadeGroupRename: [name: string]
+  facadeGroupRename: []
   selectFacadeMembers: []
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
@@ -260,6 +266,7 @@ const emit = defineEmits<{
   applyAreaCustomName: [customName: string]
   applyAreaColor: [color: string]
   applyShowAreaLabel: [show: boolean]
+  applySurfaceCutout: [isCutout: boolean]
   deleteTagged: []
   labelTextInput: [value: string]
   updateLabelText: [value: string]
@@ -275,8 +282,8 @@ const emit = defineEmits<{
   beginSurfacePolygonEdit: []
   roofVertexZInput: [cm: number]
   endSurfacePolygonEdit: []
-  itemWidthInput: [event: Event]
-  itemHeightInput: [event: Event]
+  itemWidthCm: [cm: number]
+  itemHeightCm: [cm: number]
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
@@ -368,6 +375,7 @@ const isRoofPanel = computed(
     >
       <FmlPreviewToolbarSettingsWall
         v-if="showWallSettings"
+        :unit="unit"
         :selected-wall-panel="selectedWallPanel"
         :selected-junction-panel="selectedJunctionPanel"
         :active-tool="activeTool"
@@ -382,11 +390,6 @@ const isRoofPanel = computed(
         :thickness-min-cm="thicknessMinCm"
         :thickness-mid-cm="thicknessMidCm"
         :thickness-max-cm="thicknessMaxCm"
-        :draw-wall-drafting="drawWallDrafting"
-        :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
-        :draw-room-drafting="drawRoomDrafting"
-        :draw-room-measure-h-cm="drawRoomMeasureHCm"
-        :draw-room-measure-v-cm="drawRoomMeasureVCm"
         :facade-groups-enabled="facadeGroupsEnabled"
         :facade-group-options="facadeGroupOptions"
         :facade-group-draft="facadeGroupDraft"
@@ -403,32 +406,25 @@ const isRoofPanel = computed(
         :ridge-floor-draft="ridgeFloorDraft"
         :ridge-floor-mixed="ridgeFloorMixed"
         :ridge-floor-options="ridgeFloorOptions"
-        @wall-thickness-input="emit('wallThicknessInput', $event)"
+        @wall-thickness-cm="emit('wallThicknessCm', $event)"
         @commit-wall-thickness="emit('commitWallThickness')"
         @apply-wall-thickness="emit('applyWallThickness', $event)"
         @wall-balance-input="emit('wallBalanceInput', $event)"
         @commit-wall-balance="emit('commitWallBalance')"
-        @wall-height-input="emit('wallHeightInput', $event)"
+        @wall-height-cm="emit('wallHeightCm', $event)"
         @commit-wall-height="emit('commitWallHeight')"
-        @junction-height-input="emit('junctionHeightInput', $event)"
+        @junction-height-cm="emit('junctionHeightCm', $event)"
         @commit-junction-height="emit('commitJunctionHeight')"
         @split-wall="emit('splitWall')"
         @delete-walls="emit('deleteWalls')"
         @facade-group-change="emit('facadeGroupChange', $event)"
-        @facade-group-rename="emit('facadeGroupRename', $event)"
+        @facade-group-rename="emit('facadeGroupRename')"
         @select-facade-members="emit('selectFacadeMembers')"
         @stamp-group-change="emit('stampGroupChange', $event)"
         @select-stamp-members="emit('selectStampMembers')"
         @wall-kind-change="emit('wallKindChange', $event)"
         @ridge-z-input="emit('ridgeZInput', $event)"
         @ridge-floor-change="emit('ridgeFloorChange', $event)"
-        @draw-wall-length-input="emit('drawWallLengthInput', $event)"
-        @commit-draw-wall-measure="emit('commitDrawWallMeasure')"
-        @cancel-draw-wall-draft="emit('cancelDrawWallDraft')"
-        @draw-room-h-input="emit('drawRoomHInput', $event)"
-        @draw-room-v-input="emit('drawRoomVInput', $event)"
-        @commit-draw-room-measure="emit('commitDrawRoomMeasure')"
-        @cancel-draw-room-draft="emit('cancelDrawRoomDraft')"
       >
         <template #trailing>
           <button
@@ -471,6 +467,7 @@ const isRoofPanel = computed(
             activeTool === 'draw_label'
           "
           v-model:draw-surface-role="drawSurfaceRole"
+          v-model:draw-surface-cutout="drawSurfaceCutout"
           v-model:draw-line-thickness="drawLineThickness"
           v-model:draw-line-type="drawLineType"
           v-model:draw-line-color="drawLineColor"
@@ -492,6 +489,7 @@ const isRoofPanel = computed(
           v-model:add-window-width-cm="addWindowWidthCm"
           v-model:add-window-sill-z-cm="addWindowSillZCm"
           v-model:add-window-height-cm="addWindowHeightCm"
+          :unit="unit"
           :selected-opening-panel="selectedOpeningPanel"
           :active-tool="activeTool"
           :opening-subtype-draft="openingSubtypeDraft"
@@ -514,24 +512,25 @@ const isRoofPanel = computed(
           :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
           :bovenlicht-packed="bovenlichtPacked"
           @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
-          @opening-width-input="emit('openingWidthInput', $event)"
+          @opening-width-cm="emit('openingWidthCm', $event)"
           @commit-opening-width="emit('commitOpeningWidth')"
-          @opening-height-input="emit('openingHeightInput', $event)"
+          @opening-height-cm="emit('openingHeightCm', $event)"
           @commit-opening-height="emit('commitOpeningHeight')"
-          @opening-sill-z-input="emit('openingSillZInput', $event)"
+          @opening-sill-z-cm="emit('openingSillZCm', $event)"
           @commit-opening-sill-z="emit('commitOpeningSillZ')"
           @toggle-opening-hinge="emit('toggleOpeningHinge')"
           @toggle-opening-swing="emit('toggleOpeningSwing')"
           @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
-          @opening-bovenlicht-height-input="emit('openingBovenlichtHeightInput', $event)"
+          @opening-bovenlicht-height-cm="emit('openingBovenlichtHeightCm', $event)"
           @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
-          @opening-bovenlicht-gap-input="emit('openingBovenlichtGapInput', $event)"
+          @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
           @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
           @copy-opening="emit('copyOpening')"
           @delete-openings="emit('deleteOpenings')"
         />
         <FmlPreviewToolbarSettingsRoof
           v-if="isRoofPanel"
+          :unit="unit"
           :roof-vertex-z-cm="roofVertexZCm"
           :poly-mutate="roofPolyMutate"
           @roof-vertex-z-input="emit('roofVertexZInput', $event)"
@@ -541,6 +540,7 @@ const isRoofPanel = computed(
         />
         <FmlPreviewToolbarSettingsArea
           v-else-if="selectedAreaPanel"
+          :unit="unit"
           :selected-area-panel="selectedAreaPanel"
           :room-types="roomTypes"
           :surface-edit-active="surfaceEditActive"
@@ -550,6 +550,7 @@ const isRoofPanel = computed(
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
           @apply-area-color="emit('applyAreaColor', $event)"
           @apply-show-area-label="emit('applyShowAreaLabel', $event)"
+          @apply-surface-cutout="emit('applySurfaceCutout', $event)"
           @delete-tagged="emit('deleteTagged')"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
@@ -577,9 +578,10 @@ const isRoofPanel = computed(
         />
         <FmlPreviewToolbarSettingsItem
           v-if="selectedItemPanel"
+          :unit="unit"
           :selected-item-panel="selectedItemPanel"
-          @item-width-input="emit('itemWidthInput', $event)"
-          @item-height-input="emit('itemHeightInput', $event)"
+          @item-width-cm="emit('itemWidthCm', $event)"
+          @item-height-cm="emit('itemHeightCm', $event)"
           @item-rotation-input="emit('itemRotationInput', $event)"
           @toggle-item-mirror-x="emit('toggleItemMirrorX')"
           @toggle-item-mirror-y="emit('toggleItemMirrorY')"

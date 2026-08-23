@@ -70,10 +70,17 @@ const strokeAttrs = {
       <path d="M9.6 8.2 V6.2 H14.4 V8.2" />
     </g>
 
-    <!-- NEW: single roof plane (dakvlak) -->
-    <g v-else-if="name === 'roof'" v-bind="strokeAttrs">
-      <path d="M3.6 15.4 L10.2 6.2 L20.4 8.6 L13.8 17.8 Z" />
-      <path d="M10.2 6.2 L13.8 17.8" />
+    <!-- NEW: pitched roof + gable window + chimney (dakvlak) -->
+    <g v-else-if="name === 'roof'">
+      <path fill="currentColor" d="M2.4 7.6 H13.6 L10.2 20.9 H0.9 Z" />
+      <path fill="currentColor" d="M15.5 2.35 h4.7 v1.85 H15.5 Z" />
+      <path fill="currentColor" d="M16.1 4 h3.5 v3.7 H16.1 Z" />
+      <path v-bind="strokeAttrs" d="M11.6 20.9 L14.6 7.5 L22.9 20.9" />
+      <path
+        fill="currentColor"
+        fill-rule="evenodd"
+        d="M16.75 13.35 a2.35 2.35 0 1 1 0 4.7 a2.35 2.35 0 1 1 0-4.7 M15 15.4 h3.5 v0.6 H15 Z M16.45 13.95 h0.6 v3.5 h-0.6 Z"
+      />
     </g>
 
     <!-- KEEP -->

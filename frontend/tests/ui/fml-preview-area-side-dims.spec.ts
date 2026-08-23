@@ -22,8 +22,8 @@ function rect(x0: number, y0: number, w: number, h: number): FloorArea {
 }
 
 describe('AREA_SIDE_DIM_MIN_CM', () => {
-  it('is 50 cm', () => {
-    expect(AREA_SIDE_DIM_MIN_CM).toBe(50)
+  it('is 5 cm (korte zijden via zoom-LOD)', () => {
+    expect(AREA_SIDE_DIM_MIN_CM).toBe(5)
   })
 })
 
@@ -130,24 +130,40 @@ describe('mergeCollinearSides', () => {
 })
 
 describe('buildAreaSideDims', () => {
-  it('toont alle zijden ≥ 50 cm van een vierkant, label naar binnen', () => {
+  it('toont alle zijden ≥ 5 cm van een vierkant, label naar binnen', () => {
     const dims = buildAreaSideDims([rect(0, 0, 200, 200)])
     expect(dims).toHaveLength(4)
     expect(dims.every((d) => d.lengthCm >= 200 - 1e-6)).toBe(true)
-    expect(dims.map((d) => d.label)).toEqual(['2.00 m', '2.00 m', '2.00 m', '2.00 m'])
+    expect(dims.map((d) => d.label)).toEqual(['2000 mm', '2000 mm', '2000 mm', '2000 mm'])
+    expect(buildAreaSideDims([rect(0, 0, 200, 200)], { unit: 'm' }).map((d) => d.label)).toEqual([
+      '2 m',
+      '2 m',
+      '2 m',
+      '2 m',
+    ])
+    expect(buildAreaSideDims([rect(0, 0, 200, 200)], { unit: 'cm' }).map((d) => d.label)).toEqual([
+      '200 cm',
+      '200 cm',
+      '200 cm',
+      '200 cm',
+    ])
     const top = dims.find((d) => Math.abs(d.a.y) < 1e-6 && Math.abs(d.b.y) < 1e-6)
     expect(top).toBeTruthy()
     expect(top!.mid.x).toBeCloseTo(100)
     expect(top!.mid.y).toBeCloseTo(AREA_SIDE_DIM_INSET_CM)
   })
 
-  it('verbergt zijden onder 50 cm, houdt 50 cm', () => {
-    const narrow = buildAreaSideDims([rect(0, 0, 200, 40)])
+  it('verbergt zijden onder 5 cm, houdt 5 cm (zoom-LOD toont ze later)', () => {
+    const narrow = buildAreaSideDims([rect(0, 0, 200, 4)])
     expect(narrow).toHaveLength(2)
     expect(narrow.every((d) => d.lengthCm >= 200 - 1e-6)).toBe(true)
 
-    const exact = buildAreaSideDims([rect(0, 0, 200, 50)])
+    const exact = buildAreaSideDims([rect(0, 0, 200, 5)])
     expect(exact).toHaveLength(4)
+
+    const shortButVisible = buildAreaSideDims([rect(0, 0, 200, 40)])
+    expect(shortButVisible).toHaveLength(4)
+    expect(shortButVisible.some((d) => Math.abs(d.lengthCm - 40) < 1e-6)).toBe(true)
   })
 
   it('één maat op een area-zijde met clipper-kink (1.54 + 1.72)', () => {
@@ -168,7 +184,10 @@ describe('buildAreaSideDims', () => {
     const top = dims.filter((d) => d.mid.y < 40)
     expect(top).toHaveLength(1)
     expect(top[0].lengthCm).toBeCloseTo(326, 0)
-    expect(top[0].label).toBe('3.26 m')
+    expect(top[0].label).toBe('3260 mm')
+    expect(buildAreaSideDims([kitchen], { unit: 'm' }).filter((d) => d.mid.y < 40)[0].label).toBe(
+      '3.26 m',
+    )
   })
 
   it('één label op een gedeelde wand', () => {
@@ -185,7 +204,7 @@ describe('buildAreaSideDims', () => {
     expect(buildAreaSideDims(undefined)).toEqual([])
     expect(
       buildAreaSideDims([
-        { id: 'tiny', poly: rect(0, 0, 10, 10).poly, color: '#fff', showAreaLabel: true },
+        { id: 'tiny', poly: rect(0, 0, 4, 4).poly, color: '#fff', showAreaLabel: true },
       ]),
     ).toEqual([])
   })

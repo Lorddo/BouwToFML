@@ -3,7 +3,9 @@ import {
   addOpeningToWall,
   buildWindowOpeningId,
   clampOpeningHeight,
+  clampOpeningWidth,
   findOpeningById,
+  MAX_OPENING_WIDTH_CM,
   projectPointToWallT,
   updateOpeningById,
 } from '@/ui/components/fml-preview-openings'
@@ -107,6 +109,14 @@ describe('addOpeningToWall', () => {
   })
 })
 
+describe('clampOpeningWidth', () => {
+  it('laat puien breder dan 4 m toe', () => {
+    expect(clampOpeningWidth(600)).toBe(600)
+    expect(clampOpeningWidth(MAX_OPENING_WIDTH_CM)).toBe(MAX_OPENING_WIDTH_CM)
+    expect(clampOpeningWidth(MAX_OPENING_WIDTH_CM + 50)).toBe(MAX_OPENING_WIDTH_CM)
+  })
+})
+
 describe('updateOpeningById', () => {
   it('updates window sill z and glass height', () => {
     const walls = [
@@ -133,6 +143,31 @@ describe('updateOpeningById', () => {
     expect(next[0]?.openings[0]?.z).toBe(90)
     expect(next[0]?.openings[0]?.z_height).toBe(120)
     expect(next[0]?.openings[0]?.width).toBe(110)
+  })
+
+  it('bewaart een raam breder dan 4 m', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 1000, y: 0 },
+        thickness: 20,
+        openings: [
+          {
+            type: 'window' as const,
+            refid: 'window-ref',
+            t: 0.3,
+            width: 100,
+            z: 70,
+            z_height: 150,
+            guid: 'win-wide',
+          },
+        ],
+      },
+    ]
+    const next = updateOpeningById(walls, 'w1-window-win-wide', { width: 600, t: 0.4 })
+    expect(next[0]?.openings[0]?.width).toBe(600)
+    expect(next[0]?.openings[0]?.t).toBeCloseTo(0.4, 6)
   })
 
   it('patches per-opening bovenlicht height and gap', () => {

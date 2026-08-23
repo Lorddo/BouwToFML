@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { ViewerSessionDefaults } from '@/core/fml/viewer-session-defaults'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 
 defineProps<{
   defaults: ViewerSessionDefaults
+  unit: ScaleInputUnit
   /** Project-flag: flags+export-expand (true) vs losse ramen (false). Default true. */
   bovenlichtPacked?: boolean
   hint?: string
 }>()
 
 const emit = defineEmits<{
-  number: [field: keyof ViewerSessionDefaults, event: Event]
+  cm: [field: keyof ViewerSessionDefaults, cm: number]
   bool: [field: 'bovenlichtDefault' | 'windowBovenlichtDefault', event: Event]
   packed: [packed: boolean]
 }>()
@@ -24,56 +27,64 @@ const { t } = useI18n()
     <div class="defaults-grid">
       <label class="defaults-field">
         <span>{{ t('settings.wallHeightCm') }}</span>
-        <input
-          type="number"
-          min="1"
-          :value="defaults.wallHeightCm"
-          @change="emit('number', 'wallHeightCm', $event)"
+        <ScaleLengthInput
+          block
+          :cm="defaults.wallHeightCm"
+          :unit="unit"
+          :min-cm="1"
+          @update:cm="emit('cm', 'wallHeightCm', $event)"
         />
       </label>
       <label class="defaults-field">
         <span>{{ t('settings.doorHeightCm') }}</span>
-        <input
-          type="number"
-          min="1"
-          :value="defaults.doorHeightCm"
-          @change="emit('number', 'doorHeightCm', $event)"
+        <ScaleLengthInput
+          block
+          :cm="defaults.doorHeightCm"
+          :unit="unit"
+          :min-cm="1"
+          @update:cm="emit('cm', 'doorHeightCm', $event)"
         />
       </label>
       <label class="defaults-field">
         <span>{{ t('settings.windowHeightCm') }}</span>
-        <input
-          type="number"
-          min="1"
-          :value="defaults.windowHeightCm"
-          @change="emit('number', 'windowHeightCm', $event)"
+        <ScaleLengthInput
+          block
+          :cm="defaults.windowHeightCm"
+          :unit="unit"
+          :min-cm="1"
+          @update:cm="emit('cm', 'windowHeightCm', $event)"
         />
       </label>
       <label class="defaults-field">
         <span>{{ t('settings.sillZCm') }}</span>
-        <input
-          type="number"
-          min="0"
-          :value="defaults.windowSillZCm"
-          @change="emit('number', 'windowSillZCm', $event)"
+        <ScaleLengthInput
+          block
+          :cm="defaults.windowSillZCm"
+          :unit="unit"
+          :min-cm="0"
+          allow-zero
+          @update:cm="emit('cm', 'windowSillZCm', $event)"
         />
       </label>
       <label class="defaults-field">
         <span>{{ t('settings.bovenlichtGapCm') }}</span>
-        <input
-          type="number"
-          min="0"
-          :value="defaults.bovenlichtGapCm"
-          @change="emit('number', 'bovenlichtGapCm', $event)"
+        <ScaleLengthInput
+          block
+          :cm="defaults.bovenlichtGapCm"
+          :unit="unit"
+          :min-cm="0"
+          allow-zero
+          @update:cm="emit('cm', 'bovenlichtGapCm', $event)"
         />
       </label>
       <label class="defaults-field">
         <span>{{ t('settings.bovenlichtHeightCm') }}</span>
-        <input
-          type="number"
-          min="1"
-          :value="defaults.bovenlichtHeightCm"
-          @change="emit('number', 'bovenlichtHeightCm', $event)"
+        <ScaleLengthInput
+          block
+          :cm="defaults.bovenlichtHeightCm"
+          :unit="unit"
+          :min-cm="1"
+          @update:cm="emit('cm', 'bovenlichtHeightCm', $event)"
         />
       </label>
     </div>
@@ -130,15 +141,6 @@ const { t } = useI18n()
   gap: 2px;
   font-size: 12px;
   color: #334155;
-}
-
-.defaults-field input {
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 13px;
 }
 
 .defaults-check {

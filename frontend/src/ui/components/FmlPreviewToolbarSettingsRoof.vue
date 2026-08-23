@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
 
 const { t } = useI18n()
 
 defineProps<{
+  unit: ScaleInputUnit
   roofVertexZCm?: number | null
   polyMutate?: boolean
 }>()
@@ -23,29 +26,16 @@ const emit = defineEmits<{
   <div class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roofVertexZ') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        class="fml-toolbelt__input"
-        type="number"
-        min="0"
-        step="1"
+      <ScaleLengthInput
+        :cm="roofVertexZCm ?? 0"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
         :disabled="roofVertexZCm == null"
-        :aria-label="t('result.toolbar.roofVertexZAria')"
-        :placeholder="t('result.toolbar.roofVertexZHint')"
-        :value="roofVertexZCm ?? ''"
-        @input="
-          emit(
-            'roofVertexZInput',
-            Math.max(0, Math.round(Number(($event.target as HTMLInputElement).value) || 0)),
-          )
-        "
-        @change="
-          emit(
-            'roofVertexZInput',
-            Math.max(0, Math.round(Number(($event.target as HTMLInputElement).value) || 0)),
-          )
-        "
+        :aria-label="t('result.toolbar.roofVertexZAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__input"
+        @update:cm="emit('roofVertexZInput', Math.max(0, $event))"
       />
-      <span class="fml-toolbelt__suffix">cm</span>
     </div>
   </div>
   <button

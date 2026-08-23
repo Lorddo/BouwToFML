@@ -8,6 +8,13 @@ import {
   type FmlToolId,
 } from './canvas/fmlToolbeltItems'
 
+const props = withDefaults(
+  defineProps<{
+    hideSelectTools?: boolean
+  }>(),
+  { hideSelectTools: false },
+)
+
 const settingsMod = defineModel<boolean>('settingsMod', { default: false })
 const axisLockMod = defineModel<boolean>('axisLockMod', { default: false })
 const moveMod = defineModel<boolean>('moveMod', { default: false })
@@ -84,19 +91,21 @@ function onSelectTool(id: string): void {
     >
       <ToolbeltIcon name="move" />
     </button>
-    <div class="fml-mod-rail__sep" aria-hidden="true" />
-    <button
-      v-for="tool in selectTools"
-      :key="tool.id"
-      type="button"
-      :class="{ 'is-on': isSelectActive(tool.id) }"
-      :aria-pressed="isSelectActive(tool.id)"
-      :title="tool.label"
-      :aria-label="tool.label"
-      @click="onSelectTool(tool.id)"
-    >
-      <ToolbeltIcon :name="tool.icon" />
-    </button>
+    <template v-if="!props.hideSelectTools">
+      <div class="fml-mod-rail__sep" aria-hidden="true" />
+      <button
+        v-for="tool in selectTools"
+        :key="tool.id"
+        type="button"
+        :class="{ 'is-on': isSelectActive(tool.id) }"
+        :aria-pressed="isSelectActive(tool.id)"
+        :title="tool.label"
+        :aria-label="tool.label"
+        @click="onSelectTool(tool.id)"
+      >
+        <ToolbeltIcon :name="tool.icon" />
+      </button>
+    </template>
   </div>
 </template>
 

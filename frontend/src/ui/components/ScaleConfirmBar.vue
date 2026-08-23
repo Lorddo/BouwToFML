@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SCALE_AXIS_MISMATCH_WARN_PCT } from '@/platform/calibration'
 import {
-  mmToScaleInput,
-  scaleInputStep,
-  scaleInputToMm,
+  formatScaleInputValue,
+  parseScaleInputToMm,
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
 
@@ -39,20 +38,47 @@ const axisMismatchLabel = computed(() =>
     ? `${(props.axisMismatchPct / 100 + 1).toFixed(1)}×`
     : `${props.axisMismatchPct.toFixed(1)}%`,
 )
-const inputStep = computed(() => scaleInputStep(props.unit))
-const displayX = computed(() => mmToScaleInput(props.mmX, props.unit))
-const displayY = computed(() => mmToScaleInput(props.mmY, props.unit))
 
-function onUpdateX(raw: string) {
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n <= 0) return
-  emit('updateMmX', scaleInputToMm(n, props.unit))
+function formatMm(mm: number): string {
+  return formatScaleInputValue(mm / 10, props.unit)
 }
 
-function onUpdateY(raw: string) {
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n <= 0) return
-  emit('updateMmY', scaleInputToMm(n, props.unit))
+const editingX = ref(false)
+const editingY = ref(false)
+const draftX = ref('')
+const draftY = ref('')
+
+const displayX = computed(() => (editingX.value ? draftX.value : formatMm(props.mmX)))
+const displayY = computed(() => (editingY.value ? draftY.value : formatMm(props.mmY)))
+
+function onFocusX() {
+  editingX.value = true
+  draftX.value = formatMm(props.mmX)
+}
+
+function onFocusY() {
+  editingY.value = true
+  draftY.value = formatMm(props.mmY)
+}
+
+function onInputX(raw: string) {
+  draftX.value = raw
+  const mm = parseScaleInputToMm(raw, props.unit)
+  if (mm != null) emit('updateMmX', mm)
+}
+
+function onInputY(raw: string) {
+  draftY.value = raw
+  const mm = parseScaleInputToMm(raw, props.unit)
+  if (mm != null) emit('updateMmY', mm)
+}
+
+function onBlurX() {
+  editingX.value = false
+}
+
+function onBlurY() {
+  editingY.value = false
 }
 </script>
 
@@ -65,11 +91,14 @@ function onUpdateY(raw: string) {
           <span>{{ t('input.scaleH', { unit: unitLabel }) }}</span>
           <div class="row">
             <input
-              type="number"
-              min="0"
-              :step="inputStep"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
               :value="displayX"
-              @input="onUpdateX(($event.target as HTMLInputElement).value)"
+              @focus="onFocusX"
+              @blur="onBlurX"
+              @input="onInputX(($event.target as HTMLInputElement).value)"
             />
             <span class="unit">{{ unitLabel }}</span>
             <span class="px">{{ pxX.toFixed(1) }}{{ t('common.px') }}</span>
@@ -79,11 +108,14 @@ function onUpdateY(raw: string) {
           <span>{{ t('input.scaleV', { unit: unitLabel }) }}</span>
           <div class="row">
             <input
-              type="number"
-              min="0"
-              :step="inputStep"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
               :value="displayY"
-              @input="onUpdateY(($event.target as HTMLInputElement).value)"
+              @focus="onFocusY"
+              @blur="onBlurY"
+              @input="onInputY(($event.target as HTMLInputElement).value)"
             />
             <span class="unit">{{ unitLabel }}</span>
             <span class="px">{{ pxY.toFixed(1) }}{{ t('common.px') }}</span>
@@ -128,7 +160,8 @@ label {
 }
 
 .row input {
-  width: 72px;
+  width: 7.5em;
+  min-width: 72px;
 }
 
 .unit {

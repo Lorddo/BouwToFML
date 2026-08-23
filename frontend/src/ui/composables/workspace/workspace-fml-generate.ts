@@ -50,6 +50,8 @@ import {
 } from '@/ui/composables/fml-preview/fml-rescale-from-measure'
 import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
 import { tGlobal } from '@/ui/i18n'
+import { seedPlanFromUserSettings } from '@/ui/composables/fml-viewer/seed-plan-stack-defaults'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 export function stripFileExtension(name: string | null | undefined): string {
   const fallback = tGlobal('result.defaultExportName')
@@ -278,13 +280,15 @@ export function createWorkspaceFmlGenerate(
       }
     }
     const pinnedWallIds = collectStampOwnedWallIds(next.floors[0]?.walls ?? [])
-    return regeneratePlanAreas(
-      harmonizeFmlWallThickness(
-        next,
-        applied.appliedFmlThicknessLimits.value,
-        applied.appliedFmlBandBoundaries.value,
-        faceEvidenceById,
-        pinnedWallIds,
+    return seedPlanFromUserSettings(
+      regeneratePlanAreas(
+        harmonizeFmlWallThickness(
+          next,
+          applied.appliedFmlThicknessLimits.value,
+          applied.appliedFmlBandBoundaries.value,
+          faceEvidenceById,
+          pinnedWallIds,
+        ),
       ),
     )
   }
@@ -343,6 +347,7 @@ export function createWorkspaceFmlGenerate(
       windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
       bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
       bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
+      useMetric: loadUserSettings().unitSystem === 'metric',
       ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
   })

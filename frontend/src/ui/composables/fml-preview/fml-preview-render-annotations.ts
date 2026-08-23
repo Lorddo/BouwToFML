@@ -1,4 +1,9 @@
 import type { FloorDimension, FloorLabel, FloorLine } from '@/core/fml/types'
+import {
+  DEFAULT_SCALE_INPUT_UNIT,
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 import { measureDistanceCm } from './fml-preview-measure'
 import type { RenderDimension, RenderLabel, RenderLine } from './fml-preview-render-types'
 
@@ -39,12 +44,6 @@ export function lineDash(type: FloorLine['type']): number[] | undefined {
   if (type === 'dotted_line') return [2, 4]
   if (type === 'dashdotted_line') return [8, 4, 2, 4]
   return undefined
-}
-
-function formatDimensionMeters(cm: number): string {
-  const meters = cm / 100
-  const rounded = Math.round(meters * 100) / 100
-  return `${rounded.toFixed(2)} m`
 }
 
 export function buildRenderLabels(
@@ -104,6 +103,7 @@ export function buildRenderDimensions(
   dimensions: FloorDimension[] | undefined,
   toStagePoint: ToStage,
   tickLenStage = 6,
+  unit: ScaleInputUnit = DEFAULT_SCALE_INPUT_UNIT,
 ): RenderDimension[] {
   if (!dimensions || dimensions.length === 0) return []
   return dimensions.map((dim) => {
@@ -121,7 +121,7 @@ export function buildRenderDimensions(
       tickB: [b.x - nx, b.y - ny, b.x + nx, b.y + ny],
       labelX: (a.x + b.x) / 2,
       labelY: (a.y + b.y) / 2,
-      label: formatDimensionMeters(measureDistanceCm(dim.a, dim.b)),
+      label: formatScaleInputLabel(measureDistanceCm(dim.a, dim.b), unit),
     }
   })
 }

@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FmlToolId } from './canvas/fmlToolbeltItems'
-import {
-  formatDrawLengthMeters,
-  parseDrawLengthToCm,
-} from '@/ui/composables/fml-preview/fml-preview-draw-measure'
 import { sliderPercentFromDraft } from './fml-preview-wall-edit'
+import {
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
 
@@ -14,6 +15,7 @@ const { t } = useI18n()
 
 const props = withDefaults(
   defineProps<{
+    unit: ScaleInputUnit
     selectedWallPanel: {
       wallIds: string[]
       count: number
@@ -42,13 +44,6 @@ const props = withDefaults(
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
-    /** Actieve muur-draft: live lengte (cm). */
-    drawWallDrafting?: boolean
-    drawWallMeasureLengthCm?: number
-    /** Actieve kamer-draft: live H/V (cm). */
-    drawRoomDrafting?: boolean
-    drawRoomMeasureHCm?: number
-    drawRoomMeasureVCm?: number
     /** Gevelgroepen (alleen editor capability). */
     facadeGroupsEnabled?: boolean
     facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
@@ -76,11 +71,6 @@ const props = withDefaults(
     thicknessMinCm: 10,
     thicknessMidCm: 20,
     thicknessMaxCm: 30,
-    drawWallDrafting: false,
-    drawWallMeasureLengthCm: 0,
-    drawRoomDrafting: false,
-    drawRoomMeasureHCm: 0,
-    drawRoomMeasureVCm: 0,
     facadeGroupsEnabled: false,
     facadeGroupOptions: () => [],
     facadeGroupDraft: '',
@@ -101,26 +91,19 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  wallThicknessInput: [event: Event]
+  wallThicknessCm: [cm: number]
   commitWallThickness: []
   applyWallThickness: [thicknessCm: number]
   wallBalanceInput: [event: Event]
   commitWallBalance: []
-  wallHeightInput: [event: Event]
+  wallHeightCm: [cm: number]
   commitWallHeight: []
-  junctionHeightInput: [event: Event]
+  junctionHeightCm: [cm: number]
   commitJunctionHeight: []
   splitWall: []
   deleteWalls: []
-  drawWallLengthInput: [cm: number | null]
-  commitDrawWallMeasure: []
-  cancelDrawWallDraft: []
-  drawRoomHInput: [cm: number | null]
-  drawRoomVInput: [cm: number | null]
-  commitDrawRoomMeasure: []
-  cancelDrawRoomDraft: []
   facadeGroupChange: [value: string]
-  facadeGroupRename: [name: string]
+  facadeGroupRename: []
   selectFacadeMembers: []
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
@@ -211,25 +194,13 @@ const facadeSelectValue = computed(() => {
   return props.facadeGroupDraft ?? ''
 })
 
-const facadeRenameText = ref<string | null>(null)
-
-watch(
-  () => [props.facadeGroupDraft, props.facadeGroupMixed] as const,
-  () => {
-    facadeRenameText.value = null
-  },
-)
-
-const facadeNameDisplay = computed(() => {
-  if (facadeRenameText.value != null) return facadeRenameText.value
-  if (props.facadeGroupMixed || !props.facadeGroupDraft) return ''
-  const group = props.facadeGroupOptions.find((entry) => entry.id === props.facadeGroupDraft)
-  return group?.name ?? ''
-})
-
 const showFacadeSelectButton = computed(
   () => !!props.facadeGroupDraft && !props.facadeGroupMixed && props.facadeGroupDraft.length > 0,
 )
+
+function presetSizeLabel(cm: number): string {
+  return formatScaleInputLabel(cm, props.unit)
+}
 
 function onFacadeGroupChange(event: Event): void {
   const select = event.target as HTMLSelectElement
@@ -239,48 +210,14 @@ function onFacadeGroupChange(event: Event): void {
   releaseControlFocus(event)
 }
 
-function onFacadeNameChange(event: Event): void {
-  const raw = (event.target as HTMLInputElement).value
-  facadeRenameText.value = raw
-  emit('facadeGroupRename', raw)
-  releaseControlFocus(event)
+function onFacadeGroupEdit(): void {
+  emit('facadeGroupRename')
 }
 
 function onStampGroupChange(event: Event): void {
   emit('stampGroupChange', (event.target as HTMLInputElement).checked)
   releaseControlFocus(event)
 }
-
-/** Lokale typ-drafts: null = volg live preview. */
-const lengthEditText = ref<string | null>(null)
-const hEditText = ref<string | null>(null)
-const vEditText = ref<string | null>(null)
-
-watch(
-  () => props.drawWallDrafting,
-  (on) => {
-    if (!on) lengthEditText.value = null
-  },
-)
-watch(
-  () => props.drawRoomDrafting,
-  (on) => {
-    if (!on) {
-      hEditText.value = null
-      vEditText.value = null
-    }
-  },
-)
-
-const wallLengthDisplay = computed(
-  () => lengthEditText.value ?? formatDrawLengthMeters(props.drawWallMeasureLengthCm),
-)
-const roomHDisplay = computed(
-  () => hEditText.value ?? formatDrawLengthMeters(props.drawRoomMeasureHCm),
-)
-const roomVDisplay = computed(
-  () => vEditText.value ?? formatDrawLengthMeters(props.drawRoomMeasureVCm),
-)
 
 /** Focus loslaten na toolbar-interactie — voorkomt dat Space+pan geblokkeerd blijft. */
 function releaseControlFocus(event: Event): void {
@@ -296,79 +233,13 @@ function onDrawThicknessBandChange(event: Event): void {
   releaseControlFocus(event)
 }
 
-function onWallThicknessChange(event: Event): void {
-  emit('commitWallThickness')
-  releaseControlFocus(event)
-}
-
 function onWallBalanceChange(event: Event): void {
   emit('commitWallBalance')
   releaseControlFocus(event)
 }
 
-function onWallHeightChange(event: Event): void {
-  emit('commitWallHeight')
-  releaseControlFocus(event)
-}
-
-function onJunctionHeightChange(event: Event): void {
-  emit('commitJunctionHeight')
-  releaseControlFocus(event)
-}
-
-function parseOrNull(raw: string): number | null {
-  const trimmed = raw.trim()
-  if (!trimmed) return null
-  return parseDrawLengthToCm(trimmed)
-}
-
-function onWallLengthInput(event: Event): void {
-  const raw = (event.target as HTMLInputElement).value
-  lengthEditText.value = raw
-  emit('drawWallLengthInput', parseOrNull(raw))
-}
-
-function onWallLengthEnter(event: KeyboardEvent): void {
-  event.preventDefault()
-  event.stopPropagation()
-  emit('commitDrawWallMeasure')
-  if (event.target instanceof HTMLElement) event.target.blur()
-}
-
-function onWallLengthEscape(event: KeyboardEvent): void {
-  event.preventDefault()
-  event.stopPropagation()
-  lengthEditText.value = null
-  emit('cancelDrawWallDraft')
-  if (event.target instanceof HTMLElement) event.target.blur()
-}
-
-function onRoomHInput(event: Event): void {
-  const raw = (event.target as HTMLInputElement).value
-  hEditText.value = raw
-  emit('drawRoomHInput', parseOrNull(raw))
-}
-
-function onRoomVInput(event: Event): void {
-  const raw = (event.target as HTMLInputElement).value
-  vEditText.value = raw
-  emit('drawRoomVInput', parseOrNull(raw))
-}
-
-function onRoomMeasureEnter(event: KeyboardEvent): void {
-  event.preventDefault()
-  event.stopPropagation()
-  emit('commitDrawRoomMeasure')
-  if (event.target instanceof HTMLElement) event.target.blur()
-}
-
-function onRoomMeasureEscape(event: KeyboardEvent): void {
-  event.preventDefault()
-  event.stopPropagation()
-  hEditText.value = null
-  vEditText.value = null
-  emit('cancelDrawRoomDraft')
-  if (event.target instanceof HTMLElement) event.target.blur()
+function onRidgeZCm(cm: number): void {
+  emit('ridgeZInput', cm)
 }
 </script>
 
@@ -425,120 +296,19 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
       <span v-if="selectedJunctionPanel" class="fml-toolbelt__meta">
         {{ junctionCountLabel }}
       </span>
-      <div v-if="drawWallDrafting" class="fml-toolbelt__field">
-        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawLength') }}</span>
-        <div class="fml-toolbelt__field-controls">
-          <input
-            type="text"
-            inputmode="decimal"
-            class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
-            :aria-label="t('result.toolbar.drawLengthAria')"
-            :value="wallLengthDisplay"
-            @input="onWallLengthInput"
-            @keydown.enter="onWallLengthEnter"
-            @keydown.escape="onWallLengthEscape"
-            @blur="lengthEditText = null"
-          />
-          <span class="fml-toolbelt__unit">m</span>
-          <button
-            type="button"
-            class="canvas-toolbelt__btn"
-            :title="t('result.toolbar.acceptDrawDraft')"
-            :aria-label="t('result.toolbar.acceptDrawDraft')"
-            @click="emit('commitDrawWallMeasure')"
-            @pointerup="releaseControlFocus"
-          >
-            <ToolbeltIcon name="check" />
-          </button>
-          <button
-            type="button"
-            class="canvas-toolbelt__btn"
-            :title="t('result.toolbar.deactivateDrawTool')"
-            :aria-label="t('result.toolbar.deactivateDrawTool')"
-            @click="emit('cancelDrawWallDraft')"
-            @pointerup="releaseControlFocus"
-          >
-            <ToolbeltIcon name="clear" />
-          </button>
-        </div>
-      </div>
-      <template v-if="drawRoomDrafting">
-        <div class="fml-toolbelt__field">
-          <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawWidth') }}</span>
-          <div class="fml-toolbelt__field-controls">
-            <input
-              type="text"
-              inputmode="decimal"
-              class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
-              :aria-label="t('result.toolbar.drawWidthAria')"
-              :value="roomHDisplay"
-              @input="onRoomHInput"
-              @keydown.enter="onRoomMeasureEnter"
-              @keydown.escape="onRoomMeasureEscape"
-              @blur="hEditText = null"
-            />
-            <span class="fml-toolbelt__unit">m</span>
-          </div>
-        </div>
-        <div class="fml-toolbelt__field">
-          <span class="fml-toolbelt__field-label">{{ t('result.toolbar.drawDepth') }}</span>
-          <div class="fml-toolbelt__field-controls">
-            <input
-              type="text"
-              inputmode="decimal"
-              class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--measure"
-              :aria-label="t('result.toolbar.drawDepthAria')"
-              :value="roomVDisplay"
-              @input="onRoomVInput"
-              @keydown.enter="onRoomMeasureEnter"
-              @keydown.escape="onRoomMeasureEscape"
-              @blur="vEditText = null"
-            />
-            <span class="fml-toolbelt__unit">m</span>
-            <button
-              type="button"
-              class="canvas-toolbelt__btn"
-              :title="t('result.toolbar.acceptDrawDraft')"
-              :aria-label="t('result.toolbar.acceptDrawDraft')"
-              @click="emit('commitDrawRoomMeasure')"
-              @pointerup="releaseControlFocus"
-            >
-              <ToolbeltIcon name="check" />
-            </button>
-            <button
-              type="button"
-              class="canvas-toolbelt__btn"
-              :title="t('result.toolbar.deactivateDrawTool')"
-              :aria-label="t('result.toolbar.deactivateDrawTool')"
-              @click="emit('cancelDrawRoomDraft')"
-              @pointerup="releaseControlFocus"
-            >
-              <ToolbeltIcon name="clear" />
-            </button>
-          </div>
-        </div>
-      </template>
       <div v-if="isRidgeMode" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.ridgeZ') }}</span>
         <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="0"
-            max="2000"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.ridgeZAria')"
-            :value="ridgeZCm ?? ''"
-            @change="
-              emit(
-                'ridgeZInput',
-                Number.isFinite(Number(($event.target as HTMLInputElement).value))
-                  ? Math.round(Number(($event.target as HTMLInputElement).value))
-                  : null,
-              )
-            "
+          <ScaleLengthInput
+            :cm="ridgeZCm ?? 0"
+            :unit="unit"
+            :min-cm="0"
+            allow-zero
+            :max-cm="2000"
+            :aria-label="t('result.toolbar.ridgeZAria', { unit: t(`common.${unit}`) })"
+            input-class="fml-toolbelt__thickness-input"
+            @update:cm="onRidgeZCm"
           />
-          <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <div
@@ -560,22 +330,20 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
               {{ t('result.toolbar.custom') }}
             </option>
             <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
-              {{ preset.label }} ({{ preset.cm }} cm)
+              {{ preset.label }} ({{ presetSizeLabel(preset.cm) }})
             </option>
           </select>
-          <input
-            type="number"
-            min="1"
-            max="200"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.wallThicknessAria')"
-            :value="wallThicknessMixed ? '' : wallThicknessDraft"
-            :placeholder="wallThicknessMixed ? '—' : undefined"
-            @input="emit('wallThicknessInput', $event)"
-            @change="onWallThicknessChange"
+          <ScaleLengthInput
+            :cm="wallThicknessDraft"
+            :unit="unit"
+            :min-cm="1"
+            :max-cm="200"
+            :mixed="wallThicknessMixed"
+            :aria-label="t('result.toolbar.wallThicknessAria', { unit: t(`common.${unit}`) })"
+            input-class="fml-toolbelt__thickness-input"
+            @update:cm="emit('wallThicknessCm', $event)"
+            @commit="emit('commitWallThickness')"
           />
-          <span class="fml-toolbelt__unit">cm</span>
           <div
             v-if="selectedWallPanel"
             class="fml-toolbelt__presets"
@@ -587,9 +355,17 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
               :key="preset.id"
               type="button"
               class="fml-toolbelt__preset-btn"
-              :title="t('result.toolbar.applyPresetTitle', { label: preset.label, cm: preset.cm })"
+              :title="
+                t('result.toolbar.applyPresetTitle', {
+                  label: preset.label,
+                  cm: presetSizeLabel(preset.cm),
+                })
+              "
               :aria-label="
-                t('result.toolbar.applyPresetAria', { label: preset.label, cm: preset.cm })
+                t('result.toolbar.applyPresetAria', {
+                  label: preset.label,
+                  cm: presetSizeLabel(preset.cm),
+                })
               "
               @click="emit('applyWallThickness', preset.cm)"
               @pointerup="releaseControlFocus"
@@ -635,37 +411,33 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
       <div v-if="selectedWallPanel && !isRidgeMode" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
         <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="1"
-            max="1000"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.wallHeightAria')"
-            :value="wallHeightMixed ? '' : wallHeightDraft"
-            :placeholder="wallHeightMixed ? '—' : undefined"
-            @input="emit('wallHeightInput', $event)"
-            @change="onWallHeightChange"
+          <ScaleLengthInput
+            :cm="wallHeightDraft"
+            :unit="unit"
+            :min-cm="1"
+            :max-cm="1000"
+            :mixed="wallHeightMixed"
+            :aria-label="t('result.toolbar.wallHeightAria', { unit: t(`common.${unit}`) })"
+            input-class="fml-toolbelt__thickness-input"
+            @update:cm="emit('wallHeightCm', $event)"
+            @commit="emit('commitWallHeight')"
           />
-          <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <div v-if="selectedJunctionPanel && !isRidgeJunction" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.junctionHeight') }}</span>
         <div class="fml-toolbelt__field-controls">
-          <input
-            type="number"
-            min="1"
-            max="1000"
-            step="1"
-            class="fml-toolbelt__thickness-input"
-            :aria-label="t('result.toolbar.junctionHeightAria')"
-            :value="junctionHeightMixed ? '' : junctionHeightDraft"
-            :placeholder="junctionHeightMixed ? '—' : undefined"
-            @input="emit('junctionHeightInput', $event)"
-            @change="onJunctionHeightChange"
+          <ScaleLengthInput
+            :cm="junctionHeightDraft"
+            :unit="unit"
+            :min-cm="1"
+            :max-cm="1000"
+            :mixed="junctionHeightMixed"
+            :aria-label="t('result.toolbar.junctionHeightAria', { unit: t(`common.${unit}`) })"
+            input-class="fml-toolbelt__thickness-input"
+            @update:cm="emit('junctionHeightCm', $event)"
+            @commit="emit('commitJunctionHeight')"
           />
-          <span class="fml-toolbelt__unit">cm</span>
         </div>
       </div>
       <button
@@ -713,19 +485,21 @@ function onRoomMeasureEscape(event: KeyboardEvent): void {
                 }}
               </option>
               <option v-for="group in facadeGroupOptions" :key="group.id" :value="group.id">
-                {{ group.id }}
+                {{ group.name || group.id }}
               </option>
               <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
             </select>
-            <input
-              v-if="facadeGroupDraft && !facadeGroupMixed"
-              type="text"
-              class="fml-toolbelt__thickness-input fml-toolbelt__thickness-input--facade"
-              :aria-label="t('result.toolbar.facadeGroupRenameAria')"
-              :value="facadeNameDisplay"
-              @input="facadeRenameText = ($event.target as HTMLInputElement).value"
-              @change="onFacadeNameChange"
-            />
+            <button
+              v-if="showFacadeSelectButton"
+              type="button"
+              class="canvas-toolbelt__btn"
+              :title="t('result.toolbar.facadeGroupEditTitle')"
+              :aria-label="t('result.toolbar.facadeGroupEdit')"
+              @click="onFacadeGroupEdit"
+              @pointerup="releaseControlFocus"
+            >
+              <ToolbeltIcon name="edit" />
+            </button>
             <button
               v-if="showFacadeSelectButton"
               type="button"

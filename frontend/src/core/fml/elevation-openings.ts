@@ -3,7 +3,7 @@
  * omdat gestapelde gevels dezelfde muur-id (en vaak dezelfde opening-guid) delen.
  */
 import type { FloorPlan, Opening, Wall } from './types'
-import { clampOpeningToStory } from './elevation-opening-edit'
+import { clampOpeningMoveKeepSize, clampOpeningToStory } from './elevation-opening-edit'
 import { listFacadeGroups, remapFacadeGroupWallIds } from './facade-groups'
 import { decodePlanOpeningId, encodePlanOpeningId } from './opening-ids'
 import { findOpeningById, moveOpeningToWall, type OpeningLocation } from './opening-wall-ops'
@@ -110,11 +110,11 @@ export function updatePlanOpening(
     const located = findOpeningById(walls, localId)
     const floor = plan.floors[floorIndex]
     if (!located || !floor) return walls
-    const clamped = clampOpeningToStory(
-      { ...located.opening, ...patch },
-      located.wall,
-      floor.height,
-    )
+    const merged = { ...located.opening, ...patch }
+    const keepSize = patch.width == null && patch.z_height == null
+    const clamped = keepSize
+      ? clampOpeningMoveKeepSize(merged, located.wall, floor.height)
+      : clampOpeningToStory(merged, located.wall, floor.height)
     const next = updateOpeningById(walls, localId, {
       t: clamped.t,
       width: clamped.width,

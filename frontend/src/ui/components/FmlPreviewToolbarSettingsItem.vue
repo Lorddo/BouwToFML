@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
 
 defineProps<{
+  unit: ScaleInputUnit
   selectedItemPanel: {
     id: string
     label: string
@@ -16,8 +19,8 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  itemWidthInput: [event: Event]
-  itemHeightInput: [event: Event]
+  itemWidthCm: [cm: number]
+  itemHeightCm: [cm: number]
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
@@ -32,27 +35,27 @@ const { t } = useI18n()
   <label class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('viewer.itemWidth') }}</span>
     <span class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        min="1"
-        class="fml-toolbelt__thickness-input"
-        :value="selectedItemPanel.widthCm"
-        @change="emit('itemWidthInput', $event)"
+      <ScaleLengthInput
+        :cm="selectedItemPanel.widthCm"
+        :unit="unit"
+        :min-cm="1"
+        :aria-label="t('viewer.itemWidth')"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="emit('itemWidthCm', $event)"
       />
-      <span class="fml-toolbelt__unit">{{ t('common.cm') }}</span>
     </span>
   </label>
   <label class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('viewer.itemDepth') }}</span>
     <span class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        min="1"
-        class="fml-toolbelt__thickness-input"
-        :value="selectedItemPanel.heightCm"
-        @change="emit('itemHeightInput', $event)"
+      <ScaleLengthInput
+        :cm="selectedItemPanel.heightCm"
+        :unit="unit"
+        :min-cm="1"
+        :aria-label="t('viewer.itemDepth')"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="emit('itemHeightCm', $event)"
       />
-      <span class="fml-toolbelt__unit">{{ t('common.cm') }}</span>
     </span>
   </label>
   <button

@@ -2,11 +2,19 @@ import type { Floor, FloorPlan, Point2D, Wall } from '@/core/fml/types'
 import { isPointSkyExposedOnFloor, listDakSnapWalls } from '@/core/fml/ridge-floor'
 import { listRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
 import { listRidgeSurfacesOnFloor } from '@/core/fml/roof-planes'
+import { floorFootprintCentroid, listFloorOuterFaceCorners } from '@/core/fml/wall-outer-face'
 import {
   isOnDakBoundary,
   snapDakDrawPoint,
   snapToNearestDakBoundary,
 } from './fml-preview-wall-face-snap'
+
+function dakOuterCorners(plan: FloorPlan, floorIndex: number): Point2D[] {
+  return [
+    ...listFloorOuterFaceCorners(plan.floors[floorIndex]),
+    ...listFloorOuterFaceCorners(plan.floors[floorIndex + 1]),
+  ]
+}
 
 /** Polygoonringen van dakvlakken op een floor (optioneel één id uitsluiten tijdens sleep). */
 export function dakRoofRingsFromFloor(
@@ -89,13 +97,17 @@ export function resolveDakSurfacePoint(
   },
 ): Point2D {
   const floor = opts.plan.floors[opts.floorIndex]
+  const extra = opts.extraAxisPoints ?? []
+  const isFirst = extra.length === 0 && !opts.axisAnchor
   const next = snapDakDrawPoint(cm, {
     walls: listDakSnapWalls(opts.plan, opts.floorIndex),
     ridges: listRidgeWallsOnFloor(floor),
     roofRings: dakRoofRingsFromFloor(floor, opts.excludeSurfaceId),
-    extraCorners: opts.extraAxisPoints,
+    extraCorners: [...dakOuterCorners(opts.plan, opts.floorIndex), ...extra],
     axisAnchor: opts.axisAnchor,
     lockAxis: opts.lockAxis,
+    preferOuterFaces: isFirst,
+    centroid: isFirst ? floorFootprintCentroid(floor) : undefined,
   })
   return clampDakAllowedPoint(opts.plan, opts.floorIndex, next, opts.excludeSurfaceId)
 }

@@ -1,8 +1,13 @@
 import type { Floor } from '@/core/fml/types'
-import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
+import { resolveOpeningCatalog, type WindowAssetKind } from '@/core/fml/opening-refid-catalog'
 import { insetOpeningRect, resolveOpeningFrame } from '@/core/fml/opening-display-geom'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
+import {
+  buildWindowPlanSymbol,
+  samplePlanArc,
+  type PlanGlyph,
+} from '@/core/fml/opening-plan-symbol'
 import { groupDoorOpeningsOnWall } from '@/ui/components/fml-preview-doors'
 import { buildWindowOpeningId } from '@/ui/components/fml-preview-openings'
 import {
@@ -11,7 +16,6 @@ import {
 } from '@/ui/components/fml-preview-wall-polygons'
 import {
   buildOpeningGapPolygon,
-  buildWindowSymbol,
   clamp01,
   doorGroupDetail,
   flattenStagePoints,
@@ -22,15 +26,88 @@ import { fixtureSymbolLocalBounds } from './fml-preview-fixture-bounds'
 import type {
   RenderDoorGroup,
   RenderFixture,
+  RenderPlanGlyph,
   RenderWall,
   RenderWindowOpening,
 } from './fml-preview-render-types'
+import {
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
 type StagePointFn = (x: number, y: number) => { x: number; y: number }
+
+function flattenPlanGlyph(
+  glyph: PlanGlyph,
+  wallUnit: { x: number; y: number },
+  thicknessCm: number,
+  balance: number | undefined,
+  toStagePoint: StagePointFn,
+): RenderPlanGlyph {
+  if (glyph.kind === 'polyline') {
+    return {
+      kind: 'polyline',
+      role: glyph.role,
+      closed: glyph.closed,
+      dashed: glyph.dashed,
+      points: flattenStagePoints(
+        offsetFlatPointsByWallBalance(glyph.points, wallUnit, thicknessCm, balance),
+        toStagePoint,
+      ),
+    }
+  }
+  const sampleCm = samplePlanArc(glyph)
+  const points = flattenStagePoints(
+    offsetFlatPointsByWallBalance(sampleCm, wallUnit, thicknessCm, balance),
+    toStagePoint,
+  )
+  const centerCm = offsetPointByWallBalance(
+    { x: glyph.cx, y: glyph.cy },
+    wallUnit,
+    thicknessCm,
+    balance,
+  )
+  const stageC = toStagePoint(centerCm.x, centerCm.y)
+  const startPt = toStagePoint(
+    centerCm.x + Math.cos(glyph.startRad) * glyph.r,
+    centerCm.y + Math.sin(glyph.startRad) * glyph.r,
+  )
+  const endPt = toStagePoint(
+    centerCm.x + Math.cos(glyph.startRad + glyph.sweepRad) * glyph.r,
+    centerCm.y + Math.sin(glyph.startRad + glyph.sweepRad) * glyph.r,
+  )
+  const startRad = Math.atan2(startPt.y - stageC.y, startPt.x - stageC.x)
+  const endRad = Math.atan2(endPt.y - stageC.y, endPt.x - stageC.x)
+  let sweepRad = endRad - startRad
+  while (sweepRad > Math.PI) sweepRad -= Math.PI * 2
+  while (sweepRad <= -Math.PI) sweepRad += Math.PI * 2
+  const r = Math.hypot(startPt.x - stageC.x, startPt.y - stageC.y)
+  return {
+    kind: 'arc',
+    role: 'swing',
+    cx: stageC.x,
+    cy: stageC.y,
+    r,
+    startRad,
+    sweepRad,
+    points,
+  }
+}
+
+function flattenPlanGlyphs(
+  glyphs: PlanGlyph[],
+  wallUnit: { x: number; y: number },
+  thicknessCm: number,
+  balance: number | undefined,
+  toStagePoint: StagePointFn,
+): RenderPlanGlyph[] {
+  return glyphs.map((g) => flattenPlanGlyph(g, wallUnit, thicknessCm, balance, toStagePoint))
+}
 
 export function buildRenderDoorGroupsAndWindows(
   wallLines: RenderWall[],
   toStagePoint: StagePointFn,
+  unit: ScaleInputUnit = 'mm',
 ): { doorGroups: RenderDoorGroup[]; windows: RenderWindowOpening[] } {
   const doorGroups: RenderDoorGroup[] = []
   const windows: RenderWindowOpening[] = []
@@ -75,30 +152,7 @@ export function buildRenderDoorGroupsAndWindows(
         }),
         label: group.catalogLabel,
         detail: doorGroupDetail(group),
-        leafLines: group.leafLines.map((line) =>
-          flattenStagePoints(
-            offsetFlatPointsByWallBalance(line, wallUnit, thicknessCm, balance),
-            toStagePoint,
-          ),
-        ),
-        arcPoints: group.arcPoints.map((arc) =>
-          flattenStagePoints(
-            offsetFlatPointsByWallBalance(arc, wallUnit, thicknessCm, balance),
-            toStagePoint,
-          ),
-        ),
-        arrowPoints: group.arrowPoints.map((arrow) =>
-          flattenStagePoints(
-            offsetFlatPointsByWallBalance(arrow, wallUnit, thicknessCm, balance),
-            toStagePoint,
-          ),
-        ),
-        jambPoints: group.jambLines.map((jamb) =>
-          flattenStagePoints(
-            offsetFlatPointsByWallBalance(jamb, wallUnit, thicknessCm, balance),
-            toStagePoint,
-          ),
-        ),
+        glyphs: flattenPlanGlyphs(group.glyphs, wallUnit, thicknessCm, balance, toStagePoint),
       })
     })
 
@@ -125,16 +179,17 @@ export function buildRenderDoorGroupsAndWindows(
         { width: opening.width, height: 100 },
         resolveOpeningFrame(opening, catalog),
       ).frame
-      const windowSymbol = buildWindowSymbol({
-        startCm,
-        endCm,
+      const windowSymbol = buildWindowPlanSymbol({
+        start: startCm,
+        end: endCm,
+        wallUnit,
         thicknessCm,
-        toStagePoint,
         panelCount: panels,
-        kind: catalog.kind,
+        kind: catalog.kind as WindowAssetKind,
         frameLeftCm: frame.leftCm,
         frameRightCm: frame.rightCm,
         mirrored: opening.mirrored,
+        leaf: catalog.leaf,
       })
       windows.push({
         id: buildWindowOpeningId(wallLine.id, opening, openingIndex),
@@ -149,11 +204,14 @@ export function buildRenderDoorGroupsAndWindows(
           toStagePoint,
         }),
         label: catalog.label,
-        detail: `${windowTypeLabel(panels, catalog.kind)} · ${Math.round(opening.width)} cm`,
-        basePoints: windowSymbol.basePoints,
-        mullions: windowSymbol.mullions,
-        framePoints: windowSymbol.frameQuads,
-        ornament: windowSymbol.ornament,
+        detail: `${windowTypeLabel(panels, catalog.kind)} · ${formatScaleInputLabel(opening.width, unit)}`,
+        glyphs: flattenPlanGlyphs(
+          windowSymbol.glyphs,
+          wallUnit,
+          thicknessCm,
+          balance,
+          toStagePoint,
+        ),
       })
     })
   })

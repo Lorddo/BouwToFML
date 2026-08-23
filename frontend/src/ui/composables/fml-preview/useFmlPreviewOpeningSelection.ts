@@ -33,7 +33,7 @@ import {
 } from '@/ui/components/fml-preview-openings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
-import { bindNumericDraftField } from './fml-preview-draft-commit'
+import { bindScaleLengthDraftField } from './fml-preview-draft-commit'
 import { computeOpeningDraftState } from './fml-preview-opening-draft'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
@@ -354,7 +354,7 @@ export function useFmlPreviewOpeningSelection(options: {
     return { mutated: true }
   }
 
-  const widthField = bindNumericDraftField({
+  const widthField = bindScaleLengthDraftField({
     fieldId: FIELD_WIDTH,
     draftCommit,
     draft: openingWidthDraft,
@@ -364,7 +364,7 @@ export function useFmlPreviewOpeningSelection(options: {
       return () => applyWidthToOpenings(openingIds, value)
     },
   })
-  const heightField = bindNumericDraftField({
+  const heightField = bindScaleLengthDraftField({
     fieldId: FIELD_HEIGHT,
     draftCommit,
     draft: openingHeightDraft,
@@ -374,7 +374,7 @@ export function useFmlPreviewOpeningSelection(options: {
       return () => applyHeightToOpenings(openingIds, value)
     },
   })
-  const sillZField = bindNumericDraftField({
+  const sillZField = bindScaleLengthDraftField({
     fieldId: FIELD_SILL_Z,
     draftCommit,
     draft: openingSillZDraft,
@@ -384,7 +384,7 @@ export function useFmlPreviewOpeningSelection(options: {
       return () => applySillZToOpenings(openingIds, value)
     },
   })
-  const bovenlichtHeightField = bindNumericDraftField({
+  const bovenlichtHeightField = bindScaleLengthDraftField({
     fieldId: FIELD_BOVENLICHT_HEIGHT,
     draftCommit,
     draft: openingBovenlichtHeightDraft,
@@ -394,7 +394,7 @@ export function useFmlPreviewOpeningSelection(options: {
       return () => applyBovenlichtHeightToOpenings(openingIds, value)
     },
   })
-  const bovenlichtGapField = bindNumericDraftField({
+  const bovenlichtGapField = bindScaleLengthDraftField({
     fieldId: FIELD_BOVENLICHT_GAP,
     draftCommit,
     draft: openingBovenlichtGapDraft,
@@ -405,15 +405,15 @@ export function useFmlPreviewOpeningSelection(options: {
     },
   })
 
-  const onOpeningWidthInput = widthField.onInput
+  const onOpeningWidthCm = widthField.onCm
   const commitOpeningWidth = widthField.commit
-  const onOpeningHeightInput = heightField.onInput
+  const onOpeningHeightCm = heightField.onCm
   const commitOpeningHeight = heightField.commit
-  const onOpeningSillZInput = sillZField.onInput
+  const onOpeningSillZCm = sillZField.onCm
   const commitOpeningSillZ = sillZField.commit
-  const onOpeningBovenlichtHeightInput = bovenlichtHeightField.onInput
+  const onOpeningBovenlichtHeightCm = bovenlichtHeightField.onCm
   const commitOpeningBovenlichtHeight = bovenlichtHeightField.commit
-  const onOpeningBovenlichtGapInput = bovenlichtGapField.onInput
+  const onOpeningBovenlichtGapCm = bovenlichtGapField.onCm
   const commitOpeningBovenlichtGap = bovenlichtGapField.commit
 
   function applyOpeningMirrorPatch(params: { hingeAtStart?: boolean; swingRight?: boolean }): void {
@@ -549,18 +549,18 @@ export function useFmlPreviewOpeningSelection(options: {
     clearOpeningSelectionState,
     toggleSettingsOpening,
     commitOpeningSubtype,
-    onOpeningWidthInput,
+    onOpeningWidthCm,
     commitOpeningWidth,
-    onOpeningHeightInput,
+    onOpeningHeightCm,
     commitOpeningHeight,
-    onOpeningSillZInput,
+    onOpeningSillZCm,
     commitOpeningSillZ,
     toggleOpeningHingeAtStart,
     toggleOpeningSwingRight,
     onOpeningBovenlichtChange,
-    onOpeningBovenlichtHeightInput,
+    onOpeningBovenlichtHeightCm,
     commitOpeningBovenlichtHeight,
-    onOpeningBovenlichtGapInput,
+    onOpeningBovenlichtGapCm,
     commitOpeningBovenlichtGap,
     copySelectedOpening,
     deleteSelectedOpenings,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { HScaleState } from '@/platform/calibration'
 import { SCALE_RESCALE_MIN_MEASURED_CM } from '@/platform/calibration'
@@ -8,12 +8,11 @@ import {
   resolveRescaleFactorsFromRulers,
 } from '@/ui/composables/fml-preview/fml-rescale-from-measure'
 import {
-  mmToScaleInput,
-  scaleInputStep,
-  scaleInputToMm,
+  formatScaleInputLabel,
+  formatScaleInputValue,
+  parseScaleInputToMm,
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
-import { formatMeasureDistanceCm } from '@/ui/composables/fml-preview/fml-preview-measure'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const props = withDefaults(
@@ -41,9 +40,18 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const unitLabel = computed(() => t(`common.${props.unit}`))
-const inputStep = computed(() => scaleInputStep(props.unit))
-const displayX = computed(() => mmToScaleInput(props.mmX, props.unit))
-const displayY = computed(() => mmToScaleInput(props.mmY, props.unit))
+
+function formatMm(mm: number): string {
+  return formatScaleInputValue(mm / 10, props.unit)
+}
+
+const editingX = ref(false)
+const editingY = ref(false)
+const draftX = ref('')
+const draftY = ref('')
+
+const displayX = computed(() => (editingX.value ? draftX.value : formatMm(props.mmX)))
+const displayY = computed(() => (editingY.value ? draftY.value : formatMm(props.mmY)))
 
 const measured = computed(() =>
   props.state ? measuredCmFromRescaleState(props.state) : { x: 0, y: 0 },
@@ -63,16 +71,34 @@ const canConfirm = computed(() => {
 
 const minHint = computed(() => t('result.rescaleMinHint', { cm: SCALE_RESCALE_MIN_MEASURED_CM }))
 
-function onUpdateX(raw: string) {
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n <= 0) return
-  emit('updateMmX', scaleInputToMm(n, props.unit))
+function onFocusX() {
+  editingX.value = true
+  draftX.value = formatMm(props.mmX)
 }
 
-function onUpdateY(raw: string) {
-  const n = Number(raw)
-  if (!Number.isFinite(n) || n <= 0) return
-  emit('updateMmY', scaleInputToMm(n, props.unit))
+function onFocusY() {
+  editingY.value = true
+  draftY.value = formatMm(props.mmY)
+}
+
+function onInputX(raw: string) {
+  draftX.value = raw
+  const mm = parseScaleInputToMm(raw, props.unit)
+  if (mm != null) emit('updateMmX', mm)
+}
+
+function onInputY(raw: string) {
+  draftY.value = raw
+  const mm = parseScaleInputToMm(raw, props.unit)
+  if (mm != null) emit('updateMmY', mm)
+}
+
+function onBlurX() {
+  editingX.value = false
+}
+
+function onBlurY() {
+  editingY.value = false
 }
 </script>
 
@@ -98,28 +124,34 @@ function onUpdateY(raw: string) {
           <span>{{ t('input.scaleH', { unit: unitLabel }) }}</span>
           <div class="row">
             <input
-              type="number"
-              min="0"
-              :step="inputStep"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
               :value="displayX"
-              @input="onUpdateX(($event.target as HTMLInputElement).value)"
+              @focus="onFocusX"
+              @blur="onBlurX"
+              @input="onInputX(($event.target as HTMLInputElement).value)"
             />
             <span class="unit">{{ unitLabel }}</span>
-            <span class="px">{{ formatMeasureDistanceCm(measured.x) }}</span>
+            <span class="px">{{ formatScaleInputLabel(measured.x, unit) }}</span>
           </div>
         </label>
         <label>
           <span>{{ t('input.scaleV', { unit: unitLabel }) }}</span>
           <div class="row">
             <input
-              type="number"
-              min="0"
-              :step="inputStep"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              spellcheck="false"
               :value="displayY"
-              @input="onUpdateY(($event.target as HTMLInputElement).value)"
+              @focus="onFocusY"
+              @blur="onBlurY"
+              @input="onInputY(($event.target as HTMLInputElement).value)"
             />
             <span class="unit">{{ unitLabel }}</span>
-            <span class="px">{{ formatMeasureDistanceCm(measured.y) }}</span>
+            <span class="px">{{ formatScaleInputLabel(measured.y, unit) }}</span>
           </div>
         </label>
       </div>
@@ -171,7 +203,8 @@ function onUpdateY(raw: string) {
 }
 
 .row input {
-  width: 88px;
+  width: 7.5em;
+  min-width: 88px;
   height: 28px;
   padding: 2px 6px;
   border: 1px solid #cbd5e1;

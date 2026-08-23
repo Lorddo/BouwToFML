@@ -46,6 +46,7 @@ describe('user-settings', () => {
   it('load without storage returns factory', () => {
     const settings = loadUserSettings()
     expect(settings).toEqual(createFactoryUserSettings())
+    expect(settings.unitSystem).toBe('metric')
     expect(settings.scaleInputUnit).toBe('mm')
     expect(settings.fmlViewer.underlayOpacityPct).toBe(25)
     expect(settings.fmlViewer.fmlOpacityPct).toBe(80)
@@ -55,6 +56,7 @@ describe('user-settings', () => {
   it('save/load roundtrip', () => {
     const next = createFactoryUserSettings()
     next.locale = 'nl'
+    next.unitSystem = 'imperial'
     next.scaleInputUnit = 'm'
     next.defaults.wallHeightCm = 300
     next.defaults.thicknessMinCm = 8
@@ -62,6 +64,7 @@ describe('user-settings', () => {
     next.fmlViewer.fmlOpacityPct = 90
     saveUserSettings(next)
     expect(loadUserSettings().locale).toBe('nl')
+    expect(loadUserSettings().unitSystem).toBe('imperial')
     expect(loadUserSettings().scaleInputUnit).toBe('m')
     expect(loadUserSettings().defaults.wallHeightCm).toBe(300)
     expect(loadUserSettings().defaults.thicknessMinCm).toBe(8)
@@ -75,6 +78,8 @@ describe('user-settings', () => {
         bovenlicht: '#16a34a',
       },
       slicerOffsetSnapCm: 50,
+      planDisplayStyle: 'editor',
+      ridgeDisplayWidthCm: 10,
     })
   })
 
@@ -85,7 +90,17 @@ describe('user-settings', () => {
     expect(normalizeUserSettings({ version: 1, locale: 'nl', defaults: {} }).locale).toBe('nl')
   })
 
-  it('normalize missing/invalid scaleInputUnit → mm; accepts cm/m', () => {
+  it('normalize missing/invalid unitSystem → metric; accepts imperial', () => {
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).unitSystem).toBe('metric')
+    expect(normalizeUserSettings({ version: 1, unitSystem: 'foo', defaults: {} }).unitSystem).toBe(
+      'metric',
+    )
+    expect(
+      normalizeUserSettings({ version: 1, unitSystem: 'imperial', defaults: {} }).unitSystem,
+    ).toBe('imperial')
+  })
+
+  it('normalize missing/invalid scaleInputUnit → mm; accepts cm/m/ft-in', () => {
     expect(normalizeUserSettings({ version: 1, defaults: {} }).scaleInputUnit).toBe('mm')
     expect(
       normalizeUserSettings({ version: 1, scaleInputUnit: 'inch', defaults: {} }).scaleInputUnit,
@@ -96,6 +111,9 @@ describe('user-settings', () => {
     expect(
       normalizeUserSettings({ version: 1, scaleInputUnit: 'm', defaults: {} }).scaleInputUnit,
     ).toBe('m')
+    expect(
+      normalizeUserSettings({ version: 1, scaleInputUnit: 'ft-in', defaults: {} }).scaleInputUnit,
+    ).toBe('ft-in')
   })
 
   it('parseUserSettingsJson accepts missing locale → en', () => {
@@ -106,12 +124,13 @@ describe('user-settings', () => {
     expect(parseUserSettingsJson(json).locale).toBe('en')
   })
 
-  it('parseUserSettingsJson accepts missing scaleInputUnit → mm', () => {
+  it('parseUserSettingsJson accepts missing scaleInputUnit / unitSystem → factory', () => {
     const json = JSON.stringify({
       version: 1,
       defaults: createFactoryUserSettings().defaults,
     })
     expect(parseUserSettingsJson(json).scaleInputUnit).toBe('mm')
+    expect(parseUserSettingsJson(json).unitSystem).toBe('metric')
   })
 
   it('write-through thickness localStorage on save', () => {
@@ -162,6 +181,9 @@ describe('user-settings', () => {
     expect(normalized.fmlViewer.underlayOpacityPct).toBe(100)
     expect(normalized.fmlViewer.fmlOpacityPct).toBe(0)
     expect(normalized.fmlViewer.cornerMarkerMode).toBe('skew')
+    expect(normalized.defaults.dakThicknessCm).toBe(30)
+    expect(normalized.defaults.slabThicknessCm).toBe(20)
+    expect(normalized.fmlViewer.ridgeDisplayWidthCm).toBe(10)
   })
 
   it('normalize cornerMarkerMode: missing/invalid → skew; accepts off/square', () => {
@@ -207,7 +229,29 @@ describe('user-settings', () => {
         bovenlicht: '#16a34a',
       },
       slicerOffsetSnapCm: 50,
+      planDisplayStyle: 'editor',
+      ridgeDisplayWidthCm: 10,
     })
+  })
+
+  it('normalize planDisplayStyle: missing/invalid → editor; accepts bouw', () => {
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.planDisplayStyle).toBe(
+      'editor',
+    )
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { planDisplayStyle: 'architect' },
+      }).fmlViewer.planDisplayStyle,
+    ).toBe('editor')
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { planDisplayStyle: 'bouw' },
+      }).fmlViewer.planDisplayStyle,
+    ).toBe('bouw')
   })
 
   it('parseUserSettingsJson rejects bad version / missing defaults', () => {

@@ -6,6 +6,8 @@ import type Konva from 'konva'
 import type { SelectionRect } from '@/platform/selection'
 import { resolveWallThicknessBand } from '@/platform/selection/wall-thickness-ref'
 import type { ElementClass } from '@/core/extraction/types'
+import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 import type { ResizeHandle } from '../composables/useFloorplanRectInteraction'
 
@@ -13,42 +15,27 @@ import { RESIZE_HANDLES } from '../composables/useFloorplanRectInteraction'
 
 const props = defineProps<{
   lbeRects: SelectionRect[]
-
   previewRect?: SelectionRect | null
-
   selectedRectId?: string | null
-
   selectedRect: SelectionRect | null
-
   isSelectionMode: boolean
-
   typeColors: Partial<Record<ElementClass, string>>
-
   /** Project export-cm for wall LBE labels (min/mid/max). */
   wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number } | null
-
   iconSize: number
-
   handleSize: number
-
   handlePosition: (rect: SelectionRect, handle: ResizeHandle) => { x: number; y: number }
-
   iconPositions: (rect: SelectionRect) => {
     move: { x: number; y: number }
-
     delete: { x: number; y: number }
   }
-
   onRectMouseDown: (e: Konva.KonvaEventObject<MouseEvent>, rectId: string) => void
-
   onResizeHandleDown: (
     e: Konva.KonvaEventObject<MouseEvent>,
     handle: ResizeHandle,
     rect: SelectionRect,
   ) => void
-
   onMoveIconDown: (e: Konva.KonvaEventObject<MouseEvent>, rect: SelectionRect) => void
-
   onDeleteIconClick: (e: Konva.KonvaEventObject<MouseEvent>, rectId: string) => void
 }>()
 
@@ -62,7 +49,7 @@ function wallBandLabel(rect: SelectionRect): string | null {
   const limits = props.wallThicknessLimits
   if (!limits) return band
   const cm = band === 'min' ? limits.minCm : band === 'mid' ? limits.midCm : limits.maxCm
-  return `${cm}`
+  return formatScaleInputLabel(cm, loadUserSettings().scaleInputUnit)
 }
 
 function wallLabelConfig(rect: SelectionRect) {

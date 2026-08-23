@@ -16,6 +16,7 @@ import {
   isFmlToolbarSettingsOpen,
   type FmlToolId,
 } from './canvas/fmlToolbeltItems'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import './canvas/canvas-toolbelt.css'
 
 const { t, locale } = useI18n()
@@ -35,6 +36,7 @@ const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 }
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { default: false })
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
+const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
 const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
 const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
@@ -89,6 +91,7 @@ const props = withDefaults(
       color: string
       showAreaLabel: boolean
       canEditPolygon: boolean
+      isCutout?: boolean
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
@@ -164,9 +167,12 @@ const props = withDefaults(
     measurePersistEnabled?: boolean
     drawWallDrafting?: boolean
     drawWallMeasureLengthCm?: number
+    wallMoveDrafting?: boolean
     drawRoomDrafting?: boolean
     drawRoomMeasureHCm?: number
     drawRoomMeasureVCm?: number
+    /** Schaalliniaal-eenheid voor typ-hints (m/cm/mm/ft-in). */
+    drawInputUnit?: ScaleInputUnit
     drawLineDrafting?: boolean
     drawSurfaceDrafting?: boolean
     facadeGroupsEnabled?: boolean
@@ -195,9 +201,11 @@ const props = withDefaults(
     measurePersistEnabled: false,
     drawWallDrafting: false,
     drawWallMeasureLengthCm: 0,
+    wallMoveDrafting: false,
     drawRoomDrafting: false,
     drawRoomMeasureHCm: 0,
     drawRoomMeasureVCm: 0,
+    drawInputUnit: 'm',
     drawLineDrafting: false,
     drawSurfaceDrafting: false,
     facadeGroupsEnabled: false,
@@ -235,28 +243,28 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  wallThicknessInput: [event: Event]
+  wallThicknessCm: [cm: number]
   commitWallThickness: []
   applyWallThickness: [thicknessCm: number]
   wallBalanceInput: [event: Event]
   commitWallBalance: []
-  wallHeightInput: [event: Event]
+  wallHeightCm: [cm: number]
   commitWallHeight: []
-  junctionHeightInput: [event: Event]
+  junctionHeightCm: [cm: number]
   commitJunctionHeight: []
   commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
-  openingWidthInput: [event: Event]
+  openingWidthCm: [cm: number]
   commitOpeningWidth: []
-  openingHeightInput: [event: Event]
+  openingHeightCm: [cm: number]
   commitOpeningHeight: []
-  openingSillZInput: [event: Event]
+  openingSillZCm: [cm: number]
   commitOpeningSillZ: []
   toggleOpeningHinge: []
   toggleOpeningSwing: []
   openingBovenlichtChange: [event: Event]
-  openingBovenlichtHeightInput: [event: Event]
+  openingBovenlichtHeightCm: [cm: number]
   commitOpeningBovenlichtHeight: []
-  openingBovenlichtGapInput: [event: Event]
+  openingBovenlichtGapCm: [cm: number]
   commitOpeningBovenlichtGap: []
   copyOpening: []
   deleteOpenings: []
@@ -264,7 +272,7 @@ const emit = defineEmits<{
   deleteWalls: []
   clearSelection: []
   facadeGroupChange: [value: string]
-  facadeGroupRename: [name: string]
+  facadeGroupRename: []
   selectFacadeMembers: []
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
@@ -277,6 +285,7 @@ const emit = defineEmits<{
   applyAreaCustomName: [customName: string]
   applyAreaColor: [color: string]
   applyShowAreaLabel: [show: boolean]
+  applySurfaceCutout: [isCutout: boolean]
   deleteTagged: []
   labelTextInput: [value: string]
   updateLabelText: [value: string]
@@ -292,8 +301,8 @@ const emit = defineEmits<{
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
   roofVertexZInput: [cm: number]
-  itemWidthInput: [event: Event]
-  itemHeightInput: [event: Event]
+  itemWidthCm: [cm: number]
+  itemHeightCm: [cm: number]
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
@@ -369,8 +378,9 @@ const hint = computed(() => {
     return t('result.toolbar.hintMeasureTape')
   }
   if (activeTool.value === 'nulpunt') return t('result.toolbar.hintNulpunt')
-  if (activeTool.value === 'draw_wall') return t('result.toolbar.hintDrawWall')
-  if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom')
+  const unit = props.drawInputUnit
+  if (activeTool.value === 'draw_wall') return t('result.toolbar.hintDrawWall', { unit })
+  if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom', { unit })
   if (activeTool.value === 'draw_surface' && (props.dakMode || props.includeSurfaceTool === true)) {
     return props.dakMode ? t('result.toolbar.hintDrawRoof') : t('result.toolbar.hintDrawSurface')
   }
@@ -400,9 +410,10 @@ const hint = computed(() => {
       ? t('result.toolbar.hintSurfaceSelected')
       : t('result.toolbar.hintAreaSelected')
   }
+  if (props.wallMoveDrafting) return t('result.toolbar.hintWallMove', { unit: props.drawInputUnit })
   if (props.selectedWallPanel) {
     const count = props.selectedWallPanel.count
-    if (count === 1) return t('result.toolbar.hintWallOne')
+    if (count === 1) return t('result.toolbar.hintWallOne', { unit: props.drawInputUnit })
     return t('result.toolbar.hintWallMany', { count })
   }
   if (props.selectedJunctionPanel) {
@@ -504,31 +515,33 @@ defineExpose({ hint })
           v-model:add-window-width-cm="addWindowWidthCm"
           v-model:add-window-sill-z-cm="addWindowSillZCm"
           v-model:add-window-height-cm="addWindowHeightCm"
-          :selected-wall-panel="selectedWallPanel"
-          :selected-junction-panel="selectedJunctionPanel"
           v-model:measure-draw-mode="measureDrawMode"
-          :selected-opening-panel="selectedOpeningPanel"
           v-model:slicer-edit-mode="slicerEditMode"
-          :selected-area-panel="selectedAreaPanel"
           v-model:draw-surface-role="drawSurfaceRole"
-          :selected-label-panel="selectedLabelPanel"
+          v-model:draw-surface-cutout="drawSurfaceCutout"
           v-model:draw-line-thickness="drawLineThickness"
-          :selected-line-panel="selectedLinePanel"
           v-model:draw-line-type="drawLineType"
-          :selected-item-panel="selectedItemPanel"
           v-model:draw-line-color="drawLineColor"
-          :room-types="roomTypes"
           v-model:draw-label-text="drawLabelText"
-          :surface-edit-active="surfaceEditActive"
           v-model:draw-label-font-size="drawLabelFontSize"
-          :roof-vertex-z-cm="roofVertexZCm"
+          :selected-wall-panel="selectedWallPanel"
           v-model:draw-label-font-color="drawLabelFontColor"
-          :roof-poly-mutate="roofPolyMutate"
+          :selected-junction-panel="selectedJunctionPanel"
           v-model:draw-label-outline="drawLabelOutline"
-          :wall-thickness-draft="wallThicknessDraft"
+          :selected-opening-panel="selectedOpeningPanel"
           v-model:draw-label-bold="drawLabelBold"
-          :wall-thickness-mixed="wallThicknessMixed"
+          :selected-area-panel="selectedAreaPanel"
           v-model:draw-label-italic="drawLabelItalic"
+          :selected-label-panel="selectedLabelPanel"
+          :selected-line-panel="selectedLinePanel"
+          :selected-item-panel="selectedItemPanel"
+          :unit="drawInputUnit"
+          :room-types="roomTypes"
+          :surface-edit-active="surfaceEditActive"
+          :roof-vertex-z-cm="roofVertexZCm"
+          :roof-poly-mutate="roofPolyMutate"
+          :wall-thickness-draft="wallThicknessDraft"
+          :wall-thickness-mixed="wallThicknessMixed"
           :wall-balance-draft="wallBalanceDraft"
           :wall-balance-mixed="wallBalanceMixed"
           :wall-height-draft="wallHeightDraft"
@@ -560,6 +573,7 @@ defineExpose({ hint })
           :measure-line-count="measureLineCount"
           :measure-persist-enabled="measurePersistEnabled"
           :draw-wall-drafting="drawWallDrafting"
+          :wall-move-drafting="wallMoveDrafting"
           :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
           :draw-room-drafting="drawRoomDrafting"
           :draw-room-measure-h-cm="drawRoomMeasureHCm"
@@ -582,35 +596,35 @@ defineExpose({ hint })
           :ridge-floor-mixed="ridgeFloorMixed"
           :ridge-floor-options="ridgeFloorOptions"
           :ridge-z-cm="ridgeZCm"
-          @wall-thickness-input="emit('wallThicknessInput', $event)"
+          @wall-thickness-cm="emit('wallThicknessCm', $event)"
           @commit-wall-thickness="emit('commitWallThickness')"
           @apply-wall-thickness="emit('applyWallThickness', $event)"
           @wall-balance-input="emit('wallBalanceInput', $event)"
           @commit-wall-balance="emit('commitWallBalance')"
-          @wall-height-input="emit('wallHeightInput', $event)"
+          @wall-height-cm="emit('wallHeightCm', $event)"
           @commit-wall-height="emit('commitWallHeight')"
-          @junction-height-input="emit('junctionHeightInput', $event)"
+          @junction-height-cm="emit('junctionHeightCm', $event)"
           @commit-junction-height="emit('commitJunctionHeight')"
           @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
-          @opening-width-input="emit('openingWidthInput', $event)"
+          @opening-width-cm="emit('openingWidthCm', $event)"
           @commit-opening-width="emit('commitOpeningWidth')"
-          @opening-height-input="emit('openingHeightInput', $event)"
+          @opening-height-cm="emit('openingHeightCm', $event)"
           @commit-opening-height="emit('commitOpeningHeight')"
-          @opening-sill-z-input="emit('openingSillZInput', $event)"
+          @opening-sill-z-cm="emit('openingSillZCm', $event)"
           @commit-opening-sill-z="emit('commitOpeningSillZ')"
           @toggle-opening-hinge="emit('toggleOpeningHinge')"
           @toggle-opening-swing="emit('toggleOpeningSwing')"
           @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
-          @opening-bovenlicht-height-input="emit('openingBovenlichtHeightInput', $event)"
+          @opening-bovenlicht-height-cm="emit('openingBovenlichtHeightCm', $event)"
           @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
-          @opening-bovenlicht-gap-input="emit('openingBovenlichtGapInput', $event)"
+          @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
           @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
           @copy-opening="emit('copyOpening')"
           @delete-openings="emit('deleteOpenings')"
           @split-wall="emit('splitWall')"
           @delete-walls="emit('deleteWalls')"
           @facade-group-change="emit('facadeGroupChange', $event)"
-          @facade-group-rename="emit('facadeGroupRename', $event)"
+          @facade-group-rename="emit('facadeGroupRename')"
           @select-facade-members="emit('selectFacadeMembers')"
           @stamp-group-change="emit('stampGroupChange', $event)"
           @select-stamp-members="emit('selectStampMembers')"
@@ -624,6 +638,7 @@ defineExpose({ hint })
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
           @apply-area-color="emit('applyAreaColor', $event)"
           @apply-show-area-label="emit('applyShowAreaLabel', $event)"
+          @apply-surface-cutout="emit('applySurfaceCutout', $event)"
           @delete-tagged="emit('deleteTagged')"
           @label-text-input="emit('labelTextInput', $event)"
           @update-label-text="emit('updateLabelText', $event)"
@@ -639,8 +654,8 @@ defineExpose({ hint })
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
           @roof-vertex-z-input="emit('roofVertexZInput', $event)"
-          @item-width-input="emit('itemWidthInput', $event)"
-          @item-height-input="emit('itemHeightInput', $event)"
+          @item-width-cm="emit('itemWidthCm', $event)"
+          @item-height-cm="emit('itemHeightCm', $event)"
           @item-rotation-input="emit('itemRotationInput', $event)"
           @toggle-item-mirror-x="emit('toggleItemMirrorX')"
           @toggle-item-mirror-y="emit('toggleItemMirrorY')"

@@ -1,8 +1,16 @@
 import type { FloorArea, Point2D } from '@/core/fml/types'
-import { formatMeasureDistanceCm } from './fml-preview-measure'
+import {
+  DEFAULT_SCALE_INPUT_UNIT,
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
-/** Zijden korter dan dit (cm) krijgen geen maat. */
-export const AREA_SIDE_DIM_MIN_CM = 50
+/**
+ * Zijden korter dan dit (cm) krijgen geen maat.
+ * 5–50 cm blijft in de data; zichtbaarheid = zoom-LOD
+ * (`dimensionLabelVisibleOnScreen`, ≥ 56 scherm-px).
+ */
+export const AREA_SIDE_DIM_MIN_CM = 5
 
 /** Label iets naar binnen t.o.v. de rand (cm). */
 export const AREA_SIDE_DIM_INSET_CM = 8
@@ -280,14 +288,16 @@ function edgeKey(a: Point2D, b: Point2D): string {
 
 /**
  * Maatlabels op het midden van area-zijden ≥ {@link AREA_SIDE_DIM_MIN_CM}.
+ * Korte zijden (5–50 cm) zitten erbij; de viewer toont ze pas bij inzoomen.
  * Collinear merge (incl. micro-jog / T-inkeping) + gedeelde wanden (één label).
  */
 export function buildAreaSideDims(
   areas: FloorArea[] | undefined,
-  options?: { minCm?: number; insetCm?: number },
+  options?: { minCm?: number; insetCm?: number; unit?: ScaleInputUnit },
 ): AreaSideDim[] {
   const minCm = options?.minCm ?? AREA_SIDE_DIM_MIN_CM
   const insetCm = options?.insetCm ?? AREA_SIDE_DIM_INSET_CM
+  const unit = options?.unit ?? DEFAULT_SCALE_INPUT_UNIT
   const seen = new Set<string>()
   const out: AreaSideDim[] = []
   let seq = 0
@@ -308,7 +318,7 @@ export function buildAreaSideDims(
         b: { x: side.b.x, y: side.b.y },
         mid: inwardMid(side.a, side.b, ccw, insetCm),
         lengthCm,
-        label: formatMeasureDistanceCm(lengthCm),
+        label: formatScaleInputLabel(lengthCm, unit),
       })
     }
   }
@@ -318,8 +328,9 @@ export function buildAreaSideDims(
 export function buildRenderAreaSideDims(
   areas: FloorArea[] | undefined,
   toStagePoint: (x: number, y: number) => Point2D,
+  unit: ScaleInputUnit = DEFAULT_SCALE_INPUT_UNIT,
 ): RenderAreaSideDim[] {
-  return buildAreaSideDims(areas).map((dim) => {
+  return buildAreaSideDims(areas, { unit }).map((dim) => {
     const mid = toStagePoint(dim.mid.x, dim.mid.y)
     const a = toStagePoint(dim.a.x, dim.a.y)
     const b = toStagePoint(dim.b.x, dim.b.y)

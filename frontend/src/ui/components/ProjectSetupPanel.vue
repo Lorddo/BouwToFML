@@ -3,7 +3,9 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { FloorMeta, ProjectFmlDefaults, ProjectMeta } from '../composables/project/types'
 import type { PersistedProjectIndexEntry } from '@/platform/project-store'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 
 const props = defineProps<{
   meta: ProjectMeta
@@ -13,6 +15,7 @@ const props = defineProps<{
   activeFloorDefaults: ProjectFmlDefaults
   /** Opgeslagen project in IndexedDB (stap 0 resume-kaart). */
   resumeCandidate?: PersistedProjectIndexEntry | null
+  unit: ScaleInputUnit
 }>()
 
 const emit = defineEmits<{
@@ -208,45 +211,36 @@ function onRenameBlur(floorId: string, event: Event) {
       <div class="triple-measure">
         <label class="measure-cell">
           <span class="measure-cell__label">{{ t('project.thicknessMinCm') }}</span>
-          <input
-            type="number"
-            min="1"
-            :value="activeFloorDefaults.thicknessMinCm"
-            @change="
-              emit('update:floorDefaults', {
-                thicknessMinCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.thicknessMinCm"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { thicknessMinCm: $event })"
           />
-          <span class="measure-cell__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-cell__unit">{{ t(`common.${unit}`) }}</span>
         </label>
         <label class="measure-cell">
           <span class="measure-cell__label">{{ t('project.thicknessMidCm') }}</span>
-          <input
-            type="number"
-            min="1"
-            :value="activeFloorDefaults.thicknessMidCm"
-            @change="
-              emit('update:floorDefaults', {
-                thicknessMidCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.thicknessMidCm"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { thicknessMidCm: $event })"
           />
-          <span class="measure-cell__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-cell__unit">{{ t(`common.${unit}`) }}</span>
         </label>
         <label class="measure-cell">
           <span class="measure-cell__label">{{ t('project.thicknessMaxCm') }}</span>
-          <input
-            type="number"
-            min="1"
-            :value="activeFloorDefaults.thicknessMaxCm"
-            @change="
-              emit('update:floorDefaults', {
-                thicknessMaxCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.thicknessMaxCm"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { thicknessMaxCm: $event })"
           />
-          <span class="measure-cell__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-cell__unit">{{ t(`common.${unit}`) }}</span>
         </label>
       </div>
 
@@ -257,16 +251,14 @@ function onRenameBlur(floorId: string, event: Event) {
         <h5 class="measure-category__title">{{ t('project.categoryWall') }}</h5>
         <label class="measure-row">
           <span class="measure-row__label">{{ t('project.wallHeightCm') }}</span>
-          <input
-            type="number"
-            :value="activeFloorDefaults.wallHeightCm"
-            @change="
-              emit('update:floorDefaults', {
-                wallHeightCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.wallHeightCm"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { wallHeightCm: $event })"
           />
-          <span class="measure-row__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-row__unit">{{ t(`common.${unit}`) }}</span>
         </label>
       </div>
 
@@ -274,16 +266,14 @@ function onRenameBlur(floorId: string, event: Event) {
         <h5 class="measure-category__title">{{ t('project.categoryDoor') }}</h5>
         <label class="measure-row">
           <span class="measure-row__label">{{ t('project.doorHeightCm') }}</span>
-          <input
-            type="number"
-            :value="activeFloorDefaults.doorHeightCm"
-            @change="
-              emit('update:floorDefaults', {
-                doorHeightCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.doorHeightCm"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { doorHeightCm: $event })"
           />
-          <span class="measure-row__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-row__unit">{{ t(`common.${unit}`) }}</span>
         </label>
       </div>
 
@@ -291,29 +281,26 @@ function onRenameBlur(floorId: string, event: Event) {
         <h5 class="measure-category__title">{{ t('project.categoryWindow') }}</h5>
         <label class="measure-row">
           <span class="measure-row__label">{{ t('project.windowKozijnHeightCm') }}</span>
-          <input
-            type="number"
-            :value="activeFloorDefaults.windowSillZCm"
-            @change="
-              emit('update:floorDefaults', {
-                windowSillZCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.windowSillZCm"
+            :unit="unit"
+            :min-cm="0"
+            allow-zero
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { windowSillZCm: $event })"
           />
-          <span class="measure-row__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-row__unit">{{ t(`common.${unit}`) }}</span>
         </label>
         <label class="measure-row">
           <span class="measure-row__label">{{ t('project.windowGlassHeightCm') }}</span>
-          <input
-            type="number"
-            :value="activeFloorDefaults.windowHeightCm"
-            @change="
-              emit('update:floorDefaults', {
-                windowHeightCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            :cm="activeFloorDefaults.windowHeightCm"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            @update:cm="emit('update:floorDefaults', { windowHeightCm: $event })"
           />
-          <span class="measure-row__unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="measure-row__unit">{{ t(`common.${unit}`) }}</span>
         </label>
       </div>
 
@@ -348,33 +335,28 @@ function onRenameBlur(floorId: string, event: Event) {
             <span class="measure-row__label" :title="t('project.bovenlichtGapTitle')">{{
               t('project.bovenlichtGapCm')
             }}</span>
-            <input
-              type="number"
-              min="0"
-              :value="activeFloorDefaults.bovenlichtGapCm"
-              @change="
-                emit('update:floorDefaults', {
-                  bovenlichtGapCm: Number(($event.target as HTMLInputElement).value),
-                })
-              "
+            <ScaleLengthInput
+              :cm="activeFloorDefaults.bovenlichtGapCm"
+              :unit="unit"
+              :min-cm="0"
+              allow-zero
+              hide-suffix
+              @update:cm="emit('update:floorDefaults', { bovenlichtGapCm: $event })"
             />
-            <span class="measure-row__unit">cm</span>
+            <span v-if="unit !== 'ft-in'" class="measure-row__unit">{{ t(`common.${unit}`) }}</span>
           </label>
           <label class="measure-row">
             <span class="measure-row__label" :title="t('project.bovenlichtHeightTitle')">{{
               t('project.bovenlichtHeightCm')
             }}</span>
-            <input
-              type="number"
-              min="1"
-              :value="activeFloorDefaults.bovenlichtHeightCm"
-              @change="
-                emit('update:floorDefaults', {
-                  bovenlichtHeightCm: Number(($event.target as HTMLInputElement).value),
-                })
-              "
+            <ScaleLengthInput
+              :cm="activeFloorDefaults.bovenlichtHeightCm"
+              :unit="unit"
+              :min-cm="1"
+              hide-suffix
+              @update:cm="emit('update:floorDefaults', { bovenlichtHeightCm: $event })"
             />
-            <span class="measure-row__unit">cm</span>
+            <span v-if="unit !== 'ft-in'" class="measure-row__unit">{{ t(`common.${unit}`) }}</span>
           </label>
         </template>
       </div>

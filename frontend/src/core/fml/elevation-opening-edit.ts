@@ -11,7 +11,11 @@ import type { ElevationOpeningRect, ElevationRect, ElevationWallRect } from './f
 import { elevationWallYsAtX } from './facade-elevation'
 import type { ElevationOpeningPatch } from './elevation-hit'
 import { wallElevationAtT } from './wall-endpoint-height'
-import { collectCollinearWallIds, wallCollinearEnds } from '@/ui/components/fml-preview-openings'
+import {
+  collectCollinearWallIds,
+  MAX_OPENING_WIDTH_CM,
+  wallCollinearEnds,
+} from '@/ui/components/fml-preview-openings'
 
 export type ElevResizeSide = 'n' | 'e' | 's' | 'w'
 
@@ -194,6 +198,27 @@ export function clampElevationOpeningResize(
 }
 
 /**
+ * `e`/`w` zijn zichtbare aanzicht-X (niet muur A→B). Als A rechts ligt, wissel die kanten.
+ */
+export function wallSideForElevationResize(
+  side: ElevResizeSide,
+  startOnLeft: boolean,
+): ElevResizeSide {
+  if (startOnLeft || (side !== 'e' && side !== 'w')) return side
+  return side === 'e' ? 'w' : 'e'
+}
+
+function wallTopAtT(
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'extras'> & { id?: string },
+  t: number,
+  floorHeightCm: number,
+): { minZ: number; maxTop: number } {
+  const elev = wallElevationAtT(wall as Wall, t, floorHeightCm)
+  const minZ = Math.max(0, elev.z)
+  return { minZ, maxTop: Math.max(minZ + 1, elev.h) }
+}
+
+/**
  * Houd de vaste kant van een resize; knip alleen de versleepte zijde af.
  */
 export function clampOpeningPatchKeepOppositeEdge(
@@ -203,7 +228,9 @@ export function clampOpeningPatchKeepOppositeEdge(
   side: ElevResizeSide,
   floorHeightCm: number,
   planWalls: readonly Pick<Wall, 'id' | 'a' | 'b'>[] = [],
+  startOnLeft = true,
 ): ElevationOpeningPatch {
+  const wallSide = wallSideForElevationResize(side, startOnLeft)
   const startEdges = openingEdgesAlongWall(wall, start.t, start.width)
   const nextEdges = openingEdgesAlongWall(wall, patch.t, patch.width)
   const cap = Math.max(0, (wall.thickness ?? 0) / 2)
@@ -211,20 +238,21 @@ export function clampOpeningPatchKeepOppositeEdge(
   const minW = ELEVATION_OPENING_MIN_WIDTH_CM
   let left = nextEdges.left
   let right = nextEdges.right
-  if (side === 'e') {
+  if (wallSide === 'e') {
     left = startEdges.left
     const maxRight = ends.b ? Number.POSITIVE_INFINITY : startEdges.len + cap
     right = Math.min(Math.max(left + minW, nextEdges.right), maxRight)
-  } else if (side === 'w') {
+  } else if (wallSide === 'w') {
     right = startEdges.right
     const minLeft = ends.a ? Number.NEGATIVE_INFINITY : -cap
     left = Math.max(Math.min(right - minW, nextEdges.left), minLeft)
   }
-  const width = Math.max(minW, right - left)
+  const width = Math.max(minW, Math.min(MAX_OPENING_WIDTH_CM, right - left))
+  if (wallSide === 'e') right = left + width
+  else if (wallSide === 'w') left = right - width
   const t = startEdges.len < 1e-6 ? 0.5 : (left + right) / 2 / startEdges.len
-  const elev = wallElevationAtT(wall as Wall, t, floorHeightCm)
-  const minZ = Math.max(0, elev.z)
-  const maxTop = Math.max(minZ + ELEVATION_OPENING_MIN_HEIGHT_CM, Math.min(elev.h, floorHeightCm))
+  const { minZ, maxTop: wallTop } = wallTopAtT(wall, t, floorHeightCm)
+  const maxTop = Math.max(minZ + ELEVATION_OPENING_MIN_HEIGHT_CM, wallTop)
   const startZ =
     typeof start.z === 'number' && Number.isFinite(start.z)
       ? start.z
@@ -272,23 +300,30 @@ export function translateElevationRect(
   }
 }
 
-/**
- * Houd opening binnen de verdieping én de lokale muurtop op `t` (schuine gevel).
- */
-export function clampOpeningToStory(opening: Opening, wall: Wall, floorHeightCm: number): Opening {
-  const t = Number.isFinite(opening.t) ? opening.t : 0.5
-  const elev = wallElevationAtT(wall, t, floorHeightCm)
-  const minZ = Math.max(0, elev.z)
-  const maxTop = Math.max(minZ + 1, Math.min(elev.h, floorHeightCm))
-  const span = Math.max(1, maxTop - minZ)
+function openingSizeOrFallback(opening: Pick<Opening, 'z' | 'z_height' | 'type'>): {
+  z: number
+  height: number
+} {
   const fallbackZ = opening.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0
   const fallbackH =
     opening.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM
-  let z = typeof opening.z === 'number' && Number.isFinite(opening.z) ? opening.z : fallbackZ
-  let height =
+  const z = typeof opening.z === 'number' && Number.isFinite(opening.z) ? opening.z : fallbackZ
+  const height =
     typeof opening.z_height === 'number' && Number.isFinite(opening.z_height)
       ? opening.z_height
       : fallbackH
+  return { z, height }
+}
+
+/**
+ * Houd opening binnen de lokale muurtop/`z` op `t` (schuine gevel).
+ * Mag krimpen — alleen plaatsen of als de muur korter wordt, niet tijdens verplaatsen.
+ */
+export function clampOpeningToStory(opening: Opening, wall: Wall, floorHeightCm: number): Opening {
+  const t = Number.isFinite(opening.t) ? opening.t : 0.5
+  const { minZ, maxTop } = wallTopAtT(wall, t, floorHeightCm)
+  const span = Math.max(1, maxTop - minZ)
+  let { z, height } = openingSizeOrFallback(opening)
   z = Math.max(minZ, z)
   height = Math.max(1, Math.min(height, span))
   if (z + height > maxTop) height = Math.max(1, maxTop - z)
@@ -297,6 +332,120 @@ export function clampOpeningToStory(opening: Opening, wall: Wall, floorHeightCm:
     ...opening,
     z: Math.round(z),
     z_height: Math.round(height),
+  }
+}
+
+/**
+ * Verplaatsen: breedte en hoogte blijven. Alleen `t`/`z` schuiven tot de opening op de muur past.
+ */
+export function clampOpeningMoveKeepSize(
+  opening: Opening,
+  wall: Wall,
+  floorHeightCm: number,
+): Opening {
+  const t = Number.isFinite(opening.t) ? opening.t : 0.5
+  const width = opening.width
+  const { z: rawZ, height } = openingSizeOrFallback(opening)
+  const { minZ, maxTop } = wallTopAtT(wall, t, floorHeightCm)
+  let z = rawZ
+  if (z + height > maxTop) z = maxTop - height
+  if (z < minZ) z = minZ
+  return {
+    ...opening,
+    t,
+    width,
+    z: Math.round(z),
+    z_height: Math.round(height),
+  }
+}
+
+function wallYBoundsForOpeningX(
+  wall: ElevationWallRect,
+  x0: number,
+  x1: number,
+): { top: number; bot: number } | null {
+  const lo = Math.min(x0, x1)
+  const hi = Math.max(x0, x1)
+  const samples = [lo, (lo + hi) / 2, hi]
+  let top = Number.NEGATIVE_INFINITY
+  let bot = Number.POSITIVE_INFINITY
+  let any = false
+  for (const x of samples) {
+    const ys = elevationWallYsAtX(wall, x)
+    if (!ys) continue
+    any = true
+    top = Math.max(top, ys.top)
+    bot = Math.min(bot, ys.bot)
+  }
+  return any ? { top, bot } : null
+}
+
+function elevationOpeningFitsWall(
+  wall: ElevationWallRect,
+  x0: number,
+  width: number,
+  height: number,
+): boolean {
+  const ys = wallYBoundsForOpeningX(wall, x0, x0 + width)
+  return ys != null && ys.bot - ys.top >= height - 0.5
+}
+
+function slideElevationOpeningXToFit(
+  wall: ElevationWallRect,
+  requested: number,
+  width: number,
+  height: number,
+  minX: number,
+  maxX: number,
+): number {
+  if (maxX < minX) return requested
+  if (elevationOpeningFitsWall(wall, requested, width, height)) return requested
+  let best = requested
+  let bestDist = Number.POSITIVE_INFINITY
+  const steps = 64
+  for (let i = 0; i <= steps; i += 1) {
+    const x = minX + ((maxX - minX) * i) / steps
+    if (!elevationOpeningFitsWall(wall, x, width, height)) continue
+    const dist = Math.abs(x - requested)
+    if (dist < bestDist) {
+      best = x
+      bestDist = dist
+    }
+  }
+  return best
+}
+
+/**
+ * Verplaats-rect: zelfde breedte/hoogte, schuif tot de opening binnen de muur blijft.
+ */
+export function clampElevationOpeningMove(
+  wall: ElevationWallRect,
+  rect: ElevationRect,
+  xBounds?: { left: number; right: number },
+): ElevationRect {
+  const width = Math.abs(rect.x1 - rect.x0)
+  const height = Math.abs(rect.y1 - rect.y0)
+  const x0Start = Math.min(rect.x0, rect.x1)
+  const y0Start = Math.min(rect.y0, rect.y1)
+  const left = xBounds?.left ?? Math.min(wall.aTop.x, wall.bTop.x)
+  const right = xBounds?.right ?? Math.max(wall.aTop.x, wall.bTop.x)
+  const minX = left
+  const maxX = right - width
+  let x0 = x0Start
+  if (maxX >= minX) x0 = Math.min(Math.max(x0, minX), maxX)
+  else x0 = (left + right - width) / 2
+  x0 = slideElevationOpeningXToFit(wall, x0, width, height, minX, maxX)
+  let y0 = y0Start
+  const ys = wallYBoundsForOpeningX(wall, x0, x0 + width)
+  if (ys && ys.bot - ys.top >= height - 0.5) {
+    if (y0 < ys.top) y0 = ys.top
+    if (y0 + height > ys.bot) y0 = ys.bot - height
+  }
+  return {
+    x0,
+    x1: x0 + width,
+    y0,
+    y1: y0 + height,
   }
 }
 

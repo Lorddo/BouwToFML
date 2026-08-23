@@ -2,12 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import { hasElevationFacadeGroups, listElevationFacadeGroups } from '@/core/fml/facade-groups'
 import { elevationViewForGroup, readElevationProjection } from '@/core/fml/elevation-views'
-import { elevationStackRows } from '@/core/fml/floor-stack'
-import {
-  listRidgeWallsOnFloor,
-  ridgeDisplayWidthCm,
-  ridgeEndpointZCm,
-} from '@/core/fml/ridge-walls'
+import { elevationDakThicknessCm, elevationFloorGroups } from '@/core/fml/floor-stack'
 import { imageDimensions, loadImage } from '@/platform/image'
 import { previewUnderlayLayoutFromDrawing } from '@/core/fml/drawing-to-underlay-layout'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
@@ -37,27 +32,13 @@ export function useFmlViewerGevels(options: {
     () => !options.inspectMode.value && hasElevationFacadeGroups(options.plan.value),
   )
 
-  function ridgeRowZCm(floorIndex: number, fallback: number): number {
-    const current = options.plan.value
-    const floor = current?.floors[floorIndex]
-    if (!current || !floor) return fallback
-    const zs = listRidgeWallsOnFloor(floor).flatMap((wall) => [
-      Math.round(ridgeEndpointZCm(wall, 'a', floor.height)),
-      Math.round(ridgeEndpointZCm(wall, 'b', floor.height)),
-    ])
-    if (zs.length > 0 && zs.every((value) => value === zs[0])) return zs[0] ?? fallback
-    return fallback
-  }
-
-  const elevationHeightRows = computed(() => {
-    if (!options.plan.value || !gevelsMode.value) return []
-    return elevationStackRows(options.plan.value).map((row) =>
-      row.kind === 'ridge' ? { ...row, zCm: ridgeRowZCm(row.floorIndex, row.zCm) } : row,
-    )
-  })
-  const elevationRidgeDisplayWidthCm = computed(() =>
-    options.plan.value ? ridgeDisplayWidthCm(options.plan.value) : 10,
+  const elevationDakThickness = computed(() =>
+    options.plan.value ? elevationDakThicknessCm(options.plan.value) : 0,
   )
+  const elevationFloorGroupsList = computed(() => {
+    if (!options.plan.value || !gevelsMode.value) return []
+    return elevationFloorGroups(options.plan.value)
+  })
   const elevationProjection = computed(() => readElevationProjection(options.plan.value))
 
   const activeUnderlayLayout = computed(() =>
@@ -138,8 +119,8 @@ export function useFmlViewerGevels(options: {
     elevationUnderlayLayout,
     elevationFacadeGroups,
     showGevelsChip,
-    elevationHeightRows,
-    elevationRidgeDisplayWidthCm,
+    elevationDakThicknessCm: elevationDakThickness,
+    elevationFloorGroups: elevationFloorGroupsList,
     elevationProjection,
     activeUnderlayLayout,
     activeUnderlayWidthPx,

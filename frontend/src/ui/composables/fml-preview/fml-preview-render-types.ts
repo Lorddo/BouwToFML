@@ -1,7 +1,7 @@
 import type { RenderAreaSideDim } from './fml-preview-area-side-dims'
 import type { Opening, Wall } from '@/core/fml/types'
+import type { PlanGlyphRole } from '@/core/fml/opening-plan-symbol'
 import type { WallEndRef } from '@/ui/components/fml-preview-junctions'
-import type { WindowOrnament } from './fml-preview-opening-render'
 
 export interface RenderWall {
   id: string
@@ -27,6 +27,20 @@ export interface RenderJunction {
   wallCount: number
 }
 
+/** Stage-space plan glyph (arcs include sampled points for Konva). */
+export type RenderPlanGlyph =
+  | { kind: 'polyline'; role: PlanGlyphRole; points: number[]; closed?: boolean; dashed?: boolean }
+  | {
+      kind: 'arc'
+      role: 'swing'
+      cx: number
+      cy: number
+      r: number
+      startRad: number
+      sweepRad: number
+      points: number[]
+    }
+
 export interface RenderDoorGroup {
   id: string
   wallId: string
@@ -37,10 +51,7 @@ export interface RenderDoorGroup {
   gapPoints: number[]
   label: string
   detail: string
-  leafLines: number[][]
-  arcPoints: number[][]
-  arrowPoints: number[][]
-  jambPoints: number[][]
+  glyphs: RenderPlanGlyph[]
 }
 
 export interface RenderWindowOpening {
@@ -51,10 +62,7 @@ export interface RenderWindowOpening {
   gapPoints: number[]
   label: string
   detail: string
-  basePoints?: number[]
-  mullions?: number[][]
-  framePoints?: number[][]
-  ornament?: WindowOrnament | null
+  glyphs: RenderPlanGlyph[]
 }
 
 export interface RenderFixture {

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { createBlankFloor, createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
+  elevationAxisPlanSides,
   elevationRoofFillColor,
+  orientElevationAxisToViewer,
   projectFacadeElevation,
   resolveElevationAxis,
   snapElevationAxisOrtho,
@@ -27,7 +29,6 @@ import {
   groupElevationPaintPlanes,
 } from '@/core/fml/elevation-paint'
 import { glyphFromElevationRect } from '@/core/fml/elevation-opening-symbol'
-import { applyGeneratedRoofPlanes } from '@/core/fml/generate-roof-planes'
 import {
   listRidgeSurfacesOnFloor,
   makeRoofSurface,
@@ -91,6 +92,32 @@ function twoFloorPlan(): FloorPlan {
   return plan
 }
 
+/** Zadeldak 800×800, goot op buitenface, nok op y=400. */
+function attachGableRoofs(plan: FloorPlan, heightCm = 260, ridgeZ = 450): FloorPlan {
+  const south = makeRoofSurface({
+    id: 'roof-s',
+    origin: 'manual',
+    poly: [
+      { x: -10, y: -10, z: heightCm },
+      { x: 810, y: -10, z: heightCm },
+      { x: 810, y: 400, z: ridgeZ },
+      { x: -10, y: 400, z: ridgeZ },
+    ],
+  })
+  const north = makeRoofSurface({
+    id: 'roof-n',
+    origin: 'manual',
+    poly: [
+      { x: -10, y: 810, z: heightCm },
+      { x: 810, y: 810, z: heightCm },
+      { x: 810, y: 400, z: ridgeZ },
+      { x: -10, y: 400, z: ridgeZ },
+    ],
+  })
+  plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [south, north])
+  return plan
+}
+
 describe('facade-elevation', () => {
   it('vloerband volgt alleen de gevelmuren van die floor', () => {
     const plan = createEmptyFloorPlan({ name: 'Slab', wallHeightCm: 250 })
@@ -114,10 +141,12 @@ describe('facade-elevation', () => {
     const ret = elev!.walls.find((item) => item.wallId === 'return-bg')
     expect(bg).toBeTruthy()
     expect(Math.abs(bg!.xb - bg!.xa)).toBeCloseTo(400, 5)
-    expect(bg!.aTop.x).toBeCloseTo(bg!.xa - 10, 5)
-    expect(bg!.bTop.x).toBeCloseTo(bg!.xb + 10, 5)
+    const signA = bg!.xa >= bg!.xb ? 1 : -1
+    const signB = bg!.xb >= bg!.xa ? 1 : -1
+    expect(bg!.aTop.x).toBeCloseTo(bg!.xa + signA * 10, 5)
+    expect(bg!.bTop.x).toBeCloseTo(bg!.xb + signB * 10, 5)
     expect(bg!.innerATop.x).toBeCloseTo(bg!.xa, 5)
-    expect(bg!.innerBTop.x).toBeCloseTo(bg!.xb - 10, 5)
+    expect(bg!.innerBTop.x).toBeCloseTo(bg!.xb - signB * 10, 5)
     expect(ret).toBeUndefined()
     expect(elev!.junctions.length).toBeGreaterThan(0)
     expect(elev!.junctions.some((item) => Math.abs(item.x - bg!.xa) < 1)).toBe(true)
@@ -136,8 +165,10 @@ describe('facade-elevation', () => {
     const elev = projectFacadeElevation(plan, 'G1')
     const bg = elev!.walls.find((item) => item.wallId === 'front-bg')!
     const fill = elevationWallFillPoints(bg)
-    expect(bg.aTop.x).toBeCloseTo(bg.xa - 10, 5)
-    expect(bg.bTop.x).toBeCloseTo(bg.xb + 10, 5)
+    const signA = bg.xa >= bg.xb ? 1 : -1
+    const signB = bg.xb >= bg.xa ? 1 : -1
+    expect(bg.aTop.x).toBeCloseTo(bg.xa + signA * 10, 5)
+    expect(bg.bTop.x).toBeCloseTo(bg.xb + signB * 10, 5)
     expect(bg.aTop.y).not.toBeCloseTo(bg.bTop.y, 5)
     const atAxisA = fill.find((point) => Math.abs(point.x - bg.xa) < 0.5)
     const atAxisB = fill.find((point) => Math.abs(point.x - bg.xb) < 0.5)
@@ -152,7 +183,8 @@ describe('facade-elevation', () => {
     const group = listFacadeGroups(split!.plan).find((item) => item.id === 'G1')
     expect(group?.wallGuids).toEqual(expect.arrayContaining(['front-bg', split!.secondWallId]))
     const elev = projectFacadeElevation(split!.plan, 'G1')
-    const mid = elev!.junctions.find((item) => item.floorIndex === 0 && Math.abs(item.x - 200) < 1)
+    const midX = 200 * elev!.axis.x
+    const mid = elev!.junctions.find((item) => item.floorIndex === 0 && Math.abs(item.x - midX) < 1)
     expect(mid).toBeTruthy()
     const next = setPlanJunctionHeight(split!.plan, mid!.floorIndex, mid!.refs, 160)
     const again = projectFacadeElevation(next, 'G1')
@@ -210,9 +242,10 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const elev = projectFacadeElevation(plan, 'G1')!
     const wall = elev.walls.find((item) => item.wallId === 'front-bg')!
-    const preview = elevationSplitPreviewAt(wall, 196, [200, 0, 400])
+    const mid = (wall.xa + wall.xb) / 2
+    const preview = elevationSplitPreviewAt(wall, mid + 4, [mid, wall.xa, wall.xb])
     expect(preview.snapped).toBe(true)
-    expect(preview.x).toBeCloseTo(200, 0)
+    expect(preview.x).toBeCloseTo(mid, 0)
     const snapXs = collectElevationSplitSnapXs(elev, wall.wallId)
     expect(snapXs.every((x) => Math.abs(x - wall.xa) > 1 && Math.abs(x - wall.xb) > 1)).toBe(true)
   })
@@ -278,6 +311,26 @@ describe('facade-elevation', () => {
       ?.openings.find((item) => item.guid === 'win-clamp')
     expect(located).toBeTruthy()
     expect((located!.z ?? 0) + (located!.z_height ?? 0)).toBeLessThanOrEqual(280)
+  })
+
+  it('verplaats-update houdt breedte en hoogte vast', () => {
+    const plan = twoFloorPlan()
+    const added = addPlanOpening(plan, 'front-bg', {
+      type: 'window',
+      refid: CONCEPT_WINDOW_REFID,
+      t: 0.5,
+      width: 90,
+      z: 80,
+      z_height: 140,
+      guid: 'win-keep-size',
+    })
+    const next = updatePlanOpening(added.plan, added.openingId!, { t: 0.2, z: 250 })
+    const located = next.floors[0]?.walls
+      .find((item) => item.id === 'front-bg')
+      ?.openings.find((item) => item.guid === 'win-keep-size')
+    expect(located?.width).toBe(90)
+    expect(located?.z_height).toBe(140)
+    expect((located?.z ?? 0) + 140).toBeLessThanOrEqual(280)
   })
 
   it('opening GUID blijft bij dorpel-sleep', () => {
@@ -426,6 +479,55 @@ describe('facade-elevation', () => {
     expect(DEFAULT_NOK_THICKNESS_CM).toBe(30)
   })
 
+  it('kijker staat buiten: +X is rechts, achterkant van de rechtergevel rechts', () => {
+    const H = 260
+    const end = makeEndpoint3D(0, H)
+    const thick = (id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall => ({
+      id,
+      a,
+      b,
+      thickness: 20,
+      openings: [],
+      extras: { az: end, bz: { ...end } },
+    })
+    const plan = createEmptyFloorPlan({ name: 'Kijkrichting', wallHeightCm: H })
+    plan.floors[0].walls = [
+      thick('top', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      thick('right', { x: 400, y: 0 }, { x: 400, y: 200 }),
+      thick('bottom', { x: 400, y: 200 }, { x: 0, y: 200 }),
+      thick('left', { x: 0, y: 200 }, { x: 0, y: 0 }),
+    ]
+    const top = createFacadeGroup(plan, { name: 'Boven' })
+    const right = createFacadeGroup(plan, { name: 'Rechts' })
+    const bottom = createFacadeGroup(plan, { name: 'Onder' })
+    const left = createFacadeGroup(plan, { name: 'Links' })
+    assignWallsToGroup(plan, top.id, ['top'])
+    assignWallsToGroup(plan, right.id, ['right'])
+    assignWallsToGroup(plan, bottom.id, ['bottom'])
+    assignWallsToGroup(plan, left.id, ['left'])
+
+    const elevTop = projectFacadeElevation(plan, top.id)!
+    const elevRight = projectFacadeElevation(plan, right.id)!
+    const elevBottom = projectFacadeElevation(plan, bottom.id)!
+    const elevLeft = projectFacadeElevation(plan, left.id)!
+
+    expect(orientElevationAxisToViewer({ x: 0, y: 1 })).toEqual({ x: 1, y: 0 })
+    expect(orientElevationAxisToViewer({ x: 1, y: 0 })).toEqual({ x: 0, y: -1 })
+    expect(elevationAxisPlanSides(elevBottom.axis)).toEqual({ left: 'left', right: 'right' })
+    expect(elevationAxisPlanSides(elevRight.axis)).toEqual({ left: 'bottom', right: 'top' })
+    expect(elevationAxisPlanSides(elevLeft.axis)).toEqual({ left: 'top', right: 'bottom' })
+    expect(elevationAxisPlanSides(elevTop.axis)).toEqual({ left: 'right', right: 'left' })
+
+    const project = (point: { x: number; y: number }, axis: { x: number; y: number }) =>
+      point.x * axis.x + point.y * axis.y
+    expect(project({ x: 400, y: 200 }, elevRight.axis)).toBeLessThan(
+      project({ x: 400, y: 0 }, elevRight.axis),
+    )
+    expect(project({ x: 0, y: 0 }, elevLeft.axis)).toBeLessThan(
+      project({ x: 0, y: 200 }, elevLeft.axis),
+    )
+  })
+
   it('architect snapt schuine gevelas naar H/V; projectief houdt de schuinte', () => {
     const slanted = [wall('s1', { x: 0, y: 0 }, { x: 400, y: 80 })]
     const arch = resolveElevationAxis(slanted, 'architect')
@@ -479,8 +581,6 @@ describe('facade-elevation', () => {
     expect(plane).toBeTruthy()
     const wall = elev!.walls.find((item) => item.wallId === 'front-bg')!
     const xs = plane.points.map((point) => point.x)
-    expect(Math.min(...xs)).toBeCloseTo(-10, 5)
-    expect(Math.max(...xs)).toBeCloseTo(410, 5)
     expect(Math.min(...xs)).toBeCloseTo(Math.min(wall.aTop.x, wall.bTop.x), 5)
     expect(Math.max(...xs)).toBeCloseTo(Math.max(wall.aTop.x, wall.bTop.x), 5)
   })
@@ -528,13 +628,15 @@ describe('facade-elevation', () => {
     const elev = projectFacadeElevation(plan, front.id)
     const plane = elev!.roofPlanes[0]
     expect(plane).toBeTruthy()
+    const axis = elev!.axis
+    const projected = [-613, 28].map((x) => x * axis.x)
     const xs = plane.points.map((point) => point.x)
-    expect(Math.min(...xs)).toBeCloseTo(-613, 5)
-    expect(Math.max(...xs)).toBeCloseTo(28, 5)
+    expect(Math.min(...xs)).toBeCloseTo(Math.min(...projected), 5)
+    expect(Math.max(...xs)).toBeCloseTo(Math.max(...projected), 5)
     const brick = elev!.walls.find((item) => item.wallId === 'front-z')
     expect(brick).toBeTruthy()
-    expect(Math.min(brick!.aTop.x, brick!.bTop.x)).toBeLessThan(-605)
-    expect(Math.max(brick!.aTop.x, brick!.bTop.x)).toBeGreaterThan(20)
+    expect(Math.min(brick!.aTop.x, brick!.bTop.x)).toBeLessThan(Math.min(...projected) + 8)
+    expect(Math.max(brick!.aTop.x, brick!.bTop.x)).toBeGreaterThan(Math.max(...projected) - 8)
   })
 
   it('dakvlak: alleen het vlak dat de gevel raakt, grijs per gevel', () => {
@@ -568,7 +670,7 @@ describe('facade-elevation', () => {
       ridgeEndpointExtras(H, 20, 450),
     )
     plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
-    const withRoofs = applyGeneratedRoofPlanes(plan, 0)
+    const withRoofs = attachGableRoofs(plan)
 
     const elevS = projectFacadeElevation(withRoofs, south.id)
     const elevN = projectFacadeElevation(withRoofs, north.id)
@@ -613,7 +715,7 @@ describe('facade-elevation', () => {
       ridgeEndpointExtras(H, 40, 450),
     )
     plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
-    const withRoofs = applyGeneratedRoofPlanes(plan, 0)
+    const withRoofs = attachGableRoofs(plan)
     const elev = projectFacadeElevation(withRoofs, south.id)
     const plane = elev!.roofPlanes[0]
     expect(plane.points.length).toBeGreaterThanOrEqual(3)
@@ -723,7 +825,7 @@ describe('facade-elevation', () => {
       ridgeEndpointExtras(H, 20, 450),
     )
     plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
-    const withRoofs = applyGeneratedRoofPlanes(plan, 0)
+    const withRoofs = attachGableRoofs(plan)
     const elev = projectFacadeElevation(withRoofs, south.id)
     const plane = elev!.roofPlanes[0]
     expect(plane).toBeTruthy()
@@ -1053,7 +1155,7 @@ describe('facade-elevation', () => {
       mirrored: [0, 0],
     })
     const elevFwd = projectFacadeElevation(forward.plan, 'G1')
-    expect(elevFwd!.openings[0]?.startOnLeft).toBe(true)
+    expect(elevFwd!.openings[0]?.startOnLeft).toBe(elevFwd!.axis.x >= 0)
 
     const reversed = createEmptyFloorPlan({ name: 'Rev', wallHeightCm: 280 })
     reversed.floors[0].walls = [wall('front-rev', { x: 400, y: 0 }, { x: 0, y: 0 })]
@@ -1070,7 +1172,7 @@ describe('facade-elevation', () => {
       mirrored: [0, 0],
     })
     const elevRev = projectFacadeElevation(added.plan, group.id)
-    expect(elevRev!.openings[0]?.startOnLeft).toBe(false)
+    expect(elevRev!.openings[0]?.startOnLeft).toBe(elevRev!.axis.x < 0)
     const glyph = glyphFromElevationRect(elevRev!.openings[0])
     const handle = glyph.circles.find((circle) => circle.role === 'handle')
     const mid = (elevRev!.openings[0].x0 + elevRev!.openings[0].x1) / 2

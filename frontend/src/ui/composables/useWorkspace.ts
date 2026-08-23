@@ -1100,6 +1100,7 @@ export function useWorkspace() {
         if (!meta) return liveBovenlichtGap
         return meta.defaults.bovenlichtGapCm
       },
+      useMetric: loadUserSettings().unitSystem === 'metric',
       ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
     setLocalError(null)

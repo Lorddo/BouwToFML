@@ -2,14 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { createBlankFloor, createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
   findFloorIndexForRidgeWall,
+  holeMatchesFloorCutout,
   isPointSkyExposedOnFloor,
   listBlockedRoofRings,
   listDakSnapWalls,
+  listFloorEnvelopeWalls,
   moveRidgeWallsToFloor,
   resolveFloorIndexForRidgeSegment,
 } from '@/core/fml/ridge-floor'
 import { markWallAsRidge, setRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
-import type { Wall } from '@/core/fml/types'
+import type { FloorSurface, Wall } from '@/core/fml/types'
 
 function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall {
   return { id, a, b, thickness: 20, openings: [] }
@@ -131,6 +133,73 @@ describe('ridge-floor', () => {
     const ids = listDakSnapWalls(plan, 0).map((item) => item.id)
     expect(ids).toContain('u0')
     expect(ids).not.toContain('in')
+  })
+
+  it('trapgat is geen dak-gat: dichte vloerplaat + geen gevel van cutout-wanden', () => {
+    const plan = createEmptyFloorPlan({ name: 'Nok', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('g0', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      wall('g1', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      wall('g2', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      wall('g3', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const upper = createBlankFloor({ name: 'Verdieping 1', level: 1, wallHeightCm: 280 })
+    upper.walls = [
+      wall('u0', { x: 200, y: 200 }, { x: 600, y: 200 }),
+      wall('u1', { x: 600, y: 200 }, { x: 600, y: 600 }),
+      wall('u2', { x: 600, y: 600 }, { x: 200, y: 600 }),
+      wall('u3', { x: 200, y: 600 }, { x: 200, y: 200 }),
+      wall('t0', { x: 420, y: 420 }, { x: 500, y: 420 }),
+      wall('t1', { x: 500, y: 420 }, { x: 500, y: 500 }),
+      wall('t2', { x: 500, y: 500 }, { x: 420, y: 500 }),
+      wall('t3', { x: 420, y: 500 }, { x: 420, y: 420 }),
+    ]
+    upper.areas = [
+      {
+        id: 'room',
+        poly: [
+          { x: 210, y: 210 },
+          { x: 590, y: 210 },
+          { x: 590, y: 590 },
+          { x: 210, y: 590 },
+        ],
+        color: '#eee',
+        showAreaLabel: true,
+      },
+    ]
+    const trapgat: FloorSurface = {
+      id: 'cut',
+      poly: [
+        { x: 425, y: 425 },
+        { x: 495, y: 425 },
+        { x: 495, y: 495 },
+        { x: 425, y: 495 },
+      ],
+      color: '#fff',
+      showAreaLabel: true,
+      customName: 'Trapgat',
+      isCutout: true,
+    }
+    upper.surfaces = [trapgat]
+    plan.floors.push(upper)
+
+    const trapCenter = { x: 460, y: 460 }
+    expect(isPointSkyExposedOnFloor(plan, 0, trapCenter)).toBe(false)
+    expect(isPointSkyExposedOnFloor(plan, 0, { x: 400, y: 400 })).toBe(false)
+
+    const blocked = listBlockedRoofRings(plan, 0)
+    expect(blocked).toHaveLength(1)
+    const xs = blocked[0].map((point) => point.x)
+    const ys = blocked[0].map((point) => point.y)
+    expect(Math.min(...xs)).toBeCloseTo(190, 4)
+    expect(Math.max(...xs)).toBeCloseTo(610, 4)
+    expect(Math.min(...ys)).toBeCloseTo(190, 4)
+    expect(Math.max(...ys)).toBeCloseTo(610, 4)
+
+    const envelopeIds = listFloorEnvelopeWalls(upper).map((item) => item.id)
+    expect(envelopeIds).toEqual(expect.arrayContaining(['u0', 'u1', 'u2', 'u3']))
+    expect(envelopeIds).not.toContain('t0')
+    expect(holeMatchesFloorCutout(trapgat.poly, upper)).toBe(true)
   })
 
   it('verplaatst een nok naar een andere floor', () => {

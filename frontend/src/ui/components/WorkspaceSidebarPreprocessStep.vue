@@ -25,6 +25,7 @@ const props = defineProps<{
   wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number }
   wallRefThicknessMeasures?: import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
   selectedRectId?: string | null
+  unit: import('@/ui/composables/settings/scale-input-unit').ScaleInputUnit
   canStartWallStamp?: boolean
   wallStampActive?: boolean
   wallStampBaked?: boolean
@@ -143,6 +144,7 @@ function onStartStamp() {
     :wall-thickness-limits="wallThicknessLimits"
     :wall-ref-thickness-measures="wallRefThicknessMeasures"
     :selected-rect-id="selectedRectId"
+    :unit="unit"
     @set-draw-mode="$emit('setReferenceDrawMode', $event)"
     @deactivate-draw-mode="$emit('setReferencePanMode')"
     @update-door-fml-ref-id="(id, refId) => $emit('updateDoorFmlRefId', id, refId)"

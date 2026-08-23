@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { Opening } from '@/core/fml/types'
+import { PASSAGE_DOOR_REFID, type Opening } from '@/core/fml/types'
 import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
+import type { PlanGlyph, PlanPolylineGlyph } from '@/core/fml/opening-plan-symbol'
 import {
   buildMirrored,
   groupDoorOpeningsOnWall,
@@ -16,6 +17,25 @@ function doorOpening(partial: Partial<Opening> & Pick<Opening, 't' | 'width'>): 
     mirrored: [0, 1],
     guid: partial.guid ?? 'door-guid',
     ...partial,
+  }
+}
+
+function byRole(glyphs: PlanGlyph[], role: string): PlanGlyph[] {
+  return glyphs.filter((g) => g.role === role)
+}
+
+function polylines(glyphs: PlanGlyph[], role: string): PlanPolylineGlyph[] {
+  return byRole(glyphs, role).filter((g): g is PlanPolylineGlyph => g.kind === 'polyline')
+}
+
+function leafCenterline(leaf: PlanPolylineGlyph): {
+  hinge: { x: number; y: number }
+  tip: { x: number; y: number }
+} {
+  const p = leaf.points
+  return {
+    hinge: { x: (p[0] + p[6]) / 2, y: (p[1] + p[7]) / 2 },
+    tip: { x: (p[2] + p[4]) / 2, y: (p[3] + p[5]) / 2 },
   }
 }
 
@@ -68,8 +88,9 @@ describe('groupDoorOpeningsOnWall', () => {
     expect(groups).toHaveLength(2)
     expect(groups[0].isDouble).toBe(false)
     expect(groups[0].openings).toHaveLength(1)
-    expect(groups[0].leafLines).toHaveLength(1)
-    expect(groups[0].arcPoints).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'leaf').filter((l) => l.closed)).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'leaf').filter((l) => !l.closed)).toHaveLength(1)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(1)
   })
 
   it('renders wide double-leaf doors (double_wide) from a single opening', () => {
@@ -84,8 +105,10 @@ describe('groupDoorOpeningsOnWall', () => {
 
     expect(groups).toHaveLength(1)
     expect(groups[0].isDouble).toBe(true)
-    expect(groups[0].leafLines).toHaveLength(2)
-    expect(groups[0].arcPoints).toHaveLength(2)
+    const leaves = polylines(groups[0].glyphs, 'leaf')
+    expect(leaves.filter((l) => l.closed)).toHaveLength(2)
+    expect(leaves.filter((l) => !l.closed)).toHaveLength(2)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(2)
   })
 
   it('renders sliding doors with divider + two arrows and no swing arc', () => {
@@ -97,9 +120,15 @@ describe('groupDoorOpeningsOnWall', () => {
       }),
     ])
 
-    expect(groups[0].arcPoints).toHaveLength(0)
-    expect(groups[0].leafLines).toHaveLength(1)
-    expect(groups[0].arrowPoints).toHaveLength(2)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(0)
+    expect(polylines(groups[0].glyphs, 'leaf')).toHaveLength(2)
+    expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(2)
+    // Bladen blijven binnen display-kozijn (default 5 cm L/R → clear 75..225 op opening 75..225? width 150 @ t0.5 → 75..225)
+    for (const leaf of polylines(groups[0].glyphs, 'leaf')) {
+      const xs = [leaf.points[0], leaf.points[2], leaf.points[4], leaf.points[6]]
+      expect(Math.min(...xs)).toBeGreaterThanOrEqual(75 + 5 - 0.01)
+      expect(Math.max(...xs)).toBeLessThanOrEqual(225 - 5 + 0.01)
+    }
   })
 
   it('renders pocket doors with one arrow and no divider', () => {
@@ -112,12 +141,17 @@ describe('groupDoorOpeningsOnWall', () => {
     ])
 
     expect(groups[0].catalogLabel).toBe('Pocketdeur')
-    expect(groups[0].leafLines).toHaveLength(0)
-    expect(groups[0].arrowPoints).toHaveLength(1)
-    expect(groups[0].arcPoints).toHaveLength(0)
+    expect(polylines(groups[0].glyphs, 'leaf').length).toBeGreaterThanOrEqual(1)
+    expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(1)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(0)
+    const leaf = polylines(groups[0].glyphs, 'leaf')[0]
+    const xs = [leaf.points[0], leaf.points[2], leaf.points[4], leaf.points[6]]
+    // opening 100 @ t0.5 → 100..200; frame 5 → leaf in 105..195
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(105 - 0.01)
+    expect(Math.max(...xs)).toBeLessThanOrEqual(195 + 0.01)
   })
 
-  it('renders sliding_single with divider + one arrow', () => {
+  it('renders sliding_single with fixed glass + leaf + one arrow', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
         refid: 'd2785cc45c9c0ec86644135d22fa9ac9c49bcad6',
@@ -127,8 +161,9 @@ describe('groupDoorOpeningsOnWall', () => {
     ])
 
     expect(groups[0].catalogLabel).toBe('Schuifpui (1 schuivend)')
-    expect(groups[0].leafLines).toHaveLength(1)
-    expect(groups[0].arrowPoints).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'leaf')).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'glass')).toHaveLength(2)
+    expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(1)
   })
 
   it('renders Anna kast-schuif (df95e84f) as pocket arrows', () => {
@@ -148,9 +183,9 @@ describe('groupDoorOpeningsOnWall', () => {
     ])
     expect(groups).toHaveLength(2)
     expect(groups[0].catalogLabel).toBe('Schuifdeur (kast)')
-    expect(groups[0].arrowPoints).toHaveLength(1)
-    expect(groups[0].arcPoints).toHaveLength(0)
-    expect(groups[1].arrowPoints).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(1)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(0)
+    expect(polylines(groups[1].glyphs, 'arrow')).toHaveLength(1)
   })
 
   it('renders french balcony as inward swing + railing in front', () => {
@@ -169,16 +204,26 @@ describe('groupDoorOpeningsOnWall', () => {
       20,
     )
     expect(groups[0].catalogLabel).toBe('Frans balkon')
-    expect(groups[0].arcPoints).toHaveLength(1)
-    expect(groups[0].leafLines.length).toBeGreaterThan(2)
-    expect(groups[0].arrowPoints).toHaveLength(0)
-    const leaf = groups[0].leafLines[0]
-    expect(leaf[3]).toBeGreaterThan(0)
-    const railY = (groups[0].leafLines[1][1] + groups[0].leafLines[1][3]) / 2
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(1)
+    const leaves = polylines(groups[0].glyphs, 'leaf')
+    expect(leaves.filter((l) => l.closed)).toHaveLength(1)
+    expect(leaves.filter((l) => !l.closed)).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'rail').length).toBeGreaterThan(1)
+    expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(0)
+    const { tip } = leafCenterline(leaves.find((l) => l.closed)!)
+    expect(tip.y).toBeCloseTo(0, 1)
+    const arc = byRole(groups[0].glyphs, 'swing')[0]
+    expect(arc.kind).toBe('arc')
+    if (arc.kind === 'arc') expect(arc.sweepRad).toBeGreaterThan(0)
+    const rail = polylines(groups[0].glyphs, 'rail')[0]
+    const railY = (rail.points[1] + rail.points[3]) / 2
     expect(railY).toBeLessThan(0)
+    // Rek over volle gatbreedte (muur tot muur), niet gestopt bij framing.
+    expect(rail.points[0]).toBeCloseTo(58, 5)
+    expect(rail.points[2]).toBeCloseTo(142, 5)
   })
 
-  it('renders d34e31c as a closet45 door (45° leaf + arc, like Floorplanner 2D)', () => {
+  it('renders d34e31c as a closet45 door (45° arc, leaf closed in frame)', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
         refid: 'd34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9',
@@ -190,21 +235,17 @@ describe('groupDoorOpeningsOnWall', () => {
 
     expect(groups[0].catalogLabel).toBe('Kastdeur (draai 45°)')
     expect(groups[0].isDouble).toBe(false)
-    expect(groups[0].leafLines).toHaveLength(1)
-    // 45° kastdeur heeft een boogje (Floorplanner 2D toont dat ook).
-    expect(groups[0].arcPoints).toHaveLength(1)
-
-    // vleugel staat onder 45°, niet loodrecht (90°) op de muur.
-    const leaf = groups[0].leafLines[0]
-    const hinge = { x: leaf[0], y: leaf[1] }
-    const tip = { x: leaf[2], y: leaf[3] }
-    const leafAngle = Math.atan2(tip.y - hinge.y, tip.x - hinge.x)
-    const wallAngle = 0 // muur langs +X
-    let diff = Math.abs(leafAngle - wallAngle)
-    while (diff > Math.PI) diff -= Math.PI * 2
-    diff = Math.abs(diff)
-    expect(diff).toBeGreaterThan(Math.PI / 8) // duidelijk geen 0°
-    expect(diff).toBeLessThan(Math.PI / 2 - 0.05) // duidelijk geen 90°
+    const leaves = polylines(groups[0].glyphs, 'leaf')
+    expect(leaves.filter((l) => l.closed)).toHaveLength(1)
+    expect(leaves.filter((l) => !l.closed)).toHaveLength(1)
+    const arcs = byRole(groups[0].glyphs, 'swing')
+    expect(arcs).toHaveLength(1)
+    if (arcs[0].kind === 'arc') {
+      expect(Math.abs(arcs[0].sweepRad)).toBeCloseTo(Math.PI / 4, 5)
+    }
+    // Blad gesloten langs de muur
+    const { hinge, tip } = leafCenterline(leaves.find((l) => l.closed)!)
+    expect(Math.abs(tip.y - hinge.y)).toBeLessThan(1)
   })
 
   it('renders 2cb4a1c as standard 90° door with arc', () => {
@@ -217,7 +258,7 @@ describe('groupDoorOpeningsOnWall', () => {
       }),
     ])
 
-    expect(groups[0].arcPoints).toHaveLength(1)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(1)
     expect(groups[0].catalogLabel).not.toBe('Kastdeur')
   })
 
@@ -231,8 +272,8 @@ describe('groupDoorOpeningsOnWall', () => {
     ])
 
     expect(groups[0].isDouble).toBe(false)
-    expect(groups[0].leafLines).toHaveLength(1)
-    expect(groups[0].arcPoints).toHaveLength(1)
+    expect(polylines(groups[0].glyphs, 'leaf').filter((l) => l.closed)).toHaveLength(1)
+    expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(1)
   })
 
   it('gap = volle opening; boog/blad = catalogus swingInsetCm (5cm) per zijde', () => {
@@ -252,17 +293,55 @@ describe('groupDoorOpeningsOnWall', () => {
     expect(groups[0].endCm.x).toBeCloseTo(250, 5)
 
     // Boog/blad: catalogus 5cm per zijde → clear 90 @ 155..245
-    const leaf = groups[0].leafLines[0]
-    const hinge = { x: leaf[0], y: leaf[1] }
-    const tip = { x: leaf[2], y: leaf[3] }
+    const { hinge, tip } = leafCenterline(polylines(groups[0].glyphs, 'leaf')[0])
     expect(hinge.x).toBeCloseTo(155, 5)
     expect(Math.hypot(tip.x - hinge.x, tip.y - hinge.y)).toBeCloseTo(90, 5)
 
-    const arc = groups[0].arcPoints[0]
-    const arcEnd = { x: arc[arc.length - 2], y: arc[arc.length - 1] }
-    expect(Math.hypot(arcEnd.x - hinge.x, arcEnd.y - hinge.y)).toBeCloseTo(90, 5)
+    const arc = byRole(groups[0].glyphs, 'swing')[0]
+    expect(arc.kind).toBe('arc')
+    if (arc.kind === 'arc') {
+      expect(arc.r).toBeCloseTo(90, 5)
+      expect(arc.cx).toBeCloseTo(hinge.x, 5)
+      expect(arc.cy).toBeCloseTo(hinge.y, 5)
+    }
 
-    expect(groups[0].jambLines).toHaveLength(2)
+    expect(polylines(groups[0].glyphs, 'jamb')).toHaveLength(2)
+  })
+
+  it('draaideur: dwarslijnen op gat-einden (volle muurdikte), geen langs-sill', () => {
+    const groups = groupDoorOpeningsOnWall(
+      'wall-1',
+      { x: 0, y: 0 },
+      { x: 400, y: 0 },
+      [doorOpening({ t: 0.5, width: 100 })],
+      20,
+    )
+    const sills = polylines(groups[0].glyphs, 'sill')
+    expect(sills).toHaveLength(2)
+    expect(sills.every((s) => !s.dashed)).toBe(true)
+    const xs = sills.map((s) => s.points[0]).sort((a, b) => a - b)
+    expect(xs[0]).toBeCloseTo(150, 5)
+    expect(xs[1]).toBeCloseTo(250, 5)
+    for (const sill of sills) {
+      const ys = [sill.points[1], sill.points[3]].sort((a, b) => a - b)
+      expect(ys[0]).toBeCloseTo(-10, 5)
+      expect(ys[1]).toBeCloseTo(10, 5)
+      expect(sill.points[0]).toBeCloseTo(sill.points[2], 5)
+    }
+  })
+
+  it('passage: dashed buitenfaces + solid dwars-einden', () => {
+    const groups = groupDoorOpeningsOnWall(
+      'wall-1',
+      { x: 0, y: 0 },
+      { x: 300, y: 0 },
+      [doorOpening({ refid: PASSAGE_DOOR_REFID, t: 0.5, width: 90 })],
+      16,
+    )
+    const sills = polylines(groups[0].glyphs, 'sill')
+    expect(sills).toHaveLength(4)
+    expect(sills.filter((s) => s.dashed)).toHaveLength(2)
+    expect(sills.filter((s) => !s.dashed)).toHaveLength(2)
   })
 })
 
@@ -298,15 +377,16 @@ describe('single 90° door — Floorplanner editor mapping (vertical wall up)', 
 
   function hingeAndSide(mirrored: [number, number]) {
     const groups = groupDoorOpeningsOnWall('wall-up', A, B, [doorFor(mirrored)])
-    const leaf = groups[0].leafLines[0]
-    const hinge = { x: leaf[0], y: leaf[1] }
-    const tip = { x: leaf[2], y: leaf[3] }
-    // Opening bij t=0.5 → midden op (0,-200). start (a-kant) = y≈-155, end (b-kant) = y≈-245.
-    // start = richting junction (y groter/kleiner negatief), end = verder van junction.
+    const { hinge } = leafCenterline(polylines(groups[0].glyphs, 'leaf')[0])
+    const arc = byRole(groups[0].glyphs, 'swing')[0]
+    expect(arc.kind).toBe('arc')
+    // Opening bij t=0.5 → midden op (0,-200).
     const atStart = hinge.y > -200
     const atEnd = hinge.y < -200
-    // wallNormal(code) = (1,0) = rechts; zwaaizijde = teken van (tip-hinge).x
-    const side = tip.x - hinge.x > 0.5 ? 'right' : tip.x - hinge.x < -0.5 ? 'left' : '?'
+    // Open tip via arc: wallNormal = (1,0) = rechts
+    if (arc.kind !== 'arc') return { atStart, atEnd, side: '?' as const }
+    const openX = arc.cx + Math.cos(arc.startRad + arc.sweepRad) * arc.r
+    const side = openX - hinge.x > 0.5 ? 'right' : openX - hinge.x < -0.5 ? 'left' : '?'
     return { atStart, atEnd, side }
   }
 

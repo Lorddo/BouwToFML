@@ -33,7 +33,6 @@ import {
   setRidgeWallsZ,
   unmarkWallAsRidge,
 } from '@/core/fml/ridge-walls'
-import { applyGeneratedRoofPlanesForPlan } from '@/core/fml/generate-roof-planes'
 import {
   findFloorIndexForRidgeWall,
   isPointSkyExposedOnFloor,
@@ -91,8 +90,12 @@ import {
   updateOpeningById,
   type OpeningLocation,
 } from '@/ui/components/fml-preview-openings'
-import { applyOpeningDragMove as applyOpeningDragMoveWalls } from '@/ui/components/fml-preview-opening-drag-geom'
+import {
+  applyOpeningDragMove as applyOpeningDragMoveWalls,
+  slideOpeningAlongWall as slideOpeningAlongWallGeom,
+} from '@/ui/components/fml-preview-opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
+import { cloneAreasSnapshot } from '@/ui/composables/fml-preview/fml-preview-area-live'
 import { applyStampToFloor, canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
 import {
   applyFacadeGroupRemaps,
@@ -333,6 +336,23 @@ export function useFmlPreviewEditor(
     regenerateAreasNow()
   }
 
+  /** Live preview: muren + echte area-gaten (stubs/ortho), geen scheve vertex-warp. */
+  function previewWallsWithLiveAreas(nextWalls: Wall[], baseAreas?: FloorArea[]): void {
+    if (areaRegenTimer != null) {
+      clearTimeout(areaRegenTimer)
+      areaRegenTimer = null
+    }
+    patchActiveFloor({ walls: nextWalls })
+    const floor = localPlan.value?.floors[floorIndex.value] ?? localPlan.value?.floors[0]
+    if (!floor) return
+    const next = regenerateFloorAreas(floor)
+    if ((next.areas?.length ?? 0) > 0) {
+      patchActiveFloor({ areas: next.areas })
+      return
+    }
+    if (baseAreas) patchActiveFloor({ areas: cloneAreasSnapshot(baseAreas) })
+  }
+
   function captureSnapshot(options?: { layoutOrigin?: Point2D | null }): FmlPreviewUndoSnapshot {
     const floor = localPlan.value?.floors[floorIndex.value] ?? localPlan.value?.floors[0]
     const snapshot: FmlPreviewUndoSnapshot = {
@@ -484,14 +504,19 @@ export function useFmlPreviewEditor(
 
   function addSurface(surface: Omit<FloorSurface, 'id'> & { id?: string }): string {
     const id = surface.id?.trim() || `surface-${shortGuid()}`
-    const next = markRoofSurfaceManual({
-      ...surface,
-      id,
-      isRoof: true,
-      color: resolveRoofSurfaceColor(surface.color),
-    })
-    const floor = localPlan.value?.floors[floorIndex.value]
-    setRidgeSurfaces([...listRidgeSurfacesOnFloor(floor), next])
+    if (surface.isRoof === true) {
+      const next = markRoofSurfaceManual({
+        ...surface,
+        id,
+        isRoof: true,
+        color: resolveRoofSurfaceColor(surface.color),
+      })
+      const floor = localPlan.value?.floors[floorIndex.value]
+      setRidgeSurfaces([...listRidgeSurfacesOnFloor(floor), next])
+      return id
+    }
+    const next: FloorSurface = { ...surface, id, isRoof: undefined }
+    setFloorSurfaces([...planSurfaces.value, next])
     return id
   }
 
@@ -533,12 +558,6 @@ export function useFmlPreviewEditor(
     }
     const next = planSurfaces.value.filter((s) => s.id !== surfaceId)
     setFloorSurfaces(next.length > 0 ? next : undefined)
-  }
-
-  function generateRoofPlanes(): boolean {
-    if (!localPlan.value) return false
-    localPlan.value = applyGeneratedRoofPlanesForPlan(localPlan.value)
-    return true
   }
 
   function setFloorLabels(nextLabels: FloorLabel[] | undefined): void {
@@ -661,13 +680,14 @@ export function useFmlPreviewEditor(
     baseWalls: Wall[],
     node: JunctionNode,
     position: { x: number; y: number },
+    baseAreas?: FloorArea[],
   ): void {
     const next = moveJunctionWithWallJoins(baseWalls, node, position)
     if (refsOnRidge(node.refs)) {
       setRidgeWalls(next)
       return
     }
-    setWalls(next)
+    previewWallsWithLiveAreas(next, baseAreas)
   }
 
   function applyJunctionMerge(source: JunctionNode, target: JunctionNode): void {
@@ -869,20 +889,17 @@ export function useFmlPreviewEditor(
     wallId: string,
     deltaT: number,
     slideDir: Point2D,
+    baseAreas?: FloorArea[],
   ): void {
+    const next =
+      deltaT === 0
+        ? cloneWallsSnapshot(baseWalls)
+        : slideWallSegmentAlongAxis(baseWalls, wallId, deltaT, slideDir)
     if (isRidgeWallId(localPlan.value, wallId)) {
-      if (deltaT === 0) {
-        setRidgeWalls(cloneWallsSnapshot(baseWalls))
-        return
-      }
-      setRidgeWalls(slideWallSegmentAlongAxis(baseWalls, wallId, deltaT, slideDir))
+      setRidgeWalls(next)
       return
     }
-    if (deltaT === 0) {
-      setWalls(cloneWallsSnapshot(baseWalls))
-      return
-    }
-    setWalls(slideWallSegmentAlongAxis(baseWalls, wallId, deltaT, slideDir))
+    previewWallsWithLiveAreas(next, baseAreas)
   }
 
   function applyWallBalance(wallId: string, balance: number): void {
@@ -1084,6 +1101,18 @@ export function useFmlPreviewEditor(
     return result.openingId
   }
 
+  /** Precise opening-slide vanaf base-snapshot (geen hop). */
+  function previewOpeningSlideAlongWall(
+    baseWalls: Wall[],
+    openingId: string,
+    deltaCm: number,
+  ): string | null {
+    const result = slideOpeningAlongWallGeom(baseWalls, openingId, deltaCm)
+    if (!result) return null
+    setWalls(result.walls)
+    return result.openingId
+  }
+
   /** @deprecated Prefer updateOpening */
   function updateDoorOpening(
     openingId: string,
@@ -1179,7 +1208,6 @@ export function useFmlPreviewEditor(
     addSurface,
     updateSurface,
     removeSurface,
-    generateRoofPlanes,
     addLabel,
     updateLabel,
     removeLabel,
@@ -1234,6 +1262,7 @@ export function useFmlPreviewEditor(
     updateOpening,
     updateDoorOpening,
     applyOpeningDragMove,
+    previewOpeningSlideAlongWall,
     removeOpenings,
     removeDoorOpenings,
     findMergeTarget: (sourceRefs: WallEndRef[], position: { x: number; y: number }) => {

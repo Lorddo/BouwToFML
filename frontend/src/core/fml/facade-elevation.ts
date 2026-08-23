@@ -1,6 +1,7 @@
 /**
  * Projectie van één gevelgroep op een 2D-aanzicht (alle floors gestapeld).
- * X = langs het gevelvlak; Y = −worldZ (grond onderaan in Y-omlaag-canvas).
+ * X = langs het gevelvlak, +X = rechts van de kijker (buiten, kijkend naar de gevel);
+ * Y = −worldZ (grond onderaan in Y-omlaag-canvas).
  */
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
@@ -190,6 +191,31 @@ function flipConsistent(dir: Point2D): Point2D {
     return { x: -dir.x, y: -dir.y }
   }
   return dir
+}
+
+/** Plattegrond-canvasrand die op die aanzicht-kant valt (Y omlaag). */
+export type ElevationPlanSide = 'top' | 'bottom' | 'left' | 'right'
+
+/**
+ * +X in het aanzicht = rechts vanuit de kijker (staat buiten, kijkt naar de gevel).
+ * `outward` wijst van de centroid naar de kijker.
+ */
+export function orientElevationAxisToViewer(outward: Point2D): Point2D {
+  const axis = { x: outward.y, y: -outward.x }
+  const len = Math.hypot(axis.x, axis.y)
+  if (len < 1e-9) return { x: 1, y: 0 }
+  return { x: axis.x / len || 0, y: axis.y / len || 0 }
+}
+
+/** Welke plattegrond-rand ligt links/rechts in dit aanzicht. */
+export function elevationAxisPlanSides(axis: Point2D): {
+  left: ElevationPlanSide
+  right: ElevationPlanSide
+} {
+  if (Math.abs(axis.x) >= Math.abs(axis.y)) {
+    return axis.x >= 0 ? { left: 'left', right: 'right' } : { left: 'right', right: 'left' }
+  }
+  return axis.y >= 0 ? { left: 'top', right: 'bottom' } : { left: 'bottom', right: 'top' }
 }
 
 function projectOnAxis(point: Point2D, origin: Point2D, axis: Point2D): number {
@@ -534,15 +560,15 @@ export function projectFacadeElevation(
     }
   }
 
-  const elevAxis = axis
   /** X = p · axis zodat nulpunt (0,0) op X=0 ligt. */
   const lineOrigin: Point2D = { x: 0, y: 0 }
   const centroid = planFootprintCentroid(plan)
   const outward = elevationOutwardPerp(
-    elevAxis,
+    axis,
     centroid,
     members.map((item) => wallPlanMid(item.wall)),
   )
+  const elevAxis = orientElevationAxisToViewer(outward)
 
   const walls: ElevationWallRect[] = []
   const openings: ElevationOpeningRect[] = []
@@ -780,7 +806,7 @@ export function projectFacadeElevation(
 
   return {
     groupId,
-    axis,
+    axis: elevAxis,
     origin: lineOrigin,
     walls,
     openings,

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { snapRoofVertexZ } from '@/core/fml/generate-roof-planes'
+import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
 import { isRoofSurface } from '@/core/fml/roof-planes'
 import type { FloorSurface, Point2D } from '@/core/fml/types'
 import { snapPolygonVertexAxisLock } from '@/ui/components/fml-preview-junction-snap'

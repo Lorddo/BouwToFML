@@ -1,6 +1,10 @@
 import { ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
+import {
+  openingDragPointerWithGrab,
+  openingGrabOffsetCm,
+} from '@/ui/components/fml-preview-opening-drag-geom'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -23,6 +27,8 @@ export function useFmlPreviewOpeningDrag(options: {
 
   let openingDrag: {
     openingId: string
+    /** Pointer − centrum bij start; voorkomt spring naar muis. */
+    grabOffsetCm: Point2D
   } | null = null
 
   let openingDragPending: {
@@ -49,7 +55,12 @@ export function useFmlPreviewOpeningDrag(options: {
       const dist = Math.hypot(moveEvent.clientX - startClientX, moveEvent.clientY - startClientY)
       if (dist < 4) return
       cancelOpeningDragPending()
-      beginOpeningDrag(openingId, moveEvent)
+      // Vastpak vanaf de oorspronkelijke down, niet de slop-positie.
+      beginOpeningDrag(openingId, {
+        clientX: startClientX,
+        clientY: startClientY,
+      } as MouseEvent)
+      onOpeningDragMove(moveEvent)
     }
     const onUp = () => {
       cancelOpeningDragPending()
@@ -71,17 +82,20 @@ export function useFmlPreviewOpeningDrag(options: {
     editor.pushUndo()
     moveOpeningId.value = openingId
     draggingOpening.value = true
-    openingDrag = { openingId }
+    openingDrag = {
+      openingId,
+      grabOffsetCm: openingGrabOffsetCm(located.wall, located.opening.t, cm),
+    }
     window.addEventListener('pointermove', onOpeningDragMove)
     window.addEventListener('pointerup', onOpeningDragEnd, { once: true })
-    onOpeningDragMove(event)
   }
 
   function onOpeningDragMove(event: MouseEvent): void {
     if (!openingDrag) return
     const cm = hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    const nextId = editor.applyOpeningDragMove(openingDrag.openingId, cm)
+    const adjusted = openingDragPointerWithGrab(cm, openingDrag.grabOffsetCm)
+    const nextId = editor.applyOpeningDragMove(openingDrag.openingId, adjusted)
     if (!nextId) return
     if (nextId !== openingDrag.openingId) {
       openingDrag.openingId = nextId

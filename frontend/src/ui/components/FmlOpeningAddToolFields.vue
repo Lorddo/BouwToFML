@@ -7,8 +7,10 @@ import {
   type DoorAddSubtype,
   type WindowAddSubtype,
 } from '@/core/fml/opening-add-presets'
-import { MIN_OPENING_HEIGHT_CM } from '@/ui/components/fml-preview-openings'
+import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/ui/components/fml-preview-openings'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { FmlToolId } from './canvas/fmlToolbeltItems'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import './fml-toolbelt-settings-fields.css'
 
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
@@ -19,6 +21,7 @@ const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 }
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 
 defineProps<{
+  unit: ScaleInputUnit
   activeTool: FmlToolId | null
 }>()
 
@@ -63,17 +66,15 @@ function releaseControlFocus(event: Event): void {
   <div v-if="activeTool === 'add_door'" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.size') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        v-model.number="addDoorWidthCm"
-        type="number"
-        min="10"
-        max="400"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.doorSizeAria')"
-        @change="releaseControlFocus"
+      <ScaleLengthInput
+        :cm="addDoorWidthCm"
+        :unit="unit"
+        :min-cm="10"
+        :max-cm="MAX_OPENING_WIDTH_CM"
+        :aria-label="t('result.toolbar.doorSizeAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="addDoorWidthCm = $event"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
@@ -94,49 +95,44 @@ function releaseControlFocus(event: Event): void {
   <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.size') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        v-model.number="addWindowWidthCm"
-        type="number"
-        min="10"
-        max="400"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.windowSizeAria')"
-        @change="releaseControlFocus"
+      <ScaleLengthInput
+        :cm="addWindowWidthCm"
+        :unit="unit"
+        :min-cm="10"
+        :max-cm="MAX_OPENING_WIDTH_CM"
+        :aria-label="t('result.toolbar.windowSizeAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="addWindowWidthCm = $event"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        v-model.number="addWindowSillZCm"
-        type="number"
-        min="0"
-        max="400"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.floorAria')"
-        @change="releaseControlFocus"
+      <ScaleLengthInput
+        :cm="addWindowSillZCm"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
+        :max-cm="400"
+        :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="addWindowSillZCm = $event"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <div v-if="activeTool === 'add_window'" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.glass') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        v-model.number="addWindowHeightCm"
-        type="number"
-        :min="MIN_OPENING_HEIGHT_CM"
-        max="500"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.glassAria')"
-        @change="releaseControlFocus"
+      <ScaleLengthInput
+        :cm="addWindowHeightCm"
+        :unit="unit"
+        :min-cm="MIN_OPENING_HEIGHT_CM"
+        :max-cm="500"
+        :aria-label="t('result.toolbar.glassAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="addWindowHeightCm = $event"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
 </template>

@@ -189,7 +189,11 @@ function onWindowBovenlichtChange(event: Event): void {
       {{ t('result.needScale') }}
     </p>
     <p v-else-if="!hasCombinedOutput" class="fml-hint">{{ t('result.needFinalize') }}</p>
-    <FmlOpeningOverflowNotice v-if="openingHeightOverflow" :summary="openingHeightOverflow" />
+    <FmlOpeningOverflowNotice
+      v-if="openingHeightOverflow"
+      :summary="openingHeightOverflow"
+      :unit="scaleInputUnit"
+    />
 
     <FmlPanelOpacity
       :underlay-opacity="underlayOpacity"
@@ -230,6 +234,7 @@ function onWindowBovenlichtChange(event: Event): void {
     <FmlPanelThickness
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
+      :unit="scaleInputUnit"
       :underlay-available="underlayAvailable"
       :fml-thickness-min-cm="fmlThicknessMinCm"
       :fml-thickness-mid-cm="fmlThicknessMidCm"
@@ -251,6 +256,7 @@ function onWindowBovenlichtChange(event: Event): void {
     <FmlPanelHeights
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
+      :unit="scaleInputUnit"
       :fml-wall-height-cm="fmlWallHeightCm"
       :fml-door-height-cm="fmlDoorHeightCm"
       :fml-window-height-cm="fmlWindowHeightCm"

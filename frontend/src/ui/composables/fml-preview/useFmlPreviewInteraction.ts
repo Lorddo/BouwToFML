@@ -2,10 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
-import { countGeneratedRoofPlanesOnPlan } from '@/core/fml/generate-roof-planes'
 import { parseFmlHex } from '@/core/fml/roomtype-catalog'
-import { alertFmlChrome, confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
-import { tGlobal } from '@/ui/i18n'
 import type { FloorItem, FloorLineType, FloorPlan, Point2D, Wall } from '@/core/fml/types'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
@@ -43,14 +40,24 @@ import { useFmlPreviewDrawLine } from './useFmlPreviewDrawLine'
 import { useFmlPreviewAreaSelection } from './useFmlPreviewAreaSelection'
 import { useFmlPreviewSurfaceEdit } from './useFmlPreviewSurfaceEdit'
 import { useFmlPreviewMeasure, type MeasureDrawMode } from './useFmlPreviewMeasure'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { useFmlPreviewNulpunt } from './useFmlPreviewNulpunt'
 import { useFmlPreviewUnderlayMove } from './useFmlPreviewUnderlayMove'
 import { useFmlPreviewOpeningDrag } from './useFmlPreviewOpeningDrag'
 import { useFmlPreviewOpeningSelection } from './useFmlPreviewOpeningSelection'
+import { buildOpeningMoveMeasureLines } from './fml-preview-opening-move-measure'
+import {
+  buildWallsInternalMeasureLines,
+  wallIdsForJunctionMove,
+  wallIdsForSegmentMove,
+} from './fml-preview-wall-internal-measure'
 import { useFmlPreviewPanZoom } from './useFmlPreviewPanZoom'
 import { useFmlPreviewPointer } from './useFmlPreviewPointer'
 import { useFmlPreviewWallDrag } from './useFmlPreviewWallDrag'
+import { useFmlPreviewWallMove } from './useFmlPreviewWallMove'
+import { useFmlPreviewJunctionMove } from './useFmlPreviewJunctionMove'
+import { useFmlPreviewOpeningMove } from './useFmlPreviewOpeningMove'
 import { useFmlPreviewWallSelection } from './useFmlPreviewWallSelection'
 import { useFmlPreviewItemDrag } from './useFmlPreviewItemDrag'
 import { useFmlPreviewItemResize } from './useFmlPreviewItemResize'
@@ -115,6 +122,8 @@ export function useFmlPreviewInteraction(options: {
   touchEditor?: Ref<boolean>
   /** Coarse pointer: Move-rail i.p.v. muis two-step. Default uit. */
   touchNav?: Ref<boolean>
+  /** `(pointer: coarse)` — muur/kamer alleen via accept plaatsen. */
+  coarsePointer?: Ref<boolean>
   /** Dak-tab: geen plattegrond-muren selecteren. */
   dakMode?: Ref<boolean>
   /** Meet-tool subtype: tape / manual / slicer. */
@@ -126,6 +135,7 @@ export function useFmlPreviewInteraction(options: {
   /** Geselecteerde slicer-index (−1 = geen liniaal). */
   selectedSliceIndex?: Ref<number>
   onInspectSelect?: (hit: FmlInspectHit | null) => void
+  getInputUnit?: () => ScaleInputUnit
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
 }) {
@@ -153,6 +163,7 @@ export function useFmlPreviewInteraction(options: {
     inspectMode: inspectModeProp,
     touchEditor: touchEditorProp,
     touchNav: touchNavProp,
+    coarsePointer: coarsePointerProp,
     onInspectSelect,
     onKeyDown,
     onKeyUp,
@@ -164,6 +175,7 @@ export function useFmlPreviewInteraction(options: {
   const inspectMode = computed(() => inspectModeProp?.value === true)
   const touchEditor = computed(() => touchEditorProp?.value === true)
   const touchNav = computed(() => touchNavProp?.value === true)
+  const coarsePointer = computed(() => coarsePointerProp?.value === true)
   const settingsMod = ref(false)
   const axisLockMod = ref(false)
   const moveMod = ref(false)
@@ -324,6 +336,44 @@ export function useFmlPreviewInteraction(options: {
     syncPlanToParent,
   })
 
+  const wallMove = useFmlPreviewWallMove({
+    hitTest,
+    editor,
+    moveWallId: selection.moveWallId,
+    spacePressed,
+    getInputUnit: () => options.getInputUnit?.() ?? 'm',
+    syncPlanToParent,
+  })
+
+  const junctionMove = useFmlPreviewJunctionMove({
+    hitTest,
+    editor,
+    pinnedJunctionId: selection.pinnedJunctionId,
+    draggingJunctionId: selection.draggingJunctionId,
+    spacePressed,
+    getInputUnit: () => options.getInputUnit?.() ?? 'm',
+    syncPlanToParent,
+  })
+
+  const openingMove = useFmlPreviewOpeningMove({
+    hitTest,
+    editor,
+    moveOpeningId: selection.moveOpeningId,
+    spacePressed,
+    getInputUnit: () => options.getInputUnit?.() ?? 'm',
+    syncPlanToParent,
+  })
+
+  function isPreciseMoveDrafting(): boolean {
+    return wallMove.isDrafting() || junctionMove.isDrafting() || openingMove.isDrafting()
+  }
+
+  function cancelPreciseMoves(): void {
+    wallMove.cancelWallMove()
+    junctionMove.cancelJunctionMove()
+    openingMove.cancelOpeningMove()
+  }
+
   const openingDrag = useFmlPreviewOpeningDrag({
     hitTest,
     editor,
@@ -359,14 +409,14 @@ export function useFmlPreviewInteraction(options: {
     syncWallThicknessDraftFromSelection,
     toggleSettingsWall,
     toggleSettingsJunction,
-    onWallThicknessInput,
+    onWallThicknessCm,
     commitWallThickness,
     applyWallsThicknessCm,
     onWallBalanceInput,
     commitWallBalance,
-    onWallHeightInput,
+    onWallHeightCm,
     commitWallHeight,
-    onJunctionHeightInput,
+    onJunctionHeightCm,
     commitJunctionHeight,
     splitSelectedWall,
     deleteSelectedWalls,
@@ -427,18 +477,18 @@ export function useFmlPreviewInteraction(options: {
     toggleSettingsOpening,
     syncOpeningDraftFromSelection,
     commitOpeningSubtype,
-    onOpeningWidthInput,
+    onOpeningWidthCm,
     commitOpeningWidth,
-    onOpeningHeightInput,
+    onOpeningHeightCm,
     commitOpeningHeight,
-    onOpeningSillZInput,
+    onOpeningSillZCm,
     commitOpeningSillZ,
     toggleOpeningHingeAtStart,
     toggleOpeningSwingRight,
     onOpeningBovenlichtChange,
-    onOpeningBovenlichtHeightInput,
+    onOpeningBovenlichtHeightCm,
     commitOpeningBovenlichtHeight,
-    onOpeningBovenlichtGapInput,
+    onOpeningBovenlichtGapCm,
     commitOpeningBovenlichtGap,
     copySelectedOpening,
     deleteSelectedOpenings,
@@ -478,6 +528,44 @@ export function useFmlPreviewInteraction(options: {
 
   const { draggingJunction, draggingWall } = wallDrag
   const { draggingOpening } = openingDrag
+
+  /** Restmaten a→opening en opening→b tijdens verplaatsen / move-target. */
+  const openingMoveMeasureLines = computed(() => {
+    if (!moveOpeningId.value && !draggingOpening.value) return []
+    const openingId = moveOpeningId.value ?? settingsOpeningIds.value[0] ?? null
+    if (!openingId) return []
+    const located = editor.resolveOpening(openingId)
+    if (!located) return []
+    return buildOpeningMoveMeasureLines(located.wall, located.opening, editor.walls.value)
+  })
+
+  /**
+   * Zelfde binnenmaten bij knoop- of segment-move: restmaten rond openingen,
+   * of de volle binnenlengte als de muur geen opening heeft.
+   */
+  const wallInternalMeasureLines = computed(() => {
+    if (moveOpeningId.value || draggingOpening.value) return []
+    const walls = editor.selectableWalls.value
+    const junctions = editor.junctions.value
+    const ids = new Set<string>()
+
+    if (draggingJunction.value || junctionMove.isDrafting()) {
+      const junctionId = selection.draggingJunctionId.value ?? selection.pinnedJunctionId.value
+      if (junctionId) {
+        for (const id of wallIdsForJunctionMove(junctionId, junctions)) ids.add(id)
+      }
+    }
+
+    if (draggingWall.value || wallMove.isDrafting()) {
+      const wallId = moveWallId.value
+      if (wallId) {
+        for (const id of wallIdsForSegmentMove(wallId, junctions)) ids.add(id)
+      }
+    }
+
+    if (ids.size === 0) return []
+    return buildWallsInternalMeasureLines([...ids], walls)
+  })
 
   function ridgeDrawSnapWalls(): ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> {
     const plan = editor.localPlan.value
@@ -534,6 +622,23 @@ export function useFmlPreviewInteraction(options: {
     if (snapDisabled) return cm
     if (options.dakMode?.value === true && editor.localPlan.value) {
       const extra = extraAxisPoints ?? []
+      if (extra.length === 0) {
+        const junction = hitTest.hitTestJunctionAtCm(cm)
+        const onRidge =
+          junction?.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId)) === true
+        if (junction && onRidge) {
+          return resolveDakSurfacePoint(
+            { x: junction.cmX, y: junction.cmY },
+            {
+              plan: editor.localPlan.value,
+              floorIndex: editor.floorIndex.value,
+              extraAxisPoints: extra,
+              lockAxis: axisLocked.value,
+              excludeSurfaceId,
+            },
+          )
+        }
+      }
       return resolveDakSurfacePoint(cm, {
         plan: editor.localPlan.value,
         floorIndex: editor.floorIndex.value,
@@ -586,6 +691,15 @@ export function useFmlPreviewInteraction(options: {
     requireFloorIndex: () =>
       options.dakMode?.value === true ? editor.floorIndex.value : undefined,
     resolvePoint: resolveDrawPoint,
+    handleTolCm: () => {
+      const layout = viewport.contentLayout.value
+      if (!layout) return 16
+      const px = coarsePointer.value || touchNav.value ? 28 : 18
+      return px / layout.scale / viewport.viewScale.value
+    },
+    placeOnSecondClick: () => !coarsePointer.value && !touchNav.value,
+    getWalls: () => editor.walls.value,
+    getInputUnit: () => options.getInputUnit?.() ?? 'm',
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
@@ -605,6 +719,15 @@ export function useFmlPreviewInteraction(options: {
     shiftPressed: axisLocked,
     resolveStartPoint: resolveRoomStartPoint,
     resolveEndPoint: resolveRoomEndPoint,
+    handleTolCm: () => {
+      const layout = viewport.contentLayout.value
+      if (!layout) return 16
+      const px = coarsePointer.value || touchNav.value ? 28 : 18
+      return px / layout.scale / viewport.viewScale.value
+    },
+    placeOnSecondClick: () => !coarsePointer.value && !touchNav.value,
+    getWalls: () => editor.walls.value,
+    getInputUnit: () => options.getInputUnit?.() ?? 'm',
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       wallDrag.cancelMoveDragPending()
@@ -621,6 +744,7 @@ export function useFmlPreviewInteraction(options: {
     selection,
     editor,
     hitTest,
+    hoveredJunctionId,
     shiftPressed: axisLocked,
     resolvePoint: resolveSurfacePoint,
     acceptPoint: (point) => {
@@ -1013,6 +1137,12 @@ export function useFmlPreviewInteraction(options: {
   watch(drawLineMode, (on) => {
     if (!on) drawLine.cancelDrawLine()
   })
+  watch(moveMod, (on) => {
+    if (!on && isPreciseMoveDrafting() && touchNav.value) cancelPreciseMoves()
+  })
+  watch(activeFmlTool, (tool) => {
+    if (tool != null && isPreciseMoveDrafting()) cancelPreciseMoves()
+  })
 
   function deactivateDrawTool(): void {
     drawWall.cancelDrawWallDrag()
@@ -1025,6 +1155,9 @@ export function useFmlPreviewInteraction(options: {
   }
 
   function acceptDrawDraft(): boolean {
+    if (wallMove.isDrafting()) return wallMove.commitFromMeasure()
+    if (junctionMove.isDrafting()) return junctionMove.commitFromMeasure()
+    if (openingMove.isDrafting()) return openingMove.commitFromMeasure()
     if (drawWall.isDrafting()) return drawWall.commitFromMeasure()
     if (drawRoom.isDrafting()) return drawRoom.commitFromMeasure()
     if (drawSurface.commitDrawSurface()) return true
@@ -1101,6 +1234,7 @@ export function useFmlPreviewInteraction(options: {
     wallDrag.cancelMoveDragPending()
     openingDrag.cancelOpeningDragPending()
     cancelSelectionBoxDrag()
+    cancelPreciseMoves()
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
     drawSurface.cancelDrawSurface()
@@ -1143,6 +1277,9 @@ export function useFmlPreviewInteraction(options: {
         draggingOpening,
         draggingItem: itemDrag.draggingItem,
         draggingItemResize: itemResize.draggingItemResize,
+        isWallMoveDrafting: () => wallMove.isDrafting(),
+        isJunctionMoveDrafting: () => junctionMove.isDrafting(),
+        isOpeningMoveDrafting: () => openingMove.isDrafting(),
         isMeasureDragging: () => measure.isDragging(),
         isNulpuntDragging: () => nulpunt.isDragging(),
         isUnderlayMoveDragging: () => underlayMove.isDragging(),
@@ -1190,6 +1327,12 @@ export function useFmlPreviewInteraction(options: {
         placeDoor: addOpening.placeDoor,
         placeWindow: addOpening.placeWindow,
         startJunctionDrag: wallDrag.startJunctionDrag,
+        onJunctionMoveClick: (junction, event) => {
+          wallDrag.cancelMoveDragPending()
+          openingDrag.cancelOpeningDragPending()
+          return junctionMove.onJunctionMoveClick(junction, event)
+        },
+        updateJunctionMoveHover: junctionMove.updateJunctionMoveHover,
         beginSelectionBoxDrag,
         toggleSettingsOpening,
         toggleSettingsArea: areaSelection.toggleSettingsArea,
@@ -1203,8 +1346,19 @@ export function useFmlPreviewInteraction(options: {
         clearOpeningSelectionState,
         beginOpeningDrag: openingDrag.beginOpeningDrag,
         startOpeningDragPending: openingDrag.startOpeningDragPending,
+        onOpeningMoveClick: (openingId, event) => {
+          wallDrag.cancelMoveDragPending()
+          openingDrag.cancelOpeningDragPending()
+          return openingMove.onOpeningMoveClick(openingId, event)
+        },
+        updateOpeningMoveHover: openingMove.updateOpeningMoveHover,
         beginWallDrag: wallDrag.beginWallDrag,
         startMoveDragPending: wallDrag.startMoveDragPending,
+        onWallMoveClick: (wallId, event) => {
+          wallDrag.cancelMoveDragPending()
+          return wallMove.onWallMoveClick(wallId, event)
+        },
+        updateWallMoveHover: wallMove.updateWallMoveHover,
         stopContentGroupDrag: () => {
           contentGroupRef.value?.getNode()?.stopDrag()
         },
@@ -1292,6 +1446,9 @@ export function useFmlPreviewInteraction(options: {
     surfaceEdit,
     drawWall,
     drawRoom,
+    wallMove,
+    junctionMove,
+    openingMove,
     drawLine,
     deactivateDrawTool,
     measure,
@@ -1333,6 +1490,7 @@ export function useFmlPreviewInteraction(options: {
     // Floor remount (workspace :key): flush drafts vóór dispose.
     draftCommit.dispose()
     cancelPendingMove()
+    cancelPreciseMoves()
     wallDrag.cleanupWallDrag()
     openingDrag.cleanupOpeningDrag()
     itemDrag.cleanupItemDrag()
@@ -1400,8 +1558,8 @@ export function useFmlPreviewInteraction(options: {
   }
 
   function applyRidgeZInput(cm: number | null): void {
-    const z = cm != null && Number.isFinite(cm) ? Math.max(0, Math.round(cm)) : null
-    ridgeZCm.value = z ?? Math.round(editor.floorHeightCm.value)
+    const z = cm != null && Number.isFinite(cm) ? Math.max(0, cm) : null
+    ridgeZCm.value = z ?? editor.floorHeightCm.value
     if (z == null) return
     const selectedRidgeIds = settingsWallIds.value.filter((id) =>
       isRidgeWallId(editor.localPlan.value, id),
@@ -1500,29 +1658,6 @@ export function useFmlPreviewInteraction(options: {
     return true
   }
 
-  async function generateRoofPlanes(): Promise<boolean> {
-    flushPendingFieldCommits()
-    const existing = countGeneratedRoofPlanesOnPlan(editor.localPlan.value)
-    if (existing > 0) {
-      const ok = await confirmFmlChrome({
-        title: tGlobal('result.toolbar.generateRoofPlanesTitle'),
-        message: tGlobal('result.toolbar.generateRoofPlanesConfirm'),
-        confirmLabel: tGlobal('result.toolbar.generateRoofPlanes'),
-      })
-      if (!ok) return false
-    }
-    editor.pushUndo()
-    editor.generateRoofPlanes()
-    syncPlanToParent()
-    if (countGeneratedRoofPlanesOnPlan(editor.localPlan.value) === 0) {
-      await alertFmlChrome({
-        title: tGlobal('result.toolbar.generateRoofPlanesEmptyTitle'),
-        message: tGlobal('result.toolbar.generateRoofPlanesEmpty'),
-      })
-    }
-    return true
-  }
-
   function applyStampToActiveFloor(): boolean {
     flushPendingFieldCommits()
     const changed = editor.applyStampToActiveFloor()
@@ -1554,9 +1689,29 @@ export function useFmlPreviewInteraction(options: {
     drawRoomPreview: drawRoom.drawRoomPreview,
     drawWallDrafting: computed(() => drawWall.isDrafting()),
     drawRoomDrafting: computed(() => drawRoom.isDrafting()),
+    wallMoveDrafting: computed(() => isPreciseMoveDrafting()),
+    wallMoveMeasureLengthCm: computed(() => {
+      if (wallMove.isDrafting()) return wallMove.measureLengthCm.value
+      if (junctionMove.isDrafting()) return junctionMove.measureLengthCm.value
+      if (openingMove.isDrafting()) return openingMove.measureLengthCm.value
+      return 0
+    }),
+    wallMoveTypeText: computed(() => {
+      if (wallMove.isDrafting()) return wallMove.typeText.value
+      if (junctionMove.isDrafting()) return junctionMove.typeText.value
+      if (openingMove.isDrafting()) return openingMove.typeText.value
+      return ''
+    }),
+    wallMoveLabelCm: computed(() => {
+      if (wallMove.isDrafting()) return wallMove.wallMoveLabelCm.value
+      if (junctionMove.isDrafting()) return junctionMove.junctionMoveLabelCm.value
+      if (openingMove.isDrafting()) return openingMove.openingMoveLabelCm.value
+      return null
+    }),
     drawLineDrafting: computed(() => (selection.drawLinePoints.value?.length ?? 0) > 0),
     drawSurfaceDrafting: computed(() => (drawSurface.draftPoints.value?.length ?? 0) >= 3),
     drawSurfacePendingRole: drawSurface.pendingRole,
+    drawSurfacePendingCutout: drawSurface.pendingCutout,
     drawLineThickness: drawLine.thickness,
     drawLineType: drawLine.lineType,
     drawLineColor: drawLine.color,
@@ -1569,6 +1724,10 @@ export function useFmlPreviewInteraction(options: {
     drawWallMeasureLengthCm: drawWall.measureLengthCm,
     drawRoomMeasureHCm: drawRoom.measureHCm,
     drawRoomMeasureVCm: drawRoom.measureVCm,
+    drawWallTypeText: drawWall.typeText,
+    drawRoomTypeHText: drawRoom.typeHText,
+    drawRoomTypeVText: drawRoom.typeVText,
+    drawRoomTypeField: drawRoom.typeField,
     setDrawWallLengthOverrideCm: drawWall.setLengthOverrideCm,
     setDrawRoomHOverrideCm: drawRoom.setHOverrideCm,
     setDrawRoomVOverrideCm: drawRoom.setVOverrideCm,
@@ -1578,12 +1737,33 @@ export function useFmlPreviewInteraction(options: {
     cancelDrawRoomDraft: drawRoom.cancelDrawRoomDrag,
     acceptDrawDraft,
     deactivateDrawTool,
+    isDrawDrafting: () => drawWall.isDrafting() || drawRoom.isDrafting(),
+    isWallMoveDrafting: () => isPreciseMoveDrafting(),
+    isPreciseMoveDrafting,
+    hitClickMoveAtClient: (clientX: number, clientY: number) => {
+      if (!moveMod.value) return false
+      if (isPreciseMoveDrafting()) return false
+      const cm = hitTest.clientToCm(clientX, clientY)
+      if (!cm) return false
+      return (
+        hitTest.hitTestJunctionAtCm(cm) != null ||
+        hitTest.hitTestOpeningAtCm(cm) != null ||
+        hitTest.hitTestWallAtCm(cm) != null
+      )
+    },
+    hitDrawDraftHandleAtClient: (clientX: number, clientY: number) => {
+      const cm = hitTest.clientToCm(clientX, clientY)
+      if (!cm) return false
+      return drawWall.hitHandleAtCm(cm) != null || drawRoom.hitHandleAtCm(cm) != null
+    },
     drawSurfacePoints: drawSurface.draftPoints,
     drawSurfaceHoverCm: drawSurface.hoverCm,
     drawLinePoints: selection.drawLinePoints,
     drawLineHoverCm: drawLine.hoverCm,
     measurePreview: measure.measurePreview,
     measureLines: measure.measureLines,
+    openingMoveMeasureLines,
+    wallInternalMeasureLines,
     measureHoverCm: measure.measureHoverCm,
     clearMeasureLines: measure.clearMeasureLines,
     nulpuntDisplayCm: nulpunt.nulpuntDisplayCm,
@@ -1697,28 +1877,28 @@ export function useFmlPreviewInteraction(options: {
     addWindowHeightCm,
     canvasCursor,
     syncPlanToParent,
-    onWallThicknessInput,
+    onWallThicknessCm,
     commitWallThickness,
     applyWallsThicknessCm,
     onWallBalanceInput,
     commitWallBalance,
-    onWallHeightInput,
+    onWallHeightCm,
     commitWallHeight,
-    onJunctionHeightInput,
+    onJunctionHeightCm,
     commitJunctionHeight,
     commitOpeningSubtype,
-    onOpeningWidthInput,
+    onOpeningWidthCm,
     commitOpeningWidth,
-    onOpeningHeightInput,
+    onOpeningHeightCm,
     commitOpeningHeight,
-    onOpeningSillZInput,
+    onOpeningSillZCm,
     commitOpeningSillZ,
     toggleOpeningHingeAtStart,
     toggleOpeningSwingRight,
     onOpeningBovenlichtChange,
-    onOpeningBovenlichtHeightInput,
+    onOpeningBovenlichtHeightCm,
     commitOpeningBovenlichtHeight,
-    onOpeningBovenlichtGapInput,
+    onOpeningBovenlichtGapCm,
     commitOpeningBovenlichtGap,
     copySelectedOpening,
     deleteSelectedOpenings,
@@ -1746,7 +1926,6 @@ export function useFmlPreviewInteraction(options: {
     ridgeFloorMixed,
     applyRidgeFloorInput,
     sanitizeWalls,
-    generateRoofPlanes,
     applyStampToActiveFloor,
     canApplyStampOnActiveFloor,
     applyRoomTypeToSelection: areaSelection.applyRoomTypeToSelection,
@@ -1756,6 +1935,7 @@ export function useFmlPreviewInteraction(options: {
     customNameDraft: areaSelection.customNameDraft,
     applyAreaColor: areaSelection.applyColor,
     applyShowAreaLabel: areaSelection.applyShowAreaLabel,
+    applySurfaceCutout: areaSelection.applyCutout,
     deleteSelectedTagged: areaSelection.deleteSelectedTagged,
     beginSurfacePolygonEdit: areaSelection.beginSurfacePolygonEdit,
     endSurfacePolygonEdit: () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   MAX_BOVENLICHT_GAP_CM,
@@ -8,12 +8,15 @@ import {
   MIN_BOVENLICHT_HEIGHT_CM,
 } from '@/core/fml/bovenlicht'
 import type { OpeningType } from '@/core/fml/types'
-import { MIN_OPENING_HEIGHT_CM } from '@/ui/components/fml-preview-openings'
+import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/ui/components/fml-preview-openings'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
 
 const props = withDefaults(
   defineProps<{
+    unit: ScaleInputUnit
     type: OpeningType
     widthCm: number
     heightCm: number
@@ -64,17 +67,17 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  widthInput: [event: Event]
-  width: [cm: number | null]
-  heightInput: [event: Event]
-  height: [cm: number | null]
-  sillInput: [event: Event]
-  sill: [cm: number | null]
+  widthInput: [cm: number]
+  width: [cm: number]
+  heightInput: [cm: number]
+  height: [cm: number]
+  sillInput: [cm: number]
+  sill: [cm: number]
   bovenlicht: [event: Event]
-  bovenlichtHeightInput: [event: Event]
-  bovenlichtHeight: [cm: number | null]
-  bovenlichtGapInput: [event: Event]
-  bovenlichtGap: [cm: number | null]
+  bovenlichtHeightInput: [cm: number]
+  bovenlichtHeight: [cm: number]
+  bovenlichtGapInput: [cm: number]
+  bovenlichtGap: [cm: number]
   toggleHinge: []
   toggleSwing: []
   copy: []
@@ -108,30 +111,70 @@ const mirrorTitle = computed(() => {
     : t('result.toolbar.mirrorOpeningEnd')
 })
 
-function parseCm(event: Event): number | null {
-  const raw = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(raw)) return null
-  return Math.round(raw)
-}
+const lastWidthCm = ref(props.widthCm)
+const lastHeightCm = ref(props.heightCm)
+const lastSillCm = ref(props.sillZCm)
+const lastBovenlichtHeightCm = ref(props.bovenlichtHeightCm)
+const lastBovenlichtGapCm = ref(props.bovenlichtGapCm)
+
+watch(
+  () => props.widthCm,
+  (v) => {
+    lastWidthCm.value = v
+  },
+)
+watch(
+  () => props.heightCm,
+  (v) => {
+    lastHeightCm.value = v
+  },
+)
+watch(
+  () => props.sillZCm,
+  (v) => {
+    lastSillCm.value = v
+  },
+)
+watch(
+  () => props.bovenlichtHeightCm,
+  (v) => {
+    lastBovenlichtHeightCm.value = v
+  },
+)
+watch(
+  () => props.bovenlichtGapCm,
+  (v) => {
+    lastBovenlichtGapCm.value = v
+  },
+)
 
 function releaseFocus(event: Event): void {
   const el = event.target
   if (el instanceof HTMLElement) el.blur()
 }
 
-function onWidthChange(event: Event): void {
-  emit('width', parseCm(event))
-  releaseFocus(event)
+function onWidthCm(cm: number): void {
+  lastWidthCm.value = cm
+  emit('widthInput', cm)
+}
+function onWidthCommit(): void {
+  emit('width', lastWidthCm.value)
 }
 
-function onHeightChange(event: Event): void {
-  emit('height', parseCm(event))
-  releaseFocus(event)
+function onHeightCm(cm: number): void {
+  lastHeightCm.value = cm
+  emit('heightInput', cm)
+}
+function onHeightCommit(): void {
+  emit('height', lastHeightCm.value)
 }
 
-function onSillChange(event: Event): void {
-  emit('sill', parseCm(event))
-  releaseFocus(event)
+function onSillCm(cm: number): void {
+  lastSillCm.value = cm
+  emit('sillInput', cm)
+}
+function onSillCommit(): void {
+  emit('sill', lastSillCm.value)
 }
 
 function onBovenlicht(event: Event): void {
@@ -139,14 +182,20 @@ function onBovenlicht(event: Event): void {
   releaseFocus(event)
 }
 
-function onBovenlichtHeightChange(event: Event): void {
-  emit('bovenlichtHeight', parseCm(event))
-  releaseFocus(event)
+function onBovenlichtHeightCm(cm: number): void {
+  lastBovenlichtHeightCm.value = cm
+  emit('bovenlichtHeightInput', cm)
+}
+function onBovenlichtHeightCommit(): void {
+  emit('bovenlichtHeight', lastBovenlichtHeightCm.value)
 }
 
-function onBovenlichtGapChange(event: Event): void {
-  emit('bovenlichtGap', parseCm(event))
-  releaseFocus(event)
+function onBovenlichtGapCm(cm: number): void {
+  lastBovenlichtGapCm.value = cm
+  emit('bovenlichtGapInput', cm)
+}
+function onBovenlichtGapCommit(): void {
+  emit('bovenlichtGap', lastBovenlichtGapCm.value)
 }
 </script>
 
@@ -154,21 +203,21 @@ function onBovenlichtGapChange(event: Event): void {
   <div class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.width') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        min="10"
-        max="400"
-        step="1"
-        class="fml-toolbelt__thickness-input"
+      <ScaleLengthInput
+        :cm="widthCm"
+        :unit="unit"
+        :min-cm="10"
+        :max-cm="MAX_OPENING_WIDTH_CM"
+        :mixed="widthMixed"
         :aria-label="
-          isWindow ? t('result.toolbar.windowWidthAria') : t('result.toolbar.doorWidthAria')
+          isWindow
+            ? t('result.toolbar.windowWidthAria', { unit: t(`common.${unit}`) })
+            : t('result.toolbar.doorWidthAria', { unit: t(`common.${unit}`) })
         "
-        :value="widthMixed ? '' : widthCm"
-        :placeholder="widthMixed ? '—' : undefined"
-        @input="emit('widthInput', $event)"
-        @change="onWidthChange"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="onWidthCm"
+        @commit="onWidthCommit"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <div v-if="isDoor || isWindow" class="fml-toolbelt__field">
@@ -176,37 +225,38 @@ function onBovenlichtGapChange(event: Event): void {
       isWindow ? t('result.toolbar.glass') : t('result.toolbar.height')
     }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        :min="MIN_OPENING_HEIGHT_CM"
-        max="500"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="isWindow ? t('result.toolbar.glassAria') : t('result.toolbar.doorHeightAria')"
-        :value="heightMixed ? '' : heightCm"
-        :placeholder="heightMixed ? '—' : undefined"
-        @input="emit('heightInput', $event)"
-        @change="onHeightChange"
+      <ScaleLengthInput
+        :cm="heightCm"
+        :unit="unit"
+        :min-cm="MIN_OPENING_HEIGHT_CM"
+        :max-cm="500"
+        :mixed="heightMixed"
+        :aria-label="
+          isWindow
+            ? t('result.toolbar.glassAria', { unit: t(`common.${unit}`) })
+            : t('result.toolbar.doorHeightAria', { unit: t(`common.${unit}`) })
+        "
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="onHeightCm"
+        @commit="onHeightCommit"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <div v-if="showSillField" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        min="0"
-        max="400"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.floorAria')"
-        :value="sillMixed ? '' : sillZCm"
-        :placeholder="sillMixed ? '—' : undefined"
-        @input="emit('sillInput', $event)"
-        @change="onSillChange"
+      <ScaleLengthInput
+        :cm="sillZCm"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
+        :max-cm="400"
+        :mixed="sillMixed"
+        :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="onSillCm"
+        @commit="onSillCommit"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <label
@@ -226,37 +276,34 @@ function onBovenlichtGapChange(event: Event): void {
   <div v-if="showBovenlichtMeasures" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.bovenlichtGap') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        :min="MIN_BOVENLICHT_GAP_CM"
-        :max="MAX_BOVENLICHT_GAP_CM"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.bovenlichtGapAria')"
-        :value="bovenlichtGapMixed ? '' : bovenlichtGapCm"
-        :placeholder="bovenlichtGapMixed ? '—' : undefined"
-        @input="emit('bovenlichtGapInput', $event)"
-        @change="onBovenlichtGapChange"
+      <ScaleLengthInput
+        :cm="bovenlichtGapCm"
+        :unit="unit"
+        :min-cm="MIN_BOVENLICHT_GAP_CM"
+        :max-cm="MAX_BOVENLICHT_GAP_CM"
+        :allow-zero="MIN_BOVENLICHT_GAP_CM <= 0"
+        :mixed="bovenlichtGapMixed"
+        :aria-label="t('result.toolbar.bovenlichtGapAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="onBovenlichtGapCm"
+        @commit="onBovenlichtGapCommit"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <div v-if="showBovenlichtMeasures" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.bovenlichtHeight') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        :min="MIN_BOVENLICHT_HEIGHT_CM"
-        :max="MAX_BOVENLICHT_HEIGHT_CM"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :aria-label="t('result.toolbar.bovenlichtHeightAria')"
-        :value="bovenlichtHeightMixed ? '' : bovenlichtHeightCm"
-        :placeholder="bovenlichtHeightMixed ? '—' : undefined"
-        @input="emit('bovenlichtHeightInput', $event)"
-        @change="onBovenlichtHeightChange"
+      <ScaleLengthInput
+        :cm="bovenlichtHeightCm"
+        :unit="unit"
+        :min-cm="MIN_BOVENLICHT_HEIGHT_CM"
+        :max-cm="MAX_BOVENLICHT_HEIGHT_CM"
+        :mixed="bovenlichtHeightMixed"
+        :aria-label="t('result.toolbar.bovenlichtHeightAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="onBovenlichtHeightCm"
+        @commit="onBovenlichtHeightCommit"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
   <button

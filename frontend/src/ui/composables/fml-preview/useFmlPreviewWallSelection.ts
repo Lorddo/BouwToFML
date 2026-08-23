@@ -6,7 +6,7 @@ import { balanceToPercent, percentToBalance } from '@/ui/components/fml-preview-
 import { projectPointToWallT } from '@/ui/components/fml-preview-openings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
-import { bindNumericDraftField } from './fml-preview-draft-commit'
+import { bindNumericDraftField, bindScaleLengthDraftField } from './fml-preview-draft-commit'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 import { findWallsFullyInCmBBox } from './fml-preview-wall-select'
 import {
@@ -295,7 +295,7 @@ export function useFmlPreviewWallSelection(options: {
     syncJunctionHeightDraftFromSelection()
   }
 
-  const thicknessField = bindNumericDraftField({
+  const thicknessField = bindScaleLengthDraftField({
     fieldId: FIELD_THICKNESS,
     draftCommit,
     draft: wallThicknessDraft,
@@ -317,7 +317,7 @@ export function useFmlPreviewWallSelection(options: {
     },
   })
 
-  const wallHeightField = bindNumericDraftField({
+  const wallHeightField = bindScaleLengthDraftField({
     fieldId: FIELD_WALL_HEIGHT,
     draftCommit,
     draft: wallHeightDraft,
@@ -328,7 +328,7 @@ export function useFmlPreviewWallSelection(options: {
     },
   })
 
-  const junctionHeightField = bindNumericDraftField({
+  const junctionHeightField = bindScaleLengthDraftField({
     fieldId: FIELD_JUNCTION_HEIGHT,
     draftCommit,
     draft: junctionHeightDraft,
@@ -339,13 +339,13 @@ export function useFmlPreviewWallSelection(options: {
     },
   })
 
-  const onWallThicknessInput = thicknessField.onInput
+  const onWallThicknessCm = thicknessField.onCm
   const commitWallThickness = thicknessField.commit
   const onWallBalanceInput = balanceField.onInput
   const commitWallBalance = balanceField.commit
-  const onWallHeightInput = wallHeightField.onInput
+  const onWallHeightCm = wallHeightField.onCm
   const commitWallHeight = wallHeightField.commit
-  const onJunctionHeightInput = junctionHeightField.onInput
+  const onJunctionHeightCm = junctionHeightField.onCm
   const commitJunctionHeight = junctionHeightField.commit
 
   /** Immediate preset / programmatic thickness (own undo step). */
@@ -497,13 +497,14 @@ export function useFmlPreviewWallSelection(options: {
     syncPlanToParent()
   }
 
-  function renameSelectedFacadeGroup(name: string): void {
+  async function renameSelectedFacadeGroup(): Promise<void> {
     const draft = facadeGroupDraft.value
     if (!draft || draft === STAMP_FACADE_GROUP_ID) return
-    const trimmed = name.trim()
-    if (!trimmed) return
+    const current = facadeGroupOptions.value.find((group) => group.id === draft)
+    const name = await promptFacadeGroupName({ currentName: current?.name })
+    if (name == null || name === current?.name) return
     editor.pushUndo()
-    editor.applyFacadeRename(draft, { name: trimmed })
+    editor.applyFacadeRename(draft, { name })
     syncPlanToParent()
   }
 
@@ -694,14 +695,14 @@ export function useFmlPreviewWallSelection(options: {
     syncJunctionHeightDraftFromSelection,
     toggleSettingsWall,
     toggleSettingsJunction,
-    onWallThicknessInput,
+    onWallThicknessCm,
     commitWallThickness,
     applyWallsThicknessCm,
     onWallBalanceInput,
     commitWallBalance,
-    onWallHeightInput,
+    onWallHeightCm,
     commitWallHeight,
-    onJunctionHeightInput,
+    onJunctionHeightCm,
     commitJunctionHeight,
     splitSelectedWall,
     deleteSelectedWalls,

@@ -2,6 +2,7 @@ import type { ComputedRef, Ref } from 'vue'
 import type Konva from 'konva'
 import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/fml/ridge-walls'
 import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
+import { distancePointToSegment, hitTestRidgeBeamAtCm } from './fml-preview-ridge-hit'
 import { normalizeCmBBox } from './fml-preview-wall-select'
 import type { ContentLayout } from './useFmlPreviewViewport'
 import type {
@@ -23,15 +24,6 @@ interface ViewportApi {
     toStagePoint: (x: number, y: number) => { x: number; y: number }
     toCmPoint: (x: number, y: number) => { x: number; y: number }
   }>
-}
-
-function distancePointToSegment(p: Point2D, a: Point2D, b: Point2D): number {
-  const dx = b.x - a.x
-  const dy = b.y - a.y
-  const lenSq = dx * dx + dy * dy
-  if (lenSq < 1e-9) return Math.hypot(p.x - a.x, p.y - a.y)
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq))
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
 }
 
 function pointInPolygon(point: Point2D, polygon: Point2D[]): boolean {
@@ -70,6 +62,7 @@ export function useFmlPreviewHitTest(
   items?: ComputedRef<FloorItem[]>,
   coarseHits?: ComputedRef<boolean> | Ref<boolean>,
   renderFixtures?: ComputedRef<RenderFixture[]>,
+  ridgeDisplayWidthCm?: ComputedRef<number> | Ref<number>,
 ) {
   function hitPx(fine: number, coarse: number): number {
     return coarseHits?.value === true ? coarse : fine
@@ -84,13 +77,20 @@ export function useFmlPreviewHitTest(
   function hitTestWallAtCm(cm: Point2D): string | null {
     const wallList = walls.value
     if (wallList.length === 0) return null
+    const ridgeId = hitTestRidgeBeamAtCm(
+      wallList,
+      cm,
+      ridgeDisplayWidthCm?.value ?? DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
+    )
+    if (ridgeId) return ridgeId
     const tol = screenPxToCmTolerance(hitPx(16, 32))
     let bestId: string | null = null
     let bestDist = Number.POSITIVE_INFINITY
     wallList.forEach((wall, index) => {
+      if (wall.thickness <= 1e-6) return
       const id = wall.id || `wall-${index}`
       const dist = distancePointToSegment(cm, wall.a, wall.b)
-      const halfWidth = wall.thickness > 0 ? wall.thickness / 2 : DEFAULT_RIDGE_DISPLAY_WIDTH_CM / 2
+      const halfWidth = wall.thickness / 2
       const hitDist = Math.max(0, dist - halfWidth)
       if (hitDist <= tol && hitDist < bestDist) {
         bestId = id

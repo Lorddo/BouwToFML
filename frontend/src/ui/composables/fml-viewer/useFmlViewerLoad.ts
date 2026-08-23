@@ -19,6 +19,7 @@ import {
   sessionDefaultsFromPartial,
   type ViewerSessionDefaults,
 } from '@/core/fml/viewer-session-defaults'
+import { seedPlanFromUserSettings } from '@/ui/composables/fml-viewer/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 type FmlLoadPhase = 'reading' | 'parsing' | 'building'
@@ -158,7 +159,7 @@ export function useFmlViewerLoad(deps: {
       level: nextIndex,
       wallHeightCm: defaults.wallHeightCm,
     })
-    deps.plan.value = { ...current, floors: [...current.floors, floor] }
+    deps.plan.value = seedPlanFromUserSettings({ ...current, floors: [...current.floors, floor] })
     deps.addFloorDefaultsSlot(nextIndex, defaults)
     await selectFloor(nextIndex)
   }
@@ -195,7 +196,9 @@ export function useFmlViewerLoad(deps: {
   function startNewPlan(): void {
     deps.flushPreviewFieldCommits()
     const defaults = sessionDefaultsFromSettings()
-    deps.plan.value = createEmptyFloorPlan({ wallHeightCm: defaults.wallHeightCm })
+    deps.plan.value = seedPlanFromUserSettings(
+      createEmptyFloorPlan({ wallHeightCm: defaults.wallHeightCm }),
+    )
     deps.sessionDefaults.value = defaults
     deps.hydrateFloorDefaultsFromPlan(deps.plan.value)
     deps.fmlOpacity.value = 0.8

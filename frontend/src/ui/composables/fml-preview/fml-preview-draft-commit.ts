@@ -187,3 +187,36 @@ export function bindNumericDraftField(options: {
 
   return { onInput, commit }
 }
+
+/**
+ * Length field in cm: ScaleLengthInput emits parsed cm; we schedule/flush.
+ * Stored draft stays cm-float — unit switch never rewrites it.
+ */
+export function bindScaleLengthDraftField(options: {
+  fieldId: string
+  draftCommit: FmlPreviewDraftCommitScheduler
+  draft: Ref<number>
+  mixed: Ref<boolean>
+  /** Build apply closure; called with cm after draft update. */
+  applyWithValue: (valueCm: number) => DraftCommitApply
+}): {
+  onCm: (cm: number) => void
+  commit: () => void
+} {
+  const { fieldId, draftCommit, draft, mixed, applyWithValue } = options
+
+  function onCm(cm: number): void {
+    if (!Number.isFinite(cm)) return
+    draft.value = cm
+    mixed.value = false
+    draftCommit.schedule(fieldId, applyWithValue(cm))
+  }
+
+  function commit(): void {
+    const value = draft.value
+    draftCommit.schedule(fieldId, applyWithValue(value))
+    draftCommit.flush(fieldId)
+  }
+
+  return { onCm, commit }
+}

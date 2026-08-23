@@ -163,12 +163,16 @@ export async function confirmFacadeStackedFloors(params: {
   })
 }
 
-export async function promptFacadeGroupName(): Promise<string | null> {
+export async function promptFacadeGroupName(opts?: {
+  currentName?: string
+}): Promise<string | null> {
+  const fallback = tGlobal('result.toolbar.facadeGroupNameDefault')
+  const current = opts?.currentName?.trim()
   const name = await promptFmlChrome({
     title: tGlobal('result.toolbar.facadeGroupNameTitle'),
     message: tGlobal('result.toolbar.facadeGroupNameHint'),
-    defaultValue: tGlobal('result.toolbar.facadeGroupNameDefault'),
-    placeholder: tGlobal('result.toolbar.facadeGroupNameDefault'),
+    defaultValue: current && current.length > 0 ? current : fallback,
+    placeholder: fallback,
     confirmLabel: tGlobal('common.apply'),
   })
   if (name == null) return null

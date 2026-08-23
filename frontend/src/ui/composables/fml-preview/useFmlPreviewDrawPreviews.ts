@@ -59,10 +59,29 @@ export function useFmlPreviewDrawPreviews(opts: {
     return drawRoomPreviewScreen.value.map((point) => `${point.x},${point.y}`).join(' ')
   })
 
+  const drawWallMeasureLabel = computed(() => {
+    const screen = drawWallPreviewScreen.value
+    if (!screen) return null
+    return {
+      x: (screen.x1 + screen.x2) / 2,
+      y: (screen.y1 + screen.y2) / 2,
+    }
+  })
+
+  const drawRoomMeasureLabels = computed(() => {
+    const pts = drawRoomPreviewScreen.value
+    if (!pts || pts.length < 4) return null
+    return {
+      h: { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 },
+      v: { x: (pts[1].x + pts[2].x) / 2, y: (pts[1].y + pts[2].y) / 2 },
+    }
+  })
+
   const drawSurfacePreviewScreen = computed(() => {
-    const pts = drawSurfacePoints?.value
+    const pts = drawSurfacePoints?.value ?? []
+    const hover = drawSurfaceHoverCm?.value
     const layout = contentLayout.value
-    if (!pts || pts.length === 0 || !layout) return null
+    if (!layout || (pts.length === 0 && !hover)) return null
     const { toStagePoint } = layoutTransform(layout)
     const toScreen = (p: Point2D) => {
       const stage = toStagePoint(p.x, p.y)
@@ -72,9 +91,8 @@ export function useFmlPreviewDrawPreviews(opts: {
       }
     }
     const screen = pts.map(toScreen)
-    const hover = drawSurfaceHoverCm?.value
     if (hover) screen.push(toScreen(hover))
-    return screen
+    return screen.length > 0 ? screen : null
   })
 
   const drawSurfacePreviewPolyline = computed(() => {
@@ -129,6 +147,8 @@ export function useFmlPreviewDrawPreviews(opts: {
     drawWallPreviewScreen,
     drawRoomPreviewScreen,
     drawRoomPreviewPolygon,
+    drawWallMeasureLabel,
+    drawRoomMeasureLabels,
     drawSurfacePreviewScreen,
     drawSurfacePreviewPolyline,
     drawLinePreviewScreen,

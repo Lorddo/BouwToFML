@@ -245,6 +245,49 @@ describe('useFmlPreviewEditor', () => {
     scope.stop()
   })
 
+  it('preview wall slide regenereert area-gaten (geen scheve vertex-warp)', () => {
+    const scope = effectScope()
+    const closed: FloorPlan = {
+      name: 'LiveAreas',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            { id: 'west', a: { x: 0, y: 0 }, b: { x: 0, y: 300 }, thickness: 10, openings: [] },
+            { id: 'east', a: { x: 400, y: 0 }, b: { x: 400, y: 300 }, thickness: 10, openings: [] },
+            { id: 'north', a: { x: 0, y: 0 }, b: { x: 400, y: 0 }, thickness: 10, openings: [] },
+            {
+              id: 'south',
+              a: { x: 0, y: 300 },
+              b: { x: 400, y: 300 },
+              thickness: 10,
+              openings: [],
+            },
+          ],
+        },
+      ],
+    }
+    const plan = ref<FloorPlan | null>(closed)
+    const floorIndex = ref(0)
+    const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
+    editor.flushAreaRegen()
+    const baseline = JSON.parse(JSON.stringify(editor.walls.value))
+    const startMaxX = Math.max(...(editor.areas.value[0]?.poly ?? []).map((p) => p.x))
+    expect(startMaxX).toBeGreaterThan(300)
+
+    editor.previewWallSlideAlongAxis(baseline, 'east', 40, { x: 1, y: 0 })
+    const movedMaxX = Math.max(...(editor.areas.value[0]?.poly ?? []).map((p) => p.x))
+    expect(movedMaxX - startMaxX).toBeCloseTo(40, 0)
+
+    editor.previewWallSlideAlongAxis(baseline, 'east', 0, { x: 1, y: 0 })
+    const resetMaxX = Math.max(...(editor.areas.value[0]?.poly ?? []).map((p) => p.x))
+    expect(resetMaxX).toBeCloseTo(startMaxX, 0)
+
+    scope.stop()
+  })
+
   it('redo restores the snapshot after undo', () => {
     const scope = effectScope()
     const plan = ref<FloorPlan | null>(samplePlan())

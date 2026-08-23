@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { OpeningType } from '@/core/fml/types'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import FmlOpeningEditFields from './FmlOpeningEditFields.vue'
 
 const props = withDefaults(
   defineProps<{
+    unit: ScaleInputUnit
     type: OpeningType
     widthCm: number
     heightCm: number
@@ -47,26 +49,27 @@ const kindLabel = computed(() =>
   props.type === 'window' ? t('result.toolbar.windowOne') : t('result.toolbar.doorOne'),
 )
 
-function emitWidth(cm: number | null): void {
-  if (cm != null) emit('width', cm)
+function emitWidth(cm: number): void {
+  emit('width', cm)
 }
-function emitHeight(cm: number | null): void {
-  if (cm != null) emit('height', cm)
+function emitHeight(cm: number): void {
+  emit('height', cm)
 }
-function emitSill(cm: number | null): void {
-  if (cm != null) emit('sill', cm)
+function emitSill(cm: number): void {
+  emit('sill', cm)
 }
-function emitBovenlichtHeight(cm: number | null): void {
-  if (cm != null) emit('bovenlichtHeight', cm)
+function emitBovenlichtHeight(cm: number): void {
+  emit('bovenlichtHeight', cm)
 }
-function emitBovenlichtGap(cm: number | null): void {
-  if (cm != null) emit('bovenlichtGap', cm)
+function emitBovenlichtGap(cm: number): void {
+  emit('bovenlichtGap', cm)
 }
 </script>
 
 <template>
   <span class="fml-toolbelt__meta">{{ kindLabel }}</span>
   <FmlOpeningEditFields
+    :unit="unit"
     :type="type"
     :width-cm="widthCm"
     :height-cm="heightCm"

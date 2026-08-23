@@ -1,30 +1,25 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { ElevationProjectionMode } from '@/core/fml/elevation-views'
-import type { ElevationStackRow } from '@/core/fml/floor-stack'
+import type { ElevationFloorGroup } from '@/core/fml/floor-stack'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 
 defineProps<{
-  rows: ElevationStackRow[]
-  ridgeDisplayWidthCm?: number
+  unit: ScaleInputUnit
+  dakThicknessCm: number
+  floors: ElevationFloorGroup[]
   projection?: ElevationProjectionMode
 }>()
 
 const emit = defineEmits<{
   nok: [cm: number]
   story: [floorIndex: number, cm: number]
-  ridge: [floorIndex: number, cm: number]
   slab: [floorIndex: number, cm: number]
-  ridgeDisplayWidth: [cm: number]
   projection: [mode: ElevationProjectionMode]
 }>()
 
 const { t } = useI18n()
-
-function onNumber(event: Event): number | null {
-  const raw = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(raw) || raw < 0) return null
-  return Math.round(raw)
-}
 </script>
 
 <template>
@@ -48,77 +43,41 @@ function onNumber(event: Event): number | null {
       </select>
     </label>
     <p class="elev-heights__hint">{{ t('viewer.elevationProjectionHint') }}</p>
-    <label v-if="ridgeDisplayWidthCm != null" class="elev-heights__row">
-      <span>{{ t('viewer.elevationRidgeWidth') }}</span>
-      <input
-        type="number"
-        min="1"
-        max="80"
-        :value="ridgeDisplayWidthCm"
-        @change="
-          (event) => {
-            const cm = onNumber(event)
-            if (cm != null) emit('ridgeDisplayWidth', cm)
-          }
-        "
+    <label class="elev-heights__row">
+      <span>{{ t('viewer.elevationNok') }}</span>
+      <ScaleLengthInput
+        block
+        :cm="dakThicknessCm"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
+        @update:cm="emit('nok', $event)"
       />
     </label>
-    <label v-for="(row, index) in rows" :key="`${row.kind}-${index}`" class="elev-heights__row">
-      <span v-if="row.kind === 'nok'">{{ t('viewer.elevationNok') }}</span>
-      <span v-else-if="row.kind === 'story'">{{ row.name }}</span>
-      <span v-else-if="row.kind === 'ridge'">{{
-        t('viewer.elevationRidgeZ', { name: row.name })
-      }}</span>
-      <span v-else>{{ t('viewer.elevationSlab', { name: row.name }) }}</span>
-      <input
-        v-if="row.kind === 'nok'"
-        type="number"
-        min="0"
-        :value="row.thicknessCm"
-        @change="
-          (event) => {
-            const cm = onNumber(event)
-            if (cm != null) emit('nok', cm)
-          }
-        "
-      />
-      <input
-        v-else-if="row.kind === 'story'"
-        type="number"
-        min="1"
-        :value="row.heightCm"
-        @change="
-          (event) => {
-            const cm = onNumber(event)
-            if (cm != null) emit('story', row.floorIndex, cm)
-          }
-        "
-      />
-      <input
-        v-else-if="row.kind === 'ridge'"
-        type="number"
-        min="0"
-        :value="row.zCm"
-        @change="
-          (event) => {
-            const cm = onNumber(event)
-            if (cm != null) emit('ridge', row.floorIndex, cm)
-          }
-        "
-      />
-      <input
-        v-else
-        type="number"
-        min="0"
-        :value="row.thicknessCm"
-        @change="
-          (event) => {
-            const cm = onNumber(event)
-            if (cm != null) emit('slab', row.floorIndex, cm)
-          }
-        "
-      />
-    </label>
+    <div v-for="floor in floors" :key="floor.floorIndex" class="elev-heights__floor">
+      <p class="elev-heights__floor-name">{{ floor.name }}</p>
+      <label class="elev-heights__row">
+        <span>{{ t('viewer.elevationStory') }}</span>
+        <ScaleLengthInput
+          block
+          :cm="floor.heightCm"
+          :unit="unit"
+          :min-cm="1"
+          @update:cm="emit('story', floor.floorIndex, $event)"
+        />
+      </label>
+      <label class="elev-heights__row">
+        <span>{{ t('viewer.elevationSlabShort') }}</span>
+        <ScaleLengthInput
+          block
+          :cm="floor.slabCm"
+          :unit="unit"
+          :min-cm="0"
+          allow-zero
+          @update:cm="emit('slab', floor.floorIndex, $event)"
+        />
+      </label>
+    </div>
   </div>
 </template>
 
@@ -136,6 +95,23 @@ function onNumber(event: Event): number | null {
   line-height: 1.4;
 }
 
+.elev-heights__floor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.elev-heights__floor-name {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .elev-heights__row {
   display: grid;
   grid-template-columns: 1fr 72px;
@@ -145,7 +121,15 @@ function onNumber(event: Event): number | null {
   color: #334155;
 }
 
-.elev-heights__row input,
+.elev-heights__row :deep(.scale-length-input) {
+  width: 100%;
+}
+
+.elev-heights__row :deep(.scale-length-input input) {
+  width: 100%;
+  min-width: 0;
+}
+
 .elev-heights__row select {
   width: 100%;
   box-sizing: border-box;

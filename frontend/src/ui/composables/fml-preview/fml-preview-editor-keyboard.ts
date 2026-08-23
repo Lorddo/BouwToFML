@@ -41,11 +41,31 @@ export function createFmlPreviewEditorKeyHandlers(options: {
     isDragging: () => boolean
     cancelDrawWallDrag: () => void
     commitFromMeasure: () => boolean
+    handleTypeKey: (event: KeyboardEvent) => boolean
   }
   drawRoom: {
     isDragging: () => boolean
     cancelDrawRoomDrag: () => void
     commitFromMeasure: () => boolean
+    handleTypeKey: (event: KeyboardEvent) => boolean
+  }
+  wallMove: {
+    isDrafting: () => boolean
+    cancelWallMove: () => void
+    commitFromMeasure: () => boolean
+    handleTypeKey: (event: KeyboardEvent) => boolean
+  }
+  junctionMove: {
+    isDrafting: () => boolean
+    cancelJunctionMove: () => void
+    commitFromMeasure: () => boolean
+    handleTypeKey: (event: KeyboardEvent) => boolean
+  }
+  openingMove: {
+    isDrafting: () => boolean
+    cancelOpeningMove: () => void
+    commitFromMeasure: () => boolean
+    handleTypeKey: (event: KeyboardEvent) => boolean
   }
   drawLine: { cancelDrawLine: () => void }
   deactivateDrawTool: () => void
@@ -89,6 +109,9 @@ export function createFmlPreviewEditorKeyHandlers(options: {
     surfaceEdit,
     drawWall,
     drawRoom,
+    wallMove,
+    junctionMove,
+    openingMove,
     drawLine,
     deactivateDrawTool,
     measure,
@@ -116,12 +139,44 @@ export function createFmlPreviewEditorKeyHandlers(options: {
       }
       return
     }
+    if (drawWall.isDragging() && drawWall.handleTypeKey(event)) {
+      event.preventDefault()
+      return
+    }
+    if (drawRoom.isDragging() && drawRoom.handleTypeKey(event)) {
+      event.preventDefault()
+      return
+    }
+    if (wallMove.isDrafting() && wallMove.handleTypeKey(event)) {
+      event.preventDefault()
+      return
+    }
+    if (junctionMove.isDrafting() && junctionMove.handleTypeKey(event)) {
+      event.preventDefault()
+      return
+    }
+    if (openingMove.isDrafting() && openingMove.handleTypeKey(event)) {
+      event.preventDefault()
+      return
+    }
     if (event.key === 'Enter') {
       if (drawWall.isDragging() && drawWall.commitFromMeasure()) {
         event.preventDefault()
         return
       }
       if (drawRoom.isDragging() && drawRoom.commitFromMeasure()) {
+        event.preventDefault()
+        return
+      }
+      if (wallMove.isDrafting() && wallMove.commitFromMeasure()) {
+        event.preventDefault()
+        return
+      }
+      if (junctionMove.isDrafting() && junctionMove.commitFromMeasure()) {
+        event.preventDefault()
+        return
+      }
+      if (openingMove.isDrafting() && openingMove.commitFromMeasure()) {
         event.preventDefault()
         return
       }
@@ -154,6 +209,18 @@ export function createFmlPreviewEditorKeyHandlers(options: {
       }
       if (drawRoom.isDragging()) {
         drawRoom.cancelDrawRoomDrag()
+        return
+      }
+      if (wallMove.isDrafting()) {
+        wallMove.cancelWallMove()
+        return
+      }
+      if (junctionMove.isDrafting()) {
+        junctionMove.cancelJunctionMove()
+        return
+      }
+      if (openingMove.isDrafting()) {
+        openingMove.cancelOpeningMove()
         return
       }
       if (drawSurface.draftPoints.value?.length) {

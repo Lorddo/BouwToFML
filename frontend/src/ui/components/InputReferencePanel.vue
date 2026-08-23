@@ -17,6 +17,8 @@ import {
 } from '@/platform/selection/wall-thickness-ref'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import { DEFAULT_FML_WALL_THICKNESS_LIMITS } from '@/core/fml/fml-wall-thickness-limits'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 
 const props = defineProps<{
   activeClass: ElementClass | null
@@ -28,6 +30,7 @@ const props = defineProps<{
   scaleConfirmed: boolean
   rects: SelectionRect[]
   wallThicknessLimits?: FmlWallThicknessLimits
+  unit: ScaleInputUnit
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
@@ -93,8 +96,7 @@ function cmForBand(band: FmlThicknessBand): number {
   return limits.maxCm
 }
 
-function onCmInput(band: FmlThicknessBand, raw: string) {
-  const cm = Number(raw)
+function onCmInput(band: FmlThicknessBand, cm: number) {
   if (!Number.isFinite(cm) || cm <= 0) return
   emit('updateWallThicknessCm', band, cm)
 }
@@ -193,19 +195,16 @@ onUnmounted(() => {
               {{ bandName(opt.band) }}
             </option>
           </select>
-          <input
-            class="cm-input"
-            type="number"
-            min="1"
-            step="0.1"
-            :value="cmForBand(resolveWallThicknessBand(rect))"
-            :title="t('preprocess.refs.wallThicknessCmOverride')"
-            @click.stop
-            @change="
-              onCmInput(resolveWallThicknessBand(rect), ($event.target as HTMLInputElement).value)
-            "
+          <ScaleLengthInput
+            input-class="cm-input"
+            :cm="cmForBand(resolveWallThicknessBand(rect))"
+            :unit="unit"
+            :min-cm="1"
+            hide-suffix
+            :aria-label="t('preprocess.refs.wallThicknessCmOverride')"
+            @update:cm="onCmInput(resolveWallThicknessBand(rect), $event)"
           />
-          <span class="cm-unit">cm</span>
+          <span v-if="unit !== 'ft-in'" class="cm-unit">{{ t(`common.${unit}`) }}</span>
           <span v-if="measuredPxFor(rect.id) != null" class="px-badge">
             {{ measuredPxFor(rect.id) }}px
           </span>

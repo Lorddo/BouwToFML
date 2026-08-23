@@ -75,7 +75,6 @@ const canvasRef = ref<InstanceType<typeof FmlPreviewCanvas> | null>(null)
 defineExpose({
   flushPendingFieldCommits: () => canvasRef.value?.flushPendingFieldCommits(),
   sanitizeWalls: () => canvasRef.value?.sanitizeWalls() ?? false,
-  generateRoofPlanes: () => canvasRef.value?.generateRoofPlanes() ?? false,
   applyStampToActiveFloor: () => canvasRef.value?.applyStampToActiveFloor() ?? false,
   canApplyStampOnActiveFloor: () => canvasRef.value?.canApplyStampOnActiveFloor() ?? false,
   applyCornerMarkerModeFromSettings: () => canvasRef.value?.applyCornerMarkerModeFromSettings(),

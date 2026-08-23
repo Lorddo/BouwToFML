@@ -121,21 +121,18 @@ function computeMovingRefsAtJunction(
 ): Set<string> {
   const moving = new Set<string>()
   const hasBranch = junctionHasBranch(walls, draggedWall, draggedEnd, junction)
-  const isLCorner = junction.refs.length === 2 && hasBranch
-
-  if (!hasBranch || isLCorner) {
-    for (const ref of junction.refs) moving.add(refKey(ref))
-    return moving
-  }
-
   const draggedDir = directionFromEndpoint(draggedWall, draggedEnd)
   const slideAlongTrunk = isDirectionParallel(slideDir, draggedDir)
 
-  if (slideAlongTrunk) {
+  // T/X langs de stam: alleen het gesleepte eind (T→L + stub). L-hoek (2 poten)
+  // hoort hier niet: die volgt de slide-as-regel hieronder.
+  if (hasBranch && junction.refs.length > 2 && slideAlongTrunk) {
     moving.add(refKey({ wallId: draggedWall.id, end: draggedEnd }))
     return moving
   }
 
+  // Gesleepte eind + poten die al op de slide-as liggen (punt schuift mee).
+  // Overige poten blijven; applyEndpointSlide maakt een H/V-stub i.p.v. schuin trekken.
   moving.add(refKey({ wallId: draggedWall.id, end: draggedEnd }))
   for (const ref of junction.refs) {
     if (ref.wallId === draggedWall.id && ref.end === draggedEnd) continue
@@ -320,9 +317,45 @@ export function resolveWallSlidePointerDelta(
   return { delta, slideDir: perpU }
 }
 
+/** Soft snap van muur-slide naar andere knopen (niet de eigen einden). */
+export const WALL_SLIDE_JUNCTION_SNAP_CM = 8
+
+/**
+ * Trek de schuif-delta naar een andere knoop als die binnen `radiusCm` ligt
+ * langs de slide-as (H-muur → zelfde Y, V-muur → zelfde X).
+ */
+export function snapWallSlideDeltaToJunctions(
+  wall: { a: Point2D; b: Point2D },
+  wallId: string,
+  walls: ReadonlyArray<Wall>,
+  rawDelta: number,
+  slideDir: Point2D,
+  radiusCm = WALL_SLIDE_JUNCTION_SNAP_CM,
+): number {
+  const dirLen = Math.hypot(slideDir.x, slideDir.y)
+  if (dirLen < 1e-9 || radiusCm <= 0) return rawDelta
+  const ux = slideDir.x / dirLen
+  const uy = slideDir.y / dirLen
+  let best = rawDelta
+  let bestAbs = radiusCm
+  for (const junction of buildJunctions(walls)) {
+    if (junction.refs.some((ref) => ref.wallId === wallId)) continue
+    for (const end of [wall.a, wall.b]) {
+      const delta = (junction.x - end.x) * ux + (junction.y - end.y) * uy
+      const abs = Math.abs(delta - rawDelta)
+      if (abs < bestAbs) {
+        bestAbs = abs
+        best = delta
+      }
+    }
+  }
+  return best
+}
+
 /**
  * Schuif een muursegment rigide langs slideDir (beide eindpunten zelfde delta).
- * Per eindpunt: branch-junction blijft vast (T→L); collineaire junction schuift mee.
+ * Per eindpunt: poot op de slide-as schuift mee; andere poten blijven
+ * (H/V-stub). T/X langs de stam: alleen het gesleepte eind (T→L).
  */
 export function slideWallSegmentAlongAxis(
   walls: Wall[],

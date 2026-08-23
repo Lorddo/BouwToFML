@@ -7,6 +7,7 @@ import {
   type GesturePoint,
 } from './fml-preview-gestures'
 import {
+  BTF_LIVE_POINTER,
   isTouchHoverFollowTool,
   shouldCommitTouchTap,
   shouldOneFingerPan,
@@ -16,8 +17,12 @@ import { clampViewScale } from './useFmlPreviewPanZoom'
 
 const TOUCH_NAV_LISTENER_OPTS: AddEventListenerOptions = { passive: false }
 
-export function syntheticMouseDown(clientX: number, clientY: number): MouseEvent {
-  return new MouseEvent('mousedown', {
+export function syntheticMouseDown(
+  clientX: number,
+  clientY: number,
+  livePointer = true,
+): MouseEvent {
+  const event = new MouseEvent('mousedown', {
     bubbles: false,
     cancelable: true,
     view: window,
@@ -26,6 +31,8 @@ export function syntheticMouseDown(clientX: number, clientY: number): MouseEvent
     button: 0,
     buttons: 1,
   })
+  Object.defineProperty(event, BTF_LIVE_POINTER, { value: livePointer })
+  return event
 }
 
 export function useCoarsePointer(): Ref<boolean> {
@@ -61,6 +68,11 @@ export function useFmlCanvasTouch(options: {
   blockEdit: () => boolean
   onEditPointerDown: (event: MouseEvent) => void
   onEditPointerMove: (event: MouseEvent) => void
+  isDrawDrafting?: () => boolean
+  hitDraftHandle?: (clientX: number, clientY: number) => boolean
+  isWallMoveDrafting?: () => boolean
+  isPreciseMoveDrafting?: () => boolean
+  hitClickMove?: (clientX: number, clientY: number) => boolean
 }): void {
   const touchPointers = new Map<number, GesturePoint>()
   let touchPrevPair: { a: GesturePoint; b: GesturePoint } | null = null
@@ -76,8 +88,8 @@ export function useFmlCanvasTouch(options: {
   let touchOnePanLast: GesturePoint | null = null
 
   function touchIgnoreTarget(event: PointerEvent): boolean {
-    const target = event.target as HTMLElement
-    return Boolean(target.closest(FML_PREVIEW_CHROME_SELECTOR))
+    const target = event.target instanceof Element ? event.target : null
+    return Boolean(target?.closest(FML_PREVIEW_CHROME_SELECTOR))
   }
 
   function touchLocalPoint(event: PointerEvent): GesturePoint {
@@ -155,25 +167,36 @@ export function useFmlCanvasTouch(options: {
     if (touchNav) return
 
     const tool = options.getTool()
+    const drafting = options.isDrawDrafting?.() === true
+    const preciseMoveDrafting =
+      options.isPreciseMoveDrafting?.() === true || options.isWallMoveDrafting?.() === true
+    const hoverFollow = isTouchHoverFollowTool(tool, { drafting, preciseMoveDrafting })
     if (touchPending && event.pointerId === touchPending.pointerId && !touchSloppy) {
       if (!isTapMove(touchPending.start, local)) {
         touchSloppy = true
+        const draftHandle =
+          options.hitDraftHandle?.(touchPending.clientX, touchPending.clientY) === true
+        const clickMoveHit =
+          options.hitClickMove?.(touchPending.clientX, touchPending.clientY) === true
         if (
           shouldStartTouchHoldDrag({
             sloppy: true,
             moveMod: options.moveMod.value,
             tool,
             becameNav: false,
+            draftHandle,
+            preciseMoveDrafting,
+            clickMoveHit,
           })
         ) {
           touchCommittedOne = true
-          options.onEditPointerDown(syntheticMouseDown(event.clientX, event.clientY))
+          options.onEditPointerDown(syntheticMouseDown(event.clientX, event.clientY, true))
         } else if (
           shouldOneFingerPan({
             sloppy: true,
             becameNav: false,
             holdDragStarted: false,
-            hoverFollow: isTouchHoverFollowTool(tool),
+            hoverFollow,
           })
         ) {
           touchOnePanLast = local
@@ -190,7 +213,7 @@ export function useFmlCanvasTouch(options: {
       return
     }
 
-    if (touchCommittedOne || isTouchHoverFollowTool(tool)) {
+    if (touchCommittedOne || hoverFollow) {
       options.onEditPointerMove(event)
     }
   }
@@ -215,7 +238,7 @@ export function useFmlCanvasTouch(options: {
       pointerId === pending.pointerId &&
       shouldCommitTouchTap({ becameNav: wasNav, sloppy, cancelled })
     ) {
-      options.onEditPointerDown(syntheticMouseDown(pending.clientX, pending.clientY))
+      options.onEditPointerDown(syntheticMouseDown(pending.clientX, pending.clientY, false))
     }
     resetTouchIdle()
   }

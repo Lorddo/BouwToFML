@@ -8,6 +8,7 @@ import {
   type WindowAddSubtype,
 } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { FmlToolId } from './canvas/fmlToolbeltItems'
 import FmlOpeningAddToolFields from './FmlOpeningAddToolFields.vue'
 import FmlOpeningEditFields from './FmlOpeningEditFields.vue'
@@ -24,6 +25,7 @@ const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 }
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 
 const props = defineProps<{
+  unit: ScaleInputUnit
   selectedOpeningPanel: {
     openingIds: string[]
     count: number
@@ -68,18 +70,18 @@ const showPackedBovenlichtUi = computed(() => props.bovenlichtPacked !== false)
 
 const emit = defineEmits<{
   commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
-  openingWidthInput: [event: Event]
+  openingWidthCm: [cm: number]
   commitOpeningWidth: []
-  openingHeightInput: [event: Event]
+  openingHeightCm: [cm: number]
   commitOpeningHeight: []
-  openingSillZInput: [event: Event]
+  openingSillZCm: [cm: number]
   commitOpeningSillZ: []
   toggleOpeningHinge: []
   toggleOpeningSwing: []
   openingBovenlichtChange: [event: Event]
-  openingBovenlichtHeightInput: [event: Event]
+  openingBovenlichtHeightCm: [cm: number]
   commitOpeningBovenlichtHeight: []
-  openingBovenlichtGapInput: [event: Event]
+  openingBovenlichtGapCm: [cm: number]
   commitOpeningBovenlichtGap: []
   copyOpening: []
   deleteOpenings: []
@@ -196,6 +198,7 @@ const showTriangleMirror = computed(
   </div>
   <FmlOpeningEditFields
     v-if="selectedOpeningPanel && (isDoorSelection || isWindowSelection)"
+    :unit="unit"
     :type="selectedOpeningPanel.openingType === 'window' ? 'window' : 'door'"
     :width-cm="openingWidthDraft"
     :height-cm="openingHeightDraft"
@@ -217,16 +220,16 @@ const showTriangleMirror = computed(
     :show-mirror-button="showTriangleMirror"
     :show-copy="canCopyOpening"
     show-delete
-    @width-input="emit('openingWidthInput', $event)"
+    @width-input="emit('openingWidthCm', $event)"
     @width="onOpeningWidthChange"
-    @height-input="emit('openingHeightInput', $event)"
+    @height-input="emit('openingHeightCm', $event)"
     @height="onOpeningHeightChange"
-    @sill-input="emit('openingSillZInput', $event)"
+    @sill-input="emit('openingSillZCm', $event)"
     @sill="onOpeningSillZChange"
     @bovenlicht="onOpeningBovenlichtChange"
-    @bovenlicht-height-input="emit('openingBovenlichtHeightInput', $event)"
+    @bovenlicht-height-input="emit('openingBovenlichtHeightCm', $event)"
     @bovenlicht-height="onOpeningBovenlichtHeightChange"
-    @bovenlicht-gap-input="emit('openingBovenlichtGapInput', $event)"
+    @bovenlicht-gap-input="emit('openingBovenlichtGapCm', $event)"
     @bovenlicht-gap="onOpeningBovenlichtGapChange"
     @toggle-hinge="emit('toggleOpeningHinge')"
     @toggle-swing="emit('toggleOpeningSwing')"
@@ -250,6 +253,7 @@ const showTriangleMirror = computed(
     v-model:add-window-width-cm="addWindowWidthCm"
     v-model:add-window-sill-z-cm="addWindowSillZCm"
     v-model:add-window-height-cm="addWindowHeightCm"
+    :unit="unit"
     :active-tool="activeTool"
   />
 </template>

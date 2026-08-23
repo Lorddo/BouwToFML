@@ -2,10 +2,18 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
+import {
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
-const props = defineProps<{
-  summary: OpeningHeightOverflowSummary
-}>()
+const props = withDefaults(
+  defineProps<{
+    summary: OpeningHeightOverflowSummary
+    unit?: ScaleInputUnit
+  }>(),
+  { unit: 'mm' },
+)
 
 const { t } = useI18n()
 
@@ -26,6 +34,10 @@ const kinds = computed(() => {
   }
   return parts.join(', ')
 })
+
+function len(cm: number): string {
+  return formatScaleInputLabel(cm, props.unit)
+}
 </script>
 
 <template>
@@ -34,8 +46,8 @@ const kinds = computed(() => {
       {{
         t('result.openingOverflow', {
           kinds,
-          top: summary.maxTopCm,
-          floor: summary.floorHeightCm,
+          top: len(summary.maxTopCm),
+          floor: len(summary.floorHeightCm),
         })
       }}
     </p>
@@ -43,8 +55,8 @@ const kinds = computed(() => {
       {{
         t('result.openingOverflowBelow', {
           n: summary.below,
-          sill: summary.minSillCm,
-          floor: summary.wallBottomCm,
+          sill: len(summary.minSillCm),
+          floor: len(summary.wallBottomCm),
         })
       }}
     </p>

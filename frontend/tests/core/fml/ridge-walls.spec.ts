@@ -190,7 +190,7 @@ describe('ridge-walls', () => {
     const ridgeRect = elevation!.walls.find((item) => item.wallId === 'r1' && item.ridge)
     expect(ridgeRect).toBeTruthy()
     expect(ridgeRect!.x1 - ridgeRect!.x0).toBeCloseTo(10, 5)
-    expect((ridgeRect!.x0 + ridgeRect!.x1) / 2).toBeCloseTo(200, 5)
+    expect((ridgeRect!.x0 + ridgeRect!.x1) / 2).toBeCloseTo(200 * elevation!.axis.x, 5)
     expect(elevation!.bands.some((band) => band.kind === 'nok')).toBe(true)
     expect(elevation!.roofPlanes).toEqual([])
   })

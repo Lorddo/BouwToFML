@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { wallJoinFaceCorner } from '@/core/fml/fml-wall-geom'
 import {
   buildWallRenderGeometry,
   offsetPointByWallBalance,
@@ -119,7 +120,7 @@ describe('buildWallRenderGeometry', () => {
       { id: 'branch', a: { x: 0, y: 0 }, b: { x: 80, y: 0 }, thickness: 20 },
     ])
     expect(geometry.fillComponents.length).toBe(1)
-    // Host left face at x=-15; cap+inflate must not step past that façade.
+    // Host left face at x=-15; miter/cap must not step past that façade.
     expect(pointInFillComponents({ x: -16.2, y: 0 }, geometry.fillComponents)).toBe(false)
     expect(pointInFillComponents({ x: -14, y: 0 }, geometry.fillComponents)).toBe(true)
     expect(pointInFillComponents({ x: 40, y: 0 }, geometry.fillComponents)).toBe(true)
@@ -293,6 +294,38 @@ describe('buildWallRenderGeometry', () => {
     const geometry = buildWallRenderGeometry(walls)
     expect(geometry.fillComponents.length).toBe(1)
     expect(maxFillVertexDistanceFromWallEnds(geometry.fillComponents, walls)).toBeLessThan(40)
+  })
+
+  it('L overlay steekt niet voorbij de buur-buitenface', () => {
+    const geometry = buildWallRenderGeometry([
+      { id: 'h', a: { x: 0, y: 0 }, b: { x: 90, y: 0 }, thickness: 10 },
+      { id: 'v', a: { x: 90, y: 0 }, b: { x: 90, y: 335 }, thickness: 10 },
+    ])
+    const h = geometry.wallPolygons.find((polygon) => polygon.id === 'h')!
+    expect(Math.max(...h.points.map((point) => point.x))).toBeLessThanOrEqual(95.2)
+    expect(Math.min(...h.points.map((point) => point.y))).toBeGreaterThanOrEqual(-5.2)
+  })
+
+  it('schuine L: geen square-cap stickout voorbij de buitenmiter', () => {
+    const v = { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 100 }, thickness: 10 }
+    const s = { id: 's', a: { x: 0, y: 100 }, b: { x: 80, y: 146 }, thickness: 10 }
+    const geometry = buildWallRenderGeometry([v, s])
+    const junction = { x: 0, y: 100 }
+    const slen = Math.hypot(80, 46)
+    const outer = wallJoinFaceCorner(
+      junction,
+      v,
+      { x: 0, y: -1 },
+      s,
+      { x: 80 / slen, y: 46 / slen },
+      true,
+    )!
+    const outLen = Math.hypot(outer.x - junction.x, outer.y - junction.y)
+    const outDir = { x: (outer.x - junction.x) / outLen, y: (outer.y - junction.y) / outLen }
+    for (const point of allFillPoints(geometry)) {
+      const along = (point.x - junction.x) * outDir.x + (point.y - junction.y) * outDir.y
+      expect(along).toBeLessThan(outLen + 0.2)
+    }
   })
 
   it('per-wall overlay polygons stay simple quads', () => {

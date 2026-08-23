@@ -130,6 +130,60 @@ export function wallFaces(wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>)
   }
 }
 
+function inwardPerpToDir(dir: Point2D, bisector: Point2D): Point2D {
+  const along = dir.x * bisector.x + dir.y * bisector.y
+  const x = bisector.x - dir.x * along
+  const y = bisector.y - dir.y * along
+  const len = Math.hypot(x, y)
+  if (len < 1e-12) return floorplannerLeftNormal(dir)
+  return { x: x / len, y: y / len }
+}
+
+function faceExtentToward(
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  inward: Point2D,
+): number {
+  const n = wallLeftNormal(wall)
+  const { plus, minus } = resolveWallBalanceExtents(wall.thickness, wall.balance)
+  return inward.x * n.x + inward.y * n.y >= 0 ? plus : minus
+}
+
+/**
+ * Snijpunt van de twee faces die de sector bij `junction` begrenzen.
+ * `dirA` / `dirB` = unit, van de knoop de muur in.
+ * `opposite` = de andere (buiten)hoek van dezelfde twee muren.
+ * Zelfde rekenkern als schuine-hoekmarkers / dak-buitenhoeken.
+ */
+export function wallJoinFaceCorner(
+  junction: Point2D,
+  wallA: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  dirA: Point2D,
+  wallB: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  dirB: Point2D,
+  opposite = false,
+): Point2D | null {
+  const bx = dirA.x + dirB.x
+  const by = dirA.y + dirB.y
+  const bLen = Math.hypot(bx, by)
+  if (bLen < 1e-12) return null
+  const bisector = { x: bx / bLen, y: by / bLen }
+  let inA = inwardPerpToDir(dirA, bisector)
+  let inB = inwardPerpToDir(dirB, bisector)
+  if (opposite) {
+    inA = { x: -inA.x, y: -inA.y }
+    inB = { x: -inB.x, y: -inB.y }
+  }
+  const eA = faceExtentToward(wallA, inA)
+  const eB = faceExtentToward(wallB, inB)
+  const p1 = { x: junction.x + inA.x * eA, y: junction.y + inA.y * eA }
+  const p2 = { x: junction.x + inB.x * eB, y: junction.y + inB.y * eB }
+  const cross = dirA.x * dirB.y - dirA.y * dirB.x
+  if (Math.abs(cross) < 1e-12) return null
+  const t = ((p2.x - p1.x) * dirB.y - (p2.y - p1.y) * dirB.x) / cross
+  if (!Number.isFinite(t)) return null
+  return { x: p1.x + t * dirA.x, y: p1.y + t * dirA.y }
+}
+
 /** Junction-clustering / keten-index: 0,0001 cm-afronding. */
 export const ENDPOINT_KEY_DECIMALS = 4
 

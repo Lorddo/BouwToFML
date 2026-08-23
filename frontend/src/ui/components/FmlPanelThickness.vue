@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
 import { useI18n } from 'vue-i18n'
+import ScaleLengthInput from './ScaleLengthInput.vue'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import './fml-panel-fields.css'
 
 const { t } = useI18n()
@@ -9,6 +12,7 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
+    unit: ScaleInputUnit
     underlayAvailable?: boolean
     fmlThicknessMinCm?: number
     fmlThicknessMidCm?: number
@@ -41,36 +45,6 @@ const emit = defineEmits<{
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
 }>()
-
-function onThicknessMinInput(event: Event): void {
-  const value = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(value) || value <= 0) return
-  emit('update:fmlThicknessMinCm', value)
-}
-
-function onThicknessMidInput(event: Event): void {
-  const value = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(value) || value <= 0) return
-  emit('update:fmlThicknessMidCm', value)
-}
-
-function onThicknessMaxInput(event: Event): void {
-  const value = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(value) || value <= 0) return
-  emit('update:fmlThicknessMaxCm', value)
-}
-
-function onBandMidBoundaryInput(event: Event): void {
-  const value = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(value) || value <= 0) return
-  emit('update:fmlBandMidBoundaryCm', value)
-}
-
-function onBandMaxBoundaryInput(event: Event): void {
-  const value = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(value) || value <= 0) return
-  emit('update:fmlBandMaxBoundaryCm', value)
-}
 </script>
 
 <template>
@@ -80,13 +54,12 @@ function onBandMaxBoundaryInput(event: Event): void {
       <label class="fml-limit-field">
         <span :title="t('result.thicknessMinTitle')">{{ t('result.thicknessMin') }}</span>
         <div class="fml-limit-input-row">
-          <input
-            type="number"
-            min="1"
-            step="1"
-            :value="fmlThicknessMinCm"
+          <ScaleLengthInput
+            :cm="fmlThicknessMinCm"
+            :unit="unit"
+            :min-cm="1"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @input="onThicknessMinInput"
+            @update:cm="emit('update:fmlThicknessMinCm', $event)"
           />
           <button
             type="button"
@@ -100,28 +73,26 @@ function onBandMaxBoundaryInput(event: Event): void {
           >
             ⊕
           </button>
-          <input
-            type="number"
-            class="band-input"
-            min="1"
-            step="0.1"
-            :title="t('result.bandMidTitle')"
-            :value="fmlBandMidBoundaryCm"
+          <ScaleLengthInput
+            input-class="band-input"
+            :cm="fmlBandMidBoundaryCm"
+            :unit="unit"
+            :min-cm="1"
+            :aria-label="t('result.bandMidTitle')"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @input="onBandMidBoundaryInput"
+            @update:cm="emit('update:fmlBandMidBoundaryCm', $event)"
           />
         </div>
       </label>
       <label class="fml-limit-field">
         <span :title="t('result.thicknessMidTitle')">{{ t('result.thicknessMid') }}</span>
         <div class="fml-limit-input-row">
-          <input
-            type="number"
-            min="1"
-            step="1"
-            :value="fmlThicknessMidCm"
+          <ScaleLengthInput
+            :cm="fmlThicknessMidCm"
+            :unit="unit"
+            :min-cm="1"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @input="onThicknessMidInput"
+            @update:cm="emit('update:fmlThicknessMidCm', $event)"
           />
           <span class="fml-limit-spacer" aria-hidden="true" />
           <span class="fml-limit-spacer band-spacer" aria-hidden="true" />
@@ -130,13 +101,12 @@ function onBandMaxBoundaryInput(event: Event): void {
       <label class="fml-limit-field">
         <span :title="t('result.thicknessMaxTitle')">{{ t('result.thicknessMax') }}</span>
         <div class="fml-limit-input-row">
-          <input
-            type="number"
-            min="1"
-            step="1"
-            :value="fmlThicknessMaxCm"
+          <ScaleLengthInput
+            :cm="fmlThicknessMaxCm"
+            :unit="unit"
+            :min-cm="1"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @input="onThicknessMaxInput"
+            @update:cm="emit('update:fmlThicknessMaxCm', $event)"
           />
           <button
             type="button"
@@ -150,15 +120,14 @@ function onBandMaxBoundaryInput(event: Event): void {
           >
             ⊕
           </button>
-          <input
-            type="number"
-            class="band-input"
-            min="1"
-            step="0.1"
-            :title="t('result.bandMaxTitle')"
-            :value="fmlBandMaxBoundaryCm"
+          <ScaleLengthInput
+            input-class="band-input"
+            :cm="fmlBandMaxBoundaryCm"
+            :unit="unit"
+            :min-cm="1"
+            :aria-label="t('result.bandMaxTitle')"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @input="onBandMaxBoundaryInput"
+            @update:cm="emit('update:fmlBandMaxBoundaryCm', $event)"
           />
         </div>
       </label>
@@ -166,8 +135,8 @@ function onBandMaxBoundaryInput(event: Event): void {
     <p class="fml-band-hint">
       {{
         t('result.bandHint', {
-          mid: fmlBandMidBoundaryCm,
-          max: fmlBandMaxBoundaryCm,
+          mid: formatScaleInputLabel(fmlBandMidBoundaryCm, unit),
+          max: formatScaleInputLabel(fmlBandMaxBoundaryCm, unit),
         })
       }}
       <span class="fml-band-ratio">{{ t('result.bandHintRatio') }}</span>

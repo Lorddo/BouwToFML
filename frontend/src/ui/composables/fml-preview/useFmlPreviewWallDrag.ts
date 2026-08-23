@@ -1,9 +1,11 @@
 import { ref, type Ref } from 'vue'
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { FloorArea, Point2D, Wall } from '@/core/fml/types'
+import { cloneAreasSnapshot } from './fml-preview-area-live'
 import {
   type JunctionNode,
   type WallEndRef,
   resolveWallSlidePointerDelta,
+  snapWallSlideDeltaToJunctions,
   stableJunctionId,
 } from '@/ui/components/fml-preview-junctions'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
@@ -34,6 +36,7 @@ export function useFmlPreviewWallDrag(options: {
     originCm: Point2D
     lastCm: Point2D
     baseWalls: Wall[]
+    baseAreas: FloorArea[] | undefined
     /** Laatste Ctrl/Meta tijdens sleep — ook gebruikt bij pointerup (merge skip). */
     snapDisabled: boolean
   } | null = null
@@ -43,6 +46,7 @@ export function useFmlPreviewWallDrag(options: {
     wall: { a: Point2D; b: Point2D }
     startCm: Point2D
     baseWalls: Wall[]
+    baseAreas: FloorArea[] | undefined
   } | null = null
 
   let moveDragPending: {
@@ -109,6 +113,7 @@ export function useFmlPreviewWallDrag(options: {
       baseWalls: JSON.parse(
         JSON.stringify(ridgeGraph ? editor.ridgeWalls.value : editor.walls.value),
       ) as Wall[],
+      baseAreas: cloneAreasSnapshot(editor.areas.value),
       snapDisabled: evt.ctrlKey || evt.metaKey,
     }
     window.addEventListener('pointermove', onJunctionPointerMove)
@@ -130,7 +135,7 @@ export function useFmlPreviewWallDrag(options: {
       ? pointer
       : editor.snapJunctionPoint(junctionDrag.refs, pointer, junctionDrag.baseWalls)
     junctionDrag.lastCm = next
-    editor.previewJunctionMove(junctionDrag.baseWalls, node, next)
+    editor.previewJunctionMove(junctionDrag.baseWalls, node, next, junctionDrag.baseAreas)
   }
 
   function onJunctionPointerUp(evt: MouseEvent): void {
@@ -153,6 +158,7 @@ export function useFmlPreviewWallDrag(options: {
           editor.applyJunctionMerge(current, mergeTarget)
         }
       }
+      editor.flushAreaRegen()
       syncPlanToParent()
     }
     draggingJunctionId.value = null
@@ -178,6 +184,7 @@ export function useFmlPreviewWallDrag(options: {
       wall: { a: wall.a, b: wall.b },
       startCm: cm,
       baseWalls: JSON.parse(JSON.stringify(sourceWalls)) as Wall[],
+      baseAreas: cloneAreasSnapshot(editor.areas.value),
     }
     window.addEventListener('pointermove', onWallDragMove)
     window.addEventListener('pointerup', onWallDragEnd, { once: true })
@@ -190,13 +197,18 @@ export function useFmlPreviewWallDrag(options: {
     if (!cm) return
     const dx = cm.x - drag.startCm.x
     const dy = cm.y - drag.startCm.y
-    const { delta, slideDir } = resolveWallSlidePointerDelta({ x: dx, y: dy }, drag.wall)
-    editor.previewWallSlideAlongAxis(drag.baseWalls, drag.wallId, delta, slideDir)
+    const { delta: rawDelta, slideDir } = resolveWallSlidePointerDelta({ x: dx, y: dy }, drag.wall)
+    const delta =
+      evt.ctrlKey || evt.metaKey
+        ? rawDelta
+        : snapWallSlideDeltaToJunctions(drag.wall, drag.wallId, drag.baseWalls, rawDelta, slideDir)
+    editor.previewWallSlideAlongAxis(drag.baseWalls, drag.wallId, delta, slideDir, drag.baseAreas)
   }
 
   function endWallDrag(): void {
     window.removeEventListener('pointermove', onWallDragMove)
     if (wallDrag) {
+      editor.flushAreaRegen()
       syncPlanToParent()
     }
     wallDrag = null

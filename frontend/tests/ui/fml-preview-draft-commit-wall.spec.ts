@@ -65,8 +65,7 @@ describe('FML wall thickness draft commit', () => {
       wallSelection.syncWallThicknessDraftFromSelection()
       expect(wallSelection.wallThicknessDraft.value).toBe(10)
 
-      const inputEvent = { target: { value: '18' } } as unknown as Event
-      wallSelection.onWallThicknessInput(inputEvent)
+      wallSelection.onWallThicknessCm(18)
       expect(editor.walls.value[0].thickness).toBe(10)
 
       wallSelection.clearSelection()
@@ -103,7 +102,7 @@ describe('FML wall thickness draft commit', () => {
       selection.settingsWallIds.value = ['w1']
       wallSelection.syncWallThicknessDraftFromSelection()
 
-      wallSelection.onWallThicknessInput({ target: { value: '25' } } as unknown as Event)
+      wallSelection.onWallThicknessCm(25)
       expect(editor.walls.value[0].thickness).toBe(10)
 
       vi.advanceTimersByTime(700)

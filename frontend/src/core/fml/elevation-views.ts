@@ -59,6 +59,9 @@ function normalizeDrawing(raw: unknown): DrawingMeta | undefined {
   if (typeof record.alpha === 'number' && Number.isFinite(record.alpha))
     drawing.alpha = record.alpha
   if (typeof record.visible === 'boolean') drawing.visible = record.visible
+  if (record.extras && typeof record.extras === 'object') {
+    drawing.extras = { ...(record.extras as FmlExtras) }
+  }
   return drawing
 }
 

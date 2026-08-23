@@ -23,6 +23,10 @@ import {
   FACTORY_OPENING_COLORS,
   type OpeningDisplayColors,
 } from '@/ui/composables/settings/opening-display-colors'
+import {
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 
 withDefaults(
   defineProps<{
@@ -33,7 +37,7 @@ withDefaults(
     layoutScale?: number
     /** false = kamer-/FML-labels niet mounten. */
     labelsVisible?: boolean
-    /** Overlay: maten op area-zijden ≥ 50 cm. */
+    /** Overlay: maten op area-zijden (≥ 5 cm; kort bij inzoomen). */
     areaSideDimsVisible?: boolean
     cornerMarkerMode?: CornerMarkerMode
     cornerMarkers?: RenderCornerMarker[]
@@ -69,6 +73,7 @@ withDefaults(
     /** Vloerdefault bovenlicht ramen (preview-badge). */
     windowBovenlichtDefault?: boolean
     openingColors?: OpeningDisplayColors
+    planDisplayStyle?: PlanDisplayStyleChoice
     settingsAreaId: string | null
     settingsSurfaceId: string | null
     settingsLabelId: string | null
@@ -117,6 +122,7 @@ withDefaults(
     doorBovenlichtDefault: false,
     windowBovenlichtDefault: false,
     openingColors: () => ({ ...FACTORY_OPENING_COLORS }),
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
     settingsItemId: null,
     moveItemId: null,
     itemDragPreview: null,
@@ -420,6 +426,7 @@ onBeforeUnmount(unbindGroupDrag)
             :door-bovenlicht-default="doorBovenlichtDefault"
             :window-bovenlicht-default="windowBovenlichtDefault"
             :opening-colors="openingColors"
+            :plan-display-style="planDisplayStyle"
             :inspect-colors="inspectColors"
             :layout-scale="layoutScale"
             :view-scale="viewScale"

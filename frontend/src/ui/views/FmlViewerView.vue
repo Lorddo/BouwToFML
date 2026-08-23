@@ -44,16 +44,18 @@ import {
   stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
 import {
+  copyElevationUnderlay,
+  copyFloorUnderlay,
+  listElevationUnderlayDonors,
+  listFloorUnderlayDonors,
+} from '@/core/fml/copy-underlay-drawing'
+import {
   elevationViewForGroup,
   setElevationProjection,
   setElevationViewDrawing,
 } from '@/core/fml/elevation-views'
 import { setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
-import {
-  overwriteRidgeDakThickness,
-  setFloorRidgeHeights,
-  setRidgeDisplayWidthCm,
-} from '@/core/fml/ridge-walls'
+import { overwriteRidgeDakThickness } from '@/core/fml/ridge-walls'
 import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
 import {
   countExpandableBovenlicht,
@@ -84,7 +86,10 @@ import {
 import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import {
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 import {
   fmlRescaleStateFromImageHandles,
   initFmlRescaleStateFromWalls,
@@ -105,7 +110,6 @@ const activeFloorIndex = ref(0)
 const previewCanvasRef = ref<{
   flushPendingFieldCommits?: () => void
   sanitizeWalls?: () => boolean
-  generateRoofPlanes?: () => boolean | Promise<boolean>
   applyStampToActiveFloor?: () => boolean
   canApplyStampOnActiveFloor?: () => boolean
   applyCornerMarkerModeFromSettings?: () => void
@@ -121,6 +125,8 @@ const sidebarOpen = ref(true)
 const sidebarOpenBeforeFullscreen = ref(true)
 const coarsePointer = ref(false)
 const canvasFullscreen = ref(false)
+const reuseUnderlayOpen = ref(false)
+const reuseUnderlayWrapRef = ref<HTMLElement | null>(null)
 
 watch(canvasFullscreen, (on) => {
   emit('update:canvasFullscreen', on)
@@ -141,9 +147,20 @@ function syncCoarsePointer(): void {
 }
 
 function onViewerKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && reuseUnderlayOpen.value) {
+    reuseUnderlayOpen.value = false
+    return
+  }
   if (event.key === 'Escape' && canvasFullscreen.value) {
     canvasFullscreen.value = false
   }
+}
+
+function onReuseUnderlayPointerDown(event: PointerEvent): void {
+  if (!reuseUnderlayOpen.value) return
+  const el = reuseUnderlayWrapRef.value
+  if (el && event.target instanceof Node && el.contains(event.target)) return
+  reuseUnderlayOpen.value = false
 }
 
 onMounted(() => {
@@ -151,12 +168,14 @@ onMounted(() => {
   coarseMq.addEventListener('change', syncCoarsePointer)
   narrowMq.addEventListener('change', syncCoarsePointer)
   window.addEventListener('keydown', onViewerKeydown)
+  document.addEventListener('pointerdown', onReuseUnderlayPointerDown, true)
 })
 
 onBeforeUnmount(() => {
   coarseMq.removeEventListener('change', syncCoarsePointer)
   narrowMq.removeEventListener('change', syncCoarsePointer)
   window.removeEventListener('keydown', onViewerKeydown)
+  document.removeEventListener('pointerdown', onReuseUnderlayPointerDown, true)
 })
 
 function flushPreviewFieldCommits(): void {
@@ -232,8 +251,8 @@ const {
   elevationUnderlayHeightPx,
   elevationUnderlayLayout,
   showGevelsChip,
-  elevationHeightRows,
-  elevationRidgeDisplayWidthCm,
+  elevationDakThicknessCm,
+  elevationFloorGroups,
   elevationProjection,
   activeUnderlayLayout,
   activeUnderlayWidthPx,
@@ -257,6 +276,52 @@ watch(elevationGroupId, (_next, prev) => {
   underlayMoveMode.value = false
   void syncElevationUnderlayFromPlan()
 })
+
+const underlayReuseDonors = computed(() => {
+  const current = plan.value
+  if (!current) return []
+  if (gevelsMode.value) return listElevationUnderlayDonors(current, elevationGroupId.value)
+  return listFloorUnderlayDonors(current, activeFloorIndex.value)
+})
+
+watch([gevelsMode, activeFloorIndex, elevationGroupId], () => {
+  reuseUnderlayOpen.value = false
+})
+
+watch(underlayReuseDonors, (opts) => {
+  if (opts.length === 0) reuseUnderlayOpen.value = false
+})
+
+async function onReuseUnderlayFromDonor(donorId: string): Promise<void> {
+  reuseUnderlayOpen.value = false
+  const current = plan.value
+  if (!current || inspectMode.value) return
+  cancelFmlRescale()
+  cancelUnderlayScale()
+  if (gevelsMode.value && elevationGroupId.value) {
+    const next = copyElevationUnderlay(current, donorId, elevationGroupId.value)
+    if (!next) return
+    plan.value = next
+    underlayHint.value = null
+    error.value = null
+    await syncElevationUnderlayFromPlan()
+    await nextTick()
+    previewCanvasRef.value?.resetView?.()
+    return
+  }
+  const fromIndex = Number(donorId)
+  if (!Number.isInteger(fromIndex)) return
+  const next = copyFloorUnderlay(current, fromIndex, activeFloorIndex.value)
+  if (!next) return
+  plan.value = next
+  underlayHint.value = null
+  error.value = null
+  await syncUnderlayForActiveFloor()
+  if ((next.floors[activeFloorIndex.value]?.walls.length ?? 0) === 0) {
+    await nextTick()
+    previewCanvasRef.value?.resetView?.()
+  }
+}
 
 const inspectFacadeSelectValue = computed(() => {
   const hit = lastInspectHit.value
@@ -300,7 +365,7 @@ const {
   sessionDefaults,
   activeFloorDefaults,
   defaultsForFloor,
-  onFloorDefaultNumber,
+  onFloorDefaultCm,
   onFloorDefaultBool,
   hydrateFloorDefaultsFromPlan,
   addFloorDefaultsSlot,
@@ -537,6 +602,7 @@ const fmlText = computed(() => {
     windowBovenlichtDefault: (_floor, index) => defaultsForFloor(index).windowBovenlichtDefault,
     bovenlichtHeightCm: (_floor, index) => defaultsForFloor(index).bovenlichtHeightCm,
     bovenlichtGapCm: (_floor, index) => defaultsForFloor(index).bovenlichtGapCm,
+    useMetric: loadUserSettings().unitSystem === 'metric',
   })
 })
 
@@ -898,20 +964,16 @@ function onSelectDakDesign(floorIndex: number): void {
   if (floorIndex !== activeFloorIndex.value) void selectFloor(floorIndex)
 }
 
-async function onGenerateRoofPlanes(): Promise<void> {
-  leaveGevelsMode()
-  await nextTick()
-  const ok = await previewCanvasRef.value?.generateRoofPlanes?.()
-  if (ok === false) return
-  enterDakMode()
-}
-
 async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
   if (!plan.value) return
   const count = countPlanWalls(plan.value, floorIndex)
   const ok = await confirmFmlChrome({
     title: t('viewer.defaultsOverwriteTitle'),
-    message: t('viewer.defaultsOverwriteWallFloor', { cm, count }),
+    message: t('viewer.defaultsOverwriteWallFloor', {
+      length: formatScaleInputLabel(cm, scaleInputUnit.value),
+      cm: formatScaleInputLabel(cm, scaleInputUnit.value),
+      count,
+    }),
     confirmLabel: t('common.apply'),
     cancelLabel: t('common.cancel'),
   })
@@ -922,16 +984,6 @@ async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<v
 function onElevationNok(cm: number): void {
   if (!plan.value) return
   plan.value = overwriteRidgeDakThickness(setNokThicknessCm(plan.value, cm), cm)
-}
-
-function onElevationRidgeZ(floorIndex: number, cm: number): void {
-  if (!plan.value) return
-  plan.value = setFloorRidgeHeights(plan.value, floorIndex, cm)
-}
-
-function onElevationRidgeDisplayWidth(cm: number): void {
-  if (!plan.value) return
-  plan.value = setRidgeDisplayWidthCm(plan.value, cm)
 }
 
 function onElevationProjection(mode: 'architect' | 'projective'): void {
@@ -1228,6 +1280,36 @@ defineExpose({
                   @input="setPlanName(($event.target as HTMLInputElement).value)"
                 />
               </label>
+              <div class="sidebar-icon-row sidebar-plan-actions">
+                <label
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-disabled': isLoadingFml }"
+                  :title="t('viewer.chooseFml')"
+                  :aria-label="t('viewer.chooseFml')"
+                >
+                  <ToolbeltIcon name="upload" />
+                  <span>{{ t('viewer.chooseFml') }}</span>
+                  <input
+                    type="file"
+                    accept=".fml,.json,.json.fml"
+                    :disabled="isLoadingFml"
+                    @change="onFileInput"
+                  />
+                </label>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': projectOrientFlipX }"
+                  :disabled="!plan || floors.length === 0"
+                  :title="t('result.mirrorProjectHint')"
+                  :aria-label="t('result.mirrorProject')"
+                  :aria-pressed="projectOrientFlipX"
+                  @click="applyViewerProjectOrient('flipX')"
+                >
+                  <ToolbeltIcon name="mirror_plan" />
+                  <span>{{ t('result.mirrorProject') }}</span>
+                </button>
+              </div>
               <div class="floor-edit-list">
                 <div
                   v-for="(floor, index) in floors"
@@ -1260,47 +1342,6 @@ defineExpose({
                   <span>{{ t('project.addFloor') }}</span>
                 </button>
               </div>
-              <div class="sidebar-icon-row sidebar-plan-actions">
-                <label
-                  class="sidebar-icon-btn"
-                  :class="{ 'is-disabled': isLoadingFml }"
-                  :title="t('viewer.chooseFml')"
-                  :aria-label="t('viewer.chooseFml')"
-                >
-                  <ToolbeltIcon name="upload" />
-                  <span>{{ t('viewer.chooseFml') }}</span>
-                  <input
-                    type="file"
-                    accept=".fml,.json,.json.fml"
-                    :disabled="isLoadingFml"
-                    @change="onFileInput"
-                  />
-                </label>
-                <button
-                  type="button"
-                  class="sidebar-icon-btn"
-                  :class="{ 'is-on': projectOrientFlipX }"
-                  :disabled="!plan || floors.length === 0"
-                  :title="t('result.mirrorProjectHint')"
-                  :aria-label="t('result.mirrorProject')"
-                  :aria-pressed="projectOrientFlipX"
-                  @click="applyViewerProjectOrient('flipX')"
-                >
-                  <ToolbeltIcon name="mirror_plan" />
-                  <span>{{ t('result.mirrorProject') }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="sidebar-icon-btn"
-                  :disabled="!plan || floors.length === 0"
-                  :title="t('result.toolbar.generateRoofPlanesAria')"
-                  :aria-label="t('result.toolbar.generateRoofPlanesAria')"
-                  @click="onGenerateRoofPlanes()"
-                >
-                  <ToolbeltIcon name="rect" />
-                  <span>{{ t('result.toolbar.generateRoofPlanes') }}</span>
-                </button>
-              </div>
             </div>
           </details>
 
@@ -1322,6 +1363,38 @@ defineExpose({
                   @change="onUnderlayFileInput"
                 />
               </label>
+              <div ref="reuseUnderlayWrapRef" class="underlay-reuse">
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': reuseUnderlayOpen }"
+                  :disabled="underlayReuseDonors.length === 0 || isLoadingFml"
+                  :title="
+                    underlayReuseDonors.length > 0
+                      ? t('viewer.reuseUnderlayHint')
+                      : t('viewer.reuseUnderlayHintBlocked')
+                  "
+                  :aria-label="t('viewer.reuseUnderlay')"
+                  :aria-expanded="reuseUnderlayOpen"
+                  :aria-haspopup="true"
+                  @click="reuseUnderlayOpen = !reuseUnderlayOpen"
+                >
+                  <ToolbeltIcon name="copy" />
+                  <span>{{ t('viewer.reuseUnderlay') }}</span>
+                </button>
+                <div v-if="reuseUnderlayOpen" class="underlay-reuse-menu" role="listbox">
+                  <button
+                    v-for="opt in underlayReuseDonors"
+                    :key="opt.id"
+                    type="button"
+                    role="option"
+                    class="sidebar-icon-btn"
+                    @click="onReuseUnderlayFromDonor(opt.id)"
+                  >
+                    {{ opt.name }}
+                  </button>
+                </div>
+              </div>
               <button
                 type="button"
                 class="sidebar-icon-btn"
@@ -1417,14 +1490,13 @@ defineExpose({
           <details v-if="gevelsMode && !inspectMode" class="fml-fold defaults-fold" open>
             <summary>{{ t('viewer.elevationHeightsFold') }}</summary>
             <FmlElevationHeightFields
-              :rows="elevationHeightRows"
-              :ridge-display-width-cm="elevationRidgeDisplayWidthCm"
+              :unit="scaleInputUnit"
+              :dak-thickness-cm="elevationDakThicknessCm"
+              :floors="elevationFloorGroups"
               :projection="elevationProjection"
               @nok="onElevationNok"
               @story="onElevationStoryHeight"
-              @ridge="onElevationRidgeZ"
               @slab="onElevationSlab"
-              @ridge-display-width="onElevationRidgeDisplayWidth"
               @projection="onElevationProjection"
             />
           </details>
@@ -1522,9 +1594,10 @@ defineExpose({
             </div>
             <FmlViewerDefaultsFields
               :defaults="activeFloorDefaults"
+              :unit="scaleInputUnit"
               :bovenlicht-packed="bovenlichtPacked"
               :hint="t('viewer.defaultsHintFloor')"
-              @number="onFloorDefaultNumber"
+              @cm="onFloorDefaultCm"
               @bool="onFloorDefaultBool"
               @packed="onBovenlichtPackedChange"
             />
@@ -1590,7 +1663,7 @@ defineExpose({
               >
                 <option value="">{{ t('result.toolbar.facadeGroupNone') }}</option>
                 <option v-for="group in inspectFacadeGroups" :key="group.id" :value="group.id">
-                  {{ group.code }} — {{ group.name }}
+                  {{ group.name || group.id }}
                 </option>
                 <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
               </select>
@@ -1601,7 +1674,11 @@ defineExpose({
           </div>
 
           <div v-if="openingOverflow || warnings.length > 0" class="download-warnings">
-            <FmlOpeningOverflowNotice v-if="openingOverflow" :summary="openingOverflow" />
+            <FmlOpeningOverflowNotice
+              v-if="openingOverflow"
+              :summary="openingOverflow"
+              :unit="scaleInputUnit"
+            />
             <div v-if="warnings.length > 0" class="warnings">
               <p v-for="(warning, index) in warnings" :key="index">{{ warning.message }}</p>
             </div>
@@ -1739,10 +1816,12 @@ defineExpose({
             ref="previewCanvasRef"
             :plan="plan"
             :group-id="elevationGroupId"
+            :unit="scaleInputUnit"
             :underlay-src="elevationUnderlaySrc"
             :underlay-width-px="elevationUnderlayWidthPx"
             :underlay-height-px="elevationUnderlayHeightPx"
             :underlay-opacity="elevationUnderlaySrc ? underlayOpacity : 0"
+            :content-opacity="fmlOpacity"
             :cm-origin="elevationUnderlayLayout?.origin ?? null"
             :px-per-mm-x="elevationUnderlayLayout?.pxPerMmX ?? 1"
             :px-per-mm-y="elevationUnderlayLayout?.pxPerMmY ?? 1"
@@ -1965,6 +2044,22 @@ defineExpose({
 
 .sidebar-icon-row .sidebar-icon-btn--primary {
   display: none;
+}
+
+.underlay-reuse {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.underlay-reuse-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
 }
 
 @media (max-width: 600px) {

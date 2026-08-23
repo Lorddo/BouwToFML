@@ -14,13 +14,15 @@ import type { Opening, OpeningType, Point2D, Wall } from '@/core/fml/types'
 
 export type { OpeningLocation }
 
-const MIN_OPENING_WIDTH_CM = 10
-const MAX_OPENING_WIDTH_CM = 400
+export const MIN_OPENING_WIDTH_CM = 10
+/** Sanity-cap; echte limiet is de (collineaire) muur. 4 m was te krap voor puien. */
+export const MAX_OPENING_WIDTH_CM = 2000
 /** Kozijn-rondom; ook ventilatierooster (~10 cm). */
 export const MIN_OPENING_HEIGHT_CM = 10
-const MAX_OPENING_HEIGHT_CM = 500
+/** Zelfde sanity-cap als breedte; echte limiet is de muurtop (`az`/`bz`). */
+const MAX_OPENING_HEIGHT_CM = 2000
 const MIN_OPENING_SILL_Z_CM = 0
-const MAX_OPENING_SILL_Z_CM = 400
+const MAX_OPENING_SILL_Z_CM = 2000
 
 export function buildDoorOpeningId(wallId: string, opening: Opening, openingIndex: number): string {
   return buildLocalOpeningId(wallId, { ...opening, type: 'door' }, openingIndex)

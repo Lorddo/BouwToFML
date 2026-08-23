@@ -1,7 +1,6 @@
-import { floorplannerLeftNormal, wallDirectionUnit } from '@/core/fml/fml-wall-geom'
+import { wallJoinFaceCorner } from '@/core/fml/fml-wall-geom'
 import type { Point2D, Wall } from '@/core/fml/types'
 import { buildJunctions, type JunctionNode } from '@/ui/components/fml-preview-junction-core'
-import { resolveWallExtents } from '@/ui/components/fml-preview-wall-polygons'
 import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-mode'
 
 /** Eindpunten op dezelfde H/V-lijn (cm). Strakker dan snap (0,5 / 2). */
@@ -93,30 +92,6 @@ function sectorKind(wallA: Wall, wallB: Wall): CornerKind {
   return 'skew'
 }
 
-/** Normaal van de muur-as de sector in (projectie van de bissectrice). */
-function inwardFromBisector(dir: Point2D, bisector: Point2D): Point2D {
-  const along = dir.x * bisector.x + dir.y * bisector.y
-  return (
-    normalizeDir(bisector.x - dir.x * along, bisector.y - dir.y * along) ?? {
-      x: -dir.y,
-      y: dir.x,
-    }
-  )
-}
-
-function faceExtentIntoSector(wall: Wall, inward: Point2D): number {
-  const left = floorplannerLeftNormal(wallDirectionUnit(wall))
-  const { plus, minus } = resolveWallExtents(wall)
-  return inward.x * left.x + inward.y * left.y >= 0 ? plus : minus
-}
-
-function intersectLines(p1: Point2D, d1: Point2D, p2: Point2D, d2: Point2D): Point2D | null {
-  const cross = d1.x * d2.y - d1.y * d2.x
-  if (Math.abs(cross) < MIN_DIR_CM) return null
-  const s = ((p2.x - p1.x) * d2.y - (p2.y - p1.y) * d2.x) / cross
-  return { x: p1.x + s * d1.x, y: p1.y + s * d1.y }
-}
-
 /** Binnenhoek van de twee faces + pad de sector in (cm). */
 export function innerCornerAnchorCm(
   junction: Point2D,
@@ -127,15 +102,9 @@ export function innerCornerAnchorCm(
   bisector: Point2D,
   padCm = CORNER_MARKER_PAD_CM,
 ): Point2D {
-  const inA = inwardFromBisector(dirA, bisector)
-  const inB = inwardFromBisector(dirB, bisector)
-  const eA = faceExtentIntoSector(wallA, inA)
-  const eB = faceExtentIntoSector(wallB, inB)
-  const p1 = { x: junction.x + inA.x * eA, y: junction.y + inA.y * eA }
-  const p2 = { x: junction.x + inB.x * eB, y: junction.y + inB.y * eB }
-  const hit = intersectLines(p1, dirA, p2, dirB) ?? {
-    x: junction.x + inA.x * eA + inB.x * eB,
-    y: junction.y + inA.y * eA + inB.y * eB,
+  const hit = wallJoinFaceCorner(junction, wallA, dirA, wallB, dirB) ?? {
+    x: junction.x + bisector.x * Math.max(wallA.thickness, wallB.thickness) * 0.5,
+    y: junction.y + bisector.y * Math.max(wallA.thickness, wallB.thickness) * 0.5,
   }
   return {
     x: hit.x + bisector.x * padCm,

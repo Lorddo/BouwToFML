@@ -1,5 +1,10 @@
 import polygonClipping from 'polygon-clipping'
-import { clampWallBalance, floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
+import {
+  clampWallBalance,
+  floorplannerLeftNormal,
+  wallFaces,
+  wallJoinFaceCorner,
+} from '@/core/fml/fml-wall-geom'
 import type { Point2D } from '@/core/fml/types'
 
 export interface WallPolygonInput {
@@ -28,8 +33,12 @@ export interface WallRenderGeometry {
 const ENDPOINT_EPS_CM = 3
 /** Half-thickness end extend so meeting walls always overlap for boolean union. */
 const END_EXTEND_FACTOR = 0.5
-/** Extra inflate (cm) before clipper union to seal near-touching edges. */
-const UNION_SEAL_CM = 0.5
+/** Tiny overlap past a miter so clipper union seals without bloating faces. */
+const UNION_SEAL_CM = 0.05
+/** Nearly-collinear join: skip miter (otherwise a spike). */
+const FLAT_TURN_CROSS = 0.035
+/** Miter farther than this × thickness falls back to a square cap. */
+const MAX_MITER_THICKNESS_FACTOR = 4
 /**
  * Snap clipper coords to 0.01 cm. Raw L10 floats create near-degenerate
  * intersections → polygon-clipping "Unable to complete output ring".
@@ -209,12 +218,16 @@ function neighborsAtEnd(
   end: 'a' | 'b',
   adj: Map<string, Array<{ wallId: string; end: 'a' | 'b' }>>,
   wallById: Map<string, WallPolygonInput>,
-): WallPolygonInput[] {
+): Array<{ wall: WallPolygonInput; end: 'a' | 'b' }> {
   const key = endpointKey(pointAtEnd(wall, end))
   const entries = adj.get(key) ?? []
-  return entries
-    .filter((entry) => entry.wallId !== wall.id)
-    .map((entry) => wallById.get(entry.wallId)!)
+  const out: Array<{ wall: WallPolygonInput; end: 'a' | 'b' }> = []
+  for (const entry of entries) {
+    if (entry.wallId === wall.id) continue
+    const other = wallById.get(entry.wallId)
+    if (other) out.push({ wall: other, end: entry.end })
+  }
+  return out
 }
 
 /**
@@ -234,13 +247,9 @@ function endOutDir(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
   return end === 'a' ? scale(along, -1) : along
 }
 
-/**
- * Join-cap: stop just inside the neighbor face. Union still seals via
- * {@link UNION_SEAL_CM} inflate; without this inset the incoming cap + inflate
- * pokes ~0.5 cm past a straight through-wall (1 px at typical junction zoom).
- */
+/** Join-cap overlap: miter is exact; this is only the square-cap fallback. */
 function joinExtendCm(needed: number): number {
-  return Math.max(0, needed - UNION_SEAL_CM)
+  return Math.max(0, needed) + UNION_SEAL_CM
 }
 
 /**
@@ -259,7 +268,7 @@ function resolveEndExtendCm(
   const out = endOutDir(wall, end)
   const neighbors = neighborsAtEnd(wall, end, adj, wallById)
   if (neighbors.length > 0) {
-    const needed = Math.max(...neighbors.map((neighbor) => extentAlongDirection(neighbor, out)))
+    const needed = Math.max(...neighbors.map((entry) => extentAlongDirection(entry.wall, out)))
     return joinExtendCm(needed)
   }
 
@@ -272,9 +281,166 @@ function resolveEndExtendCm(
   return Math.max(wall.thickness * END_EXTEND_FACTOR, UNION_SEAL_CM)
 }
 
+function intoWallFromEnd(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
+  const along = alongWallDir(wall)
+  return end === 'a' ? along : scale(along, -1)
+}
+
+function intersectFaceLines(
+  a: { a: Point2D; b: Point2D },
+  b: { a: Point2D; b: Point2D },
+): Point2D | null {
+  const dax = a.b.x - a.a.x
+  const day = a.b.y - a.a.y
+  const dbx = b.b.x - b.a.x
+  const dby = b.b.y - b.a.y
+  const denom = dax * dby - day * dbx
+  if (Math.abs(denom) < 1e-9) return null
+  const t = ((b.a.x - a.a.x) * dby - (b.a.y - a.a.y) * dbx) / denom
+  if (!Number.isFinite(t)) return null
+  return { x: a.a.x + dax * t, y: a.a.y + day * t }
+}
+
+function squareEndCorners(
+  wall: WallPolygonInput,
+  end: 'a' | 'b',
+  extendCm: number,
+): { left: Point2D; right: Point2D } {
+  const along = alongWallDir(wall)
+  const n = leftNormal(along)
+  const extents = resolveWallExtents(wall)
+  const origin = add(pointAtEnd(wall, end), scale(along, end === 'a' ? -extendCm : extendCm))
+  return {
+    left: add(origin, scale(n, extents.plus)),
+    right: add(origin, scale(n, -extents.minus)),
+  }
+}
+
+function assignLeftRight(
+  wall: WallPolygonInput,
+  end: 'a' | 'b',
+  c1: Point2D,
+  c2: Point2D,
+  maxMiter: number,
+): { left: Point2D; right: Point2D } | null {
+  const junction = pointAtEnd(wall, end)
+  if (distance(c1, junction) > maxMiter || distance(c2, junction) > maxMiter) return null
+  const faces = wallFaces(wall)
+  const originL = end === 'a' ? faces.left.a : faces.left.b
+  const originR = end === 'a' ? faces.right.a : faces.right.b
+  if (
+    distance(c1, originL) + distance(c2, originR) <=
+    distance(c1, originR) + distance(c2, originL)
+  ) {
+    return { left: c1, right: c2 }
+  }
+  return { left: c2, right: c1 }
+}
+
+function nearHostFaceCorners(
+  wall: WallPolygonInput,
+  end: 'a' | 'b',
+  host: WallPolygonInput,
+): { left: Point2D; right: Point2D } | null {
+  const out = endOutDir(wall, end)
+  const hostFaces = wallFaces(host)
+  const n = leftNormal(alongWallDir(host))
+  const near = n.x * out.x + n.y * out.y >= 0 ? hostFaces.left : hostFaces.right
+  const self = wallFaces(wall)
+  const left = intersectFaceLines(self.left, near)
+  const right = intersectFaceLines(self.right, near)
+  if (!left || !right) return null
+  const maxMiter = Math.max(wall.thickness, host.thickness) * MAX_MITER_THICKNESS_FACTOR
+  const junction = pointAtEnd(wall, end)
+  if (distance(left, junction) > maxMiter || distance(right, junction) > maxMiter) return null
+  return { left, right }
+}
+
+function sectorCorner(
+  junction: Point2D,
+  wall: WallPolygonInput,
+  into: Point2D,
+  other: WallPolygonInput,
+  otherDir: Point2D,
+  maxMiter: number,
+  opposite = false,
+): Point2D | null {
+  const cross = into.x * otherDir.y - into.y * otherDir.x
+  const dot = into.x * otherDir.x + into.y * otherDir.y
+  if (Math.abs(cross) < FLAT_TURN_CROSS && dot < 0) return null
+  const hit = wallJoinFaceCorner(junction, wall, into, other, otherDir, opposite)
+  if (!hit || distance(hit, junction) > maxMiter) return null
+  return hit
+}
+
+function tryMiterEndCorners(
+  wall: WallPolygonInput,
+  end: 'a' | 'b',
+  neighbors: Array<{ wall: WallPolygonInput; end: 'a' | 'b' }>,
+  hosts: WallPolygonInput[],
+): { left: Point2D; right: Point2D } | null {
+  if (neighbors.length === 0 && hosts.length > 0) {
+    return nearHostFaceCorners(wall, end, hosts[0])
+  }
+  if (neighbors.length === 0) return null
+
+  const junction = pointAtEnd(wall, end)
+  const into = intoWallFromEnd(wall, end)
+  const maxMiter =
+    Math.max(wall.thickness, ...neighbors.map((entry) => entry.wall.thickness)) *
+    MAX_MITER_THICKNESS_FACTOR
+
+  if (neighbors.length === 1) {
+    const other = neighbors[0]
+    const otherDir = intoWallFromEnd(other.wall, other.end)
+    const inner = sectorCorner(junction, wall, into, other.wall, otherDir, maxMiter)
+    const outer = sectorCorner(junction, wall, into, other.wall, otherDir, maxMiter, true)
+    if (!inner || !outer) return null
+    return assignLeftRight(wall, end, inner, outer, maxMiter)
+  }
+
+  const arms = [
+    { wall, dir: into, id: wall.id },
+    ...neighbors.map((entry) => ({
+      wall: entry.wall,
+      dir: intoWallFromEnd(entry.wall, entry.end),
+      id: entry.wall.id,
+    })),
+  ]
+  arms.sort(
+    (a, b) =>
+      Math.atan2(a.dir.y, a.dir.x) - Math.atan2(b.dir.y, b.dir.x) || a.id.localeCompare(b.id),
+  )
+  const index = arms.findIndex((arm) => arm.id === wall.id)
+  if (index < 0) return null
+  const prev = arms[(index - 1 + arms.length) % arms.length]
+  const next = arms[(index + 1) % arms.length]
+  const cPrev = sectorCorner(junction, wall, into, prev.wall, prev.dir, maxMiter)
+  const cNext = sectorCorner(junction, wall, into, next.wall, next.dir, maxMiter)
+  if (cPrev && cNext) return assignLeftRight(wall, end, cPrev, cNext, maxMiter)
+  return null
+}
+
+function endCorners(
+  wall: WallPolygonInput,
+  end: 'a' | 'b',
+  adj: Map<string, Array<{ wallId: string; end: 'a' | 'b' }>>,
+  wallById: Map<string, WallPolygonInput>,
+  walls: WallPolygonInput[],
+): { left: Point2D; right: Point2D } {
+  const len = distance(wall.a, wall.b)
+  const maxExtend = Math.max(0, len * 0.45)
+  const extend = Math.min(resolveEndExtendCm(wall, end, adj, wallById, walls), maxExtend)
+  const square = squareEndCorners(wall, end, extend)
+  const neighbors = neighborsAtEnd(wall, end, adj, wallById)
+  const hosts = neighbors.length > 0 ? [] : findMidspanHosts(wall, end, walls)
+  const mitered = tryMiterEndCorners(wall, end, neighbors, hosts)
+  return mitered ?? square
+}
+
 /**
- * Oriented rectangle along the Floorplanner axis (`a`/`b`) with square ends.
- * Join-extend is neighbor+balance-aware so flush faces do not grow exterior ears.
+ * Oriented body along the Floorplanner axis. Joined ends use face-miters
+ * (same join-corner as schuine hoeken); free ends stay square caps.
  */
 function buildWallRectPolygon(
   wall: WallPolygonInput,
@@ -282,21 +448,9 @@ function buildWallRectPolygon(
   wallById: Map<string, WallPolygonInput>,
   walls: WallPolygonInput[],
 ): Point2D[] {
-  const along = alongWallDir(wall)
-  const extents = resolveWallExtents(wall)
-  const len = distance(wall.a, wall.b)
-  const maxExtend = Math.max(0, len * 0.45)
-  const extendA = Math.min(resolveEndExtendCm(wall, 'a', adj, wallById, walls), maxExtend)
-  const extendB = Math.min(resolveEndExtendCm(wall, 'b', adj, wallById, walls), maxExtend)
-  const a0 = add(wall.a, scale(along, -extendA))
-  const b0 = add(wall.b, scale(along, extendB))
-  const n = leftNormal(along)
-  const points = [
-    add(a0, scale(n, extents.plus)),
-    add(b0, scale(n, extents.plus)),
-    add(b0, scale(n, -extents.minus)),
-    add(a0, scale(n, -extents.minus)),
-  ]
+  const a = endCorners(wall, 'a', adj, wallById, walls)
+  const b = endCorners(wall, 'b', adj, wallById, walls)
+  const points = [a.left, b.left, b.right, a.right]
   if (ringArea(points) < 0) points.reverse()
   return points
 }
@@ -343,27 +497,6 @@ function fromClippingRing(ring: [number, number][]): Point2D[] {
   return ensureClosedRing(ring.map(([x, y]) => ({ x, y })))
 }
 
-/** Expand a closed ring from its centroid so touching walls overlap for union. */
-function inflateRing(points: Point2D[], amountCm: number): Point2D[] {
-  if (points.length < 3 || amountCm <= 0) return points
-  let cx = 0
-  let cy = 0
-  for (const p of points) {
-    cx += p.x
-    cy += p.y
-  }
-  cx /= points.length
-  cy /= points.length
-  return points.map((p) => {
-    const dx = p.x - cx
-    const dy = p.y - cy
-    const len = Math.hypot(dx, dy)
-    if (len < 1e-9) return { ...p }
-    const factor = (len + amountCm) / len
-    return { x: cx + dx * factor, y: cy + dy * factor }
-  })
-}
-
 function resolveUnionFn(): typeof polygonClipping.union {
   const mod = polygonClipping as unknown as {
     union?: typeof polygonClipping.union
@@ -377,7 +510,7 @@ function resolveUnionFn(): typeof polygonClipping.union {
 }
 
 function toUnionGeom(points: Point2D[]): [[number, number][]] | null {
-  const ring = toClippingRing(inflateRing(points, UNION_SEAL_CM))
+  const ring = toClippingRing(points)
   if (ring.length < 4) return null
   return [ring]
 }
@@ -413,8 +546,7 @@ function unionWallRects(rects: Point2D[][]): WallFillComponent[] {
 }
 
 /**
- * Per-wall square rects (overlays) + boolean-union fill silhouette.
- * No miter, no silent per-wall fallback.
+ * Per-wall bodies (mitered joins, square free ends) + boolean-union fill.
  */
 export function buildWallRenderGeometry(walls: WallPolygonInput[]): WallRenderGeometry {
   if (walls.length === 0) {

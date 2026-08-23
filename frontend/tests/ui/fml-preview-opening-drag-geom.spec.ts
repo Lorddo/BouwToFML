@@ -4,6 +4,8 @@ import {
   moveOpeningToWall,
   OPENING_DRAG_LEAVE_CM,
   OPENING_DRAG_SNAP_CM,
+  openingDragPointerWithGrab,
+  openingGrabOffsetCm,
   projectPointToWallTUnclamped,
   resolveOpeningDragTarget,
 } from '@/ui/components/fml-preview-opening-drag-geom'
@@ -97,6 +99,50 @@ describe('collinear hop', () => {
     const worldX = located!.wall.a.x + located!.opening.t * (located!.wall.b.x - located!.wall.a.x)
     expect(worldX).toBeCloseTo(70, 0)
     expect(result!.walls.find((w) => w.id === 'w1')?.openings).toHaveLength(0)
+  })
+})
+
+describe('grab offset (geen spring naar muis)', () => {
+  it('houdt openingscentrum vast als de pointer op de grip blijft', () => {
+    const wall = { a: { x: 0, y: 0 }, b: { x: 400, y: 0 } }
+    // Opening op t=0.5 → centrum x=200; grip 30 cm links van centrum
+    const grab = openingGrabOffsetCm(wall, 0.5, { x: 170, y: 5 })
+    expect(grab.x).toBeCloseTo(-30, 6)
+    expect(grab.y).toBeCloseTo(5, 6)
+
+    const walls = [
+      doorOnWall({
+        id: 'w1',
+        a: wall.a,
+        b: wall.b,
+        t: 0.5,
+        width: 80,
+      }),
+    ]
+    const id = 'w1-door-door-1'
+    // Zelfde grip-punt: effectieve pointer = centrum → t blijft 0.5
+    const adjusted = openingDragPointerWithGrab({ x: 170, y: 5 }, grab)
+    const result = applyOpeningDragMove(walls, id, adjusted)
+    expect(result!.walls[0]?.openings[0]?.t).toBeCloseTo(0.5, 5)
+  })
+
+  it('schuift met de muis zonder de grip-offset te verliezen', () => {
+    const wall = { a: { x: 0, y: 0 }, b: { x: 400, y: 0 } }
+    const grab = openingGrabOffsetCm(wall, 0.5, { x: 170, y: 0 })
+    const walls = [
+      doorOnWall({
+        id: 'w1',
+        a: wall.a,
+        b: wall.b,
+        t: 0.5,
+        width: 80,
+      }),
+    ]
+    const id = 'w1-door-door-1'
+    // Muis 40 cm naar rechts → centrum ook +40 → t = 240/400 = 0.6
+    const adjusted = openingDragPointerWithGrab({ x: 210, y: 0 }, grab)
+    const result = applyOpeningDragMove(walls, id, adjusted)
+    expect(result!.walls[0]?.openings[0]?.t).toBeCloseTo(0.6, 5)
   })
 })
 

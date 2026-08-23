@@ -6,7 +6,7 @@
 /** Deurblad / zwaaiboog / pijl. */
 export const OPENING_STROKE_CM = 1.2
 
-/** Raam-sill / basislijn iets zwaarder. */
+/** Aanzicht-deurkruk (plattegrond-sill = OPENING_STROKE_CM). */
 export const OPENING_STROKE_HEAVY_CM = 2
 
 /** Raam-mullion / ornament. */

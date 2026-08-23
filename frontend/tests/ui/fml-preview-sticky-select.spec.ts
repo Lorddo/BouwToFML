@@ -110,5 +110,61 @@ describe('touch tap vs pan', () => {
     expect(isTouchHoverFollowTool('measure')).toBe(false)
     expect(isTouchHoverFollowTool('box_select')).toBe(false)
     expect(isTouchHoverFollowTool(null)).toBe(false)
+    expect(isTouchHoverFollowTool(null, { wallMoveDrafting: true })).toBe(true)
+    expect(isTouchHoverFollowTool(null, { preciseMoveDrafting: true })).toBe(true)
+  })
+
+  it('zet hover-follow uit tijdens muur/kamer-draft zodat handles + pan werken', () => {
+    expect(isTouchHoverFollowTool('draw_wall', { drafting: true })).toBe(false)
+    expect(isTouchHoverFollowTool('draw_room', { drafting: true })).toBe(false)
+    expect(isTouchHoverFollowTool('draw_surface', { drafting: true })).toBe(true)
+  })
+
+  it('start handle-sleep op draft-punten zonder move-tool', () => {
+    expect(
+      shouldStartTouchHoldDrag({
+        sloppy: true,
+        moveMod: false,
+        tool: 'draw_wall',
+        becameNav: false,
+        draftHandle: true,
+      }),
+    ).toBe(true)
+    expect(
+      shouldStartTouchHoldDrag({
+        sloppy: true,
+        moveMod: false,
+        tool: 'draw_room',
+        becameNav: false,
+        draftHandle: true,
+      }),
+    ).toBe(true)
+    expect(
+      shouldStartTouchHoldDrag({
+        sloppy: true,
+        moveMod: true,
+        tool: null,
+        becameNav: false,
+        clickMoveHit: true,
+      }),
+    ).toBe(false)
+    expect(
+      shouldStartTouchHoldDrag({
+        sloppy: true,
+        moveMod: true,
+        tool: null,
+        becameNav: false,
+        wallMoveDrafting: true,
+      }),
+    ).toBe(false)
+    expect(
+      shouldStartTouchHoldDrag({
+        sloppy: true,
+        moveMod: true,
+        tool: null,
+        becameNav: false,
+        preciseMoveDrafting: true,
+      }),
+    ).toBe(false)
   })
 })

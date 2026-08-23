@@ -4,6 +4,7 @@ import {
   confirmFmlChrome,
   confirmFmlChromeDialog,
   fmlChromeDialogState,
+  promptFacadeGroupName,
   promptFmlChrome,
   registerFmlChromeDialogHost,
   resetFmlChromeDialogForTests,
@@ -39,6 +40,16 @@ describe('fml-chrome-dialog', () => {
     if (state) state.state.inputValue = ' Westgevel '
     resolveFmlChromeDialog(state?.state.inputValue ?? null)
     await expect(pending).resolves.toBe(' Westgevel ')
+    unregister()
+  })
+
+  it('promptFacadeGroupName uses current name when editing', async () => {
+    const unregister = registerFmlChromeDialogHost()
+    const pending = promptFacadeGroupName({ currentName: 'Achtergevel' })
+    const state = fmlChromeDialogState().value
+    expect(state?.state.inputValue).toBe('Achtergevel')
+    confirmFmlChromeDialog()
+    await expect(pending).resolves.toBe('Achtergevel')
     unregister()
   })
 

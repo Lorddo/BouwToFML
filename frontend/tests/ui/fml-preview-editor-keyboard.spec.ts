@@ -39,11 +39,31 @@ function makeHandlers(overrides?: { typingTarget?: EventTarget | null }) {
       isDragging: () => false,
       cancelDrawWallDrag: () => {},
       commitFromMeasure: () => false,
+      handleTypeKey: () => false,
     },
     drawRoom: {
       isDragging: () => false,
       cancelDrawRoomDrag: () => {},
       commitFromMeasure: () => false,
+      handleTypeKey: () => false,
+    },
+    wallMove: {
+      isDrafting: () => false,
+      cancelWallMove: () => {},
+      commitFromMeasure: () => false,
+      handleTypeKey: () => false,
+    },
+    junctionMove: {
+      isDrafting: () => false,
+      cancelJunctionMove: () => {},
+      commitFromMeasure: () => false,
+      handleTypeKey: () => false,
+    },
+    openingMove: {
+      isDrafting: () => false,
+      cancelOpeningMove: () => {},
+      commitFromMeasure: () => false,
+      handleTypeKey: () => false,
     },
     drawLine: { cancelDrawLine: () => {} },
     deactivateDrawTool,
@@ -74,6 +94,94 @@ function makeHandlers(overrides?: { typingTarget?: EventTarget | null }) {
 
   return { selection, deactivateDrawTool, clearSelection, pressEscape }
 }
+
+describe('FML editor types wall measure without a toolbar field', () => {
+  it('stuurt cijfers naar de draft i.p.v. Delete/selectie', () => {
+    const handleTypeKey = vi.fn(() => true)
+    const deleteSelected = vi.fn()
+    const selection = createFmlPreviewSelection()
+    const handlers = createFmlPreviewEditorKeyHandlers({
+      selection,
+      inspectMode: computed(() => false),
+      drawSurfaceMode: computed(() => false),
+      measureMode: computed(() => false),
+      nulpuntMode: computed(() => false),
+      underlayMoveMode: { value: false },
+      thicknessPickTier: ref(null),
+      onKeyDown: () => {},
+      onKeyUp: () => {},
+      flushPendingFieldCommits: () => {},
+      deleteSelected,
+      clearSelection: () => {},
+      clearInspectSelect: () => {},
+      emitCancelThicknessPick: () => {},
+      undo: () => false,
+      redo: () => false,
+      syncPlanToParentAfterUndo: () => {},
+      drawSurface: {
+        draftPoints: ref(null),
+        commitDrawSurface: () => false,
+        cancelDrawSurface: () => {},
+      },
+      areaSelection: { endSurfacePolygonEdit: () => {} },
+      surfaceEdit: { cancelDrag: () => {} },
+      drawWall: {
+        isDragging: () => true,
+        cancelDrawWallDrag: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey,
+      },
+      drawRoom: {
+        isDragging: () => false,
+        cancelDrawRoomDrag: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      wallMove: {
+        isDrafting: () => false,
+        cancelWallMove: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      junctionMove: {
+        isDrafting: () => false,
+        cancelJunctionMove: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      openingMove: {
+        isDrafting: () => false,
+        cancelOpeningMove: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      drawLine: { cancelDrawLine: () => {} },
+      deactivateDrawTool: () => {},
+      measure: {
+        isDragging: () => false,
+        cancelMeasureDrag: () => {},
+        measureLines: ref([]),
+        clearMeasureLines: () => {},
+      },
+      nulpunt: {
+        isDragging: () => false,
+        cancelNulpuntPending: () => {},
+        nulpuntHasPending: ref(false),
+      },
+      underlayMove: {
+        isDragging: () => false,
+        cancelUnderlayMoveDrag: () => {},
+      },
+    })
+
+    const event = new KeyboardEvent('keydown', { key: '3', bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'target', { value: document.body })
+    handlers.onEditorKeyDown(event)
+    expect(handleTypeKey).toHaveBeenCalledTimes(1)
+    expect(event.defaultPrevented).toBe(true)
+    expect(deleteSelected).not.toHaveBeenCalled()
+  })
+})
 
 describe('FML editor Escape deactivates draw tool', () => {
   it('zet teken-tool uit zonder startpunt', () => {

@@ -35,6 +35,7 @@ import type { FloorPlan } from '@/core/fml/types'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import { tGlobal } from '@/ui/i18n'
 
 const THICKNESS_PICK_LABELS: Record<FmlThicknessPickTier, string> = {
@@ -340,7 +341,8 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
         fmlBandMaxBoundaryCm.value = applied.bandBoundaries.maxBoundaryCm
         fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.applied', {
           tier: THICKNESS_PICK_LABELS[tier],
-          cm: applied.measuredCm,
+          length: formatScaleInputLabel(applied.measuredCm, loadUserSettings().scaleInputUnit),
+          cm: formatScaleInputLabel(applied.measuredCm, loadUserSettings().scaleInputUnit),
         })
         fmlThicknessPickTier.value = null
       } catch (error) {

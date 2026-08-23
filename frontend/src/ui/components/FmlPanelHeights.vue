@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import ScaleLengthInput from './ScaleLengthInput.vue'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import './fml-panel-fields.css'
 
 const { t } = useI18n()
@@ -8,6 +10,7 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
+    unit: ScaleInputUnit
     fmlWallHeightCm?: number
     fmlDoorHeightCm?: number
     fmlWindowHeightCm?: number
@@ -27,31 +30,6 @@ const emit = defineEmits<{
   'update:fmlWindowHeightCm': [value: number]
   'update:fmlWindowSillZCm': [value: number]
 }>()
-
-function metersFromCm(cm: number): string {
-  return (cm / 100).toFixed(2)
-}
-
-type HeightEmitName =
-  | 'update:fmlWallHeightCm'
-  | 'update:fmlDoorHeightCm'
-  | 'update:fmlWindowHeightCm'
-  | 'update:fmlWindowSillZCm'
-
-function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
-  const meters = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(meters)) return
-  const cm = Math.round(meters * 100)
-  if (emitName === 'update:fmlWindowSillZCm') {
-    if (meters < 0) return
-    emit('update:fmlWindowSillZCm', cm)
-    return
-  }
-  if (meters <= 0) return
-  if (emitName === 'update:fmlWallHeightCm') emit('update:fmlWallHeightCm', cm)
-  else if (emitName === 'update:fmlDoorHeightCm') emit('update:fmlDoorHeightCm', cm)
-  else emit('update:fmlWindowHeightCm', cm)
-}
 </script>
 
 <template>
@@ -60,56 +38,53 @@ function onHeightMetersInput(event: Event, emitName: HeightEmitName): void {
     <div class="fml-height-limits">
       <label class="fml-limit-field">
         <span>{{ t('result.wallHeightM') }}</span>
-        <input
-          type="number"
-          min="1"
-          max="6"
-          step="0.01"
-          :value="metersFromCm(fmlWallHeightCm)"
+        <ScaleLengthInput
+          block
+          :cm="fmlWallHeightCm"
+          :unit="unit"
+          :min-cm="1"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onHeightMetersInput($event, 'update:fmlWallHeightCm')"
+          @update:cm="emit('update:fmlWallHeightCm', $event)"
         />
       </label>
       <label class="fml-limit-field">
         <span :title="t('result.doorHeightTitle')">
           {{ t('result.doorHeightM') }}
         </span>
-        <input
-          type="number"
-          min="0.5"
-          max="4"
-          step="0.01"
-          :value="metersFromCm(fmlDoorHeightCm)"
+        <ScaleLengthInput
+          block
+          :cm="fmlDoorHeightCm"
+          :unit="unit"
+          :min-cm="1"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onHeightMetersInput($event, 'update:fmlDoorHeightCm')"
+          @update:cm="emit('update:fmlDoorHeightCm', $event)"
         />
       </label>
       <label class="fml-limit-field">
         <span :title="t('result.windowSillTitle')">
           {{ t('result.windowSillM') }}
         </span>
-        <input
-          type="number"
-          min="0"
-          max="3"
-          step="0.01"
-          :value="metersFromCm(fmlWindowSillZCm)"
+        <ScaleLengthInput
+          block
+          :cm="fmlWindowSillZCm"
+          :unit="unit"
+          :min-cm="0"
+          allow-zero
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onHeightMetersInput($event, 'update:fmlWindowSillZCm')"
+          @update:cm="emit('update:fmlWindowSillZCm', $event)"
         />
       </label>
       <label class="fml-limit-field">
         <span :title="t('result.windowGlassTitle')">
           {{ t('result.windowGlassM') }}
         </span>
-        <input
-          type="number"
-          min="0.3"
-          max="4"
-          step="0.01"
-          :value="metersFromCm(fmlWindowHeightCm)"
+        <ScaleLengthInput
+          block
+          :cm="fmlWindowHeightCm"
+          :unit="unit"
+          :min-cm="1"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @input="onHeightMetersInput($event, 'update:fmlWindowHeightCm')"
+          @update:cm="emit('update:fmlWindowHeightCm', $event)"
         />
       </label>
     </div>

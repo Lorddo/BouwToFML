@@ -20,9 +20,11 @@ import {
 } from '@/core/fml/extraction-to-plan-types'
 import { listElevationFacadeGroups } from '@/core/fml/facade-groups'
 import {
+  elevationAxisPlanSides,
   projectFacadeElevation,
   type ElevationBovenlichtDefaults,
   type ElevationOpeningRect,
+  type ElevationPlanSide,
   type ElevationRect,
   type ElevationWallRect,
   type FacadeElevation,
@@ -66,6 +68,20 @@ import {
   snapElevationRidgeCenter,
 } from '@/core/fml/elevation-ridge-edit'
 import {
+  placeRidgeFromElevation,
+  previewRidgeFromElevation,
+  type ElevationRidgePlacePreview,
+} from '@/core/fml/elevation-ridge-place'
+import {
+  beginRoofPlaceFromElevation,
+  placeRoofFromElevation,
+  previewRoofFromElevation,
+  roofPlaceHoverElevPoint,
+  type ElevationRoofPlaceDraft,
+  type ElevationRoofPlacePreview,
+} from '@/core/fml/elevation-roof-place'
+import type { ElevTool } from '@/ui/composables/fml-preview/fml-elevation-tool'
+import {
   isTriangleWindow,
   resolveDoorAddPreset,
   resolveDoorSubtypeFromRefid,
@@ -76,6 +92,7 @@ import {
 } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import {
+  clampElevationOpeningMove,
   clampElevationOpeningResize,
   clampOpeningPatchKeepOppositeEdge,
   collectOpeningSnapTargets,
@@ -136,24 +153,40 @@ import {
   useFmlPreviewViewport,
 } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
 import { useFmlPreviewPanZoom } from '@/ui/composables/fml-preview/useFmlPreviewPanZoom'
+import { buildElevationOpeningMeasureLines } from '@/ui/composables/fml-preview/fml-preview-elevation-opening-measure'
 import { useFmlElevationPointer } from '@/ui/composables/fml-preview/useFmlElevationPointer'
 import { useFmlCanvasTouch, useFmlTouchNav } from '@/ui/composables/fml-preview/useFmlCanvasTouch'
+import {
+  elevationPreciseCommitMinCm,
+  elevationPreciseHeightDelta,
+  elevationPreciseOffset,
+} from '@/ui/composables/fml-preview/fml-elevation-precise-move'
+import {
+  applyDrawTypeKey,
+  isDrawTypeLengthKey,
+  parseDrawLengthDraftToCm,
+} from '@/ui/composables/fml-preview/fml-preview-draw-measure'
+import {
+  isSettingsMod,
+  resolveRelocatePointerIntent,
+} from '@/ui/composables/fml-preview/fml-preview-mods'
 import { buildOpeningFromPreset } from '@/core/fml/opening-from-preset'
 import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import FmlEditorTopbar from './FmlEditorTopbar.vue'
+import FmlEditorModifierRail from './FmlEditorModifierRail.vue'
 import FmlElevationHeightOnlyFields from './FmlElevationHeightOnlyFields.vue'
 import FmlElevationOpeningFields from './FmlElevationOpeningFields.vue'
 import FmlElevationOpeningQuickFields from './FmlElevationOpeningQuickFields.vue'
 import FmlOpeningAddToolFields from './FmlOpeningAddToolFields.vue'
+import FmlPreviewMeasureOverlay from './FmlPreviewMeasureOverlay.vue'
 import FmlRescaleOverlay from './FmlRescaleOverlay.vue'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import type { ToolbeltItem } from './canvas/canvas-toolbelt.types'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import { FACTORY_OPENING_COLORS } from '@/ui/composables/settings/opening-display-colors'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import './canvas/canvas-toolbelt.css'
-
-type ElevTool = 'select' | 'add_door' | 'add_window' | 'split'
 
 const props = withDefaults(
   defineProps<{
@@ -163,6 +196,8 @@ const props = withDefaults(
     underlayWidthPx?: number
     underlayHeightPx?: number
     underlayOpacity?: number
+    /** 0–1; FML-geometrie opacity (zelfde slider als plattegrond). */
+    contentOpacity?: number
     cmOrigin?: { x: number; y: number } | null
     pxPerMmX?: number
     pxPerMmY?: number
@@ -183,10 +218,12 @@ const props = withDefaults(
     bovenlichtPacked?: boolean
     /** Per-floor lookup; valt terug op de props hierboven. */
     resolveBovenlichtDefaults?: (floorIndex: number) => ElevationBovenlichtDefaults
+    unit?: ScaleInputUnit
   }>(),
   {
     underlaySrc: null,
     underlayOpacity: 0.45,
+    contentOpacity: 0.8,
     underlayMoveMode: false,
     rescaleMode: false,
     rescaleState: null,
@@ -199,6 +236,7 @@ const props = withDefaults(
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
     bovenlichtGapCm: BOVENLICHT_GAP_CM,
     bovenlichtPacked: true,
+    unit: 'm',
   },
 )
 
@@ -220,6 +258,8 @@ useChromeFitScale(elevDockRef, { containerSelector: '.elev-host, .fml-preview-wr
 const elevLibraryTools = computed<ToolbeltItem[]>(() => [
   { id: 'add_door', icon: 'door', label: t('toolbelt.fml.addDoor') },
   { id: 'add_window', icon: 'window', label: t('toolbelt.fml.addWindow') },
+  { id: 'add_ridge', icon: 'ridge', label: t('toolbelt.fml.addRidge') },
+  { id: 'add_roof', icon: 'roof', label: t('toolbelt.fml.addRoof') },
   { id: 'split', icon: 'split', label: t('result.toolbar.splitWall') },
 ])
 const isPanDragging = ref(false)
@@ -254,6 +294,10 @@ const elevSettingsOpen = computed(
 )
 const snapGuide = ref<ElevationSnapGuide | null>(null)
 const splitDraft = ref<ElevationSplitPreview | null>(null)
+const ridgePlacePreview = ref<ElevationRidgePlacePreview | null>(null)
+const roofPlaceDraft = ref<ElevationRoofPlaceDraft | null>(null)
+const roofPlacePreview = ref<ElevationRoofPlacePreview | null>(null)
+const roofPlaceHover = ref<Point2D | null>(null)
 const undoStack = ref<FloorPlan[]>([])
 const redoStack = ref<FloorPlan[]>([])
 
@@ -279,10 +323,21 @@ const openingHandles = computed(() => {
 
 const openingMoveHandle = computed(() => {
   const rect = selectedOpeningRect.value
-  if (!rect || settingsTarget.value?.kind !== 'opening' || settingsTarget.value.mode !== 'edit') {
-    return null
-  }
+  if (!rect || settingsTarget.value?.kind !== 'opening') return null
   return elevationRectCenter(rect)
+})
+
+/** Restmaten links/rechts + vloer/plafond bij selectie / verslepen. */
+const openingMoveMeasureLines = computed(() => {
+  if (settingsTarget.value?.kind !== 'opening') return []
+  const rect = selectedOpeningRect.value
+  const elev = elevation.value
+  if (!rect || !elev) return []
+  const wall = elev.walls.find(
+    (item) => item.wallId === rect.wallId && item.floorIndex === rect.floorIndex && !item.ridge,
+  )
+  if (!wall) return []
+  return buildElevationOpeningMeasureLines(wall, rect)
 })
 
 const selectedRidgeWall = computed(() => {
@@ -344,6 +399,17 @@ function floorBovenlichtDefaults(floorIndex: number): ElevationBovenlichtDefault
 const elevation = computed(() =>
   projectFacadeElevation(props.plan, props.groupId, floorBovenlichtDefaults),
 )
+
+const planSideLabels = computed(() => {
+  const axis = elevation.value?.axis
+  return axis ? elevationAxisPlanSides(axis) : null
+})
+
+function planSideLetter(side: ElevationPlanSide): string {
+  return t(`viewer.elevationPlanSide.${side}`)
+}
+
+const ELEVATION_PLAN_SIDE_GAP_CM = 56
 
 function glyphOpacity(role: string, transom: boolean): number {
   if (role === 'glass') return transom ? 0.55 : 0.85
@@ -467,9 +533,9 @@ const extraBounds = computed(() => {
   const bounds = elevation.value?.bounds
   const elev = bounds
     ? {
-        minX: bounds.x0,
+        minX: bounds.x0 - ELEVATION_PLAN_SIDE_GAP_CM,
         minY: bounds.y0,
-        spanX: Math.max(1, bounds.x1 - bounds.x0),
+        spanX: Math.max(1, bounds.x1 - bounds.x0) + ELEVATION_PLAN_SIDE_GAP_CM * 2,
         spanY: Math.max(1, bounds.y1 - bounds.y0),
       }
     : null
@@ -520,6 +586,37 @@ const layoutXform = computed(() => {
     })
   }
   return layoutTransform(layout)
+})
+
+const planSideLabelMarks = computed(() => {
+  const elev = elevation.value
+  const sides = planSideLabels.value
+  if (!elev || !sides) return []
+  const inv = 1 / Math.max(1e-6, viewScale.value)
+  const font = 14 * inv
+  const width = 36 * inv
+  const midY = (elev.bounds.y0 + elev.bounds.y1) / 2
+  const xform = layoutXform.value
+  const left = xform.toStagePoint(elev.bounds.x0 - ELEVATION_PLAN_SIDE_GAP_CM, midY)
+  const right = xform.toStagePoint(elev.bounds.x1 + ELEVATION_PLAN_SIDE_GAP_CM, midY)
+  const base = {
+    fontSize: font,
+    fontStyle: 'bold' as const,
+    fill: '#334155',
+    align: 'center' as const,
+    width,
+    offsetX: width / 2,
+    offsetY: font / 2,
+    listening: false,
+    perfectDrawEnabled: false,
+  }
+  return [
+    { key: 'left', config: { ...base, x: left.x, y: left.y, text: planSideLetter(sides.left) } },
+    {
+      key: 'right',
+      config: { ...base, x: right.x, y: right.y, text: planSideLetter(sides.right) },
+    },
+  ]
 })
 
 const { clientToCm, pointerCm } = useFmlElevationPointer({
@@ -629,6 +726,7 @@ onMounted(() => mountResizeObserver())
 onBeforeUnmount(() => {
   unmountResizeObserver()
   cancelOpeningMovePending()
+  clearPreciseDraftUi()
   window.removeEventListener('pointermove', onRoofVertexMove)
   window.removeEventListener('pointerup', onRoofVertexUp)
   window.removeEventListener('pointermove', onJunctionMove)
@@ -639,6 +737,7 @@ onBeforeUnmount(() => {
 watch(
   () => props.groupId,
   () => {
+    if (preciseDraft) clearPreciseDraftUi()
     selectedOpeningId.value = null
     settingsTarget.value = null
     clearSplitDraft()
@@ -816,8 +915,20 @@ function redoEdit(): void {
   emit('planUpdate', next)
 }
 
-function toggleOpeningTool(tool: 'add_door' | 'add_window' | 'split'): void {
+function clearRoofPlaceDraft(): void {
+  roofPlaceDraft.value = null
+  roofPlacePreview.value = null
+  roofPlaceHover.value = null
+  snapGuide.value = null
+}
+
+function toggleOpeningTool(
+  tool: 'add_door' | 'add_window' | 'add_ridge' | 'add_roof' | 'split',
+): void {
+  if (preciseDraft) cancelPreciseDraft()
   clearSplitDraft()
+  ridgePlacePreview.value = null
+  clearRoofPlaceDraft()
   if (activeTool.value === tool) {
     activeTool.value = 'select'
     return
@@ -827,11 +938,19 @@ function toggleOpeningTool(tool: 'add_door' | 'add_window' | 'split'): void {
 }
 
 function onElevToolChange(id: string | null): void {
-  if (id === 'add_door' || id === 'add_window' || id === 'split') {
+  if (
+    id === 'add_door' ||
+    id === 'add_window' ||
+    id === 'add_ridge' ||
+    id === 'add_roof' ||
+    id === 'split'
+  ) {
     toggleOpeningTool(id)
     return
   }
   clearSplitDraft()
+  ridgePlacePreview.value = null
+  clearRoofPlaceDraft()
   activeTool.value = 'select'
 }
 
@@ -917,18 +1036,36 @@ function applyOpeningRect(
   let nextRect = raw.rect
   const floorWalls = props.plan.floors[wall.floorIndex]?.walls ?? []
   const xBounds = elevationCollinearXBounds(elev?.walls ?? [wall], wall, floorWalls)
+  const moving = !drag || drag.mode === 'move'
   if (drag && drag.mode !== 'move') {
     nextRect = clampElevationOpeningResize(wall, nextRect, drag.mode, undefined, undefined, xBounds)
   }
-  const hostElev = pickElevationWallForOpeningX(
-    elev?.walls ?? [wall],
-    wall,
-    (nextRect.x0 + nextRect.x1) / 2,
-    floorWalls,
-  )
+  let hostElev = moving
+    ? pickElevationWallForOpeningX(
+        elev?.walls ?? [wall],
+        wall,
+        (nextRect.x0 + nextRect.x1) / 2,
+        floorWalls,
+      )
+    : wall
+  if (moving) {
+    const hostBounds = elevationCollinearXBounds(elev?.walls ?? [hostElev], hostElev, floorWalls)
+    nextRect = clampElevationOpeningMove(hostElev, nextRect, hostBounds)
+    const nextHost = pickElevationWallForOpeningX(
+      elev?.walls ?? [hostElev],
+      hostElev,
+      (nextRect.x0 + nextRect.x1) / 2,
+      floorWalls,
+    )
+    if (nextHost.wallId !== hostElev.wallId || nextHost.floorIndex !== hostElev.floorIndex) {
+      hostElev = nextHost
+      const nextBounds = elevationCollinearXBounds(elev?.walls ?? [hostElev], hostElev, floorWalls)
+      nextRect = clampElevationOpeningMove(hostElev, nextRect, nextBounds)
+    }
+  }
   let nextId = openingId
   let nextPlan = props.plan
-  if (hostElev.wallId !== wall.wallId) {
+  if (moving && hostElev.wallId !== wall.wallId) {
     const patchT = openingPatchFromElevationRect(
       hostElev,
       nextRect,
@@ -947,26 +1084,30 @@ function applyOpeningRect(
       settingsTarget.value = { ...settingsTarget.value, id: nextId }
     }
   }
-  let patch = openingPatchFromElevationRect(
+  const patch = openingPatchFromElevationRect(
     hostElev,
     nextRect,
     floorWallBaseWorldZ(nextPlan, hostElev.floorIndex),
   )
-  if (drag && drag.mode !== 'move') {
-    const floor = nextPlan.floors[hostElev.floorIndex]
-    const host = findOpeningInPlan(nextPlan, nextId)?.wall
-    if (floor && host) {
-      patch = clampOpeningPatchKeepOppositeEdge(
-        host,
-        drag.startOpening,
-        patch,
-        drag.mode,
-        floor.height,
-        floor.walls,
-      )
-    }
+  if (!drag || drag.mode === 'move') {
+    commitPlan(updatePlanOpening(nextPlan, nextId, { t: patch.t, z: patch.z }))
+    return
   }
-  commitPlan(updatePlanOpening(nextPlan, nextId, patch))
+  const floor = nextPlan.floors[hostElev.floorIndex]
+  const host = findOpeningInPlan(nextPlan, nextId)?.wall
+  const resized =
+    floor && host
+      ? clampOpeningPatchKeepOppositeEdge(
+          host,
+          drag.startOpening,
+          patch,
+          drag.mode,
+          floor.height,
+          floor.walls,
+          hostElev.xa <= hostElev.xb,
+        )
+      : patch
+  commitPlan(updatePlanOpening(nextPlan, nextId, resized))
 }
 
 function clearSettings(): void {
@@ -979,8 +1120,85 @@ function selectOpening(openingId: string | null, mode: 'quick' | 'edit' | null =
 }
 
 function closeElevToolbelt(): void {
+  if (preciseDraft) cancelPreciseDraft()
   activeTool.value = 'select'
+  ridgePlacePreview.value = null
+  clearRoofPlaceDraft()
   selectOpening(null)
+  clearSettings()
+}
+
+function placeRidge(elev: FacadeElevation, cm: Point2D, snapOff = false): void {
+  const result = placeRidgeFromElevation(props.plan, elev, cm, { snapOff })
+  if (!result) return
+  pushUndo()
+  commitPlan(result.plan)
+  selectRidge(result.wallId, result.floorIndex)
+  ridgePlacePreview.value = null
+  activeTool.value = 'select'
+}
+
+function updateRidgePlacePreview(elev: FacadeElevation, cm: Point2D, snapOff = false): void {
+  ridgePlacePreview.value = previewRidgeFromElevation(props.plan, elev, cm, { snapOff })
+  const midX =
+    ridgePlacePreview.value != null
+      ? (ridgePlacePreview.value.rect.x0 + ridgePlacePreview.value.rect.x1) / 2
+      : null
+  snapGuide.value = midX != null && Math.abs(midX - cm.x) > 1e-6 ? { x: midX } : null
+}
+
+function onRoofPlaceClick(
+  elev: FacadeElevation,
+  cm: Point2D,
+  snapOff = false,
+  freeZ = false,
+): void {
+  if (!roofPlaceDraft.value) {
+    const draft = beginRoofPlaceFromElevation(props.plan, elev, cm, { snapOff })
+    if (!draft) return
+    roofPlaceDraft.value = draft
+    roofPlacePreview.value = null
+    // Hover blijft zichtbaar tot de volgende move (nok-preview).
+    roofPlaceHover.value = draft.eaveElev
+    return
+  }
+  const result = placeRoofFromElevation(props.plan, elev, roofPlaceDraft.value, cm, {
+    snapOff,
+    freeZ,
+  })
+  if (!result) return
+  pushUndo()
+  commitPlan(result.plan)
+  selectRoof(result.surfaceId, null)
+  clearRoofPlaceDraft()
+  activeTool.value = 'select'
+}
+
+function updateRoofPlacePreview(
+  elev: FacadeElevation,
+  cm: Point2D,
+  snapOff = false,
+  freeZ = false,
+): void {
+  const draft = roofPlaceDraft.value
+  if (!draft) {
+    // Eerste punt: al snap-preview (buitenhoek/goot) vóór de klik.
+    roofPlacePreview.value = null
+    const preview = beginRoofPlaceFromElevation(props.plan, elev, cm, { snapOff })
+    roofPlaceHover.value = preview?.eaveElev ?? null
+    snapGuide.value =
+      preview != null && Math.abs(preview.eaveElev.x - cm.x) > 1e-6
+        ? { x: preview.eaveElev.x }
+        : null
+    return
+  }
+  roofPlaceHover.value = roofPlaceHoverElevPoint(props.plan, elev, draft, cm, { snapOff, freeZ })
+  roofPlacePreview.value = previewRoofFromElevation(props.plan, elev, draft, cm, {
+    snapOff,
+    freeZ,
+  })
+  const hoverX = roofPlaceHover.value?.x
+  snapGuide.value = hoverX != null && Math.abs(hoverX - cm.x) > 1e-6 ? { x: hoverX } : null
 }
 
 function commitOpeningSubtype(subtype: OpeningSubtypeDraft): void {
@@ -1266,6 +1484,10 @@ function onContentClick(event: {
   }
 }): void {
   if (isPanDragging.value || canvasLocked.value) return
+  if (preciseDraft) {
+    if (!preciseIgnoreClick) commitPreciseDraft()
+    return
+  }
   const elev = elevation.value
   if (!elev) return
   const cm =
@@ -1277,6 +1499,19 @@ function onContentClick(event: {
   }
   if (activeTool.value === 'add_window') {
     placeOpening(elev, cm, 'window')
+    return
+  }
+  if (activeTool.value === 'add_ridge') {
+    placeRidge(elev, cm, event.evt.ctrlKey || event.evt.metaKey)
+    return
+  }
+  if (activeTool.value === 'add_roof') {
+    onRoofPlaceClick(
+      elev,
+      cm,
+      event.evt.ctrlKey || event.evt.metaKey,
+      event.evt.ctrlKey || event.evt.metaKey,
+    )
     return
   }
   if (activeTool.value === 'split') {
@@ -1342,6 +1577,44 @@ function onContentClick(event: {
   }
   selectOpening(null)
   clearSettings()
+}
+
+function onContentMove(event: { evt: MouseEvent }): void {
+  if (canvasLocked.value) {
+    if (ridgePlacePreview.value) {
+      ridgePlacePreview.value = null
+      snapGuide.value = null
+    }
+    if (roofPlaceDraft.value || roofPlacePreview.value) clearRoofPlaceDraft()
+    return
+  }
+  const elev = elevation.value
+  if (!elev) return
+  const cm = clientToCm(event.evt.clientX, event.evt.clientY)
+  if (!cm) {
+    if (activeTool.value === 'add_ridge') {
+      ridgePlacePreview.value = null
+      snapGuide.value = null
+    }
+    return
+  }
+  const snapOff = event.evt.ctrlKey || event.evt.metaKey
+  if (activeTool.value === 'add_ridge') {
+    updateRidgePlacePreview(elev, cm, snapOff)
+    return
+  }
+  if (activeTool.value === 'add_roof') {
+    updateRoofPlacePreview(elev, cm, snapOff, snapOff)
+    return
+  }
+  if (ridgePlacePreview.value) {
+    ridgePlacePreview.value = null
+    snapGuide.value = null
+  }
+  if (roofPlaceHover.value || roofPlacePreview.value) {
+    roofPlaceHover.value = null
+    roofPlacePreview.value = null
+  }
 }
 
 const OPENING_MOVE_PENDING_PX = 4
@@ -1415,7 +1688,16 @@ function onOpeningDown(openingId: string, event: { evt: MouseEvent }): void {
   const rect = elev?.openings.find((item) => item.openingId === openingId)
   const cm = pointerCm(event)
   if (!elev || !rect || !cm) return
-  const wantEdit = event.evt.ctrlKey || event.evt.metaKey
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  if (preciseIntent(event.evt)) {
+    selectOpening(openingId, 'quick')
+    beginPreciseOpening(openingId, cm, rect, rect.wallId, rect.floorIndex)
+    return
+  }
+  const wantEdit = isSettingsMod(event.evt, elevSettingsMod.value)
   const alreadyEdit =
     selectedOpeningId.value === openingId &&
     settingsTarget.value?.kind === 'opening' &&
@@ -1438,7 +1720,14 @@ function onMoveHandleDown(event: { evt: MouseEvent }): void {
   const rect = selectedOpeningRect.value
   const cm = pointerCm(event)
   if (!rect || !cm) return
-  selectOpening(rect.openingId, 'edit')
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  if (preciseIntent(event.evt)) {
+    beginPreciseOpening(rect.openingId, cm, rect, rect.wallId, rect.floorIndex)
+    return
+  }
   beginOpeningDrag(rect.openingId, 'move', cm, rect, rect.wallId, rect.floorIndex)
 }
 
@@ -1501,6 +1790,83 @@ const canvasLocked = computed(() => underlayMoveMode.value || props.rescaleMode 
 const elevTouchEditor = computed(() => true)
 const { useTouchNav } = useFmlTouchNav(elevTouchEditor)
 const elevMoveMod = ref(false)
+const elevSettingsMod = ref(false)
+const elevAxisLockMod = ref(false)
+const preciseTypeText = ref('')
+const precisePreview = ref<{ a: Point2D; b: Point2D } | null>(null)
+
+type PreciseDraft =
+  | {
+      kind: 'opening'
+      startCm: Point2D
+      hoverCm: Point2D
+      startRect: ElevationRect
+      openingId: string
+      wallId: string
+      floorIndex: number
+    }
+  | {
+      kind: 'ridge'
+      startCm: Point2D
+      hoverCm: Point2D
+      startRect: ElevationRect
+      wallId: string
+      floorIndex: number
+      startWall: Wall
+    }
+  | {
+      kind: 'junction'
+      startCm: Point2D
+      hoverCm: Point2D
+      startHeightCm: number
+      id: string
+      floorIndex: number
+      refs: Array<{ wallId: string; end: 'a' | 'b' }>
+      ridge?: boolean
+    }
+
+let preciseDraft: PreciseDraft | null = null
+let preciseIgnoreClick = false
+let preciseOverrideCm: number | null = null
+
+function preciseIntent(event: { shiftKey?: boolean }): boolean {
+  return (
+    resolveRelocatePointerIntent({
+      touchNav: useTouchNav.value,
+      moveMod: elevMoveMod.value,
+      shiftKey: event.shiftKey === true,
+    }) === 'precise'
+  )
+}
+
+function clearPreciseDraftUi(): void {
+  window.removeEventListener('pointermove', onPreciseMove)
+  preciseDraft = null
+  preciseOverrideCm = null
+  preciseTypeText.value = ''
+  precisePreview.value = null
+}
+
+function cancelPreciseDraft(): void {
+  if (preciseDraft) undoEdit()
+  clearPreciseDraftUi()
+}
+
+function markPreciseIgnoreClick(): void {
+  preciseIgnoreClick = true
+  window.addEventListener(
+    'pointerup',
+    () => {
+      preciseIgnoreClick = false
+    },
+    { once: true },
+  )
+}
+
+function beginPreciseListen(): void {
+  markPreciseIgnoreClick()
+  window.addEventListener('pointermove', onPreciseMove)
+}
 useFmlCanvasTouch({
   containerRef,
   enabled: useTouchNav,
@@ -1513,6 +1879,19 @@ useFmlCanvasTouch({
     onContentClick({ evt: event, target: {} })
   },
   onEditPointerMove: (event) => {
+    if (activeTool.value === 'add_ridge') {
+      const elev = elevation.value
+      const cm = clientToCm(event.clientX, event.clientY)
+      if (elev && cm) updateRidgePlacePreview(elev, cm, event.ctrlKey || event.metaKey)
+      return
+    }
+    if (activeTool.value === 'add_roof') {
+      const elev = elevation.value
+      const cm = clientToCm(event.clientX, event.clientY)
+      const snapOff = event.ctrlKey || event.metaKey
+      if (elev && cm) updateRoofPlacePreview(elev, cm, snapOff, snapOff)
+      return
+    }
     if (activeTool.value !== 'split') return
     const elev = elevation.value
     const cm = clientToCm(event.clientX, event.clientY)
@@ -1523,6 +1902,8 @@ useFmlCanvasTouch({
 watch(underlayMoveMode, (on) => {
   if (!on) return
   clearSplitDraft()
+  ridgePlacePreview.value = null
+  clearRoofPlaceDraft()
   activeTool.value = 'select'
 })
 
@@ -1555,6 +1936,197 @@ function onOpeningUp(): void {
   cancelOpeningMovePending()
   drag = null
   snapGuide.value = null
+}
+
+function applyPreciseOpening(draft: Extract<PreciseDraft, { kind: 'opening' }>): void {
+  const elev = elevation.value
+  const wall = elev?.walls.find(
+    (item) => item.wallId === draft.wallId && item.floorIndex === draft.floorIndex,
+  )
+  if (!elev || !wall) return
+  const offset = elevationPreciseOffset(
+    draft.startCm,
+    draft.hoverCm,
+    preciseOverrideCm,
+    elevAxisLockMod.value,
+  )
+  const next = translateElevationRect(draft.startRect, offset.x, offset.y)
+  applyOpeningRect(draft.openingId, wall, next, false)
+  const center = elevationRectCenter(next)
+  precisePreview.value = {
+    a: elevationRectCenter(draft.startRect),
+    b: center,
+  }
+}
+
+function applyPreciseRidge(draft: Extract<PreciseDraft, { kind: 'ridge' }>): void {
+  const elev = elevation.value
+  if (!elev) return
+  const offset = elevationPreciseOffset(
+    draft.startCm,
+    draft.hoverCm,
+    preciseOverrideCm,
+    elevAxisLockMod.value,
+  )
+  const raw = translateElevationRect(draft.startRect, offset.x, offset.y)
+  const snapped = snapElevationRidgeCenter(raw, collectElevationRidgeJunctionSnapXs(elev))
+  snapGuide.value = snapped.guide.x != null ? snapped.guide : null
+  commitPlan(
+    applyElevationRidgeRect({
+      plan: props.plan,
+      axis: elev.axis,
+      floorIndex: draft.floorIndex,
+      wallId: draft.wallId,
+      startWall: draft.startWall,
+      startRect: draft.startRect,
+      nextRect: snapped.rect,
+    }),
+  )
+  precisePreview.value = {
+    a: elevationRectCenter(draft.startRect),
+    b: elevationRectCenter(snapped.rect),
+  }
+}
+
+function applyPreciseJunction(draft: Extract<PreciseDraft, { kind: 'junction' }>): void {
+  const delta = elevationPreciseHeightDelta(draft.startCm.y, draft.hoverCm.y, preciseOverrideCm)
+  const min = draft.ridge ? 0 : 1
+  const heightCm = Math.max(min, Math.min(800, Math.round(draft.startHeightCm + delta)))
+  commitPlan(
+    draft.ridge
+      ? setPlanRidgeJunctionZ(props.plan, draft.floorIndex, draft.refs, heightCm)
+      : setPlanJunctionHeight(props.plan, draft.floorIndex, draft.refs, heightCm),
+  )
+  precisePreview.value = {
+    a: draft.startCm,
+    b: { x: draft.startCm.x, y: draft.startCm.y - (heightCm - draft.startHeightCm) },
+  }
+}
+
+function applyPreciseDraft(): void {
+  if (!preciseDraft) return
+  if (preciseDraft.kind === 'opening') applyPreciseOpening(preciseDraft)
+  else if (preciseDraft.kind === 'ridge') applyPreciseRidge(preciseDraft)
+  else applyPreciseJunction(preciseDraft)
+}
+
+function onPreciseMove(event: PointerEvent): void {
+  if (!preciseDraft || preciseTypeText.value) return
+  const cm = clientToCm(event.clientX, event.clientY)
+  if (!cm) return
+  preciseDraft.hoverCm = cm
+  applyPreciseDraft()
+}
+
+function commitPreciseDraft(): boolean {
+  if (!preciseDraft) return false
+  const typed = preciseOverrideCm != null
+  const minCm = elevationPreciseCommitMinCm(typed)
+  const delta =
+    preciseDraft.kind === 'junction'
+      ? Math.abs(
+          elevationPreciseHeightDelta(
+            preciseDraft.startCm.y,
+            preciseDraft.hoverCm.y,
+            preciseOverrideCm,
+          ),
+        )
+      : Math.hypot(
+          elevationPreciseOffset(
+            preciseDraft.startCm,
+            preciseDraft.hoverCm,
+            preciseOverrideCm,
+            elevAxisLockMod.value,
+          ).x,
+          elevationPreciseOffset(
+            preciseDraft.startCm,
+            preciseDraft.hoverCm,
+            preciseOverrideCm,
+            elevAxisLockMod.value,
+          ).y,
+        )
+  if (delta < minCm) {
+    cancelPreciseDraft()
+    return false
+  }
+  clearPreciseDraftUi()
+  return true
+}
+
+function beginPreciseOpening(
+  openingId: string,
+  cm: Point2D,
+  rect: ElevationRect,
+  wallId: string,
+  floorIndex: number,
+): void {
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  cancelOpeningMovePending()
+  const located = findOpeningInPlan(props.plan, openingId)
+  if (!located) return
+  pushUndo()
+  preciseDraft = {
+    kind: 'opening',
+    startCm: cm,
+    hoverCm: cm,
+    startRect: { x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1 },
+    openingId,
+    wallId,
+    floorIndex,
+  }
+  beginPreciseListen()
+}
+
+function beginPreciseRidge(wall: ElevationWallRect, cm: Point2D): void {
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  const floor = props.plan.floors[wall.floorIndex]
+  const startWall = floor
+    ? listRidgeWallsOnFloor(floor).find((item) => item.id === wall.wallId)
+    : undefined
+  if (!startWall) return
+  selectRidge(wall.wallId, wall.floorIndex)
+  pushUndo()
+  const startRect = elevationRidgeRectOf(wall)
+  preciseDraft = {
+    kind: 'ridge',
+    startCm: cm,
+    hoverCm: cm,
+    startRect,
+    wallId: wall.wallId,
+    floorIndex: wall.floorIndex,
+    startWall,
+  }
+  beginPreciseListen()
+}
+
+function beginPreciseJunction(
+  junction: { id: string; heightCm: number; floorIndex: number; ridge?: boolean },
+  refs: Array<{ wallId: string; end: 'a' | 'b' }>,
+  cm: Point2D,
+): void {
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  selectJunction(junction.id)
+  pushUndo()
+  preciseDraft = {
+    kind: 'junction',
+    startCm: cm,
+    hoverCm: cm,
+    startHeightCm: junction.heightCm,
+    id: junction.id,
+    floorIndex: junction.floorIndex,
+    refs,
+    ridge: junction.ridge,
+  }
+  beginPreciseListen()
 }
 
 type JunctionDrag = {
@@ -1594,6 +2166,14 @@ function onJunctionDown(junctionId: string, event: { evt: MouseEvent }): void {
   const junction = elev?.junctions.find((item) => item.id === junctionId)
   const cm = pointerCm(event)
   if (!junction || !cm) return
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  if (preciseIntent(event.evt)) {
+    beginPreciseJunction(junction, junction.refs, cm)
+    return
+  }
   beginJunctionDrag(junction, junction.refs, cm.y)
 }
 
@@ -1604,12 +2184,35 @@ function onRidgeWallDown(wall: ElevationWallRect, event: { evt: MouseEvent }): v
   if (!elev || !cm) return
   if (wall.endOn) {
     event.evt.stopPropagation()
+    if (preciseDraft) {
+      commitPreciseDraft()
+      return
+    }
+    if (preciseIntent(event.evt)) {
+      beginPreciseRidge(wall, cm)
+      return
+    }
     beginRidgeRectDrag(wall, 'move', cm)
     return
   }
   const junction = nearestElevationRidgeJunction(elev, wall, cm)
   if (!junction) return
   event.evt.stopPropagation()
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  if (preciseIntent(event.evt)) {
+    beginPreciseJunction(
+      junction,
+      [
+        { wallId: wall.wallId, end: 'a' },
+        { wallId: wall.wallId, end: 'b' },
+      ],
+      cm,
+    )
+    return
+  }
   beginJunctionDrag(
     junction,
     [
@@ -1618,6 +2221,23 @@ function onRidgeWallDown(wall: ElevationWallRect, event: { evt: MouseEvent }): v
     ],
     cm.y,
   )
+}
+
+function onRidgeMoveHandleDown(event: { evt: MouseEvent }): void {
+  event.evt.stopPropagation()
+  if (activeTool.value !== 'select' || canvasLocked.value) return
+  const wall = selectedRidgeWall.value
+  const cm = pointerCm(event)
+  if (!wall?.endOn || !cm) return
+  if (preciseDraft) {
+    commitPreciseDraft()
+    return
+  }
+  if (preciseIntent(event.evt)) {
+    beginPreciseRidge(wall, cm)
+    return
+  }
+  beginRidgeRectDrag(wall, 'move', cm)
 }
 
 type RidgeRectDrag = {
@@ -1787,6 +2407,27 @@ function onRoofVertexUp(): void {
 function onKeydown(event: KeyboardEvent): void {
   if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
     return
+  if (preciseDraft) {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      cancelPreciseDraft()
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commitPreciseDraft()
+      return
+    }
+    if (isDrawTypeLengthKey(event)) {
+      event.preventDefault()
+      const next = applyDrawTypeKey(preciseTypeText.value, event.key)
+      if (next == null) return
+      preciseTypeText.value = next
+      preciseOverrideCm = parseDrawLengthDraftToCm(next, props.unit)
+      applyPreciseDraft()
+      return
+    }
+  }
   if (event.key === 'Escape') {
     if (props.rescaleMode) {
       emit('cancelRescale')
@@ -1798,6 +2439,14 @@ function onKeydown(event: KeyboardEvent): void {
     }
     if (splitDraft.value) {
       clearSplitDraft()
+      return
+    }
+    if (ridgePlacePreview.value) {
+      ridgePlacePreview.value = null
+      snapGuide.value = null
+    }
+    if (roofPlaceDraft.value) {
+      clearRoofPlaceDraft()
       return
     }
     activeTool.value = 'select'
@@ -1828,7 +2477,9 @@ defineExpose({
     class="elev-host"
     :class="{
       'elev-host--move-underlay': underlayMoveMode && !rescaleMode,
-      'elev-host--split': activeTool === 'split' && !canvasLocked,
+      'elev-host--split':
+        (activeTool === 'split' || activeTool === 'add_ridge' || activeTool === 'add_roof') &&
+        !canvasLocked,
       'elev-host--touch': useTouchNav,
     }"
     tabindex="0"
@@ -1849,8 +2500,11 @@ defineExpose({
         'viewer.elevationSplitHint',
         'viewer.elevationJunctionHint',
         'viewer.elevationRidgeHint',
+        'viewer.elevationPlanSidesHint',
         'result.toolbar.hintAddDoor',
         'result.toolbar.hintAddWindow',
+        'toolbelt.fml.addRidge',
+        'toolbelt.fml.addRoof',
       ]"
       @undo="undoEdit"
       @redo="redoEdit"
@@ -1858,6 +2512,13 @@ defineExpose({
       @zoom-in="panZoom.zoomBy(1.15)"
       @zoom-out="panZoom.zoomBy(1 / 1.15)"
       @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
+    />
+    <FmlEditorModifierRail
+      v-if="useTouchNav && !canvasLocked"
+      v-model:settings-mod="elevSettingsMod"
+      v-model:axis-lock-mod="elevAxisLockMod"
+      v-model:move-mod="elevMoveMod"
+      hide-select-tools
     />
     <div class="elev-groups" role="tablist">
       <button
@@ -1885,6 +2546,7 @@ defineExpose({
           @dragmove="panZoom.onGroupDragMove"
           @dragend="panZoom.onGroupDragEnd"
           @click="onContentClick"
+          @mousemove="onContentMove"
         >
           <v-rect
             :config="{
@@ -1901,91 +2563,51 @@ defineExpose({
               <v-image :config="underlayConfig.image" />
             </v-group>
           </v-group>
-          <template v-if="elevation">
-            <v-group v-for="(band, index) in elevation.bands" :key="`band-${band.kind}-${index}`">
-              <v-rect
-                :config="{
-                  ...stageRect(band),
-                  fill: band.kind === 'nok' ? '#cbd5e1' : '#e2e8f0',
-                  listening: false,
-                }"
-              />
-              <v-rect
-                v-if="
-                  band.kind === 'slab' && band.floorIndex != null && slabSelected(band.floorIndex)
-                "
-                :config="{
-                  ...stageRect(band),
-                  fillEnabled: false,
-                  stroke: '#f97316',
-                  strokeWidth: elevHighlightStroke,
-                  listening: false,
-                  perfectDrawEnabled: false,
-                }"
-              />
-            </v-group>
-            <v-group v-for="plane in elevation.roofPlanes" :key="`roof-${plane.id}`">
-              <v-line
-                :config="{
-                  points: stagePoly(plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points),
-                  closed: true,
-                  fill: plane.color,
-                  stroke: '#4b5563',
-                  strokeWidth: elevStroke,
-                  perfectDrawEnabled: false,
-                  opacity: roofSelected(plane.id) ? 1 : 0.92,
-                  listening: false,
-                }"
-              />
-              <v-line
-                v-if="roofSelected(plane.id)"
-                :config="{
-                  points: stagePoly(plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points),
-                  closed: true,
-                  fillEnabled: false,
-                  stroke: '#f97316',
-                  strokeWidth: elevHighlightStroke,
-                  listening: false,
-                  perfectDrawEnabled: false,
-                }"
-              />
-            </v-group>
-            <v-group
-              v-for="plane in elevationPlanes"
-              :key="plane.key"
-              :config="{ listening: true }"
-            >
-              <v-group
-                v-for="layer in plane.layers"
-                :key="`layer-${layer.wall.floorIndex}-${layer.wall.wallId}`"
-                :config="{ listening: true }"
-              >
-                <v-path
+          <v-group :config="{ opacity: contentOpacity, listening: true }">
+            <template v-if="elevation">
+              <v-group v-for="(band, index) in elevation.bands" :key="`band-${band.kind}-${index}`">
+                <v-rect
                   :config="{
-                    data: layer.fillPath,
-                    fill: '#94a3b8',
-                    fillRule: 'evenodd',
-                    strokeEnabled: false,
-                    perfectDrawEnabled: false,
-                    listening: true,
+                    ...stageRect(band),
+                    fill: band.kind === 'nok' ? '#cbd5e1' : '#e2e8f0',
+                    listening: false,
                   }"
-                  @mousedown="onRidgeWallDown(layer.wall, $event)"
                 />
+                <v-rect
+                  v-if="
+                    band.kind === 'slab' && band.floorIndex != null && slabSelected(band.floorIndex)
+                  "
+                  :config="{
+                    ...stageRect(band),
+                    fillEnabled: false,
+                    stroke: '#f97316',
+                    strokeWidth: elevHighlightStroke,
+                    listening: false,
+                    perfectDrawEnabled: false,
+                  }"
+                />
+              </v-group>
+              <v-group v-for="plane in elevation.roofPlanes" :key="`roof-${plane.id}`">
                 <v-line
                   :config="{
-                    points: stageWallPoly(layer.wall),
+                    points: stagePoly(
+                      plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points,
+                    ),
                     closed: true,
-                    fillEnabled: false,
-                    stroke: '#334155',
+                    fill: plane.color,
+                    stroke: '#4b5563',
                     strokeWidth: elevStroke,
                     perfectDrawEnabled: false,
+                    opacity: roofSelected(plane.id) ? 1 : 0.92,
                     listening: false,
                   }"
                 />
                 <v-line
-                  v-if="wallOrRidgeSelected(layer.wall)"
+                  v-if="roofSelected(plane.id)"
                   :config="{
-                    points: stageWallPoly(layer.wall),
+                    points: stagePoly(
+                      plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points,
+                    ),
                     closed: true,
                     fillEnabled: false,
                     stroke: '#f97316',
@@ -1994,326 +2616,458 @@ defineExpose({
                     perfectDrawEnabled: false,
                   }"
                 />
+              </v-group>
+              <v-group
+                v-for="plane in elevationPlanes"
+                :key="plane.key"
+                :config="{ listening: true }"
+              >
+                <v-group
+                  v-for="layer in plane.layers"
+                  :key="`layer-${layer.wall.floorIndex}-${layer.wall.wallId}`"
+                  :config="{ listening: true }"
+                >
+                  <v-path
+                    :config="{
+                      data: layer.fillPath,
+                      fill: '#94a3b8',
+                      fillRule: 'evenodd',
+                      strokeEnabled: false,
+                      perfectDrawEnabled: false,
+                      listening: true,
+                    }"
+                    @mousedown="onRidgeWallDown(layer.wall, $event)"
+                  />
+                  <v-line
+                    :config="{
+                      points: stageWallPoly(layer.wall),
+                      closed: true,
+                      fillEnabled: false,
+                      stroke: '#334155',
+                      strokeWidth: elevStroke,
+                      perfectDrawEnabled: false,
+                      listening: false,
+                    }"
+                  />
+                  <v-line
+                    v-if="wallOrRidgeSelected(layer.wall)"
+                    :config="{
+                      points: stageWallPoly(layer.wall),
+                      closed: true,
+                      fillEnabled: false,
+                      stroke: '#f97316',
+                      strokeWidth: elevHighlightStroke,
+                      listening: false,
+                      perfectDrawEnabled: false,
+                    }"
+                  />
+                  <v-line
+                    v-for="stroke in layer.innerStrokes"
+                    :key="stroke.key"
+                    :config="{
+                      points: stagePoints(stroke.a, stroke.b),
+                      stroke: '#0f172a',
+                      dash: elevDash,
+                      strokeWidth: elevStroke,
+                      perfectDrawEnabled: false,
+                      listening: false,
+                    }"
+                  />
+                </v-group>
+                <v-group
+                  v-for="opening in plane.openings"
+                  :key="opening.openingId"
+                  :config="{ listening: true }"
+                >
+                  <v-rect
+                    :config="{
+                      ...stageRect(opening),
+                      fill:
+                        selectedOpeningId === opening.openingId
+                          ? '#f97316'
+                          : opening.type === 'door'
+                            ? '#f59e0b'
+                            : '#38bdf8',
+                      opacity: selectedOpeningId === opening.openingId ? 0.55 : 0.08,
+                      stroke: selectedOpeningId === opening.openingId ? '#ea580c' : '#0c4a6e',
+                      strokeWidth: elevStroke,
+                      perfectDrawEnabled: false,
+                      listening: true,
+                    }"
+                    @mousedown="onOpeningDown(opening.openingId, $event)"
+                  />
+                  <v-rect
+                    v-if="selectedOpeningId === opening.openingId"
+                    :config="{
+                      ...stageRect(opening),
+                      fillEnabled: false,
+                      stroke: '#f97316',
+                      strokeWidth: elevHighlightStroke,
+                      listening: false,
+                      perfectDrawEnabled: false,
+                    }"
+                  />
+                </v-group>
+                <v-group
+                  v-for="(transom, index) in plane.transoms"
+                  :key="`transom-${transom.openingId}-${index}`"
+                >
+                  <v-rect
+                    :config="{
+                      ...stageRect(transom),
+                      fill: FACTORY_OPENING_COLORS.bovenlicht,
+                      stroke: '#14532d',
+                      strokeWidth: elevStroke,
+                      opacity: 0.22,
+                      perfectDrawEnabled: false,
+                      listening: false,
+                    }"
+                  />
+                  <v-rect
+                    v-if="selectedOpeningId === transom.openingId"
+                    :config="{
+                      ...stageRect(transom),
+                      fillEnabled: false,
+                      stroke: '#f97316',
+                      strokeWidth: elevHighlightStroke,
+                      listening: false,
+                      perfectDrawEnabled: false,
+                    }"
+                  />
+                </v-group>
+                <v-group
+                  v-for="glyph in plane.glyphs"
+                  :key="glyph.id"
+                  :config="{ listening: false }"
+                >
+                  <v-line
+                    v-for="poly in glyph.polys"
+                    :key="`${glyph.id}-${poly.key}`"
+                    :config="{
+                      points: poly.points,
+                      closed: poly.closed,
+                      fill: poly.fill ? glyphFill(poly.role, glyph.transom, glyph.type) : undefined,
+                      stroke: glyph.transom ? '#14532d' : '#0c4a6e',
+                      strokeWidth: poly.role === 'handle' ? elevStrokeHeavy : elevStroke,
+                      opacity: glyphOpacity(poly.role, glyph.transom),
+                      perfectDrawEnabled: false,
+                      listening: false,
+                    }"
+                  />
+                  <v-circle
+                    v-for="circle in glyph.circles"
+                    :key="`${glyph.id}-${circle.key}`"
+                    :config="{
+                      x: circle.x,
+                      y: circle.y,
+                      radius: circle.radius,
+                      fill: circle.fill
+                        ? glyphFill(circle.role, glyph.transom, glyph.type)
+                        : undefined,
+                      stroke: glyph.transom ? '#14532d' : '#0c4a6e',
+                      strokeWidth: circle.role === 'handle' ? elevStrokeHeavy : elevStroke,
+                      opacity: glyphOpacity(circle.role, glyph.transom),
+                      perfectDrawEnabled: false,
+                      listening: false,
+                    }"
+                  />
+                </v-group>
+                <v-group
+                  v-for="layer in plane.endOnRidges"
+                  :key="`ridge-end-${layer.wall.floorIndex}-${layer.wall.wallId}`"
+                  :config="{ listening: true }"
+                >
+                  <v-path
+                    :config="{
+                      data: layer.fillPath,
+                      fill: '#7b8ea6',
+                      fillRule: 'evenodd',
+                      strokeEnabled: false,
+                      perfectDrawEnabled: false,
+                      listening: true,
+                    }"
+                    @mousedown="onRidgeWallDown(layer.wall, $event)"
+                  />
+                  <v-line
+                    :config="{
+                      points: stageWallPoly(layer.wall),
+                      closed: true,
+                      fillEnabled: false,
+                      stroke: '#334155',
+                      strokeWidth: elevStroke,
+                      perfectDrawEnabled: false,
+                      listening: false,
+                    }"
+                  />
+                  <v-line
+                    v-if="wallOrRidgeSelected(layer.wall)"
+                    :config="{
+                      points: stageWallPoly(layer.wall),
+                      closed: true,
+                      fillEnabled: false,
+                      stroke: '#f97316',
+                      strokeWidth: elevHighlightStroke,
+                      listening: false,
+                      perfectDrawEnabled: false,
+                    }"
+                  />
+                </v-group>
+              </v-group>
+              <v-group v-for="junction in elevation.junctions" :key="junction.id">
                 <v-line
-                  v-for="stroke in layer.innerStrokes"
-                  :key="stroke.key"
+                  v-if="junctionSelected(junction.id)"
                   :config="{
-                    points: stagePoints(stroke.a, stroke.b),
-                    stroke: '#0f172a',
+                    points: stagePoints(
+                      { x: junction.x, y: junction.yBot },
+                      { x: junction.x, y: junction.yTop },
+                    ),
+                    stroke: '#f97316',
+                    strokeWidth: elevHighlightStroke,
+                    listening: false,
+                    perfectDrawEnabled: false,
+                  }"
+                />
+                <v-line
+                  :config="{
+                    points: stagePoints(
+                      { x: junction.x, y: junction.yBot },
+                      { x: junction.x, y: junction.yTop },
+                    ),
+                    stroke: junctionSelected(junction.id) ? '#f97316' : '#334155',
                     dash: elevDash,
                     strokeWidth: elevStroke,
                     perfectDrawEnabled: false,
-                    listening: false,
-                  }"
-                />
-              </v-group>
-              <v-group
-                v-for="opening in plane.openings"
-                :key="opening.openingId"
-                :config="{ listening: true }"
-              >
-                <v-rect
-                  :config="{
-                    ...stageRect(opening),
-                    fill:
-                      selectedOpeningId === opening.openingId
-                        ? '#f97316'
-                        : opening.type === 'door'
-                          ? '#f59e0b'
-                          : '#38bdf8',
-                    opacity: selectedOpeningId === opening.openingId ? 0.55 : 0.08,
-                    stroke: selectedOpeningId === opening.openingId ? '#ea580c' : '#0c4a6e',
-                    strokeWidth: elevStroke,
-                    perfectDrawEnabled: false,
                     listening: true,
                   }"
-                  @mousedown="onOpeningDown(opening.openingId, $event)"
-                />
-                <v-rect
-                  v-if="selectedOpeningId === opening.openingId"
-                  :config="{
-                    ...stageRect(opening),
-                    fillEnabled: false,
-                    stroke: '#f97316',
-                    strokeWidth: elevHighlightStroke,
-                    listening: false,
-                    perfectDrawEnabled: false,
-                  }"
+                  @mousedown="onJunctionDown(junction.id, $event)"
                 />
               </v-group>
-              <v-group
-                v-for="(transom, index) in plane.transoms"
-                :key="`transom-${transom.openingId}-${index}`"
-              >
-                <v-rect
-                  :config="{
-                    ...stageRect(transom),
-                    fill: FACTORY_OPENING_COLORS.bovenlicht,
-                    stroke: '#14532d',
-                    strokeWidth: elevStroke,
-                    opacity: 0.22,
-                    perfectDrawEnabled: false,
-                    listening: false,
-                  }"
-                />
-                <v-rect
-                  v-if="selectedOpeningId === transom.openingId"
-                  :config="{
-                    ...stageRect(transom),
-                    fillEnabled: false,
-                    stroke: '#f97316',
-                    strokeWidth: elevHighlightStroke,
-                    listening: false,
-                    perfectDrawEnabled: false,
-                  }"
-                />
-              </v-group>
-              <v-group v-for="glyph in plane.glyphs" :key="glyph.id" :config="{ listening: false }">
-                <v-line
-                  v-for="poly in glyph.polys"
-                  :key="`${glyph.id}-${poly.key}`"
-                  :config="{
-                    points: poly.points,
-                    closed: poly.closed,
-                    fill: poly.fill ? glyphFill(poly.role, glyph.transom, glyph.type) : undefined,
-                    stroke: glyph.transom ? '#14532d' : '#0c4a6e',
-                    strokeWidth: poly.role === 'handle' ? elevStrokeHeavy : elevStroke,
-                    opacity: glyphOpacity(poly.role, glyph.transom),
-                    perfectDrawEnabled: false,
-                    listening: false,
-                  }"
-                />
-                <v-circle
-                  v-for="circle in glyph.circles"
-                  :key="`${glyph.id}-${circle.key}`"
-                  :config="{
-                    x: circle.x,
-                    y: circle.y,
-                    radius: circle.radius,
-                    fill: circle.fill
-                      ? glyphFill(circle.role, glyph.transom, glyph.type)
-                      : undefined,
-                    stroke: glyph.transom ? '#14532d' : '#0c4a6e',
-                    strokeWidth: circle.role === 'handle' ? elevStrokeHeavy : elevStroke,
-                    opacity: glyphOpacity(circle.role, glyph.transom),
-                    perfectDrawEnabled: false,
-                    listening: false,
-                  }"
-                />
-              </v-group>
-              <v-group
-                v-for="layer in plane.endOnRidges"
-                :key="`ridge-end-${layer.wall.floorIndex}-${layer.wall.wallId}`"
-                :config="{ listening: true }"
-              >
-                <v-path
-                  :config="{
-                    data: layer.fillPath,
-                    fill: '#7b8ea6',
-                    fillRule: 'evenodd',
-                    strokeEnabled: false,
-                    perfectDrawEnabled: false,
-                    listening: true,
-                  }"
-                  @mousedown="onRidgeWallDown(layer.wall, $event)"
-                />
-                <v-line
-                  :config="{
-                    points: stageWallPoly(layer.wall),
-                    closed: true,
-                    fillEnabled: false,
-                    stroke: '#334155',
-                    strokeWidth: elevStroke,
-                    perfectDrawEnabled: false,
-                    listening: false,
-                  }"
-                />
-                <v-line
-                  v-if="wallOrRidgeSelected(layer.wall)"
-                  :config="{
-                    points: stageWallPoly(layer.wall),
-                    closed: true,
-                    fillEnabled: false,
-                    stroke: '#f97316',
-                    strokeWidth: elevHighlightStroke,
-                    listening: false,
-                    perfectDrawEnabled: false,
-                  }"
-                />
-              </v-group>
-            </v-group>
-            <v-group v-for="junction in elevation.junctions" :key="junction.id">
-              <v-line
-                v-if="junctionSelected(junction.id)"
+              <v-circle
+                v-for="junction in elevation.junctions"
+                :key="`jh-${junction.id}`"
                 :config="{
-                  points: stagePoints(
-                    { x: junction.x, y: junction.yBot },
-                    { x: junction.x, y: junction.yTop },
-                  ),
-                  stroke: '#f97316',
-                  strokeWidth: elevHighlightStroke,
-                  listening: false,
-                  perfectDrawEnabled: false,
-                }"
-              />
-              <v-line
-                :config="{
-                  points: stagePoints(
-                    { x: junction.x, y: junction.yBot },
-                    { x: junction.x, y: junction.yTop },
-                  ),
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(junction.x, junction.yTop)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: (junctionSelected(junction.id) ? 6 : 4) / viewScale,
+                  fill: '#fff',
                   stroke: junctionSelected(junction.id) ? '#f97316' : '#334155',
-                  dash: elevDash,
                   strokeWidth: elevStroke,
-                  perfectDrawEnabled: false,
                   listening: true,
                 }"
                 @mousedown="onJunctionDown(junction.id, $event)"
               />
-            </v-group>
-            <v-circle
-              v-for="junction in elevation.junctions"
-              :key="`jh-${junction.id}`"
-              :config="{
-                ...(() => {
-                  const stage = layoutXform.toStagePoint(junction.x, junction.yTop)
-                  return { x: stage.x, y: stage.y }
-                })(),
-                radius: (junctionSelected(junction.id) ? 6 : 4) / viewScale,
-                fill: '#fff',
-                stroke: junctionSelected(junction.id) ? '#f97316' : '#334155',
-                strokeWidth: elevStroke,
-                listening: true,
-              }"
-              @mousedown="onJunctionDown(junction.id, $event)"
-            />
-            <v-line
-              v-if="snapGuide?.y != null"
-              :config="{
-                points: (() => {
-                  const a = layoutXform.toStagePoint(elevation.bounds.x0, snapGuide.y)
-                  const b = layoutXform.toStagePoint(elevation.bounds.x1, snapGuide.y)
-                  return [a.x, a.y, b.x, b.y]
-                })(),
-                stroke: '#2563eb',
-                dash: [6 / viewScale, 4 / viewScale],
-                strokeWidth: 1 / viewScale,
-                listening: false,
-              }"
-            />
-            <v-line
-              v-if="snapGuide?.x != null"
-              :config="{
-                points: (() => {
-                  const a = layoutXform.toStagePoint(snapGuide.x, elevation.bounds.y0)
-                  const b = layoutXform.toStagePoint(snapGuide.x, elevation.bounds.y1)
-                  return [a.x, a.y, b.x, b.y]
-                })(),
-                stroke: '#2563eb',
-                dash: [6 / viewScale, 4 / viewScale],
-                strokeWidth: 1 / viewScale,
-                listening: false,
-              }"
-            />
-            <v-line
-              v-if="splitDraft"
-              :config="{
-                points: stagePoints(
-                  { x: splitDraft.x, y: splitDraft.y0 },
-                  { x: splitDraft.x, y: splitDraft.y1 },
-                ),
-                stroke: '#f97316',
-                strokeWidth: elevStrokeHeavy,
-                listening: false,
-              }"
-            />
-            <v-circle
-              v-for="(point, index) in selectedRoofPlane?.points ?? []"
-              :key="`roof-v-${selectedRoofPlane?.id}-${index}`"
-              :config="{
-                ...(() => {
-                  const stage = layoutXform.toStagePoint(point.x, point.y)
-                  return { x: stage.x, y: stage.y }
-                })(),
-                radius:
-                  (settingsTarget?.kind === 'roof' && settingsTarget.vertexIndex === index
-                    ? 6
-                    : 4.5) / viewScale,
-                fill:
-                  settingsTarget?.kind === 'roof' && settingsTarget.vertexIndex === index
-                    ? '#b45309'
-                    : '#f97316',
-                stroke: '#fff',
-                strokeWidth: 1.5 / viewScale,
-                listening: true,
-              }"
-              @mousedown="onRoofVertexDown(index, $event)"
-            />
-            <v-circle
-              v-if="ridgeCenter"
-              :config="{
-                ...(() => {
-                  const stage = layoutXform.toStagePoint(ridgeCenter.x, ridgeCenter.y)
-                  return { x: stage.x, y: stage.y }
-                })(),
-                radius: 5 / viewScale,
-                fill: '#f97316',
-                stroke: '#fff',
-                strokeWidth: 1.5 / viewScale,
-                listening: false,
-              }"
-            />
-            <v-circle
-              v-for="handle in ridgeHandles"
-              :key="`ridge-handle-${handle.side}`"
-              :config="{
-                ...(() => {
-                  const stage = layoutXform.toStagePoint(handle.x, handle.y)
-                  return { x: stage.x, y: stage.y }
-                })(),
-                radius: 6 / viewScale,
-                fill: '#fff',
-                stroke: '#f97316',
-                strokeWidth: 2 / viewScale,
-                listening: true,
-              }"
-              @mousedown="onRidgeHandleDown(handle.side, $event)"
-            />
-            <v-circle
-              v-if="openingMoveHandle"
-              :config="{
-                ...(() => {
-                  const stage = layoutXform.toStagePoint(openingMoveHandle.x, openingMoveHandle.y)
-                  return { x: stage.x, y: stage.y }
-                })(),
-                radius: 6 / viewScale,
-                fill: '#f97316',
-                stroke: '#fff',
-                strokeWidth: 2 / viewScale,
-                listening: true,
-              }"
-              @mousedown="onMoveHandleDown"
-            />
-            <v-circle
-              v-for="handle in openingHandles"
-              :key="`handle-${handle.side}`"
-              :config="{
-                ...(() => {
-                  const stage = layoutXform.toStagePoint(handle.x, handle.y)
-                  return { x: stage.x, y: stage.y }
-                })(),
-                radius: 6 / viewScale,
-                fill: '#fff',
-                stroke: '#f97316',
-                strokeWidth: 2 / viewScale,
-                listening: true,
-              }"
-              @mousedown="onHandleDown(handle.side, $event)"
-            />
-          </template>
+              <v-line
+                v-if="snapGuide?.y != null"
+                :config="{
+                  points: (() => {
+                    const a = layoutXform.toStagePoint(elevation.bounds.x0, snapGuide.y)
+                    const b = layoutXform.toStagePoint(elevation.bounds.x1, snapGuide.y)
+                    return [a.x, a.y, b.x, b.y]
+                  })(),
+                  stroke: '#2563eb',
+                  dash: [6 / viewScale, 4 / viewScale],
+                  strokeWidth: 1 / viewScale,
+                  listening: false,
+                }"
+              />
+              <v-line
+                v-if="snapGuide?.x != null"
+                :config="{
+                  points: (() => {
+                    const a = layoutXform.toStagePoint(snapGuide.x, elevation.bounds.y0)
+                    const b = layoutXform.toStagePoint(snapGuide.x, elevation.bounds.y1)
+                    return [a.x, a.y, b.x, b.y]
+                  })(),
+                  stroke: '#2563eb',
+                  dash: [6 / viewScale, 4 / viewScale],
+                  strokeWidth: 1 / viewScale,
+                  listening: false,
+                }"
+              />
+              <v-line
+                v-if="splitDraft"
+                :config="{
+                  points: stagePoints(
+                    { x: splitDraft.x, y: splitDraft.y0 },
+                    { x: splitDraft.x, y: splitDraft.y1 },
+                  ),
+                  stroke: '#f97316',
+                  strokeWidth: elevStrokeHeavy,
+                  listening: false,
+                }"
+              />
+              <v-rect
+                v-if="ridgePlacePreview"
+                :config="{
+                  ...stageRect(ridgePlacePreview.rect),
+                  fill: 'rgba(123, 142, 166, 0.35)',
+                  stroke: '#f97316',
+                  strokeWidth: elevStrokeHeavy,
+                  dash: elevDash,
+                  listening: false,
+                  perfectDrawEnabled: false,
+                }"
+              />
+              <v-line
+                v-if="roofPlaceDraft && roofPlaceHover"
+                :config="{
+                  points: stagePoints(roofPlaceDraft.eaveElev, roofPlaceHover),
+                  stroke: '#f97316',
+                  strokeWidth: elevStroke,
+                  dash: elevDash,
+                  listening: false,
+                  perfectDrawEnabled: false,
+                }"
+              />
+              <v-circle
+                v-if="roofPlaceDraft"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(
+                      roofPlaceDraft.eaveElev.x,
+                      roofPlaceDraft.eaveElev.y,
+                    )
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: 5 / viewScale,
+                  fill: '#f97316',
+                  stroke: '#fff',
+                  strokeWidth: 1.5 / viewScale,
+                  listening: false,
+                }"
+              />
+              <v-circle
+                v-else-if="activeTool === 'add_roof' && roofPlaceHover"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(roofPlaceHover.x, roofPlaceHover.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: 5 / viewScale,
+                  fill: 'rgba(249, 115, 22, 0.85)',
+                  stroke: '#fff',
+                  strokeWidth: 1.5 / viewScale,
+                  listening: false,
+                }"
+              />
+              <v-line
+                v-if="roofPlacePreview"
+                :config="{
+                  points: stagePoly(roofPlacePreview.elevPoints),
+                  closed: true,
+                  fill: 'rgba(100, 116, 139, 0.35)',
+                  stroke: '#f97316',
+                  strokeWidth: elevStrokeHeavy,
+                  dash: elevDash,
+                  listening: false,
+                  perfectDrawEnabled: false,
+                }"
+              />
+              <v-circle
+                v-for="(point, index) in selectedRoofPlane?.points ?? []"
+                :key="`roof-v-${selectedRoofPlane?.id}-${index}`"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(point.x, point.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius:
+                    (settingsTarget?.kind === 'roof' && settingsTarget.vertexIndex === index
+                      ? 6
+                      : 4.5) / viewScale,
+                  fill:
+                    settingsTarget?.kind === 'roof' && settingsTarget.vertexIndex === index
+                      ? '#b45309'
+                      : '#f97316',
+                  stroke: '#fff',
+                  strokeWidth: 1.5 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onRoofVertexDown(index, $event)"
+              />
+              <v-circle
+                v-if="ridgeCenter"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(ridgeCenter.x, ridgeCenter.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: 6 / viewScale,
+                  fill: '#f97316',
+                  stroke: '#fff',
+                  strokeWidth: 2 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onRidgeMoveHandleDown"
+              />
+              <v-circle
+                v-for="handle in ridgeHandles"
+                :key="`ridge-handle-${handle.side}`"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(handle.x, handle.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: 6 / viewScale,
+                  fill: '#fff',
+                  stroke: '#f97316',
+                  strokeWidth: 2 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onRidgeHandleDown(handle.side, $event)"
+              />
+              <v-circle
+                v-if="openingMoveHandle"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(openingMoveHandle.x, openingMoveHandle.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: 6 / viewScale,
+                  fill: '#f97316',
+                  stroke: '#fff',
+                  strokeWidth: 2 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onMoveHandleDown"
+              />
+              <v-circle
+                v-for="handle in openingHandles"
+                :key="`handle-${handle.side}`"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(handle.x, handle.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: 6 / viewScale,
+                  fill: '#fff',
+                  stroke: '#f97316',
+                  strokeWidth: 2 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onHandleDown(handle.side, $event)"
+              />
+              <v-text
+                v-for="mark in planSideLabelMarks"
+                :key="`plan-side-${mark.key}`"
+                :config="mark.config"
+              />
+            </template>
+          </v-group>
         </v-group>
       </v-layer>
     </v-stage>
+    <FmlPreviewMeasureOverlay
+      :width="stageSize.width"
+      :height="stageSize.height"
+      :lines="openingMoveMeasureLines"
+      :preview="precisePreview"
+      :hover="null"
+      :to-screen="cmToScreen"
+      :unit="unit"
+    />
     <FmlRescaleOverlay
       v-if="rescaleMode && rescaleState"
       :state="rescaleState"
@@ -2334,7 +3088,10 @@ defineExpose({
       @click.stop
     >
       <div class="canvas-toolbelt-dock__row">
-        <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face">
+        <div
+          v-show="!elevSettingsOpen"
+          class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--face"
+        >
           <CanvasToolbelt
             embedded
             :tools="elevLibraryTools"
@@ -2351,6 +3108,7 @@ defineExpose({
             </span>
             <FmlElevationHeightOnlyFields
               v-else-if="settingsRoof && settingsRoof.heightCm != null"
+              :unit="unit"
               :title="t('viewer.elevationRoof', { name: settingsRoof.name })"
               :height-cm="settingsRoof.heightCm"
               :min="0"
@@ -2359,6 +3117,7 @@ defineExpose({
             />
             <FmlElevationHeightOnlyFields
               v-else-if="settingsRidge"
+              :unit="unit"
               :title="t('viewer.elevationRidgeZ', { name: settingsRidge.name })"
               :height-cm="settingsRidge.heightCm"
               :min="0"
@@ -2367,6 +3126,7 @@ defineExpose({
             />
             <FmlElevationHeightOnlyFields
               v-else-if="settingsJunction"
+              :unit="unit"
               :title="
                 settingsJunction.ridge
                   ? t('viewer.elevationRidgeZ', { name: settingsJunction.name })
@@ -2379,6 +3139,7 @@ defineExpose({
             />
             <FmlElevationHeightOnlyFields
               v-else-if="settingsWall"
+              :unit="unit"
               :title="t('viewer.elevationWall', { name: settingsWall.name })"
               :height-cm="settingsWall.heightCm"
               :min="1"
@@ -2387,6 +3148,7 @@ defineExpose({
             />
             <FmlElevationHeightOnlyFields
               v-else-if="settingsSlab"
+              :unit="unit"
               :title="t('viewer.elevationSlab', { name: settingsSlab.name })"
               :height-cm="settingsSlab.heightCm"
               :min="0"
@@ -2411,6 +3173,7 @@ defineExpose({
                 settingsTarget.mode === 'edit' &&
                 selectedOpening
               "
+              :unit="unit"
               :type="selectedOpening.opening.type"
               :width-cm="selectedOpening.opening.width"
               :height-cm="resolveOpeningHeight(selectedOpening.opening)"
@@ -2444,6 +3207,7 @@ defineExpose({
               v-model:add-window-width-cm="addWindowWidthCm"
               v-model:add-window-sill-z-cm="addWindowSillZCm"
               v-model:add-window-height-cm="addWindowHeightCm"
+              :unit="unit"
               :active-tool="activeTool"
             />
             <button

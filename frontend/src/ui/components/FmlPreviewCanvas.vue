@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
-import { listRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
+import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/fml/ridge-walls'
 import type { FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
@@ -16,6 +16,7 @@ import {
   useFmlPreviewInteraction,
 } from '@/ui/composables/fml-preview/useFmlPreviewInteraction'
 import { useFmlPreviewDrawPreviews } from '@/ui/composables/fml-preview/useFmlPreviewDrawPreviews'
+import { formatDrawTypeLabel } from '@/ui/composables/fml-preview/fml-preview-draw-measure'
 import { inspectColorFor, type FmlInspectHit } from '@/ui/composables/fml-preview/fml-inspect'
 import { FML_PREVIEW_CHROME_SELECTOR } from '@/ui/composables/fml-preview/fml-preview-gestures'
 import { useFmlCanvasTouch, useFmlTouchNav } from '@/ui/composables/fml-preview/useFmlCanvasTouch'
@@ -34,8 +35,11 @@ import {
   loadUserSettings,
   type CornerMarkerMode,
   type OpeningDisplayColors,
+  type PlanDisplayStyleChoice,
 } from '@/ui/composables/settings/user-settings'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { resolveFmlCapabilities, type FmlKind } from '@/ui/composables/fml-preview/fml-capabilities'
+import { tGlobal } from '@/ui/i18n'
 import {
   clampLabelFontSize,
   DEFAULT_LABEL_FONT_COLOR,
@@ -269,7 +273,7 @@ watch(underlayMoveModeRef, (on) => {
 const containerRef = ref<HTMLDivElement | null>(null)
 const stageRef = ref<{ getNode: () => Konva.Stage } | null>(null)
 const contentGroupRef = ref<{ getNode: () => Konva.Group } | null>(null)
-const { useTouchNav } = useFmlTouchNav(touchEditor)
+const { useTouchNav, coarsePointer } = useFmlTouchNav(touchEditor)
 
 const { shiftPressed, spacePressed, onKeyDown, onKeyUp } = useStage()
 const ensureStampPreset = computed(() => props.kind === 'detection' || props.kind === 'editor')
@@ -338,6 +342,7 @@ const underlayProps = computed(() => ({
 }))
 
 const dakMode = computed(() => props.dakMode === true)
+const drawInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
 
 const render = useFmlPreviewRenderModel(
   viewport,
@@ -347,12 +352,13 @@ const render = useFmlPreviewRenderModel(
   selection,
   dimensionVis,
   dakMode,
+  drawInputUnit,
 )
 
 const hitTestWalls = computed(() => {
   const current = floor.value
   if (dakMode.value) return listRidgeWallsOnFloor(current)
-  return [...editor.walls.value, ...listRidgeWallsOnFloor(current)]
+  return editor.walls.value
 })
 
 const hitTest = useFmlPreviewHitTest(
@@ -370,6 +376,7 @@ const hitTest = useFmlPreviewHitTest(
   editor.items,
   useTouchNav,
   computed(() => render.renderModel.value?.fixtures ?? []),
+  computed(() => ridgeDisplayWidthCm(editor.localPlan.value)),
 )
 
 const interaction = useFmlPreviewInteraction({
@@ -420,12 +427,14 @@ const interaction = useFmlPreviewInteraction({
   inspectMode,
   touchEditor,
   touchNav: useTouchNav,
+  coarsePointer,
   measureDrawMode,
   slicerEditMode,
   dimensionVis,
   selectedSliceIndex,
   dakMode,
   onInspectSelect: (hit) => emit('inspectSelect', hit),
+  getInputUnit: () => drawInputUnit.value,
   onKeyDown,
   onKeyUp,
 })
@@ -487,11 +496,14 @@ const cornerMarkerMode = ref<CornerMarkerMode>(loadUserSettings().fmlViewer.corn
 const openingColors = ref<OpeningDisplayColors>({
   ...loadUserSettings().fmlViewer.openingColors,
 })
+const planDisplayStyle = ref<PlanDisplayStyleChoice>(loadUserSettings().fmlViewer.planDisplayStyle)
 
 function applyCornerMarkerModeFromSettings(): void {
-  const viewer = loadUserSettings().fmlViewer
-  cornerMarkerMode.value = viewer.cornerMarkerMode
-  openingColors.value = { ...viewer.openingColors }
+  const settings = loadUserSettings()
+  cornerMarkerMode.value = settings.fmlViewer.cornerMarkerMode
+  openingColors.value = { ...settings.fmlViewer.openingColors }
+  planDisplayStyle.value = settings.fmlViewer.planDisplayStyle
+  drawInputUnit.value = settings.scaleInputUnit
 }
 const fmlToolbarRef = ref<{ hint: string } | null>(null)
 const toolbarHint = computed(() => fmlToolbarRef.value?.hint ?? '')
@@ -503,9 +515,14 @@ const {
   drawRoomPreview,
   drawWallDrafting,
   drawRoomDrafting,
+  wallMoveDrafting,
+  wallMoveMeasureLengthCm,
+  wallMoveTypeText,
+  wallMoveLabelCm,
   drawLineDrafting,
   drawSurfaceDrafting,
   drawSurfacePendingRole,
+  drawSurfacePendingCutout,
   drawLineThickness,
   drawLineType,
   drawLineColor,
@@ -518,6 +535,10 @@ const {
   drawWallMeasureLengthCm,
   drawRoomMeasureHCm,
   drawRoomMeasureVCm,
+  drawWallTypeText,
+  drawRoomTypeHText,
+  drawRoomTypeVText,
+  drawRoomTypeField,
   setDrawWallLengthOverrideCm,
   setDrawRoomHOverrideCm,
   setDrawRoomVOverrideCm,
@@ -525,12 +546,19 @@ const {
   commitDrawRoomFromMeasure,
   acceptDrawDraft,
   deactivateDrawTool,
+  isDrawDrafting,
+  isWallMoveDrafting,
+  isPreciseMoveDrafting,
+  hitClickMoveAtClient,
+  hitDrawDraftHandleAtClient,
   drawSurfacePoints,
   drawSurfaceHoverCm,
   drawLinePoints,
   drawLineHoverCm,
   measurePreview,
   measureLines,
+  openingMoveMeasureLines,
+  wallInternalMeasureLines,
   measureHoverCm,
   nulpuntMode,
   nulpuntDisplayCm,
@@ -582,28 +610,28 @@ const {
   addWindowSillZCm,
   addWindowHeightCm,
   canvasCursor,
-  onWallThicknessInput,
+  onWallThicknessCm,
   commitWallThickness,
   applyWallsThicknessCm,
   onWallBalanceInput,
   commitWallBalance,
-  onWallHeightInput,
+  onWallHeightCm,
   commitWallHeight,
-  onJunctionHeightInput,
+  onJunctionHeightCm,
   commitJunctionHeight,
   commitOpeningSubtype,
-  onOpeningWidthInput,
+  onOpeningWidthCm,
   commitOpeningWidth,
-  onOpeningHeightInput,
+  onOpeningHeightCm,
   commitOpeningHeight,
-  onOpeningSillZInput,
+  onOpeningSillZCm,
   commitOpeningSillZ,
   toggleOpeningHingeAtStart,
   toggleOpeningSwingRight,
   onOpeningBovenlichtChange,
-  onOpeningBovenlichtHeightInput,
+  onOpeningBovenlichtHeightCm,
   commitOpeningBovenlichtHeight,
-  onOpeningBovenlichtGapInput,
+  onOpeningBovenlichtGapCm,
   commitOpeningBovenlichtGap,
   copySelectedOpening,
   deleteSelectedOpenings,
@@ -625,7 +653,6 @@ const {
   clearSelection,
   flushPendingFieldCommits,
   sanitizeWalls,
-  generateRoofPlanes,
   applyStampToActiveFloor,
   canApplyStampOnActiveFloor,
   applyRoomTypeToSelection,
@@ -634,6 +661,7 @@ const {
   customNameDraft,
   applyAreaColor,
   applyShowAreaLabel,
+  applySurfaceCutout,
   deleteSelectedTagged,
   beginSurfacePolygonEdit,
   endSurfacePolygonEdit,
@@ -789,6 +817,12 @@ const sliceGuidesStage = computed(() => {
   return out
 })
 
+const measureOverlayLines = computed(() => [
+  ...(measureDrawMode.value === 'tape' ? measureLines.value : []),
+  ...openingMoveMeasureLines.value,
+  ...wallInternalMeasureLines.value,
+])
+
 const slicePreviewStage = computed(() => {
   if (activeFmlTool.value !== 'measure' || measureDrawMode.value !== 'slicer') return null
   if (slicerEditMode.value) return null
@@ -880,6 +914,11 @@ useFmlCanvasTouch({
   blockEdit: () => Boolean(props.rescaleMode && !spacePressed.value),
   onEditPointerDown: onCanvasPointerDown,
   onEditPointerMove: onCanvasPointerMove,
+  isDrawDrafting,
+  hitDraftHandle: hitDrawDraftHandleAtClient,
+  isWallMoveDrafting,
+  isPreciseMoveDrafting,
+  hitClickMove: hitClickMoveAtClient,
 })
 
 const selectedItemPanel = computed(() => {
@@ -899,15 +938,15 @@ const selectedItemPanel = computed(() => {
   }
 })
 
-function onItemWidthInput(event: Event): void {
+function onItemWidthCm(cm: number): void {
   updateSelectedItem({
-    width: Math.max(1, Number((event.target as HTMLInputElement).value) || 1),
+    width: Math.max(1, cm),
   })
 }
 
-function onItemHeightInput(event: Event): void {
+function onItemHeightCm(cm: number): void {
   updateSelectedItem({
-    height: Math.max(1, Number((event.target as HTMLInputElement).value) || 1),
+    height: Math.max(1, cm),
   })
 }
 
@@ -932,6 +971,7 @@ const selectedAreaPanel = computed(() => {
     color: area.color,
     showAreaLabel: area.showAreaLabel !== false,
     canEditPolygon: false,
+    isCutout: false,
   }
 })
 
@@ -949,6 +989,7 @@ const selectedSurfacePanel = computed(() => {
     color: surface.color,
     showAreaLabel: surface.showAreaLabel !== false,
     canEditPolygon: true,
+    isCutout: surface.isCutout === true,
   }
 })
 
@@ -1032,6 +1073,8 @@ const {
   drawWallPreviewScreen,
   drawRoomPreviewScreen,
   drawRoomPreviewPolygon,
+  drawWallMeasureLabel,
+  drawRoomMeasureLabels,
   drawSurfacePreviewScreen,
   drawSurfacePreviewPolyline,
   drawLinePreviewScreen,
@@ -1048,6 +1091,25 @@ const {
   viewPosition,
   viewScale,
 })
+
+const drawWallMeasureLabelText = computed(() =>
+  formatDrawTypeLabel(drawWallTypeText.value, drawWallMeasureLengthCm.value, drawInputUnit.value),
+)
+const drawRoomMeasureHLabelText = computed(() =>
+  formatDrawTypeLabel(drawRoomTypeHText.value, drawRoomMeasureHCm.value, drawInputUnit.value),
+)
+const drawRoomMeasureVLabelText = computed(() =>
+  formatDrawTypeLabel(drawRoomTypeVText.value, drawRoomMeasureVCm.value, drawInputUnit.value),
+)
+const wallMoveMeasureLabel = computed(() => {
+  if (!wallMoveDrafting.value) return null
+  const cm = wallMoveLabelCm.value
+  if (!cm) return null
+  return cmToScreen(cm.x, cm.y)
+})
+const wallMoveMeasureLabelText = computed(() =>
+  formatDrawTypeLabel(wallMoveTypeText.value, wallMoveMeasureLengthCm.value, drawInputUnit.value),
+)
 
 const itemResizeHandles = computed(() => {
   const guid = settingsItemId.value
@@ -1097,7 +1159,6 @@ onUnmounted(() => {
 defineExpose({
   flushPendingFieldCommits,
   sanitizeWalls,
-  generateRoofPlanes,
   applyStampToActiveFloor,
   canApplyStampOnActiveFloor,
   applyCornerMarkerModeFromSettings,
@@ -1174,38 +1235,39 @@ watch(
       v-model:add-window-width-cm="addWindowWidthCm"
       v-model:add-window-sill-z-cm="addWindowSillZCm"
       v-model:add-window-height-cm="addWindowHeightCm"
-      :hide-inline-hint="viewportChrome"
-      :floating-dock="touchEditor"
-      :hide-select-tools="useTouchNav || dakMode"
-      :dak-mode="dakMode"
-      :selected-wall-panel="selectedWallPanel"
-      :selected-junction-panel="selectedJunctionPanel"
-      :selected-opening-panel="selectedOpeningPanel"
-      :selected-area-panel="taggedSettingsPanel"
-      :selected-label-panel="selectedLabelPanel"
       v-model:measure-draw-mode="measureDrawMode"
-      :selected-line-panel="selectedLinePanel"
       v-model:slicer-edit-mode="slicerEditMode"
-      :room-types="roomTypes"
+      :hide-inline-hint="viewportChrome"
       v-model:draw-surface-role="drawSurfacePendingRole"
-      :surface-edit-active="surfaceEditActive"
+      :floating-dock="touchEditor"
+      v-model:draw-surface-cutout="drawSurfacePendingCutout"
+      :hide-select-tools="useTouchNav || dakMode"
       v-model:draw-line-thickness="drawLineThickness"
-      :roof-vertex-z-cm="roofVertexZCm"
+      :dak-mode="dakMode"
       v-model:draw-line-type="drawLineType"
-      :roof-poly-mutate="selection.roofPolyMutate.value"
+      :selected-wall-panel="selectedWallPanel"
       v-model:draw-line-color="drawLineColor"
-      :include-surface-tool="includeSurfaceTool"
+      :selected-junction-panel="selectedJunctionPanel"
       v-model:draw-label-text="drawLabelText"
-      :include-annotation-tools="includeAnnotationTools && !dakMode"
+      :selected-opening-panel="selectedOpeningPanel"
       v-model:draw-label-font-size="drawLabelFontSize"
-      :include-fixture-tool="includeFixtureTool && !dakMode"
+      :selected-area-panel="taggedSettingsPanel"
       v-model:draw-label-font-color="drawLabelFontColor"
-      :selected-item-panel="selectedItemPanel"
+      :selected-label-panel="selectedLabelPanel"
       v-model:draw-label-outline="drawLabelOutline"
-      :wall-thickness-draft="wallThicknessDraft"
+      :selected-line-panel="selectedLinePanel"
       v-model:draw-label-bold="drawLabelBold"
-      :wall-thickness-mixed="wallThicknessMixed"
+      :room-types="roomTypes"
       v-model:draw-label-italic="drawLabelItalic"
+      :surface-edit-active="surfaceEditActive"
+      :roof-vertex-z-cm="roofVertexZCm"
+      :roof-poly-mutate="selection.roofPolyMutate.value"
+      :include-surface-tool="includeSurfaceTool"
+      :include-annotation-tools="includeAnnotationTools && !dakMode"
+      :include-fixture-tool="includeFixtureTool && !dakMode"
+      :selected-item-panel="selectedItemPanel"
+      :wall-thickness-draft="wallThicknessDraft"
+      :wall-thickness-mixed="wallThicknessMixed"
       :wall-balance-draft="wallBalanceDraft"
       :wall-balance-mixed="wallBalanceMixed"
       :wall-height-draft="wallHeightDraft"
@@ -1238,9 +1300,11 @@ watch(
       :measure-persist-enabled="props.kind === 'editor'"
       :draw-wall-drafting="drawWallDrafting"
       :draw-wall-measure-length-cm="drawWallMeasureLengthCm"
+      :wall-move-drafting="wallMoveDrafting"
       :draw-room-drafting="drawRoomDrafting"
       :draw-room-measure-h-cm="drawRoomMeasureHCm"
       :draw-room-measure-v-cm="drawRoomMeasureVCm"
+      :draw-input-unit="drawInputUnit"
       :draw-line-drafting="drawLineDrafting"
       :draw-surface-drafting="drawSurfaceDrafting"
       :facade-groups-enabled="capabilities?.facadeGroups === true"
@@ -1258,28 +1322,28 @@ watch(
       :ridge-floor-draft="ridgeFloorDraft"
       :ridge-floor-mixed="ridgeFloorMixed"
       :ridge-floor-options="ridgeFloorOptions"
-      @wall-thickness-input="onWallThicknessInput"
+      @wall-thickness-cm="onWallThicknessCm"
       @commit-wall-thickness="commitWallThickness"
       @apply-wall-thickness="applyWallsThicknessCm"
       @wall-balance-input="onWallBalanceInput"
       @commit-wall-balance="commitWallBalance"
-      @wall-height-input="onWallHeightInput"
+      @wall-height-cm="onWallHeightCm"
       @commit-wall-height="commitWallHeight"
-      @junction-height-input="onJunctionHeightInput"
+      @junction-height-cm="onJunctionHeightCm"
       @commit-junction-height="commitJunctionHeight"
       @commit-opening-subtype="commitOpeningSubtype"
-      @opening-width-input="onOpeningWidthInput"
+      @opening-width-cm="onOpeningWidthCm"
       @commit-opening-width="commitOpeningWidth"
-      @opening-height-input="onOpeningHeightInput"
+      @opening-height-cm="onOpeningHeightCm"
       @commit-opening-height="commitOpeningHeight"
-      @opening-sill-z-input="onOpeningSillZInput"
+      @opening-sill-z-cm="onOpeningSillZCm"
       @commit-opening-sill-z="commitOpeningSillZ"
       @toggle-opening-hinge="toggleOpeningHingeAtStart"
       @toggle-opening-swing="toggleOpeningSwingRight"
       @opening-bovenlicht-change="onOpeningBovenlichtChange"
-      @opening-bovenlicht-height-input="onOpeningBovenlichtHeightInput"
+      @opening-bovenlicht-height-cm="onOpeningBovenlichtHeightCm"
       @commit-opening-bovenlicht-height="commitOpeningBovenlichtHeight"
-      @opening-bovenlicht-gap-input="onOpeningBovenlichtGapInput"
+      @opening-bovenlicht-gap-cm="onOpeningBovenlichtGapCm"
       @commit-opening-bovenlicht-gap="commitOpeningBovenlichtGap"
       @copy-opening="copySelectedOpening"
       @delete-openings="deleteSelectedOpenings"
@@ -1300,6 +1364,7 @@ watch(
       @apply-area-custom-name="applyAreaCustomName"
       @apply-area-color="applyAreaColor"
       @apply-show-area-label="applyShowAreaLabel"
+      @apply-surface-cutout="applySurfaceCutout"
       @delete-tagged="deleteSelectedTagged"
       @label-text-input="onLabelTextInput"
       @update-label-text="updateSelectedLabelText"
@@ -1315,8 +1380,8 @@ watch(
       @begin-surface-polygon-edit="beginSurfacePolygonEdit"
       @end-surface-polygon-edit="endSurfacePolygonEdit"
       @roof-vertex-z-input="setRoofVertexZ"
-      @item-width-input="onItemWidthInput"
-      @item-height-input="onItemHeightInput"
+      @item-width-cm="onItemWidthCm"
+      @item-height-cm="onItemHeightCm"
       @item-rotation-input="onItemRotationInput"
       @toggle-item-mirror-x="toggleSelectedItemMirror(0)"
       @toggle-item-mirror-y="toggleSelectedItemMirror(1)"
@@ -1350,11 +1415,12 @@ watch(
     <FmlPreviewMeasureOverlay
       :width="stageSize.width"
       :height="stageSize.height"
-      :lines="measureDrawMode === 'tape' ? measureLines : []"
+      :lines="measureOverlayLines"
       :preview="measureDrawMode === 'slicer' ? null : measurePreview"
       :hover="measureHoverCm"
       :to-screen="cmToScreen"
       :dashed="true"
+      :unit="drawInputUnit"
     />
     <FmlRescaleOverlay
       v-if="rescaleMode && rescaleState"
@@ -1433,6 +1499,18 @@ watch(
         :x2="drawWallPreviewScreen.x2"
         :y2="drawWallPreviewScreen.y2"
       />
+      <circle
+        class="draw-draft-handle"
+        :cx="drawWallPreviewScreen.x1"
+        :cy="drawWallPreviewScreen.y1"
+        r="8"
+      />
+      <circle
+        class="draw-draft-handle"
+        :cx="drawWallPreviewScreen.x2"
+        :cy="drawWallPreviewScreen.y2"
+        r="8"
+      />
     </svg>
     <svg
       v-if="drawRoomPreviewScreen"
@@ -1441,7 +1519,67 @@ watch(
       :height="stageSize.height"
     >
       <polygon :points="drawRoomPreviewPolygon" />
+      <circle
+        v-for="(pt, idx) in drawRoomPreviewScreen"
+        :key="`room-h-${idx}`"
+        class="draw-draft-handle"
+        :cx="pt.x"
+        :cy="pt.y"
+        r="8"
+      />
     </svg>
+    <div
+      v-if="drawWallMeasureLabel"
+      class="draw-measure-label draw-measure-label--wall"
+      :class="{ 'draw-measure-label--typing': !!drawWallTypeText }"
+      :style="{ left: `${drawWallMeasureLabel.x}px`, top: `${drawWallMeasureLabel.y}px` }"
+    >
+      {{ drawWallMeasureLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+    </div>
+    <div
+      v-if="wallMoveMeasureLabel"
+      class="draw-measure-label draw-measure-label--wall"
+      :class="{ 'draw-measure-label--typing': !!wallMoveTypeText }"
+      :style="{ left: `${wallMoveMeasureLabel.x}px`, top: `${wallMoveMeasureLabel.y}px` }"
+    >
+      {{ wallMoveMeasureLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+      <button
+        type="button"
+        class="draw-measure-label__accept"
+        :title="tGlobal('result.toolbar.acceptDrawDraft')"
+        :aria-label="tGlobal('result.toolbar.acceptDrawDraft')"
+        @pointerdown.stop
+        @click.stop="acceptDrawDraft"
+      >
+        ✓
+      </button>
+    </div>
+    <div
+      v-if="drawRoomMeasureLabels"
+      class="draw-measure-label draw-measure-label--h"
+      :class="{ 'draw-measure-label--typing': drawRoomTypeField === 'h' }"
+      :style="{
+        left: `${drawRoomMeasureLabels.h.x}px`,
+        top: `${drawRoomMeasureLabels.h.y}px`,
+      }"
+    >
+      {{ drawRoomMeasureHLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+    </div>
+    <div
+      v-if="drawRoomMeasureLabels"
+      class="draw-measure-label draw-measure-label--v"
+      :class="{ 'draw-measure-label--typing': drawRoomTypeField === 'v' }"
+      :style="{
+        left: `${drawRoomMeasureLabels.v.x}px`,
+        top: `${drawRoomMeasureLabels.v.y}px`,
+      }"
+    >
+      {{ drawRoomMeasureVLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+    </div>
     <svg
       v-if="drawSurfacePreviewScreen"
       class="draw-surface-preview"
@@ -1535,6 +1673,7 @@ watch(
       :door-bovenlicht-default="bovenlichtPacked !== false && bovenlichtDefault"
       :window-bovenlicht-default="bovenlichtPacked !== false && windowBovenlichtDefault"
       :opening-colors="openingColors"
+      :plan-display-style="planDisplayStyle"
       :settings-area-id="settingsAreaId"
       :settings-surface-id="settingsSurfaceId"
       :settings-label-id="settingsLabelId"
@@ -1662,6 +1801,61 @@ watch(
   stroke: #f97316;
   stroke-width: 2;
   stroke-dasharray: 6 4;
+}
+
+.draw-draft-handle {
+  fill: #fff;
+  stroke: #f97316;
+  stroke-width: 2;
+}
+
+.draw-measure-label {
+  position: absolute;
+  z-index: 10;
+  pointer-events: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.94);
+  border: 1px solid #f97316;
+  color: #9a3412;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.draw-measure-label--wall,
+.draw-measure-label--h {
+  transform: translate(-50%, calc(-100% - 8px));
+}
+
+.draw-measure-label--v {
+  transform: translate(10px, -50%);
+}
+
+.draw-measure-label--typing {
+  border-width: 2px;
+  box-shadow: 0 0 0 2px rgb(249 115 22 / 0.28);
+}
+
+.draw-measure-label__unit {
+  margin-left: 3px;
+  color: #c2410c;
+  font-size: 10px;
+}
+
+.draw-measure-label__accept {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 3px;
+  background: #f97316;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .draw-surface-preview {

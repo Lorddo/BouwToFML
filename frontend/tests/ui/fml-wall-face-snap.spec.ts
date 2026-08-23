@@ -204,6 +204,24 @@ describe('snapDakDrawPoint', () => {
     expect(isOnDakBoundary(walls, [], clamped!, roofRings)).toBe(true)
   })
 
+  it('eerste dakvlak-punt: buitenhoek wint van een binnenface', () => {
+    const walls = [
+      wall({ id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 }),
+      wall({ id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 100 }, thickness: 20 }),
+    ]
+    const snapped = snapDakDrawPoint(
+      { x: -6, y: -6 },
+      {
+        walls,
+        extraCorners: [{ x: -10, y: -10 }],
+        preferOuterFaces: true,
+        centroid: { x: 50, y: 50 },
+      },
+    )
+    expect(snapped.x).toBeCloseTo(-10)
+    expect(snapped.y).toBeCloseTo(-10)
+  })
+
   it('nok zonder dakvlak-ringen: geen snap naar een dakhoek', () => {
     const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 })]
     const ridges = [{ a: { x: 10, y: 10 }, b: { x: 90, y: 10 } }]

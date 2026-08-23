@@ -1,4 +1,9 @@
 import type { Point2D } from '@/core/fml/types'
+import {
+  DEFAULT_SCALE_INPUT_UNIT,
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
 export interface MeasureLine {
   id: string
@@ -10,11 +15,11 @@ export function measureDistanceCm(a: Point2D, b: Point2D): number {
   return Math.hypot(b.x - a.x, b.y - a.y)
 }
 
-export function formatMeasureDistanceCm(cm: number): string {
-  if (cm >= 100) {
-    return `${(cm / 100).toFixed(2)} m`
-  }
-  return `${cm.toFixed(1)} cm`
+export function formatMeasureDistanceCm(
+  cm: number,
+  unit: ScaleInputUnit = DEFAULT_SCALE_INPUT_UNIT,
+): string {
+  return formatScaleInputLabel(cm, unit)
 }
 
 export interface MeasureLineScreen {
@@ -40,6 +45,7 @@ export function buildMeasureLineScreen(
   line: MeasureLine,
   toScreen: (x: number, y: number) => { x: number; y: number },
   tickLen = 6,
+  unit: ScaleInputUnit = DEFAULT_SCALE_INPUT_UNIT,
 ): MeasureLineScreen {
   const p1 = toScreen(line.a.x, line.a.y)
   const p2 = toScreen(line.b.x, line.b.y)
@@ -66,6 +72,6 @@ export function buildMeasureLineScreen(
     tickBy2: p2.y + ny,
     labelX: (p1.x + p2.x) / 2,
     labelY: (p1.y + p2.y) / 2,
-    label: formatMeasureDistanceCm(distanceCm),
+    label: formatMeasureDistanceCm(distanceCm, unit),
   }
 }

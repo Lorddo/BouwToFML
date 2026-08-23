@@ -6,7 +6,7 @@ import {
   distance,
   normalizeDir,
 } from './fml-preview-junction-core'
-import { findOpeningById, projectPointToWallT } from './fml-preview-openings'
+import { findOpeningById, openingWorldCenter, projectPointToWallT } from './fml-preview-openings'
 
 export { moveOpeningToWall }
 
@@ -103,6 +103,24 @@ function findNearestWallTarget(
 }
 
 /**
+ * Vastpak-offset: pointer − openingscentrum bij drag-start.
+ * Zo volgt het centrum de muis zonder naar de klik te springen.
+ */
+export function openingGrabOffsetCm(
+  wall: Pick<Wall, 'a' | 'b'>,
+  openingT: number,
+  pointerCm: Point2D,
+): Point2D {
+  const center = openingWorldCenter(wall, openingT)
+  return { x: pointerCm.x - center.x, y: pointerCm.y - center.y }
+}
+
+/** Effectieve pointer voor resolve: trekt de grab-offset af. */
+export function openingDragPointerWithGrab(pointerCm: Point2D, grabOffsetCm: Point2D): Point2D {
+  return { x: pointerCm.x - grabOffsetCm.x, y: pointerCm.y - grabOffsetCm.y }
+}
+
+/**
  * Bepaal doelmuur + soft `t` voor openings-drag.
  * Volgorde: collineaire hop → sticky huidig → snap-transfer → sticky fallback.
  */
@@ -147,4 +165,22 @@ export function applyOpeningDragMove(
   const target = resolveOpeningDragTarget(walls, located.wallId, pointerCm, opts)
   if (!target) return null
   return moveOpeningToWall(walls, openingId, target.wallId, target.t)
+}
+
+/**
+ * Precise move: schuif opening alleen langs de huidige muur (geen hop/transfer).
+ * `deltaCm` is verplaatsing vanaf de huidige `t` op die muur (a→b positief).
+ */
+export function slideOpeningAlongWall(
+  walls: Wall[],
+  openingId: string,
+  deltaCm: number,
+): OpeningDragMoveResult | null {
+  const located = findOpeningById(walls, openingId)
+  if (!located) return null
+  const wall = located.wall
+  const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
+  if (len < 1e-6) return null
+  const t = clamp01(located.opening.t + deltaCm / len)
+  return moveOpeningToWall(walls, openingId, located.wallId, t)
 }

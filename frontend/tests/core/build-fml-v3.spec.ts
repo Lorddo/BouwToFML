@@ -42,12 +42,22 @@ function planWithDoors(): FloorPlan {
 }
 
 describe('buildFmlV3 — Floorplanner-valid formaat', () => {
+  it('useMetric option overrides project settings; omitted keeps default true', () => {
+    const withImperial = JSON.parse(buildFmlV3(planWithDoors(), { useMetric: false }))
+    expect(withImperial.settings.useMetric).toBe(false)
+    const withMetric = JSON.parse(buildFmlV3(planWithDoors(), { useMetric: true }))
+    expect(withMetric.settings.useMetric).toBe(true)
+    const omitted = JSON.parse(buildFmlV3(planWithDoors()))
+    expect(omitted.settings.useMetric).toBe(true)
+  })
+
   it('bevat alle verplichte project/floor/design velden', () => {
     const raw = JSON.parse(buildFmlV3(planWithDoors()))
     expect(raw.id).toBeTruthy()
     expect(raw.public).toBe(false)
     expect(Array.isArray(raw.features)).toBe(true)
     expect(raw.settings.wallHeight).toBe(280)
+    expect(raw.settings.useMetric).toBe(true)
 
     const floor = raw.floors[0]
     expect(floor.id).toBeTruthy()

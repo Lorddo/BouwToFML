@@ -73,14 +73,8 @@
 }
 
 .fml-toolbelt__select--facade {
-  min-width: var(--fml-toolbelt-select-min, 110px);
-  max-width: 160px;
-  flex: 0 1 auto;
-}
-
-.fml-toolbelt__thickness-input--facade {
-  width: 100px;
-  min-width: 80px;
+  min-width: var(--fml-toolbelt-select-min, 140px);
+  max-width: 220px;
   flex: 0 1 auto;
 }
 

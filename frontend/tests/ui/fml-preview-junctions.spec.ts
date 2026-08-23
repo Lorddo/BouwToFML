@@ -12,6 +12,7 @@ import {
   sliderPercentFromDraft,
   slideWallSegmentAlongAxis,
   resolveWallSlidePointerDelta,
+  snapWallSlideDeltaToJunctions,
   moveJunctionWithWallJoins,
   snapPointToJunctions,
   snapPointToWallCenters,
@@ -619,6 +620,17 @@ describe('addWallSegment', () => {
     expect(addWallSegment([], { x: 0, y: 0 }, { x: 1, y: 0 }, 20)).toBeNull()
   })
 
+  it('houdt een tweede gebouw los van het eerste', () => {
+    const first = addWallSegment([], { x: 0, y: 0 }, { x: 400, y: 0 }, 20)
+    expect(first).not.toBeNull()
+    const second = addWallSegment(first!.walls, { x: 2000, y: 1500 }, { x: 2400, y: 1500 }, 20)
+    expect(second).not.toBeNull()
+    expect(second!.walls).toHaveLength(2)
+    const junctions = buildJunctions(second!.walls)
+    expect(junctions).toHaveLength(4)
+    expect(junctions.every((junction) => junction.refs.length === 1)).toBe(true)
+  })
+
   it('splits host and new wall at crossing into a shared junction', () => {
     const walls = [
       {
@@ -738,6 +750,15 @@ describe('snapPointToJunctions', () => {
     ])
     const snapped = snapPointToJunctions(junctions, { x: 1, y: 1 }, 3)
     expect(snapped).toEqual({ x: 0, y: 0 })
+  })
+
+  it('laat een leeg plan en verre klikken vrij (tweede gebouw)', () => {
+    const free = { x: 400, y: 300 }
+    expect(snapPointToJunctions([], free, 15)).toEqual(free)
+    const junctions = buildJunctions([
+      { id: 'w1', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, openings: [] },
+    ])
+    expect(snapPointToJunctions(junctions, free, 15)).toEqual(free)
   })
 })
 
@@ -865,6 +886,43 @@ describe('resolveWallSlidePointerDelta', () => {
     expect(result.delta).toBeCloseTo(6 * u, 4)
     expect(result.slideDir.x).toBeCloseTo(u, 4)
     expect(result.slideDir.y).toBeCloseTo(-u, 4)
+  })
+})
+
+describe('snapWallSlideDeltaToJunctions', () => {
+  const walls = [
+    {
+      id: 'h',
+      a: { x: 0, y: 100 },
+      b: { x: 200, y: 100 },
+      thickness: 20,
+      openings: [],
+    },
+    {
+      id: 'other',
+      a: { x: 400, y: 180 },
+      b: { x: 500, y: 180 },
+      thickness: 20,
+      openings: [],
+    },
+  ]
+
+  it('snaps a horizontal wall Y to another junction within 8 cm', () => {
+    const wall = walls[0]
+    const delta = snapWallSlideDeltaToJunctions(wall, 'h', walls, 75, { x: 0, y: 1 })
+    expect(delta).toBeCloseTo(80)
+  })
+
+  it('leaves the delta when the junction is farther than 8 cm', () => {
+    const wall = walls[0]
+    const delta = snapWallSlideDeltaToJunctions(wall, 'h', walls, 60, { x: 0, y: 1 })
+    expect(delta).toBeCloseTo(60)
+  })
+
+  it('does not snap to the moving wall own endpoints', () => {
+    const wall = walls[0]
+    const delta = snapWallSlideDeltaToJunctions(wall, 'h', walls, 3, { x: 0, y: 1 })
+    expect(delta).toBeCloseTo(3)
   })
 })
 
@@ -1187,7 +1245,7 @@ describe('slideWallSegmentAlongAxis', () => {
     expect(moved.find((wall) => wall.id === 'wBranch')?.a).toEqual({ x: 50, y: 0 })
   })
 
-  it('aligning junction: openingen op buur houden wereldpositie; op gesleepte muur schuiven mee', () => {
+  it('haakse slide op collineaire buur: buur blijft; H/V-stub i.p.v. schuin trekken', () => {
     const walls = [
       {
         id: 'wLeft',
@@ -1205,27 +1263,93 @@ describe('slideWallSegmentAlongAxis', () => {
       },
     ]
 
-    // Haakse slide: shared aligning junction beweegt mee → wLeft asymmetrisch, wDrag rigide.
     const moved = slideWallSegmentAlongAxis(walls, 'wDrag', 10, { x: 0, y: 1 })
     const left = moved.find((wall) => wall.id === 'wLeft')!
     const drag = moved.find((wall) => wall.id === 'wDrag')!
+    const stub = moved.find((wall) => wall.id.startsWith('slide-stub-'))
 
     expect(drag.a).toEqual({ x: 50, y: 10 })
     expect(drag.b).toEqual({ x: 100, y: 10 })
     expect(left.a).toEqual({ x: 0, y: 0 })
-    expect(left.b).toEqual({ x: 50, y: 10 })
+    expect(left.b).toEqual({ x: 50, y: 0 })
+    expect(stub?.a).toEqual({ x: 50, y: 0 })
+    expect(stub?.b).toEqual({ x: 50, y: 10 })
 
-    // Buur: herprojectie vanaf oude wereldpositie (20,0) op nieuwe as (niet vaste t=0.4).
-    const dx = left.b.x - left.a.x
-    const dy = left.b.y - left.a.y
-    const lenSq = dx * dx + dy * dy
-    const expectedT = Math.max(0, Math.min(1, ((20 - left.a.x) * dx + (0 - left.a.y) * dy) / lenSq))
-    expect(left.openings[0].t).toBeCloseTo(expectedT, 5)
-    expect(left.openings[0].t).not.toBeCloseTo(0.4, 2)
+    // Buur ongewijzigd: deur blijft op wereldpositie (20,0), t=0.4.
+    expect(left.openings[0].t).toBeCloseTo(0.4, 5)
 
     // Gesleepte muur: deur schuift rigide mee (t blijft 0.5 → y=10).
     expect(drag.openings[0].t).toBeCloseTo(0.5, 5)
     expect(drag.a.y + (drag.b.y - drag.a.y) * drag.openings[0].t).toBeCloseTo(10, 4)
+  })
+
+  it('haakse slide: punt op slide-as schuift mee; andere poot krijgt H/V-stub', () => {
+    const walls = [
+      {
+        id: 'vLeftUpper',
+        a: { x: 0, y: 0 },
+        b: { x: 0, y: -40 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'vLeftLower',
+        a: { x: 0, y: 0 },
+        b: { x: 0, y: 80 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'hDrag',
+        a: { x: 0, y: 0 },
+        b: { x: 80, y: 0 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'hStay',
+        a: { x: 80, y: 0 },
+        b: { x: 140, y: 0 },
+        thickness: 20,
+        openings: [],
+      },
+      {
+        id: 'vRight',
+        a: { x: 140, y: 0 },
+        b: { x: 140, y: 60 },
+        thickness: 10,
+        openings: [],
+      },
+    ]
+
+    const moved = slideWallSegmentAlongAxis(walls, 'hDrag', 20, { x: 0, y: 1 })
+    const drag = moved.find((wall) => wall.id === 'hDrag')!
+    const stay = moved.find((wall) => wall.id === 'hStay')!
+    const right = moved.find((wall) => wall.id === 'vRight')!
+    const stub = moved.find(
+      (wall) =>
+        wall.id.startsWith('slide-stub-') &&
+        Math.abs(wall.a.x - 80) < 0.01 &&
+        Math.abs(wall.b.x - 80) < 0.01,
+    )
+
+    expect(drag.a).toEqual({ x: 0, y: 20 })
+    expect(drag.b).toEqual({ x: 80, y: 20 })
+    expect(stay.a).toEqual({ x: 80, y: 0 })
+    expect(stay.b).toEqual({ x: 140, y: 0 })
+    expect(right.a).toEqual({ x: 140, y: 0 })
+    expect(right.b).toEqual({ x: 140, y: 60 })
+    expect(stub).toBeTruthy()
+    expect([stub!.a.y, stub!.b.y].sort((a, b) => a - b)).toEqual([0, 20])
+
+    const leftUpper = moved.find((wall) => wall.id === 'vLeftUpper')!
+    const leftLower = moved.find((wall) => wall.id === 'vLeftLower')!
+    expect(leftUpper.a).toEqual({ x: 0, y: 20 })
+    expect(leftLower.a).toEqual({ x: 0, y: 20 })
+    const hasDiagonal = moved.some(
+      (wall) => Math.abs(wall.a.x - wall.b.x) > 0.05 && Math.abs(wall.a.y - wall.b.y) > 0.05,
+    )
+    expect(hasDiagonal).toBe(false)
   })
 
   it('L-hoek slide: opening op stilstaande been houdt wereldpositie', () => {

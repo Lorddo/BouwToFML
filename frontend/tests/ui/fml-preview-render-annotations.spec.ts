@@ -104,7 +104,14 @@ describe('fml-preview-render-annotations', () => {
     expect(dim.tickB).toEqual([250, -6, 250, 6])
     expect(dim.labelX).toBe(125)
     expect(dim.labelY).toBe(0)
-    expect(dim.label).toBe('2.50 m')
+    expect(dim.label).toBe('2500 mm')
+    const [meters] = buildRenderDimensions(
+      [{ id: 'd1', type: 'custom_dimension', a: { x: 0, y: 0 }, b: { x: 250, y: 0 } }],
+      toStage,
+      6,
+      'm',
+    )
+    expect(meters.label).toBe('2.5 m')
   })
 
   it('label: fontSize clamp + bold/italic/outline in render', () => {

@@ -10,7 +10,7 @@ import {
   syncRidgeWallGuidsFromDesigns,
 } from './ridge-walls'
 import { listFloorOuterFaceCorners } from './wall-outer-face'
-import type { Floor, FloorPlan, Point2D, Wall } from './types'
+import type { Floor, FloorPlan, FloorSurface, Point2D, Wall } from './types'
 
 const FOOTPRINT_SLACK_CM = 40
 
@@ -72,6 +72,64 @@ function convexHull(points: readonly Point2D[]): Point2D[] {
   return [...lower, ...upper]
 }
 
+function ringCentroid(ring: readonly Point2D[]): Point2D {
+  let sx = 0
+  let sy = 0
+  const n = Math.max(1, ring.length)
+  for (const point of ring) {
+    sx += point.x
+    sy += point.y
+  }
+  return { x: sx / n, y: sy / n }
+}
+
+function ringAreaAbs(ring: readonly Point2D[]): number {
+  let area = 0
+  for (let i = 0; i < ring.length; i += 1) {
+    const a = ring[i]
+    const b = ring[(i + 1) % ring.length]
+    if (!a || !b) continue
+    area += a.x * b.y - b.x * a.y
+  }
+  return Math.abs(area) / 2
+}
+
+/** Hole ≈ cutout, niet de kamer eromheen. */
+const CUTOUT_HOLE_AREA_RATIO = 2.5
+
+/** Floorplanner-trapgat: `isCutout` of naam Trapgat — geen dak-/vloergat. */
+export function isFloorCutoutSurface(surface: FloorSurface | null | undefined): boolean {
+  if (!surface) return false
+  if (surface.isCutout === true) return true
+  const name = (surface.customName ?? surface.name ?? '').trim().toLowerCase()
+  return name === 'trapgat'
+}
+
+function floorCutoutRings(floor: Floor): Point2D[][] {
+  const out: Point2D[][] = []
+  for (const surface of floor.surfaces ?? []) {
+    if (!isFloorCutoutSurface(surface) || surface.poly.length < 3) continue
+    out.push(surface.poly.map((point) => ({ x: point.x, y: point.y })))
+  }
+  return out
+}
+
+/** Wall-union-hole die een trapgat/cutout is — niet als kamer of dak-gat. */
+export function holeMatchesFloorCutout(hole: readonly Point2D[], floor: Floor): boolean {
+  if (hole.length < 3) return false
+  const cutouts = floorCutoutRings(floor)
+  if (cutouts.length === 0) return false
+  const holeArea = ringAreaAbs(hole)
+  if (holeArea < 1e-6) return false
+  const holeCenter = ringCentroid(hole)
+  for (const ring of cutouts) {
+    const cutArea = ringAreaAbs(ring)
+    if (cutArea < 1e-6 || holeArea > cutArea * CUTOUT_HOLE_AREA_RATIO) continue
+    if (pointInPolygon(holeCenter, ring) || pointInPolygon(ringCentroid(ring), hole)) return true
+  }
+  return false
+}
+
 function floorHullRing(floor: Floor): Point2D[] | null {
   const pts: Point2D[] = []
   for (const wall of floor.walls) {
@@ -85,8 +143,10 @@ function floorHullRing(floor: Floor): Point2D[] | null {
 
 /** Buitencontour: hoeken = snijpunt van buitenfaces, niet face-eind (geen knikje). */
 function floorOuterHullRing(floor: Floor): Point2D[] | null {
-  const corners = listFloorOuterFaceCorners(floor)
-  const pts = corners.length >= 3 ? corners : collectFaceEndpoints(floor)
+  const envelope = listFloorEnvelopeWalls(floor)
+  const source = envelope.length >= 2 ? { ...floor, walls: envelope } : floor
+  const corners = listFloorOuterFaceCorners(source)
+  const pts = corners.length >= 3 ? corners : collectFaceEndpoints(source)
   if (pts.length < 3) return null
   const hull = convexHull(pts)
   return hull.length >= 3 ? hull : null
@@ -111,10 +171,13 @@ export function floorFootprintHitsPoint(floor: Floor, point: Point2D): boolean {
   return false
 }
 
-/** Binnen areas/omtrek — geen muurslack. Gevelvlakken blijven buiten. */
+/** Binnen areas/omtrek — geen muurslack. Gevelvlakken blijven buiten. Trapgat telt als vloer. */
 export function floorInteriorHitsPoint(floor: Floor, point: Point2D): boolean {
   for (const area of floor.areas ?? []) {
     if (area.poly.length >= 3 && pointInPolygon(point, area.poly)) return true
+  }
+  for (const ring of floorCutoutRings(floor)) {
+    if (pointInPolygon(point, ring)) return true
   }
   const ring = floorHullRing(floor)
   return ring != null && pointInPolygon(point, ring)
@@ -147,12 +210,17 @@ export function listSkyExposedWalls(plan: FloorPlan, floorIndex: number): Wall[]
   )
 }
 
-/** Buitenkant van de floor erboven — één vlak (convex hull) voor de Dak-tab. */
+/** Buitenkant van de floor erboven — dichte plaat (geen trapgat-gat) voor de Dak-tab. */
 export function listBlockedRoofRings(plan: FloorPlan, floorIndex: number): Point2D[][] {
   const next = plan.floors[floorIndex + 1]
   if (!next) return []
   const ring = floorOuterHullRing(next)
   return ring ? [ring] : []
+}
+
+/** Gevelmuren — geen binnenwanden of trapgat-kanten. */
+export function listFloorEnvelopeWalls(floor: Floor): Wall[] {
+  return floor.walls.filter((wall) => wall.thickness > 1e-6 && wallIsEnvelope(floor, wall))
 }
 
 /** Buitenmuur: minstens één face valt buiten het interieur. */

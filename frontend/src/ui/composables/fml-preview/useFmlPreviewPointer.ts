@@ -2,7 +2,8 @@ import { computed, type ComputedRef, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { ItemResizeSide } from './item-resize-handles'
 import { FML_PREVIEW_CHROME_SELECTOR } from './fml-preview-gestures'
-import { isSettingsMod, wantsRelocate } from './fml-preview-mods'
+import { isSettingsMod, resolveRelocatePointerIntent, wantsRelocate } from './fml-preview-mods'
+import { pickDakPlanOverlayHit } from './fml-preview-ridge-hit'
 import {
   allowsFmlStickyHit,
   resolveFmlStickySelectKind,
@@ -47,6 +48,9 @@ interface PointerDragState {
   isPanDragging: Ref<boolean>
   draggingItem: ComputedRef<boolean> | Ref<boolean>
   draggingItemResize: ComputedRef<boolean> | Ref<boolean>
+  isWallMoveDrafting?: () => boolean
+  isJunctionMoveDrafting?: () => boolean
+  isOpeningMoveDrafting?: () => boolean
 }
 
 interface PointerActions {
@@ -74,6 +78,8 @@ interface PointerActions {
   placeDoor: (wallId: string, cm: Point2D) => string | null
   placeWindow: (wallId: string, cm: Point2D) => string | null
   startJunctionDrag: (junction: RenderJunction, event: MouseEvent) => void
+  onJunctionMoveClick: (junction: RenderJunction, event: MouseEvent) => boolean
+  updateJunctionMoveHover: (event: MouseEvent) => void
   beginSelectionBoxDrag: (event: MouseEvent) => void
   toggleSettingsOpening: (openingId: string) => void
   toggleSettingsArea: (areaId: string) => void
@@ -87,8 +93,12 @@ interface PointerActions {
   clearOpeningSelectionState: () => void
   beginOpeningDrag: (openingId: string, event: MouseEvent) => void
   startOpeningDragPending: (openingId: string, event: MouseEvent) => void
+  onOpeningMoveClick: (openingId: string, event: MouseEvent) => boolean
+  updateOpeningMoveHover: (event: MouseEvent) => void
   beginWallDrag: (wallId: string, event: MouseEvent) => void
   startMoveDragPending: (wallId: string, event: MouseEvent) => void
+  onWallMoveClick: (wallId: string, event: MouseEvent) => boolean
+  updateWallMoveHover: (event: MouseEvent) => void
   stopContentGroupDrag: () => void
   applyInspectPick: (cm: Point2D) => void
   updateInspectHover: (event: MouseEvent) => void
@@ -187,14 +197,16 @@ export function useFmlPreviewPointer(options: {
 
   function onWrapPointerDown(event: MouseEvent): void {
     if (event.button !== 0) return
-    const target = event.target as HTMLElement
-    if (target.closest(FML_PREVIEW_CHROME_SELECTOR)) {
+    // Touch synthesizes an undispatched MouseEvent — target is null, niet chrome.
+    const target = event.target instanceof Element ? event.target : null
+    if (target?.closest(FML_PREVIEW_CHROME_SELECTOR)) {
       return
     }
 
     // Sidebar-controls (opacity e.d.) verliezen focus zodat Space+pan meteen werkt.
     const active = document.activeElement
     if (
+      target &&
       active instanceof HTMLElement &&
       active !== target &&
       !target.contains(active) &&
@@ -216,6 +228,30 @@ export function useFmlPreviewPointer(options: {
 
     const cm = hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
+
+    if (drag.isWallMoveDrafting?.() === true) {
+      actions.onWallMoveClick(moveWallId.value ?? '', event)
+      return
+    }
+    if (drag.isJunctionMoveDrafting?.() === true) {
+      actions.onJunctionMoveClick(
+        {
+          id: pinnedJunctionId.value ?? '',
+          x: cm.x,
+          y: cm.y,
+          cmX: cm.x,
+          cmY: cm.y,
+          refs: [],
+          wallCount: 0,
+        },
+        event,
+      )
+      return
+    }
+    if (drag.isOpeningMoveDrafting?.() === true) {
+      actions.onOpeningMoveClick(moveOpeningId.value ?? '', event)
+      return
+    }
 
     if (modes.inspectMode.value) {
       actions.applyInspectPick(cm)
@@ -307,7 +343,16 @@ export function useFmlPreviewPointer(options: {
         actions.toggleSettingsJunction(junction.id)
         return
       }
-      if (!wantsRelocate(modes.touchNav.value, modes.moveMod.value)) {
+      const junctionIntent = resolveRelocatePointerIntent({
+        touchNav: modes.touchNav.value,
+        moveMod: modes.moveMod.value,
+        shiftKey: event.shiftKey === true,
+      })
+      if (junctionIntent === 'precise') {
+        actions.onJunctionMoveClick(junction, event)
+        return
+      }
+      if (junctionIntent === 'select') {
         pinnedJunctionId.value = junction.id
         return
       }
@@ -347,7 +392,16 @@ export function useFmlPreviewPointer(options: {
       selection.settingsLineId.value = null
       const wasMoveTarget = moveOpeningId.value === openingId
       moveOpeningId.value = openingId
-      if (!wantsRelocate(modes.touchNav.value, modes.moveMod.value)) return
+      const openingIntent = resolveRelocatePointerIntent({
+        touchNav: modes.touchNav.value,
+        moveMod: modes.moveMod.value,
+        shiftKey: event.shiftKey === true,
+      })
+      if (openingIntent === 'precise') {
+        actions.onOpeningMoveClick(openingId, event)
+        return
+      }
+      if (openingIntent === 'select') return
       if (wasMoveTarget || modes.moveMod.value) {
         actions.beginOpeningDrag(openingId, event)
         return
@@ -405,10 +459,15 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
-    const surfaceId = hitTest.hitTestSurfaceAtCm(cm)
+    const dakRidgeId = modes.dakMode?.value === true ? hitTest.hitTestWallAtCm(cm) : null
+    const surfaceId = dakRidgeId ? null : hitTest.hitTestSurfaceAtCm(cm)
+    const dakOverlay =
+      modes.dakMode?.value === true
+        ? pickDakPlanOverlayHit({ ridgeId: dakRidgeId, surfaceId })
+        : null
     if (modes.areaSurfaceEditEnabled.value && surfaceId && allowHit('area')) {
       const ctrl = isSettingsMod(event, modes.settingsMod.value)
-      if (modes.dakMode?.value === true) {
+      if (dakOverlay?.kind === 'surface') {
         actions.selectRoofSurface?.(surfaceId, ctrl)
         return
       }
@@ -439,7 +498,7 @@ export function useFmlPreviewPointer(options: {
       }
     }
 
-    const wallId = hitTest.hitTestWallAtCm(cm)
+    const wallId = dakRidgeId ?? hitTest.hitTestWallAtCm(cm)
     if (wallId && modes.dakMode?.value === true && modes.isRidgeWallId?.(wallId) !== true) {
       actions.clearSelection()
       hoveredOpeningId.value = null
@@ -451,7 +510,7 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
-    if (!allowHit('wall')) return
+    if (!dakRidgeId && !allowHit('wall')) return
 
     if (isSettingsMod(event, modes.settingsMod.value)) {
       actions.toggleSettingsWall(wallId, cm)
@@ -466,19 +525,40 @@ export function useFmlPreviewPointer(options: {
     actions.cancelItemDragPending()
     const wasMoveTarget = moveWallId.value === wallId
     moveWallId.value = wallId
-    if (!wantsRelocate(modes.touchNav.value, modes.moveMod.value)) return
-
+    const wallIntent = resolveRelocatePointerIntent({
+      touchNav: modes.touchNav.value,
+      moveMod: modes.moveMod.value,
+      shiftKey: event.shiftKey === true,
+    })
+    if (wallIntent === 'precise') {
+      settingsWallIds.value = []
+      selection.settingsJunctionId.value = null
+      actions.onWallMoveClick(wallId, event)
+      return
+    }
+    if (wallIntent === 'select') return
     if (wasMoveTarget || modes.moveMod.value) {
       actions.beginWallDrag(wallId, event)
       return
     }
-
     actions.startMoveDragPending(wallId, event)
   }
 
   function onWrapPointerMove(event: MouseEvent): void {
-    const moveTarget = event.target as HTMLElement | null
+    const moveTarget = event.target instanceof Element ? event.target : null
     if (moveTarget?.closest(FML_PREVIEW_CHROME_SELECTOR)) return
+    if (drag.isWallMoveDrafting?.() === true) {
+      actions.updateWallMoveHover(event)
+      return
+    }
+    if (drag.isJunctionMoveDrafting?.() === true) {
+      actions.updateJunctionMoveHover(event)
+      return
+    }
+    if (drag.isOpeningMoveDrafting?.() === true) {
+      actions.updateOpeningMoveHover(event)
+      return
+    }
     if (
       drag.draggingWall.value ||
       drag.draggingJunction.value ||

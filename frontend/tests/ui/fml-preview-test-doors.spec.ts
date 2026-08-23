@@ -69,15 +69,20 @@ describe('test-doors.json.fml', () => {
       expect(groups).toHaveLength(12)
       groups.forEach((g) => {
         const kind = resolveOpeningCatalog(g.openings[0].refid, 'door').kind
+        const leaves = g.glyphs.filter((x) => x.kind === 'polyline' && x.role === 'leaf')
+        const arcs = g.glyphs.filter((x) => x.role === 'swing')
         if (kind === 'single') {
-          expect(g.leafLines).toHaveLength(1)
-          expect(g.arcPoints).toHaveLength(1)
+          expect(leaves.filter((l) => l.kind === 'polyline' && l.closed)).toHaveLength(1)
+          expect(leaves.filter((l) => l.kind === 'polyline' && !l.closed)).toHaveLength(1)
+          expect(arcs).toHaveLength(1)
         } else if (kind === 'closet45') {
-          expect(g.leafLines).toHaveLength(1)
-          expect(g.arcPoints).toHaveLength(1) // 45° met boogje
+          expect(leaves.filter((l) => l.kind === 'polyline' && l.closed)).toHaveLength(1)
+          expect(leaves.filter((l) => l.kind === 'polyline' && !l.closed)).toHaveLength(1)
+          expect(arcs).toHaveLength(1) // 45° met boogje
         } else if (kind === 'double_wide') {
-          expect(g.leafLines).toHaveLength(2)
-          expect(g.arcPoints).toHaveLength(2)
+          expect(leaves.filter((l) => l.kind === 'polyline' && l.closed)).toHaveLength(2)
+          expect(leaves.filter((l) => l.kind === 'polyline' && !l.closed)).toHaveLength(2)
+          expect(arcs).toHaveLength(2)
         }
       })
     }
@@ -91,15 +96,23 @@ describe('test-doors.json.fml', () => {
     function swingSignOf(wall: (typeof walls)[number], pos: number): number {
       const groups = groupDoorOpeningsOnWall(wall.id, wall.a, wall.b, wall.openings)
       const g = groups[pos]
-      const leaf = g.leafLines[0]
-      const hinge = { x: leaf[0], y: leaf[1] }
-      const tip = { x: leaf[2], y: leaf[3] }
+      const leaf = g.glyphs.find((x) => x.kind === 'polyline' && x.role === 'leaf' && x.closed)
+      const arc = g.glyphs.find((x) => x.kind === 'arc')
+      expect(leaf?.kind).toBe('polyline')
+      expect(arc?.kind).toBe('arc')
+      if (leaf?.kind !== 'polyline' || arc?.kind !== 'arc') return 0
+      const p = leaf.points
+      const hinge = { x: (p[0] + p[6]) / 2, y: (p[1] + p[7]) / 2 }
+      const open = {
+        x: arc.cx + Math.cos(arc.startRad + arc.sweepRad) * arc.r,
+        y: arc.cy + Math.sin(arc.startRad + arc.sweepRad) * arc.r,
+      }
       const dx = wall.b.x - wall.a.x
       const dy = wall.b.y - wall.a.y
       const len = Math.hypot(dx, dy) || 1
       const nx = -dy / len
       const ny = dx / len
-      return Math.sign((tip.x - hinge.x) * nx + (tip.y - hinge.y) * ny)
+      return Math.sign((open.x - hinge.x) * nx + (open.y - hinge.y) * ny)
     }
     const signs = walls.map((w) => swingSignOf(w, 0)) // single, mirrored [0,0]
     expect(new Set(signs).size).toBe(1) // allemaal dezelfde zijde t.o.v. de muur-normaal

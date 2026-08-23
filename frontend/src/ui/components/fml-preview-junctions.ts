@@ -40,6 +40,8 @@ export {
 
 export {
   resolveWallSlidePointerDelta,
+  snapWallSlideDeltaToJunctions,
+  WALL_SLIDE_JUNCTION_SNAP_CM,
   slideWallSegmentAlongAxis,
   moveJunctionWithWallJoins,
   splitWallAtPoint,

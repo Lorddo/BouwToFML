@@ -1,3 +1,10 @@
+/** Touch-tap synthesizes mousedown after pointerup — geen live sleep. */
+export const BTF_LIVE_POINTER = 'btfLivePointer'
+
+export function isLiveDrawPointer(event: MouseEvent): boolean {
+  return (event as MouseEvent & { [BTF_LIVE_POINTER]?: boolean }).btfLivePointer !== false
+}
+
 /** Eerste vinger van pinch/pan mag geen selectie/deselectie triggeren. */
 
 export function shouldCommitTouchTap(args: {
@@ -13,8 +20,15 @@ export function shouldCommitTouchTap(args: {
  * Nok = `draw_wall` + `drawWallKind=ridge`; dakvlak = `draw_surface` + `dakMode`.
  * Elevation `split` / `add_*` horen hier ook (zelfde plaats-tik).
  * Measure/slicer/nulpunt/box_select = hold-drag (`shouldStartTouchHoldDrag`), geen hover-follow.
+ * Muur/kamer ná de eerste tik: geen hover-follow — handles + 1-vinger-pan.
+ * Precise relocate (muur/knoop/opening): hover-follow tijdens draft.
  */
-export function isTouchHoverFollowTool(tool: string | null): boolean {
+export function isTouchHoverFollowTool(
+  tool: string | null,
+  opts?: { drafting?: boolean; wallMoveDrafting?: boolean; preciseMoveDrafting?: boolean },
+): boolean {
+  if (opts?.preciseMoveDrafting === true || opts?.wallMoveDrafting === true) return true
+  if (opts?.drafting === true && (tool === 'draw_wall' || tool === 'draw_room')) return false
   return (
     tool === 'draw_wall' ||
     tool === 'draw_room' ||
@@ -34,8 +48,22 @@ export function shouldStartTouchHoldDrag(args: {
   moveMod: boolean
   tool: string | null
   becameNav: boolean
+  draftHandle?: boolean
+  wallMoveDrafting?: boolean
+  preciseMoveDrafting?: boolean
+  clickMoveHit?: boolean
 }): boolean {
   if (args.becameNav === true || args.sloppy !== true) return false
+  if (
+    args.preciseMoveDrafting === true ||
+    args.wallMoveDrafting === true ||
+    args.clickMoveHit === true
+  ) {
+    return false
+  }
+  if (args.draftHandle === true && (args.tool === 'draw_wall' || args.tool === 'draw_room')) {
+    return true
+  }
   if (isTouchHoverFollowTool(args.tool)) return false
   return (
     args.moveMod === true ||

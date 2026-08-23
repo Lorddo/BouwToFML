@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import './fml-toolbelt-settings-fields.css'
 
 defineProps<{
+  unit: ScaleInputUnit
   title: string
   heightCm: number
   min?: number
@@ -14,17 +17,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-
-function onNumber(event: Event): number | null {
-  const raw = Number((event.target as HTMLInputElement).value)
-  if (!Number.isFinite(raw)) return null
-  return Math.round(raw)
-}
-
-function releaseFocus(event: Event): void {
-  const el = event.target
-  if (el instanceof HTMLElement) el.blur()
-}
 </script>
 
 <template>
@@ -32,22 +24,16 @@ function releaseFocus(event: Event): void {
   <div class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.height') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        type="number"
-        :min="min ?? 0"
-        :max="max ?? 800"
-        step="1"
-        class="fml-toolbelt__thickness-input"
-        :value="heightCm"
-        @change="
-          (event) => {
-            const cm = onNumber(event)
-            if (cm != null) emit('height', cm)
-            releaseFocus(event)
-          }
-        "
+      <ScaleLengthInput
+        :cm="heightCm"
+        :unit="unit"
+        :min-cm="min ?? 0"
+        :max-cm="max ?? 800"
+        :allow-zero="(min ?? 0) <= 0"
+        :aria-label="t('result.toolbar.height')"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="emit('height', $event)"
       />
-      <span class="fml-toolbelt__unit">cm</span>
     </div>
   </div>
 </template>

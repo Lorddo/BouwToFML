@@ -118,6 +118,13 @@ export function setRidgeDisplayWidthCm(plan: FloorPlan, widthCm: number): FloorP
   return plan
 }
 
+/** Alleen als het plan nog geen expliciete `displayWidthCm` heeft. */
+export function seedRidgeDisplayWidthIfMissing(plan: FloorPlan, widthCm: number): FloorPlan {
+  const raw = plan.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY]
+  if (raw && typeof raw === 'object' && 'displayWidthCm' in raw) return plan
+  return setRidgeDisplayWidthCm(plan, widthCm)
+}
+
 export function isRidgeWallId(plan: FloorPlan | null | undefined, wallGuid: string): boolean {
   const id = wallGuid.trim()
   if (!id) return false

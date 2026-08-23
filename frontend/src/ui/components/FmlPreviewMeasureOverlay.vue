@@ -2,20 +2,28 @@
 import { computed } from 'vue'
 import type { MeasureLine } from '@/ui/composables/fml-preview/fml-preview-measure'
 import { buildMeasureLineScreen } from '@/ui/composables/fml-preview/fml-preview-measure'
+import {
+  DEFAULT_SCALE_INPUT_UNIT,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
-const props = defineProps<{
-  width: number
-  height: number
-  lines: MeasureLine[]
-  preview: { a: { x: number; y: number }; b: { x: number; y: number } } | null
-  hover: { x: number; y: number } | null
-  toScreen: (x: number, y: number) => { x: number; y: number }
-  dashed?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    width: number
+    height: number
+    lines: MeasureLine[]
+    preview: { a: { x: number; y: number }; b: { x: number; y: number } } | null
+    hover: { x: number; y: number } | null
+    toScreen: (x: number, y: number) => { x: number; y: number }
+    dashed?: boolean
+    unit?: ScaleInputUnit
+  }>(),
+  { unit: DEFAULT_SCALE_INPUT_UNIT },
+)
 
 const screenLines = computed(() => {
   const toScreen = props.toScreen
-  return props.lines.map((line) => buildMeasureLineScreen(line, toScreen))
+  return props.lines.map((line) => buildMeasureLineScreen(line, toScreen, 6, props.unit))
 })
 
 const screenPreview = computed(() => {
@@ -23,6 +31,8 @@ const screenPreview = computed(() => {
   return buildMeasureLineScreen(
     { id: 'preview', a: props.preview.a, b: props.preview.b },
     props.toScreen,
+    6,
+    props.unit,
   )
 })
 

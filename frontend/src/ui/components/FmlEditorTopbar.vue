@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const DEFAULT_FML_HELP_KEYS = [
@@ -18,6 +19,7 @@ const DEFAULT_FML_HELP_KEYS = [
   'result.toolbar.hintAddFixture',
   'result.toolbar.hintBoxSelect',
   'result.toolbar.hintAreaSideDims',
+  'result.toolbar.hintWallMove',
   'result.toolbar.hintWallOne',
   'result.toolbar.hintJunction',
   'result.toolbar.hintDoorOne',
@@ -56,7 +58,8 @@ const resolvedHelpKeys = computed(() => props.helpKeys ?? DEFAULT_FML_HELP_KEYS)
 
 const helpItems = computed(() => {
   const q = helpQuery.value.trim().toLowerCase()
-  const items = resolvedHelpKeys.value.map((key) => t(key, { count: 2, type: '…' }))
+  const unit = loadUserSettings().scaleInputUnit
+  const items = resolvedHelpKeys.value.map((key) => t(key, { count: 2, type: '…', unit }))
   if (!q) return items
   return items.filter((text) => text.toLowerCase().includes(q))
 })

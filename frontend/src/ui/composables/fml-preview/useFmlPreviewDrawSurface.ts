@@ -1,24 +1,35 @@
 import { ref, type Ref } from 'vue'
-import { snapRoofVertexZ } from '@/core/fml/generate-roof-planes'
+import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
 import { resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
-import { resolveRoomType } from '@/core/fml/roomtype-catalog'
+import {
+  effectiveRoomTypeColor,
+  resolveRoomType,
+  UNLABELED_AREA_COLOR,
+} from '@/core/fml/roomtype-catalog'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { Point2D } from '@/core/fml/types'
 import { snapDrawWallEndpoint } from '@/ui/components/fml-preview-junction-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
+import type { RenderJunction } from './fml-preview-render-types'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
 /**
  * Surface-tekentool: klik vertices, rubber-band naar cursor.
  * Soft H/V naar geplaatste punten + muureinden; hoeken/ribben van andere polygonen;
- * Shift = vast H/V t.o.v. vorig punt; junction-snap (Ctrl/Cmd = uit);
+ * Shift = vast H/V t.o.v. vorig punt; snap (Ctrl/Cmd = uit);
+ * eerste dakvlak-punt heeft dezelfde hover-snap als latere punten;
  * sluiten via dubbelklik / eerste punt / Enter.
  */
 export function useFmlPreviewDrawSurface(options: {
   selection: FmlPreviewSelectionRefs
   editor: EditorApi
-  hitTest: { clientToCm: (clientX: number, clientY: number) => Point2D | null }
+  hitTest: {
+    clientToCm: (clientX: number, clientY: number) => Point2D | null
+    hitTestJunctionAtCm?: (cm: Point2D) => RenderJunction | null
+  }
+  hoveredJunctionId?: Ref<string | null>
   shiftPressed: Ref<boolean>
   /** Snap naar junctions, andere polygonen (hoek/ribbe) en H/V-assen; Ctrl/Cmd = raw. */
   resolvePoint: (
@@ -37,11 +48,25 @@ export function useFmlPreviewDrawSurface(options: {
   const draftPoints = options.selection.drawSurfacePoints
   const hoverCm = ref<Point2D | null>(null)
   const pendingRole = ref<number | null>(null)
+  const pendingCutout = ref(false)
   const CLOSE_EPS_CM = 8
+
+  function setJunctionHover(event: MouseEvent): void {
+    const hoverId = options.hoveredJunctionId
+    if (!hoverId) return
+    if (draftPoints.value?.length) {
+      hoverId.value = null
+      return
+    }
+    const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
+    const junction = cm ? options.hitTest.hitTestJunctionAtCm?.(cm) : null
+    hoverId.value = junction?.id ?? null
+  }
 
   function cancelDrawSurface(): void {
     draftPoints.value = null
     hoverCm.value = null
+    if (options.hoveredJunctionId) options.hoveredJunctionId.value = null
   }
 
   function maybeCloseSnap(point: Point2D, snapDisabled: boolean): Point2D {
@@ -71,22 +96,34 @@ export function useFmlPreviewDrawSurface(options: {
     if (!pts || pts.length < 3) return false
     options.editor.pushUndo()
     const dak = options.isDak?.() === true
-    const role = dak ? null : pendingRole.value
-    const rt = role != null ? resolveRoomType(role) : null
     const plan = options.editor.localPlan.value
     const floorIndex = options.editor.floorIndex.value
-    options.editor.addSurface({
-      poly: pts.map((p) => ({
-        x: p.x,
-        y: p.y,
-        z: plan ? snapRoofVertexZ({ plan, floorIndex, point: p }) : 0,
-      })),
-      role: rt?.role,
-      name: rt?.name,
-      color: resolveRoofSurfaceColor(),
-      showAreaLabel: false,
-      isRoof: true,
-    })
+    if (dak) {
+      options.editor.addSurface({
+        poly: pts.map((p) => ({
+          x: p.x,
+          y: p.y,
+          z: plan ? snapRoofVertexZ({ plan, floorIndex, point: p }) : 0,
+        })),
+        color: resolveRoofSurfaceColor(),
+        showAreaLabel: false,
+        isRoof: true,
+      })
+    } else {
+      const role = pendingRole.value
+      const rt = role != null ? resolveRoomType(role) : null
+      const cutout = pendingCutout.value === true
+      const overrides = loadUserSettings().roomTagColors
+      options.editor.addSurface({
+        poly: pts.map((p) => ({ x: p.x, y: p.y, z: 0 })),
+        role: rt?.role,
+        name: rt?.name,
+        customName: cutout ? 'Trapgat' : undefined,
+        color: rt ? effectiveRoomTypeColor(rt.role, overrides) : UNLABELED_AREA_COLOR,
+        showAreaLabel: true,
+        isCutout: cutout || undefined,
+      })
+    }
     draftPoints.value = null
     hoverCm.value = null
     options.selection.activeFmlTool.value = null
@@ -95,15 +132,13 @@ export function useFmlPreviewDrawSurface(options: {
   }
 
   function updateDrawSurfaceHover(event: MouseEvent): void {
-    if (!draftPoints.value?.length) {
-      hoverCm.value = null
-      return
-    }
     hoverCm.value = resolveClick(event)
+    setJunctionHover(event)
   }
 
   function clearDrawSurfaceHover(): void {
     hoverCm.value = null
+    if (options.hoveredJunctionId) options.hoveredJunctionId.value = null
   }
 
   function onDrawSurfaceClick(event: MouseEvent): void {
@@ -142,6 +177,7 @@ export function useFmlPreviewDrawSurface(options: {
     draftPoints,
     hoverCm,
     pendingRole,
+    pendingCutout,
     cancelDrawSurface,
     onDrawSurfaceClick,
     onDrawSurfaceDblClick,

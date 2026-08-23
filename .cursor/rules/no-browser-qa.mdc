@@ -1,0 +1,16 @@
+---
+description: Geen browser/visual QA tenzij de gebruiker er expliciet om vraagt
+alwaysApply: true
+---
+
+# Geen automatische browser-verificatie
+
+**Niet** na UI-wijzigingen (of überhaupt) uit jezelf:
+
+- browser tabs openen / navigeren (cursor-ide-browser, Chrome DevTools MCP, enz.)
+- screenshots of “visual QA” van pagina’s
+- FML-editor / workspace “even smoke-checken” in de browser
+
+Unit tests / typecheck mogen wél als dat bij de taak past.
+
+**Alleen** browser gebruiken als de gebruiker daar **expliciet** om vraagt (bijv. “check in de browser”, “screenshot”, “open localhost”).

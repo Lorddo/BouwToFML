@@ -21,11 +21,17 @@ export type FloorStack = {
   floors: FloorStackEntry[]
 }
 
-export type ElevationStackRow =
-  | { kind: 'nok'; thicknessCm: number }
-  | { kind: 'story'; floorIndex: number; name: string; heightCm: number }
-  | { kind: 'ridge'; floorIndex: number; name: string; zCm: number }
-  | { kind: 'slab'; floorIndex: number; name: string; thicknessCm: number }
+export type ElevationFloorGroup = {
+  floorIndex: number
+  name: string
+  heightCm: number
+  slabCm: number
+}
+
+export type FloorStackDefaults = {
+  dakThicknessCm: number
+  slabThicknessCm: number
+}
 
 function clampPositiveCm(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return fallback
@@ -131,33 +137,48 @@ export function setFloorRidgeZCm(plan: FloorPlan, level: number, ridgeZCm: numbe
   return writeFloorStack(plan, { ...stack, floors })
 }
 
-/** Hoog → laag: nok, bovenste verdieping, haar plaat, …, BG, BG-plaat. */
-export function elevationStackRows(plan: FloorPlan): ElevationStackRow[] {
+export function elevationDakThicknessCm(plan: FloorPlan): number {
+  return readFloorStack(plan).nokThicknessCm
+}
+
+/** Hoog → laag: per verdieping hoogte + vloerplaat. */
+export function elevationFloorGroups(plan: FloorPlan): ElevationFloorGroup[] {
   const stack = readFloorStack(plan)
-  const rows: ElevationStackRow[] = [{ kind: 'nok', thicknessCm: stack.nokThicknessCm }]
+  const groups: ElevationFloorGroup[] = []
   for (let i = plan.floors.length - 1; i >= 0; i -= 1) {
     const floor = plan.floors[i]
     if (!floor) continue
-    rows.push({
-      kind: 'story',
+    groups.push({
       floorIndex: i,
       name: floor.name,
       heightCm: Math.round(floor.height),
-    })
-    rows.push({
-      kind: 'ridge',
-      floorIndex: i,
-      name: floor.name,
-      zCm: storedRidgeZCm(stack, floor.level) ?? Math.round(floor.height),
-    })
-    rows.push({
-      kind: 'slab',
-      floorIndex: i,
-      name: floor.name,
-      thicknessCm: slabThicknessCm(stack, floor.level),
+      slabCm: slabThicknessCm(stack, floor.level),
     })
   }
-  return rows
+  return groups
+}
+
+/** Schrijf defaults alleen als `floorStack` nog ontbreekt of een floor geen plaat heeft. */
+export function seedFloorStackIfMissing(plan: FloorPlan, defaults: FloorStackDefaults): FloorPlan {
+  const raw = plan.source?.settings?.[FLOOR_STACK_SETTINGS_KEY]
+  const dak = clampPositiveCm(defaults.dakThicknessCm, DEFAULT_NOK_THICKNESS_CM)
+  const slab = clampPositiveCm(defaults.slabThicknessCm, DEFAULT_FLOOR_THICKNESS_CM)
+  if (!raw || typeof raw !== 'object') {
+    return writeFloorStack(plan, {
+      nokThicknessCm: dak,
+      floors: plan.floors.map((floor) => ({
+        level: Math.round(floor.level),
+        thicknessCm: slab,
+      })),
+    })
+  }
+  let next = plan
+  for (const floor of plan.floors) {
+    const stack = readFloorStack(next)
+    if (stack.floors.some((entry) => entry.level === floor.level)) continue
+    next = setSlabThicknessCm(next, floor.level, slab)
+  }
+  return next
 }
 
 /**

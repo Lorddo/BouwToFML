@@ -3,6 +3,7 @@ import {
   clampWallBalance,
   floorplannerLeftNormal,
   wallFaces,
+  wallJoinFaceCorner,
   wallLeftNormal,
   wallVisualMid,
 } from '@/core/fml/fml-wall-geom'
@@ -68,5 +69,38 @@ describe('wall balance keep-axis', () => {
     const faces = wallFaces(overshoot)
     expect(faces.left.a.y).toBeCloseTo(50, 6)
     expect(faces.right.a.y).toBeCloseTo(70, 6)
+  })
+})
+
+describe('wallJoinFaceCorner', () => {
+  const h = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 10, balance: 0.5 }
+  const v = { a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 10, balance: 0.5 }
+
+  it('haakse L: binnen- en buitenhoek op ±t/2', () => {
+    const junction = { x: 0, y: 0 }
+    const inner = wallJoinFaceCorner(junction, h, { x: 1, y: 0 }, v, { x: 0, y: 1 })
+    const outer = wallJoinFaceCorner(junction, h, { x: 1, y: 0 }, v, { x: 0, y: 1 }, true)
+    expect(inner).toEqual({ x: 5, y: 5 })
+    expect(outer).toEqual({ x: -5, y: -5 })
+  })
+
+  it('schuine L: binnen- en buitenface snijden, niet het hartlijn-eind', () => {
+    const s = { a: { x: 0, y: 0 }, b: { x: 80, y: 46 }, thickness: 10, balance: 0.5 }
+    const junction = { x: 0, y: 0 }
+    const len = Math.hypot(80, 46)
+    const inner = wallJoinFaceCorner(junction, v, { x: 0, y: 1 }, s, { x: 80 / len, y: 46 / len })
+    const outer = wallJoinFaceCorner(
+      junction,
+      v,
+      { x: 0, y: 1 },
+      s,
+      { x: 80 / len, y: 46 / len },
+      true,
+    )
+    expect(inner).toBeTruthy()
+    expect(outer).toBeTruthy()
+    expect(inner!.x).not.toBeCloseTo(0, 1)
+    expect(outer!.x).not.toBeCloseTo(0, 1)
+    expect(Math.hypot(inner!.x - outer!.x, inner!.y - outer!.y)).toBeGreaterThan(10)
   })
 })

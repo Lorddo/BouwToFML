@@ -9,6 +9,7 @@ import './fml-toolbelt-settings-fields.css'
 const { t } = useI18n()
 
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
+const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
 const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
 const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
@@ -31,6 +32,10 @@ withDefaults(
 function onRoleChange(event: Event): void {
   const raw = (event.target as HTMLSelectElement).value
   drawSurfaceRole.value = raw === '' ? null : Number(raw)
+}
+
+function onCutoutChange(event: Event): void {
+  drawSurfaceCutout.value = (event.target as HTMLInputElement).checked
 }
 
 function onThicknessInput(event: Event): void {
@@ -65,6 +70,20 @@ function onLabelInput(event: Event): void {
           {{ rt.name }}
         </option>
       </select>
+    </div>
+  </div>
+  <div v-if="activeTool === 'draw_surface' && !dakMode" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.surfaceCutout') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <label class="fml-toolbelt__checkbox">
+        <input
+          type="checkbox"
+          :checked="drawSurfaceCutout"
+          :aria-label="t('result.toolbar.surfaceCutout')"
+          @change="onCutoutChange"
+        />
+        <span>{{ t('result.toolbar.surfaceCutoutActive') }}</span>
+      </label>
     </div>
   </div>
   <template v-if="activeTool === 'draw_line'">

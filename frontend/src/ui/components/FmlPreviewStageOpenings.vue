@@ -10,18 +10,27 @@ import {
   openingStrokeFromFill,
   type OpeningDisplayColors,
 } from '@/ui/composables/settings/opening-display-colors'
+import {
+  BOUW_GAP_FILL,
+  BOUW_OPENING_STROKE,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  isBouwPlanStyle,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 import { inspectColorFor } from '@/ui/composables/fml-preview/fml-inspect'
 import {
   OPENING_ARC_DASH_CM,
   OPENING_HIT_STROKE_PX,
   OPENING_STROKE_CM,
-  OPENING_STROKE_HEAVY_CM,
   OPENING_STROKE_MID_CM,
   detailSymbolsVisibleOnScreen,
   worldDashStage,
   worldStrokeStage,
 } from '@/ui/composables/fml-preview/fml-preview-world-stroke'
-import type { RenderModel } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
+import type {
+  RenderPlanGlyph,
+  RenderModel,
+} from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
 
 const props = withDefaults(
   defineProps<{
@@ -37,6 +46,7 @@ const props = withDefaults(
     /** Vloerdefault: bovenlicht op ramen zonder per-raam override. */
     windowBovenlichtDefault?: boolean
     openingColors?: OpeningDisplayColors
+    planDisplayStyle?: PlanDisplayStyleChoice
   }>(),
   {
     layoutScale: 1,
@@ -44,8 +54,11 @@ const props = withDefaults(
     doorBovenlichtDefault: false,
     windowBovenlichtDefault: false,
     openingColors: () => ({ ...FACTORY_OPENING_COLORS }),
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
   },
 )
+
+const bouw = computed(() => isBouwPlanStyle(props.planDisplayStyle))
 
 const detailVisible = computed(() =>
   detailSymbolsVisibleOnScreen(props.layoutScale, props.viewScale),
@@ -54,8 +67,8 @@ const doorGroups = computed(() => (detailVisible.value ? props.renderModel.doorG
 const windows = computed(() => (detailVisible.value ? props.renderModel.windows : []))
 
 const stroke = computed(() => worldStrokeStage(OPENING_STROKE_CM, props.layoutScale))
-const strokeHeavy = computed(() => worldStrokeStage(OPENING_STROKE_HEAVY_CM, props.layoutScale))
 const strokeMid = computed(() => worldStrokeStage(OPENING_STROKE_MID_CM, props.layoutScale))
+const strokeLeaf = computed(() => worldStrokeStage(OPENING_STROKE_CM * 0.75, props.layoutScale))
 const arcDash = computed(() => worldDashStage(OPENING_ARC_DASH_CM, props.layoutScale))
 
 function isOpeningSettings(openingId: string): boolean {
@@ -80,15 +93,16 @@ function openingInspectGuid(openingId: string, type: 'door' | 'window'): string 
 function openingGapFill(openingId: string, type: 'door' | 'window'): string {
   if (isOpeningSettings(openingId)) return '#f97316'
   if (isOpeningMove(openingId)) return '#3b82f6'
-  return (
-    inspectColorFor(openingInspectGuid(openingId, type), props.inspectColors) ??
-    openingFillColor(type, false, props.openingColors)
-  )
+  const inspect = inspectColorFor(openingInspectGuid(openingId, type), props.inspectColors)
+  if (inspect) return inspect
+  if (bouw.value) return BOUW_GAP_FILL
+  return openingFillColor(type, false, props.openingColors)
 }
 
 function openingStrokeColor(openingId: string, type: 'door' | 'window'): string {
   if (isOpeningSettings(openingId)) return '#ea580c'
   if (isOpeningMove(openingId)) return '#2563eb'
+  if (bouw.value) return BOUW_OPENING_STROKE
   return openingStrokeFromFill(
     type === 'door' ? props.openingColors.door : props.openingColors.window,
   )
@@ -106,20 +120,89 @@ function windowHasBovenlicht(window: (typeof props.renderModel.windows)[number])
 
 /** Hartlijn door de muurgap — zelfde points als hit, zichtbaar blauw. */
 const doorBovenlichtMarkers = computed(() =>
-  doorGroups.value.flatMap((door) =>
-    doorHasBovenlicht(door) && door.hitPoints.length >= 4
-      ? [{ id: door.id, points: door.hitPoints }]
-      : [],
-  ),
+  bouw.value
+    ? []
+    : doorGroups.value.flatMap((door) =>
+        doorHasBovenlicht(door) && door.hitPoints.length >= 4
+          ? [{ id: door.id, points: door.hitPoints }]
+          : [],
+      ),
 )
 
 const windowBovenlichtMarkers = computed(() =>
-  windows.value.flatMap((window) =>
-    windowHasBovenlicht(window) && window.hitPoints.length >= 4
-      ? [{ id: window.id, points: window.hitPoints }]
-      : [],
-  ),
+  bouw.value
+    ? []
+    : windows.value.flatMap((window) =>
+        windowHasBovenlicht(window) && window.hitPoints.length >= 4
+          ? [{ id: window.id, points: window.hitPoints }]
+          : [],
+      ),
 )
+
+function glyphStrokeWidth(glyph: RenderPlanGlyph): number {
+  if (glyph.kind === 'arc') return stroke.value
+  switch (glyph.role) {
+    case 'sill':
+      return stroke.value
+    case 'glass':
+    case 'mullion':
+    case 'ornament':
+    case 'panel':
+      return strokeMid.value
+    case 'leaf':
+      return strokeLeaf.value
+    default:
+      return stroke.value
+  }
+}
+
+function glyphClosed(glyph: RenderPlanGlyph): boolean {
+  return glyph.kind === 'polyline' && !!glyph.closed
+}
+
+function glyphIsJamb(glyph: RenderPlanGlyph): boolean {
+  return glyph.kind === 'polyline' && glyph.role === 'jamb'
+}
+
+function glyphIsFilledLeaf(glyph: RenderPlanGlyph): boolean {
+  return glyph.kind === 'polyline' && glyph.role === 'leaf' && !!glyph.closed
+}
+
+/** Blind paneel: dicht glasvlak, altijd zwart. */
+function glyphIsFilledGlass(glyph: RenderPlanGlyph): boolean {
+  return glyph.kind === 'polyline' && glyph.role === 'glass' && !!glyph.closed
+}
+
+function glyphDash(glyph: RenderPlanGlyph): number[] | undefined {
+  // Draaiboog = solid; stippellijn alleen bij expliciet dashed (passage/arch).
+  if (glyph.kind === 'polyline' && glyph.dashed) return arcDash.value
+  return undefined
+}
+
+function glyphOpacity(glyph: RenderPlanGlyph): number {
+  if (glyph.kind === 'arc') return 0.85
+  if (glyph.role === 'arrow') return 0.95
+  return 0.9
+}
+
+function jambFill(openingId: string, type: 'door' | 'window'): string | undefined {
+  if (bouw.value) return undefined
+  return openingStrokeColor(openingId, type)
+}
+
+function jambFillOpacity(): number {
+  return bouw.value ? 0 : 0.35
+}
+
+function leafFill(openingId: string, type: 'door' | 'window'): string | undefined {
+  // Blad = outline; lichte fill alleen in editor voor leesbaarheid.
+  if (bouw.value) return undefined
+  return openingStrokeColor(openingId, type)
+}
+
+function leafFillOpacity(): number {
+  return bouw.value ? 0 : 0.12
+}
 </script>
 
 <template>
@@ -131,7 +214,13 @@ const windowBovenlichtMarkers = computed(() =>
           closed: true,
           fill: openingGapFill(door.id, 'door'),
           strokeEnabled: false,
-          opacity: isOpeningSettings(door.id) ? 0.96 : isOpeningMove(door.id) ? 0.94 : 0.92,
+          opacity: isOpeningSettings(door.id)
+            ? 0.96
+            : isOpeningMove(door.id)
+              ? 0.94
+              : bouw
+                ? 1
+                : 0.92,
           listening: false,
         }"
       />
@@ -143,67 +232,64 @@ const windowBovenlichtMarkers = computed(() =>
           closed: true,
           fill: openingGapFill(window.id, 'window'),
           strokeEnabled: false,
-          opacity: isOpeningSettings(window.id) ? 0.96 : isOpeningMove(window.id) ? 0.94 : 0.92,
+          opacity: isOpeningSettings(window.id)
+            ? 0.96
+            : isOpeningMove(window.id)
+              ? 0.94
+              : bouw
+                ? 1
+                : 0.92,
           listening: false,
         }"
       />
     </template>
 
     <template v-for="door in doorGroups" :key="door.id">
-      <v-line
-        v-for="(jamb, jambIdx) in door.jambPoints"
-        :key="`${door.id}-jamb-${jambIdx}`"
-        :config="{
-          points: jamb,
-          closed: true,
-          fill: openingStrokeColor(door.id, 'door'),
-          opacity: 0.35,
-          stroke: openingStrokeColor(door.id, 'door'),
-          strokeWidth: stroke,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
-      <v-line
-        v-for="(leaf, leafIdx) in door.leafLines"
-        :key="`${door.id}-leaf-${leafIdx}`"
-        :config="{
-          points: leaf,
-          stroke: openingStrokeColor(door.id, 'door'),
-          strokeWidth: stroke,
-          lineCap: 'round',
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
-      <v-line
-        v-for="(arc, arcIdx) in door.arcPoints"
-        :key="`${door.id}-arc-${arcIdx}`"
-        :config="{
-          points: arc,
-          stroke: openingStrokeColor(door.id, 'door'),
-          strokeWidth: stroke,
-          dash: arcDash,
-          lineCap: 'round',
-          opacity: 0.85,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
-      <v-line
-        v-for="(arrow, arrowIdx) in door.arrowPoints"
-        :key="`${door.id}-arrow-${arrowIdx}`"
-        :config="{
-          points: arrow,
-          stroke: openingStrokeColor(door.id, 'door'),
-          strokeWidth: stroke,
-          lineCap: 'round',
-          lineJoin: 'round',
-          opacity: 0.95,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
+      <template v-for="(glyph, glyphIdx) in door.glyphs" :key="`${door.id}-g-${glyphIdx}`">
+        <v-line
+          v-if="glyphIsJamb(glyph)"
+          :config="{
+            points: glyph.points,
+            closed: true,
+            fill: jambFill(door.id, 'door'),
+            opacity: jambFillOpacity() || 1,
+            stroke: openingStrokeColor(door.id, 'door'),
+            strokeWidth: stroke,
+            listening: false,
+            perfectDrawEnabled: false,
+          }"
+        />
+        <v-line
+          v-else-if="glyphIsFilledLeaf(glyph)"
+          :config="{
+            points: glyph.points,
+            closed: true,
+            fill: leafFill(door.id, 'door'),
+            fillEnabled: !bouw,
+            opacity: leafFillOpacity() || glyphOpacity(glyph),
+            stroke: openingStrokeColor(door.id, 'door'),
+            strokeWidth: glyphStrokeWidth(glyph),
+            lineJoin: 'round',
+            listening: false,
+            perfectDrawEnabled: false,
+          }"
+        />
+        <v-line
+          v-else
+          :config="{
+            points: glyph.points,
+            closed: glyphClosed(glyph),
+            stroke: openingStrokeColor(door.id, 'door'),
+            strokeWidth: glyphStrokeWidth(glyph),
+            dash: glyphDash(glyph),
+            lineCap: 'round',
+            lineJoin: 'round',
+            opacity: glyphOpacity(glyph),
+            listening: false,
+            perfectDrawEnabled: false,
+          }"
+        />
+      </template>
       <v-line
         :config="{
           points: door.hitPoints,
@@ -218,58 +304,50 @@ const windowBovenlichtMarkers = computed(() =>
     </template>
 
     <template v-for="window in windows" :key="window.id">
-      <v-line
-        v-for="(frame, frameIdx) in window.framePoints ?? []"
-        :key="`${window.id}-frame-${frameIdx}`"
-        :config="{
-          points: frame,
-          closed: true,
-          fill: openingStrokeColor(window.id, 'window'),
-          opacity: 0.35,
-          stroke: openingStrokeColor(window.id, 'window'),
-          strokeWidth: stroke,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
-      <v-line
-        v-if="window.basePoints"
-        :config="{
-          points: window.basePoints,
-          stroke: openingStrokeColor(window.id, 'window'),
-          strokeWidth: strokeHeavy,
-          lineCap: 'round',
-          opacity: 0.9,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
-      <v-line
-        v-for="(mullion, idx) in window.mullions ?? []"
-        :key="`${window.id}-m-${idx}`"
-        :config="{
-          points: mullion,
-          stroke: openingStrokeColor(window.id, 'window'),
-          strokeWidth: strokeMid,
-          lineCap: 'round',
-          opacity: 0.9,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
-      <v-line
-        v-if="window.ornament"
-        :config="{
-          points: window.ornament.points,
-          stroke: openingStrokeColor(window.id, 'window'),
-          strokeWidth: strokeMid,
-          lineCap: 'round',
-          lineJoin: 'round',
-          opacity: 0.9,
-          listening: false,
-          perfectDrawEnabled: false,
-        }"
-      />
+      <template v-for="(glyph, glyphIdx) in window.glyphs" :key="`${window.id}-g-${glyphIdx}`">
+        <v-line
+          v-if="glyphIsJamb(glyph)"
+          :config="{
+            points: glyph.points,
+            closed: true,
+            fill: jambFill(window.id, 'window'),
+            opacity: jambFillOpacity() || 1,
+            stroke: openingStrokeColor(window.id, 'window'),
+            strokeWidth: stroke,
+            listening: false,
+            perfectDrawEnabled: false,
+          }"
+        />
+        <v-line
+          v-else-if="glyphIsFilledGlass(glyph)"
+          :config="{
+            points: glyph.points,
+            closed: true,
+            fill: '#000000',
+            fillEnabled: true,
+            opacity: 1,
+            stroke: '#000000',
+            strokeWidth: glyphStrokeWidth(glyph),
+            lineJoin: 'miter',
+            listening: false,
+            perfectDrawEnabled: false,
+          }"
+        />
+        <v-line
+          v-else
+          :config="{
+            points: glyph.points,
+            closed: glyphClosed(glyph),
+            stroke: openingStrokeColor(window.id, 'window'),
+            strokeWidth: glyphStrokeWidth(glyph),
+            lineCap: 'round',
+            lineJoin: 'round',
+            opacity: glyphOpacity(glyph),
+            listening: false,
+            perfectDrawEnabled: false,
+          }"
+        />
+      </template>
       <v-line
         :config="{
           points: window.hitPoints,
@@ -283,7 +361,7 @@ const windowBovenlichtMarkers = computed(() =>
       />
     </template>
 
-    <!-- Bovenlicht: 3 px hartlijn door de opening (schermvast). -->
+    <!-- Bovenlicht: 3 px hartlijn door de opening (schermvast); alleen Editor. -->
     <v-line
       v-for="marker in doorBovenlichtMarkers"
       :key="`${marker.id}-bovenlicht`"

@@ -86,7 +86,7 @@ export function roofSurfaceOrigin(surface: FloorSurface | null | undefined): Roo
 
 export function markRoofSurface(
   surface: FloorSurface,
-  origin: RoofSurfaceOrigin = ROOF_ORIGIN_GENERATED,
+  origin: RoofSurfaceOrigin = ROOF_ORIGIN_MANUAL,
 ): FloorSurface {
   return {
     ...surface,

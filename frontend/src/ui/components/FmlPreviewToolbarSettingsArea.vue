@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import HexColorField from './HexColorField.vue'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import './fml-toolbelt-settings-fields.css'
 
 const { t } = useI18n()
 
 const props = withDefaults(
   defineProps<{
+    unit: ScaleInputUnit
     selectedAreaPanel: {
       kind: 'area' | 'surface'
       id: string
@@ -18,6 +21,7 @@ const props = withDefaults(
       color: string
       showAreaLabel: boolean
       canEditPolygon: boolean
+      isCutout?: boolean
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
@@ -36,6 +40,7 @@ const emit = defineEmits<{
   applyAreaCustomName: [customName: string]
   applyAreaColor: [color: string]
   applyShowAreaLabel: [show: boolean]
+  applySurfaceCutout: [isCutout: boolean]
   deleteTagged: []
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
@@ -69,6 +74,10 @@ function onAreaColorInput(color: string): void {
 
 function onHideLabelChange(event: Event): void {
   emit('applyShowAreaLabel', !(event.target as HTMLInputElement).checked)
+}
+
+function onCutoutChange(event: Event): void {
+  emit('applySurfaceCutout', (event.target as HTMLInputElement).checked)
 }
 </script>
 
@@ -127,26 +136,33 @@ function onHideLabelChange(event: Event): void {
       </label>
     </div>
   </div>
+  <div v-if="selectedAreaPanel?.kind === 'surface'" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.surfaceCutout') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <label class="fml-toolbelt__checkbox">
+        <input
+          type="checkbox"
+          :checked="selectedAreaPanel.isCutout === true"
+          :aria-label="t('result.toolbar.surfaceCutout')"
+          @change="onCutoutChange"
+        />
+        <span>{{ t('result.toolbar.surfaceCutoutActive') }}</span>
+      </label>
+    </div>
+  </div>
   <div v-if="selectedAreaPanel?.canEditPolygon && surfaceEditActive" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roofVertexZ') }}</span>
     <div class="fml-toolbelt__field-controls">
-      <input
-        class="fml-toolbelt__input"
-        type="number"
-        min="0"
-        step="1"
+      <ScaleLengthInput
+        :cm="roofVertexZCm ?? 0"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
         :disabled="roofVertexZCm == null"
-        :aria-label="t('result.toolbar.roofVertexZAria')"
-        :placeholder="t('result.toolbar.roofVertexZHint')"
-        :value="roofVertexZCm ?? ''"
-        @change="
-          emit(
-            'roofVertexZInput',
-            Math.max(0, Math.round(Number(($event.target as HTMLInputElement).value) || 0)),
-          )
-        "
+        :aria-label="t('result.toolbar.roofVertexZAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__input"
+        @update:cm="emit('roofVertexZInput', Math.max(0, $event))"
       />
-      <span class="fml-toolbelt__suffix">cm</span>
     </div>
   </div>
   <button

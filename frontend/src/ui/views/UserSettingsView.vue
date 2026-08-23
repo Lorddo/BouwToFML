@@ -11,12 +11,16 @@ import {
   resetUserSettingsToFactory,
   saveUserSettings,
   SCALE_INPUT_UNITS,
+  UNIT_SYSTEMS,
+  PLAN_DISPLAY_STYLE_CHOICES,
   UserSettingsParseError,
   type CornerMarkerMode,
   type FmlConversionSettings,
   type FmlViewerSettings,
   type OpeningDisplayColorKey,
+  type PlanDisplayStyleChoice,
   type ScaleInputUnit,
+  type UnitSystem,
   type UserSettingsV1,
   FACTORY_OPENING_COLORS,
 } from '@/ui/composables/settings/user-settings'
@@ -29,6 +33,7 @@ import {
 import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
 import { FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
 import HexColorField from '@/ui/components/HexColorField.vue'
+import ScaleLengthInput from '@/ui/components/ScaleLengthInput.vue'
 
 const { t } = useI18n()
 
@@ -54,6 +59,7 @@ function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
   return {
     version: settings.version,
     locale: settings.locale,
+    unitSystem: settings.unitSystem,
     scaleInputUnit: settings.scaleInputUnit,
     defaults: { ...settings.defaults },
     fmlViewer: {
@@ -138,6 +144,10 @@ function onLocaleChange(event: Event) {
   draft.locale = (event.target as HTMLSelectElement).value as AppLocale
 }
 
+function onUnitSystemChange(event: Event) {
+  draft.unitSystem = (event.target as HTMLSelectElement).value as UnitSystem
+}
+
 function onScaleUnitChange(event: Event) {
   draft.scaleInputUnit = (event.target as HTMLSelectElement).value as ScaleInputUnit
 }
@@ -148,10 +158,21 @@ function onCornerMarkerModeChange(event: Event) {
   })
 }
 
+function onPlanDisplayStyleChange(event: Event) {
+  patchViewer({
+    planDisplayStyle: (event.target as HTMLSelectElement).value as PlanDisplayStyleChoice,
+  })
+}
+
 function cornerMarkerModeLabel(mode: CornerMarkerMode): string {
   if (mode === 'off') return t('settings.cornerMarkersOff')
   if (mode === 'square') return t('settings.cornerMarkersSquare')
   return t('settings.cornerMarkersSkew')
+}
+
+function planDisplayStyleLabel(style: PlanDisplayStyleChoice): string {
+  if (style === 'bouw') return t('settings.planDisplayStyleBouw')
+  return t('settings.planDisplayStyleEditor')
 }
 
 const openingColorRows: { key: OpeningDisplayColorKey; labelKey: string }[] = [
@@ -186,6 +207,7 @@ function persistDraft(): UserSettingsV1 {
   const saved = saveUserSettings({
     version: 1,
     locale: draft.locale,
+    unitSystem: draft.unitSystem,
     scaleInputUnit: draft.scaleInputUnit,
     defaults: { ...draft.defaults },
     fmlViewer: { ...draft.fmlViewer },
@@ -220,6 +242,7 @@ function onResetFactory() {
     const saved = saveUserSettings({
       ...current,
       locale: factory.locale,
+      unitSystem: factory.unitSystem,
       scaleInputUnit: factory.scaleInputUnit,
       defaults: { ...factory.defaults },
       roomTagColors: {},
@@ -228,6 +251,8 @@ function onResetFactory() {
         cornerMarkerMode: factory.fmlViewer.cornerMarkerMode,
         openingColors: { ...factory.fmlViewer.openingColors },
         slicerOffsetSnapCm: factory.fmlViewer.slicerOffsetSnapCm,
+        planDisplayStyle: factory.fmlViewer.planDisplayStyle,
+        ridgeDisplayWidthCm: factory.fmlViewer.ridgeDisplayWidthCm,
       },
     })
     Object.assign(draft, cloneSettings(saved))
@@ -248,6 +273,7 @@ function onExport() {
   downloadUserSettingsJson({
     version: 1,
     locale: draft.locale,
+    unitSystem: draft.unitSystem,
     scaleInputUnit: draft.scaleInputUnit,
     defaults: { ...draft.defaults },
     fmlViewer: { ...draft.fmlViewer },
@@ -324,8 +350,20 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="panel settings-section">
-      <h3>{{ t('settings.scaleUnit') }}</h3>
-      <p class="hint">{{ t('settings.scaleUnitHint') }}</p>
+      <h3>{{ t('settings.units') }}</h3>
+      <p class="hint">{{ t('settings.unitsHint') }}</p>
+      <label class="field compact">
+        <span>{{ t('settings.unitSystem') }}</span>
+        <select :value="draft.unitSystem" @change="onUnitSystemChange">
+          <option v-for="system in UNIT_SYSTEMS" :key="system" :value="system">
+            {{
+              system === 'metric'
+                ? t('settings.unitSystemMetric')
+                : t('settings.unitSystemImperial')
+            }}
+          </option>
+        </select>
+      </label>
       <label class="field compact">
         <span>{{ t('settings.scaleUnit') }}</span>
         <select :value="draft.scaleInputUnit" @change="onScaleUnitChange">
@@ -341,70 +379,66 @@ onBeforeUnmount(() => {
       <div class="defaults-grid">
         <label class="field compact">
           <span>{{ t('settings.wallHeightCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.wallHeightCm"
-            @change="
-              patchDefaults({ wallHeightCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.wallHeightCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ wallHeightCm: $event })"
           />
         </label>
         <label class="field compact">
           <span>{{ t('settings.doorHeightCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.doorHeightCm"
-            @change="
-              patchDefaults({ doorHeightCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.doorHeightCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ doorHeightCm: $event })"
           />
         </label>
         <label class="field compact">
           <span>{{ t('settings.windowHeightCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.windowHeightCm"
-            @change="
-              patchDefaults({ windowHeightCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.windowHeightCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ windowHeightCm: $event })"
           />
         </label>
         <label class="field compact">
           <span>{{ t('settings.sillZCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.windowSillZCm"
-            @change="
-              patchDefaults({ windowSillZCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.windowSillZCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="patchDefaults({ windowSillZCm: $event })"
           />
         </label>
         <label class="field compact">
           <span :title="t('settings.bovenlichtGapTitle')">{{ t('settings.bovenlichtGapCm') }}</span>
-          <input
-            type="number"
-            min="0"
-            :value="draft.defaults.bovenlichtGapCm"
-            @change="
-              patchDefaults({
-                bovenlichtGapCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.bovenlichtGapCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="patchDefaults({ bovenlichtGapCm: $event })"
           />
         </label>
         <label class="field compact">
           <span :title="t('settings.bovenlichtHeightTitle')">{{
             t('settings.bovenlichtHeightCm')
           }}</span>
-          <input
-            type="number"
-            min="1"
-            :value="draft.defaults.bovenlichtHeightCm"
-            @change="
-              patchDefaults({
-                bovenlichtHeightCm: Number(($event.target as HTMLInputElement).value),
-              })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.bovenlichtHeightCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ bovenlichtHeightCm: $event })"
           />
         </label>
         <label class="field compact check">
@@ -440,32 +474,52 @@ onBeforeUnmount(() => {
       <div class="defaults-grid">
         <label class="field compact">
           <span>{{ t('settings.minCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.thicknessMinCm"
-            @change="
-              patchDefaults({ thicknessMinCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.thicknessMinCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ thicknessMinCm: $event })"
           />
         </label>
         <label class="field compact">
           <span>{{ t('settings.midCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.thicknessMidCm"
-            @change="
-              patchDefaults({ thicknessMidCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.thicknessMidCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ thicknessMidCm: $event })"
           />
         </label>
         <label class="field compact">
           <span>{{ t('settings.maxCm') }}</span>
-          <input
-            type="number"
-            :value="draft.defaults.thicknessMaxCm"
-            @change="
-              patchDefaults({ thicknessMaxCm: Number(($event.target as HTMLInputElement).value) })
-            "
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.thicknessMaxCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ thicknessMaxCm: $event })"
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.dakThicknessCm') }}</span>
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.dakThicknessCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ dakThicknessCm: $event })"
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.slabThicknessCm') }}</span>
+          <ScaleLengthInput
+            block
+            :cm="draft.defaults.slabThicknessCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="1"
+            @update:cm="patchDefaults({ slabThicknessCm: $event })"
           />
         </label>
       </div>
@@ -580,6 +634,28 @@ onBeforeUnmount(() => {
     <section class="panel settings-section">
       <h3>{{ t('settings.openingColors') }}</h3>
       <p class="hint">{{ t('settings.openingColorsHint') }}</p>
+      <label class="field compact">
+        <span>{{ t('settings.planDisplayStyle') }}</span>
+        <select :value="draft.fmlViewer.planDisplayStyle" @change="onPlanDisplayStyleChange">
+          <option v-for="style in PLAN_DISPLAY_STYLE_CHOICES" :key="style" :value="style">
+            {{ planDisplayStyleLabel(style) }}
+          </option>
+        </select>
+      </label>
+      <p class="hint">{{ t('settings.planDisplayStyleHint') }}</p>
+      <label class="field compact">
+        <span>{{ t('settings.ridgeDisplayWidthCm') }}</span>
+        <ScaleLengthInput
+          block
+          :cm="draft.fmlViewer.ridgeDisplayWidthCm"
+          :unit="draft.scaleInputUnit"
+          :min-cm="1"
+          :max-cm="80"
+          :aria-label="t('settings.ridgeDisplayWidthCm')"
+          @update:cm="patchViewer({ ridgeDisplayWidthCm: $event })"
+        />
+      </label>
+      <p class="hint">{{ t('settings.ridgeDisplayWidthHint') }}</p>
       <div class="roomtag-list">
         <div v-for="row in openingColorRows" :key="row.key" class="roomtag-row">
           <span class="roomtag-name">{{ t(row.labelKey) }}</span>
@@ -623,18 +699,14 @@ onBeforeUnmount(() => {
       </label>
       <label class="field compact">
         <span>{{ t('settings.slicerOffsetSnapCm') }}</span>
-        <input
-          type="number"
-          min="1"
-          max="500"
-          step="1"
-          :value="draft.fmlViewer.slicerOffsetSnapCm"
+        <ScaleLengthInput
+          block
+          :cm="draft.fmlViewer.slicerOffsetSnapCm"
+          :unit="draft.scaleInputUnit"
+          :min-cm="1"
+          :max-cm="500"
           :aria-label="t('settings.slicerOffsetSnapCm')"
-          @change="
-            patchViewer({
-              slicerOffsetSnapCm: Number(($event.target as HTMLInputElement).value),
-            })
-          "
+          @update:cm="patchViewer({ slicerOffsetSnapCm: $event })"
         />
       </label>
       <p class="hint">{{ t('settings.slicerOffsetSnapHint') }}</p>

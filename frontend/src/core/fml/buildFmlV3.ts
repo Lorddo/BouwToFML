@@ -64,6 +64,11 @@ export interface BuildFmlV3Options {
    * i.p.v. per-instantie kleur (bijv. fabrieks-Woonkamer tot tagging is goedgekeurd).
    */
   forceAreaFillColor?: string
+  /**
+   * Floorplanner project setting. When set, written on project settings
+   * (new envelope and roundtrip). When omitted, keep existing / default true.
+   */
+  useMetric?: boolean
 }
 
 /**
@@ -512,11 +517,13 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
             ? plan.source.settings.wallHeight
             : wallHeightCm,
         bovenlichtPacked: readBovenlichtPacked(plan),
+        ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
       }
     : {
         wallHeight: wallHeightCm,
         bovenlichtPacked: readBovenlichtPacked(plan),
         ...DEFAULT_PROJECT_SETTINGS,
+        ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
       }
 
   const output: Record<string, unknown> = {

@@ -19,6 +19,8 @@ import {
   type ViewerSessionDefaults,
 } from '@/core/fml/viewer-session-defaults'
 import { confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 /**
  * Viewer-defaults alleen per verdieping (zoals detectie).
@@ -80,9 +82,11 @@ export function useFmlViewerSessionDefaults(deps: {
     if (field === 'bovenlichtDefault' || field === 'windowBovenlichtDefault') {
       next[field] = Boolean(raw)
     } else if (field === 'windowSillZCm' || field === 'bovenlichtGapCm') {
-      next[field] = Math.max(0, Math.round(Number(raw)))
+      const n = Number(raw)
+      next[field] = Number.isFinite(n) ? Math.max(0, n) : target[field]
     } else {
-      next[field] = Math.max(1, Math.round(Number(raw)))
+      const n = Number(raw)
+      next[field] = Number.isFinite(n) ? Math.max(1, n) : target[field]
     }
     return next
   }
@@ -159,7 +163,14 @@ export function useFmlViewerSessionDefaults(deps: {
     const enabled = Boolean(next[field])
     const message = deps.t(overwriteKey(field), {
       count,
-      cm: next[field],
+      length:
+        typeof next[field] === 'number'
+          ? formatScaleInputLabel(next[field], loadUserSettings().scaleInputUnit)
+          : next[field],
+      cm:
+        typeof next[field] === 'number'
+          ? formatScaleInputLabel(next[field], loadUserSettings().scaleInputUnit)
+          : next[field],
       state: enabled ? deps.t('viewer.defaultsOn') : deps.t('viewer.defaultsOff'),
     })
     if (!(await confirmOverwrite(message))) return
@@ -171,6 +182,12 @@ export function useFmlViewerSessionDefaults(deps: {
     }
   }
 
+  async function onFloorDefaultCm(field: keyof ViewerSessionDefaults, cm: number): Promise<void> {
+    if (!Number.isFinite(cm)) return
+    await applyFloorDefault(field, cm)
+  }
+
+  /** @deprecated Prefer onFloorDefaultCm — kept for Event-based callers. */
   async function onFloorDefaultNumber(
     field: keyof ViewerSessionDefaults,
     event: Event,
@@ -237,6 +254,7 @@ export function useFmlViewerSessionDefaults(deps: {
     sessionDefaults,
     activeFloorDefaults,
     defaultsForFloor,
+    onFloorDefaultCm,
     onFloorDefaultNumber,
     onFloorDefaultBool,
     hydrateFloorDefaultsFromPlan,

@@ -15,8 +15,11 @@ import type { ProjectFmlDefaults } from '@/ui/composables/project/types'
 import { DEFAULT_LOCALE, normalizeLocale, type AppLocale } from '@/ui/i18n'
 import {
   DEFAULT_SCALE_INPUT_UNIT,
+  DEFAULT_UNIT_SYSTEM,
   normalizeScaleInputUnit,
+  normalizeUnitSystem,
   type ScaleInputUnit,
+  type UnitSystem,
 } from './scale-input-unit'
 import {
   DEFAULT_CORNER_MARKER_MODE,
@@ -28,14 +31,24 @@ import {
   normalizeOpeningDisplayColors,
   type OpeningDisplayColors,
 } from './opening-display-colors'
+import {
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  normalizePlanDisplayStyle,
+  type PlanDisplayStyleChoice,
+} from './plan-display-style'
 import { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
+import { DEFAULT_FLOOR_THICKNESS_CM, DEFAULT_NOK_THICKNESS_CM } from '@/core/fml/floor-stack'
+import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/fml/ridge-walls'
 
-export type { ScaleInputUnit } from './scale-input-unit'
+export type { ScaleInputUnit, UnitSystem } from './scale-input-unit'
 export {
   DEFAULT_SCALE_INPUT_UNIT,
+  DEFAULT_UNIT_SYSTEM,
   SCALE_INPUT_UNITS,
+  UNIT_SYSTEMS,
   mmToScaleInput,
   normalizeScaleInputUnit,
+  normalizeUnitSystem,
   scaleInputStep,
   scaleInputToMm,
 } from './scale-input-unit'
@@ -51,6 +64,12 @@ export {
   createFactoryOpeningDisplayColors,
   normalizeOpeningDisplayColors,
 } from './opening-display-colors'
+export type { PlanDisplayStyle, PlanDisplayStyleChoice } from './plan-display-style'
+export {
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  PLAN_DISPLAY_STYLE_CHOICES,
+  normalizePlanDisplayStyle,
+} from './plan-display-style'
 
 export const USER_SETTINGS_STORAGE_KEY = 'bouwToFml.userSettings'
 export const USER_SETTINGS_VERSION = 1 as const
@@ -69,6 +88,10 @@ export type FmlViewerSettings = {
   openingColors: OpeningDisplayColors
   /** Soft-snap P↔M-offset (voorkeur + andere slices). */
   slicerOffsetSnapCm: number
+  /** Plattegrond-verf: editor (kleur) | bouw (CAD-lijnen). */
+  planDisplayStyle: PlanDisplayStyleChoice
+  /** Gestippelde nokbalk-breedte (aanzicht + Dak-tab). */
+  ridgeDisplayWidthCm: number
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
@@ -80,7 +103,9 @@ export type FmlConversionSettings = {
 export type UserSettingsV1 = {
   version: typeof USER_SETTINGS_VERSION
   locale: AppLocale
-  /** Alleen schaalliniaal-invoer (stap 1); doorrekening blijft mm. */
+  /** Metric / imperial (onafhankelijk van input type; later FML useMetric). */
+  unitSystem: UnitSystem
+  /** Schaalliniaal + FML typen (kamer/muur/move); doorrekening blijft cm. */
   scaleInputUnit: ScaleInputUnit
   defaults: ProjectFmlDefaults
   fmlViewer: FmlViewerSettings
@@ -113,6 +138,12 @@ function clampOpacityPct(raw: unknown, fallback: number): number {
   return Math.min(100, Math.max(0, Math.round(n)))
 }
 
+function clampRidgeDisplayWidthCm(raw: unknown, fallback: number): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return fallback
+  return Math.max(1, Math.min(80, Math.round(n)))
+}
+
 export function createFactoryFmlDefaults(): ProjectFmlDefaults {
   return {
     wallHeightCm: DEFAULT_FML_WALL_HEIGHT_CM,
@@ -126,6 +157,8 @@ export function createFactoryFmlDefaults(): ProjectFmlDefaults {
     thicknessMinCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.minCm,
     thicknessMidCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.midCm,
     thicknessMaxCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.maxCm,
+    dakThicknessCm: DEFAULT_NOK_THICKNESS_CM,
+    slabThicknessCm: DEFAULT_FLOOR_THICKNESS_CM,
     bandMidBoundaryCm: DEFAULT_FML_BAND_BOUNDARIES.midBoundaryCm,
     bandMaxBoundaryCm: DEFAULT_FML_BAND_BOUNDARIES.maxBoundaryCm,
   }
@@ -138,6 +171,8 @@ export function createFactoryFmlViewerSettings(): FmlViewerSettings {
     cornerMarkerMode: DEFAULT_CORNER_MARKER_MODE,
     openingColors: createFactoryOpeningDisplayColors(),
     slicerOffsetSnapCm: DEFAULT_SLICER_OFFSET_SNAP_CM,
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
+    ridgeDisplayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
   }
 }
 
@@ -152,6 +187,7 @@ export function createFactoryUserSettings(): UserSettingsV1 {
   return {
     version: USER_SETTINGS_VERSION,
     locale: DEFAULT_LOCALE,
+    unitSystem: DEFAULT_UNIT_SYSTEM,
     scaleInputUnit: DEFAULT_SCALE_INPUT_UNIT,
     defaults: createFactoryFmlDefaults(),
     fmlViewer: createFactoryFmlViewerSettings(),
@@ -182,6 +218,8 @@ function normalizeDefaults(
     thicknessMinCm: positiveCm(src.thicknessMinCm, factory.thicknessMinCm),
     thicknessMidCm: positiveCm(src.thicknessMidCm, factory.thicknessMidCm),
     thicknessMaxCm: positiveCm(src.thicknessMaxCm, factory.thicknessMaxCm),
+    dakThicknessCm: positiveCm(src.dakThicknessCm, factory.dakThicknessCm),
+    slabThicknessCm: positiveCm(src.slabThicknessCm, factory.slabThicknessCm),
     // Meetband = REF-afgeleid; settings bewaren alleen fabrieks-fallback (geen user-override).
     bandMidBoundaryCm: factory.bandMidBoundaryCm,
     bandMaxBoundaryCm: factory.bandMaxBoundaryCm,
@@ -199,6 +237,11 @@ function normalizeFmlViewer(
     cornerMarkerMode: normalizeCornerMarkerMode(src.cornerMarkerMode ?? factory.cornerMarkerMode),
     openingColors: normalizeOpeningDisplayColors(src.openingColors ?? factory.openingColors),
     slicerOffsetSnapCm: positiveCm(src.slicerOffsetSnapCm, factory.slicerOffsetSnapCm),
+    planDisplayStyle: normalizePlanDisplayStyle(src.planDisplayStyle ?? factory.planDisplayStyle),
+    ridgeDisplayWidthCm: clampRidgeDisplayWidthCm(
+      src.ridgeDisplayWidthCm,
+      factory.ridgeDisplayWidthCm,
+    ),
   }
 }
 
@@ -224,6 +267,7 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
   return {
     version: USER_SETTINGS_VERSION,
     locale: normalizeLocale(obj.locale),
+    unitSystem: normalizeUnitSystem(obj.unitSystem),
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults, factory.defaults),
     fmlViewer: normalizeFmlViewer(obj.fmlViewer, factory.fmlViewer),
@@ -234,7 +278,7 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
 
 /**
  * Strict parse for import. Requires version: 1 and a defaults object.
- * Missing fmlViewer / fmlConversion / scaleInputUnit → factory (forward-compatible).
+ * Missing fmlViewer / fmlConversion / scaleInputUnit / unitSystem → factory (forward-compatible).
  */
 export function parseUserSettingsJson(raw: string): UserSettingsV1 {
   let parsed: unknown
@@ -256,6 +300,7 @@ export function parseUserSettingsJson(raw: string): UserSettingsV1 {
   return {
     version: USER_SETTINGS_VERSION,
     locale: normalizeLocale(obj.locale),
+    unitSystem: normalizeUnitSystem(obj.unitSystem),
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults),
     fmlViewer: normalizeFmlViewer(obj.fmlViewer),

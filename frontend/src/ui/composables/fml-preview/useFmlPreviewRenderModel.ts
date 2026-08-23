@@ -43,6 +43,10 @@ import {
   buildSelectedWallPanel,
 } from './fml-preview-selected-panels'
 import { buildUnderlayStageGeom } from './fml-preview-underlay-layout'
+import {
+  DEFAULT_SCALE_INPUT_UNIT,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
 export type {
   RenderArea,
@@ -52,6 +56,7 @@ export type {
   RenderLabel,
   RenderLine,
   RenderModel,
+  RenderPlanGlyph,
   RenderSurface,
   RenderWall,
   RenderWallPolygon,
@@ -105,6 +110,7 @@ export function useFmlPreviewRenderModel(
   selection: FmlPreviewSelectionRefs,
   dimensionVis?: ComputedRef<DimensionVis>,
   dakMode?: ComputedRef<boolean>,
+  inputUnit?: Ref<ScaleInputUnit> | ComputedRef<ScaleInputUnit>,
 ) {
   const underlayImageObj = ref<HTMLImageElement | null>(null)
 
@@ -132,6 +138,7 @@ export function useFmlPreviewRenderModel(
     const activeFloor = floor.value
     if (!layout || !activeFloor) return null
     const dak = dakMode?.value === true
+    const unit = inputUnit?.value ?? DEFAULT_SCALE_INPUT_UNIT
     const walls = dak ? [] : editor.walls.value
     const { toStagePoint, toCmPoint } = layoutTransform(layout)
     const scale = layout.scale
@@ -193,7 +200,7 @@ export function useFmlPreviewRenderModel(
 
     const displayWidth = ridgeDisplayWidthCm(plan)
     const half = displayWidth / 2
-    const ridgeSource = listRidgeWallsOnFloor(activeFloor)
+    const ridgeSource = dak ? listRidgeWallsOnFloor(activeFloor) : []
     const ridgeLines = ridgeSource.map((wall, index) => {
       const a = toStagePoint(wall.a.x, wall.a.y)
       const b = toStagePoint(wall.b.x, wall.b.y)
@@ -250,7 +257,7 @@ export function useFmlPreviewRenderModel(
 
     const { doorGroups, windows } = dak
       ? { doorGroups: [], windows: [] }
-      : buildRenderDoorGroupsAndWindows(wallLines, toStagePoint)
+      : buildRenderDoorGroupsAndWindows(wallLines, toStagePoint, unit)
     const fixtures = dak ? [] : buildRenderFixtures(activeFloor, toStagePoint)
     const areas = dak ? [] : buildRenderAreas(activeFloor.areas, toStagePoint)
     const surfaces = buildRenderSurfaces(
@@ -265,9 +272,9 @@ export function useFmlPreviewRenderModel(
 
     const manualDims =
       vis === 'manual' ? filterManualDimensions(activeFloor.dimensions, slices) : []
-    const dimensions = buildRenderDimensions(manualDims, toStagePoint)
+    const dimensions = buildRenderDimensions(manualDims, toStagePoint, 6, unit)
 
-    const areaSideDims = dak ? [] : buildRenderAreaSideDims(activeFloor.areas, toStagePoint)
+    const areaSideDims = dak ? [] : buildRenderAreaSideDims(activeFloor.areas, toStagePoint, unit)
 
     let autoDimensions: ReturnType<typeof buildRenderDimensions> = []
     if (!dak && vis === 'autogen' && dimSettings.engineAutoDims) {
@@ -283,6 +290,8 @@ export function useFmlPreviewRenderModel(
           b: line.b,
         })),
         toStagePoint,
+        6,
+        unit,
       )
     }
 
@@ -291,6 +300,8 @@ export function useFmlPreviewRenderModel(
       sliceDimensions = buildRenderDimensions(
         bakeSliceDimensions(slices, walls, dimSettings.dimensionMode, 'slice-live'),
         toStagePoint,
+        6,
+        unit,
       )
     }
 
@@ -411,7 +422,6 @@ export function useFmlPreviewRenderModel(
       for (const wall of listRidgeWallsOnFloor(floor.value)) visibleIds.add(wall.id)
     } else {
       for (const wall of editor.walls.value) visibleIds.add(wall.id)
-      for (const wall of listRidgeWallsOnFloor(floor.value)) visibleIds.add(wall.id)
     }
     return editor.junctions.value
       .filter((junction) => junction.refs.some((ref) => visibleIds.has(ref.wallId)))
@@ -432,7 +442,8 @@ export function useFmlPreviewRenderModel(
   const visibleJunctionIds = computed(() => {
     const showAllDrawJunctions =
       selection.activeFmlTool.value === 'draw_room' ||
-      (selection.activeFmlTool.value === 'draw_wall' && selection.drawWallKind.value !== 'ridge')
+      (selection.activeFmlTool.value === 'draw_wall' && selection.drawWallKind.value !== 'ridge') ||
+      (dakMode?.value === true && selection.activeFmlTool.value === 'draw_surface')
     if (showAllDrawJunctions) {
       return new Set(renderJunctions.value.map((junction) => junction.id))
     }
