@@ -159,18 +159,16 @@ export function buildRenderDoorGroupsAndWindows(
     wallLine.wall.openings.forEach((opening, openingIndex) => {
       if (opening.type !== 'window') return
 
-      const center = offsetPointByWallBalance(
-        {
-          x: wallLine.a.x + clamp01(opening.t) * dx,
-          y: wallLine.a.y + clamp01(opening.t) * dy,
-        },
-        wallUnit,
-        thicknessCm,
-        balance,
-      )
+      // Glyphs op de hartlijn (zoals deuren); flatten + gap krijgen één balance-offset.
+      const centerAxis = {
+        x: wallLine.a.x + clamp01(opening.t) * dx,
+        y: wallLine.a.y + clamp01(opening.t) * dy,
+      }
       const half = Math.max(0.5, opening.width / 2)
-      const startCm = { x: center.x - ux * half, y: center.y - uy * half }
-      const endCm = { x: center.x + ux * half, y: center.y + uy * half }
+      const startAxis = { x: centerAxis.x - ux * half, y: centerAxis.y - uy * half }
+      const endAxis = { x: centerAxis.x + ux * half, y: centerAxis.y + uy * half }
+      const startCm = offsetPointByWallBalance(startAxis, wallUnit, thicknessCm, balance)
+      const endCm = offsetPointByWallBalance(endAxis, wallUnit, thicknessCm, balance)
       const start = toStagePoint(startCm.x, startCm.y)
       const end = toStagePoint(endCm.x, endCm.y)
       const catalog = resolveOpeningCatalog(opening.refid, 'window')
@@ -180,8 +178,8 @@ export function buildRenderDoorGroupsAndWindows(
         resolveOpeningFrame(opening, catalog),
       ).frame
       const windowSymbol = buildWindowPlanSymbol({
-        start: startCm,
-        end: endCm,
+        start: startAxis,
+        end: endAxis,
         wallUnit,
         thicknessCm,
         panelCount: panels,

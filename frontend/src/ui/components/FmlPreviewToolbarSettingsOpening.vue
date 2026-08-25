@@ -19,6 +19,7 @@ const { t } = useI18n()
 
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
 const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
+const addDoorSillZCm = defineModel<number>('addDoorSillZCm', { default: 0 })
 const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
 const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 })
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
@@ -249,6 +250,7 @@ const showTriangleMirror = computed(
   <FmlOpeningAddToolFields
     v-model:add-door-subtype="addDoorSubtype"
     v-model:add-door-width-cm="addDoorWidthCm"
+    v-model:add-door-sill-z-cm="addDoorSillZCm"
     v-model:add-window-subtype="addWindowSubtype"
     v-model:add-window-width-cm="addWindowWidthCm"
     v-model:add-window-sill-z-cm="addWindowSillZCm"

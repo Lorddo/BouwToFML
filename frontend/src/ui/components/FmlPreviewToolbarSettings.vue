@@ -21,6 +21,7 @@ import FmlPreviewToolbarSettingsLine from './FmlPreviewToolbarSettingsLine.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
 import FmlPreviewToolbarSettingsDraw from './FmlPreviewToolbarSettingsDraw.vue'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import type { BoxSelectKind } from '@/ui/composables/fml-preview/fml-preview-wall-select'
 
 const { t } = useI18n()
 
@@ -28,9 +29,11 @@ const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null }
 const measureDrawMode = defineModel<'tape' | 'manual' | 'slicer'>('measureDrawMode', {
   default: 'tape',
 })
+const boxSelectKind = defineModel<BoxSelectKind>('boxSelectKind', { default: 'wall' })
 const slicerEditMode = defineModel<boolean>('slicerEditMode', { default: false })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
 const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
+const addDoorSillZCm = defineModel<number>('addDoorSillZCm', { default: 0 })
 const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
 const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 })
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
@@ -128,8 +131,12 @@ const props = withDefaults(
     wallBalanceMixed: boolean
     wallHeightDraft: number
     wallHeightMixed: boolean
+    wallBottomZDraft?: number
+    wallBottomZMixed?: boolean
     junctionHeightDraft: number
     junctionHeightMixed: boolean
+    junctionBottomZDraft?: number
+    junctionBottomZMixed?: boolean
     openingSubtypeDraft: OpeningSubtypeDraft
     openingSubtypeMixed: boolean
     openingWidthDraft: number
@@ -165,9 +172,7 @@ const props = withDefaults(
     drawSurfaceDrafting?: boolean
     facadeGroupsEnabled?: boolean
     facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
-    facadeGroupDraft?: string | null
-    facadeGroupMixed?: boolean
-    canSelectFacadeMembers?: boolean
+    facadeGroupChecks?: Record<string, boolean | null>
     facadeGroupsStampPreset?: boolean
     /** Editor: Stempel-checkbox (niet workspace-preset). */
     stampGroupEnabled?: boolean
@@ -197,9 +202,7 @@ const props = withDefaults(
     drawSurfaceDrafting: false,
     facadeGroupsEnabled: false,
     facadeGroupOptions: () => [],
-    facadeGroupDraft: '',
-    facadeGroupMixed: false,
-    canSelectFacadeMembers: false,
+    facadeGroupChecks: () => ({}),
     facadeGroupsStampPreset: false,
     stampGroupEnabled: false,
     stampGroupDraft: false,
@@ -231,8 +234,12 @@ const emit = defineEmits<{
   commitWallBalance: []
   wallHeightCm: [cm: number]
   commitWallHeight: []
+  wallBottomZCm: [cm: number]
+  commitWallBottomZ: []
   junctionHeightCm: [cm: number]
   commitJunctionHeight: []
+  junctionBottomZCm: [cm: number]
+  commitJunctionBottomZ: []
   commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
   openingWidthCm: [cm: number]
   commitOpeningWidth: []
@@ -253,8 +260,8 @@ const emit = defineEmits<{
   deleteWalls: []
   clearSelection: []
   facadeGroupChange: [value: string]
-  facadeGroupRename: []
-  selectFacadeMembers: []
+  facadeGroupRemove: [groupId: string]
+  selectFacadeMembers: [groupId: string]
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
   wallKindChange: [kind: 'wall' | 'ridge']
@@ -298,6 +305,7 @@ const emit = defineEmits<{
   cancelDrawRoomDraft: []
   acceptDrawDraft: []
   deactivateDrawTool: []
+  boxSelectAll: []
 }>()
 
 const showDrawToolActions = computed(() => isFmlOneshotDrawTool(activeTool.value))
@@ -328,8 +336,8 @@ const showOpeningSettings = computed(
     activeTool.value === 'add_window',
 )
 
-const showSettings = computed(() =>
-  isFmlToolbarSettingsOpen({
+const showSettings = computed(() => {
+  const open = isFmlToolbarSettingsOpen({
     hasWallSelection: props.selectedWallPanel != null,
     hasJunctionSelection: props.selectedJunctionPanel != null,
     hasOpeningSelection: props.selectedOpeningPanel != null,
@@ -339,8 +347,13 @@ const showSettings = computed(() =>
     hasItemSelection: props.selectedItemPanel != null,
     activeTool: activeTool.value,
     dakMode: props.dakMode === true,
-  }),
-)
+  })
+  if (!open) return false
+  if (activeTool.value === 'box_select' && !showWallSettings.value && !showOpeningSettings.value) {
+    return showDeselect.value
+  }
+  return open
+})
 
 const measureCountLabel = computed(() => {
   const count = props.measureLineCount ?? 0
@@ -350,6 +363,13 @@ const measureCountLabel = computed(() => {
 })
 
 const showMeasureStrip = computed(() => activeTool.value === 'measure')
+const showBoxSelectStrip = computed(() => activeTool.value === 'box_select')
+const boxSelectAllTitle = computed(() => {
+  if (boxSelectKind.value === 'door') return t('result.toolbar.boxSelectAllDoors')
+  if (boxSelectKind.value === 'window') return t('result.toolbar.boxSelectAllWindows')
+  if (boxSelectKind.value === 'all') return t('result.toolbar.boxSelectAllMixed')
+  return t('result.toolbar.boxSelectAllWalls')
+})
 
 const showDeselect = computed(
   () =>
@@ -385,16 +405,18 @@ const isRoofPanel = computed(
         :wall-balance-mixed="wallBalanceMixed"
         :wall-height-draft="wallHeightDraft"
         :wall-height-mixed="wallHeightMixed"
+        :wall-bottom-z-draft="wallBottomZDraft"
+        :wall-bottom-z-mixed="wallBottomZMixed"
         :junction-height-draft="junctionHeightDraft"
         :junction-height-mixed="junctionHeightMixed"
+        :junction-bottom-z-draft="junctionBottomZDraft"
+        :junction-bottom-z-mixed="junctionBottomZMixed"
         :thickness-min-cm="thicknessMinCm"
         :thickness-mid-cm="thicknessMidCm"
         :thickness-max-cm="thicknessMaxCm"
         :facade-groups-enabled="facadeGroupsEnabled"
         :facade-group-options="facadeGroupOptions"
-        :facade-group-draft="facadeGroupDraft"
-        :facade-group-mixed="facadeGroupMixed"
-        :can-select-facade-members="canSelectFacadeMembers"
+        :facade-group-checks="facadeGroupChecks"
         :facade-groups-stamp-preset="facadeGroupsStampPreset"
         :stamp-group-enabled="stampGroupEnabled"
         :stamp-group-draft="stampGroupDraft"
@@ -413,13 +435,17 @@ const isRoofPanel = computed(
         @commit-wall-balance="emit('commitWallBalance')"
         @wall-height-cm="emit('wallHeightCm', $event)"
         @commit-wall-height="emit('commitWallHeight')"
+        @wall-bottom-z-cm="emit('wallBottomZCm', $event)"
+        @commit-wall-bottom-z="emit('commitWallBottomZ')"
         @junction-height-cm="emit('junctionHeightCm', $event)"
         @commit-junction-height="emit('commitJunctionHeight')"
+        @junction-bottom-z-cm="emit('junctionBottomZCm', $event)"
+        @commit-junction-bottom-z="emit('commitJunctionBottomZ')"
         @split-wall="emit('splitWall')"
         @delete-walls="emit('deleteWalls')"
         @facade-group-change="emit('facadeGroupChange', $event)"
-        @facade-group-rename="emit('facadeGroupRename')"
-        @select-facade-members="emit('selectFacadeMembers')"
+        @facade-group-remove="emit('facadeGroupRemove', $event)"
+        @select-facade-members="emit('selectFacadeMembers', $event)"
         @stamp-group-change="emit('stampGroupChange', $event)"
         @select-stamp-members="emit('selectStampMembers')"
         @wall-kind-change="emit('wallKindChange', $event)"
@@ -459,6 +485,54 @@ const isRoofPanel = computed(
           </button>
         </template>
       </FmlPreviewToolbarSettingsWall>
+      <FmlPreviewToolbarSettingsOpening
+        v-if="showWallSettings && showOpeningSettings"
+        v-model:add-door-subtype="addDoorSubtype"
+        v-model:add-door-width-cm="addDoorWidthCm"
+        v-model:add-door-sill-z-cm="addDoorSillZCm"
+        v-model:add-window-subtype="addWindowSubtype"
+        v-model:add-window-width-cm="addWindowWidthCm"
+        v-model:add-window-sill-z-cm="addWindowSillZCm"
+        v-model:add-window-height-cm="addWindowHeightCm"
+        :unit="unit"
+        :selected-opening-panel="selectedOpeningPanel"
+        :active-tool="activeTool"
+        :opening-subtype-draft="openingSubtypeDraft"
+        :opening-subtype-mixed="openingSubtypeMixed"
+        :opening-width-draft="openingWidthDraft"
+        :opening-width-mixed="openingWidthMixed"
+        :opening-height-draft="openingHeightDraft"
+        :opening-height-mixed="openingHeightMixed"
+        :opening-sill-z-draft="openingSillZDraft"
+        :opening-sill-z-mixed="openingSillZMixed"
+        :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+        :opening-hinge-mixed="openingHingeMixed"
+        :opening-swing-right-draft="openingSwingRightDraft"
+        :opening-swing-mixed="openingSwingMixed"
+        :opening-bovenlicht-draft="openingBovenlichtDraft"
+        :opening-bovenlicht-mixed="openingBovenlichtMixed"
+        :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+        :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+        :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+        :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+        :bovenlicht-packed="bovenlichtPacked"
+        @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
+        @opening-width-cm="emit('openingWidthCm', $event)"
+        @commit-opening-width="emit('commitOpeningWidth')"
+        @opening-height-cm="emit('openingHeightCm', $event)"
+        @commit-opening-height="emit('commitOpeningHeight')"
+        @opening-sill-z-cm="emit('openingSillZCm', $event)"
+        @commit-opening-sill-z="emit('commitOpeningSillZ')"
+        @toggle-opening-hinge="emit('toggleOpeningHinge')"
+        @toggle-opening-swing="emit('toggleOpeningSwing')"
+        @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
+        @opening-bovenlicht-height-cm="emit('openingBovenlichtHeightCm', $event)"
+        @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
+        @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
+        @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+        @copy-opening="emit('copyOpening')"
+        @delete-openings="emit('deleteOpenings')"
+      />
       <div v-if="!showWallSettings" class="fml-toolbelt__row fml-toolbelt__row--primary">
         <FmlPreviewToolbarSettingsDraw
           v-if="
@@ -485,6 +559,7 @@ const isRoofPanel = computed(
           v-if="showOpeningSettings"
           v-model:add-door-subtype="addDoorSubtype"
           v-model:add-door-width-cm="addDoorWidthCm"
+          v-model:add-door-sill-z-cm="addDoorSillZCm"
           v-model:add-window-subtype="addWindowSubtype"
           v-model:add-window-width-cm="addWindowWidthCm"
           v-model:add-window-sill-z-cm="addWindowSillZCm"
@@ -622,6 +697,39 @@ const isRoofPanel = computed(
     </div>
   </template>
 
+  <template v-if="showBoxSelectStrip">
+    <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
+    <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
+      <label class="fml-toolbelt__meta fml-measure-mode">
+        <span>{{ t('result.toolbar.boxSelectKindLabel') }}</span>
+        <select v-model="boxSelectKind" class="fml-measure-mode__select">
+          <option value="wall">{{ t('result.toolbar.boxSelectKindWall') }}</option>
+          <option value="door">{{ t('result.toolbar.boxSelectKindDoor') }}</option>
+          <option value="window">{{ t('result.toolbar.boxSelectKindWindow') }}</option>
+          <option value="all">{{ t('result.toolbar.boxSelectKindAll') }}</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        class="fml-box-select-all"
+        :title="boxSelectAllTitle"
+        :aria-label="boxSelectAllTitle"
+        @click="emit('boxSelectAll')"
+      >
+        {{ t('result.toolbar.boxSelectAll') }}
+      </button>
+      <button
+        type="button"
+        class="canvas-toolbelt__btn"
+        :title="t('result.toolbar.deactivateDrawTool')"
+        :aria-label="t('result.toolbar.deactivateDrawTool')"
+        @click="emit('deactivateDrawTool')"
+      >
+        <ToolbeltIcon name="clear" />
+      </button>
+    </div>
+  </template>
+
   <template v-if="showMeasureStrip">
     <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
     <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
@@ -692,5 +800,18 @@ const isRoofPanel = computed(
   font-size: 12px;
   background: #fff;
   color: #334155;
+}
+.fml-box-select-all {
+  height: 26px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 8px;
+  font-size: 12px;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+.fml-box-select-all:hover {
+  background: #f1f5f9;
 }
 </style>

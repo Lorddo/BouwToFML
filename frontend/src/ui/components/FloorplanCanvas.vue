@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import type Konva from 'konva'
 import { useStage } from '@/platform/canvas'
 import type { PolygonToolMode } from '@/cv/tools/polygon'
@@ -19,12 +19,15 @@ import FloorplanOverlayLayers from './FloorplanOverlayLayers.vue'
 import FloorplanSelectionLayer from './FloorplanSelectionLayer.vue'
 import FloorplanProbeLayer from './FloorplanProbeLayer.vue'
 import WallStampCanvasLayer from './WallStampCanvasLayer.vue'
+import CanvasGuideGrid from './canvas/CanvasGuideGrid.vue'
+import { canvasGridScanSlot } from './canvas/canvas-guide-grid'
 import FmlEditorTopbar from './FmlEditorTopbar.vue'
 import {
   FLOORPLAN_CANVAS_PROP_DEFAULTS,
   type FloorplanCanvasEmits,
   type FloorplanCanvasProps,
 } from './floorplan-canvas.types'
+import { setShowCanvasGrid } from '@/ui/composables/settings/user-settings'
 import './canvas/canvas-toolbelt.css'
 import './floorplan-canvas.css'
 
@@ -40,7 +43,16 @@ const containerSize = ref({ width: 800, height: 600 })
 
 const { spacePressed, shiftPressed, onKeyDown, onKeyUp, wheelZoom, fitToScreen } = useStage()
 
-const { imageObj, rasterOverlayObj, imgSize, stageScale, fit, zoomBy } = useFloorplanCanvasImage({
+const {
+  imageObj,
+  rasterOverlayObj,
+  imgSize,
+  stageScale,
+  stageViewport,
+  syncStageViewport,
+  fit,
+  zoomBy,
+} = useFloorplanCanvasImage({
   imageSrc: () => props.imageSrc,
   rasterOverlaySrc: () => props.rasterOverlaySrc,
   rasterOverlayRevision: () => props.rasterOverlayRevision,
@@ -48,6 +60,9 @@ const { imageObj, rasterOverlayObj, imgSize, stageScale, fit, zoomBy } = useFloo
   fitToScreen,
   onImageLoaded: (width, height) => emit('imageLoaded', width, height),
 })
+
+/** Scan under grid (stap 1) vs scan over grid (stap 2/3/B/W). */
+const scanUnderGrid = computed(() => canvasGridScanSlot(props.guideGridSurface) === 'under')
 
 const {
   isDrawMode,
@@ -67,7 +82,7 @@ const {
   baseImageConfig,
   polygonDraftStroke,
   onDragStart,
-  onDragEnd,
+  onDragEnd: onModesDragEnd,
 } = useFloorplanCanvasModes({
   lbeEnabled: () => props.lbeEnabled,
   drawType: () => props.drawType,
@@ -86,6 +101,15 @@ const {
   imgSize: () => imgSize.value,
   stageScale: () => stageScale.value,
 })
+
+function onDragMove() {
+  syncStageViewport()
+}
+
+function onDragEnd() {
+  onModesDragEnd()
+  syncStageViewport()
+}
 
 const {
   selectedRect,
@@ -210,7 +234,6 @@ const pointer = useFloorplanPointerRouter({
   stageRef,
   underlayGroupRef,
   imageObj,
-  imgSize: () => imgSize.value,
   stageScale,
   spacePressed: () => spacePressed.value,
   lbeEnabled: () => props.lbeEnabled,
@@ -222,10 +245,8 @@ const pointer = useFloorplanPointerRouter({
   eraserEnabled: () => props.eraserEnabled,
   inkTool: () => props.inkTool,
   faceTool: () => props.faceTool,
-  rotationPreviewDeg: () => props.rotationPreviewDeg ?? 0,
   isDrawMode: () => isDrawMode.value,
   isDragging,
-  fitToScreen,
   wheelZoom,
   onProbeMouseDown,
   onFaceBoxMouseDown,
@@ -251,10 +272,16 @@ const pointer = useFloorplanPointerRouter({
   resetEraserDraft,
   resetInkDraft,
   resetFaceBoxDraft,
+  onViewportChange: syncStageViewport,
   emit,
 })
 
 defineExpose({ fit, zoomBy, imageObj, imgSize })
+
+function onShowCanvasGrid(next: boolean) {
+  setShowCanvasGrid(next)
+  emit('update:showGuideGrid', next)
+}
 </script>
 
 <template>
@@ -266,12 +293,14 @@ defineExpose({ fit, zoomBy, imageObj, imgSize })
       :fullscreen="canvasFullscreen"
       :edge-chrome="canvasFullscreen"
       :help-keys="helpKeys?.length ? helpKeys : undefined"
+      :show-canvas-grid="showGuideGrid"
       @undo="emit('undo')"
       @redo="emit('redo')"
       @fit="fit"
       @zoom-in="zoomBy(1.1)"
       @zoom-out="zoomBy(1 / 1.1)"
       @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
+      @update:show-canvas-grid="onShowCanvasGrid"
     />
     <v-stage
       ref="stageRef"
@@ -282,11 +311,13 @@ defineExpose({ fit, zoomBy, imageObj, imgSize })
       @mousemove="pointer.onMouseMove"
       @mouseup="pointer.onMouseUp"
       @dragstart="onDragStart"
+      @dragmove="onDragMove"
       @dragend="onDragEnd"
       @mouseleave="pointer.onMouseLeave"
     >
       <v-layer>
-        <v-group ref="underlayGroupRef" :config="underlayGroupConfig">
+        <!-- Paper + scan when grid sits above the underlay (stap 1). -->
+        <v-group :config="underlayGroupConfig">
           <v-rect
             v-if="imgSize.w > 0 && imgSize.h > 0"
             :config="{
@@ -298,7 +329,19 @@ defineExpose({ fit, zoomBy, imageObj, imgSize })
               listening: false,
             }"
           />
-          <v-image v-if="imageObj" :config="baseImageConfig" />
+          <v-image v-if="scanUnderGrid && imageObj" :config="baseImageConfig" />
+        </v-group>
+
+        <CanvasGuideGrid
+          :visible="showGuideGrid"
+          :parent-transform="stageViewport"
+          :viewport-width="containerSize.width"
+          :viewport-height="containerSize.height"
+        />
+
+        <!-- Scan when above grid (stap 2/3) + tools / overlays (same rotation as underlay). -->
+        <v-group ref="underlayGroupRef" :config="underlayGroupConfig">
+          <v-image v-if="!scanUnderGrid && imageObj" :config="baseImageConfig" />
           <v-image
             v-if="rasterOverlayObj && showRasterOverlay"
             :config="{

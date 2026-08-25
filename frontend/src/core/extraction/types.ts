@@ -362,6 +362,8 @@ export interface ExtractionInput {
       [number, 'wall' | 'surface' | 'unknown' | 'outside' | 'door' | 'window' | 'doorframe']
     >
     pinnedRoots?: number[]
+    /** Dunne deur-faces die in L0-mask blijven (D-63). */
+    maskKeepDoorFaceIds?: number[]
   }
 }
 

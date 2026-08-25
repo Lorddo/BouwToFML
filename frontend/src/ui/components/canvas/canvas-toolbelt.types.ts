@@ -33,6 +33,7 @@ export type ToolbeltIconName =
   | 'hinge'
   | 'swing'
   | 'grid'
+  | 'grid_off'
   | 'dims'
   | 'mirror_h'
   | 'mirror_v'

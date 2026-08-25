@@ -1,5 +1,6 @@
 /**
  * Session-only weergave van maatlijnen (exclusief). Niet in FML.
+ * Autogen/slicer kunnen naar handmatig (`dimensions[]`) via convert-overlay.
  */
 import { readBtfSlices } from './btf-slices'
 import { readDimensionSettings } from './fml-dimension-settings'

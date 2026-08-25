@@ -1,4 +1,5 @@
 import { foldBovenlichtOnPlan, readBovenlichtPacked } from './bovenlicht'
+import { hydrateFacadeGroupsFromNativeMarkers } from './facade-groups'
 import { ensureRidgeDesignsOnPlan, syncRidgeWallGuidsFromDesigns } from './ridge-walls'
 import { syncRoofPlaneGuidsFromDesigns } from './roof-planes'
 import { stripBakedSliceDimensionsFromPlan } from './btf-slices'
@@ -677,5 +678,7 @@ export function importFmlV3(json: string | object): ImportResult {
     plan = foldBovenlichtOnPlan(plan)
   }
   // Slicer-bake op P-lijn opnieuw genereren; strip uit dimensions zodat live/export niet dubbelt.
-  return { plan: stripBakedSliceDimensionsFromPlan(plan), warnings }
+  plan = stripBakedSliceDimensionsFromPlan(plan)
+  hydrateFacadeGroupsFromNativeMarkers(plan)
+  return { plan, warnings }
 }

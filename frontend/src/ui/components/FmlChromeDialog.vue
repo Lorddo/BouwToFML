@@ -10,6 +10,8 @@ const props = withDefaults(
     input?: boolean
     inputValue?: string
     placeholder?: string
+    listEdit?: boolean
+    listItems?: Array<{ id: string; name: string }>
     confirmLabel: string
     cancelLabel?: string
     hideCancel?: boolean
@@ -20,6 +22,8 @@ const props = withDefaults(
     input: false,
     inputValue: '',
     placeholder: '',
+    listEdit: false,
+    listItems: () => [],
     cancelLabel: '',
     hideCancel: false,
   },
@@ -29,6 +33,7 @@ const emit = defineEmits<{
   confirm: []
   cancel: []
   'update:inputValue': [value: string]
+  'update:listItemName': [id: string, name: string]
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -36,9 +41,12 @@ const confirmRef = ref<HTMLButtonElement | null>(null)
 
 function focusPrimary(): void {
   void nextTick(() => {
-    if (props.input) {
-      inputRef.value?.focus()
-      inputRef.value?.select()
+    if (props.input || props.listEdit) {
+      const first = props.listEdit
+        ? document.querySelector('.fml-chrome-dialog__list-input')
+        : inputRef.value
+      first?.focus()
+      first?.select()
       return
     }
     confirmRef.value?.focus()
@@ -88,7 +96,7 @@ onBeforeUnmount(() => {
       :aria-labelledby="'fml-chrome-dialog-title'"
     >
       <div class="fml-chrome-dialog__backdrop" @click="emit('cancel')" />
-      <div class="fml-chrome-dialog__card">
+      <div class="fml-chrome-dialog__card" :class="{ 'fml-chrome-dialog__card--wide': listEdit }">
         <div class="fml-chrome-dialog__head">
           <h3 id="fml-chrome-dialog-title">{{ title }}</h3>
           <button type="button" :aria-label="cancelLabel || confirmLabel" @click="emit('cancel')">
@@ -106,6 +114,18 @@ onBeforeUnmount(() => {
           :placeholder="placeholder"
           @input="emit('update:inputValue', ($event.target as HTMLInputElement).value)"
         />
+        <div v-if="listEdit" class="fml-chrome-dialog__list">
+          <label v-for="row in listItems" :key="row.id" class="fml-chrome-dialog__list-row">
+            <input
+              class="fml-chrome-dialog__input fml-chrome-dialog__list-input"
+              type="text"
+              :value="row.name"
+              @input="
+                emit('update:listItemName', row.id, ($event.target as HTMLInputElement).value)
+              "
+            />
+          </label>
+        </div>
         <div class="fml-chrome-dialog__actions">
           <button
             v-if="!hideCancel"
@@ -160,6 +180,10 @@ onBeforeUnmount(() => {
   border-radius: 10px;
   box-shadow: 0 12px 32px rgb(15 23 42 / 0.18);
   pointer-events: auto;
+}
+
+.fml-chrome-dialog__card--wide {
+  width: min(480px, 100%);
 }
 
 .fml-chrome-dialog__head {
@@ -219,6 +243,23 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   font-size: var(--fml-touch-input-font-size, 16px);
   color: #0f172a;
+}
+
+.fml-chrome-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 10px;
+  max-height: min(50vh, 320px);
+  overflow: auto;
+}
+
+.fml-chrome-dialog__list-row {
+  display: block;
+}
+
+.fml-chrome-dialog__list-input {
+  margin: 0;
 }
 
 .fml-chrome-dialog__actions {

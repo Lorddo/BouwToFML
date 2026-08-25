@@ -56,6 +56,8 @@ export function useFmlPreviewDrawRoom(options: {
   editor: EditorApi
   hoveredJunctionId: Ref<string | null>
   wallThicknessDraft: Ref<number>
+  wallHeightDraft?: Ref<number>
+  wallBottomZDraft?: Ref<number>
   shiftPressed: Ref<boolean>
   resolveStartPoint: (cm: Point2D) => Point2D
   resolveEndPoint: (cm: Point2D, start: Point2D) => Point2D
@@ -248,7 +250,10 @@ export function useFmlPreviewDrawRoom(options: {
     if (!draft) return false
     const corners = buildRectCorners(draft.startCm, endCm)
     options.editor.pushUndo()
-    const wallIds = options.editor.applyRoomRect(corners, options.wallThicknessDraft.value)
+    const wallIds = options.editor.applyRoomRect(corners, options.wallThicknessDraft.value, {
+      heightCm: options.wallHeightDraft?.value,
+      bottomZCm: options.wallBottomZDraft?.value,
+    })
     if (!wallIds) {
       options.editor.undo()
       return false

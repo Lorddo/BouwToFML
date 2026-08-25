@@ -38,7 +38,7 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
 | Download onderlegger PNG | `downloadUnderlay` |
 
-**Canvas:** stap 1–4 hebben een wit vlak (stap 4 = infinity-stage; 1–3 = witte stage-achtergrond). Geen auto-trim van witte randen bij bake (`normalizeWorkingCanvas` laat wit staan). Detectie negeert wit. Gum/crop blijft user-actie; PDF-ROI blijft een echte crop.
+**Canvas:** stap 1–4 hebben een wit vlak (stap 4 = infinity-stage; 1–3 = witte stage-achtergrond). Optioneel **hulpraster** (Settings `showCanvasGrid`, default aan): viewport-vast, draait niet mee; puur visueel (niet bake/export). Stap 1/editor/gevel: onderlegger onder raster; stap 2/3/B/W: scan boven raster. Geen auto-trim van witte randen bij bake (`normalizeWorkingCanvas` laat wit staan). Detectie negeert wit. Gum/crop blijft user-actie; PDF-ROI blijft een echte crop.
 
 **PDF-crop:** bij «Volgende» met in-memory PDF-bron + meaningful crop → ROI her-raster uit PDF (≥4000px langste zijde) i.p.v. blur-upscale van het full-page PNG-crop. PNG/JPG-crops ongewijzigd; PDF-bytes niet in IndexedDB.
 
@@ -118,7 +118,7 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 | vector / FML (canvas) | `useWorkspaceFml` ← `combinedOutput` (`mergeTabOutputs`); muren via semantic post-finalize — zie [`fml-layer8-conversion-plan.md`](./fml-layer8-conversion-plan.md) |
 | walls (Dev) | `tabOutputs.walls` + layer overlays (`ResultWallsLayerPanel` / Layer Debug) |
 
-**Project-export:** «Download .fml (project)» (footer op stap 4) → `mergeFloorPlans` over alle floors met preview/generated FML (namen/`level` uit `FloorMeta`). Geen per-verdieping download in de productie-UI.
+**Project-export:** «Download .fml (project)» (footer op stap 4) → `mergeFloorPlans` over alle floors met preview/generated FML (namen/`level` uit `FloorMeta`). Detectie-FML is plat (`floor.walls`, geen Dak/`designs[]`); live walls winnen als er tóch een snapshot is. Geen per-verdieping download in de productie-UI.
 
 **Nulpunt (uitlijning multi-floor):** select-tool «Nulpunt» — versleepbaar kruis op FML `(0,0)`. Na loslaten: ✓ bakken (alleen **actieve** floor: muren − P, `layout.origin` += P; onderlegger blijft op de scan) of ✕/Esc annuleren. Per verdieping hetzelfde anker kiezen zodat floors in 3D stapelen. Persist: `fmlNulpuntImageCm` op die floor-blob.
 
@@ -130,7 +130,7 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 
 **Verdiepingsnaam:** bewerkbaar bovenaan `FmlPanel` (actieve floor → `renameFloor`); zelfde bron als stap 0 / floor-rail.
 
-**Stempelset:** muursettings → vaste groep «Stempel» (`settings.facadeGroups` id `stamp`); leden meenemen naar stap-2 Muurstempel. Bake zaait nulpunt; stap-4 generate (ná semantic + deuren/ramen) injecteert vectoren (offset = bake − current nulpunt), daarna **ownership-corridor** (`resolve-stamp-ownership`, `extras.stampOwned`: trim parallellen, T-snap, openings overzetten), en sanitizet tot stabiel. Gum filtert inject-lijst bij generate. Workspace-download stript `facadeGroups` én `stampOwned`.
+**Stempelset:** muursettings → vaste groep «Stempel» (`settings.facadeGroups` id `stamp` + `stampGroupId` op de muur); leden meenemen naar stap-2 Muurstempel. Bake zaait nulpunt; stap-4 generate (ná semantic + deuren/ramen) injecteert vectoren (offset = bake − current nulpunt), daarna **ownership-corridor** (`resolve-stamp-ownership`, `extras.stampOwned`: trim parallellen, T-snap, openings overzetten), en sanitizet tot stabiel. Gum filtert inject-lijst bij generate. Workspace-download stript `facadeGroups`, native gevel/stamp-markers én `stampOwned`.
 
 **Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 

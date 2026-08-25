@@ -82,6 +82,8 @@ defineExpose({
   redoEdit: () => canvasRef.value?.redoEdit(),
   resetView: () => canvasRef.value?.resetView(),
   pushUndo: () => canvasRef.value?.pushUndo?.(),
+  convertOverlayToManual: (source: 'autogen' | 'slicer') =>
+    canvasRef.value?.convertOverlayToManual?.(source) ?? false,
 })
 </script>
 

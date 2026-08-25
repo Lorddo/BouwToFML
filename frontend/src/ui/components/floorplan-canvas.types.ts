@@ -13,6 +13,7 @@ import type { HScaleState } from '@/platform/calibration'
 import type { PolygonPoint, PolygonToolMode } from '@/cv/tools/polygon'
 import type { DebugProbeMode } from '@/ui/composables/workspace/useWorkspaceDebugProbe'
 import type { InkToolId, FaceToolId } from '@/ui/components/canvas/canvas-toolbelt.types'
+import type { CanvasGridSurface } from '@/ui/components/canvas/canvas-guide-grid'
 
 export type FloorplanCanvasProps = {
   imageSrc?: string
@@ -68,6 +69,10 @@ export type FloorplanCanvasProps = {
   canRedo?: boolean
   canvasFullscreen?: boolean
   helpKeys?: readonly string[]
+  /** Viewport-vast hulpraster (settings). */
+  showGuideGrid?: boolean
+  /** Z-order scan vs grid — zie canvasGridScanSlot. */
+  guideGridSurface?: CanvasGridSurface
 }
 
 export const FLOORPLAN_CANVAS_PROP_DEFAULTS = {
@@ -107,6 +112,8 @@ export const FLOORPLAN_CANVAS_PROP_DEFAULTS = {
   canRedo: false,
   canvasFullscreen: false,
   helpKeys: () => [] as string[],
+  showGuideGrid: true,
+  guideGridSurface: 'input' as CanvasGridSurface,
   wallStampBounds: null,
   wallStampInteractive: false,
   wallStampGhostSrc: null,
@@ -146,4 +153,5 @@ export type FloorplanCanvasEmits = {
   undo: []
   redo: []
   'update:canvasFullscreen': [value: boolean]
+  'update:showGuideGrid': [value: boolean]
 }

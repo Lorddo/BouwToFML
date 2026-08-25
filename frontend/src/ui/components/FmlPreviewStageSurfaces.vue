@@ -5,9 +5,16 @@ import {
   areaLabelKonvaConfig,
   areaLabelVisibleOnScreen,
 } from '@/ui/composables/fml-preview/fml-preview-render-areas'
-import { resolveInspectFill } from '@/ui/composables/fml-preview/fml-inspect'
+import { inspectColorFor, resolveInspectFill } from '@/ui/composables/fml-preview/fml-inspect'
 import type { RenderSurface } from '@/ui/composables/fml-preview/fml-preview-render-types'
 import type { Point2D } from '@/core/fml/types'
+import {
+  ARCHITECT_AREA_FILL,
+  ARCHITECT_STROKE,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  isArchitectPlanStyle,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 
 const props = withDefaults(
   defineProps<{
@@ -27,10 +34,18 @@ const props = withDefaults(
     labelsVisible?: boolean
     /** fill = vlakken; labels = benaming + edit-handles bovenop. */
     layer?: 'fill' | 'labels' | 'all'
+    planDisplayStyle?: PlanDisplayStyleChoice
   }>(),
-  { layer: 'all', layoutScale: 1, viewScale: 1, labelsVisible: true },
+  {
+    layer: 'all',
+    layoutScale: 1,
+    viewScale: 1,
+    labelsVisible: true,
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
+  },
 )
 
+const architect = computed(() => isArchitectPlanStyle(props.planDisplayStyle))
 const showFill = computed(() => props.layer !== 'labels')
 const showLabels = computed(() => props.layer !== 'fill' && props.labelsVisible)
 const fillSurfaces = computed(() => (showFill.value ? props.surfaces : []))
@@ -58,7 +73,23 @@ const cutoutMarks = computed(() => {
 
 function surfaceFill(surface: RenderSurface): string {
   if (surface.isCutout) return '#ffffff'
+  if (architect.value) {
+    const inspect = inspectColorFor(surface.id, props.inspectColors)
+    if (inspect) return inspect
+    if (props.settingsSurfaceId === surface.id || props.surfaceEditId === surface.id) {
+      return '#f97316'
+    }
+    return ARCHITECT_AREA_FILL
+  }
   return resolveInspectFill(surface.id, props.inspectColors, surface.fill)
+}
+
+function surfaceStroke(surface: RenderSurface): string {
+  if (props.settingsSurfaceId === surface.id || props.surfaceEditId === surface.id) {
+    return '#f97316'
+  }
+  if (architect.value) return ARCHITECT_STROKE
+  return surface.isRoof ? '#b45309' : '#64748b'
 }
 
 const handleScale = computed(() => 1 / Math.max(0.35, props.viewScale))
@@ -67,6 +98,11 @@ const handleRadiusSelected = computed(() => 4.5 * handleScale.value)
 const handleStroke = computed(() => 1.25 * handleScale.value)
 
 function surfaceOpacity(surface: RenderSurface): number {
+  if (architect.value) {
+    if (props.settingsSurfaceId === surface.id || props.surfaceEditId === surface.id) return 0.72
+    if (props.hoveredSurfaceId === surface.id) return 0.85
+    return 1
+  }
   const isRoof = surface.isRoof === true
   const base = isRoof ? 0.42 : 0.55
   if (props.settingsSurfaceId === surface.id || props.surfaceEditId === surface.id) {
@@ -96,14 +132,14 @@ function cutoutDiagonals(points: number[]): number[][] {
         closed: true,
         fill: surfaceFill(surface),
         opacity: surfaceOpacity(surface),
-        stroke:
-          settingsSurfaceId === surface.id || surfaceEditId === surface.id
-            ? '#f97316'
-            : surface.isRoof
-              ? '#b45309'
-              : '#64748b',
+        stroke: surfaceStroke(surface),
         strokeWidth: settingsSurfaceId === surface.id || surfaceEditId === surface.id ? 1.5 : 1,
-        dash: surface.isCutout ? [6, 4] : surface.isRoof ? [8, 5] : undefined,
+        dash:
+          surface.isCutout || (surface.isRoof && !architect)
+            ? surface.isCutout
+              ? [6, 4]
+              : [8, 5]
+            : undefined,
         listening: false,
         strokeScaleEnabled: false,
       }"
@@ -113,11 +149,12 @@ function cutoutDiagonals(points: number[]): number[][] {
       :key="diag.id"
       :config="{
         points: diag.points,
-        stroke: '#64748b',
+        stroke: architect ? ARCHITECT_STROKE : '#64748b',
         strokeWidth: 0.7,
         dash: [6, 4],
-        opacity: 0.7,
+        opacity: architect ? 1 : 0.7,
         listening: false,
+        strokeScaleEnabled: false,
       }"
     />
     <v-text
@@ -128,7 +165,7 @@ function cutoutDiagonals(points: number[]): number[][] {
           surface.label ?? '',
           surface.labelX,
           surface.labelY,
-          '#334155',
+          architect ? ARCHITECT_STROKE : '#334155',
           fontSizeStage,
         )
       "

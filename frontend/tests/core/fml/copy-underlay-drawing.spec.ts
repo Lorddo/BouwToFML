@@ -3,12 +3,13 @@ import {
   cloneDrawingMeta,
   copyElevationUnderlay,
   copyFloorUnderlay,
+  copyUnderlayFromDonor,
+  encodeUnderlayDonorId,
   isReusableUnderlayDrawing,
-  listElevationUnderlayDonors,
-  listFloorUnderlayDonors,
+  listUnderlayReuseDonors,
 } from '@/core/fml/copy-underlay-drawing'
 import { createBlankFloor, createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
-import { setElevationViewDrawing } from '@/core/fml/elevation-views'
+import { elevationViewForGroup, setElevationViewDrawing } from '@/core/fml/elevation-views'
 import { createFacadeGroup } from '@/core/fml/facade-groups'
 import type { DrawingMeta, FloorPlan } from '@/core/fml/types'
 
@@ -59,16 +60,26 @@ describe('cloneDrawingMeta', () => {
   })
 })
 
-describe('listFloorUnderlayDonors', () => {
-  it('slaat de actieve floor over en floors zonder url', () => {
+describe('listUnderlayReuseDonors', () => {
+  it('op een lege doel-floor: bronnen zijn floors mét onderlegger', () => {
     const plan = planWithFloors()
-    expect(listFloorUnderlayDonors(plan, 1)).toEqual([{ id: '0', name: 'Begane grond' }])
-    expect(listFloorUnderlayDonors(plan, 0)).toEqual([])
+    expect(listUnderlayReuseDonors(plan, { floorIndex: 1 })).toEqual([
+      { id: 'floor:0', name: 'Begane grond', kind: 'floor' },
+    ])
+    expect(listUnderlayReuseDonors(plan, { floorIndex: 0 })).toEqual([])
+  })
+
+  it('op een gevel zonder scan: verdiepingen mét onderlegger zijn bron', () => {
+    const plan = planWithFloors()
+    const voor = createFacadeGroup(plan, { name: 'Voorgevel' })
+    expect(listUnderlayReuseDonors(plan, { elevationGroupId: voor.id })).toEqual([
+      { id: 'floor:0', name: 'Begane grond', kind: 'floor' },
+    ])
   })
 })
 
 describe('copyFloorUnderlay', () => {
-  it('zet een kloon van de donor-drawing op de doel-floor', () => {
+  it('zet een kloon van de donor-drawing op een floor zonder onderlegger', () => {
     const plan = planWithFloors()
     const next = copyFloorUnderlay(plan, 0, 1)
     expect(next).not.toBeNull()
@@ -91,29 +102,30 @@ describe('elevation underlay reuse', () => {
     const achter = createFacadeGroup(plan, { name: 'Achtergevel' })
     voor.wallGuids.push('w1')
     achter.wallGuids.push('w2')
-    plan = setElevationViewDrawing(plan, voor.id, DRAWING_A)
-    plan = setElevationViewDrawing(plan, achter.id, DRAWING_B)
+    plan = setElevationViewDrawing(plan, voor.id, DRAWING_B)
     return { plan, voorId: voor.id, achterId: achter.id }
   }
 
-  it('lijst andere gevels met onderlegger', () => {
+  it('lijst floors én andere gevels met onderlegger', () => {
     const { plan, voorId, achterId } = planWithGevels()
-    expect(listElevationUnderlayDonors(plan, voorId)).toEqual([
-      { id: achterId, name: 'Achtergevel' },
+    expect(listUnderlayReuseDonors(plan, { elevationGroupId: achterId })).toEqual([
+      { id: 'floor:0', name: 'Begane grond', kind: 'floor' },
+      { id: encodeUnderlayDonorId('elevation', voorId), name: 'Voorgevel', kind: 'elevation' },
     ])
+  })
+
+  it('kopieert een floor-onderlegger naar een gevel zonder scan', () => {
+    const { plan, achterId } = planWithGevels()
+    const next = copyUnderlayFromDonor(plan, 'floor:0', { kind: 'elevation', groupId: achterId })
+    expect(next).not.toBeNull()
+    expect(elevationViewForGroup(next, achterId)?.drawing).toEqual(DRAWING_A)
   })
 
   it('kopieert drawing naar de actieve gevelgroep', () => {
     const { plan, voorId, achterId } = planWithGevels()
     const next = copyElevationUnderlay(plan, voorId, achterId)
     expect(next).not.toBeNull()
-    const views = next!.source?.settings?.elevationViews as Array<{
-      facadeGroupId: string
-      drawing?: DrawingMeta
-    }>
-    const target = views.find((view) => view.facadeGroupId === achterId)
-    expect(target?.drawing).toEqual(DRAWING_A)
-    expect(target?.drawing).not.toBe(DRAWING_A)
+    expect(elevationViewForGroup(next, achterId)?.drawing).toEqual(DRAWING_B)
   })
 
   it('weigert dezelfde groep of ontbrekende donor', () => {

@@ -29,6 +29,7 @@ import {
   clampOpeningSillZ,
   clampOpeningWidth,
   resolveOpeningHeight,
+  resolveOpeningSillZ,
   resolveWindowSillZ,
 } from '@/ui/components/fml-preview-openings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
@@ -285,14 +286,18 @@ export function useFmlPreviewOpeningSelection(options: {
     if (openingIds.length === 0) return { mutated: false }
     const needsWrite = openingIds.some((id) => {
       const located = editor.resolveOpening(id)
-      if (!located || located.opening.type !== 'window') return false
-      return resolveWindowSillZ(located.opening) !== sillZ
+      if (!located || (located.opening.type !== 'window' && located.opening.type !== 'door')) {
+        return false
+      }
+      return resolveOpeningSillZ(located.opening) !== sillZ
     })
     if (!needsWrite) return { mutated: false }
     draftCommit.beginUndoGroup(FIELD_SILL_Z, () => editor.pushUndo())
     for (const openingId of openingIds) {
       const located = editor.resolveOpening(openingId)
-      if (!located || located.opening.type !== 'window') continue
+      if (!located || (located.opening.type !== 'window' && located.opening.type !== 'door')) {
+        continue
+      }
       editor.updateOpening(openingId, { z: sillZ })
     }
     syncOpeningDraftFromSelection()
@@ -513,10 +518,12 @@ export function useFmlPreviewOpeningSelection(options: {
     const subtype = resolveDoorSubtypeFromRefid(opening.refid)
     const width = clampOpeningWidth(opening.width)
     const doorHeight = Math.round(opening.z_height ?? DEFAULT_FML_DOOR_HEIGHT_CM)
+    const doorSill = Math.round(opening.z ?? 0)
     addDoorSubtype.value = subtype
     queueMicrotask(() => {
       addDoorWidthCm.value = width
       selection.addDoorHeightCm.value = doorHeight
+      selection.addDoorSillZCm.value = doorSill
     })
     clearOpeningSelectionState()
     settingsWallIds.value = []

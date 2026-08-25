@@ -1,10 +1,12 @@
 import type {
+  CollapsePolicy,
   HvPolicy,
   WeldPolicy,
   PrunePolicy,
   JunctionGraphPolicy,
   PruneTerminalKind,
 } from '../engines/policy-types'
+import { baseCollapsePolicy, scaleCollapsePolicy } from './collapse-base'
 import {
   PIPELINE_ENDPOINT_EPS_PX,
   PIPELINE_JUNCTION_SHIFT_MAX_RATIO,
@@ -18,7 +20,9 @@ import {
 } from '../engines/scale'
 
 /**
- * L8 — bare HV (mask distance map) + once I→L/T/X prune.
+ * L8 — bare HV (mask distance map) + collinear overlap-cover + once I→L/T/X prune.
+ * Cover is not L9 stair-stub: it only drops same-axis segments whose span is
+ * already covered, and T-splits the survivor so a hidden I-spur can prune.
  * HV thresholds match L4 bare; layerId=8; no seal (postSnap=0).
  * Weld = 1px graph-prep only (CURRENT weldSegmentsForJunctionGraph).
  */
@@ -53,6 +57,14 @@ const layer8JunctionPolicy: JunctionGraphPolicy = {
   weldBeforeGraph: true,
 }
 
+/** Overlap-cover before prune — no stub-collapse (that stays L9). */
+export const layer8CoverPolicy: CollapsePolicy = baseCollapsePolicy(8, {
+  enableStubCollapse: false,
+  enableParallelCover: true,
+  enableMicroCornerAbsorb: false,
+  enableChainAxisStraighten: false,
+})
+
 export const layer8PrunePolicy: PrunePolicy = {
   layerId: 8,
   thicknessFallbackPx: SCALE_REF30.thicknessFallbackRefPx,
@@ -71,6 +83,7 @@ export type Layer8FinalizePolicy = {
   hv: HvPolicy
   weld: WeldPolicy
   junction: JunctionGraphPolicy
+  cover: CollapsePolicy
   prune: PrunePolicy
 }
 
@@ -93,6 +106,7 @@ export function resolveLayer8FinalizePolicy(
     },
     weld: { ...layer8WeldPolicy },
     junction: { ...layer8JunctionPolicy },
+    cover: scaleCollapsePolicy(layer8CoverPolicy, scale),
     prune: { ...layer8PrunePolicy, thicknessFallbackPx, hvBandPx: scale.hvBandPx },
   }
 }

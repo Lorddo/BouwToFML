@@ -1,6 +1,5 @@
 import { watch, type Ref } from 'vue'
 import type Konva from 'konva'
-import { axisAlignedBoundsForRotation } from '@/platform/canvas/rotationPreview'
 import type { SelectionRect } from '@/platform/selection'
 import type { OcrTextOverlay } from '@/platform/canvas'
 import { findOcrOverlayAt } from '@/platform/canvas/ocrOverlayHitTest'
@@ -10,13 +9,12 @@ type Point = { x: number; y: number }
 
 /**
  * Stage pointer routing: tool priority (probe → face-box → shift-delete → … → LBE draw)
- * plus tool-reset watches and rotation re-fit.
+ * plus tool-reset watches. Rotatie-preview past zoom/pan niet aan (geen auto-fit).
  */
 export function useFloorplanPointerRouter(deps: {
   stageRef: Ref<{ getNode: () => Konva.Stage } | null>
   underlayGroupRef: Ref<{ getNode: () => Konva.Group } | null>
   imageObj: Ref<HTMLImageElement | null>
-  imgSize: () => { w: number; h: number }
   stageScale: Ref<number>
   spacePressed: () => boolean
   lbeEnabled: () => boolean
@@ -28,10 +26,8 @@ export function useFloorplanPointerRouter(deps: {
   eraserEnabled: () => boolean
   inkTool: () => unknown
   faceTool: () => unknown
-  rotationPreviewDeg: () => number
   isDrawMode: () => boolean
   isDragging: () => boolean
-  fitToScreen: (stage: Konva.Stage, w: number, h: number) => void
   wheelZoom: (stage: Konva.Stage, e: Konva.KonvaEventObject<WheelEvent>) => void
   onProbeMouseDown: (p: Point, stopDrag: () => void) => boolean
   onFaceBoxMouseDown: (p: Point, stopDrag: () => void) => boolean
@@ -57,6 +53,8 @@ export function useFloorplanPointerRouter(deps: {
   resetEraserDraft: () => void
   resetInkDraft: () => void
   resetFaceBoxDraft: () => void
+  /** After wheel zoom — sync guide-grid inverse transform. */
+  onViewportChange?: () => void
   emit: {
     (e: 'lbeCancel'): void
     (e: 'lbeStart', x: number, y: number): void
@@ -115,18 +113,6 @@ export function useFloorplanPointerRouter(deps: {
     () => deps.faceTool(),
     (tool) => {
       if (!tool) deps.resetFaceBoxDraft()
-    },
-  )
-
-  watch(
-    () => deps.rotationPreviewDeg(),
-    () => {
-      const stage = deps.stageRef.value?.getNode()
-      if (!stage || !deps.imageObj.value) return
-      const size = deps.imgSize()
-      const bounds = axisAlignedBoundsForRotation(size.w, size.h, deps.rotationPreviewDeg() ?? 0)
-      deps.fitToScreen(stage, bounds.width, bounds.height)
-      deps.stageScale.value = Math.max(0.01, stage.scaleX())
     },
   )
 
@@ -216,6 +202,7 @@ export function useFloorplanPointerRouter(deps: {
     if (stage) {
       deps.wheelZoom(stage, e)
       deps.stageScale.value = Math.max(0.01, stage.scaleX())
+      deps.onViewportChange?.()
     }
   }
 

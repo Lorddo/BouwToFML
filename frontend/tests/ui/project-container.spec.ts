@@ -37,6 +37,44 @@ describe('mergeFloorPlans', () => {
     expect(plan.floors[1].walls[0].id).toBe('f1-wall-a')
   })
 
+  it('houdt live floor.walls aan als designs[0] een stale snapshot is', () => {
+    const stale: Floor = {
+      name: 'BG',
+      level: 0,
+      height: 280,
+      walls: [
+        {
+          id: 'split-host-live',
+          a: { x: 0, y: 0 },
+          b: { x: 100, y: 0 },
+          thickness: 7,
+          openings: [],
+        },
+      ],
+      designs: [
+        {
+          name: 'BG',
+          walls: [
+            {
+              id: 'e0',
+              a: { x: 0, y: 0 },
+              b: { x: 140, y: 0 },
+              thickness: 19.121682691137714,
+              openings: [],
+            },
+          ],
+        },
+      ],
+      activeDesignIndex: 0,
+    }
+    const plan = mergeFloorPlans('Export', [stale])
+    expect(plan.floors[0].walls).toHaveLength(1)
+    expect(plan.floors[0].walls[0].id).toBe('f0-split-host-live')
+    expect(plan.floors[0].walls[0].thickness).toBe(7)
+    expect(plan.floors[0].designs?.[0].walls[0].id).toBe('f0-split-host-live')
+    expect(plan.floors[0].designs?.[0].walls[0].thickness).toBe(7)
+  })
+
   it('stampFloorMeta sets name/level/height', () => {
     const stamped = stampFloorMeta(wallFloor('x', 0, 'w1'), {
       name: 'Begane grond',

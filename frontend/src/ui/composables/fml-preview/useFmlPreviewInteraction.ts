@@ -54,7 +54,10 @@ import {
 } from './fml-preview-wall-internal-measure'
 import { useFmlPreviewPanZoom } from './useFmlPreviewPanZoom'
 import { useFmlPreviewPointer } from './useFmlPreviewPointer'
+import { filterManualDimensions, readBtfSlices } from '@/core/fml/btf-slices'
+import { hitTestDimensionAtCm } from '@/core/fml/offset-dimension-line'
 import { useFmlPreviewWallDrag } from './useFmlPreviewWallDrag'
+import { useFmlPreviewDimensionDrag } from './useFmlPreviewDimensionDrag'
 import { useFmlPreviewWallMove } from './useFmlPreviewWallMove'
 import { useFmlPreviewJunctionMove } from './useFmlPreviewJunctionMove'
 import { useFmlPreviewOpeningMove } from './useFmlPreviewOpeningMove'
@@ -193,6 +196,7 @@ export function useFmlPreviewInteraction(options: {
     addDoorSubtype,
     addDoorWidthCm,
     addDoorHeightCm,
+    addDoorSillZCm,
     addWindowSubtype,
     addWindowWidthCm,
     addWindowSillZCm,
@@ -382,6 +386,7 @@ export function useFmlPreviewInteraction(options: {
     syncPlanToParent,
   })
 
+  const openingDraftSync = { run: (): void => {} }
   const wallSelection = useFmlPreviewWallSelection({
     editor,
     hitTest,
@@ -393,6 +398,7 @@ export function useFmlPreviewInteraction(options: {
     cancelMoveDragPending: wallDrag.cancelMoveDragPending,
     cancelDrawWallDrag: () => drawMeasureCancels.cancelDrawWallDrag(),
     cancelMeasureDrag: () => drawMeasureCancels.cancelMeasureDrag(),
+    syncOpeningDraftFromSelection: () => openingDraftSync.run(),
   })
 
   const {
@@ -402,10 +408,16 @@ export function useFmlPreviewInteraction(options: {
     wallBalanceMixed,
     wallHeightDraft,
     wallHeightMixed,
+    wallBottomZDraft,
+    wallBottomZMixed,
     junctionHeightDraft,
     junctionHeightMixed,
+    junctionBottomZDraft,
+    junctionBottomZMixed,
     selectionBoxMode,
     selectionBoxPreview,
+    boxSelectKind,
+    selectAllOfBoxKind,
     syncWallThicknessDraftFromSelection,
     toggleSettingsWall,
     toggleSettingsJunction,
@@ -416,23 +428,33 @@ export function useFmlPreviewInteraction(options: {
     commitWallBalance,
     onWallHeightCm,
     commitWallHeight,
+    onWallBottomZCm,
+    commitWallBottomZ,
     onJunctionHeightCm,
     commitJunctionHeight,
+    onJunctionBottomZCm,
+    commitJunctionBottomZ,
     splitSelectedWall,
     deleteSelectedWalls,
     facadeGroupOptions,
-    facadeGroupDraft,
-    facadeGroupMixed,
+    facadeGroupChecks,
     facadeMemberIdsOnActiveFloor,
     stampGroupDraft,
     stampGroupMixed,
     stampMemberIdsOnActiveFloor,
     applyFacadeGroupSelection,
+    removeFacadeGroupFromSelection,
+    editAllFacadeGroups,
+    createFacadeGroupFromSelection,
+    toggleFacadeGroup,
     applyStampGroupSelection,
     renameSelectedFacadeGroup,
+    renameFacadeGroupById,
     selectFacadeGroupMembers,
+    selectFacadeGroupMembersById,
     selectStampGroupMembers,
     canSelectFacadeMembers,
+    canSelectMembersOfGroup,
     canSelectStampMembers,
     clearSelection,
     toggleSelectionBoxMode,
@@ -453,6 +475,7 @@ export function useFmlPreviewInteraction(options: {
     bovenlichtHeightCm,
     bovenlichtGapCm,
   })
+  openingDraftSync.run = () => openingSelection.syncOpeningDraftFromSelection()
 
   const {
     openingSubtypeDraft,
@@ -527,6 +550,14 @@ export function useFmlPreviewInteraction(options: {
   }
 
   const { draggingJunction, draggingWall } = wallDrag
+  const dimensionDrag = useFmlPreviewDimensionDrag({
+    clientToCm: (x, y) => hitTest.clientToCm(x, y),
+    editor,
+    selection,
+    spacePressed,
+    syncPlanToParent,
+  })
+  const { draggingDimension } = dimensionDrag
   const { draggingOpening } = openingDrag
 
   /** Restmaten a→opening en opening→b tijdens verplaatsen / move-target. */
@@ -686,6 +717,8 @@ export function useFmlPreviewInteraction(options: {
     editor,
     hoveredJunctionId,
     wallThicknessDraft,
+    wallHeightDraft,
+    wallBottomZDraft,
     drawKind: drawWallKind,
     ridgeZCm,
     requireFloorIndex: () =>
@@ -716,6 +749,8 @@ export function useFmlPreviewInteraction(options: {
     editor,
     hoveredJunctionId,
     wallThicknessDraft,
+    wallHeightDraft,
+    wallBottomZDraft,
     shiftPressed: axisLocked,
     resolveStartPoint: resolveRoomStartPoint,
     resolveEndPoint: resolveRoomEndPoint,
@@ -1051,6 +1086,7 @@ export function useFmlPreviewInteraction(options: {
     addDoorSubtype,
     addDoorWidthCm,
     addDoorHeightCm,
+    addDoorSillZCm,
     addWindowSubtype,
     addWindowWidthCm,
     addWindowSillZCm,
@@ -1226,12 +1262,15 @@ export function useFmlPreviewInteraction(options: {
     underlayMoveMode.value = false
     moveWallId.value = null
     moveOpeningId.value = null
+    selection.moveDimensionId.value = null
+    selection.hoveredDimensionId.value = null
     selection.pinnedJunctionId.value = null
     selection.surfaceEditId.value = null
     selection.roofPolyMutate.value = false
     selection.drawSurfacePoints.value = null
     selection.drawLinePoints.value = null
     wallDrag.cancelMoveDragPending()
+    dimensionDrag.cleanup()
     openingDrag.cancelOpeningDragPending()
     cancelSelectionBoxDrag()
     cancelPreciseMoves()
@@ -1270,6 +1309,17 @@ export function useFmlPreviewInteraction(options: {
         touchNav,
         dakMode: computed(() => options.dakMode?.value === true),
         isRidgeWallId: (wallId: string) => isRidgeWallId(editor.localPlan.value, wallId),
+        manualDimensionsEnabled: computed(
+          () => !inspectMode.value && options.dimensionVis?.value === 'manual',
+        ),
+        hitTestDimensionAtCm: (cm) => {
+          const floor = editor.localPlan.value?.floors[editor.floorIndex.value]
+          const manuals = filterManualDimensions(editor.dimensions.value, readBtfSlices(floor))
+          const layout = viewport.contentLayout.value
+          const scale = layout ? layout.scale * viewport.viewScale.value : 1
+          const tol = Math.max(8, 12 / Math.max(1e-6, scale))
+          return hitTestDimensionAtCm(cm, manuals, tol)
+        },
       },
       drag: {
         draggingWall,
@@ -1284,6 +1334,7 @@ export function useFmlPreviewInteraction(options: {
         isNulpuntDragging: () => nulpunt.isDragging(),
         isUnderlayMoveDragging: () => underlayMove.isDragging(),
         isPanDragging,
+        draggingDimension,
       },
       actions: {
         beginPanDrag: panZoom.beginPanDrag,
@@ -1371,6 +1422,8 @@ export function useFmlPreviewInteraction(options: {
         cancelItemDragPending: itemDrag.cancelItemDragPending,
         hitItemResizeHandle: (cm) => itemResize.hitHandleAtCm(cm),
         beginItemResize: itemResize.beginItemResize,
+        startDimensionDragPending: dimensionDrag.startPending,
+        beginDimensionDrag: dimensionDrag.beginDrag,
       },
       spacePressed,
       thicknessPickTier,
@@ -1415,6 +1468,13 @@ export function useFmlPreviewInteraction(options: {
     }
     if (selection.settingsWallIds.value.length > 0 || selection.moveWallId.value != null) {
       deleteSelectedWalls()
+      return
+    }
+    if (selection.moveDimensionId.value) {
+      editor.pushUndo()
+      editor.removeDimension(selection.moveDimensionId.value)
+      selection.moveDimensionId.value = null
+      syncPlanToParent()
     }
   }
 
@@ -1492,6 +1552,7 @@ export function useFmlPreviewInteraction(options: {
     cancelPendingMove()
     cancelPreciseMoves()
     wallDrag.cleanupWallDrag()
+    dimensionDrag.cleanup()
     openingDrag.cleanupOpeningDrag()
     itemDrag.cleanupItemDrag()
     itemResize.cleanupItemResize()
@@ -1516,6 +1577,16 @@ export function useFmlPreviewInteraction(options: {
     }
     return ridgeZCm.value
   }
+
+  watch(
+    () => editor.floorHeightCm.value,
+    (height) => {
+      if (!Number.isFinite(height) || height <= 0) return
+      if (settingsWallIds.value.length > 0) return
+      wallHeightDraft.value = Math.round(height)
+    },
+    { immediate: true },
+  )
 
   function syncRidgeZFromSelection(): void {
     const floorH = editor.floorHeightCm.value
@@ -1674,6 +1745,8 @@ export function useFmlPreviewInteraction(options: {
   return {
     activeFmlTool,
     selectionBoxMode,
+    boxSelectKind,
+    selectAllOfBoxKind,
     drawWallMode,
     drawRoomMode,
     drawSurfaceMode,
@@ -1840,6 +1913,8 @@ export function useFmlPreviewInteraction(options: {
     ridgeZCm,
     settingsWallIds,
     moveWallId,
+    moveDimensionId: selection.moveDimensionId,
+    hoveredDimensionId: selection.hoveredDimensionId,
     settingsOpeningIds,
     moveOpeningId,
     wallThicknessDraft,
@@ -1848,8 +1923,12 @@ export function useFmlPreviewInteraction(options: {
     wallBalanceMixed,
     wallHeightDraft,
     wallHeightMixed,
+    wallBottomZDraft,
+    wallBottomZMixed,
     junctionHeightDraft,
     junctionHeightMixed,
+    junctionBottomZDraft,
+    junctionBottomZMixed,
     openingSubtypeDraft,
     openingSubtypeMixed,
     openingWidthDraft,
@@ -1871,6 +1950,7 @@ export function useFmlPreviewInteraction(options: {
     addDoorSubtype,
     addDoorWidthCm,
     addDoorHeightCm,
+    addDoorSillZCm,
     addWindowSubtype,
     addWindowWidthCm,
     addWindowSillZCm,
@@ -1884,8 +1964,12 @@ export function useFmlPreviewInteraction(options: {
     commitWallBalance,
     onWallHeightCm,
     commitWallHeight,
+    onWallBottomZCm,
+    commitWallBottomZ,
     onJunctionHeightCm,
     commitJunctionHeight,
+    onJunctionBottomZCm,
+    commitJunctionBottomZ,
     commitOpeningSubtype,
     onOpeningWidthCm,
     commitOpeningWidth,
@@ -1905,18 +1989,24 @@ export function useFmlPreviewInteraction(options: {
     splitSelectedWall,
     deleteSelectedWalls,
     facadeGroupOptions,
-    facadeGroupDraft,
-    facadeGroupMixed,
+    facadeGroupChecks,
     facadeMemberIdsOnActiveFloor,
     stampGroupDraft,
     stampGroupMixed,
     stampMemberIdsOnActiveFloor,
     applyFacadeGroupSelection,
+    removeFacadeGroupFromSelection,
+    editAllFacadeGroups,
+    createFacadeGroupFromSelection,
+    toggleFacadeGroup,
     applyStampGroupSelection,
     renameSelectedFacadeGroup,
+    renameFacadeGroupById,
     selectFacadeGroupMembers,
+    selectFacadeGroupMembersById,
     selectStampGroupMembers,
     canSelectFacadeMembers,
+    canSelectMembersOfGroup,
     canSelectStampMembers,
     clearSelection,
     flushPendingFieldCommits,

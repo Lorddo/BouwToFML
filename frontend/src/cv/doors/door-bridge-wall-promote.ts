@@ -1,6 +1,8 @@
 import { tally } from '@/core/diagnostics'
-import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
-import { resolvePixelClassification } from '@/cv/walls/rooms/room-ink-classify'
+import {
+  resolvePixelClassification,
+  type RoomRasterClass,
+} from '@/cv/walls/rooms/room-ink-classify'
 import type { RasterRoomComponent } from '@/cv/walls/rooms/room-raster'
 import { cardinalNeighborRoots, resolveMergedLabel } from '@/cv/walls/rooms/room-raster-merge'
 import { aggregateRootFaces, type RootFace } from './door-swing-filter-matching'
@@ -10,10 +12,18 @@ const DEFAULT_SPAN_TOLERANCE_RATIO = 0.15
 const DEFAULT_SHORT_AXIS_RATIO = 1.5
 const WALL_THICKNESS_RATIO = 2
 
-type BridgeAxis = 'h' | 'v'
+export type DoorBetweenWallsAxis = 'h' | 'v'
 
-function resolveAxis(bbox: { width: number; height: number }): BridgeAxis {
+/** Lange-as H/V uit bbox — gedeeld met D-62 pair (eigen between-check). */
+export function resolveDoorBetweenWallsAxis(bbox: {
+  width: number
+  height: number
+}): DoorBetweenWallsAxis {
   return bbox.width >= bbox.height ? 'h' : 'v'
+}
+
+function resolveAxis(bbox: { width: number; height: number }): DoorBetweenWallsAxis {
+  return resolveDoorBetweenWallsAxis(bbox)
 }
 
 function resolveSpan(bbox: { width: number; height: number }): number {
@@ -60,9 +70,13 @@ function touchesDoorFace(params: {
   return false
 }
 
-function isSeedBetweenTwoWalls(params: {
+/**
+ * D-40 only — streng: `cardinalNeighborRoots` (micro overslaan) + class === `wall`.
+ * D-62 pair heeft een eigen softe check in `door-pair-demote.ts` (geen shared API).
+ */
+function isBridgeSeedBetweenTwoWalls(params: {
   face: RootFace
-  axis: BridgeAxis
+  axis: DoorBetweenWallsAxis
   componentsByLabel: Map<number, RasterRoomComponent>
   labelsData: Int32Array
   width: number
@@ -188,7 +202,7 @@ export function findDoorBridgeWallFaces(params: {
         continue
       }
       if (
-        !isSeedBetweenTwoWalls({
+        !isBridgeSeedBetweenTwoWalls({
           face,
           axis,
           componentsByLabel,

@@ -1,3 +1,4 @@
+import { ensureDesignsSynced } from '@/core/fml/design-sync'
 import type {
   Floor,
   FloorArea,
@@ -47,34 +48,35 @@ function remapDesignIds(design: FloorDesign, floorLevel: number): FloorDesign {
 }
 
 function remapFloorWallIds(floor: Floor): Floor {
-  const designs = floor.designs?.map((d) => remapDesignIds(d, floor.level))
-  const activeIdx = floor.activeDesignIndex ?? 0
-  const active = designs?.[activeIdx]
+  // Live `floor.walls` is bron — niet een stale designs[0] snapshot van vóór
+  // harmonize/T-split. Flush eerst zodat export en plat-velden gelijk lopen.
+  const live = floor.designs?.length ? ensureDesignsSynced(floor) : floor
+  const designs = live.designs?.map((d) => remapDesignIds(d, live.level))
   return {
-    ...floor,
-    walls: (active?.walls ?? floor.walls).map((wall): Wall => ({
+    ...live,
+    walls: live.walls.map((wall): Wall => ({
       ...wall,
-      id: prefixId(floor.level, wall.id),
+      id: prefixId(live.level, wall.id),
     })),
-    areas: (active?.areas ?? floor.areas)?.map((area): FloorArea => ({
+    areas: live.areas?.map((area): FloorArea => ({
       ...area,
-      id: prefixId(floor.level, area.id),
+      id: prefixId(live.level, area.id),
     })),
-    surfaces: (active?.surfaces ?? floor.surfaces)?.map((surface): FloorSurface => ({
+    surfaces: live.surfaces?.map((surface): FloorSurface => ({
       ...surface,
-      id: prefixId(floor.level, surface.id),
+      id: prefixId(live.level, surface.id),
     })),
-    labels: (active?.labels ?? floor.labels)?.map((label): FloorLabel => ({
+    labels: live.labels?.map((label): FloorLabel => ({
       ...label,
-      id: prefixId(floor.level, label.id),
+      id: prefixId(live.level, label.id),
     })),
-    lines: (active?.lines ?? floor.lines)?.map((line): FloorLine => ({
+    lines: live.lines?.map((line): FloorLine => ({
       ...line,
-      id: prefixId(floor.level, line.id),
+      id: prefixId(live.level, line.id),
     })),
-    dimensions: (active?.dimensions ?? floor.dimensions)?.map((dim): FloorDimension => ({
+    dimensions: live.dimensions?.map((dim): FloorDimension => ({
       ...dim,
-      id: prefixId(floor.level, dim.id),
+      id: prefixId(live.level, dim.id),
     })),
     designs,
   }

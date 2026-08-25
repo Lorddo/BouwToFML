@@ -98,3 +98,27 @@ export async function traceSkeletonSegments(mat: OpenCV['Mat']): Promise<Segment
   }
   return segments
 }
+
+/**
+ * Zelfde WASM-meetlint als L1, maar vanaf binary mask (0=leeg, ≠0=muur).
+ * Voor D-63 Laag 3: één trace op L0 zonder deuren — geen volle V3.
+ */
+export async function traceSkeletonSegmentsFromBinaryMask(params: {
+  mask: Uint8Array
+  width: number
+  height: number
+}): Promise<Segment[]> {
+  const { mask, width, height } = params
+  if (width < 1 || height < 1 || mask.length < width * height) return []
+  const tracer = await getTracer()
+  const binary = new Uint8Array(width * height)
+  for (let i = 0; i < binary.length; i += 1) {
+    binary[i] = (mask[i] ?? 0) > 0 ? 1 : 0
+  }
+  const traced = tracer.fromBoolArray(binary, width, height)
+  const segments: Segment[] = []
+  for (const polyline of traced.polylines ?? []) {
+    segments.push(...polylineToSegments(polyline))
+  }
+  return segments
+}

@@ -6,14 +6,19 @@ import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/fml-pre
 
 type HandleId = 'xLeft' | 'xRight' | 'xGuideY' | 'yTop' | 'yBottom' | 'yGuideX'
 
-const props = defineProps<{
-  state: HScaleState
-  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
-  width: number
-  height: number
-  toScreen: (x: number, y: number) => Point2D
-  toCm: (screenX: number, screenY: number) => Point2D
-}>()
+const props = withDefaults(
+  defineProps<{
+    state: HScaleState
+    walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
+    width: number
+    height: number
+    toScreen: (x: number, y: number) => Point2D
+    toCm: (screenX: number, screenY: number) => Point2D
+    /** Space+sleep = pan; handles niet pakken. */
+    spacePressed?: boolean
+  }>(),
+  { spacePressed: false },
+)
 
 const emit = defineEmits<{
   updateState: [state: HScaleState]
@@ -72,6 +77,7 @@ function endDrag(): void {
 
 function onPointerDown(handle: HandleId, event: PointerEvent): void {
   if (event.button !== 0) return
+  if (props.spacePressed) return
   event.preventDefault()
   event.stopPropagation()
   dragHandle.value = handle

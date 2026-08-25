@@ -1,10 +1,10 @@
 # Deur-detectie flow (stap 3)
 
-Laatste update: 2026-07-26
+Laatste update: 2026-08-25
 
-Doel: herbruikbare inventaris van **hoe** deurdetectie in stap 3 werkt — dual-space faces (opening-wit vs wall-ink), Stage 1–2, clustering, fill, wall-rescue, bridge, resolve, L11/L12 → FML.
+Doel: herbruikbare inventaris van **hoe** deurdetectie in stap 3 werkt — dual-space faces (opening-wit vs wall-ink), Stage 1–2, pair/demote, clustering, fill, wall-rescue, bridge, resolve, L11/L12 → FML.
 
-Gerelateerd: [`window-detection-flow.md`](./window-detection-flow.md), [`workspace-flow.md`](./workspace-flow.md), [`archive/wall-face-class-flow.md`](./archive/wall-face-class-flow.md), [`floorplanner/door-mirrored-semantics.md`](./floorplanner/door-mirrored-semantics.md).
+Gerelateerd: [`window-detection-flow.md`](./window-detection-flow.md), [`workspace-flow.md`](./workspace-flow.md), [`archive/wall-face-class-flow.md`](./archive/wall-face-class-flow.md), [`floorplanner/door-mirrored-semantics.md`](./floorplanner/door-mirrored-semantics.md), open D-62 cases: [`door-pair-demote-open-cases.md`](./door-pair-demote-open-cases.md).
 
 ---
 
@@ -140,19 +140,20 @@ Orde in `runDoorSwingOverlayRefreshPass` → `runDoorStagePipeline`:
 9. filterRoomSurroundedHypotheses → drop als alle ink-adjacent room/unknown of wall
 10. runDoorSwingAngleRescue → inject (bypass fill/surround)
 11. filterWallUntouchedHypotheses → drop zonder ink-adjacent wall/window/doorframe
-12. findDoorBridgeWallFaces → surface/unknown “brug” (ink labels tussen muren)
-13. resolveDoorCandidates → span, width, fmlRefId (**geen hinge**)
-14. pushStage2DoorsOntoWalls → faceOverrides door + bridge doorframe
-15. overlay render → Deuren-tab; pipeDual.ink labels
+12. pairDemoteDoorHypotheses → adjacent deur-hits: kozijn (`betweenTwoWalls`) → doorframe; boog blijft deur (D-62)
+13. findDoorBridgeWallFaces → surface/unknown “brug” (ink labels tussen muren; alleen swings)
+14. resolveDoorCandidates → span, width, fmlRefId (**geen hinge**)
+15. pushStage2DoorsOntoWalls → faceOverrides door + bridge/pair doorframe
+16. overlay render → Deuren-tab; pipeDual.ink labels
 ```
 
 Na afronden muren (L0 keepLargest → `roomWallMaskRle` + L10 + segments):
 
 ```
-16. filterDoorsByKeptWallMaskContact → drop zonder kept-mask contact; unpin auto-door
-17. snapDoorsToWalls   → BoundDoor (L11; geen hinge-score)
-18. orientBoundDoors → L12 hinge (white straighten) → OrientedDoor
-19. useWorkspaceFml    → layer12Doors → FML openings
+17. filterDoorsByKeptWallMaskContact → drop zonder kept-mask contact; unpin auto-door
+18. snapDoorsToWalls   → BoundDoor (L11; geen hinge-score)
+19. orientBoundDoors → L12 hinge (white straighten) → OrientedDoor
+20. useWorkspaceFml    → layer12Doors → FML openings
 ```
 
 ---
@@ -249,13 +250,26 @@ Geen wall-mask merge / keepLargest; geen wijziging aan V3. `existingDoorsOnly` �
 
 Rapport (`*-deuren-fase1-report`): `stage2.fillRejected` / `surroundRejected` / `wallTouchRejected` / `angleRescueDiagnostics` met status + fill/diepte/lengte/hoek — zodat gemeten rejects een reden hebben.
 
-### Bridge-wall (`findDoorBridgeWallFaces`)
+### Pair/demote (`pairDemoteDoorHypotheses`) — ESC:D-62
 
-Na accept: surface/unknown faces die:
+Na wall-touch, **vóór** bridge: twee Stage-2 deur-hits die **1-hop ink-adjacent** zijn en waarvan **exact één** tussen twee muren ligt (eigen **lichte** check in `door-pair-demote.ts`: micro-wall fragments tellen, unanieme samples; **niet** D-40’s predicaat):
+
+- Kozijn (tussen muren) → class-push `doorframe` (blijft in muurmasker) + `doorframeFaceIds` op de swing.
+- Swing blijft `door`.
+
+Wees-kozijn (tussen muren, geen swing-sibling) → class **`wall`** (geen losse doorframe). Geen dikte-heuristiek in D-62. `existingDoorsOnly` → overslaan.
+
+### Dun → mask + dedupe — ESC:D-63
+
+Na Stage-2 push: **per face** met `depth=min(w,h) ≤ max muur-ref` → `maskKeepDoorFaceIds` via Laag 1 between-walls → pair-conflict → Laag 2 vleugel-brug → Laag 3 polylijn (in-band/I-bridge; één L1-meetlint, geen 2e V3). Cluster kozijn+swing in één hyp → alleen kozijn. Hyp blijft één deur. Skip: D-62-swing, face nog `window`/`doorframe`. Finalize mapt keep → wall in L0. Na L11: `dedupeOverlappingBoundDoors`. Zie [`door-thin-mask-dedupe-plan.md`](./door-thin-mask-dedupe-plan.md).
+
+### Bridge-wall (`findDoorBridgeWallFaces`) — ESC:D-40
+
+Na pair/demote (alleen overgebleven swings): surface/unknown faces die:
 
 - deur raken via **adjacency** (opening-wit),
 - span ≈ deurspan (±15%), korte as ≤ max(deur-diepte×1.5, muurdikte×2),
-- cardinaal **tussen twee wall**-buren (check op **post-ink** `labelsData`),
+- cardinaal **tussen twee `wall`-buren** via `cardinalNeighborRoots` (micro **overslaan**; streng — los van D-62),
 
 → BFS naar in-band buren → later `syncDoorBridgeWallOverrides` (class **`doorframe`**, mask≡wall). Zo wordt de opening-koker in het muurmasker meegenomen zonder de boog zelf; UI = donker oranje kozijn.
 
@@ -366,7 +380,13 @@ Tot afronden is `door` UI/Stage-2-metadata. Geen ink-reresolve bij deur-push (bo
 | `cv/doors/door-swing-angle-rescue.ts` | Stage 2 angle-rescue + per-root diagnostics (fill/lengte/hoek) |
 | `cv/doors/door-room-surround.ts` | Room-surround + wall-touch reject |
 | `cv/doors/door-kept-wall-mask-contact.ts` | Post-L0 kept-mask contact purge |
-| `cv/doors/door-bridge-wall-promote.ts` | Bridge → wall |
+| `cv/doors/door-bridge-wall-promote.ts` | Bridge → doorframe (D-40 streng between-walls) |
+| `cv/doors/door-pair-demote.ts` | Stage-2 pair/demote kozijn→doorframe (D-62) |
+| `cv/doors/door-thin-mask.ts` | D-63 guard: dunne face → maskKeep faceIds |
+| `cv/doors/door-thin-mask-between-walls.ts` | D-63 Laag 1 between-walls keep-poort |
+| `cv/doors/door-thin-mask-wing-bridge.ts` | D-63 Laag 2 vleugel-brug dry-run |
+| `cv/doors/door-thin-mask-polyline-keep.ts` | D-63 Laag 3 polylijn in-band/bridge |
+| `cv/doors/door-wall-dedupe.ts` | D-63 L11 1D-dedupe (R-28-spiegel) |
 | `cv/doors/door-resolve.ts` | Stage-2 width/meta (geen hinge) |
 | `cv/doors/door-wall-snap.ts` | L11 entry `snapDoorsToWalls` (geen hinge-score) |
 | `cv/doors/door-wall-snap-*.ts` | L11 split: tuning / geom / scoring / bind / doorframe / path-b |
@@ -405,6 +425,7 @@ Niet actief: `src/archive/openings/**`.
 - [ ] Project4 / BouwTek11: Stage 1 hits op white sectors, niet op pure ink-banen
 - [ ] Wall-fill: Otsu-gevulde boog komt door fill-band, niet via versoepelde Stage-1 area
 - [ ] Cluster: gestapelde stroken → één boog; dubbele deur niet opgeblazen door tip-face
+- [ ] Pair/demote: kozijn+boog → één `door` + `doorframe`; wees-kozijn → `wall` (geen losse doorframe)
 - [ ] Bridge: koker tussen muren → `doorframe`; boog blijft `door`
 - [ ] Afronden: L11 bound + L12 oriented; FML download met juiste `mirrored` / width
 - [ ] Snapshot-restore: geen unknown→deur; overlay herbouwt uit bestaande `door`

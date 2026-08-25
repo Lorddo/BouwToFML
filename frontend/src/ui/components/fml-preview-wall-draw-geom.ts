@@ -216,20 +216,28 @@ export function addSegmentPathWithJunctionBreaks(
   return addedIds
 }
 
+function wallDrawEndpoint(
+  floorHeightCm: number | undefined,
+  bottomZCm = 0,
+): { z: number; h: number } | null {
+  if (floorHeightCm == null || !Number.isFinite(floorHeightCm) || floorHeightCm <= 0) return null
+  const z = Math.max(0, Math.round(bottomZCm))
+  const height = Math.max(1, Math.round(floorHeightCm))
+  return { z, h: z + height }
+}
+
 export function addWallSegment(
   walls: Wall[],
   a: Point2D,
   b: Point2D,
   thicknessCm: number,
   floorHeightCm?: number,
+  bottomZCm = 0,
 ): { walls: Wall[]; wallId: string; wallIds: string[] } | null {
   if (distance(a, b) < MIN_WALL_LENGTH_CM) return null
   const next = cloneWalls(walls)
   const thickness = Math.max(1, Math.min(200, Math.round(thicknessCm)))
-  const endpoint =
-    floorHeightCm != null && Number.isFinite(floorHeightCm) && floorHeightCm > 0
-      ? { z: 0, h: Math.round(floorHeightCm) }
-      : null
+  const endpoint = wallDrawEndpoint(floorHeightCm, bottomZCm)
   const wallIds = addSegmentPathWithJunctionBreaks(next, a, b, {
     thickness,
     idPrefix: 'wall',
@@ -344,15 +352,13 @@ export function addRoomRect(
   corners: readonly Point2D[],
   thicknessCm: number,
   floorHeightCm?: number,
+  bottomZCm = 0,
 ): { walls: Wall[]; wallIds: string[] } | null {
   if (corners.length !== 4) return null
   const next = cloneWalls(walls)
   const snappedCorners = corners.map((corner) => ({ x: corner.x, y: corner.y }))
   let changed = false
-  const endpoint =
-    floorHeightCm != null && Number.isFinite(floorHeightCm) && floorHeightCm > 0
-      ? { z: 0, h: Math.round(floorHeightCm) }
-      : null
+  const endpoint = wallDrawEndpoint(floorHeightCm, bottomZCm)
   const endpointExtras = endpoint ? { az: endpoint, bz: { ...endpoint } } : undefined
 
   for (let idx = 0; idx < snappedCorners.length; idx += 1) {

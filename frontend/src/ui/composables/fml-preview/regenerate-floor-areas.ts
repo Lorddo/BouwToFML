@@ -1,4 +1,5 @@
 import { rebuildAreasFromHoles } from '@/core/fml/area-match'
+import { ensureDesignsSynced } from '@/core/fml/design-sync'
 import { holeMatchesFloorCutout } from '@/core/fml/ridge-floor'
 import type { Floor, Wall } from '@/core/fml/types'
 import { buildWallRenderGeometry } from '@/ui/components/fml-preview-wall-polygons'
@@ -24,10 +25,11 @@ export function regenerateFloorAreas(floor: Floor): Floor {
     return floor
   }
   const areas = rebuildAreasFromHoles(holes, floor.areas)
-  return {
+  const next = {
     ...floor,
     areas: areas.length > 0 ? areas : undefined,
   }
+  return floor.designs?.length ? ensureDesignsSynced(next) : next
 }
 
 export function regeneratePlanAreas(plan: { name: string; floors: Floor[] }): {

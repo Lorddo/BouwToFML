@@ -36,18 +36,18 @@ import { downloadFml } from '@/core/fml/downloadFml'
 import {
   assignWallsToGroup,
   createFacadeGroup,
-  detachWalls,
+  detachWallsFromGroup,
   facadeMemberIdsOnFloor,
-  groupIdForWall,
+  groupIdsForWall,
   listFacadeGroups,
+  renameFacadeGroup,
   STAMP_FACADE_GROUP_ID,
   stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
 import {
-  copyElevationUnderlay,
-  copyFloorUnderlay,
-  listElevationUnderlayDonors,
-  listFloorUnderlayDonors,
+  copyUnderlayFromDonor,
+  isReusableUnderlayDrawing,
+  listUnderlayReuseDonors,
 } from '@/core/fml/copy-underlay-drawing'
 import {
   elevationViewForGroup,
@@ -82,6 +82,7 @@ import {
   cancelFmlChromeDialog,
   confirmFmlChrome,
   promptFacadeGroupName,
+  promptFacadeGroupsEdit,
 } from '@/ui/composables/fml-chrome-dialog'
 import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
@@ -115,6 +116,7 @@ const previewCanvasRef = ref<{
   applyCornerMarkerModeFromSettings?: () => void
   resetView?: () => void
   pushUndo?: () => void
+  convertOverlayToManual?: (source: 'autogen' | 'slicer') => boolean
 } | null>(null)
 
 const emit = defineEmits<{
@@ -127,6 +129,7 @@ const coarsePointer = ref(false)
 const canvasFullscreen = ref(false)
 const reuseUnderlayOpen = ref(false)
 const reuseUnderlayWrapRef = ref<HTMLElement | null>(null)
+const underlayFoldOpen = ref(false)
 
 watch(canvasFullscreen, (on) => {
   emit('update:canvasFullscreen', on)
@@ -280,11 +283,35 @@ watch(elevationGroupId, (_next, prev) => {
 const underlayReuseDonors = computed(() => {
   const current = plan.value
   if (!current) return []
-  if (gevelsMode.value) return listElevationUnderlayDonors(current, elevationGroupId.value)
-  return listFloorUnderlayDonors(current, activeFloorIndex.value)
+  if (gevelsMode.value) {
+    return listUnderlayReuseDonors(current, { elevationGroupId: elevationGroupId.value })
+  }
+  return listUnderlayReuseDonors(current, { floorIndex: activeFloorIndex.value })
 })
 
-watch([gevelsMode, activeFloorIndex, elevationGroupId], () => {
+const activeHasReusableUnderlay = computed(() => {
+  const current = plan.value
+  if (!current) return false
+  if (gevelsMode.value) {
+    return isReusableUnderlayDrawing(
+      elevationViewForGroup(current, elevationGroupId.value)?.drawing,
+    )
+  }
+  return isReusableUnderlayDrawing(current.floors[activeFloorIndex.value]?.drawing)
+})
+
+/** Doel zonder onderlegger + er is een bron: knop + bronlijst hier, niet op de donor. */
+const needsUnderlayReuse = computed(
+  () =>
+    !inspectMode.value && !activeHasReusableUnderlay.value && underlayReuseDonors.value.length > 0,
+)
+
+watch([needsUnderlayReuse, gevelsMode, activeFloorIndex, elevationGroupId], ([needed]) => {
+  if (needed) {
+    underlayFoldOpen.value = true
+    reuseUnderlayOpen.value = true
+    return
+  }
   reuseUnderlayOpen.value = false
 })
 
@@ -292,73 +319,133 @@ watch(underlayReuseDonors, (opts) => {
   if (opts.length === 0) reuseUnderlayOpen.value = false
 })
 
+function reuseDonorLabel(opt: { kind: 'floor' | 'elevation'; name: string }): string {
+  return opt.kind === 'elevation'
+    ? t('viewer.reuseUnderlayGevel', { name: opt.name })
+    : t('viewer.reuseUnderlayFloor', { name: opt.name })
+}
+
 async function onReuseUnderlayFromDonor(donorId: string): Promise<void> {
   reuseUnderlayOpen.value = false
   const current = plan.value
   if (!current || inspectMode.value) return
   cancelFmlRescale()
   cancelUnderlayScale()
-  if (gevelsMode.value && elevationGroupId.value) {
-    const next = copyElevationUnderlay(current, donorId, elevationGroupId.value)
-    if (!next) return
-    plan.value = next
-    underlayHint.value = null
-    error.value = null
-    await syncElevationUnderlayFromPlan()
-    await nextTick()
-    previewCanvasRef.value?.resetView?.()
-    return
-  }
-  const fromIndex = Number(donorId)
-  if (!Number.isInteger(fromIndex)) return
-  const next = copyFloorUnderlay(current, fromIndex, activeFloorIndex.value)
+  persistActiveUnderlayDrawing()
+  const target =
+    gevelsMode.value && elevationGroupId.value
+      ? ({ kind: 'elevation', groupId: elevationGroupId.value } as const)
+      : ({ kind: 'floor', index: activeFloorIndex.value } as const)
+  const next = copyUnderlayFromDonor(current, donorId, target)
   if (!next) return
   plan.value = next
   underlayHint.value = null
   error.value = null
-  await syncUnderlayForActiveFloor()
-  if ((next.floors[activeFloorIndex.value]?.walls.length ?? 0) === 0) {
-    await nextTick()
-    previewCanvasRef.value?.resetView?.()
+  if (target.kind === 'elevation') {
+    await syncElevationUnderlayFromPlan()
+  } else {
+    await syncUnderlayForActiveFloor()
   }
+  await nextTick()
+  previewCanvasRef.value?.resetView?.()
 }
 
-const inspectFacadeSelectValue = computed(() => {
+function inspectFacadeChecked(groupId: string): boolean {
   const hit = lastInspectHit.value
-  if (!hit || hit.kind !== 'wall' || !plan.value) return ''
-  return groupIdForWall(plan.value, hit.id) ?? ''
-})
+  if (!hit || hit.kind !== 'wall' || !plan.value) return false
+  return groupIdsForWall(plan.value, hit.id).includes(groupId)
+}
 
-async function onInspectFacadeGroupChange(event: Event): Promise<void> {
+const inspectMemberFacadeGroups = computed(() =>
+  inspectFacadeGroups.value.filter((group) => inspectFacadeChecked(group.id)),
+)
+
+const inspectAddableFacadeGroups = computed(() =>
+  inspectFacadeGroups.value.filter((group) => !inspectFacadeChecked(group.id)),
+)
+
+function refreshInspectFacadeHit(): void {
   const hit = lastInspectHit.value
   if (!hit || hit.kind !== 'wall' || !plan.value) return
-  const select = event.target as HTMLSelectElement
-  const value = select.value
-  const selectedIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
-  if (value === '__new__') select.value = inspectFacadeSelectValue.value
-
-  if (value === '__new__') {
-    const name = await promptFacadeGroupName()
-    if (name == null) return
-    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'create')
-    const group = createFacadeGroup(plan.value, { name })
-    assignWallsToGroup(plan.value, group.id, wallIds)
-  } else if (value === '') {
-    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'detach')
-    detachWalls(plan.value, wallIds)
-  } else {
-    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'assign', value)
-    assignWallsToGroup(plan.value, value, wallIds)
-  }
-
-  const groupId = groupIdForWall(plan.value, hit.id)
-  const ids = groupId ? facadeMemberIdsOnFloor(plan.value, groupId, hit.floorIndex) : undefined
+  const groupIds = groupIdsForWall(plan.value, hit.id)
+  const ids =
+    groupIds.length === 1
+      ? facadeMemberIdsOnFloor(plan.value, groupIds[0], hit.floorIndex)
+      : undefined
   lastInspectHit.value = {
     ...hit,
     ids: ids && ids.length > 0 ? ids : undefined,
   }
-  // Force plan reactivity for download/settings roundtrip.
   plan.value = { ...plan.value }
+}
+
+async function onInspectFacadeToggle(groupId: string, enabled: boolean): Promise<void> {
+  const hit = lastInspectHit.value
+  if (!hit || hit.kind !== 'wall' || !plan.value) return
+  const selectedIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
+  if (enabled) {
+    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'assign', groupId)
+    assignWallsToGroup(plan.value, groupId, wallIds)
+  } else {
+    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'detach', groupId)
+    detachWallsFromGroup(plan.value, groupId, wallIds)
+  }
+  refreshInspectFacadeHit()
+}
+
+async function onInspectFacadeChange(event: Event): Promise<void> {
+  const select = event.target as HTMLSelectElement
+  const value = select.value
+  select.value = ''
+  if (!value) return
+  if (value === '__edit__') {
+    await onInspectFacadeEditAll()
+    return
+  }
+  if (value === '__new__') {
+    await onInspectFacadeNew()
+    return
+  }
+  await onInspectFacadeToggle(value, true)
+}
+
+async function onInspectFacadeEditAll(): Promise<void> {
+  const groups = inspectFacadeGroups.value
+  if (groups.length === 0 || !plan.value) return
+  const edited = await promptFacadeGroupsEdit(groups.map((g) => ({ id: g.id, name: g.name })))
+  if (!edited) return
+  let changed = false
+  for (const row of edited) {
+    const current = groups.find((g) => g.id === row.id)
+    if (!current || current.name === row.name) continue
+    renameFacadeGroup(plan.value, row.id, { name: row.name })
+    changed = true
+  }
+  if (changed) plan.value = { ...plan.value }
+}
+
+async function onInspectFacadeNew(): Promise<void> {
+  const hit = lastInspectHit.value
+  if (!hit || hit.kind !== 'wall' || !plan.value) return
+  const selectedIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
+  const name = await promptFacadeGroupName()
+  if (name == null) return
+  const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'create')
+  const group = createFacadeGroup(plan.value, { name })
+  assignWallsToGroup(plan.value, group.id, wallIds)
+  refreshInspectFacadeHit()
+}
+
+function onInspectFacadeSelectMembers(groupId: string): void {
+  const hit = lastInspectHit.value
+  if (!hit || hit.kind !== 'wall' || !plan.value) return
+  const ids = facadeMemberIdsOnFloor(plan.value, groupId, hit.floorIndex)
+  if (ids.length === 0) return
+  lastInspectHit.value = { ...hit, ids }
+}
+
+async function onInspectFacadeRemove(groupId: string): Promise<void> {
+  await onInspectFacadeToggle(groupId, false)
 }
 
 const {
@@ -410,9 +497,17 @@ const {
   dimensionVis,
   dimensionSettings,
   canClearActiveDimensions,
+  canConvertActiveDimensions,
   patchDimensionSettings,
   clearActiveDimensionType,
 } = useFmlViewerDimensions({ plan, activeFloorIndex })
+
+function convertActiveDimensionsToManual(): void {
+  const vis = dimensionVis.value
+  if (vis !== 'autogen' && vis !== 'slicer') return
+  const ok = previewCanvasRef.value?.convertOverlayToManual?.(vis) === true
+  if (ok) dimensionVis.value = 'manual'
+}
 
 const fmlRescaleActive = ref(false)
 const fmlRescaleState = ref<HScaleState | null>(null)
@@ -1345,34 +1440,35 @@ defineExpose({
             </div>
           </details>
 
-          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <details
+            v-if="!inspectMode"
+            class="fml-fold defaults-fold"
+            :class="{ 'is-reuse-needed': needsUnderlayReuse }"
+            :open="underlayFoldOpen"
+            @toggle="underlayFoldOpen = ($event.target as HTMLDetailsElement).open"
+          >
             <summary>{{ t('viewer.underlayFold') }}</summary>
-            <p v-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
+            <p v-if="needsUnderlayReuse" class="underlay-hint">
+              {{ t('viewer.reuseUnderlayHintEmpty') }}
+            </p>
+            <p v-else-if="underlayHint" class="underlay-hint">{{ underlayHint }}</p>
             <div class="sidebar-icon-row sidebar-plan-actions">
-              <label
-                class="sidebar-icon-btn"
-                :title="t('viewer.uploadUnderlayHint')"
-                :aria-label="t('viewer.uploadUnderlay')"
+              <div
+                ref="reuseUnderlayWrapRef"
+                class="underlay-reuse"
+                :class="{ 'is-needed': needsUnderlayReuse }"
               >
-                <ToolbeltIcon name="upload" />
-                <span>{{ t('viewer.uploadUnderlay') }}</span>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-                  :disabled="isLoadingFml"
-                  @change="onUnderlayFileInput"
-                />
-              </label>
-              <div ref="reuseUnderlayWrapRef" class="underlay-reuse">
                 <button
                   type="button"
                   class="sidebar-icon-btn"
                   :class="{ 'is-on': reuseUnderlayOpen }"
                   :disabled="underlayReuseDonors.length === 0 || isLoadingFml"
                   :title="
-                    underlayReuseDonors.length > 0
-                      ? t('viewer.reuseUnderlayHint')
-                      : t('viewer.reuseUnderlayHintBlocked')
+                    needsUnderlayReuse
+                      ? t('viewer.reuseUnderlayHintEmpty')
+                      : underlayReuseDonors.length > 0
+                        ? t('viewer.reuseUnderlayHint')
+                        : t('viewer.reuseUnderlayHintBlocked')
                   "
                   :aria-label="t('viewer.reuseUnderlay')"
                   :aria-expanded="reuseUnderlayOpen"
@@ -1391,10 +1487,24 @@ defineExpose({
                     class="sidebar-icon-btn"
                     @click="onReuseUnderlayFromDonor(opt.id)"
                   >
-                    {{ opt.name }}
+                    {{ reuseDonorLabel(opt) }}
                   </button>
                 </div>
               </div>
+              <label
+                class="sidebar-icon-btn"
+                :title="t('viewer.uploadUnderlayHint')"
+                :aria-label="t('viewer.uploadUnderlay')"
+              >
+                <ToolbeltIcon name="upload" />
+                <span>{{ t('viewer.uploadUnderlay') }}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+                  :disabled="isLoadingFml"
+                  @change="onUnderlayFileInput"
+                />
+              </label>
               <button
                 type="button"
                 class="sidebar-icon-btn"
@@ -1609,10 +1719,12 @@ defineExpose({
               :settings="dimensionSettings"
               :vis="dimensionVis"
               :can-clear="canClearActiveDimensions"
+              :can-convert="canConvertActiveDimensions"
               @update:vis="dimensionVis = $event"
               @auto="patchDimensionSettings({ engineAutoDims: $event })"
               @mode="patchDimensionSettings({ dimensionMode: $event })"
               @outer="patchDimensionSettings({ generateOuterDimension: $event })"
+              @convert-active="convertActiveDimensionsToManual"
               @clear-active="clearActiveDimensionType"
             />
           </details>
@@ -1652,21 +1764,55 @@ defineExpose({
               </div>
             </dl>
             <div v-if="lastInspectHit?.kind === 'wall'" class="inspect-facade">
-              <label class="inspect-facade-label" for="inspect-facade-select">{{
-                t('result.toolbar.facadeGroup')
-              }}</label>
-              <select
-                id="inspect-facade-select"
-                class="inspect-facade-select"
-                :value="inspectFacadeSelectValue"
-                @change="onInspectFacadeGroupChange"
-              >
-                <option value="">{{ t('result.toolbar.facadeGroupNone') }}</option>
-                <option v-for="group in inspectFacadeGroups" :key="group.id" :value="group.id">
-                  {{ group.name || group.id }}
-                </option>
-                <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
-              </select>
+              <span class="inspect-facade-label">{{ t('result.toolbar.facadeGroup') }}</span>
+              <div class="inspect-facade-stack">
+                <select
+                  class="inspect-facade-select"
+                  :aria-label="t('result.toolbar.facadeGroupAria')"
+                  value=""
+                  @change="onInspectFacadeChange"
+                >
+                  <option value="" disabled>
+                    {{ t('result.toolbar.facadeGroupAdd') }}
+                  </option>
+                  <option
+                    v-for="group in inspectAddableFacadeGroups"
+                    :key="group.id"
+                    :value="group.id"
+                  >
+                    {{ group.name || group.id }}
+                  </option>
+                  <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
+                  <option value="__edit__">{{ t('result.toolbar.facadeGroupEditAll') }}</option>
+                </select>
+                <div v-if="inspectMemberFacadeGroups.length > 0" class="inspect-facade-chips">
+                  <div
+                    v-for="group in inspectMemberFacadeGroups"
+                    :key="group.id"
+                    class="inspect-facade-chip"
+                  >
+                    <span class="inspect-facade-chip-name">{{ group.name || group.id }}</span>
+                    <button
+                      type="button"
+                      class="inspect-facade-chip-btn"
+                      :title="t('result.toolbar.facadeGroupSelectTitle')"
+                      :aria-label="t('result.toolbar.facadeGroupSelect')"
+                      @click="onInspectFacadeSelectMembers(group.id)"
+                    >
+                      <ToolbeltIcon name="fit" />
+                    </button>
+                    <button
+                      type="button"
+                      class="inspect-facade-chip-btn"
+                      :title="t('result.toolbar.facadeGroupRemoveTitle')"
+                      :aria-label="t('result.toolbar.facadeGroupRemove')"
+                      @click="onInspectFacadeRemove(group.id)"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             <p v-else-if="!lastInspectHit" class="inspect-empty">
               Nog geen selectie — tik op de plattegrond.
@@ -2050,6 +2196,11 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.underlay-reuse.is-needed .underlay-reuse-menu {
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .underlay-reuse-menu {
@@ -2531,13 +2682,76 @@ defineExpose({
   color: #64748b;
 }
 
+.inspect-facade-stack {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .inspect-facade-select {
-  width: 100%;
+  min-width: 140px;
+  max-width: 100%;
+  height: 28px;
   font-size: 12px;
-  padding: 4px 6px;
+  padding: 1px 4px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   background: #fff;
+  color: #334155;
+  flex: 0 0 auto;
+}
+
+.inspect-facade-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.inspect-facade-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 1px 2px 1px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.inspect-facade-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.inspect-facade-chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.inspect-facade-chip-btn:hover {
   color: #0f172a;
 }
 

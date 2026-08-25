@@ -867,6 +867,8 @@ describe('facade-elevation', () => {
     expect(after?.y).toBe(xy.y)
     expect(snapElevationY(-450, [-400, -500], 8)).toBe(-450)
     expect(snapElevationY(-403, [-400, -500], 8)).toBe(-400)
+    expect(snapElevationY(-408, [-400, -500], 10)).toBe(-400)
+    expect(snapElevationY(-411, [-400, -500], 10)).toBe(-411)
   })
 
   it('bovenlicht-flag: groen vlak boven de deur met juiste Z', () => {
@@ -970,6 +972,38 @@ describe('facade-elevation', () => {
     const hit = hitElevationOpening(elev, mid)
     expect(hit?.openingId).toBe(elev.openings[0].openingId)
     expect(hit?.type).toBe('door')
+  })
+
+  it('twee overlappinge ramen: preferOpeningId blijft op het gekozen raam', () => {
+    const plan = twoFloorPlan()
+    const first = addPlanOpening(plan, 'front-bg', {
+      type: 'window',
+      refid: CONCEPT_WINDOW_REFID,
+      t: 0.5,
+      width: 90,
+      z: 80,
+      z_height: 120,
+      guid: 'win-onder',
+    })
+    const stacked = addPlanOpening(first.plan, 'front-bg', {
+      type: 'window',
+      refid: CONCEPT_WINDOW_REFID,
+      t: 0.5,
+      width: 90,
+      z: 80,
+      z_height: 120,
+      guid: 'win-boven',
+    })
+    const elev = projectFacadeElevation(stacked.plan, 'G1')!
+    expect(elev.openings.length).toBeGreaterThanOrEqual(2)
+    const a = elev.openings.find((item) => item.openingGuid === 'win-onder')!
+    const b = elev.openings.find((item) => item.openingGuid === 'win-boven')!
+    const mid = {
+      x: (a.x0 + a.x1) / 2,
+      y: (a.y0 + a.y1) / 2,
+    }
+    expect(hitElevationOpening(elev, mid, a.openingId)?.openingId).toBe(a.openingId)
+    expect(hitElevationOpening(elev, mid, b.openingId)?.openingId).toBe(b.openingId)
   })
 
   it('twee parallelle gevels: buitenste muur en opening liggen vóór de achtergevel', () => {

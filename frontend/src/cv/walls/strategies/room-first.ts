@@ -345,6 +345,7 @@ export async function runRoomFinalizePhase(params: {
   wallPipelineVersion?: WallPipelineVersion
   faceOverrides?: Map<number, RoomRasterClass>
   pinnedRoots?: Set<number>
+  maskKeepDoorFaceIds?: ReadonlySet<number> | readonly number[]
 }): Promise<WallStrategyResult> {
   const { cv, classify } = params
   const faceOverrides = params.faceOverrides ?? new Map<number, RoomRasterClass>()
@@ -356,6 +357,7 @@ export async function runRoomFinalizePhase(params: {
     wallStyle: params.wallStyle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     faceOverrides,
+    maskKeepDoorFaceIds: params.maskKeepDoorFaceIds,
   })
   const updatedClassifyState = serializeRoomClassifyState({
     ...classify,

@@ -1,4 +1,18 @@
-import type { Wall } from '@/core/fml/types'
+import {
+  openingWorldCenter,
+  wallBalanceMidOffsetCm,
+  wallDirectionUnit,
+  wallLeftNormal,
+} from '@/core/fml/fml-wall-geom'
+import { buildLocalOpeningId } from '@/core/fml/opening-ids'
+import type { Opening, OpeningType, Wall } from '@/core/fml/types'
+
+export type BoxSelectKind = 'wall' | 'door' | 'window' | 'all'
+
+export interface BoxSelectHits {
+  wallIds: string[]
+  openingIds: string[]
+}
 
 export interface CmBBox {
   x: number
@@ -43,4 +57,93 @@ export function findWallsFullyInCmBBox(walls: Wall[], bbox: CmBBox): string[] {
   const selection = normalizeCmBBox(bbox)
   if (selection.width < 0.5 || selection.height < 0.5) return []
   return walls.filter((wall) => cmBBoxContains(selection, wallCmBBox(wall))).map((wall) => wall.id)
+}
+
+/** Axis-aligned bbox van een opening op de muur (gat + dikte, incl. balance). */
+export function openingCmBBox(wall: Wall, opening: Opening): CmBBox {
+  const dir = wallDirectionUnit(wall)
+  const left = wallLeftNormal(wall)
+  const center = openingWorldCenter(wall, opening.t)
+  const mid = wallBalanceMidOffsetCm(wall.thickness, wall.balance)
+  const cx = center.x + left.x * mid
+  const cy = center.y + left.y * mid
+  const halfW = Math.max(0, opening.width) / 2
+  const halfT = wall.thickness / 2
+  const xs = [
+    cx - dir.x * halfW - left.x * halfT,
+    cx + dir.x * halfW - left.x * halfT,
+    cx + dir.x * halfW + left.x * halfT,
+    cx - dir.x * halfW + left.x * halfT,
+  ]
+  const ys = [
+    cy - dir.y * halfW - left.y * halfT,
+    cy + dir.y * halfW - left.y * halfT,
+    cy + dir.y * halfW + left.y * halfT,
+    cy - dir.y * halfW + left.y * halfT,
+  ]
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const minY = Math.min(...ys)
+  const maxY = Math.max(...ys)
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+}
+
+export function listOpeningIdsByType(walls: Wall[], type?: OpeningType): string[] {
+  const ids: string[] = []
+  for (const wall of walls) {
+    for (let index = 0; index < wall.openings.length; index++) {
+      const opening = wall.openings[index]
+      if (type != null && opening.type !== type) continue
+      ids.push(buildLocalOpeningId(wall.id, opening, index))
+    }
+  }
+  return ids
+}
+
+/** Opening-ids waarvan de volledige bbox binnen de selectie ligt. `type` weglaten = deur+raam. */
+export function findOpeningsFullyInCmBBox(
+  walls: Wall[],
+  bbox: CmBBox,
+  type?: OpeningType,
+): string[] {
+  const selection = normalizeCmBBox(bbox)
+  if (selection.width < 0.5 || selection.height < 0.5) return []
+  const ids: string[] = []
+  for (const wall of walls) {
+    for (let index = 0; index < wall.openings.length; index++) {
+      const opening = wall.openings[index]
+      if (type != null && opening.type !== type) continue
+      if (!cmBBoxContains(selection, openingCmBBox(wall, opening))) continue
+      ids.push(buildLocalOpeningId(wall.id, opening, index))
+    }
+  }
+  return ids
+}
+
+export function collectBoxSelectHits(
+  walls: Wall[],
+  bbox: CmBBox,
+  kind: BoxSelectKind,
+): BoxSelectHits {
+  if (kind === 'wall') {
+    return { wallIds: findWallsFullyInCmBBox(walls, bbox), openingIds: [] }
+  }
+  if (kind === 'all') {
+    return {
+      wallIds: findWallsFullyInCmBBox(walls, bbox),
+      openingIds: findOpeningsFullyInCmBBox(walls, bbox),
+    }
+  }
+  return { wallIds: [], openingIds: findOpeningsFullyInCmBBox(walls, bbox, kind) }
+}
+
+/** Alle items van het gekozen type op de floor (zoals gevelgroep-leden). */
+export function collectAllOfBoxKind(walls: Wall[], kind: BoxSelectKind): BoxSelectHits {
+  if (kind === 'wall') {
+    return { wallIds: walls.map((wall) => wall.id), openingIds: [] }
+  }
+  if (kind === 'all') {
+    return { wallIds: walls.map((wall) => wall.id), openingIds: listOpeningIdsByType(walls) }
+  }
+  return { wallIds: [], openingIds: listOpeningIdsByType(walls, kind) }
 }

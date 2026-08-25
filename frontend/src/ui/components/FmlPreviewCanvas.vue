@@ -33,6 +33,7 @@ import { buildSliceGuide } from '@/core/fml/slice-dimension-lines'
 import { useFmlPreviewSlicer } from '@/ui/composables/fml-preview/useFmlPreviewSlicer'
 import {
   loadUserSettings,
+  setShowCanvasGrid,
   type CornerMarkerMode,
   type OpeningDisplayColors,
   type PlanDisplayStyleChoice,
@@ -343,6 +344,8 @@ const underlayProps = computed(() => ({
 
 const dakMode = computed(() => props.dakMode === true)
 const drawInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
+const planDisplayStyle = ref<PlanDisplayStyleChoice>(loadUserSettings().fmlViewer.planDisplayStyle)
+const showCanvasGrid = ref(loadUserSettings().fmlViewer.showCanvasGrid !== false)
 
 const render = useFmlPreviewRenderModel(
   viewport,
@@ -353,6 +356,7 @@ const render = useFmlPreviewRenderModel(
   dimensionVis,
   dakMode,
   drawInputUnit,
+  planDisplayStyle,
 )
 
 const hitTestWalls = computed(() => {
@@ -478,6 +482,8 @@ const hoveredAreaId = computed(() => selection.hoveredAreaId.value)
 const hoveredSurfaceId = computed(() => selection.hoveredSurfaceId.value)
 const hoveredLabelId = computed(() => selection.hoveredLabelId.value)
 const hoveredLineId = computed(() => selection.hoveredLineId.value)
+const moveDimensionId = computed(() => selection.moveDimensionId.value)
+const hoveredDimensionId = computed(() => selection.hoveredDimensionId.value)
 
 const inspectWallPolygons = computed(() => {
   if (!inspectMode.value || !renderModel.value) return []
@@ -496,14 +502,18 @@ const cornerMarkerMode = ref<CornerMarkerMode>(loadUserSettings().fmlViewer.corn
 const openingColors = ref<OpeningDisplayColors>({
   ...loadUserSettings().fmlViewer.openingColors,
 })
-const planDisplayStyle = ref<PlanDisplayStyleChoice>(loadUserSettings().fmlViewer.planDisplayStyle)
 
 function applyCornerMarkerModeFromSettings(): void {
   const settings = loadUserSettings()
   cornerMarkerMode.value = settings.fmlViewer.cornerMarkerMode
   openingColors.value = { ...settings.fmlViewer.openingColors }
   planDisplayStyle.value = settings.fmlViewer.planDisplayStyle
+  showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
   drawInputUnit.value = settings.scaleInputUnit
+}
+
+function onShowCanvasGrid(next: boolean) {
+  showCanvasGrid.value = setShowCanvasGrid(next)
 }
 const fmlToolbarRef = ref<{ hint: string } | null>(null)
 const toolbarHint = computed(() => fmlToolbarRef.value?.hint ?? '')
@@ -511,6 +521,8 @@ const toolbarHint = computed(() => fmlToolbarRef.value?.hint ?? '')
 const {
   activeFmlTool,
   selectionBoxPreview,
+  boxSelectKind,
+  selectAllOfBoxKind,
   drawWallPreview,
   drawRoomPreview,
   drawWallDrafting,
@@ -583,8 +595,12 @@ const {
   wallBalanceMixed,
   wallHeightDraft,
   wallHeightMixed,
+  wallBottomZDraft,
+  wallBottomZMixed,
   junctionHeightDraft,
   junctionHeightMixed,
+  junctionBottomZDraft,
+  junctionBottomZMixed,
   openingSubtypeDraft,
   openingSubtypeMixed,
   openingWidthDraft,
@@ -605,6 +621,7 @@ const {
   openingBovenlichtGapMixed,
   addDoorSubtype,
   addDoorWidthCm,
+  addDoorSillZCm,
   addWindowSubtype,
   addWindowWidthCm,
   addWindowSillZCm,
@@ -617,8 +634,12 @@ const {
   commitWallBalance,
   onWallHeightCm,
   commitWallHeight,
+  onWallBottomZCm,
+  commitWallBottomZ,
   onJunctionHeightCm,
   commitJunctionHeight,
+  onJunctionBottomZCm,
+  commitJunctionBottomZ,
   commitOpeningSubtype,
   onOpeningWidthCm,
   commitOpeningWidth,
@@ -638,17 +659,15 @@ const {
   splitSelectedWall,
   deleteSelectedWalls,
   facadeGroupOptions,
-  facadeGroupDraft,
-  facadeGroupMixed,
+  facadeGroupChecks,
   facadeMemberIdsOnActiveFloor,
   stampGroupDraft,
   stampGroupMixed,
   applyFacadeGroupSelection,
+  removeFacadeGroupFromSelection,
   applyStampGroupSelection,
-  renameSelectedFacadeGroup,
-  selectFacadeGroupMembers,
+  selectFacadeGroupMembersById,
   selectStampGroupMembers,
-  canSelectFacadeMembers,
   canSelectStampMembers,
   clearSelection,
   flushPendingFieldCommits,
@@ -749,9 +768,7 @@ const facadeGroupOptionsForUi = computed(() => {
   if (facadeGroupsStampPreset.value) return []
   return all.filter((group) => group.id !== STAMP_FACADE_GROUP_ID)
 })
-const facadeGroupDraftForUi = computed((): string | null => facadeGroupDraft.value)
-const facadeGroupMixedForUi = computed(() => facadeGroupMixed.value)
-const canSelectFacadeMembersForUi = computed(() => canSelectFacadeMembers.value)
+const facadeGroupChecksForUi = computed(() => facadeGroupChecks.value)
 
 /** Gevelgroep-leden op deze floor (excl. al geselecteerde muren). */
 const facadeWallPolygons = computed(() => {
@@ -1172,6 +1189,17 @@ defineExpose({
   axisLockMod,
   moveMod,
   pushUndo: () => editor.pushUndo(),
+  convertOverlayToManual: (source: 'autogen' | 'slicer') => {
+    editor.pushUndo()
+    const ok = editor.convertOverlayToManual(source)
+    const nextPlan = editor.localPlan.value
+    if (ok && nextPlan) {
+      editor.prepareParentSync()
+      emit('planUpdate', nextPlan)
+      dimensionVis.value = 'manual'
+    }
+    return ok
+  },
 })
 
 watch(
@@ -1217,12 +1245,14 @@ watch(
       :hint="toolbarHint"
       :fullscreen="canvasFullscreen"
       :edge-chrome="canvasFullscreen"
+      :show-canvas-grid="showCanvasGrid"
       @undo="undoEdit"
       @redo="redoEdit"
       @fit="resetView"
       @zoom-in="zoomBy(1.1)"
       @zoom-out="zoomBy(1 / 1.1)"
       @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
+      @update:show-canvas-grid="onShowCanvasGrid"
     />
     <FmlPreviewToolbar
       v-if="!inspectMode && !rescaleMode"
@@ -1231,34 +1261,36 @@ watch(
       v-model:area-side-dims-visible="areaSideDimsVisible"
       v-model:add-door-subtype="addDoorSubtype"
       v-model:add-door-width-cm="addDoorWidthCm"
+      v-model:add-door-sill-z-cm="addDoorSillZCm"
       v-model:add-window-subtype="addWindowSubtype"
       v-model:add-window-width-cm="addWindowWidthCm"
       v-model:add-window-sill-z-cm="addWindowSillZCm"
       v-model:add-window-height-cm="addWindowHeightCm"
       v-model:measure-draw-mode="measureDrawMode"
+      v-model:box-select-kind="boxSelectKind"
       v-model:slicer-edit-mode="slicerEditMode"
-      :hide-inline-hint="viewportChrome"
       v-model:draw-surface-role="drawSurfacePendingRole"
-      :floating-dock="touchEditor"
       v-model:draw-surface-cutout="drawSurfacePendingCutout"
-      :hide-select-tools="useTouchNav || dakMode"
       v-model:draw-line-thickness="drawLineThickness"
-      :dak-mode="dakMode"
       v-model:draw-line-type="drawLineType"
-      :selected-wall-panel="selectedWallPanel"
       v-model:draw-line-color="drawLineColor"
-      :selected-junction-panel="selectedJunctionPanel"
       v-model:draw-label-text="drawLabelText"
-      :selected-opening-panel="selectedOpeningPanel"
       v-model:draw-label-font-size="drawLabelFontSize"
-      :selected-area-panel="taggedSettingsPanel"
       v-model:draw-label-font-color="drawLabelFontColor"
-      :selected-label-panel="selectedLabelPanel"
       v-model:draw-label-outline="drawLabelOutline"
-      :selected-line-panel="selectedLinePanel"
       v-model:draw-label-bold="drawLabelBold"
-      :room-types="roomTypes"
+      :hide-inline-hint="viewportChrome"
       v-model:draw-label-italic="drawLabelItalic"
+      :floating-dock="touchEditor"
+      :hide-select-tools="useTouchNav || dakMode"
+      :dak-mode="dakMode"
+      :selected-wall-panel="selectedWallPanel"
+      :selected-junction-panel="selectedJunctionPanel"
+      :selected-opening-panel="selectedOpeningPanel"
+      :selected-area-panel="taggedSettingsPanel"
+      :selected-label-panel="selectedLabelPanel"
+      :selected-line-panel="selectedLinePanel"
+      :room-types="roomTypes"
       :surface-edit-active="surfaceEditActive"
       :roof-vertex-z-cm="roofVertexZCm"
       :roof-poly-mutate="selection.roofPolyMutate.value"
@@ -1272,8 +1304,12 @@ watch(
       :wall-balance-mixed="wallBalanceMixed"
       :wall-height-draft="wallHeightDraft"
       :wall-height-mixed="wallHeightMixed"
+      :wall-bottom-z-draft="wallBottomZDraft"
+      :wall-bottom-z-mixed="wallBottomZMixed"
       :junction-height-draft="junctionHeightDraft"
       :junction-height-mixed="junctionHeightMixed"
+      :junction-bottom-z-draft="junctionBottomZDraft"
+      :junction-bottom-z-mixed="junctionBottomZMixed"
       :opening-subtype-draft="openingSubtypeDraft"
       :opening-subtype-mixed="openingSubtypeMixed"
       :opening-width-draft="openingWidthDraft"
@@ -1309,9 +1345,7 @@ watch(
       :draw-surface-drafting="drawSurfaceDrafting"
       :facade-groups-enabled="capabilities?.facadeGroups === true"
       :facade-group-options="facadeGroupOptionsForUi"
-      :facade-group-draft="facadeGroupDraftForUi"
-      :facade-group-mixed="facadeGroupMixedForUi"
-      :can-select-facade-members="canSelectFacadeMembersForUi"
+      :facade-group-checks="facadeGroupChecksForUi"
       :facade-groups-stamp-preset="facadeGroupsStampPreset"
       :stamp-group-enabled="stampGroupUiEnabled"
       :stamp-group-draft="stampGroupDraft"
@@ -1329,8 +1363,12 @@ watch(
       @commit-wall-balance="commitWallBalance"
       @wall-height-cm="onWallHeightCm"
       @commit-wall-height="commitWallHeight"
+      @wall-bottom-z-cm="onWallBottomZCm"
+      @commit-wall-bottom-z="commitWallBottomZ"
       @junction-height-cm="onJunctionHeightCm"
       @commit-junction-height="commitJunctionHeight"
+      @junction-bottom-z-cm="onJunctionBottomZCm"
+      @commit-junction-bottom-z="commitJunctionBottomZ"
       @commit-opening-subtype="commitOpeningSubtype"
       @opening-width-cm="onOpeningWidthCm"
       @commit-opening-width="commitOpeningWidth"
@@ -1350,14 +1388,15 @@ watch(
       @split-wall="splitSelectedWall"
       @delete-walls="deleteSelectedWalls"
       @facade-group-change="applyFacadeGroupSelection"
-      @facade-group-rename="renameSelectedFacadeGroup"
-      @select-facade-members="selectFacadeGroupMembers"
+      @facade-group-remove="removeFacadeGroupFromSelection"
+      @select-facade-members="selectFacadeGroupMembersById"
       @stamp-group-change="applyStampGroupSelection"
       @select-stamp-members="selectStampGroupMembers"
       @wall-kind-change="applySelectedWallKind"
       @ridge-z-input="applyRidgeZInput"
       @ridge-floor-change="applyRidgeFloorInput"
       @clear-selection="clearSelection"
+      @box-select-all="selectAllOfBoxKind"
       @clear-measures="clearMeasureLines"
       @apply-room-type="applyRoomTypeToSelection"
       @area-custom-name-input="onAreaCustomNameInput"
@@ -1430,6 +1469,7 @@ watch(
       :height="stageSize.height"
       :to-screen="cmToScreen"
       :to-cm="screenToCm"
+      :space-pressed="spacePressed"
       @update-state="emit('updateRescaleState', $event)"
     />
     <svg
@@ -1659,6 +1699,7 @@ watch(
       :slice-preview-stage="slicePreviewStage"
       :underlay-config="underlayConfig"
       :content-opacity="contentOpacity"
+      :show-guide-grid="showCanvasGrid"
       :move-wall-polygon="moveWallPolygon"
       :settings-wall-polygons="settingsWallPolygons"
       :facade-wall-polygons="facadeWallPolygons"
@@ -1682,6 +1723,8 @@ watch(
       :hovered-surface-id="hoveredSurfaceId"
       :hovered-label-id="hoveredLabelId"
       :hovered-line-id="hoveredLineId"
+      :selected-dimension-id="moveDimensionId"
+      :hovered-dimension-id="hoveredDimensionId"
       :inspect-colors="inspectColors"
       :dak-mode="dakMode"
       :surface-edit-id="surfaceEditId"

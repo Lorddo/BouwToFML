@@ -4,6 +4,13 @@ import { detailSymbolsVisibleOnScreen } from '@/ui/composables/fml-preview/fml-p
 import { inspectColorFor } from '@/ui/composables/fml-preview/fml-inspect'
 import type { RenderFixture } from '@/ui/composables/fml-preview/fml-preview-render-types'
 import type { RenderModel } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
+import {
+  ARCHITECT_AREA_FILL,
+  ARCHITECT_STROKE,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  isArchitectPlanStyle,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 
 const props = withDefaults(
   defineProps<{
@@ -16,6 +23,7 @@ const props = withDefaults(
     settingsItemId?: string | null
     moveItemId?: string | null
     itemDragPreview?: { id: string; x: number; y: number } | null
+    planDisplayStyle?: PlanDisplayStyleChoice
   }>(),
   {
     layer: 'all',
@@ -25,8 +33,11 @@ const props = withDefaults(
     settingsItemId: null,
     moveItemId: null,
     itemDragPreview: null,
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
   },
 )
+
+const architect = computed(() => isArchitectPlanStyle(props.planDisplayStyle))
 
 function fixtureStagePos(fixture: RenderFixture): { x: number; y: number } {
   const preview = props.itemDragPreview
@@ -41,11 +52,24 @@ function itemHighlight(id: string): string | null {
 }
 
 function fixtureFill(fixture: RenderFixture): string | undefined {
-  return inspectColorFor(fixture.id, props.inspectColors) ?? fixture.fill
+  const inspect = inspectColorFor(fixture.id, props.inspectColors)
+  if (inspect) return inspect
+  if (architect.value) return ARCHITECT_AREA_FILL
+  return fixture.fill
 }
 
 function fixtureStroke(fixture: RenderFixture): string | undefined {
-  return inspectColorFor(fixture.id, props.inspectColors) ?? fixture.stroke
+  const inspect = inspectColorFor(fixture.id, props.inspectColors)
+  if (inspect) return inspect
+  if (architect.value) return ARCHITECT_STROKE
+  return fixture.stroke
+}
+
+function fixtureCircleFill(fixture: RenderFixture): string | undefined {
+  const inspect = inspectColorFor(fixture.id, props.inspectColors)
+  if (inspect) return inspect
+  if (architect.value) return ARCHITECT_AREA_FILL
+  return fixture.circleFill ?? fixture.fill
 }
 
 const detailVisible = computed(() =>
@@ -142,7 +166,7 @@ function localCutDash(_fixture: RenderFixture): number[] {
           x: cir[0],
           y: cir[1],
           radius: cir[2],
-          fill: inspectColorFor(fixture.id, inspectColors) ?? fixture.circleFill ?? fixture.fill,
+          fill: fixtureCircleFill(fixture),
           stroke: fixtureStroke(fixture),
           strokeWidth: localStroke(fixture),
           listening: false,

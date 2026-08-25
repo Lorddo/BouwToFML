@@ -37,6 +37,8 @@ const props = defineProps<{
   showHelp?: boolean
   /** i18n-keys voor de zoekbare help-lijst (default = FML editor). */
   helpKeys?: readonly string[]
+  /** Viewport-vast hulpraster (settings). */
+  showCanvasGrid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -46,6 +48,7 @@ const emit = defineEmits<{
   zoomIn: []
   zoomOut: []
   toggleFullscreen: []
+  'update:showCanvasGrid': [value: boolean]
 }>()
 
 const { t } = useI18n()
@@ -130,6 +133,20 @@ function toggleHelp(): void {
       @click="emit('zoomIn')"
     >
       +
+    </button>
+    <button
+      type="button"
+      :class="{ 'is-on': props.showCanvasGrid === false }"
+      :title="
+        props.showCanvasGrid === false ? t('viewer.canvasGridShow') : t('viewer.canvasGridHide')
+      "
+      :aria-label="
+        props.showCanvasGrid === false ? t('viewer.canvasGridShow') : t('viewer.canvasGridHide')
+      "
+      :aria-pressed="props.showCanvasGrid === false"
+      @click="emit('update:showCanvasGrid', props.showCanvasGrid === false)"
+    >
+      <ToolbeltIcon name="grid_off" />
     </button>
     <button
       v-if="props.showHelp !== false"

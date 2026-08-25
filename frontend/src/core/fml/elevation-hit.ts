@@ -13,6 +13,7 @@ import {
   type ElevationWallRect,
   type FacadeElevation,
 } from './facade-elevation'
+import { elevationOpeningHoleIsRect, elevationOpeningHolePoints } from './elevation-opening-symbol'
 import type { Point2D } from './types'
 
 const DEPTH_OCCLUDE_MIN_CM = ELEVATION_SAME_PLANE_CM
@@ -21,6 +22,8 @@ export const ELEVATION_JUNCTION_HIT_CM = 8
 export const ELEVATION_ROOF_VERTEX_HIT_CM = 12
 export const ELEVATION_ROOF_Z_SNAP_CM = 8
 export const ELEVATION_SPLIT_SNAP_CM = 8
+/** Soft snap van grepen/segmenten naar andere muur-/knoop-Y's in aanzicht. */
+export const ELEVATION_SEGMENT_SNAP_CM = 10
 const ELEVATION_ROOF_EDGE_HIT_CM = 6
 
 export type ElevationOpeningPatch = {
@@ -42,6 +45,40 @@ export type ElevationSplitPreview = {
 
 function pointInElevationRect(rect: ElevationRect, point: Point2D): boolean {
   return point.x >= rect.x0 && point.x <= rect.x1 && point.y >= rect.y0 && point.y <= rect.y1
+}
+
+function pointInPolygon(points: readonly Point2D[], point: Point2D): boolean {
+  let inside = false
+  for (let i = 0, j = points.length - 1; i < points.length; i += 1) {
+    const a = points[i]
+    const b = points[j]
+    if (!a || !b) continue
+    const crosses = a.y > point.y !== b.y > point.y
+    if (
+      crosses &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y + (b.y === a.y ? 1e-9 : 0)) + a.x
+    ) {
+      inside = !inside
+    }
+    j = i
+  }
+  return inside
+}
+
+function pointInElevationOpening(rect: ElevationOpeningRect, point: Point2D): boolean {
+  if (!pointInElevationRect(rect, point)) return false
+  if (elevationOpeningHoleIsRect(rect.type, rect.refid)) return true
+  const x0 = Math.min(rect.x0, rect.x1)
+  const x1 = Math.max(rect.x0, rect.x1)
+  const y0 = Math.min(rect.y0, rect.y1)
+  const y1 = Math.max(rect.y0, rect.y1)
+  return pointInPolygon(
+    elevationOpeningHolePoints({ x0, y0, x1, y1 }, rect.type, rect.refid, {
+      mirrored: rect.mirrored,
+      startOnLeft: rect.startOnLeft,
+    }),
+    point,
+  )
 }
 
 function hypot2(ax: number, ay: number, bx: number, by: number): number {
@@ -92,28 +129,46 @@ function wallOccludesElevationPoint(
   return !mine.some((rect) => pointInElevationRect(rect, point))
 }
 
+function resolveElevationOpeningHit(
+  elevation: FacadeElevation,
+  item: { rect: ElevationOpeningRect; transom: boolean },
+): ElevationOpeningRect {
+  if (!item.transom) return item.rect
+  return (
+    elevation.openings.find((opening) => opening.openingId === item.rect.openingId) ?? item.rect
+  )
+}
+
 export function hitElevationOpening(
   elevation: FacadeElevation,
   point: Point2D,
+  preferOpeningId?: string | null,
 ): ElevationOpeningRect | null {
   const candidates: Array<{ rect: ElevationOpeningRect; transom: boolean }> = [
     ...elevation.transoms.map((rect) => ({ rect, transom: true })),
     ...elevation.openings.map((rect) => ({ rect, transom: false })),
   ].sort((a, b) => compareElevationPainter(b.rect, a.rect))
+  const hits: ElevationOpeningRect[] = []
+  const seen = new Set<string>()
   for (const item of candidates) {
-    if (!pointInElevationRect(item.rect, point)) continue
+    if (!pointInElevationOpening(item.rect, point)) continue
     const occluded = elevation.walls.some(
       (wall) =>
         wall.depthCm > item.rect.depthCm + DEPTH_OCCLUDE_MIN_CM &&
         wallOccludesElevationPoint(elevation, wall, point),
     )
     if (occluded) continue
-    if (!item.transom) return item.rect
-    return (
-      elevation.openings.find((opening) => opening.openingId === item.rect.openingId) ?? item.rect
-    )
+    const resolved = resolveElevationOpeningHit(elevation, item)
+    if (seen.has(resolved.openingId)) continue
+    seen.add(resolved.openingId)
+    hits.push(resolved)
   }
-  return null
+  if (hits.length === 0) return null
+  if (preferOpeningId) {
+    const preferred = hits.find((hit) => hit.openingId === preferOpeningId)
+    if (preferred) return preferred
+  }
+  return hits[0] ?? null
 }
 
 export function hitElevationWall(
@@ -336,6 +391,28 @@ export function collectElevationRoofSnapYs(
       if (skip && plane.id === skip.planeId && index === skip.vertexIndex) return
       ys.push(point.y)
     })
+  }
+  return ys
+}
+
+/** Tops + bottoms van muren/knopen (voor greep-snap in aanzicht). */
+export function collectElevationSegmentSnapYs(
+  elevation: FacadeElevation,
+  skip?: { wallId?: string; wallIds?: readonly string[]; junctionId?: string },
+): number[] {
+  const skipWalls = new Set<string>()
+  if (skip?.wallId) skipWalls.add(skip.wallId)
+  if (skip?.wallIds) {
+    for (const id of skip.wallIds) skipWalls.add(id)
+  }
+  const ys: number[] = []
+  for (const wall of elevation.walls) {
+    if (skipWalls.has(wall.wallId)) continue
+    ys.push(wall.aTop.y, wall.bTop.y, wall.aBottom.y, wall.bBottom.y)
+  }
+  for (const junction of elevation.junctions) {
+    if (skip?.junctionId && junction.id === skip.junctionId) continue
+    ys.push(junction.yTop, junction.yBot)
   }
   return ys
 }

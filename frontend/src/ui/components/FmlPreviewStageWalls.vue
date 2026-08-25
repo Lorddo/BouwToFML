@@ -5,7 +5,17 @@ import type {
   RenderWall,
   RenderWallPolygon,
 } from '@/ui/composables/fml-preview/useFmlPreviewRenderModel'
-import { SELECTION_HIGHLIGHT_PAD_PX } from '@/ui/composables/fml-preview/fml-preview-world-stroke'
+import {
+  OPENING_STROKE_CM,
+  SELECTION_HIGHLIGHT_PAD_PX,
+  worldStrokeStage,
+} from '@/ui/composables/fml-preview/fml-preview-world-stroke'
+import {
+  ARCHITECT_STROKE,
+  isArchitectPlanStyle,
+  type PlanDisplayStyleChoice,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+} from '@/ui/composables/settings/plan-display-style'
 
 const props = withDefaults(
   defineProps<{
@@ -20,13 +30,22 @@ const props = withDefaults(
     /** Dak-tab: dunne schermvaste lijnen, geen oranje nok-vulling. */
     dakMode?: boolean
     viewScale?: number
+    /** Content-layout scale (cm → stage) for outline stroke. */
+    layoutScale?: number
+    planDisplayStyle?: PlanDisplayStyleChoice
   }>(),
   {
     facadeWallPolygons: () => [],
     dakMode: false,
     viewScale: 1,
+    layoutScale: 1,
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
   },
 )
+
+const outlineStroke = computed(() => worldStrokeStage(OPENING_STROKE_CM, props.layoutScale))
+const hasOutlines = computed(() => props.renderModel.wallOutlinePolylines.length > 0)
+const architect = computed(() => isArchitectPlanStyle(props.planDisplayStyle))
 
 function wallHighlightStroke(line: RenderWall): number {
   const pad = SELECTION_HIGHLIGHT_PAD_PX / Math.max(props.viewScale, 0.01)
@@ -45,7 +64,7 @@ const highlightedWallHits = computed((): RenderWall[] => {
 <template>
   <v-group :config="{ listening: false }">
     <v-path
-      v-if="renderModel.wallFillPathData"
+      v-if="renderModel.wallFillPathData && !hasOutlines && !architect"
       :config="{
         data: renderModel.wallFillPathData,
         fill: '#111827',
@@ -56,15 +75,29 @@ const highlightedWallHits = computed((): RenderWall[] => {
       }"
     />
     <v-line
+      v-for="(points, index) in renderModel.wallOutlinePolylines"
+      :key="`wall-outline-${index}`"
+      :config="{
+        points,
+        stroke: ARCHITECT_STROKE,
+        strokeWidth: outlineStroke,
+        fillEnabled: false,
+        lineCap: 'butt',
+        lineJoin: 'miter',
+        listening: false,
+        perfectDrawEnabled: false,
+      }"
+    />
+    <v-line
       v-for="line in renderModel.ghostWallLines"
       :key="`${line.id}-ghost`"
       :config="{
         points: line.points,
-        stroke: '#94a3b8',
+        stroke: architect ? ARCHITECT_STROKE : '#94a3b8',
         strokeWidth: 1,
-        dash: [7, 5],
+        dash: architect ? undefined : [7, 5],
         lineCap: 'butt',
-        opacity: 0.85,
+        opacity: architect ? 1 : 0.85,
         listening: false,
         perfectDrawEnabled: false,
         strokeScaleEnabled: false,
@@ -76,16 +109,16 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :config="{
         points: polygon.points,
         closed: true,
-        stroke: '#64748b',
-        strokeWidth: 1,
-        dash: [7, 5],
+        stroke: architect ? ARCHITECT_STROKE : '#64748b',
+        strokeWidth: architect ? outlineStroke : 1,
+        dash: architect ? undefined : [7, 5],
         fillEnabled: false,
         lineJoin: 'miter',
         lineCap: 'butt',
-        opacity: 0.95,
+        opacity: architect ? 1 : 0.95,
         listening: false,
         perfectDrawEnabled: false,
-        strokeScaleEnabled: false,
+        strokeScaleEnabled: architect,
       }"
     />
     <v-line
@@ -140,9 +173,13 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :key="`${ridge.id}-center`"
       :config="{
         points: ridge.points,
-        stroke: settingsWallIds.includes(ridge.id) ? '#f97316' : '#0f766e',
+        stroke: settingsWallIds.includes(ridge.id)
+          ? '#f97316'
+          : architect
+            ? ARCHITECT_STROKE
+            : '#0f766e',
         strokeWidth: settingsWallIds.includes(ridge.id) ? 1.5 : 1,
-        dash: [8, 6],
+        dash: architect ? undefined : [8, 6],
         lineCap: 'butt',
         listening: false,
         perfectDrawEnabled: false,
@@ -156,9 +193,13 @@ const highlightedWallHits = computed((): RenderWall[] => {
       :key="`${outline.id}-outline-${outline.index}`"
       :config="{
         points: outline.points,
-        stroke: settingsWallIds.includes(outline.id) ? '#f97316' : '#0f766e',
+        stroke: settingsWallIds.includes(outline.id)
+          ? '#f97316'
+          : architect
+            ? ARCHITECT_STROKE
+            : '#0f766e',
         strokeWidth: 1,
-        dash: [8, 6],
+        dash: architect ? undefined : [8, 6],
         lineCap: 'butt',
         listening: false,
         perfectDrawEnabled: false,

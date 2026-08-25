@@ -5,8 +5,9 @@
  * restmaten voor gaten (muurdikte / strook zonder area). Interior = gevelgerichte
  * polygonrand op het buitenste gevelvlak (niet AABB, niet elke west-gerichte
  * inkeping). Clipper-kinks < muurdikte verdwijnen.
+ * Ticks/totaal: 0.5-area-rand schuift mee met muur-balance (zelfde faces als slicer).
  */
-import { wallFaces } from './fml-wall-geom'
+import { clampWallBalance, wallFaces, wallLeftNormal } from './fml-wall-geom'
 import type { FloorArea, Point2D, Wall } from './types'
 import type { DimensionMode } from './fml-dimension-settings'
 
@@ -32,6 +33,13 @@ export const AUTO_DIM_BAND_SLACK_CM = 4
 const FACADE_PLANE_QUANT_CM = 5
 /** Exterior: einden nabij area-union → buiten-AABB. */
 const EXTERIOR_SNAP_CM = 40
+/**
+ * Area-tick op de 0.5-face van een muur met andere balance → schuif mee.
+ * Krap: miter/clipper (woonkamer 5 cm) niet meeslepen.
+ */
+const BALANCE_FACE_SNAP_CM = 2
+/** Muur moet nagenoeg langs de kettingas wijzen (loodrechte ticks). */
+const BALANCE_FACE_ALIGN = 0.85
 
 export type AutoDimSide = 'W' | 'E' | 'N' | 'S'
 
@@ -94,6 +102,46 @@ export function wallOuterAabb(walls: Wall[]): Aabb | null {
   }
   if (!any) return null
   return { minX, minY, maxX, maxY }
+}
+
+/**
+ * Tick/envelope-coord die nog op de 0.5-face ligt, meeschuiven met keep-axis
+ * balance (lichaam = t × (balance − 0.5) langs leftNormal).
+ */
+function correctChainTickForBalance(tick: number, side: AutoDimSide, walls: Wall[]): number {
+  const useY = side === 'W' || side === 'E'
+  let best = tick
+  let bestDist = BALANCE_FACE_SNAP_CM
+  for (const wall of walls) {
+    if (!Number.isFinite(wall.thickness) || wall.thickness <= 0) continue
+    const shift = wall.thickness * (clampWallBalance(wall.balance) - 0.5)
+    if (Math.abs(shift) < 1e-6) continue
+    const n = wallLeftNormal(wall)
+    const nChain = useY ? n.y : n.x
+    if (Math.abs(nChain) < BALANCE_FACE_ALIGN) continue
+    const axis = useY ? (wall.a.y + wall.b.y) / 2 : (wall.a.x + wall.b.x) / 2
+    const half = wall.thickness / 2
+    const left0 = axis + half * nChain
+    const right0 = axis - half * nChain
+    const shiftChain = shift * nChain
+    for (const face0 of [left0, right0]) {
+      const dist = Math.abs(tick - face0)
+      if (dist <= bestDist) {
+        bestDist = dist
+        best = tick + shiftChain
+      }
+    }
+  }
+  return best
+}
+
+function correctAabbForBalance(aabb: Aabb, walls: Wall[]): Aabb {
+  return {
+    minX: correctChainTickForBalance(aabb.minX, 'N', walls),
+    maxX: correctChainTickForBalance(aabb.maxX, 'N', walls),
+    minY: correctChainTickForBalance(aabb.minY, 'W', walls),
+    maxY: correctChainTickForBalance(aabb.maxY, 'W', walls),
+  }
 }
 
 function chainSpan(aabb: Aabb, side: AutoDimSide): { lo: number; hi: number } {
@@ -243,6 +291,7 @@ function ticksForSide(
   outer: Aabb,
   mode: DimensionMode,
   minSegmentCm: number,
+  walls: Wall[],
 ): number[] {
   const innerSpan = chainSpan(inner, side)
   const outerSpan = chainSpan(outer, side)
@@ -250,7 +299,11 @@ function ticksForSide(
   const ticks: number[] = mode === 'exterior' ? [outerSpan.lo, outerSpan.hi] : []
 
   if (mode === 'interior') {
-    for (const box of band) ticks.push(...areaChainTicks(box, side))
+    for (const box of band) {
+      for (const tick of areaChainTicks(box, side)) {
+        ticks.push(correctChainTickForBalance(tick, side, walls))
+      }
+    }
   } else {
     const groups = new Map<number, AreaBox[]>()
     for (const box of band) {
@@ -260,7 +313,9 @@ function ticksForSide(
       else groups.set(key, [box])
     }
     for (const members of groups.values()) {
-      const face = members.flatMap((member) => areaChainTicks(member, side))
+      const face = members.flatMap((member) =>
+        areaChainTicks(member, side).map((tick) => correctChainTickForBalance(tick, side, walls)),
+      )
       let lo = Infinity
       let hi = -Infinity
       for (const t of face) {
@@ -353,8 +408,9 @@ export function buildAutoDimensionLines(
   }
   if (boxes.length === 0) return []
   const aabbs = boxes.map((b) => b.aabb)
-  const inner = unionAabb(aabbs)
-  if (!inner) return []
+  const innerRaw = unionAabb(aabbs)
+  if (!innerRaw) return []
+  const inner = correctAabbForBalance(innerRaw, walls)
 
   const minSeg = minWallThicknessCm(walls)
   const mode = options.dimensionMode === 'exterior' ? 'exterior' : 'interior'
@@ -363,7 +419,7 @@ export function buildAutoDimensionLines(
   for (const side of sides) {
     const band = boxes.filter((box) => isAreaOnFacadeBand(box.aabb, aabbs, side))
     if (band.length === 0) continue
-    const ticks = ticksForSide(side, band, inner, outer, mode, minSeg)
+    const ticks = ticksForSide(side, band, inner, outer, mode, minSeg, walls)
     lines.push(...placeChain(side, ticks, outer, AUTO_DIM_CHAIN_OFFSET_CM, minSeg))
   }
 

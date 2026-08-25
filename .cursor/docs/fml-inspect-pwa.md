@@ -101,15 +101,15 @@ Kamers / fixtures zonder zichtbare vragen: completeness is 0 vragen = compleet; 
 
 Eén FML-muur = één segment tussen knopen. Een EPA-gevel is vaak 3–8 segmenten. **Toch één PWA-subject.**
 
-**BouwToFML-store (v1):** groepen staan in `plan.source.settings.facadeGroups`:
+**BouwToFML-store (v1):** lidmaatschap in `plan.source.settings.facadeGroups` (extras-only; multi-lidmaatschap mag):
 
 ```
 { id: "G1", code: "VG", name: "Voorgevel", wallGuids: ["…", "…"] }
 ```
 
 - Project-breed (alle verdiepingen delen één “Voorgevel”).
-- Muur-GUID blijft de haak; geen suffix in de GUID, geen `facadeGroupId` op de muur (Floorplanner stript wall-extras).
-- In `/FML-editor` (bewerken + inspectie): aanmaken/koppelen/loshalen; tik op een segment selecteert alle leden **op die floor** (`FmlInspectHit.ids`).
+- Muur-GUID blijft de haak; een muur mag in meerdere gevelgroepen; stempel = aparte `stamp`-groep.
+- In `/FML-editor` (bewerken + inspectie): aanmaken/koppelen/loshalen; tik op een segment selecteert alle leden **op die floor** alleen als de muur in precies één gevelgroep zit.
 - PWA join: `fmlWallGuids[]` ← `facadeGroups[].wallGuids` (of subset per floor).
 
 Gedrag:

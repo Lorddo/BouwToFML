@@ -328,6 +328,88 @@ describe('buildWallRenderGeometry', () => {
     }
   })
 
+  it('+ junction of four walls fills the center (no white thickness hole)', () => {
+    const geometry = buildWallRenderGeometry([
+      { id: 'l', a: { x: -100, y: 0 }, b: { x: 0, y: 0 }, thickness: 20 },
+      { id: 'r', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 },
+      { id: 'u', a: { x: 0, y: 0 }, b: { x: 0, y: -100 }, thickness: 20 },
+      { id: 'd', a: { x: 0, y: 0 }, b: { x: 0, y: 100 }, thickness: 20 },
+    ])
+    expect(geometry.fillComponents.length).toBe(1)
+    expect(geometry.fillComponents[0].rings.length).toBe(1)
+    expect(pointInFillComponents({ x: 0, y: 0 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 5, y: 5 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: -5, y: -5 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 50, y: 0 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 0, y: 50 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 40, y: 40 }, geometry.fillComponents)).toBe(false)
+  })
+
+  it('slightly bent T fills the junction (no hole from inset sector-miters)', () => {
+    const geometry = buildWallRenderGeometry([
+      { id: 'l', a: { x: -100, y: 3 }, b: { x: 0, y: 0 }, thickness: 20 },
+      { id: 'r', a: { x: 0, y: 0 }, b: { x: 100, y: 3 }, thickness: 20 },
+      { id: 'd', a: { x: 0, y: 0 }, b: { x: 0, y: 100 }, thickness: 20 },
+    ])
+    expect(geometry.fillComponents.length).toBe(1)
+    expect(geometry.fillComponents[0].rings.length).toBe(1)
+    expect(pointInFillComponents({ x: 0, y: 0 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: -8, y: -8 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 8, y: -8 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: 0, y: 40 }, geometry.fillComponents)).toBe(true)
+  })
+
+  it('ladder koven stay open, including the bay next to a T-in', () => {
+    const t = 20
+    const x0 = 0
+    const x1 = 32
+    const ys = [0, 32, 64, 96, 128]
+    const walls: Array<{
+      id: string
+      a: { x: number; y: number }
+      b: { x: number; y: number }
+      thickness: number
+    }> = []
+    for (let i = 0; i < ys.length - 1; i += 1) {
+      walls.push({
+        id: `L${i}`,
+        a: { x: x0, y: ys[i] },
+        b: { x: x0, y: ys[i + 1] },
+        thickness: t,
+      })
+      walls.push({
+        id: `R${i}`,
+        a: { x: x1, y: ys[i] },
+        b: { x: x1, y: ys[i + 1] },
+        thickness: t,
+      })
+    }
+    for (let i = 0; i < ys.length; i += 1) {
+      walls.push({
+        id: `S${i}`,
+        a: { x: x0, y: ys[i] },
+        b: { x: x1, y: ys[i] },
+        thickness: t,
+      })
+    }
+    walls.push({
+      id: 'tin',
+      a: { x: x1, y: ys[2] },
+      b: { x: x1 + 80, y: ys[2] },
+      thickness: t,
+    })
+
+    const geometry = buildWallRenderGeometry(walls)
+    expect(geometry.fillComponents[0].rings.length).toBeGreaterThanOrEqual(5)
+    expect(pointInFillComponents({ x: x0, y: 64 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: x1, y: 64 }, geometry.fillComponents)).toBe(true)
+    expect(pointInFillComponents({ x: x1 + 40, y: 64 }, geometry.fillComponents)).toBe(true)
+    for (let i = 0; i < ys.length - 1; i += 1) {
+      const mid = { x: (x0 + x1) / 2, y: (ys[i] + ys[i + 1]) / 2 }
+      expect(pointInFillComponents(mid, geometry.fillComponents), `kove ${i}`).toBe(false)
+    }
+  })
+
   it('per-wall overlay polygons stay simple quads', () => {
     const geometry = buildWallRenderGeometry([
       { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 },

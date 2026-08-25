@@ -7,6 +7,7 @@ import {
   parseUserSettingsJson,
   resetUserSettingsToFactory,
   saveUserSettings,
+  setShowCanvasGrid,
   UserSettingsParseError,
 } from '@/ui/composables/settings/user-settings'
 import { createDefaultFloorFmlDefaults } from '@/ui/composables/project/defaults'
@@ -80,7 +81,26 @@ describe('user-settings', () => {
       slicerOffsetSnapCm: 50,
       planDisplayStyle: 'editor',
       ridgeDisplayWidthCm: 10,
+      showCanvasGrid: true,
     })
+  })
+
+  it('showCanvasGrid factory true; missing → true; false preserved', () => {
+    expect(createFactoryUserSettings().fmlViewer.showCanvasGrid).toBe(true)
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.showCanvasGrid).toBe(true)
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { showCanvasGrid: false },
+      }).fmlViewer.showCanvasGrid,
+    ).toBe(false)
+    const next = createFactoryUserSettings()
+    next.fmlViewer.showCanvasGrid = false
+    saveUserSettings(next)
+    expect(loadUserSettings().fmlViewer.showCanvasGrid).toBe(false)
+    expect(setShowCanvasGrid(true)).toBe(true)
+    expect(loadUserSettings().fmlViewer.showCanvasGrid).toBe(true)
   })
 
   it('normalize missing/invalid locale → en; accepts nl/th', () => {
@@ -231,10 +251,11 @@ describe('user-settings', () => {
       slicerOffsetSnapCm: 50,
       planDisplayStyle: 'editor',
       ridgeDisplayWidthCm: 10,
+      showCanvasGrid: true,
     })
   })
 
-  it('normalize planDisplayStyle: missing/invalid → editor; accepts bouw', () => {
+  it('normalize planDisplayStyle: missing/invalid → editor; accepts bouw + architect', () => {
     expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.planDisplayStyle).toBe(
       'editor',
     )
@@ -244,7 +265,7 @@ describe('user-settings', () => {
         defaults: {},
         fmlViewer: { planDisplayStyle: 'architect' },
       }).fmlViewer.planDisplayStyle,
-    ).toBe('editor')
+    ).toBe('architect')
     expect(
       normalizeUserSettings({
         version: 1,
@@ -252,6 +273,13 @@ describe('user-settings', () => {
         fmlViewer: { planDisplayStyle: 'bouw' },
       }).fmlViewer.planDisplayStyle,
     ).toBe('bouw')
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { planDisplayStyle: 'nope' },
+      }).fmlViewer.planDisplayStyle,
+    ).toBe('editor')
   })
 
   it('parseUserSettingsJson rejects bad version / missing defaults', () => {

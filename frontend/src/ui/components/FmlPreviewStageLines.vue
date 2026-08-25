@@ -5,6 +5,12 @@ import type {
   RenderDimension,
   RenderLine,
 } from '@/ui/composables/fml-preview/fml-preview-render-types'
+import {
+  ARCHITECT_STROKE,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  isArchitectPlanStyle,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 
 const props = withDefaults(
   defineProps<{
@@ -12,11 +18,16 @@ const props = withDefaults(
     dimensions: RenderDimension[]
     settingsLineId: string | null
     hoveredLineId: string | null
+    selectedDimensionId?: string | null
+    hoveredDimensionId?: string | null
     /** Viewport zoom — maattekst blijft schermgrootte. */
     viewScale?: number
+    planDisplayStyle?: PlanDisplayStyleChoice
   }>(),
-  { viewScale: 1 },
+  { viewScale: 1, planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE },
 )
+
+const architect = computed(() => isArchitectPlanStyle(props.planDisplayStyle))
 
 /** Scherm-px voor maat-label (niet meezoomen zoals kamerbenaming). */
 const DIM_LABEL_SCREEN_PX = 11
@@ -40,17 +51,27 @@ const dimensionsWithLabel = computed(() =>
     showLabel: dimensionLabelVisibleOnScreen(dimLengthStage(dim), props.viewScale),
   })),
 )
+
+function dimStroke(dimId: string): string {
+  if (dimId === props.selectedDimensionId || dimId === props.hoveredDimensionId) return '#f97316'
+  return architect.value ? ARCHITECT_STROKE : '#334155'
+}
+
+function lineStroke(line: RenderLine): string {
+  if (props.settingsLineId === line.id || props.hoveredLineId === line.id) return '#f97316'
+  return architect.value ? ARCHITECT_STROKE : line.stroke
+}
 </script>
 
 <template>
   <v-group>
-    <!-- Maatlijnen: lijn/ticks schermvast; tekst schermgrootte + LOD -->
+    <!-- Maatlijnen: lijn/ticks wereld-cm (40 cm eindstreep); stroke + tekst schermvast -->
     <v-group v-for="{ dim, showLabel } in dimensionsWithLabel" :key="`dim-${dim.id}`">
       <v-line
         :config="{
           points: dim.points,
-          stroke: '#334155',
-          strokeWidth: 1,
+          stroke: dimStroke(dim.id),
+          strokeWidth: dim.id === selectedDimensionId ? 2 : 1,
           strokeScaleEnabled: false,
           listening: false,
         }"
@@ -58,8 +79,8 @@ const dimensionsWithLabel = computed(() =>
       <v-line
         :config="{
           points: dim.tickA,
-          stroke: '#334155',
-          strokeWidth: 1,
+          stroke: dimStroke(dim.id),
+          strokeWidth: dim.id === selectedDimensionId ? 2 : 1,
           strokeScaleEnabled: false,
           listening: false,
         }"
@@ -67,8 +88,8 @@ const dimensionsWithLabel = computed(() =>
       <v-line
         :config="{
           points: dim.tickB,
-          stroke: '#334155',
-          strokeWidth: 1,
+          stroke: dimStroke(dim.id),
+          strokeWidth: dim.id === selectedDimensionId ? 2 : 1,
           strokeScaleEnabled: false,
           listening: false,
         }"
@@ -81,7 +102,7 @@ const dimensionsWithLabel = computed(() =>
           text: dim.label,
           fontSize: labelFont,
           fontStyle: 'bold',
-          fill: '#1e293b',
+          fill: architect ? ARCHITECT_STROKE : '#1e293b',
           stroke: '#ffffff',
           strokeWidth: labelStroke,
           fillAfterStrokeEnabled: true,
@@ -100,7 +121,7 @@ const dimensionsWithLabel = computed(() =>
       :key="line.id"
       :config="{
         points: line.points,
-        stroke: line.stroke,
+        stroke: lineStroke(line),
         strokeWidth:
           settingsLineId === line.id || hoveredLineId === line.id
             ? line.strokeWidth + 1

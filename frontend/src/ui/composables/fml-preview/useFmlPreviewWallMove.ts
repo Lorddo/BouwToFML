@@ -69,9 +69,11 @@ export function useFmlPreviewWallMove(options: {
       labelCm.value = null
       return
     }
-    measureLengthCm.value = Math.abs(draft.delta)
+    const current = draft
+    measureLengthCm.value = Math.abs(current.delta)
     const wall =
-      options.editor.selectableWalls.value.find((item) => item.id === draft.wallId) ?? draft.wall
+      options.editor.selectableWalls.value.find((item) => item.id === current.wallId) ??
+      current.wall
     labelCm.value = wallMid(wall)
   }
 

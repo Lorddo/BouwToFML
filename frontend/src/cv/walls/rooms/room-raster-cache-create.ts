@@ -111,6 +111,7 @@ export function createRoomRasterCache(state: SerializedRoomClassifyState): RoomR
     state: normalized,
     faceOverrides: new Map(),
     pinnedRoots: new Set(),
+    maskKeepDoorFaceIds: new Set(),
     previewMaskUrl: null,
     previewMaskCanvas: null,
     faceDual: null,
@@ -145,6 +146,10 @@ export function serializeFaceOverrides(cache: RoomRasterCache): Array<[number, R
 
 export function serializePinnedRoots(cache: RoomRasterCache): number[] {
   return [...cache.pinnedRoots]
+}
+
+export function serializeMaskKeepDoorFaceIds(cache: RoomRasterCache): number[] {
+  return [...cache.maskKeepDoorFaceIds].sort((a, b) => a - b)
 }
 
 export function applySerializedFaceOverrides(

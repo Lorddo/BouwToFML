@@ -5,6 +5,7 @@ import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import {
   serializeFaceOverrides,
   serializePinnedRoots,
+  serializeMaskKeepDoorFaceIds,
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
@@ -31,6 +32,7 @@ export async function finalizeWallDetection(ctx: {
       roomClassifyState?: SerializedRoomClassifyState
       faceOverrides?: Array<[number, RoomRasterClass]>
       pinnedRoots?: number[]
+      maskKeepDoorFaceIds?: number[]
     },
   ) => Promise<boolean>
   ensureEditableCacheAfterFinalize: (output: ExtractionOutput | null | undefined) => Promise<void>
@@ -49,6 +51,7 @@ export async function finalizeWallDetection(ctx: {
       roomClassifyState: cache.state,
       faceOverrides: serializeFaceOverrides(cache),
       pinnedRoots: serializePinnedRoots(cache),
+      maskKeepDoorFaceIds: serializeMaskKeepDoorFaceIds(cache),
     },
   )
   const finalized = ctx.getWallsOutput()

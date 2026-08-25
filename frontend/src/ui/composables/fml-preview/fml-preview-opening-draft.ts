@@ -86,8 +86,10 @@ export function computeOpeningDraftState(
   const widths = openings.map((opening) => Math.round(opening.width))
   const heights = openings.map((opening) => resolveOpeningHeight(opening))
   const sillZs = openings
-    .filter((opening) => opening.type === 'window')
-    .map((opening) => resolveWindowSillZ(opening))
+    .filter((opening) => opening.type === 'window' || opening.type === 'door')
+    .map((opening) =>
+      opening.type === 'window' ? resolveWindowSillZ(opening) : Math.round(opening.z ?? 0),
+    )
   const doorOpenings = openings.filter((opening) => opening.type === 'door')
   const windowOpenings = openings.filter((opening) => opening.type === 'window')
   const mirrorable = openings.filter(
@@ -104,7 +106,7 @@ export function computeOpeningDraftState(
   const heightFirst =
     heights[0] ??
     (openingType === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM)
-  const sillFirst = sillZs[0] ?? DEFAULT_FML_WINDOW_SILL_Z_CM
+  const sillFirst = sillZs[0] ?? (openingType === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0)
   const hingeFirst = hinges[0] ?? true
   const swingFirst = swings[0] ?? false
   const bovenlichtDefaultFallback =

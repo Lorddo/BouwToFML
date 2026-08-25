@@ -137,7 +137,7 @@ export function isRidgeWallId(plan: FloorPlan | null | undefined, wallGuid: stri
   return false
 }
 
-export function isRidgeWall(wall: Pick<Wall, 'id' | 'extras'> | null | undefined): boolean {
+export function isRidgeWall(wall: Pick<Wall, 'extras'> | null | undefined): boolean {
   return wall?.extras?.[RIDGE_WALL_EXTRA] === true
 }
 
@@ -265,8 +265,12 @@ function emptyRidgeDesign(): FloorDesign {
 }
 
 /**
- * Zorg dat het Dak-design bestaat. Schrijft actieve plat-velden eerst terug
- * zodat design 0 niet wordt overschreven.
+ * Zorg dat het Dak-design bestaat. Alleen FML-editor / aanzichten
+ * (`createBlankFloor`, import, Dak-tab). Niet aanroepen vanuit detectie
+ * (`extractionToPlan`) — die flush schreef ooit ruwe L10-muren in designs[0].
+ *
+ * Schrijft actieve plat-velden eerst terug zodat design 0 niet wordt
+ * overschreven.
  */
 export function ensureRidgeDesign(floor: Floor): { floor: Floor; designIndex: number } {
   const flushed = flushActiveDesign(floor)

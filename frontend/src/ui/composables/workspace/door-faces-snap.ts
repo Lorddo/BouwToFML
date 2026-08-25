@@ -6,6 +6,7 @@ import { decodeMaskRle } from '@/cv/util/binary-mask-rle'
 import { ensureFaceDualSpace, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import {
   attachDoorframesToResolvedDoors,
+  dedupeOverlappingBoundDoors,
   filterDoorsByKeptWallMaskContact,
   orientBoundDoors,
   snapDoorsToWalls,
@@ -232,6 +233,8 @@ export async function snapResolvedDoorsToWalls(
     referenceWallThicknessPx: thickness,
     classificationByLabel: classification,
   })
+  // ESC:D-63 (A) — R-28-achtige 1D-dedupe vóór L12.
+  const deduped = dedupeOverlappingBoundDoors(snapped)
 
   const whiteLabels =
     state.rawLabelsData instanceof Int32Array
@@ -246,7 +249,7 @@ export async function snapResolvedDoorsToWalls(
     const cv = await waitForOpenCV()
     oriented = orientBoundDoors({
       cv,
-      boundDoors: snapped,
+      boundDoors: deduped,
       resolvedDoors: keptDoors,
       segments,
       whiteLabelsData: whiteLabels,
@@ -257,7 +260,7 @@ export async function snapResolvedDoorsToWalls(
     // ESC:O-36 (D)
   } catch (error) {
     noteSwallowedError('O-36', 'door-faces-snap.orientBoundDoors', error, {
-      boundDoors: snapped.length,
+      boundDoors: deduped.length,
       effect: 'L12 leeg — deuren verdwijnen uit FML',
     })
     oriented = []
@@ -265,7 +268,7 @@ export async function snapResolvedDoorsToWalls(
   }
 
   return {
-    bound: snapped,
+    bound: deduped,
     oriented,
     nextResolvedDoors,
     purgeKeptFaceIds,

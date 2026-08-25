@@ -22,6 +22,11 @@ export interface RoomRasterCache {
   state: SerializedRoomClassifyState
   faceOverrides: Map<number, RoomRasterClass>
   pinnedRoots: Set<number>
+  /**
+   * Door-faceIds van dunne Stage-2 hyps (depth ≤ max muur-ref) die bij finalize
+   * in het muurmasker blijven (raam-semantiek). Hyp/class blijft `door` voor L11.
+   */
+  maskKeepDoorFaceIds: Set<number>
   /** Legacy URL — live pad gebruikt previewMaskCanvas. */
   previewMaskUrl: string | null
   /** Persistente live-review overlay (geen PNG roundtrip). */

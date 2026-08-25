@@ -1,49 +1,39 @@
 /* Shared FmlPanel field styles (Heights + Thickness). Unscoped. */
 
 .fml-limit-field {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: auto minmax(7.25rem, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   font-size: 11px;
   color: #334155;
 }
 
 .fml-limit-field > span {
-  flex: 1;
   min-width: 0;
   line-height: 1.2;
 }
 
-.fml-limit-field input {
-  width: 56px;
-  height: 26px;
-  padding: 3px 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 12px;
-  box-sizing: border-box;
-  flex-shrink: 0;
+.fml-limit-field .scale-length-input {
+  width: 100%;
+  min-width: 0;
 }
 
-.fml-limit-field input.band-input {
-  width: 52px;
+.fml-limit-field .band-input {
   border-color: #93c5fd;
   background: #f8fbff;
 }
 
-.fml-limit-field input:disabled {
+.fml-limit-field .scale-length-input:has(input:disabled) {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .fml-limit-input-row {
   display: grid;
-  grid-template-columns: 56px 26px 52px;
+  grid-template-columns: minmax(6.5rem, 1fr) 26px minmax(6.5rem, 1fr);
   gap: 4px;
   align-items: center;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .fml-limit-spacer {

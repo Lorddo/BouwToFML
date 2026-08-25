@@ -289,7 +289,7 @@ function buildWideDoubleGlyphs(params: {
 /** Blad-rechthoek in de muurgap (along wall), dikte = min(leaf, wall). */
 function leafQuadInGap(
   start: Point,
-  end: Point,
+  _end: Point,
   wallUnit: Point,
   along0: number,
   along1: number,
@@ -321,7 +321,7 @@ function leafQuadInGap(
 
 function glassPairAlongGap(
   start: Point,
-  end: Point,
+  _end: Point,
   wallUnit: Point,
   along0: number,
   along1: number,

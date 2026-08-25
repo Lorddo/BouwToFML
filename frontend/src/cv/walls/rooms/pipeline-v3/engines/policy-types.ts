@@ -123,7 +123,7 @@ export interface CollapsePolicy {
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** L9 only — L7/L10 must be false. */
   enableStubCollapse: boolean
-  /** L9 only — axis-cluster coverage absorb. */
+  /** L8+L9 — axis-cluster coverage absorb (L8: reveal hidden I-spurs before prune). */
   enableParallelCover: boolean
   /** L10 only — absorb hard-L ↔ fake-L micro corner jogs. */
   enableMicroCornerAbsorb: boolean

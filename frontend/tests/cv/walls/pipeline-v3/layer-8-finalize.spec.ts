@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Segment } from '@/cv/port/wallGraph'
 import { buildJunctionGraph } from '@/cv/port/wallJunctionGraph'
+import { parallelCoverAbsorb } from '@/cv/walls/rooms/pipeline-v3/engines/collapse'
 import { pruneISpurs } from '@/cv/walls/rooms/pipeline-v3/engines/prune'
 import { runLayer8Finalize } from '@/cv/walls/rooms/pipeline-v3/layer-8-finalize'
 import {
+  layer8CoverPolicy,
   layer8HvPolicy,
   layer8PrunePolicy,
   layer8WeldPolicy,
@@ -23,6 +25,14 @@ function offsetSegments(segments: Segment[], dx: number, dy: number): Segment[] 
     ...segment,
     a: { x: segment.a.x + dx, y: segment.a.y + dy },
     b: { x: segment.b.x + dx, y: segment.b.y + dy },
+  }))
+}
+
+function swapXY(segments: Segment[]): Segment[] {
+  return segments.map((segment) => ({
+    ...segment,
+    a: { x: segment.a.y, y: segment.a.x },
+    b: { x: segment.b.y, y: segment.b.x },
   }))
 }
 
@@ -65,6 +75,8 @@ describe('V3 L8 native gate', () => {
     expect(layer8PrunePolicy.mode).toBe('once-ltx')
     expect(layer8PrunePolicy.terminalKinds).toEqual(['L', 'T', 'X'])
     expect(layer8PrunePolicy.protectStructuralTx).toBe(true)
+    expect(layer8CoverPolicy.enableParallelCover).toBe(true)
+    expect(layer8CoverPolicy.enableStubCollapse).toBe(false)
   })
 
   it('HV policy is bare (≠ L4 seal thresholds)', () => {
@@ -157,8 +169,9 @@ describe('pruneISpurs L8 once-ltx', () => {
     })
   })
 
-  it('documenteert parallel L/T als L9-restje (geen I-spur, offset-invariant)', () => {
+  it('documenteert parallel L/T als prune-only restje (geen I-spur, offset-invariant)', () => {
     // Through-V overlaps short branch between T@907 and L@886 — not an I-spur.
+    // Cover (runLayer8Finalize) T-splits this; prune alone must leave it.
     const base: Segment[] = [
       { a: { x: 1515.26, y: 907.7 }, b: { x: 1515.26, y: 567.4 } },
       { a: { x: 1515.26, y: 907.7 }, b: { x: 1515.26, y: 886.58 } },
@@ -190,5 +203,109 @@ describe('runLayer8Finalize', () => {
     expect(result.facesFinalized).toHaveLength(1)
     expect(result.totalSegmentsFinalized).toBeGreaterThan(0)
     expect(result.finalizeStats.removedPathCount).toBeGreaterThanOrEqual(0)
+  })
+
+  it('overlap-V die I verbergt: cover+prune haalt deurstomp weg (offset-invariant)', () => {
+    // WhatsApp 2026-08-24 12.55 probe @(1380,634): long V covers short V,
+    // tip stays L-180° until cover T-splits; then I-spur into the door prunes.
+    const base: Segment[] = [
+      { a: { x: 1381.058, y: 637.934 }, b: { x: 1381.058, y: 625.5 } },
+      { a: { x: 1381.058, y: 625.5 }, b: { x: 1381.058, y: 634.596 } },
+      { a: { x: 1381.058, y: 634.596 }, b: { x: 1214.486, y: 634.596 } },
+      { a: { x: 1381.058, y: 637.934 }, b: { x: 1393, y: 637.934 } },
+      { a: { x: 1393, y: 637.934 }, b: { x: 1728.013, y: 637.934 } },
+    ]
+    ;[
+      [0, 0],
+      [1234, 987],
+    ].forEach(([dx, dy]) => {
+      const shifted = offsetSegments(base, dx, dy)
+      const policy = resolveLayer8FinalizePolicy(30)
+      const pruneOnly = pruneISpurs(shifted, policy.prune)
+      expect(pruneOnly.pruneStats.removedPathCount).toBe(0)
+
+      const covered = parallelCoverAbsorb(shifted, policy.cover)
+      expect(covered.stats.coveredCount).toBeGreaterThanOrEqual(1)
+      const pruned = pruneISpurs(covered.segments, policy.prune)
+      expect(pruned.pruneStats.removedPathCount).toBeGreaterThanOrEqual(1)
+
+      const doorTip = { x: 1381.058 + dx, y: 625.5 + dy }
+      const graph = buildJunctionGraph(pruned.segments, 0)
+      expect(
+        graph.nodes.some(
+          (node) => node.kind === 'I' && Math.hypot(node.x - doorTip.x, node.y - doorTip.y) < 1,
+        ),
+      ).toBe(false)
+      expect(
+        pruned.segments.some((seg) => {
+          const lo = Math.min(seg.a.y, seg.b.y)
+          return Math.abs(seg.a.x - seg.b.x) < 1 && lo < 630 + dy
+        }),
+      ).toBe(false)
+
+      const result = runLayer8Finalize({
+        layer7: makeLayer7(shifted),
+        referenceWallThicknessPx: 30,
+      })
+      expect(result.finalizeStats.parallelCovered).toBeGreaterThanOrEqual(1)
+      expect(result.finalizeStats.removedPathCount).toBeGreaterThanOrEqual(1)
+      expect(
+        result.allSegmentsFinalized.some((seg) => {
+          const lo = Math.min(seg.a.y, seg.b.y)
+          return Math.abs(seg.a.x - seg.b.x) < 1 && lo < 630 + dy
+        }),
+      ).toBe(false)
+    })
+  })
+
+  it('overlap-H die I verbergt: cover+prune haalt stomp weg (andersom, offset-invariant)', () => {
+    const verticalProbe: Segment[] = [
+      { a: { x: 1381.058, y: 637.934 }, b: { x: 1381.058, y: 625.5 } },
+      { a: { x: 1381.058, y: 625.5 }, b: { x: 1381.058, y: 634.596 } },
+      { a: { x: 1381.058, y: 634.596 }, b: { x: 1214.486, y: 634.596 } },
+      { a: { x: 1381.058, y: 637.934 }, b: { x: 1393, y: 637.934 } },
+      { a: { x: 1393, y: 637.934 }, b: { x: 1728.013, y: 637.934 } },
+    ]
+    const base = swapXY(verticalProbe)
+    ;[
+      [0, 0],
+      [1234, 987],
+    ].forEach(([dx, dy]) => {
+      const shifted = offsetSegments(base, dx, dy)
+      const policy = resolveLayer8FinalizePolicy(30)
+      expect(pruneISpurs(shifted, policy.prune).pruneStats.removedPathCount).toBe(0)
+
+      const covered = parallelCoverAbsorb(shifted, policy.cover)
+      expect(covered.stats.coveredCount).toBeGreaterThanOrEqual(1)
+      const pruned = pruneISpurs(covered.segments, policy.prune)
+      expect(pruned.pruneStats.removedPathCount).toBeGreaterThanOrEqual(1)
+
+      const doorTip = { x: 625.5 + dx, y: 1381.058 + dy }
+      const graph = buildJunctionGraph(pruned.segments, 0)
+      expect(
+        graph.nodes.some(
+          (node) => node.kind === 'I' && Math.hypot(node.x - doorTip.x, node.y - doorTip.y) < 1,
+        ),
+      ).toBe(false)
+      expect(
+        pruned.segments.some((seg) => {
+          const lo = Math.min(seg.a.x, seg.b.x)
+          return Math.abs(seg.a.y - seg.b.y) < 1 && lo < 630 + dx
+        }),
+      ).toBe(false)
+
+      const result = runLayer8Finalize({
+        layer7: makeLayer7(shifted),
+        referenceWallThicknessPx: 30,
+      })
+      expect(result.finalizeStats.parallelCovered).toBeGreaterThanOrEqual(1)
+      expect(result.finalizeStats.removedPathCount).toBeGreaterThanOrEqual(1)
+      expect(
+        result.allSegmentsFinalized.some((seg) => {
+          const lo = Math.min(seg.a.x, seg.b.x)
+          return Math.abs(seg.a.y - seg.b.y) < 1 && lo < 630 + dx
+        }),
+      ).toBe(false)
+    })
   })
 })

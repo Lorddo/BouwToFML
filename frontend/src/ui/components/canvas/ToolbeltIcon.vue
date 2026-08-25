@@ -296,6 +296,18 @@ const strokeAttrs = {
       <rect x="16" y="16" width="4.5" height="4.5" rx="0.8" />
     </g>
 
+    <!-- Guide grid off: H/V lines + cancel slash -->
+    <g v-else-if="name === 'grid_off'" v-bind="strokeAttrs">
+      <line x1="4" y1="8" x2="20" y2="8" />
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="16" x2="20" y2="16" />
+      <line x1="8" y1="4" x2="8" y2="20" />
+      <line x1="12" y1="4" x2="12" y2="20" />
+      <line x1="16" y1="4" x2="16" y2="20" />
+      <line x1="5" y1="5" x2="19" y2="19" />
+      <line x1="19" y1="5" x2="5" y2="19" />
+    </g>
+
     <!-- NEW: door swing (open door in frame) -->
     <g v-else-if="name === 'swing'" v-bind="strokeAttrs">
       <!-- frame: top + right jamb -->

@@ -5,8 +5,14 @@ import {
   areaLabelKonvaConfig,
   areaLabelVisibleOnScreen,
 } from '@/ui/composables/fml-preview/fml-preview-render-areas'
-import { resolveInspectFill } from '@/ui/composables/fml-preview/fml-inspect'
+import { inspectColorFor, resolveInspectFill } from '@/ui/composables/fml-preview/fml-inspect'
 import type { RenderArea } from '@/ui/composables/fml-preview/fml-preview-render-types'
+import {
+  ARCHITECT_AREA_FILL,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  isArchitectPlanStyle,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 
 const props = withDefaults(
   defineProps<{
@@ -22,10 +28,18 @@ const props = withDefaults(
     labelsVisible?: boolean
     /** fill = vlakken; labels = benaming bovenop. */
     layer?: 'fill' | 'labels' | 'all'
+    planDisplayStyle?: PlanDisplayStyleChoice
   }>(),
-  { layer: 'all', layoutScale: 1, viewScale: 1, labelsVisible: true },
+  {
+    layer: 'all',
+    layoutScale: 1,
+    viewScale: 1,
+    labelsVisible: true,
+    planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
+  },
 )
 
+const architect = computed(() => isArchitectPlanStyle(props.planDisplayStyle))
 const showFill = computed(() => props.layer !== 'labels')
 const showLabels = computed(() => props.layer !== 'fill' && props.labelsVisible)
 const fillAreas = computed(() => (showFill.value ? props.areas : []))
@@ -37,12 +51,22 @@ const labeledAreas = computed(() => {
 })
 
 function areaFill(area: RenderArea): string {
+  if (architect.value) {
+    // Selectie/inspect behouden voor edit; anders wit (alleen UI).
+    const inspect = inspectColorFor(area.id, props.inspectColors)
+    if (inspect) return inspect
+    if (props.settingsAreaId === area.id) return '#f97316'
+    if (props.hoveredAreaId === area.id) return '#93c5fd'
+    return ARCHITECT_AREA_FILL
+  }
   return resolveInspectFill(area.id, props.inspectColors, area.fill)
 }
 
 function areaOpacity(areaId: string): number {
   if (props.settingsAreaId === areaId) return 0.72
   if (props.hoveredAreaId === areaId) return 0.58
+  // Architect: volle witte plaat (geen pastel door opacity).
+  if (architect.value) return 1
   return 0.45
 }
 </script>
@@ -66,7 +90,13 @@ function areaOpacity(areaId: string): number {
       v-for="area in labeledAreas"
       :key="`${area.id}-label`"
       :config="
-        areaLabelKonvaConfig(area.label ?? '', area.labelX, area.labelY, '#1f2937', fontSizeStage)
+        areaLabelKonvaConfig(
+          area.label ?? '',
+          area.labelX,
+          area.labelY,
+          architect ? '#111827' : '#1f2937',
+          fontSizeStage,
+        )
       "
     />
   </v-group>

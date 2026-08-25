@@ -1,6 +1,6 @@
 /** Huidige FML-selectie blijft binnen één soort tot de gebruiker leeg/area klikt. */
 
-export type FmlStickySelectKind = 'wall' | 'opening' | 'item' | 'annotation' | 'area'
+export type FmlStickySelectKind = 'wall' | 'opening' | 'item' | 'annotation' | 'area' | 'dimension'
 
 export function resolveFmlStickySelectKind(state: {
   hasWall: boolean
@@ -9,11 +9,13 @@ export function resolveFmlStickySelectKind(state: {
   hasItem: boolean
   hasAnnotation: boolean
   hasArea: boolean
+  hasDimension?: boolean
 }): FmlStickySelectKind | null {
   if (state.hasWall || state.hasJunction) return 'wall'
   if (state.hasOpening) return 'opening'
   if (state.hasItem) return 'item'
   if (state.hasAnnotation) return 'annotation'
+  if (state.hasDimension) return 'dimension'
   if (state.hasArea) return 'area'
   return null
 }

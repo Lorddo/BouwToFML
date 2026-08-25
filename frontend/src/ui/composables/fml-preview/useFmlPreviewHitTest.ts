@@ -114,11 +114,16 @@ export function useFmlPreviewHitTest(
     return best
   }
 
-  function hitTestOpeningTargetsAtCm(cm: Point2D, targets: OpeningHitTarget[]): string | null {
+  function hitTestOpeningTargetsAtCm(
+    cm: Point2D,
+    targets: OpeningHitTarget[],
+    preferId?: string | null,
+  ): string | null {
     if (targets.length === 0) return null
     const tol = screenPxToCmTolerance(hitPx(16, 32))
     let bestId: string | null = null
     let bestScore = Number.POSITIVE_INFINITY
+    const polygonHits: string[] = []
 
     for (const target of targets) {
       if (target.hitPoints.length < 4 || target.gapPoints.length < 6) continue
@@ -135,6 +140,7 @@ export function useFmlPreviewHitTest(
       }
 
       if (pointInPolygon(cm, polygon)) {
+        polygonHits.push(target.id)
         const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
         const score = Math.hypot(cm.x - center.x, cm.y - center.y)
         if (score < bestScore) {
@@ -151,17 +157,18 @@ export function useFmlPreviewHitTest(
       }
     }
 
+    if (preferId && polygonHits.includes(preferId)) return preferId
     return bestId
   }
 
-  function hitTestDoorAtCm(cm: Point2D): string | null {
-    return hitTestOpeningTargetsAtCm(cm, renderDoorGroups.value)
+  function hitTestDoorAtCm(cm: Point2D, preferId?: string | null): string | null {
+    return hitTestOpeningTargetsAtCm(cm, renderDoorGroups.value, preferId)
   }
 
-  function hitTestOpeningAtCm(cm: Point2D): string | null {
+  function hitTestOpeningAtCm(cm: Point2D, preferId?: string | null): string | null {
     const doors = renderDoorGroups.value
     const windows = renderWindows?.value ?? []
-    return hitTestOpeningTargetsAtCm(cm, [...doors, ...windows])
+    return hitTestOpeningTargetsAtCm(cm, [...doors, ...windows], preferId)
   }
 
   function clientToCm(clientX: number, clientY: number): Point2D | null {

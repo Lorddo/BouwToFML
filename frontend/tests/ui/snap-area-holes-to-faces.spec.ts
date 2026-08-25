@@ -4,12 +4,21 @@ import { buildAreaSideDims } from '@/ui/composables/fml-preview/fml-preview-area
 import { regenerateFloorAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
 import { snapHoleRingsToWallFaces } from '@/ui/composables/fml-preview/snap-area-holes-to-faces'
 
-function wall(id: string, ax: number, ay: number, bx: number, by: number, thickness = 10): Wall {
+function wall(
+  id: string,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  thickness = 10,
+  balance = 0.5,
+): Wall {
   return {
     id,
     a: { x: ax, y: ay },
     b: { x: bx, y: by },
     thickness,
+    balance,
     openings: [],
   }
 }
@@ -113,6 +122,19 @@ describe('regenerateFloorAreas typed inner', () => {
     const sloped = dims.find((d) => Math.abs(d.a.y - d.b.y) > 5 && Math.abs(d.a.x - d.b.x) > 5)
     expect(sloped).toBeTruthy()
     expect(sloped!.lengthCm).not.toBeCloseTo(Math.hypot(60, 20), 1)
+  })
+
+  it('west balance 0: binnenbreedte 390, niet 380 (face, niet hartlijn/2)', () => {
+    const walls = [
+      wall('n', 0, 0, 400, 0, 20),
+      wall('s', 0, 300, 400, 300, 20),
+      wall('w', 0, 0, 0, 300, 20, 0),
+      wall('e', 400, 0, 400, 300, 20),
+    ]
+    const next = regenerateFloorAreas(floorOf(walls))
+    const dims = buildAreaSideDims(next.areas, { unit: 'cm' })
+    const lengths = dims.map((d) => Math.round(d.lengthCm * 10) / 10).sort((a, b) => a - b)
+    expect(lengths).toEqual([280, 280, 390, 390])
   })
 
   it('houdt 0,2 × 1,0 m binnenmaat bij 10 cm muren (geen 19,9 / 99,6)', () => {

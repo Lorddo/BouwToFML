@@ -47,12 +47,13 @@ export type DiagnosisReportPayload = {
   meta: DiagnosisReportMeta
   /**
    * Stap-1 colour underlay (rotation/crop/gum baked) as JPEG/PNG data-URL.
-   * JPEG is used at export to keep the HTML shareable.
+   * JPEG is used at export to keep the HTML shareable. Rendered clean (no rulers)
+   * so the scan can be saved and re-run through detection.
    */
   originalPng: string | null
-  /** Stap-1 H/V schaallinialen in dezelfde pixels als originalPng. */
+  /** Stap-1 H/V schaallinialen in dezelfde pixels als originalPng; overlay op B/W. */
   scaleOverlay: DiagnosisScaleOverlay | null
-  /** Effective or base wall B/W as PNG data-URL. */
+  /** Effective or base wall B/W as PNG data-URL. Hosts the scale-ruler overlay. */
   bwPng: string | null
   /** Live reference boxes (rect metadata). */
   references: unknown | null
@@ -185,54 +186,76 @@ function figureUnderlay(
 </figure>`
 }
 
-function figureOriginal(
+function rulerCaptionNote(scale: DiagnosisScaleOverlay | null): string {
+  if (!scale) return ' Geen schaallinialen in de live sessie.'
+  const mismatch = formatScaleMismatch(scale.axisMismatchPct)
+  return ` Schaallinialen: cyaan = H (X), amber = V (Y)${scale.confirmed ? ', bevestigd' : ', niet bevestigd'}.${mismatch ? ` As-mismatch ${mismatch}.` : ''}`
+}
+
+function scaleJsonBlock(scale: DiagnosisScaleOverlay | null): string {
+  if (!scale) return ''
+  return jsonBlock(scale, 'Schaallinialen', {
+    open: false,
+    summary: 'Schaalliniaal JSON (handles + mm/px)',
+  })
+}
+
+function figureWithScaleOverlay(
   png: string | null,
+  emptyLabel: string,
+  alt: string,
+  caption: string,
   meta: DiagnosisReportMeta,
   scale: DiagnosisScaleOverlay | null,
 ): string {
-  const size =
-    meta.originalWidth != null && meta.originalHeight != null
-      ? ` · ${meta.originalWidth}×${meta.originalHeight} px`
-      : ''
-  const caption = `Stap 1 kleur-onderlegger (na rotatie/crop/gum; JPEG volle resolutie)${size}`
-  if (!png) return unavailable('Originele onderlegger')
-
+  if (!png) return unavailable(emptyLabel)
   const width = meta.originalWidth ?? 0
   const height = meta.originalHeight ?? 0
   const svg = scale && width > 0 && height > 0 ? buildScaleRulerSvg(scale, width, height) : ''
-  const mismatch = scale ? formatScaleMismatch(scale.axisMismatchPct) : null
-  const rulerNote = scale
-    ? ` Schaallinialen: cyaan = H (X), amber = V (Y)${scale.confirmed ? ', bevestigd' : ', niet bevestigd'}.${mismatch ? ` As-mismatch ${mismatch}.` : ''}`
-    : ' Geen schaallinialen in de live sessie.'
-
-  const json = scale
-    ? jsonBlock(scale, 'Schaallinialen', {
-        open: false,
-        summary: 'Schaalliniaal JSON (handles + mm/px)',
-      })
-    : ''
-
+  const note = rulerCaptionNote(scale)
+  const json = scaleJsonBlock(scale)
   if (!svg) {
-    return `${figureUnderlay(png, 'Originele onderlegger', 'Step 1 colour underlay', caption + rulerNote)}
+    return `${figureUnderlay(png, emptyLabel, alt, caption + note)}
 ${json}`
   }
-
-  return `<figure class="bw-figure original-figure">
-  <div class="original-wrap" style="aspect-ratio: ${width} / ${height}">
-    <img src="${png}" alt="Step 1 colour underlay" width="${width}" height="${height}" />
+  return `<figure class="bw-figure overlay-figure">
+  <div class="underlay-wrap" style="aspect-ratio: ${width} / ${height}">
+    <img src="${png}" alt="${escapeHtml(alt)}" width="${width}" height="${height}" />
     ${svg}
   </div>
-  <figcaption>${escapeHtml(caption + rulerNote)}</figcaption>
+  <figcaption>${escapeHtml(caption + note)}</figcaption>
 </figure>
 ${json}`
 }
 
-function figureBw(png: string | null): string {
-  return figureUnderlay(
-    png,
+function figureOriginal(png: string | null, meta: DiagnosisReportMeta): string {
+  const size =
+    meta.originalWidth != null && meta.originalHeight != null
+      ? ` · ${meta.originalWidth}×${meta.originalHeight} px`
+      : ''
+  const caption =
+    `Stap 1 kleur-onderlegger (na rotatie/crop/gum; JPEG volle resolutie)${size}` +
+    '. Zonder schaallinialen — opslaan/kopiëren voor her-detectie.'
+  return figureUnderlay(png, 'Originele onderlegger', 'Step 1 colour underlay', caption)
+}
+
+function figureBw(
+  png: string | null,
+  fallbackPng: string | null,
+  meta: DiagnosisReportMeta,
+  scale: DiagnosisScaleOverlay | null,
+): string {
+  const usedFallback = !png && !!fallbackPng
+  const caption = usedFallback
+    ? 'Geen B/W in deze sessie — zelfde stap-1 scan met schaallinialen (B/W is niet nodig voor her-detectie).'
+    : 'Stap 2 effective / base wall B/W'
+  return figureWithScaleOverlay(
+    png ?? fallbackPng,
     'B/W onderlegger',
-    'B/W wall underlay',
-    'Stap 2 effective / base wall B/W',
+    usedFallback ? 'Step 1 colour underlay with scale rulers' : 'B/W wall underlay',
+    caption,
+    meta,
+    scale,
   )
 }
 
@@ -609,9 +632,9 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
     .bw-figure { margin: 0; }
     .bw-figure img { max-width: min(100%, 960px); height: auto; border: 1px solid #e2e8f0; background: #fff; }
     .bw-figure figcaption { margin-top: 6px; font-size: 12px; color: #64748b; }
-    .original-wrap { position: relative; display: inline-block; max-width: min(100%, 960px); width: 100%; }
-    .original-wrap img { display: block; width: 100%; height: auto; max-width: 100%; }
-    .original-wrap svg.scale-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .underlay-wrap { position: relative; display: inline-block; max-width: min(100%, 960px); width: 100%; }
+    .underlay-wrap img { display: block; width: 100%; height: auto; max-width: 100%; }
+    .underlay-wrap svg.scale-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .ref-img-grid { display: flex; flex-wrap: wrap; gap: 16px; margin: 8px 0 12px; }
     .ref-contour-figure { margin: 0; max-width: min(100%, 420px); }
     .ref-contour-figure img { display: block; max-width: 100%; height: auto; border: 1px solid #e2e8f0; background: #fff; }
@@ -627,11 +650,11 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
-  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = stap 1 kleur-scan met H/V-schaallinialen (cyaan/amber); B/W = stap 2 muur-onderlegger.</p>
+  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = schone stap-1 kleur-scan (kopiëren voor her-detectie); B/W = stap 2 muur-onderlegger met H/V-schaallinialen (cyaan/amber).</p>
   ${toc}
   ${section('meta', 'Meta', metaList(payload.meta, payload.scaleOverlay))}
-  ${section('original', 'Originele onderlegger (stap 1)', figureOriginal(payload.originalPng, payload.meta, payload.scaleOverlay))}
-  ${section('bw', 'B/W onderlegger', figureBw(payload.bwPng))}
+  ${section('original', 'Originele onderlegger (stap 1)', figureOriginal(payload.originalPng, payload.meta))}
+  ${section('bw', 'B/W onderlegger', figureBw(payload.bwPng, payload.originalPng, payload.meta, payload.scaleOverlay))}
   ${section(
     'refs',
     'Referenties',

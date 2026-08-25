@@ -80,6 +80,18 @@ export function worldOverflowsLayout(
   )
 }
 
+/**
+ * Herfit alleen als de onderlegger voor het eerst binnenkomt (niet bij rotatie-AABB-groei).
+ * Overflow-check blijft aan de caller (resetView alleen bij echte overflow).
+ */
+export function shouldRefitForExtraBoundsAppear(
+  next: ExtraContentBounds | null | undefined,
+  prev: ExtraContentBounds | null | undefined,
+): boolean {
+  if (!next || next.spanX <= 0 || next.spanY <= 0) return false
+  return !prev || prev.spanX <= 0 || prev.spanY <= 0
+}
+
 function mergeBounds(
   a: ExtraContentBounds | null,
   b: ExtraContentBounds | null,
@@ -106,11 +118,15 @@ export function useFmlPreviewViewport(
 
   let resizeObserver: ResizeObserver | null = null
 
+  function resolveGeomBounds(wallList: Wall[], itemList: FloorItem[]): ExtraContentBounds | null {
+    if (wallList.length === 0 && itemList.length === 0) return null
+    return contentBounds(wallList, itemList)
+  }
+
   function resolveBounds(wallList: Wall[], itemList: FloorItem[]): ExtraContentBounds {
     const extra = extraBounds.value
     const extraOk = extra && extra.spanX > 0 && extra.spanY > 0 ? extra : null
-    const hasGeom = wallList.length > 0 || itemList.length > 0
-    const geom = hasGeom ? contentBounds(wallList, itemList) : null
+    const geom = resolveGeomBounds(wallList, itemList)
     return (
       mergeBounds(geom, extraOk) ?? {
         minX: 0,
@@ -187,10 +203,16 @@ export function useFmlPreviewViewport(
     viewPosition.value = { x: 0, y: 0 }
   }
 
+  /**
+   * Alleen muur/item-geometrie — onderlegger-rotatie (grotere AABB) telt niet mee,
+   * zodat zoom/pan niet terugspringt naar fit bij draaien.
+   */
   function worldOverflowsCurrentLayout(): boolean {
     const layout = contentLayout.value
     if (!layout) return true
-    return worldOverflowsLayout(layout, resolveBounds(walls.value, items.value))
+    const geom = resolveGeomBounds(walls.value, items.value)
+    if (!geom) return false
+    return worldOverflowsLayout(layout, geom)
   }
 
   const renderTransform = computed(() => {
@@ -205,11 +227,10 @@ export function useFmlPreviewViewport(
   })
 
   watch(extraBounds, (next, prev) => {
-    if (!next || next.spanX <= 0 || next.spanY <= 0) return
-    const appeared = !prev || prev.spanX <= 0 || prev.spanY <= 0
-    if (!appeared) return
+    if (!shouldRefitForExtraBoundsAppear(next, prev)) return
     // Onderlegger komt later binnen dan muren: herfit alleen als die de world vergroot.
-    if (!contentLayout.value || worldOverflowsCurrentLayout()) resetView()
+    const layout = contentLayout.value
+    if (!layout || worldOverflowsLayout(layout, next!)) resetView()
   })
 
   function mountResizeObserver(): void {

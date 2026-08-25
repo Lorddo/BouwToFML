@@ -52,6 +52,12 @@ export function resolveWindowSillZ(opening: Opening): number {
   return Math.round(opening.z ?? DEFAULT_FML_WINDOW_SILL_Z_CM)
 }
 
+/** Dorpel vanaf vloer: raam default 70, deur/overig default 0. */
+export function resolveOpeningSillZ(opening: Opening): number {
+  if (opening.type === 'window') return resolveWindowSillZ(opening)
+  return Math.round(opening.z ?? 0)
+}
+
 export function resolveOpeningHeight(opening: Opening): number {
   return opening.type === 'window'
     ? resolveWindowOpeningHeight(opening)

@@ -15,6 +15,7 @@ import './fml-toolbelt-settings-fields.css'
 
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
 const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
+const addDoorSillZCm = defineModel<number>('addDoorSillZCm', { default: 0 })
 const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
 const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 })
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
@@ -74,6 +75,21 @@ function releaseControlFocus(event: Event): void {
         :aria-label="t('result.toolbar.doorSizeAria', { unit: t(`common.${unit}`) })"
         input-class="fml-toolbelt__thickness-input"
         @update:cm="addDoorWidthCm = $event"
+      />
+    </div>
+  </div>
+  <div v-if="activeTool === 'add_door'" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <ScaleLengthInput
+        :cm="addDoorSillZCm"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
+        :max-cm="400"
+        :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__thickness-input"
+        @update:cm="addDoorSillZCm = $event"
       />
     </div>
   </div>

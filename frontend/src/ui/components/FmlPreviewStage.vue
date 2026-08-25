@@ -24,9 +24,13 @@ import {
   type OpeningDisplayColors,
 } from '@/ui/composables/settings/opening-display-colors'
 import {
+  ARCHITECT_AREA_FILL,
+  ARCHITECT_STROKE,
   DEFAULT_PLAN_DISPLAY_STYLE,
+  isArchitectPlanStyle,
   type PlanDisplayStyleChoice,
 } from '@/ui/composables/settings/plan-display-style'
+import CanvasGuideGrid from './canvas/CanvasGuideGrid.vue'
 
 withDefaults(
   defineProps<{
@@ -57,6 +61,8 @@ withDefaults(
     } | null
     /** 0–1; FML-geometrie opacity. */
     contentOpacity: number
+    /** Viewport-vast hulpraster (settings). */
+    showGuideGrid?: boolean
     moveWallPolygon: RenderWallPolygon | null
     settingsWallPolygons: RenderWallPolygon[]
     facadeWallPolygons?: RenderWallPolygon[]
@@ -82,6 +88,8 @@ withDefaults(
     hoveredSurfaceId: string | null
     hoveredLabelId: string | null
     hoveredLineId: string | null
+    selectedDimensionId?: string | null
+    hoveredDimensionId?: string | null
     inspectColors: Record<string, string>
     dakMode?: boolean
     surfaceEditId: string | null
@@ -123,6 +131,7 @@ withDefaults(
     windowBovenlichtDefault: false,
     openingColors: () => ({ ...FACTORY_OPENING_COLORS }),
     planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
+    showGuideGrid: true,
     settingsItemId: null,
     moveItemId: null,
     itemDragPreview: null,
@@ -219,6 +228,12 @@ onBeforeUnmount(unbindGroupDrag)
             <v-image :config="underlayConfig.image" />
           </v-group>
         </v-group>
+        <CanvasGuideGrid
+          :visible="showGuideGrid"
+          :parent-transform="{ x: viewPosition.x, y: viewPosition.y, scale: viewScale }"
+          :viewport-width="stageSize.width"
+          :viewport-height="stageSize.height"
+        />
         <v-group :config="{ opacity: contentOpacity, listening: true }">
           <!-- Z-order: area → surface → object → tekst. Meubels blijven onder muurfill. -->
           <v-line
@@ -227,8 +242,11 @@ onBeforeUnmount(unbindGroupDrag)
             :config="{
               points: polygon.points,
               closed: true,
-              fill: '#94a3b8',
-              opacity: 0.38,
+              fill: isArchitectPlanStyle(planDisplayStyle) ? ARCHITECT_AREA_FILL : '#94a3b8',
+              opacity: isArchitectPlanStyle(planDisplayStyle) ? 1 : 0.38,
+              stroke: isArchitectPlanStyle(planDisplayStyle) ? ARCHITECT_STROKE : undefined,
+              strokeWidth: isArchitectPlanStyle(planDisplayStyle) ? 1 : 0,
+              strokeEnabled: isArchitectPlanStyle(planDisplayStyle),
               listening: false,
               perfectDrawEnabled: false,
             }"
@@ -241,6 +259,7 @@ onBeforeUnmount(unbindGroupDrag)
             :layout-scale="layoutScale"
             :view-scale="viewScale"
             :labels-visible="labelsVisible"
+            :plan-display-style="planDisplayStyle"
             layer="fill"
           />
           <FmlPreviewStageSurfaces
@@ -254,6 +273,7 @@ onBeforeUnmount(unbindGroupDrag)
             :layout-scale="layoutScale"
             :view-scale="viewScale"
             :labels-visible="labelsVisible"
+            :plan-display-style="planDisplayStyle"
             layer="fill"
           />
           <FmlPreviewStageFixtures
@@ -264,6 +284,7 @@ onBeforeUnmount(unbindGroupDrag)
             :settings-item-id="settingsItemId"
             :move-item-id="moveItemId"
             :item-drag-preview="itemDragPreview"
+            :plan-display-style="planDisplayStyle"
             layer="under"
           />
           <FmlPreviewStageLines
@@ -271,7 +292,10 @@ onBeforeUnmount(unbindGroupDrag)
             :dimensions="renderModel.dimensions"
             :settings-line-id="settingsLineId"
             :hovered-line-id="hoveredLineId"
+            :selected-dimension-id="selectedDimensionId"
+            :hovered-dimension-id="hoveredDimensionId"
             :view-scale="viewScale"
+            :plan-display-style="planDisplayStyle"
           />
           <FmlPreviewStageLines
             :lines="[]"
@@ -279,6 +303,7 @@ onBeforeUnmount(unbindGroupDrag)
             :settings-line-id="null"
             :hovered-line-id="null"
             :view-scale="viewScale"
+            :plan-display-style="planDisplayStyle"
           />
           <FmlPreviewStageLines
             :lines="[]"
@@ -286,6 +311,7 @@ onBeforeUnmount(unbindGroupDrag)
             :settings-line-id="null"
             :hovered-line-id="null"
             :view-scale="viewScale"
+            :plan-display-style="planDisplayStyle"
           />
           <v-group
             v-for="guide in sliceGuidesStage"
@@ -418,6 +444,8 @@ onBeforeUnmount(unbindGroupDrag)
             :move-wall-id="moveWallId"
             :dak-mode="dakMode"
             :view-scale="viewScale"
+            :layout-scale="layoutScale"
+            :plan-display-style="planDisplayStyle"
           />
           <FmlPreviewStageOpenings
             :render-model="renderModel"
@@ -439,6 +467,7 @@ onBeforeUnmount(unbindGroupDrag)
             :settings-item-id="settingsItemId"
             :move-item-id="moveItemId"
             :item-drag-preview="itemDragPreview"
+            :plan-display-style="planDisplayStyle"
             layer="over"
           />
           <FmlPreviewStageAreas
@@ -449,6 +478,7 @@ onBeforeUnmount(unbindGroupDrag)
             :layout-scale="layoutScale"
             :view-scale="viewScale"
             :labels-visible="labelsVisible"
+            :plan-display-style="planDisplayStyle"
             layer="labels"
           />
           <FmlPreviewStageSurfaces
@@ -462,6 +492,7 @@ onBeforeUnmount(unbindGroupDrag)
             :layout-scale="layoutScale"
             :view-scale="viewScale"
             :labels-visible="labelsVisible"
+            :plan-display-style="planDisplayStyle"
             layer="labels"
           />
           <FmlPreviewStageLabels

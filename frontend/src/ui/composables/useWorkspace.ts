@@ -313,6 +313,8 @@ export function useWorkspace() {
   const fmlContentOpacity = ref(initialViewer.fmlOpacityPct)
   /** Sesssie-only: kamer-/FML-labels verbergen (niet in user-settings). */
   const fmlHidePlanText = ref(false)
+  /** Viewport-vast hulpraster op stap 1–3 canvas. */
+  const showCanvasGrid = ref(initialViewer.showCanvasGrid !== false)
   const mergeDoubleDoors = ref(initialConversion.mergeDoubleDoors)
   const mergeMultiWindows = ref(initialConversion.mergeMultiWindows)
 
@@ -320,6 +322,7 @@ export function useWorkspace() {
     const settings = loadUserSettings()
     fmlUnderlayOpacity.value = settings.fmlViewer.underlayOpacityPct
     fmlContentOpacity.value = settings.fmlViewer.fmlOpacityPct
+    showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
     mergeDoubleDoors.value = settings.fmlConversion.mergeDoubleDoors
     mergeMultiWindows.value = settings.fmlConversion.mergeMultiWindows
     scaleUi.applyScaleInputUnitFromSettings()
@@ -1152,6 +1155,7 @@ export function useWorkspace() {
     fmlUnderlayOpacity,
     fmlContentOpacity,
     fmlHidePlanText,
+    showCanvasGrid,
     fmlUnderlaySrc,
     fmlUnderlaySize,
     fml,

@@ -13,8 +13,14 @@ import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { buildSliceDimensionLines, buildSliceGuide } from '@/core/fml/slice-dimension-lines'
 import type { FloorDimension, Wall } from '@/core/fml/types'
 
-function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }, t = 20): Wall {
-  return { id, a, b, thickness: t, balance: 0.5, openings: [] }
+function wall(
+  id: string,
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  t = 20,
+  balance = 0.5,
+): Wall {
+  return { id, a, b, thickness: t, balance, openings: [] }
 }
 
 /** Rechthoek 400×300 hartlijn, dikte 20 → binnenfaces ~10..390 / 10..290. */
@@ -65,6 +71,28 @@ describe('btf-slices + slice-dimension-lines', () => {
     expect(
       Math.abs(mdx * odx + mdy * ody) / (Math.hypot(mdx, mdy) * Math.hypot(odx, ody)),
     ).toBeLessThan(0.02)
+  })
+
+  it('west balance 0 (alles buiten): binnenbreedte 390, niet 380', () => {
+    const walls = [
+      wall('n', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('s', { x: 0, y: 300 }, { x: 400, y: 300 }),
+      wall('w', { x: 0, y: 0 }, { x: 0, y: 300 }, 20, 0),
+      wall('e', { x: 400, y: 0 }, { x: 400, y: 300 }),
+    ]
+    const slice: BtfSlice = { m: { x: 200, y: 150 }, p: { x: 200, y: -40 } }
+    const interior = buildSliceDimensionLines(slice, walls, 'interior')
+    const total = interior.reduce(
+      (sum, line) => sum + Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y),
+      0,
+    )
+    expect(total).toBeCloseTo(390, 5)
+    const exterior = buildSliceDimensionLines(slice, walls, 'exterior')
+    const extTotal = exterior.reduce(
+      (sum, line) => sum + Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y),
+      0,
+    )
+    expect(extTotal).toBeCloseTo(430, 5)
   })
 
   it('interior slaat muurdikte over; exterior houdt die', () => {

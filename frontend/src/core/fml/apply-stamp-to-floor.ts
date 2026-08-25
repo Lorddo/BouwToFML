@@ -13,7 +13,7 @@
 import {
   assignWallsToGroup,
   createFacadeGroup,
-  groupIdForWall,
+  groupIdsForWall,
   isWallInStampGroup,
   listFacadeGroups,
   wallsInStampGroup,
@@ -94,12 +94,17 @@ function floorHeightCm(plan: FloorPlan, floorIndex: number): number {
 
 function cloneStampWall(source: Wall, heightCm: number, offsetCm?: Point2D): Wall {
   const offset = offsetCm ?? { x: 0, y: 0 }
-  const endpoint = { z: 0, h: heightCm }
-  const extras: Record<string, unknown> = { az: { ...endpoint }, bz: { ...endpoint } }
-  if (typeof source.balance === 'number' && Number.isFinite(source.balance)) {
-    // balance blijft op wall.balance; geen extras-copy van bron
-  }
-  // Bewaar relevante extras behalve az/bz (hoogte doelverdieping).
+  const fallback = { z: 0, h: heightCm }
+  const az =
+    source.extras?.az != null && typeof source.extras.az === 'object'
+      ? { ...(source.extras.az as { z: number; h: number }) }
+      : { ...fallback }
+  const bz =
+    source.extras?.bz != null && typeof source.extras.bz === 'object'
+      ? { ...(source.extras.bz as { z: number; h: number }) }
+      : { ...fallback }
+  const extras: Record<string, unknown> = { az, bz }
+  // Bewaar overige extras behalve az/bz (die hierboven gezet).
   if (source.extras) {
     for (const [key, value] of Object.entries(source.extras)) {
       if (key === 'az' || key === 'bz') continue
@@ -135,35 +140,42 @@ export function collectStampSourceWalls(plan: FloorPlan, targetFloorIndex: numbe
 
 function assignFacadesForAdded(
   plan: FloorPlan,
-  facadeAssigns: Map<string, string>,
+  /** Nieuwe wall-id → gevelgroep-ids van de bron (multi). */
+  facadeAssigns: Map<string, string[]>,
   facadeLookupPlan?: FloorPlan | null,
 ): void {
   if (facadeAssigns.size === 0) return
   // Zorg dat gevelgroepen van de donor op het doelplan bestaan (zelfde id/naam).
+  const remappedIds = new Map<string, string>()
   if (facadeLookupPlan) {
     const existing = new Set(listFacadeGroups(plan).map((g) => g.id))
-    for (const groupId of new Set(facadeAssigns.values())) {
-      if (existing.has(groupId)) continue
+    const needed = new Set<string>()
+    for (const groupIds of facadeAssigns.values()) {
+      for (const groupId of groupIds) needed.add(groupId)
+    }
+    for (const groupId of needed) {
+      if (existing.has(groupId)) {
+        remappedIds.set(groupId, groupId)
+        continue
+      }
       const donorGroup = listFacadeGroups(facadeLookupPlan).find((g) => g.id === groupId)
       if (!donorGroup) continue
       const created = createFacadeGroup(plan, {
         name: donorGroup.name,
         code: donorGroup.code,
       })
-      // createFacadeGroup maakt G1/G2… — remap assigns naar die id als id verschilt.
-      if (created.id !== groupId) {
-        for (const [wallId, gid] of [...facadeAssigns.entries()]) {
-          if (gid === groupId) facadeAssigns.set(wallId, created.id)
-        }
-      }
+      remappedIds.set(groupId, created.id)
       existing.add(created.id)
     }
   }
   const byGroup = new Map<string, string[]>()
-  for (const [wallId, groupId] of facadeAssigns) {
-    const list = byGroup.get(groupId) ?? []
-    list.push(wallId)
-    byGroup.set(groupId, list)
+  for (const [wallId, groupIds] of facadeAssigns) {
+    for (const rawId of groupIds) {
+      const groupId = remappedIds.get(rawId) ?? rawId
+      const list = byGroup.get(groupId) ?? []
+      list.push(wallId)
+      byGroup.set(groupId, list)
+    }
   }
   for (const [groupId, wallIds] of byGroup) {
     assignWallsToGroup(plan, groupId, wallIds)
@@ -193,8 +205,8 @@ export function applyStampToFloor(
   const heightCm = floorHeightCm(plan, targetFloorIndex)
   const nextWalls = [...floor.walls]
   const addedWallIds: string[] = []
-  /** Nieuwe id → gevelgroep van bron (niet stamp). */
-  const facadeAssigns = new Map<string, string>()
+  /** Nieuwe id → gevelgroepen van bron (niet stamp). */
+  const facadeAssigns = new Map<string, string[]>()
   let skippedCount = 0
 
   for (const source of sources) {
@@ -205,8 +217,8 @@ export function applyStampToFloor(
     const cloned = cloneStampWall(source, heightCm)
     nextWalls.push(cloned)
     addedWallIds.push(cloned.id)
-    const facadeId = groupIdForWall(plan, source.id)
-    if (facadeId) facadeAssigns.set(cloned.id, facadeId)
+    const facadeIds = groupIdsForWall(plan, source.id)
+    if (facadeIds.length > 0) facadeAssigns.set(cloned.id, facadeIds)
   }
 
   if (addedWallIds.length === 0) {
@@ -273,7 +285,7 @@ export function injectStampWallsIntoPlan(
   const heightCm = floorHeightCm(plan, targetFloorIndex)
   let nextWalls = [...floor.walls]
   const addedWallIds: string[] = []
-  const facadeAssigns = new Map<string, string>()
+  const facadeAssigns = new Map<string, string[]>()
   let skippedCount = 0
   let removedOverlapCount = 0
   const facadePlan = options?.facadeLookupPlan ?? plan
@@ -294,8 +306,8 @@ export function injectStampWallsIntoPlan(
     const cloned = markStampOwned(cloneStampWall(source, heightCm, offsetCm))
     nextWalls.push(cloned)
     addedWallIds.push(cloned.id)
-    const facadeId = groupIdForWall(facadePlan, source.id)
-    if (facadeId) facadeAssigns.set(cloned.id, facadeId)
+    const facadeIds = groupIdsForWall(facadePlan, source.id)
+    if (facadeIds.length > 0) facadeAssigns.set(cloned.id, facadeIds)
   }
 
   if (addedWallIds.length === 0) {

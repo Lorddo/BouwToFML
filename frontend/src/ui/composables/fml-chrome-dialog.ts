@@ -1,7 +1,9 @@
 import { ref } from 'vue'
 import { tGlobal } from '@/ui/i18n'
 
-export type FmlChromeDialogKind = 'alert' | 'confirm' | 'prompt'
+export type FmlChromeDialogKind = 'alert' | 'confirm' | 'prompt' | 'listEdit'
+
+export type FacadeGroupEditRow = { id: string; name: string }
 
 export interface FmlChromeDialogRequest {
   kind: FmlChromeDialogKind
@@ -12,14 +14,17 @@ export interface FmlChromeDialogRequest {
   placeholder?: string
   confirmLabel?: string
   cancelLabel?: string
+  /** Voor `listEdit`: startwaarden per rij. */
+  listItems?: FacadeGroupEditRow[]
 }
 
 export interface FmlChromeDialogState {
   request: FmlChromeDialogRequest
   inputValue: string
+  listItems: FacadeGroupEditRow[]
 }
 
-type DialogResult = boolean | string | null
+export type DialogResult = boolean | string | null | FacadeGroupEditRow[]
 
 interface PendingDialog {
   state: FmlChromeDialogState
@@ -40,7 +45,7 @@ export function registerFmlChromeDialogHost(): () => void {
     if (hostCount === 0 && pending.value) {
       const current = pending.value
       pending.value = null
-      current.resolve(current.state.request.kind === 'prompt' ? null : false)
+      current.resolve(cancelResultFor(current.state.request.kind))
     }
   }
 }
@@ -50,13 +55,18 @@ export function resetFmlChromeDialogForTests(): void {
   if (pending.value) {
     const current = pending.value
     pending.value = null
-    current.resolve(current.state.request.kind === 'prompt' ? null : false)
+    current.resolve(cancelResultFor(current.state.request.kind))
   }
   hostCount = 0
 }
 
 export function fmlChromeDialogState(): typeof pending {
   return pending
+}
+
+function cancelResultFor(kind: FmlChromeDialogKind): DialogResult {
+  if (kind === 'prompt' || kind === 'listEdit') return null
+  return false
 }
 
 function defaultsFor(request: FmlChromeDialogRequest): FmlChromeDialogRequest {
@@ -73,7 +83,7 @@ export function showFmlChromeDialog(request: FmlChromeDialogRequest): Promise<Di
   if (pending.value) {
     const previous = pending.value
     pending.value = null
-    previous.resolve(previous.state.request.kind === 'prompt' ? null : false)
+    previous.resolve(cancelResultFor(previous.state.request.kind))
   }
 
   if (hostCount === 0) {
@@ -85,6 +95,7 @@ export function showFmlChromeDialog(request: FmlChromeDialogRequest): Promise<Di
       state: {
         request: defaultsFor(request),
         inputValue: request.defaultValue ?? '',
+        listItems: (request.listItems ?? []).map((row) => ({ ...row })),
       },
       resolve,
     }
@@ -96,6 +107,11 @@ function nativeFallback(request: FmlChromeDialogRequest): DialogResult {
   const body = text.length > 0 ? `${request.title}\n\n${text}` : request.title
   if (request.kind === 'prompt') {
     return window.prompt(body, request.defaultValue ?? '')
+  }
+  if (request.kind === 'listEdit') {
+    // Geen nette multi-edit in native; annuleer.
+    window.alert(body)
+    return null
   }
   if (request.kind === 'alert') {
     window.alert(body)
@@ -113,7 +129,7 @@ export function resolveFmlChromeDialog(value: DialogResult): void {
 
 export function cancelFmlChromeDialog(): void {
   const kind = pending.value?.state.request.kind
-  resolveFmlChromeDialog(kind === 'prompt' ? null : false)
+  resolveFmlChromeDialog(kind ? cancelResultFor(kind) : null)
 }
 
 export function confirmFmlChromeDialog(): void {
@@ -121,6 +137,10 @@ export function confirmFmlChromeDialog(): void {
   if (!current) return
   if (current.state.request.kind === 'prompt') {
     resolveFmlChromeDialog(current.state.inputValue)
+    return
+  }
+  if (current.state.request.kind === 'listEdit') {
+    resolveFmlChromeDialog(current.state.listItems.map((row) => ({ ...row })))
     return
   }
   resolveFmlChromeDialog(true)
@@ -178,4 +198,22 @@ export async function promptFacadeGroupName(opts?: {
   if (name == null) return null
   const trimmed = name.trim()
   return trimmed.length > 0 ? trimmed : null
+}
+
+/** Bewerk alle gevelgroep-namen in één dialoog. Null = geannuleerd. */
+export async function promptFacadeGroupsEdit(
+  groups: readonly FacadeGroupEditRow[],
+): Promise<FacadeGroupEditRow[] | null> {
+  const result = await showFmlChromeDialog({
+    kind: 'listEdit',
+    title: tGlobal('result.toolbar.facadeGroupEditAllTitle'),
+    message: tGlobal('result.toolbar.facadeGroupEditAllHint'),
+    listItems: groups.map((g) => ({ id: g.id, name: g.name })),
+    confirmLabel: tGlobal('common.apply'),
+  })
+  if (!Array.isArray(result)) return null
+  return result.map((row) => ({
+    id: row.id,
+    name: row.name.trim().length > 0 ? row.name.trim() : row.id,
+  }))
 }

@@ -250,13 +250,15 @@ De deur-pipeline is het duidelijkste voorbeeld van een cascade: bij een miss wor
 | D-38 | `keepBetterDiag` ranking | `:150-181` | B | Meerdere refs per root → beste diagnose houden |
 | D-39 | H/V-prefer + `expectedAngleDeg` | `:100-102` | A | Verwachte hoek uit ref stuurt hinge-keuze |
 
-### 5.6 Stage 2 — bridge-promote en sticky doorframe
+### 5.6 Stage 2 — pair/demote, bridge-promote en sticky doorframe
 
 | ID | Escalatiepad | Locatie | Cat | Trigger → actie |
 |---|---|---|---|---|
-| D-40 | Bridge-promote BFS | `door-bridge-wall-promote.ts:119-281` | A | surface/unknown tussen twee muren, span ±15% → promote naar doorframe |
-| D-41 | Sticky doorframe niet herpromoten | `door-bridge-wall-promote.ts:245-267` | D | *"niet opnieuw promoten (geen allFaceIds — pin blijft sticky)"* |
-| D-42 | Post-bridge attach | `run-door-stage-pipeline.ts:259-267`, `door-attach-doorframes.ts:191-261` | D | Sticky pins koppelen zonder Stage-2 her-run |
+| D-62 | Pair/demote kozijn→doorframe | `door-pair-demote.ts`, `run-door-stage-pipeline.ts` (ná wall-touch) | A | Adjacent deur-hits, xor `betweenTwoWalls` → kozijn doorframe + swing blijft deur; wees-kozijn → **wall** (geen losse DF) · **anker WhatsApp frame+boog** |
+| D-63 | Dunne deur → mask-keep + L11-dedupe | `door-thin-mask.ts` (L1–L3), `door-wall-dedupe.ts` | A | depth ≤ max muur-ref → L1 between-walls → pair-conflict → L2 vleugel-brug → L3 polylijn; hyp intact; post-L11 overlap-dedupe · **anker WhatsApp 2026-08-24** |
+| D-40 | Bridge-promote BFS | `door-bridge-wall-promote.ts` | A | surface/unknown tussen twee muren, span ±15% → promote naar doorframe |
+| D-41 | Sticky doorframe niet herpromoten | `door-bridge-wall-promote.ts` | D | *"niet opnieuw promoten (geen allFaceIds — pin blijft sticky)"* |
+| D-42 | Post-bridge attach | `run-door-stage-pipeline.ts`, `door-attach-doorframes.ts` | D | Sticky pins koppelen zonder Stage-2 her-run |
 | D-43 | Resolve width-fallbacks | `door-resolve.ts:34-54,100-107` | E | Ontbrekende ref-overhangs → `ratioBlade` 1, legacy overhang, swing-span |
 
 ### 5.7 L11 — snap (negenvoudige cascade)
@@ -289,9 +291,9 @@ D-50..D-52 zijn **verwijderd 2026-07-31** (0/6 E2E + kill-switch gelijk); Path B
 | D-58 | Path A vs B opening-resolve | `door-wall-orient.ts:296-313` | A | Twee verschillende breedte-afleidingen naast elkaar |
 | D-59 | L12 hinge hard gate | `door-wall-orient.ts:273-283` | B | Geen hinge → deur verdwijnt uit FML |
 | D-60 | Degenerate blade → swing-span | `door-swing-ref.ts:91,177-180` | E | `blade < 0.5× span` → maat uit swing i.p.v. kozijn |
-| D-61 | `existingDoorsOnly` multi-skip | `run-door-stage-pipeline.ts:170,185,216,231` | D | Slaat wall-fill, surround, wall-touch én bridge over |
+| D-61 | `existingDoorsOnly` multi-skip | `run-door-stage-pipeline.ts` | D | Slaat wall-fill, surround, wall-touch, pair-demote én bridge over |
 
-**D-61 is een sleutelitem voor een later plan:** één boolean schakelt vier gates uit. Dat betekent dat de deurdetectie in demote-modus een fundamenteel ander systeem is dan in normale modus, met andere false-positive-eigenschappen.
+**D-61 is een sleutelitem voor een later plan:** één boolean schakelt vijf gates uit. Dat betekent dat de deurdetectie in demote-modus een fundamenteel ander systeem is dan in normale modus, met andere false-positive-eigenschappen.
 
 ---
 
@@ -525,7 +527,7 @@ Alle transformatiepassen in L7–L10 zitten in `withTopologyGuard`, op één uit
 Twee plekken waar een rescue-pad de filters overslaat die het normale pad wél moet passeren:
 
 - **D-37** angle-rescue injecteert een hypothese die fill- en surround-filter omzeilt (wall-touch geldt wel).
-- **D-61** `existingDoorsOnly` schakelt vier gates tegelijk uit (wall-fill, surround, wall-touch, bridge).
+- **D-61** `existingDoorsOnly` schakelt vijf gates tegelijk uit (wall-fill, surround, wall-touch, pair-demote, bridge).
 - **R-16** derde niveau van de evidence-cascade laat vlakken door zonder rails- of framing-bewijs.
 
 ### 10.5 Compensatie in plaats van correctheid

@@ -373,6 +373,12 @@ function sectorCorner(
   return hit
 }
 
+function dirsAreOpposite(a: Point2D, b: Point2D): boolean {
+  const cross = a.x * b.y - a.y * b.x
+  const dot = a.x * b.x + a.y * b.y
+  return Math.abs(cross) < FLAT_TURN_CROSS && dot < 0
+}
+
 function tryMiterEndCorners(
   wall: WallPolygonInput,
   end: 'a' | 'b',
@@ -384,41 +390,61 @@ function tryMiterEndCorners(
   }
   if (neighbors.length === 0) return null
 
-  const junction = pointAtEnd(wall, end)
   const into = intoWallFromEnd(wall, end)
-  const maxMiter =
-    Math.max(wall.thickness, ...neighbors.map((entry) => entry.wall.thickness)) *
-    MAX_MITER_THICKNESS_FACTOR
+  const neighborDirs = neighbors.map((entry) => ({
+    ...entry,
+    dir: intoWallFromEnd(entry.wall, entry.end),
+  }))
 
+  const continues = neighborDirs.some((entry) => dirsAreOpposite(into, entry.dir))
+  let throughHost: WallPolygonInput | null = null
+  for (let i = 0; i < neighborDirs.length; i += 1) {
+    for (let j = i + 1; j < neighborDirs.length; j += 1) {
+      if (dirsAreOpposite(neighborDirs[i].dir, neighborDirs[j].dir)) {
+        throughHost = neighborDirs[i].wall
+        break
+      }
+    }
+    if (throughHost) break
+  }
+
+  // T-tak in een doorgaande muur (geen tegenoverliggende voortzetting):
+  // stop op de nabije host-face, niet erdoorheen (anders kove-dicht).
+  if (throughHost && !continues) {
+    return nearHostFaceCorners(wall, end, throughHost)
+  }
+
+  // L (één buur): binnen- + buitenmiter.
   if (neighbors.length === 1) {
+    const junction = pointAtEnd(wall, end)
+    const maxMiter =
+      Math.max(wall.thickness, neighbors[0].wall.thickness) * MAX_MITER_THICKNESS_FACTOR
     const other = neighbors[0]
-    const otherDir = intoWallFromEnd(other.wall, other.end)
+    const otherDir = neighborDirs[0].dir
     const inner = sectorCorner(junction, wall, into, other.wall, otherDir, maxMiter)
     const outer = sectorCorner(junction, wall, into, other.wall, otherDir, maxMiter, true)
     if (!inner || !outer) return null
     return assignLeftRight(wall, end, inner, outer, maxMiter)
   }
 
-  const arms = [
-    { wall, dir: into, id: wall.id },
-    ...neighbors.map((entry) => ({
-      wall: entry.wall,
-      dir: intoWallFromEnd(entry.wall, entry.end),
-      id: entry.wall.id,
-    })),
-  ]
-  arms.sort(
-    (a, b) =>
-      Math.atan2(a.dir.y, a.dir.x) - Math.atan2(b.dir.y, b.dir.x) || a.id.localeCompare(b.id),
-  )
-  const index = arms.findIndex((arm) => arm.id === wall.id)
-  if (index < 0) return null
-  const prev = arms[(index - 1 + arms.length) % arms.length]
-  const next = arms[(index + 1) % arms.length]
-  const cPrev = sectorCorner(junction, wall, into, prev.wall, prev.dir, maxMiter)
-  const cNext = sectorCorner(junction, wall, into, next.wall, next.dir, maxMiter)
-  if (cPrev && cNext) return assignLeftRight(wall, end, cPrev, cNext, maxMiter)
+  // + / Y / doorgaande as: square-cap vult het knooppunt (geen sector-gat).
   return null
+}
+
+function segmentsProperIntersect(a: Point2D, b: Point2D, c: Point2D, d: Point2D): boolean {
+  const o1 = Math.sign((b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y))
+  const o2 = Math.sign((b.y - a.y) * (d.x - b.x) - (b.x - a.x) * (d.y - b.y))
+  const o3 = Math.sign((d.y - c.y) * (a.x - d.x) - (d.x - c.x) * (a.y - d.y))
+  const o4 = Math.sign((d.y - c.y) * (b.x - d.x) - (d.x - c.x) * (b.y - d.y))
+  return o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0 && o1 !== o2 && o3 !== o4
+}
+
+function isBowtieQuad(points: Point2D[]): boolean {
+  if (points.length !== 4) return false
+  return (
+    segmentsProperIntersect(points[0], points[1], points[2], points[3]) ||
+    segmentsProperIntersect(points[1], points[2], points[3], points[0])
+  )
 }
 
 function endCorners(
@@ -428,14 +454,23 @@ function endCorners(
   wallById: Map<string, WallPolygonInput>,
   walls: WallPolygonInput[],
 ): { left: Point2D; right: Point2D } {
-  const len = distance(wall.a, wall.b)
-  const maxExtend = Math.max(0, len * 0.45)
-  const extend = Math.min(resolveEndExtendCm(wall, end, adj, wallById, walls), maxExtend)
-  const square = squareEndCorners(wall, end, extend)
   const neighbors = neighborsAtEnd(wall, end, adj, wallById)
   const hosts = neighbors.length > 0 ? [] : findMidspanHosts(wall, end, walls)
   const mitered = tryMiterEndCorners(wall, end, neighbors, hosts)
-  return mitered ?? square
+  return mitered ?? squareCapCorners(wall, end, adj, wallById, walls)
+}
+
+function squareCapCorners(
+  wall: WallPolygonInput,
+  end: 'a' | 'b',
+  adj: Map<string, Array<{ wallId: string; end: 'a' | 'b' }>>,
+  wallById: Map<string, WallPolygonInput>,
+  walls: WallPolygonInput[],
+): { left: Point2D; right: Point2D } {
+  const len = distance(wall.a, wall.b)
+  const maxExtend = Math.max(0, len * 0.45)
+  const extend = Math.min(resolveEndExtendCm(wall, end, adj, wallById, walls), maxExtend)
+  return squareEndCorners(wall, end, extend)
 }
 
 /**
@@ -452,7 +487,13 @@ function buildWallRectPolygon(
   const b = endCorners(wall, 'b', adj, wallById, walls)
   const points = [a.left, b.left, b.right, a.right]
   if (ringArea(points) < 0) points.reverse()
-  return points
+  if (!isBowtieQuad(points)) return points
+
+  const squareA = squareCapCorners(wall, 'a', adj, wallById, walls)
+  const squareB = squareCapCorners(wall, 'b', adj, wallById, walls)
+  const fallback = [squareA.left, squareB.left, squareB.right, squareA.right]
+  if (ringArea(fallback) < 0) fallback.reverse()
+  return fallback
 }
 
 function ensureClosedRing(points: Point2D[]): Point2D[] {
@@ -649,4 +690,314 @@ export function maxFillVertexDistanceFromWallEnds(
     }
   }
   return maxDist
+}
+
+// --- Architect outlines (union rings → opening punch → drop sill/jamb) ---
+
+/** Opening punch/drop input (cm along wall axis via `t` + `width`). */
+export interface WallOutlineOpeningInput {
+  wallId: string
+  t: number
+  width: number
+  /** Deur: jamb-edges droppen (glyph heeft end-caps). Raam: jambs behouden. */
+  type?: 'door' | 'window'
+}
+
+export type WallOutlinePolyline = Point2D[]
+
+/** Midpoint of an edge within this of a sill/jamb → drop (opening glyph closes). */
+const OPENING_EDGE_DROP_EPS_CM = 0.15
+/** Punch slightly past faces so difference cuts through instead of islanding. */
+const OPENING_PUNCH_SEAL_CM = UNION_SEAL_CM + 0.02
+
+type OpeningSide = { a: Point2D; b: Point2D }
+
+function resolveDifferenceFn(): typeof polygonClipping.difference {
+  const mod = polygonClipping as unknown as {
+    difference?: typeof polygonClipping.difference
+    default?: { difference?: typeof polygonClipping.difference }
+  }
+  const fn = mod.difference ?? mod.default?.difference
+  if (typeof fn !== 'function') {
+    throw new Error('polygon-clipping.difference is not available')
+  }
+  return fn.bind(mod.default ?? mod)
+}
+
+function lerpPoint(a: Point2D, b: Point2D, t: number): Point2D {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+}
+
+function wallAxisLength(wall: WallPolygonInput): number {
+  return distance(wall.a, wall.b)
+}
+
+/** Face corners of an opening at axis-t span (no seal). */
+function openingFaceCorners(
+  wall: WallPolygonInput,
+  t0: number,
+  t1: number,
+): { left0: Point2D; left1: Point2D; right0: Point2D; right1: Point2D } | null {
+  const faces = wallFaces(wall)
+  return {
+    left0: lerpPoint(faces.left.a, faces.left.b, t0),
+    left1: lerpPoint(faces.left.a, faces.left.b, t1),
+    right0: lerpPoint(faces.right.a, faces.right.b, t0),
+    right1: lerpPoint(faces.right.a, faces.right.b, t1),
+  }
+}
+
+function openingAxisSpan(
+  wall: WallPolygonInput,
+  opening: Pick<WallOutlineOpeningInput, 't' | 'width'>,
+): { t0: number; t1: number } | null {
+  const len = wallAxisLength(wall)
+  if (len < MIN_WALL_LENGTH_CM || !(opening.width > 0)) return null
+  const half = opening.width / 2 / len
+  return { t0: opening.t - half, t1: opening.t + half }
+}
+
+/** Balance-aware punch rect (slightly past faces). */
+function openingPunchRect(
+  wall: WallPolygonInput,
+  opening: WallOutlineOpeningInput,
+): Point2D[] | null {
+  const span = openingAxisSpan(wall, opening)
+  if (!span) return null
+  const corners = openingFaceCorners(wall, span.t0, span.t1)
+  if (!corners) return null
+  const n = leftNormal(alongWallDir(wall))
+  const seal = OPENING_PUNCH_SEAL_CM
+  return [
+    add(corners.left0, scale(n, seal)),
+    add(corners.left1, scale(n, seal)),
+    add(corners.right1, scale(n, -seal)),
+    add(corners.right0, scale(n, -seal)),
+  ].map(quantizePoint)
+}
+
+function openingDropSides(wall: WallPolygonInput, opening: WallOutlineOpeningInput): OpeningSide[] {
+  const span = openingAxisSpan(wall, opening)
+  if (!span) return []
+  const corners = openingFaceCorners(wall, span.t0, span.t1)
+  if (!corners) return []
+  // Altijd sill (langs-faces) droppen — glyph tekent die.
+  const sides: OpeningSide[] = [
+    { a: corners.left0, b: corners.left1 },
+    { a: corners.right0, b: corners.right1 },
+  ]
+  // Deur heeft end-caps in 2D-glyph; raam niet → muur-jambs behouden.
+  if (opening.type !== 'window') {
+    sides.push({ a: corners.left0, b: corners.right0 }, { a: corners.left1, b: corners.right1 })
+  }
+  return sides
+}
+
+function componentsToMultiPolygon(components: WallFillComponent[]): [number, number][][][] {
+  const out: [number, number][][][] = []
+  for (const component of components) {
+    const rings: [number, number][][] = []
+    for (const ring of component.rings) {
+      const clipped = toClippingRing(ring)
+      if (clipped.length >= 4) rings.push(clipped)
+    }
+    if (rings.length > 0) out.push(rings)
+  }
+  return out
+}
+
+function multiPolygonToComponents(multi: [number, number][][][]): WallFillComponent[] {
+  return multi.map((polygon) => ({
+    rings: polygon.map((ring) => fromClippingRing(ring)),
+  }))
+}
+
+function punchOpeningsFromComponents(
+  components: WallFillComponent[],
+  wallsById: Map<string, WallPolygonInput>,
+  openings: WallOutlineOpeningInput[],
+): WallFillComponent[] {
+  if (components.length === 0 || openings.length === 0) return components
+
+  const punches: Point2D[][] = []
+  for (const opening of openings) {
+    const wall = wallsById.get(opening.wallId)
+    if (!wall) continue
+    const rect = openingPunchRect(wall, opening)
+    if (rect && rect.length >= 3) punches.push(rect)
+  }
+  if (punches.length === 0) return components
+
+  const difference = resolveDifferenceFn()
+  let acc = componentsToMultiPolygon(components)
+  if (acc.length === 0) return components
+
+  for (const punch of punches) {
+    const geom = toUnionGeom(punch)
+    if (!geom) continue
+    acc = difference(acc, geom)
+  }
+
+  if (acc.length === 0) return []
+  return multiPolygonToComponents(acc)
+}
+
+function distPointToSegment(point: Point2D, a: Point2D, b: Point2D): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len2 = dx * dx + dy * dy
+  if (len2 < 1e-18) return distance(point, a)
+  let t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / len2
+  t = Math.max(0, Math.min(1, t))
+  return distance(point, { x: a.x + dx * t, y: a.y + dy * t })
+}
+
+function edgeNearAnySide(a: Point2D, b: Point2D, sides: OpeningSide[], eps: number): boolean {
+  const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+  for (const side of sides) {
+    if (distPointToSegment(mid, side.a, side.b) <= eps) return true
+  }
+  return false
+}
+
+type OutlineEdge = { a: Point2D; b: Point2D }
+
+function ringToEdges(ring: Point2D[]): OutlineEdge[] {
+  // ensureClosedRing returns an *open* ring (no duplicate close).
+  const open = ensureClosedRing(ring)
+  if (open.length < 2) return []
+  const edges: OutlineEdge[] = []
+  for (let i = 0; i < open.length; i += 1) {
+    const a = open[i]
+    const b = open[(i + 1) % open.length]
+    if (distance(a, b) < QUANTIZE_CM * 0.5) continue
+    edges.push({ a, b })
+  }
+  return edges
+}
+
+function pointKey(point: Point2D): string {
+  return `${quantize(point.x)},${quantize(point.y)}`
+}
+
+/** Chain remaining edges into open polylines (shared endpoints). */
+function chainEdgesToPolylines(edges: OutlineEdge[]): WallOutlinePolyline[] {
+  if (edges.length === 0) return []
+
+  type Node = { point: Point2D; edgeIndexes: number[] }
+  const nodes = new Map<string, Node>()
+  const ensure = (point: Point2D): Node => {
+    const key = pointKey(point)
+    let node = nodes.get(key)
+    if (!node) {
+      node = { point: quantizePoint(point), edgeIndexes: [] }
+      nodes.set(key, node)
+    }
+    return node
+  }
+
+  edges.forEach((edge, index) => {
+    ensure(edge.a).edgeIndexes.push(index)
+    ensure(edge.b).edgeIndexes.push(index)
+  })
+
+  const used = new Set<number>()
+  const polylines: WallOutlinePolyline[] = []
+
+  const otherEnd = (edge: OutlineEdge, from: Point2D): Point2D =>
+    pointKey(edge.a) === pointKey(from) ? edge.b : edge.a
+
+  const walk = (startEdgeIndex: number, startPoint: Point2D): Point2D[] => {
+    const chain: Point2D[] = [quantizePoint(startPoint)]
+    let edgeIndex = startEdgeIndex
+    let from = startPoint
+    while (edgeIndex >= 0 && !used.has(edgeIndex)) {
+      used.add(edgeIndex)
+      const edge = edges[edgeIndex]
+      const next = otherEnd(edge, from)
+      chain.push(quantizePoint(next))
+      from = next
+      const node = nodes.get(pointKey(from))
+      if (!node) break
+      const nextEdge = node.edgeIndexes.find((idx) => !used.has(idx))
+      edgeIndex = nextEdge ?? -1
+    }
+    return chain
+  }
+
+  // Prefer degree-1 starts so open chains are complete; then leftovers (loops).
+  const degreeOneStarts: Array<{ edgeIndex: number; start: Point2D }> = []
+  for (const node of nodes.values()) {
+    if (node.edgeIndexes.length !== 1) continue
+    degreeOneStarts.push({ edgeIndex: node.edgeIndexes[0], start: node.point })
+  }
+  for (const { edgeIndex, start } of degreeOneStarts) {
+    if (used.has(edgeIndex)) continue
+    const chain = walk(edgeIndex, start)
+    if (chain.length >= 2) polylines.push(chain)
+  }
+
+  for (let i = 0; i < edges.length; i += 1) {
+    if (used.has(i)) continue
+    const chain = walk(i, edges[i].a)
+    if (chain.length >= 2) polylines.push(chain)
+  }
+
+  return polylines
+}
+
+function dropOpeningSidesFromComponents(
+  components: WallFillComponent[],
+  wallsById: Map<string, WallPolygonInput>,
+  openings: WallOutlineOpeningInput[],
+): WallOutlinePolyline[] {
+  const sides: OpeningSide[] = []
+  for (const opening of openings) {
+    const wall = wallsById.get(opening.wallId)
+    if (!wall) continue
+    sides.push(...openingDropSides(wall, opening))
+  }
+
+  const kept: OutlineEdge[] = []
+  for (const component of components) {
+    for (const ring of component.rings) {
+      for (const edge of ringToEdges(ring)) {
+        if (sides.length > 0 && edgeNearAnySide(edge.a, edge.b, sides, OPENING_EDGE_DROP_EPS_CM)) {
+          continue
+        }
+        kept.push(edge)
+      }
+    }
+  }
+  return chainEdgesToPolylines(kept)
+}
+
+/**
+ * Architect-mode wall outlines in cm: mitered union rings, openings punched
+ * through, sill/jamb edges dropped so opening glyphs close the gap.
+ */
+export function buildWallOutlinePolylines(
+  walls: WallPolygonInput[],
+  openings: WallOutlineOpeningInput[] = [],
+): WallOutlinePolyline[] {
+  if (walls.length === 0) return []
+
+  const geometry = buildWallRenderGeometry(walls)
+  if (geometry.fillComponents.length === 0) return []
+
+  const wallsById = new Map<string, WallPolygonInput>()
+  for (const wall of walls) {
+    wallsById.set(wall.id, {
+      id: wall.id,
+      a: quantizePoint(wall.a),
+      b: quantizePoint(wall.b),
+      thickness: Math.max(QUANTIZE_CM, quantize(wall.thickness)),
+      balance: wall.balance,
+    })
+  }
+
+  const punched = punchOpeningsFromComponents(geometry.fillComponents, wallsById, openings)
+  if (punched.length === 0) return []
+
+  return dropOpeningSidesFromComponents(punched, wallsById, openings)
 }

@@ -319,6 +319,46 @@ function flattenPoints(points: Point2D[]): number[] {
   return points.flatMap((point) => [point.x, point.y])
 }
 
+function roundHolePoints(outer: ElevationOpeningOuter, steps = 32): Point2D[] {
+  const cx = (outer.x0 + outer.x1) / 2
+  const cy = (outer.y0 + outer.y1) / 2
+  const rx = Math.max(0.5, (outer.x1 - outer.x0) / 2)
+  const ry = Math.max(0.5, (outer.y1 - outer.y0) / 2)
+  const radius = Math.min(rx, ry)
+  const points: Point2D[] = []
+  for (let i = 0; i < steps; i += 1) {
+    const a = (Math.PI * 2 * i) / steps
+    points.push({ x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius })
+  }
+  return points
+}
+
+function halfRoundHolePoints(outer: ElevationOpeningOuter, steps = 24): Point2D[] {
+  const cx = (outer.x0 + outer.x1) / 2
+  const rx = Math.max(0.5, (outer.x1 - outer.x0) / 2)
+  const ry = Math.max(0.5, outer.y1 - outer.y0)
+  const cy = outer.y1
+  const points: Point2D[] = []
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps
+    const a = Math.PI + Math.PI * t
+    points.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry })
+  }
+  return points
+}
+
+/** Rechthoekig kozijn-gat; driehoek/rond/halfrond/boog gebruiken hun silhouet. */
+export function elevationOpeningHoleIsRect(type: OpeningType, refid: string): boolean {
+  const catalog = resolveOpeningCatalog(refid, type)
+  const kind = catalog.kind
+  const symbol = catalog.elevationSymbol
+  if (kind === 'archway' || symbol === 'archway') return false
+  if (kind === 'triangle' || symbol === 'triangle') return false
+  if (kind === 'round' || symbol === 'round') return false
+  if (kind === 'half_round' || symbol === 'half_round') return false
+  return true
+}
+
 function buildTriangle(
   polys: ElevationGlyphPoly[],
   outer: ElevationOpeningOuter,
@@ -362,6 +402,8 @@ export function elevationOpeningHolePoints(
   if (kind === 'triangle' || symbol === 'triangle') {
     return trianglePoints(outer, hingeOnLeft(opts?.mirrored, opts?.startOnLeft !== false))
   }
+  if (kind === 'round' || symbol === 'round') return roundHolePoints(outer)
+  if (kind === 'half_round' || symbol === 'half_round') return halfRoundHolePoints(outer)
   return [
     { x: outer.x0, y: outer.y0 },
     { x: outer.x1, y: outer.y0 },

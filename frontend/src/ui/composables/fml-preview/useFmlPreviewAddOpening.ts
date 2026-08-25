@@ -12,7 +12,6 @@ import {
   clampOpeningSillZ,
   clampOpeningWidth,
   clampWindowOpeningHeight,
-  DEFAULT_WINDOW_SILL_Z_CM,
   projectPointToWallT,
   wallCollinearEnds,
 } from '@/ui/components/fml-preview-openings'
@@ -25,6 +24,7 @@ export function useFmlPreviewAddOpening(options: {
   addDoorSubtype: Ref<DoorAddSubtype>
   addDoorWidthCm: Ref<number>
   addDoorHeightCm: Ref<number>
+  addDoorSillZCm: Ref<number>
   addWindowSubtype: Ref<WindowAddSubtype>
   addWindowWidthCm: Ref<number>
   addWindowSillZCm: Ref<number>
@@ -48,7 +48,7 @@ export function useFmlPreviewAddOpening(options: {
     const sillZCm =
       mode === 'window'
         ? clampOpeningSillZ(options.addWindowSillZCm.value)
-        : DEFAULT_WINDOW_SILL_Z_CM
+        : clampOpeningSillZ(options.addDoorSillZCm.value)
     const heightCm =
       mode === 'window'
         ? clampWindowOpeningHeight(options.addWindowHeightCm.value)
@@ -57,6 +57,7 @@ export function useFmlPreviewAddOpening(options: {
       options.addWindowSillZCm.value = sillZCm
       options.addWindowHeightCm.value = heightCm
     } else {
+      options.addDoorSillZCm.value = sillZCm
       options.addDoorHeightCm.value = heightCm
     }
 

@@ -18,6 +18,7 @@ describe('resolveFmlStickySelectKind', () => {
     hasItem: false,
     hasAnnotation: false,
     hasArea: false,
+    hasDimension: false,
   }
 
   it('kiest muur vóór opening', () => {
@@ -25,6 +26,7 @@ describe('resolveFmlStickySelectKind', () => {
     expect(resolveFmlStickySelectKind({ ...none, hasWall: true })).toBe('wall')
     expect(resolveFmlStickySelectKind({ ...none, hasJunction: true })).toBe('wall')
     expect(resolveFmlStickySelectKind({ ...none, hasOpening: true })).toBe('opening')
+    expect(resolveFmlStickySelectKind({ ...none, hasDimension: true })).toBe('dimension')
   })
 })
 

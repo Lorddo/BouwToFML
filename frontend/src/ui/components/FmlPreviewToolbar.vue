@@ -17,6 +17,7 @@ import {
   type FmlToolId,
 } from './canvas/fmlToolbeltItems'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import type { BoxSelectKind } from '@/ui/composables/fml-preview/fml-preview-wall-select'
 import './canvas/canvas-toolbelt.css'
 
 const { t, locale } = useI18n()
@@ -27,9 +28,11 @@ const activeTool = defineModel<FmlToolId | null>('activeTool', { default: null }
 const measureDrawMode = defineModel<'tape' | 'manual' | 'slicer'>('measureDrawMode', {
   default: 'tape',
 })
+const boxSelectKind = defineModel<BoxSelectKind>('boxSelectKind', { default: 'wall' })
 const slicerEditMode = defineModel<boolean>('slicerEditMode', { default: false })
 const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
 const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
+const addDoorSillZCm = defineModel<number>('addDoorSillZCm', { default: 0 })
 const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
 const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 })
 const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
@@ -139,8 +142,12 @@ const props = withDefaults(
     wallBalanceMixed: boolean
     wallHeightDraft: number
     wallHeightMixed: boolean
+    wallBottomZDraft?: number
+    wallBottomZMixed?: boolean
     junctionHeightDraft: number
     junctionHeightMixed: boolean
+    junctionBottomZDraft?: number
+    junctionBottomZMixed?: boolean
     openingSubtypeDraft: OpeningSubtypeDraft
     openingSubtypeMixed: boolean
     openingWidthDraft: number
@@ -177,9 +184,7 @@ const props = withDefaults(
     drawSurfaceDrafting?: boolean
     facadeGroupsEnabled?: boolean
     facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
-    facadeGroupDraft?: string | null
-    facadeGroupMixed?: boolean
-    canSelectFacadeMembers?: boolean
+    facadeGroupChecks?: Record<string, boolean | null>
     /** Workspace: alleen Stempel-preset (geen nieuwe groep / rename). */
     facadeGroupsStampPreset?: boolean
     /** Editor: Stempel-select naast gevel. */
@@ -210,9 +215,7 @@ const props = withDefaults(
     drawSurfaceDrafting: false,
     facadeGroupsEnabled: false,
     facadeGroupOptions: () => [],
-    facadeGroupDraft: '',
-    facadeGroupMixed: false,
-    canSelectFacadeMembers: false,
+    facadeGroupChecks: () => ({}),
     facadeGroupsStampPreset: false,
     stampGroupEnabled: false,
     stampGroupDraft: false,
@@ -250,8 +253,12 @@ const emit = defineEmits<{
   commitWallBalance: []
   wallHeightCm: [cm: number]
   commitWallHeight: []
+  wallBottomZCm: [cm: number]
+  commitWallBottomZ: []
   junctionHeightCm: [cm: number]
   commitJunctionHeight: []
+  junctionBottomZCm: [cm: number]
+  commitJunctionBottomZ: []
   commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
   openingWidthCm: [cm: number]
   commitOpeningWidth: []
@@ -272,8 +279,8 @@ const emit = defineEmits<{
   deleteWalls: []
   clearSelection: []
   facadeGroupChange: [value: string]
-  facadeGroupRename: []
-  selectFacadeMembers: []
+  facadeGroupRemove: [groupId: string]
+  selectFacadeMembers: [groupId: string]
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
   wallKindChange: [kind: 'wall' | 'ridge']
@@ -317,6 +324,7 @@ const emit = defineEmits<{
   cancelDrawRoomDraft: []
   acceptDrawDraft: []
   deactivateDrawTool: []
+  boxSelectAll: []
 }>()
 
 const selectTools = computed(() => {
@@ -393,7 +401,12 @@ const hint = computed(() => {
   if (activeTool.value === 'add_door') return t('result.toolbar.hintAddDoor')
   if (activeTool.value === 'add_window') return t('result.toolbar.hintAddWindow')
   if (activeTool.value === 'add_fixture') return t('result.toolbar.hintAddFixture')
-  if (activeTool.value === 'box_select') return t('result.toolbar.hintBoxSelect')
+  if (activeTool.value === 'box_select') {
+    if (boxSelectKind.value === 'door') return t('result.toolbar.hintBoxSelectDoor')
+    if (boxSelectKind.value === 'window') return t('result.toolbar.hintBoxSelectWindow')
+    if (boxSelectKind.value === 'all') return t('result.toolbar.hintBoxSelectMixed')
+    return t('result.toolbar.hintBoxSelect')
+  }
   if (props.selectedLabelPanel && props.includeAnnotationTools === true) {
     return t('result.toolbar.hintLabelSelected')
   }
@@ -511,11 +524,13 @@ defineExpose({ hint })
           v-model:active-tool="activeTool"
           v-model:add-door-subtype="addDoorSubtype"
           v-model:add-door-width-cm="addDoorWidthCm"
+          v-model:add-door-sill-z-cm="addDoorSillZCm"
           v-model:add-window-subtype="addWindowSubtype"
           v-model:add-window-width-cm="addWindowWidthCm"
           v-model:add-window-sill-z-cm="addWindowSillZCm"
           v-model:add-window-height-cm="addWindowHeightCm"
           v-model:measure-draw-mode="measureDrawMode"
+          v-model:box-select-kind="boxSelectKind"
           v-model:slicer-edit-mode="slicerEditMode"
           v-model:draw-surface-role="drawSurfaceRole"
           v-model:draw-surface-cutout="drawSurfaceCutout"
@@ -524,14 +539,14 @@ defineExpose({ hint })
           v-model:draw-line-color="drawLineColor"
           v-model:draw-label-text="drawLabelText"
           v-model:draw-label-font-size="drawLabelFontSize"
-          :selected-wall-panel="selectedWallPanel"
           v-model:draw-label-font-color="drawLabelFontColor"
-          :selected-junction-panel="selectedJunctionPanel"
           v-model:draw-label-outline="drawLabelOutline"
-          :selected-opening-panel="selectedOpeningPanel"
           v-model:draw-label-bold="drawLabelBold"
-          :selected-area-panel="selectedAreaPanel"
           v-model:draw-label-italic="drawLabelItalic"
+          :selected-wall-panel="selectedWallPanel"
+          :selected-junction-panel="selectedJunctionPanel"
+          :selected-opening-panel="selectedOpeningPanel"
+          :selected-area-panel="selectedAreaPanel"
           :selected-label-panel="selectedLabelPanel"
           :selected-line-panel="selectedLinePanel"
           :selected-item-panel="selectedItemPanel"
@@ -546,8 +561,12 @@ defineExpose({ hint })
           :wall-balance-mixed="wallBalanceMixed"
           :wall-height-draft="wallHeightDraft"
           :wall-height-mixed="wallHeightMixed"
+          :wall-bottom-z-draft="wallBottomZDraft"
+          :wall-bottom-z-mixed="wallBottomZMixed"
           :junction-height-draft="junctionHeightDraft"
           :junction-height-mixed="junctionHeightMixed"
+          :junction-bottom-z-draft="junctionBottomZDraft"
+          :junction-bottom-z-mixed="junctionBottomZMixed"
           :opening-subtype-draft="openingSubtypeDraft"
           :opening-subtype-mixed="openingSubtypeMixed"
           :opening-width-draft="openingWidthDraft"
@@ -582,9 +601,7 @@ defineExpose({ hint })
           :draw-surface-drafting="drawSurfaceDrafting"
           :facade-groups-enabled="facadeGroupsEnabled"
           :facade-group-options="facadeGroupOptions"
-          :facade-group-draft="facadeGroupDraft"
-          :facade-group-mixed="facadeGroupMixed"
-          :can-select-facade-members="canSelectFacadeMembers"
+          :facade-group-checks="facadeGroupChecks"
           :facade-groups-stamp-preset="facadeGroupsStampPreset"
           :stamp-group-enabled="stampGroupEnabled"
           :stamp-group-draft="stampGroupDraft"
@@ -603,8 +620,12 @@ defineExpose({ hint })
           @commit-wall-balance="emit('commitWallBalance')"
           @wall-height-cm="emit('wallHeightCm', $event)"
           @commit-wall-height="emit('commitWallHeight')"
+          @wall-bottom-z-cm="emit('wallBottomZCm', $event)"
+          @commit-wall-bottom-z="emit('commitWallBottomZ')"
           @junction-height-cm="emit('junctionHeightCm', $event)"
           @commit-junction-height="emit('commitJunctionHeight')"
+          @junction-bottom-z-cm="emit('junctionBottomZCm', $event)"
+          @commit-junction-bottom-z="emit('commitJunctionBottomZ')"
           @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
           @opening-width-cm="emit('openingWidthCm', $event)"
           @commit-opening-width="emit('commitOpeningWidth')"
@@ -624,8 +645,8 @@ defineExpose({ hint })
           @split-wall="emit('splitWall')"
           @delete-walls="emit('deleteWalls')"
           @facade-group-change="emit('facadeGroupChange', $event)"
-          @facade-group-rename="emit('facadeGroupRename')"
-          @select-facade-members="emit('selectFacadeMembers')"
+          @facade-group-remove="emit('facadeGroupRemove', $event)"
+          @select-facade-members="emit('selectFacadeMembers', $event)"
           @stamp-group-change="emit('stampGroupChange', $event)"
           @select-stamp-members="emit('selectStampMembers')"
           @wall-kind-change="emit('wallKindChange', $event)"
@@ -670,6 +691,7 @@ defineExpose({ hint })
           @cancel-draw-room-draft="emit('cancelDrawRoomDraft')"
           @accept-draw-draft="emit('acceptDrawDraft')"
           @deactivate-draw-tool="emit('deactivateDrawTool')"
+          @box-select-all="emit('boxSelectAll')"
         />
       </div>
     </div>

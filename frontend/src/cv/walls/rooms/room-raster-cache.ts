@@ -9,11 +9,13 @@ export {
   classificationStats,
   serializeFaceOverrides,
   serializePinnedRoots,
+  serializeMaskKeepDoorFaceIds,
   applySerializedFaceOverrides,
 } from './room-raster-cache-create'
 
 export {
   rebuildFaceBBoxIndex,
+  ensureFaceBBoxIndex,
   invalidateFaceDualSpace,
   claimFacesInRoomRasterCache,
   ensureFaceDualSpace,

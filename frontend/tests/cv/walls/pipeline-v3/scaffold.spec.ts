@@ -12,7 +12,11 @@ import { layer5WeldPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-5'
 import { layer6ConnectorPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-6'
 import { resolveLayer6Scale } from '@/cv/walls/rooms/pipeline-v3/engines/connector/constants'
 import { layer7CollapsePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-7'
-import { layer8HvPolicy, layer8WeldPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-8'
+import {
+  layer8CoverPolicy,
+  layer8HvPolicy,
+  layer8WeldPolicy,
+} from '@/cv/walls/rooms/pipeline-v3/policies/layer-8'
 import { layer9CollapsePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
 import { resolvePipelineScale } from '@/cv/walls/rooms/pipeline-v3/engines/scale'
 import {
@@ -78,6 +82,8 @@ describe('pipeline-v3 progressive stop', () => {
     expect(layer7CollapsePolicy.enableStubCollapse).toBe(false)
     expect(layer9CollapsePolicy.enableStubCollapse).toBe(true)
     expect(layer9CollapsePolicy.enableParallelCover).toBe(true)
+    expect(layer8CoverPolicy.enableParallelCover).toBe(true)
+    expect(layer8CoverPolicy.enableStubCollapse).toBe(false)
   })
 
   it('keeps L6 connector iterations configured', () => {

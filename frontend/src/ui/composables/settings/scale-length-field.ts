@@ -3,7 +3,17 @@
  * but store cm-float. Unit switch never rewrites stored cm — only typing does.
  */
 
-import { formatScaleInputValue, parseScaleInput, type ScaleInputUnit } from './scale-input-unit'
+import {
+  CM_PER_INCH,
+  formatScaleInputValue,
+  parseScaleInput,
+  type ScaleInputUnit,
+  type UnitSystem,
+} from './scale-input-unit'
+
+/** Stepper: metric = 1 cm; imperial = 1/16 inch. */
+export const SCALE_LENGTH_STEP_METRIC_CM = 1
+export const SCALE_LENGTH_STEP_IMPERIAL_IN = 1 / 16
 
 export type ScaleLengthClampOptions = {
   /** Inclusive minimum in cm. Omit = no lower bound. */
@@ -40,4 +50,31 @@ export function parseAndClampScaleLengthCm(
 /** Display string for an idle length field (no suffix). */
 export function formatScaleLengthField(cm: number, unit: ScaleInputUnit): string {
   return formatScaleInputValue(cm, unit)
+}
+
+/** Stored-cm delta for −/+ / pijltjes (settings `unitSystem`, niet display-unit). */
+export function scaleLengthStepCm(unitSystem: UnitSystem): number {
+  return unitSystem === 'imperial'
+    ? CM_PER_INCH * SCALE_LENGTH_STEP_IMPERIAL_IN
+    : SCALE_LENGTH_STEP_METRIC_CM
+}
+
+function clampScaleLengthCm(cm: number, opts: ScaleLengthClampOptions): number {
+  let next = cm
+  if (!opts.allowNegative && next < 0) next = 0
+  if (!opts.allowZero && !opts.allowNegative && next <= 0) next = opts.minCm ?? 1
+  if (opts.minCm != null && Number.isFinite(opts.minCm)) next = Math.max(opts.minCm, next)
+  if (opts.maxCm != null && Number.isFinite(opts.maxCm)) next = Math.min(opts.maxCm, next)
+  return next
+}
+
+/** −/+ : huidige cm ± stap, daarna dezelfde clamp als typen. */
+export function stepScaleLengthCm(
+  cm: number,
+  unitSystem: UnitSystem,
+  direction: 1 | -1,
+  opts: ScaleLengthClampOptions = {},
+): number {
+  const base = Number.isFinite(cm) ? cm : 0
+  return clampScaleLengthCm(base + direction * scaleLengthStepCm(unitSystem), opts)
 }

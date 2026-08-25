@@ -195,7 +195,7 @@ export function stableJunctionId(refs: WallEndRef[]): string {
     .join('|')
 }
 
-export function buildJunctions(walls: Wall[]): JunctionNode[] {
+export function buildJunctions(walls: ReadonlyArray<Wall>): JunctionNode[] {
   const map = new Map<string, JunctionNode>()
 
   for (const wall of walls) {

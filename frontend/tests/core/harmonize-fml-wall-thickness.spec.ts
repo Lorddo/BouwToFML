@@ -214,6 +214,26 @@ describe('harmonizeFmlWallThickness', () => {
     expect(thicknesses).toEqual([30, 30, 30])
   })
 
+  it('flusht geharmoniseerde dikte terug naar designs[0]', () => {
+    const raw = wall('e0', { x: 0, y: 0 }, { x: 100, y: 0 }, 19.12)
+    const plan: FloorPlan = {
+      name: 'Test',
+      floors: [
+        {
+          name: 'F0',
+          level: 0,
+          height: 280,
+          walls: [raw],
+          designs: [{ name: 'F0', walls: [{ ...raw }] }],
+          activeDesignIndex: 0,
+        },
+      ],
+    }
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
+    expect(harmonized.floors[0]?.walls[0]?.thickness).toBe(20)
+    expect(harmonized.floors[0]?.designs?.[0].walls[0]?.thickness).toBe(20)
+  })
+
   it('slaat pinned wall ids over (dikte + keten-vote)', () => {
     const plan = planWithWalls([
       wall('pinned', { x: 0, y: 0 }, { x: 100, y: 0 }, 35),

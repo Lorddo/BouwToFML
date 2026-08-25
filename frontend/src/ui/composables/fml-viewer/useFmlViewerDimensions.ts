@@ -12,6 +12,7 @@ import {
   readBtfSlices,
   writeBtfSlices,
 } from '@/core/fml/btf-slices'
+import { collectOverlayDimensionLines } from '@/core/fml/convert-overlay-dimensions'
 
 export function useFmlViewerDimensions(options: {
   plan: Ref<FloorPlan | null>
@@ -23,12 +24,35 @@ export function useFmlViewerDimensions(options: {
   )
 
   watch(
-    () => [options.plan.value, options.activeFloorIndex.value] as const,
+    () => options.activeFloorIndex.value,
     () => {
       dimensionVis.value = defaultDimensionVis(options.plan.value, options.activeFloorIndex.value)
     },
+  )
+
+  watch(
+    () => options.plan.value,
+    (next, prev) => {
+      if (prev != null && next != null) return
+      dimensionVis.value = defaultDimensionVis(next, options.activeFloorIndex.value)
+    },
     { immediate: true },
   )
+
+  const canConvertActiveDimensions = computed(() => {
+    const vis = dimensionVis.value
+    const plan = options.plan.value
+    const floor = plan?.floors[options.activeFloorIndex.value]
+    if (!plan || !floor) return false
+    if (vis === 'autogen') {
+      return (
+        dimensionSettings.value.engineAutoDims &&
+        collectOverlayDimensionLines(plan, options.activeFloorIndex.value, 'autogen').length > 0
+      )
+    }
+    if (vis === 'slicer') return readBtfSlices(floor).length > 0
+    return false
+  })
 
   const canClearActiveDimensions = computed(() => {
     const vis = dimensionVis.value
@@ -90,6 +114,7 @@ export function useFmlViewerDimensions(options: {
     dimensionVis,
     dimensionSettings,
     canClearActiveDimensions,
+    canConvertActiveDimensions,
     patchDimensionSettings,
     clearActiveDimensionType,
   }

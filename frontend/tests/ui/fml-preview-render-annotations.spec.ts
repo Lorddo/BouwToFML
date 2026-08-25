@@ -4,6 +4,7 @@ import {
   buildRenderLabels,
   buildRenderLines,
   clampLabelFontSize,
+  DIM_TICK_HALF_CM,
   labelKonvaFontStyle,
 } from '@/ui/composables/fml-preview/fml-preview-render-annotations'
 
@@ -93,25 +94,31 @@ describe('fml-preview-render-annotations', () => {
     expect(dashdotted.stroke).toBe('#0000ff')
   })
 
-  it('maatlijn: ticks + meters-label in midden', () => {
+  it('maatlijn: ticks 40 cm totaal + meters-label in midden', () => {
     const [dim] = buildRenderDimensions(
       [{ id: 'd1', type: 'custom_dimension', a: { x: 0, y: 0 }, b: { x: 250, y: 0 } }],
       toStage,
-      6,
     )
     expect(dim.points).toEqual([0, 0, 250, 0])
-    expect(dim.tickA).toEqual([0, -6, 0, 6])
-    expect(dim.tickB).toEqual([250, -6, 250, 6])
+    expect(dim.tickA).toEqual([0, -20, 0, 20])
+    expect(dim.tickB).toEqual([250, -20, 250, 20])
     expect(dim.labelX).toBe(125)
     expect(dim.labelY).toBe(0)
     expect(dim.label).toBe('2500 mm')
     const [meters] = buildRenderDimensions(
       [{ id: 'd1', type: 'custom_dimension', a: { x: 0, y: 0 }, b: { x: 250, y: 0 } }],
       toStage,
-      6,
+      DIM_TICK_HALF_CM,
       'm',
     )
     expect(meters.label).toBe('2.5 m')
+
+    const [scaled] = buildRenderDimensions(
+      [{ id: 'd1', type: 'custom_dimension', a: { x: 0, y: 0 }, b: { x: 250, y: 0 } }],
+      (x, y) => ({ x: x * 2, y: y * 2 }),
+    )
+    expect(scaled.tickA).toEqual([0, -40, 0, 40])
+    expect(scaled.tickB).toEqual([500, -40, 500, 40])
   })
 
   it('label: fontSize clamp + bold/italic/outline in render', () => {

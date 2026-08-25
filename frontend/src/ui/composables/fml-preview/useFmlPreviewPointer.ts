@@ -36,6 +36,8 @@ interface PointerToolModes {
   touchNav: Ref<boolean> | ComputedRef<boolean>
   dakMode?: ComputedRef<boolean>
   isRidgeWallId?: (wallId: string) => boolean
+  manualDimensionsEnabled?: ComputedRef<boolean>
+  hitTestDimensionAtCm?: (cm: Point2D) => string | null
 }
 
 interface PointerDragState {
@@ -51,6 +53,7 @@ interface PointerDragState {
   isWallMoveDrafting?: () => boolean
   isJunctionMoveDrafting?: () => boolean
   isOpeningMoveDrafting?: () => boolean
+  draggingDimension?: ComputedRef<boolean> | Ref<boolean>
 }
 
 interface PointerActions {
@@ -109,6 +112,8 @@ interface PointerActions {
   cancelItemDragPending: () => void
   hitItemResizeHandle: (cm: Point2D) => ItemResizeSide | null
   beginItemResize: (guid: string, side: ItemResizeSide, event: MouseEvent) => void
+  startDimensionDragPending: (id: string, event: MouseEvent) => void
+  beginDimensionDrag: (id: string, event: MouseEvent) => void
 }
 
 export function useFmlPreviewPointer(options: {
@@ -180,6 +185,13 @@ export function useFmlPreviewPointer(options: {
     if (moveOpeningId.value && hoveredOpeningId.value === moveOpeningId.value) return 'grab'
     if (moveWallId.value && hoveredWallId.value === moveWallId.value) return 'grab'
     if (moveItemId.value && hoveredItemId.value === moveItemId.value) return 'grab'
+    if (
+      selection.moveDimensionId.value &&
+      selection.hoveredDimensionId.value === selection.moveDimensionId.value
+    ) {
+      return 'grab'
+    }
+    if (drag.draggingDimension?.value === true) return 'grabbing'
     return 'default'
   })
 
@@ -192,6 +204,7 @@ export function useFmlPreviewPointer(options: {
       hasAnnotation:
         selection.settingsLabelId.value != null || selection.settingsLineId.value != null,
       hasArea: selection.settingsAreaId.value != null || selection.settingsSurfaceId.value != null,
+      hasDimension: selection.moveDimensionId.value != null,
     })
   }
 
@@ -371,7 +384,10 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
-    const openingId = hitTest.hitTestOpeningAtCm(cm)
+    const openingId = hitTest.hitTestOpeningAtCm(
+      cm,
+      settingsOpeningIds.value[0] ?? moveOpeningId.value,
+    )
     if (openingId && allowHit('opening')) {
       if (isSettingsMod(event, modes.settingsMod.value)) {
         actions.toggleSettingsOpening(openingId)
@@ -435,6 +451,31 @@ export function useFmlPreviewPointer(options: {
       }
       actions.startItemDragPending(itemId, event)
       return
+    }
+
+    if (
+      modes.manualDimensionsEnabled?.value === true &&
+      !modes.inspectMode.value &&
+      !modes.measureMode.value
+    ) {
+      const dimensionId = modes.hitTestDimensionAtCm?.(cm) ?? null
+      if (dimensionId && allowHit('dimension')) {
+        const wasMoveTarget = selection.moveDimensionId.value === dimensionId
+        actions.clearSelection()
+        selection.moveDimensionId.value = dimensionId
+        const dimIntent = resolveRelocatePointerIntent({
+          touchNav: modes.touchNav.value,
+          moveMod: modes.moveMod.value,
+          shiftKey: event.shiftKey === true,
+        })
+        if (dimIntent === 'select') return
+        if (wasMoveTarget || modes.moveMod.value) {
+          actions.beginDimensionDrag(dimensionId, event)
+          return
+        }
+        actions.startDimensionDragPending(dimensionId, event)
+        return
+      }
     }
 
     const labelId = modes.labelsVisible.value ? hitTest.hitTestLabelAtCm(cm) : null
@@ -568,6 +609,7 @@ export function useFmlPreviewPointer(options: {
       drag.isUnderlayMoveDragging() ||
       drag.draggingItem.value ||
       drag.draggingItemResize.value ||
+      drag.draggingDimension?.value === true ||
       spacePressed.value
     ) {
       return
@@ -619,6 +661,16 @@ export function useFmlPreviewPointer(options: {
       hoveredOpeningId.value = doorId && allowHover('opening') ? doorId : null
       hoveredItemId.value = null
       hoveredWallId.value = hoveredOpeningId.value != null ? null : hitTest.hitTestWallAtCm(cm)
+      if (
+        modes.manualDimensionsEnabled?.value === true &&
+        !modes.inspectMode.value &&
+        !modes.measureMode.value
+      ) {
+        const dimId = modes.hitTestDimensionAtCm?.(cm) ?? null
+        selection.hoveredDimensionId.value = dimId && allowHover('dimension') ? dimId : null
+      } else {
+        selection.hoveredDimensionId.value = null
+      }
     })
   }
 

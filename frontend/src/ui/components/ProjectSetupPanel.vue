@@ -412,9 +412,7 @@ function onRenameBlur(floorId: string, event: Event) {
   color: #94a3b8;
 }
 .field input[type='text'],
-.field input[type='number'],
-.measure-cell input,
-.measure-row input {
+.field input[type='number'] {
   padding: 6px 8px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
@@ -445,10 +443,8 @@ function onRenameBlur(floorId: string, event: Event) {
   color: #475569;
   font-weight: 500;
 }
-.measure-cell input {
+.measure-cell .scale-length-input {
   width: 100%;
-  box-sizing: border-box;
-  text-align: center;
 }
 .measure-cell__unit {
   color: #94a3b8;
@@ -471,7 +467,7 @@ function onRenameBlur(floorId: string, event: Event) {
 }
 .measure-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr minmax(7.5rem, auto) auto;
   align-items: center;
   gap: 8px;
   margin-bottom: 6px;
@@ -483,9 +479,8 @@ function onRenameBlur(floorId: string, event: Event) {
 .measure-row__label {
   color: #475569;
 }
-.measure-row input {
-  width: 72px;
-  text-align: right;
+.measure-row .scale-length-input {
+  justify-self: end;
 }
 .measure-row__unit {
   color: #94a3b8;

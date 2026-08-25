@@ -1,4 +1,4 @@
-import { findStackedWallIds, groupIdForWall } from '@/core/fml/facade-groups'
+import { findStackedWallIds, groupIdsForWall, groupIdForWall } from '@/core/fml/facade-groups'
 import type { FloorPlan } from '@/core/fml/types'
 import { confirmFacadeStackedFloors } from '@/ui/composables/fml-chrome-dialog'
 
@@ -17,9 +17,13 @@ export async function withStackedFacadeWalls(
 
   let extra = findStackedWallIds(plan, selected)
   if (action === 'detach') {
-    extra = extra.filter((id) => groupIdForWall(plan, id) != null)
+    if (targetGroupId) {
+      extra = extra.filter((id) => groupIdsForWall(plan, id).includes(targetGroupId))
+    } else {
+      extra = extra.filter((id) => groupIdForWall(plan, id) != null)
+    }
   } else if (action === 'assign' && targetGroupId) {
-    extra = extra.filter((id) => groupIdForWall(plan, id) !== targetGroupId)
+    extra = extra.filter((id) => !groupIdsForWall(plan, id).includes(targetGroupId))
   }
   if (extra.length === 0) return selected
 

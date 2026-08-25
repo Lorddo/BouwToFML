@@ -81,6 +81,7 @@ export function useWorkspaceRoomFaces(deps: {
       roomClassifyState?: SerializedRoomClassifyState
       faceOverrides?: Array<[number, RoomRasterClass]>
       pinnedRoots?: number[]
+      maskKeepDoorFaceIds?: number[]
       referenceWallMeasureRect?: { x: number; y: number; width: number; height: number }
     },
   ) => Promise<boolean>

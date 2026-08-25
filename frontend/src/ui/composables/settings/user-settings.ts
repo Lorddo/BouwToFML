@@ -66,9 +66,15 @@ export {
 } from './opening-display-colors'
 export type { PlanDisplayStyle, PlanDisplayStyleChoice } from './plan-display-style'
 export {
+  ARCHITECT_AREA_FILL,
+  ARCHITECT_STROKE,
   DEFAULT_PLAN_DISPLAY_STYLE,
   PLAN_DISPLAY_STYLE_CHOICES,
+  isArchitectPlanStyle,
+  isBouwPlanStyle,
+  isLinePlanStyle,
   normalizePlanDisplayStyle,
+  planLineStroke,
 } from './plan-display-style'
 
 export const USER_SETTINGS_STORAGE_KEY = 'bouwToFml.userSettings'
@@ -88,10 +94,12 @@ export type FmlViewerSettings = {
   openingColors: OpeningDisplayColors
   /** Soft-snap P↔M-offset (voorkeur + andere slices). */
   slicerOffsetSnapCm: number
-  /** Plattegrond-verf: editor (kleur) | bouw (CAD-lijnen). */
+  /** Plattegrond + gevel-verf: editor (kleur) | bouw (CAD-lijnen) | architect (CAD zonder fill). */
   planDisplayStyle: PlanDisplayStyleChoice
   /** Gestippelde nokbalk-breedte (aanzicht + Dak-tab). */
   ridgeDisplayWidthCm: number
+  /** Licht viewport-vast hulpraster op alle canvassen (niet in export). */
+  showCanvasGrid: boolean
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
@@ -173,6 +181,7 @@ export function createFactoryFmlViewerSettings(): FmlViewerSettings {
     slicerOffsetSnapCm: DEFAULT_SLICER_OFFSET_SNAP_CM,
     planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
     ridgeDisplayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
+    showCanvasGrid: true,
   }
 }
 
@@ -242,6 +251,8 @@ function normalizeFmlViewer(
       src.ridgeDisplayWidthCm,
       factory.ridgeDisplayWidthCm,
     ),
+    showCanvasGrid:
+      typeof src.showCanvasGrid === 'boolean' ? src.showCanvasGrid : factory.showCanvasGrid,
   }
 }
 
@@ -337,6 +348,15 @@ export function saveUserSettings(settings: UserSettingsV1): UserSettingsV1 {
   }
   writeThroughThickness(normalized.defaults)
   return normalized
+}
+
+/** Persist canvas guide-grid preference (topbar toggle + Settings). */
+export function setShowCanvasGrid(show: boolean): boolean {
+  const current = loadUserSettings()
+  return saveUserSettings({
+    ...current,
+    fmlViewer: { ...current.fmlViewer, showCanvasGrid: show === true },
+  }).fmlViewer.showCanvasGrid
 }
 
 export function resetUserSettingsToFactory(): UserSettingsV1 {

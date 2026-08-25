@@ -86,6 +86,7 @@ export type WorkspaceFacadeContext = {
   fmlUnderlayOpacity: Ref<number>
   fmlContentOpacity: Ref<number>
   fmlHidePlanText: Ref<boolean>
+  showCanvasGrid: Ref<boolean>
   fmlUnderlaySrc: ComputedRef<string | null>
   fmlUnderlaySize: ComputedRef<{ width: number; height: number } | null>
   fml: ReturnType<typeof useWorkspaceFml>
@@ -221,6 +222,7 @@ function sliceFml(ctx: WorkspaceFacadeContext) {
     fmlUnderlayOpacity: ctx.fmlUnderlayOpacity,
     fmlContentOpacity: ctx.fmlContentOpacity,
     fmlHidePlanText: ctx.fmlHidePlanText,
+    showCanvasGrid: ctx.showCanvasGrid,
     fmlUnderlaySrc: ctx.fmlUnderlaySrc,
     fmlUnderlaySize: ctx.fmlUnderlaySize,
     ...ctx.fml,

@@ -17,6 +17,8 @@ export interface FmlPreviewSelectionRefs {
   settingsWallIds: Ref<string[]>
   settingsJunctionId: Ref<string | null>
   moveWallId: Ref<string | null>
+  moveDimensionId: Ref<string | null>
+  hoveredDimensionId: Ref<string | null>
   settingsOpeningIds: Ref<string[]>
   moveOpeningId: Ref<string | null>
   settingsAreaId: Ref<string | null>
@@ -43,6 +45,7 @@ export interface FmlPreviewSelectionRefs {
   addDoorSubtype: Ref<DoorAddSubtype>
   addDoorWidthCm: Ref<number>
   addDoorHeightCm: Ref<number>
+  addDoorSillZCm: Ref<number>
   addWindowSubtype: Ref<WindowAddSubtype>
   addWindowWidthCm: Ref<number>
   addWindowSillZCm: Ref<number>
@@ -56,6 +59,8 @@ export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
     settingsWallIds: ref<string[]>([]),
     settingsJunctionId: ref<string | null>(null),
     moveWallId: ref<string | null>(null),
+    moveDimensionId: ref<string | null>(null),
+    hoveredDimensionId: ref<string | null>(null),
     settingsOpeningIds: ref<string[]>([]),
     moveOpeningId: ref<string | null>(null),
     settingsAreaId: ref<string | null>(null),
@@ -81,6 +86,7 @@ export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
     addDoorSubtype: ref<DoorAddSubtype>('standard'),
     addDoorWidthCm: ref(resolveDoorAddPreset('standard').defaultWidthCm),
     addDoorHeightCm: ref(DEFAULT_FML_DOOR_HEIGHT_CM),
+    addDoorSillZCm: ref(0),
     addWindowSubtype: ref<WindowAddSubtype>('single'),
     addWindowWidthCm: ref(resolveWindowAddPreset('single').defaultWidthCm),
     addWindowSillZCm: ref(DEFAULT_WINDOW_SILL_Z_CM),

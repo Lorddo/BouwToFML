@@ -10,6 +10,7 @@ import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
 import { bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
 import { junctionIdsForWall, type WallEndRef } from '@/ui/components/fml-preview-junctions'
 import {
+  buildWallOutlinePolylines,
   buildWallRenderGeometry,
   wallFillComponentsToPathData,
 } from '@/ui/components/fml-preview-wall-polygons'
@@ -29,6 +30,7 @@ import {
   buildRenderDimensions,
   buildRenderLabels,
   buildRenderLines,
+  DIM_TICK_HALF_CM,
 } from './fml-preview-render-annotations'
 import type {
   RenderJunction,
@@ -47,6 +49,10 @@ import {
   DEFAULT_SCALE_INPUT_UNIT,
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
+import {
+  isArchitectPlanStyle,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
 
 export type {
   RenderArea,
@@ -111,6 +117,7 @@ export function useFmlPreviewRenderModel(
   dimensionVis?: ComputedRef<DimensionVis>,
   dakMode?: ComputedRef<boolean>,
   inputUnit?: Ref<ScaleInputUnit> | ComputedRef<ScaleInputUnit>,
+  planDisplayStyle?: Ref<PlanDisplayStyleChoice> | ComputedRef<PlanDisplayStyleChoice>,
 ) {
   const underlayImageObj = ref<HTMLImageElement | null>(null)
 
@@ -228,16 +235,16 @@ export function useFmlPreviewRenderModel(
 
     let wallPolygons: RenderWallPolygon[] = []
     let wallFillPathData = ''
+    let wallOutlinePolylines: number[][] = []
     if (walls.length > 0) {
-      const geometry = buildWallRenderGeometry(
-        walls.map((wall, index) => ({
-          id: wall.id || `wall-${index}`,
-          a: wall.a,
-          b: wall.b,
-          thickness: wall.thickness,
-          balance: wall.balance,
-        })),
-      )
+      const wallInputs = walls.map((wall, index) => ({
+        id: wall.id || `wall-${index}`,
+        a: wall.a,
+        b: wall.b,
+        thickness: wall.thickness,
+        balance: wall.balance,
+      }))
+      const geometry = buildWallRenderGeometry(wallInputs)
       wallPolygons = geometry.wallPolygons.map((polygon) => ({
         id: polygon.id,
         points: polygon.points.flatMap((point) => {
@@ -245,13 +252,35 @@ export function useFmlPreviewRenderModel(
           return [stage.x, stage.y]
         }),
       }))
-      wallFillPathData = wallFillComponentsToPathData(
-        geometry.fillComponents.map((component) => ({
-          rings: component.rings.map((ring) => ring.map((point) => toStagePoint(point.x, point.y))),
-        })),
-      )
-      if (!wallFillPathData) {
-        throw new Error('fml-walls: empty union path — refusing per-wall fallback')
+
+      const architect = isArchitectPlanStyle(planDisplayStyle?.value)
+      if (architect) {
+        const openings = walls.flatMap((wall, index) => {
+          const wallId = wall.id || `wall-${index}`
+          return (wall.openings ?? []).map((opening) => ({
+            wallId,
+            t: opening.t,
+            width: opening.width,
+            type: opening.type,
+          }))
+        })
+        wallOutlinePolylines = buildWallOutlinePolylines(wallInputs, openings).map((poly) =>
+          poly.flatMap((point) => {
+            const stage = toStagePoint(point.x, point.y)
+            return [stage.x, stage.y]
+          }),
+        )
+      } else {
+        wallFillPathData = wallFillComponentsToPathData(
+          geometry.fillComponents.map((component) => ({
+            rings: component.rings.map((ring) =>
+              ring.map((point) => toStagePoint(point.x, point.y)),
+            ),
+          })),
+        )
+        if (!wallFillPathData) {
+          throw new Error('fml-walls: empty union path — refusing per-wall fallback')
+        }
       }
     }
 
@@ -272,7 +301,7 @@ export function useFmlPreviewRenderModel(
 
     const manualDims =
       vis === 'manual' ? filterManualDimensions(activeFloor.dimensions, slices) : []
-    const dimensions = buildRenderDimensions(manualDims, toStagePoint, 6, unit)
+    const dimensions = buildRenderDimensions(manualDims, toStagePoint, DIM_TICK_HALF_CM, unit)
 
     const areaSideDims = dak ? [] : buildRenderAreaSideDims(activeFloor.areas, toStagePoint, unit)
 
@@ -290,7 +319,7 @@ export function useFmlPreviewRenderModel(
           b: line.b,
         })),
         toStagePoint,
-        6,
+        DIM_TICK_HALF_CM,
         unit,
       )
     }
@@ -300,7 +329,7 @@ export function useFmlPreviewRenderModel(
       sliceDimensions = buildRenderDimensions(
         bakeSliceDimensions(slices, walls, dimSettings.dimensionMode, 'slice-live'),
         toStagePoint,
-        6,
+        DIM_TICK_HALF_CM,
         unit,
       )
     }
@@ -313,6 +342,7 @@ export function useFmlPreviewRenderModel(
       ridgeLines,
       wallPolygons,
       wallFillPathData,
+      wallOutlinePolylines,
       doorGroups,
       windows,
       fixtures,

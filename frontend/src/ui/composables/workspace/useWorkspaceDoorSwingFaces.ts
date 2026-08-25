@@ -377,6 +377,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
         const next = await pushStage2DoorsOntoWalls({
           accepted: pipe.stage2Accepted,
           bridgeWallFaceIds: pipe.bridgeWallFaceIds,
+          orphanWallFaceIds: pipe.orphanWallFaceIds,
           roomRasterCache: deps.roomRasterCache.value,
           wallsOutput: deps.tabOutputs.value.walls,
           referenceWallThicknessPx: deps.referenceWallThicknessPx?.value ?? undefined,

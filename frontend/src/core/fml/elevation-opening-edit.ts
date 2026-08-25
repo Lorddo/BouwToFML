@@ -6,10 +6,11 @@ import {
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
-import type { Opening, Point2D, Wall } from './types'
+import type { Opening, OpeningType, Point2D, Wall } from './types'
 import type { ElevationOpeningRect, ElevationRect, ElevationWallRect } from './facade-elevation'
 import { elevationWallYsAtX } from './facade-elevation'
 import type { ElevationOpeningPatch } from './elevation-hit'
+import { elevationOpeningHolePoints } from './elevation-opening-symbol'
 import { wallElevationAtT } from './wall-endpoint-height'
 import {
   collectCollinearWallIds,
@@ -22,6 +23,16 @@ export type ElevResizeSide = 'n' | 'e' | 's' | 'w'
 export const ELEVATION_OPENING_SNAP_CM = 8
 export const ELEVATION_OPENING_MIN_WIDTH_CM = 10
 export const ELEVATION_OPENING_MIN_HEIGHT_CM = 10
+const ELEVATION_SHAPE_SAMPLES = 16
+const ELEVATION_SHAPE_SLACK_CM = 0.5
+
+/** Kozijn-silhouet i.p.v. AABB (driehoek / rond / halfrond). */
+export type ElevationOpeningShapeHint = {
+  type: OpeningType
+  refid: string
+  mirrored?: [number, number]
+  startOnLeft?: boolean
+}
 
 export type ElevationSnapTargets = {
   xs: number[]
@@ -109,6 +120,88 @@ function openingEdgesAlongWall(
   return { left: center - half, right: center + half, len }
 }
 
+function normalizedOpeningRect(rect: ElevationRect): {
+  x0: number
+  x1: number
+  y0: number
+  y1: number
+  width: number
+  height: number
+} {
+  const x0 = Math.min(rect.x0, rect.x1)
+  const x1 = Math.max(rect.x0, rect.x1)
+  const y0 = Math.min(rect.y0, rect.y1)
+  const y1 = Math.max(rect.y0, rect.y1)
+  return { x0, x1, y0, y1, width: x1 - x0, height: y1 - y0 }
+}
+
+function holeForOpeningRect(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  shape?: ElevationOpeningShapeHint,
+): Point2D[] {
+  if (!shape) {
+    return [
+      { x: x0, y: y0 },
+      { x: x1, y: y0 },
+      { x: x1, y: y1 },
+      { x: x0, y: y1 },
+    ]
+  }
+  return elevationOpeningHolePoints({ x0, y0, x1, y1 }, shape.type, shape.refid, {
+    mirrored: shape.mirrored,
+    startOnLeft: shape.startOnLeft,
+  })
+}
+
+/** Verticale doorsnede van een gesloten polygoon; `null` als de vorm hier geen glas/kozijn heeft. */
+export function polygonYRangeAtX(
+  points: readonly Point2D[],
+  x: number,
+  eps = 1e-6,
+): { top: number; bot: number } | null {
+  const ys: number[] = []
+  const n = points.length
+  for (let i = 0; i < n; i += 1) {
+    const a = points[i]
+    const b = points[(i + 1) % n]
+    if (!a || !b) continue
+    const lo = Math.min(a.x, b.x)
+    const hi = Math.max(a.x, b.x)
+    if (x < lo - eps || x > hi + eps) continue
+    if (Math.abs(b.x - a.x) < eps) {
+      if (Math.abs(x - a.x) <= eps) ys.push(a.y, b.y)
+      continue
+    }
+    const u = (x - a.x) / (b.x - a.x)
+    if (u < -eps || u > 1 + eps) continue
+    ys.push(a.y + u * (b.y - a.y))
+  }
+  if (ys.length === 0) return null
+  return { top: Math.min(...ys), bot: Math.max(...ys) }
+}
+
+function shapeSampleXs(x0: number, x1: number): number[] {
+  const xs = [x0, x1]
+  for (let i = 1; i < ELEVATION_SHAPE_SAMPLES; i += 1) {
+    xs.push(x0 + ((x1 - x0) * i) / ELEVATION_SHAPE_SAMPLES)
+  }
+  return xs
+}
+
+function holeOccupancyX(points: readonly Point2D[]): { left: number; right: number } | null {
+  if (points.length === 0) return null
+  let left = Number.POSITIVE_INFINITY
+  let right = Number.NEGATIVE_INFINITY
+  for (const point of points) {
+    left = Math.min(left, point.x)
+    right = Math.max(right, point.x)
+  }
+  return Number.isFinite(left) ? { left, right } : null
+}
+
 /**
  * Versleepte kant stopt op de muur; de tegenoverliggende kant blijft staan.
  */
@@ -163,6 +256,7 @@ export function clampElevationOpeningResize(
   minW = ELEVATION_OPENING_MIN_WIDTH_CM,
   minH = ELEVATION_OPENING_MIN_HEIGHT_CM,
   xBounds?: { left: number; right: number },
+  shape?: ElevationOpeningShapeHint,
 ): ElevationRect {
   const wallLeft = xBounds?.left ?? Math.min(wall.aTop.x, wall.bTop.x)
   const wallRight = xBounds?.right ?? Math.max(wall.aTop.x, wall.bTop.x)
@@ -170,22 +264,22 @@ export function clampElevationOpeningResize(
   let nextE = Math.max(rect.x0, rect.x1)
   let nextN = Math.min(rect.y0, rect.y1)
   let nextS = Math.max(rect.y0, rect.y1)
-  if (side === 'e') nextE = Math.min(nextE, wallRight)
-  else if (side === 'w') nextW = Math.max(nextW, wallLeft)
-  const sampleXs = [
-    Math.min(wallRight, Math.max(wallLeft, nextW)),
-    Math.min(wallRight, Math.max(wallLeft, nextE)),
-  ]
-  let wallTop = wall.y0
-  let wallBot = wall.y1
-  for (const x of sampleXs) {
+  const occupancy = holeOccupancyX(holeForOpeningRect(nextW, nextN, nextE, nextS, shape))
+  const hangL = occupancy ? occupancy.left - nextW : 0
+  const hangR = occupancy ? nextE - occupancy.right : 0
+  if (side === 'e') nextE = Math.min(nextE, wallRight + hangR)
+  else if (side === 'w') nextW = Math.max(nextW, wallLeft - hangL)
+  const originN = nextN
+  const originS = nextS
+  const hole = holeForOpeningRect(nextW, originN, nextE, originS, shape)
+  for (const x of shapeSampleXs(nextW, nextE)) {
+    const local = polygonYRangeAtX(hole, x)
+    if (!local) continue
     const ys = elevationWallYsAtX(wall, x)
     if (!ys) continue
-    wallTop = Math.max(wallTop, ys.top)
-    wallBot = Math.min(wallBot, ys.bot)
+    if (side === 'n') nextN = Math.max(nextN, ys.top - (local.top - originN))
+    else if (side === 's') nextS = Math.min(nextS, ys.bot + (originS - local.bot))
   }
-  if (side === 'n') nextN = Math.max(nextN, wallTop)
-  else if (side === 's') nextS = Math.min(nextS, wallBot)
   if (nextE - nextW < minW) {
     if (side === 'e') nextE = nextW + minW
     else if (side === 'w') nextW = nextE - minW
@@ -342,14 +436,39 @@ export function clampOpeningMoveKeepSize(
   opening: Opening,
   wall: Wall,
   floorHeightCm: number,
+  startOnLeft = true,
 ): Opening {
   const t = Number.isFinite(opening.t) ? opening.t : 0.5
   const width = opening.width
   const { z: rawZ, height } = openingSizeOrFallback(opening)
-  const { minZ, maxTop } = wallTopAtT(wall, t, floorHeightCm)
+  const edges = openingEdgesAlongWall(wall, t, width)
+  const hole = holeForOpeningRect(0, 0, width, height, {
+    type: opening.type,
+    refid: opening.refid,
+    mirrored: opening.mirrored,
+    startOnLeft,
+  })
+  let zMin = Number.NEGATIVE_INFINITY
+  let zMax = Number.POSITIVE_INFINITY
+  let any = false
+  for (const x of shapeSampleXs(0, width)) {
+    const local = polygonYRangeAtX(hole, x)
+    if (!local) continue
+    const along = startOnLeft ? edges.left + x : edges.right - x
+    const tSample = edges.len < 1e-6 ? t : along / edges.len
+    const { minZ, maxTop } = wallTopAtT(wall, tSample, floorHeightCm)
+    any = true
+    zMin = Math.max(zMin, minZ - height + local.bot)
+    zMax = Math.min(zMax, maxTop - height + local.top)
+  }
+  if (!any) {
+    const { minZ, maxTop } = wallTopAtT(wall, t, floorHeightCm)
+    zMin = minZ
+    zMax = maxTop - height
+  }
   let z = rawZ
-  if (z + height > maxTop) z = maxTop - height
-  if (z < minZ) z = minZ
+  if (z > zMax) z = zMax
+  if (z < zMin) z = zMin
   return {
     ...opening,
     t,
@@ -359,53 +478,61 @@ export function clampOpeningMoveKeepSize(
   }
 }
 
-function wallYBoundsForOpeningX(
+function elevationOpeningY0Bounds(
   wall: ElevationWallRect,
   x0: number,
-  x1: number,
-): { top: number; bot: number } | null {
-  const lo = Math.min(x0, x1)
-  const hi = Math.max(x0, x1)
-  const samples = [lo, (lo + hi) / 2, hi]
-  let top = Number.NEGATIVE_INFINITY
-  let bot = Number.POSITIVE_INFINITY
+  y0: number,
+  width: number,
+  height: number,
+  shape?: ElevationOpeningShapeHint,
+): { min: number; max: number } | null {
+  const hole = holeForOpeningRect(x0, y0, x0 + width, y0 + height, shape)
+  let min = Number.NEGATIVE_INFINITY
+  let max = Number.POSITIVE_INFINITY
   let any = false
-  for (const x of samples) {
+  for (const x of shapeSampleXs(x0, x0 + width)) {
+    const local = polygonYRangeAtX(hole, x)
+    if (!local) continue
     const ys = elevationWallYsAtX(wall, x)
-    if (!ys) continue
+    if (!ys) return null
     any = true
-    top = Math.max(top, ys.top)
-    bot = Math.min(bot, ys.bot)
+    min = Math.max(min, ys.top - (local.top - y0))
+    max = Math.min(max, ys.bot - (local.bot - y0))
   }
-  return any ? { top, bot } : null
+  return any ? { min, max } : null
 }
 
 function elevationOpeningFitsWall(
   wall: ElevationWallRect,
   x0: number,
+  y0: number,
   width: number,
   height: number,
+  shape?: ElevationOpeningShapeHint,
 ): boolean {
-  const ys = wallYBoundsForOpeningX(wall, x0, x0 + width)
-  return ys != null && ys.bot - ys.top >= height - 0.5
+  const bounds = elevationOpeningY0Bounds(wall, x0, y0, width, height, shape)
+  if (!bounds) return false
+  return y0 >= bounds.min - ELEVATION_SHAPE_SLACK_CM && y0 <= bounds.max + ELEVATION_SHAPE_SLACK_CM
 }
 
 function slideElevationOpeningXToFit(
   wall: ElevationWallRect,
   requested: number,
+  y0: number,
   width: number,
   height: number,
   minX: number,
   maxX: number,
+  shape?: ElevationOpeningShapeHint,
 ): number {
   if (maxX < minX) return requested
-  if (elevationOpeningFitsWall(wall, requested, width, height)) return requested
+  if (elevationOpeningFitsWall(wall, requested, y0, width, height, shape)) return requested
   let best = requested
   let bestDist = Number.POSITIVE_INFINITY
   const steps = 64
   for (let i = 0; i <= steps; i += 1) {
     const x = minX + ((maxX - minX) * i) / steps
-    if (!elevationOpeningFitsWall(wall, x, width, height)) continue
+    if (!elevationOpeningFitsWall(wall, x, y0, width, height, shape)) continue
     const dist = Math.abs(x - requested)
     if (dist < bestDist) {
       best = x
@@ -417,29 +544,31 @@ function slideElevationOpeningXToFit(
 
 /**
  * Verplaats-rect: zelfde breedte/hoogte, schuif tot de opening binnen de muur blijft.
+ * Driehoek/rond/halfrond toetsen het kozijn-silhouet, niet de lege AABB-hoek.
  */
 export function clampElevationOpeningMove(
   wall: ElevationWallRect,
   rect: ElevationRect,
   xBounds?: { left: number; right: number },
+  shape?: ElevationOpeningShapeHint,
 ): ElevationRect {
-  const width = Math.abs(rect.x1 - rect.x0)
-  const height = Math.abs(rect.y1 - rect.y0)
-  const x0Start = Math.min(rect.x0, rect.x1)
-  const y0Start = Math.min(rect.y0, rect.y1)
+  const { x0: x0Start, y0: y0Start, width, height } = normalizedOpeningRect(rect)
   const left = xBounds?.left ?? Math.min(wall.aTop.x, wall.bTop.x)
   const right = xBounds?.right ?? Math.max(wall.aTop.x, wall.bTop.x)
-  const minX = left
-  const maxX = right - width
+  const occupancy = holeOccupancyX(holeForOpeningRect(0, 0, width, height, shape))
+  const insetL = occupancy?.left ?? 0
+  const insetR = occupancy ? width - occupancy.right : 0
+  const minX = left - insetL
+  const maxX = right - width + insetR
   let x0 = x0Start
   if (maxX >= minX) x0 = Math.min(Math.max(x0, minX), maxX)
   else x0 = (left + right - width) / 2
-  x0 = slideElevationOpeningXToFit(wall, x0, width, height, minX, maxX)
+  x0 = slideElevationOpeningXToFit(wall, x0, y0Start, width, height, minX, maxX, shape)
   let y0 = y0Start
-  const ys = wallYBoundsForOpeningX(wall, x0, x0 + width)
-  if (ys && ys.bot - ys.top >= height - 0.5) {
-    if (y0 < ys.top) y0 = ys.top
-    if (y0 + height > ys.bot) y0 = ys.bot - height
+  const yBounds = elevationOpeningY0Bounds(wall, x0, y0Start, width, height, shape)
+  if (yBounds && yBounds.min <= yBounds.max + ELEVATION_SHAPE_SLACK_CM) {
+    if (y0 < yBounds.min) y0 = yBounds.min
+    if (y0 > yBounds.max) y0 = yBounds.max
   }
   return {
     x0,
@@ -481,15 +610,30 @@ function nearestDelta(
   return best
 }
 
+export function openingShapeSnapEdges(
+  rect: ElevationRect,
+  shape?: ElevationOpeningShapeHint,
+): { xs: number[]; ys: number[] } {
+  const { x0, y0, x1, y1 } = normalizedOpeningRect(rect)
+  const hole = holeForOpeningRect(x0, y0, x1, y1, shape)
+  if (hole.length === 0) return { xs: [x0, x1], ys: [y0, y1] }
+  return {
+    xs: hole.map((point) => point.x),
+    ys: hole.map((point) => point.y),
+  }
+}
+
 export function snapElevationRect(
   rect: ElevationRect,
   mode: 'move' | ElevResizeSide,
   targets: ElevationSnapTargets,
   slack = ELEVATION_OPENING_SNAP_CM,
+  shape?: ElevationOpeningShapeHint,
 ): { rect: ElevationRect; guide: ElevationSnapGuide } {
   if (mode === 'move') {
-    const xHit = nearestDelta([rect.x0, rect.x1], targets.xs, slack)
-    const yHit = nearestDelta([rect.y0, rect.y1], targets.ys, slack)
+    const edges = openingShapeSnapEdges(rect, shape)
+    const xHit = nearestDelta(edges.xs, targets.xs, slack)
+    const yHit = nearestDelta(edges.ys, targets.ys, slack)
     return {
       rect: translateElevationRect(rect, xHit?.delta ?? 0, yHit?.delta ?? 0),
       guide: {

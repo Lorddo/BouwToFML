@@ -7,7 +7,16 @@ import { clampOpeningMoveKeepSize, clampOpeningToStory } from './elevation-openi
 import { listFacadeGroups, remapFacadeGroupWallIds } from './facade-groups'
 import { decodePlanOpeningId, encodePlanOpeningId } from './opening-ids'
 import { findOpeningById, moveOpeningToWall, type OpeningLocation } from './opening-wall-ops'
-import { setJunctionHeight, setWallsUniformHeight, type WallEnd } from './wall-endpoint-height'
+import {
+  setJunctionBottomZ,
+  setJunctionElevationEdit,
+  setJunctionHeight,
+  setWallsElevationEdit,
+  setWallsUniformBottomZ,
+  setWallsUniformHeight,
+  type WallElevationEditMode,
+  type WallEnd,
+} from './wall-endpoint-height'
 import {
   addOpeningToWall,
   removeOpeningsById,
@@ -101,6 +110,7 @@ export function updatePlanOpening(
   plan: FloorPlan,
   openingId: string,
   patch: ElevationOpeningWrite,
+  opts?: { startOnLeft?: boolean },
 ): FloorPlan {
   const { floorIndex: scoped, localId } = decodePlanOpeningId(openingId)
   let wrote = false
@@ -113,7 +123,7 @@ export function updatePlanOpening(
     const merged = { ...located.opening, ...patch }
     const keepSize = patch.width == null && patch.z_height == null
     const clamped = keepSize
-      ? clampOpeningMoveKeepSize(merged, located.wall, floor.height)
+      ? clampOpeningMoveKeepSize(merged, located.wall, floor.height, opts?.startOnLeft !== false)
       : clampOpeningToStory(merged, located.wall, floor.height)
     const next = updateOpeningById(walls, localId, {
       t: clamped.t,
@@ -264,17 +274,63 @@ export function setPlanJunctionHeight(
   })
 }
 
-export function setPlanWallHeight(
+export function setPlanJunctionBottomZ(
   plan: FloorPlan,
-  wallId: string,
   floorIndex: number,
-  heightCm: number,
+  refs: ReadonlyArray<{ wallId: string; end: WallEnd }>,
+  bottomZCm: number,
+): FloorPlan {
+  return mapPlanJunctionWalls(plan, floorIndex, refs, (walls, floorHeightCm) =>
+    setJunctionBottomZ(walls, refs, bottomZCm, floorHeightCm),
+  )
+}
+
+/** Aanzicht-greep op knoop: height | lift | shift. */
+export function setPlanJunctionElevationEdit(
+  plan: FloorPlan,
+  floorIndex: number,
+  refs: ReadonlyArray<{ wallId: string; end: WallEnd }>,
+  mode: WallElevationEditMode,
+  targetCm: number,
+): FloorPlan {
+  return mapPlanJunctionWalls(plan, floorIndex, refs, (walls, floorHeightCm) =>
+    setJunctionElevationEdit(walls, refs, mode, targetCm, floorHeightCm),
+  )
+}
+
+function mapPlanJunctionWalls(
+  plan: FloorPlan,
+  floorIndex: number,
+  refs: ReadonlyArray<{ wallId: string; end: WallEnd }>,
+  mapWalls: (walls: Wall[], floorHeightCm: number) => Wall[],
 ): FloorPlan {
   return mapPlanWalls(plan, (walls, index) => {
     if (index !== floorIndex) return walls
     const floor = plan.floors[index]
     if (!floor) return walls
-    const next = setWallsUniformHeight(walls, [wallId], heightCm, floor.height)
+    const next = mapWalls(walls, floor.height)
+    const touched = new Set(refs.map((ref) => ref.wallId))
+    return next.map((wall) => {
+      if (!touched.has(wall.id)) return wall
+      return {
+        ...wall,
+        openings: wall.openings.map((opening) => clampOpeningToStory(opening, wall, floor.height)),
+      }
+    })
+  })
+}
+
+function mapPlanWallElevation(
+  plan: FloorPlan,
+  wallId: string,
+  floorIndex: number,
+  mapWalls: (walls: Wall[], floorHeightCm: number) => Wall[],
+): FloorPlan {
+  return mapPlanWalls(plan, (walls, index) => {
+    if (index !== floorIndex) return walls
+    const floor = plan.floors[index]
+    if (!floor) return walls
+    const next = mapWalls(walls, floor.height)
     return next.map((wall) => {
       if (wall.id !== wallId) return wall
       return {
@@ -283,4 +339,40 @@ export function setPlanWallHeight(
       }
     })
   })
+}
+
+export function setPlanWallHeight(
+  plan: FloorPlan,
+  wallId: string,
+  floorIndex: number,
+  heightCm: number,
+): FloorPlan {
+  return mapPlanWallElevation(plan, wallId, floorIndex, (walls, floorHeightCm) =>
+    setWallsUniformHeight(walls, [wallId], heightCm, floorHeightCm),
+  )
+}
+
+/** Muurbodem tillen; hoogte per eind behouden; openings clampen. */
+export function setPlanWallBottomZ(
+  plan: FloorPlan,
+  wallId: string,
+  floorIndex: number,
+  bottomZCm: number,
+): FloorPlan {
+  return mapPlanWallElevation(plan, wallId, floorIndex, (walls, floorHeightCm) =>
+    setWallsUniformBottomZ(walls, [wallId], bottomZCm, floorHeightCm),
+  )
+}
+
+/** Aanzicht-greep: `height` | `lift` (onder, top vast) | `shift` (hele muur). */
+export function setPlanWallElevationEdit(
+  plan: FloorPlan,
+  wallId: string,
+  floorIndex: number,
+  mode: WallElevationEditMode,
+  targetCm: number,
+): FloorPlan {
+  return mapPlanWallElevation(plan, wallId, floorIndex, (walls, floorHeightCm) =>
+    setWallsElevationEdit(walls, [wallId], mode, targetCm, floorHeightCm),
+  )
 }

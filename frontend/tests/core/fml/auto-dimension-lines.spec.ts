@@ -16,8 +16,14 @@ const KINDERDIJK = resolve(
   '../../../examples/FML(current)/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam/Kinderdijkstraat 53 1, Amsterdam.json.fml',
 )
 
-function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }, t = 20): Wall {
-  return { id, a, b, thickness: t, balance: 0.5, openings: [] }
+function wall(
+  id: string,
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  t = 20,
+  balance = 0.5,
+): Wall {
+  return { id, a, b, thickness: t, balance, openings: [] }
 }
 
 function rectArea(id: string, minX: number, minY: number, maxX: number, maxY: number): FloorArea {
@@ -101,6 +107,66 @@ describe('buildAutoDimensionLines', () => {
     expect(sides.S).toEqual([380])
     expect(sides.outerH).toEqual([])
     expect(sides.outerV).toEqual([])
+  })
+
+  it('west balance 0 (alles buiten): binnenmaat groeit, buitenmaat groeit', () => {
+    // West a→b +Y, links = +X (binnen). balance 0 = alles rechts = buiten (x=-20..0).
+    const walls = [
+      wall('n', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('s', { x: 0, y: 300 }, { x: 400, y: 300 }),
+      wall('w', { x: 0, y: 0 }, { x: 0, y: 300 }, 20, 0),
+      wall('e', { x: 400, y: 0 }, { x: 400, y: 300 }),
+    ]
+    // Binnenfaces: west x=0, east x=390, north y=10, south y=290
+    const areas = [rectArea('room', 0, 10, 390, 290)]
+    const outer = { minX: -20, minY: -10, maxX: 410, maxY: 310 }
+    const interior = classify(
+      buildAutoDimensionLines(walls, areas, {
+        dimensionMode: 'interior',
+        generateOuterDimension: true,
+      }),
+      outer,
+    )
+    expect(interior.N).toEqual([390])
+    expect(interior.S).toEqual([390])
+    expect(interior.W).toEqual([280])
+    expect(interior.E).toEqual([280])
+    expect(interior.outerH).toEqual([390])
+    expect(interior.outerV).toEqual([280])
+
+    const exterior = classify(
+      buildAutoDimensionLines(walls, areas, {
+        dimensionMode: 'exterior',
+        generateOuterDimension: true,
+      }),
+      outer,
+    )
+    expect(exterior.N).toEqual([430])
+    expect(exterior.S).toEqual([430])
+    expect(exterior.W).toEqual([320])
+    expect(exterior.E).toEqual([320])
+    expect(exterior.outerH).toEqual([430])
+    expect(exterior.outerV).toEqual([320])
+  })
+
+  it('stale 0.5-areas + west balance 0: mag niet 380 blijven (balance-aware faces)', () => {
+    const walls = [
+      wall('n', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('s', { x: 0, y: 300 }, { x: 400, y: 300 }),
+      wall('w', { x: 0, y: 0 }, { x: 0, y: 300 }, 20, 0),
+      wall('e', { x: 400, y: 0 }, { x: 400, y: 300 }),
+    ]
+    const { areas } = rectanglePlan()
+    const outer = { minX: -20, minY: -10, maxX: 410, maxY: 310 }
+    const interior = classify(
+      buildAutoDimensionLines(walls, areas, {
+        dimensionMode: 'interior',
+        generateOuterDimension: false,
+      }),
+      outer,
+    )
+    expect(interior.N).toEqual([390])
+    expect(interior.S).toEqual([390])
   })
 
   it('rechthoek exterior: 4 zijden × 1 segment = buitenmaat', () => {

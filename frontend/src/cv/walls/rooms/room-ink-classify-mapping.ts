@@ -7,20 +7,25 @@ export type RoomRasterClass =
 export type RoomClassificationGroupBy = 'merged' | 'component'
 
 /**
- * Tot L11/L12 is `door` alleen UI/Stage-2-metadata → unknown in muurmasker.
+ * Tot L11/L12 is `door` alleen UI/Stage-2-metadata → unknown in muurmasker,
+ * tenzij de face in `maskKeepDoorFaceIds` zit (dunne face → mask zoals window).
  * `window` / `doorframe` tellen als muur in L0-mask (L1–L10 zien binary mask);
  * window-geometrie → L14; doorframe blijft mask-only (geen FML-opening).
  * Zie `.cursor/docs/archive/wall-face-class-flow.md` + `.cursor/docs/door-detection-flow.md`.
  */
-export function toWallPipelineClass(cls: RoomRasterClass): RoomRasterClass {
-  if (cls === 'door') return 'unknown'
+export function toWallPipelineClass(
+  cls: RoomRasterClass,
+  options?: { keepDoorInMask?: boolean },
+): RoomRasterClass {
+  if (cls === 'door') return options?.keepDoorInMask ? 'wall' : 'unknown'
   if (cls === 'window' || cls === 'doorframe') return 'wall'
   return cls
 }
 
 /**
  * Faces die in het ink-muurmasker horen.
- * `window` / `doorframe` meenemen; `door` niet (alleen bogen → later L11/L12).
+ * `window` / `doorframe` meenemen; `door` niet (alleen bogen → later L11/L12),
+ * behalve dunne hyps via `mapClassesForWallPipeline` keep-set.
  */
 export function isWallMaskClass(cls: RoomRasterClass): boolean {
   return cls === 'wall' || cls === 'window' || cls === 'doorframe'
@@ -43,10 +48,17 @@ export function needsInkReresolve(prev: RoomRasterClass, next: RoomRasterClass):
 /** Map classificatie voor muur-pipeline (door → unknown, window → wall); keys blijven. */
 export function mapClassesForWallPipeline(
   classification: Map<number, RoomRasterClass>,
+  options?: { maskKeepDoorFaceIds?: ReadonlySet<number> },
 ): Map<number, RoomRasterClass> {
+  const keep = options?.maskKeepDoorFaceIds
   const out = new Map<number, RoomRasterClass>()
   for (const [label, cls] of classification) {
-    out.set(label, toWallPipelineClass(cls))
+    out.set(
+      label,
+      toWallPipelineClass(cls, {
+        keepDoorInMask: cls === 'door' && keep != null && keep.has(label),
+      }),
+    )
   }
   return out
 }

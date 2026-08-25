@@ -118,6 +118,8 @@ export interface PipelineV3Layer8Result {
     movedJunctionCount: number
     removedPathCount: number
     removedSegmentCount: number
+    parallelCovered: number
+    parallelSegmentsRemoved: number
     zeroLengthRemoved: number
     dedupedCount: number
     junctionKindCountsBeforeHv: Record<'I' | 'L' | 'T' | 'X', number>

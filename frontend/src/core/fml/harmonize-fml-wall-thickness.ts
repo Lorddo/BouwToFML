@@ -1,5 +1,6 @@
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import { alignWallJunctionBalance } from './align-wall-junction-balance'
+import { ensureDesignsSynced } from './design-sync'
 import { sanitizeFmlWalls } from './sanitize-fml-walls'
 import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
@@ -286,10 +287,15 @@ export function harmonizeFmlWallThickness(
         }
       })
 
-      return {
+      const nextWalls = sanitizeFmlWalls(
+        alignWallJunctionBalance(thicknessAssigned, faceEvidenceById),
+      )
+      // designs[0] is een snapshot (ensureRidgeDesign bij generate). Zonder flush
+      // blijft daar de ruwe L10-meting staan — project-download las die snapshot.
+      return ensureDesignsSynced({
         ...floor,
-        walls: sanitizeFmlWalls(alignWallJunctionBalance(thicknessAssigned, faceEvidenceById)),
-      }
+        walls: nextWalls,
+      })
     }),
   }
 }

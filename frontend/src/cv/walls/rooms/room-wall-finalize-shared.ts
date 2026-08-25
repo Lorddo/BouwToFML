@@ -41,15 +41,23 @@ export function prepareRoomFinalizeMask(params: {
   wallStyle?: 'solid' | 'open'
   referenceWallThicknessPx?: number
   faceOverrides?: Map<number, RoomRasterClass>
+  /** Dunne deur-hyps: door→wall in pipeline-mask (UI-class blijft door via locked). */
+  maskKeepDoorFaceIds?: ReadonlySet<number> | readonly number[]
 }): RoomFinalizeSharedPrepResult {
   const { cv, classify } = params
   const faceOverrides = params.faceOverrides ?? new Map<number, RoomRasterClass>()
-  // Door = UI/Stage-2 tot L11/L12; muur-pipeline ziet ze als unknown (niet in mask).
+  // Door = UI/Stage-2 tot L11/L12; muur-pipeline ziet ze als unknown (niet in mask),
+  // behalve dunne hyps (maskKeepDoorFaceIds) → wall zoals window.
   // Window / doorframe = UI-class; blijven in L0-mask (isWallMaskClass) en mappen naar wall.
   const doorOverrides = pickDoorOverrides(faceOverrides)
   const windowOverrides = pickWindowOverrides(faceOverrides)
   const doorframeOverrides = pickDoorframeOverrides(faceOverrides)
-  const wallPipelineOverrides = mapClassesForWallPipeline(faceOverrides)
+  const maskKeepDoorFaceIds = new Set(
+    [...(params.maskKeepDoorFaceIds ?? [])].filter((id) => id > 0),
+  )
+  const wallPipelineOverrides = mapClassesForWallPipeline(faceOverrides, {
+    maskKeepDoorFaceIds,
+  })
 
   reportPipelineProgress('Vlakken voorbereiden…')
   const rawLabelsData = classify.rawLabelsData

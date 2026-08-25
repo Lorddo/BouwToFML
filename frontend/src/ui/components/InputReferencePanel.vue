@@ -375,13 +375,9 @@ onUnmounted(() => {
 }
 
 .cm-input {
-  flex: 0 0 4.5rem;
-  width: 4.5rem;
-  font-size: 12px;
-  padding: 4px 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
+  flex: 0 0 7.25rem;
+  width: 7.25rem;
+  height: 26px;
 }
 
 .cm-unit {

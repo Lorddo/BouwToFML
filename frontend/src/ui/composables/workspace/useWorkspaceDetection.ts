@@ -436,6 +436,7 @@ export function useWorkspaceDetection(deps: {
       roomClassifyState?: SerializedRoomClassifyState
       faceOverrides?: Array<[number, RoomRasterClass]>
       pinnedRoots?: number[]
+      maskKeepDoorFaceIds?: number[]
       referenceWallMeasureRect?: { x: number; y: number; width: number; height: number }
     },
   ): Promise<boolean> {
@@ -493,6 +494,7 @@ export function useWorkspaceDetection(deps: {
           roomClassifyState: options?.roomClassifyState,
           faceOverrides: options?.faceOverrides,
           pinnedRoots: options?.pinnedRoots,
+          maskKeepDoorFaceIds: options?.maskKeepDoorFaceIds,
         },
       )
       if (output.meta?.referenceWallThicknessPx && output.meta.referenceWallThicknessPx > 0) {

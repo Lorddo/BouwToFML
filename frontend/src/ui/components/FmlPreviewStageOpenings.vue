@@ -12,9 +12,10 @@ import {
 } from '@/ui/composables/settings/opening-display-colors'
 import {
   BOUW_GAP_FILL,
-  BOUW_OPENING_STROKE,
   DEFAULT_PLAN_DISPLAY_STYLE,
-  isBouwPlanStyle,
+  isArchitectPlanStyle,
+  isLinePlanStyle,
+  planLineStroke,
   type PlanDisplayStyleChoice,
 } from '@/ui/composables/settings/plan-display-style'
 import { inspectColorFor } from '@/ui/composables/fml-preview/fml-inspect'
@@ -58,7 +59,8 @@ const props = withDefaults(
   },
 )
 
-const bouw = computed(() => isBouwPlanStyle(props.planDisplayStyle))
+const lineStyle = computed(() => isLinePlanStyle(props.planDisplayStyle))
+const architect = computed(() => isArchitectPlanStyle(props.planDisplayStyle))
 
 const detailVisible = computed(() =>
   detailSymbolsVisibleOnScreen(props.layoutScale, props.viewScale),
@@ -95,14 +97,14 @@ function openingGapFill(openingId: string, type: 'door' | 'window'): string {
   if (isOpeningMove(openingId)) return '#3b82f6'
   const inspect = inspectColorFor(openingInspectGuid(openingId, type), props.inspectColors)
   if (inspect) return inspect
-  if (bouw.value) return BOUW_GAP_FILL
+  if (lineStyle.value) return BOUW_GAP_FILL
   return openingFillColor(type, false, props.openingColors)
 }
 
 function openingStrokeColor(openingId: string, type: 'door' | 'window'): string {
   if (isOpeningSettings(openingId)) return '#ea580c'
   if (isOpeningMove(openingId)) return '#2563eb'
-  if (bouw.value) return BOUW_OPENING_STROKE
+  if (lineStyle.value) return planLineStroke(props.planDisplayStyle)
   return openingStrokeFromFill(
     type === 'door' ? props.openingColors.door : props.openingColors.window,
   )
@@ -120,7 +122,7 @@ function windowHasBovenlicht(window: (typeof props.renderModel.windows)[number])
 
 /** Hartlijn door de muurgap — zelfde points als hit, zichtbaar blauw. */
 const doorBovenlichtMarkers = computed(() =>
-  bouw.value
+  lineStyle.value
     ? []
     : doorGroups.value.flatMap((door) =>
         doorHasBovenlicht(door) && door.hitPoints.length >= 4
@@ -130,7 +132,7 @@ const doorBovenlichtMarkers = computed(() =>
 )
 
 const windowBovenlichtMarkers = computed(() =>
-  bouw.value
+  lineStyle.value
     ? []
     : windows.value.flatMap((window) =>
         windowHasBovenlicht(window) && window.hitPoints.length >= 4
@@ -180,28 +182,37 @@ function glyphDash(glyph: RenderPlanGlyph): number[] | undefined {
 }
 
 function glyphOpacity(glyph: RenderPlanGlyph): number {
+  // Architect/Bouw: volle dekking (opacity <1 → grijs i.p.v. zwart).
+  if (lineStyle.value) return 1
   if (glyph.kind === 'arc') return 0.85
   if (glyph.role === 'arrow') return 0.95
   return 0.9
 }
 
 function jambFill(openingId: string, type: 'door' | 'window'): string | undefined {
-  if (bouw.value) return undefined
+  if (lineStyle.value) return undefined
   return openingStrokeColor(openingId, type)
 }
 
 function jambFillOpacity(): number {
-  return bouw.value ? 0 : 0.35
+  return lineStyle.value ? 0 : 0.35
 }
 
 function leafFill(openingId: string, type: 'door' | 'window'): string | undefined {
   // Blad = outline; lichte fill alleen in editor voor leesbaarheid.
-  if (bouw.value) return undefined
+  if (lineStyle.value) return undefined
   return openingStrokeColor(openingId, type)
 }
 
 function leafFillOpacity(): number {
-  return bouw.value ? 0 : 0.12
+  return lineStyle.value ? 0 : 0.12
+}
+
+/** Gap-vlak: editor kleur / bouw wit punch / architect uit (geen muurfill). */
+function showOpeningGap(openingId: string): boolean {
+  if (isOpeningSettings(openingId) || isOpeningMove(openingId)) return true
+  if (architect.value) return false
+  return true
 }
 </script>
 
@@ -209,6 +220,7 @@ function leafFillOpacity(): number {
   <v-group :config="{ listening: false }">
     <template v-for="door in doorGroups" :key="`${door.id}-gap`">
       <v-line
+        v-if="showOpeningGap(door.id)"
         :config="{
           points: door.gapPoints,
           closed: true,
@@ -218,7 +230,7 @@ function leafFillOpacity(): number {
             ? 0.96
             : isOpeningMove(door.id)
               ? 0.94
-              : bouw
+              : lineStyle
                 ? 1
                 : 0.92,
           listening: false,
@@ -227,6 +239,7 @@ function leafFillOpacity(): number {
     </template>
     <template v-for="window in windows" :key="`${window.id}-gap`">
       <v-line
+        v-if="showOpeningGap(window.id)"
         :config="{
           points: window.gapPoints,
           closed: true,
@@ -236,7 +249,7 @@ function leafFillOpacity(): number {
             ? 0.96
             : isOpeningMove(window.id)
               ? 0.94
-              : bouw
+              : lineStyle
                 ? 1
                 : 0.92,
           listening: false,
@@ -265,7 +278,7 @@ function leafFillOpacity(): number {
             points: glyph.points,
             closed: true,
             fill: leafFill(door.id, 'door'),
-            fillEnabled: !bouw,
+            fillEnabled: !lineStyle,
             opacity: leafFillOpacity() || glyphOpacity(glyph),
             stroke: openingStrokeColor(door.id, 'door'),
             strokeWidth: glyphStrokeWidth(glyph),

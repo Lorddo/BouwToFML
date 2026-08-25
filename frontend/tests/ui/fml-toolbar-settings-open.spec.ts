@@ -24,7 +24,10 @@ describe('isFmlToolbarSettingsOpen', () => {
   it('is uit zonder selectie of teken-tool', () => {
     expect(isFmlToolbarSettingsOpen(none)).toBe(false)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt' })).toBe(false)
-    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'box_select' })).toBe(false)
+  })
+
+  it('is aan bij box-select (type-dropdown), zoals maatlijn', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'box_select' })).toBe(true)
   })
 
   it('is aan bij maatlijn-tool (mode-dropdown), ook zonder tape-lijnen', () => {

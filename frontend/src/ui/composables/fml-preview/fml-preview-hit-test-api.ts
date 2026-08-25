@@ -3,8 +3,8 @@ import type { RenderJunction } from './fml-preview-render-types'
 
 export interface HitTestApi {
   hitTestWallAtCm: (cm: Point2D) => string | null
-  hitTestDoorAtCm: (cm: Point2D) => string | null
-  hitTestOpeningAtCm: (cm: Point2D) => string | null
+  hitTestDoorAtCm: (cm: Point2D, preferId?: string | null) => string | null
+  hitTestOpeningAtCm: (cm: Point2D, preferId?: string | null) => string | null
   hitTestSurfaceAtCm: (cm: Point2D) => string | null
   hitTestAreaAtCm: (cm: Point2D) => string | null
   hitTestLabelAtCm: (cm: Point2D) => string | null

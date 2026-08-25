@@ -39,19 +39,20 @@ const props = withDefaults(
     wallBalanceMixed: boolean
     wallHeightDraft: number
     wallHeightMixed: boolean
+    wallBottomZDraft?: number
+    wallBottomZMixed?: boolean
     junctionHeightDraft: number
     junctionHeightMixed: boolean
+    junctionBottomZDraft?: number
+    junctionBottomZMixed?: boolean
     thicknessMinCm?: number
     thicknessMidCm?: number
     thicknessMaxCm?: number
     /** Gevelgroepen (alleen editor capability). */
     facadeGroupsEnabled?: boolean
     facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
-    /** '' = none, null = mixed, else group id. */
-    facadeGroupDraft?: string | null
-    facadeGroupMixed?: boolean
-    /** True als niet alle groepsleden al geselecteerd zijn. */
-    canSelectFacadeMembers?: boolean
+    /** Per groep-id: true / false / null (gemengd). */
+    facadeGroupChecks?: Record<string, boolean | null>
     /** Workspace-detectie: Stempel-preset (geen nieuwe groep / rename). */
     facadeGroupsStampPreset?: boolean
     /** Editor: aparte Stempel-checkbox naast gevel. */
@@ -73,9 +74,7 @@ const props = withDefaults(
     thicknessMaxCm: 30,
     facadeGroupsEnabled: false,
     facadeGroupOptions: () => [],
-    facadeGroupDraft: '',
-    facadeGroupMixed: false,
-    canSelectFacadeMembers: false,
+    facadeGroupChecks: () => ({}),
     facadeGroupsStampPreset: false,
     stampGroupEnabled: false,
     stampGroupDraft: false,
@@ -87,6 +86,10 @@ const props = withDefaults(
     ridgeFloorMixed: false,
     ridgeFloorOptions: () => [],
     ridgeZCm: null,
+    wallBottomZDraft: 0,
+    wallBottomZMixed: false,
+    junctionBottomZDraft: 0,
+    junctionBottomZMixed: false,
   },
 )
 
@@ -98,13 +101,18 @@ const emit = defineEmits<{
   commitWallBalance: []
   wallHeightCm: [cm: number]
   commitWallHeight: []
+  wallBottomZCm: [cm: number]
+  commitWallBottomZ: []
   junctionHeightCm: [cm: number]
   commitJunctionHeight: []
+  junctionBottomZCm: [cm: number]
+  commitJunctionBottomZ: []
   splitWall: []
   deleteWalls: []
+  /** Dropdown: groupId | `__new__` | `__edit__`. */
   facadeGroupChange: [value: string]
-  facadeGroupRename: []
-  selectFacadeMembers: []
+  facadeGroupRemove: [groupId: string]
+  selectFacadeMembers: [groupId: string]
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
   wallKindChange: [kind: 'wall' | 'ridge']
@@ -189,13 +197,18 @@ const wallBalanceSliderValue = computed(() =>
   props.wallBalanceMixed ? 50 : sliderPercentFromDraft(props.wallBalanceDraft),
 )
 
-const facadeSelectValue = computed(() => {
-  if (props.facadeGroupMixed) return ''
-  return props.facadeGroupDraft ?? ''
-})
+function facadeCheckState(groupId: string): boolean | null {
+  return props.facadeGroupChecks[groupId] ?? false
+}
 
-const showFacadeSelectButton = computed(
-  () => !!props.facadeGroupDraft && !props.facadeGroupMixed && props.facadeGroupDraft.length > 0,
+/** Groepen waar (een deel van) de selectie lid van is. */
+const memberFacadeGroups = computed(() =>
+  props.facadeGroupOptions.filter((group) => facadeCheckState(group.id) !== false),
+)
+
+/** Groepen die nog niet volledig toegekend zijn (voor dropdown toevoegen). */
+const addableFacadeGroups = computed(() =>
+  props.facadeGroupOptions.filter((group) => facadeCheckState(group.id) !== true),
 )
 
 function presetSizeLabel(cm: number): string {
@@ -205,13 +218,10 @@ function presetSizeLabel(cm: number): string {
 function onFacadeGroupChange(event: Event): void {
   const select = event.target as HTMLSelectElement
   const value = select.value
-  if (value === '__new__') select.value = facadeSelectValue.value
+  select.value = ''
+  if (!value) return
   emit('facadeGroupChange', value)
   releaseControlFocus(event)
-}
-
-function onFacadeGroupEdit(): void {
-  emit('facadeGroupRename')
 }
 
 function onStampGroupChange(event: Event): void {
@@ -408,7 +418,30 @@ function onRidgeZCm(cm: number): void {
           <span class="fml-toolbelt__unit">%</span>
         </div>
       </div>
-      <div v-if="selectedWallPanel && !isRidgeMode" class="fml-toolbelt__field">
+      <div
+        v-if="(selectedWallPanel || isDrawWallOrRoom) && !isRidgeMode"
+        class="fml-toolbelt__field"
+      >
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="wallBottomZDraft ?? 0"
+            :unit="unit"
+            :min-cm="0"
+            allow-zero
+            :max-cm="2000"
+            :mixed="!!selectedWallPanel && wallBottomZMixed"
+            :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
+            input-class="fml-toolbelt__thickness-input"
+            @update:cm="emit('wallBottomZCm', $event)"
+            @commit="emit('commitWallBottomZ')"
+          />
+        </div>
+      </div>
+      <div
+        v-if="(selectedWallPanel || isDrawWallOrRoom) && !isRidgeMode"
+        class="fml-toolbelt__field"
+      >
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
         <div class="fml-toolbelt__field-controls">
           <ScaleLengthInput
@@ -416,11 +449,28 @@ function onRidgeZCm(cm: number): void {
             :unit="unit"
             :min-cm="1"
             :max-cm="1000"
-            :mixed="wallHeightMixed"
+            :mixed="!!selectedWallPanel && wallHeightMixed"
             :aria-label="t('result.toolbar.wallHeightAria', { unit: t(`common.${unit}`) })"
             input-class="fml-toolbelt__thickness-input"
             @update:cm="emit('wallHeightCm', $event)"
             @commit="emit('commitWallHeight')"
+          />
+        </div>
+      </div>
+      <div v-if="selectedJunctionPanel && !isRidgeJunction" class="fml-toolbelt__field">
+        <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
+        <div class="fml-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="junctionBottomZDraft ?? 0"
+            :unit="unit"
+            :min-cm="0"
+            allow-zero
+            :max-cm="2000"
+            :mixed="junctionBottomZMixed"
+            :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
+            input-class="fml-toolbelt__thickness-input"
+            @update:cm="emit('junctionBottomZCm', $event)"
+            @commit="emit('commitJunctionBottomZ')"
           />
         </div>
       </div>
@@ -470,48 +520,58 @@ function onRidgeZCm(cm: number): void {
       <div class="fml-toolbelt__pair">
         <div v-if="!facadeGroupsStampPreset" class="fml-toolbelt__pair-item">
           <span class="fml-toolbelt__field-label">{{ t('result.toolbar.facadeGroup') }}</span>
-          <div class="fml-toolbelt__field-controls">
-            <select
-              class="fml-toolbelt__select fml-toolbelt__select--facade"
-              :aria-label="t('result.toolbar.facadeGroupAria')"
-              :value="facadeSelectValue"
-              @change="onFacadeGroupChange"
-            >
-              <option value="">
-                {{
-                  facadeGroupMixed
-                    ? t('result.toolbar.facadeGroupMixed')
-                    : t('result.toolbar.facadeGroupNone')
-                }}
-              </option>
-              <option v-for="group in facadeGroupOptions" :key="group.id" :value="group.id">
-                {{ group.name || group.id }}
-              </option>
-              <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
-            </select>
-            <button
-              v-if="showFacadeSelectButton"
-              type="button"
-              class="canvas-toolbelt__btn"
-              :title="t('result.toolbar.facadeGroupEditTitle')"
-              :aria-label="t('result.toolbar.facadeGroupEdit')"
-              @click="onFacadeGroupEdit"
-              @pointerup="releaseControlFocus"
-            >
-              <ToolbeltIcon name="edit" />
-            </button>
-            <button
-              v-if="showFacadeSelectButton"
-              type="button"
-              class="canvas-toolbelt__btn canvas-toolbelt__btn--primary"
-              :title="t('result.toolbar.facadeGroupSelectTitle')"
-              :aria-label="t('result.toolbar.facadeGroupSelect')"
-              :disabled="!canSelectFacadeMembers"
-              @click="emit('selectFacadeMembers')"
-              @pointerup="releaseControlFocus"
-            >
-              {{ t('result.toolbar.facadeGroupSelect') }}
-            </button>
+          <div class="fml-toolbelt__facade-stack">
+            <div class="fml-toolbelt__field-controls">
+              <select
+                class="fml-toolbelt__select fml-toolbelt__select--facade"
+                :aria-label="t('result.toolbar.facadeGroupAria')"
+                value=""
+                @change="onFacadeGroupChange"
+              >
+                <option value="" disabled>
+                  {{ t('result.toolbar.facadeGroupAdd') }}
+                </option>
+                <option v-for="group in addableFacadeGroups" :key="group.id" :value="group.id">
+                  {{ group.name || group.id }}
+                </option>
+                <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
+                <option value="__edit__">{{ t('result.toolbar.facadeGroupEditAll') }}</option>
+              </select>
+            </div>
+            <div v-if="memberFacadeGroups.length > 0" class="fml-toolbelt__facade-chips">
+              <div
+                v-for="group in memberFacadeGroups"
+                :key="group.id"
+                class="fml-toolbelt__facade-chip"
+                :class="{ 'is-mixed': facadeCheckState(group.id) === null }"
+              >
+                <span class="fml-toolbelt__facade-chip-name">{{
+                  facadeCheckState(group.id) === null
+                    ? `${group.name || group.id} (${t('result.toolbar.facadeGroupMixedShort')})`
+                    : group.name || group.id
+                }}</span>
+                <button
+                  type="button"
+                  class="canvas-toolbelt__btn fml-toolbelt__facade-chip-btn"
+                  :title="t('result.toolbar.facadeGroupSelectTitle')"
+                  :aria-label="t('result.toolbar.facadeGroupSelect')"
+                  @click="emit('selectFacadeMembers', group.id)"
+                  @pointerup="releaseControlFocus"
+                >
+                  <ToolbeltIcon name="fit" />
+                </button>
+                <button
+                  type="button"
+                  class="canvas-toolbelt__btn fml-toolbelt__facade-chip-btn"
+                  :title="t('result.toolbar.facadeGroupRemoveTitle')"
+                  :aria-label="t('result.toolbar.facadeGroupRemove')"
+                  @click="emit('facadeGroupRemove', group.id)"
+                  @pointerup="releaseControlFocus"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div

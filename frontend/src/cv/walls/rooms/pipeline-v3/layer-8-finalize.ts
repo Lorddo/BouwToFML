@@ -1,6 +1,7 @@
 /**
- * V3 Laag 8 — finalize: bare HV (wall-mask distance map) + once I→L/T/X prune.
- * Golden: CURRENT layer-8-finalize. No L4 seal; no L9 stub absorb.
+ * V3 Laag 8 — finalize: bare HV + collinear overlap-cover + once I→L/T/X prune.
+ * Cover reveals I-spurs hidden by overlapping same-axis fragments (L-180°).
+ * No L4 seal; no L9 stair-stub absorb.
  */
 import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
@@ -9,6 +10,7 @@ import type { Segment } from '@/cv/port/wallGraph'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
 import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickness'
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
+import { parallelCoverAbsorb } from './engines/collapse'
 import { positionSegmentsHv } from './engines/hv'
 import { pruneISpurs } from './engines/prune'
 import {
@@ -54,6 +56,8 @@ export function runLayer8Finalize(params: {
   let movedJunctionCount = 0
   let removedPathCount = 0
   let removedSegmentCount = 0
+  let parallelCovered = 0
+  let parallelSegmentsRemoved = 0
   let zeroLengthRemoved = 0
   let dedupedCount = 0
 
@@ -77,8 +81,12 @@ export function runLayer8Finalize(params: {
     tally('W-47', positioned.movedSegmentCount > 0 ? 'repositioned' : 'noop')
 
     const weldedAfterHv = weldNearEndpoints(positioned.face.segments, policy.weld)
+    const covered = parallelCoverAbsorb(weldedAfterHv, policy.cover)
+    parallelCovered += covered.stats.coveredCount
+    parallelSegmentsRemoved += covered.stats.segmentsRemoved
+    tally('W-48', covered.stats.coveredCount > 0 ? 'covered' : 'cover_noop')
     // ESC:W-48 (B)
-    const pruned = pruneISpurs(weldedAfterHv, policy.prune)
+    const pruned = pruneISpurs(covered.segments, policy.prune)
     removedPathCount += pruned.pruneStats.removedPathCount
     removedSegmentCount += pruned.pruneStats.removedSegmentCount
     tally('W-48', pruned.pruneStats.removedPathCount > 0 ? 'pruned' : 'noop')
@@ -112,6 +120,8 @@ export function runLayer8Finalize(params: {
       movedJunctionCount,
       removedPathCount,
       removedSegmentCount,
+      parallelCovered,
+      parallelSegmentsRemoved,
       zeroLengthRemoved,
       dedupedCount,
       junctionKindCountsBeforeHv: junctionKindsBeforeHv,

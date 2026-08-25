@@ -2,6 +2,8 @@ import type { Wall } from '@/core/fml/types'
 import { clampWallBalance } from '@/core/fml/fml-wall-geom'
 import {
   setJunctionHeight as setJunctionEndpointHeight,
+  setJunctionBottomZ as setJunctionEndpointBottomZ,
+  setWallsUniformBottomZ as setWallsUniformEndpointBottomZ,
   setWallsUniformHeight as setWallsUniformEndpointHeight,
   splitWallEndpointExtras,
 } from '@/core/fml/wall-endpoint-height'
@@ -112,6 +114,16 @@ export function setWallsHeight(
   return setWallsUniformEndpointHeight(walls, wallIds, heightCm, floorHeightCm)
 }
 
+/** Beide uiteinden van geselecteerde muren op dezelfde bodem (`az.z`/`bz.z`); hoogte behouden. */
+export function setWallsBottomZ(
+  walls: Wall[],
+  wallIds: Iterable<string>,
+  bottomZCm: number,
+  floorHeightCm: number,
+): Wall[] {
+  return setWallsUniformEndpointBottomZ(walls, wallIds, bottomZCm, floorHeightCm)
+}
+
 /** Alle wall-ends op één knoop op dezelfde hoogte. */
 export function setJunctionHeight(
   walls: Wall[],
@@ -120,6 +132,16 @@ export function setJunctionHeight(
   floorHeightCm: number,
 ): Wall[] {
   return setJunctionEndpointHeight(walls, refs, heightCm, floorHeightCm)
+}
+
+/** Alle wall-ends op één knoop op dezelfde bodem; hoogte behouden. */
+export function setJunctionBottomZ(
+  walls: Wall[],
+  refs: ReadonlyArray<WallEndRef>,
+  bottomZCm: number,
+  floorHeightCm: number,
+): Wall[] {
+  return setJunctionEndpointBottomZ(walls, refs, bottomZCm, floorHeightCm)
 }
 
 /** Verwijder één muursegment (openingen op die muur gaan mee). */

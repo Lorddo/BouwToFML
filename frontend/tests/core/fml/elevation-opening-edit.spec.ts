@@ -6,6 +6,7 @@ import {
   clampOpeningPatchKeepOppositeEdge,
   clampOpeningToStory,
   collectOpeningSnapTargets,
+  openingShapeSnapEdges,
   ELEVATION_OPENING_SNAP_CM,
   elevationCollinearXBounds,
   elevationRectCenter,
@@ -18,7 +19,12 @@ import {
 } from '@/core/fml/elevation-opening-edit'
 import { MAX_OPENING_WIDTH_CM } from '@/ui/components/fml-preview-openings'
 import type { ElevationWallRect } from '@/core/fml/facade-elevation'
-import type { Opening, Wall } from '@/core/fml/types'
+import {
+  WINDOW_ROUND_REFID,
+  WINDOW_TRIANGLE_REFID,
+  type Opening,
+  type Wall,
+} from '@/core/fml/types'
 
 const windowA = { openingId: 'a', x0: 0, x1: 100, y0: -220, y1: -70 }
 const windowB = { openingId: 'b', x0: 200, x1: 300, y0: -210, y1: -70 }
@@ -128,7 +134,7 @@ describe('elevation-opening-edit', () => {
     expect(moved.z_height).toBe(120)
     expect(moved.width).toBe(80)
     expect(moved.z).toBe(160)
-    expect(moved.z + moved.z_height).toBe(280)
+    expect((moved.z ?? 0) + (moved.z_height ?? 0)).toBe(280)
   })
 
   it('verplaatsen mag boven de verdieping als de muur hoger is', () => {
@@ -151,7 +157,7 @@ describe('elevation-opening-edit', () => {
     const moved = clampOpeningMoveKeepSize({ ...opening, z: 280 }, host, 280)
     expect(moved.z).toBe(260)
     expect(moved.z_height).toBe(140)
-    expect(moved.z + moved.z_height).toBe(400)
+    expect((moved.z ?? 0) + (moved.z_height ?? 0)).toBe(400)
   })
 
   it('houdt raam onder een schuine muurtop', () => {
@@ -408,6 +414,104 @@ describe('elevation-opening-edit', () => {
     expect(next.y1 - next.y0).toBe(120)
     expect(next.y0).toBeGreaterThanOrEqual(-400)
     expect(next.y1).toBeLessThanOrEqual(0)
+  })
+
+  it('driehoekraam mag met lege bbox-hoek onder een schuine kopgevel', () => {
+    const wall: ElevationWallRect = {
+      wallId: 'w',
+      floorIndex: 0,
+      depthCm: 0,
+      xa: 0,
+      xb: 200,
+      x0: 0,
+      x1: 200,
+      y0: -400,
+      y1: 0,
+      aTop: { x: 0, y: -400 },
+      aBottom: { x: 0, y: 0 },
+      bTop: { x: 200, y: -200 },
+      bBottom: { x: 200, y: 0 },
+      innerATop: { x: 0, y: -400 },
+      innerABottom: { x: 0, y: 0 },
+      innerBTop: { x: 200, y: -200 },
+      innerBBottom: { x: 200, y: 0 },
+    }
+    const requested = { x0: 20, y0: -380, x1: 100, y1: -260 }
+    const rect = clampElevationOpeningMove(wall, requested, undefined, {
+      type: 'window',
+      refid: WINDOW_TRIANGLE_REFID,
+      startOnLeft: true,
+    })
+    const asBox = clampElevationOpeningMove(wall, requested)
+    expect(rect.x1 - rect.x0).toBe(80)
+    expect(rect.y1 - rect.y0).toBe(120)
+    expect(rect.y0).toBeCloseTo(-380, 0)
+    expect(asBox.y0).toBeGreaterThan(rect.y0 + 20)
+  })
+
+  it('rond raam mag met lege bbox-hoek onder een schuine kopgevel', () => {
+    const wall: ElevationWallRect = {
+      wallId: 'w',
+      floorIndex: 0,
+      depthCm: 0,
+      xa: 0,
+      xb: 200,
+      x0: 0,
+      x1: 200,
+      y0: -400,
+      y1: 0,
+      aTop: { x: 0, y: -400 },
+      aBottom: { x: 0, y: 0 },
+      bTop: { x: 200, y: -200 },
+      bBottom: { x: 200, y: 0 },
+      innerATop: { x: 0, y: -400 },
+      innerABottom: { x: 0, y: 0 },
+      innerBTop: { x: 200, y: -200 },
+      innerBBottom: { x: 200, y: 0 },
+    }
+    const requested = { x0: 20, y0: -340, x1: 100, y1: -260 }
+    const next = clampElevationOpeningMove(wall, requested, undefined, {
+      type: 'window',
+      refid: WINDOW_ROUND_REFID,
+    })
+    const asBox = clampElevationOpeningMove(wall, requested)
+    expect(next.x1 - next.x0).toBe(80)
+    expect(next.y1 - next.y0).toBe(80)
+    expect(next.y0).toBeCloseTo(-340, 0)
+    expect(asBox.y0).toBeGreaterThan(next.y0 + 15)
+  })
+
+  it('verplaatsen van een driehoek houdt niet de AABB onder de schuine top', () => {
+    const host: Wall = {
+      id: 'w',
+      a: { x: 0, y: 0 },
+      b: { x: 200, y: 0 },
+      thickness: 20,
+      openings: [],
+      extras: { az: { z: 0, h: 400 }, bz: { z: 0, h: 200 } },
+    }
+    const opening: Opening = {
+      type: 'window',
+      refid: WINDOW_TRIANGLE_REFID,
+      t: 0.3,
+      width: 80,
+      z: 260,
+      z_height: 120,
+    }
+    const asBox = clampOpeningMoveKeepSize({ ...opening, refid: 'concept-window' }, host, 280)
+    const triangle = clampOpeningMoveKeepSize(opening, host, 280, true)
+    expect(triangle.z_height).toBe(120)
+    expect(triangle.z).toBe(260)
+    expect((asBox.z ?? 0) + (asBox.z_height ?? 0)).toBeLessThan(380)
+  })
+
+  it('rond-snap gebruikt de cirkel, niet de lege bbox-hoek', () => {
+    const edges = openingShapeSnapEdges(
+      { x0: 0, y0: -50, x1: 100, y1: 0 },
+      { type: 'window', refid: WINDOW_ROUND_REFID },
+    )
+    expect(Math.min(...edges.xs)).toBeGreaterThan(20)
+    expect(Math.max(...edges.xs)).toBeLessThan(80)
   })
 
   it('elevatie-rect oost-resize stopt op de baksteen, west blijft', () => {

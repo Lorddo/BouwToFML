@@ -5,13 +5,33 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-23 (dakvlak-generatie weg)
+Laatste update: 2026-08-25 (D-63 mask per face)
 
 ## Huidige focus
 
-**Dakvlakken handmatig** — geen project-brede generate-knop meer; tekenen op Dak-tab of 2-klik vanuit kopgevel.
+**Muur/deur/knoop vloer-lift** — uitzondering (geen settings-hoogte-default). Muur: `az`/`bz`.z; knoop: zelfde ends via `setJunctionBottomZ`; deur: `opening.z`. 2D tool+settings Vloer+Hoogte (ook knoop); deur add/edit Vloer; aanzicht veld + 3 grepen (boven/midden/onder). Nok-knoop blijft `ridgeZ`. Stamp behoudt bron-elevatie.
 
-**Onderlegger hergebruiken** — FML-editor knop kopieert scan+schaal van andere floor of (op Gevels) andere gevelgroep.
+**Box-select type** — FML-editor + stap-4: strip met dropdown muur/deur/raam/**Alles (mixed)**; box alleen dat type; «Alles selecteren» = hele floor (zoals gevelgroep). Mixed = muren+deuren+ramen. Default muren. Stap-3 face-box ongewijzigd.
+
+**Muurfill knopen + koven** — `+`/Y = square-cap (geen wit gat). T-tak stopt op host-face (niet erdoorheen). Geen hole-drop meer (koven bleven dicht). L-miter ongewijzigd. Gele ! = scheve punten, geen render.
+
+**Maatvelden −/+ ** — `ScaleLengthInput`: − links + rechts; stap 1 cm (metric) of 1/16″ (imperial via `unitSystem`); pijltjes hetzelfde. Detectie-Hoogtes: label niet meer onder het veld (`fml-limit-field` grid).
+
+**Deur dun→mask + dedupe (D-63)** — keep **per face** (eigen bbox); cluster kozijn+swing → alleen kozijn. L1 between-walls (**majority** ≥2/3) + pair-conflict + L2 vleugel-brug (**gap-slack**) + L3 polylijn; post-L11 dedupe. Plan: `.cursor/docs/door-thin-mask-dedupe-plan.md`. D-62/D-40 ongewijzigd.
+
+**Deur pair/demote (D-62)** — Stage-2 licht: adjacent + xor betweenWalls (soft, micro OK, alleen in `door-pair-demote.ts`).
+
+**FML export = live walls** — detectie (`extractionToPlan`) maakt geen Dak/`designs[]`; ridge alleen FML-editor. Project-download mag nooit stale snapshot over live walls zetten. Twee tekenaars (test + Wonen Limburg) zagen nette canvas, kapotte FML.
+
+**Canvas-hulpraster** — Settings `showCanvasGrid` (default aan): licht viewport-vast raster op workspace + editor + gevels; draait niet mee. Stap 1/editor: underlay onder grid; stap 2/3/B/W: scan erboven. Alleen visueel.
+
+**Architect weergavestijl** — Settings `planDisplayStyle`: plattegrond muren als buitenlijnen; gevels witte papier-fill + zwarte CAD-lijnen (achtergevel verdwijnt achter fill). Bouw = baksteen-fill + zwarte openings. `elevationProjection` blijft apart. DXF later.
+
+**Gevelgroepen extras-only** — `settings.facadeGroups` = bron; multi-lidmaatschap (voor/na); geen native `groupMarker`/`groupId`-write. Import migreert markers alleen als catalogus leeg. Editor-download stript native + stamp-catalogus; workspace stript alles. UI = checkboxes.
+
+**Dakvlakken handmatig** — geen project-brede generate-knop meer; tekenen op Dak-tab of 2-klik vanuit kopgevel. Geblokt vlak = buitenring muur-union (geen convex hull / hartlijn-knikje).
+
+**Onderlegger hergebruiken** — op floor/gevel zonder scan: kies bron (verdieping of gevel). Gevels zien ook floor-scans.
 
 **Hoogtetabel aanzicht** — noklijn-weergave in Settings; per-verdieping groep (hoogte + vloer); geen aparte nokhoogte-rij. Nieuwe nokken = `floor.height`.
 
@@ -27,7 +47,7 @@ Laatste update: 2026-08-23 (dakvlak-generatie weg)
 
 **Aanzicht chrome** — move-punt bij klik; Shift+klik precise (deur/raam/nok); toolbar weg bij settings.
 
-**Aanzicht opening verplaatsen** — alleen `t`/`z`; maat vast; grens = muur (`az`/`bz`), niet `floor.height`.
+**Aanzicht opening verplaatsen** — alleen `t`/`z`; maat vast; grens = muur (`az`/`bz`), niet `floor.height`. Driehoek/rond/halfrond = kozijn-silhouet, rest = bbox.
 
 **Dakvlak eerste-punt snap** — hover + land op nok-knoop of buitenface/buitenhoek.
 
@@ -53,11 +73,11 @@ Laatste update: 2026-08-23 (dakvlak-generatie weg)
 
 **Stap 3:** altijd Muren; OCR/Deuren/Ramen → Dev-view. Muren = room-first → V3 L1–L10. Deuren Stage-2 → L11/L12. Ramen Stage 1–4 → L14. Face-class: V3 ziet alleen binary mask. Stempel-inkt blijft zichtbaar in classify.
 
-**Stap 4 / persist:** `previewPlan` + IndexedDB (`projects` + `projectIndex`). Resume «Verder werken». Diagnose-FAB = HTML met stap-1 scan + linialen + L1–L14. Stempelset-inject na nulpunt (`injectStampWallsIntoPlan` add-only) + ownership ronde 2 (`resolve-stamp-ownership`, stamp frozen cm/dikte, det→stamp); dikte pinned. Generate ná semantic + deuren/ramen; sanitize weld/ortho/T-X/cover tot vast punt (max 4).
+**Stap 4 / persist:** `previewPlan` + IndexedDB (`projects` + `projectIndex`). Resume «Verder werken». Diagnose-FAB = HTML met schone stap-1 scan (kopiëren voor her-detectie) + linialen op B/W + L1–L14. Stempelset-inject na nulpunt (`injectStampWallsIntoPlan` add-only) + ownership ronde 2 (`resolve-stamp-ownership`, stamp frozen cm/dikte, det→stamp); dikte pinned. Generate ná semantic + deuren/ramen; sanitize weld/ortho/T-X/cover tot vast punt (max 4).
 
 **FML workspace:** generate + editor (select/move/spiegel/copy/draw). Canvas-top = zelfde topbar als editor/inspect (geen hint-balk; undo/fit/fullscreen/zoom). Sidebar sluiten + menu-FAB (fullscreen sluit sidebar). Areas/surfaces-edit **uit** (`FML_AREA_SURFACE_EDIT_VISIBLE`). Oriëntatie-UI **uit** (`FML_ORIENT_CONTROLS_VISIBLE`); techniek blijft. Herschalen = H/V-linialen (geen muurdikte).
 
-**FML `/FML-editor`:** leeg plan + floor CRUD + onderlegger-stretch (alleen `drawing`). **Onderlegger hergebruiken:** dropdown andere floor (`floors[].drawing`) of op Gevels andere gevelgroep (`elevationViews`); scan+schaal+positie, geen linialen. Inspect-modus. Mobile chrome + touch alleen `pointer: coarse`. Extra gate `J0rd!`. Sessie-defaults + `az`/`bz`. Sanitize-knop (weld+ortho+T/X+cover tot stabiel); import/download = junction-pass. Gevelgroepen. Chrome-dialogs. Fixture-dock linksonder. Sticky select; desktop click-move-click + typ maat (m) + Enter (kamer Tab H→V); mobile muur/kamer = seed 0,5 m + handles + alleen ✓. Leeg canvas: eerste muur zonder knoop; twee losse gebouwen OK (snap alleen 15 cm). Pointer-down verdraagt `event.target === null` (touch-synthetic). Balance keep-axis. Roundtrip bewaart envelope als `source` er is. **Stempel:** checkbox naast gevel; Plattegrond «Stempel» kopieert bron-muren naar actieve floor; download stript `stamp`. **Afmetingen:** Autogen/Slicer/Handmatig (vis exclusief, per plattegrond-design van de actieve floor); slicer `btfSlices` + M/P-handles; meet-tool Tape/Manual/Slicer. Kamermaten-toggle: ≥5 cm; 5–50 cm pas bij inzoomen (zelfde LOD ≥56 scherm-px). Labels = `scaleInputUnit` (geen auto m/cm-mix). Area-holes snap terug op muurfaces (geen 19,9/99,6 na getypte 0,2/1,0 m). **Wall-join:** gemiterde caps (`wallJoinFaceCorner`); geen centroid-inflate; schuine hoek geen square-oor; 10 cm-muur → 330/340 niet 340,1. Dak geen maten (geen `engineAutoDims`, geen buitenmaat hogere floor). **Muur-slide:** poot op slide-as schuift mee; andere poot blijft + H/V-stub (geen schuine buur). T-tak voorbij stam-einde absorbeert overlap. **Kamer-tekenen:** 1e klik knoop-hit; 2e hoek 8 cm H/V op andere knopen (niet start, geen 15 cm-magnet). **Surface-polygoon:** rubber-band + H/V-snap; hoeken/ribben van andere surfaces/areas (Shift = vast, Ctrl = uit). Plattegrond-surface: checkbox **Trapgat** = FML `isCutout` (dashed kruis); Dakvlak blijft `isRoof` zonder die checkbox. Overlay zonder `isRoof` landt op `floors[].surfaces`. **Gevels:** chip ná `+` (alleen met groepen); projectie + hoogte-stack (groep per floor; dakdikte globaal; geen noklijn/nokhoogte) + per-groep onderlegger; schaallinialen + verplaatsen (zelfde als plattegrond). Aanzicht deur/raam-tool opent type+breedte(+dorpel/glas) zoals plattegrond (`FmlOpeningAddToolFields`). **Nok-tool** in aanzicht: één klik op kopse kant → ridge in Dak-design (`placeRidgeFromElevation`); floor uit klik-Y + gevelmuur; span buitenface→buitenface met sky-clip; ghost-preview. **Dakvlak-tool** in aanzicht: 2 klikken (goot + nok) → manual quad langs nok (`placeRoofFromElevation`). Openings: kozijn in aanzicht (catalogus, default 5 cm; deur-dorpel 0; passage 0) + jambs op plattegrond. **2D-glyphs:** CAD-plan (`opening-plan-symbol`); Editor=kleur / Bouw=zwarte lijnen (`planDisplayStyle`). Sill 1,2 cm; raam langs, deur dwars op gat-einden (passage/boog dashed + dwars). Deur-dropdown = catalogus-kinds incl. garage + Frans balkon + doorgang (`181e49d1…` rechthoek) + boogopening (`047a2a4a…`) + vouwdeur 2/4. Ramen 1/2/3/rond/half-rond/driehoek/blind. Aanzicht: entryway=gat, archway=rond gat, driehoek=rechthoekige driehoek (spiegel `mirrored[0]`), blind=kozijn+plaat. Plattegrond: driehoek-ornament zoals rond + spiegelknop (alleen driehoek). Dubbel/schuif-presets ongewijzigd. Objectlabels roundtrip + transform, geen UI. Aanzicht-opening-id = `floor:wall-type-guid` (geen lekkage bij dezelfde muur-id op bg/1e). `extras.btfFrame` klaar, UI uit (`FML_OPENING_FRAME_EDIT_VISIBLE`). **Nok:** alleen op Dak-tab (geen plattegrond-overlay); tool Nok (icoon `ridge`); eigen junction-graaf; snap binnen-/buitenface + andere nokken (ribbe/hoek); junction+segment-sleep; nokhoogte bij tool; selectie = binnen stippellijnen van de balk (wint van dakvlak). **Dakvlakken:** rail-tab Dak altijd (design bij floor-create/import/generate, ook zonder nok); overlay-chips; tool **Dakvlak** (icoon `roof`, geen roomtype); snap faces + nok + andere vlakken; 1e punt = hover + nok-knoop / buitenhoek. Floor-chip verlaat Dak. Geen dak tekenen waar een hogere floor zit; dat vlak = buitenfaces van die floor (hit-test blijft hartlijn zodat de gevel vrij blijft). Ctrl+klik polygoon + punthoogte. Aanzicht-vloerband = die floor. Nokhoogte per floor. **Bovenlicht:** `source.settings.bovenlichtPacked` (default true = flags+groen+fold/expand); uit = losse ramen, place sibling bij floor-default, geen groen/checkbox.
+**FML `/FML-editor`:** leeg plan + floor CRUD + onderlegger-stretch (alleen `drawing`). **Box-select:** actieve strip (zoals maatlijn) met type muur/deur/raam/Alles (mixed); box = volledig in kader; «Alles selecteren» = hele floor (zoals gevelgroep); Shift/Ctrl voegt toe. Zelfde canvas op stap-4 resultaat. **Onderlegger hergebruiken:** op doel zonder scan (vouw gaat open); kies bron-floor (`floors[].drawing`) of op Gevels bron-gevel (`elevationViews`); scan+schaal+positie, geen linialen. Inspect-modus. Mobile chrome + touch alleen `pointer: coarse`. Extra gate `J0rd!`. Sessie-defaults + `az`/`bz`. Sanitize-knop (weld+ortho+T/X+cover tot stabiel); import/download = junction-pass. Gevelgroepen. Chrome-dialogs. Fixture-dock linksonder. Sticky select; desktop click-move-click + typ maat (m) + Enter (kamer Tab H→V); mobile muur/kamer = seed 0,5 m + handles + alleen ✓. Leeg canvas: eerste muur zonder knoop; twee losse gebouwen OK (snap alleen 15 cm). Pointer-down verdraagt `event.target === null` (touch-synthetic). Balance keep-axis. Roundtrip bewaart envelope als `source` er is. **Stempel:** checkbox naast gevel; Plattegrond «Stempel» kopieert bron-muren naar actieve floor; download stript `stamp`. **Afmetingen:** Autogen/Slicer/Handmatig (vis exclusief, per plattegrond-design van de actieve floor); slicer `btfSlices` + M/P-handles; meet-tool Tape/Manual/Slicer. Kamermaten-toggle: ≥5 cm; 5–50 cm pas bij inzoomen (zelfde LOD ≥56 scherm-px). Labels = `scaleInputUnit` (geen auto m/cm-mix). Area-holes snap terug op muurfaces (geen 19,9/99,6 na getypte 0,2/1,0 m). **Wall-join:** gemiterde caps (`wallJoinFaceCorner`) bij 2 muren; `+`/Y = square-cap; T-tak = host-face; bowtie → square; geen hole-drop. Geen centroid-inflate; schuine L geen square-oor; 10 cm-muur → 330/340 niet 340,1. Dak geen maten (geen `engineAutoDims`, geen buitenmaat hogere floor). **Muur-slide:** poot op slide-as schuift mee; andere poot blijft + H/V-stub (geen schuine buur). T-tak voorbij stam-einde absorbeert overlap. **Kamer-tekenen:** 1e klik knoop-hit; 2e hoek 8 cm H/V op andere knopen (niet start, geen 15 cm-magnet). **Surface-polygoon:** rubber-band + H/V-snap; hoeken/ribben van andere surfaces/areas (Shift = vast, Ctrl = uit). Plattegrond-surface: checkbox **Trapgat** = FML `isCutout` (dashed kruis); Dakvlak blijft `isRoof` zonder die checkbox. Overlay zonder `isRoof` landt op `floors[].surfaces`. **Gevels:** chip ná `+` (alleen met groepen); projectie + hoogte-stack (groep per floor; dakdikte globaal; geen noklijn/nokhoogte) + per-groep onderlegger; schaallinialen + verplaatsen (zelfde als plattegrond). Aanzicht deur/raam-tool opent type+breedte(+dorpel/glas) zoals plattegrond (`FmlOpeningAddToolFields`). **Nok-tool** in aanzicht: één klik op kopse kant → ridge in Dak-design (`placeRidgeFromElevation`); floor uit klik-Y + gevelmuur; span buitenface→buitenface met sky-clip; ghost-preview. **Dakvlak-tool** in aanzicht: 2 klikken (goot + nok) → manual quad langs nok (`placeRoofFromElevation`). Openings: kozijn in aanzicht (catalogus, default 5 cm; deur-dorpel 0; passage 0) + jambs op plattegrond. **2D-glyphs:** CAD-plan (`opening-plan-symbol`); Editor=kleur / Bouw=zwarte lijnen (`planDisplayStyle`). Sill 1,2 cm; raam langs, deur dwars op gat-einden (passage/boog dashed + dwars). Deur-dropdown = catalogus-kinds incl. garage + Frans balkon + doorgang (`181e49d1…` rechthoek) + boogopening (`047a2a4a…`) + vouwdeur 2/4. Ramen 1/2/3/rond/half-rond/driehoek/blind. Aanzicht: entryway=gat, archway=rond gat, driehoek=rechthoekige driehoek (spiegel `mirrored[0]`), blind=kozijn+plaat. Plattegrond: driehoek-ornament zoals rond + spiegelknop (alleen driehoek). Dubbel/schuif-presets ongewijzigd. Objectlabels roundtrip + transform, geen UI. Aanzicht-opening-id = `floor:wall-type-guid` (geen lekkage bij dezelfde muur-id op bg/1e). `extras.btfFrame` klaar, UI uit (`FML_OPENING_FRAME_EDIT_VISIBLE`). **Nok:** alleen op Dak-tab (geen plattegrond-overlay); tool Nok (icoon `ridge`); eigen junction-graaf; snap binnen-/buitenface + andere nokken (ribbe/hoek); junction+segment-sleep; nokhoogte bij tool; selectie = binnen stippellijnen van de balk (wint van dakvlak). **Dakvlakken:** rail-tab Dak altijd (design bij floor-create/import/generate, ook zonder nok); overlay-chips; tool **Dakvlak** (icoon `roof`, geen roomtype); snap faces + nok + andere vlakken; 1e punt = hover + nok-knoop / buitenhoek. Floor-chip verlaat Dak. Geen dak tekenen waar een hogere floor zit; dat vlak = buitenfaces van die floor (hit-test blijft hartlijn zodat de gevel vrij blijft). Ctrl+klik polygoon + punthoogte. Aanzicht-vloerband = die floor. Nokhoogte per floor. **Bovenlicht:** `source.settings.bovenlichtPacked` (default true = flags+groen+fold/expand); uit = losse ramen, place sibling bij floor-default, geen groen/checkbox.
 
 **Host:** `floorplan-fml` workers.dev; SPA via `not_found_handling` (geen `_redirects`). Soft access-gate. i18n `en`/`nl`/`th`.
 
@@ -65,15 +85,24 @@ Laatste update: 2026-08-23 (dakvlak-generatie weg)
 
 ## Open / handmatig checken
 
-- Onderlegger hergebruiken: plattegrond floor→floor + Gevels gevel→gevel (dropdown + kopie schaal/positie) — nog niet handmatig.
+- Muur/deur/knoop vloer-lift: 2D Vloer+Hoogte (muur+knoop); deur dorpel; aanzicht knoop 3 grepen (hoogte/shift/lift) + 10 cm segment-snap; muur 3 grepen + snap; stamp lift — nog niet handmatig.
+- Box-select type: dropdown muur/deur/raam/Alles (mixed); Alles selecteren = hele floor; editor + stap-4 — nog niet handmatig.
+- Maat-stepper −/+: alle `ScaleLengthInput` (detectie Hoogtes-labels + 1 cm / 1/16″) — nog niet handmatig.
+- Deur pair/demote (D-62): WhatsApp-probe kozijn+boog → één deur + doorframe; wees → wall; muren heel na finalize — pair nog niet goed, daarna verder.
+- D-63 thin-mask per face + L1–L3 + dedupe: WhatsApp Image 2026-08-24 (cases 1–3) + E2E openings/muren — nog niet handmatig.
+- Canvas-hulpraster: Settings aan/uit; stap 1 grid over scan; stap 2/3 alleen in witte randen; editor/gevel underlay onder grid; geen mee-draaien bij rotatie — nog niet handmatig.
+- Gevel multi-lidmaatschap: zelfde muur in «voor» + «na» → twee aanzicht-chips; checkbox UI + inspect expand alleen bij 1 groep.
+- Onderlegger hergebruiken: op lege floor/gevel knop + bron kiezen; plattegrond floor→floor + Gevels gevel→gevel — nog niet handmatig.
 - Hoogtetabel Gevels: groep per floor; dakdikte; geen noklijn/nokhoogte. Settings: dakdikte, vloerdikte, noklijn-weergave — nog niet handmatig.
 - Plattegrond-surface Trapgat: tekenen + checkbox; dashed kruis; download `isCutout`; Dakvlak geen checkbox — nog niet handmatig.
 - Eenheden fase 2: settings/toolbar/gevel/defaults/display + `useMetric` — handmatig smoke (ft-in typen, unit-wissel zonder mute).
-- Dakvlakken: tab Dak + tool Dakvlak; 1e punt hover-snap naar nok-knoop/buitenhoek; krappe snap (8 cm face / 5 cm hoek); geen H/V-as ná face; bedekte klik → rand (ook dakvlak); geen sky-gate die hover afwijst; bovenverdieping alleen gevel; geblokkeerd vlak = buitenfaces + hoek = face-snijpunt (geen knikje, geen buitenmaten). Floor-chip zet tools uit. Close = X. Overstek/dakkapel later. Nok niet op plattegrond; op Dak-tab klik in stippellijn-balk = nok (niet vlak).
+- Dakvlakken: tab Dak + tool Dakvlak; 1e punt hover-snap naar nok-knoop/buitenhoek; krappe snap (8 cm face / 5 cm hoek); geen H/V-as ná face; bedekte klik → rand (ook dakvlak); geen sky-gate die hover afwijst; bovenverdieping alleen gevel; geblokkeerd vlak = muur-union buitenring (L/T-split, geen hartlijn-tab, geen trapgat-plaat). Floor-chip zet tools uit. Close = X. Overstek/dakkapel later. Nok niet op plattegrond; op Dak-tab klik in stippellijn-balk = nok (niet vlak).
 - Nok-muren: alleen Dak-tab (niet plattegrond); klik in stippellijn-balk pakt nok boven dakvlak; snap binnen-/buitenface + andere nokken (ribbe/hoek); nokhoogte meteen; junction+segment-sleep in eigen graaf; aanzicht piek op kopgevel; leeg Dak (zonder vlakken) valt weg.
 - Gevels-aanzicht: volle baksteen buiten–buiten + binnenkant stippellijn; bovenkant-hoogte vanaf hartlijn (oren recht omhoog). Kijkrichting = buiten naar de gevel (+X = rechts van jou); O/B/L/R van de plattegrond op de randen. Parallelle gevels: diepte back→front, openingen uitgesneden (evenodd). Lange nok = knooplijn; kopse nok = sleep/resize zoals raam. Split = 1e klik segment, lijn uitlijnen (snap 8 cm), 2e klik snijdt. Vloerbanden + nokbalk; projectie Architect/Projectief; onderlegger schaal+move; inspect/detectie nog niet. Dakvlak = goot of kopse kil (grijs) + plaatdikte om het hart; goot = getekende buitenhoek. Ctrl+klik dakvlak = punten alleen hoogte. Opening-glyphs (kozijn/glas/blad + deurkruk) visueel checken per kind; packed bovenlicht = raam-recept. Driehoekraam: 2D-driehoekje + spiegelknop; aanzicht leunt L/R. Vouwdeur 2/4: menu + panelen + tussenscharnier. Opening-edit: restmaten L/R + vloer/plafond.
 - Opening-kozijn: gap blijft `width`; `swingInsetCm` ongewijzigd voor boog; jambs/glyphs uit `frame`. Instance-UI later.
-- Editor maatlijnen: Autogen/Slicer/Handmatig; slicer P→M + H/V; linialen zichtbaar bij slicer-tool; handmatig oneindige face-as-snap; meettype-dropdown direct bij tool.
+- Editor maatlijnen: Autogen/Slicer/Handmatig; slicer P→M + H/V; linialen zichtbaar bij slicer-tool; handmatig oneindige face-as-snap; meettype-dropdown direct bij tool. Eindstrepen 40 cm totaal (20 cm per zijde, wereld-cm) — nog niet handmatig. Autogen/slicer «Omzetten naar handmatig» + H/V-slide van manual lijnen — nog niet handmatig. Autogen + balance (muur 0%/100%): binnen-/buitenmaat moet meeschuiven — nog niet handmatig.
+- Architect: plattegrond + Dak-tab B/W; gevel CAD-lijnwerk + hidden-line; annotatie/maten — nog niet handmatig.
+- Raam bij muur-balance 0%/100%: glyph in het gat (niet ernaast) — nog niet handmatig.
 - Muur-slide: haakse sleep op collineaire buur → H/V-stub, geen diagonaal; T-tak voorbij stam geen dubbele muur.
 - Stempel ownership A+r2: freeze stamp cm/dikte; det→stamp junction; full-drop ≥50%; bake inject-count. Band raster-only.
 - UI-polish: stap 0 één +; close-bulge; stap 2 geen B/W-overnemen; classify-icoon; rescale left+icon.
@@ -89,11 +118,12 @@ Laatste update: 2026-08-23 (dakvlak-generatie weg)
 - Aanzicht opening-resize: breedte tot 20 m; verder slepen verschuift niet (tegenoverliggende kant vast; geen muur-hop). Move = alleen t/z, grens = muur niet floor.height. Klik = oranje move-punt; Shift/Move = precise; toolbar weg bij settings.
 - Recente FML-smoke (dialogs, T-split+gevel, underlay-pivot, fixture-dock, sticky/touch).
 - `bg` muur-shift 17,4 cm uit E2E-baseline-verversing (los van schuine-gevels).
-- Wall-join miter (330/340 + schuine stickouts) nog niet handmatig.
+- Wall-join: +knoop dicht, ladder-koven open (ook naast T-in); L-miter + 330/340 — nog niet handmatig.
 - Desktop click-drag + Shift-precise / mobile Move-precise + knoop/segment-binnenmaten overlay nog niet handmatig.
 - Aanzicht move-punt + Shift-precise (deur/raam/nok) + toolbar-hide bij settings — nog niet handmatig.
 - Aanzicht opening-move: tegen kopgevel/muurrand niet krimpen; boven floor.height in de gevel — nog niet handmatig.
 - Aanzicht opening-edit restmaten (L/R + vloer/plafond) nog niet handmatig.
+- Driehoek/rond/halfrond tegen schuine kopgevel: silhouet-clamp (lege bbox-hoek mag over de schuine top) — nog niet handmatig.
 - Aanzicht-tool Nok (plaatsen vanaf kopgevel) nog niet handmatig.
 - Aanzicht-tool Dakvlak (2 klikken goot+nok) nog niet handmatig.
 - WoonGroHuis FIN-0013: Dak-tab BG — verdiepingsvloer dicht (geen trapgat-gat); 1e heeft surface Trapgat.
@@ -133,8 +163,31 @@ Laatste update: 2026-08-23 (dakvlak-generatie weg)
 
 ## Recente besluiten
 
+- **2026-08-25** — D-63 maskKeep per face (eigen bbox + L1/L2/L3); cluster kozijn+swing → alleen kozijn. Hyp blijft één deur. D-62-swing skip ongewijzigd.
+- **2026-08-24** — Aanzicht knoop: mid=shift + onder=lift (top=hoogte); 10 cm Y-snap naar andere muur-/knoop-segmenten (Ctrl uit).
+- **2026-08-24** — Knoop-settings: Vloer+Hoogte (niet-nok); `setJunctionBottomZ` tilt ends, hoogte per eind blijft; aanzicht idem.
+- **2026-08-24** — Muur/deur vloer-lift: uitzondering (geen settings-default); `az`/`bz`.z + `opening.z`; 2D Vloer+Hoogte; aanzicht 3 grepen; stamp behoudt elevatie.
+- **2026-08-24** — Box-select: dropdown muur/deur/raam/Alles (mixed); «Alles selecteren» = hele floor (zoals gevelgroep). Default muren. Stap-3 face-box blijft unknown/wall.
+- **2026-08-24** — Maatvelden: −/+ in `ScaleLengthInput`; stap 1 cm of 1/16″ via `unitSystem` (niet display-unit). Detectie-Hoogtes grid zodat labels niet onder het veld schuiven.
+- **2026-08-24** — D-63 L1 majority (≥2/3) + L2 gap-slack dilate (≤8 px / 0.15×ref vanaf hyp) voor mini-uitstolpsel / 6 px-verspringing.
+- **2026-08-24** — D-63 Laag 3 polylijn: keep = in-band (≲0,25×dikte + as) of I-einden-bridge; T/zijwaarts = swing punch; één L1-meetlint, geen 2e V3.
+- **2026-08-24** — D-63 Laag 2 vleugel-brug: L0 zonder deuren → dry-run hyp; ≥2 grote blobs→één = keep; uitsteeksel = nee. Na L1 + pair-conflict.
+- **2026-08-24** — D-63 maskKeep: thin + between-walls (streng→soft, micro OK, march ≈ muurdikte; as = eigen bbox); overlap ≤1; post-L11 dedupe. D-62 pair-orakel / D-40 bridge ongewijzigd.
+- **2026-08-24** — D-63: dunne deur-hyps (depth ≤ max muur-ref) in L0-mask (hyp intact); post-L11 `dedupeOverlappingBoundDoors`. D-40/D-62 predicaten gescheiden.
+- **2026-08-24** — D-40 bridge between-walls streng hersteld (`cardinalNeighborRoots`); D-62 soft-check alleen in pair-demote.
+- **2026-08-24** — Deur Stage-2 pair/demote (D-62): adjacent hits, xor betweenTwoWalls → kozijn `doorframe`, swing `door`; wees-kozijn → `wall`. `betweenTwoWalls` accepteert micro-walls (arcering); geen junction-check.
+- **2026-08-24** — Canvas-hulpraster: Settings `showCanvasGrid` (default aan); viewport-vast; stap 1/editor underlay→grid→tekening; stap 2/3 scan boven grid; niet in export.
+- **2026-08-24** — Diagnose-HTML: stap-1 origineel blijft schoon (opslaan/her-detectie); H/V-linialen overlay op B/W (B/W niet nodig voor herlopen).
+- **2026-08-24** — Architect gevels: wit papier-fill + zwarte lijnen (painter occludeert achtergevel); glyphs lijn-only; `elevationProjection` ongewijzigd.
+- **2026-08-24** — Raam-glyphs: één balance-offset (hartlijn → mid-dikte). Dubbele offset zette ramen bij 0/100% buiten het gat.
+- **2026-08-24** — Architect polish: annotatie/maten zwart; Dak-tab ghost/nok solid zwart + blocked/dakvlakken wit+rand; aanzichten later.
+- **2026-08-24** — Maatlijn-eindstrepen 40 cm totaal (20 cm per zijde) in wereld-cm, niet stage-px — blijven los van de muur bij 50 cm-offset.
+- **2026-08-24** — Architect plattegrondstijl: muren als buitenlijnen (union→opening-punch→drop sill/jamb); Settings kiesbaar; DXF later.
+- **2026-08-24** — Autogen/slicer «Omzetten naar handmatig» baket overlay naar `dimensions[]` en schakelt vis. Handmatige lijnen H/V-slide zoals muursegment (lengte vast).
+- **2026-08-24** — Autogen-maatlijnen volgen muurfaces + balance (0.5-area-tick schuift mee). Slicer deed dat al via `wallFaces`. Buiten-AABB was al face-based.
+- **2026-08-23** — Aanzicht driehoek/rond/halfrond: clamp op kozijn-silhouet (niet AABB). Kopgevel-hoek mogelijk; overige kinds bbox. Gat in baksteen volgt de vorm.
 - **2026-08-23** — Project-brede «Dakvlakken genereren» weg. Dakvlak = tekenen of aanzicht 2-klik; snap-Z blijft.
-- **2026-08-23** — FML-editor «Onderlegger hergebruiken»: klik → dropdown; plattegrond kopieert `floors[].drawing` van andere floor, Gevels kopieert `elevationViews` van andere gevel. Scan + schaal + positie, geen linialen.
+- **2026-08-23** — FML-editor «Onderlegger hergebruiken» op het doel zonder scan: vouw open + kies bron. Kopieert `floors[].drawing` of `elevationViews` (scan + schaal + positie).
 - **2026-08-23** — Aanzicht gebruikt dezelfde FML-opacity als de plattegrond (`contentOpacity`), zodat de gevel-onderlegger erdoorheen zichtbaar is.
 - **2026-08-23** — Hoogtetabel aanzicht: noklijn-weergave → Settings; groep per verdieping (hoogte + vloer); geen nokhoogte-rij. Nieuwe nokken = `floor.height`; dak/vloer-defaults in Settings.
 - **2026-08-23** — Trapgat/`isCutout` geen gat: dak-vloerplaat dicht; area-regen slaat cutout-holes over; generate alleen naar gevels. Plattegrond-overlay blijft.
@@ -155,6 +208,12 @@ Laatste update: 2026-08-23 (dakvlak-generatie weg)
 - **2026-08-23** — Opening verplaatsen: restmaten op segment (a→rand, rand→b), overlay + `scaleInputUnit`; geen kamer/keten.
 - **2026-08-23** — Opening-breedte max 20 m (was 4 m). Aanzicht-resize houdt de vaste kant; geen hop naar buurmuur — verschalen ≠ verslepen.
 - **2026-08-23** — Eenheden fase 2: `ScaleLengthInput` overal; unit-switch = alleen weergave (geen cm-rewrite); FML `useMetric` ← `unitSystem`.
+- **2026-08-24** — Muurfill: `+`/Y square-cap; T-tak host-face (koven open); geen hole-drop. L-miter blijft.
+- **2026-08-24** — Detectie maakt geen Dak/`designs[]` meer (`extractionToPlan` plat). Ridge alleen FML-editor. Export-guard: live walls winnen van stale snapshot.
+- **2026-08-24** — Gevelgroepen extras-only + multi-lidmaatschap (voor/na); native markers niet meer schrijven; UI checkboxes; hydrate alleen als catalogus leeg.
+- **2026-08-23** — FP-groep probe: WoonGroHuis muren krijgen native `groupMarker`/`groupMarkerConfig` (L/R/A/V + stamp=gevels). Import hydrateert daaruit als settings weg zijn. Geen product-export-write tot roundtrip bekend is.
+- **2026-08-23** — Ctrl+klik overlappinge ramen (aanzicht/plattegrond): blijft op het gekozen raam; group-click lekte door naar het andere. Packed transom → ouder ongewijzigd.
+- **2026-08-23** — Dak geblokt vlak = buitenring van de muur-union (gemiterde buitenfaces), niet convex hull van hoeken/face-einden. L-vorm volgt de contour; T-split blijft recht; trapgat geen tweede plaat.
 Detailbesluiten → `.cursor/docs/decisions.md`. Catalogus-refids (Poort6, Anna, Ostade, Kinderdijk) staan daar / in eerdere sessies, niet hier.
 
 ---

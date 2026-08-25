@@ -18,6 +18,7 @@ import {
   WINDOW_BLIND_REFID,
   WINDOW_DOUBLE_REFID,
   WINDOW_HALF_ROUND_REFID,
+  WINDOW_ROUND_REFID,
   WINDOW_TRIANGLE_REFID,
   WINDOW_TRIPLE_REFID,
 } from '@/core/fml/types'
@@ -166,6 +167,25 @@ describe('elevation opening glyph', () => {
     expect(Math.min(...xs)).toBeGreaterThanOrEqual(outer.x0 - 0.5)
     expect(Math.max(...xs)).toBeLessThanOrEqual(outer.x1 + 0.5)
     expect(Math.min(...ys)).toBeLessThan(outer.y0 + 12)
+    const hole = elevationOpeningHolePoints(outer, 'window', WINDOW_HALF_ROUND_REFID)
+    expect(hole.length).toBeGreaterThan(4)
+    expect(Math.min(...hole.map((p) => p.y))).toBeCloseTo(outer.y0, 0)
+    expect(Math.max(...hole.map((p) => p.y))).toBeCloseTo(outer.y1, 0)
+  })
+
+  it('rond raam heeft cirkel-gat, geen rechthoek', () => {
+    const hole = elevationOpeningHolePoints(
+      { x0: 0, y0: -100, x1: 100, y1: 0 },
+      'window',
+      WINDOW_ROUND_REFID,
+    )
+    expect(hole.length).toBeGreaterThan(8)
+    const xs = hole.map((p) => p.x)
+    const ys = hole.map((p) => p.y)
+    expect(Math.min(...xs)).toBeCloseTo(0, 0)
+    expect(Math.max(...xs)).toBeCloseTo(100, 0)
+    expect(Math.min(...ys)).toBeCloseTo(-100, 0)
+    expect(Math.max(...ys)).toBeCloseTo(0, 0)
   })
 
   it('passage heeft geen frame-polys', () => {

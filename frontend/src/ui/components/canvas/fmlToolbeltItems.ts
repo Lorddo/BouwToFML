@@ -66,7 +66,7 @@ export function isFmlToolbarSettingsOpen(args: {
   ) {
     return true
   }
-  if (args.activeTool === 'measure') return true
+  if (args.activeTool === 'measure' || args.activeTool === 'box_select') return true
   if (args.dakMode === true && args.activeTool === 'draw_surface') return false
   return args.activeTool != null && SETTINGS_TOOLS.has(args.activeTool)
 }

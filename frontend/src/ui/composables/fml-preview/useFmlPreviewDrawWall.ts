@@ -34,6 +34,8 @@ export function useFmlPreviewDrawWall(options: {
   editor: EditorApi
   hoveredJunctionId: Ref<string | null>
   wallThicknessDraft: Ref<number>
+  wallHeightDraft?: Ref<number>
+  wallBottomZDraft?: Ref<number>
   drawKind?: Ref<'wall' | 'ridge'>
   ridgeZCm?: Ref<number | undefined>
   requireFloorIndex?: () => number | undefined
@@ -209,7 +211,13 @@ export function useFmlPreviewDrawWall(options: {
       draft.startCm,
       endCm,
       options.wallThicknessDraft.value,
-      { kind, ridgeZCm: options.ridgeZCm?.value, requireFloorIndex: options.requireFloorIndex?.() },
+      {
+        kind,
+        ridgeZCm: options.ridgeZCm?.value,
+        requireFloorIndex: options.requireFloorIndex?.(),
+        heightCm: options.wallHeightDraft?.value,
+        bottomZCm: options.wallBottomZDraft?.value,
+      },
     )
     if (!wallId) {
       options.editor.undo()

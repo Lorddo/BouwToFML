@@ -114,7 +114,7 @@ const { t } = useI18n()
 
 .elev-heights__row {
   display: grid;
-  grid-template-columns: 1fr 72px;
+  grid-template-columns: minmax(4.5rem, 1fr) minmax(8rem, 1.4fr);
   gap: 8px;
   align-items: center;
   font-size: 12px;
@@ -122,10 +122,6 @@ const { t } = useI18n()
 }
 
 .elev-heights__row :deep(.scale-length-input) {
-  width: 100%;
-}
-
-.elev-heights__row :deep(.scale-length-input input) {
   width: 100%;
   min-width: 0;
 }

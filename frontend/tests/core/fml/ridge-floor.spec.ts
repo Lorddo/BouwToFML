@@ -17,6 +17,23 @@ function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number
   return { id, a, b, thickness: 20, openings: [] }
 }
 
+function pointInRing(
+  point: { x: number; y: number },
+  ring: readonly { x: number; y: number }[],
+): boolean {
+  let inside = false
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i, i += 1) {
+    const a = ring[i]
+    const b = ring[j]
+    if (!a || !b) continue
+    const intersect =
+      a.y > point.y !== b.y > point.y &&
+      point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y + 1e-15) + a.x
+    if (intersect) inside = !inside
+  }
+  return inside
+}
+
 describe('ridge-floor', () => {
   it('plaatst op de hoogste floor die het midden raakt', () => {
     const plan = createEmptyFloorPlan({ name: 'Nok', wallHeightCm: 280 })
@@ -110,6 +127,83 @@ describe('ridge-floor', () => {
       expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeCloseTo(420, 4)
     }
     expect(listBlockedRoofRings(plan, 1)).toEqual([])
+  })
+
+  it('L-vorm: volgt de buitencontour, vult de inzinking niet met een convex hull', () => {
+    const plan = createEmptyFloorPlan({ name: 'Nok', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('g0', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      wall('g1', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      wall('g2', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      wall('g3', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const upper = createBlankFloor({ name: 'Verdieping 1', level: 1, wallHeightCm: 280 })
+    upper.walls = [
+      wall('u0', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('u1', { x: 400, y: 0 }, { x: 400, y: 200 }),
+      wall('u2', { x: 400, y: 200 }, { x: 200, y: 200 }),
+      wall('u3', { x: 200, y: 200 }, { x: 200, y: 400 }),
+      wall('u4', { x: 200, y: 400 }, { x: 0, y: 400 }),
+      wall('u5', { x: 0, y: 400 }, { x: 0, y: 0 }),
+    ]
+    plan.floors.push(upper)
+
+    const blocked = listBlockedRoofRings(plan, 0)
+    expect(blocked).toHaveLength(1)
+    const ring = blocked[0]
+    expect(ring.length).toBeGreaterThanOrEqual(6)
+    const xs = ring.map((point) => point.x)
+    const ys = ring.map((point) => point.y)
+    expect(Math.min(...xs)).toBeCloseTo(-10, 1)
+    expect(Math.max(...xs)).toBeCloseTo(410, 1)
+    expect(Math.min(...ys)).toBeCloseTo(-10, 1)
+    expect(Math.max(...ys)).toBeCloseTo(410, 1)
+
+    const nearInner = ring.some(
+      (point) => Math.abs(point.x - 210) < 2 && Math.abs(point.y - 210) < 2,
+    )
+    expect(nearInner).toBe(true)
+    expect(pointInRing({ x: 300, y: 300 }, ring)).toBe(false)
+    expect(pointInRing({ x: 100, y: 100 }, ring)).toBe(true)
+  })
+
+  it('T-split gevel: buitenface blijft recht, geen hartlijn-tab op het einde', () => {
+    const plan = createEmptyFloorPlan({ name: 'Nok', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('g0', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      wall('g1', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      wall('g2', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      wall('g3', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const upper = createBlankFloor({ name: 'Verdieping 1', level: 1, wallHeightCm: 280 })
+    upper.walls = [
+      wall('u0a', { x: 200, y: 200 }, { x: 400, y: 200 }),
+      wall('u0b', { x: 400, y: 200 }, { x: 600, y: 200 }),
+      wall('u1', { x: 600, y: 200 }, { x: 600, y: 600 }),
+      wall('u2a', { x: 600, y: 600 }, { x: 400, y: 600 }),
+      wall('u2b', { x: 400, y: 600 }, { x: 200, y: 600 }),
+      wall('u3', { x: 200, y: 600 }, { x: 200, y: 200 }),
+      wall('in', { x: 400, y: 200 }, { x: 400, y: 600 }),
+    ]
+    plan.floors.push(upper)
+
+    const blocked = listBlockedRoofRings(plan, 0)
+    expect(blocked).toHaveLength(1)
+    const ring = blocked[0]
+    const xs = ring.map((point) => point.x)
+    const ys = ring.map((point) => point.y)
+    expect(Math.min(...xs)).toBeCloseTo(190, 1)
+    expect(Math.max(...xs)).toBeCloseTo(610, 1)
+    expect(Math.min(...ys)).toBeCloseTo(190, 1)
+    expect(Math.max(...ys)).toBeCloseTo(610, 1)
+    for (const point of ring) {
+      const onOuterX = Math.abs(point.x - 190) < 0.5 || Math.abs(point.x - 610) < 0.5
+      const onOuterY = Math.abs(point.y - 190) < 0.5 || Math.abs(point.y - 610) < 0.5
+      expect(onOuterX && onOuterY).toBe(true)
+    }
+    expect(
+      ring.some((point) => Math.abs(point.x - 400) < 0.5 && Math.abs(point.y - 200) < 0.5),
+    ).toBe(false)
   })
 
   it('dak-snap: gevel van de floor erboven, geen binnenwand', () => {

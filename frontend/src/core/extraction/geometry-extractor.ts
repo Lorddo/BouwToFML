@@ -36,6 +36,7 @@ const geometryExtractor: ExtractorPlugin = {
         roomClassifyState: input.pipelineOptions?.roomClassifyState,
         faceOverrides: input.pipelineOptions?.faceOverrides,
         pinnedRoots: input.pipelineOptions?.pinnedRoots,
+        maskKeepDoorFaceIds: input.pipelineOptions?.maskKeepDoorFaceIds,
       },
       eraserMask: input.eraserMask,
       precomposedWallBw: input.precomposedWallBw,

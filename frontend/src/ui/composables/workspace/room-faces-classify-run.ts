@@ -124,6 +124,7 @@ export function ingestRecalculateOutput(
     ...cache,
     faceOverrides: new Map(cache.faceOverrides),
     pinnedRoots: new Set(cache.pinnedRoots),
+    maskKeepDoorFaceIds: new Set(cache.maskKeepDoorFaceIds),
     faceBBox: cache.faceBBox,
   }
 }
@@ -211,6 +212,7 @@ export interface ClassifyRunDeps {
       roomClassifyState?: SerializedRoomClassifyState
       faceOverrides?: Array<[number, RoomRasterClass]>
       pinnedRoots?: number[]
+      maskKeepDoorFaceIds?: number[]
       referenceWallMeasureRect?: { x: number; y: number; width: number; height: number }
     },
   ) => Promise<boolean>

@@ -7,6 +7,7 @@ defineProps<{
   settings: DimensionSettings
   vis: DimensionVis
   canClear: boolean
+  canConvert: boolean
 }>()
 
 const emit = defineEmits<{
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   auto: [enabled: boolean]
   mode: [mode: DimensionMode]
   outer: [enabled: boolean]
+  convertActive: []
   clearActive: []
 }>()
 
@@ -93,6 +95,16 @@ const { t } = useI18n()
         </div>
       </div>
     </template>
+
+    <button
+      v-if="vis === 'autogen' || vis === 'slicer'"
+      type="button"
+      class="dim-clear"
+      :disabled="!canConvert"
+      @click="emit('convertActive')"
+    >
+      {{ t('viewer.dimensionsConvertManual') }}
+    </button>
 
     <button
       type="button"

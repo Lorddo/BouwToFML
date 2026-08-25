@@ -182,6 +182,8 @@ export interface RenderModel {
   wallPolygons: RenderWallPolygon[]
   /** Boolean-union wall silhouette (single even-odd SVG path — never per-wall strokes). */
   wallFillPathData: string
+  /** Architect: wall face polylines (stage coords); empty in editor/bouw. */
+  wallOutlinePolylines: number[][]
   doorGroups: RenderDoorGroup[]
   windows: RenderWindowOpening[]
   fixtures: RenderFixture[]

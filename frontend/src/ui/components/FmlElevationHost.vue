@@ -31,9 +31,11 @@ import {
 } from '@/core/fml/facade-elevation'
 import {
   collectElevationRoofSnapYs,
+  collectElevationSegmentSnapYs,
   collectElevationSplitSnapXs,
   collectElevationWallSnapXs,
   elevationSplitPreviewAt,
+  ELEVATION_SEGMENT_SNAP_CM,
   hitElevationBand,
   hitElevationJunction,
   hitElevationOpening,
@@ -51,7 +53,11 @@ import {
   elevationWallInnerStrokes,
   groupElevationPaintPlanes,
 } from '@/core/fml/elevation-paint'
-import { glyphFromElevationRect } from '@/core/fml/elevation-opening-symbol'
+import {
+  elevationOpeningHoleIsRect,
+  elevationOpeningHolePoints,
+  glyphFromElevationRect,
+} from '@/core/fml/elevation-opening-symbol'
 import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from '@/core/fml/door-swing-symbol'
 import { findRidgeSurface, setRidgeSurfaceVertexZ } from '@/core/fml/roof-planes'
 import {
@@ -95,6 +101,7 @@ import {
   clampElevationOpeningMove,
   clampElevationOpeningResize,
   clampOpeningPatchKeepOppositeEdge,
+  type ElevationOpeningShapeHint,
   collectOpeningSnapTargets,
   elevationCollinearXBounds,
   elevationHandlePoints,
@@ -117,12 +124,22 @@ import {
   findOpeningInPlan,
   movePlanOpening,
   removePlanOpening,
+  setPlanJunctionBottomZ,
+  setPlanJunctionElevationEdit,
   setPlanJunctionHeight,
+  setPlanWallBottomZ,
+  setPlanWallElevationEdit,
   setPlanWallHeight,
   splitPlanWallAtT,
   updatePlanOpening,
 } from '@/core/fml/elevation-openings'
-import { wallEndpointHeightCm, wallUniformHeightCm } from '@/core/fml/wall-endpoint-height'
+import {
+  wallEndpoint3D,
+  wallEndpointHeightCm,
+  wallUniformBottomZCm,
+  wallUniformHeightCm,
+  type WallElevationEditMode,
+} from '@/core/fml/wall-endpoint-height'
 import {
   clampOpeningHeight,
   clampOpeningSillZ,
@@ -132,6 +149,7 @@ import {
   resolveWindowSillZ,
 } from '@/ui/components/fml-preview-openings'
 import { loadImage } from '@/platform/image'
+import { useStage } from '@/platform/canvas'
 import type { HScaleState } from '@/platform/calibration'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import {
@@ -185,7 +203,17 @@ import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import type { ToolbeltItem } from './canvas/canvas-toolbelt.types'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import { FACTORY_OPENING_COLORS } from '@/ui/composables/settings/opening-display-colors'
+import {
+  ARCHITECT_AREA_FILL,
+  DEFAULT_PLAN_DISPLAY_STYLE,
+  isArchitectPlanStyle,
+  isLinePlanStyle,
+  planLineStroke,
+  type PlanDisplayStyleChoice,
+} from '@/ui/composables/settings/plan-display-style'
+import { loadUserSettings, setShowCanvasGrid } from '@/ui/composables/settings/user-settings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import CanvasGuideGrid from './canvas/CanvasGuideGrid.vue'
 import './canvas/canvas-toolbelt.css'
 
 const props = withDefaults(
@@ -255,6 +283,23 @@ const containerRef = ref<HTMLDivElement | null>(null)
 const elevDockRef = ref<HTMLElement | null>(null)
 useChromeFitScale(elevDockRef, { containerSelector: '.elev-host, .fml-preview-wrap, .canvas-wrap' })
 
+const planDisplayStyle = ref<PlanDisplayStyleChoice>(
+  loadUserSettings().fmlViewer.planDisplayStyle ?? DEFAULT_PLAN_DISPLAY_STYLE,
+)
+const showCanvasGrid = ref(loadUserSettings().fmlViewer.showCanvasGrid !== false)
+function applyCornerMarkerModeFromSettings(): void {
+  const settings = loadUserSettings()
+  planDisplayStyle.value = settings.fmlViewer.planDisplayStyle
+  showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
+}
+
+function onShowCanvasGrid(next: boolean) {
+  showCanvasGrid.value = setShowCanvasGrid(next)
+}
+const architectStyle = computed(() => isArchitectPlanStyle(planDisplayStyle.value))
+const lineStyle = computed(() => isLinePlanStyle(planDisplayStyle.value))
+const elevLineColor = computed(() => planLineStroke(planDisplayStyle.value))
+
 const elevLibraryTools = computed<ToolbeltItem[]>(() => [
   { id: 'add_door', icon: 'door', label: t('toolbelt.fml.addDoor') },
   { id: 'add_window', icon: 'window', label: t('toolbelt.fml.addWindow') },
@@ -267,6 +312,7 @@ const activeTool = ref<ElevTool>('select')
 const addDoorSubtype = ref<DoorAddSubtype>('standard')
 const addDoorWidthCm = ref(resolveDoorAddPreset('standard').defaultWidthCm)
 const addDoorHeightCm = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
+const addDoorSillZCm = ref(0)
 const addWindowSubtype = ref<WindowAddSubtype>('single')
 const addWindowWidthCm = ref(resolveWindowAddPreset('single').defaultWidthCm)
 const addWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
@@ -480,7 +526,45 @@ const settingsWall = computed(() => {
         wallEndpointHeightCm(wall, 'b', floor.height),
       ),
     )
-  return { ...target, name: floor.name, heightCm }
+  const bottomZCm = wallUniformBottomZCm(wall, floor.height) ?? 0
+  return { ...target, name: floor.name, heightCm, bottomZCm }
+})
+
+const selectedPlanWall = computed(() => {
+  const target = settingsTarget.value
+  if (target?.kind !== 'wall' || !elevation.value) return null
+  return (
+    elevation.value.walls.find(
+      (item) =>
+        !item.ridge && item.wallId === target.wallId && item.floorIndex === target.floorIndex,
+    ) ?? null
+  )
+})
+
+/** Boven / midden / onder grepen op geselecteerde muur (niet-nok). */
+const wallElevationHandles = computed(() => {
+  const wall = selectedPlanWall.value
+  if (!wall) return []
+  const mx = (wall.xa + wall.xb) / 2
+  const topY = (wall.aTop.y + wall.bTop.y) / 2
+  const botY = (wall.aBottom.y + wall.bBottom.y) / 2
+  const midY = (topY + botY) / 2
+  return [
+    { mode: 'height' as const, x: mx, y: topY },
+    { mode: 'shift' as const, x: mx, y: midY },
+    { mode: 'lift' as const, x: mx, y: botY },
+  ]
+})
+
+/** Mid + onder greep bij geselecteerde (niet-nok) knoop; top-cirkel blijft apart. */
+const junctionElevationHandles = computed(() => {
+  const junction = settingsJunction.value
+  if (!junction || junction.ridge) return []
+  const midY = (junction.yTop + junction.yBot) / 2
+  return [
+    { mode: 'shift' as const, x: junction.x, y: midY },
+    { mode: 'lift' as const, x: junction.x, y: junction.yBot },
+  ]
 })
 
 const settingsSlab = computed(() => {
@@ -501,9 +585,19 @@ const settingsJunction = computed(() => {
   const junction = elevation.value.junctions.find((item) => item.id === target.id)
   if (!junction) return null
   const floor = props.plan.floors[junction.floorIndex]
+  const floorH = floor?.height ?? 280
+  const bottoms = junction.refs
+    .map((ref) => {
+      const wall = floor?.walls.find((item) => item.id === ref.wallId)
+      if (!wall) return null
+      return Math.round(wallEndpoint3D(wall, ref.end, floorH).z)
+    })
+    .filter((value): value is number => value != null)
+  const firstBottom = bottoms[0] ?? 0
   return {
     ...junction,
     name: floor?.name ?? '',
+    bottomZCm: firstBottom,
   }
 })
 
@@ -722,9 +816,15 @@ const panZoom = useFmlPreviewPanZoom({
   onBeforePan: () => undefined,
 })
 
-onMounted(() => mountResizeObserver())
+onMounted(() => {
+  mountResizeObserver()
+  window.addEventListener('keydown', onSpaceKeyDown)
+  window.addEventListener('keyup', onSpaceKeyUp)
+})
 onBeforeUnmount(() => {
   unmountResizeObserver()
+  window.removeEventListener('keydown', onSpaceKeyDown)
+  window.removeEventListener('keyup', onSpaceKeyUp)
   cancelOpeningMovePending()
   clearPreciseDraftUi()
   window.removeEventListener('pointermove', onRoofVertexMove)
@@ -842,6 +942,25 @@ function stagePoly(points: ReadonlyArray<{ x: number; y: number }>): number[] {
   })
 }
 
+function openingGhostStage(rect: ElevationOpeningRect) {
+  const x0 = Math.min(rect.x0, rect.x1)
+  const x1 = Math.max(rect.x0, rect.x1)
+  const y0 = Math.min(rect.y0, rect.y1)
+  const y1 = Math.max(rect.y0, rect.y1)
+  const shaped = !elevationOpeningHoleIsRect(rect.type, rect.refid)
+  return {
+    shaped,
+    points: shaped
+      ? stagePoly(
+          elevationOpeningHolePoints({ x0, y0, x1, y1 }, rect.type, rect.refid, {
+            mirrored: rect.mirrored,
+            startOnLeft: rect.startOnLeft,
+          }),
+        )
+      : [],
+  }
+}
+
 function stagePoints(a: { x: number; y: number }, b: { x: number; y: number }): number[] {
   const sa = layoutXform.value.toStagePoint(a.x, a.y)
   const sb = layoutXform.value.toStagePoint(b.x, b.y)
@@ -880,8 +999,8 @@ const elevationPlanes = computed(() => {
       wall,
       fillPath: stageWallFillPath(wall, []),
     })),
-    openings: plane.openings,
-    transoms: plane.transoms,
+    openings: plane.openings.map((opening) => ({ ...opening, ghost: openingGhostStage(opening) })),
+    transoms: plane.transoms.map((transom) => ({ ...transom, ghost: openingGhostStage(transom) })),
     glyphs: glyphs.filter((item) =>
       plane.walls.some(
         (wall) => wall.wallId === item.wallId && wall.floorIndex === item.floorIndex,
@@ -889,6 +1008,62 @@ const elevationPlanes = computed(() => {
     ),
   }))
 })
+
+function wallBodyFill(): string {
+  return architectStyle.value ? ARCHITECT_AREA_FILL : '#94a3b8'
+}
+
+function ridgeEndFill(): string {
+  return architectStyle.value ? ARCHITECT_AREA_FILL : '#7b8ea6'
+}
+
+function bandBodyFill(kind: 'slab' | 'nok'): string {
+  if (architectStyle.value) return ARCHITECT_AREA_FILL
+  return kind === 'nok' ? '#cbd5e1' : '#e2e8f0'
+}
+
+function roofBodyFill(color: string): string {
+  return architectStyle.value ? ARCHITECT_AREA_FILL : color
+}
+
+function wallOuterStroke(): string {
+  return lineStyle.value ? elevLineColor.value : '#334155'
+}
+
+function wallInnerStroke(): string {
+  return lineStyle.value ? elevLineColor.value : '#0f172a'
+}
+
+function roofOuterStroke(): string {
+  return lineStyle.value ? elevLineColor.value : '#4b5563'
+}
+
+function openingGhostFill(openingId: string, type: 'door' | 'window'): string | undefined {
+  if (architectStyle.value) return ARCHITECT_AREA_FILL
+  if (selectedOpeningId.value === openingId) return '#f97316'
+  return type === 'door' ? '#f59e0b' : '#38bdf8'
+}
+
+function openingGhostOpacity(openingId: string): number {
+  if (architectStyle.value) return 1
+  return selectedOpeningId.value === openingId ? 0.55 : 0.08
+}
+
+function glyphStrokeColor(transom: boolean): string {
+  if (architectStyle.value) return elevLineColor.value
+  return transom ? '#14532d' : '#0c4a6e'
+}
+
+function glyphPolyFill(
+  role: string,
+  transom: boolean,
+  type: 'door' | 'window',
+  filled: boolean,
+): string | undefined {
+  if (!filled) return undefined
+  if (architectStyle.value) return ARCHITECT_AREA_FILL
+  return glyphFill(role, transom, type)
+}
 
 function pushUndo(): void {
   undoStack.value = [...undoStack.value, props.plan].slice(-40)
@@ -966,11 +1141,15 @@ function placeOpening(elev: FacadeElevation, cm: Point2D, type: 'door' | 'window
     type === 'door'
       ? Math.max(1, Math.round(addDoorHeightCm.value || props.defaultDoorHeightCm))
       : clampWindowOpeningHeight(addWindowHeightCm.value)
-  const z = type === 'door' ? 0 : clampOpeningSillZ(addWindowSillZCm.value)
+  const z =
+    type === 'door'
+      ? clampOpeningSillZ(addDoorSillZCm.value)
+      : clampOpeningSillZ(addWindowSillZCm.value)
   if (type === 'window') {
     addWindowSillZCm.value = z
     addWindowHeightCm.value = height
   } else {
+    addDoorSillZCm.value = z
     addDoorHeightCm.value = height
   }
   const xSpan = wall.xb - wall.xa
@@ -1025,20 +1204,45 @@ function applyOpeningRect(
   const openingTargets = elev
     ? collectOpeningSnapTargets([...elev.openings, ...elev.transoms], openingId)
     : { xs: [], ys: [] }
-  const raw =
-    snapOff || !elev
-      ? { rect, guide: {} as ElevationSnapGuide }
-      : snapElevationRect(rect, drag?.mode === 'move' || !drag ? 'move' : drag.mode, {
-          xs: [...openingTargets.xs, ...collectElevationWallSnapXs(elev.walls)],
-          ys: openingTargets.ys,
-        })
-  snapGuide.value = raw.guide.x != null || raw.guide.y != null ? raw.guide : null
-  let nextRect = raw.rect
   const floorWalls = props.plan.floors[wall.floorIndex]?.walls ?? []
   const xBounds = elevationCollinearXBounds(elev?.walls ?? [wall], wall, floorWalls)
   const moving = !drag || drag.mode === 'move'
+  const shapeOpening = drag?.startOpening ?? findOpeningInPlan(props.plan, openingId)?.opening
+  const shapeFor = (startOnLeft: boolean): ElevationOpeningShapeHint | undefined =>
+    shapeOpening
+      ? {
+          type: shapeOpening.type,
+          refid: shapeOpening.refid,
+          mirrored: shapeOpening.mirrored,
+          startOnLeft,
+        }
+      : undefined
+  const snapShape = shapeFor(wall.xa <= wall.xb)
+  const raw =
+    snapOff || !elev
+      ? { rect, guide: {} as ElevationSnapGuide }
+      : snapElevationRect(
+          rect,
+          drag?.mode === 'move' || !drag ? 'move' : drag.mode,
+          {
+            xs: [...openingTargets.xs, ...collectElevationWallSnapXs(elev.walls)],
+            ys: openingTargets.ys,
+          },
+          undefined,
+          snapShape,
+        )
+  snapGuide.value = raw.guide.x != null || raw.guide.y != null ? raw.guide : null
+  let nextRect = raw.rect
   if (drag && drag.mode !== 'move') {
-    nextRect = clampElevationOpeningResize(wall, nextRect, drag.mode, undefined, undefined, xBounds)
+    nextRect = clampElevationOpeningResize(
+      wall,
+      nextRect,
+      drag.mode,
+      undefined,
+      undefined,
+      xBounds,
+      shapeFor(wall.xa <= wall.xb),
+    )
   }
   let hostElev = moving
     ? pickElevationWallForOpeningX(
@@ -1050,7 +1254,12 @@ function applyOpeningRect(
     : wall
   if (moving) {
     const hostBounds = elevationCollinearXBounds(elev?.walls ?? [hostElev], hostElev, floorWalls)
-    nextRect = clampElevationOpeningMove(hostElev, nextRect, hostBounds)
+    nextRect = clampElevationOpeningMove(
+      hostElev,
+      nextRect,
+      hostBounds,
+      shapeFor(hostElev.xa <= hostElev.xb),
+    )
     const nextHost = pickElevationWallForOpeningX(
       elev?.walls ?? [hostElev],
       hostElev,
@@ -1060,7 +1269,12 @@ function applyOpeningRect(
     if (nextHost.wallId !== hostElev.wallId || nextHost.floorIndex !== hostElev.floorIndex) {
       hostElev = nextHost
       const nextBounds = elevationCollinearXBounds(elev?.walls ?? [hostElev], hostElev, floorWalls)
-      nextRect = clampElevationOpeningMove(hostElev, nextRect, nextBounds)
+      nextRect = clampElevationOpeningMove(
+        hostElev,
+        nextRect,
+        nextBounds,
+        shapeFor(hostElev.xa <= hostElev.xb),
+      )
     }
   }
   let nextId = openingId
@@ -1090,7 +1304,14 @@ function applyOpeningRect(
     floorWallBaseWorldZ(nextPlan, hostElev.floorIndex),
   )
   if (!drag || drag.mode === 'move') {
-    commitPlan(updatePlanOpening(nextPlan, nextId, { t: patch.t, z: patch.z }))
+    commitPlan(
+      updatePlanOpening(
+        nextPlan,
+        nextId,
+        { t: patch.t, z: patch.z },
+        { startOnLeft: hostElev.xa <= hostElev.xb },
+      ),
+    )
     return
   }
   const floor = nextPlan.floors[hostElev.floorIndex]
@@ -1232,10 +1453,12 @@ function copySelectedOpening(): void {
     const subtype = resolveDoorSubtypeFromRefid(located.opening.refid)
     const width = clampOpeningWidth(located.opening.width)
     const doorHeight = Math.round(located.opening.z_height ?? props.defaultDoorHeightCm)
+    const doorSill = Math.round(located.opening.z ?? 0)
     addDoorSubtype.value = subtype
     queueMicrotask(() => {
       addDoorWidthCm.value = width
       addDoorHeightCm.value = doorHeight
+      addDoorSillZCm.value = doorSill
     })
     activeTool.value = 'add_door'
   }
@@ -1360,6 +1583,13 @@ function commitWallHeight(cm: number): void {
   commitPlan(setPlanWallHeight(props.plan, target.wallId, target.floorIndex, cm))
 }
 
+function commitWallBottomZ(cm: number): void {
+  const target = settingsTarget.value
+  if (target?.kind !== 'wall') return
+  pushUndo()
+  commitPlan(setPlanWallBottomZ(props.plan, target.wallId, target.floorIndex, cm))
+}
+
 function commitJunctionHeight(cm: number): void {
   const junction = settingsJunction.value
   if (!junction) return
@@ -1369,6 +1599,13 @@ function commitJunctionHeight(cm: number): void {
       ? setPlanRidgeJunctionZ(props.plan, junction.floorIndex, junction.refs, cm)
       : setPlanJunctionHeight(props.plan, junction.floorIndex, junction.refs, cm),
   )
+}
+
+function commitJunctionBottomZ(cm: number): void {
+  const junction = settingsJunction.value
+  if (!junction || junction.ridge) return
+  pushUndo()
+  commitPlan(setPlanJunctionBottomZ(props.plan, junction.floorIndex, junction.refs, cm))
 }
 
 function commitRidgeHeight(cm: number): void {
@@ -1477,12 +1714,20 @@ function commitSlabHeight(cm: number): void {
   commitPlan(setSlabThicknessCm(props.plan, floor.level, cm))
 }
 
+/** Opening-mousedown stopt niet de latere group-@click — die zou het andere overlappinge raam pakken. */
+let ignoreContentClickUntil = 0
+
+function markOpeningPointerHandled(): void {
+  ignoreContentClickUntil = Date.now() + 400
+}
+
 function onContentClick(event: {
   evt: MouseEvent
   target?: {
     getStage?: () => { getPointerPosition?: () => { x: number; y: number } | null } | null
   }
 }): void {
+  if (Date.now() < ignoreContentClickUntil) return
   if (isPanDragging.value || canvasLocked.value) return
   if (preciseDraft) {
     if (!preciseIgnoreClick) commitPreciseDraft()
@@ -1527,7 +1772,7 @@ function onContentClick(event: {
     }
     if (hitElevationRoofPlane(elev, cm)?.id === selectedRoof.id) return
   }
-  const hit = hitElevationOpening(elev, cm)
+  const hit = hitElevationOpening(elev, cm, selectedOpeningId.value)
   if (hit) {
     const wantEdit = event.evt.ctrlKey || event.evt.metaKey
     if (
@@ -1683,35 +1928,43 @@ function beginOpeningDrag(
 
 function onOpeningDown(openingId: string, event: { evt: MouseEvent }): void {
   event.evt.stopPropagation()
+  markOpeningPointerHandled()
   if (activeTool.value !== 'select' || canvasLocked.value) return
   const elev = elevation.value
-  const rect = elev?.openings.find((item) => item.openingId === openingId)
   const cm = pointerCm(event)
+  const wantEdit = isSettingsMod(event.evt, elevSettingsMod.value)
+  let id = openingId
+  if (elev && cm && selectedOpeningId.value) {
+    const preferred = hitElevationOpening(elev, cm, selectedOpeningId.value)
+    if (preferred && (wantEdit || preferred.openingId === selectedOpeningId.value)) {
+      id = preferred.openingId
+    }
+  }
+  const rect = elev?.openings.find((item) => item.openingId === id)
   if (!elev || !rect || !cm) return
   if (preciseDraft) {
     commitPreciseDraft()
     return
   }
   if (preciseIntent(event.evt)) {
-    selectOpening(openingId, 'quick')
-    beginPreciseOpening(openingId, cm, rect, rect.wallId, rect.floorIndex)
+    selectOpening(id, 'quick')
+    beginPreciseOpening(id, cm, rect, rect.wallId, rect.floorIndex)
     return
   }
-  const wantEdit = isSettingsMod(event.evt, elevSettingsMod.value)
   const alreadyEdit =
-    selectedOpeningId.value === openingId &&
+    selectedOpeningId.value === id &&
     settingsTarget.value?.kind === 'opening' &&
     settingsTarget.value.mode === 'edit'
   if (!wantEdit && !alreadyEdit) {
-    selectOpening(openingId, 'quick')
+    selectOpening(id, 'quick')
     return
   }
-  selectOpening(openingId, 'edit')
+  selectOpening(id, 'edit')
   if (alreadyEdit) {
-    beginOpeningDrag(openingId, 'move', cm, rect, rect.wallId, rect.floorIndex)
+    beginOpeningDrag(id, 'move', cm, rect, rect.wallId, rect.floorIndex)
     return
   }
-  startOpeningMovePending(openingId, rect, cm, event)
+  startOpeningMovePending(id, rect, cm, event)
 }
 
 function onMoveHandleDown(event: { evt: MouseEvent }): void {
@@ -1787,6 +2040,7 @@ const underlayMove = useFmlPreviewUnderlayMove({
 })
 
 const canvasLocked = computed(() => underlayMoveMode.value || props.rescaleMode === true)
+const { spacePressed, onKeyDown: onSpaceKeyDown, onKeyUp: onSpaceKeyUp } = useStage()
 const elevTouchEditor = computed(() => true)
 const { useTouchNav } = useFmlTouchNav(elevTouchEditor)
 const elevMoveMod = ref(false)
@@ -1908,9 +2162,15 @@ watch(underlayMoveMode, (on) => {
 })
 
 function onHostPointerDown(event: PointerEvent): void {
-  if (event.button !== 0 || props.rescaleMode || !underlayMoveMode.value) return
+  if (event.button !== 0) return
   const target = event.target as HTMLElement | null
   if (target?.closest(`${FML_PREVIEW_CHROME_SELECTOR}, .elev-groups`)) return
+  if (spacePressed.value) {
+    event.preventDefault()
+    panZoom.beginPanDrag(event)
+    return
+  }
+  if (props.rescaleMode || !underlayMoveMode.value) return
   event.preventDefault()
   underlayMove.beginUnderlayMoveDrag(event)
 }
@@ -2133,6 +2393,8 @@ type JunctionDrag = {
   id: string
   startY: number
   startHeightCm: number
+  startBottomZ: number
+  mode: WallElevationEditMode
   floorIndex: number
   refs: Array<{ wallId: string; end: 'a' | 'b' }>
   ridge?: boolean
@@ -2140,16 +2402,35 @@ type JunctionDrag = {
 
 let junctionDrag: JunctionDrag | null = null
 
+function junctionBottomZOf(junction: {
+  floorIndex: number
+  refs: Array<{ wallId: string; end: 'a' | 'b' }>
+}): number {
+  const floor = props.plan.floors[junction.floorIndex]
+  const floorH = floor?.height ?? 280
+  const bottoms = junction.refs
+    .map((ref) => {
+      const wall = floor?.walls.find((item) => item.id === ref.wallId)
+      if (!wall) return null
+      return Math.round(wallEndpoint3D(wall, ref.end, floorH).z)
+    })
+    .filter((value): value is number => value != null)
+  return bottoms[0] ?? 0
+}
+
 function beginJunctionDrag(
   junction: { id: string; heightCm: number; floorIndex: number; ridge?: boolean },
   refs: Array<{ wallId: string; end: 'a' | 'b' }>,
   startY: number,
+  mode: WallElevationEditMode = 'height',
 ): void {
   selectJunction(junction.id)
   junctionDrag = {
     id: junction.id,
     startY,
     startHeightCm: junction.heightCm,
+    startBottomZ: junction.ridge ? 0 : junctionBottomZOf({ floorIndex: junction.floorIndex, refs }),
+    mode: junction.ridge ? 'height' : mode,
     floorIndex: junction.floorIndex,
     refs,
     ridge: junction.ridge,
@@ -2174,7 +2455,16 @@ function onJunctionDown(junctionId: string, event: { evt: MouseEvent }): void {
     beginPreciseJunction(junction, junction.refs, cm)
     return
   }
-  beginJunctionDrag(junction, junction.refs, cm.y)
+  beginJunctionDrag(junction, junction.refs, cm.y, 'height')
+}
+
+function onJunctionElevHandleDown(mode: WallElevationEditMode, event: { evt: MouseEvent }): void {
+  event.evt.stopPropagation()
+  if (activeTool.value !== 'select' || canvasLocked.value) return
+  const junction = settingsJunction.value
+  const cm = pointerCm(event)
+  if (!junction || junction.ridge || !cm) return
+  beginJunctionDrag(junction, junction.refs, cm.y, mode)
 }
 
 function onRidgeWallDown(wall: ElevationWallRect, event: { evt: MouseEvent }): void {
@@ -2284,6 +2574,87 @@ function onRidgeHandleDown(side: ElevResizeSide, event: { evt: MouseEvent }): vo
   beginRidgeRectDrag(wall, side, cm)
 }
 
+type WallElevHandleDrag = {
+  wallId: string
+  floorIndex: number
+  mode: WallElevationEditMode
+  startBottomZ: number
+}
+
+let wallElevDrag: WallElevHandleDrag | null = null
+let wallElevDragStarted = false
+
+function elevCmToLocalZ(floorIndex: number, elevY: number): number {
+  const base = floorWallBaseWorldZ(props.plan, floorIndex)
+  return -elevY - base
+}
+
+function onWallElevHandleDown(mode: WallElevationEditMode, event: { evt: MouseEvent }): void {
+  event.evt.stopPropagation()
+  if (activeTool.value !== 'select' || canvasLocked.value) return
+  const target = settingsTarget.value
+  if (target?.kind !== 'wall') return
+  const floor = props.plan.floors[target.floorIndex]
+  const wall = floor?.walls.find((item) => item.id === target.wallId)
+  if (!floor || !wall) return
+  const startBottomZ = wallUniformBottomZCm(wall, floor.height) ?? 0
+  wallElevDrag = {
+    wallId: target.wallId,
+    floorIndex: target.floorIndex,
+    mode,
+    startBottomZ,
+  }
+  wallElevDragStarted = false
+  window.addEventListener('pointermove', onWallElevHandleMove)
+  window.addEventListener('pointerup', onWallElevHandleUp, { once: true })
+}
+
+function onWallElevHandleMove(event: PointerEvent): void {
+  if (!wallElevDrag) return
+  const elev = elevation.value
+  const cm = clientToCm(event.clientX, event.clientY)
+  if (!cm) return
+  let y = cm.y
+  if (elev && !(event.ctrlKey || event.metaKey)) {
+    y = snapElevationY(
+      y,
+      collectElevationSegmentSnapYs(elev, { wallId: wallElevDrag.wallId }),
+      ELEVATION_SEGMENT_SNAP_CM,
+    )
+    snapGuide.value = Math.abs(y - cm.y) < 1e-6 ? null : { y }
+  } else {
+    snapGuide.value = null
+  }
+  const localZ = Math.max(0, Math.round(elevCmToLocalZ(wallElevDrag.floorIndex, y)))
+  let targetCm: number
+  if (wallElevDrag.mode === 'height') {
+    targetCm = Math.max(1, localZ - wallElevDrag.startBottomZ)
+  } else {
+    // lift + shift: pointer Y = nieuwe onderkant
+    targetCm = localZ
+  }
+  if (!wallElevDragStarted) {
+    pushUndo()
+    wallElevDragStarted = true
+  }
+  commitPlan(
+    setPlanWallElevationEdit(
+      props.plan,
+      wallElevDrag.wallId,
+      wallElevDrag.floorIndex,
+      wallElevDrag.mode,
+      targetCm,
+    ),
+  )
+}
+
+function onWallElevHandleUp(): void {
+  window.removeEventListener('pointermove', onWallElevHandleMove)
+  wallElevDrag = null
+  wallElevDragStarted = false
+  snapGuide.value = null
+}
+
 function onRidgeRectMove(event: PointerEvent): void {
   if (!ridgeRectDrag) return
   const elev = elevation.value
@@ -2330,23 +2701,56 @@ function onRidgeRectUp(): void {
 
 function onJunctionMove(event: PointerEvent): void {
   if (!junctionDrag) return
+  const elev = elevation.value
   const cm = clientToCm(event.clientX, event.clientY)
   if (!cm) return
-  const min = junctionDrag.ridge ? 0 : 1
-  const heightCm = Math.max(
-    min,
-    Math.min(800, Math.round(junctionDrag.startHeightCm - (cm.y - junctionDrag.startY))),
-  )
+  let y = cm.y
+  if (elev && !(event.ctrlKey || event.metaKey)) {
+    y = snapElevationY(
+      y,
+      collectElevationSegmentSnapYs(elev, {
+        junctionId: junctionDrag.id,
+        wallIds: junctionDrag.refs.map((ref) => ref.wallId),
+      }),
+      ELEVATION_SEGMENT_SNAP_CM,
+    )
+    snapGuide.value = Math.abs(y - cm.y) < 1e-6 ? null : { y }
+  } else {
+    snapGuide.value = null
+  }
+  if (junctionDrag.ridge) {
+    const min = 0
+    const heightCm = Math.max(
+      min,
+      Math.min(800, Math.round(junctionDrag.startHeightCm - (y - junctionDrag.startY))),
+    )
+    commitPlan(
+      setPlanRidgeJunctionZ(props.plan, junctionDrag.floorIndex, junctionDrag.refs, heightCm),
+    )
+    return
+  }
+  const localZ = Math.max(0, Math.round(elevCmToLocalZ(junctionDrag.floorIndex, y)))
+  let targetCm: number
+  if (junctionDrag.mode === 'height') {
+    targetCm = Math.max(1, localZ - junctionDrag.startBottomZ)
+  } else {
+    targetCm = localZ
+  }
   commitPlan(
-    junctionDrag.ridge
-      ? setPlanRidgeJunctionZ(props.plan, junctionDrag.floorIndex, junctionDrag.refs, heightCm)
-      : setPlanJunctionHeight(props.plan, junctionDrag.floorIndex, junctionDrag.refs, heightCm),
+    setPlanJunctionElevationEdit(
+      props.plan,
+      junctionDrag.floorIndex,
+      junctionDrag.refs,
+      junctionDrag.mode,
+      targetCm,
+    ),
   )
 }
 
 function onJunctionUp(): void {
   window.removeEventListener('pointermove', onJunctionMove)
   junctionDrag = null
+  snapGuide.value = null
 }
 
 type RoofVertexDrag = {
@@ -2468,6 +2872,7 @@ defineExpose({
   resetView,
   undoEdit,
   redoEdit,
+  applyCornerMarkerModeFromSettings,
 })
 </script>
 
@@ -2476,7 +2881,8 @@ defineExpose({
     ref="containerRef"
     class="elev-host"
     :class="{
-      'elev-host--move-underlay': underlayMoveMode && !rescaleMode,
+      'elev-host--move-underlay': underlayMoveMode && !rescaleMode && !spacePressed,
+      'elev-host--pan': spacePressed,
       'elev-host--split':
         (activeTool === 'split' || activeTool === 'add_ridge' || activeTool === 'add_roof') &&
         !canvasLocked,
@@ -2492,6 +2898,7 @@ defineExpose({
       :can-redo="redoStack.length > 0"
       :hint="t('viewer.elevationHint')"
       :fullscreen="canvasFullscreen"
+      :show-canvas-grid="showCanvasGrid"
       :help-keys="[
         'viewer.elevationHint',
         'viewer.elevationOpeningHint',
@@ -2512,6 +2919,7 @@ defineExpose({
       @zoom-in="panZoom.zoomBy(1.15)"
       @zoom-out="panZoom.zoomBy(1 / 1.15)"
       @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
+      @update:show-canvas-grid="onShowCanvasGrid"
     />
     <FmlEditorModifierRail
       v-if="useTouchNav && !canvasLocked"
@@ -2540,7 +2948,7 @@ defineExpose({
             y: viewPosition.y,
             scaleX: viewScale,
             scaleY: viewScale,
-            draggable: activeTool === 'select' && !settingsTarget && !canvasLocked,
+            draggable: activeTool === 'select' && !settingsTarget && !canvasLocked && !spacePressed,
           }"
           @dragstart="panZoom.onGroupDragStart"
           @dragmove="panZoom.onGroupDragMove"
@@ -2563,13 +2971,21 @@ defineExpose({
               <v-image :config="underlayConfig.image" />
             </v-group>
           </v-group>
+          <CanvasGuideGrid
+            :visible="showCanvasGrid"
+            :parent-transform="{ x: viewPosition.x, y: viewPosition.y, scale: viewScale }"
+            :viewport-width="stageSize.width"
+            :viewport-height="stageSize.height"
+          />
           <v-group :config="{ opacity: contentOpacity, listening: true }">
             <template v-if="elevation">
               <v-group v-for="(band, index) in elevation.bands" :key="`band-${band.kind}-${index}`">
                 <v-rect
                   :config="{
                     ...stageRect(band),
-                    fill: band.kind === 'nok' ? '#cbd5e1' : '#e2e8f0',
+                    fill: bandBodyFill(band.kind),
+                    stroke: architectStyle ? elevLineColor : undefined,
+                    strokeWidth: architectStyle ? elevStroke : 0,
                     listening: false,
                   }"
                 />
@@ -2594,11 +3010,11 @@ defineExpose({
                       plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points,
                     ),
                     closed: true,
-                    fill: plane.color,
-                    stroke: '#4b5563',
+                    fill: roofBodyFill(plane.color),
+                    stroke: roofOuterStroke(),
                     strokeWidth: elevStroke,
                     perfectDrawEnabled: false,
-                    opacity: roofSelected(plane.id) ? 1 : 0.92,
+                    opacity: roofSelected(plane.id) ? 1 : architectStyle ? 1 : 0.92,
                     listening: false,
                   }"
                 />
@@ -2630,7 +3046,7 @@ defineExpose({
                   <v-path
                     :config="{
                       data: layer.fillPath,
-                      fill: '#94a3b8',
+                      fill: wallBodyFill(),
                       fillRule: 'evenodd',
                       strokeEnabled: false,
                       perfectDrawEnabled: false,
@@ -2643,7 +3059,7 @@ defineExpose({
                       points: stageWallPoly(layer.wall),
                       closed: true,
                       fillEnabled: false,
-                      stroke: '#334155',
+                      stroke: wallOuterStroke(),
                       strokeWidth: elevStroke,
                       perfectDrawEnabled: false,
                       listening: false,
@@ -2666,7 +3082,7 @@ defineExpose({
                     :key="stroke.key"
                     :config="{
                       points: stagePoints(stroke.a, stroke.b),
-                      stroke: '#0f172a',
+                      stroke: wallInnerStroke(),
                       dash: elevDash,
                       strokeWidth: elevStroke,
                       perfectDrawEnabled: false,
@@ -2679,25 +3095,59 @@ defineExpose({
                   :key="opening.openingId"
                   :config="{ listening: true }"
                 >
-                  <v-rect
+                  <v-line
+                    v-if="opening.ghost.shaped"
                     :config="{
-                      ...stageRect(opening),
-                      fill:
+                      points: opening.ghost.points,
+                      closed: true,
+                      fill: openingGhostFill(opening.openingId, opening.type) ?? 'rgba(0,0,0,0)',
+                      opacity: openingGhostOpacity(opening.openingId) || 1,
+                      stroke:
                         selectedOpeningId === opening.openingId
-                          ? '#f97316'
-                          : opening.type === 'door'
-                            ? '#f59e0b'
-                            : '#38bdf8',
-                      opacity: selectedOpeningId === opening.openingId ? 0.55 : 0.08,
-                      stroke: selectedOpeningId === opening.openingId ? '#ea580c' : '#0c4a6e',
+                          ? '#ea580c'
+                          : architectStyle
+                            ? 'transparent'
+                            : '#0c4a6e',
                       strokeWidth: elevStroke,
                       perfectDrawEnabled: false,
                       listening: true,
                     }"
                     @mousedown="onOpeningDown(opening.openingId, $event)"
+                    @click.stop
                   />
                   <v-rect
-                    v-if="selectedOpeningId === opening.openingId"
+                    v-else
+                    :config="{
+                      ...stageRect(opening),
+                      fill: openingGhostFill(opening.openingId, opening.type) ?? 'rgba(0,0,0,0)',
+                      opacity: openingGhostOpacity(opening.openingId) || 1,
+                      stroke:
+                        selectedOpeningId === opening.openingId
+                          ? '#ea580c'
+                          : architectStyle
+                            ? 'transparent'
+                            : '#0c4a6e',
+                      strokeWidth: elevStroke,
+                      perfectDrawEnabled: false,
+                      listening: true,
+                    }"
+                    @mousedown="onOpeningDown(opening.openingId, $event)"
+                    @click.stop
+                  />
+                  <v-line
+                    v-if="selectedOpeningId === opening.openingId && opening.ghost.shaped"
+                    :config="{
+                      points: opening.ghost.points,
+                      closed: true,
+                      fillEnabled: false,
+                      stroke: '#f97316',
+                      strokeWidth: elevHighlightStroke,
+                      listening: false,
+                      perfectDrawEnabled: false,
+                    }"
+                  />
+                  <v-rect
+                    v-else-if="selectedOpeningId === opening.openingId"
                     :config="{
                       ...stageRect(opening),
                       fillEnabled: false,
@@ -2713,6 +3163,18 @@ defineExpose({
                   :key="`transom-${transom.openingId}-${index}`"
                 >
                   <v-rect
+                    v-if="architectStyle"
+                    :config="{
+                      ...stageRect(transom),
+                      fill: ARCHITECT_AREA_FILL,
+                      strokeEnabled: false,
+                      listening: true,
+                      perfectDrawEnabled: false,
+                    }"
+                    @mousedown="onOpeningDown(transom.openingId, $event)"
+                  />
+                  <v-rect
+                    v-else
                     :config="{
                       ...stageRect(transom),
                       fill: FACTORY_OPENING_COLORS.bovenlicht,
@@ -2746,10 +3208,10 @@ defineExpose({
                     :config="{
                       points: poly.points,
                       closed: poly.closed,
-                      fill: poly.fill ? glyphFill(poly.role, glyph.transom, glyph.type) : undefined,
-                      stroke: glyph.transom ? '#14532d' : '#0c4a6e',
+                      fill: glyphPolyFill(poly.role, glyph.transom, glyph.type, poly.fill),
+                      stroke: glyphStrokeColor(glyph.transom),
                       strokeWidth: poly.role === 'handle' ? elevStrokeHeavy : elevStroke,
-                      opacity: glyphOpacity(poly.role, glyph.transom),
+                      opacity: architectStyle ? 1 : glyphOpacity(poly.role, glyph.transom),
                       perfectDrawEnabled: false,
                       listening: false,
                     }"
@@ -2761,12 +3223,10 @@ defineExpose({
                       x: circle.x,
                       y: circle.y,
                       radius: circle.radius,
-                      fill: circle.fill
-                        ? glyphFill(circle.role, glyph.transom, glyph.type)
-                        : undefined,
-                      stroke: glyph.transom ? '#14532d' : '#0c4a6e',
+                      fill: glyphPolyFill(circle.role, glyph.transom, glyph.type, circle.fill),
+                      stroke: glyphStrokeColor(glyph.transom),
                       strokeWidth: circle.role === 'handle' ? elevStrokeHeavy : elevStroke,
-                      opacity: glyphOpacity(circle.role, glyph.transom),
+                      opacity: architectStyle ? 1 : glyphOpacity(circle.role, glyph.transom),
                       perfectDrawEnabled: false,
                       listening: false,
                     }"
@@ -2780,7 +3240,7 @@ defineExpose({
                   <v-path
                     :config="{
                       data: layer.fillPath,
-                      fill: '#7b8ea6',
+                      fill: ridgeEndFill(),
                       fillRule: 'evenodd',
                       strokeEnabled: false,
                       perfectDrawEnabled: false,
@@ -2793,7 +3253,7 @@ defineExpose({
                       points: stageWallPoly(layer.wall),
                       closed: true,
                       fillEnabled: false,
-                      stroke: '#334155',
+                      stroke: wallOuterStroke(),
                       strokeWidth: elevStroke,
                       perfectDrawEnabled: false,
                       listening: false,
@@ -2857,6 +3317,22 @@ defineExpose({
                   listening: true,
                 }"
                 @mousedown="onJunctionDown(junction.id, $event)"
+              />
+              <v-circle
+                v-for="handle in junctionElevationHandles"
+                :key="`junc-elev-${handle.mode}`"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(handle.x, handle.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: (handle.mode === 'shift' ? 6 : 5) / viewScale,
+                  fill: '#fff',
+                  stroke: '#f97316',
+                  strokeWidth: 2 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onJunctionElevHandleDown(handle.mode, $event)"
               />
               <v-line
                 v-if="snapGuide?.y != null"
@@ -2988,6 +3464,22 @@ defineExpose({
                 @mousedown="onRoofVertexDown(index, $event)"
               />
               <v-circle
+                v-for="handle in wallElevationHandles"
+                :key="`wall-elev-${handle.mode}`"
+                :config="{
+                  ...(() => {
+                    const stage = layoutXform.toStagePoint(handle.x, handle.y)
+                    return { x: stage.x, y: stage.y }
+                  })(),
+                  radius: (handle.mode === 'shift' ? 6 : 5) / viewScale,
+                  fill: '#fff',
+                  stroke: '#f97316',
+                  strokeWidth: 2 / viewScale,
+                  listening: true,
+                }"
+                @mousedown="onWallElevHandleDown(handle.mode, $event)"
+              />
+              <v-circle
                 v-if="ridgeCenter"
                 :config="{
                   ...(() => {
@@ -3076,6 +3568,7 @@ defineExpose({
       :height="stageSize.height"
       :to-screen="cmToScreen"
       :to-cm="screenToCm"
+      :space-pressed="spacePressed"
       @update-state="emit('updateRescaleState', $event)"
     />
     <div
@@ -3133,18 +3626,24 @@ defineExpose({
                   : t('viewer.elevationJunction', { name: settingsJunction.name })
               "
               :height-cm="settingsJunction.heightCm"
+              :bottom-z-cm="settingsJunction.bottomZCm"
+              :show-bottom-z="!settingsJunction.ridge"
               :min="settingsJunction.ridge ? 0 : 1"
               :max="800"
               @height="commitJunctionHeight"
+              @bottom-z="commitJunctionBottomZ"
             />
             <FmlElevationHeightOnlyFields
               v-else-if="settingsWall"
               :unit="unit"
               :title="t('viewer.elevationWall', { name: settingsWall.name })"
               :height-cm="settingsWall.heightCm"
+              :bottom-z-cm="settingsWall.bottomZCm"
+              show-bottom-z
               :min="1"
               :max="800"
               @height="commitWallHeight"
+              @bottom-z="commitWallBottomZ"
             />
             <FmlElevationHeightOnlyFields
               v-else-if="settingsSlab"
@@ -3203,6 +3702,7 @@ defineExpose({
               v-else-if="activeTool === 'add_door' || activeTool === 'add_window'"
               v-model:add-door-subtype="addDoorSubtype"
               v-model:add-door-width-cm="addDoorWidthCm"
+              v-model:add-door-sill-z-cm="addDoorSillZCm"
               v-model:add-window-subtype="addWindowSubtype"
               v-model:add-window-width-cm="addWindowWidthCm"
               v-model:add-window-sill-z-cm="addWindowSillZCm"
@@ -3236,7 +3736,8 @@ defineExpose({
   outline: none;
 }
 
-.elev-host--move-underlay {
+.elev-host--move-underlay,
+.elev-host--pan {
   cursor: grab;
 }
 
@@ -3248,7 +3749,8 @@ defineExpose({
   touch-action: none;
 }
 
-.elev-host--move-underlay:active {
+.elev-host--move-underlay:active,
+.elev-host--pan:active {
   cursor: grabbing;
 }
 

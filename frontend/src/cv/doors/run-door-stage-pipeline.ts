@@ -12,6 +12,7 @@ import {
 import { buildLabelAdjacency } from '@/cv/walls/rooms/label-adjacency'
 import { attachDoorframesToResolvedDoors } from './door-attach-doorframes'
 import { findDoorBridgeWallFaces } from './door-bridge-wall-promote'
+import { pairDemoteDoorHypotheses } from './door-pair-demote'
 import { runDoorFillFilter } from './door-fill-filter'
 import { filterRoomSurroundedHypotheses, filterWallUntouchedHypotheses } from './door-room-surround'
 import type { DoorRoomSurroundRejection, DoorWallTouchRejection } from './door-room-surround'
@@ -112,13 +113,15 @@ export type RunDoorStagePipelineResult = {
   angleRescueCount: number
   angleRescueDiagnostics: DoorAngleRescueDiagnostic[]
   bridgeWallFaceIds: number[]
+  /** Wees-kozijnen (D-62) → class wall bij push; nooit losse doorframe. */
+  orphanWallFaceIds: number[]
   resolved: ResolvedDoorCandidate[]
 }
 
 /**
  * Stage 1–2 deur pipeline (na ref-band analyse): merge wall-rescue →
  * `prepareOpeningPipeDual` → filter → fill → surround → angle-rescue →
- * wall-touch → bridge → resolve.
+ * wall-touch → pair/demote → bridge → resolve.
  * Pure CV, geen Vue.
  *
  * Verplicht `dual: FaceDualSpace`. Bootstrap: seed-detach + white rebind
@@ -149,6 +152,7 @@ export function runDoorStagePipeline(
       'wall-fill',
       'room-surround',
       'wall-touch',
+      'pair-demote',
       'bridge-promote',
     ])
   }
@@ -243,18 +247,39 @@ export function runDoorStagePipeline(
         parentMap: detachedParentMap,
         classificationByLabel: detachedClassificationByLabel,
       })
-  const stage2Accepted = wallTouchFiltered.kept
+  const stage2AfterWallTouch = wallTouchFiltered.kept
   const stage2RejectedCount =
     fillResult.rejected.length +
     surroundFiltered.rejected.length +
     wallTouchFiltered.rejected.length
 
   const bridgeClassification = params.bridgeClassificationByLabel ?? detachedClassificationByLabel
+  // ESC:D-62 (A) — pair/demote vóór bridge; existingDoorsOnly → no-op.
+  // ESC:D-61 (D)
+  const pairResult = existingDoorsOnly
+    ? {
+        swings: stage2AfterWallTouch,
+        demotedDoorframeFaceIds: [] as number[],
+        demotedWallFaceIds: [] as number[],
+        byHypothesisId: new Map<string, number[]>(),
+      }
+    : pairDemoteDoorHypotheses({
+        hypotheses: stage2AfterWallTouch,
+        components: merged.components,
+        labelsData: pipeDual.ink.labelsData,
+        width: pipeDual.ink.width,
+        height: pipeDual.ink.height,
+        parentMap: detachedParentMap,
+        classificationByLabel: bridgeClassification,
+        classificationGroupBy,
+        adjacency: clusterAdjacency,
+      })
+
   // ESC:D-61 (D)
   const bridgeResult = existingDoorsOnly
     ? { allFaceIds: [] as number[], byHypothesisId: new Map<string, number[]>() }
     : findDoorBridgeWallFaces({
-        hypotheses: stage2Accepted,
+        hypotheses: pairResult.swings,
         components: merged.components,
         labelsData: pipeDual.ink.labelsData,
         width: pipeDual.ink.width,
@@ -265,12 +290,20 @@ export function runDoorStagePipeline(
         adjacency: whiteAdjacency,
         referenceWallThicknessPx: params.referenceWallThicknessPx ?? undefined,
       })
-  const bridgeWallFaceIds = bridgeResult.allFaceIds
 
-  const stage2WithDoorframes = stage2Accepted.map((hyp) => {
-    const ids = bridgeResult.byHypothesisId.get(hyp.id)
-    if (!ids || ids.length <= 0) return hyp
-    return { ...hyp, doorframeFaceIds: ids }
+  const bridgeWallFaceIds = [
+    ...new Set([...pairResult.demotedDoorframeFaceIds, ...bridgeResult.allFaceIds]),
+  ].sort((a, b) => a - b)
+  const orphanWallFaceIds = [...pairResult.demotedWallFaceIds]
+
+  const stage2WithDoorframes = pairResult.swings.map((hyp) => {
+    const fromPair = pairResult.byHypothesisId.get(hyp.id) ?? []
+    const fromBridge = bridgeResult.byHypothesisId.get(hyp.id) ?? []
+    if (fromPair.length <= 0 && fromBridge.length <= 0) return hyp
+    const ids = [...new Set([...(hyp.doorframeFaceIds ?? []), ...fromPair, ...fromBridge])].sort(
+      (a, b) => a - b,
+    )
+    return ids.length > 0 ? { ...hyp, doorframeFaceIds: ids } : hyp
   })
 
   const resolvedRaw = resolveDoorCandidates({
@@ -310,6 +343,7 @@ export function runDoorStagePipeline(
     angleRescueCount: angleRescue.matchedCount,
     angleRescueDiagnostics: angleRescue.diagnostics,
     bridgeWallFaceIds,
+    orphanWallFaceIds,
     resolved,
   }
 }

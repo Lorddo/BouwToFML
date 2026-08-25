@@ -366,6 +366,10 @@ describe('toWallPipelineClass', () => {
     expect(mapped.get(3)).toBe('unknown')
     expect(mapped.get(4)).toBe('wall')
     expect(mapped.get(5)).toBe('wall')
+    const keepMapped = mapClassesForWallPipeline(input, {
+      maskKeepDoorFaceIds: new Set([1]),
+    })
+    expect(keepMapped.get(1)).toBe('wall')
     expect([...pickDoorOverrides(input).entries()]).toEqual([[1, 'door']])
     expect([...pickWindowOverrides(input).entries()]).toEqual([[4, 'window']])
     expect([...pickDoorframeOverrides(input).entries()]).toEqual([[5, 'doorframe']])

@@ -88,7 +88,7 @@ const { t } = useI18n()
 
 const isDoor = computed(() => props.type === 'door')
 const isWindow = computed(() => props.type === 'window')
-const showSillField = computed(() => props.showSill ?? isWindow.value)
+const showSillField = computed(() => props.showSill ?? (isWindow.value || isDoor.value))
 const showPacked = computed(() => props.bovenlichtPacked !== false)
 const showBovenlichtMeasures = computed(
   () => showPacked.value && (props.bovenlicht || props.bovenlichtMixed),

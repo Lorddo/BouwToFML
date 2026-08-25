@@ -1,22 +1,31 @@
 import { computed, ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
-import { wallEndpointHeightCm } from '@/core/fml/wall-endpoint-height'
+import {
+  wallEndpoint3D,
+  wallEndpointHeightCm,
+  wallUniformBottomZCm,
+} from '@/core/fml/wall-endpoint-height'
 import { balanceToPercent, percentToBalance } from '@/ui/components/fml-preview-wall-edit'
 import { projectPointToWallT } from '@/ui/components/fml-preview-openings'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
 import { bindNumericDraftField, bindScaleLengthDraftField } from './fml-preview-draft-commit'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
-import { findWallsFullyInCmBBox } from './fml-preview-wall-select'
 import {
-  groupIdForWall,
+  collectAllOfBoxKind,
+  collectBoxSelectHits,
+  type BoxSelectHits,
+  type BoxSelectKind,
+} from './fml-preview-wall-select'
+import {
+  groupIdsForWall,
   isWallInStampGroup,
   listFacadeGroups,
   STAMP_FACADE_GROUP_ID,
   type FacadeGroup,
 } from '@/core/fml/facade-groups'
-import { promptFacadeGroupName } from '@/ui/composables/fml-chrome-dialog'
+import { promptFacadeGroupName, promptFacadeGroupsEdit } from '@/ui/composables/fml-chrome-dialog'
 import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -24,7 +33,9 @@ type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 const FIELD_THICKNESS = 'wall-thickness'
 const FIELD_BALANCE = 'wall-balance'
 const FIELD_WALL_HEIGHT = 'wall-height'
+const FIELD_WALL_BOTTOM_Z = 'wall-bottom-z'
 const FIELD_JUNCTION_HEIGHT = 'junction-height'
+const FIELD_JUNCTION_BOTTOM_Z = 'junction-bottom-z'
 
 interface WallSelectionHitTestApi {
   containerRectToCmBBox: (rect: { x: number; y: number; width: number; height: number }) => {
@@ -46,6 +57,7 @@ export function useFmlPreviewWallSelection(options: {
   cancelMoveDragPending: () => void
   cancelDrawWallDrag: () => void
   cancelMeasureDrag: () => void
+  syncOpeningDraftFromSelection?: () => void
 }) {
   const {
     editor,
@@ -58,6 +70,7 @@ export function useFmlPreviewWallSelection(options: {
     cancelMoveDragPending,
     cancelDrawWallDrag,
     cancelMeasureDrag,
+    syncOpeningDraftFromSelection,
   } = options
 
   const {
@@ -76,8 +89,12 @@ export function useFmlPreviewWallSelection(options: {
   const wallBalanceMixed = ref(false)
   const wallHeightDraft = ref(DEFAULT_FML_WALL_HEIGHT_CM)
   const wallHeightMixed = ref(false)
+  const wallBottomZDraft = ref(0)
+  const wallBottomZMixed = ref(false)
   const junctionHeightDraft = ref(DEFAULT_FML_WALL_HEIGHT_CM)
   const junctionHeightMixed = ref(false)
+  const junctionBottomZDraft = ref(0)
+  const junctionBottomZMixed = ref(false)
   const selectionBoxPreview = ref<{ x: number; y: number; width: number; height: number } | null>(
     null,
   )
@@ -85,6 +102,7 @@ export function useFmlPreviewWallSelection(options: {
   const settingsWallSplitClickCm = ref<Point2D | null>(null)
 
   const selectionBoxMode = computed(() => activeFmlTool.value === 'box_select')
+  const boxSelectKind = ref<BoxSelectKind>('wall')
 
   let selectionBoxDrag: {
     startX: number
@@ -101,6 +119,7 @@ export function useFmlPreviewWallSelection(options: {
       wallThicknessMixed.value = false
       wallBalanceMixed.value = false
       wallHeightMixed.value = false
+      wallBottomZMixed.value = false
       return
     }
     const floorH = floorHeight()
@@ -111,16 +130,21 @@ export function useFmlPreviewWallSelection(options: {
       .map((id) => editor.selectableWalls.value.find((item) => item.id === id)?.balance ?? 0.5)
       .filter((value): value is number => value != null)
     const heights: number[] = []
+    const bottoms: number[] = []
     for (const id of ids) {
       const wall = editor.selectableWalls.value.find((item) => item.id === id)
       if (!wall) continue
       heights.push(wallEndpointHeightCm(wall, 'a', floorH))
       heights.push(wallEndpointHeightCm(wall, 'b', floorH))
+      const bottom = wallUniformBottomZCm(wall, floorH)
+      if (bottom != null) bottoms.push(bottom)
+      else bottoms.push(Number.NaN)
     }
     if (thicknesses.length === 0) {
       wallThicknessMixed.value = false
       wallBalanceMixed.value = false
       wallHeightMixed.value = false
+      wallBottomZMixed.value = false
       return
     }
     const first = Math.round(thicknesses[0])
@@ -141,17 +165,28 @@ export function useFmlPreviewWallSelection(options: {
       wallHeightMixed.value = heightMixed
       wallHeightDraft.value = firstHeight
     }
+
+    if (bottoms.length > 0) {
+      const firstBottom = bottoms.find((value) => Number.isFinite(value)) ?? 0
+      const bottomMixed = bottoms.some(
+        (value) => !Number.isFinite(value) || Math.round(value) !== Math.round(firstBottom),
+      )
+      wallBottomZMixed.value = bottomMixed
+      wallBottomZDraft.value = Math.round(firstBottom)
+    }
   }
 
   function syncJunctionHeightDraftFromSelection(): void {
     const junctionId = settingsJunctionId.value
     if (!junctionId) {
       junctionHeightMixed.value = false
+      junctionBottomZMixed.value = false
       return
     }
     const junction = editor.junctions.value.find((item) => item.id === junctionId)
     if (!junction || junction.refs.length === 0) {
       junctionHeightMixed.value = false
+      junctionBottomZMixed.value = false
       return
     }
     const floorH = floorHeight()
@@ -162,14 +197,28 @@ export function useFmlPreviewWallSelection(options: {
         return wallEndpointHeightCm(wall, ref.end, floorH)
       })
       .filter((value): value is number => value != null)
+    const bottoms = junction.refs
+      .map((ref) => {
+        const wall = editor.selectableWalls.value.find((item) => item.id === ref.wallId)
+        if (!wall) return null
+        return wallEndpoint3D(wall, ref.end, floorH).z
+      })
+      .filter((value): value is number => value != null)
     if (heights.length === 0) {
       junctionHeightMixed.value = false
+      junctionBottomZMixed.value = false
       return
     }
     const first = Math.round(heights[0])
     const mixed = heights.some((value) => Math.round(value) !== first)
     junctionHeightMixed.value = mixed
     junctionHeightDraft.value = first
+    if (bottoms.length > 0) {
+      const firstBottom = Math.round(bottoms[0])
+      const bottomMixed = bottoms.some((value) => Math.round(value) !== firstBottom)
+      junctionBottomZMixed.value = bottomMixed
+      junctionBottomZDraft.value = firstBottom
+    }
   }
 
   function applyThicknessToWalls(wallIds: string[], thicknessCm: number): { mutated: boolean } {
@@ -228,6 +277,25 @@ export function useFmlPreviewWallSelection(options: {
     return { mutated: true }
   }
 
+  function applyBottomZToWalls(wallIds: string[], bottomRaw: number): { mutated: boolean } {
+    const bottomZ = Math.max(0, Math.min(2000, Math.round(bottomRaw)))
+    wallBottomZDraft.value = bottomZ
+    wallBottomZMixed.value = false
+    if (wallIds.length === 0) return { mutated: false }
+    const floorH = floorHeight()
+    const already = wallIds.every((id) => {
+      const wall = editor.selectableWalls.value.find((item) => item.id === id)
+      if (!wall) return false
+      return wallUniformBottomZCm(wall, floorH) === bottomZ
+    })
+    if (already) return { mutated: false }
+    draftCommit.beginUndoGroup(FIELD_WALL_BOTTOM_Z, () => editor.pushUndo())
+    editor.applyWallsBottomZ(wallIds, bottomZ)
+    syncWallThicknessDraftFromSelection()
+    syncPlanToParent()
+    return { mutated: true }
+  }
+
   function applyHeightToJunction(
     junctionId: string | null,
     heightRaw: number,
@@ -247,6 +315,30 @@ export function useFmlPreviewWallSelection(options: {
     if (already) return { mutated: false }
     draftCommit.beginUndoGroup(FIELD_JUNCTION_HEIGHT, () => editor.pushUndo())
     editor.applyJunctionHeight(junction.refs, height)
+    syncJunctionHeightDraftFromSelection()
+    syncPlanToParent()
+    return { mutated: true }
+  }
+
+  function applyBottomZToJunction(
+    junctionId: string | null,
+    bottomRaw: number,
+  ): { mutated: boolean } {
+    const bottomZ = Math.max(0, Math.min(2000, Math.round(bottomRaw)))
+    junctionBottomZDraft.value = bottomZ
+    junctionBottomZMixed.value = false
+    if (!junctionId) return { mutated: false }
+    const junction = editor.junctions.value.find((item) => item.id === junctionId)
+    if (!junction || junction.refs.length === 0) return { mutated: false }
+    const floorH = floorHeight()
+    const already = junction.refs.every((ref) => {
+      const wall = editor.selectableWalls.value.find((item) => item.id === ref.wallId)
+      if (!wall) return false
+      return Math.round(wallEndpoint3D(wall, ref.end, floorH).z) === bottomZ
+    })
+    if (already) return { mutated: false }
+    draftCommit.beginUndoGroup(FIELD_JUNCTION_BOTTOM_Z, () => editor.pushUndo())
+    editor.applyJunctionBottomZ(junction.refs, bottomZ)
     syncJunctionHeightDraftFromSelection()
     syncPlanToParent()
     return { mutated: true }
@@ -285,6 +377,7 @@ export function useFmlPreviewWallSelection(options: {
     wallThicknessMixed.value = false
     wallBalanceMixed.value = false
     wallHeightMixed.value = false
+    wallBottomZMixed.value = false
     if (settingsJunctionId.value === junctionId) {
       settingsJunctionId.value = null
       junctionHeightMixed.value = false
@@ -328,6 +421,17 @@ export function useFmlPreviewWallSelection(options: {
     },
   })
 
+  const wallBottomZField = bindScaleLengthDraftField({
+    fieldId: FIELD_WALL_BOTTOM_Z,
+    draftCommit,
+    draft: wallBottomZDraft,
+    mixed: wallBottomZMixed,
+    applyWithValue: (value) => {
+      const wallIds = [...settingsWallIds.value]
+      return () => applyBottomZToWalls(wallIds, value)
+    },
+  })
+
   const junctionHeightField = bindScaleLengthDraftField({
     fieldId: FIELD_JUNCTION_HEIGHT,
     draftCommit,
@@ -339,14 +443,29 @@ export function useFmlPreviewWallSelection(options: {
     },
   })
 
+  const junctionBottomZField = bindScaleLengthDraftField({
+    fieldId: FIELD_JUNCTION_BOTTOM_Z,
+    draftCommit,
+    draft: junctionBottomZDraft,
+    mixed: junctionBottomZMixed,
+    applyWithValue: (value) => {
+      const junctionId = settingsJunctionId.value
+      return () => applyBottomZToJunction(junctionId, value)
+    },
+  })
+
   const onWallThicknessCm = thicknessField.onCm
   const commitWallThickness = thicknessField.commit
   const onWallBalanceInput = balanceField.onInput
   const commitWallBalance = balanceField.commit
   const onWallHeightCm = wallHeightField.onCm
   const commitWallHeight = wallHeightField.commit
+  const onWallBottomZCm = wallBottomZField.onCm
+  const commitWallBottomZ = wallBottomZField.commit
   const onJunctionHeightCm = junctionHeightField.onCm
   const commitJunctionHeight = junctionHeightField.commit
+  const onJunctionBottomZCm = junctionBottomZField.onCm
+  const commitJunctionBottomZ = junctionBottomZField.commit
 
   /** Immediate preset / programmatic thickness (own undo step). */
   function applyWallsThicknessCm(thicknessCm: number): void {
@@ -404,17 +523,25 @@ export function useFmlPreviewWallSelection(options: {
 
   const facadeGroupOptions = computed((): FacadeGroup[] => listFacadeGroups(editor.localPlan.value))
 
-  /** Shared gevelgroep-id, '' = none, null = mixed. Stamp zit hier niet in (aparte checkbox). */
-  const facadeGroupDraft = computed((): string | null => {
+  /**
+   * Per gevelgroep: true = alle geselecteerde muren lid, false = geen, null = gemengd.
+   * Stamp zit hier niet in (aparte checkbox).
+   */
+  const facadeGroupChecks = computed((): Record<string, boolean | null> => {
     const ids = settingsWallIds.value
-    if (ids.length === 0) return ''
-    const groupIds = ids.map((id) => groupIdForWall(editor.localPlan.value, id))
-    const first = groupIds[0] ?? null
-    if (groupIds.some((id) => id !== first)) return null
-    return first ?? ''
+    const out: Record<string, boolean | null> = {}
+    for (const group of facadeGroupOptions.value) {
+      if (group.id === STAMP_FACADE_GROUP_ID) continue
+      if (ids.length === 0) {
+        out[group.id] = false
+        continue
+      }
+      const flags = ids.map((id) => groupIdsForWall(editor.localPlan.value, id).includes(group.id))
+      const first = flags[0] ?? false
+      out[group.id] = flags.some((flag) => flag !== first) ? null : first
+    }
+    return out
   })
-
-  const facadeGroupMixed = computed(() => facadeGroupDraft.value === null)
 
   /** Stempel-lidmaatschap: true/false/null(mixed). */
   const stampGroupDraft = computed((): boolean | null => {
@@ -428,15 +555,31 @@ export function useFmlPreviewWallSelection(options: {
 
   const stampGroupMixed = computed(() => stampGroupDraft.value === null)
 
+  /** Highlight: unie van floor-leden van groepen die alle geselecteerde muren delen. */
   const facadeMemberIdsOnActiveFloor = computed((): string[] => {
-    const draft = facadeGroupDraft.value
-    if (!draft) return []
+    const ids = settingsWallIds.value
+    if (ids.length === 0) return []
+    const plan = editor.localPlan.value
+    let common: Set<string> | null = null
+    for (const wallId of ids) {
+      const set = new Set(groupIdsForWall(plan, wallId))
+      if (common == null) common = set
+      else {
+        for (const gid of [...common]) {
+          if (!set.has(gid)) common.delete(gid)
+        }
+      }
+    }
+    if (!common || common.size === 0) return []
     const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
-    return (
-      listFacadeGroups(editor.localPlan.value)
-        .find((group) => group.id === draft)
-        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
-    )
+    const out = new Set<string>()
+    for (const group of listFacadeGroups(plan)) {
+      if (!common.has(group.id)) continue
+      for (const id of group.wallGuids) {
+        if (onFloor.has(id)) out.add(id)
+      }
+    }
+    return [...out]
   })
 
   const stampMemberIdsOnActiveFloor = computed((): string[] => {
@@ -448,43 +591,94 @@ export function useFmlPreviewWallSelection(options: {
     )
   })
 
-  async function applyFacadeGroupSelection(value: string): Promise<void> {
+  async function createFacadeGroupFromSelection(): Promise<void> {
+    flushPendingFieldCommits()
+    const selectedIds = [...settingsWallIds.value]
+    if (selectedIds.length === 0) return
+    const plan = editor.localPlan.value
+    if (!plan) return
+    const name = await promptFacadeGroupName()
+    if (name == null) return
+    const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'create')
+    editor.pushUndo()
+    editor.applyFacadeCreate({ name }, wallIds)
+    syncPlanToParent()
+  }
+
+  async function toggleFacadeGroup(groupId: string, enabled: boolean): Promise<void> {
     flushPendingFieldCommits()
     const selectedIds = [...settingsWallIds.value]
     if (selectedIds.length === 0) return
     const plan = editor.localPlan.value
     if (!plan) return
 
-    if (value === '__new__') {
-      const name = await promptFacadeGroupName()
-      if (name == null) return
-      const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'create')
+    if (groupId === STAMP_FACADE_GROUP_ID) {
       editor.pushUndo()
-      editor.applyFacadeCreate({ name }, wallIds)
+      if (enabled) editor.applyStampAssign(selectedIds)
+      else editor.applyStampDetach(selectedIds)
       syncPlanToParent()
       return
     }
 
+    if (enabled) {
+      const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'assign', groupId)
+      editor.pushUndo()
+      editor.applyFacadeAssign(groupId, wallIds)
+    } else {
+      const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'detach', groupId)
+      editor.pushUndo()
+      editor.applyFacadeDetachFromGroup(groupId, wallIds)
+    }
+    syncPlanToParent()
+  }
+
+  async function removeFacadeGroupFromSelection(groupId: string): Promise<void> {
+    await toggleFacadeGroup(groupId, false)
+  }
+
+  async function editAllFacadeGroups(): Promise<void> {
+    const groups = facadeGroupOptions.value.filter((g) => g.id !== STAMP_FACADE_GROUP_ID)
+    if (groups.length === 0) return
+    const edited = await promptFacadeGroupsEdit(groups.map((g) => ({ id: g.id, name: g.name })))
+    if (!edited) return
+    const renames = edited.filter((row) => {
+      const current = groups.find((g) => g.id === row.id)
+      return current != null && current.name !== row.name
+    })
+    if (renames.length === 0) return
+    editor.pushUndo()
+    for (const row of renames) {
+      editor.applyFacadeRename(row.id, { name: row.name })
+    }
+    syncPlanToParent()
+  }
+
+  async function applyFacadeGroupSelection(value: string): Promise<void> {
+    if (value === '__edit__') {
+      await editAllFacadeGroups()
+      return
+    }
+    if (value === '__new__') {
+      await createFacadeGroupFromSelection()
+      return
+    }
+    if (value === STAMP_FACADE_GROUP_ID) {
+      await toggleFacadeGroup(STAMP_FACADE_GROUP_ID, true)
+      return
+    }
     if (value === '' || value === '__none__') {
+      flushPendingFieldCommits()
+      const selectedIds = [...settingsWallIds.value]
+      if (selectedIds.length === 0) return
+      const plan = editor.localPlan.value
+      if (!plan) return
       const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'detach')
       editor.pushUndo()
       editor.applyFacadeDetach(wallIds)
       syncPlanToParent()
       return
     }
-
-    // Workspace stamp-preset kan nog via applyFacadeGroupSelection komen.
-    if (value === STAMP_FACADE_GROUP_ID) {
-      editor.pushUndo()
-      editor.applyStampAssign(selectedIds)
-      syncPlanToParent()
-      return
-    }
-
-    const wallIds = await withStackedFacadeWalls(plan, selectedIds, 'assign', value)
-    editor.pushUndo()
-    editor.applyFacadeAssign(value, wallIds)
-    syncPlanToParent()
+    await toggleFacadeGroup(value, true)
   }
 
   function applyStampGroupSelection(enabled: boolean): void {
@@ -497,20 +691,29 @@ export function useFmlPreviewWallSelection(options: {
     syncPlanToParent()
   }
 
-  async function renameSelectedFacadeGroup(): Promise<void> {
-    const draft = facadeGroupDraft.value
-    if (!draft || draft === STAMP_FACADE_GROUP_ID) return
-    const current = facadeGroupOptions.value.find((group) => group.id === draft)
+  async function renameFacadeGroupById(groupId: string): Promise<void> {
+    if (!groupId || groupId === STAMP_FACADE_GROUP_ID) return
+    const current = facadeGroupOptions.value.find((group) => group.id === groupId)
     const name = await promptFacadeGroupName({ currentName: current?.name })
     if (name == null || name === current?.name) return
     editor.pushUndo()
-    editor.applyFacadeRename(draft, { name })
+    editor.applyFacadeRename(groupId, { name })
     syncPlanToParent()
   }
 
-  /** Zet alle groepsleden op deze floor in de settings-selectie (blauwe/oranje highlight). */
-  function selectFacadeGroupMembers(): void {
-    const ids = facadeMemberIdsOnActiveFloor.value
+  async function renameSelectedFacadeGroup(): Promise<void> {
+    const checked = Object.entries(facadeGroupChecks.value).filter(([, v]) => v === true)
+    if (checked.length !== 1) return
+    await renameFacadeGroupById(checked[0][0])
+  }
+
+  /** Zet alle leden van `groupId` op deze floor in de settings-selectie. */
+  function selectFacadeGroupMembersById(groupId: string): void {
+    const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
+    const ids =
+      listFacadeGroups(editor.localPlan.value)
+        .find((group) => group.id === groupId)
+        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
     if (ids.length === 0) return
     flushPendingFieldCommits()
     settingsWallIds.value = [...ids]
@@ -525,6 +728,26 @@ export function useFmlPreviewWallSelection(options: {
     selection.settingsLineId.value = null
     selection.settingsItemId.value = null
     syncWallThicknessDraftFromSelection()
+  }
+
+  function selectFacadeGroupMembers(): void {
+    const common = Object.entries(facadeGroupChecks.value)
+      .filter(([, v]) => v === true)
+      .map(([id]) => id)
+    if (common.length !== 1) return
+    selectFacadeGroupMembersById(common[0])
+  }
+
+  function canSelectMembersOfGroup(groupId: string): boolean {
+    const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
+    const members =
+      listFacadeGroups(editor.localPlan.value)
+        .find((group) => group.id === groupId)
+        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
+    if (members.length === 0) return false
+    if (settingsWallIds.value.length !== members.length) return true
+    const selected = new Set(settingsWallIds.value)
+    return members.some((id) => !selected.has(id))
   }
 
   function selectStampGroupMembers(): void {
@@ -546,11 +769,9 @@ export function useFmlPreviewWallSelection(options: {
   }
 
   const canSelectFacadeMembers = computed(() => {
-    const members = facadeMemberIdsOnActiveFloor.value
-    if (members.length === 0) return false
-    if (settingsWallIds.value.length !== members.length) return true
-    const selected = new Set(settingsWallIds.value)
-    return members.some((id) => !selected.has(id))
+    const checked = Object.entries(facadeGroupChecks.value).filter(([, v]) => v === true)
+    if (checked.length !== 1) return false
+    return canSelectMembersOfGroup(checked[0][0])
   })
 
   const canSelectStampMembers = computed(() => {
@@ -566,6 +787,7 @@ export function useFmlPreviewWallSelection(options: {
     settingsWallIds.value = []
     settingsJunctionId.value = null
     moveWallId.value = null
+    selection.moveDimensionId.value = null
     settingsOpeningIds.value = []
     moveOpeningId.value = null
     pinnedJunctionId.value = null
@@ -630,23 +852,63 @@ export function useFmlPreviewWallSelection(options: {
     }
   }
 
-  function applySelectionBox(rect: { x: number; y: number; width: number; height: number }): void {
-    flushPendingFieldCommits()
-    const cmBBox = hitTest.containerRectToCmBBox(rect)
+  function mergeIds(current: string[], added: string[], additive: boolean): string[] {
+    if (!additive) return added
+    const merged = new Set(current)
+    for (const id of added) merged.add(id)
+    return [...merged]
+  }
+
+  function applyBoxHits(hits: BoxSelectHits, additive: boolean): void {
     settingsWallSplitClickCm.value = null
     settingsJunctionId.value = null
-    if (!cmBBox) {
+    pinnedJunctionId.value = null
+    selection.settingsAreaId.value = null
+    selection.settingsSurfaceId.value = null
+    selection.settingsLabelId.value = null
+    selection.settingsLineId.value = null
+    selection.settingsItemId.value = null
+    const kind = boxSelectKind.value
+    const applyWalls = kind === 'wall' || kind === 'all'
+    const applyOpenings = kind === 'door' || kind === 'window' || kind === 'all'
+
+    if (applyWalls) {
+      settingsWallIds.value = mergeIds(settingsWallIds.value, hits.wallIds, additive)
+      syncWallThicknessDraftFromSelection()
+    } else {
       settingsWallIds.value = []
+      moveWallId.value = null
       wallThicknessMixed.value = false
       wallBalanceMixed.value = false
       wallHeightMixed.value = false
+    }
+
+    if (applyOpenings) {
+      moveOpeningId.value = null
+      settingsOpeningIds.value = mergeIds(settingsOpeningIds.value, hits.openingIds, additive)
+      syncOpeningDraftFromSelection?.()
+    } else {
+      settingsOpeningIds.value = []
+      moveOpeningId.value = null
+    }
+  }
+
+  function applySelectionBox(rect: { x: number; y: number; width: number; height: number }): void {
+    flushPendingFieldCommits()
+    const cmBBox = hitTest.containerRectToCmBBox(rect)
+    if (!cmBBox) {
+      applyBoxHits({ wallIds: [], openingIds: [] }, false)
       return
     }
-    const wallIds = findWallsFullyInCmBBox(editor.selectableWalls.value, cmBBox)
-    settingsWallIds.value = wallIds
-    settingsOpeningIds.value = []
-    moveOpeningId.value = null
-    syncWallThicknessDraftFromSelection()
+    applyBoxHits(
+      collectBoxSelectHits(editor.selectableWalls.value, cmBBox, boxSelectKind.value),
+      false,
+    )
+  }
+
+  function selectAllOfBoxKind(): void {
+    flushPendingFieldCommits()
+    applyBoxHits(collectAllOfBoxKind(editor.selectableWalls.value, boxSelectKind.value), false)
   }
 
   function onSelectionBoxPointerUp(event: MouseEvent): void {
@@ -666,14 +928,9 @@ export function useFmlPreviewWallSelection(options: {
       flushPendingFieldCommits()
       const cmBBox = hitTest.containerRectToCmBBox(preview)
       if (!cmBBox) return
-      const added = new Set(findWallsFullyInCmBBox(editor.selectableWalls.value, cmBBox))
-      if (added.size === 0) return
-      const merged = new Set(settingsWallIds.value)
-      for (const id of added) merged.add(id)
-      settingsWallIds.value = [...merged]
-      settingsWallSplitClickCm.value = null
-      settingsJunctionId.value = null
-      syncWallThicknessDraftFromSelection()
+      const added = collectBoxSelectHits(editor.selectableWalls.value, cmBBox, boxSelectKind.value)
+      if (added.wallIds.length === 0 && added.openingIds.length === 0) return
+      applyBoxHits(added, true)
       return
     }
 
@@ -687,10 +944,16 @@ export function useFmlPreviewWallSelection(options: {
     wallBalanceMixed,
     wallHeightDraft,
     wallHeightMixed,
+    wallBottomZDraft,
+    wallBottomZMixed,
     junctionHeightDraft,
     junctionHeightMixed,
+    junctionBottomZDraft,
+    junctionBottomZMixed,
     selectionBoxMode,
     selectionBoxPreview,
+    boxSelectKind,
+    selectAllOfBoxKind,
     syncWallThicknessDraftFromSelection,
     syncJunctionHeightDraftFromSelection,
     toggleSettingsWall,
@@ -702,23 +965,33 @@ export function useFmlPreviewWallSelection(options: {
     commitWallBalance,
     onWallHeightCm,
     commitWallHeight,
+    onWallBottomZCm,
+    commitWallBottomZ,
     onJunctionHeightCm,
     commitJunctionHeight,
+    onJunctionBottomZCm,
+    commitJunctionBottomZ,
     splitSelectedWall,
     deleteSelectedWalls,
     facadeGroupOptions,
-    facadeGroupDraft,
-    facadeGroupMixed,
+    facadeGroupChecks,
     facadeMemberIdsOnActiveFloor,
     stampGroupDraft,
     stampGroupMixed,
     stampMemberIdsOnActiveFloor,
     applyFacadeGroupSelection,
+    removeFacadeGroupFromSelection,
+    editAllFacadeGroups,
+    createFacadeGroupFromSelection,
+    toggleFacadeGroup,
     applyStampGroupSelection,
     renameSelectedFacadeGroup,
+    renameFacadeGroupById,
     selectFacadeGroupMembers,
+    selectFacadeGroupMembersById,
     selectStampGroupMembers,
     canSelectFacadeMembers,
+    canSelectMembersOfGroup,
     canSelectStampMembers,
     clearSelection,
     toggleSelectionBoxMode,

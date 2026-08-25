@@ -1,6 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { FloorPlan, Point2D, Wall } from '@/core/fml/types'
-import { facadeMemberIdsOnFloor, groupIdForWall } from '@/core/fml/facade-groups'
+import { facadeMemberIdsOnFloor, groupIdsForWall } from '@/core/fml/facade-groups'
 import { findOpeningById } from '@/ui/components/fml-preview-openings'
 import type { FmlInspectHit } from './fml-inspect'
 import { pickInspectTarget } from './fml-inspect'
@@ -83,9 +83,10 @@ export function useFmlPreviewInspect(options: {
     let wallIds: string[] = picked.kind === 'wall' ? [picked.id] : []
     let facadeIds: string[] | undefined
     if (picked.kind === 'wall' && plan?.value) {
-      const groupId = groupIdForWall(plan.value, picked.id)
-      if (groupId) {
-        facadeIds = facadeMemberIdsOnFloor(plan.value, groupId, floorIndex.value)
+      const groupIds = groupIdsForWall(plan.value, picked.id)
+      // Alleen expanden als de muur in precies één gevelgroep zit (voor/na overlap).
+      if (groupIds.length === 1) {
+        facadeIds = facadeMemberIdsOnFloor(plan.value, groupIds[0], floorIndex.value)
         if (facadeIds.length > 0) wallIds = facadeIds
       }
     }

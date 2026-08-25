@@ -18,6 +18,7 @@ defineProps<{
   fullscreen?: boolean
   edgeChrome?: boolean
   helpKeys?: readonly string[]
+  showCanvasGrid?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   zoomIn: []
   zoomOut: []
   toggleFullscreen: []
+  'update:showCanvasGrid': [value: boolean]
 }>()
 
 const settingsMod = defineModel<boolean>('settingsMod', { default: false })
@@ -46,12 +48,14 @@ const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { defaul
     :fullscreen="fullscreen"
     :edge-chrome="edgeChrome"
     :help-keys="helpKeys"
+    :show-canvas-grid="showCanvasGrid !== false"
     @undo="emit('undo')"
     @redo="emit('redo')"
     @fit="emit('fit')"
     @zoom-in="emit('zoomIn')"
     @zoom-out="emit('zoomOut')"
     @toggle-fullscreen="emit('toggleFullscreen')"
+    @update:show-canvas-grid="emit('update:showCanvasGrid', $event)"
   />
   <FmlEditorModifierRail
     v-if="showModRail"

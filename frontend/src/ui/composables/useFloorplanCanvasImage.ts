@@ -1,6 +1,8 @@
 import { ref, watch } from 'vue'
 import type Konva from 'konva'
 import { isCanvasLike } from '@/cv/port/canvasEnv'
+import type { ViewportTransform } from '@/ui/components/canvas/canvas-guide-grid'
+import { readStageViewport } from '@/ui/components/canvas/canvas-guide-grid'
 
 export type FloorplanRasterOverlaySrc = CanvasImageSource | string | null | undefined
 
@@ -23,7 +25,16 @@ export function useFloorplanCanvasImage(deps: {
   const rasterOverlayKey = ref(0)
   const imgSize = ref({ w: 800, h: 600 })
   const stageScale = ref(1)
+  const stageViewport = ref<ViewportTransform>({ x: 0, y: 0, scale: 1 })
   let rasterOverlayLoadGen = 0
+
+  function syncStageViewport() {
+    const stage = deps.getStage()
+    if (!stage) return
+    const next = readStageViewport(stage)
+    stageScale.value = next.scale
+    stageViewport.value = next
+  }
 
   watch(
     deps.imageSrc,
@@ -43,7 +54,7 @@ export function useFloorplanCanvasImage(deps: {
             hadImage && prevSize.w === img.naturalWidth && prevSize.h === img.naturalHeight
           if (!sameSize) {
             deps.fitToScreen(stage, img.naturalWidth, img.naturalHeight)
-            stageScale.value = Math.max(0.01, stage.scaleX())
+            syncStageViewport()
           }
         }
       }
@@ -109,7 +120,7 @@ export function useFloorplanCanvasImage(deps: {
     const stage = deps.getStage()
     if (stage && imageObj.value) {
       deps.fitToScreen(stage, imageObj.value.naturalWidth, imageObj.value.naturalHeight)
-      stageScale.value = Math.max(0.01, stage.scaleX())
+      syncStageViewport()
     }
   }
 
@@ -132,8 +143,18 @@ export function useFloorplanCanvasImage(deps: {
       x: center.x - mousePointTo.x * next,
       y: center.y - mousePointTo.y * next,
     })
-    stageScale.value = next
+    syncStageViewport()
   }
 
-  return { imageObj, rasterOverlayObj, rasterOverlayKey, imgSize, stageScale, fit, zoomBy }
+  return {
+    imageObj,
+    rasterOverlayObj,
+    rasterOverlayKey,
+    imgSize,
+    stageScale,
+    stageViewport,
+    syncStageViewport,
+    fit,
+    zoomBy,
+  }
 }

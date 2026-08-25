@@ -16,10 +16,17 @@ let unregister: (() => void) | null = null
 const open = computed(() => isActiveHost.value && pending.value != null)
 const request = computed(() => pending.value?.state.request ?? null)
 const inputValue = computed(() => pending.value?.state.inputValue ?? '')
+const listItems = computed(() => pending.value?.state.listItems ?? [])
 
 function onInputValue(value: string): void {
   if (!pending.value) return
   pending.value.state.inputValue = value
+}
+
+function onListItemName(id: string, name: string): void {
+  if (!pending.value) return
+  const row = pending.value.state.listItems.find((item) => item.id === id)
+  if (row) row.name = name
 }
 
 onMounted(() => {
@@ -45,11 +52,14 @@ onBeforeUnmount(() => {
     :input="request.kind === 'prompt'"
     :input-value="inputValue"
     :placeholder="request.placeholder"
+    :list-edit="request.kind === 'listEdit'"
+    :list-items="listItems"
     :confirm-label="request.confirmLabel ?? ''"
     :cancel-label="request.cancelLabel"
     :hide-cancel="request.kind === 'alert'"
     @confirm="confirmFmlChromeDialog"
     @cancel="cancelFmlChromeDialog"
     @update:input-value="onInputValue"
+    @update:list-item-name="onListItemName"
   />
 </template>

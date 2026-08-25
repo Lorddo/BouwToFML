@@ -144,7 +144,7 @@
 .canvas-toolbelt-dock.is-chrome-compact,
 .fml-editor-topbar.is-chrome-compact {
   --fml-toolbelt-btn-size: 28px;
-  --fml-toolbelt-input-width: 52px;
+  --fml-toolbelt-input-width: 84px;
   --fml-toolbelt-select-min: 96px;
 }
 

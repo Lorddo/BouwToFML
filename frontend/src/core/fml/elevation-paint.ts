@@ -9,7 +9,7 @@ import {
   type ElevationWallRect,
   type FacadeElevation,
 } from './facade-elevation'
-import { elevationOpeningHolePoints } from './elevation-opening-symbol'
+import { elevationOpeningHoleIsRect, elevationOpeningHolePoints } from './elevation-opening-symbol'
 import type { OpeningType, Point2D } from './types'
 
 export type ElevationPaintPlane = {
@@ -134,25 +134,32 @@ export function elevationWallFillRings(
   if (wall.ridge || openings.length === 0) return [outer]
   const holes: Point2D[][] = []
   for (const opening of openings) {
-    const hole = clipElevationOpeningToWall(wall, opening)
-    if (!hole) continue
     const typed = opening as ElevationRect & {
       type?: OpeningType
       refid?: string
       mirrored?: [number, number]
       startOnLeft?: boolean
     }
+    const shaped = Boolean(
+      typed.type && typed.refid && !elevationOpeningHoleIsRect(typed.type, typed.refid),
+    )
+    const hole = shaped ? opening : clipElevationOpeningToWall(wall, opening)
+    if (!hole) continue
+    const x0 = Math.min(hole.x0, hole.x1)
+    const x1 = Math.max(hole.x0, hole.x1)
+    const y0 = Math.min(hole.y0, hole.y1)
+    const y1 = Math.max(hole.y0, hole.y1)
     holes.push(
       typed.type && typed.refid
-        ? elevationOpeningHolePoints(hole, typed.type, typed.refid, {
+        ? elevationOpeningHolePoints({ x0, y0, x1, y1 }, typed.type, typed.refid, {
             mirrored: typed.mirrored,
             startOnLeft: typed.startOnLeft,
           })
         : [
-            { x: hole.x0, y: hole.y0 },
-            { x: hole.x1, y: hole.y0 },
-            { x: hole.x1, y: hole.y1 },
-            { x: hole.x0, y: hole.y1 },
+            { x: x0, y: y0 },
+            { x: x1, y: y0 },
+            { x: x1, y: y1 },
+            { x: x0, y: y1 },
           ],
     )
   }

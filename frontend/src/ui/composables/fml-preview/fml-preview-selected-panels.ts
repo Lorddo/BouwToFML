@@ -1,5 +1,9 @@
 import type { Opening, Wall } from '@/core/fml/types'
-import { wallEndpointHeightCm } from '@/core/fml/wall-endpoint-height'
+import {
+  wallEndpoint3D,
+  wallEndpointHeightCm,
+  wallUniformBottomZCm,
+} from '@/core/fml/wall-endpoint-height'
 import type { RenderModel, RenderWall } from './fml-preview-render-types'
 import { computeOpeningDraftState } from './fml-preview-opening-draft'
 import type { WallEndRef } from '@/ui/components/fml-preview-junction-core'
@@ -20,9 +24,16 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorH
   const thicknesses = wallLines.map((line) => Math.round(line.wall.thickness))
   const balances = wallLines.map((line) => line.wall.balance ?? 0.5)
   const heights: number[] = []
+  const bottoms: number[] = []
   for (const line of wallLines) {
     heights.push(Math.round(wallEndpointHeightCm(line.wall, 'a', floorHeightCm)))
     heights.push(Math.round(wallEndpointHeightCm(line.wall, 'b', floorHeightCm)))
+    const bottom = wallUniformBottomZCm(line.wall, floorHeightCm)
+    if (bottom != null) bottoms.push(bottom)
+    else {
+      // mixed ends on one wall → treat as mixed overall
+      bottoms.push(Number.NaN)
+    }
   }
   const firstThickness = thicknesses[0] ?? 20
   const thicknessMixed = thicknesses.some((value) => value !== firstThickness)
@@ -32,6 +43,10 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorH
   )
   const firstHeight = heights[0] ?? Math.round(floorHeightCm)
   const heightMixed = heights.some((value) => value !== firstHeight)
+  const firstBottom = bottoms.find((value) => Number.isFinite(value)) ?? 0
+  const bottomMixed =
+    bottoms.length === 0 ||
+    bottoms.some((value) => !Number.isFinite(value) || value !== firstBottom)
   const openingCount = wallLines.reduce((sum, line) => sum + line.wall.openings.length, 0)
   const singleLine = wallLines.length === 1 ? wallLines[0] : null
 
@@ -47,6 +62,8 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorH
     balanceMixed,
     heightCm: heightMixed ? null : firstHeight,
     heightMixed,
+    bottomZCm: bottomMixed ? null : firstBottom,
+    bottomZMixed: bottomMixed,
     openingCount,
     canSplit: singleLine != null && (lengths[0] ?? 0) >= 8,
     ridgeCount: wallLines.filter(
@@ -69,8 +86,17 @@ export function buildSelectedJunctionPanel(
     })
     .filter((value): value is number => value != null)
   if (heights.length === 0) return null
+  const bottoms = junction.refs
+    .map((ref) => {
+      const wall = walls.find((item) => item.id === ref.wallId)
+      if (!wall) return null
+      return Math.round(wallEndpoint3D(wall, ref.end, floorHeightCm).z)
+    })
+    .filter((value): value is number => value != null)
   const first = heights[0]
   const heightMixed = heights.some((value) => value !== first)
+  const firstBottom = bottoms[0] ?? 0
+  const bottomMixed = bottoms.length === 0 || bottoms.some((value) => value !== firstBottom)
   const ridgeCount = junction.refs.filter((ref) => {
     const wall = walls.find((item) => item.id === ref.wallId)
     return wall != null && (wall.extras?.ridge === true || wall.thickness === 0)
@@ -80,6 +106,8 @@ export function buildSelectedJunctionPanel(
     wallCount: junction.refs.length,
     heightCm: heightMixed ? null : first,
     heightMixed,
+    bottomZCm: bottomMixed ? null : firstBottom,
+    bottomZMixed: bottomMixed,
     ridgeCount,
   }
 }
@@ -135,8 +163,13 @@ export function buildSelectedOpeningPanel(model: RenderModel, ids: string[]) {
     widthMixed: draft.widthMixed,
     heightCm: draft.heightMixed ? null : draft.heightCm,
     heightMixed: draft.heightMixed,
-    sillZCm: openingType === 'window' ? (draft.sillZMixed ? null : draft.sillZCm) : null,
-    sillZMixed: openingType === 'window' ? draft.sillZMixed : false,
+    sillZCm:
+      openingType === 'window' || openingType === 'door'
+        ? draft.sillZMixed
+          ? null
+          : draft.sillZCm
+        : null,
+    sillZMixed: openingType === 'window' || openingType === 'door' ? draft.sillZMixed : false,
     hingeAtStart: openingType === 'door' ? (draft.hingeMixed ? null : draft.hingeAtStart) : null,
     hingeMixed: openingType === 'door' ? draft.hingeMixed : false,
     swingRight: openingType === 'door' ? (draft.swingMixed ? null : draft.swingRight) : null,

@@ -24,7 +24,7 @@ export function buildOpeningFromPreset(args: {
     refid: preset.refid,
     t: Math.max(0, Math.min(1, args.t)),
     width: args.widthCm,
-    z: args.type === 'door' ? 0 : args.sillZCm,
+    z: args.sillZCm,
     z_height: args.heightCm,
     mirrored: args.type === 'door' ? [0, 0] : undefined,
     guid: crypto.randomUUID(),

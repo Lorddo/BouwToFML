@@ -144,6 +144,7 @@ export async function pushStageClassesOntoWalls(ctx: {
     },
     faceOverrides: new Map(cache.faceOverrides),
     pinnedRoots: new Set(cache.pinnedRoots),
+    maskKeepDoorFaceIds: new Set(cache.maskKeepDoorFaceIds),
   }
   ctx.persistOverrides(next)
   return next

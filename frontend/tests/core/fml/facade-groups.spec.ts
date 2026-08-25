@@ -13,8 +13,11 @@ import {
   ensureStampFacadeGroup,
   findStackedWallIds,
   hasElevationFacadeGroups,
+  hydrateFacadeGroupsFromNativeMarkers,
   groupIdForWall,
+  groupIdsForWall,
   isWallInStampGroup,
+  nativeGroupRefsFromWallExtras,
   listFacadeGroups,
   pruneFacadeGroups,
   remapFacadeGroupWallIds,
@@ -22,6 +25,7 @@ import {
   STAMP_FACADE_GROUP_ID,
   stripFacadeGroupsFromPlan,
   stripStampGroupFromPlan,
+  syncNativeMarkersOnWalls,
   wallGuidsInGroup,
   wallsInStampGroup,
 } from '@/core/fml/facade-groups'
@@ -52,11 +56,16 @@ function planWithWalls(ids: string[]): FloorPlan {
 }
 
 describe('facade-groups', () => {
-  it('createFacadeGroup maakt G1 met lege leden en settings-source', () => {
+  it('createFacadeGroup maakt G1 met lege leden, nativeId en settings-source', () => {
     const plan = createEmptyFloorPlan({ name: 'Test' })
     expect(plan.source).toBeUndefined()
     const group = createFacadeGroup(plan, { name: 'Voorgevel', code: 'VG' })
-    expect(group).toEqual({ id: 'G1', code: 'VG', name: 'Voorgevel', wallGuids: [] })
+    expect(group.id).toBe('G1')
+    expect(group.code).toBe('VG')
+    expect(group.name).toBe('Voorgevel')
+    expect(group.wallGuids).toEqual([])
+    expect(typeof group.nativeId).toBe('number')
+    expect(typeof group.groupMarker).toBe('number')
     expect(listFacadeGroups(plan)).toHaveLength(1)
     expect(plan.source?.settings?.facadeGroups).toBeTruthy()
     expect(hasElevationFacadeGroups(plan)).toBe(false)
@@ -71,15 +80,16 @@ describe('facade-groups', () => {
     expect(hasElevationFacadeGroups(plan)).toBe(true)
   })
 
-  it('assign verplaatst muur van G1 naar G2; G1 verdwijnt als leeg', () => {
+  it('assign voegt toe; muur mag in G1 én G2', () => {
     const plan = planWithWalls(['w1', 'w2'])
     createFacadeGroup(plan, { name: 'Voor', code: 'VG' })
     createFacadeGroup(plan, { name: 'Achter', code: 'AG' })
     assignWallsToGroup(plan, 'G1', ['w1', 'w2'])
     expect(wallGuidsInGroup(plan, 'G1').sort()).toEqual(['w1', 'w2'])
     assignWallsToGroup(plan, 'G2', ['w1'])
-    expect(groupIdForWall(plan, 'w1')).toBe('G2')
-    expect(wallGuidsInGroup(plan, 'G1')).toEqual(['w2'])
+    expect(groupIdsForWall(plan, 'w1').sort()).toEqual(['G1', 'G2'])
+    expect(wallGuidsInGroup(plan, 'G1').sort()).toEqual(['w1', 'w2'])
+    expect(wallGuidsInGroup(plan, 'G2')).toEqual(['w1'])
     expect(
       listFacadeGroups(plan)
         .map((g) => g.id)
@@ -107,17 +117,21 @@ describe('facade-groups', () => {
     expect(deleteFacadeGroup(plan, 'G1')).toBe(true)
   })
 
-  it('één muur zit in max één groep', () => {
+  it('muur mag in meerdere gevelgroepen', () => {
     const plan = planWithWalls(['w1'])
     createFacadeGroup(plan, { name: 'A' })
     createFacadeGroup(plan, { name: 'B' })
     assignWallsToGroup(plan, 'G1', ['w1'])
     assignWallsToGroup(plan, 'G2', ['w1'])
-    expect(groupIdForWall(plan, 'w1')).toBe('G2')
-    expect(listFacadeGroups(plan).map((g) => g.id)).toEqual(['G2'])
+    expect(groupIdsForWall(plan, 'w1').sort()).toEqual(['G1', 'G2'])
+    expect(
+      listFacadeGroups(plan)
+        .map((g) => g.id)
+        .sort(),
+    ).toEqual(['G1', 'G2'])
   })
 
-  it('corrupte dubbele membership: eerste groep wint bij list/prune', () => {
+  it('overlap tussen groepen blijft bij list/prune', () => {
     const plan = planWithWalls(['w1', 'w2'])
     plan.source = {
       settings: {
@@ -127,11 +141,15 @@ describe('facade-groups', () => {
         ],
       },
     }
-    expect(groupIdForWall(plan, 'w1')).toBe('G1')
-    expect(wallGuidsInGroup(plan, 'G2')).toEqual([])
+    expect(groupIdsForWall(plan, 'w1').sort()).toEqual(['G1', 'G2'])
+    expect(wallGuidsInGroup(plan, 'G2')).toEqual(['w1'])
     pruneFacadeGroups(plan)
-    expect(groupIdForWall(plan, 'w1')).toBe('G1')
-    expect(listFacadeGroups(plan).map((g) => g.id)).toEqual(['G1'])
+    expect(groupIdsForWall(plan, 'w1').sort()).toEqual(['G1', 'G2'])
+    expect(
+      listFacadeGroups(plan)
+        .map((g) => g.id)
+        .sort(),
+    ).toEqual(['G1', 'G2'])
     expect(wallGuidsInGroup(plan, 'G1').sort()).toEqual(['w1', 'w2'])
   })
 
@@ -163,34 +181,92 @@ describe('facade-groups', () => {
     expect(groupIdForWall(plan, 'branch')).toBeNull()
   })
 
-  it('renameFacadeGroup wijzigt naam/code, niet id', () => {
+  it('renameFacadeGroup wijzigt naam/code, niet id; geen native sync op muur', () => {
     const plan = planWithWalls(['w1'])
     createFacadeGroup(plan, { name: 'Voor' })
     assignWallsToGroup(plan, 'G1', ['w1'])
     const renamed = renameFacadeGroup(plan, 'G1', { name: 'Voorgevel', code: 'VG' })
-    expect(renamed).toEqual({
-      id: 'G1',
-      code: 'VG',
-      name: 'Voorgevel',
-      wallGuids: ['w1'],
-    })
+    expect(renamed?.id).toBe('G1')
+    expect(renamed?.code).toBe('VG')
+    expect(renamed?.name).toBe('Voorgevel')
+    expect(renamed?.wallGuids).toEqual(['w1'])
+    expect(plan.floors[0].walls[0].extras?.groupMarkerConfig).toBeUndefined()
   })
 
-  it('buildFmlV3 → importFmlV3 behoudt facadeGroups', () => {
+  it('buildFmlV3 → importFmlV3 behoudt facadeGroups; geen native groupId op muur', () => {
     const plan = planWithWalls(['wall-a', 'wall-b'])
     createFacadeGroup(plan, { name: 'Voorgevel', code: 'VG' })
     assignWallsToGroup(plan, 'G1', ['wall-a', 'wall-b'])
+    const g1 = listFacadeGroups(plan)[0]
     const exported = buildFmlV3(plan)
     const raw = JSON.parse(exported) as {
-      settings?: { facadeGroups?: unknown }
+      settings?: { facadeGroups?: Array<Record<string, unknown>> }
+      floors?: Array<{ designs?: Array<{ walls?: Array<Record<string, unknown>> }> }>
     }
-    expect(raw.settings?.facadeGroups).toEqual([
-      { id: 'G1', code: 'VG', name: 'Voorgevel', wallGuids: ['wall-a', 'wall-b'] },
-    ])
+    expect(raw.settings?.facadeGroups?.[0]).toMatchObject({
+      id: 'G1',
+      code: 'VG',
+      name: 'Voorgevel',
+      wallGuids: ['wall-a', 'wall-b'],
+      nativeId: g1.nativeId,
+      groupMarker: g1.groupMarker,
+    })
+    const wallRaw = raw.floors?.[0]?.designs?.[0]?.walls?.find((w) => w.guid === 'wall-a')
+    expect(wallRaw?.groupMarkerConfig).toEqual({ locked: false })
+    expect(wallRaw?.groupMarker).toBeUndefined()
     const { plan: reimported } = importFmlV3(exported)
-    expect(listFacadeGroups(reimported)).toEqual([
-      { id: 'G1', code: 'VG', name: 'Voorgevel', wallGuids: ['wall-a', 'wall-b'] },
-    ])
+    expect(listFacadeGroups(reimported)[0]).toMatchObject({
+      id: 'G1',
+      code: 'VG',
+      name: 'Voorgevel',
+      wallGuids: ['wall-a', 'wall-b'],
+      nativeId: g1.nativeId,
+    })
+  })
+
+  it('assign schrijft alleen catalogus; geen native markers op de muur', () => {
+    const plan = planWithWalls(['w1'])
+    const gevel = createFacadeGroup(plan, { name: 'Voor' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, gevel.id, ['w1'])
+    assignWallsToStamp(plan, ['w1'])
+    expect(groupIdForWall(plan, 'w1')).toBe(gevel.id)
+    expect(isWallInStampGroup(plan, 'w1')).toBe(true)
+    expect(plan.floors[0].walls[0].extras?.groupMarkerConfig).toBeUndefined()
+    expect(plan.floors[0].walls[0].extras?.groupMarker).toBeUndefined()
+  })
+
+  it('stripStampGroupFromPlan houdt gevel-catalogus, stript alle native markers', () => {
+    const plan = planWithWalls(['w1'])
+    createFacadeGroup(plan, { name: 'Voor', code: 'VG' })
+    ensureStampFacadeGroup(plan)
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    assignWallsToStamp(plan, ['w1'])
+    // Legacy native markers (oude sessie) moeten ook weg bij editor-download.
+    syncNativeMarkersOnWalls(plan)
+    const stripped = stripStampGroupFromPlan(plan)
+    expect(listFacadeGroups(stripped).map((g) => g.id)).toEqual(['G1'])
+    expect(wallGuidsInGroup(stripped, 'G1')).toEqual(['w1'])
+    expect(isWallInStampGroup(stripped, 'w1')).toBe(false)
+    expect(stripped.floors[0].walls[0].extras?.groupMarker).toBeUndefined()
+    expect(stripped.floors[0].walls[0].extras?.groupMarkerConfig).toEqual({ locked: false })
+    // Bron-plan ongemoeid
+    expect(isWallInStampGroup(plan, 'w1')).toBe(true)
+  })
+
+  it('stripFacadeGroupsFromPlan verwijdert catalogus én native markers', () => {
+    const plan = planWithWalls(['w1'])
+    createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    assignWallsToStamp(plan, ['w1'])
+    const stripped = stripFacadeGroupsFromPlan(plan)
+    expect(stripped.source?.settings?.facadeGroups).toBeUndefined()
+    expect(listFacadeGroups(plan).length).toBeGreaterThan(0)
+    expect(stripped.floors[0].walls[0].extras?.groupMarker).toBeUndefined()
+    expect(stripped.floors[0].walls[0].extras?.groupMarkerConfig).toEqual({ locked: false })
+    const json = buildFmlV3(stripped, { name: 'Export' })
+    expect(json).not.toContain('facadeGroups')
+    expect(json).not.toContain('stampGroupId')
   })
 
   it('junction-pass: T-host-helften blijven in groep; uitstekende tak niet', () => {
@@ -266,17 +342,6 @@ describe('facade-groups', () => {
     expect(wallsInStampGroup(plan, 0)).toEqual([])
   })
 
-  it('stripFacadeGroupsFromPlan verwijdert settings-key voor export', () => {
-    const plan = planWithWalls(['w1'])
-    ensureStampFacadeGroup(plan)
-    assignWallsToGroup(plan, STAMP_FACADE_GROUP_ID, ['w1'])
-    const stripped = stripFacadeGroupsFromPlan(plan)
-    expect(stripped.source?.settings?.facadeGroups).toBeUndefined()
-    expect(listFacadeGroups(plan)).toHaveLength(1)
-    const json = buildFmlV3(stripped, { name: 'Export' })
-    expect(json).not.toContain('facadeGroups')
-  })
-
   it('muur mag in gevel + stamp tegelijk', () => {
     const plan = planWithWalls(['w1', 'w2'])
     createFacadeGroup(plan, { name: 'Voor' })
@@ -307,20 +372,6 @@ describe('facade-groups', () => {
     detachWalls(plan, ['w1'])
     expect(groupIdForWall(plan, 'w1')).toBeNull()
     expect(isWallInStampGroup(plan, 'w1')).toBe(false)
-  })
-
-  it('stripStampGroupFromPlan houdt gevel, verwijdert stamp', () => {
-    const plan = planWithWalls(['w1'])
-    createFacadeGroup(plan, { name: 'Voor', code: 'VG' })
-    ensureStampFacadeGroup(plan)
-    assignWallsToGroup(plan, 'G1', ['w1'])
-    assignWallsToStamp(plan, ['w1'])
-    const stripped = stripStampGroupFromPlan(plan)
-    expect(listFacadeGroups(stripped).map((g) => g.id)).toEqual(['G1'])
-    expect(wallGuidsInGroup(stripped, 'G1')).toEqual(['w1'])
-    expect(isWallInStampGroup(stripped, 'w1')).toBe(false)
-    // Bron-plan ongemoeid
-    expect(isWallInStampGroup(plan, 'w1')).toBe(true)
   })
 
   it('remap split-id in gevel én stamp', () => {
@@ -369,6 +420,25 @@ describe('facade-groups', () => {
     expect(second.skippedCount).toBe(1)
     expect(second.plan.floors[1].walls).toHaveLength(1)
   })
+
+  it('applyStampToFloor behoudt bron az/bz (lift)', () => {
+    const plan = createEmptyFloorPlan({ name: 'LiftStamp' })
+    const src = wall('src', { x: 0, y: 0 }, { x: 200, y: 0 })
+    src.extras = { az: { z: 30, h: 310 }, bz: { z: 30, h: 310 } }
+    plan.floors[0].walls = [src]
+    plan.floors.push({
+      name: '1e',
+      level: 1,
+      height: 260,
+      walls: [],
+    })
+    ensureStampFacadeGroup(plan)
+    assignWallsToStamp(plan, ['src'])
+    const first = applyStampToFloor(plan, 1)
+    const added = first.plan.floors[1].walls[0]
+    expect(added?.extras?.az).toEqual({ z: 30, h: 310 })
+    expect(added?.extras?.bz).toEqual({ z: 30, h: 310 })
+  })
 })
 
 describe('findStackedWallIds', () => {
@@ -404,5 +474,164 @@ describe('findStackedWallIds', () => {
     expect(findStackedWallIds(plan, ['bg-front'])).toEqual(['v1-front'])
     plan.floors[1].walls[0] = wall('v1-front', { x: 403, y: 0 }, { x: 0, y: 0 })
     expect(findStackedWallIds(plan, ['bg-front'])).toEqual([])
+  })
+})
+
+describe('hydrateFacadeGroupsFromNativeMarkers', () => {
+  it('bouwt G1/G2/G3/stamp uit groupMarkerConfig als settings ontbreekt', () => {
+    const plan = createEmptyFloorPlan({ name: 'FP-import' })
+    plan.floors[0].walls = [
+      {
+        ...wall('bg-l'),
+        extras: {
+          groupMarker: 1787490663030,
+          groupMarkerConfig: { locked: true, groupId: 708151, name: 'gevel links' },
+        },
+      },
+      {
+        ...wall('bg-r'),
+        extras: {
+          groupMarker: 1787490678301,
+          groupMarkerConfig: { locked: true, groupId: 708409, name: 'gevel rechts' },
+        },
+      },
+      {
+        ...wall('bg-voor'),
+        extras: {
+          groupMarker: 1787490694442,
+          groupMarkerConfig: {
+            locked: true,
+            groupId: 708421,
+            name: 'gevel voor',
+            stampGroupId: 708412,
+            stampName: 'gevels',
+          },
+        },
+      },
+    ]
+    plan.floors.push(createBlankFloor({ name: '1e', level: 1 }))
+    plan.floors[1].walls = [
+      {
+        ...wall('v1-l'),
+        extras: {
+          groupMarker: 1787490663030,
+          groupMarkerConfig: { locked: true, groupId: 708151, name: 'gevel links' },
+        },
+      },
+    ]
+
+    const groups = hydrateFacadeGroupsFromNativeMarkers(plan)
+    expect(groups.map((g) => g.id).sort()).toEqual(['G1', 'G2', 'G3', 'stamp'])
+    expect(wallGuidsInGroup(plan, 'G1').sort()).toEqual(['bg-l', 'v1-l'])
+    expect(wallGuidsInGroup(plan, 'stamp')).toEqual(['bg-voor'])
+    expect(isWallInStampGroup(plan, 'bg-voor')).toBe(true)
+    expect(groupIdForWall(plan, 'bg-voor')).toBe('G3')
+  })
+
+  it('extras bestaan: hydrate overschrijft niet vanuit markers', () => {
+    const plan = planWithWalls(['w1'])
+    createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, 'G1', ['w1'])
+    plan.floors[0].walls[0].extras = {
+      groupMarker: 99,
+      groupMarkerConfig: { locked: true, groupId: 708409, name: 'gevel rechts' },
+    }
+    hydrateFacadeGroupsFromNativeMarkers(plan)
+    const g1 = listFacadeGroups(plan).find((g) => g.id === 'G1')
+    expect(g1?.name).toBe('Voor')
+    expect(g1?.wallGuids).toEqual(['w1'])
+  })
+
+  it('stale catalogus blijft tot prune; hydrate no-op als extras bestaan', () => {
+    const plan = planWithWalls(['alive-new'])
+    plan.source = {
+      settings: {
+        facadeGroups: [
+          {
+            id: 'G1',
+            code: 'L',
+            name: 'L',
+            nativeId: 708151,
+            groupMarker: 1,
+            wallGuids: ['dead-old'],
+          },
+        ],
+      },
+    }
+    plan.floors[0].walls[0].extras = {
+      groupMarker: 1,
+      groupMarkerConfig: { locked: true, groupId: 708151, name: 'gevel links' },
+    }
+    hydrateFacadeGroupsFromNativeMarkers(plan)
+    expect(wallGuidsInGroup(plan, 'G1')).toEqual(['dead-old'])
+    pruneFacadeGroups(plan)
+    expect(listFacadeGroups(plan)).toEqual([])
+  })
+
+  it('oude FML alleen catalogus: geen native markers zonder sync', () => {
+    const plan = planWithWalls(['w1', 'w2'])
+    plan.source = {
+      settings: {
+        facadeGroups: [{ id: 'G1', code: 'VG', name: 'Voor', wallGuids: ['w1', 'w2'] }],
+      },
+    }
+    hydrateFacadeGroupsFromNativeMarkers(plan)
+    expect(groupIdForWall(plan, 'w1')).toBe('G1')
+    expect(plan.floors[0].walls[0].extras?.groupMarkerConfig).toBeUndefined()
+  })
+
+  it('leest dual groups[] en groupMarker-als-naam', () => {
+    expect(
+      nativeGroupRefsFromWallExtras({
+        groupMarkerConfig: {
+          groupId: 708420,
+          name: 'gevel achter',
+          groups: [
+            { groupId: 708420, name: 'gevel achter' },
+            { groupId: 708412, name: 'gevels' },
+          ],
+        },
+      }).map((r) => r.key),
+    ).toEqual(['708420', '708412'])
+    expect(
+      nativeGroupRefsFromWallExtras({
+        groupMarker: 'gevel links',
+        groupMarkerConfig: { locked: true, groupId: 708151 },
+      }),
+    ).toEqual([{ key: '708151' }, { key: 'gevel links', name: 'gevel links' }])
+  })
+
+  it('importFmlV3 hydrateert als Floorplanner facadeGroups stript', () => {
+    const raw = {
+      name: 'FP-roundtrip',
+      settings: { wallHeight: 280 },
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          designs: [
+            {
+              name: 'BG',
+              walls: [
+                {
+                  guid: 'west-1',
+                  a: { x: 0, y: 0 },
+                  b: { x: 0, y: 100 },
+                  thickness: 20,
+                  groupMarker: 1787490663030,
+                  groupMarkerConfig: { locked: true, groupId: 708151, name: 'gevel links' },
+                  openings: [],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const { plan } = importFmlV3(raw)
+    expect(groupIdForWall(plan, 'west-1')).toBe('G1')
+    expect(listFacadeGroups(plan)[0]?.name).toBe('gevel links')
+    expect(listFacadeGroups(plan)[0]?.nativeId).toBe(708151)
   })
 })

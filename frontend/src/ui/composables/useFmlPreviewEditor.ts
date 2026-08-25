@@ -52,6 +52,10 @@ import {
   syncRoofPlaneGuidsFromDesigns,
 } from '@/core/fml/roof-planes'
 import { readBtfSlices, writeBtfSlices, type BtfSlice } from '@/core/fml/btf-slices'
+import {
+  collectOverlayDimensionLines,
+  convertOverlayDimensionsToManual,
+} from '@/core/fml/convert-overlay-dimensions'
 import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import { sanitizeFmlWallsDetailed, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
 import { isStampOwnedWall } from '@/core/fml/stamp-owned'
@@ -66,10 +70,12 @@ import {
   mergeJunctions,
   moveJunctionWithWallJoins,
   removeWalls,
+  setJunctionBottomZ,
   setJunctionHeight,
   setWallBalance,
   setWallThickness,
   setWallsBalance,
+  setWallsBottomZ,
   setWallsHeight,
   setWallsThickness,
   slideWallSegmentAlongAxis,
@@ -104,6 +110,7 @@ import {
   createFacadeGroup,
   detachWalls,
   detachWallsFromFacade,
+  detachWallsFromGroup,
   detachWallsFromStamp,
   ensureStampFacadeGroup,
   listFacadeGroups,
@@ -629,6 +636,28 @@ export function useFmlPreviewEditor(
     setFloorDimensions(next.length > 0 ? next : undefined)
   }
 
+  function updateDimension(
+    dimensionId: string,
+    patch: Partial<Pick<FloorDimension, 'a' | 'b'>>,
+  ): void {
+    const next = (dimensions.value ?? []).map((d) =>
+      d.id === dimensionId ? { ...d, ...patch } : d,
+    )
+    setFloorDimensions(next)
+  }
+
+  function convertOverlayToManual(source: 'autogen' | 'slicer'): boolean {
+    if (!localPlan.value) return false
+    const baked = collectOverlayDimensionLines(localPlan.value, floorIndex.value, source)
+    if (source === 'autogen' && baked.length === 0) return false
+    if (source === 'slicer' && readBtfSlices(localPlan.value.floors[floorIndex.value]).length === 0)
+      return false
+    const next = convertOverlayDimensionsToManual(localPlan.value, floorIndex.value, source)
+    prepareParentSync()
+    localPlan.value = next
+    return true
+  }
+
   const btfSlices = computed(() => readBtfSlices(localPlan.value?.floors[floorIndex.value]))
 
   function setBtfSlices(slices: BtfSlice[]): void {
@@ -720,12 +749,23 @@ export function useFmlPreviewEditor(
     }
   }
 
+  function applyWallsBottomZ(wallIds: string[], bottomZCm: number): void {
+    const planIds = wallIds.filter((id) => !isRidgeWallId(localPlan.value, id))
+    if (planIds.length === 0) return
+    setWalls(setWallsBottomZ(walls.value, planIds, bottomZCm, floorHeightCm.value))
+  }
+
   function applyJunctionHeight(refs: ReadonlyArray<WallEndRef>, heightCm: number): void {
     if (refsOnRidge(refs)) {
       setRidgeWalls(setJunctionHeight(ridgeWalls.value, refs, heightCm, floorHeightCm.value))
       return
     }
     setWalls(setJunctionHeight(walls.value, refs, heightCm, floorHeightCm.value))
+  }
+
+  function applyJunctionBottomZ(refs: ReadonlyArray<WallEndRef>, bottomZCm: number): void {
+    if (refsOnRidge(refs)) return
+    setWalls(setJunctionBottomZ(walls.value, refs, bottomZCm, floorHeightCm.value))
   }
 
   function applyRidgeZ(wallIds: string[], zCm: number): void {
@@ -811,6 +851,11 @@ export function useFmlPreviewEditor(
   function applyFacadeDetach(wallGuids: readonly string[]): void {
     if (!localPlan.value) return
     detachWallsFromFacade(localPlan.value, wallGuids)
+  }
+
+  function applyFacadeDetachFromGroup(groupId: string, wallGuids: readonly string[]): void {
+    if (!localPlan.value) return
+    detachWallsFromGroup(localPlan.value, groupId, rejectRidgeGuids(localPlan.value, wallGuids))
   }
 
   function applyStampAssign(wallGuids: readonly string[]): void {
@@ -982,14 +1027,26 @@ export function useFmlPreviewEditor(
     a: Point2D,
     b: Point2D,
     thicknessCm: number,
-    options?: { kind?: 'wall' | 'ridge'; ridgeZCm?: number; requireFloorIndex?: number },
+    options?: {
+      kind?: 'wall' | 'ridge'
+      ridgeZCm?: number
+      requireFloorIndex?: number
+      heightCm?: number
+      bottomZCm?: number
+    },
   ): string | null {
     if (options?.kind === 'ridge') {
       return applyRidgeAdd(a, b, options.ridgeZCm, {
         requireFloorIndex: options.requireFloorIndex,
       })
     }
-    const result = addWallSegment(walls.value, a, b, thicknessCm, floorHeightCm.value)
+    const heightCm =
+      options?.heightCm != null && Number.isFinite(options.heightCm) && options.heightCm > 0
+        ? options.heightCm
+        : floorHeightCm.value
+    const bottomZCm =
+      options?.bottomZCm != null && Number.isFinite(options.bottomZCm) ? options.bottomZCm : 0
+    const result = addWallSegment(walls.value, a, b, thicknessCm, heightCm, bottomZCm)
     if (!result) return null
     setWalls(result.walls)
     return result.wallId
@@ -1046,8 +1103,18 @@ export function useFmlPreviewEditor(
     )
   }
 
-  function applyRoomRect(corners: readonly Point2D[], thicknessCm: number): string[] | null {
-    const result = addRoomRect(walls.value, corners, thicknessCm, floorHeightCm.value)
+  function applyRoomRect(
+    corners: readonly Point2D[],
+    thicknessCm: number,
+    options?: { heightCm?: number; bottomZCm?: number },
+  ): string[] | null {
+    const heightCm =
+      options?.heightCm != null && Number.isFinite(options.heightCm) && options.heightCm > 0
+        ? options.heightCm
+        : floorHeightCm.value
+    const bottomZCm =
+      options?.bottomZCm != null && Number.isFinite(options.bottomZCm) ? options.bottomZCm : 0
+    const result = addRoomRect(walls.value, corners, thicknessCm, heightCm, bottomZCm)
     if (!result) return null
     setWalls(result.walls)
     flushAreaRegen()
@@ -1216,7 +1283,9 @@ export function useFmlPreviewEditor(
     removeLine,
     setFloorDimensions,
     addDimension,
+    updateDimension,
     removeDimension,
+    convertOverlayToManual,
     btfSlices,
     setBtfSlices,
     addBtfSlice,
@@ -1230,9 +1299,11 @@ export function useFmlPreviewEditor(
     applyWallThickness,
     applyWallsThickness,
     applyWallsHeight,
+    applyWallsBottomZ,
     applyRidgeZ,
     applyRidgeJunctionZ,
     applyJunctionHeight,
+    applyJunctionBottomZ,
     applyWallSplit,
     applyWallSlideAlongAxis,
     previewWallSlideAlongAxis,
@@ -1244,6 +1315,7 @@ export function useFmlPreviewEditor(
     facadeGroups,
     applyFacadeAssign,
     applyFacadeDetach,
+    applyFacadeDetachFromGroup,
     applyStampAssign,
     applyStampDetach,
     applyFacadeCreate,

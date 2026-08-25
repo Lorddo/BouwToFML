@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   formatScaleLengthField,
   parseAndClampScaleLengthCm,
+  scaleLengthStepCm,
+  stepScaleLengthCm,
 } from '@/ui/composables/settings/scale-length-field'
 import { CM_PER_INCH } from '@/ui/composables/settings/scale-input-unit'
 
@@ -31,6 +33,16 @@ describe('scale-length-field', () => {
     expect(formatScaleLengthField(cm, 'mm')).toBe('2800')
     // roundtrip of display string may differ by 1/32" but stored cm is unchanged by format alone
     expect(cm).toBe(280)
+  })
+
+  it('step is 1 cm metric and 1/16 inch imperial', () => {
+    expect(scaleLengthStepCm('metric')).toBe(1)
+    expect(scaleLengthStepCm('imperial')).toBeCloseTo(CM_PER_INCH / 16)
+    expect(stepScaleLengthCm(220, 'metric', 1)).toBe(221)
+    expect(stepScaleLengthCm(220, 'metric', -1)).toBe(219)
+    expect(stepScaleLengthCm(1, 'metric', -1, { minCm: 1 })).toBe(1)
+    expect(stepScaleLengthCm(0, 'metric', -1, { allowZero: true, minCm: 0 })).toBe(0)
+    expect(stepScaleLengthCm(CM_PER_INCH, 'imperial', 1)).toBeCloseTo(CM_PER_INCH * (17 / 16))
   })
 
   it('unit switch display: same cm, different format', () => {

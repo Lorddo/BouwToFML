@@ -172,6 +172,7 @@ function cornerMarkerModeLabel(mode: CornerMarkerMode): string {
 
 function planDisplayStyleLabel(style: PlanDisplayStyleChoice): string {
   if (style === 'bouw') return t('settings.planDisplayStyleBouw')
+  if (style === 'architect') return t('settings.planDisplayStyleArchitect')
   return t('settings.planDisplayStyleEditor')
 }
 
@@ -253,6 +254,7 @@ function onResetFactory() {
         slicerOffsetSnapCm: factory.fmlViewer.slicerOffsetSnapCm,
         planDisplayStyle: factory.fmlViewer.planDisplayStyle,
         ridgeDisplayWidthCm: factory.fmlViewer.ridgeDisplayWidthCm,
+        showCanvasGrid: factory.fmlViewer.showCanvasGrid,
       },
     })
     Object.assign(draft, cloneSettings(saved))
@@ -381,6 +383,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.wallHeightCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.wallHeightCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -391,6 +394,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.doorHeightCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.doorHeightCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -401,6 +405,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.windowHeightCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.windowHeightCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -411,6 +416,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.sillZCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.windowSillZCm"
             :unit="draft.scaleInputUnit"
             :min-cm="0"
@@ -422,6 +428,7 @@ onBeforeUnmount(() => {
           <span :title="t('settings.bovenlichtGapTitle')">{{ t('settings.bovenlichtGapCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.bovenlichtGapCm"
             :unit="draft.scaleInputUnit"
             :min-cm="0"
@@ -435,6 +442,7 @@ onBeforeUnmount(() => {
           }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.bovenlichtHeightCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -476,6 +484,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.minCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.thicknessMinCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -486,6 +495,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.midCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.thicknessMidCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -496,6 +506,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.maxCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.thicknessMaxCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -506,6 +517,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.dakThicknessCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.dakThicknessCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -516,6 +528,7 @@ onBeforeUnmount(() => {
           <span>{{ t('settings.slabThicknessCm') }}</span>
           <ScaleLengthInput
             block
+            :unit-system="draft.unitSystem"
             :cm="draft.defaults.slabThicknessCm"
             :unit="draft.scaleInputUnit"
             :min-cm="1"
@@ -643,10 +656,24 @@ onBeforeUnmount(() => {
         </select>
       </label>
       <p class="hint">{{ t('settings.planDisplayStyleHint') }}</p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.fmlViewer.showCanvasGrid"
+          @change="
+            patchViewer({
+              showCanvasGrid: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showCanvasGrid') }}</span>
+      </label>
+      <p class="hint">{{ t('settings.showCanvasGridHint') }}</p>
       <label class="field compact">
         <span>{{ t('settings.ridgeDisplayWidthCm') }}</span>
         <ScaleLengthInput
           block
+          :unit-system="draft.unitSystem"
           :cm="draft.fmlViewer.ridgeDisplayWidthCm"
           :unit="draft.scaleInputUnit"
           :min-cm="1"
@@ -701,6 +728,7 @@ onBeforeUnmount(() => {
         <span>{{ t('settings.slicerOffsetSnapCm') }}</span>
         <ScaleLengthInput
           block
+          :unit-system="draft.unitSystem"
           :cm="draft.fmlViewer.slicerOffsetSnapCm"
           :unit="draft.scaleInputUnit"
           :min-cm="1"

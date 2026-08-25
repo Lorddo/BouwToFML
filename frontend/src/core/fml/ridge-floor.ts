@@ -3,18 +3,19 @@
  * voetafdruk het stuk dekt én die niet door een hogere floor wordt bedekt.
  * Handmatig overschrijven via moveRidgeWallsToFloor.
  */
+import { buildWallRenderGeometry } from '@/ui/components/fml-preview-wall-polygons'
 import { wallFaces } from './fml-wall-geom'
 import {
   listRidgeWallsOnFloor,
   setRidgeWallsOnFloor,
   syncRidgeWallGuidsFromDesigns,
 } from './ridge-walls'
-import { listFloorOuterFaceCorners } from './wall-outer-face'
 import type { Floor, FloorPlan, FloorSurface, Point2D, Wall } from './types'
+import { listFloorOuterFaceCorners } from './wall-outer-face'
 
 const FOOTPRINT_SLACK_CM = 40
 
-function pointInPolygon(point: Point2D, ring: Point2D[]): boolean {
+function pointInPolygon(point: Point2D, ring: readonly Point2D[]): boolean {
   let inside = false
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
     const a = ring[i]
@@ -141,7 +142,66 @@ function floorHullRing(floor: Floor): Point2D[] | null {
   return hull.length >= 3 ? hull : null
 }
 
-/** Buitencontour: hoeken = snijpunt van buitenfaces, niet face-eind (geen knikje). */
+/** Collinear middenpunten weg — union kan T-splits op de buitenface laten staan. */
+function collapseCollinearRing(ring: readonly Point2D[]): Point2D[] {
+  if (ring.length < 3) return ring.map((point) => ({ x: point.x, y: point.y }))
+  const out: Point2D[] = []
+  for (let i = 0; i < ring.length; i += 1) {
+    const prev = ring[(i - 1 + ring.length) % ring.length]
+    const cur = ring[i]
+    const next = ring[(i + 1) % ring.length]
+    if (!prev || !cur || !next) continue
+    const ax = cur.x - prev.x
+    const ay = cur.y - prev.y
+    const bx = next.x - cur.x
+    const by = next.y - cur.y
+    const cross = ax * by - ay * bx
+    const dot = ax * bx + ay * by
+    if (Math.abs(cross) < 1e-4 && dot > 0) continue
+    out.push({ x: cur.x, y: cur.y })
+  }
+  return out.length >= 3 ? out : ring.map((point) => ({ x: point.x, y: point.y }))
+}
+
+/**
+ * Buitencontour van de baksteen (muur-union, gemiterde hoeken).
+ * Geen convex hull: die knipt inzinkingen af of valt terug op face-einden (hartlijn).
+ */
+function floorOuterContourRings(floor: Floor): Point2D[][] {
+  const walls = floor.walls.filter((wall) => wall.thickness > 1e-6)
+  if (walls.length === 0) return []
+  try {
+    const geometry = buildWallRenderGeometry(
+      walls.map((wall) => ({
+        id: wall.id,
+        a: wall.a,
+        b: wall.b,
+        thickness: wall.thickness,
+        balance: wall.balance,
+      })),
+    )
+    const rings: Point2D[][] = []
+    for (const component of geometry.fillComponents) {
+      const outer = component.rings[0]
+      if (!outer || outer.length < 3) continue
+      const ring = collapseCollinearRing(outer)
+      if (ring.length >= 3) rings.push(ring)
+    }
+    const outermost = rings.filter((ring, index) => {
+      const center = ringCentroid(ring)
+      return !rings.some(
+        (other, otherIndex) => otherIndex !== index && pointInPolygon(center, other),
+      )
+    })
+    if (outermost.length > 0) return outermost
+  } catch {
+    // Union kan falen op degeneraat — hoeken/hull hieronder.
+  }
+  const fallback = floorOuterHullRing(floor)
+  return fallback ? [fallback] : []
+}
+
+/** Fallback: hoeken = snijpunt van buitenfaces, anders convex hull (kan knikje geven). */
 function floorOuterHullRing(floor: Floor): Point2D[] | null {
   const envelope = listFloorEnvelopeWalls(floor)
   const source = envelope.length >= 2 ? { ...floor, walls: envelope } : floor
@@ -214,8 +274,7 @@ export function listSkyExposedWalls(plan: FloorPlan, floorIndex: number): Wall[]
 export function listBlockedRoofRings(plan: FloorPlan, floorIndex: number): Point2D[][] {
   const next = plan.floors[floorIndex + 1]
   if (!next) return []
-  const ring = floorOuterHullRing(next)
-  return ring ? [ring] : []
+  return floorOuterContourRings(next)
 }
 
 /** Gevelmuren — geen binnenwanden of trapgat-kanten. */

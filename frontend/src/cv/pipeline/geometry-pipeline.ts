@@ -32,6 +32,8 @@ export interface GeometryPipelineConfig {
   roomClassifyState?: SerializedRoomClassifyState
   faceOverrides?: Array<[number, RoomRasterClass]>
   pinnedRoots?: number[]
+  /** Dunne deur-faces die in L0-mask blijven (D-63). */
+  maskKeepDoorFaceIds?: number[]
 }
 
 export async function runGeometryPipeline(params: {
@@ -166,6 +168,7 @@ export async function runGeometryPipeline(params: {
         roomClassifyState: classifyState,
         faceOverrides: params.config?.faceOverrides,
         pinnedRoots: params.config?.pinnedRoots,
+        maskKeepDoorFaceIds: params.config?.maskKeepDoorFaceIds,
         prebuiltReferenceMat,
       })
     : {}

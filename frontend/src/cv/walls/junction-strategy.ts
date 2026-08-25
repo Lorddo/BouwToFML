@@ -31,6 +31,8 @@ export async function runWallJunctionStrategy(params: {
   roomClassifyState?: SerializedRoomClassifyState
   faceOverrides?: Array<[number, RoomRasterClass]>
   pinnedRoots?: number[]
+  /** Dunne deur-faces die in L0-mask blijven (D-63). */
+  maskKeepDoorFaceIds?: number[]
   prebuiltReferenceMat?: OpenCV['Mat']
 }): Promise<WallStrategyResult> {
   const phase = params.roomPipelinePhase ?? 'full'
@@ -138,6 +140,7 @@ export async function runWallJunctionStrategy(params: {
       wallPipelineVersion: params.wallPipelineVersion ?? DEFAULT_WALL_PIPELINE_VERSION,
       faceOverrides: new Map(params.faceOverrides ?? []),
       pinnedRoots: new Set(params.pinnedRoots ?? []),
+      maskKeepDoorFaceIds: params.maskKeepDoorFaceIds,
     })
     return { ...result, roomPipelinePhase: 'finalize' }
   }
