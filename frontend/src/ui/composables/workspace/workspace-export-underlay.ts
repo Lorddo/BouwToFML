@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { PreprocessConfig } from '@/platform/image'
-import type { PreprocessPanelLayer } from '@/cv/preprocess/layer-preprocess'
+import { PREPROCESS_TAB_LABELS, type PreprocessPanelLayer } from '@/cv/preprocess/layer-preprocess'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { usePreprocessPreview } from '../usePreprocessPreview'
 import { downloadCanvasPng } from '@/core/fml/downloadFml'
@@ -52,6 +52,18 @@ export function createWorkspaceExportUnderlay(deps: WorkspaceExportUnderlayDeps)
         downloadDataUrl(
           dataUrl,
           underlayDownloadFilename(deps.imageName.value, `onderlegger-bewerkt-${layer}`),
+        )
+        return
+      }
+      // Int muur (Otsu): engine-beeld — niet walls refresh (zou canvas overschrijven).
+      if (layer === 'inkWall') {
+        await deps.refreshLayerUnderlayPreview('inkWall')
+        const dataUrl = deps.preprocessPreview.previewUrl.value
+        if (!dataUrl) throw new Error('Geen Otsu-onderlegger beschikbaar.')
+        const tabLabel = PREPROCESS_TAB_LABELS.inkWall.replace(/\s+/g, '-').toLowerCase()
+        downloadDataUrl(
+          dataUrl,
+          underlayDownloadFilename(deps.imageName.value, `onderlegger-bewerkt-${tabLabel}`),
         )
         return
       }

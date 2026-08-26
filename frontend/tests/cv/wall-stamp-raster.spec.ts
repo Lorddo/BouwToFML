@@ -8,6 +8,8 @@ import {
   filterWallsByBands,
   orStampBwInto,
   orStampMaskIntoReference,
+  rasterizePolylinesToBw,
+  rasterizeStampCenterlineContour,
   rasterizeStampGrayBytes,
   rasterizeStampSolid,
   buildStampGhostDataUrl,
@@ -149,6 +151,43 @@ describe('rasterize solid + erase + OR', () => {
     }
     expect(foundDiff || stampMaskHasInk(solid)).toBe(true)
     void DEFAULT_FML_BAND_BOUNDARIES
+  })
+})
+
+describe('rasterizePolylinesToBw + centerline contour', () => {
+  it('tekent polyline-pixels zwart, rest wit', () => {
+    const bw = rasterizePolylinesToBw({
+      polylines: [
+        [
+          { x: 2, y: 5 },
+          { x: 18, y: 5 },
+        ],
+      ],
+      width: 20,
+      height: 10,
+      lineWidthPx: 1,
+    })
+    expect(bw[5 * 20 + 10]).toBe(WALL_BW_INK)
+    expect(bw[0]).toBe(WALL_BW_WHITE)
+    expect(bw[9 * 20 + 19]).toBe(WALL_BW_WHITE)
+  })
+
+  it('centerline-contour is dunner dan solid', () => {
+    const walls: StampWallPx[] = [{ a: { x: 10, y: 20 }, b: { x: 50, y: 20 }, thicknessPx: 12 }]
+    const solid = rasterizeStampSolid({ walls, width: 60, height: 40 })
+    const contour = rasterizeStampCenterlineContour({
+      walls,
+      width: 60,
+      height: 40,
+      lineWidthPx: 2,
+    })
+    const mid = 20 * 60 + 30
+    expect(solid[mid]).toBe(WALL_BW_INK)
+    // Hartlijn-contour blijft zwart op as; pixels ver van de as (binnen solid) blijven wit.
+    const offAxis = 14 * 60 + 30
+    expect(solid[offAxis]).toBe(WALL_BW_INK)
+    expect(contour[offAxis]).toBe(WALL_BW_WHITE)
+    expect(stampMaskHasInk(contour)).toBe(true)
   })
 })
 

@@ -41,3 +41,25 @@ export function measureReferenceWallThicknessPx(params: {
     mat.delete()
   }
 }
+
+/**
+ * Lokale preview-dikte voor Dev-Otsu / download — schrijft geen official state.
+ * Neemt de grootste geldige ink-band over alle muur-refs.
+ */
+export function measurePreviewWallThicknessPx(params: {
+  cv: OpenCV
+  baseBw: ReferenceWallBaseBw
+  wallRects: ReferenceWallRect[]
+}): number | null {
+  let best: number | null = null
+  for (const rect of params.wallRects) {
+    const px = measureReferenceWallThicknessPx({
+      cv: params.cv,
+      baseBw: params.baseBw,
+      rect,
+    })
+    if (px == null || px <= 0) continue
+    if (best == null || px > best) best = px
+  }
+  return best
+}

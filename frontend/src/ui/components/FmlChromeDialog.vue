@@ -43,7 +43,7 @@ function focusPrimary(): void {
   void nextTick(() => {
     if (props.input || props.listEdit) {
       const first = props.listEdit
-        ? document.querySelector('.fml-chrome-dialog__list-input')
+        ? document.querySelector<HTMLInputElement>('.fml-chrome-dialog__list-input')
         : inputRef.value
       first?.focus()
       first?.select()

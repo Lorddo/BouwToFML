@@ -2,6 +2,7 @@ import type { Floor, FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { PdfUnderlaySource } from '@/platform/upload'
+import type { PdfUnderlayMeta } from './reuse-underlay-pdf'
 
 /** Flow steps shared by project blobs and workspace UI (no CV import). */
 export type WorkspaceFlowStep = 'project' | 'input' | 'preprocess' | 'templates' | 'result'
@@ -89,10 +90,15 @@ export type FloorWorkspaceBlob = {
    */
   sourceUnderlay?: ProjectSourceUnderlay | null
   /**
-   * Runtime-only PDF bytes for ROI re-render at input commit.
-   * Never written to IndexedDB (`persistBlob` omits this field).
+   * Runtime-only PDF bytes for ROI re-render at input commit (live working image).
+   * Cleared after crop; never written to IndexedDB (`persistBlob` omits this field).
    */
   pdfUnderlaySource?: PdfUnderlaySource | null
+  /**
+   * Original PDF page for «Onderlegger overnemen» after the donor already cropped.
+   * Survives crop (unlike `pdfUnderlaySource`). In-memory on the blob; project-level copy is persisted.
+   */
+  sourcePdfUnderlay?: PdfUnderlaySource | null
 }
 
 export type ProjectSourceUnderlay = {
@@ -100,11 +106,18 @@ export type ProjectSourceUnderlay = {
   name: string
   /** Schaal-snapshot van de bronscan (vóór per-floor crop). */
   scale?: DevWorkspaceSession['scale']
+  /** PDF-pagina van deze bronscan (geen bytes — die zitten in `sourcePdfUnderlay`). */
+  pdf?: PdfUnderlayMeta | null
 }
 
 export type ProjectState = {
   meta: ProjectMeta
   sourceUnderlay: ProjectSourceUnderlay | null
+  /**
+   * Shared PDF page for reuse/ROI on every floor.
+   * Set on PDF upload; cleared on raster upload. Persisted (quota-retry may omit).
+   */
+  sourcePdfUnderlay?: PdfUnderlaySource | null
   floors: FloorMeta[]
   blobs: Record<string, FloorWorkspaceBlob>
   activeFloorId: string

@@ -200,6 +200,7 @@ export async function recalculateFaces(ctx: {
 
 export interface ClassifyRunDeps {
   templateTab: string
+  flowStep: string
   referenceWallThicknessPx: number | null
   setRoomPhase: (phase: RoomPhase) => void
   syncDetectionComplete: () => void
@@ -235,6 +236,8 @@ export function createClassifyRunner(deps: ClassifyRunDeps) {
     referenceWallMeasureRect?: { x: number; y: number; width: number; height: number },
   ): Promise<boolean> {
     if (classifyRun) return classifyRun
+    // Force mag shouldAutoClassify overslaan, maar nooit classificeren buiten stap 3.
+    if (deps.flowStep !== 'templates') return false
     if (!force && !shouldAutoClassifyFn()) return false
     if (deps.templateTab !== 'walls') return false
     if (

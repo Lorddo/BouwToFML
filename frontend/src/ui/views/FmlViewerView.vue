@@ -55,8 +55,10 @@ import {
   setElevationViewDrawing,
 } from '@/core/fml/elevation-views'
 import { setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
+import { bindFloorWallsToRoofs, listFloorsWithRoofPlanes } from '@/core/fml/bind-walls-to-roofs'
 import { overwriteRidgeDakThickness } from '@/core/fml/ridge-walls'
 import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
+import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
 import {
   countExpandableBovenlicht,
   countFoldableBovenlicht,
@@ -106,11 +108,19 @@ const plan = ref<FloorPlan | null>(null)
 const warnings = ref<ImportWarning[]>([])
 const error = ref<string | null>(null)
 const underlayHint = ref<string | null>(null)
+const bindRoofHint = ref<string | null>(null)
+const bindRoofFloorIndex = ref<number | null>(null)
 const fileName = ref<string | null>(null)
 const activeFloorIndex = ref(0)
 const previewCanvasRef = ref<{
   flushPendingFieldCommits?: () => void
   sanitizeWalls?: () => boolean
+  bindWallsToRoof?: (floorIndex: number) => {
+    boundJunctions: number
+    skippedBlocked: number
+    skippedUncovered: number
+    splits: number
+  } | null
   applyStampToActiveFloor?: () => boolean
   canApplyStampOnActiveFloor?: () => boolean
   applyCornerMarkerModeFromSettings?: () => void
@@ -1092,6 +1102,67 @@ function onElevationSlab(floorIndex: number, cm: number): void {
   plan.value = setSlabThicknessCm(plan.value, floor.level, cm)
 }
 
+const floorsWithRoofPlanes = computed(() => listFloorsWithRoofPlanes(plan.value))
+
+const canBindWallsToRoof = computed(() => {
+  if (!plan.value) return false
+  const idx = resolveBindRoofFloorIndex()
+  return idx != null
+})
+
+function resolveBindRoofFloorIndex(): number | null {
+  const floors = floorsWithRoofPlanes.value
+  if (floors.length === 0) return null
+  if (
+    bindRoofFloorIndex.value != null &&
+    floors.some((f) => f.floorIndex === bindRoofFloorIndex.value)
+  ) {
+    return bindRoofFloorIndex.value
+  }
+  if (floors.some((f) => f.floorIndex === activeFloorIndex.value)) {
+    return activeFloorIndex.value
+  }
+  return floors[0]?.floorIndex ?? null
+}
+
+watch([floorsWithRoofPlanes, activeFloorIndex, dakMode, gevelsMode], () => {
+  const resolved = resolveBindRoofFloorIndex()
+  if (resolved != null) bindRoofFloorIndex.value = resolved
+  else bindRoofFloorIndex.value = null
+  bindRoofHint.value = null
+})
+
+function bindWallsToRoof(): void {
+  if (!plan.value) return
+  const floorIndex = resolveBindRoofFloorIndex()
+  if (floorIndex == null) return
+
+  if (dakMode.value && previewCanvasRef.value?.bindWallsToRoof) {
+    const result = previewCanvasRef.value.bindWallsToRoof(floorIndex)
+    if (!result) return
+    bindRoofHint.value = t('viewer.bindWallsToRoofResult', {
+      bound: result.boundJunctions,
+      skipped: result.skippedBlocked + result.skippedUncovered,
+      splits: result.splits,
+    })
+    return
+  }
+
+  previewCanvasRef.value?.flushPendingFieldCommits?.()
+  const result = bindFloorWallsToRoofs(plan.value, floorIndex, {
+    splitCreases: true,
+    splitWalls: splitWallAtT,
+  })
+  bindRoofHint.value = t('viewer.bindWallsToRoofResult', {
+    bound: result.boundJunctions,
+    skipped: result.skippedBlocked + result.skippedUncovered,
+    splits: result.splits,
+  })
+  if (result.boundJunctions === 0 && result.splits === 0) return
+  previewCanvasRef.value?.pushUndo?.()
+  plan.value = result.plan
+}
+
 function applyAlignFixtureRebase(): void {
   const pending = pendingAlignRebase.value
   if (!pending) return
@@ -1609,6 +1680,35 @@ defineExpose({
               @slab="onElevationSlab"
               @projection="onElevationProjection"
             />
+            <div class="sidebar-icon-row sidebar-plan-actions bind-roof-row">
+              <label v-if="floorsWithRoofPlanes.length > 1" class="bind-roof-floor">
+                <span>{{ t('viewer.bindWallsToRoofFloor') }}</span>
+                <select
+                  :value="resolveBindRoofFloorIndex() ?? ''"
+                  @change="bindRoofFloorIndex = Number(($event.target as HTMLSelectElement).value)"
+                >
+                  <option
+                    v-for="floor in floorsWithRoofPlanes"
+                    :key="floor.floorIndex"
+                    :value="floor.floorIndex"
+                  >
+                    {{ floor.name }}
+                  </option>
+                </select>
+              </label>
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :disabled="!canBindWallsToRoof"
+                :title="t('viewer.bindWallsToRoofHint')"
+                :aria-label="t('viewer.bindWallsToRoof')"
+                @click="bindWallsToRoof"
+              >
+                <ToolbeltIcon name="roof" />
+                <span>{{ t('viewer.bindWallsToRoof') }}</span>
+              </button>
+            </div>
+            <p v-if="bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
           </details>
 
           <details v-if="!inspectMode && !gevelsMode" class="fml-fold defaults-fold">
@@ -1649,7 +1749,20 @@ defineExpose({
                 <ToolbeltIcon name="edit" />
                 <span>{{ t('viewer.applyStamp') }}</span>
               </button>
+              <button
+                v-if="dakMode"
+                type="button"
+                class="sidebar-icon-btn"
+                :disabled="!canBindWallsToRoof"
+                :title="t('viewer.bindWallsToRoofHint')"
+                :aria-label="t('viewer.bindWallsToRoof')"
+                @click="bindWallsToRoof"
+              >
+                <ToolbeltIcon name="roof" />
+                <span>{{ t('viewer.bindWallsToRoof') }}</span>
+              </button>
             </div>
+            <p v-if="dakMode && bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
             <FmlRescalePanel
               v-if="!underlayScaleActive"
               hide-start
@@ -2510,6 +2623,37 @@ defineExpose({
   font-size: 11px;
   color: #b45309;
   line-height: 1.4;
+}
+
+.bind-roof-row {
+  margin-top: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.bind-roof-floor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #334155;
+  min-width: 120px;
+}
+
+.bind-roof-floor select {
+  height: 28px;
+  padding: 2px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.bind-roof-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.35;
 }
 
 .underlay-rotation-field {

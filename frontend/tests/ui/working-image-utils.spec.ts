@@ -1,8 +1,10 @@
+/** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import { expandedSizeForRotation, uiRotationToCvDegrees } from '@/cv/tools/rotateMat'
 import {
   applyPixelScaleFactorToCalibration,
+  normalizeWorkingCanvas,
   resolveScaleAfterInputBake,
   transformHScaleState,
   transformHScaleStateRotate180,
@@ -32,6 +34,24 @@ describe('rotation convention', () => {
 })
 
 describe('working image utils', () => {
+  it('downscales canvas above werk-max-edge (vloer+plafond)', () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 4000
+    canvas.height = 3444
+    const result = normalizeWorkingCanvas(canvas)
+    expect(Math.max(result.canvas.width, result.canvas.height)).toBe(OPTIMIZATION_BASE_DIMENSION)
+    expect(result.scale).toBeCloseTo(OPTIMIZATION_BASE_DIMENSION / 4000)
+  })
+
+  it('upscales canvas below werk-max-edge', () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1500
+    canvas.height = 1000
+    const result = normalizeWorkingCanvas(canvas)
+    expect(Math.max(result.canvas.width, result.canvas.height)).toBe(OPTIMIZATION_BASE_DIMENSION)
+    expect(result.scale).toBeCloseTo(OPTIMIZATION_BASE_DIMENSION / 1500)
+  })
+
   it('re-inits unconfirmed scale after rotation bake so H/V can follow walls', () => {
     expect(
       resolveScaleAfterInputBake({
@@ -230,7 +250,7 @@ describe('working image utils', () => {
 })
 
 describe('workspace input gates and OCR tabs', () => {
-  it('uses 3000px optimization floor', () => {
+  it('uses 3000px werk-max-edge (vloer+plafond)', () => {
     expect(OPTIMIZATION_BASE_DIMENSION).toBe(3000)
   })
 

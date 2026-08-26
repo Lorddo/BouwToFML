@@ -36,9 +36,47 @@ import {
   DEFAULT_FML_WINDOW_HEIGHT_CM,
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
-import { wallElevationAtT } from './wall-endpoint-height'
+import { wallElevationAtT, wallEndpoint3D } from './wall-endpoint-height'
 import { STAMP_OWNED_EXTRA } from './stamp-owned'
 import { writeObjectLabel } from './object-label'
+import { ELEVATION_PROJECTION_SETTINGS_KEY, ELEVATION_VIEWS_SETTINGS_KEY } from './elevation-views'
+import { FLOOR_STACK_SETTINGS_KEY } from './floor-stack'
+
+/**
+ * Editor-only settings die Floorplanner bij import kunnen laten knallen
+ * (o.a. gevel-onderlegger als data-URL in `elevationViews`).
+ * In-sessie blijven ze in `plan.source`; download stript ze.
+ */
+const FLOORPLANNER_STRIP_SETTINGS_KEYS = [
+  ELEVATION_VIEWS_SETTINGS_KEY,
+  ELEVATION_PROJECTION_SETTINGS_KEY,
+  FLOOR_STACK_SETTINGS_KEY,
+] as const
+
+function stripFloorplannerHostileSettings(
+  settings: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...settings }
+  for (const key of FLOORPLANNER_STRIP_SETTINGS_KEYS) {
+    delete out[key]
+  }
+  return out
+}
+
+/** Max `az.h`/`bz.h` over alle designs van een floor (incl. nok). */
+export function maxWallTopHOnFloor(floor: Floor): number {
+  let maxH = 0
+  const designs = floor.designs ?? [{ walls: floor.walls }]
+  for (const design of designs) {
+    for (const wall of design.walls ?? []) {
+      for (const end of ['a', 'b'] as const) {
+        const ep = wallEndpoint3D(wall, end, floor.height)
+        if (ep.h > maxH) maxH = ep.h
+      }
+    }
+  }
+  return Math.round(maxH)
+}
 
 export type BovenlichtDefaultResolver = boolean | ((floor: Floor, floorIndex: number) => boolean)
 export type BovenlichtCmResolver = number | ((floor: Floor, floorIndex: number) => number)
@@ -391,6 +429,9 @@ function serializeWall(
 
 function serializeDrawing(drawing: DrawingMeta | undefined): Record<string, unknown> | undefined {
   if (!drawing) return undefined
+  // Alleen cloud-URL's (http/https) meeschrijven. data:/blob: zijn lokaal tot we
+  // cloud-storage voor onderleggers hebben — anders Floorplanner 500 / broken links.
+  const url = isExportableDrawingUrl(drawing.url) ? drawing.url!.trim() : undefined
   return {
     ...(drawing.extras ?? {}),
     x: drawing.x,
@@ -398,10 +439,17 @@ function serializeDrawing(drawing: DrawingMeta | undefined): Record<string, unkn
     width: drawing.width,
     height: drawing.height,
     rotation: drawing.rotation,
-    ...(drawing.url != null ? { url: drawing.url } : {}),
+    ...(url != null ? { url } : {}),
     ...(drawing.alpha != null ? { alpha: drawing.alpha } : {}),
     ...(drawing.visible != null ? { visible: drawing.visible } : {}),
   }
+}
+
+/** true = CDN/remote; false = data-URL / blob / leeg (sessie-only). */
+export function isExportableDrawingUrl(url: string | null | undefined): boolean {
+  if (typeof url !== 'string') return false
+  const trimmed = url.trim()
+  return /^https?:\/\//i.test(trimmed)
 }
 
 function isDimensionMode(value: unknown): value is DimensionMode {
@@ -509,22 +557,24 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
 
   const syncedFloors = plan.floors.map((floor) => dropEmptyRidgeDesign(ensureDesignsSynced(floor)))
 
-  const projectSettings = hasSource
-    ? {
-        ...(plan.source?.settings ?? {}),
-        wallHeight:
-          typeof plan.source?.settings?.wallHeight === 'number'
-            ? plan.source.settings.wallHeight
-            : wallHeightCm,
-        bovenlichtPacked: readBovenlichtPacked(plan),
-        ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
-      }
-    : {
-        wallHeight: wallHeightCm,
-        bovenlichtPacked: readBovenlichtPacked(plan),
-        ...DEFAULT_PROJECT_SETTINGS,
-        ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
-      }
+  const projectSettings = stripFloorplannerHostileSettings(
+    hasSource
+      ? {
+          ...(plan.source?.settings ?? {}),
+          wallHeight:
+            typeof plan.source?.settings?.wallHeight === 'number'
+              ? plan.source.settings.wallHeight
+              : wallHeightCm,
+          bovenlichtPacked: readBovenlichtPacked(plan),
+          ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
+        }
+      : {
+          wallHeight: wallHeightCm,
+          bovenlichtPacked: readBovenlichtPacked(plan),
+          ...DEFAULT_PROJECT_SETTINGS,
+          ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
+        },
+  )
 
   const output: Record<string, unknown> = {
     ...(plan.source?.leftover ?? {}),
@@ -546,6 +596,8 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
           dimensions: floor.dimensions,
         },
       ]
+      // Floorplanner: wall tops boven floor.height → vaak 500 bij herladen.
+      const exportHeight = Math.max(floor.height, maxWallTopHOnFloor(floor))
       const floorOut: Record<string, unknown> = {
         ...(floor.source?.leftover ?? {}),
         id: floor.source?.id ?? fallbackProjectId + 10 + floorIndex,
@@ -554,12 +606,12 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
         level: floor.level,
         created_at: floor.source?.created_at ?? '2026-01-01T00:00:00.000Z',
         updated_at: floor.source?.updated_at ?? '2026-01-01T00:00:00.000Z',
-        height: floor.height,
+        height: exportHeight,
         cameras: floor.source?.cameras ?? [],
         designs: designs.map((design, designIndex) =>
           serializeDesign(
             design,
-            floor,
+            { ...floor, height: exportHeight },
             floorIndex,
             designIndex,
             options,

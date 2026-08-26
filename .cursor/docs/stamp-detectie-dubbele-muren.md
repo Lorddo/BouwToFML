@@ -62,12 +62,12 @@ Stap 4 generate
 | Wat | Module |
 |---|---|
 | Ghost + bounds + gum | `frontend/src/ui/composables/workspace/useWallStamp.ts` |
-| `stampBw` OR in B/W | `compose-wall-bw.ts` — `effectiveBw = baseBw → OCR-white → stampBw → ink` |
-| `stampMask` OR in Otsu | `wall-stamp-raster.ts` → `geometry-pipeline.ts` / `room-recalculate-local.ts` |
+| `stampBw` OR in B/W | `compose-wall-bw.ts` — **architect-contour** (dunne buitenlijnen), niet volle dikte |
+| `stampMask` | solid volle lichamen — **stamp-last face-prior** ná Otsu (`stamp-wall-face-prior.ts`); geen OR in Otsu-referentie |
 | Band-filter min/mid/max | `filterWallsByBands` — default mid+max; **geen** vector-inject |
 | Stempelset | `skipBandFilter` + `injectWalls`; translate-only; nulpunt-zaad |
 
-Detectie ziet stempelpixels als muur. Room-first maakt vlakken **tussen** stempelmuren. Die inkt gaat het muurmasker in. Het skelet **tekent de stempel na**.
+Contour maakt witte muurlichaam-faces + kamers. Otsu classificeert scan-only; stamp pin't overlap-faces als `wall`. Room-first / skelet ziet stempel niet meer als volle inkt.
 
 ### 2.2 Vector-inject (alleen Stempelset)
 

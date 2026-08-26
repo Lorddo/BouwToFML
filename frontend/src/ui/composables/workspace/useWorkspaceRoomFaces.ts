@@ -90,6 +90,7 @@ export function useWorkspaceRoomFaces(deps: {
   onInvalidateResult?: () => void
   onDoorFacesDemoted?: () => void | Promise<void>
   onWindowFacesDemoted?: () => void | Promise<void>
+  getAcceptedDoorHyps?: () => import('@/cv/doors').DoorSwingHypothesis[]
   setStatus?: (message: string) => void
   refreshWallUnderlayPreview?: () => Promise<void>
 }) {
@@ -237,6 +238,9 @@ export function useWorkspaceRoomFaces(deps: {
   const classifyRunner = createClassifyRunner({
     get templateTab() {
       return deps.templateTab.value
+    },
+    get flowStep() {
+      return deps.flowStep.value
     },
     get referenceWallThicknessPx() {
       return deps.referenceWallThicknessPx.value
@@ -442,6 +446,8 @@ export function useWorkspaceRoomFaces(deps: {
       onExtractTargets: deps.onExtractTargets,
       ensureEditableCacheAfterFinalize,
       onFinalizeSuccess: deps.onFinalizeSuccess,
+      referenceWallThicknessPx: deps.referenceWallThicknessPx.value,
+      getAcceptedDoorHyps: deps.getAcceptedDoorHyps,
     })
   }
 

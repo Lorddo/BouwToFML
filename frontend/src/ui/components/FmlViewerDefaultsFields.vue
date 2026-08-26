@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import type { ViewerSessionDefaults } from '@/core/fml/viewer-session-defaults'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 
 defineProps<{
@@ -32,6 +33,7 @@ const { t } = useI18n()
           :cm="defaults.wallHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('cm', 'wallHeightCm', $event)"
         />
       </label>
@@ -42,6 +44,7 @@ const { t } = useI18n()
           :cm="defaults.doorHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('cm', 'doorHeightCm', $event)"
         />
       </label>
@@ -52,6 +55,7 @@ const { t } = useI18n()
           :cm="defaults.windowHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('cm', 'windowHeightCm', $event)"
         />
       </label>
@@ -63,6 +67,7 @@ const { t } = useI18n()
           :unit="unit"
           :min-cm="0"
           allow-zero
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('cm', 'windowSillZCm', $event)"
         />
       </label>
@@ -74,6 +79,7 @@ const { t } = useI18n()
           :unit="unit"
           :min-cm="0"
           allow-zero
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('cm', 'bovenlichtGapCm', $event)"
         />
       </label>
@@ -84,6 +90,7 @@ const { t } = useI18n()
           :cm="defaults.bovenlichtHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('cm', 'bovenlichtHeightCm', $event)"
         />
       </label>

@@ -34,6 +34,8 @@ export async function runWallJunctionStrategy(params: {
   /** Dunne deur-faces die in L0-mask blijven (D-63). */
   maskKeepDoorFaceIds?: number[]
   prebuiltReferenceMat?: OpenCV['Mat']
+  /** Solid stampMask — ná Otsu pin overlap-faces als wall. */
+  wallStampMask?: Uint8Array
 }): Promise<WallStrategyResult> {
   const phase = params.roomPipelinePhase ?? 'full'
 
@@ -51,6 +53,7 @@ export async function runWallJunctionStrategy(params: {
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       roomInkCoverageThreshold: params.roomInkCoverageThreshold,
       prebuiltReferenceMat: params.prebuiltReferenceMat,
+      wallStampMask: params.wallStampMask,
     })
     return {
       roomInkCoverageThreshold: classified.threshold,
@@ -94,6 +97,7 @@ export async function runWallJunctionStrategy(params: {
       referenceData,
       roomReferenceCanvas,
       skipClassifiedMask: true,
+      wallStampMask: params.wallStampMask,
     })
     const lockedStats = {
       wallCount: recalculated.wallCount,
@@ -157,6 +161,7 @@ export async function runWallJunctionStrategy(params: {
     wallStyle: params.wallStyle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     roomInkCoverageThreshold: params.roomInkCoverageThreshold,
+    wallStampMask: params.wallStampMask,
   })
   return {
     ...result,

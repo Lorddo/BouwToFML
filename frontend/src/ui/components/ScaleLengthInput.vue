@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
+  createScaleLengthCommitGate,
   scaleLengthStepCm,
   stepScaleLengthCm,
   formatScaleLengthField,
@@ -30,6 +31,11 @@ const props = withDefaults(
     hideSuffix?: boolean
     /** Full-width for settings/forms. */
     block?: boolean
+    /**
+     * Delay `update:cm` while typing / stepping (0 = live).
+     * Blur and Enter still flush immediately.
+     */
+    debounceMs?: number
   }>(),
   {
     allowZero: false,
@@ -38,6 +44,7 @@ const props = withDefaults(
     mixed: false,
     hideSuffix: false,
     block: false,
+    debounceMs: 0,
   },
 )
 
@@ -51,6 +58,8 @@ const { t } = useI18n()
 
 const editing = ref(false)
 const draft = ref('')
+/** Last typed/stepped cm not yet emitted (keeps −/+ stacking during debounce). */
+const pendingCm = ref<number | null>(null)
 
 const clampOpts = computed((): ScaleLengthClampOptions => ({
   minCm: props.minCm,
@@ -63,58 +72,86 @@ const resolvedUnitSystem = computed((): UnitSystem => {
   return props.unitSystem ?? loadUserSettings().unitSystem
 })
 
+const liveCm = computed(() => pendingCm.value ?? props.cm)
+
+const commitGate = createScaleLengthCommitGate(
+  (cm) => {
+    pendingCm.value = null
+    emit('update:cm', cm)
+  },
+  () => props.debounceMs,
+)
+
+function scheduleCm(cm: number): void {
+  pendingCm.value = cm
+  commitGate.schedule(cm)
+}
+
+function flushCm(): void {
+  commitGate.flush()
+}
+
+onUnmounted(() => {
+  flushCm()
+  commitGate.dispose()
+})
+
 const unitLabel = computed(() => t(`common.${props.unit}`))
 const showSuffix = computed(() => !props.hideSuffix && props.unit !== 'ft-in')
 
 const display = computed(() => {
   if (props.mixed && !editing.value) return ''
   if (editing.value) return draft.value
+  if (pendingCm.value != null) return formatScaleLengthField(pendingCm.value, props.unit)
   return formatScaleLengthField(props.cm, props.unit)
 })
 
 const canStepDown = computed(() => {
   if (props.disabled) return false
-  return stepScaleLengthCm(props.cm, resolvedUnitSystem.value, -1, clampOpts.value) !== props.cm
+  const next = stepScaleLengthCm(liveCm.value, resolvedUnitSystem.value, -1, clampOpts.value)
+  return next !== liveCm.value
 })
 
 const canStepUp = computed(() => {
   if (props.disabled) return false
-  return stepScaleLengthCm(props.cm, resolvedUnitSystem.value, 1, clampOpts.value) !== props.cm
+  const next = stepScaleLengthCm(liveCm.value, resolvedUnitSystem.value, 1, clampOpts.value)
+  return next !== liveCm.value
 })
 
 watch(
   () => [props.cm, props.unit, props.mixed] as const,
   () => {
-    if (editing.value) return
+    if (editing.value || pendingCm.value != null) return
     draft.value = props.mixed ? '' : formatScaleLengthField(props.cm, props.unit)
   },
 )
 
 function onFocus(): void {
   editing.value = true
-  draft.value = props.mixed ? '' : formatScaleLengthField(props.cm, props.unit)
+  draft.value = props.mixed ? '' : formatScaleLengthField(liveCm.value, props.unit)
 }
 
 function onInput(raw: string): void {
   draft.value = raw
   const cm = parseAndClampScaleLengthCm(raw, props.unit, clampOpts.value)
   if (cm == null) return
-  emit('update:cm', cm)
+  scheduleCm(cm)
 }
 
 function onBlur(): void {
   editing.value = false
+  flushCm()
   emit('commit')
 }
 
 function applyStep(direction: 1 | -1): void {
   if (props.disabled) return
-  const next = stepScaleLengthCm(props.cm, resolvedUnitSystem.value, direction, clampOpts.value)
-  if (next === props.cm) return
+  const next = stepScaleLengthCm(liveCm.value, resolvedUnitSystem.value, direction, clampOpts.value)
+  if (next === liveCm.value) return
   editing.value = false
   draft.value = formatScaleLengthField(next, props.unit)
-  emit('update:cm', next)
-  emit('commit')
+  scheduleCm(next)
+  if (props.debounceMs <= 0) emit('commit')
 }
 
 function onKeydown(event: KeyboardEvent): void {
@@ -126,7 +163,8 @@ function onKeydown(event: KeyboardEvent): void {
   if (event.key !== 'Enter') return
   event.preventDefault()
   const cm = parseAndClampScaleLengthCm(draft.value, props.unit, clampOpts.value)
-  if (cm != null) emit('update:cm', cm)
+  if (cm != null) scheduleCm(cm)
+  flushCm()
   editing.value = false
   emit('commit')
   const el = event.target

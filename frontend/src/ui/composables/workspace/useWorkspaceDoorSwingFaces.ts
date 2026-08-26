@@ -720,6 +720,10 @@ export function useWorkspaceDoorSwingFaces(deps: {
     return new Set(collectAcceptedDoorFaceIds(stageCache.value.stage2AcceptedHypotheses))
   }
 
+  function getStage2AcceptedHyps(): DoorSwingHypothesis[] {
+    return stageCache.value.stage2AcceptedHypotheses
+  }
+
   return {
     doorSwingStage,
     doorSwingPreviewMaskCanvas,
@@ -745,6 +749,7 @@ export function useWorkspaceDoorSwingFaces(deps: {
     snapResolvedDoorsToWalls,
     reattachStickyDoorframesToResolved,
     getStage2DoorArcFaceIds,
+    getStage2AcceptedHyps,
     resetDoorSwingState,
   }
 }

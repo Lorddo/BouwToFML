@@ -16,8 +16,14 @@ import type {
   Wall,
 } from './types'
 
-/** Zelfde segment op een andere floor (~1 cm), zelfde drempel als stempel-apply. */
-export const STACKED_WALL_EPS_CM = 1
+/**
+ * Band rond de hartlijn voor gestapelde gevelmuren (cm).
+ * Ruimer dan stempel-apply (exact a/b): junctions knippen de as in andere stukken.
+ */
+export const STACKED_WALL_EPS_CM = 5
+
+/** Min |dot| van unit-richtingen (~11°) zodat een T-tak niet meekomt. */
+const STACKED_WALL_PARALLEL_DOT = 0.98
 
 export const FACADE_GROUPS_SETTINGS_KEY = 'facadeGroups'
 
@@ -1054,19 +1060,48 @@ export function applyFacadeGroupRemaps(plan: FloorPlan, remaps: readonly WallIdR
   }
 }
 
-function samePoint(a: Point2D, b: Point2D, epsCm: number): boolean {
-  return Math.abs(a.x - b.x) <= epsCm && Math.abs(a.y - b.y) <= epsCm
+function wallAxisDir(wall: Pick<Wall, 'a' | 'b'>): { ux: number; uy: number; len: number } | null {
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const len = Math.hypot(dx, dy)
+  if (len <= 1e-6) return null
+  return { ux: dx / len, uy: dy / len, len }
 }
 
-function segmentsMatch(a: Wall, b: Pick<Wall, 'a' | 'b'>, epsCm: number): boolean {
-  return (
-    (samePoint(a.a, b.a, epsCm) && samePoint(a.b, b.b, epsCm)) ||
-    (samePoint(a.a, b.b, epsCm) && samePoint(a.b, b.a, epsCm))
-  )
+function pointLineDistCm(point: Point2D, origin: Point2D, ux: number, uy: number): number {
+  return Math.abs((point.x - origin.x) * uy - (point.y - origin.y) * ux)
+}
+
+function projectAlongAxis(point: Point2D, origin: Point2D, ux: number, uy: number): number {
+  return (point.x - origin.x) * ux + (point.y - origin.y) * uy
 }
 
 /**
- * Muren op andere verdiepingen met dezelfde `a`/`b` (of omgekeerd).
+ * Zelfde oneindige as (band) + overlap langs die as.
+ * Junctions mogen de muur in andere stukken knippen; T-takken vallen af.
+ */
+function wallsShareFacadeAxis(
+  seed: Pick<Wall, 'a' | 'b'>,
+  cand: Pick<Wall, 'a' | 'b'>,
+  epsCm: number,
+): boolean {
+  const seedAxis = wallAxisDir(seed)
+  const candAxis = wallAxisDir(cand)
+  if (!seedAxis || !candAxis) return false
+  if (Math.abs(seedAxis.ux * candAxis.ux + seedAxis.uy * candAxis.uy) < STACKED_WALL_PARALLEL_DOT) {
+    return false
+  }
+  if (pointLineDistCm(cand.a, seed.a, seedAxis.ux, seedAxis.uy) > epsCm) return false
+  if (pointLineDistCm(cand.b, seed.a, seedAxis.ux, seedAxis.uy) > epsCm) return false
+  const c0 = projectAlongAxis(cand.a, seed.a, seedAxis.ux, seedAxis.uy)
+  const c1 = projectAlongAxis(cand.b, seed.a, seedAxis.ux, seedAxis.uy)
+  const cMin = Math.min(c0, c1)
+  const cMax = Math.max(c0, c1)
+  return Math.max(0, cMin) <= Math.min(seedAxis.len, cMax) + epsCm
+}
+
+/**
+ * Muren op andere verdiepingen op dezelfde as-band (niet per se dezelfde a/b).
  * Alleen `floor.walls` (geen nok-design). Seed-ids zelf zitten niet in het resultaat.
  */
 export function findStackedWallIds(
@@ -1098,7 +1133,7 @@ export function findStackedWallIds(
     for (const wall of floor.walls) {
       if (seen.has(wall.id)) continue
       const hit = seeds.some(
-        (seed) => seed.floorIndex !== floorIndex && segmentsMatch(wall, seed.wall, epsCm),
+        (seed) => seed.floorIndex !== floorIndex && wallsShareFacadeAxis(seed.wall, wall, epsCm),
       )
       if (!hit) continue
       seen.add(wall.id)

@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import type { ElevationProjectionMode } from '@/core/fml/elevation-views'
 import type { ElevationFloorGroup } from '@/core/fml/floor-stack'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 
 defineProps<{
@@ -51,6 +52,7 @@ const { t } = useI18n()
         :unit="unit"
         :min-cm="0"
         allow-zero
+        :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
         @update:cm="emit('nok', $event)"
       />
     </label>
@@ -63,6 +65,7 @@ const { t } = useI18n()
           :cm="floor.heightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('story', floor.floorIndex, $event)"
         />
       </label>
@@ -74,6 +77,7 @@ const { t } = useI18n()
           :unit="unit"
           :min-cm="0"
           allow-zero
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           @update:cm="emit('slab', floor.floorIndex, $event)"
         />
       </label>

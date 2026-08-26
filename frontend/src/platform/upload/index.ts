@@ -1,5 +1,11 @@
 export { useImageUpload } from './useImageUpload'
 export {
+  getProjectPdfStore,
+  setProjectPdfStore,
+  pdfStoreMatchesRaster,
+  clonePdfUnderlaySource,
+} from './project-pdf-store'
+export {
   closePdfSession,
   formatPdfPageImageName,
   isPdfFile,
@@ -7,6 +13,7 @@ export {
   pdfLoadErrorMessage,
   renderPdfPagePreviewForFile,
   renderPdfPageToBlobUrlForFile,
+  renderPdfPageFromBytes,
   renderPdfPageRoiToCanvas,
   computeRoiRenderScale,
   pdfRoiDensityFactor,

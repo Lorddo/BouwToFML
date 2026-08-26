@@ -11,6 +11,7 @@ import {
   type PersistedFloorBlob,
   type PersistedProject,
   type PersistedProjectIndexEntry,
+  type PersistedPdfUnderlay,
   type PersistedSourceUnderlay,
   type PersistedWallStamp,
 } from './types'
@@ -128,6 +129,8 @@ export type PersistProjectOptions = {
   stripClassifyRasters?: boolean
   /** Geen project-level sourceUnderlay wanneer floors al een bron hebben. */
   omitLegacyProjectSource?: boolean
+  /** Drop shared PDF bytes (quota retry). */
+  omitSourcePdf?: boolean
 }
 
 /** Quota-slim: drop face-raster buffers (tientallen MB) — classify opnieuw na restore. */
@@ -223,6 +226,8 @@ function persistBlob(
       : (blob.fmlNulpuntImageCm ?? null),
     fmlOrient: blob.fmlOrient ? toStorableDevSession(blob.fmlOrient) : (blob.fmlOrient ?? null),
     sourceUnderlay: blob.sourceUnderlay ? persistSourceUnderlay(blob.sourceUnderlay) : null,
+    // Floor pdfUnderlaySource / sourcePdfUnderlay stay memory-only (stale ROI + quota).
+    // Project-level sourcePdfUnderlay is persisted separately.
   }
 }
 
@@ -235,6 +240,39 @@ function restoreBlob(blob: PersistedFloorBlob): FloorWorkspaceBlob {
     fmlNulpuntImageCm: blob.fmlNulpuntImageCm ?? null,
     fmlOrient: blob.fmlOrient ?? null,
     sourceUnderlay: blob.sourceUnderlay ? restoreSourceUnderlay(blob.sourceUnderlay) : null,
+    pdfUnderlaySource: null,
+    sourcePdfUnderlay: null,
+  }
+}
+
+function persistPdfUnderlay(
+  source: NonNullable<ProjectState['sourcePdfUnderlay']>,
+): PersistedPdfUnderlay | null {
+  try {
+    if (!(source.bytes.byteLength > 0)) return null
+  } catch {
+    return null
+  }
+  return {
+    bytes: new Uint8Array(source.bytes),
+    pageNumber: source.pageNumber,
+    fileName: source.fileName,
+    pageRenderScale: source.pageRenderScale,
+    pageWidthPx: source.pageWidthPx,
+    pageHeightPx: source.pageHeightPx,
+  }
+}
+
+function restorePdfUnderlay(
+  source: PersistedPdfUnderlay,
+): NonNullable<ProjectState['sourcePdfUnderlay']> {
+  return {
+    bytes: new Uint8Array(source.bytes),
+    pageNumber: source.pageNumber,
+    fileName: source.fileName,
+    pageRenderScale: source.pageRenderScale,
+    pageWidthPx: source.pageWidthPx,
+    pageHeightPx: source.pageHeightPx,
   }
 }
 
@@ -245,6 +283,7 @@ function persistSourceUnderlay(underlay: ProjectSourceUnderlay): PersistedSource
     pngBytes,
     name: underlay.name,
     scale: underlay.scale ? toStorableDevSession(underlay.scale) : undefined,
+    ...(underlay.pdf ? { pdf: toStorableDevSession(underlay.pdf) } : {}),
   }
 }
 
@@ -253,6 +292,7 @@ function restoreSourceUnderlay(underlay: PersistedSourceUnderlay): ProjectSource
     src: pngBytesToDataUrl(underlay.pngBytes),
     name: underlay.name,
     scale: underlay.scale,
+    pdf: underlay.pdf ?? null,
   }
 }
 
@@ -276,6 +316,10 @@ export function toPersistedProject(
     activeFloorId: state.activeFloorId,
     sourceUnderlay:
       omitLegacy || !state.sourceUnderlay ? null : persistSourceUnderlay(state.sourceUnderlay),
+    sourcePdfUnderlay:
+      options?.omitSourcePdf || !state.sourcePdfUnderlay
+        ? null
+        : persistPdfUnderlay(state.sourcePdfUnderlay),
     blobs,
   }
 }
@@ -290,6 +334,9 @@ export function fromPersistedProject(record: PersistedProject): ProjectState {
     floors: record.floors,
     activeFloorId: record.activeFloorId,
     sourceUnderlay: record.sourceUnderlay ? restoreSourceUnderlay(record.sourceUnderlay) : null,
+    sourcePdfUnderlay: record.sourcePdfUnderlay
+      ? restorePdfUnderlay(record.sourcePdfUnderlay)
+      : null,
     blobs,
   }
 }

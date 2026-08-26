@@ -672,6 +672,7 @@ const {
   clearSelection,
   flushPendingFieldCommits,
   sanitizeWalls,
+  bindWallsToRoof,
   applyStampToActiveFloor,
   canApplyStampOnActiveFloor,
   applyRoomTypeToSelection,
@@ -1176,6 +1177,7 @@ onUnmounted(() => {
 defineExpose({
   flushPendingFieldCommits,
   sanitizeWalls,
+  bindWallsToRoof,
   applyStampToActiveFloor,
   canApplyStampOnActiveFloor,
   applyCornerMarkerModeFromSettings,
@@ -1279,8 +1281,8 @@ watch(
       v-model:draw-label-font-color="drawLabelFontColor"
       v-model:draw-label-outline="drawLabelOutline"
       v-model:draw-label-bold="drawLabelBold"
-      :hide-inline-hint="viewportChrome"
       v-model:draw-label-italic="drawLabelItalic"
+      :hide-inline-hint="viewportChrome"
       :floating-dock="touchEditor"
       :hide-select-tools="useTouchNav || dakMode"
       :dak-mode="dakMode"

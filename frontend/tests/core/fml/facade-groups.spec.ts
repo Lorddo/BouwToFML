@@ -468,11 +468,37 @@ describe('findStackedWallIds', () => {
     expect(findStackedWallIds(plan, ['bg-front', 'bg-side'])).toEqual(['v1-front'])
   })
 
-  it('houdt 1 cm tolerantie; 2 cm mist', () => {
+  it('houdt 5 cm band; 8 cm naast de as mist', () => {
     const plan = stackedPlan()
-    plan.floors[1].walls[0] = wall('v1-front', { x: 400.8, y: 0 }, { x: 0.4, y: 0.6 })
+    plan.floors[1].walls[0] = wall('v1-front', { x: 400, y: 4 }, { x: 0, y: 4 })
     expect(findStackedWallIds(plan, ['bg-front'])).toEqual(['v1-front'])
-    plan.floors[1].walls[0] = wall('v1-front', { x: 403, y: 0 }, { x: 0, y: 0 })
+    plan.floors[1].walls[0] = wall('v1-front', { x: 400, y: 8 }, { x: 0, y: 8 })
+    expect(findStackedWallIds(plan, ['bg-front'])).toEqual([])
+  })
+
+  it('pakt junction-helften op dezelfde as, niet de T-tak', () => {
+    const plan = stackedPlan()
+    plan.floors[1].walls = [
+      wall('v1-a', { x: 0, y: 0 }, { x: 180, y: 0 }),
+      wall('v1-b', { x: 180, y: 0 }, { x: 400, y: 0 }),
+      wall('v1-t', { x: 180, y: 0 }, { x: 180, y: 80 }),
+    ]
+    expect(findStackedWallIds(plan, ['bg-front']).sort()).toEqual(['v1-a', 'v1-b'])
+  })
+
+  it('pakt langere muur op dezelfde as als seed-helften', () => {
+    const plan = stackedPlan()
+    plan.floors[0].walls = [
+      wall('bg-a', { x: 0, y: 0 }, { x: 180, y: 0 }),
+      wall('bg-b', { x: 180, y: 0 }, { x: 400, y: 0 }),
+    ]
+    plan.floors[1].walls = [wall('v1-front', { x: 0, y: 0 }, { x: 400, y: 0 })]
+    expect(findStackedWallIds(plan, ['bg-a', 'bg-b'])).toEqual(['v1-front'])
+  })
+
+  it('negeert collineair stuk zonder overlap (andere vleugel)', () => {
+    const plan = stackedPlan()
+    plan.floors[1].walls = [wall('v1-far', { x: 500, y: 0 }, { x: 700, y: 0 })]
     expect(findStackedWallIds(plan, ['bg-front'])).toEqual([])
   })
 })

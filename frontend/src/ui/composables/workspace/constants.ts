@@ -154,5 +154,5 @@ export function preprocessStepCanProceed(params: {
   return !!params.imageSrc && params.hasWallRect && !params.vectorCacheLoading
 }
 
-/** Upscale-floor: langste zijde min. zoveel px (geen downscale). Compromis 3k (4k was te zwaar voor canvas). */
+/** Werk-max-edge: langste zijde = zoveel px (vloer én plafond; up- én downscale). */
 export const OPTIMIZATION_BASE_DIMENSION = 3000

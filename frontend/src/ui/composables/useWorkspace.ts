@@ -1,6 +1,6 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { tally } from '@/core/diagnostics'
-import { useImageUpload } from '@/platform/upload'
+import { renderPdfPageFromBytes, useImageUpload, type PdfUnderlaySource } from '@/platform/upload'
 import { imageElementToPngDataUrl } from '@/platform/dev-workspace/image-capture'
 import { useExampleSelection } from '@/platform/selection'
 import { DEFAULT_PREPROCESS } from '@/platform/image'
@@ -102,7 +102,7 @@ export function useWorkspace() {
   const preprocess = ref(normalizeStoredPreprocess({ ...DEFAULT_PREPROCESS }))
   const preprocessTab = ref<PreprocessPanelLayer>('walls')
   const inputTab = ref<'origineel'>('origineel')
-  const templateTab = ref<TemplateTab>('ocr')
+  const templateTab = ref<TemplateTab>('walls')
   const resultTab = ref<ResultViewTab>('vector')
   const tabOutputs = ref<TabDetectionOutputs>(emptyTabOutputs())
   const flowStep = ref<WorkspaceFlowStep>('project')
@@ -215,8 +215,6 @@ export function useWorkspace() {
   } = preprocessWiring
 
   const wallStamp = useWallStamp({
-    cvLoader,
-    preprocess,
     imageWidth: () => originalImageEl.value?.naturalWidth ?? 0,
     imageHeight: () => originalImageEl.value?.naturalHeight ?? 0,
     pxPerMmX: () => scale.pixelsPerMillimeterX.value,
@@ -430,6 +428,7 @@ export function useWorkspace() {
       onWindowFacesDemoted: () => {
         windowFacesApi?.scheduleRefreshWindowsFromExistingClasses()
       },
+      getAcceptedDoorHyps: () => doorSwingFacesApi?.getStage2AcceptedHyps() ?? [],
       // ESC:O-27 (D)
       onAfterFinalize: async (setFinalizePhase) => {
         tally('O-27', 'post_finalize_openings')
@@ -745,12 +744,39 @@ export function useWorkspace() {
     restoreFmlDefaultsFromActiveFloor: () => restoreFmlDefaultsFromActiveFloor?.(),
   })
 
+  let projectSetPdf: ((source: PdfUnderlaySource | null) => void) | null = null
   const pdfUpload = useWorkspacePdfUpload({
     loadFile,
     setImageSource,
     applyNewUnderlayReset: lifecycle.applyNewUnderlayReset,
-    setPdfUnderlaySource: image.setPdfUnderlaySource,
+    setPdfUnderlaySource: (source) => {
+      image.setPdfUnderlaySource(source)
+      projectSetPdf?.(source)
+    },
   })
+
+  async function loadUnderlayWithScale(
+    src: string,
+    name: string,
+    scaleSnapshot?: Parameters<typeof scaleUi.restoreFromSessionSnapshot>[0],
+    pdfSource?: PdfUnderlaySource | null,
+  ): Promise<void> {
+    clearRects()
+    doorSwingFaces.resetDoorSwingState()
+    doorSwingFaces.resetAutoDoorPassGate()
+    windowFaces.resetWindowState()
+    windowFaces.invalidateAutoWindowPass()
+    roomFaces.resetRoomState()
+    tabOutputs.value = emptyTabOutputs()
+    wallsDetectionComplete.value = false
+    image.setPdfUnderlaySource(pdfSource ?? null)
+    image.prepareExactImageSrcLoad()
+    setImageSource(src, name)
+    await image.loadExactWorkingImage(src)
+    if (scaleSnapshot) {
+      scaleUi.restoreFromSessionSnapshot(scaleSnapshot)
+    }
+  }
 
   const devSession = useWorkspaceDevSession(
     buildWorkspaceDevSessionDeps({
@@ -811,22 +837,21 @@ export function useWorkspace() {
       image.resetImageSource()
       flowStep.value = 'input'
     },
-    loadUnderlayWithScale: async (src, name, scaleSnapshot) => {
-      clearRects()
-      doorSwingFaces.resetDoorSwingState()
-      doorSwingFaces.resetAutoDoorPassGate()
-      windowFaces.resetWindowState()
-      windowFaces.invalidateAutoWindowPass()
-      roomFaces.resetRoomState()
-      tabOutputs.value = emptyTabOutputs()
-      wallsDetectionComplete.value = false
-      image.clearPdfUnderlaySource()
-      image.prepareExactImageSrcLoad()
-      setImageSource(src, name)
-      await image.loadExactWorkingImage(src)
-      if (scaleSnapshot) {
-        scaleUi.restoreFromSessionSnapshot(scaleSnapshot)
-      }
+    loadUnderlayWithScale,
+    loadUnderlayFromPdf: async (pdfSource, name, scaleSnapshot) => {
+      const rendered = await renderPdfPageFromBytes({
+        bytes: pdfSource.bytes,
+        pageNumber: pdfSource.pageNumber,
+        pageRenderScale: pdfSource.pageRenderScale,
+      })
+      await loadUnderlayWithScale(rendered.dataUrl, name, scaleSnapshot, {
+        bytes: pdfSource.bytes,
+        pageNumber: pdfSource.pageNumber,
+        fileName: pdfSource.fileName,
+        pageRenderScale: rendered.pageRenderScale,
+        pageWidthPx: rendered.pageWidthPx,
+        pageHeightPx: rendered.pageHeightPx,
+      })
     },
     applyPreprocessTune: ({ preprocess: nextPreprocess, drawingProfileId: nextProfile }) => {
       preprocess.value = normalizeStoredPreprocess({ ...nextPreprocess })
@@ -860,10 +885,12 @@ export function useWorkspace() {
       // Programmatische sync = geen «gewijzigd»-hint; alleen handmatige FmlPanel-edits.
       fml.syncAppliedFromDraft()
     },
-    shouldSkipPersist: () => extraction.running.value || devSessionRestoring.value,
+    shouldSkipPersist: () =>
+      extraction.running.value || roomFaces.classifyingInFlight.value || devSessionRestoring.value,
     getPdfUnderlaySource: () => image.pdfUnderlaySource.value,
     setPdfUnderlaySource: image.setPdfUnderlaySource,
   })
+  projectSetPdf = project.setSourcePdfUnderlay
 
   restoreFmlDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()
   // Eerste sync: factory-FML-UI → actieve vloer-/user-defaults (o.a. bovenlicht).
@@ -952,7 +979,7 @@ export function useWorkspace() {
   const flow = useWorkspaceFlow({
     flowStep,
     imageSrc,
-    running: extraction.running,
+    running: computed(() => extraction.running.value || roomFaces.classifyingInFlight.value),
     scaleConfirmed: scale.confirmed,
     profileConfirmed,
     preprocessTab,
@@ -980,15 +1007,32 @@ export function useWorkspace() {
     runOcrScan: () => ocr.runOcrScan(),
     measureWallReferenceThickness: (rect) => detection.measureWallReferenceThickness(rect),
     wallsDetectionComplete: () => wallsDetectionComplete.value,
+    hasResultFml: () => project.hasActiveFloorFml(),
     hasTemplatesDetection: () => {
       const phase = roomFaces.roomPhase.value
-      if (phase === 'review' || phase === 'done' || phase === 'finalizing') return true
+      if (
+        phase === 'review' ||
+        phase === 'done' ||
+        phase === 'finalizing' ||
+        phase === 'classifying' ||
+        phase === 'recalculating'
+      ) {
+        return true
+      }
       const walls = tabOutputs.value.walls
       return isWallsClassifyOutput(walls) || isWallsOutputFinalized(walls)
+    },
+    onStartTemplatesDetection: () => {
+      // Nieuwe 2→3-run: live preview weg, blob-FML blijft voor 3→4 als classify faalt.
+      fml.clearLiveFmlPreview()
     },
     devSessionRestoring,
     onEnterResultStep: async () => {
       await semanticWalls.buildForResultStep()
+      // Alleen resume zonder verse finalize: anders kan stale blob-FML een nieuwe generate overschrijven.
+      if (!wallsDetectionComplete.value) {
+        project.restoreActiveFloorPreviewIfNeeded()
+      }
       // Store vóór download: previewPlan kan al bestaan vóór flowStep=result (watch mist dan).
       const plan = fml.previewPlan.value
       if (plan?.floors[0]) {
@@ -1192,22 +1236,25 @@ export function useWorkspace() {
       if (!img?.complete || img.naturalWidth <= 0) return
       try {
         const durableSrc = imageElementToPngDataUrl(img)
-        project.ensureSourceUnderlay({
-          src: durableSrc,
-          name: imageName.value ?? 'onderlegger.png',
-          scale: {
-            state: scale.state.value ? { ...scale.state.value } : undefined,
-            distanceMmX: scale.distanceMmX.value,
-            distanceMmY: scale.distanceMmY.value,
-            confirmed: scale.confirmed.value,
-            ...(scale.confirmedPixelsPerMillimeterX.value != null
-              ? { confirmedPixelsPerMillimeterX: scale.confirmedPixelsPerMillimeterX.value }
-              : {}),
-            ...(scale.confirmedPixelsPerMillimeterY.value != null
-              ? { confirmedPixelsPerMillimeterY: scale.confirmedPixelsPerMillimeterY.value }
-              : {}),
+        project.ensureSourceUnderlay(
+          {
+            src: durableSrc,
+            name: imageName.value ?? 'onderlegger.png',
+            scale: {
+              state: scale.state.value ? { ...scale.state.value } : undefined,
+              distanceMmX: scale.distanceMmX.value,
+              distanceMmY: scale.distanceMmY.value,
+              confirmed: scale.confirmed.value,
+              ...(scale.confirmedPixelsPerMillimeterX.value != null
+                ? { confirmedPixelsPerMillimeterX: scale.confirmedPixelsPerMillimeterX.value }
+                : {}),
+              ...(scale.confirmedPixelsPerMillimeterY.value != null
+                ? { confirmedPixelsPerMillimeterY: scale.confirmedPixelsPerMillimeterY.value }
+                : {}),
+            },
           },
-        })
+          image.pdfUnderlaySource.value,
+        )
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         setLocalError(tGlobal('input.errors.couldNotSaveProjectSource', { message }))

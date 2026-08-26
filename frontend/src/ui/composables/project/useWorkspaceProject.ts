@@ -25,7 +25,13 @@ import {
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
 import { mergeFloorPlans } from './merge-floor-plans'
 import { mirrorFloorBlobVertical } from './mirror-floor-blob'
-import type { PdfUnderlaySource } from '@/platform/upload'
+import {
+  getProjectPdfStore,
+  setProjectPdfStore,
+  clonePdfUnderlaySource,
+  type PdfUnderlaySource,
+} from '@/platform/upload'
+import { pdfMetaFromSource, resolveReusePdfBytes } from './reuse-underlay-pdf'
 import type {
   FloorMeta,
   FloorOrientPersist,
@@ -56,6 +62,7 @@ export type WorkspaceProjectDeps = {
     src: string,
     name: string,
     scale?: DevWorkspaceSession['scale'],
+    pdfSource?: PdfUnderlaySource | null,
   ) => Promise<void>
   /**
    * Pas alleen B/W-tune + profile toe (geen LBE-rects, geen gemeten muurdikte —
@@ -91,6 +98,15 @@ export type WorkspaceProjectDeps = {
   /** Runtime PDF source for ROI re-render (memory-only across floor switch). */
   getPdfUnderlaySource?: () => PdfUnderlaySource | null
   setPdfUnderlaySource?: (source: PdfUnderlaySource | null) => void
+  /**
+   * Re-raster a full PDF page and load it as the working underlay.
+   * Used by «Onderlegger overnemen» so a new crop can ROI-render from the PDF.
+   */
+  loadUnderlayFromPdf?: (
+    pdfSource: PdfUnderlaySource,
+    name: string,
+    scale?: DevWorkspaceSession['scale'],
+  ) => Promise<void>
 }
 
 function emptyBlob(): FloorWorkspaceBlob {
@@ -103,6 +119,7 @@ function emptyBlob(): FloorWorkspaceBlob {
     fmlOrient: null,
     sourceUnderlay: null,
     pdfUnderlaySource: null,
+    sourcePdfUnderlay: null,
   }
 }
 
@@ -181,6 +198,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           omitResultDetection: true,
           omitLegacyProjectSource: true,
           stripClassifyRasters: true,
+          omitSourcePdf: true,
         },
       },
     ]
@@ -397,8 +415,13 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           fmlOrient,
           // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
           sourceUnderlay: prev.sourceUnderlay ?? null,
-          // Memory-only; not persisted to IndexedDB.
-          pdfUnderlaySource: deps.getPdfUnderlaySource?.() ?? prev.pdfUnderlaySource ?? null,
+          // Live PDF (full-page space). After crop the getter is null — do not keep
+          // prev (stale coords on the cropped working image).
+          pdfUnderlaySource: deps.getPdfUnderlaySource
+            ? (deps.getPdfUnderlaySource() ?? null)
+            : (prev.pdfUnderlaySource ?? null),
+          // Donor PDF survives crop so reuse can re-raster a new ROI.
+          sourcePdfUnderlay: prev.sourcePdfUnderlay ?? null,
         },
       },
     }
@@ -560,21 +583,55 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
    * Schaal bevestigd op actieve floor → bronscan per floor (+ project-level legacy).
    * Altijd overschrijven: her-upload + opnieuw bevestigen moet de donor bijwerken.
    * Alleen aanroepen met de nog-niet-gecropte original (duurzame PNG).
+   * PDF-bytes wissen we hier niet — alleen `setSourcePdfUnderlay(null)` bij een nieuwe raster-upload.
    */
-  function ensureSourceUnderlay(underlay: ProjectSourceUnderlay): void {
+  function ensureSourceUnderlay(
+    underlay: ProjectSourceUnderlay,
+    pdfSource?: PdfUnderlaySource | null,
+  ): void {
     if (!isDurableUnderlaySrc(underlay.src)) return
     const id = state.value.activeFloorId
     const prev = state.value.blobs[id] ?? emptyBlob()
-    const next = { ...underlay }
+    const rawPdf = pdfSource ?? prev.sourcePdfUnderlay ?? state.value.sourcePdfUnderlay ?? null
+    const keptPdf = rawPdf ? clonePdfUnderlaySource(rawPdf) : null
+    const next: ProjectSourceUnderlay = {
+      ...underlay,
+      pdf: pdfSource
+        ? pdfMetaFromSource(pdfSource)
+        : (underlay.pdf ?? prev.sourceUnderlay?.pdf ?? null),
+    }
     state.value = {
       ...state.value,
       sourceUnderlay: next,
+      sourcePdfUnderlay: keptPdf ?? state.value.sourcePdfUnderlay ?? null,
       blobs: {
         ...state.value.blobs,
-        [id]: { ...prev, sourceUnderlay: next },
+        [id]: {
+          ...prev,
+          sourceUnderlay: next,
+          sourcePdfUnderlay: keptPdf,
+        },
       },
     }
     persistCtrl.persistNow()
+    if (keptPdf) setProjectPdfStore(keptPdf)
+  }
+
+  /** Set/clear the shared in-memory PDF (upload). Raster upload must pass null. */
+  function setSourcePdfUnderlay(source: PdfUnderlaySource | null): void {
+    const id = state.value.activeFloorId
+    const prev = state.value.blobs[id] ?? emptyBlob()
+    const cloned = source ? clonePdfUnderlaySource(source) : null
+    state.value = {
+      ...state.value,
+      sourcePdfUnderlay: cloned,
+      blobs: {
+        ...state.value.blobs,
+        [id]: { ...prev, sourcePdfUnderlay: cloned },
+      },
+    }
+    persistCtrl.persistNow()
+    setProjectPdfStore(cloned)
   }
 
   /** Expliciete knop stap 1: bronscan + schaal van donor-floor (geen crop). */
@@ -585,20 +642,34 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         ? donorFloorId
         : (resolveDonorFloorId() ?? donors[0]?.id ?? null)
     const source = preferred ? getFloorSourceUnderlay(preferred) : null
-    if (source?.src) {
-      if (source.src.startsWith('blob:')) {
-        deps.setLocalError(tGlobal('input.errors.projectSourceExpired'))
-        return
-      }
-      try {
-        await deps.loadUnderlayWithScale(source.src, source.name, source.scale)
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e)
-        deps.setLocalError(tGlobal('input.errors.reuseFailed', { message }))
-      }
+    if (!source?.src) {
+      deps.setLocalError(tGlobal('input.errors.noProjectSource'))
       return
     }
-    deps.setLocalError(tGlobal('input.errors.noProjectSource'))
+    if (source.src.startsWith('blob:')) {
+      deps.setLocalError(tGlobal('input.errors.projectSourceExpired'))
+      return
+    }
+
+    const donorPdf = preferred ? (state.value.blobs[preferred]?.sourcePdfUnderlay ?? null) : null
+    const pdfSource = resolveReusePdfBytes({
+      sessionPdf: getProjectPdfStore(),
+      donorPdf,
+      projectPdf: state.value.sourcePdfUnderlay ?? null,
+    })
+
+    try {
+      if (pdfSource && deps.loadUnderlayFromPdf) {
+        setSourcePdfUnderlay(pdfSource)
+        await deps.loadUnderlayFromPdf(pdfSource, source.name, source.scale)
+        return
+      }
+
+      await deps.loadUnderlayWithScale(source.src, source.name, source.scale, pdfSource)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      deps.setLocalError(tGlobal('input.errors.reuseFailed', { message }))
+    }
   }
 
   /**
@@ -644,6 +715,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
 
   function applyPersistedState(next: ProjectState): void {
     state.value = next
+    setProjectPdfStore(next.sourcePdfUnderlay ?? null)
     syncActiveFloorDefaultsToUi()
   }
 
@@ -651,6 +723,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const previousId = state.value.meta.id
     persistCtrl.dispose()
     state.value = createEmptyProjectState()
+    setProjectPdfStore(null)
     deps.resetToEmptyFloor()
     deps.flowStep.value = 'project'
     syncActiveFloorDefaultsToUi()
@@ -714,6 +787,33 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     }
     persistCtrl.persistNow()
     return count
+  }
+
+  function planFromActiveBlob(): FloorPlan | null {
+    const blob = state.value.blobs[state.value.activeFloorId]
+    if (!blob) return null
+    if (blob.previewPlan?.floors[0]) return blob.previewPlan
+    if (blob.generatedFloor) {
+      return { name: state.value.meta.name, floors: [blob.generatedFloor] }
+    }
+    return null
+  }
+
+  /** Live of blob-FML van de actieve floor — 3→4 na resume alleen als stap 3 leeg is. */
+  function hasActiveFloorFml(): boolean {
+    if (deps.getPreviewPlan()?.floors[0]) return true
+    return planFromActiveBlob() != null
+  }
+
+  /** Zet blob-FML live als de preview weg is (hydrate op stap 3). */
+  function restoreActiveFloorPreviewIfNeeded(): void {
+    if (deps.getPreviewPlan()?.floors[0]) return
+    const blob = state.value.blobs[state.value.activeFloorId]
+    const plan = planFromActiveBlob()
+    if (!blob || !plan) return
+    deps.updatePreviewPlan(plan, blob.previewUnderlayLayout ?? null)
+    deps.setFmlNulpuntImageCm(blob.fmlNulpuntImageCm ?? null)
+    deps.setFmlOrient(blob.fmlOrient ?? null)
   }
 
   /** True als ≥1 floor FML heeft (project-spiegel knop). */
@@ -835,6 +935,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     reorderFloors,
     setSourceUnderlay,
     ensureSourceUnderlay,
+    setSourcePdfUnderlay,
     reuseUnderlayFromProject,
     copyPreprocessAndRefsFromDonor,
     listUnderlayDonorFloors,
@@ -850,6 +951,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     buildMergedProjectPlan,
     applyProjectMirrorVertical,
     hasAnyFloorFml,
+    hasActiveFloorFml,
+    restoreActiveFloorPreviewIfNeeded,
     projectOrientFlipXActive,
     storeGeneratedFloorForActive,
     resolveDonorFloorId,

@@ -1,27 +1,29 @@
 /**
- * Stap-2 muurstempel: donor-FML → canvas-bounds → erase → bake adaptive stampBw + solid stampMask.
+ * Stap-2 muurstempel: donor-FML → canvas-bounds → erase → bake contour stampBw + solid stampMask.
  *
- * Live align (1+4): goedkope ghost-bitmap + bounds-stretch; OpenCV/compose alleen bij bake/retune.
+ * Live align (1+4): goedkope ghost-bitmap + bounds-stretch; contour/solid alleen bij bake/retune.
  */
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref } from 'vue'
 import type { Floor, Point2D, Wall } from '@/core/fml/types'
 import {
   DEFAULT_FML_BAND_BOUNDARIES,
   type FmlThicknessBandBoundaries,
 } from '@/core/fml/fml-wall-thickness-tiers'
-import type { PreprocessConfig } from '@/core/extraction/types'
-import { waitForOpenCV } from '@/cv/loadOpenCV'
-import { buildWallLayerBwMat } from '@/cv/preprocess/compose-wall-bw'
 import { resolveBakeNulpuntImageCm } from '@/core/fml/stamp-nulpunt'
 import {
+  buildWallOutlinePolylines,
+  type WallPolygonInput,
+} from '@/ui/components/fml-preview-wall-polygons'
+import {
   DEFAULT_STAMP_BANDS,
+  STAMP_CONTOUR_LINE_PX,
   buildStampGhostDataUrl,
   centerAlignBounds,
   computeWallsBBox,
   filterWallsByBands,
-  rasterizeStampGrayBytes,
+  rasterizePolylinesToBw,
+  rasterizeStampCenterlineContour,
   rasterizeStampSolid,
-  stampGrayBytesToCanvas,
   stampMaskHasInk,
   transformWallsByBounds,
   wallsCmToPx,
@@ -42,7 +44,6 @@ import { WALL_BW_WHITE } from '@/cv/preprocess/compose-wall-bw'
 import { applyBrushStroke, applyPolygonErase, createEraserMask } from '@/cv/tools/eraser'
 import type { PolygonPoint } from '@/cv/tools/polygon'
 import { encodeMaskBase64, decodeMaskBase64 } from '@/platform/dev-workspace/mask-codec'
-import type { useOpenCvLoader } from '../useOpenCvLoader'
 import { tGlobal } from '@/ui/i18n'
 
 export type WallStampSerialized = {
@@ -72,8 +73,6 @@ export type WallStampDonorOption = {
 }
 
 export function useWallStamp(deps: {
-  cvLoader: ReturnType<typeof useOpenCvLoader>
-  preprocess: Ref<PreprocessConfig>
   imageWidth: () => number
   imageHeight: () => number
   pxPerMmX: () => number
@@ -204,8 +203,8 @@ export function useWallStamp(deps: {
     return true
   }
 
-  /** Zware pad: solid + adaptive OpenCV + compose-callback. Alleen bake / retune / hydrate. */
-  async function rebuildOutputs(options?: { adaptive?: boolean }): Promise<void> {
+  /** Contour + solid bake. Alleen bake / retune / hydrate. */
+  async function rebuildOutputs(_options?: { adaptive?: boolean }): Promise<void> {
     const size = imageSize()
     const walls = resolveTransformedWalls()
     if (!size || walls.length === 0) {
@@ -223,40 +222,29 @@ export function useWallStamp(deps: {
     })
     stampMask.value = solid
 
-    const doAdaptive = options?.adaptive !== false
-    if (doAdaptive) {
-      busy.value = true
-      try {
-        await deps.cvLoader.ensureOpenCv()
-        const cv = await waitForOpenCV()
-        const gray = rasterizeStampGrayBytes({
-          walls,
-          width: size.width,
-          height: size.height,
-          eraseMask: erase,
-        })
-        const grayCanvas = stampGrayBytesToCanvas(gray, size.width, size.height)
-        const mat = buildWallLayerBwMat({
-          cv,
-          image: grayCanvas,
-          preprocess: deps.preprocess.value,
-        })
-        try {
-          stampBw.value = new Uint8Array(mat.data)
-        } finally {
-          mat.delete()
-        }
-      } catch (err) {
-        // Fallback: solid als adaptive faalt (tests zonder OpenCV-assets).
-        stampBw.value = new Uint8Array(solid)
-        error.value =
-          err instanceof Error ? err.message : tGlobal('preprocess.stampErrors.adaptiveFailed')
-      } finally {
-        busy.value = false
-      }
-    } else if (!stampBw.value || stampBw.value.length !== size.width * size.height) {
-      stampBw.value = new Uint8Array(solid)
-    }
+    const outlineInputs: WallPolygonInput[] = walls.map((wall, index) => ({
+      id: `stamp-${index}`,
+      a: { ...wall.a },
+      b: { ...wall.b },
+      thickness: Math.max(1, wall.thicknessPx),
+    }))
+    const polylines = buildWallOutlinePolylines(outlineInputs, [])
+    stampBw.value =
+      polylines.length > 0
+        ? rasterizePolylinesToBw({
+            polylines,
+            width: size.width,
+            height: size.height,
+            lineWidthPx: STAMP_CONTOUR_LINE_PX,
+            eraseMask: erase,
+          })
+        : rasterizeStampCenterlineContour({
+            walls,
+            width: size.width,
+            height: size.height,
+            lineWidthPx: STAMP_CONTOUR_LINE_PX,
+            eraseMask: erase,
+          })
 
     deps.onStampBwChanged()
   }
@@ -653,6 +641,7 @@ export function useWallStamp(deps: {
     return null
   }
 
+  /** Contour-mask voor face-prior ná Otsu (niet meer OR in Otsu-referentie). */
   function getOtsuStampMask(): Uint8Array | null {
     if (baked.value) return stampMask.value
     return null

@@ -172,6 +172,10 @@ import {
 } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
 import { useFmlPreviewPanZoom } from '@/ui/composables/fml-preview/useFmlPreviewPanZoom'
 import { buildElevationOpeningMeasureLines } from '@/ui/composables/fml-preview/fml-preview-elevation-opening-measure'
+import {
+  buildElevationJunctionHeightMeasureLines,
+  buildElevationWallFaceMeasureLines,
+} from '@/ui/composables/fml-preview/fml-preview-elevation-wall-measure'
 import { useFmlElevationPointer } from '@/ui/composables/fml-preview/useFmlElevationPointer'
 import { useFmlCanvasTouch, useFmlTouchNav } from '@/ui/composables/fml-preview/useFmlCanvasTouch'
 import {
@@ -384,6 +388,25 @@ const openingMoveMeasureLines = computed(() => {
   )
   if (!wall) return []
   return buildElevationOpeningMeasureLines(wall, rect)
+})
+
+/** Volle vlakhoogte bij muur-/knoopselectie (niet rond ramen/deuren). */
+const wallFaceMeasureLines = computed(() => {
+  const kind = settingsTarget.value?.kind
+  if (kind === 'wall') {
+    const wall = selectedPlanWall.value
+    return wall ? buildElevationWallFaceMeasureLines(wall) : []
+  }
+  if (kind === 'junction') {
+    const junction = settingsJunction.value
+    return junction ? buildElevationJunctionHeightMeasureLines(junction) : []
+  }
+  return []
+})
+
+const elevationMeasureLines = computed(() => {
+  if (settingsTarget.value?.kind === 'opening') return openingMoveMeasureLines.value
+  return wallFaceMeasureLines.value
 })
 
 const selectedRidgeWall = computed(() => {
@@ -1926,8 +1949,15 @@ function beginOpeningDrag(
   window.addEventListener('pointerup', onOpeningUp, { once: true })
 }
 
+/** Vue `.stop` calls `e.stopPropagation()`; Konva events only have `cancelBubble` + `evt`. */
+function stopKonvaBubble(event: { cancelBubble?: boolean; evt?: Event | null }): void {
+  event.cancelBubble = true
+  const native = event.evt
+  if (native && typeof native.stopPropagation === 'function') native.stopPropagation()
+}
+
 function onOpeningDown(openingId: string, event: { evt: MouseEvent }): void {
-  event.evt.stopPropagation()
+  stopKonvaBubble(event)
   markOpeningPointerHandled()
   if (activeTool.value !== 'select' || canvasLocked.value) return
   const elev = elevation.value
@@ -2873,6 +2903,7 @@ defineExpose({
   undoEdit,
   redoEdit,
   applyCornerMarkerModeFromSettings,
+  pushUndo,
 })
 </script>
 
@@ -3113,7 +3144,7 @@ defineExpose({
                       listening: true,
                     }"
                     @mousedown="onOpeningDown(opening.openingId, $event)"
-                    @click.stop
+                    @click="stopKonvaBubble"
                   />
                   <v-rect
                     v-else
@@ -3132,7 +3163,7 @@ defineExpose({
                       listening: true,
                     }"
                     @mousedown="onOpeningDown(opening.openingId, $event)"
-                    @click.stop
+                    @click="stopKonvaBubble"
                   />
                   <v-line
                     v-if="selectedOpeningId === opening.openingId && opening.ghost.shaped"
@@ -3554,7 +3585,7 @@ defineExpose({
     <FmlPreviewMeasureOverlay
       :width="stageSize.width"
       :height="stageSize.height"
-      :lines="openingMoveMeasureLines"
+      :lines="elevationMeasureLines"
       :preview="precisePreview"
       :hover="null"
       :to-screen="cmToScreen"

@@ -8,7 +8,8 @@ Gerelateerd: [`door-detection-flow.md`](./door-detection-flow.md), [`window-dete
 ## Intent
 
 1. **Per face** (eigen bbox + L1/L2/L3). Cluster kozijn+swing in één hyp → alleen kozijn in mask.
-2. Als `depth ≤ max muur-ref` → die face **in het muurmasker** bij finalize (raam-semantiek).
+2. Als `depth ≤ max muur-ref` → die face **in het muurmasker** bij finalize (raam-semantiek).  
+   **Niet** tijdens Stage-2 initial pass — L1/L2/L3 + meetlint pas bij Afronden (definitieve hyps/faces + L0).
 3. Hyp blijft één `door` voor L11/L12 (geen demote/split).
 4. Na L11-bind: **dedupe** overlappende deuren op hetzelfde segment → 1 hit (spiegel R-28).
 
@@ -48,9 +49,9 @@ Geen muur-ref → niemand via deze regel in mask (fail-closed).
 
 ## Stap A — thin → mask
 
-- `collectThinDoorMaskFaceIds` / push zet `cache.maskKeepDoorFaceIds`.
+- Stage-2 push zet **geen** keep-set. `resolveThinDoorMaskKeepFaceIds` bij Afronden → `cache.maskKeepDoorFaceIds` + L0.
 - Volgorde: Laag 1 → pair-conflict → Laag 2 → Laag 3; daarna **één** finalize met keep-set.
-- Modules: `door-thin-mask.ts`, `door-thin-mask-between-walls.ts`, `door-thin-mask-wing-bridge.ts`, `door-thin-mask-polyline-keep.ts`.
+- Modules: `door-thin-mask.ts`, `door-thin-mask-between-walls.ts`, `door-thin-mask-wing-bridge.ts`, `door-thin-mask-polyline-keep.ts`; wiring: `door-thin-mask-finalize.ts`.
 
 ## Stap B — dedupe (D-63)
 

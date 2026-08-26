@@ -96,7 +96,8 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
     })
   }
 
-  // Stap 2: adaptive alleen als aangezet. Beide uit → vaste drempel (geen grijs naar detectie).
+  // Stap 2: adaptive als aangezet; anders thresholdMode (otsu / fixed / edgeAware).
+  // Beide uit + geen preBinarize → vaste drempel (geen grijs naar detectie).
   if (useAdaptive) {
     mat = binarizeMat(cv, mat, {
       threshold: preprocess.threshold,
@@ -107,11 +108,15 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
       edgeAwareEdgeBoost: preprocess.edgeAwareEdgeBoost ?? 0,
     })
   } else if (thresholdEnabled && !preBinarize) {
+    const mode = preprocess.thresholdMode ?? 'fixed'
+    const resolvedMode = mode === 'adaptive' ? 'fixed' : mode
     mat = binarizeMat(cv, mat, {
       applyThreshold: true,
-      thresholdMode: 'fixed',
+      thresholdMode: resolvedMode,
       useAdaptive: false,
-      threshold: preThreshold,
+      // fixed zonder preBinarize: UI-drempel = preBinarizeThreshold; edgeAware/otsu = threshold.
+      threshold: resolvedMode === 'fixed' ? preThreshold : (preprocess.threshold ?? preThreshold),
+      edgeAwareEdgeBoost: preprocess.edgeAwareEdgeBoost ?? 0,
     })
   }
 

@@ -6,14 +6,18 @@ import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 function createFlowHarness(options?: {
   hasTemplatesDetection?: () => boolean
   wallsDetectionComplete?: () => boolean
+  hasResultFml?: () => boolean
+  templateTab?: 'walls' | 'ocr'
+  running?: boolean
+  onStartTemplatesDetection?: () => void
 }) {
   const flowStep = ref<WorkspaceFlowStep>('result')
   const imageSrc = ref<string | null>('data:image/png;base64,xx')
-  const running = ref(false)
+  const running = ref(options?.running ?? false)
   const scaleConfirmed = ref(true)
   const profileConfirmed = ref(true)
   const preprocessTab = ref('walls' as const)
-  const templateTab = ref('walls' as const)
+  const templateTab = ref(options?.templateTab ?? 'walls')
   const resultTab = ref('vector' as const)
   const showOcrDetails = ref(false)
   const activeClass = ref(null)
@@ -60,7 +64,9 @@ function createFlowHarness(options?: {
     runOcrScan,
     measureWallReferenceThickness,
     wallsDetectionComplete: options?.wallsDetectionComplete ?? (() => true),
+    hasResultFml: options?.hasResultFml,
     hasTemplatesDetection: options?.hasTemplatesDetection ?? (() => true),
+    onStartTemplatesDetection: options?.onStartTemplatesDetection,
     resetInkOverlay,
   })
 
@@ -116,6 +122,76 @@ describe('useWorkspaceFlow — stap-terug bewaart werk', () => {
 
     expect(h.measureWallReferenceThickness).not.toHaveBeenCalled()
     expect(h.flowStep.value).toBe('templates')
+  })
+
+  it('kan na result→templates weer vooruit als FML er is (geen wallsDetectionComplete)', async () => {
+    const h = createFlowHarness({
+      wallsDetectionComplete: () => false,
+      hasResultFml: () => true,
+      hasTemplatesDetection: () => false,
+    })
+    h.flowStep.value = 'result'
+    await nextTick()
+
+    h.flow.goToPreviousStep()
+    await nextTick()
+    expect(h.flowStep.value).toBe('templates')
+    expect(h.flow.canGoNext.value).toBe(true)
+
+    await h.flow.goToNextStep()
+    await nextTick()
+    expect(h.flowStep.value).toBe('result')
+  })
+
+  it('blokkeert 3→4 tijdens nieuwe detectie ook als resume-FML nog bestaat', async () => {
+    const h = createFlowHarness({
+      wallsDetectionComplete: () => false,
+      hasResultFml: () => true,
+      hasTemplatesDetection: () => true,
+    })
+    h.flowStep.value = 'templates'
+    await nextTick()
+    expect(h.flow.canGoNext.value).toBe(false)
+  })
+
+  it('start classify bij preprocess→templates zonder bestaande detectie', async () => {
+    const onStart = vi.fn()
+    const h = createFlowHarness({
+      hasTemplatesDetection: () => false,
+      templateTab: 'ocr',
+      onStartTemplatesDetection: onStart,
+    })
+    h.flowStep.value = 'preprocess'
+    await nextTick()
+
+    h.flowStep.value = 'templates'
+    await nextTick()
+    await Promise.resolve()
+
+    expect(h.autoClassifyWalls).toHaveBeenCalledTimes(1)
+    expect(onStart).toHaveBeenCalledTimes(1)
+  })
+
+  it('blokkeert 3→4 tijdens running ook met resume-FML', async () => {
+    const h = createFlowHarness({
+      wallsDetectionComplete: () => false,
+      hasResultFml: () => true,
+      hasTemplatesDetection: () => false,
+      running: true,
+    })
+    h.flowStep.value = 'templates'
+    await nextTick()
+    expect(h.flow.canGoNext.value).toBe(false)
+  })
+
+  it('blijft geblokt op templates zonder finalize en zonder FML', async () => {
+    const h = createFlowHarness({
+      wallsDetectionComplete: () => false,
+      hasResultFml: () => false,
+    })
+    h.flowStep.value = 'templates'
+    await nextTick()
+    expect(h.flow.canGoNext.value).toBe(false)
   })
 
   it('kan na result→templates weer vooruit (wallsDetectionComplete)', async () => {

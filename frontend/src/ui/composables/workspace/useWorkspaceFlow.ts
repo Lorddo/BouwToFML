@@ -54,10 +54,17 @@ export function useWorkspaceFlow(deps: {
   measureWallReferenceThickness: (rect?: SelectionRect) => Promise<number | null>
   wallsDetectionComplete?: () => boolean
   /**
+   * True als stap 4 al een FML-preview heeft (live of blob) — na resume zonder
+   * detectionExact mag 3→4 alleen als stap 3 leeg is (geen classify-run).
+   */
+  hasResultFml?: () => boolean
+  /**
    * True als stap 3 al classify/finalize-output heeft — geen OCR/classify-bootstrap
-   * bij opnieuw binnenkomen (stap terug → vooruit).
+   * bij opnieuw binnenkomen (stap terug → vooruit). Blokkeert ook 3→4 via stale FML.
    */
   hasTemplatesDetection?: () => boolean
+  /** Nieuwe detectie-run start (2→3 bootstrap): live FML wissen zodat classify niet naast oude preview draait. */
+  onStartTemplatesDetection?: () => void
   devSessionRestoring?: Ref<boolean>
   onEnterResultStep?: () => Promise<void> | void
   setLocalError?: (message: string | null) => void
@@ -110,8 +117,12 @@ export function useWorkspaceFlow(deps: {
       // ESC:O-42 (B)
       case 'templates':
         if (deps.templateTab.value === 'walls' && !deps.wallsDetectionComplete?.()) {
-          tally('O-42', 'walls_gate_block')
-          return false
+          // Resume zonder detectie: 3→4 via FML. Nieuwe classify-run moet weer afronden —
+          // stale blob-FML mag Next niet openhouden (classify + result tegelijk → OOM).
+          if (deps.hasTemplatesDetection?.() === true || !deps.hasResultFml?.()) {
+            tally('O-42', 'walls_gate_block')
+            return false
+          }
         }
         return true
       case 'result':
@@ -184,10 +195,10 @@ export function useWorkspaceFlow(deps: {
         deps.setLocalError?.(tGlobal('flow.blocked.wallRef'))
         return
       }
-      // Detectie al gedaan: dikte niet opnieuw meten (voorkomt band-churn + UI-lock).
-      // Alleen meten wanneer nog geen geldige referentiedikte.
-      const existingPx = deps.referenceWallThicknessPx.value
-      if (existingPx == null || existingPx <= 0) {
+      // Detectie al gedaan (re-enter): dikte niet opnieuw meten.
+      // Anders altijd meten ná ink-bake — niet skippen omdat tekenen al een px zette.
+      const detectionDone = deps.wallsDetectionComplete?.() === true
+      if (!detectionDone) {
         const thickness = await deps.measureWallReferenceThickness()
         if (thickness == null || thickness <= 0) {
           // measureWallReferenceThickness zet al een foutmelding
@@ -280,13 +291,15 @@ export function useWorkspaceFlow(deps: {
       deps.activeClass.value = null
     }
     if (prev === 'preprocess' && step === 'templates') {
-      deps.templateTab.value = 'walls'
       deps.preprocessTab.value = 'walls'
       deps.activeClass.value = null
       const skipBootstrap = shouldSkipAutoClassify() || deps.hasTemplatesDetection?.() === true
       if (!skipBootstrap) {
+        // Vlag vóór tab-assign: anders vuurt templateTab-watch een tweede classify.
         bootstrappingTemplates = true
+        deps.templateTab.value = 'walls'
         ocrInitialPassReady.value = !deps.ocrEnabled.value
+        deps.onStartTemplatesDetection?.()
         void (async () => {
           try {
             if (deps.ocrEnabled.value) {
@@ -302,6 +315,7 @@ export function useWorkspaceFlow(deps: {
           }
         })()
       } else {
+        deps.templateTab.value = 'walls'
         ocrInitialPassReady.value = true
       }
     }

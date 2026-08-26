@@ -1,7 +1,7 @@
-/** Target longest edge for PDF rasterization (vector source → higher than PNG upload floor). */
+/** Target longest edge for PDF rasterization — same 3k werkformaat as PNG/JPG (vloer+plafond). */
 import { tGlobal } from '@/ui/i18n'
 
-export const DEFAULT_MIN_MAX_EDGE = 4000
+export const DEFAULT_MIN_MAX_EDGE = 3000
 /** Browser canvas safety cap (never exceed on longest edge). */
 export const MAX_PDF_RENDER_MAX_EDGE = 8192
 export const DEFAULT_PREVIEW_MAX_EDGE = 800
@@ -40,9 +40,8 @@ export function isPdfFile(file: File): boolean {
 }
 
 /**
- * PDF render scale — same idea as PNG `buildOptimizationBase`:
- * keep native when already at/above target; upscale smaller pages only.
- * Very large page sizes are capped for canvas limits.
+ * PDF render scale — same 3k werkformaat as PNG `buildOptimizationBase`:
+ * always scale so longest edge = target (up or down). Hard-capped for canvas limits.
  */
 export function computeRenderScale(
   viewportWidth: number,
@@ -51,12 +50,8 @@ export function computeRenderScale(
   maxRenderMaxEdge = MAX_PDF_RENDER_MAX_EDGE,
 ): number {
   const maxEdge = Math.max(viewportWidth, viewportHeight, 1)
-  const scale = maxEdge >= targetMaxEdge ? 1 : targetMaxEdge / maxEdge
-  const renderedMax = maxEdge * scale
-  if (renderedMax > maxRenderMaxEdge) {
-    return maxRenderMaxEdge / maxEdge
-  }
-  return scale
+  const cappedTarget = Math.min(targetMaxEdge, maxRenderMaxEdge)
+  return cappedTarget / maxEdge
 }
 
 /** ROI scale from PDF-point size of the crop (same policy as full-page). */
@@ -126,12 +121,11 @@ export function shouldReRenderPdfRoi(
   pageHeightPx: number,
   maxEdgeRatio = PDF_ROI_MAX_EDGE_RATIO,
 ): boolean {
-  const pageMax = Math.max(pageWidthPx, pageHeightPx, 1)
-  const contentMax = Math.max(bounds.width, bounds.height, 1)
-  if (contentMax >= pageMax * maxEdgeRatio) return false
-  if (bounds.width >= pageWidthPx * maxEdgeRatio && bounds.height >= pageHeightPx * maxEdgeRatio) {
-    return false
-  }
+  if (!(bounds.width > 0) || !(bounds.height > 0)) return false
+  const widthRatio = bounds.width / Math.max(pageWidthPx, 1)
+  const heightRatio = bounds.height / Math.max(pageHeightPx, 1)
+  // Almost the full page (both axes). A full-width floor strip still re-renders.
+  if (widthRatio >= maxEdgeRatio && heightRatio >= maxEdgeRatio) return false
   return true
 }
 

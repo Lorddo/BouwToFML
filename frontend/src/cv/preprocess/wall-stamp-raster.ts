@@ -131,8 +131,11 @@ export function transformWallsByBounds(
   }))
 }
 
+/** Dunne contour-stroke voor stampBw (architect-outline → B/W). */
+export const STAMP_CONTOUR_LINE_PX = 1
+
 /**
- * Pure zwarte mask (0 = inkt, 255 = wit) — voor Otsu OR.
+ * Pure zwarte mask (0 = inkt, 255 = wit) — volle muurlichamen voor face-prior.
  * eraseMask: >0 wist stempel (wit).
  */
 export function rasterizeStampSolid(params: {
@@ -149,6 +152,79 @@ export function rasterizeStampSolid(params: {
   })
   applyEraseToBw(out, params.eraseMask)
   return out
+}
+
+/**
+ * Rasteriseer polylines als dunne inkt (0) op wit (255).
+ * Gebruikt voor architect-outline → stampBw.
+ */
+export function rasterizePolylinesToBw(params: {
+  polylines: ReadonlyArray<readonly Point2D[]>
+  width: number
+  height: number
+  lineWidthPx?: number
+  eraseMask?: Uint8Array | null
+}): Uint8Array {
+  const { width, height } = params
+  const out = new Uint8Array(width * height)
+  out.fill(WALL_BW_WHITE)
+  if (params.polylines.length === 0 || width <= 0 || height <= 0) {
+    applyEraseToBw(out, params.eraseMask)
+    return out
+  }
+  const canvas = createCanvas(width, height)
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    applyEraseToBw(out, params.eraseMask)
+    return out
+  }
+  ctx.clearRect(0, 0, width, height)
+  ctx.imageSmoothingEnabled = false
+  ctx.strokeStyle = '#000000'
+  ctx.fillStyle = '#000000'
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.lineWidth = Math.max(1, Math.round(params.lineWidthPx ?? STAMP_CONTOUR_LINE_PX))
+  for (const poly of params.polylines) {
+    if (poly.length === 0) continue
+    ctx.beginPath()
+    ctx.moveTo(poly[0].x, poly[0].y)
+    for (let i = 1; i < poly.length; i += 1) {
+      ctx.lineTo(poly[i].x, poly[i].y)
+    }
+    if (poly.length === 1) {
+      ctx.lineTo(poly[0].x + 0.01, poly[0].y)
+    }
+    ctx.stroke()
+  }
+  const image = ctx.getImageData(0, 0, width, height)
+  const px = image.data
+  for (let i = 0, p = 0; i < width * height; i += 1, p += 4) {
+    if ((px[p + 3] ?? 0) > 0) out[i] = WALL_BW_INK
+  }
+  applyEraseToBw(out, params.eraseMask)
+  return out
+}
+
+/**
+ * Fallback als outline-union leeg is: hartlijn-contour (niet volle dikte).
+ */
+export function rasterizeStampCenterlineContour(params: {
+  walls: readonly StampWallPx[]
+  width: number
+  height: number
+  lineWidthPx?: number
+  eraseMask?: Uint8Array | null
+}): Uint8Array {
+  const lineWidth = Math.max(1, Math.round(params.lineWidthPx ?? STAMP_CONTOUR_LINE_PX))
+  const polylines = params.walls.map((wall) => [wall.a, wall.b])
+  return rasterizePolylinesToBw({
+    polylines,
+    width: params.width,
+    height: params.height,
+    lineWidthPx: lineWidth,
+    eraseMask: params.eraseMask,
+  })
 }
 
 /**

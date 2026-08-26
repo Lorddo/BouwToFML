@@ -15,6 +15,70 @@ import {
 export const SCALE_LENGTH_STEP_METRIC_CM = 1
 export const SCALE_LENGTH_STEP_IMPERIAL_IN = 1 / 16
 
+/**
+ * Pause before apply on confirm-heavy length fields (floor height / overwrite-all).
+ * Toolbelt selected-object fields keep their own 700 ms draft-commit.
+ */
+export const SCALE_LENGTH_COMMIT_DEBOUNCE_MS = 1000
+
+type ScaleLengthCommitGate = {
+  schedule: (cm: number) => void
+  flush: () => void
+  cancel: () => void
+  peek: () => number | null
+  dispose: () => void
+}
+
+/** Coalesce typing / −/+ into one emit after pause; flush on blur/Enter. */
+export function createScaleLengthCommitGate(
+  emit: (cm: number) => void,
+  delayMs: () => number,
+): ScaleLengthCommitGate {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let pending: number | null = null
+
+  function clearTimer(): void {
+    if (timer == null) return
+    clearTimeout(timer)
+    timer = null
+  }
+
+  function fire(): void {
+    if (pending == null) return
+    const cm = pending
+    pending = null
+    clearTimer()
+    emit(cm)
+  }
+
+  return {
+    schedule(cm: number) {
+      pending = cm
+      const delay = delayMs()
+      if (!(delay > 0)) {
+        fire()
+        return
+      }
+      clearTimer()
+      timer = setTimeout(fire, delay)
+    },
+    flush() {
+      fire()
+    },
+    cancel() {
+      clearTimer()
+      pending = null
+    },
+    peek() {
+      return pending
+    },
+    dispose() {
+      clearTimer()
+      pending = null
+    },
+  }
+}
+
 export type ScaleLengthClampOptions = {
   /** Inclusive minimum in cm. Omit = no lower bound. */
   minCm?: number

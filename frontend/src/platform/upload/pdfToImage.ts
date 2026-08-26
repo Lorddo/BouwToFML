@@ -190,6 +190,35 @@ export async function renderPdfPageToBlobUrlForFile(
   }
 }
 
+/** Full-page raster from in-memory PDF bytes (reuse / ROI source). */
+export async function renderPdfPageFromBytes(params: {
+  bytes: Uint8Array
+  pageNumber: number
+  pageRenderScale?: number
+  minMaxEdge?: number
+}): Promise<RenderPdfPageResult & { dataUrl: string }> {
+  const { bytes, pageNumber, minMaxEdge = DEFAULT_MIN_MAX_EDGE } = params
+  const pdf = await getDocument(pdfJsDocumentOptions(bytes)).promise
+  try {
+    const page = await pdf.getPage(pageNumber)
+    const baseViewport = page.getViewport({ scale: 1 })
+    const pageRenderScale =
+      params.pageRenderScale ??
+      computeRenderScale(baseViewport.width, baseViewport.height, minMaxEdge)
+    const canvas = await renderPageToCanvas(pdf, pageNumber, pageRenderScale)
+    const blobUrl = await canvasToBlobUrl(canvas)
+    return {
+      blobUrl,
+      dataUrl: canvas.toDataURL('image/png'),
+      pageRenderScale,
+      pageWidthPx: canvas.width,
+      pageHeightPx: canvas.height,
+    }
+  } finally {
+    await pdf.cleanup()
+  }
+}
+
 /**
  * Re-raster a PDF page crop at `scale` (PDF user units × scale → pixels).
  * Canvas is sized to the ROI; full-page content is translated so the crop is at (0,0).

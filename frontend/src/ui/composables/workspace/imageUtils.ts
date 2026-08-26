@@ -103,20 +103,19 @@ function cropCanvasToBounds(canvas: HTMLCanvasElement, bounds: PixelBounds): HTM
 }
 
 /**
- * Upscale naar min. langste zijde (`OPTIMIZATION_BASE_DIMENSION` = 3000).
- * High-quality smoothing (bicubic-achtig) i.p.v. nearest-neighbor — schonere
- * randen voor adaptive B/W. Geen downscale als max-edge al ≥ floor.
+ * Clamp langste zijde naar `targetMaxEdge` (`OPTIMIZATION_BASE_DIMENSION` = 3000).
+ * High-quality smoothing — upscale én downscale zodat werkformaat vast is.
  */
-function upscaleCanvasToMinMaxEdge(
+function clampCanvasToMaxEdge(
   canvas: HTMLCanvasElement,
-  minMaxEdge = OPTIMIZATION_BASE_DIMENSION,
+  targetMaxEdge = OPTIMIZATION_BASE_DIMENSION,
 ): { canvas: HTMLCanvasElement; scale: number } {
   const maxEdge = Math.max(canvas.width, canvas.height, 1)
-  if (maxEdge >= minMaxEdge) {
+  if (maxEdge === targetMaxEdge) {
     return { canvas, scale: 1 }
   }
 
-  const scale = minMaxEdge / maxEdge
+  const scale = targetMaxEdge / maxEdge
   const width = Math.max(1, Math.round(canvas.width * scale))
   const height = Math.max(1, Math.round(canvas.height * scale))
   const out = document.createElement('canvas')
@@ -133,7 +132,7 @@ function upscaleCanvasToMinMaxEdge(
 }
 
 /**
- * Schaal op tot minimaal `minMaxEdge` (default 3000px).
+ * Clamp langste zijde naar `minMaxEdge` (default 3000px; vloer+plafond).
  * Witruimte blijft staan (canvas 1–4 is wit); `trimWhitespace` alleen opt-in.
  */
 export function normalizeWorkingCanvas(
@@ -160,11 +159,11 @@ export function normalizeWorkingCanvas(
     }
   }
 
-  const upscaled = upscaleCanvasToMinMaxEdge(working, minMaxEdge)
+  const clamped = clampCanvasToMaxEdge(working, minMaxEdge)
   return {
-    canvas: upscaled.canvas,
+    canvas: clamped.canvas,
     cropOffset,
-    scale: upscaled.scale,
+    scale: clamped.scale,
   }
 }
 
@@ -399,7 +398,7 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
 export interface OptimizationBaseResult {
   src: string
   image: HTMLImageElement
-  /** Uniform upscale factor applied to reach min max-edge (1 = unchanged). */
+  /** Uniform scale factor applied to reach werk-max-edge (1 = unchanged). */
   scale: number
 }
 
@@ -407,7 +406,7 @@ export async function buildOptimizationBase(src: string): Promise<OptimizationBa
   const original = await loadImage(src)
   const maxEdge = Math.max(original.naturalWidth, original.naturalHeight)
 
-  if (maxEdge >= OPTIMIZATION_BASE_DIMENSION) {
+  if (maxEdge === OPTIMIZATION_BASE_DIMENSION) {
     return { src, image: original, scale: 1 }
   }
 
@@ -419,11 +418,11 @@ export async function buildOptimizationBase(src: string): Promise<OptimizationBa
     return { src, image: original, scale: 1 }
   }
   ctx.drawImage(original, 0, 0)
-  const { canvas: upscaled, scale } = upscaleCanvasToMinMaxEdge(canvas, OPTIMIZATION_BASE_DIMENSION)
+  const { canvas: clamped, scale } = clampCanvasToMaxEdge(canvas, OPTIMIZATION_BASE_DIMENSION)
 
-  const upscaledSrc = upscaled.toDataURL('image/png')
-  const upscaledImage = await loadImage(upscaledSrc)
-  return { src: upscaledSrc, image: upscaledImage, scale }
+  const clampedSrc = clamped.toDataURL('image/png')
+  const clampedImage = await loadImage(clampedSrc)
+  return { src: clampedSrc, image: clampedImage, scale }
 }
 
 /** Houd schaallinialen / bevestigde px·mm gelijk na stille upscale (upload-base). */

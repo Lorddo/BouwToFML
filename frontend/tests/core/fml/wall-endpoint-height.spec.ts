@@ -6,6 +6,7 @@ import {
   overwritePlanWallHeights,
   setJunctionBottomZ,
   setJunctionElevationEdit,
+  readJunctionElevation,
   setJunctionHeight,
   setWallsUniformHeight,
   splitWallEndpointExtras,
@@ -102,6 +103,58 @@ describe('wall-endpoint-height', () => {
     expect(wallEndpointHeightCm(next[0], 'b', 280)).toBe(250)
     expect(wallEndpointHeightCm(next[1], 'a', 280)).toBe(250)
     expect(wallEndpointHeightCm(next[1], 'b', 280)).toBe(280)
+  })
+
+  it('readJunctionElevation neemt knoop-eind, niet de verre muurhoogte', () => {
+    const walls = [
+      wall({
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        extras: { az: { z: 0, h: 280 }, bz: { z: 10, h: 260 } },
+      }),
+      wall({
+        id: 'w2',
+        a: { x: 100, y: 0 },
+        b: { x: 100, y: 80 },
+        extras: { az: { z: 10, h: 260 }, bz: { z: 0, h: 300 } },
+      }),
+    ]
+    const elev = readJunctionElevation(
+      walls,
+      [
+        { wallId: 'w1', end: 'b' },
+        { wallId: 'w2', end: 'a' },
+      ],
+      280,
+    )
+    expect(elev).toEqual({ heightCm: 250, bottomZCm: 10 })
+  })
+
+  it('readJunctionElevation blijft één waarde als aangesloten muren verschillen', () => {
+    const walls = [
+      wall({
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        extras: { az: { z: 0, h: 250 }, bz: { z: 0, h: 250 } },
+      }),
+      wall({
+        id: 'w2',
+        a: { x: 100, y: 0 },
+        b: { x: 100, y: 80 },
+        extras: { az: { z: 0, h: 300 }, bz: { z: 0, h: 300 } },
+      }),
+    ]
+    const elev = readJunctionElevation(
+      walls,
+      [
+        { wallId: 'w1', end: 'b' },
+        { wallId: 'w2', end: 'a' },
+      ],
+      280,
+    )
+    expect(elev).toEqual({ heightCm: 250, bottomZCm: 0 })
   })
 
   it('setJunctionBottomZ tilt knoop-ends; hoogte per eind blijft', () => {

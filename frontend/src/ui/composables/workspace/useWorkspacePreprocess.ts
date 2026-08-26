@@ -1,6 +1,7 @@
 import { watch, type Ref } from 'vue'
 import type { ExampleSample } from '@/core/extraction'
 import type { PreprocessConfig } from '@/platform/image'
+import type { SelectionRect } from '@/platform/selection'
 import {
   isPreprocessLayerId,
   layerTuneFingerprintParts,
@@ -14,6 +15,8 @@ import type { PreprocessMaskInput } from '@/cv/tools/preparePreprocessMasks'
 import type { usePreprocessPreview } from '../usePreprocessPreview'
 import type { usePreprocessVectorCache } from './usePreprocessVectorCache'
 import { formatCvError } from '@/cv/formatCvError'
+import { waitForOpenCV } from '@/cv/loadOpenCV'
+import { measurePreviewWallThicknessPx } from '@/cv/walls/measure-reference-wall'
 import { PREPROCESS_PREVIEW_DEBOUNCE_MS, type WorkspaceFlowStep } from './constants'
 import type { WorkspaceWallBwCompose } from './useWorkspaceWallBwCompose'
 
@@ -35,6 +38,7 @@ export function useWorkspacePreprocess(deps: {
   referenceWallThicknessPx: Ref<number | null>
   gapsInkMode: Ref<GapsInkMode>
   wallBw?: WorkspaceWallBwCompose
+  rects?: Ref<SelectionRect[]>
 }) {
   let livePreviewTimer: ReturnType<typeof setTimeout> | null = null
   let lastUnderlayFingerprint = underlayPreviewFingerprint(deps.preprocess.value)
@@ -77,6 +81,35 @@ export function useWorkspacePreprocess(deps: {
     if (url) deps.preprocessPreview.previewUrl.value = url
   }
 
+  /**
+   * Dikte voor Otsu-preview/download: official ná 2→3, anders lokale meting
+   * (schrijft geen referenceWallThicknessPx).
+   */
+  async function resolveInkWallThicknessPx(): Promise<number | undefined> {
+    const official = deps.referenceWallThicknessPx.value
+    if (official != null && official > 0) return official
+
+    const wallRects = (deps.rects?.value ?? []).filter((r) => r.type === 'wall')
+    if (wallRects.length === 0 || !deps.wallBw) return undefined
+
+    await deps.wallBw.rebuildBaseWallBw()
+    const baseBw = deps.wallBw.getBaseWallBw()
+    if (!baseBw) return undefined
+
+    const cv = await waitForOpenCV()
+    const local = measurePreviewWallThicknessPx({
+      cv,
+      baseBw,
+      wallRects: wallRects.map((r) => ({
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        height: r.height,
+      })),
+    })
+    return local ?? undefined
+  }
+
   async function refreshLayerUnderlayPreview(
     layer: PreprocessPanelLayer = deps.activeUnderlayLayer(),
   ) {
@@ -110,9 +143,10 @@ export function useWorkspacePreprocess(deps: {
         return
       }
       if (layer === 'inkWall') {
+        const referenceWallThicknessPx = await resolveInkWallThicknessPx()
         await deps.preprocessPreview.buildInkWallPreview(img, deps.preprocess.value, maskArgs, {
           includeOcrMask: detectionUnderlayIncludesOcrMask(),
-          referenceWallThicknessPx: deps.referenceWallThicknessPx.value,
+          referenceWallThicknessPx,
         })
         return
       }
@@ -174,10 +208,7 @@ export function useWorkspacePreprocess(deps: {
     if (livePreviewTimer) clearTimeout(livePreviewTimer)
     livePreviewTimer = setTimeout(() => {
       const tab = deps.preprocessTab.value
-      if (tab === 'inkWall' && changed.wall) {
-        void refreshLayerUnderlayPreview('inkWall')
-        return
-      }
+      // Otsu = eigen recept; wall-slider herbouwt Int muur niet (lui bij tab-open).
       if (changed.wall && tab === 'walls') void refreshLayerUnderlayPreview('walls')
       if (changed.gaps && tab === 'gaps') void refreshLayerUnderlayPreview('gaps')
       // OCR deelt muur-tune — geen aparte preprocess-tab meer.

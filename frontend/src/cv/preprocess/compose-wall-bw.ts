@@ -38,7 +38,7 @@ export function composeWallBw(params: {
   baseBw: Uint8Array
   ocrMask?: Uint8Array | null
   inkOverlay?: Uint8Array | null
-  /** Adaptive stempel-B/W (0 = inkt) — onder live ink. */
+  /** Adaptive stempel-contour (0 = inkt) — onder live ink. */
   stampBw?: Uint8Array | null
 }): Uint8Array {
   const { baseBw } = params

@@ -16,6 +16,7 @@ import {
   renderClassifiedFaceMask,
 } from '../rooms/room-ink-classify'
 import { claimWallishAfterInherit } from '../rooms/face-parent-claim'
+import { applyStampWallFacePrior } from '../rooms/stamp-wall-face-prior'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 import { reportPipelineProgress } from '@/cv/pipeline/pipeline-progress'
 import { resolveInkFromRawTopology } from '../rooms/room-refine-topology'
@@ -83,6 +84,8 @@ function classifyRoomFacesFromBwMat(params: {
   referenceData: Uint8Array
   referenceWallThicknessPx?: number
   roomInkCoverageThreshold?: number
+  /** Solid stampMask — ná Otsu pin overlap-faces als wall. */
+  wallStampMask?: Uint8Array
 }): Pick<
   RoomClassifyResult,
   | 'width'
@@ -191,8 +194,22 @@ function classifyRoomFacesFromBwMat(params: {
     parentMap,
     faceOverrides: new Map(),
   })
-  const classificationByLabel = wallish.classificationByLabel
+  let classificationByLabel = wallish.classificationByLabel
   parentMap = wallish.parentMap
+
+  // Stamp-last: Otsu eerst; solid stampMask pin't exacte muur-faces.
+  if (params.wallStampMask && params.wallStampMask.length === labelsData.length) {
+    reportPipelineProgress('Stempel-muren pin’en…')
+    const stamped = applyStampWallFacePrior({
+      labelsData,
+      parentMap,
+      classificationByLabel,
+      stampMask: params.wallStampMask,
+      groupBy: ROOM_INK_CLASSIFICATION_GROUP_BY,
+    })
+    classificationByLabel = stamped.classificationByLabel
+  }
+
   const mergedFaceCount = countDistinctMergedFaces(components, parentMap)
   const stats = countClassificationStats(classificationByLabel)
 
@@ -286,6 +303,8 @@ export async function runRoomClassifyPhase(params: {
   roomInkCoverageThreshold?: number
   /** Vooraf gebouwde Otsu-referentie (classify deelt grijswaarden met muur-preprocess). */
   prebuiltReferenceMat?: OpenCV['Mat']
+  /** Solid stampMask — ná Otsu pin overlap-faces als wall. */
+  wallStampMask?: Uint8Array
 }): Promise<RoomClassifyResult> {
   const { cv, image, mat, preprocess, eraserMask } = params
   const width = mat.cols
@@ -311,6 +330,7 @@ export async function runRoomClassifyPhase(params: {
     referenceData: classifiedReferenceData,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     roomInkCoverageThreshold: params.roomInkCoverageThreshold,
+    wallStampMask: params.wallStampMask,
   })
 
   const classifiedMaskCanvas = renderClassifiedFaceMask({
@@ -458,6 +478,7 @@ export async function runRoomFirstStrategy(params: {
   wallStyle?: 'solid' | 'open'
   referenceWallThicknessPx?: number
   roomInkCoverageThreshold?: number
+  wallStampMask?: Uint8Array
 }): Promise<WallStrategyResult> {
   const classified = await runRoomClassifyPhase(params)
   return runRoomFinalizePhase({

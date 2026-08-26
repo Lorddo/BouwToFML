@@ -1,6 +1,6 @@
 import type { Opening, Wall } from '@/core/fml/types'
 import {
-  wallEndpoint3D,
+  readJunctionElevation,
   wallEndpointHeightCm,
   wallUniformBottomZCm,
 } from '@/core/fml/wall-endpoint-height'
@@ -78,25 +78,8 @@ export function buildSelectedJunctionPanel(
   floorHeightCm: number,
 ) {
   if (!junction || junction.refs.length === 0) return null
-  const heights = junction.refs
-    .map((ref) => {
-      const wall = walls.find((item) => item.id === ref.wallId)
-      if (!wall) return null
-      return Math.round(wallEndpointHeightCm(wall, ref.end, floorHeightCm))
-    })
-    .filter((value): value is number => value != null)
-  if (heights.length === 0) return null
-  const bottoms = junction.refs
-    .map((ref) => {
-      const wall = walls.find((item) => item.id === ref.wallId)
-      if (!wall) return null
-      return Math.round(wallEndpoint3D(wall, ref.end, floorHeightCm).z)
-    })
-    .filter((value): value is number => value != null)
-  const first = heights[0]
-  const heightMixed = heights.some((value) => value !== first)
-  const firstBottom = bottoms[0] ?? 0
-  const bottomMixed = bottoms.length === 0 || bottoms.some((value) => value !== firstBottom)
+  const elev = readJunctionElevation(walls, junction.refs, floorHeightCm)
+  if (!elev) return null
   const ridgeCount = junction.refs.filter((ref) => {
     const wall = walls.find((item) => item.id === ref.wallId)
     return wall != null && (wall.extras?.ridge === true || wall.thickness === 0)
@@ -104,10 +87,10 @@ export function buildSelectedJunctionPanel(
   return {
     junctionId: junction.id,
     wallCount: junction.refs.length,
-    heightCm: heightMixed ? null : first,
-    heightMixed,
-    bottomZCm: bottomMixed ? null : firstBottom,
-    bottomZMixed: bottomMixed,
+    heightCm: elev.heightCm,
+    heightMixed: false,
+    bottomZCm: elev.bottomZCm,
+    bottomZMixed: false,
     ridgeCount,
   }
 }

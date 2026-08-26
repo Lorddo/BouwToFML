@@ -94,6 +94,7 @@ export function useWorkspaceRoomPipeline(deps: {
   clearGapsInkModeManual?: () => void
   onDoorFacesDemoted?: () => void | Promise<void>
   onWindowFacesDemoted?: () => void | Promise<void>
+  getAcceptedDoorHyps?: () => import('@/cv/doors').DoorSwingHypothesis[]
   onAfterFinalize?: (
     setFinalizePhase: (phase: import('./workspace-view-visibility').TemplatesFinalizePhase) => void,
   ) => void | Promise<void>
@@ -152,7 +153,9 @@ export function useWorkspaceRoomPipeline(deps: {
     },
     onReferenceWallRectReady: async () => {
       if (deps.devSessionRestoring?.value) return
+      // Stap 2: alleen underlay; geen classify/meting bij tekenen (dikte = 2→3).
       await deps.refreshWallUnderlayPreview()
+      if (deps.flowStep.value !== 'templates') return
       await roomFacesRef.value?.autoclassifyWalls()
     },
   })
@@ -207,6 +210,7 @@ export function useWorkspaceRoomPipeline(deps: {
     },
     onDoorFacesDemoted: deps.onDoorFacesDemoted,
     onWindowFacesDemoted: deps.onWindowFacesDemoted,
+    getAcceptedDoorHyps: deps.getAcceptedDoorHyps,
     refreshWallUnderlayPreview: deps.refreshWallUnderlayPreview,
   })
   roomFacesRef.value = roomFaces

@@ -11,8 +11,17 @@ import { ROTATION_EPS_DEG } from '@/cv/tools/rotateMat'
 import { hasPendingInputRotation } from '@/platform/canvas/rotationPreview'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { canvasToDataUrl } from '@/cv/tools/maskImage'
-import type { PdfUnderlaySource } from '@/platform/upload'
+import { pdfStoreMatchesRaster, type PdfUnderlaySource } from '@/platform/upload'
 import { tryBuildPdfRoiCanvas } from './commitPdfRoiUnderlay'
+
+function usablePdfUnderlay(source: PdfUnderlaySource | null): PdfUnderlaySource | null {
+  if (!source) return null
+  try {
+    return source.bytes.byteLength > 0 ? source : null
+  } catch {
+    return null
+  }
+}
 import {
   applyPixelScaleFactorToCalibration,
   buildOptimizationBase,
@@ -231,7 +240,8 @@ export function useWorkspaceImage(deps: {
     let roiCropOffset = { x: 0, y: 0 }
     let usedPdfRoi = false
 
-    const pdfSource = pdfUnderlaySource.value
+    const pdfSource =
+      usablePdfUnderlay(pdfUnderlaySource.value) ?? pdfStoreMatchesRaster(sourceWidth, sourceHeight)
     if (hadMask && pdfSource) {
       const bounds = findContentBounds(source)
       if (bounds) {
@@ -249,8 +259,8 @@ export function useWorkspaceImage(deps: {
             roiCropOffset = { x: bounds.left, y: bounds.top }
             usedPdfRoi = true
           }
-        } catch {
-          // Fallback: legacy bake + blur-upscale.
+        } catch (err) {
+          console.warn('[pdf-roi] crop re-render failed, keeping PNG bake', err)
         }
       }
     }

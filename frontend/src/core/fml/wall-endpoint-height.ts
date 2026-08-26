@@ -51,6 +51,26 @@ export function wallEndpointHeightCm(wall: Wall, end: WallEnd, floorHeightCm: nu
   return endpointHeightCm(wallEndpoint3D(wall, end, floorHeightCm))
 }
 
+/**
+ * Elevatie van één knoop: alleen de wall-ends op die knoop.
+ * Eén waarde (eerste eind), ook als aangesloten muren verderop een andere hoogte hebben.
+ */
+export function readJunctionElevation(
+  walls: ReadonlyArray<Wall>,
+  refs: ReadonlyArray<{ wallId: string; end: WallEnd }>,
+  floorHeightCm: number,
+): { heightCm: number; bottomZCm: number } | null {
+  for (const ref of refs) {
+    const wall = walls.find((item) => item.id === ref.wallId)
+    if (!wall) continue
+    return {
+      heightCm: Math.round(wallEndpointHeightCm(wall, ref.end, floorHeightCm)),
+      bottomZCm: Math.round(wallEndpoint3D(wall, ref.end, floorHeightCm).z),
+    }
+  }
+  return null
+}
+
 /** Uniforme hoogte over beide ends; anders null (mixed). */
 export function wallUniformHeightCm(wall: Wall, floorHeightCm: number): number | null {
   const a = wallEndpointHeightCm(wall, 'a', floorHeightCm)

@@ -100,6 +100,50 @@ export async function traceSkeletonSegments(mat: OpenCV['Mat']): Promise<Segment
 }
 
 /**
+ * WASM-skeleton op native 4k+ blokkeert de main thread (Chrome tab-crash).
+ * D-63 Laag 3 draait alleen bij finalize; downsamplen houdt L3 bruikbaar.
+ */
+export const SKELETON_TRACE_MAX_EDGE_PX = 2048
+
+export function downsampleBinaryMaskNearest(params: {
+  mask: Uint8Array
+  width: number
+  height: number
+  maxEdgePx?: number
+}): { binary: Uint8Array; width: number; height: number; scale: number } {
+  const { mask, width, height } = params
+  const maxEdgePx = params.maxEdgePx ?? SKELETON_TRACE_MAX_EDGE_PX
+  const edge = Math.max(width, height)
+  if (edge <= maxEdgePx) {
+    const binary = new Uint8Array(width * height)
+    for (let i = 0; i < binary.length; i += 1) binary[i] = (mask[i] ?? 0) > 0 ? 1 : 0
+    return { binary, width, height, scale: 1 }
+  }
+  const scale = maxEdgePx / edge
+  const nextW = Math.max(1, Math.round(width * scale))
+  const nextH = Math.max(1, Math.round(height * scale))
+  const binary = new Uint8Array(nextW * nextH)
+  const inv = 1 / scale
+  for (let y = 0; y < nextH; y += 1) {
+    const srcY = Math.min(height - 1, Math.floor(y * inv))
+    for (let x = 0; x < nextW; x += 1) {
+      const srcX = Math.min(width - 1, Math.floor(x * inv))
+      binary[y * nextW + x] = (mask[srcY * width + srcX] ?? 0) > 0 ? 1 : 0
+    }
+  }
+  return { binary, width: nextW, height: nextH, scale }
+}
+
+function scaleSegmentsToSource(segments: Segment[], scale: number): Segment[] {
+  if (scale === 1) return segments
+  const inv = 1 / scale
+  return segments.map((seg) => ({
+    a: { x: seg.a.x * inv, y: seg.a.y * inv },
+    b: { x: seg.b.x * inv, y: seg.b.y * inv },
+  }))
+}
+
+/**
  * Zelfde WASM-meetlint als L1, maar vanaf binary mask (0=leeg, ≠0=muur).
  * Voor D-63 Laag 3: één trace op L0 zonder deuren — geen volle V3.
  */
@@ -111,14 +155,11 @@ export async function traceSkeletonSegmentsFromBinaryMask(params: {
   const { mask, width, height } = params
   if (width < 1 || height < 1 || mask.length < width * height) return []
   const tracer = await getTracer()
-  const binary = new Uint8Array(width * height)
-  for (let i = 0; i < binary.length; i += 1) {
-    binary[i] = (mask[i] ?? 0) > 0 ? 1 : 0
-  }
-  const traced = tracer.fromBoolArray(binary, width, height)
+  const sampled = downsampleBinaryMaskNearest({ mask, width, height })
+  const traced = tracer.fromBoolArray(sampled.binary, sampled.width, sampled.height)
   const segments: Segment[] = []
   for (const polyline of traced.polylines ?? []) {
     segments.push(...polylineToSegments(polyline))
   }
-  return segments
+  return scaleSegmentsToSource(segments, sampled.scale)
 }

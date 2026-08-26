@@ -1,4 +1,5 @@
 import { cloneFloorShallow } from './clone-floor-shallow'
+import { ensureDesignsSynced } from './design-sync'
 import { mirrorObjectLabelX, rotateObjectLabel90 } from './object-label'
 import { resolveFixtureCatalog } from './fixture-refid-catalog'
 import type {
@@ -189,26 +190,25 @@ function mirrorDesign(design: FloorDesign, axisXCm: number): FloorDesign {
 }
 
 function mirrorFloor(floor: Floor, axisXCm: number): Floor {
-  const designs = floor.designs?.map((d) => mirrorDesign(d, axisXCm))
-  const activeIdx = floor.activeDesignIndex ?? 0
-  const active = designs?.[activeIdx]
+  // Live `floor.walls` is bron — niet een stale designs[0] snapshot (Dak/gevels).
+  const live = floor.designs?.length ? ensureDesignsSynced(floor) : floor
   return {
-    ...floor,
-    walls: active?.walls ?? floor.walls.map((wall) => mirrorWall(wall, axisXCm)),
-    items: active?.items ?? floor.items?.map((item) => mirrorItem(item, axisXCm)),
-    areas: active?.areas ?? floor.areas?.map((area) => mirrorArea(area, axisXCm)),
-    surfaces: active?.surfaces ?? floor.surfaces?.map((surface) => mirrorSurface(surface, axisXCm)),
-    labels: active?.labels ?? floor.labels?.map((label) => mirrorLabel(label, axisXCm)),
-    lines: active?.lines ?? floor.lines?.map((line) => mirrorLine(line, axisXCm)),
-    dimensions: active?.dimensions ?? floor.dimensions?.map((dim) => mirrorDimension(dim, axisXCm)),
-    drawing: mirrorDrawing(floor.drawing, axisXCm),
-    designs,
-    source: floor.source
+    ...live,
+    walls: live.walls.map((wall) => mirrorWall(wall, axisXCm)),
+    items: live.items?.map((item) => mirrorItem(item, axisXCm)),
+    areas: live.areas?.map((area) => mirrorArea(area, axisXCm)),
+    surfaces: live.surfaces?.map((surface) => mirrorSurface(surface, axisXCm)),
+    labels: live.labels?.map((label) => mirrorLabel(label, axisXCm)),
+    lines: live.lines?.map((line) => mirrorLine(line, axisXCm)),
+    dimensions: live.dimensions?.map((dim) => mirrorDimension(dim, axisXCm)),
+    drawing: mirrorDrawing(live.drawing, axisXCm),
+    designs: live.designs?.map((d) => mirrorDesign(d, axisXCm)),
+    source: live.source
       ? {
-          ...floor.source,
-          cameras: floor.source.cameras?.map((cam) => mirrorCamera(cam, axisXCm)),
+          ...live.source,
+          cameras: live.source.cameras?.map((cam) => mirrorCamera(cam, axisXCm)),
         }
-      : floor.source,
+      : live.source,
   }
 }
 
@@ -350,28 +350,25 @@ function rotateDesign90(design: FloorDesign, pivot: Point2D, dir: Rotate90Dir): 
 }
 
 function rotateFloor90(floor: Floor, pivot: Point2D, dir: Rotate90Dir): Floor {
-  const designs = floor.designs?.map((d) => rotateDesign90(d, pivot, dir))
-  const activeIdx = floor.activeDesignIndex ?? 0
-  const active = designs?.[activeIdx]
+  // Live `floor.walls` is bron — niet een stale designs[0] snapshot (Dak/gevels).
+  const live = floor.designs?.length ? ensureDesignsSynced(floor) : floor
   return {
-    ...floor,
-    walls: active?.walls ?? floor.walls.map((wall) => rotateWall90(wall, pivot, dir)),
-    items: active?.items ?? floor.items?.map((item) => rotateItem90(item, pivot, dir)),
-    areas: active?.areas ?? floor.areas?.map((area) => rotateArea90(area, pivot, dir)),
-    surfaces:
-      active?.surfaces ?? floor.surfaces?.map((surface) => rotateSurface90(surface, pivot, dir)),
-    labels: active?.labels ?? floor.labels?.map((label) => rotateLabel90(label, pivot, dir)),
-    lines: active?.lines ?? floor.lines?.map((line) => rotateLine90(line, pivot, dir)),
-    dimensions:
-      active?.dimensions ?? floor.dimensions?.map((dim) => rotateDimension90(dim, pivot, dir)),
-    drawing: rotateDrawing90(floor.drawing, pivot, dir),
-    designs,
-    source: floor.source
+    ...live,
+    walls: live.walls.map((wall) => rotateWall90(wall, pivot, dir)),
+    items: live.items?.map((item) => rotateItem90(item, pivot, dir)),
+    areas: live.areas?.map((area) => rotateArea90(area, pivot, dir)),
+    surfaces: live.surfaces?.map((surface) => rotateSurface90(surface, pivot, dir)),
+    labels: live.labels?.map((label) => rotateLabel90(label, pivot, dir)),
+    lines: live.lines?.map((line) => rotateLine90(line, pivot, dir)),
+    dimensions: live.dimensions?.map((dim) => rotateDimension90(dim, pivot, dir)),
+    drawing: rotateDrawing90(live.drawing, pivot, dir),
+    designs: live.designs?.map((d) => rotateDesign90(d, pivot, dir)),
+    source: live.source
       ? {
-          ...floor.source,
-          cameras: floor.source.cameras?.map((cam) => rotateCamera90(cam, pivot, dir)),
+          ...live.source,
+          cameras: live.source.cameras?.map((cam) => rotateCamera90(cam, pivot, dir)),
         }
-      : floor.source,
+      : live.source,
   }
 }
 

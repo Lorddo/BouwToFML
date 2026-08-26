@@ -4,7 +4,7 @@
 
 Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + per-floor blobs; CV blijft single-floor op de actieve verdieping.
 
-**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap. Floor-switch/resume op result → volledige session-restore (geen «fast» wipe van LBE-refs).
+**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap. Floor-switch/resume op result → volledige session-restore (geen «fast» wipe van LBE-refs). Persist van een result-floor slaat `detectionExact` niet op (quota); stap 3 is dan leeg na resume, maar 3→4 blijft open als `previewPlan` er is **én** stap 3 geen classify-run heeft. Nieuwe 2→3-detectie wist de live-FML (blob blijft) en vereist weer afronden — stale FML houdt Next niet open tijdens classify.
 
 ## Stap 0 — Project (`flowStep: project`)
 
@@ -20,7 +20,7 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 
 | Stap | Knop | Wat |
 |------|------|-----|
-| 1 | «Onderlegger overnemen» | Donor-keuze: bronscan + schaal van gekozen verdieping (geen crop; laatste schaal-bevestiging per floor); daarna per-floor crop → `transformHScaleState` |
+| 1 | «Onderlegger overnemen» | Donor-keuze: bronscan + schaal (geen crop). PDF: dezelfde pagina opnieuw rasteren uit sessie-store + projectbytes (gezet bij upload). Crop-commit gebruikt die bytes ook als de live-ref weg is (zelfde full-page maat). |
 | 2 | «B/W overnemen» | Donor-keuze: alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
 | 2 | «Muurstempel» | FML-muren van donor-floor → canvas-align (REF-handles) + gum → bake: adaptive `stampBw` in `effectiveBw` + pure zwarte `stampMask` OR in Otsu. Optioneel Stempelset (groep `stamp` op donor): translate-only, nulpunt-zaad, vector-inject op stap 4 (donor-dikte pinned); anders diktebanden + stretch. Stempel buiten de scan → wit pad op de kleur-onderlegger (linialen/refs/masks/nulpunt schuiven mee) |
 | 3 | — | Solo: geen detectie-state delen |
@@ -33,14 +33,14 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 | Upload tekening | `DrawingUploadPanel` |
 | Onderlegger overnemen (donor-keuze) | `reuseUnderlayFromProject(donorFloorId)` |
 | Schaal (mm) | `ScaleConfirmBar`, `useWorkspaceScale` |
-| Rotatie (native resolutie, min 3000px) | `OriginalSetupPanel` — niet geblokkeerd door onbevestigde schaal |
+| Rotatie (native resolutie, clamp 3000px) | `OriginalSetupPanel` — niet geblokkeerd door onbevestigde schaal |
 | Rotatie vastzetten (optioneel) | `bakeInputRotation` → zelfde pad als `commitInputStepImage`; auto bij «Volgende» |
 | Gum / crop / polygon | `InputMaskPanel`, `useWorkspaceInputMask` → `eraserMask` |
 | Download onderlegger PNG | `downloadUnderlay` |
 
 **Canvas:** stap 1–4 hebben een wit vlak (stap 4 = infinity-stage; 1–3 = witte stage-achtergrond). Optioneel **hulpraster** (Settings `showCanvasGrid`, default aan): viewport-vast, draait niet mee; puur visueel (niet bake/export). Stap 1/editor/gevel: onderlegger onder raster; stap 2/3/B/W: scan boven raster. Geen auto-trim van witte randen bij bake (`normalizeWorkingCanvas` laat wit staan). Detectie negeert wit. Gum/crop blijft user-actie; PDF-ROI blijft een echte crop.
 
-**PDF-crop:** bij «Volgende» met in-memory PDF-bron + meaningful crop → ROI her-raster uit PDF (≥4000px langste zijde) i.p.v. blur-upscale van het full-page PNG-crop. PNG/JPG-crops ongewijzigd; PDF-bytes niet in IndexedDB.
+**PDF-crop:** bij «Volgende» met PDF-bron + meaningful crop (ook volle-breedte verdiepingsstrook) → ROI her-raster uit PDF (**3000px**). `getDocument` krijgt altijd een **kopie** van de bytes (pdf.js transferred de buffer). «Onderlegger overnemen» rastert de **volle pagina opnieuw uit dezelfde PDF-bytes + pagina** (niet de 3k-PNG). Bytes blijven in het project (IndexedDB; bij quota-retry weggelaten). PNG/JPG-crops ongewijzigd.
 
 **Output:** `originalImageEl` + optioneel `maskedWorkingCanvas` (gum/crop). Geen referentievakken.
 
@@ -55,7 +55,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | Per tab | Opslag | Pipeline |
 |---------|--------|----------|
 | Muren (canvas) | `preprocess.wallLayer` | `resolveLayerPreprocess(..., 'walls')` — baseBw-recipe; OCR-scan én (via `baseBw`) **ref-crops** |
-| Int muur (Dev) | — (read-only) | `buildRoomReferenceMat` (Otsu-inkt voor classify) |
+| Int muur (Dev) | — (read-only) | `buildRoomReferenceMat` — **eigen Otsu-recept** vanaf kleur-origineel (geen wallLayer-preBinarize); lui bij tab-open; hole-fill/thicken/bridge op REF (lokaal gemeten als official dikte nog leeg) |
 | Gaten (hidden) | `preprocess.gapsLayer` | `resolveLayerPreprocess(..., 'gaps')` |
 
 | Actie | Waar |
@@ -63,17 +63,19 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | B/W tunen | `PreprocessPanel` — vaste drempel + Geavanceerd: adaptive aan/uit + kernel (`adaptiveBlockSize` 3–51) |
 | Reset naar fabriekswaarden | `PreprocessPanel` — B/W-tune van de actieve laag (`defaultLayerTune`); refs, inkt, OCR en stempel blijven |
 | B/W overnemen (donor-keuze) | `copyPreprocessAndRefsFromDonor(donorFloorId)` |
-| Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren of Stempelset (`stamp`), band min/mid/max (uit bij Stempelset), REF-handles (geen resize bij Stempelset), penseel/polygoon-gum, bake → `bakeNulpuntImageCm` + `injectStampWallsIntoPlan`. Overflow buiten de scan: `expandUnderlayForStamp` (wit pad, max-edge 12k) |
+| Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren of Stempelset (`stamp`), band min/mid/max (uit bij Stempelset), REF-handles (geen resize bij Stempelset), penseel/polygoon-gum, bake → architect-contour `stampBw` + solid `stampMask` + `bakeNulpuntImageCm` + `injectStampWallsIntoPlan`. Overflow buiten de scan: `expandUnderlayForStamp` (wit pad, max-edge 12k) |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
 | Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); tekenen uitzetten via opnieuw klikken of Escape |
 | OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) — auto-scan op Muren in stap 3 |
 | Deur FML Template ID | per deur-ref dropdown (`fmlRefId`) |
-| Muurdikte + muurstijl | bij afronden: bake ink→`baseBw`, daarna `measureReferenceWallThicknessPx` + `classifyWallRefStyleFromBw` op **baseBw** (wall + gebakken ink; geen OCR) |
-| Download B/W | `downloadPreprocessedUnderlay` → `effectiveBw` (base ⊕ OCR ⊕ ink ⊕ stampBw) |
+| Muurdikte + muurstijl | **alleen bij afronden 2→3** (ná ink-bake): `measureReferenceWallThicknessPx` + `classifyWallRefStyleFromBw` op **baseBw**. Tekenen/resize van een ref meet niet / start geen classify |
+| Download B/W | `downloadPreprocessedUnderlay` → muren: `effectiveBw`; Int muur: Otsu-engine-beeld (`buildInkWallPreview`) |
 
-**Wall-B/W compose (stap 2+3):** `effectiveBw = baseBw → forceWhite(ocrMask) → OR stampBw → apply(inkOverlay)` (inkt boven stamp). Module: `cv/preprocess/compose-wall-bw.ts` + `wall-stamp-raster.ts`. Stempel-bake schrijft ook pure zwarte `stampMask` die na Otsu in classify wordt ge-OR'd (`geometry-pipeline` / `room-recalculate-local`).
+**Wall-B/W compose (stap 2+3):** `effectiveBw = baseBw → forceWhite(ocrMask) → OR stampBw → apply(inkOverlay)` (inkt boven stamp). Module: `cv/preprocess/compose-wall-bw.ts` + `wall-stamp-raster.ts`. Bake: `stampBw` = architect-contour (`buildWallOutlinePolylines` → dunne inkt); `stampMask` = volle solid. Classify: Otsu scan-only, daarna stamp-last pin (`applyStampWallFacePrior` op solid-mask overlap → `wall`). Geen OR van stamp in Otsu-referentie.
 
-**Bij afronden stap 2 («Volgende»):** live `inkOverlay` wordt **gebakken in `baseBw`** (+ bewaard in `bakedInkOverlay` voor retune); live overlay leeg; daarna muurdikte meten op die `baseBw`. Geen bake naar kleur-onderlegger. Stap-3 first-pass classify ziet de inkt dus als vaste muur-B/W (aparte vlakken).
+**Bij afronden stap 2 («Volgende»):** live `inkOverlay` → **baseBw** (+ `bakedInkOverlay`); daarna **officiële** muurdikte meten (tenzij detectie al klaar / re-enter). Geen meting bij tekenen van een ref op stap 2. Geen bake naar kleur-onderlegger. Stap-3 classify gebruikt die officiële REF + eigen Otsu-recept (`buildRoomReferenceMat`).
+
+**Werkformaat:** JPG/PNG/PDF/crop = **3000px** langste zijde (vloer én plafond; up- én downscale). Konva-onderlegger: `listening: false` + `perfectDrawEnabled: false` (pan zonder bitmap-hit-test).
 
 **Gate naar stap 3:** ≥1 muurvak; bij afronden moet muurdikte meetbaar zijn (zelfde harde eis als vroeger op 1→2). Ref-crops = post-bake **`baseBw`** (gebakken inkt mee; nooit `effectiveBw`); fallback `buildWallLayerBwMat` alleen zonder UI-`baseBw`.
 

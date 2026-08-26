@@ -40,10 +40,6 @@ export async function tryBuildPdfRoiCanvas(params: {
 
   const roiScale = computeRoiRenderScale(pdfRect.width, pdfRect.height)
   const densityFactor = pdfRoiDensityFactor(roiScale, pdfSource.pageRenderScale)
-  if (!(densityFactor > 1.01)) {
-    // No quality gain vs full-page raster density.
-    return null
-  }
 
   let canvas = await renderPdfPageRoiToCanvas({
     bytes: pdfSource.bytes,

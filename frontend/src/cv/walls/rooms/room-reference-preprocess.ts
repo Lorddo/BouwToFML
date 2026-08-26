@@ -3,10 +3,13 @@ import type { OpenCV } from '@/cv/loadOpenCV'
 import { runPreprocessLayer, runPreprocessLayerFromGrayscale } from '@/cv/layers/preprocess-layer'
 import { thickenLines } from '@/cv/port/cleanBinary'
 import { matToCanvas } from '@/cv/port/preprocess'
-import { resolveLayerPreprocess } from '@/cv/preprocess/layer-preprocess'
 import type { LayerContext } from '@/cv/layers/types'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
 
+/**
+ * Eigen Otsu-recept vanaf kleur-origineel — deelt geen wallLayer preBinarize/adaptive.
+ * Rotatie/eraser komen van de caller; hole-fill/thicken/bridge schalen op REF.
+ */
 const ROOM_REFERENCE_LAYER_TUNE = {
   adjustBrightnessContrastEnabled: true,
   brightness: 50,
@@ -15,11 +18,12 @@ const ROOM_REFERENCE_LAYER_TUNE = {
   colorThresholdEnabled: true,
   thresholdMode: 'otsu' as const,
   useAdaptive: false,
+  preBinarizeEnabled: false,
   edgeAwareEdgeBoost: 0,
   smoothLinesEnabled: false,
   smoothLines: 1,
   removeSpecklesEnabled: true,
-  removeHolesEnabled: false,
+  removeHolesEnabled: true,
   removeHolesMaxPx: 15,
   /**
    * Prefilter thicken staat in buildRoomReferencePreprocess op true (REF × factor).
@@ -87,15 +91,20 @@ function buildRoomReferencePreprocess(
   referenceWallThicknessPx?: number,
   wallStyle?: 'solid' | 'open',
 ): PreprocessConfig {
-  const wallPreprocess = resolveLayerPreprocess(preprocess, 'walls')
+  // Eigen flow: geen wallLayer-preBinarize/adaptive — alleen rotatie + Otsu-tune.
   return {
-    ...wallPreprocess,
+    ...preprocess,
     ...ROOM_REFERENCE_LAYER_TUNE,
+    preBinarizeEnabled: false,
+    useAdaptive: false,
+    thresholdMode: 'otsu',
+    removeHolesEnabled: true,
     removeHolesMaxPx: resolveReferenceRemoveHolesPx(referenceWallThicknessPx, wallStyle),
     thickenLinesEnabled: true,
     thickenLinesPx: resolveReferencePrefilterThickenPx(referenceWallThicknessPx, wallStyle),
     bridgeGapsEnabled: true,
     bridgeGaps: resolveReferenceBridgeGapsPx(referenceWallThicknessPx, wallStyle),
+    wallStyle: wallStyle ?? preprocess.wallStyle,
   }
 }
 

@@ -117,6 +117,8 @@ export function useFloorplanCanvasModes(deps: {
     width: deps.imgSize().w,
     height: deps.imgSize().h,
     opacity: deps.imageDimmed() ? 0.5 : 1,
+    listening: false,
+    perfectDrawEnabled: false,
   }))
 
   const polygonDraftStroke = computed(() => {

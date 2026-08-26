@@ -8,6 +8,8 @@ import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import { listDakSnapWalls } from '@/core/fml/ridge-floor'
+import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/fml/bind-walls-to-roofs'
+import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
 import {
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
@@ -1729,6 +1731,21 @@ export function useFmlPreviewInteraction(options: {
     return true
   }
 
+  function bindWallsToRoof(floorIndexTarget: number): BindWallsToRoofsResult | null {
+    if (!editor.localPlan.value) return null
+    flushPendingFieldCommits()
+    const result = bindFloorWallsToRoofs(editor.localPlan.value, floorIndexTarget, {
+      splitCreases: true,
+      splitWalls: splitWallAtT,
+    })
+    if (result.boundJunctions === 0 && result.splits === 0) return result
+    editor.pushUndo()
+    editor.replaceLocalPlan(result.plan, { keepUndo: true, keepParentSyncSkip: true })
+    clearSelection()
+    syncPlanToParent()
+    return result
+  }
+
   function applyStampToActiveFloor(): boolean {
     flushPendingFieldCommits()
     const changed = editor.applyStampToActiveFloor()
@@ -2016,6 +2033,7 @@ export function useFmlPreviewInteraction(options: {
     ridgeFloorMixed,
     applyRidgeFloorInput,
     sanitizeWalls,
+    bindWallsToRoof,
     applyStampToActiveFloor,
     canApplyStampOnActiveFloor,
     applyRoomTypeToSelection: areaSelection.applyRoomTypeToSelection,

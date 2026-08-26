@@ -1,16 +1,11 @@
 import {
   claimFacesInRoomRasterCache,
   createRoomRasterCache,
-  effectiveClassification,
-  ensureFaceBBoxIndex,
   syncDoorBridgeWallOverrides,
   syncDoorSwingFaceOverrides,
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import type { DoorSwingHypothesis } from '@/cv/doors'
-import { collectThinDoorMaskFaceIdsFromHyps } from '@/cv/doors/door-thin-mask'
-import { buildBaselineWallMaskWithoutDoors } from '@/cv/doors/door-thin-mask-wing-bridge'
-import { traceSkeletonSegmentsFromBinaryMask } from '@/cv/port/wallSkeletonTrace'
 import { collectAcceptedDoorFaceIds, normalizeDoorSwingState } from './useWorkspaceDoorSwingHelpers'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 
@@ -104,66 +99,6 @@ export async function pushStage2DoorsOntoWalls(ctx: {
     cache = createRoomRasterCache(normalizeDoorSwingState(state))
   }
   const faceIds = collectAcceptedDoorFaceIds(ctx.accepted)
-  // Vóór door-claim: window/doorframe-class nog zichtbaar voor maskKeep-skip.
-  const classificationBeforeClaim = effectiveClassification(cache)
-  const parentMap = new Map(cache.state.parentMap)
-  const classificationByLabel = new Map(cache.state.classificationByLabel)
-  const labelsData =
-    cache.state.labelsData instanceof Int32Array
-      ? cache.state.labelsData
-      : new Int32Array(cache.state.labelsData)
-  const faceBBox = ensureFaceBBoxIndex(cache)
-  const rasterCtx = {
-    labelsData,
-    width: cache.state.width,
-    height: cache.state.height,
-    parentMap,
-    components: faceBBox.ink,
-    classificationByLabel,
-    classificationGroupBy: cache.state.classificationGroupBy ?? 'component',
-    referenceWallThicknessPx: Math.max(0, ctx.referenceWallThicknessPx ?? 0),
-  }
-  const wingBridge = {
-    labelsData: rasterCtx.labelsData,
-    width: rasterCtx.width,
-    height: rasterCtx.height,
-    parentMap: rasterCtx.parentMap,
-    classificationByLabel: rasterCtx.classificationByLabel,
-    classificationGroupBy: rasterCtx.classificationGroupBy,
-    referenceWallThicknessPx: rasterCtx.referenceWallThicknessPx,
-  }
-  // Één L1-meetlint op L0 zonder deuren — geen tweede volle V3 (D-63 Laag 3).
-  let meetlintSegments: Awaited<ReturnType<typeof traceSkeletonSegmentsFromBinaryMask>>
-  try {
-    const baselineMask = buildBaselineWallMaskWithoutDoors(wingBridge)
-    meetlintSegments = await traceSkeletonSegmentsFromBinaryMask({
-      mask: baselineMask,
-      width: wingBridge.width,
-      height: wingBridge.height,
-    })
-  } catch {
-    meetlintSegments = []
-  }
-  const thinMaskFaceIds = collectThinDoorMaskFaceIdsFromHyps(
-    ctx.accepted,
-    ctx.referenceWallThicknessPx,
-    {
-      classForFaceId: (faceId) => classificationBeforeClaim.get(faceId) ?? null,
-      betweenWalls: rasterCtx,
-      wingBridge,
-      polylineKeep:
-        meetlintSegments.length > 0
-          ? {
-              segments: meetlintSegments,
-              labelsData: wingBridge.labelsData,
-              width: wingBridge.width,
-              height: wingBridge.height,
-              parentMap: wingBridge.parentMap,
-              referenceWallThicknessPx: wingBridge.referenceWallThicknessPx,
-            }
-          : undefined,
-    },
-  )
   const bridgeFaceIds = [...new Set(ctx.bridgeWallFaceIds.filter((id) => id > 0))]
   const orphanWallIds = [
     ...new Set((ctx.orphanWallFaceIds ?? []).filter((id) => id > 0 && !bridgeFaceIds.includes(id))),
@@ -198,7 +133,8 @@ export async function pushStage2DoorsOntoWalls(ctx: {
     class: 'wall',
     forceClass: true,
   })
-  cache.maskKeepDoorFaceIds = new Set(thinMaskFaceIds)
+  // D-63 thin→mask pas bij finalize (L0 + definitieve hyps) — niet hier.
+  cache.maskKeepDoorFaceIds = new Set()
   ctx.autoPassState.lastAutoDoorFaceIds = [...new Set(faceIds)]
   ctx.autoPassState.lastAutoBridgeFaceIds = bridgeFaceIds
   markDoorAutoPassDone(ctx.autoPassState)
@@ -222,7 +158,6 @@ export async function pushStage2DoorsOntoWalls(ctx: {
     maskKeepDoorFaceIds: new Set(cache.maskKeepDoorFaceIds),
   }
   if (!doorSync.changed && !bridgeSync.changed && !claimChanged) {
-    // maskKeepDoorFaceIds staat al op de live cache.
     return null
   }
   ctx.persistOverrides(next)

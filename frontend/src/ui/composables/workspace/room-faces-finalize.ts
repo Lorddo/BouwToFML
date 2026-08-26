@@ -1,14 +1,15 @@
 import type { ExtractionOutput } from '@/core/extraction'
 import type { WallJunctionStrategy } from '@/core/extraction/types'
+import type { DoorSwingHypothesis } from '@/cv/doors'
 import type { SerializedRoomClassifyState } from '@/cv/walls/strategies/room-first'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import {
   serializeFaceOverrides,
   serializePinnedRoots,
-  serializeMaskKeepDoorFaceIds,
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
+import { resolveThinDoorMaskKeepFaceIds } from './door-thin-mask-finalize'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 import type { TemplatesFinalizePhase } from './workspace-view-visibility'
 
@@ -37,6 +38,8 @@ export async function finalizeWallDetection(ctx: {
   ) => Promise<boolean>
   ensureEditableCacheAfterFinalize: (output: ExtractionOutput | null | undefined) => Promise<void>
   onFinalizeSuccess?: () => void | Promise<void>
+  referenceWallThicknessPx?: number | null
+  getAcceptedDoorHyps?: () => readonly DoorSwingHypothesis[]
 }): Promise<boolean> {
   const cache = ctx.roomRasterCache
   if (!cache || (ctx.roomPhase !== 'review' && ctx.roomPhase !== 'done')) return false
@@ -44,6 +47,13 @@ export async function finalizeWallDetection(ctx: {
   ctx.setRoomPhase('finalizing')
   ctx.setFinalizePhase('walls')
   ctx.setStatus?.('Afronden detectie…')
+  const accepted = ctx.getAcceptedDoorHyps?.() ?? []
+  const maskKeepDoorFaceIds = await resolveThinDoorMaskKeepFaceIds({
+    cache,
+    accepted,
+    referenceWallThicknessPx: ctx.referenceWallThicknessPx ?? undefined,
+  })
+  cache.maskKeepDoorFaceIds = new Set(maskKeepDoorFaceIds)
   const ok = await ctx.onExtractTargets(
     { walls: true, wallJunctionStrategy: 'room_first' },
     {
@@ -51,7 +61,7 @@ export async function finalizeWallDetection(ctx: {
       roomClassifyState: cache.state,
       faceOverrides: serializeFaceOverrides(cache),
       pinnedRoots: serializePinnedRoots(cache),
-      maskKeepDoorFaceIds: serializeMaskKeepDoorFaceIds(cache),
+      maskKeepDoorFaceIds,
     },
   )
   const finalized = ctx.getWallsOutput()

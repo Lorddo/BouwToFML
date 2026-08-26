@@ -4,7 +4,6 @@ import { yieldToMain } from '@/platform/image/workImage'
 import type { RoomRasterClass } from './room-ink-classify'
 import { runInkProcessAfterEdits } from './room-ink-process'
 import { buildRoomReferenceMat, finalizeRoomReferenceMat } from './room-reference-preprocess'
-import { orStampMaskIntoReference } from '@/cv/preprocess/wall-stamp-raster'
 import {
   deserializeRoomClassifyState,
   serializeRoomClassifyState,
@@ -24,7 +23,7 @@ export interface RoomRecalculateLocalResult {
 
 /**
  * Ink-process v2 op al gecomposeerde muur-B/W — geen kleur-rethreshold.
- * Caller levert effectiveBw (base ⊕ OCR ⊕ ink).
+ * Caller levert effectiveBw (base ⊕ OCR ⊕ ink ⊕ stamp-contour).
  */
 export async function runRoomRecalculateLocal(params: {
   cv: OpenCV
@@ -32,7 +31,7 @@ export async function runRoomRecalculateLocal(params: {
   image: HTMLCanvasElement | HTMLImageElement | OffscreenCanvas
   /** Gecomposeerde muur-B/W bytes (zelfde WxH als image). */
   precomposedWallBw: Uint8Array
-  /** Pure zwarte stempel voor Otsu OR. */
+  /** Solid stampMask — ná Otsu/ink pin overlap-faces als wall. */
   wallStampMask?: Uint8Array
   preprocess: PreprocessConfig
   eraserMask?: Uint8Array
@@ -70,7 +69,6 @@ export async function runRoomRecalculateLocal(params: {
   })
   const roomReferenceCanvas = finalizeRoomReferenceMat(params.cv, reference.mat)
   const referenceData = new Uint8Array(reference.mat.data as Uint8Array)
-  orStampMaskIntoReference(referenceData, params.wallStampMask)
 
   await yieldToMain()
 
@@ -86,6 +84,7 @@ export async function runRoomRecalculateLocal(params: {
     referenceData,
     roomReferenceCanvas,
     skipClassifiedMask: true,
+    wallStampMask: params.wallStampMask,
   })
 
   wallMat.delete()

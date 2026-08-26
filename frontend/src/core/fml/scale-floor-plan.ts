@@ -12,6 +12,7 @@ import type {
   Point2D,
   Wall,
 } from './types'
+import { ensureDesignsSynced } from './design-sync'
 import type { UnderlayOriginLayout } from './translate-floor-plan'
 import { scaleObjectLabel } from './object-label'
 
@@ -162,27 +163,26 @@ function scaleDesign(design: FloorDesign, f: PlanScaleFactors): FloorDesign {
 }
 
 function scaleFloor(floor: Floor, f: PlanScaleFactors): Floor {
-  const designs = floor.designs?.map((d) => scaleDesign(d, f))
-  const activeIdx = floor.activeDesignIndex ?? 0
-  const active = designs?.[activeIdx]
+  // Live `floor.walls` is bron — niet een stale designs[0] snapshot (Dak/gevels).
+  const live = floor.designs?.length ? ensureDesignsSynced(floor) : floor
   return {
-    ...floor,
+    ...live,
     // height stays — vertical project default, not scan px/mm error.
-    walls: active?.walls ?? floor.walls.map((wall) => scaleWall(wall, f)),
-    items: active?.items ?? floor.items?.map((item) => scaleItem(item, f)),
-    areas: active?.areas ?? floor.areas?.map((area) => scaleArea(area, f)),
-    surfaces: active?.surfaces ?? floor.surfaces?.map((surface) => scaleSurface(surface, f)),
-    labels: active?.labels ?? floor.labels?.map((label) => scaleLabel(label, f)),
-    lines: active?.lines ?? floor.lines?.map((line) => scaleLine(line, f)),
-    dimensions: active?.dimensions ?? floor.dimensions?.map((dim) => scaleDimension(dim, f)),
-    drawing: scaleDrawing(floor.drawing, f),
-    designs,
-    source: floor.source
+    walls: live.walls.map((wall) => scaleWall(wall, f)),
+    items: live.items?.map((item) => scaleItem(item, f)),
+    areas: live.areas?.map((area) => scaleArea(area, f)),
+    surfaces: live.surfaces?.map((surface) => scaleSurface(surface, f)),
+    labels: live.labels?.map((label) => scaleLabel(label, f)),
+    lines: live.lines?.map((line) => scaleLine(line, f)),
+    dimensions: live.dimensions?.map((dim) => scaleDimension(dim, f)),
+    drawing: scaleDrawing(live.drawing, f),
+    designs: live.designs?.map((d) => scaleDesign(d, f)),
+    source: live.source
       ? {
-          ...floor.source,
-          cameras: floor.source.cameras?.map((cam) => scaleCamera(cam, f)),
+          ...live.source,
+          cameras: live.source.cameras?.map((cam) => scaleCamera(cam, f)),
         }
-      : floor.source,
+      : live.source,
   }
 }
 

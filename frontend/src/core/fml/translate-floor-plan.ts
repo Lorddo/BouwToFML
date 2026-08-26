@@ -1,4 +1,5 @@
 import { cloneFloorShallow } from './clone-floor-shallow'
+import { ensureDesignsSynced } from './design-sync'
 import type {
   DrawingMeta,
   Floor,
@@ -129,28 +130,25 @@ function translateDesign(design: FloorDesign, dx: number, dy: number): FloorDesi
 }
 
 function translateFloor(floor: Floor, dx: number, dy: number): Floor {
-  const designs = floor.designs?.map((d) => translateDesign(d, dx, dy))
-  const activeIdx = floor.activeDesignIndex ?? 0
-  const active = designs?.[activeIdx]
+  // Live `floor.walls` is bron — niet een stale designs[0] snapshot (Dak/gevels).
+  const live = floor.designs?.length ? ensureDesignsSynced(floor) : floor
   return {
-    ...floor,
-    walls: active?.walls ?? floor.walls.map((wall) => translateWall(wall, dx, dy)),
-    items: active?.items ?? floor.items?.map((item) => translateItem(item, dx, dy)),
-    areas: active?.areas ?? floor.areas?.map((area) => translateArea(area, dx, dy)),
-    surfaces:
-      active?.surfaces ?? floor.surfaces?.map((surface) => translateSurface(surface, dx, dy)),
-    labels: active?.labels ?? floor.labels?.map((label) => translateLabel(label, dx, dy)),
-    lines: active?.lines ?? floor.lines?.map((line) => translateLine(line, dx, dy)),
-    dimensions:
-      active?.dimensions ?? floor.dimensions?.map((dim) => translateDimension(dim, dx, dy)),
-    drawing: translateDrawing(floor.drawing, dx, dy),
-    designs,
-    source: floor.source
+    ...live,
+    walls: live.walls.map((wall) => translateWall(wall, dx, dy)),
+    items: live.items?.map((item) => translateItem(item, dx, dy)),
+    areas: live.areas?.map((area) => translateArea(area, dx, dy)),
+    surfaces: live.surfaces?.map((surface) => translateSurface(surface, dx, dy)),
+    labels: live.labels?.map((label) => translateLabel(label, dx, dy)),
+    lines: live.lines?.map((line) => translateLine(line, dx, dy)),
+    dimensions: live.dimensions?.map((dim) => translateDimension(dim, dx, dy)),
+    drawing: translateDrawing(live.drawing, dx, dy),
+    designs: live.designs?.map((d) => translateDesign(d, dx, dy)),
+    source: live.source
       ? {
-          ...floor.source,
-          cameras: floor.source.cameras?.map((cam) => translateCamera(cam, dx, dy)),
+          ...live.source,
+          cameras: live.source.cameras?.map((cam) => translateCamera(cam, dx, dy)),
         }
-      : floor.source,
+      : live.source,
   }
 }
 

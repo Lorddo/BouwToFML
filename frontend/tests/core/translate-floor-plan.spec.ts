@@ -143,4 +143,47 @@ describe('translateFloorPlan / applyNulpunt', () => {
     expect(applied.plan.floors[1].walls[0].a).toEqual({ x: 50, y: 60 })
     expect(applied.layout.origin).toEqual({ x: 10, y: 20 })
   })
+
+  it('verschuift live floor.walls, niet een stale designs[0] snapshot', () => {
+    const plan: FloorPlan = {
+      name: 't',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'live',
+              a: { x: 50, y: 10 },
+              b: { x: 250, y: 10 },
+              thickness: 8,
+              openings: [],
+            },
+          ],
+          designs: [
+            {
+              name: 'BG',
+              walls: [
+                {
+                  id: 'stale-detect',
+                  a: { x: 0, y: 0 },
+                  b: { x: 1000, y: 0 },
+                  thickness: 19,
+                  openings: [],
+                },
+              ],
+            },
+          ],
+          activeDesignIndex: 0,
+        },
+      ],
+    }
+    const next = translateFloorPlan(plan, -50, -10)
+    expect(next.floors[0].walls[0].id).toBe('live')
+    expect(next.floors[0].walls[0].a).toEqual({ x: 0, y: 0 })
+    expect(next.floors[0].walls[0].b).toEqual({ x: 200, y: 0 })
+    expect(next.floors[0].designs?.[0].walls[0].id).toBe('live')
+    expect(next.floors[0].designs?.[0].walls[0].a).toEqual({ x: 0, y: 0 })
+  })
 })

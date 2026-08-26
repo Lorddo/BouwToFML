@@ -278,6 +278,8 @@ Per verdieping **inputvelden**:
 | **V1** | Na voorbewerking: **apart downloaden** naast FML — niet ingebed in export |
 | **V2** | Online opslaan + meenemen in FML als `floors[].drawing` (URL/base64) |
 | **2026-08-23** | FML-editor: «Onderlegger hergebruiken» op het doel zonder scan. Bronnen = verdiepingen én gevels met scan (op Gevels dus ook `floors[].drawing`). Kopieert scan + schaal + positie. |
+| **2026-08-26** | Stap-1 «Onderlegger overnemen»: PDF-bytes + paginanummer bewaren in het project (IndexedDB; quota-retry laat ze weg). Reuse rastert dezelfde pagina opnieuw — geen file-picker. Browser kan een pad niet opnieuw openen. |
+| **2026-08-26** | pdf.js `getDocument({ data })` krijgt altijd een kopie: de worker transferred de ArrayBuffer, waardoor 1e-reuse anders op de PNG viel. Verdiepingsstrook (volle breedte) telt als meaningful crop. |
 
 POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat geen drawing.
 
@@ -296,6 +298,9 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Versie | Scope |
 |--------|-------|
+| **2026-08-26** | FML-download: geen lokale onderlegger-URL's. Stript `elevationViews`/`elevationProjection`/`floorStack`; `floors[].drawing.url` alleen bij `http(s)` (data:/blob: weg, layout blijft). Cloud-storage later → dan wél meeschrijven. Export + bind: `floor.height` ≥ max `az.h`/`bz.h`. UI-`---` = scheve einden. |
+| **2026-08-26** | **Muren aan dak binden** (expliciete knop Dak + Gevels): per verdieping knoop-`h` op dakvlak-Z (hartlijn); skip verboden gebied (floor+1) en ongedekte knopen; na bind `floor.height` omhoog tot hoogste top. V2: eerst knip op gedeelde nok/kil + nokbalk. Geen auto-run; geen dakkapel. |
+| **2026-08-26** | Knoop-settings tonen **altijd** de hoogte/vloer van die knoop (`readJunctionElevation` = eerste wall-end op de knoop). Niet `mixed`/leeg omdat aangesloten muren een andere hoogte hebben (verre einden of ongelijke muren). Wijzigen blijft alle ends op die knoop zetten. |
 | **2026-08-24** | Muur-/deur-/knoop-**lift vanaf vloer** (uitzondering, geen settings-default). FML: `az`/`bz`.z + `opening.z`. 2D tool/selectie: Vloer + Hoogte (muur én knoop); deur add/edit: Vloer zoals raam. Aanzicht: veld + 3 grepen op muur (boven=hoogte, midden=shift, onder=lift); knoop: Vloer+Hoogte (nok blijft `ridgeZ`). Stamp behoudt bron-`az`/`bz`. |
 | **2026-08-23** | Hoogtetabel aanzicht: **geen noklijn-weergave** (naar Settings) en **geen nokhoogte-rij**. Groep per verdieping (hoogte + vloer). Nieuwe nokken starten op `floor.height`; afwijken via sleep/typ op de nok. `ridgeZCm` in `floorStack` blijft leesbaar (oude plannen). Dakdikte + vloerdikte defaults in Settings. |
 | **2026-08-23** | Aanzicht-X = **rechts van de kijker** (staat buiten, kijkt naar de gevel). Rechtergevel: achterkant rechts; linkergevel: achterkant links. Voorheen as altijd +X/+Y op de plattegrond (beide zijgevels hadden achterkant links). Canvas-letters O/B/L/R (nl) op links/rechts + kompas. Bestaande gevel-onderleggers kunnen gespiegeld staan — flipX. |
@@ -352,7 +357,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | Werkwijze | **Per verdieping** detectie-flow (stap 1–4); stap 0 = projectmeta |
 | Stap 1 overname | Expliciete knop «Onderlegger overnemen» — projectbron (pre-crop) + schaal |
 | Stap 2 overname | Expliciete knop «B/W overnemen» — tune only; LBE-rects opnieuw tekenen na crop |
-| Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (adaptive `stampBw` in wall-B/W + pure zwarte OR in Otsu); geen openings. Optioneel **Stempelset** = muren uit vaste gevelgroep `stamp` op donor (stap 4); aan = die muren zonder band-filter, **translate-only**, nulpunt-zaad + vector-inject op stap 4 (dikte pinned t.o.v. `harmonizeFmlWallThickness`); uit/leeg = diktebanden + stretch zoals nu. **Overflow:** stempel buiten de scan → automatisch wit pad op de kleur-onderlegger (plaatsen + bake); schaal blijft; linialen/refs/masks/nulpunt schuiven; geen auto-trim van wit op stap 1–3 (canvas blijft wit, zelfde als stap-4 infinity); max langste zijde 12k px |
+| Stap 2 muurstempel | Expliciete knop «Muurstempel»: donor-FML → canvas-align/gum → bake dual (**architect-contour** `stampBw` in wall-B/W via `buildWallOutlinePolylines` + solid `stampMask` voor stamp-last face-prior ná Otsu; geen OR in Otsu); geen openings. Optioneel **Stempelset** = muren uit vaste gevelgroep `stamp` op donor (stap 4); aan = die muren zonder band-filter, **translate-only**, nulpunt-zaad + vector-inject op stap 4 (dikte pinned t.o.v. `harmonizeFmlWallThickness`); uit/leeg = diktebanden + stretch zoals nu. **Overflow:** stempel buiten de scan → automatisch wit pad op de kleur-onderlegger (plaatsen + bake); schaal blijft; linialen/refs/masks/nulpunt schuiven; geen auto-trim van wit op stap 1–3 (canvas blijft wit, zelfde als stap-4 infinity); max langste zijde 12k px |
 | Stempel-eigendom (methode) | **Geïmplementeerd (optie A + ronde 2).** Stempel = waarheid in corridor — geometrie én dikte (3D: donor-cm én donor-dikte). Module `resolve-stamp-ownership.ts`; `extras.stampOwned`; inject `replaceOverlap: false`; ownership ná inject vóór `harmonize`; stamp coords/dikte frozen; detectie snapt/weldt op stamp (niet andersom); parallel ≥50% overlap → drop; gum filtert inject; bake toont inject-count; Opschonen herhaalt ownership. Band blijft raster-only. Uitwerking: `stamp-detectie-dubbele-muren.md` §13–§15 |
 | Stap 3 | Altijd solo (geen `tabOutputs`/faces delen) |
 | Stap 4 | Merge floors → één FML (`mergeFloorPlans`); juiste floor-namen/`level` |
@@ -406,6 +411,7 @@ Velden: `walls`, `doors`, `windows`, `scaleHorizontal`, `scaleVertical`. Zie `v1
 | Fase 1 | Settings + conversie-API; liniaal/editor-typen/labels al gekoppeld |
 | Fase 2 (2026-08-23) | Alle user-facing lengtevelden via `ScaleLengthInput` / `parseScaleInput`; unit-switch herschrijft **geen** cm; FML-export `useMetric` ← `unitSystem` |
 | Stepper (2026-08-24) | `−` links + `+` rechts in het veld; stap = **1 cm** (metric) of **1/16″** (imperial) via `unitSystem`; pijltjes omhoog/omlaag hetzelfde |
+| Commit-delay (2026-08-26) | Floor-/defaults-velden met overwrite-all: `ScaleLengthInput` debounce **1 s** (`SCALE_LENGTH_COMMIT_DEBOUNCE_MS`); Enter/blur flush. Toolbelt-selectie blijft 700 ms draft-commit. |
 | Module | `scale-input-unit.ts` + `scale-length-field.ts` + `ScaleLengthInput.vue` |
 
 ### Eenheden — cross-unit typen (2026-08-23)
@@ -633,6 +639,7 @@ Generate zette ruwe L10-muren in `designs[0]` (`ensureRidgeDesign` flush) en har
 | Bron | Live `floor.walls` is waarheid; `designs[]` is snapshot (alleen als die laag bestaat) |
 | Generate | `harmonizeFmlWallThickness` flusht ná dikte+sanitize als designs er al zijn; area-regen idem |
 | Project-download | `mergeFloorPlans` flusht eerst, daarna remap — nooit `designs[0]` over live walls heen |
+| Herschalen / nulpunt / oriëntatie | `scaleFloorPlan` / `translateFloorPlan` / `floor-plan-orient` flush eerst, daarna live walls — nooit `designs[0]` over de huidige FML heen |
 
 ---
 
@@ -686,6 +693,7 @@ Project-brede EPA-gevels. Bron van waarheid = `settings.facadeGroups` (extras). 
 | Id | Stabiel `G1`, `G2`, …; `nativeId` legacy/cache; `code` vrij; `name` verplicht |
 | Split-remap | Remap in alle groepen die de GUID bevatten (gevel én stamp) |
 | Stempel | Workspace stap-4 alleen Stempel-preset; editor-download stript stamp-catalogus |
+| Stacked floors | «Ook andere verdiepingen»: zelfde **as-band** (5 cm) + overlap langs de as — niet exact `a`/`b`. Junctions mogen anders knippen; T-tak valt af |
 | Niet | Dual `groupId[]` in product-export; native primary-group “zodat FP iets ziet”; Floorplanner library Groups (account-quota) |
 
 ---
@@ -813,6 +821,17 @@ Native `window.confirm` / `window.prompt` (browser-chrome) vervangen door dezelf
 | Origineel (stap 1) | Schone kleur-scan — opslaan/kopiëren voor her-detectie |
 | Schaallinialen | SVG-overlay op B/W (zelfde px als stap-1); JSON blijft in het rapport |
 | Geen B/W | Fallback: zelfde scan + linialen in de B/W-sectie; origineel blijft schoon |
+
+---
+
+## Aanzicht muurvlak-hoogte (2026-08-26)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Wanneer | Selectie / resize van muur of knoop op Gevels (zelfde overlay als opening-restmaten) |
+| Wat | Volle vlakhoogte (niet rond ramen/deuren); lijn naast de muur |
+| Scheef | Kopgevel met Δhoogte &gt; 1 cm → beide einden |
+| Nok | Geen (eigen grepen) |
 
 ---
 

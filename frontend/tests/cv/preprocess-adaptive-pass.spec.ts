@@ -165,4 +165,22 @@ describe('preprocess adaptive pass', () => {
     })
     result.mat.delete()
   })
+
+  it('draait otsu wanneer thresholdMode otsu + preBinarize uit', () => {
+    const result = runPreprocessLayerFromGrayscale(
+      makeCtx({
+        ...createDefaultWallLayerTune(),
+        useAdaptive: false,
+        thresholdMode: 'otsu',
+        preBinarizeEnabled: false,
+      }),
+      makeGrayMat(),
+    )
+    expect(binarizeMat).toHaveBeenCalledTimes(1)
+    expect(binarizeMat.mock.calls[0]?.[2]).toMatchObject({
+      thresholdMode: 'otsu',
+      useAdaptive: false,
+    })
+    result.mat.delete()
+  })
 })

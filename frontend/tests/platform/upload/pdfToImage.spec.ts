@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { copyPdfBytes, pdfJsDocumentOptions } from '@/platform/upload/pdfJsAssets'
 import {
   compositeRgbaOntoWhiteInPlace,
   computePreviewScale,
@@ -13,28 +14,34 @@ import {
 
 describe('computeRenderScale', () => {
   it('keeps scale 1 when page already meets target max-edge', () => {
+    expect(computeRenderScale(3000, 2000, 3000)).toBe(1)
     expect(computeRenderScale(4000, 3000, 4000)).toBe(1)
-    expect(computeRenderScale(5000, 3500, 4000)).toBe(1)
   })
 
   it('scales up small pages to reach target max-edge', () => {
-    expect(computeRenderScale(1000, 800, 4000)).toBe(4)
+    expect(computeRenderScale(1000, 800, 3000)).toBe(3)
     expect(computeRenderScale(500, 400, 4000)).toBe(8)
   })
 
+  it('downscales large pages to werk-max-edge (vloer+plafond)', () => {
+    expect(computeRenderScale(4000, 3444, 3000)).toBeCloseTo(3000 / 4000)
+    expect(computeRenderScale(5000, 3500, 3000)).toBeCloseTo(3000 / 5000)
+  })
+
   it('caps extremely large pages for canvas safety', () => {
-    expect(computeRenderScale(12000, 8000, 4000, 8192)).toBeCloseTo(8192 / 12000)
+    expect(computeRenderScale(12000, 8000, 3000, 8192)).toBeCloseTo(3000 / 12000)
+    expect(computeRenderScale(12000, 8000, 9000, 8192)).toBeCloseTo(8192 / 12000)
   })
 
   it('handles zero-sized viewports safely', () => {
-    expect(computeRenderScale(0, 0, 4000)).toBe(4000)
+    expect(computeRenderScale(0, 0, 3000)).toBe(3000)
   })
 })
 
 describe('computeRoiRenderScale', () => {
   it('matches full-page policy on ROI pdf-point size', () => {
-    expect(computeRoiRenderScale(1000, 800, 4000)).toBe(4)
-    expect(computeRoiRenderScale(5000, 3000, 4000)).toBe(1)
+    expect(computeRoiRenderScale(1000, 800, 3000)).toBe(3)
+    expect(computeRoiRenderScale(5000, 3000, 3000)).toBeCloseTo(3000 / 5000)
   })
 })
 
@@ -92,6 +99,12 @@ describe('shouldReRenderPdfRoi', () => {
       true,
     )
   })
+
+  it('triggers for a full-width floor strip (max-edge still equals the page)', () => {
+    expect(shouldReRenderPdfRoi({ left: 0, top: 400, width: 4000, height: 800 }, 4000, 3000)).toBe(
+      true,
+    )
+  })
 })
 
 describe('computePreviewScale', () => {
@@ -125,5 +138,17 @@ describe('formatPdfPageImageName', () => {
 
   it('appends page number for multi-page pdf', () => {
     expect(formatPdfPageImageName('plattegrond.pdf', 3, 12)).toBe('plattegrond.pdf (page 3)')
+  })
+})
+
+describe('pdfJsDocumentOptions', () => {
+  it('geeft pdf.js een kopie zodat de store-buffer blijft staan', () => {
+    const bytes = new Uint8Array([10, 20, 30])
+    const options = pdfJsDocumentOptions(bytes)
+    expect(options.data).not.toBe(bytes)
+    expect(options.data.buffer).not.toBe(bytes.buffer)
+    options.data.fill(0)
+    expect([...bytes]).toEqual([10, 20, 30])
+    expect([...copyPdfBytes(bytes)]).toEqual([10, 20, 30])
   })
 })

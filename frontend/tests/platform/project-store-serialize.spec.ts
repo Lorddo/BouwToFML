@@ -79,7 +79,25 @@ describe('project-store serialize', () => {
           generatedFloor: null,
           previewPlan: null,
           previewUnderlayLayout: null,
-          sourceUnderlay: { src: png, name: 'floor-src.png' },
+          sourceUnderlay: {
+            src: png,
+            name: 'floor-src.png',
+            pdf: {
+              pageNumber: 1,
+              fileName: 'plan.pdf',
+              pageRenderScale: 2,
+              pageWidthPx: 3000,
+              pageHeightPx: 2000,
+            },
+          },
+          sourcePdfUnderlay: {
+            bytes: new Uint8Array([1, 2, 3]),
+            pageNumber: 1,
+            fileName: 'plan.pdf',
+            pageRenderScale: 2,
+            pageWidthPx: 3000,
+            pageHeightPx: 2000,
+          },
         },
       },
     }
@@ -92,7 +110,10 @@ describe('project-store serialize', () => {
     expect(persisted.sourceUnderlay).toBeNull()
     expect(persisted.blobs[floorId]?.sourceUnderlay?.pngBytes).toBeInstanceOf(Uint8Array)
     expect(persisted.blobs[floorId]?.sourceUnderlay?.name).toBe('floor-src.png')
+    expect(persisted.blobs[floorId]?.sourceUnderlay?.pdf?.fileName).toBe('plan.pdf')
     expect('workingImagePng' in (persisted.blobs[floorId]?.session ?? {})).toBe(false)
+    expect('pdfUnderlaySource' in (persisted.blobs[floorId] ?? {})).toBe(false)
+    expect('sourcePdfUnderlay' in (persisted.blobs[floorId] ?? {})).toBe(false)
 
     const restored = fromPersistedProject(persisted)
     expect(restored.meta.name).toBe('Test')
@@ -103,6 +124,9 @@ describe('project-store serialize', () => {
     expect(restored.sourceUnderlay).toBeNull()
     expect(restored.blobs[floorId]?.sourceUnderlay?.src).toBe(png)
     expect(restored.blobs[floorId]?.sourceUnderlay?.name).toBe('floor-src.png')
+    expect(restored.blobs[floorId]?.sourceUnderlay?.pdf?.fileName).toBe('plan.pdf')
+    expect(restored.blobs[floorId]?.pdfUnderlaySource).toBeNull()
+    expect(restored.blobs[floorId]?.sourcePdfUnderlay).toBeNull()
 
     const index = toProjectIndexEntry(persisted)
     expect(index).toEqual({
@@ -166,5 +190,45 @@ describe('project-store serialize', () => {
     expect(persisted.blobs[floorId]?.previewPlan).toBeTruthy()
     // Legacy project source weggelaten als floors al een bron hebben.
     expect(persisted.sourceUnderlay).toBeNull()
+  })
+
+  it('roundtrips project-level PDF bytes; omitSourcePdf drops them', () => {
+    const png = minimalPngDataUrl()
+    const empty = createEmptyProjectState({ id: 'proj-pdf', name: 'Test', address: 'Street 1' })
+    const floorId = empty.floors[0].id
+    const pdfBytes = new Uint8Array([37, 80, 68, 70])
+    const state: ProjectState = {
+      ...empty,
+      sourcePdfUnderlay: {
+        bytes: pdfBytes,
+        pageNumber: 2,
+        fileName: 'plan.pdf',
+        pageRenderScale: 1.5,
+        pageWidthPx: 3000,
+        pageHeightPx: 2000,
+      },
+      blobs: {
+        [floorId]: {
+          session: sessionStub(png),
+          generatedFloor: null,
+          previewPlan: null,
+          previewUnderlayLayout: null,
+          sourceUnderlay: { src: png, name: 'plan.pdf' },
+        },
+      },
+    }
+
+    const persisted = toPersistedProject(state)
+    expect(persisted.sourcePdfUnderlay?.fileName).toBe('plan.pdf')
+    expect(persisted.sourcePdfUnderlay?.pageNumber).toBe(2)
+    expect(Array.from(persisted.sourcePdfUnderlay?.bytes ?? [])).toEqual([37, 80, 68, 70])
+
+    const restored = fromPersistedProject(persisted)
+    expect(restored.sourcePdfUnderlay?.fileName).toBe('plan.pdf')
+    expect(restored.sourcePdfUnderlay?.pageNumber).toBe(2)
+    expect(Array.from(restored.sourcePdfUnderlay?.bytes ?? [])).toEqual([37, 80, 68, 70])
+
+    const omitted = toPersistedProject(state, undefined, { omitSourcePdf: true })
+    expect(omitted.sourcePdfUnderlay).toBeNull()
   })
 })

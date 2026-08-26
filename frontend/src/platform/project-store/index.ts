@@ -5,6 +5,7 @@ export {
   type PersistedDevSession,
   type PersistedFloorBlob,
   type PersistedSourceUnderlay,
+  type PersistedPdfUnderlay,
 } from './types'
 export {
   toPersistedProject,

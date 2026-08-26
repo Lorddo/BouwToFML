@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  createScaleLengthCommitGate,
   formatScaleLengthField,
   parseAndClampScaleLengthCm,
+  SCALE_LENGTH_COMMIT_DEBOUNCE_MS,
   scaleLengthStepCm,
   stepScaleLengthCm,
 } from '@/ui/composables/settings/scale-length-field'
@@ -50,5 +52,64 @@ describe('scale-length-field', () => {
     expect(formatScaleLengthField(cm, 'cm')).toBe('90')
     expect(formatScaleLengthField(cm, 'm')).toBe('0.9')
     expect(formatScaleLengthField(cm, 'ft-in')).toMatch(/'|"/)
+  })
+})
+
+describe('createScaleLengthCommitGate', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('emits immediately when delay is 0', () => {
+    const emit = vi.fn()
+    const gate = createScaleLengthCommitGate(emit, () => 0)
+    gate.schedule(2)
+    expect(emit).toHaveBeenCalledTimes(1)
+    expect(emit).toHaveBeenCalledWith(2)
+    expect(gate.peek()).toBeNull()
+    gate.dispose()
+  })
+
+  it('debounces typing so 2 → 24 → 245 emits once', () => {
+    const emit = vi.fn()
+    const gate = createScaleLengthCommitGate(emit, () => SCALE_LENGTH_COMMIT_DEBOUNCE_MS)
+    gate.schedule(2)
+    gate.schedule(24)
+    gate.schedule(245)
+    expect(emit).not.toHaveBeenCalled()
+    expect(gate.peek()).toBe(245)
+    vi.advanceTimersByTime(SCALE_LENGTH_COMMIT_DEBOUNCE_MS - 1)
+    expect(emit).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(emit).toHaveBeenCalledTimes(1)
+    expect(emit).toHaveBeenCalledWith(245)
+    expect(gate.peek()).toBeNull()
+    gate.dispose()
+  })
+
+  it('flush applies pending immediately (blur / Enter)', () => {
+    const emit = vi.fn()
+    const gate = createScaleLengthCommitGate(emit, () => SCALE_LENGTH_COMMIT_DEBOUNCE_MS)
+    gate.schedule(245)
+    gate.flush()
+    expect(emit).toHaveBeenCalledTimes(1)
+    expect(emit).toHaveBeenCalledWith(245)
+    vi.advanceTimersByTime(SCALE_LENGTH_COMMIT_DEBOUNCE_MS)
+    expect(emit).toHaveBeenCalledTimes(1)
+    gate.dispose()
+  })
+
+  it('peek keeps last step so −/+ can stack before emit', () => {
+    const emit = vi.fn()
+    const gate = createScaleLengthCommitGate(emit, () => SCALE_LENGTH_COMMIT_DEBOUNCE_MS)
+    gate.schedule(281)
+    gate.schedule(282)
+    expect(gate.peek()).toBe(282)
+    expect(emit).not.toHaveBeenCalled()
+    gate.dispose()
   })
 })

@@ -266,6 +266,50 @@ describe('scaleFloorPlan', () => {
     expect(v.openings[0].width).toBeCloseTo(100)
   })
 
+  it('schaalt live floor.walls, niet een stale designs[0] snapshot', () => {
+    const plan: FloorPlan = {
+      name: 't',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'live',
+              a: { x: 0, y: 0 },
+              b: { x: 200, y: 0 },
+              thickness: 8,
+              openings: [],
+            },
+          ],
+          designs: [
+            {
+              name: 'BG',
+              walls: [
+                {
+                  id: 'stale-detect',
+                  a: { x: 0, y: 0 },
+                  b: { x: 1000, y: 0 },
+                  thickness: 19,
+                  openings: [],
+                },
+              ],
+            },
+          ],
+          activeDesignIndex: 0,
+        },
+      ],
+    }
+    const scaled = scaleFloorPlan(plan, 2, 0)
+    expect(scaled.floors[0].walls).toHaveLength(1)
+    expect(scaled.floors[0].walls[0].id).toBe('live')
+    expect(scaled.floors[0].walls[0].b.x).toBeCloseTo(400)
+    expect(scaled.floors[0].walls[0].thickness).toBe(8)
+    expect(scaled.floors[0].designs?.[0].walls[0].id).toBe('live')
+    expect(scaled.floors[0].designs?.[0].walls[0].b.x).toBeCloseTo(400)
+  })
+
   it('initImageScaleHandles: 35% span in het midden', () => {
     const state = initImageScaleHandles(1000, 800)
     expect(state).not.toBeNull()

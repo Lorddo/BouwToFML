@@ -30,7 +30,7 @@ export interface DevWorkspaceSessionBase {
   imageHeight: number
   /**
    * Exacte werkpixels na stap 1 (`originalImageEl`).
-   * Resolutiebeleid: native upload, alleen upscale als max-edge < 3000px (`buildOptimizationBase`).
+   * Resolutiebeleid: werk-max-edge 3000px (`buildOptimizationBase` — up- én downscale).
    */
   workingImagePng: string
   preprocess: PreprocessConfig

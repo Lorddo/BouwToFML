@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compressPolylinePoints } from '@/cv/port/wallSkeletonTrace'
+import { compressPolylinePoints, downsampleBinaryMaskNearest } from '@/cv/port/wallSkeletonTrace'
 
 function horizontalRun(x0: number, x1: number, y: number): number[][] {
   const points: number[][] = []
@@ -54,5 +54,27 @@ describe('compressPolylinePoints', () => {
       [1, 2],
       [4, 5],
     ])
+  })
+})
+
+describe('downsampleBinaryMaskNearest', () => {
+  it('houdt kleine mask 1:1', () => {
+    const mask = new Uint8Array([0, 255, 255, 0])
+    const out = downsampleBinaryMaskNearest({ mask, width: 2, height: 2, maxEdgePx: 8 })
+    expect(out.scale).toBe(1)
+    expect(out.width).toBe(2)
+    expect(out.height).toBe(2)
+    expect([...out.binary]).toEqual([0, 1, 1, 0])
+  })
+
+  it('schaalt grote mask naar max-edge', () => {
+    const width = 8
+    const height = 4
+    const mask = new Uint8Array(width * height).fill(255)
+    const out = downsampleBinaryMaskNearest({ mask, width, height, maxEdgePx: 4 })
+    expect(out.scale).toBe(0.5)
+    expect(out.width).toBe(4)
+    expect(out.height).toBe(2)
+    expect(out.binary.every((v) => v === 1)).toBe(true)
   })
 })

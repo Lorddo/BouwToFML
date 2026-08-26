@@ -175,6 +175,7 @@ export function useWorkspacePreprocessWiring(deps: {
     referenceWallThicknessPx: deps.referenceWallThicknessPx,
     gapsInkMode: deps.gapsInkMode,
     wallBw,
+    rects: deps.rects,
   })
 
   scheduleLivePreprocessPreview = preprocessUi.scheduleLivePreprocessPreview

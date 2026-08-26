@@ -6,6 +6,7 @@ import {
   openPdfDocument,
   pdfLoadErrorMessage,
   renderPdfPageToBlobUrlForFile,
+  setProjectPdfStore,
   type PdfUnderlaySource,
 } from '@/platform/upload'
 
@@ -35,6 +36,7 @@ export function useWorkspacePdfUpload(deps: {
 
     // Eerst sessie resetten, daarna nieuwe src — voorkomt dat reset de verse load wist.
     deps.applyNewUnderlayReset()
+    setProjectPdfStore(null)
     deps.setPdfUnderlaySource(null)
     deps.loadFile(file)
   }
@@ -52,16 +54,19 @@ export function useWorkspacePdfUpload(deps: {
       const rendered = await renderPdfPageToBlobUrlForFile(file, pageNumber)
       await closePdfSession()
 
-      deps.applyNewUnderlayReset()
-      deps.setImageSource(rendered.blobUrl, formatPdfPageImageName(fileName, pageNumber, numPages))
-      deps.setPdfUnderlaySource({
+      const pdfSource: PdfUnderlaySource = {
         bytes,
         pageNumber,
         fileName,
         pageRenderScale: rendered.pageRenderScale,
         pageWidthPx: rendered.pageWidthPx,
         pageHeightPx: rendered.pageHeightPx,
-      })
+      }
+      // Before reset: keep bytes even if Vue/project wiring drops the live ref.
+      setProjectPdfStore(pdfSource)
+      deps.applyNewUnderlayReset()
+      deps.setImageSource(rendered.blobUrl, formatPdfPageImageName(fileName, pageNumber, numPages))
+      deps.setPdfUnderlaySource(pdfSource)
       showPdfPageDialog.value = false
       pendingPdfFile.value = null
     } catch (error) {

@@ -23,6 +23,7 @@ import { countDistinctMergedFaces } from './room-raster-merge'
 import { resolveInkOnStoredTopology } from './room-refine-topology'
 import { normalizeLabelsArray } from './room-labels-array'
 import { patchTopologyLabelsInDiffRegion } from './room-topology-patch'
+import { applyStampWallFacePrior } from './stamp-wall-face-prior'
 
 /** Review-overlay — per component klikken en overrides. */
 const ROOM_MANUAL_CLASSIFICATION_GROUP_BY = 'component' as const
@@ -121,6 +122,8 @@ export async function runInkProcessAfterEdits(params: {
   roomReferenceCanvas?: CanvasLike
   /** Preview-mask wordt daarna opnieuw opgebouwd in UI — skip zware full-canvas render. */
   skipClassifiedMask?: boolean
+  /** Solid stampMask — ná subset-classify opnieuw pin'en. */
+  wallStampMask?: Uint8Array
 }): Promise<
   RoomClassifyResult & {
     refinedFaceOverrides: Map<number, RoomRasterClass>
@@ -277,8 +280,24 @@ export async function runInkProcessAfterEdits(params: {
 
   const refinedFaceOverrides = faceOverrides
   const refinedPinnedRoots = pinnedRoots
+
+  // Stamp-last: na ink-reclassify opnieuw pin'en (stripAffectedPins kan wall-pins wissen).
+  let stampedClassification = classificationByLabel
+  if (params.wallStampMask && params.wallStampMask.length === rawLabelsData.length) {
+    const stamped = applyStampWallFacePrior({
+      labelsData: rawLabelsData,
+      parentMap: priorParentMap,
+      classificationByLabel,
+      stampMask: params.wallStampMask,
+      groupBy: ROOM_MANUAL_CLASSIFICATION_GROUP_BY,
+      faceOverrides: refinedFaceOverrides,
+      pinnedRoots: refinedPinnedRoots,
+    })
+    stampedClassification = stamped.classificationByLabel
+  }
+
   const effectiveClassification = applyFaceClassificationOverrides(
-    classificationByLabel,
+    stampedClassification,
     refinedFaceOverrides,
   )
   const stats = countClassificationStats(effectiveClassification)
@@ -300,7 +319,7 @@ export async function runInkProcessAfterEdits(params: {
     labelsData: resolved.labelsData,
     parentMap: priorParentMap,
     components,
-    classificationByLabel,
+    classificationByLabel: stampedClassification,
     classificationGroupBy: ROOM_MANUAL_CLASSIFICATION_GROUP_BY,
     classifiedMaskCanvas,
     roomReferenceCanvas: params.roomReferenceCanvas ?? classify.roomReferenceCanvas,

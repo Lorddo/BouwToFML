@@ -5,11 +5,31 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-08-25 (D-63 mask per face)
+Laatste update: 2026-08-26 (aanzicht muur-hoogtemaat)
 
 ## Huidige focus
 
-**Muur/deur/knoop vloer-lift** — uitzondering (geen settings-hoogte-default). Muur: `az`/`bz`.z; knoop: zelfde ends via `setJunctionBottomZ`; deur: `opening.z`. 2D tool+settings Vloer+Hoogte (ook knoop); deur add/edit Vloer; aanzicht veld + 3 grepen (boven/midden/onder). Nok-knoop blijft `ridgeZ`. Stamp behoudt bron-elevatie.
+**Aanzicht muurvlak-hoogte** — bij muur-/knoopselectie of -resize op Gevels: live hoogte van het hele vlak (niet rond ramen/deuren); lijn naast de muur. Scheve kopgevel = beide einden. Nok slaat over.
+
+**Muren aan dak binden** — expliciete knop Dak + Gevels: knoop-`h` ← dakvlak-Z (hartlijn); skip floor+1 + ongedekt; V2 knipt op nok/kil eerst. Geen `floor.height`; geen auto-run; geen dakkapel.
+
+**Gevel «ook andere verdiepingen»** — stacked-match = as-band 5 cm + overlap langs de as (niet exact `a`/`b`). Junctions mogen anders knippen; T-tak valt af. Nulpunt-kopie blijft de uitlijning.
+
+**Stap-4 herschalen = live FML** — na gevels/Dak bestaat `designs[0]` als snapshot; rescale/nulpunt/oriëntatie lazen die i.p.v. `floor.walls` (zelfde klasse als vuile download). Flush eerst (`ensureDesignsSynced`), daarna live geometry. Download was al gefixt.
+
+**Vloerhoogte commit-delay** — Settings-defaults + Gevels-verdiepingshoogte: `ScaleLengthInput` debounce 1 s (typen én −/+ stapelen); Enter/blur meteen. Voorkomt overwrite-all-dialog bij het eerste cijfer. Toolbelt-selectie blijft 700 ms.
+
+**Stempel contour + stamp-last** — bake = architect-outline in `stampBw` (niet volle inkt); solid `stampMask` pin't faces ná Otsu als wall. Finalize/inject ongewijzigd. Dakkapellen/zij-openingen blijven scan-zichtbaar.
+
+**PDF onderlegger overnemen** — bytes + pagina in het project (IDB). `getDocument` altijd een kopie (pdf.js transferred de buffer). Reuse rastert dezelfde pagina opnieuw; strook-crop = ROI. Geen file-picker. Quota-retry kan PDF weglaten.
+
+**Werkformaat 3k** — JPG/PNG/PDF/crop: langste zijde = 3000 (vloer én plafond; up- én downscale). PDF-target was 4000 → 3000. Konva-onderlegger: `listening: false` + `perfectDrawEnabled: false`.
+
+**Otsu / Int muur** — eigen recept vanaf kleur-origineel (geen wall-preBinarize); `thresholdMode` echt doorgegeven; hole-fill aan + REF. Lui op Dev-tab; productie bij stap-3 classify. Download Int muur = engine-beeld.
+
+**Muurdikte alleen 2→3** — tekenen ref start geen classify/meting; official `referenceWallThicknessPx` ná ink-bake bij afronden (skip alleen als detectie al klaar).
+
+**Muur/deur/knoop vloer-lift** — uitzondering (geen settings-hoogte-default). Muur: `az`/`bz`.z; knoop: zelfde ends via `setJunctionBottomZ`; deur: `opening.z`. 2D tool+settings Vloer+Hoogte (ook knoop); knoop-settings altijd één hoogte/vloer (niet mixed van aangesloten muren). Deur add/edit Vloer; aanzicht veld + 3 grepen (boven/midden/onder). Nok-knoop blijft `ridgeZ`. Stamp behoudt bron-elevatie.
 
 **Box-select type** — FML-editor + stap-4: strip met dropdown muur/deur/raam/**Alles (mixed)**; box alleen dat type; «Alles selecteren» = hele floor (zoals gevelgroep). Mixed = muren+deuren+ramen. Default muren. Stap-3 face-box ongewijzigd.
 
@@ -17,17 +37,17 @@ Laatste update: 2026-08-25 (D-63 mask per face)
 
 **Maatvelden −/+ ** — `ScaleLengthInput`: − links + rechts; stap 1 cm (metric) of 1/16″ (imperial via `unitSystem`); pijltjes hetzelfde. Detectie-Hoogtes: label niet meer onder het veld (`fml-limit-field` grid).
 
-**Deur dun→mask + dedupe (D-63)** — keep **per face** (eigen bbox); cluster kozijn+swing → alleen kozijn. L1 between-walls (**majority** ≥2/3) + pair-conflict + L2 vleugel-brug (**gap-slack**) + L3 polylijn; post-L11 dedupe. Plan: `.cursor/docs/door-thin-mask-dedupe-plan.md`. D-62/D-40 ongewijzigd.
+**Deur dun→mask + dedupe (D-63)** — keep **per face** (eigen bbox); cluster kozijn+swing → alleen kozijn. L1–L3 **alleen bij finalize** (niet Stage-2). L1 between-walls (**majority** ≥2/3) + pair-conflict + L2 vleugel-brug (**gap-slack**) + L3 polylijn; post-L11 dedupe. Plan: `.cursor/docs/door-thin-mask-dedupe-plan.md`. D-62/D-40 ongewijzigd.
 
 **Deur pair/demote (D-62)** — Stage-2 licht: adjacent + xor betweenWalls (soft, micro OK, alleen in `door-pair-demote.ts`).
 
-**FML export = live walls** — detectie (`extractionToPlan`) maakt geen Dak/`designs[]`; ridge alleen FML-editor. Project-download mag nooit stale snapshot over live walls zetten. Twee tekenaars (test + Wonen Limburg) zagen nette canvas, kapotte FML.
+**FML export = live walls** — detectie (`extractionToPlan`) maakt geen Dak/`designs[]`; ridge alleen FML-editor. Download + herschalen/nulpunt/oriëntatie flushen eerst; nooit stale `designs[0]` over live walls.
 
 **Canvas-hulpraster** — Settings `showCanvasGrid` (default aan): licht viewport-vast raster op workspace + editor + gevels; draait niet mee. Stap 1/editor: underlay onder grid; stap 2/3/B/W: scan erboven. Alleen visueel.
 
 **Architect weergavestijl** — Settings `planDisplayStyle`: plattegrond muren als buitenlijnen; gevels witte papier-fill + zwarte CAD-lijnen (achtergevel verdwijnt achter fill). Bouw = baksteen-fill + zwarte openings. `elevationProjection` blijft apart. DXF later.
 
-**Gevelgroepen extras-only** — `settings.facadeGroups` = bron; multi-lidmaatschap (voor/na); geen native `groupMarker`/`groupId`-write. Import migreert markers alleen als catalogus leeg. Editor-download stript native + stamp-catalogus; workspace stript alles. UI = checkboxes.
+**Gevelgroepen extras-only** — `settings.facadeGroups` = bron; multi-lidmaatschap (voor/na); geen native `groupMarker`/`groupId`-write. Import migreert markers alleen als catalogus leeg. Editor-download stript native + stamp-catalogus; workspace stript alles. UI = checkboxes. «Ook andere verdiepingen» = as-band 5 cm + overlap (niet exact a/b).
 
 **Dakvlakken handmatig** — geen project-brede generate-knop meer; tekenen op Dak-tab of 2-klik vanuit kopgevel. Geblokt vlak = buitenring muur-union (geen convex hull / hartlijn-knikje).
 
@@ -67,13 +87,13 @@ Laatste update: 2026-08-25 (D-63 mask per face)
 
 **Canvas chrome:** `FmlEditorTopbar` op stap 1–4 (raster + FML). Hints via **i**-modal (`workspace-canvas-help.ts`); geen hint-balk. Fullscreen op alle canvas-stappen. Mask/inkt-history met redo (Ctrl+Shift+Z/Y). Sidebar: `sidebar-chrome.css` icon+naam, zebra weg.
 
-**Stap 1:** schaal/rotatie/crop/gum. Optionele «Rotatie vastzetten» (zelfde bake als 1→2). Geen auto-trim van witte randen; canvas wit. Geen refs. Floor **min 3000px**. Asymmetrie-waarschuwing H/V >2%.
+**Stap 1:** schaal/rotatie/crop/gum. Optionele «Rotatie vastzetten» (zelfde bake als 1→2). Geen auto-trim van witte randen; canvas wit. Geen refs. Floor **clamp 3000px** (vloer+plafond). Asymmetrie-waarschuwing H/V >2%.
 
-**Stap 2:** B/W-tune + **LBE-refs** (max 3 muur min/mid/max) + OCR-toggle (default uit). Afronden meet dikte/stijl op post-bake **`baseBw`**. `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay`. Muurstempel (opt. Stempelset: translate-only + nulpunt-zaad) + B/W-overnemen. Stempel buiten scan → wit pad (`expandUnderlayForStamp`). Fabrieksreset = alleen laag-tune.
+**Stap 2:** B/W-tune + **LBE-refs** (max 3 muur min/mid/max) + OCR-toggle (default uit). Afronden meet dikte/stijl op post-bake **`baseBw`** (niet bij tekenen). `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay`. Dev Int muur = lui Otsu vanaf origineel. Muurstempel (opt. Stempelset: translate-only + nulpunt-zaad) + B/W-overnemen. Stempel buiten scan → wit pad (`expandUnderlayForStamp`). Fabrieksreset = alleen laag-tune.
 
 **Stap 3:** altijd Muren; OCR/Deuren/Ramen → Dev-view. Muren = room-first → V3 L1–L10. Deuren Stage-2 → L11/L12. Ramen Stage 1–4 → L14. Face-class: V3 ziet alleen binary mask. Stempel-inkt blijft zichtbaar in classify.
 
-**Stap 4 / persist:** `previewPlan` + IndexedDB (`projects` + `projectIndex`). Resume «Verder werken». Diagnose-FAB = HTML met schone stap-1 scan (kopiëren voor her-detectie) + linialen op B/W + L1–L14. Stempelset-inject na nulpunt (`injectStampWallsIntoPlan` add-only) + ownership ronde 2 (`resolve-stamp-ownership`, stamp frozen cm/dikte, det→stamp); dikte pinned. Generate ná semantic + deuren/ramen; sanitize weld/ortho/T-X/cover tot vast punt (max 4).
+**Stap 4 / persist:** `previewPlan` + IndexedDB (`projects` + `projectIndex`). Resume «Verder werken». Result-floor slaat `detectionExact` niet op (quota) → stap 3 leeg na resume; 3→4 blijft open via live/blob `previewPlan`. Diagnose-FAB = HTML met schone stap-1 scan (kopiëren voor her-detectie) + linialen op B/W + L1–L14. Stempelset-inject na nulpunt (`injectStampWallsIntoPlan` add-only) + ownership ronde 2 (`resolve-stamp-ownership`, stamp frozen cm/dikte, det→stamp); dikte pinned. Generate ná semantic + deuren/ramen; sanitize weld/ortho/T-X/cover tot vast punt (max 4).
 
 **FML workspace:** generate + editor (select/move/spiegel/copy/draw). Canvas-top = zelfde topbar als editor/inspect (geen hint-balk; undo/fit/fullscreen/zoom). Sidebar sluiten + menu-FAB (fullscreen sluit sidebar). Areas/surfaces-edit **uit** (`FML_AREA_SURFACE_EDIT_VISIBLE`). Oriëntatie-UI **uit** (`FML_ORIENT_CONTROLS_VISIBLE`); techniek blijft. Herschalen = H/V-linialen (geen muurdikte).
 
@@ -85,14 +105,24 @@ Laatste update: 2026-08-25 (D-63 mask per face)
 
 ## Open / handmatig checken
 
+- Aanzicht muurvlak-hoogte: muur of knoop selecteren/verslepen → hoogte naast het vlak (niet op ramen/deuren); scheve kopgevel beide einden; live bij resize — nog niet handmatig.
+- Muren aan dak binden: Dak-tab knop → knopen volgen vlak; Gevels floor-keuze + kopgevel-driehoek na split; aanbouw onder BG-dak, hoofdgebouw onder 1e ongemoeid; undo — nog niet handmatig.
+- Stap-4 herschalen na gevels/edits: Herschalen volgt huidige FML (niet detectie-snapshot); nulpunt/spiegel idem — nog niet handmatig.
+- Vloerhoogte 1s debounce: Settings muurhoogte + Gevels verdiepingshoogte — typ 245 zonder dialog bij 2; −/+ paar keer dan één confirm; Enter/blur meteen — nog niet handmatig.
+- 3k clamp: PDF-upload + PNG >3k → download onderlegger ≤3000; stap-2 pan soepeler; Dev-Otsu fills + download Int muur — nog niet handmatig.
+- Muurdikte alleen 2→3: tekenen ref → geen dikte in sidebar; Volgende → dikte na bake — nog niet handmatig.
+- Resume result-floor: Verder werken → stap 4 FML → terug stap 3 (leeg OK) → weer naar 4; verse 1→2→3 detectie mag Chrome niet crashen — nog niet handmatig.
 - Muur/deur/knoop vloer-lift: 2D Vloer+Hoogte (muur+knoop); deur dorpel; aanzicht knoop 3 grepen (hoogte/shift/lift) + 10 cm segment-snap; muur 3 grepen + snap; stamp lift — nog niet handmatig.
 - Box-select type: dropdown muur/deur/raam/Alles (mixed); Alles selecteren = hele floor; editor + stap-4 — nog niet handmatig.
 - Maat-stepper −/+: alle `ScaleLengthInput` (detectie Hoogtes-labels + 1 cm / 1/16″) — nog niet handmatig.
 - Deur pair/demote (D-62): WhatsApp-probe kozijn+boog → één deur + doorframe; wees → wall; muren heel na finalize — pair nog niet goed, daarna verder.
 - D-63 thin-mask per face + L1–L3 + dedupe: WhatsApp Image 2026-08-24 (cases 1–3) + E2E openings/muren — nog niet handmatig.
 - Canvas-hulpraster: Settings aan/uit; stap 1 grid over scan; stap 2/3 alleen in witte randen; editor/gevel underlay onder grid; geen mee-draaien bij rotatie — nog niet handmatig.
+- Gevel stacked-floors: BG-gevel toekennen → «ook andere verdiepingen» pakt alle as-stukken op 1e (ook na T-knoop), niet alleen exact a/b; T-tak blijft buiten — nog niet handmatig.
 - Gevel multi-lidmaatschap: zelfde muur in «voor» + «na» → twee aanzicht-chips; checkbox UI + inspect expand alleen bij 1 groep.
 - Onderlegger hergebruiken: op lege floor/gevel knop + bron kiezen; plattegrond floor→floor + Gevels gevel→gevel — nog niet handmatig.
+- PDF overnemen: BG PDF uploaden (één keer) → 1e overnemen (geen file-picker) → andere crop → scherpe 3k ROI — nog niet handmatig.
+- Stempel contour + stamp-last: 1e kap met dakkapellen; bake contour in B/W; Otsu dan stamp-pin wall; inject ongewijzigd — nog niet handmatig.
 - Hoogtetabel Gevels: groep per floor; dakdikte; geen noklijn/nokhoogte. Settings: dakdikte, vloerdikte, noklijn-weergave — nog niet handmatig.
 - Plattegrond-surface Trapgat: tekenen + checkbox; dashed kruis; download `isCutout`; Dakvlak geen checkbox — nog niet handmatig.
 - Eenheden fase 2: settings/toolbar/gevel/defaults/display + `useMetric` — handmatig smoke (ft-in typen, unit-wissel zonder mute).
@@ -163,7 +193,18 @@ Laatste update: 2026-08-25 (D-63 mask per face)
 
 ## Recente besluiten
 
-- **2026-08-25** — D-63 maskKeep per face (eigen bbox + L1/L2/L3); cluster kozijn+swing → alleen kozijn. Hyp blijft één deur. D-62-swing skip ongewijzigd.
+- **2026-08-26** — Aanzicht muur/knoop: live vlakhoogte (niet rond openingen); lijn naast de muur; scheve kopgevel = beide einden.
+- **2026-08-26** — FML-download: geen lokale onderlegger-URL's (`elevationViews` + `floors[].drawing` data:/blob:); alleen `http(s)`. Layout blijft. Cloud later → dan meeschrijven. Bind/`floor.height` ≥ max muurtop. UI-`---` = scheve `az`/`bz`.
+- **2026-08-26** — Muren aan dak binden: knop Dak+Gevels; knoop-`h` ← dakvlak (hartlijn); skip blocked/uncovered; V2 crease-split; geen auto/dakkapel.
+- **2026-08-26** — Gevel «ook andere verdiepingen»: as-band 5 cm + overlap langs de as (`findStackedWallIds`); junctions mogen anders knippen. Was exact a/b (~1 cm) → pakte alleen helften die toevallig dezelfde einden hadden.
+- **2026-08-26** — Knoop-settings: altijd knoophoogte/vloer tonen (`readJunctionElevation`); niet mixed/leeg omdat aangesloten muren verderop verschillen. Wijzigen schrijft nog alle ends op die knoop.
+- **2026-08-26** — Stap-4 herschalen/nulpunt/oriëntatie: flush live walls → designs eerst (`ensureDesignsSynced`); nooit stale `designs[0]` (na gevels/Dak) over de huidige FML. Zelfde contract als project-download.
+- **2026-08-26** — Vloer-/defaults-hoogte (Settings + Gevels): `ScaleLengthInput` debounce 1 s zodat overwrite-all niet bij het eerste cijfer of per cm-klik springt; Enter/blur flush. Geselecteerde muur/deur blijft 700 ms draft-commit.
+- **2026-08-26** — Stempel bake = architect-contour in `effectiveBw` (`buildWallOutlinePolylines`); solid `stampMask` = stamp-last wall-pin ná Otsu (geen OR in Otsu). Finalize/inject ongewijzigd. Voorkomt volle-inkt die dakkapellen/openingen wist.
+- **2026-08-26** — PDF-reuse: kopie naar pdf.js (buffer-transfer) + volle-breedte verdiepingsstrook telt als ROI. Geen file-picker. Quota-retry laat PDF weg.
+- **2026-08-25** — Werkformaat 3000 vloer+plafond (JPG/PNG/PDF/crop); Otsu eigen recept + hole-fill; muurdikte alleen 2→3; Konva underlay listening/perfectDraw uit; download Int muur = engine.
+- **2026-08-25** — D-63 thin→mask alleen bij finalize (L0 + definitieve hyps). Niet in Stage-2 initial pass (WASM-meetlint op 4k crashte Chrome).
+- **2026-08-25** — Resume 3→4 via `previewPlan` (geen detectionExact) alleen als stap 3 leeg is. Nieuwe classify: stale FML houdt Next niet open; persist skip tijdens classify.
 - **2026-08-24** — Aanzicht knoop: mid=shift + onder=lift (top=hoogte); 10 cm Y-snap naar andere muur-/knoop-segmenten (Ctrl uit).
 - **2026-08-24** — Knoop-settings: Vloer+Hoogte (niet-nok); `setJunctionBottomZ` tilt ends, hoogte per eind blijft; aanzicht idem.
 - **2026-08-24** — Muur/deur vloer-lift: uitzondering (geen settings-default); `az`/`bz`.z + `opening.z`; 2D Vloer+Hoogte; aanzicht 3 grepen; stamp behoudt elevatie.

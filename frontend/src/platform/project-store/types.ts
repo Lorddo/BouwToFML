@@ -55,6 +55,24 @@ export type PersistedSourceUnderlay = {
   pngBytes: Uint8Array
   name: string
   scale?: DevWorkspaceSession['scale']
+  /** PDF page identity (no bytes). */
+  pdf?: {
+    pageNumber: number
+    fileName: string
+    pageRenderScale: number
+    pageWidthPx: number
+    pageHeightPx: number
+  }
+}
+
+/** One shared PDF page for reuse/ROI (bytes + page). Omitted on quota retry. */
+export type PersistedPdfUnderlay = {
+  bytes: Uint8Array
+  pageNumber: number
+  fileName: string
+  pageRenderScale: number
+  pageWidthPx: number
+  pageHeightPx: number
 }
 
 export type PersistedFloorBlob = {
@@ -78,6 +96,8 @@ export type PersistedProject = {
   floors: FloorMeta[]
   activeFloorId: string
   sourceUnderlay: PersistedSourceUnderlay | null
+  /** Shared PDF bytes for «Onderlegger overnemen»; optional on oude records. */
+  sourcePdfUnderlay?: PersistedPdfUnderlay | null
   blobs: Record<string, PersistedFloorBlob>
 }
 

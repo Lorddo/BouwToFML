@@ -95,6 +95,7 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
   clearGapsInkModeManual?: () => void
   onDoorFacesDemoted?: () => void | Promise<void>
   onWindowFacesDemoted?: () => void | Promise<void>
+  getAcceptedDoorHyps?: () => import('@/cv/doors').DoorSwingHypothesis[]
   onAfterFinalize?: (
     setFinalizePhase: (phase: import('./workspace-view-visibility').TemplatesFinalizePhase) => void,
   ) => void | Promise<void>
@@ -164,6 +165,7 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
     clearGapsInkModeManual: ctx.clearGapsInkModeManual,
     onDoorFacesDemoted: ctx.onDoorFacesDemoted,
     onWindowFacesDemoted: ctx.onWindowFacesDemoted,
+    getAcceptedDoorHyps: ctx.getAcceptedDoorHyps,
     onAfterFinalize: ctx.onAfterFinalize,
   }
 }

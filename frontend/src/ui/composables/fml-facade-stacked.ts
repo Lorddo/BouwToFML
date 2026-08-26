@@ -3,7 +3,7 @@ import type { FloorPlan } from '@/core/fml/types'
 import { confirmFacadeStackedFloors } from '@/ui/composables/fml-chrome-dialog'
 
 /**
- * Vraag of gestapelde muren (zelfde a/b op andere floors) mee moeten.
+ * Vraag of gestapelde muren (zelfde as-band op andere floors) mee moeten.
  * Annuleren = alleen de selectie (toekenning zelf gaat door).
  */
 export async function withStackedFacadeWalls(

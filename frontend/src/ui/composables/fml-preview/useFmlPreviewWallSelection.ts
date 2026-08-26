@@ -2,6 +2,7 @@ import { computed, ref, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import {
+  readJunctionElevation,
   wallEndpoint3D,
   wallEndpointHeightCm,
   wallUniformBottomZCm,
@@ -189,36 +190,17 @@ export function useFmlPreviewWallSelection(options: {
       junctionBottomZMixed.value = false
       return
     }
-    const floorH = floorHeight()
-    const heights = junction.refs
-      .map((ref) => {
-        const wall = editor.selectableWalls.value.find((item) => item.id === ref.wallId)
-        if (!wall) return null
-        return wallEndpointHeightCm(wall, ref.end, floorH)
-      })
-      .filter((value): value is number => value != null)
-    const bottoms = junction.refs
-      .map((ref) => {
-        const wall = editor.selectableWalls.value.find((item) => item.id === ref.wallId)
-        if (!wall) return null
-        return wallEndpoint3D(wall, ref.end, floorH).z
-      })
-      .filter((value): value is number => value != null)
-    if (heights.length === 0) {
+    const elev = readJunctionElevation(editor.selectableWalls.value, junction.refs, floorHeight())
+    if (!elev) {
       junctionHeightMixed.value = false
       junctionBottomZMixed.value = false
       return
     }
-    const first = Math.round(heights[0])
-    const mixed = heights.some((value) => Math.round(value) !== first)
-    junctionHeightMixed.value = mixed
-    junctionHeightDraft.value = first
-    if (bottoms.length > 0) {
-      const firstBottom = Math.round(bottoms[0])
-      const bottomMixed = bottoms.some((value) => Math.round(value) !== firstBottom)
-      junctionBottomZMixed.value = bottomMixed
-      junctionBottomZDraft.value = firstBottom
-    }
+    // Eén knoop = één hoogte/vloer; niet mixed maken van aangesloten muren.
+    junctionHeightMixed.value = false
+    junctionHeightDraft.value = elev.heightCm
+    junctionBottomZMixed.value = false
+    junctionBottomZDraft.value = elev.bottomZCm
   }
 
   function applyThicknessToWalls(wallIds: string[], thicknessCm: number): { mutated: boolean } {

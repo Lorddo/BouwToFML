@@ -1,0 +1,102 @@
+import { describe, expect, it } from 'vitest'
+import type { ElevationWallRect } from '@/core/fml/facade-elevation'
+import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/fml-preview/fml-preview-opening-move-measure'
+import {
+  buildElevationJunctionHeightMeasureLines,
+  buildElevationWallFaceMeasureLines,
+  elevationWallFaceMeasureLengthsCm,
+} from '@/ui/composables/fml-preview/fml-preview-elevation-wall-measure'
+
+function wall400x280(overrides: Partial<ElevationWallRect> = {}): ElevationWallRect {
+  return {
+    wallId: 'w',
+    floorIndex: 0,
+    depthCm: 0,
+    xa: 0,
+    xb: 400,
+    x0: 0,
+    x1: 400,
+    y0: -280,
+    y1: 0,
+    aTop: { x: 0, y: -280 },
+    aBottom: { x: 0, y: 0 },
+    bTop: { x: 400, y: -280 },
+    bBottom: { x: 400, y: 0 },
+    innerATop: { x: 0, y: -280 },
+    innerABottom: { x: 0, y: 0 },
+    innerBTop: { x: 400, y: -280 },
+    innerBBottom: { x: 400, y: 0 },
+    ...overrides,
+  }
+}
+
+describe('fml-preview-elevation-wall-measure', () => {
+  it('rechte muur 400×280 → één hoogte 280 cm rechts naast het vlak', () => {
+    const lengths = elevationWallFaceMeasureLengthsCm(wall400x280())
+    expect(lengths).not.toBeNull()
+    expect(lengths!.heightLeftCm).toBeCloseTo(280, 6)
+    expect(lengths!.heightRightCm).toBeCloseTo(280, 6)
+
+    const lines = buildElevationWallFaceMeasureLines(wall400x280())
+    expect(lines).toHaveLength(1)
+    expect(lines[0].id).toBe('elev-wall-height')
+    expect(lines[0].a.x).toBeCloseTo(400 + OPENING_MOVE_MEASURE_INSET_CM, 6)
+    expect(lines[0].a.y).toBeCloseTo(-280, 6)
+    expect(lines[0].b.y).toBeCloseTo(0, 6)
+  })
+
+  it('scheve kopgevel → beide eindhoogtes buiten het vlak', () => {
+    const wall = wall400x280({
+      aTop: { x: 0, y: -320 },
+      bTop: { x: 400, y: -200 },
+      y0: -320,
+    })
+    const lengths = elevationWallFaceMeasureLengthsCm(wall)
+    expect(lengths).not.toBeNull()
+    expect(lengths!.heightLeftCm).toBeCloseTo(320, 6)
+    expect(lengths!.heightRightCm).toBeCloseTo(200, 6)
+
+    const lines = buildElevationWallFaceMeasureLines(wall)
+    expect(lines).toHaveLength(2)
+    expect(lines[0].a.x).toBeCloseTo(0 - OPENING_MOVE_MEASURE_INSET_CM, 6)
+    expect(lines[1].a.x).toBeCloseTo(400 + OPENING_MOVE_MEASURE_INSET_CM, 6)
+  })
+
+  it('degenereat segment → geen lijnen', () => {
+    expect(
+      buildElevationWallFaceMeasureLines(
+        wall400x280({
+          xa: 10,
+          xb: 10,
+          aTop: { x: 10, y: -280 },
+          aBottom: { x: 10, y: 0 },
+          bTop: { x: 10, y: -280 },
+          bBottom: { x: 10, y: 0 },
+        }),
+      ),
+    ).toEqual([])
+  })
+
+  it('knoop → hoogte naast de knoop; nok slaat over', () => {
+    const lines = buildElevationJunctionHeightMeasureLines({
+      id: 'j-0-0',
+      x: 400,
+      yTop: -260,
+      yBot: 0,
+    })
+    expect(lines).toHaveLength(1)
+    expect(lines[0].a.x).toBeCloseTo(400 + OPENING_MOVE_MEASURE_INSET_CM, 6)
+    expect(lines[0].a.y).toBeCloseTo(-260, 6)
+    expect(lines[0].b.y).toBeCloseTo(0, 6)
+
+    expect(
+      buildElevationJunctionHeightMeasureLines({
+        id: 'rj-0-0',
+        x: 200,
+        yTop: -400,
+        yBot: -280,
+        ridge: true,
+      }),
+    ).toEqual([])
+  })
+})

@@ -40,6 +40,7 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
       address: meta?.address ?? '',
     },
     sourceUnderlay: null,
+    sourcePdfUnderlay: null,
     floors: [floor],
     blobs: {
       [floor.id]: {
@@ -51,6 +52,7 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
         fmlOrient: null,
         sourceUnderlay: null,
         pdfUnderlaySource: null,
+        sourcePdfUnderlay: null,
       },
     },
     activeFloorId: floor.id,
