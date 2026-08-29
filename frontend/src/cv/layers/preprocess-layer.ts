@@ -86,7 +86,9 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
     Math.min(255, Math.round(preprocess.preBinarizeThreshold ?? 150)),
   )
 
-  // Stap 1 (optioneel): vaste B/W — geen grijs meer; daarna stap 2 (adaptive).
+  // Start-B/W vóór morph: vaste drempel, of otsu/edgeAware als vooraf-B/W uit staat.
+  // Adaptive komt ná morph zodat hole-fill/brug/verdikken eerst sluiten, daarna
+  // grote zwarte vlakken weer wit kunnen worden (kernel past in het vlak).
   if (preBinarize) {
     mat = binarizeMat(cv, mat, {
       applyThreshold: true,
@@ -94,20 +96,7 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
       useAdaptive: false,
       threshold: preThreshold,
     })
-  }
-
-  // Stap 2: adaptive als aangezet; anders thresholdMode (otsu / fixed / edgeAware).
-  // Beide uit + geen preBinarize → vaste drempel (geen grijs naar detectie).
-  if (useAdaptive) {
-    mat = binarizeMat(cv, mat, {
-      threshold: preprocess.threshold,
-      applyThreshold: true,
-      useAdaptive: true,
-      thresholdMode: 'adaptive',
-      adaptiveBlockSize: preprocess.adaptiveBlockSize,
-      edgeAwareEdgeBoost: preprocess.edgeAwareEdgeBoost ?? 0,
-    })
-  } else if (thresholdEnabled && !preBinarize) {
+  } else if (thresholdEnabled) {
     const mode = preprocess.thresholdMode ?? 'fixed'
     const resolvedMode = mode === 'adaptive' ? 'fixed' : mode
     mat = binarizeMat(cv, mat, {
@@ -156,6 +145,17 @@ function runBinarizedPreprocessFromGray(ctx: LayerContext, gray: OpenCV['Mat']):
   const erodePx = erodeEnabled ? Math.max(0, Math.round(preprocess.erodeLinesPx ?? 0)) : 0
   if (erodePx > 0) {
     thinLines(cv, mat, erodePx)
+  }
+
+  if (useAdaptive) {
+    mat = binarizeMat(cv, mat, {
+      threshold: preprocess.threshold,
+      applyThreshold: true,
+      useAdaptive: true,
+      thresholdMode: 'adaptive',
+      adaptiveBlockSize: preprocess.adaptiveBlockSize,
+      edgeAwareEdgeBoost: preprocess.edgeAwareEdgeBoost ?? 0,
+    })
   }
 
   if (preprocess.finalNegativeEnabled ?? false) {

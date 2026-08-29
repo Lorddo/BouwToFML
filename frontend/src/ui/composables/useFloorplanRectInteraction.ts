@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import type Konva from 'konva'
 import type { SelectionRect } from '@/platform/selection'
+import { isTypingFieldTarget } from '@/ui/composables/fml-preview/fml-preview-draft-commit'
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 export const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']
@@ -215,8 +216,10 @@ export function useFloorplanRectInteraction(deps: {
   }
 
   function onSelectionKeyDown(e: KeyboardEvent) {
+    if (isTypingFieldTarget(e.target)) return
     if (!deps.isSelectionMode() || !deps.selectedRectId()) return
     if (e.key === 'Escape') {
+      e.preventDefault()
       deps.onSelectRect(null)
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()

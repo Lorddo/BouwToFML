@@ -100,7 +100,12 @@ export type UseWorkspaceDevSessionDeps = {
   serializePinnedRoots: () => number[]
   referenceWallThicknessPx: Ref<number | null>
   wallRefThicknessMeasures: Ref<
-    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+    Array<{
+      thicknessPx: number
+      thicknessCm?: number
+      band?: 'min' | 'mid' | 'max'
+      rectId?: string
+    }>
   >
   rects: Ref<Array<{ type: string; x: number; y: number; width: number; height: number }>>
   restoreWallReferenceRects: (rects: DevWallReferenceRect[]) => void

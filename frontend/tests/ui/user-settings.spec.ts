@@ -60,7 +60,7 @@ describe('user-settings', () => {
     next.unitSystem = 'imperial'
     next.scaleInputUnit = 'm'
     next.defaults.wallHeightCm = 300
-    next.defaults.thicknessMinCm = 8
+    next.defaults.thicknessCms = [8, 20, 30]
     next.fmlViewer.underlayOpacityPct = 40
     next.fmlViewer.fmlOpacityPct = 90
     saveUserSettings(next)
@@ -68,6 +68,7 @@ describe('user-settings', () => {
     expect(loadUserSettings().unitSystem).toBe('imperial')
     expect(loadUserSettings().scaleInputUnit).toBe('m')
     expect(loadUserSettings().defaults.wallHeightCm).toBe(300)
+    expect(loadUserSettings().defaults.thicknessCms).toEqual([8, 20, 30])
     expect(loadUserSettings().defaults.thicknessMinCm).toBe(8)
     expect(loadUserSettings().fmlViewer).toEqual({
       underlayOpacityPct: 40,
@@ -155,18 +156,33 @@ describe('user-settings', () => {
 
   it('write-through thickness localStorage on save', () => {
     const next = createFactoryUserSettings()
-    next.defaults.thicknessMinCm = 9
-    next.defaults.thicknessMidCm = 18
-    next.defaults.thicknessMaxCm = 28
+    next.defaults.thicknessCms = [9, 18, 28]
     next.defaults.bandMidBoundaryCm = 11
     next.defaults.bandMaxBoundaryCm = 22
     saveUserSettings(next)
-    expect(loadFmlWallThicknessLimits()).toEqual({ minCm: 9, midCm: 18, maxCm: 28 })
+    expect(loadFmlWallThicknessLimits()).toEqual({
+      minCm: 9,
+      midCm: 18,
+      maxCm: 28,
+      thicknessCms: [9, 18, 28],
+    })
     // Meetband komt uit muur-REF — settings schrijven fabrieksbanden niet door.
     expect(loadFmlThicknessBandBoundaries()).toEqual({
       midBoundaryCm: createFactoryUserSettings().defaults.bandMidBoundaryCm,
       maxBoundaryCm: createFactoryUserSettings().defaults.bandMaxBoundaryCm,
     })
+  })
+
+  it('legacy load: alleen min/mid/max → catalogus [10,20,30]', () => {
+    const normalized = normalizeUserSettings({
+      version: 1,
+      defaults: {
+        thicknessMinCm: 10,
+        thicknessMidCm: 20,
+        thicknessMaxCm: 30,
+      },
+    })
+    expect(normalized.defaults.thicknessCms).toEqual([10, 20, 30])
   })
 
   it('normalize clamps opacity 0–100 and falls back invalid cm', () => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
 import {
@@ -7,18 +7,28 @@ import {
   DOOR_FML_TEMPLATE_OPTIONS,
   resolveDoorFmlTemplateRefId,
 } from '@/core/fml/types'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import { SELECTION_COLORS } from '@/platform/selection'
 import type { SelectionRect } from '@/platform/selection'
 import {
-  resolveWallThicknessBand,
-  wallThicknessBandOptions,
+  findWallRectForCm,
   type WallRefThicknessMeasure,
 } from '@/platform/selection/wall-thickness-ref'
+import {
+  addThicknessToCatalog,
+  MAX_THICKNESS_CATALOG,
+  MIN_THICKNESS_CATALOG,
+  normalizeThicknessCatalog,
+  removeThicknessFromCatalog,
+} from '@/core/fml/fml-wall-thickness-catalog'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import { DEFAULT_FML_WALL_THICKNESS_LIMITS } from '@/core/fml/fml-wall-thickness-limits'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import {
+  TOOLBELT_HOTKEY_PRIORITY,
+  useToolbeltHotkey,
+} from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const props = defineProps<{
   activeClass: ElementClass | null
@@ -26,6 +36,7 @@ const props = defineProps<{
   referenceWallThicknessPx: number | null
   wallRefThicknessMeasures?: WallRefThicknessMeasure[]
   selectedRectId?: string | null
+  pendingWallThicknessCm?: number | null
   measuring?: boolean
   scaleConfirmed: boolean
   rects: SelectionRect[]
@@ -36,22 +47,19 @@ const props = defineProps<{
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
 
 const emit = defineEmits<{
-  setDrawMode: [type: 'wall' | 'door' | 'window']
+  setDrawMode: [type: 'wall' | 'door' | 'window', cm?: number]
   deactivateDrawMode: []
   updateDoorFmlRefId: [id: string, fmlRefId: string]
-  updateWallThicknessBand: [id: string, band: FmlThicknessBand]
-  updateWallThicknessCm: [band: FmlThicknessBand, cm: number]
+  updateCatalogThickness: [oldCm: number, newCm: number]
+  setCatalogCms: [cms: number[]]
   selectRect: [id: string]
 }>()
 
+type CatalogDraftRow = { id: number; cm: number | null }
+
 const { t } = useI18n()
 
-const REF_TYPES = computed(() => [
-  {
-    type: 'wall' as const,
-    label: t('preprocess.refs.wall'),
-    title: t('preprocess.refs.wallTitle'),
-  },
+const OPENING_REF_TYPES = computed(() => [
   {
     type: 'door' as const,
     label: t('preprocess.refs.door'),
@@ -67,8 +75,58 @@ const REF_TYPES = computed(() => [
 const doorRects = computed(() => props.rects.filter((rect) => rect.type === 'door'))
 const wallRects = computed(() => props.rects.filter((rect) => rect.type === 'wall'))
 
-const thicknessOptions = computed(() =>
-  wallThicknessBandOptions(props.wallThicknessLimits ?? DEFAULT_FML_WALL_THICKNESS_LIMITS),
+const catalogCms = computed(() => {
+  const limits = props.wallThicknessLimits ?? DEFAULT_FML_WALL_THICKNESS_LIMITS
+  return normalizeThicknessCatalog(
+    limits.thicknessCms ?? [limits.minCm, limits.midCm, limits.maxCm],
+  )
+})
+
+const catalogDisplayCms = computed(() => catalogCms.value.slice().reverse())
+
+let nextRowId = 1
+const draftRows = ref<CatalogDraftRow[]>([])
+const fieldRefs = ref<Array<{ focus: () => void }>>([])
+const newRowIds = new Set<number>()
+
+function catalogSignature(cms: readonly number[]): string {
+  return [...cms].slice().reverse().join(',')
+}
+
+function rowsFromCatalog(cms: readonly number[]): void {
+  newRowIds.clear()
+  draftRows.value = cms.map((cm) => ({ id: nextRowId++, cm }))
+}
+
+watch(
+  () => catalogSignature(catalogDisplayCms.value),
+  (sig, prev) => {
+    if (sig === prev && draftRows.value.length > 0) return
+    rowsFromCatalog(catalogDisplayCms.value)
+  },
+  { immediate: true },
+)
+
+const catalogRows = computed(() =>
+  draftRows.value.map((row, index) => {
+    const rect = row.cm != null ? findWallRectForCm(wallRects.value, row.cm) : null
+    return {
+      id: row.id,
+      cm: row.cm,
+      index,
+      rect,
+      drawn: rect != null,
+      drawing:
+        row.cm != null && props.activeClass === 'wall' && props.pendingWallThicknessCm === row.cm,
+      selected: rect != null && props.selectedRectId === rect.id,
+    }
+  }),
+)
+
+const canAdd = computed(() => draftRows.value.length < MAX_THICKNESS_CATALOG)
+const canRemoveCommitted = computed(
+  () =>
+    draftRows.value.filter((row) => row.cm != null && row.cm > 0).length > MIN_THICKNESS_CATALOG,
 )
 
 const measuresByRectId = computed(() => {
@@ -85,38 +143,69 @@ function doorTemplateLabel(refid: string): string {
     : t('preprocess.refs.templateStandard')
 }
 
-function bandName(band: FmlThicknessBand): string {
-  return t(`preprocess.refs.band.${band}`)
-}
-
-function cmForBand(band: FmlThicknessBand): number {
-  const limits = props.wallThicknessLimits ?? DEFAULT_FML_WALL_THICKNESS_LIMITS
-  if (band === 'min') return limits.minCm
-  if (band === 'mid') return limits.midCm
-  return limits.maxCm
-}
-
-function onCmInput(band: FmlThicknessBand, cm: number) {
+function onCatalogCm(rowId: number, cm: number) {
   if (!Number.isFinite(cm) || cm <= 0) return
-  emit('updateWallThicknessCm', band, cm)
+  const row = draftRows.value.find((item) => item.id === rowId)
+  if (!row) return
+  const previous = row.cm
+  row.cm = cm
+  if (newRowIds.has(rowId)) return
+  if (previous == null || previous === cm) return
+  emit('updateCatalogThickness', previous, cm)
+}
+
+function onDraftCommit(rowId: number) {
+  if (!newRowIds.has(rowId)) return
+  const row = draftRows.value.find((item) => item.id === rowId)
+  if (row?.cm == null || !(row.cm > 0)) return
+  if (catalogCms.value.includes(row.cm)) return
+  newRowIds.delete(rowId)
+  emit('setCatalogCms', addThicknessToCatalog(catalogCms.value, row.cm))
+}
+
+function onCatalogRowClick(row: (typeof catalogRows.value)[number]) {
+  if (!props.scaleConfirmed || row.cm == null) return
+  emit('setDrawMode', 'wall', row.cm)
+}
+
+function addCatalogRow() {
+  if (!canAdd.value) return
+  const id = nextRowId++
+  newRowIds.add(id)
+  draftRows.value = [...draftRows.value, { id, cm: null }]
+  void nextTick(() => {
+    fieldRefs.value[fieldRefs.value.length - 1]?.focus()
+  })
+}
+
+function canRemoveRow(row: (typeof catalogRows.value)[number]): boolean {
+  if (row.cm == null || newRowIds.has(row.id)) return true
+  return canRemoveCommitted.value
+}
+
+function removeCatalogRow(event: Event, row: (typeof catalogRows.value)[number]) {
+  event.stopPropagation()
+  if (!canRemoveRow(row)) return
+  if (row.cm == null || newRowIds.has(row.id)) {
+    newRowIds.delete(row.id)
+    draftRows.value = draftRows.value.filter((item) => item.id !== row.id)
+    return
+  }
+  emit('setCatalogCms', removeThicknessFromCatalog(catalogCms.value, row.cm))
+}
+
+function onSelectDrawn(event: Event, rectId: string) {
+  event.stopPropagation()
+  emit('selectRect', rectId)
 }
 
 function measuredPxFor(rectId: string): number | null {
   return measuresByRectId.value.get(rectId) ?? null
 }
 
-function onEscapeKey(e: KeyboardEvent) {
-  if (e.key !== 'Escape') return
-  if (props.activeClass == null) return
-  emit('deactivateDrawMode')
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', onEscapeKey)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', onEscapeKey)
+useToolbeltHotkey('Escape', () => emit('deactivateDrawMode'), {
+  enabled: () => props.activeClass != null,
+  priority: TOOLBELT_HOTKEY_PRIORITY.tool,
 })
 </script>
 
@@ -133,8 +222,18 @@ onUnmounted(() => {
     <p v-else class="hint subtle">{{ t('preprocess.refs.ocrOnHint') }}</p>
 
     <div class="icon-row">
+      <span
+        class="ref-btn ref-btn--status"
+        :class="{ active: activeClass === 'wall' }"
+        :style="{ '--ref-color': SELECTION_COLORS.wall }"
+        :title="t('preprocess.refs.wallTitle')"
+      >
+        <span class="swatch" />
+        <span class="label">{{ t('preprocess.refs.wall') }}</span>
+        <span class="count">{{ wallRects.length }}/{{ catalogDisplayCms.length }}</span>
+      </span>
       <button
-        v-for="item in REF_TYPES"
+        v-for="item in OPENING_REF_TYPES"
         :key="item.type"
         type="button"
         class="ref-btn"
@@ -166,50 +265,79 @@ onUnmounted(() => {
       <template v-else>{{ t('preprocess.refs.noThicknessYet') }}</template>
     </p>
 
-    <div v-if="wallRects.length > 0" class="door-list">
+    <div class="door-list">
       <h4>{{ t('preprocess.refs.wallThicknessTitle') }}</h4>
       <p class="hint subtle">{{ t('preprocess.refs.wallThicknessHint') }}</p>
       <ul>
         <li
-          v-for="(rect, index) in wallRects"
-          :key="rect.id"
+          v-for="row in catalogRows"
+          :key="row.id"
           class="ref-row"
-          :class="{ selected: selectedRectId === rect.id }"
-          @click="$emit('selectRect', rect.id)"
+          :class="{
+            selected: row.selected,
+            drawing: row.drawing,
+            'has-ref': row.drawn && !row.drawing && !row.selected,
+            disabled: !scaleConfirmed && row.cm != null,
+            draft: row.cm == null,
+          }"
+          :title="
+            row.cm == null
+              ? t('settings.thicknessAdd')
+              : row.drawn
+                ? t('preprocess.refs.wallRowRedrawTitle')
+                : t('preprocess.refs.wallRowDrawTitle')
+          "
+          @click="onCatalogRowClick(row)"
         >
-          <span class="door-label">{{ t('preprocess.refs.wallN', { n: index + 1 }) }}</span>
-          <select
-            class="band-select"
-            :value="resolveWallThicknessBand(rect)"
-            :title="t('preprocess.refs.wallBandSelect')"
-            @click.stop
-            @change="
-              $emit(
-                'updateWallThicknessBand',
-                rect.id,
-                ($event.target as HTMLSelectElement).value as FmlThicknessBand,
-              )
-            "
-          >
-            <option v-for="opt in thicknessOptions" :key="opt.band" :value="opt.band">
-              {{ bandName(opt.band) }}
-            </option>
-          </select>
+          <span class="door-label">{{ t('preprocess.refs.wallN', { n: row.index + 1 }) }}</span>
           <ScaleLengthInput
+            ref="fieldRefs"
             input-class="cm-input"
-            :cm="cmForBand(resolveWallThicknessBand(rect))"
+            :cm="row.cm ?? 0"
+            :mixed="row.cm == null"
             :unit="unit"
             :min-cm="1"
             hide-suffix
             :aria-label="t('preprocess.refs.wallThicknessCmOverride')"
-            @update:cm="onCmInput(resolveWallThicknessBand(rect), $event)"
+            @click.stop
+            @update:cm="onCatalogCm(row.id, $event)"
+            @commit="onDraftCommit(row.id)"
           />
           <span v-if="unit !== 'ft-in'" class="cm-unit">{{ t(`common.${unit}`) }}</span>
-          <span v-if="measuredPxFor(rect.id) != null" class="px-badge">
-            {{ measuredPxFor(rect.id) }}px
+          <span v-if="row.rect && measuredPxFor(row.rect.id) != null" class="px-badge">
+            {{ measuredPxFor(row.rect.id) }}px
           </span>
+          <button
+            v-if="row.rect"
+            type="button"
+            class="drawn-mark"
+            :title="t('preprocess.refs.wallSelectRef')"
+            :aria-label="t('preprocess.refs.wallSelectRef')"
+            @click="onSelectDrawn($event, row.rect.id)"
+          >
+            <ToolbeltIcon name="check" />
+          </button>
+          <button
+            type="button"
+            class="catalog-remove"
+            :disabled="!canRemoveRow(row)"
+            :title="t('settings.thicknessRemove')"
+            :aria-label="t('settings.thicknessRemove')"
+            @click="removeCatalogRow($event, row)"
+          >
+            −
+          </button>
         </li>
       </ul>
+      <button
+        type="button"
+        class="catalog-add"
+        :disabled="!canAdd"
+        :title="t('settings.thicknessAdd')"
+        @click="addCatalogRow"
+      >
+        +
+      </button>
     </div>
 
     <div v-if="doorRects.length > 0" class="door-list">
@@ -283,6 +411,10 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+.ref-btn--status {
+  cursor: default;
+}
+
 .ref-btn.active {
   border-color: var(--ref-color, #2563eb);
   background: color-mix(in srgb, var(--ref-color, #2563eb) 12%, white);
@@ -354,24 +486,88 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+.ref-row.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ref-row.draft {
+  cursor: default;
+}
+
+.catalog-remove,
+.catalog-add {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #475569;
+}
+
+.catalog-add {
+  width: auto;
+  padding: 0 10px;
+  margin-top: 8px;
+}
+
+.catalog-remove:hover:not(:disabled),
+.catalog-add:hover:not(:disabled) {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.catalog-remove:disabled,
+.catalog-add:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .ref-row.selected {
   background: color-mix(in srgb, #2563eb 12%, white);
   outline: 1px solid #2563eb;
+}
+
+.ref-row.drawing {
+  background: color-mix(in srgb, #2563eb 16%, white);
+  outline: 2px solid #2563eb;
+}
+
+.ref-row.has-ref {
+  background: color-mix(in srgb, #16a34a 10%, white);
+  outline: 1.5px solid #16a34a;
+}
+
+.drawn-mark {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.drawn-mark :deep(svg) {
+  width: 12px;
+  height: 12px;
 }
 
 .door-label {
   flex: 0 0 4.5rem;
   font-size: 12px;
   color: #475569;
-}
-
-.band-select {
-  flex: 0 0 5.5rem;
-  font-size: 12px;
-  padding: 4px 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
 }
 
 .cm-input {
@@ -386,7 +582,7 @@ onUnmounted(() => {
   color: #64748b;
 }
 
-.door-list select:not(.band-select) {
+.door-list select {
   flex: 1;
   min-width: 0;
   font-size: 12px;
@@ -401,6 +597,5 @@ onUnmounted(() => {
   font-size: 11px;
   color: #64748b;
   font-variant-numeric: tabular-nums;
-  margin-left: auto;
 }
 </style>

@@ -6,6 +6,11 @@ import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import { resolveEffectiveFmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import {
+  classifyThicknessSlot,
+  nearestCatalogCm,
+  normalizeThicknessCatalog,
+} from './fml-wall-thickness-catalog'
+import {
   classifyFmlThicknessBand,
   DEFAULT_FML_BAND_BOUNDARIES,
   type FmlThicknessBand,
@@ -66,15 +71,21 @@ function areCollinearWalls(a: Wall, b: Wall): boolean {
 }
 
 /**
- * Zelfde meetband, of naburige banden binnen hysterese (meetruis rond bandgrens).
+ * Zelfde meetband / catalogus-slot, of naburige maten binnen hysterese (meetruis).
  */
 export function thicknessesCompatibleForChain(
   aCm: number,
   bCm: number,
   boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
+  catalogCms?: readonly number[],
 ): boolean {
   if (!(aCm > 0) || !(bCm > 0)) return true
-  if (classifyFmlThicknessBand(aCm, boundaries) === classifyFmlThicknessBand(bCm, boundaries)) {
+  if (catalogCms && catalogCms.length >= 3) {
+    const catalog = normalizeThicknessCatalog(catalogCms)
+    if (classifyThicknessSlot(aCm, catalog) === classifyThicknessSlot(bCm, catalog)) return true
+  } else if (
+    classifyFmlThicknessBand(aCm, boundaries) === classifyFmlThicknessBand(bCm, boundaries)
+  ) {
     return true
   }
   const larger = Math.max(aCm, bCm)
@@ -82,12 +93,14 @@ export function thicknessesCompatibleForChain(
 }
 
 /**
- * Groepeer muren in dikte-ketens: gedeeld knooppunt (incl. T/L/X) + gemeten gelijkenis.
- * Keten loopt door junctions; breekt alleen bij echte diktestap (niet bandgrens-ruis).
+ * Groepeer muren in dikte-ketens.
+ * Collineair op een gedeeld knooppunt (door T/X) = altijd één keten: T-split
+ * is geen diktestap. T-arm / L alleen bij dezelfde slot/band of 15% hysterese.
  */
 export function buildFmlThicknessChains(
   walls: Wall[],
   boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
+  catalogCms?: readonly number[],
 ): number[][] {
   const count = walls.length
   if (count <= 1) return walls.map((_, index) => [index])
@@ -108,13 +121,52 @@ export function buildFmlThicknessChains(
   for (const indices of wallsAtPoint.values()) {
     for (let i = 0; i < indices.length; i += 1) {
       for (let j = i + 1; j < indices.length; j += 1) {
+        if (areCollinearWalls(walls[indices[i]], walls[indices[j]])) {
+          uf.union(indices[i], indices[j])
+        }
+      }
+    }
+  }
+
+  const chainLength = new Array<number>(count).fill(0)
+  const chainWeighted = new Array<number>(count).fill(0)
+  for (let index = 0; index < count; index += 1) {
+    const root = uf.find(index)
+    const length = Math.max(0, wallLengthCm(walls[index]))
+    chainLength[root] += length
+    chainWeighted[root] += walls[index].thickness * length
+  }
+
+  const chainAverageCm = (index: number): number => {
+    const root = uf.find(index)
+    const length = chainLength[root]
+    return length > 0 ? chainWeighted[root] / length : walls[index].thickness
+  }
+
+  // T-arm / L: alleen als de ketens ná de collineaire merge nog compatibel zijn.
+  // Zo trekt een ruizig 10 cm-middenstuk geen 10 cm-T-arm de 15 cm-lijn in.
+  for (const indices of wallsAtPoint.values()) {
+    for (let i = 0; i < indices.length; i += 1) {
+      for (let j = i + 1; j < indices.length; j += 1) {
         const left = indices[i]
         const right = indices[j]
+        if (uf.find(left) === uf.find(right)) continue
+        if (areCollinearWalls(walls[left], walls[right])) continue
         if (
-          thicknessesCompatibleForChain(walls[left].thickness, walls[right].thickness, boundaries)
+          !thicknessesCompatibleForChain(
+            chainAverageCm(left),
+            chainAverageCm(right),
+            boundaries,
+            catalogCms,
+          )
         ) {
-          uf.union(left, right)
+          continue
         }
+        const rootA = uf.find(left)
+        const rootB = uf.find(right)
+        chainLength[rootA] += chainLength[rootB]
+        chainWeighted[rootA] += chainWeighted[rootB]
+        uf.union(left, right)
       }
     }
   }
@@ -124,7 +176,7 @@ export function buildFmlThicknessChains(
   // Dunne tussensegmenten (bv kozijn/ruis) verbinden twee gelijke buitenbanden.
   for (let bridgeIndex = 0; bridgeIndex < count; bridgeIndex += 1) {
     const bridge = walls[bridgeIndex]
-    const bridgeBand = classifyFmlThicknessBand(bridge.thickness, boundaries)
+    const bridgeBand = classifyChainSlot(bridge.thickness, boundaries, catalogCms)
     const bridgeLength = wallLengthCm(bridge)
     const pointA = wallsAtPoint.get(wallEndpointKey(bridge.a)) ?? []
     const pointB = wallsAtPoint.get(wallEndpointKey(bridge.b)) ?? []
@@ -140,8 +192,8 @@ export function buildFmlThicknessChains(
 
     const leftIndex = neighborsA[0]
     const rightIndex = neighborsB[0]
-    const leftBand = classifyFmlThicknessBand(walls[leftIndex].thickness, boundaries)
-    const rightBand = classifyFmlThicknessBand(walls[rightIndex].thickness, boundaries)
+    const leftBand = classifyChainSlot(walls[leftIndex].thickness, boundaries, catalogCms)
+    const rightBand = classifyChainSlot(walls[rightIndex].thickness, boundaries, catalogCms)
     if (leftBand !== rightBand || leftBand === bridgeBand) continue
 
     const maxNeighborLength = Math.min(
@@ -174,6 +226,37 @@ function averageThicknessCm(values: number[]): number {
 }
 
 // ESC:X-03 (E)
+function classifyChainSlot(
+  thicknessCm: number,
+  boundaries: FmlThicknessBandBoundaries,
+  catalogCms?: readonly number[],
+): string {
+  if (catalogCms && catalogCms.length >= 3) {
+    return String(classifyThicknessSlot(thicknessCm, catalogCms))
+  }
+  return classifyFmlThicknessBand(thicknessCm, boundaries)
+}
+
+function resolveChainCatalogCm(
+  chain: number[],
+  walls: Wall[],
+  catalogCms: readonly number[],
+): number {
+  const catalog = normalizeThicknessCatalog(catalogCms)
+  let weighted = 0
+  let lengthSum = 0
+  for (const index of chain) {
+    const wall = walls[index]
+    if (!wall) continue
+    const len = Math.max(0, wallLengthCm(wall))
+    weighted += wall.thickness * len
+    lengthSum += len
+  }
+  const avg =
+    lengthSum > 0 ? weighted / lengthSum : (walls[chain[0]]?.thickness ?? catalog[0] ?? 10)
+  return nearestCatalogCm(roundFmlThicknessCm(avg), catalog)
+}
+
 function resolveChainBand(
   chain: number[],
   walls: Wall[],
@@ -216,9 +299,9 @@ export function roundFmlThicknessCm(value: number): number {
 
 // ESC:X-02 (E) + ESC:X-01 (E)
 /**
- * Harmoniseert muurdikte per keten en mapt naar absolute min/mid/max exportdiktes.
- * Ruwe meting bepaalt alleen de band; exportedikte komt altijd uit limits (bewust beleid).
- * Balance: default 0.5; collineaire diktewissel-ketens flushen alleen bij face-evidence
+ * Harmoniseert muurdikte per keten en mapt naar catalogus-cm of min/mid/max.
+ * Collineaire T/X-stukken delen één keten (lengtegewogen); T-arm breekt nog
+ * bij een echte stap. Balance: default 0.5; collineaire diktewissel-ketens flushen alleen bij face-evidence
  * (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
  * Daarna sanitize (weld + near-H/V op as + collinear cover). Viewer = export.
  *
@@ -230,6 +313,7 @@ export function harmonizeFmlWallThickness(
   boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
   faceEvidenceById?: Map<string, WallFaceExtentsCm>,
   pinnedWallIds?: ReadonlySet<string> | readonly string[],
+  catalogCms?: readonly number[],
 ): FloorPlan {
   const pinned =
     pinnedWallIds == null
@@ -237,6 +321,12 @@ export function harmonizeFmlWallThickness(
       : pinnedWallIds instanceof Set
         ? pinnedWallIds
         : new Set(pinnedWallIds)
+  const catalog =
+    catalogCms && catalogCms.length >= 3
+      ? normalizeThicknessCatalog(catalogCms)
+      : limits.thicknessCms && limits.thicknessCms.length >= 3
+        ? normalizeThicknessCatalog(limits.thicknessCms)
+        : null
 
   return {
     ...plan,
@@ -250,12 +340,13 @@ export function harmonizeFmlWallThickness(
       }
 
       const freeWalls = freeIndices.map((index) => floor.walls[index])
-      const freeChains = buildFmlThicknessChains(freeWalls, boundaries)
+      const freeChains = buildFmlThicknessChains(freeWalls, boundaries, catalog ?? undefined)
       const thicknessByIndex = new Map<number, number>()
 
       for (const chain of freeChains) {
-        const band = resolveChainBand(chain, freeWalls, boundaries)
-        const exportThickness = resolveBandThicknessCm(band, limits)
+        const exportThickness = catalog
+          ? resolveChainCatalogCm(chain, freeWalls, catalog)
+          : resolveBandThicknessCm(resolveChainBand(chain, freeWalls, boundaries), limits)
         for (const local of chain) {
           const globalIndex = freeIndices[local]
           if (globalIndex != null) thicknessByIndex.set(globalIndex, exportThickness)
@@ -268,10 +359,12 @@ export function harmonizeFmlWallThickness(
         }
         const exportThickness =
           thicknessByIndex.get(index) ??
-          resolveBandThicknessCm(
-            classifyFmlThicknessBand(roundFmlThicknessCm(wall.thickness), boundaries),
-            limits,
-          )
+          (catalog
+            ? nearestCatalogCm(roundFmlThicknessCm(wall.thickness), catalog)
+            : resolveBandThicknessCm(
+                classifyFmlThicknessBand(roundFmlThicknessCm(wall.thickness), boundaries),
+                limits,
+              ))
         if (exportThickness !== wall.thickness) {
           noteDiscardedMeasurement(
             'X-02',

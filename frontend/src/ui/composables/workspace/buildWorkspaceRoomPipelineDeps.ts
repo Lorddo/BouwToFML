@@ -51,15 +51,14 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
-  updateRectWallThicknessBand: (
-    id: string,
-    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
-  ) => void
+  updateRectWallThicknessCm: (id: string, cm: number) => void
   getWallThicknessLimits: () => import('@/core/fml/fml-wall-thickness-limits').FmlWallThicknessLimits
-  setWallThicknessCm?: (
-    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
-    cm: number,
-  ) => void
+  getThicknessCatalog: () => number[]
+  getPxPerMm: () => { x: number; y: number }
+  addThicknessToCatalog?: (cm: number) => void
+  replaceCatalogThickness?: (cms: number[]) => void
+  setPendingWallThicknessCm: (cm: number | null) => void
+  getPendingWallThicknessCm: () => number | null
   wallRefThicknessMeasures: Ref<
     import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
   >
@@ -130,9 +129,14 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
     selectRect: ctx.selectRect,
     updateRectBounds: ctx.updateRectBounds,
     updateRectFmlRefId: ctx.updateRectFmlRefId,
-    updateRectWallThicknessBand: ctx.updateRectWallThicknessBand,
+    updateRectWallThicknessCm: ctx.updateRectWallThicknessCm,
     getWallThicknessLimits: ctx.getWallThicknessLimits,
-    setWallThicknessCm: ctx.setWallThicknessCm,
+    getThicknessCatalog: ctx.getThicknessCatalog,
+    getPxPerMm: ctx.getPxPerMm,
+    addThicknessToCatalog: ctx.addThicknessToCatalog,
+    replaceCatalogThickness: ctx.replaceCatalogThickness,
+    setPendingWallThicknessCm: ctx.setPendingWallThicknessCm,
+    getPendingWallThicknessCm: ctx.getPendingWallThicknessCm,
     wallRefThicknessMeasures: ctx.wallRefThicknessMeasures,
     wallThicknessBandBoundariesPx: ctx.wallThicknessBandBoundariesPx,
     endDraw: ctx.endDraw,

@@ -20,7 +20,12 @@ export type FloorplanCanvasProps = {
   lbeRects?: SelectionRect[]
   previewRect?: SelectionRect | null
   /** Project min/mid/max cm — labels op muur-LBE. */
-  wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number } | null
+  wallThicknessLimits?: {
+    minCm: number
+    midCm: number
+    maxCm: number
+    thicknessCms?: number[]
+  } | null
   drawType?: ElementClass | null
   typeColors?: Partial<Record<ElementClass, string>>
   wallMatchOverlays?: WallMatchOverlay[]

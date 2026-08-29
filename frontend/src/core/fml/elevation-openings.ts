@@ -201,13 +201,16 @@ export function addPlanOpening(
   return { plan: next, openingId }
 }
 
-/** UI-split (junctions/openings) — core importeert geen `fml-preview-wall-edit`. */
+/** UI-split (junctions/openings) — core importeert geen `fml-preview-wall-edit`.
+ * Callers: inject `splitWallAtT` from UI as `splitWalls` (geom), plan remap via this helper.
+ */
 export type SplitWallAtTFn = (
   walls: Wall[],
   wallId: string,
   t: number,
 ) => { walls: Wall[]; firstWallId: string; secondWallId: string } | null
 
+/** Plan-level split: wall geom via `splitWalls` + facade-group remap. Prefer over raw UI split for hosts. */
 export function splitPlanWallAtT(
   plan: FloorPlan,
   wallId: string,

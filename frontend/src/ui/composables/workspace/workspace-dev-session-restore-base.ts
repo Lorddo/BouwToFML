@@ -58,7 +58,12 @@ export type WorkspaceDevSessionRestoreBaseDeps = {
   restoreOcrFromRegions: (regions: OcrTextCandidate[]) => void
   referenceWallThicknessPx: Ref<number | null>
   wallRefThicknessMeasures: Ref<
-    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+    Array<{
+      thicknessPx: number
+      thicknessCm?: number
+      band?: 'min' | 'mid' | 'max'
+      rectId?: string
+    }>
   >
   restoreWallReferenceRects: (rects: DevWallReferenceRect[]) => void
   restoreOpeningReferenceRects: (rects: DevOpeningReferenceRect[]) => void
@@ -118,13 +123,15 @@ export function createWorkspaceDevSessionRestoreBase(deps: WorkspaceDevSessionRe
     }
     if (session.wallRefThicknessMeasures?.length) {
       deps.wallRefThicknessMeasures.value = session.wallRefThicknessMeasures
-        .filter(
-          (m) =>
-            (m.band === 'min' || m.band === 'mid' || m.band === 'max') &&
-            Number.isFinite(m.thicknessPx) &&
-            m.thicknessPx > 0,
-        )
-        .map((m) => ({ band: m.band, thicknessPx: m.thicknessPx }))
+        .filter((m) => Number.isFinite(m.thicknessPx) && m.thicknessPx > 0)
+        .map((m) => ({
+          thicknessPx: m.thicknessPx,
+          ...(typeof m.thicknessCm === 'number' && m.thicknessCm > 0
+            ? { thicknessCm: m.thicknessCm }
+            : {}),
+          ...(m.band === 'min' || m.band === 'mid' || m.band === 'max' ? { band: m.band } : {}),
+          ...(m.rectId ? { rectId: m.rectId } : {}),
+        }))
     }
     const wallRects =
       session.referenceWallRects && session.referenceWallRects.length > 0

@@ -2,10 +2,11 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import HexColorField from './HexColorField.vue'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
@@ -26,11 +27,13 @@ const props = withDefaults(
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
     roofVertexZCm?: number | null
+    roofVertexIndex?: number | null
   }>(),
   {
     roomTypes: () => [],
     surfaceEditActive: false,
     roofVertexZCm: null,
+    roofVertexIndex: null,
   },
 )
 
@@ -154,6 +157,7 @@ function onCutoutChange(event: Event): void {
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roofVertexZ') }}</span>
     <div class="fml-toolbelt__field-controls">
       <ScaleLengthInput
+        :key="`roof-z-${roofVertexIndex ?? 'none'}`"
         :cm="roofVertexZCm ?? 0"
         :unit="unit"
         :min-cm="0"
@@ -183,10 +187,9 @@ function onCutoutChange(event: Event): void {
   >
     {{ t('result.toolbar.doneSurfacePolygon') }}
   </button>
-  <button
+  <ToolbeltActionButton
     v-if="selectedAreaPanel"
-    type="button"
-    class="canvas-toolbelt__btn"
+    icon="delete"
     :title="
       selectedAreaPanel.kind === 'surface'
         ? t('result.toolbar.deleteSurface')
@@ -197,8 +200,8 @@ function onCutoutChange(event: Event): void {
         ? t('result.toolbar.deleteSurface')
         : t('result.toolbar.deleteArea')
     "
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteTagged')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
 </template>

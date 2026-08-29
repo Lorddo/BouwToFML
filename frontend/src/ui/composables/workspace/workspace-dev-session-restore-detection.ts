@@ -39,7 +39,12 @@ export type WorkspaceDevSessionRestoreDetectionDeps = {
   finalizeWallDetection: () => Promise<boolean>
   referenceWallThicknessPx: Ref<number | null>
   wallRefThicknessMeasures: Ref<
-    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+    Array<{
+      thicknessPx: number
+      thicknessCm?: number
+      band?: 'min' | 'mid' | 'max'
+      rectId?: string
+    }>
   >
   restoreWallReferenceRects: (rects: DevWallReferenceRect[]) => void
   restoreOpeningReferenceRects: (rects: DevOpeningReferenceRect[]) => void
@@ -64,18 +69,27 @@ export type WorkspaceDevSessionRestoreDetectionDeps = {
 }
 
 function restoreWallRefThicknessMeasures(
-  target: Ref<Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>>,
+  target: Ref<
+    Array<{
+      thicknessPx: number
+      thicknessCm?: number
+      band?: 'min' | 'mid' | 'max'
+      rectId?: string
+    }>
+  >,
   measures: DevWorkspaceRoomSnapshot['wallRefThicknessMeasures'] | undefined,
 ): void {
   if (!measures?.length) return
   target.value = measures
-    .filter(
-      (m) =>
-        (m.band === 'min' || m.band === 'mid' || m.band === 'max') &&
-        Number.isFinite(m.thicknessPx) &&
-        m.thicknessPx > 0,
-    )
-    .map((m) => ({ band: m.band, thicknessPx: m.thicknessPx }))
+    .filter((m) => Number.isFinite(m.thicknessPx) && m.thicknessPx > 0)
+    .map((m) => ({
+      thicknessPx: m.thicknessPx,
+      ...(typeof m.thicknessCm === 'number' && m.thicknessCm > 0
+        ? { thicknessCm: m.thicknessCm }
+        : {}),
+      ...(m.band === 'min' || m.band === 'mid' || m.band === 'max' ? { band: m.band } : {}),
+      ...(m.rectId ? { rectId: m.rectId } : {}),
+    }))
 }
 
 export function createWorkspaceDevSessionRestoreDetection(

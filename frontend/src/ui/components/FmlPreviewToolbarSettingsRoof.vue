@@ -2,14 +2,16 @@
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
-import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
 defineProps<{
   unit: ScaleInputUnit
   roofVertexZCm?: number | null
+  roofVertexIndex?: number | null
   polyMutate?: boolean
 }>()
 
@@ -27,6 +29,7 @@ const emit = defineEmits<{
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roofVertexZ') }}</span>
     <div class="fml-toolbelt__field-controls">
       <ScaleLengthInput
+        :key="`roof-z-${roofVertexIndex ?? 'none'}`"
         :cm="roofVertexZCm ?? 0"
         :unit="unit"
         :min-cm="0"
@@ -56,13 +59,12 @@ const emit = defineEmits<{
   >
     {{ t('result.toolbar.doneSurfacePolygon') }}
   </button>
-  <button
-    type="button"
-    class="canvas-toolbelt__btn"
+  <ToolbeltActionButton
+    icon="delete"
     :title="t('result.toolbar.deleteSurface')"
     :aria-label="t('result.toolbar.deleteSurface')"
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteTagged')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
 </template>

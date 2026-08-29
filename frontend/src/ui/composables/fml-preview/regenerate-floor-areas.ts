@@ -1,7 +1,8 @@
 import { rebuildAreasFromHoles } from '@/core/fml/area-match'
 import { ensureDesignsSynced } from '@/core/fml/design-sync'
 import { holeMatchesFloorCutout } from '@/core/fml/ridge-floor'
-import type { Floor, Wall } from '@/core/fml/types'
+import { scaleFloorPlan, type PlanScaleFactors } from '@/core/fml/scale-floor-plan'
+import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
 import { buildWallRenderGeometry } from '@/ui/components/fml-preview-wall-polygons'
 import { snapHoleRingsToWallFaces } from './snap-area-holes-to-faces'
 
@@ -39,5 +40,29 @@ export function regeneratePlanAreas(plan: { name: string; floors: Floor[] }): {
   return {
     ...plan,
     floors: plan.floors.map((floor) => regenerateFloorAreas(floor)),
+  }
+}
+
+/**
+ * Rescale + kamers opnieuw uit binnenfaces.
+ * `scaleFloorPlan` schaalt area-polygonen mee, maar muurdikte blijft — daardoor
+ * wijken kamermaten af tot de volgende muur-edit. Zelfde regen als `setWalls`.
+ */
+export function scaleFloorPlanAndRegenAreas(
+  plan: FloorPlan,
+  factor: number | PlanScaleFactors,
+  floorIndex?: number,
+): FloorPlan {
+  const scaled = scaleFloorPlan(plan, factor, floorIndex)
+  if (scaled === plan) return plan
+  if (floorIndex == null) return regeneratePlanAreas(scaled)
+  const idx = Math.max(0, Math.min(floorIndex, scaled.floors.length - 1))
+  const floor = scaled.floors[idx]
+  if (!floor) return scaled
+  const next = regenerateFloorAreas(floor)
+  if (next === floor) return scaled
+  return {
+    ...scaled,
+    floors: scaled.floors.map((entry, i) => (i === idx ? next : entry)),
   }
 }

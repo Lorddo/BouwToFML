@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, type ComputedRef, type Ref } from 'vue'
 import type { FloorItem, Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import {
@@ -14,6 +14,7 @@ const MIN_SIZE_CM = 5
 
 export function useFmlPreviewItemResize(options: {
   editor: EditorApi
+  selectedItemId: ComputedRef<string | null>
   settingsItemId: Ref<string | null>
   clientToCm: (clientX: number, clientY: number) => Point2D | null
   screenPxToCm: (px: number) => number
@@ -23,7 +24,7 @@ export function useFmlPreviewItemResize(options: {
   const activeSide = ref<ItemResizeSide | null>(null)
 
   function selectedItem(): FloorItem | undefined {
-    const guid = options.settingsItemId.value
+    const guid = options.selectedItemId.value
     if (!guid) return undefined
     return options.editor.items.value.find((entry) => entry.guid === guid)
   }

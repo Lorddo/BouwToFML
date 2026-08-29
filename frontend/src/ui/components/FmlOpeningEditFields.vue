@@ -11,8 +11,10 @@ import type { OpeningType } from '@/core/fml/types'
 import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/ui/components/fml-preview-openings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const props = withDefaults(
   defineProps<{
@@ -349,14 +351,13 @@ function onBovenlichtGapCommit(): void {
   >
     <ToolbeltIcon name="copy" />
   </button>
-  <button
+  <ToolbeltActionButton
     v-if="showDelete"
-    type="button"
-    class="canvas-toolbelt__btn"
+    icon="delete"
     :title="deleteTitle"
     :aria-label="deleteTitle"
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('remove')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
 </template>

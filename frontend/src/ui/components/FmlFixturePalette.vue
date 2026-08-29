@@ -2,12 +2,20 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { listFixturePlaceOptions, type FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
+import {
+  TOOLBELT_HOTKEY_PRIORITY,
+  useToolbeltHotkey,
+} from '@/ui/composables/canvas/useToolbeltHotkey'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const selected = defineModel<FixturePlaceOption | null>({ default: null })
 const emit = defineEmits<{
   close: []
 }>()
+
+useToolbeltHotkey('Escape', () => emit('close'), {
+  priority: TOOLBELT_HOTKEY_PRIORITY.tool,
+})
 
 const { t } = useI18n()
 const query = ref('')

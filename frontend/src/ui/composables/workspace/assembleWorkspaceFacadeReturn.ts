@@ -63,6 +63,7 @@ export type WorkspaceFacadeContext = {
   error: ComputedRef<string | null>
   rects: Ref<SelectionRect[]>
   selectedRectId: Ref<string | null>
+  pendingWallThicknessCm: Ref<number | null>
   activeClass: Ref<ElementClass | null>
   previewRect: Ref<SelectionRect | null>
   typeColors: Record<ElementClass, string>
@@ -172,6 +173,7 @@ function slicePreprocessShell(ctx: WorkspaceFacadeContext) {
     error: ctx.error,
     rects: ctx.rects,
     selectedRectId: ctx.selectedRectId,
+    pendingWallThicknessCm: ctx.pendingWallThicknessCm,
     activeClass: ctx.activeClass,
     previewRect: ctx.previewRect,
     typeColors: ctx.typeColors,
@@ -249,8 +251,9 @@ function sliceDetectionUi(ctx: WorkspaceFacadeContext) {
     setReferencePanMode: ctx.detection.setReferencePanMode,
     setReferenceDrawMode: ctx.detection.setReferenceDrawMode,
     onDoorFmlRefIdChange: ctx.detection.onDoorFmlRefIdChange,
-    onWallThicknessBandChange: ctx.detection.onWallThicknessBandChange,
     onWallThicknessCmChange: ctx.detection.onWallThicknessCmChange,
+    onCatalogThicknessChange: ctx.detection.onCatalogThicknessChange,
+    onCatalogCmsChange: ctx.detection.onCatalogCmsChange,
     clearTemplateTypeRects: ctx.detection.clearTemplateTypeRects,
     measuringReferenceWall: ctx.detection.measuringReferenceWall,
     onRectUpdate: ctx.detection.onRectUpdate,

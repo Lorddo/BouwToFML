@@ -233,8 +233,8 @@ export interface PreprocessLayerTune {
   thresholdMode?: 'fixed' | 'adaptive' | 'otsu' | 'edgeAware'
   useAdaptive?: boolean
   /**
-   * Stap 1 vóór de gekozen drempelmodus: vaste B/W (geen grijs bewaren),
-   * daarna adaptive/otsu/… op puur B/W.
+   * Start-B/W vóór morph: vaste drempel (geen grijs bewaren).
+   * Adaptive (indien aan) draait ná holes/brug/verdikken op dat B/W.
    */
   preBinarizeEnabled?: boolean
   /** Drempel voor vooraf-B/W (default 150). */

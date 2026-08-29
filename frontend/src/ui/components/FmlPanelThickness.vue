@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
+import { FACTORY_THICKNESS_CMS } from '@/core/fml/fml-wall-thickness-catalog'
 import { useI18n } from 'vue-i18n'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import ThicknessCatalogFields from './ThicknessCatalogFields.vue'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import './fml-panel-fields.css'
@@ -14,9 +16,7 @@ withDefaults(
     hasCombinedOutput: boolean
     unit: ScaleInputUnit
     underlayAvailable?: boolean
-    fmlThicknessMinCm?: number
-    fmlThicknessMidCm?: number
-    fmlThicknessMaxCm?: number
+    fmlThicknessCms?: number[]
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
     fmlThicknessPickTier?: FmlThicknessPickTier | null
@@ -25,9 +25,7 @@ withDefaults(
   }>(),
   {
     underlayAvailable: false,
-    fmlThicknessMinCm: 10,
-    fmlThicknessMidCm: 20,
-    fmlThicknessMaxCm: 30,
+    fmlThicknessCms: () => [...FACTORY_THICKNESS_CMS],
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
     fmlThicknessPickTier: null,
@@ -37,9 +35,7 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  'update:fmlThicknessMinCm': [value: number]
-  'update:fmlThicknessMidCm': [value: number]
-  'update:fmlThicknessMaxCm': [value: number]
+  'update:fmlThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   startThicknessPick: [tier: FmlThicknessPickTier]
@@ -50,17 +46,16 @@ const emit = defineEmits<{
 <template>
   <details class="fml-fold">
     <summary>{{ t('result.thicknessFold') }}</summary>
+    <ThicknessCatalogFields
+      :cms="fmlThicknessCms"
+      :unit="unit"
+      :disabled="!scaleConfirmed || !hasCombinedOutput"
+      @update:cms="emit('update:fmlThicknessCms', $event)"
+    />
     <div class="fml-thickness-limits">
       <label class="fml-limit-field">
-        <span :title="t('result.thicknessMinTitle')">{{ t('result.thicknessMin') }}</span>
+        <span :title="t('result.thicknessMinTitle')">{{ t('result.pickMinTitle') }}</span>
         <div class="fml-limit-input-row">
-          <ScaleLengthInput
-            :cm="fmlThicknessMinCm"
-            :unit="unit"
-            :min-cm="1"
-            :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @update:cm="emit('update:fmlThicknessMinCm', $event)"
-          />
           <button
             type="button"
             class="pick-btn"
@@ -85,29 +80,8 @@ const emit = defineEmits<{
         </div>
       </label>
       <label class="fml-limit-field">
-        <span :title="t('result.thicknessMidTitle')">{{ t('result.thicknessMid') }}</span>
+        <span :title="t('result.thicknessMaxTitle')">{{ t('result.pickMaxTitle') }}</span>
         <div class="fml-limit-input-row">
-          <ScaleLengthInput
-            :cm="fmlThicknessMidCm"
-            :unit="unit"
-            :min-cm="1"
-            :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @update:cm="emit('update:fmlThicknessMidCm', $event)"
-          />
-          <span class="fml-limit-spacer" aria-hidden="true" />
-          <span class="fml-limit-spacer band-spacer" aria-hidden="true" />
-        </div>
-      </label>
-      <label class="fml-limit-field">
-        <span :title="t('result.thicknessMaxTitle')">{{ t('result.thicknessMax') }}</span>
-        <div class="fml-limit-input-row">
-          <ScaleLengthInput
-            :cm="fmlThicknessMaxCm"
-            :unit="unit"
-            :min-cm="1"
-            :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @update:cm="emit('update:fmlThicknessMaxCm', $event)"
-          />
           <button
             type="button"
             class="pick-btn"
@@ -160,7 +134,7 @@ const emit = defineEmits<{
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 4px 0 0;
+  margin: 8px 0 0;
 }
 
 .pick-btn {

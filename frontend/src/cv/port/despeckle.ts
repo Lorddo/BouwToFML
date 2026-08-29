@@ -1,26 +1,13 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
 
-const MIN_PX_REFERENCE_SIDE = 1000
-
-export function scaleMinPixels(
-  minPixels: number | undefined,
-  width: number,
-  height: number,
-): number {
-  const base = Math.max(0, minPixels ?? 0)
-  if (base === 0) return 0
-  const sideRatio = Math.max(width, height) / MIN_PX_REFERENCE_SIDE
-  const areaScale = Math.max(1, sideRatio * sideRatio)
-  return Math.round(base * areaScale)
-}
-
 export function despeckleByMinArea(
   cv: OpenCV,
   mat: OpenCV['Mat'],
   minPixels: number | undefined,
 ): number {
-  const scaledMin = scaleMinPixels(minPixels, mat.cols, mat.rows)
-  if (scaledMin <= 0) return 0
+  // Ruwe px — werkformaat is 3k; geen verborgen 1000-px beeldmaat-schaal.
+  const minArea = Math.max(0, Math.round(minPixels ?? 0))
+  if (minArea <= 0) return 0
 
   const inv = new cv.Mat()
   cv.bitwise_not(mat, inv)
@@ -32,7 +19,7 @@ export function despeckleByMinArea(
 
   for (let i = 1; i < count; i += 1) {
     const area = stats.intAt(i, cv.CC_STAT_AREA)
-    if (area >= scaledMin) continue
+    if (area >= minArea) continue
     const left = stats.intAt(i, cv.CC_STAT_LEFT)
     const top = stats.intAt(i, cv.CC_STAT_TOP)
     const width = stats.intAt(i, cv.CC_STAT_WIDTH)

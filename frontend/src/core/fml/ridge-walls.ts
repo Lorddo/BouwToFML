@@ -493,6 +493,30 @@ export function overwriteRidgeDakThickness(plan: FloorPlan, thicknessCm: number)
   return changed ? { ...plan, floors } : plan
 }
 
+/** Verwijder nok-muren uit het Dak-design + GUID-lijst. Plattegrondmuren blijven. */
+export function removeRidgeWallsFromPlan(plan: FloorPlan, wallIds: readonly string[]): FloorPlan {
+  const idSet = new Set(wallIds.map((id) => id.trim()).filter(Boolean))
+  if (idSet.size === 0) return plan
+  let changed = false
+  const floors = plan.floors.map((floor) => {
+    const current = listRidgeWallsOnFloor(floor)
+    const next = current.filter((wall) => !idSet.has(wall.id))
+    if (next.length === current.length) return floor
+    changed = true
+    return setRidgeWallsOnFloor(floor, next)
+  })
+  if (!changed) return plan
+  const next: FloorPlan = {
+    ...plan,
+    floors,
+    source: plan.source
+      ? { ...plan.source, settings: { ...(plan.source.settings ?? {}) } }
+      : plan.source,
+  }
+  pruneRidgeWalls(next)
+  return next
+}
+
 /** Zet nok-uiteinden op één floor (sibling Dak-design). */
 export function setPlanRidgeJunctionZ(
   plan: FloorPlan,

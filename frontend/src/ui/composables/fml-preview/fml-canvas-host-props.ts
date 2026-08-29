@@ -1,0 +1,88 @@
+import type { FloorPlan } from '@/core/fml/types'
+import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { HScaleState } from '@/platform/calibration'
+import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
+import type { FmlKind } from './fml-capabilities'
+
+/**
+ * Props accepted by `FmlPreviewCanvas.vue`.
+ *
+ * Extracted so consumers (host views, test harnesses) can reference the
+ * surface without importing the SFC itself.
+ */
+export interface FmlCanvasHostProps {
+  plan: FloorPlan | null
+  floorIndex?: number
+
+  // ── Underlay / calibration ──
+  underlaySrc?: string | null
+  underlayWidthPx?: number
+  underlayHeightPx?: number
+  /** 0–1; 0 = uit. */
+  underlayOpacity?: number
+  /** 0–1; FML-geometrie opacity. */
+  contentOpacity?: number
+  cmOrigin?: { x: number; y: number } | null
+  pxPerMmX?: number
+  pxPerMmY?: number
+  /** Onderlegger-rotatie in graden (FML drawing); default 0. */
+  rotationDeg?: number
+  /** Display-only X-flip van de onderlegger. */
+  flipX?: boolean
+  /** Sidebar: onderlegger verslepen. */
+  underlayMoveMode?: boolean
+
+  // ── Thickness pick ──
+  thicknessPickTier?: FmlThicknessBand | null
+  thicknessPresetCms?: number[]
+
+  // ── Bovenlicht defaults ──
+  bovenlichtDefault?: boolean
+  windowBovenlichtDefault?: boolean
+  bovenlichtHeightCm?: number
+  bovenlichtGapCm?: number
+  /** true = flags+groen; false = losse ramen. Default true. */
+  bovenlichtPacked?: boolean
+
+  // ── Session defaults ──
+  defaultDoorHeightCm?: number
+  defaultWindowHeightCm?: number
+  defaultWindowSillZCm?: number
+
+  // ── Capability / mode ──
+  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+  /**
+   * Capability preset. When set, derives area/annotation/inspect/touch flags.
+   * Prefer this over the legacy boolean props below.
+   */
+  kind?: FmlKind
+  /**
+   * Area/surface Ctrl+klik + draw_surface. Default **false** (product-safe).
+   * Ignored when `kind` is set (use detection/editor preset).
+   */
+  areaSurfaceEditEnabled?: boolean
+  /**
+   * Labels/lijnen plaatsen (Ctrl+klik selecteren). Default **false**.
+   * Ignored when `kind` is set.
+   */
+  annotationEditEnabled?: boolean
+  /** Read-only inspect. Ignored when `kind` is set. */
+  inspectMode?: boolean
+  /** FML-id → #RRGGBB statusfill. */
+  inspectColors?: Record<string, string>
+  /** Kamer-/surface-benaming + FML draw_label. Default true.
+   * false = geen Konva.Text (maatlijnen blijven).
+   */
+  labelsVisible?: boolean
+  /** Workspace: Herschalen-modus (H/V-linialen). Viewer uit. */
+  rescaleMode?: boolean
+  rescaleState?: HScaleState | null
+  /** Fixture tool + coarse-pointer rail. Ignored when `kind` is set. */
+  touchEditor?: boolean
+  /** Viewer: chrome (header/floor-rail) verborgen. */
+  canvasFullscreen?: boolean
+  /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */
+  dimensionVis?: DimensionVis
+  /** Dak-tab: uitslag van de actieve floor (nok + dakvlakken). */
+  dakMode?: boolean
+}

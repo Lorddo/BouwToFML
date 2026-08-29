@@ -8,8 +8,10 @@ import {
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
@@ -45,9 +47,7 @@ const props = withDefaults(
     junctionHeightMixed: boolean
     junctionBottomZDraft?: number
     junctionBottomZMixed?: boolean
-    thicknessMinCm?: number
-    thicknessMidCm?: number
-    thicknessMaxCm?: number
+    thicknessPresetCms?: number[]
     /** Gevelgroepen (alleen editor capability). */
     facadeGroupsEnabled?: boolean
     facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
@@ -69,9 +69,7 @@ const props = withDefaults(
     ridgeZCm?: number | null
   }>(),
   {
-    thicknessMinCm: 10,
-    thicknessMidCm: 20,
-    thicknessMaxCm: 30,
+    thicknessPresetCms: () => [10, 20, 30],
     facadeGroupsEnabled: false,
     facadeGroupOptions: () => [],
     facadeGroupChecks: () => ({}),
@@ -120,11 +118,13 @@ const emit = defineEmits<{
   ridgeFloorChange: [floorIndex: number]
 }>()
 
-const thicknessPresets = computed(() => [
-  { id: 'min' as const, label: t('result.toolbar.presetMin'), cm: props.thicknessMinCm },
-  { id: 'mid' as const, label: t('result.toolbar.presetMid'), cm: props.thicknessMidCm },
-  { id: 'max' as const, label: t('result.toolbar.presetMax'), cm: props.thicknessMaxCm },
-])
+const thicknessPresets = computed(() =>
+  (props.thicknessPresetCms ?? [10, 20, 30]).map((cm) => ({
+    id: String(Math.round(cm * 10) / 10),
+    label: formatScaleInputLabel(cm, props.unit),
+    cm,
+  })),
+)
 
 const isDrawWallOrRoom = computed(
   () => props.activeTool === 'draw_wall' || props.activeTool === 'draw_room',
@@ -161,14 +161,12 @@ const showRidgeFloorSelect = computed(
 const showThicknessFields = computed(() => !isRidgeMode.value)
 const showFacadeStamp = computed(() => !!props.selectedWallPanel && selectedKind.value === 'wall')
 
-/** Matcht draft op min/mid/max; leeg = handmatige overschrijving. */
-const drawThicknessBand = computed<'min' | 'mid' | 'max' | ''>(() => {
+/** Matcht draft op een catalogus-cm; leeg = handmatige overschrijving. */
+const drawThicknessBand = computed(() => {
   if (props.wallThicknessMixed) return ''
   const cm = Math.round(props.wallThicknessDraft)
-  if (cm === Math.round(props.thicknessMinCm)) return 'min'
-  if (cm === Math.round(props.thicknessMidCm)) return 'mid'
-  if (cm === Math.round(props.thicknessMaxCm)) return 'max'
-  return ''
+  const match = thicknessPresets.value.find((item) => Math.round(item.cm) === cm)
+  return match?.id ?? ''
 })
 
 const wallCountLabel = computed(() => {
@@ -236,8 +234,8 @@ function releaseControlFocus(event: Event): void {
 }
 
 function onDrawThicknessBandChange(event: Event): void {
-  const band = (event.target as HTMLSelectElement).value as 'min' | 'mid' | 'max' | ''
-  const preset = thicknessPresets.value.find((item) => item.id === band)
+  const id = (event.target as HTMLSelectElement).value
+  const preset = thicknessPresets.value.find((item) => item.id === id)
   if (!preset) return
   emit('applyWallThickness', preset.cm)
   releaseControlFocus(event)
@@ -340,7 +338,7 @@ function onRidgeZCm(cm: number): void {
               {{ t('result.toolbar.custom') }}
             </option>
             <option v-for="preset in thicknessPresets" :key="preset.id" :value="preset.id">
-              {{ preset.label }} ({{ presetSizeLabel(preset.cm) }})
+              {{ preset.label }}
             </option>
           </select>
           <ScaleLengthInput
@@ -501,16 +499,15 @@ function onRidgeZCm(cm: number): void {
       >
         <ToolbeltIcon name="split" />
       </button>
-      <button
+      <ToolbeltActionButton
         v-if="selectedWallPanel"
-        type="button"
-        class="canvas-toolbelt__btn"
+        icon="delete"
         :title="deleteWallTitle"
         :aria-label="deleteWallTitle"
+        hotkey="Delete"
+        :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
         @click="emit('deleteWalls')"
-      >
-        <ToolbeltIcon name="delete" />
-      </button>
+      />
       <slot name="trailing" />
     </div>
     <div

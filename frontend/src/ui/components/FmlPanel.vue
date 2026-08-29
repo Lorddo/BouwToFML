@@ -46,9 +46,7 @@ withDefaults(
     fmlWindowSillZCm?: number
     fmlBovenlichtDefault?: boolean
     fmlWindowBovenlichtDefault?: boolean
-    fmlThicknessMinCm?: number
-    fmlThicknessMidCm?: number
-    fmlThicknessMaxCm?: number
+    fmlThicknessCms?: number[]
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
     fmlLimitsDirty?: boolean
@@ -84,9 +82,7 @@ withDefaults(
     fmlWindowSillZCm: 70,
     fmlBovenlichtDefault: false,
     fmlWindowBovenlichtDefault: false,
-    fmlThicknessMinCm: 10,
-    fmlThicknessMidCm: 20,
-    fmlThicknessMaxCm: 30,
+    fmlThicknessCms: () => [10, 20, 30],
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
     fmlLimitsDirty: false,
@@ -123,9 +119,7 @@ const emit = defineEmits<{
   'update:fmlWindowSillZCm': [value: number]
   'update:fmlBovenlichtDefault': [value: boolean]
   'update:fmlWindowBovenlichtDefault': [value: boolean]
-  'update:fmlThicknessMinCm': [value: number]
-  'update:fmlThicknessMidCm': [value: number]
-  'update:fmlThicknessMaxCm': [value: number]
+  'update:fmlThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:underlayOpacity': [value: number]
@@ -236,17 +230,13 @@ function onWindowBovenlichtChange(event: Event): void {
       :has-combined-output="hasCombinedOutput"
       :unit="scaleInputUnit"
       :underlay-available="underlayAvailable"
-      :fml-thickness-min-cm="fmlThicknessMinCm"
-      :fml-thickness-mid-cm="fmlThicknessMidCm"
-      :fml-thickness-max-cm="fmlThicknessMaxCm"
+      :fml-thickness-cms="fmlThicknessCms"
       :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
       :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
       :fml-thickness-pick-tier="fmlThicknessPickTier"
       :fml-thickness-pick-message="fmlThicknessPickMessage"
       :fml-thickness-pick-busy="fmlThicknessPickBusy"
-      @update:fml-thickness-min-cm="emit('update:fmlThicknessMinCm', $event)"
-      @update:fml-thickness-mid-cm="emit('update:fmlThicknessMidCm', $event)"
-      @update:fml-thickness-max-cm="emit('update:fmlThicknessMaxCm', $event)"
+      @update:fml-thickness-cms="emit('update:fmlThicknessCms', $event)"
       @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
       @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
       @start-thickness-pick="emit('startThicknessPick', $event)"

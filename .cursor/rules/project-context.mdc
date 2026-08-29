@@ -35,6 +35,7 @@ Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse mark
 | Floorplanner/FML offline | `.cursor/docs/floorplanner/` |
 | **Deur/raam `mirrored` semantiek** | `.cursor/docs/floorplanner/door-mirrored-semantics.md` |
 | **Workspace 4-stappen flow** | `.cursor/docs/workspace-flow.md` |
+| **Pointcloud → FML (vooronderzoek)** | `.cursor/docs/pointcloud-fml-vooronderzoek.md` → `examples/Scans/grok/` |
 | **Production-refactor inventaris (workspace-pipeline)** | `.cursor/docs/refactor/README.md` |
 | **Resolutie 2k→4k impact-audit** | `.cursor/docs/resolution-4k-impact-audit.md` |
 | **Detectie abs-px inventaris** | `.cursor/docs/detection-abs-px-inventory.md` |

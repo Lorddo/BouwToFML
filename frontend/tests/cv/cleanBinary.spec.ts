@@ -143,4 +143,56 @@ describe('cleanBinary helpers', () => {
     expect(rectangles).toHaveLength(0)
     expect(mat.ucharPtr).toHaveBeenCalled()
   })
+
+  it('fillHolesByMaxArea schaalt niet met beeldmaat (3k = ruwe px)', () => {
+    const statsRows = [
+      [0, 0, 3000, 2000, 5_000_000],
+      [10, 10, 9, 9, 80],
+    ]
+    const cv = {
+      CC_STAT_LEFT: 0,
+      CC_STAT_TOP: 1,
+      CC_STAT_WIDTH: 2,
+      CC_STAT_HEIGHT: 3,
+      CC_STAT_AREA: 4,
+      CV_32S: 0,
+      FILLED: -1,
+      connectedComponentsWithStats: vi.fn(() => 2),
+      rectangle: vi.fn(),
+      Point: class {
+        constructor(
+          public x: number,
+          public y: number,
+        ) {}
+      },
+      Scalar: class {
+        constructor(..._args: number[]) {}
+      },
+      Mat: class {
+        cols = 3000
+        rows = 2000
+        delete = vi.fn()
+      },
+    }
+    const labels = { ...makeMat(3000, 2000), intAt: () => 0 }
+    const centroids = makeMat(3000, 2000)
+    const stats = {
+      ...makeMat(3000, 2000),
+      intAt: (row: number, col: number) => statsRows[row][col],
+    }
+    ;(cv.connectedComponentsWithStats as ReturnType<typeof vi.fn>).mockImplementation(
+      (_src, outLabels, outStats, outCentroids) => {
+        Object.assign(outLabels, labels)
+        Object.assign(outStats, stats)
+        Object.assign(outCentroids, centroids)
+        return 2
+      },
+    )
+
+    const mat = makeMat(3000, 2000)
+    // 80 px-gat: met oude ×9 (20→180) zou dit wél vullen.
+    const filled = fillHolesByMaxArea(cv, mat, 20)
+    expect(filled).toBe(0)
+    expect(mat.ucharPtr).not.toHaveBeenCalled()
+  })
 })

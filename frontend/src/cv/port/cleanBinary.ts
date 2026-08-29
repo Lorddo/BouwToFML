@@ -1,5 +1,4 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
-import { scaleMinPixels } from '@/cv/port/despeckle'
 import {
   directionalCloseForeground,
   kernelFromPixelRadius,
@@ -117,8 +116,9 @@ export function fillHolesByMaxArea(
   mat: OpenCV['Mat'],
   maxPixels: number | undefined,
 ): number {
-  const scaledMax = scaleMinPixels(maxPixels, mat.cols, mat.rows)
-  if (scaledMax <= 0) return 0
+  // Ruwe px — werkformaat is 3k; Int muur schaalt via REF, niet via beeldmaat.
+  const maxArea = Math.max(0, Math.round(maxPixels ?? 0))
+  if (maxArea <= 0) return 0
 
   const labels = new cv.Mat()
   const stats = new cv.Mat()
@@ -128,7 +128,7 @@ export function fillHolesByMaxArea(
 
   for (let i = 1; i < count; i += 1) {
     const area = stats.intAt(i, cv.CC_STAT_AREA)
-    if (area > scaledMax) continue
+    if (area > maxArea) continue
     const left = stats.intAt(i, cv.CC_STAT_LEFT)
     const top = stats.intAt(i, cv.CC_STAT_TOP)
     const width = stats.intAt(i, cv.CC_STAT_WIDTH)

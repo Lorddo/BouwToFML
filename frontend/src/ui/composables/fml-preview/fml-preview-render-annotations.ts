@@ -5,6 +5,7 @@ import {
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
 import { measureDistanceCm } from './fml-preview-measure'
+import { AREA_LABEL_HEIGHT_CM, planLabelBox } from './fml-preview-render-areas'
 import type { RenderDimension, RenderLabel, RenderLine } from './fml-preview-render-types'
 
 type ToStage = (x: number, y: number) => { x: number; y: number }
@@ -21,6 +22,30 @@ export const LABEL_FONT_SIZE_MAX_PX = 200
 export function clampLabelFontSize(raw: number): number {
   if (!Number.isFinite(raw)) return DEFAULT_LABEL_FONT_SIZE_PX
   return Math.min(LABEL_FONT_SIZE_MAX_PX, Math.max(LABEL_FONT_SIZE_MIN_PX, Math.round(raw)))
+}
+
+/**
+ * Floorplanner `fontSize` (px bij 1:1) → wereldhoogte.
+ * 16 px = dezelfde cm-hoogte als een kamerbenaming.
+ */
+export function commentLabelHeightCm(fontSizePx: number): number {
+  return AREA_LABEL_HEIGHT_CM * (clampLabelFontSize(fontSizePx) / DEFAULT_LABEL_FONT_SIZE_PX)
+}
+
+export function commentLabelFontSizeStage(fontSizePx: number, layoutScale: number): number {
+  return commentLabelHeightCm(fontSizePx) * Math.max(0, layoutScale)
+}
+
+export function labelHitBoxCm(label: {
+  text: string
+  fontSize: number
+  align?: 'left' | 'center' | 'right'
+}): { minX: number; maxX: number; hh: number } {
+  const { width, height } = planLabelBox(label.text, commentLabelHeightCm(label.fontSize))
+  const hh = height / 2
+  if (label.align === 'left') return { minX: 0, maxX: width, hh }
+  if (label.align === 'right') return { minX: -width, maxX: 0, hh }
+  return { minX: -width / 2, maxX: width / 2, hh }
 }
 
 export function labelKonvaFontStyle(bold?: boolean, italic?: boolean): string {
@@ -59,7 +84,7 @@ export function buildRenderLabels(
       y: stage.y,
       text: label.text,
       fontFamily: label.fontFamily,
-      /** Schermpixels (Floorplanner `fontSize`); Stage deelt door viewScale. */
+      /** Floorplanner `fontSize` (px bij 1:1); Stage gebruikt wereld-cm zoals kamerbenaming. */
       fontSize: clampLabelFontSize(label.fontSize),
       fontColor: label.fontColor,
       backgroundColor: label.backgroundColor,

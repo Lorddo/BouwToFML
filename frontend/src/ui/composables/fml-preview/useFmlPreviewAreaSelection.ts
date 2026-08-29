@@ -65,6 +65,7 @@ export function useFmlPreviewAreaSelection(options: {
     options.cancelOpeningDragPending()
     moveWallId.value = null
     settingsWallIds.value = []
+    options.selection.settingsFacadeGroupId.value = null
     options.selection.settingsJunctionId.value = null
     pinnedJunctionId.value = null
     moveOpeningId.value = null
@@ -83,6 +84,14 @@ export function useFmlPreviewAreaSelection(options: {
     syncCustomNameDraftFromSelection()
   }
 
+  function selectSettingsArea(areaId: string): void {
+    if (settingsAreaId.value === areaId) {
+      syncCustomNameDraftFromSelection()
+      return
+    }
+    toggleSettingsArea(areaId)
+  }
+
   function toggleSettingsSurface(surfaceId: string): void {
     selectRoofSurface(surfaceId, false)
   }
@@ -93,13 +102,6 @@ export function useFmlPreviewAreaSelection(options: {
     settingsAreaId.value = null
     const surface = options.editor.surfaces.value.find((item) => item.id === surfaceId)
     const roof = surface != null && isRoofSurface(surface)
-    if (settingsSurfaceId.value === surfaceId && !mutate) {
-      settingsSurfaceId.value = null
-      surfaceEditId.value = null
-      roofPolyMutate.value = false
-      syncCustomNameDraftFromSelection()
-      return
-    }
     settingsSurfaceId.value = surfaceId
     surfaceEditId.value = roof ? surfaceId : mutate ? surfaceId : null
     roofPolyMutate.value = roof && mutate
@@ -279,6 +281,7 @@ export function useFmlPreviewAreaSelection(options: {
     syncCustomNameDraftFromSelection,
     clearTaggedSelection,
     toggleSettingsArea,
+    selectSettingsArea,
     toggleSettingsSurface,
     selectRoofSurface,
     beginSurfacePolygonEdit,

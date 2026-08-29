@@ -56,6 +56,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
+const inputEl = ref<HTMLInputElement | null>(null)
 const editing = ref(false)
 const draft = ref('')
 /** Last typed/stepped cm not yet emitted (keeps −/+ stacking during debounce). */
@@ -180,6 +181,12 @@ const stepAria = computed(() => {
     up: t('common.lengthStepUp', { step }),
   }
 })
+
+function focus(): void {
+  inputEl.value?.focus()
+}
+
+defineExpose({ focus })
 </script>
 
 <template>
@@ -197,6 +204,7 @@ const stepAria = computed(() => {
         −
       </button>
       <input
+        ref="inputEl"
         type="text"
         inputmode="decimal"
         autocomplete="off"

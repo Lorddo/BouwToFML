@@ -17,6 +17,22 @@ export function fixtureAabbHalfExtents(
   return { hx: c * hw + s * hh, hy: s * hw + c * hh }
 }
 
+/** Half-extent of the rotated box along a unit normal (OBB support). */
+export function fixtureObbHalfAlongNormal(
+  width: number,
+  height: number,
+  rotationDeg: number,
+  nx: number,
+  ny: number,
+): number {
+  const rad = ((rotationDeg % 360) * Math.PI) / 180
+  const c = Math.cos(rad)
+  const s = Math.sin(rad)
+  const hw = Math.max(0.5, width) / 2
+  const hh = Math.max(0.5, height) / 2
+  return Math.abs(nx * c + ny * s) * hw + Math.abs(-nx * s + ny * c) * hh
+}
+
 function facePadCm(wall: Pick<Wall, 'thickness'>): number {
   return WALL_FACE_SNAP_CM + Math.max(0, wall.thickness)
 }
@@ -86,7 +102,13 @@ export function snapFixtureCenterToWallFaces(
       if (len < 1e-9) continue
       const n = floorplannerLeftNormal({ x: along.x / len, y: along.y / len })
       const signed = (center.x - face.a.x) * n.x + (center.y - face.a.y) * n.y
-      const half = hx * Math.abs(n.x) + hy * Math.abs(n.y)
+      const half = fixtureObbHalfAlongNormal(
+        size.width,
+        size.height,
+        size.rotationDeg ?? 0,
+        n.x,
+        n.y,
+      )
       const t = ((center.x - face.a.x) * along.x + (center.y - face.a.y) * along.y) / (len * len)
       const padT = (pad + Math.max(hx, hy)) / len
       if (t < -padT || t > 1 + padT) continue

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { AREA_LABEL_HEIGHT_CM } from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import {
   buildRenderDimensions,
   buildRenderLabels,
   buildRenderLines,
   clampLabelFontSize,
+  commentLabelFontSizeStage,
+  commentLabelHeightCm,
   DIM_TICK_HALF_CM,
+  labelHitBoxCm,
   labelKonvaFontStyle,
 } from '@/ui/composables/fml-preview/fml-preview-render-annotations'
 
@@ -156,5 +160,19 @@ describe('fml-preview-render-annotations', () => {
     expect(label.outline).toBe(true)
     expect(label.bold).toBe(true)
     expect(label.italic).toBe(true)
+  })
+
+  it('comment-label: 16 px = kamerbenaming-hoogte, schaalt met layout', () => {
+    expect(commentLabelHeightCm(16)).toBe(AREA_LABEL_HEIGHT_CM)
+    expect(commentLabelHeightCm(8)).toBe(AREA_LABEL_HEIGHT_CM / 2)
+    expect(commentLabelFontSizeStage(16, 0.4)).toBeCloseTo(AREA_LABEL_HEIGHT_CM * 0.4)
+  })
+
+  it('label-hitbox volgt align (links vanaf anker)', () => {
+    const left = labelHitBoxCm({ text: 'Hallo', fontSize: 16, align: 'left' })
+    expect(left.minX).toBe(0)
+    expect(left.maxX).toBeGreaterThan(0)
+    const center = labelHitBoxCm({ text: 'Hallo', fontSize: 16, align: 'center' })
+    expect(center.minX).toBeCloseTo(-center.maxX)
   })
 })

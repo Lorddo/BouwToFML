@@ -9,10 +9,12 @@ import {
   isFmlToolbarSettingsOpen,
   type FmlToolId,
 } from './canvas/fmlToolbeltItems'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './canvas/canvas-toolbelt.css'
 import './fml-toolbelt-settings-fields.css'
 import FmlPreviewToolbarSettingsWall from './FmlPreviewToolbarSettingsWall.vue'
+import FmlPreviewToolbarSettingsFacade from './FmlPreviewToolbarSettingsFacade.vue'
 import FmlPreviewToolbarSettingsOpening from './FmlPreviewToolbarSettingsOpening.vue'
 import FmlPreviewToolbarSettingsArea from './FmlPreviewToolbarSettingsArea.vue'
 import FmlPreviewToolbarSettingsRoof from './FmlPreviewToolbarSettingsRoof.vue'
@@ -20,8 +22,10 @@ import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue
 import FmlPreviewToolbarSettingsLine from './FmlPreviewToolbarSettingsLine.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
 import FmlPreviewToolbarSettingsDraw from './FmlPreviewToolbarSettingsDraw.vue'
+import FmlPreviewToolbarSettingsStrips from './FmlPreviewToolbarSettingsStrips.vue'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { BoxSelectKind } from '@/ui/composables/fml-preview/fml-preview-wall-select'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
@@ -61,6 +65,12 @@ const props = withDefaults(
       heightMixed?: boolean
       canSplit: boolean
       ridgeCount?: number
+    } | null
+    selectedFacadeGroupPanel?: {
+      groupId: string
+      name: string
+      wallCount: number
+      floorCount: number
     } | null
     selectedJunctionPanel: {
       junctionId: string
@@ -124,6 +134,7 @@ const props = withDefaults(
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
     roofVertexZCm?: number | null
+    roofVertexIndex?: number | null
     roofPolyMutate?: boolean
     wallThicknessDraft: number
     wallThicknessMixed: boolean
@@ -156,9 +167,7 @@ const props = withDefaults(
     openingBovenlichtGapDraft: number
     openingBovenlichtGapMixed: boolean
     bovenlichtPacked?: boolean
-    thicknessMinCm?: number
-    thicknessMidCm?: number
-    thicknessMaxCm?: number
+    thicknessPresetCms?: number[]
     measureLineCount?: number
     /** Alleen editor: manual + slicer beschikbaar. */
     measurePersistEnabled?: boolean
@@ -187,9 +196,7 @@ const props = withDefaults(
     ridgeZCm?: number | null
   }>(),
   {
-    thicknessMinCm: 10,
-    thicknessMidCm: 20,
-    thicknessMaxCm: 30,
+    thicknessPresetCms: () => [10, 20, 30],
     measureLineCount: 0,
     measurePersistEnabled: false,
     drawWallDrafting: false,
@@ -215,6 +222,7 @@ const props = withDefaults(
     ridgeFloorOptions: () => [],
     ridgeZCm: null,
     selectedAreaPanel: null,
+    selectedFacadeGroupPanel: null,
     selectedJunctionPanel: null,
     selectedLabelPanel: null,
     selectedLinePanel: null,
@@ -222,6 +230,7 @@ const props = withDefaults(
     roomTypes: () => [],
     surfaceEditActive: false,
     roofVertexZCm: null,
+    roofVertexIndex: null,
     roofPolyMutate: false,
   },
 )
@@ -308,7 +317,9 @@ const emit = defineEmits<{
   boxSelectAll: []
 }>()
 
-const showDrawToolActions = computed(() => isFmlOneshotDrawTool(activeTool.value))
+const showDrawToolActions = computed(
+  () => isFmlOneshotDrawTool(activeTool.value) || activeTool.value === 'nulpunt',
+)
 
 const canAcceptDrawDraft = computed(
   () =>
@@ -322,11 +333,14 @@ const isDrawWallOrRoom = computed(
   () => activeTool.value === 'draw_wall' || activeTool.value === 'draw_room',
 )
 
+const showFacadeSettings = computed(() => props.selectedFacadeGroupPanel != null)
+
 const showWallSettings = computed(
   () =>
-    props.selectedWallPanel != null ||
-    props.selectedJunctionPanel != null ||
-    isDrawWallOrRoom.value,
+    !showFacadeSettings.value &&
+    (props.selectedWallPanel != null ||
+      props.selectedJunctionPanel != null ||
+      isDrawWallOrRoom.value),
 )
 
 const showOpeningSettings = computed(
@@ -345,6 +359,7 @@ const showSettings = computed(() => {
     hasLabelSelection: props.selectedLabelPanel != null,
     hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
+    hasFacadeGroupSelection: showFacadeSettings.value,
     activeTool: activeTool.value,
     dakMode: props.dakMode === true,
   })
@@ -355,24 +370,12 @@ const showSettings = computed(() => {
   return open
 })
 
-const measureCountLabel = computed(() => {
-  const count = props.measureLineCount ?? 0
-  return count === 1
-    ? t('result.toolbar.measureCountOne', { count })
-    : t('result.toolbar.measureCountMany', { count })
-})
-
 const showMeasureStrip = computed(() => activeTool.value === 'measure')
 const showBoxSelectStrip = computed(() => activeTool.value === 'box_select')
-const boxSelectAllTitle = computed(() => {
-  if (boxSelectKind.value === 'door') return t('result.toolbar.boxSelectAllDoors')
-  if (boxSelectKind.value === 'window') return t('result.toolbar.boxSelectAllWindows')
-  if (boxSelectKind.value === 'all') return t('result.toolbar.boxSelectAllMixed')
-  return t('result.toolbar.boxSelectAllWalls')
-})
 
 const showDeselect = computed(
   () =>
+    showFacadeSettings.value ||
     props.selectedWallPanel != null ||
     props.selectedJunctionPanel != null ||
     props.selectedOpeningPanel != null ||
@@ -393,6 +396,18 @@ const isRoofPanel = computed(
     <div
       class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml fml-toolbelt-settings-stack"
     >
+      <FmlPreviewToolbarSettingsFacade
+        v-if="showFacadeSettings && selectedFacadeGroupPanel"
+        :unit="unit"
+        :panel="selectedFacadeGroupPanel"
+        :wall-thickness-draft="wallThicknessDraft"
+        :wall-thickness-mixed="wallThicknessMixed"
+        :thickness-preset-cms="thicknessPresetCms"
+        @wall-thickness-cm="emit('wallThicknessCm', $event)"
+        @commit-wall-thickness="emit('commitWallThickness')"
+        @apply-wall-thickness="emit('applyWallThickness', $event)"
+        @clear-selection="emit('clearSelection')"
+      />
       <FmlPreviewToolbarSettingsWall
         v-if="showWallSettings"
         :unit="unit"
@@ -411,9 +426,7 @@ const isRoofPanel = computed(
         :junction-height-mixed="junctionHeightMixed"
         :junction-bottom-z-draft="junctionBottomZDraft"
         :junction-bottom-z-mixed="junctionBottomZMixed"
-        :thickness-min-cm="thicknessMinCm"
-        :thickness-mid-cm="thicknessMidCm"
-        :thickness-max-cm="thicknessMaxCm"
+        :thickness-preset-cms="thicknessPresetCms"
         :facade-groups-enabled="facadeGroupsEnabled"
         :facade-group-options="facadeGroupOptions"
         :facade-group-checks="facadeGroupChecks"
@@ -453,16 +466,15 @@ const isRoofPanel = computed(
         @ridge-floor-change="emit('ridgeFloorChange', $event)"
       >
         <template #trailing>
-          <button
+          <ToolbeltActionButton
             v-if="showDeselect"
-            type="button"
-            class="canvas-toolbelt__btn"
+            icon="clear"
             :title="t('result.toolbar.deselectTitle')"
             :aria-label="t('result.toolbar.deselect')"
+            hotkey="Escape"
+            :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.chrome"
             @click="emit('clearSelection')"
-          >
-            <ToolbeltIcon name="clear" />
-          </button>
+          />
           <button
             v-if="canAcceptDrawDraft"
             type="button"
@@ -473,16 +485,15 @@ const isRoofPanel = computed(
           >
             <ToolbeltIcon name="check" />
           </button>
-          <button
+          <ToolbeltActionButton
             v-if="showDrawToolActions"
-            type="button"
-            class="canvas-toolbelt__btn"
+            icon="clear"
             :title="t('result.toolbar.deactivateDrawTool')"
             :aria-label="t('result.toolbar.deactivateDrawTool')"
+            hotkey="Escape"
+            :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
             @click="emit('deactivateDrawTool')"
-          >
-            <ToolbeltIcon name="clear" />
-          </button>
+          />
         </template>
       </FmlPreviewToolbarSettingsWall>
       <FmlPreviewToolbarSettingsOpening
@@ -533,7 +544,10 @@ const isRoofPanel = computed(
         @copy-opening="emit('copyOpening')"
         @delete-openings="emit('deleteOpenings')"
       />
-      <div v-if="!showWallSettings" class="fml-toolbelt__row fml-toolbelt__row--primary">
+      <div
+        v-if="!showWallSettings && !showFacadeSettings"
+        class="fml-toolbelt__row fml-toolbelt__row--primary"
+      >
         <FmlPreviewToolbarSettingsDraw
           v-if="
             (activeTool === 'draw_surface' && !dakMode) ||
@@ -607,6 +621,7 @@ const isRoofPanel = computed(
           v-if="isRoofPanel"
           :unit="unit"
           :roof-vertex-z-cm="roofVertexZCm"
+          :roof-vertex-index="roofVertexIndex"
           :poly-mutate="roofPolyMutate"
           @roof-vertex-z-input="emit('roofVertexZInput', $event)"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
@@ -620,6 +635,7 @@ const isRoofPanel = computed(
           :room-types="roomTypes"
           :surface-edit-active="surfaceEditActive"
           :roof-vertex-z-cm="roofVertexZCm"
+          :roof-vertex-index="roofVertexIndex"
           @apply-room-type="emit('applyRoomType', $event)"
           @area-custom-name-input="emit('areaCustomNameInput', $event)"
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
@@ -663,16 +679,15 @@ const isRoofPanel = computed(
           @copy-item="emit('copyItem')"
           @delete-item="emit('deleteItem')"
         />
-        <button
+        <ToolbeltActionButton
           v-if="showDeselect"
-          type="button"
-          class="canvas-toolbelt__btn"
+          icon="clear"
           :title="t('result.toolbar.deselectTitle')"
           :aria-label="t('result.toolbar.deselect')"
+          hotkey="Escape"
+          :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.chrome"
           @click="emit('clearSelection')"
-        >
-          <ToolbeltIcon name="clear" />
-        </button>
+        />
         <button
           v-if="canAcceptDrawDraft"
           type="button"
@@ -683,135 +698,33 @@ const isRoofPanel = computed(
         >
           <ToolbeltIcon name="check" />
         </button>
-        <button
+        <ToolbeltActionButton
           v-if="showDrawToolActions"
-          type="button"
-          class="canvas-toolbelt__btn"
+          icon="clear"
           :title="t('result.toolbar.deactivateDrawTool')"
           :aria-label="t('result.toolbar.deactivateDrawTool')"
+          hotkey="Escape"
+          :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
           @click="emit('deactivateDrawTool')"
-        >
-          <ToolbeltIcon name="clear" />
-        </button>
+        />
       </div>
     </div>
   </template>
 
-  <template v-if="showBoxSelectStrip">
-    <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
-    <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <label class="fml-toolbelt__meta fml-measure-mode">
-        <span>{{ t('result.toolbar.boxSelectKindLabel') }}</span>
-        <select v-model="boxSelectKind" class="fml-measure-mode__select">
-          <option value="wall">{{ t('result.toolbar.boxSelectKindWall') }}</option>
-          <option value="door">{{ t('result.toolbar.boxSelectKindDoor') }}</option>
-          <option value="window">{{ t('result.toolbar.boxSelectKindWindow') }}</option>
-          <option value="all">{{ t('result.toolbar.boxSelectKindAll') }}</option>
-        </select>
-      </label>
-      <button
-        type="button"
-        class="fml-box-select-all"
-        :title="boxSelectAllTitle"
-        :aria-label="boxSelectAllTitle"
-        @click="emit('boxSelectAll')"
-      >
-        {{ t('result.toolbar.boxSelectAll') }}
-      </button>
-      <button
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.deactivateDrawTool')"
-        :aria-label="t('result.toolbar.deactivateDrawTool')"
-        @click="emit('deactivateDrawTool')"
-      >
-        <ToolbeltIcon name="clear" />
-      </button>
-    </div>
-  </template>
-
-  <template v-if="showMeasureStrip">
-    <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
-    <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml">
-      <label class="fml-toolbelt__meta fml-measure-mode">
-        <span>{{ t('result.toolbar.measureModeLabel') }}</span>
-        <select v-model="measureDrawMode" class="fml-measure-mode__select">
-          <option value="tape">{{ t('result.toolbar.measureModeTape') }}</option>
-          <option v-if="measurePersistEnabled" value="manual">
-            {{ t('result.toolbar.measureModeManual') }}
-          </option>
-          <option v-if="measurePersistEnabled" value="slicer">
-            {{ t('result.toolbar.measureModeSlicer') }}
-          </option>
-        </select>
-      </label>
-      <button
-        v-if="measureDrawMode === 'slicer'"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :class="{ 'is-active': slicerEditMode }"
-        :title="t('result.toolbar.slicerEditToggle')"
-        :aria-label="t('result.toolbar.slicerEditToggle')"
-        :aria-pressed="slicerEditMode"
-        @click="slicerEditMode = !slicerEditMode"
-      >
-        <ToolbeltIcon name="edit" />
-      </button>
-      <span
-        v-if="measureDrawMode === 'tape' && (measureLineCount ?? 0) > 0"
-        class="fml-toolbelt__meta"
-      >
-        {{ measureCountLabel }}
-      </span>
-      <button
-        v-if="measureDrawMode === 'tape' && (measureLineCount ?? 0) > 0"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.clearMeasures')"
-        :aria-label="t('result.toolbar.clearMeasures')"
-        @click="emit('clearMeasures')"
-      >
-        <ToolbeltIcon name="delete" />
-      </button>
-      <button
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.deactivateDrawTool')"
-        :aria-label="t('result.toolbar.deactivateDrawTool')"
-        @click="emit('deactivateDrawTool')"
-      >
-        <ToolbeltIcon name="clear" />
-      </button>
-    </div>
-  </template>
+  <FmlPreviewToolbarSettingsStrips
+    v-model:box-select-kind="boxSelectKind"
+    v-model:measure-draw-mode="measureDrawMode"
+    v-model:slicer-edit-mode="slicerEditMode"
+    :show-box-select-strip="showBoxSelectStrip"
+    :show-measure-strip="showMeasureStrip"
+    :measure-persist-enabled="measurePersistEnabled"
+    :measure-line-count="measureLineCount"
+    @box-select-all="emit('boxSelectAll')"
+    @clear-measures="emit('clearMeasures')"
+    @deactivate-draw-tool="emit('deactivateDrawTool')"
+  />
 </template>
 
 <style scoped>
-.fml-measure-mode {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.fml-measure-mode__select {
-  height: 26px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0 6px;
-  font-size: 12px;
-  background: #fff;
-  color: #334155;
-}
-.fml-box-select-all {
-  height: 26px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  padding: 0 8px;
-  font-size: 12px;
-  background: #fff;
-  color: #334155;
-  cursor: pointer;
-}
-.fml-box-select-all:hover {
-  background: #f1f5f9;
-}
+/* Strip styles live in FmlPreviewToolbarSettingsStrips.vue */
 </style>

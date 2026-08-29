@@ -13,7 +13,7 @@ import {
   copyUnderlayDisplayOrient,
 } from '@/core/fml/drawing-to-underlay-layout'
 import { applyNulpunt, reapplyNulpuntImageCm } from '@/core/fml/translate-floor-plan'
-import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
+import { scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import {
   applyFloorOrientFromCanonical,
   applyFloorOrientOp,
@@ -40,7 +40,10 @@ import type { useHScaleCalibration, HScaleState } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
 import type { FloorOrientPersist, PreviewUnderlayLayout } from '@/ui/composables/project/types'
-import { regeneratePlanAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
+import {
+  regeneratePlanAreas,
+  scaleFloorPlanAndRegenAreas,
+} from '@/ui/composables/fml-preview/regenerate-floor-areas'
 import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
 import {
   measuredCmFromRescaleState,
@@ -120,6 +123,7 @@ export type WorkspaceFmlGenerateApplied = {
   appliedFmlDoorHeightCm: Ref<number>
   appliedFmlWindowHeightCm: Ref<number>
   appliedFmlWindowSillZCm: Ref<number>
+  fmlThicknessCms: Ref<number[]>
   fmlThicknessMinCm: Ref<number>
   fmlThicknessMidCm: Ref<number>
   fmlThicknessMaxCm: Ref<number>
@@ -288,6 +292,7 @@ export function createWorkspaceFmlGenerate(
           applied.appliedFmlBandBoundaries.value,
           faceEvidenceById,
           pinnedWallIds,
+          applied.appliedFmlThicknessLimits.value.thicknessCms,
         ),
       ),
     )
@@ -420,6 +425,7 @@ export function createWorkspaceFmlGenerate(
       minCm: applied.fmlThicknessMinCm.value,
       midCm: applied.fmlThicknessMidCm.value,
       maxCm: applied.fmlThicknessMaxCm.value,
+      thicknessCms: [...applied.fmlThicknessCms.value],
     }
     applied.appliedFmlBandBoundaries.value = {
       midBoundaryCm: applied.fmlBandMidBoundaryCm.value,
@@ -524,7 +530,7 @@ export function createWorkspaceFmlGenerate(
 
     // Eerst plan/layout zetten — anders overschrijft generatedBundle-watch (sync) vóór
     // applyAxisGeometryFactors met een verse generate (dubbele schaal of edits kwijt).
-    const scaledPlan = scaleFloorPlan(plan, factors, 0)
+    const scaledPlan = scaleFloorPlanAndRegenAreas(plan, factors, 0)
     editedPreviewPlan.value = scaledPlan
     if (importedPlan.value) {
       importedPlan.value = scaledPlan

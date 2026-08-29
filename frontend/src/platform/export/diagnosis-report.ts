@@ -1,4 +1,13 @@
 import { SCALE_AXIS_MISMATCH_WARN_PCT } from '@/platform/calibration'
+import {
+  DOOR_FACE_RGBA,
+  DOORFRAME_FACE_RGBA,
+  OUTSIDE_FACE_RGBA,
+  UNKNOWN_FACE_RGBA,
+  UNRESOLVED_INK_RGBA,
+  WALL_FACE_RGBA,
+  WINDOW_FACE_RGBA,
+} from '@/cv/walls/rooms/room-raster'
 import { escapeHtml, formatJson } from './examples-report-html-utils'
 import type { LayerDebugReport, LayerDebugWallTransition } from './layer-debug-report/types'
 import {
@@ -30,6 +39,7 @@ export type DiagnosisReportMeta = {
 export type DiagnosisRefImage = {
   id: string
   kind: 'wall' | 'door' | 'window'
+  wallThicknessCm?: number
   wallThicknessBand?: 'min' | 'mid' | 'max'
   /** PNG data-URL */
   png: string
@@ -41,6 +51,23 @@ export type DiagnosisRefImage = {
 export type DiagnosisRefGroupedContour = DiagnosisRefImage & {
   kind: 'door' | 'window'
   groupedPolygonCleanPng?: string
+}
+
+/** Live stap-3 face-class overlay (zelfde kleuren als het canvas bij afronden). */
+export type DiagnosisClassifiedFacesStats = {
+  wallCount: number
+  surfaceCount: number
+  unknownCount: number
+  doorCount: number
+  windowCount: number
+  doorframeCount: number
+  overrideCount: number
+}
+
+export type DiagnosisClassifiedFaces = {
+  /** PNG data-URL van de gekleurde face-overlay. */
+  png: string
+  stats: DiagnosisClassifiedFacesStats
 }
 
 export type DiagnosisReportPayload = {
@@ -55,6 +82,16 @@ export type DiagnosisReportPayload = {
   scaleOverlay: DiagnosisScaleOverlay | null
   /** Effective or base wall B/W as PNG data-URL. Hosts the scale-ruler overlay. */
   bwPng: string | null
+  /**
+   * Stap-3 gekleurde vlakken (tekenaar): auto-classify + handmatige overrides
+   * op het moment van export / afronden. V3 ziet deze kleuren niet.
+   */
+  classifiedFaces?: DiagnosisClassifiedFaces | null
+  /**
+   * Binary muurmasker dat finalize/V3 consumeerde (`roomWallMaskRle`).
+   * Alleen aanwezig ná afronden.
+   */
+  usedWallMaskPng?: string | null
   /** Live reference boxes (rect metadata). */
   references: unknown | null
   /**
@@ -259,6 +296,82 @@ function figureBw(
   )
 }
 
+function rgbaCss(rgba: readonly [number, number, number, number]): string {
+  return `rgb(${rgba[0]}, ${rgba[1]}, ${rgba[2]})`
+}
+
+function faceLegendHtml(): string {
+  const items: Array<[readonly [number, number, number, number], string, boolean?]> = [
+    [WALL_FACE_RGBA, 'muur — gaat het finalize-masker in', true],
+    [UNKNOWN_FACE_RGBA, 'onbekend — tekenaar moet herstellen of laten'],
+    [DOOR_FACE_RGBA, 'deur (draaiboog)'],
+    [DOORFRAME_FACE_RGBA, 'deurkozijn'],
+    [WINDOW_FACE_RGBA, 'raam'],
+    [OUTSIDE_FACE_RGBA, 'buiten', true],
+    [UNRESOLVED_INK_RGBA, 'niet-toegewezen inkt', true],
+  ]
+  const swatches = items
+    .map(([rgba, label, bordered]) => {
+      const border = bordered ? ' face-swatch-bordered' : ''
+      return `  <li><span class="face-swatch${border}" style="background:${rgbaCss(rgba)}"></span>${escapeHtml(label)}</li>`
+    })
+    .join('\n')
+  return `<ul class="face-legend">
+${swatches}
+  <li><span class="face-swatch face-swatch-pastel"></span>vloer / kamer (pastel per vlak)</li>
+</ul>`
+}
+
+function classifiedFacesStatsHtml(stats: DiagnosisClassifiedFacesStats): string {
+  const bits = [
+    `muur ${stats.wallCount}`,
+    `vloer ${stats.surfaceCount}`,
+    `onbekend ${stats.unknownCount}`,
+    `deur ${stats.doorCount}`,
+    `raam ${stats.windowCount}`,
+    `kozijn ${stats.doorframeCount}`,
+    `handmatig ${stats.overrideCount}`,
+  ]
+  return `<p class="muted">${escapeHtml(bits.join(' · '))}</p>`
+}
+
+function facesBody(
+  faces: DiagnosisClassifiedFaces | null | undefined,
+  usedWallMaskPng: string | null | undefined,
+): string {
+  if (!faces && !usedWallMaskPng) {
+    return unavailable('Gekleurde vlakken (eerst Muren classificeren of afronden)')
+  }
+  const parts: string[] = [
+    '<p class="muted">Dit is de <strong>tekenaars-input</strong> bij afronden: auto-classify plus wat zij met de face-tools hebben gezet. V3 L1–L10 ziet deze kleuren niet — alleen het binary muurmasker van de muur-vlakken. Foutieve kleur of rood onbekend = input; juiste kleuren maar foute muren/deuren in FML = code.</p>',
+  ]
+  if (faces) {
+    parts.push(classifiedFacesStatsHtml(faces.stats))
+    parts.push(faceLegendHtml())
+    parts.push(
+      figureUnderlay(
+        faces.png,
+        'Gekleurde vlakken',
+        'Step 3 classified faces',
+        'Zelfde overlay als op het canvas bij afronden (muur/deur/raam/onbekend).',
+      ),
+    )
+  } else {
+    parts.push(unavailable('Gekleurde vlakken (cache/classify-state ontbreekt in deze sessie)'))
+  }
+  if (usedWallMaskPng) {
+    parts.push(
+      figureUnderlay(
+        usedWallMaskPng,
+        'Gebruikt muurmasker',
+        'Finalize wall mask used by V3',
+        'Binary muurmasker dat finalize aan V3 gaf (zwart = muur). Alleen ná afronden.',
+      ),
+    )
+  }
+  return parts.join('\n')
+}
+
 function referencesBody(references: unknown | null, refImages: DiagnosisRefImage[] | null): string {
   const parts: string[] = []
   if (refImages && refImages.length > 0) {
@@ -269,9 +382,11 @@ function referencesBody(references: unknown | null, refImages: DiagnosisRefImage
       `<div class="ref-img-grid">${refImages
         .map((item) => {
           const band =
-            item.kind === 'wall' && item.wallThicknessBand
-              ? ` · ${escapeHtml(item.wallThicknessBand)}`
-              : ''
+            item.kind === 'wall' && item.wallThicknessCm != null && item.wallThicknessCm > 0
+              ? ` · ${escapeHtml(String(item.wallThicknessCm))} cm`
+              : item.kind === 'wall' && item.wallThicknessBand
+                ? ` · ${escapeHtml(item.wallThicknessBand)}`
+                : ''
           const kindLabel = item.kind === 'wall' ? 'wall' : item.kind === 'door' ? 'door' : 'window'
           const imageHint =
             item.imageKind === 'groupedPolygonClean'
@@ -604,6 +719,7 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
   <a href="#meta">Meta</a>
   <a href="#original">Origineel</a>
   <a href="#bw">B/W</a>
+  <a href="#faces">Vlakken (tekenaar)</a>
   <a href="#refs">Referenties</a>
   <a href="#doors">Deuren</a>
   <a href="#windows">Ramen</a>
@@ -639,6 +755,11 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
     .ref-contour-figure { margin: 0; max-width: min(100%, 420px); }
     .ref-contour-figure img { display: block; max-width: 100%; height: auto; border: 1px solid #e2e8f0; background: #fff; }
     .ref-contour-figure figcaption { margin-top: 6px; font-size: 12px; color: #64748b; }
+    .face-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 12px; padding: 0; list-style: none; font-size: 12px; color: #475569; }
+    .face-legend li { display: flex; align-items: center; gap: 6px; }
+    .face-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; flex: 0 0 14px; }
+    .face-swatch-bordered { border: 1px solid #cbd5e1; }
+    .face-swatch-pastel { background: linear-gradient(135deg, #86efac, #93c5fd, #f9a8d4); }
     .diag-table { border-collapse: collapse; font-size: 12px; margin: 8px 0 12px; background: #fff; }
     .diag-table th, .diag-table td { border: 1px solid #e2e8f0; padding: 4px 8px; text-align: left; }
     .diag-table th { background: #f1f5f9; color: #334155; font-weight: 600; }
@@ -650,11 +771,16 @@ export function buildDiagnosisReportHtml(payload: DiagnosisReportPayload): strin
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
-  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = schone stap-1 kleur-scan (kopiëren voor her-detectie); B/W = stap 2 muur-onderlegger met H/V-schaallinialen (cyaan/amber).</p>
+  <p class="muted">Best-effort live snapshot. Missing sections mean that step was not finished yet — not an export error. Wall layers include the full L1–L10 pipeline (not only L10). Origineel = schone stap-1 kleur-scan (kopiëren voor her-detectie); B/W = stap 2 muur-onderlegger met H/V-schaallinialen (cyaan/amber); Vlakken = gekleurde faces van de tekenaar bij afronden (niet wat V3 ziet).</p>
   ${toc}
   ${section('meta', 'Meta', metaList(payload.meta, payload.scaleOverlay))}
   ${section('original', 'Originele onderlegger (stap 1)', figureOriginal(payload.originalPng, payload.meta))}
   ${section('bw', 'B/W onderlegger', figureBw(payload.bwPng, payload.originalPng, payload.meta, payload.scaleOverlay))}
+  ${section(
+    'faces',
+    'Stap 3 gekleurde vlakken (tekenaar)',
+    facesBody(payload.classifiedFaces, payload.usedWallMaskPng),
+  )}
   ${section(
     'refs',
     'Referenties',

@@ -1,12 +1,12 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { CONCEPT_DOOR_REFID } from '@/core/fml/types'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import { FACTORY_THICKNESS_CMS } from '@/core/fml/fml-wall-thickness-catalog'
 import { SELECTION_COLORS, type ElementClass, type SelectionRect } from './types'
 import {
-  assignWallThicknessBand,
+  bindNextWallRefCm,
   enforceWallRefLimit,
-  isWallThicknessBand,
-  resolveWallThicknessBand,
+  findWallRectForCm,
+  resolveWallThicknessCm,
 } from './wall-thickness-ref'
 
 const ACTIVE_SELECTION_CLASSES: ElementClass[] = ['wall', 'door', 'window']
@@ -15,32 +15,40 @@ let nextId = 1
 
 const MIN_RECT_SIZE = 5
 
-export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELECTION_CLASSES) {
+export function useExampleSelection(
+  activeClasses: ElementClass[] = ACTIVE_SELECTION_CLASSES,
+  options?: { getThicknessCatalog?: () => readonly number[] },
+) {
   const rects = ref<SelectionRect[]>([])
   const selectedRectId = ref<string | null>(null)
   const activeClass = ref<ElementClass | null>(null)
   const isDrawing = ref(false)
   const drawStart = ref<{ x: number; y: number } | null>(null)
   const previewRect = ref<SelectionRect | null>(null)
+  /** Catalogus-cm voor de volgende muur-ref (stap 2: klik op dikte-rij). */
+  const pendingWallThicknessCm = ref<number | null>(null)
 
   const typeColors = SELECTION_COLORS
+
+  function catalog(): readonly number[] {
+    return options?.getThicknessCatalog?.() ?? FACTORY_THICKNESS_CMS
+  }
+
+  watch(activeClass, (cls) => {
+    if (cls !== 'wall') pendingWallThicknessCm.value = null
+  })
 
   function addRect(rect: Omit<SelectionRect, 'id'>) {
     let withDefaults: Omit<SelectionRect, 'id'> =
       rect.type === 'door' ? { ...rect, fmlRefId: rect.fmlRefId ?? CONCEPT_DOOR_REFID } : rect
     if (rect.type === 'wall') {
-      const used = new Set(
-        rects.value.filter((r) => r.type === 'wall').map((r) => resolveWallThicknessBand(r)),
-      )
-      const preferred = isWallThicknessBand(rect.wallThicknessBand)
-        ? rect.wallThicknessBand
-        : ('max' as FmlThicknessBand)
-      const fallbackOrder: FmlThicknessBand[] = ['max', 'mid', 'min']
-      const band =
-        !used.has(preferred) && used.size < 3
-          ? preferred
-          : (fallbackOrder.find((b) => !used.has(b)) ?? preferred)
-      withDefaults = { ...withDefaults, wallThicknessBand: band }
+      const cm =
+        resolveWallThicknessCm(rect) ??
+        pendingWallThicknessCm.value ??
+        bindNextWallRefCm(rects.value, catalog())
+      withDefaults = { ...withDefaults, wallThicknessCm: cm }
+      const existing = findWallRectForCm(rects.value, cm)
+      if (existing) removeRect(existing.id)
     }
     rects.value.push({ ...withDefaults, id: `sel-${nextId++}` })
     if (rect.type === 'wall') {
@@ -82,9 +90,15 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     rects.value = next
   }
 
-  function updateRectWallThicknessBand(id: string, band: FmlThicknessBand) {
-    if (!isWallThicknessBand(band)) return
-    rects.value = assignWallThicknessBand(rects.value, id, band)
+  function updateRectWallThicknessCm(id: string, cm: number) {
+    if (!(cm > 0) || !Number.isFinite(cm)) return
+    const idx = rects.value.findIndex((r) => r.id === id)
+    if (idx < 0) return
+    const current = rects.value[idx]
+    if (current.type !== 'wall') return
+    const next = [...rects.value]
+    next[idx] = { ...current, wallThicknessCm: cm }
+    rects.value = next
   }
 
   function clearRects() {
@@ -96,33 +110,25 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
   }
 
   /**
-   * Vervang alle muur-refs in één keer (restore). Unieke bands + max 3 via enforce.
-   * Voorkomt sequentiële addRect-race waarbij ontbrekende bands tot collapse leiden.
+   * Vervang alle muur-refs in één keer (restore). Cap 8 via enforce.
+   * `wallThicknessCm` blijft; oude `wallThicknessBand` wordt genegeerd.
    */
   function replaceWallRects(
     walls: Array<
       Omit<SelectionRect, 'id' | 'type'> & {
-        wallThicknessBand?: FmlThicknessBand
+        wallThicknessCm?: number
       }
     >,
   ) {
     const nonWall = rects.value.filter((r) => r.type !== 'wall')
-    const used = new Set<FmlThicknessBand>()
-    const fallbackOrder: FmlThicknessBand[] = ['max', 'mid', 'min']
     const nextWalls: SelectionRect[] = []
     for (const wall of walls) {
-      const preferred = isWallThicknessBand(wall.wallThicknessBand)
-        ? wall.wallThicknessBand
-        : ('max' as FmlThicknessBand)
-      const band =
-        !used.has(preferred) && used.size < 3
-          ? preferred
-          : (fallbackOrder.find((b) => !used.has(b)) ?? preferred)
-      used.add(band)
+      const bound =
+        resolveWallThicknessCm(wall) ?? bindNextWallRefCm([...nonWall, ...nextWalls], catalog())
       nextWalls.push({
         ...wall,
         type: 'wall',
-        wallThicknessBand: band,
+        wallThicknessCm: bound,
         id: `sel-${nextId++}`,
       })
     }
@@ -189,7 +195,8 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     isDrawing.value = false
     drawStart.value = null
     previewRect.value = null
-    // Na selectie terug naar pan; opnieuw activeren via Muur/Deur/Raam (of Escape bij afbreken).
+    pendingWallThicknessCm.value = null
+    // Na selectie terug naar pan; opnieuw activeren via dikte-rij / Deur / Raam (of Escape).
     activeClass.value = null
   }
 
@@ -202,6 +209,11 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
   function deactivateDrawMode() {
     cancelDraw()
     activeClass.value = null
+    pendingWallThicknessCm.value = null
+  }
+
+  function setPendingWallThicknessCm(cm: number | null) {
+    pendingWallThicknessCm.value = cm != null && cm > 0 && Number.isFinite(cm) ? cm : null
   }
 
   function toExamples() {
@@ -219,6 +231,7 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     activeClass,
     isDrawing,
     previewRect,
+    pendingWallThicknessCm,
     typeColors,
     counts,
     addRect,
@@ -226,7 +239,7 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     selectRect,
     updateRectBounds,
     updateRectFmlRefId,
-    updateRectWallThicknessBand,
+    updateRectWallThicknessCm,
     clearRects,
     clearRectsByType,
     replaceWallRects,
@@ -237,6 +250,7 @@ export function useExampleSelection(activeClasses: ElementClass[] = ACTIVE_SELEC
     endDraw,
     cancelDraw,
     deactivateDrawMode,
+    setPendingWallThicknessCm,
     toExamples,
   }
 }

@@ -14,6 +14,7 @@ import {
   type FacadeElevation,
 } from './facade-elevation'
 import { elevationOpeningHoleIsRect, elevationOpeningHolePoints } from './elevation-opening-symbol'
+import { hitSelectedVertex } from './vertex-hit'
 import type { Point2D } from './types'
 
 const DEPTH_OCCLUDE_MIN_CM = ELEVATION_SAME_PLANE_CM
@@ -363,19 +364,9 @@ export function hitElevationRoofVertex(
   plane: ElevationRoofPlane,
   point: Point2D,
   tolCm = ELEVATION_ROOF_VERTEX_HIT_CM,
+  preferIndex?: number | null,
 ): number | null {
-  let best = -1
-  let bestDist = tolCm
-  for (let i = 0; i < plane.points.length; i += 1) {
-    const vertex = plane.points[i]
-    if (!vertex) continue
-    const dist = Math.hypot(point.x - vertex.x, point.y - vertex.y)
-    if (dist <= bestDist) {
-      best = i
-      bestDist = dist
-    }
-  }
-  return best >= 0 ? best : null
+  return hitSelectedVertex(plane.points, point, tolCm, preferIndex)
 }
 
 export function collectElevationRoofSnapYs(
@@ -393,6 +384,24 @@ export function collectElevationRoofSnapYs(
     })
   }
   return ys
+}
+
+/** Muurfaces + knopen + andere dakvlak-punten (uitlijnen langs de gevel). */
+export function collectElevationRoofSnapXs(
+  elevation: FacadeElevation,
+  skip?: { planeId: string; vertexIndex: number },
+): number[] {
+  const xs = collectElevationWallSnapXs(elevation.walls)
+  for (const junction of elevation.junctions) {
+    xs.push(junction.x)
+  }
+  for (const plane of elevation.roofPlanes) {
+    plane.points.forEach((point, index) => {
+      if (skip && plane.id === skip.planeId && index === skip.vertexIndex) return
+      xs.push(point.x)
+    })
+  }
+  return xs
 }
 
 /** Tops + bottoms van muren/knopen (voor greep-snap in aanzicht). */

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { Floor, Wall } from '@/core/fml/types'
+import { scaleFloorPlan } from '@/core/fml/scale-floor-plan'
+import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
 import { buildAreaSideDims } from '@/ui/composables/fml-preview/fml-preview-area-side-dims'
-import { regenerateFloorAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
+import {
+  regenerateFloorAreas,
+  scaleFloorPlanAndRegenAreas,
+} from '@/ui/composables/fml-preview/regenerate-floor-areas'
 import { snapHoleRingsToWallFaces } from '@/ui/composables/fml-preview/snap-area-holes-to-faces'
 
 function wall(
@@ -183,5 +187,23 @@ describe('regenerateFloorAreas typed inner', () => {
     expect(Math.max(...xs)).toBeGreaterThan(180)
     expect(Math.min(...ys)).toBeLessThan(20)
     expect(Math.max(...ys)).toBeGreaterThan(180)
+  })
+})
+
+describe('scaleFloorPlanAndRegenAreas', () => {
+  it('zet kamermaten op nieuwe binnenfaces (dikte blijft, poly-schaal alleen is te kort)', () => {
+    const seeded = regenerateFloorAreas(floorOf(typedRoomWalls()))
+    const plan: FloorPlan = { name: 't', floors: [seeded] }
+    const onlyScaled = scaleFloorPlan(plan, 2, 0)
+    const scaledDims = buildAreaSideDims(onlyScaled.floors[0]?.areas, { unit: 'cm' })
+      .map((d) => Math.round(d.lengthCm * 10) / 10)
+      .sort((a, b) => a - b)
+    expect(scaledDims).toEqual([40, 40, 200, 200])
+
+    const next = scaleFloorPlanAndRegenAreas(plan, 2, 0)
+    const dims = buildAreaSideDims(next.floors[0]?.areas, { unit: 'cm' })
+    const lengths = dims.map((d) => Math.round(d.lengthCm * 10) / 10).sort((a, b) => a - b)
+    // Hartlijn 60 × 220, dikte 10 → binnen 50 × 210 (niet 40 × 200).
+    expect(lengths).toEqual([50, 50, 210, 210])
   })
 })

@@ -1,25 +1,29 @@
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import {
-  resolveEffectiveFmlWallThicknessLimits,
-  type FmlWallThicknessLimits,
-} from '@/core/fml/fml-wall-thickness-limits'
+  catalogMaxCm,
+  nextUnusedCatalogCm,
+  normalizeThicknessCatalog,
+} from '@/core/fml/fml-wall-thickness-catalog'
+import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { SelectionRect } from './types'
 
-export const MAX_WALL_REFS = 3
+export const MAX_WALL_REFS = 8
 
 export type WallThicknessBand = FmlThicknessBand
 
 export type WallRefThicknessMeasure = {
-  band: WallThicknessBand
+  /** Legacy sessie-tag; nieuwe metingen schrijven thicknessCm. */
+  band?: WallThicknessBand
   thicknessPx: number
+  /** Catalogus-cm van deze ref (export + max-equivalent). */
+  thicknessCm?: number
   rectId?: string
 }
 
 export type ReferenceWallThicknessResolution = {
   referenceWallThicknessPx: number
-  /** Band waarvan de winnende schatting kwam. */
-  sourceBand: WallThicknessBand
-  /** true als max-tag onder de doorgerekende mid/min lag (gearceerde gevel e.d.). */
+  /** Catalogus-cm van de winnende meting. */
+  sourceCm: number
+  /** true als de winnende ref dunner is dan catalogus-max (scale-up). */
   usedScaledFallback: boolean
 }
 
@@ -27,154 +31,120 @@ export function isWallThicknessBand(value: unknown): value is WallThicknessBand 
   return value === 'min' || value === 'mid' || value === 'max'
 }
 
-/** Default eerste muur → max (handig; niet verplicht). */
-export function resolveWallThicknessBand(
-  rect: Pick<SelectionRect, 'wallThicknessBand'>,
-  fallback: WallThicknessBand = 'max',
-): WallThicknessBand {
-  return isWallThicknessBand(rect.wallThicknessBand) ? rect.wallThicknessBand : fallback
-}
-
-export function bandCmFor(band: WallThicknessBand, limits: FmlWallThicknessLimits): number {
-  const effective = resolveEffectiveFmlWallThicknessLimits(limits)
-  if (band === 'min') return effective.minCm
-  if (band === 'mid') return effective.midCm
-  return effective.maxCm
+export function resolveWallThicknessCm(
+  rect: Pick<SelectionRect, 'wallThicknessCm'>,
+): number | null {
+  const cm = Number(rect.wallThicknessCm)
+  return Number.isFinite(cm) && cm > 0 ? cm : null
 }
 
 /**
- * Reken gemeten band-px door naar max-equivalent px voor pipeline-schaal.
- * bandCm === maxCm → identity.
+ * Reken gemeten px door naar max-equivalent voor pipeline-schaal.
+ * refCm === maxCm → identity.
  */
-export function scaleMeasuredPxToMax(measuredPx: number, bandCm: number, maxCm: number): number {
+export function scaleMeasuredPxToMax(measuredPx: number, refCm: number, maxCm: number): number {
   if (!(measuredPx > 0)) {
     throw new Error('scaleMeasuredPxToMax vereist een positieve meting in px.')
   }
-  if (!(bandCm > 0) || !(maxCm > 0)) {
-    throw new Error('scaleMeasuredPxToMax vereist positieve project-diktes (bandCm, maxCm).')
+  if (!(refCm > 0) || !(maxCm > 0)) {
+    throw new Error('scaleMeasuredPxToMax vereist positieve catalogus-cm (refCm, maxCm).')
   }
-  return measuredPx * (maxCm / bandCm)
+  return measuredPx * (maxCm / refCm)
 }
 
-/** Max-equivalent px-schatting per meting (max-band = raw; overige = scale-up). */
+function measureRefCm(measure: WallRefThicknessMeasure, fallbackCm: number): number {
+  const cm = Number(measure.thicknessCm)
+  return Number.isFinite(cm) && cm > 0 ? cm : fallbackCm
+}
+
+/** Max-equivalent px-schatting per meting (max-cm = raw; overige = scale-up). */
 export function measureToMaxEquivalentPx(
   measure: WallRefThicknessMeasure,
-  limits: FmlWallThicknessLimits,
+  catalogCms: readonly number[],
 ): number {
-  const effective = resolveEffectiveFmlWallThicknessLimits(limits)
-  if (measure.band === 'max') return measure.thicknessPx
-  return scaleMeasuredPxToMax(
-    measure.thicknessPx,
-    bandCmFor(measure.band, effective),
-    effective.maxCm,
-  )
+  const maxCm = catalogMaxCm(catalogCms)
+  const refCm = measureRefCm(measure, maxCm)
+  if (refCm === maxCm) return measure.thicknessPx
+  return scaleMeasuredPxToMax(measure.thicknessPx, refCm, maxCm)
 }
 
 /**
  * Pipeline-scalar = hoogste max-equivalent onder alle metingen.
- * Zo wint een solide mid-ref boven een te lage max-meting (gearceerde spouw/gevel).
+ * Een nette dunnere ref kan een rotte max-crop overtroeven.
  */
 export function resolveReferenceWallThicknessPx(params: {
   measures: WallRefThicknessMeasure[]
-  limits: FmlWallThicknessLimits
+  catalogCms: readonly number[]
 }): number | null {
   return resolveReferenceWallThicknessDetail(params)?.referenceWallThicknessPx ?? null
 }
 
 export function resolveReferenceWallThicknessDetail(params: {
   measures: WallRefThicknessMeasure[]
-  limits: FmlWallThicknessLimits
+  catalogCms: readonly number[]
 }): ReferenceWallThicknessResolution | null {
   const valid = params.measures.filter((m) => m.thicknessPx > 0)
   if (valid.length === 0) return null
+  const maxCm = catalogMaxCm(params.catalogCms)
 
   let best: ReferenceWallThicknessResolution | null = null
   for (const m of valid) {
-    const scaled = measureToMaxEquivalentPx(m, params.limits)
+    const sourceCm = measureRefCm(m, maxCm)
+    const scaled = measureToMaxEquivalentPx(m, params.catalogCms)
     if (best == null || scaled > best.referenceWallThicknessPx) {
       best = {
         referenceWallThicknessPx: scaled,
-        sourceBand: m.band,
-        usedScaledFallback: m.band !== 'max',
+        sourceCm,
+        usedScaledFallback: sourceCm !== maxCm,
       }
     }
   }
   return best
 }
 
-export function findWallRectForBand(
-  rects: readonly SelectionRect[],
-  band: WallThicknessBand,
-): SelectionRect | null {
-  for (let i = rects.length - 1; i >= 0; i--) {
-    const rect = rects[i]
-    if (rect.type !== 'wall') continue
-    if (resolveWallThicknessBand(rect) === band) return rect
-  }
-  return null
-}
-
-/**
- * Zet band op een bestaande muur-ref.
- * Als de doelband al bezet is: **swap** met die ref (geen delete).
- */
-export function assignWallThicknessBand(
-  rects: SelectionRect[],
-  id: string,
-  band: WallThicknessBand,
-): SelectionRect[] {
-  const idx = rects.findIndex((r) => r.id === id)
-  if (idx < 0) return rects
-  const current = rects[idx]
-  if (current.type !== 'wall') return rects
-  const oldBand = resolveWallThicknessBand(current)
-  if (oldBand === band) {
-    const next = [...rects]
-    next[idx] = { ...current, wallThicknessBand: band }
-    return next
-  }
-
-  const otherIdx = rects.findIndex(
-    (r, i) => i !== idx && r.type === 'wall' && resolveWallThicknessBand(r) === band,
-  )
-  const next = [...rects]
-  if (otherIdx >= 0) {
-    // Swap: voorkomt dat enforceWallRefLimit de andere ref wist.
-    next[otherIdx] = { ...next[otherIdx], wallThicknessBand: oldBand }
-  }
-  next[idx] = { ...current, wallThicknessBand: band }
-  return next
-}
-
-/** Style-bron: max-rect indien aanwezig, anders laatste wall-rect. */
+/** Style-bron: dikste catalogus-cm, anders laatste wall-rect. */
 export function resolveStyleWallRect(rects: readonly SelectionRect[]): SelectionRect | null {
-  const maxRect = findWallRectForBand(rects, 'max')
-  if (maxRect) return maxRect
-  for (let i = rects.length - 1; i >= 0; i--) {
-    if (rects[i].type === 'wall') return rects[i]
+  let best: SelectionRect | null = null
+  let bestCm = -1
+  let last: SelectionRect | null = null
+  for (const rect of rects) {
+    if (rect.type !== 'wall') continue
+    last = rect
+    const cm = resolveWallThicknessCm(rect)
+    if (cm != null && cm >= bestCm) {
+      best = rect
+      bestCm = cm
+    }
+  }
+  return best ?? last
+}
+
+export function findWallRectForCm(
+  rects: readonly SelectionRect[],
+  cm: number,
+): SelectionRect | null {
+  const target = Number(cm)
+  if (!(target > 0) || !Number.isFinite(target)) return null
+  for (const rect of rects) {
+    if (rect.type !== 'wall') continue
+    if (resolveWallThicknessCm(rect) === target) return rect
   }
   return null
 }
 
-export function wallThicknessBandOptions(
-  limits: FmlWallThicknessLimits,
-): Array<{ band: WallThicknessBand; cm: number; label: string }> {
-  const effective = resolveEffectiveFmlWallThicknessLimits(limits)
-  return (
-    [
-      { band: 'min' as const, cm: effective.minCm },
-      { band: 'mid' as const, cm: effective.midCm },
-      { band: 'max' as const, cm: effective.maxCm },
-    ] as const
-  ).map((row) => ({
-    ...row,
-    label: `${row.cm} cm`,
-  }))
+export function bindNextWallRefCm(
+  rects: readonly SelectionRect[],
+  catalogCms: readonly number[],
+): number {
+  const used = rects
+    .filter((r) => r.type === 'wall')
+    .map((r) => resolveWallThicknessCm(r))
+    .filter((cm): cm is number => cm != null)
+  return nextUnusedCatalogCm(used, catalogCms)
 }
 
 /**
- * Enforce ≤3 wall-rects + unieke band.
- * Nieuwste rect (laatste in array) wint bij band-conflict; oudste wall zonder plek valt weg bij overflow.
+ * Enforce ≤8 wall-rects. Nieuwste (laatste in array) blijft; oudste valt weg bij overflow.
  */
 export function enforceWallRefLimit(rects: SelectionRect[]): {
   rects: SelectionRect[]
@@ -184,27 +154,13 @@ export function enforceWallRefLimit(rects: SelectionRect[]): {
   if (walls.length === 0) return { rects: [...rects], removedIds: [] }
 
   const removedIds: string[] = []
-  const keptByBand = new Map<WallThicknessBand, SelectionRect>()
-
-  // Newest last wins band uniqueness.
-  for (const wall of walls) {
-    const band = resolveWallThicknessBand(wall)
-    const prev = keptByBand.get(band)
-    if (prev) removedIds.push(prev.id)
-    keptByBand.set(band, { ...wall, wallThicknessBand: band })
-  }
-
-  const keptWalls = Array.from(keptByBand.values())
-  const orderIndex = new Map(walls.map((w, i) => [w.id, i]))
-  keptWalls.sort((a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0))
-
+  const keptWalls = [...walls]
   while (keptWalls.length > MAX_WALL_REFS) {
     const drop = keptWalls.shift()
     if (drop) removedIds.push(drop.id)
   }
 
   const keptIds = new Set(keptWalls.map((w) => w.id))
-  const wallById = new Map(keptWalls.map((w) => [w.id, w]))
   const next: SelectionRect[] = []
   for (const rect of rects) {
     if (rect.type !== 'wall') {
@@ -212,7 +168,19 @@ export function enforceWallRefLimit(rects: SelectionRect[]): {
       continue
     }
     if (!keptIds.has(rect.id)) continue
-    next.push(wallById.get(rect.id) ?? rect)
+    next.push(rect)
   }
   return { rects: next, removedIds }
+}
+
+export function catalogCmsFromLimits(limits: {
+  thicknessCms?: readonly number[]
+  minCm: number
+  midCm: number
+  maxCm: number
+}): number[] {
+  if (Array.isArray(limits.thicknessCms) && limits.thicknessCms.length > 0) {
+    return normalizeThicknessCatalog(limits.thicknessCms)
+  }
+  return normalizeThicknessCatalog([limits.minCm, limits.midCm, limits.maxCm])
 }

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { effectScope, nextTick, ref } from 'vue'
 import { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
+import {
+  assignWallsToGroup,
+  createFacadeGroup,
+  STAMP_FACADE_GROUP_ID,
+} from '@/core/fml/facade-groups'
 import type { FloorPlan } from '@/core/fml/types'
 
 function samplePlan(): FloorPlan {
@@ -111,6 +116,20 @@ function samplePlanWithSlideCrossing(): FloorPlan {
 }
 
 describe('useFmlPreviewEditor', () => {
+  it('initializes with stamp preset without TDZ on facadeStamp', () => {
+    const scope = effectScope()
+    const plan = ref<FloorPlan | null>(samplePlan())
+    const floorIndex = ref(0)
+
+    const editor = scope.run(() =>
+      useFmlPreviewEditor(plan, floorIndex, { ensureStampPreset: ref(true) }),
+    )!
+
+    expect(editor.facadeGroups().some((group) => group.id === STAMP_FACADE_GROUP_ID)).toBe(true)
+
+    scope.stop()
+  })
+
   it('keeps undo stack after internal parent sync', async () => {
     const scope = effectScope()
     const plan = ref<FloorPlan | null>(samplePlan())
@@ -127,6 +146,41 @@ describe('useFmlPreviewEditor', () => {
     expect(editor.canUndo()).toBe(true)
     expect(editor.undo()).toBe(true)
     expect(editor.walls.value[0]?.a).toEqual({ x: 0, y: 0 })
+
+    scope.stop()
+  })
+
+  it('neemt parent-rescale over ook als parent-sync-skip open staat', async () => {
+    const scope = effectScope()
+    const plan = ref<FloorPlan | null>(samplePlan())
+    const floorIndex = ref(0)
+
+    const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
+    editor.pushUndo()
+    editor.prepareParentSync()
+    plan.value = {
+      name: 'Test',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'w1',
+              a: { x: 0, y: 0 },
+              b: { x: 200, y: 0 },
+              thickness: 10,
+              openings: [],
+            },
+          ],
+        },
+      ],
+    }
+    await nextTick()
+
+    expect(editor.walls.value[0]?.b.x).toBe(200)
+    expect(editor.canUndo()).toBe(false)
 
     scope.stop()
   })
@@ -306,6 +360,59 @@ describe('useFmlPreviewEditor', () => {
     expect(editor.redo()).toBe(true)
     expect(editor.walls.value[0]?.thickness).toBe(20)
     expect(editor.canRedoEdit.value).toBe(false)
+
+    scope.stop()
+  })
+
+  it('applyFacadeGroupThickness zet alle floors en laat balance staan', () => {
+    const scope = effectScope()
+    const plan = ref<FloorPlan | null>({
+      name: 'Gevel',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'bg',
+              a: { x: 0, y: 0 },
+              b: { x: 400, y: 0 },
+              thickness: 20,
+              balance: 0,
+              openings: [],
+            },
+          ],
+        },
+        {
+          name: '1e',
+          level: 1,
+          height: 260,
+          walls: [
+            {
+              id: 'e1',
+              a: { x: 0, y: 0 },
+              b: { x: 400, y: 0 },
+              thickness: 24,
+              balance: 1,
+              openings: [],
+            },
+          ],
+        },
+      ],
+    })
+    const floorIndex = ref(0)
+    const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
+    const group = createFacadeGroup(editor.localPlan.value!, { name: 'Voor' })
+    assignWallsToGroup(editor.localPlan.value!, group.id, ['bg', 'e1'])
+
+    expect(editor.applyFacadeGroupThickness(group.id, 30)).toBe(true)
+    expect(editor.localPlan.value?.floors[0]?.walls[0]?.thickness).toBe(30)
+    expect(editor.localPlan.value?.floors[0]?.walls[0]?.balance).toBe(0)
+    expect(editor.localPlan.value?.floors[1]?.walls[0]?.thickness).toBe(30)
+    expect(editor.localPlan.value?.floors[1]?.walls[0]?.balance).toBe(1)
+
+    expect(editor.applyFacadeGroupThickness(group.id, 30)).toBe(false)
 
     scope.stop()
   })

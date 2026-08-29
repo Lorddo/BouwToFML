@@ -26,6 +26,7 @@ import {
   type RenderCornerMarker,
 } from './fml-preview-corner-markers'
 import { buildRenderAreas, buildRenderSurfaces } from './fml-preview-render-areas'
+import { FML_PLAN_HANDLE_RADIUS_PX } from './fml-preview-vertex-hit'
 import {
   buildRenderDimensions,
   buildRenderLabels,
@@ -516,7 +517,7 @@ export function useFmlPreviewRenderModel(
 
   const groupDraggable = computed(() => false)
 
-  const junctionMarkerRadius = computed(() => 7)
+  const junctionMarkerRadius = computed(() => FML_PLAN_HANDLE_RADIUS_PX)
   const junctionMarkerStroke = computed(() => 2)
   const junctionHitRadius = computed(() => 14)
 

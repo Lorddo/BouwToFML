@@ -1,19 +1,16 @@
-import { describe, expect, it } from 'vitest'
-import { scaleMinPixels } from '@/cv/port/despeckle'
+import { describe, expect, it, vi } from 'vitest'
+import { despeckleByMinArea } from '@/cv/port/despeckle'
+import type { OpenCV } from '@/cv/loadOpenCV'
 
-describe('scaleMinPixels', () => {
-  it('houdt minimum gelijk op referentie-resolutie', () => {
-    expect(scaleMinPixels(20, 1000, 800)).toBe(20)
-  })
-
-  it('schaalt omhoog op hogere resolutie', () => {
-    const scaled = scaleMinPixels(20, 2000, 1600)
-    expect(scaled).toBeGreaterThan(20)
-    expect(scaled).toBe(80)
-  })
-
-  it('geeft 0 terug voor niet-positieve input', () => {
-    expect(scaleMinPixels(0, 4000, 3000)).toBe(0)
-    expect(scaleMinPixels(undefined, 4000, 3000)).toBe(0)
+describe('despeckleByMinArea', () => {
+  it('doet niets bij 0 of undefined (geen beeldmaat-schaal)', () => {
+    const cv = {
+      bitwise_not: vi.fn(),
+      connectedComponentsWithStats: vi.fn(),
+    } as unknown as OpenCV
+    const mat = { cols: 3000, rows: 2000, data: new Uint8Array(1) } as OpenCV['Mat']
+    expect(despeckleByMinArea(cv, mat, 0)).toBe(0)
+    expect(despeckleByMinArea(cv, mat, undefined)).toBe(0)
+    expect(cv.connectedComponentsWithStats).not.toHaveBeenCalled()
   })
 })

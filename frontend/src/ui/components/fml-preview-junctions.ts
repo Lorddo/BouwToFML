@@ -62,6 +62,9 @@ export {
   setWallsHeight,
   setWallThickness,
   setWallsThickness,
+  setWallsThicknessKeepBalance,
+  collectPlanWallsByIds,
+  setPlanWallsThicknessKeepBalance,
   splitWallAtMidpoint,
   splitWallAtT,
 } from './fml-preview-wall-edit'

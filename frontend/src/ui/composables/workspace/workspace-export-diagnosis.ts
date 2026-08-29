@@ -2,6 +2,13 @@ import type { Ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
+import {
+  classificationStats,
+  createRoomRasterCache,
+  updateRoomRasterPreviewMask,
+  type RoomRasterCache,
+} from '@/cv/walls/rooms/room-raster-cache'
+import { renderBinaryMaskRleCanvas } from '@/cv/util/binary-mask-rle'
 import type { BoundDoor, OrientedDoor, ResolvedDoorCandidate } from '@/cv/doors'
 import type {
   BoundWindow,
@@ -22,6 +29,7 @@ import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { analyzeAllReferenceRects } from '@/cv/refs/analyze-all-refs'
 import {
   buildDiagnosisReportHtml,
+  type DiagnosisClassifiedFaces,
   type DiagnosisRefImage,
   type DiagnosisReportPayload,
   type DiagnosisScaleOverlay,
@@ -47,6 +55,7 @@ export type WorkspaceExportDiagnosisDeps = {
   preprocessMaskArgs: () => PreprocessMaskInput
   setLocalError: (message: string | null) => void
   getBaseWallBw?: () => { data: Uint8Array; width: number; height: number } | null
+  roomRasterCache?: Ref<RoomRasterCache | null>
   boundDoors?: Ref<BoundDoor[]>
   resolvedDoors?: Ref<ResolvedDoorCandidate[]>
   orientedDoors?: Ref<OrientedDoor[]>
@@ -134,6 +143,49 @@ function resolveBwPng(deps: WorkspaceExportDiagnosisDeps): string | null {
   }
 }
 
+function resolveClassifyCache(deps: WorkspaceExportDiagnosisDeps): RoomRasterCache | null {
+  const live = deps.roomRasterCache?.value ?? null
+  if (live?.state.labelsData && live.state.width > 0 && live.state.height > 0) return live
+  const state = deps.tabOutputs.value.walls?.meta?.roomClassifyState
+  if (!state?.labelsData || state.width <= 0 || state.height <= 0) return null
+  try {
+    return createRoomRasterCache(state)
+  } catch (e) {
+    console.warn('[exportDiagnosisReport] classify cache rebuild skipped', e)
+    return null
+  }
+}
+
+function resolveClassifiedFaces(
+  deps: WorkspaceExportDiagnosisDeps,
+): DiagnosisClassifiedFaces | null {
+  const cache = resolveClassifyCache(deps)
+  if (!cache) return null
+  try {
+    const painted = updateRoomRasterPreviewMask(cache)
+    const canvas = canvasLikeToHtmlCanvas(painted)
+    const png = canvas.toDataURL('image/png')
+    if (!png.startsWith('data:image/')) return null
+    return { png, stats: classificationStats(cache) }
+  } catch (e) {
+    console.warn('[exportDiagnosisReport] classified faces skipped', e)
+    return null
+  }
+}
+
+function resolveUsedWallMaskPng(deps: WorkspaceExportDiagnosisDeps): string | null {
+  const maskRle = deps.tabOutputs.value.walls?.roomWallMaskRle
+  if (!maskRle || maskRle.width <= 0 || maskRle.height <= 0) return null
+  try {
+    const canvas = canvasLikeToHtmlCanvas(renderBinaryMaskRleCanvas(maskRle))
+    const png = canvas.toDataURL('image/png')
+    return png.startsWith('data:image/') ? png : null
+  } catch (e) {
+    console.warn('[exportDiagnosisReport] used wall mask skipped', e)
+    return null
+  }
+}
+
 function compactSemanticWalls(tabOutputs: TabDetectionOutputs): unknown | null {
   const graph = tabOutputs.walls?.semanticWallGraph
   if (!graph) return null
@@ -191,8 +243,8 @@ async function resolveReferenceRefImages(
         y: r.y,
         width: r.width,
         height: r.height,
-        ...(r.type === 'wall' && r.wallThicknessBand
-          ? { wallThicknessBand: r.wallThicknessBand }
+        ...(r.type === 'wall' && r.wallThicknessCm != null && r.wallThicknessCm > 0
+          ? { wallThicknessCm: r.wallThicknessCm }
           : {}),
       })),
     })
@@ -211,7 +263,9 @@ async function resolveReferenceRefImages(
       out.push({
         id: wall.rect.id ?? `wall-${out.length + 1}`,
         kind: 'wall',
-        ...(wall.wallThicknessBand ? { wallThicknessBand: wall.wallThicknessBand } : {}),
+        ...(wall.wallThicknessCm != null && wall.wallThicknessCm > 0
+          ? { wallThicknessCm: wall.wallThicknessCm }
+          : {}),
         png,
         imageKind,
       })
@@ -281,6 +335,8 @@ async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<Diagnos
   const referenceRefImages = await resolveReferenceRefImages(deps)
   const originalUnderlay = await resolveOriginalUnderlay(deps)
   const scaleOverlay = resolveScaleOverlay(deps)
+  const classifiedFaces = resolveClassifiedFaces(deps)
+  const usedWallMaskPng = resolveUsedWallMaskPng(deps)
 
   return {
     meta: {
@@ -300,6 +356,8 @@ async function buildPayload(deps: WorkspaceExportDiagnosisDeps): Promise<Diagnos
     originalPng: originalUnderlay?.dataUrl ?? null,
     scaleOverlay,
     bwPng: resolveBwPng(deps),
+    classifiedFaces,
+    usedWallMaskPng,
     references: refRects.length > 0 ? refRects : null,
     referenceRefImages,
     doors: hasDoorData
@@ -331,6 +389,8 @@ export function createWorkspaceExportDiagnosis(deps: WorkspaceExportDiagnosisDep
       const hasAnythingUseful =
         payload.originalPng != null ||
         payload.bwPng != null ||
+        payload.classifiedFaces != null ||
+        payload.usedWallMaskPng != null ||
         payload.references != null ||
         payload.referenceRefImages != null ||
         payload.doors != null ||

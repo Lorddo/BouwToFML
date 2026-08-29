@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { tGlobal } from '@/ui/i18n'
 
-export type FmlChromeDialogKind = 'alert' | 'confirm' | 'prompt' | 'listEdit'
+export type FmlChromeDialogKind = 'alert' | 'confirm' | 'prompt' | 'listEdit' | 'choice'
 
 export type FacadeGroupEditRow = { id: string; name: string }
 
@@ -14,7 +14,7 @@ export interface FmlChromeDialogRequest {
   placeholder?: string
   confirmLabel?: string
   cancelLabel?: string
-  /** Voor `listEdit`: startwaarden per rij. */
+  /** Voor `listEdit` (namen) en `choice` (opties; `id` = waarde). */
   listItems?: FacadeGroupEditRow[]
 }
 
@@ -65,7 +65,7 @@ export function fmlChromeDialogState(): typeof pending {
 }
 
 function cancelResultFor(kind: FmlChromeDialogKind): DialogResult {
-  if (kind === 'prompt' || kind === 'listEdit') return null
+  if (kind === 'prompt' || kind === 'listEdit' || kind === 'choice') return null
   return false
 }
 
@@ -113,6 +113,14 @@ function nativeFallback(request: FmlChromeDialogRequest): DialogResult {
     window.alert(body)
     return null
   }
+  if (request.kind === 'choice') {
+    const options = request.listItems ?? []
+    const fallback = request.defaultValue ?? options[0]?.id ?? ''
+    const picked = window.prompt(body, fallback)
+    if (picked == null) return null
+    const trimmed = picked.trim()
+    return options.some((row) => row.id === trimmed) ? trimmed : fallback
+  }
   if (request.kind === 'alert') {
     window.alert(body)
     return true
@@ -135,7 +143,7 @@ export function cancelFmlChromeDialog(): void {
 export function confirmFmlChromeDialog(): void {
   const current = pending.value
   if (!current) return
-  if (current.state.request.kind === 'prompt') {
+  if (current.state.request.kind === 'prompt' || current.state.request.kind === 'choice') {
     resolveFmlChromeDialog(current.state.inputValue)
     return
   }
@@ -161,6 +169,25 @@ export async function promptFmlChrome(
 ): Promise<string | null> {
   const result = await showFmlChromeDialog({ ...request, kind: 'prompt' })
   return typeof result === 'string' ? result : null
+}
+
+/** Radio-keuze; resultaat = gekozen `id`, of null bij annuleren. */
+export async function promptFmlChromeChoice(
+  request: Omit<FmlChromeDialogRequest, 'kind'>,
+): Promise<string | null> {
+  const choices = request.listItems ?? []
+  if (choices.length === 0) return null
+  const defaultValue =
+    request.defaultValue && choices.some((row) => row.id === request.defaultValue)
+      ? request.defaultValue
+      : choices[0]?.id
+  const result = await showFmlChromeDialog({
+    ...request,
+    kind: 'choice',
+    defaultValue,
+    listItems: choices,
+  })
+  return typeof result === 'string' && choices.some((row) => row.id === result) ? result : null
 }
 
 export async function confirmFacadeStackedFloors(params: {

@@ -93,7 +93,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
   }
   referenceWallThicknessPx: Ref<number | null>
   wallRefThicknessMeasures: Ref<
-    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+    import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
   >
   rects: Ref<SelectionRect[]>
   clearRectsByType: (type: ElementClass) => void
@@ -103,7 +103,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
       y: number
       width: number
       height: number
-      wallThicknessBand?: 'min' | 'mid' | 'max'
+      wallThicknessCm?: number
     }>,
   ) => void
   addRect: (rect: Omit<SelectionRect, 'id'>) => void
@@ -197,7 +197,9 @@ export function buildWorkspaceDevSessionDeps(ctx: {
           y: rect.y,
           width: rect.width,
           height: rect.height,
-          ...(rect.wallThicknessBand ? { wallThicknessBand: rect.wallThicknessBand } : {}),
+          ...(rect.wallThicknessCm != null && rect.wallThicknessCm > 0
+            ? { wallThicknessCm: rect.wallThicknessCm }
+            : {}),
         })),
       )
     },

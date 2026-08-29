@@ -54,14 +54,8 @@ export interface DevWorkspaceSessionBase {
   wallStamp?: import('@/ui/composables/workspace/useWallStamp').WallStampSerialized
   /** Stap-1 referentievakken (muur + deur/raam) — ook buiten detectie-snapshots. */
   referenceWallThicknessPx?: number
-  /**
-   * Gemeten muur-ref diktes (min/mid/max) — nodig om na resume bandgrenzen te herleiden
-   * i.p.v. 40/80-defaults op alleen `referenceWallThicknessPx`.
-   */
-  wallRefThicknessMeasures?: Array<{
-    band: 'min' | 'mid' | 'max'
-    thicknessPx: number
-  }>
+  /** Gemeten muur-ref diktes (px + catalogus-cm) voor schaal na restore. */
+  wallRefThicknessMeasures?: DevWallRefThicknessMeasure[]
   /** @deprecated Prefer `referenceWallRects` (multi muur-refs). */
   referenceWallRect?: DevWallReferenceRect
   referenceWallRects?: DevWallReferenceRect[]
@@ -89,12 +83,21 @@ export interface DevWorkspaceFlowSnapshot {
   wallPipelineVersion?: WallPipelineVersion
 }
 
+export interface DevWallRefThicknessMeasure {
+  thicknessPx: number
+  thicknessCm?: number
+  /** Legacy sessie-tag; restore negeert. */
+  band?: 'min' | 'mid' | 'max'
+  rectId?: string
+}
+
 export interface DevWallReferenceRect {
   x: number
   y: number
   width: number
   height: number
-  /** min/mid/max — alleen relevant bij multi muur-refs. */
+  wallThicknessCm?: number
+  /** Legacy; restore bindt catalogus-cm i.p.v. deze tag. */
   wallThicknessBand?: 'min' | 'mid' | 'max'
 }
 
@@ -110,17 +113,14 @@ export interface DevOpeningReferenceRect {
 
 export interface DevWorkspaceRoomSnapshot {
   referenceWallThicknessPx?: number
-  /** Gemeten muur-ref diktes (band + px) voor meetbandgrenzen na restore. */
-  wallRefThicknessMeasures?: Array<{
-    band: 'min' | 'mid' | 'max'
-    thicknessPx: number
-  }>
+  /** Gemeten muur-ref diktes (px + catalogus-cm) voor schaal na restore. */
+  wallRefThicknessMeasures?: DevWallRefThicknessMeasure[]
   /**
    * Legacy single muur-ref (style/max pick). Nieuwe snapshots zetten ook
    * `referenceWallRects` — restore prefereert die array.
    */
   referenceWallRect?: DevWallReferenceRect
-  /** Alle muur-LBE’s (max 3) met band-tag. */
+  /** Alle muur-LBE’s (max 8) met catalogus-cm. */
   referenceWallRects?: DevWallReferenceRect[]
   /** Deur-/raamreferentievakken van stap 1. */
   openingRects?: DevOpeningReferenceRect[]
@@ -183,10 +183,7 @@ export interface DevSessionCaptureInput {
   faceOverrides?: Array<[number, RoomRasterClass]>
   pinnedRoots?: number[]
   referenceWallThicknessPx?: number | null
-  wallRefThicknessMeasures?: Array<{
-    band: 'min' | 'mid' | 'max'
-    thicknessPx: number
-  }>
+  wallRefThicknessMeasures?: DevWallRefThicknessMeasure[]
   referenceWallRect?: DevWallReferenceRect
   referenceWallRects?: DevWallReferenceRect[]
   openingRects?: DevOpeningReferenceRect[]

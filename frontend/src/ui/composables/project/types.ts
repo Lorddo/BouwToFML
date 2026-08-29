@@ -29,6 +29,9 @@ export type ProjectFmlDefaults = {
   bovenlichtHeightCm: number
   /** Afstand tussen bovenzijde opening en onderkant bovenlicht (cm) — bepaalt de dorpel. */
   bovenlichtGapCm: number
+  /** Catalogus muurdiktes (min 3, tot 8). Array wint bij load. */
+  thicknessCms: number[]
+  /** Legacy write-through: first / midden / last van thicknessCms. */
   thicknessMinCm: number
   thicknessMidCm: number
   thicknessMaxCm: number

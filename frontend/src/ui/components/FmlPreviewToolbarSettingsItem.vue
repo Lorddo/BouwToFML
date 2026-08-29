@@ -2,8 +2,10 @@
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 defineProps<{
   unit: ScaleInputUnit
@@ -103,13 +105,12 @@ const { t } = useI18n()
   >
     <ToolbeltIcon name="copy" />
   </button>
-  <button
-    type="button"
-    class="canvas-toolbelt__btn"
+  <ToolbeltActionButton
+    icon="delete"
     :title="t('viewer.itemDelete')"
     :aria-label="t('viewer.itemDelete')"
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteItem')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
 </template>

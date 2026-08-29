@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FmlEditor from '@/ui/fml-editor/FmlEditor.vue'
 import FmlInspect from '@/ui/fml-inspect/FmlInspect.vue'
@@ -8,23 +8,18 @@ import FmlElevationHeightFields from '../components/FmlElevationHeightFields.vue
 import FmlOpeningOverflowNotice from '../components/FmlOpeningOverflowNotice.vue'
 import FmlViewerDefaultsFields from '../components/FmlViewerDefaultsFields.vue'
 import FmlViewerDimensionFields from '../components/FmlViewerDimensionFields.vue'
+import FmlViewerInspectPanel from '../components/FmlViewerInspectPanel.vue'
 import FmlRescalePanel from '../components/FmlRescalePanel.vue'
 import ScaleConfirmBar from '../components/ScaleConfirmBar.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
+import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
 import '../components/fml-panel-fields.css'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
 } from '@/core/fml/opening-height-overflow'
-import {
-  cloneUnderlayOriginLayout,
-  copyUnderlayDisplayOrient,
-  drawingFromImageScale,
-  previewUnderlayLayoutFromDrawing,
-  provisionalDrawingFromImage,
-  resolveUnderlayPxPerMmFromRulers,
-} from '@/core/fml/drawing-to-underlay-layout'
+import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout'
 import {
   applyFloorOrientOp,
   composeFloorOrient,
@@ -44,16 +39,6 @@ import {
   STAMP_FACADE_GROUP_ID,
   stripStampGroupFromPlan,
 } from '@/core/fml/facade-groups'
-import {
-  copyUnderlayFromDonor,
-  isReusableUnderlayDrawing,
-  listUnderlayReuseDonors,
-} from '@/core/fml/copy-underlay-drawing'
-import {
-  elevationViewForGroup,
-  setElevationProjection,
-  setElevationViewDrawing,
-} from '@/core/fml/elevation-views'
 import { setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
 import { bindFloorWallsToRoofs, listFloorsWithRoofPlanes } from '@/core/fml/bind-walls-to-roofs'
 import { overwriteRidgeDakThickness } from '@/core/fml/ridge-walls'
@@ -68,15 +53,14 @@ import {
   writeBovenlichtPacked,
 } from '@/core/fml/bovenlicht'
 import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
+import { setElevationProjection } from '@/core/fml/elevation-views'
 import { useFmlViewerDak } from '@/ui/composables/fml-viewer/useFmlViewerDak'
 import { useFmlViewerDimensions } from '@/ui/composables/fml-viewer/useFmlViewerDimensions'
 import { useFmlViewerGevels } from '@/ui/composables/fml-viewer/useFmlViewerGevels'
+import { useFmlViewerUnderlay } from '@/ui/composables/fml-viewer/useFmlViewerUnderlay'
 import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
-import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
-import type { HScaleState } from '@/platform/calibration'
-import { inspectKindLabel } from '@/ui/composables/fml-preview/fml-inspect'
 import { useFmlViewerInspect } from '@/ui/composables/fml-viewer/useFmlViewerInspect'
 import { useFmlViewerLoad } from '@/ui/composables/fml-viewer/useFmlViewerLoad'
 import { useFmlViewerSessionDefaults } from '@/ui/composables/fml-viewer/useFmlViewerSessionDefaults'
@@ -85,6 +69,7 @@ import {
   confirmFmlChrome,
   promptFacadeGroupName,
   promptFacadeGroupsEdit,
+  promptFmlChromeChoice,
 } from '@/ui/composables/fml-chrome-dialog'
 import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
@@ -93,21 +78,12 @@ import {
   formatScaleInputLabel,
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
-import {
-  fmlRescaleStateFromImageHandles,
-  initFmlRescaleStateFromWalls,
-  initImageScaleHandles,
-  measuredCmFromRescaleState,
-  resolveRescaleFactorsFromRulers,
-} from '@/ui/composables/fml-preview/fml-rescale-from-measure'
-import { imageDimensions, loadImage } from '@/platform/image'
 
 const { t } = useI18n()
 
 const plan = ref<FloorPlan | null>(null)
 const warnings = ref<ImportWarning[]>([])
 const error = ref<string | null>(null)
-const underlayHint = ref<string | null>(null)
 const bindRoofHint = ref<string | null>(null)
 const bindRoofFloorIndex = ref<number | null>(null)
 const fileName = ref<string | null>(null)
@@ -137,9 +113,6 @@ const sidebarOpen = ref(true)
 const sidebarOpenBeforeFullscreen = ref(true)
 const coarsePointer = ref(false)
 const canvasFullscreen = ref(false)
-const reuseUnderlayOpen = ref(false)
-const reuseUnderlayWrapRef = ref<HTMLElement | null>(null)
-const underlayFoldOpen = ref(false)
 
 watch(canvasFullscreen, (on) => {
   emit('update:canvasFullscreen', on)
@@ -159,60 +132,7 @@ function syncCoarsePointer(): void {
   if (coarsePointer.value) sidebarOpen.value = false
 }
 
-function onViewerKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && reuseUnderlayOpen.value) {
-    reuseUnderlayOpen.value = false
-    return
-  }
-  if (event.key === 'Escape' && canvasFullscreen.value) {
-    canvasFullscreen.value = false
-  }
-}
-
-function onReuseUnderlayPointerDown(event: PointerEvent): void {
-  if (!reuseUnderlayOpen.value) return
-  const el = reuseUnderlayWrapRef.value
-  if (el && event.target instanceof Node && el.contains(event.target)) return
-  reuseUnderlayOpen.value = false
-}
-
-onMounted(() => {
-  syncCoarsePointer()
-  coarseMq.addEventListener('change', syncCoarsePointer)
-  narrowMq.addEventListener('change', syncCoarsePointer)
-  window.addEventListener('keydown', onViewerKeydown)
-  document.addEventListener('pointerdown', onReuseUnderlayPointerDown, true)
-})
-
-onBeforeUnmount(() => {
-  coarseMq.removeEventListener('change', syncCoarsePointer)
-  narrowMq.removeEventListener('change', syncCoarsePointer)
-  window.removeEventListener('keydown', onViewerKeydown)
-  document.removeEventListener('pointerdown', onReuseUnderlayPointerDown, true)
-})
-
-function flushPreviewFieldCommits(): void {
-  previewCanvasRef.value?.flushPendingFieldCommits?.()
-}
-
-const underlaySrc = ref<string | null>(null)
-const underlayWidthPx = ref(0)
-const underlayHeightPx = ref(0)
-const underlayLayout = ref<PreviewUnderlayLayout | null>(null)
-const underlayOpacity = ref(0.5)
-/** FML-geometrie opacity 0–1; 0 = uit. */
-const fmlOpacity = ref(0.8)
-/** Sesssie-only: kamer-/FML-labels verbergen. */
-const hidePlanText = ref(false)
-/** Per-floor FML-oriëntatie (viewer heeft geen regenerate-from-detectie). */
-const orientByFloor = ref<Record<number, FloorOrientState>>({})
-const underlayMoveMode = ref(false)
-const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
-const userSettings = loadUserSettings()
-const scaleInputUnit = ref<ScaleInputUnit>(userSettings.scaleInputUnit)
-const thicknessMinCm = ref(userSettings.defaults.thicknessMinCm)
-const thicknessMidCm = ref(userSettings.defaults.thicknessMidCm)
-const thicknessMaxCm = ref(userSettings.defaults.thicknessMaxCm)
+const reuseUnderlayWrapRef = ref<HTMLElement | null>(null)
 
 const {
   viewerMode,
@@ -223,12 +143,26 @@ const {
   resetInspectState,
 } = useFmlViewerInspect()
 
+const /** FML-geometrie opacity 0–1; 0 = uit. */ fmlOpacity = ref(0.8)
+const /** Sesssie-only: kamer-/FML-labels verbergen. */ hidePlanText = ref(false)
+const /** Per-floor FML-oriëntatie (viewer heeft geen regenerate-from-detectie). */ orientByFloor =
+    ref<Record<number, FloorOrientState>>({})
+const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
+const userSettings = loadUserSettings()
+const scaleInputUnit = ref<ScaleInputUnit>(userSettings.scaleInputUnit)
+const thicknessPresetCms = ref<number[]>([...userSettings.defaults.thicknessCms])
+
+const floors = computed(() => plan.value?.floors ?? [])
+const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
+
 const inspectFacadeGroups = computed(() =>
   listFacadeGroups(plan.value).filter((group) => group.id !== STAMP_FACADE_GROUP_ID),
 )
 
 let selectFloorLater: (index: number) => void | Promise<void> = () => {}
 let leaveGevelsLater = (): void => {}
+
+const underlayBox: { api: ReturnType<typeof useFmlViewerUnderlay> | null } = { api: null }
 
 const dak = useFmlViewerDak({
   plan,
@@ -240,18 +174,22 @@ const dak = useFmlViewerDak({
 const gevels = useFmlViewerGevels({
   plan,
   inspectMode,
-  planUnderlayLayout: underlayLayout,
-  planUnderlayWidthPx: underlayWidthPx,
-  planUnderlayHeightPx: underlayHeightPx,
+  planUnderlayLayout: computed(() => underlayBox.api?.underlayLayout.value ?? null),
+  planUnderlayWidthPx: computed(() => underlayBox.api?.underlayWidthPx.value ?? 0),
+  planUnderlayHeightPx: computed(() => underlayBox.api?.underlayHeightPx.value ?? 0),
   leaveDakMode: () => dak.leaveDakMode(),
   onLeaveGevels: (wasOn) => {
-    if (wasOn) persistElevationUnderlayDrawing()
-    cancelUnderlayScale()
-    underlayMoveMode.value = false
+    const u = underlayBox.api
+    if (!u) return
+    if (wasOn) u.persistElevationUnderlayDrawing()
+    u.cancelUnderlayScale()
+    u.underlayMoveMode.value = false
   },
   onEnterGevels: () => {
-    cancelUnderlayScale()
-    underlayMoveMode.value = false
+    const u = underlayBox.api
+    if (!u) return
+    u.cancelUnderlayScale()
+    u.underlayMoveMode.value = false
   },
 })
 
@@ -276,10 +214,115 @@ const {
 } = gevels
 leaveGevelsLater = leaveGevelsMode
 
-function onAddFloorChip(): void {
-  leaveGevelsMode()
-  leaveDakMode()
-  void addFloor()
+const underlay = useFmlViewerUnderlay({
+  plan,
+  activeFloorIndex,
+  activeFloor,
+  floors,
+  inspectMode,
+  gevelsMode,
+  elevationGroupId,
+  elevationUnderlaySrc,
+  elevationUnderlayWidthPx,
+  elevationUnderlayHeightPx,
+  elevationUnderlayLayout,
+  activeUnderlayLayout,
+  activeUnderlayWidthPx,
+  activeUnderlayHeightPx,
+  syncElevationUnderlayFromPlan,
+  previewCanvasRef,
+  t,
+})
+underlayBox.api = underlay
+
+const {
+  underlaySrc,
+  underlayWidthPx,
+  underlayHeightPx,
+  underlayLayout,
+  underlayOpacity,
+  underlayHint,
+  underlayMoveMode,
+  reuseUnderlayOpen,
+  underlayFoldOpen,
+  underlayReuseDonors,
+  needsUnderlayReuse,
+  underlayAvailable,
+  underlayRotationDeg,
+  canStartRescale,
+  canStartUnderlayScale,
+  rescaleOverlayActive,
+  rescaleOverlayState,
+  fmlRescaleActive,
+  fmlRescaleState,
+  fmlRescaleDistanceMmX,
+  fmlRescaleDistanceMmY,
+  underlayScaleActive,
+  underlayScaleState,
+  underlayScaleMmX,
+  underlayScaleMmY,
+  underlayScalePxX,
+  underlayScalePxY,
+  underlayScaleCanConfirm,
+  underlayScaleMismatchPct,
+  reuseDonorLabel,
+  onReuseUnderlayFromDonor,
+  clearUnderlayState,
+  onUnderlayOpacityInput,
+  onUnderlayFileInput,
+  persistElevationUnderlayDrawing,
+  persistActiveUnderlayDrawing,
+  cancelFmlRescale,
+  beginFmlRescale,
+  setFmlRescaleDistanceMmX,
+  setFmlRescaleDistanceMmY,
+  confirmFmlRescale,
+  cancelUnderlayScale,
+  beginUnderlayScale,
+  confirmUnderlayScale,
+  onRescaleStateUpdate,
+  syncUnderlayForActiveFloor,
+  applyViewerUnderlayOrient,
+  setUnderlayRotationDeg,
+  onElevationUnderlayLayout,
+} = underlay
+
+function onViewerKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && reuseUnderlayOpen.value) {
+    reuseUnderlayOpen.value = false
+    return
+  }
+  if (event.key !== 'Escape' || !canvasFullscreen.value) return
+  if (event.defaultPrevented) return
+  if (hasToolbeltHotkey('Escape')) return
+  canvasFullscreen.value = false
+}
+
+function onReuseUnderlayPointerDown(event: PointerEvent): void {
+  if (!reuseUnderlayOpen.value) return
+  const el = reuseUnderlayWrapRef.value
+  if (el && event.target instanceof Node && el.contains(event.target)) return
+  reuseUnderlayOpen.value = false
+}
+
+onMounted(() => {
+  syncCoarsePointer()
+  coarseMq.addEventListener('change', syncCoarsePointer)
+  narrowMq.addEventListener('change', syncCoarsePointer)
+  window.addEventListener('keydown', onViewerKeydown)
+  document.addEventListener('pointerdown', onReuseUnderlayPointerDown, true)
+})
+
+onBeforeUnmount(() => {
+  coarseMq.removeEventListener('change', syncCoarsePointer)
+  narrowMq.removeEventListener('change', syncCoarsePointer)
+  window.removeEventListener('keydown', onViewerKeydown)
+  document.removeEventListener('pointerdown', onReuseUnderlayPointerDown, true)
+  clearUnderlayState()
+})
+
+function flushPreviewFieldCommits(): void {
+  previewCanvasRef.value?.flushPendingFieldCommits?.()
 }
 
 watch(elevationGroupId, (_next, prev) => {
@@ -290,75 +333,33 @@ watch(elevationGroupId, (_next, prev) => {
   void syncElevationUnderlayFromPlan()
 })
 
-const underlayReuseDonors = computed(() => {
-  const current = plan.value
-  if (!current) return []
-  if (gevelsMode.value) {
-    return listUnderlayReuseDonors(current, { elevationGroupId: elevationGroupId.value })
-  }
-  return listUnderlayReuseDonors(current, { floorIndex: activeFloorIndex.value })
-})
+function onAddFloorChip(): void {
+  leaveGevelsMode()
+  leaveDakMode()
+  void addFloor()
+}
 
-const activeHasReusableUnderlay = computed(() => {
-  const current = plan.value
-  if (!current) return false
-  if (gevelsMode.value) {
-    return isReusableUnderlayDrawing(
-      elevationViewForGroup(current, elevationGroupId.value)?.drawing,
-    )
-  }
-  return isReusableUnderlayDrawing(current.floors[activeFloorIndex.value]?.drawing)
-})
-
-/** Doel zonder onderlegger + er is een bron: knop + bronlijst hier, niet op de donor. */
-const needsUnderlayReuse = computed(
-  () =>
-    !inspectMode.value && !activeHasReusableUnderlay.value && underlayReuseDonors.value.length > 0,
-)
-
-watch([needsUnderlayReuse, gevelsMode, activeFloorIndex, elevationGroupId], ([needed]) => {
-  if (needed) {
-    underlayFoldOpen.value = true
-    reuseUnderlayOpen.value = true
+watch(floors, (list) => {
+  if (list.length === 0) {
+    activeFloorIndex.value = 0
     return
   }
-  reuseUnderlayOpen.value = false
-})
-
-watch(underlayReuseDonors, (opts) => {
-  if (opts.length === 0) reuseUnderlayOpen.value = false
-})
-
-function reuseDonorLabel(opt: { kind: 'floor' | 'elevation'; name: string }): string {
-  return opt.kind === 'elevation'
-    ? t('viewer.reuseUnderlayGevel', { name: opt.name })
-    : t('viewer.reuseUnderlayFloor', { name: opt.name })
-}
-
-async function onReuseUnderlayFromDonor(donorId: string): Promise<void> {
-  reuseUnderlayOpen.value = false
-  const current = plan.value
-  if (!current || inspectMode.value) return
-  cancelFmlRescale()
-  cancelUnderlayScale()
-  persistActiveUnderlayDrawing()
-  const target =
-    gevelsMode.value && elevationGroupId.value
-      ? ({ kind: 'elevation', groupId: elevationGroupId.value } as const)
-      : ({ kind: 'floor', index: activeFloorIndex.value } as const)
-  const next = copyUnderlayFromDonor(current, donorId, target)
-  if (!next) return
-  plan.value = next
-  underlayHint.value = null
-  error.value = null
-  if (target.kind === 'elevation') {
-    await syncElevationUnderlayFromPlan()
-  } else {
-    await syncUnderlayForActiveFloor()
+  if (activeFloorIndex.value >= list.length) {
+    activeFloorIndex.value = list.length - 1
   }
-  await nextTick()
-  previewCanvasRef.value?.resetView?.()
-}
+})
+
+watch(activeFloorIndex, () => {
+  underlayMoveMode.value = false
+  lastInspectHit.value = null
+  void syncUnderlayForActiveFloor()
+})
+
+watch(viewerMode, (mode) => {
+  if (mode === 'inspect') underlayMoveMode.value = false
+})
+
+// --- Inspect facade logic ---
 
 function inspectFacadeChecked(groupId: string): boolean {
   const hit = lastInspectHit.value
@@ -458,6 +459,8 @@ async function onInspectFacadeRemove(groupId: string): Promise<void> {
   await onInspectFacadeToggle(groupId, false)
 }
 
+// --- Session defaults ---
+
 const {
   sessionDefaults,
   activeFloorDefaults,
@@ -503,6 +506,8 @@ async function onBovenlichtPackedChange(nextPacked: boolean): Promise<void> {
   plan.value = writeBovenlichtPacked(next, nextPacked)
 }
 
+// --- Dimensions ---
+
 const {
   dimensionVis,
   dimensionSettings,
@@ -519,171 +524,13 @@ function convertActiveDimensionsToManual(): void {
   if (ok) dimensionVis.value = 'manual'
 }
 
-const fmlRescaleActive = ref(false)
-const fmlRescaleState = ref<HScaleState | null>(null)
-const fmlRescaleDistanceMmX = ref(0)
-const fmlRescaleDistanceMmY = ref(0)
-const underlayScaleActive = ref(false)
-const underlayScaleState = ref<HScaleState | null>(null)
-const underlayScaleMmX = ref(3000)
-const underlayScaleMmY = ref(3000)
+// --- Opacity / text ---
 
-function cancelFmlRescale(): void {
-  fmlRescaleActive.value = false
-  fmlRescaleState.value = null
+function onFmlOpacityInput(event: Event): void {
+  fmlOpacity.value = Number((event.target as HTMLInputElement).value) / 100
 }
 
-function cancelUnderlayScale(): void {
-  underlayScaleActive.value = false
-  underlayScaleState.value = null
-}
-
-function persistElevationUnderlayDrawing(groupId = elevationGroupId.value): void {
-  const current = plan.value
-  const layout = elevationUnderlayLayout.value
-  const id = groupId.trim()
-  if (!current || !layout || !id) return
-  if (!(elevationUnderlayWidthPx.value > 0) || !(elevationUnderlayHeightPx.value > 0)) return
-  const url =
-    elevationViewForGroup(current, id)?.drawing?.url ?? elevationUnderlaySrc.value ?? undefined
-  if (!url) return
-  const drawing = drawingFromImageScale({
-    imageWidthPx: elevationUnderlayWidthPx.value,
-    imageHeightPx: elevationUnderlayHeightPx.value,
-    pxPerMmX: layout.pxPerMmX,
-    pxPerMmY: layout.pxPerMmY,
-    origin: layout.origin,
-    url,
-    alpha: Math.round(underlayOpacity.value * 100),
-    rotation: layout.rotationDeg ?? 0,
-  })
-  if (!drawing) return
-  plan.value = setElevationViewDrawing(current, id, drawing)
-}
-
-function persistActiveUnderlayDrawing(): void {
-  persistElevationUnderlayDrawing()
-  const current = plan.value
-  const layout = underlayLayout.value
-  const idx = activeFloorIndex.value
-  const floor = current?.floors[idx]
-  if (!current || !floor || !layout) return
-  if (!(underlayWidthPx.value > 0) || !(underlayHeightPx.value > 0)) return
-  const url = floor.drawing?.url ?? underlaySrc.value
-  if (!url) return
-  const drawing = drawingFromImageScale({
-    imageWidthPx: underlayWidthPx.value,
-    imageHeightPx: underlayHeightPx.value,
-    pxPerMmX: layout.pxPerMmX,
-    pxPerMmY: layout.pxPerMmY,
-    origin: layout.origin,
-    url,
-    alpha: Math.round(underlayOpacity.value * 100),
-    rotation: layout.rotationDeg ?? 0,
-  })
-  if (!drawing) return
-  if (floor.drawing?.extras) drawing.extras = floor.drawing.extras
-  if (floor.drawing?.visible != null) drawing.visible = floor.drawing.visible
-  plan.value = {
-    ...current,
-    floors: current.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
-  }
-}
-
-function beginFmlRescale(): boolean {
-  if (inspectMode.value) return false
-  const walls = plan.value?.floors[activeFloorIndex.value]?.walls ?? []
-  const state = initFmlRescaleStateFromWalls(walls)
-  if (!state) return false
-  const measured = measuredCmFromRescaleState(state)
-  fmlRescaleState.value = state
-  fmlRescaleDistanceMmX.value = measured.x * 10
-  fmlRescaleDistanceMmY.value = measured.y * 10
-  underlayMoveMode.value = false
-  cancelUnderlayScale()
-  fmlRescaleActive.value = true
-  return true
-}
-
-function updateFmlRescaleState(next: HScaleState): void {
-  if (!fmlRescaleActive.value) return
-  fmlRescaleState.value = { ...next }
-}
-
-function setFmlRescaleDistanceMmX(mm: number): void {
-  if (!(mm > 0) || !Number.isFinite(mm)) return
-  fmlRescaleDistanceMmX.value = mm
-}
-
-function setFmlRescaleDistanceMmY(mm: number): void {
-  if (!(mm > 0) || !Number.isFinite(mm)) return
-  fmlRescaleDistanceMmY.value = mm
-}
-
-function confirmFmlRescale(): boolean {
-  const state = fmlRescaleState.value
-  const current = plan.value
-  if (!state || !fmlRescaleActive.value || !current) return false
-  const measured = measuredCmFromRescaleState(state)
-  const factors = resolveRescaleFactorsFromRulers({
-    measuredCmX: measured.x,
-    measuredCmY: measured.y,
-    trueMmX: fmlRescaleDistanceMmX.value,
-    trueMmY: fmlRescaleDistanceMmY.value,
-  })
-  if (factors == null) return false
-  plan.value = scaleFloorPlan(current, factors, activeFloorIndex.value)
-  if (underlayLayout.value) {
-    underlayLayout.value = scaleUnderlayLayout(underlayLayout.value, factors)
-  }
-  cancelFmlRescale()
-  return true
-}
-
-const underlayAvailable = computed(() =>
-  gevelsMode.value
-    ? !!elevationUnderlaySrc.value && !!elevationUnderlayLayout.value
-    : !!underlaySrc.value && !!underlayLayout.value,
-)
-const canStartRescale = computed(
-  () => (plan.value?.floors[activeFloorIndex.value]?.walls.length ?? 0) > 0 && !inspectMode.value,
-)
-const activeFmlOrient = computed(
-  () => orientByFloor.value[activeFloorIndex.value] ?? defaultFloorOrient(),
-)
-/** Alle floors hebben flipX — voor project-spiegel knop-styling. */
-const projectOrientFlipX = computed(() => {
-  const list = floors.value
-  if (list.length === 0) return false
-  return list.every((_, i) => (orientByFloor.value[i] ?? defaultFloorOrient()).flipX)
-})
-
-/** Object-URL van lokale fallback-PNG; revoke bij clear/switch. */
-let localUnderlayObjectUrl: string | null = null
-let underlayLoadGen = 0
-
-const floors = computed(() => plan.value?.floors ?? [])
-const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
-
-watch(floors, (list) => {
-  if (list.length === 0) {
-    activeFloorIndex.value = 0
-    return
-  }
-  if (activeFloorIndex.value >= list.length) {
-    activeFloorIndex.value = list.length - 1
-  }
-})
-
-watch(activeFloorIndex, () => {
-  underlayMoveMode.value = false
-  lastInspectHit.value = null
-  void syncUnderlayForActiveFloor()
-})
-
-watch(viewerMode, (mode) => {
-  if (mode === 'inspect') underlayMoveMode.value = false
-})
+// --- Opening overflow ---
 
 const openingOverflow = computed(() => {
   const floor = activeFloor.value
@@ -698,6 +545,8 @@ const openingOverflow = computed(() => {
   )
 })
 
+// --- FML export ---
+
 const fmlText = computed(() => {
   if (!plan.value) return ''
   const exportPlan = stripStampGroupFromPlan(plan.value)
@@ -711,297 +560,43 @@ const fmlText = computed(() => {
   })
 })
 
-function revokeLocalUnderlay(): void {
-  if (localUnderlayObjectUrl) {
-    URL.revokeObjectURL(localUnderlayObjectUrl)
-    localUnderlayObjectUrl = null
-  }
-}
+// --- Orient ---
 
-function clearUnderlayState(): void {
-  underlayLoadGen += 1
-  revokeLocalUnderlay()
-  underlaySrc.value = null
-  underlayWidthPx.value = 0
-  underlayHeightPx.value = 0
-  underlayLayout.value = null
-  underlayOpacity.value = 0.5
-  underlayHint.value = null
-  underlayMoveMode.value = false
-  cancelUnderlayScale()
-}
-
-function resolveDrawingOpacity(alpha: number | undefined): number {
-  // Floorplanner alpha is 0–100; ontbrekend → 50.
-  const pct = typeof alpha === 'number' && Number.isFinite(alpha) ? alpha : 50
-  return Math.min(1, Math.max(0, pct / 100))
-}
-
-function onUnderlayOpacityInput(event: Event): void {
-  const next = Number((event.target as HTMLInputElement).value) / 100
-  underlayOpacity.value = next
-  if (next <= 0) underlayMoveMode.value = false
-}
-
-function onFmlOpacityInput(event: Event): void {
-  fmlOpacity.value = Number((event.target as HTMLInputElement).value) / 100
-}
-
-function applyImageToUnderlay(
-  src: string,
-  width: number,
-  height: number,
-  drawing: NonNullable<(typeof floors.value)[number]['drawing']>,
-): boolean {
-  const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
-  if (!layout) return false
-  underlaySrc.value = src
-  underlayWidthPx.value = width
-  underlayHeightPx.value = height
-  underlayLayout.value = cloneUnderlayOriginLayout(layout)
-  underlayOpacity.value = resolveDrawingOpacity(drawing.alpha)
-  return true
-}
-
-async function tryLoadDrawingUrl(
-  url: string,
-  drawing: NonNullable<(typeof floors.value)[number]['drawing']>,
-  gen: number,
-): Promise<boolean> {
-  try {
-    const img = await loadImage(url)
-    if (gen !== underlayLoadGen) return false
-    const { width, height } = imageDimensions(img)
-    return applyImageToUnderlay(url, width, height, drawing)
-  } catch {
-    return false
-  }
-}
-
-async function syncUnderlayForActiveFloor(): Promise<void> {
-  const drawing = activeFloor.value?.drawing
-  underlayLoadGen += 1
-  const gen = underlayLoadGen
-  revokeLocalUnderlay()
-  underlaySrc.value = null
-  underlayWidthPx.value = 0
-  underlayHeightPx.value = 0
-  underlayLayout.value = null
-  underlayHint.value = null
-
-  if (!drawing || !(drawing.width > 0) || !(drawing.height > 0)) {
-    underlayOpacity.value = 0.5
-    return
-  }
-
-  underlayOpacity.value = resolveDrawingOpacity(drawing.alpha)
-
-  if (drawing.url) {
-    const ok = await tryLoadDrawingUrl(drawing.url, drawing, gen)
-    if (gen !== underlayLoadGen) return
-    if (ok) {
-      underlayHint.value = null
-      return
-    }
-    underlayHint.value =
-      'Onderlegger-URL kon niet laden (COEP/CORS). Kies lokaal een PNG/JPG van dezelfde scan.'
-    return
-  }
-
-  underlayHint.value = t('viewer.underlayMissingUrl')
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result
-      if (typeof result !== 'string') {
-        reject(new Error('read failed'))
-        return
-      }
-      resolve(result)
-    }
-    reader.onerror = () => reject(reader.error ?? new Error('read failed'))
-    reader.readAsDataURL(file)
-  })
-}
-
-async function onUnderlayFileInput(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  input.value = ''
-  if (!file || !plan.value) return
-  cancelFmlRescale()
-  cancelUnderlayScale()
-  try {
-    const dataUrl = await fileToDataUrl(file)
-    const img = await loadImage(dataUrl)
-    const { width, height } = imageDimensions(img)
-    const drawing = provisionalDrawingFromImage(
-      { width, height },
-      { url: dataUrl, alpha: Math.round(underlayOpacity.value * 100) },
-    )
-    if (!drawing) {
-      error.value = t('viewer.underlayInvalid')
-      return
-    }
-    if (gevelsMode.value && elevationGroupId.value) {
-      elevationUnderlayWidthPx.value = width
-      elevationUnderlayHeightPx.value = height
-      elevationUnderlaySrc.value = dataUrl
-      plan.value = setElevationViewDrawing(plan.value, elevationGroupId.value, drawing)
-      const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
-      elevationUnderlayLayout.value = layout
-      underlayHint.value = null
-      error.value = null
-      await nextTick()
-      previewCanvasRef.value?.resetView?.()
-      beginUnderlayScale()
-      return
-    }
-    const idx = activeFloorIndex.value
-    plan.value = {
-      ...plan.value,
-      floors: plan.value.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
-    }
-    applyImageToUnderlay(dataUrl, width, height, drawing)
-    underlayHint.value = null
-    error.value = null
-    await nextTick()
-    previewCanvasRef.value?.resetView?.()
-    beginUnderlayScale()
-  } catch {
-    error.value = t('viewer.underlayLoadFailed')
-  }
-}
-
-function beginUnderlayScale(): boolean {
-  if (inspectMode.value || !underlayAvailable.value) return false
-  const layout = activeUnderlayLayout.value
-  const widthPx = activeUnderlayWidthPx.value
-  const heightPx = activeUnderlayHeightPx.value
-  const handles = initImageScaleHandles(widthPx, heightPx)
-  if (!layout || !handles) return false
-  const cmState = fmlRescaleStateFromImageHandles(handles, layout)
-  if (!cmState) return false
-  const measured = measuredCmFromRescaleState(cmState)
-  cancelFmlRescale()
-  underlayScaleState.value = cmState
-  underlayScaleMmX.value = measured.x * 10
-  underlayScaleMmY.value = measured.y * 10
-  underlayMoveMode.value = false
-  underlayScaleActive.value = true
-  return true
-}
-
-function updateUnderlayScaleState(next: HScaleState): void {
-  if (!underlayScaleActive.value) return
-  underlayScaleState.value = { ...next }
-}
-
-function onRescaleStateUpdate(next: HScaleState): void {
-  if (fmlRescaleActive.value) updateFmlRescaleState(next)
-  else if (underlayScaleActive.value) updateUnderlayScaleState(next)
-}
-
-function confirmUnderlayScale(): boolean {
-  const state = underlayScaleState.value
-  const layout = activeUnderlayLayout.value
-  const current = plan.value
-  if (!state || !layout || !current || !underlayScaleActive.value) return false
-  const measured = measuredCmFromRescaleState(state)
-  const nextPpm = resolveUnderlayPxPerMmFromRulers({
-    measuredCmX: measured.x,
-    measuredCmY: measured.y,
-    currentPxPerMmX: layout.pxPerMmX,
-    currentPxPerMmY: layout.pxPerMmY,
-    trueMmX: underlayScaleMmX.value,
-    trueMmY: underlayScaleMmY.value,
-  })
-  if (!nextPpm) return false
-  const widthPx = activeUnderlayWidthPx.value
-  const heightPx = activeUnderlayHeightPx.value
-  const url = gevelsMode.value
-    ? (elevationViewForGroup(current, elevationGroupId.value)?.drawing?.url ??
-      elevationUnderlaySrc.value ??
-      undefined)
-    : (current.floors[activeFloorIndex.value]?.drawing?.url ?? underlaySrc.value ?? undefined)
-  const drawing = drawingFromImageScale({
-    imageWidthPx: widthPx,
-    imageHeightPx: heightPx,
-    pxPerMmX: nextPpm.pxPerMmX,
-    pxPerMmY: nextPpm.pxPerMmY,
-    origin: layout.origin,
-    url,
-    alpha: Math.round(underlayOpacity.value * 100),
-    rotation: layout.rotationDeg ?? 0,
-  })
-  if (!drawing) return false
-  if (gevelsMode.value && elevationGroupId.value) {
-    plan.value = setElevationViewDrawing(current, elevationGroupId.value, drawing)
-    const nextLayout = previewUnderlayLayoutFromDrawing(drawing, {
-      width: widthPx,
-      height: heightPx,
-    })
-    if (nextLayout) {
-      elevationUnderlayLayout.value = copyUnderlayDisplayOrient(nextLayout, layout)
-    }
-    cancelUnderlayScale()
-    void nextTick().then(() => previewCanvasRef.value?.resetView?.())
-    return true
-  }
-  const idx = activeFloorIndex.value
-  const floor = current.floors[idx]
-  if (floor?.drawing?.extras) drawing.extras = floor.drawing.extras
-  if (floor?.drawing?.visible != null) drawing.visible = floor.drawing.visible
-  plan.value = {
-    ...current,
-    floors: current.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
-  }
-  const nextLayout = previewUnderlayLayoutFromDrawing(drawing, {
-    width: underlayWidthPx.value,
-    height: underlayHeightPx.value,
-  })
-  if (nextLayout) {
-    underlayLayout.value = copyUnderlayDisplayOrient(nextLayout, layout)
-  }
-  cancelUnderlayScale()
-  if ((floor?.walls.length ?? 0) === 0) {
-    void nextTick().then(() => previewCanvasRef.value?.resetView?.())
-  }
-  return true
-}
-
-const underlayScalePxX = computed(() => {
-  const state = underlayScaleState.value
-  const layout = activeUnderlayLayout.value
-  if (!state || !layout) return 0
-  return measuredCmFromRescaleState(state).x * 10 * layout.pxPerMmX
-})
-
-const underlayScalePxY = computed(() => {
-  const state = underlayScaleState.value
-  const layout = activeUnderlayLayout.value
-  if (!state || !layout) return 0
-  return measuredCmFromRescaleState(state).y * 10 * layout.pxPerMmY
-})
-
-const underlayScaleCanConfirm = computed(
-  () =>
-    underlayScaleActive.value &&
-    underlayScalePxX.value > 3 &&
-    underlayScalePxY.value > 3 &&
-    underlayScaleMmX.value > 0 &&
-    underlayScaleMmY.value > 0,
+const activeFmlOrient = computed(
+  () => orientByFloor.value[activeFloorIndex.value] ?? defaultFloorOrient(),
 )
 
-const underlayScaleMismatchPct = computed(() => {
-  const x = underlayScalePxX.value / underlayScaleMmX.value
-  const y = underlayScalePxY.value / underlayScaleMmY.value
-  if (!(x > 0) || !(y > 0)) return 0
-  return (Math.abs(x - y) / Math.min(x, y)) * 100
+const projectOrientFlipX = computed(() => {
+  const list = floors.value
+  if (list.length === 0) return false
+  return list.every((_, i) => (orientByFloor.value[i] ?? defaultFloorOrient()).flipX)
 })
+
+function applyViewerFloorOrient(op: FloorOrientOp): void {
+  if (!plan.value) return
+  const idx = activeFloorIndex.value
+  const prev = orientByFloor.value[idx] ?? defaultFloorOrient()
+  orientByFloor.value = {
+    ...orientByFloor.value,
+    [idx]: composeFloorOrient(prev, op),
+  }
+  plan.value = applyFloorOrientOp(plan.value, op, idx)
+  underlayMoveMode.value = false
+}
+
+function applyViewerProjectOrient(op: 'flipX'): void {
+  if (!plan.value || plan.value.floors.length === 0) return
+  const nextOrient: Record<number, FloorOrientState> = { ...orientByFloor.value }
+  for (let i = 0; i < plan.value.floors.length; i++) {
+    const prev = nextOrient[i] ?? defaultFloorOrient()
+    nextOrient[i] = composeFloorOrient(prev, op)
+  }
+  orientByFloor.value = nextOrient
+  plan.value = applyFloorOrientOp(plan.value, op, null)
+  underlayMoveMode.value = false
+}
+
+// --- Stamp ---
 
 const canApplyStamp = computed(
   () =>
@@ -1012,62 +607,7 @@ function applyStampFromSidebar(): void {
   previewCanvasRef.value?.applyStampToActiveFloor?.()
 }
 
-const canStartUnderlayScale = computed(() => underlayAvailable.value && !inspectMode.value)
-const rescaleOverlayActive = computed(() => fmlRescaleActive.value || underlayScaleActive.value)
-const rescaleOverlayState = computed(() =>
-  fmlRescaleActive.value ? fmlRescaleState.value : underlayScaleState.value,
-)
-
-const {
-  loadFileName,
-  isLoadingFml,
-  loadStatusLabel,
-  floorLabel,
-  selectFloor,
-  setPlanName,
-  renameFloor,
-  addFloor,
-  removeFloor,
-  startNewPlan,
-  onFileInput,
-} = useFmlViewerLoad({
-  // assigned after load; dak-enter uses this via selectFloorLater
-
-  plan,
-  warnings,
-  error,
-  fileName,
-  activeFloorIndex,
-  sessionDefaults,
-  orientByFloor,
-  pendingAlignRebase,
-  fmlOpacity,
-  hidePlanText,
-  floors,
-  t,
-  flushPreviewFieldCommits,
-  cancelFmlRescale,
-  cancelUnderlayScale,
-  persistActiveUnderlayDrawing,
-  clearUnderlayState,
-  syncUnderlayForActiveFloor,
-  resetInspectState,
-  hydrateFloorDefaultsFromPlan,
-  addFloorDefaultsSlot,
-  removeFloorDefaultsSlot,
-})
-selectFloorLater = selectFloor
-
-function onSelectFloorChip(index: number): void {
-  leaveGevelsMode()
-  leaveDakMode()
-  void selectFloor(index)
-}
-
-function onSelectDakDesign(floorIndex: number): void {
-  if (!dakMode.value) enterDakMode()
-  if (floorIndex !== activeFloorIndex.value) void selectFloor(floorIndex)
-}
+// --- Elevation events ---
 
 async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
   if (!plan.value) return
@@ -1102,27 +642,34 @@ function onElevationSlab(floorIndex: number, cm: number): void {
   plan.value = setSlabThicknessCm(plan.value, floor.level, cm)
 }
 
+// --- Bind walls to roof ---
+
 const floorsWithRoofPlanes = computed(() => listFloorsWithRoofPlanes(plan.value))
 
 const canBindWallsToRoof = computed(() => {
   if (!plan.value) return false
-  const idx = resolveBindRoofFloorIndex()
-  return idx != null
+  if (dakMode.value) return resolveBindRoofFloorIndex() != null
+  return floorsWithRoofPlanes.value.length > 0
 })
 
 function resolveBindRoofFloorIndex(): number | null {
-  const floors = floorsWithRoofPlanes.value
-  if (floors.length === 0) return null
+  const floorList = floorsWithRoofPlanes.value
+  if (floorList.length === 0) return null
+  if (dakMode.value) {
+    return floorList.some((f) => f.floorIndex === activeFloorIndex.value)
+      ? activeFloorIndex.value
+      : null
+  }
   if (
     bindRoofFloorIndex.value != null &&
-    floors.some((f) => f.floorIndex === bindRoofFloorIndex.value)
+    floorList.some((f) => f.floorIndex === bindRoofFloorIndex.value)
   ) {
     return bindRoofFloorIndex.value
   }
-  if (floors.some((f) => f.floorIndex === activeFloorIndex.value)) {
+  if (floorList.some((f) => f.floorIndex === activeFloorIndex.value)) {
     return activeFloorIndex.value
   }
-  return floors[0]?.floorIndex ?? null
+  return floorList[0]?.floorIndex ?? null
 }
 
 watch([floorsWithRoofPlanes, activeFloorIndex, dakMode, gevelsMode], () => {
@@ -1132,10 +679,38 @@ watch([floorsWithRoofPlanes, activeFloorIndex, dakMode, gevelsMode], () => {
   bindRoofHint.value = null
 })
 
-function bindWallsToRoof(): void {
+async function bindWallsToRoof(): Promise<void> {
   if (!plan.value) return
-  const floorIndex = resolveBindRoofFloorIndex()
+  const floorList = floorsWithRoofPlanes.value
+  if (floorList.length === 0) return
+
+  let floorIndex: number | null
+  if (dakMode.value) {
+    floorIndex = resolveBindRoofFloorIndex()
+  } else if (floorList.length === 1) {
+    floorIndex = floorList[0]?.floorIndex ?? null
+  } else {
+    const picked = await promptFmlChromeChoice({
+      title: t('viewer.bindWallsToRoof'),
+      message: t('viewer.bindWallsToRoofPickHint'),
+      confirmLabel: t('viewer.bindWallsToRoof'),
+      defaultValue: String(resolveBindRoofFloorIndex() ?? floorList[0]?.floorIndex ?? 0),
+      listItems: floorList.map((floor) => ({
+        id: String(floor.floorIndex),
+        name: floor.name,
+      })),
+    })
+    if (picked == null) return
+    floorIndex = Number(picked)
+    if (!floorList.some((floor) => floor.floorIndex === floorIndex)) return
+    bindRoofFloorIndex.value = floorIndex
+  }
   if (floorIndex == null) return
+  applyBindWallsToRoof(floorIndex)
+}
+
+function applyBindWallsToRoof(floorIndex: number): void {
+  if (!plan.value) return
 
   if (dakMode.value && previewCanvasRef.value?.bindWallsToRoof) {
     const result = previewCanvasRef.value.bindWallsToRoof(floorIndex)
@@ -1162,6 +737,8 @@ function bindWallsToRoof(): void {
   previewCanvasRef.value?.pushUndo?.()
   plan.value = result.plan
 }
+
+// --- Align fixture rebase ---
 
 function applyAlignFixtureRebase(): void {
   const pending = pendingAlignRebase.value
@@ -1198,55 +775,7 @@ watch(pendingAlignRebase, async (preview) => {
   else dismissAlignFixtureRebase()
 })
 
-function applyViewerFloorOrient(op: FloorOrientOp): void {
-  if (!plan.value) return
-  const idx = activeFloorIndex.value
-  const prev = orientByFloor.value[idx] ?? defaultFloorOrient()
-  orientByFloor.value = {
-    ...orientByFloor.value,
-    [idx]: composeFloorOrient(prev, op),
-  }
-  plan.value = applyFloorOrientOp(plan.value, op, idx)
-  underlayMoveMode.value = false
-}
-
-/** Spiegel alle verdiepingen om hun nulpunt (geen floor-switch). */
-function applyViewerProjectOrient(op: 'flipX'): void {
-  if (!plan.value || plan.value.floors.length === 0) return
-  const nextOrient: Record<number, FloorOrientState> = { ...orientByFloor.value }
-  for (let i = 0; i < plan.value.floors.length; i++) {
-    const prev = nextOrient[i] ?? defaultFloorOrient()
-    nextOrient[i] = composeFloorOrient(prev, op)
-  }
-  orientByFloor.value = nextOrient
-  plan.value = applyFloorOrientOp(plan.value, op, null)
-  underlayMoveMode.value = false
-}
-
-function applyViewerUnderlayOrient(): void {
-  const layout = activeUnderlayLayout.value
-  if (!layout) return
-  const next = cloneUnderlayOriginLayout(layout)
-  next.flipX = !next.flipX
-  if (!next.flipX) delete next.flipX
-  if (gevelsMode.value) elevationUnderlayLayout.value = next
-  else underlayLayout.value = next
-}
-
-function setUnderlayRotationDeg(raw: number): void {
-  const layout = activeUnderlayLayout.value
-  if (!layout || !Number.isFinite(raw)) return
-  const next = cloneUnderlayOriginLayout(layout)
-  let rotationDeg = raw
-  while (rotationDeg > 180) rotationDeg -= 360
-  while (rotationDeg <= -180) rotationDeg += 360
-  if (Math.abs(rotationDeg) < 0.001) delete next.rotationDeg
-  else next.rotationDeg = Math.round(rotationDeg * 10) / 10
-  if (gevelsMode.value) elevationUnderlayLayout.value = next
-  else underlayLayout.value = next
-}
-
-const underlayRotationDeg = computed(() => activeUnderlayLayout.value?.rotationDeg ?? 0)
+// --- Download ---
 
 function downloadCurrentFml(): void {
   flushPreviewFieldCommits()
@@ -1268,10 +797,6 @@ function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): v
   }
 }
 
-function onElevationUnderlayLayout(layout: PreviewUnderlayLayout): void {
-  elevationUnderlayLayout.value = cloneUnderlayOriginLayout(layout)
-}
-
 watch(inspectMode, (on) => {
   if (on) {
     cancelFmlRescale()
@@ -1279,18 +804,65 @@ watch(inspectMode, (on) => {
   }
 })
 
+// --- Load ---
+
+const {
+  loadFileName,
+  isLoadingFml,
+  loadStatusLabel,
+  floorLabel,
+  selectFloor,
+  setPlanName,
+  renameFloor,
+  addFloor,
+  removeFloor,
+  startNewPlan,
+  onFileInput,
+} = useFmlViewerLoad({
+  plan,
+  warnings,
+  error,
+  fileName,
+  activeFloorIndex,
+  sessionDefaults,
+  orientByFloor,
+  pendingAlignRebase,
+  fmlOpacity,
+  hidePlanText,
+  floors,
+  t,
+  flushPreviewFieldCommits,
+  cancelFmlRescale,
+  cancelUnderlayScale,
+  persistActiveUnderlayDrawing,
+  clearUnderlayState,
+  syncUnderlayForActiveFloor,
+  resetInspectState,
+  hydrateFloorDefaultsFromPlan,
+  addFloorDefaultsSlot,
+  removeFloorDefaultsSlot,
+})
+selectFloorLater = selectFloor
+
+function onSelectFloorChip(index: number): void {
+  leaveGevelsMode()
+  leaveDakMode()
+  void selectFloor(index)
+}
+
+function onSelectDakDesign(floorIndex: number): void {
+  if (!dakMode.value) enterDakMode()
+  if (floorIndex !== activeFloorIndex.value) void selectFloor(floorIndex)
+}
+
+// --- Settings ---
+
 function applyViewerSettings(): void {
   const settings = loadUserSettings()
   scaleInputUnit.value = settings.scaleInputUnit
-  thicknessMinCm.value = settings.defaults.thicknessMinCm
-  thicknessMidCm.value = settings.defaults.thicknessMidCm
-  thicknessMaxCm.value = settings.defaults.thicknessMaxCm
+  thicknessPresetCms.value = [...settings.defaults.thicknessCms]
   previewCanvasRef.value?.applyCornerMarkerModeFromSettings?.()
 }
-
-onBeforeUnmount(() => {
-  clearUnderlayState()
-})
 
 defineExpose({
   startNewPlan,
@@ -1681,21 +1253,6 @@ defineExpose({
               @projection="onElevationProjection"
             />
             <div class="sidebar-icon-row sidebar-plan-actions bind-roof-row">
-              <label v-if="floorsWithRoofPlanes.length > 1" class="bind-roof-floor">
-                <span>{{ t('viewer.bindWallsToRoofFloor') }}</span>
-                <select
-                  :value="resolveBindRoofFloorIndex() ?? ''"
-                  @change="bindRoofFloorIndex = Number(($event.target as HTMLSelectElement).value)"
-                >
-                  <option
-                    v-for="floor in floorsWithRoofPlanes"
-                    :key="floor.floorIndex"
-                    :value="floor.floorIndex"
-                  >
-                    {{ floor.name }}
-                  </option>
-                </select>
-              </label>
               <button
                 type="button"
                 class="sidebar-icon-btn"
@@ -1842,95 +1399,16 @@ defineExpose({
             />
           </details>
 
-          <div v-if="inspectMode" class="inspect-panel">
-            <p class="inspect-hint">
-              Tik cyclet de statuskleur: uit → open (oranje) → klaar (groen) → uit. Muur in een
-              gevelgroep selecteert alle leden op deze verdieping.
-            </p>
-            <dl v-if="lastInspectHit" class="inspect-hit">
-              <div>
-                <dt>Type</dt>
-                <dd>{{ inspectKindLabel(lastInspectHit.kind) }}</dd>
-              </div>
-              <div>
-                <dt>Id</dt>
-                <dd class="inspect-id">{{ lastInspectHit.id }}</dd>
-              </div>
-              <div v-if="lastInspectHit.wallId">
-                <dt>Muur</dt>
-                <dd class="inspect-id">{{ lastInspectHit.wallId }}</dd>
-              </div>
-              <div v-if="lastInspectHit.ids?.length">
-                <dt>Gevel-leden</dt>
-                <dd class="inspect-id">{{ lastInspectHit.ids.length }}</dd>
-              </div>
-              <div>
-                <dt>Kleur</dt>
-                <dd>
-                  <span
-                    v-if="inspectColors[lastInspectHit.id]"
-                    class="inspect-swatch"
-                    :style="{ background: inspectColors[lastInspectHit.id] }"
-                  />
-                  {{ inspectColors[lastInspectHit.id] ?? 'geen' }}
-                </dd>
-              </div>
-            </dl>
-            <div v-if="lastInspectHit?.kind === 'wall'" class="inspect-facade">
-              <span class="inspect-facade-label">{{ t('result.toolbar.facadeGroup') }}</span>
-              <div class="inspect-facade-stack">
-                <select
-                  class="inspect-facade-select"
-                  :aria-label="t('result.toolbar.facadeGroupAria')"
-                  value=""
-                  @change="onInspectFacadeChange"
-                >
-                  <option value="" disabled>
-                    {{ t('result.toolbar.facadeGroupAdd') }}
-                  </option>
-                  <option
-                    v-for="group in inspectAddableFacadeGroups"
-                    :key="group.id"
-                    :value="group.id"
-                  >
-                    {{ group.name || group.id }}
-                  </option>
-                  <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
-                  <option value="__edit__">{{ t('result.toolbar.facadeGroupEditAll') }}</option>
-                </select>
-                <div v-if="inspectMemberFacadeGroups.length > 0" class="inspect-facade-chips">
-                  <div
-                    v-for="group in inspectMemberFacadeGroups"
-                    :key="group.id"
-                    class="inspect-facade-chip"
-                  >
-                    <span class="inspect-facade-chip-name">{{ group.name || group.id }}</span>
-                    <button
-                      type="button"
-                      class="inspect-facade-chip-btn"
-                      :title="t('result.toolbar.facadeGroupSelectTitle')"
-                      :aria-label="t('result.toolbar.facadeGroupSelect')"
-                      @click="onInspectFacadeSelectMembers(group.id)"
-                    >
-                      <ToolbeltIcon name="fit" />
-                    </button>
-                    <button
-                      type="button"
-                      class="inspect-facade-chip-btn"
-                      :title="t('result.toolbar.facadeGroupRemoveTitle')"
-                      :aria-label="t('result.toolbar.facadeGroupRemove')"
-                      @click="onInspectFacadeRemove(group.id)"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p v-else-if="!lastInspectHit" class="inspect-empty">
-              Nog geen selectie — tik op de plattegrond.
-            </p>
-          </div>
+          <FmlViewerInspectPanel
+            v-if="inspectMode"
+            :last-inspect-hit="lastInspectHit"
+            :inspect-colors="inspectColors"
+            :member-facade-groups="inspectMemberFacadeGroups"
+            :addable-facade-groups="inspectAddableFacadeGroups"
+            @facade-change="onInspectFacadeChange"
+            @facade-remove="onInspectFacadeRemove"
+            @facade-select-members="onInspectFacadeSelectMembers"
+          />
 
           <div v-if="openingOverflow || warnings.length > 0" class="download-warnings">
             <FmlOpeningOverflowNotice
@@ -2158,9 +1636,7 @@ defineExpose({
             :canvas-fullscreen="canvasFullscreen"
             :dimension-vis="dimensionVis"
             :dak-mode="dakMode"
-            :thickness-min-cm="thicknessMinCm"
-            :thickness-mid-cm="thicknessMidCm"
-            :thickness-max-cm="thicknessMaxCm"
+            :thickness-preset-cms="thicknessPresetCms"
             :rescale-mode="rescaleOverlayActive"
             :rescale-state="rescaleOverlayState"
             :bovenlicht-default="activeFloorDefaults.bovenlichtDefault"
@@ -2627,26 +2103,6 @@ defineExpose({
 
 .bind-roof-row {
   margin-top: 10px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.bind-roof-floor {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  color: #334155;
-  min-width: 120px;
-}
-
-.bind-roof-floor select {
-  height: 28px;
-  padding: 2px 6px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
 }
 
 .bind-roof-hint {
@@ -2752,151 +2208,6 @@ defineExpose({
   background: #1e293b;
   color: #fff;
   font-weight: 600;
-}
-
-.inspect-panel {
-  margin: 0 0 10px;
-  padding: 8px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.inspect-hint,
-.inspect-empty {
-  margin: 0;
-  font-size: 11px;
-  color: #64748b;
-  line-height: 1.4;
-}
-
-.inspect-hit {
-  margin: 8px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.inspect-hit div {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 8px;
-  align-items: start;
-}
-
-.inspect-hit dt {
-  margin: 0;
-  font-size: 11px;
-  color: #64748b;
-}
-
-.inspect-hit dd {
-  margin: 0;
-  font-size: 12px;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.inspect-id {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  word-break: break-all;
-}
-
-.inspect-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  border: 1px solid rgb(15 23 42 / 0.2);
-  flex-shrink: 0;
-}
-
-.inspect-facade {
-  margin: 10px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.inspect-facade-label {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.inspect-facade-stack {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.inspect-facade-select {
-  min-width: 140px;
-  max-width: 100%;
-  height: 28px;
-  font-size: 12px;
-  padding: 1px 4px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
-  color: #334155;
-  flex: 0 0 auto;
-}
-
-.inspect-facade-chips {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.inspect-facade-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  max-width: 100%;
-  padding: 1px 2px 1px 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  background: #f8fafc;
-  color: #0f172a;
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.inspect-facade-chip-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 120px;
-}
-
-.inspect-facade-chip-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  line-height: 1;
-  color: #64748b;
-  cursor: pointer;
-}
-
-.inspect-facade-chip-btn:hover {
-  color: #0f172a;
 }
 
 .download-warnings {

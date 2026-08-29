@@ -60,6 +60,57 @@ export function buildElevationWallFaceMeasureLines(wall: ElevationWallRect): Mea
   ]
 }
 
+/**
+ * Nokhoogte tot de verdiepingsvloer (onderkant balk → vloer), naast het segment.
+ * Scheve nok = beide einden.
+ */
+export function buildElevationRidgeHeightMeasureLines(
+  wall: ElevationWallRect,
+  floorY: number,
+): MeasureLine[] {
+  const left = Math.min(wall.aTop.x, wall.bTop.x, wall.aBottom.x, wall.bBottom.x)
+  const right = Math.max(wall.aTop.x, wall.bTop.x, wall.aBottom.x, wall.bBottom.x)
+  const inset = OPENING_MOVE_MEASURE_INSET_CM
+  const leftYs = wallEndYs(wall, true)
+  const rightYs = wallEndYs(wall, false)
+  const leftH = Math.abs(leftYs.bot - floorY)
+  const rightH = Math.abs(rightYs.bot - floorY)
+  if (leftH < EPS && rightH < EPS) return []
+
+  if (right - left < EPS) {
+    return [
+      {
+        id: 'elev-ridge-height',
+        a: { x: right + inset, y: rightYs.bot },
+        b: { x: right + inset, y: floorY },
+      },
+    ]
+  }
+
+  if (Math.abs(leftH - rightH) > SLOPE_SPLIT_CM) {
+    return [
+      {
+        id: 'elev-ridge-height-left',
+        a: { x: left - inset, y: leftYs.bot },
+        b: { x: left - inset, y: floorY },
+      },
+      {
+        id: 'elev-ridge-height-right',
+        a: { x: right + inset, y: rightYs.bot },
+        b: { x: right + inset, y: floorY },
+      },
+    ]
+  }
+
+  return [
+    {
+      id: 'elev-ridge-height',
+      a: { x: right + inset, y: rightYs.bot },
+      b: { x: right + inset, y: floorY },
+    },
+  ]
+}
+
 export function elevationWallFaceMeasureLengthsCm(
   wall: ElevationWallRect,
 ): ElevationWallFaceMeasureLengths | null {
@@ -75,13 +126,23 @@ export function elevationWallFaceMeasureLengthsCm(
   }
 }
 
-/** Knoop-hoogte naast de knoop (zelfde inset); nok slaat over. */
+/** Knoop-hoogte naast de knoop (zelfde inset). Nok = onderkant tot vloer. */
 export function buildElevationJunctionHeightMeasureLines(
   junction: Pick<ElevationJunction, 'id' | 'x' | 'yTop' | 'yBot' | 'ridge'>,
+  floorY?: number,
 ): MeasureLine[] {
-  if (junction.ridge) return []
-  if (Math.abs(junction.yBot - junction.yTop) < EPS) return []
   const inset = OPENING_MOVE_MEASURE_INSET_CM
+  if (junction.ridge) {
+    if (floorY == null || Math.abs(junction.yBot - floorY) < EPS) return []
+    return [
+      {
+        id: `elev-junction-height:${junction.id}`,
+        a: { x: junction.x + inset, y: junction.yBot },
+        b: { x: junction.x + inset, y: floorY },
+      },
+    ]
+  }
+  if (Math.abs(junction.yBot - junction.yTop) < EPS) return []
   return [
     {
       id: `elev-junction-height:${junction.id}`,

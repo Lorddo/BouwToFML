@@ -1,6 +1,7 @@
-import { computed, type ComputedRef, type Ref } from 'vue'
+import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { ItemResizeSide } from './item-resize-handles'
+import type { ItemRotateCorner } from './item-rotate-handles'
 import { FML_PREVIEW_CHROME_SELECTOR } from './fml-preview-gestures'
 import { isSettingsMod, resolveRelocatePointerIntent, wantsRelocate } from './fml-preview-mods'
 import { pickDakPlanOverlayHit } from './fml-preview-ridge-hit'
@@ -50,10 +51,12 @@ interface PointerDragState {
   isPanDragging: Ref<boolean>
   draggingItem: ComputedRef<boolean> | Ref<boolean>
   draggingItemResize: ComputedRef<boolean> | Ref<boolean>
+  draggingItemRotate: ComputedRef<boolean> | Ref<boolean>
   isWallMoveDrafting?: () => boolean
   isJunctionMoveDrafting?: () => boolean
   isOpeningMoveDrafting?: () => boolean
   draggingDimension?: ComputedRef<boolean> | Ref<boolean>
+  draggingAreaLabel?: ComputedRef<boolean> | Ref<boolean>
 }
 
 interface PointerActions {
@@ -86,7 +89,10 @@ interface PointerActions {
   beginSelectionBoxDrag: (event: MouseEvent) => void
   toggleSettingsOpening: (openingId: string) => void
   toggleSettingsArea: (areaId: string) => void
+  selectSettingsArea: (areaId: string) => void
   toggleSettingsSurface: (surfaceId: string) => void
+  beginAreaLabelDrag: (kind: 'area' | 'surface', id: string, event: MouseEvent) => void
+  startAreaLabelDragPending: (kind: 'area' | 'surface', id: string, event: MouseEvent) => void
   selectRoofSurface?: (surfaceId: string, mutate: boolean) => void
   toggleSettingsLabel: (labelId: string) => void
   toggleSettingsLine: (lineId: string) => void
@@ -112,6 +118,8 @@ interface PointerActions {
   cancelItemDragPending: () => void
   hitItemResizeHandle: (cm: Point2D) => ItemResizeSide | null
   beginItemResize: (guid: string, side: ItemResizeSide, event: MouseEvent) => void
+  hitItemRotateHandle: (cm: Point2D) => ItemRotateCorner | null
+  beginItemRotate: (guid: string, corner: ItemRotateCorner, event: MouseEvent) => void
   startDimensionDragPending: (id: string, event: MouseEvent) => void
   beginDimensionDrag: (id: string, event: MouseEvent) => void
 }
@@ -144,6 +152,9 @@ export function useFmlPreviewPointer(options: {
     pinnedJunctionId,
   } = selection
 
+  const hoverItemHandle = ref<'rotate' | 'resize' | null>(null)
+  const hoverAreaLabel = ref(false)
+
   const canvasCursor = computed(() => {
     if (modes.measureMode.value && !spacePressed.value && !thicknessPickTier.value)
       return 'crosshair'
@@ -172,6 +183,7 @@ export function useFmlPreviewPointer(options: {
       return 'crosshair'
     if (thicknessPickTier.value) return 'crosshair'
     if (modes.inspectMode.value && !spacePressed.value) return 'pointer'
+    if (drag.draggingItemRotate?.value === true) return 'grabbing'
     if (
       drag.draggingWall.value ||
       drag.draggingJunction.value ||
@@ -192,6 +204,9 @@ export function useFmlPreviewPointer(options: {
       return 'grab'
     }
     if (drag.draggingDimension?.value === true) return 'grabbing'
+    if (drag.draggingAreaLabel?.value === true) return 'grabbing'
+    if (hoverAreaLabel.value) return 'grab'
+    if (hoverItemHandle.value) return 'grab'
     return 'default'
   })
 
@@ -340,10 +355,17 @@ export function useFmlPreviewPointer(options: {
     const allowHit = (hit: FmlStickySelectKind): boolean =>
       allowsFmlStickyHit(currentStickyKind(), hit)
 
-    if (settingsItemId.value) {
+    const selectedItem =
+      modes.dakMode?.value === true ? null : (settingsItemId.value ?? moveItemId.value)
+    if (selectedItem) {
+      const corner = actions.hitItemRotateHandle(cm)
+      if (corner) {
+        actions.beginItemRotate(selectedItem, corner, event)
+        return
+      }
       const side = actions.hitItemResizeHandle(cm)
       if (side) {
-        actions.beginItemResize(settingsItemId.value, side, event)
+        actions.beginItemResize(selectedItem, side, event)
         return
       }
     }
@@ -395,6 +417,7 @@ export function useFmlPreviewPointer(options: {
       }
 
       settingsWallIds.value = []
+      selection.settingsFacadeGroupId.value = null
       selection.settingsJunctionId.value = null
       moveWallId.value = null
       pinnedJunctionId.value = null
@@ -426,13 +449,14 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
-    const itemId = hitTest.hitTestItemAtCm(cm)
+    const itemId = modes.dakMode?.value === true ? null : hitTest.hitTestItemAtCm(cm)
     if (itemId && allowHit('item')) {
       if (isSettingsMod(event, modes.settingsMod.value)) {
         actions.toggleSettingsItem(itemId)
         return
       }
       settingsWallIds.value = []
+      selection.settingsFacadeGroupId.value = null
       selection.settingsJunctionId.value = null
       moveWallId.value = null
       pinnedJunctionId.value = null
@@ -506,6 +530,18 @@ export function useFmlPreviewPointer(options: {
       modes.dakMode?.value === true
         ? pickDakPlanOverlayHit({ ridgeId: dakRidgeId, surfaceId })
         : null
+    const nameHit =
+      modes.areaSurfaceEditEnabled.value && allowHit('area') && modes.labelsVisible.value
+        ? hitTest.hitTestAreaNameAtCm(cm)
+        : null
+    const selectedName =
+      nameHit &&
+      ((nameHit.kind === 'area' && nameHit.id === selection.settingsAreaId.value) ||
+        (nameHit.kind === 'surface' && nameHit.id === selection.settingsSurfaceId.value))
+    if (selectedName && nameHit) {
+      actions.beginAreaLabelDrag(nameHit.kind, nameHit.id, event)
+      return
+    }
     if (modes.areaSurfaceEditEnabled.value && surfaceId && allowHit('area')) {
       const ctrl = isSettingsMod(event, modes.settingsMod.value)
       if (dakOverlay?.kind === 'surface') {
@@ -519,14 +555,29 @@ export function useFmlPreviewPointer(options: {
     }
 
     const areaId = hitTest.hitTestAreaAtCm(cm)
+    const pickAreaId = nameHit?.kind === 'area' ? nameHit.id : areaId
+    const pickSurfaceId = nameHit?.kind === 'surface' ? nameHit.id : surfaceId
     if (
       modes.areaSurfaceEditEnabled.value &&
-      areaId &&
+      pickAreaId &&
       allowHit('area') &&
       isSettingsMod(event, modes.settingsMod.value)
     ) {
-      actions.toggleSettingsArea(areaId)
+      actions.toggleSettingsArea(pickAreaId)
       return
+    }
+
+    if (modes.areaSurfaceEditEnabled.value && allowHit('area') && (pickAreaId || pickSurfaceId)) {
+      const wallUnder = nameHit ? null : hitTest.hitTestWallAtCm(cm)
+      if (!wallUnder) {
+        if (pickSurfaceId && dakOverlay?.kind !== 'surface') {
+          actions.toggleSettingsSurface(pickSurfaceId)
+        } else if (pickAreaId) {
+          actions.selectSettingsArea(pickAreaId)
+        }
+        if (nameHit) actions.startAreaLabelDragPending(nameHit.kind, nameHit.id, event)
+        return
+      }
     }
 
     // Interior click on area/surface without ctrl: clear (don't steal wall hits)
@@ -573,6 +624,7 @@ export function useFmlPreviewPointer(options: {
     })
     if (wallIntent === 'precise') {
       settingsWallIds.value = []
+      selection.settingsFacadeGroupId.value = null
       selection.settingsJunctionId.value = null
       actions.onWallMoveClick(wallId, event)
       return
@@ -609,7 +661,9 @@ export function useFmlPreviewPointer(options: {
       drag.isUnderlayMoveDragging() ||
       drag.draggingItem.value ||
       drag.draggingItemResize.value ||
+      drag.draggingItemRotate?.value === true ||
       drag.draggingDimension?.value === true ||
+      drag.draggingAreaLabel?.value === true ||
       spacePressed.value
     ) {
       return
@@ -653,6 +707,23 @@ export function useFmlPreviewPointer(options: {
       if (!e) return
       const cm = hitTest.clientToCm(e.clientX, e.clientY)
       if (!cm) return
+      const selectedItem =
+        modes.dakMode?.value === true ? null : (settingsItemId.value ?? moveItemId.value)
+      if (selectedItem && !modes.inspectMode.value) {
+        if (actions.hitItemRotateHandle(cm)) hoverItemHandle.value = 'rotate'
+        else if (actions.hitItemResizeHandle(cm)) hoverItemHandle.value = 'resize'
+        else hoverItemHandle.value = null
+      } else {
+        hoverItemHandle.value = null
+      }
+      const nameHover =
+        modes.areaSurfaceEditEnabled.value && !modes.inspectMode.value && modes.labelsVisible.value
+          ? hitTest.hitTestAreaNameAtCm(cm)
+          : null
+      hoverAreaLabel.value =
+        nameHover != null &&
+        ((nameHover.kind === 'area' && nameHover.id === selection.settingsAreaId.value) ||
+          (nameHover.kind === 'surface' && nameHover.id === selection.settingsSurfaceId.value))
       const allowHover = (hit: FmlStickySelectKind): boolean =>
         allowsFmlStickyHit(currentStickyKind(), hit)
       const junction = hitTest.hitTestJunctionAtCm(cm)

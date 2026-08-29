@@ -1,4 +1,4 @@
-import type { Wall } from '@/core/fml/types'
+import type { FloorPlan, Wall } from '@/core/fml/types'
 import { clampWallBalance } from '@/core/fml/fml-wall-geom'
 import {
   setJunctionHeight as setJunctionEndpointHeight,
@@ -78,6 +78,10 @@ export function setWallThickness(walls: Wall[], wallId: string, thicknessCm: num
   return setWallsThickness(walls, [wallId], thicknessCm)
 }
 
+function clampThicknessCm(thicknessCm: number): number {
+  return Math.max(1, Math.min(200, thicknessCm))
+}
+
 /**
  * Dikte wijzigen: hartlijn vast, balance terug naar 0.5 (flush hoorde bij oude dikte).
  */
@@ -88,7 +92,7 @@ export function setWallsThickness(
 ): Wall[] {
   const idSet = new Set(wallIds)
   if (idSet.size === 0) return walls
-  const clamped = Math.max(1, Math.min(200, thicknessCm))
+  const clamped = clampThicknessCm(thicknessCm)
   let changed = false
   const next = walls.map((wall) => {
     if (!idSet.has(wall.id)) return wall
@@ -102,6 +106,64 @@ export function setWallsThickness(
     return cloneWallWith(wall, { thickness: clamped, balance: BALANCE_DEFAULT })
   })
   return changed ? next : walls
+}
+
+/**
+ * Alleen `thickness` schrijven. Hartlijn én balance blijven (binnenmaten bij 0/1).
+ */
+export function setWallsThicknessKeepBalance(
+  walls: Wall[],
+  wallIds: Iterable<string>,
+  thicknessCm: number,
+): Wall[] {
+  const idSet = new Set(wallIds)
+  if (idSet.size === 0) return walls
+  const clamped = clampThicknessCm(thicknessCm)
+  let changed = false
+  const next = walls.map((wall) => {
+    if (!idSet.has(wall.id)) return wall
+    if (wall.thickness === clamped) return wall
+    changed = true
+    return cloneWallWith(wall, {
+      thickness: clamped,
+      balance: wall.balance ?? BALANCE_DEFAULT,
+    })
+  })
+  return changed ? next : walls
+}
+
+/** Muren met deze ids, over alle verdiepingen. */
+export function collectPlanWallsByIds(plan: FloorPlan, wallIds: Iterable<string>): Wall[] {
+  const idSet = new Set(wallIds)
+  if (idSet.size === 0) return []
+  const out: Wall[] = []
+  for (const floor of plan.floors) {
+    for (const wall of floor.walls) {
+      if (idSet.has(wall.id)) out.push(wall)
+    }
+  }
+  return out
+}
+
+/**
+ * Dikte van genoemde ids op elke floor, zonder balance te wijzigen.
+ * Ongewijzigde floors blijven dezelfde referentie.
+ */
+export function setPlanWallsThicknessKeepBalance(
+  plan: FloorPlan,
+  wallIds: Iterable<string>,
+  thicknessCm: number,
+): FloorPlan {
+  const idSet = new Set(wallIds)
+  if (idSet.size === 0) return plan
+  let changed = false
+  const floors = plan.floors.map((floor) => {
+    const nextWalls = setWallsThicknessKeepBalance(floor.walls, idSet, thicknessCm)
+    if (nextWalls === floor.walls) return floor
+    changed = true
+    return { ...floor, walls: nextWalls }
+  })
+  return changed ? { ...plan, floors } : plan
 }
 
 /** Beide uiteinden van geselecteerde muren op dezelfde hoogte (`az`/`bz`). */

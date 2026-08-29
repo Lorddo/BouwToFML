@@ -3,6 +3,7 @@ import type { ElevationWallRect } from '@/core/fml/facade-elevation'
 import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/fml-preview/fml-preview-opening-move-measure'
 import {
   buildElevationJunctionHeightMeasureLines,
+  buildElevationRidgeHeightMeasureLines,
   buildElevationWallFaceMeasureLines,
   elevationWallFaceMeasureLengthsCm,
 } from '@/ui/composables/fml-preview/fml-preview-elevation-wall-measure'
@@ -98,5 +99,53 @@ describe('fml-preview-elevation-wall-measure', () => {
         ridge: true,
       }),
     ).toEqual([])
+
+    const ridgeLines = buildElevationJunctionHeightMeasureLines(
+      {
+        id: 'rj-0-0',
+        x: 200,
+        yTop: -400,
+        yBot: -350,
+        ridge: true,
+      },
+      0,
+    )
+    expect(ridgeLines).toHaveLength(1)
+    expect(ridgeLines[0].a.y).toBeCloseTo(-350, 6)
+    expect(ridgeLines[0].b.y).toBeCloseTo(0, 6)
+  })
+
+  it('nokbalk → hoogte tot vloer naast het segment; scheef = beide einden', () => {
+    const ridge = wall400x280({
+      ridge: true,
+      aTop: { x: 0, y: -370 },
+      aBottom: { x: 0, y: -350 },
+      bTop: { x: 400, y: -370 },
+      bBottom: { x: 400, y: -350 },
+      y0: -370,
+      y1: -350,
+    })
+    const lines = buildElevationRidgeHeightMeasureLines(ridge, 0)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].id).toBe('elev-ridge-height')
+    expect(lines[0].a.x).toBeCloseTo(400 + OPENING_MOVE_MEASURE_INSET_CM, 6)
+    expect(lines[0].a.y).toBeCloseTo(-350, 6)
+    expect(lines[0].b.y).toBeCloseTo(0, 6)
+
+    const sloped = buildElevationRidgeHeightMeasureLines(
+      wall400x280({
+        ridge: true,
+        aTop: { x: 0, y: -420 },
+        aBottom: { x: 0, y: -400 },
+        bTop: { x: 400, y: -320 },
+        bBottom: { x: 400, y: -300 },
+        y0: -420,
+        y1: -300,
+      }),
+      0,
+    )
+    expect(sloped).toHaveLength(2)
+    expect(Math.abs(sloped[0].a.y - sloped[0].b.y)).toBeCloseTo(400, 6)
+    expect(Math.abs(sloped[1].a.y - sloped[1].b.y)).toBeCloseTo(300, 6)
   })
 })

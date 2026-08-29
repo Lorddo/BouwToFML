@@ -3,6 +3,13 @@ import { tally } from '@/core/diagnostics'
 import { renderPdfPageFromBytes, useImageUpload, type PdfUnderlaySource } from '@/platform/upload'
 import { imageElementToPngDataUrl } from '@/platform/dev-workspace/image-capture'
 import { useExampleSelection } from '@/platform/selection'
+import {
+  addThicknessToCatalog,
+  catalogFromLegacyLimits,
+  FACTORY_THICKNESS_CMS,
+  limitsFromCatalog,
+  normalizeThicknessCatalog,
+} from '@/core/fml/fml-wall-thickness-catalog'
 import { DEFAULT_PREPROCESS } from '@/platform/image'
 import {
   detectionPresetForProfile,
@@ -172,12 +179,16 @@ export function useWorkspace() {
     selectRect,
     updateRectBounds,
     updateRectFmlRefId,
-    updateRectWallThicknessBand,
+    updateRectWallThicknessCm,
     startDraw,
     updateDraw,
     endDraw,
     cancelDraw,
-  } = useExampleSelection()
+    pendingWallThicknessCm,
+    setPendingWallThicknessCm,
+  } = useExampleSelection(undefined, {
+    getThicknessCatalog: () => getThicknessCatalogCms(),
+  })
 
   const preprocessWiring = useWorkspacePreprocessWiring({
     flowStep,
@@ -334,8 +345,9 @@ export function useWorkspace() {
 
   /** Late-bind: FML na door/window faces (directe refs; geen mirror-watches). */
   let fmlApi: ReturnType<typeof useWorkspaceFml> | null = null
-  let syncThicknessCmToFloorDefaults: ((band: 'min' | 'mid' | 'max', cm: number) => void) | null =
-    null
+  let getThicknessCatalogCms = (): number[] => [...FACTORY_THICKNESS_CMS]
+  let syncThicknessCmToFloorDefaults: ((cm: number) => void) | null = null
+  let writeCatalogToFloorDefaults: ((cms: number[]) => void) | null = null
   let doorSwingFacesApi: ReturnType<typeof useWorkspaceDoorSwingFaces> | null = null
   let windowFacesApi: ReturnType<typeof useWorkspaceWindowFaces> | null = null
 
@@ -370,26 +382,35 @@ export function useWorkspace() {
       selectRect,
       updateRectBounds,
       updateRectFmlRefId,
-      updateRectWallThicknessBand,
+      updateRectWallThicknessCm,
       getWallThicknessLimits: () => {
         if (fmlApi) {
           return {
             minCm: fmlApi.fmlThicknessMinCm.value,
             midCm: fmlApi.fmlThicknessMidCm.value,
             maxCm: fmlApi.fmlThicknessMaxCm.value,
+            thicknessCms: [...fmlApi.fmlThicknessCms.value],
           }
         }
         return loadFmlWallThicknessLimits()
       },
-      setWallThicknessCm: (band, cm) => {
+      getThicknessCatalog: () => getThicknessCatalogCms(),
+      getPxPerMm: () => ({
+        x: scale.pixelsPerMillimeterX.value,
+        y: scale.pixelsPerMillimeterY.value,
+      }),
+      addThicknessToCatalog: (cm) => {
         if (!fmlApi || !(cm > 0)) return
-        if (band === 'min') fmlApi.setFmlThicknessMinCm(cm)
-        else if (band === 'mid') fmlApi.setFmlThicknessMidCm(cm)
-        else fmlApi.setFmlThicknessMaxCm(cm)
-        // Floor-defaults meenemen — anders overschrijft resume/sync de stap-2 override
-        // weer met oude project-defaults.
-        syncThicknessCmToFloorDefaults?.(band, cm)
+        fmlApi.setFmlThicknessCms(addThicknessToCatalog(fmlApi.fmlThicknessCms.value, cm))
+        syncThicknessCmToFloorDefaults?.(cm)
       },
+      replaceCatalogThickness: (cms) => {
+        if (!fmlApi) return
+        fmlApi.setFmlThicknessCms(cms)
+        writeCatalogToFloorDefaults?.(cms)
+      },
+      setPendingWallThicknessCm,
+      getPendingWallThicknessCm: () => pendingWallThicknessCm.value,
       wallRefThicknessMeasures,
       wallThicknessBandBoundariesPx,
       endDraw,
@@ -878,9 +899,16 @@ export function useWorkspace() {
       fml.setFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
       fml.setFmlBovenlichtHeightCm(defaults.bovenlichtHeightCm)
       fml.setFmlBovenlichtGapCm(defaults.bovenlichtGapCm)
-      fml.setFmlThicknessMinCm(defaults.thicknessMinCm)
-      fml.setFmlThicknessMidCm(defaults.thicknessMidCm)
-      fml.setFmlThicknessMaxCm(defaults.thicknessMaxCm)
+      fml.setFmlThicknessCms(
+        normalizeThicknessCatalog(
+          defaults.thicknessCms ??
+            catalogFromLegacyLimits({
+              minCm: defaults.thicknessMinCm,
+              midCm: defaults.thicknessMidCm,
+              maxCm: defaults.thicknessMaxCm,
+            }),
+        ),
+      )
       // Meetbanden blijven uit muur-REF (niet floor-defaults) — anders false dirty na meting.
       // Programmatische sync = geen «gewijzigd»-hint; alleen handmatige FmlPanel-edits.
       fml.syncAppliedFromDraft()
@@ -895,12 +923,33 @@ export function useWorkspace() {
   restoreFmlDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()
   // Eerste sync: factory-FML-UI → actieve vloer-/user-defaults (o.a. bovenlicht).
   restoreFmlDefaultsFromActiveFloor()
-  syncThicknessCmToFloorDefaults = (band, cm) => {
+  getThicknessCatalogCms = () =>
+    fml.fmlThicknessCms?.value ? [...fml.fmlThicknessCms.value] : [...FACTORY_THICKNESS_CMS]
+  writeCatalogToFloorDefaults = (cms) => {
+    const catalog = normalizeThicknessCatalog(cms)
+    const limits = limitsFromCatalog(catalog)
+    project.updateActiveFloorDefaults(
+      {
+        thicknessCms: catalog,
+        thicknessMinCm: limits.minCm,
+        thicknessMidCm: limits.midCm,
+        thicknessMaxCm: limits.maxCm,
+      },
+      { syncUi: false },
+    )
+  }
+  syncThicknessCmToFloorDefaults = (cm) => {
     if (!(cm > 0)) return
-    if (band === 'min') project.updateActiveFloorDefaults({ thicknessMinCm: cm }, { syncUi: false })
-    else if (band === 'mid')
-      project.updateActiveFloorDefaults({ thicknessMidCm: cm }, { syncUi: false })
-    else project.updateActiveFloorDefaults({ thicknessMaxCm: cm }, { syncUi: false })
+    const current = project.activeFloorDefaults.value
+    const existing = normalizeThicknessCatalog(
+      current.thicknessCms ??
+        catalogFromLegacyLimits({
+          minCm: current.thicknessMinCm,
+          midCm: current.thicknessMidCm,
+          maxCm: current.thicknessMaxCm,
+        }),
+    )
+    writeCatalogToFloorDefaults?.(addThicknessToCatalog(existing, cm))
   }
 
   const resumeCandidate = ref<PersistedProjectIndexEntry | null>(null)
@@ -1178,6 +1227,7 @@ export function useWorkspace() {
     error,
     rects,
     selectedRectId,
+    pendingWallThicknessCm,
     activeClass,
     previewRect,
     typeColors,

@@ -30,6 +30,8 @@ import {
   ROOM_DRAW_SNAP_CM,
   setWallThickness,
   setWallsThickness,
+  setWallsThicknessKeepBalance,
+  setPlanWallsThicknessKeepBalance,
   removeWalls,
   findWallAtPoint,
   splitWallAtPoint,
@@ -593,6 +595,107 @@ describe('setWallsThickness', () => {
     expect(next[2]?.balance).toBe(0.5)
     expect(next[0]?.a).toEqual({ x: 0, y: 0 })
     expect(next[1]?.a).toEqual({ x: 0, y: 100 })
+  })
+})
+
+describe('setWallsThicknessKeepBalance', () => {
+  it('wijzigt dikte en laat balance + hartlijn staan', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        balance: 0,
+        openings: [],
+      },
+      {
+        id: 'w2',
+        a: { x: 0, y: 100 },
+        b: { x: 100, y: 100 },
+        thickness: 12,
+        balance: 1,
+        openings: [],
+      },
+    ]
+    const next = setWallsThicknessKeepBalance(walls, ['w1', 'w2'], 30)
+    expect(next[0]?.thickness).toBe(30)
+    expect(next[0]?.balance).toBe(0)
+    expect(next[0]?.a).toEqual({ x: 0, y: 0 })
+    expect(next[1]?.thickness).toBe(30)
+    expect(next[1]?.balance).toBe(1)
+  })
+
+  it('is no-op als dikte al klopt', () => {
+    const walls = [
+      {
+        id: 'w1',
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        balance: 0,
+        openings: [],
+      },
+    ]
+    const next = setWallsThicknessKeepBalance(walls, ['w1'], 20)
+    expect(next).toBe(walls)
+  })
+})
+
+describe('setPlanWallsThicknessKeepBalance', () => {
+  it('zet dikte op alle floors zonder balance te wijzigen', () => {
+    const plan = {
+      name: 'T',
+      floors: [
+        {
+          name: 'BG',
+          level: 0,
+          height: 280,
+          walls: [
+            {
+              id: 'bg',
+              a: { x: 0, y: 0 },
+              b: { x: 100, y: 0 },
+              thickness: 20,
+              balance: 0,
+              openings: [],
+            },
+          ],
+        },
+        {
+          name: '1e',
+          level: 1,
+          height: 260,
+          walls: [
+            {
+              id: 'e1',
+              a: { x: 0, y: 0 },
+              b: { x: 100, y: 0 },
+              thickness: 24,
+              balance: 1,
+              openings: [],
+            },
+            {
+              id: 'other',
+              a: { x: 0, y: 50 },
+              b: { x: 80, y: 50 },
+              thickness: 10,
+              balance: 0.5,
+              openings: [],
+            },
+          ],
+        },
+      ],
+    }
+    const next = setPlanWallsThicknessKeepBalance(plan, ['bg', 'e1'], 30)
+    expect(next).not.toBe(plan)
+    expect(next.floors[0]?.walls[0]?.thickness).toBe(30)
+    expect(next.floors[0]?.walls[0]?.balance).toBe(0)
+    expect(next.floors[1]?.walls[0]?.thickness).toBe(30)
+    expect(next.floors[1]?.walls[0]?.balance).toBe(1)
+    expect(next.floors[1]?.walls[1]?.thickness).toBe(10)
+    expect(next.floors[1]).not.toBe(plan.floors[1])
+    expect(next.floors[0]).not.toBe(plan.floors[0])
   })
 })
 

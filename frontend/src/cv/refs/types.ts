@@ -187,7 +187,8 @@ export type OpeningRefProfile = {
 export type WallRefProfile = {
   kind: 'wall'
   rect: RefRect
-  /** min/mid/max — aanwezig bij multi muur-refs. */
+  wallThicknessCm?: number
+  /** Legacy sessie-tag. */
   wallThicknessBand?: 'min' | 'mid' | 'max'
   cropWidth: number
   cropHeight: number

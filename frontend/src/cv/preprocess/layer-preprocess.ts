@@ -30,6 +30,7 @@ export {
   createDefaultGapsLayerTune,
   layerTuneStorageKey,
   defaultLayerTune,
+  PREPROCESS_SLIDER_LIMITS,
 } from './layer-preprocess-defaults'
 
 export {

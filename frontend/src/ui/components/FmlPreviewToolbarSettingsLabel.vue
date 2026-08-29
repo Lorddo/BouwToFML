@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import FmlPreviewToolbarLabelStyle from './FmlPreviewToolbarLabelStyle.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
@@ -68,14 +69,13 @@ function onLabelTextChange(event: Event): void {
     @update:bold="emit('updateLabelBold', $event)"
     @update:italic="emit('updateLabelItalic', $event)"
   />
-  <button
+  <ToolbeltActionButton
     v-if="selectedLabelPanel"
-    type="button"
-    class="canvas-toolbelt__btn"
+    icon="delete"
     :title="t('result.toolbar.deleteLabel')"
     :aria-label="t('result.toolbar.deleteLabel')"
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteAnnotation')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
 </template>

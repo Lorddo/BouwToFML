@@ -6,6 +6,8 @@ import type { PersistedProjectIndexEntry } from '@/platform/project-store'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import ThicknessCatalogFields from './ThicknessCatalogFields.vue'
+import { limitsFromCatalog } from '@/core/fml/fml-wall-thickness-catalog'
 
 const props = defineProps<{
   meta: ProjectMeta
@@ -208,41 +210,23 @@ function onRenameBlur(floorId: string, event: Event) {
     <template v-if="activeFloor">
       <h4>{{ t('project.thicknessesTitle', { name: activeFloor.name }) }}</h4>
       <p class="hint">{{ t('project.thicknessesHint') }}</p>
-      <div class="triple-measure">
-        <label class="measure-cell">
-          <span class="measure-cell__label">{{ t('project.thicknessMinCm') }}</span>
-          <ScaleLengthInput
-            :cm="activeFloorDefaults.thicknessMinCm"
-            :unit="unit"
-            :min-cm="1"
-            hide-suffix
-            @update:cm="emit('update:floorDefaults', { thicknessMinCm: $event })"
-          />
-          <span v-if="unit !== 'ft-in'" class="measure-cell__unit">{{ t(`common.${unit}`) }}</span>
-        </label>
-        <label class="measure-cell">
-          <span class="measure-cell__label">{{ t('project.thicknessMidCm') }}</span>
-          <ScaleLengthInput
-            :cm="activeFloorDefaults.thicknessMidCm"
-            :unit="unit"
-            :min-cm="1"
-            hide-suffix
-            @update:cm="emit('update:floorDefaults', { thicknessMidCm: $event })"
-          />
-          <span v-if="unit !== 'ft-in'" class="measure-cell__unit">{{ t(`common.${unit}`) }}</span>
-        </label>
-        <label class="measure-cell">
-          <span class="measure-cell__label">{{ t('project.thicknessMaxCm') }}</span>
-          <ScaleLengthInput
-            :cm="activeFloorDefaults.thicknessMaxCm"
-            :unit="unit"
-            :min-cm="1"
-            hide-suffix
-            @update:cm="emit('update:floorDefaults', { thicknessMaxCm: $event })"
-          />
-          <span v-if="unit !== 'ft-in'" class="measure-cell__unit">{{ t(`common.${unit}`) }}</span>
-        </label>
-      </div>
+      <ThicknessCatalogFields
+        :cms="
+          activeFloorDefaults.thicknessCms ?? [
+            activeFloorDefaults.thicknessMinCm,
+            activeFloorDefaults.thicknessMidCm,
+            activeFloorDefaults.thicknessMaxCm,
+          ]
+        "
+        :unit="unit"
+        hide-suffix
+        @update:cms="
+          emit('update:floorDefaults', {
+            thicknessCms: $event,
+            ...limitsFromCatalog($event),
+          })
+        "
+      />
 
       <h4>{{ t('project.heightsTitle', { name: activeFloor.name }) }}</h4>
       <p class="hint">{{ t('project.heightsHint') }}</p>

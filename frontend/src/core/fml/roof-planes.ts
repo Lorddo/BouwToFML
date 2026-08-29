@@ -195,6 +195,34 @@ export function isRidgeSurfaceId(plan: FloorPlan | null | undefined, surfaceId: 
 export const ROOF_VERTEX_Z_MIN_CM = 0
 export const ROOF_VERTEX_Z_MAX_CM = 800
 
+function clampRoofVertexZ(zCm: number): number {
+  return Math.max(ROOF_VERTEX_Z_MIN_CM, Math.min(ROOF_VERTEX_Z_MAX_CM, Math.round(zCm)))
+}
+
+/** Eén dakvlak-hoek; ontbrekende velden blijven. Markeert het vlak `manual`. */
+export function setRidgeSurfaceVertex(
+  plan: FloorPlan,
+  surfaceId: string,
+  vertexIndex: number,
+  next: { x?: number; y?: number; z?: number },
+): FloorPlan {
+  return mapRidgeSurfaceOnPlan(plan, surfaceId, (surface) => {
+    const point = surface.poly[vertexIndex]
+    if (!point) return surface
+    const x = next.x ?? point.x
+    const y = next.y ?? point.y
+    const z = next.z != null ? clampRoofVertexZ(next.z) : (point.z ?? 0)
+    if (point.x === x && point.y === y && Math.round(point.z ?? 0) === z) return surface
+    return markRoofSurfaceManual({
+      ...surface,
+      isRoof: true,
+      poly: surface.poly.map((entry, index) =>
+        index === vertexIndex ? { ...entry, x, y, z } : entry,
+      ),
+    })
+  })
+}
+
 /** Alleen Z van één dakvlak-hoek; X/Y blijven. Markeert het vlak `manual`. */
 export function setRidgeSurfaceVertexZ(
   plan: FloorPlan,
@@ -202,17 +230,7 @@ export function setRidgeSurfaceVertexZ(
   vertexIndex: number,
   zCm: number,
 ): FloorPlan {
-  const z = Math.max(ROOF_VERTEX_Z_MIN_CM, Math.min(ROOF_VERTEX_Z_MAX_CM, Math.round(zCm)))
-  return mapRidgeSurfaceOnPlan(plan, surfaceId, (surface) => {
-    const point = surface.poly[vertexIndex]
-    if (!point) return surface
-    if (Math.round(point.z ?? 0) === z) return surface
-    return markRoofSurfaceManual({
-      ...surface,
-      isRoof: true,
-      poly: surface.poly.map((entry, index) => (index === vertexIndex ? { ...entry, z } : entry)),
-    })
-  })
+  return setRidgeSurfaceVertex(plan, surfaceId, vertexIndex, { z: zCm })
 }
 
 export function findRidgeSurface(

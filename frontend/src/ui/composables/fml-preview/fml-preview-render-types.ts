@@ -105,6 +105,9 @@ export interface RenderArea {
   label: string | null
   labelX: number
   labelY: number
+  /** Wereld-cm van de benaming (centroid + name_x/y). */
+  labelCm: { x: number; y: number }
+  centroidCm: { x: number; y: number }
   role?: number
   color: string
   customName?: string

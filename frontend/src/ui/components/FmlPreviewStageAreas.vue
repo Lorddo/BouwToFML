@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import {
   areaLabelFontSizeStage,
   areaLabelKonvaConfig,
+  areaLabelSelectRectConfig,
   areaLabelVisibleOnScreen,
 } from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import { inspectColorFor, resolveInspectFill } from '@/ui/composables/fml-preview/fml-inspect'
@@ -44,11 +45,15 @@ const showFill = computed(() => props.layer !== 'labels')
 const showLabels = computed(() => props.layer !== 'fill' && props.labelsVisible)
 const fillAreas = computed(() => (showFill.value ? props.areas : []))
 const fontSizeStage = computed(() => areaLabelFontSizeStage(props.layoutScale))
+const invView = computed(() => 1 / Math.max(1e-6, props.viewScale))
 const labeledAreas = computed(() => {
   if (!showLabels.value) return []
   if (!areaLabelVisibleOnScreen(fontSizeStage.value, props.viewScale)) return []
   return props.areas.filter((area) => area.label && area.showAreaLabel !== false)
 })
+const selectedLabeledArea = computed(
+  () => labeledAreas.value.find((area) => area.id === props.settingsAreaId) ?? null,
+)
 
 function areaFill(area: RenderArea): string {
   if (architect.value) {
@@ -96,6 +101,19 @@ function areaOpacity(areaId: string): number {
           area.labelY,
           architect ? '#111827' : '#1f2937',
           fontSizeStage,
+        )
+      "
+    />
+    <v-rect
+      v-if="selectedLabeledArea"
+      :config="
+        areaLabelSelectRectConfig(
+          selectedLabeledArea.label ?? '',
+          selectedLabeledArea.labelX,
+          selectedLabeledArea.labelY,
+          fontSizeStage,
+          true,
+          invView,
         )
       "
     />

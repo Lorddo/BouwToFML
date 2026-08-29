@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Wall } from '@/core/fml/types'
 import {
   fixtureAabbHalfExtents,
+  fixtureObbHalfAlongNormal,
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/fml-preview-fixture-face-snap'
@@ -72,6 +73,34 @@ describe('snapFixtureCenterToWallFaces', () => {
     )
     expect(snapped.x).toBeCloseTo(-40)
     expect(snapped.y).toBeCloseTo(-30)
+  })
+
+  it('OBB support along a 45° normal is the edge, not the AABB', () => {
+    const n = Math.SQRT1_2
+    expect(fixtureObbHalfAlongNormal(60, 40, 45, n, -n)).toBeCloseTo(20)
+    expect(fixtureObbHalfAlongNormal(60, 40, 0, 1, 0)).toBeCloseTo(30)
+  })
+
+  it('snaps a 45° box flush to a diagonal wall on the OBB edge', () => {
+    const walls = [wall({ a: { x: 0, y: 0 }, b: { x: 200, y: 200 }, thickness: 20, balance: 0.5 })]
+    const len = Math.hypot(200, 200)
+    const dir = { x: 200 / len, y: 200 / len }
+    const left = { x: dir.y, y: -dir.x }
+    const axis = { x: 100, y: 100 }
+    const minusFace = { x: axis.x - left.x * 10, y: axis.y - left.y * 10 }
+    const half = fixtureObbHalfAlongNormal(60, 40, 45, left.x, left.y)
+    const almost = {
+      x: minusFace.x - left.x * (half + 5),
+      y: minusFace.y - left.y * (half + 5),
+    }
+    const snapped = snapFixtureCenterToWallFaces(
+      walls,
+      almost,
+      { width: 60, height: 40, rotationDeg: 45 },
+      WALL_FACE_SNAP_CM,
+    )
+    const signed = (snapped.x - minusFace.x) * left.x + (snapped.y - minusFace.y) * left.y
+    expect(Math.abs(Math.abs(signed) - half)).toBeLessThan(0.08)
   })
 
   it('Ctrl/disabled laat het midden vrij', () => {

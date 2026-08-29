@@ -1,7 +1,10 @@
 import type { ComputedRef, Ref } from 'vue'
 import type Konva from 'konva'
 import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/fml/ridge-walls'
+import { FML_PLAN_HANDLE_HIT_COARSE_PX, FML_PLAN_HANDLE_HIT_PX } from './fml-preview-vertex-hit'
 import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
+import { labelHitBoxCm } from './fml-preview-render-annotations'
+import { areaLabelHitHalfExtentsCm } from './fml-preview-render-areas'
 import { distancePointToSegment, hitTestRidgeBeamAtCm } from './fml-preview-ridge-hit'
 import { normalizeCmBBox } from './fml-preview-wall-select'
 import type { ContentLayout } from './useFmlPreviewViewport'
@@ -100,8 +103,12 @@ export function useFmlPreviewHitTest(
     return bestId
   }
 
+  function handleHitTolCm(): number {
+    return screenPxToCmTolerance(hitPx(FML_PLAN_HANDLE_HIT_PX, FML_PLAN_HANDLE_HIT_COARSE_PX))
+  }
+
   function hitTestJunctionAtCm(cm: Point2D): RenderJunction | null {
-    const tol = screenPxToCmTolerance(hitPx(18, 32))
+    const tol = handleHitTolCm()
     let best: RenderJunction | null = null
     let bestDist = tol
     for (const junction of renderJunctions.value) {
@@ -237,11 +244,40 @@ export function useFmlPreviewHitTest(
     return null
   }
 
+  function hitNameInList(list: RenderArea[], cm: Point2D, pad: number): string | null {
+    let bestId: string | null = null
+    let bestDist = Number.POSITIVE_INFINITY
+    for (const item of list) {
+      if (!item.label || item.showAreaLabel === false) continue
+      const { hw, hh } = areaLabelHitHalfExtentsCm(item.label)
+      const dx = cm.x - item.labelCm.x
+      const dy = cm.y - item.labelCm.y
+      if (Math.abs(dx) > hw + pad || Math.abs(dy) > hh + pad) continue
+      const dist = Math.hypot(dx, dy)
+      if (dist < bestDist) {
+        bestId = item.id
+        bestDist = dist
+      }
+    }
+    return bestId
+  }
+
+  function hitTestAreaNameAtCm(cm: Point2D): { kind: 'area' | 'surface'; id: string } | null {
+    const pad = screenPxToCmTolerance(hitPx(8, 12))
+    const surfaceId = hitNameInList(renderSurfaces?.value ?? [], cm, pad)
+    if (surfaceId) return { kind: 'surface', id: surfaceId }
+    const areaId = hitNameInList(renderAreas?.value ?? [], cm, pad)
+    if (areaId) return { kind: 'area', id: areaId }
+    return null
+  }
+
   function hitTestItemAtCm(cm: Point2D): string | null {
-    const drawn = renderFixtures?.value ?? []
     const tol = screenPxToCmTolerance(hitPx(4, 8))
     const toStage = viewport.renderTransform.value.toStagePoint
-    if (drawn.length > 0) {
+    // Dak-tab geeft expres `fixtures=[]` (niet getekend). Lege lijst ≠ fallback
+    // naar floor-items — anders pak je BG-keuken onder het vlak van 1e.
+    if (renderFixtures) {
+      const drawn = renderFixtures.value
       let bestId: string | null = null
       let bestDist = Number.POSITIVE_INFINITY
       const stage = toStage(cm.x, cm.y)
@@ -300,12 +336,19 @@ export function useFmlPreviewHitTest(
 
   function hitTestLabelAtCm(cm: Point2D): string | null {
     const list = renderLabels?.value ?? []
-    const tol = screenPxToCmTolerance(hitPx(20, 28))
+    const pad = screenPxToCmTolerance(hitPx(8, 12))
     let bestId: string | null = null
-    let bestDist = tol
+    let bestDist = Number.POSITIVE_INFINITY
     for (const label of list) {
-      const dist = Math.hypot(label.cmX - cm.x, label.cmY - cm.y)
-      if (dist <= bestDist) {
+      const { minX, maxX, hh } = labelHitBoxCm(label)
+      const rot = ((label.rotation ?? 0) * Math.PI) / 180
+      const dx = cm.x - label.cmX
+      const dy = cm.y - label.cmY
+      const localX = dx * Math.cos(-rot) - dy * Math.sin(-rot)
+      const localY = dx * Math.sin(-rot) + dy * Math.cos(-rot)
+      if (localX < minX - pad || localX > maxX + pad || Math.abs(localY) > hh + pad) continue
+      const dist = Math.hypot(localX, localY)
+      if (dist < bestDist) {
         bestId = label.id
         bestDist = dist
       }
@@ -334,9 +377,11 @@ export function useFmlPreviewHitTest(
     hitTestDoorAtCm,
     hitTestOpeningAtCm,
     hitTestJunctionAtCm,
+    handleHitTolCm,
     hitTestItemAtCm,
     hitTestSurfaceAtCm,
     hitTestAreaAtCm,
+    hitTestAreaNameAtCm,
     hitTestLabelAtCm,
     hitTestLineAtCm,
     clientToCm,

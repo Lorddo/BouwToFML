@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { areaLabelKonvaConfig } from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import {
-  DEFAULT_LABEL_FONT_SIZE_PX,
+  commentLabelFontSizeStage,
   labelKonvaFontStyle,
 } from '@/ui/composables/fml-preview/fml-preview-render-annotations'
+import {
+  areaLabelKonvaConfig,
+  areaLabelVisibleOnScreen,
+  planLabelBox,
+  type PlanLabelAlign,
+} from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import type { RenderLabel } from '@/ui/composables/fml-preview/fml-preview-render-types'
 
 const props = withDefaults(
@@ -12,7 +17,7 @@ const props = withDefaults(
     labels: RenderLabel[]
     settingsLabelId: string | null
     hoveredLabelId: string | null
-    /** Content-layout scale (cm → stage). Unused for annotation fontSize (scherm-px). */
+    /** Content-layout scale (cm → stage); zelfde wereldmaat als kamerbenaming. */
     layoutScale?: number
     viewScale?: number
     /** false = geen FML draw_label tekst. */
@@ -23,41 +28,56 @@ const props = withDefaults(
 
 const invView = computed(() => 1 / Math.max(1e-6, props.viewScale))
 
-const visibleLabels = computed(() => (props.labelsVisible ? props.labels : []))
+const visibleLabels = computed(() => {
+  if (!props.labelsVisible) return []
+  return props.labels.filter((label) => {
+    const fontSize = commentLabelFontSizeStage(label.fontSize, props.layoutScale)
+    return areaLabelVisibleOnScreen(fontSize, props.viewScale)
+  })
+})
 
-function screenPxToStage(px: number): number {
-  return Math.max(0.01, px * invView.value)
+function labelAlign(label: RenderLabel): PlanLabelAlign {
+  return label.align === 'left' || label.align === 'right' ? label.align : 'center'
 }
 
-function labelFontPx(label: RenderLabel): number {
-  return Number.isFinite(label.fontSize) && label.fontSize > 0
-    ? label.fontSize
-    : DEFAULT_LABEL_FONT_SIZE_PX
+function labelFontStage(label: RenderLabel): number {
+  return commentLabelFontSizeStage(label.fontSize, props.layoutScale)
 }
 
-/** Floorplanner fontSize = schermpixels; Stage schaalt met viewScale, dus delen. */
+function labelOffsetX(width: number, align: PlanLabelAlign): number {
+  if (align === 'left') return 0
+  if (align === 'right') return width
+  return width / 2
+}
+
 function labelTextConfig(label: RenderLabel): Record<string, unknown> {
-  const fontSize = screenPxToStage(labelFontPx(label))
+  const fontSize = labelFontStage(label)
   const fill = label.fontColor || '#1f2937'
-  const cfg = areaLabelKonvaConfig(label.text, 0, 0, fill, fontSize)
+  const cfg = areaLabelKonvaConfig(label.text, 0, 0, fill, fontSize, labelAlign(label))
   const outline = label.outline === true
   return {
     ...cfg,
-    fontFamily: label.fontFamily || 'arial',
     fontStyle: labelKonvaFontStyle(label.bold, label.italic),
     stroke: outline ? '#ffffff' : undefined,
-    strokeWidth: outline ? screenPxToStage(Math.max(2, labelFontPx(label) * 0.14)) : 0,
+    strokeWidth: outline ? Math.max(fontSize * 0.14, 0.4) : 0,
     fillAfterStrokeEnabled: outline,
   }
 }
 
-function labelSelectWidth(label: RenderLabel): number {
-  const fontSize = screenPxToStage(labelFontPx(label))
-  return Math.max(fontSize * 4, label.text.length * fontSize * 0.62)
-}
-
-function labelSelectHeight(label: RenderLabel): number {
-  return screenPxToStage(labelFontPx(label)) + 4 * invView.value
+function labelSelectConfig(label: RenderLabel): Record<string, unknown> {
+  const { width, height } = planLabelBox(label.text, labelFontStage(label))
+  const selected = props.settingsLabelId === label.id
+  return {
+    x: 0,
+    y: 0,
+    width,
+    height,
+    offsetX: labelOffsetX(width, labelAlign(label)),
+    offsetY: height / 2,
+    stroke: selected ? '#f97316' : '#94a3b8',
+    strokeWidth: selected ? 2 * invView.value : invView.value,
+    listening: false,
+  }
 }
 </script>
 
@@ -76,17 +96,7 @@ function labelSelectHeight(label: RenderLabel): number {
       <v-text :config="labelTextConfig(label)" />
       <v-rect
         v-if="settingsLabelId === label.id || hoveredLabelId === label.id"
-        :config="{
-          x: 0,
-          y: 0,
-          width: labelSelectWidth(label),
-          height: labelSelectHeight(label),
-          offsetX: labelSelectWidth(label) / 2,
-          offsetY: labelSelectHeight(label) / 2,
-          stroke: settingsLabelId === label.id ? '#f97316' : '#94a3b8',
-          strokeWidth: settingsLabelId === label.id ? 2 * invView : invView,
-          listening: false,
-        }"
+        :config="labelSelectConfig(label)"
       />
     </v-group>
   </v-group>

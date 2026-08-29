@@ -7,6 +7,12 @@ import {
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import {
+  catalogFromLegacyLimits,
+  FACTORY_THICKNESS_CMS,
+  limitsFromCatalog,
+  normalizeThicknessCatalog,
+} from '@/core/fml/fml-wall-thickness-catalog'
+import {
   DEFAULT_FML_WALL_THICKNESS_LIMITS,
   saveFmlWallThicknessLimits,
 } from '@/core/fml/fml-wall-thickness-limits'
@@ -162,6 +168,7 @@ export function createFactoryFmlDefaults(): ProjectFmlDefaults {
     windowBovenlichtDefault: false,
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
     bovenlichtGapCm: BOVENLICHT_GAP_CM,
+    thicknessCms: [...FACTORY_THICKNESS_CMS],
     thicknessMinCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.minCm,
     thicknessMidCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.midCm,
     thicknessMaxCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.maxCm,
@@ -224,9 +231,23 @@ function normalizeDefaults(
       typeof src.windowBovenlichtDefault === 'boolean' ? src.windowBovenlichtDefault : false,
     bovenlichtHeightCm: positiveCm(src.bovenlichtHeightCm, factory.bovenlichtHeightCm),
     bovenlichtGapCm: nonNegativeCm(src.bovenlichtGapCm, factory.bovenlichtGapCm),
-    thicknessMinCm: positiveCm(src.thicknessMinCm, factory.thicknessMinCm),
-    thicknessMidCm: positiveCm(src.thicknessMidCm, factory.thicknessMidCm),
-    thicknessMaxCm: positiveCm(src.thicknessMaxCm, factory.thicknessMaxCm),
+    ...(() => {
+      const rawCatalog = src.thicknessCms
+      const catalog = Array.isArray(rawCatalog)
+        ? normalizeThicknessCatalog(rawCatalog)
+        : catalogFromLegacyLimits({
+            minCm: positiveCm(src.thicknessMinCm, factory.thicknessMinCm),
+            midCm: positiveCm(src.thicknessMidCm, factory.thicknessMidCm),
+            maxCm: positiveCm(src.thicknessMaxCm, factory.thicknessMaxCm),
+          })
+      const limits = limitsFromCatalog(catalog)
+      return {
+        thicknessCms: catalog,
+        thicknessMinCm: limits.minCm,
+        thicknessMidCm: limits.midCm,
+        thicknessMaxCm: limits.maxCm,
+      }
+    })(),
     dakThicknessCm: positiveCm(src.dakThicknessCm, factory.dakThicknessCm),
     slabThicknessCm: positiveCm(src.slabThicknessCm, factory.slabThicknessCm),
     // Meetband = REF-afgeleid; settings bewaren alleen fabrieks-fallback (geen user-override).
@@ -332,10 +353,18 @@ export function loadUserSettings(): UserSettingsV1 {
 
 /** Alleen export-diktes; meetband komt uit muur-REF (`deriveFmlBandBoundariesCmFromRefPx`). */
 function writeThroughThickness(defaults: ProjectFmlDefaults): void {
+  const catalog = normalizeThicknessCatalog(
+    defaults.thicknessCms ??
+      catalogFromLegacyLimits({
+        minCm: defaults.thicknessMinCm,
+        midCm: defaults.thicknessMidCm,
+        maxCm: defaults.thicknessMaxCm,
+      }),
+  )
+  const limits = limitsFromCatalog(catalog)
   saveFmlWallThicknessLimits({
-    minCm: defaults.thicknessMinCm,
-    midCm: defaults.thicknessMidCm,
-    maxCm: defaults.thicknessMaxCm,
+    ...limits,
+    thicknessCms: catalog,
   })
 }
 

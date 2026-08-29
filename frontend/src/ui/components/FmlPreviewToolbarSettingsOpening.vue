@@ -12,8 +12,9 @@ import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { FmlToolId } from './canvas/fmlToolbeltItems'
 import FmlOpeningAddToolFields from './FmlOpeningAddToolFields.vue'
 import FmlOpeningEditFields from './FmlOpeningEditFields.vue'
-import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
@@ -237,16 +238,15 @@ const showTriangleMirror = computed(
     @copy="emit('copyOpening')"
     @remove="emit('deleteOpenings')"
   />
-  <button
+  <ToolbeltActionButton
     v-if="isMixedOpening"
-    type="button"
-    class="canvas-toolbelt__btn"
+    icon="delete"
     :title="t('result.toolbar.deleteOpenings')"
     :aria-label="t('result.toolbar.deleteOpenings')"
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteOpenings')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
   <FmlOpeningAddToolFields
     v-model:add-door-subtype="addDoorSubtype"
     v-model:add-door-width-cm="addDoorWidthCm"

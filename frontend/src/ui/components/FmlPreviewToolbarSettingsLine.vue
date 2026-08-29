@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { FLOOR_LINE_TYPES, type FloorLineType } from '@/core/fml/types'
-import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import HexColorField from './HexColorField.vue'
 import './fml-toolbelt-settings-fields.css'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 
 const { t } = useI18n()
 
@@ -79,14 +80,13 @@ function onThicknessInput(event: Event): void {
       />
     </div>
   </div>
-  <button
+  <ToolbeltActionButton
     v-if="selectedLinePanel"
-    type="button"
-    class="canvas-toolbelt__btn"
+    icon="delete"
     :title="t('result.toolbar.deleteLine')"
     :aria-label="t('result.toolbar.deleteLine')"
+    hotkey="Delete"
+    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteAnnotation')"
-  >
-    <ToolbeltIcon name="delete" />
-  </button>
+  />
 </template>

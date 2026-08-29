@@ -72,6 +72,7 @@ export function useFmlPreviewInspect(options: {
 
     if (!picked) {
       settingsWallIds.value = []
+      selection.settingsFacadeGroupId.value = null
       settingsOpeningIds.value = []
       selection.settingsAreaId.value = null
       selection.settingsSurfaceId.value = null
@@ -92,6 +93,7 @@ export function useFmlPreviewInspect(options: {
     }
 
     settingsWallIds.value = wallIds
+    selection.settingsFacadeGroupId.value = null
     settingsOpeningIds.value = picked.compositeOpeningId ? [picked.compositeOpeningId] : []
     selection.settingsAreaId.value = picked.kind === 'area' ? picked.id : null
     selection.settingsSurfaceId.value = picked.kind === 'surface' ? picked.id : null

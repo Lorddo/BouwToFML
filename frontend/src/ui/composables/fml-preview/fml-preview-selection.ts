@@ -15,6 +15,8 @@ import type { Point2D } from '@/core/fml/types'
 
 export interface FmlPreviewSelectionRefs {
   settingsWallIds: Ref<string[]>
+  /** Gevelgroep-settings (dikte alle floors); sluit muur-settings. */
+  settingsFacadeGroupId: Ref<string | null>
   settingsJunctionId: Ref<string | null>
   moveWallId: Ref<string | null>
   moveDimensionId: Ref<string | null>
@@ -57,6 +59,7 @@ export interface FmlPreviewSelectionRefs {
 export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
   return {
     settingsWallIds: ref<string[]>([]),
+    settingsFacadeGroupId: ref<string | null>(null),
     settingsJunctionId: ref<string | null>(null),
     moveWallId: ref<string | null>(null),
     moveDimensionId: ref<string | null>(null),

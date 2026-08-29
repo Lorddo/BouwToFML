@@ -378,4 +378,89 @@ describe('buildDiagnosisReportHtml', () => {
     expect(html.slice(bwIdx)).toContain('data:image/jpeg;base64,origscan')
     expect(html).toContain('Geen B/W in deze sessie')
   })
+
+  it('renders classified faces overlay, legend, stats, and used wall mask', () => {
+    const payload: DiagnosisReportPayload = {
+      meta: {
+        exportedAtIso: '2026-08-27T00:00:00.000Z',
+        projectName: 'Test',
+        floorId: 'f1',
+        floorName: 'BG',
+        floorLevel: 0,
+        imageName: 'scan.png',
+        flowStep: 'templates',
+        pxPerMmX: 0.2,
+        pxPerMmY: 0.2,
+        appVersion: '1.0.0',
+      },
+      originalPng: null,
+      scaleOverlay: null,
+      bwPng: null,
+      classifiedFaces: {
+        png: 'data:image/png;base64,facesoverlay',
+        stats: {
+          wallCount: 40,
+          surfaceCount: 12,
+          unknownCount: 3,
+          doorCount: 5,
+          windowCount: 8,
+          doorframeCount: 2,
+          overrideCount: 4,
+        },
+      },
+      usedWallMaskPng: 'data:image/png;base64,wallmaskv3',
+      references: null,
+      referenceRefImages: null,
+      doors: null,
+      windows: null,
+      layers: { layerDebug: null, semanticWallGraph: null },
+      layerDebugMarkdown: null,
+      fmlText: null,
+      previewPlan: null,
+    }
+
+    const html = buildDiagnosisReportHtml(payload)
+    expect(html).toContain('href="#faces"')
+    expect(html).toContain('Stap 3 gekleurde vlakken (tekenaar)')
+    expect(html).toContain('tekenaars-input')
+    expect(html).toContain('data:image/png;base64,facesoverlay')
+    expect(html).toContain('data:image/png;base64,wallmaskv3')
+    expect(html).toContain('muur 40')
+    expect(html).toContain('handmatig 4')
+    expect(html).toContain('muur — gaat het finalize-masker in')
+    expect(html).toContain('deur (draaiboog)')
+    expect(html).toContain('Binary muurmasker dat finalize aan V3 gaf')
+  })
+
+  it('shows unavailable faces when classify was not run', () => {
+    const payload: DiagnosisReportPayload = {
+      meta: {
+        exportedAtIso: '2026-08-27T00:00:00.000Z',
+        projectName: 'Test',
+        floorId: 'f1',
+        floorName: 'BG',
+        floorLevel: 0,
+        imageName: 'scan.png',
+        flowStep: 'input',
+        pxPerMmX: null,
+        pxPerMmY: null,
+        appVersion: '1.0.0',
+      },
+      originalPng: null,
+      scaleOverlay: null,
+      bwPng: null,
+      references: null,
+      referenceRefImages: null,
+      doors: null,
+      windows: null,
+      layers: { layerDebug: null, semanticWallGraph: null },
+      layerDebugMarkdown: null,
+      fmlText: null,
+      previewPlan: null,
+    }
+
+    const html = buildDiagnosisReportHtml(payload)
+    expect(html).toContain('id="faces"')
+    expect(html).toContain('Gekleurde vlakken (eerst Muren classificeren of afronden)')
+  })
 })

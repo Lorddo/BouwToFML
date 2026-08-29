@@ -18,8 +18,12 @@ export interface SelectionRect {
    */
   fmlRefId?: string
   /**
-   * Export-dikteband (min/mid/max) voor muur-LBE.
-   * Alleen relevant voor `wall`; pipeline schaalt naar max-equivalent.
+   * Catalogus-cm voor muur-LBE. Pipeline schaalt px × (maxCm / refCm).
+   * Alleen relevant voor `wall`.
+   */
+  wallThicknessCm?: number
+  /**
+   * Legacy sessie-tag. Nieuwe rects schrijven hem niet; restore mag hem negeren.
    */
   wallThicknessBand?: FmlThicknessBand
 }

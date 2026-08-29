@@ -30,9 +30,7 @@ const props = defineProps<{
   flipX?: boolean
   underlayMoveMode?: boolean
   thicknessPickTier: FmlThicknessBand | null
-  thicknessMinCm: number
-  thicknessMidCm: number
-  thicknessMaxCm: number
+  thicknessPresetCms: number[]
   bovenlichtDefault?: boolean
   windowBovenlichtDefault?: boolean
   bovenlichtHeightCm?: number
@@ -97,9 +95,7 @@ defineExpose({
     :flip-x="flipX === true"
     :underlay-move-mode="underlayMoveMode === true"
     :thickness-pick-tier="thicknessPickTier"
-    :thickness-min-cm="thicknessMinCm"
-    :thickness-mid-cm="thicknessMidCm"
-    :thickness-max-cm="thicknessMaxCm"
+    :thickness-preset-cms="thicknessPresetCms"
     :bovenlicht-default="bovenlichtDefault"
     :window-bovenlicht-default="windowBovenlichtDefault"
     :bovenlicht-height-cm="bovenlichtHeightCm"

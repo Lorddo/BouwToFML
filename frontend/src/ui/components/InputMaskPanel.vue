@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import {
+  TOOLBELT_HOTKEY_PRIORITY,
+  useToolbeltHotkey,
+} from '@/ui/composables/canvas/useToolbeltHotkey'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     eraserEnabled?: boolean
     polygonEraserEnabled?: boolean
@@ -31,6 +35,22 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+useToolbeltHotkey(
+  'Escape',
+  () => {
+    if (props.cropIncludeEnabled) emit('toggleCropInclude')
+    else if (props.eraserEnabled) emit('toggleEraser')
+    else if (props.polygonEraserEnabled) emit('togglePolygonEraser')
+  },
+  {
+    enabled: () =>
+      props.cropIncludeEnabled === true ||
+      props.eraserEnabled === true ||
+      props.polygonEraserEnabled === true,
+    priority: TOOLBELT_HOTKEY_PRIORITY.tool,
+  },
+)
 </script>
 
 <template>

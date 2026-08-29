@@ -46,7 +46,7 @@ export function useFmlPreviewDrawLabel(options: {
       letterSpacing: 0,
       fontColor: fontColor.value,
       backgroundColor: '#f4f8f4',
-      align: 'left',
+      align: 'center',
       rotation: 0,
       outline: outline.value || undefined,
       bold: bold.value || undefined,

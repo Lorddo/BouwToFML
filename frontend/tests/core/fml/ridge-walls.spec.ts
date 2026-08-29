@@ -25,6 +25,8 @@ import {
   ridgeEndpointZCm,
   ridgeWorldBottomZ,
   ridgeZForTargetFloor,
+  readRidgeWallsSettings,
+  removeRidgeWallsFromPlan,
   setRidgeJunctionZ,
   setPlanRidgeJunctionZ,
   setFloorRidgeHeights,
@@ -191,7 +193,7 @@ describe('ridge-walls', () => {
     expect(ridgeRect).toBeTruthy()
     expect(ridgeRect!.x1 - ridgeRect!.x0).toBeCloseTo(10, 5)
     expect((ridgeRect!.x0 + ridgeRect!.x1) / 2).toBeCloseTo(200 * elevation!.axis.x, 5)
-    expect(elevation!.bands.some((band) => band.kind === 'nok')).toBe(true)
+    expect(elevation!.bands.some((band) => band.kind === 'nok')).toBe(false)
     expect(elevation!.roofPlanes).toEqual([])
   })
 
@@ -316,5 +318,22 @@ describe('ridge-walls', () => {
     const next = setFloorRidgeHeights(plan, 1, 520)
     expect(ridgeEndpointZCm(listRidgeWallsOnFloor(next.floors[0])[0], 'a', 250)).toBe(250)
     expect(ridgeEndpointZCm(listRidgeWallsOnFloor(next.floors[1])[0], 'a', 250)).toBe(520)
+  })
+
+  it('removeRidgeWallsFromPlan haalt nok weg en laat plattegrondmuren', () => {
+    const plan = createEmptyFloorPlan({ name: 'Nokweg', wallHeightCm: 280 })
+    plan.floors[0].walls = [wall('w1')]
+    const ridge = markWallAsRidge(
+      wall('r1', { x: 0, y: 0 }, { x: 200, y: 0 }),
+      ridgeEndpointExtras(280, 20, 350),
+    )
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
+    assignRidgeWallGuids(plan, ['r1'])
+    const next = removeRidgeWallsFromPlan(plan, ['r1'])
+    expect(listRidgeWallsOnFloor(next.floors[0])).toHaveLength(0)
+    expect(readRidgeWallsSettings(next).wallGuids).not.toContain('r1')
+    expect(next.floors[0].walls.map((item) => item.id)).toEqual(['w1'])
+    expect(listRidgeWallsOnFloor(plan.floors[0])).toHaveLength(1)
+    expect(readRidgeWallsSettings(plan).wallGuids).toContain('r1')
   })
 })

@@ -5,7 +5,6 @@ import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/fml/ridge-walls'
 import type { FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import { useStage } from '@/platform/canvas'
 import { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import { useFmlPreviewViewport } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
@@ -22,6 +21,8 @@ import { FML_PREVIEW_CHROME_SELECTOR } from '@/ui/composables/fml-preview/fml-pr
 import { useFmlCanvasTouch, useFmlTouchNav } from '@/ui/composables/fml-preview/useFmlCanvasTouch'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { itemResizeHandleWorlds } from '@/ui/composables/fml-preview/item-resize-handles'
+import { itemRotateHandleWorlds } from '@/ui/composables/fml-preview/item-rotate-handles'
+import { FML_PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/fml-preview/fml-preview-vertex-hit'
 import FmlEditorTouchChrome from '@/ui/fml-editor/FmlEditorTouchChrome.vue'
 import type { HScaleState } from '@/platform/calibration'
 import { layoutTransform } from '@/ui/composables/fml-preview/useFmlPreviewViewport'
@@ -39,7 +40,8 @@ import {
   type PlanDisplayStyleChoice,
 } from '@/ui/composables/settings/user-settings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import { resolveFmlCapabilities, type FmlKind } from '@/ui/composables/fml-preview/fml-capabilities'
+import type { FmlCanvasHostProps } from '@/ui/composables/fml-preview/fml-canvas-host-props'
+import { resolveFmlCapabilities } from '@/ui/composables/fml-preview/fml-capabilities'
 import { tGlobal } from '@/ui/i18n'
 import {
   clampLabelFontSize,
@@ -56,116 +58,43 @@ import FmlPreviewStage from './FmlPreviewStage.vue'
 import FmlPreviewMeasureOverlay from './FmlPreviewMeasureOverlay.vue'
 import FmlRescaleOverlay from './FmlRescaleOverlay.vue'
 
-const props = withDefaults(
-  defineProps<{
-    plan: FloorPlan | null
-    floorIndex?: number
-    underlaySrc?: string | null
-    underlayWidthPx?: number
-    underlayHeightPx?: number
-    /** 0–1; 0 = uit. */
-    underlayOpacity?: number
-    /** 0–1; FML-geometrie opacity. */
-    contentOpacity?: number
-    cmOrigin?: { x: number; y: number } | null
-    pxPerMmX?: number
-    pxPerMmY?: number
-    /** Onderlegger-rotatie in graden (FML drawing); default 0. */
-    rotationDeg?: number
-    /** Display-only X-flip van de onderlegger. */
-    flipX?: boolean
-    /** Sidebar: onderlegger verslepen. */
-    underlayMoveMode?: boolean
-    thicknessPickTier?: FmlThicknessBand | null
-    thicknessMinCm?: number
-    thicknessMidCm?: number
-    thicknessMaxCm?: number
-    bovenlichtDefault?: boolean
-    windowBovenlichtDefault?: boolean
-    bovenlichtHeightCm?: number
-    bovenlichtGapCm?: number
-    /** true = flags+groen; false = losse ramen. Default true. */
-    bovenlichtPacked?: boolean
-    /** Sessie-default voor nieuwe deuren (viewer). */
-    defaultDoorHeightCm?: number
-    defaultWindowHeightCm?: number
-    defaultWindowSillZCm?: number
-    setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
-    /**
-     * Capability preset. When set, derives area/annotation/inspect/touch flags.
-     * Prefer this over the legacy boolean props below.
-     */
-    kind?: FmlKind
-    /**
-     * Area/surface Ctrl+klik + draw_surface. Default **false** (product-safe).
-     * Ignored when `kind` is set (use detection/editor preset).
-     */
-    areaSurfaceEditEnabled?: boolean
-    /**
-     * Labels/lijnen plaatsen (Ctrl+klik selecteren). Default **false**.
-     * Ignored when `kind` is set.
-     */
-    annotationEditEnabled?: boolean
-    /** Read-only inspect. Ignored when `kind` is set. */
-    inspectMode?: boolean
-    /** FML-id → #RRGGBB statusfill. */
-    inspectColors?: Record<string, string>
-    /** Kamer-/surface-benaming + FML draw_label. Default true.
-     * false = geen Konva.Text (maatlijnen blijven).
-     */
-    labelsVisible?: boolean
-    /** Workspace: Herschalen-modus (H/V-linialen). Viewer uit. */
-    rescaleMode?: boolean
-    rescaleState?: HScaleState | null
-    /** Fixture tool + coarse-pointer rail. Ignored when `kind` is set. */
-    touchEditor?: boolean
-    /** Viewer: chrome (header/floor-rail) verborgen. */
-    canvasFullscreen?: boolean
-    /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */
-    dimensionVis?: DimensionVis
-    /** Dak-tab: uitslag van de actieve floor (nok + dakvlakken). */
-    dakMode?: boolean
-  }>(),
-  {
-    floorIndex: 0,
-    underlaySrc: null,
-    underlayWidthPx: 0,
-    underlayHeightPx: 0,
-    underlayOpacity: 0,
-    contentOpacity: 0.8,
-    cmOrigin: null,
-    pxPerMmX: 1,
-    pxPerMmY: 1,
-    rotationDeg: 0,
-    flipX: false,
-    underlayMoveMode: false,
-    thicknessPickTier: null,
-    thicknessMinCm: 10,
-    thicknessMidCm: 20,
-    thicknessMaxCm: 30,
-    bovenlichtDefault: false,
-    windowBovenlichtDefault: false,
-    bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
-    bovenlichtGapCm: BOVENLICHT_GAP_CM,
-    bovenlichtPacked: true,
-    defaultDoorHeightCm: undefined,
-    defaultWindowHeightCm: undefined,
-    defaultWindowSillZCm: undefined,
-    setFmlNulpuntImageCm: undefined,
-    kind: undefined,
-    areaSurfaceEditEnabled: undefined,
-    annotationEditEnabled: undefined,
-    inspectMode: undefined,
-    inspectColors: undefined,
-    labelsVisible: true,
-    rescaleMode: false,
-    rescaleState: null,
-    touchEditor: undefined,
-    canvasFullscreen: false,
-    dimensionVis: undefined,
-    dakMode: false,
-  },
-)
+const props = withDefaults(defineProps<FmlCanvasHostProps>(), {
+  floorIndex: 0,
+  underlaySrc: null,
+  underlayWidthPx: 0,
+  underlayHeightPx: 0,
+  underlayOpacity: 0,
+  contentOpacity: 0.8,
+  cmOrigin: null,
+  pxPerMmX: 1,
+  pxPerMmY: 1,
+  rotationDeg: 0,
+  flipX: false,
+  underlayMoveMode: false,
+  thicknessPickTier: null,
+  thicknessPresetCms: () => [10, 20, 30],
+  bovenlichtDefault: false,
+  windowBovenlichtDefault: false,
+  bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
+  bovenlichtGapCm: BOVENLICHT_GAP_CM,
+  bovenlichtPacked: true,
+  defaultDoorHeightCm: undefined,
+  defaultWindowHeightCm: undefined,
+  defaultWindowSillZCm: undefined,
+  setFmlNulpuntImageCm: undefined,
+  kind: undefined,
+  areaSurfaceEditEnabled: undefined,
+  annotationEditEnabled: undefined,
+  inspectMode: undefined,
+  inspectColors: undefined,
+  labelsVisible: true,
+  rescaleMode: false,
+  rescaleState: null,
+  touchEditor: undefined,
+  canvasFullscreen: false,
+  dimensionVis: undefined,
+  dakMode: false,
+})
 
 const capabilities = computed(() =>
   props.kind != null ? resolveFmlCapabilities(props.kind) : null,
@@ -255,6 +184,7 @@ function interactionEmit(
 }
 
 const thicknessPickTierRef = toRef(props, 'thicknessPickTier')
+const thicknessPresetCmsRef = toRef(props, 'thicknessPresetCms')
 const bovenlichtDefaultRef = toRef(props, 'bovenlichtDefault')
 const windowBovenlichtDefaultRef = toRef(props, 'windowBovenlichtDefault')
 const bovenlichtHeightCmRef = toRef(props, 'bovenlichtHeightCm')
@@ -394,6 +324,7 @@ const interaction = useFmlPreviewInteraction({
   shiftPressed,
   spacePressed,
   thicknessPickTier: thicknessPickTierRef,
+  thicknessPresetCms: thicknessPresetCmsRef,
   bovenlichtDefault: bovenlichtDefaultRef,
   windowBovenlichtDefault: windowBovenlichtDefaultRef,
   bovenlichtHeightCm: bovenlichtHeightCmRef,
@@ -589,6 +520,7 @@ const {
   ridgeFloorDraft,
   ridgeFloorMixed,
   applyRidgeFloorInput,
+  selectedFacadeGroupPanel,
   wallThicknessDraft,
   wallThicknessMixed,
   wallBalanceDraft,
@@ -1129,12 +1061,25 @@ const wallMoveMeasureLabelText = computed(() =>
   formatDrawTypeLabel(wallMoveTypeText.value, wallMoveMeasureLengthCm.value, drawInputUnit.value),
 )
 
+const handleItemId = computed(() => settingsItemId.value ?? moveItemId.value)
+
 const itemResizeHandles = computed(() => {
-  const guid = settingsItemId.value
-  if (!guid || inspectMode.value) return []
+  const guid = handleItemId.value
+  if (!guid || inspectMode.value || dakMode.value) return []
   const item = editor.items.value.find((entry) => entry.guid === guid)
   if (!item) return []
   return itemResizeHandleWorlds(item).map((handle) => ({
+    ...handle,
+    ...cmToScreen(handle.x, handle.y),
+  }))
+})
+
+const itemRotateHandles = computed(() => {
+  const guid = handleItemId.value
+  if (!guid || inspectMode.value || dakMode.value) return []
+  const item = editor.items.value.find((entry) => entry.guid === guid)
+  if (!item) return []
+  return itemRotateHandleWorlds(item).map((handle) => ({
     ...handle,
     ...cmToScreen(handle.x, handle.y),
   }))
@@ -1287,6 +1232,7 @@ watch(
       :hide-select-tools="useTouchNav || dakMode"
       :dak-mode="dakMode"
       :selected-wall-panel="selectedWallPanel"
+      :selected-facade-group-panel="selectedFacadeGroupPanel"
       :selected-junction-panel="selectedJunctionPanel"
       :selected-opening-panel="selectedOpeningPanel"
       :selected-area-panel="taggedSettingsPanel"
@@ -1295,6 +1241,7 @@ watch(
       :room-types="roomTypes"
       :surface-edit-active="surfaceEditActive"
       :roof-vertex-z-cm="roofVertexZCm"
+      :roof-vertex-index="roofVertexIndex"
       :roof-poly-mutate="selection.roofPolyMutate.value"
       :include-surface-tool="includeSurfaceTool"
       :include-annotation-tools="includeAnnotationTools && !dakMode"
@@ -1331,9 +1278,7 @@ watch(
       :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
       :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
       :bovenlicht-packed="bovenlichtPacked"
-      :thickness-min-cm="thicknessMinCm"
-      :thickness-mid-cm="thicknessMidCm"
-      :thickness-max-cm="thicknessMaxCm"
+      :thickness-preset-cms="thicknessPresetCms"
       :measure-line-count="measureLines.length"
       :measure-persist-enabled="props.kind === 'editor'"
       :draw-wall-drafting="drawWallDrafting"
@@ -1439,18 +1384,29 @@ watch(
       @deactivate-draw-tool="deactivateDrawTool"
     />
     <svg
-      v-if="itemResizeHandles.length > 0"
+      v-if="itemResizeHandles.length > 0 || itemRotateHandles.length > 0"
       class="item-resize-overlay"
       :width="stageSize.width"
       :height="stageSize.height"
     >
+      <g
+        v-for="handle in itemRotateHandles"
+        :key="`r-${handle.corner}`"
+        class="item-rotate-handle"
+        :transform="`translate(${handle.x} ${handle.y})`"
+      >
+        <title>{{ tGlobal('viewer.itemRotateHandle') }}</title>
+        <circle class="item-rotate-handle__hit" :r="FML_PLAN_HANDLE_RADIUS_PX" />
+        <path class="item-rotate-handle__arc" d="M 1.4 -2.5 A 2.8 2.8 0 1 1 -1.4 -2.5" />
+        <path class="item-rotate-handle__head" d="M 1.4 -2.5 L 0.2 -4.1 L 2.7 -3.9 Z" />
+      </g>
       <circle
         v-for="handle in itemResizeHandles"
         :key="handle.side"
         class="item-resize-handle"
         :cx="handle.x"
         :cy="handle.y"
-        r="7"
+        :r="FML_PLAN_HANDLE_RADIUS_PX"
       />
     </svg>
     <FmlPreviewMeasureOverlay
@@ -1801,6 +1757,23 @@ watch(
   fill: #fff;
   stroke: var(--fml-accent-warm);
   stroke-width: 2;
+}
+
+.item-rotate-handle__hit {
+  fill: #fff;
+  stroke: var(--fml-accent-warm);
+  stroke-width: 2;
+}
+
+.item-rotate-handle__arc {
+  fill: none;
+  stroke: var(--fml-accent-warm);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.item-rotate-handle__head {
+  fill: var(--fml-accent-warm);
 }
 
 .empty {

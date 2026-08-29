@@ -197,6 +197,36 @@ describe('bindFloorWallsToRoofs V1', () => {
     // Aanbouw sky-exposed → gebonden op 260
     expect(endH(result.plan, 'out-f', 'a')).toBe(260)
     expect(result.boundJunctions).toBeGreaterThan(0)
+    // Story-height blijft: 1e stapelt hierop (geen float).
+    expect(result.plan.floors[0].height).toBe(280)
+    expect(result.plan.floors[1].height).toBe(280)
+    const upper = result.plan.floors[1].walls.find((item) => item.id === 'u-f')!
+    expect(wallEndpoint3D(upper, 'a', 280).h).toBe(280)
+    expect(wallEndpoint3D(upper, 'a', 280).z).toBe(0)
+  })
+
+  it('met floor erboven: floor.height blijft (1e/2e niet optillen)', () => {
+    const plan = saddlePlan({ withUpperFloor: true, withOutbuilding: true })
+    plan.floors.push({
+      name: '2e',
+      level: 2,
+      height: 280,
+      walls: [
+        wall('2-f', { x: 0, y: 0 }, { x: 400, y: 0 }),
+        wall('2-b', { x: 0, y: 800 }, { x: 400, y: 800 }),
+      ],
+    })
+    const before1e = plan.floors[1].walls.map((item) => ({
+      id: item.id,
+      extras: item.extras,
+    }))
+    const result = bindFloorWallsToRoofs(plan, 0)
+    expect(result.plan.floors[0].height).toBe(280)
+    expect(result.plan.floors[1].height).toBe(280)
+    expect(result.plan.floors[2].height).toBe(280)
+    expect(result.plan.floors[1].walls.map((item) => item.extras)).toEqual(
+      before1e.map((item) => item.extras),
+    )
   })
 
   it('knopen buiten elk dakvlak: overslaan', () => {

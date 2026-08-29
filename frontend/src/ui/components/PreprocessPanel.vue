@@ -12,6 +12,7 @@ import {
   isPreprocessLayerId,
   layerTuneStorageKey,
   mirrorWallTuneToRoot,
+  PREPROCESS_SLIDER_LIMITS,
   PREPROCESS_TAB_LABELS,
   resetLayerTuneToFactory,
   type PreprocessLayerId,
@@ -172,7 +173,7 @@ const { t } = useI18n()
 
 <template>
   <div class="panel">
-    <!-- Eenvoudige flow: één slider (vooraf vast B/W). -->
+    <!-- Eenvoudige flow: één slider (start vast B/W); adaptive ná morph. -->
     <section class="simple-section">
       <div class="setting-row">
         <span class="setting-label">{{ t('preprocess.bwThreshold') }}</span>
@@ -321,16 +322,16 @@ const { t } = useI18n()
             <input
               :value="readField('despeckleMinPx', 0)"
               type="range"
-              min="0"
-              max="32"
+              :min="PREPROCESS_SLIDER_LIMITS.despeckleMinPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.despeckleMinPx.max"
               step="1"
               @input="setNumber('despeckleMinPx', $event)"
             />
             <input
               :value="readField('despeckleMinPx', 0)"
               type="number"
-              min="0"
-              max="32"
+              :min="PREPROCESS_SLIDER_LIMITS.despeckleMinPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.despeckleMinPx.max"
               step="1"
               class="num-input"
               @input="setNumber('despeckleMinPx', $event)"
@@ -352,16 +353,16 @@ const { t } = useI18n()
             <input
               :value="readField('removeHolesMaxPx', 0)"
               type="range"
-              min="0"
-              max="24"
+              :min="PREPROCESS_SLIDER_LIMITS.removeHolesMaxPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.removeHolesMaxPx.max"
               step="1"
               @input="setNumber('removeHolesMaxPx', $event)"
             />
             <input
               :value="readField('removeHolesMaxPx', 0)"
               type="number"
-              min="0"
-              max="24"
+              :min="PREPROCESS_SLIDER_LIMITS.removeHolesMaxPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.removeHolesMaxPx.max"
               step="1"
               class="num-input"
               @input="setNumber('removeHolesMaxPx', $event)"
@@ -374,16 +375,16 @@ const { t } = useI18n()
             <input
               :value="readField('despeckleOpen', 0)"
               type="range"
-              min="0"
-              max="6"
+              :min="PREPROCESS_SLIDER_LIMITS.despeckleOpen.min"
+              :max="PREPROCESS_SLIDER_LIMITS.despeckleOpen.max"
               step="1"
               @input="setNumber('despeckleOpen', $event)"
             />
             <input
               :value="readField('despeckleOpen', 0)"
               type="number"
-              min="0"
-              max="6"
+              :min="PREPROCESS_SLIDER_LIMITS.despeckleOpen.min"
+              :max="PREPROCESS_SLIDER_LIMITS.despeckleOpen.max"
               step="1"
               class="num-input"
               @input="setNumber('despeckleOpen', $event)"
@@ -405,16 +406,16 @@ const { t } = useI18n()
             <input
               :value="readField('bridgeGaps', 1)"
               type="range"
-              min="1"
-              max="10"
+              :min="PREPROCESS_SLIDER_LIMITS.bridgeGaps.min"
+              :max="PREPROCESS_SLIDER_LIMITS.bridgeGaps.max"
               step="1"
               @input="setNumber('bridgeGaps', $event)"
             />
             <input
               :value="readField('bridgeGaps', 1)"
               type="number"
-              min="1"
-              max="10"
+              :min="PREPROCESS_SLIDER_LIMITS.bridgeGaps.min"
+              :max="PREPROCESS_SLIDER_LIMITS.bridgeGaps.max"
               step="1"
               class="num-input"
               @input="setNumber('bridgeGaps', $event)"
@@ -436,16 +437,16 @@ const { t } = useI18n()
             <input
               :value="readField('smoothLines', 1)"
               type="range"
-              min="1"
-              max="8"
+              :min="PREPROCESS_SLIDER_LIMITS.smoothLines.min"
+              :max="PREPROCESS_SLIDER_LIMITS.smoothLines.max"
               step="1"
               @input="setNumber('smoothLines', $event)"
             />
             <input
               :value="readField('smoothLines', 1)"
               type="number"
-              min="1"
-              max="8"
+              :min="PREPROCESS_SLIDER_LIMITS.smoothLines.min"
+              :max="PREPROCESS_SLIDER_LIMITS.smoothLines.max"
               step="1"
               class="num-input"
               @input="setNumber('smoothLines', $event)"
@@ -467,16 +468,16 @@ const { t } = useI18n()
             <input
               :value="readField('thickenLinesPx', 1)"
               type="range"
-              min="1"
-              max="8"
+              :min="PREPROCESS_SLIDER_LIMITS.thickenLinesPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.thickenLinesPx.max"
               step="1"
               @input="setNumber('thickenLinesPx', $event)"
             />
             <input
               :value="readField('thickenLinesPx', 1)"
               type="number"
-              min="1"
-              max="8"
+              :min="PREPROCESS_SLIDER_LIMITS.thickenLinesPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.thickenLinesPx.max"
               step="1"
               class="num-input"
               @input="setNumber('thickenLinesPx', $event)"
@@ -498,16 +499,16 @@ const { t } = useI18n()
             <input
               :value="readField('erodeLinesPx', 1)"
               type="range"
-              min="0"
-              max="6"
+              :min="PREPROCESS_SLIDER_LIMITS.erodeLinesPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.erodeLinesPx.max"
               step="1"
               @input="setNumber('erodeLinesPx', $event)"
             />
             <input
               :value="readField('erodeLinesPx', 1)"
               type="number"
-              min="0"
-              max="6"
+              :min="PREPROCESS_SLIDER_LIMITS.erodeLinesPx.min"
+              :max="PREPROCESS_SLIDER_LIMITS.erodeLinesPx.max"
               step="1"
               class="num-input"
               @input="setNumber('erodeLinesPx', $event)"

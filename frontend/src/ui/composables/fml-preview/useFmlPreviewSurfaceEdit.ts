@@ -1,15 +1,17 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
 import { isRoofSurface } from '@/core/fml/roof-planes'
+import { hitSelectedVertex, pointInPoly } from '@/core/fml/vertex-hit'
 import type { FloorSurface, Point2D } from '@/core/fml/types'
 import { snapPolygonVertexAxisLock } from '@/ui/components/fml-preview-junction-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
+import type { HitTestApi } from './fml-preview-hit-test-api'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
-const VERTEX_HIT_CM = 12
 const EDGE_HIT_CM = 10
+const VERTEX_HIT_FALLBACK_CM = 12
 
 function distPointSeg(p: Point2D, a: Point2D, b: Point2D): { dist: number; t: number } {
   const dx = b.x - a.x
@@ -27,7 +29,7 @@ function distPointSeg(p: Point2D, a: Point2D, b: Point2D): { dist: number; t: nu
 export function useFmlPreviewSurfaceEdit(options: {
   selection: FmlPreviewSelectionRefs
   editor: EditorApi
-  hitTest: { clientToCm: (clientX: number, clientY: number) => Point2D | null }
+  hitTest: Pick<HitTestApi, 'clientToCm'> & Partial<Pick<HitTestApi, 'handleHitTolCm'>>
   resolvePoint: (
     cm: Point2D,
     snapDisabled: boolean,
@@ -36,9 +38,18 @@ export function useFmlPreviewSurfaceEdit(options: {
   ) => Point2D
   axisLocked: { value: boolean }
   syncPlanToParent: () => void
+  /** Nokbalk onder de klik: niet opeten, zodat de nok geopend kan worden. */
+  isRidgeHit?: (cm: Point2D) => boolean
 }) {
   const draggingVertexIndex = ref<number | null>(null)
   const selectedVertexIndex = ref<number | null>(null)
+
+  watch(
+    () => options.selection.surfaceEditId.value,
+    () => {
+      selectedVertexIndex.value = null
+    },
+  )
   let didPushUndo = false
   let snapDisabled = false
   let pendingZ: { index: number; z: number } | null = null
@@ -184,24 +195,16 @@ export function useFmlPreviewSurfaceEdit(options: {
     const poly = currentPoly()
     if (!poly || poly.length < 3) return false
     const mutate = options.selection.roofPolyMutate.value === true || event.ctrlKey || event.metaKey
-
-    let bestVi = -1
-    let bestVd = Number.POSITIVE_INFINITY
-    for (let i = 0; i < poly.length; i++) {
-      const d = Math.hypot(raw.x - poly[i].x, raw.y - poly[i].y)
-      if (d < bestVd) {
-        bestVd = d
-        bestVi = i
-      }
-    }
-    if (bestVi >= 0 && bestVd <= VERTEX_HIT_CM) {
+    const tol = options.hitTest.handleHitTolCm?.() ?? VERTEX_HIT_FALLBACK_CM
+    const hitVi = hitSelectedVertex(poly, raw, tol, selectedVertexIndex.value)
+    if (hitVi != null) {
       if ((event.ctrlKey || event.metaKey) && poly.length > 3) {
-        removeVertex(bestVi)
+        removeVertex(hitVi)
         event.preventDefault()
         return true
       }
-      selectedVertexIndex.value = bestVi
-      beginVertexDrag(bestVi, event)
+      selectedVertexIndex.value = hitVi
+      beginVertexDrag(hitVi, event)
       event.preventDefault()
       return true
     }
@@ -237,6 +240,12 @@ export function useFmlPreviewSurfaceEdit(options: {
       commitPoly(next)
       selectedVertexIndex.value = bestEi + 1
       beginVertexDrag(bestEi + 1, event)
+      event.preventDefault()
+      return true
+    }
+
+    if (options.isRidgeHit?.(raw) === true) return false
+    if (pointInPoly(raw, poly)) {
       event.preventDefault()
       return true
     }

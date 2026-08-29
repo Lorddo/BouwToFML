@@ -21,7 +21,10 @@ export function useFloorplanPolygonPointer(deps: {
   function onPolygonKeyDown(e: KeyboardEvent) {
     if (!deps.isPolygonMode() || deps.spacePressed()) return
     if (e.key === 'Escape') {
-      deps.onPolygonCancel()
+      if (deps.polygonDraftPoints().length > 0) {
+        e.preventDefault()
+        deps.onPolygonCancel()
+      }
     } else if (e.key === 'Enter') {
       completePolygonDraft()
     } else if (e.key === 'Backspace') {

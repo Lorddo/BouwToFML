@@ -3,11 +3,13 @@ import { computed } from 'vue'
 import {
   areaLabelFontSizeStage,
   areaLabelKonvaConfig,
+  areaLabelSelectRectConfig,
   areaLabelVisibleOnScreen,
 } from '@/ui/composables/fml-preview/fml-preview-render-areas'
 import { inspectColorFor, resolveInspectFill } from '@/ui/composables/fml-preview/fml-inspect'
 import type { RenderSurface } from '@/ui/composables/fml-preview/fml-preview-render-types'
 import type { Point2D } from '@/core/fml/types'
+import { FML_PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/fml-preview/fml-preview-vertex-hit'
 import {
   ARCHITECT_AREA_FILL,
   ARCHITECT_STROKE,
@@ -55,6 +57,10 @@ const labeledSurfaces = computed(() => {
   if (!areaLabelVisibleOnScreen(fontSizeStage.value, props.viewScale)) return []
   return props.surfaces.filter((surface) => surface.label && surface.showAreaLabel !== false)
 })
+const invView = computed(() => 1 / Math.max(1e-6, props.viewScale))
+const selectedLabeledSurface = computed(
+  () => labeledSurfaces.value.find((surface) => surface.id === props.settingsSurfaceId) ?? null,
+)
 /** Edit-handles blijven zichtbaar ook als benaming uit staat. */
 const editHandleVertices = computed(() =>
   props.layer !== 'fill' ? (props.editVertices ?? []) : [],
@@ -92,10 +98,10 @@ function surfaceStroke(surface: RenderSurface): string {
   return surface.isRoof ? '#b45309' : '#64748b'
 }
 
-const handleScale = computed(() => 1 / Math.max(0.35, props.viewScale))
-const handleRadius = computed(() => 3.5 * handleScale.value)
-const handleRadiusSelected = computed(() => 4.5 * handleScale.value)
-const handleStroke = computed(() => 1.25 * handleScale.value)
+const handleScale = computed(() => 1 / Math.max(0.01, props.viewScale))
+const handleRadius = computed(() => FML_PLAN_HANDLE_RADIUS_PX * handleScale.value)
+const handleRadiusSelected = computed(() => FML_PLAN_HANDLE_RADIUS_PX * handleScale.value)
+const handleStroke = computed(() => 2 * handleScale.value)
 
 function surfaceOpacity(surface: RenderSurface): number {
   if (architect.value) {
@@ -170,6 +176,19 @@ function cutoutDiagonals(points: number[]): number[][] {
         )
       "
     />
+    <v-rect
+      v-if="selectedLabeledSurface"
+      :config="
+        areaLabelSelectRectConfig(
+          selectedLabeledSurface.label ?? '',
+          selectedLabeledSurface.labelX,
+          selectedLabeledSurface.labelY,
+          fontSizeStage,
+          true,
+          invView,
+        )
+      "
+    />
     <v-circle
       v-for="(vertex, index) in editHandleVertices"
       :key="`edit-v-${index}`"
@@ -177,7 +196,7 @@ function cutoutDiagonals(points: number[]): number[][] {
         x: vertex.x,
         y: vertex.y,
         radius: selectedVertexIndex === index ? handleRadiusSelected : handleRadius,
-        fill: selectedVertexIndex === index ? '#5b21b6' : '#7c3aed',
+        fill: selectedVertexIndex === index ? '#fbbf24' : '#f97316',
         stroke: '#fff',
         strokeWidth: handleStroke,
         listening: false,

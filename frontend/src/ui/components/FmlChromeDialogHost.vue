@@ -53,6 +53,7 @@ onBeforeUnmount(() => {
     :input-value="inputValue"
     :placeholder="request.placeholder"
     :list-edit="request.kind === 'listEdit'"
+    :choice="request.kind === 'choice'"
     :list-items="listItems"
     :confirm-label="request.confirmLabel ?? ''"
     :cancel-label="request.cancelLabel"

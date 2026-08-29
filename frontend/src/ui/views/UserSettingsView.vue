@@ -34,6 +34,8 @@ import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
 import { FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
 import HexColorField from '@/ui/components/HexColorField.vue'
 import ScaleLengthInput from '@/ui/components/ScaleLengthInput.vue'
+import ThicknessCatalogFields from '@/ui/components/ThicknessCatalogFields.vue'
+import { limitsFromCatalog } from '@/core/fml/fml-wall-thickness-catalog'
 
 const { t } = useI18n()
 
@@ -103,6 +105,11 @@ watch(
 
 function patchDefaults(patch: Partial<ProjectFmlDefaults>) {
   Object.assign(draft.defaults, patch)
+}
+
+function patchThicknessCatalog(cms: number[]) {
+  const limits = limitsFromCatalog(cms)
+  patchDefaults({ thicknessCms: cms, ...limits })
 }
 
 function patchViewer(patch: Partial<FmlViewerSettings>) {
@@ -480,39 +487,16 @@ onBeforeUnmount(() => {
       <h3>{{ t('settings.thicknesses') }}</h3>
       <p class="hint">{{ t('settings.thicknessHint') }}</p>
       <div class="defaults-grid">
-        <label class="field compact">
-          <span>{{ t('settings.minCm') }}</span>
-          <ScaleLengthInput
-            block
-            :unit-system="draft.unitSystem"
-            :cm="draft.defaults.thicknessMinCm"
+        <div class="field compact catalog-field">
+          <span>{{ t('settings.thicknessCatalog') }}</span>
+          <ThicknessCatalogFields
+            :cms="draft.defaults.thicknessCms"
             :unit="draft.scaleInputUnit"
-            :min-cm="1"
-            @update:cm="patchDefaults({ thicknessMinCm: $event })"
-          />
-        </label>
-        <label class="field compact">
-          <span>{{ t('settings.midCm') }}</span>
-          <ScaleLengthInput
-            block
             :unit-system="draft.unitSystem"
-            :cm="draft.defaults.thicknessMidCm"
-            :unit="draft.scaleInputUnit"
-            :min-cm="1"
-            @update:cm="patchDefaults({ thicknessMidCm: $event })"
-          />
-        </label>
-        <label class="field compact">
-          <span>{{ t('settings.maxCm') }}</span>
-          <ScaleLengthInput
             block
-            :unit-system="draft.unitSystem"
-            :cm="draft.defaults.thicknessMaxCm"
-            :unit="draft.scaleInputUnit"
-            :min-cm="1"
-            @update:cm="patchDefaults({ thicknessMaxCm: $event })"
+            @update:cms="patchThicknessCatalog"
           />
-        </label>
+        </div>
         <label class="field compact">
           <span>{{ t('settings.dakThicknessCm') }}</span>
           <ScaleLengthInput

@@ -22,11 +22,16 @@ import {
   enforceWallRefLimit,
   resolveReferenceWallThicknessDetail,
   resolveStyleWallRect,
-  resolveWallThicknessBand,
+  resolveWallThicknessCm,
   type WallRefThicknessMeasure,
 } from '@/platform/selection/wall-thickness-ref'
+import {
+  MIN_THICKNESS_CATALOG,
+  normalizeThicknessCatalog,
+  replaceThicknessInCatalog,
+  thicknessPxToCm,
+} from '@/core/fml/fml-wall-thickness-catalog'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import {
   emptyTabOutputs,
   tabFromDetectTargets,
@@ -96,10 +101,16 @@ export function useWorkspaceDetection(deps: {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
-  updateRectWallThicknessBand: (id: string, band: FmlThicknessBand) => void
+  updateRectWallThicknessCm: (id: string, cm: number) => void
   /** Project/export diktes voor max-equivalent schaal. */
   getWallThicknessLimits: () => FmlWallThicknessLimits
-  setWallThicknessCm?: (band: FmlThicknessBand, cm: number) => void
+  getThicknessCatalog: () => number[]
+  getPxPerMm: () => { x: number; y: number }
+  addThicknessToCatalog?: (cm: number) => void
+  /** Vervang één catalogus-slot (stap 2 lijst) en schrijf floor-defaults. */
+  replaceCatalogThickness?: (cms: number[]) => void
+  setPendingWallThicknessCm: (cm: number | null) => void
+  getPendingWallThicknessCm: () => number | null
   /** Laatste multi-ref metingen (voor bandgrenzen). */
   wallRefThicknessMeasures: Ref<WallRefThicknessMeasure[]>
   wallThicknessBandBoundariesPx?: Ref<{ midBoundaryPx: number; maxBoundaryPx: number } | null>
@@ -183,11 +194,26 @@ export function useWorkspaceDetection(deps: {
   function setReferencePanMode() {
     deps.cancelDraw()
     deps.activeClass.value = null
+    deps.setPendingWallThicknessCm(null)
     deps.selectRect(null)
   }
 
-  function setReferenceDrawMode(type: 'wall' | 'door' | 'window') {
+  function setReferenceDrawMode(type: 'wall' | 'door' | 'window', wallThicknessCm?: number) {
     if (!REFERENCE_DRAW_TYPES.includes(type)) return
+    if (type === 'wall') {
+      if (!(wallThicknessCm != null && wallThicknessCm > 0)) return
+      if (
+        deps.activeClass.value === 'wall' &&
+        deps.getPendingWallThicknessCm() === wallThicknessCm
+      ) {
+        setReferencePanMode()
+        return
+      }
+      deps.setPendingWallThicknessCm(wallThicknessCm)
+      deps.activeClass.value = 'wall'
+      return
+    }
+    deps.setPendingWallThicknessCm(null)
     // Opnieuw klikken op de actieve knop = deactiveren (Pan-knop is weg).
     if (deps.activeClass.value === type) {
       setReferencePanMode()
@@ -200,19 +226,61 @@ export function useWorkspaceDetection(deps: {
     deps.updateRectFmlRefId(id, fmlRefId)
   }
 
-  function onWallThicknessBandChange(id: string, band: FmlThicknessBand) {
-    deps.updateRectWallThicknessBand(id, band)
+  function onWallThicknessCmChange(rectId: string, cm: number) {
+    if (!(cm > 0)) return
+    deps.updateRectWallThicknessCm(rectId, cm)
+    deps.addThicknessToCatalog?.(cm)
     deps.referenceWallThicknessPx.value = null
     deps.wallRefThicknessMeasures.value = []
     deps.onRoomPipelineReset?.()
   }
 
-  function onWallThicknessCmChange(band: FmlThicknessBand, cm: number) {
-    if (!(cm > 0)) return
-    deps.setWallThicknessCm?.(band, cm)
-    deps.referenceWallThicknessPx.value = null
-    deps.wallRefThicknessMeasures.value = []
-    deps.onRoomPipelineReset?.()
+  function onCatalogThicknessChange(oldCm: number, newCm: number) {
+    if (!(newCm > 0) || !Number.isFinite(newCm) || oldCm === newCm) return
+    const next = replaceThicknessInCatalog(deps.getThicknessCatalog(), oldCm, newCm)
+    deps.replaceCatalogThickness?.(next)
+    let remapped = false
+    for (const rect of deps.rects.value) {
+      if (rect.type !== 'wall') continue
+      if (resolveWallThicknessCm(rect) !== oldCm) continue
+      deps.updateRectWallThicknessCm(rect.id, newCm)
+      remapped = true
+    }
+    if (deps.getPendingWallThicknessCm() === oldCm) {
+      deps.setPendingWallThicknessCm(newCm)
+    }
+    if (remapped) {
+      deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
+      deps.onRoomPipelineReset?.()
+    }
+  }
+
+  function onCatalogCmsChange(cms: number[]) {
+    const next = normalizeThicknessCatalog(cms)
+    if (next.length < MIN_THICKNESS_CATALOG) return
+    const prev = new Set(normalizeThicknessCatalog(deps.getThicknessCatalog()))
+    deps.replaceCatalogThickness?.(next)
+    const nextSet = new Set(next)
+    let dropped = false
+    for (const rect of deps.rects.value) {
+      if (rect.type !== 'wall') continue
+      const cm = resolveWallThicknessCm(rect)
+      if (cm == null || nextSet.has(cm)) continue
+      deps.removeRect(rect.id)
+      deps.clearSignatureForRect(rect.id)
+      dropped = true
+    }
+    const pending = deps.getPendingWallThicknessCm()
+    if (pending != null && !nextSet.has(pending)) {
+      deps.setPendingWallThicknessCm(null)
+      if (deps.activeClass.value === 'wall') deps.activeClass.value = null
+    }
+    if (dropped || next.some((cm) => !prev.has(cm))) {
+      deps.referenceWallThicknessPx.value = null
+      deps.wallRefThicknessMeasures.value = []
+      deps.onRoomPipelineReset?.()
+    }
   }
 
   function clearTemplateTypeRects() {
@@ -279,6 +347,8 @@ export function useWorkspaceDetection(deps: {
         return null
       }
 
+      const pxPerMm = deps.getPxPerMm()
+      const catalogCms = deps.getThicknessCatalog()
       const measures: WallRefThicknessMeasure[] = []
       for (const wallRect of wallRects) {
         const thickness = measureReferenceWallThicknessPx({
@@ -292,24 +362,31 @@ export function useWorkspaceDetection(deps: {
           },
         })
         if (thickness != null && thickness > 0) {
+          let cm = resolveWallThicknessCm(wallRect)
+          if (cm == null) {
+            cm = thicknessPxToCm(thickness, pxPerMm.x, pxPerMm.y)
+            if (cm != null) {
+              deps.updateRectWallThicknessCm(wallRect.id, cm)
+              deps.addThicknessToCatalog?.(cm)
+            }
+          }
           measures.push({
-            band: resolveWallThicknessBand(wallRect),
             thicknessPx: thickness,
+            ...(cm != null ? { thicknessCm: cm } : {}),
             rectId: wallRect.id,
           })
         }
       }
 
       deps.wallRefThicknessMeasures.value = measures
-      const limits = deps.getWallThicknessLimits()
       let referencePx: number | null = null
       try {
-        const resolved = resolveReferenceWallThicknessDetail({ measures, limits })
+        const resolved = resolveReferenceWallThicknessDetail({ measures, catalogCms })
         referencePx = resolved?.referenceWallThicknessPx ?? null
         if (resolved?.usedScaledFallback) {
           status.value = tGlobal('templates.status.thicknessScaledFromBand', {
             px: Math.round(referencePx ?? 0),
-            band: resolved.sourceBand,
+            band: `${Math.round(resolved.sourceCm)}cm`,
           })
         }
       } catch (error) {
@@ -554,8 +631,9 @@ export function useWorkspaceDetection(deps: {
     setReferencePanMode,
     setReferenceDrawMode,
     onDoorFmlRefIdChange,
-    onWallThicknessBandChange,
     onWallThicknessCmChange,
+    onCatalogThicknessChange,
+    onCatalogCmsChange,
     clearTemplateTypeRects,
     measureWallReferenceThickness,
     onRectUpdate,

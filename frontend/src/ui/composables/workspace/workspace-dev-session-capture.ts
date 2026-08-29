@@ -46,7 +46,12 @@ export type WorkspaceDevSessionCaptureDeps = {
   serializePinnedRoots: () => number[]
   referenceWallThicknessPx: Ref<number | null>
   wallRefThicknessMeasures: Ref<
-    Array<{ band: 'min' | 'mid' | 'max'; thicknessPx: number; rectId?: string }>
+    Array<{
+      thicknessPx: number
+      thicknessCm?: number
+      band?: 'min' | 'mid' | 'max'
+      rectId?: string
+    }>
   >
   rects: Ref<Array<{ type: string; x: number; y: number; width: number; height: number }>>
   roomInkCoverageThreshold: Ref<number>
@@ -59,16 +64,25 @@ export function resolveReferenceWallRect(
     y: number
     width: number
     height: number
+    wallThicknessCm?: number
     wallThicknessBand?: string
   }>,
 ): DevWallReferenceRect | undefined {
   const all = resolveReferenceWallRects(rects)
   if (all.length === 0) return undefined
-  const maxTagged = [...all].reverse().find((r) => r.wallThicknessBand === 'max')
-  return maxTagged ?? all[all.length - 1]
+  let best = all[all.length - 1]
+  let bestCm = -1
+  for (const rect of all) {
+    const cm = Number(rect.wallThicknessCm)
+    if (Number.isFinite(cm) && cm > bestCm) {
+      best = rect
+      bestCm = cm
+    }
+  }
+  return best
 }
 
-/** Alle muur-LBE’s met band — tekenvolgorde behouden. */
+/** Alle muur-LBE’s — tekenvolgorde behouden. */
 export function resolveReferenceWallRects(
   rects: Array<{
     type: string
@@ -76,22 +90,22 @@ export function resolveReferenceWallRects(
     y: number
     width: number
     height: number
+    wallThicknessCm?: number
     wallThicknessBand?: string
   }>,
 ): DevWallReferenceRect[] {
   return rects
     .filter((rect) => rect.type === 'wall')
-    .map((pick) => ({
-      x: pick.x,
-      y: pick.y,
-      width: pick.width,
-      height: pick.height,
-      ...(pick.wallThicknessBand === 'min' ||
-      pick.wallThicknessBand === 'mid' ||
-      pick.wallThicknessBand === 'max'
-        ? { wallThicknessBand: pick.wallThicknessBand }
-        : {}),
-    }))
+    .map((pick) => {
+      const cm = Number(pick.wallThicknessCm)
+      return {
+        x: pick.x,
+        y: pick.y,
+        width: pick.width,
+        height: pick.height,
+        ...(Number.isFinite(cm) && cm > 0 ? { wallThicknessCm: cm } : {}),
+      }
+    })
 }
 
 export function resolveOpeningRects(
@@ -198,8 +212,10 @@ export function createWorkspaceDevSessionCapture(deps: WorkspaceDevSessionCaptur
       pinnedRoots: deps.serializePinnedRoots(),
       referenceWallThicknessPx: deps.referenceWallThicknessPx.value,
       wallRefThicknessMeasures: deps.wallRefThicknessMeasures.value.map((m) => ({
-        band: m.band,
         thicknessPx: m.thicknessPx,
+        ...(m.thicknessCm != null && m.thicknessCm > 0 ? { thicknessCm: m.thicknessCm } : {}),
+        ...(m.band === 'min' || m.band === 'mid' || m.band === 'max' ? { band: m.band } : {}),
+        ...(m.rectId ? { rectId: m.rectId } : {}),
       })),
       referenceWallRect: resolveReferenceWallRect(deps.rects.value),
       referenceWallRects: resolveReferenceWallRects(deps.rects.value),

@@ -475,9 +475,12 @@ export function bindFloorWallsToRoofs(
     working = mapFloorWalls(working, floorIndex, () => walls)
   }
 
-  // Floorplanner + aanzicht: floor.height ≥ hoogste muurtop (az/bz ongemoeid).
+  // Floorplanner: floor.height ≥ hoogste muurtop — alleen op de bovenste
+  // verdieping. Erboven stapelt het aanzicht op story-height (plaat+height);
+  // een nok/aanbouw-dak mag 1e/2e niet optillen.
   const boundFloor = working.floors[floorIndex]
-  if (boundFloor && (boundJunctions > 0 || splits > 0)) {
+  const hasFloorAbove = working.floors[floorIndex + 1] != null
+  if (boundFloor && !hasFloorAbove && (boundJunctions > 0 || splits > 0)) {
     let maxTop = boundFloor.height
     for (const wall of boundFloor.walls) {
       for (const end of ['a', 'b'] as const) {

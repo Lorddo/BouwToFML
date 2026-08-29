@@ -1,53 +1,17 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
-import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
-import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
-import { parseFmlHex } from '@/core/fml/roomtype-catalog'
-import type { FloorItem, FloorLineType, FloorPlan, Point2D, Wall } from '@/core/fml/types'
-import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
-import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
+import type { FloorPlan, Point2D } from '@/core/fml/types'
+import { isRidgeWallId } from '@/core/fml/ridge-walls'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
-import { listDakSnapWalls } from '@/core/fml/ridge-floor'
-import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/fml/bind-walls-to-roofs'
-import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
-import {
-  JUNCTION_POINT_SNAP_CM,
-  ROOM_DRAW_SNAP_CM,
-  snapDrawWallEndpoint,
-  snapPointToJunctions,
-  snapPointToWallCenters,
-  snapRoomDrawEndPoint,
-  snapToNearbyEndpointAxes,
-  snapToNearbyPointAxes,
-  snapToPolygonGeometry,
-  closedRingSegments,
-  openPolylineSegments,
-} from '@/ui/components/fml-preview-junctions'
-import {
-  isAllowedDakDrawPoint,
-  resolveDakSurfacePoint,
-  resolveRidgeDrawPoint,
-} from '@/ui/components/fml-preview-dak-draw-snap'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import type { FmlInspectHit } from './fml-inspect'
 import { createFmlPreviewEditorKeyHandlers } from './fml-preview-editor-keyboard'
 import type { HitTestApi } from './fml-preview-hit-test-api'
-import { useFmlPreviewAddOpening } from './useFmlPreviewAddOpening'
 import { useFmlPreviewInspect } from './useFmlPreviewInspect'
-import { useFmlPreviewDrawWall } from './useFmlPreviewDrawWall'
-import { useFmlPreviewDrawRoom } from './useFmlPreviewDrawRoom'
-import { useFmlPreviewDrawSurface } from './useFmlPreviewDrawSurface'
-import { useFmlPreviewDrawLabel } from './useFmlPreviewDrawLabel'
-import { useFmlPreviewDrawLine } from './useFmlPreviewDrawLine'
-import { useFmlPreviewAreaSelection } from './useFmlPreviewAreaSelection'
-import { useFmlPreviewSurfaceEdit } from './useFmlPreviewSurfaceEdit'
-import { useFmlPreviewMeasure, type MeasureDrawMode } from './useFmlPreviewMeasure'
+import { useFmlPreviewAreaLabelDrag } from './useFmlPreviewAreaLabelDrag'
+import type { MeasureDrawMode } from './useFmlPreviewMeasure'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import { useFmlPreviewNulpunt } from './useFmlPreviewNulpunt'
-import { useFmlPreviewUnderlayMove } from './useFmlPreviewUnderlayMove'
 import { useFmlPreviewOpeningDrag } from './useFmlPreviewOpeningDrag'
-import { useFmlPreviewOpeningSelection } from './useFmlPreviewOpeningSelection'
 import { buildOpeningMoveMeasureLines } from './fml-preview-opening-move-measure'
 import {
   buildWallsInternalMeasureLines,
@@ -63,13 +27,10 @@ import { useFmlPreviewDimensionDrag } from './useFmlPreviewDimensionDrag'
 import { useFmlPreviewWallMove } from './useFmlPreviewWallMove'
 import { useFmlPreviewJunctionMove } from './useFmlPreviewJunctionMove'
 import { useFmlPreviewOpeningMove } from './useFmlPreviewOpeningMove'
-import { useFmlPreviewWallSelection } from './useFmlPreviewWallSelection'
 import { useFmlPreviewItemDrag } from './useFmlPreviewItemDrag'
 import { useFmlPreviewItemResize } from './useFmlPreviewItemResize'
-import { useFmlPreviewAddFixture } from './useFmlPreviewAddFixture'
-import type { FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
+import { useFmlPreviewItemRotate } from './useFmlPreviewItemRotate'
 import { createFmlPreviewDraftCommitScheduler } from './fml-preview-draft-commit'
-import { clampLabelFontSize, lineStrokeColor } from './fml-preview-render-annotations'
 
 export type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 export { createFmlPreviewSelection } from './fml-preview-selection'
@@ -77,6 +38,8 @@ import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 import type { ContentLayout } from './useFmlPreviewViewport'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import { useFmlPreviewToolCoordinator } from './useFmlPreviewToolCoordinator'
+import { useFmlPreviewSelectionCoordinator } from './useFmlPreviewSelectionCoordinator'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
 
@@ -110,39 +73,26 @@ export function useFmlPreviewInteraction(options: {
   bovenlichtHeightCm?: Ref<number>
   bovenlichtGapCm?: Ref<number>
   bovenlichtPacked?: Ref<boolean>
-  /** Huidige underlay-layout (voor nulpunt + undo). */
   getUnderlayLayout?: () => UnderlayOriginLayout | null
   setFmlNulpuntImageCm?: (point: Point2D | null) => void
-  /** Extern: onderlegger-verplaats-modus (sidebar toggle). */
   underlayMoveMode?: Ref<boolean>
-  /** Area/surface Ctrl+klik + draw_surface (product-gate). Ontbreekt/false = uit. */
   areaSurfaceEditEnabled?: Ref<boolean>
-  /** Labels/lijnen plaatsen (losse viewer). Default uit. */
   annotationEditEnabled?: Ref<boolean>
-  /** Kamer-/FML-labels zichtbaar. Default true. */
   labelsVisible?: Ref<boolean>
-  /** Read-only inspect (losse viewer). Default uit. */
   inspectMode?: Ref<boolean>
-  /** Touch-editor host (`/FML-editor`). Default uit. */
   touchEditor?: Ref<boolean>
-  /** Coarse pointer: Move-rail i.p.v. muis two-step. Default uit. */
   touchNav?: Ref<boolean>
-  /** `(pointer: coarse)` — muur/kamer alleen via accept plaatsen. */
   coarsePointer?: Ref<boolean>
-  /** Dak-tab: geen plattegrond-muren selecteren. */
   dakMode?: Ref<boolean>
-  /** Meet-tool subtype: tape / manual / slicer. */
   measureDrawMode?: Ref<MeasureDrawMode>
-  /** Slicer: bewerk bestaande M/P i.p.v. nieuwe plaatsen. */
   slicerEditMode?: Ref<boolean>
-  /** Vis-dropdown exclusief; commit schakelt mee. */
   dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
-  /** Geselecteerde slicer-index (−1 = geen liniaal). */
   selectedSliceIndex?: Ref<number>
   onInspectSelect?: (hit: FmlInspectHit | null) => void
   getInputUnit?: () => ScaleInputUnit
   onKeyDown: (event: KeyboardEvent) => void
   onKeyUp: (event: KeyboardEvent) => void
+  thicknessPresetCms?: Ref<number[] | undefined>
 }) {
   const {
     viewport,
@@ -181,82 +131,7 @@ export function useFmlPreviewInteraction(options: {
   const touchEditor = computed(() => touchEditorProp?.value === true)
   const touchNav = computed(() => touchNavProp?.value === true)
   const coarsePointer = computed(() => coarsePointerProp?.value === true)
-  const settingsMod = ref(false)
-  const axisLockMod = ref(false)
-  const moveMod = ref(false)
-  const axisLocked = computed(() => shiftPressed.value || axisLockMod.value)
-  const pendingFixture = ref<FixturePlaceOption | null>(null)
 
-  const {
-    settingsWallIds,
-    moveWallId,
-    settingsOpeningIds,
-    moveOpeningId,
-    hoveredWallId,
-    hoveredOpeningId,
-    hoveredJunctionId,
-    addDoorSubtype,
-    addDoorWidthCm,
-    addDoorHeightCm,
-    addDoorSillZCm,
-    addWindowSubtype,
-    addWindowWidthCm,
-    addWindowSillZCm,
-    addWindowHeightCm,
-    activeFmlTool,
-    drawWallKind,
-  } = selection
-  const ridgeZCm = ref<number | undefined>(undefined)
-  const drawWallMode = computed(() => activeFmlTool.value === 'draw_wall')
-  const drawRoomMode = computed(() => activeFmlTool.value === 'draw_room')
-  const drawSurfaceMode = computed(
-    () => areaSurfaceEditEnabled.value && activeFmlTool.value === 'draw_surface',
-  )
-  const drawLabelMode = computed(
-    () => annotationEditEnabled.value && activeFmlTool.value === 'draw_label',
-  )
-  const drawLineMode = computed(
-    () => annotationEditEnabled.value && activeFmlTool.value === 'draw_line',
-  )
-  const addDoorMode = computed(() => activeFmlTool.value === 'add_door')
-  const addWindowMode = computed(() => activeFmlTool.value === 'add_window')
-  const addFixtureMode = computed(() => touchEditor.value && activeFmlTool.value === 'add_fixture')
-  const measureMode = computed(() => activeFmlTool.value === 'measure')
-  const nulpuntMode = computed(() => activeFmlTool.value === 'nulpunt')
-
-  watch(
-    areaSurfaceEditEnabled,
-    (on) => {
-      if (on) return
-      if (activeFmlTool.value === 'draw_surface') activeFmlTool.value = null
-      selection.settingsAreaId.value = null
-      selection.settingsSurfaceId.value = null
-      selection.surfaceEditId.value = null
-      selection.roofPolyMutate.value = false
-      selection.drawSurfacePoints.value = null
-    },
-    { immediate: true },
-  )
-
-  watch(
-    annotationEditEnabled,
-    (on) => {
-      if (on) return
-      if (activeFmlTool.value === 'draw_label' || activeFmlTool.value === 'draw_line') {
-        activeFmlTool.value = null
-      }
-      selection.settingsLabelId.value = null
-      selection.settingsLineId.value = null
-      selection.drawLinePoints.value = null
-    },
-    { immediate: true },
-  )
-
-  watch(labelsVisible, (on) => {
-    if (on) return
-    selection.settingsLabelId.value = null
-    selection.hoveredLabelId.value = null
-  })
   const underlayMoveModeInternal = ref(false)
   const underlayMoveMode = computed({
     get: () => underlayMoveModeProp?.value ?? underlayMoveModeInternal.value,
@@ -275,37 +150,11 @@ export function useFmlPreviewInteraction(options: {
     draftCommit.cancelAll()
   }
 
-  // Exclusive: nulpunt-tool ↔ underlay-move
-  watch(nulpuntMode, (on) => {
-    if (on && underlayMoveMode.value) underlayMoveMode.value = false
-  })
-  watch(underlayMoveMode, (on) => {
-    if (on && nulpuntMode.value) activeFmlTool.value = null
-  })
-
-  watch(addDoorSubtype, (subtype) => {
-    addDoorWidthCm.value = resolveDoorAddPreset(subtype).defaultWidthCm
-  })
-  watch(addWindowSubtype, (subtype) => {
-    addWindowWidthCm.value = resolveWindowAddPreset(subtype).defaultWidthCm
-  })
-
   const ignoreNextPlanWatch = ref(false)
   const pendingPlanSyncSkips = ref(0)
 
-  let wallHoverClearTimer: ReturnType<typeof setTimeout> | null = null
-
-  const drawMeasureCancels = {
-    cancelDrawWallDrag: () => {},
-    cancelDrawRoomDrag: () => {},
-    cancelMeasureDrag: () => {},
-    cancelNulpuntDrag: () => {},
-    cancelUnderlayMoveDrag: () => {},
-  }
-
   function syncPlanToParent(layout?: UnderlayOriginLayout | null): void {
     if (!editor.localPlan.value) return
-    // +2: parent kan edited + imported in één tick zetten; extra marge tegen dubbele watch.
     ignoreNextPlanWatch.value = true
     pendingPlanSyncSkips.value = Math.max(pendingPlanSyncSkips.value, 2)
     editor.prepareParentSync()
@@ -327,12 +176,21 @@ export function useFmlPreviewInteraction(options: {
       ...current,
       origin: layoutOrigin ? { ...layoutOrigin } : current.origin,
     }
-    // FML (0,0) ↔ imageCm = layout.origin
     setFmlNulpuntImageCm?.(nextLayout.origin)
-    // Zelfde contentLayout-refit als bij nulpunt-apply.
     viewport.refitContentLayout()
     syncPlanToParent(nextLayout)
   }
+
+  const axisLockMod = ref(false)
+  const axisLocked = computed(() => shiftPressed.value || axisLockMod.value)
+
+  // Shared refs owned here (needed by both coordinators)
+  const ridgeZCm = ref<number | undefined>(undefined)
+  const pendingFixture = ref<import('@/core/fml/fixture-refid-catalog').FixturePlaceOption | null>(
+    null,
+  )
+
+  // --- Drag/Move stack (stays in Interaction) ---
 
   const wallDrag = useFmlPreviewWallDrag({
     hitTest,
@@ -388,22 +246,158 @@ export function useFmlPreviewInteraction(options: {
     syncPlanToParent,
   })
 
-  const openingDraftSync = { run: (): void => {} }
-  const wallSelection = useFmlPreviewWallSelection({
-    editor,
+  const itemDrag = useFmlPreviewItemDrag({
     hitTest,
+    editor,
     selection,
+    spacePressed,
+    settingsMod: ref(false), // placeholder, overwritten below
     syncPlanToParent,
-    draftCommit,
-    flushPendingFieldCommits,
-    containerRef: options.containerRef,
-    cancelMoveDragPending: wallDrag.cancelMoveDragPending,
-    cancelDrawWallDrag: () => drawMeasureCancels.cancelDrawWallDrag(),
-    cancelMeasureDrag: () => drawMeasureCancels.cancelMeasureDrag(),
-    syncOpeningDraftFromSelection: () => openingDraftSync.run(),
   })
 
+  const areaLabelDrag = useFmlPreviewAreaLabelDrag({
+    hitTest,
+    editor,
+    selection,
+    spacePressed,
+    syncPlanToParent,
+  })
+
+  const dimensionDrag = useFmlPreviewDimensionDrag({
+    clientToCm: (x, y) => hitTest.clientToCm(x, y),
+    editor,
+    selection,
+    spacePressed,
+    syncPlanToParent,
+  })
+
+  // --- Selection Coordinator (created first — owns wallThicknessDraft etc.) ---
+
+  let toolCoordEnsureRidgeZDraft: () => number = () => 0
+
+  const drawCancelsDeferred = {
+    cancelDrawWallDrag: () => {},
+    cancelMeasureDrag: () => {},
+  }
+
+  const selCoord = useFmlPreviewSelectionCoordinator({
+    hitTest,
+    selection,
+    editor,
+    draftCommit,
+    syncPlanToParent,
+    flushPendingFieldCommits,
+    cancelMoveDragPending: () => wallDrag.cancelMoveDragPending(),
+    cancelOpeningDragPending: () => openingDrag.cancelOpeningDragPending(),
+    cancelItemDragPending: () => itemDrag.cancelItemDragPending(),
+    cancelDrawWallDrag: () => drawCancelsDeferred.cancelDrawWallDrag(),
+    cancelMeasureDrag: () => drawCancelsDeferred.cancelMeasureDrag(),
+    containerRef: options.containerRef,
+    axisLocked,
+    areaSurfaceEditEnabled,
+    bovenlichtDefault,
+    windowBovenlichtDefault,
+    bovenlichtHeightCm,
+    bovenlichtGapCm,
+    dakMode: options.dakMode,
+    ridgeZCm,
+    pendingFixture,
+    ensureRidgeZDraft: () => toolCoordEnsureRidgeZDraft(),
+    thicknessPresetCms: options.thicknessPresetCms,
+  })
+
+  // --- Tool Coordinator ---
+
+  const toolCoord = useFmlPreviewToolCoordinator({
+    hitTest,
+    selection,
+    editor,
+    viewport: {
+      viewScale: viewport.viewScale,
+      contentLayout: viewport.contentLayout,
+      nudgeContentLayout: viewport.nudgeContentLayout,
+    },
+    shiftPressed,
+    axisLocked,
+    coarsePointer,
+    touchNav,
+    touchEditor,
+    inspectMode,
+    areaSurfaceEditEnabled,
+    annotationEditEnabled,
+    labelsVisible,
+    bovenlichtDefault,
+    windowBovenlichtDefault,
+    bovenlichtHeightCm,
+    bovenlichtGapCm,
+    bovenlichtPacked,
+    dakMode: options.dakMode,
+    measureDrawMode: options.measureDrawMode,
+    slicerEditMode: options.slicerEditMode,
+    dimensionVis: options.dimensionVis,
+    selectedSliceIndex: options.selectedSliceIndex,
+    getUnderlayLayout,
+    setFmlNulpuntImageCm,
+    underlayMoveMode: underlayMoveMode,
+    getInputUnit: options.getInputUnit,
+    syncPlanToParent,
+    ignoreNextPlanWatch,
+    pendingPlanSyncSkips,
+    clearSelection: (opts?) => selCoord.clearSelection(opts),
+    cancelSelectionBoxDrag: () => selCoord.cancelSelectionBoxDrag(),
+    cancelMoveDragPending: () => wallDrag.cancelMoveDragPending(),
+    cancelOpeningDragPending: () => openingDrag.cancelOpeningDragPending(),
+    cancelItemDragPending: () => itemDrag.cancelItemDragPending(),
+    flushPendingFieldCommits,
+    wallThicknessDraft: selCoord.wallThicknessDraft,
+    wallHeightDraft: selCoord.wallHeightDraft,
+    wallBottomZDraft: selCoord.wallBottomZDraft,
+    ridgeZCm,
+    pendingFixture,
+  })
+
+  // Wire deferred bindings now that toolCoord exists
+  drawCancelsDeferred.cancelDrawWallDrag = toolCoord.drawMeasureCancels.cancelDrawWallDrag
+  drawCancelsDeferred.cancelMeasureDrag = toolCoord.drawMeasureCancels.cancelMeasureDrag
+  toolCoordEnsureRidgeZDraft = toolCoord.ensureRidgeZDraft
+
+  // Wire itemDrag.settingsMod to ToolCoordinator's settingsMod
+  ;(itemDrag as unknown as { settingsMod: Ref<boolean> }).settingsMod = toolCoord.settingsMod
+
   const {
+    settingsMod,
+    moveMod,
+    drawWallMode,
+    drawRoomMode,
+    drawSurfaceMode,
+    drawLabelMode,
+    drawLineMode,
+    addDoorMode,
+    addWindowMode,
+    addFixtureMode,
+    measureMode,
+    nulpuntMode,
+    drawWall,
+    drawRoom,
+    drawSurface,
+    drawLabel,
+    drawLine,
+    measure,
+    addOpening,
+    addFixture,
+    nulpunt,
+    underlayMove,
+    deactivateDrawTool,
+    acceptDrawDraft,
+    confirmNulpuntBake,
+    resolveSurfacePoint,
+  } = toolCoord
+
+  // Bind the resolveSurfacePoint into surfaceEdit (deferred circular dep)
+  selCoord.bindResolveSurfacePoint(resolveSurfacePoint)
+
+  const {
+    selectedFacadeGroupPanel,
     wallThicknessDraft,
     wallThicknessMixed,
     wallBalanceDraft,
@@ -462,62 +456,39 @@ export function useFmlPreviewInteraction(options: {
     toggleSelectionBoxMode,
     cancelSelectionBoxDrag,
     beginSelectionBoxDrag,
-  } = wallSelection
-
-  const openingSelection = useFmlPreviewOpeningSelection({
-    editor,
-    selection,
-    syncPlanToParent,
-    draftCommit,
-    flushPendingFieldCommits,
-    cancelMoveDragPending: wallDrag.cancelMoveDragPending,
-    cancelOpeningDragPending: openingDrag.cancelOpeningDragPending,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
-  })
-  openingDraftSync.run = () => openingSelection.syncOpeningDraftFromSelection()
-
-  const {
-    openingSubtypeDraft,
-    openingSubtypeMixed,
-    openingWidthDraft,
-    openingWidthMixed,
-    openingHeightDraft,
-    openingHeightMixed,
-    openingSillZDraft,
-    openingSillZMixed,
-    openingHingeAtStartDraft,
-    openingHingeMixed,
-    openingSwingRightDraft,
-    openingSwingMixed,
-    openingBovenlichtDraft,
-    openingBovenlichtMixed,
-    openingBovenlichtHeightDraft,
-    openingBovenlichtHeightMixed,
-    openingBovenlichtGapDraft,
-    openingBovenlichtGapMixed,
-    clearOpeningSelectionState,
     toggleSettingsOpening,
-    syncOpeningDraftFromSelection,
-    commitOpeningSubtype,
-    onOpeningWidthCm,
-    commitOpeningWidth,
-    onOpeningHeightCm,
-    commitOpeningHeight,
-    onOpeningSillZCm,
-    commitOpeningSillZ,
-    toggleOpeningHingeAtStart,
-    toggleOpeningSwingRight,
-    onOpeningBovenlichtChange,
-    onOpeningBovenlichtHeightCm,
-    commitOpeningBovenlichtHeight,
-    onOpeningBovenlichtGapCm,
-    commitOpeningBovenlichtGap,
-    copySelectedOpening,
-    deleteSelectedOpenings,
-  } = openingSelection
+    clearOpeningSelectionState,
+    areaSelection,
+    surfaceEdit,
+    toggleSettingsLabel,
+    toggleSettingsLine,
+    labelTextDraft,
+    toggleSettingsItem,
+    deleteSelectedItem,
+    deleteSelected,
+    onJunctionHover,
+    onJunctionHoverEnd,
+    applyRidgeZInput,
+    applySelectedWallKind,
+    ridgeFloorDraft,
+    ridgeFloorMixed,
+    applyRidgeFloorInput,
+    sanitizeWalls,
+    bindWallsToRoof,
+    applyStampToActiveFloor,
+    canApplyStampOnActiveFloor,
+  } = selCoord
+
+  // --- moveMod watch (depends on both coordinators) ---
+
+  watch(moveMod, (on) => {
+    if (!on && isPreciseMoveDrafting() && touchNav.value) cancelPreciseMoves()
+  })
+  watch(selection.activeFmlTool, (tool) => {
+    if (tool != null && isPreciseMoveDrafting()) cancelPreciseMoves()
+  })
+
+  // --- Inspect ---
 
   const inspect = useFmlPreviewInspect({
     hitTest,
@@ -530,54 +501,23 @@ export function useFmlPreviewInteraction(options: {
   })
   const { applyInspectPick, updateInspectHover, clearInspectSelect } = inspect
 
-  if (bovenlichtDefault) {
-    watch(bovenlichtDefault, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
-  if (windowBovenlichtDefault) {
-    watch(windowBovenlichtDefault, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
-  if (bovenlichtHeightCm) {
-    watch(bovenlichtHeightCm, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
-  if (bovenlichtGapCm) {
-    watch(bovenlichtGapCm, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
+  // --- Computed measure lines ---
 
   const { draggingJunction, draggingWall } = wallDrag
-  const dimensionDrag = useFmlPreviewDimensionDrag({
-    clientToCm: (x, y) => hitTest.clientToCm(x, y),
-    editor,
-    selection,
-    spacePressed,
-    syncPlanToParent,
-  })
   const { draggingDimension } = dimensionDrag
   const { draggingOpening } = openingDrag
 
-  /** Restmaten a→opening en opening→b tijdens verplaatsen / move-target. */
   const openingMoveMeasureLines = computed(() => {
-    if (!moveOpeningId.value && !draggingOpening.value) return []
-    const openingId = moveOpeningId.value ?? settingsOpeningIds.value[0] ?? null
+    if (!selection.moveOpeningId.value && !draggingOpening.value) return []
+    const openingId = selection.moveOpeningId.value ?? selection.settingsOpeningIds.value[0] ?? null
     if (!openingId) return []
     const located = editor.resolveOpening(openingId)
     if (!located) return []
     return buildOpeningMoveMeasureLines(located.wall, located.opening, editor.walls.value)
   })
 
-  /**
-   * Zelfde binnenmaten bij knoop- of segment-move: restmaten rond openingen,
-   * of de volle binnenlengte als de muur geen opening heeft.
-   */
   const wallInternalMeasureLines = computed(() => {
-    if (moveOpeningId.value || draggingOpening.value) return []
+    if (selection.moveOpeningId.value || draggingOpening.value) return []
     const walls = editor.selectableWalls.value
     const junctions = editor.junctions.value
     const ids = new Set<string>()
@@ -590,7 +530,7 @@ export function useFmlPreviewInteraction(options: {
     }
 
     if (draggingWall.value || wallMove.isDrafting()) {
-      const wallId = moveWallId.value
+      const wallId = selection.moveWallId.value
       if (wallId) {
         for (const id of wallIdsForSegmentMove(wallId, junctions)) ids.add(id)
       }
@@ -600,656 +540,37 @@ export function useFmlPreviewInteraction(options: {
     return buildWallsInternalMeasureLines([...ids], walls)
   })
 
-  function ridgeDrawSnapWalls(): ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> {
-    const plan = editor.localPlan.value
-    if (options.dakMode?.value === true && plan) {
-      return listDakSnapWalls(plan, editor.floorIndex.value)
-    }
-    return editor.walls.value
+  // --- Item resize/rotate ---
+
+  const selectedHandleItemId = computed(
+    () => selection.settingsItemId.value ?? selection.moveItemId.value,
+  )
+  const screenPxToCm = (px: number): number => {
+    const layout = viewport.contentLayout.value
+    if (!layout) return 10
+    return px / layout.scale / viewport.viewScale.value
   }
 
-  function resolveDrawPoint(cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean): Point2D {
-    if (drawWallKind.value === 'ridge') {
-      return resolveRidgeDrawPoint(cm, {
-        plan: editor.localPlan.value,
-        floorIndex: editor.floorIndex.value,
-        walls: ridgeDrawSnapWalls(),
-        axisAnchor,
-        lockAxis: axisLocked.value,
-        snapDisabled,
-      })
-    }
-    const junction = hitTest.hitTestJunctionAtCm(cm)
-    let point = junction ? { x: junction.cmX, y: junction.cmY } : cm
-    if (!junction) {
-      point = snapToNearbyEndpointAxes(editor.walls.value, [], point)
-      point = snapPointToJunctions(editor.junctions.value, point, JUNCTION_POINT_SNAP_CM)
-      point = snapPointToWallCenters(editor.walls.value, point, JUNCTION_POINT_SNAP_CM)
-    }
-    if (axisAnchor) {
-      point = snapDrawWallEndpoint(axisAnchor, point, axisLocked.value)
-    }
-    return point
-  }
-
-  /**
-   * Kamer-start: junction-hit zodat je makkelijk op een knoop bindt.
-   * Eindhoek: 8 cm H/V op andere knopen — geen 15 cm as-magnet (schachten).
-   */
-  function resolveRoomStartPoint(cm: Point2D): Point2D {
-    const junction = hitTest.hitTestJunctionAtCm(cm)
-    if (junction) return { x: junction.cmX, y: junction.cmY }
-    return snapPointToJunctions(editor.junctions.value, cm, ROOM_DRAW_SNAP_CM)
-  }
-
-  function resolveRoomEndPoint(cm: Point2D, start: Point2D): Point2D {
-    return snapRoomDrawEndPoint(editor.junctions.value, editor.walls.value, cm, start)
-  }
-
-  function resolveSurfacePoint(
-    cm: Point2D,
-    snapDisabled: boolean,
-    extraAxisPoints?: Point2D[],
-    excludeSurfaceId?: string | null,
-  ): Point2D {
-    if (snapDisabled) return cm
-    if (options.dakMode?.value === true && editor.localPlan.value) {
-      const extra = extraAxisPoints ?? []
-      if (extra.length === 0) {
-        const junction = hitTest.hitTestJunctionAtCm(cm)
-        const onRidge =
-          junction?.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId)) === true
-        if (junction && onRidge) {
-          return resolveDakSurfacePoint(
-            { x: junction.cmX, y: junction.cmY },
-            {
-              plan: editor.localPlan.value,
-              floorIndex: editor.floorIndex.value,
-              extraAxisPoints: extra,
-              lockAxis: axisLocked.value,
-              excludeSurfaceId,
-            },
-          )
-        }
-      }
-      return resolveDakSurfacePoint(cm, {
-        plan: editor.localPlan.value,
-        floorIndex: editor.floorIndex.value,
-        extraAxisPoints: extra,
-        axisAnchor: extra.length > 0 ? extra[extra.length - 1] : undefined,
-        lockAxis: axisLocked.value,
-        excludeSurfaceId,
-      })
-    }
-    const junction = hitTest.hitTestJunctionAtCm(cm)
-    if (junction) return { x: junction.cmX, y: junction.cmY }
-
-    const extra = extraAxisPoints ?? []
-    const rings: Point2D[][] = []
-    for (const surface of editor.surfaces.value) {
-      if (excludeSurfaceId && surface.id === excludeSurfaceId) continue
-      if (surface.poly && surface.poly.length >= 2) {
-        rings.push(surface.poly.map((p) => ({ x: p.x, y: p.y })))
-      }
-    }
-    for (const area of editor.areas.value) {
-      if (area.poly && area.poly.length >= 2) rings.push(area.poly)
-    }
-    const ringVerts = rings.flat()
-    const segments = [
-      ...rings.flatMap((ring) => closedRingSegments(ring)),
-      ...openPolylineSegments(extra),
-    ]
-    const polySnap = snapToPolygonGeometry(
-      cm,
-      [...ringVerts, ...extra],
-      segments,
-      JUNCTION_POINT_SNAP_CM,
-    )
-    if (polySnap) return polySnap
-
-    const wallPoints = editor.walls.value.flatMap((wall) => [wall.a, wall.b])
-    const axis = snapToNearbyPointAxes([...wallPoints, ...ringVerts, ...extra], cm)
-    const junctionSnap = snapPointToJunctions(editor.junctions.value, axis, JUNCTION_POINT_SNAP_CM)
-    return snapPointToWallCenters(editor.walls.value, junctionSnap, JUNCTION_POINT_SNAP_CM)
-  }
-
-  const drawWall = useFmlPreviewDrawWall({
-    hitTest,
+  const itemResize = useFmlPreviewItemResize({
     editor,
-    hoveredJunctionId,
-    wallThicknessDraft,
-    wallHeightDraft,
-    wallBottomZDraft,
-    drawKind: drawWallKind,
-    ridgeZCm,
-    requireFloorIndex: () =>
-      options.dakMode?.value === true ? editor.floorIndex.value : undefined,
-    resolvePoint: resolveDrawPoint,
-    handleTolCm: () => {
-      const layout = viewport.contentLayout.value
-      if (!layout) return 16
-      const px = coarsePointer.value || touchNav.value ? 28 : 18
-      return px / layout.scale / viewport.viewScale.value
-    },
-    placeOnSecondClick: () => !coarsePointer.value && !touchNav.value,
-    getWalls: () => editor.walls.value,
-    getInputUnit: () => options.getInputUnit?.() ?? 'm',
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      clearSelection()
-    },
-    syncPlanToParent,
-    onPlaced: () => {
-      activeFmlTool.value = null
-    },
-  })
-
-  const drawRoom = useFmlPreviewDrawRoom({
-    hitTest,
-    editor,
-    hoveredJunctionId,
-    wallThicknessDraft,
-    wallHeightDraft,
-    wallBottomZDraft,
-    shiftPressed: axisLocked,
-    resolveStartPoint: resolveRoomStartPoint,
-    resolveEndPoint: resolveRoomEndPoint,
-    handleTolCm: () => {
-      const layout = viewport.contentLayout.value
-      if (!layout) return 16
-      const px = coarsePointer.value || touchNav.value ? 28 : 18
-      return px / layout.scale / viewport.viewScale.value
-    },
-    placeOnSecondClick: () => !coarsePointer.value && !touchNav.value,
-    getWalls: () => editor.walls.value,
-    getInputUnit: () => options.getInputUnit?.() ?? 'm',
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      openingDrag.cancelOpeningDragPending()
-      clearSelection()
-    },
-    syncPlanToParent,
-    onPlaced: () => {
-      activeFmlTool.value = null
-    },
-  })
-
-  const drawSurface = useFmlPreviewDrawSurface({
-    selection,
-    editor,
-    hitTest,
-    hoveredJunctionId,
-    shiftPressed: axisLocked,
-    resolvePoint: resolveSurfacePoint,
-    acceptPoint: (point) => {
-      if (options.dakMode?.value !== true || !editor.localPlan.value) return true
-      return isAllowedDakDrawPoint(editor.localPlan.value, editor.floorIndex.value, point)
-    },
-    isDak: () => options.dakMode?.value === true,
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      openingDrag.cancelOpeningDragPending()
-      clearSelection()
-    },
+    selectedItemId: selectedHandleItemId,
+    settingsItemId: selection.settingsItemId,
+    clientToCm: (x, y) => hitTest.clientToCm(x, y),
+    screenPxToCm,
     syncPlanToParent,
   })
 
-  const drawLabel = useFmlPreviewDrawLabel({
-    selection,
+  const itemRotate = useFmlPreviewItemRotate({
     editor,
-    hitTest,
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      openingDrag.cancelOpeningDragPending()
-      clearSelection()
-    },
-    syncPlanToParent,
-  })
-
-  const drawLine = useFmlPreviewDrawLine({
-    selection,
-    editor,
-    hitTest,
-    shiftPressed: axisLocked,
-    resolvePoint: resolveSurfacePoint,
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      openingDrag.cancelOpeningDragPending()
-      clearSelection()
-    },
-    syncPlanToParent,
-  })
-
-  function toggleSettingsLabel(labelId: string): void {
-    flushPendingFieldCommits()
-    wallDrag.cancelMoveDragPending()
-    openingDrag.cancelOpeningDragPending()
-    moveWallId.value = null
-    settingsWallIds.value = []
-    selection.pinnedJunctionId.value = null
-    moveOpeningId.value = null
-    settingsOpeningIds.value = []
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
-    selection.settingsLineId.value = null
-    selection.settingsItemId.value = null
-    selection.moveItemId.value = null
-    selection.settingsLabelId.value = selection.settingsLabelId.value === labelId ? null : labelId
-    syncLabelTextDraftFromSelection()
-  }
-
-  function toggleSettingsLine(lineId: string): void {
-    flushPendingFieldCommits()
-    wallDrag.cancelMoveDragPending()
-    openingDrag.cancelOpeningDragPending()
-    moveWallId.value = null
-    settingsWallIds.value = []
-    selection.pinnedJunctionId.value = null
-    moveOpeningId.value = null
-    settingsOpeningIds.value = []
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
-    selection.settingsLabelId.value = null
-    selection.settingsItemId.value = null
-    selection.moveItemId.value = null
-    selection.settingsLineId.value = selection.settingsLineId.value === lineId ? null : lineId
-  }
-
-  const FIELD_LABEL_TEXT = 'label-text'
-  const labelTextDraft = ref('')
-
-  function syncLabelTextDraftFromSelection(): void {
-    const id = selection.settingsLabelId.value
-    if (!id) {
-      labelTextDraft.value = ''
-      return
-    }
-    const label = editor.labels.value.find((item) => item.id === id)
-    labelTextDraft.value = label?.text ?? ''
-  }
-
-  function applyLabelTextToId(labelId: string | null, text: string): { mutated: boolean } {
-    labelTextDraft.value = text
-    if (!labelId) return { mutated: false }
-    const label = editor.labels.value.find((item) => item.id === labelId)
-    if (!label || label.text === text) return { mutated: false }
-    draftCommit.beginUndoGroup(FIELD_LABEL_TEXT, () => editor.pushUndo())
-    editor.updateLabel(labelId, { text })
-    syncPlanToParent()
-    return { mutated: true }
-  }
-
-  function onLabelTextInput(text: string): void {
-    labelTextDraft.value = text
-    const labelId = selection.settingsLabelId.value
-    draftCommit.schedule(FIELD_LABEL_TEXT, () => applyLabelTextToId(labelId, text))
-  }
-
-  function commitLabelText(): void {
-    const labelId = selection.settingsLabelId.value
-    const text = labelTextDraft.value
-    draftCommit.schedule(FIELD_LABEL_TEXT, () => applyLabelTextToId(labelId, text))
-    draftCommit.flush(FIELD_LABEL_TEXT)
-  }
-
-  function updateSelectedLabelText(text: string): void {
-    labelTextDraft.value = text
-    commitLabelText()
-  }
-
-  function patchSelectedLabel(patch: {
-    fontSize?: number
-    fontColor?: string
-    outline?: boolean
-    bold?: boolean
-    italic?: boolean
-  }): void {
-    const labelId = selection.settingsLabelId.value
-    if (!labelId) return
-    const label = editor.labels.value.find((item) => item.id === labelId)
-    if (!label) return
-    const nextSize = patch.fontSize != null ? clampLabelFontSize(patch.fontSize) : label.fontSize
-    const nextColor = patch.fontColor ?? label.fontColor
-    const nextOutline = patch.outline ?? label.outline === true
-    const nextBold = patch.bold ?? label.bold === true
-    const nextItalic = patch.italic ?? label.italic === true
-    if (
-      label.fontSize === nextSize &&
-      label.fontColor === nextColor &&
-      (label.outline === true) === nextOutline &&
-      (label.bold === true) === nextBold &&
-      (label.italic === true) === nextItalic
-    ) {
-      return
-    }
-    flushPendingFieldCommits()
-    editor.pushUndo()
-    editor.updateLabel(labelId, {
-      fontSize: nextSize,
-      fontColor: nextColor,
-      outline: nextOutline || undefined,
-      bold: nextBold || undefined,
-      italic: nextItalic || undefined,
-    })
-    syncPlanToParent()
-  }
-
-  function updateSelectedLabelFontSize(fontSize: number): void {
-    patchSelectedLabel({ fontSize })
-  }
-
-  function updateSelectedLabelFontColor(color: string): void {
-    const hex = parseFmlHex(color)
-    if (!hex) return
-    patchSelectedLabel({ fontColor: hex })
-  }
-
-  function updateSelectedLabelOutline(outline: boolean): void {
-    patchSelectedLabel({ outline })
-  }
-
-  function updateSelectedLabelBold(bold: boolean): void {
-    patchSelectedLabel({ bold })
-  }
-
-  function updateSelectedLabelItalic(italic: boolean): void {
-    patchSelectedLabel({ italic })
-  }
-
-  function deleteSelectedAnnotation(): void {
-    flushPendingFieldCommits()
-    if (selection.settingsLabelId.value) {
-      editor.pushUndo()
-      editor.removeLabel(selection.settingsLabelId.value)
-      selection.settingsLabelId.value = null
-      labelTextDraft.value = ''
-      syncPlanToParent()
-      return
-    }
-    if (selection.settingsLineId.value) {
-      editor.pushUndo()
-      editor.removeLine(selection.settingsLineId.value)
-      selection.settingsLineId.value = null
-      syncPlanToParent()
-    }
-  }
-
-  function patchSelectedLine(patch: {
-    type?: FloorLineType
-    color?: string
-    thickness?: number
-  }): void {
-    const lineId = selection.settingsLineId.value
-    if (!lineId) return
-    const line = editor.lines.value.find((item) => item.id === lineId)
-    if (!line) return
-    const nextType = patch.type ?? line.type
-    const nextColor = patch.color ?? lineStrokeColor(line.color)
-    const nextThickness =
-      patch.thickness != null ? Math.max(1, Math.round(patch.thickness)) : line.thickness
-    if (
-      line.type === nextType &&
-      lineStrokeColor(line.color) === nextColor &&
-      line.thickness === nextThickness
-    ) {
-      return
-    }
-    flushPendingFieldCommits()
-    editor.pushUndo()
-    editor.updateLine(lineId, {
-      type: nextType,
-      color: nextColor,
-      thickness: nextThickness,
-    })
-    syncPlanToParent()
-  }
-
-  function updateSelectedLineType(type: FloorLineType): void {
-    patchSelectedLine({ type })
-  }
-
-  function updateSelectedLineColor(color: string): void {
-    const hex = parseFmlHex(color)
-    if (!hex) return
-    patchSelectedLine({ color: hex })
-  }
-
-  function updateSelectedLineThickness(thickness: number): void {
-    patchSelectedLine({ thickness })
-  }
-
-  const areaSelection = useFmlPreviewAreaSelection({
-    selection,
-    editor,
-    syncPlanToParent,
-    draftCommit,
-    flushPendingFieldCommits,
-    cancelMoveDragPending: () => wallDrag.cancelMoveDragPending(),
-    cancelOpeningDragPending: () => openingDrag.cancelOpeningDragPending(),
-  })
-
-  const surfaceEdit = useFmlPreviewSurfaceEdit({
-    selection,
-    editor,
-    hitTest,
-    resolvePoint: resolveSurfacePoint,
-    axisLocked,
-    syncPlanToParent,
-  })
-
-  const measure = useFmlPreviewMeasure({
-    hitTest,
-    hoveredJunctionId,
-    getWalls: () => editor.walls.value,
-    shiftPressed: axisLocked,
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      clearSelection()
-      // Slicer-tool: bestaande linialen blijven zichtbaar (niet deselecteren bij nieuwe sleep).
-      if (options.measureDrawMode?.value !== 'slicer' && options.selectedSliceIndex) {
-        options.selectedSliceIndex.value = -1
-      }
-    },
-    getMode: () => options.measureDrawMode?.value ?? 'tape',
-    canPersist: () => !inspectMode.value,
-    getSlicerSlices: () => editor.btfSlices.value,
-    getSlicerOffsetSnapCm: () => loadUserSettings().fmlViewer.slicerOffsetSnapCm,
-    onCommitManual: (a, b) => {
-      editor.pushUndo()
-      editor.addDimension({ type: 'custom_dimension', a, b })
-      syncPlanToParent()
-      if (options.dimensionVis) options.dimensionVis.value = 'manual'
-    },
-    onCommitSlicer: (p, m) => {
-      editor.pushUndo()
-      const idx = editor.addBtfSlice({ m, p })
-      syncPlanToParent()
-      if (options.dimensionVis) options.dimensionVis.value = 'slicer'
-      // Place-modus: geen selectie (anders lijkt het edit); edit-modus wel.
-      if (options.selectedSliceIndex) {
-        options.selectedSliceIndex.value = options.slicerEditMode?.value ? idx : -1
-      }
-    },
-  })
-
-  watch(measureMode, (on) => {
-    if (!on) measure.clearMeasureHover()
-  })
-
-  const addOpening = useFmlPreviewAddOpening({
-    editor,
-    addDoorSubtype,
-    addDoorWidthCm,
-    addDoorHeightCm,
-    addDoorSillZCm,
-    addWindowSubtype,
-    addWindowWidthCm,
-    addWindowSillZCm,
-    addWindowHeightCm,
-    bovenlichtPacked,
-    bovenlichtDefaults: computed(() => ({
-      doorDefault: bovenlichtDefault?.value === true,
-      windowDefault: windowBovenlichtDefault?.value === true,
-      heightCm: bovenlichtHeightCm?.value ?? BOVENLICHT_HEIGHT_CM,
-      gapCm: bovenlichtGapCm?.value ?? BOVENLICHT_GAP_CM,
-    })),
-    beforePlace: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      openingDrag.cancelOpeningDragPending()
-      clearSelection()
-    },
-    syncPlanToParent,
-  })
-
-  const itemDrag = useFmlPreviewItemDrag({
-    hitTest,
-    editor,
-    selection,
-    spacePressed,
+    selectedItemId: selectedHandleItemId,
+    settingsItemId: selection.settingsItemId,
+    clientToCm: (x, y) => hitTest.clientToCm(x, y),
+    screenPxToCm,
     settingsMod,
     syncPlanToParent,
   })
 
-  const itemResize = useFmlPreviewItemResize({
-    editor,
-    settingsItemId: selection.settingsItemId,
-    clientToCm: (x, y) => hitTest.clientToCm(x, y),
-    screenPxToCm: (px) => {
-      const layout = viewport.contentLayout.value
-      if (!layout) return 10
-      return px / layout.scale / viewport.viewScale.value
-    },
-    syncPlanToParent,
-  })
-
-  const addFixture = useFmlPreviewAddFixture({
-    editor,
-    pendingFixture,
-    beforePlace: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      openingDrag.cancelOpeningDragPending()
-      itemDrag.cancelItemDragPending()
-      clearSelection()
-    },
-    syncPlanToParent,
-  })
-
-  function toggleSettingsItem(guid: string): void {
-    flushPendingFieldCommits()
-    wallDrag.cancelMoveDragPending()
-    openingDrag.cancelOpeningDragPending()
-    itemDrag.cancelItemDragPending()
-    moveWallId.value = null
-    settingsWallIds.value = []
-    selection.settingsJunctionId.value = null
-    selection.pinnedJunctionId.value = null
-    moveOpeningId.value = null
-    settingsOpeningIds.value = []
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
-    selection.settingsLabelId.value = null
-    selection.settingsLineId.value = null
-    selection.moveItemId.value = null
-    selection.settingsItemId.value = selection.settingsItemId.value === guid ? null : guid
-  }
-
-  drawMeasureCancels.cancelDrawWallDrag = drawWall.cancelDrawWallDrag
-  drawMeasureCancels.cancelDrawRoomDrag = drawRoom.cancelDrawRoomDrag
-  drawMeasureCancels.cancelMeasureDrag = measure.cancelMeasureDrag
-
-  watch(drawWallMode, (on) => {
-    if (!on) drawWall.cancelDrawWallDrag()
-  })
-  watch(drawRoomMode, (on) => {
-    if (!on) drawRoom.cancelDrawRoomDrag()
-  })
-  watch(drawLineMode, (on) => {
-    if (!on) drawLine.cancelDrawLine()
-  })
-  watch(moveMod, (on) => {
-    if (!on && isPreciseMoveDrafting() && touchNav.value) cancelPreciseMoves()
-  })
-  watch(activeFmlTool, (tool) => {
-    if (tool != null && isPreciseMoveDrafting()) cancelPreciseMoves()
-  })
-
-  function deactivateDrawTool(): void {
-    drawWall.cancelDrawWallDrag()
-    drawRoom.cancelDrawRoomDrag()
-    drawSurface.cancelDrawSurface()
-    drawLine.cancelDrawLine()
-    measure.cancelMeasureDrag()
-    if (options.selectedSliceIndex) options.selectedSliceIndex.value = -1
-    activeFmlTool.value = null
-  }
-
-  function acceptDrawDraft(): boolean {
-    if (wallMove.isDrafting()) return wallMove.commitFromMeasure()
-    if (junctionMove.isDrafting()) return junctionMove.commitFromMeasure()
-    if (openingMove.isDrafting()) return openingMove.commitFromMeasure()
-    if (drawWall.isDrafting()) return drawWall.commitFromMeasure()
-    if (drawRoom.isDrafting()) return drawRoom.commitFromMeasure()
-    if (drawSurface.commitDrawSurface()) return true
-    return drawLine.commitFromHover()
-  }
-
-  const nulpunt = useFmlPreviewNulpunt({
-    hitTest,
-    editor,
-    nulpuntMode,
-    getUnderlayLayout: () => getUnderlayLayout?.() ?? null,
-    getFloorIndex: () => editor.floorIndex.value,
-    setFmlNulpuntImageCm: (point) => setFmlNulpuntImageCm?.(point),
-    markParentPlanSync: () => {
-      ignoreNextPlanWatch.value = true
-      pendingPlanSyncSkips.value = Math.max(pendingPlanSyncSkips.value, 2)
-    },
-    nudgeContentLayout: (dx, dy) => viewport.nudgeContentLayout(dx, dy),
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      clearSelection()
-    },
-  })
-  drawMeasureCancels.cancelNulpuntDrag = nulpunt.cancelNulpuntPending
-
-  const underlayMove = useFmlPreviewUnderlayMove({
-    hitTest,
-    underlayMoveMode,
-    getUnderlayLayout: () => getUnderlayLayout?.() ?? null,
-    setFmlNulpuntImageCm: (point) => setFmlNulpuntImageCm?.(point),
-    syncLayoutToParent: (layout) => syncPlanToParent(layout),
-    beforeBegin: () => {
-      cancelSelectionBoxDrag()
-      wallDrag.cancelMoveDragPending()
-      clearSelection()
-    },
-  })
-  drawMeasureCancels.cancelUnderlayMoveDrag = underlayMove.cancelUnderlayMoveDrag
-
-  function confirmNulpuntBake(): boolean {
-    const applied = nulpunt.confirmNulpuntBake()
-    if (!applied) return false
-    // Alleen actieve preview → parent; andere project-floors zitten in eigen blobs.
-    syncPlanToParent(applied.layout)
-    return true
-  }
-
-  function undoEdit(): void {
-    if (editor.undo()) {
-      syncPlanToParentAfterUndo()
-      syncWallThicknessDraftFromSelection()
-    }
-  }
+  // --- PanZoom ---
 
   const panZoom = useFmlPreviewPanZoom({
     viewport,
@@ -1258,12 +579,23 @@ export function useFmlPreviewInteraction(options: {
     onBeforePan: wallDrag.cancelMoveDragPending,
   })
 
+  // --- undoEdit ---
+
+  function undoEdit(): void {
+    if (editor.undo()) {
+      syncPlanToParentAfterUndo()
+      syncWallThicknessDraftFromSelection()
+    }
+  }
+
+  // --- Inspect-mode watch ---
+
   watch(inspectMode, (on) => {
     if (!on) return
-    activeFmlTool.value = null
+    selection.activeFmlTool.value = null
     underlayMoveMode.value = false
-    moveWallId.value = null
-    moveOpeningId.value = null
+    selection.moveWallId.value = null
+    selection.moveOpeningId.value = null
     selection.moveDimensionId.value = null
     selection.hoveredDimensionId.value = null
     selection.pinnedJunctionId.value = null
@@ -1284,6 +616,8 @@ export function useFmlPreviewInteraction(options: {
     nulpunt.cancelNulpuntPending()
     underlayMove.cancelUnderlayMoveDrag()
   })
+
+  // --- Pointer ---
 
   const { canvasCursor, onWrapPointerDown, onWrapPointerMove, onWrapDblClick, cancelPendingMove } =
     useFmlPreviewPointer({
@@ -1329,6 +663,7 @@ export function useFmlPreviewInteraction(options: {
         draggingOpening,
         draggingItem: itemDrag.draggingItem,
         draggingItemResize: itemResize.draggingItemResize,
+        draggingItemRotate: itemRotate.draggingItemRotate,
         isWallMoveDrafting: () => wallMove.isDrafting(),
         isJunctionMoveDrafting: () => junctionMove.isDrafting(),
         isOpeningMoveDrafting: () => openingMove.isDrafting(),
@@ -1337,6 +672,7 @@ export function useFmlPreviewInteraction(options: {
         isUnderlayMoveDragging: () => underlayMove.isDragging(),
         isPanDragging,
         draggingDimension,
+        draggingAreaLabel: areaLabelDrag.draggingAreaLabel,
       },
       actions: {
         beginPanDrag: panZoom.beginPanDrag,
@@ -1389,7 +725,10 @@ export function useFmlPreviewInteraction(options: {
         beginSelectionBoxDrag,
         toggleSettingsOpening,
         toggleSettingsArea: areaSelection.toggleSettingsArea,
+        selectSettingsArea: areaSelection.selectSettingsArea,
         toggleSettingsSurface: areaSelection.toggleSettingsSurface,
+        beginAreaLabelDrag: areaLabelDrag.beginAreaLabelDrag,
+        startAreaLabelDragPending: areaLabelDrag.startAreaLabelDragPending,
         selectRoofSurface: areaSelection.selectRoofSurface,
         toggleSettingsLabel,
         toggleSettingsLine,
@@ -1424,6 +763,8 @@ export function useFmlPreviewInteraction(options: {
         cancelItemDragPending: itemDrag.cancelItemDragPending,
         hitItemResizeHandle: (cm) => itemResize.hitHandleAtCm(cm),
         beginItemResize: itemResize.beginItemResize,
+        hitItemRotateHandle: (cm) => itemRotate.hitRotateHandleAtCm(cm),
+        beginItemRotate: itemRotate.beginItemRotate,
         startDimensionDragPending: dimensionDrag.startPending,
         beginDimensionDrag: dimensionDrag.beginDrag,
       },
@@ -1432,53 +773,7 @@ export function useFmlPreviewInteraction(options: {
       emit: (event, payload) => emit(event, payload),
     })
 
-  function onJunctionHover(junctionId: string): void {
-    if (wallHoverClearTimer) {
-      clearTimeout(wallHoverClearTimer)
-      wallHoverClearTimer = null
-    }
-    hoveredJunctionId.value = junctionId
-    const junction = editor.junctions.value.find((item) => item.id === junctionId)
-    const wallId = junction?.refs[0]?.wallId
-    if (wallId) hoveredWallId.value = wallId
-  }
-
-  function onJunctionHoverEnd(): void {
-    hoveredJunctionId.value = null
-  }
-
-  function deleteSelectedItem(): void {
-    const ids = new Set<string>()
-    if (selection.settingsItemId.value) ids.add(selection.settingsItemId.value)
-    if (selection.moveItemId.value) ids.add(selection.moveItemId.value)
-    if (ids.size === 0) return
-    editor.pushUndo()
-    for (const guid of ids) editor.removeItem(guid)
-    selection.settingsItemId.value = null
-    selection.moveItemId.value = null
-    syncPlanToParent()
-  }
-
-  function deleteSelected(): void {
-    if (selection.settingsOpeningIds.value.length > 0 || selection.moveOpeningId.value != null) {
-      deleteSelectedOpenings()
-      return
-    }
-    if (selection.settingsItemId.value != null || selection.moveItemId.value != null) {
-      deleteSelectedItem()
-      return
-    }
-    if (selection.settingsWallIds.value.length > 0 || selection.moveWallId.value != null) {
-      deleteSelectedWalls()
-      return
-    }
-    if (selection.moveDimensionId.value) {
-      editor.pushUndo()
-      editor.removeDimension(selection.moveDimensionId.value)
-      selection.moveDimensionId.value = null
-      syncPlanToParent()
-    }
-  }
+  // --- Keyboard ---
 
   const { onEditorKeyDown, onEditorKeyUp } = createFmlPreviewEditorKeyHandlers({
     selection,
@@ -1518,8 +813,9 @@ export function useFmlPreviewInteraction(options: {
     underlayMove,
   })
 
+  // --- External plan change ---
+
   function handleExternalPlanChange(): void {
-    // Round-trip na lokale edit (delete/move/draw): viewport + selectie behouden.
     if (pendingPlanSyncSkips.value > 0) {
       pendingPlanSyncSkips.value -= 1
       ignoreNextPlanWatch.value = pendingPlanSyncSkips.value > 0
@@ -1529,18 +825,16 @@ export function useFmlPreviewInteraction(options: {
       ignoreNextPlanWatch.value = false
       return
     }
-    // Echte externe plan-vervanging: pending drafts droppen (plan is weg).
     cancelPendingFieldCommits()
-    // Echte externe plan-vervanging: selectie wissen. Herfit als de nieuwe
-    // geometrie buiten de huidige world valt (import/generate/stempel) — niet
-    // bij elke lokale sync, die wordt hierboven al overgeslagen.
     clearSelection({ flush: false })
-    hoveredOpeningId.value = null
+    selection.hoveredOpeningId.value = null
     measure.clearMeasureLines()
     if (!viewport.contentLayout.value || viewport.worldOverflowsCurrentLayout()) {
       viewport.resetView()
     }
   }
+
+  // --- Mount / unmount ---
 
   function mountKeyboardListeners(): void {
     window.addEventListener('keydown', onEditorKeyDown)
@@ -1548,8 +842,7 @@ export function useFmlPreviewInteraction(options: {
   }
 
   function unmountInteraction(): void {
-    if (wallHoverClearTimer) clearTimeout(wallHoverClearTimer)
-    // Floor remount (workspace :key): flush drafts vóór dispose.
+    selCoord.cleanupHoverTimer()
     draftCommit.dispose()
     cancelPendingMove()
     cancelPreciseMoves()
@@ -1557,7 +850,9 @@ export function useFmlPreviewInteraction(options: {
     dimensionDrag.cleanup()
     openingDrag.cleanupOpeningDrag()
     itemDrag.cleanupItemDrag()
+    areaLabelDrag.cleanupAreaLabelDrag()
     itemResize.cleanupItemResize()
+    itemRotate.cleanupItemRotate()
     cancelSelectionBoxDrag()
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
@@ -1573,194 +868,10 @@ export function useFmlPreviewInteraction(options: {
     window.removeEventListener('keyup', onEditorKeyUp)
   }
 
-  function ensureRidgeZDraft(): number {
-    if (ridgeZCm.value == null) {
-      ridgeZCm.value = Math.round(editor.floorHeightCm.value)
-    }
-    return ridgeZCm.value
-  }
-
-  watch(
-    () => editor.floorHeightCm.value,
-    (height) => {
-      if (!Number.isFinite(height) || height <= 0) return
-      if (settingsWallIds.value.length > 0) return
-      wallHeightDraft.value = Math.round(height)
-    },
-    { immediate: true },
-  )
-
-  function syncRidgeZFromSelection(): void {
-    const floorH = editor.floorHeightCm.value
-    const ridgeIds = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
-    if (ridgeIds.length > 0) {
-      const zs = ridgeIds
-        .map((id) => editor.ridgeWalls.value.find((wall) => wall.id === id))
-        .filter((wall): wall is NonNullable<typeof wall> => wall != null)
-        .flatMap((wall) => [
-          Math.round(ridgeEndpointZCm(wall, 'a', floorH)),
-          Math.round(ridgeEndpointZCm(wall, 'b', floorH)),
-        ])
-      if (zs.length > 0 && zs.every((value) => value === zs[0])) {
-        ridgeZCm.value = zs[0]
-      }
-      return
-    }
-    const junctionId = selection.settingsJunctionId.value
-    if (!junctionId) {
-      if (drawWallKind.value === 'ridge') ensureRidgeZDraft()
-      return
-    }
-    const junction = editor.junctions.value.find((item) => item.id === junctionId)
-    if (
-      !junction ||
-      !junction.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId))
-    ) {
-      return
-    }
-    const zs = junction.refs
-      .map((ref) => {
-        const wall = editor.ridgeWalls.value.find((item) => item.id === ref.wallId)
-        if (!wall) return null
-        return Math.round(ridgeEndpointZCm(wall, ref.end, floorH))
-      })
-      .filter((value): value is number => value != null)
-    if (zs.length > 0 && zs.every((value) => value === zs[0])) {
-      ridgeZCm.value = zs[0]
-    }
-  }
-
-  function applyRidgeZInput(cm: number | null): void {
-    const z = cm != null && Number.isFinite(cm) ? Math.max(0, cm) : null
-    ridgeZCm.value = z ?? editor.floorHeightCm.value
-    if (z == null) return
-    const selectedRidgeIds = settingsWallIds.value.filter((id) =>
-      isRidgeWallId(editor.localPlan.value, id),
-    )
-    const floor = editor.localPlan.value?.floors[editor.floorIndex.value]
-    const ridgeIds =
-      selectedRidgeIds.length > 0
-        ? selectedRidgeIds
-        : listRidgeWallsOnFloor(floor).map((wall) => wall.id)
-    const junction = editor.junctions.value.find(
-      (item) => item.id === selection.settingsJunctionId.value,
-    )
-    const junctionIsRidge =
-      junction != null &&
-      junction.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId))
-    if (ridgeIds.length === 0 && !junctionIsRidge) return
-    flushPendingFieldCommits()
-    editor.pushUndo()
-    if (ridgeIds.length > 0) editor.applyRidgeZ(ridgeIds, z)
-    if (junctionIsRidge && junction) editor.applyRidgeJunctionZ(junction.refs, z)
-    syncPlanToParent()
-  }
-
-  function applySelectedWallKind(kind: 'wall' | 'ridge'): void {
-    drawWallKind.value = kind
-    if (kind === 'ridge') ensureRidgeZDraft()
-    const ids = settingsWallIds.value
-    if (ids.length === 0) return
-    flushPendingFieldCommits()
-    editor.pushUndo()
-    editor.applyWallKind(ids, kind, wallThicknessDraft.value, ridgeZCm.value)
-    syncWallThicknessDraftFromSelection()
-    syncRidgeZFromSelection()
-    syncPlanToParent()
-  }
-
-  watch([settingsWallIds, () => selection.settingsJunctionId.value], () => {
-    syncRidgeZFromSelection()
-  })
-  watch(drawWallMode, (on) => {
-    if (on && drawWallKind.value === 'ridge') ensureRidgeZDraft()
-  })
-
-  watch(
-    () => options.dakMode?.value === true,
-    (on) => {
-      if (on) {
-        drawWallKind.value = 'ridge'
-        ensureRidgeZDraft()
-        const tool = activeFmlTool.value
-        if (tool && tool !== 'draw_wall' && tool !== 'draw_surface') activeFmlTool.value = null
-        return
-      }
-      drawWallKind.value = 'wall'
-      deactivateDrawTool()
-    },
-    { immediate: true },
-  )
-
-  watch(editor.floorIndex, () => {
-    if (options.dakMode?.value === true) return
-    deactivateDrawTool()
-  })
-
-  const ridgeFloorDraft = computed(() => {
-    const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
-    if (ids.length === 0) return null
-    const indexes = ids.map((id) => editor.ridgeFloorIndexForWall(id)).filter((index) => index >= 0)
-    if (indexes.length === 0) return null
-    if (indexes.every((index) => index === indexes[0])) return indexes[0]
-    return null
-  })
-
-  const ridgeFloorMixed = computed(() => {
-    const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
-    if (ids.length < 2) return false
-    const indexes = ids.map((id) => editor.ridgeFloorIndexForWall(id))
-    return indexes.some((index) => index !== indexes[0])
-  })
-
-  function applyRidgeFloorInput(floorIndexTarget: number): void {
-    const ids = settingsWallIds.value.filter((id) => isRidgeWallId(editor.localPlan.value, id))
-    if (ids.length === 0) return
-    flushPendingFieldCommits()
-    editor.pushUndo()
-    editor.applyRidgeFloor(ids, floorIndexTarget)
-    syncPlanToParent()
-  }
-
-  function sanitizeWalls(): boolean {
-    flushPendingFieldCommits()
-    const changed = editor.applyWallsSanitize()
-    if (!changed) return false
-    clearSelection()
-    syncPlanToParent()
-    return true
-  }
-
-  function bindWallsToRoof(floorIndexTarget: number): BindWallsToRoofsResult | null {
-    if (!editor.localPlan.value) return null
-    flushPendingFieldCommits()
-    const result = bindFloorWallsToRoofs(editor.localPlan.value, floorIndexTarget, {
-      splitCreases: true,
-      splitWalls: splitWallAtT,
-    })
-    if (result.boundJunctions === 0 && result.splits === 0) return result
-    editor.pushUndo()
-    editor.replaceLocalPlan(result.plan, { keepUndo: true, keepParentSyncSkip: true })
-    clearSelection()
-    syncPlanToParent()
-    return result
-  }
-
-  function applyStampToActiveFloor(): boolean {
-    flushPendingFieldCommits()
-    const changed = editor.applyStampToActiveFloor()
-    if (!changed) return false
-    clearSelection()
-    syncPlanToParent()
-    return true
-  }
-
-  function canApplyStampOnActiveFloor(): boolean {
-    return editor.canApplyStampOnActiveFloor()
-  }
+  // --- Flat return ---
 
   return {
-    activeFmlTool,
+    activeFmlTool: selection.activeFmlTool,
     selectionBoxMode,
     boxSelectKind,
     selectAllOfBoxKind,
@@ -1874,66 +985,27 @@ export function useFmlPreviewInteraction(options: {
     zoomBy: panZoom.zoomBy,
     applyView: panZoom.applyView,
     settingsMod,
-    axisLockMod,
+    axisLockMod: toolCoord.axisLockMod,
     moveMod,
     pendingFixture,
     settingsItemId: selection.settingsItemId,
     moveItemId: selection.moveItemId,
     itemDragPreview: itemDrag.itemDragPreview,
     touchEditor,
-    updateSelectedItem(patch: Partial<FloorItem>) {
-      const guid = selection.settingsItemId.value
-      if (!guid) return
-      editor.pushUndo()
-      editor.updateItem(guid, patch)
-      syncPlanToParent()
-    },
+    updateSelectedItem: selCoord.updateSelectedItem,
     deleteSelectedItem,
-    copySelectedItem() {
-      const guid = selection.settingsItemId.value
-      if (!guid) return
-      const item = editor.items.value.find((entry) => entry.guid === guid)
-      if (!item) return
-      const info = resolveFixtureCatalog(item.refid, { width: item.width, height: item.height })
-      pendingFixture.value = {
-        refid: item.refid,
-        label: item.name ?? info.label,
-        kind: info.kind,
-        categorie: info.categorie,
-      }
-      activeFmlTool.value = 'add_fixture'
-      selection.settingsItemId.value = null
-      selection.moveItemId.value = null
-    },
-    rotateSelectedItem(deltaDeg: number) {
-      const guid = selection.settingsItemId.value
-      if (!guid) return
-      const item = editor.items.value.find((entry) => entry.guid === guid)
-      if (!item) return
-      editor.pushUndo()
-      editor.updateItem(guid, { rotation: ((item.rotation ?? 0) + deltaDeg + 360) % 360 })
-      syncPlanToParent()
-    },
-    toggleSelectedItemMirror(axis: 0 | 1) {
-      const guid = selection.settingsItemId.value
-      if (!guid) return
-      const item = editor.items.value.find((entry) => entry.guid === guid)
-      if (!item) return
-      const cur = item.mirrored ?? [0, 0]
-      const next: [number, number] = [cur[0] === 1 ? 1 : 0, cur[1] === 1 ? 1 : 0]
-      next[axis] = next[axis] === 1 ? 0 : 1
-      editor.pushUndo()
-      editor.updateItem(guid, { mirrored: next })
-      syncPlanToParent()
-    },
-    drawWallKind,
+    copySelectedItem: selCoord.copySelectedItem,
+    rotateSelectedItem: selCoord.rotateSelectedItem,
+    toggleSelectedItemMirror: selCoord.toggleSelectedItemMirror,
+    drawWallKind: selection.drawWallKind,
     ridgeZCm,
-    settingsWallIds,
-    moveWallId,
+    selectedFacadeGroupPanel,
+    settingsWallIds: selection.settingsWallIds,
+    moveWallId: selection.moveWallId,
     moveDimensionId: selection.moveDimensionId,
     hoveredDimensionId: selection.hoveredDimensionId,
-    settingsOpeningIds,
-    moveOpeningId,
+    settingsOpeningIds: selection.settingsOpeningIds,
+    moveOpeningId: selection.moveOpeningId,
     wallThicknessDraft,
     wallThicknessMixed,
     wallBalanceDraft,
@@ -1946,32 +1018,32 @@ export function useFmlPreviewInteraction(options: {
     junctionHeightMixed,
     junctionBottomZDraft,
     junctionBottomZMixed,
-    openingSubtypeDraft,
-    openingSubtypeMixed,
-    openingWidthDraft,
-    openingWidthMixed,
-    openingHeightDraft,
-    openingHeightMixed,
-    openingSillZDraft,
-    openingSillZMixed,
-    openingHingeAtStartDraft,
-    openingHingeMixed,
-    openingSwingRightDraft,
-    openingSwingMixed,
-    openingBovenlichtDraft,
-    openingBovenlichtMixed,
-    openingBovenlichtHeightDraft,
-    openingBovenlichtHeightMixed,
-    openingBovenlichtGapDraft,
-    openingBovenlichtGapMixed,
-    addDoorSubtype,
-    addDoorWidthCm,
-    addDoorHeightCm,
-    addDoorSillZCm,
-    addWindowSubtype,
-    addWindowWidthCm,
-    addWindowSillZCm,
-    addWindowHeightCm,
+    openingSubtypeDraft: selCoord.openingSubtypeDraft,
+    openingSubtypeMixed: selCoord.openingSubtypeMixed,
+    openingWidthDraft: selCoord.openingWidthDraft,
+    openingWidthMixed: selCoord.openingWidthMixed,
+    openingHeightDraft: selCoord.openingHeightDraft,
+    openingHeightMixed: selCoord.openingHeightMixed,
+    openingSillZDraft: selCoord.openingSillZDraft,
+    openingSillZMixed: selCoord.openingSillZMixed,
+    openingHingeAtStartDraft: selCoord.openingHingeAtStartDraft,
+    openingHingeMixed: selCoord.openingHingeMixed,
+    openingSwingRightDraft: selCoord.openingSwingRightDraft,
+    openingSwingMixed: selCoord.openingSwingMixed,
+    openingBovenlichtDraft: selCoord.openingBovenlichtDraft,
+    openingBovenlichtMixed: selCoord.openingBovenlichtMixed,
+    openingBovenlichtHeightDraft: selCoord.openingBovenlichtHeightDraft,
+    openingBovenlichtHeightMixed: selCoord.openingBovenlichtHeightMixed,
+    openingBovenlichtGapDraft: selCoord.openingBovenlichtGapDraft,
+    openingBovenlichtGapMixed: selCoord.openingBovenlichtGapMixed,
+    addDoorSubtype: selection.addDoorSubtype,
+    addDoorWidthCm: selection.addDoorWidthCm,
+    addDoorHeightCm: selection.addDoorHeightCm,
+    addDoorSillZCm: selection.addDoorSillZCm,
+    addWindowSubtype: selection.addWindowSubtype,
+    addWindowWidthCm: selection.addWindowWidthCm,
+    addWindowSillZCm: selection.addWindowSillZCm,
+    addWindowHeightCm: selection.addWindowHeightCm,
     canvasCursor,
     syncPlanToParent,
     onWallThicknessCm,
@@ -1987,22 +1059,22 @@ export function useFmlPreviewInteraction(options: {
     commitJunctionHeight,
     onJunctionBottomZCm,
     commitJunctionBottomZ,
-    commitOpeningSubtype,
-    onOpeningWidthCm,
-    commitOpeningWidth,
-    onOpeningHeightCm,
-    commitOpeningHeight,
-    onOpeningSillZCm,
-    commitOpeningSillZ,
-    toggleOpeningHingeAtStart,
-    toggleOpeningSwingRight,
-    onOpeningBovenlichtChange,
-    onOpeningBovenlichtHeightCm,
-    commitOpeningBovenlichtHeight,
-    onOpeningBovenlichtGapCm,
-    commitOpeningBovenlichtGap,
-    copySelectedOpening,
-    deleteSelectedOpenings,
+    commitOpeningSubtype: selCoord.commitOpeningSubtype,
+    onOpeningWidthCm: selCoord.onOpeningWidthCm,
+    commitOpeningWidth: selCoord.commitOpeningWidth,
+    onOpeningHeightCm: selCoord.onOpeningHeightCm,
+    commitOpeningHeight: selCoord.commitOpeningHeight,
+    onOpeningSillZCm: selCoord.onOpeningSillZCm,
+    commitOpeningSillZ: selCoord.commitOpeningSillZ,
+    toggleOpeningHingeAtStart: selCoord.toggleOpeningHingeAtStart,
+    toggleOpeningSwingRight: selCoord.toggleOpeningSwingRight,
+    onOpeningBovenlichtChange: selCoord.onOpeningBovenlichtChange,
+    onOpeningBovenlichtHeightCm: selCoord.onOpeningBovenlichtHeightCm,
+    commitOpeningBovenlichtHeight: selCoord.commitOpeningBovenlichtHeight,
+    onOpeningBovenlichtGapCm: selCoord.onOpeningBovenlichtGapCm,
+    commitOpeningBovenlichtGap: selCoord.commitOpeningBovenlichtGap,
+    copySelectedOpening: selCoord.copySelectedOpening,
+    deleteSelectedOpenings: selCoord.deleteSelectedOpenings,
     splitSelectedWall,
     deleteSelectedWalls,
     facadeGroupOptions,
@@ -2056,19 +1128,19 @@ export function useFmlPreviewInteraction(options: {
     roomTypes: areaSelection.roomTypes,
     commitDrawSurface: drawSurface.commitDrawSurface,
     cancelDrawSurface: drawSurface.cancelDrawSurface,
-    updateSelectedLabelText,
-    onLabelTextInput,
-    commitLabelText,
+    updateSelectedLabelText: selCoord.updateSelectedLabelText,
+    onLabelTextInput: selCoord.onLabelTextInput,
+    commitLabelText: selCoord.commitLabelText,
     labelTextDraft,
-    deleteSelectedAnnotation,
-    updateSelectedLabelFontSize,
-    updateSelectedLabelFontColor,
-    updateSelectedLabelOutline,
-    updateSelectedLabelBold,
-    updateSelectedLabelItalic,
-    updateSelectedLineType,
-    updateSelectedLineColor,
-    updateSelectedLineThickness,
+    deleteSelectedAnnotation: selCoord.deleteSelectedAnnotation,
+    updateSelectedLabelFontSize: selCoord.updateSelectedLabelFontSize,
+    updateSelectedLabelFontColor: selCoord.updateSelectedLabelFontColor,
+    updateSelectedLabelOutline: selCoord.updateSelectedLabelOutline,
+    updateSelectedLabelBold: selCoord.updateSelectedLabelBold,
+    updateSelectedLabelItalic: selCoord.updateSelectedLabelItalic,
+    updateSelectedLineType: selCoord.updateSelectedLineType,
+    updateSelectedLineColor: selCoord.updateSelectedLineColor,
+    updateSelectedLineThickness: selCoord.updateSelectedLineThickness,
     settingsLabelId: selection.settingsLabelId,
     settingsLineId: selection.settingsLineId,
     onWrapPointerDown,

@@ -16,13 +16,15 @@ function sanitizeWallRefThicknessMeasures(
 ): DevWorkspaceRoomSnapshot['wallRefThicknessMeasures'] {
   if (!measures?.length) return undefined
   const next = measures
-    .filter(
-      (m) =>
-        (m.band === 'min' || m.band === 'mid' || m.band === 'max') &&
-        Number.isFinite(m.thicknessPx) &&
-        m.thicknessPx > 0,
-    )
-    .map((m) => ({ band: m.band, thicknessPx: m.thicknessPx }))
+    .filter((m) => Number.isFinite(m.thicknessPx) && m.thicknessPx > 0)
+    .map((m) => ({
+      thicknessPx: m.thicknessPx,
+      ...(typeof m.thicknessCm === 'number' && m.thicknessCm > 0
+        ? { thicknessCm: m.thicknessCm }
+        : {}),
+      ...(m.band === 'min' || m.band === 'mid' || m.band === 'max' ? { band: m.band } : {}),
+      ...(m.rectId ? { rectId: m.rectId } : {}),
+    }))
   return next.length > 0 ? next : undefined
 }
 

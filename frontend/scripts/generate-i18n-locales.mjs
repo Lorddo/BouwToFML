@@ -411,15 +411,32 @@ const tree = {
     ),
     inkWallParams: {
       thresholdOtsu: t('Threshold: Otsu', 'Threshold: Otsu', 'เกณฑ์: Otsu'),
-      brightnessBridge: t(
-        'Brightness: 150 · bridge/thicken × wall REF',
-        'Brightness: 150 · bridge/thicken × muur-REF',
-        'ความสว่าง: 150 · bridge/thicken × wall REF',
+      brightnessContrast: t(
+        'Brightness {brightness} · contrast {contrast}',
+        'Helderheid {brightness} · contrast {contrast}',
+        'ความสว่าง {brightness} · คอนทราสต์ {contrast}',
+      ),
+      style: t('Style: {style}', 'Stijl: {style}', 'สไตล์: {style}'),
+      refPx: t('REF {px} px', 'REF {px} px', 'REF {px} px'),
+      refMissing: t(
+        'REF not measured yet (fallback px)',
+        'REF nog niet gemeten (fallback-px)',
+        'ยังไม่วัด REF (ค่าสำรอง)',
+      ),
+      thicken: t(
+        'Thicken: {px} px ({factor}× REF)',
+        'Verdikken: {px} px ({factor}× REF)',
+        'ทำให้หนา: {px} px ({factor}× REF)',
+      ),
+      bridge: t(
+        'Bridge: {px} px ({factor}× REF)',
+        'Brug: {px} px ({factor}× REF)',
+        'เชื่อม: {px} px ({factor}× REF)',
       ),
       holeFill: t(
-        'Hole-fill / thicken: scaled to wall thickness',
-        'Hole-fill / thicken: geschaald op muurdikte',
-        'เติมรู / ทำให้หนา: ตามความหนาผนัง',
+        'Hole-fill: {px} px ({factor}× REF)',
+        'Hole-fill: {px} px ({factor}× REF)',
+        'เติมรู: {px} px ({factor}× REF)',
       ),
     },
     refs: {

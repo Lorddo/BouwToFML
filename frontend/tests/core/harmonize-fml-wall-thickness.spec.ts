@@ -58,13 +58,29 @@ describe('buildFmlThicknessChains', () => {
     expect(chains[0]).toEqual([0, 1, 2])
   })
 
-  it('splitst bij andere meetband op knooppunt', () => {
+  it('houdt collineaire 10/20 als één keten door het knooppunt', () => {
     const walls = [
       wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
       wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 20),
     ]
     const chains = buildFmlThicknessChains(walls)
+    expect(chains).toHaveLength(1)
+    expect(chains[0]?.sort()).toEqual([0, 1])
+  })
+
+  it('houdt collineaire 15/10/15 als één keten door T-kruisingen', () => {
+    const walls = [
+      wall('left', { x: 0, y: 0 }, { x: 100, y: 0 }, 15),
+      wall('mid', { x: 100, y: 0 }, { x: 200, y: 0 }, 10),
+      wall('right', { x: 200, y: 0 }, { x: 360, y: 0 }, 15),
+      wall('stem', { x: 100, y: 0 }, { x: 100, y: 80 }, 10),
+    ]
+    const chains = buildFmlThicknessChains(walls, undefined, [10, 15, 25, 30])
     expect(chains).toHaveLength(2)
+    const through = chains.find(
+      (chain) => chain.includes(0) && chain.includes(1) && chain.includes(2),
+    )
+    expect(through?.sort()).toEqual([0, 1, 2])
   })
 
   it('verbindt T-armen met dezelfde band', () => {
@@ -88,13 +104,14 @@ describe('buildFmlThicknessChains', () => {
     expect(chains[0]?.sort()).toEqual([0, 1, 2])
   })
 
-  it('houdt dik-dun gescheiden als er geen tweede dikke arm is', () => {
+  it('houdt collineair dik-dun als één keten ook zonder tweede dikke arm', () => {
     const walls = [
       wall('w0', { x: 0, y: 0 }, { x: 120, y: 0 }, 24),
       wall('w1', { x: 120, y: 0 }, { x: 130, y: 0 }, 10),
     ]
     const chains = buildFmlThicknessChains(walls)
-    expect(chains).toHaveLength(2)
+    expect(chains).toHaveLength(1)
+    expect(chains[0]?.sort()).toEqual([0, 1])
   })
 
   it('splitst dik en dun op T-kruising', () => {
@@ -132,55 +149,29 @@ describe('harmonizeFmlWallThickness', () => {
     expect(harmonized.floors[0]?.walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('aligns flush balance on collinear diktewissel only with face evidence', () => {
+  it('geeft collineair 26/10 één band-dikte (geen flush-stap meer)', () => {
     const plan = planWithWalls([
-      wall('thick', { x: 0, y: 0 }, { x: 100, y: 0 }, 26, 0.5),
-      wall('thin', { x: 100, y: 0 }, { x: 200, y: 0 }, 10, 0.5),
-    ])
-    // After tiers: 30 and 10. Shared CL: thick 15/15, thin flush_minus 0/10.
-    const evidence = new Map([
-      ['thick', { plusCm: 15, minusCm: 15 }],
-      ['thin', { plusCm: 0, minusCm: 10 }],
-    ])
-    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits, undefined, evidence)
-    const walls = harmonized.floors[0]?.walls ?? []
-    expect(walls[0]?.thickness).toBe(30)
-    expect(walls[1]?.thickness).toBe(10)
-    expect(walls[0]?.balance).toBe(0.5)
-    expect(walls[1]?.balance).not.toBe(0.5)
-  })
-
-  it('keeps balance 0.5 on diktewissel without face evidence', () => {
-    const plan = planWithWalls([
-      wall('thick', { x: 0, y: 0 }, { x: 100, y: 0 }, 26, 0.5),
-      wall('thin', { x: 100, y: 0 }, { x: 200, y: 0 }, 10, 0.5),
+      wall('thick', { x: 0, y: 0 }, { x: 150, y: 0 }, 26, 0.5),
+      wall('thin', { x: 150, y: 0 }, { x: 250, y: 0 }, 10, 0.5),
     ])
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const walls = harmonized.floors[0]?.walls ?? []
-    expect(walls[0]?.thickness).toBe(30)
-    expect(walls[1]?.thickness).toBe(10)
-    expect(walls[0]?.balance).toBe(0.5)
-    expect(walls[1]?.balance).toBe(0.5)
+    expect(walls.map((item) => item.thickness)).toEqual([30, 30])
+    expect(walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('chain-flushes with longest band at 0.5 after tiers when evidence confirms', () => {
+  it('geeft de langste collineaire band de export-dikte', () => {
     const plan = planWithWalls([
       wall('thick', { x: 0, y: 0 }, { x: 120, y: 0 }, 47, 0.34),
       wall('thin', { x: 120, y: 0 }, { x: 220, y: 0 }, 11, 0.41),
     ])
-    const evidence = new Map([
-      ['thick', { plusCm: 15, minusCm: 15 }],
-      ['thin', { plusCm: 0, minusCm: 10 }],
-    ])
-    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits, undefined, evidence)
+    const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const walls = harmonized.floors[0]?.walls ?? []
-    expect(walls[0]?.thickness).toBe(30)
-    expect(walls[1]?.thickness).toBe(10)
-    expect(walls[0]?.balance).toBe(0.5)
-    expect(walls[1]?.balance).not.toBe(0.5)
+    expect(walls.map((item) => item.thickness)).toEqual([30, 30])
+    expect(walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('splitst 10–12 en 20 op verschillende banden en mapt naar min/mid', () => {
+  it('geeft een collineaire 10–12–20-lijn één band-dikte', () => {
     const plan = planWithWalls([
       wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
       wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 12),
@@ -188,9 +179,33 @@ describe('harmonizeFmlWallThickness', () => {
     ])
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
-    expect(thicknesses[0]).toBe(10)
-    expect(thicknesses[1]).toBe(20)
-    expect(thicknesses[2]).toBe(20)
+    expect(thicknesses).toEqual([20, 20, 20])
+  })
+
+  it('catalogus: collineaire 15/10/15 door T → één cm, geen flush-balance', () => {
+    const plan = planWithWalls([
+      wall('left', { x: 0, y: 0 }, { x: 112, y: 0 }, 15),
+      wall('mid', { x: 112, y: 0 }, { x: 222, y: 0 }, 10, 0.75),
+      wall('right', { x: 222, y: 0 }, { x: 479, y: 0 }, 15),
+      wall('stem', { x: 112, y: 0 }, { x: 112, y: 128 }, 10),
+    ])
+    const catalog = [7, 10, 15, 25, 30]
+    const harmonized = harmonizeFmlWallThickness(
+      plan,
+      { minCm: 7, midCm: 15, maxCm: 30, thicknessCms: catalog },
+      undefined,
+      undefined,
+      undefined,
+      catalog,
+    )
+    const byId = new Map(harmonized.floors[0]?.walls.map((w) => [w.id, w]))
+    expect(byId.get('left')?.thickness).toBe(15)
+    expect(byId.get('mid')?.thickness).toBe(15)
+    expect(byId.get('right')?.thickness).toBe(15)
+    expect(byId.get('left')?.balance).toBe(0.5)
+    expect(byId.get('mid')?.balance).toBe(0.5)
+    expect(byId.get('right')?.balance).toBe(0.5)
+    expect(byId.get('stem')?.thickness).toBe(10)
   })
 
   it('mapt hoge band naar absolute max-waarde', () => {
@@ -245,6 +260,61 @@ describe('harmonizeFmlWallThickness', () => {
     const byId = new Map(harmonized.floors[0]?.walls.map((w) => [w.id, w.thickness]))
     expect(byId.get('pinned')).toBe(35)
     expect(byId.get('free')).toBe(10)
+  })
+
+  it('catalogus [15,20] op een T → twee diktes', () => {
+    const plan = planWithWalls([
+      wall('h', { x: 0, y: 0 }, { x: 100, y: 0 }, 15),
+      wall('v', { x: 0, y: 0 }, { x: 0, y: 80 }, 20),
+    ])
+    const catalog = [15, 20, 30]
+    const harmonized = harmonizeFmlWallThickness(
+      plan,
+      { minCm: 15, midCm: 20, maxCm: 30, thicknessCms: catalog },
+      undefined,
+      undefined,
+      undefined,
+      catalog,
+    )
+    const byId = new Map(harmonized.floors[0]?.walls.map((w) => [w.id, w.thickness]))
+    expect(byId.get('h')).toBe(15)
+    expect(byId.get('v')).toBe(20)
+  })
+
+  it('lege catalogus → 10/20/30 via limits', () => {
+    const plan = planWithWalls([
+      wall('thin', { x: 0, y: 0 }, { x: 100, y: 0 }, 11),
+      wall('mid', { x: 0, y: 0 }, { x: 0, y: 80 }, 19),
+    ])
+    const harmonized = harmonizeFmlWallThickness(
+      plan,
+      defaultLimits,
+      undefined,
+      undefined,
+      undefined,
+      [],
+    )
+    const thicknesses = harmonized.floors[0]?.walls.map((w) => w.thickness) ?? []
+    expect(thicknesses).toEqual([10, 20])
+  })
+
+  it('pinned stamp blijft ongewijzigd met catalogus', () => {
+    const plan = planWithWalls([
+      wall('stamp', { x: 0, y: 0 }, { x: 100, y: 0 }, 35),
+      wall('free', { x: 100, y: 0 }, { x: 200, y: 0 }, 16),
+    ])
+    const catalog = [10, 20, 30]
+    const harmonized = harmonizeFmlWallThickness(
+      plan,
+      { minCm: 10, midCm: 20, maxCm: 30, thicknessCms: catalog },
+      undefined,
+      undefined,
+      ['stamp'],
+      catalog,
+    )
+    const byId = new Map(harmonized.floors[0]?.walls.map((w) => [w.id, w.thickness]))
+    expect(byId.get('stamp')).toBe(35)
+    expect(byId.get('free')).toBe(20)
   })
 })
 

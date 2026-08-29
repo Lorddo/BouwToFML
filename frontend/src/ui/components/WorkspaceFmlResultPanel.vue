@@ -23,9 +23,7 @@ withDefaults(
     fmlWindowSillZCm: number
     fmlBovenlichtDefault: boolean
     fmlWindowBovenlichtDefault: boolean
-    fmlThicknessMinCm: number
-    fmlThicknessMidCm: number
-    fmlThicknessMaxCm: number
+    fmlThicknessCms: number[]
     fmlBandMidBoundaryCm: number
     fmlBandMaxBoundaryCm: number
     fmlLimitsDirty: boolean
@@ -80,9 +78,7 @@ const emit = defineEmits<{
   'update:fmlWindowSillZCm': [value: number]
   'update:fmlBovenlichtDefault': [value: boolean]
   'update:fmlWindowBovenlichtDefault': [value: boolean]
-  'update:fmlThicknessMinCm': [value: number]
-  'update:fmlThicknessMidCm': [value: number]
-  'update:fmlThicknessMaxCm': [value: number]
+  'update:fmlThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:fmlRescaleDistanceMmX': [value: number]
@@ -117,9 +113,7 @@ const emit = defineEmits<{
     :fml-window-sill-z-cm="fmlWindowSillZCm"
     :fml-bovenlicht-default="fmlBovenlichtDefault"
     :fml-window-bovenlicht-default="fmlWindowBovenlichtDefault"
-    :fml-thickness-min-cm="fmlThicknessMinCm"
-    :fml-thickness-mid-cm="fmlThicknessMidCm"
-    :fml-thickness-max-cm="fmlThicknessMaxCm"
+    :fml-thickness-cms="fmlThicknessCms"
     :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
     :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
     :fml-limits-dirty="fmlLimitsDirty"
@@ -155,9 +149,7 @@ const emit = defineEmits<{
     @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
     @update:fml-bovenlicht-default="emit('update:fmlBovenlichtDefault', $event)"
     @update:fml-window-bovenlicht-default="emit('update:fmlWindowBovenlichtDefault', $event)"
-    @update:fml-thickness-min-cm="emit('update:fmlThicknessMinCm', $event)"
-    @update:fml-thickness-mid-cm="emit('update:fmlThicknessMidCm', $event)"
-    @update:fml-thickness-max-cm="emit('update:fmlThicknessMaxCm', $event)"
+    @update:fml-thickness-cms="emit('update:fmlThicknessCms', $event)"
     @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
     @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
     @update:fml-rescale-distance-mm-x="emit('update:fmlRescaleDistanceMmX', $event)"

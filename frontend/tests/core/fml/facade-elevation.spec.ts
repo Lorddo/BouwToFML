@@ -3,12 +3,14 @@ import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { createBlankFloor, createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
   elevationAxisPlanSides,
+  elevationOutwardFromViewerAxis,
   elevationRoofFillColor,
   orientElevationAxisToViewer,
   projectFacadeElevation,
   resolveElevationAxis,
   snapElevationAxisOrtho,
   thickenElevationRoofPoly,
+  unprojectElevationAlong,
 } from '@/core/fml/facade-elevation'
 import {
   collectElevationSplitSnapXs,
@@ -33,6 +35,7 @@ import {
   listRidgeSurfacesOnFloor,
   makeRoofSurface,
   roofSurfaceOrigin,
+  setRidgeSurfaceVertex,
   setRidgeSurfaceVertexZ,
   setRidgeSurfacesOnFloor,
 } from '@/core/fml/roof-planes'
@@ -115,6 +118,34 @@ function attachGableRoofs(plan: FloorPlan, heightCm = 260, ridgeZ = 450): FloorP
     ],
   })
   plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [south, north])
+  return plan
+}
+
+/** Zadeldak + T-vleugel die de noordgevel 100 cm niet raakt (alleen zijde-zicht). */
+function attachTWingRoofs(plan: FloorPlan, heightCm = 260, ridgeZ = 450): FloorPlan {
+  attachGableRoofs(plan, heightCm, ridgeZ)
+  const wing = makeRoofSurface({
+    id: 'roof-t',
+    origin: 'manual',
+    poly: [
+      { x: 400, y: 400, z: ridgeZ },
+      { x: 810, y: 400, z: ridgeZ },
+      { x: 810, y: 700, z: heightCm },
+      { x: 400, y: 700, z: heightCm },
+    ],
+  })
+  const westFill = makeRoofSurface({
+    id: 'roof-west-extra',
+    origin: 'manual',
+    poly: [
+      { x: -10, y: 400, z: ridgeZ },
+      { x: 300, y: 400, z: ridgeZ },
+      { x: 300, y: 700, z: heightCm },
+      { x: -10, y: 700, z: heightCm },
+    ],
+  })
+  const existing = listRidgeSurfacesOnFloor(plan.floors[0])
+  plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [...existing, wing, westFill])
   return plan
 }
 
@@ -690,6 +721,56 @@ describe('facade-elevation', () => {
     }
   })
 
+  it('dakvlak: T-vleugel op voor- en zijgevel, extra’s aan de andere kant niet', () => {
+    const H = 260
+    const end = makeEndpoint3D(0, H)
+    const thick = (id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall => ({
+      id,
+      a,
+      b,
+      thickness: 20,
+      openings: [],
+      extras: { az: end, bz: { ...end } },
+    })
+    const plan = createEmptyFloorPlan({ name: 'T-dak', wallHeightCm: H })
+    plan.floors[0].walls = [
+      thick('south', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      thick('east', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      thick('north', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      thick('west', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const south = createFacadeGroup(plan, { name: 'Zuid' })
+    const east = createFacadeGroup(plan, { name: 'Oost' })
+    const north = createFacadeGroup(plan, { name: 'Noord' })
+    const west = createFacadeGroup(plan, { name: 'West' })
+    assignWallsToGroup(plan, south.id, ['south'])
+    assignWallsToGroup(plan, east.id, ['east'])
+    assignWallsToGroup(plan, north.id, ['north'])
+    assignWallsToGroup(plan, west.id, ['west'])
+    attachTWingRoofs(plan)
+
+    const elevN = projectFacadeElevation(plan, north.id)
+    const elevE = projectFacadeElevation(plan, east.id)
+    const elevS = projectFacadeElevation(plan, south.id)
+    const elevW = projectFacadeElevation(plan, west.id)
+    const idsN = elevN!.roofPlanes.map((plane) => plane.id)
+    const idsE = elevE!.roofPlanes.map((plane) => plane.id)
+    const idsS = elevS!.roofPlanes.map((plane) => plane.id)
+    const idsW = elevW!.roofPlanes.map((plane) => plane.id)
+    expect(idsN).toContain('roof-t')
+    expect(idsN).toContain('roof-west-extra')
+    expect(idsN).not.toContain('roof-s')
+    expect(idsE).toContain('roof-t')
+    expect(idsE).not.toContain('roof-west-extra')
+    expect(idsS).toEqual(['roof-s'])
+    expect(idsW).toContain('roof-west-extra')
+    expect(idsW).not.toContain('roof-t')
+    const tOnEast = elevE!.roofPlanes.find((plane) => plane.id === 'roof-t')!
+    const southOnEast = elevE!.roofPlanes.find((plane) => plane.id === 'roof-s')
+    expect(tOnEast.depthCm).toBeGreaterThan(southOnEast?.depthCm ?? -Infinity)
+    expect(elevE!.roofPlanes.at(-1)?.id).toBe('roof-t')
+  })
+
   it('dakvlak in aanzicht: nokdikte om het hart, handles blijven op het vlak', () => {
     const H = 260
     const end = makeEndpoint3D(0, H)
@@ -838,6 +919,12 @@ describe('facade-elevation', () => {
     expect(hitElevationRoofPlane(elev!, mid)?.id).toBe(plane.id)
     expect(hitElevationRoofPlane(elev!, { x: mid.x, y: mid.y + 400 })).toBeNull()
     expect(hitElevationRoofVertex(plane, plane.points[0])).toBe(0)
+    const overlap = {
+      x: (plane.points[0].x + plane.points[1].x) / 2,
+      y: plane.points[0].y,
+    }
+    expect(hitElevationRoofVertex(plane, overlap, 800, 0)).toBe(0)
+    expect(hitElevationRoofVertex(plane, overlap, 800, 1)).toBe(1)
 
     const peak = plane.points.reduce(
       (best, point, index) => (point.y < best.y ? { index, y: point.y } : best),
@@ -869,6 +956,68 @@ describe('facade-elevation', () => {
     expect(snapElevationY(-403, [-400, -500], 8)).toBe(-400)
     expect(snapElevationY(-408, [-400, -500], 10)).toBe(-400)
     expect(snapElevationY(-411, [-400, -500], 10)).toBe(-411)
+  })
+
+  it('dakvlak in aanzicht: punt langs de gevel, diepte blijft', () => {
+    const axis = { x: 1, y: 0 }
+    const origin = { x: 0, y: 0 }
+    const keep = { x: 120, y: 340 }
+    const moved = unprojectElevationAlong(180, keep, { axis, origin })
+    expect(moved.x).toBeCloseTo(180, 5)
+    expect(moved.y).toBeCloseTo(340, 5)
+    const outward = elevationOutwardFromViewerAxis(axis)
+    expect(keep.x * outward.x + keep.y * outward.y).toBeCloseTo(
+      moved.x * outward.x + moved.y * outward.y,
+      5,
+    )
+
+    const H = 260
+    const end = makeEndpoint3D(0, H)
+    const thick = (id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall => ({
+      id,
+      a,
+      b,
+      thickness: 20,
+      openings: [],
+      extras: { az: end, bz: { ...end } },
+    })
+    const plan = createEmptyFloorPlan({ name: 'Dak-H', wallHeightCm: H })
+    plan.floors[0].walls = [
+      thick('south', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      thick('east', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      thick('north', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      thick('west', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const south = createFacadeGroup(plan, { name: 'Zuid' })
+    assignWallsToGroup(plan, south.id, ['south'])
+    const withRoofs = attachGableRoofs(plan)
+    const elev = projectFacadeElevation(withRoofs, south.id)!
+    const plane = elev.roofPlanes[0]
+    const vi = 0
+    const keepPlan = listRidgeSurfacesOnFloor(withRoofs.floors[0]).find(
+      (surface) => surface.id === plane.id,
+    )!.poly[vi]
+    const along = plane.points[vi].x + 40
+    const xy = unprojectElevationAlong(along, keepPlan, elev)
+    const next = setRidgeSurfaceVertex(withRoofs, plane.id, vi, {
+      x: xy.x,
+      y: xy.y,
+      z: keepPlan.z,
+    })
+    const afterSurface = listRidgeSurfacesOnFloor(next.floors[0]).find(
+      (surface) => surface.id === plane.id,
+    )
+    const after = afterSurface?.poly[vi]
+    expect(roofSurfaceOrigin(afterSurface)).toBe('manual')
+    const out = elevationOutwardFromViewerAxis(elev.axis)
+    expect(after!.x * out.x + after!.y * out.y).toBeCloseTo(
+      keepPlan.x * out.x + keepPlan.y * out.y,
+      5,
+    )
+    const elevNext = projectFacadeElevation(next, south.id)!
+    const movedPt = elevNext.roofPlanes[0].points[vi]
+    expect(movedPt.x).toBeCloseTo(along, 5)
+    expect(movedPt.y).toBeCloseTo(plane.points[vi].y, 5)
   })
 
   it('bovenlicht-flag: groen vlak boven de deur met juiste Z', () => {

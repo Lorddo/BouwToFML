@@ -7,13 +7,22 @@ import type { OpeningRefProfile, ReferenceAnalysisReport, RefRect, WallRefProfil
 
 export type AnalyzeRefsInputRect = RefRect & {
   type: 'wall' | 'door' | 'window'
+  wallThicknessCm?: number
   wallThicknessBand?: 'min' | 'mid' | 'max'
 }
 
 function pickPrimaryWall(walls: WallRefProfile[]): WallRefProfile | null {
   if (walls.length === 0) return null
-  const maxTagged = [...walls].reverse().find((w) => w.wallThicknessBand === 'max')
-  return maxTagged ?? walls[walls.length - 1]
+  let best = walls[walls.length - 1]
+  let bestCm = -1
+  for (const wall of walls) {
+    const cm = Number(wall.wallThicknessCm)
+    if (Number.isFinite(cm) && cm > bestCm) {
+      best = wall
+      bestCm = cm
+    }
+  }
+  return best
 }
 
 export async function analyzeAllReferenceRects(params: {
@@ -48,11 +57,13 @@ export async function analyzeAllReferenceRects(params: {
         eraserMask: params.eraserMask,
         sharedWallBwMat,
       })
-      walls.push(
-        wallRect.wallThicknessBand
-          ? { ...profile, wallThicknessBand: wallRect.wallThicknessBand }
-          : profile,
-      )
+      walls.push({
+        ...profile,
+        ...(typeof wallRect.wallThicknessCm === 'number' && wallRect.wallThicknessCm > 0
+          ? { wallThicknessCm: wallRect.wallThicknessCm }
+          : {}),
+        ...(wallRect.wallThicknessBand ? { wallThicknessBand: wallRect.wallThicknessBand } : {}),
+      })
     }
 
     const openings: OpeningRefProfile[] = []

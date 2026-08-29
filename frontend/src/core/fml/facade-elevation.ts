@@ -120,7 +120,7 @@ export type ElevationBand = ElevationRect & {
   floorIndex?: number
 }
 
-/** Dakvlak op dit aanzicht: goot-gevel of kopse kil. */
+/** Dakvlak op dit aanzicht: goot-gevel, kopse kil, of T-vlak aan deze zijde van het huis. */
 export type ElevationRoofPlane = {
   id: string
   floorIndex: number
@@ -129,6 +129,8 @@ export type ElevationRoofPlane = {
   /** Gesimuleerde plaat: nokdikte verdeeld boven én onder het hart. */
   fillPoints: Point2D[]
   color: string
+  /** Zelfde diepte-as als muren; groter = vóór (painter). */
+  depthCm: number
 }
 
 /** Grijs per gevelgroep — afwijkend van muur `#94a3b8`. */
@@ -220,6 +222,29 @@ export function elevationAxisPlanSides(axis: Point2D): {
 
 function projectOnAxis(point: Point2D, origin: Point2D, axis: Point2D): number {
   return (point.x - origin.x) * axis.x + (point.y - origin.y) * axis.y
+}
+
+/** Outward bij viewer-as: +X in het aanzicht = rechts van de kijker. */
+export function elevationOutwardFromViewerAxis(axis: Point2D): Point2D {
+  return { x: -axis.y, y: axis.x }
+}
+
+/**
+ * Verplaats een plattegrond-punt langs de gevel-as; diepte (loodrecht op de gevel) blijft.
+ * `alongCm` = aanzicht-X (`projectOnAxis` met dezelfde origin/as).
+ */
+export function unprojectElevationAlong(
+  alongCm: number,
+  keepPlan: Point2D,
+  elevation: Pick<FacadeElevation, 'axis' | 'origin'>,
+): Point2D {
+  const { axis, origin } = elevation
+  const outward = elevationOutwardFromViewerAxis(axis)
+  const depth = (keepPlan.x - origin.x) * outward.x + (keepPlan.y - origin.y) * outward.y
+  return {
+    x: origin.x + alongCm * axis.x + depth * outward.x,
+    y: origin.y + alongCm * axis.y + depth * outward.y,
+  }
 }
 
 function wallPlanMid(wall: Pick<Wall, 'a' | 'b'>): Point2D {
@@ -349,6 +374,17 @@ function roofEdgeAlongFacadeWall(
   })
 }
 
+function meanPoint(points: readonly Point2D[]): Point2D {
+  if (points.length === 0) return { x: 0, y: 0 }
+  let x = 0
+  let y = 0
+  for (const point of points) {
+    x += point.x
+    y += point.y
+  }
+  return { x: x / points.length, y: y / points.length }
+}
+
 /**
  * Goot (langgevel) of kil/rake (kopgevel): rand evenwijdig en vlakbij de gevel.
  * Geen Z-match — kopgeveltops volgen de daklijn vaak niet.
@@ -374,6 +410,35 @@ export function roofSurfaceTouchesFacadeWalls(
     }
   }
   return false
+}
+
+/**
+ * Zoals nokbalken: een T-vlak aan deze zijde van het huis (niet het tegenschild)
+ * hoort op zij- en voorgevel, ook zonder goot op de gevelmuur.
+ */
+export function roofSurfaceOnThisFacadeSide(
+  surface: FloorSurface,
+  centroid: Point2D,
+  outward: Point2D,
+  facadeMids: readonly Point2D[],
+): boolean {
+  if (surface.poly.length === 0 || facadeMids.length === 0) return false
+  const roofAlong = elevationDepthCm(meanPoint(surface.poly), centroid, outward)
+  const facadeAlong = elevationDepthCm(meanPoint(facadeMids), centroid, outward)
+  const pad = ROOF_FACADE_BBOX_PAD_CM
+  if (facadeAlong >= 0) return roofAlong > -pad
+  return roofAlong < pad
+}
+
+export function roofSurfaceVisibleOnElevation(
+  surface: FloorSurface,
+  walls: readonly ElevationFacadeWall[],
+  centroid: Point2D,
+  outward: Point2D,
+  facadeMids: readonly Point2D[],
+): boolean {
+  if (roofSurfaceTouchesFacadeWalls(surface, walls, centroid)) return true
+  return roofSurfaceOnThisFacadeSide(surface, centroid, outward, facadeMids)
 }
 
 function elevY(worldZ: number): number {
@@ -736,11 +801,14 @@ export function projectFacadeElevation(
   }))
   const roofPlanes: ElevationRoofPlane[] = []
   const roofThicknessCm = dakThicknessCmForPlan(plan)
+  const facadeMids = members.map((item) => wallPlanMid(item.wall))
   plan.floors.forEach((floor, floorIndex) => {
     if (facadeWalls.length === 0) return
     const base = floorWallBaseWorldZ(plan, floorIndex)
     listRidgeSurfacesOnFloor(floor).forEach((surface) => {
-      if (!roofSurfaceTouchesFacadeWalls(surface, facadeWalls, centroid, plan, floorIndex)) return
+      if (!roofSurfaceVisibleOnElevation(surface, facadeWalls, centroid, outward, facadeMids)) {
+        return
+      }
       const points = surface.poly.map((point) => ({
         x: projectOnAxis(point, lineOrigin, elevAxis),
         y: elevY(base + (point.z ?? 0)),
@@ -754,9 +822,13 @@ export function projectFacadeElevation(
         points,
         fillPoints,
         color: roofColor,
+        depthCm: elevationDepthCm(meanPoint(surface.poly), centroid, outward),
       })
     })
   })
+  roofPlanes.sort(
+    (a, b) => a.depthCm - b.depthCm || a.floorIndex - b.floorIndex || a.id.localeCompare(b.id),
+  )
 
   const bands: ElevationBand[] = []
   const facadeXs = walls.filter((w) => !w.ridge).flatMap((w) => [w.x0, w.x1])
@@ -780,18 +852,10 @@ export function projectFacadeElevation(
       y1: elevY(range.z0),
     })
   })
+  // Alleen een placeholder-strip als er geen nokbalken zijn. Per-ridge AABB
+  // (x0/x1/y0/y1) zou achter een scheve dwarsligger een horizontale fill tonen.
   const ridgeRects = walls.filter((w) => w.ridge)
-  if (ridgeRects.length > 0) {
-    for (const ridge of ridgeRects) {
-      bands.push({
-        kind: 'nok',
-        x0: ridge.x0,
-        x1: ridge.x1,
-        y0: ridge.y0,
-        y1: ridge.y1,
-      })
-    }
-  } else if (readFloorStack(plan).nokThicknessCm > 0) {
+  if (ridgeRects.length === 0 && readFloorStack(plan).nokThicknessCm > 0) {
     const nok = ridgeAwareNokWorldRange(plan)
     bands.push({
       kind: 'nok',

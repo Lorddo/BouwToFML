@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import CanvasToolbelt from './CanvasToolbelt.vue'
+import ToolbeltActionButton from './ToolbeltActionButton.vue'
 import type { CanvasToolId } from './canvas-toolbelt.types'
 import type { ToolbeltItem } from './canvas-toolbelt.types'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 import './canvas-toolbelt.css'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     faceTools?: ToolbeltItem[]
     faceActiveTool?: CanvasToolId | null
@@ -36,8 +39,16 @@ const emit = defineEmits<{
   inkUndo: []
 }>()
 
+const { t } = useI18n()
 const dockRef = ref<HTMLElement | null>(null)
 useChromeFitScale(dockRef)
+
+const hasActiveTool = computed(() => props.faceActiveTool != null || props.inkActiveTool != null)
+
+function deactivateActiveTool(): void {
+  if (props.inkActiveTool) emit('update:inkActiveTool', null)
+  if (props.faceActiveTool) emit('update:faceActiveTool', null)
+}
 </script>
 
 <template>
@@ -74,6 +85,20 @@ useChromeFitScale(dockRef)
           @update:active-tool="emit('update:inkActiveTool', $event)"
           @update:brush-size="emit('update:inkBrushSize', $event)"
           @undo="emit('inkUndo')"
+        />
+      </div>
+      <div v-if="hasActiveTool" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
+      <div
+        v-if="hasActiveTool"
+        class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml"
+      >
+        <ToolbeltActionButton
+          icon="clear"
+          :title="t('result.toolbar.deactivateDrawTool')"
+          :aria-label="t('result.toolbar.deactivateDrawTool')"
+          hotkey="Escape"
+          :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
+          @click="deactivateActiveTool"
         />
       </div>
     </div>

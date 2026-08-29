@@ -135,7 +135,7 @@ export function isTypingFieldTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement & { type?: string }
   if (el.isContentEditable === true) return true
   const tag = typeof el.tagName === 'string' ? el.tagName.toUpperCase() : ''
-  if (tag === 'TEXTAREA') return true
+  if (tag === 'TEXTAREA' || tag === 'SELECT') return true
   if (tag !== 'INPUT') return false
   const type = (el.type || 'text').toLowerCase()
   if (

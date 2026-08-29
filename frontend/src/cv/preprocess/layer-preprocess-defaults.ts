@@ -1,7 +1,18 @@
 import type { PreprocessLayerTune } from '@/core/extraction/types'
 import type { PreprocessLayerId } from './layer-preprocess-tabs'
 
-/** Defaults: vooraf B/W 150 → adaptive; thicken uit; despeckle uit. */
+/** Stap-2 Geavanceerd: ruwe px (3k-werkformaat, geen beeldmaat-schaal). */
+export const PREPROCESS_SLIDER_LIMITS = {
+  despeckleMinPx: { min: 0, max: 200 },
+  removeHolesMaxPx: { min: 0, max: 200 },
+  despeckleOpen: { min: 0, max: 16 },
+  bridgeGaps: { min: 1, max: 40 },
+  smoothLines: { min: 1, max: 16 },
+  thickenLinesPx: { min: 1, max: 24 },
+  erodeLinesPx: { min: 0, max: 16 },
+} as const
+
+/** Defaults: vooraf B/W 150 → morph → adaptive laatst; thicken uit; despeckle uit. */
 export const WALL_LAYER_DEFAULTS: PreprocessLayerTune = {
   adjustBrightnessContrastEnabled: true,
   adjustNegativeEnabled: false,
@@ -12,7 +23,7 @@ export const WALL_LAYER_DEFAULTS: PreprocessLayerTune = {
   thresholdEnabled: true,
   thresholdMode: 'adaptive',
   useAdaptive: true,
-  /** Vast 150 → puur B/W, daarna adaptive op dat beeld. */
+  /** Vast 150 → puur B/W; adaptive ná morph. */
   preBinarizeEnabled: true,
   preBinarizeThreshold: 150,
   adaptiveBlockSize: 11,

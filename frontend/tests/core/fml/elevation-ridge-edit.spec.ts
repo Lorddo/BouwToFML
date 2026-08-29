@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
+  applyElevationRidgeEnd,
   applyElevationRidgeRect,
   collectElevationRidgeJunctionSnapXs,
   snapElevationRidgeCenter,
+  snapElevationRidgeEnds,
 } from '@/core/fml/elevation-ridge-edit'
 import { assignWallsToGroup, createFacadeGroup } from '@/core/fml/facade-groups'
 import { projectFacadeElevation } from '@/core/fml/facade-elevation'
@@ -89,5 +91,48 @@ describe('applyElevationRidgeRect', () => {
     const snapped = snapElevationRidgeCenter(rect, xs)
     expect(snapped.guide.x).toBeCloseTo(400, 0)
     expect((snapped.rect.x0 + snapped.rect.x1) / 2).toBeCloseTo(400, 0)
+  })
+
+  it('verplaatst één dwarsligger-eind langs de gevel; andere blijft + helling', () => {
+    const plan = createEmptyFloorPlan({ name: 'Lang', wallHeightCm: 280 })
+    plan.floors[0].walls = [wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })]
+    const group = createFacadeGroup(plan, { name: 'Voorgevel' })
+    assignWallsToGroup(plan, group.id, ['front'])
+    const extrasA = ridgeEndpointExtras(280, 20, 350)
+    const ridge = markWallAsRidge(wall('r1', { x: 40, y: 90 }, { x: 360, y: 90 }), extrasA)
+    ridge.extras = {
+      ...ridge.extras,
+      az: { z: 350, h: 370 },
+      bz: { z: 420, h: 440 },
+    }
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
+    const elev = projectFacadeElevation(plan, group.id)!
+    const rect = elev.walls.find((item) => item.wallId === 'r1')!
+    expect(rect.endOn).toBe(false)
+    const displayBefore = ridgeDisplayWidthCm(plan)
+    const next = applyElevationRidgeEnd({
+      plan,
+      elevation: elev,
+      floorIndex: 0,
+      refs: [{ wallId: 'r1', end: 'a' }],
+      alongCm: rect.xa + 50,
+      zCm: 380,
+    })
+    const written = listRidgeWallsOnFloor(next.floors[0])[0]
+    expect(written.b.x).toBeCloseTo(ridge.b.x, 5)
+    expect(written.b.y).toBeCloseTo(ridge.b.y, 5)
+    expect(ridgeEndpointZCm(written, 'a', 280)).toBe(380)
+    expect(ridgeEndpointZCm(written, 'b', 280)).toBe(420)
+    expect(ridgeDisplayWidthCm(next)).toBe(displayBefore)
+    const alongA = written.a.x * elev.axis.x + written.a.y * elev.axis.y
+    expect(alongA).toBeCloseTo(rect.xa + 50, 5)
+  })
+
+  it('dwarsligger-einde snapt op gevelknoop', () => {
+    const rect = { x0: 8, x1: 328, y0: -400, y1: -360 }
+    const snapped = snapElevationRidgeEnds(rect, [0, 400])
+    expect(snapped.guide.x).toBeCloseTo(0, 0)
+    expect(snapped.rect.x0).toBeCloseTo(0, 0)
+    expect(snapped.rect.x1).toBeCloseTo(320, 0)
   })
 })

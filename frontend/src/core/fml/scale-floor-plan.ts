@@ -189,6 +189,8 @@ function scaleFloor(floor: Floor, f: PlanScaleFactors): Floor {
 /**
  * Plan-schaal in FML-cm. `factor` = uniforme of `{ x, y }` (aparte H/V zoals stap 1).
  * Muurdikte blijft; opening-breedte volgt de muur-as. Verticale maten (height/z) blijven.
+ * Area-polygonen schalen mee als punten — binnenmaten kloppen pas na
+ * `scaleFloorPlanAndRegenAreas` (dikte blijft, gat is geen simpele schaal).
  */
 export function scaleFloorPlan(
   plan: FloorPlan,

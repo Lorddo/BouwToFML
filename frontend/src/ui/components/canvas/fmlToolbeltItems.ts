@@ -49,6 +49,7 @@ export function isFmlToolbarSettingsOpen(args: {
   hasLabelSelection: boolean
   hasLineSelection?: boolean
   hasItemSelection?: boolean
+  hasFacadeGroupSelection?: boolean
   /** Viewer-maatlijnen: strip met wissen, ook in de floating settings-kaart. */
   hasMeasureLines?: boolean
   activeTool: FmlToolId | null
@@ -62,11 +63,13 @@ export function isFmlToolbarSettingsOpen(args: {
     args.hasAreaSelection ||
     args.hasLabelSelection ||
     args.hasLineSelection ||
-    args.hasItemSelection
+    args.hasItemSelection ||
+    args.hasFacadeGroupSelection
   ) {
     return true
   }
   if (args.activeTool === 'measure' || args.activeTool === 'box_select') return true
+  if (args.activeTool === 'nulpunt') return true
   if (args.dakMode === true && args.activeTool === 'draw_surface') return false
   return args.activeTool != null && SETTINGS_TOOLS.has(args.activeTool)
 }

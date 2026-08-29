@@ -47,8 +47,8 @@ export function createWorkspaceExportReferenceAnalysis(deps: WorkspaceExportRefe
           y: r.y,
           width: r.width,
           height: r.height,
-          ...(r.type === 'wall' && r.wallThicknessBand
-            ? { wallThicknessBand: r.wallThicknessBand }
+          ...(r.type === 'wall' && r.wallThicknessCm != null && r.wallThicknessCm > 0
+            ? { wallThicknessCm: r.wallThicknessCm }
             : {}),
         })),
       })

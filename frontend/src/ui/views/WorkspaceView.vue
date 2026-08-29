@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { proxyRefs, computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
 import FloorplanCanvas from '../components/FloorplanCanvas.vue'
 import DrawingUploadPanel from '../components/DrawingUploadPanel.vue'
 import DrawingProfilePicker from '../components/DrawingProfilePicker.vue'
@@ -73,9 +74,10 @@ watch(
 )
 
 function onWorkspaceKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && canvasFullscreen.value) {
-    canvasFullscreen.value = false
-  }
+  if (event.key !== 'Escape' || !canvasFullscreen.value) return
+  if (event.defaultPrevented) return
+  if (hasToolbeltHotkey('Escape')) return
+  canvasFullscreen.value = false
 }
 
 onMounted(() => {
@@ -255,9 +257,11 @@ defineExpose<{
               minCm: ws.fmlThicknessMinCm,
               midCm: ws.fmlThicknessMidCm,
               maxCm: ws.fmlThicknessMaxCm,
+              thicknessCms: ws.fmlThicknessCms,
             }"
             :wall-ref-thickness-measures="ws.wallRefThicknessMeasures"
             :selected-rect-id="ws.selectedRectId"
+            :pending-wall-thickness-cm="ws.pendingWallThicknessCm"
             :unit="ws.scaleInputUnit"
             :can-start-wall-stamp="ws.canStartWallStamp"
             :wall-stamp-active="ws.wallStampActive"
@@ -276,8 +280,8 @@ defineExpose<{
             @set-reference-draw-mode="ws.setReferenceDrawMode"
             @set-reference-pan-mode="ws.setReferencePanMode"
             @update-door-fml-ref-id="ws.onDoorFmlRefIdChange"
-            @update-wall-thickness-band="ws.onWallThicknessBandChange"
-            @update-wall-thickness-cm="ws.onWallThicknessCmChange"
+            @update-catalog-thickness="ws.onCatalogThicknessChange"
+            @set-catalog-cms="ws.onCatalogCmsChange"
             @select-wall-ref="ws.selectRect"
             @start-wall-stamp="(id, useSet) => ws.startWallStamp(id, useSet)"
             @update:wall-stamp-use-stamp-set="(v) => (ws.wallStampUseStampSet = v)"
@@ -406,9 +410,7 @@ defineExpose<{
             :fml-window-sill-z-cm="ws.fmlWindowSillZCm"
             :fml-bovenlicht-default="ws.fmlBovenlichtDefault"
             :fml-window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
-            :fml-thickness-min-cm="ws.fmlThicknessMinCm"
-            :fml-thickness-mid-cm="ws.fmlThicknessMidCm"
-            :fml-thickness-max-cm="ws.fmlThicknessMaxCm"
+            :fml-thickness-cms="ws.fmlThicknessCms"
             :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
             :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
             :fml-limits-dirty="ws.fmlLimitsDirty"
@@ -446,9 +448,7 @@ defineExpose<{
             @update:fml-window-sill-z-cm="ws.setFmlWindowSillZCm"
             @update:fml-bovenlicht-default="ws.setFmlBovenlichtDefault"
             @update:fml-window-bovenlicht-default="ws.setFmlWindowBovenlichtDefault"
-            @update:fml-thickness-min-cm="ws.setFmlThicknessMinCm"
-            @update:fml-thickness-mid-cm="ws.setFmlThicknessMidCm"
-            @update:fml-thickness-max-cm="ws.setFmlThicknessMaxCm"
+            @update:fml-thickness-cms="ws.setFmlThicknessCms"
             @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
             @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
             @update:fml-rescale-distance-mm-x="ws.setFmlRescaleDistanceMmX"
@@ -551,9 +551,7 @@ defineExpose<{
             :flip-x="ws.previewUnderlayLayout?.flipX === true"
             :underlay-move-mode="ws.underlayMoveMode"
             :thickness-pick-tier="ws.fmlThicknessPickTier"
-            :thickness-min-cm="ws.fmlThicknessMinCm"
-            :thickness-mid-cm="ws.fmlThicknessMidCm"
-            :thickness-max-cm="ws.fmlThicknessMaxCm"
+            :thickness-preset-cms="ws.fmlThicknessCms"
             :bovenlicht-default="ws.fmlBovenlichtDefault"
             :window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
             :bovenlicht-height-cm="ws.fmlBovenlichtHeightCm"
@@ -597,6 +595,7 @@ defineExpose<{
                       minCm: ws.fmlThicknessMinCm,
                       midCm: ws.fmlThicknessMidCm,
                       maxCm: ws.fmlThicknessMaxCm,
+                      thicknessCms: ws.fmlThicknessCms,
                     }
                   : null
               "

@@ -8,28 +8,39 @@ import { runPreprocessLayerFromGrayscale } from '@/cv/layers/preprocess-layer'
 import type { LayerContext } from '@/cv/layers/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 
-const binarizeMat = vi.hoisted(() =>
-  vi.fn((_cv: unknown, src: { delete?: () => void }, _opts: unknown) => {
-    // Mimic binarizeMat consuming src and returning a fresh mat.
-    src.delete?.()
-    return {
-      cols: 2,
-      rows: 2,
-      channels: () => 1,
-      data: new Uint8Array(4),
-      clone: () => ({
+const { binarizeMat, fillHolesByMaxArea, thickenLines, callOrder } = vi.hoisted(() => {
+  const callOrder: string[] = []
+  const binarizeMat = vi.fn(
+    (_cv: unknown, src: { delete?: () => void }, opts: { thresholdMode?: string }) => {
+      callOrder.push(`binarize:${opts.thresholdMode ?? 'unknown'}`)
+      src.delete?.()
+      return {
         cols: 2,
         rows: 2,
         channels: () => 1,
         data: new Uint8Array(4),
+        clone: () => ({
+          cols: 2,
+          rows: 2,
+          channels: () => 1,
+          data: new Uint8Array(4),
+          delete: vi.fn(),
+          setTo: vi.fn(),
+        }),
         delete: vi.fn(),
         setTo: vi.fn(),
-      }),
-      delete: vi.fn(),
-      setTo: vi.fn(),
-    }
-  }),
-)
+      }
+    },
+  )
+  const fillHolesByMaxArea = vi.fn(() => {
+    callOrder.push('holes')
+    return 0
+  })
+  const thickenLines = vi.fn(() => {
+    callOrder.push('thicken')
+  })
+  return { binarizeMat, fillHolesByMaxArea, thickenLines, callOrder }
+})
 
 vi.mock('@/cv/port/preprocess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/cv/port/preprocess')>()
@@ -50,10 +61,10 @@ vi.mock('@/cv/port/despeckle', () => ({
 
 vi.mock('@/cv/port/cleanBinary', () => ({
   applyNegative: vi.fn(),
-  fillHolesByMaxArea: vi.fn(),
+  fillHolesByMaxArea,
   openWhiteDetails: vi.fn(),
   smoothBinaryLines: vi.fn(),
-  thickenLines: vi.fn(),
+  thickenLines,
   thinLines: vi.fn(),
 }))
 
@@ -104,6 +115,9 @@ function makeCtx(wallTune: ReturnType<typeof createDefaultWallLayerTune>): Layer
 describe('preprocess adaptive pass', () => {
   beforeEach(() => {
     binarizeMat.mockClear()
+    fillHolesByMaxArea.mockClear()
+    thickenLines.mockClear()
+    callOrder.length = 0
   })
 
   it('slaat adaptive over wanneer useAdaptive false + preBinarize aan', () => {
@@ -166,6 +180,24 @@ describe('preprocess adaptive pass', () => {
     result.mat.delete()
   })
 
+  it('draait adaptive ná hole-fill en verdikken', () => {
+    const result = runPreprocessLayerFromGrayscale(
+      makeCtx({
+        ...createDefaultWallLayerTune(),
+        useAdaptive: true,
+        thresholdMode: 'adaptive',
+        preBinarizeEnabled: true,
+        removeHolesEnabled: true,
+        removeHolesMaxPx: 8,
+        thickenLinesEnabled: true,
+        thickenLinesPx: 2,
+      }),
+      makeGrayMat(),
+    )
+    expect(callOrder).toEqual(['binarize:fixed', 'holes', 'thicken', 'binarize:adaptive'])
+    result.mat.delete()
+  })
+
   it('draait otsu wanneer thresholdMode otsu + preBinarize uit', () => {
     const result = runPreprocessLayerFromGrayscale(
       makeCtx({
@@ -181,6 +213,25 @@ describe('preprocess adaptive pass', () => {
       thresholdMode: 'otsu',
       useAdaptive: false,
     })
+    expect(callOrder).toEqual(['binarize:otsu'])
+    result.mat.delete()
+  })
+
+  it('houdt Otsu-start + morph zonder adaptive (Int-muur-recept)', () => {
+    const result = runPreprocessLayerFromGrayscale(
+      makeCtx({
+        ...createDefaultWallLayerTune(),
+        useAdaptive: false,
+        thresholdMode: 'otsu',
+        preBinarizeEnabled: false,
+        removeHolesEnabled: true,
+        removeHolesMaxPx: 15,
+        thickenLinesEnabled: true,
+        thickenLinesPx: 2,
+      }),
+      makeGrayMat(),
+    )
+    expect(callOrder).toEqual(['binarize:otsu', 'holes', 'thicken'])
     result.mat.delete()
   })
 })

@@ -14,7 +14,7 @@ describe('fml-wall-thickness-limits', () => {
 
   it('normaliseert omgekeerde min/mid/max', () => {
     const effective = resolveEffectiveFmlWallThicknessLimits({ minCm: 30, midCm: 10, maxCm: 17 })
-    expect(effective).toEqual({ minCm: 10, midCm: 17, maxCm: 30 })
+    expect(effective).toEqual({ minCm: 10, midCm: 17, maxCm: 30, thicknessCms: [10, 17, 30] })
     expect(clampWallThicknessCm(5, { minCm: 30, midCm: 10, maxCm: 17 })).toBe(10)
     expect(clampWallThicknessCm(40, { minCm: 30, midCm: 10, maxCm: 17 })).toBe(30)
   })

@@ -185,6 +185,7 @@ export function useFmlPreviewOpeningSelection(options: {
     cancelOpeningDragPending()
     moveWallId.value = null
     settingsWallIds.value = []
+    selection.settingsFacadeGroupId.value = null
     selection.settingsJunctionId.value = null
     pinnedJunctionId.value = null
     moveOpeningId.value = null
@@ -508,6 +509,7 @@ export function useFmlPreviewOpeningSelection(options: {
       })
       clearOpeningSelectionState()
       settingsWallIds.value = []
+      selection.settingsFacadeGroupId.value = null
       selection.settingsJunctionId.value = null
       moveWallId.value = null
       pinnedJunctionId.value = null
@@ -527,6 +529,7 @@ export function useFmlPreviewOpeningSelection(options: {
     })
     clearOpeningSelectionState()
     settingsWallIds.value = []
+    selection.settingsFacadeGroupId.value = null
     selection.settingsJunctionId.value = null
     moveWallId.value = null
     pinnedJunctionId.value = null

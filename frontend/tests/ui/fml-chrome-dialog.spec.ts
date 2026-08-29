@@ -6,6 +6,7 @@ import {
   fmlChromeDialogState,
   promptFacadeGroupName,
   promptFmlChrome,
+  promptFmlChromeChoice,
   registerFmlChromeDialogHost,
   resetFmlChromeDialogForTests,
   resolveFmlChromeDialog,
@@ -50,6 +51,36 @@ describe('fml-chrome-dialog', () => {
     expect(state?.state.inputValue).toBe('Achtergevel')
     confirmFmlChromeDialog()
     await expect(pending).resolves.toBe('Achtergevel')
+    unregister()
+  })
+
+  it('promptFmlChromeChoice returns selected id', async () => {
+    const unregister = registerFmlChromeDialogHost()
+    const pending = promptFmlChromeChoice({
+      title: 'Bind',
+      defaultValue: '0',
+      listItems: [
+        { id: '0', name: 'BG' },
+        { id: '1', name: '1e' },
+      ],
+    })
+    const state = fmlChromeDialogState().value
+    expect(state?.state.request.kind).toBe('choice')
+    expect(state?.state.inputValue).toBe('0')
+    if (state) state.state.inputValue = '1'
+    confirmFmlChromeDialog()
+    await expect(pending).resolves.toBe('1')
+    unregister()
+  })
+
+  it('promptFmlChromeChoice cancel returns null', async () => {
+    const unregister = registerFmlChromeDialogHost()
+    const pending = promptFmlChromeChoice({
+      title: 'Bind',
+      listItems: [{ id: '0', name: 'BG' }],
+    })
+    cancelFmlChromeDialog()
+    await expect(pending).resolves.toBeNull()
     unregister()
   })
 

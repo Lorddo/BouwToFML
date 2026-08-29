@@ -11,6 +11,7 @@ const props = withDefaults(
     inputValue?: string
     placeholder?: string
     listEdit?: boolean
+    choice?: boolean
     listItems?: Array<{ id: string; name: string }>
     confirmLabel: string
     cancelLabel?: string
@@ -23,6 +24,7 @@ const props = withDefaults(
     inputValue: '',
     placeholder: '',
     listEdit: false,
+    choice: false,
     listItems: () => [],
     cancelLabel: '',
     hideCancel: false,
@@ -41,12 +43,16 @@ const confirmRef = ref<HTMLButtonElement | null>(null)
 
 function focusPrimary(): void {
   void nextTick(() => {
-    if (props.input || props.listEdit) {
-      const first = props.listEdit
-        ? document.querySelector<HTMLInputElement>('.fml-chrome-dialog__list-input')
-        : inputRef.value
+    if (props.input || props.listEdit || props.choice) {
+      const first = props.choice
+        ? document.querySelector<HTMLInputElement>(
+            '.fml-chrome-dialog__choice-input:checked, .fml-chrome-dialog__choice-input',
+          )
+        : props.listEdit
+          ? document.querySelector<HTMLInputElement>('.fml-chrome-dialog__list-input')
+          : inputRef.value
       first?.focus()
-      first?.select()
+      if (props.input || props.listEdit) first?.select()
       return
     }
     confirmRef.value?.focus()
@@ -96,7 +102,10 @@ onBeforeUnmount(() => {
       :aria-labelledby="'fml-chrome-dialog-title'"
     >
       <div class="fml-chrome-dialog__backdrop" @click="emit('cancel')" />
-      <div class="fml-chrome-dialog__card" :class="{ 'fml-chrome-dialog__card--wide': listEdit }">
+      <div
+        class="fml-chrome-dialog__card"
+        :class="{ 'fml-chrome-dialog__card--wide': listEdit || choice }"
+      >
         <div class="fml-chrome-dialog__head">
           <h3 id="fml-chrome-dialog-title">{{ title }}</h3>
           <button type="button" :aria-label="cancelLabel || confirmLabel" @click="emit('cancel')">
@@ -124,6 +133,29 @@ onBeforeUnmount(() => {
                 emit('update:listItemName', row.id, ($event.target as HTMLInputElement).value)
               "
             />
+          </label>
+        </div>
+        <div
+          v-if="choice"
+          class="fml-chrome-dialog__list"
+          role="radiogroup"
+          :aria-labelledby="'fml-chrome-dialog-title'"
+        >
+          <label
+            v-for="row in listItems"
+            :key="row.id"
+            class="fml-chrome-dialog__choice"
+            :class="{ 'is-on': inputValue === row.id }"
+          >
+            <input
+              class="fml-chrome-dialog__choice-input"
+              type="radio"
+              name="fml-chrome-dialog-choice"
+              :value="row.id"
+              :checked="inputValue === row.id"
+              @change="emit('update:inputValue', row.id)"
+            />
+            <span>{{ row.name }}</span>
           </label>
         </div>
         <div class="fml-chrome-dialog__actions">
@@ -260,6 +292,33 @@ onBeforeUnmount(() => {
 
 .fml-chrome-dialog__list-input {
   margin: 0;
+}
+
+.fml-chrome-dialog__choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.fml-chrome-dialog__choice.is-on {
+  border-color: var(--fml-accent, #2563eb);
+  background: #eff6ff;
+}
+
+.fml-chrome-dialog__choice-input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--fml-accent, #2563eb);
 }
 
 .fml-chrome-dialog__actions {

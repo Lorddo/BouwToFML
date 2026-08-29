@@ -180,8 +180,8 @@ describe('elevation-linework', () => {
     const lw = buildElevationLinework(elev)
     expect(lw.strokes.some((s) => s.role === 'ridge')).toBe(true)
     expect(lw.strokes.some((s) => s.role === 'slab')).toBe(true)
-    // Nok-bands from ridge rects are skipped when ridge wall outlines exist.
+    // Nok-balk is de outline; geen extra AABB-band achter de balk.
     const nokBandCount = elev.bands.filter((b) => b.kind === 'nok').length
-    expect(nokBandCount).toBeGreaterThan(0)
+    expect(nokBandCount).toBe(0)
   })
 })

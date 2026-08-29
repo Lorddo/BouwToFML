@@ -4,7 +4,8 @@ import { computed } from 'vue'
 import type Konva from 'konva'
 
 import type { SelectionRect } from '@/platform/selection'
-import { resolveWallThicknessBand } from '@/platform/selection/wall-thickness-ref'
+import { resolveWallThicknessCm } from '@/platform/selection/wall-thickness-ref'
+import { catalogMaxCm } from '@/core/fml/fml-wall-thickness-catalog'
 import type { ElementClass } from '@/core/extraction/types'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
@@ -20,8 +21,13 @@ const props = defineProps<{
   selectedRect: SelectionRect | null
   isSelectionMode: boolean
   typeColors: Partial<Record<ElementClass, string>>
-  /** Project export-cm for wall LBE labels (min/mid/max). */
-  wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number } | null
+  /** Project export-cm for wall LBE labels. */
+  wallThicknessLimits?: {
+    minCm: number
+    midCm: number
+    maxCm: number
+    thicknessCms?: number[]
+  } | null
   iconSize: number
   handleSize: number
   handlePosition: (rect: SelectionRect, handle: ResizeHandle) => { x: number; y: number }
@@ -45,10 +51,14 @@ function colorFor(type: ElementClass): string {
 
 function wallBandLabel(rect: SelectionRect): string | null {
   if (rect.type !== 'wall') return null
-  const band = resolveWallThicknessBand(rect)
+  const own = resolveWallThicknessCm(rect)
   const limits = props.wallThicknessLimits
-  if (!limits) return band
-  const cm = band === 'min' ? limits.minCm : band === 'mid' ? limits.midCm : limits.maxCm
+  const cm =
+    own ??
+    (limits
+      ? catalogMaxCm(limits.thicknessCms ?? [limits.minCm, limits.midCm, limits.maxCm])
+      : null)
+  if (cm == null) return null
   return formatScaleInputLabel(cm, loadUserSettings().scaleInputUnit)
 }
 

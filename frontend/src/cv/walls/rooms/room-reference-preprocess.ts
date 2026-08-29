@@ -46,7 +46,15 @@ const ROOM_REFERENCE_LAYER_TUNE = {
   despeckleMinPx: 0,
 } satisfies Partial<PreprocessConfig>
 
-/** Solid 0.15×REF / open 0.25×REF — geen cap. Fallback zonder REF = 2. */
+export const ROOM_REFERENCE_THICKEN_FACTOR = { solid: 0.1, open: 0.1 } as const
+export const ROOM_REFERENCE_BRIDGE_FACTOR = { solid: 0.15, open: 0.2 } as const
+export const ROOM_REFERENCE_HOLE_FILL_FACTOR = { solid: 0.2, open: 0.3 } as const
+
+function resolveWallStyle(wallStyle?: 'solid' | 'open'): 'solid' | 'open' {
+  return wallStyle === 'solid' ? 'solid' : 'open'
+}
+
+/** Solid/open 0.1×REF — geen cap. Fallback zonder REF = 2. */
 export function resolveReferencePrefilterThickenPx(
   referenceWallThicknessPx?: number,
   wallStyle?: 'solid' | 'open',
@@ -54,11 +62,11 @@ export function resolveReferencePrefilterThickenPx(
   if (!referenceWallThicknessPx || referenceWallThicknessPx <= 0) {
     return ROOM_REFERENCE_LAYER_TUNE.thickenLinesPx ?? 2
   }
-  const factor = wallStyle === 'open' ? 0.25 : 0.15
+  const factor = ROOM_REFERENCE_THICKEN_FACTOR[resolveWallStyle(wallStyle)]
   return Math.max(0, Math.round(referenceWallThicknessPx * factor))
 }
 
-/** Solid 0.2×REF / open 0.3×REF — geen cap. Fallback zonder REF = 8. */
+/** Solid 0.15×REF / open 0.2×REF — geen cap. Fallback zonder REF = 8. */
 export function resolveReferenceBridgeGapsPx(
   referenceWallThicknessPx?: number,
   wallStyle?: 'solid' | 'open',
@@ -66,10 +74,11 @@ export function resolveReferenceBridgeGapsPx(
   if (!referenceWallThicknessPx || referenceWallThicknessPx <= 0) {
     return ROOM_REFERENCE_LAYER_TUNE.bridgeGaps ?? 8
   }
-  const factor = wallStyle === 'open' ? 0.3 : 0.2
+  const factor = ROOM_REFERENCE_BRIDGE_FACTOR[resolveWallStyle(wallStyle)]
   return Math.max(0, Math.round(referenceWallThicknessPx * factor))
 }
 
+/** Solid 0.2×REF / open 0.3×REF — ruwe px, geen cap. Fallback zonder REF = 15. */
 export function resolveReferenceRemoveHolesPx(
   referenceWallThicknessPx?: number,
   wallStyle?: 'solid' | 'open',
@@ -77,13 +86,45 @@ export function resolveReferenceRemoveHolesPx(
   if (!referenceWallThicknessPx || referenceWallThicknessPx <= 0) {
     return ROOM_REFERENCE_LAYER_TUNE.removeHolesMaxPx ?? 15
   }
-  // Open walls hebben dunnere lijnstructuren; te hoge hole-fill trekt vloerpartijen
-  // de muurclassificatie in. Solid walls mogen iets ruimer dichten.
-  const factor = wallStyle === 'open' ? 0.5 : 0.45
-  const min = 16
-  const max = wallStyle === 'open' ? 42 : 44
-  const scaled = Math.round(referenceWallThicknessPx * factor)
-  return Math.min(max, Math.max(min, scaled))
+  const factor = ROOM_REFERENCE_HOLE_FILL_FACTOR[resolveWallStyle(wallStyle)]
+  return Math.max(0, Math.round(referenceWallThicknessPx * factor))
+}
+
+/** UI + engine: zelfde px als `buildRoomReferenceMat`. */
+export function describeRoomReferenceTune(params: {
+  referenceWallThicknessPx?: number | null
+  wallStyle?: 'solid' | 'open'
+}): {
+  style: 'solid' | 'open'
+  hasRef: boolean
+  refPx: number | null
+  brightness: number
+  contrast: number
+  thickenPx: number
+  thickenFactor: number
+  bridgePx: number
+  bridgeFactor: number
+  holeFillPx: number
+  holeFillFactor: number
+} {
+  const style = resolveWallStyle(params.wallStyle)
+  const ref =
+    params.referenceWallThicknessPx != null && params.referenceWallThicknessPx > 0
+      ? params.referenceWallThicknessPx
+      : undefined
+  return {
+    style,
+    hasRef: ref != null,
+    refPx: ref != null ? Math.round(ref) : null,
+    brightness: ROOM_REFERENCE_LAYER_TUNE.brightness ?? 50,
+    contrast: ROOM_REFERENCE_LAYER_TUNE.contrast ?? 1,
+    thickenPx: resolveReferencePrefilterThickenPx(ref, style),
+    thickenFactor: ROOM_REFERENCE_THICKEN_FACTOR[style],
+    bridgePx: resolveReferenceBridgeGapsPx(ref, style),
+    bridgeFactor: ROOM_REFERENCE_BRIDGE_FACTOR[style],
+    holeFillPx: resolveReferenceRemoveHolesPx(ref, style),
+    holeFillFactor: ROOM_REFERENCE_HOLE_FILL_FACTOR[style],
+  }
 }
 
 function buildRoomReferencePreprocess(

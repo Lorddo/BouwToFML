@@ -6,7 +6,7 @@ import type { FloorLineType } from '@/core/fml/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
-import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
 import {
   FML_AREA_SIDE_DIMS_TOOL_ID,
@@ -18,6 +18,7 @@ import {
 } from './canvas/fmlToolbeltItems'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { BoxSelectKind } from '@/ui/composables/fml-preview/fml-preview-wall-select'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 import './canvas/canvas-toolbelt.css'
 
 const { t, locale } = useI18n()
@@ -61,6 +62,12 @@ const props = withDefaults(
       canSplit: boolean
       ridgeCount?: number
     } | null
+    selectedFacadeGroupPanel?: {
+      groupId: string
+      name: string
+      wallCount: number
+      floorCount: number
+    } | null
     selectedJunctionPanel: {
       junctionId: string
       wallCount: number
@@ -99,6 +106,7 @@ const props = withDefaults(
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
     roofVertexZCm?: number | null
+    roofVertexIndex?: number | null
     /** draw_surface in toolbelt; default true (viewer). */
     includeSurfaceTool?: boolean
     dakMode?: boolean
@@ -167,9 +175,7 @@ const props = withDefaults(
     openingBovenlichtGapDraft: number
     openingBovenlichtGapMixed: boolean
     bovenlichtPacked?: boolean
-    thicknessMinCm?: number
-    thicknessMidCm?: number
-    thicknessMaxCm?: number
+    thicknessPresetCms?: number[]
     measureLineCount?: number
     measurePersistEnabled?: boolean
     drawWallDrafting?: boolean
@@ -199,9 +205,7 @@ const props = withDefaults(
     ridgeFloorOptions?: ReadonlyArray<{ index: number; name: string }>
   }>(),
   {
-    thicknessMinCm: 10,
-    thicknessMidCm: 20,
-    thicknessMaxCm: 30,
+    thicknessPresetCms: () => [10, 20, 30],
     measureLineCount: 0,
     measurePersistEnabled: false,
     drawWallDrafting: false,
@@ -227,10 +231,12 @@ const props = withDefaults(
     ridgeFloorMixed: false,
     ridgeFloorOptions: () => [],
     selectedAreaPanel: null,
+    selectedFacadeGroupPanel: null,
     selectedJunctionPanel: null,
     roomTypes: () => [],
     surfaceEditActive: false,
     roofVertexZCm: null,
+    roofVertexIndex: null,
     includeSurfaceTool: false,
     dakMode: false,
     roofPolyMutate: false,
@@ -367,6 +373,7 @@ const settingsOpen = computed(() =>
     hasLabelSelection: props.selectedLabelPanel != null,
     hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
+    hasFacadeGroupSelection: props.selectedFacadeGroupPanel != null,
     hasMeasureLines: (props.measureLineCount ?? 0) > 0,
     activeTool: activeTool.value,
     dakMode: props.dakMode === true,
@@ -493,16 +500,15 @@ defineExpose({ hint })
             :show-undo="false"
             @update:active-tool="activeTool = $event as FmlToolId | null"
           />
-          <button
+          <ToolbeltActionButton
             v-if="props.dakMode && activeTool"
-            type="button"
-            class="canvas-toolbelt__btn"
+            icon="clear"
             :title="t('result.toolbar.deactivateDrawTool')"
             :aria-label="t('result.toolbar.deactivateDrawTool')"
+            hotkey="Escape"
+            :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
             @click="emit('deactivateDrawTool')"
-          >
-            <ToolbeltIcon name="clear" />
-          </button>
+          />
         </div>
         <div v-if="!props.dakMode" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
         <div
@@ -544,6 +550,7 @@ defineExpose({ hint })
           v-model:draw-label-bold="drawLabelBold"
           v-model:draw-label-italic="drawLabelItalic"
           :selected-wall-panel="selectedWallPanel"
+          :selected-facade-group-panel="selectedFacadeGroupPanel"
           :selected-junction-panel="selectedJunctionPanel"
           :selected-opening-panel="selectedOpeningPanel"
           :selected-area-panel="selectedAreaPanel"
@@ -554,6 +561,7 @@ defineExpose({ hint })
           :room-types="roomTypes"
           :surface-edit-active="surfaceEditActive"
           :roof-vertex-z-cm="roofVertexZCm"
+          :roof-vertex-index="roofVertexIndex"
           :roof-poly-mutate="roofPolyMutate"
           :wall-thickness-draft="wallThicknessDraft"
           :wall-thickness-mixed="wallThicknessMixed"
@@ -586,9 +594,7 @@ defineExpose({ hint })
           :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
           :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
           :bovenlicht-packed="bovenlichtPacked"
-          :thickness-min-cm="thicknessMinCm"
-          :thickness-mid-cm="thicknessMidCm"
-          :thickness-max-cm="thicknessMaxCm"
+          :thickness-preset-cms="thicknessPresetCms"
           :measure-line-count="measureLineCount"
           :measure-persist-enabled="measurePersistEnabled"
           :draw-wall-drafting="drawWallDrafting"

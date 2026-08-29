@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
 import { isFmlOneshotDrawTool } from '@/ui/components/canvas/fmlToolbeltItems'
+import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
 import { isTypingFieldTarget } from './fml-preview-draft-commit'
 import type { MeasureLine } from './fml-preview-measure'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
@@ -126,9 +127,10 @@ export function createFmlPreviewEditorKeyHandlers(options: {
     const typing = isTypingFieldTarget(event.target)
     if (typing) {
       if (event.key === 'Escape') {
-        event.preventDefault()
         flushPendingFieldCommits()
         if (event.target instanceof HTMLElement) event.target.blur()
+        if (hasToolbeltHotkey('Escape')) return
+        event.preventDefault()
         if (isFmlOneshotDrawTool(activeFmlTool.value)) {
           deactivateDrawTool()
           return
@@ -198,61 +200,69 @@ export function createFmlPreviewEditorKeyHandlers(options: {
         emitCancelThicknessPick()
         return
       }
-      if (isFmlOneshotDrawTool(activeFmlTool.value)) {
-        event.preventDefault()
-        deactivateDrawTool()
-        return
-      }
       if (drawWall.isDragging()) {
+        event.preventDefault()
         drawWall.cancelDrawWallDrag()
         return
       }
       if (drawRoom.isDragging()) {
+        event.preventDefault()
         drawRoom.cancelDrawRoomDrag()
         return
       }
       if (wallMove.isDrafting()) {
+        event.preventDefault()
         wallMove.cancelWallMove()
         return
       }
       if (junctionMove.isDrafting()) {
+        event.preventDefault()
         junctionMove.cancelJunctionMove()
         return
       }
       if (openingMove.isDrafting()) {
+        event.preventDefault()
         openingMove.cancelOpeningMove()
         return
       }
       if (drawSurface.draftPoints.value?.length) {
+        event.preventDefault()
         drawSurface.cancelDrawSurface()
         return
       }
       if (selection.drawLinePoints.value?.length) {
+        event.preventDefault()
         drawLine.cancelDrawLine()
         return
       }
       if (selection.surfaceEditId.value) {
+        event.preventDefault()
         areaSelection.endSurfacePolygonEdit()
         surfaceEdit.cancelDrag()
         return
       }
       if (measure.isDragging()) {
+        event.preventDefault()
         measure.cancelMeasureDrag()
         return
       }
       if (nulpunt.isDragging()) {
+        event.preventDefault()
         nulpunt.cancelNulpuntPending()
         return
       }
       if (underlayMove.isDragging()) {
+        event.preventDefault()
         underlayMove.cancelUnderlayMoveDrag()
         return
       }
       if (nulpunt.nulpuntHasPending.value) {
+        event.preventDefault()
         nulpunt.cancelNulpuntPending()
         return
       }
       if (measureMode.value && measure.measureLines.value.length > 0) {
+        event.preventDefault()
         measure.clearMeasureLines()
         return
       }
@@ -260,26 +270,34 @@ export function createFmlPreviewEditorKeyHandlers(options: {
         event.preventDefault()
         return
       }
-      if (measureMode.value) {
+      if (hasToolbeltHotkey('Escape')) return
+      if (isFmlOneshotDrawTool(activeFmlTool.value) || measureMode.value) {
         event.preventDefault()
         deactivateDrawTool()
         return
       }
       if (nulpuntMode.value) {
+        event.preventDefault()
         activeFmlTool.value = null
         return
       }
       if (underlayMoveMode.value) {
+        event.preventDefault()
         underlayMoveMode.value = false
         return
       }
+      event.preventDefault()
       clearSelection()
       hoveredOpeningId.value = null
       if (inspectMode.value) clearInspectSelect()
       return
     }
-    if (inspectMode.value) return
+    if (inspectMode.value) {
+      if (event.key === 'Delete' || event.key === 'Backspace') event.preventDefault()
+      return
+    }
     if (event.key === 'Delete' || event.key === 'Backspace') {
+      if (hasToolbeltHotkey('Delete')) return
       event.preventDefault()
       deleteSelected()
       return

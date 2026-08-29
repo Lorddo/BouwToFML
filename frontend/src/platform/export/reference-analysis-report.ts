@@ -222,9 +222,12 @@ function unitBlock(unit: OpeningRefUnitProfile, kind: 'door' | 'window'): string
 
 function wallSection(wall: WallRefProfile, index: number, total: number): string {
   const bwLabel = wall.bwMode === 'otsu' ? 'B/W (Otsu)' : 'B/W (adaptief)'
-  const bandLabel = wall.wallThicknessBand
-    ? ` <span class="muted">(${wall.wallThicknessBand})</span>`
-    : ''
+  const bandLabel =
+    wall.wallThicknessCm != null && wall.wallThicknessCm > 0
+      ? ` <span class="muted">(${wall.wallThicknessCm} cm)</span>`
+      : wall.wallThicknessBand
+        ? ` <span class="muted">(${wall.wallThicknessBand})</span>`
+        : ''
   const title =
     total > 1 ? `Muur-referentie #${index + 1}${bandLabel}` : `Muur-referentie${bandLabel}`
   return `<article class="ref-card wall">
@@ -243,6 +246,7 @@ function wallSection(wall: WallRefProfile, index: number, total: number): string
     <details open>
       <summary>Muur JSON</summary>
       <pre class="json">${formatJson({
+        wallThicknessCm: wall.wallThicknessCm ?? null,
         wallThicknessBand: wall.wallThicknessBand ?? null,
         rect: wall.rect,
         bwMode: wall.bwMode,

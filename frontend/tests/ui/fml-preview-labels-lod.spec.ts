@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AREA_LABEL_CHAR_WIDTH,
   AREA_LABEL_HEIGHT_CM,
+  AREA_LABEL_LINE_HEIGHT,
   AREA_LABEL_LOD_MIN_SCREEN_PX,
   areaLabelFontSizeStage,
   areaLabelKonvaConfig,
@@ -40,6 +42,58 @@ describe('areaLabelKonvaConfig', () => {
     expect(cfg.text).toBe('Keuken')
     expect(cfg.perfectDrawEnabled).toBe(false)
     expect(cfg.listening).toBe(false)
+    expect(cfg.wrap).toBe('none')
+    expect(cfg.lineHeight).toBe(AREA_LABEL_LINE_HEIGHT)
+  })
+
+  it('multiline: breedte van langste regel, hoogte stapelt regels', () => {
+    const font = 10
+    const cfg = areaLabelKonvaConfig('Kort\nVeel langere regel', 0, 0, '#111', font)
+    expect(cfg.text).toBe('Kort\nVeel langere regel')
+    expect(cfg.width).toBeCloseTo('Veel langere regel'.length * font * AREA_LABEL_CHAR_WIDTH)
+    expect(cfg.height).toBeCloseTo(2 * font * AREA_LABEL_LINE_HEIGHT)
+    expect(cfg.offsetY).toBeCloseTo((cfg.height as number) / 2)
+  })
+
+  it('normaliseert CR/LF tot echte regels', () => {
+    const cfg = areaLabelKonvaConfig('A\r\nB\rC', 0, 0, '#111', 10)
+    expect(cfg.text).toBe('A\nB\nC')
+    expect(cfg.height).toBeCloseTo(3 * 10 * AREA_LABEL_LINE_HEIGHT)
+  })
+})
+
+describe('buildRenderAreas name_x/y', () => {
+  it('zet benaming op centroid + offset', () => {
+    const toStage = (x: number, y: number) => ({ x, y })
+    const poly = [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 80 },
+      { x: 0, y: 80 },
+    ]
+    const [centered] = buildRenderAreas(
+      [{ id: 'a1', poly, color: '#fff', name: 'Keuken', showAreaLabel: true }],
+      toStage,
+    )
+    expect(centered.centroidCm).toEqual({ x: 50, y: 40 })
+    expect(centered.labelCm).toEqual({ x: 50, y: 40 })
+    const [shifted] = buildRenderAreas(
+      [
+        {
+          id: 'a2',
+          poly,
+          color: '#fff',
+          name: 'Keuken',
+          showAreaLabel: true,
+          name_x: 12,
+          name_y: -8,
+        },
+      ],
+      toStage,
+    )
+    expect(shifted.labelCm).toEqual({ x: 62, y: 32 })
+    expect(shifted.labelX).toBe(62)
+    expect(shifted.labelY).toBe(32)
   })
 })
 

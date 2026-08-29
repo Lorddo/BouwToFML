@@ -70,6 +70,7 @@ export function useWorkspaceFml(deps: {
       appliedFmlDoorHeightCm: thickness.appliedFmlDoorHeightCm,
       appliedFmlWindowHeightCm: thickness.appliedFmlWindowHeightCm,
       appliedFmlWindowSillZCm: thickness.appliedFmlWindowSillZCm,
+      fmlThicknessCms: thickness.fmlThicknessCms,
       fmlThicknessMinCm: thickness.fmlThicknessMinCm,
       fmlThicknessMidCm: thickness.fmlThicknessMidCm,
       fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
@@ -98,6 +99,7 @@ export function useWorkspaceFml(deps: {
   })
 
   return {
+    fmlThicknessCms: thickness.fmlThicknessCms,
     fmlThicknessMinCm: thickness.fmlThicknessMinCm,
     fmlThicknessMidCm: thickness.fmlThicknessMidCm,
     fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
@@ -122,6 +124,7 @@ export function useWorkspaceFml(deps: {
     applyBandBoundariesFromReferenceWall: thickness.applyBandBoundariesFromReferenceWall,
     resetFmlSessionDefaults: thickness.resetFmlSessionDefaults,
     syncAppliedFromDraft: generate.syncAppliedFromDraft,
+    setFmlThicknessCms: thickness.setFmlThicknessCms,
     setFmlThicknessMinCm: thickness.setFmlThicknessMinCm,
     setFmlThicknessMidCm: thickness.setFmlThicknessMidCm,
     setFmlThicknessMaxCm: thickness.setFmlThicknessMaxCm,

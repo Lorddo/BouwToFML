@@ -23,7 +23,10 @@ describe('isFmlToolbarSettingsOpen', () => {
 
   it('is uit zonder selectie of teken-tool', () => {
     expect(isFmlToolbarSettingsOpen(none)).toBe(false)
-    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt' })).toBe(false)
+  })
+
+  it('is aan bij nulpunt (X om uit te zetten), zoals maatlijn', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt' })).toBe(true)
   })
 
   it('is aan bij box-select (type-dropdown), zoals maatlijn', () => {
@@ -37,7 +40,7 @@ describe('isFmlToolbarSettingsOpen', () => {
     ).toBe(true)
     expect(
       isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt', hasMeasureLines: true }),
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('is aan bij selectie of muur/deur/raam-tool', () => {
@@ -56,6 +59,7 @@ describe('isFmlToolbarSettingsOpen', () => {
     )
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_window' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasItemSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasFacadeGroupSelection: true })).toBe(true)
   })
 
   it('houdt de fixture-bibliotheek buiten de midden-settingskaart', () => {

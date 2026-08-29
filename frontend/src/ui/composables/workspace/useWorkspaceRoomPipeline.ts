@@ -49,16 +49,15 @@ export function useWorkspaceRoomPipeline(deps: {
     bounds: { x: number; y: number; width: number; height: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
-  updateRectWallThicknessBand: (
-    id: string,
-    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
-  ) => void
+  updateRectWallThicknessCm: (id: string, cm: number) => void
   /** Project/export diktes voor max-equivalent schaal. */
   getWallThicknessLimits: () => import('@/core/fml/fml-wall-thickness-limits').FmlWallThicknessLimits
-  setWallThicknessCm?: (
-    band: import('@/core/fml/fml-wall-thickness-tiers').FmlThicknessBand,
-    cm: number,
-  ) => void
+  getThicknessCatalog: () => number[]
+  getPxPerMm: () => { x: number; y: number }
+  addThicknessToCatalog?: (cm: number) => void
+  replaceCatalogThickness?: (cms: number[]) => void
+  setPendingWallThicknessCm: (cm: number | null) => void
+  getPendingWallThicknessCm: () => number | null
   /** Laatste multi-ref metingen (voor bandgrenzen). */
   wallRefThicknessMeasures: Ref<
     import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
@@ -129,9 +128,14 @@ export function useWorkspaceRoomPipeline(deps: {
     selectRect: deps.selectRect,
     updateRectBounds: deps.updateRectBounds,
     updateRectFmlRefId: deps.updateRectFmlRefId,
-    updateRectWallThicknessBand: deps.updateRectWallThicknessBand,
+    updateRectWallThicknessCm: deps.updateRectWallThicknessCm,
     getWallThicknessLimits: deps.getWallThicknessLimits,
-    setWallThicknessCm: deps.setWallThicknessCm,
+    getThicknessCatalog: deps.getThicknessCatalog,
+    getPxPerMm: deps.getPxPerMm,
+    addThicknessToCatalog: deps.addThicknessToCatalog,
+    replaceCatalogThickness: deps.replaceCatalogThickness,
+    setPendingWallThicknessCm: deps.setPendingWallThicknessCm,
+    getPendingWallThicknessCm: deps.getPendingWallThicknessCm,
     wallRefThicknessMeasures: deps.wallRefThicknessMeasures,
     wallThicknessBandBoundariesPx: deps.wallThicknessBandBoundariesPx,
     endDraw: deps.endDraw,

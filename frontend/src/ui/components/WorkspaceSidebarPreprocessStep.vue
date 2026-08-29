@@ -11,6 +11,11 @@ import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
 import type { SelectionRect } from '@/platform/selection'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  TOOLBELT_HOTKEY_PRIORITY,
+  useToolbeltHotkey,
+} from '@/ui/composables/canvas/useToolbeltHotkey'
+import { describeRoomReferenceTune } from '@/cv/walls/rooms/room-reference-preprocess'
 
 const props = defineProps<{
   preprocessTab: PreprocessPanelLayer
@@ -22,9 +27,10 @@ const props = defineProps<{
   counts: Partial<Record<ElementClass, number>>
   scaleConfirmed: boolean
   rects: SelectionRect[]
-  wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number }
+  wallThicknessLimits?: { minCm: number; midCm: number; maxCm: number; thicknessCms?: number[] }
   wallRefThicknessMeasures?: import('@/platform/selection/wall-thickness-ref').WallRefThicknessMeasure[]
   selectedRectId?: string | null
+  pendingWallThicknessCm?: number | null
   unit: import('@/ui/composables/settings/scale-input-unit').ScaleInputUnit
   canStartWallStamp?: boolean
   wallStampActive?: boolean
@@ -50,11 +56,11 @@ const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true 
 const emit = defineEmits<{
   downloadPreprocessedUnderlay: []
   layerCopied: [target: PreprocessPanelLayer]
-  setReferenceDrawMode: [type: 'wall' | 'door' | 'window']
+  setReferenceDrawMode: [type: 'wall' | 'door' | 'window', cm?: number]
   setReferencePanMode: []
   updateDoorFmlRefId: [id: string, fmlRefId: string]
-  updateWallThicknessBand: [id: string, band: 'min' | 'mid' | 'max']
-  updateWallThicknessCm: [band: 'min' | 'mid' | 'max', cm: number]
+  updateCatalogThickness: [oldCm: number, newCm: number]
+  setCatalogCms: [cms: number[]]
   selectWallRef: [id: string]
   startWallStamp: [donorFloorId: string, useStampSet: boolean]
   setWallStampBands: [bands: { min: boolean; mid: boolean; max: boolean }]
@@ -70,6 +76,13 @@ const { t } = useI18n()
 
 const showTunePanel = computed(() => isPreprocessLayerId(props.preprocessTab))
 const isInkWallTab = computed(() => props.preprocessTab === 'inkWall')
+
+const inkWallTune = computed(() =>
+  describeRoomReferenceTune({
+    referenceWallThicknessPx: props.referenceWallThicknessPx,
+    wallStyle: preprocess.value.wallStyle === 'solid' ? 'solid' : 'open',
+  }),
+)
 
 const donorId = ref('')
 watch(
@@ -108,6 +121,13 @@ function onStartStamp() {
   if (!donorId.value) return
   emit('startWallStamp', donorId.value, useStampSetEffective.value)
 }
+
+useToolbeltHotkey('Escape', () => emit('setWallStampGumMode', 'off'), {
+  enabled: () =>
+    props.wallStampActive === true &&
+    (props.wallStampGumMode === 'brush' || props.wallStampGumMode === 'polygon'),
+  priority: TOOLBELT_HOTKEY_PRIORITY.tool,
+})
 </script>
 
 <template>
@@ -123,12 +143,48 @@ function onStartStamp() {
     <p class="hint">{{ t('preprocess.inkWallHint') }}</p>
     <ul class="params">
       <li>{{ t('preprocess.inkWallParams.thresholdOtsu') }}</li>
-      <li>{{ t('preprocess.inkWallParams.brightnessBridge') }}</li>
       <li>
-        {{ t('preprocess.inkWallParams.holeFill') }}
-        <template v-if="referenceWallThicknessPx != null">
-          ({{ referenceWallThicknessPx }}px)</template
-        >
+        {{
+          t('preprocess.inkWallParams.brightnessContrast', {
+            brightness: inkWallTune.brightness,
+            contrast: inkWallTune.contrast,
+          })
+        }}
+      </li>
+      <li>
+        {{
+          t('preprocess.inkWallParams.style', {
+            style: t(`templates.profiles.${inkWallTune.style}`),
+          })
+        }}
+      </li>
+      <li v-if="inkWallTune.hasRef">
+        {{ t('preprocess.inkWallParams.refPx', { px: inkWallTune.refPx }) }}
+      </li>
+      <li v-else>{{ t('preprocess.inkWallParams.refMissing') }}</li>
+      <li>
+        {{
+          t('preprocess.inkWallParams.thicken', {
+            px: inkWallTune.thickenPx,
+            factor: inkWallTune.thickenFactor,
+          })
+        }}
+      </li>
+      <li>
+        {{
+          t('preprocess.inkWallParams.bridge', {
+            px: inkWallTune.bridgePx,
+            factor: inkWallTune.bridgeFactor,
+          })
+        }}
+      </li>
+      <li>
+        {{
+          t('preprocess.inkWallParams.holeFill', {
+            px: inkWallTune.holeFillPx,
+            factor: inkWallTune.holeFillFactor,
+          })
+        }}
       </li>
     </ul>
   </div>
@@ -144,12 +200,13 @@ function onStartStamp() {
     :wall-thickness-limits="wallThicknessLimits"
     :wall-ref-thickness-measures="wallRefThicknessMeasures"
     :selected-rect-id="selectedRectId"
+    :pending-wall-thickness-cm="pendingWallThicknessCm"
     :unit="unit"
-    @set-draw-mode="$emit('setReferenceDrawMode', $event)"
+    @set-draw-mode="(type, cm) => $emit('setReferenceDrawMode', type, cm)"
     @deactivate-draw-mode="$emit('setReferencePanMode')"
     @update-door-fml-ref-id="(id, refId) => $emit('updateDoorFmlRefId', id, refId)"
-    @update-wall-thickness-band="(id, band) => $emit('updateWallThicknessBand', id, band)"
-    @update-wall-thickness-cm="(band, cm) => $emit('updateWallThicknessCm', band, cm)"
+    @update-catalog-thickness="(oldCm, newCm) => $emit('updateCatalogThickness', oldCm, newCm)"
+    @set-catalog-cms="(cms) => $emit('setCatalogCms', cms)"
     @select-rect="(id) => $emit('selectWallRef', id)"
   />
 
