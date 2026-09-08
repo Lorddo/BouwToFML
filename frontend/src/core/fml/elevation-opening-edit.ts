@@ -11,12 +11,12 @@ import type { ElevationOpeningRect, ElevationRect, ElevationWallRect } from './f
 import { elevationWallYsAtX } from './facade-elevation'
 import type { ElevationOpeningPatch } from './elevation-hit'
 import { elevationOpeningHolePoints } from './elevation-opening-symbol'
-import { wallElevationAtT } from './wall-endpoint-height'
 import {
-  collectCollinearWallIds,
-  MAX_OPENING_WIDTH_CM,
-  wallCollinearEnds,
-} from '@/ui/components/fml-preview-openings'
+  clampOpeningWidthKeepOppositeEdge,
+  openingEdgesAlongWall,
+} from './opening-along-wall-resize'
+import { wallElevationAtT } from './wall-endpoint-height'
+import { collectCollinearWallIds } from '@/ui/components/fml-preview-openings'
 
 export type ElevResizeSide = 'n' | 'e' | 's' | 'w'
 
@@ -107,17 +107,6 @@ export function resizeElevationRect(
   else if (side === 'e') nextE = Math.max(pointer.x, w + minW)
   else nextW = Math.min(pointer.x, e - minW)
   return { x0: nextW, x1: nextE, y0: nextN, y1: nextS }
-}
-
-function openingEdgesAlongWall(
-  wall: Pick<Wall, 'a' | 'b'>,
-  t: number,
-  widthCm: number,
-): { left: number; right: number; len: number } {
-  const len = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
-  const center = (Number.isFinite(t) ? t : 0.5) * len
-  const half = Math.max(0.5, widthCm / 2)
-  return { left: center - half, right: center + half, len }
 }
 
 function normalizedOpeningRect(rect: ElevationRect): {
@@ -325,26 +314,13 @@ export function clampOpeningPatchKeepOppositeEdge(
   startOnLeft = true,
 ): ElevationOpeningPatch {
   const wallSide = wallSideForElevationResize(side, startOnLeft)
-  const startEdges = openingEdgesAlongWall(wall, start.t, start.width)
-  const nextEdges = openingEdgesAlongWall(wall, patch.t, patch.width)
-  const cap = Math.max(0, (wall.thickness ?? 0) / 2)
-  const ends = wall.id ? wallCollinearEnds(planWalls, wall.id) : { a: false, b: false }
-  const minW = ELEVATION_OPENING_MIN_WIDTH_CM
-  let left = nextEdges.left
-  let right = nextEdges.right
-  if (wallSide === 'e') {
-    left = startEdges.left
-    const maxRight = ends.b ? Number.POSITIVE_INFINITY : startEdges.len + cap
-    right = Math.min(Math.max(left + minW, nextEdges.right), maxRight)
-  } else if (wallSide === 'w') {
-    right = startEdges.right
-    const minLeft = ends.a ? Number.NEGATIVE_INFINITY : -cap
-    left = Math.max(Math.min(right - minW, nextEdges.left), minLeft)
-  }
-  const width = Math.max(minW, Math.min(MAX_OPENING_WIDTH_CM, right - left))
-  if (wallSide === 'e') right = left + width
-  else if (wallSide === 'w') left = right - width
-  const t = startEdges.len < 1e-6 ? 0.5 : (left + right) / 2 / startEdges.len
+  const alongSide = wallSide === 'e' ? 'end' : wallSide === 'w' ? 'start' : null
+  const widthPatch =
+    alongSide != null
+      ? clampOpeningWidthKeepOppositeEdge(wall, start, patch, alongSide, planWalls)
+      : { t: patch.t, width: Math.round(patch.width) }
+  const t = widthPatch.t
+  const width = widthPatch.width
   const { minZ, maxTop: wallTop } = wallTopAtT(wall, t, floorHeightCm)
   const maxTop = Math.max(minZ + ELEVATION_OPENING_MIN_HEIGHT_CM, wallTop)
   const startZ =
@@ -375,7 +351,7 @@ export function clampOpeningPatchKeepOppositeEdge(
   }
   return {
     t: Number.isFinite(t) ? t : 0.5,
-    width: Math.round(width),
+    width,
     z: Math.round(z),
     z_height: Math.round(height),
   }

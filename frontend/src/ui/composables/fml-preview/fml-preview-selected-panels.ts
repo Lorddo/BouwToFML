@@ -117,7 +117,11 @@ export function buildSelectedInfo(
   return null
 }
 
-export function buildSelectedOpeningPanel(model: RenderModel, ids: string[]) {
+export function buildSelectedOpeningPanel(
+  model: RenderModel,
+  ids: string[],
+  mode: 'quick' | 'full' = 'full',
+) {
   if (ids.length === 0) return null
 
   const selected: { id: string; opening: Opening }[] = []
@@ -139,6 +143,7 @@ export function buildSelectedOpeningPanel(model: RenderModel, ids: string[]) {
   return {
     openingIds: selected.map((item) => item.id),
     count: selected.length,
+    mode,
     openingType,
     subtype: draft.subtypeMixed ? null : draft.subtype,
     subtypeMixed: draft.subtypeMixed,

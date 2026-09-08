@@ -23,6 +23,15 @@ export {
 } from './fml-preview-junction-core'
 
 export {
+  connectJunctionsKeepAxis,
+  findMergeTargetFlushAware,
+  flushConnectLanding,
+  isFlushOnlyJunctionConnect,
+  mergeJunctionsAware,
+  snapPointToJunctionsFlushAware,
+} from './fml-preview-junction-flush-connect'
+
+export {
   applyShiftSnapAxisAligned,
   applyShiftSnapFromAllOppositeEnds,
   applyShiftSnapFromOppositeEnd,

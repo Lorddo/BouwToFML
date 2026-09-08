@@ -58,17 +58,16 @@ describe('buildFmlThicknessChains', () => {
     expect(chains[0]).toEqual([0, 1, 2])
   })
 
-  it('houdt collineaire 10/20 als één keten door het knooppunt', () => {
+  it('splitst collineaire 10/20 op het knooppunt (echte stap)', () => {
     const walls = [
       wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
       wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 20),
     ]
     const chains = buildFmlThicknessChains(walls)
-    expect(chains).toHaveLength(1)
-    expect(chains[0]?.sort()).toEqual([0, 1])
+    expect(chains).toHaveLength(2)
   })
 
-  it('houdt collineaire 15/10/15 als één keten door T-kruisingen', () => {
+  it('splitst collineaire 15/10/15 door T-kruisingen (geen één keten)', () => {
     const walls = [
       wall('left', { x: 0, y: 0 }, { x: 100, y: 0 }, 15),
       wall('mid', { x: 100, y: 0 }, { x: 200, y: 0 }, 10),
@@ -76,11 +75,23 @@ describe('buildFmlThicknessChains', () => {
       wall('stem', { x: 100, y: 0 }, { x: 100, y: 80 }, 10),
     ]
     const chains = buildFmlThicknessChains(walls, undefined, [10, 15, 25, 30])
-    expect(chains).toHaveLength(2)
+    expect(chains).toHaveLength(3)
     const through = chains.find(
       (chain) => chain.includes(0) && chain.includes(1) && chain.includes(2),
     )
-    expect(through?.sort()).toEqual([0, 1, 2])
+    expect(through).toBeUndefined()
+    const midAndStem = chains.find((chain) => chain.includes(1) && chain.includes(3))
+    expect(midAndStem?.sort()).toEqual([1, 3])
+  })
+
+  it('splitst collineaire 7/15/30 door T (sloped-as)', () => {
+    const walls = [
+      wall('top', { x: 0, y: 0 }, { x: 0, y: 200 }, 30),
+      wall('shaft', { x: 0, y: 200 }, { x: 0, y: 640 }, 7),
+      wall('arm', { x: 0, y: 200 }, { x: 180, y: 200 }, 15),
+    ]
+    const chains = buildFmlThicknessChains(walls, undefined, [7, 15, 30, 43])
+    expect(chains).toHaveLength(3)
   })
 
   it('verbindt T-armen met dezelfde band', () => {
@@ -104,14 +115,13 @@ describe('buildFmlThicknessChains', () => {
     expect(chains[0]?.sort()).toEqual([0, 1, 2])
   })
 
-  it('houdt collineair dik-dun als één keten ook zonder tweede dikke arm', () => {
+  it('houdt collineair dik-dun gesplitst zonder tweede dikke arm', () => {
     const walls = [
       wall('w0', { x: 0, y: 0 }, { x: 120, y: 0 }, 24),
       wall('w1', { x: 120, y: 0 }, { x: 130, y: 0 }, 10),
     ]
     const chains = buildFmlThicknessChains(walls)
-    expect(chains).toHaveLength(1)
-    expect(chains[0]?.sort()).toEqual([0, 1])
+    expect(chains).toHaveLength(2)
   })
 
   it('splitst dik en dun op T-kruising', () => {
@@ -149,29 +159,29 @@ describe('harmonizeFmlWallThickness', () => {
     expect(harmonized.floors[0]?.walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('geeft collineair 26/10 één band-dikte (geen flush-stap meer)', () => {
+  it('houdt collineair 26/10 als twee band-diktes', () => {
     const plan = planWithWalls([
       wall('thick', { x: 0, y: 0 }, { x: 150, y: 0 }, 26, 0.5),
       wall('thin', { x: 150, y: 0 }, { x: 250, y: 0 }, 10, 0.5),
     ])
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const walls = harmonized.floors[0]?.walls ?? []
-    expect(walls.map((item) => item.thickness)).toEqual([30, 30])
+    expect(walls.map((item) => item.thickness)).toEqual([30, 10])
     expect(walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('geeft de langste collineaire band de export-dikte', () => {
+  it('houdt de langste en korte collineaire band hun eigen export-dikte', () => {
     const plan = planWithWalls([
       wall('thick', { x: 0, y: 0 }, { x: 120, y: 0 }, 47, 0.34),
       wall('thin', { x: 120, y: 0 }, { x: 220, y: 0 }, 11, 0.41),
     ])
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const walls = harmonized.floors[0]?.walls ?? []
-    expect(walls.map((item) => item.thickness)).toEqual([30, 30])
+    expect(walls.map((item) => item.thickness)).toEqual([30, 10])
     expect(walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
-  it('geeft een collineaire 10–12–20-lijn één band-dikte', () => {
+  it('houdt 10 gesplitst van 12–20 op een collineaire lijn', () => {
     const plan = planWithWalls([
       wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
       wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 12),
@@ -179,10 +189,10 @@ describe('harmonizeFmlWallThickness', () => {
     ])
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
-    expect(thicknesses).toEqual([20, 20, 20])
+    expect(thicknesses).toEqual([10, 20, 20])
   })
 
-  it('catalogus: collineaire 15/10/15 door T → één cm, geen flush-balance', () => {
+  it('catalogus: collineaire 15/10/15 door T houdt beide slots', () => {
     const plan = planWithWalls([
       wall('left', { x: 0, y: 0 }, { x: 112, y: 0 }, 15),
       wall('mid', { x: 112, y: 0 }, { x: 222, y: 0 }, 10, 0.75),
@@ -200,7 +210,7 @@ describe('harmonizeFmlWallThickness', () => {
     )
     const byId = new Map(harmonized.floors[0]?.walls.map((w) => [w.id, w]))
     expect(byId.get('left')?.thickness).toBe(15)
-    expect(byId.get('mid')?.thickness).toBe(15)
+    expect(byId.get('mid')?.thickness).toBe(10)
     expect(byId.get('right')?.thickness).toBe(15)
     expect(byId.get('left')?.balance).toBe(0.5)
     expect(byId.get('mid')?.balance).toBe(0.5)

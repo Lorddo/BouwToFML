@@ -10,9 +10,16 @@ import {
   runWindowStagePipeline,
   type RunWindowStagePipelineResult,
 } from './run-window-stage-pipeline'
+import { aabbOfOrientedRect } from '@/platform/selection/oriented-rect'
 import type { WindowAxelRefBand } from './types'
 
-export type WindowRefRect = { x: number; y: number; width: number; height: number }
+export type WindowRefRect = {
+  x: number
+  y: number
+  width: number
+  height: number
+  rotationDeg?: number
+}
 
 /** `project-brief.md`: 3–5 voorbeelden per type. Niet afgedwongen, wel gesignaleerd. */
 const MIN_ADVISED_REF_BANDS = 3
@@ -79,7 +86,7 @@ export function runWindowStagePipelineWithBands(params: {
     minSpanPxByOrientation: resolveWindowMinSpanPxByOrientation(params.ppm),
     refRects: params.windowRects.map((rect, refIndex) => ({
       refIndex,
-      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      rect: aabbOfOrientedRect(rect),
     })),
     doorArcFaceIds: params.doorArcFaceIds,
     wallThicknessPx: params.wallThicknessPx,

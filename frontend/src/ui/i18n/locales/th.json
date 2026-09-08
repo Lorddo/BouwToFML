@@ -30,7 +30,10 @@
   "app": {
     "title": "BouwToFML",
     "subtitle": "แบบแปลนสู่ Floorplanner",
-    "newDrawing": "แบบใหม่",
+    "newDrawing": "ใหม่",
+    "navConverter": "Converter",
+    "navEditor": "Editor",
+    "navDashboard": "Dashboard",
     "settings": "การตั้งค่า",
     "debugEmptyHint": "ไม่มีเครื่องมือดีบักในขั้นตอนนี้ เปิดอีกครั้งที่ preprocess (walls), detection หรือ result"
   },

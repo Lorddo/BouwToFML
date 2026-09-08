@@ -176,6 +176,53 @@ function materializeConnectorByHostWallSplit(
   return false
 }
 
+/**
+ * Stub old→new erft dikte/balance van een collineaire buur op de oude junction
+ * (niet van de gesleepte muur). Tegengestelde a→b → balance flip (1−b).
+ */
+function resolveSlideStubStyle(
+  walls: ReadonlyArray<Wall>,
+  junctionRefs: ReadonlyArray<WallEndRef>,
+  draggedWallId: string,
+  oldPoint: Point2D,
+  newPoint: Point2D,
+  fallbackThickness: number,
+  fallbackBalance?: number,
+): { thickness: number; balance?: number } {
+  const stubVec = { x: newPoint.x - oldPoint.x, y: newPoint.y - oldPoint.y }
+  const stubLen = Math.hypot(stubVec.x, stubVec.y)
+  if (stubLen < 1e-9) {
+    return { thickness: fallbackThickness, balance: fallbackBalance }
+  }
+  const stubDir = { x: stubVec.x / stubLen, y: stubVec.y / stubLen }
+
+  let best: Wall | null = null
+  let bestLen = -Infinity
+  for (const ref of junctionRefs) {
+    if (ref.wallId === draggedWallId) continue
+    const other = walls.find((item) => item.id === ref.wallId)
+    if (!other) continue
+    const wallDir = normalizeDir({ x: other.b.x - other.a.x, y: other.b.y - other.a.y })
+    if (!isDirectionParallel(stubDir, wallDir)) continue
+    const len = Math.hypot(other.b.x - other.a.x, other.b.y - other.a.y)
+    if (len > bestLen) {
+      bestLen = len
+      best = other
+    }
+  }
+  if (!best) {
+    return { thickness: fallbackThickness, balance: fallbackBalance }
+  }
+
+  const wallDir = normalizeDir({ x: best.b.x - best.a.x, y: best.b.y - best.a.y })
+  const sameSense = wallDir.x * stubDir.x + wallDir.y * stubDir.y >= 0
+  const bal = best.balance ?? 0.5
+  return {
+    thickness: best.thickness,
+    balance: sameSense ? bal : 1 - bal,
+  }
+}
+
 function addJunctionSplitStub(
   walls: Wall[],
   oldPoint: Point2D,
@@ -279,7 +326,16 @@ function applyEndpointSlideAlongAxis(
   if (hasStaying && movingRefs.size > 0) {
     const newPoint = { x: wall[end].x, y: wall[end].y }
     if (!relinkViaExistingStayingSegment(walls, stayingRefs, oldPoint, newPoint)) {
-      addJunctionSplitStub(walls, oldPoint, newPoint, wall.thickness, wall.balance)
+      const style = resolveSlideStubStyle(
+        walls,
+        junction.refs,
+        wallId,
+        oldPoint,
+        newPoint,
+        wall.thickness,
+        wall.balance,
+      )
+      addJunctionSplitStub(walls, oldPoint, newPoint, style.thickness, style.balance)
     }
   }
 }

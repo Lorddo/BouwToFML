@@ -31,6 +31,7 @@ const props = defineProps<{
   selectedOpeningPanel: {
     openingIds: string[]
     count: number
+    mode?: 'quick' | 'full'
     openingType: 'door' | 'window' | 'mixed'
     subtype: OpeningSubtypeDraft | null
     subtypeMixed: boolean
@@ -159,17 +160,25 @@ const openingKindLabel = computed(() => {
 
 const isDoorSelection = computed(() => props.selectedOpeningPanel?.openingType === 'door')
 const isWindowSelection = computed(() => props.selectedOpeningPanel?.openingType === 'window')
-const canChangeOpeningSubtype = computed(() => isDoorSelection.value || isWindowSelection.value)
+const isQuickOpeningPanel = computed(() => props.selectedOpeningPanel?.mode === 'quick')
+const canChangeOpeningSubtype = computed(
+  () => !isQuickOpeningPanel.value && (isDoorSelection.value || isWindowSelection.value),
+)
 const selectedSubtypeOptions = computed(() =>
   isWindowSelection.value ? windowSubtypeOptions.value : doorSubtypeOptions.value,
 )
 const selectedSubtypeAria = computed(() =>
   isWindowSelection.value ? t('result.toolbar.windowType') : t('result.toolbar.doorType'),
 )
-const canCopyOpening = computed(() => props.selectedOpeningPanel?.count === 1)
-const isMixedOpening = computed(() => props.selectedOpeningPanel?.openingType === 'mixed')
+const canCopyOpening = computed(
+  () => !isQuickOpeningPanel.value && props.selectedOpeningPanel?.count === 1,
+)
+const isMixedOpening = computed(
+  () => !isQuickOpeningPanel.value && props.selectedOpeningPanel?.openingType === 'mixed',
+)
 const showTriangleMirror = computed(
   () =>
+    !isQuickOpeningPanel.value &&
     isWindowSelection.value &&
     props.openingSubtypeDraft === 'triangle' &&
     !props.openingSubtypeMixed,
@@ -177,7 +186,10 @@ const showTriangleMirror = computed(
 </script>
 
 <template>
-  <span v-if="selectedOpeningPanel && !canChangeOpeningSubtype" class="fml-toolbelt__meta">
+  <span v-if="selectedOpeningPanel && isQuickOpeningPanel" class="fml-toolbelt__meta">
+    {{ openingKindLabel }}
+  </span>
+  <span v-else-if="selectedOpeningPanel && !canChangeOpeningSubtype" class="fml-toolbelt__meta">
     {{ openingKindLabel }}
   </span>
   <div v-if="selectedOpeningPanel && canChangeOpeningSubtype" class="fml-toolbelt__field">
@@ -221,7 +233,8 @@ const showTriangleMirror = computed(
     :swing-mixed="openingSwingMixed"
     :show-mirror-button="showTriangleMirror"
     :show-copy="canCopyOpening"
-    show-delete
+    :show-delete="!isQuickOpeningPanel"
+    :compact="isQuickOpeningPanel"
     @width-input="emit('openingWidthCm', $event)"
     @width="onOpeningWidthChange"
     @height-input="emit('openingHeightCm', $event)"

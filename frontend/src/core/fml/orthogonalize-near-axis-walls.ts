@@ -1,8 +1,8 @@
 /**
  * Late FML pass: near-H/V restjitter → exacte as (a.y===b.y / a.x===b.x).
  *
- * Na px→cm + junction-cluster + thickness/balance. Hoek < 1,5° (onder oblique-
- * dodezone 2,5°); echte schuine gevels blijven met rust. Knoop-gewijs zodat
+ * Na px→cm + junction-cluster + thickness/balance. Hoek < 1,5° (= oblique-
+ * dodezone); echte schuine gevels (≥ dodezone) blijven met rust. Knoop-gewijs zodat
  * L/T (Vx, Hy) blijft en viewer/export dezelfde coords delen.
  *
  * Conflicterende bevroren ankers op één H/V-keten: geen half-snap (voorkomt
@@ -17,7 +17,7 @@ import {
 } from './fml-wall-geom'
 import type { Wall } from './types'
 
-/** Near-ortho max afwijking t.o.v. H/V — strak onder OBLIQUE_DEADZONE_DEG (2,5°). */
+/** Near-ortho max afwijking t.o.v. H/V — gelijk aan OBLIQUE_DEADZONE_DEG (1,5°). */
 export const NEAR_ORTHO_MAX_DEG = 1.5
 
 const AXIS_EPS_CM = 1e-6

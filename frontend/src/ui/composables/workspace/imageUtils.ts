@@ -5,6 +5,11 @@ import {
 } from '@/platform/image'
 import { ROTATION_EPS_DEG, uiRotationToCvDegrees } from '@/cv/tools/rotateMat'
 import type { CanvasLike } from '@/cv/port/canvasEnv'
+import {
+  hasRectRotation,
+  orientedRectCorners,
+  recoverOrientedRectFromCorners,
+} from '@/platform/selection/oriented-rect'
 import { OPTIMIZATION_BASE_DIMENSION } from './constants'
 
 export interface PixelBounds {
@@ -268,7 +273,13 @@ export function transformHScaleStateRotation(
   }
 }
 
-export type SelectionRectBounds = { x: number; y: number; width: number; height: number }
+export type SelectionRectBounds = {
+  x: number
+  y: number
+  width: number
+  height: number
+  rotationDeg?: number
+}
 
 function mapPointRotate180(
   x: number,
@@ -314,12 +325,14 @@ export function transformSelectionRect(
     outHeight: number
   },
 ): SelectionRectBounds {
-  const corners = [
-    { x: rect.x, y: rect.y },
-    { x: rect.x + rect.width, y: rect.y },
-    { x: rect.x + rect.width, y: rect.y + rect.height },
-    { x: rect.x, y: rect.y + rect.height },
-  ]
+  const corners = hasRectRotation(rect)
+    ? orientedRectCorners(rect)
+    : [
+        { x: rect.x, y: rect.y },
+        { x: rect.x + rect.width, y: rect.y },
+        { x: rect.x + rect.width, y: rect.y + rect.height },
+        { x: rect.x, y: rect.y + rect.height },
+      ]
 
   let mapped = corners
   if (params.rotate180) {
@@ -337,6 +350,14 @@ export function transformSelectionRect(
         params.bakedHeight,
       ),
     )
+  }
+
+  if (hasRectRotation(rect)) {
+    const scaled = mapped.map((p) => ({
+      x: (p.x - params.cropOffset.x) * params.scale,
+      y: (p.y - params.cropOffset.y) * params.scale,
+    }))
+    return recoverOrientedRectFromCorners(scaled)
   }
 
   const afterBake = boundsFromCorners(mapped, params.bakedWidth, params.bakedHeight)

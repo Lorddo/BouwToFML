@@ -96,6 +96,8 @@ export interface DevWallReferenceRect {
   y: number
   width: number
   height: number
+  /** Clockwise degrees around the box center. Omit / ~0 = axis-aligned. */
+  rotationDeg?: number
   wallThicknessCm?: number
   /** Legacy; restore bindt catalogus-cm i.p.v. deze tag. */
   wallThicknessBand?: 'min' | 'mid' | 'max'
@@ -107,6 +109,8 @@ export interface DevOpeningReferenceRect {
   y: number
   width: number
   height: number
+  /** Clockwise degrees around the box center. Omit / ~0 = axis-aligned. */
+  rotationDeg?: number
   /** Alleen voor deuren: Floorplanner template-refid (standaard/kastdeur). */
   fmlRefId?: string
 }

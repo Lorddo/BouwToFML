@@ -94,8 +94,10 @@ export function thicknessesCompatibleForChain(
 
 /**
  * Groepeer muren in dikte-ketens.
- * Collineair op een gedeeld knooppunt (door T/X) = altijd één keten: T-split
- * is geen diktestap. T-arm / L alleen bij dezelfde slot/band of 15% hysterese.
+ * Collineair door T/X alleen bij dezelfde slot/band of 15% hysterese —
+ * een echte stap (7 vs 15 vs 30) blijft gesplitst zodat balance kan flushen.
+ * Meetruis (10 vs 11) blijft één keten. T-arm / L daarna op ketengemiddelde.
+ * Korte dik-dun-dik brug (kozijn) mag alsnog mergen.
  */
 export function buildFmlThicknessChains(
   walls: Wall[],
@@ -121,9 +123,20 @@ export function buildFmlThicknessChains(
   for (const indices of wallsAtPoint.values()) {
     for (let i = 0; i < indices.length; i += 1) {
       for (let j = i + 1; j < indices.length; j += 1) {
-        if (areCollinearWalls(walls[indices[i]], walls[indices[j]])) {
-          uf.union(indices[i], indices[j])
+        const left = indices[i]
+        const right = indices[j]
+        if (!areCollinearWalls(walls[left], walls[right])) continue
+        if (
+          !thicknessesCompatibleForChain(
+            walls[left].thickness,
+            walls[right].thickness,
+            boundaries,
+            catalogCms,
+          )
+        ) {
+          continue
         }
+        uf.union(left, right)
       }
     }
   }
@@ -300,9 +313,11 @@ export function roundFmlThicknessCm(value: number): number {
 // ESC:X-02 (E) + ESC:X-01 (E)
 /**
  * Harmoniseert muurdikte per keten en mapt naar catalogus-cm of min/mid/max.
- * Collineaire T/X-stukken delen één keten (lengtegewogen); T-arm breekt nog
- * bij een echte stap. Balance: default 0.5; collineaire diktewissel-ketens flushen alleen bij face-evidence
- * (hint vanaf dikste); junction stubs in die scope mogen verdwijnen — ESC:X-01.
+ * Collineaire T/X-stukken delen een keten alleen bij dezelfde slot/band of
+ * 15% hysterese; een echte stap blijft gesplitst. T-arm breekt bij incompatibele
+ * ketengemiddeldes. Balance: default 0.5; collineaire diktewissel-ketens flushen
+ * alleen bij face-evidence (hint vanaf dikste); junction stubs in die scope
+ * mogen verdwijnen — ESC:X-01.
  * Daarna sanitize (weld + near-H/V op as + collinear cover). Viewer = export.
  *
  * Flush is keep-axis (gedeelde L10-lijn): alleen `balance`, `a`/`b` blijven.

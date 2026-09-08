@@ -17,6 +17,8 @@ import {
 } from './engines/collapse'
 import { dedupeExactSegments, rebuildFaceFromSegments } from './engines/segment-ops'
 import { resolveLayer9DissolvePolicy } from './policies/layer-9'
+import { toThicknessAxisHints } from '@/cv/walls/rooms/thickness-axis-sample'
+import type { ObliqueAxis } from './engines/oblique'
 import type { PipelineV3Layer8Result, PipelineV3Layer9Result } from './types'
 
 export function runLayer9Dissolve(params: {
@@ -27,6 +29,8 @@ export function runLayer9Dissolve(params: {
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
+  /** L3-assen — dikte op hartlijn; geen collapse-skip in deze slice. */
+  obliqueAxes?: ObliqueAxis[]
 }): PipelineV3Layer9Result {
   reportPipelineProgress('Skeleton Laag 9 — dissolve (chain/stub/cover)…')
   const policy = resolveLayer9DissolvePolicy(
@@ -37,6 +41,10 @@ export function runLayer9Dissolve(params: {
     params.distanceMap !== undefined
       ? params.distanceMap
       : (buildWallDistanceMap({ cv: params.cv, maskRle: params.maskRle })?.distanceMap ?? null)
+  const thicknessAxes =
+    params.obliqueAxes && params.obliqueAxes.length > 0
+      ? toThicknessAxisHints(params.obliqueAxes)
+      : undefined
 
   const facesCollapsed: RoomWallFaceSkeleton[] = []
   const allSegmentsCollapsed: Segment[] = []
@@ -62,6 +70,7 @@ export function runLayer9Dissolve(params: {
       policy: policy.collapse,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
+      thicknessAxes,
     })
     // ESC:W-49 (B)
     const chainGuard = withTopologyGuard({
@@ -93,6 +102,7 @@ export function runLayer9Dissolve(params: {
       policy: policy.collapse,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
+      thicknessAxes,
     })
     const stubGuard = withTopologyGuard({
       segments: segmentsOut,

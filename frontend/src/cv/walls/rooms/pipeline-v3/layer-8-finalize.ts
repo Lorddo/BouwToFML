@@ -12,6 +12,7 @@ import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickne
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
 import { parallelCoverAbsorb } from './engines/collapse'
 import { positionSegmentsHv } from './engines/hv'
+import type { ObliqueAxis } from './engines/oblique'
 import { pruneISpurs } from './engines/prune'
 import {
   dedupeExactSegments,
@@ -20,6 +21,7 @@ import {
 } from './engines/segment-ops'
 import { weldNearEndpoints } from './engines/weld'
 import { resolveLayer8FinalizePolicy } from './policies/layer-8'
+import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer7Result, PipelineV3Layer8Result } from './types'
 
 function countJunctionKinds(junctions: RoomWallJunction[]): Record<'I' | 'L' | 'T' | 'X', number> {
@@ -35,9 +37,14 @@ export function runLayer8Finalize(params: {
   referenceWallThicknessPx?: number
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
+  /** L3-assen — leden blijven op axis.line i.p.v. H/V-trap. */
+  obliqueAxes?: ObliqueAxis[]
 }): PipelineV3Layer8Result {
   reportPipelineProgress('Skeleton Laag 8 — H/V + I-prune…')
   const policy = resolveLayer8FinalizePolicy(params.referenceWallThicknessPx)
+  const obliqueAxes = params.obliqueAxes ?? []
+  const obliquePolicy =
+    obliqueAxes.length > 0 ? resolveObliquePolicy(params.referenceWallThicknessPx) : undefined
 
   const distanceMap =
     params.distanceMap !== undefined
@@ -75,6 +82,8 @@ export function runLayer8Finalize(params: {
       maskHeight: height,
       policy: policy.hv,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
+      obliqueAxes,
+      obliquePolicy,
     })
     movedSegmentCount += positioned.movedSegmentCount
     movedJunctionCount += positioned.movedJunctionCount

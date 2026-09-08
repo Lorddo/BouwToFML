@@ -2,6 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { ItemResizeSide } from './item-resize-handles'
 import type { ItemRotateCorner } from './item-rotate-handles'
+import type { PlanOpeningHandleKind, PlanOpeningResizeSide } from './fml-preview-opening-handles'
 import { FML_PREVIEW_CHROME_SELECTOR } from './fml-preview-gestures'
 import { isSettingsMod, resolveRelocatePointerIntent, wantsRelocate } from './fml-preview-mods'
 import { pickDakPlanOverlayHit } from './fml-preview-ridge-hit'
@@ -102,6 +103,8 @@ interface PointerActions {
   clearOpeningSelectionState: () => void
   beginOpeningDrag: (openingId: string, event: MouseEvent) => void
   startOpeningDragPending: (openingId: string, event: MouseEvent) => void
+  hitOpeningHandle: (cm: Point2D) => PlanOpeningHandleKind | null
+  beginOpeningResize: (openingId: string, side: PlanOpeningResizeSide, event: MouseEvent) => void
   onOpeningMoveClick: (openingId: string, event: MouseEvent) => boolean
   updateOpeningMoveHover: (event: MouseEvent) => void
   beginWallDrag: (wallId: string, event: MouseEvent) => void
@@ -366,6 +369,31 @@ export function useFmlPreviewPointer(options: {
       const side = actions.hitItemResizeHandle(cm)
       if (side) {
         actions.beginItemResize(selectedItem, side, event)
+        return
+      }
+    }
+
+    const selectedOpeningForHandle =
+      moveOpeningId.value ??
+      (settingsOpeningIds.value.length === 1 ? settingsOpeningIds.value[0] : null)
+    if (selectedOpeningForHandle) {
+      const openingHandle = actions.hitOpeningHandle(cm)
+      if (openingHandle === 'move') {
+        const moveIntent = resolveRelocatePointerIntent({
+          touchNav: modes.touchNav.value,
+          moveMod: modes.moveMod.value,
+          shiftKey: event.shiftKey === true,
+        })
+        if (moveIntent === 'precise') {
+          actions.onOpeningMoveClick(selectedOpeningForHandle, event)
+          return
+        }
+        if (moveIntent !== 'select') {
+          actions.beginOpeningDrag(selectedOpeningForHandle, event)
+          return
+        }
+      } else if (openingHandle === 'start' || openingHandle === 'end') {
+        actions.beginOpeningResize(selectedOpeningForHandle, openingHandle, event)
         return
       }
     }

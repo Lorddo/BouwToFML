@@ -197,6 +197,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
           y: rect.y,
           width: rect.width,
           height: rect.height,
+          ...(rect.rotationDeg != null ? { rotationDeg: rect.rotationDeg } : {}),
           ...(rect.wallThicknessCm != null && rect.wallThicknessCm > 0
             ? { wallThicknessCm: rect.wallThicknessCm }
             : {}),
@@ -213,6 +214,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
           y: rect.y,
           width: rect.width,
           height: rect.height,
+          ...(rect.rotationDeg != null ? { rotationDeg: rect.rotationDeg } : {}),
           ...(rect.type === 'door' ? { fmlRefId: rect.fmlRefId } : {}),
         })
       }

@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { CONCEPT_DOOR_REFID } from '@/core/fml/types'
 import { FACTORY_THICKNESS_CMS } from '@/core/fml/fml-wall-thickness-catalog'
 import { SELECTION_COLORS, type ElementClass, type SelectionRect } from './types'
+import { compactRectRotationDeg } from './oriented-rect'
 import {
   bindNextWallRefCm,
   enforceWallRefLimit,
@@ -69,14 +70,25 @@ export function useExampleSelection(
 
   function updateRectBounds(
     id: string,
-    bounds: Pick<SelectionRect, 'x' | 'y' | 'width' | 'height'>,
+    bounds: Pick<SelectionRect, 'x' | 'y' | 'width' | 'height'> & { rotationDeg?: number },
   ) {
     const idx = rects.value.findIndex((r) => r.id === id)
     if (idx < 0) return
     const width = Math.max(MIN_RECT_SIZE, bounds.width)
     const height = Math.max(MIN_RECT_SIZE, bounds.height)
     const next = [...rects.value]
-    next[idx] = { ...next[idx], x: bounds.x, y: bounds.y, width, height }
+    const current = next[idx]
+    const rotationDeg =
+      'rotationDeg' in bounds ? compactRectRotationDeg(bounds.rotationDeg) : current.rotationDeg
+    next[idx] = {
+      ...current,
+      x: bounds.x,
+      y: bounds.y,
+      width,
+      height,
+      ...(rotationDeg != null ? { rotationDeg } : { rotationDeg: undefined }),
+    }
+    if (rotationDeg == null) delete next[idx].rotationDeg
     rects.value = next
   }
 
@@ -220,7 +232,13 @@ export function useExampleSelection(
     return rects.value.map((r) => ({
       id: r.id,
       type: r.type,
-      bbox: { x: r.x, y: r.y, width: r.width, height: r.height },
+      bbox: {
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        height: r.height,
+        ...(r.rotationDeg != null ? { rotationDeg: r.rotationDeg } : {}),
+      },
       signature: r.signature,
     }))
   }

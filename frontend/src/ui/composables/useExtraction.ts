@@ -232,7 +232,13 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
       const examples: ExampleSample[] = rects.map((r) => ({
         id: r.id,
         type: r.type,
-        bbox: { x: r.x, y: r.y, width: r.width, height: r.height },
+        bbox: {
+          x: r.x,
+          y: r.y,
+          width: r.width,
+          height: r.height,
+          ...(r.rotationDeg != null ? { rotationDeg: r.rotationDeg } : {}),
+        },
         signature: r.signature,
       }))
 
@@ -402,6 +408,18 @@ export function useExtraction(activeExtractorId = 'geometry-lbe') {
         roomWallMaskRle: raw.roomWallMaskRle
           ? scaleMaskRleNearest(raw.roomWallMaskRle, work.originalWidth, work.originalHeight)
           : raw.roomWallMaskRle,
+        thicknessAxes:
+          raw.thicknessAxes && work.scale < 1
+            ? raw.thicknessAxes.map((axis) => ({
+                anchor: {
+                  x: axis.anchor.x / work.scale,
+                  y: axis.anchor.y / work.scale,
+                },
+                direction: axis.direction,
+                tMin: axis.tMin / work.scale,
+                tMax: axis.tMax / work.scale,
+              }))
+            : raw.thicknessAxes,
         meta: {
           ...raw.meta,
           extractorId: raw.meta?.extractorId ?? plugin.capabilities.id,

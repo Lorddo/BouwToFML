@@ -5,10 +5,14 @@ import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
-import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { wallThicknessBandsCompatible } from '@/core/fml/wall-thickness-chain'
 import { FML_BAND_MAX_RATIO } from '@/core/fml/fml-wall-thickness-tiers'
 import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickness'
+import {
+  resolveThicknessSampleEnds,
+  type ThicknessAxisHint,
+} from '@/cv/walls/rooms/thickness-axis-sample'
+import { resolveObliquePolicy } from '../../policies/oblique'
 import type { CollapsePolicy } from '../policy-types'
 
 export { isWallThicknessBridgeCandidatePx } from '@/core/fml/wall-thickness-chain'
@@ -20,14 +24,22 @@ function sampleSegmentThicknessPx(params: {
   maskHeight: number
   policy: CollapsePolicy
   referenceWallThicknessPx?: number
+  thicknessAxes?: readonly ThicknessAxisHint[] | null
 }): number {
-  const len = segmentLength(params.segment)
+  const captureBandPx = resolveObliquePolicy(params.referenceWallThicknessPx).captureBandPx
+  const sampleEnds = resolveThicknessSampleEnds({
+    a: params.segment.a,
+    b: params.segment.b,
+    axes: params.thicknessAxes,
+    captureBandPx,
+  })
+  const len = Math.hypot(sampleEnds.b.x - sampleEnds.a.x, sampleEnds.b.y - sampleEnds.a.y)
   const inset =
     len > params.policy.thicknessSampleInsetPx * 2 + 1
       ? params.policy.thicknessSampleInsetPx / len
       : 0.5
-  const sx = params.segment.a.x + (params.segment.b.x - params.segment.a.x) * inset
-  const sy = params.segment.a.y + (params.segment.b.y - params.segment.a.y) * inset
+  const sx = sampleEnds.a.x + (sampleEnds.b.x - sampleEnds.a.x) * inset
+  const sy = sampleEnds.a.y + (sampleEnds.b.y - sampleEnds.a.y) * inset
   if (params.distanceMap) {
     const x = Math.round(sx)
     const y = Math.round(sy)
@@ -123,6 +135,8 @@ export function buildThicknessBySegment(params: {
   referenceWallThicknessPx?: number
   /** Reuse a prebuilt mask distance map (same maskRle). Built once if omitted. */
   distanceMap?: Float32Array | null
+  /** L3-assen — sample dikte op axis.line voor as-leden. */
+  thicknessAxes?: readonly ThicknessAxisHint[] | null
 }): number[] {
   const distanceMap =
     params.distanceMap !== undefined
@@ -137,6 +151,7 @@ export function buildThicknessBySegment(params: {
       maskHeight: height,
       policy: params.policy,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
+      thicknessAxes: params.thicknessAxes,
     }),
   )
 }

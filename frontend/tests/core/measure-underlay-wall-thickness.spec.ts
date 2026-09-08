@@ -178,4 +178,36 @@ describe('measure-underlay-wall-thickness', () => {
     expect(cm).toBeGreaterThanOrEqual(1)
     expect(cm).toBeLessThan(3)
   })
+
+  it('meet milde schuine muur (~7°) loodrecht, niet via H/V-box', () => {
+    // Band ~10 px dik, ~7° uit lood (richting (sin7, cos7)).
+    const width = 120
+    const height = 160
+    const mask = new Uint8Array(width * height)
+    const angle = (7 * Math.PI) / 180
+    const ux = Math.sin(angle)
+    const uy = Math.cos(angle)
+    const nx = -uy
+    const ny = ux
+    const half = 5
+    for (let y = 20; y <= 140; y += 1) {
+      for (let x = 30; x <= 90; x += 1) {
+        const cx = 60
+        const cy = 80
+        const along = (x - cx) * ux + (y - cy) * uy
+        const across = (x - cx) * nx + (y - cy) * ny
+        if (Math.abs(across) <= half && along >= -50 && along <= 50) {
+          mask[y * width + x] = 255
+        }
+      }
+    }
+    const a = { x: 60 - ux * 40, y: 80 - uy * 40 }
+    const b = { x: 60 + ux * 40, y: 80 + uy * 40 }
+    const thicknessPx = measureWallThicknessPxOnMask(mask, width, height, a, b, {
+      maxSearchPx: 40,
+    })
+    // Ware dikte ~11 px (half*2+1); H/V-box zou systematisch te dik meten.
+    expect(thicknessPx).toBeGreaterThanOrEqual(9)
+    expect(thicknessPx).toBeLessThanOrEqual(14)
+  })
 })

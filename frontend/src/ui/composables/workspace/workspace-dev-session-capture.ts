@@ -16,6 +16,7 @@ import {
   type DevOpeningReferenceRect,
   type DevWallReferenceRect,
 } from '@/platform/dev-workspace'
+import { compactRectRotationDeg } from '@/platform/selection/oriented-rect'
 import type { WorkspaceFlowStep } from './constants'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 import type { DevRoomPhase } from '@/platform/dev-workspace/types'
@@ -64,6 +65,7 @@ export function resolveReferenceWallRect(
     y: number
     width: number
     height: number
+    rotationDeg?: number
     wallThicknessCm?: number
     wallThicknessBand?: string
   }>,
@@ -90,6 +92,7 @@ export function resolveReferenceWallRects(
     y: number
     width: number
     height: number
+    rotationDeg?: number
     wallThicknessCm?: number
     wallThicknessBand?: string
   }>,
@@ -98,11 +101,13 @@ export function resolveReferenceWallRects(
     .filter((rect) => rect.type === 'wall')
     .map((pick) => {
       const cm = Number(pick.wallThicknessCm)
+      const rotationDeg = compactRectRotationDeg(pick.rotationDeg)
       return {
         x: pick.x,
         y: pick.y,
         width: pick.width,
         height: pick.height,
+        ...(rotationDeg != null ? { rotationDeg } : {}),
         ...(Number.isFinite(cm) && cm > 0 ? { wallThicknessCm: cm } : {}),
       }
     })
@@ -115,6 +120,7 @@ export function resolveOpeningRects(
     y: number
     width: number
     height: number
+    rotationDeg?: number
     fmlRefId?: string
   }>,
 ): DevOpeningReferenceRect[] {
@@ -128,17 +134,22 @@ export function resolveOpeningRects(
         y: number
         width: number
         height: number
+        rotationDeg?: number
         fmlRefId?: string
       } => rect.type === 'door' || rect.type === 'window',
     )
-    .map((rect) => ({
-      type: rect.type,
-      x: rect.x,
-      y: rect.y,
-      width: rect.width,
-      height: rect.height,
-      ...(rect.type === 'door' ? { fmlRefId: resolveDoorFmlTemplateRefId(rect.fmlRefId) } : {}),
-    }))
+    .map((rect) => {
+      const rotationDeg = compactRectRotationDeg(rect.rotationDeg)
+      return {
+        type: rect.type,
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        ...(rotationDeg != null ? { rotationDeg } : {}),
+        ...(rect.type === 'door' ? { fmlRefId: resolveDoorFmlTemplateRefId(rect.fmlRefId) } : {}),
+      }
+    })
 }
 
 export function serializeLiveRoomClassifyState(

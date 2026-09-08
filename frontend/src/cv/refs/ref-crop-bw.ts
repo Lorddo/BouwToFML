@@ -15,6 +15,7 @@ import {
   WALL_BW_WHITE,
 } from '@/cv/preprocess/compose-wall-bw'
 import { rotateMatExpandBounds } from '@/cv/tools/rotateMat'
+import { hasRectRotation, sampleOrientedRectNearest } from '@/platform/selection/oriented-rect'
 import { estimateRefAxisCorrectionDeg } from './ref-axis-align'
 import type { RefRect } from './types'
 
@@ -97,6 +98,25 @@ function cropColorCanvas(
   return originalCanvas
 }
 
+function cropOrientedColorCanvas(
+  image: HTMLImageElement | HTMLCanvasElement,
+  rect: RefRect,
+): CanvasLike {
+  const width = Math.max(1, Math.round(rect.width))
+  const height = Math.max(1, Math.round(rect.height))
+  const originalCanvas = createCanvas(width, height)
+  const ctx = originalCanvas.getContext('2d')
+  if (!ctx) throw new Error('Canvas 2D context niet beschikbaar voor gedraaide ref-crop')
+  const cx = rect.x + rect.width / 2
+  const cy = rect.y + rect.height / 2
+  const rad = ((rect.rotationDeg ?? 0) * Math.PI) / 180
+  ctx.translate(width / 2, height / 2)
+  ctx.rotate(-rad)
+  ctx.translate(-cx, -cy)
+  ctx.drawImage(image, 0, 0)
+  return originalCanvas
+}
+
 function cropBwRegionFromMat(
   cv: OpenCV,
   fullBw: OpenCV['Mat'],
@@ -144,6 +164,15 @@ export function cropBwBytesFromRect(params: {
   height: number
   rect: RefRect
 }): { data: Uint8Array; width: number; height: number } {
+  if (hasRectRotation(params.rect)) {
+    return sampleOrientedRectNearest(
+      params.bw,
+      params.width,
+      params.height,
+      params.rect,
+      WALL_BW_WHITE,
+    )
+  }
   const box = clampRect(params.rect, params.width, params.height)
   const data = new Uint8Array(box.width * box.height)
   for (let y = 0; y < box.height; y += 1) {
@@ -172,10 +201,28 @@ function cropRectFromWallBw(params: {
   const { cv, image, wallBwMat, rect } = params
   const axisAlign = params.axisAlign === true
   const size = imageSize(image)
-  const box = clampRect(rect, size.width, size.height)
-
-  let originalCanvas = cropColorCanvas(image, box)
-  let { bwMat: bw, bwData } = cropBwRegionFromMat(cv, wallBwMat, box)
+  let originalCanvas: CanvasLike
+  let bw: OpenCV['Mat']
+  let bwData: Uint8Array
+  if (hasRectRotation(rect)) {
+    originalCanvas = cropOrientedColorCanvas(image, rect)
+    const sampled = sampleOrientedRectNearest(
+      wallBwMat.data as Uint8Array,
+      wallBwMat.cols,
+      wallBwMat.rows,
+      rect,
+      WALL_BW_WHITE,
+    )
+    bwData = sampled.data
+    bw = new cv.Mat(sampled.height, sampled.width, cv.CV_8UC1)
+    bw.data.set(bwData)
+  } else {
+    const box = clampRect(rect, size.width, size.height)
+    originalCanvas = cropColorCanvas(image, box)
+    const cropped = cropBwRegionFromMat(cv, wallBwMat, box)
+    bw = cropped.bwMat
+    bwData = cropped.bwData
+  }
 
   let skewCorrectedDeg = 0
   if (axisAlign) {

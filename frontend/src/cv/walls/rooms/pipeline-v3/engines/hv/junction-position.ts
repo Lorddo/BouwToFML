@@ -1,4 +1,6 @@
 import type { RoomWallJunction } from '../../../room-wall-skeleton-types'
+import type { ObliqueAxis } from '../oblique'
+import { pointAtT, projectOnto, type Point2 } from '../oblique'
 import type { HvPolicy } from '../policy-types'
 import { resolveMaxAxisShiftFromOwnPx } from './axis-clusters'
 import type { HvOrientation } from './qualify'
@@ -9,6 +11,8 @@ export type JunctionArmInfo = {
   targetAxis: number | null
   thicknessPx: number
   lengthPx: number
+  /** L3-as waarvan dit segment lid is — geen H/V-stem. */
+  obliqueAxis?: ObliqueAxis
 }
 
 function mean(nums: number[]): number {
@@ -70,15 +74,49 @@ function resolveCollinearAxisGroup(params: {
   return weighted ?? mean(axes)
 }
 
-/** Resolve new junction XY from H/V arms — all mapped endpoints later copy this point. */
+/** Snijpunt van schuine as met H (y=const) of V (x=const); null bij parallel. */
+function intersectObliqueWithHv(
+  axis: ObliqueAxis,
+  hv: 'H' | 'V',
+  axisValue: number,
+): Point2 | null {
+  const { line } = axis
+  if (hv === 'H') {
+    if (Math.abs(line.direction.y) < 1e-9) return null
+    const t = (axisValue - line.anchor.y) / line.direction.y
+    return pointAtT(line, t)
+  }
+  if (Math.abs(line.direction.x) < 1e-9) return null
+  const t = (axisValue - line.anchor.x) / line.direction.x
+  return pointAtT(line, t)
+}
+
+function pickPrimaryObliqueAxis(arms: JunctionArmInfo[]): ObliqueAxis | null {
+  let best: JunctionArmInfo | null = null
+  for (const arm of arms) {
+    if (!arm.obliqueAxis) continue
+    if (!best || arm.lengthPx > best.lengthPx) best = arm
+  }
+  return best?.obliqueAxis ?? null
+}
+
+/**
+ * Resolve new junction XY from H/V arms — all mapped endpoints later copy this point.
+ * As-lid + H/V → snijpunt lijn ∩ as (niet (Vx, Hy)); alleen as → projectie.
+ */
 export function resolveJunctionPosition(params: {
   policy: HvPolicy
   junction: RoomWallJunction
   arms: JunctionArmInfo[]
   referenceWallThicknessPx?: number
 }): { x: number; y: number } {
-  const hArms = params.arms.filter((arm) => arm.orientation === 'H' && arm.targetAxis != null)
-  const vArms = params.arms.filter((arm) => arm.orientation === 'V' && arm.targetAxis != null)
+  const obliqueAxis = pickPrimaryObliqueAxis(params.arms)
+  const hArms = params.arms.filter(
+    (arm) => !arm.obliqueAxis && arm.orientation === 'H' && arm.targetAxis != null,
+  )
+  const vArms = params.arms.filter(
+    (arm) => !arm.obliqueAxis && arm.orientation === 'V' && arm.targetAxis != null,
+  )
 
   const localThickness = mean(params.arms.map((arm) => arm.thicknessPx))
   const maxShiftPx =
@@ -87,6 +125,42 @@ export function resolveJunctionPosition(params: {
       params.referenceWallThicknessPx ?? 0,
       params.policy.thicknessFallbackPx,
     ) * params.policy.junctionShiftMaxRatio
+
+  if (obliqueAxis) {
+    const junctionPoint = { x: params.junction.x, y: params.junction.y }
+    let target: Point2 | null = null
+
+    if (hArms.length > 0) {
+      const y = resolveCollinearAxisGroup({
+        policy: params.policy,
+        arms: hArms,
+        originalAxis: params.junction.y,
+        referenceWallThicknessPx: params.referenceWallThicknessPx,
+        localThicknessPx: localThickness,
+      })
+      target = intersectObliqueWithHv(obliqueAxis, 'H', y)
+    } else if (vArms.length > 0) {
+      const x = resolveCollinearAxisGroup({
+        policy: params.policy,
+        arms: vArms,
+        originalAxis: params.junction.x,
+        referenceWallThicknessPx: params.referenceWallThicknessPx,
+        localThicknessPx: localThickness,
+      })
+      target = intersectObliqueWithHv(obliqueAxis, 'V', x)
+    }
+
+    // Parallel of geen H/V-arm: projecteer op de as (zelfde fallback als L10).
+    if (!target) {
+      target = projectOnto(obliqueAxis.line, junctionPoint)
+    }
+
+    return clampShift({
+      from: junctionPoint,
+      to: target,
+      maxShiftPx,
+    })
+  }
 
   const next = {
     x:

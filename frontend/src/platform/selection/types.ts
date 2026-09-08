@@ -11,6 +11,8 @@ export interface SelectionRect {
   y: number
   width: number
   height: number
+  /** Clockwise degrees around the box center. Omit / ~0 = axis-aligned. */
+  rotationDeg?: number
   signature?: GeometricSignature
   /**
    * Floorplanner opening-refid voor FML-export.

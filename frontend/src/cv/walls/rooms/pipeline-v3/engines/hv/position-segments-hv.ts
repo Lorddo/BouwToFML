@@ -3,7 +3,8 @@ import { computeJunctionTurnAngleDeg } from '@/cv/port/wallJunctionGraph'
 import type { Segment } from '@/cv/port/wallGraph'
 import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../../../room-wall-skeleton-types'
-import type { HvPolicy } from '../policy-types'
+import { collectMembers, projectOnto, type ObliqueAxis } from '../oblique'
+import type { HvPolicy, ObliquePolicy } from '../policy-types'
 import { resolveSegmentAxisTargets, type SegmentEndpointRef } from './axis-clusters'
 import { resolveJunctionPosition, type JunctionArmInfo } from './junction-position'
 import { classifyHvOrientation } from './qualify'
@@ -145,9 +146,26 @@ function buildJunctionAngleDeg(params: {
   return computeJunctionTurnAngleDeg(directions)
 }
 
+/** Eerste as waarvan dit segment lid is (capture-band + bewijsspan). */
+function mapObliqueAxisBySegment(params: {
+  segments: Segment[]
+  obliqueAxes: ObliqueAxis[]
+  obliquePolicy: ObliquePolicy
+}): Array<ObliqueAxis | null> {
+  const byIndex: Array<ObliqueAxis | null> = params.segments.map(() => null)
+  if (params.obliqueAxes.length === 0) return byIndex
+  for (const axis of params.obliqueAxes) {
+    for (const index of collectMembers(params.segments, axis, params.obliquePolicy)) {
+      if (byIndex[index] == null) byIndex[index] = axis
+    }
+  }
+  return byIndex
+}
+
 /**
  * Copy6/7 bare HV: move junctions, then set every mapped endpoint to that exact point.
  * Free endpoints (no junction) only get axis update. No post-seal / weld.
+ * L3-obliqueAxes: as-leden blijven op axis.line (geen H/V-snap / W-15).
  */
 export function positionSegmentsHv(params: {
   face: RoomWallFaceSkeleton
@@ -156,6 +174,10 @@ export function positionSegmentsHv(params: {
   maskHeight: number
   policy: HvPolicy
   referenceWallThicknessPx?: number
+  /** L3-assen — leden vrijwaren van H/V-positie. */
+  obliqueAxes?: ObliqueAxis[]
+  /** Nodig voor capture-band lidmaatschap; verplicht als obliqueAxes niet leeg. */
+  obliquePolicy?: ObliquePolicy
 }): {
   face: RoomWallFaceSkeleton
   movedSegmentCount: number
@@ -168,8 +190,18 @@ export function positionSegmentsHv(params: {
     snapPx: params.policy.prePositionSnapPx,
   })
 
-  const orientationBySegment = sourceSegments.map((segment) =>
-    classifyHvOrientation(segment, params.policy.flatBandPx),
+  const obliqueAxes = params.obliqueAxes ?? []
+  const obliqueBySegment =
+    obliqueAxes.length > 0 && params.obliquePolicy
+      ? mapObliqueAxisBySegment({
+          segments: sourceSegments,
+          obliqueAxes,
+          obliquePolicy: params.obliquePolicy,
+        })
+      : sourceSegments.map(() => null)
+
+  const orientationBySegment = sourceSegments.map((segment, index) =>
+    obliqueBySegment[index] ? null : classifyHvOrientation(segment, params.policy.flatBandPx),
   )
   const sampledThicknessBySegment = sourceSegments.map((segment) =>
     sampleSegmentThicknessFromMaskPx({
@@ -203,6 +235,7 @@ export function positionSegmentsHv(params: {
   for (let segmentIndex = 0; segmentIndex < sourceSegments.length; segmentIndex += 1) {
     const refs = endpointMap[segmentIndex]
     const axis = axisBySegment[segmentIndex]
+    const obliqueAxis = obliqueBySegment[segmentIndex]
     const thicknessPx =
       thicknessBySegment[segmentIndex] ??
       params.referenceWallThicknessPx ??
@@ -212,10 +245,11 @@ export function positionSegmentsHv(params: {
       const list = armsByJunction.get(junctionIndex) ?? []
       list.push({
         segmentIndex,
-        orientation: axis.orientation,
-        targetAxis: axis.targetAxis,
+        orientation: obliqueAxis ? null : axis.orientation,
+        targetAxis: obliqueAxis ? null : axis.targetAxis,
         thicknessPx,
         lengthPx: segmentLength(sourceSegments[segmentIndex]),
+        ...(obliqueAxis ? { obliqueAxis } : {}),
       })
       armsByJunction.set(junctionIndex, list)
     }
@@ -236,9 +270,17 @@ export function positionSegmentsHv(params: {
     const next = cloneSegment(segment)
     const refs = endpointMap[segmentIndex]
     const axis = axisBySegment[segmentIndex]
+    const obliqueAxis = obliqueBySegment[segmentIndex]
     // Co-move: every endpoint mapped to a junction copies the new junction XY exactly.
     if (refs.aJunctionIndex != null) next.a = { ...positionedJunctionCoords[refs.aJunctionIndex] }
     if (refs.bJunctionIndex != null) next.b = { ...positionedJunctionCoords[refs.bJunctionIndex] }
+
+    if (obliqueAxis) {
+      // Vrije einden van as-leden: projectie op de lijn (geen W-15 H/V).
+      if (refs.aJunctionIndex == null) next.a = projectOnto(obliqueAxis.line, next.a)
+      if (refs.bJunctionIndex == null) next.b = projectOnto(obliqueAxis.line, next.b)
+      return next
+    }
 
     // ESC:W-15 (B)
     if (axis.orientation === 'H' && axis.targetAxis != null) {

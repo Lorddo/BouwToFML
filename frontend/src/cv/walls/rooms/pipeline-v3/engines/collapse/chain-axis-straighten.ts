@@ -7,8 +7,10 @@
  * After align, near-zero jog stubs are dropped so FML sees one axis chain.
  */
 import type { Segment } from '@/cv/port/wallGraph'
-import { segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
+import { segmentAngleDeg, segmentLength } from '@/cv/walls/rooms/wall-segment-geometry'
 import { cloneSegments, dropZeroLengthSegments } from '../segment-ops'
+import { offAxisDeg } from '../oblique/axis-line'
+import { obliqueDeadzoneDeg } from '../../policies/oblique'
 import type { CollapsePolicy } from '../policy-types'
 import {
   buildExactAdjacency,
@@ -238,7 +240,12 @@ function applyAxisToCluster(params: {
   }
 }
 
-function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: number }): {
+function collapseStraightDegree2Nodes(params: {
+  segments: Segment[]
+  hvBandPx: number
+  /** Dodezone: segmenten verder uit H/V niet mergen (L3-assen). */
+  obliqueDeadzoneDeg?: number
+}): {
   segments: Segment[]
   merged: number
 } {
@@ -248,6 +255,7 @@ function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: n
     b: { ...seg.b },
   }))
   let merged = 0
+  const deadzone = params.obliqueDeadzoneDeg ?? 0
 
   let changed = true
   while (changed) {
@@ -263,6 +271,13 @@ function collapseStraightDegree2Nodes(params: { segments: Segment[]; hvBandPx: n
       const firstSeg = work[firstIdx]
       const secondSeg = work[secondIdx]
       if (!firstSeg || !secondSeg) continue
+      if (
+        deadzone > 0 &&
+        (offAxisDeg(segmentAngleDeg(firstSeg)) > deadzone ||
+          offAxisDeg(segmentAngleDeg(secondSeg)) > deadzone)
+      ) {
+        continue
+      }
 
       const firstAxis = segmentAxis(firstSeg, firstIdx, params.hvBandPx)
       const secondAxis = segmentAxis(secondSeg, secondIdx, params.hvBandPx)
@@ -311,6 +326,7 @@ export function straightenCollinearAxisChains(
   policy: CollapsePolicy,
   thicknessBySegment?: number[],
   referenceWallThicknessPx?: number,
+  skipSegIndices?: Set<number>,
 ): { segments: Segment[]; stats: ChainAxisStraightenStats } {
   if (!policy.enableChainAxisStraighten) {
     throw new Error('V3 straightenCollinearAxisChains: disabled for this layer policy')
@@ -335,6 +351,9 @@ export function straightenCollinearAxisChains(
     })
 
     for (const clusterIndices of clusters) {
+      // L3-as-leden niet naar H/V trekken.
+      if (skipSegIndices && clusterIndices.some((idx) => skipSegIndices.has(idx))) continue
+
       let weight = 0
       let sum = 0
       for (const idx of clusterIndices) {
@@ -371,6 +390,8 @@ export function straightenCollinearAxisChains(
   const collinearCollapsed = collapseStraightDegree2Nodes({
     segments: dropped.segments,
     hvBandPx,
+    // Zelfde dodezone als oblique-policy: scheve L3-assen niet tot H/V mergen.
+    obliqueDeadzoneDeg: skipSegIndices && skipSegIndices.size > 0 ? obliqueDeadzoneDeg() : 0,
   })
 
   return {

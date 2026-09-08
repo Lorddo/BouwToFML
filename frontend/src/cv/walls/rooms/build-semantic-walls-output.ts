@@ -78,6 +78,7 @@ export async function buildSemanticWallsForOutput(
       distanceMap,
       harmonizeByWallLine: false,
       referenceWallThicknessPx: walls.meta?.referenceWallThicknessPx,
+      thicknessAxes: walls.thicknessAxes,
     })
   }
 

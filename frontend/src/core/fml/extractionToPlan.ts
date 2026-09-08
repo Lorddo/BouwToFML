@@ -17,6 +17,7 @@ import {
 } from './extraction-to-plan-walls'
 import { mapLayer12DoorsToOpenings } from './extraction-to-plan-doors'
 import { mapLayer14WindowsToOpenings } from './extraction-to-plan-windows'
+import { imagePxThicknessToCmAlongNormal } from './measure-underlay-wall-thickness'
 import type { WallFaceExtentsCm } from './wall-face-step-evidence'
 
 export type {
@@ -96,7 +97,6 @@ export function extractionToPlanWithOrigin(
   const consumedDoorIds = new Set<string>()
   const consumedWindowIds = new Set<string>()
   const faceEvidenceById: FaceEvidenceByWallId = new Map()
-  const pxPerMmAvg = (options.pxPerMmX + options.pxPerMmY) / 2
 
   const walls: Wall[] = graph.edges.map((edge, index) => {
     const aNode = nodeById.get(edge.a)
@@ -123,13 +123,25 @@ export function extractionToPlanWithOrigin(
       (semanticSegment?.thicknessPxTypical ?? 0) > 0
         ? semanticSegment?.thicknessPxTypical
         : semanticSegment?.thicknessPxMax
+    const dxPx = bSource.x - aSource.x
+    const dyPx = bSource.y - aSource.y
+    const segLenPx = Math.hypot(dxPx, dyPx)
+    const nx = segLenPx > 1e-6 ? -dyPx / segLenPx : 0
+    const ny = segLenPx > 1e-6 ? dxPx / segLenPx : 1
     // ESC:X-22 — thicknessPx≤0 telt niet als meting (zero-fallback weg); dan resolveThicknessCm.
+    // Schuine muren: cm langs de muur-normaal (niet pxPerMm-gemiddelde).
     const semanticThicknessCm =
-      Number.isFinite(semanticThicknessPx) &&
-      (semanticThicknessPx ?? 0) > 0 &&
-      Number.isFinite(pxPerMmAvg) &&
-      pxPerMmAvg > 0
-        ? Math.max(1, (semanticThicknessPx as number) / pxPerMmAvg / 10)
+      Number.isFinite(semanticThicknessPx) && (semanticThicknessPx ?? 0) > 0
+        ? Math.max(
+            1,
+            imagePxThicknessToCmAlongNormal(
+              semanticThicknessPx as number,
+              nx,
+              ny,
+              options.pxPerMmX,
+              options.pxPerMmY,
+            ),
+          )
         : null
     const doorOpenings = mapLayer12DoorsToOpenings({
       layer12Doors: options.layer12Doors ?? [],
@@ -157,15 +169,26 @@ export function extractionToPlanWithOrigin(
     const plusPx = semanticSegment?.facePlusPx
     const minusPx = semanticSegment?.faceMinusPx
     if (
-      pxPerMmAvg > 0 &&
       Number.isFinite(plusPx) &&
       Number.isFinite(minusPx) &&
       (plusPx ?? 0) >= 0 &&
       (minusPx ?? 0) >= 0
     ) {
       faceEvidenceById.set(wallId, {
-        plusCm: (plusPx as number) / pxPerMmAvg / 10,
-        minusCm: (minusPx as number) / pxPerMmAvg / 10,
+        plusCm: imagePxThicknessToCmAlongNormal(
+          plusPx as number,
+          nx,
+          ny,
+          options.pxPerMmX,
+          options.pxPerMmY,
+        ),
+        minusCm: imagePxThicknessToCmAlongNormal(
+          minusPx as number,
+          nx,
+          ny,
+          options.pxPerMmX,
+          options.pxPerMmY,
+        ),
       })
     }
     return {

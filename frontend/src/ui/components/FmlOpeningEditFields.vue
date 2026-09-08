@@ -44,6 +44,8 @@ const props = withDefaults(
     showDoorButtons?: boolean
     /** Driehoekraam: één spiegelknop (mirrored[0]), geen scharnier/draai. */
     showMirrorButton?: boolean
+    /** Alleen breedte/hoogte/vloer (gewone klik); geen type-extra's. */
+    compact?: boolean
   }>(),
   {
     bovenlicht: false,
@@ -65,6 +67,7 @@ const props = withDefaults(
     showCopy: false,
     showDoorButtons: true,
     showMirrorButton: false,
+    compact: false,
   },
 )
 
@@ -91,10 +94,11 @@ const { t } = useI18n()
 const isDoor = computed(() => props.type === 'door')
 const isWindow = computed(() => props.type === 'window')
 const showSillField = computed(() => props.showSill ?? (isWindow.value || isDoor.value))
-const showPacked = computed(() => props.bovenlichtPacked !== false)
+const showPacked = computed(() => !props.compact && props.bovenlichtPacked !== false)
 const showBovenlichtMeasures = computed(
-  () => showPacked.value && (props.bovenlicht || props.bovenlichtMixed),
+  () => !props.compact && showPacked.value && (props.bovenlicht || props.bovenlichtMixed),
 )
+const showExtras = computed(() => !props.compact)
 const hingeTitle = computed(() => {
   if (props.hingeMixed) return t('result.toolbar.hingeMixed')
   return props.hingeAtStart ? t('result.toolbar.hingeAtStart') : t('result.toolbar.hingeAtEnd')
@@ -309,7 +313,7 @@ function onBovenlichtGapCommit(): void {
     </div>
   </div>
   <button
-    v-if="showMirrorButton"
+    v-if="showExtras && showMirrorButton"
     type="button"
     class="canvas-toolbelt__btn"
     :class="{ 'canvas-toolbelt__btn--active': !hingeMixed && !hingeAtStart }"
@@ -320,7 +324,7 @@ function onBovenlichtGapCommit(): void {
     <ToolbeltIcon name="mirror_h" />
   </button>
   <button
-    v-if="isDoor && showDoorButtons"
+    v-if="showExtras && isDoor && showDoorButtons"
     type="button"
     class="canvas-toolbelt__btn"
     :class="{ 'canvas-toolbelt__btn--active': !hingeMixed && !hingeAtStart }"
@@ -331,7 +335,7 @@ function onBovenlichtGapCommit(): void {
     <ToolbeltIcon name="hinge" />
   </button>
   <button
-    v-if="isDoor && showDoorButtons"
+    v-if="showExtras && isDoor && showDoorButtons"
     type="button"
     class="canvas-toolbelt__btn"
     :class="{ 'canvas-toolbelt__btn--active': !swingMixed && swingRight }"
@@ -342,7 +346,7 @@ function onBovenlichtGapCommit(): void {
     <ToolbeltIcon name="swing" />
   </button>
   <button
-    v-if="showCopy"
+    v-if="showExtras && showCopy"
     type="button"
     class="canvas-toolbelt__btn"
     :title="t('result.toolbar.copyOpeningTitle')"
@@ -352,7 +356,7 @@ function onBovenlichtGapCommit(): void {
     <ToolbeltIcon name="copy" />
   </button>
   <ToolbeltActionButton
-    v-if="showDelete"
+    v-if="showExtras && showDelete"
     icon="delete"
     :title="deleteTitle"
     :aria-label="deleteTitle"

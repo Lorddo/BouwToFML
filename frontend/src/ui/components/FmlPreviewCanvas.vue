@@ -513,6 +513,7 @@ const {
   moveWallId,
   settingsOpeningIds,
   moveOpeningId,
+  openingHandlesCm,
   drawWallKind,
   ridgeZCm,
   applySelectedWallKind,
@@ -1074,6 +1075,22 @@ const itemResizeHandles = computed(() => {
   }))
 })
 
+const openingEditHandles = computed(() => {
+  if (inspectMode.value) return []
+  return openingHandlesCm.value.map((handle) => ({
+    ...handle,
+    ...cmToScreen(handle.x, handle.y),
+  }))
+})
+
+const openingResizeHandles = computed(() =>
+  openingEditHandles.value.filter((handle) => handle.kind === 'start' || handle.kind === 'end'),
+)
+
+const openingMoveHandle = computed(
+  () => openingEditHandles.value.find((handle) => handle.kind === 'move') ?? null,
+)
+
 const itemRotateHandles = computed(() => {
   const guid = handleItemId.value
   if (!guid || inspectMode.value || dakMode.value) return []
@@ -1403,6 +1420,28 @@ watch(
       <circle
         v-for="handle in itemResizeHandles"
         :key="handle.side"
+        class="item-resize-handle"
+        :cx="handle.x"
+        :cy="handle.y"
+        :r="FML_PLAN_HANDLE_RADIUS_PX"
+      />
+    </svg>
+    <svg
+      v-if="openingResizeHandles.length > 0 || openingMoveHandle"
+      class="item-resize-overlay"
+      :width="stageSize.width"
+      :height="stageSize.height"
+    >
+      <circle
+        v-if="openingMoveHandle"
+        class="opening-move-handle"
+        :cx="openingMoveHandle.x"
+        :cy="openingMoveHandle.y"
+        :r="FML_PLAN_HANDLE_RADIUS_PX"
+      />
+      <circle
+        v-for="handle in openingResizeHandles"
+        :key="handle.kind"
         class="item-resize-handle"
         :cx="handle.x"
         :cy="handle.y"
@@ -1756,6 +1795,12 @@ watch(
 .item-resize-handle {
   fill: #fff;
   stroke: var(--fml-accent-warm);
+  stroke-width: 2;
+}
+
+.opening-move-handle {
+  fill: var(--fml-accent-warm);
+  stroke: #fff;
   stroke-width: 2;
 }
 

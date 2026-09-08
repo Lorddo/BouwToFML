@@ -3,7 +3,7 @@
  *
  * Reden voor deze fixture: L4 snapt de gevelketen naar H/V en laag 10 levert een
  * trap op. `reference.fml` is de handmatig opgepoetste versie met drie rechte
- * schuine muren. De schuine-poort staat op `knownFailing` tot dat pad klopt.
+ * schuine muren. L3-assen gaan naar L4/L7/L8/L10 zodat leden op de as blijven.
  *
  * @vitest-environment node
  */

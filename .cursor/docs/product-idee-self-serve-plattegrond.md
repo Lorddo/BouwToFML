@@ -1,6 +1,8 @@
 # Productidee — self-serve plattegrond + bureau als knop
 
-Brainstorm 21 augustus 2026. Los van BouwToFML-klantwerk. Bedoeld om buiten dit project te bewaren.
+Brainstorm 21 augustus 2026. Los van BouwToFML-klantwerk.
+
+**Geld / seats (2026-08-31):** credits hieronder zijn **achterhaald**. Canonieke bron: [Pricing & Marketplace Strategy – Floorplan Editor.md](./Pricing%20%26%20Marketplace%20Strategy%20%E2%80%93%20Floorplan%20Editor.md). Productzin, contract, catalogus en bouwvolgorde hier blijven.
 
 Geen juridisch advies; contractpunten zijn intern kader, geen uitleg van de overeenkomst.
 
@@ -61,8 +63,8 @@ Niet: makelaars, corporaties, verkoopdossiers, Floorplanner-vervanging.
 
 - Gratis zelf tekenen.
 - Export JPG zonder maatvoering (delen is beperkt nuttig).
-- Tegen credits: JPG/PNG/PDF **met** maatvoering (deelbaar, professioneel).
-- Tegen credits: uitbesteden aan het bureau (prijs n.a.v. m² / verdieping / leesbaarheid — afstemmen met bureau).
+- Tegen **stoel** (Solo): JPG/PNG/PDF **met** maatvoering + aanzichten. Gratis: alleen JPG zonder maten / watermerk.
+- Uitbesteden aan het bureau (offerte n.a.v. m² / verdieping / leesbaarheid). Gratis mag bestellen; bij levering **maand Solo cadeau**. Zie prijsdoc.
 - Premium: eigen inspectie-flow gekoppeld aan ruimtes, muren, deuren, ramen (visueel i.p.v. papier).
 - Later: eigen 3D-weergave; optioneel DXF/IFC (geen FML-export).
 - Meerdere ontwerpen / lagen per verdieping (elektra, loodgieter, …).
@@ -72,25 +74,17 @@ Niet: makelaars, corporaties, verkoopdossiers, Floorplanner-vervanging.
 
 - Detectie / scan-naar-muren in de klantapp (dat is bureau-gereedschap).
 - `.fml` download of Floorplanner-account.
-- Abonnement als hoofdmodel (credits; abo voelt als dwang).
+- Credits als hoofdmodel (achterhaald 31 aug → seats, zie prijsdoc).
 
 ---
 
-## Verdienmodel: credits
+## Verdienmodel: seats (niet credits)
 
-Drie credit-soorten, niet één munt die alles moet dekken:
+**Was (21 aug):** drie creditsoorten, geen abo. **Nu:** seats — zie het [prijsdoc](./Pricing%20%26%20Marketplace%20Strategy%20%E2%80%93%20Floorplan%20Editor.md).
 
-| Soort | Voorbeeldrichting | Functie |
-|-------|-------------------|---------|
-| **Export** | ~€2-achtige impuls, later bundels | hek om maten / PDF / PNG |
-| **Tekenopdracht** | bureau; kleinste &lt;80 m² zat intern rond ~€8 — **voorbeeld, afstemmen** | de moat |
-| **Flow** | ~€50 per inspectie-flow (prijs per flow) | premium, sticky, herhaalgebruik |
+Kort: Gratis = trechter; Solo €29 = PDF + aanzichten in de stoel; Kantoor €199–249 / 5 stoelen; bureau = losse offerte; geen Studio; geen marketplace bij launch. Inspectie-flow blijft go2scan, geen derde munt.
 
-Geen abonnement als kern. Credits passen bij “ik betaal als het ertoe doet”: export als het gedeeld moet worden, tekenopdracht als het goed moet, flow als het veldwerk is.
-
-App-store-cut en support op €2-transacties zijn details; bundels (tegoed) zijn logischer dan losse micropayments als volume komt.
-
-Uitbesteden is alleen houdbaar als detectie + korte correctie de norm is. Staffel op verdiepingen en leesbaarheid van de scan, niet alleen m². Slechte scan = toeslag of globale uitwerking.
+Uitbesteden is alleen houdbaar als detectie + korte correctie de norm is. Staffel op verdiepingen en leesbaarheid, niet alleen m². Slechte scan = toeslag of globale uitwerking.
 
 ---
 
@@ -157,7 +151,7 @@ Al bruikbaar als kern (huidige plattegrond-stack): muren/deuren/ramen/ruimtes, s
 Nodig voor dit product, nu dun of afwezig:
 
 - accounts voor consument/ZZP en project-inbox bureau
-- credits / betalen
+- accounts + seats / betalen (zie prijsdoc)
 - nette PDF (titelblok, schaalstok, noorden, legenda)
 - place-tool op eigen `kind` die terugschrijft naar refid
 - discipline-lagen
@@ -175,7 +169,7 @@ Niet meenemen: Floorplanner-catalogus als publiek meubelpakket; hun 3D als verko
 
 - FML intern; klant ziet app + raster/PDF; DXF/IFC later optioneel
 - Detectie = bureau only
-- Twee persona’s; credits; editor = trechter; uitbesteden = moat
+- Twee persona’s; **seats** (niet credits); editor = trechter; uitbesteden = moat
 - Catalogus = refid ↔ kind ↔ eigen 2D/3D; look mag anders, klasse niet
 - 3D = eigen draai, ná 2D-PDF die klanten durven doorsturen
 - Geen makelaars/corporaties
@@ -185,7 +179,7 @@ Niet meenemen: Floorplanner-catalogus als publiek meubelpakket; hun 3D als verko
 - Staffel tekenopdracht (m², verdiepingen, leesbaarheid, doorlooptijd)
 - Wat het bureau in Floorplanner blijft doen vs. in onze editor
 - Dagelijkse refid-set = mapping-prioriteit
-- Credit-bundels en exacte exportprijs
+- Tekenopdracht-staffel en of Solo-cadeau bij élke Gratis-opdracht of alleen de eerste (prijsdoc)
 
 ---
 

@@ -66,8 +66,8 @@ export async function runPipelineV3(params: {
     layer2,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
   })
-  // Laag 3 is het laatste punt waar een schuine gevel nog op zijn hartlijn ligt:
-  // laag 4 trekt hem naar H/V. Hier alleen lezen; herstellen doet laag 10.
+  // Laag 3 is het laatste punt waar een schuine gevel nog op zijn hartlijn ligt.
+  // Assen hier lezen; L4/L8 vrijwaren leden; L10 herbouwt als vangnet.
   const obliquePolicy = resolveObliquePolicy(params.referenceWallThicknessPx)
   const obliqueAxes = distanceMap
     ? collectObliqueAxes({
@@ -89,6 +89,7 @@ export async function runPipelineV3(params: {
     maskRle: params.maskRle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     distanceMap,
+    obliqueAxes,
   })
   const layer5 = runLayer5Cleanup({
     layer4,
@@ -105,6 +106,7 @@ export async function runPipelineV3(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     bandBoundariesPx: params.bandBoundariesPx,
     distanceMap,
+    obliqueAxes,
   })
   const layer8 = runLayer8Finalize({
     layer7,
@@ -112,6 +114,7 @@ export async function runPipelineV3(params: {
     maskRle: params.maskRle,
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     distanceMap,
+    obliqueAxes,
   })
   const layer9 = runLayer9Dissolve({
     layer8,
@@ -120,6 +123,7 @@ export async function runPipelineV3(params: {
     referenceWallThicknessPx: params.referenceWallThicknessPx,
     bandBoundariesPx: params.bandBoundariesPx,
     distanceMap,
+    obliqueAxes,
   })
   const layer10 = runLayer10Fml({
     layer9,
@@ -136,6 +140,7 @@ export async function runPipelineV3(params: {
     completedThroughLayer: V3_NATIVE_THROUGH_LAYER,
     incompleteLayers,
     fmlReady,
+    obliqueAxes,
     layer1,
     layer2,
     layer3,

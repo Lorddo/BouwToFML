@@ -27,6 +27,8 @@ export interface WallStrategyResult {
   roomWallJunctionsLayerC?: RoomWallJunction[]
   pipelineV3Debug?: PipelineV3Debug
   roomWallMaskRle?: RoomWallMaskRle
+  /** L3-assen (lijn+span) voor dikte-sampling op de hartlijn. */
+  thicknessAxes?: import('@/cv/walls/rooms/thickness-axis-sample').ThicknessAxisHint[]
   roomPipelinePhase?: RoomPipelinePhase
   wallPipelineVersion?: WallPipelineVersion
   roomClassifyState?: SerializedRoomClassifyState

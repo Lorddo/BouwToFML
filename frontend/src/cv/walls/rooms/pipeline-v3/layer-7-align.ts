@@ -14,8 +14,11 @@ import {
   buildThicknessBySegment,
   withTopologyGuard,
 } from './engines/collapse'
+import { collectAllObliqueMemberIndices, type ObliqueAxis } from './engines/oblique'
+import { toThicknessAxisHints } from '@/cv/walls/rooms/thickness-axis-sample'
 import { dedupeExactSegments, rebuildFaceFromSegments } from './engines/segment-ops'
 import { resolveLayer7AlignPolicy } from './policies/layer-7'
+import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer6Result, PipelineV3Layer7Result } from './types'
 
 export function runLayer7Align(params: {
@@ -26,9 +29,15 @@ export function runLayer7Align(params: {
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
+  /** L3-assen — leden niet als H/V collapsen. */
+  obliqueAxes?: ObliqueAxis[]
 }): PipelineV3Layer7Result {
   reportPipelineProgress('Skeleton Laag 7 — keten-collapse…')
   const policy = resolveLayer7AlignPolicy(params.referenceWallThicknessPx, params.bandBoundariesPx)
+  const obliqueAxes = params.obliqueAxes ?? []
+  const obliquePolicy =
+    obliqueAxes.length > 0 ? resolveObliquePolicy(params.referenceWallThicknessPx) : undefined
+  const thicknessAxes = obliqueAxes.length > 0 ? toThicknessAxisHints(obliqueAxes) : undefined
   const distanceMap =
     params.distanceMap !== undefined
       ? params.distanceMap
@@ -52,7 +61,12 @@ export function runLayer7Align(params: {
       policy: policy.collapse,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
+      thicknessAxes,
     })
+    const skipSegIndices =
+      obliquePolicy && obliqueAxes.length > 0
+        ? collectAllObliqueMemberIndices(face.segments, obliqueAxes, obliquePolicy)
+        : undefined
     // ESC:W-44 (B)
     const guard = withTopologyGuard({
       segments: face.segments,
@@ -63,6 +77,7 @@ export function runLayer7Align(params: {
           thicknessBySegment,
           policy: policy.collapse,
           referenceWallThicknessPx: params.referenceWallThicknessPx,
+          skipSegIndices,
         }),
     })
     const segmentsOut = guard.segments

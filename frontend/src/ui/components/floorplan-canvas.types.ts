@@ -138,7 +138,10 @@ export type FloorplanCanvasEmits = {
   polygonUndoPoint: []
   moveScaleHandle: [handle: keyof HScaleState, value: number]
   selectRect: [id: string | null]
-  rectUpdate: [id: string, bounds: { x: number; y: number; width: number; height: number }]
+  rectUpdate: [
+    id: string,
+    bounds: { x: number; y: number; width: number; height: number; rotationDeg?: number },
+  ]
   rectDelete: [id: string]
   faceClick: [x: number, y: number]
   faceBoxSelect: [bounds: { x: number; y: number; width: number; height: number }]

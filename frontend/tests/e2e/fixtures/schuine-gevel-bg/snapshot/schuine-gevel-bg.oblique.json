@@ -1,16 +1,15 @@
 {
   "detected": {
-    "lengthCm": 1266.3,
+    "lengthCm": 1222.5,
     "offAxisDeg": [
-      1.8,
       5.6,
       5.6,
       5.6,
     ],
-    "wallCount": 4,
+    "wallCount": 3,
   },
   "lengthRatio": 1,
-  "maxDeviationCm": 1.6,
+  "maxDeviationCm": 1.5,
   "minOffAxisDeg": 1,
   "reference": {
     "lengthCm": 1222.4,

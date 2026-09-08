@@ -77,7 +77,13 @@ export function useWorkspaceSignaturePreview(deps: {
     return deps.rects.value.map((r) => ({
       id: r.id,
       type: r.type,
-      bbox: { x: r.x, y: r.y, width: r.width, height: r.height },
+      bbox: {
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        height: r.height,
+        ...(r.rotationDeg != null ? { rotationDeg: r.rotationDeg } : {}),
+      },
       signature: r.signature ?? signaturePreview.value[r.id],
     }))
   }

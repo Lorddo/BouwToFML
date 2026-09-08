@@ -35,6 +35,7 @@ export function mergeTabOutputs(outputs: TabDetectionOutputs): ExtractionOutput 
     debugGaps: base.debugGaps,
     pipelineV3Debug: base.pipelineV3Debug,
     roomWallMaskRle: base.roomWallMaskRle,
+    thicknessAxes: base.thicknessAxes,
     candidates: [],
     meta: base.meta,
   }

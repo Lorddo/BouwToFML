@@ -67,8 +67,13 @@ function isInsideBand(seg: Segment, line: AxisLine, bandPx: number): boolean {
  * Segmenten die in de band rond de as liggen en via gedeelde eindpunten aan de
  * bewijsspan hangen. De band is een halve muurdikte: een trap blijft altijd
  * binnen zijn eigen muur, een buurmuur komt er niet in.
+ * Ook gebruikt door L4/L8 om as-leden van H/V-snap te vrijwaren.
  */
-function collectMembers(segments: Segment[], axis: ObliqueAxis, policy: ObliquePolicy): number[] {
+export function collectMembers(
+  segments: Segment[],
+  axis: ObliqueAxis,
+  policy: ObliquePolicy,
+): number[] {
   const inBand = new Set<number>()
   for (let index = 0; index < segments.length; index += 1) {
     if (isInsideBand(segments[index], axis.line, policy.captureBandPx)) inBand.add(index)
@@ -95,6 +100,20 @@ function collectMembers(segments: Segment[], axis: ObliqueAxis, policy: ObliqueP
     }
   }
   return [...members]
+}
+
+/** Unie van alle as-leden — L7/L10 collapse/straighten slaan deze over. */
+export function collectAllObliqueMemberIndices(
+  segments: Segment[],
+  axes: ObliqueAxis[],
+  policy: ObliquePolicy,
+): Set<number> {
+  const out = new Set<number>()
+  if (axes.length === 0) return out
+  for (const axis of axes) {
+    for (const index of collectMembers(segments, axis, policy)) out.add(index)
+  }
+  return out
 }
 
 /**

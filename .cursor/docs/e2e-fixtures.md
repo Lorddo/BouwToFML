@@ -72,7 +72,7 @@ die alleen naar muren kijkt die meer dan 1° uit de as staan, met een matchafsta
 | ------------------------------------------- | ---------- | ------- | ------- |
 | schuine lengte / referentie                 | 0.4        | 1.0     | ≥ 0.9   |
 | dekking schuine referentiemuren binnen 5 cm | 57.8%      | 100%    | ≥ 95%   |
-| max afwijking detectie → referentie         | 18.5 cm    | 1.6 cm  | ≤ 10 cm |
+| max afwijking detectie → referentie         | 18.5 cm    | 1.5 cm  | ≤ 10 cm |
 | schuine muren                               | 2 (3.8°)   | 3 (5.6°) | ref: 3 (5.2–5.7°) |
 
 Een tweede tekening (1e verdieping, gevel 12,6° met knik) is **niet** als fixture opgenomen:

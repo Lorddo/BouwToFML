@@ -10,6 +10,8 @@ export interface BoundingBox {
   y: number
   width: number
   height: number
+  /** Clockwise degrees around the box center. Omit / ~0 = axis-aligned. */
+  rotationDeg?: number
 }
 
 export interface ExampleSample {
@@ -379,6 +381,8 @@ export interface ExtractionOutput {
   debugGaps?: GapCandidate[]
   pipelineV3Debug?: PipelineV3Debug
   roomWallMaskRle?: RoomWallMaskRle
+  /** L3-assen voor dikte-sampling op de hartlijn. */
+  thicknessAxes?: import('@/cv/walls/rooms/thickness-axis-sample').ThicknessAxisHint[]
   semanticWallGraph?: RoomWallSemanticGraph
   /** True als Laag C leeg was en de semantic-graaf op Laag B (gepolijst) draaide. */
   semanticUsedLayerBFallback?: boolean

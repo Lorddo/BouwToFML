@@ -561,7 +561,13 @@ export function useFmlPreviewRenderModel(
   const selectedOpeningPanel = computed(() => {
     const model = renderModel.value
     if (!model) return null
-    return buildSelectedOpeningPanel(model, settingsOpeningIds.value)
+    if (settingsOpeningIds.value.length > 0) {
+      return buildSelectedOpeningPanel(model, settingsOpeningIds.value, 'full')
+    }
+    if (moveOpeningId.value) {
+      return buildSelectedOpeningPanel(model, [moveOpeningId.value], 'quick')
+    }
+    return null
   })
 
   return {

@@ -78,6 +78,7 @@ const props = withDefaults(
     selectedOpeningPanel: {
       openingIds: string[]
       count: number
+      mode?: 'quick' | 'full'
       openingType: 'door' | 'window' | 'mixed'
       subtype: OpeningSubtypeDraft | null
       subtypeMixed: boolean

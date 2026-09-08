@@ -57,6 +57,9 @@ Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse mark
 | **Stempel ↔ detectie (dubbele muren, OPEN)** | `.cursor/docs/stamp-detectie-dubbele-muren.md` |
 | **Customer test delivery (host + guide)** | `.cursor/docs/customer-test-delivery.md` |
 | **Audit Cloudflare klanttest 2026-08-05** | `.cursor/docs/audit-2026-08-05-customer-test.md` |
+| **Losstaande editor seats/prijs** | `.cursor/docs/Pricing & Marketplace Strategy – Floorplan Editor.md` |
+| **Productidee self-serve (21 aug; geld → prijsdoc)** | `.cursor/docs/product-idee-self-serve-plattegrond.md` |
+| **Openings-preprocess (deur+raam eigen B/W, plan)** | `.cursor/docs/openings-preprocess-refactor-plan.md` |
 | Sessie-geheugen (lopende staat) | `.cursor/rules/memory.mdc` |
 
 ## Stack (V1)

@@ -1,6 +1,15 @@
 /** Losse FML-editor, buiten de projectflow. */
 export const FML_EDITOR_PATH = '/FML-editor'
 
+/** Extern Go2Scan-dashboard (andere host; nieuwe tab). */
+export const DASHBOARD_URL = 'https://dashboard.go2scan.nl/projects'
+
+export type AppShellView = 'workspace' | 'settings' | 'fml-viewer'
+
+export function viewFromPathname(pathname: string): Exclude<AppShellView, 'settings'> {
+  return isFmlEditorPath(pathname) ? 'fml-viewer' : 'workspace'
+}
+
 export function normalizePathname(pathname: string): string {
   const trimmed = pathname.replace(/\/+$/, '')
   return trimmed === '' ? '/' : trimmed

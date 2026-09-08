@@ -19,6 +19,7 @@ import type {
   PipelineV3Result,
 } from './types'
 import type { RoomWallJunction } from '../room-wall-skeleton-types'
+import { toThicknessAxisHints } from '@/cv/walls/rooms/thickness-axis-sample'
 
 export interface FinalizeV3Result {
   pipeline: PipelineV3Result
@@ -39,6 +40,8 @@ export interface FinalizeV3Result {
   pipelineV3Debug: PipelineV3Debug
   blobCount: number
   removedBlobCount: number
+  /** L3-assen voor dikte-sampling (hartlijn). */
+  thicknessAxes: import('@/cv/walls/rooms/thickness-axis-sample').ThicknessAxisHint[]
 }
 
 function countJunctionKinds(
@@ -301,5 +304,6 @@ export async function runFinalizePipelineV3(params: {
     pipelineV3Debug,
     blobCount: params.prep.splitBlobs.blobs.length,
     removedBlobCount: params.prep.splitBlobs.removedBlobCount,
+    thicknessAxes: toThicknessAxisHints(pipeline.obliqueAxes ?? []),
   }
 }

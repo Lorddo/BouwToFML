@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  DASHBOARD_URL,
   FML_EDITOR_PATH,
   isFmlEditorPath,
   normalizePathname,
   syncFmlEditorCanonicalPath,
+  viewFromPathname,
 } from '@/ui/app-routes'
 
 describe('app-routes', () => {
@@ -18,6 +20,17 @@ describe('app-routes', () => {
     expect(isFmlEditorPath('/fml-editor/')).toBe(true)
     expect(isFmlEditorPath('/')).toBe(false)
     expect(isFmlEditorPath('/settings')).toBe(false)
+  })
+
+  it('maps pathnames to shell views', () => {
+    expect(viewFromPathname('/')).toBe('workspace')
+    expect(viewFromPathname('/FML-editor')).toBe('fml-viewer')
+    expect(viewFromPathname('/fml-editor/')).toBe('fml-viewer')
+    expect(viewFromPathname('/settings')).toBe('workspace')
+  })
+
+  it('keeps the dashboard on the Go2Scan host', () => {
+    expect(DASHBOARD_URL).toBe('https://dashboard.go2scan.nl/projects')
   })
 
   it('rewrites aliases to the canonical editor path', () => {

@@ -98,7 +98,7 @@ export function useWorkspaceDetection(deps: {
   selectRect: (id: string | null) => void
   updateRectBounds: (
     id: string,
-    bounds: { x: number; y: number; width: number; height: number },
+    bounds: { x: number; y: number; width: number; height: number; rotationDeg?: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   updateRectWallThicknessCm: (id: string, cm: number) => void
@@ -359,6 +359,7 @@ export function useWorkspaceDetection(deps: {
             y: wallRect.y,
             width: wallRect.width,
             height: wallRect.height,
+            ...(wallRect.rotationDeg != null ? { rotationDeg: wallRect.rotationDeg } : {}),
           },
         })
         if (thickness != null && thickness > 0) {
@@ -409,6 +410,7 @@ export function useWorkspaceDetection(deps: {
               y: styleRect.y,
               width: styleRect.width,
               height: styleRect.height,
+              ...(styleRect.rotationDeg != null ? { rotationDeg: styleRect.rotationDeg } : {}),
             },
           })
           deps.applyAutoGapsInkMode?.(style.gapsInkMode)

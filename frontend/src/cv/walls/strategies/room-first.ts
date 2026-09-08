@@ -443,6 +443,7 @@ export async function runRoomFinalizePhase(params: {
     roomWallJunctionsFiltered: finalizedV3.layer2.allJunctionsClean,
     pipelineV3Debug: finalizedV3.pipelineV3Debug,
     roomWallMaskRle: finalizedV3.roomWallMaskRle,
+    thicknessAxes: finalizedV3.thicknessAxes,
     roomInkCoverageThreshold: classify.threshold,
     roomClassifyState: updatedClassifyState,
     wallPipelineVersion: 'v3',

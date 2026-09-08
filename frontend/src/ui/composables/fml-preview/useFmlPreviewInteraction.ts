@@ -12,6 +12,7 @@ import { useFmlPreviewAreaLabelDrag } from './useFmlPreviewAreaLabelDrag'
 import type { MeasureDrawMode } from './useFmlPreviewMeasure'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { useFmlPreviewOpeningDrag } from './useFmlPreviewOpeningDrag'
+import { useFmlPreviewOpeningResize } from './useFmlPreviewOpeningResize'
 import { buildOpeningMoveMeasureLines } from './fml-preview-opening-move-measure'
 import {
   buildWallsInternalMeasureLines,
@@ -508,8 +509,11 @@ export function useFmlPreviewInteraction(options: {
   const { draggingOpening } = openingDrag
 
   const openingMoveMeasureLines = computed(() => {
-    if (!selection.moveOpeningId.value && !draggingOpening.value) return []
-    const openingId = selection.moveOpeningId.value ?? selection.settingsOpeningIds.value[0] ?? null
+    const openingId =
+      selection.moveOpeningId.value ??
+      (selection.settingsOpeningIds.value.length === 1
+        ? selection.settingsOpeningIds.value[0]
+        : null)
     if (!openingId) return []
     const located = editor.resolveOpening(openingId)
     if (!located) return []
@@ -568,6 +572,18 @@ export function useFmlPreviewInteraction(options: {
     screenPxToCm,
     settingsMod,
     syncPlanToParent,
+  })
+
+  const openingResize = useFmlPreviewOpeningResize({
+    editor,
+    selection,
+    clientToCm: (x, y) => hitTest.clientToCm(x, y),
+    screenPxToCm,
+    coarseHits: touchNav,
+    inspectMode,
+    spacePressed,
+    syncPlanToParent,
+    syncOpeningDraftFromSelection: () => selCoord.syncOpeningDraftFromSelection(),
   })
 
   // --- PanZoom ---
@@ -738,6 +754,8 @@ export function useFmlPreviewInteraction(options: {
         clearOpeningSelectionState,
         beginOpeningDrag: openingDrag.beginOpeningDrag,
         startOpeningDragPending: openingDrag.startOpeningDragPending,
+        hitOpeningHandle: (cm) => openingResize.hitOpeningHandleAtCm(cm),
+        beginOpeningResize: openingResize.beginOpeningResize,
         onOpeningMoveClick: (openingId, event) => {
           wallDrag.cancelMoveDragPending()
           openingDrag.cancelOpeningDragPending()
@@ -849,6 +867,7 @@ export function useFmlPreviewInteraction(options: {
     wallDrag.cleanupWallDrag()
     dimensionDrag.cleanup()
     openingDrag.cleanupOpeningDrag()
+    openingResize.cleanupOpeningResize()
     itemDrag.cleanupItemDrag()
     areaLabelDrag.cleanupAreaLabelDrag()
     itemResize.cleanupItemResize()
@@ -1006,6 +1025,7 @@ export function useFmlPreviewInteraction(options: {
     hoveredDimensionId: selection.hoveredDimensionId,
     settingsOpeningIds: selection.settingsOpeningIds,
     moveOpeningId: selection.moveOpeningId,
+    openingHandlesCm: openingResize.openingHandlesCm,
     wallThicknessDraft,
     wallThicknessMixed,
     wallBalanceDraft,

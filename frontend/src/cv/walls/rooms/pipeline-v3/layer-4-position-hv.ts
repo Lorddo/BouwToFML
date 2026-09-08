@@ -6,7 +6,9 @@ import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickne
 import type { Segment } from '@/cv/port/wallGraph'
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
 import { assertLayer4Invariants, positionSegmentsHv } from './engines/hv'
+import type { ObliqueAxis } from './engines/oblique'
 import { resolveLayer4HvPolicy } from './policies/layer-4'
+import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer3Result, PipelineV3Layer4Result } from './types'
 
 export function runLayer4PositionHv(params: {
@@ -16,9 +18,14 @@ export function runLayer4PositionHv(params: {
   referenceWallThicknessPx?: number
   /** Injected wall distance map (same maskRle); built once if omitted. */
   distanceMap?: Float32Array | null
+  /** L3-assen — leden blijven op axis.line i.p.v. H/V-trap. */
+  obliqueAxes?: ObliqueAxis[]
 }): PipelineV3Layer4Result {
   reportPipelineProgress('Skeleton Laag 4…')
   const policy = resolveLayer4HvPolicy(params.referenceWallThicknessPx)
+  const obliqueAxes = params.obliqueAxes ?? []
+  const obliquePolicy =
+    obliqueAxes.length > 0 ? resolveObliquePolicy(params.referenceWallThicknessPx) : undefined
   const distanceMap =
     params.distanceMap !== undefined
       ? params.distanceMap
@@ -42,6 +49,8 @@ export function runLayer4PositionHv(params: {
       maskHeight: height,
       policy,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
+      obliqueAxes,
+      obliquePolicy,
     })
     facesPositioned.push(positioned.face)
     allSegmentsPositioned.push(...positioned.face.segments)

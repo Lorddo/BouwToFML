@@ -1,11 +1,13 @@
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { measureInkBandInBox } from '@/cv/port/wallKernel'
+import { hasRectRotation, sampleOrientedRectNearest } from '@/platform/selection/oriented-rect'
 
 export type ReferenceWallRect = {
   x: number
   y: number
   width: number
   height: number
+  rotationDeg?: number
 }
 
 export type ReferenceWallBaseBw = {
@@ -31,10 +33,19 @@ export function measureReferenceWallThicknessPx(params: {
   if (baseBw.width <= 0 || baseBw.height <= 0) return null
   if (baseBw.data.length < baseBw.width * baseBw.height) return null
 
-  const mat = cv.matFromArray(baseBw.height, baseBw.width, cv.CV_8UC1, baseBw.data)
+  const oriented = hasRectRotation(rect)
+    ? sampleOrientedRectNearest(baseBw.data, baseBw.width, baseBw.height, rect)
+    : null
+  const src = oriented
+    ? { data: oriented.data, width: oriented.width, height: oriented.height }
+    : baseBw
+  const box = oriented ? { x: 0, y: 0, width: oriented.width, height: oriented.height } : rect
+  if (box.width < 5 || box.height < 5) return null
+
+  const mat = cv.matFromArray(src.height, src.width, cv.CV_8UC1, src.data)
   try {
-    const orientation = rect.width >= rect.height ? 'horizontal' : 'vertical'
-    const measure = measureInkBandInBox(mat, rect, orientation)
+    const orientation = box.width >= box.height ? 'horizontal' : 'vertical'
+    const measure = measureInkBandInBox(mat, box, orientation)
     if (!measure || !(measure.thicknessPx > 0)) return null
     return Math.max(1, Math.round(measure.thicknessPx))
   } finally {

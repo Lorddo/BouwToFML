@@ -46,7 +46,7 @@ export function useWorkspaceRoomPipeline(deps: {
   selectRect: (id: string | null) => void
   updateRectBounds: (
     id: string,
-    bounds: { x: number; y: number; width: number; height: number },
+    bounds: { x: number; y: number; width: number; height: number; rotationDeg?: number },
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   updateRectWallThicknessCm: (id: string, cm: number) => void

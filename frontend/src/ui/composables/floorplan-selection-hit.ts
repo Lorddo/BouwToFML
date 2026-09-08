@@ -1,4 +1,5 @@
 import type { SelectionRect } from '@/platform/selection'
+import { pointInOrientedRect } from '@/platform/selection/oriented-rect'
 
 export function findSelectionRectAt(
   point: { x: number; y: number },
@@ -6,14 +7,7 @@ export function findSelectionRectAt(
 ): SelectionRect | null {
   for (let i = rects.length - 1; i >= 0; i -= 1) {
     const rect = rects[i]
-    if (
-      point.x >= rect.x &&
-      point.x <= rect.x + rect.width &&
-      point.y >= rect.y &&
-      point.y <= rect.y + rect.height
-    ) {
-      return rect
-    }
+    if (pointInOrientedRect(point, rect)) return rect
   }
   return null
 }

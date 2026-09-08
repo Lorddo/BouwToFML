@@ -30,7 +30,10 @@
   "app": {
     "title": "BouwToFML",
     "subtitle": "Bouwtekening naar Floorplanner",
-    "newDrawing": "Nieuwe tekening",
+    "newDrawing": "Nieuw",
+    "navConverter": "Converter",
+    "navEditor": "Editor",
+    "navDashboard": "Dashboard",
     "settings": "Instellingen",
     "debugEmptyHint": "Geen debug-tools op deze stap. Open opnieuw bij voorbewerking (muren), detectie of resultaat."
   },

@@ -26,6 +26,10 @@ import {
   buildJunctions,
   junctionIdsForWall,
   mergeJunctions,
+  mergeJunctionsAware,
+  isFlushOnlyJunctionConnect,
+  flushConnectLanding,
+  snapPointToJunctionsFlushAware,
   moveJunction,
   ROOM_DRAW_SNAP_CM,
   setWallThickness,
@@ -1400,6 +1404,48 @@ describe('slideWallSegmentAlongAxis', () => {
     expect(drag.a.y + (drag.b.y - drag.a.y) * drag.openings[0].t).toBeCloseTo(10, 4)
   })
 
+  it('V over H schuiven: stub erft H-dikte/balance (niet V); tegengestelde zin → 1−b', () => {
+    // Test(31): dikke V schuift links over H15; gap bij dunne V → stub = 15 cm, bal flip.
+    const walls = [
+      {
+        id: 'h15',
+        a: { x: 0, y: 100 },
+        b: { x: 100, y: 100 },
+        thickness: 15,
+        balance: 1,
+        openings: [],
+      },
+      {
+        id: 'thickV',
+        a: { x: 100, y: 100 },
+        b: { x: 100, y: 200 },
+        thickness: 30,
+        balance: 0.83,
+        openings: [],
+      },
+      {
+        id: 'thinV',
+        a: { x: 100, y: 100 },
+        b: { x: 100, y: 0 },
+        thickness: 10,
+        balance: 0.5,
+        openings: [],
+      },
+    ]
+
+    const moved = slideWallSegmentAlongAxis(walls, 'thickV', -40, { x: 1, y: 0 })
+    const stub = moved.find(
+      (wall) =>
+        wall.id.startsWith('slide-stub-') &&
+        Math.abs(wall.a.y - 100) < 0.01 &&
+        Math.abs(wall.b.y - 100) < 0.01,
+    )
+    expect(stub).toBeTruthy()
+    expect(stub!.thickness).toBe(15)
+    expect(stub!.balance ?? 0.5).toBeCloseTo(0, 5)
+    expect(stub!.thickness).not.toBe(30)
+  })
+
   it('haakse slide: punt op slide-as schuift mee; andere poot krijgt H/V-stub', () => {
     const walls = [
       {
@@ -2106,5 +2152,243 @@ describe('applyShiftSnapAxisAligned', () => {
     ]
     const snapped = applyShiftSnapAxisAligned(walls, refs, { x: 120, y: 30 })
     expect(snapped).toEqual({ x: 100, y: 0 })
+  })
+})
+
+describe('keep-axis flush-connect', () => {
+  function wall(
+    id: string,
+    a: { x: number; y: number },
+    b: { x: number; y: number },
+    thickness: number,
+    balance = 0.5,
+  ) {
+    return { id, a, b, thickness, balance, openings: [] as [] }
+  }
+
+  it('T-join: dunne verticale muur blijft verticaal; host splitst; geen diagonaal', () => {
+    const walls = [
+      wall('host', { x: 0, y: 80 }, { x: 200, y: 80 }, 20),
+      wall('thin', { x: 100, y: 0 }, { x: 100, y: 78 }, 10),
+      wall('stub', { x: 105, y: 80 }, { x: 105, y: 120 }, 20),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'thin' && r.end === 'b'))!
+    const target = junctions.find((j) => j.refs.some((r) => r.wallId === 'stub' && r.end === 'a'))!
+
+    expect(isFlushOnlyJunctionConnect(walls, source, target)).toBe(true)
+    const landing = flushConnectLanding(walls, source, target)!
+    expect(landing.x).toBeCloseTo(100, 5)
+    expect(landing.y).toBeCloseTo(80, 5)
+
+    const connected = mergeJunctionsAware(walls, source, target)
+    const thin = connected.find((w) => w.id === 'thin')!
+    expect(Math.abs(thin.a.x - thin.b.x)).toBeLessThan(0.5)
+    expect(thin.b.y).toBeCloseTo(80, 5)
+    const hostParts = connected.filter((w) => w.id === 'host' || w.id.startsWith('split-host-'))
+    expect(hostParts.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('extensie naar host: grote along + kleine across → keep-axis (geen diagonaal)', () => {
+    // Screenshot-case: dunne V eindigt ver boven dikke H; knoop 5 cm naast de as.
+    const walls = [
+      wall('host', { x: 0, y: 80 }, { x: 200, y: 80 }, 30),
+      wall('thin', { x: 100, y: 0 }, { x: 100, y: 50 }, 10),
+      wall('arm', { x: 105, y: 80 }, { x: 105, y: 140 }, 30),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'thin' && r.end === 'b'))!
+    const target = junctions.find((j) => j.refs.some((r) => r.wallId === 'arm' && r.end === 'a'))!
+
+    expect(isFlushOnlyJunctionConnect(walls, source, target)).toBe(true)
+    const landing = flushConnectLanding(walls, source, target)!
+    expect(landing.x).toBeCloseTo(100, 5)
+    expect(landing.y).toBeCloseTo(80, 5)
+
+    const connected = mergeJunctionsAware(walls, source, target)
+    const thin = connected.find((w) => w.id === 'thin')!
+    expect(Math.abs(thin.a.x - thin.b.x)).toBeLessThan(0.5)
+    expect(thin.b.x).toBeCloseTo(100, 5)
+    expect(thin.b.y).toBeCloseTo(80, 5)
+  })
+
+  it('FML4→FML6: doel-hoek schuift op held-as (geen stub); balance binnenkant op korte dikke', () => {
+    // Midden Test(31): H15 eindigt op (242.4,1035) met V30; dunne V op x=248.6 eindigt erboven.
+    const walls = [
+      wall('left', { x: 41.8, y: 1035 }, { x: 41.8, y: 760.6 }, 30),
+      wall('topH', { x: 41.8, y: 1035 }, { x: 242.4, y: 1035 }, 15, 1),
+      wall('thickV', { x: 242.4, y: 1136.3 }, { x: 242.4, y: 1035 }, 30),
+      wall('thinV', { x: 248.6, y: 963.6 }, { x: 248.6, y: 760.6 }, 10),
+      wall('botH', { x: 242.4, y: 1136.3 }, { x: 520.9, y: 1136.3 }, 30),
+      wall('right', { x: 520.9, y: 798.6 }, { x: 520.9, y: 1136.3 }, 25),
+    ]
+    const junctions = buildJunctions(walls)
+    // thinV a is (248.6, 963.6) — het vrije eind dichter bij de host
+    const sourceEnd = junctions.find((j) =>
+      j.refs.some((r) => r.wallId === 'thinV' && r.end === 'a'),
+    )!
+    const target = junctions.find(
+      (j) =>
+        j.refs.some((r) => r.wallId === 'topH' && r.end === 'b') &&
+        j.refs.some((r) => r.wallId === 'thickV'),
+    )!
+
+    expect(isFlushOnlyJunctionConnect(walls, sourceEnd, target)).toBe(true)
+    const connected = mergeJunctionsAware(walls, sourceEnd, target)
+
+    const thin = connected.find((w) => w.id === 'thinV')!
+    const thick = connected.find((w) => w.id === 'thickV')!
+    const topH = connected.find((w) => w.id === 'topH')!
+
+    // Geen stub: alles op x≈248.6
+    expect(thin.a.x).toBeCloseTo(248.6, 1)
+    expect(thick.a.x).toBeCloseTo(248.6, 1)
+    expect(thick.b.x).toBeCloseTo(248.6, 1)
+    expect(topH.b.x).toBeCloseTo(248.6, 1)
+    // Thin verlengd tot host-y
+    const thinYs = [thin.a.y, thin.b.y].sort((a, b) => a - b)
+    expect(thinYs[1]).toBeCloseTo(1035, 0)
+
+    // Balance op korte dikke (~0.83 = face-flush), niet export-quantize 0.75
+    expect(thin.balance ?? 0.5).toBeCloseTo(0.5, 1)
+    expect(thick.balance ?? 0.5).toBeCloseTo(0.83, 1)
+    // Faces: één kant echt flush (≤1 mm), niet 2.5 cm offset van 0.75
+    const thickCl = (thick.a.x + thick.b.x) / 2
+    const thinCl = (thin.a.x + thin.b.x) / 2
+    const thickB = thick.balance ?? 0.5
+    const thinFaceR = thinCl + 5
+    const thickFaceR = thickCl + thick.thickness * (1 - thickB) // minus-face bij n.x=-1 → cl + t*(1-b)
+    // Met dir (0,-1), leftN.x=-1: minus = cl - (-1)*t*(1-b) = cl + t*(1-b)
+    expect(Math.abs(thickFaceR - thinFaceR)).toBeLessThan(0.2)
+  })
+
+  it('ruimte alleen rechts: flush rechts (niet plan-centroid); a→b per muur', () => {
+    // sloped(4)-achtig: dikke korte + dunne extensie; area alleen +X → niet links flushen.
+    const walls = [
+      wall('thick', { x: 100, y: 80 }, { x: 100, y: 0 }, 30, 0.5),
+      wall('thin', { x: 105, y: 200 }, { x: 105, y: 50 }, 10, 0.5),
+      wall('host', { x: 0, y: 80 }, { x: 100, y: 80 }, 15, 0.5),
+    ]
+    const areas = [
+      {
+        id: 'room-right',
+        poly: [
+          { x: 135, y: 10 },
+          { x: 220, y: 10 },
+          { x: 220, y: 70 },
+          { x: 135, y: 70 },
+        ],
+        color: '#fff',
+        showAreaLabel: false,
+      },
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'thin' && r.end === 'b'))!
+    const target = junctions.find(
+      (j) =>
+        j.refs.some((r) => r.wallId === 'host' && r.end === 'b') &&
+        j.refs.some((r) => r.wallId === 'thick'),
+    )!
+
+    expect(isFlushOnlyJunctionConnect(walls, source, target)).toBe(true)
+    const connected = mergeJunctionsAware(walls, source, target, areas)
+    const thick = connected.find((w) => w.id === 'thick')!
+    const thin = connected.find((w) => w.id === 'thin')!
+    // Keep-axis: alles op x van thin (105)
+    expect(thick.a.x).toBeCloseTo(105, 0)
+    expect(thin.a.x).toBeCloseTo(105, 0)
+    // Ruimte +X, thick dir (0,-1) n.x=-1 → minus-face = +X → bal ~0.83
+    expect(thick.balance ?? 0.5).toBeCloseTo(0.83, 1)
+  })
+
+  it('parallel: dikteverschil, einden dwars dichtbij → as uitlijnen; korte keten flusht', () => {
+    const walls2 = [
+      wall('long', { x: 0, y: 20 }, { x: 40, y: 20 }, 20, 0.5),
+      wall('short', { x: 0, y: 24 }, { x: 40, y: 24 }, 10, 0.5),
+    ]
+    const j2 = buildJunctions(walls2)
+    const s2 = j2.find((j) => j.refs.some((r) => r.wallId === 'short' && r.end === 'b'))!
+    const t2 = j2.find((j) => j.refs.some((r) => r.wallId === 'long' && r.end === 'b'))!
+
+    expect(isFlushOnlyJunctionConnect(walls2, s2, t2)).toBe(true)
+    const connected = mergeJunctionsAware(walls2, s2, t2)
+    const short = connected.find((w) => w.id === 'short')!
+    const long = connected.find((w) => w.id === 'long')!
+    // Doel (long) schuift op short-as — zelfde Y, geen diagonaal.
+    expect(Math.abs(short.a.y - short.b.y)).toBeLessThan(0.5)
+    expect(Math.abs((long.a.y + long.b.y) / 2 - (short.a.y + short.b.y) / 2)).toBeLessThan(0.5)
+    // Balance op korte muur (niet 0.5) of op dikke — één van beide flusht.
+    const shortB = short.balance ?? 0.5
+    const longB = long.balance ?? 0.5
+    expect(shortB !== 0.5 || longB !== 0.5).toBe(true)
+  })
+
+  it('lange merge blijft klassiek (diagonaal/L toegestaan)', () => {
+    const walls = [
+      wall('w1', { x: 0, y: 0 }, { x: 100, y: 0 }, 20),
+      wall('w2', { x: 200, y: 0 }, { x: 200, y: 80 }, 20),
+    ]
+    const junctions = buildJunctions(walls)
+    const target = junctions.find((j) => j.refs.some((r) => r.wallId === 'w1' && r.end === 'a'))!
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'w2' && r.end === 'a'))!
+    expect(isFlushOnlyJunctionConnect(walls, source, target)).toBe(false)
+    const merged = mergeJunctionsAware(walls, source, target)
+    expect(merged.find((w) => w.id === 'w2')?.a).toEqual({ x: 0, y: 0 })
+  })
+
+  it('al-schuine muur (>12°) → geen flush, gewone merge', () => {
+    const walls2 = [
+      wall('host', { x: 0, y: 80 }, { x: 200, y: 80 }, 20),
+      wall('arm', { x: 100, y: 80 }, { x: 100, y: 140 }, 20),
+      // ~26° uit lood t.o.v. verticaal
+      wall('diag', { x: 70, y: 20 }, { x: 98, y: 78 }, 10),
+    ]
+    const j2 = buildJunctions(walls2)
+    const s2 = j2.find((j) => j.refs.some((r) => r.wallId === 'diag' && r.end === 'b'))!
+    const t2 = j2.find((j) => j.refs.some((r) => r.wallId === 'arm' && r.end === 'a'))!
+    expect(isFlushOnlyJunctionConnect(walls2, s2, t2)).toBe(false)
+  })
+
+  it('korte 45°-chamfer → geen flush', () => {
+    const walls = [
+      wall('h', { x: 0, y: 0 }, { x: 100, y: 0 }, 20),
+      wall('v', { x: 110, y: 10 }, { x: 110, y: 100 }, 20),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'h' && r.end === 'b'))!
+    const target = junctions.find((j) => j.refs.some((r) => r.wallId === 'v' && r.end === 'a'))!
+    expect(isFlushOnlyJunctionConnect(walls, source, target)).toBe(false)
+  })
+
+  it('parallel offset > Δt/2 → geen flush', () => {
+    const walls = [
+      wall('long', { x: 0, y: 20 }, { x: 40, y: 20 }, 20, 0.5),
+      wall('short', { x: 0, y: 32 }, { x: 40, y: 32 }, 10, 0.5),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'short' && r.end === 'b'))!
+    const target = junctions.find((j) => j.refs.some((r) => r.wallId === 'long' && r.end === 'b'))!
+    expect(isFlushOnlyJunctionConnect(walls, source, target)).toBe(false)
+  })
+
+  it('snap naar as-landing i.p.v. T.xy bij flush-only', () => {
+    const walls = [
+      wall('host', { x: 0, y: 80 }, { x: 200, y: 80 }, 20),
+      wall('thin', { x: 100, y: 0 }, { x: 100, y: 78 }, 10),
+      wall('stub', { x: 105, y: 80 }, { x: 105, y: 120 }, 20),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'thin' && r.end === 'b'))!
+    const target = junctions.find((j) => j.refs.some((r) => r.wallId === 'stub' && r.end === 'a'))!
+    const snapped = snapPointToJunctionsFlushAware(
+      junctions.filter((j) => j.id !== source.id),
+      { x: 103, y: 78 },
+      15,
+      walls,
+      source,
+    )
+    expect(snapped.x).toBeCloseTo(100, 5)
+    expect(snapped.y).toBeCloseTo(80, 5)
+    expect(snapped.x).not.toBeCloseTo(target.x, 0)
   })
 })

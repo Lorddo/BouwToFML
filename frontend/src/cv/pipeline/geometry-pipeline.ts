@@ -191,6 +191,7 @@ export async function runGeometryPipeline(params: {
       : output.debugSkeleton,
     pipelineV3Debug: wallLayer.pipelineV3Debug,
     roomWallMaskRle: wallLayer.roomWallMaskRle,
+    thicknessAxes: wallLayer.thicknessAxes,
     meta: {
       extractorId: 'geometry-lbe',
       elapsedMs: output.meta?.elapsedMs ?? performance.now() - started,

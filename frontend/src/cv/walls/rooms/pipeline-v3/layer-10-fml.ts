@@ -15,7 +15,13 @@ import {
   straightenCollinearAxisChains,
   withTopologyGuard,
 } from './engines/collapse'
-import { type ObliqueAxis, OBLIQUE_STUB_MAX_PX, rebuildObliqueChains } from './engines/oblique'
+import {
+  collectAllObliqueMemberIndices,
+  type ObliqueAxis,
+  OBLIQUE_STUB_MAX_PX,
+  rebuildObliqueChains,
+} from './engines/oblique'
+import { toThicknessAxisHints } from '@/cv/walls/rooms/thickness-axis-sample'
 import {
   dedupeExactSegments,
   dropZeroLengthSegments,
@@ -66,6 +72,8 @@ export function runLayer10Fml(params: {
 
   const obliqueAxes = params.obliqueAxes ?? []
   const obliquePolicy = resolveObliquePolicy(params.referenceWallThicknessPx)
+  const hasObliqueAxes = obliqueAxes.length > 0
+  const thicknessAxes = hasObliqueAxes ? toThicknessAxisHints(obliqueAxes) : undefined
 
   for (const face of params.layer9.facesCollapsed) {
     const thicknessBySegment = buildThicknessBySegment({
@@ -75,7 +83,11 @@ export function runLayer10Fml(params: {
       policy: policy.collapse,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
+      thicknessAxes,
     })
+    const skipBeforeChain = hasObliqueAxes
+      ? collectAllObliqueMemberIndices(face.segments, obliqueAxes, obliquePolicy)
+      : undefined
     // ESC:W-50 (B)
     const chainGuard = withTopologyGuard({
       segments: face.segments,
@@ -86,6 +98,7 @@ export function runLayer10Fml(params: {
           thicknessBySegment,
           policy: policy.collapse,
           referenceWallThicknessPx: params.referenceWallThicknessPx,
+          skipSegIndices: skipBeforeChain,
         }),
     })
     let segmentsOut = chainGuard.segments
@@ -106,7 +119,11 @@ export function runLayer10Fml(params: {
       policy: policy.collapse,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
       distanceMap,
+      thicknessAxes,
     })
+    const skipForStraighten = hasObliqueAxes
+      ? collectAllObliqueMemberIndices(segmentsOut, obliqueAxes, obliquePolicy)
+      : undefined
 
     // ESC:W-51 (A)
     // Axis polish before micro-corner so 0px / near-collinear H/V share one line.
@@ -116,6 +133,7 @@ export function runLayer10Fml(params: {
       policy.collapse,
       thicknessForStraighten,
       params.referenceWallThicknessPx,
+      skipForStraighten,
     )
     segmentsOut = straightened.segments
     tally('W-51', straightened.stats.chainsStraightened > 0 ? 'straightened' : 'noop')

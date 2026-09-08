@@ -42,6 +42,7 @@ function filterCollinearChainCandidates(params: {
   adjacency: ReturnType<typeof buildExactAdjacency>
   policy: CollapsePolicy
   hvBandPx: number
+  skipSegIndices?: Set<number>
 }): ExactIncident[] {
   const node = params.adjacency.get(exactPointKey(params.atPoint))
   if (!node) return []
@@ -71,6 +72,7 @@ function filterCollinearChainCandidates(params: {
     if (inc.segIndex === params.viaSegIndex) return false
     if (params.consumed.has(inc.segIndex)) return false
     if (params.collected.includes(inc.segIndex)) return false
+    if (params.skipSegIndices?.has(inc.segIndex)) return false
     const axis = segmentAxis(params.segments[inc.segIndex], inc.segIndex, params.hvBandPx)
     if (axis !== params.axis) return false
     if (
@@ -102,6 +104,7 @@ function pickChainExtension(params: {
   adjacency: ReturnType<typeof buildExactAdjacency>
   policy: CollapsePolicy
   hvBandPx: number
+  skipSegIndices?: Set<number>
 }): { segIndices: number[]; endPoint: ExactPoint } | null {
   const candidates = filterCollinearChainCandidates({
     atPoint: params.atPoint,
@@ -114,6 +117,7 @@ function pickChainExtension(params: {
     adjacency: params.adjacency,
     policy: params.policy,
     hvBandPx: params.hvBandPx,
+    skipSegIndices: params.skipSegIndices,
   })
   if (candidates.length === 0) return null
 
@@ -179,6 +183,7 @@ function pickChainExtension(params: {
     adjacency: params.adjacency,
     policy: params.policy,
     hvBandPx: params.hvBandPx,
+    skipSegIndices: params.skipSegIndices,
   }).filter((inc) =>
     thicknessCompatible(
       viaThickness,
@@ -226,6 +231,7 @@ function extendChainArm(params: {
   chainSegIndices: number[]
   policy: CollapsePolicy
   hvBandPx: number
+  skipSegIndices?: Set<number>
 }): { segIndices: number[]; endPoint: ExactPoint } {
   const collected: number[] = []
   let atPoint = params.atPoint
@@ -245,6 +251,7 @@ function extendChainArm(params: {
       adjacency: params.adjacency,
       policy: params.policy,
       hvBandPx: params.hvBandPx,
+      skipSegIndices: params.skipSegIndices,
     })
     if (!step) break
 
@@ -309,10 +316,13 @@ export function collapseInterJunctionChains(params: {
   thicknessBySegment: number[]
   policy: CollapsePolicy
   referenceWallThicknessPx?: number
+  /** L3-as-leden — niet als H/V collapsen (12°-classify). */
+  skipSegIndices?: Set<number>
 }): { segments: Segment[]; stats: ChainCollapseStats } {
   const referenceWallThicknessPx =
     params.referenceWallThicknessPx ?? params.policy.thicknessFallbackPx
   const hvBandPx = params.policy.hvBandPx
+  const skipSegIndices = params.skipSegIndices
   const work = cloneSegments(params.segments)
   const adjacency = buildExactAdjacency(work)
   const consumed = new Set<number>()
@@ -324,6 +334,7 @@ export function collapseInterJunctionChains(params: {
 
   for (let seedIndex = 0; seedIndex < work.length; seedIndex += 1) {
     if (consumed.has(seedIndex)) continue
+    if (skipSegIndices?.has(seedIndex)) continue
     const seed = work[seedIndex]
     const axis = segmentAxis(seed, seedIndex, hvBandPx)
     if (!axis) continue
@@ -340,6 +351,7 @@ export function collapseInterJunctionChains(params: {
       chainSegIndices: [seedIndex],
       policy: params.policy,
       hvBandPx,
+      skipSegIndices,
     })
     const forward = extendChainArm({
       atPoint: seed.b,
@@ -353,6 +365,7 @@ export function collapseInterJunctionChains(params: {
       chainSegIndices: [seedIndex],
       policy: params.policy,
       hvBandPx,
+      skipSegIndices,
     })
 
     const chainIndices = [

@@ -115,13 +115,12 @@ const {
   selectedRect,
   iconSize,
   handleSize,
-  handlePosition,
   iconPositions,
   isDragging,
   onRectMouseDown,
   onStageMouseDown,
   onResizeHandleDown,
-  onMoveIconDown,
+  onRotateHandleDown,
   onDeleteIconClick,
   onSelectionMouseMove,
   onSelectionMouseUp,
@@ -456,11 +455,10 @@ function onShowCanvasGrid(next: boolean) {
             :wall-thickness-limits="wallThicknessLimits"
             :icon-size="iconSize"
             :handle-size="handleSize"
-            :handle-position="handlePosition"
             :icon-positions="iconPositions"
             :on-rect-mouse-down="onRectMouseDown"
             :on-resize-handle-down="onResizeHandleDown"
-            :on-move-icon-down="onMoveIconDown"
+            :on-rotate-handle-down="onRotateHandleDown"
             :on-delete-icon-click="onDeleteIconClick"
           />
           <WallStampCanvasLayer

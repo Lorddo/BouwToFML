@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import {
   BOVENLICHT_GAP_CM,
   BOVENLICHT_HEIGHT_CM,
@@ -108,8 +108,15 @@ export function useFmlPreviewOpeningSelection(options: {
   const openingBovenlichtGapDraft = ref(BOVENLICHT_GAP_CM)
   const openingBovenlichtGapMixed = ref(false)
 
+  /** Settings-selectie, of enkele move-selectie bij gewone klik. */
+  function editableOpeningIds(): string[] {
+    if (settingsOpeningIds.value.length > 0) return [...settingsOpeningIds.value]
+    if (moveOpeningId.value) return [moveOpeningId.value]
+    return []
+  }
+
   function selectedOpenings() {
-    return settingsOpeningIds.value
+    return editableOpeningIds()
       .map((id) => editor.resolveOpening(id))
       .filter((item): item is NonNullable<ReturnType<typeof editor.resolveOpening>> => item != null)
   }
@@ -209,7 +216,8 @@ export function useFmlPreviewOpeningSelection(options: {
 
   function commitOpeningSubtype(subtype: OpeningSubtypeDraft): void {
     flushPendingFieldCommits()
-    if (settingsOpeningIds.value.length === 0) return
+    const openingIds = editableOpeningIds()
+    if (openingIds.length === 0) return
     const selected = selectedOpenings()
     if (selected.length === 0) return
     const openingType = selected[0].opening.type
@@ -224,7 +232,7 @@ export function useFmlPreviewOpeningSelection(options: {
     openingSubtypeDraft.value = subtype
     openingSubtypeMixed.value = false
     editor.pushUndo()
-    for (const openingId of settingsOpeningIds.value) {
+    for (const openingId of openingIds) {
       const located = editor.resolveOpening(openingId)
       if (!located || located.opening.type !== openingType) continue
       editor.updateOpening(openingId, { refid })
@@ -366,7 +374,7 @@ export function useFmlPreviewOpeningSelection(options: {
     draft: openingWidthDraft,
     mixed: openingWidthMixed,
     applyWithValue: (value) => {
-      const openingIds = [...settingsOpeningIds.value]
+      const openingIds = editableOpeningIds()
       return () => applyWidthToOpenings(openingIds, value)
     },
   })
@@ -376,7 +384,7 @@ export function useFmlPreviewOpeningSelection(options: {
     draft: openingHeightDraft,
     mixed: openingHeightMixed,
     applyWithValue: (value) => {
-      const openingIds = [...settingsOpeningIds.value]
+      const openingIds = editableOpeningIds()
       return () => applyHeightToOpenings(openingIds, value)
     },
   })
@@ -386,7 +394,7 @@ export function useFmlPreviewOpeningSelection(options: {
     draft: openingSillZDraft,
     mixed: openingSillZMixed,
     applyWithValue: (value) => {
-      const openingIds = [...settingsOpeningIds.value]
+      const openingIds = editableOpeningIds()
       return () => applySillZToOpenings(openingIds, value)
     },
   })
@@ -396,7 +404,7 @@ export function useFmlPreviewOpeningSelection(options: {
     draft: openingBovenlichtHeightDraft,
     mixed: openingBovenlichtHeightMixed,
     applyWithValue: (value) => {
-      const openingIds = [...settingsOpeningIds.value]
+      const openingIds = editableOpeningIds()
       return () => applyBovenlichtHeightToOpenings(openingIds, value)
     },
   })
@@ -406,7 +414,7 @@ export function useFmlPreviewOpeningSelection(options: {
     draft: openingBovenlichtGapDraft,
     mixed: openingBovenlichtGapMixed,
     applyWithValue: (value) => {
-      const openingIds = [...settingsOpeningIds.value]
+      const openingIds = editableOpeningIds()
       return () => applyBovenlichtGapToOpenings(openingIds, value)
     },
   })
@@ -424,9 +432,10 @@ export function useFmlPreviewOpeningSelection(options: {
 
   function applyOpeningMirrorPatch(params: { hingeAtStart?: boolean; swingRight?: boolean }): void {
     flushPendingFieldCommits()
-    if (settingsOpeningIds.value.length === 0) return
+    const openingIds = editableOpeningIds()
+    if (openingIds.length === 0) return
     editor.pushUndo()
-    for (const openingId of settingsOpeningIds.value) {
+    for (const openingId of openingIds) {
       const located = editor.resolveOpening(openingId)
       if (!located) continue
       const canMirror =
@@ -460,11 +469,12 @@ export function useFmlPreviewOpeningSelection(options: {
 
   function setOpeningBovenlicht(on: boolean): void {
     flushPendingFieldCommits()
-    if (settingsOpeningIds.value.length === 0) return
+    const openingIds = editableOpeningIds()
+    if (openingIds.length === 0) return
     openingBovenlichtDraft.value = on
     openingBovenlichtMixed.value = false
     editor.pushUndo()
-    for (const openingId of settingsOpeningIds.value) {
+    for (const openingId of openingIds) {
       const located = editor.resolveOpening(openingId)
       if (!located) continue
       if (located.opening.type !== 'door' && located.opening.type !== 'window') continue
@@ -535,6 +545,10 @@ export function useFmlPreviewOpeningSelection(options: {
     pinnedJunctionId.value = null
     activeFmlTool.value = 'add_door'
   }
+
+  watch([moveOpeningId, settingsOpeningIds], () => {
+    syncOpeningDraftFromSelection()
+  })
 
   return {
     openingSubtypeDraft,

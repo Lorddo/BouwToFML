@@ -1,4 +1,11 @@
 export { SELECTION_COLORS, type SelectionRect } from './types'
+export {
+  compactRectRotationDeg,
+  hasRectRotation,
+  pointInOrientedRect,
+  rectRotationDeg,
+  sampleOrientedRectNearest,
+} from './oriented-rect'
 export { useExampleSelection } from './useExampleSelection'
 export {
   MAX_WALL_REFS,

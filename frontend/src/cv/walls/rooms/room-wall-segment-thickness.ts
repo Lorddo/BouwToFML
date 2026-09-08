@@ -11,6 +11,13 @@ import {
   isDominantVertical,
   segmentAngleDeg,
 } from '@/cv/walls/rooms/wall-segment-geometry'
+import {
+  resolveThicknessSampleEnds,
+  type ThicknessAxisHint,
+} from '@/cv/walls/rooms/thickness-axis-sample'
+import { resolveObliquePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/oblique'
+
+export type { ThicknessAxisHint }
 
 function segmentLength(a: { x: number; y: number }, b: { x: number; y: number }): number {
   return Math.hypot(b.x - a.x, b.y - a.y)
@@ -295,22 +302,39 @@ function collectSegmentThicknessSamples(params: {
   distanceMap?: Float32Array | null
   junctionMarginPx?: number
   referenceWallThicknessPx?: number
+  /** L3-assen: sample op axis.line i.p.v. H/V-trap. */
+  thicknessAxes?: readonly ThicknessAxisHint[] | null
 }): number[] {
   const margin =
     params.junctionMarginPx ?? resolveJunctionThicknessMarginPx(params.referenceWallThicknessPx)
+  const captureBandPx = resolveObliquePolicy(params.referenceWallThicknessPx).captureBandPx
+  const sampleEnds = resolveThicknessSampleEnds({
+    a: params.a,
+    b: params.b,
+    axes: params.thicknessAxes,
+    captureBandPx,
+  })
   if (params.distanceMap) {
     const byDt = sampleThicknessFromDistanceMap({
       distanceMap: params.distanceMap,
       width: params.width,
       height: params.height,
-      a: params.a,
-      b: params.b,
+      a: sampleEnds.a,
+      b: sampleEnds.b,
       sampleStepPx: params.sampleStepPx,
       junctionMarginPx: margin,
     })
     if (byDt.length > 0) return byDt
   }
-  return sampleThicknessFallback({ ...params, junctionMarginPx: margin })
+  return sampleThicknessFallback({
+    mask: params.mask,
+    width: params.width,
+    height: params.height,
+    a: sampleEnds.a,
+    b: sampleEnds.b,
+    sampleStepPx: params.sampleStepPx,
+    junctionMarginPx: margin,
+  })
 }
 
 export function estimateMedianThicknessPx(params: {
@@ -547,6 +571,8 @@ export function measureSegmentThicknessMax(params: {
   /** Houd false voor FML-ketenlogica; true behoudt legacy lijn-harmonisatie. */
   harmonizeByWallLine?: boolean
   referenceWallThicknessPx?: number
+  /** L3-assen (via finalize) — dikte op hartlijn voor schuine leden. */
+  thicknessAxes?: readonly ThicknessAxisHint[] | null
 }): RoomWallSemanticGraph {
   const sampleStepPx = params.sampleStepPx ?? 5
   const mask = params.mask ?? decodeMaskRle(params.maskRle)
@@ -563,18 +589,27 @@ export function measureSegmentThicknessMax(params: {
         })
       : null)
   const junctionMarginPx = resolveJunctionThicknessMarginPx(params.referenceWallThicknessPx)
+  const captureBandPx = resolveObliquePolicy(params.referenceWallThicknessPx).captureBandPx
 
   const segments = params.graph.segments.map((segment) => {
+    const sampleEnds = resolveThicknessSampleEnds({
+      a: segment.a,
+      b: segment.b,
+      axes: params.thicknessAxes,
+      captureBandPx,
+    })
     const samples = collectSegmentThicknessSamples({
       mask,
       width,
       height,
-      a: segment.a,
-      b: segment.b,
+      a: sampleEnds.a,
+      b: sampleEnds.b,
       sampleStepPx,
       distanceMap,
       junctionMarginPx,
       referenceWallThicknessPx: params.referenceWallThicknessPx,
+      // al geprojecteerd — niet dubbel
+      thicknessAxes: null,
     })
     const thicknessPxMax = samples.length ? Math.max(...samples) : 0
     const thicknessPxTypical = samples.length ? median(samples) : 0
@@ -584,8 +619,8 @@ export function measureSegmentThicknessMax(params: {
       mask,
       width,
       height,
-      a: segment.a,
-      b: segment.b,
+      a: sampleEnds.a,
+      b: sampleEnds.b,
       sampleStepPx,
       junctionMarginPx,
     })

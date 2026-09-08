@@ -7,6 +7,8 @@ export type RefRect = {
   y: number
   width: number
   height: number
+  /** Clockwise degrees around the box center. Omit / ~0 = axis-aligned. */
+  rotationDeg?: number
 }
 
 export type RefBBox = {

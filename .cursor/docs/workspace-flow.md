@@ -65,7 +65,7 @@ Canvas-tab: alleen **Voorbewerking** (`walls`, via `visiblePreprocessLayerTabs`)
 | B/W overnemen (donor-keuze) | `copyPreprocessAndRefsFromDonor(donorFloorId)` |
 | Muurstempel (keuze) | Sidebar + canvas: `useWallStamp` — donor FML-muren of Stempelset (`stamp`), band min/mid/max (uit bij Stempelset), REF-handles (geen resize bij Stempelset), penseel/polygoon-gum, bake → architect-contour `stampBw` + solid `stampMask` + `bakeNulpuntImageCm` + `injectStampWallsIntoPlan`. Overflow buiten de scan: `expandUnderlayForStamp` (wit pad, max-edge 12k) |
 | Inkt-tools (penseel/gum/lijn/rect) | `inkOverlay` via `useWorkspaceInkEdit` + `composeWallBw` — **niet** op kleur-onderlegger |
-| Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); muur-ref via dikte-rij (geen losse Muur-knop); deur/raam via knoppen; tekenen uitzetten via opnieuw tikken of Escape |
+| Referentievakken muur/deur/raam | `InputReferencePanel` + LBE op canvas (`useExampleSelection`); muur-ref via dikte-rij (geen losse Muur-knop); deur/raam via knoppen; tekenen uitzetten via opnieuw tikken of Escape; na tekenen: sleep overal in het vak; randen schalen; hoeken draaien (scheve muur; 12° magnet 0/90; Ctrl = vrij) |
 | OCR aan/uit | `preprocess.ocrEnabled` in Referenties-panel (**default uit**) — auto-scan op Muren in stap 3 |
 | Deur FML Template ID | per deur-ref dropdown (`fmlRefId`) |
 | Muurdikte + muurstijl | **alleen bij afronden 2→3** (ná ink-bake): `measureReferenceWallThicknessPx` + `classifyWallRefStyleFromBw` op **baseBw**. Tekenen/resize van een ref meet niet / start geen classify |

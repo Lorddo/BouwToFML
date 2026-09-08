@@ -23,9 +23,11 @@ import {
   addRoomRect,
   addWallSegment,
   buildJunctions,
-  findMergeTarget,
+  connectJunctionsKeepAxis,
+  findMergeTargetFlushAware,
+  isFlushOnlyJunctionConnect,
   JUNCTION_POINT_SNAP_CM,
-  mergeJunctions,
+  mergeJunctionsAware,
   moveJunctionWithWallJoins,
   removeWalls,
   setJunctionBottomZ,
@@ -37,7 +39,7 @@ import {
   setWallsHeight,
   setWallsThickness,
   slideWallSegmentAlongAxis,
-  snapPointToJunctions,
+  snapPointToJunctionsFlushAware,
   snapPointToWallCenters,
   snapToNearbyEndpointAxes,
   stableJunctionId,
@@ -514,7 +516,23 @@ export function useFmlPreviewEditor(
     position: { x: number; y: number },
     baseAreas?: FloorArea[],
   ): void {
-    const next = moveJunctionWithWallJoins(baseWalls, node, position)
+    // Flush-connect alleen bij knoop-sleep (deze preview), nooit bij segment-slide.
+    const junctions = buildJunctions(baseWalls)
+    const source =
+      junctions.find((junction) => junction.id === node.id) ??
+      ({
+        ...node,
+        x: node.x,
+        y: node.y,
+      } satisfies JunctionNode)
+    const flushTarget = findMergeTargetFlushAware(junctions, node.refs, position, baseWalls, 3, {
+      x: source.x,
+      y: source.y,
+    })
+    const next =
+      flushTarget && isFlushOnlyJunctionConnect(baseWalls, source, flushTarget)
+        ? connectJunctionsKeepAxis(baseWalls, source, flushTarget, baseAreas)
+        : moveJunctionWithWallJoins(baseWalls, node, position)
     if (ridgeRoof.refsOnRidge(node.refs)) {
       ridgeRoof.setRidgeWalls(next)
       return
@@ -525,10 +543,10 @@ export function useFmlPreviewEditor(
   function applyJunctionMerge(source: JunctionNode, target: JunctionNode): void {
     if (ridgeRoof.refsOnRidge(source.refs) || ridgeRoof.refsOnRidge(target.refs)) {
       if (!ridgeRoof.refsOnRidge(source.refs) || !ridgeRoof.refsOnRidge(target.refs)) return
-      ridgeRoof.setRidgeWalls(mergeJunctions(ridgeRoof.ridgeWalls.value, source, target))
+      ridgeRoof.setRidgeWalls(mergeJunctionsAware(ridgeRoof.ridgeWalls.value, source, target))
       return
     }
-    setWalls(mergeJunctions(walls.value, source, target))
+    setWalls(mergeJunctionsAware(walls.value, source, target, areas.value))
   }
 
   function applyWallThickness(wallId: string, thicknessCm: number): void {
@@ -909,8 +927,27 @@ export function useFmlPreviewEditor(
     removeOpenings,
     removeDoorOpenings,
     findMergeTarget: (sourceRefs: WallEndRef[], position: { x: number; y: number }) => {
-      const graph = ridgeRoof.refsOnRidge(sourceRefs) ? ridgeJunctions.value : planJunctions.value
-      return findMergeTarget(graph, sourceRefs, position)
+      const onRidge = ridgeRoof.refsOnRidge(sourceRefs)
+      const graph = onRidge ? ridgeJunctions.value : planJunctions.value
+      const sourceWalls = onRidge ? ridgeRoof.ridgeWalls.value : walls.value
+      const sourceJunction =
+        graph.find(
+          (junction) =>
+            junction.refs.length === sourceRefs.length &&
+            sourceRefs.every((ref) =>
+              junction.refs.some(
+                (candidate) => candidate.wallId === ref.wallId && candidate.end === ref.end,
+              ),
+            ),
+        ) ?? null
+      return findMergeTargetFlushAware(
+        graph,
+        sourceRefs,
+        position,
+        sourceWalls,
+        3,
+        sourceJunction ? { x: sourceJunction.x, y: sourceJunction.y } : undefined,
+      )
     },
     snapJunctionPoint: (
       refs: WallEndRef[],
@@ -926,8 +963,22 @@ export function useFmlPreviewEditor(
         : ridgeRoof.refsOnRidge(refs)
           ? ridgeJunctions.value
           : planJunctions.value
+      const source =
+        sourceJunctions.find((item) => item.id === sourceId) ??
+        ({
+          id: sourceId,
+          refs,
+          x: candidate.x,
+          y: candidate.y,
+        } satisfies JunctionNode)
       const otherJunctions = sourceJunctions.filter((item) => item.id !== sourceId)
-      const junctionSnap = snapPointToJunctions(otherJunctions, axisSnap, JUNCTION_POINT_SNAP_CM)
+      const junctionSnap = snapPointToJunctionsFlushAware(
+        otherJunctions,
+        axisSnap,
+        JUNCTION_POINT_SNAP_CM,
+        sourceWalls,
+        source,
+      )
       const exclude = new Set(refs.map((ref) => ref.wallId))
       return snapPointToWallCenters(sourceWalls, junctionSnap, JUNCTION_POINT_SNAP_CM, exclude)
     },

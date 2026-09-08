@@ -51,7 +51,7 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Beslissing | Keuze |
 |------------|-------|
 | Plan | `.cursor/docs/fml-layer8-conversion-plan.md` |
-| Keten | Collineair door T/X = altijd één dikte (lengtegewogen catalogus/band). T-arm/L alleen als ketengemiddeldes dezelfde slot/band of 15% hysterese hebben. |
+| Keten | Collineair door T/X = één keten alleen bij dezelfde slot/band of 15% hysterese. Echte stap (7 vs 15 vs 30) blijft gesplitst. T-arm/L daarna op ketengemiddelde. Korte dik-dun-dik brug mag mergen. |
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
@@ -69,11 +69,19 @@ L7/L9/L10 blijven 3 bakken. Drempels: **min** tot kleinste catalogus-cm × 1,2; 
 
 ### Dikte-catalogus (2026-08-29)
 
-Eén `thicknessCms[]` (min 3, factory `[10, 20, 30]`, tot 8) is Settings, LBE-refs, harmonize/export én editor-presets. Geen parallelle min/mid/max-UI. **Geen nabij-merge** (8/9/10/11 blijven 4 maten; alleen exacte dubbelen na 0,1 cm). Pipeline-schaal blijft max-equivalent (`px × maxCm/refCm`). Gate L7/L9/L10 blijft 3-band (zie hierboven). Harmonize met catalogus ≥3: nearest slot of 15% hysterese voor T-arm/L; collineair door T/X altijd één keten (anders 10/15-splits + balance-flush). Daarna één catalogus-cm per keten. Editor-knoppen = `thicknessPresetCms` (“X cm”); draw-default = grootste cm. Stempel `filterWallsByBands` en ⊕ thickness-pick blijven 3-band. Stap 2: dikte-lijst is altijd zichtbaar; tik een rij om het vak voor die cm te tekenen (geen losse Muur-knop); groen/vinkje = getekend.
+Eén `thicknessCms[]` (min 3, factory `[10, 20, 30]`, tot 8) is Settings, LBE-refs, harmonize/export én editor-presets. Geen parallelle min/mid/max-UI. **Geen nabij-merge** (8/9/10/11 blijven 4 maten; alleen exacte dubbelen na 0,1 cm). Pipeline-schaal blijft max-equivalent (`px × maxCm/refCm`). Gate L7/L9/L10 blijft 3-band (zie hierboven). Harmonize met catalogus ≥3: nearest slot of 15% hysterese voor collinear-union én T-arm/L. Echte stap blijft gesplitst (balance kan flushen). Korte dik-dun-dik brug mag mergen. Geen mid-span splits (T-tot-T blijft één meting). Daarna één catalogus-cm per keten. Editor-knoppen = `thicknessPresetCms` (“X cm”); draw-default = grootste cm. Stempel `filterWallsByBands` en ⊕ thickness-pick blijven 3-band. Stap 2: dikte-lijst is altijd zichtbaar; tik een rij om het vak voor die cm te tekenen (geen losse Muur-knop); groen/vinkje = getekend.
+
+### LBE-vak draaien (2026-09-08)
+
+Na tekenen mag het referentievak scheef (schuine muur). `rotationDeg` om het centrum; tekenen blijft as-uitgelijnd. Randen schalen langs de lokale as; hoeken = draaigrepen (zelfde pijl als fixtures); 12° magnet naar 0/90/180/270; Ctrl = vrij. Sleep overal in het vak (geen grab-icoon). Crop/meting samplet het gedraaide vak (niet de AABB).
 
 ### Harmonize collinear door T/X (2026-08-29)
 
-Met 8 catalogus-slots werd 10 vs 15 een “echte stap” (33% > 15% hysterese). T-splits op één as kregen verschillende cm + balance-flush (Test 31: boven 15/10/15, linksonder 15/30). **Collineair op een gedeeld knooppunt = altijd één keten** (lengtegewogen). T-arm/L pas daarna, en alleen als de *ketengemiddeldes* compatibel zijn — anders trekt een ruizig middenstuk de T-arm de gevel in.
+Met 8 catalogus-slots werd 10 vs 15 een “echte stap” (33% > 15% hysterese). T-splits op één as kregen verschillende cm + balance-flush (Test 31: boven 15/10/15, linksonder 15/30). **Destijds:** collineair op een gedeeld knooppunt = altijd één keten (lengtegewogen). T-arm/L pas daarna op ketengemiddelde.
+
+### Harmonize collinear dikte-guard (2026-09-08)
+
+“Altijd één keten” veegde echte gevelstappen weg (sloped: middelste V 7/15/30 → alles 7, geen flush). **Terug:** collinear-union alleen bij dezelfde slot/band of 15% hysterese — zelfde predicaat als T-arm. Meetruis (10 vs 11, 22 vs 24) blijft één keten; 7 vs 15 vs 30 blijft gesplitst zodat `alignWallJunctionBalance` kan flushen bij face-evidence. Korte dik-dun-dik brug ongewijzigd. Geen mid-span splits (T-tot-T = één meting; dat maakte eerder te veel ruis).
 
 ### Coördinaten
 
@@ -132,6 +140,8 @@ Detectie draait op witte velden. Hole-fill / brug / verdikken sluiten eerst inkt
 | Keten (`baseBw` / `effectiveBw`) | grijs → start-B/W (vast of otsu/edgeAware) → polarity → morph → **adaptive laatst** → negatief → gum |
 | Otsu / Int muur | Ongewijzigd: eigen recept (`buildRoomReferenceMat`), geen adaptive |
 | Compose | Ongewijzigd: OCR / stempel / inkt ná `baseBw` |
+
+Openingen delen nu deze wall-B/W (faces + refs). Eigen openings-laag zonder adaptive: plan [`.cursor/docs/openings-preprocess-refactor-plan.md`](openings-preprocess-refactor-plan.md) — nog niet gebouwd.
 
 ### Hole-fill / speckles: geen beeldmaat-schaal (2026-08-29)
 
@@ -251,6 +261,16 @@ Zie `.cursor/docs/v1-workflow-ui.md` voor volledige flow.
 Correcties vóór FML-download; tekenaar hoeft niet direct in Floorplanner te werken voor fixes.
 
 **Opening-maten:** V1 = projectdefaults per **deur-tag** (voor/achter/binnen) + per-verdieping defaults voor ramen; volledige per-opening editor = **V2** (zie `klant-eisen-v1.md`).
+
+### Keep-axis flush-connect (2026-09-08)
+
+Alleen bij **knoop-verslepen** (niet bij segment-slide). Als de dwars-offset klein is: landing op de as van de muur die je vasthoudt; **parallelle doel-segmenten schuiven geheel mee** (geen micro-stub); orthogonale einden alleen op de junction; daarna `balance` op het kortste collineaire dikte-wissel-segment.
+
+**Ruimtekant:** eerst area-probes links/rechts van de te balanceren muur (anders anker; anders plan-centroid). Flush-face = die ruimtekant. **Plus/minus** volgt `leftNormal(a→b)` van de muur die we tweaken (niet blind het plus/minus-label van het anker overnemen — a↔b draait links/rechts).
+
+**Marges:** across ≤ 15 cm (parallel) of ≤ 25 cm (ortho); parallel ook ≤ Δt/2 + 1 cm. Extensie (along groot) mag. 45°-chamfer / schuine muren → klassieke merge. Ctrl = snap-uit.
+
+Implementatie: `fml-preview-junction-flush-connect.ts`; preview+merge via `useFmlPreviewEditor` (junction-drag only, met `areas[]`).
 
 ---
 
@@ -768,7 +788,34 @@ Native `window.confirm` / `window.prompt` (browser-chrome) vervangen door dezelf
 | Touch-nav + rail | Alleen `pointer: coarse` (Set/H/V/Move; geen Sel — Settings is al multi) |
 | Gestures | Stille tik = edit; 1-vinger-slop = pan (geen deselect); 2 vingers = pan; pinch = zoom |
 | Redo | Ctrl+Y / Ctrl+Shift+Z **niet** achter flag — ook workspace |
-| Editor-wachtwoord | Soft gate `J0rd!` (`bouwToFml.fmlEditorUnlocked`), naast app-access |
+| Editor-wachtwoord | Soft gate `J0rd!` (`bouwToFml.fmlEditorUnlocked`), naast app-access — **2026-08-30: uit** (editor in topnav, alleen app-access) |
+
+---
+
+## Losstaande editor — seats & prijs (2026-08-31)
+
+Los product, niet BouwToFML-detectie. Canonieke tekst: `.cursor/docs/Pricing & Marketplace Strategy – Floorplan Editor.md`. Aug-21-credits in `product-idee-self-serve-plattegrond.md` zijn achterhaald.
+
+| Beslissing | Keuze |
+|------------|--------|
+| Model | **Seats** (persoon, multi-device). Geen credits als kern |
+| Treden | Gratis / Solo / Kantoor. **Geen Studio** |
+| Solo | Alles in de stoel: PDF-met-maten **én** aanzichten. Richtprijs **€29/mnd**, jaar ~10× |
+| Kantoor | 5 stoelen + lock/rollen. Richtprijs **€199–249/mnd** |
+| Gratis | Trechter; **mag bureau bestellen**; bij levering **maand Solo cadeau** |
+| Bureau | Offerte via partnerkantoor. Geen marketplace bij launch |
+| Partner | go2scan = API-tenant, geen publieke Enterprise-rij |
+| Markt | Geen NL-makelaars/corporaties (contractkader productidee) |
+
+---
+
+## App topnav Converter / Editor / Dashboard (2026-08-30)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Nav | `Nieuw` links naast BouwToFML; `Dashboard` `https://dashboard.go2scan.nl/projects` (nieuwe tab) · `Converter` `/` · `Editor` `/FML-editor` · tandwiel = settings |
+| Editor-gate | Extra `J0rd!` uit; app-access blijft |
+| Wissel | Beide views blijven gemount na eerste bezoek (geen detectie/editor-state weg) |
 
 ---
 
@@ -886,6 +933,7 @@ Floorplanner `labels[]` (`fontSize` in px bij 1:1) worden getoond zoals kamerben
 
 ## Nog open
 
+- **Openings-preprocess (deur+raam eigen B/W):** plan 2026-09-08 — één laag zonder adaptive, stages op eigen dual, projectie `OpeningHit → L10` (geen FaceID-lijm, geen AABB-snede). Werkwijze: map-backup, experiment in deze repo. `.cursor/docs/openings-preprocess-refactor-plan.md`
 - **Stempel ↔ detectie (dubbele muren):** ownership A geïmplementeerd (`resolve-stamp-ownership`); band-unificatie + fixture-tuning nog open — `.cursor/docs/stamp-detectie-dubbele-muren.md`
 - Geschikte OpenCV browser-build/versie
 - **Deur-rotatiestrategie:** 45° vs 5° vs 90° + 2e schuin voorbeeld (POC)

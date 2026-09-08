@@ -1,5 +1,6 @@
 import type { Segment } from '@/cv/port/wallGraph'
 import type { RoomWallFaceSkeleton, RoomWallJunction } from '../room-wall-skeleton-types'
+import type { ObliqueAxis } from './engines/oblique'
 
 /**
  * V3 owns its layer result shapes — no import from pipeline-v2.
@@ -191,6 +192,8 @@ export interface PipelineV3Result {
   completedThroughLayer: number
   incompleteLayers: number[]
   fmlReady: boolean
+  /** L3-assen — ook voor dikte-sampling op de hartlijn. */
+  obliqueAxes: ObliqueAxis[]
   layer1: PipelineV3Layer1Result
   layer2: PipelineV3Layer2Result
   layer3?: PipelineV3Layer3Result

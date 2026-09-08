@@ -37,7 +37,7 @@ export function useFloorplanPointerRouter(deps: {
   onMaskMouseDown: (p: Point, stopDrag?: () => void) => boolean
   onInkMouseDown: (p: Point, stopDrag: () => void) => boolean
   onPolygonDblClick: () => void
-  onSelectionMouseMove: () => void
+  onSelectionMouseMove: (event?: MouseEvent) => void
   onProbeMouseMove: (p: Point) => boolean
   onFaceMouseMove: (p: Point) => boolean
   onMaskMouseMove: (p: Point) => boolean
@@ -165,9 +165,9 @@ export function useFloorplanPointerRouter(deps: {
     deps.onPolygonDblClick()
   }
 
-  function onMouseMove() {
+  function onMouseMove(e: Konva.KonvaEventObject<MouseEvent>) {
     if (deps.isDragging()) {
-      deps.onSelectionMouseMove()
+      deps.onSelectionMouseMove(e.evt)
       return
     }
     const p = stagePointerPos()
