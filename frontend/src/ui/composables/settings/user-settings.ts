@@ -1,5 +1,5 @@
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
-import { normalizeRoomTagColors } from '@/core/fml/roomtype-catalog'
+import { normalizeRoomTagColors, parseFmlHex } from '@/core/fml/roomtype-catalog'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WALL_HEIGHT_CM,
@@ -45,6 +45,12 @@ import {
 import { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
 import { DEFAULT_FLOOR_THICKNESS_CM, DEFAULT_NOK_THICKNESS_CM } from '@/core/fml/floor-stack'
 import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/fml/ridge-walls'
+import {
+  createDefaultFacadeGroupPresets,
+  MAX_FACADE_GROUP_PRESETS,
+  STAMP_FACADE_GROUP_ID,
+  type FacadeGroupPreset,
+} from '@/core/fml/facade-groups'
 
 export type { ScaleInputUnit, UnitSystem } from './scale-input-unit'
 export {
@@ -104,8 +110,24 @@ export type FmlViewerSettings = {
   planDisplayStyle: PlanDisplayStyleChoice
   /** Gestippelde nokbalk-breedte (aanzicht + Dak-tab). */
   ridgeDisplayWidthCm: number
+  /** Toon gestippelde nokbalk op Dak-tab / plattegrond-overlay. */
+  showRidgeDisplay: boolean
   /** Licht viewport-vast hulpraster op alle canvassen (niet in export). */
   showCanvasGrid: boolean
+  /** Topbar: hele dak-overlay op de plattegrond (inhoud via vlaggen hieronder). */
+  showRoofOverlayOnPlan: boolean
+  /** Overlay-inhoud: dakvlak-omtrek op de plattegrond. */
+  showRoofPlanesOnPlan: boolean
+  /** 1,50 m clear-height overlay (lijn op plattegrond, fill op Dak). */
+  showClearHeight150: boolean
+  /** 2,00 m clear-height lijn (alleen plattegrond). */
+  showClearHeight200: boolean
+  /** Optionele arcering/fill onder 1,50 op de plattegrond. */
+  showClearHeightPlanFill: boolean
+  /** Arcering-/fill-kleur clear-height (`#RRGGBB`). */
+  clearHeightFillColor: string
+  /** Catalogus voor nieuwe editor-plannen (factory: Front/Back/Left/Right). */
+  facadeGroups: FacadeGroupPreset[]
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
@@ -152,6 +174,22 @@ function clampOpacityPct(raw: unknown, fallback: number): number {
   return Math.min(100, Math.max(0, Math.round(n)))
 }
 
+export const DEFAULT_CLEAR_HEIGHT_FILL_COLOR = '#6366F1'
+export const CLEAR_HEIGHT_FILL_ALPHA = 0.18
+
+/** `#RRGGBB` → `rgba(r,g,b,a)` voor clear-height arcering. */
+export function clearHeightFillRgba(
+  hex: string | undefined | null,
+  alpha = CLEAR_HEIGHT_FILL_ALPHA,
+): string {
+  const parsed = parseFmlHex(hex) ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
+  const r = Number.parseInt(parsed.slice(1, 3), 16)
+  const g = Number.parseInt(parsed.slice(3, 5), 16)
+  const b = Number.parseInt(parsed.slice(5, 7), 16)
+  const a = Number.isFinite(alpha) ? Math.min(1, Math.max(0, alpha)) : CLEAR_HEIGHT_FILL_ALPHA
+  return `rgba(${r}, ${g}, ${b}, ${a})`
+}
+
 function clampRidgeDisplayWidthCm(raw: unknown, fallback: number): number {
   const n = Number(raw)
   if (!Number.isFinite(n) || n <= 0) return fallback
@@ -188,7 +226,15 @@ export function createFactoryFmlViewerSettings(): FmlViewerSettings {
     slicerOffsetSnapCm: DEFAULT_SLICER_OFFSET_SNAP_CM,
     planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
     ridgeDisplayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
+    showRidgeDisplay: true,
     showCanvasGrid: true,
+    showRoofOverlayOnPlan: true,
+    showRoofPlanesOnPlan: true,
+    showClearHeight150: true,
+    showClearHeight200: false,
+    showClearHeightPlanFill: false,
+    clearHeightFillColor: DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
+    facadeGroups: createDefaultFacadeGroupPresets(),
   }
 }
 
@@ -256,6 +302,27 @@ function normalizeDefaults(
   }
 }
 
+function normalizeFacadeGroupPresets(
+  raw: unknown,
+  factory: FacadeGroupPreset[] = createDefaultFacadeGroupPresets(),
+): FacadeGroupPreset[] {
+  if (!Array.isArray(raw)) return factory.map((row) => ({ ...row }))
+  const out: FacadeGroupPreset[] = []
+  const seen = new Set<string>()
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue
+    const record = entry as Record<string, unknown>
+    const id = typeof record.id === 'string' ? record.id.trim() : ''
+    if (!id || id === STAMP_FACADE_GROUP_ID || seen.has(id)) continue
+    seen.add(id)
+    const name =
+      typeof record.name === 'string' && record.name.trim().length > 0 ? record.name.trim() : id
+    out.push({ id, name })
+    if (out.length >= MAX_FACADE_GROUP_PRESETS) break
+  }
+  return out
+}
+
 function normalizeFmlViewer(
   raw: unknown,
   factory: FmlViewerSettings = createFactoryFmlViewerSettings(),
@@ -272,8 +339,34 @@ function normalizeFmlViewer(
       src.ridgeDisplayWidthCm,
       factory.ridgeDisplayWidthCm,
     ),
+    showRidgeDisplay:
+      typeof src.showRidgeDisplay === 'boolean' ? src.showRidgeDisplay : factory.showRidgeDisplay,
     showCanvasGrid:
       typeof src.showCanvasGrid === 'boolean' ? src.showCanvasGrid : factory.showCanvasGrid,
+    showRoofOverlayOnPlan:
+      typeof src.showRoofOverlayOnPlan === 'boolean'
+        ? src.showRoofOverlayOnPlan
+        : factory.showRoofOverlayOnPlan,
+    showRoofPlanesOnPlan:
+      typeof src.showRoofPlanesOnPlan === 'boolean'
+        ? src.showRoofPlanesOnPlan
+        : factory.showRoofPlanesOnPlan,
+    showClearHeight150:
+      typeof src.showClearHeight150 === 'boolean'
+        ? src.showClearHeight150
+        : factory.showClearHeight150,
+    showClearHeight200:
+      typeof src.showClearHeight200 === 'boolean'
+        ? src.showClearHeight200
+        : factory.showClearHeight200,
+    showClearHeightPlanFill:
+      typeof src.showClearHeightPlanFill === 'boolean'
+        ? src.showClearHeightPlanFill
+        : factory.showClearHeightPlanFill,
+    clearHeightFillColor:
+      parseFmlHex(typeof src.clearHeightFillColor === 'string' ? src.clearHeightFillColor : null) ??
+      factory.clearHeightFillColor,
+    facadeGroups: normalizeFacadeGroupPresets(src.facadeGroups, factory.facadeGroups),
   }
 }
 
@@ -386,6 +479,15 @@ export function setShowCanvasGrid(show: boolean): boolean {
     ...current,
     fmlViewer: { ...current.fmlViewer, showCanvasGrid: show === true },
   }).fmlViewer.showCanvasGrid
+}
+
+/** Persist plattegrond dak-overlay master (topbar toggle). */
+export function setShowRoofOverlayOnPlan(show: boolean): boolean {
+  const current = loadUserSettings()
+  return saveUserSettings({
+    ...current,
+    fmlViewer: { ...current.fmlViewer, showRoofOverlayOnPlan: show === true },
+  }).fmlViewer.showRoofOverlayOnPlan
 }
 
 export function resetUserSettingsToFactory(): UserSettingsV1 {

@@ -6,6 +6,7 @@ import {
   isOnDakBoundary,
   snapDakDrawPoint,
   snapDrawPointToWallFaces,
+  snapDrawPointWithManualDimensions,
   snapPointToWallFaces,
   snapToNearestDakBoundary,
   wallFaceSegments,
@@ -266,4 +267,45 @@ describe('useFmlPreviewMeasure face-snap', () => {
     expect(end.x).toBeCloseTo(50)
     expect(end.y).toBe(50)
   })
+
+  it('handmatig snapt op een andere maatlijn (as + eindpunt)', () => {
+    const walls = [wall({ id: 'h', a: { x: 0, y: 20 }, b: { x: 100, y: 20 }, thickness: 20 })]
+    const manuals = [
+      { id: 'dim-1', type: 'custom_dimension' as const, a: { x: 200, y: 80 }, b: { x: 500, y: 80 } },
+    ]
+
+    const api = useFmlPreviewMeasure({
+      hitTest: {
+        clientToCm: (x, y) => ({ x, y }),
+        hitTestJunctionAtCm: () => null,
+      },
+      hoveredJunctionId: ref(null),
+      getWalls: () => walls,
+      shiftPressed: ref(false),
+      beforeBegin: () => {},
+      getMode: () => 'manual',
+      canPersist: () => true,
+      getManualDimensions: () => manuals,
+    })
+
+    const onAxis = api.resolveMeasureCm({ x: 300, y: 85 })
+    expect(onAxis.y).toBeCloseTo(80)
+
+    const onEnd = api.resolveMeasureCm({ x: 198, y: 82 })
+    expect(onEnd.x).toBeCloseTo(200)
+    expect(onEnd.y).toBeCloseTo(80)
+  })
 })
+
+describe('snapDrawPointWithManualDimensions', () => {
+  it('snapt naar een evenwijdige andere maatlijn, niet alleen muurfaces', () => {
+    const walls = [wall({ id: 'h', a: { x: 0, y: 0 }, b: { x: 40, y: 0 }, thickness: 10 })]
+    const manuals = [
+      { id: 'dim-1', type: 'custom_dimension' as const, a: { x: 0, y: 120 }, b: { x: 300, y: 120 } },
+    ]
+    const snapped = snapDrawPointWithManualDimensions(walls, manuals, { x: 80, y: 125 })
+    expect(snapped.y).toBeCloseTo(120)
+    expect(snapped.x).toBeCloseTo(80)
+  })
+})
+

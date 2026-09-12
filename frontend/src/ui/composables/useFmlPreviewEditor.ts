@@ -61,6 +61,8 @@ import {
 } from '@/ui/components/fml-preview-opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/fml-preview/regenerate-floor-areas'
 import { cloneAreasSnapshot } from '@/ui/composables/fml-preview/fml-preview-area-live'
+import { ensureDefaultFacadeGroups } from '@/core/fml/facade-groups'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 import {
   createFmlEditorUndo,
@@ -127,6 +129,7 @@ export function useFmlPreviewEditor(
   floorIndex: Ref<number>,
   options?: {
     ensureStampPreset?: Ref<boolean> | { readonly value: boolean }
+    ensureDefaultFacades?: Ref<boolean> | { readonly value: boolean }
   },
 ) {
   const localPlan = ref<FloorPlan | null>(null)
@@ -312,6 +315,9 @@ export function useFmlPreviewEditor(
     if (localPlan.value && options?.ensureStampPreset?.value === true) {
       facadeStamp.ensureStampFacadeGroup(localPlan.value)
     }
+    if (localPlan.value && options?.ensureDefaultFacades?.value === true) {
+      ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().fmlViewer.facadeGroups)
+    }
     if (!optionsReplace?.keepUndo) {
       undoModule.clearStacks()
     }
@@ -334,6 +340,9 @@ export function useFmlPreviewEditor(
       localPlan.value = value ? clonePlan(value) : null
       if (localPlan.value && options?.ensureStampPreset?.value === true) {
         facadeStamp.ensureStampFacadeGroup(localPlan.value)
+      }
+      if (localPlan.value && options?.ensureDefaultFacades?.value === true) {
+        ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().fmlViewer.facadeGroups)
       }
       undoModule.clearStacks()
     },
@@ -384,19 +393,19 @@ export function useFmlPreviewEditor(
     patchActiveFloor({ items: nextItems })
   }
 
-  function addItem(item: Omit<FloorItem, 'guid'> & { guid?: string }): string {
-    const guid = item.guid?.trim() || crypto.randomUUID()
-    setFloorItems([...items.value, { ...item, guid }])
-    return guid
+  function addItem(item: Omit<FloorItem, 'id'> & { id?: string }): string {
+    const id = item.id?.trim() || crypto.randomUUID()
+    setFloorItems([...items.value, { ...item, id }])
+    return id
   }
 
-  function updateItem(guid: string, patch: Partial<Omit<FloorItem, 'guid'>>): void {
-    const next = items.value.map((entry) => (entry.guid === guid ? { ...entry, ...patch } : entry))
+  function updateItem(guid: string, patch: Partial<Omit<FloorItem, 'id'>>): void {
+    const next = items.value.map((entry) => (entry.id === guid ? { ...entry, ...patch } : entry))
     setFloorItems(next)
   }
 
   function removeItem(guid: string): void {
-    const next = items.value.filter((entry) => entry.guid !== guid)
+    const next = items.value.filter((entry) => entry.id !== guid)
     setFloorItems(next.length > 0 ? next : undefined)
   }
 
@@ -427,7 +436,15 @@ export function useFmlPreviewEditor(
     patch: Partial<
       Pick<
         FloorArea,
-        'role' | 'name' | 'customName' | 'color' | 'showAreaLabel' | 'name_x' | 'name_y' | 'poly'
+        | 'role'
+        | 'name'
+        | 'customName'
+        | 'color'
+        | 'showAreaLabel'
+        | 'name_x'
+        | 'name_y'
+        | 'poly'
+        | 'liningCm'
       >
     >,
   ): void {
@@ -440,7 +457,7 @@ export function useFmlPreviewEditor(
     setFloorAreas(next.length > 0 ? next : undefined)
   }
 
-  function addSurface(surface: Omit<FloorSurface, 'id'> & { id?: string }): string {
+  function addSurface(surface: Omit<FloorSurface, 'id'> & { id?: string }): string | null {
     const id = surface.id?.trim() || `surface-${shortGuid()}`
     if (surface.isRoof === true) {
       return ridgeRoof.addRidgeSurface({ ...surface, id, isRoof: true })
@@ -466,15 +483,17 @@ export function useFmlPreviewEditor(
         | 'isCutout'
         | 'isRoof'
         | 'pattern'
+        | 'roofKind'
+        | 'roofParentId'
       >
     >,
-  ): void {
+  ): boolean {
     if (ridgeRoof.isRidgeSurfaceId(surfaceId)) {
-      ridgeRoof.updateRidgeSurface(surfaceId, patch)
-      return
+      return ridgeRoof.updateRidgeSurface(surfaceId, patch)
     }
     const next = planSurfaces.value.map((s) => (s.id === surfaceId ? { ...s, ...patch } : s))
     setFloorSurfaces(next)
+    return true
   }
 
   function removeSurface(surfaceId: string): void {
@@ -776,7 +795,7 @@ export function useFmlPreviewEditor(
         | 'bovenlicht'
         | 'bovenlichtHeightCm'
         | 'bovenlichtGapCm'
-        | 'refid'
+        | 'kind'
       >
     >,
   ): void {
@@ -814,7 +833,7 @@ export function useFmlPreviewEditor(
         | 'bovenlicht'
         | 'bovenlichtHeightCm'
         | 'bovenlichtGapCm'
-        | 'refid'
+        | 'kind'
       >
     >,
   ): void {
@@ -874,11 +893,11 @@ export function useFmlPreviewEditor(
     updateDimension: annotations.updateDimension,
     removeDimension: annotations.removeDimension,
     convertOverlayToManual: annotations.convertOverlayToManual,
-    btfSlices: annotations.btfSlices,
-    setBtfSlices: annotations.setBtfSlices,
-    addBtfSlice: annotations.addBtfSlice,
-    updateBtfSlice: annotations.updateBtfSlice,
-    clearBtfSlices: annotations.clearBtfSlices,
+    planSlices: annotations.planSlices,
+    setPlanSlices: annotations.setPlanSlices,
+    addPlanSlice: annotations.addPlanSlice,
+    updatePlanSlice: annotations.updatePlanSlice,
+    clearPlanSlices: annotations.clearPlanSlices,
     setActiveDesignIndex,
     addWallSegment,
     applyJunctionMove,
@@ -908,6 +927,7 @@ export function useFmlPreviewEditor(
     applyStampAssign: facadeStamp.applyStampAssign,
     applyStampDetach: facadeStamp.applyStampDetach,
     applyFacadeCreate: facadeStamp.applyFacadeCreate,
+    applyFacadeDelete: facadeStamp.applyFacadeDelete,
     applyFacadeRename: facadeStamp.applyFacadeRename,
     applyStampToActiveFloor: facadeStamp.applyStampToActiveFloor,
     canApplyStampOnActiveFloor: facadeStamp.canApplyStampOnActiveFloor,

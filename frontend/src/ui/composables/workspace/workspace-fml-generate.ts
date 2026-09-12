@@ -33,6 +33,16 @@ import {
   summarizeOpeningHeightOverflows,
   type OpeningHeightOverflowSummary,
 } from '@/core/fml/opening-height-overflow'
+import {
+  countPlanOpenings,
+  countPlanWalls,
+  overwritePlanDoorBovenlicht,
+  overwritePlanDoorHeights,
+  overwritePlanWallHeights,
+  overwritePlanWindowBovenlicht,
+  overwritePlanWindowHeights,
+  overwritePlanWindowSills,
+} from '@/core/fml/wall-endpoint-height'
 import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import type { ExtractionOutput } from '@/core/extraction'
@@ -55,6 +65,17 @@ import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
 import { tGlobal } from '@/ui/i18n'
 import { seedPlanFromUserSettings } from '@/ui/composables/fml-viewer/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
+import { confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+
+/** Stap-4 defaults die de live plattegrond muteren (niet hergenereren). */
+export type WorkspacePreviewDefaultField =
+  | 'wallHeightCm'
+  | 'doorHeightCm'
+  | 'windowHeightCm'
+  | 'windowSillZCm'
+  | 'bovenlichtDefault'
+  | 'windowBovenlichtDefault'
 
 export function stripFileExtension(name: string | null | undefined): string {
   const fallback = tGlobal('result.defaultExportName')
@@ -114,6 +135,8 @@ export type WorkspaceFmlGenerateDeps = {
    * bakeNulpunt zaait fmlNulpuntImageCm als die leeg is.
    */
   getStampVectorInject?: () => WorkspaceFmlStampInject | null
+  /** Test/override: zelfde seam als useFmlViewerSessionDefaults.confirmOverwrite. */
+  confirmOverwrite?: (message: string) => boolean | Promise<boolean>
 }
 
 export type WorkspaceFmlGenerateApplied = {
@@ -200,6 +223,25 @@ export function createWorkspaceFmlGenerate(
     return { plan: oriented, layout }
   }
 
+  /**
+   * Hoogtes voor extractionToPlan — plain object, géén refs.
+   * Zo invalideert een stap-4 hoogtewijziging `generatedBundle` niet (D6).
+   * Seed wordt gezet bij syncApplied / applyPreviewDefault / regenerate.
+   */
+  const extractionHeightSeed = {
+    wallHeightCm: applied.appliedFmlWallHeightCm.value,
+    doorHeightCm: applied.appliedFmlDoorHeightCm.value,
+    windowHeightCm: applied.appliedFmlWindowHeightCm.value,
+    windowSillZCm: applied.appliedFmlWindowSillZCm.value,
+  }
+
+  function syncExtractionHeightSeedFromApplied(): void {
+    extractionHeightSeed.wallHeightCm = applied.appliedFmlWallHeightCm.value
+    extractionHeightSeed.doorHeightCm = applied.appliedFmlDoorHeightCm.value
+    extractionHeightSeed.windowHeightCm = applied.appliedFmlWindowHeightCm.value
+    extractionHeightSeed.windowSillZCm = applied.appliedFmlWindowSillZCm.value
+  }
+
   /** Één plan-build + cm-origin per generate-pass (geen tweede resolveGraph voor underlay). */
   const generatedBundle = computed(() => {
     if (!deps.scale.confirmed.value) return null
@@ -227,10 +269,10 @@ export function createWorkspaceFmlGenerate(
         floorName: deps.floorName?.value?.trim() || 'Detectie',
         level: deps.floorLevel?.value ?? 0,
         defaultThicknessCm: 10,
-        floorHeightCm: applied.appliedFmlWallHeightCm.value,
-        defaultDoorHeightCm: applied.appliedFmlDoorHeightCm.value,
-        defaultWindowHeightCm: applied.appliedFmlWindowHeightCm.value,
-        defaultWindowSillZCm: applied.appliedFmlWindowSillZCm.value,
+        floorHeightCm: extractionHeightSeed.wallHeightCm,
+        defaultDoorHeightCm: extractionHeightSeed.doorHeightCm,
+        defaultWindowHeightCm: extractionHeightSeed.windowHeightCm,
+        defaultWindowSillZCm: extractionHeightSeed.windowSillZCm,
         mergeDoubleDoors: deps.mergeDoubleDoors?.value !== false,
         layer12Doors,
         layer14Windows,
@@ -343,11 +385,17 @@ export function createWorkspaceFmlGenerate(
     () => editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value,
   )
 
-  const generatedFmlText = computed(() => {
-    if (!previewPlan.value) return ''
-    const planForExport = stripFacadeGroupsFromPlan(previewPlan.value)
+  /** Live keten op aanroeptijd — geen gecachte FML-string (D5). */
+  function resolveLivePreviewPlan(): FloorPlan | null {
+    return editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+  }
+
+  function buildGeneratedFmlText(): string {
+    const plan = resolveLivePreviewPlan()
+    if (!plan) return ''
+    const planForExport = stripFacadeGroupsFromPlan(plan)
     return buildFmlV3(planForExport, {
-      name: previewPlan.value.name,
+      name: plan.name,
       bovenlichtDefault: applied.fmlBovenlichtDefault.value,
       windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
       bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
@@ -355,7 +403,7 @@ export function createWorkspaceFmlGenerate(
       useMetric: loadUserSettings().unitSystem === 'metric',
       ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
-  })
+  }
 
   const generatedStats = computed(() => countPlanElements(previewPlan.value))
   const importedStats = computed(() => countPlanElements(importedPlan.value))
@@ -372,6 +420,168 @@ export function createWorkspaceFmlGenerate(
       }),
     )
   })
+
+  function writePreviewDefaultRefs(field: WorkspacePreviewDefaultField, raw: number | boolean): void {
+    if (field === 'bovenlichtDefault') {
+      applied.fmlBovenlichtDefault.value = Boolean(raw)
+      return
+    }
+    if (field === 'windowBovenlichtDefault') {
+      applied.fmlWindowBovenlichtDefault.value = Boolean(raw)
+      return
+    }
+    const n = Number(raw)
+    if (!Number.isFinite(n)) return
+    if (field === 'wallHeightCm') {
+      const cm = Math.max(1, Math.round(n))
+      applied.fmlWallHeightCm.value = cm
+      applied.appliedFmlWallHeightCm.value = cm
+      extractionHeightSeed.wallHeightCm = cm
+      return
+    }
+    if (field === 'doorHeightCm') {
+      const cm = Math.max(1, Math.round(n))
+      applied.fmlDoorHeightCm.value = cm
+      applied.appliedFmlDoorHeightCm.value = cm
+      extractionHeightSeed.doorHeightCm = cm
+      return
+    }
+    if (field === 'windowHeightCm') {
+      const cm = Math.max(1, Math.round(n))
+      applied.fmlWindowHeightCm.value = cm
+      applied.appliedFmlWindowHeightCm.value = cm
+      extractionHeightSeed.windowHeightCm = cm
+      return
+    }
+    const cm = Math.max(0, Math.round(n))
+    applied.fmlWindowSillZCm.value = cm
+    applied.appliedFmlWindowSillZCm.value = cm
+    extractionHeightSeed.windowSillZCm = cm
+  }
+
+  function readPreviewDefault(field: WorkspacePreviewDefaultField): number | boolean {
+    switch (field) {
+      case 'wallHeightCm':
+        return applied.fmlWallHeightCm.value
+      case 'doorHeightCm':
+        return applied.fmlDoorHeightCm.value
+      case 'windowHeightCm':
+        return applied.fmlWindowHeightCm.value
+      case 'windowSillZCm':
+        return applied.fmlWindowSillZCm.value
+      case 'bovenlichtDefault':
+        return applied.fmlBovenlichtDefault.value
+      case 'windowBovenlichtDefault':
+        return applied.fmlWindowBovenlichtDefault.value
+    }
+  }
+
+  function overwriteKeyForField(field: WorkspacePreviewDefaultField): string {
+    switch (field) {
+      case 'wallHeightCm':
+        return 'viewer.defaultsOverwriteWallFloor'
+      case 'doorHeightCm':
+        return 'viewer.defaultsOverwriteDoorFloor'
+      case 'windowHeightCm':
+        return 'viewer.defaultsOverwriteWindowFloor'
+      case 'windowSillZCm':
+        return 'viewer.defaultsOverwriteSillFloor'
+      case 'bovenlichtDefault':
+        return 'viewer.defaultsOverwriteBovenlichtDoorsFloor'
+      case 'windowBovenlichtDefault':
+        return 'viewer.defaultsOverwriteBovenlichtWindowsFloor'
+    }
+  }
+
+  function countForPreviewDefault(field: WorkspacePreviewDefaultField, plan: FloorPlan): number {
+    if (field === 'wallHeightCm') return countPlanWalls(plan, 0)
+    if (field === 'doorHeightCm' || field === 'bovenlichtDefault') {
+      return countPlanOpenings(plan, 'door', 0)
+    }
+    return countPlanOpenings(plan, 'window', 0)
+  }
+
+  function overwriteLivePlan(
+    field: WorkspacePreviewDefaultField,
+    plan: FloorPlan,
+    next: number | boolean,
+  ): FloorPlan {
+    if (field === 'wallHeightCm') return overwritePlanWallHeights(plan, Number(next), 0)
+    if (field === 'doorHeightCm') return overwritePlanDoorHeights(plan, Number(next), 0)
+    if (field === 'windowHeightCm') return overwritePlanWindowHeights(plan, Number(next), 0)
+    if (field === 'windowSillZCm') return overwritePlanWindowSills(plan, Number(next), 0)
+    if (field === 'bovenlichtDefault') {
+      return overwritePlanDoorBovenlicht(plan, Boolean(next), 0)
+    }
+    return overwritePlanWindowBovenlicht(plan, Boolean(next), 0)
+  }
+
+  /**
+   * Stap-4: hoogtes/bovenlicht muteren de live plattegrond (zoals rescale/orient).
+   * Hergebruikt dezelfde overwrite-all-confirm als Settings-defaults / Gevels
+   * (`confirmFmlChrome` + `viewer.defaultsOverwrite*`).
+   */
+  async function applyPreviewDefault(
+    field: WorkspacePreviewDefaultField,
+    raw: number | boolean,
+  ): Promise<boolean> {
+    const current = readPreviewDefault(field)
+    let next: number | boolean
+    if (field === 'bovenlichtDefault' || field === 'windowBovenlichtDefault') {
+      next = Boolean(raw)
+    } else if (field === 'windowSillZCm') {
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return false
+      next = Math.max(0, Math.round(n))
+    } else {
+      const n = Number(raw)
+      if (!Number.isFinite(n)) return false
+      next = Math.max(1, Math.round(n))
+    }
+    if (next === current) return false
+
+    const plan = resolveLivePreviewPlan()
+    if (!plan) {
+      writePreviewDefaultRefs(field, next)
+      return true
+    }
+
+    const count = countForPreviewDefault(field, plan)
+    const enabled = Boolean(next)
+    const lengthLabel =
+      typeof next === 'number'
+        ? formatScaleInputLabel(next, loadUserSettings().scaleInputUnit)
+        : next
+    const ok = deps.confirmOverwrite
+      ? await deps.confirmOverwrite(
+          tGlobal(overwriteKeyForField(field), {
+            count,
+            length: lengthLabel,
+            cm: lengthLabel,
+            state: enabled ? tGlobal('viewer.defaultsOn') : tGlobal('viewer.defaultsOff'),
+          }),
+        )
+      : await confirmFmlChrome({
+          title: tGlobal('viewer.defaultsOverwriteTitle'),
+          message: tGlobal(overwriteKeyForField(field), {
+            count,
+            length: lengthLabel,
+            cm: lengthLabel,
+            state: enabled ? tGlobal('viewer.defaultsOn') : tGlobal('viewer.defaultsOff'),
+          }),
+          confirmLabel: tGlobal('common.apply'),
+          cancelLabel: tGlobal('common.cancel'),
+        })
+    if (!ok) return false
+
+    const nextPlan = overwriteLivePlan(field, plan, next)
+    editedPreviewPlan.value = nextPlan
+    if (importedPlan.value) {
+      importedPlan.value = nextPlan
+    }
+    writePreviewDefaultRefs(field, next)
+    return true
+  }
 
   function rebuildPreviewFromCanonical(preserveUnderlayDisplay: boolean): void {
     const bundle = generatedBundle.value
@@ -435,6 +645,7 @@ export function createWorkspaceFmlGenerate(
     applied.appliedFmlDoorHeightCm.value = applied.fmlDoorHeightCm.value
     applied.appliedFmlWindowHeightCm.value = applied.fmlWindowHeightCm.value
     applied.appliedFmlWindowSillZCm.value = applied.fmlWindowSillZCm.value
+    syncExtractionHeightSeedFromApplied()
   }
 
   function updatePreviewPlan(plan: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
@@ -475,12 +686,12 @@ export function createWorkspaceFmlGenerate(
     const layout = layoutOverride ?? previewUnderlayLayout.value
     if (!plan || !layout) return null
     if (Math.hypot(dropCm.x, dropCm.y) < 0.05) return null
-    const applied = applyNulpunt(plan, layout, dropCm)
-    editedPreviewPlan.value = applied.plan
-    persistedUnderlayLayout.value = cloneUnderlayOriginLayout(applied.layout)
-    fmlNulpuntImageCm.value = { ...applied.nulpuntImageCm }
+    const appliedNulpunt = applyNulpunt(plan, layout, dropCm)
+    editedPreviewPlan.value = appliedNulpunt.plan
+    persistedUnderlayLayout.value = cloneUnderlayOriginLayout(appliedNulpunt.layout)
+    fmlNulpuntImageCm.value = { ...appliedNulpunt.nulpuntImageCm }
     return {
-      plan: applied.plan,
+      plan: appliedNulpunt.plan,
       layout: persistedUnderlayLayout.value,
       nulpuntImageCm: fmlNulpuntImageCm.value,
     }
@@ -505,6 +716,7 @@ export function createWorkspaceFmlGenerate(
     rebuildPreviewFromCanonical(true)
   }
 
+  /** Alleen diktes/banden: hergenereert uit detectie; hoogtes komen uit extractionHeightSeed. */
   function regenerateFml(): void {
     if (!generatedPlan.value) return
     syncAppliedFromDraft()
@@ -648,18 +860,20 @@ export function createWorkspaceFmlGenerate(
   }
 
   function downloadGeneratedFml(): void {
-    if (!generatedFmlText.value) {
+    const text = buildGeneratedFmlText()
+    if (!text) {
       deps.setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
       return
     }
     const name = sanitizeFilename(stripFileExtension(deps.imageName.value))
-    downloadFml(generatedFmlText.value, `${name}.fml`)
+    downloadFml(text, `${name}.fml`)
   }
 
   async function copyGeneratedFml(): Promise<void> {
-    if (!generatedFmlText.value) return
+    const text = buildGeneratedFmlText()
+    if (!text) return
     try {
-      await navigator.clipboard.writeText(generatedFmlText.value)
+      await navigator.clipboard.writeText(text)
     } catch {
       deps.setLocalError(tGlobal('result.clipboardUnavailable'))
     }
@@ -688,7 +902,7 @@ export function createWorkspaceFmlGenerate(
     generatedPlan,
     fmlExportPlan,
     previewPlan: previewPlan,
-    generatedFmlText,
+    buildGeneratedFmlText,
     generatedStats,
     openingHeightOverflow,
     importedPlan,
@@ -701,6 +915,7 @@ export function createWorkspaceFmlGenerate(
     fmlOrient,
     underlayMoveMode,
     syncAppliedFromDraft,
+    applyPreviewDefault,
     updatePreviewPlan,
     setPreviewUnderlayLayout,
     setFmlNulpuntImageCm,

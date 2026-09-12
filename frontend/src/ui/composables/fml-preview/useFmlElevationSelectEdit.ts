@@ -13,6 +13,7 @@ import {
 import { DEFAULT_FML_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import {
   unprojectElevationAlong,
+  ELEVATION_RETURN_MAX_DOT,
   type ElevationBovenlichtDefaults,
   type ElevationOpeningRect,
   type ElevationRect,
@@ -55,11 +56,14 @@ import {
   elevationRidgeRectOf,
   snapElevationRidgeCenter,
 } from '@/core/fml/elevation-ridge-edit'
+import { applyElevationWallEndAlongPlanAxis } from '@/core/fml/elevation-wall-end-edit'
 import {
   findRidgeSurface,
   removeRidgeSurfaceOnPlan,
+  roofVertexZMinCm,
   setRidgeSurfaceVertex,
   setRidgeSurfaceVertexZ,
+  slabCmForRoofSurface,
 } from '@/core/fml/roof-planes'
 import {
   listRidgeWallsOnFloor,
@@ -114,6 +118,7 @@ import { buildElevationOpeningMeasureLines } from './fml-preview-elevation-openi
 import {
   buildElevationJunctionHeightMeasureLines,
   buildElevationRidgeHeightMeasureLines,
+  buildElevationRoofVertexHeightMeasureLines,
   buildElevationWallFaceMeasureLines,
 } from './fml-preview-elevation-wall-measure'
 import { isSettingsMod } from './fml-preview-mods'
@@ -284,12 +289,45 @@ export function useFmlElevationSelectEdit(options: {
     ]
   })
 
+  const selectedAxisEditWall = computed(() => {
+    const target = settingsTarget.value
+    const elev = elevation.value
+    if (target?.kind !== 'wall' || !elev) return null
+    const rect = elev.walls.find(
+      (item) =>
+        item.axisEdit === true &&
+        item.wallId === target.wallId &&
+        item.floorIndex === target.floorIndex &&
+        item.ridge !== true,
+    )
+    if (!rect) return null
+    const floor = props.plan.floors[rect.floorIndex]
+    const wall = floor?.walls.find((item) => item.id === rect.wallId)
+    if (!wall) return null
+    const dx = wall.b.x - wall.a.x
+    const dy = wall.b.y - wall.a.y
+    const len = Math.hypot(dx, dy)
+    if (len < 1e-6) return null
+    const along = Math.abs((dx / len) * elev.axis.x + (dy / len) * elev.axis.y)
+    if (along < ELEVATION_RETURN_MAX_DOT) return null
+    return rect
+  })
+
+  const wallAxisEndHandles = computed(() => {
+    const wall = selectedAxisEditWall.value
+    if (!wall) return []
+    return [
+      { end: 'a' as const, x: wall.aTop.x, y: wall.aTop.y },
+      { end: 'b' as const, x: wall.bTop.x, y: wall.bTop.y },
+    ]
+  })
+
   const openingSubtype = computed((): OpeningSubtypeDraft => {
     const opening = selectedOpening.value?.opening
     if (!opening) return 'standard'
     return opening.type === 'window'
-      ? resolveWindowSubtypeFromRefid(opening.refid)
-      : resolveDoorSubtypeFromRefid(opening.refid)
+      ? resolveWindowSubtypeFromRefid(opening.kind)
+      : resolveDoorSubtypeFromRefid(opening.kind)
   })
 
   const selectedOpeningBovenlicht = computed(() => {
@@ -432,6 +470,7 @@ export function useFmlElevationSelectEdit(options: {
       name: floor?.name ?? '',
       vertexIndex: target.vertexIndex,
       heightCm: z != null ? Math.round(z) : null,
+      minCm: roofVertexZMinCm(slabCmForRoofSurface(props.plan, target.id)),
     }
   })
 
@@ -453,6 +492,20 @@ export function useFmlElevationSelectEdit(options: {
         ? buildElevationJunctionHeightMeasureLines(
             junction,
             junction.ridge ? elevationStoreyFloorY(junction.floorIndex) : undefined,
+          )
+        : []
+    }
+    if (kind === 'roof') {
+      const target = settingsTarget.value
+      const plane = selectedRoofPlane.value
+      const vertexIndex = target?.kind === 'roof' ? target.vertexIndex : null
+      if (!plane || vertexIndex == null) return []
+      const point = plane.points[vertexIndex]
+      return point
+        ? buildElevationRoofVertexHeightMeasureLines(
+            point,
+            elevationStoreyFloorY(plane.floorIndex),
+            vertexIndex,
           )
         : []
     }
@@ -533,7 +586,7 @@ export function useFmlElevationSelectEdit(options: {
       shapeOpening
         ? {
             type: shapeOpening.type,
-            refid: shapeOpening.refid,
+            kind: shapeOpening.kind,
             mirrored: shapeOpening.mirrored,
             startOnLeft,
           }
@@ -762,19 +815,19 @@ export function useFmlElevationSelectEdit(options: {
     const id = selectedOpeningId.value
     const located = selectedOpening.value
     if (!id || !located) return
-    const refid =
+    const kind =
       located.opening.type === 'window'
-        ? resolveWindowAddPreset(subtype as WindowAddSubtype).refid
-        : resolveDoorAddPreset(subtype as DoorAddSubtype).refid
+        ? resolveWindowAddPreset(subtype as WindowAddSubtype).kind
+        : resolveDoorAddPreset(subtype as DoorAddSubtype).kind
     pushUndo()
-    commitPlan(updatePlanOpening(props.plan, id, { refid }))
+    commitPlan(updatePlanOpening(props.plan, id, { kind }))
   }
 
   function copySelectedOpening(): void {
     const located = selectedOpening.value
     if (!located) return
     if (located.opening.type === 'window') {
-      const subtype = resolveWindowSubtypeFromRefid(located.opening.refid)
+      const subtype = resolveWindowSubtypeFromRefid(located.opening.kind)
       const width = clampOpeningWidth(located.opening.width)
       const sillZ = resolveWindowSillZ(located.opening)
       const height = resolveOpeningHeight(located.opening)
@@ -786,7 +839,7 @@ export function useFmlElevationSelectEdit(options: {
       })
       activeTool.value = 'add_window'
     } else {
-      const subtype = resolveDoorSubtypeFromRefid(located.opening.refid)
+      const subtype = resolveDoorSubtypeFromRefid(located.opening.kind)
       const width = clampOpeningWidth(located.opening.width)
       const doorHeight = Math.round(
         located.opening.z_height ?? props.defaultDoorHeightCm ?? DEFAULT_FML_DOOR_HEIGHT_CM,
@@ -894,7 +947,7 @@ export function useFmlElevationSelectEdit(options: {
     if (!id || !located) return
     const canMirror =
       located.opening.type === 'door' ||
-      isTriangleWindow(located.opening.type, located.opening.refid)
+      isTriangleWindow(located.opening.type, located.opening.kind)
     if (!canMirror) return
     const nextHinge = !resolveHingeAtStart(located.opening.mirrored)
     const swingRight =
@@ -1136,6 +1189,72 @@ export function useFmlElevationSelectEdit(options: {
     window.removeEventListener('pointermove', onRidgeEndMove)
     ridgeEndDrag = null
     snapGuide.value = null
+  }
+
+  type WallAxisEndDrag = {
+    wallId: string
+    floorIndex: number
+    end: 'a' | 'b'
+  }
+
+  let wallAxisEndDrag: WallAxisEndDrag | null = null
+
+  function beginWallAxisEndDrag(wallId: string, floorIndex: number, end: 'a' | 'b'): void {
+    wallAxisEndDrag = { wallId, floorIndex, end }
+    pushUndo()
+    window.addEventListener('pointermove', onWallAxisEndMove)
+    window.addEventListener('pointerup', onWallAxisEndUp, { once: true })
+  }
+
+  function onWallAxisEndMove(event: PointerEvent): void {
+    if (!wallAxisEndDrag) return
+    const elev = elevation.value
+    const cm = clientToCm(event.clientX, event.clientY)
+    if (!elev || !cm) return
+    let x = cm.x
+    let y = cm.y
+    if (!(event.ctrlKey || event.metaKey)) {
+      x = snapElevationX(x, collectElevationWallSnapXs(elev.walls))
+      y = snapElevationY(
+        y,
+        collectElevationSegmentSnapYs(elev, { wallId: wallAxisEndDrag.wallId }),
+        ELEVATION_SEGMENT_SNAP_CM,
+      )
+      const guide: ElevationSnapGuide = {}
+      if (Math.abs(x - cm.x) >= 1e-6) guide.x = x
+      if (Math.abs(y - cm.y) >= 1e-6) guide.y = y
+      snapGuide.value = guide.x != null || guide.y != null ? guide : null
+    } else {
+      snapGuide.value = null
+    }
+    const z = -y - floorWallBaseWorldZ(props.plan, wallAxisEndDrag.floorIndex)
+    commitPlan(
+      applyElevationWallEndAlongPlanAxis({
+        plan: props.plan,
+        elevation: elev,
+        floorIndex: wallAxisEndDrag.floorIndex,
+        wallId: wallAxisEndDrag.wallId,
+        end: wallAxisEndDrag.end,
+        alongCm: x,
+        zCm: z,
+      }),
+    )
+  }
+
+  function onWallAxisEndUp(): void {
+    window.removeEventListener('pointermove', onWallAxisEndMove)
+    wallAxisEndDrag = null
+    snapGuide.value = null
+  }
+
+  function onWallAxisEndHandleDown(end: 'a' | 'b', event: { evt: MouseEvent }): void {
+    event.evt.stopPropagation()
+    markOpeningPointerHandled()
+    if (activeTool.value !== 'select' || canvasLocked.value) return
+    const wall = selectedAxisEditWall.value
+    if (!wall) return
+    selectWallSettings(wall.wallId, wall.floorIndex)
+    beginWallAxisEndDrag(wall.wallId, wall.floorIndex, end)
   }
 
   type WallElevHandleDrag = {
@@ -1555,12 +1674,14 @@ export function useFmlElevationSelectEdit(options: {
     window.removeEventListener('pointermove', onOpeningMove)
     window.removeEventListener('pointermove', onRidgeRectMove)
     window.removeEventListener('pointermove', onRidgeEndMove)
+    window.removeEventListener('pointermove', onWallAxisEndMove)
     window.removeEventListener('pointermove', onWallElevHandleMove)
     window.removeEventListener('pointermove', onJunctionMove)
     window.removeEventListener('pointermove', onRoofVertexMove)
     drag = null
     ridgeRectDrag = null
     ridgeEndDrag = null
+    wallAxisEndDrag = null
     wallElevDrag = null
     wallElevDragStarted = false
     junctionDrag = null
@@ -1586,6 +1707,7 @@ export function useFmlElevationSelectEdit(options: {
     ridgeHandles,
     ridgeCenter,
     ridgeEndHandles,
+    wallAxisEndHandles,
     openingSubtype,
     selectedOpeningBovenlicht,
     selectedOpeningBovenlichtHeightCm,
@@ -1640,6 +1762,7 @@ export function useFmlElevationSelectEdit(options: {
     onRidgeMoveHandleDown,
     onRidgeHandleDown,
     onRidgeEndHandleDown,
+    onWallAxisEndHandleDown,
     onWallElevHandleDown,
     onRoofVertexDown,
     cleanupSelectListeners,

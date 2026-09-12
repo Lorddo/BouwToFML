@@ -2,7 +2,7 @@
  * Autogen / slicer-overlay → persistente `dimensions[]` (handmatig).
  */
 import { buildAutoDimensionLines } from './auto-dimension-lines'
-import { filterManualDimensions, readBtfSlices, writeBtfSlices } from './btf-slices'
+import { filterManualDimensions, readPlanSlices, writePlanSlices } from './plan-slices'
 import { readDimensionSettings, writeDimensionSettings } from './fml-dimension-settings'
 import { bakeSliceDimensions } from './slice-dimension-lines'
 import type { FloorDimension, FloorPlan } from './types'
@@ -37,7 +37,7 @@ export function collectOverlayDimensionLines(
       b: { ...line.b },
     }))
   }
-  const slices = readBtfSlices(floor)
+  const slices = readPlanSlices(floor)
   if (slices.length === 0) return []
   return bakeSliceDimensions(slices, floor.walls, settings.dimensionMode, 'slice-man').map(
     (line, index) => ({
@@ -58,7 +58,7 @@ export function convertOverlayDimensionsToManual(
   const baked = collectOverlayDimensionLines(plan, floorIndex, source)
   const floor = plan.floors[floorIndex] ?? plan.floors[0]
   if (!floor) return plan
-  const slices = readBtfSlices(floor)
+  const slices = readPlanSlices(floor)
   const manuals = filterManualDimensions(floor.dimensions, slices)
   const nextDims = [...manuals, ...baked]
   const idx = Math.max(0, Math.min(floorIndex, plan.floors.length - 1))
@@ -71,7 +71,7 @@ export function convertOverlayDimensionsToManual(
   if (source === 'autogen') {
     next = writeDimensionSettings(next, { engineAutoDims: false }, idx)
   } else {
-    next = writeBtfSlices(next, [], idx)
+    next = writePlanSlices(next, [], idx)
   }
   return next
 }

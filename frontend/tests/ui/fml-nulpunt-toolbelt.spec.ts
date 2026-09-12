@@ -37,5 +37,11 @@ describe('FML dak-tab tools', () => {
     const plan = getFmlDrawTools()
     expect(plan.find((tool) => tool.id === 'draw_wall')?.icon).toBe('wall')
     expect(plan.find((tool) => tool.id === 'draw_surface')).toBeUndefined()
+    expect(plan.find((tool) => tool.id === 'draw_roof')).toBeUndefined()
+    const withRoof = getFmlDrawTools({ includeRoof: true })
+    expect(withRoof.find((tool) => tool.id === 'draw_roof')).toEqual(
+      expect.objectContaining({ id: 'draw_roof', icon: 'roof' }),
+    )
+    expect(withRoof.find((tool) => tool.id === 'draw_surface')).toBeUndefined()
   })
 })

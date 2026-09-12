@@ -5,7 +5,7 @@ import {
 } from '@/core/fml/convert-overlay-dimensions'
 import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import { writeDimensionSettings } from '@/core/fml/fml-dimension-settings'
-import { readBtfSlices, writeBtfSlices } from '@/core/fml/btf-slices'
+import { readPlanSlices, writePlanSlices } from '@/core/fml/plan-slices'
 import type { FloorArea, Wall } from '@/core/fml/types'
 
 function wall(id: string, ax: number, ay: number, bx: number, by: number): Wall {
@@ -58,13 +58,13 @@ describe('convertOverlayDimensionsToManual', () => {
 
   it('slicer: baket P-lijn maten en wist slices', () => {
     let plan = rectanglePlan()
-    plan = writeBtfSlices(plan, [{ m: { x: 200, y: 150 }, p: { x: -50, y: 150 } }], 0)
-    expect(readBtfSlices(plan.floors[0]).length).toBe(1)
+    plan = writePlanSlices(plan, [{ m: { x: 200, y: 150 }, p: { x: -50, y: 150 } }], 0)
+    expect(readPlanSlices(plan.floors[0]).length).toBe(1)
     const overlay = collectOverlayDimensionLines(plan, 0, 'slicer')
     expect(overlay.length).toBeGreaterThan(0)
 
     const next = convertOverlayDimensionsToManual(plan, 0, 'slicer')
-    expect(readBtfSlices(next.floors[0])).toEqual([])
+    expect(readPlanSlices(next.floors[0])).toEqual([])
     expect((next.floors[0].dimensions ?? []).length).toBe(overlay.length)
     for (const dim of next.floors[0].dimensions ?? []) {
       expect(Math.abs(dim.a.x + 50)).toBeLessThan(0.5)

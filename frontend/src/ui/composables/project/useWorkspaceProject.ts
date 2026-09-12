@@ -21,6 +21,7 @@ import {
   createEmptyProjectState,
   createFloorId,
   floorNameIndexedNl,
+  thicknessCatalogPatchFromFloorDefaults,
 } from './defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
 import { mergeFloorPlans } from './merge-floor-plans'
@@ -182,6 +183,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   const canCopyPreprocessRefs = computed(() => listPreprocessDonorFloors().length > 0)
 
   async function writeProjectToIdb(): Promise<void> {
+    // Quota-ladder: alle CV-slanking (detection/classify/PDF) via PersistProjectOptions
+    // op de converter-sidecar in serialize — plan-helft blijft intact.
     const attempts: Array<{
       label: string
       before?: () => Promise<void>
@@ -358,6 +361,10 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     deps.applyFmlDefaultsToUi?.(effectiveDefaultsForFloor(state.value.activeFloorId))
   }
 
+  /**
+   * Snapshot actieve floor → runtime blob (session + previewPlan/…).
+   * Persist (`toPersistedProject`) splitst daarna naar plan-helft + CV-sidecar.
+   */
   function captureActiveFloorIntoBlob(): void {
     const id = state.value.activeFloorId
     const prev = state.value.blobs[id] ?? emptyBlob()
@@ -427,6 +434,10 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     }
   }
 
+  /**
+   * Herstel floor uit blob: session = CV-sidecar + plan.scale (na IDB-restore samengevoegd).
+   * Result-floor zonder detectionExact → stap 3 leeg; 3→4 via previewPlan.
+   */
   async function hydrateFloor(floorId: string): Promise<void> {
     const blob = state.value.blobs[floorId] ?? emptyBlob()
     syncActiveFloorDefaultsToUi()
@@ -634,7 +645,11 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     setProjectPdfStore(cloned)
   }
 
-  /** Expliciete knop stap 1: bronscan + schaal van donor-floor (geen crop). */
+  /**
+   * Expliciete knop stap 1: bronscan + schaal van donor-floor (geen crop).
+   * Neemt ook de muurdikte-catalogus over (cm + min/mid/max); géén LBE-rects
+   * en géén gemeten dikte — refs tekent de tekenaar opnieuw op deze verdieping.
+   */
   async function reuseUnderlayFromProject(donorFloorId?: string): Promise<void> {
     const donors = listUnderlayDonorFloors()
     const preferred =
@@ -662,10 +677,15 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       if (pdfSource && deps.loadUnderlayFromPdf) {
         setSourcePdfUnderlay(pdfSource)
         await deps.loadUnderlayFromPdf(pdfSource, source.name, source.scale)
-        return
+      } else {
+        await deps.loadUnderlayWithScale(source.src, source.name, source.scale, pdfSource)
       }
-
-      await deps.loadUnderlayWithScale(source.src, source.name, source.scale, pdfSource)
+      // Catalogus ná succesvolle load: zelfde donor als de scan, zonder refs/meting.
+      if (preferred) {
+        updateActiveFloorDefaults(
+          thicknessCatalogPatchFromFloorDefaults(effectiveDefaultsForFloor(preferred)),
+        )
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
       deps.setLocalError(tGlobal('input.errors.reuseFailed', { message }))
@@ -799,7 +819,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     return null
   }
 
-  /** Live of blob-FML van de actieve floor — 3→4 na resume alleen als stap 3 leeg is. */
+  /** Live of blob-plattegrond van de actieve floor — 3→4 na resume alleen als stap 3 leeg is. */
   function hasActiveFloorFml(): boolean {
     if (deps.getPreviewPlan()?.floors[0]) return true
     return planFromActiveBlob() != null
@@ -816,7 +836,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     deps.setFmlOrient(blob.fmlOrient ?? null)
   }
 
-  /** True als ≥1 floor FML heeft (project-spiegel knop). */
+  /** True als ≥1 floor een plattegrond heeft (`previewPlan` / generatedFloor — geen download). */
   function hasAnyFloorFml(): boolean {
     for (const meta of state.value.floors) {
       const blob = state.value.blobs[meta.id]
@@ -825,7 +845,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     return false
   }
 
-  /** True als alle FML-floors flipX aan hebben (toggle-styling). */
+  /** True als alle floors mét plattegrond flipX aan hebben (toggle-styling). */
   function projectOrientFlipXActive(): boolean {
     let seen = 0
     for (const meta of state.value.floors) {

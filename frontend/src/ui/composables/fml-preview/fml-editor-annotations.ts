@@ -6,7 +6,7 @@ import type {
   FloorPlan,
   FloorSurface,
 } from '@/core/fml/types'
-import { readBtfSlices, writeBtfSlices, type BtfSlice } from '@/core/fml/btf-slices'
+import { readPlanSlices, writePlanSlices, type PlanSlice } from '@/core/fml/plan-slices'
 import {
   collectOverlayDimensionLines,
   convertOverlayDimensionsToManual,
@@ -105,7 +105,7 @@ export function createFmlEditorAnnotations(deps: FmlEditorAnnotationsDeps) {
     if (source === 'autogen' && baked.length === 0) return false
     if (
       source === 'slicer' &&
-      readBtfSlices(deps.localPlan.value.floors[deps.floorIndex.value]).length === 0
+      readPlanSlices(deps.localPlan.value.floors[deps.floorIndex.value]).length === 0
     )
       return false
     const next = convertOverlayDimensionsToManual(
@@ -118,31 +118,31 @@ export function createFmlEditorAnnotations(deps: FmlEditorAnnotationsDeps) {
     return true
   }
 
-  const btfSlices = computed(() =>
-    readBtfSlices(deps.localPlan.value?.floors[deps.floorIndex.value]),
+  const planSlices = computed(() =>
+    readPlanSlices(deps.localPlan.value?.floors[deps.floorIndex.value]),
   )
 
-  function setBtfSlices(slices: BtfSlice[]): void {
+  function setPlanSlices(slices: PlanSlice[]): void {
     if (!deps.localPlan.value) return
-    deps.localPlan.value = writeBtfSlices(deps.localPlan.value, slices, deps.floorIndex.value)
+    deps.localPlan.value = writePlanSlices(deps.localPlan.value, slices, deps.floorIndex.value)
   }
 
-  function addBtfSlice(slice: BtfSlice): number {
-    const next = [...btfSlices.value, { m: { ...slice.m }, p: { ...slice.p } }]
-    setBtfSlices(next)
+  function addPlanSlice(slice: PlanSlice): number {
+    const next = [...planSlices.value, { m: { ...slice.m }, p: { ...slice.p } }]
+    setPlanSlices(next)
     return next.length - 1
   }
 
-  function updateBtfSlice(index: number, slice: BtfSlice): void {
-    if (index < 0 || index >= btfSlices.value.length) return
-    const next = btfSlices.value.map((s, i) =>
+  function updatePlanSlice(index: number, slice: PlanSlice): void {
+    if (index < 0 || index >= planSlices.value.length) return
+    const next = planSlices.value.map((s, i) =>
       i === index ? { m: { ...slice.m }, p: { ...slice.p } } : s,
     )
-    setBtfSlices(next)
+    setPlanSlices(next)
   }
 
-  function clearBtfSlices(): void {
-    setBtfSlices([])
+  function clearPlanSlices(): void {
+    setPlanSlices([])
   }
 
   return {
@@ -156,10 +156,10 @@ export function createFmlEditorAnnotations(deps: FmlEditorAnnotationsDeps) {
     updateDimension,
     removeDimension,
     convertOverlayToManual,
-    btfSlices,
-    setBtfSlices,
-    addBtfSlice,
-    updateBtfSlice,
-    clearBtfSlices,
+    planSlices,
+    setPlanSlices,
+    addPlanSlice,
+    updatePlanSlice,
+    clearPlanSlices,
   }
 }

@@ -9,24 +9,24 @@
     "filteredZeroThickness": 0,
     "matchDistCm": 20,
     "openingRecall": {
-      "door": 87.5,
-      "overall": 66.7,
-      "window": 50,
+      "door": 93.8,
+      "overall": 75,
+      "window": 60,
     },
     "referenceDoorCount": 16,
     "referenceLengthCm": 11400,
     "referenceWallCount": 90,
     "referenceWindowCount": 20,
-    "wallCoveragePct": 97.5,
-    "wallPrecisionPct": 98.4,
+    "wallCoveragePct": 98.9,
+    "wallPrecisionPct": 100,
   },
   "thicknessBands": {
-    "max": 10,
-    "mid": 17,
-    "min": 46,
+    "max": 11,
+    "mid": 21,
+    "min": 43,
   },
-  "totalLengthCm": 10962.4,
-  "wallCount": 73,
+  "totalLengthCm": 11000.6,
+  "wallCount": 75,
   "walls": [
     {
       "a": {
@@ -177,7 +177,7 @@
         "y": 419.9,
       },
       "openings": [],
-      "thickness": 20,
+      "thickness": 30,
     },
     {
       "a": {
@@ -388,7 +388,7 @@
         "y": 769.6,
       },
       "openings": [],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {
@@ -428,6 +428,30 @@
     },
     {
       "a": {
+        "x": 850.1,
+        "y": 351.9,
+      },
+      "b": {
+        "x": 850.1,
+        "y": 292.4,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
+        "x": 861,
+        "y": 363.1,
+      },
+      "b": {
+        "x": 850.1,
+        "y": 351.9,
+      },
+      "openings": [],
+      "thickness": 20,
+    },
+    {
+      "a": {
         "x": 857.9,
         "y": 796.6,
       },
@@ -436,7 +460,7 @@
         "y": 769.6,
       },
       "openings": [],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {
@@ -449,18 +473,6 @@
       },
       "openings": [],
       "thickness": 10,
-    },
-    {
-      "a": {
-        "x": 861,
-        "y": 351.9,
-      },
-      "b": {
-        "x": 861,
-        "y": 292.4,
-      },
-      "openings": [],
-      "thickness": 20,
     },
     {
       "a": {
@@ -579,11 +591,11 @@
     {
       "a": {
         "x": 977.8,
-        "y": 396.1,
+        "y": 506.6,
       },
       "b": {
         "x": 977.8,
-        "y": 506.6,
+        "y": 396.1,
       },
       "openings": [],
       "thickness": 20,
@@ -914,11 +926,11 @@
     {
       "a": {
         "x": 1276.4,
-        "y": 493.4,
+        "y": 510.8,
       },
       "b": {
         "x": 1485,
-        "y": 493.4,
+        "y": 510.8,
       },
       "openings": [
         {
@@ -972,6 +984,18 @@
       },
       "openings": [],
       "thickness": 10,
+    },
+    {
+      "a": {
+        "x": 1485,
+        "y": 510.8,
+      },
+      "b": {
+        "x": 1499.5,
+        "y": 493.4,
+      },
+      "openings": [],
+      "thickness": 20,
     },
     {
       "a": {
@@ -1039,7 +1063,7 @@
           "width": 175.4,
         },
       ],
-      "thickness": 10,
+      "thickness": 20,
     },
     {
       "a": {

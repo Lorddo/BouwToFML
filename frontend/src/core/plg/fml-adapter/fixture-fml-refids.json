@@ -1,0 +1,230 @@
+{
+  "beschrijving": "FML-adapter: FixtureAssetKind → canonieke Floorplanner-refid + aliases.",
+  "laatste_update": "2026-09-11",
+  "alignKind": "oil_bottle",
+  "entries": [
+    {
+      "kind": "countertop",
+      "canonical": "5bbfd9e1325ca8d3c59e23b35401eeec71424256",
+      "aliases": [
+        "db74ce14813eb0d5c54c8992806b22fb846ee34c",
+        "f6402c587fa67fbdba921024206525ee86432449"
+      ]
+    },
+    {
+      "kind": "fridge",
+      "canonical": "bd60660df8e8d48fa3f524a7536d1f78e6e0e21f",
+      "aliases": [
+        "416c68a89eda39033eb729fa72f7058802555a9e"
+      ]
+    },
+    {
+      "kind": "cabinet_high",
+      "canonical": "c2d966559ee73ca0f88779a2de90d8158f85e4fb",
+      "aliases": []
+    },
+    {
+      "kind": "kitchen_sink",
+      "canonical": "79b71be64f8b275103e264cbd1c070d820bac2b4",
+      "aliases": []
+    },
+    {
+      "kind": "cooktop",
+      "canonical": "a87ae8e3bd9b8c3c45d3330cbac583baa957c3bb",
+      "aliases": [
+        "20c1f9e918e3f5c28ea4012347c6d76a3745eecc"
+      ]
+    },
+    {
+      "kind": "dishwasher",
+      "canonical": "cb3dd8f2c8de396606e0794f6effc921aff7235d",
+      "aliases": []
+    },
+    {
+      "kind": "washing_machine",
+      "canonical": "856317b238f6a70ae6f0afffed1f6d5e3ab7b80c",
+      "aliases": []
+    },
+    {
+      "kind": "washer_dryer",
+      "canonical": "faef118ee9bdcf21040eef84cbca59d8dc50a214",
+      "aliases": []
+    },
+    {
+      "kind": "toilet",
+      "canonical": "17e3ab9295832bd22e220a7f861580bb5aaeb007",
+      "aliases": [
+        "0c4ab4d4ccdc801b4093f10a9aa9c0bfd08ab584",
+        "fc3f4092037285fb0d17702b7a3920e2910de0cc"
+      ]
+    },
+    {
+      "kind": "toilet_wall_hung",
+      "canonical": "b9782bc372e695a56bc5b488f4f9114c8e8c7f28",
+      "aliases": []
+    },
+    {
+      "kind": "sink_small",
+      "canonical": "05dfa289f4a5be6a1be7f0882a4d929060242b5d",
+      "aliases": [
+        "e96698fedd2611ba51fff989e8ff2e764e106b85",
+        "acd22f8f5814b4f22ecf1a698a4cadb6c8014739"
+      ],
+      "sizeUpgradeByRefid": {
+        "acd22f8f5814b4f22ecf1a698a4cadb6c8014739": {
+          "kind": "sink_large",
+          "minCm": 42,
+          "label": "Wasbak (groot)"
+        }
+      }
+    },
+    {
+      "kind": "sink_vanity",
+      "canonical": "c5686bd0f8ed8a56e5460743c11364c52e79719a",
+      "aliases": []
+    },
+    {
+      "kind": "sink_double",
+      "canonical": "d1d3542887f4bc9da14060afc1e332c155a0cd48",
+      "aliases": []
+    },
+    {
+      "kind": "bathtub",
+      "canonical": "793b53d25a8b26dbe12430fe86e07f8cdeb3bb2f",
+      "aliases": []
+    },
+    {
+      "kind": "shower_head",
+      "canonical": "074b112e6d9be8860fce202dd706de49598db82d",
+      "aliases": [
+        "a816372ed69d80b54927513990336c750ca6f2b0",
+        "cb00ebb224822113239b0ad246940f7f208570b3"
+      ]
+    },
+    {
+      "kind": "glass_wall",
+      "canonical": "06c0e13ac226ebda9c917c6a79ec8e58dd0a9b86",
+      "aliases": []
+    },
+    {
+      "kind": "sink_large",
+      "canonical": "7b5d656c72b56ae0e8200132ec92a1ae03869b93",
+      "aliases": [
+        "8911888116d02e6058deb14839e65290eb9041be"
+      ]
+    },
+    {
+      "kind": "entrance_arrow",
+      "canonical": "sym-22",
+      "aliases": []
+    },
+    {
+      "kind": "north_cross",
+      "canonical": "sym-350",
+      "aliases": []
+    },
+    {
+      "kind": "fuse_box",
+      "canonical": "d7ab51af239b365d146fc553319312f4f2d952df",
+      "aliases": []
+    },
+    {
+      "kind": "boiler",
+      "canonical": "0af9732417cdf12a734bd3133f493b18cfe03e91",
+      "aliases": [
+        "33e2521c0692e52b4fb6a3f1bdc0cb3e7b37a88d"
+      ]
+    },
+    {
+      "kind": "heat_pump",
+      "canonical": "c17bf1853d916f1b0ece0259bb0d5b4313c71730",
+      "aliases": []
+    },
+    {
+      "kind": "stair_winder_180",
+      "canonical": "4536785e9e82fc33642fa523ed85a4520bd4a91a",
+      "aliases": []
+    },
+    {
+      "kind": "stair_quarter_90",
+      "canonical": "7f4bebad787178e920c4c7aa11954aad24e457a1",
+      "aliases": []
+    },
+    {
+      "kind": "stair_quarter_90_up",
+      "canonical": "e28361f3a9cdd47134d12b3e183481cfa638668f",
+      "aliases": []
+    },
+    {
+      "kind": "stair_straight",
+      "canonical": "17f4fb9a53843a0e345bfd587144ed48c08bf6f5",
+      "aliases": []
+    },
+    {
+      "kind": "stair_straight_double",
+      "canonical": "825bce5ff93725dbd0ab11b82e6a2b13f96475cf",
+      "aliases": []
+    },
+    {
+      "kind": "stair_opening",
+      "canonical": "c86e7f32a692444a8ff2a19e3cd29ce6ecc9c444",
+      "aliases": [
+        "sym-stair-opening"
+      ]
+    },
+    {
+      "kind": "dormer",
+      "canonical": "a8c2aefd352dbcdd65543fa95659b1cc096ad73f",
+      "aliases": []
+    },
+    {
+      "kind": "canopy",
+      "canonical": "d8dfd3e5683d86a7d9db8a8f7d3260b87ea8213f",
+      "aliases": []
+    },
+    {
+      "kind": "hidden",
+      "canonical": "7518d7dd885df41f7caddb870d2561bdc5a1a861",
+      "aliases": []
+    },
+    {
+      "kind": "chimney",
+      "canonical": "72752422845c99169f50216772287e8471e2ff48",
+      "aliases": []
+    },
+    {
+      "kind": "koof",
+      "canonical": "719b88456badf9658c0a2b9afbe6922026b6fd71",
+      "aliases": []
+    },
+    {
+      "kind": "railing",
+      "canonical": "0bcc0bc80f610a0cb428012520b7006d7fcb1ce8",
+      "aliases": []
+    },
+    {
+      "kind": "balustrade",
+      "canonical": "dbdefc3be5b710a2f123fc1acc137b621eeff0fc",
+      "aliases": [
+        "9ab4ec64a812dbdb0848ab5c0267c97edb99a7c8",
+        "a41b3eefff00293fdf1f5e04cb44295102cb3d57",
+        "7292d81f717bee00e2879664e13ca45d081ee856"
+      ]
+    },
+    {
+      "kind": "skylight",
+      "canonical": "a88fc7b43bb9e44a54c400a9ab8071dc1a0b2032",
+      "aliases": []
+    },
+    {
+      "kind": "roof_eave",
+      "canonical": "679e3878a0937739c161fec224cb3e7ab9eaf131",
+      "aliases": []
+    },
+    {
+      "kind": "oil_bottle",
+      "canonical": "4e58355312c1de13eb2b1b29b4dfbf0a8dbabefd",
+      "aliases": []
+    }
+  ]
+}

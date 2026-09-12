@@ -136,12 +136,12 @@ export function elevationWallFillRings(
   for (const opening of openings) {
     const typed = opening as ElevationRect & {
       type?: OpeningType
-      refid?: string
+      kind?: string
       mirrored?: [number, number]
       startOnLeft?: boolean
     }
     const shaped = Boolean(
-      typed.type && typed.refid && !elevationOpeningHoleIsRect(typed.type, typed.refid),
+      typed.type && typed.kind && !elevationOpeningHoleIsRect(typed.type, typed.kind),
     )
     const hole = shaped ? opening : clipElevationOpeningToWall(wall, opening)
     if (!hole) continue
@@ -150,8 +150,8 @@ export function elevationWallFillRings(
     const y0 = Math.min(hole.y0, hole.y1)
     const y1 = Math.max(hole.y0, hole.y1)
     holes.push(
-      typed.type && typed.refid
-        ? elevationOpeningHolePoints({ x0, y0, x1, y1 }, typed.type, typed.refid, {
+      typed.type && typed.kind
+        ? elevationOpeningHolePoints({ x0, y0, x1, y1 }, typed.type, typed.kind, {
             mirrored: typed.mirrored,
             startOnLeft: typed.startOnLeft,
           })

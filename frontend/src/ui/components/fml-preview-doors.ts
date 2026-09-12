@@ -54,7 +54,7 @@ export function groupDoorOpeningsOnWall(
 
   return openings.flatMap((opening, openingIndex) => {
     if (opening.type !== 'door') return []
-    const catalog = resolveOpeningCatalog(opening.refid, 'door')
+    const catalog = resolveOpeningCatalog(opening.kind, 'door')
     const fullSpan = openingSpanOnWall(wallA, wallUnit, len, opening)
     const span = Math.hypot(fullSpan.end.x - fullSpan.start.x, fullSpan.end.y - fullSpan.start.y)
     const frame = insetOpeningRect(
@@ -104,7 +104,7 @@ export function groupDoorOpeningsOnWall(
     return {
       id: buildDoorOpeningId(wallId, opening, openingIndex),
       openingIndex,
-      openingGuid: opening.guid,
+      openingGuid: opening.id,
       openings: [opening],
       catalogLabel: catalog.label,
       isDouble: catalog.kind === 'double_wide',

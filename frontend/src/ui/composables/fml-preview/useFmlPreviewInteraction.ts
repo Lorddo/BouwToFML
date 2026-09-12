@@ -21,7 +21,7 @@ import {
 } from './fml-preview-wall-internal-measure'
 import { useFmlPreviewPanZoom } from './useFmlPreviewPanZoom'
 import { useFmlPreviewPointer } from './useFmlPreviewPointer'
-import { filterManualDimensions, readBtfSlices } from '@/core/fml/btf-slices'
+import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
 import { hitTestDimensionAtCm } from '@/core/fml/offset-dimension-line'
 import { useFmlPreviewWallDrag } from './useFmlPreviewWallDrag'
 import { useFmlPreviewDimensionDrag } from './useFmlPreviewDimensionDrag'
@@ -85,6 +85,9 @@ export function useFmlPreviewInteraction(options: {
   touchNav?: Ref<boolean>
   coarsePointer?: Ref<boolean>
   dakMode?: Ref<boolean>
+  /** false = converter stap 4: geen overlay, geen wang-snap. */
+  roofOverlayOnPlan?: Ref<boolean>
+  ensureRoofOverlayOn?: () => void
   measureDrawMode?: Ref<MeasureDrawMode>
   slicerEditMode?: Ref<boolean>
   dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
@@ -333,6 +336,8 @@ export function useFmlPreviewInteraction(options: {
     bovenlichtGapCm,
     bovenlichtPacked,
     dakMode: options.dakMode,
+    roofOverlayOnPlan: options.roofOverlayOnPlan,
+    ensureRoofOverlayOn: options.ensureRoofOverlayOn,
     measureDrawMode: options.measureDrawMode,
     slicerEditMode: options.slicerEditMode,
     dimensionVis: options.dimensionVis,
@@ -416,6 +421,7 @@ export function useFmlPreviewInteraction(options: {
     boxSelectKind,
     selectAllOfBoxKind,
     syncWallThicknessDraftFromSelection,
+    selectWall,
     toggleSettingsWall,
     toggleSettingsJunction,
     onWallThicknessCm,
@@ -467,6 +473,7 @@ export function useFmlPreviewInteraction(options: {
     toggleSettingsItem,
     deleteSelectedItem,
     deleteSelected,
+    applySelectedDimensionLength,
     onJunctionHover,
     onJunctionHoverEnd,
     applyRidgeZInput,
@@ -614,6 +621,7 @@ export function useFmlPreviewInteraction(options: {
     selection.moveOpeningId.value = null
     selection.moveDimensionId.value = null
     selection.hoveredDimensionId.value = null
+    selection.hoveredDimensionEnd.value = null
     selection.pinnedJunctionId.value = null
     selection.surfaceEditId.value = null
     selection.roofPolyMutate.value = false
@@ -666,12 +674,14 @@ export function useFmlPreviewInteraction(options: {
         ),
         hitTestDimensionAtCm: (cm) => {
           const floor = editor.localPlan.value?.floors[editor.floorIndex.value]
-          const manuals = filterManualDimensions(editor.dimensions.value, readBtfSlices(floor))
+          const manuals = filterManualDimensions(editor.dimensions.value, readPlanSlices(floor))
           const layout = viewport.contentLayout.value
           const scale = layout ? layout.scale * viewport.viewScale.value : 1
           const tol = Math.max(8, 12 / Math.max(1e-6, scale))
           return hitTestDimensionAtCm(cm, manuals, tol)
         },
+        hitTestDimensionEndpointAtCm: (cm) =>
+          dimensionDrag.hitTestEndpoint(cm, hitTest.handleHitTolCm()),
       },
       drag: {
         draggingWall,
@@ -749,6 +759,7 @@ export function useFmlPreviewInteraction(options: {
         toggleSettingsLabel,
         toggleSettingsLine,
         toggleSettingsWall,
+        selectWall,
         toggleSettingsJunction,
         clearSelection,
         clearOpeningSelectionState,
@@ -785,6 +796,7 @@ export function useFmlPreviewInteraction(options: {
         beginItemRotate: itemRotate.beginItemRotate,
         startDimensionDragPending: dimensionDrag.startPending,
         beginDimensionDrag: dimensionDrag.beginDrag,
+        beginDimensionEndpointDrag: dimensionDrag.beginEndpointDrag,
       },
       spacePressed,
       thicknessPickTier,
@@ -932,6 +944,7 @@ export function useFmlPreviewInteraction(options: {
     drawSurfaceDrafting: computed(() => (drawSurface.draftPoints.value?.length ?? 0) >= 3),
     drawSurfacePendingRole: drawSurface.pendingRole,
     drawSurfacePendingCutout: drawSurface.pendingCutout,
+    drawSurfacePendingRoofKind: drawSurface.pendingRoofKind,
     drawLineThickness: drawLine.thickness,
     drawLineType: drawLine.lineType,
     drawLineColor: drawLine.color,
@@ -1013,6 +1026,8 @@ export function useFmlPreviewInteraction(options: {
     touchEditor,
     updateSelectedItem: selCoord.updateSelectedItem,
     deleteSelectedItem,
+    deleteSelected,
+    applySelectedDimensionLength,
     copySelectedItem: selCoord.copySelectedItem,
     rotateSelectedItem: selCoord.rotateSelectedItem,
     toggleSelectedItemMirror: selCoord.toggleSelectedItemMirror,
@@ -1023,6 +1038,8 @@ export function useFmlPreviewInteraction(options: {
     moveWallId: selection.moveWallId,
     moveDimensionId: selection.moveDimensionId,
     hoveredDimensionId: selection.hoveredDimensionId,
+    hoveredDimensionEnd: selection.hoveredDimensionEnd,
+    draggingDimensionEnd: dimensionDrag.draggingDimensionEnd,
     settingsOpeningIds: selection.settingsOpeningIds,
     moveOpeningId: selection.moveOpeningId,
     openingHandlesCm: openingResize.openingHandlesCm,
@@ -1136,6 +1153,9 @@ export function useFmlPreviewInteraction(options: {
     applyAreaColor: areaSelection.applyColor,
     applyShowAreaLabel: areaSelection.applyShowAreaLabel,
     applySurfaceCutout: areaSelection.applyCutout,
+    applyAreaLiningCm: areaSelection.applyLiningCm,
+    applyRoofKind: areaSelection.applyRoofKind,
+    applyRoofParentId: areaSelection.applyRoofParentId,
     deleteSelectedTagged: areaSelection.deleteSelectedTagged,
     beginSurfacePolygonEdit: areaSelection.beginSurfacePolygonEdit,
     endSurfacePolygonEdit: () => {

@@ -32,7 +32,7 @@ export function useFmlPreviewItemRotate(options: {
   function selectedItem(): FloorItem | undefined {
     const guid = options.selectedItemId.value
     if (!guid) return undefined
-    return options.editor.items.value.find((entry) => entry.guid === guid)
+    return options.editor.items.value.find((entry) => entry.id === guid)
   }
 
   function hitTol(): number {
@@ -51,7 +51,7 @@ export function useFmlPreviewItemRotate(options: {
     event: { ctrlKey?: boolean; metaKey?: boolean },
     snapPosition: boolean,
   ): void {
-    const item = options.editor.items.value.find((entry) => entry.guid === guid)
+    const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     const snapDisabled = isSettingsMod(event, options.settingsMod.value)
     const patch: Partial<FloorItem> = { rotation }
@@ -73,7 +73,7 @@ export function useFmlPreviewItemRotate(options: {
     corner: ItemRotateCorner,
     event: { clientX: number; clientY: number; ctrlKey?: boolean; metaKey?: boolean },
   ): void {
-    const item = options.editor.items.value.find((entry) => entry.guid === guid)
+    const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     const startCm = options.clientToCm(event.clientX, event.clientY)
     if (!startCm) return
@@ -89,7 +89,7 @@ export function useFmlPreviewItemRotate(options: {
     const onMove = (moveEvent: PointerEvent) => {
       const cm = options.clientToCm(moveEvent.clientX, moveEvent.clientY)
       if (!cm) return
-      const live = options.editor.items.value.find((entry) => entry.guid === guid)
+      const live = options.editor.items.value.find((entry) => entry.id === guid)
       if (!live) return
       moved = true
       const raw = rotationFromGrab(startRotation, startPointer, pointerAngleDeg(center, cm))
@@ -110,7 +110,7 @@ export function useFmlPreviewItemRotate(options: {
       window.removeEventListener('pointermove', onMove)
       dragging.value = false
       activeCorner.value = null
-      const live = options.editor.items.value.find((entry) => entry.guid === guid)
+      const live = options.editor.items.value.find((entry) => entry.id === guid)
       if (moved && live) applyRotation(guid, live.rotation ?? 0, upEvent, true)
       options.syncPlanToParent()
     }

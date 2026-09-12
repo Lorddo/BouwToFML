@@ -254,8 +254,8 @@ describe('ridge-walls', () => {
     const updated = listRidgeWallsOnFloor(next.floors[0])[0]
     expect(updated).toBeTruthy()
     expect(ridgeEndpointZCm(updated, 'a', 280)).toBe(350)
-    expect(updated.extras?.az).toEqual({ z: 350, h: 390 })
-    expect(updated.extras?.bz).toEqual({ z: 350, h: 390 })
+    expect(updated.elevation?.a).toEqual({ z: 350, h: 390 })
+    expect(updated.elevation?.b).toEqual({ z: 350, h: 390 })
     expect(ridgeAwareNokWorldRange(next).z1 - ridgeAwareNokWorldRange(next).z0).toBe(40)
   })
 
@@ -265,7 +265,7 @@ describe('ridge-walls', () => {
     const next = setRidgeWallsZ([ridge], ['r1'], 420, 280)
     expect(ridgeEndpointZCm(next[0], 'a', 280)).toBe(420)
     expect(ridgeEndpointZCm(next[0], 'b', 280)).toBe(420)
-    expect(next[0].extras?.az).toEqual({ z: 420, h: 440 })
+    expect(next[0].elevation?.a).toEqual({ z: 420, h: 440 })
   })
 
   it('nok-junction verslepen blijft in eigen graaf', () => {
@@ -335,5 +335,38 @@ describe('ridge-walls', () => {
     expect(next.floors[0].walls.map((item) => item.id)).toEqual(['w1'])
     expect(listRidgeWallsOnFloor(plan.floors[0])).toHaveLength(1)
     expect(readRidgeWallsSettings(plan).wallGuids).toContain('r1')
+  })
+
+  it('.plg-roundtrip: nok woont in plan.roof; FML-uit heeft ridge:true + btfRole + ridgeWalls', () => {
+    const plan = planWithWall()
+    const ridge = markWallAsRidge(wall('r1', { x: 40, y: 80 }, { x: 360, y: 80 }))
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
+    assignRidgeWallGuids(plan, ['r1'])
+    expect(plan.roof?.ridge.wallGuids).toEqual(['r1'])
+    expect(listRidgeWallsOnFloor(plan.floors[0])[0]?.role).toBe('ridge')
+    expect(listRidgeWallsOnFloor(plan.floors[0])[0]?.extras?.ridge).toBeUndefined()
+
+    const raw = JSON.parse(buildFmlV3(plan)) as {
+      settings: { ridgeWalls?: { wallGuids: string[] } }
+      floors: Array<{
+        designs?: Array<{
+          name?: string
+          settings?: { btfRole?: string }
+          walls?: Array<{ id: string; ridge?: boolean }>
+        }>
+      }>
+    }
+    expect(raw.settings.ridgeWalls?.wallGuids).toEqual(['r1'])
+    const dak = raw.floors[0].designs?.find((d) => d.name === 'Dak')
+    expect(dak?.settings?.btfRole).toBe('ridge')
+    expect(dak?.walls?.find((w) => w.guid === 'r1')?.ridge).toBe(true)
+
+    const imported = importFmlV3(raw).plan
+    expect(imported.roof?.ridge.wallGuids).toEqual(['r1'])
+    expect(imported.source?.settings?.ridgeWalls).toBeUndefined()
+    const importedRidge = listRidgeWallsOnFloor(imported.floors[0])[0]
+    expect(importedRidge?.role).toBe('ridge')
+    expect(importedRidge?.extras?.ridge).toBeUndefined()
+    expect(imported.floors[0].designs?.find(isRidgeDesign)?.role).toBe('ridge')
   })
 })

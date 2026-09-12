@@ -24,6 +24,7 @@ const wallElevationHandles = ix.wallElevationHandles
 const junctionElevationHandles = ix.junctionElevationHandles
 const ridgeCenter = ix.ridgeCenter
 const ridgeEndHandles = ix.ridgeEndHandles
+const wallAxisEndHandles = ix.wallAxisEndHandles
 const ridgeHandles = ix.ridgeHandles
 const openingMoveHandle = ix.openingMoveHandle
 const openingHandles = ix.openingHandles
@@ -32,6 +33,7 @@ const onWallElevHandleDown = ix.onWallElevHandleDown
 const onJunctionElevHandleDown = ix.onJunctionElevHandleDown
 const onRidgeMoveHandleDown = ix.onRidgeMoveHandleDown
 const onRidgeEndHandleDown = ix.onRidgeEndHandleDown
+const onWallAxisEndHandleDown = ix.onWallAxisEndHandleDown
 const onRidgeHandleDown = ix.onRidgeHandleDown
 const onMoveHandleDown = ix.onMoveHandleDown
 const onHandleDown = ix.onHandleDown
@@ -152,6 +154,25 @@ const stopKonvaBubble = ix.stopKonvaBubble
         listening: true,
       }"
       @mousedown="onRidgeEndHandleDown(handle.end, $event)"
+      @click="stopKonvaBubble"
+    />
+
+    <!-- Dakkapel-randmuur as-einden -->
+    <v-circle
+      v-for="handle in wallAxisEndHandles"
+      :key="`wall-axis-end-${handle.end}`"
+      :config="{
+        ...(() => {
+          const stage = layoutXform.toStagePoint(handle.x, handle.y)
+          return { x: stage.x, y: stage.y }
+        })(),
+        radius: FML_PLAN_HANDLE_RADIUS_PX / viewScale,
+        fill: '#f97316',
+        stroke: '#fff',
+        strokeWidth: 2 / viewScale,
+        listening: true,
+      }"
+      @mousedown="onWallAxisEndHandleDown(handle.end, $event)"
       @click="stopKonvaBubble"
     />
 

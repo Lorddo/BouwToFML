@@ -4,6 +4,7 @@ import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/fml-preview/fml-
 import {
   buildElevationJunctionHeightMeasureLines,
   buildElevationRidgeHeightMeasureLines,
+  buildElevationRoofVertexHeightMeasureLines,
   buildElevationWallFaceMeasureLines,
   elevationWallFaceMeasureLengthsCm,
 } from '@/ui/composables/fml-preview/fml-preview-elevation-wall-measure'
@@ -147,5 +148,27 @@ describe('fml-preview-elevation-wall-measure', () => {
     expect(sloped).toHaveLength(2)
     expect(Math.abs(sloped[0].a.y - sloped[0].b.y)).toBeCloseTo(400, 6)
     expect(Math.abs(sloped[1].a.y - sloped[1].b.y)).toBeCloseTo(300, 6)
+  })
+
+  it('dakvlak-punt → hoogte tot vloer naast het punt', () => {
+    const lines = buildElevationRoofVertexHeightMeasureLines({ x: 180, y: -420 }, 0, 2)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].id).toBe('elev-roof-vertex-height:2')
+    expect(lines[0].a.x).toBeCloseTo(180 + OPENING_MOVE_MEASURE_INSET_CM, 6)
+    expect(lines[0].a.y).toBeCloseTo(-420, 6)
+    expect(lines[0].b.y).toBeCloseTo(0, 6)
+    expect(Math.abs(lines[0].a.y - lines[0].b.y)).toBeCloseTo(420, 6)
+  })
+
+  it('dakvlak-punt op de vloer → geen lijn', () => {
+    expect(buildElevationRoofVertexHeightMeasureLines({ x: 100, y: 0 }, 0, 0)).toEqual([])
+  })
+
+  it('dakvlak-punt op hogere verdieping → hoogte tot die vloer, niet begane grond', () => {
+    const lines = buildElevationRoofVertexHeightMeasureLines({ x: 200, y: -700 }, -280, 1)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].a.y).toBeCloseTo(-700, 6)
+    expect(lines[0].b.y).toBeCloseTo(-280, 6)
+    expect(Math.abs(lines[0].a.y - lines[0].b.y)).toBeCloseTo(420, 6)
   })
 })

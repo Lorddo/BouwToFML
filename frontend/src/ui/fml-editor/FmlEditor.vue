@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Public Vue embed: full FML editor (leading capability preset).
+ * Public Vue embed: full editor (PLG-native; FML I/O per tenant).
  * No OpenCV / workspace — host supplies `plan` and handles `planUpdate`.
  */
 import { ref } from 'vue'

@@ -8,6 +8,23 @@ export type FmlSettingsVariant = 'viewer' | 'workspace' | 'inspect'
 
 export type FmlCapabilityToolId = FmlToolId | typeof FML_AREA_SIDE_DIMS_TOOL_ID
 
+/**
+ * File I/O rights per host. FML is a direction + entitlement, not a file property.
+ * See `.cursor/docs/plg-native-format-plan.md` §8.
+ *
+ * Editor today = tekenbureau (FML import + lossy export). External-customer
+ * tenants (native-only, no FML) land later via a tenant flag — not a fourth FmlKind.
+ */
+export type PlanIoCaps = {
+  nativeRead: true
+  /** inspect: false (observations-only write may come later) */
+  nativeWrite: boolean
+  fmlImport: boolean
+  fmlExport: 'none' | 'lossy'
+  ifcImport?: boolean
+  ifcExport?: 'none' | 'lossy'
+}
+
 export type FmlCapabilities = {
   mutate: boolean
   inspect: boolean
@@ -25,6 +42,8 @@ export type FmlCapabilities = {
   /** Gevelgroepen in muursettings / inspect-panel (geen Stempel in inspect). */
   facadeGroups: boolean
   settingsVariant: FmlSettingsVariant
+  /** Open/save + FML/IFC adapter rights. Editor file-picker follows nativeRead + fmlImport. */
+  planIo: PlanIoCaps
 }
 
 function allTools(enabled: boolean): Record<FmlCapabilityToolId, boolean> {
@@ -36,6 +55,7 @@ function allTools(enabled: boolean): Record<FmlCapabilityToolId, boolean> {
     draw_wall: enabled,
     draw_room: enabled,
     draw_surface: enabled,
+    draw_roof: enabled,
     draw_label: enabled,
     draw_line: enabled,
     add_door: enabled,
@@ -44,7 +64,7 @@ function allTools(enabled: boolean): Record<FmlCapabilityToolId, boolean> {
   }
 }
 
-/** Leading / most complete mode (`/FML-editor` edit). */
+/** Leading / most complete mode (`/FML-editor` edit). PLG-native; FML I/O until tenant split. */
 export const FML_CAPABILITIES_EDITOR: FmlCapabilities = Object.freeze({
   mutate: true,
   inspect: false,
@@ -59,6 +79,12 @@ export const FML_CAPABILITIES_EDITOR: FmlCapabilities = Object.freeze({
   underlayMove: true,
   facadeGroups: true,
   settingsVariant: 'viewer',
+  planIo: Object.freeze({
+    nativeRead: true,
+    nativeWrite: true,
+    fmlImport: true,
+    fmlExport: 'lossy',
+  }),
 })
 
 /** Read-only inspect (`/FML-editor` inspect tab / PWA embed). */
@@ -76,6 +102,12 @@ export const FML_CAPABILITIES_INSPECT: FmlCapabilities = Object.freeze({
   underlayMove: false,
   facadeGroups: true,
   settingsVariant: 'inspect',
+  planIo: Object.freeze({
+    nativeRead: true,
+    nativeWrite: false,
+    fmlImport: true,
+    fmlExport: 'none',
+  }),
 })
 
 /**
@@ -89,6 +121,7 @@ export const FML_CAPABILITIES_DETECTION: FmlCapabilities = Object.freeze({
   tools: Object.freeze({
     ...allTools(true),
     draw_surface: false,
+    draw_roof: false,
     draw_label: false,
     draw_line: false,
     add_fixture: false,
@@ -104,6 +137,12 @@ export const FML_CAPABILITIES_DETECTION: FmlCapabilities = Object.freeze({
   /** Stempel-preset via checkbox (zelfde store als editor; geen gevel-UI). */
   facadeGroups: true,
   settingsVariant: 'workspace',
+  planIo: Object.freeze({
+    nativeRead: true,
+    nativeWrite: true,
+    fmlImport: true,
+    fmlExport: 'lossy',
+  }),
 })
 
 const PRESETS: Record<FmlKind, FmlCapabilities> = {
@@ -114,45 +153,4 @@ const PRESETS: Record<FmlKind, FmlCapabilities> = {
 
 export function resolveFmlCapabilities(kind: FmlKind): FmlCapabilities {
   return PRESETS[kind]
-}
-
-/** Toolbar / toolbelt: only tools allowed by the preset. */
-export function isFmlToolEnabled(caps: FmlCapabilities, toolId: string): boolean {
-  return caps.tools[toolId as FmlCapabilityToolId] === true
-}
-
-/**
- * Derive canvas flags from a kind (+ optional legacy boolean overrides).
- * Prefer passing `kind` from hosts; overrides keep call-sites that still set props.
- */
-export function fmlCanvasFlagsFromCapabilities(
-  caps: FmlCapabilities,
-  overrides?: {
-    areaSurfaceEditEnabled?: boolean
-    annotationEditEnabled?: boolean
-    inspectMode?: boolean
-    touchEditor?: boolean
-  },
-): {
-  areaSurfaceEditEnabled: boolean
-  annotationEditEnabled: boolean
-  inspectMode: boolean
-  touchEditor: boolean
-  includeSurfaceTool: boolean
-  includeAnnotationTools: boolean
-  includeFixtureTool: boolean
-} {
-  const areaSurfaceEditEnabled = overrides?.areaSurfaceEditEnabled ?? caps.areaSurfaceEdit
-  const annotationEditEnabled = overrides?.annotationEditEnabled ?? caps.annotationEdit
-  const inspectMode = overrides?.inspectMode ?? caps.inspect
-  const touchEditor = overrides?.touchEditor ?? caps.touchChrome
-  return {
-    areaSurfaceEditEnabled,
-    annotationEditEnabled,
-    inspectMode,
-    touchEditor,
-    includeSurfaceTool: areaSurfaceEditEnabled,
-    includeAnnotationTools: annotationEditEnabled,
-    includeFixtureTool: touchEditor && caps.fixtureLibrary,
-  }
 }

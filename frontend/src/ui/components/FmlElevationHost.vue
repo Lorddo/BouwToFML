@@ -44,6 +44,7 @@ import FmlElevationStagePlanes from './FmlElevationStagePlanes.vue'
 import FmlElevationStageGuides from './FmlElevationStageGuides.vue'
 import FmlElevationStageHandles from './FmlElevationStageHandles.vue'
 import './canvas/canvas-toolbelt.css'
+import { facadeGroupDisplayName } from '@/ui/composables/fml-preview/facade-group-label'
 
 const props = withDefaults(
   defineProps<{
@@ -500,7 +501,7 @@ defineExpose({
         :class="{ active: group.id === groupId }"
         @click="emit('update:groupId', group.id)"
       >
-        {{ group.name }}
+        {{ facadeGroupDisplayName(group, t) }}
       </button>
     </div>
     <v-stage :config="{ width: stageSize.width, height: stageSize.height }">
@@ -614,7 +615,7 @@ defineExpose({
                 :unit="unit"
                 :title="t('viewer.elevationRoof', { name: settingsRoof.name })"
                 :height-cm="settingsRoof.heightCm"
-                :min="0"
+                :min="settingsRoof.minCm"
                 :max="800"
                 @height="commitRoofVertexHeight"
               />

@@ -245,7 +245,7 @@ export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening
   const t = clampDoorOpeningT(wall, width, opening.t, wallCollinearEnds(walls, wallId))
   const normalized: Opening = {
     ...opening,
-    guid: opening.guid ?? crypto.randomUUID(),
+    id: opening.id?.trim() || crypto.randomUUID(),
     width,
     t,
     z_height:
@@ -279,7 +279,7 @@ type OpeningPatch = Partial<
     | 'bovenlicht'
     | 'bovenlichtHeightCm'
     | 'bovenlichtGapCm'
-    | 'refid'
+    | 'kind'
   >
 >
 
@@ -300,8 +300,8 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
 
   let changed = false
 
-  if (patch.refid != null && patch.refid !== '' && nextOpening.refid !== patch.refid) {
-    nextOpening.refid = patch.refid
+  if (patch.kind != null && nextOpening.kind !== patch.kind) {
+    nextOpening.kind = patch.kind
     changed = true
   }
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   allowsFmlStickyHit,
   resolveFmlStickySelectKind,
+  wallPreemptsAreaHit,
 } from '@/ui/composables/fml-preview/fml-preview-sticky-select'
 import {
   isTouchHoverFollowTool,
@@ -17,7 +18,6 @@ describe('resolveFmlStickySelectKind', () => {
     hasOpening: false,
     hasItem: false,
     hasAnnotation: false,
-    hasArea: false,
     hasDimension: false,
   }
 
@@ -41,6 +41,24 @@ describe('allowsFmlStickyHit', () => {
     expect(allowsFmlStickyHit('wall', 'wall')).toBe(true)
     expect(allowsFmlStickyHit('opening', 'wall')).toBe(false)
     expect(allowsFmlStickyHit('opening', 'opening')).toBe(true)
+  })
+
+  it('laat deur/muur door bij ruimte-selectie', () => {
+    expect(allowsFmlStickyHit('area', 'opening')).toBe(true)
+    expect(allowsFmlStickyHit('area', 'wall')).toBe(true)
+    expect(allowsFmlStickyHit('area', 'item')).toBe(true)
+  })
+})
+
+describe('wallPreemptsAreaHit', () => {
+  it('laat een muur in de ruimte winnen, ook bij Ctrl-settings', () => {
+    expect(wallPreemptsAreaHit('w1', false)).toBe(true)
+    expect(wallPreemptsAreaHit(null, false)).toBe(false)
+  })
+
+  it('houdt klik op de ruimtenaam bij de ruimte', () => {
+    expect(wallPreemptsAreaHit('w1', true)).toBe(false)
+    expect(wallPreemptsAreaHit(null, true)).toBe(false)
   })
 })
 
@@ -120,6 +138,7 @@ describe('touch tap vs pan', () => {
     expect(isTouchHoverFollowTool('draw_wall', { drafting: true })).toBe(false)
     expect(isTouchHoverFollowTool('draw_room', { drafting: true })).toBe(false)
     expect(isTouchHoverFollowTool('draw_surface', { drafting: true })).toBe(true)
+    expect(isTouchHoverFollowTool('draw_roof', { drafting: true })).toBe(true)
   })
 
   it('start handle-sleep op draft-punten zonder move-tool', () => {

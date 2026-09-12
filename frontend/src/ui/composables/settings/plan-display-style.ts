@@ -2,14 +2,17 @@
  * Verf voor plattegrond én gevels: Editor (kleur) / Bouw (CAD-lijnen + muurfill) /
  * Architect (CAD-lijnen; plattegrond zonder muurfill; gevels wit papier-fill + zwarte lijnen).
  * Los van `elevationProjection` (H/V-snap vs projectief).
+ *
+ * Canonieke union: `PlgPlanDisplayStyle` in `core/plg`.
  */
+import type { PlgPlanDisplayStyle } from '@/core/plg/plg-document'
 
 export const PLAN_DISPLAY_STYLES = ['editor', 'bouw', 'architect'] as const
-export type PlanDisplayStyle = (typeof PLAN_DISPLAY_STYLES)[number]
+export type PlanDisplayStyle = PlgPlanDisplayStyle
 
 /** Kiesbaar in Settings. */
 export const PLAN_DISPLAY_STYLE_CHOICES = ['editor', 'bouw', 'architect'] as const
-export type PlanDisplayStyleChoice = (typeof PLAN_DISPLAY_STYLE_CHOICES)[number]
+export type PlanDisplayStyleChoice = PlgPlanDisplayStyle
 
 export const DEFAULT_PLAN_DISPLAY_STYLE: PlanDisplayStyleChoice = 'editor'
 

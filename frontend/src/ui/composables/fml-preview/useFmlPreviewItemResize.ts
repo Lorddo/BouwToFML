@@ -26,7 +26,7 @@ export function useFmlPreviewItemResize(options: {
   function selectedItem(): FloorItem | undefined {
     const guid = options.selectedItemId.value
     if (!guid) return undefined
-    return options.editor.items.value.find((entry) => entry.guid === guid)
+    return options.editor.items.value.find((entry) => entry.id === guid)
   }
 
   function hitHandleAtCm(cm: Point2D): ItemResizeSide | null {
@@ -42,7 +42,7 @@ export function useFmlPreviewItemResize(options: {
   }
 
   function applySide(guid: string, side: ItemResizeSide, cm: Point2D): void {
-    const item = options.editor.items.value.find((entry) => entry.guid === guid)
+    const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     const local = worldToItemLocal({ x: item.x, y: item.y }, cm, item.rotation ?? 0, item.mirrored)
     options.editor.updateItem(guid, resizeFromSide(item, side, local, MIN_SIZE_CM))
@@ -53,7 +53,7 @@ export function useFmlPreviewItemResize(options: {
     side: ItemResizeSide,
     event: { clientX: number; clientY: number },
   ): void {
-    const item = options.editor.items.value.find((entry) => entry.guid === guid)
+    const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     options.editor.pushUndo()
     options.settingsItemId.value = guid

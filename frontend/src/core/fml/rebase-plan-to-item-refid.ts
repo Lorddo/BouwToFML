@@ -1,8 +1,9 @@
-import { FML_ALIGN_FIXTURE_REFID } from './fixture-refid-catalog'
+import { FML_ALIGN_FIXTURE_KIND } from './fixture-refid-catalog'
 import { translateFloorPlan } from './translate-floor-plan'
 import type { DrawingMeta, Floor, FloorItem, FloorPlan } from './types'
+import type { FixtureAssetKind } from './fixture-kind-catalog'
 
-export { FML_ALIGN_FIXTURE_REFID }
+export { FML_ALIGN_FIXTURE_KIND }
 
 /** Zelfde drempel als nulpunt-bake (`NULPUNT_EPS_CM`). */
 export const ALIGN_FIXTURE_ORIGIN_EPS_CM = 0.05
@@ -14,8 +15,8 @@ export type RebasePlanToItemRefidResult = {
   alreadyAtOrigin: number[]
 }
 
-function findAlignItem(floor: Floor, refid: string): FloorItem | undefined {
-  return floor.items?.find((item) => item.refid === refid)
+function findAlignItem(floor: Floor, kind: FixtureAssetKind): FloorItem | undefined {
+  return floor.items?.find((item) => item.kind === kind)
 }
 
 function shiftDrawing(
@@ -32,12 +33,12 @@ function shiftDrawing(
 }
 
 /**
- * Zet per floor het eerste item met `refid` op FML `(0,0)`.
+ * Zet per floor het eerste item met `kind` op plan `(0,0)`.
  * Floors zonder match of al op origin blijven. Drawing-midden schuift mee.
  */
 export function rebasePlanToItemRefid(
   plan: FloorPlan,
-  refid = FML_ALIGN_FIXTURE_REFID,
+  kind: FixtureAssetKind = FML_ALIGN_FIXTURE_KIND,
   epsCm = ALIGN_FIXTURE_ORIGIN_EPS_CM,
 ): RebasePlanToItemRefidResult {
   const moved: number[] = []
@@ -51,7 +52,7 @@ export function rebasePlanToItemRefid(
       missing.push(i)
       continue
     }
-    const item = findAlignItem(floor, refid)
+    const item = findAlignItem(floor, kind)
     if (!item) {
       missing.push(i)
       continue

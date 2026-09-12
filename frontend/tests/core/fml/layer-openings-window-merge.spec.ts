@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
-import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID } from '@/core/fml/types'
 import type { BoundWindow } from '@/cv/windows/types'
 
 function makeBound(
@@ -14,7 +13,7 @@ function makeBound(
     openingEndPx: partial.openingEndPx ?? { x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 },
     widthPx: partial.widthPx ?? bbox.width,
     widthCm: partial.widthCm ?? bbox.width / 5,
-    fmlRefId: partial.fmlRefId ?? CONCEPT_WINDOW_REFID,
+    fmlRefId: partial.fmlRefId ?? 'window.single',
     evidence: partial.evidence ?? 'framing',
     faceIds: partial.faceIds ?? [1],
     ...partial,
@@ -42,12 +41,12 @@ describe('toLayer14WindowsForFml mergeMultiWindows', () => {
   it('merges adjacent windows by default (R-27 in FML path)', () => {
     const layer14 = toLayer14WindowsForFml(pair)
     expect(layer14).toHaveLength(1)
-    expect(layer14[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(layer14[0].fmlRefId).toBe('window.double')
   })
 
   it('keeps singles when mergeMultiWindows is false', () => {
     const layer14 = toLayer14WindowsForFml(pair, { mergeMultiWindows: false })
     expect(layer14).toHaveLength(2)
-    expect(layer14.every((w) => w.fmlRefId === CONCEPT_WINDOW_REFID)).toBe(true)
+    expect(layer14.every((w) => w.fmlRefId === 'window.single')).toBe(true)
   })
 })

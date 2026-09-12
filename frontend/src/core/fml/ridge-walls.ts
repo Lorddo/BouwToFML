@@ -1,6 +1,7 @@
 /**
  * Nok-muren in een sibling Dak-design (niet in de plattegrond-graaf).
- * GUID-lijst in settings — Floorplanner stript wall-extras.
+ * GUID-lijst in `plan.roof.ridge` (`.plg`). FML-adapter projecteert naar settings.ridgeWalls
+ * — Floorplanner stript wall-extras.
  */
 import { flushActiveDesign } from './design-sync'
 import { detachWallsFromFacade, detachWallsFromStamp, type WallIdRemap } from './facade-groups'
@@ -16,7 +17,6 @@ import type {
   Floor,
   FloorDesign,
   FloorPlan,
-  FloorPlanSource,
   FmlExtras,
   Point2D,
   Wall,
@@ -24,7 +24,7 @@ import type {
 import {
   endpointHeightCm,
   makeEndpoint3D,
-  parseEndpoint3D,
+  promoteWallElevationFromExtras,
   wallEndpoint3D,
   type WallEnd,
 } from './wall-endpoint-height'
@@ -32,6 +32,8 @@ import {
 export const RIDGE_WALLS_SETTINGS_KEY = 'ridgeWalls'
 export const RIDGE_DESIGN_NAME = 'Dak'
 export const RIDGE_DESIGN_ROLE = 'ridge'
+/** FML `design.settings`-key; waarde bewust `'btfRole'`. */
+export const PLAN_ROLE_SETTINGS_KEY = 'btfRole'
 export const DEFAULT_RIDGE_DISPLAY_WIDTH_CM = 10
 export const RIDGE_WALL_EXTRA = 'ridge' as const
 
@@ -42,13 +44,6 @@ export type RidgeWallsSettings = {
 
 function cloneSettings(settings: FmlExtras | undefined): FmlExtras {
   return { ...(settings ?? {}) }
-}
-
-function ensurePlanSource(plan: FloorPlan): FloorPlanSource {
-  if (plan.source) return plan.source
-  const source: FloorPlanSource = { settings: {} }
-  plan.source = source
-  return source
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -76,15 +71,7 @@ function clampDisplayWidthCm(value: unknown): number {
   return Math.max(1, Math.min(80, Math.round(value)))
 }
 
-export function isRidgeDesign(design: FloorDesign | null | undefined): boolean {
-  if (!design) return false
-  const role = design.source?.settings?.btfRole
-  if (role === RIDGE_DESIGN_ROLE) return true
-  return design.name.trim().toLowerCase() === RIDGE_DESIGN_NAME.toLowerCase()
-}
-
-export function readRidgeWallsSettings(plan: FloorPlan | null | undefined): RidgeWallsSettings {
-  const raw = plan?.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY]
+function parseRidgeSettings(raw: unknown): RidgeWallsSettings {
   if (!raw || typeof raw !== 'object') {
     return { wallGuids: [], displayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM }
   }
@@ -95,14 +82,35 @@ export function readRidgeWallsSettings(plan: FloorPlan | null | undefined): Ridg
   }
 }
 
+export function isRidgeDesign(design: FloorDesign | null | undefined): boolean {
+  if (!design) return false
+  if (design.role === RIDGE_DESIGN_ROLE) return true
+  const role = design.source?.settings?.[PLAN_ROLE_SETTINGS_KEY]
+  if (role === RIDGE_DESIGN_ROLE) return true
+  return design.name.trim().toLowerCase() === RIDGE_DESIGN_NAME.toLowerCase()
+}
+
+export function readRidgeWallsSettings(plan: FloorPlan | null | undefined): RidgeWallsSettings {
+  if (plan?.roof?.ridge) return parseRidgeSettings(plan.roof.ridge)
+  return parseRidgeSettings(plan?.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY])
+}
+
 function writeRidgeWallsSettings(plan: FloorPlan, next: RidgeWallsSettings): void {
-  const source = ensurePlanSource(plan)
-  const settings = cloneSettings(source.settings)
-  settings[RIDGE_WALLS_SETTINGS_KEY] = {
-    wallGuids: [...next.wallGuids],
-    displayWidthCm: clampDisplayWidthCm(next.displayWidthCm),
+  // Nieuwe roof-object zodat shallow-copied plans hun oude ridge behouden.
+  plan.roof = {
+    ridge: {
+      wallGuids: [...next.wallGuids],
+      displayWidthCm: clampDisplayWidthCm(next.displayWidthCm),
+    },
+    planes: plan.roof?.planes ?? { surfaceGuids: [] },
+    stack: plan.roof?.stack ?? { nokThicknessCm: DEFAULT_NOK_THICKNESS_CM, floors: [] },
   }
-  source.settings = settings
+  const source = plan.source
+  if (source?.settings && RIDGE_WALLS_SETTINGS_KEY in source.settings) {
+    const settings = cloneSettings(source.settings)
+    delete settings[RIDGE_WALLS_SETTINGS_KEY]
+    source.settings = settings
+  }
 }
 
 export function ridgeDisplayWidthCm(plan: FloorPlan | null | undefined): number {
@@ -120,6 +128,7 @@ export function setRidgeDisplayWidthCm(plan: FloorPlan, widthCm: number): FloorP
 
 /** Alleen als het plan nog geen expliciete `displayWidthCm` heeft. */
 export function seedRidgeDisplayWidthIfMissing(plan: FloorPlan, widthCm: number): FloorPlan {
+  if (plan.roof?.ridge && 'displayWidthCm' in plan.roof.ridge) return plan
   const raw = plan.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY]
   if (raw && typeof raw === 'object' && 'displayWidthCm' in raw) return plan
   return setRidgeDisplayWidthCm(plan, widthCm)
@@ -137,7 +146,8 @@ export function isRidgeWallId(plan: FloorPlan | null | undefined, wallGuid: stri
   return false
 }
 
-export function isRidgeWall(wall: Pick<Wall, 'extras'> | null | undefined): boolean {
+export function isRidgeWall(wall: Pick<Wall, 'extras' | 'role'> | null | undefined): boolean {
+  if (wall?.role === RIDGE_DESIGN_ROLE) return true
   return wall?.extras?.[RIDGE_WALL_EXTRA] === true
 }
 
@@ -260,7 +270,8 @@ function emptyRidgeDesign(): FloorDesign {
     name: RIDGE_DESIGN_NAME,
     walls: [],
     surfaces: [],
-    source: { settings: { btfRole: RIDGE_DESIGN_ROLE, engineAutoDims: false } },
+    role: RIDGE_DESIGN_ROLE,
+    source: { settings: { engineAutoDims: false } },
   }
 }
 
@@ -337,10 +348,11 @@ export function ridgeEndpointExtras(
     Math.round(dakThicknessCm > 0 ? dakThicknessCm : DEFAULT_NOK_THICKNESS_CM),
   )
   const end = makeEndpoint3D(z, span)
+  // az/bz tijdelijk in extras; markWallAsRidge / addSegmentPath promoveert naar elevation.
   return { az: end, bz: { ...end }, [RIDGE_WALL_EXTRA]: true }
 }
 
-/** Onderkant nok (`az`/`bz`.z) t.o.v. verdiepingsvloer. */
+/** Onderkant nok (`elevation.a/b`.z) t.o.v. verdiepingsvloer. */
 export function ridgeEndpointZCm(wall: Wall, end: WallEnd, floorHeightCm: number): number {
   return wallEndpoint3D(wall, end, floorHeightCm).z
 }
@@ -348,10 +360,21 @@ export function ridgeEndpointZCm(wall: Wall, end: WallEnd, floorHeightCm: number
 function withRidgeEndpointZ(wall: Wall, end: WallEnd, zCm: number, floorHeightCm: number): Wall {
   const current = wallEndpoint3D(wall, end, floorHeightCm)
   const span = Math.max(1, Math.round(endpointHeightCm(current) || DEFAULT_NOK_THICKNESS_CM))
+  const next = makeEndpoint3D(Math.max(0, Math.round(zCm)), span)
+  const other = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
   const extras = { ...(wall.extras ?? {}) }
-  extras[end === 'a' ? 'az' : 'bz'] = makeEndpoint3D(Math.max(0, Math.round(zCm)), span)
-  extras[RIDGE_WALL_EXTRA] = true
-  return { ...wall, extras }
+  delete extras.az
+  delete extras.bz
+  delete extras[RIDGE_WALL_EXTRA]
+  return {
+    ...wall,
+    role: RIDGE_DESIGN_ROLE,
+    elevation: {
+      a: end === 'a' ? next : other,
+      b: end === 'a' ? other : next,
+    },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
+  }
 }
 
 /** Onderkant nok in world-Z (plaat + verdiepingen eronder + `az.z`). */
@@ -470,13 +493,21 @@ export function setRidgeWallsZ(
 
 function withRidgeDakSpan(wall: Wall, spanCm: number, floorHeightCm: number): Wall {
   const span = Math.max(1, Math.round(spanCm > 0 ? spanCm : DEFAULT_NOK_THICKNESS_CM))
+  const az = wallEndpoint3D(wall, 'a', floorHeightCm)
+  const bz = wallEndpoint3D(wall, 'b', floorHeightCm)
   const extras = { ...(wall.extras ?? {}) }
-  const az = parseEndpoint3D(extras.az, floorHeightCm)
-  const bz = parseEndpoint3D(extras.bz, floorHeightCm)
-  extras.az = makeEndpoint3D(az.z, span)
-  extras.bz = makeEndpoint3D(bz.z, span)
-  extras[RIDGE_WALL_EXTRA] = true
-  return { ...wall, extras }
+  delete extras.az
+  delete extras.bz
+  delete extras[RIDGE_WALL_EXTRA]
+  return {
+    ...wall,
+    role: RIDGE_DESIGN_ROLE,
+    elevation: {
+      a: makeEndpoint3D(az.z, span),
+      b: makeEndpoint3D(bz.z, span),
+    },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
+  }
 }
 
 /** Overschrijf dakspan (`h − z`) van bestaande nokken; onderkant blijft. */
@@ -551,16 +582,20 @@ export function setRidgeWallPlanPose(
   const current = ridges[index]
   if (!current) return plan
   const span = Math.max(1, Math.round(pose.spanCm))
+  const extras = { ...(current.extras ?? {}) }
+  delete extras.az
+  delete extras.bz
+  delete extras[RIDGE_WALL_EXTRA]
   const nextWall: Wall = {
     ...current,
     a: { x: pose.a.x, y: pose.a.y },
     b: { x: pose.b.x, y: pose.b.y },
-    extras: {
-      ...(current.extras ?? {}),
-      az: makeEndpoint3D(Math.max(0, Math.round(pose.zA)), span),
-      bz: makeEndpoint3D(Math.max(0, Math.round(pose.zB)), span),
-      [RIDGE_WALL_EXTRA]: true,
+    role: RIDGE_DESIGN_ROLE,
+    elevation: {
+      a: makeEndpoint3D(Math.max(0, Math.round(pose.zA)), span),
+      b: makeEndpoint3D(Math.max(0, Math.round(pose.zB)), span),
     },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
   const next = ridges.slice()
   next[index] = nextWall
@@ -606,8 +641,8 @@ export function ridgeAwareNokWorldRange(plan: FloorPlan): { z0: number; z1: numb
   plan.floors.forEach((floor, floorIndex) => {
     const base = floorWallBaseWorldZ(plan, floorIndex)
     for (const wall of listRidgeWallsOnFloor(floor)) {
-      const az = parseEndpoint3D(wall.extras?.az, floor.height)
-      const bz = parseEndpoint3D(wall.extras?.bz, floor.height)
+      const az = wallEndpoint3D(wall, 'a', floor.height)
+      const bz = wallEndpoint3D(wall, 'b', floor.height)
       const lo = base + Math.min(az.z, bz.z)
       const hi = base + Math.max(az.h, bz.h)
       ridgeBottom = ridgeBottom == null ? lo : Math.min(ridgeBottom, lo)
@@ -624,24 +659,34 @@ export function dakThicknessCmForPlan(plan: FloorPlan | null | undefined): numbe
 }
 
 export function markWallAsRidge(wall: Wall, extras?: Wall['extras']): Wall {
+  const merged = { ...(wall.extras ?? {}), ...(extras ?? {}) }
+  delete merged[RIDGE_WALL_EXTRA]
+  const fallbackH =
+    wall.elevation?.a != null ? endpointHeightCm(wall.elevation.a) || 280 : 280
+  const fromExtras = promoteWallElevationFromExtras(merged, fallbackH)
   return {
     ...wall,
     thickness: 0,
     openings: [],
-    extras: { ...(wall.extras ?? {}), ...(extras ?? {}), [RIDGE_WALL_EXTRA]: true },
+    role: RIDGE_DESIGN_ROLE,
+    elevation: fromExtras.elevation ?? wall.elevation,
+    extras: fromExtras.extras,
   }
 }
 
 export function unmarkWallAsRidge(wall: Wall, thicknessCm: number, floorHeightCm: number): Wall {
   const extras = { ...(wall.extras ?? {}) }
   delete extras[RIDGE_WALL_EXTRA]
+  delete extras.az
+  delete extras.bz
   const end = makeEndpoint3D(0, floorHeightCm)
-  extras.az = end
-  extras.bz = { ...end }
+  const { role: _role, ...rest } = wall
+  void _role
   return {
-    ...wall,
+    ...rest,
     thickness: Math.max(1, Math.round(thicknessCm)),
-    extras,
+    elevation: { a: end, b: { ...end } },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
 }
 

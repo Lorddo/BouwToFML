@@ -1,5 +1,4 @@
 import type { FloorPlan, Opening, Wall } from './types'
-import { CONCEPT_WINDOW_REFID } from './types'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WINDOW_HEIGHT_CM,
@@ -16,7 +15,7 @@ export const MAX_BOVENLICHT_HEIGHT_CM = 400
 export const MIN_BOVENLICHT_GAP_CM = 0
 export const MAX_BOVENLICHT_GAP_CM = 200
 
-/** Guid-suffix van gesynthetiseerde bovenlichten (export). */
+/** Id-suffix van gesynthetiseerde bovenlichten (export). */
 export const BOVENLICHT_GUID_SUFFIX = '-bovenlicht'
 /** Max |Δt| × muurlengte bij geometrische match (cm). */
 export const BOVENLICHT_MATCH_AXIS_CM = 3
@@ -96,7 +95,7 @@ export function resolveWindowBovenlicht(
 export interface BuildBovenlichtOptions {
   /** Muurtop in cm (`az`/`bz`.h); bovenlicht wordt geclampt zodat top ≤ dit. */
   floorHeightCm?: number
-  /** Stabiele guid-prefix (meestal de bron-opening-guid). */
+  /** Stabiele id-prefix (meestal de bron-opening-id). */
   sourceGuid?: string
   /** @deprecated Gebruik sourceGuid. */
   doorGuid?: string
@@ -112,7 +111,7 @@ export interface BuildBovenlichtOptions {
  * Past de gap niet: plaats direct op de opening. Skip alleen als opening tot plafond reikt.
  */
 export function buildBovenlichtOpening(
-  source: Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'type' | 'guid'>,
+  source: Pick<Opening, 't' | 'width' | 'z' | 'z_height' | 'type' | 'id'>,
   options: BuildBovenlichtOptions = {},
 ): Opening | null {
   const sillZ = source.z ?? 0
@@ -138,16 +137,16 @@ export function buildBovenlichtOpening(
     if (zHeight <= 0) return null
   }
 
-  const sourceGuid = options.sourceGuid ?? options.doorGuid ?? source.guid
+  const sourceId = options.sourceGuid ?? options.doorGuid ?? source.id
   return {
-    refid: CONCEPT_WINDOW_REFID,
+    id: sourceId ? `${sourceId}${BOVENLICHT_GUID_SUFFIX}` : crypto.randomUUID(),
+    kind: 'window.single',
     t: source.t,
     width: source.width,
     type: 'window',
     z,
     z_height: zHeight,
     mirrored: [0, 0],
-    guid: sourceGuid ? `${sourceGuid}${BOVENLICHT_GUID_SUFFIX}` : undefined,
   }
 }
 
@@ -173,7 +172,7 @@ function applyBovenlichtFromTransom(parent: Opening, transom: Opening): Opening 
 
 /**
  * Vouwt gestapelde bovenlicht-ramen terug naar session-flags op de ouder-opening.
- * Guid-pass (onze export) eerst; daarna geometrie (Floorplanner t/width/z).
+ * Id-pass (onze export) eerst; daarna geometrie (Floorplanner t/width/z).
  * Transom-ramen verdwijnen uit de lijst; export synthetiseert ze opnieuw.
  */
 export function foldBovenlichtOnWall(openings: Opening[], wallLenCm: number): Opening[] {
@@ -183,16 +182,16 @@ export function foldBovenlichtOnWall(openings: Opening[], wallLenCm: number): Op
   const consumed = new Set<number>()
   const parentHasTransom = new Set<number>()
 
-  // 1) Guid-pass: `{parentGuid}-bovenlicht` → ouder met die guid.
+  // 1) Id-pass: `{parentId}-bovenlicht` → ouder met die id.
   for (let i = 0; i < openings.length; i++) {
     const cand = openings[i]
     if (cand.type !== 'window') continue
-    const guid = cand.guid
-    if (!guid || !guid.endsWith(BOVENLICHT_GUID_SUFFIX)) continue
-    const parentGuid = guid.slice(0, -BOVENLICHT_GUID_SUFFIX.length)
-    if (!parentGuid) continue
+    const id = cand.id
+    if (!id || !id.endsWith(BOVENLICHT_GUID_SUFFIX)) continue
+    const parentId = id.slice(0, -BOVENLICHT_GUID_SUFFIX.length)
+    if (!parentId) continue
     const parentIdx = openings.findIndex(
-      (op, j) => j !== i && !consumed.has(j) && !parentHasTransom.has(j) && op.guid === parentGuid,
+      (op, j) => j !== i && !consumed.has(j) && !parentHasTransom.has(j) && op.id === parentId,
     )
     if (parentIdx < 0) continue
     next[parentIdx] = applyBovenlichtFromTransom(next[parentIdx], cand)
@@ -255,18 +254,24 @@ export function foldBovenlichtOnWalls(walls: Wall[]): Wall[] {
 
 /** Ontbrekend / niet-false → packed (huidige default). */
 export function readBovenlichtPacked(plan: FloorPlan | null | undefined): boolean {
+  if (plan?.settings?.bovenlichtPacked != null) {
+    return plan.settings.bovenlichtPacked !== false
+  }
   return plan?.source?.settings?.bovenlichtPacked !== false
 }
 
 export function writeBovenlichtPacked(plan: FloorPlan, packed: boolean): FloorPlan {
+  const sourceSettings = { ...(plan.source?.settings ?? {}) }
+  delete sourceSettings.bovenlichtPacked
   return {
     ...plan,
+    settings: {
+      ...(plan.settings ?? {}),
+      bovenlichtPacked: packed,
+    },
     source: {
       ...plan.source,
-      settings: {
-        ...(plan.source?.settings ?? {}),
-        bovenlichtPacked: packed,
-      },
+      settings: sourceSettings,
     },
   }
 }
@@ -297,15 +302,15 @@ function openingWantsBovenlicht(
 
 /**
  * Zet effectieve bovenlicht-flags om naar losse ramen; wist flags op de ouder.
- * Skip als er al een `{guid}-bovenlicht` sibling bestaat.
+ * Skip als er al een `{id}-bovenlicht` sibling bestaat.
  */
 export function expandBovenlichtOnWall(
   wall: Wall,
   floorHeightCm: number,
   defaults: ExpandBovenlichtFloorDefaults,
 ): Wall {
-  const existingGuids = new Set(
-    wall.openings.map((op) => op.guid).filter((guid): guid is string => Boolean(guid)),
+  const existingIds = new Set(
+    wall.openings.map((op) => op.id).filter((id): id is string => Boolean(id)),
   )
   const nextOpenings: Opening[] = []
   for (const opening of wall.openings) {
@@ -316,15 +321,15 @@ export function expandBovenlichtOnWall(
     const wallTopCm = wallElevationAtT(wall, opening.t, floorHeightCm).h
     const sibling = buildBovenlichtOpening(opening, {
       floorHeightCm: wallTopCm,
-      sourceGuid: opening.guid,
+      sourceGuid: opening.id,
       heightCm: resolveBovenlichtHeightCm(opening, defaults.heightCm),
       gapCm: resolveBovenlichtGapCm(opening, defaults.gapCm),
     })
     nextOpenings.push(stripBovenlichtFlags(opening))
     if (!sibling) continue
-    if (sibling.guid && existingGuids.has(sibling.guid)) continue
+    if (sibling.id && existingIds.has(sibling.id)) continue
     nextOpenings.push(sibling)
-    if (sibling.guid) existingGuids.add(sibling.guid)
+    if (sibling.id) existingIds.add(sibling.id)
   }
   return { ...wall, openings: nextOpenings }
 }
@@ -377,20 +382,20 @@ export function countExpandableBovenlicht(
   plan.floors.forEach((floor, floorIndex) => {
     const defaults = defaultsForFloor(floorIndex)
     for (const wall of floor.walls) {
-      const existingGuids = new Set(
-        wall.openings.map((op) => op.guid).filter((guid): guid is string => Boolean(guid)),
+      const existingIds = new Set(
+        wall.openings.map((op) => op.id).filter((id): id is string => Boolean(id)),
       )
       for (const opening of wall.openings) {
         if (!openingWantsBovenlicht(opening, defaults)) continue
         const wallTopCm = wallElevationAtT(wall, opening.t, floor.height).h
         const sibling = buildBovenlichtOpening(opening, {
           floorHeightCm: wallTopCm,
-          sourceGuid: opening.guid,
+          sourceGuid: opening.id,
           heightCm: resolveBovenlichtHeightCm(opening, defaults.heightCm),
           gapCm: resolveBovenlichtGapCm(opening, defaults.gapCm),
         })
         if (!sibling) continue
-        if (sibling.guid && existingGuids.has(sibling.guid)) continue
+        if (sibling.id && existingIds.has(sibling.id)) continue
         count += 1
       }
     }
@@ -398,7 +403,7 @@ export function countExpandableBovenlicht(
   return count
 }
 
-/** Aantal openingen die bij fold zouden verdwijnen (guid- of geometrie-match). */
+/** Aantal openingen die bij fold zouden verdwijnen (id- of geometrie-match). */
 export function countFoldableBovenlicht(plan: FloorPlan): number {
   let count = 0
   for (const floor of plan.floors) {
@@ -427,7 +432,7 @@ export function maybeAddSiblingBovenlicht(
   const wallTopCm = wallElevationAtT(wall, parent.t, floorHeightCm).h
   return buildBovenlichtOpening(parent, {
     floorHeightCm: wallTopCm,
-    sourceGuid: parent.guid,
+    sourceGuid: parent.id,
     heightCm: defaults.heightCm,
     gapCm: defaults.gapCm,
   })

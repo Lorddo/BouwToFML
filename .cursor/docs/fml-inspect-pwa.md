@@ -67,11 +67,11 @@ Officiële Floorplanner-FML heeft al guids:
 
 Junctions hebben **geen** FML-guid (`stableJunctionId` is afgeleid van `wallId:end`). Gevels groeperen daarom wall-segment-guids, niet knopen.
 
-**Join key:** `project + floorIndex + kind + guid`.
+**Join key:** `project + floorIndex + kind + guid` (UUID).
 
-In-memory mapping: FML `guid` = viewer `id` voor area / surface / wall / item. Bij openingen emit **`opening.guid`**, niet een interne composite zoals `${wallId}-door-…`.
+In-memory / `.plg`: openings/items hebben verplicht `id` (+ domein-`kind`). FML-export: `guid = id`. Viewer emit **`opening.id`** (was `opening.guid`); niet een interne composite zoals `${wallId}-door-…` als persist-key (composites mogen wél hit-test).
 
-`refid` is **catalogustype** (standaarddeur, driedelig raam, fixture-type), geen instance-ID.
+FML-`refid` is **alleen catalogusmapping** in de adapter (standaarddeur, driedelig raam, fixture-type), geen instance-ID en geen domein-identiteit.
 
 Detectie-ids (`e0`, `door-swing-single-17`) zijn **niet stabiel** over een her-detectie.
 
@@ -209,7 +209,7 @@ Op tablet: split plattegrond + vragen. Op telefoon: sheet over de plattegrond.
 
 ### 5. Module-knip (latere schijf)
 
-PWA neemt niet de hele detectie-app.
+PWA neemt niet de hele detectie-app. Productbesluit native `.plg` + FML-adapter: [`.cursor/docs/plg-native-format-plan.md`](plg-native-format-plan.md) (hernoemt onderstaande `fml-core` naar plg-core; FML wordt import-adapter).
 
 | Pakket | Inhoud | Waar |
 |---|---|---|

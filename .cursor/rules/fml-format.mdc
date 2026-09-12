@@ -10,7 +10,7 @@ Primair: **muren, deuren, ramen** via JSON v3 (`walls[]` + `openings[]`).
 Muurclassificatie (buiten / woningsscheidend / binnen) → `walls[].thickness` via 3 projectdefaults.
 Deur-tags (voor/achter/binnen) + **structurele openingstypes** + maatdefaults — zie `klant-eisen-v1.md`.
 Maatlijnen: Autogen (flags + overlay), Slicer (`btfSlices` `{m,p}` + bake `dimensions[]`), Handmatig (`dimensions[]`). Onderlegger: **V1 apart download**, **V2 in FML**. Roomtags: onderzoek.
-V1: **structurele types** (refid per soort deur/raam); POC start met standaard enkeldeur + standaard raam. Visuele stijl per makelaar: V2.
+V1: **structurele types** — in het **domein** als `Opening.kind` (`door.single`, …); FML-export schrijft Floorplanner-`refid` via de adapter. POC start met standaard enkeldeur + standaard raam. Visuele stijl per makelaar: V2.
 
 Referentie-examples: `examples/FML(current)/` — zie `examples-inventory.md`.
 Volledige spec: `.cursor/docs/floorplanner/v30-specification.md`.
@@ -81,9 +81,13 @@ Centerline + dikte; openingen ingebed.
 
 Deur of raam **op** muurlijn — niet los zwevend.
 
+Domein (`.plg` / in-memory): verplicht `id` + `kind` (`door.single`, …). Geen `refid`/`guid` op het plan.
+FML-bestand: `guid` = domein-`id`; `refid` = canonieke Floorplanner-hash via `plg/fml-adapter/opening-fml-refids.json`.
+
 ```json
 {
   "refid": "0434246537840a3326e305dbe7b9c355743e6e93",
+  "guid": "<opening.id>",
   "t": 0.5,
   "type": "door",
   "width": 90,
@@ -99,15 +103,16 @@ Deur of raam **op** muurlijn — niet los zwevend.
 
 - **`t`:** 0..1 — positie langs muur (0 bij `a`, 1 bij `b`)
 - **`width`:** breedte in cm
-- **`refid`:** SHA-hash uit Floorplanner-catalogus (geen korte IDs)
+- **`guid`:** exemplaar-ID (= domein `opening.id`; PWA join key)
+- **`refid`:** SHA-hash uit Floorplanner-catalogus (alleen FML-adapter)
 - **`mirrored`:** deuren = scharnier/draai; driehoekraam = L/R via `mirrored[0]` (overige ramen symmetrisch)
 - **Objectlabel (optioneel):** `name`, `showLabel`, `name_x`, `name_y` — vastgemaakt aan de opening (geen `labels[]`). Roundtrip + schaal/spiegel/rotatie; geen eigen UI.
 - **Deur-tags** (voor/achter/binnen): persistent FML-veld nog te bevestigen via roundtrip — `klant-eisen-v1.md`
 - Raam: `z` + `z_height` voor sill en hoogte
 
-### Structurele openingstypes (refid)
+### Structurele openingstypes (domein-`kind` → FML-`refid`)
 
-Twee lagen: **structureel type** → `refid`; **deur-tag** (voor/achter/binnen) → semantisch, orthogonaal. Zie `klant-eisen-v1.md` §2.
+Twee lagen: **structureel type** → domein-`kind` / FML-`refid`; **deur-tag** (voor/achter/binnen) → semantisch, orthogonaal. Zie `klant-eisen-v1.md` §2.
 
 | Structureel type | Exportvorm | refid-status |
 |----------------|------------|--------------|

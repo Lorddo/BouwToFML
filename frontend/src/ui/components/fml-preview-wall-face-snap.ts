@@ -1,5 +1,9 @@
 import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
-import type { Point2D, Wall } from '@/core/fml/types'
+import {
+  collectManualDimensionEndpoints,
+  manualsAsSnapWalls,
+} from '@/core/fml/offset-dimension-line'
+import type { FloorDimension, Point2D, Wall } from '@/core/fml/types'
 import { snapPointToOuterWallFaces } from '@/core/fml/wall-outer-face'
 import { WALL_AXIS_EPS_CM } from './fml-preview-junction-core'
 import { closestPointInRadius, snapDrawWallEndpoint } from './fml-preview-junction-snap'
@@ -206,6 +210,47 @@ export function snapDrawPointToWallFaces(
 
 /** Grotere radius + oneindige H/V-assen voor handmatige maten buiten de footprint. */
 export const MANUAL_DIM_FACE_SNAP_CM = 60
+
+/**
+ * Muurfaces + andere handmatige maatlijnen (assen én einden).
+ * Ctrl = `snapDisabled`. Shift-H/V blijft via `lockAxis` + `axisAnchor`.
+ */
+export function snapDrawPointWithManualDimensions(
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+  manuals: ReadonlyArray<Pick<FloorDimension, 'id' | 'a' | 'b'>>,
+  point: Point2D,
+  opts?: {
+    axisAnchor?: Point2D
+    lockAxis?: boolean
+    snapDisabled?: boolean
+    radiusCm?: number
+    excludeDimensionId?: string | null
+  },
+): Point2D {
+  const radius = opts?.radiusCm ?? MANUAL_DIM_FACE_SNAP_CM
+  const snapDisabled = opts?.snapDisabled === true
+  const extras = manualsAsSnapWalls(manuals, opts?.excludeDimensionId)
+  let next = snapDrawPointToWallFaces([...walls, ...extras], point, {
+    axisAnchor: opts?.axisAnchor,
+    lockAxis: opts?.lockAxis,
+    snapDisabled,
+    radiusCm: radius,
+    infiniteAxes: true,
+  })
+  if (snapDisabled) return next
+  const corner = closestPointInRadius(
+    collectManualDimensionEndpoints(manuals, opts?.excludeDimensionId),
+    next,
+    radius,
+  )
+  if (!corner) return next
+  const anchor = opts?.axisAnchor
+  if (anchor && opts?.lockAxis) {
+    const locked = snapDrawWallEndpoint(anchor, corner, true)
+    if (Math.abs(locked.x - corner.x) > 1e-6 || Math.abs(locked.y - corner.y) > 1e-6) return next
+  }
+  return corner
+}
 
 function asZeroThicknessWall(
   a: Point2D,

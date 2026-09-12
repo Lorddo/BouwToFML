@@ -1,0 +1,119 @@
+{
+  "beschrijving": "FML-adapter: OpeningKind → canonieke Floorplanner-refid + aliases (import).",
+  "laatste_update": "2026-09-11",
+  "entries": [
+    {
+      "kind": "door.single",
+      "canonical": "0434246537840a3326e305dbe7b9c355743e6e93",
+      "aliases": [
+        "200",
+        "2cb4a1c74ec301ab0fdc762deb37eaf0e28d9ecc",
+        "eec7e3d89097fc1a9b5ec153b0148cf6f52222dc"
+      ]
+    },
+    {
+      "kind": "door.closet",
+      "canonical": "d34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9",
+      "aliases": []
+    },
+    {
+      "kind": "door.passage",
+      "canonical": "181e49d1e848e8668befb4ee93bb5a2ec86b017c",
+      "aliases": []
+    },
+    {
+      "kind": "door.archway",
+      "canonical": "047a2a4afa369865012e7925b94c11a817ff0c69",
+      "aliases": []
+    },
+    {
+      "kind": "door.french_balcony",
+      "canonical": "9c845cf2ad8de220b65ee4dedeeb28ba4d750e21",
+      "aliases": []
+    },
+    {
+      "kind": "door.double",
+      "canonical": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
+      "aliases": []
+    },
+    {
+      "kind": "door.double_solid",
+      "canonical": "9c1479d9dfc482859aea10b9dd67f5e7773fff6d",
+      "aliases": [
+        "568f1c990a44f774c52d16d599b29f0e61767616"
+      ]
+    },
+    {
+      "kind": "door.bifold",
+      "canonical": "e7ef286f1690491cf28bf8586c2b9624be881dba",
+      "aliases": []
+    },
+    {
+      "kind": "door.bifold_double",
+      "canonical": "919e3f1aaa05cd6b38b843f44573261442e38caa",
+      "aliases": []
+    },
+    {
+      "kind": "door.pocket",
+      "canonical": "216",
+      "aliases": [
+        "df95e84f01163fe9983d43d088551813e40e3e2f",
+        "f0b8b6d3772692611c44a04dc17e0b503a1eb5eb"
+      ]
+    },
+    {
+      "kind": "door.sliding_single",
+      "canonical": "d2785cc45c9c0ec86644135d22fa9ac9c49bcad6",
+      "aliases": []
+    },
+    {
+      "kind": "door.sliding",
+      "canonical": "1cdb4e6092e998630e7881667f2ddedafa3b0eb9",
+      "aliases": [
+        "f54db5adfdca7fad8fa792c1d5872c9567ff8d5d"
+      ]
+    },
+    {
+      "kind": "door.garage",
+      "canonical": "37bb0bbe45ba0a5efda34f3f1e0b7ace63084e7f",
+      "aliases": []
+    },
+    {
+      "kind": "window.single",
+      "canonical": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
+      "aliases": [
+        "14980facdeef5985d186e6767ee5300a1845abbc"
+      ]
+    },
+    {
+      "kind": "window.double",
+      "canonical": "bbf86e131112adca8869e9970229a71d7ff3fc28",
+      "aliases": []
+    },
+    {
+      "kind": "window.triple",
+      "canonical": "e3296a727699a3fc70e70dfec4ab715ed368ef63",
+      "aliases": []
+    },
+    {
+      "kind": "window.round",
+      "canonical": "6da47b0a60330d19716d716046ec6c72c19d2cdb",
+      "aliases": []
+    },
+    {
+      "kind": "window.half_round",
+      "canonical": "65d378c39d0183c82927e4ed7f8be6b224cf1df8",
+      "aliases": []
+    },
+    {
+      "kind": "window.triangle",
+      "canonical": "db1a3a6fceaae4487bda6b761df83ea75d9996c5",
+      "aliases": []
+    },
+    {
+      "kind": "window.blind",
+      "canonical": "327e76e3a132e358fef8757471f4989e93323b03",
+      "aliases": []
+    }
+  ]
+}

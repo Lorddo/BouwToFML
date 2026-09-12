@@ -3,9 +3,8 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
 import {
-  CLOSET_DOOR_REFID,
-  DOOR_FML_TEMPLATE_OPTIONS,
-  resolveDoorFmlTemplateRefId,
+  DOOR_TEMPLATE_KIND_OPTIONS,
+  resolveDoorTemplateKind,
 } from '@/core/fml/types'
 import { SELECTION_COLORS } from '@/platform/selection'
 import type { SelectionRect } from '@/platform/selection'
@@ -137,8 +136,8 @@ const measuresByRectId = computed(() => {
   return map
 })
 
-function doorTemplateLabel(refid: string): string {
-  return refid === CLOSET_DOOR_REFID
+function doorTemplateLabel(kind: string): string {
+  return kind === 'door.closet'
     ? t('preprocess.refs.templateCloset')
     : t('preprocess.refs.templateStandard')
 }
@@ -353,14 +352,14 @@ useToolbeltHotkey('Escape', () => emit('deactivateDrawMode'), {
         >
           <span class="door-label">{{ t('preprocess.refs.doorN', { n: index + 1 }) }}</span>
           <select
-            :value="resolveDoorFmlTemplateRefId(rect.fmlRefId)"
+            :value="resolveDoorTemplateKind(rect.fmlRefId)"
             @click.stop
             @change="
               $emit('updateDoorFmlRefId', rect.id, ($event.target as HTMLSelectElement).value)
             "
           >
-            <option v-for="opt in DOOR_FML_TEMPLATE_OPTIONS" :key="opt.refid" :value="opt.refid">
-              {{ doorTemplateLabel(opt.refid) }}
+            <option v-for="opt in DOOR_TEMPLATE_KIND_OPTIONS" :key="opt.kind" :value="opt.kind">
+              {{ doorTemplateLabel(opt.kind) }}
             </option>
           </select>
         </li>

@@ -1,12 +1,13 @@
 import { ref, type Ref } from 'vue'
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { FloorDimension, Point2D, Wall } from '@/core/fml/types'
 import {
   MANUAL_DIM_FACE_SNAP_CM,
   snapDrawPointToWallFaces,
+  snapDrawPointWithManualDimensions,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/fml-preview-wall-face-snap'
 import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/fml/slice-offset-snap'
-import type { BtfSlice } from '@/core/fml/btf-slices'
+import type { PlanSlice } from '@/core/fml/plan-slices'
 import type { RenderJunction } from './useFmlPreviewRenderModel'
 import { type MeasureLine, measureDistanceCm } from './fml-preview-measure'
 
@@ -36,8 +37,10 @@ export function useFmlPreviewMeasure(options: {
   /** p = plaatsing (eerste), m = meten (tweede). */
   onCommitSlicer?: (p: Point2D, m: Point2D) => void
   /** Slicer offset-snap: bestaande slices + voorkeursafstand. */
-  getSlicerSlices?: () => ReadonlyArray<BtfSlice>
+  getSlicerSlices?: () => ReadonlyArray<PlanSlice>
   getSlicerOffsetSnapCm?: () => number
+  /** Andere handmatige maten (assen + einden) bij tekenen. */
+  getManualDimensions?: () => ReadonlyArray<Pick<FloorDimension, 'id' | 'a' | 'b'>>
 }) {
   const measurePreview = ref<{ a: Point2D; b: Point2D } | null>(null)
   const measureLines = ref<MeasureLine[]>([])
@@ -57,13 +60,22 @@ export function useFmlPreviewMeasure(options: {
     // Overige modes: Shift = H/V.
     const lockAxis = mode === 'slicer' ? !snapDisabled : options.shiftPressed.value
     const anchor = opts?.axisAnchor
-    let point = snapDrawPointToWallFaces(options.getWalls(), cm, {
-      axisAnchor: anchor,
-      lockAxis,
-      snapDisabled,
-      radiusCm: radius,
-      infiniteAxes,
-    })
+    const manuals = mode === 'manual' ? (options.getManualDimensions?.() ?? []) : []
+    let point =
+      mode === 'manual'
+        ? snapDrawPointWithManualDimensions(options.getWalls(), manuals, cm, {
+            axisAnchor: anchor,
+            lockAxis,
+            snapDisabled,
+            radiusCm: radius,
+          })
+        : snapDrawPointToWallFaces(options.getWalls(), cm, {
+            axisAnchor: anchor,
+            lockAxis,
+            snapDisabled,
+            radiusCm: radius,
+            infiniteAxes,
+          })
     // Slicer: P↔P soft-snap (onderlinge place-offset). P↔M niet forceren.
     if (mode === 'slicer' && !snapDisabled && !anchor) {
       point = snapSlicerPPoint({

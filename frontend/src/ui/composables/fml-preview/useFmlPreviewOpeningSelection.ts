@@ -224,10 +224,10 @@ export function useFmlPreviewOpeningSelection(options: {
     if (openingType !== 'door' && openingType !== 'window') return
     if (!selected.every((item) => item.opening.type === openingType)) return
 
-    const refid =
+    const kind =
       openingType === 'window'
-        ? resolveWindowAddPreset(subtype as WindowAddSubtype).refid
-        : resolveDoorAddPreset(subtype as DoorAddSubtype).refid
+        ? resolveWindowAddPreset(subtype as WindowAddSubtype).kind
+        : resolveDoorAddPreset(subtype as DoorAddSubtype).kind
 
     openingSubtypeDraft.value = subtype
     openingSubtypeMixed.value = false
@@ -235,7 +235,7 @@ export function useFmlPreviewOpeningSelection(options: {
     for (const openingId of openingIds) {
       const located = editor.resolveOpening(openingId)
       if (!located || located.opening.type !== openingType) continue
-      editor.updateOpening(openingId, { refid })
+      editor.updateOpening(openingId, { kind })
     }
     syncOpeningDraftFromSelection()
     syncPlanToParent()
@@ -440,7 +440,7 @@ export function useFmlPreviewOpeningSelection(options: {
       if (!located) continue
       const canMirror =
         located.opening.type === 'door' ||
-        isTriangleWindow(located.opening.type, located.opening.refid)
+        isTriangleWindow(located.opening.type, located.opening.kind)
       if (!canMirror) continue
       const hingeAtStart = params.hingeAtStart ?? resolveHingeAtStart(located.opening.mirrored)
       const swingRight =
@@ -507,7 +507,7 @@ export function useFmlPreviewOpeningSelection(options: {
     if (selected.length !== 1) return
     const { opening } = selected[0]
     if (opening.type === 'window') {
-      const subtype = resolveWindowSubtypeFromRefid(opening.refid)
+      const subtype = resolveWindowSubtypeFromRefid(opening.kind)
       const width = clampOpeningWidth(opening.width)
       const sillZ = resolveWindowSillZ(opening)
       const height = resolveOpeningHeight(opening)
@@ -527,7 +527,7 @@ export function useFmlPreviewOpeningSelection(options: {
       return
     }
 
-    const subtype = resolveDoorSubtypeFromRefid(opening.refid)
+    const subtype = resolveDoorSubtypeFromRefid(opening.kind)
     const width = clampOpeningWidth(opening.width)
     const doorHeight = Math.round(opening.z_height ?? DEFAULT_FML_DOOR_HEIGHT_CM)
     const doorSill = Math.round(opening.z ?? 0)

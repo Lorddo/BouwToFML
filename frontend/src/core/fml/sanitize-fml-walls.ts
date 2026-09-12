@@ -15,7 +15,7 @@ import {
 import type { WallIdRemap } from './facade-groups'
 import { materializeWallJunctionsDetailed } from './materialize-wall-junctions'
 import type { Opening, Point2D, Wall } from './types'
-import { splitWallEndpointExtras } from './wall-endpoint-height'
+import { promoteWallElevationFromExtras, splitWallEndpointExtras } from './wall-endpoint-height'
 
 /** Import-knoopjes die 1 mm uit elkaar liggen → één punt. */
 export const SANITIZE_WELD_EPS_CM = 0.25
@@ -213,6 +213,8 @@ function splitWallAtAlong(
     }
   }
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, t)
+  const firstEnds = promoteWallElevationFromExtras(firstExtras)
+  const secondEnds = promoteWallElevationFromExtras(secondExtras)
   const newId = newSplitId(wall.id)
   return {
     walls: [
@@ -220,14 +222,16 @@ function splitWallAtAlong(
         ...wall,
         b: { ...split },
         openings: firstOpenings,
-        extras: firstExtras,
+        extras: firstEnds.extras,
+        elevation: firstEnds.elevation,
       },
       {
         ...wall,
         id: newId,
         a: { ...split },
         openings: secondOpenings,
-        extras: secondExtras,
+        extras: secondEnds.extras,
+        elevation: secondEnds.elevation,
       },
     ],
     remap: { fromId: wall.id, intoIds: [wall.id, newId] },

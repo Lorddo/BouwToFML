@@ -16,6 +16,11 @@ export interface FmlChromeDialogRequest {
   cancelLabel?: string
   /** Voor `listEdit` (namen) en `choice` (opties; `id` = waarde). */
   listItems?: FacadeGroupEditRow[]
+  /** listEdit: +/− rijen (gevelgroep-catalogus). */
+  listManage?: boolean
+  listAddLabel?: string
+  listRemoveLabel?: string
+  defaultNewName?: string
 }
 
 export interface FmlChromeDialogState {
@@ -190,6 +195,29 @@ export async function promptFmlChromeChoice(
   return typeof result === 'string' && choices.some((row) => row.id === result) ? result : null
 }
 
+export type FacadeSelectScope = 'floor' | 'all'
+
+/** Chip «Selecteer»: huidige verdieping of alle verdiepingen. Null = geannuleerd. */
+export async function promptFacadeSelectScope(params?: {
+  name?: string
+}): Promise<FacadeSelectScope | null> {
+  const name = params?.name?.trim()
+  const picked = await promptFmlChromeChoice({
+    title: tGlobal('result.toolbar.facadeGroupSelectScopeTitle'),
+    message: name
+      ? tGlobal('result.toolbar.facadeGroupSelectScopeMessage', { name })
+      : tGlobal('result.toolbar.facadeGroupSelectScopeHint'),
+    defaultValue: 'floor',
+    listItems: [
+      { id: 'floor', name: tGlobal('result.toolbar.facadeGroupSelectScopeFloor') },
+      { id: 'all', name: tGlobal('result.toolbar.facadeGroupSelectScopeAll') },
+    ],
+    confirmLabel: tGlobal('common.apply'),
+  })
+  if (picked === 'floor' || picked === 'all') return picked
+  return null
+}
+
 export async function confirmFacadeStackedFloors(params: {
   count: number
   mode: 'assign' | 'detach'
@@ -227,7 +255,7 @@ export async function promptFacadeGroupName(opts?: {
   return trimmed.length > 0 ? trimmed : null
 }
 
-/** Bewerk alle gevelgroep-namen in één dialoog. Null = geannuleerd. */
+/** Bewerk gevelgroepen (naam, toevoegen, verwijderen). Null = geannuleerd. */
 export async function promptFacadeGroupsEdit(
   groups: readonly FacadeGroupEditRow[],
 ): Promise<FacadeGroupEditRow[] | null> {
@@ -236,6 +264,10 @@ export async function promptFacadeGroupsEdit(
     title: tGlobal('result.toolbar.facadeGroupEditAllTitle'),
     message: tGlobal('result.toolbar.facadeGroupEditAllHint'),
     listItems: groups.map((g) => ({ id: g.id, name: g.name })),
+    listManage: true,
+    listAddLabel: tGlobal('settings.facadeGroupAdd'),
+    listRemoveLabel: tGlobal('settings.facadeGroupRemove'),
+    defaultNewName: tGlobal('result.toolbar.facadeGroupNameDefault'),
     confirmLabel: tGlobal('common.apply'),
   })
   if (!Array.isArray(result)) return null

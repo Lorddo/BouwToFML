@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Wall } from '@/core/fml/types'
-import { buildSelectedJunctionPanel } from '@/ui/composables/fml-preview/fml-preview-selected-panels'
+import type { RenderModel } from '@/ui/composables/fml-preview/fml-preview-render-types'
+import {
+  buildSelectedJunctionPanel,
+  buildSelectedWallPanel,
+} from '@/ui/composables/fml-preview/fml-preview-selected-panels'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'id' | 'a' | 'b'>): Wall {
   return {
@@ -9,6 +13,31 @@ function wall(partial: Partial<Wall> & Pick<Wall, 'id' | 'a' | 'b'>): Wall {
     ...partial,
   }
 }
+
+function wallModel(item: Wall): RenderModel {
+  return {
+    wallLines: [
+      {
+        id: item.id,
+        wall: item,
+        points: [],
+        strokeWidth: 1,
+        a: item.a,
+        b: item.b,
+      },
+    ],
+    ridgeLines: [],
+  } as RenderModel
+}
+
+describe('buildSelectedWallPanel', () => {
+  it('zet quick vs full op de muur-strip', () => {
+    const model = wallModel(wall({ id: 'w1', a: { x: 0, y: 0 }, b: { x: 100, y: 0 } }))
+    expect(buildSelectedWallPanel(model, ['w1'], 280)?.mode).toBe('full')
+    expect(buildSelectedWallPanel(model, ['w1'], 280, 'quick')?.mode).toBe('quick')
+    expect(buildSelectedWallPanel(model, ['w1'], 280, 'full')?.canSplit).toBe(true)
+  })
+})
 
 describe('buildSelectedJunctionPanel', () => {
   it('toont knoophoogte ook als aangesloten muren verschillende hoogtes hebben', () => {

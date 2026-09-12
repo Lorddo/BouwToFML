@@ -16,6 +16,7 @@ import {
   makeRoofSurface,
   ROOF_SURFACE_COLOR,
   setRidgeSurfacesOnFloor,
+  syncRoofPlaneGuidsFromDesigns,
 } from '@/core/fml/roof-planes'
 import { snapRoofVertexToWallFace } from '@/core/fml/roof-vertex-snap'
 import type { FloorPlan, Wall } from '@/core/fml/types'
@@ -125,5 +126,43 @@ describe('roof-vertex-snap', () => {
     expect(makeRoofSurface({ id: 'c', poly, origin: 'manual', color: '#88AACC' }).color).toBe(
       '#88AACC',
     )
+  })
+
+  it('.plg-roundtrip: dakvlak origin + roofPlanes GUID-lijst', () => {
+    const plan = createEmptyFloorPlan({ name: 'DakvlakPlg' })
+    const surface = makeRoofSurface({
+      id: 'roof-1',
+      origin: 'manual',
+      poly: [
+        { x: 0, y: 0, z: 280 },
+        { x: 100, y: 0, z: 280 },
+        { x: 100, y: 100, z: 400 },
+        { x: 0, y: 100, z: 400 },
+      ],
+    })
+    expect(surface.origin).toBe('manual')
+    expect(surface.extras?.btfOrigin).toBeUndefined()
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [surface])
+    syncRoofPlaneGuidsFromDesigns(plan)
+    expect(plan.roof?.planes.surfaceGuids).toEqual(['roof-1'])
+
+    const raw = JSON.parse(buildFmlV3(plan)) as {
+      settings: { roofPlanes?: { surfaceGuids: string[] } }
+      floors: Array<{
+        designs?: Array<{ surfaces?: Array<{ id: string; btfOrigin?: string }> }>
+      }>
+    }
+    expect(raw.settings.roofPlanes?.surfaceGuids).toEqual(['roof-1'])
+    const dakSurf = raw.floors[0].designs
+      ?.flatMap((d) => d.surfaces ?? [])
+      .find((s) => s.guid === 'roof-1')
+    expect(dakSurf?.btfOrigin).toBe('manual')
+
+    const imported = importFmlV3(raw).plan
+    expect(imported.roof?.planes.surfaceGuids).toEqual(['roof-1'])
+    expect(imported.source?.settings?.roofPlanes).toBeUndefined()
+    const again = listRidgeSurfacesOnFloor(imported.floors[0])[0]
+    expect(again?.origin).toBe('manual')
+    expect(again?.extras?.btfOrigin).toBeUndefined()
   })
 })

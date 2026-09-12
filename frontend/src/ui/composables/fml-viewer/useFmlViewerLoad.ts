@@ -4,9 +4,9 @@ import {
   createEmptyFloorPlan,
   emptyFloorNameIndexed,
 } from '@/core/fml/empty-floor-plan'
-import { pruneFacadeGroups } from '@/core/fml/facade-groups'
-import { importFmlV3 } from '@/core/fml/importFmlV3'
+import { ensureDefaultFacadeGroups, pruneFacadeGroups } from '@/core/fml/facade-groups'
 import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
+import { parseEditorPlanFile } from '@/ui/composables/fml-viewer/parse-editor-plan-file'
 import {
   rebasePlanToItemRefid,
   type RebasePlanToItemRefidResult,
@@ -159,7 +159,10 @@ export function useFmlViewerLoad(deps: {
       level: nextIndex,
       wallHeightCm: defaults.wallHeightCm,
     })
-    deps.plan.value = seedPlanFromUserSettings({ ...current, floors: [...current.floors, floor] })
+    deps.plan.value = seedPlanFromUserSettings(
+      { ...current, floors: [...current.floors, floor] },
+      { facadeCatalog: true },
+    )
     deps.addFloorDefaultsSlot(nextIndex, defaults)
     await selectFloor(nextIndex)
   }
@@ -198,12 +201,76 @@ export function useFmlViewerLoad(deps: {
     const defaults = sessionDefaultsFromSettings()
     deps.plan.value = seedPlanFromUserSettings(
       createEmptyFloorPlan({ wallHeightCm: defaults.wallHeightCm }),
+      { facadeCatalog: true },
     )
     deps.sessionDefaults.value = defaults
     deps.hydrateFloorDefaultsFromPlan(deps.plan.value)
     deps.fmlOpacity.value = 0.8
     deps.hidePlanText.value = false
     resetTransientUi()
+  }
+
+  async function applyOpenedPlan(args: {
+    plan: FloorPlan
+    warnings: ImportWarning[]
+    sourceName: string
+    sessionDefaults?: ViewerSessionDefaults
+  }): Promise<void> {
+    pruneFacadeGroups(args.plan)
+    ensureDefaultFacadeGroups(args.plan, loadUserSettings().fmlViewer.facadeGroups)
+    deps.plan.value = applyJunctionSanitizeToPlan(args.plan)
+    deps.sessionDefaults.value =
+      args.sessionDefaults ?? seedViewerDefaultsFromPlan(args.plan, 0)
+    deps.hydrateFloorDefaultsFromPlan(args.plan)
+    deps.warnings.value = args.warnings
+    deps.fileName.value = args.sourceName
+    deps.activeFloorIndex.value = 0
+    deps.orientByFloor.value = {}
+    deps.pendingAlignRebase.value = null
+    deps.resetInspectState()
+    deps.cancelFmlRescale()
+    deps.cancelUnderlayScale()
+    await deps.syncUnderlayForActiveFloor()
+    const preview = rebasePlanToItemRefid(args.plan)
+    deps.pendingAlignRebase.value = preview.moved.length > 0 ? preview : null
+    await nextTick()
+    await yieldToPaint()
+  }
+
+  function failOpen(): void {
+    deps.plan.value = null
+    deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
+    deps.hydrateFloorDefaultsFromPlan(null)
+    deps.warnings.value = []
+    deps.fileName.value = null
+    deps.activeFloorIndex.value = 0
+    deps.orientByFloor.value = {}
+    deps.pendingAlignRebase.value = null
+    deps.resetInspectState()
+    deps.clearUnderlayState()
+  }
+
+  /** True als de editor al een getekende/geladen plattegrond heeft (niet leeg). */
+  function hasOpenContent(): boolean {
+    return editorPlanHasContent(deps.plan.value)
+  }
+
+  /** In-memory openen (converter → editor, geen download). */
+  async function loadPlan(plan: FloorPlan, sourceName: string): Promise<void> {
+    deps.error.value = null
+    deps.clearUnderlayState()
+    loadPhase.value = 'building'
+    loadFileName.value = sourceName
+    await yieldToPaint()
+    try {
+      await applyOpenedPlan({ plan, warnings: [], sourceName })
+    } catch (err) {
+      failOpen()
+      deps.error.value = err instanceof Error ? err.message : deps.t('viewer.importFailed')
+    } finally {
+      loadPhase.value = null
+      loadFileName.value = null
+    }
   }
 
   async function onFileInput(event: Event): Promise<void> {
@@ -223,39 +290,22 @@ export function useFmlViewerLoad(deps: {
       loadPhase.value = 'parsing'
       await yieldToPaint()
 
-      const parsed = importFmlV3(rawText)
+      const opened = parseEditorPlanFile(rawText)
       loadPhase.value = 'building'
       await yieldToPaint()
 
-      pruneFacadeGroups(parsed.plan)
-      deps.plan.value = applyJunctionSanitizeToPlan(parsed.plan)
-      deps.sessionDefaults.value = seedViewerDefaultsFromPlan(parsed.plan, 0)
-      deps.hydrateFloorDefaultsFromPlan(parsed.plan)
-      deps.warnings.value = parsed.warnings
-      deps.fileName.value = file.name
-      deps.activeFloorIndex.value = 0
-      deps.orientByFloor.value = {}
-      deps.pendingAlignRebase.value = null
-      deps.resetInspectState()
-      deps.cancelFmlRescale()
-      deps.cancelUnderlayScale()
-      await deps.syncUnderlayForActiveFloor()
-      const preview = rebasePlanToItemRefid(parsed.plan)
-      deps.pendingAlignRebase.value = preview.moved.length > 0 ? preview : null
-      await nextTick()
-      await yieldToPaint()
+      await applyOpenedPlan({
+        plan: opened.plan,
+        warnings: opened.warnings,
+        sourceName: file.name,
+        sessionDefaults:
+          opened.kind === 'plg' && opened.plgSettings
+            ? sessionDefaultsFromPartial(opened.plgSettings.defaults)
+            : undefined,
+      })
     } catch (err) {
-      deps.plan.value = null
-      deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
-      deps.hydrateFloorDefaultsFromPlan(null)
-      deps.warnings.value = []
-      deps.fileName.value = null
-      deps.activeFloorIndex.value = 0
-      deps.orientByFloor.value = {}
-      deps.pendingAlignRebase.value = null
-      deps.resetInspectState()
-      deps.clearUnderlayState()
-      deps.error.value = err instanceof Error ? err.message : 'FML import mislukt.'
+      failOpen()
+      deps.error.value = err instanceof Error ? err.message : deps.t('viewer.importFailed')
     } finally {
       loadPhase.value = null
       loadFileName.value = null
@@ -283,7 +333,20 @@ export function useFmlViewerLoad(deps: {
     addFloor,
     removeFloor,
     startNewPlan,
+    loadPlan,
+    hasOpenContent,
     onFileInput,
     clearPlan,
   }
+}
+
+/** Leeg «Nieuw plan» telt niet; muren/kamers/objecten wel. */
+export function editorPlanHasContent(plan: FloorPlan | null): boolean {
+  if (!plan) return false
+  return plan.floors.some(
+    (floor) =>
+      (floor.walls?.length ?? 0) > 0 ||
+      (floor.areas?.length ?? 0) > 0 ||
+      (floor.items?.length ?? 0) > 0,
+  )
 }

@@ -69,13 +69,8 @@ import {
   updatePlanOpening,
 } from '@/core/fml/elevation-openings'
 import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
-import {
-  CONCEPT_DOOR_REFID,
-  CONCEPT_WINDOW_REFID,
-  WINDOW_DOUBLE_REFID,
-  type FloorPlan,
-  type Wall,
-} from '@/core/fml/types'
+import { type FloorPlan,
+  type Wall } from '@/core/fml/types'
 import { makeEndpoint3D } from '@/core/fml/wall-endpoint-height'
 
 function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall {
@@ -330,16 +325,16 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 200,
       z_height: 200,
-      guid: 'win-clamp',
+      id: 'win-clamp',
     })
     const located = added.plan.floors[0]?.walls
       .find((item) => item.id === 'front-bg')
-      ?.openings.find((item) => item.guid === 'win-clamp')
+      ?.openings.find((item) => item.id === 'win-clamp')
     expect(located).toBeTruthy()
     expect((located!.z ?? 0) + (located!.z_height ?? 0)).toBeLessThanOrEqual(280)
   })
@@ -348,17 +343,17 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.5,
       width: 90,
       z: 80,
       z_height: 140,
-      guid: 'win-keep-size',
+      id: 'win-keep-size',
     })
     const next = updatePlanOpening(added.plan, added.openingId!, { t: 0.2, z: 250 })
     const located = next.floors[0]?.walls
       .find((item) => item.id === 'front-bg')
-      ?.openings.find((item) => item.guid === 'win-keep-size')
+      ?.openings.find((item) => item.id === 'win-keep-size')
     expect(located?.width).toBe(90)
     expect(located?.z_height).toBe(140)
     expect((located?.z ?? 0) + 140).toBeLessThanOrEqual(280)
@@ -368,12 +363,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.4,
       width: 80,
       z: 100,
       z_height: 140,
-      guid: 'win-guid-1',
+      id: 'win-guid-1',
     })
     expect(added.openingId).toBeTruthy()
     const elev = projectFacadeElevation(added.plan, 'G1')
@@ -408,12 +403,12 @@ describe('facade-elevation', () => {
       'front',
       {
         type: 'window',
-        refid: CONCEPT_WINDOW_REFID,
+        kind: 'window.single',
         t: 0.5,
         width: 100,
         z: 80,
         z_height: 140,
-        guid: 'shared-win',
+        id: 'shared-win',
       },
       0,
     )
@@ -422,12 +417,12 @@ describe('facade-elevation', () => {
       'front',
       {
         type: 'window',
-        refid: CONCEPT_WINDOW_REFID,
+        kind: 'window.single',
         t: 0.5,
         width: 100,
         z: 80,
         z_height: 140,
-        guid: 'shared-win',
+        id: 'shared-win',
       },
       1,
     )
@@ -438,21 +433,21 @@ describe('facade-elevation', () => {
     expect(upRect?.openingId).toBe(both.openingId)
     expect(bgRect?.openingId).not.toBe(upRect?.openingId)
 
-    const next = updatePlanOpening(both.plan, bg.openingId!, { refid: WINDOW_DOUBLE_REFID })
-    expect(next.floors[0]?.walls[0]?.openings[0]?.refid).toBe(WINDOW_DOUBLE_REFID)
-    expect(next.floors[1]?.walls[0]?.openings[0]?.refid).toBe(CONCEPT_WINDOW_REFID)
+    const next = updatePlanOpening(both.plan, bg.openingId!, { kind: 'window.double' })
+    expect(next.floors[0]?.walls[0]?.openings[0]?.kind).toBe('window.double')
+    expect(next.floors[1]?.walls[0]?.openings[0]?.kind).toBe('window.single')
   })
 
   it('schrijft mirrored alleen op de geklikte floor-deur', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-mirror',
+      id: 'door-mirror',
       mirrored: [0, 0],
     })
     const next = updatePlanOpening(added.plan, added.openingId!, { mirrored: [1, 1] })
@@ -463,12 +458,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-guid-1',
+      id: 'door-guid-1',
     })
     const elev = projectFacadeElevation(added.plan, 'G1')
     const rect = elev!.openings[0]
@@ -481,7 +476,7 @@ describe('facade-elevation', () => {
     expect(openingOverlapRatio(inner, rect)).toBeGreaterThan(0.5)
   })
 
-  it('hasElevationFacadeGroups negeert stamp; extras roundtrip', () => {
+  it('hasElevationFacadeGroups negeert stamp; stack/elevations typed, FML stript', () => {
     const plan = twoFloorPlan()
     ensureStampFacadeGroup(plan)
     expect(hasElevationFacadeGroups(plan)).toBe(true)
@@ -496,17 +491,27 @@ describe('facade-elevation', () => {
       rotation: 0,
       url: 'data:image/png;base64,xx',
     })
-    const json = buildFmlV3(withDraw)
-    expect(json).toContain('floorStack')
-    expect(json).toContain('elevationViews')
-    const imported = importFmlV3(json)
-    expect(imported.plan.source?.settings?.floorStack).toMatchObject({
+    // Getypte domeinvelden (`.plg`); niet meer via settings-extras.
+    expect(withDraw.roof?.stack).toMatchObject({
       nokThicknessCm: 40,
       floors: expect.arrayContaining([{ level: 1, thicknessCm: 25 }]),
     })
-    expect(imported.plan.source?.settings?.elevationViews).toEqual([
-      expect.objectContaining({ facadeGroupId: 'G1' }),
+    expect(withDraw.elevations?.views).toEqual([
+      expect.objectContaining({
+        facadeGroupId: 'G1',
+        drawing: expect.objectContaining({ url: 'data:image/png;base64,xx' }),
+      }),
     ])
+    expect(withDraw.source?.settings?.floorStack).toBeUndefined()
+    expect(withDraw.source?.settings?.elevationViews).toBeUndefined()
+
+    // Floorplanner-export stript bewust (zelfde contract als build-fml-export-safe).
+    const raw = JSON.parse(buildFmlV3(withDraw))
+    expect(raw.settings.floorStack).toBeUndefined()
+    expect(raw.settings.elevationViews).toBeUndefined()
+    const imported = importFmlV3(JSON.stringify(raw))
+    expect(imported.plan.source?.settings?.floorStack).toBeUndefined()
+    expect(imported.plan.source?.settings?.elevationViews).toBeUndefined()
     expect(DEFAULT_NOK_THICKNESS_CM).toBe(30)
   })
 
@@ -771,7 +776,7 @@ describe('facade-elevation', () => {
     expect(elevE!.roofPlanes.at(-1)?.id).toBe('roof-t')
   })
 
-  it('dakvlak in aanzicht: nokdikte om het hart, handles blijven op het vlak', () => {
+  it('dakvlak in aanzicht: nokdikte omhoog vanaf onderkant, handles blijven op het vlak', () => {
     const H = 260
     const end = makeEndpoint3D(0, H)
     const thick = (id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall => ({
@@ -804,9 +809,9 @@ describe('facade-elevation', () => {
     const topMinY = Math.min(...plane.points.map((point) => point.y))
     const fillMinY = Math.min(...plane.fillPoints.map((point) => point.y))
     const fillMaxY = Math.max(...plane.fillPoints.map((point) => point.y))
-    const hartMaxY = Math.max(...plane.points.map((point) => point.y))
-    expect(fillMinY).toBeCloseTo(topMinY - 20, 5)
-    expect(fillMaxY).toBeCloseTo(hartMaxY + 20, 5)
+    const undersideMaxY = Math.max(...plane.points.map((point) => point.y))
+    expect(fillMinY).toBeCloseTo(topMinY - 40, 5)
+    expect(fillMaxY).toBeCloseTo(undersideMaxY, 5)
     expect(hitElevationRoofVertex(plane, plane.points[0])).toBe(0)
     const aboveTop = { x: plane.points[0].x, y: plane.points[0].y - 20 }
     expect(hitElevationRoofPlane(elev!, aboveTop)?.id).toBe(plane.id)
@@ -820,19 +825,36 @@ describe('facade-elevation', () => {
     ]
     expect(thickenElevationRoofPoly(ring, 0)).toEqual(ring)
     const thick = thickenElevationRoofPoly(ring, 12)
-    expect(Math.min(...thick.map((p) => p.y))).toBe(-6)
-    expect(Math.max(...thick.map((p) => p.y))).toBe(16)
+    expect(Math.min(...thick.map((p) => p.y))).toBe(-12)
+    expect(Math.max(...thick.map((p) => p.y))).toBe(10)
   })
 
-  it('thickenElevationRoofPoly: kopse lijn wordt een plaat om het hart', () => {
+  it('thickenElevationRoofPoly: kopse lijn wordt een plaat omhoog vanaf de onderkant', () => {
     const line = [
       { x: 0, y: 0 },
       { x: 100, y: -80 },
     ]
     const thick = thickenElevationRoofPoly(line, 20)
     expect(thick.length).toBeGreaterThanOrEqual(3)
-    expect(Math.min(...thick.map((p) => p.y))).toBeCloseTo(-90, 5)
-    expect(Math.max(...thick.map((p) => p.y))).toBeCloseTo(10, 5)
+    expect(Math.min(...thick.map((p) => p.y))).toBeCloseTo(-100, 5)
+    expect(Math.max(...thick.map((p) => p.y))).toBeCloseTo(0, 5)
+  })
+
+  it('dakvlak-punt Z mag tot onderkant vloerplaat', () => {
+    const plan = attachGableRoofs(createEmptyFloorPlan({ name: 'Goot', wallHeightCm: 260 }))
+    const surface = listRidgeSurfacesOnFloor(plan.floors[0])[0]
+    expect(surface).toBeTruthy()
+    const minZ = -DEFAULT_FLOOR_THICKNESS_CM
+    const lowered = setRidgeSurfaceVertexZ(plan, surface!.id, 0, minZ)
+    expect(
+      listRidgeSurfacesOnFloor(lowered.floors[0]).find((item) => item.id === surface!.id)?.poly[0]
+        ?.z,
+    ).toBe(minZ)
+    const clamped = setRidgeSurfaceVertexZ(plan, surface!.id, 0, -200)
+    expect(
+      listRidgeSurfacesOnFloor(clamped.floors[0]).find((item) => item.id === surface!.id)?.poly[0]
+        ?.z,
+    ).toBe(minZ)
   })
 
   it('dakvlak: geen projectie van zijgevels die het vlak raken', () => {
@@ -1024,12 +1046,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-transom',
+      id: 'door-transom',
       bovenlicht: true,
       bovenlichtHeightCm: 20,
       bovenlichtGapCm: 0,
@@ -1045,7 +1067,7 @@ describe('facade-elevation', () => {
     // Gap 0: onderkant bovenlicht = bovenzijde deur; hoogte 20 cm (Y = −worldZ).
     expect(transom.y1).toBeCloseTo(door.y0, 5)
     expect(transom.y0).toBeCloseTo(door.y0 - 20, 5)
-    expect(transom.refid).toBe(CONCEPT_WINDOW_REFID)
+    expect(transom.kind).toBe('window.single')
     const glyph = glyphFromElevationRect(transom)
     expect(glyph.inner.x1 - glyph.inner.x0).toBeLessThan(transom.x1 - transom.x0)
     expect(glyph.inner.y1 - glyph.inner.y0).toBeLessThan(transom.y1 - transom.y0)
@@ -1055,12 +1077,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-no-transom',
+      id: 'door-no-transom',
       bovenlicht: false,
     })
     const elev = projectFacadeElevation(added.plan, 'G1', () => ({
@@ -1076,12 +1098,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-default-transom',
+      id: 'door-default-transom',
     })
     const elev = projectFacadeElevation(added.plan, 'G1', () => ({
       doorDefault: true,
@@ -1102,12 +1124,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-hit-transom',
+      id: 'door-hit-transom',
       bovenlicht: true,
       bovenlichtHeightCm: 20,
       bovenlichtGapCm: 0,
@@ -1127,21 +1149,21 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const first = addPlanOpening(plan, 'front-bg', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.5,
       width: 90,
       z: 80,
       z_height: 120,
-      guid: 'win-onder',
+      id: 'win-onder',
     })
     const stacked = addPlanOpening(first.plan, 'front-bg', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.5,
       width: 90,
       z: 80,
       z_height: 120,
-      guid: 'win-boven',
+      id: 'win-boven',
     })
     const elev = projectFacadeElevation(stacked.plan, 'G1')!
     expect(elev.openings.length).toBeGreaterThanOrEqual(2)
@@ -1168,12 +1190,12 @@ describe('facade-elevation', () => {
     assignWallsToGroup(plan, group.id, ['achter', 'serre'])
     const rear = addPlanOpening(plan, 'achter', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-achter',
+      id: 'door-achter',
       bovenlicht: true,
       bovenlichtHeightCm: 20,
       bovenlichtGapCm: 0,
@@ -1224,12 +1246,12 @@ describe('facade-elevation', () => {
     assignWallsToGroup(plan, group.id, ['gevel-l', 'gevel-r'])
     const added = addPlanOpening(plan, 'gevel-l', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.95,
       width: 80,
       z: 40,
       z_height: 180,
-      guid: 'win-naad',
+      id: 'win-naad',
     })
     const elev = projectFacadeElevation(added.plan, group.id)!
     const left = elev.walls.find((item) => item.wallId === 'gevel-l')!
@@ -1257,12 +1279,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const added = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-holes',
+      id: 'door-holes',
       bovenlicht: true,
       bovenlichtHeightCm: 20,
       bovenlichtGapCm: 0,
@@ -1297,22 +1319,22 @@ describe('facade-elevation', () => {
     }
     const withDoor = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-loose',
+      id: 'door-loose',
       bovenlicht: true,
     })
     const withTransom = addPlanOpening(withDoor.plan, 'front-bg', {
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.5,
       width: 90,
       z: 230,
       z_height: 40,
-      guid: 'door-loose-bovenlicht',
+      id: 'door-loose-bovenlicht',
     })
     const elev = projectFacadeElevation(withTransom.plan, 'G1', () => ({
       doorDefault: true,
@@ -1329,12 +1351,12 @@ describe('facade-elevation', () => {
     const plan = twoFloorPlan()
     const forward = addPlanOpening(plan, 'front-bg', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-fwd',
+      id: 'door-fwd',
       mirrored: [0, 0],
     })
     const elevFwd = projectFacadeElevation(forward.plan, 'G1')
@@ -1346,12 +1368,12 @@ describe('facade-elevation', () => {
     assignWallsToGroup(reversed, group.id, ['front-rev'])
     const added = addPlanOpening(reversed, 'front-rev', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-rev',
+      id: 'door-rev',
       mirrored: [0, 0],
     })
     const elevRev = projectFacadeElevation(added.plan, group.id)
@@ -1361,5 +1383,51 @@ describe('facade-elevation', () => {
     const mid = (elevRev!.openings[0].x0 + elevRev!.openings[0].x1) / 2
     expect(handle).toBeTruthy()
     expect(handle!.cx).toBeLessThan(mid)
+  })
+})
+
+describe('dakkapel-randmuren op aanzicht', () => {
+  it('toont wang zonder gevelgroep, kamerschot niet, geen dubbel', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('front', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('d-front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+      wall('wang-l', { x: 100, y: 0 }, { x: 100, y: 120 }),
+      wall('split', { x: 175, y: 20 }, { x: 175, y: 100 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        roofKind: 'dormer',
+        roofParentId: 'parent',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 320 },
+          { x: 100, y: 120, z: 320 },
+        ],
+      }),
+    ])
+    const group = createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, group.id, ['front', 'd-front'])
+    const elev = projectFacadeElevation(plan, group.id)!
+    const wang = elev.walls.filter((item) => item.wallId === 'wang-l')
+    expect(wang.length).toBe(1)
+    expect(wang[0]?.axisEdit).toBe(true)
+    const dFront = elev.walls.filter((item) => item.wallId === 'd-front' && !item.ridge)
+    expect(dFront.length).toBe(1)
+    expect(dFront[0]?.axisEdit).toBe(true)
+    expect(elev.walls.some((item) => item.wallId === 'split')).toBe(false)
   })
 })

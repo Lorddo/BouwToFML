@@ -1,9 +1,44 @@
+import {
+  catalogFromLegacyLimits,
+  limitsFromCatalog,
+  normalizeThicknessCatalog,
+} from '@/core/fml/fml-wall-thickness-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { FloorMeta, ProjectFmlDefaults, ProjectMeta, ProjectState } from './types'
 
 /** Project-/floor-defaults uit user settings (localStorage), anders fabriekswaarden. */
 export function createDefaultFloorFmlDefaults(): ProjectFmlDefaults {
   return { ...loadUserSettings().defaults }
+}
+
+/**
+ * Alleen de muurdikte-catalogus (+ min/mid/max write-through) uit floor-defaults.
+ * Geen LBE-rects, geen meetbanden, geen hoogtes — voor «Onderlegger overnemen».
+ */
+export function thicknessCatalogPatchFromFloorDefaults(
+  defaults: Pick<
+    ProjectFmlDefaults,
+    'thicknessCms' | 'thicknessMinCm' | 'thicknessMidCm' | 'thicknessMaxCm'
+  >,
+): Pick<
+  ProjectFmlDefaults,
+  'thicknessCms' | 'thicknessMinCm' | 'thicknessMidCm' | 'thicknessMaxCm'
+> {
+  const catalog =
+    Array.isArray(defaults.thicknessCms) && defaults.thicknessCms.length > 0
+      ? normalizeThicknessCatalog(defaults.thicknessCms)
+      : catalogFromLegacyLimits({
+          minCm: defaults.thicknessMinCm,
+          midCm: defaults.thicknessMidCm,
+          maxCm: defaults.thicknessMaxCm,
+        })
+  const limits = limitsFromCatalog(catalog)
+  return {
+    thicknessCms: [...catalog],
+    thicknessMinCm: limits.minCm,
+    thicknessMidCm: limits.midCm,
+    thicknessMaxCm: limits.maxCm,
+  }
 }
 
 export function createProjectId(): string {

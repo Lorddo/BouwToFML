@@ -10,10 +10,15 @@ import {
   DEFAULT_FML_BAND_BOUNDARIES,
 } from '@/core/fml/fml-wall-thickness-tiers'
 import { cmPointToImagePx } from '@/core/fml/measure-underlay-wall-thickness'
+import {
+  transformPointByBounds,
+  type StampBounds,
+} from '@/core/fml/stamp-bounds'
 import { createCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
 import { WALL_BW_INK, WALL_BW_WHITE } from '@/cv/preprocess/compose-wall-bw'
 
-export type StampBounds = { x: number; y: number; width: number; height: number }
+export type { StampBounds }
+export { transformPointByBounds }
 
 export type StampBands = { min: boolean; mid: boolean; max: boolean }
 
@@ -100,19 +105,6 @@ export function centerAlignBounds(
     y: source.y + (ty - cy),
     width: source.width,
     height: source.height,
-  }
-}
-
-export function transformPointByBounds(
-  point: Point2D,
-  baseBounds: StampBounds,
-  bounds: StampBounds,
-): Point2D {
-  const sx = baseBounds.width > 1e-6 ? bounds.width / baseBounds.width : 1
-  const sy = baseBounds.height > 1e-6 ? bounds.height / baseBounds.height : 1
-  return {
-    x: bounds.x + (point.x - baseBounds.x) * sx,
-    y: bounds.y + (point.y - baseBounds.y) * sy,
   }
 }
 

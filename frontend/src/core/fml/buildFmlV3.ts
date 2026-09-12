@@ -1,4 +1,6 @@
 import { tally } from '@/core/diagnostics'
+import { FML_CONCEPT_ADAPTERS } from '../plg/fml-adapter/registry'
+import { fmlRefidForOpeningKind } from '../plg/fml-adapter/opening-fml-refids'
 import {
   BOVENLICHT_GAP_CM,
   BOVENLICHT_HEIGHT_CM,
@@ -11,7 +13,7 @@ import {
 } from './bovenlicht'
 import { ensureDesignsSynced } from './design-sync'
 import { dropEmptyRidgeDesign, isRidgeDesign } from './ridge-walls'
-import { BTF_SLICES_SETTINGS_KEY, filterManualDimensions, type BtfSlice } from './btf-slices'
+import { PLAN_SLICES_SETTINGS_KEY, filterManualDimensions, type PlanSlice } from './plan-slices'
 import { bakeSliceDimensions } from './slice-dimension-lines'
 import type { DimensionMode } from './fml-dimension-settings'
 import type {
@@ -28,8 +30,6 @@ import type {
   Opening,
   Wall,
 } from './types'
-import { CONCEPT_DOOR_REFID, CONCEPT_WINDOW_REFID } from './types'
-import { resolveRoomType, UNLABELED_AREA_COLOR } from './roomtype-catalog'
 import {
   DEFAULT_FML_DOOR_HEIGHT_CM,
   DEFAULT_FML_WALL_HEIGHT_CM,
@@ -37,6 +37,7 @@ import {
   DEFAULT_FML_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 import { wallElevationAtT, wallEndpoint3D } from './wall-endpoint-height'
+import { resolveRoomType, UNLABELED_AREA_COLOR } from './roomtype-catalog'
 import { STAMP_OWNED_EXTRA } from './stamp-owned'
 import { writeObjectLabel } from './object-label'
 import { ELEVATION_PROJECTION_SETTINGS_KEY, ELEVATION_VIEWS_SETTINGS_KEY } from './elevation-views'
@@ -76,6 +77,17 @@ export function maxWallTopHOnFloor(floor: Floor): number {
     }
   }
   return Math.round(maxH)
+}
+
+/**
+ * Floorplanner eist `floor.height` ≥ hoogste muurtop (anders 500 bij herladen).
+ * Alleen de bovenste verdieping tillen: een aanbouw/nok op BG mag de 1e niet
+ * op de nok zetten. Muur-`az`/`bz` blijven de echte toppen.
+ */
+export function exportFloorHeightCm(floor: Floor, hasFloorAbove: boolean): number {
+  const stored = Math.round(floor.height)
+  if (hasFloorAbove) return stored
+  return Math.max(stored, maxWallTopHOnFloor(floor))
 }
 
 export type BovenlichtDefaultResolver = boolean | ((floor: Floor, floorIndex: number) => boolean)
@@ -185,13 +197,14 @@ function shortGuid(): string {
 }
 
 function openingGuid(opening: Opening): string {
-  return opening.guid ?? shortGuid()
+  return opening.id || shortGuid()
 }
 
 function serializeOpening(op: Opening): Record<string, unknown> {
   const out: Record<string, unknown> = {
     ...(op.extras ?? {}),
-    refid: op.refid || (op.type === 'window' ? CONCEPT_WINDOW_REFID : CONCEPT_DOOR_REFID),
+    // refid/guid worden gezet door opening-kind adapter
+    refid: fmlRefidForOpeningKind(op.kind),
     t: op.t,
     type: op.type,
     width: op.width,
@@ -205,6 +218,9 @@ function serializeOpening(op: Opening): Record<string, unknown> {
     guid: openingGuid(op),
   }
   writeObjectLabel(out, op)
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.serializeOpening?.(op, out)
+  }
   return out
 }
 
@@ -309,6 +325,9 @@ function serializeSurface(surface: FloorSurface, forceFillColor?: string): Recor
   if (surface.isRoof === true) out.isRoof = true
   if (surface.pattern != null) out.pattern = surface.pattern
   if (out.roomstyle_id == null) out.roomstyle_id = ''
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.serializeSurface?.(surface, out)
+  }
   return out
 }
 
@@ -356,7 +375,7 @@ function serializeDimension(dim: FloorDimension): Record<string, unknown> {
 function serializeItem(item: FloorItem): Record<string, unknown> {
   const out: Record<string, unknown> = {
     ...(item.extras ?? {}),
-    refid: item.refid,
+    refid: '',
     x: item.x,
     y: item.y,
     z: item.z ?? 0,
@@ -365,9 +384,12 @@ function serializeItem(item: FloorItem): Record<string, unknown> {
     z_height: item.z_height,
     rotation: item.rotation ?? 0,
     mirrored: item.mirrored ?? [0, 0],
-    guid: item.guid ?? shortGuid(),
+    guid: item.id || shortGuid(),
   }
   writeObjectLabel(out, item)
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.serializeItem?.(item, out)
+  }
   return out
 }
 
@@ -392,7 +414,8 @@ function serializeWall(
   delete restExtras.bz
   delete restExtras.decor
   delete restExtras.groupMarkerConfig
-  // Session-only stempel-ownership — niet naar Floorplanner.
+  // Session-only stempel-ownership leeft nu op `wall.stampOwned`; deze strip is de
+  // vangnet voor plannen die de legacy extras-key nog dragen (zie stamp-owned.ts).
   delete restExtras[STAMP_OWNED_EXTRA]
 
   if (!hasSource) {
@@ -400,7 +423,7 @@ function serializeWall(
     void restExtras
   }
 
-  return {
+  const out: Record<string, unknown> = {
     ...restExtras,
     guid: wall.id,
     a: { x: wall.a.x, y: wall.a.y },
@@ -425,6 +448,10 @@ function serializeWall(
       : wall.openings
     ).map(serializeOpening),
   }
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.serializeWall?.(wall, out, floor)
+  }
+  return out
 }
 
 function serializeDrawing(drawing: DrawingMeta | undefined): Record<string, unknown> | undefined {
@@ -456,10 +483,10 @@ function isDimensionMode(value: unknown): value is DimensionMode {
   return value === 'interior' || value === 'exterior'
 }
 
-function readSlicesFromDesignSettings(settings: Record<string, unknown> | undefined): BtfSlice[] {
-  const raw = settings?.[BTF_SLICES_SETTINGS_KEY]
+function readSlicesFromDesignSettings(settings: Record<string, unknown> | undefined): PlanSlice[] {
+  const raw = settings?.[PLAN_SLICES_SETTINGS_KEY]
   if (!Array.isArray(raw)) return []
-  const out: BtfSlice[] = []
+  const out: PlanSlice[] = []
   for (const entry of raw) {
     if (!entry || typeof entry !== 'object') continue
     const record = entry as Record<string, unknown>
@@ -503,6 +530,13 @@ function serializeDesign(
   plan: FloorPlan,
 ): Record<string, unknown> {
   const source = design.source
+  // Clone zodat adapters settings mogen muteren zonder het live plan te raken.
+  const settings: Record<string, unknown> = isRidgeDesign(design)
+    ? { ...(source?.settings ?? {}), engineAutoDims: false }
+    : { ...(source?.settings ?? DEFAULT_DESIGN_SETTINGS) }
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.serializeDesignSettings?.(design, settings)
+  }
   const out: Record<string, unknown> = {
     ...(source?.leftover ?? {}),
     id: source?.id ?? 1 + floorIndex * 100 + designIndex,
@@ -521,9 +555,7 @@ function serializeDesign(
     walls: design.walls.map((wall) =>
       serializeWall(wall, floor, floorIndex, options, hasSource, readBovenlichtPacked(plan)),
     ),
-    settings: isRidgeDesign(design)
-      ? { ...(source?.settings ?? {}), engineAutoDims: false }
-      : (source?.settings ?? { ...DEFAULT_DESIGN_SETTINGS }),
+    settings,
   }
   void fallbackProjectId
   return out
@@ -557,24 +589,28 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
 
   const syncedFloors = plan.floors.map((floor) => dropEmptyRidgeDesign(ensureDesignsSynced(floor)))
 
-  const projectSettings = stripFloorplannerHostileSettings(
-    hasSource
-      ? {
-          ...(plan.source?.settings ?? {}),
-          wallHeight:
-            typeof plan.source?.settings?.wallHeight === 'number'
-              ? plan.source.settings.wallHeight
-              : wallHeightCm,
-          bovenlichtPacked: readBovenlichtPacked(plan),
-          ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
-        }
-      : {
-          wallHeight: wallHeightCm,
-          bovenlichtPacked: readBovenlichtPacked(plan),
-          ...DEFAULT_PROJECT_SETTINGS,
-          ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
-        },
-  )
+  // Adapters vóór hostile-strip: elevationViews/floorStack mogen tijdelijk gezet
+  // worden en verdwijnen daarna nog steeds uit de FML-download.
+  const projectSettingsRaw: Record<string, unknown> = hasSource
+    ? {
+        ...(plan.source?.settings ?? {}),
+        wallHeight:
+          typeof plan.source?.settings?.wallHeight === 'number'
+            ? plan.source.settings.wallHeight
+            : wallHeightCm,
+        bovenlichtPacked: readBovenlichtPacked(plan),
+        ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
+      }
+    : {
+        wallHeight: wallHeightCm,
+        bovenlichtPacked: readBovenlichtPacked(plan),
+        ...DEFAULT_PROJECT_SETTINGS,
+        ...(typeof options.useMetric === 'boolean' ? { useMetric: options.useMetric } : {}),
+      }
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.serializePlanSettings?.(plan, projectSettingsRaw)
+  }
+  const projectSettings = stripFloorplannerHostileSettings(projectSettingsRaw)
 
   const output: Record<string, unknown> = {
     ...(plan.source?.leftover ?? {}),
@@ -597,7 +633,11 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
         },
       ]
       // Floorplanner: wall tops boven floor.height → vaak 500 bij herladen.
-      const exportHeight = Math.max(floor.height, maxWallTopHOnFloor(floor))
+      // Alleen tillen zonder floor erboven; az/bz serialiseren tegen de echte
+      // story-height (niet de getilde export-waarde), anders worden muren zonder
+      // eigen elevatie ineens zo hoog als de aanbouwnok.
+      const hasFloorAbove = syncedFloors[floorIndex + 1] != null
+      const exportHeight = exportFloorHeightCm(floor, hasFloorAbove)
       const floorOut: Record<string, unknown> = {
         ...(floor.source?.leftover ?? {}),
         id: floor.source?.id ?? fallbackProjectId + 10 + floorIndex,
@@ -611,7 +651,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
         designs: designs.map((design, designIndex) =>
           serializeDesign(
             design,
-            { ...floor, height: exportHeight },
+            floor,
             floorIndex,
             designIndex,
             options,

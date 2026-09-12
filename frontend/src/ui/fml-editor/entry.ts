@@ -1,5 +1,5 @@
 /**
- * Embed entry for the FML editor (no OpenCV / workspace).
+ * Embed entry for the editor (no OpenCV / workspace).
  * Host apps: `import { FmlEditor } from '@/ui/fml-editor/entry'`
  */
 export { default as FmlEditor } from './FmlEditor.vue'

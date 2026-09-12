@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { extractionToPlan } from '@/core/fml/extractionToPlan'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { CONCEPT_WINDOW_REFID } from '@/core/fml/types'
 import type { ExtractionOutput } from '@/core/extraction'
 
 describe('extractionToPlan', () => {
@@ -238,9 +237,9 @@ describe('extractionToPlan', () => {
     const door = wall.openings[0]
     const forward = wall.b.x >= wall.a.x
     expect(door.type).toBe('door')
-    expect(door.refid).toBe('0434246537840a3326e305dbe7b9c355743e6e93')
+    expect(door.kind).toBe('door.single')
     expect(door.width).toBeCloseTo(4, 2)
-    expect(door.guid).toBe('door-1')
+    expect(door.id).toBeTruthy()
     expect(door.t).toBeCloseTo(forward ? 0.4 : 0.6, 2)
     expect(door.mirrored).toEqual(forward ? [0, 1] : [1, 0])
     expect(door.z_height).toBe(220)
@@ -338,11 +337,11 @@ describe('extractionToPlan', () => {
     expect(wall).toBeTruthy()
     expect(wall.openings).toHaveLength(1)
     const merged = wall.openings[0]
-    expect(merged.refid).toBe('5ae0ee3c682e32c8c7ac15a6136d692df5737b22')
+    expect(merged.kind).toBe('door.double')
     expect(merged.width).toBeCloseTo(6, 2)
     // Hart = midden van gecombineerde span 20..80 → t=50/120
     expect(merged.t).toBeCloseTo(50 / 120, 3)
-    expect(merged.guid).toContain('door-left__door-right')
+    expect(merged.id).toBeTruthy()
     expect(merged.mirrored?.[1]).toBe(1)
   })
 
@@ -395,7 +394,7 @@ describe('extractionToPlan', () => {
     })
     const allDoors = plan.floors[0].walls.flatMap((wall) => wall.openings)
     expect(allDoors).toHaveLength(1)
-    expect(allDoors[0].refid).toBe('5ae0ee3c682e32c8c7ac15a6136d692df5737b22')
+    expect(allDoors[0].kind).toBe('door.double')
     expect(allDoors[0].width).toBeCloseTo(9, 2) // 40..130
     expect(allDoors[0].t).toBeCloseTo(85 / 200, 3) // hart (40+130)/2
   })
@@ -474,8 +473,8 @@ describe('extractionToPlan', () => {
     })
     const allDoors = plan.floors[0].walls.flatMap((wall) => wall.openings)
     expect(allDoors).toHaveLength(1)
-    expect(allDoors[0].refid).toBe('5ae0ee3c682e32c8c7ac15a6136d692df5737b22')
-    expect(allDoors[0].guid).toContain('door-left__door-right')
+    expect(allDoors[0].kind).toBe('door.double')
+    expect(allDoors[0].id).toBeTruthy()
   })
 
   it('plaatst layer14Windows als Opening type window op de juiste muur', () => {
@@ -507,7 +506,7 @@ describe('extractionToPlan', () => {
         {
           windowId: 'window-1',
           segmentIndex: 0,
-          fmlRefId: CONCEPT_WINDOW_REFID,
+          fmlRefId: 'window.single',
           openingStartPx: { x: 20, y: 0 },
           openingEndPx: { x: 60, y: 0 },
         },
@@ -517,8 +516,8 @@ describe('extractionToPlan', () => {
     expect(wall.openings).toHaveLength(1)
     const opening = wall.openings[0]
     expect(opening.type).toBe('window')
-    expect(opening.refid).toBe(CONCEPT_WINDOW_REFID)
-    expect(opening.guid).toBe('window-1')
+    expect(opening.kind).toBe('window.single')
+    expect(opening.id).toBeTruthy()
     expect(opening.width).toBeCloseTo(4, 2)
     const forward = wall.b.x >= wall.a.x
     expect(opening.t).toBeCloseTo(forward ? 0.4 : 0.6, 2)

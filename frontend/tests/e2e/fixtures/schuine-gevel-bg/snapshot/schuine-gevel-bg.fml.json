@@ -22,8 +22,8 @@
   },
   "thicknessBands": {
     "max": 5,
-    "mid": 7,
-    "min": 10,
+    "mid": 5,
+    "min": 12,
   },
   "totalLengthCm": 4728.8,
   "wallCount": 22,
@@ -84,7 +84,7 @@
           "width": 97.5,
         },
       ],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {
@@ -140,7 +140,7 @@
           "width": 90.1,
         },
       ],
-      "thickness": 25,
+      "thickness": 7,
     },
     {
       "a": {

@@ -1,5 +1,7 @@
 import type { Opening } from './types'
 import {
+  coerceDoorAddSubtype,
+  coerceWindowAddSubtype,
   resolveDoorAddPreset,
   resolveWindowAddPreset,
   type DoorAddSubtype,
@@ -8,8 +10,8 @@ import {
 
 export function buildOpeningFromPreset(args: {
   type: 'door' | 'window'
-  doorSubtype: DoorAddSubtype
-  windowSubtype: WindowAddSubtype
+  doorSubtype: DoorAddSubtype | string
+  windowSubtype: WindowAddSubtype | string
   widthCm: number
   heightCm: number
   sillZCm: number
@@ -17,16 +19,16 @@ export function buildOpeningFromPreset(args: {
 }): Opening {
   const preset =
     args.type === 'door'
-      ? resolveDoorAddPreset(args.doorSubtype)
-      : resolveWindowAddPreset(args.windowSubtype)
+      ? resolveDoorAddPreset(coerceDoorAddSubtype(args.doorSubtype))
+      : resolveWindowAddPreset(coerceWindowAddSubtype(args.windowSubtype))
   return {
+    id: crypto.randomUUID(),
+    kind: preset.kind,
     type: args.type,
-    refid: preset.refid,
     t: Math.max(0, Math.min(1, args.t)),
     width: args.widthCm,
     z: args.sillZCm,
     z_height: args.heightCm,
     mirrored: args.type === 'door' ? [0, 0] : undefined,
-    guid: crypto.randomUUID(),
   }
 }

@@ -1,8 +1,8 @@
 /** Touch-tap synthesizes mousedown after pointerup — geen live sleep. */
-export const BTF_LIVE_POINTER = 'btfLivePointer'
+export const PLAN_LIVE_POINTER = 'planLivePointer'
 
 export function isLiveDrawPointer(event: MouseEvent): boolean {
-  return (event as MouseEvent & { [BTF_LIVE_POINTER]?: boolean }).btfLivePointer !== false
+  return (event as MouseEvent & { [PLAN_LIVE_POINTER]?: boolean }).planLivePointer !== false
 }
 
 /** Eerste vinger van pinch/pan mag geen selectie/deselectie triggeren. */
@@ -17,7 +17,7 @@ export function shouldCommitTouchTap(args: {
 
 /**
  * Click-move-click: vinger volgt hover, tik op pointerup.
- * Nok = `draw_wall` + `drawWallKind=ridge`; dakvlak = `draw_surface` + `dakMode`.
+ * Nok = `draw_wall` + `drawWallKind=ridge`; dakvlak = `draw_surface` + `dakMode` of `draw_roof`.
  * Elevation `split` / `add_*` horen hier ook (zelfde plaats-tik).
  * Measure/slicer/nulpunt/box_select = hold-drag (`shouldStartTouchHoldDrag`), geen hover-follow.
  * Muur/kamer ná de eerste tik: geen hover-follow — handles + 1-vinger-pan.
@@ -33,6 +33,7 @@ export function isTouchHoverFollowTool(
     tool === 'draw_wall' ||
     tool === 'draw_room' ||
     tool === 'draw_surface' ||
+    tool === 'draw_roof' ||
     tool === 'draw_label' ||
     tool === 'draw_line' ||
     tool === 'add_door' ||

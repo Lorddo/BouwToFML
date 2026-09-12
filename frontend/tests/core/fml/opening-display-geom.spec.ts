@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  BTF_FRAME_EXTRA,
+  OPENING_FRAME_EXTRA,
   clampFramePair,
   insetOpeningRect,
   resolveOpeningFrame,
@@ -10,22 +10,10 @@ import {
   glyphFromElevationRect,
 } from '@/core/fml/elevation-opening-symbol'
 import { defaultOpeningFrame, resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
-import {
-  ARCHWAY_DOOR_REFID,
-  CONCEPT_DOOR_REFID,
-  CONCEPT_WINDOW_REFID,
-  PASSAGE_DOOR_REFID,
-  WINDOW_BLIND_REFID,
-  WINDOW_DOUBLE_REFID,
-  WINDOW_HALF_ROUND_REFID,
-  WINDOW_ROUND_REFID,
-  WINDOW_TRIANGLE_REFID,
-  WINDOW_TRIPLE_REFID,
-} from '@/core/fml/types'
 
 describe('opening-display-geom', () => {
   it('kind-defaults: draaideur dorpel 0, schuif 5, passage 0, raam 5 rondom', () => {
-    const door = resolveOpeningCatalog(CONCEPT_DOOR_REFID, 'door')
+    const door = resolveOpeningCatalog('door.single', 'door')
     expect(door.swingInsetCm).toBe(5)
     expect(door.frame).toEqual({ leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 0 })
 
@@ -70,7 +58,7 @@ describe('opening-display-geom', () => {
     expect(resolveOpeningCatalog('df95e84f01163fe9983d43d088551813e40e3e2f', 'door').leaf).toBe(
       'solid',
     )
-    expect(resolveOpeningCatalog(CONCEPT_WINDOW_REFID, 'window').leaf).toBe('glass')
+    expect(resolveOpeningCatalog('window.single', 'window').leaf).toBe('glass')
   })
 
   it('clamp: 8 cm hoog raam + 5+5 → inner 1 cm', () => {
@@ -88,12 +76,24 @@ describe('opening-display-geom', () => {
   })
 
   it('extras.btfFrame wint van catalogus', () => {
-    const catalog = resolveOpeningCatalog(CONCEPT_WINDOW_REFID, 'window')
+    const catalog = resolveOpeningCatalog('window.single', 'window')
     const frame = resolveOpeningFrame(
-      { extras: { [BTF_FRAME_EXTRA]: { leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 } } },
+      { extras: { [OPENING_FRAME_EXTRA]: { leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 } } },
       catalog,
     )
     expect(frame).toEqual({ leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 })
+  })
+
+  it('opening.frame wint van catalogus en van legacy extras', () => {
+    const catalog = resolveOpeningCatalog('window.single', 'window')
+    const frame = resolveOpeningFrame(
+      {
+        frame: { leftCm: 9, rightCm: 9, topCm: 2, bottomCm: 2 },
+        extras: { [OPENING_FRAME_EXTRA]: { leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 } },
+      } as { extras?: Record<string, unknown> },
+      catalog,
+    )
+    expect(frame).toEqual({ leftCm: 9, rightCm: 9, topCm: 2, bottomCm: 2 })
   })
 })
 
@@ -105,7 +105,7 @@ describe('elevation opening glyph', () => {
       y0: -40,
       y1: 0,
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       widthCm: 100,
     })
     expect(glyph.inner.x0).toBeCloseTo(5, 5)
@@ -123,7 +123,7 @@ describe('elevation opening glyph', () => {
       y0: -140,
       y1: 0,
       type: 'window',
-      refid: WINDOW_DOUBLE_REFID,
+      kind: 'window.double',
       widthCm: 200,
     })
     const isTallStile = (poly: { role: string; points: number[] }, cx: number) => {
@@ -143,7 +143,7 @@ describe('elevation opening glyph', () => {
       y0: -140,
       y1: 0,
       type: 'window',
-      refid: WINDOW_TRIPLE_REFID,
+      kind: 'window.triple',
       widthCm: 240,
     })
     expect(triple.polys.some((poly) => isTallStile(poly, 80))).toBe(true)
@@ -155,7 +155,7 @@ describe('elevation opening glyph', () => {
     const glyph = glyphFromElevationRect({
       ...outer,
       type: 'window',
-      refid: WINDOW_HALF_ROUND_REFID,
+      kind: 'window.half_round',
       widthCm: 120,
     })
     const glass = glyph.polys.find((poly) => poly.role === 'glass')
@@ -167,7 +167,7 @@ describe('elevation opening glyph', () => {
     expect(Math.min(...xs)).toBeGreaterThanOrEqual(outer.x0 - 0.5)
     expect(Math.max(...xs)).toBeLessThanOrEqual(outer.x1 + 0.5)
     expect(Math.min(...ys)).toBeLessThan(outer.y0 + 12)
-    const hole = elevationOpeningHolePoints(outer, 'window', WINDOW_HALF_ROUND_REFID)
+    const hole = elevationOpeningHolePoints(outer, 'window', 'window.half_round')
     expect(hole.length).toBeGreaterThan(4)
     expect(Math.min(...hole.map((p) => p.y))).toBeCloseTo(outer.y0, 0)
     expect(Math.max(...hole.map((p) => p.y))).toBeCloseTo(outer.y1, 0)
@@ -177,7 +177,7 @@ describe('elevation opening glyph', () => {
     const hole = elevationOpeningHolePoints(
       { x0: 0, y0: -100, x1: 100, y1: 0 },
       'window',
-      WINDOW_ROUND_REFID,
+      'window.round',
     )
     expect(hole.length).toBeGreaterThan(8)
     const xs = hole.map((p) => p.x)
@@ -195,7 +195,7 @@ describe('elevation opening glyph', () => {
       y0: -220,
       y1: 0,
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       widthCm: 90,
     })
     expect(glyph.polys.some((poly) => poly.role === 'hinge')).toBe(true)
@@ -208,7 +208,7 @@ describe('elevation opening glyph', () => {
       y0: -220,
       y1: 0,
       type: 'door',
-      refid: PASSAGE_DOOR_REFID,
+      kind: 'door.passage',
       widthCm: 90,
     })
     expect(entry.polys).toHaveLength(0)
@@ -218,14 +218,14 @@ describe('elevation opening glyph', () => {
       y0: -220,
       y1: 0,
       type: 'door',
-      refid: ARCHWAY_DOOR_REFID,
+      kind: 'door.archway',
       widthCm: 90,
     })
     expect(arch.polys).toHaveLength(0)
     const hole = elevationOpeningHolePoints(
       { x0: 0, y0: -220, x1: 90, y1: 0 },
       'door',
-      ARCHWAY_DOOR_REFID,
+      'door.archway',
     )
     expect(hole.length).toBeGreaterThan(4)
     const ys = hole.map((p) => p.y)
@@ -239,7 +239,7 @@ describe('elevation opening glyph', () => {
       y0: -110,
       y1: 0,
       type: 'window',
-      refid: WINDOW_TRIANGLE_REFID,
+      kind: 'window.triangle',
       widthCm: 110,
     })
     expect(triangle.polys.some((poly) => poly.role === 'frame')).toBe(true)
@@ -266,7 +266,7 @@ describe('elevation opening glyph', () => {
       y0: -110,
       y1: 0,
       type: 'window',
-      refid: WINDOW_TRIANGLE_REFID,
+      kind: 'window.triangle',
       widthCm: 110,
       mirrored: [1, 0],
     })
@@ -274,14 +274,14 @@ describe('elevation opening glyph', () => {
     const hole = elevationOpeningHolePoints(
       { x0: 0, y0: -110, x1: 110, y1: 0 },
       'window',
-      WINDOW_TRIANGLE_REFID,
+      'window.triangle',
     )
     expect(hole).toHaveLength(3)
     expect(hole.some((p) => p.x === 0 && p.y === -110)).toBe(true)
     const holeFlip = elevationOpeningHolePoints(
       { x0: 0, y0: -110, x1: 110, y1: 0 },
       'window',
-      WINDOW_TRIANGLE_REFID,
+      'window.triangle',
       { mirrored: [1, 0] },
     )
     expect(holeFlip.some((p) => p.x === 110 && p.y === -110)).toBe(true)
@@ -292,7 +292,7 @@ describe('elevation opening glyph', () => {
       y0: -150,
       y1: 0,
       type: 'window',
-      refid: WINDOW_BLIND_REFID,
+      kind: 'window.blind',
       widthCm: 110,
     })
     expect(blind.polys.some((poly) => poly.role === 'frame')).toBe(true)

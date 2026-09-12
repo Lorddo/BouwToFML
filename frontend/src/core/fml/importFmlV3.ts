@@ -1,8 +1,16 @@
+import { FML_CONCEPT_ADAPTERS } from '../plg/fml-adapter/registry'
+import { normalizePlanIdentities } from '../plg/fml-adapter/normalize-plan-identities'
+import {
+  isKnownWindowFmlRefid,
+  openingKindFromFmlRefid,
+} from '../plg/fml-adapter/opening-fml-refids'
+import { fixtureKindFromFmlRefid } from '../plg/fml-adapter/fixture-fml-refids'
+import { FML_REFID_EXTRA } from '../plg/fml-adapter/normalize-plan-identities'
 import { foldBovenlichtOnPlan, readBovenlichtPacked } from './bovenlicht'
 import { hydrateFacadeGroupsFromNativeMarkers } from './facade-groups'
 import { ensureRidgeDesignsOnPlan, syncRidgeWallGuidsFromDesigns } from './ridge-walls'
 import { syncRoofPlaneGuidsFromDesigns } from './roof-planes'
-import { stripBakedSliceDimensionsFromPlan } from './btf-slices'
+import { stripBakedSliceDimensionsFromPlan } from './plan-slices'
 import type {
   DrawingMeta,
   Floor,
@@ -26,7 +34,6 @@ import type {
   Point2D,
   Wall,
 } from './types'
-import { WINDOW_REFIDS } from './types'
 import { UNLABELED_AREA_COLOR, isValidRoomTagHex, resolveRoomType } from './roomtype-catalog'
 import { OBJECT_LABEL_KEYS, parseObjectLabel } from './object-label'
 
@@ -307,23 +314,29 @@ function shortGuid(): string {
 function resolveOpeningType(raw: RawOpening): OpeningType {
   if (raw.type === 'window') return 'window'
   if (raw.type === 'door') return 'door'
-  if (raw.refid && WINDOW_REFIDS.has(raw.refid)) return 'window'
+  if (raw.refid && isKnownWindowFmlRefid(raw.refid)) return 'window'
   return 'door'
 }
 
 function parseOpening(raw: RawOpening): Opening {
+  const type = resolveOpeningType(raw)
+  const mapped = openingKindFromFmlRefid(raw.refid, type)
+  const extras: FmlExtras = { ...(pickExtras(raw, OPENING_KNOWN) ?? {}) }
+  if (raw.refid && !mapped.known) {
+    extras[FML_REFID_EXTRA] = raw.refid
+  }
   return {
-    refid: raw.refid ?? '',
+    id: raw.guid?.trim() || crypto.randomUUID(),
+    kind: mapped.kind,
     t: raw.t ?? 0,
     width: raw.width ?? 0,
-    type: resolveOpeningType(raw),
+    type,
     mirrored: raw.mirrored,
     z: raw.z,
     z_height: raw.z_height,
-    guid: raw.guid,
     materials: raw.materials,
     ...parseObjectLabel(raw),
-    extras: pickExtras(raw, OPENING_KNOWN),
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
 }
 
@@ -354,8 +367,14 @@ function parseWall(raw: RawWall, warnings: ImportWarning[], floorName: string): 
 }
 
 function parseItem(raw: RawItem): FloorItem {
+  const mapped = fixtureKindFromFmlRefid(raw.refid)
+  const extras: FmlExtras = { ...(pickExtras(raw, ITEM_KNOWN) ?? {}) }
+  if (raw.refid && !mapped.known) {
+    extras[FML_REFID_EXTRA] = raw.refid
+  }
   return {
-    refid: raw.refid ?? '',
+    id: raw.guid?.trim() || crypto.randomUUID(),
+    kind: mapped.kind,
     x: raw.x ?? 0,
     y: raw.y ?? 0,
     z: raw.z,
@@ -364,9 +383,8 @@ function parseItem(raw: RawItem): FloorItem {
     z_height: raw.z_height,
     rotation: raw.rotation,
     mirrored: raw.mirrored,
-    guid: raw.guid,
     ...parseObjectLabel(raw),
-    extras: pickExtras(raw, ITEM_KNOWN),
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
 }
 
@@ -680,5 +698,13 @@ export function importFmlV3(json: string | object): ImportResult {
   // Slicer-bake op P-lijn opnieuw genereren; strip uit dimensions zodat live/export niet dubbelt.
   plan = stripBakedSliceDimensionsFromPlan(plan)
   hydrateFacadeGroupsFromNativeMarkers(plan)
+  // PLG adapters (Fase A+): FML-raw → getypte velden. Draaien NÁ de legacy-keten
+  // ensureRidgeDesigns → syncRidgeWallGuids → syncRoofPlaneGuids → bovenlicht-fold →
+  // slice-strip → facade-hydrate, zodat adapters een genormaliseerd plan zien.
+  // Volgorde in FML_CONCEPT_ADAPTERS moet die keten weerspiegelen (niet-commutatief).
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.hydrate?.(plan)
+  }
+  normalizePlanIdentities(plan)
   return { plan, warnings }
 }

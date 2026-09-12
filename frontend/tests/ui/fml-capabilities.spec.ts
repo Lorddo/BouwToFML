@@ -3,8 +3,6 @@ import {
   FML_CAPABILITIES_DETECTION,
   FML_CAPABILITIES_EDITOR,
   FML_CAPABILITIES_INSPECT,
-  fmlCanvasFlagsFromCapabilities,
-  isFmlToolEnabled,
   resolveFmlCapabilities,
 } from '@/ui/composables/fml-preview/fml-capabilities'
 
@@ -27,6 +25,7 @@ describe('fml-capabilities', () => {
     expect(editor.facadeGroups).toBe(true)
     expect(editor.tools.add_fixture).toBe(true)
     expect(editor.tools.draw_surface).toBe(true)
+    expect(editor.tools.draw_roof).toBe(true)
     expect(editor.settingsVariant).toBe('viewer')
   })
 
@@ -56,35 +55,29 @@ describe('fml-capabilities', () => {
     expect(detection.tools.draw_wall).toBe(true)
     expect(detection.tools.add_door).toBe(true)
     expect(detection.tools.draw_surface).toBe(false)
+    expect(detection.tools.draw_roof).toBe(false)
     expect(detection.tools.add_fixture).toBe(false)
     expect(detection.settingsVariant).toBe('workspace')
   })
 
-  it('isFmlToolEnabled reads the tools map', () => {
-    expect(isFmlToolEnabled(FML_CAPABILITIES_EDITOR, 'draw_wall')).toBe(true)
-    expect(isFmlToolEnabled(FML_CAPABILITIES_INSPECT, 'draw_wall')).toBe(false)
-    expect(isFmlToolEnabled(FML_CAPABILITIES_DETECTION, 'add_fixture')).toBe(false)
-  })
-
-  it('fmlCanvasFlagsFromCapabilities maps editor flags', () => {
-    const flags = fmlCanvasFlagsFromCapabilities(FML_CAPABILITIES_EDITOR)
-    expect(flags).toEqual({
-      areaSurfaceEditEnabled: true,
-      annotationEditEnabled: true,
-      inspectMode: false,
-      touchEditor: true,
-      includeSurfaceTool: true,
-      includeAnnotationTools: true,
-      includeFixtureTool: true,
+  it('planIo matches host rights matrix (tekenbureau editor today)', () => {
+    expect(resolveFmlCapabilities('editor').planIo).toEqual({
+      nativeRead: true,
+      nativeWrite: true,
+      fmlImport: true,
+      fmlExport: 'lossy',
     })
-  })
-
-  it('fmlCanvasFlagsFromCapabilities honors overrides', () => {
-    const flags = fmlCanvasFlagsFromCapabilities(FML_CAPABILITIES_DETECTION, {
-      areaSurfaceEditEnabled: true,
+    expect(resolveFmlCapabilities('inspect').planIo).toEqual({
+      nativeRead: true,
+      nativeWrite: false,
+      fmlImport: true,
+      fmlExport: 'none',
     })
-    expect(flags.areaSurfaceEditEnabled).toBe(true)
-    expect(flags.includeSurfaceTool).toBe(true)
-    expect(flags.touchEditor).toBe(false)
+    expect(resolveFmlCapabilities('detection').planIo).toEqual({
+      nativeRead: true,
+      nativeWrite: true,
+      fmlImport: true,
+      fmlExport: 'lossy',
+    })
   })
 })

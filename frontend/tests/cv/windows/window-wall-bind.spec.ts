@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_WINDOW_REFID } from '@/core/fml/types'
 import { bindWindowsToWalls } from '@/cv/windows/window-wall-bind'
 import type { ResolvedWindowCandidate, WindowAxelRefBand } from '@/cv/windows/types'
 import type { SemanticWallJunction, SemanticWallSegment } from '@/core/extraction/types'
@@ -73,7 +72,7 @@ describe('bindWindowsToWalls', () => {
     const bound = result.bound[0]
     expect(bound.segmentIndex).toBe(0)
     expect(bound.openingBBox).toEqual(candidate.bbox)
-    expect(bound.fmlRefId).toBe(CONCEPT_WINDOW_REFID)
+    expect(bound.fmlRefId).toBe('window.single')
     expect(bound.openingAxis).toBe('h')
     expect(bound.t).toBeGreaterThan(0.2)
     expect(bound.t).toBeLessThan(0.6)

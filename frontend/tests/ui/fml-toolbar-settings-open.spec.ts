@@ -54,11 +54,13 @@ describe('isFmlToolbarSettingsOpen', () => {
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_line' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_label' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_roof' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface', dakMode: true })).toBe(
-      false,
+      true,
     )
     expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_window' })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasItemSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasDimensionSelection: true })).toBe(true)
     expect(isFmlToolbarSettingsOpen({ ...none, hasFacadeGroupSelection: true })).toBe(true)
   })
 
@@ -71,6 +73,7 @@ describe('isFmlOneshotDrawTool', () => {
   it('is aan voor teken- en plaats-tools, uit voor select/maat', () => {
     expect(isFmlOneshotDrawTool('draw_wall')).toBe(true)
     expect(isFmlOneshotDrawTool('draw_room')).toBe(true)
+    expect(isFmlOneshotDrawTool('draw_roof')).toBe(true)
     expect(isFmlOneshotDrawTool('draw_line')).toBe(true)
     expect(isFmlOneshotDrawTool('add_door')).toBe(true)
     expect(isFmlOneshotDrawTool('measure')).toBe(false)

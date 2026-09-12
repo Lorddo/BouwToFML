@@ -13,6 +13,9 @@ const props = withDefaults(
     listEdit?: boolean
     choice?: boolean
     listItems?: Array<{ id: string; name: string }>
+    listManage?: boolean
+    listAddLabel?: string
+    listRemoveLabel?: string
     confirmLabel: string
     cancelLabel?: string
     hideCancel?: boolean
@@ -26,6 +29,9 @@ const props = withDefaults(
     listEdit: false,
     choice: false,
     listItems: () => [],
+    listManage: false,
+    listAddLabel: '',
+    listRemoveLabel: '',
     cancelLabel: '',
     hideCancel: false,
   },
@@ -36,6 +42,8 @@ const emit = defineEmits<{
   cancel: []
   'update:inputValue': [value: string]
   'update:listItemName': [id: string, name: string]
+  'list-add': []
+  'list-remove': [id: string]
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -69,6 +77,7 @@ function onKeydown(event: KeyboardEvent): void {
   }
   if (event.key === 'Enter' && !event.defaultPrevented) {
     if (event.target instanceof HTMLTextAreaElement) return
+    if (event.target instanceof HTMLButtonElement && event.target !== confirmRef.value) return
     event.preventDefault()
     emit('confirm')
   }
@@ -133,7 +142,25 @@ onBeforeUnmount(() => {
                 emit('update:listItemName', row.id, ($event.target as HTMLInputElement).value)
               "
             />
+            <button
+              v-if="listManage"
+              type="button"
+              class="fml-chrome-dialog__list-remove"
+              :title="listRemoveLabel"
+              :aria-label="listRemoveLabel"
+              @click="emit('list-remove', row.id)"
+            >
+              −
+            </button>
           </label>
+          <button
+            v-if="listManage"
+            type="button"
+            class="fml-chrome-dialog__list-add"
+            @click="emit('list-add')"
+          >
+            {{ listAddLabel || '+' }}
+          </button>
         </div>
         <div
           v-if="choice"
@@ -287,11 +314,35 @@ onBeforeUnmount(() => {
 }
 
 .fml-chrome-dialog__list-row {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .fml-chrome-dialog__list-input {
   margin: 0;
+  flex: 1;
+}
+
+.fml-chrome-dialog__list-remove,
+.fml-chrome-dialog__list-add {
+  width: 28px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #475569;
+}
+
+.fml-chrome-dialog__list-add {
+  width: auto;
+  padding: 0 10px;
+  align-self: flex-start;
+  min-height: 32px;
 }
 
 .fml-chrome-dialog__choice {

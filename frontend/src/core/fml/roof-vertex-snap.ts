@@ -5,7 +5,7 @@
 import { listDakSnapWalls } from './ridge-floor'
 import { ROOF_TOUCH_SLACK_CM } from './roof-planes'
 import type { FloorPlan, Point2D, Wall } from './types'
-import { parseEndpoint3D } from './wall-endpoint-height'
+import { wallEndpoint3D } from './wall-endpoint-height'
 import {
   listThickPlanWalls,
   planFootprintCentroid,
@@ -34,8 +34,7 @@ function pointOnSeg(
 }
 
 function wallTopAtEnd(wall: Wall, end: 'a' | 'b', floorHeightCm: number): number {
-  const parsed = parseEndpoint3D(end === 'a' ? wall.extras?.az : wall.extras?.bz, floorHeightCm)
-  return parsed.h
+  return wallEndpoint3D(wall, end, floorHeightCm).h
 }
 
 function wallTopAtPoint(wall: Wall, point: Point2D, floorHeightCm: number): number {

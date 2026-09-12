@@ -2,14 +2,22 @@ import { computed, watch } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import type { useFmlPreviewEditor } from '@/ui/composables/useFmlPreviewEditor'
 import {
+  DEFAULT_FACADE_GROUP_NAMES,
   groupIdsForWall,
+  isDefaultFacadeGroupId,
   isWallInStampGroup,
   listFacadeGroups,
   STAMP_FACADE_GROUP_ID,
   type FacadeGroup,
 } from '@/core/fml/facade-groups'
-import { promptFacadeGroupName, promptFacadeGroupsEdit } from '@/ui/composables/fml-chrome-dialog'
+import {
+  promptFacadeGroupName,
+  promptFacadeGroupsEdit,
+  promptFacadeSelectScope,
+} from '@/ui/composables/fml-chrome-dialog'
 import { withStackedFacadeWalls } from '@/ui/composables/fml-facade-stacked'
+import { tGlobal } from '@/ui/i18n'
+import { facadeGroupDisplayName } from './facade-group-label'
 import type { FmlPreviewSelectionRefs } from './fml-preview-selection'
 
 type EditorApi = ReturnType<typeof useFmlPreviewEditor>
@@ -133,7 +141,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     }
     return {
       groupId,
-      name: group.name || group.id,
+      name: facadeGroupDisplayName(group, tGlobal),
       wallCount,
       floorCount,
     }
@@ -202,17 +210,40 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
 
   async function editAllFacadeGroups(): Promise<void> {
     const groups = facadeGroupOptions.value.filter((g) => g.id !== STAMP_FACADE_GROUP_ID)
-    if (groups.length === 0) return
-    const edited = await promptFacadeGroupsEdit(groups.map((g) => ({ id: g.id, name: g.name })))
+    const edited = await promptFacadeGroupsEdit(
+      groups.map((g) => ({ id: g.id, name: facadeGroupDisplayName(g, tGlobal) })),
+    )
     if (!edited) return
-    const renames = edited.filter((row) => {
+
+    function storedName(id: string, typed: string): string {
+      if (
+        isDefaultFacadeGroupId(id) &&
+        typed === tGlobal(`result.toolbar.facadeGroupNames.${id}`)
+      ) {
+        return DEFAULT_FACADE_GROUP_NAMES[id]
+      }
+      return typed
+    }
+
+    const keptIds = new Set(edited.filter((row) => !row.id.startsWith('__new__')).map((row) => row.id))
+    const removed = groups.filter((group) => !keptIds.has(group.id))
+    const added = edited.filter((row) => row.id.startsWith('__new__'))
+    const renamed = edited.filter((row) => {
+      if (row.id.startsWith('__new__')) return false
       const current = groups.find((g) => g.id === row.id)
-      return current != null && current.name !== row.name
+      if (!current) return false
+      return current.name !== storedName(row.id, row.name)
     })
-    if (renames.length === 0) return
+    if (removed.length === 0 && added.length === 0 && renamed.length === 0) return
     editor.pushUndo()
-    for (const row of renames) {
-      editor.applyFacadeRename(row.id, { name: row.name })
+    for (const group of removed) {
+      editor.applyFacadeDelete(group.id, { force: true })
+    }
+    for (const row of renamed) {
+      editor.applyFacadeRename(row.id, { name: storedName(row.id, row.name) })
+    }
+    for (const row of added) {
+      editor.applyFacadeCreate({ name: storedName(row.id, row.name) })
     }
     syncPlanToParent()
   }
@@ -271,15 +302,32 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     await renameFacadeGroupById(checked[0][0])
   }
 
-  function selectFacadeGroupMembersById(groupId: string): void {
-    const group = listFacadeGroups(editor.localPlan.value).find((entry) => entry.id === groupId)
-    if (!group) return
+  async function selectFacadeGroupMembersById(groupId: string): Promise<void> {
+    const plan = editor.localPlan.value
+    const group = listFacadeGroups(plan).find((entry) => entry.id === groupId)
+    if (!group || !plan) return
+
+    const idSet = new Set(group.wallGuids)
+    let floorCount = 0
+    for (const floor of plan.floors) {
+      if (floor.walls.some((wall) => idSet.has(wall.id))) floorCount += 1
+    }
+
+    let acrossFloors = true
+    if (floorCount > 1) {
+      const scope = await promptFacadeSelectScope({
+        name: facadeGroupDisplayName(group, tGlobal),
+      })
+      if (scope == null) return
+      acrossFloors = scope === 'all'
+    }
+
     flushPendingFieldCommits()
     if (activeFmlTool.value != null && activeFmlTool.value !== 'box_select') {
       activeFmlTool.value = null
     }
     const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
-    settingsFacadeGroupId.value = groupId
+    settingsFacadeGroupId.value = acrossFloors ? groupId : null
     settingsWallIds.value = group.wallGuids.filter((id) => onFloor.has(id))
     deps.settingsWallSplitClickCm.value = null
     settingsJunctionId.value = null
@@ -291,15 +339,16 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     selection.settingsLabelId.value = null
     selection.settingsLineId.value = null
     selection.settingsItemId.value = null
-    deps.syncFacadeThicknessDraftFromGroup()
+    if (acrossFloors) deps.syncFacadeThicknessDraftFromGroup()
+    else deps.syncWallThicknessDraftFromSelection()
   }
 
-  function selectFacadeGroupMembers(): void {
+  async function selectFacadeGroupMembers(): Promise<void> {
     const common = Object.entries(facadeGroupChecks.value)
       .filter(([, v]) => v === true)
       .map(([id]) => id)
     if (common.length !== 1) return
-    selectFacadeGroupMembersById(common[0])
+    await selectFacadeGroupMembersById(common[0])
   }
 
   function canSelectMembersOfGroup(groupId: string): boolean {

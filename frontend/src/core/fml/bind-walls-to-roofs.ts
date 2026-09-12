@@ -6,7 +6,8 @@ import { clampOpeningToStory } from './elevation-opening-edit'
 import { splitPlanWallAtT, type SplitWallAtTFn } from './elevation-openings'
 import { isPointSkyExposedOnFloor } from './ridge-floor'
 import { listRidgeWallsOnFloor } from './ridge-walls'
-import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM } from './roof-planes'
+import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM, isDormerRoof } from './roof-planes'
+import { findDormerEdgeSurface, flushDormerEdgeWallOutward } from './dormer-edge-walls'
 import type { FloorPlan, FloorSurface, Point2D, Wall } from './types'
 import { wallEndpoint3D, type WallEnd } from './wall-endpoint-height'
 
@@ -26,6 +27,8 @@ export type BindWallsToRoofsResult = {
   skippedBlocked: number
   skippedUncovered: number
   splits: number
+  /** Randmuren van een dakkapel: hartlijn naar buitenface. */
+  flushedEdges: number
 }
 
 type Point3 = Point2D & { z: number }
@@ -150,13 +153,27 @@ function zInTriangle(point: Point2D, a: Point3, b: Point3, c: Point3): number | 
   return a.z * u + b.z * v + c.z * w
 }
 
-/** Laagste dakvlak-Z op XY (overlap → min). */
+export type SampleRoofZOptions = {
+  /** Overlap: min (default, bind/legacy) of max. */
+  prefer?: 'min' | 'max'
+  /** Alleen deze surface-ids samplen. */
+  surfaceIds?: ReadonlyArray<string>
+}
+
+/** Dakvlak-Z op XY. Default prefer=min (overlap → laagste). */
 export function sampleRoofZAtPoint(
   surfaces: ReadonlyArray<FloorSurface>,
   point: Point2D,
+  options?: SampleRoofZOptions,
 ): number | null {
+  const prefer = options?.prefer ?? 'min'
+  const idFilter =
+    options?.surfaceIds && options.surfaceIds.length > 0
+      ? new Set(options.surfaceIds)
+      : null
   let best: number | null = null
   for (const surface of surfaces) {
+    if (idFilter && !idFilter.has(surface.id)) continue
     if (!surfaceCoversPoint(surface, point)) continue
     const pts: Point3[] = surface.poly.map((p) => ({
       x: p.x,
@@ -165,7 +182,6 @@ export function sampleRoofZAtPoint(
     }))
     if (pts.length < 3) continue
     let zHit: number | null = null
-    // Fan-triangulatie vanaf vertex 0.
     for (let i = 1; i < pts.length - 1; i += 1) {
       const a = pts[0]
       const b = pts[i]
@@ -175,7 +191,6 @@ export function sampleRoofZAtPoint(
       if (z == null) continue
       zHit = zHit == null ? z : Math.min(zHit, z)
     }
-    // Rand: dichtste rand → lineaire Z.
     if (zHit == null) {
       let edgeZ: number | null = null
       let edgeDist = ROOF_TOUCH_SLACK_CM
@@ -197,9 +212,35 @@ export function sampleRoofZAtPoint(
       zHit = edgeZ
     }
     if (zHit == null) continue
-    best = best == null ? zHit : Math.min(best, zHit)
+    best =
+      best == null ? zHit : prefer === 'max' ? Math.max(best, zHit) : Math.min(best, zHit)
   }
   return best == null ? null : Math.round(best)
+}
+
+/**
+ * Plafond-Z voor clear-height: dakkapel wint in zijn voetafdruk, anders plane.
+ * Retourneert ook welk surface de hit gaf.
+ */
+export function sampleCeilingRoofAtPoint(
+  surfaces: ReadonlyArray<FloorSurface>,
+  point: Point2D,
+): { z: number; surfaceId: string; dormer: boolean } | null {
+  const dormers = surfaces.filter((s) => isDormerRoof(s))
+  for (const dormer of dormers) {
+    if (!surfaceCoversPoint(dormer, point)) continue
+    const z = sampleRoofZAtPoint([dormer], point)
+    if (z != null) return { z, surfaceId: dormer.id, dormer: true }
+  }
+  const planes = surfaces.filter((s) => !isDormerRoof(s))
+  let best: { z: number; surfaceId: string } | null = null
+  for (const plane of planes) {
+    if (!surfaceCoversPoint(plane, point)) continue
+    const z = sampleRoofZAtPoint([plane], point)
+    if (z == null) continue
+    if (!best || z < best.z) best = { z, surfaceId: plane.id }
+  }
+  return best ? { ...best, dormer: false } : null
 }
 
 type Crease = { a: Point2D; b: Point2D }
@@ -340,10 +381,6 @@ function mapFloorWalls(
   }
 }
 
-function cloneExtras(extras: Wall['extras']): NonNullable<Wall['extras']> {
-  return { ...(extras ?? {}) }
-}
-
 /** Absolute muurtop `h` op één eind; `z` blijft. */
 function withWallEndpointTopH(
   wall: Wall,
@@ -351,16 +388,42 @@ function withWallEndpointTopH(
   topHCm: number,
   floorHeightCm: number,
 ): Wall {
-  const key = end === 'a' ? 'az' : 'bz'
   const current = wallEndpoint3D(wall, end, floorHeightCm)
   const h = Math.max(current.z + 1, Math.round(topHCm))
-  const extras = cloneExtras(wall.extras)
-  extras[key] = { z: current.z, h }
-  const otherKey = end === 'a' ? 'bz' : 'az'
-  if (extras[otherKey] == null) {
-    extras[otherKey] = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
+  const other = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
+  const a = end === 'a' ? { z: current.z, h } : other
+  const b = end === 'a' ? other : { z: current.z, h }
+  const extras = { ...(wall.extras ?? {}) }
+  delete extras.az
+  delete extras.bz
+  return {
+    ...wall,
+    elevation: { a, b },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
-  return { ...wall, extras }
+}
+
+/** Absolute bodem `z` + top `h` op één eind (dakkapel-fitting). */
+function withWallEndpointAbsolute(
+  wall: Wall,
+  end: WallEnd,
+  bottomZCm: number,
+  topHCm: number,
+  floorHeightCm: number,
+): Wall {
+  const z = Math.max(0, Math.round(bottomZCm))
+  const h = Math.max(z + 1, Math.round(topHCm))
+  const other = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
+  const a = end === 'a' ? { z, h } : other
+  const b = end === 'a' ? other : { z, h }
+  const extras = { ...(wall.extras ?? {}) }
+  delete extras.az
+  delete extras.bz
+  return {
+    ...wall,
+    elevation: { a, b },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
+  }
 }
 
 /** Alle wall-ends op één knoop: absolute bovenkant; bodem `z` behouden. */
@@ -391,6 +454,34 @@ function setJunctionTopH(
   return changed ? next : walls
 }
 
+function setJunctionAbsolute(
+  walls: Wall[],
+  refs: ReadonlyArray<JunctionRef>,
+  bottomZCm: number,
+  topHCm: number,
+  floorHeightCm: number,
+): Wall[] {
+  if (refs.length === 0) return walls
+  const byWall = new Map<string, WallEnd[]>()
+  for (const ref of refs) {
+    const list = byWall.get(ref.wallId) ?? []
+    list.push(ref.end)
+    byWall.set(ref.wallId, list)
+  }
+  let changed = false
+  const next = walls.map((wall) => {
+    const ends = byWall.get(wall.id)
+    if (!ends || ends.length === 0) return wall
+    changed = true
+    let updated = wall
+    for (const end of ends) {
+      updated = withWallEndpointAbsolute(updated, end, bottomZCm, topHCm, floorHeightCm)
+    }
+    return updated
+  })
+  return changed ? next : walls
+}
+
 /**
  * Zet knoop-bovenkanten van één verdieping op dakvlak-Z (hartlijn).
  * Skip: verboden gebied (floor+1) en knopen zonder dakvlak.
@@ -406,6 +497,7 @@ export function bindFloorWallsToRoofs(
     skippedBlocked: 0,
     skippedUncovered: 0,
     splits: 0,
+    flushedEdges: 0,
   }
   const floor = plan.floors[floorIndex]
   if (!floor) return empty
@@ -441,13 +533,51 @@ export function bindFloorWallsToRoofs(
       skippedBlocked += 1
       continue
     }
-    const z = sampleRoofZAtPoint(surfaces, point)
+    const dormerHit = surfaces.find(
+      (surface) => isDormerRoof(surface) && surfaceCoversPoint(surface, point),
+    )
+    if (dormerHit) {
+      const parentId = dormerHit.roofParentId?.trim()
+      const parent = parentId ? surfaces.find((s) => s.id === parentId) : null
+      const childZ = sampleRoofZAtPoint([dormerHit], point)
+      const parentZ = parent
+        ? sampleRoofZAtPoint([parent], point)
+        : sampleRoofZAtPoint(
+            surfaces.filter((s) => !isDormerRoof(s)),
+            point,
+          )
+      if (childZ == null || parentZ == null) {
+        skippedUncovered += 1
+        continue
+      }
+      const bottomZ = Math.round(parentZ)
+      const topH = Math.max(bottomZ + 1, Math.round(childZ))
+      let needsWrite = false
+      for (const ref of junction.refs) {
+        const wall = walls.find((item) => item.id === ref.wallId)
+        if (!wall) continue
+        const end = wallEndpoint3D(wall, ref.end, floorHeightCm)
+        if (Math.abs(end.z - bottomZ) > 0.05 || Math.abs(end.h - topH) > 0.05) {
+          needsWrite = true
+          break
+        }
+      }
+      if (!needsWrite) continue
+      walls = setJunctionAbsolute(walls, junction.refs, bottomZ, topH, floorHeightCm)
+      for (const ref of junction.refs) touchedWallIds.add(ref.wallId)
+      boundJunctions += 1
+      continue
+    }
+
+    const z = sampleRoofZAtPoint(
+      surfaces.filter((s) => !isDormerRoof(s)),
+      point,
+    )
     if (z == null) {
       skippedUncovered += 1
       continue
     }
     const topHCm = Math.max(1, Math.round(z))
-    // Skip no-op als alle ends al op die bovenkant zitten.
     let needsWrite = false
     for (const ref of junction.refs) {
       const wall = walls.find((item) => item.id === ref.wallId)
@@ -472,6 +602,18 @@ export function bindFloorWallsToRoofs(
         openings: wall.openings.map((opening) => clampOpeningToStory(opening, wall, floorHeightCm)),
       }
     })
+  }
+
+  let flushedEdges = 0
+  walls = walls.map((wall) => {
+    const dormer = findDormerEdgeSurface(wall, surfaces)
+    if (!dormer) return wall
+    const next = flushDormerEdgeWallOutward(wall, dormer)
+    if (next === wall) return wall
+    flushedEdges += 1
+    return next
+  })
+  if (touchedWallIds.size > 0 || flushedEdges > 0) {
     working = mapFloorWalls(working, floorIndex, () => walls)
   }
 
@@ -509,6 +651,7 @@ export function bindFloorWallsToRoofs(
     skippedBlocked,
     skippedUncovered,
     splits,
+    flushedEdges,
   }
 }
 

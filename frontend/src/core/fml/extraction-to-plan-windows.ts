@@ -1,8 +1,18 @@
 import { tally } from '@/core/diagnostics'
 import type { Opening } from './types'
+import type { OpeningKind } from './opening-kind-catalog'
 import type { Layer14WindowForFml } from './extraction-to-plan-types'
 import type { Point2D } from './extraction-to-plan-geom'
 import { filterOpeningsForEdge, openingSpanOnEdge } from './extraction-to-plan-edge-openings'
+
+function resolveWindowOpeningKind(fmlRefId: string | undefined): OpeningKind {
+  if (fmlRefId === 'window.double') return 'window.double'
+  if (fmlRefId === 'window.triple') return 'window.triple'
+  if (typeof fmlRefId === 'string' && fmlRefId.startsWith('window.')) {
+    return fmlRefId as OpeningKind
+  }
+  return 'window.single'
+}
 
 export function mapLayer14WindowsToOpenings(params: {
   layer14Windows: Layer14WindowForFml[]
@@ -35,13 +45,13 @@ export function mapLayer14WindowsToOpenings(params: {
     // ESC:X-11 (E) — geen mirrored-veld op ramen; export altijd [0,0] via buildFmlV3.
     tally('X-11', 'no_mirrored')
     return {
-      refid: window.fmlRefId,
+      id: crypto.randomUUID(),
+      kind: resolveWindowOpeningKind(window.fmlRefId),
       type: 'window',
       t: span.tMid,
       width: span.widthCm,
       z: params.defaultWindowSillZCm,
       z_height: params.defaultWindowHeightCm,
-      guid: window.windowId,
     } satisfies Opening
   })
 }

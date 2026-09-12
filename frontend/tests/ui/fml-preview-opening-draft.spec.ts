@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_WINDOW_REFID, WINDOW_TRIANGLE_REFID, type Opening } from '@/core/fml/types'
+import { type Opening } from '@/core/fml/types'
 import { computeOpeningDraftState } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({
-  refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+  kind: 'door.single',
   t: 0.5,
   width: 90,
   type: 'door',
@@ -12,7 +12,7 @@ const door = (overrides: Partial<Opening> = {}): Opening => ({
 })
 
 const windowOpening = (overrides: Partial<Opening> = {}): Opening => ({
-  refid: CONCEPT_WINDOW_REFID,
+  kind: 'window.single',
   t: 0.5,
   width: 120,
   type: 'window',
@@ -56,7 +56,7 @@ describe('computeOpeningDraftState — bovenlicht measures', () => {
 
   it('leest spiegelstand van een driehoekraam', () => {
     const draft = computeOpeningDraftState([
-      windowOpening({ refid: WINDOW_TRIANGLE_REFID, mirrored: [1, 0] }),
+      windowOpening({ kind: 'window.triangle', mirrored: [1, 0] }),
     ])
     expect(draft?.subtype).toBe('triangle')
     expect(draft?.hingeAtStart).toBe(false)

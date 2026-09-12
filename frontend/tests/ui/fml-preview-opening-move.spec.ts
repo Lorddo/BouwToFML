@@ -26,7 +26,7 @@ function doorWall(id: string, t = 0.5): Wall {
         refid: 'door-ref',
         t,
         width: 90,
-        guid: 'door-1',
+        id: 'door-1',
         mirrored: [0, 1],
       },
     ],

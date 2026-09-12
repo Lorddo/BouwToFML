@@ -12,6 +12,7 @@ import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-toolbelt-settings-fields.css'
 import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
+import { facadeGroupDisplayName } from '@/ui/composables/fml-preview/facade-group-label'
 
 const { t } = useI18n()
 
@@ -26,6 +27,7 @@ const props = withDefaults(
       heightMixed?: boolean
       canSplit: boolean
       ridgeCount?: number
+      mode?: 'quick' | 'full'
     } | null
     selectedJunctionPanel: {
       junctionId: string
@@ -130,6 +132,8 @@ const isDrawWallOrRoom = computed(
   () => props.activeTool === 'draw_wall' || props.activeTool === 'draw_room',
 )
 
+const isQuickWallPanel = computed(() => props.selectedWallPanel?.mode === 'quick')
+
 const selectedRidgeCount = computed(() => props.selectedWallPanel?.ridgeCount ?? 0)
 const selectedKind = computed<'wall' | 'ridge' | ''>(() => {
   const panel = props.selectedWallPanel
@@ -150,16 +154,25 @@ const isRidgeMode = computed(
 )
 const showKindSelect = computed(
   () =>
-    props.dakMode !== true && (props.activeTool === 'draw_wall' || props.selectedWallPanel != null),
+    !isQuickWallPanel.value &&
+    props.dakMode !== true &&
+    (props.activeTool === 'draw_wall' || props.selectedWallPanel != null),
 )
 const showRidgeFloorSelect = computed(
   () =>
+    !isQuickWallPanel.value &&
     props.dakMode === true &&
     (props.ridgeFloorOptions?.length ?? 0) > 1 &&
     (props.selectedWallPanel?.ridgeCount ?? 0) > 0,
 )
 const showThicknessFields = computed(() => !isRidgeMode.value)
-const showFacadeStamp = computed(() => !!props.selectedWallPanel && selectedKind.value === 'wall')
+const showFacadeStamp = computed(
+  () =>
+    !isQuickWallPanel.value && !!props.selectedWallPanel && selectedKind.value === 'wall',
+)
+const showAdvancedElevation = computed(
+  () => !isQuickWallPanel.value && (props.selectedWallPanel != null || isDrawWallOrRoom.value),
+)
 
 /** Matcht draft op een catalogus-cm; leeg = handmatige overschrijving. */
 const drawThicknessBand = computed(() => {
@@ -208,6 +221,10 @@ const memberFacadeGroups = computed(() =>
 const addableFacadeGroups = computed(() =>
   props.facadeGroupOptions.filter((group) => facadeCheckState(group.id) !== true),
 )
+
+function groupLabel(group: { id: string; name: string }): string {
+  return facadeGroupDisplayName(group, t)
+}
 
 function presetSizeLabel(cm: number): string {
   return formatScaleInputLabel(cm, props.unit)
@@ -298,13 +315,13 @@ function onRidgeZCm(cm: number): void {
           </select>
         </div>
       </div>
-      <span v-if="selectedWallPanel" class="fml-toolbelt__meta">
+      <span v-if="selectedWallPanel && !isQuickWallPanel" class="fml-toolbelt__meta">
         {{ wallCountLabel }}
       </span>
       <span v-if="selectedJunctionPanel" class="fml-toolbelt__meta">
         {{ junctionCountLabel }}
       </span>
-      <div v-if="isRidgeMode" class="fml-toolbelt__field">
+      <div v-if="isRidgeMode && !isQuickWallPanel" class="fml-toolbelt__field">
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.ridgeZ') }}</span>
         <div class="fml-toolbelt__field-controls">
           <ScaleLengthInput
@@ -417,7 +434,7 @@ function onRidgeZCm(cm: number): void {
         </div>
       </div>
       <div
-        v-if="(selectedWallPanel || isDrawWallOrRoom) && !isRidgeMode"
+        v-if="showAdvancedElevation && !isRidgeMode"
         class="fml-toolbelt__field"
       >
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
@@ -437,7 +454,7 @@ function onRidgeZCm(cm: number): void {
         </div>
       </div>
       <div
-        v-if="(selectedWallPanel || isDrawWallOrRoom) && !isRidgeMode"
+        v-if="showAdvancedElevation && !isRidgeMode"
         class="fml-toolbelt__field"
       >
         <span class="fml-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
@@ -529,7 +546,7 @@ function onRidgeZCm(cm: number): void {
                   {{ t('result.toolbar.facadeGroupAdd') }}
                 </option>
                 <option v-for="group in addableFacadeGroups" :key="group.id" :value="group.id">
-                  {{ group.name || group.id }}
+                  {{ groupLabel(group) }}
                 </option>
                 <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
                 <option value="__edit__">{{ t('result.toolbar.facadeGroupEditAll') }}</option>
@@ -544,8 +561,8 @@ function onRidgeZCm(cm: number): void {
               >
                 <span class="fml-toolbelt__facade-chip-name">{{
                   facadeCheckState(group.id) === null
-                    ? `${group.name || group.id} (${t('result.toolbar.facadeGroupMixedShort')})`
-                    : group.name || group.id
+                    ? `${groupLabel(group)} (${t('result.toolbar.facadeGroupMixedShort')})`
+                    : groupLabel(group)
                 }}</span>
                 <button
                   type="button"

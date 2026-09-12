@@ -1,14 +1,14 @@
 import type { Opening } from './types'
 
-/** Lokale opening-id (één floor): `{wallId}-door|window-{guid|index}`. */
+/** Lokale opening-id (één floor): `{wallId}-door|window-{id|index}`. */
 export function buildLocalOpeningId(
   wallId: string,
   opening: Opening,
   openingIndex: number,
 ): string {
   return opening.type === 'window'
-    ? `${wallId}-window-${opening.guid ?? openingIndex}`
-    : `${wallId}-door-${opening.guid ?? openingIndex}`
+    ? `${wallId}-window-${opening.id || openingIndex}`
+    : `${wallId}-door-${opening.id || openingIndex}`
 }
 
 export function decodePlanOpeningId(openingId: string): {
@@ -24,7 +24,7 @@ export function encodePlanOpeningId(floorIndex: number, localId: string): string
   return `${floorIndex}:${localId}`
 }
 
-/** Uniek over floors: zelfde muur-id + guid bij gestapelde gevels. */
+/** Uniek over floors: zelfde muur-id + opening-id bij gestapelde gevels. */
 export function scopeOpeningId(floorIndex: number, localId: string): string {
   return encodePlanOpeningId(floorIndex, localId)
 }

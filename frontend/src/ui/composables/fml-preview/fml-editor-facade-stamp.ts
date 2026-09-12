@@ -7,6 +7,7 @@ import {
   assignWallsToGroup,
   assignWallsToStamp,
   createFacadeGroup,
+  deleteFacadeGroup,
   detachWalls,
   detachWallsFromFacade,
   detachWallsFromGroup,
@@ -103,6 +104,11 @@ export function createFmlEditorFacadeStamp(deps: FmlEditorFacadeStampDeps) {
     return listFacadeGroups(deps.localPlan.value).find((g) => g.id === group.id) ?? group
   }
 
+  function applyFacadeDelete(groupId: string, options?: { force?: boolean }): boolean {
+    if (!deps.localPlan.value) return false
+    return deleteFacadeGroup(deps.localPlan.value, groupId, options)
+  }
+
   function applyFacadeRename(
     groupId: string,
     patch: { name?: string; code?: string },
@@ -152,6 +158,7 @@ export function createFmlEditorFacadeStamp(deps: FmlEditorFacadeStampDeps) {
     applyStampAssign,
     applyStampDetach,
     applyFacadeCreate,
+    applyFacadeDelete,
     applyFacadeRename,
     applyStampToActiveFloor,
     canApplyStampOnActiveFloor,

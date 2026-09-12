@@ -9,9 +9,9 @@ import { defaultDimensionVis, type DimensionVis } from '@/core/fml/fml-dimension
 import {
   dimensionLiesOnAnySlice,
   filterManualDimensions,
-  readBtfSlices,
-  writeBtfSlices,
-} from '@/core/fml/btf-slices'
+  readPlanSlices,
+  writePlanSlices,
+} from '@/core/fml/plan-slices'
 import { collectOverlayDimensionLines } from '@/core/fml/convert-overlay-dimensions'
 
 export function useFmlViewerDimensions(options: {
@@ -50,7 +50,7 @@ export function useFmlViewerDimensions(options: {
         collectOverlayDimensionLines(plan, options.activeFloorIndex.value, 'autogen').length > 0
       )
     }
-    if (vis === 'slicer') return readBtfSlices(floor).length > 0
+    if (vis === 'slicer') return readPlanSlices(floor).length > 0
     return false
   })
 
@@ -59,9 +59,9 @@ export function useFmlViewerDimensions(options: {
     if (vis === 'none') return false
     if (vis === 'autogen') return dimensionSettings.value.engineAutoDims
     const floor = options.plan.value?.floors[options.activeFloorIndex.value]
-    if (vis === 'slicer') return readBtfSlices(floor).length > 0
+    if (vis === 'slicer') return readPlanSlices(floor).length > 0
     if (vis === 'manual') {
-      return filterManualDimensions(floor?.dimensions, readBtfSlices(floor)).length > 0
+      return filterManualDimensions(floor?.dimensions, readPlanSlices(floor)).length > 0
     }
     return false
   })
@@ -91,13 +91,13 @@ export function useFmlViewerDimensions(options: {
       return
     }
     if (vis === 'slicer') {
-      options.plan.value = writeBtfSlices(options.plan.value, [], options.activeFloorIndex.value)
+      options.plan.value = writePlanSlices(options.plan.value, [], options.activeFloorIndex.value)
       return
     }
     if (vis === 'manual') {
       const floor = options.plan.value.floors[options.activeFloorIndex.value]
       if (!floor) return
-      const slices = readBtfSlices(floor)
+      const slices = readPlanSlices(floor)
       const nextDims = (floor.dimensions ?? []).filter((d) => dimensionLiesOnAnySlice(d, slices))
       options.plan.value = {
         ...options.plan.value,

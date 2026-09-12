@@ -2,7 +2,7 @@ export type FmlInspectKind = 'wall' | 'door' | 'window' | 'area' | 'surface' | '
 
 export interface FmlInspectHit {
   kind: FmlInspectKind
-  /** FML guid (area/surface/wall id, of opening.guid). */
+  /** FML guid (area/surface/wall id, of opening.id). */
   id: string
   floorIndex: number
   /** Alleen deur/raam. */
@@ -53,7 +53,7 @@ export function inspectKindLabel(kind: FmlInspectKind): string {
 export interface InspectHitCandidates {
   opening: {
     compositeId: string
-    guid: string
+    id: string
     type: 'door' | 'window'
     wallId: string
   } | null
@@ -83,7 +83,7 @@ export function pickInspectTarget(hits: InspectHitCandidates): PickedInspectTarg
   if (hits.opening) {
     return {
       kind: hits.opening.type,
-      id: hits.opening.guid,
+      id: hits.opening.id,
       wallId: hits.opening.wallId,
       compositeOpeningId: hits.opening.compositeId,
     }

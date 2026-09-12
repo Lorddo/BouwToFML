@@ -87,6 +87,34 @@ describe('useFmlPreviewDrawSurface', () => {
 
     scope.stop()
   })
+
+  it('onRoofPlaced na dakvlak op de verdieping (draw_roof, geen dakMode)', () => {
+    const scope = effectScope()
+    const plan = ref<FloorPlan | null>(emptyPlan())
+    const floorIndex = ref(0)
+    const editor = scope.run(() => useFmlPreviewEditor(plan, floorIndex))!
+    const selection = createFmlPreviewSelection()
+    let placed = 0
+    const draw = scope.run(() =>
+      useFmlPreviewDrawSurface({
+        selection,
+        editor,
+        hitTest: { clientToCm: () => null },
+        shiftPressed: ref(false),
+        resolvePoint: (cm) => cm,
+        beforeBegin: () => undefined,
+        syncPlanToParent: () => undefined,
+        isDak: () => true,
+        onRoofPlaced: () => {
+          placed += 1
+        },
+      }),
+    )!
+    selection.drawSurfacePoints.value = triangle()
+    expect(draw.commitDrawSurface()).toBe(true)
+    expect(placed).toBe(1)
+    scope.stop()
+  })
 })
 
 describe('useFmlPreviewEditor addSurface', () => {

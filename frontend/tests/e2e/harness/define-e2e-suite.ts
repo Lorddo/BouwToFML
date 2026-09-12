@@ -86,7 +86,7 @@ export function defineE2eSuite(slug: string, options: E2eSuiteOptions = {}): voi
         expect(openings.fmlSnapshot.reference).toBeUndefined()
       }
 
-      await expect(openings.fmlSnapshot).toMatchFileSnapshot(
+      await expect.soft(openings.fmlSnapshot).toMatchFileSnapshot(
         `./fixtures/${slug}/snapshot/${slug}.fml.json`,
       )
       await expect(openings.layersSnapshot).toMatchFileSnapshot(

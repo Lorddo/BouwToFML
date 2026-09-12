@@ -41,7 +41,7 @@ export function useFmlPreviewInspect(options: {
       if (loc) {
         opening = {
           compositeId: openingId,
-          guid: loc.opening.guid?.trim() || openingId,
+          id: loc.opening.id?.trim() || openingId,
           type: loc.opening.type,
           wallId: loc.wallId,
         }

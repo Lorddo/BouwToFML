@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
 import './fml-panel-fields.css'
 
 const { t } = useI18n()
@@ -43,6 +44,7 @@ const emit = defineEmits<{
           :cm="fmlWallHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
           @update:cm="emit('update:fmlWallHeightCm', $event)"
         />
@@ -56,6 +58,7 @@ const emit = defineEmits<{
           :cm="fmlDoorHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
           @update:cm="emit('update:fmlDoorHeightCm', $event)"
         />
@@ -70,6 +73,7 @@ const emit = defineEmits<{
           :unit="unit"
           :min-cm="0"
           allow-zero
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
           @update:cm="emit('update:fmlWindowSillZCm', $event)"
         />
@@ -83,6 +87,7 @@ const emit = defineEmits<{
           :cm="fmlWindowHeightCm"
           :unit="unit"
           :min-cm="1"
+          :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
           @update:cm="emit('update:fmlWindowHeightCm', $event)"
         />

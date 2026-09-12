@@ -69,7 +69,7 @@ export function useFmlPreviewItemDrag(options: {
     if (options.spacePressed.value) return
     const cm = options.hitTest.clientToCm(event.clientX, event.clientY)
     if (!cm) return
-    const item = options.editor.items.value.find((entry) => entry.guid === guid)
+    const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     options.editor.pushUndo()
     options.selection.moveItemId.value = guid
@@ -86,7 +86,7 @@ export function useFmlPreviewItemDrag(options: {
     cm: Point2D,
     event: { ctrlKey?: boolean; metaKey?: boolean },
   ): Point2D {
-    const item = options.editor.items.value.find((entry) => entry.guid === guid)
+    const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return cm
     return snapFixtureCenterToWallFaces(
       options.editor.walls.value,

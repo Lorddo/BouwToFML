@@ -8,6 +8,7 @@ export type FmlToolId =
   | 'draw_wall'
   | 'draw_room'
   | 'draw_surface'
+  | 'draw_roof'
   | 'draw_label'
   | 'draw_line'
   | 'add_door'
@@ -18,6 +19,7 @@ const SETTINGS_TOOLS: ReadonlySet<FmlToolId> = new Set([
   'draw_wall',
   'draw_room',
   'draw_surface',
+  'draw_roof',
   'draw_label',
   'draw_line',
   'add_door',
@@ -29,6 +31,7 @@ const ONESHOT_DRAW_TOOLS: ReadonlySet<FmlToolId> = new Set([
   'draw_wall',
   'draw_room',
   'draw_surface',
+  'draw_roof',
   'draw_label',
   'draw_line',
   'add_door',
@@ -48,14 +51,19 @@ export function isFmlToolbarSettingsOpen(args: {
   hasAreaSelection: boolean
   hasLabelSelection: boolean
   hasLineSelection?: boolean
-  hasItemSelection?: boolean
-  hasFacadeGroupSelection?: boolean
+    hasItemSelection?: boolean
+    hasDimensionSelection?: boolean
+    hasFacadeGroupSelection?: boolean
   /** Viewer-maatlijnen: strip met wissen, ook in de floating settings-kaart. */
   hasMeasureLines?: boolean
   activeTool: FmlToolId | null
-  /** Dakvlak-tool heeft geen roomtype-settings. */
+  /**
+   * Reserved: Dak-tab draw_surface opens settings for Hoofddak/Dakkapel (same as other draw tools).
+   * Callers may still pass it; it no longer suppresses the strip.
+   */
   dakMode?: boolean
 }): boolean {
+  void args.dakMode
   if (
     args.hasWallSelection ||
     args.hasJunctionSelection ||
@@ -64,13 +72,13 @@ export function isFmlToolbarSettingsOpen(args: {
     args.hasLabelSelection ||
     args.hasLineSelection ||
     args.hasItemSelection ||
+    args.hasDimensionSelection ||
     args.hasFacadeGroupSelection
   ) {
     return true
   }
   if (args.activeTool === 'measure' || args.activeTool === 'box_select') return true
   if (args.activeTool === 'nulpunt') return true
-  if (args.dakMode === true && args.activeTool === 'draw_surface') return false
   return args.activeTool != null && SETTINGS_TOOLS.has(args.activeTool)
 }
 
@@ -93,6 +101,7 @@ export function getFmlSelectTools(): ToolbeltItem[] {
 
 export function getFmlDrawTools(options?: {
   includeSurface?: boolean
+  includeRoof?: boolean
   includeAnnotations?: boolean
   dakMode?: boolean
 }): ToolbeltItem[] {
@@ -106,6 +115,9 @@ export function getFmlDrawTools(options?: {
     { id: 'draw_wall', icon: 'wall', label: tGlobal('toolbelt.fml.drawWall') },
     { id: 'draw_room', icon: 'room', label: tGlobal('toolbelt.fml.drawRoom') },
   ]
+  if (options?.includeRoof === true) {
+    tools.push({ id: 'draw_roof', icon: 'roof', label: tGlobal('toolbelt.fml.drawRoof') })
+  }
   if (options?.includeSurface === true) {
     tools.push({ id: 'draw_surface', icon: 'rect', label: tGlobal('toolbelt.fml.drawSurface') })
   }
@@ -131,6 +143,7 @@ export function getFmlLibraryTools(options?: { includeFixture?: boolean }): Tool
 
 export function getFmlEditTools(options?: {
   includeSurface?: boolean
+  includeRoof?: boolean
   includeAnnotations?: boolean
   includeFixture?: boolean
 }): ToolbeltItem[] {

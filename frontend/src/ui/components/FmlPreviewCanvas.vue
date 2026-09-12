@@ -2,7 +2,13 @@
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
-import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/fml/ridge-walls'
+import { listRidgeWallsOnFloor, ridgeDisplayWidthCm, dakThicknessCmForPlan } from '@/core/fml/ridge-walls'
+import { DEFAULT_FLOOR_THICKNESS_CM, readFloorStack, slabThicknessCm } from '@/core/fml/floor-stack'
+import {
+  listParentRoofs,
+  listRidgeSurfacesOnFloor,
+  roofKindOf,
+} from '@/core/fml/roof-planes'
 import type { FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 import { useStage } from '@/platform/canvas'
@@ -35,6 +41,8 @@ import { useFmlPreviewSlicer } from '@/ui/composables/fml-preview/useFmlPreviewS
 import {
   loadUserSettings,
   setShowCanvasGrid,
+  setShowRoofOverlayOnPlan,
+  DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
   type CornerMarkerMode,
   type OpeningDisplayColors,
   type PlanDisplayStyleChoice,
@@ -125,6 +133,13 @@ const viewportChrome = computed(
   () => capabilities.value?.viewportChrome === true || touchEditor.value,
 )
 const includeSurfaceTool = computed(() => areaSurfaceEditEnabled.value)
+const includeRoofTool = computed(
+  () => props.dakMode !== true && capabilities.value?.tools.draw_roof === true,
+)
+/** Editor + inspect: overlay-knop. Converter stap 4 niet. */
+const showRoofOverlayChrome = computed(
+  () => props.kind !== 'detection' && props.dakMode !== true,
+)
 const includeAnnotationTools = computed(() => annotationEditEnabled.value)
 const includeFixtureTool = computed(
   () =>
@@ -208,8 +223,10 @@ const { useTouchNav, coarsePointer } = useFmlTouchNav(touchEditor)
 
 const { shiftPressed, spacePressed, onKeyDown, onKeyUp } = useStage()
 const ensureStampPreset = computed(() => props.kind === 'detection' || props.kind === 'editor')
+const ensureDefaultFacades = computed(() => props.kind === 'editor')
 const editor = useFmlPreviewEditor(toRef(props, 'plan'), toRef(props, 'floorIndex'), {
   ensureStampPreset,
+  ensureDefaultFacades,
 })
 const selection = createFmlPreviewSelection()
 
@@ -276,6 +293,28 @@ const dakMode = computed(() => props.dakMode === true)
 const drawInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
 const planDisplayStyle = ref<PlanDisplayStyleChoice>(loadUserSettings().fmlViewer.planDisplayStyle)
 const showCanvasGrid = ref(loadUserSettings().fmlViewer.showCanvasGrid !== false)
+const showRoofOverlayOnPlan = ref(loadUserSettings().fmlViewer.showRoofOverlayOnPlan !== false)
+const showRoofPlanesOnPlan = ref(loadUserSettings().fmlViewer.showRoofPlanesOnPlan !== false)
+const showClearHeight150 = ref(loadUserSettings().fmlViewer.showClearHeight150 !== false)
+const showClearHeight200 = ref(loadUserSettings().fmlViewer.showClearHeight200 === true)
+const showClearHeightPlanFill = ref(loadUserSettings().fmlViewer.showClearHeightPlanFill === true)
+const clearHeightFillColor = ref(
+  loadUserSettings().fmlViewer.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
+)
+const showRidgeDisplay = ref(loadUserSettings().fmlViewer.showRidgeDisplay !== false)
+
+function onShowRoofOverlayOnPlan(next: boolean) {
+  showRoofOverlayOnPlan.value = setShowRoofOverlayOnPlan(next)
+}
+
+function ensureRoofOverlayOn(): void {
+  if (showRoofOverlayOnPlan.value) return
+  showRoofOverlayOnPlan.value = setShowRoofOverlayOnPlan(true)
+}
+
+const planRoofOverlayOn = computed(
+  () => showRoofOverlayChrome.value && showRoofOverlayOnPlan.value === true,
+)
 
 const render = useFmlPreviewRenderModel(
   viewport,
@@ -368,6 +407,8 @@ const interaction = useFmlPreviewInteraction({
   dimensionVis,
   selectedSliceIndex,
   dakMode,
+  roofOverlayOnPlan: planRoofOverlayOn,
+  ensureRoofOverlayOn,
   onInspectSelect: (hit) => emit('inspectSelect', hit),
   getInputUnit: () => drawInputUnit.value,
   onKeyDown,
@@ -399,6 +440,7 @@ const {
   junctionMarkerRadius,
   junctionMarkerStroke,
   activeJunctionId,
+  dimensionHandleOverlay,
   selectedWallPanel,
   selectedJunctionPanel,
   selectedOpeningPanel,
@@ -415,6 +457,26 @@ const hoveredLabelId = computed(() => selection.hoveredLabelId.value)
 const hoveredLineId = computed(() => selection.hoveredLineId.value)
 const moveDimensionId = computed(() => selection.moveDimensionId.value)
 const hoveredDimensionId = computed(() => selection.hoveredDimensionId.value)
+const selectedDimensionPanel = computed(() => {
+  const id = moveDimensionId.value
+  if (!id) return null
+  const dim = editor.dimensions.value.find((item) => item.id === id)
+  if (!dim) return null
+  return {
+    id: dim.id,
+    lengthCm: Math.hypot(dim.b.x - dim.a.x, dim.b.y - dim.a.y),
+  }
+})
+const dimensionHandles = computed(() => {
+  const overlay = dimensionHandleOverlay.value
+  if (!overlay) return null
+  return {
+    a: overlay.a,
+    b: overlay.b,
+    selected: overlay.selected,
+    activeEnd: draggingDimensionEnd.value ?? overlay.activeEnd,
+  }
+})
 
 const inspectWallPolygons = computed(() => {
   if (!inspectMode.value || !renderModel.value) return []
@@ -440,12 +502,21 @@ function applyCornerMarkerModeFromSettings(): void {
   openingColors.value = { ...settings.fmlViewer.openingColors }
   planDisplayStyle.value = settings.fmlViewer.planDisplayStyle
   showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
+  showRoofOverlayOnPlan.value = settings.fmlViewer.showRoofOverlayOnPlan !== false
+  showRoofPlanesOnPlan.value = settings.fmlViewer.showRoofPlanesOnPlan !== false
+  showClearHeight150.value = settings.fmlViewer.showClearHeight150 !== false
+  showClearHeight200.value = settings.fmlViewer.showClearHeight200 === true
+  showClearHeightPlanFill.value = settings.fmlViewer.showClearHeightPlanFill === true
+  clearHeightFillColor.value =
+    settings.fmlViewer.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
+  showRidgeDisplay.value = settings.fmlViewer.showRidgeDisplay !== false
   drawInputUnit.value = settings.scaleInputUnit
 }
 
 function onShowCanvasGrid(next: boolean) {
   showCanvasGrid.value = setShowCanvasGrid(next)
 }
+
 const fmlToolbarRef = ref<{ hint: string } | null>(null)
 const toolbarHint = computed(() => fmlToolbarRef.value?.hint ?? '')
 
@@ -466,6 +537,7 @@ const {
   drawSurfaceDrafting,
   drawSurfacePendingRole,
   drawSurfacePendingCutout,
+  drawSurfacePendingRoofKind,
   drawLineThickness,
   drawLineType,
   drawLineColor,
@@ -615,6 +687,9 @@ const {
   applyAreaColor,
   applyShowAreaLabel,
   applySurfaceCutout,
+  applyAreaLiningCm,
+  applyRoofKind,
+  applyRoofParentId,
   deleteSelectedTagged,
   beginSurfacePolygonEdit,
   endSurfacePolygonEdit,
@@ -648,6 +723,9 @@ const {
   itemDragPreview,
   updateSelectedItem,
   deleteSelectedItem,
+  deleteSelected,
+  applySelectedDimensionLength,
+  draggingDimensionEnd,
   copySelectedItem,
   toggleSelectedItemMirror,
   onWrapPointerDown,
@@ -681,7 +759,7 @@ watch(slicerEditMode, (edit) => {
     return
   }
   if (measureDrawMode.value !== 'slicer') return
-  const slices = editor.btfSlices.value
+  const slices = editor.planSlices.value
   if (slices.length === 0) return
   if (selectedSliceIndex.value < 0 || selectedSliceIndex.value >= slices.length) {
     selectedSliceIndex.value = slices.length - 1
@@ -732,7 +810,7 @@ const itemDragPreviewStage = computed(() => {
 const sliceGuidesStage = computed(() => {
   // Linialen alleen tijdens actieve slicer-meettool; maten blijven via sliceDimensions.
   if (activeFmlTool.value !== 'measure' || measureDrawMode.value !== 'slicer') return []
-  const slices = editor.btfSlices.value
+  const slices = editor.planSlices.value
   if (slices.length === 0) return []
   const toStage = renderTransform.value.toStagePoint
   const walls = editor.walls.value
@@ -800,7 +878,7 @@ const slicePreviewStage = computed(() => {
 })
 
 const slicer = useFmlPreviewSlicer({
-  getSlices: () => editor.btfSlices.value,
+  getSlices: () => editor.planSlices.value,
   getWalls: () => editor.walls.value,
   getPlan: () => editor.localPlan.value,
   getFloorIndex: () => editor.floorIndex.value,
@@ -809,7 +887,7 @@ const slicer = useFmlPreviewSlicer({
   toStagePoint: (x, y) => renderTransform.value.toStagePoint(x, y),
   shiftPressed,
   pushUndo: () => editor.pushUndo(),
-  updateSlice: (index, slice) => editor.updateBtfSlice(index, slice),
+  updateSlice: (index, slice) => editor.updatePlanSlice(index, slice),
   syncPlan: () => {
     const plan = editor.localPlan.value
     if (plan) {
@@ -875,9 +953,9 @@ useFmlCanvasTouch({
 const selectedItemPanel = computed(() => {
   const guid = settingsItemId.value
   if (!guid) return null
-  const item = editor.items.value.find((entry) => entry.guid === guid)
+  const item = editor.items.value.find((entry) => entry.id === guid)
   if (!item) return null
-  const info = resolveFixtureCatalog(item.refid, { width: item.width, height: item.height })
+  const info = resolveFixtureCatalog(item.kind, { width: item.width, height: item.height })
   return {
     id: guid,
     label: item.name ?? info.label,
@@ -913,6 +991,7 @@ const selectedAreaPanel = computed(() => {
   if (!id || !renderModel.value) return null
   const area = renderModel.value.areas.find((a) => a.id === id)
   if (!area) return null
+  const live = editor.areas.value.find((a) => a.id === id)
   return {
     kind: 'area' as const,
     id: area.id,
@@ -923,6 +1002,7 @@ const selectedAreaPanel = computed(() => {
     showAreaLabel: area.showAreaLabel !== false,
     canEditPolygon: false,
     isCutout: false,
+    liningCm: live?.liningCm ?? 0,
   }
 })
 
@@ -1020,6 +1100,39 @@ const roofVertexZCm = computed(() => {
   return typeof z === 'number' && Number.isFinite(z) ? Math.round(z) : null
 })
 
+const selectedRoofKind = computed(() => {
+  const id = settingsSurfaceId.value
+  if (!id) return 'plane' as const
+  const surface = editor.surfaces.value.find((item) => item.id === id)
+  return roofKindOf(surface)
+})
+
+const selectedRoofParentId = computed(() => {
+  const id = settingsSurfaceId.value
+  if (!id) return null
+  const surface = editor.surfaces.value.find((item) => item.id === id)
+  return surface?.roofParentId?.trim() || null
+})
+
+const parentRoofOptions = computed(() => {
+  const floorSurfaces = listRidgeSurfacesOnFloor(floor.value)
+  const selectedId = settingsSurfaceId.value
+  return listParentRoofs(floorSurfaces)
+    .filter((surface) => surface.id !== selectedId)
+    .map((surface, index) => ({
+      id: surface.id,
+      label: (surface.customName || surface.name || `Hoofddak ${index + 1}`).trim(),
+    }))
+})
+
+const editorDakThicknessCm = computed(() => dakThicknessCmForPlan(editor.localPlan.value))
+const editorSlabThicknessCm = computed(() => {
+  const plan = editor.localPlan.value
+  const active = floor.value
+  if (!plan || !active) return DEFAULT_FLOOR_THICKNESS_CM
+  return slabThicknessCm(readFloorStack(plan), active.level)
+})
+
 const {
   drawWallPreviewScreen,
   drawRoomPreviewScreen,
@@ -1067,7 +1180,7 @@ const handleItemId = computed(() => settingsItemId.value ?? moveItemId.value)
 const itemResizeHandles = computed(() => {
   const guid = handleItemId.value
   if (!guid || inspectMode.value || dakMode.value) return []
-  const item = editor.items.value.find((entry) => entry.guid === guid)
+  const item = editor.items.value.find((entry) => entry.id === guid)
   if (!item) return []
   return itemResizeHandleWorlds(item).map((handle) => ({
     ...handle,
@@ -1094,7 +1207,7 @@ const openingMoveHandle = computed(
 const itemRotateHandles = computed(() => {
   const guid = handleItemId.value
   if (!guid || inspectMode.value || dakMode.value) return []
-  const item = editor.items.value.find((entry) => entry.guid === guid)
+  const item = editor.items.value.find((entry) => entry.id === guid)
   if (!item) return []
   return itemRotateHandleWorlds(item).map((handle) => ({
     ...handle,
@@ -1210,6 +1323,8 @@ watch(
       :fullscreen="canvasFullscreen"
       :edge-chrome="canvasFullscreen"
       :show-canvas-grid="showCanvasGrid"
+      :show-roof-overlay-toggle="showRoofOverlayChrome"
+      :show-roof-overlay-on-plan="showRoofOverlayOnPlan"
       @undo="undoEdit"
       @redo="redoEdit"
       @fit="resetView"
@@ -1217,6 +1332,7 @@ watch(
       @zoom-out="zoomBy(1 / 1.1)"
       @toggle-fullscreen="emit('update:canvasFullscreen', !canvasFullscreen)"
       @update:show-canvas-grid="onShowCanvasGrid"
+      @update:show-roof-overlay-on-plan="onShowRoofOverlayOnPlan"
     />
     <FmlPreviewToolbar
       v-if="!inspectMode && !rescaleMode"
@@ -1235,6 +1351,7 @@ watch(
       v-model:slicer-edit-mode="slicerEditMode"
       v-model:draw-surface-role="drawSurfacePendingRole"
       v-model:draw-surface-cutout="drawSurfacePendingCutout"
+      v-model:draw-roof-kind="drawSurfacePendingRoofKind"
       v-model:draw-line-thickness="drawLineThickness"
       v-model:draw-line-type="drawLineType"
       v-model:draw-line-color="drawLineColor"
@@ -1255,12 +1372,19 @@ watch(
       :selected-area-panel="taggedSettingsPanel"
       :selected-label-panel="selectedLabelPanel"
       :selected-line-panel="selectedLinePanel"
+      :selected-dimension-panel="selectedDimensionPanel"
       :room-types="roomTypes"
       :surface-edit-active="surfaceEditActive"
       :roof-vertex-z-cm="roofVertexZCm"
       :roof-vertex-index="roofVertexIndex"
       :roof-poly-mutate="selection.roofPolyMutate.value"
+      :roof-kind="selectedRoofKind"
+      :roof-parent-id="selectedRoofParentId"
+      :parent-roof-options="parentRoofOptions"
+      :dak-thickness-cm="editorDakThicknessCm"
+      :slab-thickness-cm="editorSlabThicknessCm"
       :include-surface-tool="includeSurfaceTool"
+      :include-roof-tool="includeRoofTool"
       :include-annotation-tools="includeAnnotationTools && !dakMode"
       :include-fixture-tool="includeFixtureTool && !dakMode"
       :selected-item-panel="selectedItemPanel"
@@ -1368,6 +1492,9 @@ watch(
       @apply-area-color="applyAreaColor"
       @apply-show-area-label="applyShowAreaLabel"
       @apply-surface-cutout="applySurfaceCutout"
+      @apply-area-lining-cm="applyAreaLiningCm"
+      @apply-roof-kind="applyRoofKind"
+      @apply-roof-parent-id="applyRoofParentId"
       @delete-tagged="deleteSelectedTagged"
       @label-text-input="onLabelTextInput"
       @update-label-text="updateSelectedLabelText"
@@ -1390,6 +1517,8 @@ watch(
       @toggle-item-mirror-y="toggleSelectedItemMirror(1)"
       @copy-item="copySelectedItem"
       @delete-item="deleteSelectedItem"
+      @dimension-length-cm="applySelectedDimensionLength"
+      @delete-dimension="deleteSelected"
       @draw-wall-length-input="setDrawWallLengthOverrideCm"
       @commit-draw-wall-measure="commitDrawWallFromMeasure"
       @cancel-draw-wall-draft="deactivateDrawTool"
@@ -1697,6 +1826,12 @@ watch(
       :underlay-config="underlayConfig"
       :content-opacity="contentOpacity"
       :show-guide-grid="showCanvasGrid"
+      :show-clear-height150="dakMode || planRoofOverlayOn ? showClearHeight150 : false"
+      :show-clear-height200="planRoofOverlayOn ? showClearHeight200 : false"
+      :show-clear-height-plan-fill="dakMode || planRoofOverlayOn ? showClearHeightPlanFill : false"
+      :clear-height-fill-color="clearHeightFillColor"
+      :show-roof-planes="planRoofOverlayOn && showRoofPlanesOnPlan"
+      :show-ridge-display="showRidgeDisplay"
       :move-wall-polygon="moveWallPolygon"
       :settings-wall-polygons="settingsWallPolygons"
       :facade-wall-polygons="facadeWallPolygons"
@@ -1722,6 +1857,7 @@ watch(
       :hovered-line-id="hoveredLineId"
       :selected-dimension-id="moveDimensionId"
       :hovered-dimension-id="hoveredDimensionId"
+      :dimension-handles="dimensionHandles"
       :inspect-colors="inspectColors"
       :dak-mode="dakMode"
       :surface-edit-id="surfaceEditId"

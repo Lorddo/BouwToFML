@@ -76,9 +76,9 @@ export function computeOpeningDraftState(
 
   const subtypes =
     openingType === 'window'
-      ? openings.map((opening) => resolveWindowSubtypeFromRefid(opening.refid))
+      ? openings.map((opening) => resolveWindowSubtypeFromRefid(opening.kind))
       : openingType === 'door'
-        ? openings.map((opening) => resolveDoorSubtypeFromRefid(opening.refid))
+        ? openings.map((opening) => resolveDoorSubtypeFromRefid(opening.kind))
         : []
   const subtypeFirst = subtypes[0] ?? (openingType === 'window' ? 'single' : 'standard')
   const subtypeMixed = subtypes.length > 0 && subtypes.some((value) => value !== subtypeFirst)
@@ -93,7 +93,7 @@ export function computeOpeningDraftState(
   const doorOpenings = openings.filter((opening) => opening.type === 'door')
   const windowOpenings = openings.filter((opening) => opening.type === 'window')
   const mirrorable = openings.filter(
-    (opening) => opening.type === 'door' || isTriangleWindow(opening.type, opening.refid),
+    (opening) => opening.type === 'door' || isTriangleWindow(opening.type, opening.kind),
   )
   const hinges = mirrorable.map((opening) => resolveHingeAtStart(opening.mirrored))
   const swings = doorOpenings.map((opening) => resolveSwingSign(opening.mirrored) > 0)

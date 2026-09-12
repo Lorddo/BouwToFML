@@ -28,7 +28,8 @@ function samplePlan(): FloorPlan {
             balance: 0.3,
             openings: [
               {
-                refid: 'door',
+                id: 'door-1',
+                kind: 'door.single',
                 t: 0.4,
                 width: 90,
                 type: 'door',
@@ -45,7 +46,8 @@ function samplePlan(): FloorPlan {
             c: { x: 105, y: 70 },
             openings: [
               {
-                refid: 'win',
+                id: 'win-1',
+                kind: 'window.single',
                 t: 0.25,
                 width: 60,
                 type: 'window',
@@ -63,7 +65,8 @@ function samplePlan(): FloorPlan {
         ],
         items: [
           {
-            refid: 'item',
+            id: 'item-1',
+            kind: 'generic',
             x: 50,
             y: 60,
             width: 40,
@@ -145,7 +148,8 @@ describe('mirrorFloorPlanVertical', () => {
           walls: [],
           items: [
             {
-              refid: 'sym-350',
+              id: 'north-1',
+              kind: 'north_cross',
               x: 80,
               y: 40,
               width: 85,
@@ -154,7 +158,8 @@ describe('mirrorFloorPlanVertical', () => {
               mirrored: [0, 0],
             },
             {
-              refid: 'item',
+              id: 'item-2',
+              kind: 'generic',
               x: 50,
               y: 60,
               width: 40,
@@ -200,10 +205,19 @@ describe('rotateFloorPlan90', () => {
               b: { x: 2, y: 0 },
               thickness: 10,
               balance: 0.25,
-              openings: [{ refid: 'd', t: 0.5, width: 80, type: 'door', mirrored: [0, 1] }],
+              openings: [
+                {
+                  id: 'd-1',
+                  kind: 'door.single',
+                  t: 0.5,
+                  width: 80,
+                  type: 'door',
+                  mirrored: [0, 1],
+                },
+              ],
             },
           ],
-          items: [{ refid: 'i', x: 1, y: 0, width: 10, height: 10, rotation: 15 }],
+          items: [{ id: 'i-1', kind: 'generic', x: 1, y: 0, width: 10, height: 10, rotation: 15 }],
         },
       ],
     }
@@ -228,7 +242,8 @@ describe('rotateFloorPlan90', () => {
           walls: [],
           items: [
             {
-              refid: 'sym-350',
+              id: 'north-2',
+              kind: 'north_cross',
               x: 1,
               y: 0,
               width: 85,

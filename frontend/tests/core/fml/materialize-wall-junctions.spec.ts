@@ -65,10 +65,10 @@ describe('materializeWallJunctions', () => {
     const out = materializeWallJunctions([host, wall('branch', { x: 50, y: 0 }, { x: 50, y: 20 })])
     const first = out.find((item) => item.id === 'host')!
     const second = out.find((item) => item.id.startsWith('split-host-'))!
-    expect((first.extras?.bz as { h: number }).h).toBe(300)
-    expect((second.extras?.az as { h: number }).h).toBe(300)
-    expect((first.extras?.az as { h: number }).h).toBe(200)
-    expect((second.extras?.bz as { h: number }).h).toBe(400)
+    expect(first.elevation?.b.h).toBe(300)
+    expect(second.elevation?.a.h).toBe(300)
+    expect(first.elevation?.a.h).toBe(200)
+    expect(second.elevation?.b.h).toBe(400)
   })
 })
 

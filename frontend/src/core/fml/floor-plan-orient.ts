@@ -98,7 +98,7 @@ function normalizeRotationDeg(deg: number): number {
 
 /** Noordkruis wijst wereld-noord; X-flip mag glyph/heading niet omdraaien (N niet achterstevoren). */
 function keepsWorldHeadingOnMirror(item: FloorItem): boolean {
-  return resolveFixtureCatalog(item.refid).kind === 'north_cross'
+  return resolveFixtureCatalog(item.kind).kind === 'north_cross'
 }
 
 function mirrorItem(item: FloorItem, axisXCm: number): FloorItem {

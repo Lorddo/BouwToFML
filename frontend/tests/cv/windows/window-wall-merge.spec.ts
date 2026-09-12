@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
 import { mergeAdjacentBoundWindows } from '@/cv/windows/window-wall-merge'
 import type { BoundWindow } from '@/cv/windows/types'
 
@@ -14,7 +13,7 @@ function makeBound(
     openingEndPx: partial.openingEndPx ?? { x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 },
     widthPx: partial.widthPx ?? bbox.width,
     widthCm: partial.widthCm ?? bbox.width / 5,
-    fmlRefId: partial.fmlRefId ?? CONCEPT_WINDOW_REFID,
+    fmlRefId: partial.fmlRefId ?? 'window.single',
     evidence: partial.evidence ?? 'framing',
     faceIds: partial.faceIds ?? [1],
     ...partial,
@@ -36,8 +35,8 @@ describe('mergeAdjacentBoundWindows', () => {
 
     const merged = mergeAdjacentBoundWindows(windows)
     expect(merged).toHaveLength(2)
-    expect(merged[0].fmlRefId).toBe(WINDOW_TRIPLE_REFID)
-    expect(merged[1].fmlRefId).toBe(WINDOW_TRIPLE_REFID)
+    expect(merged[0].fmlRefId).toBe('window.triple')
+    expect(merged[1].fmlRefId).toBe('window.triple')
     expect(merged[0].windowId).toBe('w0__w1__w2')
     expect(merged[1].windowId).toBe('w3__w4__w5')
     expect(merged[0].openingBBox.width).toBeCloseTo(120, 1)
@@ -60,7 +59,7 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(1)
-    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].fmlRefId).toBe('window.double')
     expect(merged[0].windowId).toBe('a__b')
   })
 
@@ -81,8 +80,8 @@ describe('mergeAdjacentBoundWindows', () => {
     ]
     const merged = mergeAdjacentBoundWindows(windows, { enabled: false })
     expect(merged).toHaveLength(2)
-    expect(merged[0].fmlRefId).toBe(CONCEPT_WINDOW_REFID)
-    expect(merged[1].fmlRefId).toBe(CONCEPT_WINDOW_REFID)
+    expect(merged[0].fmlRefId).toBe('window.single')
+    expect(merged[1].fmlRefId).toBe('window.single')
   })
 
   it('houdt losse ramen bij >5% maatverschil', () => {
@@ -101,7 +100,7 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(2)
-    expect(merged.every((w) => w.fmlRefId === CONCEPT_WINDOW_REFID)).toBe(true)
+    expect(merged.every((w) => w.fmlRefId === 'window.single')).toBe(true)
   })
 
   it('merge niet bij klein maar >5% maatverschil', () => {
@@ -120,7 +119,7 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(2)
-    expect(merged.every((w) => w.fmlRefId === CONCEPT_WINDOW_REFID)).toBe(true)
+    expect(merged.every((w) => w.fmlRefId === 'window.single')).toBe(true)
   })
 
   it('houdt losse ramen als bbox niet raakt', () => {
@@ -157,7 +156,7 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(1)
-    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].fmlRefId).toBe('window.double')
   })
 
   it('merge alleen binnen hetzelfde segment', () => {
@@ -192,8 +191,8 @@ describe('mergeAdjacentBoundWindows', () => {
     )
     const merged = mergeAdjacentBoundWindows(windows)
     expect(merged).toHaveLength(2)
-    expect(merged[0].fmlRefId).toBe(WINDOW_TRIPLE_REFID)
-    expect(merged[1].fmlRefId).toBe(CONCEPT_WINDOW_REFID)
+    expect(merged[0].fmlRefId).toBe('window.triple')
+    expect(merged[1].fmlRefId).toBe('window.single')
   })
 
   it('houdt volle opening-span bij reverse t-volgorde (segment rechts→links)', () => {
@@ -219,7 +218,7 @@ describe('mergeAdjacentBoundWindows', () => {
       }),
     ])
     expect(merged).toHaveLength(1)
-    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].fmlRefId).toBe('window.double')
     expect(merged[0].widthPx).toBeGreaterThan(250)
     expect(merged[0].openingStartPx.x).toBeLessThan(merged[0].openingEndPx.x)
   })

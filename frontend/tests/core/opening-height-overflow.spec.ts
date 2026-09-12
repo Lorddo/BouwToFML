@@ -25,7 +25,7 @@ const door = (overrides: Partial<Opening> = {}): Opening => ({
   type: 'door',
   z: 0,
   z_height: 220,
-  guid: 'd1',
+  id: 'd1',
   ...overrides,
 })
 
@@ -36,13 +36,13 @@ const windowOpening = (overrides: Partial<Opening> = {}): Opening => ({
   type: 'window',
   z: 70,
   z_height: 150,
-  guid: 'w1',
+  id: 'w1',
   ...overrides,
 })
 
 describe('findOpeningHeightOverflows', () => {
   it('meldt deuren boven een te lage muur zonder az/bz (fallback floor.height)', () => {
-    const hits = findOpeningHeightOverflows(floorOf(55, [door(), door({ guid: 'd2' })]))
+    const hits = findOpeningHeightOverflows(floorOf(55, [door(), door({ id: 'd2' })]))
     expect(hits).toHaveLength(2)
     expect(hits.every((hit) => hit.kind === 'door' && hit.side === 'above')).toBe(true)
     expect(summarizeOpeningHeightOverflows(hits)).toMatchObject({

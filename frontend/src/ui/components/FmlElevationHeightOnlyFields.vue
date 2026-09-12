@@ -57,6 +57,7 @@ const { t } = useI18n()
         :min-cm="min ?? 0"
         :max-cm="max ?? 800"
         :allow-zero="(min ?? 0) <= 0"
+        :allow-negative="(min ?? 0) < 0"
         :aria-label="t('result.toolbar.height')"
         input-class="fml-toolbelt__thickness-input"
         @update:cm="emit('height', $event)"

@@ -1,4 +1,4 @@
-/** Losse FML-editor, buiten de projectflow. */
+/** Losse editor (PLG-native). Pad is legacy; niet hernoemen zonder redirect. */
 export const FML_EDITOR_PATH = '/FML-editor'
 
 /** Extern Go2Scan-dashboard (andere host; nieuwe tab). */

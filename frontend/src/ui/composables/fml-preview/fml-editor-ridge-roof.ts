@@ -1,5 +1,8 @@
 import { computed, type Ref } from 'vue'
 import type { FloorPlan, FloorSurface, Point2D, Wall } from '@/core/fml/types'
+import { alertFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+import { tGlobal } from '@/ui/i18n'
+import { roofOverlapMessage, validateRoofOverlap } from '@/core/fml/roof-overlap'
 import {
   applyRidgeWallRemaps,
   assignRidgeWallGuids,
@@ -27,14 +30,17 @@ import {
 } from '@/core/fml/ridge-floor'
 import {
   isRidgeSurfaceId,
+  listParentRoofs,
   listRidgeSurfacesOnFloor,
   listRidgeSurfacesOnPlan,
   mapRidgeSurfaceOnPlan,
   markRoofSurfaceManual,
+  resolveDormerParent,
   resolveRoofSurfaceColor,
   removeRidgeSurfaceOnPlan,
   setRidgeSurfacesOnFloor,
   syncRoofPlaneGuidsFromDesigns,
+  withRoofKind,
 } from '@/core/fml/roof-planes'
 import {
   addRidgeSegment,
@@ -84,14 +90,45 @@ export function createFmlEditorRidgeRoof(deps: FmlEditorRidgeRoofDeps) {
     syncRoofPlaneGuidsFromDesigns(deps.localPlan.value)
   }
 
-  function addRidgeSurface(surface: FloorSurface): string {
-    const next = markRoofSurfaceManual({
+  function addRidgeSurface(surface: FloorSurface): string | null {
+    const floor = deps.localPlan.value?.floors[deps.floorIndex.value]
+    const existing = listRidgeSurfacesOnFloor(floor)
+    let next = markRoofSurfaceManual({
       ...surface,
       isRoof: true,
-      color: resolveRoofSurfaceColor(surface.color),
+      color: resolveRoofSurfaceColor(surface.color, surface.roofKind === 'dormer'),
     })
-    const floor = deps.localPlan.value?.floors[deps.floorIndex.value]
-    setRidgeSurfaces([...listRidgeSurfacesOnFloor(floor), next])
+    // Auto-tag alleen als soort niet expliciet is gezet.
+    if (next.roofKind !== 'dormer' && next.roofKind !== 'plane') {
+      const parent = resolveDormerParent(next, existing, next.id)
+      if (parent) {
+        next = withRoofKind(next, 'dormer', parent.id)
+      } else {
+        next = withRoofKind(next, 'plane')
+      }
+    } else if (next.roofKind === 'dormer') {
+      const parentId = next.roofParentId?.trim()
+      if (!parentId) {
+        const parent = resolveDormerParent(next, existing, next.id)
+        // Enige hoofddak op deze floor: ook zonder vertex-hit als ouder gebruiken.
+        const planes = listParentRoofs(existing)
+        const fallback = parent ?? (planes.length === 1 ? planes[0] : null)
+        next = withRoofKind(next, 'dormer', fallback?.id)
+      } else {
+        next = withRoofKind(next, 'dormer', parentId)
+      }
+    } else {
+      next = withRoofKind(next, 'plane')
+    }
+    const violation = validateRoofOverlap(next, existing)
+    if (violation) {
+      void alertFmlChrome({
+        title: tGlobal('result.toolbar.roofOverlapTitle'),
+        message: roofOverlapMessage(violation),
+      })
+      return null
+    }
+    setRidgeSurfaces([...existing, next])
     return surface.id
   }
 
@@ -111,13 +148,78 @@ export function createFmlEditorRidgeRoof(deps: FmlEditorRidgeRoofDeps) {
         | 'isCutout'
         | 'isRoof'
         | 'pattern'
+        | 'roofKind'
+        | 'roofParentId'
       >
     >,
-  ): void {
-    if (!deps.localPlan.value) return
-    deps.localPlan.value = mapRidgeSurfaceOnPlan(deps.localPlan.value, surfaceId, (surface) =>
-      markRoofSurfaceManual({ ...surface, ...patch, isRoof: true }),
-    )
+  ): boolean {
+    if (!deps.localPlan.value) return false
+    const floor = deps.localPlan.value.floors[deps.floorIndex.value]
+    const existing = listRidgeSurfacesOnFloor(floor)
+    const current = existing.find((s) => s.id === surfaceId)
+    if (!current) {
+      // Andere floor — mapRidgeSurfaceOnPlan zoekt plan-breed.
+      let accepted = true
+      deps.localPlan.value = mapRidgeSurfaceOnPlan(deps.localPlan.value, surfaceId, (surface) => {
+        let merged = markRoofSurfaceManual({ ...surface, ...patch, isRoof: true })
+        if (patch.roofKind != null || patch.roofParentId !== undefined) {
+          const kind =
+            patch.roofKind === 'dormer' ||
+            (patch.roofKind == null && merged.roofKind === 'dormer')
+              ? 'dormer'
+              : 'plane'
+          let parentId =
+            patch.roofParentId !== undefined ? patch.roofParentId : merged.roofParentId
+          if (kind === 'dormer' && !(parentId?.trim())) {
+            const siblings = listRidgeSurfacesOnFloor(
+              deps.localPlan.value!.floors.find((f) =>
+                listRidgeSurfacesOnFloor(f).some((s) => s.id === surfaceId),
+              ),
+            )
+            parentId = resolveDormerParent(merged, siblings, merged.id)?.id
+          }
+          merged = withRoofKind(merged, kind, parentId)
+        }
+        const others = listRidgeSurfacesOnPlan(deps.localPlan.value).filter(
+          (s) => s.id !== surfaceId,
+        )
+        const violation = validateRoofOverlap(merged, others)
+        if (violation) {
+          accepted = false
+          void alertFmlChrome({
+            title: tGlobal('result.toolbar.roofOverlapTitle'),
+            message: roofOverlapMessage(violation),
+          })
+          return surface
+        }
+        return merged
+      })
+      return accepted
+    }
+    let merged = markRoofSurfaceManual({ ...current, ...patch, isRoof: true })
+    if (patch.roofKind != null || patch.roofParentId !== undefined) {
+      const kind =
+        patch.roofKind === 'dormer' ||
+        (patch.roofKind == null && merged.roofKind === 'dormer')
+          ? 'dormer'
+          : 'plane'
+      let parentId =
+        patch.roofParentId !== undefined ? patch.roofParentId : merged.roofParentId
+      if (kind === 'dormer' && !(parentId?.trim())) {
+        parentId = resolveDormerParent(merged, existing, merged.id)?.id
+      }
+      merged = withRoofKind(merged, kind, parentId)
+    }
+    const violation = validateRoofOverlap(merged, existing)
+    if (violation) {
+      void alertFmlChrome({
+        title: tGlobal('result.toolbar.roofOverlapTitle'),
+        message: roofOverlapMessage(violation),
+      })
+      return false
+    }
+    deps.localPlan.value = mapRidgeSurfaceOnPlan(deps.localPlan.value, surfaceId, () => merged)
+    return true
   }
 
   function removeRidgeSurface(surfaceId: string): void {

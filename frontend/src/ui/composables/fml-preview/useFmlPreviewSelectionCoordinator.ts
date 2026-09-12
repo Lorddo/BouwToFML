@@ -1,6 +1,7 @@
 import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
 import { parseFmlHex } from '@/core/fml/roomtype-catalog'
 import type { FloorItem, FloorLineType, Point2D } from '@/core/fml/types'
+import { dimensionLengthCm, setDimensionLengthCentered } from '@/core/fml/offset-dimension-line'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
 import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/fml/bind-walls-to-roofs'
@@ -116,6 +117,7 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
     boxSelectKind,
     selectAllOfBoxKind,
     syncWallThicknessDraftFromSelection,
+    selectWall,
     toggleSettingsWall,
     toggleSettingsJunction,
     onWallThicknessCm,
@@ -541,8 +543,23 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
       editor.pushUndo()
       editor.removeDimension(selection.moveDimensionId.value)
       selection.moveDimensionId.value = null
+      selection.hoveredDimensionEnd.value = null
       syncPlanToParent()
     }
+  }
+
+  function applySelectedDimensionLength(lengthCm: number): void {
+    const id = selection.moveDimensionId.value
+    if (!id) return
+    const dim = editor.dimensions.value.find((item) => item.id === id)
+    if (!dim) return
+    const next = setDimensionLengthCentered(dim, lengthCm)
+    if (Math.abs(dimensionLengthCm(next.a, next.b) - dimensionLengthCm(dim.a, dim.b)) < 0.01) {
+      return
+    }
+    editor.pushUndo()
+    editor.updateDimension(id, { a: next.a, b: next.b })
+    syncPlanToParent()
   }
 
   // --- Junction hover ---
@@ -706,7 +723,9 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
       splitCreases: true,
       splitWalls: splitWallAtT,
     })
-    if (result.boundJunctions === 0 && result.splits === 0) return result
+    if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) {
+      return result
+    }
     editor.pushUndo()
     editor.replaceLocalPlan(result.plan, { keepUndo: true, keepParentSyncSkip: true })
     clearSelection()
@@ -740,13 +759,12 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
   function copySelectedItem(): void {
     const guid = selection.settingsItemId.value
     if (!guid) return
-    const item = editor.items.value.find((entry) => entry.guid === guid)
+    const item = editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
-    const info = resolveFixtureCatalog(item.refid, { width: item.width, height: item.height })
+    const info = resolveFixtureCatalog(item.kind, { width: item.width, height: item.height })
     pendingFixture.value = {
-      refid: item.refid,
+      kind: item.kind,
       label: item.name ?? info.label,
-      kind: info.kind,
       categorie: info.categorie,
     }
     activeFmlTool.value = 'add_fixture'
@@ -757,7 +775,7 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
   function rotateSelectedItem(deltaDeg: number): void {
     const guid = selection.settingsItemId.value
     if (!guid) return
-    const item = editor.items.value.find((entry) => entry.guid === guid)
+    const item = editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     editor.pushUndo()
     editor.updateItem(guid, { rotation: ((item.rotation ?? 0) + deltaDeg + 360) % 360 })
@@ -767,7 +785,7 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
   function toggleSelectedItemMirror(axis: 0 | 1): void {
     const guid = selection.settingsItemId.value
     if (!guid) return
-    const item = editor.items.value.find((entry) => entry.guid === guid)
+    const item = editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
     const cur = item.mirrored ?? [0, 0]
     const next: [number, number] = [cur[0] === 1 ? 1 : 0, cur[1] === 1 ? 1 : 0]
@@ -798,6 +816,7 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
     boxSelectKind,
     selectAllOfBoxKind,
     syncWallThicknessDraftFromSelection,
+    selectWall,
     toggleSettingsWall,
     toggleSettingsJunction,
     onWallThicknessCm,
@@ -906,6 +925,7 @@ export function useFmlPreviewSelectionCoordinator(options: SelectionCoordinatorO
     toggleSettingsItem,
     deleteSelectedItem,
     deleteSelected,
+    applySelectedDimensionLength,
     updateSelectedItem,
     copySelectedItem,
     rotateSelectedItem,

@@ -1,5 +1,7 @@
 import { toStorableDevSession } from '@/platform/dev-workspace/storable'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
+import { normalizePlanIdentities } from '@/core/plg/fml-adapter/normalize-plan-identities'
+import type { FloorPlan } from '@/core/fml/types'
 import type {
   FloorWorkspaceBlob,
   ProjectSourceUnderlay,
@@ -7,6 +9,7 @@ import type {
 } from '@/ui/composables/project/types'
 import {
   PERSISTED_PROJECT_SCHEMA_VERSION,
+  type ConverterSidecar,
   type PersistedDevSession,
   type PersistedFloorBlob,
   type PersistedProject,
@@ -14,6 +17,7 @@ import {
   type PersistedPdfUnderlay,
   type PersistedSourceUnderlay,
   type PersistedWallStamp,
+  type PlgFloorDocument,
 } from './types'
 
 const DATA_URL_PNG_PREFIX = 'data:image/png;base64,'
@@ -117,13 +121,13 @@ function restoreWallStamp(stamp: PersistedWallStamp): RuntimeWallStamp {
 
 export type PersistProjectOptions = {
   /**
-   * Result-floors met previewPlan: sla detectionExact/Replay niet op.
-   * FML komt uit previewPlan; image/schaal/refs/preprocess blijven in de session.
+   * Result-floors met previewPlan: sla detectionExact/Replay niet op (sidecar).
+   * FML komt uit previewPlan; image/schaal/refs/preprocess blijven.
    * Scheelt tientallen MB face-rasters per afgeronde verdieping (quota).
    */
   omitResultDetection?: boolean
   /**
-   * Strip labelsData / rawLabelsData / baselineWallBwData uit roomClassifyState.
+   * Strip labelsData / rawLabelsData / baselineWallBwData uit roomClassifyState (sidecar).
    * Face-raster moet na restore opnieuw geclassificeerd worden.
    */
   stripClassifyRasters?: boolean
@@ -155,6 +159,10 @@ function stripClassifyRastersFromSession(session: DevWorkspaceSession): DevWorks
   }
 }
 
+/**
+ * Quota-opties op de runtime-session (vóór sidecar-persist).
+ * omitResultDetection / stripClassifyRasters raken alleen CV-velden.
+ */
 function sessionForPersist(
   session: DevWorkspaceSession,
   blob: FloorWorkspaceBlob,
@@ -209,13 +217,33 @@ function restoreSession(persisted: PersistedDevSession): DevWorkspaceSession {
   return session as DevWorkspaceSession
 }
 
+function splitPersistedSession(persisted: PersistedDevSession): {
+  scale: PersistedDevSession['scale']
+  cv: ConverterSidecar
+} {
+  const { scale, ...cv } = persisted
+  return { scale, cv }
+}
+
+function joinPersistedSession(
+  cv: ConverterSidecar,
+  scale: PersistedDevSession['scale'],
+): PersistedDevSession {
+  return { ...cv, scale }
+}
+
 function persistBlob(
   blob: FloorWorkspaceBlob,
   options?: PersistProjectOptions,
 ): PersistedFloorBlob {
-  const session = blob.session ? sessionForPersist(blob.session, blob, options) : null
-  return {
-    session: session ? persistSession(session) : null,
+  const runtimeSession = blob.session ? sessionForPersist(blob.session, blob, options) : null
+  const persistedFull = runtimeSession ? persistSession(runtimeSession) : null
+  const split = persistedFull ? splitPersistedSession(persistedFull) : null
+  // Schaal is planeigendom: ook bewaren als PNG-persist faalt (cv=null).
+  const scaleFallback =
+    runtimeSession?.scale != null ? toStorableDevSession(runtimeSession.scale) : null
+
+  const plan: PlgFloorDocument = {
     generatedFloor: blob.generatedFloor ? toStorableDevSession(blob.generatedFloor) : null,
     previewPlan: blob.previewPlan ? toStorableDevSession(blob.previewPlan) : null,
     previewUnderlayLayout: blob.previewUnderlayLayout
@@ -225,21 +253,41 @@ function persistBlob(
       ? toStorableDevSession(blob.fmlNulpuntImageCm)
       : (blob.fmlNulpuntImageCm ?? null),
     fmlOrient: blob.fmlOrient ? toStorableDevSession(blob.fmlOrient) : (blob.fmlOrient ?? null),
+    scale: split?.scale ?? scaleFallback,
     sourceUnderlay: blob.sourceUnderlay ? persistSourceUnderlay(blob.sourceUnderlay) : null,
     // Floor pdfUnderlaySource / sourcePdfUnderlay stay memory-only (stale ROI + quota).
     // Project-level sourcePdfUnderlay is persisted separately.
   }
+
+  return {
+    plan,
+    cv: split?.cv ?? null,
+  }
 }
 
 function restoreBlob(blob: PersistedFloorBlob): FloorWorkspaceBlob {
+  const plan = blob.plan
+  let session: DevWorkspaceSession | null = null
+  if (blob.cv && plan.scale) {
+    session = restoreSession(joinPersistedSession(blob.cv, plan.scale))
+  }
+  const previewPlan = plan.previewPlan
+    ? normalizePlanIdentities(toStorableDevSession(plan.previewPlan) as FloorPlan)
+    : null
+  const generatedFloor = plan.generatedFloor
+    ? (normalizePlanIdentities({
+        name: 'generated',
+        floors: [toStorableDevSession(plan.generatedFloor)],
+      } as FloorPlan).floors[0] ?? plan.generatedFloor)
+    : plan.generatedFloor
   return {
-    session: blob.session ? restoreSession(blob.session) : null,
-    generatedFloor: blob.generatedFloor,
-    previewPlan: blob.previewPlan,
-    previewUnderlayLayout: blob.previewUnderlayLayout,
-    fmlNulpuntImageCm: blob.fmlNulpuntImageCm ?? null,
-    fmlOrient: blob.fmlOrient ?? null,
-    sourceUnderlay: blob.sourceUnderlay ? restoreSourceUnderlay(blob.sourceUnderlay) : null,
+    session,
+    generatedFloor,
+    previewPlan,
+    previewUnderlayLayout: plan.previewUnderlayLayout,
+    fmlNulpuntImageCm: plan.fmlNulpuntImageCm ?? null,
+    fmlOrient: plan.fmlOrient ?? null,
+    sourceUnderlay: plan.sourceUnderlay ? restoreSourceUnderlay(plan.sourceUnderlay) : null,
     pdfUnderlaySource: null,
     sourcePdfUnderlay: null,
   }

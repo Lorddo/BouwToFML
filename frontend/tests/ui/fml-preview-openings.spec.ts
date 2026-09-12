@@ -30,7 +30,7 @@ describe('projectPointToWallT', () => {
 })
 
 describe('addOpeningToWall', () => {
-  it('adds an opening with guid and clamps t tot de buitenkant (halve muurdikte)', () => {
+  it('adds an opening with id and clamps t tot de buitenkant (halve muurdikte)', () => {
     const walls = [
       {
         id: 'w1',
@@ -43,14 +43,15 @@ describe('addOpeningToWall', () => {
 
     const next = addOpeningToWall(walls, 'w1', {
       type: 'door',
-      refid: 'door-ref',
+      id: 'door-1',
+      kind: 'door.single',
       t: 0.1,
       width: 80,
     })
 
     expect(walls[0]?.openings).toHaveLength(0)
     expect(next[0]?.openings).toHaveLength(1)
-    expect(next[0]?.openings[0]?.guid).toBeTruthy()
+    expect(next[0]?.openings[0]?.id).toBeTruthy()
     expect(next[0]?.openings[0]?.t).toBeCloseTo(0.3, 6)
     expect(next[0]?.openings[0]?.z_height).toBe(220)
   })
@@ -74,7 +75,8 @@ describe('addOpeningToWall', () => {
     ]
     const next = addOpeningToWall(walls, 'w1', {
       type: 'window',
-      refid: 'window-ref',
+      id: 'win-1',
+      kind: 'window.single',
       t: 1,
       width: 80,
     })
@@ -95,7 +97,8 @@ describe('addOpeningToWall', () => {
 
     const next = addOpeningToWall(walls, 'w1', {
       type: 'window',
-      refid: 'window-ref',
+      id: 'win-1',
+      kind: 'window.single',
       t: 0.5,
       width: 100,
     })
@@ -128,12 +131,12 @@ describe('updateOpeningById', () => {
         openings: [
           {
             type: 'window' as const,
-            refid: 'window-ref',
+            id: 'win-1', kind: 'window.single',
             t: 0.5,
             width: 100,
             z: 70,
             z_height: 150,
-            guid: 'win-1',
+            id: 'win-1',
           },
         ],
       },
@@ -155,12 +158,12 @@ describe('updateOpeningById', () => {
         openings: [
           {
             type: 'window' as const,
-            refid: 'window-ref',
+            id: 'win-1', kind: 'window.single',
             t: 0.3,
             width: 100,
             z: 70,
             z_height: 150,
-            guid: 'win-wide',
+            id: 'win-wide',
           },
         ],
       },
@@ -180,11 +183,11 @@ describe('updateOpeningById', () => {
         openings: [
           {
             type: 'door' as const,
-            refid: 'door-ref',
+            id: 'door-1', kind: 'door.single',
             t: 0.5,
             width: 90,
             z_height: 220,
-            guid: 'door-1',
+            id: 'door-1',
           },
         ],
       },
@@ -210,12 +213,12 @@ describe('updateOpeningById', () => {
         openings: [
           {
             type: 'window' as const,
-            refid: 'window-ref',
+            id: 'win-1', kind: 'window.single',
             t: 0.5,
             width: 100,
             z: 220,
             z_height: 10,
-            guid: 'win-low',
+            id: 'win-low',
           },
         ],
       },
@@ -235,12 +238,12 @@ describe('updateOpeningById', () => {
         openings: [
           {
             type: 'window' as const,
-            refid: 'window-ref',
+            id: 'win-1', kind: 'window.single',
             t: 0.5,
             width: 110,
             z: 70,
             z_height: 110,
-            guid: 'win-tri',
+            id: 'win-tri',
           },
         ],
       },

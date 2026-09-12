@@ -16,6 +16,7 @@ import {
   setRidgeSurfacesOnFloor,
   syncRoofPlaneGuidsFromDesigns,
 } from './roof-planes'
+import { validateRoofOverlap } from './roof-overlap'
 import type { FloorPlan, Point2D, Wall } from './types'
 import {
   floorFootprintCentroid,
@@ -412,6 +413,7 @@ export function placeRoofFromElevation(
   const floor = plan.floors[preview.floorIndex]
   if (!floor) return null
   const surfaceId = `roof-${crypto.randomUUID().slice(0, 8)}`
+  const existing = listRidgeSurfacesOnFloor(floor)
   const surface = markRoofSurfaceManual(
     makeRoofSurface({
       id: surfaceId,
@@ -419,8 +421,8 @@ export function placeRoofFromElevation(
       origin: 'manual',
     }),
   )
+  if (validateRoofOverlap(surface, existing)) return null
   const next = clonePlanForPlace(plan)
-  const existing = listRidgeSurfacesOnFloor(floor)
   next.floors[preview.floorIndex] = setRidgeSurfacesOnFloor(floor, [...existing, surface])
   syncRoofPlaneGuidsFromDesigns(next)
   return { plan: next, surfaceId, floorIndex: preview.floorIndex }

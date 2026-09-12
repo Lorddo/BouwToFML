@@ -6,7 +6,6 @@ import type { FloorLineType } from '@/core/fml/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/fml-preview/fml-preview-opening-draft'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
-import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import FmlPreviewToolbarSettings from './FmlPreviewToolbarSettings.vue'
 import {
   FML_AREA_SIDE_DIMS_TOOL_ID,
@@ -18,7 +17,6 @@ import {
 } from './canvas/fmlToolbeltItems'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { BoxSelectKind } from '@/ui/composables/fml-preview/fml-preview-wall-select'
-import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 import './canvas/canvas-toolbelt.css'
 
 const { t, locale } = useI18n()
@@ -41,6 +39,7 @@ const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 15
 const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { default: false })
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
 const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
+const drawRoofKind = defineModel<'plane' | 'dormer'>('drawRoofKind')
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
 const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
 const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
@@ -61,6 +60,7 @@ const props = withDefaults(
       heightMixed?: boolean
       canSplit: boolean
       ridgeCount?: number
+      mode?: 'quick' | 'full'
     } | null
     selectedFacadeGroupPanel?: {
       groupId: string
@@ -103,13 +103,21 @@ const props = withDefaults(
       showAreaLabel: boolean
       canEditPolygon: boolean
       isCutout?: boolean
+      liningCm?: number | null
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
     roofVertexZCm?: number | null
     roofVertexIndex?: number | null
+    roofKind?: 'plane' | 'dormer'
+    roofParentId?: string | null
+    parentRoofOptions?: ReadonlyArray<{ id: string; label: string }>
+    dakThicknessCm?: number
+    slabThicknessCm?: number
     /** draw_surface in toolbelt; default true (viewer). */
     includeSurfaceTool?: boolean
+    /** draw_roof in toolbelt (plattegrond); default false. */
+    includeRoofTool?: boolean
     dakMode?: boolean
     roofPolyMutate?: boolean
     /** draw_label + draw_line; default false. */
@@ -129,6 +137,10 @@ const props = withDefaults(
       type: FloorLineType
       color: string
       thickness: number
+    } | null
+    selectedDimensionPanel?: {
+      id: string
+      lengthCm: number
     } | null
     selectedItemPanel?: {
       id: string
@@ -238,13 +250,20 @@ const props = withDefaults(
     surfaceEditActive: false,
     roofVertexZCm: null,
     roofVertexIndex: null,
+    roofKind: 'plane',
+    roofParentId: null,
+    parentRoofOptions: () => [],
+    dakThicknessCm: 20,
+    slabThicknessCm: 20,
     includeSurfaceTool: false,
+    includeRoofTool: false,
     dakMode: false,
     roofPolyMutate: false,
     includeAnnotationTools: false,
     includeFixtureTool: false,
     selectedLabelPanel: null,
     selectedLinePanel: null,
+    selectedDimensionPanel: null,
     selectedItemPanel: null,
     hideInlineHint: false,
     floatingDock: false,
@@ -300,6 +319,9 @@ const emit = defineEmits<{
   applyAreaColor: [color: string]
   applyShowAreaLabel: [show: boolean]
   applySurfaceCutout: [isCutout: boolean]
+  applyAreaLiningCm: [cm: number]
+  applyRoofKind: [kind: 'plane' | 'dormer']
+  applyRoofParentId: [parentId: string | null]
   deleteTagged: []
   labelTextInput: [value: string]
   updateLabelText: [value: string]
@@ -322,6 +344,8 @@ const emit = defineEmits<{
   toggleItemMirrorY: []
   copyItem: []
   deleteItem: []
+  dimensionLengthCm: [cm: number]
+  deleteDimension: []
   drawWallLengthInput: [cm: number | null]
   commitDrawWallMeasure: []
   cancelDrawWallDraft: []
@@ -353,6 +377,7 @@ const drawTools = computed(() => {
   void locale.value
   return getFmlDrawTools({
     includeSurface: props.includeSurfaceTool === true,
+    includeRoof: props.includeRoofTool === true,
     includeAnnotations: props.includeAnnotationTools === true,
     dakMode: props.dakMode === true,
   })
@@ -374,6 +399,7 @@ const settingsOpen = computed(() =>
     hasLabelSelection: props.selectedLabelPanel != null,
     hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
+    hasDimensionSelection: props.selectedDimensionPanel != null,
     hasFacadeGroupSelection: props.selectedFacadeGroupPanel != null,
     hasMeasureLines: (props.measureLineCount ?? 0) > 0,
     activeTool: activeTool.value,
@@ -381,7 +407,7 @@ const settingsOpen = computed(() =>
   }),
 )
 
-const showDrawingTools = computed(() => props.dakMode === true || !settingsOpen.value)
+const showDrawingTools = computed(() => !settingsOpen.value)
 
 const hint = computed(() => {
   if (activeTool.value === 'measure') {
@@ -399,6 +425,9 @@ const hint = computed(() => {
   if (activeTool.value === 'draw_room') return t('result.toolbar.hintDrawRoom', { unit })
   if (activeTool.value === 'draw_surface' && (props.dakMode || props.includeSurfaceTool === true)) {
     return props.dakMode ? t('result.toolbar.hintDrawRoof') : t('result.toolbar.hintDrawSurface')
+  }
+  if (activeTool.value === 'draw_roof' && props.includeRoofTool === true) {
+    return t('result.toolbar.hintDrawRoof')
   }
   if (activeTool.value === 'draw_label' && props.includeAnnotationTools === true) {
     return t('result.toolbar.hintDrawLabel')
@@ -420,6 +449,9 @@ const hint = computed(() => {
   }
   if (props.selectedLinePanel && props.includeAnnotationTools === true) {
     return t('result.toolbar.hintLineSelected')
+  }
+  if (props.selectedDimensionPanel) {
+    return t('result.toolbar.hintDimensionSelected')
   }
   if (props.dakMode && props.selectedAreaPanel?.kind === 'surface') {
     return props.roofPolyMutate
@@ -501,15 +533,6 @@ defineExpose({ hint })
             :show-undo="false"
             @update:active-tool="activeTool = $event as FmlToolId | null"
           />
-          <ToolbeltActionButton
-            v-if="props.dakMode && activeTool"
-            icon="clear"
-            :title="t('result.toolbar.deactivateDrawTool')"
-            :aria-label="t('result.toolbar.deactivateDrawTool')"
-            hotkey="Escape"
-            :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
-            @click="emit('deactivateDrawTool')"
-          />
         </div>
         <div v-if="!props.dakMode" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
         <div
@@ -541,6 +564,7 @@ defineExpose({ hint })
           v-model:slicer-edit-mode="slicerEditMode"
           v-model:draw-surface-role="drawSurfaceRole"
           v-model:draw-surface-cutout="drawSurfaceCutout"
+          v-model:draw-roof-kind="drawRoofKind"
           v-model:draw-line-thickness="drawLineThickness"
           v-model:draw-line-type="drawLineType"
           v-model:draw-line-color="drawLineColor"
@@ -557,6 +581,7 @@ defineExpose({ hint })
           :selected-area-panel="selectedAreaPanel"
           :selected-label-panel="selectedLabelPanel"
           :selected-line-panel="selectedLinePanel"
+          :selected-dimension-panel="selectedDimensionPanel"
           :selected-item-panel="selectedItemPanel"
           :unit="drawInputUnit"
           :room-types="roomTypes"
@@ -564,6 +589,11 @@ defineExpose({ hint })
           :roof-vertex-z-cm="roofVertexZCm"
           :roof-vertex-index="roofVertexIndex"
           :roof-poly-mutate="roofPolyMutate"
+          :roof-kind="roofKind"
+          :roof-parent-id="roofParentId"
+          :parent-roof-options="parentRoofOptions"
+          :dak-thickness-cm="dakThicknessCm"
+          :slab-thickness-cm="slabThicknessCm"
           :wall-thickness-draft="wallThicknessDraft"
           :wall-thickness-mixed="wallThicknessMixed"
           :wall-balance-draft="wallBalanceDraft"
@@ -667,6 +697,9 @@ defineExpose({ hint })
           @apply-area-color="emit('applyAreaColor', $event)"
           @apply-show-area-label="emit('applyShowAreaLabel', $event)"
           @apply-surface-cutout="emit('applySurfaceCutout', $event)"
+          @apply-area-lining-cm="emit('applyAreaLiningCm', $event)"
+          @apply-roof-kind="emit('applyRoofKind', $event)"
+          @apply-roof-parent-id="emit('applyRoofParentId', $event)"
           @delete-tagged="emit('deleteTagged')"
           @label-text-input="emit('labelTextInput', $event)"
           @update-label-text="emit('updateLabelText', $event)"
@@ -689,6 +722,8 @@ defineExpose({ hint })
           @toggle-item-mirror-y="emit('toggleItemMirrorY')"
           @copy-item="emit('copyItem')"
           @delete-item="emit('deleteItem')"
+          @dimension-length-cm="emit('dimensionLengthCm', $event)"
+          @delete-dimension="emit('deleteDimension')"
           @draw-wall-length-input="emit('drawWallLengthInput', $event)"
           @commit-draw-wall-measure="emit('commitDrawWallMeasure')"
           @cancel-draw-wall-draft="emit('cancelDrawWallDraft')"

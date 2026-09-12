@@ -6,11 +6,11 @@ import { mirrorObjectLabelX, rotateObjectLabel90, scaleObjectLabel } from '@/cor
 import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
 import { scaleFloorPlan } from '@/core/fml/scale-floor-plan'
 import type { FloorPlan, Opening } from '@/core/fml/types'
-import { ARCHWAY_DOOR_REFID, CONCEPT_DOOR_REFID, PASSAGE_DOOR_REFID } from '@/core/fml/types'
 
 function labeledOpening(): Opening {
   return {
-    refid: CONCEPT_DOOR_REFID,
+    id: 'door-label-1',
+    kind: 'door.single',
     t: 0.4,
     width: 90,
     type: 'door',
@@ -40,7 +40,8 @@ function planWithOpening(opening: Opening): FloorPlan {
         ],
         items: [
           {
-            refid: 'item',
+            id: 'item-1',
+            kind: 'generic',
             x: 50,
             y: 60,
             width: 40,
@@ -64,19 +65,19 @@ describe('FML invoer catalogus', () => {
         kind: 'passage',
       },
     )
-    expect(resolveOpeningCatalog(PASSAGE_DOOR_REFID, 'door')).toMatchObject({
+    expect(resolveOpeningCatalog('door.passage', 'door')).toMatchObject({
       label: 'Doorgang',
       kind: 'passage',
     })
-    expect(resolveOpeningCatalog(ARCHWAY_DOOR_REFID, 'door')).toMatchObject({
+    expect(resolveOpeningCatalog('door.archway', 'door')).toMatchObject({
       label: 'Doorgang (boog)',
       kind: 'archway',
     })
     expect(resolveOpeningCatalog('eec7e3d89097fc1a9b5ec153b0148cf6f52222dc', 'door')).toMatchObject(
       {
-        label: 'Voordeur (met raam)',
+        label: 'Deur enkel',
         kind: 'single',
-        leaf: 'glass',
+        leaf: 'solid',
       },
     )
     expect(

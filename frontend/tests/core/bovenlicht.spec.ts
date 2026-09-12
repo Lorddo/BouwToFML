@@ -13,10 +13,11 @@ import {
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
 } from '@/core/fml/bovenlicht'
-import { CONCEPT_WINDOW_REFID, type FloorPlan, type Opening, type Wall } from '@/core/fml/types'
+import { type FloorPlan, type Opening, type Wall } from '@/core/fml/types'
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({
-  refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+  id: overrides.id ?? 'door-1',
+  kind: 'door.single',
   t: 0.5,
   width: 90,
   type: 'door',
@@ -25,7 +26,8 @@ const door = (overrides: Partial<Opening> = {}): Opening => ({
 })
 
 const windowOpening = (overrides: Partial<Opening> = {}): Opening => ({
-  refid: CONCEPT_WINDOW_REFID,
+  id: overrides.id ?? 'window-1',
+  kind: 'window.single',
   t: 0.5,
   width: 120,
   type: 'window',
@@ -96,40 +98,40 @@ describe('resolveBovenlichtHeightCm / GapCm', () => {
 
 describe('buildBovenlichtOpening', () => {
   it('plaatst raam 10 cm boven deur, 40 cm hoog, zelfde breedte/t', () => {
-    const opening = buildBovenlichtOpening(door({ guid: 'abcdef' }))
+    const opening = buildBovenlichtOpening(door({ id: 'abcdef' }))
     expect(opening).toMatchObject({
       type: 'window',
-      refid: CONCEPT_WINDOW_REFID,
+      kind: 'window.single',
       t: 0.5,
       width: 90,
       z: 220 + BOVENLICHT_GAP_CM,
       z_height: BOVENLICHT_HEIGHT_CM,
-      guid: 'abcdef-bovenlicht',
+      id: 'abcdef-bovenlicht',
       mirrored: [0, 0],
     })
   })
 
   it('plaatst raam 10 cm boven bestaand raam (sill + hoogte)', () => {
-    const opening = buildBovenlichtOpening(windowOpening({ guid: 'win001' }))
+    const opening = buildBovenlichtOpening(windowOpening({ id: 'win001' }))
     expect(opening).toMatchObject({
       type: 'window',
       t: 0.5,
       width: 120,
       z: 70 + 150 + BOVENLICHT_GAP_CM,
       z_height: BOVENLICHT_HEIGHT_CM,
-      guid: 'win001-bovenlicht',
+      id: 'win001-bovenlicht',
     })
   })
 
   it('respecteert custom gapCm en heightCm', () => {
-    const opening = buildBovenlichtOpening(door({ guid: 'custom' }), {
+    const opening = buildBovenlichtOpening(door({ id: 'custom' }), {
       gapCm: 5,
       heightCm: 30,
     })
     expect(opening).toMatchObject({
       z: 225,
       z_height: 30,
-      guid: 'custom-bovenlicht',
+      id: 'custom-bovenlicht',
     })
   })
 
@@ -154,13 +156,13 @@ describe('foldBovenlichtOnWall', () => {
   const WALL_LEN = 200
 
   it('vouwt eigen export-guid terug (checkmark + maten, raam weg)', () => {
-    const parent = door({ guid: 'door001', t: 0.4, width: 90 })
+    const parent = door({ id: 'door001', t: 0.4, width: 90 })
     const transom = buildBovenlichtOpening(parent)!
     const folded = foldBovenlichtOnWall([parent, transom], WALL_LEN)
     expect(folded).toHaveLength(1)
     expect(folded[0]).toMatchObject({
       type: 'door',
-      guid: 'door001',
+      id: 'door001',
       bovenlicht: true,
       bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
       bovenlichtGapCm: BOVENLICHT_GAP_CM,
@@ -198,7 +200,7 @@ describe('foldBovenlichtOnWall', () => {
       [
         windowOpening({ t: 0.3, width: 120, z: 70, z_height: 150 }),
         {
-          refid: CONCEPT_WINDOW_REFID,
+          kind: 'window.single',
           type: 'window',
           t: 0.3,
           width: 120,
@@ -266,20 +268,20 @@ describe('bovenlichtPacked expand/fold', () => {
       a: { x: 0, y: 0 },
       b: { x: 200, y: 0 },
       thickness: 20,
-      openings: [door({ guid: 'd1', bovenlicht: true })],
+      openings: [door({ id: 'd1', bovenlicht: true })],
     }
     const expanded = expandBovenlichtOnWall(wall, 280, defaults)
     expect(expanded.openings).toHaveLength(2)
     expect(expanded.openings[0]?.bovenlicht).toBeUndefined()
     expect(expanded.openings[1]).toMatchObject({
       type: 'window',
-      guid: 'd1-bovenlicht',
+      id: 'd1-bovenlicht',
     })
 
     const folded = foldBovenlichtOnWall(expanded.openings, 200)
     expect(folded).toHaveLength(1)
     expect(folded[0]).toMatchObject({
-      guid: 'd1',
+      id: 'd1',
       bovenlicht: true,
       bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
       bovenlichtGapCm: BOVENLICHT_GAP_CM,
@@ -302,7 +304,7 @@ describe('bovenlichtPacked expand/fold', () => {
               thickness: 20,
               openings: [
                 door({
-                  guid: 'door-rt',
+                  id: 'door-rt',
                   bovenlicht: true,
                   bovenlichtHeightCm: 30,
                   bovenlichtGapCm: 0,
@@ -325,17 +327,18 @@ describe('bovenlichtPacked expand/fold', () => {
     const op = folded.floors[0].walls[0].openings[0]
     expect(folded.floors[0].walls[0].openings).toHaveLength(1)
     expect(op).toMatchObject({
-      guid: 'door-rt',
+      id: 'door-rt',
       bovenlicht: true,
       bovenlichtHeightCm: 30,
       bovenlichtGapCm: 0,
     })
   })
 
-  it('writeBovenlichtPacked zet settings', () => {
+  it('writeBovenlichtPacked zet plan.settings', () => {
     const plan: FloorPlan = { name: 't', floors: [] }
     const next = writeBovenlichtPacked(plan, false)
     expect(readBovenlichtPacked(next)).toBe(false)
-    expect(next.source?.settings?.bovenlichtPacked).toBe(false)
+    expect(next.settings?.bovenlichtPacked).toBe(false)
+    expect(next.source?.settings?.bovenlichtPacked).toBeUndefined()
   })
 })

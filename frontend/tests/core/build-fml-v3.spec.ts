@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { CONCEPT_WINDOW_REFID, type FloorPlan, type Opening } from '@/core/fml/types'
+import { type FloorPlan, type Opening } from '@/core/fml/types'
 
 function planWithDoors(): FloorPlan {
   const door: Opening = {
-    refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+    id: 'door-1',
+    kind: 'door.single',
     t: 0.5,
     width: 90,
     type: 'door',
     mirrored: [1, 0],
   }
   const window: Opening = {
-    refid: 'b88cd3f479455fbf57205a91c613c02b7e6dc2df',
+    id: 'window-1',
+    kind: 'window.single',
     t: 0.5,
     width: 120,
     type: 'window',
@@ -111,14 +113,14 @@ describe('buildFmlV3 — Floorplanner-valid formaat', () => {
       FP_DOOR: { type: 'color', value: '#ffffff' },
       FP_DOORFRAME: { type: 'color', value: '#ffffff' },
     })
-    expect(door.guid).toMatch(/^[0-9a-f]{6}$/)
+    expect(door.guid).toBe('door-1')
     expect(door.mirrored).toEqual([1, 0])
 
     expect(window.materials).toMatchObject({
       FP_FRAME_OUT: { type: 'color', value: '#ffffff' },
       FP_FRAME_IN: { type: 'color', value: '#ffffff' },
     })
-    expect(window.guid).toMatch(/^[0-9a-f]{6}$/)
+    expect(window.guid).toBe('window-1')
   })
 
   it('roundtript door importFmlV3 (muren + openings bewaard)', () => {
@@ -140,7 +142,7 @@ describe('buildFmlV3 — Floorplanner-valid formaat', () => {
       FP_DOOR: { type: 'color', value: '#ff0000' },
       FP_DOORFRAME: { type: 'color', value: '#00ff00' },
     }
-    plan.floors[0].walls[0].openings[0].guid = 'abcdef'
+    plan.floors[0].walls[0].openings[0].id = 'abcdef'
     const raw = JSON.parse(buildFmlV3(plan))
     const door = raw.floors[0].designs[0].walls[0].openings.find(
       (o: { type: string }) => o.type === 'door',
@@ -155,12 +157,12 @@ describe('buildFmlV3 — bovenlicht export', () => {
     const plan = planWithDoors()
     plan.floors[0].walls[0].openings = [
       {
-        refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+        kind: 'door.single',
         t: 0.4,
         width: 90,
         type: 'door',
         z_height: 220,
-        guid: 'door001',
+        id: 'door001',
         ...overrides,
       },
     ]
@@ -206,7 +208,7 @@ describe('buildFmlV3 — bovenlicht export', () => {
       walls: plan.floors[0].walls.map((wall) => ({
         ...wall,
         id: `${wall.id}-1e`,
-        openings: wall.openings.map((op) => ({ ...op, guid: `${op.guid}-1e` })),
+        openings: wall.openings.map((op) => ({ ...op, id: `${op.id}-1e` })),
       })),
     })
     const raw = JSON.parse(
@@ -248,13 +250,13 @@ describe('buildFmlV3 — bovenlicht export', () => {
     const plan = planWithDoors()
     plan.floors[0].walls[0].openings = [
       {
-        refid: 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+        kind: 'window.single',
         t: 0.4,
         width: 120,
         type: 'window',
         z: 70,
         z_height: 150,
-        guid: 'win001',
+        id: 'win001',
         ...overrides,
       },
     ]
@@ -279,12 +281,12 @@ describe('buildFmlV3 — bovenlicht export', () => {
   it('houdt deur- en raam-defaults gescheiden', () => {
     const plan = windowOnlyPlan()
     plan.floors[0].walls[0].openings.push({
-      refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+      kind: 'door.single',
       t: 0.2,
       width: 90,
       type: 'door',
       z_height: 220,
-      guid: 'door001',
+      id: 'door001',
     })
     const raw = JSON.parse(
       buildFmlV3(plan, {
@@ -325,12 +327,12 @@ describe('buildFmlV3 — bovenlicht export', () => {
   it('gebruikt per-opening maat-override naast vloerdefault', () => {
     const plan = doorOnlyPlan()
     plan.floors[0].walls[0].openings.push({
-      refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+      kind: 'door.single',
       t: 0.7,
       width: 80,
       type: 'door',
       z_height: 220,
-      guid: 'door002',
+      id: 'door002',
       bovenlichtHeightCm: 25,
       bovenlichtGapCm: 5,
     })
@@ -373,7 +375,7 @@ describe('buildFmlV3 — bovenlicht export', () => {
     expect(openings).toHaveLength(1)
     expect(openings[0]).toMatchObject({
       type: 'door',
-      guid: 'door001',
+      id: 'door001',
       bovenlicht: true,
       bovenlichtHeightCm: 30,
       bovenlichtGapCm: 0,
@@ -396,21 +398,21 @@ describe('buildFmlV3 — bovenlicht export', () => {
     // Unpacked plan: los raam al aanwezig, geen flags nodig voor export-shape.
     plan.floors[0].walls[0].openings = [
       {
-        refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+        kind: 'door.single',
         t: 0.4,
         width: 90,
         type: 'door',
         z_height: 220,
-        guid: 'door001',
+        id: 'door001',
       },
       {
-        refid: CONCEPT_WINDOW_REFID,
+        kind: 'window.single',
         t: 0.4,
         width: 90,
         type: 'window',
         z: 230,
         z_height: 40,
-        guid: 'door001-bovenlicht',
+        id: 'door001-bovenlicht',
       },
     ]
     const exported = buildFmlV3(plan, { bovenlichtDefault: true })
@@ -425,8 +427,9 @@ describe('buildFmlV3 — bovenlicht export', () => {
     ).toHaveLength(1)
 
     const parsed = importFmlV3(exported)
-    expect(parsed.plan.source?.settings?.bovenlichtPacked).toBe(false)
+    expect(parsed.plan.settings?.bovenlichtPacked).toBe(false)
+    expect(parsed.plan.source?.settings?.bovenlichtPacked).toBeUndefined()
     expect(parsed.plan.floors[0].walls[0].openings).toHaveLength(2)
-    expect(parsed.plan.floors[0].walls[0].openings[1]?.guid).toBe('door001-bovenlicht')
+    expect(parsed.plan.floors[0].walls[0].openings[1]?.id).toBe('door001-bovenlicht')
   })
 })

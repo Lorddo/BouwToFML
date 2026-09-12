@@ -4,8 +4,8 @@
  * injectCm = donorFml + bakeNulpuntImageCm − currentNulpuntImageCm
  */
 import { cmPointToImagePx } from './measure-underlay-wall-thickness'
+import { transformPointByBounds, type StampBounds } from './stamp-bounds'
 import type { Point2D } from './types'
-import { transformPointByBounds, type StampBounds } from '@/cv/preprocess/wall-stamp-raster'
 
 /** Image-px → scant-cm (origin = FML+layout; hier bare image-cm vanaf scan-hoek). */
 export function imagePxToScantCm(px: Point2D, pxPerMmX: number, pxPerMmY: number): Point2D {

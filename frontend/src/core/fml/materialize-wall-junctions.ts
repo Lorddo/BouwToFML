@@ -13,7 +13,7 @@ import { ensureDesignsSynced } from './design-sync'
 import { applyFacadeGroupRemaps, pruneFacadeGroups, type WallIdRemap } from './facade-groups'
 import { openingWorldCenter, projectOpeningT, reprojectWallOpenings } from './fml-wall-geom'
 import type { Floor, FloorPlan, Opening, Point2D, Wall } from './types'
-import { splitWallEndpointExtras } from './wall-endpoint-height'
+import { promoteWallElevationFromExtras, splitWallEndpointExtras } from './wall-endpoint-height'
 
 /** Eindpunt ligt op een hartlijn (cm); gelijk aan sanitize-weld. */
 export const JUNCTION_ON_AXIS_EPS_CM = 0.25
@@ -140,6 +140,8 @@ function splitWallAt(
     secondGeom,
   )
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, tSplit)
+  const firstEnds = promoteWallElevationFromExtras(firstExtras)
+  const secondEnds = promoteWallElevationFromExtras(secondExtras)
   const newId = newSplitId()
   walls.splice(
     wallIndex,
@@ -148,14 +150,16 @@ function splitWallAt(
       ...wall,
       b: { ...splitPoint },
       openings: firstOpenings,
-      extras: firstExtras,
+      extras: firstEnds.extras,
+      elevation: firstEnds.elevation,
     },
     {
       ...wall,
       id: newId,
       a: { ...splitPoint },
       openings: secondOpenings,
-      extras: secondExtras,
+      extras: secondEnds.extras,
+      elevation: secondEnds.elevation,
     },
   )
   remaps.push({ fromId: wall.id, intoIds: [wall.id, newId] })

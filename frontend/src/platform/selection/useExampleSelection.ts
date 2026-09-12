@@ -1,5 +1,4 @@
 import { ref, computed, watch } from 'vue'
-import { CONCEPT_DOOR_REFID } from '@/core/fml/types'
 import { FACTORY_THICKNESS_CMS } from '@/core/fml/fml-wall-thickness-catalog'
 import { SELECTION_COLORS, type ElementClass, type SelectionRect } from './types'
 import { compactRectRotationDeg } from './oriented-rect'
@@ -41,7 +40,7 @@ export function useExampleSelection(
 
   function addRect(rect: Omit<SelectionRect, 'id'>) {
     let withDefaults: Omit<SelectionRect, 'id'> =
-      rect.type === 'door' ? { ...rect, fmlRefId: rect.fmlRefId ?? CONCEPT_DOOR_REFID } : rect
+      rect.type === 'door' ? { ...rect, fmlRefId: rect.fmlRefId ?? 'door.single' } : rect
     if (rect.type === 'wall') {
       const cm =
         resolveWallThicknessCm(rect) ??

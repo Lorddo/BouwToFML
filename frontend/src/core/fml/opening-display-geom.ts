@@ -1,11 +1,12 @@
 /**
  * Display-kozijn: zit in opening.width / z_height (FML-gat krimpt niet).
- * Catalogus + optioneel extras.btfFrame; niet uit detectie-framingPx.
+ * Catalogus + optioneel `opening.frame` (was extras.btfFrame); niet uit detectie-framingPx.
  */
 import type { Opening } from './types'
 import type { OpeningCatalogInfo, OpeningFrameCm } from './opening-refid-catalog'
 
-export const BTF_FRAME_EXTRA = 'btfFrame'
+/** FML opening-key; waarde bewust `'btfFrame'`. */
+export const OPENING_FRAME_EXTRA = 'btfFrame'
 export const OPENING_FRAME_MIN_INNER_CM = 1
 
 export type { OpeningFrameCm }
@@ -43,7 +44,7 @@ export function insetOpeningRect(
   }
 }
 
-function readBtfFrame(raw: unknown): OpeningFrameCm | null {
+function readFrameRaw(raw: unknown): OpeningFrameCm | null {
   if (!raw || typeof raw !== 'object') return null
   const rec = raw as Record<string, unknown>
   const pick = (key: string): number | null => {
@@ -63,11 +64,19 @@ function readBtfFrame(raw: unknown): OpeningFrameCm | null {
   }
 }
 
-/** Instance extras.btfFrame wint; anders catalogus (kind-default al ingevuld). */
+/**
+ * Instance `opening.frame` (of legacy extras.btfFrame) wint; anders catalogus
+ * (kind-default al ingevuld). Signatuur ongewijzigd — frame via runtime-check.
+ */
 export function resolveOpeningFrame(
   opening: Pick<Opening, 'extras'> | null | undefined,
   catalog: Pick<OpeningCatalogInfo, 'frame'>,
 ): OpeningFrameCm {
-  const override = readBtfFrame(opening?.extras?.[BTF_FRAME_EXTRA])
-  return override ?? catalog.frame
+  const typed =
+    opening && typeof opening === 'object' && 'frame' in opening
+      ? readFrameRaw((opening as Opening).frame)
+      : null
+  if (typed) return typed
+  const legacy = readFrameRaw(opening?.extras?.[OPENING_FRAME_EXTRA])
+  return legacy ?? catalog.frame
 }

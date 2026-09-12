@@ -9,6 +9,7 @@ import {
   toPersistedProject,
   toProjectIndexEntry,
 } from '@/platform/project-store/serialize'
+import { PERSISTED_PROJECT_SCHEMA_VERSION } from '@/platform/project-store/types'
 import { createEmptyProjectState } from '@/ui/composables/project/defaults'
 import type { ProjectState } from '@/ui/composables/project/types'
 import type { DevWorkspaceSessionV2 } from '@/platform/dev-workspace/types'
@@ -54,7 +55,11 @@ function sessionStub(png: string): DevWorkspaceSessionV2 {
   }
 }
 
-describe('project-store serialize', () => {
+describe('project-store serialize (schema v2 plan+cv)', () => {
+  it('uses schema version 2', () => {
+    expect(PERSISTED_PROJECT_SCHEMA_VERSION).toBe(2)
+  })
+
   it('roundtrips data-url png and base64 masks', () => {
     const png = minimalPngDataUrl()
     const bytes = dataUrlToPngBytes(png)
@@ -66,7 +71,7 @@ describe('project-store serialize', () => {
     expect(Array.from(base64ToBytes(bytesToBase64(mask)))).toEqual([0, 255, 128, 1])
   })
 
-  it('roundtrips ProjectState with session bytes', () => {
+  it('roundtrips ProjectState with plan half + converter sidecar', () => {
     const png = minimalPngDataUrl()
     const empty = createEmptyProjectState({ id: 'proj-1', name: 'Test', address: 'Street 1' })
     const floorId = empty.floors[0].id
@@ -104,20 +109,32 @@ describe('project-store serialize', () => {
 
     const persisted = toPersistedProject(state, '2026-08-05T12:00:00.000Z')
     expect(isPersistedProject(persisted)).toBe(true)
-    expect(persisted.blobs[floorId]?.session?.workingImagePngBytes).toBeInstanceOf(Uint8Array)
-    expect(persisted.blobs[floorId]?.session?.eraserMaskBytes).toBeInstanceOf(Uint8Array)
+    expect(persisted.schemaVersion).toBe(2)
+
+    const floorBlob = persisted.blobs[floorId]
+    expect(floorBlob?.plan).toBeTruthy()
+    expect(floorBlob?.cv).toBeTruthy()
+    // Schaal op plan-helft; CV-sidecar zonder scale.
+    expect(floorBlob?.plan.scale?.confirmed).toBe(true)
+    expect(floorBlob?.plan.scale?.distanceMmX).toBe(1000)
+    expect(floorBlob?.cv && 'scale' in floorBlob.cv).toBe(false)
+    expect(floorBlob?.cv?.workingImagePngBytes).toBeInstanceOf(Uint8Array)
+    expect(floorBlob?.cv?.eraserMaskBytes).toBeInstanceOf(Uint8Array)
+    expect(floorBlob?.cv?.inkOverlayRle).toEqual([0, 4])
     // Legacy project-level source weggelaten als floors al een bron hebben (quota).
     expect(persisted.sourceUnderlay).toBeNull()
-    expect(persisted.blobs[floorId]?.sourceUnderlay?.pngBytes).toBeInstanceOf(Uint8Array)
-    expect(persisted.blobs[floorId]?.sourceUnderlay?.name).toBe('floor-src.png')
-    expect(persisted.blobs[floorId]?.sourceUnderlay?.pdf?.fileName).toBe('plan.pdf')
-    expect('workingImagePng' in (persisted.blobs[floorId]?.session ?? {})).toBe(false)
-    expect('pdfUnderlaySource' in (persisted.blobs[floorId] ?? {})).toBe(false)
-    expect('sourcePdfUnderlay' in (persisted.blobs[floorId] ?? {})).toBe(false)
+    expect(floorBlob?.plan.sourceUnderlay?.pngBytes).toBeInstanceOf(Uint8Array)
+    expect(floorBlob?.plan.sourceUnderlay?.name).toBe('floor-src.png')
+    expect(floorBlob?.plan.sourceUnderlay?.pdf?.fileName).toBe('plan.pdf')
+    expect('workingImagePng' in (floorBlob?.cv ?? {})).toBe(false)
+    expect('session' in (floorBlob ?? {})).toBe(false)
+    expect('pdfUnderlaySource' in (floorBlob?.plan ?? {})).toBe(false)
+    expect('sourcePdfUnderlay' in (floorBlob?.plan ?? {})).toBe(false)
 
     const restored = fromPersistedProject(persisted)
     expect(restored.meta.name).toBe('Test')
     expect(restored.blobs[floorId]?.session?.workingImagePng).toBe(png)
+    expect(restored.blobs[floorId]?.session?.scale.confirmed).toBe(true)
     expect(restored.blobs[floorId]?.session?.eraserMaskBase64).toBe(
       bytesToBase64(new Uint8Array([0, 1, 0, 1])),
     )
@@ -138,7 +155,7 @@ describe('project-store serialize', () => {
     })
   })
 
-  it('omits detectionExact for result floors with previewPlan', () => {
+  it('omits detectionExact from sidecar for result floors with previewPlan', () => {
     const png = minimalPngDataUrl()
     const empty = createEmptyProjectState({ id: 'proj-2', name: 'Test', address: 'Street 1' })
     const floorId = empty.floors[0].id
@@ -183,11 +200,12 @@ describe('project-store serialize', () => {
     }
 
     const persisted = toPersistedProject(state)
-    const persistedSession = persisted.blobs[floorId]?.session
-    expect(persistedSession).toBeTruthy()
+    const cv = persisted.blobs[floorId]?.cv
+    expect(cv).toBeTruthy()
     // detectionExact alleen op V2; na omitResultDetection mag de key niet meer aanwezig zijn.
-    expect(persistedSession != null && 'detectionExact' in persistedSession).toBe(false)
-    expect(persisted.blobs[floorId]?.previewPlan).toBeTruthy()
+    expect(cv != null && 'detectionExact' in cv).toBe(false)
+    expect(persisted.blobs[floorId]?.plan.previewPlan).toBeTruthy()
+    expect(persisted.blobs[floorId]?.plan.scale?.confirmed).toBe(true)
     // Legacy project source weggelaten als floors al een bron hebben.
     expect(persisted.sourceUnderlay).toBeNull()
   })
@@ -230,5 +248,24 @@ describe('project-store serialize', () => {
 
     const omitted = toPersistedProject(state, undefined, { omitSourcePdf: true })
     expect(omitted.sourcePdfUnderlay).toBeNull()
+  })
+
+  it('rejects schema v1 records via isPersistedProject', () => {
+    const png = minimalPngDataUrl()
+    const empty = createEmptyProjectState({ id: 'proj-old', name: 'Old', address: '' })
+    const floorId = empty.floors[0].id
+    const v2 = toPersistedProject({
+      ...empty,
+      blobs: {
+        [floorId]: {
+          session: sessionStub(png),
+          generatedFloor: null,
+          previewPlan: null,
+          previewUnderlayLayout: null,
+        },
+      },
+    })
+    expect(isPersistedProject({ ...v2, schemaVersion: 1 })).toBe(false)
+    expect(isPersistedProject(v2)).toBe(true)
   })
 })

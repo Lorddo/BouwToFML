@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { OcrTextCandidate } from '@/core/extraction'
-import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/fml/types'
 import type { PreprocessConfig } from '@/platform/image'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { DrawingProfileId } from '@/platform/profile'
@@ -147,7 +147,7 @@ export function resolveOpeningRects(
         width: rect.width,
         height: rect.height,
         ...(rotationDeg != null ? { rotationDeg } : {}),
-        ...(rect.type === 'door' ? { fmlRefId: resolveDoorFmlTemplateRefId(rect.fmlRefId) } : {}),
+        ...(rect.type === 'door' ? { fmlRefId: resolveDoorTemplateKind(rect.fmlRefId) } : {}),
       }
     })
 }

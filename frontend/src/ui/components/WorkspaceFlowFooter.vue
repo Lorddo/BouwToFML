@@ -2,18 +2,27 @@
 import { useI18n } from 'vue-i18n'
 import type { WorkspaceFlowStep } from '../composables/workspace/constants'
 
-defineProps<{
-  flowOrder: WorkspaceFlowStep[]
-  flowStepIndex: number
-  flowNextBlockedHint: string | null
-  canGoBack: boolean
-  canGoNext: boolean
-  nextStepButtonLabel: string
-}>()
+withDefaults(
+  defineProps<{
+    flowOrder: WorkspaceFlowStep[]
+    flowStepIndex: number
+    flowNextBlockedHint: string | null
+    canGoBack: boolean
+    canGoNext: boolean
+    nextStepButtonLabel: string
+    showOpenInEditor?: boolean
+    canOpenInEditor?: boolean
+  }>(),
+  {
+    showOpenInEditor: false,
+    canOpenInEditor: false,
+  },
+)
 
 const emit = defineEmits<{
   back: []
   next: []
+  openInEditor: []
 }>()
 
 const { t } = useI18n()
@@ -46,6 +55,16 @@ const { t } = useI18n()
         {{ nextStepButtonLabel }}
       </button>
     </div>
+    <button
+      v-if="showOpenInEditor"
+      type="button"
+      class="flow-nav-open-editor"
+      :disabled="!canOpenInEditor"
+      :title="t('result.openInEditorHint')"
+      @click="emit('openInEditor')"
+    >
+      {{ t('result.openInEditor') }}
+    </button>
   </div>
 </template>
 
@@ -97,5 +116,27 @@ const { t } = useI18n()
 
 .flow-nav-next {
   font-weight: 600;
+}
+
+.flow-nav-open-editor {
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1d4ed8;
+  background: #fff;
+  border: 1px solid #93c5fd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.flow-nav-open-editor:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.flow-nav-open-editor:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>

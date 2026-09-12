@@ -23,6 +23,7 @@ import {
   type UnitSystem,
   type UserSettingsV1,
   FACTORY_OPENING_COLORS,
+  DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
 } from '@/ui/composables/settings/user-settings'
 import {
   effectiveRoomTypeColor,
@@ -35,13 +36,14 @@ import { FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/
 import HexColorField from '@/ui/components/HexColorField.vue'
 import ScaleLengthInput from '@/ui/components/ScaleLengthInput.vue'
 import ThicknessCatalogFields from '@/ui/components/ThicknessCatalogFields.vue'
+import FacadeGroupPresetFields from '@/ui/components/FacadeGroupPresetFields.vue'
 import { limitsFromCatalog } from '@/core/fml/fml-wall-thickness-catalog'
 
 const { t } = useI18n()
 
 const props = withDefaults(
   defineProps<{
-    /** Workspace = converter; viewer = losse FML-editor. */
+    /** Workspace = converter; viewer = losse editor (PLG-native). */
     variant?: 'workspace' | 'viewer'
   }>(),
   { variant: 'workspace' },
@@ -67,6 +69,7 @@ function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
     fmlViewer: {
       ...settings.fmlViewer,
       openingColors: { ...settings.fmlViewer.openingColors },
+      facadeGroups: settings.fmlViewer.facadeGroups.map((group) => ({ ...group })),
     },
     fmlConversion: { ...settings.fmlConversion },
     roomTagColors: { ...settings.roomTagColors },
@@ -211,6 +214,22 @@ function resetAllOpeningColors(): void {
   draft.fmlViewer.openingColors = { ...FACTORY_OPENING_COLORS }
 }
 
+const clearHeightFillIsOverride = computed(
+  () =>
+    draft.fmlViewer.clearHeightFillColor.toUpperCase() !==
+    DEFAULT_CLEAR_HEIGHT_FILL_COLOR.toUpperCase(),
+)
+
+function onClearHeightFillColorInput(value: string): void {
+  const hex = parseFmlHex(value)
+  if (!hex) return
+  draft.fmlViewer.clearHeightFillColor = hex
+}
+
+function resetClearHeightFillColor(): void {
+  draft.fmlViewer.clearHeightFillColor = DEFAULT_CLEAR_HEIGHT_FILL_COLOR
+}
+
 function persistDraft(): UserSettingsV1 {
   const saved = saveUserSettings({
     version: 1,
@@ -261,7 +280,15 @@ function onResetFactory() {
         slicerOffsetSnapCm: factory.fmlViewer.slicerOffsetSnapCm,
         planDisplayStyle: factory.fmlViewer.planDisplayStyle,
         ridgeDisplayWidthCm: factory.fmlViewer.ridgeDisplayWidthCm,
+        showRidgeDisplay: factory.fmlViewer.showRidgeDisplay,
         showCanvasGrid: factory.fmlViewer.showCanvasGrid,
+        showRoofOverlayOnPlan: factory.fmlViewer.showRoofOverlayOnPlan,
+        showRoofPlanesOnPlan: factory.fmlViewer.showRoofPlanesOnPlan,
+        showClearHeight150: factory.fmlViewer.showClearHeight150,
+        showClearHeight200: factory.fmlViewer.showClearHeight200,
+        showClearHeightPlanFill: factory.fmlViewer.showClearHeightPlanFill,
+        clearHeightFillColor: factory.fmlViewer.clearHeightFillColor,
+        facadeGroups: factory.fmlViewer.facadeGroups.map((group) => ({ ...group })),
       },
     })
     Object.assign(draft, cloneSettings(saved))
@@ -522,6 +549,15 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
+    <section v-if="isViewer" class="panel settings-section">
+      <h3>{{ t('settings.facadeGroups') }}</h3>
+      <p class="hint">{{ t('settings.facadeGroupsHint') }}</p>
+      <FacadeGroupPresetFields
+        :groups="draft.fmlViewer.facadeGroups"
+        @update:groups="patchViewer({ facadeGroups: $event })"
+      />
+    </section>
+
     <section v-if="!isViewer" class="panel settings-section">
       <h3>{{ t('settings.fmlConversion') }}</h3>
       <p class="hint">{{ t('settings.fmlConversionHint') }}</p>
@@ -629,6 +665,112 @@ onBeforeUnmount(() => {
     </section>
 
     <section class="panel settings-section">
+      <h3>{{ t('settings.dakSection') }}</h3>
+      <p class="hint">{{ t('settings.dakSectionHint') }}</p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.fmlViewer.showRidgeDisplay"
+          @change="
+            patchViewer({
+              showRidgeDisplay: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showRidgeDisplay') }}</span>
+      </label>
+      <p class="hint">{{ t('settings.showRidgeDisplayHint') }}</p>
+      <label v-if="draft.fmlViewer.showRidgeDisplay" class="field compact">
+        <span>{{ t('settings.ridgeDisplayWidthCm') }}</span>
+        <ScaleLengthInput
+          block
+          :unit-system="draft.unitSystem"
+          :cm="draft.fmlViewer.ridgeDisplayWidthCm"
+          :unit="draft.scaleInputUnit"
+          :min-cm="1"
+          :max-cm="80"
+          :aria-label="t('settings.ridgeDisplayWidthCm')"
+          @update:cm="patchViewer({ ridgeDisplayWidthCm: $event })"
+        />
+      </label>
+      <p v-if="draft.fmlViewer.showRidgeDisplay" class="hint">
+        {{ t('settings.ridgeDisplayWidthHint') }}
+      </p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.fmlViewer.showRoofPlanesOnPlan"
+          @change="
+            patchViewer({
+              showRoofPlanesOnPlan: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showRoofPlanesOnPlan') }}</span>
+      </label>
+      <p class="hint">{{ t('settings.showRoofPlanesOnPlanHint') }}</p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.fmlViewer.showClearHeight150"
+          @change="
+            patchViewer({
+              showClearHeight150: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showClearHeight150') }}</span>
+      </label>
+      <p class="hint">{{ t('settings.showClearHeight150Hint') }}</p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.fmlViewer.showClearHeight200"
+          @change="
+            patchViewer({
+              showClearHeight200: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showClearHeight200') }}</span>
+      </label>
+      <p class="hint">{{ t('settings.showClearHeight200Hint') }}</p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.fmlViewer.showClearHeightPlanFill"
+          @change="
+            patchViewer({
+              showClearHeightPlanFill: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showClearHeightPlanFill') }}</span>
+      </label>
+      <p class="hint">{{ t('settings.showClearHeightPlanFillHint') }}</p>
+      <div class="roomtag-list">
+        <div class="roomtag-row">
+          <span class="roomtag-name">{{ t('settings.clearHeightFillColor') }}</span>
+          <HexColorField
+            :model-value="draft.fmlViewer.clearHeightFillColor"
+            :aria-label="t('settings.clearHeightFillColor')"
+            @update:model-value="onClearHeightFillColorInput"
+          />
+          <button
+            v-if="clearHeightFillIsOverride"
+            type="button"
+            class="secondary roomtag-reset"
+            :title="t('settings.roomTagResetRow')"
+            @click="resetClearHeightFillColor"
+          >
+            {{ t('settings.roomTagResetRow') }}
+          </button>
+        </div>
+      </div>
+      <p class="hint">{{ t('settings.clearHeightFillColorHint') }}</p>
+    </section>
+
+    <section class="panel settings-section">
       <h3>{{ t('settings.openingColors') }}</h3>
       <p class="hint">{{ t('settings.openingColorsHint') }}</p>
       <label class="field compact">
@@ -653,20 +795,6 @@ onBeforeUnmount(() => {
         <span>{{ t('settings.showCanvasGrid') }}</span>
       </label>
       <p class="hint">{{ t('settings.showCanvasGridHint') }}</p>
-      <label class="field compact">
-        <span>{{ t('settings.ridgeDisplayWidthCm') }}</span>
-        <ScaleLengthInput
-          block
-          :unit-system="draft.unitSystem"
-          :cm="draft.fmlViewer.ridgeDisplayWidthCm"
-          :unit="draft.scaleInputUnit"
-          :min-cm="1"
-          :max-cm="80"
-          :aria-label="t('settings.ridgeDisplayWidthCm')"
-          @update:cm="patchViewer({ ridgeDisplayWidthCm: $event })"
-        />
-      </label>
-      <p class="hint">{{ t('settings.ridgeDisplayWidthHint') }}</p>
       <div class="roomtag-list">
         <div v-for="row in openingColorRows" :key="row.key" class="roomtag-row">
           <span class="roomtag-name">{{ t(row.labelKey) }}</span>

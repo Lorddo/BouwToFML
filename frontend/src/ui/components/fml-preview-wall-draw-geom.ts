@@ -1,4 +1,5 @@
 import type { Point2D, Wall } from '@/core/fml/types'
+import { promoteWallElevationFromExtras } from '@/core/fml/wall-endpoint-height'
 import {
   MIN_WALL_LENGTH_CM,
   ROOM_CORNER_ENDPOINT_EPS_T,
@@ -202,6 +203,9 @@ export function addSegmentPathWithJunctionBreaks(
     if (distance(p1, p2) < options.minLengthCm) continue
     if (hasSegmentBetween(walls, p1, p2)) continue
     const wallId = `${options.idPrefix}-${crypto.randomUUID().slice(0, 8)}`
+    const promoted = promoteWallElevationFromExtras(
+      options.endpointExtras ? { ...options.endpointExtras } : undefined,
+    )
     walls.push({
       id: wallId,
       a: { x: p1.x, y: p1.y },
@@ -209,7 +213,8 @@ export function addSegmentPathWithJunctionBreaks(
       thickness: options.thickness,
       balance: options.balance,
       openings: [],
-      extras: options.endpointExtras ? { ...options.endpointExtras } : undefined,
+      extras: promoted.extras,
+      elevation: promoted.elevation,
     })
     addedIds.push(wallId)
   }

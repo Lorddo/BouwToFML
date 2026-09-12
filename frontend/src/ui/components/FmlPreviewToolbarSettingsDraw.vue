@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { FLOOR_LINE_TYPES, type FloorLineType } from '@/core/fml/types'
 import HexColorField from './HexColorField.vue'
@@ -10,6 +11,7 @@ const { t } = useI18n()
 
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
 const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
+const drawRoofKind = defineModel<'plane' | 'dormer'>('drawRoofKind')
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
 const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
 const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
@@ -20,13 +22,17 @@ const drawLabelOutline = defineModel<boolean>('drawLabelOutline', { default: fal
 const drawLabelBold = defineModel<boolean>('drawLabelBold', { default: false })
 const drawLabelItalic = defineModel<boolean>('drawLabelItalic', { default: false })
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     activeTool: FmlToolId | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     dakMode?: boolean
   }>(),
   { dakMode: false },
+)
+
+const drawingRoof = computed(
+  () => props.dakMode === true || props.activeTool === 'draw_roof',
 )
 
 function onRoleChange(event: Event): void {
@@ -56,7 +62,20 @@ function onLabelInput(event: Event): void {
 </script>
 
 <template>
-  <div v-if="activeTool === 'draw_surface' && !dakMode" class="fml-toolbelt__field">
+  <div v-if="drawingRoof" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roofKind') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <select
+        class="fml-toolbelt__select"
+        :aria-label="t('result.toolbar.roofKind')"
+        v-model="drawRoofKind"
+      >
+        <option value="plane">{{ t('result.toolbar.roofKindPlane') }}</option>
+        <option value="dormer">{{ t('result.toolbar.roofKindDormer') }}</option>
+      </select>
+    </div>
+  </div>
+  <div v-if="activeTool === 'draw_surface' && !drawingRoof" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.roomType') }}</span>
     <div class="fml-toolbelt__field-controls">
       <select
@@ -72,7 +91,7 @@ function onLabelInput(event: Event): void {
       </select>
     </div>
   </div>
-  <div v-if="activeTool === 'draw_surface' && !dakMode" class="fml-toolbelt__field">
+  <div v-if="activeTool === 'draw_surface' && !drawingRoof" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.surfaceCutout') }}</span>
     <div class="fml-toolbelt__field-controls">
       <label class="fml-toolbelt__checkbox">

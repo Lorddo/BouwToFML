@@ -314,7 +314,7 @@ function doorDirectionLabel(opening: Opening): string {
 
 export function doorGroupDetail(group: { openings: Opening[]; isDouble: boolean }): string {
   const parts: string[] = []
-  const refid = group.openings[0]?.refid
+  const refid = group.openings[0]?.kind
   if (refid) parts.push(refid.slice(0, 12))
   if (group.isDouble) {
     parts.push('dubbel openslaand')

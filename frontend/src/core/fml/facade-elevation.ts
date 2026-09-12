@@ -34,10 +34,16 @@ import {
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
 } from './bovenlicht'
-import { ROOF_TOUCH_SLACK_CM, listRidgeSurfacesOnFloor } from './roof-planes'
+import {
+  DORMER_ROOF_SURFACE_COLOR,
+  ROOF_TOUCH_SLACK_CM,
+  isDormerRoof,
+  listRidgeSurfacesOnFloor,
+  resolveRoofSurfaceColor,
+} from './roof-planes'
+import { listDormerEdgeWalls } from './dormer-edge-walls'
 import { buildLocalOpeningId, encodePlanOpeningId } from './opening-ids'
 import {
-  CONCEPT_WINDOW_REFID,
   type Floor,
   type FloorPlan,
   type FloorSurface,
@@ -48,8 +54,8 @@ import {
   type Wall,
 } from './types'
 import {
-  parseEndpoint3D,
   wallElevationAtT,
+  wallEndpoint3D,
   wallEndpointHeightCm,
   type Endpoint3D,
   type WallEnd,
@@ -96,6 +102,8 @@ export type ElevationWallRect = ElevationRect & {
   innerBBottom: Point2D
   /** Diepte t.o.v. gebouw-centroid langs de kijkrichting; groter = dichter bij de kijker. */
   depthCm: number
+  /** Dakkapel-randmuur: as-sleep in aanzicht. */
+  axisEdit?: boolean
 }
 
 export type ElevationOpeningRect = ElevationRect & {
@@ -104,7 +112,7 @@ export type ElevationOpeningRect = ElevationRect & {
   wallId: string
   floorIndex: number
   type: OpeningType
-  refid: string
+  kind: string
   mirrored?: [number, number]
   /** FML-breedte (cm), ongeprojecteerd — kozijn-X schalen met (x1−x0)/widthCm. */
   widthCm: number
@@ -131,6 +139,9 @@ export type ElevationRoofPlane = {
   color: string
   /** Zelfde diepte-as als muren; groter = vóór (painter). */
   depthCm: number
+  /** Dakkapel → na oudervlak tekenen. */
+  dormer?: boolean
+  parentId?: string
 }
 
 /** Grijs per gevelgroep — afwijkend van muur `#94a3b8`. */
@@ -482,8 +493,8 @@ function convexHull2(points: readonly Point2D[]): Point2D[] {
 }
 
 /**
- * Simuleer dakplaat-dikte in aanzicht: `points` = hart (handles),
- * vul = convexe omhulling van ±halve nokdikte (verticaal). Ook een lijn
+ * Simuleer dakplaat-dikte in aanzicht: `points` = onderkant (handles),
+ * vul = omhoog (kleinere Y) over de volle nokdikte. Ook een lijn
  * (kopse projectie) wordt zo een zichtbare plaat.
  */
 export function thickenElevationRoofPoly(
@@ -492,10 +503,8 @@ export function thickenElevationRoofPoly(
 ): Point2D[] {
   const base = points.map((point) => ({ x: point.x, y: point.y }))
   if (base.length < 2 || thicknessCm <= 0) return base
-  const half = thicknessCm / 2
-  const above = base.map((point) => ({ x: point.x, y: point.y - half }))
-  const below = base.map((point) => ({ x: point.x, y: point.y + half }))
-  const hull = convexHull2([...above, ...below])
+  const above = base.map((point) => ({ x: point.x, y: point.y - thicknessCm }))
+  const hull = convexHull2([...above, ...base])
   return hull.length >= 3 ? hull : base
 }
 
@@ -531,8 +540,8 @@ export function elevationOpeningId(
 
 function wallEndpoints(wall: Wall, floorHeightCm: number): { az: Endpoint3D; bz: Endpoint3D } {
   return {
-    az: parseEndpoint3D(wall.extras?.az, floorHeightCm),
-    bz: parseEndpoint3D(wall.extras?.bz, floorHeightCm),
+    az: wallEndpoint3D(wall, 'a', floorHeightCm),
+    bz: wallEndpoint3D(wall, 'b', floorHeightCm),
   }
 }
 
@@ -655,6 +664,7 @@ export function projectFacadeElevation(
     floor: Floor,
     skipReturnFilter: boolean,
     ridge: boolean,
+    axisEdit?: boolean,
   ): void {
     const dir = unit(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
     if (!dir) return
@@ -683,6 +693,7 @@ export function projectFacadeElevation(
       xa,
       xb,
       ridge,
+      axisEdit: axisEdit === true ? true : undefined,
       endOn: ridge ? elevationRidgeIsEndOn(xa, xb, wallLen(wall)) : undefined,
       aTop,
       aBottom,
@@ -699,12 +710,11 @@ export function projectFacadeElevation(
     })
   }
 
-  for (const { wall, floorIndex, floor } of members) {
-    pushWallRect(wall, floorIndex, floor, false, false)
+  function pushWallOpenings(wall: Wall, floorIndex: number, floor: Floor): void {
     const dir = unit(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
-    if (!dir) continue
+    if (!dir) return
     const along = Math.abs(dir.x * elevAxis.x + dir.y * elevAxis.y)
-    if (along < ELEVATION_RETURN_MAX_DOT) continue
+    if (along < ELEVATION_RETURN_MAX_DOT) return
     const xa = projectOnAxis(wall.a, lineOrigin, elevAxis)
     const xb = projectOnAxis(wall.b, lineOrigin, elevAxis)
     const base = floorWallBaseWorldZ(plan, floorIndex)
@@ -718,7 +728,7 @@ export function projectFacadeElevation(
       const height = openingHeightCm(opening)
       const z0 = base + sill
       const z1 = z0 + height
-      const guid = opening.guid?.trim() || `${wall.id}:${openingIndex}`
+      const guid = opening.id?.trim() || `${wall.id}:${openingIndex}`
       const openingId = elevationOpeningId(wall.id, opening, openingIndex, floorIndex)
       const x0 = xCenter - projWidth / 2
       const x1 = xCenter + projWidth / 2
@@ -730,7 +740,7 @@ export function projectFacadeElevation(
         wallId: wall.id,
         floorIndex,
         type: opening.type,
-        refid: opening.refid,
+        kind: opening.kind,
         mirrored: opening.mirrored,
         widthCm: width,
         extras: opening.extras,
@@ -754,7 +764,7 @@ export function projectFacadeElevation(
       const wallTopCm = wallElevationAtT(wall, t, floor.height).h
       const transom = buildBovenlichtOpening(opening, {
         floorHeightCm: wallTopCm,
-        sourceGuid: opening.guid,
+        sourceGuid: opening.id,
         heightCm: resolveBovenlichtHeightCm(opening, floorDefaults.heightCm),
         gapCm: resolveBovenlichtGapCm(opening, floorDefaults.gapCm),
       })
@@ -768,7 +778,7 @@ export function projectFacadeElevation(
         wallId: wall.id,
         floorIndex,
         type: 'window',
-        refid: transom.refid || CONCEPT_WINDOW_REFID,
+        kind: transom.kind || 'window.single',
         mirrored: transom.mirrored,
         widthCm: transom.width,
         startOnLeft,
@@ -780,6 +790,34 @@ export function projectFacadeElevation(
       })
     })
   }
+
+  for (const { wall, floorIndex, floor } of members) {
+    pushWallRect(wall, floorIndex, floor, false, false)
+    pushWallOpenings(wall, floorIndex, floor)
+  }
+
+  const facadeWalls: ElevationFacadeWall[] = members.map((item) => ({
+    wall: item.wall,
+    floorIndex: item.floorIndex,
+  }))
+  const facadeMids = members.map((item) => wallPlanMid(item.wall))
+
+  plan.floors.forEach((floor, floorIndex) => {
+    for (const { wall, dormer } of listDormerEdgeWalls(floor)) {
+      if (!roofSurfaceVisibleOnElevation(dormer, facadeWalls, centroid, outward, facadeMids)) {
+        continue
+      }
+      const existing = walls.find(
+        (item) => item.wallId === wall.id && item.floorIndex === floorIndex && item.ridge !== true,
+      )
+      if (existing) {
+        existing.axisEdit = true
+        continue
+      }
+      pushWallRect(wall, floorIndex, floor, true, false, true)
+      pushWallOpenings(wall, floorIndex, floor)
+    }
+  })
 
   plan.floors.forEach((floor, floorIndex) => {
     for (const wall of listRidgeWallsOnFloor(floor)) {
@@ -795,13 +833,8 @@ export function projectFacadeElevation(
     (entry) => entry.id === groupId,
   )
   const roofColor = elevationRoofFillColor(groupId, facadeGroupIndex)
-  const facadeWalls: ElevationFacadeWall[] = members.map((item) => ({
-    wall: item.wall,
-    floorIndex: item.floorIndex,
-  }))
   const roofPlanes: ElevationRoofPlane[] = []
   const roofThicknessCm = dakThicknessCmForPlan(plan)
-  const facadeMids = members.map((item) => wallPlanMid(item.wall))
   plan.floors.forEach((floor, floorIndex) => {
     if (facadeWalls.length === 0) return
     const base = floorWallBaseWorldZ(plan, floorIndex)
@@ -809,11 +842,15 @@ export function projectFacadeElevation(
       if (!roofSurfaceVisibleOnElevation(surface, facadeWalls, centroid, outward, facadeMids)) {
         return
       }
+      const dormer = isDormerRoof(surface)
+      const thickness = dormer
+        ? Math.max(8, Math.round(roofThicknessCm * 0.6))
+        : roofThicknessCm
       const points = surface.poly.map((point) => ({
         x: projectOnAxis(point, lineOrigin, elevAxis),
         y: elevY(base + (point.z ?? 0)),
       }))
-      const fillPoints = thickenElevationRoofPoly(points, roofThicknessCm)
+      const fillPoints = thickenElevationRoofPoly(points, thickness)
       const ring = fillPoints.length >= 3 ? fillPoints : points
       if (ring.length < 3 || polyAreaCm2(ring) < ROOF_PROJECTED_AREA_MIN_CM2) return
       roofPlanes.push({
@@ -821,14 +858,26 @@ export function projectFacadeElevation(
         floorIndex,
         points,
         fillPoints,
-        color: roofColor,
+        color: dormer
+          ? resolveRoofSurfaceColor(surface.color, true)
+          : roofColor,
         depthCm: elevationDepthCm(meanPoint(surface.poly), centroid, outward),
+        dormer: dormer || undefined,
+        parentId: dormer ? surface.roofParentId : undefined,
       })
     })
   })
-  roofPlanes.sort(
-    (a, b) => a.depthCm - b.depthCm || a.floorIndex - b.floorIndex || a.id.localeCompare(b.id),
-  )
+  // Far→near, dan ouder vóór kind (dakkapel niet onder hoofddak).
+  roofPlanes.sort((a, b) => {
+    if (a.depthCm !== b.depthCm) return a.depthCm - b.depthCm
+    if (a.floorIndex !== b.floorIndex) return a.floorIndex - b.floorIndex
+    const aChildOfB = a.dormer === true && a.parentId === b.id
+    const bChildOfA = b.dormer === true && b.parentId === a.id
+    if (aChildOfB) return 1
+    if (bChildOfA) return -1
+    if (a.dormer !== b.dormer) return a.dormer ? 1 : -1
+    return a.id.localeCompare(b.id)
+  })
 
   const bands: ElevationBand[] = []
   const facadeXs = walls.filter((w) => !w.ridge).flatMap((w) => [w.x0, w.x1])

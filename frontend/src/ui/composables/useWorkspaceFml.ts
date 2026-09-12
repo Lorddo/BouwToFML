@@ -36,6 +36,8 @@ export function useWorkspaceFml(deps: {
   floorName?: Ref<string | null>
   floorLevel?: Ref<number | null>
   getStampVectorInject?: () => WorkspaceFmlStampInject | null
+  /** Test/override voor stap-4 hoogte overwrite-confirm. */
+  confirmOverwrite?: (message: string) => boolean | Promise<boolean>
 }) {
   const thickness = createWorkspaceFmlThicknessUi({
     scale: deps.scale,
@@ -62,6 +64,7 @@ export function useWorkspaceFml(deps: {
       floorName: deps.floorName,
       floorLevel: deps.floorLevel,
       getStampVectorInject: deps.getStampVectorInject,
+      confirmOverwrite: deps.confirmOverwrite,
     },
     {
       appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,
@@ -98,6 +101,30 @@ export function useWorkspaceFml(deps: {
     previewUnderlayLayout: generate.previewUnderlayLayout,
   })
 
+  async function setFmlWallHeightCm(value: number): Promise<boolean> {
+    return generate.applyPreviewDefault('wallHeightCm', value)
+  }
+
+  async function setFmlDoorHeightCm(value: number): Promise<boolean> {
+    return generate.applyPreviewDefault('doorHeightCm', value)
+  }
+
+  async function setFmlWindowHeightCm(value: number): Promise<boolean> {
+    return generate.applyPreviewDefault('windowHeightCm', value)
+  }
+
+  async function setFmlWindowSillZCm(value: number): Promise<boolean> {
+    return generate.applyPreviewDefault('windowSillZCm', value)
+  }
+
+  async function setFmlBovenlichtDefault(value: boolean): Promise<boolean> {
+    return generate.applyPreviewDefault('bovenlichtDefault', value === true)
+  }
+
+  async function setFmlWindowBovenlichtDefault(value: boolean): Promise<boolean> {
+    return generate.applyPreviewDefault('windowBovenlichtDefault', value === true)
+  }
+
   return {
     fmlThicknessCms: thickness.fmlThicknessCms,
     fmlThicknessMinCm: thickness.fmlThicknessMinCm,
@@ -128,12 +155,19 @@ export function useWorkspaceFml(deps: {
     setFmlThicknessMinCm: thickness.setFmlThicknessMinCm,
     setFmlThicknessMidCm: thickness.setFmlThicknessMidCm,
     setFmlThicknessMaxCm: thickness.setFmlThicknessMaxCm,
-    setFmlWallHeightCm: thickness.setFmlWallHeightCm,
-    setFmlDoorHeightCm: thickness.setFmlDoorHeightCm,
-    setFmlWindowHeightCm: thickness.setFmlWindowHeightCm,
-    setFmlWindowSillZCm: thickness.setFmlWindowSillZCm,
-    setFmlBovenlichtDefault: thickness.setFmlBovenlichtDefault,
-    setFmlWindowBovenlichtDefault: thickness.setFmlWindowBovenlichtDefault,
+    /** Silent UI hydrate (floor-defaults) — geen overwrite-confirm. */
+    hydrateFmlWallHeightCm: thickness.setFmlWallHeightCm,
+    hydrateFmlDoorHeightCm: thickness.setFmlDoorHeightCm,
+    hydrateFmlWindowHeightCm: thickness.setFmlWindowHeightCm,
+    hydrateFmlWindowSillZCm: thickness.setFmlWindowSillZCm,
+    hydrateFmlBovenlichtDefault: thickness.setFmlBovenlichtDefault,
+    hydrateFmlWindowBovenlichtDefault: thickness.setFmlWindowBovenlichtDefault,
+    setFmlWallHeightCm,
+    setFmlDoorHeightCm,
+    setFmlWindowHeightCm,
+    setFmlWindowSillZCm,
+    setFmlBovenlichtDefault,
+    setFmlWindowBovenlichtDefault,
     setFmlBovenlichtHeightCm: thickness.setFmlBovenlichtHeightCm,
     setFmlBovenlichtGapCm: thickness.setFmlBovenlichtGapCm,
     setFmlBandMidBoundaryCm: thickness.setFmlBandMidBoundaryCm,
@@ -144,7 +178,7 @@ export function useWorkspaceFml(deps: {
     startFmlThicknessPick: thickness.startFmlThicknessPick,
     cancelFmlThicknessPick: thickness.cancelFmlThicknessPick,
     handleFmlThicknessWallPick,
-    generatedFmlText: generate.generatedFmlText,
+    buildGeneratedFmlText: generate.buildGeneratedFmlText,
     generatedStats: generate.generatedStats,
     openingHeightOverflow: generate.openingHeightOverflow,
     importedWarnings: generate.importedWarnings,

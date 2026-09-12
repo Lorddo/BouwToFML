@@ -6,6 +6,7 @@ import type { FloorPlan, Wall } from './types'
 import type { FmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import { resolveEffectiveFmlWallThicknessLimits } from './fml-wall-thickness-limits'
 import {
+  catalogMaxCm,
   classifyThicknessSlot,
   nearestCatalogCm,
   normalizeThicknessCatalog,
@@ -24,10 +25,26 @@ import { WALL_CHAIN_BRIDGE_MAX_RATIO } from './wall-thickness-chain'
 const CHAIN_BRIDGE_MAX_CM = 40
 const COLLINEAR_EPS_DEG = 12
 /**
- * Relatieve hysterese bij keten-union over een bandgrens.
- * 15%: 10 vs 12 blijft gesplitst (~17%), 35 vs 38 blijft één keten (~8%).
+ * Relatieve hysterese bij keten-union.
+ * 15% van de meting: 10 vs 11 / 22 vs 24 = meetruis; 10 vs 12 (~17%) splitst
+ * zonder catalogus. Zelfde ratio t.o.v. catalogus-max voor aangrenzende slots:
+ * 7 vs 10 bij max 47 (Δ 3 ≤ 7,05) wordt één keten; 10 vs 22 (Δ 12) blijft split.
  */
 export const CHAIN_THICKNESS_HYSTERESIS_RATIO = 0.15
+
+function adjacentCatalogSlotsClose(
+  slotA: number,
+  slotB: number,
+  catalog: readonly number[],
+): boolean {
+  if (Math.abs(slotA - slotB) !== 1) return false
+  const cmA = catalog[slotA]
+  const cmB = catalog[slotB]
+  if (cmA == null || cmB == null) return false
+  const maxCm = catalogMaxCm(catalog)
+  if (!(maxCm > 0)) return false
+  return Math.abs(cmA - cmB) <= maxCm * CHAIN_THICKNESS_HYSTERESIS_RATIO
+}
 
 class UnionFind {
   private parent: number[]
@@ -71,7 +88,8 @@ function areCollinearWalls(a: Wall, b: Wall): boolean {
 }
 
 /**
- * Zelfde meetband / catalogus-slot, of naburige maten binnen hysterese (meetruis).
+ * Zelfde meetband / catalogus-slot, aangrenzende slots binnen 15% van de
+ * catalogus-max, of naburige metingen binnen hysterese (meetruis).
  */
 export function thicknessesCompatibleForChain(
   aCm: number,
@@ -82,7 +100,10 @@ export function thicknessesCompatibleForChain(
   if (!(aCm > 0) || !(bCm > 0)) return true
   if (catalogCms && catalogCms.length >= 3) {
     const catalog = normalizeThicknessCatalog(catalogCms)
-    if (classifyThicknessSlot(aCm, catalog) === classifyThicknessSlot(bCm, catalog)) return true
+    const slotA = classifyThicknessSlot(aCm, catalog)
+    const slotB = classifyThicknessSlot(bCm, catalog)
+    if (slotA === slotB) return true
+    if (adjacentCatalogSlotsClose(slotA, slotB, catalog)) return true
   } else if (
     classifyFmlThicknessBand(aCm, boundaries) === classifyFmlThicknessBand(bCm, boundaries)
   ) {
@@ -94,10 +115,11 @@ export function thicknessesCompatibleForChain(
 
 /**
  * Groepeer muren in dikte-ketens.
- * Collineair door T/X alleen bij dezelfde slot/band of 15% hysterese —
- * een echte stap (7 vs 15 vs 30) blijft gesplitst zodat balance kan flushen.
- * Meetruis (10 vs 11) blijft één keten. T-arm / L daarna op ketengemiddelde.
- * Korte dik-dun-dik brug (kozijn) mag alsnog mergen.
+ * Collineair door T/X alleen bij dezelfde slot/band, aangrenzende slots
+ * binnen 15% van de catalogus-max, of 15% meet-hysterese —
+ * een echte stap (7 vs 15 vs 30, 10 vs 22) blijft gesplitst zodat balance kan flushen.
+ * Meetruis (10 vs 11) en dichte buren (7 vs 10 bij max 47) blijven één keten.
+ * T-arm / L daarna op ketengemiddelde. Korte dik-dun-dik brug (kozijn) mag mergen.
  */
 export function buildFmlThicknessChains(
   walls: Wall[],
@@ -313,8 +335,9 @@ export function roundFmlThicknessCm(value: number): number {
 // ESC:X-02 (E) + ESC:X-01 (E)
 /**
  * Harmoniseert muurdikte per keten en mapt naar catalogus-cm of min/mid/max.
- * Collineaire T/X-stukken delen een keten alleen bij dezelfde slot/band of
- * 15% hysterese; een echte stap blijft gesplitst. T-arm breekt bij incompatibele
+ * Collineaire T/X-stukken delen een keten alleen bij dezelfde slot/band,
+ * dichte aangrenzende slots (Δcatalog ≤ 15% van max) of 15% hysterese;
+ * een echte stap blijft gesplitst. T-arm breekt bij incompatibele
  * ketengemiddeldes. Balance: default 0.5; collineaire diktewissel-ketens flushen
  * alleen bij face-evidence (hint vanaf dikste); junction stubs in die scope
  * mogen verdwijnen — ESC:X-01.

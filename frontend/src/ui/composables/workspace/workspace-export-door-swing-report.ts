@@ -31,7 +31,7 @@ import {
 } from '@/cv/doors'
 import { resolveFloorDual, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
-import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/fml/types'
 import {
   normalizeDoorSwingState,
   resolveDoorRefKind,
@@ -111,7 +111,7 @@ export function createWorkspaceExportDoorSwingReport(deps: WorkspaceExportDoorSw
             sharedWallBwMat,
           })
           if (!band) continue
-          const fmlRefId = resolveDoorFmlTemplateRefId(rect.fmlRefId)
+          const fmlRefId = resolveDoorTemplateKind(rect.fmlRefId)
           refBands.push({
             ...band,
             fmlRefId,

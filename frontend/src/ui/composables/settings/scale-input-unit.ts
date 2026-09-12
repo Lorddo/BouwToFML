@@ -1,5 +1,7 @@
+import type { PlgScaleInputUnit, PlgUnitSystem } from '@/core/plg/plg-document'
+
 /** Invoereenheid voor schaalliniaal + FML typen (kamer/muur/move). Intern FML = cm. */
-export type ScaleInputUnit = 'mm' | 'cm' | 'm' | 'ft-in'
+export type ScaleInputUnit = PlgScaleInputUnit
 
 export const SCALE_INPUT_UNITS: readonly ScaleInputUnit[] = ['mm', 'cm', 'm', 'ft-in'] as const
 
@@ -11,7 +13,7 @@ export const MM_PER_INCH = 25.4
 export const INCHES_PER_FOOT = 12
 export const FT_IN_DENOMINATOR = 32
 
-export type UnitSystem = 'metric' | 'imperial'
+export type UnitSystem = PlgUnitSystem
 
 export const UNIT_SYSTEMS: readonly UnitSystem[] = ['metric', 'imperial'] as const
 export const DEFAULT_UNIT_SYSTEM: UnitSystem = 'metric'

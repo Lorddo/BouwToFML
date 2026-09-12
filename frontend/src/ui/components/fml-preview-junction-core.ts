@@ -1,5 +1,8 @@
 import type { Point2D, Wall } from '@/core/fml/types'
-import { splitWallEndpointExtras } from '@/core/fml/wall-endpoint-height'
+import {
+  promoteWallElevationFromExtras,
+  splitWallEndpointExtras,
+} from '@/core/fml/wall-endpoint-height'
 import {
   openingWorldCenter,
   redistributeOpeningsAcrossSplit,
@@ -98,6 +101,9 @@ export function cloneWalls(walls: Wall[]): Wall[] {
         : undefined,
       extras: opening.extras ? { ...opening.extras } : undefined,
     })),
+    elevation: wall.elevation
+      ? { a: { ...wall.elevation.a }, b: { ...wall.elevation.b } }
+      : undefined,
     extras: cloneFmlExtras(wall.extras),
   }))
 }
@@ -170,18 +176,22 @@ export function splitWallAtPoint(
   })
 
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, tSplit)
+  const firstEnds = promoteWallElevationFromExtras(firstExtras)
+  const secondEnds = promoteWallElevationFromExtras(secondExtras)
   const firstWall: Wall = {
     ...wall,
     b: { x: splitPoint.x, y: splitPoint.y },
     openings: firstOpenings,
-    extras: firstExtras,
+    extras: firstEnds.extras,
+    elevation: firstEnds.elevation,
   }
   const secondWall: Wall = {
     ...wall,
     id: `split-host-${crypto.randomUUID().slice(0, 8)}`,
     a: { x: splitPoint.x, y: splitPoint.y },
     openings: secondOpenings,
-    extras: secondExtras,
+    extras: secondEnds.extras,
+    elevation: secondEnds.elevation,
   }
 
   walls.splice(wallIndex, 1, firstWall, secondWall)

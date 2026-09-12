@@ -1,5 +1,4 @@
 import type { SemanticWallJunction, SemanticWallSegment } from '@/core/extraction/types'
-import { CONCEPT_WINDOW_REFID } from '@/core/fml/types'
 import type {
   BoundWindow,
   ResolvedWindowCandidate,
@@ -209,7 +208,7 @@ export function bindWindowsToWalls(params: {
       openingEndPx: { x: round2(span.end.x), y: round2(span.end.y) },
       widthPx: round2(widthPx),
       widthCm: round2(candidate.widthCm),
-      fmlRefId: CONCEPT_WINDOW_REFID,
+      fmlRefId: 'window.single',
       evidence: candidate.evidence,
       faceIds: [...candidate.faceIds],
     })

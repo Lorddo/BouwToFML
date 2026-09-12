@@ -1,30 +1,33 @@
 /**
  * Session-only: inject-stempelmuur (workspace stap 4).
- * Overleeft sanitize-split/cover via extras-copy; niet naar Floorplanner exporteren.
+ * Overleeft sanitize-split/cover via wall-spread (`stampOwned` op de Wall);
+ * niet naar Floorplanner / `.plg` exporteren.
  */
 import type { Wall } from './types'
 
+/** @deprecated Legacy extras-key; alleen nog strip/fallback. */
 export const STAMP_OWNED_EXTRA = 'stampOwned' as const
 
 export function isStampOwnedWall(wall: Pick<Wall, 'extras'> | null | undefined): boolean {
-  return wall?.extras?.[STAMP_OWNED_EXTRA] === true
+  if (!wall) return false
+  if (typeof wall === 'object' && 'stampOwned' in wall && (wall as Wall).stampOwned === true) {
+    return true
+  }
+  return wall.extras?.[STAMP_OWNED_EXTRA] === true
 }
 
-/** Zet/clear de vlag; andere extras blijven. */
+/** Zet/clear de vlag; andere extras blijven; legacy extras-key wordt verwijderd. */
 export function markStampOwned(wall: Wall, owned = true): Wall {
   const extras = { ...(wall.extras ?? {}) }
-  if (owned) {
-    extras[STAMP_OWNED_EXTRA] = true
-  } else {
-    delete extras[STAMP_OWNED_EXTRA]
-  }
+  delete extras[STAMP_OWNED_EXTRA]
   return {
     ...wall,
+    stampOwned: owned ? true : undefined,
     extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
 }
 
-/** Strip vóór FML-export (niet in Floorplanner lekken). */
+/** Strip legacy extras-key (no-op als de key al weg is). */
 export function stripStampOwnedFromExtras(
   extras: Record<string, unknown> | undefined,
 ): Record<string, unknown> | undefined {

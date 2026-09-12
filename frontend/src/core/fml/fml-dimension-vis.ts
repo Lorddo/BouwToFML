@@ -2,7 +2,7 @@
  * Session-only weergave van maatlijnen (exclusief). Niet in FML.
  * Autogen/slicer kunnen naar handmatig (`dimensions[]`) via convert-overlay.
  */
-import { readBtfSlices } from './btf-slices'
+import { readPlanSlices } from './plan-slices'
 import { readDimensionSettings } from './fml-dimension-settings'
 import type { FloorPlan } from './types'
 
@@ -24,7 +24,7 @@ export function defaultDimensionVis(
   const settings = readDimensionSettings(plan, floorIndex)
   if (settings.engineAutoDims) return 'autogen'
   const floor = plan.floors[floorIndex] ?? plan.floors[0]
-  if (readBtfSlices(floor).length > 0) return 'slicer'
+  if (readPlanSlices(floor).length > 0) return 'slicer'
   if ((floor?.dimensions?.length ?? 0) > 0) return 'manual'
   return 'none'
 }

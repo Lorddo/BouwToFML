@@ -1,5 +1,6 @@
 import type { Floor, FloorPlan } from '@/core/fml/types'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { PlgFloorDefaults } from '@/core/plg/plg-document'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { PdfUnderlaySource } from '@/platform/upload'
 import type { PdfUnderlayMeta } from './reuse-underlay-pdf'
@@ -15,33 +16,11 @@ export type ProjectMeta = {
   address: string
 }
 
-/** FML-hoogtes/diktes per verdieping (geen aparte project-laag). */
-export type ProjectFmlDefaults = {
-  wallHeightCm: number
-  doorHeightCm: number
-  windowHeightCm: number
-  windowSillZCm: number
-  /** Bovenlicht op alle deuren (per-deur override via Opening.bovenlicht). */
-  bovenlichtDefault: boolean
-  /** Bovenlicht op alle ramen (per-raam override via Opening.bovenlicht). */
-  windowBovenlichtDefault: boolean
-  /** Glashoogte gesynthetiseerd bovenlicht (cm). */
-  bovenlichtHeightCm: number
-  /** Afstand tussen bovenzijde opening en onderkant bovenlicht (cm) — bepaalt de dorpel. */
-  bovenlichtGapCm: number
-  /** Catalogus muurdiktes (min 3, tot 8). Array wint bij load. */
-  thicknessCms: number[]
-  /** Legacy write-through: first / midden / last van thicknessCms. */
-  thicknessMinCm: number
-  thicknessMidCm: number
-  thicknessMaxCm: number
-  /** Default dakplaat (nokspan) voor nieuwe plannen / generate. */
-  dakThicknessCm: number
-  /** Default vloerplaat per verdieping (alleen aanzicht-stack). */
-  slabThicknessCm: number
-  bandMidBoundaryCm: number
-  bandMaxBoundaryCm: number
-}
+/**
+ * Floor-/project-defaults — alias van canonieke `PlgFloorDefaults` (`core/plg`).
+ * Hoogtes, diktes, banden, bovenlicht.
+ */
+export type ProjectFmlDefaults = PlgFloorDefaults
 
 export type FloorMeta = {
   id: string

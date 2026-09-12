@@ -8,7 +8,7 @@ import {
   snapSliceHandleAxis,
   snapSlicerPPoint,
 } from '@/core/fml/slice-offset-snap'
-import type { BtfSlice } from '@/core/fml/btf-slices'
+import type { PlanSlice } from '@/core/fml/plan-slices'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { FloorPlan } from '@/core/fml/types'
 
@@ -17,7 +17,7 @@ const SLICE_HANDLE_HIT_STAGE = 12
 
 export function hitSliceIndexAtCm(
   cm: Point2D,
-  slices: ReadonlyArray<BtfSlice>,
+  slices: ReadonlyArray<PlanSlice>,
   walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
   plan: FloorPlan | null,
   floorIndex: number,
@@ -47,7 +47,7 @@ export function hitSliceIndexAtCm(
 }
 
 export function useFmlPreviewSlicer(options: {
-  getSlices: () => ReadonlyArray<BtfSlice>
+  getSlices: () => ReadonlyArray<PlanSlice>
   getWalls: () => ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
   getPlan: () => FloorPlan | null
   getFloorIndex: () => number
@@ -56,7 +56,7 @@ export function useFmlPreviewSlicer(options: {
   toStagePoint: (x: number, y: number) => { x: number; y: number }
   shiftPressed: Ref<boolean>
   pushUndo: () => void
-  updateSlice: (index: number, slice: BtfSlice) => void
+  updateSlice: (index: number, slice: PlanSlice) => void
   syncPlan: () => void
 }): {
   tryPointerDown: (event: MouseEvent) => boolean
@@ -87,7 +87,7 @@ export function useFmlPreviewSlicer(options: {
         })
       }
     }
-    const next: BtfSlice =
+    const next: PlanSlice =
       sliceHandleDrag.which === 'm'
         ? { m: point, p: { ...slice.p } }
         : { m: { ...slice.m }, p: point }

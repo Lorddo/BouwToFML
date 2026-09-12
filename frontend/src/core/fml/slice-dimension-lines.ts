@@ -3,7 +3,7 @@
  * Ticks = snijpunten met muurfaces (niet hartlijn / area-poly).
  */
 import { wallOuterAabb } from './auto-dimension-lines'
-import { type BtfSlice, pointOnAxis, projectOnAxis, sliceMeasureAxis } from './btf-slices'
+import { type PlanSlice, pointOnAxis, projectOnAxis, sliceMeasureAxis } from './plan-slices'
 import type { DimensionMode } from './fml-dimension-settings'
 import { wallFaces } from './fml-wall-geom'
 import type { FloorDimension, Point2D, Wall } from './types'
@@ -124,7 +124,7 @@ export type SliceGuide = {
 }
 
 /** Constructie-lijnen (dashed) + handles voor één slice. */
-export function buildSliceGuide(slice: BtfSlice, walls: Wall[]): SliceGuide | null {
+export function buildSliceGuide(slice: PlanSlice, walls: Wall[]): SliceGuide | null {
   const axis = sliceMeasureAxis(slice)
   if (!axis) return null
   const span = sliceDashSpan(walls, slice.m, axis)
@@ -141,7 +141,7 @@ export function buildSliceGuide(slice: BtfSlice, walls: Wall[]): SliceGuide | nu
 
 /** Maatlijnen op de P-lijn voor één slice. */
 export function buildSliceDimensionLines(
-  slice: BtfSlice,
+  slice: PlanSlice,
   walls: Wall[],
   mode: DimensionMode,
 ): SliceDimensionLine[] {
@@ -161,7 +161,7 @@ export function buildSliceDimensionLines(
 }
 
 export function buildAllSliceDimensionLines(
-  slices: BtfSlice[],
+  slices: PlanSlice[],
   walls: Wall[],
   mode: DimensionMode,
 ): SliceDimensionLine[] {
@@ -174,7 +174,7 @@ export function buildAllSliceDimensionLines(
 
 /** FloorDimension[] voor export/bake (verse ids). */
 export function bakeSliceDimensions(
-  slices: BtfSlice[],
+  slices: PlanSlice[],
   walls: Wall[],
   mode: DimensionMode,
   idPrefix = 'slice-dim',

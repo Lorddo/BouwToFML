@@ -4,6 +4,8 @@ import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening
 import type { Point2D, Wall } from '@/core/fml/types'
 import { isRidgeWallId } from '@/core/fml/ridge-walls'
 import { listDakSnapWalls } from '@/core/fml/ridge-floor'
+import { ROOF_TOUCH_SLACK_CM } from '@/core/fml/roof-planes'
+import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
 import {
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
@@ -19,6 +21,7 @@ import {
 } from '@/ui/components/fml-preview-junctions'
 import {
   isAllowedDakDrawPoint,
+  dakRoofRingsFromFloor,
   resolveDakSurfacePoint,
   resolveRidgeDrawPoint,
 } from '@/ui/components/fml-preview-dak-draw-snap'
@@ -67,6 +70,8 @@ interface ToolCoordinatorOptions {
   bovenlichtGapCm?: Ref<number>
   bovenlichtPacked?: Ref<boolean>
   dakMode?: Ref<boolean>
+  roofOverlayOnPlan?: Ref<boolean>
+  ensureRoofOverlayOn?: () => void
   measureDrawMode?: Ref<MeasureDrawMode>
   slicerEditMode?: Ref<boolean>
   dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
@@ -143,10 +148,15 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
   const pendingFixture = options.pendingFixture
   const ridgeZCm = options.ridgeZCm
 
+  const drawingRoof = computed(
+    () => options.dakMode?.value === true || activeFmlTool.value === 'draw_roof',
+  )
   const drawWallMode = computed(() => activeFmlTool.value === 'draw_wall')
   const drawRoomMode = computed(() => activeFmlTool.value === 'draw_room')
   const drawSurfaceMode = computed(
-    () => areaSurfaceEditEnabled.value && activeFmlTool.value === 'draw_surface',
+    () =>
+      (areaSurfaceEditEnabled.value && activeFmlTool.value === 'draw_surface') ||
+      activeFmlTool.value === 'draw_roof',
   )
   const drawLabelMode = computed(
     () => annotationEditEnabled.value && activeFmlTool.value === 'draw_label',
@@ -224,6 +234,24 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
     return editor.walls.value
   }
 
+  function roofOverlaySnapEnabled(): boolean {
+    if (options.dakMode?.value === true) return false
+    if (options.roofOverlayOnPlan?.value === false) return false
+    const viewer = loadUserSettings().fmlViewer
+    if (options.roofOverlayOnPlan == null && viewer.showRoofOverlayOnPlan === false) return false
+    return viewer.showRoofPlanesOnPlan !== false
+  }
+
+  function snapToRoofPlaneRings(cm: Point2D): Point2D | null {
+    const plan = editor.localPlan.value
+    if (!plan || !roofOverlaySnapEnabled()) return null
+    const rings = dakRoofRingsFromFloor(plan.floors[editor.floorIndex.value])
+    if (rings.length === 0) return null
+    const verts = rings.flat()
+    const segments = rings.flatMap((ring) => closedRingSegments(ring))
+    return snapToPolygonGeometry(cm, verts, segments, ROOF_TOUCH_SLACK_CM)
+  }
+
   function resolveDrawPoint(cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean): Point2D {
     if (drawWallKind.value === 'ridge') {
       return resolveRidgeDrawPoint(cm, {
@@ -241,6 +269,10 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
       point = snapToNearbyEndpointAxes(editor.walls.value, [], point)
       point = snapPointToJunctions(editor.junctions.value, point, JUNCTION_POINT_SNAP_CM)
       point = snapPointToWallCenters(editor.walls.value, point, JUNCTION_POINT_SNAP_CM)
+      if (!snapDisabled) {
+        const roofSnap = snapToRoofPlaneRings(point)
+        if (roofSnap) point = roofSnap
+      }
     }
     if (axisAnchor) {
       point = snapDrawWallEndpoint(axisAnchor, point, axisLocked.value)
@@ -265,7 +297,7 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
     excludeSurfaceId?: string | null,
   ): Point2D {
     if (snapDisabled) return cm
-    if (options.dakMode?.value === true && editor.localPlan.value) {
+    if (drawingRoof.value && editor.localPlan.value) {
       const extra = extraAxisPoints ?? []
       if (extra.length === 0) {
         const junction = hitTest.hitTestJunctionAtCm(cm)
@@ -399,10 +431,11 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
     shiftPressed: axisLocked,
     resolvePoint: resolveSurfacePoint,
     acceptPoint: (point) => {
-      if (options.dakMode?.value !== true || !editor.localPlan.value) return true
+      if (!drawingRoof.value || !editor.localPlan.value) return true
       return isAllowedDakDrawPoint(editor.localPlan.value, editor.floorIndex.value, point)
     },
-    isDak: () => options.dakMode?.value === true,
+    isDak: () => drawingRoof.value,
+    onRoofPlaced: () => options.ensureRoofOverlayOn?.(),
     beforeBegin: () => {
       cancelSelectionBoxDrag()
       cancelMoveDragPending()
@@ -455,8 +488,12 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
     },
     getMode: () => options.measureDrawMode?.value ?? 'tape',
     canPersist: () => !inspectMode.value,
-    getSlicerSlices: () => editor.btfSlices.value,
+    getSlicerSlices: () => editor.planSlices.value,
     getSlicerOffsetSnapCm: () => loadUserSettings().fmlViewer.slicerOffsetSnapCm,
+    getManualDimensions: () => {
+      const floor = editor.localPlan.value?.floors[editor.floorIndex.value]
+      return filterManualDimensions(editor.dimensions.value, readPlanSlices(floor))
+    },
     onCommitManual: (a, b) => {
       editor.pushUndo()
       editor.addDimension({ type: 'custom_dimension', a, b })
@@ -465,7 +502,7 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
     },
     onCommitSlicer: (p, m) => {
       editor.pushUndo()
-      const idx = editor.addBtfSlice({ m, p })
+      const idx = editor.addPlanSlice({ m, p })
       syncPlanToParent()
       if (options.dimensionVis) options.dimensionVis.value = 'slicer'
       if (options.selectedSliceIndex) {
@@ -600,7 +637,10 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
         drawWallKind.value = 'ridge'
         ensureRidgeZDraft()
         const tool = activeFmlTool.value
-        if (tool && tool !== 'draw_wall' && tool !== 'draw_surface') activeFmlTool.value = null
+        if (tool && tool !== 'draw_wall' && tool !== 'draw_surface' && tool !== 'draw_roof') {
+          activeFmlTool.value = null
+        }
+        if (tool === 'draw_roof') activeFmlTool.value = 'draw_surface'
         selection.settingsItemId.value = null
         selection.moveItemId.value = null
         selection.hoveredItemId.value = null
@@ -611,6 +651,13 @@ export function useFmlPreviewToolCoordinator(options: ToolCoordinatorOptions) {
       deactivateDrawTool()
     },
     { immediate: true },
+  )
+
+  watch(
+    activeFmlTool,
+    (tool) => {
+      if (tool === 'draw_roof') options.ensureRoofOverlayOn?.()
+    },
   )
 
   watch(editor.floorIndex, () => {

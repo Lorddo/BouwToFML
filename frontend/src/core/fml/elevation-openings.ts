@@ -32,7 +32,7 @@ export type ElevationOpeningWrite = Partial<
     | 'width'
     | 'z'
     | 'z_height'
-    | 'refid'
+    | 'kind'
     | 'mirrored'
     | 'bovenlicht'
     | 'bovenlichtHeightCm'
@@ -97,7 +97,7 @@ export function findOpeningByGuidInPlan(
       if (!wall) continue
       for (let openingIndex = 0; openingIndex < wall.openings.length; openingIndex += 1) {
         const opening = wall.openings[openingIndex]
-        if (!opening || opening.guid !== needle) continue
+        if (!opening || opening.id !== needle) continue
         const located = findOpeningById(floor.walls, `${wall.id}-${opening.type}-${needle}`)
         if (located) return { ...located, floorIndex }
       }
@@ -130,7 +130,7 @@ export function updatePlanOpening(
       width: clamped.width,
       z: clamped.z,
       z_height: clamped.z_height,
-      refid: clamped.refid,
+      kind: clamped.kind,
       ...(patch.mirrored !== undefined ? { mirrored: patch.mirrored } : {}),
       ...(patch.bovenlicht !== undefined ? { bovenlicht: patch.bovenlicht } : {}),
       ...(patch.bovenlichtHeightCm !== undefined
@@ -193,7 +193,7 @@ export function addPlanOpening(
     const wall = updated.find((item) => item.id === wallId)
     const added = wall?.openings[wall.openings.length - 1]
     if (wall && added) {
-      const localId = `${wallId}-${added.type}-${added.guid ?? wall.openings.length - 1}`
+      const localId = `${wallId}-${added.type}-${added.id ?? wall.openings.length - 1}`
       openingId = encodePlanOpeningId(floorIndex, localId)
     }
     return updated

@@ -73,9 +73,9 @@ describe('fml-dimension-settings', () => {
       activeDesignIndex: 0,
     })
     const written = writeDimensionSettings(plan, { engineAutoDims: true }, 1)
-    expect(written.floors[0]?.designs?.[0]?.source?.settings?.engineAutoDims).not.toBe(true)
-    expect(written.floors[1]?.designs?.[0]?.source?.settings?.engineAutoDims).toBe(true)
-    expect(written.floors[1]?.designs?.[1]?.source?.settings?.engineAutoDims).toBe(false)
+    expect(written.floors[0]?.designs?.[0]?.autoDimensions).not.toBe(true)
+    expect(written.floors[1]?.designs?.[0]?.autoDimensions).toBe(true)
+    expect(written.floors[1]?.designs?.[1]?.autoDimensions).toBe(false)
     expect(readDimensionSettings(written, 0).engineAutoDims).toBe(false)
     expect(readDimensionSettings(written, 1).engineAutoDims).toBe(true)
   })
@@ -84,8 +84,8 @@ describe('fml-dimension-settings', () => {
     const plan = createEmptyFloorPlan({ name: 'BG' })
     const written = writeDimensionSettings(plan, { engineAutoDims: true }, 0)
     const dak = written.floors[0]?.designs?.find((design) => design.name === 'Dak')
-    expect(written.floors[0]?.designs?.[0]?.source?.settings?.engineAutoDims).toBe(true)
-    expect(dak?.source?.settings?.engineAutoDims).toBe(false)
+    expect(written.floors[0]?.designs?.[0]?.autoDimensions).toBe(true)
+    expect(dak?.autoDimensions).toBe(false)
   })
 
   it('export Dak: engineAutoDims false en geen dimensions', () => {

@@ -1,10 +1,11 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/fml/ridge-walls'
 import { listBlockedRoofRings, listSkyExposedWalls } from '@/core/fml/ridge-floor'
-import { listRidgeSurfacesOnFloor } from '@/core/fml/roof-planes'
+import { computeClearHeightOverlays } from '@/core/fml/roof-clear-height'
+import { listRidgeSurfacesOnFloor, isDormerRoof, resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
 import type { Floor, FloorPlan, FloorSurface, Wall } from '@/core/fml/types'
 import { buildAutoDimensionLines } from '@/core/fml/auto-dimension-lines'
-import { filterManualDimensions, readBtfSlices } from '@/core/fml/btf-slices'
+import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
 import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
 import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
 import { bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
@@ -57,6 +58,7 @@ import {
 
 export type {
   RenderArea,
+  RenderClearHeight,
   RenderDoorGroup,
   RenderFixture,
   RenderJunction,
@@ -64,6 +66,7 @@ export type {
   RenderLine,
   RenderModel,
   RenderPlanGlyph,
+  RenderRoofPlaneOutline,
   RenderSurface,
   RenderWall,
   RenderWallPolygon,
@@ -297,7 +300,7 @@ export function useFmlPreviewRenderModel(
     const labels = dak ? [] : buildRenderLabels(activeFloor.labels, toStagePoint)
     const lines = dak ? [] : buildRenderLines(activeFloor.lines, toStagePoint)
     const dimSettings = readDimensionSettings(editor.localPlan.value, editor.floorIndex.value)
-    const slices = readBtfSlices(activeFloor)
+    const slices = readPlanSlices(activeFloor)
     const vis = dak ? 'none' : (dimensionVis?.value ?? 'none')
 
     const manualDims =
@@ -335,6 +338,38 @@ export function useFmlPreviewRenderModel(
       )
     }
 
+    let clearHeight: RenderModel['clearHeight'] = null
+    if (plan && listRidgeSurfacesOnFloor(activeFloor).length > 0) {
+      const overlays = computeClearHeightOverlays(plan, editor.floorIndex.value)
+      const toStagePoly = (pts: { x: number; y: number }[]): number[] =>
+        pts.flatMap((p) => {
+          const s = toStagePoint(p.x, p.y)
+          return [s.x, s.y]
+        })
+      clearHeight = {
+        lines150: overlays.lines150.map((line) => toStagePoly(line.points)),
+        lines200: overlays.lines200.map((line) => toStagePoly(line.points)),
+        fills150: overlays.fills150.map((ring) => toStagePoly(ring.points)),
+      }
+    }
+
+    const roofPlaneOutlines = dak
+      ? []
+      : listRidgeSurfacesOnFloor(activeFloor)
+          .filter((surface) => (surface.poly?.length ?? 0) >= 3)
+          .map((surface) => {
+            const dormer = isDormerRoof(surface)
+            return {
+              id: surface.id,
+              points: surface.poly.flatMap((p) => {
+                const stage = toStagePoint(p.x, p.y)
+                return [stage.x, stage.y]
+              }),
+              color: resolveRoofSurfaceColor(surface.color, dormer),
+              dormer,
+            }
+          })
+
     return {
       wallLines,
       ghostWallLines,
@@ -355,6 +390,8 @@ export function useFmlPreviewRenderModel(
       autoDimensions,
       sliceDimensions,
       areaSideDims,
+      clearHeight,
+      roofPlaneOutlines,
       toCmPoint,
       panRect: {
         x: layout.offsetX - 48,
@@ -474,7 +511,8 @@ export function useFmlPreviewRenderModel(
     const showAllDrawJunctions =
       selection.activeFmlTool.value === 'draw_room' ||
       (selection.activeFmlTool.value === 'draw_wall' && selection.drawWallKind.value !== 'ridge') ||
-      (dakMode?.value === true && selection.activeFmlTool.value === 'draw_surface')
+      (dakMode?.value === true && selection.activeFmlTool.value === 'draw_surface') ||
+      selection.activeFmlTool.value === 'draw_roof'
     if (showAllDrawJunctions) {
       return new Set(renderJunctions.value.map((junction) => junction.id))
     }
@@ -508,6 +546,24 @@ export function useFmlPreviewRenderModel(
     renderJunctions.value.filter((junction) => visibleJunctionIds.value.has(junction.id)),
   )
 
+  const dimensionHandleOverlay = computed(() => {
+    const id = selection.moveDimensionId.value ?? selection.hoveredDimensionId.value
+    if (!id) return null
+    const activeFloor = floor.value
+    if (!activeFloor) return null
+    const dim = filterManualDimensions(activeFloor.dimensions, readPlanSlices(activeFloor)).find(
+      (item) => item.id === id,
+    )
+    if (!dim) return null
+    return {
+      id: dim.id,
+      a: junctionStagePoint(dim.a.x, dim.a.y),
+      b: junctionStagePoint(dim.b.x, dim.b.y),
+      selected: selection.moveDimensionId.value === dim.id,
+      activeEnd: selection.hoveredDimensionEnd.value,
+    }
+  })
+
   const renderCornerMarkers = computed((): RenderCornerMarker[] => {
     if (!renderModel.value) return []
     return buildRenderCornerMarkers(buildAllCornerMarkers(editor.walls.value), (x, y) =>
@@ -537,7 +593,23 @@ export function useFmlPreviewRenderModel(
   const selectedWallPanel = computed(() => {
     const model = renderModel.value
     if (!model) return null
-    return buildSelectedWallPanel(model, settingsWallIds.value, editor.floorHeightCm.value)
+    if (settingsWallIds.value.length > 0) {
+      return buildSelectedWallPanel(
+        model,
+        settingsWallIds.value,
+        editor.floorHeightCm.value,
+        'full',
+      )
+    }
+    if (selection.moveWallId.value) {
+      return buildSelectedWallPanel(
+        model,
+        [selection.moveWallId.value],
+        editor.floorHeightCm.value,
+        'quick',
+      )
+    }
+    return null
   })
 
   const selectedJunctionPanel = computed(() => {
@@ -581,6 +653,7 @@ export function useFmlPreviewRenderModel(
     moveOpeningId,
     renderJunctions,
     visibleJunctions,
+    dimensionHandleOverlay,
     renderCornerMarkers,
     groupDraggable,
     junctionMarkerRadius,

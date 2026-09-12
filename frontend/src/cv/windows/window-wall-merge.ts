@@ -1,7 +1,10 @@
 import { unionFaceBBox } from '@/cv/walls/rooms/face-dual-space'
 import { noteCascadeLevel } from '@/core/diagnostics'
-import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
 import type { BoundWindow } from './types'
+
+const WINDOW_SINGLE_KIND = 'window.single'
+const WINDOW_DOUBLE_KIND = 'window.double'
+const WINDOW_TRIPLE_KIND = 'window.triple'
 
 type BBox = { x: number; y: number; width: number; height: number }
 
@@ -52,7 +55,7 @@ function sizesCompatible(
 
 function canMergePair(a: BoundWindow, b: BoundWindow): boolean {
   if (a.segmentIndex !== b.segmentIndex) return false
-  if (a.fmlRefId !== CONCEPT_WINDOW_REFID || b.fmlRefId !== CONCEPT_WINDOW_REFID) return false
+  if (a.fmlRefId !== WINDOW_SINGLE_KIND || b.fmlRefId !== WINDOW_SINGLE_KIND) return false
   if (!bboxesTouchOrOverlap(a.openingBBox, b.openingBBox, resolveMergeTouchEpsPx(a, b)))
     return false
   return sizesCompatible(a, b)
@@ -93,7 +96,7 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
   const spanPx = Math.hypot(openingEndPx.x - openingStartPx.x, openingEndPx.y - openingStartPx.y)
 
   const panelCount = windows.length as 2 | 3
-  const fmlRefId = panelCount === 3 ? WINDOW_TRIPLE_REFID : WINDOW_DOUBLE_REFID
+  const fmlRefId = panelCount === 3 ? WINDOW_TRIPLE_KIND : WINDOW_DOUBLE_KIND
 
   return {
     windowId: windows.map((window) => window.windowId).join('__'),
@@ -115,7 +118,7 @@ function mergeGroup(windows: BoundWindow[]): BoundWindow {
 /**
  * Per segment, van voor naar achter (stijgende `t`): greedy 3 → 2 → 1.
  * Zes gelijke aanliggende ramen → twee triples.
- * Alleen singles (`CONCEPT_WINDOW_REFID`) met rake/overlappende bbox + ≤5% maatverschil.
+ * Alleen singles (`window.single`) met rake/overlappende bbox + ≤5% maatverschil.
  * `enabled: false` → identity (geen merge).
  */
 export function mergeAdjacentBoundWindows(

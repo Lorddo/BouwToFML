@@ -6,7 +6,7 @@ import { addPlanOpening } from '@/core/fml/elevation-openings'
 import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
 import { buildElevationLinework, clipSegmentAgainstOccluder } from '@/core/fml/elevation-linework'
 import { elevationWallFillRings, groupElevationPaintPlanes } from '@/core/fml/elevation-paint'
-import { CONCEPT_DOOR_REFID, type FloorPlan, type Wall } from '@/core/fml/types'
+import { type FloorPlan, type Wall } from '@/core/fml/types'
 
 function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall {
   return { id, a, b, thickness: 20, openings: [] }
@@ -92,12 +92,12 @@ describe('elevation-linework', () => {
     const plan = parallelFacadePlan()
     const withDoor = addPlanOpening(plan, 'serre', {
       type: 'door',
-      refid: CONCEPT_DOOR_REFID,
+      kind: 'door.single',
       t: 0.5,
       width: 90,
       z: 0,
       z_height: 220,
-      guid: 'door-serre',
+      id: 'door-serre',
     })
     const elev = projectFacadeElevation(withDoor.plan, 'G1')!
     const planes = groupElevationPaintPlanes(elev)

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID } from '@/core/fml/types'
 import {
   dedupeOverlappingBoundWindows,
   suppressWindowsNearDoors,
@@ -19,7 +18,7 @@ function makeBound(
     openingEndPx: partial.openingEndPx ?? { x: bbox.x + bbox.width, y: bbox.y + bbox.height / 2 },
     widthPx: partial.widthPx ?? bbox.width,
     widthCm: partial.widthCm ?? bbox.width / 5,
-    fmlRefId: partial.fmlRefId ?? CONCEPT_WINDOW_REFID,
+    fmlRefId: partial.fmlRefId ?? 'window.single',
     evidence: partial.evidence ?? 'framing',
     faceIds: partial.faceIds ?? [1],
     ...partial,
@@ -106,7 +105,7 @@ describe('dedupeOverlappingBoundWindows', () => {
     expect(deduped).toHaveLength(2)
     const merged = mergeAdjacentBoundWindows(deduped)
     expect(merged).toHaveLength(1)
-    expect(merged[0].fmlRefId).toBe(WINDOW_DOUBLE_REFID)
+    expect(merged[0].fmlRefId).toBe('window.double')
   })
 
   it('raakt andere segmenten niet', () => {

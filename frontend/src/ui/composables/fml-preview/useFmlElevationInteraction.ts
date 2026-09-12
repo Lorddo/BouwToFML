@@ -300,6 +300,10 @@ export function useFmlElevationInteraction(deps: ElevationInteractionDeps) {
       select.selectRidge(ridgeWall.wallId, ridgeWall.floorIndex)
       return
     }
+    if (ridgeWall?.axisEdit) {
+      select.selectWallSettings(ridgeWall.wallId, ridgeWall.floorIndex)
+      return
+    }
     if (event.evt.ctrlKey || event.evt.metaKey) {
       const roof = hitElevationRoofPlane(elev, cm)
       if (roof) {
@@ -539,6 +543,7 @@ export function useFmlElevationInteraction(deps: ElevationInteractionDeps) {
     onRidgeMoveHandleDown: select.onRidgeMoveHandleDown,
     onRidgeHandleDown: select.onRidgeHandleDown,
     onRidgeEndHandleDown: select.onRidgeEndHandleDown,
+    onWallAxisEndHandleDown: select.onWallAxisEndHandleDown,
     onWallElevHandleDown: select.onWallElevHandleDown,
     onRoofVertexDown: select.onRoofVertexDown,
     onElevToolChange,

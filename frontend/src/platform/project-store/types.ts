@@ -10,7 +10,11 @@ import type {
   ProjectState,
 } from '@/ui/composables/project/types'
 
-export const PERSISTED_PROJECT_SCHEMA_VERSION = 1 as const
+/**
+ * IDB-schema v2: floor-blob = plan-helft (`.plg`-vorm) + converter-sidecar (CV).
+ * Geen migratie van v1 — schema-gate wist het oude record (afgesproken cutover).
+ */
+export const PERSISTED_PROJECT_SCHEMA_VERSION = 2 as const
 
 export type PersistedProjectIndexEntry = {
   id: string
@@ -75,8 +79,11 @@ export type PersistedPdfUnderlay = {
   pageHeightPx: number
 }
 
-export type PersistedFloorBlob = {
-  session: PersistedDevSession | null
+/**
+ * Plan-helft van één floor in IDB (geen CV-bytes).
+ * Schaal hoort hier — kalibratie is planeigendom.
+ */
+export type PlgFloorDocument = {
   generatedFloor: Floor | null
   previewPlan: FloorPlan | null
   previewUnderlayLayout: PreviewUnderlayLayout | null
@@ -84,8 +91,22 @@ export type PersistedFloorBlob = {
   fmlNulpuntImageCm?: { x: number; y: number } | null
   /** FML-oriëntatie; optioneel voor oude records. */
   fmlOrient?: FloorOrientPersist | null
-  /** Per-floor bronscan (vóór crop); optioneel voor oude records. */
+  /** Schaalkalibratie (was `session.scale`). */
+  scale: PersistedDevSession['scale'] | null
+  /** Per-floor bronscan (vóór crop); optioneel. */
   sourceUnderlay?: PersistedSourceUnderlay | null
+}
+
+/**
+ * Converter-sidecar: CV-werkstaat (scan, maskers, refs, detectie).
+ * Nooit in `.plg`-download; alleen IDB / BouwToFML.
+ */
+export type ConverterSidecar = Omit<PersistedDevSession, 'scale'>
+
+/** Floor-blob v2: plan + optionele CV-sidecar. */
+export type PersistedFloorBlob = {
+  plan: PlgFloorDocument
+  cv: ConverterSidecar | null
 }
 
 export type PersistedProject = {

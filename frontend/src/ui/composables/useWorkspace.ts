@@ -65,7 +65,15 @@ import {
   loadProject,
   type PersistedProjectIndexEntry,
 } from '@/platform/project-store'
-import { downloadFml } from '@/core/fml/downloadFml'
+import { downloadFml, downloadText } from '@/core/fml/downloadFml'
+import {
+  createPlgDocument,
+  writePlg,
+  type PlgSettings,
+} from '@/core/plg/plg-document'
+import { clonePlain } from '@/platform/dev-workspace'
+import type { FloorPlan } from '@/core/fml/types'
+import { promptFmlChromeChoice } from '@/ui/composables/fml-chrome-dialog'
 import { sanitizeFilename } from './workspace/workspace-fml-generate'
 import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
 import {
@@ -654,7 +662,7 @@ export function useWorkspace() {
     floorName: fmlFloorName,
     floorLevel: fmlFloorLevel,
     getPreviewPlan: () => fml.previewPlan.value ?? null,
-    getGeneratedFmlText: () => fml.generatedFmlText.value ?? '',
+    getGeneratedFmlText: () => fml.buildGeneratedFmlText() ?? '',
     appVersion: '1.0.0',
   })
 
@@ -891,12 +899,12 @@ export function useWorkspace() {
     setFmlOrient: (state) => fml.setFmlOrient(state),
     clearLiveFmlPreview: () => fml.clearLiveFmlPreview(),
     applyFmlDefaultsToUi: (defaults) => {
-      fml.setFmlWallHeightCm(defaults.wallHeightCm)
-      fml.setFmlDoorHeightCm(defaults.doorHeightCm)
-      fml.setFmlWindowHeightCm(defaults.windowHeightCm)
-      fml.setFmlWindowSillZCm(defaults.windowSillZCm)
-      fml.setFmlBovenlichtDefault(defaults.bovenlichtDefault)
-      fml.setFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
+      fml.hydrateFmlWallHeightCm(defaults.wallHeightCm)
+      fml.hydrateFmlDoorHeightCm(defaults.doorHeightCm)
+      fml.hydrateFmlWindowHeightCm(defaults.windowHeightCm)
+      fml.hydrateFmlWindowSillZCm(defaults.windowSillZCm)
+      fml.hydrateFmlBovenlichtDefault(defaults.bovenlichtDefault)
+      fml.hydrateFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
       fml.setFmlBovenlichtHeightCm(defaults.bovenlichtHeightCm)
       fml.setFmlBovenlichtGapCm(defaults.bovenlichtGapCm)
       fml.setFmlThicknessCms(
@@ -1096,8 +1104,55 @@ export function useWorkspace() {
     onLeaveProjectStep: () => project.enterActiveFloorFromProject(),
     onEnterProjectStep: () => project.leaveFloorToProject(),
     onFlowCheckpoint: () => project.persistProject('flowCheckpoint'),
-    onResultDownload: () => downloadProjectFml(),
+    onResultDownload: () => {
+      void downloadProjectExport()
+    },
   })
+
+  function buildWorkspacePlgSettings(): PlgSettings {
+    const settings = loadUserSettings()
+    return {
+      unitSystem: settings.unitSystem,
+      scaleInputUnit: settings.scaleInputUnit,
+      planDisplayStyle: settings.fmlViewer.planDisplayStyle ?? 'editor',
+      showCanvasGrid: settings.fmlViewer.showCanvasGrid !== false,
+      defaults: { ...project.activeFloorDefaults.value },
+    }
+  }
+
+  function downloadProjectPlg(): void {
+    if (fml.fmlLimitsDirty.value) {
+      fml.syncAppliedFromDraft()
+    }
+    const plan = project.buildMergedProjectPlan()
+    if (!plan) {
+      setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      return
+    }
+    const meta = project.projectMeta.value
+    const doc = createPlgDocument({
+      project: { id: meta.id, name: meta.name || plan.name, address: meta.address },
+      settings: buildWorkspacePlgSettings(),
+      plan,
+    })
+    setLocalError(null)
+    downloadText(writePlg(doc), `${sanitizeFilename(plan.name)}.plg`, 'application/json')
+  }
+
+  async function downloadProjectExport(): Promise<void> {
+    const format = await promptFmlChromeChoice({
+      title: tGlobal('result.downloadProjectTitle'),
+      message: tGlobal('result.downloadProjectMessage'),
+      listItems: [
+        { id: 'fml', name: tGlobal('result.downloadFml') },
+        { id: 'plg', name: tGlobal('result.downloadPlg') },
+      ],
+      defaultValue: 'fml',
+      confirmLabel: tGlobal('common.apply'),
+    })
+    if (format === 'plg') downloadProjectPlg()
+    else if (format === 'fml') downloadProjectFml()
+  }
 
   function resetWorkspace() {
     project.resetProject()
@@ -1140,20 +1195,59 @@ export function useWorkspace() {
     }
   }
 
+  async function setFmlWallHeightCm(value: number): Promise<void> {
+    const applied = await fml.setFmlWallHeightCm(value)
+    if (!applied) return
+    project.updateActiveFloorDefaults({ wallHeightCm: Math.round(value) }, { syncUi: false })
+  }
+
+  async function setFmlDoorHeightCm(value: number): Promise<void> {
+    const applied = await fml.setFmlDoorHeightCm(value)
+    if (!applied) return
+    project.updateActiveFloorDefaults({ doorHeightCm: Math.round(value) }, { syncUi: false })
+  }
+
+  async function setFmlWindowHeightCm(value: number): Promise<void> {
+    const applied = await fml.setFmlWindowHeightCm(value)
+    if (!applied) return
+    project.updateActiveFloorDefaults({ windowHeightCm: Math.round(value) }, { syncUi: false })
+  }
+
+  async function setFmlWindowSillZCm(value: number): Promise<void> {
+    const applied = await fml.setFmlWindowSillZCm(value)
+    if (!applied) return
+    project.updateActiveFloorDefaults({ windowSillZCm: Math.round(value) }, { syncUi: false })
+  }
+
   /**
-   * FmlPanel-checkbox → UI-ref + actieve vloer-defaults (zonder UI-resync-loop).
+   * FmlPanel-checkbox → overwrite-confirm op live plan + actieve vloer-defaults.
    * Zonder write-through bleef project-download op defaults.bovenlichtDefault=false.
    */
-  function setFmlBovenlichtDefault(value: boolean): void {
+  async function setFmlBovenlichtDefault(value: boolean): Promise<void> {
     const on = value === true
-    fml.setFmlBovenlichtDefault(on)
+    const applied = await fml.setFmlBovenlichtDefault(on)
+    if (!applied) return
     project.updateActiveFloorDefaults({ bovenlichtDefault: on }, { syncUi: false })
   }
 
-  function setFmlWindowBovenlichtDefault(value: boolean): void {
+  async function setFmlWindowBovenlichtDefault(value: boolean): Promise<void> {
     const on = value === true
-    fml.setFmlWindowBovenlichtDefault(on)
+    const applied = await fml.setFmlWindowBovenlichtDefault(on)
+    if (!applied) return
     project.updateActiveFloorDefaults({ windowBovenlichtDefault: on }, { syncUi: false })
+  }
+
+  function exportMergedProjectPlan(): FloorPlan | null {
+    if (fml.fmlLimitsDirty.value) {
+      fml.syncAppliedFromDraft()
+    }
+    const plan = project.buildMergedProjectPlan()
+    if (!plan) {
+      setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      return null
+    }
+    setLocalError(null)
+    return clonePlain(plan)
   }
 
   function downloadProjectFml(): void {
@@ -1337,10 +1431,16 @@ export function useWorkspace() {
       project.copyPreprocessAndRefsFromDonor(donorFloorId),
     setFmlBovenlichtDefault,
     setFmlWindowBovenlichtDefault,
+    setFmlWallHeightCm,
+    setFmlDoorHeightCm,
+    setFmlWindowHeightCm,
+    setFmlWindowSillZCm,
     setFmlNulpuntImageCm: (point: { x: number; y: number } | null) =>
       fml.setFmlNulpuntImageCm(point),
     updatePreviewPlan: fml.updatePreviewPlan,
     downloadProjectFml,
+    downloadProjectPlg,
+    exportMergedProjectPlan,
     applyProjectMirrorVertical: () => {
       const count = project.applyProjectMirrorVertical()
       if (count === 0) {

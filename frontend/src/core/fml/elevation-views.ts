@@ -1,36 +1,64 @@
 /**
- * Per-gevelgroep aanzicht-onderlegger in `plan.source.settings.elevationViews`.
+ * Per-gevelgroep aanzicht-onderlegger op `plan.elevations`.
  * Niet `floors[].drawing` (dat is de plattegrond-scan).
+ * FML-settings keys blijven via de fml-adapter (hydrate/serialize; export stript ze).
  */
+import {
+  DEFAULT_ELEVATION_PROJECTION as PLG_DEFAULT_ELEVATION_PROJECTION,
+  type ElevationProjection,
+  type ElevationView as PlgElevationView,
+} from '../plg/extension-types'
 import type { DrawingMeta, FloorPlan, FmlExtras } from './types'
 
 export const ELEVATION_VIEWS_SETTINGS_KEY = 'elevationViews'
 export const ELEVATION_PROJECTION_SETTINGS_KEY = 'elevationProjection'
 
 /** Vaste H/V-zijde (architect) of mee met de gevel (projectief). */
-export type ElevationProjectionMode = 'architect' | 'projective'
+export type ElevationProjectionMode = ElevationProjection
 
-export const DEFAULT_ELEVATION_PROJECTION: ElevationProjectionMode = 'architect'
+export const DEFAULT_ELEVATION_PROJECTION: ElevationProjectionMode = PLG_DEFAULT_ELEVATION_PROJECTION
 
-export type ElevationView = {
-  facadeGroupId: string
-  drawing?: DrawingMeta
-}
+export type ElevationView = PlgElevationView
 
 export function readElevationProjection(
   plan: FloorPlan | null | undefined,
 ): ElevationProjectionMode {
+  const typed = plan?.elevations?.projection
+  if (typed === 'projective') return 'projective'
+  if (typed === 'architect') return 'architect'
   const raw = plan?.source?.settings?.[ELEVATION_PROJECTION_SETTINGS_KEY]
   return raw === 'projective' ? 'projective' : DEFAULT_ELEVATION_PROJECTION
 }
 
-export function setElevationProjection(plan: FloorPlan, mode: ElevationProjectionMode): FloorPlan {
-  const settings = cloneSettings(plan.source?.settings)
-  settings[ELEVATION_PROJECTION_SETTINGS_KEY] = mode === 'projective' ? 'projective' : 'architect'
+function clearElevationSettingsKeys(settings: FmlExtras): FmlExtras {
+  const next = { ...settings }
+  delete next[ELEVATION_VIEWS_SETTINGS_KEY]
+  delete next[ELEVATION_PROJECTION_SETTINGS_KEY]
+  return next
+}
+
+function withElevations(
+  plan: FloorPlan,
+  projection: ElevationProjectionMode,
+  views: ElevationView[],
+): FloorPlan {
+  const settings = clearElevationSettingsKeys(cloneSettings(plan.source?.settings))
   return {
     ...plan,
+    elevations: {
+      projection: projection === 'projective' ? 'projective' : 'architect',
+      views,
+    },
     source: plan.source ? { ...plan.source, settings } : { settings },
   }
+}
+
+export function setElevationProjection(plan: FloorPlan, mode: ElevationProjectionMode): FloorPlan {
+  return withElevations(
+    plan,
+    mode === 'projective' ? 'projective' : 'architect',
+    listElevationViews(plan),
+  )
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -76,7 +104,7 @@ function normalizeView(raw: unknown): ElevationView | null {
 }
 
 export function listElevationViews(plan: FloorPlan | null | undefined): ElevationView[] {
-  const raw = plan?.source?.settings?.[ELEVATION_VIEWS_SETTINGS_KEY]
+  const raw = plan?.elevations?.views ?? plan?.source?.settings?.[ELEVATION_VIEWS_SETTINGS_KEY]
   if (!Array.isArray(raw)) return []
   const out: ElevationView[] = []
   const seen = new Set<string>()
@@ -105,15 +133,14 @@ export function writeElevationView(plan: FloorPlan, view: ElevationView): FloorP
   if (view.drawing) nextView.drawing = { ...view.drawing }
   const views = listElevationViews(plan).filter((entry) => entry.facadeGroupId !== id)
   views.push(nextView)
-  const settings = cloneSettings(plan.source?.settings)
-  settings[ELEVATION_VIEWS_SETTINGS_KEY] = views.map((entry) => ({
-    facadeGroupId: entry.facadeGroupId,
-    ...(entry.drawing ? { drawing: { ...entry.drawing } } : {}),
-  }))
-  return {
-    ...plan,
-    source: plan.source ? { ...plan.source, settings } : { settings },
-  }
+  return withElevations(
+    plan,
+    readElevationProjection(plan),
+    views.map((entry) => ({
+      facadeGroupId: entry.facadeGroupId,
+      ...(entry.drawing ? { drawing: { ...entry.drawing } } : {}),
+    })),
+  )
 }
 
 export function setElevationViewDrawing(

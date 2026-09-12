@@ -12,6 +12,7 @@ const DEFAULT_FML_HELP_KEYS = [
   'result.toolbar.hintDrawWall',
   'result.toolbar.hintDrawRoom',
   'result.toolbar.hintDrawSurface',
+  'result.toolbar.hintDrawRoof',
   'result.toolbar.hintDrawLabel',
   'result.toolbar.hintDrawLine',
   'result.toolbar.hintAddDoor',
@@ -35,10 +36,14 @@ const props = defineProps<{
   edgeChrome?: boolean
   /** Inspect: geen teken-tips. */
   showHelp?: boolean
-  /** i18n-keys voor de zoekbare help-lijst (default = FML editor). */
+  /** i18n-keys voor de zoekbare help-lijst (default = editor). */
   helpKeys?: readonly string[]
   /** Viewport-vast hulpraster (settings). */
   showCanvasGrid?: boolean
+  /** Plattegrond: toon dak-overlay-knop (niet op Dak/Gevels/stap 1–3). */
+  showRoofOverlayToggle?: boolean
+  /** Master dak-overlay op de plattegrond. */
+  showRoofOverlayOnPlan?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -49,6 +54,7 @@ const emit = defineEmits<{
   zoomOut: []
   toggleFullscreen: []
   'update:showCanvasGrid': [value: boolean]
+  'update:showRoofOverlayOnPlan': [value: boolean]
 }>()
 
 const { t } = useI18n()
@@ -147,6 +153,25 @@ function toggleHelp(): void {
       @click="emit('update:showCanvasGrid', props.showCanvasGrid === false)"
     >
       <ToolbeltIcon name="grid_off" />
+    </button>
+    <button
+      v-if="props.showRoofOverlayToggle === true"
+      type="button"
+      :class="{ 'is-on': props.showRoofOverlayOnPlan === false }"
+      :title="
+        props.showRoofOverlayOnPlan === false
+          ? t('viewer.roofOverlayShow')
+          : t('viewer.roofOverlayHide')
+      "
+      :aria-label="
+        props.showRoofOverlayOnPlan === false
+          ? t('viewer.roofOverlayShow')
+          : t('viewer.roofOverlayHide')
+      "
+      :aria-pressed="props.showRoofOverlayOnPlan === false"
+      @click="emit('update:showRoofOverlayOnPlan', props.showRoofOverlayOnPlan === false)"
+    >
+      <ToolbeltIcon name="roof" />
     </button>
     <button
       v-if="props.showHelp !== false"

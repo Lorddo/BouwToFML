@@ -30,6 +30,7 @@ import WorkspaceDiagnosisFab from '../components/WorkspaceDiagnosisFab.vue'
 import ProjectSetupPanel from '../components/ProjectSetupPanel.vue'
 import WorkspaceFloorRail from '../components/WorkspaceFloorRail.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
+import type { FloorPlan } from '@/core/fml/types'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useWorkspaceViewUi } from '../composables/workspace/useWorkspaceViewUi'
 import { workspaceCanvasHelpKeys } from '../composables/workspace/workspace-canvas-help'
@@ -50,6 +51,9 @@ const debugSidebarOpen = ref(false)
 const sidebarOpen = ref(true)
 const sidebarOpenBeforeFullscreen = ref(true)
 const canvasFullscreen = defineModel<boolean>('canvasFullscreen', { default: false })
+const emit = defineEmits<{
+  openInEditor: [plan: FloorPlan]
+}>()
 const { t } = useI18n()
 
 watch(canvasFullscreen, (on) => {
@@ -163,6 +167,12 @@ function onRasterRedo() {
   if (ws.flowStep === 'preprocess' || ws.flowStep === 'templates') {
     ws.redoInkEdit()
   }
+}
+
+function onOpenInEditor(): void {
+  const plan = api.exportMergedProjectPlan()
+  if (!plan) return
+  emit('openInEditor', plan)
 }
 
 defineExpose<{
@@ -477,8 +487,11 @@ defineExpose<{
           :can-go-back="ws.canGoBack"
           :can-go-next="ws.canGoNext"
           :next-step-button-label="ws.nextStepButtonLabel"
+          :show-open-in-editor="ws.flowStep === 'result'"
+          :can-open-in-editor="ws.hasAnyFloorFml"
           @back="ws.goToPreviousStep"
           @next="ws.goToNextStep"
+          @open-in-editor="onOpenInEditor"
         />
       </aside>
       <button

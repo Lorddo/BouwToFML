@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_WINDOW_REFID, type Opening, type Wall } from '@/core/fml/types'
+import { type Opening, type Wall } from '@/core/fml/types'
 import { buildRenderDoorGroupsAndWindows } from '@/ui/composables/fml-preview/fml-preview-render-openings'
 import type { RenderWall } from '@/ui/composables/fml-preview/fml-preview-render-types'
 import { wallBalanceMidOffsetCm } from '@/ui/components/fml-preview-wall-polygons'
@@ -9,10 +9,10 @@ const toStage = (x: number, y: number) => ({ x, y })
 function windowOnWall(balance: number): RenderWall {
   const opening: Opening = {
     type: 'window',
-    refid: CONCEPT_WINDOW_REFID,
+    kind: 'window.single',
     t: 0.5,
     width: 80,
-    guid: 'w1',
+    id: 'w1',
   }
   const wall: Wall = {
     id: 'wall-h',

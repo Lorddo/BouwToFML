@@ -7,7 +7,7 @@ import { insetOpeningRect, resolveOpeningFrame, type OpeningFrameCm } from './op
 import {
   resolveOpeningCatalog,
   resolveWindowPanelCount,
-  type OpeningCatalogInfo,
+  type LegacyOpeningCatalogInfo,
   type OpeningLeafKind,
 } from './opening-refid-catalog'
 import type { OpeningType, Point2D } from './types'
@@ -348,14 +348,14 @@ function halfRoundHolePoints(outer: ElevationOpeningOuter, steps = 24): Point2D[
 }
 
 /** Rechthoekig kozijn-gat; driehoek/rond/halfrond/boog gebruiken hun silhouet. */
-export function elevationOpeningHoleIsRect(type: OpeningType, refid: string): boolean {
-  const catalog = resolveOpeningCatalog(refid, type)
-  const kind = catalog.kind
+export function elevationOpeningHoleIsRect(type: OpeningType, kind: string): boolean {
+  const catalog = resolveOpeningCatalog(kind, type)
+  const glyph = catalog.kind
   const symbol = catalog.elevationSymbol
-  if (kind === 'archway' || symbol === 'archway') return false
-  if (kind === 'triangle' || symbol === 'triangle') return false
-  if (kind === 'round' || symbol === 'round') return false
-  if (kind === 'half_round' || symbol === 'half_round') return false
+  if (glyph === 'archway' || symbol === 'archway') return false
+  if (glyph === 'triangle' || symbol === 'triangle') return false
+  if (glyph === 'round' || symbol === 'round') return false
+  if (glyph === 'half_round' || symbol === 'half_round') return false
   return true
 }
 
@@ -392,18 +392,18 @@ function buildTriangle(
 export function elevationOpeningHolePoints(
   outer: ElevationOpeningOuter,
   type: OpeningType,
-  refid: string,
+  kind: string,
   opts?: { mirrored?: [number, number]; startOnLeft?: boolean },
 ): Point2D[] {
-  const catalog = resolveOpeningCatalog(refid, type)
-  const kind = catalog.kind
+  const catalog = resolveOpeningCatalog(kind, type)
+  const glyph = catalog.kind
   const symbol = catalog.elevationSymbol
-  if (kind === 'archway' || symbol === 'archway') return archHolePoints(outer)
-  if (kind === 'triangle' || symbol === 'triangle') {
+  if (glyph === 'archway' || symbol === 'archway') return archHolePoints(outer)
+  if (glyph === 'triangle' || symbol === 'triangle') {
     return trianglePoints(outer, hingeOnLeft(opts?.mirrored, opts?.startOnLeft !== false))
   }
-  if (kind === 'round' || symbol === 'round') return roundHolePoints(outer)
-  if (kind === 'half_round' || symbol === 'half_round') return halfRoundHolePoints(outer)
+  if (glyph === 'round' || symbol === 'round') return roundHolePoints(outer)
+  if (glyph === 'half_round' || symbol === 'half_round') return halfRoundHolePoints(outer)
   return [
     { x: outer.x0, y: outer.y0 },
     { x: outer.x1, y: outer.y0 },
@@ -469,15 +469,15 @@ export function glyphFromElevationRect(rect: {
   y0: number
   x1: number
   y1: number
-  type: OpeningCatalogInfo['type']
-  refid: string
+  type: OpeningType
+  kind: string
   mirrored?: [number, number]
   widthCm: number
   extras?: import('./types').FmlExtras
   /** Muur-a ligt links in het aanzicht (`xa <= xb`). Default true. */
   startOnLeft?: boolean
 }): ElevationOpeningSymbol {
-  const catalog = resolveOpeningCatalog(rect.refid, rect.type)
+  const catalog = resolveOpeningCatalog(rect.kind, rect.type)
   const base = resolveOpeningFrame({ extras: rect.extras }, catalog)
   const projW = Math.max(0.1, rect.x1 - rect.x0)
   const worldW = Math.max(0.1, rect.widthCm)
@@ -498,7 +498,7 @@ export function glyphFromElevationRect(rect: {
 
 export function buildElevationOpeningSymbol(params: {
   outer: ElevationOpeningOuter
-  catalog: OpeningCatalogInfo
+  catalog: LegacyOpeningCatalogInfo
   frame: OpeningFrameCm
   mirrored?: [number, number]
   startOnLeft?: boolean

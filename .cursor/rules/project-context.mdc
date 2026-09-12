@@ -14,6 +14,19 @@ Het grootste **repetitieve** tekenwerk wegnemen; interpretatie blijft bij de tek
 
 **Buiten scope:** handschetsen en point clouds (ander project/tool).
 
+## Woordenboek (`.plg` vs FML)
+
+Intern is de plattegrond **`.plg`** (`FloorPlan` + `PlgDocument`). FML is een **adapter** (Floorplanner import/export), geen opslag en geen editor-identiteit. Download **maakt** geen plattegrond: na detectie (stap 4) staat `previewPlan` al in geheugen; download serialiseert die naar `.fml` en/of `.plg`.
+
+| Zeg (intern, editor, docs, chats) | Niet | Waar FML wél mag |
+|---|---|---|
+| **plattegrond** / **plan** / `.plg` | «de FML» voor in-memory state | — |
+| **editor** (PLG-native; FML in/uit per tenant) | «FML-editor» | — |
+| **converter** / detectie-app | — | Klant-UI van BouwToFML: «FML», «Vector / FML», download `.fml` |
+| Pad `/FML-editor`, identifiers `Fml*` | niet hernoemen zonder migratie | legacy URL / bestaande TS-namen |
+
+**Regel:** in conversatie en nieuwe docs «editor» + «plattegrond». Alleen in de converter-UI (en klantgesprekken over Floorplanner-export) «FML». Tekenbureau-tenant: FML-import/export; overige editor-accounts alleen `.plg`. Uitwerking: `.cursor/docs/plg-native-format-plan.md`.
+
 ## Documentatie
 
 Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse markdown-bestanden in de repo.
@@ -60,6 +73,9 @@ Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse mark
 | **Losstaande editor seats/prijs** | `.cursor/docs/Pricing & Marketplace Strategy – Floorplan Editor.md` |
 | **Productidee self-serve (21 aug; geld → prijsdoc)** | `.cursor/docs/product-idee-self-serve-plattegrond.md` |
 | **Openings-preprocess (deur+raam eigen B/W, plan)** | `.cursor/docs/openings-preprocess-refactor-plan.md` |
+| **IFC/DWG → FML (vooronderzoek + plan)** | `.cursor/docs/ifc-dwg-naar-fml-plan.md` |
+| **Eigen planformaat `.plg` (FML + IFC als adapters)** | `.cursor/docs/plg-native-format-plan.md` |
+| **Clear height 1,50/2,00 + dakkapel** | `.cursor/docs/roof-clear-height.md` |
 | Sessie-geheugen (lopende staat) | `.cursor/rules/memory.mdc` |
 
 ## Stack (V1)

@@ -3,10 +3,10 @@ import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import {
   dimensionLiesOnSlice,
   filterManualDimensions,
-  readBtfSlices,
-  writeBtfSlices,
-  type BtfSlice,
-} from '@/core/fml/btf-slices'
+  readPlanSlices,
+  writePlanSlices,
+  type PlanSlice,
+} from '@/core/fml/plan-slices'
 import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import { writeDimensionSettings } from '@/core/fml/fml-dimension-settings'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
@@ -33,11 +33,11 @@ function rectangleWalls(): Wall[] {
   ]
 }
 
-describe('btf-slices + slice-dimension-lines', () => {
+describe('plan-slices + slice-dimension-lines', () => {
   it('H-slice (M/P horizontaal offset): meet verticaal, plaats op P', () => {
     const walls = rectangleWalls()
     // M in kamer, P links buiten → offset west → meetas verticaal
-    const slice: BtfSlice = { m: { x: 200, y: 150 }, p: { x: -50, y: 150 } }
+    const slice: PlanSlice = { m: { x: 200, y: 150 }, p: { x: -50, y: 150 } }
     const guide = buildSliceGuide(slice, walls)
     expect(guide).not.toBeNull()
     expect(Math.abs(guide!.measureA.x - guide!.measureB.x)).toBeLessThan(0.5)
@@ -60,7 +60,7 @@ describe('btf-slices + slice-dimension-lines', () => {
 
   it('schuine M→P: meetas loodrecht op offset', () => {
     const walls = rectangleWalls()
-    const slice: BtfSlice = { m: { x: 200, y: 150 }, p: { x: 250, y: 200 } }
+    const slice: PlanSlice = { m: { x: 200, y: 150 }, p: { x: 250, y: 200 } }
     const guide = buildSliceGuide(slice, walls)
     expect(guide).not.toBeNull()
     const mdx = guide!.measureB.x - guide!.measureA.x
@@ -80,7 +80,7 @@ describe('btf-slices + slice-dimension-lines', () => {
       wall('w', { x: 0, y: 0 }, { x: 0, y: 300 }, 20, 0),
       wall('e', { x: 400, y: 0 }, { x: 400, y: 300 }),
     ]
-    const slice: BtfSlice = { m: { x: 200, y: 150 }, p: { x: 200, y: -40 } }
+    const slice: PlanSlice = { m: { x: 200, y: 150 }, p: { x: 200, y: -40 } }
     const interior = buildSliceDimensionLines(slice, walls, 'interior')
     const total = interior.reduce(
       (sum, line) => sum + Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y),
@@ -104,7 +104,7 @@ describe('btf-slices + slice-dimension-lines', () => {
       wall('e', { x: 400, y: 0 }, { x: 400, y: 300 }),
       wall('mid', { x: 200, y: 0 }, { x: 200, y: 300 }, 20),
     ]
-    const slice: BtfSlice = { m: { x: 100, y: 150 }, p: { x: 100, y: -40 } }
+    const slice: PlanSlice = { m: { x: 100, y: 150 }, p: { x: 100, y: -40 } }
     const interior = buildSliceDimensionLines(slice, walls, 'interior')
     const exterior = buildSliceDimensionLines(slice, walls, 'exterior')
     const intLens = interior.map((l) => Math.round(Math.hypot(l.b.x - l.a.x, l.b.y - l.a.y)))
@@ -117,9 +117,9 @@ describe('btf-slices + slice-dimension-lines', () => {
     let plan = createEmptyFloorPlan({ name: 'Slice' })
     plan.floors[0].walls = rectangleWalls()
     // P links (plaats), M in kamer (meet) — offset horizontaal → meetas verticaal
-    const slice: BtfSlice = { m: { x: 200, y: 150 }, p: { x: -50, y: 150 } }
-    plan = writeBtfSlices(plan, [slice], 0)
-    expect(readBtfSlices(plan.floors[0])).toEqual([slice])
+    const slice: PlanSlice = { m: { x: 200, y: 150 }, p: { x: -50, y: 150 } }
+    plan = writePlanSlices(plan, [slice], 0)
+    expect(readPlanSlices(plan.floors[0])).toEqual([slice])
 
     const baked: FloorDimension = {
       id: 'bake-1',
@@ -140,7 +140,7 @@ describe('btf-slices + slice-dimension-lines', () => {
     plan.floors[0].dimensions = [baked, manual]
     plan = writeDimensionSettings(plan, { dimensionMode: 'interior' })
     // Sync design dimensions for export
-    plan = writeBtfSlices(plan, [slice], 0)
+    plan = writePlanSlices(plan, [slice], 0)
     plan.floors[0] = {
       ...plan.floors[0],
       dimensions: [baked, manual],
@@ -164,10 +164,22 @@ describe('btf-slices + slice-dimension-lines', () => {
     )
 
     const { plan: imported } = importFmlV3(raw)
-    expect(readBtfSlices(imported.floors[0])).toEqual([slice])
+    expect(readPlanSlices(imported.floors[0])).toEqual([slice])
+    // Typed veld na hydrate; legacy settings-key weg
+    expect(imported.floors[0].designs?.[0]?.slices).toEqual([slice])
+    expect(imported.floors[0].designs?.[0]?.source?.settings?.btfSlices).toBeUndefined()
     // Bake gestript; manual blijft (ids worden bij import opnieuw gegenereerd)
     const dims = imported.floors[0].dimensions ?? []
     expect(dims.some((d) => Math.abs(d.a.y + 80) < 1 && Math.abs(d.b.y + 80) < 1)).toBe(true)
     expect(dims.every((d) => !(Math.abs(d.a.x + 50) < 1 && Math.abs(d.b.x + 50) < 1))).toBe(true)
+
+    // FML-roundtrip opnieuw: bake + btfSlices terug in export
+    const reExported = JSON.parse(buildFmlV3(imported))
+    expect(reExported.floors[0].designs[0].settings.btfSlices).toEqual([slice])
+    const reDims = reExported.floors[0].designs[0].dimensions as Array<{
+      a: { x: number; y: number }
+      b: { x: number; y: number }
+    }>
+    expect(reDims.some((d) => Math.abs(d.a.x + 50) < 1 && Math.abs(d.b.x + 50) < 1)).toBe(true)
   })
 })

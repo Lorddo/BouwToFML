@@ -20,6 +20,7 @@ import FmlPreviewToolbarSettingsArea from './FmlPreviewToolbarSettingsArea.vue'
 import FmlPreviewToolbarSettingsRoof from './FmlPreviewToolbarSettingsRoof.vue'
 import FmlPreviewToolbarSettingsLabel from './FmlPreviewToolbarSettingsLabel.vue'
 import FmlPreviewToolbarSettingsLine from './FmlPreviewToolbarSettingsLine.vue'
+import FmlPreviewToolbarSettingsDimension from './FmlPreviewToolbarSettingsDimension.vue'
 import FmlPreviewToolbarSettingsItem from './FmlPreviewToolbarSettingsItem.vue'
 import FmlPreviewToolbarSettingsDraw from './FmlPreviewToolbarSettingsDraw.vue'
 import FmlPreviewToolbarSettingsStrips from './FmlPreviewToolbarSettingsStrips.vue'
@@ -44,6 +45,7 @@ const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 }
 const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
 const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
 const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
+const drawRoofKind = defineModel<'plane' | 'dormer'>('drawRoofKind')
 const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
 const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
 const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
@@ -65,6 +67,7 @@ const props = withDefaults(
       heightMixed?: boolean
       canSplit: boolean
       ridgeCount?: number
+      mode?: 'quick' | 'full'
     } | null
     selectedFacadeGroupPanel?: {
       groupId: string
@@ -107,6 +110,7 @@ const props = withDefaults(
       showAreaLabel: boolean
       canEditPolygon: boolean
       isCutout?: boolean
+      liningCm?: number | null
     } | null
     selectedLabelPanel?: {
       id: string
@@ -123,6 +127,10 @@ const props = withDefaults(
       color: string
       thickness: number
     } | null
+    selectedDimensionPanel?: {
+      id: string
+      lengthCm: number
+    } | null
     selectedItemPanel?: {
       id: string
       label: string
@@ -137,6 +145,13 @@ const props = withDefaults(
     roofVertexZCm?: number | null
     roofVertexIndex?: number | null
     roofPolyMutate?: boolean
+    roofKind?: 'plane' | 'dormer'
+    roofParentId?: string | null
+    parentRoofOptions?: ReadonlyArray<{ id: string; label: string }>
+    /** Dakdikte voor liningCm-clamp (ondergrens −dakThickness). */
+    dakThicknessCm?: number
+    /** Vloerdikte: ondergrens dakpunt-Z (goot tot onderkant plaat). */
+    slabThicknessCm?: number
     wallThicknessDraft: number
     wallThicknessMixed: boolean
     wallBalanceDraft: number
@@ -227,12 +242,18 @@ const props = withDefaults(
     selectedJunctionPanel: null,
     selectedLabelPanel: null,
     selectedLinePanel: null,
+    selectedDimensionPanel: null,
     selectedItemPanel: null,
     roomTypes: () => [],
     surfaceEditActive: false,
     roofVertexZCm: null,
     roofVertexIndex: null,
     roofPolyMutate: false,
+    roofKind: 'plane',
+    roofParentId: null,
+    parentRoofOptions: () => [],
+    dakThicknessCm: 20,
+    slabThicknessCm: 20,
   },
 )
 
@@ -284,6 +305,9 @@ const emit = defineEmits<{
   applyAreaColor: [color: string]
   applyShowAreaLabel: [show: boolean]
   applySurfaceCutout: [isCutout: boolean]
+  applyAreaLiningCm: [cm: number]
+  applyRoofKind: [kind: 'plane' | 'dormer']
+  applyRoofParentId: [parentId: string | null]
   deleteTagged: []
   labelTextInput: [value: string]
   updateLabelText: [value: string]
@@ -306,6 +330,8 @@ const emit = defineEmits<{
   toggleItemMirrorY: []
   copyItem: []
   deleteItem: []
+  dimensionLengthCm: [cm: number]
+  deleteDimension: []
   drawWallLengthInput: [cm: number | null]
   commitDrawWallMeasure: []
   cancelDrawWallDraft: []
@@ -327,7 +353,8 @@ const canAcceptDrawDraft = computed(
     (activeTool.value === 'draw_wall' && props.drawWallDrafting === true) ||
     (activeTool.value === 'draw_room' && props.drawRoomDrafting === true) ||
     (activeTool.value === 'draw_line' && props.drawLineDrafting === true) ||
-    (activeTool.value === 'draw_surface' && props.drawSurfaceDrafting === true),
+    (activeTool.value === 'draw_surface' && props.drawSurfaceDrafting === true) ||
+    (activeTool.value === 'draw_roof' && props.drawSurfaceDrafting === true),
 )
 
 const isDrawWallOrRoom = computed(
@@ -360,6 +387,7 @@ const showSettings = computed(() => {
     hasLabelSelection: props.selectedLabelPanel != null,
     hasLineSelection: props.selectedLinePanel != null,
     hasItemSelection: props.selectedItemPanel != null,
+    hasDimensionSelection: props.selectedDimensionPanel != null,
     hasFacadeGroupSelection: showFacadeSettings.value,
     activeTool: activeTool.value,
     dakMode: props.dakMode === true,
@@ -383,6 +411,7 @@ const showDeselect = computed(
     props.selectedAreaPanel != null ||
     props.selectedLabelPanel != null ||
     props.selectedLinePanel != null ||
+    props.selectedDimensionPanel != null ||
     props.selectedItemPanel != null,
 )
 
@@ -551,12 +580,14 @@ const isRoofPanel = computed(
       >
         <FmlPreviewToolbarSettingsDraw
           v-if="
-            (activeTool === 'draw_surface' && !dakMode) ||
+            activeTool === 'draw_surface' ||
+            activeTool === 'draw_roof' ||
             activeTool === 'draw_line' ||
             activeTool === 'draw_label'
           "
           v-model:draw-surface-role="drawSurfaceRole"
           v-model:draw-surface-cutout="drawSurfaceCutout"
+          v-model:draw-roof-kind="drawRoofKind"
           v-model:draw-line-thickness="drawLineThickness"
           v-model:draw-line-type="drawLineType"
           v-model:draw-line-color="drawLineColor"
@@ -624,10 +655,16 @@ const isRoofPanel = computed(
           :roof-vertex-z-cm="roofVertexZCm"
           :roof-vertex-index="roofVertexIndex"
           :poly-mutate="roofPolyMutate"
+          :roof-kind="roofKind"
+          :roof-parent-id="roofParentId"
+          :parent-roof-options="parentRoofOptions"
+          :slab-thickness-cm="slabThicknessCm"
           @roof-vertex-z-input="emit('roofVertexZInput', $event)"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
           @delete-tagged="emit('deleteTagged')"
+          @apply-roof-kind="emit('applyRoofKind', $event)"
+          @apply-roof-parent-id="emit('applyRoofParentId', $event)"
         />
         <FmlPreviewToolbarSettingsArea
           v-else-if="selectedAreaPanel"
@@ -637,12 +674,15 @@ const isRoofPanel = computed(
           :surface-edit-active="surfaceEditActive"
           :roof-vertex-z-cm="roofVertexZCm"
           :roof-vertex-index="roofVertexIndex"
+          :dak-thickness-cm="dakThicknessCm"
+          :slab-thickness-cm="slabThicknessCm"
           @apply-room-type="emit('applyRoomType', $event)"
           @area-custom-name-input="emit('areaCustomNameInput', $event)"
           @apply-area-custom-name="emit('applyAreaCustomName', $event)"
           @apply-area-color="emit('applyAreaColor', $event)"
           @apply-show-area-label="emit('applyShowAreaLabel', $event)"
           @apply-surface-cutout="emit('applySurfaceCutout', $event)"
+          @apply-area-lining-cm="emit('applyAreaLiningCm', $event)"
           @delete-tagged="emit('deleteTagged')"
           @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
           @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
@@ -667,6 +707,13 @@ const isRoofPanel = computed(
           @update-line-color="emit('updateLineColor', $event)"
           @update-line-thickness="emit('updateLineThickness', $event)"
           @delete-annotation="emit('deleteAnnotation')"
+        />
+        <FmlPreviewToolbarSettingsDimension
+          v-if="selectedDimensionPanel"
+          :unit="unit"
+          :selected-dimension-panel="selectedDimensionPanel"
+          @dimension-length-cm="emit('dimensionLengthCm', $event)"
+          @delete-dimension="emit('deleteDimension')"
         />
         <FmlPreviewToolbarSettingsItem
           v-if="selectedItemPanel"

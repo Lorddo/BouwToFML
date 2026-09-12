@@ -7,7 +7,7 @@ import {
   type GesturePoint,
 } from './fml-preview-gestures'
 import {
-  BTF_LIVE_POINTER,
+  PLAN_LIVE_POINTER,
   isTouchHoverFollowTool,
   shouldCommitTouchTap,
   shouldOneFingerPan,
@@ -31,7 +31,7 @@ export function syntheticMouseDown(
     button: 0,
     buttons: 1,
   })
-  Object.defineProperty(event, BTF_LIVE_POINTER, { value: livePointer })
+  Object.defineProperty(event, PLAN_LIVE_POINTER, { value: livePointer })
   return event
 }
 

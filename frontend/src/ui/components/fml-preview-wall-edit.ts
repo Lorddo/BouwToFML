@@ -5,6 +5,7 @@ import {
   setJunctionBottomZ as setJunctionEndpointBottomZ,
   setWallsUniformBottomZ as setWallsUniformEndpointBottomZ,
   setWallsUniformHeight as setWallsUniformEndpointHeight,
+  promoteWallElevationFromExtras,
   splitWallEndpointExtras,
 } from '@/core/fml/wall-endpoint-height'
 import {
@@ -252,18 +253,22 @@ export function splitWallAtT(walls: Wall[], wallId: string, tSplit = 0.5): Split
   })
 
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, t)
+  const firstEnds = promoteWallElevationFromExtras(firstExtras)
+  const secondEnds = promoteWallElevationFromExtras(secondExtras)
   const firstWall: Wall = {
     ...wall,
     b: { ...splitPoint },
     openings: firstOpenings,
-    extras: firstExtras,
+    extras: firstEnds.extras,
+    elevation: firstEnds.elevation,
   }
   const secondWall: Wall = {
     ...wall,
     id: secondWallId,
     a: { ...splitPoint },
     openings: secondOpenings,
-    extras: secondExtras,
+    extras: secondEnds.extras,
+    elevation: secondEnds.elevation,
   }
 
   const next = [...walls.slice(0, index), firstWall, secondWall, ...walls.slice(index + 1)]

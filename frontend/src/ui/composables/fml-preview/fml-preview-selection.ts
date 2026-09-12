@@ -21,6 +21,7 @@ export interface FmlPreviewSelectionRefs {
   moveWallId: Ref<string | null>
   moveDimensionId: Ref<string | null>
   hoveredDimensionId: Ref<string | null>
+  hoveredDimensionEnd: Ref<'a' | 'b' | null>
   settingsOpeningIds: Ref<string[]>
   moveOpeningId: Ref<string | null>
   settingsAreaId: Ref<string | null>
@@ -64,6 +65,7 @@ export function createFmlPreviewSelection(): FmlPreviewSelectionRefs {
     moveWallId: ref<string | null>(null),
     moveDimensionId: ref<string | null>(null),
     hoveredDimensionId: ref<string | null>(null),
+    hoveredDimensionEnd: ref<'a' | 'b' | null>(null),
     settingsOpeningIds: ref<string[]>([]),
     moveOpeningId: ref<string | null>(null),
     settingsAreaId: ref<string | null>(null),

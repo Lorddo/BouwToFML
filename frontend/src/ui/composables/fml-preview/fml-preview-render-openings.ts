@@ -171,7 +171,7 @@ export function buildRenderDoorGroupsAndWindows(
       const endCm = offsetPointByWallBalance(endAxis, wallUnit, thicknessCm, balance)
       const start = toStagePoint(startCm.x, startCm.y)
       const end = toStagePoint(endCm.x, endCm.y)
-      const catalog = resolveOpeningCatalog(opening.refid, 'window')
+      const catalog = resolveOpeningCatalog(opening.kind, 'window')
       const panels = resolveWindowPanelCount(opening.width, catalog.kind, catalog.panels)
       const frame = insetOpeningRect(
         { width: opening.width, height: 100 },
@@ -218,11 +218,18 @@ export function buildRenderDoorGroupsAndWindows(
 }
 
 export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): RenderFixture[] {
-  const prepared = (floor.items ?? []).map((item, index) => ({
-    item,
-    index,
-    catalog: resolveFixtureCatalog(item.refid, { width: item.width, height: item.height }),
-  }))
+  const prepared = (floor.items ?? []).map((item, index) => {
+    const legacyRefid =
+      typeof (item as { refid?: unknown }).refid === 'string'
+        ? String((item as { refid?: string }).refid)
+        : ''
+    const catalogKey = item.kind || legacyRefid
+    return {
+      item,
+      index,
+      catalog: resolveFixtureCatalog(catalogKey, { width: item.width, height: item.height }),
+    }
+  })
   prepared.sort((a, b) => {
     const rank = (kind: string) => (kind === 'countertop' ? 0 : kind === 'hidden' ? 99 : 1)
     return rank(a.catalog.kind) - rank(b.catalog.kind) || a.index - b.index
@@ -248,7 +255,7 @@ export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): R
     const bounds = fixtureSymbolLocalBounds(symbol)
     return [
       {
-        id: item.guid ?? `fixture-${index}`,
+        id: item.id ?? `fixture-${index}`,
         label: catalog.label,
         detail: catalog.categorie,
         x: center.x,

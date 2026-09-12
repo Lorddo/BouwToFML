@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { CONCEPT_WINDOW_REFID, WINDOW_DOUBLE_REFID, WINDOW_TRIPLE_REFID } from '@/core/fml/types'
+/** Dev-only window panel — labels by OpeningKind. */
 import type {
   BoundWindow,
   ResolvedWindowCandidate,
@@ -72,9 +72,9 @@ const stage1PrefilterRejectCount = computed(
 )
 
 function shortRefId(refid: string): string {
-  if (refid === CONCEPT_WINDOW_REFID) return '1-delig'
-  if (refid === WINDOW_DOUBLE_REFID) return '2-delig'
-  if (refid === WINDOW_TRIPLE_REFID) return '3-delig'
+  if (refid === 'window.single') return '1-delig'
+  if (refid === 'window.double') return '2-delig'
+  if (refid === 'window.triple') return '3-delig'
   return refid.slice(0, 8)
 }
 

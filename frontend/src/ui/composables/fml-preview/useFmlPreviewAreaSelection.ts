@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { isRoofSurface } from '@/core/fml/roof-planes'
+import { isRoofSurface, resolveDormerParent } from '@/core/fml/roof-planes'
 import type { FloorArea, FloorSurface } from '@/core/fml/types'
 import {
   effectiveRoomTypeColor,
@@ -249,6 +249,68 @@ export function useFmlPreviewAreaSelection(options: {
     options.syncPlanToParent()
   }
 
+  function applyLiningCm(cm: number): void {
+    flushPendingFieldCommits()
+    const areaId = settingsAreaId.value
+    if (!areaId) return
+    const area = selectedArea()
+    if (!area) return
+    const next = Number.isFinite(cm) ? Math.round(cm) : 0
+    if ((area.liningCm ?? 0) === next) return
+    options.editor.pushUndo()
+    options.editor.updateArea(areaId, { liningCm: next === 0 ? undefined : next })
+    options.syncPlanToParent()
+  }
+
+  function applyRoofKind(kind: 'plane' | 'dormer'): void {
+    flushPendingFieldCommits()
+    const surfaceId = settingsSurfaceId.value
+    if (!surfaceId) return
+    const surface = selectedSurface()
+    if (!surface || !isRoofSurface(surface)) return
+    if ((surface.roofKind === 'dormer' ? 'dormer' : 'plane') === kind) return
+    options.editor.pushUndo()
+    let parentId: string | undefined
+    if (kind === 'dormer') {
+      parentId =
+        surface.roofParentId?.trim() ||
+        resolveDormerParent(
+          surface,
+          options.editor.surfaces.value.filter((s) => s.id !== surfaceId && isRoofSurface(s)),
+          surfaceId,
+        )?.id
+    }
+    const ok = options.editor.updateSurface(surfaceId, {
+      roofKind: kind,
+      roofParentId: kind === 'dormer' ? parentId : undefined,
+    })
+    if (!ok) {
+      options.editor.undo()
+      return
+    }
+    options.syncPlanToParent()
+  }
+
+  function applyRoofParentId(parentId: string | null): void {
+    flushPendingFieldCommits()
+    const surfaceId = settingsSurfaceId.value
+    if (!surfaceId) return
+    const surface = selectedSurface()
+    if (!surface || !isRoofSurface(surface)) return
+    const next = parentId?.trim() || undefined
+    if ((surface.roofParentId ?? undefined) === next && surface.roofKind === 'dormer') return
+    options.editor.pushUndo()
+    const ok = options.editor.updateSurface(surfaceId, {
+      roofKind: 'dormer',
+      roofParentId: next,
+    })
+    if (!ok) {
+      options.editor.undo()
+      return
+    }
+    options.syncPlanToParent()
+  }
+
   function deleteSelectedTagged(): void {
     flushPendingFieldCommits()
     options.editor.pushUndo()
@@ -293,6 +355,9 @@ export function useFmlPreviewAreaSelection(options: {
     applyColor,
     applyShowAreaLabel,
     applyCutout,
+    applyLiningCm,
+    applyRoofKind,
+    applyRoofParentId,
     deleteSelectedTagged,
     selectedArea,
     selectedSurface,

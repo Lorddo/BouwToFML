@@ -88,7 +88,7 @@ function openingInspectGuid(openingId: string, type: 'door' | 'window'): string 
     )
   }
   return (
-    props.renderModel.windows.find((window) => window.id === openingId)?.opening.guid ?? openingId
+    props.renderModel.windows.find((window) => window.id === openingId)?.opening.id ?? openingId
   )
 }
 

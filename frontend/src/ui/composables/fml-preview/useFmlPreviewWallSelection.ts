@@ -97,7 +97,7 @@ export function useFmlPreviewWallSelection(options: {
   const selectionBoxPreview = ref<{ x: number; y: number; width: number; height: number } | null>(
     null,
   )
-  /** Laatste Ctrl-klik op een settings-muur (cm); gebruikt voor split-positie. */
+  /** Laatste selectie-klik op een muur (cm); gebruikt voor split-positie. */
   const settingsWallSplitClickCm = ref<Point2D | null>(null)
 
   const selectionBoxMode = computed(() => activeFmlTool.value === 'box_select')
@@ -156,12 +156,18 @@ export function useFmlPreviewWallSelection(options: {
     wallThicknessDraft.value = first
   }
 
+  function wallIdsForEdit(): string[] {
+    if (settingsWallIds.value.length > 0) return [...settingsWallIds.value]
+    if (moveWallId.value) return [moveWallId.value]
+    return []
+  }
+
   function syncWallThicknessDraftFromSelection(): void {
     if (settingsFacadeGroupId.value) {
       syncFacadeThicknessDraftFromGroup()
       return
     }
-    const ids = settingsWallIds.value
+    const ids = wallIdsForEdit()
     if (ids.length === 0) {
       wallThicknessMixed.value = false
       wallBalanceMixed.value = false
@@ -339,29 +345,54 @@ export function useFmlPreviewWallSelection(options: {
 
   // ── Toggle settings ──
 
-  function toggleSettingsWall(wallId: string, clickCm?: Point2D | null): void {
-    flushPendingFieldCommits()
-    cancelMoveDragPending()
+  function clearCompetingWallSelection(): void {
     settingsOpeningIds.value = []
     moveOpeningId.value = null
     settingsJunctionId.value = null
     junctionHeightMixed.value = false
+    settingsFacadeGroupId.value = null
     selection.settingsItemId.value = null
     selection.moveItemId.value = null
-    if (settingsFacadeGroupId.value) {
-      settingsFacadeGroupId.value = null
+    selection.settingsAreaId.value = null
+    selection.settingsSurfaceId.value = null
+    selection.surfaceEditId.value = null
+    selection.roofPolyMutate.value = false
+  }
+
+  /** Left-klik: basis-settings (dikte/balans/split/delete) + verplaatsen. */
+  function selectWall(wallId: string, clickCm?: Point2D | null): void {
+    flushPendingFieldCommits()
+    cancelMoveDragPending()
+    clearCompetingWallSelection()
+    settingsWallIds.value = []
+    settingsWallSplitClickCm.value = clickCm ? { ...clickCm } : null
+    moveWallId.value = wallId
+    syncWallThicknessDraftFromSelection()
+  }
+
+  function toggleSettingsWall(wallId: string, clickCm?: Point2D | null): void {
+    flushPendingFieldCommits()
+    cancelMoveDragPending()
+    const leavingFacade = settingsFacadeGroupId.value != null
+    clearCompetingWallSelection()
+    if (leavingFacade) {
       settingsWallIds.value = [wallId]
       settingsWallSplitClickCm.value = clickCm ? { ...clickCm } : null
+      if (moveWallId.value && moveWallId.value !== wallId) moveWallId.value = null
       syncWallThicknessDraftFromSelection()
       return
     }
     const current = settingsWallIds.value
     if (current.includes(wallId)) {
       settingsWallIds.value = current.filter((id) => id !== wallId)
+      if (moveWallId.value === wallId) moveWallId.value = null
       if (settingsWallIds.value.length !== 1) settingsWallSplitClickCm.value = null
     } else {
       settingsWallIds.value = [...current, wallId]
       settingsWallSplitClickCm.value = clickCm ? { ...clickCm } : null
+      if (moveWallId.value && !settingsWallIds.value.includes(moveWallId.value)) {
+        moveWallId.value = null
+      }
     }
     syncWallThicknessDraftFromSelection()
   }
@@ -399,7 +430,7 @@ export function useFmlPreviewWallSelection(options: {
     draft: wallThicknessDraft,
     mixed: wallThicknessMixed,
     applyWithValue: (value) => {
-      const wallIds = [...settingsWallIds.value]
+      const wallIds = wallIdsForEdit()
       return () => applyThicknessToWalls(wallIds, value)
     },
   })
@@ -410,7 +441,7 @@ export function useFmlPreviewWallSelection(options: {
     draft: wallBalanceDraft,
     mixed: wallBalanceMixed,
     applyWithValue: (value) => {
-      const wallIds = [...settingsWallIds.value]
+      const wallIds = wallIdsForEdit()
       return () => applyBalanceToWalls(wallIds, value)
     },
   })
@@ -421,7 +452,7 @@ export function useFmlPreviewWallSelection(options: {
     draft: wallHeightDraft,
     mixed: wallHeightMixed,
     applyWithValue: (value) => {
-      const wallIds = [...settingsWallIds.value]
+      const wallIds = wallIdsForEdit()
       return () => applyHeightToWalls(wallIds, value)
     },
   })
@@ -432,7 +463,7 @@ export function useFmlPreviewWallSelection(options: {
     draft: wallBottomZDraft,
     mixed: wallBottomZMixed,
     applyWithValue: (value) => {
-      const wallIds = [...settingsWallIds.value]
+      const wallIds = wallIdsForEdit()
       return () => applyBottomZToWalls(wallIds, value)
     },
   })
@@ -465,8 +496,8 @@ export function useFmlPreviewWallSelection(options: {
       }
       return
     }
-    if (settingsWallIds.value.length === 0) return
-    const wallIds = [...settingsWallIds.value]
+    if (wallIdsForEdit().length === 0) return
+    const wallIds = wallIdsForEdit()
     const already = wallIds.every((id) => {
       const wall = editor.selectableWalls.value.find((item) => item.id === id)
       return wall != null && Math.round(wall.thickness) === thickness
@@ -482,8 +513,9 @@ export function useFmlPreviewWallSelection(options: {
 
   function splitSelectedWall(): void {
     flushPendingFieldCommits()
-    if (settingsWallIds.value.length !== 1) return
-    const wallId = settingsWallIds.value[0]
+    const ids = wallIdsForEdit()
+    if (ids.length !== 1) return
+    const wallId = ids[0]
     const wall = editor.selectableWalls.value.find((item) => item.id === wallId)
     if (!wall) return
     const lengthCm = Math.hypot(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
@@ -493,7 +525,9 @@ export function useFmlPreviewWallSelection(options: {
     editor.pushUndo()
     const result = editor.applyWallSplit(wallId, tSplit)
     if (!result) return
-    settingsWallIds.value = [result.firstWallId]
+    const wasFull = settingsWallIds.value.length > 0
+    if (wasFull) settingsWallIds.value = [result.firstWallId]
+    else moveWallId.value = result.firstWallId
     settingsWallSplitClickCm.value = null
     pinnedJunctionId.value = result.junctionId
     syncWallThicknessDraftFromSelection()
@@ -524,6 +558,8 @@ export function useFmlPreviewWallSelection(options: {
     settingsJunctionId.value = null
     moveWallId.value = null
     selection.moveDimensionId.value = null
+    selection.hoveredDimensionId.value = null
+    selection.hoveredDimensionEnd.value = null
     settingsOpeningIds.value = []
     moveOpeningId.value = null
     pinnedJunctionId.value = null
@@ -695,6 +731,7 @@ export function useFmlPreviewWallSelection(options: {
     selectAllOfBoxKind,
     syncWallThicknessDraftFromSelection,
     syncJunctionHeightDraftFromSelection,
+    selectWall,
     toggleSettingsWall,
     toggleSettingsJunction,
     onWallThicknessCm,

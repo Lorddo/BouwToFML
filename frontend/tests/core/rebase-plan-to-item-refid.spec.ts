@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALIGN_FIXTURE_ORIGIN_EPS_CM,
-  FML_ALIGN_FIXTURE_REFID,
   rebasePlanToItemRefid,
 } from '@/core/fml/rebase-plan-to-item-refid'
 import type { Floor, FloorPlan } from '@/core/fml/types'
@@ -27,14 +26,15 @@ function floorWithBottle(
     items: bottle
       ? [
           {
-            refid: FML_ALIGN_FIXTURE_REFID,
+            id: `${name}-bottle`,
+            kind: 'oil_bottle',
             x: bottle.x,
             y: bottle.y,
             width: 8,
             height: 8,
           },
         ]
-      : [{ refid: 'other', x: 50, y: 60, width: 40, height: 40 }],
+      : [{ id: `${name}-other`, kind: 'generic', x: 50, y: 60, width: 40, height: 40 }],
     ...extras,
   }
 }

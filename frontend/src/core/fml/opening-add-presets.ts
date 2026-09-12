@@ -1,27 +1,7 @@
-import { resolveOpeningCatalog } from './opening-refid-catalog'
-import {
-  CLOSET_DOOR_REFID,
-  CONCEPT_DOOR_REFID,
-  CONCEPT_WINDOW_REFID,
-  DOUBLE_SOLID_DOOR_REFID,
-  DOUBLE_WIDE_DOOR_REFID,
-  FRENCH_BALCONY_DOOR_REFID,
-  ARCHWAY_DOOR_REFID,
-  BIFOLD_DOOR_REFID,
-  BIFOLD_DOUBLE_DOOR_REFID,
-  GARAGE_DOOR_REFID,
-  PASSAGE_DOOR_REFID,
-  POCKET_DOOR_REFID,
-  SLIDING_DOUBLE_DOOR_REFID,
-  SLIDING_SINGLE_DOOR_REFID,
-  WINDOW_DOUBLE_REFID,
-  WINDOW_BLIND_REFID,
-  WINDOW_HALF_ROUND_REFID,
-  WINDOW_ROUND_REFID,
-  WINDOW_TRIANGLE_REFID,
-  WINDOW_TRIPLE_REFID,
-  type OpeningType,
-} from './types'
+import type { OpeningKind } from './opening-kind-catalog'
+import { resolveOpeningKind } from './opening-kind-catalog'
+import type { OpeningType } from './types'
+import { openingKindFromFmlRefid } from '../plg/fml-adapter/opening-fml-refids'
 
 /** Volgorde = deur-dropdown (plattegrond + aanzicht). */
 export const DOOR_ADD_SUBTYPES = [
@@ -56,34 +36,62 @@ export type WindowAddSubtype = (typeof WINDOW_ADD_SUBTYPES)[number]
 
 export interface OpeningAddPreset {
   type: OpeningType
-  refid: string
+  kind: OpeningKind
   defaultWidthCm: number
 }
 
 const DOOR_ADD_PRESETS: Record<DoorAddSubtype, OpeningAddPreset> = {
-  standard: { type: 'door', refid: CONCEPT_DOOR_REFID, defaultWidthCm: 90 },
-  closet: { type: 'door', refid: CLOSET_DOOR_REFID, defaultWidthCm: 80 },
-  passage: { type: 'door', refid: PASSAGE_DOOR_REFID, defaultWidthCm: 90 },
-  archway: { type: 'door', refid: ARCHWAY_DOOR_REFID, defaultWidthCm: 90 },
-  french_balcony: { type: 'door', refid: FRENCH_BALCONY_DOOR_REFID, defaultWidthCm: 90 },
-  double: { type: 'door', refid: DOUBLE_WIDE_DOOR_REFID, defaultWidthCm: 140 },
-  double_solid: { type: 'door', refid: DOUBLE_SOLID_DOOR_REFID, defaultWidthCm: 140 },
-  bifold: { type: 'door', refid: BIFOLD_DOOR_REFID, defaultWidthCm: 160 },
-  bifold_double: { type: 'door', refid: BIFOLD_DOUBLE_DOOR_REFID, defaultWidthCm: 240 },
-  pocket: { type: 'door', refid: POCKET_DOOR_REFID, defaultWidthCm: 100 },
-  sliding_single: { type: 'door', refid: SLIDING_SINGLE_DOOR_REFID, defaultWidthCm: 180 },
-  sliding: { type: 'door', refid: SLIDING_DOUBLE_DOOR_REFID, defaultWidthCm: 180 },
-  garage: { type: 'door', refid: GARAGE_DOOR_REFID, defaultWidthCm: 240 },
+  standard: { type: 'door', kind: 'door.single', defaultWidthCm: 90 },
+  closet: { type: 'door', kind: 'door.closet', defaultWidthCm: 80 },
+  passage: { type: 'door', kind: 'door.passage', defaultWidthCm: 90 },
+  archway: { type: 'door', kind: 'door.archway', defaultWidthCm: 90 },
+  french_balcony: { type: 'door', kind: 'door.french_balcony', defaultWidthCm: 90 },
+  double: { type: 'door', kind: 'door.double', defaultWidthCm: 140 },
+  double_solid: { type: 'door', kind: 'door.double_solid', defaultWidthCm: 140 },
+  bifold: { type: 'door', kind: 'door.bifold', defaultWidthCm: 160 },
+  bifold_double: { type: 'door', kind: 'door.bifold_double', defaultWidthCm: 240 },
+  pocket: { type: 'door', kind: 'door.pocket', defaultWidthCm: 100 },
+  sliding_single: { type: 'door', kind: 'door.sliding_single', defaultWidthCm: 180 },
+  sliding: { type: 'door', kind: 'door.sliding', defaultWidthCm: 180 },
+  garage: { type: 'door', kind: 'door.garage', defaultWidthCm: 240 },
 }
 
 const WINDOW_ADD_PRESETS: Record<WindowAddSubtype, OpeningAddPreset> = {
-  single: { type: 'window', refid: CONCEPT_WINDOW_REFID, defaultWidthCm: 100 },
-  double: { type: 'window', refid: WINDOW_DOUBLE_REFID, defaultWidthCm: 150 },
-  triple: { type: 'window', refid: WINDOW_TRIPLE_REFID, defaultWidthCm: 200 },
-  round: { type: 'window', refid: WINDOW_ROUND_REFID, defaultWidthCm: 98 },
-  half_round: { type: 'window', refid: WINDOW_HALF_ROUND_REFID, defaultWidthCm: 98 },
-  triangle: { type: 'window', refid: WINDOW_TRIANGLE_REFID, defaultWidthCm: 110 },
-  blind: { type: 'window', refid: WINDOW_BLIND_REFID, defaultWidthCm: 110 },
+  single: { type: 'window', kind: 'window.single', defaultWidthCm: 100 },
+  double: { type: 'window', kind: 'window.double', defaultWidthCm: 150 },
+  triple: { type: 'window', kind: 'window.triple', defaultWidthCm: 200 },
+  round: { type: 'window', kind: 'window.round', defaultWidthCm: 98 },
+  half_round: { type: 'window', kind: 'window.half_round', defaultWidthCm: 98 },
+  triangle: { type: 'window', kind: 'window.triangle', defaultWidthCm: 110 },
+  blind: { type: 'window', kind: 'window.blind', defaultWidthCm: 110 },
+}
+
+const KIND_TO_DOOR_SUBTYPE: Partial<Record<OpeningKind, DoorAddSubtype>> = {
+  'door.single': 'standard',
+  'door.closet': 'closet',
+  'door.passage': 'passage',
+  'door.archway': 'archway',
+  'door.french_balcony': 'french_balcony',
+  'door.double': 'double',
+  'door.double_solid': 'double_solid',
+  'door.bifold': 'bifold',
+  'door.bifold_double': 'bifold_double',
+  'door.pocket': 'pocket',
+  'door.sliding_single': 'sliding_single',
+  'door.sliding': 'sliding',
+  'door.garage': 'garage',
+  'door.unmapped': 'standard',
+}
+
+const KIND_TO_WINDOW_SUBTYPE: Partial<Record<OpeningKind, WindowAddSubtype>> = {
+  'window.single': 'single',
+  'window.double': 'double',
+  'window.triple': 'triple',
+  'window.round': 'round',
+  'window.half_round': 'half_round',
+  'window.triangle': 'triangle',
+  'window.blind': 'blind',
+  'window.unmapped': 'single',
 }
 
 export function resolveDoorAddPreset(subtype: DoorAddSubtype): OpeningAddPreset {
@@ -94,68 +102,45 @@ export function resolveWindowAddPreset(subtype: WindowAddSubtype): OpeningAddPre
   return WINDOW_ADD_PRESETS[subtype]
 }
 
-function doorSubtypeFromCatalog(refid: string): DoorAddSubtype {
-  const info = resolveOpeningCatalog(refid, 'door')
-  switch (info.kind) {
-    case 'closet45':
-      return 'closet'
-    case 'passage':
-      return 'passage'
-    case 'archway':
-      return 'archway'
-    case 'french_balcony':
-      return 'french_balcony'
-    case 'bifold':
-      return 'bifold'
-    case 'bifold_double':
-      return 'bifold_double'
-    case 'double_wide':
-      return info.leaf === 'solid' ? 'double_solid' : 'double'
-    case 'sliding_pocket':
-      return 'pocket'
-    case 'sliding_single':
-      return 'sliding_single'
-    case 'sliding':
-      return 'sliding'
-    case 'garage':
-      return 'garage'
-    default:
-      return 'standard'
-  }
+export function coerceDoorAddSubtype(value: string | undefined | null): DoorAddSubtype {
+  const raw = (value ?? '').trim()
+  if ((DOOR_ADD_SUBTYPES as readonly string[]).includes(raw)) return raw as DoorAddSubtype
+  return resolveDoorSubtypeFromKind(raw)
 }
 
-function windowSubtypeFromCatalog(refid: string): WindowAddSubtype {
-  const info = resolveOpeningCatalog(refid, 'window')
-  if (info.kind === 'round') return 'round'
-  if (info.kind === 'half_round') return 'half_round'
-  if (info.kind === 'triangle') return 'triangle'
-  if (info.kind === 'multi') return info.panels === 3 ? 'triple' : 'double'
-  return 'single'
+export function coerceWindowAddSubtype(value: string | undefined | null): WindowAddSubtype {
+  const raw = (value ?? '').trim()
+  if ((WINDOW_ADD_SUBTYPES as readonly string[]).includes(raw)) return raw as WindowAddSubtype
+  return resolveWindowSubtypeFromKind(raw)
 }
 
-export function resolveDoorSubtypeFromRefid(refid: string | undefined): DoorAddSubtype {
-  if (!refid) return 'standard'
-  for (const [subtype, preset] of Object.entries(DOOR_ADD_PRESETS) as [
-    DoorAddSubtype,
-    OpeningAddPreset,
-  ][]) {
-    if (preset.refid === refid) return subtype
-  }
-  return doorSubtypeFromCatalog(refid)
+export function resolveDoorSubtypeFromKind(kind: string | undefined): DoorAddSubtype {
+  if (!kind) return 'standard'
+  const openingKind = kind.includes('.')
+    ? resolveOpeningKind(kind).kind
+    : openingKindFromFmlRefid(kind, 'door').kind
+  return KIND_TO_DOOR_SUBTYPE[openingKind] ?? 'standard'
 }
 
-export function resolveWindowSubtypeFromRefid(refid: string | undefined): WindowAddSubtype {
-  if (!refid) return 'single'
-  for (const [subtype, preset] of Object.entries(WINDOW_ADD_PRESETS) as [
-    WindowAddSubtype,
-    OpeningAddPreset,
-  ][]) {
-    if (preset.refid === refid) return subtype
-  }
-  return windowSubtypeFromCatalog(refid)
+export function resolveWindowSubtypeFromKind(kind: string | undefined): WindowAddSubtype {
+  if (!kind) return 'single'
+  const openingKind = kind.includes('.')
+    ? resolveOpeningKind(kind).kind
+    : openingKindFromFmlRefid(kind, 'window').kind
+  return KIND_TO_WINDOW_SUBTYPE[openingKind] ?? 'single'
+}
+
+/** @deprecated Gebruik `resolveDoorSubtypeFromKind`. */
+export function resolveDoorSubtypeFromRefid(kindOrRefid: string | undefined): DoorAddSubtype {
+  return resolveDoorSubtypeFromKind(kindOrRefid)
+}
+
+/** @deprecated Gebruik `resolveWindowSubtypeFromKind`. */
+export function resolveWindowSubtypeFromRefid(kindOrRefid: string | undefined): WindowAddSubtype {
+  return resolveWindowSubtypeFromKind(kindOrRefid)
 }
 
 /** Alleen driehoekraam is links/rechts asymmetrisch; andere ramen hebben geen spiegelknop. */
-export function isTriangleWindow(type: OpeningType, refid: string | undefined): boolean {
-  return type === 'window' && resolveWindowSubtypeFromRefid(refid) === 'triangle'
+export function isTriangleWindow(type: OpeningType, kind: string | undefined): boolean {
+  return type === 'window' && resolveWindowSubtypeFromKind(kind) === 'triangle'
 }

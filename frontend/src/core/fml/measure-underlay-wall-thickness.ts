@@ -1,5 +1,4 @@
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
-import { obliqueDeadzoneDeg } from '@/cv/walls/rooms/pipeline-v3/policies/oblique'
 import type { Point2D, Wall } from './types'
 
 /**
@@ -26,9 +25,13 @@ const PROBE_ALONG_AXIS_MAX_PX = 80
 const PROBE_ALONG_AXIS_RATIO = 0.15
 /** Scanlijnen in het midden van de probe-box (zoals measureInkBandInBox). */
 const PROBE_SCAN_COUNT = 5
-/** Binnen deze graden van H/V: as-aligned bbox; anders diagonale fallback.
- * Gelijk aan V3 oblique-deadzone — milde gevels (~2°) geen H/V-box. */
-const ORTHO_ANGLE_EPS_DEG = obliqueDeadzoneDeg()
+/**
+ * Binnen deze graden van H/V: as-aligned bbox; anders diagonale fallback.
+ * Gelijk aan V3 `OBLIQUE_DEADZONE_DEG` (policies/oblique) — milde gevels (~2°)
+ * geen H/V-box. Lokaal gehouden zodat `core/fml` geen `cv/` importeert
+ * (embed-boundary: editor/inspect).
+ */
+const ORTHO_ANGLE_EPS_DEG = 1.5
 
 /** Muur-B/W (0 = inkt, 255 = wit) → meetmask (255 = inkt). */
 export function wallBwToInkMask(wallBw: Uint8Array): Uint8Array {

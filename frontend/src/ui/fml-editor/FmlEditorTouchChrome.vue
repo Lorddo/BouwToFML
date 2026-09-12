@@ -19,6 +19,8 @@ defineProps<{
   edgeChrome?: boolean
   helpKeys?: readonly string[]
   showCanvasGrid?: boolean
+  showRoofOverlayToggle?: boolean
+  showRoofOverlayOnPlan?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -29,6 +31,7 @@ const emit = defineEmits<{
   zoomOut: []
   toggleFullscreen: []
   'update:showCanvasGrid': [value: boolean]
+  'update:showRoofOverlayOnPlan': [value: boolean]
 }>()
 
 const settingsMod = defineModel<boolean>('settingsMod', { default: false })
@@ -49,6 +52,8 @@ const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { defaul
     :edge-chrome="edgeChrome"
     :help-keys="helpKeys"
     :show-canvas-grid="showCanvasGrid !== false"
+    :show-roof-overlay-toggle="showRoofOverlayToggle === true"
+    :show-roof-overlay-on-plan="showRoofOverlayOnPlan !== false"
     @undo="emit('undo')"
     @redo="emit('redo')"
     @fit="emit('fit')"
@@ -56,6 +61,7 @@ const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { defaul
     @zoom-out="emit('zoomOut')"
     @toggle-fullscreen="emit('toggleFullscreen')"
     @update:show-canvas-grid="emit('update:showCanvasGrid', $event)"
+    @update:show-roof-overlay-on-plan="emit('update:showRoofOverlayOnPlan', $event)"
   />
   <FmlEditorModifierRail
     v-if="showModRail"

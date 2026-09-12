@@ -1,6 +1,11 @@
 import { ref, watch } from 'vue'
 import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
-import { isRoofSurface } from '@/core/fml/roof-planes'
+import {
+  clampRoofVertexZCm,
+  isRoofSurface,
+  slabCmForRoofSurface,
+} from '@/core/fml/roof-planes'
+import { DEFAULT_FLOOR_THICKNESS_CM } from '@/core/fml/floor-stack'
 import { hitSelectedVertex, pointInPoly } from '@/core/fml/vertex-hit'
 import type { FloorSurface, Point2D } from '@/core/fml/types'
 import { snapPolygonVertexAxisLock } from '@/ui/components/fml-preview-junction-snap'
@@ -263,7 +268,13 @@ export function useFmlPreviewSurfaceEdit(options: {
   function applyVertexZ(index: number, zCm: number): void {
     const surface = currentSurface()
     if (!surface?.poly[index]) return
-    const z = Math.max(0, Math.round(zCm))
+    const plan = options.editor.localPlan.value
+    const z = isRoofSurface(surface)
+      ? clampRoofVertexZCm(
+          zCm,
+          plan ? slabCmForRoofSurface(plan, surface.id) : DEFAULT_FLOOR_THICKNESS_CM,
+        )
+      : Math.max(0, Math.round(zCm))
     if (Math.round(surface.poly[index]?.z ?? 0) === z) return
     if (!didPushUndo) {
       options.editor.pushUndo()
@@ -284,7 +295,7 @@ export function useFmlPreviewSurfaceEdit(options: {
   function setSelectedVertexZ(zCm: number): void {
     const idx = selectedVertexIndex.value
     if (idx == null) return
-    pendingZ = { index: idx, z: Math.max(0, Math.round(zCm)) }
+    pendingZ = { index: idx, z: zCm }
     applyVertexZ(idx, pendingZ.z)
   }
 

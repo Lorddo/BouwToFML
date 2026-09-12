@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { CONCEPT_DOOR_REFID } from '@/core/fml/types'
 import { resolveDoorCandidates, type DoorSwingHypothesis, type DoorSwingRefBand } from '@/cv/doors'
 
 function makeHypothesis(params: {
@@ -40,7 +39,7 @@ describe('door-resolve', () => {
         framingPx: 12,
         overhangAlongPx: 90,
         overhangOppositePx: 30,
-        fmlRefId: CONCEPT_DOOR_REFID,
+        fmlRefId: 'door.single',
         kind: 'single',
       },
     ]
@@ -79,7 +78,7 @@ describe('door-resolve', () => {
         overhangOppositePx: 30,
         framingAlongPx: 12,
         framingOppositePx: 13,
-        fmlRefId: CONCEPT_DOOR_REFID,
+        fmlRefId: 'door.single',
         kind: 'single',
       },
     ]
@@ -126,7 +125,7 @@ describe('door-resolve', () => {
         framingPx: 8,
         overhangAlongPx: 70,
         overhangOppositePx: 20,
-        fmlRefId: CONCEPT_DOOR_REFID,
+        fmlRefId: 'door.single',
         kind: 'single',
       },
       {
@@ -139,7 +138,7 @@ describe('door-resolve', () => {
         framingPx: 22,
         overhangAlongPx: 100,
         overhangOppositePx: 40,
-        fmlRefId: CONCEPT_DOOR_REFID,
+        fmlRefId: 'door.single',
         kind: 'single',
       },
     ]
@@ -184,7 +183,7 @@ describe('door-resolve', () => {
         overhangOppositePx: 90,
         clearOverhangAlongRatio: 0.75,
         clearOverhangOppositeRatio: 0.1,
-        fmlRefId: CONCEPT_DOOR_REFID,
+        fmlRefId: 'door.single',
         kind: 'single',
       },
     ]
@@ -217,7 +216,7 @@ describe('door-resolve', () => {
         areaPx: 3600,
         ratioBlade: 1.2,
         framingPx: 14,
-        fmlRefId: CONCEPT_DOOR_REFID,
+        fmlRefId: 'door.single',
         kind: 'single',
       },
     ]
@@ -229,7 +228,7 @@ describe('door-resolve', () => {
     })
     expect(resolved).toHaveLength(1)
     expect(resolved[0].kind).toBe('single')
-    expect(resolved[0].fmlRefId).toBe(CONCEPT_DOOR_REFID)
+    expect(resolved[0].fmlRefId).toBe('door.single')
   })
 
   it('dropt niet meer bij ontbrekende hinge (hinge pas in L12)', () => {
@@ -249,7 +248,7 @@ describe('door-resolve', () => {
           areaPx: 3000,
           ratioBlade: 1,
           framingPx: 0,
-          fmlRefId: CONCEPT_DOOR_REFID,
+          fmlRefId: 'door.single',
           kind: 'single',
         },
       ],
@@ -284,7 +283,7 @@ describe('door-resolve', () => {
           overhangOppositePx: 0,
           framingAlongPx: 0,
           framingOppositePx: 0,
-          fmlRefId: CONCEPT_DOOR_REFID,
+          fmlRefId: 'door.single',
           kind: 'single',
         },
       ],

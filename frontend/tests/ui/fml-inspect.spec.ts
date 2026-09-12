@@ -51,12 +51,12 @@ describe('inspectKindLabel', () => {
 describe('pickInspectTarget', () => {
   const opening = {
     compositeId: 'w1-door-abc123',
-    guid: 'abc123',
+    id: 'abc123',
     type: 'door' as const,
     wallId: 'w1',
   }
 
-  it('emits opening.guid, not the composite id', () => {
+  it('emits opening.id, not the composite id', () => {
     const picked = pickInspectTarget({
       opening,
       surface: { id: 's1', isCutout: false },
@@ -73,7 +73,7 @@ describe('pickInspectTarget', () => {
 
   it('lets a window win over area', () => {
     const picked = pickInspectTarget({
-      opening: { ...opening, type: 'window', guid: 'win-9' },
+      opening: { ...opening, type: 'window', id: 'win-9' },
       surface: null,
       area: { id: 'a1' },
       wall: { id: 'w1' },

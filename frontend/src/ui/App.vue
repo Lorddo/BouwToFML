@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import WorkspaceView from './views/WorkspaceView.vue'
 import UserSettingsView from './views/UserSettingsView.vue'
 import FmlViewerView from './views/FmlViewerView.vue'
@@ -15,6 +15,8 @@ import {
   viewFromPathname,
   type AppShellView,
 } from '@/ui/app-routes'
+import { confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+import type { FloorPlan } from '@/core/fml/types'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -33,6 +35,8 @@ const editorMounted = ref(appView.value === 'fml-viewer')
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
 const fmlViewerRef = ref<{
   startNewPlan: () => void
+  loadPlan: (plan: FloorPlan, sourceName: string) => Promise<void>
+  hasOpenContent: () => boolean
   applyViewerSettings: () => void
   applyCornerMarkerModeFromSettings: () => void
 } | null>(null)
@@ -78,6 +82,23 @@ function goToEditor(): void {
     history.pushState(null, '', FML_EDITOR_PATH)
   }
   appView.value = 'fml-viewer'
+}
+
+async function openProjectInEditor(plan: FloorPlan): Promise<void> {
+  if (fmlViewerRef.value?.hasOpenContent?.()) {
+    const ok = await confirmFmlChrome({
+      title: t('viewer.replacePlanTitle'),
+      message: t('viewer.replacePlanBody'),
+      confirmLabel: t('result.openInEditor'),
+      cancelLabel: t('common.cancel'),
+    })
+    if (!ok) return
+  }
+  goToEditor()
+  await nextTick()
+  if (!fmlViewerRef.value?.loadPlan) await nextTick()
+  const name = `${plan.name?.trim() || 'project'}.plg`
+  await fmlViewerRef.value?.loadPlan(plan, name)
 }
 
 function openSettings(): void {
@@ -175,7 +196,11 @@ function dismissFatalError(): void {
         v-show="appView === 'workspace'"
         class="app-page app-page--workspace"
       >
-        <WorkspaceView ref="workspaceRef" v-model:canvas-fullscreen="canvasFullscreen" />
+        <WorkspaceView
+          ref="workspaceRef"
+          v-model:canvas-fullscreen="canvasFullscreen"
+          @open-in-editor="openProjectInEditor"
+        />
       </div>
       <div v-if="appView === 'settings'" class="app-page app-page--settings">
         <UserSettingsView

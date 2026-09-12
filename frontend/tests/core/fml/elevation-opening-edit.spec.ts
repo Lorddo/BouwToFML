@@ -19,12 +19,8 @@ import {
 } from '@/core/fml/elevation-opening-edit'
 import { MAX_OPENING_WIDTH_CM } from '@/ui/components/fml-preview-openings'
 import type { ElevationWallRect } from '@/core/fml/facade-elevation'
-import {
-  WINDOW_ROUND_REFID,
-  WINDOW_TRIANGLE_REFID,
-  type Opening,
-  type Wall,
-} from '@/core/fml/types'
+import { type Opening,
+  type Wall } from '@/core/fml/types'
 
 const windowA = { openingId: 'a', x0: 0, x1: 100, y0: -220, y1: -70 }
 const windowB = { openingId: 'b', x0: 200, x1: 300, y0: -210, y1: -70 }
@@ -80,7 +76,8 @@ describe('elevation-opening-edit', () => {
     }
     const opening: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 200,
@@ -102,7 +99,8 @@ describe('elevation-opening-edit', () => {
     }
     const opening: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 100,
       z: 100,
@@ -124,7 +122,8 @@ describe('elevation-opening-edit', () => {
     }
     const opening: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 200,
@@ -148,7 +147,8 @@ describe('elevation-opening-edit', () => {
     }
     const opening: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 200,
@@ -171,7 +171,8 @@ describe('elevation-opening-edit', () => {
     }
     const opening: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 40,
@@ -192,7 +193,8 @@ describe('elevation-opening-edit', () => {
     }
     const start: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.2,
       width: 100,
       z: 100,
@@ -221,7 +223,8 @@ describe('elevation-opening-edit', () => {
     }
     const start: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.1,
       width: 80,
       z: 100,
@@ -249,7 +252,8 @@ describe('elevation-opening-edit', () => {
     }
     const start: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.7,
       width: 80,
       z: 100,
@@ -278,7 +282,8 @@ describe('elevation-opening-edit', () => {
     }
     const start: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 100,
@@ -313,7 +318,8 @@ describe('elevation-opening-edit', () => {
     }
     const start: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 100,
@@ -341,7 +347,8 @@ describe('elevation-opening-edit', () => {
     }
     const start: Opening = {
       type: 'window',
-      refid: 'concept-window',
+      id: 'win-concept',
+      kind: 'window.single',
       t: 0.5,
       width: 80,
       z: 100,
@@ -439,7 +446,7 @@ describe('elevation-opening-edit', () => {
     const requested = { x0: 20, y0: -380, x1: 100, y1: -260 }
     const rect = clampElevationOpeningMove(wall, requested, undefined, {
       type: 'window',
-      refid: WINDOW_TRIANGLE_REFID,
+      kind: 'window.triangle',
       startOnLeft: true,
     })
     const asBox = clampElevationOpeningMove(wall, requested)
@@ -472,7 +479,7 @@ describe('elevation-opening-edit', () => {
     const requested = { x0: 20, y0: -340, x1: 100, y1: -260 }
     const next = clampElevationOpeningMove(wall, requested, undefined, {
       type: 'window',
-      refid: WINDOW_ROUND_REFID,
+      kind: 'window.round',
     })
     const asBox = clampElevationOpeningMove(wall, requested)
     expect(next.x1 - next.x0).toBe(80)
@@ -491,14 +498,15 @@ describe('elevation-opening-edit', () => {
       extras: { az: { z: 0, h: 400 }, bz: { z: 0, h: 200 } },
     }
     const opening: Opening = {
+      id: 'win-triangle',
       type: 'window',
-      refid: WINDOW_TRIANGLE_REFID,
+      kind: 'window.triangle',
       t: 0.3,
       width: 80,
       z: 260,
       z_height: 120,
     }
-    const asBox = clampOpeningMoveKeepSize({ ...opening, refid: 'concept-window' }, host, 280)
+    const asBox = clampOpeningMoveKeepSize({ ...opening, kind: 'window.single' }, host, 280)
     const triangle = clampOpeningMoveKeepSize(opening, host, 280, true)
     expect(triangle.z_height).toBe(120)
     expect(triangle.z).toBe(260)
@@ -508,7 +516,7 @@ describe('elevation-opening-edit', () => {
   it('rond-snap gebruikt de cirkel, niet de lege bbox-hoek', () => {
     const edges = openingShapeSnapEdges(
       { x0: 0, y0: -50, x1: 100, y1: 0 },
-      { type: 'window', refid: WINDOW_ROUND_REFID },
+      { type: 'window', kind: 'window.round' },
     )
     expect(Math.min(...edges.xs)).toBeGreaterThan(20)
     expect(Math.max(...edges.xs)).toBeLessThan(80)

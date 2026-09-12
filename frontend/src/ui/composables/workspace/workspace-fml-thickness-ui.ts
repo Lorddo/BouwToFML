@@ -146,11 +146,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       fmlThicknessMidCm.value !== appliedFmlThicknessLimits.value.midCm ||
       fmlThicknessMaxCm.value !== appliedFmlThicknessLimits.value.maxCm ||
       fmlBandMidBoundaryCm.value !== appliedFmlBandBoundaries.value.midBoundaryCm ||
-      fmlBandMaxBoundaryCm.value !== appliedFmlBandBoundaries.value.maxBoundaryCm ||
-      fmlWallHeightCm.value !== appliedFmlWallHeightCm.value ||
-      fmlDoorHeightCm.value !== appliedFmlDoorHeightCm.value ||
-      fmlWindowHeightCm.value !== appliedFmlWindowHeightCm.value ||
-      fmlWindowSillZCm.value !== appliedFmlWindowSillZCm.value,
+      fmlBandMaxBoundaryCm.value !== appliedFmlBandBoundaries.value.maxBoundaryCm,
   )
 
   const fmlBandDirty = computed(

@@ -1,5 +1,5 @@
 import { noteMissingMeasurement } from '@/core/diagnostics'
-import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/fml/types'
 import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
 import { measureSwingSpanPxFromFaceBBox } from './door-swing-hinge'
 import { round2 } from './door-wall-snap-geom'
@@ -23,7 +23,7 @@ function resolveRefKind(
   ref: DoorSwingRefBand | undefined,
   _hyp: DoorSwingHypothesis,
 ): { kind: DoorResolvedKind; fmlRefId: string } {
-  const baseRefId = resolveDoorFmlTemplateRefId(ref?.fmlRefId)
+  const baseRefId = resolveDoorTemplateKind(ref?.fmlRefId)
   const catalogKind = resolveOpeningCatalog(baseRefId, 'door').kind
   const baseKind = ref?.kind ?? toCvDoorKind(catalogKind)
   return {

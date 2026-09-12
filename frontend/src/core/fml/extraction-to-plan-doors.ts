@@ -1,5 +1,6 @@
 import { tally } from '@/core/diagnostics'
-import { CONCEPT_DOOR_REFID, DOUBLE_WIDE_DOOR_REFID, type Opening } from './types'
+import type { Opening } from './types'
+import type { OpeningKind } from './opening-kind-catalog'
 import type { Layer12DoorForFml } from './extraction-to-plan-types'
 import {
   type Point2D,
@@ -14,6 +15,9 @@ import { filterOpeningsForEdge, openingSpanOnEdge } from './extraction-to-plan-e
 // ESC:X-10 (A)
 /** Maximaal gat langs de muur (px) waarbij twee standaarddeuren nog als paar gelden. */
 export const DOUBLE_DOOR_MERGE_GAP_PX = 24
+
+const DOOR_SINGLE_KIND: OpeningKind = 'door.single'
+const DOOR_DOUBLE_KIND: OpeningKind = 'door.double'
 
 function doorWallInterval(
   door: Layer12DoorForFml,
@@ -34,6 +38,10 @@ function wallIntervalsAdjacent(
   if (a.t1 < b.t0) return b.t0 - a.t1 <= gapT
   if (b.t1 < a.t0) return a.t0 - b.t1 <= gapT
   return true
+}
+
+function isSingleDoorKind(fmlRefId: string | undefined): boolean {
+  return resolveDoorOpeningKind(fmlRefId) === DOOR_SINGLE_KIND
 }
 
 function mergeTwoDoorsForDoubleWide(
@@ -69,7 +77,7 @@ function mergeTwoDoorsForDoubleWide(
   return {
     doorId: `${left.doorId}__${right.doorId}`,
     segmentIndex: left.segmentIndex,
-    fmlRefId: DOUBLE_WIDE_DOOR_REFID,
+    fmlRefId: DOOR_DOUBLE_KIND,
     mirrored: [0, mirrored1],
     snappedBBox,
     openingStartPx,
@@ -99,15 +107,15 @@ function mergeAdjacentStandardDoors(params: {
     const next = sorted[i + 1]
     if (
       next &&
-      current.fmlRefId === CONCEPT_DOOR_REFID &&
-      next.fmlRefId === CONCEPT_DOOR_REFID &&
+      isSingleDoorKind(current.fmlRefId) &&
+      isSingleDoorKind(next.fmlRefId) &&
       wallIntervalsAdjacent(
         doorWallInterval(current, params.edgeSegment),
         doorWallInterval(next, params.edgeSegment),
         gapT,
       )
     ) {
-      // Beide singles verdwijnen; één double_wide over de gecombineerde span.
+      // Beide singles verdwijnen; één double over de gecombineerde span.
       tally('X-10', 'double_wide_merged')
       merged.push(mergeTwoDoorsForDoubleWide(current, next, params.edgeSegment))
       i += 2
@@ -117,6 +125,15 @@ function mergeAdjacentStandardDoors(params: {
     i += 1
   }
   return merged
+}
+
+function resolveDoorOpeningKind(fmlRefId: string | undefined): OpeningKind {
+  if (fmlRefId === DOOR_DOUBLE_KIND || fmlRefId === 'door.double') return 'door.double'
+  if (fmlRefId === 'door.closet') return 'door.closet'
+  if (typeof fmlRefId === 'string' && fmlRefId.startsWith('door.')) {
+    return fmlRefId as OpeningKind
+  }
+  return DOOR_SINGLE_KIND
 }
 
 export function mapLayer12DoorsToOpenings(params: {
@@ -129,7 +146,7 @@ export function mapLayer12DoorsToOpenings(params: {
   defaultDoorHeightCm: number
   /** Deuren die al op een eerdere muur gezet zijn — voorkomt double+singles duplicaat. */
   consumedDoorIds: Set<string>
-  /** Twin→double_wide (X-10). Default true. */
+  /** Twin→double (X-10). Default true. */
   mergeDoubleDoors?: boolean
 }): Opening[] {
   const sourceDoors = filterOpeningsForEdge({
@@ -172,14 +189,14 @@ export function mapLayer12DoorsToOpenings(params: {
     if (flips) tally('X-12', 'mirrored_flip')
     const mirrored = flips ? flipMirrored(sourceMirrored) : sourceMirrored
     return {
-      refid: door.fmlRefId,
+      id: crypto.randomUUID(),
+      kind: resolveDoorOpeningKind(door.fmlRefId),
       type: 'door',
       t: span.tMid,
       width: span.widthCm,
       z_height: params.defaultDoorHeightCm,
       mirrored,
-      guid: door.doorId,
-      // Boog-inset: opening-refid-catalog.swingInsetCm (FML-viewer), niet gemeten framing.
+      // Boog-inset: opening-kind-catalog.swingInsetCm (viewer), niet gemeten framing.
     } satisfies Opening
   })
 }

@@ -68,13 +68,13 @@ function pointInPolygon(points: readonly Point2D[], point: Point2D): boolean {
 
 function pointInElevationOpening(rect: ElevationOpeningRect, point: Point2D): boolean {
   if (!pointInElevationRect(rect, point)) return false
-  if (elevationOpeningHoleIsRect(rect.type, rect.refid)) return true
+  if (elevationOpeningHoleIsRect(rect.type, rect.kind)) return true
   const x0 = Math.min(rect.x0, rect.x1)
   const x1 = Math.max(rect.x0, rect.x1)
   const y0 = Math.min(rect.y0, rect.y1)
   const y1 = Math.max(rect.y0, rect.y1)
   return pointInPolygon(
-    elevationOpeningHolePoints({ x0, y0, x1, y1 }, rect.type, rect.refid, {
+    elevationOpeningHolePoints({ x0, y0, x1, y1 }, rect.type, rect.kind, {
       mirrored: rect.mirrored,
       startOnLeft: rect.startOnLeft,
     }),

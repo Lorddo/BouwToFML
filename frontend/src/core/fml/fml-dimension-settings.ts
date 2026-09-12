@@ -1,6 +1,6 @@
 /**
  * Floorplanner maatlijn-flags: project (`dimensionMode`, `generateOuterDimension`,
- * `showDims`) + design (`engineAutoDims`). Geen `dimensions[]`.
+ * `showDims`) + design (`autoDimensions`, was `engineAutoDims`). Geen `dimensions[]`.
  */
 import { flushActiveDesign } from './design-sync'
 import { isRidgeDesign } from './ridge-walls'
@@ -37,11 +37,12 @@ export function plattegrondDesignIndex(floor: Floor | null | undefined): number 
   return designs.findIndex((design) => !isRidgeDesign(design))
 }
 
-function withEngineAutoDims(design: FloorDesign, on: boolean): FloorDesign {
+function withAutoDimensions(design: FloorDesign, on: boolean): FloorDesign {
   const settings = cloneSettings(design.source?.settings)
-  settings.engineAutoDims = on
+  delete settings.engineAutoDims
   return {
     ...design,
+    autoDimensions: on,
     source: { ...design.source, settings },
   }
 }
@@ -59,7 +60,10 @@ export function readDimensionSettings(
   const floor = plan?.floors[floorIndex] ?? plan?.floors[0]
   const idx = plattegrondDesignIndex(floor)
   const design = idx >= 0 ? floor?.designs?.[idx] : (floor?.designs?.[0] ?? undefined)
-  const engineAutoDims = design?.source?.settings?.engineAutoDims === true
+  const engineAutoDims =
+    design?.autoDimensions != null
+      ? design.autoDimensions === true
+      : design?.source?.settings?.engineAutoDims === true
   return { engineAutoDims, dimensionMode, generateOuterDimension }
 }
 
@@ -97,9 +101,9 @@ export function writeDimensionSettings(
     const flushed = flushActiveDesign(floor)
     const platIndex = plattegrondDesignIndex(flushed)
     const designs = (flushed.designs ?? []).map((design, designIndex) => {
-      if (isRidgeDesign(design)) return withEngineAutoDims(design, false)
+      if (isRidgeDesign(design)) return withAutoDimensions(design, false)
       if (designIndex !== platIndex) return design
-      return withEngineAutoDims(design, engineAutoDims)
+      return withAutoDimensions(design, engineAutoDims)
     })
     return { ...flushed, designs }
   })

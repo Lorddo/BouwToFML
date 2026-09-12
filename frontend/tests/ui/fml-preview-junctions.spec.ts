@@ -726,15 +726,15 @@ describe('addWallSegment', () => {
   it('schrijft az/bz met z=0 zonder bottomZ', () => {
     const result = addWallSegment([], { x: 0, y: 0 }, { x: 100, y: 0 }, 20, 280)
     expect(result).not.toBeNull()
-    expect(result!.walls[0].extras?.az).toEqual({ z: 0, h: 280 })
-    expect(result!.walls[0].extras?.bz).toEqual({ z: 0, h: 280 })
+    expect(result!.walls[0].elevation?.a).toEqual({ z: 0, h: 280 })
+    expect(result!.walls[0].elevation?.b).toEqual({ z: 0, h: 280 })
   })
 
   it('schrijft az/bz met lift (bottomZ + hoogte)', () => {
     const result = addWallSegment([], { x: 0, y: 0 }, { x: 100, y: 0 }, 20, 250, 40)
     expect(result).not.toBeNull()
-    expect(result!.walls[0].extras?.az).toEqual({ z: 40, h: 290 })
-    expect(result!.walls[0].extras?.bz).toEqual({ z: 40, h: 290 })
+    expect(result!.walls[0].elevation?.a).toEqual({ z: 40, h: 290 })
+    expect(result!.walls[0].elevation?.b).toEqual({ z: 40, h: 290 })
   })
 
   it('weigert te korte segmenten', () => {

@@ -29,10 +29,10 @@ function doorOnWall(params: {
     openings: [
       {
         type: 'door',
-        refid: 'door-ref',
+        kind: 'door.single',
         t: params.t,
         width: params.width ?? 90,
-        guid: params.guid ?? 'door-1',
+        id: params.guid ?? 'door-1',
         mirrored: params.mirrored ?? [0, 1],
       },
     ],
@@ -95,7 +95,7 @@ describe('collinear hop', () => {
     expect(result!.openingId).toBe('w2-door-door-hop')
     const located = findOpeningById(result!.walls, result!.openingId)
     expect(located?.wallId).toBe('w2')
-    expect(located?.opening.guid).toBe('door-hop')
+    expect(located?.opening.id).toBe('door-hop')
     const worldX = located!.wall.a.x + located!.opening.t * (located!.wall.b.x - located!.wall.a.x)
     expect(worldX).toBeCloseTo(70, 0)
     expect(result!.walls.find((w) => w.id === 'w1')?.openings).toHaveLength(0)
@@ -175,7 +175,7 @@ describe('sticky vs transfer', () => {
     expect(result?.walls.find((w) => w.id === 'w1')?.openings).toHaveLength(1)
   })
 
-  it('transfers to another wall beyond leave with snap, preserving guid and mirrored', () => {
+  it('transfers to another wall beyond leave with snap, preserving id and mirrored', () => {
     const walls = [
       doorOnWall({
         id: 'w1',
@@ -203,7 +203,7 @@ describe('sticky vs transfer', () => {
     expect(result).not.toBeNull()
     expect(result!.openingId).toBe('w2-door-xfer-1')
     const located = findOpeningById(result!.walls, result!.openingId)
-    expect(located?.opening.guid).toBe('xfer-1')
+    expect(located?.opening.id).toBe('xfer-1')
     expect(located?.opening.mirrored).toEqual([1, 0])
     expect(located?.opening.width).toBe(10)
     expect(located?.opening.type).toBe('door')

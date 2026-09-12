@@ -13,7 +13,7 @@ import {
   wallLengthCm,
 } from './fml-wall-geom'
 import { isStampOwnedWall } from './stamp-owned'
-import { splitWallEndpointExtras } from './wall-endpoint-height'
+import { promoteWallElevationFromExtras, splitWallEndpointExtras } from './wall-endpoint-height'
 import type { Opening, Point2D, Wall } from './types'
 
 /** Plaatsfout-slack (cm) — tekenaar handmatig; niet globaal in sanitize. */
@@ -263,12 +263,16 @@ function pieceFromAlong(wall: Wall, lo: number, hi: number, thickness?: number):
   }
   const midT = (t0 + t1) / 2
   const { firstExtras, secondExtras } = splitWallEndpointExtras(wall, midT)
-  const extras =
+  const mergedExtras =
     firstExtras && secondExtras
       ? { ...firstExtras, bz: secondExtras.bz }
       : wall.extras
         ? { ...wall.extras }
         : undefined
+  const { extras, elevation } = promoteWallElevationFromExtras(
+    mergedExtras,
+    // fallback unused when az/bz present from split; keep DEFAULT via promote default
+  )
   return {
     ...wall,
     id: `${wall.id}-own-${shortGuid()}`,
@@ -277,6 +281,7 @@ function pieceFromAlong(wall: Wall, lo: number, hi: number, thickness?: number):
     thickness: thickness ?? wall.thickness,
     openings,
     extras,
+    elevation: elevation ?? wall.elevation,
   }
 }
 

@@ -4,6 +4,8 @@ export {
   type PersistedProjectIndexEntry,
   type PersistedDevSession,
   type PersistedFloorBlob,
+  type PlgFloorDocument,
+  type ConverterSidecar,
   type PersistedSourceUnderlay,
   type PersistedPdfUnderlay,
 } from './types'

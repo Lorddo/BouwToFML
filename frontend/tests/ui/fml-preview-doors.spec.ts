@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PASSAGE_DOOR_REFID, type Opening } from '@/core/fml/types'
+import { type Opening } from '@/core/fml/types'
 import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
 import type { PlanGlyph, PlanPolylineGlyph } from '@/core/fml/opening-plan-symbol'
 import {
@@ -11,12 +11,20 @@ import {
 } from '@/ui/components/fml-preview-doors'
 
 function doorOpening(partial: Partial<Opening> & Pick<Opening, 't' | 'width'>): Opening {
+  const legacyRefid =
+    typeof (partial as { refid?: unknown }).refid === 'string'
+      ? String((partial as { refid?: string }).refid)
+      : ''
+  const kind =
+    partial.kind ??
+    (legacyRefid ? resolveOpeningCatalog(legacyRefid, 'door').openingKind : 'door.single')
   return {
     type: 'door',
-    refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+    kind,
     mirrored: [0, 1],
-    guid: partial.guid ?? 'door-guid',
+    id: partial.id ?? 'door-guid',
     ...partial,
+    kind,
   }
 }
 
@@ -81,8 +89,8 @@ describe('resolveSwingSpanWithinOpening', () => {
 describe('groupDoorOpeningsOnWall', () => {
   it('renders one display group per door opening (no refid-pair merging)', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 400, y: 0 }, [
-      doorOpening({ guid: 'left', t: 0.45, width: 90 }),
-      doorOpening({ guid: 'right', t: 0.55, width: 90 }),
+      doorOpening({ id: 'left', t: 0.45, width: 90 }),
+      doorOpening({ id: 'right', t: 0.55, width: 90 }),
     ])
 
     expect(groups).toHaveLength(2)
@@ -96,7 +104,7 @@ describe('groupDoorOpeningsOnWall', () => {
   it('renders wide double-leaf doors (double_wide) from a single opening', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 400, y: 0 }, [
       doorOpening({
-        refid: '5ae0ee3c682e32c8c7ac15a6136d692df5737b22',
+        kind: 'door.double',
         t: 0.5,
         width: 170,
         mirrored: [0, 1],
@@ -114,7 +122,7 @@ describe('groupDoorOpeningsOnWall', () => {
   it('renders sliding doors with divider + two arrows and no swing arc', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
-        refid: '1cdb4e6092e998630e7881667f2ddedafa3b0eb9',
+        kind: 'door.sliding',
         t: 0.5,
         width: 150,
       }),
@@ -134,13 +142,13 @@ describe('groupDoorOpeningsOnWall', () => {
   it('renders pocket doors with one arrow and no divider', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
-        refid: '216',
+        kind: 'door.pocket',
         t: 0.5,
         width: 100,
       }),
     ])
 
-    expect(groups[0].catalogLabel).toBe('Pocketdeur')
+    expect(groups[0].catalogLabel).toBe('Schuifdeur (kast)')
     expect(polylines(groups[0].glyphs, 'leaf').length).toBeGreaterThanOrEqual(1)
     expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(1)
     expect(byRole(groups[0].glyphs, 'swing')).toHaveLength(0)
@@ -154,7 +162,7 @@ describe('groupDoorOpeningsOnWall', () => {
   it('renders sliding_single with fixed glass + leaf + one arrow', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
-        refid: 'd2785cc45c9c0ec86644135d22fa9ac9c49bcad6',
+        kind: 'door.sliding_single',
         t: 0.5,
         width: 180,
       }),
@@ -195,7 +203,7 @@ describe('groupDoorOpeningsOnWall', () => {
       { x: 200, y: 0 },
       [
         doorOpening({
-          refid: '9c845cf2ad8de220b65ee4dedeeb28ba4d750e21',
+          kind: 'door.french_balcony',
           t: 0.5,
           width: 84,
           mirrored: [0, 0],
@@ -226,7 +234,7 @@ describe('groupDoorOpeningsOnWall', () => {
   it('renders d34e31c as a closet45 door (45° arc, leaf closed in frame)', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 0, y: 0 }, { x: 300, y: 0 }, [
       doorOpening({
-        refid: 'd34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9',
+        kind: 'door.closet',
         t: 0.5,
         width: 67,
         mirrored: [0, 1],
@@ -335,7 +343,7 @@ describe('groupDoorOpeningsOnWall', () => {
       'wall-1',
       { x: 0, y: 0 },
       { x: 300, y: 0 },
-      [doorOpening({ refid: PASSAGE_DOOR_REFID, t: 0.5, width: 90 })],
+      [doorOpening({ kind: 'door.passage', t: 0.5, width: 90 })],
       16,
     )
     const sills = polylines(groups[0].glyphs, 'sill')

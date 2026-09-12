@@ -46,8 +46,8 @@ function samplePlanWithDoor(): FloorPlan {
             thickness: 10,
             openings: [
               {
-                guid: 'd1',
-                refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+                id: 'd1',
+                kind: 'door.single',
                 t: 0.5,
                 width: 20,
                 z_height: 220,
@@ -99,8 +99,8 @@ function samplePlanWithSlideCrossing(): FloorPlan {
             thickness: 10,
             openings: [
               {
-                guid: 'cross-door',
-                refid: '0434246537840a3326e305dbe7b9c355743e6e93',
+                id: 'cross-door',
+                kind: 'door.single',
                 t: 0.5,
                 width: 40,
                 z_height: 220,

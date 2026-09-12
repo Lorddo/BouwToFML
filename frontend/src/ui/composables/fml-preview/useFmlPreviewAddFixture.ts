@@ -29,8 +29,8 @@ export function useFmlPreviewAddFixture(options: {
       WALL_FACE_SNAP_CM,
       { disabled: opts?.snapDisabled === true },
     )
-    const item: Omit<FloorItem, 'guid'> = {
-      refid: option.refid,
+    const item: Omit<FloorItem, 'id'> = {
+      kind: option.kind,
       x: snapped.x,
       y: snapped.y,
       width: size.width,

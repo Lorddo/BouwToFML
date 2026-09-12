@@ -29,6 +29,8 @@ const props = withDefaults(
     moveWallId: string | null
     /** Dak-tab: dunne schermvaste lijnen, geen oranje nok-vulling. */
     dakMode?: boolean
+    /** Settings: toon gestippelde nokbalk. */
+    showRidgeDisplay?: boolean
     viewScale?: number
     /** Content-layout scale (cm → stage) for outline stroke. */
     layoutScale?: number
@@ -37,6 +39,7 @@ const props = withDefaults(
   {
     facadeWallPolygons: () => [],
     dakMode: false,
+    showRidgeDisplay: true,
     viewScale: 1,
     layoutScale: 1,
     planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
@@ -169,7 +172,7 @@ const highlightedWallHits = computed((): RenderWall[] => {
       }"
     />
     <v-line
-      v-for="ridge in renderModel.ridgeLines"
+      v-for="ridge in showRidgeDisplay ? renderModel.ridgeLines : []"
       :key="`${ridge.id}-center`"
       :config="{
         points: ridge.points,
@@ -187,7 +190,7 @@ const highlightedWallHits = computed((): RenderWall[] => {
       }"
     />
     <v-line
-      v-for="outline in renderModel.ridgeLines.flatMap((ridge) =>
+      v-for="outline in (showRidgeDisplay ? renderModel.ridgeLines : []).flatMap((ridge) =>
         ridge.outlinePoints.map((points, index) => ({ id: ridge.id, index, points })),
       )"
       :key="`${outline.id}-outline-${outline.index}`"

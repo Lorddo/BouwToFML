@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { BtfSlice } from '@/core/fml/btf-slices'
+import type { PlanSlice } from '@/core/fml/plan-slices'
 import {
   DEFAULT_SLICER_OFFSET_SNAP_CM,
   slicePlaceStripAxis,
@@ -15,7 +15,7 @@ describe('slice-offset-snap (stroken)', () => {
   })
 
   it('verbiedt hele X-strook: zelfde X andere Y → wegduwen', () => {
-    const slices: BtfSlice[] = [{ m: { x: 0, y: 0 }, p: { x: 100, y: 0 } }]
+    const slices: PlanSlice[] = [{ m: { x: 0, y: 0 }, p: { x: 100, y: 0 } }]
     // Zelfde X, ver weg in Y — oude punt-snap liet dit toe
     const out = snapSlicerPPoint({
       point: { x: 102, y: 800 },
@@ -34,7 +34,7 @@ describe('slice-offset-snap (stroken)', () => {
   })
 
   it('laat parallelle place-lijnen op zelfde Y toe als X genoeg offset heeft', () => {
-    const slices: BtfSlice[] = [{ m: { x: 0, y: 50 }, p: { x: 0, y: 50 } }]
+    const slices: PlanSlice[] = [{ m: { x: 0, y: 50 }, p: { x: 0, y: 50 } }]
     const out = snapSlicerPPoint({
       point: { x: 50, y: 50 },
       slices,
@@ -46,7 +46,7 @@ describe('slice-offset-snap (stroken)', () => {
   })
 
   it('Y-strook canvas-breed bij horizontale place', () => {
-    const slices: BtfSlice[] = [{ m: { x: 0, y: 0 }, p: { x: 0, y: 100 } }]
+    const slices: PlanSlice[] = [{ m: { x: 0, y: 0 }, p: { x: 0, y: 100 } }]
     const out = snapSlicerPPoint({
       point: { x: 900, y: 105 },
       slices,

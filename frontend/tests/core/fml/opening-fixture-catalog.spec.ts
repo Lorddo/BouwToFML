@@ -47,7 +47,7 @@ describe('fixture catalog + symbols', () => {
   it('lists placeable catalog rows with default footprints', () => {
     const options = listFixturePlaceOptions()
     expect(options.length).toBeGreaterThan(10)
-    expect(options.every((item) => item.refid && item.kind !== 'hidden')).toBe(true)
+    expect(options.every((item) => item.kind && item.kind !== 'hidden')).toBe(true)
     expect(fixturePlaceSizeCm('countertop')).toEqual({ width: 120, height: 60 })
     expect(fixturePlaceSizeCm('generic')).toEqual({ width: 60, height: 60 })
   })
@@ -934,7 +934,7 @@ describe('importFmlV3 items', () => {
                   y: 20,
                   width: 130,
                   height: 60,
-                  guid: 'abc123',
+                  id: 'abc123',
                 },
               ],
             },
@@ -943,6 +943,7 @@ describe('importFmlV3 items', () => {
       ],
     })
     expect(plan.floors[0]?.items).toHaveLength(1)
-    expect(plan.floors[0]?.items?.[0]?.refid).toBe('5bbfd9e1325ca8d3c59e23b35401eeec71424256')
+    expect(plan.floors[0]?.items?.[0]?.kind).toBe('countertop')
+    expect(plan.floors[0]?.items?.[0]?.id).toBeTruthy()
   })
 })

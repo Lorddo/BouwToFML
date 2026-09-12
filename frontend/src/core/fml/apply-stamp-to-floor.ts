@@ -96,15 +96,19 @@ function cloneStampWall(source: Wall, heightCm: number, offsetCm?: Point2D): Wal
   const offset = offsetCm ?? { x: 0, y: 0 }
   const fallback = { z: 0, h: heightCm }
   const az =
-    source.extras?.az != null && typeof source.extras.az === 'object'
-      ? { ...(source.extras.az as { z: number; h: number }) }
-      : { ...fallback }
+    source.elevation?.a != null
+      ? { ...source.elevation.a }
+      : source.extras?.az != null && typeof source.extras.az === 'object'
+        ? { ...(source.extras.az as { z: number; h: number }) }
+        : { ...fallback }
   const bz =
-    source.extras?.bz != null && typeof source.extras.bz === 'object'
-      ? { ...(source.extras.bz as { z: number; h: number }) }
-      : { ...fallback }
-  const extras: Record<string, unknown> = { az, bz }
-  // Bewaar overige extras behalve az/bz (die hierboven gezet).
+    source.elevation?.b != null
+      ? { ...source.elevation.b }
+      : source.extras?.bz != null && typeof source.extras.bz === 'object'
+        ? { ...(source.extras.bz as { z: number; h: number }) }
+        : { ...fallback }
+  const extras: Record<string, unknown> = {}
+  // Bewaar overige extras behalve az/bz (die naar elevation gaan).
   if (source.extras) {
     for (const [key, value] of Object.entries(source.extras)) {
       if (key === 'az' || key === 'bz') continue
@@ -119,7 +123,8 @@ function cloneStampWall(source: Wall, heightCm: number, offsetCm?: Point2D): Wal
     ...(typeof source.balance === 'number' ? { balance: source.balance } : {}),
     ...(source.c != null ? { c: translatePointByOffset(source.c, offset) } : {}),
     openings: [],
-    extras,
+    elevation: { a: az, b: bz },
+    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
 }
 

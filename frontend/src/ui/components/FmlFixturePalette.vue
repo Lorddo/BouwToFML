@@ -69,10 +69,10 @@ const filtered = computed(() => {
     <div class="fixture-palette__list" role="listbox">
       <button
         v-for="item in filtered"
-        :key="`${item.categorie}-${item.kind}-${item.refid}`"
+        :key="`${item.categorie}-${item.kind}-${item.label}`"
         type="button"
         class="fixture-palette__item"
-        :class="{ 'is-active': selected?.refid === item.refid && selected?.label === item.label }"
+        :class="{ 'is-active': selected?.kind === item.kind && selected?.label === item.label }"
         @click="selected = item"
       >
         <span class="fixture-palette__name">{{ item.label }}</span>

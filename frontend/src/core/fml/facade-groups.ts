@@ -1,16 +1,28 @@
 /**
- * Gevelgroepen: `settings.facadeGroups` is bron van waarheid (extras-only).
+ * Gevelgroepen: `plan.facadeGroups` is bron van waarheid (extras-only catalogus).
  * Een muur-GUID mag in meerdere gevelgroepen (voor/na verbouwing).
  * Stempel (`stamp`) is orthogonaal en mag naast N gevels.
  *
  * Native Floorplanner-markers (`groupMarker` / `groupId` / `stampGroupId`) worden
  * niet meer geschreven. Import migreert eenmalig vanuit markers als de catalogus leeg is.
+ * FML-settings key blijft via de fml-adapter (hydrate/serialize).
  */
+import type { FacadeGroup as PlgFacadeGroup } from '../plg/extension-types'
+import { createDefaultFacadeGroups } from '../plg/extension-types'
+
+export {
+  createDefaultFacadeGroups,
+  createDefaultFacadeGroupPresets,
+  DEFAULT_FACADE_GROUP_IDS,
+  DEFAULT_FACADE_GROUP_NAMES,
+  isDefaultFacadeGroupId,
+  MAX_FACADE_GROUP_PRESETS,
+} from '../plg/extension-types'
+export type { DefaultFacadeGroupId, FacadeGroupPreset } from '../plg/extension-types'
 import type {
   Floor,
   FloorDesign,
   FloorPlan,
-  FloorPlanSource,
   FmlExtras,
   Point2D,
   Wall,
@@ -34,16 +46,8 @@ export const STAMP_FACADE_GROUP_NAME = 'Stempel'
 /** Stabiele default native-id voor Stempel (zelfde orde als FP-probe). */
 export const STAMP_NATIVE_GROUP_ID = 708412
 
-export interface FacadeGroup {
-  id: string
-  code: string
-  name: string
-  wallGuids: string[]
-  /** Floorplanner `groupMarkerConfig.groupId` (stamp: stampGroupId). */
-  nativeId?: number
-  /** Floorplanner `groupMarker` timestamp. */
-  groupMarker?: number
-}
+/** Zelfde shape als `plg` FacadeGroup — lokale alias houdt call-site imports stabiel. */
+export type FacadeGroup = PlgFacadeGroup
 
 export type FacadeGroupCreateInput = {
   name?: string
@@ -60,13 +64,6 @@ export type NativeGroupRef = { key: string; name?: string }
 
 function cloneSettings(settings: FmlExtras | undefined): FmlExtras {
   return { ...(settings ?? {}) }
-}
-
-function ensurePlanSource(plan: FloorPlan): FloorPlanSource {
-  if (plan.source) return plan.source
-  const source: FloorPlanSource = { settings: {} }
-  plan.source = source
-  return source
 }
 
 function isNonEmptyString(value: unknown): value is string {
@@ -124,7 +121,8 @@ function isStampGroup(group: FacadeGroup): boolean {
 
 function isPlanDesign(design: FloorDesign | null | undefined): boolean {
   if (!design) return false
-  const role = design.source?.settings?.btfRole
+  if (design.role === 'ridge') return false
+  const role = design.source?.settings?.['btfRole']
   if (role === 'ridge') return false
   if (design.name?.trim().toLowerCase() === 'dak') return false
   return true
@@ -154,6 +152,11 @@ function serializeGroup(group: FacadeGroup): Record<string, unknown> {
   if (group.nativeId != null) out.nativeId = group.nativeId
   if (group.groupMarker != null) out.groupMarker = group.groupMarker
   return out
+}
+
+/** FML-adapter: catalogus → settings.facadeGroups (zelfde shape als vóór `.plg`). */
+export function serializeFacadeGroupsForSettings(groups: FacadeGroup[]): Record<string, unknown>[] {
+  return groups.map(serializeGroup)
 }
 
 let nativeIdSeq = 0
@@ -198,10 +201,16 @@ function ensureNativeIds(groups: FacadeGroup[]): FacadeGroup[] {
 
 function writeGroupsCatalogOnly(plan: FloorPlan, groups: FacadeGroup[]): FacadeGroup[] {
   const unique = dedupeWallGuidsInGroups(ensureNativeIds(groups))
-  const source = ensurePlanSource(plan)
-  const settings = cloneSettings(source.settings)
-  settings[FACADE_GROUPS_SETTINGS_KEY] = unique.map(serializeGroup)
-  source.settings = settings
+  plan.facadeGroups = unique.map((group) => ({
+    ...group,
+    wallGuids: [...group.wallGuids],
+  }))
+  // Settings-key alleen via FML-adapter; in-sessie geen dual-write.
+  if (plan.source?.settings && FACADE_GROUPS_SETTINGS_KEY in plan.source.settings) {
+    const settings = cloneSettings(plan.source.settings)
+    delete settings[FACADE_GROUPS_SETTINGS_KEY]
+    plan.source = { ...plan.source, settings }
+  }
   return listFacadeGroups(plan)
 }
 
@@ -220,14 +229,18 @@ function nextGroupId(existing: FacadeGroup[]): string {
   return `G${max + 1}`
 }
 
-function removeEmptyGroups(groups: FacadeGroup[]): FacadeGroup[] {
-  // Preset «Stempel» blijft altijd (lege set = stempel valt terug op diktebanden).
-  return groups.filter((group) => group.wallGuids.length > 0 || group.id === STAMP_FACADE_GROUP_ID)
+/**
+ * Lege gevelgroepen blijven catalogus-slots (defaults + zelf toegevoegd).
+ * Stamp blijft altijd, ook zonder leden.
+ */
+function retainCatalogGroups(groups: FacadeGroup[]): FacadeGroup[] {
+  return groups
 }
 
-/** Lees + normaliseer `settings.facadeGroups` (dubbele GUID binnen één groep weg; overlap mag). */
+/** Lees + normaliseer `plan.facadeGroups` (settings-fallback vóór FML-adapter hydrate). */
 export function listFacadeGroups(plan: FloorPlan | null | undefined): FacadeGroup[] {
-  const raw = plan?.source?.settings?.[FACADE_GROUPS_SETTINGS_KEY]
+  const raw =
+    plan?.facadeGroups ?? plan?.source?.settings?.[FACADE_GROUPS_SETTINGS_KEY]
   if (!Array.isArray(raw)) return []
   const out: FacadeGroup[] = []
   const seenIds = new Set<string>()
@@ -321,11 +334,7 @@ function collectWallIds(plan: FloorPlan): Set<string> {
  * Product-pad gebruikt dit niet meer (extras-only); behouden voor migratie-tests.
  */
 export function syncNativeMarkersOnWalls(plan: FloorPlan): void {
-  const groups = ensureNativeIds(listFacadeGroups(plan))
-  const source = ensurePlanSource(plan)
-  const settings = cloneSettings(source.settings)
-  settings[FACADE_GROUPS_SETTINGS_KEY] = groups.map(serializeGroup)
-  source.settings = settings
+  const groups = writeGroupsCatalogOnly(plan, listFacadeGroups(plan))
 
   const facadeByGuid = new Map<string, FacadeGroup>()
   let stampGroup: FacadeGroup | undefined
@@ -443,6 +452,19 @@ function cloneFloorForExport(floor: Floor): Floor {
 function clonePlanForExport(plan: FloorPlan): FloorPlan {
   return {
     ...plan,
+    facadeGroups: plan.facadeGroups?.map((group) => ({
+      ...group,
+      wallGuids: [...group.wallGuids],
+    })),
+    elevations: plan.elevations
+      ? {
+          projection: plan.elevations.projection,
+          views: plan.elevations.views.map((view) => ({
+            facadeGroupId: view.facadeGroupId,
+            ...(view.drawing ? { drawing: { ...view.drawing } } : {}),
+          })),
+        }
+      : undefined,
     floors: plan.floors.map(cloneFloorForExport),
     source: plan.source
       ? { ...plan.source, settings: cloneSettings(plan.source.settings) }
@@ -485,6 +507,43 @@ export function ensureStampFacadeGroup(plan: FloorPlan): boolean {
   return true
 }
 
+export type FacadeGroupSeed = { id: string; name: string }
+
+function normalizeSeedGroups(presets: readonly FacadeGroupSeed[] | null | undefined): FacadeGroup[] {
+  if (presets == null) return createDefaultFacadeGroups()
+  const out: FacadeGroup[] = []
+  const seen = new Set<string>()
+  for (const entry of presets) {
+    const id = typeof entry.id === 'string' ? entry.id.trim() : ''
+    if (!id || id === STAMP_FACADE_GROUP_ID || seen.has(id)) continue
+    seen.add(id)
+    const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : id
+    out.push({ id, code: id, name, wallGuids: [] })
+  }
+  return out
+}
+
+/**
+ * Zet de settings-catalogus (factory: voor/achter/links/rechts) als het plan
+ * nog geen gevelgroep heeft (stamp telt niet). Lege slots blijven; aanzichten
+ * tonen alleen groepen met muren.
+ * @returns true als er groepen zijn toegevoegd.
+ */
+export function ensureDefaultFacadeGroups(
+  plan: FloorPlan,
+  presets?: readonly FacadeGroupSeed[] | null,
+): boolean {
+  const existing = listFacadeGroups(plan)
+  if (existing.some((group) => !isStampGroup(group))) return false
+  const seed = normalizeSeedGroups(presets)
+  if (seed.length === 0) return false
+  const taken = new Set(existing.map((group) => group.id))
+  const added = seed.filter((group) => !taken.has(group.id))
+  if (added.length === 0) return false
+  writeGroups(plan, [...existing, ...added])
+  return true
+}
+
 /** Muren op `floorIndex` die in de Stempel-groep zitten. */
 export function wallsInStampGroup(plan: FloorPlan | null | undefined, floorIndex = 0): Wall[] {
   if (!plan) return []
@@ -501,6 +560,7 @@ export function wallsInStampGroup(plan: FloorPlan | null | undefined, floorIndex
  */
 export function stripFacadeGroupsFromPlan(plan: FloorPlan): FloorPlan {
   const cloned = clonePlanForExport(plan)
+  delete cloned.facadeGroups
   const settings = cloned.source?.settings
   if (settings && FACADE_GROUPS_SETTINGS_KEY in settings) {
     const nextSettings = { ...settings }
@@ -522,6 +582,7 @@ export function stripStampGroupFromPlan(plan: FloorPlan): FloorPlan {
   const groups = listFacadeGroups(cloned)
   const next = groups.filter((group) => group.id !== STAMP_FACADE_GROUP_ID)
   if (next.length === 0) {
+    delete cloned.facadeGroups
     const settings = { ...(cloned.source?.settings ?? {}) }
     delete settings[FACADE_GROUPS_SETTINGS_KEY]
     cloned.source = cloned.source ? { ...cloned.source, settings } : { settings }
@@ -597,7 +658,7 @@ export function detachWallsFromStamp(plan: FloorPlan, wallGuids: readonly string
       wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
     }
   })
-  writeGroups(plan, removeEmptyGroups(groups))
+  writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /** Haal muren uit alle gevelgroepen; stamp-lidmaatschap blijft. */
@@ -611,7 +672,7 @@ export function detachWallsFromFacade(plan: FloorPlan, wallGuids: readonly strin
       wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
     }
   })
-  writeGroups(plan, removeEmptyGroups(groups))
+  writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /** Haal muren alleen uit één groep (gevel of stamp); overige lidmaatschappen blijven. */
@@ -629,10 +690,10 @@ export function detachWallsFromGroup(
       wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
     }
   })
-  writeGroups(plan, removeEmptyGroups(groups))
+  writeGroups(plan, retainCatalogGroups(groups))
 }
 
-/** Haal muren uit alle groepen (gevel + stamp); lege groepen weg. */
+/** Haal muren uit alle groepen (gevel + stamp); lege catalogus-slots blijven. */
 export function detachWalls(plan: FloorPlan, wallGuids: readonly string[]): void {
   const idSet = new Set(normalizeWallGuids(wallGuids))
   if (idSet.size === 0) return
@@ -640,17 +701,22 @@ export function detachWalls(plan: FloorPlan, wallGuids: readonly string[]): void
     ...group,
     wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
   }))
-  writeGroups(plan, removeEmptyGroups(groups))
+  writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /**
- * Wis een lege groep. Weigert als er nog leden zijn (return false).
+ * Wis een gevelgroep. Stamp weigert. Zonder `force` weigert een groep met leden.
  */
-export function deleteFacadeGroup(plan: FloorPlan, groupId: string): boolean {
+export function deleteFacadeGroup(
+  plan: FloorPlan,
+  groupId: string,
+  options?: { force?: boolean },
+): boolean {
   const groups = listFacadeGroups(plan)
   const group = groups.find((entry) => entry.id === groupId)
   if (!group) return true
-  if (group.wallGuids.length > 0) return false
+  if (isStampGroup(group)) return false
+  if (group.wallGuids.length > 0 && options?.force !== true) return false
   writeGroups(
     plan,
     groups.filter((entry) => entry.id !== groupId),
@@ -767,7 +833,7 @@ type WallFacadeHit = {
 
 /**
  * Eenmalige import-migratie: bouw catalogus vanuit muur-markers als extras leeg zijn.
- * Als `settings.facadeGroups` al bestaat → no-op (extras winnen).
+ * Als `plan.facadeGroups` (of legacy settings-catalogus) al bestaat → no-op (extras winnen).
  * Schrijft geen native markers terug op muren.
  */
 export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGroup[] {
@@ -990,18 +1056,18 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
     return []
   }
 
-  writeGroups(plan, removeEmptyGroups(nextGroups))
+  writeGroups(plan, retainCatalogGroups(nextGroups))
   return listFacadeGroups(plan)
 }
 
-/** Verwijder wees-GUIDs; daarna lege groepen. */
+/** Verwijder wees-GUIDs; lege catalogus-slots blijven. */
 export function pruneFacadeGroups(plan: FloorPlan): FacadeGroup[] {
   const alive = collectWallIds(plan)
   const groups = listFacadeGroups(plan).map((group) => ({
     ...group,
     wallGuids: group.wallGuids.filter((id) => alive.has(id)),
   }))
-  return writeGroups(plan, removeEmptyGroups(groups))
+  return writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /**
@@ -1050,7 +1116,7 @@ export function remapFacadeGroupWallIds(
       wallGuids: group.wallGuids.filter((id) => id !== from && !replacementSet.has(id)),
     }
   })
-  writeGroups(plan, removeEmptyGroups(groups))
+  writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /** Batch-remap na T/X of sanitize-cover splits. */

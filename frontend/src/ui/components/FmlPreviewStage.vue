@@ -16,6 +16,8 @@ import FmlPreviewStageLabels from './FmlPreviewStageLabels.vue'
 import FmlPreviewStageLines from './FmlPreviewStageLines.vue'
 import FmlPreviewStageAreaDims from './FmlPreviewStageAreaDims.vue'
 import FmlPreviewStageCornerMarkers from './FmlPreviewStageCornerMarkers.vue'
+import FmlPreviewStageClearHeight from './FmlPreviewStageClearHeight.vue'
+import FmlPreviewStageRoofPlanes from './FmlPreviewStageRoofPlanes.vue'
 import type { Point2D } from '@/core/fml/types'
 import type { RenderCornerMarker } from '@/ui/composables/fml-preview/fml-preview-corner-markers'
 import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-mode'
@@ -23,6 +25,7 @@ import {
   FACTORY_OPENING_COLORS,
   type OpeningDisplayColors,
 } from '@/ui/composables/settings/opening-display-colors'
+import { DEFAULT_CLEAR_HEIGHT_FILL_COLOR } from '@/ui/composables/settings/user-settings'
 import {
   ARCHITECT_AREA_FILL,
   ARCHITECT_STROKE,
@@ -63,6 +66,13 @@ withDefaults(
     contentOpacity: number
     /** Viewport-vast hulpraster (settings). */
     showGuideGrid?: boolean
+    /** Clear-height overlay toggles (settings). */
+    showClearHeight150?: boolean
+    showClearHeight200?: boolean
+    showClearHeightPlanFill?: boolean
+    clearHeightFillColor?: string
+    showRoofPlanes?: boolean
+    showRidgeDisplay?: boolean
     moveWallPolygon: RenderWallPolygon | null
     settingsWallPolygons: RenderWallPolygon[]
     facadeWallPolygons?: RenderWallPolygon[]
@@ -90,6 +100,12 @@ withDefaults(
     hoveredLineId: string | null
     selectedDimensionId?: string | null
     hoveredDimensionId?: string | null
+    dimensionHandles?: {
+      a: { x: number; y: number }
+      b: { x: number; y: number }
+      selected: boolean
+      activeEnd: 'a' | 'b' | null
+    } | null
     inspectColors: Record<string, string>
     dakMode?: boolean
     surfaceEditId: string | null
@@ -132,12 +148,19 @@ withDefaults(
     openingColors: () => ({ ...FACTORY_OPENING_COLORS }),
     planDisplayStyle: DEFAULT_PLAN_DISPLAY_STYLE,
     showGuideGrid: true,
+    showClearHeight150: true,
+    showClearHeight200: false,
+    showClearHeightPlanFill: false,
+    clearHeightFillColor: DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
+    showRoofPlanes: false,
+    showRidgeDisplay: true,
     settingsItemId: null,
     moveItemId: null,
     itemDragPreview: null,
     sliceGuidesStage: () => [],
     slicePreviewStage: null,
     dakMode: false,
+    dimensionHandles: null,
   },
 )
 
@@ -275,6 +298,20 @@ onBeforeUnmount(unbindGroupDrag)
             :labels-visible="labelsVisible"
             :plan-display-style="planDisplayStyle"
             layer="fill"
+          />
+          <FmlPreviewStageClearHeight
+            :clear-height="renderModel.clearHeight"
+            :layout-scale="layoutScale"
+            :dak-mode="dakMode"
+            :show150="showClearHeight150"
+            :show200="showClearHeight200"
+            :show-plan-fill="showClearHeightPlanFill"
+            :fill-color="clearHeightFillColor"
+          />
+          <FmlPreviewStageRoofPlanes
+            :outlines="renderModel.roofPlaneOutlines"
+            :layout-scale="layoutScale"
+            :visible="showRoofPlanes === true && dakMode !== true"
           />
           <FmlPreviewStageFixtures
             :render-model="renderModel"
@@ -443,6 +480,7 @@ onBeforeUnmount(unbindGroupDrag)
             :settings-wall-ids="settingsWallIds"
             :move-wall-id="moveWallId"
             :dak-mode="dakMode"
+            :show-ridge-display="showRidgeDisplay !== false"
             :view-scale="viewScale"
             :layout-scale="layoutScale"
             :plan-display-style="planDisplayStyle"
@@ -522,6 +560,30 @@ onBeforeUnmount(unbindGroupDrag)
         @junction-hover="emit('junctionHover', $event)"
         @junction-hover-end="emit('junctionHoverEnd')"
       />
+      <v-group v-if="dimensionHandles" :config="junctionOverlayGroup" listening="false">
+        <v-circle
+          :config="{
+            x: dimensionHandles.a.x,
+            y: dimensionHandles.a.y,
+            radius: dimensionHandles.activeEnd === 'a' ? junctionMarkerRadius + 1 : junctionMarkerRadius,
+            fill: dimensionHandles.activeEnd === 'a' ? '#fbbf24' : '#f97316',
+            stroke: '#ffffff',
+            strokeWidth: junctionMarkerStroke,
+            listening: false,
+          }"
+        />
+        <v-circle
+          :config="{
+            x: dimensionHandles.b.x,
+            y: dimensionHandles.b.y,
+            radius: dimensionHandles.activeEnd === 'b' ? junctionMarkerRadius + 1 : junctionMarkerRadius,
+            fill: dimensionHandles.activeEnd === 'b' ? '#fbbf24' : '#f97316',
+            stroke: '#ffffff',
+            strokeWidth: junctionMarkerStroke,
+            listening: false,
+          }"
+        />
+      </v-group>
       <FmlPreviewStageCornerMarkers
         :markers="cornerMarkers"
         :mode="cornerMarkerMode"

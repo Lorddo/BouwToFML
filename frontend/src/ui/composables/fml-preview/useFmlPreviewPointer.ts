@@ -9,6 +9,7 @@ import { pickDakPlanOverlayHit } from './fml-preview-ridge-hit'
 import {
   allowsFmlStickyHit,
   resolveFmlStickySelectKind,
+  wallPreemptsAreaHit,
   type FmlStickySelectKind,
 } from './fml-preview-sticky-select'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
@@ -40,6 +41,7 @@ interface PointerToolModes {
   isRidgeWallId?: (wallId: string) => boolean
   manualDimensionsEnabled?: ComputedRef<boolean>
   hitTestDimensionAtCm?: (cm: Point2D) => string | null
+  hitTestDimensionEndpointAtCm?: (cm: Point2D) => { id: string; end: 'a' | 'b' } | null
 }
 
 interface PointerDragState {
@@ -98,6 +100,8 @@ interface PointerActions {
   toggleSettingsLabel: (labelId: string) => void
   toggleSettingsLine: (lineId: string) => void
   toggleSettingsWall: (wallId: string, cm: Point2D) => void
+  /** Left-klik: één muur selecteren (settings + verplaatsen). */
+  selectWall: (wallId: string, cm: Point2D) => void
   toggleSettingsJunction: (junctionId: string) => void
   clearSelection: () => void
   clearOpeningSelectionState: () => void
@@ -125,6 +129,7 @@ interface PointerActions {
   beginItemRotate: (guid: string, corner: ItemRotateCorner, event: MouseEvent) => void
   startDimensionDragPending: (id: string, event: MouseEvent) => void
   beginDimensionDrag: (id: string, event: MouseEvent) => void
+  beginDimensionEndpointDrag: (id: string, end: 'a' | 'b', event: MouseEvent) => void
 }
 
 export function useFmlPreviewPointer(options: {
@@ -202,7 +207,8 @@ export function useFmlPreviewPointer(options: {
     if (moveItemId.value && hoveredItemId.value === moveItemId.value) return 'grab'
     if (
       selection.moveDimensionId.value &&
-      selection.hoveredDimensionId.value === selection.moveDimensionId.value
+      (selection.hoveredDimensionId.value === selection.moveDimensionId.value ||
+        selection.hoveredDimensionEnd.value != null)
     ) {
       return 'grab'
     }
@@ -221,7 +227,6 @@ export function useFmlPreviewPointer(options: {
       hasItem: settingsItemId.value != null || moveItemId.value != null,
       hasAnnotation:
         selection.settingsLabelId.value != null || selection.settingsLineId.value != null,
-      hasArea: selection.settingsAreaId.value != null || selection.settingsSurfaceId.value != null,
       hasDimension: selection.moveDimensionId.value != null,
     })
   }
@@ -510,11 +515,20 @@ export function useFmlPreviewPointer(options: {
       !modes.inspectMode.value &&
       !modes.measureMode.value
     ) {
+      const endpoint = modes.hitTestDimensionEndpointAtCm?.(cm) ?? null
+      if (endpoint && allowHit('dimension')) {
+        actions.clearSelection()
+        selection.moveDimensionId.value = endpoint.id
+        selection.hoveredDimensionEnd.value = endpoint.end
+        actions.beginDimensionEndpointDrag(endpoint.id, endpoint.end, event)
+        return
+      }
       const dimensionId = modes.hitTestDimensionAtCm?.(cm) ?? null
       if (dimensionId && allowHit('dimension')) {
         const wasMoveTarget = selection.moveDimensionId.value === dimensionId
         actions.clearSelection()
         selection.moveDimensionId.value = dimensionId
+        selection.hoveredDimensionEnd.value = null
         const dimIntent = resolveRelocatePointerIntent({
           touchNav: modes.touchNav.value,
           moveMod: modes.moveMod.value,
@@ -570,7 +584,13 @@ export function useFmlPreviewPointer(options: {
       actions.beginAreaLabelDrag(nameHit.kind, nameHit.id, event)
       return
     }
-    if (modes.areaSurfaceEditEnabled.value && surfaceId && allowHit('area')) {
+    const areaId = hitTest.hitTestAreaAtCm(cm)
+    const pickAreaId = nameHit?.kind === 'area' ? nameHit.id : areaId
+    const pickSurfaceId = nameHit?.kind === 'surface' ? nameHit.id : surfaceId
+    const wallUnder = dakRidgeId ?? hitTest.hitTestWallAtCm(cm)
+    const wallWins = wallPreemptsAreaHit(wallUnder, nameHit != null)
+
+    if (!wallWins && modes.areaSurfaceEditEnabled.value && surfaceId && allowHit('area')) {
       const ctrl = isSettingsMod(event, modes.settingsMod.value)
       if (dakOverlay?.kind === 'surface') {
         actions.selectRoofSurface?.(surfaceId, ctrl)
@@ -582,10 +602,8 @@ export function useFmlPreviewPointer(options: {
       }
     }
 
-    const areaId = hitTest.hitTestAreaAtCm(cm)
-    const pickAreaId = nameHit?.kind === 'area' ? nameHit.id : areaId
-    const pickSurfaceId = nameHit?.kind === 'surface' ? nameHit.id : surfaceId
     if (
+      !wallWins &&
       modes.areaSurfaceEditEnabled.value &&
       pickAreaId &&
       allowHit('area') &&
@@ -595,30 +613,29 @@ export function useFmlPreviewPointer(options: {
       return
     }
 
-    if (modes.areaSurfaceEditEnabled.value && allowHit('area') && (pickAreaId || pickSurfaceId)) {
-      const wallUnder = nameHit ? null : hitTest.hitTestWallAtCm(cm)
-      if (!wallUnder) {
-        if (pickSurfaceId && dakOverlay?.kind !== 'surface') {
-          actions.toggleSettingsSurface(pickSurfaceId)
-        } else if (pickAreaId) {
-          actions.selectSettingsArea(pickAreaId)
-        }
-        if (nameHit) actions.startAreaLabelDragPending(nameHit.kind, nameHit.id, event)
-        return
+    if (
+      !wallWins &&
+      modes.areaSurfaceEditEnabled.value &&
+      allowHit('area') &&
+      (pickAreaId || pickSurfaceId)
+    ) {
+      if (pickSurfaceId && dakOverlay?.kind !== 'surface') {
+        actions.toggleSettingsSurface(pickSurfaceId)
+      } else if (pickAreaId) {
+        actions.selectSettingsArea(pickAreaId)
       }
+      if (nameHit) actions.startAreaLabelDragPending(nameHit.kind, nameHit.id, event)
+      return
     }
 
-    // Interior click on area/surface without ctrl: clear (don't steal wall hits)
-    if (surfaceId || areaId) {
-      const wallUnder = hitTest.hitTestWallAtCm(cm)
-      if (!wallUnder) {
-        actions.clearSelection()
-        hoveredOpeningId.value = null
-        return
-      }
+    // Lege klik in ruimte/dakvlak: deselecteren, niet de muur stelen
+    if (!wallWins && (surfaceId || areaId)) {
+      actions.clearSelection()
+      hoveredOpeningId.value = null
+      return
     }
 
-    const wallId = dakRidgeId ?? hitTest.hitTestWallAtCm(cm)
+    const wallId = wallUnder
     if (wallId && modes.dakMode?.value === true && modes.isRidgeWallId?.(wallId) !== true) {
       actions.clearSelection()
       hoveredOpeningId.value = null
@@ -638,20 +655,17 @@ export function useFmlPreviewPointer(options: {
     }
 
     actions.clearOpeningSelectionState()
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
     settingsItemId.value = null
     moveItemId.value = null
     actions.cancelItemDragPending()
     const wasMoveTarget = moveWallId.value === wallId
-    moveWallId.value = wallId
+    actions.selectWall(wallId, cm)
     const wallIntent = resolveRelocatePointerIntent({
       touchNav: modes.touchNav.value,
       moveMod: modes.moveMod.value,
       shiftKey: event.shiftKey === true,
     })
     if (wallIntent === 'precise') {
-      settingsWallIds.value = []
       selection.settingsFacadeGroupId.value = null
       selection.settingsJunctionId.value = null
       actions.onWallMoveClick(wallId, event)
@@ -765,10 +779,18 @@ export function useFmlPreviewPointer(options: {
         !modes.inspectMode.value &&
         !modes.measureMode.value
       ) {
-        const dimId = modes.hitTestDimensionAtCm?.(cm) ?? null
-        selection.hoveredDimensionId.value = dimId && allowHover('dimension') ? dimId : null
+        const endpoint = modes.hitTestDimensionEndpointAtCm?.(cm) ?? null
+        if (endpoint && allowHover('dimension')) {
+          selection.hoveredDimensionId.value = endpoint.id
+          selection.hoveredDimensionEnd.value = endpoint.end
+        } else {
+          const dimId = modes.hitTestDimensionAtCm?.(cm) ?? null
+          selection.hoveredDimensionId.value = dimId && allowHover('dimension') ? dimId : null
+          selection.hoveredDimensionEnd.value = null
+        }
       } else {
         selection.hoveredDimensionId.value = null
+        selection.hoveredDimensionEnd.value = null
       }
     })
   }

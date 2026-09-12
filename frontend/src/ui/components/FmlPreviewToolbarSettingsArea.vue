@@ -2,6 +2,9 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { clampLiningCm } from '@/core/fml/roof-clear-height'
+import { DEFAULT_FLOOR_THICKNESS_CM } from '@/core/fml/floor-stack'
+import { roofVertexZMinCm } from '@/core/fml/roof-planes'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import HexColorField from './HexColorField.vue'
 import ScaleLengthInput from './ScaleLengthInput.vue'
@@ -23,17 +26,22 @@ const props = withDefaults(
       showAreaLabel: boolean
       canEditPolygon: boolean
       isCutout?: boolean
+      liningCm?: number | null
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
     roofVertexZCm?: number | null
     roofVertexIndex?: number | null
+    dakThicknessCm?: number
+    slabThicknessCm?: number
   }>(),
   {
     roomTypes: () => [],
     surfaceEditActive: false,
     roofVertexZCm: null,
     roofVertexIndex: null,
+    dakThicknessCm: 20,
+    slabThicknessCm: DEFAULT_FLOOR_THICKNESS_CM,
   },
 )
 
@@ -44,6 +52,7 @@ const emit = defineEmits<{
   applyAreaColor: [color: string]
   applyShowAreaLabel: [show: boolean]
   applySurfaceCutout: [isCutout: boolean]
+  applyAreaLiningCm: [cm: number]
   deleteTagged: []
   beginSurfacePolygonEdit: []
   endSurfacePolygonEdit: []
@@ -55,6 +64,15 @@ const taggedKindLabel = computed(() => {
   return props.selectedAreaPanel.kind === 'surface'
     ? t('result.toolbar.surfaceSelected')
     : t('result.toolbar.areaSelected')
+})
+
+const liningMinCm = computed(() => -Math.max(0, Math.round(props.dakThicknessCm ?? 20)))
+const roofZMinCm = computed(() => roofVertexZMinCm(props.slabThicknessCm))
+
+const liningCmValue = computed(() => {
+  const raw = props.selectedAreaPanel?.liningCm
+  if (raw == null || !Number.isFinite(raw)) return 0
+  return clampLiningCm(raw, props.dakThicknessCm ?? 20)
 })
 
 function onRoomTypeChange(event: Event): void {
@@ -81,6 +99,10 @@ function onHideLabelChange(event: Event): void {
 
 function onCutoutChange(event: Event): void {
   emit('applySurfaceCutout', (event.target as HTMLInputElement).checked)
+}
+
+function onLiningCm(cm: number): void {
+  emit('applyAreaLiningCm', clampLiningCm(cm, props.dakThicknessCm ?? 20))
 }
 </script>
 
@@ -139,6 +161,22 @@ function onCutoutChange(event: Event): void {
       </label>
     </div>
   </div>
+  <div v-if="selectedAreaPanel?.kind === 'area'" class="fml-toolbelt__field">
+    <span class="fml-toolbelt__field-label">{{ t('result.toolbar.areaLiningCm') }}</span>
+    <div class="fml-toolbelt__field-controls">
+      <ScaleLengthInput
+        :key="`lining-${selectedAreaPanel.id}`"
+        :cm="liningCmValue"
+        :unit="unit"
+        :min-cm="liningMinCm"
+        allow-zero
+        allow-negative
+        :aria-label="t('result.toolbar.areaLiningCmAria', { unit: t(`common.${unit}`) })"
+        input-class="fml-toolbelt__input"
+        @update:cm="onLiningCm"
+      />
+    </div>
+  </div>
   <div v-if="selectedAreaPanel?.kind === 'surface'" class="fml-toolbelt__field">
     <span class="fml-toolbelt__field-label">{{ t('result.toolbar.surfaceCutout') }}</span>
     <div class="fml-toolbelt__field-controls">
@@ -160,12 +198,13 @@ function onCutoutChange(event: Event): void {
         :key="`roof-z-${roofVertexIndex ?? 'none'}`"
         :cm="roofVertexZCm ?? 0"
         :unit="unit"
-        :min-cm="0"
+        :min-cm="roofZMinCm"
         allow-zero
+        allow-negative
         :disabled="roofVertexZCm == null"
         :aria-label="t('result.toolbar.roofVertexZAria', { unit: t(`common.${unit}`) })"
         input-class="fml-toolbelt__input"
-        @update:cm="emit('roofVertexZInput', Math.max(0, $event))"
+        @update:cm="emit('roofVertexZInput', $event)"
       />
     </div>
   </div>

@@ -3,6 +3,7 @@ import {
   buildFmlThicknessChains,
   harmonizeFmlWallThickness,
   roundFmlThicknessCm,
+  thicknessesCompatibleForChain,
 } from '@/core/fml/harmonize-fml-wall-thickness'
 import { classifyFmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { FloorPlan, Wall } from '@/core/fml/types'
@@ -143,6 +144,43 @@ describe('buildFmlThicknessChains', () => {
     expect(chains).toHaveLength(1)
     expect(chains[0]?.sort()).toEqual([0, 1])
   })
+
+  it('verbindt collineaire 7/10 bij catalogus [7,10,22,30,47] (dichte buren)', () => {
+    const catalog = [7, 10, 22, 30, 47]
+    const walls = [
+      wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 7),
+      wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 10),
+    ]
+    const chains = buildFmlThicknessChains(walls, undefined, catalog)
+    expect(chains).toHaveLength(1)
+    expect(chains[0]?.sort()).toEqual([0, 1])
+  })
+
+  it('splitst collineaire 10/22 bij catalogus [7,10,22,30,47] (echte stap)', () => {
+    const catalog = [7, 10, 22, 30, 47]
+    const walls = [
+      wall('w0', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
+      wall('w1', { x: 100, y: 0 }, { x: 200, y: 0 }, 22),
+    ]
+    const chains = buildFmlThicknessChains(walls, undefined, catalog)
+    expect(chains).toHaveLength(2)
+  })
+})
+
+describe('thicknessesCompatibleForChain', () => {
+  const catalog = [7, 10, 22, 30, 47]
+
+  it('merkt 7 vs 10 als keten-compatibel (Δcatalog 3 ≤ 15% van 47)', () => {
+    expect(thicknessesCompatibleForChain(7, 10, undefined, catalog)).toBe(true)
+  })
+
+  it('merkt 10 vs 22 als incompatibel (Δcatalog 12 > 15% van 47)', () => {
+    expect(thicknessesCompatibleForChain(10, 22, undefined, catalog)).toBe(false)
+  })
+
+  it('merkt 22 vs 30 als incompatibel (Δcatalog 8 > 15% van 47)', () => {
+    expect(thicknessesCompatibleForChain(22, 30, undefined, catalog)).toBe(false)
+  })
 })
 
 describe('harmonizeFmlWallThickness', () => {
@@ -190,6 +228,41 @@ describe('harmonizeFmlWallThickness', () => {
     const harmonized = harmonizeFmlWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
     expect(thicknesses).toEqual([10, 20, 20])
+  })
+
+  it('catalogus: collineaire 7/10 wordt één slot (lengtewint 10)', () => {
+    const plan = planWithWalls([
+      wall('thin', { x: 0, y: 0 }, { x: 80, y: 0 }, 7),
+      wall('thicker', { x: 80, y: 0 }, { x: 280, y: 0 }, 10),
+    ])
+    const catalog = [7, 10, 22, 30, 47]
+    const harmonized = harmonizeFmlWallThickness(
+      plan,
+      { minCm: 7, midCm: 22, maxCm: 47, thicknessCms: catalog },
+      undefined,
+      undefined,
+      undefined,
+      catalog,
+    )
+    const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
+    expect(thicknesses).toEqual([10, 10])
+  })
+
+  it('catalogus: collineaire 10/22 houdt beide slots', () => {
+    const plan = planWithWalls([
+      wall('mid', { x: 0, y: 0 }, { x: 100, y: 0 }, 10),
+      wall('thick', { x: 100, y: 0 }, { x: 200, y: 0 }, 22),
+    ])
+    const catalog = [7, 10, 22, 30, 47]
+    const harmonized = harmonizeFmlWallThickness(
+      plan,
+      { minCm: 7, midCm: 22, maxCm: 47, thicknessCms: catalog },
+      undefined,
+      undefined,
+      undefined,
+      catalog,
+    )
+    expect(harmonized.floors[0]?.walls.map((item) => item.thickness)).toEqual([10, 22])
   })
 
   it('catalogus: collineaire 15/10/15 door T houdt beide slots', () => {

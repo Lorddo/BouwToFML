@@ -41,9 +41,15 @@ export function endpointHeightCm(endpoint: Endpoint3D): number {
   return Math.max(0, endpoint.h - endpoint.z)
 }
 
-export function wallEndpoint3D(wall: Wall, end: WallEnd, floorHeightCm: number): Endpoint3D {
+function rawEndpoint(wall: Wall, end: WallEnd): unknown {
+  // Legacy extras wint bij dual-state (split vóór promote); anders typed elevation.
   const key = end === 'a' ? 'az' : 'bz'
-  return parseEndpoint3D(wall.extras?.[key], floorHeightCm)
+  if (wall.extras?.[key] != null) return wall.extras[key]
+  return end === 'a' ? wall.elevation?.a : wall.elevation?.b
+}
+
+export function wallEndpoint3D(wall: Wall, end: WallEnd, floorHeightCm: number): Endpoint3D {
+  return parseEndpoint3D(rawEndpoint(wall, end), floorHeightCm)
 }
 
 /** Effectieve muurhoogte op één uiteinde (`h - z`). */
@@ -90,11 +96,57 @@ export function wallUniformBottomZCm(wall: Wall, floorHeightCm: number): number 
 /** Aanzicht-greep: hoogte (z vast), lift (z, h vast), shift (z+h mee). */
 export type WallElevationEditMode = 'height' | 'lift' | 'shift'
 
+function cloneExtras(extras: FmlExtras | undefined): FmlExtras | undefined {
+  if (!extras) return undefined
+  return { ...extras }
+}
+
+function stripEndpointKeys(extras: FmlExtras | undefined): FmlExtras | undefined {
+  if (!extras) return undefined
+  if (extras.az == null && extras.bz == null) return extras
+  const next = { ...extras }
+  delete next.az
+  delete next.bz
+  return Object.keys(next).length > 0 ? next : undefined
+}
+
+/**
+ * Haal az/bz uit extras naar typed elevation (voor split-/draw-constructors).
+ * Ontbrekende ends krijgen `parseEndpoint3D`-fallback.
+ */
+export function promoteWallElevationFromExtras(
+  extras: FmlExtras | undefined,
+  fallbackHeightCm: number = DEFAULT_FML_WALL_HEIGHT_CM,
+): { extras: FmlExtras | undefined; elevation?: { a: Endpoint3D; b: Endpoint3D } } {
+  if (!extras) return { extras: undefined }
+  const hasAz = extras.az != null
+  const hasBz = extras.bz != null
+  if (!hasAz && !hasBz) return { extras }
+
+  const fallback =
+    typeof extras.az === 'object' &&
+    extras.az != null &&
+    typeof (extras.az as Endpoint3D).h === 'number'
+      ? endpointHeightCm(extras.az as Endpoint3D)
+      : typeof extras.bz === 'object' &&
+          extras.bz != null &&
+          typeof (extras.bz as Endpoint3D).h === 'number'
+        ? endpointHeightCm(extras.bz as Endpoint3D)
+        : fallbackHeightCm
+
+  const elevation = {
+    a: parseEndpoint3D(extras.az, fallback),
+    b: parseEndpoint3D(extras.bz, fallback),
+  }
+  return { extras: stripEndpointKeys(extras), elevation }
+}
+
 function writeBothEndpoints(wall: Wall, az: Endpoint3D, bz: Endpoint3D): Wall {
-  const extras = cloneExtras(wall.extras) ?? {}
-  extras.az = az
-  extras.bz = bz
-  return { ...wall, extras }
+  return {
+    ...wall,
+    elevation: { a: az, b: bz },
+    extras: stripEndpointKeys(cloneExtras(wall.extras)),
+  }
 }
 
 /** Zet beide einden op dezelfde bodem; behoudt hoogte per eind (`h − z`). */
@@ -170,11 +222,6 @@ export function wallElevationAtT(wall: Wall, t: number, floorHeightCm: number): 
   )
 }
 
-function cloneExtras(extras: FmlExtras | undefined): FmlExtras | undefined {
-  if (!extras) return undefined
-  return { ...extras }
-}
-
 /** Schrijf één endpoint-hoogte; behoudt bestaande `z`, zet `h = z + heightCm`. */
 export function withWallEndpointHeight(
   wall: Wall,
@@ -182,17 +229,14 @@ export function withWallEndpointHeight(
   heightCm: number,
   floorHeightCm: number,
 ): Wall {
-  const key = end === 'a' ? 'az' : 'bz'
   const current = wallEndpoint3D(wall, end, floorHeightCm)
   const next = makeEndpoint3D(current.z, heightCm)
-  const extras = cloneExtras(wall.extras) ?? {}
-  extras[key] = next
-  // Zorg dat het andere einde ook expliciet staat (anders export-fallback floor.height).
-  const otherKey = end === 'a' ? 'bz' : 'az'
-  if (extras[otherKey] == null) {
-    extras[otherKey] = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
-  }
-  return { ...wall, extras }
+  const other = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
+  return writeBothEndpoints(
+    wall,
+    end === 'a' ? next : other,
+    end === 'a' ? other : next,
+  )
 }
 
 function writeWallEndpoint(
@@ -201,14 +245,12 @@ function writeWallEndpoint(
   next: Endpoint3D,
   floorHeightCm: number,
 ): Wall {
-  const key = end === 'a' ? 'az' : 'bz'
-  const extras = cloneExtras(wall.extras) ?? {}
-  extras[key] = next
-  const otherKey = end === 'a' ? 'bz' : 'az'
-  if (extras[otherKey] == null) {
-    extras[otherKey] = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
-  }
-  return { ...wall, extras }
+  const other = wallEndpoint3D(wall, end === 'a' ? 'b' : 'a', floorHeightCm)
+  return writeBothEndpoints(
+    wall,
+    end === 'a' ? next : other,
+    end === 'a' ? other : next,
+  )
 }
 
 /** Schrijf één endpoint-bodem; behoudt hoogte (`h − z`). */
@@ -268,16 +310,19 @@ export function withWallUniformHeight(wall: Wall, heightCm: number, floorHeightC
   return next
 }
 
-/** Stamp default `az`/`bz` op muren zonder extras (nieuwe teken-muren). */
+/** Stamp default elevation op muren zonder ends (nieuwe teken-muren). */
 export function withDefaultWallEndpoints(wall: Wall, floorHeightCm: number): Wall {
   const height = clampHeightCm(floorHeightCm)
-  if (wall.extras?.az != null && wall.extras?.bz != null) return wall
-  const az = parseEndpoint3D(wall.extras?.az, height)
-  const bz = parseEndpoint3D(wall.extras?.bz, height)
-  return {
-    ...wall,
-    extras: { ...(wall.extras ?? {}), az, bz },
+  if (wall.elevation?.a != null && wall.elevation?.b != null) return wall
+  if (wall.extras?.az != null && wall.extras?.bz != null) {
+    return {
+      ...wall,
+      ...promoteWallElevationFromExtras(wall.extras, height),
+    }
   }
+  const az = parseEndpoint3D(rawEndpoint(wall, 'a'), height)
+  const bz = parseEndpoint3D(rawEndpoint(wall, 'b'), height)
+  return writeBothEndpoints(wall, az, bz)
 }
 
 export function setWallEndpointHeight(
@@ -447,48 +492,54 @@ export function setJunctionElevationEdit(
 }
 
 /**
- * Split `az`/`bz` op parameter `t` (a→b). Overige extras worden gedeeld.
- * Zonder bron-extras blijven beide helften zonder az/bz (export valt terug op floor.height).
+ * Split elevation op parameter `t` (a→b). Overige extras worden gedeeld.
+ * Return bevat nog az/bz in extras voor callers; gebruik `promoteWallElevationFromExtras`
+ * bij wall-constructie. Zonder bron-elevatie blijven beide helften zonder ends
+ * (export valt terug op floor.height).
  */
 export function splitWallEndpointExtras(
   wall: Wall,
   t: number,
 ): { firstExtras: FmlExtras | undefined; secondExtras: FmlExtras | undefined } {
   const extras = wall.extras
-  if (!extras) return { firstExtras: undefined, secondExtras: undefined }
+  const elev = wall.elevation
+  const hasAz = elev?.a != null || extras?.az != null
+  const hasBz = elev?.b != null || extras?.bz != null
 
-  const hasAz = extras.az != null
-  const hasBz = extras.bz != null
+  const restBase = extras ? { ...extras } : {}
+  delete restBase.az
+  delete restBase.bz
+  const sharedRest = Object.keys(restBase).length > 0 ? restBase : undefined
+
   if (!hasAz && !hasBz) {
-    const rest = { ...extras }
-    delete rest.az
-    delete rest.bz
-    const shared = Object.keys(rest).length > 0 ? rest : undefined
-    return { firstExtras: shared, secondExtras: shared ? { ...shared } : undefined }
+    return {
+      firstExtras: sharedRest,
+      secondExtras: sharedRest ? { ...sharedRest } : undefined,
+    }
   }
 
   const fallback =
-    typeof extras.az === 'object' &&
-    extras.az != null &&
-    typeof (extras.az as Endpoint3D).h === 'number'
-      ? endpointHeightCm(extras.az as Endpoint3D)
-      : typeof extras.bz === 'object' &&
-          extras.bz != null &&
-          typeof (extras.bz as Endpoint3D).h === 'number'
-        ? endpointHeightCm(extras.bz as Endpoint3D)
-        : DEFAULT_FML_WALL_HEIGHT_CM
+    elev?.a != null && typeof elev.a.h === 'number'
+      ? endpointHeightCm(elev.a)
+      : elev?.b != null && typeof elev.b.h === 'number'
+        ? endpointHeightCm(elev.b)
+        : typeof extras?.az === 'object' &&
+            extras.az != null &&
+            typeof (extras.az as Endpoint3D).h === 'number'
+          ? endpointHeightCm(extras.az as Endpoint3D)
+          : typeof extras?.bz === 'object' &&
+              extras.bz != null &&
+              typeof (extras.bz as Endpoint3D).h === 'number'
+            ? endpointHeightCm(extras.bz as Endpoint3D)
+            : DEFAULT_FML_WALL_HEIGHT_CM
 
-  const az = parseEndpoint3D(extras.az, fallback)
-  const bz = parseEndpoint3D(extras.bz, fallback)
+  const az = parseEndpoint3D(rawEndpoint(wall, 'a'), fallback)
+  const bz = parseEndpoint3D(rawEndpoint(wall, 'b'), fallback)
   const mid = interpolateEndpoint3D(az, bz, t)
 
-  const rest = { ...extras }
-  delete rest.az
-  delete rest.bz
-
   return {
-    firstExtras: { ...rest, az, bz: mid },
-    secondExtras: { ...rest, az: mid, bz },
+    firstExtras: { ...(sharedRest ?? {}), az, bz: mid },
+    secondExtras: { ...(sharedRest ?? {}), az: mid, bz },
   }
 }
 
@@ -534,7 +585,7 @@ function mapPlanOpenings(
   )
 }
 
-/** Overschrijf `floor.height` + alle `az`/`bz` (z behouden). Deuren/ramen ongemoeid. */
+/** Overschrijf `floor.height` + alle elevation-ends (z behouden). Deuren/ramen ongemoeid. */
 export function overwritePlanWallHeights(
   plan: FloorPlan,
   heightCm: number,

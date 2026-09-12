@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { createBlankFloor, createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
 import {
   elevationDakThicknessCm,
@@ -8,6 +9,7 @@ import {
   setNokThicknessCm,
   setSlabThicknessCm,
 } from '@/core/fml/floor-stack'
+import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { seedRidgeDisplayWidthIfMissing, ridgeDisplayWidthCm } from '@/core/fml/ridge-walls'
 
 describe('floor-stack elevation groups', () => {
@@ -46,5 +48,25 @@ describe('ridge display seed', () => {
     const seeded = seedRidgeDisplayWidthIfMissing(plan, 16)
     expect(ridgeDisplayWidthCm(seeded)).toBe(16)
     expect(ridgeDisplayWidthCm(seedRidgeDisplayWidthIfMissing(seeded, 8))).toBe(16)
+  })
+})
+
+describe('floor-stack .plg-roundtrip', () => {
+  it('woont in plan.roof.stack; FML-export stript floorStack', () => {
+    let plan = setNokThicknessCm(createEmptyFloorPlan({ name: 'StackPlg' }), 40)
+    plan = setSlabThicknessCm(plan, 0, 22)
+    expect(plan.roof?.stack).toMatchObject({
+      nokThicknessCm: 40,
+      floors: [{ level: 0, thicknessCm: 22 }],
+    })
+    expect(plan.source?.settings?.floorStack).toBeUndefined()
+
+    const raw = JSON.parse(buildFmlV3(plan))
+    expect(raw.settings.floorStack).toBeUndefined()
+
+    // Zonder floorStack in FML komt import terug op defaults — bekend strip-gedrag.
+    const imported = importFmlV3(raw).plan
+    expect(imported.source?.settings?.floorStack).toBeUndefined()
+    expect(readFloorStack(imported).nokThicknessCm).toBe(30)
   })
 })

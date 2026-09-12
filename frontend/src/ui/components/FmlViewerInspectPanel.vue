@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import { inspectKindLabel, type FmlInspectKind } from '@/ui/composables/fml-preview/fml-inspect'
+import { facadeGroupDisplayName } from '@/ui/composables/fml-preview/facade-group-label'
 
 export interface InspectHit {
   kind: FmlInspectKind
@@ -80,14 +81,14 @@ const { t } = useI18n()
             {{ t('result.toolbar.facadeGroupAdd') }}
           </option>
           <option v-for="group in addableFacadeGroups" :key="group.id" :value="group.id">
-            {{ group.name || group.id }}
+            {{ facadeGroupDisplayName(group, t) }}
           </option>
           <option value="__new__">{{ t('result.toolbar.facadeGroupNew') }}</option>
           <option value="__edit__">{{ t('result.toolbar.facadeGroupEditAll') }}</option>
         </select>
         <div v-if="memberFacadeGroups.length > 0" class="inspect-facade-chips">
           <div v-for="group in memberFacadeGroups" :key="group.id" class="inspect-facade-chip">
-            <span class="inspect-facade-chip-name">{{ group.name || group.id }}</span>
+            <span class="inspect-facade-chip-name">{{ facadeGroupDisplayName(group, t) }}</span>
             <button
               type="button"
               class="inspect-facade-chip-btn"

@@ -200,9 +200,11 @@ describe('resolveStampOwnership', () => {
 })
 
 describe('stampOwned export', () => {
-  it('buildFmlV3 stript stampOwned uit wall extras', () => {
+  it('buildFmlV3 stript stampOwned (runtime-veld, niet in FML)', () => {
     const owned = markStampOwned(wall('s1', { x: 0, y: 0 }, { x: 100, y: 0 }, 10))
     expect(isStampOwnedWall(owned)).toBe(true)
+    expect(owned.stampOwned).toBe(true)
+    expect(owned.extras?.stampOwned).toBeUndefined()
     const plan: FloorPlan = {
       name: 'T',
       floors: [{ name: 'F0', level: 0, height: 280, walls: [owned] }],
@@ -210,7 +212,7 @@ describe('stampOwned export', () => {
     const text = buildFmlV3(plan)
     expect(text).not.toContain('stampOwned')
     const json = JSON.parse(text) as {
-      floors: Array<{ designs: Array<{ walls: Array<{ guid: string }> }> }>
+      floors: Array<{ designs: Array<{ walls: Array<{ id: string }> }> }>
     }
     expect(json.floors[0].designs[0].walls[0].guid).toBe('s1')
   })

@@ -97,7 +97,7 @@ Bouw: `frontend/src/platform/e2e-fixture/` (`buildE2eFixture`, RLE-codec).
 ```bash
 cd frontend
 npm run test:e2e          # vitest.e2e.config.ts
-npm run test:e2e -- -u    # snapshots bijwerken
+npx vitest run --config vitest.e2e.config.ts --update  # snapshots bijwerken (niet -u: npm 11 slokt dat op)
 npm run esc:grootboek     # cross-fixture escalatie-rapport → ledger
 npm run esc:killswitch    # ESC_OFF=<id> per kandidaat, snapshot-hash-diff
 npm run esc:coverage      # getagd / geïnstrumenteerd / in-harnas

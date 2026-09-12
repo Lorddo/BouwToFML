@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
-import { resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
+import { listRidgeSurfacesOnFloor, resolveDormerParent, resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
 import {
   effectiveRoomTypeColor,
   resolveRoomType,
@@ -44,11 +44,15 @@ export function useFmlPreviewDrawSurface(options: {
   acceptPoint?: (point: Point2D) => boolean
   /** Dakvlak-tool: geen roomtype, altijd dakvlak. */
   isDak?: () => boolean
+  /** Na succesvol dakvlak: overlay aanzetten. */
+  onRoofPlaced?: () => void
 }) {
   const draftPoints = options.selection.drawSurfacePoints
   const hoverCm = ref<Point2D | null>(null)
   const pendingRole = ref<number | null>(null)
   const pendingCutout = ref(false)
+  /** Dak-tab: teken als hoofddak of dakkapel. */
+  const pendingRoofKind = ref<'plane' | 'dormer'>('plane')
   const CLOSE_EPS_CM = 8
 
   function setJunctionHover(event: MouseEvent): void {
@@ -94,22 +98,37 @@ export function useFmlPreviewDrawSurface(options: {
   function tryClose(): boolean {
     const pts = draftPoints.value
     if (!pts || pts.length < 3) return false
-    options.editor.pushUndo()
     const dak = options.isDak?.() === true
     const plan = options.editor.localPlan.value
     const floorIndex = options.editor.floorIndex.value
     if (dak) {
-      options.editor.addSurface({
-        poly: pts.map((p) => ({
-          x: p.x,
-          y: p.y,
-          z: plan ? snapRoofVertexZ({ plan, floorIndex, point: p }) : 0,
-        })),
-        color: resolveRoofSurfaceColor(),
+      options.editor.pushUndo()
+      const kind = pendingRoofKind.value === 'dormer' ? 'dormer' : 'plane'
+      const poly = pts.map((p) => ({
+        x: p.x,
+        y: p.y,
+        z: plan ? snapRoofVertexZ({ plan, floorIndex, point: p }) : 0,
+      }))
+      let parentId: string | undefined
+      if (kind === 'dormer' && plan) {
+        const existing = listRidgeSurfacesOnFloor(plan.floors[floorIndex])
+        parentId = resolveDormerParent({ poly }, existing)?.id
+      }
+      const id = options.editor.addSurface({
+        poly,
+        color: resolveRoofSurfaceColor(undefined, kind === 'dormer'),
         showAreaLabel: false,
         isRoof: true,
+        roofKind: kind,
+        roofParentId: parentId,
       })
+      if (!id) {
+        options.editor.undo()
+        return false
+      }
+      options.onRoofPlaced?.()
     } else {
+      options.editor.pushUndo()
       const role = pendingRole.value
       const rt = role != null ? resolveRoomType(role) : null
       const cutout = pendingCutout.value === true
@@ -178,6 +197,7 @@ export function useFmlPreviewDrawSurface(options: {
     hoverCm,
     pendingRole,
     pendingCutout,
+    pendingRoofKind,
     cancelDrawSurface,
     onDrawSurfaceClick,
     onDrawSurfaceDblClick,

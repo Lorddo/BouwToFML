@@ -27,7 +27,12 @@ import {
   type FloorOrientOp,
   type FloorOrientState,
 } from '@/core/fml/floor-plan-orient'
-import { downloadFml } from '@/core/fml/downloadFml'
+import { downloadFml, downloadText } from '@/core/fml/downloadFml'
+import {
+  createPlgDocument,
+  writePlg,
+  type PlgSettings,
+} from '@/core/plg/plg-document'
 import {
   assignWallsToGroup,
   createFacadeGroup,
@@ -62,6 +67,7 @@ import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctio
 import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
 import { useFmlViewerInspect } from '@/ui/composables/fml-viewer/useFmlViewerInspect'
+import { EDITOR_PLAN_FILE_ACCEPT } from '@/ui/composables/fml-viewer/parse-editor-plan-file'
 import { useFmlViewerLoad } from '@/ui/composables/fml-viewer/useFmlViewerLoad'
 import { useFmlViewerSessionDefaults } from '@/ui/composables/fml-viewer/useFmlViewerSessionDefaults'
 import {
@@ -547,7 +553,8 @@ const openingOverflow = computed(() => {
 
 // --- FML export ---
 
-const fmlText = computed(() => {
+/** Live plan → FML-string alleen bij download (geen computed bij elke mutatie). */
+function buildCurrentFmlText(): string {
   if (!plan.value) return ''
   const exportPlan = stripStampGroupFromPlan(plan.value)
   return buildFmlV3(exportPlan, {
@@ -558,7 +565,7 @@ const fmlText = computed(() => {
     bovenlichtGapCm: (_floor, index) => defaultsForFloor(index).bovenlichtGapCm,
     useMetric: loadUserSettings().unitSystem === 'metric',
   })
-})
+}
 
 // --- Orient ---
 
@@ -733,7 +740,7 @@ function applyBindWallsToRoof(floorIndex: number): void {
     skipped: result.skippedBlocked + result.skippedUncovered,
     splits: result.splits,
   })
-  if (result.boundJunctions === 0 && result.splits === 0) return
+  if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) return
   previewCanvasRef.value?.pushUndo?.()
   plan.value = result.plan
 }
@@ -777,6 +784,19 @@ watch(pendingAlignRebase, async (preview) => {
 
 // --- Download ---
 
+function buildViewerPlgSettings(): PlgSettings {
+  const settings = loadUserSettings()
+  return {
+    unitSystem: settings.unitSystem,
+    scaleInputUnit: scaleInputUnit.value,
+    planDisplayStyle: settings.fmlViewer.planDisplayStyle ?? 'editor',
+    showCanvasGrid: settings.fmlViewer.showCanvasGrid !== false,
+    // Sessie-defaults dekken alleen de openingshoogtes; dikte-catalogus en
+    // banden komen uit de gebruikersinstellingen.
+    defaults: { ...settings.defaults, ...activeFloorDefaults.value },
+  }
+}
+
 function downloadCurrentFml(): void {
   flushPreviewFieldCommits()
   persistActiveUnderlayDrawing()
@@ -785,9 +805,34 @@ function downloadCurrentFml(): void {
   if (junctioned !== plan.value) {
     plan.value = junctioned
   }
-  if (!fmlText.value) return
+  const text = buildCurrentFmlText()
+  if (!text) return
   const base = fileName.value?.replace(/\.[^.]+$/i, '') || plan.value?.name?.trim() || 'fml-export'
-  downloadFml(fmlText.value, `${base}.fml`)
+  downloadFml(text, `${base}.fml`)
+}
+
+function downloadCurrentPlg(): void {
+  flushPreviewFieldCommits()
+  persistActiveUnderlayDrawing()
+  if (!plan.value) return
+  const junctioned = applyJunctionSanitizeToPlan(plan.value)
+  if (junctioned !== plan.value) {
+    plan.value = junctioned
+  }
+  const exportPlan = stripStampGroupFromPlan(plan.value)
+  const base = fileName.value?.replace(/\.[^.]+$/i, '') || exportPlan.name?.trim() || 'plan-export'
+  const leftover = exportPlan.source?.leftover
+  const doc = createPlgDocument({
+    project: {
+      id: `viewer-${base}`,
+      name: exportPlan.name || base,
+      address: '',
+    },
+    settings: buildViewerPlgSettings(),
+    plan: exportPlan,
+    ...(leftover ? { foreign: { fml: leftover } } : {}),
+  })
+  downloadText(writePlg(doc), `${base}.plg`, 'application/json')
 }
 
 function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
@@ -817,6 +862,8 @@ const {
   addFloor,
   removeFloor,
   startNewPlan,
+  loadPlan,
+  hasOpenContent,
   onFileInput,
 } = useFmlViewerLoad({
   plan,
@@ -866,6 +913,8 @@ function applyViewerSettings(): void {
 
 defineExpose({
   startNewPlan,
+  loadPlan,
+  hasOpenContent,
   applyViewerSettings,
   applyCornerMarkerModeFromSettings: () => applyViewerSettings(),
 })
@@ -941,6 +990,17 @@ defineExpose({
             >
               <ToolbeltIcon name="download" />
               <span>Download .fml</span>
+            </button>
+            <button
+              v-if="plan"
+              type="button"
+              class="sidebar-icon-btn"
+              title="Download .plg"
+              aria-label="Download .plg"
+              @click="downloadCurrentPlg"
+            >
+              <ToolbeltIcon name="download" />
+              <span>Download .plg</span>
             </button>
             <button
               v-if="!plan"
@@ -1029,7 +1089,7 @@ defineExpose({
                   <span>{{ t('viewer.chooseFml') }}</span>
                   <input
                     type="file"
-                    accept=".fml,.json,.json.fml"
+                    :accept="EDITOR_PLAN_FILE_ACCEPT"
                     :disabled="isLoadingFml"
                     @change="onFileInput"
                   />
@@ -1428,6 +1488,9 @@ defineExpose({
             >
               Download .fml
             </button>
+            <button type="button" class="upload-btn download-plg" @click="downloadCurrentPlg">
+              Download .plg
+            </button>
           </div>
         </div>
       </aside>
@@ -1680,7 +1743,7 @@ defineExpose({
           {{ t('viewer.chooseFml') }}
           <input
             type="file"
-            accept=".fml,.json,.json.fml"
+            :accept="EDITOR_PLAN_FILE_ACCEPT"
             :disabled="isLoadingFml"
             @change="onFileInput"
           />

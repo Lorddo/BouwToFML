@@ -8,15 +8,20 @@ export type FmlExtras = Record<string, unknown>
 
 export type OpeningType = 'door' | 'window'
 
+export type { OpeningKind } from './opening-kind-catalog'
+export type { FixtureAssetKind } from './fixture-kind-catalog'
+
 export interface Opening {
-  refid: string
+  /** Stabiele exemplaar-ID (UUID). FML-export schrijft dit als `guid`. */
+  id: string
+  /** Domein-soort (`door.single`, `window.triple`, …). Geen Floorplanner-hash. */
+  kind: import('./opening-kind-catalog').OpeningKind
   t: number
   width: number
   type: OpeningType
   mirrored?: [number, number]
   z?: number
   z_height?: number
-  guid?: string
   materials?: Record<string, { type: string; value: string }>
   /** Floorplanner-objectlabel; geen eigen UI, wel roundtrip. */
   name?: string
@@ -39,13 +44,21 @@ export interface Opening {
    */
   bovenlichtGapCm?: number | null
   /**
-   * @deprecated FML-viewer leest boog-inset uit opening-refid-catalog (`swingInsetCm`).
+   * @deprecated FML-viewer leest boog-inset uit opening-kind-catalog (`swingInsetCm`).
    * Velden blijven optioneel voor oude in-memory plans; worden genegeerd bij render.
    */
   swingHingeInsetCm?: number
   /** @deprecated Zie swingHingeInsetCm. */
   swingFreeInsetCm?: number
-  /** Overige opening-keys (niet getypt). */
+  /**
+   * Display-kozijn in het FML-gat (was `extras.btfFrame`).
+   * Alle vier verplicht wanneer gezet.
+   */
+  frame?: { leftCm: number; rightCm: number; topCm: number; bottomCm: number }
+  /**
+   * Overige opening-keys.
+   * Adapter mag `fmlRefid` zetten voor unmapped FML-roundtrip (niet onze identiteit).
+   */
   extras?: FmlExtras
 }
 
@@ -57,7 +70,22 @@ export interface Wall {
   balance?: number
   c?: Point2D | null
   openings: Opening[]
-  /** Overige muur-keys (az/bz/decor/groupMarkerConfig/…). */
+  /**
+   * Endpoint elevations (was `extras.az` / `extras.bz`).
+   * FML roundtrip via `plg/fml-adapter/wall-elevation`.
+   */
+  elevation?: {
+    a: { z: number; h: number }
+    b: { z: number; h: number }
+  }
+  /** Nok-muur (`.plg`); FML-adapter schrijft `extras.ridge: true`. */
+  role?: import('../plg/extension-types').WallRole
+  /**
+   * Session-only stempel-eigendom (was `extras.stampOwned`).
+   * Niet serialiseren naar FML/`.plg`.
+   */
+  stampOwned?: boolean
+  /** Overige muur-keys (decor/groupMarkerConfig/…). */
   extras?: FmlExtras
 }
 
@@ -74,9 +102,12 @@ export interface DrawingMeta {
   extras?: FmlExtras
 }
 
-/** Floorplanner design-item (keuken/sanitair/installaties). Alleen display bij import. */
+/** Design-item (keuken/sanitair/installaties). */
 export interface FloorItem {
-  refid: string
+  /** Stabiele exemplaar-ID (UUID). FML-export schrijft dit als `guid`. */
+  id: string
+  /** Domein-soort (`toilet`, `countertop`, …). Geen Floorplanner-hash. */
+  kind: import('./fixture-kind-catalog').FixtureAssetKind
   x: number
   y: number
   z?: number
@@ -85,12 +116,14 @@ export interface FloorItem {
   z_height?: number
   rotation?: number
   mirrored?: [number, number]
-  guid?: string
   name?: string
   showLabel?: boolean
   name_x?: number
   name_y?: number
-  /** Overige item-keys (materials/rotation_x/light/…). */
+  /**
+   * Overige item-keys.
+   * Adapter mag `fmlRefid` zetten voor unmapped FML-roundtrip.
+   */
   extras?: FmlExtras
 }
 
@@ -106,6 +139,12 @@ export interface FloorArea {
   showSurfaceArea?: boolean
   name_x?: number
   name_y?: number
+  /**
+   * Dakbekleding-offset t.o.v. de onderkant van het schild (cm).
+   * Positief = dikkere bekleding (1,50 m-lijn naar de nok); negatief = ruimer
+   * (clamp ≥ −dakdikte, tot in de dakplaat).
+   */
+  liningCm?: number
   /** Overige area-keys (ceiling/roomstyle_id/texture/…). */
   extras?: FmlExtras
 }
@@ -113,6 +152,7 @@ export interface FloorArea {
 /** Handmatige polygoon boven areas (Floorplanner `surfaces[]`). */
 export interface FloorSurface {
   id: string
+  /** Voor dakvlakken is `z` de onderkant van de dakplaat (plafond), t.o.v. vloer-Z 0. */
   poly: Array<Point2D & { z?: number }>
   role?: number
   name?: string
@@ -125,6 +165,12 @@ export interface FloorSurface {
   isCutout?: boolean
   isRoof?: boolean
   pattern?: number
+  /** Dakvlak-herkomst (`.plg`); FML-adapter schrijft `extras.btfOrigin`. */
+  origin?: import('../plg/extension-types').SurfaceOrigin
+  /** Hoofddak of dakkapel (`.plg`); default `'plane'`. */
+  roofKind?: import('../plg/extension-types').RoofKind
+  /** Ouder-dakvlak GUID — alleen bij `roofKind: 'dormer'`. */
+  roofParentId?: string
   /** Overige surface-keys (transparency/…). */
   extras?: FmlExtras
 }
@@ -197,6 +243,12 @@ export interface FloorDesign {
   labels?: FloorLabel[]
   lines?: FloorLine[]
   dimensions?: FloorDimension[]
+  /** Maatlijn-slicers (was `settings.btfSlices`). */
+  slices?: Array<{ m: Point2D; p: Point2D }>
+  /** Autogen-maatlijnen (was `settings.engineAutoDims`). */
+  autoDimensions?: boolean
+  /** Dak-design (`.plg`); FML-adapter schrijft `settings.btfRole`. */
+  role?: import('../plg/extension-types').DesignRole
   source?: FloorDesignSource
 }
 
@@ -238,10 +290,34 @@ export interface Floor {
   source?: FloorSource
 }
 
+/** Eigen plan-settings (niet Floorplanner-passthrough). */
+export interface FloorPlanSettings {
+  /** Packed bovenlicht (default true). Was `source.settings.bovenlichtPacked`. */
+  bovenlichtPacked?: boolean
+}
+
 export interface FloorPlan {
   name: string
   floors: Floor[]
   source?: FloorPlanSource
+  /** Eigen settings (`.plg`); FML-adapter spiegelt bekende keys naar `source.settings`. */
+  settings?: FloorPlanSettings
+  /**
+   * Gevelgroepen (`.plg` / in-sessie). FML-adapter projecteert naar
+   * `settings.facadeGroups`; niet dual-schrijven naar settings.
+   */
+  facadeGroups?: import('../plg/extension-types').FacadeGroup[]
+  /**
+   * Nok + dakvlakken + vloerstack (`.plg` / in-sessie).
+   * FML-adapter projecteert naar ridgeWalls / roofPlanes / floorStack;
+   * floorStack blijft FML-export-gestript.
+   */
+  roof?: import('../plg/extension-types').PlanRoof
+  /**
+   * Aanzicht-onderleggers + projectie (`.plg` / in-sessie).
+   * FML-adapter zet tijdelijk elevationViews/Projection; export stript ze.
+   */
+  elevations?: import('../plg/extension-types').PlanElevations
 }
 
 export interface FloorStats {
@@ -261,69 +337,17 @@ export interface ImportResult {
   warnings: ImportWarning[]
 }
 
-export const WINDOW_REFIDS = new Set([
-  'b88cd3f479455fbf57205a91c613c02b7e6dc2df',
-  'bbf86e131112adca8869e9970229a71d7ff3fc28',
-  'e3296a727699a3fc70e70dfec4ab715ed368ef63',
-  '14980facdeef5985d186e6767ee5300a1845abbc',
-  '65d378c39d0183c82927e4ed7f8be6b224cf1df8',
-  '6da47b0a60330d19716d716046ec6c72c19d2cdb',
-  'db1a3a6fceaae4487bda6b761df83ea75d9996c5',
-  '327e76e3a132e358fef8757471f4989e93323b03',
-])
-
-/** Standaard enkele deur (90° draaicirkel) — default bij deur-referenties. */
-export const CONCEPT_DOOR_REFID = '0434246537840a3326e305dbe7b9c355743e6e93'
-/** Kastdeur (45°) — handmatig kiesbaar per deur-referentie. */
-export const CLOSET_DOOR_REFID = 'd34e31c31ba6e6bd4e0d67096ec1b31e9035c7d9'
-/**
- * Dubbele deur (glas) — X-10 twin-merge en editor-preset `double`.
- * Niet in stap-2 ref-UI; algoritmisch of handmatig in FML-editor.
- */
-export const DOUBLE_WIDE_DOOR_REFID = '5ae0ee3c682e32c8c7ac15a6136d692df5737b22'
-/** Schuifpui met 2 schuivende delen. */
-export const SLIDING_DOUBLE_DOOR_REFID = '1cdb4e6092e998630e7881667f2ddedafa3b0eb9'
-/** Schuifpui met 1 schuivend deel. */
-export const SLIDING_SINGLE_DOOR_REFID = 'd2785cc45c9c0ec86644135d22fa9ac9c49bcad6'
-/** Pocketdeur (1 schuifpijl). */
-export const POCKET_DOOR_REFID = '216'
-/**
- * Dubbele deur (vol / dicht) — editor-preset `double_solid`.
- * Was eerder foutief als garagedeur gelabeld.
- */
-export const DOUBLE_SOLID_DOOR_REFID = '9c1479d9dfc482859aea10b9dd67f5e7773fff6d'
-/** Garagedeur (sectionaal, geen draaicirkel). */
-export const GARAGE_DOOR_REFID = '37bb0bbe45ba0a5efda34f3f1e0b7ace63084e7f'
-/** Frans balkon — draaideur + balustrade. */
-export const FRENCH_BALCONY_DOOR_REFID = '9c845cf2ad8de220b65ee4dedeeb28ba4d750e21'
-/** Kale rechthoekige doorgang (entry way). */
-export const PASSAGE_DOOR_REFID = '181e49d1e848e8668befb4ee93bb5a2ec86b017c'
-/** Kale doorgang met ronde bovenzijde (archway). */
-export const ARCHWAY_DOOR_REFID = '047a2a4afa369865012e7925b94c11a817ff0c69'
-/** Vouwdeur enkel (2 delen). */
-export const BIFOLD_DOOR_REFID = 'e7ef286f1690491cf28bf8586c2b9624be881dba'
-/** Vouwdeur dubbel (4 delen). */
-export const BIFOLD_DOUBLE_DOOR_REFID = '919e3f1aaa05cd6b38b843f44573261442e38caa'
-/** @lintignore — gebruikt door buildFmlV3 (nog niet in UI) */
-export const CONCEPT_WINDOW_REFID = 'b88cd3f479455fbf57205a91c613c02b7e6dc2df'
-export const WINDOW_DOUBLE_REFID = 'bbf86e131112adca8869e9970229a71d7ff3fc28'
-export const WINDOW_TRIPLE_REFID = 'e3296a727699a3fc70e70dfec4ab715ed368ef63'
-export const WINDOW_ROUND_REFID = '6da47b0a60330d19716d716046ec6c72c19d2cdb'
-export const WINDOW_HALF_ROUND_REFID = '65d378c39d0183c82927e4ed7f8be6b224cf1df8'
-export const WINDOW_TRIANGLE_REFID = 'db1a3a6fceaae4487bda6b761df83ea75d9996c5'
-export const WINDOW_BLIND_REFID = '327e76e3a132e358fef8757471f4989e93323b03'
-
-/** Keuzes in stap-1 deur-referentie Template ID dropdown. */
-export const DOOR_FML_TEMPLATE_OPTIONS = [
-  { refid: CONCEPT_DOOR_REFID, label: 'Standaard deur' },
-  { refid: CLOSET_DOOR_REFID, label: 'Kastdeur' },
+/** Keuzes in stap-1 deur-referentie Template ID dropdown (domein-kinds). */
+export const DOOR_TEMPLATE_KIND_OPTIONS = [
+  { kind: 'door.single' as const, label: 'Standaard deur' },
+  { kind: 'door.closet' as const, label: 'Kastdeur' },
 ] as const
 
-export type DoorFmlTemplateRefId = (typeof DOOR_FML_TEMPLATE_OPTIONS)[number]['refid']
+export type DoorTemplateKind = (typeof DOOR_TEMPLATE_KIND_OPTIONS)[number]['kind']
 
-export function resolveDoorFmlTemplateRefId(
-  refid: string | undefined | null,
-): DoorFmlTemplateRefId {
-  if (refid === CLOSET_DOOR_REFID) return CLOSET_DOOR_REFID
-  return CONCEPT_DOOR_REFID
+export function resolveDoorTemplateKind(
+  kind: string | undefined | null,
+): DoorTemplateKind {
+  if (kind === 'door.closet') return 'door.closet'
+  return 'door.single'
 }

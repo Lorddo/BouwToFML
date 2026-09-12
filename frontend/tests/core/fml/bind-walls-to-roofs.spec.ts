@@ -331,3 +331,42 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
     expect(result.plan.floors[0].walls.length).toBeGreaterThanOrEqual(before)
   })
 })
+
+describe('bindFloorWallsToRoofs dakkapel-rand flush', () => {
+  it('hartlijn naar buitenface, dikte naar binnen', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('wang', { x: 100, y: 0 }, { x: 100, y: 120 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        roofKind: 'dormer',
+        roofParentId: 'parent',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 320 },
+          { x: 100, y: 120, z: 320 },
+        ],
+      }),
+    ])
+    const result = bindFloorWallsToRoofs(plan, 0)
+    expect(result.flushedEdges).toBe(1)
+    const wang = result.plan.floors[0].walls.find((item) => item.id === 'wang')!
+    expect(wang.balance).toBe(1)
+    expect(wang.a.x).toBeCloseTo(90, 5)
+    expect(wang.b.x).toBeCloseTo(90, 5)
+  })
+})

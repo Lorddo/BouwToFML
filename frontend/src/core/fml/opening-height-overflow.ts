@@ -118,7 +118,7 @@ export function findOpeningHeightOverflows(
           side: 'below',
           topCm: sillCm,
           floorHeightCm: wallBottomCm,
-          guid: opening.guid,
+          guid: opening.id,
         })
       }
       if (exceedsTop(topCm, wallTopCm)) {
@@ -127,7 +127,7 @@ export function findOpeningHeightOverflows(
           side: 'above',
           topCm,
           floorHeightCm: wallTopCm,
-          guid: opening.guid,
+          guid: opening.id,
         })
       }
       if (!bovenlichtRequested(opening, options)) continue
@@ -138,7 +138,7 @@ export function findOpeningHeightOverflows(
           side: 'above',
           topCm: bovenlichtTop,
           floorHeightCm: wallTopCm,
-          guid: opening.guid,
+          guid: opening.id,
         })
       }
     }

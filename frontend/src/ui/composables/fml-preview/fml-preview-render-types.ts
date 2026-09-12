@@ -200,6 +200,25 @@ export interface RenderModel {
   /** Live slicer-maten op P-lijn. */
   sliceDimensions: RenderDimension[]
   areaSideDims: RenderAreaSideDim[]
+  /** Live 1,50/2,00 m-contour (niet in export). */
+  clearHeight: RenderClearHeight | null
+  /** Plattegrond: dakvlak-omtrek (stage coords). */
+  roofPlaneOutlines: RenderRoofPlaneOutline[]
   toCmPoint: (stageX: number, stageY: number) => { x: number; y: number }
   panRect: { x: number; y: number; width: number; height: number }
+}
+
+/** Stage-coords voor clear-height overlay. */
+export type RenderClearHeight = {
+  lines150: number[][]
+  lines200: number[][]
+  fills150: number[][]
+}
+
+/** Stage-coords voor dakvlak-omtrek op de plattegrond. */
+export type RenderRoofPlaneOutline = {
+  id: string
+  points: number[]
+  color: string
+  dormer: boolean
 }

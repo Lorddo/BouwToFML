@@ -1,16 +1,20 @@
 /**
- * Persistente maatlijn-slicers: alleen `{ m, p }` per liniaal in design-settings.
- * H/V/hoek en meetas volgen uit P−M; maten worden live herberekend.
+ * Persistente maatlijn-slicers: alleen `{ m, p }` per liniaal op `design.slices`
+ * (was `design.settings.btfSlices`). H/V/hoek en meetas volgen uit P−M;
+ * maten worden live herberekend.
+ *
+ * FML-settingskey blijft `'btfSlices'` (Floorplanner-compatibiliteit).
  */
 import { flushActiveDesign } from './design-sync'
 import type { Floor, FloorDimension, FloorPlan, Point2D } from './types'
 
-export const BTF_SLICES_SETTINGS_KEY = 'btfSlices'
+/** FML `design.settings`-key; waarde bewust `'btfSlices'`. */
+export const PLAN_SLICES_SETTINGS_KEY = 'btfSlices'
 
 /** Afstand tot P-lijn om een custom_dimension als slicer-bake te zien (cm). */
-export const BTF_SLICE_DIM_ON_LINE_CM = 1
+export const PLAN_SLICE_DIM_ON_LINE_CM = 1
 
-export type BtfSlice = { m: Point2D; p: Point2D }
+export type PlanSlice = { m: Point2D; p: Point2D }
 
 function isFinitePoint(value: unknown): value is Point2D {
   if (!value || typeof value !== 'object') return false
@@ -18,7 +22,7 @@ function isFinitePoint(value: unknown): value is Point2D {
   return Number.isFinite(record.x) && Number.isFinite(record.y)
 }
 
-function normalizeSlice(raw: unknown): BtfSlice | null {
+function normalizeSlice(raw: unknown): PlanSlice | null {
   if (!raw || typeof raw !== 'object') return null
   const record = raw as Record<string, unknown>
   if (!isFinitePoint(record.m) || !isFinitePoint(record.p)) return null
@@ -28,23 +32,9 @@ function normalizeSlice(raw: unknown): BtfSlice | null {
   return { m, p }
 }
 
-function cloneSettings(settings: Record<string, unknown> | undefined): Record<string, unknown> {
-  return { ...(settings ?? {}) }
-}
-
-function activeDesignSettings(
-  floor: Floor | null | undefined,
-): Record<string, unknown> | undefined {
-  if (!floor) return undefined
-  const idx = Math.max(0, floor.activeDesignIndex ?? 0)
-  return floor.designs?.[idx]?.source?.settings ?? floor.designs?.[0]?.source?.settings
-}
-
-/** Lees slicers van de actieve design-settings van een floor. */
-export function readBtfSlices(floor: Floor | null | undefined): BtfSlice[] {
-  const raw = activeDesignSettings(floor)?.[BTF_SLICES_SETTINGS_KEY]
+function normalizeSliceList(raw: unknown): PlanSlice[] {
   if (!Array.isArray(raw)) return []
-  const out: BtfSlice[] = []
+  const out: PlanSlice[] = []
   for (const entry of raw) {
     const slice = normalizeSlice(entry)
     if (slice) out.push(slice)
@@ -52,19 +42,37 @@ export function readBtfSlices(floor: Floor | null | undefined): BtfSlice[] {
   return out
 }
 
-export function readBtfSlicesFromPlan(
+function cloneSettings(settings: Record<string, unknown> | undefined): Record<string, unknown> {
+  return { ...(settings ?? {}) }
+}
+
+function activeDesign(floor: Floor | null | undefined) {
+  if (!floor) return undefined
+  const idx = Math.max(0, floor.activeDesignIndex ?? 0)
+  return floor.designs?.[idx] ?? floor.designs?.[0]
+}
+
+/** Lees slicers van de actieve design (`slices`, fallback legacy settings). */
+export function readPlanSlices(floor: Floor | null | undefined): PlanSlice[] {
+  const design = activeDesign(floor)
+  if (!design) return []
+  if (design.slices !== undefined) return normalizeSliceList(design.slices)
+  return normalizeSliceList(design.source?.settings?.[PLAN_SLICES_SETTINGS_KEY])
+}
+
+export function readPlanSlicesFromPlan(
   plan: FloorPlan | null | undefined,
   floorIndex = 0,
-): BtfSlice[] {
+): PlanSlice[] {
   const floor = plan?.floors[floorIndex] ?? plan?.floors[0]
-  return readBtfSlices(floor ?? undefined)
+  return readPlanSlices(floor ?? undefined)
 }
 
 /**
  * Schrijf slicers op de actieve design van `floorIndex`.
- * Immutable plan-update (flush + design.settings).
+ * Immutable plan-update (flush + design.slices); legacy settings-key weg.
  */
-export function writeBtfSlices(plan: FloorPlan, slices: BtfSlice[], floorIndex = 0): FloorPlan {
+export function writePlanSlices(plan: FloorPlan, slices: PlanSlice[], floorIndex = 0): FloorPlan {
   const idx = Math.max(0, Math.min(floorIndex, plan.floors.length - 1))
   const floors = plan.floors.map((floor, i) => {
     if (i !== idx) return floor
@@ -73,10 +81,12 @@ export function writeBtfSlices(plan: FloorPlan, slices: BtfSlice[], floorIndex =
     const designs = (flushed.designs ?? []).map((design, di) => {
       if (di !== designIdx) return design
       const settings = cloneSettings(design.source?.settings)
-      if (slices.length === 0) delete settings[BTF_SLICES_SETTINGS_KEY]
-      else settings[BTF_SLICES_SETTINGS_KEY] = slices.map((s) => ({ m: { ...s.m }, p: { ...s.p } }))
+      delete settings[PLAN_SLICES_SETTINGS_KEY]
+      const nextSlices =
+        slices.length === 0 ? undefined : slices.map((s) => ({ m: { ...s.m }, p: { ...s.p } }))
       return {
         ...design,
+        slices: nextSlices,
         source: { ...design.source, settings },
       }
     })
@@ -86,7 +96,7 @@ export function writeBtfSlices(plan: FloorPlan, slices: BtfSlice[], floorIndex =
 }
 
 /** Eenheid-richting van de meetas (loodrecht op P−M). Null bij degeneraat. */
-export function sliceMeasureAxis(slice: BtfSlice): Point2D | null {
+export function sliceMeasureAxis(slice: PlanSlice): Point2D | null {
   const dx = slice.p.x - slice.m.x
   const dy = slice.p.y - slice.m.y
   const len = Math.hypot(dx, dy)
@@ -115,8 +125,8 @@ export function pointOnAxis(origin: Point2D, axis: Point2D, t: number): Point2D 
 /** Dim ligt op de P-lijn van deze slice (beide einden). */
 export function dimensionLiesOnSlice(
   dim: Pick<FloorDimension, 'a' | 'b'>,
-  slice: BtfSlice,
-  tolCm = BTF_SLICE_DIM_ON_LINE_CM,
+  slice: PlanSlice,
+  tolCm = PLAN_SLICE_DIM_ON_LINE_CM,
 ): boolean {
   const axis = sliceMeasureAxis(slice)
   if (!axis) return false
@@ -128,8 +138,8 @@ export function dimensionLiesOnSlice(
 
 export function dimensionLiesOnAnySlice(
   dim: Pick<FloorDimension, 'a' | 'b'>,
-  slices: BtfSlice[],
-  tolCm = BTF_SLICE_DIM_ON_LINE_CM,
+  slices: PlanSlice[],
+  tolCm = PLAN_SLICE_DIM_ON_LINE_CM,
 ): boolean {
   return slices.some((slice) => dimensionLiesOnSlice(dim, slice, tolCm))
 }
@@ -137,7 +147,7 @@ export function dimensionLiesOnAnySlice(
 /** Manual = dimensions die niet op een bekende P-lijn liggen. */
 export function filterManualDimensions(
   dimensions: FloorDimension[] | undefined,
-  slices: BtfSlice[],
+  slices: PlanSlice[],
 ): FloorDimension[] {
   if (!dimensions || dimensions.length === 0) return []
   if (slices.length === 0) return dimensions.map((d) => ({ ...d }))
@@ -145,11 +155,11 @@ export function filterManualDimensions(
 }
 
 /**
- * Strip bake-dims die bij btfSlices horen (na import), zodat live regenerate
+ * Strip bake-dims die bij slicers horen (na import), zodat live regenerate
  * geen dubbele lijnen in `floor.dimensions` houdt.
  */
 export function stripBakedSliceDimensions(floor: Floor): Floor {
-  const slices = readBtfSlices(floor)
+  const slices = readPlanSlices(floor)
   if (slices.length === 0 || !floor.dimensions?.length) return floor
   const manual = filterManualDimensions(floor.dimensions, slices)
   if (manual.length === floor.dimensions.length) return floor

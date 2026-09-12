@@ -8,6 +8,7 @@ import {
   resetUserSettingsToFactory,
   saveUserSettings,
   setShowCanvasGrid,
+  setShowRoofOverlayOnPlan,
   UserSettingsParseError,
 } from '@/ui/composables/settings/user-settings'
 import { createDefaultFloorFmlDefaults } from '@/ui/composables/project/defaults'
@@ -82,7 +83,20 @@ describe('user-settings', () => {
       slicerOffsetSnapCm: 50,
       planDisplayStyle: 'editor',
       ridgeDisplayWidthCm: 10,
+      showRidgeDisplay: true,
       showCanvasGrid: true,
+      showRoofOverlayOnPlan: true,
+      showRoofPlanesOnPlan: true,
+      showClearHeight150: true,
+      showClearHeight200: false,
+      showClearHeightPlanFill: false,
+      clearHeightFillColor: '#6366F1',
+      facadeGroups: [
+        { id: 'front', name: 'Front' },
+        { id: 'back', name: 'Back' },
+        { id: 'left', name: 'Left' },
+        { id: 'right', name: 'Right' },
+      ],
     })
   })
 
@@ -102,6 +116,24 @@ describe('user-settings', () => {
     expect(loadUserSettings().fmlViewer.showCanvasGrid).toBe(false)
     expect(setShowCanvasGrid(true)).toBe(true)
     expect(loadUserSettings().fmlViewer.showCanvasGrid).toBe(true)
+  })
+
+  it('showRoofOverlayOnPlan factory true; missing → true; false preserved', () => {
+    expect(createFactoryUserSettings().fmlViewer.showRoofOverlayOnPlan).toBe(true)
+    expect(createFactoryUserSettings().fmlViewer.showRoofPlanesOnPlan).toBe(true)
+    expect(
+      normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.showRoofOverlayOnPlan,
+    ).toBe(true)
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { showRoofOverlayOnPlan: false, showRoofPlanesOnPlan: false },
+      }).fmlViewer,
+    ).toMatchObject({ showRoofOverlayOnPlan: false, showRoofPlanesOnPlan: false })
+    expect(setShowRoofOverlayOnPlan(false)).toBe(false)
+    expect(loadUserSettings().fmlViewer.showRoofOverlayOnPlan).toBe(false)
+    expect(setShowRoofOverlayOnPlan(true)).toBe(true)
   })
 
   it('normalize missing/invalid locale → en; accepts nl/th', () => {
@@ -267,7 +299,20 @@ describe('user-settings', () => {
       slicerOffsetSnapCm: 50,
       planDisplayStyle: 'editor',
       ridgeDisplayWidthCm: 10,
+      showRidgeDisplay: true,
       showCanvasGrid: true,
+      showRoofOverlayOnPlan: true,
+      showRoofPlanesOnPlan: true,
+      showClearHeight150: true,
+      showClearHeight200: false,
+      showClearHeightPlanFill: false,
+      clearHeightFillColor: '#6366F1',
+      facadeGroups: [
+        { id: 'front', name: 'Front' },
+        { id: 'back', name: 'Back' },
+        { id: 'left', name: 'Left' },
+        { id: 'right', name: 'Right' },
+      ],
     })
   })
 
@@ -331,5 +376,37 @@ describe('user-settings', () => {
     saveUserSettings(next)
     expect(createDefaultFloorFmlDefaults().wallHeightCm).toBe(310)
     expect(createDefaultFloorFmlDefaults().doorHeightCm).toBe(230)
+  })
+
+  it('facadeGroups factory 4; missing → factory; empty array blijft leeg', () => {
+    expect(createFactoryUserSettings().fmlViewer.facadeGroups).toEqual([
+      { id: 'front', name: 'Front' },
+      { id: 'back', name: 'Back' },
+      { id: 'left', name: 'Left' },
+      { id: 'right', name: 'Right' },
+    ])
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.facadeGroups).toEqual(
+      createFactoryUserSettings().fmlViewer.facadeGroups,
+    )
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: { facadeGroups: [] },
+      }).fmlViewer.facadeGroups,
+    ).toEqual([])
+    expect(
+      normalizeUserSettings({
+        version: 1,
+        defaults: {},
+        fmlViewer: {
+          facadeGroups: [
+            { id: 'stamp', name: 'Stempel' },
+            { id: 'front', name: 'Straat' },
+            { id: 'front', name: 'dup' },
+          ],
+        },
+      }).fmlViewer.facadeGroups,
+    ).toEqual([{ id: 'front', name: 'Straat' }])
   })
 })

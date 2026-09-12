@@ -1,0 +1,182 @@
+{
+  "beschrijving": "Domein-catalogus opening-kinds (geen Floorplanner-hashes). Glyph/frame/leaf voor editor.",
+  "laatste_update": "2026-09-11",
+  "entries": [
+    {
+      "kind": "door.single",
+      "type": "door",
+      "label": "Deur enkel",
+      "glyph": "single",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.closet",
+      "type": "door",
+      "label": "Kastdeur (draai 45°)",
+      "glyph": "closet45",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.passage",
+      "type": "door",
+      "label": "Doorgang",
+      "glyph": "passage",
+      "swingInsetCm": 0,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.archway",
+      "type": "door",
+      "label": "Doorgang (boog)",
+      "glyph": "archway",
+      "swingInsetCm": 0,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.french_balcony",
+      "type": "door",
+      "label": "Frans balkon",
+      "glyph": "french_balcony",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.double",
+      "type": "door",
+      "label": "Dubbele deur (glas)",
+      "glyph": "double_wide",
+      "swingInsetCm": 5,
+      "leaf": "glass"
+    },
+    {
+      "kind": "door.double_solid",
+      "type": "door",
+      "label": "Dubbele deur (vol)",
+      "glyph": "double_wide",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.bifold",
+      "type": "door",
+      "label": "Vouwdeur (2-delig)",
+      "glyph": "bifold",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.bifold_double",
+      "type": "door",
+      "label": "Vouwdeur (4-delig)",
+      "glyph": "bifold_double",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.pocket",
+      "type": "door",
+      "label": "Schuifdeur (kast)",
+      "glyph": "sliding_pocket",
+      "swingInsetCm": 0,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.sliding_single",
+      "type": "door",
+      "label": "Schuifpui (1 schuivend)",
+      "glyph": "sliding_single",
+      "swingInsetCm": 0,
+      "leaf": "glass"
+    },
+    {
+      "kind": "door.sliding",
+      "type": "door",
+      "label": "Schuifpui (2 schuivend)",
+      "glyph": "sliding",
+      "swingInsetCm": 0,
+      "leaf": "glass"
+    },
+    {
+      "kind": "door.garage",
+      "type": "door",
+      "label": "Garagedeur",
+      "glyph": "garage",
+      "swingInsetCm": 0,
+      "leaf": "paneled"
+    },
+    {
+      "kind": "door.unmapped",
+      "type": "door",
+      "label": "Deur (onbekend)",
+      "glyph": "single",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "window.single",
+      "type": "window",
+      "label": "Raam",
+      "glyph": "single",
+      "panels": 1,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.double",
+      "type": "window",
+      "label": "Raam 2-delig",
+      "glyph": "multi",
+      "panels": 2,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.triple",
+      "type": "window",
+      "label": "Raam 3-delig",
+      "glyph": "multi",
+      "panels": 3,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.round",
+      "type": "window",
+      "label": "Raam rond",
+      "glyph": "round",
+      "panels": 1,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.half_round",
+      "type": "window",
+      "label": "Raam half-rond",
+      "glyph": "half_round",
+      "panels": 1,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.triangle",
+      "type": "window",
+      "label": "Raam driehoek",
+      "glyph": "triangle",
+      "panels": 1,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.blind",
+      "type": "window",
+      "label": "Blind paneel",
+      "glyph": "single",
+      "panels": 1,
+      "leaf": "solid"
+    },
+    {
+      "kind": "window.unmapped",
+      "type": "window",
+      "label": "Raam (onbekend)",
+      "glyph": "single",
+      "panels": 1,
+      "leaf": "glass"
+    }
+  ]
+}

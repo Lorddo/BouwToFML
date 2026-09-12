@@ -8,7 +8,12 @@ import type { RenderModel, RenderWall } from './fml-preview-render-types'
 import { computeOpeningDraftState } from './fml-preview-opening-draft'
 import type { WallEndRef } from '@/ui/components/fml-preview-junction-core'
 
-export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorHeightCm: number) {
+export function buildSelectedWallPanel(
+  model: RenderModel,
+  ids: string[],
+  floorHeightCm: number,
+  mode: 'quick' | 'full' = 'full',
+) {
   if (ids.length === 0) return null
 
   const wallLines = ids
@@ -69,6 +74,7 @@ export function buildSelectedWallPanel(model: RenderModel, ids: string[], floorH
     ridgeCount: wallLines.filter(
       (line) => line.wall.thickness === 0 || line.wall.extras?.ridge === true,
     ).length,
+    mode,
   }
 }
 

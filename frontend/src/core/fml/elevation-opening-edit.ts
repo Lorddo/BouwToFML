@@ -29,7 +29,7 @@ const ELEVATION_SHAPE_SLACK_CM = 0.5
 /** Kozijn-silhouet i.p.v. AABB (driehoek / rond / halfrond). */
 export type ElevationOpeningShapeHint = {
   type: OpeningType
-  refid: string
+  kind: string
   mirrored?: [number, number]
   startOnLeft?: boolean
 }
@@ -139,7 +139,7 @@ function holeForOpeningRect(
       { x: x0, y: y1 },
     ]
   }
-  return elevationOpeningHolePoints({ x0, y0, x1, y1 }, shape.type, shape.refid, {
+  return elevationOpeningHolePoints({ x0, y0, x1, y1 }, shape.type, shape.kind, {
     mirrored: shape.mirrored,
     startOnLeft: shape.startOnLeft,
   })
@@ -420,7 +420,7 @@ export function clampOpeningMoveKeepSize(
   const edges = openingEdgesAlongWall(wall, t, width)
   const hole = holeForOpeningRect(0, 0, width, height, {
     type: opening.type,
-    refid: opening.refid,
+    kind: opening.kind,
     mirrored: opening.mirrored,
     startOnLeft,
   })

@@ -315,7 +315,7 @@ export function useFmlPreviewHitTest(
     let bestId: string | null = null
     let bestDist = Number.POSITIVE_INFINITY
     for (const item of list) {
-      const guid = item.guid?.trim()
+      const guid = item.id?.trim()
       if (!guid) continue
       const rot = ((item.rotation ?? 0) * Math.PI) / 180
       const dx = cm.x - item.x

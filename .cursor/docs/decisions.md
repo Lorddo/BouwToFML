@@ -51,14 +51,14 @@ Vastgelegde keuzes. Bij wijziging: dit bestand én relevante `.cursor/rules/` up
 | Beslissing | Keuze |
 |------------|-------|
 | Plan | `.cursor/docs/fml-layer8-conversion-plan.md` |
-| Keten | Collineair door T/X = één keten alleen bij dezelfde slot/band of 15% hysterese. Echte stap (7 vs 15 vs 30) blijft gesplitst. T-arm/L daarna op ketengemiddelde. Korte dik-dun-dik brug mag mergen. |
+| Keten | Collineair door T/X = één keten bij dezelfde slot/band, aangrenzende slots met Δcatalog ≤ 15% van catalogus-max, of 15% meet-hysterese. Echte stap (7 vs 15 vs 30, 10 vs 22) blijft gesplitst. T-arm/L daarna op ketengemiddelde. Korte dik-dun-dik brug mag mergen. |
 | Aggregatie | Gemiddelde binnen keten |
 | Kwantiseren | 3 absolute banden (default 1–12 / 12–22 / 23+ cm) → 3 exportmaten |
 | Implementatie | `harmonizeFmlWallThickness` na `extractionToPlan` op `FloorPlan.walls` |
 | `balance` | Floorplanner **hartlijn** `a`/`b` (Y-down): `0` = alles **rechts**, `1` = alles **links** (`floorplannerLeftNormal`); lichaam schuift, as blijft (keep-axis). Default export 0.5 (X-01); collineaire diktewissel flush **alleen bij face-evidence**; zonder bewijs blijft 0.5; `quantizeBalance`; shift ≤ Δt/2; jog-stubs &lt;25 cm **én near-ortho connector** (zelfde 12°-ε als collinear; geen 45–60°-chamfer); stub-bump alleen bij gemeten nabijheid. Detectie clamp 0–1; editor-invoer tot ±1000% (slider 0–100%) |
 | Editor dikte | Handmatige dikte (`setWallsThickness`, ook dezelfde maat) zet `balance` terug naar 0.5 — flush-waarden horen bij de vorige uitlijning; hartlijn `a`/`b` ongewijzigd |
 | Diktemeting | `thicknessPxTypical` = mediaan DT-samples (FML-export); `thicknessPxMax` blijft opening-snap bovengrens; korte stubs kern-sample t∈[0.3,0.7]; junction-marge schaalt met `referenceWallThicknessPx` |
-| Keten-union | Gemeten gelijkenis + 15% hysterese over bandgrens (niet alleen band-identiteit) |
+| Keten-union | Gemeten gelijkenis + 15% hysterese over bandgrens; catalogus: ook aangrenzende slots als Δcatalog ≤ 15% van max |
 | L9 stub | Bewaart cross-band + parallel CL-offset (thickness-gate + `orthoStubTierMaxPx` mid-capped) |
 | L10 straighten | Geen axis-union over dikteband-wissel (thickness-gate op direct + bridge); FML balance blijft post-L10 consument |
 | Legacy min/max clamp | Vervangen door tier-model |
@@ -69,7 +69,7 @@ L7/L9/L10 blijven 3 bakken. Drempels: **min** tot kleinste catalogus-cm × 1,2; 
 
 ### Dikte-catalogus (2026-08-29)
 
-Eén `thicknessCms[]` (min 3, factory `[10, 20, 30]`, tot 8) is Settings, LBE-refs, harmonize/export én editor-presets. Geen parallelle min/mid/max-UI. **Geen nabij-merge** (8/9/10/11 blijven 4 maten; alleen exacte dubbelen na 0,1 cm). Pipeline-schaal blijft max-equivalent (`px × maxCm/refCm`). Gate L7/L9/L10 blijft 3-band (zie hierboven). Harmonize met catalogus ≥3: nearest slot of 15% hysterese voor collinear-union én T-arm/L. Echte stap blijft gesplitst (balance kan flushen). Korte dik-dun-dik brug mag mergen. Geen mid-span splits (T-tot-T blijft één meting). Daarna één catalogus-cm per keten. Editor-knoppen = `thicknessPresetCms` (“X cm”); draw-default = grootste cm. Stempel `filterWallsByBands` en ⊕ thickness-pick blijven 3-band. Stap 2: dikte-lijst is altijd zichtbaar; tik een rij om het vak voor die cm te tekenen (geen losse Muur-knop); groen/vinkje = getekend.
+Eén `thicknessCms[]` (min 3, factory `[10, 20, 30]`, tot 8) is Settings, LBE-refs, harmonize/export én editor-presets. Geen parallelle min/mid/max-UI. **Geen nabij-merge** (8/9/10/11 blijven 4 maten; alleen exacte dubbelen na 0,1 cm). Pipeline-schaal blijft max-equivalent (`px × maxCm/refCm`). Gate L7/L9/L10 blijft 3-band (zie hierboven). Harmonize met catalogus ≥3: nearest slot, **of** aangrenzende slots met Δcatalog ≤ 15% van de catalogus-max, **of** 15% meet-hysterese voor collinear-union én T-arm/L. Echte stap blijft gesplitst (balance kan flushen). Korte dik-dun-dik brug mag mergen. Geen mid-span splits (T-tot-T blijft één meting). Daarna één catalogus-cm per keten. Editor-knoppen = `thicknessPresetCms` (“X cm”); draw-default = grootste cm. Stempel `filterWallsByBands` en ⊕ thickness-pick blijven 3-band. Stap 2: dikte-lijst is altijd zichtbaar; tik een rij om het vak voor die cm te tekenen (geen losse Muur-knop); groen/vinkje = getekend.
 
 ### LBE-vak draaien (2026-09-08)
 
@@ -82,6 +82,10 @@ Met 8 catalogus-slots werd 10 vs 15 een “echte stap” (33% > 15% hysterese). 
 ### Harmonize collinear dikte-guard (2026-09-08)
 
 “Altijd één keten” veegde echte gevelstappen weg (sloped: middelste V 7/15/30 → alles 7, geen flush). **Terug:** collinear-union alleen bij dezelfde slot/band of 15% hysterese — zelfde predicaat als T-arm. Meetruis (10 vs 11, 22 vs 24) blijft één keten; 7 vs 15 vs 30 blijft gesplitst zodat `alignWallJunctionBalance` kan flushen bij face-evidence. Korte dik-dun-dik brug ongewijzigd. Geen mid-span splits (T-tot-T = één meting; dat maakte eerder te veel ruis).
+
+### Harmonize dichte catalogus-buren (2026-09-11)
+
+15% t.o.v. de *meting* splitst 7 vs 10 (30%). Bij catalogus `[7,10,22,30,47]` zijn dat wel dichte buren (Δ 3 cm) op één collineaire T–T-lijn. **Nu:** aangrenzende slots unieën als Δcatalog ≤ 15% van de catalogus-max (0,15×47≈7 cm). 7/10 → één keten (lengtegewogen slot); 10 vs 22 (12 cm) en 22 vs 30 (8 cm) blijven split. 7/15/30 en Test-31 10/15 blijven split. Geen N-emmers in L7/L9/L10.
 
 ### Coördinaten
 
@@ -347,7 +351,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 
 | Versie | Scope |
 |--------|-------|
-| **2026-08-27** | Muren-aan-dak: `floor.height` alleen omhoog als er **geen** floor erboven is (1e/2e stapelen op story-height, niet op BG-nok/aanbouw). Dak-tab bindt **alleen de actieve chip**. Gevels: chrome-popup kies verdieping (geen inline-dropdown). |
+| **2026-09-12** | FML-export: `floor.height` ≥ max muurtop **alleen zonder floor erboven** (was regressie: altijd tillen, ook nok/aanbouw op BG). `az`/`bz` serialiseren tegen de echte story-height, niet de getilde export-waarde. `.plg` was al goed. |
 | **2026-08-27** | Aanzicht-dakvlak-punt: sleep **omhoog/omlaag én langs de gevel** (diepte loodrecht op de gevel blijft). Per punt, niet het hele vlak. Snap 8 cm op andere punten/muurfaces (Ctrl = uit). Veld blijft punthoogte. |
 | **2026-08-27** | Aanzicht-dakvlak = **losse vlakken** (geen gegenereerde vouwen/één T-plaat). Zicht zoals nokbalken: goot/kil-raak **of** vlak aan deze zijde van het huis — T-dak op voor- én zijgevel; tegenschild en extra’s aan de andere kant niet. Painter far→near. |
 | **2026-08-27** | Dakvlak-punten: eerst vlak of nokbalk openen; daarna alleen het aangeklikte handle (18 px, zelfde als knopen). Geselecteerd punt wint bij overlap — geen nearest over het vlak. Tik op het vlak houdt het open (deselecteert niet). Punten = knoopmaat (7 px, geel geselecteerd). |
@@ -375,7 +379,7 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | **2026-08-23** | Trapgat/`isCutout` is **geen gat** in deze tekeningen: dak-vloerplaat van de hogere floor blijft dicht; area-regen maakt er geen kamer van; dak-generate loopt alleen naar gevels (niet trapgat-wanden). Overlay op de plattegrond blijft. |
 | **2026-08-23** | Dak geblokkeerd vlak (hogere floor): buitenring van de muur-union (zelfde gemiterde baksteen als de plattegrond). Convex hull van hoeken/face-einden knipt inzinkingen af of maakt een hartlijn-knikje; trapgat-lussen blijven geen tweede plaat. |
 | **2026-08-22** | Dak geblokkeerd vlak (hogere floor): hoeken = snijpunt van twee buitenfaces, niet convex hull van face-einden (anders een schuin knikje op de hartlijn-hoek). |
-| **2026-08-22** | Aanzicht-dakvlak: plaatdikte = nokdikte **om het hart** (helft omhoog + helft omlaag). Kopgevel toont goot én kil (rand evenwijdig+dichtbij, geen Z-eis). Vul-oppervlak ná dikte — een rechte kopse projectie is anders een lijn. |
+| **2026-08-22** | Aanzicht-dakvlak: plaatdikte = nokdikte **omhoog vanaf de onderkant** (was tot 2026-09-12 om het hart). Kopgevel toont goot én kil (rand evenwijdig+dichtbij, geen Z-eis). Vul-oppervlak ná dikte — een rechte kopse projectie is anders een lijn. |
 | **2026-08-22** | Aanzicht-dakvlak projecteert de **getekende XY** (buitenface/hoek), niet terug naar de muurhartlijn. Hartlijn-snap knijpt de goot als alleen die gevel een zolder-muur heeft (FIN-10508 achterkant). |
 | **2026-08-22** | Aanzicht-muren = **volle baksteen** (buiten tot buiten) + binnenkant stippellijn. Alleen de **bovenkant-hoogte** volgt de hartlijn (`az`/`bz`); schuine top tussen xa/xb, oren recht omhoog. Nokbalk ongewijzigd. |
 | **2026-08-21** | Gevel-aanzicht: schuine top alleen tussen hartlijn (oren recht omhoog). Gevelsprong-oor mag de daklijn niet meeslepen (anders een hoekje voorbij de knoop). Binnenkant = verticale stippellijn. Tool **splitsen** + knooplijn voor junction-hoogte. |
@@ -628,6 +632,7 @@ Startcase: `Kinderdijkstraat 53 1` — 1 verdieping, 53 muren, `drawing.url` aan
 | CI | `npm test` exclude `tests/e2e/**`; apart `npm run test:e2e` via `vitest.e2e.config.ts` na unit-tests in CI |
 | Set | `kromme-mijdrecht-3e`, `amstelveenseweg-1092-bg`, `amstelveenseweg-1092-1e`, `staedion-10`, `bouwtek11`, `bg`, `schuine-gevel-bg`; Kinderdijkstraat later |
 | Doc | `.cursor/docs/e2e-fixtures.md` |
+| Snapshot-refresh 2026-09-11 | Na dikte-guard + L7/L9 uit `6e16996` (die alleen `schuine-gevel-bg`-geometrie bijwerkte). 21 files (7× walls/fml/layers). Huidige output = bedoelde waarheid: echte stappen blijven gesplitst; `bg` dekking 97,5→98,9 / precisie 98,4→100 / deur-recall 87,5→93,8. `layers.json` zat verstopt achter de FML-assertie in hetzelfde `it()`. Update: `npx vitest run --config vitest.e2e.config.ts --update` (npm 11 slokt `-u` op). |
 
 ---
 
@@ -741,13 +746,15 @@ Project-brede EPA-gevels. Bron van waarheid = `settings.facadeGroups` (extras). 
 | Scope | Project-breed (alle floors); **muur mag in meerdere gevelgroepen** (voor/na verbouwing); Stempel (`stamp`) orthogonaal |
 | Native FP | Niet schrijven. Editor-download stript alle `groupMarker`/`groupId`/`stampGroupId` van muren; catalogus blijft (zonder stamp). Workspace-FML stript catalogus + markers |
 | Import | Als extras leeg én muren markers hebben → eenmalig migreren naar catalogus. Als extras bestaan → no-op (extras winnen) |
-| Assign | **Add** (niet verplaatsen); lege groep alleen weg bij detach/prune |
+| Assign | **Add** (niet verplaatsen); lege groepen blijven catalogus-slots (detach/prune wissen geen lege groep meer) |
+| Defaults (2026-09-11) | Factory 4 slots `front/back/left/right` (`.plg` naam Engels; UI vertaalt). User Settings (editor) is de zaaicatalogus: hernoemen/toevoegen/verwijderen. `ensureDefaultFacadeGroups` alleen als het plan nog geen gevelgroep heeft. Aanzicht-chips alleen bij groepen mét muren |
+| Id | Stabiel `front`/`back`/`left`/`right` of `G1`, `G2`, …; `nativeId` legacy/cache; `code` vrij; `name` verplicht |
 | UI | Checkboxes per gevelgroep (+ Stempel); inspect idem. Expand-leden alleen bij precies één gevelgroep |
-| Id | Stabiel `G1`, `G2`, …; `nativeId` legacy/cache; `code` vrij; `name` verplicht |
 | Split-remap | Remap in alle groepen die de GUID bevatten (gevel én stamp) |
 | Stempel | Workspace stap-4 alleen Stempel-preset; editor-download stript stamp-catalogus |
 | Stacked floors | «Ook andere verdiepingen»: zelfde **as-band** (5 cm) + overlap langs de as — niet exact `a`/`b`. Junctions mogen anders knippen; T-tak valt af |
 | Groepsdikte (2026-08-27) | Chip-select opent **gevel-settings** (niet muur-settings). Eén dikte → alle leden op alle floors. Balance blijft (binnenmaten bij 0/1). Losse muurdikte blijft balance resetten naar 0.5 |
+| Chip-select scope (2026-09-11) | «Selecteer» op de gevelchip: popup huidige verdieping / alle verdiepingen (alleen als de groep op >1 floor muren heeft). Huidige floor = leden op deze floor, muur-settings. Alle floors = gevel-settings (dikte overal). Annuleren = selectie ongewijzigd |
 | Niet | Dual `groupId[]` in product-export; native primary-group “zodat FP iets ziet”; Floorplanner library Groups (account-quota) |
 
 ---
@@ -770,8 +777,8 @@ Native `window.confirm` / `window.prompt` (browser-chrome) vervangen door dezelf
 
 | Beslissing | Keuze |
 |------------|--------|
-| Type-plak | Selectie blijft binnen muur / opening / item / annotatie / area tot leeg of area (zonder muur) of ✕ |
-| Wisselen | Eerst deselecteren; klik nabij een deur terwijl muren geselecteerd zijn blijft muur |
+| Type-plak | Selectie blijft binnen muur / opening / item / annotatie tot leeg of area (zonder muur) of ✕. **Ruimte is niet sticky** (2026-09-11): deur/raam/muur mogen erdoorheen |
+| Wisselen | Muur ↔ opening: eerst deselecteren (16 px-halo). Vanuit een geselecteerde ruimte: click-through |
 | Mobiel tik | `pointerdown` plaatst geen selectie; pas stille `pointerup` (geen slop, geen 2e vinger) |
 | Pan met selectie | 2-vinger én 1-vinger voorbij slop; selectie blijft. ✕ in settings-kaart wist bewust |
 | Hold-drag | Move / maatlijn / nulpunt / box-select starten ná slop |
@@ -916,6 +923,17 @@ Los product, niet BouwToFML-detectie. Canonieke tekst: `.cursor/docs/Pricing & M
 
 ---
 
+## Aanzicht dakvlak-punthoogte (2026-09-11)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Wanneer | Geselecteerd dakvlak-punt op Gevels (sleep + na klik op handle) |
+| Wat | Hart van de plaat → verdiepingsvloer van die floor (zelfde Z als toolbelt-veld) |
+| Overlay | Zelfde maatlijn als knoop/nok, 8 cm naast het punt |
+| Vlak zonder punt | Geen lijn (eerst handle kiezen) |
+
+---
+
 ## Tekstlabels plattegrond (2026-08-27)
 
 Floorplanner `labels[]` (`fontSize` in px bij 1:1) worden getoond zoals kamerbenamingen, niet als vaste schermpixels.
@@ -928,6 +946,133 @@ Floorplanner `labels[]` (`fontSize` in px bij 1:1) worden getoond zoals kamerben
 | LOD | Zelfde min-schermhoogte als kamerbenaming |
 | Hit | Box op de tekst (align left/center/right), geen cirkel om het anker |
 | Ruimte-benaming | Klik ruimte → oranje kader om de naam; sleep schrijft `name_x`/`name_y` (cm t.o.v. centroid) |
+
+---
+
+## Eigen planformaat `.plg` — losstaande editor (2026-09-10, gebouwd 2026-09-11)
+
+FML blijft first-class **export** van BouwToFML. Voor de losstaande editor is FML geen canonical store.
+Werknaam BTF verviel op 2026-09-10: `btf` = *BouwToFML* en is de verkeerde merknaam in een klantbestand.
+
+| Beslissing | Detail |
+|------------|--------|
+| Native bestand | Eigen **JSON**, extensie `.plg`, `format: "plg-plan"` + `version`; geen XML |
+| Geometrie | FML-achtig houden (wall `a/b` + opening `t`); kinds i.p.v. FP-refids intern |
+| FML | Adapter: import = hydrateren; export = lossy projectie |
+| Inspect / PWA | `.plg` default; FML-upload blijft; geen/beperkte FML-export (originele bytes OK) |
+| Editor-tenant | Tekenbureau: FML in/uit aan; externe klant: geen FML |
+| Knip | Ander host-domein; package bij ~90% + launch; geen tweede repo nu |
+
+Uitwerking: `.cursor/docs/plg-native-format-plan.md`; uitvoering `.cursor/plans/plg_native_format_eff0f41f.plan.md`.
+
+### Uitvoering (2026-09-11)
+
+| Beslissing | Detail |
+|------------|--------|
+| Geen parallel objectmodel | `.plg` = bestaande `FloorPlan` + header; editor, canvas, hit-test en sanitize onaangeroerd |
+| Adapter-registry als seam | `importFmlV3`/`buildFmlV3` kregen éénmalig hooks; concept-taken raakten die twee bestanden daarna niet meer. Volgorde in `FML_CONCEPT_ADAPTERS` is betekenisvol — adapters zijn niet commutatief |
+| Hook-volgorde | `hydrate` draait ná de hele legacy import-keten; `serializePlanSettings` vóór `stripFloorplannerHostileSettings`, zodat dak-/aanzicht-keys gezet mogen worden en alsnog uit de FML-download verdwijnen |
+| Accessor-signaturen | Ongewijzigd — alleen de opslagplek verhuisde, dus call sites buiten `core/fml/` bleven onaangeroerd |
+| Stempel-eigendom | Runtime-only `wall.stampOwned`; de `delete` in `buildFmlV3` blijft als vangnet, want de legacy extras-key wordt bewust nog gelezen |
+| IDB | Schema **v2**: per floor `plan` + converter-sidecar (CV-werkstaat). Geen migratiecode; v1-record wordt gewist. Versiebeheer loopt vanaf `.plg` v1 via `migratePlg` |
+| Canonieke types | `core/plg` bezit `PlgFloorDefaults` + unit/display-unions; `ui`/`platform` importeren daaruit (niet andersom) |
+| Importgrens | `core/plg` mag geen `cv/`/`ui/`/`platform/`; alleen `fml-adapter/` mag value-imports uit `core/fml/`, type-only elders toegestaan |
+| FML on-demand | `buildFmlV3` draait bij download/copy, niet in een `computed`; altijd op de live keten `editedPreviewPlan ?? importedPlan ?? fmlExportPlan` |
+| Stap-4 hergeneratie | Hoogtes muteren de huidige plattegrond via de bestaande overwrite-all-confirm; alleen diktes/banden hergenereren echt |
+| Naamhygiëne | TS-identifiers `btf*` hernoemd (`plan-slices.ts`, `readPlanSlices`, `OPENING_FRAME_EXTRA`); de FML-JSON-**waarden** `btfSlices`/`btfFrame`/`btfRole`/`btfOrigin` blijven staan |
+| Converter → editor | Stap-4 knop «Openen in editor»: clone van `previewPlan` (in-memory plattegrond, geen download). Confirm als de editor al inhoud heeft; CV-sidecar blijft in de converter |
+| Taal | Intern/editor = plattegrond / `.plg`; converter-klant-UI mag FML. «FML-editor» vermijden. Pad `/FML-editor` blijft tot een gerichte rename |
+
+---
+
+## 1,50 m-hoogtelijn + dakkapel (2026-09-11)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Hoofddak | Eén dichte polygoon; **geen gat** voor dakkapel |
+| Dakkapel | Getypt kindvlak `roofKind: 'dormer'` + `roofParentId` op `FloorSurface` (zoals `origin`) |
+| Sibling-overlap | Verboden (~8 cm slack); dormer-in-ouder toegestaan; toast bij weigeren |
+| Clear height | `dakplafondZ − liningCm` vanaf vloer-Z 0; `poly.z` = onderkant plaat; goot tot `−slab`; contour **live** (niet opslaan) |
+| `liningCm` | Alleen per `FloorArea`; default 0; mag negatief tot `−dakThicknessCm` |
+| Override | Slot op `plan.roof.clearHeightOverride`; deze bouw leeg (geen lijn-editor) |
+| Weergave | Plattegrond: stippellijn `[12,6]` (+ optionele arcering default uit); Dak-tab: fill ≥1,50 geen lijn |
+| Settings | `showClearHeight150` (aan), `showClearHeight200` (uit), `showClearHeightPlanFill` (uit) |
+| Persist | `.plg` v1 typed velden; **geen** versiebump/migratie; FML-adapter lossy + optioneel `settings.roofPlanes.kinds` |
+| Fitting | Bind in dormer: `z`=ouderZ, `h`=kindZ; erbuiten alleen top; wangen/gevelgroep handmatig |
+| Meetstaat | Pure `computeClearHeightBands` als haak; geen Meetstaat-tab in deze bouw |
+
+Uitwerking: `.cursor/docs/roof-clear-height.md`.
+
+---
+
+## Dakkapel-randmuren bind + aanzicht (2026-09-12)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Welke muren | Alleen hartlijn-**einden** op de kindvlak-rand (`ROOF_TOUCH_SLACK` + ½ dikte). Kamerschot in de kapel en lange gevel die de kapel raakt: nee |
+| Bind | Zelfde knop «Muren aan dak». Ná hoogtes: hartlijn naar **huidige buitenface**, `balance` 0\|1 a→b, dikte naar **binnen**. Baksteen blijft |
+| Aanzicht | Dezelfde randmuren auto (geen gevelgroep); `axisEdit`; wangen `skipReturnFilter` |
+| As-sleep | Langs plattegrond-as, geklemd op kindvlak; geen Ctrl-escape; al buiten = niet naar binnen trekken |
+| Knieschot | Geen auto-knip. Tekenaar: losse muur, licht offset zodat merge de wang niet opvreet |
+| Niet | Kindvlak-ringen als crease; flush op binnen-muren; tweede knop |
+
+---
+
+## Handmatige maatlijnen bewerken (2026-09-11)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Punten | Geselecteerde/gehoverde lijn: knoop-handles op a/b; sleep langs de bestaande as (niet draaien) |
+| Typen | Toolbelt-lengte via `ScaleLengthInput`; groeit/krimpt **evenredig naar beide kanten** (midden vast) |
+| Verwijderen | Toolbelt-prullenbak + Delete (zelfde als overige objecten) |
+| Snap tekenen | Handmatig meet-tool: muurfaces **én** andere manuals (oneindige assen + einden); Ctrl uit |
+| Snap bewerken | Eindpunt: zelfde snap, daarna projectie op as; slide: evenwijdige andere maatlijn (H/V-offset) |
+| Min. lengte | 1 cm |
+
+---
+
+## Opening/fixture-identiteit: kinds + eigen IDs (2026-09-11)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Exemplaar | Verplicht `Opening.id` / `FloorItem.id` (UUID); FML-export `guid = id` |
+| Soort | Domein-`kind` (`door.single`, `window.triple`, `oil_bottle`, …); **geen** Floorplanner-hash op het plan |
+| FML-hashes | Alleen adapter (`opening-fml-refids` / `fixture-fml-refids`); unmapped → `extras.fmlRefid` |
+| Labels D1/R1 | **Buiten scope** — later bij Meetstaat |
+| Migratie | Geen `migratePlg` bump (V1 ongepubliceerd); `normalizePlanIdentities` op `readPlg` / `importFmlV3` / IDB |
+
+---
+
+## Ruimte niet sticky (2026-09-11)
+
+Kamer/dakvlak-selectie lockt het canvas niet meer. Hit-test (opening → object → muur → ruimte) mag door klikken; muur ↔ opening blijft plakkerig vanwege de 16 px-halo. Zie ook «FML-selectie sticky + touch-pan (2026-08-19)».
+
+---
+
+## Dakvlak = onderkant plaat (2026-09-12)
+
+| Beslissing | Keuze |
+|------------|--------|
+| `poly.z` | Onderkant dakplaat (plafond), niet het hart |
+| Aanzicht | Plaatdikte omhoog vanaf handles; goot tot `−slabThicknessCm` |
+| Clear height | `dakplafondZ − liningCm` (geen ½ dikte) |
+| Bind | Ongewijzigd (hartlijn-knoop); dak rust op zichtbaar vlak, niet buitensteen |
+| Migratie | Geen; `.plg` v1 ongepubliceerd |
+
+---
+
+## Dakvlakken op de verdieping (2026-09-12)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Master | Topbar-knop (icoon `roof`, naast grid): `showRoofOverlayOnPlan` (default aan). Alleen editor-plattegrond; verborgen op Dak / Gevels / converter stap 1–4. Inspect: knop ja, teken-tool nee |
+| Inhoud | Settings → Dak: `showRoofPlanesOnPlan` (omtrek, default aan) + bestaande 1,50 / 2,00 / arcering. Geen extra sidebar-fold |
+| Render | Stippellijn `[12,6]`, `listening: false`; hoofddak / dakkapel via `resolveRoofSurfaceColor`. Geen fill in `surfaces` (zou kamer-hit stelen) |
+| Teken-tool | `draw_roof` op editor-plattegrond; zelfde write/snap/kind-strip als Dak-tab (`isRoof` + `roofKind` op sibling Dak-design). Trapgat blijft `draw_surface` |
+| Wang-snap | Muur-tekenen snapt op dakvlak-randen (8 cm) als master én omtrek aan; Ctrl = uit |
+| Buiten scope | Nok-overlay op plattegrond; vertex-edit op verdieping; ghost-ramen op Dak; muurpunten op aanzicht |
+
+Uitwerking: `.cursor/docs/roof-clear-height.md`.
 
 ---
 

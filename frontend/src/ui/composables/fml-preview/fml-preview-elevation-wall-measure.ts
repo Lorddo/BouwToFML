@@ -1,4 +1,5 @@
 import type { ElevationJunction, ElevationWallRect } from '@/core/fml/facade-elevation'
+import type { Point2D } from '@/core/fml/types'
 import { OPENING_MOVE_MEASURE_INSET_CM } from './fml-preview-opening-move-measure'
 import { type MeasureLine, measureDistanceCm } from './fml-preview-measure'
 
@@ -124,6 +125,26 @@ export function elevationWallFaceMeasureLengthsCm(
     heightLeftCm: measureDistanceCm(lines[0].a, lines[0].b),
     heightRightCm: measureDistanceCm(lines[1].a, lines[1].b),
   }
+}
+
+/**
+ * Hoogte van een dakvlak-punt tot de verdiepingsvloer (hart van de plaat),
+ * naast het punt — zelfde overlay als knoop/nok.
+ */
+export function buildElevationRoofVertexHeightMeasureLines(
+  point: Point2D,
+  floorY: number,
+  vertexIndex = 0,
+): MeasureLine[] {
+  const inset = OPENING_MOVE_MEASURE_INSET_CM
+  if (Math.abs(point.y - floorY) < EPS) return []
+  return [
+    {
+      id: `elev-roof-vertex-height:${vertexIndex}`,
+      a: { x: point.x + inset, y: point.y },
+      b: { x: point.x + inset, y: floorY },
+    },
+  ]
 }
 
 /** Knoop-hoogte naast de knoop (zelfde inset). Nok = onderkant tot vloer. */

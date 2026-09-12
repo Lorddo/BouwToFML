@@ -4,7 +4,7 @@
  * Place-lijn horizontaal (offset in Y) → strook over hele breedte op P.y.
  * P↔M van één slice blijft vrij.
  */
-import type { BtfSlice } from './btf-slices'
+import type { PlanSlice } from './plan-slices'
 import type { Point2D } from './types'
 
 /** Soft zone rond de strookrand (cm). */
@@ -34,7 +34,7 @@ export function snapSliceHandleAxis(
 export type SlicePlaceStripAxis = 'x' | 'y'
 
 /** Offset-as P−M bepaalt place-strook. */
-export function slicePlaceStripAxis(slice: Pick<BtfSlice, 'm' | 'p'>): SlicePlaceStripAxis | null {
+export function slicePlaceStripAxis(slice: Pick<PlanSlice, 'm' | 'p'>): SlicePlaceStripAxis | null {
   const dx = Math.abs(slice.p.x - slice.m.x)
   const dy = Math.abs(slice.p.y - slice.m.y)
   if (dx < 1e-6 && dy < 1e-6) return null
@@ -76,7 +76,7 @@ export function snapCoordAwayFromStrips(
 }
 
 function collectStripCenters(
-  slices: ReadonlyArray<BtfSlice>,
+  slices: ReadonlyArray<PlanSlice>,
   excludeIndex: number,
   forceAxis: SlicePlaceStripAxis | null | undefined,
 ): { x: number[]; y: number[] } {
@@ -108,7 +108,7 @@ function collectStripCenters(
  */
 export function snapPToOtherPOffsets(
   point: Point2D,
-  slices: ReadonlyArray<BtfSlice>,
+  slices: ReadonlyArray<PlanSlice>,
   preferredCm: number,
   opts?: {
     excludeIndex?: number
@@ -129,7 +129,7 @@ export function snapPToOtherPOffsets(
 /** Snap een P-punt t.o.v. P-stroken van andere slices. */
 export function snapSlicerPPoint(args: {
   point: Point2D
-  slices: ReadonlyArray<BtfSlice>
+  slices: ReadonlyArray<PlanSlice>
   preferredCm: number
   excludeIndex?: number
   softCm?: number

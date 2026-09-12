@@ -91,7 +91,7 @@ describe('fml-preview-opening-handles', () => {
         {
           type: 'door',
           refid: 'd',
-          guid: 'g1',
+          id: 'g1',
           t: 0.5,
           width: 80,
           z: 0,

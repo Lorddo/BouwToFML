@@ -10,7 +10,7 @@ import type {
   DoorSwingStage,
   ResolvedDoorCandidate,
 } from '@/cv/doors'
-import { resolveDoorFmlTemplateRefId } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/fml/types'
 import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
 
 // ESC:O-28 (D)
@@ -110,7 +110,7 @@ export function signatureForDoorRects(rects: SelectionRect[]): string {
     .filter((rect) => rect.type === 'door')
     .map(
       (rect) =>
-        `${rect.type}:${rect.x},${rect.y},${rect.width},${rect.height}:${resolveDoorFmlTemplateRefId(rect.fmlRefId)}`,
+        `${rect.type}:${rect.x},${rect.y},${rect.width},${rect.height}:${resolveDoorTemplateKind(rect.fmlRefId)}`,
     )
     .join('|')
 }

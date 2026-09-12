@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { mapLayer12DoorsToOpenings } from '@/core/fml/extraction-to-plan-doors'
-import { CONCEPT_DOOR_REFID, DOUBLE_WIDE_DOOR_REFID } from '@/core/fml/types'
 import type { Layer12DoorForFml } from '@/core/fml/extraction-to-plan-types'
 
 function makeDoor(
@@ -9,7 +8,7 @@ function makeDoor(
 ): Layer12DoorForFml {
   return {
     segmentIndex: 0,
-    fmlRefId: CONCEPT_DOOR_REFID,
+    fmlRefId: 'door.single',
     mirrored: [0, 0],
     ...partial,
   }
@@ -42,7 +41,7 @@ describe('mapLayer12DoorsToOpenings mergeDoubleDoors', () => {
       consumedDoorIds: new Set(),
     })
     expect(openings).toHaveLength(1)
-    expect(openings[0].refid).toBe(DOUBLE_WIDE_DOOR_REFID)
+    expect(openings[0].kind).toBe('door.double')
   })
 
   it('keeps singles when mergeDoubleDoors is false', () => {
@@ -58,6 +57,6 @@ describe('mapLayer12DoorsToOpenings mergeDoubleDoors', () => {
       mergeDoubleDoors: false,
     })
     expect(openings).toHaveLength(2)
-    expect(openings.every((o) => o.refid === CONCEPT_DOOR_REFID)).toBe(true)
+    expect(openings.every((o) => o.kind === 'door.single')).toBe(true)
   })
 })

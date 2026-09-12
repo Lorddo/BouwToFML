@@ -27,7 +27,7 @@ describe('FML full roundtrip (envelope + annotations)', () => {
     expect(floor.drawing?.url).toContain('cloudfront.net')
 
     const wallWith266 = floor.walls.find((w) => {
-      const az = w.extras?.az as { h?: number } | undefined
+      const az = w.elevation?.a
       return az?.h === 266
     })
     expect(wallWith266).toBeTruthy()
@@ -53,7 +53,7 @@ describe('FML full roundtrip (envelope + annotations)', () => {
     const reimported = importFmlV3(exported)
     expect(reimported.plan.floors[0].labels?.some((l) => l.text.includes('H=2.70m'))).toBe(true)
     const azAgain = reimported.plan.floors[0].walls.find((w) => {
-      const az = w.extras?.az as { h?: number } | undefined
+      const az = w.elevation?.a
       return az?.h === 266
     })
     expect(azAgain).toBeTruthy()
