@@ -16,7 +16,7 @@ import {
   UserSettingsParseError,
   type CornerMarkerMode,
   type FmlConversionSettings,
-  type FmlViewerSettings,
+  type EditorSettings,
   type OpeningDisplayColorKey,
   type PlanDisplayStyleChoice,
   type ScaleInputUnit,
@@ -115,7 +115,7 @@ function patchThicknessCatalog(cms: number[]) {
   patchDefaults({ thicknessCms: cms, ...limits })
 }
 
-function patchViewer(patch: Partial<FmlViewerSettings>) {
+function patchViewer(patch: Partial<EditorSettings>) {
   Object.assign(draft.fmlViewer, patch)
 }
 

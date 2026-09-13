@@ -19,24 +19,24 @@ const floorOf = (height: number, openings: Opening[]): Pick<Floor, 'height' | 'w
 })
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({
-  refid: 'door',
+  id: overrides.id ?? 'd1',
+  kind: 'door.single',
   t: 0.5,
   width: 90,
   type: 'door',
   z: 0,
   z_height: 220,
-  id: 'd1',
   ...overrides,
 })
 
 const windowOpening = (overrides: Partial<Opening> = {}): Opening => ({
-  refid: 'win',
+  id: overrides.id ?? 'w1',
+  kind: 'window.single',
   t: 0.5,
   width: 120,
   type: 'window',
   z: 70,
   z_height: 150,
-  id: 'w1',
   ...overrides,
 })
 

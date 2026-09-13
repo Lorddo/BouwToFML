@@ -17,7 +17,7 @@ import {
   translateElevationRect,
   wallSideForElevationResize,
 } from '@/core/fml/elevation-opening-edit'
-import { MAX_OPENING_WIDTH_CM } from '@/ui/components/fml-preview-openings'
+import { MAX_OPENING_WIDTH_CM } from '@/ui/components/plan-canvas-openings'
 import type { ElevationWallRect } from '@/core/fml/facade-elevation'
 import { type Opening,
   type Wall } from '@/core/fml/types'

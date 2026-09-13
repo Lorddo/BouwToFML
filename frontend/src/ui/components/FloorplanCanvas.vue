@@ -21,7 +21,7 @@ import FloorplanProbeLayer from './FloorplanProbeLayer.vue'
 import WallStampCanvasLayer from './WallStampCanvasLayer.vue'
 import CanvasGuideGrid from './canvas/CanvasGuideGrid.vue'
 import { canvasGridScanSlot } from './canvas/canvas-guide-grid'
-import FmlEditorTopbar from './FmlEditorTopbar.vue'
+import EditorTopbar from './EditorTopbar.vue'
 import {
   FLOORPLAN_CANVAS_PROP_DEFAULTS,
   type FloorplanCanvasEmits,
@@ -285,7 +285,7 @@ function onShowCanvasGrid(next: boolean) {
 
 <template>
   <div ref="containerRef" class="canvas-wrap" :class="wrapClass">
-    <FmlEditorTopbar
+    <EditorTopbar
       :can-undo="canUndo"
       :can-redo="canRedo"
       :hint="instructionHint || undefined"

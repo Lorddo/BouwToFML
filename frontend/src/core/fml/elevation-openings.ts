@@ -21,7 +21,7 @@ import {
   addOpeningToWall,
   removeOpeningsById,
   updateOpeningById,
-} from '@/ui/components/fml-preview-openings'
+} from '@/ui/components/plan-canvas-openings'
 
 export { decodePlanOpeningId, encodePlanOpeningId } from './opening-ids'
 
@@ -201,7 +201,7 @@ export function addPlanOpening(
   return { plan: next, openingId }
 }
 
-/** UI-split (junctions/openings) — core importeert geen `fml-preview-wall-edit`.
+/** UI-split (junctions/openings) — core importeert geen `plan-canvas-wall-edit`.
  * Callers: inject `splitWallAtT` from UI as `splitWalls` (geom), plan remap via this helper.
  */
 export type SplitWallAtTFn = (

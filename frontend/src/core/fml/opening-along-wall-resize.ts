@@ -7,7 +7,7 @@ import {
   MAX_OPENING_WIDTH_CM,
   MIN_OPENING_WIDTH_CM,
   wallCollinearEnds,
-} from '@/ui/components/fml-preview-openings'
+} from '@/ui/components/plan-canvas-openings'
 
 export type OpeningAlongWallSide = 'start' | 'end'
 

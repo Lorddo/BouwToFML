@@ -86,7 +86,7 @@ export function useWorkspaceRoomPipeline(deps: {
   showLayer11: Ref<boolean>
   showLayer12: Ref<boolean>
   showLayer14: Ref<boolean>
-  resetFmlPreview: () => void
+  resetPlanCanvas: () => void
   refreshWallUnderlayPreview: () => Promise<void>
   devSessionRestoring?: Ref<boolean>
   applyAutoGapsInkMode?: (mode: import('@/cv/gaps').GapsInkMode) => void
@@ -189,7 +189,7 @@ export function useWorkspaceRoomPipeline(deps: {
       detection.status.value = message
     },
     onInvalidateResult: () => {
-      deps.resetFmlPreview()
+      deps.resetPlanCanvas()
       deps.wallsDetectionComplete.value = false
     },
     onFinalizeSuccess: async () => {
@@ -207,7 +207,7 @@ export function useWorkspaceRoomPipeline(deps: {
       })
       // Ná semantic + deuren/ramen: anders zet stamp/nulpunt editedPreviewPlan
       // vast op de pre-semantic graph en slaat de generate-watch over.
-      deps.resetFmlPreview()
+      deps.resetPlanCanvas()
       roomFacesRef.value?.setFinalizePhase(null)
       deps.resultTab.value = 'vector'
       deps.flowStep.value = 'result'

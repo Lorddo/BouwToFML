@@ -162,7 +162,7 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
     showLayer11: ctx.showLayer11,
     showLayer12: ctx.showLayer12,
     showLayer14: ctx.showLayer14,
-    resetFmlPreview: () => ctx.fml.resetGeneratedPreview(),
+    resetPlanCanvas: () => ctx.fml.resetGeneratedPreview(),
     refreshWallUnderlayPreview: () => ctx.preprocessUi.refreshLayerUnderlayPreview('walls'),
     devSessionRestoring: ctx.devSessionRestoring,
     applyAutoGapsInkMode: ctx.applyAutoGapsInkMode,

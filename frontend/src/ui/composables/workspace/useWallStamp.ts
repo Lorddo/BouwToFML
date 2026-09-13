@@ -13,7 +13,7 @@ import { resolveBakeNulpuntImageCm } from '@/core/fml/stamp-nulpunt'
 import {
   buildWallOutlinePolylines,
   type WallPolygonInput,
-} from '@/ui/components/fml-preview-wall-polygons'
+} from '@/ui/components/plan-canvas-wall-polygons'
 import {
   DEFAULT_STAMP_BANDS,
   STAMP_CONTOUR_LINE_PX,

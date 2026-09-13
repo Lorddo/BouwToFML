@@ -35,8 +35,8 @@ import {
   syncRidgeWallGuidsFromDesigns,
 } from '@/core/fml/ridge-walls'
 import type { FloorPlan, Wall } from '@/core/fml/types'
-import { addRidgeSegment, addWallSegment } from '@/ui/components/fml-preview-wall-draw-geom'
-import { buildJunctions, moveJunctionWithWallJoins } from '@/ui/components/fml-preview-junctions'
+import { addRidgeSegment, addWallSegment } from '@/ui/components/plan-canvas-wall-draw-geom'
+import { buildJunctions, moveJunctionWithWallJoins } from '@/ui/components/plan-canvas-junctions'
 
 function wall(id: string, a = { x: 0, y: 0 }, b = { x: 400, y: 0 }): Wall {
   return { id, a, b, thickness: 20, openings: [] }
@@ -352,7 +352,7 @@ describe('ridge-walls', () => {
         designs?: Array<{
           name?: string
           settings?: { btfRole?: string }
-          walls?: Array<{ id: string; ridge?: boolean }>
+          walls?: Array<{ guid: string; ridge?: boolean }>
         }>
       }>
     }

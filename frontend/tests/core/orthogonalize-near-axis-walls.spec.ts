@@ -90,7 +90,7 @@ describe('orthogonalizeNearAxisWalls', () => {
   it('herprojecteert opening-t naar wereldpositie na de shift', () => {
     const walls = [
       wall('h', { x: 0, y: 0 }, { x: 100, y: 2 }, 10, [
-        { refid: 'door', t: 0.5, width: 90, type: 'door' },
+        { id: 'door', kind: 'door.single', t: 0.5, width: 90, type: 'door' },
       ]),
     ]
     const before = {

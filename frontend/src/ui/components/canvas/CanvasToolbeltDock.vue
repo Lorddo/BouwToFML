@@ -90,7 +90,7 @@ function deactivateActiveTool(): void {
       <div v-if="hasActiveTool" class="canvas-toolbelt-dock__sep" aria-hidden="true" />
       <div
         v-if="hasActiveTool"
-        class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--fml"
+        class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--plan"
       >
         <ToolbeltActionButton
           icon="clear"

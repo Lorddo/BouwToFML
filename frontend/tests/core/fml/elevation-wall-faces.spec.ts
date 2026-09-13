@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   displayWidthFromRidgeElevationRect,
   elevationFaceXs,
+  elevationOwnThicknessFaceXs,
   elevationRidgeIsEndOn,
+  elevationWallProjectedXs,
   resolveElevationWallEndFaces,
   ridgeElevationFaceXs,
 } from '@/core/fml/elevation-wall-faces'
@@ -86,5 +88,55 @@ describe('ridgeElevationFaceXs', () => {
   it('displayWidth inverse van kopse silhouet', () => {
     const xs = ridgeElevationFaceXs(200, 200, 200, 16)
     expect(displayWidthFromRidgeElevationRect(xs.xOuterB - xs.xOuterA, 200, 200, 200)).toBe(16)
+  })
+})
+
+describe('elevationOwnThicknessFaceXs', () => {
+  const elevY: { x: number; y: number } = { x: 0, y: 1 }
+
+  it('end-on 0.5: dikte gecentreerd op de as', () => {
+    const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 }, 20, 0.5)
+    const xs = elevationOwnThicknessFaceXs(0, 0, front, elevY)
+    expect(Math.abs(xs.xOuterB - xs.xOuterA)).toBeCloseTo(20, 5)
+    expect((xs.xOuterA + xs.xOuterB) / 2).toBeCloseTo(0, 5)
+  })
+
+  it('end-on flush (balance 0): as op één face, dikte naar de andere kant', () => {
+    const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 }, 20, 0)
+    const xs = elevationOwnThicknessFaceXs(0, 0, front, elevY)
+    const lo = Math.min(xs.xOuterA, xs.xOuterB)
+    const hi = Math.max(xs.xOuterA, xs.xOuterB)
+    expect(hi - lo).toBeCloseTo(20, 5)
+    expect(Math.min(Math.abs(lo), Math.abs(hi))).toBeCloseTo(0, 5)
+    expect(Math.max(Math.abs(lo), Math.abs(hi))).toBeCloseTo(20, 5)
+  })
+
+  it('face-on: geen extra X uit eigen dikte', () => {
+    const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 }, 20, 0)
+    const xs = elevationOwnThicknessFaceXs(0, 400, front, { x: 1, y: 0 })
+    expect(xs.xOuterA).toBeCloseTo(0, 5)
+    expect(xs.xOuterB).toBeCloseTo(400, 5)
+  })
+})
+
+describe('elevationWallProjectedXs', () => {
+  it('face-on houdt knoop-oren', () => {
+    const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })
+    const ret = wall('return', { x: 400, y: 0 }, { x: 400, y: 200 })
+    const xs = elevationWallProjectedXs(0, 400, 1, front, { x: 1, y: 0 }, [front, ret])
+    expect(xs.xOuterA).toBeCloseTo(-10, 5)
+    expect(xs.xOuterB).toBeCloseTo(410, 5)
+    expect(xs.xInnerB).toBeCloseTo(390, 5)
+  })
+
+  it('end-on gebruikt eigen balance, niet buurdikte als X-breedte', () => {
+    const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 }, 20, 0)
+    const ret = wall('return', { x: 400, y: 0 }, { x: 400, y: 200 }, 20, 0.5)
+    const xs = elevationWallProjectedXs(0, 0, 0, front, { x: 0, y: 1 }, [front, ret])
+    const width = Math.abs(xs.xOuterB - xs.xOuterA)
+    expect(width).toBeCloseTo(20, 5)
+    const lo = Math.min(xs.xOuterA, xs.xOuterB)
+    const hi = Math.max(xs.xOuterA, xs.xOuterB)
+    expect(Math.min(Math.abs(lo), Math.abs(hi))).toBeCloseTo(0, 5)
   })
 })

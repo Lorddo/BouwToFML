@@ -167,6 +167,27 @@ describe('sampleCeilingRoofAtPoint', () => {
     expect(beside?.surfaceId).toBe('roof-parent')
     expect(beside?.z).toBeLessThan(inDormer!.z)
   })
+
+  it('ongedagde kapel op ouder-rand wint voor 1,50-lijn (niet ouder-Z)', () => {
+    const parent = parentRoof()
+    const nested = makeRoofSurface({
+      id: 'roof-nested',
+      origin: 'manual',
+      poly: [
+        { x: 800, y: 100, z: 280 },
+        { x: 800, y: 250, z: 280 },
+        { x: 500, y: 250, z: 280 },
+        { x: 500, y: 100, z: 280 },
+      ],
+    })
+    const surfaces = [parent, nested]
+    const inside = sampleCeilingRoofAtPoint(surfaces, { x: 650, y: 175 })
+    expect(inside?.dormer).toBe(true)
+    expect(inside?.z).toBe(280)
+    const beside = sampleCeilingRoofAtPoint(surfaces, { x: 100, y: 100 })
+    expect(beside?.dormer).toBe(false)
+    expect(beside?.z).toBeLessThan(200)
+  })
 })
 
 describe('liningCm + clear-height', () => {
@@ -218,6 +239,7 @@ describe('liningCm + clear-height', () => {
           { x: 0, y: 600 },
         ],
         color: '#eee',
+        showAreaLabel: true,
       },
     ]
     const bands = computeClearHeightBands(plan, 0, { override })
@@ -246,6 +268,42 @@ describe('liningCm + clear-height', () => {
     }
   })
 
+  it('ongedagde kapel puncht 1,50-lijn en fill', () => {
+    const plan = basePlan()
+    const nested = makeRoofSurface({
+      id: 'roof-nested',
+      origin: 'manual',
+      poly: [
+        { x: 800, y: 100, z: 280 },
+        { x: 800, y: 250, z: 280 },
+        { x: 500, y: 250, z: 280 },
+        { x: 500, y: 100, z: 280 },
+      ],
+    })
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0]!, [parentRoof(), nested])
+    const contour = computeClearHeightContour(plan, 0, 150)
+    expect(contour.polylines.length).toBeGreaterThan(0)
+    for (const line of contour.polylines) {
+      for (let i = 0; i < line.points.length - 1; i += 1) {
+        const a = line.points[i]!
+        const b = line.points[i + 1]!
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+        const inDormer = mid.x > 520 && mid.x < 780 && mid.y > 110 && mid.y < 240
+        if (Math.hypot(b.x - a.x, b.y - a.y) > 80) {
+          expect(inDormer).toBe(false)
+        }
+      }
+    }
+    for (const ring of contour.rings) {
+      const mid = {
+        x: ring.points.reduce((s, p) => s + p.x, 0) / ring.points.length,
+        y: ring.points.reduce((s, p) => s + p.y, 0) / ring.points.length,
+      }
+      const inDormer = mid.x > 520 && mid.x < 780 && mid.y > 110 && mid.y < 240
+      expect(inDormer).toBe(false)
+    }
+  })
+
   it('liningCm +10 only affects that area snede filter', () => {
     const plan = basePlan()
     plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0]!, [parentRoof()])
@@ -259,6 +317,7 @@ describe('liningCm + clear-height', () => {
           { x: 0, y: 600 },
         ],
         color: '#eee',
+        showAreaLabel: true,
         liningCm: 10,
       },
       {
@@ -270,6 +329,7 @@ describe('liningCm + clear-height', () => {
           { x: 400, y: 600 },
         ],
         color: '#ddd',
+        showAreaLabel: true,
       },
     ]
     const contour = computeClearHeightContour(plan, 0, 150)
@@ -329,6 +389,7 @@ describe('.plg + FML dormer roundtrip', () => {
           { x: 50, y: 550 },
         ],
         color: '#ccc',
+        showAreaLabel: true,
         liningCm: 12,
       },
     ]

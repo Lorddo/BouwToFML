@@ -175,7 +175,8 @@ describe('foldBovenlichtOnWall', () => {
       [
         door({ t: 0.5, width: 93, z_height: 220 }),
         {
-          refid: '218',
+          id: 'transom-218',
+          kind: 'window.single',
           type: 'window',
           t: 0.51,
           width: 93,
@@ -200,6 +201,7 @@ describe('foldBovenlichtOnWall', () => {
       [
         windowOpening({ t: 0.3, width: 120, z: 70, z_height: 150 }),
         {
+          id: 'transom-match',
           kind: 'window.single',
           type: 'window',
           t: 0.3,
@@ -223,7 +225,7 @@ describe('foldBovenlichtOnWall', () => {
     const wide = foldBovenlichtOnWall(
       [
         door({ t: 0.5, width: 90 }),
-        { refid: '218', type: 'window', t: 0.5, width: 100, z: 230, z_height: 40 },
+        { id: 'transom-wide', kind: 'window.single', type: 'window', t: 0.5, width: 100, z: 230, z_height: 40 },
       ],
       WALL_LEN,
     )
@@ -233,7 +235,7 @@ describe('foldBovenlichtOnWall', () => {
     const far = foldBovenlichtOnWall(
       [
         door({ t: 0.5, width: 90 }),
-        { refid: '218', type: 'window', t: 0.55, width: 90, z: 230, z_height: 40 },
+        { id: 'transom-far', kind: 'window.single', type: 'window', t: 0.55, width: 90, z: 230, z_height: 40 },
       ],
       WALL_LEN,
     )

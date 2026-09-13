@@ -23,7 +23,7 @@ Intern is de plattegrond **`.plg`** (`FloorPlan` + `PlgDocument`). FML is een **
 | **plattegrond** / **plan** / `.plg` | «de FML» voor in-memory state | — |
 | **editor** (PLG-native; FML in/uit per tenant) | «FML-editor» | — |
 | **converter** / detectie-app | — | Klant-UI van BouwToFML: «FML», «Vector / FML», download `.fml` |
-| Pad `/FML-editor`, identifiers `Fml*` | niet hernoemen zonder migratie | legacy URL / bestaande TS-namen |
+| Pad `/editor` (redirect vanaf `/FML-editor`) | — | Converter-workspace + `core/fml` later (rename fase 4–6) |
 
 **Regel:** in conversatie en nieuwe docs «editor» + «plattegrond». Alleen in de converter-UI (en klantgesprekken over Floorplanner-export) «FML». Tekenbureau-tenant: FML-import/export; overige editor-accounts alleen `.plg`. Uitwerking: `.cursor/docs/plg-native-format-plan.md`.
 

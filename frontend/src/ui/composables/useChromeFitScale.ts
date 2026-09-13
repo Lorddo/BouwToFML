@@ -5,7 +5,7 @@ const COMPACT_BELOW = 0.9
 
 /**
  * Fit a chrome bar (toolbelt / topbar) to the canvas width by setting
- * `--fml-chrome-fit-scale` on the target. Keeps transform-origin at the
+ * `--plan-chrome-fit-scale` on the target. Keeps transform-origin at the
  * element; callers combine with existing centering transforms in CSS.
  */
 export function useChromeFitScale(
@@ -20,7 +20,7 @@ export function useChromeFitScale(
   const compact = ref(false)
   const minScale = options?.minScale ?? DEFAULT_MIN_SCALE
   const insetPx = options?.insetPx ?? 16
-  const containerSelector = options?.containerSelector ?? '.fml-preview-wrap, .canvas-wrap'
+  const containerSelector = options?.containerSelector ?? '.plan-canvas-wrap, .canvas-wrap'
 
   let resizeObserver: ResizeObserver | null = null
   let mutationObserver: MutationObserver | null = null
@@ -41,7 +41,7 @@ export function useChromeFitScale(
     const budget = Math.max(0, container.clientWidth - insetPx)
     if (budget <= 0) return
 
-    el.style.setProperty('--fml-chrome-fit-scale', '1')
+    el.style.setProperty('--plan-chrome-fit-scale', '1')
     el.classList.remove('is-chrome-compact')
     // Force layout at scale 1 before reading natural width.
     void el.offsetWidth
@@ -52,7 +52,7 @@ export function useChromeFitScale(
     const rounded = Math.round(next * 100) / 100
     scale.value = rounded
     compact.value = rounded < COMPACT_BELOW
-    el.style.setProperty('--fml-chrome-fit-scale', String(rounded))
+    el.style.setProperty('--plan-chrome-fit-scale', String(rounded))
     el.classList.toggle('is-chrome-compact', compact.value)
   }
 

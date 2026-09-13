@@ -21,8 +21,8 @@ import {
   withWallElevationShift,
   withWallUniformBottomZ,
 } from '@/core/fml/wall-endpoint-height'
-import { cloneWalls, splitWallAtPoint } from '@/ui/components/fml-preview-junction-core'
-import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
+import { cloneWalls, splitWallAtPoint } from '@/ui/components/plan-canvas-junction-core'
+import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'id' | 'a' | 'b'>): Wall {
   return {
@@ -62,7 +62,8 @@ describe('wall-endpoint-height', () => {
         openings: [
           {
             type: 'door',
-            refid: 'd',
+            id: 'd',
+            kind: 'door.single',
             t: 0.5,
             width: 90,
             z_height: 220,
@@ -234,7 +235,7 @@ describe('wall-endpoint-height', () => {
               id: 'w1',
               a: { x: 0, y: 0 },
               b: { x: 10, y: 0 },
-              openings: [{ type: 'door', refid: 'd', t: 0.5, width: 90, z_height: 220 }],
+              openings: [{ type: 'door', id: 'd', kind: 'door.single', t: 0.5, width: 90, z_height: 220 }],
             }),
           ],
         },
@@ -329,7 +330,7 @@ describe('wall-endpoint-height', () => {
               id: 'w0',
               a: { x: 0, y: 0 },
               b: { x: 10, y: 0 },
-              openings: [{ type: 'door', refid: 'd', t: 0.5, width: 90, z_height: 220 }],
+              openings: [{ type: 'door', id: 'd', kind: 'door.single', t: 0.5, width: 90, z_height: 220 }],
             }),
           ],
         },
@@ -342,7 +343,7 @@ describe('wall-endpoint-height', () => {
               id: 'w1',
               a: { x: 0, y: 0 },
               b: { x: 10, y: 0 },
-              openings: [{ type: 'door', refid: 'd', t: 0.5, width: 90, z_height: 220 }],
+              openings: [{ type: 'door', id: 'd', kind: 'door.single', t: 0.5, width: 90, z_height: 220 }],
             }),
           ],
         },

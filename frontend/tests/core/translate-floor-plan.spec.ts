@@ -20,7 +20,7 @@ function samplePlan(): FloorPlan {
             a: { x: 10, y: 20 },
             b: { x: 110, y: 20 },
             thickness: 15,
-            openings: [{ refid: 'door', t: 0.5, width: 90, type: 'door' }],
+            openings: [{ id: 'door', kind: 'door.single', t: 0.5, width: 90, type: 'door' }],
           },
           {
             id: 'w2',
@@ -31,7 +31,7 @@ function samplePlan(): FloorPlan {
             openings: [],
           },
         ],
-        items: [{ refid: 'item', x: 50, y: 60, width: 40, height: 40 }],
+        items: [{ id: 'item', kind: 'generic', x: 50, y: 60, width: 40, height: 40 }],
       },
     ],
   }

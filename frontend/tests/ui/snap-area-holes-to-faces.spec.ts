@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { scaleFloorPlan } from '@/core/fml/scale-floor-plan'
 import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
-import { buildAreaSideDims } from '@/ui/composables/fml-preview/fml-preview-area-side-dims'
+import { buildAreaSideDims } from '@/ui/composables/plan-canvas/plan-canvas-area-side-dims'
 import {
   regenerateFloorAreas,
   scaleFloorPlanAndRegenAreas,
-} from '@/ui/composables/fml-preview/regenerate-floor-areas'
-import { snapHoleRingsToWallFaces } from '@/ui/composables/fml-preview/snap-area-holes-to-faces'
+} from '@/ui/composables/plan-canvas/regenerate-floor-areas'
+import { snapHoleRingsToWallFaces } from '@/ui/composables/plan-canvas/snap-area-holes-to-faces'
 
 function wall(
   id: string,

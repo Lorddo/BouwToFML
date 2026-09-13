@@ -7,10 +7,10 @@ import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { useI18n } from 'vue-i18n'
 import FmlPanelActions from './FmlPanelActions.vue'
 import FmlPanelHeights from './FmlPanelHeights.vue'
-import FmlOpeningOverflowNotice from './FmlOpeningOverflowNotice.vue'
+import PlanOpeningOverflowNotice from './PlanOpeningOverflowNotice.vue'
 import FmlPanelOpacity from './FmlPanelOpacity.vue'
 import FmlPanelThickness from './FmlPanelThickness.vue'
-import FmlRescalePanel from './FmlRescalePanel.vue'
+import PlanRescalePanel from './PlanRescalePanel.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-panel-fields.css'
 
@@ -20,7 +20,7 @@ const { t } = useI18n()
  * Public contract for WorkspaceView — keep props/emits stable.
  *
  * F (half-steen): `importedFmlText` / `importedStats` / `importedWarnings` remain
- * on the contract for possible import-stats UI; upload lives only on FmlViewerView.
+ * on the contract for possible import-stats UI; upload lives only on EditorView.
  *
  * F: height/thickness defaults (280/220/150/70, 10/20/30) stay local — no cross-package
  * const sync with thickness-ui (magic-sync risk).
@@ -183,7 +183,7 @@ function onWindowBovenlichtChange(event: Event): void {
       {{ t('result.needScale') }}
     </p>
     <p v-else-if="!hasCombinedOutput" class="fml-hint">{{ t('result.needFinalize') }}</p>
-    <FmlOpeningOverflowNotice
+    <PlanOpeningOverflowNotice
       v-if="openingHeightOverflow"
       :summary="openingHeightOverflow"
       :unit="scaleInputUnit"
@@ -257,7 +257,7 @@ function onWindowBovenlichtChange(event: Event): void {
       @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
     />
 
-    <FmlRescalePanel
+    <PlanRescalePanel
       :active="fmlRescaleActive"
       :can-start="canStartRescale"
       :state="fmlRescaleState"

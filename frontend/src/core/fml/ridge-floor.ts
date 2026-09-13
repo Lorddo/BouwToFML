@@ -3,7 +3,7 @@
  * voetafdruk het stuk dekt én die niet door een hogere floor wordt bedekt.
  * Handmatig overschrijven via moveRidgeWallsToFloor.
  */
-import { buildWallRenderGeometry } from '@/ui/components/fml-preview-wall-polygons'
+import { buildWallRenderGeometry } from '@/ui/components/plan-canvas-wall-polygons'
 import { wallFaces } from './fml-wall-geom'
 import {
   listRidgeWallsOnFloor,

@@ -3,15 +3,18 @@
  * Bind flusht hartlijn naar de buitenface; aanzicht toont dezelfde set.
  */
 import {
-  isDormerRoof,
+  isDormerLikeRoof,
   listRidgeSurfacesOnFloor,
+  resolveDormerParent,
   ROOF_SAME_POINT_CM,
   ROOF_TOUCH_SLACK_CM,
 } from './roof-planes'
+import { areCollinearWalls } from './align-wall-junction-balance'
 import {
   openingWorldCenter,
   reprojectWallOpenings,
   wallAxisPoint,
+  wallDirectionUnit,
   wallFaces,
   wallLeftNormal,
 } from './fml-wall-geom'
@@ -62,7 +65,7 @@ export function isWallOnDormerEdge(
   wall: Pick<Wall, 'a' | 'b' | 'thickness'>,
   surface: FloorSurface,
 ): boolean {
-  if (!isDormerRoof(surface) || surface.poly.length < 3) return false
+  if (surface.poly.length < 3) return false
   const slack = wallEdgeSlackCm(wall)
   return (
     distToPolyEdges(wall.a, surface.poly) <= slack &&
@@ -76,9 +79,8 @@ export function findDormerEdgeSurface(
 ): FloorSurface | null {
   let best: FloorSurface | null = null
   let bestDist = Infinity
-  const slack = wallEdgeSlackCm(wall)
   for (const surface of surfaces) {
-    if (!isDormerRoof(surface) || surface.poly.length < 3) continue
+    if (!isDormerLikeRoof(surface, surfaces) || surface.poly.length < 3) continue
     if (!isWallOnDormerEdge(wall, surface)) continue
     const mid = wallAxisPoint(wall, 0.5)
     const dist = distToPolyEdges(mid, surface.poly)
@@ -109,6 +111,61 @@ export function listDormerEdgeWalls(floor: Floor | null | undefined): DormerEdge
 
 function samePoint(a: Point2D, b: Point2D, slack = 0.05): boolean {
   return hypot2(a.x, a.y, b.x, b.y) <= slack
+}
+
+/** Hartlijn-flush is ½ dikte; las moet die offset nog vinden. */
+function weldSlackCm(wall: Pick<Wall, 'thickness'>): number {
+  const half = Number.isFinite(wall.thickness) ? Math.max(0, wall.thickness) * 0.5 : 0
+  return Math.max(ROOF_SAME_POINT_CM, half + 2)
+}
+
+/**
+ * Collineair buursegment (zelfde as, gedeelde knoop).
+ * Volle-hoogte bind alleen op zo'n gevelketen, niet op een losse wang.
+ */
+export function hasCollinearContinuation(
+  wall: Wall,
+  walls: ReadonlyArray<Wall>,
+  slackCm = ROOF_SAME_POINT_CM,
+): boolean {
+  for (const other of walls) {
+    if (other.id === wall.id) continue
+    if (!areCollinearWalls(wall, other)) continue
+    if (
+      endsNear(wall.a, other.a, slackCm) ||
+      endsNear(wall.a, other.b, slackCm) ||
+      endsNear(wall.b, other.a, slackCm) ||
+      endsNear(wall.b, other.b, slackCm)
+    ) {
+      return true
+    }
+  }
+  return false
+}
+
+/** Snijpunt van twee oneindige lijnen; null als evenwijdig. */
+function unboundedLineHit(
+  a1: Point2D,
+  a2: Point2D,
+  b1: Point2D,
+  b2: Point2D,
+): Point2D | null {
+  const hit = segmentLineIntersectionT(a1, a2, b1, b2)
+  if (!hit) return null
+  return {
+    x: a1.x + (a2.x - a1.x) * hit.t,
+    y: a1.y + (a2.y - a1.y) * hit.t,
+  }
+}
+
+/** Eind schuift over de eigen as tot de nieuwe kopse-lijn — muur blijft recht. */
+function weldEndToLine(wall: Wall, end: 'a' | 'b', lineA: Point2D, lineB: Point2D): Wall {
+  const other = end === 'a' ? wall.b : wall.a
+  const hit = unboundedLineHit(wall.a, wall.b, lineA, lineB)
+  if (!hit) return wall
+  if (hypot2(hit.x, hit.y, other.x, other.y) < 4) return wall
+  if (samePoint(hit, wall[end])) return wall
+  return withEndXy(wall, end, hit)
 }
 
 /**
@@ -143,6 +200,134 @@ export function flushDormerEdgeWallOutward(wall: Wall, dormer: FloorSurface): Wa
   if (wall.openings.length === 0) return next
   const centers = wall.openings.map((opening) => openingWorldCenter(wall, opening.t))
   return { ...next, openings: reprojectWallOpenings(next, centers) }
+}
+
+function withEndXy(wall: Wall, end: 'a' | 'b', point: Point2D): Wall {
+  const next: Wall = {
+    ...wall,
+    a: end === 'a' ? { x: point.x, y: point.y } : wall.a,
+    b: end === 'b' ? { x: point.x, y: point.y } : wall.b,
+  }
+  if (wall.openings.length === 0) return next
+  const centers = wall.openings.map((opening) => openingWorldCenter(wall, opening.t))
+  return { ...next, openings: reprojectWallOpenings(next, centers) }
+}
+
+function parentOfDormer(
+  dormer: FloorSurface,
+  surfaces: ReadonlyArray<FloorSurface>,
+): FloorSurface | null {
+  const id = dormer.roofParentId?.trim()
+  if (id) {
+    const named = surfaces.find((surface) => surface.id === id)
+    if (named) return named
+  }
+  return resolveDormerParent(dormer, surfaces, dormer.id)
+}
+
+/** Ouder-helling: laagste-Z → hoogste-Z van de poly (goot → nok). */
+export function roofSlopeDir(surface: FloorSurface): Point2D | null {
+  let loZ = Infinity
+  let hiZ = -Infinity
+  let loCount = 0
+  let hiCount = 0
+  let loX = 0
+  let loY = 0
+  let hiX = 0
+  let hiY = 0
+  for (const p of surface.poly) {
+    const z = typeof p.z === 'number' && Number.isFinite(p.z) ? p.z : 0
+    if (z < loZ - 0.5) {
+      loZ = z
+      loCount = 1
+      loX = p.x
+      loY = p.y
+    } else if (Math.abs(z - loZ) <= 0.5) {
+      loCount += 1
+      loX += p.x
+      loY += p.y
+    }
+    if (z > hiZ + 0.5) {
+      hiZ = z
+      hiCount = 1
+      hiX = p.x
+      hiY = p.y
+    } else if (Math.abs(z - hiZ) <= 0.5) {
+      hiCount += 1
+      hiX += p.x
+      hiY += p.y
+    }
+  }
+  if (loCount === 0 || hiCount === 0 || hiZ - loZ < 1) return null
+  const dx = hiX / hiCount - loX / loCount
+  const dy = hiY / hiCount - loY / loCount
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-6) return null
+  return { x: dx / len, y: dy / len }
+}
+
+/** Kopse = dwars op ouder-helling (of een opening: voorkant met raam). */
+export function isKopseDormerEdgeWall(
+  wall: Wall,
+  dormer: FloorSurface,
+  surfaces: ReadonlyArray<FloorSurface>,
+): boolean {
+  if (!isWallOnDormerEdge(wall, dormer)) return false
+  if (wall.openings.length > 0) return true
+  const parent = parentOfDormer(dormer, surfaces)
+  const slope = parent ? roofSlopeDir(parent) : null
+  if (!slope) return false
+  const dir = wallDirectionUnit(wall)
+  return Math.abs(dir.x * slope.x + dir.y * slope.y) < 0.5
+}
+
+/**
+ * Alleen kopse hartlijn naar buitenface. Wangen op 0.5.
+ * Hoeken van aangesloten muren (wang) schuiven mee — knoop blijft heel.
+ */
+export function flushKopseDormerWalls(
+  walls: Wall[],
+  surfaces: ReadonlyArray<FloorSurface>,
+): { walls: Wall[]; flushed: number } {
+  const kopseIds = walls
+    .filter((wall) => {
+      const dormer = findDormerEdgeSurface(wall, surfaces)
+      return dormer != null && isKopseDormerEdgeWall(wall, dormer, surfaces)
+    })
+    .map((wall) => wall.id)
+  let next = walls
+  let flushed = 0
+  for (const id of kopseIds) {
+    const wall = next.find((item) => item.id === id)
+    if (!wall) continue
+    const dormer = findDormerEdgeSurface(wall, surfaces)
+    if (!dormer) continue
+    const flushedWall = flushDormerEdgeWallOutward(wall, dormer)
+    const oldA = wall.a
+    const oldB = wall.b
+    const slack = weldSlackCm(flushedWall)
+    let changed = flushedWall !== wall
+    next = next.map((item) => {
+      if (item.id === id) return flushedWall
+      let out = item
+      const aNear =
+        endsNear(item.a, oldA, slack) ||
+        endsNear(item.a, oldB, slack) ||
+        endsNear(item.a, flushedWall.a, slack) ||
+        endsNear(item.a, flushedWall.b, slack)
+      const bNear =
+        endsNear(item.b, oldA, slack) ||
+        endsNear(item.b, oldB, slack) ||
+        endsNear(item.b, flushedWall.a, slack) ||
+        endsNear(item.b, flushedWall.b, slack)
+      if (aNear) out = weldEndToLine(out, 'a', flushedWall.a, flushedWall.b)
+      if (bNear) out = weldEndToLine(out, 'b', flushedWall.a, flushedWall.b)
+      if (out !== item) changed = true
+      return out
+    })
+    if (changed) flushed += 1
+  }
+  return { walls: next, flushed }
 }
 
 export function unboundedWallT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D): number {

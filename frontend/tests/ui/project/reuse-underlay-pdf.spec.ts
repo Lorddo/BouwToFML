@@ -86,7 +86,7 @@ function createHarness(livePdf: { current: PdfUnderlaySource | null }) {
     setFmlNulpuntImageCm: vi.fn(),
     getFmlOrient: () => null,
     setFmlOrient: vi.fn(),
-    clearLiveFmlPreview: vi.fn(),
+    clearLivePlanCanvas: vi.fn(),
     getPdfUnderlaySource: () => livePdf.current,
     setPdfUnderlaySource: (source) => {
       livePdf.current = source

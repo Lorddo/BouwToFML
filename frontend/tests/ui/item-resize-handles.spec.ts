@@ -5,7 +5,7 @@ import {
   itemLocalToWorld,
   resizeFromSide,
   worldToItemLocal,
-} from '@/ui/composables/fml-preview/item-resize-handles'
+} from '@/ui/composables/plan-canvas/item-resize-handles'
 
 describe('item-resize-handles', () => {
   it('puts handles on the mid-sides', () => {

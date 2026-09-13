@@ -1010,11 +1010,16 @@ Uitwerking: `.cursor/docs/roof-clear-height.md`.
 | Beslissing | Keuze |
 |------------|--------|
 | Welke muren | Alleen hartlijn-**einden** op de kindvlak-rand (`ROOF_TOUCH_SLACK` + ½ dikte). Kamerschot in de kapel en lange gevel die de kapel raakt: nee |
-| Bind | Zelfde knop «Muren aan dak». Ná hoogtes: hartlijn naar **huidige buitenface**, `balance` 0\|1 a→b, dikte naar **binnen**. Baksteen blijft |
-| Aanzicht | Dezelfde randmuren auto (geen gevelgroep); `axisEdit`; wangen `skipReturnFilter` |
+| Hoogte | **Per segment** `az`/`bz`, nooit `setJunction*` (zelfde XY mag drie hoogtes houden) |
+| Nested dak | `roofKind: 'dormer'` **of** centroid in ouder + kind-Z-span < max(80, ½ ouder-span). Geen vertex-count (kapel op kopgevel deelt 2 hoeken). T-vleugel zelfde Z-span telt niet |
+| Kopse | Dwars op ouder-helling, of opening. `{z: ouderZ, h: kindZ}`. Hartlijn naar buitenface, `balance` 0\|1 |
+| Wang | Losse wang: `{z: ouderZ, h: kindZ}` (dak tot dak). **Volle hoogte** `z=0` alleen bij collineair buursegment (gevelketen) |
+| Las | Eind schuift **over de eigen as** tot de nieuwe kopse-lijn (hoek heel, muur blijft recht). Slack ½ dikte + 2 cm |
+| Bind 2e keer | No-op voor T/flush-stub (dakvlak-hoek + ½ dikte van een muureind); **niet** voor een nok die de gevel kruist |
+| Aanzicht | Randmuren auto (geen gevelgroep); kindvlak ook als het alleen op de X-span van de gevel projecteert |
 | As-sleep | Langs plattegrond-as, geklemd op kindvlak; geen Ctrl-escape; al buiten = niet naar binnen trekken |
+| Knip | `splitCreases` op nok/kil **én** dakvlak-omtrek. Lange gevel splitst op de kindrand |
 | Knieschot | Geen auto-knip. Tekenaar: losse muur, licht offset zodat merge de wang niet opvreet |
-| Niet | Kindvlak-ringen als crease; flush op binnen-muren; tweede knop |
 
 ---
 
@@ -1073,6 +1078,27 @@ Kamer/dakvlak-selectie lockt het canvas niet meer. Hit-test (opening → object 
 | Buiten scope | Nok-overlay op plattegrond; vertex-edit op verdieping; ghost-ramen op Dak; muurpunten op aanzicht |
 
 Uitwerking: `.cursor/docs/roof-clear-height.md`.
+
+---
+
+## Nok-knip vs geveldikte (2026-09-13)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Nok/kil die de muur kruist | Knip bij rest ≥ **4 cm**, ongeacht muurdikte (MK-gevel 37 cm met nok 22 cm van de T) |
+| T / flush-stub | Dakvlak-hoek of 2e bind na hartlijn-shift: skip als de knip ≤ ½ dikte + 8 cm van een muureind |
+| Niet | ½-dikte-slack op een echte nokkruising (dat hield de voor-/achtergevel van MK heel, binnenmuur 10 cm wel) |
+
+---
+
+## FML → Plan / Editor hernoeming (2026-09-12)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Woorden | Editor = product-shell/URL; Plan = gedeelde canvas; FML = adapter/export |
+| Fase 0–3 nu | i18n + `/editor` + shell + `PlanCanvas` / `plan-canvas/` |
+| Fase 4–6 later | workspace-panels, persist-keys, `core/fml` → `core/plan` ná kernel-campagne |
+| Redirect | `/FML-editor` en `/fml-editor/` → `/editor` (app-level, geen Cloudflare `_redirects`) |
 
 ---
 

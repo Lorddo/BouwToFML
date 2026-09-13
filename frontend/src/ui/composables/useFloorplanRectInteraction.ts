@@ -7,17 +7,17 @@ import {
   rectCenter,
   rectRotationDeg,
 } from '@/platform/selection/oriented-rect'
-import { isTypingFieldTarget } from '@/ui/composables/fml-preview/fml-preview-draft-commit'
+import { isTypingFieldTarget } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
 import {
   resizeFromSide,
   type ItemResizeSide,
-} from '@/ui/composables/fml-preview/item-resize-handles'
+} from '@/ui/composables/plan-canvas/item-resize-handles'
 import {
   pointerAngleDeg,
   rotationFromGrab,
   snapItemRotationDeg,
   type ItemRotateCorner,
-} from '@/ui/composables/fml-preview/item-rotate-handles'
+} from '@/ui/composables/plan-canvas/item-rotate-handles'
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
 export const RESIZE_HANDLES: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']

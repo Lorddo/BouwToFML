@@ -1,13 +1,16 @@
-/** Losse editor (PLG-native). Pad is legacy; niet hernoemen zonder redirect. */
-export const FML_EDITOR_PATH = '/FML-editor'
+/** Losse editor (PLG-native). Canonieke URL; `/FML-editor` redirect hierheen. */
+export const EDITOR_PATH = '/editor'
+
+/** Legacy bookmarks / oude links. */
+export const EDITOR_PATH_LEGACY = '/FML-editor'
 
 /** Extern Go2Scan-dashboard (andere host; nieuwe tab). */
 export const DASHBOARD_URL = 'https://dashboard.go2scan.nl/projects'
 
-export type AppShellView = 'workspace' | 'settings' | 'fml-viewer'
+export type AppShellView = 'workspace' | 'settings' | 'editor'
 
 export function viewFromPathname(pathname: string): Exclude<AppShellView, 'settings'> {
-  return isFmlEditorPath(pathname) ? 'fml-viewer' : 'workspace'
+  return isEditorPath(pathname) ? 'editor' : 'workspace'
 }
 
 export function normalizePathname(pathname: string): string {
@@ -15,18 +18,19 @@ export function normalizePathname(pathname: string): string {
   return trimmed === '' ? '/' : trimmed
 }
 
-export function isFmlEditorPath(pathname: string): boolean {
-  return normalizePathname(pathname).toLowerCase() === FML_EDITOR_PATH.toLowerCase()
+export function isEditorPath(pathname: string): boolean {
+  const n = normalizePathname(pathname).toLowerCase()
+  return n === EDITOR_PATH || n === EDITOR_PATH_LEGACY.toLowerCase()
 }
 
-/** Zet `/fml-editor/` e.d. om naar het canonieke pad. */
-export function syncFmlEditorCanonicalPath(
+/** Zet `/FML-editor`, `/fml-editor/` e.d. om naar `/editor`. */
+export function syncEditorCanonicalPath(
   location: Pick<Location, 'pathname' | 'search' | 'hash'> = window.location,
   historyApi: Pick<History, 'replaceState' | 'state'> = history,
 ): void {
-  if (!isFmlEditorPath(location.pathname)) return
+  if (!isEditorPath(location.pathname)) return
   const current = `${location.pathname}${location.search}${location.hash}`
-  const next = `${FML_EDITOR_PATH}${location.search}${location.hash}`
+  const next = `${EDITOR_PATH}${location.search}${location.hash}`
   if (current !== next) {
     historyApi.replaceState(historyApi.state, '', next)
   }

@@ -186,6 +186,40 @@ export function resolveDormerParent(
   return top > second ? (ranked[0] ?? null) : null
 }
 
+function roofZSpanCm(surface: FloorSurface): number {
+  let lo = Infinity
+  let hi = -Infinity
+  for (const p of surface.poly) {
+    const z = typeof p.z === 'number' && Number.isFinite(p.z) ? p.z : 0
+    lo = Math.min(lo, z)
+    hi = Math.max(hi, z)
+  }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return 0
+  return hi - lo
+}
+
+/**
+ * Getagd kindvlak, of een vlakker nested vlak (FIN-0013 zonder `roofKind`).
+ * T-vleugel op hetzelfde schild (zelfde Z-span) telt niet.
+ * Geen vertex-count: een kapel op de kopgevel deelt 2 hoeken met de ouder-rand
+ * (ray-casting telt die niet als binnen) — dat is wél een kapel.
+ */
+export function isDormerLikeRoof(
+  surface: FloorSurface,
+  all: ReadonlyArray<FloorSurface>,
+): boolean {
+  if (isDormerRoof(surface)) return true
+  if (!isRoofSurface(surface) || surface.poly.length < 3) return false
+  const centroid = polyCentroid(surface.poly)
+  if (!centroid) return false
+  const parents = listParentRoofs(all).filter((item) => item.id !== surface.id)
+  const host = parents.find((item) => pointInRing(centroid, item.poly))
+  if (!host) return false
+  const childSpan = roofZSpanCm(surface)
+  const parentSpan = roofZSpanCm(host)
+  return childSpan < Math.max(80, parentSpan * 0.5)
+}
+
 function countChildVerticesInside(poly: ReadonlyArray<Point2D>, parent: FloorSurface): number {
   let n = 0
   for (const p of poly) {

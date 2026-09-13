@@ -12,9 +12,8 @@ import { readElevationProjection, type ElevationProjectionMode } from './elevati
 import { listElevationFacadeGroups, wallGuidsInGroup } from './facade-groups'
 import { floorSlabWorldRange, floorWallBaseWorldZ, readFloorStack } from './floor-stack'
 import {
-  elevationFaceXs,
   elevationRidgeIsEndOn,
-  resolveElevationWallEndFaces,
+  elevationWallProjectedXs,
   ridgeElevationFaceXs,
 } from './elevation-wall-faces'
 import {
@@ -35,13 +34,17 @@ import {
   resolveWindowBovenlicht,
 } from './bovenlicht'
 import {
-  DORMER_ROOF_SURFACE_COLOR,
   ROOF_TOUCH_SLACK_CM,
-  isDormerRoof,
+  isDormerLikeRoof,
   listRidgeSurfacesOnFloor,
+  resolveDormerParent,
   resolveRoofSurfaceColor,
 } from './roof-planes'
-import { listDormerEdgeWalls } from './dormer-edge-walls'
+import {
+  isKopseDormerEdgeWall,
+  listDormerEdgeWalls,
+  roofSlopeDir,
+} from './dormer-edge-walls'
 import { buildLocalOpeningId, encodePlanOpeningId } from './opening-ids'
 import {
   type Floor,
@@ -156,6 +159,8 @@ export const ELEVATION_ROOF_FILL_GRAYS = [
 
 const ROOF_EAVE_PARALLEL_DOT = 0.92
 const ROOF_FACADE_BBOX_PAD_CM = 80
+/** Kijker staat achter de kopse (tegenover de voorkant). Zijgevels ~0, blijven in beeld. */
+const DORMER_BACK_VIEW_DOT = -0.5
 const ROOF_PROJECTED_AREA_MIN_CM2 = 100
 
 type ElevationFacadeWall = {
@@ -452,6 +457,101 @@ export function roofSurfaceVisibleOnElevation(
   return roofSurfaceOnThisFacadeSide(surface, centroid, outward, facadeMids)
 }
 
+function roofProjectsOnElevationAxis(
+  surface: FloorSurface,
+  walls: readonly ElevationFacadeWall[],
+  origin: Point2D,
+  axis: Point2D,
+): boolean {
+  if (walls.length === 0 || surface.poly.length === 0) return false
+  let f0 = Infinity
+  let f1 = -Infinity
+  for (const member of walls) {
+    f0 = Math.min(f0, projectOnAxis(member.wall.a, origin, axis), projectOnAxis(member.wall.b, origin, axis))
+    f1 = Math.max(f1, projectOnAxis(member.wall.a, origin, axis), projectOnAxis(member.wall.b, origin, axis))
+  }
+  let r0 = Infinity
+  let r1 = -Infinity
+  for (const point of surface.poly) {
+    const x = projectOnAxis(point, origin, axis)
+    r0 = Math.min(r0, x)
+    r1 = Math.max(r1, x)
+  }
+  const pad = ROOF_FACADE_BBOX_PAD_CM
+  return r0 <= f1 + pad && r1 >= f0 - pad
+}
+
+/**
+ * Kijkrichting van de kopse (voorkant dakkapel), van binnen naar de kopse-muur.
+ * Zonder kopse: naar de goot (−ouderhelling).
+ */
+function dormerKopseOutward(
+  surface: FloorSurface,
+  allSurfaces: ReadonlyArray<FloorSurface>,
+  floorWalls: readonly Wall[],
+): Point2D | null {
+  const c = meanPoint(surface.poly)
+  const kopses = floorWalls.filter((wall) => isKopseDormerEdgeWall(wall, surface, allSurfaces))
+  const preferred = kopses.filter((wall) => wall.openings.length > 0)
+  let chosen = preferred
+  if (chosen.length === 0 && kopses.length > 0) {
+    const parent = resolveDormerParent(surface, allSurfaces, surface.id)
+    const origin = parent && parent.poly.length >= 3 ? meanPoint(parent.poly) : c
+    let best = kopses[0]
+    let bestDist = -1
+    for (const wall of kopses) {
+      const mid = wallPlanMid(wall)
+      const dist = Math.hypot(mid.x - origin.x, mid.y - origin.y)
+      if (dist > bestDist) {
+        bestDist = dist
+        best = wall
+      }
+    }
+    chosen = best ? [best] : []
+  }
+  if (chosen.length > 0) {
+    let ox = 0
+    let oy = 0
+    let n = 0
+    for (const wall of chosen) {
+      const mid = wallPlanMid(wall)
+      const vx = mid.x - c.x
+      const vy = mid.y - c.y
+      const len = Math.hypot(vx, vy)
+      if (len < 1e-6) continue
+      ox += vx / len
+      oy += vy / len
+      n += 1
+    }
+    const len = Math.hypot(ox, oy)
+    if (n > 0 && len > 1e-6) return { x: ox / len, y: oy / len }
+  }
+  const parent = resolveDormerParent(surface, allSurfaces, surface.id)
+  const slope = parent ? roofSlopeDir(parent) : null
+  if (!slope) return null
+  return { x: -slope.x, y: -slope.y }
+}
+
+function dormerLikeVisibleOnElevation(
+  surface: FloorSurface,
+  allSurfaces: ReadonlyArray<FloorSurface>,
+  walls: readonly ElevationFacadeWall[],
+  centroid: Point2D,
+  outward: Point2D,
+  facadeMids: readonly Point2D[],
+  origin: Point2D,
+  axis: Point2D,
+  floorWalls: readonly Wall[],
+): boolean {
+  if (roofSurfaceVisibleOnElevation(surface, walls, centroid, outward, facadeMids)) return true
+  if (!isDormerLikeRoof(surface, allSurfaces)) return false
+  if (!roofProjectsOnElevationAxis(surface, walls, origin, axis)) return false
+  const kopseOut = dormerKopseOutward(surface, allSurfaces, floorWalls)
+  if (!kopseOut) return true
+  const viewDot = outward.x * kopseOut.x + outward.y * kopseOut.y
+  return viewDot >= DORMER_BACK_VIEW_DOT
+}
+
 function elevY(worldZ: number): number {
   return -worldZ
 }
@@ -674,7 +774,7 @@ export function projectFacadeElevation(
     const xb = projectOnAxis(wall.b, lineOrigin, elevAxis)
     const { xOuterA, xOuterB, xInnerA, xInnerB } = ridge
       ? ridgeElevationFaceXs(xa, xb, wallLen(wall), ridgeDisplayWidthCm(plan))
-      : elevationFaceXs(xa, xb, resolveElevationWallEndFaces(wall, floor.walls))
+      : elevationWallProjectedXs(xa, xb, along, wall, elevAxis, floor.walls)
     const base = floorWallBaseWorldZ(plan, floorIndex)
     const ends = wallEndpoints(wall, floor.height)
     const aTop = { x: xOuterA, y: elevY(base + ends.az.h) }
@@ -803,8 +903,21 @@ export function projectFacadeElevation(
   const facadeMids = members.map((item) => wallPlanMid(item.wall))
 
   plan.floors.forEach((floor, floorIndex) => {
+    const floorSurfaces = listRidgeSurfacesOnFloor(floor)
     for (const { wall, dormer } of listDormerEdgeWalls(floor)) {
-      if (!roofSurfaceVisibleOnElevation(dormer, facadeWalls, centroid, outward, facadeMids)) {
+      if (
+        !dormerLikeVisibleOnElevation(
+          dormer,
+          floorSurfaces,
+          facadeWalls,
+          centroid,
+          outward,
+          facadeMids,
+          lineOrigin,
+          elevAxis,
+          floor.walls,
+        )
+      ) {
         continue
       }
       const existing = walls.find(
@@ -838,11 +951,24 @@ export function projectFacadeElevation(
   plan.floors.forEach((floor, floorIndex) => {
     if (facadeWalls.length === 0) return
     const base = floorWallBaseWorldZ(plan, floorIndex)
-    listRidgeSurfacesOnFloor(floor).forEach((surface) => {
-      if (!roofSurfaceVisibleOnElevation(surface, facadeWalls, centroid, outward, facadeMids)) {
+    const floorSurfaces = listRidgeSurfacesOnFloor(floor)
+    floorSurfaces.forEach((surface) => {
+      if (
+        !dormerLikeVisibleOnElevation(
+          surface,
+          floorSurfaces,
+          facadeWalls,
+          centroid,
+          outward,
+          facadeMids,
+          lineOrigin,
+          elevAxis,
+          floor.walls,
+        )
+      ) {
         return
       }
-      const dormer = isDormerRoof(surface)
+      const dormer = isDormerLikeRoof(surface, floorSurfaces)
       const thickness = dormer
         ? Math.max(8, Math.round(roofThicknessCm * 0.6))
         : roofThicknessCm

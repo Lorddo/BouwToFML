@@ -53,20 +53,20 @@ import type { FloorOrientPersist, PreviewUnderlayLayout } from '@/ui/composables
 import {
   regeneratePlanAreas,
   scaleFloorPlanAndRegenAreas,
-} from '@/ui/composables/fml-preview/regenerate-floor-areas'
+} from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
 import {
   measuredCmFromRescaleState,
-  resolveFmlRescaleState,
+  resolvePlanRescaleState,
   resolveRescaleFactorsFromRulers,
   scaleNulpuntImageCm,
-} from '@/ui/composables/fml-preview/fml-rescale-from-measure'
+} from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
 import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
 import { tGlobal } from '@/ui/i18n'
-import { seedPlanFromUserSettings } from '@/ui/composables/fml-viewer/seed-plan-stack-defaults'
+import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
-import { confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 
 /** Stap-4 defaults die de live plattegrond muteren (niet hergenereren). */
 export type WorkspacePreviewDefaultField =
@@ -135,7 +135,7 @@ export type WorkspaceFmlGenerateDeps = {
    * bakeNulpunt zaait fmlNulpuntImageCm als die leeg is.
    */
   getStampVectorInject?: () => WorkspaceFmlStampInject | null
-  /** Test/override: zelfde seam als useFmlViewerSessionDefaults.confirmOverwrite. */
+  /** Test/override: zelfde seam als useEditorSessionDefaults.confirmOverwrite. */
   confirmOverwrite?: (message: string) => boolean | Promise<boolean>
 }
 
@@ -519,7 +519,7 @@ export function createWorkspaceFmlGenerate(
   /**
    * Stap-4: hoogtes/bovenlicht muteren de live plattegrond (zoals rescale/orient).
    * Hergebruikt dezelfde overwrite-all-confirm als Settings-defaults / Gevels
-   * (`confirmFmlChrome` + `viewer.defaultsOverwrite*`).
+   * (`confirmPlanChrome` + `viewer.defaultsOverwrite*`).
    */
   async function applyPreviewDefault(
     field: WorkspacePreviewDefaultField,
@@ -561,7 +561,7 @@ export function createWorkspaceFmlGenerate(
             state: enabled ? tGlobal('viewer.defaultsOn') : tGlobal('viewer.defaultsOff'),
           }),
         )
-      : await confirmFmlChrome({
+      : await confirmPlanChrome({
           title: tGlobal('viewer.defaultsOverwriteTitle'),
           message: tGlobal(overwriteKeyForField(field), {
             count,
@@ -698,7 +698,7 @@ export function createWorkspaceFmlGenerate(
   }
 
   /** Wis live FML-preview (na capture, vóór floor-id wissel) — voorkomt remount met vorige plan. */
-  function clearLiveFmlPreview(): void {
+  function clearLivePlanCanvas(): void {
     editedPreviewPlan.value = null
     importedPlan.value = null
     importedWarnings.value = []
@@ -707,7 +707,7 @@ export function createWorkspaceFmlGenerate(
     fmlNulpuntImageCm.value = null
     fmlOrient.value = defaultFloorOrient()
     underlayMoveMode.value = false
-    cancelFmlRescale()
+    cancelPlanRescale()
   }
 
   /** Na opnieuw afronden: toon verse detectie i.p.v. oude canvas-bewerkingen. */
@@ -771,10 +771,10 @@ export function createWorkspaceFmlGenerate(
     return true
   }
 
-  function beginFmlRescale(): boolean {
+  function beginPlanRescale(): boolean {
     const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
     const walls = plan?.floors[0]?.walls ?? []
-    const state = resolveFmlRescaleState({
+    const state = resolvePlanRescaleState({
       walls,
       imageState: deps.scale.state.value,
       layout: previewUnderlayLayout.value,
@@ -791,27 +791,27 @@ export function createWorkspaceFmlGenerate(
     return true
   }
 
-  function cancelFmlRescale(): void {
+  function cancelPlanRescale(): void {
     fmlRescaleActive.value = false
     fmlRescaleState.value = null
   }
 
-  function updateFmlRescaleState(next: HScaleState): void {
+  function updatePlanRescaleState(next: HScaleState): void {
     if (!fmlRescaleActive.value) return
     fmlRescaleState.value = { ...next }
   }
 
-  function setFmlRescaleDistanceMmX(mm: number): void {
+  function setPlanRescaleDistanceMmX(mm: number): void {
     if (!(mm > 0) || !Number.isFinite(mm)) return
     fmlRescaleDistanceMmX.value = mm
   }
 
-  function setFmlRescaleDistanceMmY(mm: number): void {
+  function setPlanRescaleDistanceMmY(mm: number): void {
     if (!(mm > 0) || !Number.isFinite(mm)) return
     fmlRescaleDistanceMmY.value = mm
   }
 
-  function confirmFmlRescale(): boolean {
+  function confirmPlanRescale(): boolean {
     const state = fmlRescaleState.value
     if (!state || !fmlRescaleActive.value) return false
     const measured = measuredCmFromRescaleState(state)
@@ -821,7 +821,7 @@ export function createWorkspaceFmlGenerate(
       trueMmX: fmlRescaleDistanceMmX.value,
       trueMmY: fmlRescaleDistanceMmY.value,
     })
-    if (ok) cancelFmlRescale()
+    if (ok) cancelPlanRescale()
     return ok
   }
 
@@ -895,7 +895,7 @@ export function createWorkspaceFmlGenerate(
   }
 
   function clearImportedFml(): void {
-    clearLiveFmlPreview()
+    clearLivePlanCanvas()
   }
 
   return {
@@ -925,19 +925,19 @@ export function createWorkspaceFmlGenerate(
     applyUnderlayOrientOp,
     setUnderlayMoveMode,
     applyNulpuntAtFmlCm,
-    clearLiveFmlPreview,
+    clearLivePlanCanvas,
     resetGeneratedPreview,
     regenerateFml,
     fmlRescaleActive,
     fmlRescaleState,
     fmlRescaleDistanceMmX,
     fmlRescaleDistanceMmY,
-    beginFmlRescale,
-    cancelFmlRescale,
-    updateFmlRescaleState,
-    setFmlRescaleDistanceMmX,
-    setFmlRescaleDistanceMmY,
-    confirmFmlRescale,
+    beginPlanRescale,
+    cancelPlanRescale,
+    updatePlanRescaleState,
+    setPlanRescaleDistanceMmX,
+    setPlanRescaleDistanceMmY,
+    confirmPlanRescale,
     rescaleFmlFromRulers,
     downloadGeneratedFml,
     copyGeneratedFml,

@@ -1,0 +1,778 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+import type { FloorLineType } from '@/core/fml/types'
+import type { OpeningSubtypeDraft } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
+import {
+  isPlanOneshotDrawTool,
+  isFmlToolbarSettingsOpen,
+  type PlanToolId,
+} from './canvas/planToolbeltItems'
+import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
+import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
+import './canvas/canvas-toolbelt.css'
+import './plan-toolbelt-settings-fields.css'
+import PlanToolbarSettingsWall from './PlanToolbarSettingsWall.vue'
+import PlanToolbarSettingsFacade from './PlanToolbarSettingsFacade.vue'
+import PlanToolbarSettingsOpening from './PlanToolbarSettingsOpening.vue'
+import PlanToolbarSettingsArea from './PlanToolbarSettingsArea.vue'
+import PlanToolbarSettingsRoof from './PlanToolbarSettingsRoof.vue'
+import PlanToolbarSettingsLabel from './PlanToolbarSettingsLabel.vue'
+import PlanToolbarSettingsLine from './PlanToolbarSettingsLine.vue'
+import PlanToolbarSettingsDimension from './PlanToolbarSettingsDimension.vue'
+import PlanToolbarSettingsItem from './PlanToolbarSettingsItem.vue'
+import PlanToolbarSettingsDraw from './PlanToolbarSettingsDraw.vue'
+import PlanToolbarSettingsStrips from './PlanToolbarSettingsStrips.vue'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import type { BoxSelectKind } from '@/ui/composables/plan-canvas/plan-canvas-wall-select'
+import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
+
+const { t } = useI18n()
+
+const activeTool = defineModel<PlanToolId | null>('activeTool', { default: null })
+const measureDrawMode = defineModel<'tape' | 'manual' | 'slicer'>('measureDrawMode', {
+  default: 'tape',
+})
+const boxSelectKind = defineModel<BoxSelectKind>('boxSelectKind', { default: 'wall' })
+const slicerEditMode = defineModel<boolean>('slicerEditMode', { default: false })
+const addDoorSubtype = defineModel<DoorAddSubtype>('addDoorSubtype', { default: 'standard' })
+const addDoorWidthCm = defineModel<number>('addDoorWidthCm', { default: 90 })
+const addDoorSillZCm = defineModel<number>('addDoorSillZCm', { default: 0 })
+const addWindowSubtype = defineModel<WindowAddSubtype>('addWindowSubtype', { default: 'single' })
+const addWindowWidthCm = defineModel<number>('addWindowWidthCm', { default: 100 })
+const addWindowSillZCm = defineModel<number>('addWindowSillZCm', { default: 70 })
+const addWindowHeightCm = defineModel<number>('addWindowHeightCm', { default: 150 })
+const drawSurfaceRole = defineModel<number | null>('drawSurfaceRole', { default: null })
+const drawSurfaceCutout = defineModel<boolean>('drawSurfaceCutout', { default: false })
+const drawRoofKind = defineModel<'plane' | 'dormer'>('drawRoofKind')
+const drawLineThickness = defineModel<number>('drawLineThickness', { default: 2 })
+const drawLineType = defineModel<FloorLineType>('drawLineType', { default: 'solid_line' })
+const drawLineColor = defineModel<string>('drawLineColor', { default: '#000000' })
+const drawLabelText = defineModel<string>('drawLabelText', { default: 'Tekst' })
+const drawLabelFontSize = defineModel<number>('drawLabelFontSize', { default: 16 })
+const drawLabelFontColor = defineModel<string>('drawLabelFontColor', { default: '#000000' })
+const drawLabelOutline = defineModel<boolean>('drawLabelOutline', { default: false })
+const drawLabelBold = defineModel<boolean>('drawLabelBold', { default: false })
+const drawLabelItalic = defineModel<boolean>('drawLabelItalic', { default: false })
+
+const props = withDefaults(
+  defineProps<{
+    unit: ScaleInputUnit
+    selectedWallPanel: {
+      wallIds: string[]
+      count: number
+      thicknessMixed: boolean
+      balanceMixed: boolean
+      heightMixed?: boolean
+      canSplit: boolean
+      ridgeCount?: number
+      mode?: 'quick' | 'full'
+    } | null
+    selectedFacadeGroupPanel?: {
+      groupId: string
+      name: string
+      wallCount: number
+      floorCount: number
+    } | null
+    selectedJunctionPanel: {
+      junctionId: string
+      wallCount: number
+      heightCm: number | null
+      heightMixed: boolean
+      ridgeCount?: number
+    } | null
+    selectedOpeningPanel: {
+      openingIds: string[]
+      count: number
+      mode?: 'quick' | 'full'
+      openingType: 'door' | 'window' | 'mixed'
+      subtype: OpeningSubtypeDraft | null
+      subtypeMixed: boolean
+      widthCm: number | null
+      widthMixed: boolean
+      heightCm: number | null
+      heightMixed: boolean
+      sillZCm: number | null
+      sillZMixed: boolean
+      hingeAtStart: boolean | null
+      hingeMixed: boolean
+      swingRight: boolean | null
+      swingMixed: boolean
+    } | null
+    selectedAreaPanel: {
+      kind: 'area' | 'surface'
+      id: string
+      role: number | null
+      name: string | null
+      customName: string
+      color: string
+      showAreaLabel: boolean
+      canEditPolygon: boolean
+      isCutout?: boolean
+      liningCm?: number | null
+    } | null
+    selectedLabelPanel?: {
+      id: string
+      text: string
+      fontSize: number
+      fontColor: string
+      outline: boolean
+      bold: boolean
+      italic: boolean
+    } | null
+    selectedLinePanel?: {
+      id: string
+      type: FloorLineType
+      color: string
+      thickness: number
+    } | null
+    selectedDimensionPanel?: {
+      id: string
+      lengthCm: number
+    } | null
+    selectedItemPanel?: {
+      id: string
+      label: string
+      widthCm: number
+      heightCm: number
+      rotationDeg: number
+      mirroredX: boolean
+      mirroredY: boolean
+    } | null
+    roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
+    surfaceEditActive?: boolean
+    roofVertexZCm?: number | null
+    roofVertexIndex?: number | null
+    roofPolyMutate?: boolean
+    roofKind?: 'plane' | 'dormer'
+    roofParentId?: string | null
+    parentRoofOptions?: ReadonlyArray<{ id: string; label: string }>
+    /** Dakdikte voor liningCm-clamp (ondergrens −dakThickness). */
+    dakThicknessCm?: number
+    /** Vloerdikte: ondergrens dakpunt-Z (goot tot onderkant plaat). */
+    slabThicknessCm?: number
+    wallThicknessDraft: number
+    wallThicknessMixed: boolean
+    wallBalanceDraft: number
+    wallBalanceMixed: boolean
+    wallHeightDraft: number
+    wallHeightMixed: boolean
+    wallBottomZDraft?: number
+    wallBottomZMixed?: boolean
+    junctionHeightDraft: number
+    junctionHeightMixed: boolean
+    junctionBottomZDraft?: number
+    junctionBottomZMixed?: boolean
+    openingSubtypeDraft: OpeningSubtypeDraft
+    openingSubtypeMixed: boolean
+    openingWidthDraft: number
+    openingWidthMixed: boolean
+    openingHeightDraft: number
+    openingHeightMixed: boolean
+    openingSillZDraft: number
+    openingSillZMixed: boolean
+    openingHingeAtStartDraft: boolean
+    openingHingeMixed: boolean
+    openingSwingRightDraft: boolean
+    openingSwingMixed: boolean
+    openingBovenlichtDraft: boolean
+    openingBovenlichtMixed: boolean
+    openingBovenlichtHeightDraft: number
+    openingBovenlichtHeightMixed: boolean
+    openingBovenlichtGapDraft: number
+    openingBovenlichtGapMixed: boolean
+    bovenlichtPacked?: boolean
+    thicknessPresetCms?: number[]
+    measureLineCount?: number
+    /** Alleen editor: manual + slicer beschikbaar. */
+    measurePersistEnabled?: boolean
+    drawWallDrafting?: boolean
+    drawWallMeasureLengthCm?: number
+    wallMoveDrafting?: boolean
+    drawRoomDrafting?: boolean
+    drawRoomMeasureHCm?: number
+    drawRoomMeasureVCm?: number
+    drawLineDrafting?: boolean
+    drawSurfaceDrafting?: boolean
+    facadeGroupsEnabled?: boolean
+    facadeGroupOptions?: Array<{ id: string; code: string; name: string }>
+    facadeGroupChecks?: Record<string, boolean | null>
+    facadeGroupsStampPreset?: boolean
+    /** Editor: Stempel-checkbox (niet workspace-preset). */
+    stampGroupEnabled?: boolean
+    stampGroupDraft?: boolean | null
+    stampGroupMixed?: boolean
+    canSelectStampMembers?: boolean
+    drawWallKind?: 'wall' | 'ridge'
+    dakMode?: boolean
+    ridgeFloorDraft?: number | null
+    ridgeFloorMixed?: boolean
+    ridgeFloorOptions?: ReadonlyArray<{ index: number; name: string }>
+    ridgeZCm?: number | null
+  }>(),
+  {
+    thicknessPresetCms: () => [10, 20, 30],
+    measureLineCount: 0,
+    measurePersistEnabled: false,
+    drawWallDrafting: false,
+    drawWallMeasureLengthCm: 0,
+    wallMoveDrafting: false,
+    drawRoomDrafting: false,
+    drawRoomMeasureHCm: 0,
+    drawRoomMeasureVCm: 0,
+    drawLineDrafting: false,
+    drawSurfaceDrafting: false,
+    facadeGroupsEnabled: false,
+    facadeGroupOptions: () => [],
+    facadeGroupChecks: () => ({}),
+    facadeGroupsStampPreset: false,
+    stampGroupEnabled: false,
+    stampGroupDraft: false,
+    stampGroupMixed: false,
+    canSelectStampMembers: false,
+    drawWallKind: 'wall',
+    dakMode: false,
+    ridgeFloorDraft: null,
+    ridgeFloorMixed: false,
+    ridgeFloorOptions: () => [],
+    ridgeZCm: null,
+    selectedAreaPanel: null,
+    selectedFacadeGroupPanel: null,
+    selectedJunctionPanel: null,
+    selectedLabelPanel: null,
+    selectedLinePanel: null,
+    selectedDimensionPanel: null,
+    selectedItemPanel: null,
+    roomTypes: () => [],
+    surfaceEditActive: false,
+    roofVertexZCm: null,
+    roofVertexIndex: null,
+    roofPolyMutate: false,
+    roofKind: 'plane',
+    roofParentId: null,
+    parentRoofOptions: () => [],
+    dakThicknessCm: 20,
+    slabThicknessCm: 20,
+  },
+)
+
+const emit = defineEmits<{
+  wallThicknessCm: [cm: number]
+  commitWallThickness: []
+  applyWallThickness: [thicknessCm: number]
+  wallBalanceInput: [event: Event]
+  commitWallBalance: []
+  wallHeightCm: [cm: number]
+  commitWallHeight: []
+  wallBottomZCm: [cm: number]
+  commitWallBottomZ: []
+  junctionHeightCm: [cm: number]
+  commitJunctionHeight: []
+  junctionBottomZCm: [cm: number]
+  commitJunctionBottomZ: []
+  commitOpeningSubtype: [subtype: OpeningSubtypeDraft]
+  openingWidthCm: [cm: number]
+  commitOpeningWidth: []
+  openingHeightCm: [cm: number]
+  commitOpeningHeight: []
+  openingSillZCm: [cm: number]
+  commitOpeningSillZ: []
+  toggleOpeningHinge: []
+  toggleOpeningSwing: []
+  openingBovenlichtChange: [event: Event]
+  openingBovenlichtHeightCm: [cm: number]
+  commitOpeningBovenlichtHeight: []
+  openingBovenlichtGapCm: [cm: number]
+  commitOpeningBovenlichtGap: []
+  copyOpening: []
+  deleteOpenings: []
+  splitWall: []
+  deleteWalls: []
+  clearSelection: []
+  facadeGroupChange: [value: string]
+  facadeGroupRemove: [groupId: string]
+  selectFacadeMembers: [groupId: string]
+  stampGroupChange: [enabled: boolean]
+  selectStampMembers: []
+  wallKindChange: [kind: 'wall' | 'ridge']
+  ridgeZInput: [cm: number | null]
+  ridgeFloorChange: [floorIndex: number]
+  clearMeasures: []
+  applyRoomType: [role: number]
+  areaCustomNameInput: [customName: string]
+  applyAreaCustomName: [customName: string]
+  applyAreaColor: [color: string]
+  applyShowAreaLabel: [show: boolean]
+  applySurfaceCutout: [isCutout: boolean]
+  applyAreaLiningCm: [cm: number]
+  applyRoofKind: [kind: 'plane' | 'dormer']
+  applyRoofParentId: [parentId: string | null]
+  deleteTagged: []
+  labelTextInput: [value: string]
+  updateLabelText: [value: string]
+  updateLabelFontSize: [value: number]
+  updateLabelFontColor: [value: string]
+  updateLabelOutline: [value: boolean]
+  updateLabelBold: [value: boolean]
+  updateLabelItalic: [value: boolean]
+  deleteAnnotation: []
+  updateLineType: [type: FloorLineType]
+  updateLineColor: [color: string]
+  updateLineThickness: [thickness: number]
+  beginSurfacePolygonEdit: []
+  roofVertexZInput: [cm: number]
+  endSurfacePolygonEdit: []
+  itemWidthCm: [cm: number]
+  itemHeightCm: [cm: number]
+  itemRotationInput: [event: Event]
+  toggleItemMirrorX: []
+  toggleItemMirrorY: []
+  copyItem: []
+  deleteItem: []
+  dimensionLengthCm: [cm: number]
+  deleteDimension: []
+  drawWallLengthInput: [cm: number | null]
+  commitDrawWallMeasure: []
+  cancelDrawWallDraft: []
+  drawRoomHInput: [cm: number | null]
+  drawRoomVInput: [cm: number | null]
+  commitDrawRoomMeasure: []
+  cancelDrawRoomDraft: []
+  acceptDrawDraft: []
+  deactivateDrawTool: []
+  boxSelectAll: []
+}>()
+
+const showDrawToolActions = computed(
+  () => isPlanOneshotDrawTool(activeTool.value) || activeTool.value === 'nulpunt',
+)
+
+const canAcceptDrawDraft = computed(
+  () =>
+    (activeTool.value === 'draw_wall' && props.drawWallDrafting === true) ||
+    (activeTool.value === 'draw_room' && props.drawRoomDrafting === true) ||
+    (activeTool.value === 'draw_line' && props.drawLineDrafting === true) ||
+    (activeTool.value === 'draw_surface' && props.drawSurfaceDrafting === true) ||
+    (activeTool.value === 'draw_roof' && props.drawSurfaceDrafting === true),
+)
+
+const isDrawWallOrRoom = computed(
+  () => activeTool.value === 'draw_wall' || activeTool.value === 'draw_room',
+)
+
+const showFacadeSettings = computed(() => props.selectedFacadeGroupPanel != null)
+
+const showWallSettings = computed(
+  () =>
+    !showFacadeSettings.value &&
+    (props.selectedWallPanel != null ||
+      props.selectedJunctionPanel != null ||
+      isDrawWallOrRoom.value),
+)
+
+const showOpeningSettings = computed(
+  () =>
+    props.selectedOpeningPanel != null ||
+    activeTool.value === 'add_door' ||
+    activeTool.value === 'add_window',
+)
+
+const showSettings = computed(() => {
+  const open = isFmlToolbarSettingsOpen({
+    hasWallSelection: props.selectedWallPanel != null,
+    hasJunctionSelection: props.selectedJunctionPanel != null,
+    hasOpeningSelection: props.selectedOpeningPanel != null,
+    hasAreaSelection: props.selectedAreaPanel != null,
+    hasLabelSelection: props.selectedLabelPanel != null,
+    hasLineSelection: props.selectedLinePanel != null,
+    hasItemSelection: props.selectedItemPanel != null,
+    hasDimensionSelection: props.selectedDimensionPanel != null,
+    hasFacadeGroupSelection: showFacadeSettings.value,
+    activeTool: activeTool.value,
+    dakMode: props.dakMode === true,
+  })
+  if (!open) return false
+  if (activeTool.value === 'box_select' && !showWallSettings.value && !showOpeningSettings.value) {
+    return showDeselect.value
+  }
+  return open
+})
+
+const showMeasureStrip = computed(() => activeTool.value === 'measure')
+const showBoxSelectStrip = computed(() => activeTool.value === 'box_select')
+
+const showDeselect = computed(
+  () =>
+    showFacadeSettings.value ||
+    props.selectedWallPanel != null ||
+    props.selectedJunctionPanel != null ||
+    props.selectedOpeningPanel != null ||
+    props.selectedAreaPanel != null ||
+    props.selectedLabelPanel != null ||
+    props.selectedLinePanel != null ||
+    props.selectedDimensionPanel != null ||
+    props.selectedItemPanel != null,
+)
+
+const isRoofPanel = computed(
+  () => props.dakMode === true && props.selectedAreaPanel?.kind === 'surface',
+)
+</script>
+
+<template>
+  <template v-if="showSettings">
+    <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
+    <div
+      class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--plan plan-toolbelt-settings-stack"
+    >
+      <PlanToolbarSettingsFacade
+        v-if="showFacadeSettings && selectedFacadeGroupPanel"
+        :unit="unit"
+        :panel="selectedFacadeGroupPanel"
+        :wall-thickness-draft="wallThicknessDraft"
+        :wall-thickness-mixed="wallThicknessMixed"
+        :thickness-preset-cms="thicknessPresetCms"
+        @wall-thickness-cm="emit('wallThicknessCm', $event)"
+        @commit-wall-thickness="emit('commitWallThickness')"
+        @apply-wall-thickness="emit('applyWallThickness', $event)"
+        @clear-selection="emit('clearSelection')"
+      />
+      <PlanToolbarSettingsWall
+        v-if="showWallSettings"
+        :unit="unit"
+        :selected-wall-panel="selectedWallPanel"
+        :selected-junction-panel="selectedJunctionPanel"
+        :active-tool="activeTool"
+        :wall-thickness-draft="wallThicknessDraft"
+        :wall-thickness-mixed="wallThicknessMixed"
+        :wall-balance-draft="wallBalanceDraft"
+        :wall-balance-mixed="wallBalanceMixed"
+        :wall-height-draft="wallHeightDraft"
+        :wall-height-mixed="wallHeightMixed"
+        :wall-bottom-z-draft="wallBottomZDraft"
+        :wall-bottom-z-mixed="wallBottomZMixed"
+        :junction-height-draft="junctionHeightDraft"
+        :junction-height-mixed="junctionHeightMixed"
+        :junction-bottom-z-draft="junctionBottomZDraft"
+        :junction-bottom-z-mixed="junctionBottomZMixed"
+        :thickness-preset-cms="thicknessPresetCms"
+        :facade-groups-enabled="facadeGroupsEnabled"
+        :facade-group-options="facadeGroupOptions"
+        :facade-group-checks="facadeGroupChecks"
+        :facade-groups-stamp-preset="facadeGroupsStampPreset"
+        :stamp-group-enabled="stampGroupEnabled"
+        :stamp-group-draft="stampGroupDraft"
+        :stamp-group-mixed="stampGroupMixed"
+        :can-select-stamp-members="canSelectStampMembers"
+        :draw-wall-kind="drawWallKind"
+        :dak-mode="dakMode"
+        :ridge-z-cm="ridgeZCm"
+        :ridge-floor-draft="ridgeFloorDraft"
+        :ridge-floor-mixed="ridgeFloorMixed"
+        :ridge-floor-options="ridgeFloorOptions"
+        @wall-thickness-cm="emit('wallThicknessCm', $event)"
+        @commit-wall-thickness="emit('commitWallThickness')"
+        @apply-wall-thickness="emit('applyWallThickness', $event)"
+        @wall-balance-input="emit('wallBalanceInput', $event)"
+        @commit-wall-balance="emit('commitWallBalance')"
+        @wall-height-cm="emit('wallHeightCm', $event)"
+        @commit-wall-height="emit('commitWallHeight')"
+        @wall-bottom-z-cm="emit('wallBottomZCm', $event)"
+        @commit-wall-bottom-z="emit('commitWallBottomZ')"
+        @junction-height-cm="emit('junctionHeightCm', $event)"
+        @commit-junction-height="emit('commitJunctionHeight')"
+        @junction-bottom-z-cm="emit('junctionBottomZCm', $event)"
+        @commit-junction-bottom-z="emit('commitJunctionBottomZ')"
+        @split-wall="emit('splitWall')"
+        @delete-walls="emit('deleteWalls')"
+        @facade-group-change="emit('facadeGroupChange', $event)"
+        @facade-group-remove="emit('facadeGroupRemove', $event)"
+        @select-facade-members="emit('selectFacadeMembers', $event)"
+        @stamp-group-change="emit('stampGroupChange', $event)"
+        @select-stamp-members="emit('selectStampMembers')"
+        @wall-kind-change="emit('wallKindChange', $event)"
+        @ridge-z-input="emit('ridgeZInput', $event)"
+        @ridge-floor-change="emit('ridgeFloorChange', $event)"
+      >
+        <template #trailing>
+          <ToolbeltActionButton
+            v-if="showDeselect"
+            icon="clear"
+            :title="t('result.toolbar.deselectTitle')"
+            :aria-label="t('result.toolbar.deselect')"
+            hotkey="Escape"
+            :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.chrome"
+            @click="emit('clearSelection')"
+          />
+          <button
+            v-if="canAcceptDrawDraft"
+            type="button"
+            class="canvas-toolbelt__btn"
+            :title="t('result.toolbar.acceptDrawDraft')"
+            :aria-label="t('result.toolbar.acceptDrawDraft')"
+            @click="emit('acceptDrawDraft')"
+          >
+            <ToolbeltIcon name="check" />
+          </button>
+          <ToolbeltActionButton
+            v-if="showDrawToolActions"
+            icon="clear"
+            :title="t('result.toolbar.deactivateDrawTool')"
+            :aria-label="t('result.toolbar.deactivateDrawTool')"
+            hotkey="Escape"
+            :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
+            @click="emit('deactivateDrawTool')"
+          />
+        </template>
+      </PlanToolbarSettingsWall>
+      <PlanToolbarSettingsOpening
+        v-if="showWallSettings && showOpeningSettings"
+        v-model:add-door-subtype="addDoorSubtype"
+        v-model:add-door-width-cm="addDoorWidthCm"
+        v-model:add-door-sill-z-cm="addDoorSillZCm"
+        v-model:add-window-subtype="addWindowSubtype"
+        v-model:add-window-width-cm="addWindowWidthCm"
+        v-model:add-window-sill-z-cm="addWindowSillZCm"
+        v-model:add-window-height-cm="addWindowHeightCm"
+        :unit="unit"
+        :selected-opening-panel="selectedOpeningPanel"
+        :active-tool="activeTool"
+        :opening-subtype-draft="openingSubtypeDraft"
+        :opening-subtype-mixed="openingSubtypeMixed"
+        :opening-width-draft="openingWidthDraft"
+        :opening-width-mixed="openingWidthMixed"
+        :opening-height-draft="openingHeightDraft"
+        :opening-height-mixed="openingHeightMixed"
+        :opening-sill-z-draft="openingSillZDraft"
+        :opening-sill-z-mixed="openingSillZMixed"
+        :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+        :opening-hinge-mixed="openingHingeMixed"
+        :opening-swing-right-draft="openingSwingRightDraft"
+        :opening-swing-mixed="openingSwingMixed"
+        :opening-bovenlicht-draft="openingBovenlichtDraft"
+        :opening-bovenlicht-mixed="openingBovenlichtMixed"
+        :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+        :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+        :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+        :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+        :bovenlicht-packed="bovenlichtPacked"
+        @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
+        @opening-width-cm="emit('openingWidthCm', $event)"
+        @commit-opening-width="emit('commitOpeningWidth')"
+        @opening-height-cm="emit('openingHeightCm', $event)"
+        @commit-opening-height="emit('commitOpeningHeight')"
+        @opening-sill-z-cm="emit('openingSillZCm', $event)"
+        @commit-opening-sill-z="emit('commitOpeningSillZ')"
+        @toggle-opening-hinge="emit('toggleOpeningHinge')"
+        @toggle-opening-swing="emit('toggleOpeningSwing')"
+        @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
+        @opening-bovenlicht-height-cm="emit('openingBovenlichtHeightCm', $event)"
+        @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
+        @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
+        @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+        @copy-opening="emit('copyOpening')"
+        @delete-openings="emit('deleteOpenings')"
+      />
+      <div
+        v-if="!showWallSettings && !showFacadeSettings"
+        class="plan-toolbelt__row plan-toolbelt__row--primary"
+      >
+        <PlanToolbarSettingsDraw
+          v-if="
+            activeTool === 'draw_surface' ||
+            activeTool === 'draw_roof' ||
+            activeTool === 'draw_line' ||
+            activeTool === 'draw_label'
+          "
+          v-model:draw-surface-role="drawSurfaceRole"
+          v-model:draw-surface-cutout="drawSurfaceCutout"
+          v-model:draw-roof-kind="drawRoofKind"
+          v-model:draw-line-thickness="drawLineThickness"
+          v-model:draw-line-type="drawLineType"
+          v-model:draw-line-color="drawLineColor"
+          v-model:draw-label-text="drawLabelText"
+          v-model:draw-label-font-size="drawLabelFontSize"
+          v-model:draw-label-font-color="drawLabelFontColor"
+          v-model:draw-label-outline="drawLabelOutline"
+          v-model:draw-label-bold="drawLabelBold"
+          v-model:draw-label-italic="drawLabelItalic"
+          :active-tool="activeTool"
+          :room-types="roomTypes"
+          :dak-mode="dakMode"
+        />
+        <PlanToolbarSettingsOpening
+          v-if="showOpeningSettings"
+          v-model:add-door-subtype="addDoorSubtype"
+          v-model:add-door-width-cm="addDoorWidthCm"
+          v-model:add-door-sill-z-cm="addDoorSillZCm"
+          v-model:add-window-subtype="addWindowSubtype"
+          v-model:add-window-width-cm="addWindowWidthCm"
+          v-model:add-window-sill-z-cm="addWindowSillZCm"
+          v-model:add-window-height-cm="addWindowHeightCm"
+          :unit="unit"
+          :selected-opening-panel="selectedOpeningPanel"
+          :active-tool="activeTool"
+          :opening-subtype-draft="openingSubtypeDraft"
+          :opening-subtype-mixed="openingSubtypeMixed"
+          :opening-width-draft="openingWidthDraft"
+          :opening-width-mixed="openingWidthMixed"
+          :opening-height-draft="openingHeightDraft"
+          :opening-height-mixed="openingHeightMixed"
+          :opening-sill-z-draft="openingSillZDraft"
+          :opening-sill-z-mixed="openingSillZMixed"
+          :opening-hinge-at-start-draft="openingHingeAtStartDraft"
+          :opening-hinge-mixed="openingHingeMixed"
+          :opening-swing-right-draft="openingSwingRightDraft"
+          :opening-swing-mixed="openingSwingMixed"
+          :opening-bovenlicht-draft="openingBovenlichtDraft"
+          :opening-bovenlicht-mixed="openingBovenlichtMixed"
+          :opening-bovenlicht-height-draft="openingBovenlichtHeightDraft"
+          :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
+          :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
+          :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+          :bovenlicht-packed="bovenlichtPacked"
+          @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
+          @opening-width-cm="emit('openingWidthCm', $event)"
+          @commit-opening-width="emit('commitOpeningWidth')"
+          @opening-height-cm="emit('openingHeightCm', $event)"
+          @commit-opening-height="emit('commitOpeningHeight')"
+          @opening-sill-z-cm="emit('openingSillZCm', $event)"
+          @commit-opening-sill-z="emit('commitOpeningSillZ')"
+          @toggle-opening-hinge="emit('toggleOpeningHinge')"
+          @toggle-opening-swing="emit('toggleOpeningSwing')"
+          @opening-bovenlicht-change="emit('openingBovenlichtChange', $event)"
+          @opening-bovenlicht-height-cm="emit('openingBovenlichtHeightCm', $event)"
+          @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
+          @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
+          @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+          @copy-opening="emit('copyOpening')"
+          @delete-openings="emit('deleteOpenings')"
+        />
+        <PlanToolbarSettingsRoof
+          v-if="isRoofPanel"
+          :unit="unit"
+          :roof-vertex-z-cm="roofVertexZCm"
+          :roof-vertex-index="roofVertexIndex"
+          :poly-mutate="roofPolyMutate"
+          :roof-kind="roofKind"
+          :roof-parent-id="roofParentId"
+          :parent-roof-options="parentRoofOptions"
+          :slab-thickness-cm="slabThicknessCm"
+          @roof-vertex-z-input="emit('roofVertexZInput', $event)"
+          @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
+          @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+          @delete-tagged="emit('deleteTagged')"
+          @apply-roof-kind="emit('applyRoofKind', $event)"
+          @apply-roof-parent-id="emit('applyRoofParentId', $event)"
+        />
+        <PlanToolbarSettingsArea
+          v-else-if="selectedAreaPanel"
+          :unit="unit"
+          :selected-area-panel="selectedAreaPanel"
+          :room-types="roomTypes"
+          :surface-edit-active="surfaceEditActive"
+          :roof-vertex-z-cm="roofVertexZCm"
+          :roof-vertex-index="roofVertexIndex"
+          :dak-thickness-cm="dakThicknessCm"
+          :slab-thickness-cm="slabThicknessCm"
+          @apply-room-type="emit('applyRoomType', $event)"
+          @area-custom-name-input="emit('areaCustomNameInput', $event)"
+          @apply-area-custom-name="emit('applyAreaCustomName', $event)"
+          @apply-area-color="emit('applyAreaColor', $event)"
+          @apply-show-area-label="emit('applyShowAreaLabel', $event)"
+          @apply-surface-cutout="emit('applySurfaceCutout', $event)"
+          @apply-area-lining-cm="emit('applyAreaLiningCm', $event)"
+          @delete-tagged="emit('deleteTagged')"
+          @begin-surface-polygon-edit="emit('beginSurfacePolygonEdit')"
+          @end-surface-polygon-edit="emit('endSurfacePolygonEdit')"
+          @roof-vertex-z-input="emit('roofVertexZInput', $event)"
+        />
+        <PlanToolbarSettingsLabel
+          v-if="selectedLabelPanel"
+          :selected-label-panel="selectedLabelPanel"
+          @label-text-input="emit('labelTextInput', $event)"
+          @update-label-text="emit('updateLabelText', $event)"
+          @update-label-font-size="emit('updateLabelFontSize', $event)"
+          @update-label-font-color="emit('updateLabelFontColor', $event)"
+          @update-label-outline="emit('updateLabelOutline', $event)"
+          @update-label-bold="emit('updateLabelBold', $event)"
+          @update-label-italic="emit('updateLabelItalic', $event)"
+          @delete-annotation="emit('deleteAnnotation')"
+        />
+        <PlanToolbarSettingsLine
+          v-if="selectedLinePanel"
+          :selected-line-panel="selectedLinePanel"
+          @update-line-type="emit('updateLineType', $event)"
+          @update-line-color="emit('updateLineColor', $event)"
+          @update-line-thickness="emit('updateLineThickness', $event)"
+          @delete-annotation="emit('deleteAnnotation')"
+        />
+        <PlanToolbarSettingsDimension
+          v-if="selectedDimensionPanel"
+          :unit="unit"
+          :selected-dimension-panel="selectedDimensionPanel"
+          @dimension-length-cm="emit('dimensionLengthCm', $event)"
+          @delete-dimension="emit('deleteDimension')"
+        />
+        <PlanToolbarSettingsItem
+          v-if="selectedItemPanel"
+          :unit="unit"
+          :selected-item-panel="selectedItemPanel"
+          @item-width-cm="emit('itemWidthCm', $event)"
+          @item-height-cm="emit('itemHeightCm', $event)"
+          @item-rotation-input="emit('itemRotationInput', $event)"
+          @toggle-item-mirror-x="emit('toggleItemMirrorX')"
+          @toggle-item-mirror-y="emit('toggleItemMirrorY')"
+          @copy-item="emit('copyItem')"
+          @delete-item="emit('deleteItem')"
+        />
+        <ToolbeltActionButton
+          v-if="showDeselect"
+          icon="clear"
+          :title="t('result.toolbar.deselectTitle')"
+          :aria-label="t('result.toolbar.deselect')"
+          hotkey="Escape"
+          :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.chrome"
+          @click="emit('clearSelection')"
+        />
+        <button
+          v-if="canAcceptDrawDraft"
+          type="button"
+          class="canvas-toolbelt__btn"
+          :title="t('result.toolbar.acceptDrawDraft')"
+          :aria-label="t('result.toolbar.acceptDrawDraft')"
+          @click="emit('acceptDrawDraft')"
+        >
+          <ToolbeltIcon name="check" />
+        </button>
+        <ToolbeltActionButton
+          v-if="showDrawToolActions"
+          icon="clear"
+          :title="t('result.toolbar.deactivateDrawTool')"
+          :aria-label="t('result.toolbar.deactivateDrawTool')"
+          hotkey="Escape"
+          :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.tool"
+          @click="emit('deactivateDrawTool')"
+        />
+      </div>
+    </div>
+  </template>
+
+  <PlanToolbarSettingsStrips
+    v-model:box-select-kind="boxSelectKind"
+    v-model:measure-draw-mode="measureDrawMode"
+    v-model:slicer-edit-mode="slicerEditMode"
+    :show-box-select-strip="showBoxSelectStrip"
+    :show-measure-strip="showMeasureStrip"
+    :measure-persist-enabled="measurePersistEnabled"
+    :measure-line-count="measureLineCount"
+    @box-select-all="emit('boxSelectAll')"
+    @clear-measures="emit('clearMeasures')"
+    @deactivate-draw-tool="emit('deactivateDrawTool')"
+  />
+</template>
+
+<style scoped>
+/* Strip styles live in PlanToolbarSettingsStrips.vue */
+</style>

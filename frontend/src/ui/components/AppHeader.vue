@@ -49,8 +49,8 @@ const emit = defineEmits<{
       <button
         type="button"
         class="nav-link"
-        :class="{ active: appView === 'fml-viewer' }"
-        :aria-current="appView === 'fml-viewer' ? 'page' : undefined"
+        :class="{ active: appView === 'editor' }"
+        :aria-current="appView === 'editor' ? 'page' : undefined"
         @click="emit('goEditor')"
       >
         {{ t('app.navEditor') }}

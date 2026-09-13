@@ -212,12 +212,11 @@ function openingFramesFingerprint(plan: FloorPlan): Array<{ id: string; frame: u
     for (const wall of floor.walls) {
       for (const op of wall.openings) {
         if (!op.frame) continue
-        // Openingen hebben geen eigen id; zonder guid is muur + positie de identiteit.
-        out.push({ id: op.guid ?? `${wall.id}@${op.t}`, frame: op.frame })
+        out.push({ id: op.id || `${wall.id}@${op.t}`, frame: op.frame })
       }
     }
   }
-  return out.sort((a, b) => String(a.guid).localeCompare(String(b.guid)))
+  return out.sort((a, b) => a.id.localeCompare(b.id))
 }
 
 function countStampOwned(plan: FloorPlan): number {

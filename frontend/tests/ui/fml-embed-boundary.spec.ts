@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest'
 
 const SRC_ROOT = resolve(fileURLToPath(new URL('../..', import.meta.url)), 'src')
 
-const ENTRIES = ['ui/fml-editor/entry.ts', 'ui/fml-inspect/entry.ts'] as const
+const ENTRIES = ['ui/editor/entry.ts', 'ui/inspect/entry.ts'] as const
 
 const FORBIDDEN = [`${sep}cv${sep}`, `${sep}ui${sep}composables${sep}workspace${sep}`] as const
 

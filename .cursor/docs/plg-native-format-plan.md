@@ -8,7 +8,7 @@ Aanleiding: de losstaande editor wordt een eigen product (ander domein). FML vas
 
 Gerelateerd: [`ifc-dwg-naar-fml-plan.md`](ifc-dwg-naar-fml-plan.md), [`fml-inspect-pwa.md`](fml-inspect-pwa.md), [`Pricing & Marketplace Strategy – Floorplan Editor.md`](Pricing%20&%20Marketplace%20Strategy%20%E2%80%93%20Floorplan%20Editor.md), [`product-idee-self-serve-plattegrond.md`](product-idee-self-serve-plattegrond.md), [`decisions.md`](decisions.md).
 
-Zaad in code: `frontend/src/ui/fml-editor/entry.ts`, `frontend/src/ui/fml-inspect/entry.ts`, `fml-capabilities.ts` (`editor` / `inspect` / `detection`).
+Zaad in code: `frontend/src/ui/editor/entry.ts`, `frontend/src/ui/inspect/entry.ts`, `plan-capabilities.ts` (`editor` / `inspect` / `detection`).
 
 ### Taal (2026-09-11)
 
@@ -18,7 +18,7 @@ Zaad in code: `frontend/src/ui/fml-editor/entry.ts`, `frontend/src/ui/fml-inspec
 | Converter-klant-UI (BouwToFML) | **FML** blijven (dat is wat de tekenaar naar Floorplanner wil) |
 | FML in de editor | Alleen import/export, **per tenant** (tekenbureau aan; overige accounts uit) |
 | In-memory na detectie | `previewPlan` — geen download nodig |
-| Legacy | Pad `/FML-editor` en TS-`Fml*` blijven tot een gerichte rename |
+| Editor-URL | `/editor` (redirect vanaf `/FML-editor` / `/fml-editor/`). Shell/canvas TS is Plan/Editor; workspace + `core/fml` later |
 
 ---
 
@@ -227,7 +227,7 @@ De serializer koppelt beide werelden, dus de interne naam hoeft de schemanaam ni
 
 ## 10. Package-knip (niet nu een tweede repo)
 
-Ander domein = **hosting**. Integratie = **semver-package**. Geen iframe van `/FML-editor`, geen hand-sync tussen repo's.
+Ander domein = **hosting**. Integratie = **semver-package**. Geen iframe van `/editor`, geen hand-sync tussen repo's.
 
 **Regel:** pas los halen wanneer ~90% van de editor erin zit **en** jullie het losse product willen lanceren. Tot die tijd één codebase; workspace/detectie mag de editor importeren, andersom nooit.
 

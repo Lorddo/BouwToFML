@@ -11,7 +11,7 @@ import WorkspaceSidebarPreprocessStep from '../components/WorkspaceSidebarPrepro
 import WorkspaceSidebarTemplatesStep from '../components/WorkspaceSidebarTemplatesStep.vue'
 import LayerDebugPanel from '../components/LayerDebugPanel.vue'
 import WorkspaceFmlResultPanel from '../components/WorkspaceFmlResultPanel.vue'
-import WorkspaceFmlPreviewHost from '../components/WorkspaceFmlPreviewHost.vue'
+import WorkspacePlanCanvasHost from '../components/WorkspacePlanCanvasHost.vue'
 import WorkspaceFloorplanCanvasHost from '../components/WorkspaceFloorplanCanvasHost.vue'
 import ResultWallsLayerPanel from '../components/ResultWallsLayerPanel.vue'
 import DevSessionPanel from '../components/DevSessionPanel.vue'
@@ -461,8 +461,8 @@ defineExpose<{
             @update:fml-thickness-cms="ws.setFmlThicknessCms"
             @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
             @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
-            @update:fml-rescale-distance-mm-x="ws.setFmlRescaleDistanceMmX"
-            @update:fml-rescale-distance-mm-y="ws.setFmlRescaleDistanceMmY"
+            @update:fml-rescale-distance-mm-x="ws.setPlanRescaleDistanceMmX"
+            @update:fml-rescale-distance-mm-y="ws.setPlanRescaleDistanceMmY"
             @start-thickness-pick="ws.startFmlThicknessPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"
             @regenerate="ws.regenerateFml"
@@ -473,9 +473,9 @@ defineExpose<{
             @underlay-rotate90-cw="ws.applyUnderlayOrientOp('rotCw')"
             @underlay-rotate90-ccw="ws.applyUnderlayOrientOp('rotCcw')"
             @underlay-mirror-vertical="ws.applyUnderlayOrientOp('flipX')"
-            @begin-rescale="ws.beginFmlRescale()"
-            @cancel-rescale="ws.cancelFmlRescale()"
-            @confirm-rescale="ws.confirmFmlRescale()"
+            @begin-rescale="ws.beginPlanRescale()"
+            @cancel-rescale="ws.cancelPlanRescale()"
+            @confirm-rescale="ws.confirmPlanRescale()"
             @sanitize="fmlPreviewHostRef?.sanitizeWalls()"
           />
         </div>
@@ -543,7 +543,7 @@ defineExpose<{
           >
             <ToolbeltIcon name="menu" />
           </button>
-          <WorkspaceFmlPreviewHost
+          <WorkspacePlanCanvasHost
             v-if="onFmlResultTab"
             ref="fmlPreviewHostRef"
             v-model:canvas-fullscreen="canvasFullscreen"
@@ -576,8 +576,8 @@ defineExpose<{
             @thickness-wall-pick="ws.handleFmlThicknessWallPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"
             @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
-            @update-rescale-state="ws.updateFmlRescaleState"
-            @cancel-rescale="ws.cancelFmlRescale()"
+            @update-rescale-state="ws.updatePlanRescaleState"
+            @cancel-rescale="ws.cancelPlanRescale()"
           />
           <WorkspaceFloorplanCanvasHost
             v-else
@@ -868,7 +868,7 @@ defineExpose<{
   max-height: 100dvh;
 }
 
-.layout--canvas-fs .canvas-main :deep(.fml-preview-wrap),
+.layout--canvas-fs .canvas-main :deep(.plan-canvas-wrap),
 .layout--canvas-fs .canvas-main :deep(.canvas-wrap) {
   border: none;
   border-radius: 0;
@@ -949,7 +949,7 @@ defineExpose<{
 }
 
 .canvas-main :deep(.canvas-wrap),
-.canvas-main :deep(.fml-preview-wrap) {
+.canvas-main :deep(.plan-canvas-wrap) {
   flex: 1;
   min-height: 0;
 }

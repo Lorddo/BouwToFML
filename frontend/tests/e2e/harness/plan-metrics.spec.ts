@@ -50,13 +50,13 @@ describe('plan-metrics', () => {
   it('countMatchedOpenings matcht zelfde type binnen afstand', () => {
     const ref = collectOpeningSites([
       wall({ x: 0, y: 0 }, { x: 100, y: 0 }, 10, [
-        { refid: 'door', type: 'door', t: 0.5, width: 90, z: 0, z_height: 210 },
+        { id: 'door', kind: 'door.single', type: 'door', t: 0.5, width: 90, z: 0, z_height: 210 },
       ]),
     ])
     const det = collectOpeningSites([
       wall({ x: 0, y: 0 }, { x: 100, y: 0 }, 10, [
-        { refid: 'door', type: 'door', t: 0.52, width: 90, z: 0, z_height: 210 },
-        { refid: 'window', type: 'window', t: 0.2, width: 120, z: 90, z_height: 120 },
+        { id: 'door', kind: 'door.single', type: 'door', t: 0.52, width: 90, z: 0, z_height: 210 },
+        { id: 'window', kind: 'window.single', type: 'window', t: 0.2, width: 120, z: 90, z_height: 120 },
       ]),
     ])
     expect(countMatchedOpenings(ref, det, 20)).toEqual({

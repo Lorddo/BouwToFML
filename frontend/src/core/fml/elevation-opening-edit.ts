@@ -16,7 +16,7 @@ import {
   openingEdgesAlongWall,
 } from './opening-along-wall-resize'
 import { wallElevationAtT } from './wall-endpoint-height'
-import { collectCollinearWallIds } from '@/ui/components/fml-preview-openings'
+import { collectCollinearWallIds } from '@/ui/components/plan-canvas-openings'
 
 export type ElevResizeSide = 'n' | 'e' | 's' | 'w'
 

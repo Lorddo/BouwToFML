@@ -1,0 +1,84 @@
+import { describe, expect, it } from 'vitest'
+import {
+  isPlanOneshotDrawTool,
+  isFmlToolbarSettingsOpen,
+} from '@/ui/components/canvas/planToolbeltItems'
+
+describe('isFmlToolbarSettingsOpen', () => {
+  const none: {
+    hasWallSelection: boolean
+    hasJunctionSelection: boolean
+    hasOpeningSelection: boolean
+    hasAreaSelection: boolean
+    hasLabelSelection: boolean
+    activeTool: null
+  } = {
+    hasWallSelection: false,
+    hasJunctionSelection: false,
+    hasOpeningSelection: false,
+    hasAreaSelection: false,
+    hasLabelSelection: false,
+    activeTool: null,
+  }
+
+  it('is uit zonder selectie of teken-tool', () => {
+    expect(isFmlToolbarSettingsOpen(none)).toBe(false)
+  })
+
+  it('is aan bij nulpunt (X om uit te zetten), zoals maatlijn', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt' })).toBe(true)
+  })
+
+  it('is aan bij box-select (type-dropdown), zoals maatlijn', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'box_select' })).toBe(true)
+  })
+
+  it('is aan bij maatlijn-tool (mode-dropdown), ook zonder tape-lijnen', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'measure' })).toBe(true)
+    expect(
+      isFmlToolbarSettingsOpen({ ...none, activeTool: 'measure', hasMeasureLines: true }),
+    ).toBe(true)
+    expect(
+      isFmlToolbarSettingsOpen({ ...none, activeTool: 'nulpunt', hasMeasureLines: true }),
+    ).toBe(true)
+  })
+
+  it('is aan bij selectie of muur/deur/raam-tool', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, hasWallSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasJunctionSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasOpeningSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasAreaSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasLabelSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasLineSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_wall' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_line' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_label' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_roof' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'draw_surface', dakMode: true })).toBe(
+      true,
+    )
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_window' })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasItemSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasDimensionSelection: true })).toBe(true)
+    expect(isFmlToolbarSettingsOpen({ ...none, hasFacadeGroupSelection: true })).toBe(true)
+  })
+
+  it('houdt de fixture-bibliotheek buiten de midden-settingskaart', () => {
+    expect(isFmlToolbarSettingsOpen({ ...none, activeTool: 'add_fixture' })).toBe(false)
+  })
+})
+
+describe('isPlanOneshotDrawTool', () => {
+  it('is aan voor teken- en plaats-tools, uit voor select/maat', () => {
+    expect(isPlanOneshotDrawTool('draw_wall')).toBe(true)
+    expect(isPlanOneshotDrawTool('draw_room')).toBe(true)
+    expect(isPlanOneshotDrawTool('draw_roof')).toBe(true)
+    expect(isPlanOneshotDrawTool('draw_line')).toBe(true)
+    expect(isPlanOneshotDrawTool('add_door')).toBe(true)
+    expect(isPlanOneshotDrawTool('measure')).toBe(false)
+    expect(isPlanOneshotDrawTool('nulpunt')).toBe(false)
+    expect(isPlanOneshotDrawTool('box_select')).toBe(false)
+    expect(isPlanOneshotDrawTool(null)).toBe(false)
+  })
+})

@@ -5,7 +5,7 @@
 import polygonClipping from 'polygon-clipping'
 import { sampleCeilingRoofAtPoint } from './bind-walls-to-roofs'
 import { dakThicknessCmForPlan } from './ridge-walls'
-import { isDormerRoof, listRidgeSurfacesOnFloor } from './roof-planes'
+import { isDormerLikeRoof, listRidgeSurfacesOnFloor } from './roof-planes'
 import type { FloorArea, FloorPlan, FloorSurface, Point2D } from './types'
 
 export const CLEAR_HEIGHT_150_CM = 150
@@ -85,23 +85,6 @@ function toClipRing(poly: readonly Point2D[]): Array<[number, number]> {
     ring.push([first[0], first[1]])
   }
   return ring
-}
-
-function clipAreaCm2(subject: readonly Point2D[], clip: readonly Point2D[]): number {
-  if (subject.length < 3 || clip.length < 3) return 0
-  try {
-    const intersection = resolveIntersectionFn()
-    const result = intersection([toClipRing(subject)], [toClipRing(clip)])
-    let area = 0
-    for (const polygon of result) {
-      const outer = polygon[0]
-      if (!outer || outer.length < 3) continue
-      area += ringArea(outer.map(([x, y]) => ({ x, y })))
-    }
-    return Math.max(0, area)
-  } catch {
-    return 0
-  }
 }
 
 export function clampLiningCm(liningCm: number, dakThicknessCm: number): number {
@@ -473,9 +456,9 @@ export function computeClearHeightContour(
       liningCm,
     })
     const segments: Array<[Point2D, Point2D]> = []
-    const dormersAll = surfaces.filter((s) => isDormerRoof(s))
+    const dormersAll = surfaces.filter((s) => isDormerLikeRoof(s, surfaces))
     for (const surface of surfaces) {
-      if (isDormerRoof(surface)) {
+      if (isDormerLikeRoof(surface, surfaces)) {
         for (const seg of roofSurfaceCutSegments(surface, zCut)) {
           for (const kept of clipSegmentToLiningAreas(
             seg,
@@ -515,7 +498,7 @@ export function computeClearHeightContour(
     // Fill = gebieden met vrije hoogte < heightCm (onder de 1,50-lijn), per area-lining.
     for (const surface of surfaces) {
       const below = portionBelowZ(surface, zCut)
-      if (isDormerRoof(surface)) {
+      if (isDormerLikeRoof(surface, surfaces)) {
         for (const ring of below) {
           if (ring.length < 3 || ringArea(ring) < 100) continue
           for (const clipped of clipFillToLiningAreas(

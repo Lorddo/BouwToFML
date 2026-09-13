@@ -135,7 +135,7 @@ describe('buildFmlV3 Floorplanner-safe export', () => {
     const raw = JSON.parse(buildFmlV3(plan))
     expect(raw.floors[0].height).toBe(432)
     // Scheve einden blijven staan (UI toont --- / mixed).
-    const gable = raw.floors[0].designs[0].walls.find((w: { id: string }) => w.guid === 'gable')
+    const gable = raw.floors[0].designs[0].walls.find((w: { guid: string }) => w.guid === 'gable')
     expect(gable.az.h).toBe(280)
     expect(gable.bz.h).toBe(432)
   })

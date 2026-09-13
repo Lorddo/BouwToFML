@@ -73,7 +73,7 @@ import {
 } from '@/core/plg/plg-document'
 import { clonePlain } from '@/platform/dev-workspace'
 import type { FloorPlan } from '@/core/fml/types'
-import { promptFmlChromeChoice } from '@/ui/composables/fml-chrome-dialog'
+import { promptPlanChromeChoice } from '@/ui/composables/plan-chrome-dialog'
 import { sanitizeFilename } from './workspace/workspace-fml-generate'
 import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
 import {
@@ -897,7 +897,7 @@ export function useWorkspace() {
     setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
     getFmlOrient: () => fml.persistOrientState(),
     setFmlOrient: (state) => fml.setFmlOrient(state),
-    clearLiveFmlPreview: () => fml.clearLiveFmlPreview(),
+    clearLivePlanCanvas: () => fml.clearLivePlanCanvas(),
     applyFmlDefaultsToUi: (defaults) => {
       fml.hydrateFmlWallHeightCm(defaults.wallHeightCm)
       fml.hydrateFmlDoorHeightCm(defaults.doorHeightCm)
@@ -1081,7 +1081,7 @@ export function useWorkspace() {
     },
     onStartTemplatesDetection: () => {
       // Nieuwe 2→3-run: live preview weg, blob-FML blijft voor 3→4 als classify faalt.
-      fml.clearLiveFmlPreview()
+      fml.clearLivePlanCanvas()
     },
     devSessionRestoring,
     onEnterResultStep: async () => {
@@ -1140,7 +1140,7 @@ export function useWorkspace() {
   }
 
   async function downloadProjectExport(): Promise<void> {
-    const format = await promptFmlChromeChoice({
+    const format = await promptPlanChromeChoice({
       title: tGlobal('result.downloadProjectTitle'),
       message: tGlobal('result.downloadProjectMessage'),
       listItems: [

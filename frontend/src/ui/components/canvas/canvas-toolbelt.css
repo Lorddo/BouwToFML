@@ -15,7 +15,7 @@
   position: absolute;
   left: 50%;
   bottom: 12px;
-  transform: translateX(-50%) scale(var(--fml-chrome-fit-scale, 1));
+  transform: translateX(-50%) scale(var(--plan-chrome-fit-scale, 1));
   transform-origin: bottom center;
   z-index: 20;
   display: flex;
@@ -54,11 +54,11 @@
   background: rgb(255 255 255 / 0.96);
 }
 
-.canvas-toolbelt-dock__section--fml {
+.canvas-toolbelt-dock__section--plan {
   background: rgb(255 255 255 / 0.96);
 }
 
-.fml-toolbelt-settings-stack {
+.plan-toolbelt-settings-stack {
   flex-direction: column;
   align-items: stretch;
   flex-wrap: nowrap;
@@ -67,7 +67,7 @@
   overflow: visible;
 }
 
-.fml-toolbelt-stack {
+.plan-toolbelt-stack {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -76,7 +76,7 @@
   min-width: 0;
 }
 
-.fml-toolbelt__row {
+.plan-toolbelt__row {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
@@ -85,11 +85,11 @@
   max-width: 100%;
 }
 
-.fml-toolbelt__row--primary {
+.plan-toolbelt__row--primary {
   flex: 0 1 auto;
 }
 
-.fml-toolbelt__meta {
+.plan-toolbelt__meta {
   font-size: 10px;
   color: #475569;
   padding: 0 4px;
@@ -130,8 +130,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--fml-toolbelt-btn-size, 32px);
-  height: var(--fml-toolbelt-btn-size, 32px);
+  width: var(--plan-toolbelt-btn-size, 32px);
+  height: var(--plan-toolbelt-btn-size, 32px);
   flex: 0 0 auto;
   padding: 0;
   border: 1px solid transparent;
@@ -142,10 +142,10 @@
 }
 
 .canvas-toolbelt-dock.is-chrome-compact,
-.fml-editor-topbar.is-chrome-compact {
-  --fml-toolbelt-btn-size: 28px;
-  --fml-toolbelt-input-width: 84px;
-  --fml-toolbelt-select-min: 96px;
+.editor-topbar.is-chrome-compact {
+  --plan-toolbelt-btn-size: 28px;
+  --plan-toolbelt-input-width: 84px;
+  --plan-toolbelt-select-min: 96px;
 }
 
 .canvas-toolbelt__btn:hover {

@@ -1,0 +1,30 @@
+/**
+ * Shared FML canvas chrome tokens — editor / inspect / detection hosts.
+ * Host chrome may diverge; canvas + toolbelt/rail/stage stay consistent.
+ */
+:root {
+  --plan-canvas-bg: #ffffff;
+  --plan-canvas-border: #cbd5e1;
+  --plan-canvas-radius: 8px;
+  --plan-canvas-min-height: 320px;
+  --plan-chrome-gap: 8px;
+  --plan-chrome-safe-left: max(var(--plan-chrome-gap), env(safe-area-inset-left, 0px));
+  --plan-chrome-safe-right: max(var(--plan-chrome-gap), env(safe-area-inset-right, 0px));
+  --plan-chrome-safe-bottom: max(var(--plan-chrome-gap), env(safe-area-inset-bottom, 0px));
+  --plan-chrome-safe-top: max(var(--plan-chrome-gap), env(safe-area-inset-top, 0px));
+  --plan-chrome-dock-bottom: calc(var(--plan-chrome-safe-bottom) + 56px);
+  --plan-z-overlay: 9;
+  --plan-z-resize: 11;
+  --plan-z-toolbelt: 20;
+  --plan-z-fixture-palette: 21;
+  --plan-z-topbar: 22;
+  --plan-z-mod-rail: 23;
+  --plan-muted: #64748b;
+  --plan-accent: #2563eb;
+  --plan-accent-warm: #ea580c;
+  --plan-touch-input-font-size: 16px;
+  --plan-chrome-fit-scale: 1;
+  --plan-toolbelt-btn-size: 32px;
+  --plan-toolbelt-input-width: 92px;
+  --plan-toolbelt-select-min: 108px;
+}

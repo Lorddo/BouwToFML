@@ -106,7 +106,8 @@ describe('resolveStampOwnership', () => {
 
   it('opening + tegengestelde a→b → t uit projectie, mirrored geflipt', () => {
     const opening: Opening = {
-      refid: 'door',
+      id: 'door',
+      kind: 'door.single',
       t: 0.25,
       width: 90,
       type: 'door',
@@ -212,7 +213,7 @@ describe('stampOwned export', () => {
     const text = buildFmlV3(plan)
     expect(text).not.toContain('stampOwned')
     const json = JSON.parse(text) as {
-      floors: Array<{ designs: Array<{ walls: Array<{ id: string }> }> }>
+      floors: Array<{ designs: Array<{ walls: Array<{ guid: string }> }> }>
     }
     expect(json.floors[0].designs[0].walls[0].guid).toBe('s1')
   })

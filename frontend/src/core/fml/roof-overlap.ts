@@ -3,12 +3,7 @@
  * dakkapel mag alleen overlappen met zijn ouder.
  */
 import polygonClipping from 'polygon-clipping'
-import {
-  ROOF_TOUCH_SLACK_CM,
-  isDormerRoof,
-  isRoofSurface,
-  roofKindOf,
-} from './roof-planes'
+import { ROOF_TOUCH_SLACK_CM, isRoofSurface, roofKindOf } from './roof-planes'
 import type { FloorSurface, Point2D } from './types'
 
 export type RoofOverlapViolation =

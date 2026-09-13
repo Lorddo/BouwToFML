@@ -87,8 +87,32 @@ export function groupElevationPaintPlanes(elevation: FacadeElevation): Elevation
   return planes
 }
 
-export function elevationWallHasInnerFace(wall: ElevationWallRect): boolean {
-  return elevationWallInnerStrokes(wall).length > 0
+export type ElevationPaintStackKind = 'plane' | 'roof'
+
+export type ElevationPaintStackSortKey = {
+  kind: ElevationPaintStackKind
+  depthCm: number
+  dormer?: boolean
+}
+
+/**
+ * Painter: verder weg eerst. Zelfde vlak: dak onder baksteen (voorgevel).
+ * Dakkapel-dak ná ouderdak. Dichter dakvlak (zijgevel, voor de kapel langs) ná die muren.
+ */
+export function compareElevationPaintStackItems(
+  a: ElevationPaintStackSortKey,
+  b: ElevationPaintStackSortKey,
+): number {
+  const delta = a.depthCm - b.depthCm
+  if (Math.abs(delta) > ELEVATION_SAME_PLANE_CM) return delta
+  if (a.kind === 'roof' && b.kind === 'roof') {
+    if (a.dormer === true && b.dormer !== true) return 1
+    if (b.dormer === true && a.dormer !== true) return -1
+    return delta
+  }
+  if (a.kind === 'roof' && b.kind === 'plane') return -1
+  if (a.kind === 'plane' && b.kind === 'roof') return 1
+  return delta
 }
 
 /**

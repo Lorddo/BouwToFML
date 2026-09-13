@@ -130,6 +130,70 @@ export function elevationFaceXs(
   }
 }
 
+export type ElevationWallFaceXs = {
+  xOuterA: number
+  xOuterB: number
+  xInnerA: number
+  xInnerB: number
+}
+
+/**
+ * Eigen muurdikte in het aanzicht-X, balance-aware.
+ * End-on (nDot≈±1): silhouet = dikte, as op de flush-face bij balance 0/1.
+ * Face-on (nDot≈0): geen extra X — dat doen de knoop-oren.
+ */
+export function elevationOwnThicknessFaceXs(
+  xa: number,
+  xb: number,
+  wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>,
+  elevAxis: Point2D,
+): ElevationWallFaceXs {
+  const n = floorplannerLeftNormal(wallDirectionUnit(wall))
+  const nDot = n.x * elevAxis.x + n.y * elevAxis.y
+  const { plus, minus } = resolveWallBalanceExtents(wall.thickness, wall.balance)
+  const left = plus * nDot
+  const right = -minus * nDot
+  const xs = [xa + left, xa + right, xb + left, xb + right]
+  const x0 = Math.min(...xs)
+  const x1 = Math.max(...xs)
+  if (xa <= xb) {
+    return { xOuterA: x0, xOuterB: x1, xInnerA: x0, xInnerB: x1 }
+  }
+  return { xOuterA: x1, xOuterB: x0, xInnerA: x1, xInnerB: x0 }
+}
+
+function lerpFaceXs(
+  neighbor: ElevationWallFaceXs,
+  own: ElevationWallFaceXs,
+  along: number,
+): ElevationWallFaceXs {
+  const t = Math.max(0, Math.min(1, along))
+  const u = 1 - t
+  return {
+    xOuterA: neighbor.xOuterA * t + own.xOuterA * u,
+    xOuterB: neighbor.xOuterB * t + own.xOuterB * u,
+    xInnerA: neighbor.xInnerA * t + own.xInnerA * u,
+    xInnerB: neighbor.xInnerB * t + own.xInnerB * u,
+  }
+}
+
+/**
+ * Face-on (`along`≈1): knoop-oren. End-on (`along`≈0): eigen dikte + balance.
+ * Anders interpoleren — een schuine muur heeft beide.
+ */
+export function elevationWallProjectedXs(
+  xa: number,
+  xb: number,
+  along: number,
+  wall: Wall,
+  elevAxis: Point2D,
+  floorWalls: readonly Wall[],
+): ElevationWallFaceXs {
+  const neighbor = elevationFaceXs(xa, xb, resolveElevationWallEndFaces(wall, floorWalls))
+  const own = elevationOwnThicknessFaceXs(xa, xb, wall, elevAxis)
+  return lerpFaceXs(neighbor, own, along)
+}
+
 /**
  * Nokbalk-silhouet: projectielengte + dwars `displayWidth` (3D-doos).
  * Kopgevel (along≈0) = gecentreerde dikte; langs gevel = lengte.

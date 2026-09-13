@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { classifyNearAxisWall } from '@/core/fml/orthogonalize-near-axis-walls'
 import { sanitizeFmlWalls, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
-import { classifyWallAxis } from '@/ui/composables/fml-preview/fml-preview-corner-markers'
+import { classifyWallAxis } from '@/ui/composables/plan-canvas/plan-canvas-corner-markers'
 import type { Wall } from '@/core/fml/types'
 
 function wall(
@@ -43,11 +43,11 @@ describe('sanitizeFmlWalls', () => {
   it('korte H volledig onder lange H → slachtoffer weg, opening verhuist', () => {
     const walls = [
       wall('long', { x: 0, y: 0 }, { x: 100, y: 0 }, 10, {
-        openings: [{ refid: 'keep', t: 0.1, width: 80, type: 'door' }],
+        openings: [{ id: 'keep', kind: 'door.single', t: 0.1, width: 80, type: 'door' }],
       }),
       wall('short', { x: 20, y: 0.08 }, { x: 80, y: 0.12 }, 10, {
         balance: 0.35,
-        openings: [{ refid: 'moved', t: 0.5, width: 90, type: 'window' }],
+        openings: [{ id: 'moved', kind: 'window.single', t: 0.5, width: 90, type: 'window' }],
       }),
     ]
     const out = sanitizeFmlWalls(walls)
@@ -56,9 +56,9 @@ describe('sanitizeFmlWalls', () => {
     const hosts = out.filter((item) => classifyNearAxisWall(item) === 'H')
     const moved = hosts
       .flatMap((item) => item.openings)
-      .find((opening) => opening.refid === 'moved')
+      .find((opening) => opening.id === 'moved')
     expect(moved).toBeTruthy()
-    const keep = hosts.flatMap((item) => item.openings).find((opening) => opening.refid === 'keep')
+    const keep = hosts.flatMap((item) => item.openings).find((opening) => opening.id === 'keep')
     expect(keep).toBeTruthy()
     const survivor = out.find((item) => item.id === 'long')
     expect(survivor?.balance).toBe(0.5)
@@ -166,13 +166,13 @@ describe('sanitizeFmlWalls', () => {
   it('opening exact op de knip blijft op één stuk, wereldpositie gelijk', () => {
     const walls = [
       wall('host', { x: 0, y: 0 }, { x: 100, y: 0 }, 10, {
-        openings: [{ refid: 'on-cut', t: 0.5, width: 80, type: 'window' }],
+        openings: [{ id: 'on-cut', kind: 'window.single', t: 0.5, width: 80, type: 'window' }],
       }),
       wall('branch', { x: 50, y: 0 }, { x: 50, y: 40 }),
     ]
     const out = sanitizeFmlWalls(walls)
     const withOpening = out.filter((item) =>
-      item.openings.some((opening) => opening.refid === 'on-cut'),
+      item.openings.some((opening) => opening.id === 'on-cut'),
     )
     expect(withOpening).toHaveLength(1)
     const host = withOpening[0]

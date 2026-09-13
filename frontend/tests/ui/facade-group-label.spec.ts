@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_FACADE_GROUP_NAMES } from '@/core/fml/facade-groups'
-import { facadeGroupDisplayName } from '@/ui/composables/fml-preview/facade-group-label'
+import { facadeGroupDisplayName } from '@/ui/composables/plan-canvas/facade-group-label'
 
 describe('facadeGroupDisplayName', () => {
   const t = (key: string) =>

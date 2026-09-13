@@ -3,7 +3,7 @@ export type {
   EnrichedExampleExport,
   ExampleExportDiagnostics,
   ExamplesExportPayload,
-  FmlPreviewExport,
+  PlanCanvasExport,
   RoomJunctionRecord,
   RoomWallFaceSkeletonRecord,
   SegmentRecord,

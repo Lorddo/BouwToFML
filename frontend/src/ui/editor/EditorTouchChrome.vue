@@ -1,0 +1,74 @@
+<script setup lang="ts">
+/**
+ * Editor-owned chrome (topbar + coarse modifier rail).
+ * Rendered by the canvas when `touchChrome` is on; lives in the fml-editor package
+ * so hosts can later mount it outside the canvas.
+ */
+import type { PlanToolId } from '@/ui/components/canvas/planToolbeltItems'
+import EditorTopbar from '@/ui/components/EditorTopbar.vue'
+import EditorModifierRail from '@/ui/components/EditorModifierRail.vue'
+
+defineProps<{
+  showTopbar: boolean
+  showHelp?: boolean
+  showModRail: boolean
+  canUndo: boolean
+  canRedo: boolean
+  hint?: string
+  fullscreen?: boolean
+  edgeChrome?: boolean
+  helpKeys?: readonly string[]
+  showCanvasGrid?: boolean
+  showRoofOverlayToggle?: boolean
+  showRoofOverlayOnPlan?: boolean
+}>()
+
+const emit = defineEmits<{
+  undo: []
+  redo: []
+  fit: []
+  zoomIn: []
+  zoomOut: []
+  toggleFullscreen: []
+  'update:showCanvasGrid': [value: boolean]
+  'update:showRoofOverlayOnPlan': [value: boolean]
+}>()
+
+const settingsMod = defineModel<boolean>('settingsMod', { default: false })
+const axisLockMod = defineModel<boolean>('axisLockMod', { default: false })
+const moveMod = defineModel<boolean>('moveMod', { default: false })
+const activeTool = defineModel<PlanToolId | null>('activeTool', { default: null })
+const areaSideDimsVisible = defineModel<boolean>('areaSideDimsVisible', { default: false })
+</script>
+
+<template>
+  <EditorTopbar
+    v-if="showTopbar"
+    :can-undo="canUndo"
+    :can-redo="canRedo"
+    :show-help="showHelp !== false"
+    :hint="hint"
+    :fullscreen="fullscreen"
+    :edge-chrome="edgeChrome"
+    :help-keys="helpKeys"
+    :show-canvas-grid="showCanvasGrid !== false"
+    :show-roof-overlay-toggle="showRoofOverlayToggle === true"
+    :show-roof-overlay-on-plan="showRoofOverlayOnPlan !== false"
+    @undo="emit('undo')"
+    @redo="emit('redo')"
+    @fit="emit('fit')"
+    @zoom-in="emit('zoomIn')"
+    @zoom-out="emit('zoomOut')"
+    @toggle-fullscreen="emit('toggleFullscreen')"
+    @update:show-canvas-grid="emit('update:showCanvasGrid', $event)"
+    @update:show-roof-overlay-on-plan="emit('update:showRoofOverlayOnPlan', $event)"
+  />
+  <EditorModifierRail
+    v-if="showModRail"
+    v-model:settings-mod="settingsMod"
+    v-model:axis-lock-mod="axisLockMod"
+    v-model:move-mod="moveMod"
+    v-model:active-tool="activeTool"
+    v-model:area-side-dims-visible="areaSideDimsVisible"
+  />
+</template>

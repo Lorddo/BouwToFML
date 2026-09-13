@@ -90,7 +90,7 @@ export interface WallLayerExport {
   json?: unknown
 }
 
-export interface FmlPreviewExport {
+export interface PlanCanvasExport {
   fmlText: string
   wallCount: number
   segments: SegmentRecord[]
@@ -169,7 +169,7 @@ export interface WallVariantExport {
   roomWallMergedClosePng?: string
   roomWallSkeletonOverlayPng?: string
   semanticWallGraph?: SemanticWallGraphRecord
-  fmlPreview?: FmlPreviewExport
+  fmlPreview?: PlanCanvasExport
   wallLayers?: WallLayerExport[]
   meta?: Omit<ExtractionOutput['meta'], 'signaturesJson' | 'debugStagePngs'>
 }

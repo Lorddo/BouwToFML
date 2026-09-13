@@ -35,7 +35,7 @@ function parseFitChromeSide(value: string | null): FitChromeSide | null {
  */
 export function resolveFitChromeHost(from: HTMLElement | null): HTMLElement | null {
   if (!from) return null
-  return from.closest('.canvas-main') ?? from.closest('.fml-preview-wrap, .canvas-wrap') ?? from
+  return from.closest('.canvas-main') ?? from.closest('.plan-canvas-wrap, .canvas-wrap') ?? from
 }
 
 /**

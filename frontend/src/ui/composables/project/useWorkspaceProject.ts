@@ -91,7 +91,7 @@ export type WorkspaceProjectDeps = {
    * Wis live FML-preview ná capture, vóór activeFloorId-wissel —
    * anders remount de canvas met de vorige verdieping als plan.
    */
-  clearLiveFmlPreview: () => void
+  clearLivePlanCanvas: () => void
   /** Sync FML UI-defaults vanuit effectieve floor defaults. */
   applyFmlDefaultsToUi?: (defaults: ProjectFmlDefaults) => void
   /** Skip IndexedDB-write tijdens running / restoring. */
@@ -484,7 +484,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         // Ná capture: live preview wissen vóór activeFloorId-wissel. Remount (key=floorId)
         // zou anders nog de vorige previewPlan als props krijgen — nulpunt-apply bakte
         // die stale geometrie daarna in de nieuwe floor.
-        deps.clearLiveFmlPreview()
+        deps.clearLivePlanCanvas()
       }
       state.value = { ...state.value, activeFloorId: floorId }
       if (deps.flowStep.value === 'project') {

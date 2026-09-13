@@ -11,9 +11,9 @@ import {
   buildWindowSymbol,
   resolveWindowPanelCount,
   WINDOW_ORNAMENT_DIAMETER_PX,
-} from '@/ui/composables/fml-preview/fml-preview-opening-render'
+} from '@/ui/composables/plan-canvas/plan-canvas-opening-render'
 import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
-import { buildRenderFixtures } from '@/ui/composables/fml-preview/fml-preview-render-openings'
+import { buildRenderFixtures } from '@/ui/composables/plan-canvas/plan-canvas-render-openings'
 
 describe('fixture catalog + symbols', () => {
   it('resolves Template ID fixture refids', () => {
@@ -193,7 +193,8 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: '7f4bebad787178e920c4c7aa11954aad24e457a1',
+            id: 'stair-q90',
+            kind: 'stair_quarter_90',
             x: 108.2,
             y: 1081.3,
             width: 73,
@@ -202,7 +203,8 @@ describe('fixture catalog + symbols', () => {
             mirrored: [1, 0],
           },
           {
-            refid: 'e28361f3a9cdd47134d12b3e183481cfa638668f',
+            id: 'stair-q90-up',
+            kind: 'stair_quarter_90_up',
             x: 110.86,
             y: 999.47,
             width: 121.47,
@@ -290,7 +292,8 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: '17f4fb9a53843a0e345bfd587144ed48c08bf6f5',
+            id: 'stair-straight',
+            kind: 'stair_straight',
             x: 1051.9,
             y: 881.8,
             width: 85,
@@ -342,7 +345,8 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: '825bce5ff93725dbd0ab11b82e6a2b13f96475cf',
+            id: 'stair-double',
+            kind: 'stair_straight_double',
             x: 590,
             y: 783.2,
             width: 203,
@@ -407,7 +411,8 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: 'a8c2aefd352dbcdd65543fa95659b1cc096ad73f',
+            id: 'dormer-1',
+            kind: 'dormer',
             x: -348.49,
             y: 2034.56,
             width: 180,
@@ -466,14 +471,16 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: 'db74ce14813eb0d5c54c8992806b22fb846ee34c',
+            id: 'counter-1',
+            kind: 'countertop',
             x: 0,
             y: 0,
             width: 180,
             height: 60,
           },
           {
-            refid: 'd8dfd3e5683d86a7d9db8a8f7d3260b87ea8213f',
+            id: 'canopy-1',
+            kind: 'canopy',
             x: 10,
             y: 10,
             width: 91,
@@ -547,21 +554,24 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: '79b71be64f8b275103e264cbd1c070d820bac2b4',
+            id: 'sink-1',
+            kind: 'kitchen_sink',
             x: 0,
             y: 0,
             width: 45,
             height: 39,
           },
           {
-            refid: 'f6402c587fa67fbdba921024206525ee86432449',
+            id: 'counter-2',
+            kind: 'countertop',
             x: 0,
             y: 0,
             width: 241,
             height: 60,
           },
           {
-            refid: 'a87ae8e3bd9b8c3c45d3330cbac583baa957c3bb',
+            id: 'cooktop-1',
+            kind: 'cooktop',
             x: 10,
             y: 10,
             width: 60,
@@ -782,14 +792,16 @@ describe('fixture catalog + symbols', () => {
         walls: [],
         items: [
           {
-            refid: 'd8dfd3e5683d86a7d9db8a8f7d3260b87ea8213f',
+            id: 'canopy-2',
+            kind: 'canopy',
             x: 0,
             y: 0,
             width: 91,
             height: 39,
           },
           {
-            refid: '7518d7dd885df41f7caddb870d2561bdc5a1a861',
+            id: 'hidden-arm',
+            kind: 'hidden',
             x: 0,
             y: 0,
             width: 13,

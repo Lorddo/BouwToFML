@@ -251,8 +251,8 @@ defineExpose({ focus })
   display: inline-flex;
   align-items: stretch;
   box-sizing: border-box;
-  width: var(--fml-toolbelt-input-width, 92px);
-  min-width: var(--fml-toolbelt-input-width, 92px);
+  width: var(--plan-toolbelt-input-width, 92px);
+  min-width: var(--plan-toolbelt-input-width, 92px);
   height: 26px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;

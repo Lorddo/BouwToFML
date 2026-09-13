@@ -102,7 +102,7 @@ describe('reuseUnderlayFromProject thickness catalog', () => {
       setFmlNulpuntImageCm: vi.fn(),
       getFmlOrient: () => null,
       setFmlOrient: vi.fn(),
-      clearLiveFmlPreview: vi.fn(),
+      clearLivePlanCanvas: vi.fn(),
     })
 
     return { project, rects, applyFmlDefaultsToUi, applyPreprocessTune, loadUnderlayWithScale }

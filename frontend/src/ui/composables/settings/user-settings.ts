@@ -97,7 +97,7 @@ export const DEFAULT_FML_UNDERLAY_OPACITY_PCT = 25
 export const DEFAULT_FML_CONTENT_OPACITY_PCT = 80
 export { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
 
-export type FmlViewerSettings = {
+export type EditorSettings = {
   underlayOpacityPct: number
   fmlOpacityPct: number
   /** Overlay: binnenhoeken H+V / scheef. */
@@ -144,7 +144,7 @@ export type UserSettingsV1 = {
   /** Schaalliniaal + FML typen (kamer/muur/move); doorrekening blijft cm. */
   scaleInputUnit: ScaleInputUnit
   defaults: ProjectFmlDefaults
-  fmlViewer: FmlViewerSettings
+  fmlViewer: EditorSettings
   fmlConversion: FmlConversionSettings
   /** Per-role kleur-overrides t.o.v. roomtype-catalogus (alleen afwijkingen). */
   roomTagColors: Record<string, string>
@@ -217,7 +217,7 @@ export function createFactoryFmlDefaults(): ProjectFmlDefaults {
   }
 }
 
-export function createFactoryFmlViewerSettings(): FmlViewerSettings {
+export function createFactoryEditorSettings(): EditorSettings {
   return {
     underlayOpacityPct: DEFAULT_FML_UNDERLAY_OPACITY_PCT,
     fmlOpacityPct: DEFAULT_FML_CONTENT_OPACITY_PCT,
@@ -252,7 +252,7 @@ export function createFactoryUserSettings(): UserSettingsV1 {
     unitSystem: DEFAULT_UNIT_SYSTEM,
     scaleInputUnit: DEFAULT_SCALE_INPUT_UNIT,
     defaults: createFactoryFmlDefaults(),
-    fmlViewer: createFactoryFmlViewerSettings(),
+    fmlViewer: createFactoryEditorSettings(),
     fmlConversion: createFactoryFmlConversionSettings(),
     roomTagColors: {},
   }
@@ -323,10 +323,10 @@ function normalizeFacadeGroupPresets(
   return out
 }
 
-function normalizeFmlViewer(
+function normalizeEditor(
   raw: unknown,
-  factory: FmlViewerSettings = createFactoryFmlViewerSettings(),
-): FmlViewerSettings {
+  factory: EditorSettings = createFactoryEditorSettings(),
+): EditorSettings {
   const src = asRecord(raw)
   return {
     underlayOpacityPct: clampOpacityPct(src.underlayOpacityPct, factory.underlayOpacityPct),
@@ -395,7 +395,7 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
     unitSystem: normalizeUnitSystem(obj.unitSystem),
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults, factory.defaults),
-    fmlViewer: normalizeFmlViewer(obj.fmlViewer, factory.fmlViewer),
+    fmlViewer: normalizeEditor(obj.fmlViewer, factory.fmlViewer),
     fmlConversion: normalizeFmlConversion(obj.fmlConversion, factory.fmlConversion),
     roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
@@ -428,7 +428,7 @@ export function parseUserSettingsJson(raw: string): UserSettingsV1 {
     unitSystem: normalizeUnitSystem(obj.unitSystem),
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults),
-    fmlViewer: normalizeFmlViewer(obj.fmlViewer),
+    fmlViewer: normalizeEditor(obj.fmlViewer),
     fmlConversion: normalizeFmlConversion(obj.fmlConversion),
     roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }

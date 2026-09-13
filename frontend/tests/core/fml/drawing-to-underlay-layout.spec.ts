@@ -7,7 +7,7 @@ import {
   resolveUnderlayPxPerMmFromRulers,
 } from '@/core/fml/drawing-to-underlay-layout'
 import type { DrawingMeta } from '@/core/fml/types'
-import { buildUnderlayStageGeom } from '@/ui/composables/fml-preview/fml-preview-underlay-layout'
+import { buildUnderlayStageGeom } from '@/ui/composables/plan-canvas/plan-canvas-underlay-layout'
 
 /** Kinderdijkstraat 53 1 — floors[0].drawing (zonder url). */
 const KINDERDIJK_DRAWING: DrawingMeta = {

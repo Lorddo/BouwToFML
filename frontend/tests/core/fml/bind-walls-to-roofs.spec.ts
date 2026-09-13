@@ -3,10 +3,13 @@ import {
   bindFloorWallsToRoofs,
   collectRoofCreases,
   listFloorsWithRoofPlanes,
+  sampleCeilingRoofAtPoint,
   sampleRoofZAtPoint,
 } from '@/core/fml/bind-walls-to-roofs'
 import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
+import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import {
+  isDormerLikeRoof,
   makeRoofSurface,
   markRoofSurfaceManual,
   setRidgeSurfacesOnFloor,
@@ -14,13 +17,13 @@ import {
 import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
 import type { FloorPlan, Opening, Wall } from '@/core/fml/types'
 import { wallEndpoint3D } from '@/core/fml/wall-endpoint-height'
-import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
+import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 
 function wall(
   id: string,
   a: { x: number; y: number },
   b: { x: number; y: number },
-  opts?: { heightCm?: number; bottomZ?: number; openings?: Opening[] },
+  opts?: { heightCm?: number; bottomZ?: number; openings?: Opening[]; thickness?: number },
 ): Wall {
   const z = opts?.bottomZ ?? 0
   const h = z + (opts?.heightCm ?? 280)
@@ -28,7 +31,7 @@ function wall(
     id,
     a,
     b,
-    thickness: 20,
+    thickness: opts?.thickness ?? 20,
     openings: opts?.openings ?? [],
     extras: { az: { z, h }, bz: { z, h } },
   }
@@ -134,6 +137,28 @@ function saddlePlan(opts?: { withUpperFloor?: boolean; withOutbuilding?: boolean
     })
   }
 
+  return plan
+}
+
+/** Dakkapel op de zuid-oosthoek (y=0–150, x=250–400), Z op de ouder op de binnenrand. */
+function saddleWithCornerDormer(): FloorPlan {
+  const plan = saddlePlan()
+  const existing = plan.floors[0].designs?.find((d) => d.name === 'Dak')?.surfaces ?? []
+  plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+    ...existing,
+    makeRoofSurface({
+      id: 'dormer',
+      origin: 'manual',
+      roofKind: 'dormer',
+      roofParentId: 'roof-s',
+      poly: [
+        { x: 250, y: 0, z: 280 },
+        { x: 400, y: 0, z: 280 },
+        { x: 400, y: 150, z: 318 },
+        { x: 250, y: 150, z: 318 },
+      ],
+    }),
+  ])
   return plan
 }
 
@@ -244,7 +269,8 @@ describe('bindFloorWallsToRoofs V1', () => {
     const front = plan.floors[0].walls.find((w) => w.id === 'front')!
     front.openings = [
       {
-        refid: 'door',
+        id: 'door',
+        kind: 'door.single',
         t: 0.5,
         width: 90,
         type: 'door',
@@ -330,12 +356,147 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
     expect(result.plan.floors[0].walls.some((w) => w.id.startsWith('short-split-'))).toBe(false)
     expect(result.plan.floors[0].walls.length).toBeGreaterThanOrEqual(before)
   })
+
+  /**
+   * MK-gevel: zelfde overspanning binnen (10 cm) en buiten (37 cm).
+   * Nok 22,6 cm van een T-knoop — rest < ½ geveldikte, wél ≥ 4 cm.
+   */
+  it('dikke gevel knipt op nok ook als rest < ½ dikte', () => {
+    const plan = createEmptyFloorPlan({ name: 'MK', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('front', { x: 533.2, y: 927.2 }, { x: 586.6, y: 927.2 }, { thickness: 37 }),
+      wall('inner', { x: 533.2, y: 830 }, { x: 586.6, y: 830 }, { thickness: 10 }),
+      wall('left', { x: 533.2, y: 830 }, { x: 533.2, y: 927.2 }, { thickness: 10 }),
+      wall('right', { x: 586.6, y: 830 }, { x: 586.6, y: 927.2 }, { thickness: 21 }),
+    ]
+    const leftRoof = markRoofSurfaceManual(
+      makeRoofSurface({
+        id: 'roof-l',
+        origin: 'manual',
+        poly: [
+          { x: 500, y: 800, z: 450 },
+          { x: 555.8, y: 800, z: 458 },
+          { x: 555.8, y: 960, z: 458 },
+          { x: 500, y: 960, z: 450 },
+        ],
+      }),
+    )
+    const rightRoof = markRoofSurfaceManual(
+      makeRoofSurface({
+        id: 'roof-r',
+        origin: 'manual',
+        poly: [
+          { x: 555.8, y: 800, z: 458 },
+          { x: 620, y: 800, z: 445 },
+          { x: 620, y: 960, z: 445 },
+          { x: 555.8, y: 960, z: 458 },
+        ],
+      }),
+    )
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [leftRoof, rightRoof])
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [
+      markWallAsRidge(
+        wall('ridge', { x: 555.8, y: 800 }, { x: 555.8, y: 960 }),
+        ridgeEndpointExtras(436, 30, 30),
+      ),
+    ])
+
+    const result = bindFloorWallsToRoofs(plan, 0, {
+      splitCreases: true,
+      splitWalls: splitWallAtT,
+    })
+    const frontParts = result.plan.floors[0].walls.filter(
+      (w) => w.id === 'front' || w.id.startsWith('front-split-'),
+    )
+    const innerParts = result.plan.floors[0].walls.filter(
+      (w) => w.id === 'inner' || w.id.startsWith('inner-split-'),
+    )
+    expect(frontParts.length).toBe(2)
+    expect(innerParts.length).toBe(2)
+    const frontRidgeX = frontParts.flatMap((w) => [w.a.x, w.b.x])
+    expect(frontRidgeX.some((x) => Math.abs(x - 555.8) < 1)).toBe(true)
+    const frontTops = frontParts.flatMap((w) => [
+      wallEndpoint3D(w, 'a', 280).h,
+      wallEndpoint3D(w, 'b', 280).h,
+    ])
+    expect(Math.max(...frontTops)).toBeGreaterThanOrEqual(456)
+
+    const twice = bindFloorWallsToRoofs(result.plan, 0, {
+      splitCreases: true,
+      splitWalls: splitWallAtT,
+    })
+    expect(twice.splits).toBe(0)
+  })
+
+  it('collectRoofCreases neemt dakkapel-omtrek mee', () => {
+    const plan = saddleWithCornerDormer()
+    const surfaces = plan.floors[0].designs?.find((d) => d.name === 'Dak')?.surfaces ?? []
+    const creases = collectRoofCreases(surfaces, [])
+    const inner = creases.find(
+      (c) =>
+        Math.abs(Math.min(c.a.y, c.b.y) - 150) < 1 &&
+        Math.abs(Math.max(c.a.y, c.b.y) - 150) < 1 &&
+        Math.min(c.a.x, c.b.x) <= 251 &&
+        Math.max(c.a.x, c.b.x) >= 399,
+    )
+    expect(inner).toBeTruthy()
+  })
+
+  it('lange gevel splitst op dakkapel-rand; wang niet flush, kopse wel', () => {
+    const plan = saddleWithCornerDormer()
+    const result = bindFloorWallsToRoofs(plan, 0, {
+      splitCreases: true,
+      splitWalls: splitWallAtT,
+    })
+    const rightParts = result.plan.floors[0].walls.filter(
+      (w) => w.id === 'right' || w.id.startsWith('right-split-'),
+    )
+    expect(rightParts.length).toBe(3)
+    const cheek = rightParts.find((w) => {
+      const lo = Math.min(w.a.y, w.b.y)
+      const hi = Math.max(w.a.y, w.b.y)
+      return lo < 10 && hi > 140 && hi < 200
+    })
+    expect(cheek).toBeTruthy()
+    expect(cheek!.balance === 0 || cheek!.balance === 1).toBe(false)
+    const cheekTops = [
+      wallEndpoint3D(cheek!, 'a', 280).h,
+      wallEndpoint3D(cheek!, 'b', 280).h,
+    ]
+    expect(Math.min(...cheekTops)).toBeGreaterThanOrEqual(270)
+    const slope = rightParts.find((w) => {
+      const lo = Math.min(w.a.y, w.b.y)
+      const hi = Math.max(w.a.y, w.b.y)
+      return lo > 140 && lo < 200 && hi > 350 && hi < 450
+    })
+    expect(slope).toBeTruthy()
+    expect(slope!.balance === 0 || slope!.balance === 1).toBe(false)
+    const ridgeTops = [wallEndpoint3D(slope!, 'a', 280).h, wallEndpoint3D(slope!, 'b', 280).h]
+    expect(ridgeTops).toContain(380)
+    expect(Math.min(...ridgeTops)).toBeGreaterThan(300)
+    const frontParts = result.plan.floors[0].walls.filter(
+      (w) => w.id === 'front' || w.id.startsWith('front-split-'),
+    )
+    const kopse = frontParts.find((w) => {
+      const lo = Math.min(w.a.x, w.b.x)
+      const hi = Math.max(w.a.x, w.b.x)
+      return lo > 200 && hi > 390
+    })
+    expect(kopse).toBeTruthy()
+    expect(kopse!.balance === 0 || kopse!.balance === 1).toBe(true)
+    for (const part of rightParts) {
+      expect(part.a.x).toBeCloseTo(400, 5)
+      expect(part.b.x).toBeCloseTo(400, 5)
+    }
+    expect(wallEndpoint3D(cheek!, 'a', 280).z).toBe(0)
+  })
 })
 
 describe('bindFloorWallsToRoofs dakkapel-rand flush', () => {
-  it('hartlijn naar buitenface, dikte naar binnen', () => {
+  it('alleen kopse flusht; wang blijft 0.5 en aan de hoek gekoppeld', () => {
     const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
     plan.floors[0].walls = [
+      wall('front', { x: 100, y: 0 }, { x: 250, y: 0 }),
       wall('wang', { x: 100, y: 0 }, { x: 100, y: 120 }),
     ]
     plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
@@ -364,9 +525,144 @@ describe('bindFloorWallsToRoofs dakkapel-rand flush', () => {
     ])
     const result = bindFloorWallsToRoofs(plan, 0)
     expect(result.flushedEdges).toBe(1)
+    const front = result.plan.floors[0].walls.find((item) => item.id === 'front')!
     const wang = result.plan.floors[0].walls.find((item) => item.id === 'wang')!
-    expect(wang.balance).toBe(1)
-    expect(wang.a.x).toBeCloseTo(90, 5)
-    expect(wang.b.x).toBeCloseTo(90, 5)
+    expect(front.balance === 0 || front.balance === 1).toBe(true)
+    expect(wang.balance === 0 || wang.balance === 1).toBe(false)
+    const dist = (p: { x: number; y: number }, q: { x: number; y: number }) =>
+      Math.hypot(p.x - q.x, p.y - q.y)
+    const welded =
+      dist(front.a, wang.a) < 0.2 ||
+      dist(front.a, wang.b) < 0.2 ||
+      dist(front.b, wang.a) < 0.2 ||
+      dist(front.b, wang.b) < 0.2
+    expect(welded).toBe(true)
+    expect(wang.a.x).toBeCloseTo(wang.b.x, 5)
+    expect(front.a.y).toBeCloseTo(front.b.y, 5)
+    expect(wallEndpoint3D(front, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wallEndpoint3D(wang, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wallEndpoint3D(wang, 'a', 280).z).toBeGreaterThanOrEqual(270)
+  })
+
+  it('ongedagde nested kapel: kopse {ouderZ, kindZ}, wang kind-top', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+      wall('wang', { x: 100, y: 0 }, { x: 100, y: 120 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 100 },
+          { x: 400, y: 0, z: 100 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 320 },
+          { x: 100, y: 120, z: 320 },
+        ],
+      }),
+    ])
+    const result = bindFloorWallsToRoofs(plan, 0)
+    const front = result.plan.floors[0].walls.find((item) => item.id === 'front')!
+    const wang = result.plan.floors[0].walls.find((item) => item.id === 'wang')!
+    expect(wallEndpoint3D(front, 'a', 280).z).toBeGreaterThanOrEqual(90)
+    expect(wallEndpoint3D(front, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wallEndpoint3D(wang, 'a', 280).z).toBeGreaterThanOrEqual(90)
+    expect(wallEndpoint3D(wang, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wang.balance === 0 || wang.balance === 1).toBe(false)
+    expect(wang.a.x).toBeCloseTo(wang.b.x, 5)
+  })
+
+  it('tweede bind is no-op: geen extra knip, muren blijven recht', () => {
+    const plan = saddleWithCornerDormer()
+    const once = bindFloorWallsToRoofs(plan, 0, {
+      splitCreases: true,
+      splitWalls: splitWallAtT,
+    })
+    expect(once.splits).toBeGreaterThan(0)
+    const twice = bindFloorWallsToRoofs(once.plan, 0, {
+      splitCreases: true,
+      splitWalls: splitWallAtT,
+    })
+    expect(twice.splits).toBe(0)
+    expect(twice.flushedEdges).toBe(0)
+    expect(twice.boundJunctions).toBe(0)
+    const before = once.plan.floors[0].walls
+    const after = twice.plan.floors[0].walls
+    expect(after.length).toBe(before.length)
+    for (let i = 0; i < before.length; i += 1) {
+      expect(after[i]!.a.x).toBeCloseTo(before[i]!.a.x, 5)
+      expect(after[i]!.a.y).toBeCloseTo(before[i]!.a.y, 5)
+      expect(after[i]!.b.x).toBeCloseTo(before[i]!.b.x, 5)
+      expect(after[i]!.b.y).toBeCloseTo(before[i]!.b.y, 5)
+    }
+  })
+
+  it('ongedagde kapel op kopgevel-rand: kopse kind-top, niet prefer-min 1cm', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('front', { x: 250, y: 0 }, { x: 400, y: 0 }, { openings: [{ type: 'window', t: 0.5, width: 80, z: 90, z_height: 80, id: 'w1', kind: 'window.single' }] }),
+      wall('wang-l', { x: 250, y: 0 }, { x: 250, y: 150 }),
+      wall('wang-r', { x: 400, y: 0 }, { x: 400, y: 150 }),
+      wall('gable', { x: 400, y: 150 }, { x: 400, y: 400 }),
+    ]
+    const parent = makeRoofSurface({
+      id: 'parent',
+      origin: 'manual',
+      poly: [
+        { x: 0, y: 0, z: 100 },
+        { x: 400, y: 0, z: 100 },
+        { x: 400, y: 400, z: 400 },
+        { x: 0, y: 400, z: 400 },
+      ],
+    })
+    const dormer = makeRoofSurface({
+      id: 'd1',
+      origin: 'manual',
+      poly: [
+        { x: 400, y: 0, z: 280 },
+        { x: 400, y: 150, z: 280 },
+        { x: 250, y: 150, z: 282 },
+        { x: 250, y: 0, z: 280 },
+      ],
+    })
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [parent, dormer])
+    const surfaces = plan.floors[0].designs?.find((d) => d.name === 'Dak')?.surfaces ?? []
+    expect(isDormerLikeRoof(dormer, surfaces)).toBe(true)
+    const ceiling = sampleCeilingRoofAtPoint(surfaces, { x: 325, y: 75 })
+    expect(ceiling?.dormer).toBe(true)
+    expect(ceiling?.z).toBeGreaterThanOrEqual(270)
+
+    const result = bindFloorWallsToRoofs(plan, 0)
+    const front = result.plan.floors[0].walls.find((item) => item.id === 'front')!
+    const inner = result.plan.floors[0].walls.find((item) => item.id === 'wang-l')!
+    const outer = result.plan.floors[0].walls.find((item) => item.id === 'wang-r')!
+    expect(wallEndpoint3D(front, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wallEndpoint3D(front, 'a', 280).z).toBeGreaterThanOrEqual(90)
+    expect(wallEndpoint3D(front, 'a', 280).h - wallEndpoint3D(front, 'a', 280).z).toBeGreaterThan(50)
+    expect(wallEndpoint3D(inner, 'a', 280).z).toBeGreaterThanOrEqual(90)
+    expect(wallEndpoint3D(inner, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wallEndpoint3D(outer, 'a', 280).z).toBeLessThan(5)
+    expect(wallEndpoint3D(outer, 'a', 280).h).toBeGreaterThanOrEqual(270)
+    expect(wallEndpoint3D(outer, 'b', 280).h).toBeGreaterThanOrEqual(270)
+
+    const exported = JSON.parse(buildFmlV3(result.plan)) as {
+      floors: Array<{ height: number; designs: Array<{ walls: Array<{ guid?: string; az?: { z: number; h: number } }> }> }>
+    }
+    const outFront = exported.floors[0]?.designs[0]?.walls.find((w) => w.guid === 'front')
+    expect(outFront?.az?.h).toBeGreaterThanOrEqual(270)
+    expect(outFront?.az?.z).toBeGreaterThanOrEqual(90)
+    expect(outFront?.az?.z).toBeLessThan(150)
+    expect((outFront?.az?.h ?? 0) - (outFront?.az?.z ?? 0)).toBeGreaterThan(50)
   })
 })

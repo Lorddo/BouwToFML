@@ -149,7 +149,7 @@ describe('roof-vertex-snap', () => {
     const raw = JSON.parse(buildFmlV3(plan)) as {
       settings: { roofPlanes?: { surfaceGuids: string[] } }
       floors: Array<{
-        designs?: Array<{ surfaces?: Array<{ id: string; btfOrigin?: string }> }>
+        designs?: Array<{ surfaces?: Array<{ guid: string; btfOrigin?: string }> }>
       }>
     }
     expect(raw.settings.roofPlanes?.surfaceGuids).toEqual(['roof-1'])

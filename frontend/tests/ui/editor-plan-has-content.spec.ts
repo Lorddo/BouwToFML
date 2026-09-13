@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FloorPlan } from '@/core/fml/types'
-import { editorPlanHasContent } from '@/ui/composables/fml-viewer/useFmlViewerLoad'
+import { editorPlanHasContent } from '@/ui/composables/editor/useEditorLoad'
 
 function emptyPlan(): FloorPlan {
   return {

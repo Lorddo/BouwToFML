@@ -2,20 +2,20 @@
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import WorkspaceView from './views/WorkspaceView.vue'
 import UserSettingsView from './views/UserSettingsView.vue'
-import FmlViewerView from './views/FmlViewerView.vue'
+import EditorView from './views/EditorView.vue'
 import AppAccessGate from './components/AppAccessGate.vue'
 import AppHeader from './components/AppHeader.vue'
-import FmlChromeDialogHost from './components/FmlChromeDialogHost.vue'
+import PlanChromeDialogHost from './components/PlanChromeDialogHost.vue'
 import { appFatalError, clearAppError } from '@/ui/app-error'
 import { isAccessPasswordRequired, isAccessUnlocked } from '@/ui/access-gate'
 import {
-  FML_EDITOR_PATH,
-  isFmlEditorPath,
-  syncFmlEditorCanonicalPath,
+  EDITOR_PATH,
+  isEditorPath,
+  syncEditorCanonicalPath,
   viewFromPathname,
   type AppShellView,
 } from '@/ui/app-routes'
-import { confirmFmlChrome } from '@/ui/composables/fml-chrome-dialog'
+import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { FloorPlan } from '@/core/fml/types'
 import { useI18n } from 'vue-i18n'
 
@@ -30,10 +30,10 @@ function viewFromLocation(): Exclude<AppView, 'settings'> {
 const accessGranted = ref(!isAccessPasswordRequired() || isAccessUnlocked())
 const appView = ref<AppView>(viewFromLocation())
 const settingsReturn = ref<AppView | null>(null)
-const workspaceMounted = ref(appView.value !== 'fml-viewer')
-const editorMounted = ref(appView.value === 'fml-viewer')
+const workspaceMounted = ref(appView.value !== 'editor')
+const editorMounted = ref(appView.value === 'editor')
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
-const fmlViewerRef = ref<{
+const editorRef = ref<{
   startNewPlan: () => void
   loadPlan: (plan: FloorPlan, sourceName: string) => Promise<void>
   hasOpenContent: () => boolean
@@ -52,12 +52,12 @@ function onNewWorkspace(): void {
 
 function onNewDrawing(): void {
   const dest = appView.value === 'settings' ? (settingsReturn.value ?? 'workspace') : appView.value
-  if (dest === 'fml-viewer') {
+  if (dest === 'editor') {
     if (appView.value === 'settings') {
       settingsReturn.value = null
-      appView.value = 'fml-viewer'
+      appView.value = 'editor'
     }
-    fmlViewerRef.value?.startNewPlan()
+    editorRef.value?.startNewPlan()
     return
   }
   if (appView.value === 'settings') {
@@ -69,7 +69,7 @@ function onNewDrawing(): void {
 function goToWorkspace(): void {
   workspaceMounted.value = true
   settingsReturn.value = null
-  if (isFmlEditorPath(window.location.pathname)) {
+  if (isEditorPath(window.location.pathname)) {
     history.pushState(null, '', '/')
   }
   appView.value = 'workspace'
@@ -78,15 +78,15 @@ function goToWorkspace(): void {
 function goToEditor(): void {
   editorMounted.value = true
   settingsReturn.value = null
-  if (!isFmlEditorPath(window.location.pathname)) {
-    history.pushState(null, '', FML_EDITOR_PATH)
+  if (!isEditorPath(window.location.pathname)) {
+    history.pushState(null, '', EDITOR_PATH)
   }
-  appView.value = 'fml-viewer'
+  appView.value = 'editor'
 }
 
 async function openProjectInEditor(plan: FloorPlan): Promise<void> {
-  if (fmlViewerRef.value?.hasOpenContent?.()) {
-    const ok = await confirmFmlChrome({
+  if (editorRef.value?.hasOpenContent?.()) {
+    const ok = await confirmPlanChrome({
       title: t('viewer.replacePlanTitle'),
       message: t('viewer.replacePlanBody'),
       confirmLabel: t('result.openInEditor'),
@@ -96,9 +96,9 @@ async function openProjectInEditor(plan: FloorPlan): Promise<void> {
   }
   goToEditor()
   await nextTick()
-  if (!fmlViewerRef.value?.loadPlan) await nextTick()
+  if (!editorRef.value?.loadPlan) await nextTick()
   const name = `${plan.name?.trim() || 'project'}.plg`
-  await fmlViewerRef.value?.loadPlan(plan, name)
+  await editorRef.value?.loadPlan(plan, name)
 }
 
 function openSettings(): void {
@@ -113,8 +113,8 @@ function openSettings(): void {
 function backFromSettings(): void {
   const dest = settingsReturn.value ?? 'workspace'
   settingsReturn.value = null
-  if (dest === 'fml-viewer') {
-    appView.value = 'fml-viewer'
+  if (dest === 'editor') {
+    appView.value = 'editor'
     return
   }
   goToWorkspace()
@@ -122,7 +122,7 @@ function backFromSettings(): void {
 
 function onPopState(): void {
   const next = viewFromLocation()
-  if (next === 'fml-viewer') editorMounted.value = true
+  if (next === 'editor') editorMounted.value = true
   else workspaceMounted.value = true
   settingsReturn.value = null
   appView.value = next
@@ -131,19 +131,19 @@ function onPopState(): void {
 }
 
 function syncViewerLockClass(): void {
-  const lock = appView.value === 'fml-viewer' || settingsReturn.value === 'fml-viewer'
-  document.documentElement.classList.toggle('fml-viewer-lock', lock)
+  const lock = appView.value === 'editor' || settingsReturn.value === 'editor'
+  document.documentElement.classList.toggle('editor-lock', lock)
 }
 
 onMounted(() => {
-  syncFmlEditorCanonicalPath()
+  syncEditorCanonicalPath()
   window.addEventListener('popstate', onPopState)
   syncViewerLockClass()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', onPopState)
-  document.documentElement.classList.remove('fml-viewer-lock')
+  document.documentElement.classList.remove('editor-lock')
 })
 
 watch(appView, () => {
@@ -156,7 +156,7 @@ watch([appView, settingsReturn], () => {
 
 function onSettingsSaved(): void {
   workspaceRef.value?.applyUserViewerSettings()
-  fmlViewerRef.value?.applyViewerSettings()
+  editorRef.value?.applyViewerSettings()
 }
 
 function dismissFatalError(): void {
@@ -170,11 +170,11 @@ function dismissFatalError(): void {
     v-else
     class="app-shell"
     :class="{
-      'app-shell--fml-viewer': appView === 'fml-viewer' || settingsReturn === 'fml-viewer',
+      'app-shell--editor': appView === 'editor' || settingsReturn === 'editor',
       'app-shell--canvas-fs': canvasFullscreen,
     }"
   >
-    <FmlChromeDialogHost />
+    <PlanChromeDialogHost />
     <div v-if="appFatalError" class="app-error-banner" role="alert">
       <span class="app-error-banner__text">{{ appFatalError }}</span>
       <button type="button" class="app-error-banner__dismiss" @click="dismissFatalError">
@@ -204,17 +204,17 @@ function dismissFatalError(): void {
       </div>
       <div v-if="appView === 'settings'" class="app-page app-page--settings">
         <UserSettingsView
-          :variant="settingsReturn === 'fml-viewer' ? 'viewer' : 'workspace'"
+          :variant="settingsReturn === 'editor' ? 'viewer' : 'workspace'"
           @saved="onSettingsSaved"
           @close="backFromSettings"
         />
       </div>
       <div
-        v-if="editorMounted || settingsReturn === 'fml-viewer'"
-        v-show="appView === 'fml-viewer'"
-        class="app-page app-page--fml-viewer"
+        v-if="editorMounted || settingsReturn === 'editor'"
+        v-show="appView === 'editor'"
+        class="app-page app-page--editor"
       >
-        <FmlViewerView ref="fmlViewerRef" @update:canvas-fullscreen="canvasFullscreen = $event" />
+        <EditorView ref="editorRef" @update:canvas-fullscreen="canvasFullscreen = $event" />
       </div>
     </main>
   </div>
@@ -229,7 +229,7 @@ function dismissFatalError(): void {
   background: #f4f5f7;
 }
 
-.app-shell--fml-viewer {
+.app-shell--editor {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
@@ -298,7 +298,7 @@ function dismissFatalError(): void {
   z-index: 10;
 }
 
-.app-page--fml-viewer {
+.app-page--editor {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -308,9 +308,9 @@ function dismissFatalError(): void {
 </style>
 
 <style>
-html.fml-viewer-lock,
-html.fml-viewer-lock body,
-html.fml-viewer-lock #app {
+html.editor-lock,
+html.editor-lock body,
+html.editor-lock #app {
   height: 100%;
   max-height: 100dvh;
   overflow: hidden;

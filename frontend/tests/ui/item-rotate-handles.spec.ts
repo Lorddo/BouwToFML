@@ -10,7 +10,7 @@ import {
   pointerAngleDeg,
   rotationFromGrab,
   snapItemRotationDeg,
-} from '@/ui/composables/fml-preview/item-rotate-handles'
+} from '@/ui/composables/plan-canvas/item-rotate-handles'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'a' | 'b' | 'thickness'>): Wall {
   return {

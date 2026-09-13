@@ -68,7 +68,8 @@ import {
   splitPlanWallAtT,
   updatePlanOpening,
 } from '@/core/fml/elevation-openings'
-import { splitWallAtT } from '@/ui/components/fml-preview-wall-edit'
+import { flushDormerEdgeWallOutward } from '@/core/fml/dormer-edge-walls'
+import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import { type FloorPlan,
   type Wall } from '@/core/fml/types'
 import { makeEndpoint3D } from '@/core/fml/wall-endpoint-height'
@@ -1429,5 +1430,185 @@ describe('dakkapel-randmuren op aanzicht', () => {
     expect(dFront.length).toBe(1)
     expect(dFront[0]?.axisEdit).toBe(true)
     expect(elev.walls.some((item) => item.wallId === 'split')).toBe(false)
+  })
+
+  it('zijgevel zonder gevelgroep-lid ziet wang + dakkapel-vlak', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('left', { x: 0, y: 0 }, { x: 0, y: 400 }),
+      wall('wang-l', { x: 100, y: 0 }, { x: 100, y: 120 }),
+      wall('d-front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        roofKind: 'dormer',
+        roofParentId: 'parent',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 320 },
+          { x: 100, y: 120, z: 320 },
+        ],
+      }),
+    ])
+    const group = createFacadeGroup(plan, { name: 'Links' })
+    assignWallsToGroup(plan, group.id, ['left'])
+    const elev = projectFacadeElevation(plan, group.id)!
+    expect(elev.walls.some((item) => item.wallId === 'wang-l')).toBe(true)
+    expect(elev.roofPlanes.some((item) => item.id === 'd1')).toBe(true)
+  })
+
+  it('kopse end-on: fill-breedte = dikte, flush legt as op de buitenface', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    const dormer = makeRoofSurface({
+      id: 'd1',
+      origin: 'manual',
+      roofKind: 'dormer',
+      roofParentId: 'parent',
+      poly: [
+        { x: 100, y: 0, z: 280 },
+        { x: 250, y: 0, z: 280 },
+        { x: 250, y: 120, z: 320 },
+        { x: 100, y: 120, z: 320 },
+      ],
+    })
+    const kopse = flushDormerEdgeWallOutward(
+      wall('d-front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+      dormer,
+    )
+    plan.floors[0].walls = [
+      wall('left', { x: 0, y: 0 }, { x: 0, y: 400 }),
+      wall('wang-l', { x: 100, y: 0 }, { x: 100, y: 120 }),
+      kopse,
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      dormer,
+    ])
+    const group = createFacadeGroup(plan, { name: 'Links' })
+    assignWallsToGroup(plan, group.id, ['left'])
+    const elev = projectFacadeElevation(plan, group.id)!
+    const front = elev.walls.find((item) => item.wallId === 'd-front' && !item.ridge)
+    expect(front).toBeTruthy()
+    const width = front!.x1 - front!.x0
+    expect(width).toBeCloseTo(20, 0)
+    const axis = (front!.xa + front!.xb) / 2
+    const distToEdge = Math.min(Math.abs(axis - front!.x0), Math.abs(axis - front!.x1))
+    expect(distToEdge).toBeCloseTo(0, 0)
+  })
+
+  it('dakkapel op voorgevel niet op achteraanzicht', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('south', { x: 0, y: 0 }, { x: 400, y: 0 }),
+      wall('north', { x: 400, y: 800 }, { x: 0, y: 800 }),
+      wall('d-front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 282 },
+          { x: 100, y: 120, z: 282 },
+        ],
+      }),
+    ])
+    const south = createFacadeGroup(plan, { name: 'Voor' })
+    const north = createFacadeGroup(plan, { name: 'Achter' })
+    assignWallsToGroup(plan, south.id, ['south', 'd-front'])
+    assignWallsToGroup(plan, north.id, ['north'])
+    const elevS = projectFacadeElevation(plan, south.id)!
+    const elevN = projectFacadeElevation(plan, north.id)!
+    expect(elevS.roofPlanes.some((item) => item.id === 'd1')).toBe(true)
+    expect(elevN.roofPlanes.some((item) => item.id === 'd1')).toBe(false)
+  })
+
+  it('dakkapel voorzijde: voor + links + rechts in beeld, achter niet — ook ver van de zijgevel', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('south', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      wall('north', { x: 800, y: 600 }, { x: 0, y: 600 }),
+      wall('west', { x: 0, y: 0 }, { x: 0, y: 600 }),
+      wall('east', { x: 800, y: 0 }, { x: 800, y: 600 }),
+      wall('d-front', { x: 500, y: 0 }, { x: 650, y: 0 }),
+      wall('wang-l', { x: 500, y: 0 }, { x: 500, y: 100 }),
+      wall('wang-r', { x: 650, y: 0 }, { x: 650, y: 100 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 800, y: 0, z: 280 },
+          { x: 800, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        roofKind: 'dormer',
+        roofParentId: 'parent',
+        poly: [
+          { x: 500, y: 0, z: 280 },
+          { x: 650, y: 0, z: 280 },
+          { x: 650, y: 100, z: 300 },
+          { x: 500, y: 100, z: 300 },
+        ],
+      }),
+    ])
+    const voor = createFacadeGroup(plan, { name: 'Voor' })
+    const achter = createFacadeGroup(plan, { name: 'Achter' })
+    const links = createFacadeGroup(plan, { name: 'Links' })
+    const rechts = createFacadeGroup(plan, { name: 'Rechts' })
+    assignWallsToGroup(plan, voor.id, ['south', 'd-front'])
+    assignWallsToGroup(plan, achter.id, ['north'])
+    assignWallsToGroup(plan, links.id, ['west'])
+    assignWallsToGroup(plan, rechts.id, ['east'])
+    const elevV = projectFacadeElevation(plan, voor.id)!
+    const elevA = projectFacadeElevation(plan, achter.id)!
+    const elevL = projectFacadeElevation(plan, links.id)!
+    const elevR = projectFacadeElevation(plan, rechts.id)!
+    expect(elevV.roofPlanes.some((item) => item.id === 'd1')).toBe(true)
+    expect(elevL.roofPlanes.some((item) => item.id === 'd1')).toBe(true)
+    expect(elevR.roofPlanes.some((item) => item.id === 'd1')).toBe(true)
+    expect(elevA.roofPlanes.some((item) => item.id === 'd1')).toBe(false)
+    expect(elevL.walls.some((item) => item.wallId === 'wang-l')).toBe(true)
+    expect(elevL.walls.some((item) => item.wallId === 'd-front')).toBe(true)
   })
 })

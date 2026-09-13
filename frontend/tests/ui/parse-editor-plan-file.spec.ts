@@ -8,7 +8,7 @@ import {
   writePlg,
   type PlgSettings,
 } from '@/core/plg/plg-document'
-import { parseEditorPlanFile } from '@/ui/composables/fml-viewer/parse-editor-plan-file'
+import { parseEditorPlanFile } from '@/ui/composables/editor/parse-editor-plan-file'
 
 const FACTORY_PLG_SETTINGS: PlgSettings = {
   unitSystem: 'metric',
