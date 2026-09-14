@@ -1,5 +1,5 @@
 import { tally } from '@/core/diagnostics'
-import { buildDoorSwingSymbol, buildMirrored } from '@/core/fml/door-swing-symbol'
+import { buildDoorSwingSymbol, buildMirrored } from '@/core/plan/door-swing-symbol'
 import type { SemanticWallSegment } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { normalizeVector } from './door-geometry-utils'

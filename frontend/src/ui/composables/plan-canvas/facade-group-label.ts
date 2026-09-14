@@ -1,7 +1,7 @@
 import {
   DEFAULT_FACADE_GROUP_NAMES,
   isDefaultFacadeGroupId,
-} from '@/core/fml/facade-groups'
+} from '@/core/plan/facade-groups'
 
 /** UI-label: default-ids vertalen zolang de opgeslagen naam de Engelse canonical is. */
 export function facadeGroupDisplayName(

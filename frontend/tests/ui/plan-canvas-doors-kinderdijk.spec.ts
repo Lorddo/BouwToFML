@@ -2,7 +2,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { describe, expect, it } from 'vitest'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { samplePlanArc, type PlanArcGlyph } from '@/core/fml/opening-plan-symbol'
+import { samplePlanArc, type PlanArcGlyph } from '@/core/plan/opening-plan-symbol'
 import { groupDoorOpeningsOnWall } from '@/ui/components/plan-canvas-doors'
 
 const KINDERDIJK = resolve(

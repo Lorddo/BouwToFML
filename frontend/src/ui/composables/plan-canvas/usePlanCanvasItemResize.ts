@@ -1,5 +1,5 @@
 import { ref, type ComputedRef, type Ref } from 'vue'
-import type { FloorItem, Point2D } from '@/core/fml/types'
+import type { FloorItem, Point2D } from '@/core/plan/types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import {
   hitItemResizeHandle,

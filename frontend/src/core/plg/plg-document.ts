@@ -4,11 +4,11 @@
  * `.plg` = bestaande `FloorPlan` + header/settings. Geen parallel objectmodel.
  * Schemakeys schoon (`slices`/`frame`/`role` elders) — nooit `btf*` in klant-JSON.
  *
- * Importgrens: type-only `FloorPlan`/`FmlExtras` uit `core/fml` (domein = FloorPlan).
+ * Importgrens: type-only `FloorPlan`/`PlanExtras` uit `core/fml` (domein = FloorPlan).
  * `PlgSettings` / `PlgFloorDefaults` / unit-unions zijn hier de **canonieke bron**;
  * `platform/` en `ui/` importeren deze types (niet andersom).
  */
-import type { FloorPlan, FmlExtras } from '../fml/types'
+import type { FloorPlan, PlanExtras } from '../plan/types'
 import { migratePlg } from './plg-migrations'
 import { CURRENT_PLG_VERSION } from './plg-version'
 import { normalizePlanIdentities } from './fml-adapter/normalize-plan-identities'
@@ -28,7 +28,7 @@ export type PlgPlanDisplayStyle = 'editor' | 'bouw' | 'architect'
 
 /**
  * Canonieke floor-/project-defaults (hoogtes, diktes, banden, bovenlicht).
- * `ProjectFmlDefaults` in de UI is een alias hiervan.
+ * `ProjectPlanDefaults` in de UI is een alias hiervan.
  */
 export interface PlgFloorDefaults {
   wallHeightCm: number
@@ -71,7 +71,7 @@ export interface PlgProjectMeta {
 
 export interface PlgForeign {
   /** Opaque Floorplanner-passthrough; alleen na FML-import. */
-  fml?: FmlExtras
+  fml?: PlanExtras
 }
 
 export interface PlgDocument {
@@ -293,7 +293,7 @@ function parseForeign(raw: unknown): PlgForeign | undefined {
     if (!isRecord(raw.fml)) {
       throw new PlgDocumentError('foreign.fml must be an object when present')
     }
-    foreign.fml = raw.fml as FmlExtras
+    foreign.fml = raw.fml as PlanExtras
   }
   return foreign
 }

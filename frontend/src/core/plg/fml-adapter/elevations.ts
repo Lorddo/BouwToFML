@@ -8,7 +8,7 @@ import {
   ELEVATION_VIEWS_SETTINGS_KEY,
   listElevationViews,
   readElevationProjection,
-} from '../../fml/elevation-views'
+} from '../../plan/elevation-views'
 import type { FmlConceptAdapter } from './registry'
 
 function clearElevationSettingsKeys(plan: {

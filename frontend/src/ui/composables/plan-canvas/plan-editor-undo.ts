@@ -10,7 +10,7 @@ import type {
   FloorSurface,
   Point2D,
   Wall,
-} from '@/core/fml/types'
+} from '@/core/plan/types'
 
 const MAX_UNDO = 50
 

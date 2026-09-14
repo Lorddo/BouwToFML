@@ -1,4 +1,4 @@
-import type { FloorArea, Point2D } from '@/core/fml/types'
+import type { FloorArea, Point2D } from '@/core/plan/types'
 
 /** Area-hoek volgt de schuifmuur tot deze afstand (cm). */
 export const WALL_MOVE_AREA_TOUCH_CM = 12

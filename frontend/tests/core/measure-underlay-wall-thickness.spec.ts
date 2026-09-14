@@ -7,7 +7,7 @@ import {
   measureWallThicknessCmOnUnderlay,
   measureWallThicknessPxOnMask,
   wallBwToInkMask,
-} from '@/core/fml/measure-underlay-wall-thickness'
+} from '@/core/plan/measure-underlay-wall-thickness'
 
 describe('measure-underlay-wall-thickness', () => {
   it('converteert cm naar image-px met origin en schaal', () => {

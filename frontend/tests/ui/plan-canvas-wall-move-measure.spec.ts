@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FloorArea } from '@/core/fml/types'
+import type { FloorArea } from '@/core/plan/types'
 import {
   areaGrowSign,
   areaSpanAlongDir,

@@ -5,7 +5,7 @@ import mappingData from './fixture-fml-refids.json'
 import {
   isFixtureAssetKind,
   type FixtureAssetKind,
-} from '../../fml/fixture-kind-catalog'
+} from '../../plan/fixture-kind-catalog'
 
 interface SizeUpgrade {
   kind: string

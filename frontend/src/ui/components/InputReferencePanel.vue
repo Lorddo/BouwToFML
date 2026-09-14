@@ -5,7 +5,7 @@ import type { ElementClass, PreprocessConfig } from '@/core/extraction/types'
 import {
   DOOR_TEMPLATE_KIND_OPTIONS,
   resolveDoorTemplateKind,
-} from '@/core/fml/types'
+} from '@/core/plan/types'
 import { SELECTION_COLORS } from '@/platform/selection'
 import type { SelectionRect } from '@/platform/selection'
 import {
@@ -18,10 +18,10 @@ import {
   MIN_THICKNESS_CATALOG,
   normalizeThicknessCatalog,
   removeThicknessFromCatalog,
-} from '@/core/fml/fml-wall-thickness-catalog'
+} from '@/core/plan/wall-thickness-catalog'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
-import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
-import { DEFAULT_FML_WALL_THICKNESS_LIMITS } from '@/core/fml/fml-wall-thickness-limits'
+import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
+import { DEFAULT_WALL_THICKNESS_LIMITS } from '@/core/plan/wall-thickness-limits'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import {
@@ -39,7 +39,7 @@ const props = defineProps<{
   measuring?: boolean
   scaleConfirmed: boolean
   rects: SelectionRect[]
-  wallThicknessLimits?: FmlWallThicknessLimits
+  wallThicknessLimits?: WallThicknessLimits
   unit: ScaleInputUnit
 }>()
 
@@ -75,7 +75,7 @@ const doorRects = computed(() => props.rects.filter((rect) => rect.type === 'doo
 const wallRects = computed(() => props.rects.filter((rect) => rect.type === 'wall'))
 
 const catalogCms = computed(() => {
-  const limits = props.wallThicknessLimits ?? DEFAULT_FML_WALL_THICKNESS_LIMITS
+  const limits = props.wallThicknessLimits ?? DEFAULT_WALL_THICKNESS_LIMITS
   return normalizeThicknessCatalog(
     limits.thicknessCms ?? [limits.minCm, limits.midCm, limits.maxCm],
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Opening, type Wall } from '@/core/fml/types'
+import { type Opening, type Wall } from '@/core/plan/types'
 import { buildRenderDoorGroupsAndWindows } from '@/ui/composables/plan-canvas/plan-canvas-render-openings'
 import type { RenderWall } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
 import { wallBalanceMidOffsetCm } from '@/ui/components/plan-canvas-wall-polygons'

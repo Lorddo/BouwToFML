@@ -8,8 +8,8 @@ import {
   listFacadeGroups,
   renameFacadeGroup,
   STAMP_FACADE_GROUP_ID,
-} from '@/core/fml/facade-groups'
-import type { FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/facade-groups'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   promptFacadeGroupName,
   promptFacadeGroupsEdit,

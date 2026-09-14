@@ -1,4 +1,4 @@
-import type { Opening, Point2D, Wall } from '@/core/fml/types'
+import type { Opening, Point2D, Wall } from '@/core/plan/types'
 import { connectorInsetAlong } from './plan-canvas-draw-measure'
 import { type MeasureLine, measureDistanceCm } from './plan-canvas-measure'
 

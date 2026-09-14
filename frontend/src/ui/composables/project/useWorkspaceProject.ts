@@ -1,6 +1,6 @@
 import { computed, nextTick, ref, type Ref } from 'vue'
-import type { Floor, FloorPlan } from '@/core/fml/types'
-import { wallsInStampGroup } from '@/core/fml/facade-groups'
+import type { Floor, FloorPlan } from '@/core/plan/types'
+import { wallsInStampGroup } from '@/core/plan/facade-groups'
 import type { PreprocessConfig } from '@/platform/image'
 import { clonePlain, type DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { DrawingProfileId } from '@/platform/profile'
@@ -16,7 +16,7 @@ import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RestoreSessionOptions } from '@/ui/composables/workspace/workspace-dev-session-restore-flow'
 import { tGlobal } from '@/ui/i18n'
 import {
-  createDefaultFloorFmlDefaults,
+  createDefaultFloorDefaults,
   createDefaultFloorMeta,
   createEmptyProjectState,
   createFloorId,
@@ -38,7 +38,7 @@ import type {
   FloorOrientPersist,
   FloorWorkspaceBlob,
   PreviewUnderlayLayout,
-  ProjectFmlDefaults,
+  ProjectPlanDefaults,
   ProjectMeta,
   ProjectSourceUnderlay,
   ProjectState,
@@ -81,11 +81,11 @@ export type WorkspaceProjectDeps = {
   /** Zet live FML-preview (na project-spiegel zonder floor-switch). */
   updatePreviewPlan: (plan: FloorPlan, layout?: PreviewUnderlayLayout | null) => void
   /** Gebruikers-nulpunt in scant-cm, of null. */
-  getFmlNulpuntImageCm: () => { x: number; y: number } | null
+  getPlanNulpuntImageCm: () => { x: number; y: number } | null
   /** Zet nulpunt bij floor-hydrate (na restore). */
   setPlanNulpuntImageCm: (point: { x: number; y: number } | null) => void
   /** FML-oriëntatie (spiegel/90°) t.o.v. canonieke generate. */
-  getFmlOrient: () => FloorOrientPersist | null
+  getPlanOrient: () => FloorOrientPersist | null
   setPlanOrient: (state: FloorOrientPersist | null) => void
   /**
    * Wis live FML-preview ná capture, vóór activeFloorId-wissel —
@@ -93,7 +93,7 @@ export type WorkspaceProjectDeps = {
    */
   clearLivePlanCanvas: () => void
   /** Sync FML UI-defaults vanuit effectieve floor defaults. */
-  applyFmlDefaultsToUi?: (defaults: ProjectFmlDefaults) => void
+  applyPlanDefaultsToUi?: (defaults: ProjectPlanDefaults) => void
   /** Skip IndexedDB-write tijdens running / restoring. */
   shouldSkipPersist?: () => boolean
   /** Runtime PDF source for ROI re-render (memory-only across floor switch). */
@@ -319,7 +319,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   function updateActiveFloorDefaults(
-    patch: Partial<ProjectFmlDefaults>,
+    patch: Partial<ProjectPlanDefaults>,
     options?: { syncUi?: boolean },
   ): void {
     const id = state.value.activeFloorId
@@ -342,23 +342,23 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     state.value = {
       ...state.value,
       floors: state.value.floors.map((f) =>
-        f.id === id ? { ...f, defaults: createDefaultFloorFmlDefaults() } : f,
+        f.id === id ? { ...f, defaults: createDefaultFloorDefaults() } : f,
       ),
     }
     syncActiveFloorDefaultsToUi()
     persistProjectDebounced()
   }
 
-  function effectiveDefaultsForFloor(floorId: string): ProjectFmlDefaults {
+  function effectiveDefaultsForFloor(floorId: string): ProjectPlanDefaults {
     const floor = state.value.floors.find((f) => f.id === floorId)
     // Merge met factory: oude persisted floors missen nieuwe keys (bv. windowBovenlichtDefault).
     return floor
-      ? { ...createDefaultFloorFmlDefaults(), ...floor.defaults }
-      : createDefaultFloorFmlDefaults()
+      ? { ...createDefaultFloorDefaults(), ...floor.defaults }
+      : createDefaultFloorDefaults()
   }
 
   function syncActiveFloorDefaultsToUi(): void {
-    deps.applyFmlDefaultsToUi?.(effectiveDefaultsForFloor(state.value.activeFloorId))
+    deps.applyPlanDefaultsToUi?.(effectiveDefaultsForFloor(state.value.activeFloorId))
   }
 
   /**
@@ -400,9 +400,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       : (prev.previewUnderlayLayout ?? null)
     // Live nulpunt is source of truth voor déze floor (ook null) — geen prev lekken
     // naar een andere verdieping bij switch.
-    const liveNulpunt = deps.getFmlNulpuntImageCm()
+    const liveNulpunt = deps.getPlanNulpuntImageCm()
     const planNulpuntImageCm = liveNulpunt ? clonePlain(liveNulpunt) : null
-    const liveOrient = deps.getFmlOrient()
+    const liveOrient = deps.getPlanOrient()
     const planOrient = liveOrient ? clonePlain(liveOrient) : null
     const generatedFloor = previewPlan?.floors[0] ?? prev.generatedFloor
     const status = floorStatusFromFlowStep(deps.flowStep.value)
@@ -459,8 +459,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       applyPreviewUnderlayLayout: isResult
         ? (blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale))
         : null,
-      applyFmlNulpuntImageCm: isResult ? (blob.planNulpuntImageCm ?? null) : null,
-      applyFmlOrient: isResult ? (blob.planOrient ?? null) : null,
+      applyPlanNulpuntImageCm: isResult ? (blob.planNulpuntImageCm ?? null) : null,
+      applyPlanOrient: isResult ? (blob.planOrient ?? null) : null,
     })
     if (!isResult) {
       deps.setPlanNulpuntImageCm(null)
@@ -820,7 +820,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   /** Live of blob-plattegrond van de actieve floor — 3→4 na resume alleen als stap 3 leeg is. */
-  function hasActiveFloorFml(): boolean {
+  function hasActiveFloorPlan(): boolean {
     if (deps.getPreviewPlan()?.floors[0]) return true
     return planFromActiveBlob() != null
   }
@@ -837,7 +837,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   /** True als ≥1 floor een plattegrond heeft (`previewPlan` / generatedFloor — geen download). */
-  function hasAnyFloorFml(): boolean {
+  function hasAnyFloorPlan(): boolean {
     for (const meta of state.value.floors) {
       const blob = state.value.blobs[meta.id]
       if (blob?.previewPlan?.floors[0] || blob?.generatedFloor) return true
@@ -862,8 +862,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const prev = state.value.blobs[id] ?? emptyBlob()
     const livePlan = deps.getPreviewPlan()
     const liveLayout = deps.getPreviewUnderlayLayout()
-    const liveNulpunt = deps.getFmlNulpuntImageCm()
-    const liveOrient = deps.getFmlOrient()
+    const liveNulpunt = deps.getPlanNulpuntImageCm()
+    const liveOrient = deps.getPlanOrient()
     const previewPlan = livePlan
       ? clonePlain({
           ...livePlan,
@@ -921,7 +921,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     walls: Floor['walls']
     stampWalls: Floor['walls']
     originCm: { x: number; y: number }
-    plan: import('@/core/fml/types').FloorPlan | null
+    plan: import('@/core/plan/types').FloorPlan | null
   } | null {
     const blob = state.value.blobs[donorFloorId]
     const plan = blob?.previewPlan ?? null
@@ -970,8 +970,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     resetProject,
     buildMergedProjectPlan,
     applyProjectMirrorVertical,
-    hasAnyFloorFml,
-    hasActiveFloorFml,
+    hasAnyFloorPlan,
+    hasActiveFloorPlan,
     restoreActiveFloorPreviewIfNeeded,
     projectOrientFlipXActive,
     storeGeneratedFloorForActive,

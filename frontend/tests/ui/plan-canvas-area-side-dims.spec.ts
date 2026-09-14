@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FloorArea } from '@/core/fml/types'
+import type { FloorArea } from '@/core/plan/types'
 import {
   AREA_SIDE_DIM_INSET_CM,
   AREA_SIDE_DIM_MIN_CM,

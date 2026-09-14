@@ -51,7 +51,7 @@ export function useWorkspaceRoomPipeline(deps: {
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   updateRectWallThicknessCm: (id: string, cm: number) => void
   /** Project/export diktes voor max-equivalent schaal. */
-  getWallThicknessLimits: () => import('@/core/fml/fml-wall-thickness-limits').FmlWallThicknessLimits
+  getWallThicknessLimits: () => import('@/core/plan/wall-thickness-limits').WallThicknessLimits
   getThicknessCatalog: () => number[]
   getPxPerMm: () => { x: number; y: number }
   addThicknessToCatalog?: (cm: number) => void

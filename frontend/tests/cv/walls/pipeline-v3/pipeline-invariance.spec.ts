@@ -19,7 +19,7 @@ import { resolveLayer3PrunePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/
 import { resolveLayer4HvPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-4'
 import { resolveLayer7AlignPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-7'
 import { resolveLayer9DissolvePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
-import { resolveLayer10FmlPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
+import { resolveLayer10PlanPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
 import type {
   PipelineV3Layer4Result,
   PipelineV3Layer5Result,
@@ -297,7 +297,7 @@ const cases: Array<{
     layer: 'L10',
     fixture: L10_MICRO_CORNER_FIXTURE,
     run: (segments, ref) => {
-      const policy = resolveLayer10FmlPolicy(ref).collapse
+      const policy = resolveLayer10PlanPolicy(ref).collapse
       const collapsed = collapseInterJunctionChains({
         segments,
         thicknessBySegment: segments.map(() => ref),

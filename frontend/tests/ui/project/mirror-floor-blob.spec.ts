@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Floor, FloorPlan } from '@/core/fml/types'
+import type { Floor, FloorPlan } from '@/core/plan/types'
 import { mirrorFloorBlobVertical } from '@/ui/composables/project/mirror-floor-blob'
 import type { FloorWorkspaceBlob } from '@/ui/composables/project/types'
 

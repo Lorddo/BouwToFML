@@ -1,6 +1,6 @@
-import { displayAreaLabel } from '@/core/fml/roomtype-catalog'
-import { resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
-import type { FloorArea, FloorSurface, Point2D } from '@/core/fml/types'
+import { displayAreaLabel } from '@/core/plan/roomtype-catalog'
+import { resolveRoofSurfaceColor } from '@/core/plan/roof-planes'
+import type { FloorArea, FloorSurface, Point2D } from '@/core/plan/types'
 import type { RenderArea, RenderSurface } from './plan-canvas-render-types'
 
 /**

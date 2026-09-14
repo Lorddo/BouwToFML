@@ -7,7 +7,7 @@ import {
   setPlanSelected,
   togglePlanSelected,
 } from '@/ui/composables/plan-canvas/plan-canvas-selected'
-import { resolveFmlStickySelectKind } from '@/ui/composables/plan-canvas/plan-canvas-sticky-select'
+import { resolvePlanStickySelectKind } from '@/ui/composables/plan-canvas/plan-canvas-sticky-select'
 
 /** De veertien Selected-refs, als leesbare momentopname. */
 function snapshot(s: ReturnType<typeof createPlanCanvasSelection>) {
@@ -267,7 +267,7 @@ describe('planStickySelectKind — gelijk aan de losse booleans', () => {
    * Het echte bewijs: over alle combinaties van de zes sticky-ingangen moet de
    * store-versie hetzelfde antwoord geven als de bestaande pure functie.
    */
-  it('is gelijk aan resolveFmlStickySelectKind over alle 64 combinaties', () => {
+  it('is gelijk aan resolvePlanStickySelectKind over alle 64 combinaties', () => {
     for (let mask = 0; mask < 64; mask += 1) {
       const flags = {
         hasWall: (mask & 1) !== 0,
@@ -284,7 +284,7 @@ describe('planStickySelectKind — gelijk aan de losse booleans', () => {
       if (flags.hasItem) s.settingsItemId.value = 'f1'
       if (flags.hasAnnotation) s.settingsLineId.value = 'ln1'
       if (flags.hasDimension) s.moveDimensionId.value = 'd1'
-      expect(planStickySelectKind(s)).toBe(resolveFmlStickySelectKind(flags))
+      expect(planStickySelectKind(s)).toBe(resolvePlanStickySelectKind(flags))
     }
   })
 })

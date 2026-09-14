@@ -1,4 +1,4 @@
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 
 /** Klik-jitter: negeer per ongeluk bijna-nul. Alleen getypt mag tot 1 mm. */
 export const ELEV_PRECISE_CLICK_MIN_CM = 0.5

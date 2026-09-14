@@ -27,11 +27,11 @@ import {
   dropZeroLengthSegments,
   rebuildFaceFromSegments,
 } from './engines/segment-ops'
-import { resolveLayer10FmlPolicy } from './policies/layer-10'
+import { resolveLayer10PlanPolicy } from './policies/layer-10'
 import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer9Result, PipelineV3Layer10Result } from './types'
 
-export function runLayer10Fml(params: {
+export function runLayer10Plan(params: {
   layer9: PipelineV3Layer9Result
   cv: OpenCV
   maskRle: RoomWallMaskRle
@@ -43,7 +43,7 @@ export function runLayer10Fml(params: {
   obliqueAxes?: ObliqueAxis[]
 }): PipelineV3Layer10Result {
   reportPipelineProgress('Skeleton Laag 10 — FML input…')
-  const policy = resolveLayer10FmlPolicy(params.referenceWallThicknessPx, params.bandBoundariesPx)
+  const policy = resolveLayer10PlanPolicy(params.referenceWallThicknessPx, params.bandBoundariesPx)
   const distanceMap =
     params.distanceMap !== undefined
       ? params.distanceMap

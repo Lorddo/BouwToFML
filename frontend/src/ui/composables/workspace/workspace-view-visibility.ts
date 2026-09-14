@@ -200,7 +200,7 @@ export function isDebugExportsVisible(flowStep: WorkspaceFlowStep): boolean {
   return flowStep === 'input' || flowStep === 'templates' || flowStep === 'result'
 }
 
-export function isOnFmlResultTab(flowStep: WorkspaceFlowStep, resultTab: ResultViewTab): boolean {
+export function isOnPlanResultTab(flowStep: WorkspaceFlowStep, resultTab: ResultViewTab): boolean {
   return flowStep === 'result' && resultTab === 'vector'
 }
 

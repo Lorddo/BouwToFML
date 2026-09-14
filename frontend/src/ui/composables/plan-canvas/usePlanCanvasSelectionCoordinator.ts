@@ -1,10 +1,10 @@
 ﻿import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
-import { parseFmlHex } from '@/core/fml/roomtype-catalog'
-import type { FloorItem, FloorLineType } from '@/core/fml/types'
-import { dimensionLengthCm, setDimensionLengthCentered } from '@/core/fml/offset-dimension-line'
-import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
-import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
-import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/fml/bind-walls-to-roofs'
+import { parsePlanHex } from '@/core/plan/roomtype-catalog'
+import type { FloorItem, FloorLineType } from '@/core/plan/types'
+import { dimensionLengthCm, setDimensionLengthCentered } from '@/core/plan/offset-dimension-line'
+import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
+import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/plan/ridge-walls'
+import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/plan/bind-walls-to-roofs'
 import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
@@ -22,8 +22,8 @@ import {
 import { togglePlanSelected } from './plan-canvas-selected'
 import { clampLabelFontSize, lineStrokeColor } from './plan-canvas-render-annotations'
 import type { createPlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
-import type { FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 type DraftCommitScheduler = ReturnType<typeof createPlanCanvasDraftCommitScheduler>
@@ -338,7 +338,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
   }
 
   function updateSelectedLabelFontColor(color: string): void {
-    const hex = parseFmlHex(color)
+    const hex = parsePlanHex(color)
     if (!hex) return
     patchSelectedLabel({ fontColor: hex })
   }
@@ -408,7 +408,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
   }
 
   function updateSelectedLineColor(color: string): void {
-    const hex = parseFmlHex(color)
+    const hex = parsePlanHex(color)
     if (!hex) return
     patchSelectedLine({ color: hex })
   }

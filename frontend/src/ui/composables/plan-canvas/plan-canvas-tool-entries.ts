@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import { isSettingsMod } from './plan-canvas-mods'

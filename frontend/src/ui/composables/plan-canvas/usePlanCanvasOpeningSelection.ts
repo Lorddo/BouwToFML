@@ -4,7 +4,7 @@ import {
   BOVENLICHT_HEIGHT_CM,
   clampBovenlichtGapCm,
   clampBovenlichtHeightCm,
-} from '@/core/fml/bovenlicht'
+} from '@/core/plan/bovenlicht'
 import {
   isTriangleWindow,
   resolveDoorAddPreset,
@@ -13,12 +13,12 @@ import {
   resolveWindowSubtypeFromRefid,
   type DoorAddSubtype,
   type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
+} from '@/core/plan/opening-add-presets'
 import type { OpeningSubtypeDraft } from './plan-canvas-opening-draft'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import {
   buildMirrored,
   resolveHingeAtStart,

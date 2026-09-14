@@ -1,21 +1,21 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
-import { hasElevationFacadeGroups, listElevationFacadeGroups } from '@/core/fml/facade-groups'
+import type { FloorPlan } from '@/core/plan/types'
+import { hasElevationFacadeGroups, listElevationFacadeGroups } from '@/core/plan/facade-groups'
 import {
   elevationViewForGroup,
   readElevationProjection,
   setElevationProjection,
-} from '@/core/fml/elevation-views'
+} from '@/core/plan/elevation-views'
 import {
   elevationDakThicknessCm,
   elevationFloorGroups,
   setNokThicknessCm,
   setSlabThicknessCm,
-} from '@/core/fml/floor-stack'
-import { overwriteRidgeDakThickness } from '@/core/fml/ridge-walls'
-import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/floor-stack'
+import { overwriteRidgeDakThickness } from '@/core/plan/ridge-walls'
+import { countPlanWalls, overwritePlanWallHeights } from '@/core/plan/wall-endpoint-height'
 import { imageDimensions, loadImage } from '@/platform/image'
-import { previewUnderlayLayoutFromDrawing } from '@/core/fml/drawing-to-underlay-layout'
+import { previewUnderlayLayoutFromDrawing } from '@/core/plan/drawing-to-underlay-layout'
 import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import {

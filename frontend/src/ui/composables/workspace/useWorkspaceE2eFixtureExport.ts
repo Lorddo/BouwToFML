@@ -3,14 +3,14 @@ import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import type { ResolvedDoorCandidate } from '@/cv/doors'
 import type { ResolvedWindowCandidate } from '@/cv/windows'
 import type { useHScaleCalibration } from '@/platform/calibration'
-import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
-import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
+import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
+import type { ThicknessBandBoundaries } from '@/core/plan/wall-thickness-tiers'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WALL_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import { downloadText } from '@/core/fml/downloadFml'
 import {
   binaryMaskRleToPngBlob,
@@ -26,12 +26,12 @@ export type UseWorkspaceE2eFixtureExportDeps = {
   referenceWallThicknessPx: Ref<number | null>
   resolvedDoors: Ref<ResolvedDoorCandidate[]>
   resolvedWindows: Ref<ResolvedWindowCandidate[]>
-  appliedFmlThicknessLimits: Ref<FmlWallThicknessLimits>
-  appliedFmlBandBoundaries: Ref<FmlThicknessBandBoundaries>
-  appliedFmlWallHeightCm?: Ref<number>
-  appliedFmlDoorHeightCm?: Ref<number>
-  appliedFmlWindowHeightCm?: Ref<number>
-  appliedFmlWindowSillZCm?: Ref<number>
+  appliedThicknessLimits: Ref<WallThicknessLimits>
+  appliedBandBoundaries: Ref<ThicknessBandBoundaries>
+  appliedWallHeightCm?: Ref<number>
+  appliedDoorHeightCm?: Ref<number>
+  appliedWindowHeightCm?: Ref<number>
+  appliedWindowSillZCm?: Ref<number>
   setLocalError: (message: string | null) => void
 }
 
@@ -109,12 +109,12 @@ export function useWorkspaceE2eFixtureExport(deps: UseWorkspaceE2eFixtureExportD
         pxPerMmY,
         referenceWallThicknessPx: refPx,
         fml: {
-          thicknessLimits: { ...deps.appliedFmlThicknessLimits.value },
-          bandBoundaries: { ...deps.appliedFmlBandBoundaries.value },
-          wallHeightCm: deps.appliedFmlWallHeightCm?.value ?? DEFAULT_WALL_HEIGHT_CM,
-          doorHeightCm: deps.appliedFmlDoorHeightCm?.value ?? DEFAULT_DOOR_HEIGHT_CM,
-          windowHeightCm: deps.appliedFmlWindowHeightCm?.value ?? DEFAULT_WINDOW_HEIGHT_CM,
-          windowSillZCm: deps.appliedFmlWindowSillZCm?.value ?? DEFAULT_WINDOW_SILL_Z_CM,
+          thicknessLimits: { ...deps.appliedThicknessLimits.value },
+          bandBoundaries: { ...deps.appliedBandBoundaries.value },
+          wallHeightCm: deps.appliedWallHeightCm?.value ?? DEFAULT_WALL_HEIGHT_CM,
+          doorHeightCm: deps.appliedDoorHeightCm?.value ?? DEFAULT_DOOR_HEIGHT_CM,
+          windowHeightCm: deps.appliedWindowHeightCm?.value ?? DEFAULT_WINDOW_HEIGHT_CM,
+          windowSillZCm: deps.appliedWindowSillZCm?.value ?? DEFAULT_WINDOW_SILL_Z_CM,
         },
       })
 

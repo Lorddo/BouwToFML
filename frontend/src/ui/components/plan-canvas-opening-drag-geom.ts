@@ -1,5 +1,5 @@
-import type { Point2D, Wall } from '@/core/fml/types'
-import { moveOpeningToWall, type OpeningDragMoveResult } from '@/core/fml/opening-wall-ops'
+import type { Point2D, Wall } from '@/core/plan/types'
+import { moveOpeningToWall, type OpeningDragMoveResult } from '@/core/plan/opening-wall-ops'
 import {
   buildJunctions,
   COLLINEAR_DOT_THRESHOLD,

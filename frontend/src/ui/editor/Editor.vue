@@ -4,11 +4,11 @@
  * No OpenCV / workspace — host supplies `plan` and handles `planUpdate`.
  */
 import { ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { FloorPlan } from '@/core/plan/types'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
-import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
+import type { DimensionVis } from '@/core/plan/plan-dimension-vis'
 import PlanCanvas from '@/ui/components/PlanCanvas.vue'
 import PlanChromeDialogHost from '@/ui/components/PlanChromeDialogHost.vue'
 
@@ -27,7 +27,7 @@ withDefaults(
     rotationDeg?: number
     flipX?: boolean
     underlayMoveMode?: boolean
-    thicknessPickTier?: FmlThicknessBand | null
+    thicknessPickTier?: ThicknessBand | null
     thicknessPresetCms?: number[]
     bovenlichtDefault?: boolean
     windowBovenlichtDefault?: boolean

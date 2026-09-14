@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
-import { createFactoryViewerSessionDefaults } from '@/core/fml/viewer-session-defaults'
+import type { FloorPlan } from '@/core/plan/types'
+import { createFactoryViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
 import { useEditorDownload } from '@/ui/composables/editor/useEditorDownload'
 
 const downloads: Array<{ filename: string; content: string }> = []

@@ -1,23 +1,23 @@
-import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
-import { normalizeRoomTagColors, parseFmlHex } from '@/core/fml/roomtype-catalog'
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/plan/bovenlicht'
+import { normalizeRoomTagColors, parsePlanHex } from '@/core/plan/roomtype-catalog'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WALL_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import {
   catalogFromLegacyLimits,
   FACTORY_THICKNESS_CMS,
   limitsFromCatalog,
   normalizeThicknessCatalog,
-} from '@/core/fml/fml-wall-thickness-catalog'
+} from '@/core/plan/wall-thickness-catalog'
 import {
-  DEFAULT_FML_WALL_THICKNESS_LIMITS,
-  saveFmlWallThicknessLimits,
-} from '@/core/fml/fml-wall-thickness-limits'
-import { DEFAULT_FML_BAND_BOUNDARIES } from '@/core/fml/fml-wall-thickness-tiers'
-import type { ProjectFmlDefaults } from '@/ui/composables/project/types'
+  DEFAULT_WALL_THICKNESS_LIMITS,
+  saveWallThicknessLimits,
+} from '@/core/plan/wall-thickness-limits'
+import { DEFAULT_THICKNESS_BAND_BOUNDARIES } from '@/core/plan/wall-thickness-tiers'
+import type { ProjectPlanDefaults } from '@/ui/composables/project/types'
 import { DEFAULT_LOCALE, normalizeLocale, type AppLocale } from '@/ui/i18n'
 import {
   DEFAULT_SCALE_INPUT_UNIT,
@@ -42,15 +42,15 @@ import {
   normalizePlanDisplayStyle,
   type PlanDisplayStyleChoice,
 } from './plan-display-style'
-import { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
-import { DEFAULT_FLOOR_THICKNESS_CM, DEFAULT_NOK_THICKNESS_CM } from '@/core/fml/floor-stack'
-import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/fml/ridge-walls'
+import { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/plan/slice-offset-snap'
+import { DEFAULT_FLOOR_THICKNESS_CM, DEFAULT_NOK_THICKNESS_CM } from '@/core/plan/floor-stack'
+import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/plan/ridge-walls'
 import {
   createDefaultFacadeGroupPresets,
   MAX_FACADE_GROUP_PRESETS,
   STAMP_FACADE_GROUP_ID,
   type FacadeGroupPreset,
-} from '@/core/fml/facade-groups'
+} from '@/core/plan/facade-groups'
 
 export type { ScaleInputUnit, UnitSystem } from './scale-input-unit'
 export {
@@ -95,7 +95,7 @@ export const USER_SETTINGS_VERSION = 1 as const
 /** Factory FML-viewer opacities (percent 0–100). */
 export const DEFAULT_UNDERLAY_OPACITY_PCT = 25
 export const DEFAULT_CONTENT_OPACITY_PCT = 80
-export { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
+export { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/plan/slice-offset-snap'
 
 export type PlanDisplaySettings = {
   underlayOpacityPct: number
@@ -143,7 +143,7 @@ export type UserSettingsV1 = {
   unitSystem: UnitSystem
   /** Schaalliniaal + FML typen (kamer/muur/move); doorrekening blijft cm. */
   scaleInputUnit: ScaleInputUnit
-  defaults: ProjectFmlDefaults
+  defaults: ProjectPlanDefaults
   planDisplay: PlanDisplaySettings
   openingMerge: OpeningMergeSettings
   /** Per-role kleur-overrides t.o.v. roomtype-catalogus (alleen afwijkingen). */
@@ -182,7 +182,7 @@ export function clearHeightFillRgba(
   hex: string | undefined | null,
   alpha = CLEAR_HEIGHT_FILL_ALPHA,
 ): string {
-  const parsed = parseFmlHex(hex) ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
+  const parsed = parsePlanHex(hex) ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
   const r = Number.parseInt(parsed.slice(1, 3), 16)
   const g = Number.parseInt(parsed.slice(3, 5), 16)
   const b = Number.parseInt(parsed.slice(5, 7), 16)
@@ -196,7 +196,7 @@ function clampRidgeDisplayWidthCm(raw: unknown, fallback: number): number {
   return Math.max(1, Math.min(80, Math.round(n)))
 }
 
-export function createFactoryFmlDefaults(): ProjectFmlDefaults {
+export function createFactoryPlanDefaults(): ProjectPlanDefaults {
   return {
     wallHeightCm: DEFAULT_WALL_HEIGHT_CM,
     doorHeightCm: DEFAULT_DOOR_HEIGHT_CM,
@@ -207,13 +207,13 @@ export function createFactoryFmlDefaults(): ProjectFmlDefaults {
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
     bovenlichtGapCm: BOVENLICHT_GAP_CM,
     thicknessCms: [...FACTORY_THICKNESS_CMS],
-    thicknessMinCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.minCm,
-    thicknessMidCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.midCm,
-    thicknessMaxCm: DEFAULT_FML_WALL_THICKNESS_LIMITS.maxCm,
+    thicknessMinCm: DEFAULT_WALL_THICKNESS_LIMITS.minCm,
+    thicknessMidCm: DEFAULT_WALL_THICKNESS_LIMITS.midCm,
+    thicknessMaxCm: DEFAULT_WALL_THICKNESS_LIMITS.maxCm,
     dakThicknessCm: DEFAULT_NOK_THICKNESS_CM,
     slabThicknessCm: DEFAULT_FLOOR_THICKNESS_CM,
-    bandMidBoundaryCm: DEFAULT_FML_BAND_BOUNDARIES.midBoundaryCm,
-    bandMaxBoundaryCm: DEFAULT_FML_BAND_BOUNDARIES.maxBoundaryCm,
+    bandMidBoundaryCm: DEFAULT_THICKNESS_BAND_BOUNDARIES.midBoundaryCm,
+    bandMaxBoundaryCm: DEFAULT_THICKNESS_BAND_BOUNDARIES.maxBoundaryCm,
   }
 }
 
@@ -251,7 +251,7 @@ export function createFactoryUserSettings(): UserSettingsV1 {
     locale: DEFAULT_LOCALE,
     unitSystem: DEFAULT_UNIT_SYSTEM,
     scaleInputUnit: DEFAULT_SCALE_INPUT_UNIT,
-    defaults: createFactoryFmlDefaults(),
+    defaults: createFactoryPlanDefaults(),
     planDisplay: createFactoryPlanDisplaySettings(),
     openingMerge: createFactoryOpeningMergeSettings(),
     roomTagColors: {},
@@ -264,8 +264,8 @@ function asRecord(raw: unknown): Record<string, unknown> {
 
 function normalizeDefaults(
   raw: unknown,
-  factory: ProjectFmlDefaults = createFactoryFmlDefaults(),
-): ProjectFmlDefaults {
+  factory: ProjectPlanDefaults = createFactoryPlanDefaults(),
+): ProjectPlanDefaults {
   const src = asRecord(raw)
   return {
     wallHeightCm: positiveCm(src.wallHeightCm, factory.wallHeightCm),
@@ -368,7 +368,7 @@ function normalizePlanDisplay(
         ? src.showClearHeightPlanFill
         : factory.showClearHeightPlanFill,
     clearHeightFillColor:
-      parseFmlHex(typeof src.clearHeightFillColor === 'string' ? src.clearHeightFillColor : null) ??
+      parsePlanHex(typeof src.clearHeightFillColor === 'string' ? src.clearHeightFillColor : null) ??
       factory.clearHeightFillColor,
     facadeGroups: normalizeFacadeGroupPresets(src.facadeGroups, factory.facadeGroups),
   }
@@ -448,8 +448,8 @@ export function loadUserSettings(): UserSettingsV1 {
   }
 }
 
-/** Alleen export-diktes; meetband komt uit muur-REF (`deriveFmlBandBoundariesCmFromRefPx`). */
-function writeThroughThickness(defaults: ProjectFmlDefaults): void {
+/** Alleen export-diktes; meetband komt uit muur-REF (`deriveBandBoundariesCmFromRefPx`). */
+function writeThroughThickness(defaults: ProjectPlanDefaults): void {
   const catalog = normalizeThicknessCatalog(
     defaults.thicknessCms ??
       catalogFromLegacyLimits({
@@ -459,7 +459,7 @@ function writeThroughThickness(defaults: ProjectFmlDefaults): void {
       }),
   )
   const limits = limitsFromCatalog(catalog)
-  saveFmlWallThicknessLimits({
+  saveWallThicknessLimits({
     ...limits,
     thicknessCms: catalog,
   })

@@ -6,8 +6,8 @@ import {
   ensureStampFacadeGroup,
   groupIdsForWall,
   STAMP_FACADE_GROUP_ID,
-} from '@/core/fml/facade-groups'
-import type { FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/facade-groups'
+import type { FloorPlan } from '@/core/plan/types'
 import { useEditorFacadeGroups } from '@/ui/composables/editor/useEditorFacadeGroups'
 import type { InspectHit } from '@/ui/composables/plan-canvas/plan-inspect'
 

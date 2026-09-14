@@ -83,7 +83,7 @@ export function buildWorkspaceDevSessionDeps(ctx: {
   semanticWalls: { buildForResultStep: () => Promise<void> }
   fml: {
     updatePreviewPlan: (
-      plan: import('@/core/fml/types').FloorPlan,
+      plan: import('@/core/plan/types').FloorPlan,
       layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
     ) => void
     setPlanNulpuntImageCm: (point: { x: number; y: number } | null) => void

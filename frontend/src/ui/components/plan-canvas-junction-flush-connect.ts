@@ -12,15 +12,15 @@
 import {
   JUNCTION_BALANCE_JOG_STUB_MAX_CM,
   JUNCTION_BALANCE_STUB_MAX_CM,
-} from '@/core/fml/align-wall-junction-balance'
-import { WALL_BALANCE_FALLBACK } from '@/core/fml/extraction-to-plan-geom'
+} from '@/core/plan/align-wall-junction-balance'
+import { WALL_BALANCE_FALLBACK } from '@/core/plan/extraction-to-plan-geom'
 import {
   clampWallBalance,
   floorplannerLeftNormal,
   wallDirectionUnit,
   wallLengthCm,
-} from '@/core/fml/fml-wall-geom'
-import type { FloorArea, Point2D, Wall } from '@/core/fml/types'
+} from '@/core/plan/plan-wall-geom'
+import type { FloorArea, Point2D, Wall } from '@/core/plan/types'
 import {
   BALANCE_DEFAULT,
   buildJunctions,

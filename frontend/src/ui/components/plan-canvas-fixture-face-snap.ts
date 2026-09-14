@@ -1,5 +1,5 @@
-import type { Point2D, Wall } from '@/core/fml/types'
-import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
+import type { Point2D, Wall } from '@/core/plan/types'
+import { floorplannerLeftNormal } from '@/core/plan/plan-wall-geom'
 import { WALL_FACE_SNAP_CM, wallFaceSegments } from './plan-canvas-wall-face-snap'
 
 export { WALL_FACE_SNAP_CM }

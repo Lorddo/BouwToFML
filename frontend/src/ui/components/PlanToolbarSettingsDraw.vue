@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { FLOOR_LINE_TYPES, type FloorLineType } from '@/core/fml/types'
+import { FLOOR_LINE_TYPES, type FloorLineType } from '@/core/plan/types'
 import HexColorField from './HexColorField.vue'
 import PlanToolbarLabelStyle from './PlanToolbarLabelStyle.vue'
 import type { PlanToolId } from './canvas/planToolbeltItems'

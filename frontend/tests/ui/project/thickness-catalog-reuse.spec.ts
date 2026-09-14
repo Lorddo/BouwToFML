@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import {
-  createDefaultFloorFmlDefaults,
+  createDefaultFloorDefaults,
   thicknessCatalogPatchFromFloorDefaults,
 } from '@/ui/composables/project/defaults'
 import { useWorkspaceProject } from '@/ui/composables/project/useWorkspaceProject'
@@ -10,7 +10,7 @@ import { DEFAULT_PREPROCESS } from '@/platform/image'
 import type { DrawingProfileId } from '@/platform/profile'
 import type { SelectionRect } from '@/platform/selection'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
-import { FACTORY_THICKNESS_CMS, limitsFromCatalog } from '@/core/fml/fml-wall-thickness-catalog'
+import { FACTORY_THICKNESS_CMS, limitsFromCatalog } from '@/core/plan/wall-thickness-catalog'
 
 vi.mock('@/platform/project-store', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/platform/project-store')>()
@@ -68,7 +68,7 @@ describe('reuseUnderlayFromProject thickness catalog', () => {
     const preprocess = ref({ ...DEFAULT_PREPROCESS })
     const drawingProfileId = ref<DrawingProfileId>('open')
     const rects = ref<SelectionRect[]>([])
-    const applyFmlDefaultsToUi = vi.fn()
+    const applyPlanDefaultsToUi = vi.fn()
     const applyPreprocessTune = vi.fn()
     const loadUnderlayWithScale = vi.fn<
       (
@@ -93,23 +93,23 @@ describe('reuseUnderlayFromProject thickness catalog', () => {
       resetToEmptyFloor: vi.fn(),
       loadUnderlayWithScale,
       applyPreprocessTune,
-      applyFmlDefaultsToUi,
+      applyPlanDefaultsToUi,
       setLocalError: vi.fn(),
       getPreviewPlan: () => null,
       getPreviewUnderlayLayout: () => null,
       updatePreviewPlan: vi.fn(),
-      getFmlNulpuntImageCm: () => null,
+      getPlanNulpuntImageCm: () => null,
       setPlanNulpuntImageCm: vi.fn(),
-      getFmlOrient: () => null,
+      getPlanOrient: () => null,
       setPlanOrient: vi.fn(),
       clearLivePlanCanvas: vi.fn(),
     })
 
-    return { project, rects, applyFmlDefaultsToUi, applyPreprocessTune, loadUnderlayWithScale }
+    return { project, rects, applyPlanDefaultsToUi, applyPreprocessTune, loadUnderlayWithScale }
   }
 
   it('neemt donor-catalogus over zonder LBE-rects of B/W-tune', async () => {
-    const { project, rects, applyFmlDefaultsToUi, applyPreprocessTune, loadUnderlayWithScale } =
+    const { project, rects, applyPlanDefaultsToUi, applyPreprocessTune, loadUnderlayWithScale } =
       createHarness()
     const donorId = project.activeFloorId.value
     const donorLimits = limitsFromCatalog([...DONOR_CMS])
@@ -130,14 +130,14 @@ describe('reuseUnderlayFromProject thickness catalog', () => {
     expect(project.activeFloorId.value).toBe(next.id)
 
     // Doel bewust op fabriek zetten (addFloor kopieert al donor-defaults).
-    const factory = createDefaultFloorFmlDefaults()
+    const factory = createDefaultFloorDefaults()
     project.updateActiveFloorDefaults({
       thicknessCms: [...FACTORY_THICKNESS_CMS],
       thicknessMinCm: factory.thicknessMinCm,
       thicknessMidCm: factory.thicknessMidCm,
       thicknessMaxCm: factory.thicknessMaxCm,
     })
-    applyFmlDefaultsToUi.mockClear()
+    applyPlanDefaultsToUi.mockClear()
     rects.value = [
       {
         id: 'donor-wall-ref',
@@ -162,8 +162,8 @@ describe('reuseUnderlayFromProject thickness catalog', () => {
     expect(defaults.thicknessMinCm).toBe(donorLimits.minCm)
     expect(defaults.thicknessMidCm).toBe(donorLimits.midCm)
     expect(defaults.thicknessMaxCm).toBe(donorLimits.maxCm)
-    expect(applyFmlDefaultsToUi).toHaveBeenCalled()
-    const synced = applyFmlDefaultsToUi.mock.calls.at(-1)?.[0]
+    expect(applyPlanDefaultsToUi).toHaveBeenCalled()
+    const synced = applyPlanDefaultsToUi.mock.calls.at(-1)?.[0]
     expect(synced?.thicknessCms).toEqual([...DONOR_CMS])
   })
 })

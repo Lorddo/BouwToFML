@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import {
   PLAN_AREA_SIDE_DIMS_TOOL_ID,
-  getFmlSelectTools,
+  getPlanSelectTools,
   type PlanToolId,
 } from './canvas/planToolbeltItems'
 
@@ -25,7 +25,7 @@ const { t, locale } = useI18n()
 
 const selectTools = computed(() => {
   void locale.value
-  return getFmlSelectTools()
+  return getPlanSelectTools()
 })
 
 function toggleSettings(): void {

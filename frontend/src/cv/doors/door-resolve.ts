@@ -1,6 +1,6 @@
 import { noteMissingMeasurement } from '@/core/diagnostics'
-import { resolveDoorTemplateKind } from '@/core/fml/types'
-import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
+import { resolveDoorTemplateKind } from '@/core/plan/types'
+import { resolveOpeningCatalog, toCvDoorKind } from '@/core/plan/opening-refid-catalog'
 import { measureSwingSpanPxFromFaceBBox } from './door-swing-hinge'
 import { round2 } from './door-wall-snap-geom'
 import type {

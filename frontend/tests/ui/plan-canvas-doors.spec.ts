@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { type Opening } from '@/core/fml/types'
-import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
-import type { PlanGlyph, PlanPolylineGlyph } from '@/core/fml/opening-plan-symbol'
+import { type Opening } from '@/core/plan/types'
+import { resolveOpeningCatalog } from '@/core/plan/opening-refid-catalog'
+import type { PlanGlyph, PlanPolylineGlyph } from '@/core/plan/opening-plan-symbol'
 import {
   buildMirrored,
   groupDoorOpeningsOnWall,

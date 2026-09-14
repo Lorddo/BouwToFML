@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
-import type { FloorLineType } from '@/core/fml/types'
+import type { DoorAddSubtype, WindowAddSubtype } from '@/core/plan/opening-add-presets'
+import type { FloorLineType } from '@/core/plan/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import PlanToolbarSettings from './PlanToolbarSettings.vue'
 import {
   PLAN_AREA_SIDE_DIMS_TOOL_ID,
-  getFmlDrawTools,
-  getFmlLibraryTools,
-  getFmlSelectTools,
-  isFmlToolbarSettingsOpen,
+  getPlanDrawTools,
+  getPlanLibraryTools,
+  getPlanSelectTools,
+  isPlanToolbarSettingsOpen,
   type PlanToolId,
 } from './canvas/planToolbeltItems'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
@@ -360,7 +360,7 @@ const emit = defineEmits<{
 
 const selectTools = computed(() => {
   void locale.value
-  return getFmlSelectTools()
+  return getPlanSelectTools()
 })
 
 const selectPressedIds = computed(() =>
@@ -375,7 +375,7 @@ function onSelectTogglePressed(id: string): void {
 
 const drawTools = computed(() => {
   void locale.value
-  return getFmlDrawTools({
+  return getPlanDrawTools({
     includeSurface: props.includeSurfaceTool === true,
     includeRoof: props.includeRoofTool === true,
     includeAnnotations: props.includeAnnotationTools === true,
@@ -385,13 +385,13 @@ const drawTools = computed(() => {
 
 const libraryTools = computed(() => {
   void locale.value
-  return getFmlLibraryTools({
+  return getPlanLibraryTools({
     includeFixture: props.includeFixtureTool === true,
   })
 })
 
 const settingsOpen = computed(() =>
-  isFmlToolbarSettingsOpen({
+  isPlanToolbarSettingsOpen({
     hasWallSelection: props.selectedWallPanel != null,
     hasJunctionSelection: props.selectedJunctionPanel != null,
     hasOpeningSelection: props.selectedOpeningPanel != null,

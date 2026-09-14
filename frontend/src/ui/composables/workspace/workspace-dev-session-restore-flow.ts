@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   isSessionV2,
   resolveRestoreMode,
@@ -18,9 +18,9 @@ export type RestoreSessionOptions = {
   /** Underlay origin+px/mm bij applyPreviewPlan. */
   applyPreviewUnderlayLayout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null
   /** Gebruikers-nulpunt in scant-cm bij floor-restore. */
-  applyFmlNulpuntImageCm?: { x: number; y: number } | null
+  applyPlanNulpuntImageCm?: { x: number; y: number } | null
   /** FML-oriëntatie bij floor-restore. */
-  applyFmlOrient?: import('@/ui/composables/project/types').FloorOrientPersist | null
+  applyPlanOrient?: import('@/ui/composables/project/types').FloorOrientPersist | null
 }
 
 export type WorkspaceDevSessionRestoreFlowDeps = {
@@ -111,11 +111,11 @@ export function createWorkspaceDevSessionRestoreFlow(
     if (options?.applyPreviewPlan && deps.updatePreviewPlan) {
       deps.updatePreviewPlan(options.applyPreviewPlan, options.applyPreviewUnderlayLayout ?? null)
     }
-    if (options?.applyFmlNulpuntImageCm !== undefined) {
-      deps.setPlanNulpuntImageCm?.(options.applyFmlNulpuntImageCm)
+    if (options?.applyPlanNulpuntImageCm !== undefined) {
+      deps.setPlanNulpuntImageCm?.(options.applyPlanNulpuntImageCm)
     }
-    if (options?.applyFmlOrient !== undefined) {
-      deps.setPlanOrient?.(options.applyFmlOrient)
+    if (options?.applyPlanOrient !== undefined) {
+      deps.setPlanOrient?.(options.applyPlanOrient)
     }
   }
 

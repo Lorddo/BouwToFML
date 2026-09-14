@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3, maxWallTopHOnFloor } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
-import { setElevationProjection, setElevationViewDrawing } from '@/core/fml/elevation-views'
-import { setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
+import { createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
+import { setElevationProjection, setElevationViewDrawing } from '@/core/plan/elevation-views'
+import { setNokThicknessCm, setSlabThicknessCm } from '@/core/plan/floor-stack'
 import {
   makeRoofSurface,
   markRoofSurfaceManual,
   setRidgeSurfacesOnFloor,
-} from '@/core/fml/roof-planes'
-import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
-import type { Wall } from '@/core/fml/types'
+} from '@/core/plan/roof-planes'
+import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/plan/ridge-walls'
+import type { Wall } from '@/core/plan/types'
 
 function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }, h = 280): Wall {
   return {

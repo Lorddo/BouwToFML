@@ -3,8 +3,8 @@ import {
   applyNulpunt,
   reapplyNulpuntImageCm,
   translateFloorPlan,
-} from '@/core/fml/translate-floor-plan'
-import type { FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/translate-floor-plan'
+import type { FloorPlan } from '@/core/plan/types'
 
 function samplePlan(): FloorPlan {
   return {

@@ -1,18 +1,18 @@
-import type { Opening } from '@/core/fml/types'
-import { resolveOpeningCatalog, type DoorAssetKind } from '@/core/fml/opening-refid-catalog'
-import { insetOpeningRect, resolveOpeningFrame } from '@/core/fml/opening-display-geom'
+import type { Opening } from '@/core/plan/types'
+import { resolveOpeningCatalog, type DoorAssetKind } from '@/core/plan/opening-refid-catalog'
+import { insetOpeningRect, resolveOpeningFrame } from '@/core/plan/opening-display-geom'
 import {
   buildMirrored,
   resolveHingeAtStart,
   resolveSwingSign,
   type DoorSymbol,
-} from '@/core/fml/door-swing-symbol'
+} from '@/core/plan/door-swing-symbol'
 import {
   buildDoorPlanSymbol,
   buildPlanJambGlyphs,
   type PlanGlyph,
-} from '@/core/fml/opening-plan-symbol'
-import { clamp01 } from '@/core/fml/extraction-to-plan-geom'
+} from '@/core/plan/opening-plan-symbol'
+import { clamp01 } from '@/core/plan/extraction-to-plan-geom'
 import { buildDoorOpeningId } from '@/ui/components/plan-canvas-openings'
 
 export { buildMirrored, resolveHingeAtStart, resolveSwingSign }

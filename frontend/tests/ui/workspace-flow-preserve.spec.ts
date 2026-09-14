@@ -6,7 +6,7 @@ import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 function createFlowHarness(options?: {
   hasTemplatesDetection?: () => boolean
   wallsDetectionComplete?: () => boolean
-  hasResultFml?: () => boolean
+  hasResultPlan?: () => boolean
   templateTab?: 'walls' | 'ocr'
   running?: boolean
   onStartTemplatesDetection?: () => void
@@ -64,7 +64,7 @@ function createFlowHarness(options?: {
     runOcrScan,
     measureWallReferenceThickness,
     wallsDetectionComplete: options?.wallsDetectionComplete ?? (() => true),
-    hasResultFml: options?.hasResultFml,
+    hasResultPlan: options?.hasResultPlan,
     hasTemplatesDetection: options?.hasTemplatesDetection ?? (() => true),
     onStartTemplatesDetection: options?.onStartTemplatesDetection,
     resetInkOverlay,
@@ -127,7 +127,7 @@ describe('useWorkspaceFlow — stap-terug bewaart werk', () => {
   it('kan na result→templates weer vooruit als FML er is (geen wallsDetectionComplete)', async () => {
     const h = createFlowHarness({
       wallsDetectionComplete: () => false,
-      hasResultFml: () => true,
+      hasResultPlan: () => true,
       hasTemplatesDetection: () => false,
     })
     h.flowStep.value = 'result'
@@ -146,7 +146,7 @@ describe('useWorkspaceFlow — stap-terug bewaart werk', () => {
   it('blokkeert 3→4 tijdens nieuwe detectie ook als resume-FML nog bestaat', async () => {
     const h = createFlowHarness({
       wallsDetectionComplete: () => false,
-      hasResultFml: () => true,
+      hasResultPlan: () => true,
       hasTemplatesDetection: () => true,
     })
     h.flowStep.value = 'templates'
@@ -175,7 +175,7 @@ describe('useWorkspaceFlow — stap-terug bewaart werk', () => {
   it('blokkeert 3→4 tijdens running ook met resume-FML', async () => {
     const h = createFlowHarness({
       wallsDetectionComplete: () => false,
-      hasResultFml: () => true,
+      hasResultPlan: () => true,
       hasTemplatesDetection: () => false,
       running: true,
     })
@@ -187,7 +187,7 @@ describe('useWorkspaceFlow — stap-terug bewaart werk', () => {
   it('blijft geblokt op templates zonder finalize en zonder FML', async () => {
     const h = createFlowHarness({
       wallsDetectionComplete: () => false,
-      hasResultFml: () => false,
+      hasResultPlan: () => false,
     })
     h.flowStep.value = 'templates'
     await nextTick()

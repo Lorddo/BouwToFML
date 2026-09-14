@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
-import type { ImportWarning } from '@/core/fml/types'
-import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
+import type { ThicknessPickTier } from '@/core/plan/apply-thickness-pick'
+import type { ImportWarning } from '@/core/plan/types'
+import type { OpeningHeightOverflowSummary } from '@/core/plan/opening-height-overflow'
 import type { HScaleState } from '@/platform/calibration'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { useI18n } from 'vue-i18n'
@@ -47,14 +47,14 @@ withDefaults(
     planBovenlichtDefault?: boolean
     planWindowBovenlichtDefault?: boolean
     planThicknessCms?: number[]
-    fmlBandMidBoundaryCm?: number
-    fmlBandMaxBoundaryCm?: number
+    planBandMidBoundaryCm?: number
+    planBandMaxBoundaryCm?: number
     planLimitsDirty?: boolean
-    thicknessPickTier?: FmlThicknessPickTier | null
+    thicknessPickTier?: ThicknessPickTier | null
     thicknessPickMessage?: string | null
     thicknessPickBusy?: boolean
     planOrientFlipX?: boolean
-    hasAnyFloorFml?: boolean
+    hasAnyFloorPlan?: boolean
     projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
@@ -83,14 +83,14 @@ withDefaults(
     planBovenlichtDefault: false,
     planWindowBovenlichtDefault: false,
     planThicknessCms: () => [10, 20, 30],
-    fmlBandMidBoundaryCm: 12,
-    fmlBandMaxBoundaryCm: 23,
+    planBandMidBoundaryCm: 12,
+    planBandMaxBoundaryCm: 23,
     planLimitsDirty: false,
     thicknessPickTier: null,
     thicknessPickMessage: null,
     thicknessPickBusy: false,
     planOrientFlipX: false,
-    hasAnyFloorFml: false,
+    hasAnyFloorPlan: false,
     projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
@@ -120,13 +120,13 @@ const emit = defineEmits<{
   'update:planBovenlichtDefault': [value: boolean]
   'update:planWindowBovenlichtDefault': [value: boolean]
   'update:planThicknessCms': [value: number[]]
-  'update:fmlBandMidBoundaryCm': [value: number]
-  'update:fmlBandMaxBoundaryCm': [value: number]
+  'update:planBandMidBoundaryCm': [value: number]
+  'update:planBandMaxBoundaryCm': [value: number]
   'update:underlayOpacity': [value: number]
   'update:contentOpacityPct': [value: number]
   'update:hidePlanText': [value: boolean]
   'update:underlayMoveMode': [value: boolean]
-  startThicknessPick: [tier: FmlThicknessPickTier]
+  startThicknessPick: [tier: ThicknessPickTier]
   cancelThicknessPick: []
   beginRescale: []
   cancelRescale: []
@@ -231,14 +231,14 @@ function onWindowBovenlichtChange(event: Event): void {
       :unit="scaleInputUnit"
       :underlay-available="underlayAvailable"
       :plan-thickness-cms="planThicknessCms"
-      :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
-      :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
+      :plan-band-mid-boundary-cm="planBandMidBoundaryCm"
+      :plan-band-max-boundary-cm="planBandMaxBoundaryCm"
       :thickness-pick-tier="thicknessPickTier"
       :thickness-pick-message="thicknessPickMessage"
       :thickness-pick-busy="thicknessPickBusy"
       @update:plan-thickness-cms="emit('update:planThicknessCms', $event)"
-      @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
-      @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
+      @update:plan-band-mid-boundary-cm="emit('update:planBandMidBoundaryCm', $event)"
+      @update:plan-band-max-boundary-cm="emit('update:planBandMaxBoundaryCm', $event)"
       @start-thickness-pick="emit('startThicknessPick', $event)"
       @cancel-thickness-pick="emit('cancelThicknessPick')"
     />
@@ -287,7 +287,7 @@ function onWindowBovenlichtChange(event: Event): void {
       :has-combined-output="hasCombinedOutput"
       :plan-limits-dirty="planLimitsDirty"
       :plan-orient-flip-x="planOrientFlipX"
-      :has-any-floor-fml="hasAnyFloorFml"
+      :has-any-floor-plan="hasAnyFloorPlan"
       :project-orient-flip-x="projectOrientFlipX"
       @regenerate="emit('regenerate')"
       @mirror-vertical="emit('mirrorVertical')"

@@ -1,4 +1,4 @@
-import { ensureDesignsSynced } from '@/core/fml/design-sync'
+import { ensureDesignsSynced } from '@/core/plan/design-sync'
 import type {
   Floor,
   FloorArea,
@@ -9,7 +9,7 @@ import type {
   FloorPlan,
   FloorSurface,
   Wall,
-} from '@/core/fml/types'
+} from '@/core/plan/types'
 
 function prefixId(floorLevel: number, id: string): string {
   const prefix = `f${floorLevel}-`

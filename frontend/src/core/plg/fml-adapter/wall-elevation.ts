@@ -7,7 +7,7 @@
  */
 import { defaultWallElevation } from '../extension-types'
 import type { FmlConceptAdapter } from './registry'
-import type { Floor, FloorPlan, Wall } from '../../fml/types'
+import type { Floor, FloorPlan, Wall } from '../../plan/types'
 
 function tryEndpoint(raw: unknown): { z: number; h: number } | undefined {
   if (raw == null || typeof raw !== 'object') return undefined

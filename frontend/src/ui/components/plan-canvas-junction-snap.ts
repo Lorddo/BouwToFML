@@ -1,4 +1,4 @@
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { Point2D, Wall } from '@/core/plan/types'
 import {
   ENDPOINT_SNAP_RADIUS_CM,
   ROOM_DRAW_END_SNAP_CM,

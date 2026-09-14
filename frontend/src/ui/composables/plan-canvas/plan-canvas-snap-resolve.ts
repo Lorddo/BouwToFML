@@ -1,9 +1,9 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { Point2D, Wall } from '@/core/plan/types'
 import type { PlanToolId } from '@/ui/components/canvas/planToolbeltItems'
-import { isRidgeWallId } from '@/core/fml/ridge-walls'
-import { listDakSnapWalls } from '@/core/fml/ridge-floor'
-import { ROOF_TOUCH_SLACK_CM } from '@/core/fml/roof-planes'
+import { isRidgeWallId } from '@/core/plan/ridge-walls'
+import { listDakSnapWalls } from '@/core/plan/ridge-floor'
+import { ROOF_TOUCH_SLACK_CM } from '@/core/plan/roof-planes'
 import {
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,

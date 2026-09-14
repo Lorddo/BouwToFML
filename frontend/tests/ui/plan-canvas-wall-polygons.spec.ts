@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { wallJoinFaceCorner } from '@/core/fml/fml-wall-geom'
+import { wallJoinFaceCorner } from '@/core/plan/plan-wall-geom'
 import {
   buildWallRenderGeometry,
   offsetPointByWallBalance,

@@ -1,5 +1,5 @@
-import { wallFaces, type WallFaceSegment } from '@/core/fml/fml-wall-geom'
-import type { Point2D, Wall } from '@/core/fml/types'
+import { wallFaces, type WallFaceSegment } from '@/core/plan/plan-wall-geom'
+import type { Point2D, Wall } from '@/core/plan/types'
 
 /**
  * Clipper-union kan hoekvertices een fractie van de face af zetten.

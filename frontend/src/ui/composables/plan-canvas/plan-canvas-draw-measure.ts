@@ -1,5 +1,5 @@
-import type { Point2D, Wall } from '@/core/fml/types'
-import { resolveWallBalanceExtents, wallLeftNormal } from '@/core/fml/fml-wall-geom'
+import type { Point2D, Wall } from '@/core/plan/types'
+import { resolveWallBalanceExtents, wallLeftNormal } from '@/core/plan/plan-wall-geom'
 import {
   formatScaleInputValue,
   parseScaleInput,

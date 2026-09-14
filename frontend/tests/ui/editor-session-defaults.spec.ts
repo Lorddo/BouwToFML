@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { useEditorSessionDefaults } from '@/ui/composables/editor/useEditorSessionDefaults'
 
 function planWithWall(): FloorPlan {

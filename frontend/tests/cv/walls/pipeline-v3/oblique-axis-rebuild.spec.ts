@@ -11,7 +11,7 @@ import {
   type RidgeField,
 } from '@/cv/walls/rooms/pipeline-v3/engines/oblique'
 import { dropZeroLengthSegments } from '@/cv/walls/rooms/pipeline-v3/engines/segment-ops'
-import { resolveLayer10FmlPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
+import { resolveLayer10PlanPolicy } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
 import { resolveObliquePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/oblique'
 import { buildSyntheticField, type SyntheticBand } from './oblique-synthetic-field'
 
@@ -240,7 +240,7 @@ describe('schuine as — keten-herbouw op laag 10', () => {
   describe('sub-pixel restje in een trap-hoek', () => {
     const STUB: Segment = { a: { x: 280, y: 280 }, b: { x: 280.5, y: 280 } }
     const withStub = [...layer10, STUB]
-    const l10Policy = resolveLayer10FmlPolicy(REF_THICKNESS_PX)
+    const l10Policy = resolveLayer10PlanPolicy(REF_THICKNESS_PX)
 
     function guard(segments: Segment[]) {
       return withTopologyGuard({

@@ -61,7 +61,7 @@ describe('run-journal', () => {
   })
 
   it('legt bij een weggegooide meting beide waarden vast', () => {
-    noteDiscardedMeasurement('X-02', 'harmonizeFmlWallThickness', 11.5, 10)
+    noteDiscardedMeasurement('X-02', 'harmonizeWallThickness', 11.5, 10)
 
     const event = summarizeRunJournal().events[0]
     expect(event?.detail).toMatchObject({ measured: 11.5, exported: 10 })

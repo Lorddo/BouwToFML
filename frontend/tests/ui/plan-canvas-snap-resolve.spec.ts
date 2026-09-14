@@ -6,7 +6,7 @@ import {
 } from '@/ui/composables/plan-canvas/plan-canvas-snap-resolve'
 import { createPlanViewContext } from '@/ui/composables/plan-canvas/plan-view-context'
 import type { RenderJunction } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 
 /**
  * De snap-service is in fase 4b uit de ToolCoordinator getild. Deze tests pinnen

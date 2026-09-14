@@ -1,13 +1,13 @@
 import { ref, type Ref } from 'vue'
-import type { FloorDimension, Point2D, Wall } from '@/core/fml/types'
+import type { FloorDimension, Point2D, Wall } from '@/core/plan/types'
 import {
   MANUAL_DIM_FACE_SNAP_CM,
   snapDrawPointToWallFaces,
   snapDrawPointWithManualDimensions,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/plan-canvas-wall-face-snap'
-import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/fml/slice-offset-snap'
-import type { PlanSlice } from '@/core/fml/plan-slices'
+import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/plan/slice-offset-snap'
+import type { PlanSlice } from '@/core/plan/plan-slices'
 import type { RenderJunction } from './usePlanCanvasRenderModel'
 import { type MeasureLine, measureDistanceCm } from './plan-canvas-measure'
 

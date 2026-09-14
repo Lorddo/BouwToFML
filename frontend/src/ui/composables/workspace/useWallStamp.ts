@@ -4,12 +4,12 @@
  * Live align (1+4): goedkope ghost-bitmap + bounds-stretch; contour/solid alleen bij bake/retune.
  */
 import { computed, ref } from 'vue'
-import type { Floor, Point2D, Wall } from '@/core/fml/types'
+import type { Floor, Point2D, Wall } from '@/core/plan/types'
 import {
-  DEFAULT_FML_BAND_BOUNDARIES,
-  type FmlThicknessBandBoundaries,
-} from '@/core/fml/fml-wall-thickness-tiers'
-import { resolveBakeNulpuntImageCm } from '@/core/fml/stamp-nulpunt'
+  DEFAULT_THICKNESS_BAND_BOUNDARIES,
+  type ThicknessBandBoundaries,
+} from '@/core/plan/wall-thickness-tiers'
+import { resolveBakeNulpuntImageCm } from '@/core/plan/stamp-nulpunt'
 import {
   buildWallOutlinePolylines,
   type WallPolygonInput,
@@ -77,7 +77,7 @@ export function useWallStamp(deps: {
   imageHeight: () => number
   pxPerMmX: () => number
   pxPerMmY: () => number
-  bandBoundaries?: () => FmlThicknessBandBoundaries
+  bandBoundaries?: () => ThicknessBandBoundaries
   /** Na bake/retune — hercompose effectiveBw. */
   onStampBwChanged: () => void
   /**
@@ -163,7 +163,7 @@ export function useWallStamp(deps: {
     const pxPerMmY = deps.pxPerMmY()
     if (!size || !(pxPerMmX > 0) || !(pxPerMmY > 0) || sourceWallsCm.value.length === 0)
       return false
-    const boundaries = deps.bandBoundaries?.() ?? DEFAULT_FML_BAND_BOUNDARIES
+    const boundaries = deps.bandBoundaries?.() ?? DEFAULT_THICKNESS_BAND_BOUNDARIES
     const filtered = skipBandFilter.value
       ? sourceWallsCm.value.map((w) => ({
           a: { ...w.a },
@@ -277,7 +277,7 @@ export function useWallStamp(deps: {
       error.value = tGlobal('preprocess.stampErrors.confirmScale')
       return false
     }
-    const boundaries = deps.bandBoundaries?.() ?? DEFAULT_FML_BAND_BOUNDARIES
+    const boundaries = deps.bandBoundaries?.() ?? DEFAULT_THICKNESS_BAND_BOUNDARIES
     const allWalls = params.walls.map((w) => ({
       a: { ...w.a },
       b: { ...w.b },

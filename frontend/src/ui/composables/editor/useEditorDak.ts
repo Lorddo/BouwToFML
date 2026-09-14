@@ -1,10 +1,10 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   ensureRidgeDesignsOnPlan,
   findRidgeDesignIndex,
   listDakDesignFloors,
-} from '@/core/fml/ridge-walls'
+} from '@/core/plan/ridge-walls'
 
 /**
  * Dak-tab: design-floors + enter/leave. Nokhoogte-rijen blijven bij gevels (stack).

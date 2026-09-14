@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import { FACTORY_THICKNESS_CMS } from '@/core/fml/fml-wall-thickness-catalog'
+import { FACTORY_THICKNESS_CMS } from '@/core/plan/wall-thickness-catalog'
 import { SELECTION_COLORS, type ElementClass, type SelectionRect } from './types'
 import { compactRectRotationDeg } from './oriented-rect'
 import {

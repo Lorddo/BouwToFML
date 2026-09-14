@@ -4,8 +4,12 @@
 // Een rename daarin faalt stil: geen typecheck, geen test.
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { FILES, NAMES } from './phase6-name-map.mjs'
 
 const NEW_NAMES = [
+  // fase 6: de hele kaart, inclusief de tien bestandsnamen
+  ...Object.values(NAMES),
+  ...Object.values(FILES),
   // fase 5
   'planNulpuntImageCm',
   'setPlanNulpuntImageCm',

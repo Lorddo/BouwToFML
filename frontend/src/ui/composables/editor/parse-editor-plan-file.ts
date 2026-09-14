@@ -1,5 +1,5 @@
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import type { FloorPlan, ImportWarning } from '@/core/fml/types'
+import type { FloorPlan, ImportWarning } from '@/core/plan/types'
 import {
   isPlgDocumentJson,
   readPlg,

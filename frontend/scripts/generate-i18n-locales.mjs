@@ -208,7 +208,7 @@ const tree = {
         'Er moet minstens één verdieping blijven.',
         'ต้องเหลืออย่างน้อยหนึ่งชั้น',
       ),
-      noFloorReadyForFml: t(
+      noFloorReadyForPlan: t(
         'No floor ready for FML export yet.',
         'Nog geen verdieping klaar voor FML-export.',
         'ยังไม่มีชั้นพร้อมส่งออก FML',
@@ -587,7 +587,7 @@ const tree = {
         'Geen stempelinkt om te bakken.',
         'ไม่มีหมึกตราเพื่ออบ',
       ),
-      noFmlWalls: t(
+      noPlanWalls: t(
         'No FML walls on the chosen floor.',
         'Geen FML-muren op de gekozen verdieping.',
         'ไม่มีผนัง FML บนชั้นที่เลือก',

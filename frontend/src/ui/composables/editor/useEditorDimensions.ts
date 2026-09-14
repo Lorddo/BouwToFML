@@ -1,18 +1,18 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   readDimensionSettings,
   writeDimensionSettings,
   type DimensionMode,
-} from '@/core/fml/fml-dimension-settings'
-import { defaultDimensionVis, type DimensionVis } from '@/core/fml/fml-dimension-vis'
+} from '@/core/plan/plan-dimension-settings'
+import { defaultDimensionVis, type DimensionVis } from '@/core/plan/plan-dimension-vis'
 import {
   dimensionLiesOnAnySlice,
   filterManualDimensions,
   readPlanSlices,
   writePlanSlices,
-} from '@/core/fml/plan-slices'
-import { collectOverlayDimensionLines } from '@/core/fml/convert-overlay-dimensions'
+} from '@/core/plan/plan-slices'
+import { collectOverlayDimensionLines } from '@/core/plan/convert-overlay-dimensions'
 
 export function useEditorDimensions(options: {
   plan: Ref<FloorPlan | null>

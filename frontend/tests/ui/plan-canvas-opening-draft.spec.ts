@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Opening } from '@/core/fml/types'
+import { type Opening } from '@/core/plan/types'
 import { computeOpeningDraftState } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({

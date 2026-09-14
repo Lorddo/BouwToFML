@@ -1,6 +1,6 @@
 import { ref, watch } from 'vue'
-import type { Point2D } from '@/core/fml/types'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { Point2D } from '@/core/plan/types'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 
 interface UnderlayMoveHitTest {
   clientToCm: (clientX: number, clientY: number) => Point2D | null

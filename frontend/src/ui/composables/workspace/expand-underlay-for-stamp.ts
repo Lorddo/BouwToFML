@@ -3,7 +3,7 @@
  * Verschuift linialen, LBE-refs, masks en nulpunt mee (px-dichtheid blijft).
  */
 import type { Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import { canvasToDataUrl } from '@/cv/tools/maskImage'
 import { INK_OVERLAY_NONE } from '@/cv/preprocess/compose-wall-bw'
 import {
@@ -39,7 +39,7 @@ export async function expandUnderlayForStamp(deps: {
   eraserMask: Ref<Uint8Array | null>
   ocrMask: Ref<Uint8Array | null>
   ocrMaskedRegions: Ref<OcrTextCandidate[]>
-  getFmlNulpuntImageCm: () => Point2D | null
+  getPlanNulpuntImageCm: () => Point2D | null
   setPlanNulpuntImageCm: (point: Point2D | null) => void
   publishWallBwUnderlay: () => Promise<void>
 }): Promise<ExpandUnderlayForStampResult> {
@@ -97,7 +97,7 @@ function applyPadToPixelState(
     eraserMask: Ref<Uint8Array | null>
     ocrMask: Ref<Uint8Array | null>
     ocrMaskedRegions: Ref<OcrTextCandidate[]>
-    getFmlNulpuntImageCm: () => Point2D | null
+    getPlanNulpuntImageCm: () => Point2D | null
     setPlanNulpuntImageCm: (point: Point2D | null) => void
   },
   pad: CanvasPad,
@@ -140,7 +140,7 @@ function applyPadToPixelState(
     y: region.y + pad.top,
   }))
 
-  const nulpunt = deps.getFmlNulpuntImageCm()
+  const nulpunt = deps.getPlanNulpuntImageCm()
   const pxPerMmX = deps.scale.pixelsPerMillimeterX.value
   const pxPerMmY = deps.scale.pixelsPerMillimeterY.value
   if (nulpunt && pxPerMmX > 0 && pxPerMmY > 0) {

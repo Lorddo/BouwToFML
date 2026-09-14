@@ -5,7 +5,7 @@ import type Konva from 'konva'
 
 import type { SelectionRect } from '@/platform/selection'
 import { resolveWallThicknessCm } from '@/platform/selection/wall-thickness-ref'
-import { catalogMaxCm } from '@/core/fml/fml-wall-thickness-catalog'
+import { catalogMaxCm } from '@/core/plan/wall-thickness-catalog'
 import type { ElementClass } from '@/core/extraction/types'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'

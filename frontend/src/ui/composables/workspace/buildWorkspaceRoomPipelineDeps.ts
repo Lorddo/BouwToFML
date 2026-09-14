@@ -52,7 +52,7 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
   ) => void
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   updateRectWallThicknessCm: (id: string, cm: number) => void
-  getWallThicknessLimits: () => import('@/core/fml/fml-wall-thickness-limits').FmlWallThicknessLimits
+  getWallThicknessLimits: () => import('@/core/plan/wall-thickness-limits').WallThicknessLimits
   getThicknessCatalog: () => number[]
   getPxPerMm: () => { x: number; y: number }
   addThicknessToCatalog?: (cm: number) => void

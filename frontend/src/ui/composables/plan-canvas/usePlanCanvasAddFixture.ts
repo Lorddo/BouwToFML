@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue'
-import type { FloorItem, Point2D } from '@/core/fml/types'
-import { fixturePlaceSizeCm } from '@/core/fml/fixture-place-defaults'
-import type { FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
+import type { FloorItem, Point2D } from '@/core/plan/types'
+import { fixturePlaceSizeCm } from '@/core/plan/fixture-place-defaults'
+import type { FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
 import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,

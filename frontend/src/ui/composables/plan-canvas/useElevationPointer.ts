@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import type { ContentLayout } from './usePlanCanvasViewport'
 import { layoutTransform } from './usePlanCanvasViewport'
 

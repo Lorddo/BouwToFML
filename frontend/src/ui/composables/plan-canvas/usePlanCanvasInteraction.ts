@@ -1,7 +1,7 @@
 ﻿import { computed, ref, watch, type Ref } from 'vue'
 import type Konva from 'konva'
-import type { FloorPlan, Point2D } from '@/core/fml/types'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { FloorPlan, Point2D } from '@/core/plan/types'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { InspectHit } from './plan-inspect'
 import { createPlanCanvasEditorKeyHandlers } from './plan-canvas-editor-keyboard'
@@ -24,8 +24,8 @@ import { usePlanCanvasPointer } from './usePlanCanvasPointer'
 import type { PlanToolEntry } from './plan-canvas-tool-registry'
 import { createPlanToolEntries } from './plan-canvas-tool-entries'
 import type { PlanSessionDefaults } from './plan-canvas-session-defaults'
-import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
-import { hitTestDimensionAtCm } from '@/core/fml/offset-dimension-line'
+import { filterManualDimensions, readPlanSlices } from '@/core/plan/plan-slices'
+import { hitTestDimensionAtCm } from '@/core/plan/offset-dimension-line'
 import { usePlanCanvasWallDrag } from './usePlanCanvasWallDrag'
 import { usePlanCanvasDimensionDrag } from './usePlanCanvasDimensionDrag'
 import { usePlanCanvasWallMove } from './usePlanCanvasWallMove'
@@ -43,7 +43,7 @@ import type { PlanViewContext } from './plan-view-context'
 import { createPlanSnapResolve } from './plan-canvas-snap-resolve'
 
 import type { ContentLayout } from './usePlanCanvasViewport'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import { usePlanCanvasToolCoordinator } from './usePlanCanvasToolCoordinator'
 import { usePlanCanvasSelectionCoordinator } from './usePlanCanvasSelectionCoordinator'
 
@@ -73,7 +73,7 @@ export function usePlanCanvasInteraction(options: {
   contentGroupRef: Ref<{ getNode: () => Konva.Group } | null>
   shiftPressed: Ref<boolean>
   spacePressed: Ref<boolean>
-  thicknessPickTier: Ref<FmlThicknessBand | null>
+  thicknessPickTier: Ref<ThicknessBand | null>
   /** Wat een nieuwe opening erft van de instellingen. */
   session: PlanSessionDefaults
   getUnderlayLayout?: () => UnderlayOriginLayout | null
@@ -93,7 +93,7 @@ export function usePlanCanvasInteraction(options: {
   ensureRoofOverlayOn?: () => void
   measureDrawMode?: Ref<MeasureDrawMode>
   slicerEditMode?: Ref<boolean>
-  dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
+  dimensionVis?: Ref<import('@/core/plan/plan-dimension-vis').DimensionVis>
   selectedSliceIndex?: Ref<number>
   onInspectSelect?: (hit: InspectHit | null) => void
   getInputUnit?: () => ScaleInputUnit
@@ -201,7 +201,7 @@ export function usePlanCanvasInteraction(options: {
 
   // Shared refs owned here (needed by both coordinators)
   const ridgeZCm = ref<number | undefined>(undefined)
-  const pendingFixture = ref<import('@/core/fml/fixture-refid-catalog').FixturePlaceOption | null>(
+  const pendingFixture = ref<import('@/core/plan/fixture-refid-catalog').FixturePlaceOption | null>(
     null,
   )
 

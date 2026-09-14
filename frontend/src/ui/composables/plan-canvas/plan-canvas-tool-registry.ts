@@ -1,4 +1,4 @@
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 
 /**
  * Tool-dispatch als geordende lijst in plaats van een rij `if (mode.value)`-takken.

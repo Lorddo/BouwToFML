@@ -1,21 +1,21 @@
 ﻿<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRef, watch } from 'vue'
 import type Konva from 'konva'
-import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/plan/bovenlicht'
 import {
   isRidgeWallId,
   listRidgeWallsOnFloor,
   ridgeDisplayWidthCm,
   dakThicknessCmForPlan,
-} from '@/core/fml/ridge-walls'
-import { DEFAULT_FLOOR_THICKNESS_CM, readFloorStack, slabThicknessCm } from '@/core/fml/floor-stack'
+} from '@/core/plan/ridge-walls'
+import { DEFAULT_FLOOR_THICKNESS_CM, readFloorStack, slabThicknessCm } from '@/core/plan/floor-stack'
 import {
   listParentRoofs,
   listRidgeSurfacesOnFloor,
   roofKindOf,
-} from '@/core/fml/roof-planes'
-import type { FloorPlan } from '@/core/fml/types'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+} from '@/core/plan/roof-planes'
+import type { FloorPlan } from '@/core/plan/types'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import { useStage } from '@/platform/canvas'
 import { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import { usePlanCanvasViewport } from '@/ui/composables/plan-canvas/usePlanCanvasViewport'
@@ -31,7 +31,7 @@ import { formatDrawTypeLabel } from '@/ui/composables/plan-canvas/plan-canvas-dr
 import { inspectColorFor, type InspectHit } from '@/ui/composables/plan-canvas/plan-inspect'
 import { PLAN_CANVAS_CHROME_SELECTOR } from '@/ui/composables/plan-canvas/plan-canvas-gestures'
 import { usePlanCanvasTouch, usePlanTouchNav } from '@/ui/composables/plan-canvas/usePlanCanvasTouch'
-import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
+import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
 import { itemResizeHandleWorlds } from '@/ui/composables/plan-canvas/item-resize-handles'
 import { itemRotateHandleWorlds } from '@/ui/composables/plan-canvas/item-rotate-handles'
 import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/plan-canvas/plan-canvas-vertex-hit'
@@ -39,10 +39,10 @@ import EditorTouchChrome from '@/ui/editor/EditorTouchChrome.vue'
 import type { HScaleState } from '@/platform/calibration'
 import { layoutTransform } from '@/ui/composables/plan-canvas/usePlanCanvasViewport'
 import { underlayContentBoundsCm } from '@/ui/composables/plan-canvas/plan-canvas-underlay-layout'
-import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
-import { defaultDimensionVis } from '@/core/fml/fml-dimension-vis'
+import type { DimensionVis } from '@/core/plan/plan-dimension-vis'
+import { defaultDimensionVis } from '@/core/plan/plan-dimension-vis'
 import type { MeasureDrawMode } from '@/ui/composables/plan-canvas/usePlanCanvasMeasure'
-import { buildSliceGuide } from '@/core/fml/slice-dimension-lines'
+import { buildSliceGuide } from '@/core/plan/slice-dimension-lines'
 import { usePlanCanvasSlicer } from '@/ui/composables/plan-canvas/usePlanCanvasSlicer'
 import {
   loadUserSettings,
@@ -65,7 +65,7 @@ import {
   lineDash,
   lineStrokeColor,
 } from '@/ui/composables/plan-canvas/plan-canvas-render-annotations'
-import { STAMP_FACADE_GROUP_ID } from '@/core/fml/facade-groups'
+import { STAMP_FACADE_GROUP_ID } from '@/core/plan/facade-groups'
 import PlanToolbar from './PlanToolbar.vue'
 import PlanFixturePalette from './PlanFixturePalette.vue'
 import PlanStage from './PlanStage.vue'

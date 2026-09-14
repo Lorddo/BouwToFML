@@ -1,5 +1,5 @@
-import type { Point2D, Wall } from '@/core/fml/types'
-import { promoteWallElevationFromExtras } from '@/core/fml/wall-endpoint-height'
+import type { Point2D, Wall } from '@/core/plan/types'
+import { promoteWallElevationFromExtras } from '@/core/plan/wall-endpoint-height'
 import {
   MIN_WALL_LENGTH_CM,
   ROOM_CORNER_ENDPOINT_EPS_T,

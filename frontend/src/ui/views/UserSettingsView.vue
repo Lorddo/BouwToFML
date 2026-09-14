@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { ProjectFmlDefaults } from '@/ui/composables/project/types'
+import type { ProjectPlanDefaults } from '@/ui/composables/project/types'
 import {
   CORNER_MARKER_MODES,
   downloadUserSettingsJson,
@@ -29,15 +29,15 @@ import {
   effectiveRoomTypeColor,
   factoryRoomTypeColor,
   listRoomTypes,
-  parseFmlHex,
-} from '@/core/fml/roomtype-catalog'
+  parsePlanHex,
+} from '@/core/plan/roomtype-catalog'
 import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
 import { PLAN_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
 import HexColorField from '@/ui/components/HexColorField.vue'
 import ScaleLengthInput from '@/ui/components/ScaleLengthInput.vue'
 import ThicknessCatalogFields from '@/ui/components/ThicknessCatalogFields.vue'
 import FacadeGroupPresetFields from '@/ui/components/FacadeGroupPresetFields.vue'
-import { limitsFromCatalog } from '@/core/fml/fml-wall-thickness-catalog'
+import { limitsFromCatalog } from '@/core/plan/wall-thickness-catalog'
 
 const { t } = useI18n()
 
@@ -106,7 +106,7 @@ watch(
   },
 )
 
-function patchDefaults(patch: Partial<ProjectFmlDefaults>) {
+function patchDefaults(patch: Partial<ProjectPlanDefaults>) {
   Object.assign(draft.defaults, patch)
 }
 
@@ -124,7 +124,7 @@ function patchConversion(patch: Partial<OpeningMergeSettings>) {
 }
 
 function onRoomTagColorInput(role: number, value: string) {
-  const hex = parseFmlHex(value)
+  const hex = parsePlanHex(value)
   if (!hex) return
   const key = String(role)
   const factory = factoryRoomTypeColor(role)
@@ -201,7 +201,7 @@ const hasAnyOpeningColorOverride = computed(() =>
 )
 
 function onOpeningColorInput(key: OpeningDisplayColorKey, value: string): void {
-  const hex = parseFmlHex(value)
+  const hex = parsePlanHex(value)
   if (!hex) return
   draft.planDisplay.openingColors[key] = hex
 }
@@ -221,7 +221,7 @@ const clearHeightFillIsOverride = computed(
 )
 
 function onClearHeightFillColorInput(value: string): void {
-  const hex = parseFmlHex(value)
+  const hex = parsePlanHex(value)
   if (!hex) return
   draft.planDisplay.clearHeightFillColor = hex
 }

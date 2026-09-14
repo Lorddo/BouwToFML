@@ -219,7 +219,7 @@ function sliceExports(ctx: WorkspaceFacadeContext) {
   return { ...ctx.exports, ...ctx.e2eFixture }
 }
 
-function sliceFml(ctx: WorkspaceFacadeContext) {
+function slicePlanState(ctx: WorkspaceFacadeContext) {
   return {
     underlayOpacityPct: ctx.underlayOpacityPct,
     contentOpacityPct: ctx.contentOpacityPct,
@@ -333,7 +333,7 @@ export function assembleWorkspaceFacadeReturn(ctx: WorkspaceFacadeContext) {
     ...sliceInput(ctx),
     ...sliceOverlays(ctx),
     ...sliceExports(ctx),
-    ...sliceFml(ctx),
+    ...slicePlanState(ctx),
     ...slicePipelineScale(ctx),
     ...sliceDetectionUi(ctx),
     ...sliceOcr(ctx),

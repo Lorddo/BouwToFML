@@ -57,7 +57,7 @@ export function useWorkspaceFlow(deps: {
    * True als stap 4 al een FML-preview heeft (live of blob) — na resume zonder
    * detectionExact mag 3→4 alleen als stap 3 leeg is (geen classify-run).
    */
-  hasResultFml?: () => boolean
+  hasResultPlan?: () => boolean
   /**
    * True als stap 3 al classify/finalize-output heeft — geen OCR/classify-bootstrap
    * bij opnieuw binnenkomen (stap terug → vooruit). Blokkeert ook 3→4 via stale FML.
@@ -119,7 +119,7 @@ export function useWorkspaceFlow(deps: {
         if (deps.templateTab.value === 'walls' && !deps.wallsDetectionComplete?.()) {
           // Resume zonder detectie: 3→4 via FML. Nieuwe classify-run moet weer afronden —
           // stale blob-FML mag Next niet openhouden (classify + result tegelijk → OOM).
-          if (deps.hasTemplatesDetection?.() === true || !deps.hasResultFml?.()) {
+          if (deps.hasTemplatesDetection?.() === true || !deps.hasResultPlan?.()) {
             tally('O-42', 'walls_gate_block')
             return false
           }

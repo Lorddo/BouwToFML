@@ -2,8 +2,8 @@ import type { RoomWallMaskRle, PipelineLayer1FaceDebug } from '@/core/extraction
 import type { ResolvedDoorCandidate } from '@/cv/doors'
 import type { ResolvedWindowCandidate } from '@/cv/windows'
 import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
-import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
-import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
+import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
+import type { ThicknessBandBoundaries } from '@/core/plan/wall-thickness-tiers'
 
 /** Int32-raster als run-length + base64 (waarde/count-paren, little-endian Int32). */
 export interface EncodedInt32Raster {
@@ -46,8 +46,8 @@ export interface E2eFixtureLayer1 {
 }
 
 export interface E2eFixtureFmlSettings {
-  thicknessLimits: FmlWallThicknessLimits
-  bandBoundaries: FmlThicknessBandBoundaries
+  thicknessLimits: WallThicknessLimits
+  bandBoundaries: ThicknessBandBoundaries
   wallHeightCm: number
   doorHeightCm: number
   windowHeightCm: number

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { parseFmlHex, UNLABELED_AREA_COLOR } from '@/core/fml/roomtype-catalog'
+import { parsePlanHex, UNLABELED_AREA_COLOR } from '@/core/plan/roomtype-catalog'
 
 const model = defineModel<string>({ required: true })
 
@@ -9,29 +9,29 @@ defineProps<{
 }>()
 
 function displayHex(raw: string): string {
-  return parseFmlHex(raw) ?? UNLABELED_AREA_COLOR
+  return parsePlanHex(raw) ?? UNLABELED_AREA_COLOR
 }
 
 const draft = ref(displayHex(model.value))
 
 watch(model, (value) => {
   const next = displayHex(value)
-  if (parseFmlHex(draft.value) !== next) draft.value = next
+  if (parsePlanHex(draft.value) !== next) draft.value = next
 })
 
 function commit(hex: string): void {
   draft.value = hex
-  if (parseFmlHex(model.value) !== hex) model.value = hex
+  if (parsePlanHex(model.value) !== hex) model.value = hex
 }
 
 function onSwatch(event: Event): void {
-  const parsed = parseFmlHex((event.target as HTMLInputElement).value)
+  const parsed = parsePlanHex((event.target as HTMLInputElement).value)
   if (parsed) commit(parsed)
 }
 
 function onDraftInput(event: Event): void {
   draft.value = (event.target as HTMLInputElement).value
-  const parsed = parseFmlHex(draft.value)
+  const parsed = parsePlanHex(draft.value)
   if (parsed) commit(parsed)
 }
 

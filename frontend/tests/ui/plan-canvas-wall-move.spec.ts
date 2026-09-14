@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 import { usePlanCanvasWallMove } from '@/ui/composables/plan-canvas/usePlanCanvasWallMove'
 
 function mouseAt(x: number, y: number): MouseEvent {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { OpeningType } from '@/core/fml/types'
+import type { OpeningType } from '@/core/plan/types'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import PlanOpeningEditFields from './PlanOpeningEditFields.vue'
 

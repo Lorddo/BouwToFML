@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
-import type { ImportWarning } from '@/core/fml/types'
-import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
+import type { ThicknessPickTier } from '@/core/plan/apply-thickness-pick'
+import type { ImportWarning } from '@/core/plan/types'
+import type { OpeningHeightOverflowSummary } from '@/core/plan/opening-height-overflow'
 import type { HScaleState } from '@/platform/calibration'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import PlanPanel from './PlanPanel.vue'
@@ -24,10 +24,10 @@ withDefaults(
     planBovenlichtDefault: boolean
     planWindowBovenlichtDefault: boolean
     planThicknessCms: number[]
-    fmlBandMidBoundaryCm: number
-    fmlBandMaxBoundaryCm: number
+    planBandMidBoundaryCm: number
+    planBandMaxBoundaryCm: number
     planLimitsDirty: boolean
-    thicknessPickTier: FmlThicknessPickTier | null
+    thicknessPickTier: ThicknessPickTier | null
     thicknessPickMessage: string | null
     thicknessPickBusy: boolean
     importedFmlText: string
@@ -37,7 +37,7 @@ withDefaults(
     contentOpacityPct: number
     underlayAvailable: boolean
     planOrientFlipX?: boolean
-    hasAnyFloorFml?: boolean
+    hasAnyFloorPlan?: boolean
     projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
@@ -51,7 +51,7 @@ withDefaults(
   }>(),
   {
     planOrientFlipX: false,
-    hasAnyFloorFml: false,
+    hasAnyFloorPlan: false,
     projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
@@ -79,11 +79,11 @@ const emit = defineEmits<{
   'update:planBovenlichtDefault': [value: boolean]
   'update:planWindowBovenlichtDefault': [value: boolean]
   'update:planThicknessCms': [value: number[]]
-  'update:fmlBandMidBoundaryCm': [value: number]
-  'update:fmlBandMaxBoundaryCm': [value: number]
+  'update:planBandMidBoundaryCm': [value: number]
+  'update:planBandMaxBoundaryCm': [value: number]
   'update:rescaleDistanceMmX': [value: number]
   'update:rescaleDistanceMmY': [value: number]
-  startThicknessPick: [tier: FmlThicknessPickTier]
+  startThicknessPick: [tier: ThicknessPickTier]
   cancelThicknessPick: []
   regenerate: []
   mirrorVertical: []
@@ -114,8 +114,8 @@ const emit = defineEmits<{
     :plan-bovenlicht-default="planBovenlichtDefault"
     :plan-window-bovenlicht-default="planWindowBovenlichtDefault"
     :plan-thickness-cms="planThicknessCms"
-    :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
-    :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
+    :plan-band-mid-boundary-cm="planBandMidBoundaryCm"
+    :plan-band-max-boundary-cm="planBandMaxBoundaryCm"
     :plan-limits-dirty="planLimitsDirty"
     :thickness-pick-tier="thicknessPickTier"
     :thickness-pick-message="thicknessPickMessage"
@@ -128,7 +128,7 @@ const emit = defineEmits<{
     :hide-plan-text="hidePlanText"
     :underlay-available="underlayAvailable"
     :plan-orient-flip-x="planOrientFlipX"
-    :has-any-floor-fml="hasAnyFloorFml"
+    :has-any-floor-plan="hasAnyFloorPlan"
     :project-orient-flip-x="projectOrientFlipX"
     :underlay-move-mode="underlayMoveMode"
     :underlay-flip-x="underlayFlipX"
@@ -150,8 +150,8 @@ const emit = defineEmits<{
     @update:plan-bovenlicht-default="emit('update:planBovenlichtDefault', $event)"
     @update:plan-window-bovenlicht-default="emit('update:planWindowBovenlichtDefault', $event)"
     @update:plan-thickness-cms="emit('update:planThicknessCms', $event)"
-    @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
-    @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
+    @update:plan-band-mid-boundary-cm="emit('update:planBandMidBoundaryCm', $event)"
+    @update:plan-band-max-boundary-cm="emit('update:planBandMaxBoundaryCm', $event)"
     @update:rescale-distance-mm-x="emit('update:rescaleDistanceMmX', $event)"
     @update:rescale-distance-mm-y="emit('update:rescaleDistanceMmY', $event)"
     @start-thickness-pick="emit('startThicknessPick', $event)"

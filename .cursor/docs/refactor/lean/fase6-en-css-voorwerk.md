@@ -45,8 +45,57 @@ Meest gelezen modules (bepaalt waar een fout het hardst doorwerkt): `types` 300 
 3. De 22 relatieve imports in `importFmlV3.ts` / `buildFmlV3.ts` naar `@/core/plan/...`.
 4. Domeinnamen mee (`sanitize-fml-walls` → `sanitize-plan-walls`, `harmonize-fml-wall-thickness` → `harmonize-wall-thickness`, `fml-wall-geom` → `plan-wall-geom`, `fml-dimension-*` → `plan-dimension-*`) + `FmlExtras` → `PlanExtras`.
 5. **C1-cluster meenemen** (dikte-catalogus + banden, ~215 refs): `fml-wall-thickness-tiers` / `-limits` / `-catalog` verhuizen hier toch al, dus dat is het goedkoopste moment.
-6. E1-gate in [`fml-embed-boundary.spec.ts`](../../../../frontend/tests/ui/fml-embed-boundary.spec.ts) herschrijven: `core/plg` mag `core/plan`; alleen `core/plg/fml-adapter/` mag value-imports uit `core/fml`; `core/plan` mag geen `cv/`/`ui/`/`platform/`.
+6. E1-gate herschrijven: `core/plg` mag `core/plan`; alleen `core/plg/fml-adapter/` mag value-imports uit `core/fml`; `core/plan` mag geen `cv/`/`ui/`/`platform/`. *(Uitgevoerd, maar strakker en met twee allowlists — zie hieronder.)*
 7. Draai [`scripts/check-i18n-collisions.mjs`](../../../../frontend/scripts/check-i18n-collisions.mjs) met de C1-namen erin, en [`scripts/fix-mojibake.mjs`](../../../../frontend/scripts/fix-mojibake.mjs) achteraf.
+
+### Uitgevoerd — 2026-09-14
+
+**104 verhuisd, 3 gebleven.** De voormeting zei 101/3 en zat er drie naast: die telling liep over `.ts`-bestanden, terwijl `core/fml` ook twee JSON-databestanden en een `fixture-symbols/`-submap had. Scripts: [`rename-phase6-move.mjs`](../../../../frontend/scripts/rename-phase6-move.mjs) + [`rename-phase6-names.mjs`](../../../../frontend/scripts/rename-phase6-names.mjs) + [`rename-phase6-relpaths.mjs`](../../../../frontend/scripts/rename-phase6-relpaths.mjs).
+
+| Sweep | Aantal | Voorspeld |
+|---|---|---|
+| `@/core/fml/X` → `@/core/plan/X` | 851 | 845 |
+| `../fml/X` → `../plan/X` in `core/plg` | 25 | niet voorzien |
+| Relatieve imports in de blijvers | 22 | 22 |
+| Identifiers + bestandspaden | 1333 in 157 bestanden | ~215 (alleen C1) |
+| Relatieve sibling-imports ná de bestandsrename | 28 in 19 bestanden | niet voorzien |
+
+**Twee soorten verwijzingen die de voormeting niet zag**, beide gevonden door de typecheck en niet door mij: de 25 `../fml/`-imports uit `core/plg` (relatief, dus buiten bereik van de alias-sweep) en de 28 sibling-imports (`./fml-wall-geom`) ná het omdopen van de tien bestanden. Beide zijn hetzelfde patroon: een sweep die op één schrijfwijze van een pad is geankerd, mist de andere. Dat is dezelfde fout als de kebab-prop in fase 4.
+
+**`git mv` van de hele map faalt op Windows** met «Permission denied» zodra een watcher of tsserver een handle in de boom heeft. Per bestand verhuizen werkt wel. Ook de Grep/Glob-tools van de agent gaven tijdens deze batch een verouderde index (bestandsnamen van vóór fase 4); alleen `rg` via de shell was betrouwbaar.
+
+#### De triage was incompleet: infix-namen
+
+Mijn eerdere conclusie dat er ná de C-clusters «exact drie groepen» resteerden, was fout. Die telling was geankerd op namen die *beginnen* met `fml`, en zag daarmee een hele klasse niet: `Fml` in het midden van een naam. Voorbeelden: `parseFmlHex` 30, `isFmlToolbarSettingsOpen` 30, `harmonizeFmlWallThickness` 30, `ProjectFmlDefaults` 22, `sanitizeFmlWalls` 20, `FmlExtras` 58, `appliedFmlWallHeightCm` + 3 zusjes elk 19. Bij elkaar ruim 400 refs bovenop de 215 van C1. Zelfde fout als eerder met `DEFAULT_FML_*`: een regex-anker dat een categorie onzichtbaar maakt.
+
+Besluit (gebruiker, 2026-09-14): **alles mee**, inclusief de UI-kant. Uitgevoerd als één kaart van **120 identifiers + 10 bestandsnamen** in [`phase6-name-map.mjs`](../../../../frontend/scripts/phase6-name-map.mjs), waar de rename-run én de twee na-audits uit lezen. Drie kopieën van zo'n kaart lopen uiteen, en dat is precies hoe een audit een echte botsing mist.
+
+**Elke regel kreeg een teller**, zodat een naam die ik verkeerd gokte zichtbaar wordt als nul treffers. Uitkomst: alle 120 namen en alle 10 paden raakten. De 116 nul-treffers waren uitsluitend kebab-varianten van namen die geen Vue-prop zijn (vier props raakten wél).
+
+#### Wat de audits vonden
+
+- **Shadowing: nul** voor fase 6. Maar de audit had eerst twee eigen fouten. (1) Hij vergeleek twee git-refs terwijl het werk ongecommit was, dus hij rapporteerde «0 gewijzigde bestanden» en deed stilzwijgend niets. (2) Voor de 104 verhuisde bestanden bestond het nieuwe pad niet in de oude ref, dus die werden overgeslagen — juist de bestanden waar ook identifiers hernoemd zijn. Nu volgt hij renames via `git diff --name-status -M` en meldt hij hoeveel bestanden hij oversloeg.
+- **Valse meldingen weggewerkt in de meetlat, niet in het lezen.** Bij een rename met streepjes zit de nieuwe naam ín de oude (`fml-wall-thickness-limits` bevat `wall-thickness-limits`, want `-` is geen woordteken), dus élke zo'n rename meldde een botsing met zichzelf — 29 stuks. De audit knipt nu eerst de oude naam eruit.
+- **Strings: nul treffers.** Geen rename landde in een string-literal. Mooie bevestiging onderweg: de twee localStorage-sleutels heten al `bouwToFml.wallThicknessLimits` en `bouwToFml.thicknessBandBoundaries` — zónder `Fml` in de veldnaam. De code liep dus achter op de opslag; `Fml` laten vallen brengt ze in lijn.
+- **i18n:** nul botsingen met de nieuwe namen, 738 sleutels compleet. **Encoding:** nul mojibake.
+
+#### De gate werd sterker, en legde een schending bloot
+
+`core/plg` raakt `core/fml` nu **helemaal niet meer** aan — ook `fml-adapter` niet. De type-only-uitzondering uit de oude E1-gate bestond alleen omdat het domein in `core/fml/types` woonde, en is dus dood. De regel is nu het sterkere «`core/plg` importeert `core/fml` niet, type noch value».
+
+Nieuw gemeten en vastgezet in [`import-boundaries.spec.ts`](../../../../frontend/tests/ui/import-boundaries.spec.ts) (omgedoopt van `fml-embed-boundary.spec.ts`, 12 tests):
+
+- het domein importeert zijn eigen adapter niet — nul, blijft nul;
+- **`core/plan` reikt op vier plekken omhoog naar `ui/components/`** (`plan-canvas-openings` 3×, `plan-canvas-wall-polygons` 1×). Dezelfde verkeerd gestalde geometrie-helpers die gate stap 1 aan de andere kant vond, nu met het domein als afnemer. Bevroren allowlist: verdwijnt met de geometrie-verhuizing, groeit tot dan niet;
+- alleen de detectie-brug (`extractionToPlan`, `extraction-to-plan-walls`, `layer-openings-to-plan`) mag `cv/` kennen — 5 randen, de rest van het domein nul.
+
+Beide nieuwe regels omgekeerd bewezen: met lege allowlists faalt de gate met exact die vier respectievelijk vijf randen.
+
+#### Testmap gespiegeld
+
+`tests/core/fml/` bevatte 49 specs waarvan 46 `core/plan`-modules testten. Die 46 staan nu in `tests/core/plan/`; de drie echte adapter-specs (`fml-roundtrip`, `build-fml-export-safe`, `areas-surfaces-roundtrip`) blijven. Plus zeven losse specs omgedoopt met hun module. De `.fml`-fixtures blijven `.fml` — dat zijn echte FML-bestanden.
+
+**Eindstand:** typecheck 0, 2580 tests met de bekende 9 rood, knip 129 exports / 123 types / 1 dood bestand (`test-plan-fixtures.ts`, al bekend als schuld). Eén verouderde `@lintignore` verwijderd die knip zelf als ongebruikt meldde.
 
 ---
 

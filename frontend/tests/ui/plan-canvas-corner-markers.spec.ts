@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 import { buildJunctions } from '@/ui/components/plan-canvas-junction-core'
 import {
   CORNER_AXIS_EPS_CM,

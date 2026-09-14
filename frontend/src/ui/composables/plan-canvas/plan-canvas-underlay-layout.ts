@@ -1,5 +1,5 @@
 /** Stage-px config voor Konva underlay (groep: flip-as + rotatie-as). */
-export type FmlUnderlayStageGeom = {
+export type PlanUnderlayStageGeom = {
   /** Buitenste groep: linker rand (verticaal midden) — scaleX −1 spiegelt hierover. */
   flip: { x: number; y: number; scaleX: number }
   /** Binnenste groep: midden van de plaat t.o.v. de linkerrand — rotatie om het center. */
@@ -20,7 +20,7 @@ export function buildUnderlayStageGeom(params: {
   heightStage: number
   rotationDeg?: number | null
   flipX?: boolean | null
-}): FmlUnderlayStageGeom {
+}): PlanUnderlayStageGeom {
   const { topLeftStage, widthStage, heightStage, rotationDeg, flipX } = params
   const rot = rotationDeg ?? 0
   const mirror = flipX === true

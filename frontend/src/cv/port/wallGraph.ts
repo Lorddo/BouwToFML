@@ -1,4 +1,4 @@
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import RBush from 'rbush'
 
 export interface Segment {

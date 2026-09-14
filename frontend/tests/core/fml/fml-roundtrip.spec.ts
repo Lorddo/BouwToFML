@@ -2,10 +2,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { switchFloorDesign } from '@/core/fml/design-sync'
+import { switchFloorDesign } from '@/core/plan/design-sync'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { translateFloorPlan } from '@/core/fml/translate-floor-plan'
-import type { FloorPlan } from '@/core/fml/types'
+import { translateFloorPlan } from '@/core/plan/translate-floor-plan'
+import type { FloorPlan } from '@/core/plan/types'
 
 const KINDERDIJK = resolve(
   __dirname,

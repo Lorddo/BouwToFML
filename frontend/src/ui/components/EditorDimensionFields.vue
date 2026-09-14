@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { DimensionMode, DimensionSettings } from '@/core/fml/fml-dimension-settings'
-import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
+import type { DimensionMode, DimensionSettings } from '@/core/plan/plan-dimension-settings'
+import type { DimensionVis } from '@/core/plan/plan-dimension-vis'
 
 defineProps<{
   settings: DimensionSettings

@@ -4,9 +4,9 @@ import {
   SCALE_GEOMETRY_FACTOR_MIN,
   SCALE_RESCALE_MIN_MEASURED_CM,
 } from '@/platform/calibration'
-import { toCmX, toCmY } from '@/core/fml/extraction-to-plan-geom'
-import type { PlanScaleFactors } from '@/core/fml/scale-floor-plan'
-import type { Point2D, Wall } from '@/core/fml/types'
+import { toCmX, toCmY } from '@/core/plan/extraction-to-plan-geom'
+import type { PlanScaleFactors } from '@/core/plan/scale-floor-plan'
+import type { Point2D, Wall } from '@/core/plan/types'
 
 /**
  * Pure helpers for stap-4 H/V-liniaal → anisotrope geometry rescale (zoals stap 1).

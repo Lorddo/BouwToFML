@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { fixtureSymbolLocalBounds } from '@/ui/composables/plan-canvas/plan-canvas-fixture-bounds'
-import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
+import { buildFixtureSymbol } from '@/core/plan/fixture-symbols'
 
 describe('fixtureSymbolLocalBounds', () => {
   it('fits a filled rect', () => {

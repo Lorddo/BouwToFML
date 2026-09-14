@@ -4,7 +4,7 @@
  * Host drives status fills via `inspectColors` and listens to `inspectSelect`.
  */
 import { ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import type { InspectHit } from '@/ui/composables/plan-canvas/plan-inspect'
 import PlanCanvas from '@/ui/components/PlanCanvas.vue'
 

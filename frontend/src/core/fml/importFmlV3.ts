@@ -6,11 +6,11 @@ import {
 } from '../plg/fml-adapter/opening-fml-refids'
 import { fixtureKindFromFmlRefid } from '../plg/fml-adapter/fixture-fml-refids'
 import { FML_REFID_EXTRA } from '../plg/fml-adapter/normalize-plan-identities'
-import { foldBovenlichtOnPlan, readBovenlichtPacked } from './bovenlicht'
-import { hydrateFacadeGroupsFromNativeMarkers } from './facade-groups'
-import { ensureRidgeDesignsOnPlan, syncRidgeWallGuidsFromDesigns } from './ridge-walls'
-import { syncRoofPlaneGuidsFromDesigns } from './roof-planes'
-import { stripBakedSliceDimensionsFromPlan } from './plan-slices'
+import { foldBovenlichtOnPlan, readBovenlichtPacked } from '@/core/plan/bovenlicht'
+import { hydrateFacadeGroupsFromNativeMarkers } from '@/core/plan/facade-groups'
+import { ensureRidgeDesignsOnPlan, syncRidgeWallGuidsFromDesigns } from '@/core/plan/ridge-walls'
+import { syncRoofPlaneGuidsFromDesigns } from '@/core/plan/roof-planes'
+import { stripBakedSliceDimensionsFromPlan } from '@/core/plan/plan-slices'
 import type {
   DrawingMeta,
   Floor,
@@ -26,16 +26,16 @@ import type {
   FloorPlanSource,
   FloorSource,
   FloorSurface,
-  FmlExtras,
+  PlanExtras,
   ImportResult,
   ImportWarning,
   Opening,
   OpeningType,
   Point2D,
   Wall,
-} from './types'
-import { UNLABELED_AREA_COLOR, isValidRoomTagHex, resolveRoomType } from './roomtype-catalog'
-import { OBJECT_LABEL_KEYS, parseObjectLabel } from './object-label'
+} from '@/core/plan/types'
+import { UNLABELED_AREA_COLOR, isValidRoomTagHex, resolveRoomType } from '@/core/plan/roomtype-catalog'
+import { OBJECT_LABEL_KEYS, parseObjectLabel } from '@/core/plan/object-label'
 
 interface RawPoint {
   x?: number
@@ -290,8 +290,8 @@ const FLOOR_KNOWN = new Set([
 
 const PROJECT_KNOWN = new Set(['name', 'id', 'public', 'features', 'settings', 'floors'])
 
-function pickExtras(raw: Record<string, unknown>, known: Set<string>): FmlExtras | undefined {
-  const extras: FmlExtras = {}
+function pickExtras(raw: Record<string, unknown>, known: Set<string>): PlanExtras | undefined {
+  const extras: PlanExtras = {}
   let has = false
   for (const [key, value] of Object.entries(raw)) {
     if (known.has(key)) continue
@@ -321,7 +321,7 @@ function resolveOpeningType(raw: RawOpening): OpeningType {
 function parseOpening(raw: RawOpening): Opening {
   const type = resolveOpeningType(raw)
   const mapped = openingKindFromFmlRefid(raw.refid, type)
-  const extras: FmlExtras = { ...(pickExtras(raw, OPENING_KNOWN) ?? {}) }
+  const extras: PlanExtras = { ...(pickExtras(raw, OPENING_KNOWN) ?? {}) }
   if (raw.refid && !mapped.known) {
     extras[FML_REFID_EXTRA] = raw.refid
   }
@@ -368,7 +368,7 @@ function parseWall(raw: RawWall, warnings: ImportWarning[], floorName: string): 
 
 function parseItem(raw: RawItem): FloorItem {
   const mapped = fixtureKindFromFmlRefid(raw.refid)
-  const extras: FmlExtras = { ...(pickExtras(raw, ITEM_KNOWN) ?? {}) }
+  const extras: PlanExtras = { ...(pickExtras(raw, ITEM_KNOWN) ?? {}) }
   if (raw.refid && !mapped.known) {
     extras[FML_REFID_EXTRA] = raw.refid
   }

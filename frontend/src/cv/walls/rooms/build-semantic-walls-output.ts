@@ -3,9 +3,9 @@ import type { ExtractionOutput } from '@/core/extraction'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import {
-  buildSemanticGraphFromFmlLayer,
-  hasFmlSemanticSource,
-  resolveFmlSourceJunctionCount,
+  buildSemanticGraphFromPlanLayer,
+  hasPlanSemanticSource,
+  resolvePlanSourceJunctionCount,
   semanticAsSegments,
 } from './build-semantic-walls-source'
 import { buildWallDistanceMap, measureSegmentThicknessMax } from './room-wall-segment-thickness'
@@ -18,18 +18,18 @@ export interface BuildSemanticWallsOutputResult {
 
 /**
  * Bouwt semantic wall graph + segmentdikte op walls-tab-output.
- * Bron: V3 L10 alleen bij `planReady` (via `resolveFmlSourceLayer`).
+ * Bron: V3 L10 alleen bij `planReady` (via `resolvePlanSourceLayer`).
  * Idempotent: slaat over als de graph al past bij het huidige junction-totaal.
  */
 export async function buildSemanticWallsForOutput(
   walls: ExtractionOutput,
   options: { force?: boolean } = {},
 ): Promise<BuildSemanticWallsOutputResult> {
-  if (!hasFmlSemanticSource(walls)) {
+  if (!hasPlanSemanticSource(walls)) {
     return { output: walls, built: false, usedLayerBFallback: false }
   }
 
-  const junctionCount = resolveFmlSourceJunctionCount(walls)
+  const junctionCount = resolvePlanSourceJunctionCount(walls)
   const existing = walls.semanticWallGraph
   if (
     !options.force &&
@@ -67,7 +67,7 @@ export async function buildSemanticWallsForOutput(
     }
   }
 
-  const built = buildSemanticGraphFromFmlLayer(walls)
+  const built = buildSemanticGraphFromPlanLayer(walls)
   let semantic = built.semantic
 
   if (walls.roomWallMaskRle) {
@@ -118,7 +118,7 @@ export async function ensureSemanticWallsOnTabOutputs(
   options: { force?: boolean } = {},
 ): Promise<{ outputs: TabDetectionOutputs; built: boolean }> {
   const walls = outputs.walls
-  if (!walls || !hasFmlSemanticSource(walls)) {
+  if (!walls || !hasPlanSemanticSource(walls)) {
     return { outputs, built: false }
   }
 

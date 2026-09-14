@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
-import { readBovenlichtPacked } from '@/core/fml/bovenlicht'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { FloorPlan } from '@/core/plan/types'
+import { readBovenlichtPacked } from '@/core/plan/bovenlicht'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
 import { PLAN_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
 import PlanCanvas from './PlanCanvas.vue'
@@ -29,7 +29,7 @@ const props = defineProps<{
   rotationDeg?: number
   flipX?: boolean
   underlayMoveMode?: boolean
-  thicknessPickTier: FmlThicknessBand | null
+  thicknessPickTier: ThicknessBand | null
   thicknessPresetCms: number[]
   bovenlichtDefault?: boolean
   windowBovenlichtDefault?: boolean

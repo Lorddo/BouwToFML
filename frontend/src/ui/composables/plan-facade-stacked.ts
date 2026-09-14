@@ -1,5 +1,5 @@
-import { findStackedWallIds, groupIdsForWall, groupIdForWall } from '@/core/fml/facade-groups'
-import type { FloorPlan } from '@/core/fml/types'
+import { findStackedWallIds, groupIdsForWall, groupIdForWall } from '@/core/plan/facade-groups'
+import type { FloorPlan } from '@/core/plan/types'
 import { confirmFacadeStackedFloors } from '@/ui/composables/plan-chrome-dialog'
 
 /**

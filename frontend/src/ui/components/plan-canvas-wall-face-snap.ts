@@ -1,10 +1,10 @@
-import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
+import { floorplannerLeftNormal } from '@/core/plan/plan-wall-geom'
 import {
   collectManualDimensionEndpoints,
   manualsAsSnapWalls,
-} from '@/core/fml/offset-dimension-line'
-import type { FloorDimension, Point2D, Wall } from '@/core/fml/types'
-import { snapPointToOuterWallFaces } from '@/core/fml/wall-outer-face'
+} from '@/core/plan/offset-dimension-line'
+import type { FloorDimension, Point2D, Wall } from '@/core/plan/types'
+import { snapPointToOuterWallFaces } from '@/core/plan/wall-outer-face'
 import { WALL_AXIS_EPS_CM } from './plan-canvas-junction-core'
 import { closestPointInRadius, snapDrawWallEndpoint } from './plan-canvas-junction-snap'
 import { resolveWallExtents } from './plan-canvas-wall-polygons'

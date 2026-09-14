@@ -10,7 +10,7 @@ import {
   resolveOpeningDragTarget,
 } from '@/ui/components/plan-canvas-opening-drag-geom'
 import { findOpeningById, updateOpeningById } from '@/ui/components/plan-canvas-openings'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 
 function doorOnWall(params: {
   id: string

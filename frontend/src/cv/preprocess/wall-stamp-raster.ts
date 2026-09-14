@@ -2,18 +2,18 @@
  * FML-muurstempel: filter → cm→px → bbox-transform → solid mask + gray raster.
  * Adaptive B/W (OpenCV) gebeurt in de caller via buildWallLayerBwMat op gray-canvas.
  */
-import type { Wall, Point2D } from '@/core/fml/types'
+import type { Wall, Point2D } from '@/core/plan/types'
 import {
-  classifyFmlThicknessBand,
-  type FmlThicknessBand,
-  type FmlThicknessBandBoundaries,
-  DEFAULT_FML_BAND_BOUNDARIES,
-} from '@/core/fml/fml-wall-thickness-tiers'
-import { cmPointToImagePx } from '@/core/fml/measure-underlay-wall-thickness'
+  classifyThicknessBand,
+  type ThicknessBand,
+  type ThicknessBandBoundaries,
+  DEFAULT_THICKNESS_BAND_BOUNDARIES,
+} from '@/core/plan/wall-thickness-tiers'
+import { cmPointToImagePx } from '@/core/plan/measure-underlay-wall-thickness'
 import {
   transformPointByBounds,
   type StampBounds,
-} from '@/core/fml/stamp-bounds'
+} from '@/core/plan/stamp-bounds'
 import { createCanvas, type CanvasLike } from '@/cv/port/canvasEnv'
 import { WALL_BW_INK, WALL_BW_WHITE } from '@/cv/preprocess/compose-wall-bw'
 
@@ -42,11 +42,11 @@ const STAMP_GRAY_INK = 32
 export function filterWallsByBands(
   walls: readonly Wall[] | readonly StampWallCm[],
   bands: StampBands,
-  boundaries: FmlThicknessBandBoundaries = DEFAULT_FML_BAND_BOUNDARIES,
+  boundaries: ThicknessBandBoundaries = DEFAULT_THICKNESS_BAND_BOUNDARIES,
 ): StampWallCm[] {
   const out: StampWallCm[] = []
   for (const wall of walls) {
-    const band: FmlThicknessBand = classifyFmlThicknessBand(wall.thickness, boundaries)
+    const band: ThicknessBand = classifyThicknessBand(wall.thickness, boundaries)
     if (!bands[band]) continue
     out.push({ a: { ...wall.a }, b: { ...wall.b }, thickness: wall.thickness })
   }

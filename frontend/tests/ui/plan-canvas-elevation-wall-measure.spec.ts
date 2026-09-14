@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ElevationWallRect } from '@/core/fml/facade-elevation'
+import type { ElevationWallRect } from '@/core/plan/facade-elevation'
 import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/plan-canvas/plan-canvas-opening-move-measure'
 import {
   buildElevationJunctionHeightMeasureLines,

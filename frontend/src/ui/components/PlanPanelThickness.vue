@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { FmlThicknessPickTier } from '@/core/fml/apply-fml-thickness-pick'
-import { FACTORY_THICKNESS_CMS } from '@/core/fml/fml-wall-thickness-catalog'
+import type { ThicknessPickTier } from '@/core/plan/apply-thickness-pick'
+import { FACTORY_THICKNESS_CMS } from '@/core/plan/wall-thickness-catalog'
 import { useI18n } from 'vue-i18n'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import ThicknessCatalogFields from './ThicknessCatalogFields.vue'
@@ -17,17 +17,17 @@ withDefaults(
     unit: ScaleInputUnit
     underlayAvailable?: boolean
     planThicknessCms?: number[]
-    fmlBandMidBoundaryCm?: number
-    fmlBandMaxBoundaryCm?: number
-    thicknessPickTier?: FmlThicknessPickTier | null
+    planBandMidBoundaryCm?: number
+    planBandMaxBoundaryCm?: number
+    thicknessPickTier?: ThicknessPickTier | null
     thicknessPickMessage?: string | null
     thicknessPickBusy?: boolean
   }>(),
   {
     underlayAvailable: false,
     planThicknessCms: () => [...FACTORY_THICKNESS_CMS],
-    fmlBandMidBoundaryCm: 12,
-    fmlBandMaxBoundaryCm: 23,
+    planBandMidBoundaryCm: 12,
+    planBandMaxBoundaryCm: 23,
     thicknessPickTier: null,
     thicknessPickMessage: null,
     thicknessPickBusy: false,
@@ -36,9 +36,9 @@ withDefaults(
 
 const emit = defineEmits<{
   'update:planThicknessCms': [value: number[]]
-  'update:fmlBandMidBoundaryCm': [value: number]
-  'update:fmlBandMaxBoundaryCm': [value: number]
-  startThicknessPick: [tier: FmlThicknessPickTier]
+  'update:planBandMidBoundaryCm': [value: number]
+  'update:planBandMaxBoundaryCm': [value: number]
+  startThicknessPick: [tier: ThicknessPickTier]
   cancelThicknessPick: []
 }>()
 </script>
@@ -70,12 +70,12 @@ const emit = defineEmits<{
           </button>
           <ScaleLengthInput
             input-class="band-input"
-            :cm="fmlBandMidBoundaryCm"
+            :cm="planBandMidBoundaryCm"
             :unit="unit"
             :min-cm="1"
             :aria-label="t('result.bandMidTitle')"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @update:cm="emit('update:fmlBandMidBoundaryCm', $event)"
+            @update:cm="emit('update:planBandMidBoundaryCm', $event)"
           />
         </div>
       </label>
@@ -96,12 +96,12 @@ const emit = defineEmits<{
           </button>
           <ScaleLengthInput
             input-class="band-input"
-            :cm="fmlBandMaxBoundaryCm"
+            :cm="planBandMaxBoundaryCm"
             :unit="unit"
             :min-cm="1"
             :aria-label="t('result.bandMaxTitle')"
             :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @update:cm="emit('update:fmlBandMaxBoundaryCm', $event)"
+            @update:cm="emit('update:planBandMaxBoundaryCm', $event)"
           />
         </div>
       </label>
@@ -109,8 +109,8 @@ const emit = defineEmits<{
     <p class="plan-band-hint">
       {{
         t('result.bandHint', {
-          mid: formatScaleInputLabel(fmlBandMidBoundaryCm, unit),
-          max: formatScaleInputLabel(fmlBandMaxBoundaryCm, unit),
+          mid: formatScaleInputLabel(planBandMidBoundaryCm, unit),
+          max: formatScaleInputLabel(planBandMaxBoundaryCm, unit),
         })
       }}
       <span class="plan-band-ratio">{{ t('result.bandHintRatio') }}</span>

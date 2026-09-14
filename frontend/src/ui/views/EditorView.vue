@@ -17,8 +17,8 @@ import '../components/plan-panel-fields.css'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
-} from '@/core/fml/opening-height-overflow'
-import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout'
+} from '@/core/plan/opening-height-overflow'
+import { cloneUnderlayOriginLayout } from '@/core/plan/drawing-to-underlay-layout'
 import {
   countExpandableBovenlicht,
   countFoldableBovenlicht,
@@ -26,14 +26,14 @@ import {
   foldBovenlichtOnPlan,
   readBovenlichtPacked,
   writeBovenlichtPacked,
-} from '@/core/fml/bovenlicht'
-import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
+} from '@/core/plan/bovenlicht'
+import { canApplyStampToFloor } from '@/core/plan/apply-stamp-to-floor'
 import { useEditorDak } from '@/ui/composables/editor/useEditorDak'
 import { useEditorDimensions } from '@/ui/composables/editor/useEditorDimensions'
 import { useEditorGevels } from '@/ui/composables/editor/useEditorGevels'
 import { useEditorUnderlay } from '@/ui/composables/editor/useEditorUnderlay'
-import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
-import type { FloorPlan, ImportWarning } from '@/core/fml/types'
+import type { RebasePlanToItemRefidResult } from '@/core/plan/rebase-plan-to-item-refid'
+import type { FloorPlan, ImportWarning } from '@/core/plan/types'
 import { useEditorBindRoof } from '@/ui/composables/editor/useEditorBindRoof'
 import { useEditorDownload } from '@/ui/composables/editor/useEditorDownload'
 import { useEditorFacadeGroups } from '@/ui/composables/editor/useEditorFacadeGroups'
@@ -402,7 +402,7 @@ function convertActiveDimensionsToManual(): void {
 
 // --- Opacity / text ---
 
-function onFmlOpacityInput(event: Event): void {
+function onContentOpacityInput(event: Event): void {
   contentOpacity.value = Number((event.target as HTMLInputElement).value) / 100
 }
 
@@ -519,7 +519,7 @@ watch(inspectMode, (on) => {
 
 const {
   loadFileName,
-  isLoadingFml,
+  isLoadingPlan,
   loadStatusLabel,
   floorLabel,
   selectFloor,
@@ -674,14 +674,14 @@ defineExpose({
               class="sidebar-icon-btn sidebar-icon-btn--primary"
               :title="t('viewer.newPlan')"
               :aria-label="t('viewer.newPlan')"
-              :disabled="isLoadingFml"
+              :disabled="isLoadingPlan"
               @click="startNewPlan"
             >
               <ToolbeltIcon name="edit" />
               <span>{{ t('viewer.newPlan') }}</span>
             </button>
           </div>
-          <p v-if="isLoadingFml" class="load-status-inline" role="status" aria-live="polite">
+          <p v-if="isLoadingPlan" class="load-status-inline" role="status" aria-live="polite">
             {{ loadStatusLabel }}
             <template v-if="loadFileName"> · {{ loadFileName }}</template>
           </p>
@@ -718,7 +718,7 @@ defineExpose({
                 step="1"
                 :value="Math.round(contentOpacity * 100)"
                 :aria-label="t('result.contentOpacityAria')"
-                @input="onFmlOpacityInput"
+                @input="onContentOpacityInput"
               />
             </div>
             <label class="hide-plan-text">
@@ -747,7 +747,7 @@ defineExpose({
               <div class="sidebar-icon-row sidebar-plan-actions">
                 <label
                   class="sidebar-icon-btn"
-                  :class="{ 'is-disabled': isLoadingFml }"
+                  :class="{ 'is-disabled': isLoadingPlan }"
                   :title="t('viewer.chooseFml')"
                   :aria-label="t('viewer.chooseFml')"
                 >
@@ -756,7 +756,7 @@ defineExpose({
                   <input
                     type="file"
                     :accept="EDITOR_PLAN_FILE_ACCEPT"
-                    :disabled="isLoadingFml"
+                    :disabled="isLoadingPlan"
                     @change="onFileInput"
                   />
                 </label>
@@ -831,7 +831,7 @@ defineExpose({
                   type="button"
                   class="sidebar-icon-btn"
                   :class="{ 'is-on': reuseUnderlayOpen }"
-                  :disabled="underlayReuseDonors.length === 0 || isLoadingFml"
+                  :disabled="underlayReuseDonors.length === 0 || isLoadingPlan"
                   :title="
                     needsUnderlayReuse
                       ? t('viewer.reuseUnderlayHintEmpty')
@@ -870,7 +870,7 @@ defineExpose({
                 <input
                   type="file"
                   accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-                  :disabled="isLoadingFml"
+                  :disabled="isLoadingPlan"
                   @change="onUnderlayFileInput"
                 />
               </label>
@@ -1173,7 +1173,7 @@ defineExpose({
 
     <main class="viewer-main">
       <div
-        v-if="isLoadingFml"
+        v-if="isLoadingPlan"
         class="plan-load-overlay"
         role="status"
         aria-live="polite"
@@ -1203,7 +1203,7 @@ defineExpose({
               class="floor-chip"
               :class="{ active: !gevelsMode && !dakMode && index === activeFloorIndex }"
               :aria-selected="!gevelsMode && !dakMode && index === activeFloorIndex"
-              :disabled="isLoadingFml"
+              :disabled="isLoadingPlan"
               :title="floorLabel(index)"
               @click="onSelectFloorChip(index)"
             >
@@ -1212,7 +1212,7 @@ defineExpose({
             <button
               type="button"
               class="floor-chip add"
-              :disabled="isLoadingFml"
+              :disabled="isLoadingPlan"
               :title="t('project.addFloor')"
               :aria-label="t('project.addFloor')"
               @click="onAddFloorChip"
@@ -1226,7 +1226,7 @@ defineExpose({
               class="floor-chip floor-chip--gevels"
               :class="{ active: gevelsMode }"
               :aria-selected="gevelsMode"
-              :disabled="isLoadingFml"
+              :disabled="isLoadingPlan"
               :title="t('viewer.elevationTab')"
               @click="enterGevelsMode()"
             >
@@ -1239,7 +1239,7 @@ defineExpose({
               class="floor-chip floor-chip--dak"
               :class="{ active: dakMode }"
               :aria-selected="dakMode"
-              :disabled="isLoadingFml"
+              :disabled="isLoadingPlan"
               :title="t('viewer.dakHint')"
               @click="enterDakMode()"
             >
@@ -1400,17 +1400,17 @@ defineExpose({
         <button
           type="button"
           class="upload-btn primary"
-          :disabled="isLoadingFml"
+          :disabled="isLoadingPlan"
           @click="startNewPlan"
         >
           {{ t('viewer.newPlan') }}
         </button>
-        <label class="upload-btn" :class="{ 'upload-btn--disabled': isLoadingFml }">
+        <label class="upload-btn" :class="{ 'upload-btn--disabled': isLoadingPlan }">
           {{ t('viewer.chooseFml') }}
           <input
             type="file"
             :accept="EDITOR_PLAN_FILE_ACCEPT"
-            :disabled="isLoadingFml"
+            :disabled="isLoadingPlan"
             @change="onFileInput"
           />
         </label>

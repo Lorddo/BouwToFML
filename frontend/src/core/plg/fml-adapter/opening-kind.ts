@@ -2,7 +2,7 @@
  * Opening kind ↔ FML refid/guid (via extras.fmlRefid bij unmapped).
  * Hydrate is grotendeels gedekt door `normalizePlanIdentities`; serialize schrijft hashes.
  */
-import type { FloorPlan, Opening } from '../../fml/types'
+import type { FloorPlan, Opening } from '../../plan/types'
 import { fmlRefidForOpeningKind } from './opening-fml-refids'
 import { FML_REFID_EXTRA } from './normalize-plan-identities'
 import type { FmlConceptAdapter } from './registry'

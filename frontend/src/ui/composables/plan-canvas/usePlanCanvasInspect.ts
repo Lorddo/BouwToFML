@@ -1,6 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { FloorPlan, Point2D, Wall } from '@/core/fml/types'
-import { facadeMemberIdsOnFloor, groupIdsForWall } from '@/core/fml/facade-groups'
+import type { FloorPlan, Point2D, Wall } from '@/core/plan/types'
+import { facadeMemberIdsOnFloor, groupIdsForWall } from '@/core/plan/facade-groups'
 import { findOpeningById } from '@/ui/components/plan-canvas-openings'
 import type { InspectHit } from './plan-inspect'
 import { pickInspectTarget } from './plan-inspect'

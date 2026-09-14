@@ -1,9 +1,9 @@
 import { basename } from 'node:path'
 import { summarizeRunJournal } from '@/core/diagnostics'
-import { extractionToPlanWithOrigin } from '@/core/fml/extractionToPlan'
-import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
+import { extractionToPlanWithOrigin } from '@/core/plan/extractionToPlan'
+import { harmonizeWallThickness } from '@/core/plan/harmonize-wall-thickness'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
+import { toLayer12DoorForPlan, toLayer14WindowsForPlan } from '@/core/plan/layer-openings-to-plan'
 import { decodeMaskRle } from '@/cv/util/binary-mask-rle'
 import { snapDoorsToWalls, orientBoundDoors } from '@/cv/doors'
 import { bindWindowsToWalls } from '@/cv/windows'
@@ -80,9 +80,9 @@ export async function runOpenings(walls: WallsHarnessResult): Promise<OpeningsHa
   const boundWindows = windowBind.bound
 
   const layer12Doors = orientedDoors
-    .map((door) => toLayer12DoorForFml(door, fixture.pxPerMmX, fixture.pxPerMmY))
+    .map((door) => toLayer12DoorForPlan(door, fixture.pxPerMmX, fixture.pxPerMmY))
     .filter((door): door is NonNullable<typeof door> => !!door)
-  const layer14Windows = toLayer14WindowsForFml(boundWindows)
+  const layer14Windows = toLayer14WindowsForPlan(boundWindows)
 
   const { plan } = extractionToPlanWithOrigin(wallsOutput, {
     pxPerMmX: fixture.pxPerMmX,
@@ -98,7 +98,7 @@ export async function runOpenings(walls: WallsHarnessResult): Promise<OpeningsHa
     layer14Windows,
   })
 
-  const harmonized = harmonizeFmlWallThickness(
+  const harmonized = harmonizeWallThickness(
     plan,
     fixture.fml.thicknessLimits,
     fixture.fml.bandBoundaries,

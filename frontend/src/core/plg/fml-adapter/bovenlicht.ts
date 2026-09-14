@@ -5,8 +5,8 @@
  * Fold-bij-import / expand-bij-export blijft in de legacy-keten
  * (vóór hydrate / via readBovenlichtPacked); de adapter houdt de FML-key synchroon.
  */
-import { readBovenlichtPacked } from '../../fml/bovenlicht'
-import type { FloorPlan } from '../../fml/types'
+import { readBovenlichtPacked } from '../../plan/bovenlicht'
+import type { FloorPlan } from '../../plan/types'
 import type { FmlConceptAdapter } from './registry'
 
 function hydratePlan(plan: FloorPlan): void {

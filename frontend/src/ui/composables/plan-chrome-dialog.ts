@@ -159,7 +159,7 @@ export function confirmPlanChromeDialog(): void {
   resolvePlanChromeDialog(true)
 }
 
-export async function alertFmlChrome(request: Omit<PlanChromeDialogRequest, 'kind'>): Promise<void> {
+export async function alertPlanChrome(request: Omit<PlanChromeDialogRequest, 'kind'>): Promise<void> {
   await showPlanChromeDialog({ ...request, kind: 'alert' })
 }
 

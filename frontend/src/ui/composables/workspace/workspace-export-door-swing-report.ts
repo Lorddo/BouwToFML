@@ -31,7 +31,7 @@ import {
 } from '@/cv/doors'
 import { resolveFloorDual, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import { assertSpacePolicy } from '@/cv/walls/rooms/space-policy-assert'
-import { resolveDoorTemplateKind } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/plan/types'
 import {
   normalizeDoorSwingState,
   resolveDoorRefKind,

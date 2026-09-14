@@ -20,7 +20,7 @@ import type {
   FloorSurface,
   Opening,
   Wall,
-} from '../../fml/types'
+} from '../../plan/types'
 import { wallElevationAdapter } from './wall-elevation'
 import { roofAdapter } from './roof'
 import { bovenlichtAdapter } from './bovenlicht'
@@ -38,7 +38,7 @@ export interface FmlConceptAdapter {
   /** Getypt veld → FML-raw. Muteert het export-object. */
   serializeWall?(wall: Wall, out: Record<string, unknown>, floor: Floor): void
   serializeOpening?(op: Opening, out: Record<string, unknown>): void
-  serializeItem?(item: import('../../fml/types').FloorItem, out: Record<string, unknown>): void
+  serializeItem?(item: import('../../plan/types').FloorItem, out: Record<string, unknown>): void
   serializeSurface?(s: FloorSurface, out: Record<string, unknown>): void
   serializePlanSettings?(plan: FloorPlan, settings: Record<string, unknown>): void
   serializeDesignSettings?(design: FloorDesign, settings: Record<string, unknown>): void

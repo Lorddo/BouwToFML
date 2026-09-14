@@ -1,4 +1,4 @@
-import type { FloorDimension, FloorLabel, FloorLine } from '@/core/fml/types'
+import type { FloorDimension, FloorLabel, FloorLine } from '@/core/plan/types'
 import {
   DEFAULT_SCALE_INPUT_UNIT,
   formatScaleInputLabel,

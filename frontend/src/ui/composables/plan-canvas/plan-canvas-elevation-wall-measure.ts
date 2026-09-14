@@ -1,5 +1,5 @@
-import type { ElevationJunction, ElevationWallRect } from '@/core/fml/facade-elevation'
-import type { Point2D } from '@/core/fml/types'
+import type { ElevationJunction, ElevationWallRect } from '@/core/plan/facade-elevation'
+import type { Point2D } from '@/core/plan/types'
 import { OPENING_MOVE_MEASURE_INSET_CM } from './plan-canvas-opening-move-measure'
 import { type MeasureLine, measureDistanceCm } from './plan-canvas-measure'
 

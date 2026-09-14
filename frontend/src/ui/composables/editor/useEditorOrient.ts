@@ -5,8 +5,8 @@ import {
   defaultFloorOrient,
   type FloorOrientOp,
   type FloorOrientState,
-} from '@/core/fml/floor-plan-orient'
-import type { FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/floor-plan-orient'
+import type { FloorPlan } from '@/core/plan/types'
 
 /**
  * Plattegrond-oriëntatie per verdieping (spiegelen/roteren). De editor heeft geen

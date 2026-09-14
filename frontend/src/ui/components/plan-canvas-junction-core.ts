@@ -1,8 +1,8 @@
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { Point2D, Wall } from '@/core/plan/types'
 import {
   promoteWallElevationFromExtras,
   splitWallEndpointExtras,
-} from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/wall-endpoint-height'
 import {
   openingWorldCenter,
   redistributeOpeningsAcrossSplit,
@@ -76,7 +76,7 @@ export function distance(a: Point2D, b: Point2D): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-function cloneFmlExtras(extras: Wall['extras']): Wall['extras'] {
+function clonePlanExtras(extras: Wall['extras']): Wall['extras'] {
   if (!extras) return undefined
   const next: NonNullable<Wall['extras']> = { ...extras }
   if (next.az != null && typeof next.az === 'object') {
@@ -104,7 +104,7 @@ export function cloneWalls(walls: Wall[]): Wall[] {
     elevation: wall.elevation
       ? { a: { ...wall.elevation.a }, b: { ...wall.elevation.b } }
       : undefined,
-    extras: cloneFmlExtras(wall.extras),
+    extras: clonePlanExtras(wall.extras),
   }))
 }
 

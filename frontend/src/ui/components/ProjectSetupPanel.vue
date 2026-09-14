@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { FloorMeta, ProjectFmlDefaults, ProjectMeta } from '../composables/project/types'
+import type { FloorMeta, ProjectPlanDefaults, ProjectMeta } from '../composables/project/types'
 import type { PersistedProjectIndexEntry } from '@/platform/project-store'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import ThicknessCatalogFields from './ThicknessCatalogFields.vue'
-import { limitsFromCatalog } from '@/core/fml/fml-wall-thickness-catalog'
+import { limitsFromCatalog } from '@/core/plan/wall-thickness-catalog'
 
 const props = defineProps<{
   meta: ProjectMeta
   floors: FloorMeta[]
   activeFloorId: string
   /** Hoogtes voor de geselecteerde verdieping. */
-  activeFloorDefaults: ProjectFmlDefaults
+  activeFloorDefaults: ProjectPlanDefaults
   /** Opgeslagen project in IndexedDB (stap 0 resume-kaart). */
   resumeCandidate?: PersistedProjectIndexEntry | null
   unit: ScaleInputUnit
@@ -22,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:meta': [patch: Partial<ProjectMeta>]
-  'update:floorDefaults': [patch: Partial<ProjectFmlDefaults>]
+  'update:floorDefaults': [patch: Partial<ProjectPlanDefaults>]
   resetFloorDefaults: []
   addFloor: []
   removeFloor: [id: string]

@@ -12,9 +12,9 @@ import {
   USER_SETTINGS_STORAGE_KEY,
   UserSettingsParseError,
 } from '@/ui/composables/settings/user-settings'
-import { createDefaultFloorFmlDefaults } from '@/ui/composables/project/defaults'
-import { loadFmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
-import { loadFmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
+import { createDefaultFloorDefaults } from '@/ui/composables/project/defaults'
+import { loadWallThicknessLimits } from '@/core/plan/wall-thickness-limits'
+import { loadThicknessBandBoundaries } from '@/core/plan/wall-thickness-tiers'
 
 const mockStorage = (() => {
   const store = new Map<string, string>()
@@ -193,14 +193,14 @@ describe('user-settings', () => {
     next.defaults.bandMidBoundaryCm = 11
     next.defaults.bandMaxBoundaryCm = 22
     saveUserSettings(next)
-    expect(loadFmlWallThicknessLimits()).toEqual({
+    expect(loadWallThicknessLimits()).toEqual({
       minCm: 9,
       midCm: 18,
       maxCm: 28,
       thicknessCms: [9, 18, 28],
     })
     // Meetband komt uit muur-REF — settings schrijven fabrieksbanden niet door.
-    expect(loadFmlThicknessBandBoundaries()).toEqual({
+    expect(loadThicknessBandBoundaries()).toEqual({
       midBoundaryCm: createFactoryUserSettings().defaults.bandMidBoundaryCm,
       maxBoundaryCm: createFactoryUserSettings().defaults.bandMaxBoundaryCm,
     })
@@ -425,13 +425,13 @@ describe('user-settings', () => {
     expect(loadUserSettings()).toEqual(createFactoryUserSettings())
   })
 
-  it('createDefaultFloorFmlDefaults reads user settings', () => {
+  it('createDefaultFloorDefaults reads user settings', () => {
     const next = createFactoryUserSettings()
     next.defaults.wallHeightCm = 310
     next.defaults.doorHeightCm = 230
     saveUserSettings(next)
-    expect(createDefaultFloorFmlDefaults().wallHeightCm).toBe(310)
-    expect(createDefaultFloorFmlDefaults().doorHeightCm).toBe(230)
+    expect(createDefaultFloorDefaults().wallHeightCm).toBe(310)
+    expect(createDefaultFloorDefaults().doorHeightCm).toBe(230)
   })
 
   it('facadeGroups factory 4; missing → factory; empty array blijft leeg', () => {

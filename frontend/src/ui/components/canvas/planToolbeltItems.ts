@@ -44,7 +44,7 @@ export function isPlanOneshotDrawTool(tool: PlanToolId | null): boolean {
 }
 
 /** True when the FML toolbar shows the settings strip (selection or draw/add tool). */
-export function isFmlToolbarSettingsOpen(args: {
+export function isPlanToolbarSettingsOpen(args: {
   hasWallSelection: boolean
   hasJunctionSelection: boolean
   hasOpeningSelection: boolean
@@ -85,7 +85,7 @@ export function isFmlToolbarSettingsOpen(args: {
 /** Toggle in de select-rij, tussen maatlijn en nulpunt. Geen PlanToolId. */
 export const PLAN_AREA_SIDE_DIMS_TOOL_ID = 'show_area_dims'
 
-export function getFmlSelectTools(): ToolbeltItem[] {
+export function getPlanSelectTools(): ToolbeltItem[] {
   return [
     { id: 'box_select', icon: 'rect', label: tGlobal('toolbelt.plan.boxSelect') },
     { id: 'measure', icon: 'ruler', label: tGlobal('toolbelt.plan.measure') },
@@ -99,7 +99,7 @@ export function getFmlSelectTools(): ToolbeltItem[] {
   ]
 }
 
-export function getFmlDrawTools(options?: {
+export function getPlanDrawTools(options?: {
   includeSurface?: boolean
   includeRoof?: boolean
   includeAnnotations?: boolean
@@ -130,7 +130,7 @@ export function getFmlDrawTools(options?: {
   return tools
 }
 
-export function getFmlLibraryTools(options?: { includeFixture?: boolean }): ToolbeltItem[] {
+export function getPlanLibraryTools(options?: { includeFixture?: boolean }): ToolbeltItem[] {
   const tools: ToolbeltItem[] = [
     { id: 'add_door', icon: 'door', label: tGlobal('toolbelt.plan.addDoor') },
     { id: 'add_window', icon: 'window', label: tGlobal('toolbelt.plan.addWindow') },
@@ -141,17 +141,17 @@ export function getFmlLibraryTools(options?: { includeFixture?: boolean }): Tool
   return tools
 }
 
-export function getFmlEditTools(options?: {
+export function getPlanEditTools(options?: {
   includeSurface?: boolean
   includeRoof?: boolean
   includeAnnotations?: boolean
   includeFixture?: boolean
 }): ToolbeltItem[] {
-  return [...getFmlDrawTools(options), ...getFmlLibraryTools(options)]
+  return [...getPlanDrawTools(options), ...getPlanLibraryTools(options)]
 }
 
-/** @deprecated Prefer getFmlSelectTools() so locale updates apply. */
-export const PLAN_SELECT_TOOLS: ToolbeltItem[] = getFmlSelectTools()
+/** @deprecated Prefer getPlanSelectTools() so locale updates apply. */
+export const PLAN_SELECT_TOOLS: ToolbeltItem[] = getPlanSelectTools()
 
-/** @deprecated Prefer getFmlEditTools() so locale updates apply. */
-export const PLAN_EDIT_TOOLS: ToolbeltItem[] = getFmlEditTools()
+/** @deprecated Prefer getPlanEditTools() so locale updates apply. */
+export const PLAN_EDIT_TOOLS: ToolbeltItem[] = getPlanEditTools()

@@ -2,8 +2,8 @@
  * Filter inject-vectoren op stempel-gum (eraseMask).
  * Hydrate/serialize houden de volle lijst; filter alleen bij lezen voor generate.
  */
-import type { Wall, Point2D } from '@/core/fml/types'
-import { cmPointToImagePx } from '@/core/fml/measure-underlay-wall-thickness'
+import type { Wall, Point2D } from '@/core/plan/types'
+import { cmPointToImagePx } from '@/core/plan/measure-underlay-wall-thickness'
 import { transformPointByBounds, type StampBounds } from '@/cv/preprocess/wall-stamp-raster'
 
 /** Weg als ≥ deze fractie van de hartlijn-monsters gewist is. */

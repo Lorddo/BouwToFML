@@ -1,5 +1,5 @@
-import type { Floor, FloorPlan } from '@/core/fml/types'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { Floor, FloorPlan } from '@/core/plan/types'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import type { PlgFloorDefaults } from '@/core/plg/plg-document'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { PdfUnderlaySource } from '@/platform/upload'
@@ -20,14 +20,14 @@ export type ProjectMeta = {
  * Floor-/project-defaults — alias van canonieke `PlgFloorDefaults` (`core/plg`).
  * Hoogtes, diktes, banden, bovenlicht.
  */
-export type ProjectFmlDefaults = PlgFloorDefaults
+export type ProjectPlanDefaults = PlgFloorDefaults
 
 export type FloorMeta = {
   id: string
   name: string
   level: number
   status: FloorStatus
-  defaults: ProjectFmlDefaults
+  defaults: ProjectPlanDefaults
 }
 
 /**

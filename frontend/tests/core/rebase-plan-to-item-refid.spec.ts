@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   ALIGN_FIXTURE_ORIGIN_EPS_CM,
   rebasePlanToItemRefid,
-} from '@/core/fml/rebase-plan-to-item-refid'
-import type { Floor, FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/rebase-plan-to-item-refid'
+import type { Floor, FloorPlan } from '@/core/plan/types'
 
 function floorWithBottle(
   name: string,

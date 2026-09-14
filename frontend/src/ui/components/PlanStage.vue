@@ -18,7 +18,7 @@ import PlanStageAreaDims from './PlanStageAreaDims.vue'
 import PlanStageCornerMarkers from './PlanStageCornerMarkers.vue'
 import PlanStageClearHeight from './PlanStageClearHeight.vue'
 import PlanStageRoofPlanes from './PlanStageRoofPlanes.vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import type { RenderCornerMarker } from '@/ui/composables/plan-canvas/plan-canvas-corner-markers'
 import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-mode'
 import {

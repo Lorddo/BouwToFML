@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { createEmptyFloorPlan } from '@/core/fml/empty-floor-plan'
-import { findRidgeDesignIndex } from '@/core/fml/ridge-walls'
-import type { FloorSurface, Wall } from '@/core/fml/types'
+import { createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
+import { findRidgeDesignIndex } from '@/core/plan/ridge-walls'
+import type { FloorSurface, Wall } from '@/core/plan/types'
 import {
   dakRoofRingsFromFloor,
   resolveDakSurfacePoint,

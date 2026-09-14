@@ -1,4 +1,4 @@
-import type { Point2D, Wall } from '@/core/fml/types'
+import type { Point2D, Wall } from '@/core/plan/types'
 import {
   fixtureObbHalfAlongNormal,
   WALL_FACE_SNAP_CM,

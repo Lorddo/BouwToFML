@@ -1,6 +1,6 @@
 import type { ElementClass } from '@/core/extraction/types'
 import type { GeometricSignature } from '@/core/extraction/geometric-signature'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 
 export type { ElementClass }
 
@@ -27,7 +27,7 @@ export interface SelectionRect {
   /**
    * Legacy sessie-tag. Nieuwe rects schrijven hem niet; restore mag hem negeren.
    */
-  wallThicknessBand?: FmlThicknessBand
+  wallThicknessBand?: ThicknessBand
 }
 
 export const SELECTION_COLORS: Record<ElementClass, string> = {

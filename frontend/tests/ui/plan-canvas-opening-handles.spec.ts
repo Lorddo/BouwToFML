@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   clampOpeningWidthKeepOppositeEdge,
   openingEdgesAlongWall,
-} from '@/core/fml/opening-along-wall-resize'
+} from '@/core/plan/opening-along-wall-resize'
 import { MAX_OPENING_WIDTH_CM } from '@/ui/components/plan-canvas-openings'
 import {
   planOpeningHandlePointsCm,
   resizeOpeningAlongWallFromPointer,
 } from '@/ui/composables/plan-canvas/plan-canvas-opening-handles'
-import type { Opening, Wall } from '@/core/fml/types'
+import type { Opening, Wall } from '@/core/plan/types'
 
 function wall(partial?: Partial<Wall>): Wall {
   return {

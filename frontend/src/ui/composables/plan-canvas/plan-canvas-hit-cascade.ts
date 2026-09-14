@@ -1,6 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { Point2D } from '@/core/plan/types'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import type { PlanViewContext } from './plan-view-context'
@@ -11,9 +11,9 @@ import type { RenderJunction } from './plan-canvas-render-types'
 import { isSettingsMod, resolveRelocatePointerIntent, wantsRelocate } from './plan-canvas-mods'
 import { pickDakPlanOverlayHit } from './plan-canvas-ridge-hit'
 import {
-  allowsFmlStickyHit,
+  allowsPlanStickyHit,
   wallPreemptsAreaHit,
-  type FmlStickySelectKind,
+  type PlanStickySelectKind,
 } from './plan-canvas-sticky-select'
 import { planStickySelectKind, setPlanSelected } from './plan-canvas-selected'
 
@@ -94,7 +94,7 @@ export interface PlanHitCascadeDeps {
   view: PlanViewContext
   modes: PlanHitCascadeModes
   actions: PlanHitCascadeActions
-  thicknessPickTier: Ref<FmlThicknessBand | null>
+  thicknessPickTier: Ref<ThicknessBand | null>
   emit: (event: 'thicknessWallPick', payload: string) => void
 }
 
@@ -102,8 +102,8 @@ export function runPlanHitCascade(deps: PlanHitCascadeDeps): void {
   const { cm, event, hitTest, selection, view, modes, actions, thicknessPickTier, emit } = deps
   const onDak = view.mode === 'dak'
 
-  const allowHit = (hit: FmlStickySelectKind): boolean =>
-    allowsFmlStickyHit(planStickySelectKind(selection), hit)
+  const allowHit = (hit: PlanStickySelectKind): boolean =>
+    allowsPlanStickyHit(planStickySelectKind(selection), hit)
   const ctrlHeld = (): boolean => isSettingsMod(event, modes.settingsMod.value)
   const relocateIntent = () =>
     resolveRelocatePointerIntent({

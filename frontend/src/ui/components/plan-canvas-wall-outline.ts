@@ -1,6 +1,6 @@
 import polygonClipping from 'polygon-clipping'
-import { wallFaces } from '@/core/fml/fml-wall-geom'
-import type { Point2D } from '@/core/fml/types'
+import { wallFaces } from '@/core/plan/plan-wall-geom'
+import type { Point2D } from '@/core/plan/types'
 import {
   MIN_WALL_LENGTH_CM,
   QUANTIZE_CM,

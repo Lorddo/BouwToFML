@@ -1,13 +1,13 @@
 import { ref, type Ref } from 'vue'
-import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
-import { listRidgeSurfacesOnFloor, resolveDormerParent, resolveRoofSurfaceColor } from '@/core/fml/roof-planes'
+import { snapRoofVertexZ } from '@/core/plan/roof-vertex-snap'
+import { listRidgeSurfacesOnFloor, resolveDormerParent, resolveRoofSurfaceColor } from '@/core/plan/roof-planes'
 import {
   effectiveRoomTypeColor,
   resolveRoomType,
   UNLABELED_AREA_COLOR,
-} from '@/core/fml/roomtype-catalog'
+} from '@/core/plan/roomtype-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import { snapDrawWallEndpoint } from '@/ui/components/plan-canvas-junction-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'

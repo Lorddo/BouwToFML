@@ -1,4 +1,4 @@
-import type { FloorArea, Point2D, Wall } from '@/core/fml/types'
+import type { FloorArea, Point2D, Wall } from '@/core/plan/types'
 
 /** Vertex volgt een meebewegende muur/knoop tot deze afstand (cm). */
 export const AREA_LIVE_SNAP_CM = 12

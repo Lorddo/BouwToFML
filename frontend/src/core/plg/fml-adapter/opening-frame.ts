@@ -1,8 +1,8 @@
 /**
  * B6 — opening.frame ↔ FML opening.btfFrame (via extras bij import).
  */
-import { OPENING_FRAME_EXTRA } from '../../fml/opening-display-geom'
-import type { FloorPlan, Opening } from '../../fml/types'
+import { OPENING_FRAME_EXTRA } from '../../plan/opening-display-geom'
+import type { FloorPlan, Opening } from '../../plan/types'
 import type { OpeningFrame } from '../extension-types'
 import type { FmlConceptAdapter } from './registry'
 

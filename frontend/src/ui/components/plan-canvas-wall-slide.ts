@@ -1,5 +1,5 @@
-import { absorbCoveredCollinearWalls } from '@/core/fml/sanitize-fml-walls'
-import type { Point2D, Wall } from '@/core/fml/types'
+import { absorbCoveredCollinearWalls } from '@/core/plan/sanitize-plan-walls'
+import type { Point2D, Wall } from '@/core/plan/types'
 import {
   COLLINEAR_DOT_THRESHOLD,
   MIN_CONNECTOR_LENGTH_CM,

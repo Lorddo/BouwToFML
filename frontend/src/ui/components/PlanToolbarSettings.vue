@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
-import type { FloorLineType } from '@/core/fml/types'
+import type { DoorAddSubtype, WindowAddSubtype } from '@/core/plan/opening-add-presets'
+import type { FloorLineType } from '@/core/plan/types'
 import type { OpeningSubtypeDraft } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
 import {
   isPlanOneshotDrawTool,
-  isFmlToolbarSettingsOpen,
+  isPlanToolbarSettingsOpen,
   type PlanToolId,
 } from './canvas/planToolbeltItems'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
@@ -379,7 +379,7 @@ const showOpeningSettings = computed(
 )
 
 const showSettings = computed(() => {
-  const open = isFmlToolbarSettingsOpen({
+  const open = isPlanToolbarSettingsOpen({
     hasWallSelection: props.selectedWallPanel != null,
     hasJunctionSelection: props.selectedJunctionPanel != null,
     hasOpeningSelection: props.selectedOpeningPanel != null,

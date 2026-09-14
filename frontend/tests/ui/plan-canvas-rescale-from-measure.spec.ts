@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
-import type { FloorPlan } from '@/core/fml/types'
+import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/plan/scale-floor-plan'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   rescaleStateFromImageHandles,
   initPlanRescaleStateFromWalls,

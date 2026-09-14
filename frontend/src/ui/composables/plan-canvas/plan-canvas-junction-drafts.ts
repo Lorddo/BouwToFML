@@ -1,10 +1,10 @@
 import { ref } from 'vue'
-import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import {
   readJunctionElevation,
   wallEndpoint3D,
   wallEndpointHeightCm,
-} from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/wall-endpoint-height'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
 import { bindScaleLengthDraftField } from './plan-canvas-draft-commit'

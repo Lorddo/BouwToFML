@@ -18,7 +18,7 @@ export function useWorkspaceLifecycle(deps: {
   scaleUi: { resetScaleFull: () => void; resetScaleUi: () => void }
   signature: { resetSignaturePreview: () => void }
   tabOutputs: Ref<TabDetectionOutputs>
-  fml: { clearImportedFml: () => void; resetFmlSessionDefaults: () => void }
+  fml: { clearImportedFml: () => void; resetPlanSessionDefaults: () => void }
   profileConfirmed: Ref<boolean>
   showOcrDetails: Ref<boolean>
   roomFaces: { resetRoomState: () => void }
@@ -44,7 +44,7 @@ export function useWorkspaceLifecycle(deps: {
    * Na factory-reset van FML-sessie-defaults: herstel actieve vloer-defaults
    * (o.a. bovenlicht). Late-bound — project composable bestaat pas na lifecycle.
    */
-  restoreFmlDefaultsFromActiveFloor?: () => void
+  restorePlanDefaultsFromActiveFloor?: () => void
 }) {
   function clearOpeningOverlays(): void {
     deps.doorSwingFaces?.resetDoorSwingState()
@@ -97,9 +97,9 @@ export function useWorkspaceLifecycle(deps: {
     deps.signature.resetSignaturePreview()
     deps.tabOutputs.value = emptyTabOutputs()
     deps.fml.clearImportedFml()
-    deps.fml.resetFmlSessionDefaults()
-    // resetFmlSessionDefaults zet o.a. bovenlicht op factory-false; project-/vloerdefault terugzetten.
-    deps.restoreFmlDefaultsFromActiveFloor?.()
+    deps.fml.resetPlanSessionDefaults()
+    // resetPlanSessionDefaults zet o.a. bovenlicht op factory-false; project-/vloerdefault terugzetten.
+    deps.restorePlanDefaultsFromActiveFloor?.()
     deps.profileConfirmed.value = true
     deps.showOcrDetails.value = false
     deps.roomFaces.resetRoomState()

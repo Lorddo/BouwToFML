@@ -10,7 +10,7 @@ import {
   DEFAULT_NOK_THICKNESS_CM,
   FLOOR_STACK_SETTINGS_KEY,
   readFloorStack,
-} from '../../fml/floor-stack'
+} from '../../plan/floor-stack'
 import {
   DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
   isRidgeDesign,
@@ -20,7 +20,7 @@ import {
   RIDGE_WALL_EXTRA,
   RIDGE_WALLS_SETTINGS_KEY,
   readRidgeWallsSettings,
-} from '../../fml/ridge-walls'
+} from '../../plan/ridge-walls'
 import {
   ROOF_ORIGIN_EXTRA,
   ROOF_ORIGIN_GENERATED,
@@ -31,8 +31,8 @@ import {
   listRidgeSurfacesOnPlan,
   readRoofPlanesSettings,
   roofSurfaceOrigin,
-} from '../../fml/roof-planes'
-import type { FloorDesign, FloorPlan, FloorSurface, Wall } from '../../fml/types'
+} from '../../plan/roof-planes'
+import type { FloorDesign, FloorPlan, FloorSurface, Wall } from '../../plan/types'
 import type { RoofKind } from '../extension-types'
 import type { FmlConceptAdapter } from './registry'
 

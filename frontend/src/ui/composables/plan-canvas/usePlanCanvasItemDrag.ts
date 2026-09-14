@@ -1,5 +1,5 @@
 import { ref, type ComputedRef, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import { isSettingsMod } from './plan-canvas-mods'
 import {
   snapFixtureCenterToWallFaces,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { listFixturePlaceOptions, type FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
+import { listFixturePlaceOptions, type FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
 import {
   TOOLBELT_HOTKEY_PRIORITY,
   useToolbeltHotkey,

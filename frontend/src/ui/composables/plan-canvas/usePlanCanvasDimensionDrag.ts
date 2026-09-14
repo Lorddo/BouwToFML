@@ -5,9 +5,9 @@ import {
   offsetDimensionForSlide,
   snapDimensionSlideToParallel,
   type DimensionEnd,
-} from '@/core/fml/offset-dimension-line'
-import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
-import type { FloorDimension, Point2D } from '@/core/fml/types'
+} from '@/core/plan/offset-dimension-line'
+import { filterManualDimensions, readPlanSlices } from '@/core/plan/plan-slices'
+import type { FloorDimension, Point2D } from '@/core/plan/types'
 import {
   MANUAL_DIM_FACE_SNAP_CM,
   snapDrawPointWithManualDimensions,

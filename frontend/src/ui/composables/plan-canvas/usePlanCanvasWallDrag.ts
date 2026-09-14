@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import type { FloorArea, Point2D, Wall } from '@/core/fml/types'
+import type { FloorArea, Point2D, Wall } from '@/core/plan/types'
 import { cloneAreasSnapshot } from './plan-canvas-area-live'
 import {
   type JunctionNode,

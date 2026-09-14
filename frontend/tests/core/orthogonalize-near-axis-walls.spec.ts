@@ -4,9 +4,9 @@ import {
   NEAR_ORTHO_MAX_DEG,
   offAxisDeg,
   orthogonalizeNearAxisWalls,
-} from '@/core/fml/orthogonalize-near-axis-walls'
-import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
-import type { FloorPlan, Wall } from '@/core/fml/types'
+} from '@/core/plan/orthogonalize-near-axis-walls'
+import { harmonizeWallThickness } from '@/core/plan/harmonize-wall-thickness'
+import type { FloorPlan, Wall } from '@/core/plan/types'
 
 function wall(
   id: string,
@@ -142,7 +142,7 @@ describe('orthogonalizeNearAxisWalls', () => {
   })
 })
 
-describe('harmonizeFmlWallThickness + near-ortho', () => {
+describe('harmonizeWallThickness + near-ortho', () => {
   it('eindigt met exacte H/V op near-ortho input', () => {
     const skew = 80 * Math.tan((0.5 * Math.PI) / 180)
     const plan = planWithWalls([
@@ -151,7 +151,7 @@ describe('harmonizeFmlWallThickness + near-ortho', () => {
       wall('top', { x: 120, y: 90 }, { x: 0, y: 90 }),
       wall('left', { x: 0, y: 90 }, { x: 0, y: 0 }),
     ])
-    const out = harmonizeFmlWallThickness(plan, { minCm: 10, midCm: 20, maxCm: 30 })
+    const out = harmonizeWallThickness(plan, { minCm: 10, midCm: 20, maxCm: 30 })
     for (const w of out.floors[0].walls) {
       const kind = classifyNearAxisWall(w)
       // Na snap: exact H of V (off-axis ≈ 0).

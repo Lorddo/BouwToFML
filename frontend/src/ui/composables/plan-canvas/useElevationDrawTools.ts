@@ -1,28 +1,28 @@
 import { ref, type Ref } from 'vue'
-import type { FloorPlan, Opening, Point2D } from '@/core/fml/types'
-import { maybeAddSiblingBovenlicht } from '@/core/fml/bovenlicht'
-import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import type { FloorPlan, Opening, Point2D } from '@/core/plan/types'
+import { maybeAddSiblingBovenlicht } from '@/core/plan/bovenlicht'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import {
   projectFacadeElevation,
   type ElevationBovenlichtDefaults,
   type ElevationWallRect,
   type FacadeElevation,
-} from '@/core/fml/facade-elevation'
+} from '@/core/plan/facade-elevation'
 import {
   collectElevationSplitSnapXs,
   elevationSplitPreviewAt,
   hitElevationWall,
   type ElevationSplitPreview,
-} from '@/core/fml/elevation-hit'
+} from '@/core/plan/elevation-hit'
 import {
   pickElevationWallForOpeningX,
   type ElevationSnapGuide,
-} from '@/core/fml/elevation-opening-edit'
+} from '@/core/plan/elevation-opening-edit'
 import {
   placeRidgeFromElevation,
   previewRidgeFromElevation,
   type ElevationRidgePlacePreview,
-} from '@/core/fml/elevation-ridge-place'
+} from '@/core/plan/elevation-ridge-place'
 import {
   beginRoofPlaceFromElevation,
   placeRoofFromElevation,
@@ -30,15 +30,15 @@ import {
   roofPlaceHoverElevPoint,
   type ElevationRoofPlaceDraft,
   type ElevationRoofPlacePreview,
-} from '@/core/fml/elevation-roof-place'
-import { addPlanOpening, splitPlanWallAtT } from '@/core/fml/elevation-openings'
+} from '@/core/plan/elevation-roof-place'
+import { addPlanOpening, splitPlanWallAtT } from '@/core/plan/elevation-openings'
 import {
   clampOpeningSillZ,
   clampOpeningWidth,
   clampWindowOpeningHeight,
 } from '@/ui/components/plan-canvas-openings'
-import { type DoorAddSubtype, type WindowAddSubtype } from '@/core/fml/opening-add-presets'
-import { buildOpeningFromPreset } from '@/core/fml/opening-from-preset'
+import { type DoorAddSubtype, type WindowAddSubtype } from '@/core/plan/opening-add-presets'
+import { buildOpeningFromPreset } from '@/core/plan/opening-from-preset'
 import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import type { ElevTool } from './elevation-tool'
 import type { ElevationInteractionProps } from './elevation-interaction-types'

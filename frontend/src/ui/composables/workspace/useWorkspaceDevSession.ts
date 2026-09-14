@@ -130,7 +130,7 @@ export type UseWorkspaceDevSessionDeps = {
   refreshWindowsFromExistingClasses: () => Promise<void>
   snapResolvedDoorsToWalls: () => void | Promise<void>
   updatePreviewPlan?: (
-    plan: import('@/core/fml/types').FloorPlan,
+    plan: import('@/core/plan/types').FloorPlan,
     layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
   ) => void
   setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void

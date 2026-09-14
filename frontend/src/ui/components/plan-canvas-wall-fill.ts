@@ -4,8 +4,8 @@ import {
   floorplannerLeftNormal,
   wallFaces,
   wallJoinFaceCorner,
-} from '@/core/fml/fml-wall-geom'
-import type { Point2D } from '@/core/fml/types'
+} from '@/core/plan/plan-wall-geom'
+import type { Point2D } from '@/core/plan/types'
 import type {
   WallFillComponent,
   WallPolygon,

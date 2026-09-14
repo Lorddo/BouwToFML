@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FLOOR_LINE_TYPES, type FloorLineType } from '@/core/fml/types'
+import { FLOOR_LINE_TYPES, type FloorLineType } from '@/core/plan/types'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import HexColorField from './HexColorField.vue'
 import './plan-toolbelt-settings-fields.css'

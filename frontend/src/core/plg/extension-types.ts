@@ -3,7 +3,7 @@
  * Schemakeys zijn schoon (`frame`, `slices`, `role`) — geen `btf*`-prefix.
  * Defaults = huidige impliciete FML-/accessor-gedrag (code wint op het plan).
  */
-import type { DrawingMeta, Point2D } from '../fml/types'
+import type { DrawingMeta, Point2D } from '../plan/types'
 
 export type { DrawingMeta, Point2D }
 

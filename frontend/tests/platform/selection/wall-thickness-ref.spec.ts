@@ -8,7 +8,7 @@ import {
   type WallRefThicknessMeasure,
 } from '@/platform/selection/wall-thickness-ref'
 import type { SelectionRect } from '@/platform/selection/types'
-import { classifyWallThicknessBandPx } from '@/core/fml/wall-thickness-chain'
+import { classifyWallThicknessBandPx } from '@/core/plan/wall-thickness-chain'
 
 const CATALOG_7_30_47 = [7, 30, 47]
 

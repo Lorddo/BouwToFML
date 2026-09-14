@@ -17,7 +17,7 @@ import { createPlanToolEntries } from '@/ui/composables/plan-canvas/plan-canvas-
 import type { PlanToolEntry } from '@/ui/composables/plan-canvas/plan-canvas-tool-registry'
 import type { HitTestApi } from '@/ui/composables/plan-canvas/plan-canvas-hit-test-api'
 import type { RenderJunction } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 
 /**
  * Harnas voor de karakteriseringstests op `onWrapPointerDown`.
@@ -284,7 +284,7 @@ export function makePointerHarness(
     modes?: ModeFixture
     drafts?: DraftFixture
     space?: boolean
-    thicknessTier?: FmlThicknessBand | null
+    thicknessTier?: ThicknessBand | null
     /** Terugwaarde van placeDoor/placeWindow/placeFixture. */
     placed?: string | null
     /** Cursor buiten het canvas: `clientToCm` geeft niets. */
@@ -298,7 +298,7 @@ export function makePointerHarness(
   const emitted: string[] = []
   const selection: PlanCanvasSelectionRefs = createPlanCanvasSelection()
   const spacePressed: Ref<boolean> = ref(options.space === true)
-  const thicknessPickTier = ref<FmlThicknessBand | null>(options.thicknessTier ?? null)
+  const thicknessPickTier = ref<ThicknessBand | null>(options.thicknessTier ?? null)
 
   const hitTest = makeHitTest(hits, options.noCm === true)
   const pointer = usePlanCanvasPointer({

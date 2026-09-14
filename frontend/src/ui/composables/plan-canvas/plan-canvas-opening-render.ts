@@ -1,6 +1,6 @@
-import type { Opening, OpeningType } from '@/core/fml/types'
-import { resolveWindowPanelCount, type OpeningAssetKind } from '@/core/fml/opening-refid-catalog'
-import { clamp01 } from '@/core/fml/extraction-to-plan-geom'
+import type { Opening, OpeningType } from '@/core/plan/types'
+import { resolveWindowPanelCount, type OpeningAssetKind } from '@/core/plan/opening-refid-catalog'
+import { clamp01 } from '@/core/plan/extraction-to-plan-geom'
 import {
   FACTORY_OPENING_COLORS,
   type OpeningDisplayColors,

@@ -16,7 +16,7 @@ import {
   type AppShellView,
 } from '@/ui/app-routes'
 import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()

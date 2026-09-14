@@ -13,14 +13,14 @@ withDefaults(
     /** FML X-spiegel actief (toggle-uiterlijk). */
     planOrientFlipX?: boolean
     /** ≥1 floor heeft FML (project-spiegel). */
-    hasAnyFloorFml?: boolean
+    hasAnyFloorPlan?: boolean
     /** Alle FML-floors hebben flipX (project-spiegel toggle). */
     projectOrientFlipX?: boolean
   }>(),
   {
     planLimitsDirty: false,
     planOrientFlipX: false,
-    hasAnyFloorFml: false,
+    hasAnyFloorPlan: false,
     projectOrientFlipX: false,
   },
 )
@@ -53,7 +53,7 @@ const emit = defineEmits<{
       type="button"
       class="sidebar-icon-btn"
       :class="{ 'is-on': projectOrientFlipX }"
-      :disabled="!hasAnyFloorFml"
+      :disabled="!hasAnyFloorPlan"
       :title="t('result.mirrorProjectHint')"
       @click="emit('mirrorProject')"
     >

@@ -3,9 +3,9 @@ import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
-import { createWorkspaceFmlGenerate } from './workspace/workspace-plan-generate'
-import type { WorkspaceFmlStampInject } from './workspace/workspace-plan-generate'
-import { createWorkspaceFmlThicknessUi } from './workspace/workspace-plan-thickness-ui'
+import { createWorkspacePlanGenerate } from './workspace/workspace-plan-generate'
+import type { WorkspaceStampInject } from './workspace/workspace-plan-generate'
+import { createWorkspaceThicknessUi } from './workspace/workspace-plan-thickness-ui'
 
 export function useWorkspacePlan(deps: {
   imageName: Ref<string | null>
@@ -35,11 +35,11 @@ export function useWorkspacePlan(deps: {
   planName?: Ref<string | null>
   floorName?: Ref<string | null>
   floorLevel?: Ref<number | null>
-  getStampVectorInject?: () => WorkspaceFmlStampInject | null
+  getStampVectorInject?: () => WorkspaceStampInject | null
   /** Test/override voor stap-4 hoogte overwrite-confirm. */
   confirmOverwrite?: (message: string) => boolean | Promise<boolean>
 }) {
-  const thickness = createWorkspaceFmlThicknessUi({
+  const thickness = createWorkspaceThicknessUi({
     scale: deps.scale,
     underlaySrc: deps.underlaySrc,
     underlaySize: deps.underlaySize,
@@ -50,7 +50,7 @@ export function useWorkspacePlan(deps: {
     referenceWallBandSync: deps.referenceWallBandSync,
   })
 
-  const generate = createWorkspaceFmlGenerate(
+  const generate = createWorkspacePlanGenerate(
     {
       imageName: deps.imageName,
       combinedOutput: deps.combinedOutput,
@@ -67,18 +67,18 @@ export function useWorkspacePlan(deps: {
       confirmOverwrite: deps.confirmOverwrite,
     },
     {
-      appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,
-      appliedFmlBandBoundaries: thickness.appliedFmlBandBoundaries,
-      appliedFmlWallHeightCm: thickness.appliedFmlWallHeightCm,
-      appliedFmlDoorHeightCm: thickness.appliedFmlDoorHeightCm,
-      appliedFmlWindowHeightCm: thickness.appliedFmlWindowHeightCm,
-      appliedFmlWindowSillZCm: thickness.appliedFmlWindowSillZCm,
+      appliedThicknessLimits: thickness.appliedThicknessLimits,
+      appliedBandBoundaries: thickness.appliedBandBoundaries,
+      appliedWallHeightCm: thickness.appliedWallHeightCm,
+      appliedDoorHeightCm: thickness.appliedDoorHeightCm,
+      appliedWindowHeightCm: thickness.appliedWindowHeightCm,
+      appliedWindowSillZCm: thickness.appliedWindowSillZCm,
       planThicknessCms: thickness.planThicknessCms,
-      fmlThicknessMinCm: thickness.fmlThicknessMinCm,
-      fmlThicknessMidCm: thickness.fmlThicknessMidCm,
-      fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
-      fmlBandMidBoundaryCm: thickness.fmlBandMidBoundaryCm,
-      fmlBandMaxBoundaryCm: thickness.fmlBandMaxBoundaryCm,
+      planThicknessMinCm: thickness.planThicknessMinCm,
+      planThicknessMidCm: thickness.planThicknessMidCm,
+      planThicknessMaxCm: thickness.planThicknessMaxCm,
+      planBandMidBoundaryCm: thickness.planBandMidBoundaryCm,
+      planBandMaxBoundaryCm: thickness.planBandMaxBoundaryCm,
       planWallHeightCm: thickness.planWallHeightCm,
       planDoorHeightCm: thickness.planDoorHeightCm,
       planWindowHeightCm: thickness.planWindowHeightCm,
@@ -95,7 +95,7 @@ export function useWorkspacePlan(deps: {
     generate.syncAppliedFromDraft()
   })
 
-  const handleFmlThicknessWallPick = thickness.createHandleFmlThicknessWallPick({
+  const handleThicknessWallPick = thickness.createHandleThicknessWallPick({
     previewPlan: generate.previewPlan,
     generatedPlan: generate.generatedPlan,
     previewUnderlayLayout: generate.previewUnderlayLayout,
@@ -127,11 +127,11 @@ export function useWorkspacePlan(deps: {
 
   return {
     planThicknessCms: thickness.planThicknessCms,
-    fmlThicknessMinCm: thickness.fmlThicknessMinCm,
-    fmlThicknessMidCm: thickness.fmlThicknessMidCm,
-    fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
-    fmlBandMidBoundaryCm: thickness.fmlBandMidBoundaryCm,
-    fmlBandMaxBoundaryCm: thickness.fmlBandMaxBoundaryCm,
+    planThicknessMinCm: thickness.planThicknessMinCm,
+    planThicknessMidCm: thickness.planThicknessMidCm,
+    planThicknessMaxCm: thickness.planThicknessMaxCm,
+    planBandMidBoundaryCm: thickness.planBandMidBoundaryCm,
+    planBandMaxBoundaryCm: thickness.planBandMaxBoundaryCm,
     planWallHeightCm: thickness.planWallHeightCm,
     planDoorHeightCm: thickness.planDoorHeightCm,
     planWindowHeightCm: thickness.planWindowHeightCm,
@@ -140,28 +140,28 @@ export function useWorkspacePlan(deps: {
     planWindowBovenlichtDefault: thickness.planWindowBovenlichtDefault,
     planBovenlichtHeightCm: thickness.planBovenlichtHeightCm,
     planBovenlichtGapCm: thickness.planBovenlichtGapCm,
-    appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,
-    appliedFmlBandBoundaries: thickness.appliedFmlBandBoundaries,
-    appliedFmlWallHeightCm: thickness.appliedFmlWallHeightCm,
-    appliedFmlDoorHeightCm: thickness.appliedFmlDoorHeightCm,
-    appliedFmlWindowHeightCm: thickness.appliedFmlWindowHeightCm,
-    appliedFmlWindowSillZCm: thickness.appliedFmlWindowSillZCm,
+    appliedThicknessLimits: thickness.appliedThicknessLimits,
+    appliedBandBoundaries: thickness.appliedBandBoundaries,
+    appliedWallHeightCm: thickness.appliedWallHeightCm,
+    appliedDoorHeightCm: thickness.appliedDoorHeightCm,
+    appliedWindowHeightCm: thickness.appliedWindowHeightCm,
+    appliedWindowSillZCm: thickness.appliedWindowSillZCm,
     planLimitsDirty: thickness.planLimitsDirty,
-    fmlBandDirty: thickness.fmlBandDirty,
+    planBandDirty: thickness.planBandDirty,
     applyBandBoundariesFromReferenceWall: thickness.applyBandBoundariesFromReferenceWall,
-    resetFmlSessionDefaults: thickness.resetFmlSessionDefaults,
+    resetPlanSessionDefaults: thickness.resetPlanSessionDefaults,
     syncAppliedFromDraft: generate.syncAppliedFromDraft,
     setPlanThicknessCms: thickness.setPlanThicknessCms,
-    setFmlThicknessMinCm: thickness.setFmlThicknessMinCm,
-    setFmlThicknessMidCm: thickness.setFmlThicknessMidCm,
-    setFmlThicknessMaxCm: thickness.setFmlThicknessMaxCm,
+    setPlanThicknessMinCm: thickness.setPlanThicknessMinCm,
+    setPlanThicknessMidCm: thickness.setPlanThicknessMidCm,
+    setPlanThicknessMaxCm: thickness.setPlanThicknessMaxCm,
     /** Silent UI hydrate (floor-defaults) — geen overwrite-confirm. */
-    hydrateFmlWallHeightCm: thickness.setPlanWallHeightCm,
-    hydrateFmlDoorHeightCm: thickness.setPlanDoorHeightCm,
-    hydrateFmlWindowHeightCm: thickness.setPlanWindowHeightCm,
-    hydrateFmlWindowSillZCm: thickness.setPlanWindowSillZCm,
-    hydrateFmlBovenlichtDefault: thickness.setPlanBovenlichtDefault,
-    hydrateFmlWindowBovenlichtDefault: thickness.setPlanWindowBovenlichtDefault,
+    hydratePlanWallHeightCm: thickness.setPlanWallHeightCm,
+    hydratePlanDoorHeightCm: thickness.setPlanDoorHeightCm,
+    hydratePlanWindowHeightCm: thickness.setPlanWindowHeightCm,
+    hydratePlanWindowSillZCm: thickness.setPlanWindowSillZCm,
+    hydratePlanBovenlichtDefault: thickness.setPlanBovenlichtDefault,
+    hydratePlanWindowBovenlichtDefault: thickness.setPlanWindowBovenlichtDefault,
     setPlanWallHeightCm,
     setPlanDoorHeightCm,
     setPlanWindowHeightCm,
@@ -170,14 +170,14 @@ export function useWorkspacePlan(deps: {
     setPlanWindowBovenlichtDefault,
     setPlanBovenlichtHeightCm: thickness.setPlanBovenlichtHeightCm,
     setPlanBovenlichtGapCm: thickness.setPlanBovenlichtGapCm,
-    setFmlBandMidBoundaryCm: thickness.setFmlBandMidBoundaryCm,
-    setFmlBandMaxBoundaryCm: thickness.setFmlBandMaxBoundaryCm,
+    setPlanBandMidBoundaryCm: thickness.setPlanBandMidBoundaryCm,
+    setPlanBandMaxBoundaryCm: thickness.setPlanBandMaxBoundaryCm,
     thicknessPickTier: thickness.thicknessPickTier,
     thicknessPickMessage: thickness.thicknessPickMessage,
     thicknessPickBusy: thickness.thicknessPickBusy,
-    startFmlThicknessPick: thickness.startFmlThicknessPick,
-    cancelFmlThicknessPick: thickness.cancelFmlThicknessPick,
-    handleFmlThicknessWallPick,
+    startThicknessPick: thickness.startThicknessPick,
+    cancelThicknessPick: thickness.cancelThicknessPick,
+    handleThicknessWallPick,
     buildGeneratedFmlText: generate.buildGeneratedFmlText,
     generatedStats: generate.generatedStats,
     openingHeightOverflow: generate.openingHeightOverflow,
@@ -197,10 +197,10 @@ export function useWorkspacePlan(deps: {
     applyFloorOrientOpToPreview: generate.applyFloorOrientOpToPreview,
     applyUnderlayOrientOp: generate.applyUnderlayOrientOp,
     setUnderlayMoveMode: generate.setUnderlayMoveMode,
-    applyNulpuntAtFmlCm: generate.applyNulpuntAtFmlCm,
+    applyNulpuntAtPlanCm: generate.applyNulpuntAtPlanCm,
     clearLivePlanCanvas: generate.clearLivePlanCanvas,
     resetGeneratedPreview: generate.resetGeneratedPreview,
-    regenerateFml: generate.regenerateFml,
+    regeneratePlan: generate.regeneratePlan,
     rescaleActive: generate.rescaleActive,
     rescaleState: generate.rescaleState,
     rescaleDistanceMmX: generate.rescaleDistanceMmX,
@@ -211,7 +211,7 @@ export function useWorkspacePlan(deps: {
     setPlanRescaleDistanceMmX: generate.setPlanRescaleDistanceMmX,
     setPlanRescaleDistanceMmY: generate.setPlanRescaleDistanceMmY,
     confirmPlanRescale: generate.confirmPlanRescale,
-    rescaleFmlFromRulers: generate.rescaleFmlFromRulers,
+    rescalePlanFromRulers: generate.rescalePlanFromRulers,
     clearImportedFml: generate.clearImportedFml,
   }
 }

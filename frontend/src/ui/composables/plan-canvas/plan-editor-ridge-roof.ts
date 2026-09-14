@@ -1,8 +1,8 @@
 import { computed, type Ref } from 'vue'
-import type { FloorPlan, FloorSurface, Point2D, Wall } from '@/core/fml/types'
-import { alertFmlChrome } from '@/ui/composables/plan-chrome-dialog'
+import type { FloorPlan, FloorSurface, Point2D, Wall } from '@/core/plan/types'
+import { alertPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import { tGlobal } from '@/ui/i18n'
-import { roofOverlapMessage, validateRoofOverlap } from '@/core/fml/roof-overlap'
+import { roofOverlapMessage, validateRoofOverlap } from '@/core/plan/roof-overlap'
 import {
   applyRidgeWallRemaps,
   assignRidgeWallGuids,
@@ -20,14 +20,14 @@ import {
   setRidgeWallsOnFloor,
   setRidgeWallsZ,
   unmarkWallAsRidge,
-} from '@/core/fml/ridge-walls'
+} from '@/core/plan/ridge-walls'
 import {
   findFloorIndexForRidgeWall,
   isPointSkyExposedOnFloor,
   moveRidgeWallsToFloor,
   resolveFloorIndexForRidgeSegment,
   writeRidgeWallsOnPlan,
-} from '@/core/fml/ridge-floor'
+} from '@/core/plan/ridge-floor'
 import {
   isRidgeSurfaceId,
   listParentRoofs,
@@ -41,7 +41,7 @@ import {
   setRidgeSurfacesOnFloor,
   syncRoofPlaneGuidsFromDesigns,
   withRoofKind,
-} from '@/core/fml/roof-planes'
+} from '@/core/plan/roof-planes'
 import {
   addRidgeSegment,
   removeWalls,
@@ -122,7 +122,7 @@ export function createEditorRidgeRoof(deps: EditorRidgeRoofDeps) {
     }
     const violation = validateRoofOverlap(next, existing)
     if (violation) {
-      void alertFmlChrome({
+      void alertPlanChrome({
         title: tGlobal('result.toolbar.roofOverlapTitle'),
         message: roofOverlapMessage(violation),
       })
@@ -186,7 +186,7 @@ export function createEditorRidgeRoof(deps: EditorRidgeRoofDeps) {
         const violation = validateRoofOverlap(merged, others)
         if (violation) {
           accepted = false
-          void alertFmlChrome({
+          void alertPlanChrome({
             title: tGlobal('result.toolbar.roofOverlapTitle'),
             message: roofOverlapMessage(violation),
           })
@@ -212,7 +212,7 @@ export function createEditorRidgeRoof(deps: EditorRidgeRoofDeps) {
     }
     const violation = validateRoofOverlap(merged, existing)
     if (violation) {
-      void alertFmlChrome({
+      void alertPlanChrome({
         title: tGlobal('result.toolbar.roofOverlapTitle'),
         message: roofOverlapMessage(violation),
       })

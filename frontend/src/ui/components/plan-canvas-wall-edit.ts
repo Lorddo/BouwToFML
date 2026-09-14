@@ -1,5 +1,5 @@
-import type { FloorPlan, Wall } from '@/core/fml/types'
-import { clampWallBalance } from '@/core/fml/fml-wall-geom'
+import type { FloorPlan, Wall } from '@/core/plan/types'
+import { clampWallBalance } from '@/core/plan/plan-wall-geom'
 import {
   setJunctionHeight as setJunctionEndpointHeight,
   setJunctionBottomZ as setJunctionEndpointBottomZ,
@@ -7,7 +7,7 @@ import {
   setWallsUniformHeight as setWallsUniformEndpointHeight,
   promoteWallElevationFromExtras,
   splitWallEndpointExtras,
-} from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/wall-endpoint-height'
 import {
   MIN_SPLIT_SEGMENT_CM,
   BALANCE_DEFAULT,

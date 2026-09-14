@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { scaleFloorPlan } from '@/core/fml/scale-floor-plan'
-import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
+import { scaleFloorPlan } from '@/core/plan/scale-floor-plan'
+import type { Floor, FloorPlan, Wall } from '@/core/plan/types'
 import { buildAreaSideDims } from '@/ui/composables/plan-canvas/plan-canvas-area-side-dims'
 import {
   regenerateFloorAreas,

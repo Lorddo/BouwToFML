@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   countPlanBovenlichtOpenings,
   countPlanOpenings,
@@ -12,12 +12,12 @@ import {
   overwritePlanWindowBovenlicht,
   overwritePlanWindowHeights,
   overwritePlanWindowSills,
-} from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/wall-endpoint-height'
 import {
   createFactoryViewerSessionDefaults,
   seedViewerDefaultsFromPlan,
   type ViewerSessionDefaults,
-} from '@/core/fml/viewer-session-defaults'
+} from '@/core/plan/viewer-session-defaults'
 import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'

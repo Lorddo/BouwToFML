@@ -1,4 +1,4 @@
-import type { FloorArea, Point2D } from '@/core/fml/types'
+import type { FloorArea, Point2D } from '@/core/plan/types'
 import {
   DEFAULT_SCALE_INPUT_UNIT,
   formatScaleInputLabel,

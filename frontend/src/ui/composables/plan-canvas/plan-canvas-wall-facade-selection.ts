@@ -1,5 +1,5 @@
 import { computed, watch } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import {
   DEFAULT_FACADE_GROUP_NAMES,
@@ -9,7 +9,7 @@ import {
   listFacadeGroups,
   STAMP_FACADE_GROUP_ID,
   type FacadeGroup,
-} from '@/core/fml/facade-groups'
+} from '@/core/plan/facade-groups'
 import {
   promptFacadeGroupName,
   promptFacadeGroupsEdit,

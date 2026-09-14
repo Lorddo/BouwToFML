@@ -1,8 +1,8 @@
-import { rebuildAreasFromHoles } from '@/core/fml/area-match'
-import { ensureDesignsSynced } from '@/core/fml/design-sync'
-import { holeMatchesFloorCutout } from '@/core/fml/ridge-floor'
-import { scaleFloorPlan, type PlanScaleFactors } from '@/core/fml/scale-floor-plan'
-import type { Floor, FloorPlan, Wall } from '@/core/fml/types'
+import { rebuildAreasFromHoles } from '@/core/plan/area-match'
+import { ensureDesignsSynced } from '@/core/plan/design-sync'
+import { holeMatchesFloorCutout } from '@/core/plan/ridge-floor'
+import { scaleFloorPlan, type PlanScaleFactors } from '@/core/plan/scale-floor-plan'
+import type { Floor, FloorPlan, Wall } from '@/core/plan/types'
 import { buildWallRenderGeometry } from '@/ui/components/plan-canvas-wall-polygons'
 import { snapHoleRingsToWallFaces } from './snap-area-holes-to-faces'
 

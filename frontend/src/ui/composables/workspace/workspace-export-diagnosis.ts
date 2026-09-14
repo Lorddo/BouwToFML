@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import {

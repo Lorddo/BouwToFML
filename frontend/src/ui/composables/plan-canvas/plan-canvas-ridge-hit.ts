@@ -1,5 +1,5 @@
-import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM, isRidgeWall } from '@/core/fml/ridge-walls'
-import type { Point2D, Wall } from '@/core/fml/types'
+import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM, isRidgeWall } from '@/core/plan/ridge-walls'
+import type { Point2D, Wall } from '@/core/plan/types'
 
 type RidgeHitWall = Pick<Wall, 'id' | 'a' | 'b' | 'thickness' | 'extras'>
 

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { markStampOwned, isStampOwnedWall } from '@/core/fml/stamp-owned'
+import { markStampOwned, isStampOwnedWall } from '@/core/plan/stamp-owned'
 import {
   resolveStampOwnership,
   transferOpeningToStampWall,
   STAMP_OWN_MIN_KEEP_CM,
-} from '@/core/fml/resolve-stamp-ownership'
-import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
-import { collectStampOwnedWallIds } from '@/core/fml/stamp-owned'
+} from '@/core/plan/resolve-stamp-ownership'
+import { harmonizeWallThickness } from '@/core/plan/harmonize-wall-thickness'
+import { collectStampOwnedWallIds } from '@/core/plan/stamp-owned'
 import { filterInjectWallsByEraseMask } from '@/cv/preprocess/stamp-inject-erase-filter'
-import type { FloorPlan, Opening, Wall } from '@/core/fml/types'
+import type { FloorPlan, Opening, Wall } from '@/core/plan/types'
 
 function wall(
   id: string,
@@ -171,7 +171,7 @@ describe('resolveStampOwnership', () => {
       floors: [{ name: 'F0', level: 0, height: 280, walls: owned }],
     }
     const pinned = collectStampOwnedWallIds(owned)
-    const harm = harmonizeFmlWallThickness(
+    const harm = harmonizeWallThickness(
       plan,
       { minCm: 10, midCm: 20, maxCm: 50 },
       { midBoundaryCm: 15, maxBoundaryCm: 25 },

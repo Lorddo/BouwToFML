@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
+import type { OpeningHeightOverflowSummary } from '@/core/plan/opening-height-overflow'
 import {
   formatScaleInputLabel,
   type ScaleInputUnit,

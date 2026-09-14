@@ -184,6 +184,8 @@ Daarmee blijft alleen groep A over met een FML-naam, en dat is precies de bedoel
 
 **~1000 vervangingen in 90 bestanden.** Restant is nu exact drie groepen, niets anders: groep A (≈340 refs, echte adapter), C1 (≈215, wacht op fase 6) en de vijf lees-aliassen. Getoetst met een restant-scan die ook `\w*_FML_\w*` meeneemt.
 
+> **Correctie (fase 6, 2026-09-14): «exact drie groepen» was fout.** Die restant-scan was geankerd op namen die *beginnen* met `fml` (plus de `_FML_`-reparatie), en zag daarmee een hele klasse niet: `Fml` in het **midden** van een naam. Ruim 400 refs bovenop C1, onder andere `parseFmlHex` 30, `isFmlToolbarSettingsOpen` 30, `harmonizeFmlWallThickness` 30, `ProjectFmlDefaults` 22, `sanitizeFmlWalls` 20, `FmlExtras` 58, `appliedFmlWallHeightCm` + 3 zusjes elk 19. Zelfde fout als eerder met `DEFAULT_FML_*`. Alles is meegegaan in fase 6 (120 namen, één kaart in [`phase6-name-map.mjs`](../../../../frontend/scripts/phase6-name-map.mjs)); zie [`fase6-en-css-voorwerk.md`](fase6-en-css-voorwerk.md). **Les: tel een restant nooit met een voorvoegsel-anker — meet met `Fml` op elke positie, of je onderschat de batch met een factor twee.**
+
 ### Vier dingen die ik eerst moest uitzoeken, niet renamen
 
 1.  **i18n-sleutels vallen samen met identifiers.** Een gemiste sleutel faalt *stil*: de UI toont het pad in plaats van de tekst, en geen typecheck of test ziet dat. [`scripts/check-i18n-collisions.mjs`](../../../../frontend/scripts/check-i18n-collisions.mjs) vond vijf: `fmlOpacity`, `fmlOpacityAria`, `fmlConversion`, `fmlConversionHint`, `fmlFold`.

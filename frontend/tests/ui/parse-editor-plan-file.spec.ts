@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   CURRENT_PLG_VERSION,
   DEFAULT_PLG_GENERATOR,

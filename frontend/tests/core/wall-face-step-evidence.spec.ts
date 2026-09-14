@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   classifyFaceStepEvidence,
   resolveChainFaceStepVerdict,
-} from '@/core/fml/wall-face-step-evidence'
+} from '@/core/plan/wall-face-step-evidence'
 
 describe('classifyFaceStepEvidence', () => {
   it('detects flush_minus when minus is continuous and plus jumps by Δt', () => {

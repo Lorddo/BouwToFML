@@ -3,8 +3,8 @@ import {
   composeFloorOrient,
   defaultFloorOrient,
   isIdentityFloorOrient,
-} from '@/core/fml/floor-plan-orient'
-import type { Floor, FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/floor-plan-orient'
+import type { Floor, FloorPlan } from '@/core/plan/types'
 import type { FloorOrientPersist, FloorWorkspaceBlob } from './types'
 
 function clonePlan(plan: FloorPlan): FloorPlan {

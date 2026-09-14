@@ -1,5 +1,5 @@
 import { computed, watch, type ComputedRef, type Ref } from 'vue'
-import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/plan/bovenlicht'
 
 /**
  * Sessie-defaults: wat een *nieuwe* opening erft van de instellingen.

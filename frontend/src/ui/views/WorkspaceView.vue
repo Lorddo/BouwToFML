@@ -30,7 +30,7 @@ import WorkspaceDiagnosisFab from '../components/WorkspaceDiagnosisFab.vue'
 import ProjectSetupPanel from '../components/ProjectSetupPanel.vue'
 import WorkspaceFloorRail from '../components/WorkspaceFloorRail.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useWorkspaceViewUi } from '../composables/workspace/useWorkspaceViewUi'
 import { workspaceCanvasHelpKeys } from '../composables/workspace/workspace-canvas-help'
@@ -102,7 +102,7 @@ const {
   layerDebugVisible,
   debugExportsVisible,
   hasUsedWallMask,
-  onFmlResultTab,
+  onPlanResultTab,
   planDevPanelVisible,
   gapsDevPanelVisible,
   doorsDevPanelVisible,
@@ -131,7 +131,7 @@ const {
   ocrInitialPassReady: api.ocrInitialPassReady,
 })
 
-watch(onFmlResultTab, (on) => {
+watch(onPlanResultTab, (on) => {
   if (!on) canvasFullscreen.value = false
 })
 
@@ -264,9 +264,9 @@ defineExpose<{
             :scale-confirmed="ws.scale.confirmed.value"
             :rects="ws.rects"
             :wall-thickness-limits="{
-              minCm: ws.fmlThicknessMinCm,
-              midCm: ws.fmlThicknessMidCm,
-              maxCm: ws.fmlThicknessMaxCm,
+              minCm: ws.planThicknessMinCm,
+              midCm: ws.planThicknessMidCm,
+              maxCm: ws.planThicknessMaxCm,
               thicknessCms: ws.planThicknessCms,
             }"
             :wall-ref-thickness-measures="ws.wallRefThicknessMeasures"
@@ -421,8 +421,8 @@ defineExpose<{
             :plan-bovenlicht-default="ws.planBovenlichtDefault"
             :plan-window-bovenlicht-default="ws.planWindowBovenlichtDefault"
             :plan-thickness-cms="ws.planThicknessCms"
-            :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
-            :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
+            :plan-band-mid-boundary-cm="ws.planBandMidBoundaryCm"
+            :plan-band-max-boundary-cm="ws.planBandMaxBoundaryCm"
             :plan-limits-dirty="ws.planLimitsDirty"
             :thickness-pick-tier="ws.thicknessPickTier"
             :thickness-pick-message="ws.thicknessPickMessage"
@@ -435,7 +435,7 @@ defineExpose<{
             :hide-plan-text="ws.hidePlanText"
             :underlay-available="!!ws.underlaySrc && !!ws.previewUnderlayLayout"
             :plan-orient-flip-x="ws.planOrient?.flipX === true"
-            :has-any-floor-fml="ws.hasAnyFloorFml"
+            :has-any-floor-plan="ws.hasAnyFloorPlan"
             :project-orient-flip-x="ws.projectOrientFlipX"
             :underlay-move-mode="ws.underlayMoveMode"
             :underlay-flip-x="ws.previewUnderlayLayout?.flipX === true"
@@ -459,13 +459,13 @@ defineExpose<{
             @update:plan-bovenlicht-default="ws.setPlanBovenlichtDefault"
             @update:plan-window-bovenlicht-default="ws.setPlanWindowBovenlichtDefault"
             @update:plan-thickness-cms="ws.setPlanThicknessCms"
-            @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
-            @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
+            @update:plan-band-mid-boundary-cm="ws.setPlanBandMidBoundaryCm"
+            @update:plan-band-max-boundary-cm="ws.setPlanBandMaxBoundaryCm"
             @update:rescale-distance-mm-x="ws.setPlanRescaleDistanceMmX"
             @update:rescale-distance-mm-y="ws.setPlanRescaleDistanceMmY"
-            @start-thickness-pick="ws.startFmlThicknessPick"
-            @cancel-thickness-pick="ws.cancelFmlThicknessPick"
-            @regenerate="ws.regenerateFml"
+            @start-thickness-pick="ws.startThicknessPick"
+            @cancel-thickness-pick="ws.cancelThicknessPick"
+            @regenerate="ws.regeneratePlan"
             @mirror-vertical="ws.applyFloorOrientOpToPreview('flipX')"
             @mirror-project="ws.applyProjectMirrorVertical()"
             @rotate90-cw="ws.applyFloorOrientOpToPreview('rotCw')"
@@ -488,7 +488,7 @@ defineExpose<{
           :can-go-next="ws.canGoNext"
           :next-step-button-label="ws.nextStepButtonLabel"
           :show-open-in-editor="ws.flowStep === 'result'"
-          :can-open-in-editor="ws.hasAnyFloorFml"
+          :can-open-in-editor="ws.hasAnyFloorPlan"
           @back="ws.goToPreviousStep"
           @next="ws.goToNextStep"
           @open-in-editor="onOpenInEditor"
@@ -544,7 +544,7 @@ defineExpose<{
             <ToolbeltIcon name="menu" />
           </button>
           <WorkspacePlanCanvasHost
-            v-if="onFmlResultTab"
+            v-if="onPlanResultTab"
             ref="planCanvasHostRef"
             v-model:canvas-fullscreen="canvasFullscreen"
             :floor-id="ws.activeFloorId"
@@ -573,8 +573,8 @@ defineExpose<{
             :rescale-mode="ws.rescaleActive"
             :rescale-state="ws.rescaleState"
             @plan-update="ws.updatePreviewPlan"
-            @thickness-wall-pick="ws.handleFmlThicknessWallPick"
-            @cancel-thickness-pick="ws.cancelFmlThicknessPick"
+            @thickness-wall-pick="ws.handleThicknessWallPick"
+            @cancel-thickness-pick="ws.cancelThicknessPick"
             @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
             @update-rescale-state="ws.updatePlanRescaleState"
             @cancel-rescale="ws.cancelPlanRescale()"
@@ -605,9 +605,9 @@ defineExpose<{
               :wall-thickness-limits="
                 ws.flowStep === 'preprocess'
                   ? {
-                      minCm: ws.fmlThicknessMinCm,
-                      midCm: ws.fmlThicknessMidCm,
-                      maxCm: ws.fmlThicknessMaxCm,
+                      minCm: ws.planThicknessMinCm,
+                      midCm: ws.planThicknessMidCm,
+                      maxCm: ws.planThicknessMaxCm,
                       thicknessCms: ws.planThicknessCms,
                     }
                   : null
@@ -784,11 +784,11 @@ defineExpose<{
       <WorkspacePlanDevPanel
         v-if="planDevPanelVisible"
         :enabled="ws.scale.confirmed.value && !!ws.combinedOutput"
-        :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
-        :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
-        :fml-band-dirty="ws.fmlBandDirty"
-        @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
-        @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
+        :plan-band-mid-boundary-cm="ws.planBandMidBoundaryCm"
+        :plan-band-max-boundary-cm="ws.planBandMaxBoundaryCm"
+        :plan-band-dirty="ws.planBandDirty"
+        @update:plan-band-mid-boundary-cm="ws.setPlanBandMidBoundaryCm"
+        @update:plan-band-max-boundary-cm="ws.setPlanBandMaxBoundaryCm"
       />
 
       <WorkspaceGapsDevPanel

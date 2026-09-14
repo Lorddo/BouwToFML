@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { FloorItem, Point2D, Wall } from '@/core/fml/types'
+import type { FloorItem, Point2D, Wall } from '@/core/plan/types'
 import {
   FIT_CONTENT_PAD,
   layoutInFitInsets,

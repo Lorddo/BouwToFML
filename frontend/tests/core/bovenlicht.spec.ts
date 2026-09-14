@@ -12,8 +12,8 @@ import {
   resolveBovenlichtHeightCm,
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
-} from '@/core/fml/bovenlicht'
-import { type FloorPlan, type Opening, type Wall } from '@/core/fml/types'
+} from '@/core/plan/bovenlicht'
+import { type FloorPlan, type Opening, type Wall } from '@/core/plan/types'
 
 const door = (overrides: Partial<Opening> = {}): Opening => ({
   id: overrides.id ?? 'door-1',

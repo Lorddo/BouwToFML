@@ -5,8 +5,8 @@ import { tally } from '@/core/diagnostics'
 import type { RoomWallMaskRle } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import type { Segment } from '@/cv/port/wallGraph'
-import { wallThicknessBandsCompatible } from '@/core/fml/wall-thickness-chain'
-import { FML_BAND_MAX_RATIO } from '@/core/fml/fml-wall-thickness-tiers'
+import { wallThicknessBandsCompatible } from '@/core/plan/wall-thickness-chain'
+import { THICKNESS_BAND_MAX_RATIO } from '@/core/plan/wall-thickness-tiers'
 import { buildWallDistanceMap } from '@/cv/walls/rooms/room-wall-segment-thickness'
 import {
   resolveThicknessSampleEnds,
@@ -15,7 +15,7 @@ import {
 import { resolveObliquePolicy } from '../../policies/oblique'
 import type { CollapsePolicy } from '../policy-types'
 
-export { isWallThicknessBridgeCandidatePx } from '@/core/fml/wall-thickness-chain'
+export { isWallThicknessBridgeCandidatePx } from '@/core/plan/wall-thickness-chain'
 
 function sampleSegmentThicknessPx(params: {
   segment: Segment
@@ -55,7 +55,7 @@ function sampleSegmentThicknessPx(params: {
 
 /** Max |Δdikte| dat als meetruis telt bij collineaire fake-L (zelfde band-schaal als FML max). */
 function resolveCollinearThicknessNoiseMaxPx(referenceWallThicknessPx: number): number {
-  return Math.max(referenceWallThicknessPx, 1) * FML_BAND_MAX_RATIO
+  return Math.max(referenceWallThicknessPx, 1) * THICKNESS_BAND_MAX_RATIO
 }
 
 export function collinearThicknessWithinMaxBandNoise(

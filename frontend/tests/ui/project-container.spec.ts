@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { mergeFloorPlans, stampFloorMeta } from '@/ui/composables/project/merge-floor-plans'
 import {
-  createDefaultFloorFmlDefaults,
+  createDefaultFloorDefaults,
   createEmptyProjectState,
 } from '@/ui/composables/project/defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
 import { floorStatusFromFlowStep } from '@/ui/composables/project/types'
-import type { Floor } from '@/core/fml/types'
+import type { Floor } from '@/core/plan/types'
 
 function wallFloor(name: string, level: number, wallId: string): Floor {
   return {
@@ -94,14 +94,14 @@ describe('project defaults + gates', () => {
     expect(state.meta.name).toBe('')
     expect(state.activeFloorId).toBe(state.floors[0].id)
     expect(state.blobs[state.activeFloorId]?.session).toBeNull()
-    expect(state.floors[0].defaults).toEqual(createDefaultFloorFmlDefaults())
+    expect(state.floors[0].defaults).toEqual(createDefaultFloorDefaults())
   })
 
   it('each floor carries full FML defaults (no project-level layer)', () => {
     const state = createEmptyProjectState()
     const floor = state.floors[0]
-    expect(floor.defaults.wallHeightCm).toBe(createDefaultFloorFmlDefaults().wallHeightCm)
-    expect(floor.defaults.doorHeightCm).toBe(createDefaultFloorFmlDefaults().doorHeightCm)
+    expect(floor.defaults.wallHeightCm).toBe(createDefaultFloorDefaults().wallHeightCm)
+    expect(floor.defaults.doorHeightCm).toBe(createDefaultFloorDefaults().doorHeightCm)
   })
 
   it('projectStepCanProceed requires name and floors (adres optioneel)', () => {

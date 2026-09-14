@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
-import type { FloorPlan, Point2D, Wall } from '@/core/fml/types'
-import { isRidgeWallId, rejectRidgeGuids } from '@/core/fml/ridge-walls'
-import { applyStampToFloor, canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
+import type { FloorPlan, Point2D, Wall } from '@/core/plan/types'
+import { isRidgeWallId, rejectRidgeGuids } from '@/core/plan/ridge-walls'
+import { applyStampToFloor, canApplyStampToFloor } from '@/core/plan/apply-stamp-to-floor'
 import {
   applyFacadeGroupRemaps,
   assignWallsToGroup,
@@ -19,7 +19,7 @@ import {
   renameFacadeGroup,
   type FacadeGroup,
   type FacadeGroupCreateInput,
-} from '@/core/fml/facade-groups'
+} from '@/core/plan/facade-groups'
 import { setPlanWallsThicknessKeepBalance } from '@/ui/components/plan-canvas-wall-edit'
 import { regenerateFloorAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import { materializeEndpointJoinsAtPoint } from '@/ui/components/plan-canvas-wall-draw-geom'

@@ -1,5 +1,5 @@
-import type { Opening, OpeningType, Wall } from '@/core/fml/types'
-import { totalWallLengthCm, wallLengthCm } from '@/core/fml/fml-wall-geom'
+import type { Opening, OpeningType, Wall } from '@/core/plan/types'
+import { totalWallLengthCm, wallLengthCm } from '@/core/plan/plan-wall-geom'
 
 export type Point2 = { x: number; y: number }
 

@@ -20,7 +20,7 @@ import {
   type StampWallCm,
   type StampWallPx,
 } from '@/cv/preprocess/wall-stamp-raster'
-import { DEFAULT_FML_BAND_BOUNDARIES } from '@/core/fml/fml-wall-thickness-tiers'
+import { DEFAULT_THICKNESS_BAND_BOUNDARIES } from '@/core/plan/wall-thickness-tiers'
 
 describe('filterWallsByBands', () => {
   const walls: StampWallCm[] = [
@@ -150,7 +150,7 @@ describe('rasterize solid + erase + OR', () => {
       }
     }
     expect(foundDiff || stampMaskHasInk(solid)).toBe(true)
-    void DEFAULT_FML_BAND_BOUNDARIES
+    void DEFAULT_THICKNESS_BAND_BOUNDARIES
   })
 })
 

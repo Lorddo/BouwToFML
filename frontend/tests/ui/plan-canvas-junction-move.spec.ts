@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 import { usePlanCanvasJunctionMove } from '@/ui/composables/plan-canvas/usePlanCanvasJunctionMove'
 import type { RenderJunction } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
 

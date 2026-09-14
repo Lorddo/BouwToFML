@@ -94,7 +94,7 @@ function createLifecycle(preprocess: Ref<PreprocessConfig>) {
     scaleUi: { resetScaleFull: noop, resetScaleUi: noop },
     signature: { resetSignaturePreview: noop },
     tabOutputs: ref(emptyTabOutputs()),
-    fml: { clearImportedFml: noop, resetFmlSessionDefaults: noop },
+    fml: { clearImportedFml: noop, resetPlanSessionDefaults: noop },
     profileConfirmed: ref(false),
     showOcrDetails: ref(true),
     roomFaces: { resetRoomState: noop },

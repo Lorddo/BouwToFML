@@ -2,13 +2,13 @@ import {
   catalogMaxCm,
   nextUnusedCatalogCm,
   normalizeThicknessCatalog,
-} from '@/core/fml/fml-wall-thickness-catalog'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+} from '@/core/plan/wall-thickness-catalog'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { SelectionRect } from './types'
 
 export const MAX_WALL_REFS = 8
 
-export type WallThicknessBand = FmlThicknessBand
+export type WallThicknessBand = ThicknessBand
 
 export type WallRefThicknessMeasure = {
   /** Legacy sessie-tag; nieuwe metingen schrijven thicknessCm. */

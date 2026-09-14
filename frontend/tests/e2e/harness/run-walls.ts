@@ -1,10 +1,10 @@
 import { resetRunJournal, summarizeRunJournal } from '@/core/diagnostics'
-import { extractionToPlanWithOrigin } from '@/core/fml/extractionToPlan'
-import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
+import { extractionToPlanWithOrigin } from '@/core/plan/extractionToPlan'
+import { harmonizeWallThickness } from '@/core/plan/harmonize-wall-thickness'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { classifyFmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
-import { wallLengthCm } from '@/core/fml/fml-wall-geom'
-import type { FloorPlan } from '@/core/fml/types'
+import { classifyThicknessBand } from '@/core/plan/wall-thickness-tiers'
+import { wallLengthCm } from '@/core/plan/plan-wall-geom'
+import type { FloorPlan } from '@/core/plan/types'
 import { runPipelineV3 } from '@/cv/walls/rooms/pipeline-v3'
 import { buildSemanticWallsForOutput } from '@/cv/walls/rooms/build-semantic-walls-output'
 import type { ExtractionOutput } from '@/core/extraction'
@@ -85,7 +85,7 @@ export function buildFmlSnapshot(
 
   const wallSnaps: FmlWallSnapshot[] = walls.map((wall) => {
     totalLengthCm += wallLengthCm(wall)
-    const band = classifyFmlThicknessBand(wall.thickness, bandBoundaries)
+    const band = classifyThicknessBand(wall.thickness, bandBoundaries)
     thicknessBands[band] += 1
     minX = Math.min(minX, wall.a.x, wall.b.x)
     minY = Math.min(minY, wall.a.y, wall.b.y)
@@ -233,7 +233,7 @@ export async function runWalls(slug: string): Promise<WallsHarnessResult> {
     layer14Windows: [],
   })
 
-  const harmonized = harmonizeFmlWallThickness(
+  const harmonized = harmonizeWallThickness(
     plan,
     fixture.fml.thicknessLimits,
     fixture.fml.bandBoundaries,

@@ -14,7 +14,7 @@ import {
   isGapsDevPanelVisible,
   isLayerDebugVisible,
   isOcrHitRemoveEnabled,
-  isOnFmlResultTab,
+  isOnPlanResultTab,
   isTemplatesFinalizeBusy,
   isTemplatesInitialDetectionBusy,
   isWindowsDevPanelVisible,
@@ -144,9 +144,9 @@ export function useWorkspaceViewUi(deps: {
 
   const debugSidebarVisible = computed(() => !!deps.imageSrc.value)
 
-  const onFmlResultTab = computed(() => isOnFmlResultTab(deps.flowStep.value, deps.resultTab.value))
+  const onPlanResultTab = computed(() => isOnPlanResultTab(deps.flowStep.value, deps.resultTab.value))
 
-  const planDevPanelVisible = computed(() => onFmlResultTab.value)
+  const planDevPanelVisible = computed(() => onPlanResultTab.value)
 
   const gapsDevPanelVisible = computed(() =>
     isGapsDevPanelVisible(deps.flowStep.value, deps.preprocessTab.value, deps.templateTab.value),
@@ -192,7 +192,7 @@ export function useWorkspaceViewUi(deps: {
     debugExportsVisible,
     hasUsedWallMask,
     debugSidebarVisible,
-    onFmlResultTab,
+    onPlanResultTab,
     planDevPanelVisible,
     gapsDevPanelVisible,
     doorsDevPanelVisible,
@@ -212,7 +212,7 @@ export function useWorkspaceViewUi(deps: {
     debugExportsVisible: ComputedRef<boolean>
     hasUsedWallMask: ComputedRef<boolean>
     debugSidebarVisible: ComputedRef<boolean>
-    onFmlResultTab: ComputedRef<boolean>
+    onPlanResultTab: ComputedRef<boolean>
     planDevPanelVisible: ComputedRef<boolean>
     gapsDevPanelVisible: ComputedRef<boolean>
     doorsDevPanelVisible: ComputedRef<boolean>

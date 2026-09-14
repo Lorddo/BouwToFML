@@ -1,11 +1,11 @@
-import type { Opening, OpeningType } from '@/core/fml/types'
+import type { Opening, OpeningType } from '@/core/plan/types'
 import {
   isTriangleWindow,
   resolveDoorSubtypeFromRefid,
   resolveWindowSubtypeFromRefid,
   type DoorAddSubtype,
   type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
+} from '@/core/plan/opening-add-presets'
 import {
   BOVENLICHT_GAP_CM,
   BOVENLICHT_HEIGHT_CM,
@@ -13,12 +13,12 @@ import {
   resolveBovenlichtHeightCm,
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
-} from '@/core/fml/bovenlicht'
+} from '@/core/plan/bovenlicht'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import { resolveHingeAtStart, resolveSwingSign } from '@/ui/components/plan-canvas-doors'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/plan-canvas-openings'
 

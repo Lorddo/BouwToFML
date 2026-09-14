@@ -1,10 +1,10 @@
 import { ref, watch } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import {
   hitElevationBand,
   hitElevationJunction,
@@ -12,14 +12,14 @@ import {
   hitElevationRoofPlane,
   hitElevationRoofVertex,
   hitElevationWall,
-} from '@/core/fml/elevation-hit'
-import type { ElevationSnapGuide } from '@/core/fml/elevation-opening-edit'
+} from '@/core/plan/elevation-hit'
+import type { ElevationSnapGuide } from '@/core/plan/elevation-opening-edit'
 import {
   resolveDoorAddPreset,
   resolveWindowAddPreset,
   type DoorAddSubtype,
   type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
+} from '@/core/plan/opening-add-presets'
 import {
   applyDrawTypeKey,
   isDrawTypeLengthKey,

@@ -1,5 +1,5 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import {

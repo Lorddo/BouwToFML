@@ -6,7 +6,7 @@ import {
   FACADE_GROUPS_SETTINGS_KEY,
   listFacadeGroups,
   serializeFacadeGroupsForSettings,
-} from '../../fml/facade-groups'
+} from '../../plan/facade-groups'
 import type { FmlConceptAdapter } from './registry'
 
 function clearFacadeGroupsSettingsKey(plan: {

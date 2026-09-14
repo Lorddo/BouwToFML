@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   PLAN_AREA_SIDE_DIMS_TOOL_ID,
-  getFmlDrawTools,
-  getFmlSelectTools,
+  getPlanDrawTools,
+  getPlanSelectTools,
   type PlanToolId,
 } from '@/ui/components/canvas/planToolbeltItems'
 
 describe('FML nulpunt toolbelt', () => {
   it('zet nulpunt in de select-toolbelt naast measure', () => {
-    const tools = getFmlSelectTools()
+    const tools = getPlanSelectTools()
     const ids = tools.map((t) => t.id as PlanToolId)
     expect(ids).toContain('nulpunt')
     expect(ids.indexOf('nulpunt')).toBeGreaterThan(ids.indexOf('measure'))
@@ -17,7 +17,7 @@ describe('FML nulpunt toolbelt', () => {
   })
 
   it('zet area-zijdematen als toggle tussen measure en nulpunt', () => {
-    const tools = getFmlSelectTools()
+    const tools = getPlanSelectTools()
     const ids = tools.map((t) => t.id)
     expect(ids.indexOf(PLAN_AREA_SIDE_DIMS_TOOL_ID)).toBe(ids.indexOf('measure') + 1)
     expect(ids.indexOf('nulpunt')).toBe(ids.indexOf(PLAN_AREA_SIDE_DIMS_TOOL_ID) + 1)
@@ -29,16 +29,16 @@ describe('FML nulpunt toolbelt', () => {
 
 describe('FML dak-tab tools', () => {
   it('geeft nok en dakvlak een eigen icoon', () => {
-    const dak = getFmlDrawTools({ dakMode: true })
+    const dak = getPlanDrawTools({ dakMode: true })
     expect(dak).toEqual([
       expect.objectContaining({ id: 'draw_wall', icon: 'ridge' }),
       expect.objectContaining({ id: 'draw_surface', icon: 'roof' }),
     ])
-    const plan = getFmlDrawTools()
+    const plan = getPlanDrawTools()
     expect(plan.find((tool) => tool.id === 'draw_wall')?.icon).toBe('wall')
     expect(plan.find((tool) => tool.id === 'draw_surface')).toBeUndefined()
     expect(plan.find((tool) => tool.id === 'draw_roof')).toBeUndefined()
-    const withRoof = getFmlDrawTools({ includeRoof: true })
+    const withRoof = getPlanDrawTools({ includeRoof: true })
     expect(withRoof.find((tool) => tool.id === 'draw_roof')).toEqual(
       expect.objectContaining({ id: 'draw_roof', icon: 'roof' }),
     )

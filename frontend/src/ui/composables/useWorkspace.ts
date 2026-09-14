@@ -9,7 +9,7 @@ import {
   FACTORY_THICKNESS_CMS,
   limitsFromCatalog,
   normalizeThicknessCatalog,
-} from '@/core/fml/fml-wall-thickness-catalog'
+} from '@/core/plan/wall-thickness-catalog'
 import { DEFAULT_PREPROCESS } from '@/platform/image'
 import {
   detectionPresetForProfile,
@@ -57,8 +57,8 @@ import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
 import { useWorkspaceProject } from './project/useWorkspaceProject'
 import { loadUserSettings } from './settings/user-settings'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
-import { loadFmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
+import { factoryRoomTypeColor } from '@/core/plan/roomtype-catalog'
+import { loadWallThicknessLimits } from '@/core/plan/wall-thickness-limits'
 import {
   deleteProject,
   listProjectIndex,
@@ -72,7 +72,7 @@ import {
   type PlgSettings,
 } from '@/core/plg/plg-document'
 import { clonePlain } from '@/platform/dev-workspace'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { promptPlanChromeChoice } from '@/ui/composables/plan-chrome-dialog'
 import { sanitizeFilename } from './workspace/workspace-plan-generate'
 import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
@@ -394,13 +394,13 @@ export function useWorkspace() {
       getWallThicknessLimits: () => {
         if (planApi) {
           return {
-            minCm: planApi.fmlThicknessMinCm.value,
-            midCm: planApi.fmlThicknessMidCm.value,
-            maxCm: planApi.fmlThicknessMaxCm.value,
+            minCm: planApi.planThicknessMinCm.value,
+            midCm: planApi.planThicknessMidCm.value,
+            maxCm: planApi.planThicknessMaxCm.value,
             thicknessCms: [...planApi.planThicknessCms.value],
           }
         }
-        return loadFmlWallThicknessLimits()
+        return loadWallThicknessLimits()
       },
       getThicknessCatalog: () => getThicknessCatalogCms(),
       getPxPerMm: () => ({
@@ -598,7 +598,7 @@ export function useWorkspace() {
       eraserMask: inputMask.eraserMask,
       ocrMask: inputMask.ocrMask,
       ocrMaskedRegions: inputMask.ocrMaskedRegions,
-      getFmlNulpuntImageCm: () => fml.planNulpuntImageCm.value ?? null,
+      getPlanNulpuntImageCm: () => fml.planNulpuntImageCm.value ?? null,
       setPlanNulpuntImageCm: (point) => fml.setPlanNulpuntImageCm(point),
       publishWallBwUnderlay: () => preprocessUi.publishWallBwUnderlay(),
     })
@@ -607,7 +607,7 @@ export function useWorkspace() {
   async function startWallStamp(donorFloorId: string, useStampSet?: boolean): Promise<boolean> {
     const donor = project.getStampDonorWalls(donorFloorId)
     if (!donor) {
-      setLocalError(tGlobal('preprocess.stampErrors.noFmlWalls'))
+      setLocalError(tGlobal('preprocess.stampErrors.noPlanWalls'))
       return false
     }
     const preferStamp =
@@ -673,12 +673,12 @@ export function useWorkspace() {
     referenceWallThicknessPx,
     resolvedDoors: doorSwingFaces.resolvedDoors,
     resolvedWindows: windowFaces.resolvedWindows,
-    appliedFmlThicknessLimits: fml.appliedFmlThicknessLimits,
-    appliedFmlBandBoundaries: fml.appliedFmlBandBoundaries,
-    appliedFmlWallHeightCm: fml.appliedFmlWallHeightCm,
-    appliedFmlDoorHeightCm: fml.appliedFmlDoorHeightCm,
-    appliedFmlWindowHeightCm: fml.appliedFmlWindowHeightCm,
-    appliedFmlWindowSillZCm: fml.appliedFmlWindowSillZCm,
+    appliedThicknessLimits: fml.appliedThicknessLimits,
+    appliedBandBoundaries: fml.appliedBandBoundaries,
+    appliedWallHeightCm: fml.appliedWallHeightCm,
+    appliedDoorHeightCm: fml.appliedDoorHeightCm,
+    appliedWindowHeightCm: fml.appliedWindowHeightCm,
+    appliedWindowSillZCm: fml.appliedWindowSillZCm,
     setLocalError,
   })
 
@@ -743,7 +743,7 @@ export function useWorkspace() {
   })
 
   /** Late-bound: project bestaat pas ná lifecycle; nodig na underlay-reset. */
-  let restoreFmlDefaultsFromActiveFloor: (() => void) | null = null
+  let restorePlanDefaultsFromActiveFloor: (() => void) | null = null
   const lifecycle = useWorkspaceLifecycle({
     clearRects,
     extractionLastOutput: extraction.lastOutput,
@@ -770,7 +770,7 @@ export function useWorkspace() {
     preprocessUi,
     image,
     imageSrc,
-    restoreFmlDefaultsFromActiveFloor: () => restoreFmlDefaultsFromActiveFloor?.(),
+    restorePlanDefaultsFromActiveFloor: () => restorePlanDefaultsFromActiveFloor?.(),
   })
 
   let projectSetPdf: ((source: PdfUnderlaySource | null) => void) | null = null
@@ -893,18 +893,18 @@ export function useWorkspace() {
     getPreviewPlan: () => fml.previewPlan.value ?? null,
     getPreviewUnderlayLayout: () => fml.previewUnderlayLayout.value ?? null,
     updatePreviewPlan: (plan, layout) => fml.updatePreviewPlan(plan, layout),
-    getFmlNulpuntImageCm: () => fml.planNulpuntImageCm.value ?? null,
+    getPlanNulpuntImageCm: () => fml.planNulpuntImageCm.value ?? null,
     setPlanNulpuntImageCm: (point) => fml.setPlanNulpuntImageCm(point),
-    getFmlOrient: () => fml.persistOrientState(),
+    getPlanOrient: () => fml.persistOrientState(),
     setPlanOrient: (state) => fml.setPlanOrient(state),
     clearLivePlanCanvas: () => fml.clearLivePlanCanvas(),
-    applyFmlDefaultsToUi: (defaults) => {
-      fml.hydrateFmlWallHeightCm(defaults.wallHeightCm)
-      fml.hydrateFmlDoorHeightCm(defaults.doorHeightCm)
-      fml.hydrateFmlWindowHeightCm(defaults.windowHeightCm)
-      fml.hydrateFmlWindowSillZCm(defaults.windowSillZCm)
-      fml.hydrateFmlBovenlichtDefault(defaults.bovenlichtDefault)
-      fml.hydrateFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
+    applyPlanDefaultsToUi: (defaults) => {
+      fml.hydratePlanWallHeightCm(defaults.wallHeightCm)
+      fml.hydratePlanDoorHeightCm(defaults.doorHeightCm)
+      fml.hydratePlanWindowHeightCm(defaults.windowHeightCm)
+      fml.hydratePlanWindowSillZCm(defaults.windowSillZCm)
+      fml.hydratePlanBovenlichtDefault(defaults.bovenlichtDefault)
+      fml.hydratePlanWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
       fml.setPlanBovenlichtHeightCm(defaults.bovenlichtHeightCm)
       fml.setPlanBovenlichtGapCm(defaults.bovenlichtGapCm)
       fml.setPlanThicknessCms(
@@ -928,9 +928,9 @@ export function useWorkspace() {
   })
   projectSetPdf = project.setSourcePdfUnderlay
 
-  restoreFmlDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()
+  restorePlanDefaultsFromActiveFloor = () => project.syncActiveFloorDefaultsToUi()
   // Eerste sync: factory-FML-UI → actieve vloer-/user-defaults (o.a. bovenlicht).
-  restoreFmlDefaultsFromActiveFloor()
+  restorePlanDefaultsFromActiveFloor()
   getThicknessCatalogCms = () =>
     fml.planThicknessCms?.value ? [...fml.planThicknessCms.value] : [...FACTORY_THICKNESS_CMS]
   writeCatalogToFloorDefaults = (cms) => {
@@ -1064,7 +1064,7 @@ export function useWorkspace() {
     runOcrScan: () => ocr.runOcrScan(),
     measureWallReferenceThickness: (rect) => detection.measureWallReferenceThickness(rect),
     wallsDetectionComplete: () => wallsDetectionComplete.value,
-    hasResultFml: () => project.hasActiveFloorFml(),
+    hasResultPlan: () => project.hasActiveFloorPlan(),
     hasTemplatesDetection: () => {
       const phase = roomFaces.roomPhase.value
       if (
@@ -1126,7 +1126,7 @@ export function useWorkspace() {
     }
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
-      setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
       return
     }
     const meta = project.projectMeta.value
@@ -1243,7 +1243,7 @@ export function useWorkspace() {
     }
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
-      setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
       return null
     }
     setLocalError(null)
@@ -1257,7 +1257,7 @@ export function useWorkspace() {
     }
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
-      setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
       return
     }
     // Bron van waarheid = floor.defaults (schrijft PlanPanel write-through + project-setup).
@@ -1444,12 +1444,12 @@ export function useWorkspace() {
     applyProjectMirrorVertical: () => {
       const count = project.applyProjectMirrorVertical()
       if (count === 0) {
-        setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+        setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
         return false
       }
       return true
     },
-    hasAnyFloorFml: computed(() => project.hasAnyFloorFml()),
+    hasAnyFloorPlan: computed(() => project.hasAnyFloorPlan()),
     projectOrientFlipX: computed(() => project.projectOrientFlipXActive()),
     // Muurstempel (stap 2)
     wallStampActive: wallStamp.active,

@@ -1,14 +1,14 @@
 /**
  * Plattegrond opening-handles: L/R-breedte + midden-verplaats.
  */
-import { ELEVATION_OPENING_SNAP_CM } from '@/core/fml/elevation-opening-edit'
+import { ELEVATION_OPENING_SNAP_CM } from '@/core/plan/elevation-opening-edit'
 import {
   clampOpeningWidthKeepOppositeEdge,
   openingEdgesAlongWall,
   type OpeningAlongWallSide,
-} from '@/core/fml/opening-along-wall-resize'
-import { findOpeningById } from '@/core/fml/opening-wall-ops'
-import type { Opening, Point2D, Wall } from '@/core/fml/types'
+} from '@/core/plan/opening-along-wall-resize'
+import { findOpeningById } from '@/core/plan/opening-wall-ops'
+import type { Opening, Point2D, Wall } from '@/core/plan/types'
 import { projectPointToWallTUnclamped } from '@/ui/components/plan-canvas-opening-drag-geom'
 import { collectCollinearWallIds } from '@/ui/components/plan-canvas-openings'
 import { offsetPointByWallBalance } from '@/ui/components/plan-canvas-wall-polygons'

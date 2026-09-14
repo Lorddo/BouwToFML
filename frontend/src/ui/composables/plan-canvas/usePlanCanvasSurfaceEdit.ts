@@ -1,13 +1,13 @@
 import { ref, watch } from 'vue'
-import { snapRoofVertexZ } from '@/core/fml/roof-vertex-snap'
+import { snapRoofVertexZ } from '@/core/plan/roof-vertex-snap'
 import {
   clampRoofVertexZCm,
   isRoofSurface,
   slabCmForRoofSurface,
-} from '@/core/fml/roof-planes'
-import { DEFAULT_FLOOR_THICKNESS_CM } from '@/core/fml/floor-stack'
-import { hitSelectedVertex, pointInPoly } from '@/core/fml/vertex-hit'
-import type { FloorSurface, Point2D } from '@/core/fml/types'
+} from '@/core/plan/roof-planes'
+import { DEFAULT_FLOOR_THICKNESS_CM } from '@/core/plan/floor-stack'
+import { hitSelectedVertex, pointInPoly } from '@/core/plan/vertex-hit'
+import type { FloorSurface, Point2D } from '@/core/plan/types'
 import { snapPolygonVertexAxisLock } from '@/ui/components/plan-canvas-junction-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'

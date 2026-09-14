@@ -1,5 +1,5 @@
-import type { ElevationRect, ElevationWallRect } from '@/core/fml/facade-elevation'
-import { elevationWallYsAtX } from '@/core/fml/facade-elevation'
+import type { ElevationRect, ElevationWallRect } from '@/core/plan/facade-elevation'
+import { elevationWallYsAtX } from '@/core/plan/facade-elevation'
 import { OPENING_MOVE_MEASURE_INSET_CM } from './plan-canvas-opening-move-measure'
 import { type MeasureLine, measureDistanceCm } from './plan-canvas-measure'
 

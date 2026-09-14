@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { ViewerSessionDefaults } from '@/core/fml/viewer-session-defaults'
+import type { ViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
 import ScaleLengthInput from './ScaleLengthInput.vue'

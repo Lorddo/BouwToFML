@@ -1,4 +1,4 @@
-import type { FloorPlan, Wall } from '@/core/fml/types'
+import type { FloorPlan, Wall } from '@/core/plan/types'
 import {
   coveredLengthCm,
   maxDistToWallsCm,

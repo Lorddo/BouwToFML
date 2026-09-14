@@ -21,17 +21,17 @@ export const layer10CollapsePolicy: CollapsePolicy = baseCollapsePolicy(10, {
 const layer10WeldPolicy = collapseWeldPolicy(10)
 const layer10JunctionPolicy = collapseJunctionPolicy(10)
 
-export interface Layer10FmlPolicy {
+export interface Layer10PlanPolicy {
   layerId: 10
   collapse: CollapsePolicy
   weld: WeldPolicy
   junction: JunctionGraphPolicy
 }
 
-export function resolveLayer10FmlPolicy(
+export function resolveLayer10PlanPolicy(
   referenceWallThicknessPx?: number,
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number },
-): Layer10FmlPolicy {
+): Layer10PlanPolicy {
   const scale = resolvePipelineScale(referenceWallThicknessPx)
   return {
     layerId: 10,

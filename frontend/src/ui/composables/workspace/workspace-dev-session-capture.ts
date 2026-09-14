@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { OcrTextCandidate } from '@/core/extraction'
-import { resolveDoorTemplateKind } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/plan/types'
 import type { PreprocessConfig } from '@/platform/image'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { DrawingProfileId } from '@/platform/profile'

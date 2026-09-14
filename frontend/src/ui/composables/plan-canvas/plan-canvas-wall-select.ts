@@ -3,9 +3,9 @@ import {
   wallBalanceMidOffsetCm,
   wallDirectionUnit,
   wallLeftNormal,
-} from '@/core/fml/fml-wall-geom'
-import { buildLocalOpeningId } from '@/core/fml/opening-ids'
-import type { Opening, OpeningType, Wall } from '@/core/fml/types'
+} from '@/core/plan/plan-wall-geom'
+import { buildLocalOpeningId } from '@/core/plan/opening-ids'
+import type { Opening, OpeningType, Wall } from '@/core/plan/types'
 
 export type BoxSelectKind = 'wall' | 'door' | 'window' | 'all'
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { type FloorPlan, type Opening } from '@/core/fml/types'
+import { type FloorPlan, type Opening } from '@/core/plan/types'
 
 function planWithDoors(): FloorPlan {
   const door: Opening = {

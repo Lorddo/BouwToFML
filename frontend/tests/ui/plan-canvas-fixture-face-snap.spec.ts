@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 import {
   fixtureAabbHalfExtents,
   fixtureObbHalfAlongNormal,

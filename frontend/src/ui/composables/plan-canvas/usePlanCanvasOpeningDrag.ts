@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import {
   openingDragPointerWithGrab,

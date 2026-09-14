@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import type { ExtractionOutput } from '@/core/extraction'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { useWorkspacePlan } from '@/ui/composables/useWorkspacePlan'
 
 const minimalOutput: ExtractionOutput = {
@@ -10,7 +10,7 @@ const minimalOutput: ExtractionOutput = {
   meta: { extractorId: 'test', elapsedMs: 0, templateKernels: [10] },
 }
 
-function createFmlHarness(confirmOverwrite: (message: string) => boolean = () => true) {
+function createPlanHarness(confirmOverwrite: (message: string) => boolean = () => true) {
   const imageName = ref('test-plan.png')
   const combinedOutput = ref<ExtractionOutput | null>(minimalOutput)
   const scale = {
@@ -37,7 +37,7 @@ function createFmlHarness(confirmOverwrite: (message: string) => boolean = () =>
 
 describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
   it('download-FML-text bevat gewijzigde muurdikte na updatePreviewPlan', () => {
-    const { api } = createFmlHarness()
+    const { api } = createPlanHarness()
     const base = api.previewPlan.value
     expect(base).not.toBeNull()
 
@@ -54,7 +54,7 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
   })
 
   it('buildGeneratedFmlText volgt verplaatste muur, niet alleen ruwe detectie', () => {
-    const { api } = createFmlHarness()
+    const { api } = createPlanHarness()
     const before = JSON.parse(api.buildGeneratedFmlText())
     const originalB = before.floors[0].designs[0].walls[0].b.x
 
@@ -67,7 +67,7 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
   })
 
   it('planLimitsDirty alleen na dikte-edit, niet na hoogte / bovenlicht', async () => {
-    const { api } = createFmlHarness(() => true)
+    const { api } = createPlanHarness(() => true)
     expect(api.planLimitsDirty.value).toBe(false)
 
     await api.setPlanWallHeightCm(api.planWallHeightCm.value + 10)
@@ -77,7 +77,7 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
     await api.setPlanBovenlichtDefault(true)
     expect(api.planLimitsDirty.value).toBe(false)
 
-    api.setPlanThicknessCms([...api.planThicknessCms.value.slice(0, -1), api.fmlThicknessMaxCm.value + 5])
+    api.setPlanThicknessCms([...api.planThicknessCms.value.slice(0, -1), api.planThicknessMaxCm.value + 5])
     expect(api.planLimitsDirty.value).toBe(true)
 
     api.syncAppliedFromDraft()
@@ -85,7 +85,7 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
   })
 
   it('hoogtewijziging na canvas-edit blijft op editedPreviewPlan (geen regeneratie)', async () => {
-    const { api } = createFmlHarness(() => true)
+    const { api } = createPlanHarness(() => true)
 
     const edited: FloorPlan = JSON.parse(JSON.stringify(api.previewPlan.value)) as FloorPlan
     edited.floors[0].walls[0].b.x = 333
@@ -98,7 +98,7 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
   })
 
   it('hoogte-confirm annuleren past niets toe', async () => {
-    const { api } = createFmlHarness(() => false)
+    const { api } = createPlanHarness(() => false)
     const before = api.planWallHeightCm.value
     const floorBefore = api.previewPlan.value?.floors[0]?.height
 

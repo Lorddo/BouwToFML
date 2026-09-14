@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { OpeningType } from '@/core/fml/types'
-import { DOOR_ADD_SUBTYPES, WINDOW_ADD_SUBTYPES } from '@/core/fml/opening-add-presets'
+import type { OpeningType } from '@/core/plan/types'
+import { DOOR_ADD_SUBTYPES, WINDOW_ADD_SUBTYPES } from '@/core/plan/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './plan-toolbelt-settings-fields.css'

@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import type { FloorPlan, OpeningType, Wall } from '@/core/fml/types'
+import type { FloorPlan, OpeningType, Wall } from '@/core/plan/types'
 import {
   collectOpeningSites,
   countMatchedOpenings,

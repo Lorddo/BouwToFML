@@ -1,4 +1,4 @@
-import type { Floor, FloorPlan } from '@/core/fml/types'
+import type { Floor, FloorPlan } from '@/core/plan/types'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type {
   FloorMeta,

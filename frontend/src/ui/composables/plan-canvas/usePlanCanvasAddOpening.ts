@@ -2,11 +2,11 @@ import type { Ref } from 'vue'
 import {
   maybeAddSiblingBovenlicht,
   type ExpandBovenlichtFloorDefaults,
-} from '@/core/fml/bovenlicht'
-import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
-import type { Opening, Point2D } from '@/core/fml/types'
-import { buildOpeningFromPreset } from '@/core/fml/opening-from-preset'
-import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
+} from '@/core/plan/bovenlicht'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
+import type { Opening, Point2D } from '@/core/plan/types'
+import { buildOpeningFromPreset } from '@/core/plan/opening-from-preset'
+import type { DoorAddSubtype, WindowAddSubtype } from '@/core/plan/opening-add-presets'
 import {
   clampDoorOpeningT,
   clampOpeningSillZ,

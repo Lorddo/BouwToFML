@@ -2,12 +2,12 @@ import {
   catalogFromLegacyLimits,
   limitsFromCatalog,
   normalizeThicknessCatalog,
-} from '@/core/fml/fml-wall-thickness-catalog'
+} from '@/core/plan/wall-thickness-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { FloorMeta, ProjectFmlDefaults, ProjectMeta, ProjectState } from './types'
+import type { FloorMeta, ProjectPlanDefaults, ProjectMeta, ProjectState } from './types'
 
 /** Project-/floor-defaults uit user settings (localStorage), anders fabriekswaarden. */
-export function createDefaultFloorFmlDefaults(): ProjectFmlDefaults {
+export function createDefaultFloorDefaults(): ProjectPlanDefaults {
   return { ...loadUserSettings().defaults }
 }
 
@@ -17,11 +17,11 @@ export function createDefaultFloorFmlDefaults(): ProjectFmlDefaults {
  */
 export function thicknessCatalogPatchFromFloorDefaults(
   defaults: Pick<
-    ProjectFmlDefaults,
+    ProjectPlanDefaults,
     'thicknessCms' | 'thicknessMinCm' | 'thicknessMidCm' | 'thicknessMaxCm'
   >,
 ): Pick<
-  ProjectFmlDefaults,
+  ProjectPlanDefaults,
   'thicknessCms' | 'thicknessMinCm' | 'thicknessMidCm' | 'thicknessMaxCm'
 > {
   const catalog =
@@ -62,7 +62,7 @@ export function createDefaultFloorMeta(partial?: Partial<FloorMeta>): FloorMeta 
     name: partial?.name ?? DEFAULT_FLOOR_NAME_NL,
     level: partial?.level ?? 0,
     status: partial?.status ?? 'empty',
-    defaults: partial?.defaults ? { ...partial.defaults } : createDefaultFloorFmlDefaults(),
+    defaults: partial?.defaults ? { ...partial.defaults } : createDefaultFloorDefaults(),
   }
 }
 

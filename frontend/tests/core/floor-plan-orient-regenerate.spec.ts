@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { copyUnderlayDisplayOrient } from '@/core/fml/drawing-to-underlay-layout'
+import { copyUnderlayDisplayOrient } from '@/core/plan/drawing-to-underlay-layout'
 import {
   applyFloorOrientFromCanonical,
   composeFloorOrient,
   defaultFloorOrient,
-} from '@/core/fml/floor-plan-orient'
-import type { FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/floor-plan-orient'
+import type { FloorPlan } from '@/core/plan/types'
 
 describe('underlay display orient + regenerate compose', () => {
   it('copyUnderlayDisplayOrient behoudt rot/flip op verse origin', () => {

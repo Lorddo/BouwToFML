@@ -1,8 +1,8 @@
-import type { Floor, FloorPlan, Point2D, Wall } from '@/core/fml/types'
-import { isPointSkyExposedOnFloor, listDakSnapWalls } from '@/core/fml/ridge-floor'
-import { listRidgeWallsOnFloor } from '@/core/fml/ridge-walls'
-import { listRidgeSurfacesOnFloor } from '@/core/fml/roof-planes'
-import { floorFootprintCentroid, listFloorOuterFaceCorners } from '@/core/fml/wall-outer-face'
+import type { Floor, FloorPlan, Point2D, Wall } from '@/core/plan/types'
+import { isPointSkyExposedOnFloor, listDakSnapWalls } from '@/core/plan/ridge-floor'
+import { listRidgeWallsOnFloor } from '@/core/plan/ridge-walls'
+import { listRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
+import { floorFootprintCentroid, listFloorOuterFaceCorners } from '@/core/plan/wall-outer-face'
 import {
   isOnDakBoundary,
   snapDakDrawPoint,

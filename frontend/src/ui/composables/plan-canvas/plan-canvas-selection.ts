@@ -4,14 +4,14 @@ import {
   resolveWindowAddPreset,
   type DoorAddSubtype,
   type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
-import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/opening-add-presets'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/ui/components/plan-canvas-openings'
 import type { PlanToolId } from '@/ui/components/canvas/planToolbeltItems'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 
 export interface PlanCanvasSelectionRefs {
   settingsWallIds: Ref<string[]>

@@ -1,9 +1,9 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout'
-import { applyNulpunt } from '@/core/fml/translate-floor-plan'
-import type { FloorPlan, Point2D } from '@/core/fml/types'
+import { cloneUnderlayOriginLayout } from '@/core/plan/drawing-to-underlay-layout'
+import { applyNulpunt } from '@/core/plan/translate-floor-plan'
+import type { FloorPlan, Point2D } from '@/core/plan/types'
 import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/plan-canvas-wall-face-snap'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

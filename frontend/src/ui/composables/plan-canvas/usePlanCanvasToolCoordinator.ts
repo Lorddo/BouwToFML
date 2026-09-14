@@ -1,7 +1,7 @@
 ﻿import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
-import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
-import type { Point2D } from '@/core/fml/types'
-import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
+import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/plan/opening-add-presets'
+import type { Point2D } from '@/core/plan/types'
+import { filterManualDimensions, readPlanSlices } from '@/core/plan/plan-slices'
 import { isAllowedDakDrawPoint } from '@/ui/components/plan-canvas-dak-draw-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
@@ -17,7 +17,7 @@ import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { usePlanCanvasNulpunt } from './usePlanCanvasNulpunt'
 import { usePlanCanvasUnderlayMove } from './usePlanCanvasUnderlayMove'
 import { usePlanCanvasAddFixture } from './usePlanCanvasAddFixture'
-import type { FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
+import type { FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import type { PlanViewContext } from './plan-view-context'
 import type { PlanSnapResolve } from './plan-canvas-snap-resolve'
@@ -26,7 +26,7 @@ import {
   type PlanSessionDefaults,
 } from './plan-canvas-session-defaults'
 import type { ContentLayout } from './usePlanCanvasViewport'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 
@@ -57,7 +57,7 @@ interface ToolCoordinatorOptions {
   ensureRoofOverlayOn?: () => void
   measureDrawMode?: Ref<MeasureDrawMode>
   slicerEditMode?: Ref<boolean>
-  dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
+  dimensionVis?: Ref<import('@/core/plan/plan-dimension-vis').DimensionVis>
   selectedSliceIndex?: Ref<number>
   getUnderlayLayout?: () => UnderlayOriginLayout | null
   setPlanNulpuntImageCm?: (point: Point2D | null) => void

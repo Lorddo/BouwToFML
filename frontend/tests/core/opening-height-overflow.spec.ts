@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
-} from '@/core/fml/opening-height-overflow'
-import type { Floor, Opening, Wall } from '@/core/fml/types'
+} from '@/core/plan/opening-height-overflow'
+import type { Floor, Opening, Wall } from '@/core/plan/types'
 
 const wall = (openings: Opening[]): Wall => ({
   id: 'w1',

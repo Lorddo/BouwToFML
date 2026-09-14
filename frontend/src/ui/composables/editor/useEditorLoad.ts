@@ -3,26 +3,26 @@ import {
   createBlankFloor,
   createEmptyFloorPlan,
   emptyFloorNameIndexed,
-} from '@/core/fml/empty-floor-plan'
-import { ensureDefaultFacadeGroups, pruneFacadeGroups } from '@/core/fml/facade-groups'
-import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
+} from '@/core/plan/empty-floor-plan'
+import { ensureDefaultFacadeGroups, pruneFacadeGroups } from '@/core/plan/facade-groups'
+import { applyJunctionSanitizeToPlan } from '@/core/plan/materialize-wall-junctions'
 import { parseEditorPlanFile } from '@/ui/composables/editor/parse-editor-plan-file'
 import {
   rebasePlanToItemRefid,
   type RebasePlanToItemRefidResult,
-} from '@/core/fml/rebase-plan-to-item-refid'
-import type { FloorOrientState } from '@/core/fml/floor-plan-orient'
-import type { Floor, FloorPlan, ImportWarning } from '@/core/fml/types'
+} from '@/core/plan/rebase-plan-to-item-refid'
+import type { FloorOrientState } from '@/core/plan/floor-plan-orient'
+import type { Floor, FloorPlan, ImportWarning } from '@/core/plan/types'
 import {
   createFactoryViewerSessionDefaults,
   seedViewerDefaultsFromPlan,
   sessionDefaultsFromPartial,
   type ViewerSessionDefaults,
-} from '@/core/fml/viewer-session-defaults'
+} from '@/core/plan/viewer-session-defaults'
 import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
-type FmlLoadPhase = 'reading' | 'parsing' | 'building'
+type PlanLoadPhase = 'reading' | 'parsing' | 'building'
 
 /** Laat de browser de overlay tekenen vóór sync-werk (import / muur-union). */
 function yieldToPaint(): Promise<void> {
@@ -76,9 +76,9 @@ export function useEditorLoad(deps: {
   addFloorDefaultsSlot: (index: number, source?: ViewerSessionDefaults) => void
   removeFloorDefaultsSlot: (index: number) => void
 }) {
-  const loadPhase = ref<FmlLoadPhase | null>(null)
+  const loadPhase = ref<PlanLoadPhase | null>(null)
   const loadFileName = ref<string | null>(null)
-  const isLoadingFml = computed(() => loadPhase.value != null)
+  const isLoadingPlan = computed(() => loadPhase.value != null)
 
   const loadStatusLabel = computed(() => {
     const phase = loadPhase.value
@@ -324,7 +324,7 @@ export function useEditorLoad(deps: {
   return {
     loadPhase,
     loadFileName,
-    isLoadingFml,
+    isLoadingPlan,
     loadStatusLabel,
     floorLabel,
     selectFloor,

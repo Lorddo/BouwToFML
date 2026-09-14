@@ -5,7 +5,7 @@ import {
   MAX_THICKNESS_CATALOG,
   MIN_THICKNESS_CATALOG,
   normalizeThicknessCatalog,
-} from '@/core/fml/fml-wall-thickness-catalog'
+} from '@/core/plan/wall-thickness-catalog'
 import type { ScaleInputUnit, UnitSystem } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 

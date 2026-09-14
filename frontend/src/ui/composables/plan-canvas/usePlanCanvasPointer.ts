@@ -1,6 +1,6 @@
 ﻿import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { PLAN_CANVAS_CHROME_SELECTOR } from './plan-canvas-gestures'
-import { allowsFmlStickyHit, type FmlStickySelectKind } from './plan-canvas-sticky-select'
+import { allowsPlanStickyHit, type PlanStickySelectKind } from './plan-canvas-sticky-select'
 import { planStickySelectKind } from './plan-canvas-selected'
 import type { PlanViewContext } from './plan-view-context'
 import {
@@ -15,7 +15,7 @@ import {
   resolvePlanToolCursor,
   type PlanToolEntry,
 } from './plan-canvas-tool-registry'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 
@@ -70,7 +70,7 @@ export function usePlanCanvasPointer(options: {
   /** Geordende tool-lijst; de volgorde ís de prioriteit. */
   tools: ReadonlyArray<PlanToolEntry>
   spacePressed: Ref<boolean>
-  thicknessPickTier: Ref<FmlThicknessBand | null>
+  thicknessPickTier: Ref<ThicknessBand | null>
   emit: (event: 'thicknessWallPick', payload: string) => void
 }) {
   const {
@@ -139,7 +139,7 @@ export function usePlanCanvasPointer(options: {
     return 'default'
   })
 
-  function currentStickyKind(): FmlStickySelectKind | null {
+  function currentStickyKind(): PlanStickySelectKind | null {
     return planStickySelectKind(selection)
   }
 
@@ -276,8 +276,8 @@ export function usePlanCanvasPointer(options: {
         nameHover != null &&
         ((nameHover.kind === 'area' && nameHover.id === selection.settingsAreaId.value) ||
           (nameHover.kind === 'surface' && nameHover.id === selection.settingsSurfaceId.value))
-      const allowHover = (hit: FmlStickySelectKind): boolean =>
-        allowsFmlStickyHit(currentStickyKind(), hit)
+      const allowHover = (hit: PlanStickySelectKind): boolean =>
+        allowsPlanStickyHit(currentStickyKind(), hit)
       const junction = hitTest.hitTestJunctionAtCm(cm)
       hoveredJunctionId.value = junction && allowHover('wall') ? junction.id : null
       const doorId = hitTest.hitTestOpeningAtCm(cm)

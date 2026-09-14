@@ -10,8 +10,8 @@ import type {
   DoorSwingStage,
   ResolvedDoorCandidate,
 } from '@/cv/doors'
-import { resolveDoorTemplateKind } from '@/core/fml/types'
-import { resolveOpeningCatalog, toCvDoorKind } from '@/core/fml/opening-refid-catalog'
+import { resolveDoorTemplateKind } from '@/core/plan/types'
+import { resolveOpeningCatalog, toCvDoorKind } from '@/core/plan/opening-refid-catalog'
 
 // ESC:O-28 (D)
 export const DOOR_SWING_REFRESH_DEBOUNCE_MS = 80

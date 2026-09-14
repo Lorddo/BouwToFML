@@ -1,9 +1,9 @@
-import type { Opening, Wall } from '@/core/fml/types'
+import type { Opening, Wall } from '@/core/plan/types'
 import {
   readJunctionElevation,
   wallEndpointHeightCm,
   wallUniformBottomZCm,
-} from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/wall-endpoint-height'
 import type { RenderModel, RenderWall } from './plan-canvas-render-types'
 import { computeOpeningDraftState } from './plan-canvas-opening-draft'
 import type { WallEndRef } from '@/ui/components/plan-canvas-junction-core'

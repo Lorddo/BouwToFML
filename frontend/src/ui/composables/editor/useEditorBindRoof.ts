@@ -1,6 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import { bindFloorWallsToRoofs, listFloorsWithRoofPlanes } from '@/core/fml/bind-walls-to-roofs'
-import type { FloorPlan } from '@/core/fml/types'
+import { bindFloorWallsToRoofs, listFloorsWithRoofPlanes } from '@/core/plan/bind-walls-to-roofs'
+import type { FloorPlan } from '@/core/plan/types'
 import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import { promptPlanChromeChoice } from '@/ui/composables/plan-chrome-dialog'
 

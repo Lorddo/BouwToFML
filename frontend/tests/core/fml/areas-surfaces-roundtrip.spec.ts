@@ -3,8 +3,8 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { displayAreaLabel } from '@/core/fml/roomtype-catalog'
-import type { FloorPlan } from '@/core/fml/types'
+import { displayAreaLabel } from '@/core/plan/roomtype-catalog'
+import type { FloorPlan } from '@/core/plan/types'
 
 const KINDERDIJK = resolve(
   __dirname,

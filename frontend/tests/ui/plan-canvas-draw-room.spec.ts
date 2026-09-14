@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import { DRAW_SEED_CM } from '@/ui/composables/plan-canvas/plan-canvas-draw-measure'
 import { usePlanCanvasDrawRoom } from '@/ui/composables/plan-canvas/usePlanCanvasDrawRoom'
 

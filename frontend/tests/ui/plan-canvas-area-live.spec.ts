@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FloorArea, Wall } from '@/core/fml/types'
+import type { FloorArea, Wall } from '@/core/plan/types'
 import { previewAreasFromWallMove } from '@/ui/composables/plan-canvas/plan-canvas-area-live'
 
 function wall(id: string, ax: number, ay: number, bx: number, by: number): Wall {

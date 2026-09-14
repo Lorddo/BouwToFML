@@ -8,7 +8,7 @@ import {
 } from '@/ui/composables/plan-canvas/plan-canvas-render-areas'
 import { inspectColorFor, resolveInspectFill } from '@/ui/composables/plan-canvas/plan-inspect'
 import type { RenderSurface } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/plan-canvas/plan-canvas-vertex-hit'
 import {
   ARCHITECT_AREA_FILL,

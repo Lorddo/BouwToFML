@@ -1,16 +1,16 @@
 import type { Ref } from 'vue'
-import type { Point2D, Wall } from '@/core/fml/types'
-import { bakeSliceDimensions } from '@/core/fml/slice-dimension-lines'
-import { readDimensionSettings } from '@/core/fml/fml-dimension-settings'
+import type { Point2D, Wall } from '@/core/plan/types'
+import { bakeSliceDimensions } from '@/core/plan/slice-dimension-lines'
+import { readDimensionSettings } from '@/core/plan/plan-dimension-settings'
 import {
   DEFAULT_SLICER_OFFSET_SNAP_CM,
   slicePlaceStripAxis,
   snapSliceHandleAxis,
   snapSlicerPPoint,
-} from '@/core/fml/slice-offset-snap'
-import type { PlanSlice } from '@/core/fml/plan-slices'
+} from '@/core/plan/slice-offset-snap'
+import type { PlanSlice } from '@/core/plan/plan-slices'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 
 const SLICE_LINE_HIT_CM = 8
 const SLICE_HANDLE_HIT_STAGE = 12

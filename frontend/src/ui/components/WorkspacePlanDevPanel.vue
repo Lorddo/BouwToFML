@@ -2,21 +2,21 @@
 withDefaults(
   defineProps<{
     enabled?: boolean
-    fmlBandMidBoundaryCm?: number
-    fmlBandMaxBoundaryCm?: number
-    fmlBandDirty?: boolean
+    planBandMidBoundaryCm?: number
+    planBandMaxBoundaryCm?: number
+    planBandDirty?: boolean
   }>(),
   {
     enabled: false,
-    fmlBandMidBoundaryCm: 12,
-    fmlBandMaxBoundaryCm: 23,
-    fmlBandDirty: false,
+    planBandMidBoundaryCm: 12,
+    planBandMaxBoundaryCm: 23,
+    planBandDirty: false,
   },
 )
 
 const emit = defineEmits<{
-  'update:fmlBandMidBoundaryCm': [value: number]
-  'update:fmlBandMaxBoundaryCm': [value: number]
+  'update:planBandMidBoundaryCm': [value: number]
+  'update:planBandMaxBoundaryCm': [value: number]
 }>()
 
 function parsePositiveCm(event: Event): number | null {
@@ -28,13 +28,13 @@ function parsePositiveCm(event: Event): number | null {
 function onBandMidBoundaryInput(event: Event): void {
   const value = parsePositiveCm(event)
   if (value == null) return
-  emit('update:fmlBandMidBoundaryCm', value)
+  emit('update:planBandMidBoundaryCm', value)
 }
 
 function onBandMaxBoundaryInput(event: Event): void {
   const value = parsePositiveCm(event)
   if (value == null) return
-  emit('update:fmlBandMaxBoundaryCm', value)
+  emit('update:planBandMaxBoundaryCm', value)
 }
 </script>
 
@@ -51,7 +51,7 @@ function onBandMaxBoundaryInput(event: Event): void {
         type="number"
         min="1"
         step="0.5"
-        :value="fmlBandMidBoundaryCm"
+        :value="planBandMidBoundaryCm"
         @input="onBandMidBoundaryInput"
       />
     </label>
@@ -61,15 +61,15 @@ function onBandMaxBoundaryInput(event: Event): void {
         type="number"
         min="1"
         step="0.5"
-        :value="fmlBandMaxBoundaryCm"
+        :value="planBandMaxBoundaryCm"
         @input="onBandMaxBoundaryInput"
       />
     </label>
     <p class="band-hint">
-      min: ≤ {{ fmlBandMidBoundaryCm }} · mid: &gt; {{ fmlBandMidBoundaryCm }} en &lt;
-      {{ fmlBandMaxBoundaryCm }} · max: ≥ {{ fmlBandMaxBoundaryCm }}
+      min: ≤ {{ planBandMidBoundaryCm }} · mid: &gt; {{ planBandMidBoundaryCm }} en &lt;
+      {{ planBandMaxBoundaryCm }} · max: ≥ {{ planBandMaxBoundaryCm }}
     </p>
-    <p v-if="fmlBandDirty" class="dirty-hint">Bandgrenzen gewijzigd — Regenereren in FML-paneel.</p>
+    <p v-if="planBandDirty" class="dirty-hint">Bandgrenzen gewijzigd — Regenereren in FML-paneel.</p>
   </div>
 </template>
 

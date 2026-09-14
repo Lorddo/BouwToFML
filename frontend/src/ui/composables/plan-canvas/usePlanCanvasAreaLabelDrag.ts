@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
+import type { Point2D } from '@/core/plan/types'
 import { areaLabelAnchorCm, areaPolygonCentroid } from './plan-canvas-render-areas'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { FloorPlan } from '@/core/fml/types'
-import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
+import type { FloorPlan } from '@/core/plan/types'
+import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/plan/bovenlicht'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
-import type { ElevationBovenlichtDefaults } from '@/core/fml/facade-elevation'
+} from '@/core/plan/extraction-to-plan-types'
+import type { ElevationBovenlichtDefaults } from '@/core/plan/facade-elevation'
 import type { HScaleState } from '@/platform/calibration'
-import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
+import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import { PLAN_CANVAS_CHROME_SELECTOR } from '@/ui/composables/plan-canvas/plan-canvas-gestures'
 import { usePlanCanvasUnderlayMove } from '@/ui/composables/plan-canvas/usePlanCanvasUnderlayMove'
 import { usePlanCanvasPanZoom } from '@/ui/composables/plan-canvas/usePlanCanvasPanZoom'
@@ -154,7 +154,7 @@ const { useTouchNav } = usePlanTouchNav(elevTouchEditor)
 const canvasLocked = computed(() => underlayMoveMode.value || props.rescaleMode === true)
 
 // --- Interaction composable (created first — owns selection/tool state) ---
-import type { FacadeElevation } from '@/core/fml/facade-elevation'
+import type { FacadeElevation } from '@/core/plan/facade-elevation'
 import type { ContentLayout } from '@/ui/composables/plan-canvas/usePlanCanvasViewport'
 const _elevation = shallowRef<FacadeElevation | null>(null)
 

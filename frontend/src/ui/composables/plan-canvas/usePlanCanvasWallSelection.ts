@@ -1,8 +1,8 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
-import { catalogMaxCm } from '@/core/fml/fml-wall-thickness-catalog'
-import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
-import { wallEndpointHeightCm, wallUniformBottomZCm } from '@/core/fml/wall-endpoint-height'
+import type { Point2D } from '@/core/plan/types'
+import { catalogMaxCm } from '@/core/plan/wall-thickness-catalog'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
+import { wallEndpointHeightCm, wallUniformBottomZCm } from '@/core/plan/wall-endpoint-height'
 import {
   balanceToPercent,
   collectPlanWallsByIds,
@@ -20,7 +20,7 @@ import {
   type BoxSelectHits,
   type BoxSelectKind,
 } from './plan-canvas-wall-select'
-import { wallGuidsInGroup } from '@/core/fml/facade-groups'
+import { wallGuidsInGroup } from '@/core/plan/facade-groups'
 import { createWallFacadeSelection } from './plan-canvas-wall-facade-selection'
 import { createJunctionDrafts } from './plan-canvas-junction-drafts'
 

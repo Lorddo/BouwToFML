@@ -21,13 +21,13 @@ import { layer9CollapsePolicy } from '@/cv/walls/rooms/pipeline-v3/policies/laye
 import { resolvePipelineScale } from '@/cv/walls/rooms/pipeline-v3/engines/scale'
 import {
   V3_NATIVE_THROUGH_LAYER,
-  isV3FmlReady,
+  isV3PlanReady,
   listIncompleteLayers,
 } from '@/cv/walls/rooms/pipeline-v3/native-layers'
 import { resolveActivePipelineDebug } from '@/cv/walls/rooms/pipeline-debug'
 import {
-  resolveFmlSourceLayer,
-  hasFmlSemanticSource,
+  resolvePlanSourceLayer,
+  hasPlanSemanticSource,
 } from '@/cv/walls/rooms/build-semantic-walls-source'
 import type { ExtractionOutput, PipelineV3Debug } from '@/core/extraction/types'
 
@@ -55,7 +55,7 @@ describe('pipeline-v3 progressive stop', () => {
   it('natively completes through L10', () => {
     expect(V3_NATIVE_THROUGH_LAYER).toBe(10)
     expect(listIncompleteLayers()).toEqual([])
-    expect(isV3FmlReady()).toBe(true)
+    expect(isV3PlanReady()).toBe(true)
   })
 
   it('owns L1/L2 policies (no V2 type coupling)', () => {
@@ -162,8 +162,8 @@ describe('V3 FML gate', () => {
       pipelineV3Debug: incompleteV3,
       meta: { extractorId: 'geometry-lbe', elapsedMs: 10, wallPipelineVersion: 'v3' },
     } as ExtractionOutput
-    expect(resolveFmlSourceLayer(output)).toBeUndefined()
-    expect(hasFmlSemanticSource(output)).toBe(false)
+    expect(resolvePlanSourceLayer(output)).toBeUndefined()
+    expect(hasPlanSemanticSource(output)).toBe(false)
   })
 
   it('allows FML only when V3 planReady + L10 segments', () => {
@@ -171,8 +171,8 @@ describe('V3 FML gate', () => {
       pipelineV3Debug: completeV3,
       meta: { extractorId: 'geometry-lbe', elapsedMs: 10, wallPipelineVersion: 'v3' },
     } as ExtractionOutput
-    expect(resolveFmlSourceLayer(output)?.segments).toHaveLength(1)
-    expect(hasFmlSemanticSource(output)).toBe(true)
+    expect(resolvePlanSourceLayer(output)?.segments).toHaveLength(1)
+    expect(hasPlanSemanticSource(output)).toBe(true)
   })
 
   it('resolves active pipeline debug from V3 only', () => {

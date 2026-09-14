@@ -1,5 +1,5 @@
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
-import { resolveFmlStickySelectKind, type FmlStickySelectKind } from './plan-canvas-sticky-select'
+import { resolvePlanStickySelectKind, type PlanStickySelectKind } from './plan-canvas-sticky-select'
 
 /**
  * De **Selected**-bak van de selectie-store: wat is geselecteerd.
@@ -171,8 +171,8 @@ export function togglePlanSelected(
  */
 export function planStickySelectKind(
   selection: PlanCanvasSelectionRefs,
-): FmlStickySelectKind | null {
-  return resolveFmlStickySelectKind({
+): PlanStickySelectKind | null {
+  return resolvePlanStickySelectKind({
     hasWall: selection.settingsWallIds.value.length > 0 || selection.moveWallId.value != null,
     hasJunction:
       selection.settingsJunctionId.value != null || selection.pinnedJunctionId.value != null,

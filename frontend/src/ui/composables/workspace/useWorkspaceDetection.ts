@@ -30,8 +30,8 @@ import {
   normalizeThicknessCatalog,
   replaceThicknessInCatalog,
   thicknessPxToCm,
-} from '@/core/fml/fml-wall-thickness-catalog'
-import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
+} from '@/core/plan/wall-thickness-catalog'
+import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
 import {
   emptyTabOutputs,
   tabFromDetectTargets,
@@ -103,7 +103,7 @@ export function useWorkspaceDetection(deps: {
   updateRectFmlRefId: (id: string, fmlRefId: string) => void
   updateRectWallThicknessCm: (id: string, cm: number) => void
   /** Project/export diktes voor max-equivalent schaal. */
-  getWallThicknessLimits: () => FmlWallThicknessLimits
+  getWallThicknessLimits: () => WallThicknessLimits
   getThicknessCatalog: () => number[]
   getPxPerMm: () => { x: number; y: number }
   addThicknessToCatalog?: (cm: number) => void

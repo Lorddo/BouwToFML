@@ -1,7 +1,7 @@
-import { seedFloorStackIfMissing } from '@/core/fml/floor-stack'
-import { seedRidgeDisplayWidthIfMissing } from '@/core/fml/ridge-walls'
-import { ensureDefaultFacadeGroups } from '@/core/fml/facade-groups'
-import type { FloorPlan } from '@/core/fml/types'
+import { seedFloorStackIfMissing } from '@/core/plan/floor-stack'
+import { seedRidgeDisplayWidthIfMissing } from '@/core/plan/ridge-walls'
+import { ensureDefaultFacadeGroups } from '@/core/plan/facade-groups'
+import type { FloorPlan } from '@/core/plan/types'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 /** User-defaults voor dak/vloer/noklijn op een nieuw of nog leeg plan. */

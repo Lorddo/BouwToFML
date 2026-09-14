@@ -2,9 +2,16 @@
 // Zo'n botsing is in een geneste scope legale shadowing: de typecheck zwijgt,
 // het gedrag verandert stil. Dit is het gat dat de C-ronde niet dekte.
 import { execSync } from 'node:child_process'
+import { FILES, NAMES } from './phase6-name-map.mjs'
 
 // [oude naam, nieuwe naam, welke ronde, welke git-ref ging eraan vooraf]
 const ROUNDS = [
+  {
+    label: 'fase 6 (core/plan + C1 + infix-namen)',
+    // Nog niet gecommit: 'HEAD' vergelijkt de werkboom met de laatste commit.
+    before: 'HEAD',
+    rules: [...Object.entries(NAMES), ...Object.entries(FILES)],
+  },
   {
     label: 'fase 5',
     before: 'e40353a',
@@ -114,9 +121,29 @@ function changedBetween(before, after) {
     .filter((s) => /\.(ts|vue)$/.test(s))
 }
 
-function readAt(ref, file) {
+/**
+ * Nieuw pad -> oud pad, voor bestanden die zijn verhuisd. Zonder dit slaat de audit
+ * elk verplaatst bestand over (het nieuwe pad bestaat niet in de oude ref), en dat zijn
+ * precies de bestanden waar ook identifiers zijn hernoemd.
+ */
+function renameMap(ref) {
+  const map = new Map()
+  const out = execSync(`git diff --name-status -M ${ref}`, { encoding: 'utf8' })
+  for (const line of out.split('\n')) {
+    const parts = line.split('\t')
+    if (parts.length === 3 && parts[0].startsWith('R')) map.set(parts[2].trim(), parts[1].trim())
+  }
+  return map
+}
+
+function readAt(ref, file, renames) {
+  const path = renames?.get(file) ?? file
   try {
-    return execSync(`git show ${ref}:${file}`, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+    return execSync(`git show ${ref}:${path}`, {
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
   } catch {
     return null
   }
@@ -126,16 +153,28 @@ let findings = 0
 for (const round of ROUNDS) {
   const files =
     round.before === 'HEAD' ? gitFiles('HEAD') : changedBetween(round.before, 'HEAD')
-  console.log(`\n=== ${round.label}: ${files.length} gewijzigde bestanden`)
+  const renames = renameMap(round.before)
+  let skipped = 0
+  console.log(
+    `\n=== ${round.label}: ${files.length} gewijzigde bestanden, ${renames.size} verhuisd`,
+  )
   for (const file of files) {
-    const before = readAt(round.before, file)
-    if (before == null) continue
+    const before = readAt(round.before, file, renames)
+    if (before == null) {
+      skipped += 1
+      continue
+    }
     for (const [from, to] of round.rules) {
       const hadOld = new RegExp(`\\b${from}\\b`).test(before)
-      const hadNew = new RegExp(`\\b${to}\\b`).test(before)
+      // Bij een rename met streepjes zit de nieuwe naam ín de oude
+      // (`fml-wall-thickness-limits` bevat `wall-thickness-limits`, want `-` is geen
+      // woordteken). Zonder de oude naam eruit te knippen meldt élke zo'n rename een
+      // botsing met zichzelf, en valse meldingen verbergen de echte.
+      const withoutOld = before.replace(new RegExp(`\\b${from}\\b`, 'g'), '')
+      const hadNew = new RegExp(`\\b${to}\\b`).test(withoutOld)
       if (hadOld && hadNew) {
         const oldCount = (before.match(new RegExp(`\\b${from}\\b`, 'g')) ?? []).length
-        const newCount = (before.match(new RegExp(`\\b${to}\\b`, 'g')) ?? []).length
+        const newCount = (withoutOld.match(new RegExp(`\\b${to}\\b`, 'g')) ?? []).length
         console.log(
           `  BOTSING  ${file}\n           ${from} (${oldCount}x) -> ${to}, maar ${to} bestond al (${newCount}x)`,
         )
@@ -143,6 +182,9 @@ for (const round of ROUNDS) {
       }
     }
   }
+  // Overgeslagen = nieuw bestand zonder voorganger. Meer dan een handvol betekent dat
+  // de rename-detectie niet werkte en de audit stilzwijgend niets deed.
+  if (skipped > 0) console.log(`  (${skipped} overgeslagen: geen versie in ${round.before})`)
 }
 
 console.log(`\ntotaal botsingen: ${findings}`)

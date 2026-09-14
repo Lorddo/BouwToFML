@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  allowsFmlStickyHit,
-  resolveFmlStickySelectKind,
+  allowsPlanStickyHit,
+  resolvePlanStickySelectKind,
   wallPreemptsAreaHit,
 } from '@/ui/composables/plan-canvas/plan-canvas-sticky-select'
 import {
@@ -11,7 +11,7 @@ import {
   shouldStartTouchHoldDrag,
 } from '@/ui/composables/plan-canvas/plan-canvas-touch-tap'
 
-describe('resolveFmlStickySelectKind', () => {
+describe('resolvePlanStickySelectKind', () => {
   const none = {
     hasWall: false,
     hasJunction: false,
@@ -22,31 +22,31 @@ describe('resolveFmlStickySelectKind', () => {
   }
 
   it('kiest muur vóór opening', () => {
-    expect(resolveFmlStickySelectKind(none)).toBe(null)
-    expect(resolveFmlStickySelectKind({ ...none, hasWall: true })).toBe('wall')
-    expect(resolveFmlStickySelectKind({ ...none, hasJunction: true })).toBe('wall')
-    expect(resolveFmlStickySelectKind({ ...none, hasOpening: true })).toBe('opening')
-    expect(resolveFmlStickySelectKind({ ...none, hasDimension: true })).toBe('dimension')
+    expect(resolvePlanStickySelectKind(none)).toBe(null)
+    expect(resolvePlanStickySelectKind({ ...none, hasWall: true })).toBe('wall')
+    expect(resolvePlanStickySelectKind({ ...none, hasJunction: true })).toBe('wall')
+    expect(resolvePlanStickySelectKind({ ...none, hasOpening: true })).toBe('opening')
+    expect(resolvePlanStickySelectKind({ ...none, hasDimension: true })).toBe('dimension')
   })
 })
 
-describe('allowsFmlStickyHit', () => {
+describe('allowsPlanStickyHit', () => {
   it('laat alle hits toe zonder selectie', () => {
-    expect(allowsFmlStickyHit(null, 'opening')).toBe(true)
-    expect(allowsFmlStickyHit(null, 'wall')).toBe(true)
+    expect(allowsPlanStickyHit(null, 'opening')).toBe(true)
+    expect(allowsPlanStickyHit(null, 'wall')).toBe(true)
   })
 
   it('houdt muur-selectie vast bij een deur-hit', () => {
-    expect(allowsFmlStickyHit('wall', 'opening')).toBe(false)
-    expect(allowsFmlStickyHit('wall', 'wall')).toBe(true)
-    expect(allowsFmlStickyHit('opening', 'wall')).toBe(false)
-    expect(allowsFmlStickyHit('opening', 'opening')).toBe(true)
+    expect(allowsPlanStickyHit('wall', 'opening')).toBe(false)
+    expect(allowsPlanStickyHit('wall', 'wall')).toBe(true)
+    expect(allowsPlanStickyHit('opening', 'wall')).toBe(false)
+    expect(allowsPlanStickyHit('opening', 'opening')).toBe(true)
   })
 
   it('laat deur/muur door bij ruimte-selectie', () => {
-    expect(allowsFmlStickyHit('area', 'opening')).toBe(true)
-    expect(allowsFmlStickyHit('area', 'wall')).toBe(true)
-    expect(allowsFmlStickyHit('area', 'item')).toBe(true)
+    expect(allowsPlanStickyHit('area', 'opening')).toBe(true)
+    expect(allowsPlanStickyHit('area', 'wall')).toBe(true)
+    expect(allowsPlanStickyHit('area', 'item')).toBe(true)
   })
 })
 

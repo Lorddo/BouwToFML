@@ -2,9 +2,9 @@
  * Inbound normalize: legacy `guid`/`refid` → verplicht `id` + `kind`.
  * Geen PLG-versiebump — V1 ongepubliceerd; tolerant voor lokale blobs.
  */
-import { resolveOpeningKind, type OpeningKind } from '../../fml/opening-kind-catalog'
-import { resolveFixtureKind, type FixtureAssetKind } from '../../fml/fixture-kind-catalog'
-import type { Floor, FloorItem, FloorPlan, Opening, OpeningType, Wall } from '../../fml/types'
+import { resolveOpeningKind, type OpeningKind } from '../../plan/opening-kind-catalog'
+import { resolveFixtureKind, type FixtureAssetKind } from '../../plan/fixture-kind-catalog'
+import type { Floor, FloorItem, FloorPlan, Opening, OpeningType, Wall } from '../../plan/types'
 import { openingKindFromFmlRefid } from './opening-fml-refids'
 import { fixtureKindFromFmlRefid } from './fixture-fml-refids'
 

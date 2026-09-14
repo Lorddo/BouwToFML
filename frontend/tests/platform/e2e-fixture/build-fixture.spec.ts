@@ -5,14 +5,14 @@ import {
   layer1FromPipelineDebug,
   slugFromImageName,
 } from '@/platform/e2e-fixture/build-fixture'
-import { DEFAULT_FML_WALL_THICKNESS_LIMITS } from '@/core/fml/fml-wall-thickness-limits'
-import { DEFAULT_FML_BAND_BOUNDARIES } from '@/core/fml/fml-wall-thickness-tiers'
+import { DEFAULT_WALL_THICKNESS_LIMITS } from '@/core/plan/wall-thickness-limits'
+import { DEFAULT_THICKNESS_BAND_BOUNDARIES } from '@/core/plan/wall-thickness-tiers'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WALL_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import { encodeMaskRle } from '@/cv/util/binary-mask-rle'
 
 describe('e2e-fixture rle-codec', () => {
@@ -77,8 +77,8 @@ describe('e2e-fixture build', () => {
       pxPerMmY: 0.5,
       referenceWallThicknessPx: 12,
       fml: {
-        thicknessLimits: { ...DEFAULT_FML_WALL_THICKNESS_LIMITS },
-        bandBoundaries: { ...DEFAULT_FML_BAND_BOUNDARIES },
+        thicknessLimits: { ...DEFAULT_WALL_THICKNESS_LIMITS },
+        bandBoundaries: { ...DEFAULT_THICKNESS_BAND_BOUNDARIES },
         wallHeightCm: DEFAULT_WALL_HEIGHT_CM,
         doorHeightCm: DEFAULT_DOOR_HEIGHT_CM,
         windowHeightCm: DEFAULT_WINDOW_HEIGHT_CM,

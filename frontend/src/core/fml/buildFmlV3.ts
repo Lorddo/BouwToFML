@@ -10,12 +10,12 @@ import {
   resolveBovenlichtHeightCm,
   resolveDoorBovenlicht,
   resolveWindowBovenlicht,
-} from './bovenlicht'
-import { ensureDesignsSynced } from './design-sync'
-import { dropEmptyRidgeDesign, isRidgeDesign } from './ridge-walls'
-import { PLAN_SLICES_SETTINGS_KEY, filterManualDimensions, type PlanSlice } from './plan-slices'
-import { bakeSliceDimensions } from './slice-dimension-lines'
-import type { DimensionMode } from './fml-dimension-settings'
+} from '@/core/plan/bovenlicht'
+import { ensureDesignsSynced } from '@/core/plan/design-sync'
+import { dropEmptyRidgeDesign, isRidgeDesign } from '@/core/plan/ridge-walls'
+import { PLAN_SLICES_SETTINGS_KEY, filterManualDimensions, type PlanSlice } from '@/core/plan/plan-slices'
+import { bakeSliceDimensions } from '@/core/plan/slice-dimension-lines'
+import type { DimensionMode } from '@/core/plan/plan-dimension-settings'
 import type {
   DrawingMeta,
   Floor,
@@ -29,19 +29,19 @@ import type {
   FloorSurface,
   Opening,
   Wall,
-} from './types'
+} from '@/core/plan/types'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WALL_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from './extraction-to-plan-types'
-import { wallElevationAtT, wallEndpoint3D } from './wall-endpoint-height'
-import { resolveRoomType, UNLABELED_AREA_COLOR } from './roomtype-catalog'
-import { STAMP_OWNED_EXTRA } from './stamp-owned'
-import { writeObjectLabel } from './object-label'
-import { ELEVATION_PROJECTION_SETTINGS_KEY, ELEVATION_VIEWS_SETTINGS_KEY } from './elevation-views'
-import { FLOOR_STACK_SETTINGS_KEY } from './floor-stack'
+} from '@/core/plan/extraction-to-plan-types'
+import { wallElevationAtT, wallEndpoint3D } from '@/core/plan/wall-endpoint-height'
+import { resolveRoomType, UNLABELED_AREA_COLOR } from '@/core/plan/roomtype-catalog'
+import { STAMP_OWNED_EXTRA } from '@/core/plan/stamp-owned'
+import { writeObjectLabel } from '@/core/plan/object-label'
+import { ELEVATION_PROJECTION_SETTINGS_KEY, ELEVATION_VIEWS_SETTINGS_KEY } from '@/core/plan/elevation-views'
+import { FLOOR_STACK_SETTINGS_KEY } from '@/core/plan/floor-stack'
 
 /**
  * Editor-only settings die Floorplanner bij import kunnen laten knallen

@@ -9,7 +9,7 @@ import {
 } from '@/cv/port/wallJunctionGraph'
 import { SEMANTIC_JUNCTION_EPS_PX, SEMANTIC_SEGMENT_CONFIDENCE } from './semantic-wall-constants'
 
-export interface SemanticGraphFromFmlLayer {
+export interface SemanticGraphFromPlanLayer {
   semantic: RoomWallSemanticGraph
   /** Zelfde `WallGraph` als de semantic-edges; één `buildJunctionGraph`-pass. */
   wallGraph: WallGraph
@@ -21,7 +21,7 @@ export interface SemanticGraphFromFmlLayer {
  * FML-bronlaag voor semantic walls.
  * V3-only: L10 alleen bij `planReady` (geen L8/L9 fallback).
  */
-export function resolveFmlSourceLayer(walls: ExtractionOutput): PipelineLayerDebug | undefined {
+export function resolvePlanSourceLayer(walls: ExtractionOutput): PipelineLayerDebug | undefined {
   const debug = walls.pipelineV3Debug
   if (!debug) return undefined
   if (debug.summary?.planReady !== true) {
@@ -33,9 +33,9 @@ export function resolveFmlSourceLayer(walls: ExtractionOutput): PipelineLayerDeb
   return undefined
 }
 
-/** True wanneer `resolveFmlSourceLayer` minstens één segment levert. */
-export function hasFmlSemanticSource(walls: ExtractionOutput): boolean {
-  return (resolveFmlSourceLayer(walls)?.segments.length ?? 0) > 0
+/** True wanneer `resolvePlanSourceLayer` minstens één segment levert. */
+export function hasPlanSemanticSource(walls: ExtractionOutput): boolean {
+  return (resolvePlanSourceLayer(walls)?.segments.length ?? 0) > 0
 }
 
 /**
@@ -47,8 +47,8 @@ function resolveSemanticThicknessPxMax(segment: { thicknessPx?: number }): numbe
   return measured > 0 ? measured : 0
 }
 
-export function buildSemanticGraphFromFmlLayer(walls: ExtractionOutput): SemanticGraphFromFmlLayer {
-  const source = resolveFmlSourceLayer(walls)
+export function buildSemanticGraphFromPlanLayer(walls: ExtractionOutput): SemanticGraphFromPlanLayer {
+  const source = resolvePlanSourceLayer(walls)
   const sourceSegments = (source?.segments ?? []).map((segment) => ({
     a: { x: segment.a.x, y: segment.a.y },
     b: { x: segment.b.x, y: segment.b.y },
@@ -104,6 +104,6 @@ export function semanticAsSegments(graph: RoomWallSemanticGraph): SegmentCandida
   }))
 }
 
-export function resolveFmlSourceJunctionCount(walls: ExtractionOutput): number {
-  return resolveFmlSourceLayer(walls)?.junctions.length ?? 0
+export function resolvePlanSourceJunctionCount(walls: ExtractionOutput): number {
+  return resolvePlanSourceLayer(walls)?.junctions.length ?? 0
 }

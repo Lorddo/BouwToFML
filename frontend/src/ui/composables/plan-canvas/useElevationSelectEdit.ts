@@ -1,5 +1,5 @@
 import { computed, ref, type Ref } from 'vue'
-import type { FloorPlan, Opening, Point2D, Wall } from '@/core/fml/types'
+import type { FloorPlan, Opening, Point2D, Wall } from '@/core/plan/types'
 import {
   BOVENLICHT_GAP_CM,
   BOVENLICHT_HEIGHT_CM,
@@ -9,8 +9,8 @@ import {
   resolveBovenlichtHeightCm,
   clampBovenlichtGapCm,
   clampBovenlichtHeightCm,
-} from '@/core/fml/bovenlicht'
-import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/bovenlicht'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import {
   unprojectElevationAlong,
   ELEVATION_RETURN_MAX_DOT,
@@ -19,7 +19,7 @@ import {
   type ElevationRect,
   type ElevationWallRect,
   type FacadeElevation,
-} from '@/core/fml/facade-elevation'
+} from '@/core/plan/facade-elevation'
 import {
   collectElevationRoofSnapXs,
   collectElevationRoofSnapYs,
@@ -30,7 +30,7 @@ import {
   openingPatchFromElevationRect,
   snapElevationX,
   snapElevationY,
-} from '@/core/fml/elevation-hit'
+} from '@/core/plan/elevation-hit'
 import {
   clampElevationOpeningMove,
   clampElevationOpeningResize,
@@ -46,7 +46,7 @@ import {
   type ElevResizeSide,
   type ElevationOpeningShapeHint,
   type ElevationSnapGuide,
-} from '@/core/fml/elevation-opening-edit'
+} from '@/core/plan/elevation-opening-edit'
 import {
   applyElevationRidgeEnd,
   applyElevationRidgeRect,
@@ -55,8 +55,8 @@ import {
   elevationRidgeRectCenter,
   elevationRidgeRectOf,
   snapElevationRidgeCenter,
-} from '@/core/fml/elevation-ridge-edit'
-import { applyElevationWallEndAlongPlanAxis } from '@/core/fml/elevation-wall-end-edit'
+} from '@/core/plan/elevation-ridge-edit'
+import { applyElevationWallEndAlongPlanAxis } from '@/core/plan/elevation-wall-end-edit'
 import {
   findRidgeSurface,
   removeRidgeSurfaceOnPlan,
@@ -64,14 +64,14 @@ import {
   setRidgeSurfaceVertex,
   setRidgeSurfaceVertexZ,
   slabCmForRoofSurface,
-} from '@/core/fml/roof-planes'
+} from '@/core/plan/roof-planes'
 import {
   listRidgeWallsOnFloor,
   removeRidgeWallsFromPlan,
   ridgeEndpointZCm,
   setPlanRidgeJunctionZ,
-} from '@/core/fml/ridge-walls'
-import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from '@/core/fml/door-swing-symbol'
+} from '@/core/plan/ridge-walls'
+import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from '@/core/plan/door-swing-symbol'
 import {
   findOpeningInPlan,
   movePlanOpening,
@@ -83,20 +83,20 @@ import {
   setPlanWallElevationEdit,
   setPlanWallHeight,
   updatePlanOpening,
-} from '@/core/fml/elevation-openings'
+} from '@/core/plan/elevation-openings'
 import {
   wallEndpoint3D,
   wallEndpointHeightCm,
   wallUniformBottomZCm,
   wallUniformHeightCm,
   type WallElevationEditMode,
-} from '@/core/fml/wall-endpoint-height'
+} from '@/core/plan/wall-endpoint-height'
 import {
   floorWallBaseWorldZ,
   readFloorStack,
   setSlabThicknessCm,
   slabThicknessCm,
-} from '@/core/fml/floor-stack'
+} from '@/core/plan/floor-stack'
 import {
   clampOpeningHeight,
   clampOpeningSillZ,
@@ -112,7 +112,7 @@ import {
   resolveWindowSubtypeFromRefid,
   type DoorAddSubtype,
   type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
+} from '@/core/plan/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
 import { buildElevationOpeningMeasureLines } from './plan-canvas-elevation-opening-measure'
 import {

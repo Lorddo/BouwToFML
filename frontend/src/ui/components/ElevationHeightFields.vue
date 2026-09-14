@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import type { ElevationProjectionMode } from '@/core/fml/elevation-views'
-import type { ElevationFloorGroup } from '@/core/fml/floor-stack'
+import type { ElevationProjectionMode } from '@/core/plan/elevation-views'
+import type { ElevationFloorGroup } from '@/core/plan/floor-stack'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
 import ScaleLengthInput from './ScaleLengthInput.vue'

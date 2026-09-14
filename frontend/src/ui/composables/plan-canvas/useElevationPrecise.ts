@@ -1,19 +1,19 @@
 import { ref, type Ref } from 'vue'
-import type { FloorPlan, Point2D, Wall } from '@/core/fml/types'
-import type { ElevationRect, ElevationWallRect, FacadeElevation } from '@/core/fml/facade-elevation'
+import type { FloorPlan, Point2D, Wall } from '@/core/plan/types'
+import type { ElevationRect, ElevationWallRect, FacadeElevation } from '@/core/plan/facade-elevation'
 import {
   elevationRectCenter,
   translateElevationRect,
   type ElevationSnapGuide,
-} from '@/core/fml/elevation-opening-edit'
+} from '@/core/plan/elevation-opening-edit'
 import {
   applyElevationRidgeRect,
   collectElevationRidgeJunctionSnapXs,
   elevationRidgeRectOf,
   snapElevationRidgeCenter,
-} from '@/core/fml/elevation-ridge-edit'
-import { listRidgeWallsOnFloor, setPlanRidgeJunctionZ } from '@/core/fml/ridge-walls'
-import { findOpeningInPlan, setPlanJunctionHeight } from '@/core/fml/elevation-openings'
+} from '@/core/plan/elevation-ridge-edit'
+import { listRidgeWallsOnFloor, setPlanRidgeJunctionZ } from '@/core/plan/ridge-walls'
+import { findOpeningInPlan, setPlanJunctionHeight } from '@/core/plan/elevation-openings'
 import {
   elevationPreciseCommitMinCm,
   elevationPreciseHeightDelta,

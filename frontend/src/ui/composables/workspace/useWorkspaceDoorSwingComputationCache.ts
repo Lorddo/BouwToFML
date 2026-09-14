@@ -8,7 +8,7 @@ import type { RoomRasterClass } from '@/cv/walls/rooms/room-ink-classify'
 import type { FaceDualSpace } from '@/cv/walls/rooms/face-dual-space'
 import { resolveFloorDual, type RoomRasterCache } from '@/cv/walls/rooms/room-raster-cache'
 import type { SelectionRect } from '@/platform/selection'
-import { resolveDoorTemplateKind } from '@/core/fml/types'
+import { resolveDoorTemplateKind } from '@/core/plan/types'
 import { resolveDoorRefKind, signatureForDoorRects } from './useWorkspaceDoorSwingHelpers'
 
 function fingerprintBaseBw(

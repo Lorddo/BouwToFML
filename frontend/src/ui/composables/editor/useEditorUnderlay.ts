@@ -1,5 +1,5 @@
 import { computed, nextTick, ref, watch, type Ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import type { HScaleState } from '@/platform/calibration'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import {
@@ -9,14 +9,14 @@ import {
   previewUnderlayLayoutFromDrawing,
   provisionalDrawingFromImage,
   resolveUnderlayPxPerMmFromRulers,
-} from '@/core/fml/drawing-to-underlay-layout'
+} from '@/core/plan/drawing-to-underlay-layout'
 import {
   copyUnderlayFromDonor,
   isReusableUnderlayDrawing,
   listUnderlayReuseDonors,
-} from '@/core/fml/copy-underlay-drawing'
-import { elevationViewForGroup, setElevationViewDrawing } from '@/core/fml/elevation-views'
-import { scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
+} from '@/core/plan/copy-underlay-drawing'
+import { elevationViewForGroup, setElevationViewDrawing } from '@/core/plan/elevation-views'
+import { scaleUnderlayLayout } from '@/core/plan/scale-floor-plan'
 import { scaleFloorPlanAndRegenAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import {
   rescaleStateFromImageHandles,

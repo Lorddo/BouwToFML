@@ -1,5 +1,5 @@
-import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
-import type { Point2D } from '@/core/fml/types'
+import { floorplannerLeftNormal } from '@/core/plan/plan-wall-geom'
+import type { Point2D } from '@/core/plan/types'
 import { resolveWallExtents } from '@/ui/components/plan-canvas-wall-fill'
 
 export type {

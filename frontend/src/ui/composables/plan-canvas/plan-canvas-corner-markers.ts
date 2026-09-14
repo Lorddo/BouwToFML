@@ -1,5 +1,5 @@
-import { wallJoinFaceCorner } from '@/core/fml/fml-wall-geom'
-import type { Point2D, Wall } from '@/core/fml/types'
+import { wallJoinFaceCorner } from '@/core/plan/plan-wall-geom'
+import type { Point2D, Wall } from '@/core/plan/types'
 import { buildJunctions, type JunctionNode } from '@/ui/components/plan-canvas-junction-core'
 import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-mode'
 

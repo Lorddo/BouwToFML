@@ -1,7 +1,7 @@
-import type { FloorPlan } from '@/core/fml/types'
-import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
+import type { FloorPlan } from '@/core/plan/types'
+import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
-import type { DimensionVis } from '@/core/fml/fml-dimension-vis'
+import type { DimensionVis } from '@/core/plan/plan-dimension-vis'
 import type { PlanKind } from './plan-capabilities'
 
 /**
@@ -33,7 +33,7 @@ export interface PlanCanvasHostProps {
   underlayMoveMode?: boolean
 
   // ── Thickness pick ──
-  thicknessPickTier?: FmlThicknessBand | null
+  thicknessPickTier?: ThicknessBand | null
   thicknessPresetCms?: number[]
 
   // ── Bovenlicht defaults ──

@@ -1,7 +1,7 @@
 /**
  * Fixture kind ↔ FML refid/guid.
  */
-import type { FloorItem, FloorPlan } from '../../fml/types'
+import type { FloorItem, FloorPlan } from '../../plan/types'
 import { fmlRefidForFixtureKind } from './fixture-fml-refids'
 import { FML_REFID_EXTRA } from './normalize-plan-identities'
 import type { FmlConceptAdapter } from './registry'

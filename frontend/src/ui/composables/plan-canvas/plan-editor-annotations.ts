@@ -5,12 +5,12 @@ import type {
   FloorLine,
   FloorPlan,
   FloorSurface,
-} from '@/core/fml/types'
-import { readPlanSlices, writePlanSlices, type PlanSlice } from '@/core/fml/plan-slices'
+} from '@/core/plan/types'
+import { readPlanSlices, writePlanSlices, type PlanSlice } from '@/core/plan/plan-slices'
 import {
   collectOverlayDimensionLines,
   convertOverlayDimensionsToManual,
-} from '@/core/fml/convert-overlay-dimensions'
+} from '@/core/plan/convert-overlay-dimensions'
 
 function shortGuid(): string {
   return Math.floor(Math.random() * 0xffffff)

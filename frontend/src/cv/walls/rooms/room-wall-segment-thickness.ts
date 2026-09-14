@@ -5,7 +5,7 @@ import type {
 } from '@/core/extraction/types'
 import type { OpenCV } from '@/cv/loadOpenCV'
 import { decodeMaskRle } from '@/cv/util/binary-mask-rle'
-import { floorplannerLeftNormal } from '@/core/fml/fml-wall-geom'
+import { floorplannerLeftNormal } from '@/core/plan/plan-wall-geom'
 import {
   isDominantHorizontal,
   isDominantVertical,

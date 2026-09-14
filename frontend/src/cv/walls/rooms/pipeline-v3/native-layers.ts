@@ -19,6 +19,6 @@ function isV3PipelineComplete(nativeThrough: number = V3_NATIVE_THROUGH_LAYER): 
   return nativeThrough >= V3_PIPELINE_LAST_LAYER
 }
 
-export function isV3FmlReady(nativeThrough: number = V3_NATIVE_THROUGH_LAYER): boolean {
+export function isV3PlanReady(nativeThrough: number = V3_NATIVE_THROUGH_LAYER): boolean {
   return isV3PipelineComplete(nativeThrough)
 }

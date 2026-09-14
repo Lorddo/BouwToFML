@@ -11,14 +11,14 @@ import type {
   Opening,
   Point2D,
   Wall,
-} from '@/core/fml/types'
-import { switchFloorDesign } from '@/core/fml/design-sync'
-import { applyRidgeWallRemaps, isRidgeDesign, pruneRidgeWalls } from '@/core/fml/ridge-walls'
-import { sanitizeFmlWallsDetailed, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
-import { isStampOwnedWall } from '@/core/fml/stamp-owned'
-import { resolveStampOwnership } from '@/core/fml/resolve-stamp-ownership'
-import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
-import { splitPlanWallAtT } from '@/core/fml/elevation-openings'
+} from '@/core/plan/types'
+import { switchFloorDesign } from '@/core/plan/design-sync'
+import { applyRidgeWallRemaps, isRidgeDesign, pruneRidgeWalls } from '@/core/plan/ridge-walls'
+import { sanitizePlanWallsDetailed, wallsSanitizeChanged } from '@/core/plan/sanitize-plan-walls'
+import { isStampOwnedWall } from '@/core/plan/stamp-owned'
+import { resolveStampOwnership } from '@/core/plan/resolve-stamp-ownership'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
+import { splitPlanWallAtT } from '@/core/plan/elevation-openings'
 import {
   addRoomRect,
   addWallSegment,
@@ -61,7 +61,7 @@ import {
 } from '@/ui/components/plan-canvas-opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import { cloneAreasSnapshot } from '@/ui/composables/plan-canvas/plan-canvas-area-live'
-import { ensureDefaultFacadeGroups } from '@/core/fml/facade-groups'
+import { ensureDefaultFacadeGroups } from '@/core/plan/facade-groups'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 import {
@@ -687,8 +687,8 @@ export function usePlanEditor(
     if (working.some(isStampOwnedWall)) {
       working = resolveStampOwnership(working).walls
     }
-    const detailed = sanitizeFmlWallsDetailed(working)
-    const ridgeDetailed = sanitizeFmlWallsDetailed(ridgeRoof.ridgeWalls.value)
+    const detailed = sanitizePlanWallsDetailed(working)
+    const ridgeDetailed = sanitizePlanWallsDetailed(ridgeRoof.ridgeWalls.value)
     const planChanged = wallsSanitizeChanged(walls.value, detailed.walls)
     const ridgeChanged = wallsSanitizeChanged(ridgeRoof.ridgeWalls.value, ridgeDetailed.walls)
     if (!planChanged && !ridgeChanged) return false

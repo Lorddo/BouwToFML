@@ -1,15 +1,15 @@
 /** Huidige selectie blijft binnen één soort tot leeg klikken — behalve ruimte (niet sticky). */
 
-export type FmlStickySelectKind = 'wall' | 'opening' | 'item' | 'annotation' | 'area' | 'dimension'
+export type PlanStickySelectKind = 'wall' | 'opening' | 'item' | 'annotation' | 'area' | 'dimension'
 
-export function resolveFmlStickySelectKind(state: {
+export function resolvePlanStickySelectKind(state: {
   hasWall: boolean
   hasJunction: boolean
   hasOpening: boolean
   hasItem: boolean
   hasAnnotation: boolean
   hasDimension?: boolean
-}): FmlStickySelectKind | null {
+}): PlanStickySelectKind | null {
   if (state.hasWall || state.hasJunction) return 'wall'
   if (state.hasOpening) return 'opening'
   if (state.hasItem) return 'item'
@@ -23,9 +23,9 @@ export function resolveFmlStickySelectKind(state: {
  * Ruimte is geen lock: deur/raam/muur mogen erdoorheen (hit-test heeft al prioriteit).
  * Muur ↔ opening blijft plakkerig (16 px-halo overlap).
  */
-export function allowsFmlStickyHit(
-  sticky: FmlStickySelectKind | null,
-  hit: FmlStickySelectKind,
+export function allowsPlanStickyHit(
+  sticky: PlanStickySelectKind | null,
+  hit: PlanStickySelectKind,
 ): boolean {
   if (sticky == null || sticky === 'area') return true
   return sticky === hit

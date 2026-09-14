@@ -2,8 +2,8 @@
  * Wit-pad wanneer een muurstempel buiten de huidige onderlegger valt.
  * Alleen overflow-zijden groeien; bestaande scan-pixels blijven op hun plek + offset.
  */
-import { imagePxToScantCm } from '@/core/fml/stamp-nulpunt'
-import type { Point2D } from '@/core/fml/types'
+import { imagePxToScantCm } from '@/core/plan/stamp-nulpunt'
+import type { Point2D } from '@/core/plan/types'
 import type { StampBounds } from '@/cv/preprocess/wall-stamp-raster'
 
 export type CanvasPad = { left: number; top: number; right: number; bottom: number }

@@ -6,7 +6,7 @@ import {
   isDefaultFacadeGroupId,
   MAX_FACADE_GROUP_PRESETS,
   type FacadeGroupPreset,
-} from '@/core/fml/facade-groups'
+} from '@/core/plan/facade-groups'
 import { facadeGroupDisplayName } from '@/ui/composables/plan-canvas/facade-group-label'
 
 const props = withDefaults(

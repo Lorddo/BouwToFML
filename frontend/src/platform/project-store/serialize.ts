@@ -1,7 +1,7 @@
 import { toStorableDevSession } from '@/platform/dev-workspace/storable'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import { normalizePlanIdentities } from '@/core/plg/fml-adapter/normalize-plan-identities'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import type {
   FloorWorkspaceBlob,
   ProjectSourceUnderlay,

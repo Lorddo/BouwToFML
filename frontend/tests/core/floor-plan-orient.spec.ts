@@ -7,9 +7,9 @@ import {
   mirrorFloorPlanVertical,
   rotateFloorPlan90,
   type FloorOrientState,
-} from '@/core/fml/floor-plan-orient'
-import { resolveHingeAtStart, resolveSwingSign } from '@/core/fml/door-swing-symbol'
-import type { FloorPlan } from '@/core/fml/types'
+} from '@/core/plan/floor-plan-orient'
+import { resolveHingeAtStart, resolveSwingSign } from '@/core/plan/door-swing-symbol'
+import type { FloorPlan } from '@/core/plan/types'
 
 function samplePlan(): FloorPlan {
   return {

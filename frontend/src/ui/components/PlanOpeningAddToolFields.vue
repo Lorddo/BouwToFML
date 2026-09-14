@@ -6,7 +6,7 @@ import {
   WINDOW_ADD_SUBTYPES,
   type DoorAddSubtype,
   type WindowAddSubtype,
-} from '@/core/fml/opening-add-presets'
+} from '@/core/plan/opening-add-presets'
 import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/ui/components/plan-canvas-openings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { PlanToolId } from './canvas/planToolbeltItems'

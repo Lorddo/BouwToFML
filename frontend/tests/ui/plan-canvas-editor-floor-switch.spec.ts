@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { nextTick, ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 function planWithWallX(x: number): FloorPlan {

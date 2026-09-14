@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/plan-canvas/plan-canvas-opening-move-measure'
 import { measureDistanceCm } from '@/ui/composables/plan-canvas/plan-canvas-measure'
 import {

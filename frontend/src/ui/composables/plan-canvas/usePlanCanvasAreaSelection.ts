@@ -1,12 +1,12 @@
 import { ref } from 'vue'
-import { isRoofSurface, resolveDormerParent } from '@/core/fml/roof-planes'
-import type { FloorArea, FloorSurface } from '@/core/fml/types'
+import { isRoofSurface, resolveDormerParent } from '@/core/plan/roof-planes'
+import type { FloorArea, FloorSurface } from '@/core/plan/types'
 import {
   effectiveRoomTypeColor,
   listRoomTypes,
-  parseFmlHex,
+  parsePlanHex,
   resolveRoomType,
-} from '@/core/fml/roomtype-catalog'
+} from '@/core/plan/roomtype-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
@@ -190,7 +190,7 @@ export function usePlanCanvasAreaSelection(options: {
   }
 
   function applyColor(color: string): void {
-    const hex = parseFmlHex(color)
+    const hex = parsePlanHex(color)
     if (!hex) return
     flushPendingFieldCommits()
     options.editor.pushUndo()

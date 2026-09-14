@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 import { snapDrawWallEndpoint } from '@/ui/components/plan-canvas-junction-snap'
 import {
   isOnDakBoundary,

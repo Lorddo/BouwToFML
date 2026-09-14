@@ -60,7 +60,7 @@ export type BindResolvedWindowsResult = {
 /**
  * L14-bind van Stage-4 resolved ramen op semantic wall graph.
  * Class-reconcile (strip demoted faces) vóór bind; 1D muurgat-dedupe (+ optioneel deur-suppress).
- * R-27 pair/triple-merge gebeurt in FML-conversie (`toLayer14WindowsForFml`).
+ * R-27 pair/triple-merge gebeurt in FML-conversie (`toLayer14WindowsForPlan`).
  */
 export function bindResolvedWindowsToWalls(params: {
   stageCache: WindowAxelStageCache

@@ -8,8 +8,8 @@ import {
   isOpeningKind,
   unmappedOpeningKind,
   type OpeningKind,
-} from '../../fml/opening-kind-catalog'
-import type { OpeningType } from '../../fml/types'
+} from '../../plan/opening-kind-catalog'
+import type { OpeningType } from '../../plan/types'
 
 interface MappingEntry {
   kind: string

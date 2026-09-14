@@ -11,9 +11,9 @@ import { runLayer6JunctionRepair } from './layer-6-repair'
 import { runLayer7Align } from './layer-7-align'
 import { runLayer8Finalize } from './layer-8-finalize'
 import { runLayer9Dissolve } from './layer-9-dissolve'
-import { runLayer10Fml } from './layer-10-plan'
+import { runLayer10Plan } from './layer-10-plan'
 import { collectObliqueAxes } from './engines/oblique'
-import { listIncompleteLayers, isV3FmlReady, V3_NATIVE_THROUGH_LAYER } from './native-layers'
+import { listIncompleteLayers, isV3PlanReady, V3_NATIVE_THROUGH_LAYER } from './native-layers'
 import { resolveObliquePolicy } from './policies/oblique'
 import type { PipelineV3Layer1Result, PipelineV3Result } from './types'
 
@@ -42,7 +42,7 @@ export async function runPipelineV3(params: {
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
 }): Promise<PipelineV3Result> {
   const incompleteLayers = listIncompleteLayers(V3_NATIVE_THROUGH_LAYER)
-  const planReady = isV3FmlReady(V3_NATIVE_THROUGH_LAYER)
+  const planReady = isV3PlanReady(V3_NATIVE_THROUGH_LAYER)
 
   // Mask is constant after finalize — build distance map once for L2/L4/L7–L10.
   const distanceMap =
@@ -125,7 +125,7 @@ export async function runPipelineV3(params: {
     distanceMap,
     obliqueAxes,
   })
-  const layer10 = runLayer10Fml({
+  const layer10 = runLayer10Plan({
     layer9,
     cv: params.cv,
     maskRle: params.maskRle,

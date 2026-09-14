@@ -6,8 +6,8 @@ import {
   JUNCTION_BALANCE_JOG_STUB_MAX_CM,
   JUNCTION_BALANCE_STUB_MAX_CM,
   quantizeBalance,
-} from '@/core/fml/align-wall-junction-balance'
-import type { Wall } from '@/core/fml/types'
+} from '@/core/plan/align-wall-junction-balance'
+import type { Wall } from '@/core/plan/types'
 
 function wall(
   id: string,

@@ -1,16 +1,16 @@
-import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/fml/bovenlicht'
+import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/plan/bovenlicht'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/core/fml/extraction-to-plan-types'
+} from '@/core/plan/extraction-to-plan-types'
 import {
   openingWorldCenter as openingWorldCenterOnAxis,
   projectOpeningT,
-} from '@/core/fml/fml-wall-geom'
-import { buildLocalOpeningId } from '@/core/fml/opening-ids'
-import { findOpeningById, type OpeningLocation } from '@/core/fml/opening-wall-ops'
-import type { Opening, OpeningType, Point2D, Wall } from '@/core/fml/types'
+} from '@/core/plan/plan-wall-geom'
+import { buildLocalOpeningId } from '@/core/plan/opening-ids'
+import { findOpeningById, type OpeningLocation } from '@/core/plan/opening-wall-ops'
+import type { Opening, OpeningType, Point2D, Wall } from '@/core/plan/types'
 
 export type { OpeningLocation }
 

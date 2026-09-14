@@ -1,5 +1,5 @@
 import { computed, ref, watch, type Ref } from 'vue'
-import type { FloorPlan, Point2D, Wall } from '@/core/fml/types'
+import type { FloorPlan, Point2D, Wall } from '@/core/plan/types'
 import {
   elevationAxisPlanSides,
   projectFacadeElevation,
@@ -9,20 +9,20 @@ import {
   type ElevationRect,
   type ElevationRoofPlane,
   type ElevationWallRect,
-} from '@/core/fml/facade-elevation'
+} from '@/core/plan/facade-elevation'
 import {
   compareElevationPaintStackItems,
   elevationWallFillPoints,
   elevationWallFillRings,
   elevationWallInnerStrokes,
   groupElevationPaintPlanes,
-} from '@/core/fml/elevation-paint'
+} from '@/core/plan/elevation-paint'
 import {
   elevationOpeningHoleIsRect,
   elevationOpeningHolePoints,
   glyphFromElevationRect,
-} from '@/core/fml/elevation-opening-symbol'
-import { listElevationFacadeGroups } from '@/core/fml/facade-groups'
+} from '@/core/plan/elevation-opening-symbol'
+import { listElevationFacadeGroups } from '@/core/plan/facade-groups'
 import { loadImage } from '@/platform/image'
 import {
   buildUnderlayStageGeom,
@@ -52,7 +52,7 @@ import {
   PLAN_HANDLE_RADIUS_PX,
   PLAN_HANDLE_HIT_PX,
 } from '@/ui/composables/plan-canvas/plan-canvas-vertex-hit'
-import { floorWallBaseWorldZ } from '@/core/fml/floor-stack'
+import { floorWallBaseWorldZ } from '@/core/plan/floor-stack'
 export type ElevSettingsRef =
   | { kind: 'opening'; id: string; mode: 'quick' | 'edit' }
   | { kind: 'wall'; wallId: string; floorIndex: number }

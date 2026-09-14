@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
-import type { FloorPlan } from '@/core/fml/types'
+import type { FloorPlan } from '@/core/plan/types'
 import { createPlanCanvasSelection } from '@/ui/composables/plan-canvas/plan-canvas-selection'
 import { createPlanCanvasDraftCommitScheduler } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
 import { usePlanCanvasWallSelection } from '@/ui/composables/plan-canvas/usePlanCanvasWallSelection'

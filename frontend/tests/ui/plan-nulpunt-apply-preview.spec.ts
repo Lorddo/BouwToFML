@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
-import { applyNulpunt } from '@/core/fml/translate-floor-plan'
-import type { FloorPlan } from '@/core/fml/types'
-import { createWorkspaceFmlGenerate } from '@/ui/composables/workspace/workspace-plan-generate'
+import { applyNulpunt } from '@/core/plan/translate-floor-plan'
+import type { FloorPlan } from '@/core/plan/types'
+import { createWorkspacePlanGenerate } from '@/ui/composables/workspace/workspace-plan-generate'
 
 function samplePlan(): FloorPlan {
   return {
@@ -26,14 +26,14 @@ function samplePlan(): FloorPlan {
   }
 }
 
-describe('applyNulpuntAtFmlCm (workspace preview)', () => {
+describe('applyNulpuntAtPlanCm (workspace preview)', () => {
   it('past atomisch toe op edited preview — niet op een andere bron', () => {
     const scale = {
       confirmed: ref(false),
       pixelsPerMillimeterX: ref(0),
       pixelsPerMillimeterY: ref(0),
     }
-    const generate = createWorkspaceFmlGenerate(
+    const generate = createWorkspacePlanGenerate(
       {
         imageName: ref('t.png'),
         combinedOutput: ref(null),
@@ -41,18 +41,18 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
         setLocalError: () => {},
       },
       {
-        appliedFmlThicknessLimits: ref({ minCm: 10, midCm: 20, maxCm: 30 }),
-        appliedFmlBandBoundaries: ref({ midBoundaryCm: 15, maxBoundaryCm: 25 }),
-        appliedFmlWallHeightCm: ref(280),
-        appliedFmlDoorHeightCm: ref(210),
-        appliedFmlWindowHeightCm: ref(120),
-        appliedFmlWindowSillZCm: ref(90),
+        appliedThicknessLimits: ref({ minCm: 10, midCm: 20, maxCm: 30 }),
+        appliedBandBoundaries: ref({ midBoundaryCm: 15, maxBoundaryCm: 25 }),
+        appliedWallHeightCm: ref(280),
+        appliedDoorHeightCm: ref(210),
+        appliedWindowHeightCm: ref(120),
+        appliedWindowSillZCm: ref(90),
         planThicknessCms: ref([10, 20, 30]),
-        fmlThicknessMinCm: ref(10),
-        fmlThicknessMidCm: ref(20),
-        fmlThicknessMaxCm: ref(30),
-        fmlBandMidBoundaryCm: ref(15),
-        fmlBandMaxBoundaryCm: ref(25),
+        planThicknessMinCm: ref(10),
+        planThicknessMidCm: ref(20),
+        planThicknessMaxCm: ref(30),
+        planBandMidBoundaryCm: ref(15),
+        planBandMaxBoundaryCm: ref(25),
         planWallHeightCm: ref(280),
         planDoorHeightCm: ref(210),
         planWindowHeightCm: ref(120),
@@ -69,7 +69,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
     generate.updatePreviewPlan(plan, layout)
 
     const drop = { x: 100, y: 200 }
-    const applied = generate.applyNulpuntAtFmlCm(drop, layout)
+    const applied = generate.applyNulpuntAtPlanCm(drop, layout)
     expect(applied).not.toBeNull()
     expect(applied!.plan.floors[0].walls[0].a).toEqual({ x: 0, y: 0 })
     expect(applied!.layout.origin).toEqual({ x: 150, y: 260 })
@@ -87,7 +87,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
       pixelsPerMillimeterX: ref(0),
       pixelsPerMillimeterY: ref(0),
     }
-    const generate = createWorkspaceFmlGenerate(
+    const generate = createWorkspacePlanGenerate(
       {
         imageName: ref('t.png'),
         combinedOutput: ref(null),
@@ -95,18 +95,18 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
         setLocalError: () => {},
       },
       {
-        appliedFmlThicknessLimits: ref({ minCm: 10, midCm: 20, maxCm: 30 }),
-        appliedFmlBandBoundaries: ref({ midBoundaryCm: 15, maxBoundaryCm: 25 }),
-        appliedFmlWallHeightCm: ref(280),
-        appliedFmlDoorHeightCm: ref(210),
-        appliedFmlWindowHeightCm: ref(120),
-        appliedFmlWindowSillZCm: ref(90),
+        appliedThicknessLimits: ref({ minCm: 10, midCm: 20, maxCm: 30 }),
+        appliedBandBoundaries: ref({ midBoundaryCm: 15, maxBoundaryCm: 25 }),
+        appliedWallHeightCm: ref(280),
+        appliedDoorHeightCm: ref(210),
+        appliedWindowHeightCm: ref(120),
+        appliedWindowSillZCm: ref(90),
         planThicknessCms: ref([10, 20, 30]),
-        fmlThicknessMinCm: ref(10),
-        fmlThicknessMidCm: ref(20),
-        fmlThicknessMaxCm: ref(30),
-        fmlBandMidBoundaryCm: ref(15),
-        fmlBandMaxBoundaryCm: ref(25),
+        planThicknessMinCm: ref(10),
+        planThicknessMidCm: ref(20),
+        planThicknessMaxCm: ref(30),
+        planBandMidBoundaryCm: ref(15),
+        planBandMaxBoundaryCm: ref(25),
         planWallHeightCm: ref(280),
         planDoorHeightCm: ref(210),
         planWindowHeightCm: ref(120),
@@ -124,7 +124,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
     expect(generate.previewUnderlayLayout.value).toBeNull()
 
     const layout = { origin: { x: 50, y: 60 }, pxPerMmX: 1, pxPerMmY: 1 }
-    const applied = generate.applyNulpuntAtFmlCm({ x: 100, y: 200 }, layout)
+    const applied = generate.applyNulpuntAtPlanCm({ x: 100, y: 200 }, layout)
     expect(applied).not.toBeNull()
     expect(applied!.layout.origin).toEqual({ x: 150, y: 260 })
   })
@@ -135,7 +135,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
       pixelsPerMillimeterX: ref(0),
       pixelsPerMillimeterY: ref(0),
     }
-    const generate = createWorkspaceFmlGenerate(
+    const generate = createWorkspacePlanGenerate(
       {
         imageName: ref('t.png'),
         combinedOutput: ref(null),
@@ -143,18 +143,18 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
         setLocalError: () => {},
       },
       {
-        appliedFmlThicknessLimits: ref({ minCm: 10, midCm: 20, maxCm: 30 }),
-        appliedFmlBandBoundaries: ref({ midBoundaryCm: 15, maxBoundaryCm: 25 }),
-        appliedFmlWallHeightCm: ref(280),
-        appliedFmlDoorHeightCm: ref(210),
-        appliedFmlWindowHeightCm: ref(120),
-        appliedFmlWindowSillZCm: ref(90),
+        appliedThicknessLimits: ref({ minCm: 10, midCm: 20, maxCm: 30 }),
+        appliedBandBoundaries: ref({ midBoundaryCm: 15, maxBoundaryCm: 25 }),
+        appliedWallHeightCm: ref(280),
+        appliedDoorHeightCm: ref(210),
+        appliedWindowHeightCm: ref(120),
+        appliedWindowSillZCm: ref(90),
         planThicknessCms: ref([10, 20, 30]),
-        fmlThicknessMinCm: ref(10),
-        fmlThicknessMidCm: ref(20),
-        fmlThicknessMaxCm: ref(30),
-        fmlBandMidBoundaryCm: ref(15),
-        fmlBandMaxBoundaryCm: ref(25),
+        planThicknessMinCm: ref(10),
+        planThicknessMidCm: ref(20),
+        planThicknessMaxCm: ref(30),
+        planBandMidBoundaryCm: ref(15),
+        planBandMaxBoundaryCm: ref(25),
         planWallHeightCm: ref(280),
         planDoorHeightCm: ref(210),
         planWindowHeightCm: ref(120),

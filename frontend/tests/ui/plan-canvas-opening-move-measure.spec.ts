@@ -8,7 +8,7 @@ import {
   formatMeasureDistanceCm,
   measureDistanceCm,
 } from '@/ui/composables/plan-canvas/plan-canvas-measure'
-import type { Wall } from '@/core/fml/types'
+import type { Wall } from '@/core/plan/types'
 
 const wall400 = {
   a: { x: 0, y: 0 },

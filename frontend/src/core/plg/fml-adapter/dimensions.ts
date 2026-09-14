@@ -5,8 +5,8 @@
  * (private readSlicesFromDesignSettings). Daarom sync't serializeDesignSettings
  * slices tijdelijk terug naar design.source.settings vóór die bake.
  */
-import { PLAN_SLICES_SETTINGS_KEY } from '../../fml/plan-slices'
-import type { FloorDesign, FloorPlan, Point2D } from '../../fml/types'
+import { PLAN_SLICES_SETTINGS_KEY } from '../../plan/plan-slices'
+import type { FloorDesign, FloorPlan, Point2D } from '../../plan/types'
 import type { FmlConceptAdapter } from './registry'
 
 function isFinitePoint(value: unknown): value is Point2D {

@@ -1,13 +1,13 @@
-import type { Floor } from '@/core/fml/types'
-import { resolveOpeningCatalog, type WindowAssetKind } from '@/core/fml/opening-refid-catalog'
-import { insetOpeningRect, resolveOpeningFrame } from '@/core/fml/opening-display-geom'
-import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
-import { buildFixtureSymbol } from '@/core/fml/fixture-symbols'
+import type { Floor } from '@/core/plan/types'
+import { resolveOpeningCatalog, type WindowAssetKind } from '@/core/plan/opening-refid-catalog'
+import { insetOpeningRect, resolveOpeningFrame } from '@/core/plan/opening-display-geom'
+import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
+import { buildFixtureSymbol } from '@/core/plan/fixture-symbols'
 import {
   buildWindowPlanSymbol,
   samplePlanArc,
   type PlanGlyph,
-} from '@/core/fml/opening-plan-symbol'
+} from '@/core/plan/opening-plan-symbol'
 import { groupDoorOpeningsOnWall } from '@/ui/components/plan-canvas-doors'
 import { buildWindowOpeningId } from '@/ui/components/plan-canvas-openings'
 import {

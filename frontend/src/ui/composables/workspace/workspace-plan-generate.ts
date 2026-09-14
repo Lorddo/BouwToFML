@@ -2,18 +2,18 @@ import { computed, ref, watch, type Ref } from 'vue'
 import { noteSwallowedError } from '@/core/diagnostics'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml } from '@/core/fml/downloadFml'
-import { extractionToPlanWithOrigin, type Layer12DoorForFml } from '@/core/fml/extractionToPlan'
-import { harmonizeFmlWallThickness } from '@/core/fml/harmonize-fml-wall-thickness'
-import { toLayer12DoorForFml, toLayer14WindowsForFml } from '@/core/fml/layer-openings-to-fml'
-import { pruneFacadeGroups, stripFacadeGroupsFromPlan } from '@/core/fml/facade-groups'
+import { extractionToPlanWithOrigin, type Layer12DoorForPlan } from '@/core/plan/extractionToPlan'
+import { harmonizeWallThickness } from '@/core/plan/harmonize-wall-thickness'
+import { toLayer12DoorForPlan, toLayer14WindowsForPlan } from '@/core/plan/layer-openings-to-plan'
+import { pruneFacadeGroups, stripFacadeGroupsFromPlan } from '@/core/plan/facade-groups'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
+import { applyJunctionSanitizeToPlan } from '@/core/plan/materialize-wall-junctions'
 import {
   cloneUnderlayOriginLayout,
   copyUnderlayDisplayOrient,
-} from '@/core/fml/drawing-to-underlay-layout'
-import { applyNulpunt, reapplyNulpuntImageCm } from '@/core/fml/translate-floor-plan'
-import { scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
+} from '@/core/plan/drawing-to-underlay-layout'
+import { applyNulpunt, reapplyNulpuntImageCm } from '@/core/plan/translate-floor-plan'
+import { scaleUnderlayLayout } from '@/core/plan/scale-floor-plan'
 import {
   applyFloorOrientFromCanonical,
   applyFloorOrientOp,
@@ -22,17 +22,17 @@ import {
   isIdentityFloorOrient,
   type FloorOrientOp,
   type FloorOrientState,
-} from '@/core/fml/floor-plan-orient'
-import { injectStampWallsIntoPlan } from '@/core/fml/apply-stamp-to-floor'
-import { collectStampOwnedWallIds } from '@/core/fml/stamp-owned'
-import { resolveStampOwnership } from '@/core/fml/resolve-stamp-ownership'
-import { resolveStampInjectOffsetCm } from '@/core/fml/stamp-nulpunt'
-import type { FloorPlan, ImportWarning, Point2D, Wall } from '@/core/fml/types'
+} from '@/core/plan/floor-plan-orient'
+import { injectStampWallsIntoPlan } from '@/core/plan/apply-stamp-to-floor'
+import { collectStampOwnedWallIds } from '@/core/plan/stamp-owned'
+import { resolveStampOwnership } from '@/core/plan/resolve-stamp-ownership'
+import { resolveStampInjectOffsetCm } from '@/core/plan/stamp-nulpunt'
+import type { FloorPlan, ImportWarning, Point2D, Wall } from '@/core/plan/types'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
   type OpeningHeightOverflowSummary,
-} from '@/core/fml/opening-height-overflow'
+} from '@/core/plan/opening-height-overflow'
 import {
   countPlanOpenings,
   countPlanWalls,
@@ -42,9 +42,9 @@ import {
   overwritePlanWindowBovenlicht,
   overwritePlanWindowHeights,
   overwritePlanWindowSills,
-} from '@/core/fml/wall-endpoint-height'
-import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
-import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
+} from '@/core/plan/wall-endpoint-height'
+import type { ThicknessBandBoundaries } from '@/core/plan/wall-thickness-tiers'
+import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration, HScaleState } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
@@ -61,7 +61,7 @@ import {
   resolveRescaleFactorsFromRulers,
   scaleNulpuntImageCm,
 } from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
-import { factoryRoomTypeColor } from '@/core/fml/roomtype-catalog'
+import { factoryRoomTypeColor } from '@/core/plan/roomtype-catalog'
 import { tGlobal } from '@/ui/i18n'
 import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
@@ -109,13 +109,13 @@ export function countPlanElements(plan: FloorPlan | null): {
   return { walls, doors, windows }
 }
 
-export type WorkspaceFmlStampInject = {
+export type WorkspaceStampInject = {
   walls: Wall[]
   bakeNulpuntImageCm: Point2D
   facadeLookupPlan?: FloorPlan | null
 }
 
-export type WorkspaceFmlGenerateDeps = {
+export type WorkspacePlanGenerateDeps = {
   imageName: Ref<string | null>
   combinedOutput: Ref<ExtractionOutput | null>
   scale: ReturnType<typeof useHScaleCalibration>
@@ -134,24 +134,24 @@ export type WorkspaceFmlGenerateDeps = {
    * Stempelset vector-inject (stap 2 bake). null = geen inject.
    * bakeNulpunt zaait planNulpuntImageCm als die leeg is.
    */
-  getStampVectorInject?: () => WorkspaceFmlStampInject | null
+  getStampVectorInject?: () => WorkspaceStampInject | null
   /** Test/override: zelfde seam als useEditorSessionDefaults.confirmOverwrite. */
   confirmOverwrite?: (message: string) => boolean | Promise<boolean>
 }
 
-export type WorkspaceFmlGenerateApplied = {
-  appliedFmlThicknessLimits: Ref<FmlWallThicknessLimits>
-  appliedFmlBandBoundaries: Ref<FmlThicknessBandBoundaries>
-  appliedFmlWallHeightCm: Ref<number>
-  appliedFmlDoorHeightCm: Ref<number>
-  appliedFmlWindowHeightCm: Ref<number>
-  appliedFmlWindowSillZCm: Ref<number>
+export type WorkspacePlanGenerateApplied = {
+  appliedThicknessLimits: Ref<WallThicknessLimits>
+  appliedBandBoundaries: Ref<ThicknessBandBoundaries>
+  appliedWallHeightCm: Ref<number>
+  appliedDoorHeightCm: Ref<number>
+  appliedWindowHeightCm: Ref<number>
+  appliedWindowSillZCm: Ref<number>
   planThicknessCms: Ref<number[]>
-  fmlThicknessMinCm: Ref<number>
-  fmlThicknessMidCm: Ref<number>
-  fmlThicknessMaxCm: Ref<number>
-  fmlBandMidBoundaryCm: Ref<number>
-  fmlBandMaxBoundaryCm: Ref<number>
+  planThicknessMinCm: Ref<number>
+  planThicknessMidCm: Ref<number>
+  planThicknessMaxCm: Ref<number>
+  planBandMidBoundaryCm: Ref<number>
+  planBandMaxBoundaryCm: Ref<number>
   planWallHeightCm: Ref<number>
   planDoorHeightCm: Ref<number>
   planWindowHeightCm: Ref<number>
@@ -169,9 +169,9 @@ export type WorkspaceFmlGenerateApplied = {
  * `resetGeneratedPreview` clears only edited — bij sessie-restore kan imported nog
  * voorrang houden tot clearImportedFml; geen strikte invalidatie-contract.
  */
-export function createWorkspaceFmlGenerate(
-  deps: WorkspaceFmlGenerateDeps,
-  applied: WorkspaceFmlGenerateApplied,
+export function createWorkspacePlanGenerate(
+  deps: WorkspacePlanGenerateDeps,
+  applied: WorkspacePlanGenerateApplied,
 ) {
   const importedPlan = ref<FloorPlan | null>(null)
   const importedWarnings = ref<ImportWarning[]>([])
@@ -229,17 +229,17 @@ export function createWorkspaceFmlGenerate(
    * Seed wordt gezet bij syncApplied / applyPreviewDefault / regenerate.
    */
   const extractionHeightSeed = {
-    wallHeightCm: applied.appliedFmlWallHeightCm.value,
-    doorHeightCm: applied.appliedFmlDoorHeightCm.value,
-    windowHeightCm: applied.appliedFmlWindowHeightCm.value,
-    windowSillZCm: applied.appliedFmlWindowSillZCm.value,
+    wallHeightCm: applied.appliedWallHeightCm.value,
+    doorHeightCm: applied.appliedDoorHeightCm.value,
+    windowHeightCm: applied.appliedWindowHeightCm.value,
+    windowSillZCm: applied.appliedWindowSillZCm.value,
   }
 
   function syncExtractionHeightSeedFromApplied(): void {
-    extractionHeightSeed.wallHeightCm = applied.appliedFmlWallHeightCm.value
-    extractionHeightSeed.doorHeightCm = applied.appliedFmlDoorHeightCm.value
-    extractionHeightSeed.windowHeightCm = applied.appliedFmlWindowHeightCm.value
-    extractionHeightSeed.windowSillZCm = applied.appliedFmlWindowSillZCm.value
+    extractionHeightSeed.wallHeightCm = applied.appliedWallHeightCm.value
+    extractionHeightSeed.doorHeightCm = applied.appliedDoorHeightCm.value
+    extractionHeightSeed.windowHeightCm = applied.appliedWindowHeightCm.value
+    extractionHeightSeed.windowSillZCm = applied.appliedWindowSillZCm.value
   }
 
   /** Één plan-build + cm-origin per generate-pass (geen tweede resolveGraph voor underlay). */
@@ -256,9 +256,9 @@ export function createWorkspaceFmlGenerate(
     try {
       const layer12Doors =
         deps.orientedDoors?.value
-          .map((door) => toLayer12DoorForFml(door, pxPerMmX, pxPerMmY))
-          .filter((door): door is Layer12DoorForFml => !!door) ?? []
-      const layer14Windows = toLayer14WindowsForFml(deps.boundWindows?.value ?? [], {
+          .map((door) => toLayer12DoorForPlan(door, pxPerMmX, pxPerMmY))
+          .filter((door): door is Layer12DoorForPlan => !!door) ?? []
+      const layer14Windows = toLayer14WindowsForPlan(deps.boundWindows?.value ?? [], {
         mergeMultiWindows: deps.mergeMultiWindows?.value !== false,
         doors: deps.orientedDoors?.value ?? [],
       })
@@ -289,11 +289,11 @@ export function createWorkspaceFmlGenerate(
 
   const generatedPlan = computed<FloorPlan | null>(() => generatedBundle.value?.plan ?? null)
 
-  function resolveStampInject(): WorkspaceFmlStampInject | null {
+  function resolveStampInject(): WorkspaceStampInject | null {
     return deps.getStampVectorInject?.() ?? null
   }
 
-  function ensureNulpuntSeededFromStamp(stamp: WorkspaceFmlStampInject | null): Point2D | null {
+  function ensureNulpuntSeededFromStamp(stamp: WorkspaceStampInject | null): Point2D | null {
     if (planNulpuntImageCm.value) return planNulpuntImageCm.value
     if (!stamp) return null
     planNulpuntImageCm.value = { ...stamp.bakeNulpuntImageCm }
@@ -306,7 +306,7 @@ export function createWorkspaceFmlGenerate(
    */
   function finalizePlanInNulpuntFrame(
     plan: FloorPlan,
-    faceEvidenceById?: Map<string, import('@/core/fml/wall-face-step-evidence').WallFaceExtentsCm>,
+    faceEvidenceById?: Map<string, import('@/core/plan/wall-face-step-evidence').WallFaceExtentsCm>,
   ): FloorPlan {
     const stamp = resolveStampInject()
     let next = plan
@@ -328,13 +328,13 @@ export function createWorkspaceFmlGenerate(
     const pinnedWallIds = collectStampOwnedWallIds(next.floors[0]?.walls ?? [])
     return seedPlanFromUserSettings(
       regeneratePlanAreas(
-        harmonizeFmlWallThickness(
+        harmonizeWallThickness(
           next,
-          applied.appliedFmlThicknessLimits.value,
-          applied.appliedFmlBandBoundaries.value,
+          applied.appliedThicknessLimits.value,
+          applied.appliedBandBoundaries.value,
           faceEvidenceById,
           pinnedWallIds,
-          applied.appliedFmlThicknessLimits.value.thicknessCms,
+          applied.appliedThicknessLimits.value.thicknessCms,
         ),
       ),
     )
@@ -346,7 +346,7 @@ export function createWorkspaceFmlGenerate(
       origin: Point2D
       pxPerMmX: number
       pxPerMmY: number
-      faceEvidenceById?: Map<string, import('@/core/fml/wall-face-step-evidence').WallFaceExtentsCm>
+      faceEvidenceById?: Map<string, import('@/core/plan/wall-face-step-evidence').WallFaceExtentsCm>
     },
     options?: { seedNulpunt?: boolean },
   ): { plan: FloorPlan; layout: PreviewUnderlayLayout } {
@@ -435,27 +435,27 @@ export function createWorkspaceFmlGenerate(
     if (field === 'wallHeightCm') {
       const cm = Math.max(1, Math.round(n))
       applied.planWallHeightCm.value = cm
-      applied.appliedFmlWallHeightCm.value = cm
+      applied.appliedWallHeightCm.value = cm
       extractionHeightSeed.wallHeightCm = cm
       return
     }
     if (field === 'doorHeightCm') {
       const cm = Math.max(1, Math.round(n))
       applied.planDoorHeightCm.value = cm
-      applied.appliedFmlDoorHeightCm.value = cm
+      applied.appliedDoorHeightCm.value = cm
       extractionHeightSeed.doorHeightCm = cm
       return
     }
     if (field === 'windowHeightCm') {
       const cm = Math.max(1, Math.round(n))
       applied.planWindowHeightCm.value = cm
-      applied.appliedFmlWindowHeightCm.value = cm
+      applied.appliedWindowHeightCm.value = cm
       extractionHeightSeed.windowHeightCm = cm
       return
     }
     const cm = Math.max(0, Math.round(n))
     applied.planWindowSillZCm.value = cm
-    applied.appliedFmlWindowSillZCm.value = cm
+    applied.appliedWindowSillZCm.value = cm
     extractionHeightSeed.windowSillZCm = cm
   }
 
@@ -631,20 +631,20 @@ export function createWorkspaceFmlGenerate(
   })
 
   function syncAppliedFromDraft(): void {
-    applied.appliedFmlThicknessLimits.value = {
-      minCm: applied.fmlThicknessMinCm.value,
-      midCm: applied.fmlThicknessMidCm.value,
-      maxCm: applied.fmlThicknessMaxCm.value,
+    applied.appliedThicknessLimits.value = {
+      minCm: applied.planThicknessMinCm.value,
+      midCm: applied.planThicknessMidCm.value,
+      maxCm: applied.planThicknessMaxCm.value,
       thicknessCms: [...applied.planThicknessCms.value],
     }
-    applied.appliedFmlBandBoundaries.value = {
-      midBoundaryCm: applied.fmlBandMidBoundaryCm.value,
-      maxBoundaryCm: applied.fmlBandMaxBoundaryCm.value,
+    applied.appliedBandBoundaries.value = {
+      midBoundaryCm: applied.planBandMidBoundaryCm.value,
+      maxBoundaryCm: applied.planBandMaxBoundaryCm.value,
     }
-    applied.appliedFmlWallHeightCm.value = applied.planWallHeightCm.value
-    applied.appliedFmlDoorHeightCm.value = applied.planDoorHeightCm.value
-    applied.appliedFmlWindowHeightCm.value = applied.planWindowHeightCm.value
-    applied.appliedFmlWindowSillZCm.value = applied.planWindowSillZCm.value
+    applied.appliedWallHeightCm.value = applied.planWallHeightCm.value
+    applied.appliedDoorHeightCm.value = applied.planDoorHeightCm.value
+    applied.appliedWindowHeightCm.value = applied.planWindowHeightCm.value
+    applied.appliedWindowSillZCm.value = applied.planWindowSillZCm.value
     syncExtractionHeightSeedFromApplied()
   }
 
@@ -672,7 +672,7 @@ export function createWorkspaceFmlGenerate(
    * Zet plan + layout + nulpuntImageCm atomisch.
    * @param layoutOverride canvas-layout (getUnderlayLayout) — voorkomt mismatch met null previewUnderlayLayout
    */
-  function applyNulpuntAtFmlCm(
+  function applyNulpuntAtPlanCm(
     dropCm: Point2D,
     layoutOverride?: PreviewUnderlayLayout | null,
     planOverride?: FloorPlan | null,
@@ -717,7 +717,7 @@ export function createWorkspaceFmlGenerate(
   }
 
   /** Alleen diktes/banden: hergenereert uit detectie; hoogtes komen uit extractionHeightSeed. */
-  function regenerateFml(): void {
+  function regeneratePlan(): void {
     if (!generatedPlan.value) return
     syncAppliedFromDraft()
     editedPreviewPlan.value = null
@@ -728,7 +728,7 @@ export function createWorkspaceFmlGenerate(
    * Stap-4: anisotrope H/V-schaal van het **huidige** plan (edits blijven).
    * Geen muurdikte-schaal; underlay per as; kalibratie alleen als schaal confirmed.
    */
-  function rescaleFmlFromRulers(params: {
+  function rescalePlanFromRulers(params: {
     measuredCmX: number
     measuredCmY: number
     trueMmX: number
@@ -815,7 +815,7 @@ export function createWorkspaceFmlGenerate(
     const state = rescaleState.value
     if (!state || !rescaleActive.value) return false
     const measured = measuredCmFromRescaleState(state)
-    const ok = rescaleFmlFromRulers({
+    const ok = rescalePlanFromRulers({
       measuredCmX: measured.x,
       measuredCmY: measured.y,
       trueMmX: rescaleDistanceMmX.value,
@@ -862,7 +862,7 @@ export function createWorkspaceFmlGenerate(
   function downloadGeneratedFml(): void {
     const text = buildGeneratedFmlText()
     if (!text) {
-      deps.setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
+      deps.setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
       return
     }
     const name = sanitizeFilename(stripFileExtension(deps.imageName.value))
@@ -924,10 +924,10 @@ export function createWorkspaceFmlGenerate(
     applyFloorOrientOpToPreview,
     applyUnderlayOrientOp,
     setUnderlayMoveMode,
-    applyNulpuntAtFmlCm,
+    applyNulpuntAtPlanCm,
     clearLivePlanCanvas,
     resetGeneratedPreview,
-    regenerateFml,
+    regeneratePlan,
     rescaleActive,
     rescaleState,
     rescaleDistanceMmX,
@@ -938,7 +938,7 @@ export function createWorkspaceFmlGenerate(
     setPlanRescaleDistanceMmX,
     setPlanRescaleDistanceMmY,
     confirmPlanRescale,
-    rescaleFmlFromRulers,
+    rescalePlanFromRulers,
     downloadGeneratedFml,
     copyGeneratedFml,
     importFmlFile,
@@ -946,4 +946,4 @@ export function createWorkspaceFmlGenerate(
   }
 }
 
-export type WorkspaceFmlGenerateApi = ReturnType<typeof createWorkspaceFmlGenerate>
+export type WorkspacePlanGenerateApi = ReturnType<typeof createWorkspacePlanGenerate>

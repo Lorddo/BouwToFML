@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { extractionToPlan } from '@/core/fml/extractionToPlan'
+import { extractionToPlan } from '@/core/plan/extractionToPlan'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import type { ExtractionOutput } from '@/core/extraction'

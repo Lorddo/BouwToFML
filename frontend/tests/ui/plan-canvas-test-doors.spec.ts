@@ -2,7 +2,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { describe, expect, it } from 'vitest'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { resolveOpeningCatalog } from '@/core/fml/opening-refid-catalog'
+import { resolveOpeningCatalog } from '@/core/plan/opening-refid-catalog'
 import { groupDoorOpeningsOnWall } from '@/ui/components/plan-canvas-doors'
 
 const TEST_FML = resolve(__dirname, '../../examples/FML(test)/test-doors.json.fml')

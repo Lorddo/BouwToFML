@@ -14,17 +14,17 @@ import {
 } from '@/cv/walls/rooms/pipeline-v3/policies/layer-9'
 import {
   layer10CollapsePolicy,
-  resolveLayer10FmlPolicy,
+  resolveLayer10PlanPolicy,
 } from '@/cv/walls/rooms/pipeline-v3/policies/layer-10'
 import {
   V3_NATIVE_THROUGH_LAYER,
   V3_PIPELINE_LAST_LAYER,
-  isV3FmlReady,
+  isV3PlanReady,
   listIncompleteLayers,
 } from '@/cv/walls/rooms/pipeline-v3/native-layers'
 import {
-  resolveFmlSourceLayer,
-  hasFmlSemanticSource,
+  resolvePlanSourceLayer,
+  hasPlanSemanticSource,
 } from '@/cv/walls/rooms/build-semantic-walls-source'
 import type { ExtractionOutput, PipelineV3Debug } from '@/core/extraction/types'
 
@@ -90,7 +90,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
     expect(V3_PIPELINE_LAST_LAYER).toBe(10)
     expect(V3_NATIVE_THROUGH_LAYER).toBe(10)
     expect(listIncompleteLayers()).toEqual([])
-    expect(isV3FmlReady()).toBe(true)
+    expect(isV3PlanReady()).toBe(true)
   })
 
   it('keeps stub/cover only on L9; axis-straighten + micro-corner only on L10', () => {
@@ -389,7 +389,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
       { a: { x: 246, y: 2082 }, b: { x: 269, y: 2082 } },
       { a: { x: 269, y: 2082 }, b: { x: 269, y: 1800 } },
     ]
-    const policy = resolveLayer10FmlPolicy(160, {
+    const policy = resolveLayer10PlanPolicy(160, {
       midBoundaryPx: 40,
       maxBoundaryPx: 70,
     }).collapse
@@ -459,20 +459,20 @@ describe('V3 L9/L10 dissolve → FML', () => {
     }
 
     expect(
-      resolveFmlSourceLayer({
+      resolvePlanSourceLayer({
         pipelineV3Debug: incomplete,
         meta: { extractorId: 'geometry-lbe', elapsedMs: 1, wallPipelineVersion: 'v3' },
       } as ExtractionOutput),
     ).toBeUndefined()
 
-    const source = resolveFmlSourceLayer({
+    const source = resolvePlanSourceLayer({
       pipelineV3Debug: complete,
       meta: { extractorId: 'geometry-lbe', elapsedMs: 1, wallPipelineVersion: 'v3' },
     } as ExtractionOutput)
     expect(source?.segments).toHaveLength(1)
     expect(source?.segments[0]?.b.x).toBe(10)
     expect(
-      hasFmlSemanticSource({
+      hasPlanSemanticSource({
         pipelineV3Debug: complete,
         meta: { extractorId: 'geometry-lbe', elapsedMs: 1, wallPipelineVersion: 'v3' },
       } as ExtractionOutput),

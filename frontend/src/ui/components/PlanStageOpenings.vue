@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { resolveDoorBovenlicht, resolveWindowBovenlicht } from '@/core/fml/bovenlicht'
+import { resolveDoorBovenlicht, resolveWindowBovenlicht } from '@/core/plan/bovenlicht'
 import {
   BOVENLICHT_MARKER_STROKE_PX,
   openingFillColor,

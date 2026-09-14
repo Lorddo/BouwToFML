@@ -6,7 +6,7 @@ import {
   clearHeightFillRgba,
   DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
 } from '@/ui/composables/settings/user-settings'
-import { parseFmlHex } from '@/core/fml/roomtype-catalog'
+import { parsePlanHex } from '@/core/plan/roomtype-catalog'
 
 const props = withDefaults(
   defineProps<{
@@ -36,7 +36,7 @@ const LINE_STROKE_CM = 1.4
 const COLOR_200 = '#a855f7'
 
 const baseHex = computed(
-  () => parseFmlHex(props.fillColor) ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
+  () => parsePlanHex(props.fillColor) ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
 )
 const fill150 = computed(() => clearHeightFillRgba(baseHex.value))
 const color150 = computed(() => baseHex.value)
