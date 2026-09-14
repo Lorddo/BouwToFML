@@ -3,7 +3,7 @@ import {
   maybeAddSiblingBovenlicht,
   type ExpandBovenlichtFloorDefaults,
 } from '@/core/fml/bovenlicht'
-import { DEFAULT_FML_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import type { Opening, Point2D } from '@/core/fml/types'
 import { buildOpeningFromPreset } from '@/core/fml/opening-from-preset'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/fml/opening-add-presets'
@@ -52,7 +52,7 @@ export function usePlanCanvasAddOpening(options: {
     const heightCm =
       mode === 'window'
         ? clampWindowOpeningHeight(options.addWindowHeightCm.value)
-        : Math.max(1, Math.round(options.addDoorHeightCm.value || DEFAULT_FML_DOOR_HEIGHT_CM))
+        : Math.max(1, Math.round(options.addDoorHeightCm.value || DEFAULT_DOOR_HEIGHT_CM))
     if (mode === 'window') {
       options.addWindowSillZCm.value = sillZCm
       options.addWindowHeightCm.value = heightCm

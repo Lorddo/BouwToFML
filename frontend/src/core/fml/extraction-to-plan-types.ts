@@ -25,10 +25,10 @@ export interface Layer14WindowForFml {
   openingEndPx: Point2D
 }
 
-export const DEFAULT_FML_WALL_HEIGHT_CM = 280
-export const DEFAULT_FML_DOOR_HEIGHT_CM = 220
-export const DEFAULT_FML_WINDOW_HEIGHT_CM = 150
-export const DEFAULT_FML_WINDOW_SILL_Z_CM = 70
+export const DEFAULT_WALL_HEIGHT_CM = 280
+export const DEFAULT_DOOR_HEIGHT_CM = 220
+export const DEFAULT_WINDOW_HEIGHT_CM = 150
+export const DEFAULT_WINDOW_SILL_Z_CM = 70
 
 export interface ExtractionToPlanOptions {
   pxPerMmX: number

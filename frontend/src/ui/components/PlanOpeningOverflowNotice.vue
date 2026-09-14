@@ -41,7 +41,7 @@ function len(cm: number): string {
 </script>
 
 <template>
-  <div class="fml-overflow-hint" role="status">
+  <div class="plan-overflow-hint" role="status">
     <p v-if="hasAbove">
       {{
         t('result.openingOverflow', {
@@ -64,18 +64,18 @@ function len(cm: number): string {
 </template>
 
 <style scoped>
-.fml-overflow-hint {
+.plan-overflow-hint {
   margin: 0 0 8px;
   font-size: 11px;
   line-height: 1.4;
   color: #b45309;
 }
 
-.fml-overflow-hint p {
+.plan-overflow-hint p {
   margin: 0;
 }
 
-.fml-overflow-hint p + p {
+.plan-overflow-hint p + p {
   margin-top: 4px;
 }
 </style>

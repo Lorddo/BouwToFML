@@ -136,7 +136,7 @@ describe('V3 FML gate', () => {
     summary: {
       incompleteLayers: [10],
       completedThroughLayer: 9,
-      fmlReady: false,
+      planReady: false,
       bridgeMode: 'native',
     },
   }
@@ -152,7 +152,7 @@ describe('V3 FML gate', () => {
     summary: {
       incompleteLayers: [],
       completedThroughLayer: 10,
-      fmlReady: true,
+      planReady: true,
       bridgeMode: 'native',
     },
   }
@@ -166,7 +166,7 @@ describe('V3 FML gate', () => {
     expect(hasFmlSemanticSource(output)).toBe(false)
   })
 
-  it('allows FML only when V3 fmlReady + L10 segments', () => {
+  it('allows FML only when V3 planReady + L10 segments', () => {
     const output = {
       pipelineV3Debug: completeV3,
       meta: { extractorId: 'geometry-lbe', elapsedMs: 10, wallPipelineVersion: 'v3' },

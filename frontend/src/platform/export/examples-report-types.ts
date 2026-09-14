@@ -156,7 +156,7 @@ export interface WallVariantExport {
     semanticWallJunctionCount?: number
     semanticLayerCSegmentCount?: number
     semanticUsedLayerBFallback?: boolean
-    fmlWallCount?: number
+    planWallCount?: number
     balanceNonDefault?: number
   }
   segments?: SegmentRecord[]
@@ -169,7 +169,7 @@ export interface WallVariantExport {
   roomWallMergedClosePng?: string
   roomWallSkeletonOverlayPng?: string
   semanticWallGraph?: SemanticWallGraphRecord
-  fmlPreview?: PlanCanvasExport
+  planPreview?: PlanCanvasExport
   wallLayers?: WallLayerExport[]
   meta?: Omit<ExtractionOutput['meta'], 'signaturesJson' | 'debugStagePngs'>
 }

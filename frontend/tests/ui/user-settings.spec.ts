@@ -222,6 +222,16 @@ describe('user-settings', () => {
     expect(normalized.planDisplay.planDisplayStyle).toBe('bouw')
   })
 
+  it('legacy load: fmlConversion blijft leesbaar als openingMerge (C-triage D1)', () => {
+    const normalized = normalizeUserSettings({
+      version: 1,
+      fmlConversion: { mergeDoubleDoors: false, mergeMultiWindows: false },
+    })
+    expect(normalized.openingMerge).toEqual({ mergeDoubleDoors: false, mergeMultiWindows: false })
+    // Fabriek staat op true, dus een false uit de oude sleutel bewijst dat hij gelezen is.
+    expect(createFactoryUserSettings().openingMerge.mergeDoubleDoors).toBe(true)
+  })
+
   it('legacy load: nieuwe sleutel wint van de oude als beide er staan', () => {
     const normalized = normalizeUserSettings({
       version: 1,

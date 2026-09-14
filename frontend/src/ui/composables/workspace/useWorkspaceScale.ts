@@ -70,9 +70,13 @@ export function useWorkspaceScale(deps: {
     scalePanelOpen.value = true
   }
 
+  /**
+   * Nieuw project / nieuwe sessie: ook de getypte mm terug naar fabriek.
+   * `resetScaleUi` doet dat bewust níet — bij een nieuwe onderlegger in hetzelfde
+   * project blijft de ingevoerde maat staan.
+   */
   function resetScaleFull() {
-    deps.scale.cancel()
-    deps.scale.state.value = null
+    deps.scale.reset()
   }
 
   /** Herstel schaal + UI na dev-snapshot (linialen dicht bij bevestigde schaal). */

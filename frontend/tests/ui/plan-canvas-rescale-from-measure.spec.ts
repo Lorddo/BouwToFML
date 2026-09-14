@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import type { FloorPlan } from '@/core/fml/types'
 import {
-  fmlRescaleStateFromImageHandles,
+  rescaleStateFromImageHandles,
   initPlanRescaleStateFromWalls,
   initImageScaleHandles,
   resolvePlanRescaleState,
@@ -72,7 +72,7 @@ describe('plan-canvas-rescale-from-measure', () => {
   })
 
   it('zet stap-1 pixel-handles om naar FML-cm via layout', () => {
-    const state = fmlRescaleStateFromImageHandles(
+    const state = rescaleStateFromImageHandles(
       {
         xLeft: 200,
         xRight: 1200,
@@ -102,12 +102,12 @@ describe('plan-canvas-rescale-from-measure', () => {
       yBottom: 450,
       yGuideX: 400,
     }
-    const before = fmlRescaleStateFromImageHandles(handles, {
+    const before = rescaleStateFromImageHandles(handles, {
       origin: { x: 0, y: 0 },
       pxPerMmX: 1,
       pxPerMmY: 1,
     })!
-    const afterNulpunt = fmlRescaleStateFromImageHandles(handles, {
+    const afterNulpunt = rescaleStateFromImageHandles(handles, {
       origin: { x: 15, y: 8 },
       pxPerMmX: 1,
       pxPerMmY: 1,
@@ -122,7 +122,7 @@ describe('plan-canvas-rescale-from-measure', () => {
 
   it('weiger omzetting zonder geldige px/mm', () => {
     expect(
-      fmlRescaleStateFromImageHandles(
+      rescaleStateFromImageHandles(
         {
           xLeft: 0,
           xRight: 10,

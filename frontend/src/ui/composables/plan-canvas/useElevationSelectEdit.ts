@@ -10,7 +10,7 @@ import {
   clampBovenlichtGapCm,
   clampBovenlichtHeightCm,
 } from '@/core/fml/bovenlicht'
-import { DEFAULT_FML_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import {
   unprojectElevationAlong,
   ELEVATION_RETURN_MAX_DOT,
@@ -842,7 +842,7 @@ export function useElevationSelectEdit(options: {
       const subtype = resolveDoorSubtypeFromRefid(located.opening.kind)
       const width = clampOpeningWidth(located.opening.width)
       const doorHeight = Math.round(
-        located.opening.z_height ?? props.defaultDoorHeightCm ?? DEFAULT_FML_DOOR_HEIGHT_CM,
+        located.opening.z_height ?? props.defaultDoorHeightCm ?? DEFAULT_DOOR_HEIGHT_CM,
       )
       const doorSill = Math.round(located.opening.z ?? 0)
       addDoorSubtype.value = subtype

@@ -91,7 +91,7 @@ describe('E2E fase 1 — layer1 injectie', () => {
         referenceWallThicknessPx: WALL,
       })
 
-      expect(injected.fmlReady).toBe(true)
+      expect(injected.planReady).toBe(true)
       expect(injected.layer1.totalSegmentsRaw).toBe(first.layer1.totalSegmentsRaw)
       expect(injected.layer10).toBeDefined()
       expect(first.layer10).toBeDefined()

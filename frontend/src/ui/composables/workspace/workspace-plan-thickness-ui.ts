@@ -5,13 +5,13 @@ import {
 } from '@/core/fml/apply-fml-thickness-pick'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extractionToPlan'
 import {
-  FML_THICKNESS_PICK_SEARCH_CM,
+  THICKNESS_PICK_SEARCH_CM,
   measureWallThicknessCmOnUnderlay,
 } from '@/core/fml/measure-underlay-wall-thickness'
 import {
@@ -90,29 +90,29 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   const fmlThicknessMaxCm = ref(storedLimits.maxCm)
   const fmlBandMidBoundaryCm = ref(storedBandBoundaries.midBoundaryCm)
   const fmlBandMaxBoundaryCm = ref(storedBandBoundaries.maxBoundaryCm)
-  const fmlWallHeightCm = ref(DEFAULT_FML_WALL_HEIGHT_CM)
-  const fmlDoorHeightCm = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
-  const fmlWindowHeightCm = ref(DEFAULT_FML_WINDOW_HEIGHT_CM)
-  const fmlWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
+  const planWallHeightCm = ref(DEFAULT_WALL_HEIGHT_CM)
+  const planDoorHeightCm = ref(DEFAULT_DOOR_HEIGHT_CM)
+  const planWindowHeightCm = ref(DEFAULT_WINDOW_HEIGHT_CM)
+  const planWindowSillZCm = ref(DEFAULT_WINDOW_SILL_Z_CM)
   /** Export-only: bovenlicht op alle deuren tenzij per-deur override. Start vanuit user/project defaults. */
-  const fmlBovenlichtDefault = ref(loadUserSettings().defaults.bovenlichtDefault === true)
+  const planBovenlichtDefault = ref(loadUserSettings().defaults.bovenlichtDefault === true)
   /** Export-only: bovenlicht op alle ramen tenzij per-raam override. */
-  const fmlWindowBovenlichtDefault = ref(
+  const planWindowBovenlichtDefault = ref(
     loadUserSettings().defaults.windowBovenlichtDefault === true,
   )
-  const fmlBovenlichtHeightCm = ref(
+  const planBovenlichtHeightCm = ref(
     loadUserSettings().defaults.bovenlichtHeightCm ?? BOVENLICHT_HEIGHT_CM,
   )
-  const fmlBovenlichtGapCm = ref(loadUserSettings().defaults.bovenlichtGapCm ?? BOVENLICHT_GAP_CM)
+  const planBovenlichtGapCm = ref(loadUserSettings().defaults.bovenlichtGapCm ?? BOVENLICHT_GAP_CM)
   const appliedFmlThicknessLimits = ref<FmlWallThicknessLimits>({ ...storedLimits })
   const appliedFmlBandBoundaries = ref<FmlThicknessBandBoundaries>({ ...storedBandBoundaries })
-  const appliedFmlWallHeightCm = ref(DEFAULT_FML_WALL_HEIGHT_CM)
-  const appliedFmlDoorHeightCm = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
-  const appliedFmlWindowHeightCm = ref(DEFAULT_FML_WINDOW_HEIGHT_CM)
-  const appliedFmlWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
-  const fmlThicknessPickTier = ref<FmlThicknessPickTier | null>(null)
-  const fmlThicknessPickMessage = ref<string | null>(null)
-  const fmlThicknessPickBusy = ref(false)
+  const appliedFmlWallHeightCm = ref(DEFAULT_WALL_HEIGHT_CM)
+  const appliedFmlDoorHeightCm = ref(DEFAULT_DOOR_HEIGHT_CM)
+  const appliedFmlWindowHeightCm = ref(DEFAULT_WINDOW_HEIGHT_CM)
+  const appliedFmlWindowSillZCm = ref(DEFAULT_WINDOW_SILL_Z_CM)
+  const thicknessPickTier = ref<FmlThicknessPickTier | null>(null)
+  const thicknessPickMessage = ref<string | null>(null)
+  const thicknessPickBusy = ref(false)
 
   function syncLegacyFromCatalog(cms: number[]): FmlWallThicknessLimits {
     const catalog = normalizeThicknessCatalog(cms)
@@ -202,25 +202,25 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlThicknessMaxCm.value = DEFAULT_FML_WALL_THICKNESS_LIMITS.maxCm
     fmlBandMidBoundaryCm.value = DEFAULT_FML_BAND_BOUNDARIES.midBoundaryCm
     fmlBandMaxBoundaryCm.value = DEFAULT_FML_BAND_BOUNDARIES.maxBoundaryCm
-    fmlWallHeightCm.value = DEFAULT_FML_WALL_HEIGHT_CM
-    fmlDoorHeightCm.value = DEFAULT_FML_DOOR_HEIGHT_CM
-    fmlWindowHeightCm.value = DEFAULT_FML_WINDOW_HEIGHT_CM
-    fmlWindowSillZCm.value = DEFAULT_FML_WINDOW_SILL_Z_CM
+    planWallHeightCm.value = DEFAULT_WALL_HEIGHT_CM
+    planDoorHeightCm.value = DEFAULT_DOOR_HEIGHT_CM
+    planWindowHeightCm.value = DEFAULT_WINDOW_HEIGHT_CM
+    planWindowSillZCm.value = DEFAULT_WINDOW_SILL_Z_CM
     // Niet hard false: onderlegger-reset wist anders project-/settings-bovenlicht tot sync.
-    fmlBovenlichtDefault.value = loadUserSettings().defaults.bovenlichtDefault === true
-    fmlWindowBovenlichtDefault.value = loadUserSettings().defaults.windowBovenlichtDefault === true
-    fmlBovenlichtHeightCm.value =
+    planBovenlichtDefault.value = loadUserSettings().defaults.bovenlichtDefault === true
+    planWindowBovenlichtDefault.value = loadUserSettings().defaults.windowBovenlichtDefault === true
+    planBovenlichtHeightCm.value =
       loadUserSettings().defaults.bovenlichtHeightCm ?? BOVENLICHT_HEIGHT_CM
-    fmlBovenlichtGapCm.value = loadUserSettings().defaults.bovenlichtGapCm ?? BOVENLICHT_GAP_CM
+    planBovenlichtGapCm.value = loadUserSettings().defaults.bovenlichtGapCm ?? BOVENLICHT_GAP_CM
     appliedFmlThicknessLimits.value = {
       ...DEFAULT_FML_WALL_THICKNESS_LIMITS,
       thicknessCms: [...FACTORY_THICKNESS_CMS],
     }
     appliedFmlBandBoundaries.value = { ...DEFAULT_FML_BAND_BOUNDARIES }
-    appliedFmlWallHeightCm.value = DEFAULT_FML_WALL_HEIGHT_CM
-    appliedFmlDoorHeightCm.value = DEFAULT_FML_DOOR_HEIGHT_CM
-    appliedFmlWindowHeightCm.value = DEFAULT_FML_WINDOW_HEIGHT_CM
-    appliedFmlWindowSillZCm.value = DEFAULT_FML_WINDOW_SILL_Z_CM
+    appliedFmlWallHeightCm.value = DEFAULT_WALL_HEIGHT_CM
+    appliedFmlDoorHeightCm.value = DEFAULT_DOOR_HEIGHT_CM
+    appliedFmlWindowHeightCm.value = DEFAULT_WINDOW_HEIGHT_CM
+    appliedFmlWindowSillZCm.value = DEFAULT_WINDOW_SILL_Z_CM
     saveFmlWallThicknessLimits(DEFAULT_FML_WALL_THICKNESS_LIMITS)
     saveFmlThicknessBandBoundaries(DEFAULT_FML_BAND_BOUNDARIES)
   }
@@ -247,42 +247,42 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     setPlanThicknessCms(next)
   }
 
-  function setFmlWallHeightCm(value: number): void {
+  function setPlanWallHeightCm(value: number): void {
     if (!Number.isFinite(value) || value <= 0) return
-    fmlWallHeightCm.value = Math.round(value)
+    planWallHeightCm.value = Math.round(value)
   }
 
-  function setFmlDoorHeightCm(value: number): void {
+  function setPlanDoorHeightCm(value: number): void {
     if (!Number.isFinite(value) || value <= 0) return
-    fmlDoorHeightCm.value = Math.round(value)
+    planDoorHeightCm.value = Math.round(value)
   }
 
-  function setFmlWindowHeightCm(value: number): void {
+  function setPlanWindowHeightCm(value: number): void {
     if (!Number.isFinite(value) || value <= 0) return
-    fmlWindowHeightCm.value = Math.round(value)
+    planWindowHeightCm.value = Math.round(value)
   }
 
-  function setFmlWindowSillZCm(value: number): void {
+  function setPlanWindowSillZCm(value: number): void {
     if (!Number.isFinite(value) || value < 0) return
-    fmlWindowSillZCm.value = Math.round(value)
+    planWindowSillZCm.value = Math.round(value)
   }
 
-  function setFmlBovenlichtDefault(value: boolean): void {
-    fmlBovenlichtDefault.value = value === true
+  function setPlanBovenlichtDefault(value: boolean): void {
+    planBovenlichtDefault.value = value === true
   }
 
-  function setFmlWindowBovenlichtDefault(value: boolean): void {
-    fmlWindowBovenlichtDefault.value = value === true
+  function setPlanWindowBovenlichtDefault(value: boolean): void {
+    planWindowBovenlichtDefault.value = value === true
   }
 
-  function setFmlBovenlichtHeightCm(value: number): void {
+  function setPlanBovenlichtHeightCm(value: number): void {
     if (!Number.isFinite(value) || value <= 0) return
-    fmlBovenlichtHeightCm.value = Math.round(value)
+    planBovenlichtHeightCm.value = Math.round(value)
   }
 
-  function setFmlBovenlichtGapCm(value: number): void {
+  function setPlanBovenlichtGapCm(value: number): void {
     if (!Number.isFinite(value) || value < 0) return
-    fmlBovenlichtGapCm.value = Math.round(value)
+    planBovenlichtGapCm.value = Math.round(value)
   }
 
   function setFmlBandMidBoundaryCm(value: number): void {
@@ -303,24 +303,24 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
       deps.setLocalError(tGlobal('result.thicknessPick.noWallBw'))
       return
     }
-    fmlThicknessPickTier.value = tier
+    thicknessPickTier.value = tier
     if (deps.underlayOpacity.value <= 0) deps.underlayOpacity.value = 25
-    fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.clickWall', {
+    thicknessPickMessage.value = tGlobal('result.thicknessPick.clickWall', {
       tier: THICKNESS_PICK_LABELS[tier],
     })
     deps.setLocalError(null)
   }
 
   function cancelFmlThicknessPick(): void {
-    fmlThicknessPickTier.value = null
-    fmlThicknessPickMessage.value = null
-    fmlThicknessPickBusy.value = false
+    thicknessPickTier.value = null
+    thicknessPickMessage.value = null
+    thicknessPickBusy.value = false
   }
 
   function createHandleFmlThicknessWallPick(preview: WorkspaceFmlThicknessPreview) {
     return async function handleFmlThicknessWallPick(wallId: string): Promise<void> {
-      const tier = fmlThicknessPickTier.value
-      if (!tier || fmlThicknessPickBusy.value) return
+      const tier = thicknessPickTier.value
+      if (!tier || thicknessPickBusy.value) return
 
       const plan = preview.previewPlan.value ?? preview.generatedPlan.value
       const wall = plan?.floors[0]?.walls.find((item) => item.id === wallId)
@@ -331,8 +331,8 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
         return
       }
 
-      fmlThicknessPickBusy.value = true
-      fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.measuring')
+      thicknessPickBusy.value = true
+      thicknessPickMessage.value = tGlobal('result.thicknessPick.measuring')
       try {
         const measuredCm = measureWallThicknessCmOnUnderlay({
           wallBw,
@@ -340,7 +340,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
           origin: layout.origin,
           pxPerMmX: layout.pxPerMmX,
           pxPerMmY: layout.pxPerMmY,
-          maxSearchCm: FML_THICKNESS_PICK_SEARCH_CM[tier],
+          maxSearchCm: THICKNESS_PICK_SEARCH_CM[tier],
         })
         const applied = applyFmlThicknessPick(tier, measuredCm, {
           limits: {
@@ -355,23 +355,23 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
         })
         fmlBandMidBoundaryCm.value = applied.bandBoundaries.midBoundaryCm
         fmlBandMaxBoundaryCm.value = applied.bandBoundaries.maxBoundaryCm
-        fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.applied', {
+        thicknessPickMessage.value = tGlobal('result.thicknessPick.applied', {
           tier: THICKNESS_PICK_LABELS[tier],
           length: formatScaleInputLabel(applied.measuredCm, loadUserSettings().scaleInputUnit),
           cm: formatScaleInputLabel(applied.measuredCm, loadUserSettings().scaleInputUnit),
         })
-        fmlThicknessPickTier.value = null
+        thicknessPickTier.value = null
       } catch (error) {
         deps.setLocalError(
           error instanceof Error
             ? error.message
             : tGlobal('result.thicknessPick.measureFailedGeneric'),
         )
-        fmlThicknessPickMessage.value = tGlobal('result.thicknessPick.retry', {
+        thicknessPickMessage.value = tGlobal('result.thicknessPick.retry', {
           tier: THICKNESS_PICK_LABELS[tier],
         })
       } finally {
-        fmlThicknessPickBusy.value = false
+        thicknessPickBusy.value = false
       }
     }
   }
@@ -383,14 +383,14 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     fmlThicknessMaxCm,
     fmlBandMidBoundaryCm,
     fmlBandMaxBoundaryCm,
-    fmlWallHeightCm,
-    fmlDoorHeightCm,
-    fmlWindowHeightCm,
-    fmlWindowSillZCm,
-    fmlBovenlichtDefault,
-    fmlWindowBovenlichtDefault,
-    fmlBovenlichtHeightCm,
-    fmlBovenlichtGapCm,
+    planWallHeightCm,
+    planDoorHeightCm,
+    planWindowHeightCm,
+    planWindowSillZCm,
+    planBovenlichtDefault,
+    planWindowBovenlichtDefault,
+    planBovenlichtHeightCm,
+    planBovenlichtGapCm,
     appliedFmlThicknessLimits,
     appliedFmlBandBoundaries,
     appliedFmlWallHeightCm,
@@ -399,23 +399,23 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     appliedFmlWindowSillZCm,
     planLimitsDirty,
     fmlBandDirty,
-    fmlThicknessPickTier,
-    fmlThicknessPickMessage,
-    fmlThicknessPickBusy,
+    thicknessPickTier,
+    thicknessPickMessage,
+    thicknessPickBusy,
     applyBandBoundariesFromReferenceWall,
     resetFmlSessionDefaults,
     setPlanThicknessCms,
     setFmlThicknessMinCm,
     setFmlThicknessMidCm,
     setFmlThicknessMaxCm,
-    setFmlWallHeightCm,
-    setFmlDoorHeightCm,
-    setFmlWindowHeightCm,
-    setFmlWindowSillZCm,
-    setFmlBovenlichtDefault,
-    setFmlWindowBovenlichtDefault,
-    setFmlBovenlichtHeightCm,
-    setFmlBovenlichtGapCm,
+    setPlanWallHeightCm,
+    setPlanDoorHeightCm,
+    setPlanWindowHeightCm,
+    setPlanWindowSillZCm,
+    setPlanBovenlichtDefault,
+    setPlanWindowBovenlichtDefault,
+    setPlanBovenlichtHeightCm,
+    setPlanBovenlichtGapCm,
     setFmlBandMidBoundaryCm,
     setFmlBandMaxBoundaryCm,
     startFmlThicknessPick,

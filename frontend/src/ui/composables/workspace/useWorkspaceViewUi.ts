@@ -146,7 +146,7 @@ export function useWorkspaceViewUi(deps: {
 
   const onFmlResultTab = computed(() => isOnFmlResultTab(deps.flowStep.value, deps.resultTab.value))
 
-  const fmlDevPanelVisible = computed(() => onFmlResultTab.value)
+  const planDevPanelVisible = computed(() => onFmlResultTab.value)
 
   const gapsDevPanelVisible = computed(() =>
     isGapsDevPanelVisible(deps.flowStep.value, deps.preprocessTab.value, deps.templateTab.value),
@@ -168,7 +168,7 @@ export function useWorkspaceViewUi(deps: {
       layerDebugVisible: layerDebugVisible.value,
       debugExportsVisible: debugExportsVisible.value,
       probeVisible: deps.probeVisible.value,
-      fmlDevPanelVisible: fmlDevPanelVisible.value,
+      planDevPanelVisible: planDevPanelVisible.value,
       gapsDevPanelVisible: gapsDevPanelVisible.value,
       doorsDevPanelVisible: doorsDevPanelVisible.value,
       windowsDevPanelVisible: windowsDevPanelVisible.value,
@@ -193,7 +193,7 @@ export function useWorkspaceViewUi(deps: {
     hasUsedWallMask,
     debugSidebarVisible,
     onFmlResultTab,
-    fmlDevPanelVisible,
+    planDevPanelVisible,
     gapsDevPanelVisible,
     doorsDevPanelVisible,
     windowsDevPanelVisible,
@@ -213,7 +213,7 @@ export function useWorkspaceViewUi(deps: {
     hasUsedWallMask: ComputedRef<boolean>
     debugSidebarVisible: ComputedRef<boolean>
     onFmlResultTab: ComputedRef<boolean>
-    fmlDevPanelVisible: ComputedRef<boolean>
+    planDevPanelVisible: ComputedRef<boolean>
     gapsDevPanelVisible: ComputedRef<boolean>
     doorsDevPanelVisible: ComputedRef<boolean>
     windowsDevPanelVisible: ComputedRef<boolean>

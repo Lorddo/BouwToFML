@@ -21,7 +21,7 @@ function v3ReadyOutput(
         },
       },
       summary: {
-        fmlReady: true,
+        planReady: true,
         completedThroughLayer: 10,
         incompleteLayers: [],
         bridgeMode: 'native',
@@ -71,7 +71,7 @@ describe('buildSemanticWallsForOutput', () => {
     }
   })
 
-  it('slaat over zonder V3 fmlReady L10', async () => {
+  it('slaat over zonder V3 planReady L10', async () => {
     const walls: ExtractionOutput = {
       candidates: [],
       meta: { extractorId: 'test', elapsedMs: 0, wallPipelineVersion: 'v3' },
@@ -84,7 +84,7 @@ describe('buildSemanticWallsForOutput', () => {
           },
         },
         summary: {
-          fmlReady: false,
+          planReady: false,
           completedThroughLayer: 8,
           incompleteLayers: [9, 10],
           bridgeMode: 'native',

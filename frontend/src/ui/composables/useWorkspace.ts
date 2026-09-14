@@ -324,12 +324,12 @@ export function useWorkspace() {
   })
 
   const initialViewer = loadUserSettings().planDisplay
-  const initialConversion = loadUserSettings().fmlConversion
-  const fmlUnderlayOpacity = ref(initialViewer.underlayOpacityPct)
+  const initialConversion = loadUserSettings().openingMerge
+  const underlayOpacityPct = ref(initialViewer.underlayOpacityPct)
   /** FML-geometrie opacity in de viewer (percent 0–100). */
-  const fmlContentOpacity = ref(initialViewer.contentOpacityPct)
+  const contentOpacityPct = ref(initialViewer.contentOpacityPct)
   /** Sesssie-only: kamer-/FML-labels verbergen (niet in user-settings). */
-  const fmlHidePlanText = ref(false)
+  const hidePlanText = ref(false)
   /** Viewport-vast hulpraster op stap 1–3 canvas. */
   const showCanvasGrid = ref(initialViewer.showCanvasGrid !== false)
   const mergeDoubleDoors = ref(initialConversion.mergeDoubleDoors)
@@ -337,15 +337,15 @@ export function useWorkspace() {
 
   function applyUserViewerSettings(): void {
     const settings = loadUserSettings()
-    fmlUnderlayOpacity.value = settings.planDisplay.underlayOpacityPct
-    fmlContentOpacity.value = settings.planDisplay.contentOpacityPct
+    underlayOpacityPct.value = settings.planDisplay.underlayOpacityPct
+    contentOpacityPct.value = settings.planDisplay.contentOpacityPct
     showCanvasGrid.value = settings.planDisplay.showCanvasGrid !== false
-    mergeDoubleDoors.value = settings.fmlConversion.mergeDoubleDoors
-    mergeMultiWindows.value = settings.fmlConversion.mergeMultiWindows
+    mergeDoubleDoors.value = settings.openingMerge.mergeDoubleDoors
+    mergeMultiWindows.value = settings.openingMerge.mergeMultiWindows
     scaleUi.applyScaleInputUnitFromSettings()
   }
-  const fmlUnderlaySrc = computed(() => image.workingImageSrc.value ?? null)
-  const fmlUnderlaySize = computed(() => {
+  const underlaySrc = computed(() => image.workingImageSrc.value ?? null)
+  const underlaySize = computed(() => {
     const img = originalImageEl.value
     if (!img?.naturalWidth || !img.naturalHeight) return null
     return { width: img.naturalWidth, height: img.naturalHeight }
@@ -542,18 +542,18 @@ export function useWorkspace() {
   })
   windowFacesApi = windowFaces
 
-  const fmlPlanName = ref<string | null>(null)
-  const fmlFloorName = ref<string | null>(null)
-  const fmlFloorLevel = ref<number | null>(null)
-  const fmlFloorId = ref<string | null>(null)
+  const planName = ref<string | null>(null)
+  const floorName = ref<string | null>(null)
+  const floorLevel = ref<number | null>(null)
+  const floorId = ref<string | null>(null)
 
   const fml = useWorkspacePlan({
     imageName,
     combinedOutput: pipeline.combinedOutput,
     scale,
-    underlaySrc: fmlUnderlaySrc,
-    underlaySize: fmlUnderlaySize,
-    underlayOpacity: fmlUnderlayOpacity,
+    underlaySrc: underlaySrc,
+    underlaySize: underlaySize,
+    underlayOpacity: underlayOpacityPct,
     setLocalError,
     getBaseWallBw,
     orientedDoors: doorSwingFaces.orientedDoors,
@@ -566,9 +566,9 @@ export function useWorkspace() {
       wallThicknessBandBoundariesPx,
       devSessionRestoring,
     },
-    planName: fmlPlanName,
-    floorName: fmlFloorName,
-    floorLevel: fmlFloorLevel,
+    planName: planName,
+    floorName: floorName,
+    floorLevel: floorLevel,
     getStampVectorInject: () => {
       if (!wallStamp.baked.value || !wallStamp.skipBandFilter.value) return null
       const bake = wallStamp.bakeNulpuntImageCm.value
@@ -657,10 +657,10 @@ export function useWorkspace() {
     windowAxelStage: windowFaces.windowAxelStage,
     referenceWallThicknessPx,
     getBaseWallBw,
-    projectName: fmlPlanName,
-    floorId: fmlFloorId,
-    floorName: fmlFloorName,
-    floorLevel: fmlFloorLevel,
+    projectName: planName,
+    floorId: floorId,
+    floorName: floorName,
+    floorLevel: floorLevel,
     getPreviewPlan: () => fml.previewPlan.value ?? null,
     getGeneratedFmlText: () => fml.buildGeneratedFmlText() ?? '',
     appVersion: '1.0.0',
@@ -905,8 +905,8 @@ export function useWorkspace() {
       fml.hydrateFmlWindowSillZCm(defaults.windowSillZCm)
       fml.hydrateFmlBovenlichtDefault(defaults.bovenlichtDefault)
       fml.hydrateFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
-      fml.setFmlBovenlichtHeightCm(defaults.bovenlichtHeightCm)
-      fml.setFmlBovenlichtGapCm(defaults.bovenlichtGapCm)
+      fml.setPlanBovenlichtHeightCm(defaults.bovenlichtHeightCm)
+      fml.setPlanBovenlichtGapCm(defaults.bovenlichtGapCm)
       fml.setPlanThicknessCms(
         normalizeThicknessCatalog(
           defaults.thicknessCms ??
@@ -1025,10 +1025,10 @@ export function useWorkspace() {
   watch(
     [project.projectMeta, project.activeFloor],
     () => {
-      fmlPlanName.value = project.projectMeta.value.name.trim() || null
-      fmlFloorId.value = project.activeFloor.value?.id ?? null
-      fmlFloorName.value = project.activeFloor.value?.name ?? null
-      fmlFloorLevel.value = project.activeFloor.value?.level ?? null
+      planName.value = project.projectMeta.value.name.trim() || null
+      floorId.value = project.activeFloor.value?.id ?? null
+      floorName.value = project.activeFloor.value?.name ?? null
+      floorLevel.value = project.activeFloor.value?.level ?? null
     },
     { immediate: true, deep: true },
   )
@@ -1195,26 +1195,26 @@ export function useWorkspace() {
     }
   }
 
-  async function setFmlWallHeightCm(value: number): Promise<void> {
-    const applied = await fml.setFmlWallHeightCm(value)
+  async function setPlanWallHeightCm(value: number): Promise<void> {
+    const applied = await fml.setPlanWallHeightCm(value)
     if (!applied) return
     project.updateActiveFloorDefaults({ wallHeightCm: Math.round(value) }, { syncUi: false })
   }
 
-  async function setFmlDoorHeightCm(value: number): Promise<void> {
-    const applied = await fml.setFmlDoorHeightCm(value)
+  async function setPlanDoorHeightCm(value: number): Promise<void> {
+    const applied = await fml.setPlanDoorHeightCm(value)
     if (!applied) return
     project.updateActiveFloorDefaults({ doorHeightCm: Math.round(value) }, { syncUi: false })
   }
 
-  async function setFmlWindowHeightCm(value: number): Promise<void> {
-    const applied = await fml.setFmlWindowHeightCm(value)
+  async function setPlanWindowHeightCm(value: number): Promise<void> {
+    const applied = await fml.setPlanWindowHeightCm(value)
     if (!applied) return
     project.updateActiveFloorDefaults({ windowHeightCm: Math.round(value) }, { syncUi: false })
   }
 
-  async function setFmlWindowSillZCm(value: number): Promise<void> {
-    const applied = await fml.setFmlWindowSillZCm(value)
+  async function setPlanWindowSillZCm(value: number): Promise<void> {
+    const applied = await fml.setPlanWindowSillZCm(value)
     if (!applied) return
     project.updateActiveFloorDefaults({ windowSillZCm: Math.round(value) }, { syncUi: false })
   }
@@ -1223,16 +1223,16 @@ export function useWorkspace() {
    * PlanPanel-checkbox → overwrite-confirm op live plan + actieve vloer-defaults.
    * Zonder write-through bleef project-download op defaults.bovenlichtDefault=false.
    */
-  async function setFmlBovenlichtDefault(value: boolean): Promise<void> {
+  async function setPlanBovenlichtDefault(value: boolean): Promise<void> {
     const on = value === true
-    const applied = await fml.setFmlBovenlichtDefault(on)
+    const applied = await fml.setPlanBovenlichtDefault(on)
     if (!applied) return
     project.updateActiveFloorDefaults({ bovenlichtDefault: on }, { syncUi: false })
   }
 
-  async function setFmlWindowBovenlichtDefault(value: boolean): Promise<void> {
+  async function setPlanWindowBovenlichtDefault(value: boolean): Promise<void> {
     const on = value === true
-    const applied = await fml.setFmlWindowBovenlichtDefault(on)
+    const applied = await fml.setPlanWindowBovenlichtDefault(on)
     if (!applied) return
     project.updateActiveFloorDefaults({ windowBovenlichtDefault: on }, { syncUi: false })
   }
@@ -1264,10 +1264,10 @@ export function useWorkspace() {
     // Live UI alleen als fallback wanneer floor-meta niet matcht (niet actieve-floor override:
     // underlay-reset wist UI naar false terwijl defaults true konden blijven).
     const floorsMeta = project.projectFloors.value
-    const liveBovenlicht = fml.fmlBovenlichtDefault.value
-    const liveWindowBovenlicht = fml.fmlWindowBovenlichtDefault.value
-    const liveBovenlichtHeight = fml.fmlBovenlichtHeightCm.value
-    const liveBovenlichtGap = fml.fmlBovenlichtGapCm.value
+    const liveBovenlicht = fml.planBovenlichtDefault.value
+    const liveWindowBovenlicht = fml.planWindowBovenlichtDefault.value
+    const liveBovenlichtHeight = fml.planBovenlichtHeightCm.value
+    const liveBovenlichtGap = fml.planBovenlichtGapCm.value
     const text = buildFmlV3(plan, {
       name: plan.name,
       bovenlichtDefault: (floor) => {
@@ -1340,12 +1340,12 @@ export function useWorkspace() {
     debugProbe,
     exports,
     e2eFixture,
-    fmlUnderlayOpacity,
-    fmlContentOpacity,
-    fmlHidePlanText,
+    underlayOpacityPct,
+    contentOpacityPct,
+    hidePlanText,
     showCanvasGrid,
-    fmlUnderlaySrc,
-    fmlUnderlaySize,
+    underlaySrc,
+    underlaySize,
     fml,
     pipeline,
     scaleUi,
@@ -1429,12 +1429,12 @@ export function useWorkspace() {
       project.reuseUnderlayFromProject(donorFloorId),
     copyPreprocessAndRefsFromDonor: (donorFloorId: string) =>
       project.copyPreprocessAndRefsFromDonor(donorFloorId),
-    setFmlBovenlichtDefault,
-    setFmlWindowBovenlichtDefault,
-    setFmlWallHeightCm,
-    setFmlDoorHeightCm,
-    setFmlWindowHeightCm,
-    setFmlWindowSillZCm,
+    setPlanBovenlichtDefault,
+    setPlanWindowBovenlichtDefault,
+    setPlanWallHeightCm,
+    setPlanDoorHeightCm,
+    setPlanWindowHeightCm,
+    setPlanWindowSillZCm,
     setPlanNulpuntImageCm: (point: { x: number; y: number } | null) =>
       fml.setPlanNulpuntImageCm(point),
     updatePreviewPlan: fml.updatePreviewPlan,

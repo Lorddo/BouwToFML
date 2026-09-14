@@ -43,14 +43,14 @@ const screenHover = computed(() => {
 </script>
 
 <template>
-  <svg class="fml-measure-overlay" :width="width" :height="height">
-    <g v-for="line in screenLines" :key="line.id" class="fml-measure-line">
+  <svg class="plan-measure-overlay" :width="width" :height="height">
+    <g v-for="line in screenLines" :key="line.id" class="plan-measure-line">
       <line :x1="line.x1" :y1="line.y1" :x2="line.x2" :y2="line.y2" />
       <line :x1="line.tickAx1" :y1="line.tickAy1" :x2="line.tickAx2" :y2="line.tickAy2" />
       <line :x1="line.tickBx1" :y1="line.tickBy1" :x2="line.tickBx2" :y2="line.tickBy2" />
       <text :x="line.labelX" :y="line.labelY">{{ line.label }}</text>
     </g>
-    <g v-if="screenPreview" class="fml-measure-line fml-measure-line--preview">
+    <g v-if="screenPreview" class="plan-measure-line plan-measure-line--preview">
       <line
         :x1="screenPreview.x1"
         :y1="screenPreview.y1"
@@ -74,7 +74,7 @@ const screenHover = computed(() => {
     </g>
     <g
       v-if="screenHover"
-      class="fml-measure-hover"
+      class="plan-measure-hover"
       :transform="`translate(${screenHover.x} ${screenHover.y})`"
     >
       <circle r="5" />
@@ -85,7 +85,7 @@ const screenHover = computed(() => {
 </template>
 
 <style scoped>
-.fml-measure-overlay {
+.plan-measure-overlay {
   position: absolute;
   inset: 0;
   z-index: 9;
@@ -93,17 +93,17 @@ const screenHover = computed(() => {
   overflow: visible;
 }
 
-.fml-measure-line line {
+.plan-measure-line line {
   stroke: #7c3aed;
   stroke-width: 1.5;
   stroke-linecap: round;
 }
 
-.fml-measure-line--preview line {
+.plan-measure-line--preview line {
   stroke: #a78bfa;
 }
 
-.fml-measure-line text {
+.plan-measure-line text {
   font-size: 11px;
   font-weight: 600;
   fill: #5b21b6;
@@ -114,14 +114,14 @@ const screenHover = computed(() => {
   stroke-width: 3px;
 }
 
-.fml-measure-hover circle {
+.plan-measure-hover circle {
   fill: #a78bfa;
   fill-opacity: 0.35;
   stroke: #7c3aed;
   stroke-width: 1.5;
 }
 
-.fml-measure-hover line {
+.plan-measure-hover line {
   stroke: #7c3aed;
   stroke-width: 1.5;
   stroke-linecap: round;

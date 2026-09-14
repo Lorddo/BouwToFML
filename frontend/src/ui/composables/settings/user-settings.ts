@@ -1,10 +1,10 @@
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import { normalizeRoomTagColors, parseFmlHex } from '@/core/fml/roomtype-catalog'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import {
   catalogFromLegacyLimits,
@@ -131,7 +131,7 @@ export type PlanDisplaySettings = {
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
-export type FmlConversionSettings = {
+export type OpeningMergeSettings = {
   mergeDoubleDoors: boolean
   mergeMultiWindows: boolean
 }
@@ -145,7 +145,7 @@ export type UserSettingsV1 = {
   scaleInputUnit: ScaleInputUnit
   defaults: ProjectFmlDefaults
   planDisplay: PlanDisplaySettings
-  fmlConversion: FmlConversionSettings
+  openingMerge: OpeningMergeSettings
   /** Per-role kleur-overrides t.o.v. roomtype-catalogus (alleen afwijkingen). */
   roomTagColors: Record<string, string>
 }
@@ -198,10 +198,10 @@ function clampRidgeDisplayWidthCm(raw: unknown, fallback: number): number {
 
 export function createFactoryFmlDefaults(): ProjectFmlDefaults {
   return {
-    wallHeightCm: DEFAULT_FML_WALL_HEIGHT_CM,
-    doorHeightCm: DEFAULT_FML_DOOR_HEIGHT_CM,
-    windowHeightCm: DEFAULT_FML_WINDOW_HEIGHT_CM,
-    windowSillZCm: DEFAULT_FML_WINDOW_SILL_Z_CM,
+    wallHeightCm: DEFAULT_WALL_HEIGHT_CM,
+    doorHeightCm: DEFAULT_DOOR_HEIGHT_CM,
+    windowHeightCm: DEFAULT_WINDOW_HEIGHT_CM,
+    windowSillZCm: DEFAULT_WINDOW_SILL_Z_CM,
     bovenlichtDefault: false,
     windowBovenlichtDefault: false,
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,
@@ -238,7 +238,7 @@ export function createFactoryPlanDisplaySettings(): PlanDisplaySettings {
   }
 }
 
-export function createFactoryFmlConversionSettings(): FmlConversionSettings {
+export function createFactoryOpeningMergeSettings(): OpeningMergeSettings {
   return {
     mergeDoubleDoors: true,
     mergeMultiWindows: true,
@@ -253,7 +253,7 @@ export function createFactoryUserSettings(): UserSettingsV1 {
     scaleInputUnit: DEFAULT_SCALE_INPUT_UNIT,
     defaults: createFactoryFmlDefaults(),
     planDisplay: createFactoryPlanDisplaySettings(),
-    fmlConversion: createFactoryFmlConversionSettings(),
+    openingMerge: createFactoryOpeningMergeSettings(),
     roomTagColors: {},
   }
 }
@@ -374,10 +374,10 @@ function normalizePlanDisplay(
   }
 }
 
-function normalizeFmlConversion(
+function normalizeOpeningMerge(
   raw: unknown,
-  factory: FmlConversionSettings = createFactoryFmlConversionSettings(),
-): FmlConversionSettings {
+  factory: OpeningMergeSettings = createFactoryOpeningMergeSettings(),
+): OpeningMergeSettings {
   const src = asRecord(raw)
   return {
     mergeDoubleDoors:
@@ -400,14 +400,14 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults, factory.defaults),
     planDisplay: normalizePlanDisplay(obj.planDisplay ?? obj.fmlViewer, factory.planDisplay),
-    fmlConversion: normalizeFmlConversion(obj.fmlConversion, factory.fmlConversion),
+    openingMerge: normalizeOpeningMerge(obj.openingMerge ?? obj.fmlConversion, factory.openingMerge),
     roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
 }
 
 /**
  * Strict parse for import. Requires version: 1 and a defaults object.
- * Missing planDisplay / fmlConversion / scaleInputUnit / unitSystem → factory (forward-compatible).
+ * Missing planDisplay / openingMerge / scaleInputUnit / unitSystem → factory (forward-compatible).
  */
 export function parseUserSettingsJson(raw: string): UserSettingsV1 {
   let parsed: unknown
@@ -433,7 +433,7 @@ export function parseUserSettingsJson(raw: string): UserSettingsV1 {
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults),
     planDisplay: normalizePlanDisplay(obj.planDisplay ?? obj.fmlViewer),
-    fmlConversion: normalizeFmlConversion(obj.fmlConversion),
+    openingMerge: normalizeOpeningMerge(obj.openingMerge ?? obj.fmlConversion),
     roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
 }

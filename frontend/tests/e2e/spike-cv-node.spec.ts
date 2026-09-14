@@ -158,10 +158,10 @@ describe('E2E fase 0 — OpenCV + skeleton in Node', () => {
         `[spike] L1–L10: ${elapsedMs.toFixed(0)} ms | ` +
           `L1 segs=${result.layer1.allSegmentsRaw.length} | ` +
           `L10 segs=${result.layer10?.allSegmentsReady.length ?? 0} | ` +
-          `fmlReady=${result.fmlReady}`,
+          `planReady=${result.planReady}`,
       )
 
-      expect(result.fmlReady).toBe(true)
+      expect(result.planReady).toBe(true)
       expect(result.layer1.allSegmentsRaw.length).toBeGreaterThan(0)
       expect(result.layer10).toBeDefined()
       expect(result.layer10!.allSegmentsReady.length).toBeGreaterThan(0)

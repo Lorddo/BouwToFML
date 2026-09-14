@@ -17,7 +17,7 @@ import { applyRidgeWallRemaps, isRidgeDesign, pruneRidgeWalls } from '@/core/fml
 import { sanitizeFmlWallsDetailed, wallsSanitizeChanged } from '@/core/fml/sanitize-fml-walls'
 import { isStampOwnedWall } from '@/core/fml/stamp-owned'
 import { resolveStampOwnership } from '@/core/fml/resolve-stamp-ownership'
-import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import { splitPlanWallAtT } from '@/core/fml/elevation-openings'
 import {
   addRoomRect,
@@ -153,7 +153,7 @@ export function usePlanEditor(
     const height = floor?.height
     return typeof height === 'number' && Number.isFinite(height) && height > 0
       ? height
-      : DEFAULT_FML_WALL_HEIGHT_CM
+      : DEFAULT_WALL_HEIGHT_CM
   })
 
   const areas = computed(() => {

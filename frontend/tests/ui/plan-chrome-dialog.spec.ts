@@ -3,7 +3,7 @@ import {
   cancelPlanChromeDialog,
   confirmPlanChrome,
   confirmPlanChromeDialog,
-  fmlChromeDialogState,
+  planChromeDialogState,
   promptFacadeGroupName,
   promptFacadeSelectScope,
   promptPlanChrome,
@@ -21,7 +21,7 @@ describe('plan-chrome-dialog', () => {
   it('confirm resolves true/false via host', async () => {
     const unregister = registerPlanChromeDialogHost()
     const pending = confirmPlanChrome({ title: 'Overwrite', message: 'Set 260 cm?' })
-    expect(fmlChromeDialogState().value?.state.request.title).toBe('Overwrite')
+    expect(planChromeDialogState().value?.state.request.title).toBe('Overwrite')
     confirmPlanChromeDialog()
     await expect(pending).resolves.toBe(true)
 
@@ -37,7 +37,7 @@ describe('plan-chrome-dialog', () => {
       title: 'Facade',
       defaultValue: 'Voorgevel',
     })
-    const state = fmlChromeDialogState().value
+    const state = planChromeDialogState().value
     expect(state?.state.inputValue).toBe('Voorgevel')
     if (state) state.state.inputValue = ' Westgevel '
     resolvePlanChromeDialog(state?.state.inputValue ?? null)
@@ -48,7 +48,7 @@ describe('plan-chrome-dialog', () => {
   it('promptFacadeGroupName uses current name when editing', async () => {
     const unregister = registerPlanChromeDialogHost()
     const pending = promptFacadeGroupName({ currentName: 'Achtergevel' })
-    const state = fmlChromeDialogState().value
+    const state = planChromeDialogState().value
     expect(state?.state.inputValue).toBe('Achtergevel')
     confirmPlanChromeDialog()
     await expect(pending).resolves.toBe('Achtergevel')
@@ -65,7 +65,7 @@ describe('plan-chrome-dialog', () => {
         { id: '1', name: '1e' },
       ],
     })
-    const state = fmlChromeDialogState().value
+    const state = planChromeDialogState().value
     expect(state?.state.request.kind).toBe('choice')
     expect(state?.state.inputValue).toBe('0')
     if (state) state.state.inputValue = '1'
@@ -77,7 +77,7 @@ describe('plan-chrome-dialog', () => {
   it('promptFacadeSelectScope returns floor or all', async () => {
     const unregister = registerPlanChromeDialogHost()
     const pending = promptFacadeSelectScope({ name: 'Voorgevel' })
-    const state = fmlChromeDialogState().value
+    const state = planChromeDialogState().value
     expect(state?.state.request.kind).toBe('choice')
     expect(state?.state.inputValue).toBe('floor')
     expect(state?.state.request.listItems?.map((row) => row.id)).toEqual(['floor', 'all'])
@@ -103,7 +103,7 @@ describe('plan-chrome-dialog', () => {
     const first = confirmPlanChrome({ title: 'One', message: 'a' })
     const second = confirmPlanChrome({ title: 'Two', message: 'b' })
     await expect(first).resolves.toBe(false)
-    expect(fmlChromeDialogState().value?.state.request.title).toBe('Two')
+    expect(planChromeDialogState().value?.state.request.title).toBe('Two')
     confirmPlanChromeDialog()
     await expect(second).resolves.toBe(true)
     unregister()

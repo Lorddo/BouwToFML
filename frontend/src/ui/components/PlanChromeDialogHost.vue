@@ -4,12 +4,12 @@ import PlanChromeDialog from './PlanChromeDialog.vue'
 import {
   cancelPlanChromeDialog,
   confirmPlanChromeDialog,
-  fmlChromeDialogState,
+  planChromeDialogState,
   hasPlanChromeDialogHost,
   registerPlanChromeDialogHost,
 } from '@/ui/composables/plan-chrome-dialog'
 
-const pending = fmlChromeDialogState()
+const pending = planChromeDialogState()
 const isActiveHost = ref(false)
 let unregister: (() => void) | null = null
 

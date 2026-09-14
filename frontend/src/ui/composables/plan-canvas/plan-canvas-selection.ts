@@ -5,7 +5,7 @@ import {
   type DoorAddSubtype,
   type WindowAddSubtype,
 } from '@/core/fml/opening-add-presets'
-import { DEFAULT_FML_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
@@ -90,7 +90,7 @@ export function createPlanCanvasSelection(): PlanCanvasSelectionRefs {
     draggingJunctionId: ref<string | null>(null),
     addDoorSubtype: ref<DoorAddSubtype>('standard'),
     addDoorWidthCm: ref(resolveDoorAddPreset('standard').defaultWidthCm),
-    addDoorHeightCm: ref(DEFAULT_FML_DOOR_HEIGHT_CM),
+    addDoorHeightCm: ref(DEFAULT_DOOR_HEIGHT_CM),
     addDoorSillZCm: ref(0),
     addWindowSubtype: ref<WindowAddSubtype>('single'),
     addWindowWidthCm: ref(resolveWindowAddPreset('single').defaultWidthCm),

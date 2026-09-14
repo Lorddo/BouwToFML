@@ -1,7 +1,7 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type { Point2D } from '@/core/fml/types'
 import { catalogMaxCm } from '@/core/fml/fml-wall-thickness-catalog'
-import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import { wallEndpointHeightCm, wallUniformBottomZCm } from '@/core/fml/wall-endpoint-height'
 import {
   balanceToPercent,
@@ -91,7 +91,7 @@ export function usePlanCanvasWallSelection(options: {
   const wallThicknessMixed = ref(false)
   const wallBalanceDraft = ref(50)
   const wallBalanceMixed = ref(false)
-  const wallHeightDraft = ref(DEFAULT_FML_WALL_HEIGHT_CM)
+  const wallHeightDraft = ref(DEFAULT_WALL_HEIGHT_CM)
   const wallHeightMixed = ref(false)
   const wallBottomZDraft = ref(0)
   const wallBottomZMixed = ref(false)

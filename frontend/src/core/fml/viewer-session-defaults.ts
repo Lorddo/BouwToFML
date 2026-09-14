@@ -1,9 +1,9 @@
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import type { FloorPlan } from '@/core/fml/types'
 
@@ -20,10 +20,10 @@ export type ViewerSessionDefaults = {
 
 export function createFactoryViewerSessionDefaults(): ViewerSessionDefaults {
   return {
-    wallHeightCm: DEFAULT_FML_WALL_HEIGHT_CM,
-    doorHeightCm: DEFAULT_FML_DOOR_HEIGHT_CM,
-    windowHeightCm: DEFAULT_FML_WINDOW_HEIGHT_CM,
-    windowSillZCm: DEFAULT_FML_WINDOW_SILL_Z_CM,
+    wallHeightCm: DEFAULT_WALL_HEIGHT_CM,
+    doorHeightCm: DEFAULT_DOOR_HEIGHT_CM,
+    windowHeightCm: DEFAULT_WINDOW_HEIGHT_CM,
+    windowSillZCm: DEFAULT_WINDOW_SILL_Z_CM,
     bovenlichtDefault: false,
     windowBovenlichtDefault: false,
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,

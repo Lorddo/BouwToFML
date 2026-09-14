@@ -11,7 +11,7 @@
 
 import type { Ref } from 'vue'
 
-export const FML_FIELD_COMMIT_DEBOUNCE_MS = 700
+export const PLAN_FIELD_COMMIT_DEBOUNCE_MS = 700
 
 export type DraftCommitApplyResult = {
   /** True when the plan actually changed (triggers undo grouping). */
@@ -37,7 +37,7 @@ export type PlanCanvasDraftCommitScheduler = {
 }
 
 export function createPlanCanvasDraftCommitScheduler(
-  debounceMs: number = FML_FIELD_COMMIT_DEBOUNCE_MS,
+  debounceMs: number = PLAN_FIELD_COMMIT_DEBOUNCE_MS,
 ): PlanCanvasDraftCommitScheduler {
   const pending = new Map<string, PendingEntry>()
   /** Field ids that already pushed undo in the current edit session. */

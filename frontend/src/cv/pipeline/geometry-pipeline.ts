@@ -175,7 +175,7 @@ export async function runGeometryPipeline(params: {
     reportPipelineProgress('Resultaat samenstellen…')
   }
 
-  // Compose = meta-shell zonder wall-segments; semantic komt post-finalize (L10/fmlReady).
+  // Compose = meta-shell zonder wall-segments; semantic komt post-finalize (L10/planReady).
   const output = composeLayers({
     extractorId: 'geometry-lbe',
     elapsedMs: performance.now() - started,

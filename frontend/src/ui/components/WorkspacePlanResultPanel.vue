@@ -17,50 +17,50 @@ withDefaults(
     generatedStats: { walls: number; doors: number; windows: number }
     openingHeightOverflow?: OpeningHeightOverflowSummary | null
     floorName: string
-    fmlWallHeightCm: number
-    fmlDoorHeightCm: number
-    fmlWindowHeightCm: number
-    fmlWindowSillZCm: number
-    fmlBovenlichtDefault: boolean
-    fmlWindowBovenlichtDefault: boolean
+    planWallHeightCm: number
+    planDoorHeightCm: number
+    planWindowHeightCm: number
+    planWindowSillZCm: number
+    planBovenlichtDefault: boolean
+    planWindowBovenlichtDefault: boolean
     planThicknessCms: number[]
     fmlBandMidBoundaryCm: number
     fmlBandMaxBoundaryCm: number
     planLimitsDirty: boolean
-    fmlThicknessPickTier: FmlThicknessPickTier | null
-    fmlThicknessPickMessage: string | null
-    fmlThicknessPickBusy: boolean
+    thicknessPickTier: FmlThicknessPickTier | null
+    thicknessPickMessage: string | null
+    thicknessPickBusy: boolean
     importedFmlText: string
     importedStats: { walls: number; doors: number; windows: number }
     importedWarnings: ImportWarning[]
     underlayOpacity: number
-    fmlOpacity: number
+    contentOpacityPct: number
     underlayAvailable: boolean
-    fmlOrientFlipX?: boolean
+    planOrientFlipX?: boolean
     hasAnyFloorFml?: boolean
     projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
     hidePlanText?: boolean
-    fmlRescaleActive?: boolean
-    fmlRescaleState?: HScaleState | null
-    fmlRescaleDistanceMmX?: number
-    fmlRescaleDistanceMmY?: number
+    rescaleActive?: boolean
+    rescaleState?: HScaleState | null
+    rescaleDistanceMmX?: number
+    rescaleDistanceMmY?: number
     scaleInputUnit?: ScaleInputUnit
     canStartRescale?: boolean
   }>(),
   {
-    fmlOrientFlipX: false,
+    planOrientFlipX: false,
     hasAnyFloorFml: false,
     projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
     hidePlanText: false,
     openingHeightOverflow: null,
-    fmlRescaleActive: false,
-    fmlRescaleState: null,
-    fmlRescaleDistanceMmX: 0,
-    fmlRescaleDistanceMmY: 0,
+    rescaleActive: false,
+    rescaleState: null,
+    rescaleDistanceMmX: 0,
+    rescaleDistanceMmY: 0,
     scaleInputUnit: 'mm',
     canStartRescale: false,
   },
@@ -69,20 +69,20 @@ withDefaults(
 const emit = defineEmits<{
   'update:floorName': [value: string]
   'update:underlayOpacity': [value: number]
-  'update:fmlOpacity': [value: number]
+  'update:contentOpacityPct': [value: number]
   'update:hidePlanText': [value: boolean]
   'update:underlayMoveMode': [value: boolean]
-  'update:fmlWallHeightCm': [value: number]
-  'update:fmlDoorHeightCm': [value: number]
-  'update:fmlWindowHeightCm': [value: number]
-  'update:fmlWindowSillZCm': [value: number]
-  'update:fmlBovenlichtDefault': [value: boolean]
-  'update:fmlWindowBovenlichtDefault': [value: boolean]
+  'update:planWallHeightCm': [value: number]
+  'update:planDoorHeightCm': [value: number]
+  'update:planWindowHeightCm': [value: number]
+  'update:planWindowSillZCm': [value: number]
+  'update:planBovenlichtDefault': [value: boolean]
+  'update:planWindowBovenlichtDefault': [value: boolean]
   'update:planThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
-  'update:fmlRescaleDistanceMmX': [value: number]
-  'update:fmlRescaleDistanceMmY': [value: number]
+  'update:rescaleDistanceMmX': [value: number]
+  'update:rescaleDistanceMmY': [value: number]
   startThicknessPick: [tier: FmlThicknessPickTier]
   cancelThicknessPick: []
   regenerate: []
@@ -107,53 +107,53 @@ const emit = defineEmits<{
     :generated-stats="generatedStats"
     :opening-height-overflow="openingHeightOverflow"
     :floor-name="floorName"
-    :fml-wall-height-cm="fmlWallHeightCm"
-    :fml-door-height-cm="fmlDoorHeightCm"
-    :fml-window-height-cm="fmlWindowHeightCm"
-    :fml-window-sill-z-cm="fmlWindowSillZCm"
-    :fml-bovenlicht-default="fmlBovenlichtDefault"
-    :fml-window-bovenlicht-default="fmlWindowBovenlichtDefault"
+    :plan-wall-height-cm="planWallHeightCm"
+    :plan-door-height-cm="planDoorHeightCm"
+    :plan-window-height-cm="planWindowHeightCm"
+    :plan-window-sill-z-cm="planWindowSillZCm"
+    :plan-bovenlicht-default="planBovenlichtDefault"
+    :plan-window-bovenlicht-default="planWindowBovenlichtDefault"
     :plan-thickness-cms="planThicknessCms"
     :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
     :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
     :plan-limits-dirty="planLimitsDirty"
-    :fml-thickness-pick-tier="fmlThicknessPickTier"
-    :fml-thickness-pick-message="fmlThicknessPickMessage"
-    :fml-thickness-pick-busy="fmlThicknessPickBusy"
+    :thickness-pick-tier="thicknessPickTier"
+    :thickness-pick-message="thicknessPickMessage"
+    :thickness-pick-busy="thicknessPickBusy"
     :imported-fml-text="importedFmlText"
     :imported-stats="importedStats"
     :imported-warnings="importedWarnings"
     :underlay-opacity="underlayOpacity"
-    :fml-opacity="fmlOpacity"
+    :content-opacity-pct="contentOpacityPct"
     :hide-plan-text="hidePlanText"
     :underlay-available="underlayAvailable"
-    :fml-orient-flip-x="fmlOrientFlipX"
+    :plan-orient-flip-x="planOrientFlipX"
     :has-any-floor-fml="hasAnyFloorFml"
     :project-orient-flip-x="projectOrientFlipX"
     :underlay-move-mode="underlayMoveMode"
     :underlay-flip-x="underlayFlipX"
-    :fml-rescale-active="fmlRescaleActive"
-    :fml-rescale-state="fmlRescaleState"
-    :fml-rescale-distance-mm-x="fmlRescaleDistanceMmX"
-    :fml-rescale-distance-mm-y="fmlRescaleDistanceMmY"
+    :rescale-active="rescaleActive"
+    :rescale-state="rescaleState"
+    :rescale-distance-mm-x="rescaleDistanceMmX"
+    :rescale-distance-mm-y="rescaleDistanceMmY"
     :scale-input-unit="scaleInputUnit"
     :can-start-rescale="canStartRescale"
     @update:floor-name="emit('update:floorName', $event)"
     @update:underlay-opacity="emit('update:underlayOpacity', $event)"
-    @update:fml-opacity="emit('update:fmlOpacity', $event)"
+    @update:content-opacity-pct="emit('update:contentOpacityPct', $event)"
     @update:hide-plan-text="emit('update:hidePlanText', $event)"
     @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
-    @update:fml-wall-height-cm="emit('update:fmlWallHeightCm', $event)"
-    @update:fml-door-height-cm="emit('update:fmlDoorHeightCm', $event)"
-    @update:fml-window-height-cm="emit('update:fmlWindowHeightCm', $event)"
-    @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
-    @update:fml-bovenlicht-default="emit('update:fmlBovenlichtDefault', $event)"
-    @update:fml-window-bovenlicht-default="emit('update:fmlWindowBovenlichtDefault', $event)"
+    @update:plan-wall-height-cm="emit('update:planWallHeightCm', $event)"
+    @update:plan-door-height-cm="emit('update:planDoorHeightCm', $event)"
+    @update:plan-window-height-cm="emit('update:planWindowHeightCm', $event)"
+    @update:plan-window-sill-z-cm="emit('update:planWindowSillZCm', $event)"
+    @update:plan-bovenlicht-default="emit('update:planBovenlichtDefault', $event)"
+    @update:plan-window-bovenlicht-default="emit('update:planWindowBovenlichtDefault', $event)"
     @update:plan-thickness-cms="emit('update:planThicknessCms', $event)"
     @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
     @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
-    @update:fml-rescale-distance-mm-x="emit('update:fmlRescaleDistanceMmX', $event)"
-    @update:fml-rescale-distance-mm-y="emit('update:fmlRescaleDistanceMmY', $event)"
+    @update:rescale-distance-mm-x="emit('update:rescaleDistanceMmX', $event)"
+    @update:rescale-distance-mm-y="emit('update:rescaleDistanceMmY', $event)"
     @start-thickness-pick="emit('startThicknessPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"
     @regenerate="emit('regenerate')"

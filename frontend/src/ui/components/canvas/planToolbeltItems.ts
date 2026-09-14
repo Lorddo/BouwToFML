@@ -151,7 +151,7 @@ export function getFmlEditTools(options?: {
 }
 
 /** @deprecated Prefer getFmlSelectTools() so locale updates apply. */
-export const FML_SELECT_TOOLS: ToolbeltItem[] = getFmlSelectTools()
+export const PLAN_SELECT_TOOLS: ToolbeltItem[] = getFmlSelectTools()
 
 /** @deprecated Prefer getFmlEditTools() so locale updates apply. */
-export const FML_EDIT_TOOLS: ToolbeltItem[] = getFmlEditTools()
+export const PLAN_EDIT_TOOLS: ToolbeltItem[] = getFmlEditTools()

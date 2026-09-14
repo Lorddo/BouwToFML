@@ -18,7 +18,7 @@ import {
   listFacadeGroups,
   wallsInStampGroup,
 } from './facade-groups'
-import { DEFAULT_FML_WALL_HEIGHT_CM } from './extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from './extraction-to-plan-types'
 import { markStampOwned } from './stamp-owned'
 import { translatePointByOffset } from './stamp-nulpunt'
 import type { FloorPlan, Point2D, Wall } from './types'
@@ -89,7 +89,7 @@ function floorHeightCm(plan: FloorPlan, floorIndex: number): number {
   const height = plan.floors[floorIndex]?.height
   return typeof height === 'number' && Number.isFinite(height) && height > 0
     ? Math.round(height)
-    : DEFAULT_FML_WALL_HEIGHT_CM
+    : DEFAULT_WALL_HEIGHT_CM
 }
 
 function cloneStampWall(source: Wall, heightCm: number, offsetCm?: Point2D): Wall {

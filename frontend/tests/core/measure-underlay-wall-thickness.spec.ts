@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   cmPointToImagePx,
-  FML_THICKNESS_PICK_SEARCH_CM,
+  THICKNESS_PICK_SEARCH_CM,
   imagePxThicknessToCm,
   imagePxThicknessToCmAlongNormal,
   measureWallThicknessCmOnUnderlay,
@@ -26,8 +26,8 @@ describe('measure-underlay-wall-thickness', () => {
   })
 
   it('zet zoekvenster min=20 / max=50 cm', () => {
-    expect(FML_THICKNESS_PICK_SEARCH_CM.min).toBe(20)
-    expect(FML_THICKNESS_PICK_SEARCH_CM.max).toBe(50)
+    expect(THICKNESS_PICK_SEARCH_CM.min).toBe(20)
+    expect(THICKNESS_PICK_SEARCH_CM.max).toBe(50)
   })
 
   it('converteert muur-B/W (0=inkt) naar meetmask (255=inkt)', () => {
@@ -149,7 +149,7 @@ describe('measure-underlay-wall-thickness', () => {
       origin: { x: -20, y: 35 },
       pxPerMmX: pxPerMm,
       pxPerMmY: pxPerMm,
-      maxSearchCm: FML_THICKNESS_PICK_SEARCH_CM.min,
+      maxSearchCm: THICKNESS_PICK_SEARCH_CM.min,
     })
     // 5 px * 0.9 → ~0.225 cm → floor 1 cm; parallelle muur mag niet meestijgen
     expect(cm).toBeLessThan(5)
@@ -172,7 +172,7 @@ describe('measure-underlay-wall-thickness', () => {
       origin: { x: -17, y: 5 },
       pxPerMmX: pxPerMm,
       pxPerMmY: pxPerMm,
-      maxSearchCm: FML_THICKNESS_PICK_SEARCH_CM.max,
+      maxSearchCm: THICKNESS_PICK_SEARCH_CM.max,
     })
     // 21 px * 0.9 / 20 ≈ 0.945 → floor 1 cm; moet niet naar hartlijn-halve (~10 px) zakken
     expect(cm).toBeGreaterThanOrEqual(1)

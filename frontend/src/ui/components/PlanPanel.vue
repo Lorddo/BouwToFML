@@ -12,7 +12,7 @@ import PlanPanelOpacity from './PlanPanelOpacity.vue'
 import PlanPanelThickness from './PlanPanelThickness.vue'
 import PlanRescalePanel from './PlanRescalePanel.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
-import './fml-panel-fields.css'
+import './plan-panel-fields.css'
 
 const { t } = useI18n()
 
@@ -36,33 +36,33 @@ withDefaults(
     importedWarnings?: ImportWarning[]
     underlayOpacity?: number
     /** FML-geometrie opacity 0–100. */
-    fmlOpacity?: number
+    contentOpacityPct?: number
     underlayAvailable?: boolean
     /** Actieve verdiepingsnaam (bewerkbaar na toevoegen via floor-rail). */
     floorName?: string
-    fmlWallHeightCm?: number
-    fmlDoorHeightCm?: number
-    fmlWindowHeightCm?: number
-    fmlWindowSillZCm?: number
-    fmlBovenlichtDefault?: boolean
-    fmlWindowBovenlichtDefault?: boolean
+    planWallHeightCm?: number
+    planDoorHeightCm?: number
+    planWindowHeightCm?: number
+    planWindowSillZCm?: number
+    planBovenlichtDefault?: boolean
+    planWindowBovenlichtDefault?: boolean
     planThicknessCms?: number[]
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
     planLimitsDirty?: boolean
-    fmlThicknessPickTier?: FmlThicknessPickTier | null
-    fmlThicknessPickMessage?: string | null
-    fmlThicknessPickBusy?: boolean
-    fmlOrientFlipX?: boolean
+    thicknessPickTier?: FmlThicknessPickTier | null
+    thicknessPickMessage?: string | null
+    thicknessPickBusy?: boolean
+    planOrientFlipX?: boolean
     hasAnyFloorFml?: boolean
     projectOrientFlipX?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
     hidePlanText?: boolean
-    fmlRescaleActive?: boolean
-    fmlRescaleState?: HScaleState | null
-    fmlRescaleDistanceMmX?: number
-    fmlRescaleDistanceMmY?: number
+    rescaleActive?: boolean
+    rescaleState?: HScaleState | null
+    rescaleDistanceMmX?: number
+    rescaleDistanceMmY?: number
     scaleInputUnit?: ScaleInputUnit
     /** Herschalen beschikbaar (plan met muren). Default false. */
     canStartRescale?: boolean
@@ -72,32 +72,32 @@ withDefaults(
     importedWarnings: () => [],
     openingHeightOverflow: null,
     underlayOpacity: 25,
-    fmlOpacity: 80,
+    contentOpacityPct: 80,
     underlayAvailable: false,
     hidePlanText: false,
     floorName: '',
-    fmlWallHeightCm: 280,
-    fmlDoorHeightCm: 220,
-    fmlWindowHeightCm: 150,
-    fmlWindowSillZCm: 70,
-    fmlBovenlichtDefault: false,
-    fmlWindowBovenlichtDefault: false,
+    planWallHeightCm: 280,
+    planDoorHeightCm: 220,
+    planWindowHeightCm: 150,
+    planWindowSillZCm: 70,
+    planBovenlichtDefault: false,
+    planWindowBovenlichtDefault: false,
     planThicknessCms: () => [10, 20, 30],
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
     planLimitsDirty: false,
-    fmlThicknessPickTier: null,
-    fmlThicknessPickMessage: null,
-    fmlThicknessPickBusy: false,
-    fmlOrientFlipX: false,
+    thicknessPickTier: null,
+    thicknessPickMessage: null,
+    thicknessPickBusy: false,
+    planOrientFlipX: false,
     hasAnyFloorFml: false,
     projectOrientFlipX: false,
     underlayMoveMode: false,
     underlayFlipX: false,
-    fmlRescaleActive: false,
-    fmlRescaleState: null,
-    fmlRescaleDistanceMmX: 0,
-    fmlRescaleDistanceMmY: 0,
+    rescaleActive: false,
+    rescaleState: null,
+    rescaleDistanceMmX: 0,
+    rescaleDistanceMmY: 0,
     scaleInputUnit: 'mm',
     canStartRescale: false,
   },
@@ -113,17 +113,17 @@ const emit = defineEmits<{
   underlayRotate90Ccw: []
   underlayMirrorVertical: []
   'update:floorName': [value: string]
-  'update:fmlWallHeightCm': [value: number]
-  'update:fmlDoorHeightCm': [value: number]
-  'update:fmlWindowHeightCm': [value: number]
-  'update:fmlWindowSillZCm': [value: number]
-  'update:fmlBovenlichtDefault': [value: boolean]
-  'update:fmlWindowBovenlichtDefault': [value: boolean]
+  'update:planWallHeightCm': [value: number]
+  'update:planDoorHeightCm': [value: number]
+  'update:planWindowHeightCm': [value: number]
+  'update:planWindowSillZCm': [value: number]
+  'update:planBovenlichtDefault': [value: boolean]
+  'update:planWindowBovenlichtDefault': [value: boolean]
   'update:planThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:underlayOpacity': [value: number]
-  'update:fmlOpacity': [value: number]
+  'update:contentOpacityPct': [value: number]
   'update:hidePlanText': [value: boolean]
   'update:underlayMoveMode': [value: boolean]
   startThicknessPick: [tier: FmlThicknessPickTier]
@@ -132,8 +132,8 @@ const emit = defineEmits<{
   cancelRescale: []
   confirmRescale: []
   sanitize: []
-  'update:fmlRescaleDistanceMmX': [value: number]
-  'update:fmlRescaleDistanceMmY': [value: number]
+  'update:rescaleDistanceMmX': [value: number]
+  'update:rescaleDistanceMmY': [value: number]
 }>()
 
 function onFloorNameInput(event: Event): void {
@@ -147,17 +147,17 @@ function onFloorNameBlur(event: Event): void {
 }
 
 function onBovenlichtChange(event: Event): void {
-  emit('update:fmlBovenlichtDefault', (event.target as HTMLInputElement).checked)
+  emit('update:planBovenlichtDefault', (event.target as HTMLInputElement).checked)
 }
 
 function onWindowBovenlichtChange(event: Event): void {
-  emit('update:fmlWindowBovenlichtDefault', (event.target as HTMLInputElement).checked)
+  emit('update:planWindowBovenlichtDefault', (event.target as HTMLInputElement).checked)
 }
 </script>
 
 <template>
-  <div class="panel fml-panel">
-    <label class="fml-floor-name">
+  <div class="panel plan-panel">
+    <label class="plan-floor-name">
       <span>{{ t('result.floorName') }}</span>
       <input
         type="text"
@@ -170,7 +170,7 @@ function onWindowBovenlichtChange(event: Event): void {
       />
     </label>
 
-    <p v-if="generatedStats.walls > 0" class="fml-stats">
+    <p v-if="generatedStats.walls > 0" class="plan-stats">
       {{ t('result.previewStats', { walls: generatedStats.walls })
       }}<template v-if="generatedStats.doors > 0">{{
         t('result.previewDoors', { n: generatedStats.doors })
@@ -179,10 +179,10 @@ function onWindowBovenlichtChange(event: Event): void {
         t('result.previewWindows', { n: generatedStats.windows })
       }}</template>
     </p>
-    <p v-else-if="!scaleConfirmed" class="fml-hint">
+    <p v-else-if="!scaleConfirmed" class="plan-hint">
       {{ t('result.needScale') }}
     </p>
-    <p v-else-if="!hasCombinedOutput" class="fml-hint">{{ t('result.needFinalize') }}</p>
+    <p v-else-if="!hasCombinedOutput" class="plan-hint">{{ t('result.needFinalize') }}</p>
     <PlanOpeningOverflowNotice
       v-if="openingHeightOverflow"
       :summary="openingHeightOverflow"
@@ -191,13 +191,13 @@ function onWindowBovenlichtChange(event: Event): void {
 
     <PlanPanelOpacity
       :underlay-opacity="underlayOpacity"
-      :fml-opacity="fmlOpacity"
+      :content-opacity-pct="contentOpacityPct"
       :underlay-available="underlayAvailable"
       :underlay-move-mode="underlayMoveMode"
       :underlay-flip-x="underlayFlipX"
       :hide-plan-text="hidePlanText"
       @update:underlay-opacity="emit('update:underlayOpacity', $event)"
-      @update:fml-opacity="emit('update:fmlOpacity', $event)"
+      @update:content-opacity-pct="emit('update:contentOpacityPct', $event)"
       @update:hide-plan-text="emit('update:hidePlanText', $event)"
       @update:underlay-move-mode="emit('update:underlayMoveMode', $event)"
       @underlay-rotate90-cw="emit('underlayRotate90Cw')"
@@ -205,20 +205,20 @@ function onWindowBovenlichtChange(event: Event): void {
       @underlay-mirror-vertical="emit('underlayMirrorVertical')"
     />
 
-    <label class="fml-limit-field fml-bovenlicht" :title="t('result.bovenlichtTitle')">
+    <label class="plan-limit-field plan-bovenlicht" :title="t('result.bovenlichtTitle')">
       <input
         type="checkbox"
-        :checked="fmlBovenlichtDefault"
+        :checked="planBovenlichtDefault"
         :disabled="!canStartRescale"
         @change="onBovenlichtChange"
       />
       <span>{{ t('result.bovenlichtAllDoors') }}</span>
     </label>
 
-    <label class="fml-limit-field fml-bovenlicht" :title="t('result.bovenlichtWindowsTitle')">
+    <label class="plan-limit-field plan-bovenlicht" :title="t('result.bovenlichtWindowsTitle')">
       <input
         type="checkbox"
-        :checked="fmlWindowBovenlichtDefault"
+        :checked="planWindowBovenlichtDefault"
         :disabled="!canStartRescale"
         @change="onWindowBovenlichtChange"
       />
@@ -233,9 +233,9 @@ function onWindowBovenlichtChange(event: Event): void {
       :plan-thickness-cms="planThicknessCms"
       :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
       :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
-      :fml-thickness-pick-tier="fmlThicknessPickTier"
-      :fml-thickness-pick-message="fmlThicknessPickMessage"
-      :fml-thickness-pick-busy="fmlThicknessPickBusy"
+      :thickness-pick-tier="thicknessPickTier"
+      :thickness-pick-message="thicknessPickMessage"
+      :thickness-pick-busy="thicknessPickBusy"
       @update:plan-thickness-cms="emit('update:planThicknessCms', $event)"
       @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
       @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
@@ -247,28 +247,28 @@ function onWindowBovenlichtChange(event: Event): void {
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
       :unit="scaleInputUnit"
-      :fml-wall-height-cm="fmlWallHeightCm"
-      :fml-door-height-cm="fmlDoorHeightCm"
-      :fml-window-height-cm="fmlWindowHeightCm"
-      :fml-window-sill-z-cm="fmlWindowSillZCm"
-      @update:fml-wall-height-cm="emit('update:fmlWallHeightCm', $event)"
-      @update:fml-door-height-cm="emit('update:fmlDoorHeightCm', $event)"
-      @update:fml-window-height-cm="emit('update:fmlWindowHeightCm', $event)"
-      @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
+      :plan-wall-height-cm="planWallHeightCm"
+      :plan-door-height-cm="planDoorHeightCm"
+      :plan-window-height-cm="planWindowHeightCm"
+      :plan-window-sill-z-cm="planWindowSillZCm"
+      @update:plan-wall-height-cm="emit('update:planWallHeightCm', $event)"
+      @update:plan-door-height-cm="emit('update:planDoorHeightCm', $event)"
+      @update:plan-window-height-cm="emit('update:planWindowHeightCm', $event)"
+      @update:plan-window-sill-z-cm="emit('update:planWindowSillZCm', $event)"
     />
 
     <PlanRescalePanel
-      :active="fmlRescaleActive"
+      :active="rescaleActive"
       :can-start="canStartRescale"
-      :state="fmlRescaleState"
-      :mm-x="fmlRescaleDistanceMmX"
-      :mm-y="fmlRescaleDistanceMmY"
+      :state="rescaleState"
+      :mm-x="rescaleDistanceMmX"
+      :mm-y="rescaleDistanceMmY"
       :unit="scaleInputUnit"
       @begin="emit('beginRescale')"
       @cancel="emit('cancelRescale')"
       @confirm="emit('confirmRescale')"
-      @update-mm-x="emit('update:fmlRescaleDistanceMmX', $event)"
-      @update-mm-y="emit('update:fmlRescaleDistanceMmY', $event)"
+      @update-mm-x="emit('update:rescaleDistanceMmX', $event)"
+      @update-mm-y="emit('update:rescaleDistanceMmY', $event)"
     />
 
     <button
@@ -286,7 +286,7 @@ function onWindowBovenlichtChange(event: Event): void {
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
       :plan-limits-dirty="planLimitsDirty"
-      :fml-orient-flip-x="fmlOrientFlipX"
+      :plan-orient-flip-x="planOrientFlipX"
       :has-any-floor-fml="hasAnyFloorFml"
       :project-orient-flip-x="projectOrientFlipX"
       @regenerate="emit('regenerate')"
@@ -299,12 +299,12 @@ function onWindowBovenlichtChange(event: Event): void {
 </template>
 
 <style scoped>
-.fml-panel {
+.plan-panel {
   padding-top: 8px;
   padding-bottom: 8px;
 }
 
-.fml-floor-name {
+.plan-floor-name {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -313,7 +313,7 @@ function onWindowBovenlichtChange(event: Event): void {
   color: #334155;
 }
 
-.fml-floor-name input {
+.plan-floor-name input {
   width: 100%;
   height: 28px;
   padding: 4px 8px;
@@ -323,20 +323,20 @@ function onWindowBovenlichtChange(event: Event): void {
   box-sizing: border-box;
 }
 
-.fml-floor-name input:focus {
+.plan-floor-name input:focus {
   border-color: #3b82f6;
   outline: none;
 }
 
-.fml-stats,
-.fml-hint {
+.plan-stats,
+.plan-hint {
   margin: 0 0 8px;
   font-size: 12px;
   color: #475569;
   line-height: 1.4;
 }
 
-.fml-bovenlicht {
+.plan-bovenlicht {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -345,7 +345,7 @@ function onWindowBovenlichtChange(event: Event): void {
   justify-content: flex-start;
 }
 
-.fml-bovenlicht input[type='checkbox'] {
+.plan-bovenlicht input[type='checkbox'] {
   width: auto;
   margin: 0;
   flex-shrink: 0;

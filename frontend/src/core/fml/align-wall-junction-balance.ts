@@ -10,9 +10,9 @@
  */
 import { noteDiscardedMeasurement, tally } from '@/core/diagnostics'
 import {
-  FML_WALL_BALANCE_FALLBACK,
-  FML_WALL_BALANCE_MAX,
-  FML_WALL_BALANCE_MIN,
+  WALL_BALANCE_FALLBACK,
+  WALL_BALANCE_MAX,
+  WALL_BALANCE_MIN,
   type Point2D,
 } from './extraction-to-plan-geom'
 import {
@@ -67,8 +67,8 @@ function isNearOrthoJogConnector(stub: Wall, arm: Wall): boolean {
 }
 
 function clampBalance(value: number): number {
-  if (!Number.isFinite(value)) return FML_WALL_BALANCE_FALLBACK
-  return Math.min(FML_WALL_BALANCE_MAX, Math.max(FML_WALL_BALANCE_MIN, value))
+  if (!Number.isFinite(value)) return WALL_BALANCE_FALLBACK
+  return Math.min(WALL_BALANCE_MAX, Math.max(WALL_BALANCE_MIN, value))
 }
 
 export function quantizeBalance(value: number): number {
@@ -500,7 +500,7 @@ function faceCrossCoord(wall: Wall, side: FlushSide, balance = wall.balance): nu
   const vertical = wallIsVertical(wall)
   const c = crossAxisComponent(leftNormal(wallDirectionUnit(wall)), vertical)
   const thickness = wall.thickness
-  const b = clampBalance(balance ?? FML_WALL_BALANCE_FALLBACK)
+  const b = clampBalance(balance ?? WALL_BALANCE_FALLBACK)
   if (side === 'plus') return cl + c * (thickness * b)
   return cl - c * (thickness * (1 - b))
 }
@@ -515,7 +515,7 @@ function balanceForWorldFlushFace(wall: Wall, flushCross: number, maxShiftCm: nu
   const vertical = wallIsVertical(wall)
   const c = crossAxisComponent(leftNormal(wallDirectionUnit(wall)), vertical)
   const thickness = wall.thickness
-  if (!(thickness > 1e-9) || Math.abs(c) < 1e-12) return FML_WALL_BALANCE_FALLBACK
+  if (!(thickness > 1e-9) || Math.abs(c) < 1e-12) return WALL_BALANCE_FALLBACK
 
   const delta = flushCross - cl
   const fromPlus = clampBalance(delta / (c * thickness))
@@ -582,7 +582,7 @@ function applyChainFlushBalances(
   if (verdict === 'no_evidence' || verdict === 'centered') {
     tally('X-01', verdict === 'centered' ? 'centered_no_flush' : 'no_evidence')
     for (const index of indices) {
-      walls[index].balance = FML_WALL_BALANCE_FALLBACK
+      walls[index].balance = WALL_BALANCE_FALLBACK
       tally('X-01', 'preserved')
     }
     return
@@ -599,10 +599,10 @@ function applyChainFlushBalances(
   tally('X-01', 'flush_applied')
   for (const index of indices) {
     const wall = walls[index]
-    const prev = wall.balance ?? FML_WALL_BALANCE_FALLBACK
+    const prev = wall.balance ?? WALL_BALANCE_FALLBACK
     const deltaT = Math.abs(wall.thickness - anchorT)
     const next = !thicknessesDiffer(wall.thickness, anchorT)
-      ? FML_WALL_BALANCE_FALLBACK
+      ? WALL_BALANCE_FALLBACK
       : balanceForWorldFlushFace(wall, flushCross, deltaT * 0.5)
     wall.balance = next
     if (Math.abs(prev - next) > 1e-9) {
@@ -628,20 +628,20 @@ export function alignWallJunctionBalance(
 
   // ESC:X-01 — default export balance 0.5 (geen meet-ruis).
   let result: Wall[] = walls.map((wall) => {
-    const measured = clampBalance(wall.balance ?? FML_WALL_BALANCE_FALLBACK)
-    if (Math.abs(measured - FML_WALL_BALANCE_FALLBACK) > 1e-9) {
+    const measured = clampBalance(wall.balance ?? WALL_BALANCE_FALLBACK)
+    if (Math.abs(measured - WALL_BALANCE_FALLBACK) > 1e-9) {
       noteDiscardedMeasurement(
         'X-01',
         'alignWallJunctionBalance',
         measured,
-        FML_WALL_BALANCE_FALLBACK,
+        WALL_BALANCE_FALLBACK,
       )
     } else {
       tally('X-01', 'default_0_5')
     }
     return {
       ...cloneWall(wall),
-      balance: FML_WALL_BALANCE_FALLBACK,
+      balance: WALL_BALANCE_FALLBACK,
     }
   })
 

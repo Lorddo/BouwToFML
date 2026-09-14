@@ -65,7 +65,7 @@ export function resetPlanChromeDialogForTests(): void {
   hostCount = 0
 }
 
-export function fmlChromeDialogState(): typeof pending {
+export function planChromeDialogState(): typeof pending {
   return pending
 }
 

@@ -7,8 +7,8 @@ import {
   resolveWindowBovenlicht,
 } from './bovenlicht'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
 } from './extraction-to-plan-types'
 import type { Floor, Opening } from './types'
 import { wallElevationAtT } from './wall-endpoint-height'
@@ -56,8 +56,8 @@ function openingTopCm(opening: Opening): number {
     opening.z_height != null && Number.isFinite(opening.z_height)
       ? opening.z_height
       : opening.type === 'window'
-        ? DEFAULT_FML_WINDOW_HEIGHT_CM
-        : DEFAULT_FML_DOOR_HEIGHT_CM
+        ? DEFAULT_WINDOW_HEIGHT_CM
+        : DEFAULT_DOOR_HEIGHT_CM
   return sill + height
 }
 

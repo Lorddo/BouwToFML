@@ -1,4 +1,4 @@
-import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import { ensureRidgeDesign } from '@/core/fml/ridge-walls'
 import type { Floor, FloorPlan } from '@/core/fml/types'
 
@@ -13,7 +13,7 @@ function resolveWallHeightCm(value: number | undefined): number {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     return Math.round(value)
   }
-  return DEFAULT_FML_WALL_HEIGHT_CM
+  return DEFAULT_WALL_HEIGHT_CM
 }
 
 export function createBlankFloor(opts: {

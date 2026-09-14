@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import { FML_FIELD_COMMIT_DEBOUNCE_MS } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
+import { PLAN_FIELD_COMMIT_DEBOUNCE_MS } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
 import { MIN_DIMENSION_LENGTH_CM } from '@/core/fml/offset-dimension-line'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
@@ -33,7 +33,7 @@ const { t } = useI18n()
         :cm="selectedDimensionPanel.lengthCm"
         :unit="unit"
         :min-cm="MIN_DIMENSION_LENGTH_CM"
-        :debounce-ms="FML_FIELD_COMMIT_DEBOUNCE_MS"
+        :debounce-ms="PLAN_FIELD_COMMIT_DEBOUNCE_MS"
         :aria-label="t('result.toolbar.dimensionLength')"
         input-class="plan-toolbelt__thickness-input"
         @update:cm="emit('dimensionLengthCm', $event)"

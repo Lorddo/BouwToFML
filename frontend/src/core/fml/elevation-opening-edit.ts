@@ -2,9 +2,9 @@
  * Rand-resize + onderlinge snap voor ramen/deuren in het gevel-aanzicht.
  */
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 import type { Opening, OpeningType, Point2D, Wall } from './types'
 import type { ElevationOpeningRect, ElevationRect, ElevationWallRect } from './facade-elevation'
@@ -327,14 +327,14 @@ export function clampOpeningPatchKeepOppositeEdge(
     typeof start.z === 'number' && Number.isFinite(start.z)
       ? start.z
       : start.type === 'window'
-        ? DEFAULT_FML_WINDOW_SILL_Z_CM
+        ? DEFAULT_WINDOW_SILL_Z_CM
         : 0
   const startH =
     typeof start.z_height === 'number' && Number.isFinite(start.z_height)
       ? start.z_height
       : start.type === 'window'
-        ? DEFAULT_FML_WINDOW_HEIGHT_CM
-        : DEFAULT_FML_DOOR_HEIGHT_CM
+        ? DEFAULT_WINDOW_HEIGHT_CM
+        : DEFAULT_DOOR_HEIGHT_CM
   let z = patch.z
   let height = patch.z_height
   if (side === 'n') {
@@ -374,9 +374,9 @@ function openingSizeOrFallback(opening: Pick<Opening, 'z' | 'z_height' | 'type'>
   z: number
   height: number
 } {
-  const fallbackZ = opening.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0
+  const fallbackZ = opening.type === 'window' ? DEFAULT_WINDOW_SILL_Z_CM : 0
   const fallbackH =
-    opening.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM
+    opening.type === 'window' ? DEFAULT_WINDOW_HEIGHT_CM : DEFAULT_DOOR_HEIGHT_CM
   const z = typeof opening.z === 'number' && Number.isFinite(opening.z) ? opening.z : fallbackZ
   const height =
     typeof opening.z_height === 'number' && Number.isFinite(opening.z_height)

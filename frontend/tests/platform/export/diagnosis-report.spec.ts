@@ -42,7 +42,7 @@ describe('buildDiagnosisReportHtml', () => {
       },
       summary: {
         completedThroughLayer: 10,
-        fmlReady: true,
+        planReady: true,
       },
       wallTransitions: [
         {

@@ -239,7 +239,7 @@ export function isDebugSidebarEmpty(params: {
   layerDebugVisible: boolean
   debugExportsVisible: boolean
   probeVisible: boolean
-  fmlDevPanelVisible: boolean
+  planDevPanelVisible: boolean
   gapsDevPanelVisible?: boolean
   doorsDevPanelVisible?: boolean
   windowsDevPanelVisible?: boolean
@@ -250,7 +250,7 @@ export function isDebugSidebarEmpty(params: {
     !params.layerDebugVisible &&
     !params.debugExportsVisible &&
     !params.probeVisible &&
-    !params.fmlDevPanelVisible &&
+    !params.planDevPanelVisible &&
     !params.gapsDevPanelVisible &&
     !params.doorsDevPanelVisible &&
     !params.windowsDevPanelVisible &&

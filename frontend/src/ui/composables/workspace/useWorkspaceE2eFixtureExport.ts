@@ -6,10 +6,10 @@ import type { useHScaleCalibration } from '@/platform/calibration'
 import type { FmlWallThicknessLimits } from '@/core/fml/fml-wall-thickness-limits'
 import type { FmlThicknessBandBoundaries } from '@/core/fml/fml-wall-thickness-tiers'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import { downloadText } from '@/core/fml/downloadFml'
 import {
@@ -111,10 +111,10 @@ export function useWorkspaceE2eFixtureExport(deps: UseWorkspaceE2eFixtureExportD
         fml: {
           thicknessLimits: { ...deps.appliedFmlThicknessLimits.value },
           bandBoundaries: { ...deps.appliedFmlBandBoundaries.value },
-          wallHeightCm: deps.appliedFmlWallHeightCm?.value ?? DEFAULT_FML_WALL_HEIGHT_CM,
-          doorHeightCm: deps.appliedFmlDoorHeightCm?.value ?? DEFAULT_FML_DOOR_HEIGHT_CM,
-          windowHeightCm: deps.appliedFmlWindowHeightCm?.value ?? DEFAULT_FML_WINDOW_HEIGHT_CM,
-          windowSillZCm: deps.appliedFmlWindowSillZCm?.value ?? DEFAULT_FML_WINDOW_SILL_Z_CM,
+          wallHeightCm: deps.appliedFmlWallHeightCm?.value ?? DEFAULT_WALL_HEIGHT_CM,
+          doorHeightCm: deps.appliedFmlDoorHeightCm?.value ?? DEFAULT_DOOR_HEIGHT_CM,
+          windowHeightCm: deps.appliedFmlWindowHeightCm?.value ?? DEFAULT_WINDOW_HEIGHT_CM,
+          windowSillZCm: deps.appliedFmlWindowSillZCm?.value ?? DEFAULT_WINDOW_SILL_Z_CM,
         },
       })
 

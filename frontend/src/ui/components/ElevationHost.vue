@@ -4,9 +4,9 @@ import { useI18n } from 'vue-i18n'
 import type { FloorPlan } from '@/core/fml/types'
 import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import type { ElevationBovenlichtDefaults } from '@/core/fml/facade-elevation'
 import type { HScaleState } from '@/platform/calibration'
@@ -83,9 +83,9 @@ const props = withDefaults(
     rescaleMode: false,
     rescaleState: null,
     canvasFullscreen: false,
-    defaultDoorHeightCm: DEFAULT_FML_DOOR_HEIGHT_CM,
-    defaultWindowHeightCm: DEFAULT_FML_WINDOW_HEIGHT_CM,
-    defaultWindowSillZCm: DEFAULT_FML_WINDOW_SILL_Z_CM,
+    defaultDoorHeightCm: DEFAULT_DOOR_HEIGHT_CM,
+    defaultWindowHeightCm: DEFAULT_WINDOW_HEIGHT_CM,
+    defaultWindowSillZCm: DEFAULT_WINDOW_SILL_Z_CM,
     bovenlichtDefault: false,
     windowBovenlichtDefault: false,
     bovenlichtHeightCm: BOVENLICHT_HEIGHT_CM,

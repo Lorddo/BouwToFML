@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, type Ref } from 'vue'
-import type { PreprocessConfig } from '@/platform/image'
+import { DEFAULT_PREPROCESS, type PreprocessConfig } from '@/platform/image'
+import { normalizeStoredPreprocess } from '@/cv/preprocess/layer-preprocess-normalize'
 import { emptyTabOutputs, type TabDetectionOutputs } from '@/cv/pipeline/merge-tab-outputs'
 import { resolveOcrLanguage, warmUpOcrWorker } from '@/cv/port/ocrWorker'
 import type { WorkspaceFlowStep } from './constants'
@@ -70,6 +71,10 @@ export function useWorkspaceLifecycle(deps: {
   function resetWorkspace() {
     clearWorkspaceForSession()
     deps.localError.value = null
+    // De composable blijft gemount bij «Nieuw», dus zonder deze regel draagt het
+    // volgende project de B/W-tuning van het vorige mee. Per vloer komt de tuning
+    // uit de session-blob; die overschrijft dit bij hydrate.
+    deps.preprocess.value = normalizeStoredPreprocess({ ...DEFAULT_PREPROCESS })
     deps.preprocessPreview.clearPreview()
     deps.inputMask.resetMaskState()
     deps.inkEdit.resetInkEdit()

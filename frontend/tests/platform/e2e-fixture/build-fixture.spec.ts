@@ -8,10 +8,10 @@ import {
 import { DEFAULT_FML_WALL_THICKNESS_LIMITS } from '@/core/fml/fml-wall-thickness-limits'
 import { DEFAULT_FML_BAND_BOUNDARIES } from '@/core/fml/fml-wall-thickness-tiers'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import { encodeMaskRle } from '@/cv/util/binary-mask-rle'
 
@@ -79,10 +79,10 @@ describe('e2e-fixture build', () => {
       fml: {
         thicknessLimits: { ...DEFAULT_FML_WALL_THICKNESS_LIMITS },
         bandBoundaries: { ...DEFAULT_FML_BAND_BOUNDARIES },
-        wallHeightCm: DEFAULT_FML_WALL_HEIGHT_CM,
-        doorHeightCm: DEFAULT_FML_DOOR_HEIGHT_CM,
-        windowHeightCm: DEFAULT_FML_WINDOW_HEIGHT_CM,
-        windowSillZCm: DEFAULT_FML_WINDOW_SILL_Z_CM,
+        wallHeightCm: DEFAULT_WALL_HEIGHT_CM,
+        doorHeightCm: DEFAULT_DOOR_HEIGHT_CM,
+        windowHeightCm: DEFAULT_WINDOW_HEIGHT_CM,
+        windowSillZCm: DEFAULT_WINDOW_SILL_Z_CM,
       },
     })
 

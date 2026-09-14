@@ -1,7 +1,7 @@
 import type { FloorPlan, Opening, Wall } from './types'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
 } from './extraction-to-plan-types'
 import { wallLengthCm } from './fml-wall-geom'
 import { wallElevationAtT } from './wall-endpoint-height'
@@ -117,7 +117,7 @@ export function buildBovenlichtOpening(
   const sillZ = source.z ?? 0
   const openingHeight =
     source.z_height ??
-    (source.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM)
+    (source.type === 'window' ? DEFAULT_WINDOW_HEIGHT_CM : DEFAULT_DOOR_HEIGHT_CM)
   const top = sillZ + openingHeight
   const gapCm =
     options.gapCm != null && Number.isFinite(options.gapCm) && options.gapCm >= 0
@@ -155,7 +155,7 @@ function openingTopCm(opening: Pick<Opening, 'type' | 'z' | 'z_height'>): number
   const sillZ = opening.z ?? 0
   const height =
     opening.z_height ??
-    (opening.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM)
+    (opening.type === 'window' ? DEFAULT_WINDOW_HEIGHT_CM : DEFAULT_DOOR_HEIGHT_CM)
   return sillZ + height
 }
 

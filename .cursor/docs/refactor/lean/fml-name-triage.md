@@ -1,4 +1,8 @@
-# `fml*`-namen: triage voor besluit
+# `fml*`-namen: triage — BESLOTEN EN UITGEVOERD (2026-09-14)
+
+> **Besluit:** C2–C14 ja, C1 mee met fase 6, D1 = `openingMerge`, D2 = mee met de oriëntatie-rename.
+> **Uitgevoerd** via [`scripts/rename-c-clusters.mjs`](../../../../frontend/scripts/rename-c-clusters.mjs): ~1000 vervangingen in 90 bestanden. Zie «Uitvoering» onderaan.
+> Nog open: **C1** (dikte-catalogus + banden, 21 namen / ~215 refs) gaat mee met fase 6, en de **CSS-klassen** (`fml-fold`, `fml-rescale-*`, `fml-load-*`, …) zijn een eigen batch die hier niet in stond.
 
 Opgemeten 2026-09-14 na rename fase 4, over `frontend/src` + `frontend/tests`:
 **96 unieke namen, 1465 verwijzingen.** Dit is de volledige lijst — niet de steekproef uit de plantabel.
@@ -172,4 +176,50 @@ Totale omvang wordt daarmee **1679 refs in 105 namen**, waarvan 269 blijven (gro
 Eén antwoord dat alles dekt: **«C1 mee met fase 6, C2–C14 allemaal ja, D1 = `openingMerge`, D2 = mee met fase 5.»**
 Daarmee blijft alleen groep A over met een FML-naam, en dat is precies de bedoeling van het rename-plan: FML alleen waar het écht om het uitwisselingsformaat gaat.
 
-JA
+*(Dit is het gekozen antwoord.)*
+
+---
+
+## Uitvoering — 2026-09-14
+
+**~1000 vervangingen in 90 bestanden.** Restant is nu exact drie groepen, niets anders: groep A (≈340 refs, echte adapter), C1 (≈215, wacht op fase 6) en de vijf lees-aliassen. Getoetst met een restant-scan die ook `\w*_FML_\w*` meeneemt.
+
+### Vier dingen die ik eerst moest uitzoeken, niet renamen
+
+1.  **i18n-sleutels vallen samen met identifiers.** Een gemiste sleutel faalt *stil*: de UI toont het pad in plaats van de tekst, en geen typecheck of test ziet dat. [`scripts/check-i18n-collisions.mjs`](../../../../frontend/scripts/check-i18n-collisions.mjs) vond vijf: `fmlOpacity`, `fmlOpacityAria`, `fmlConversion`, `fmlConversionHint`, `fmlFold`.
+
+2.  **`fmlOpacity` betekende twee dingen.** In de prop-keten (`WorkspaceView` → `WorkspacePlanResultPanel` → `PlanPanel` → `PlanPanelOpacity`) is het een **percentage** (default 80, `{{ fmlOpacity }}%`); in `EditorView.vue` + `useEditorLoad.ts` is het een **0–1 ref** die `:content-opacity` voedt. Eén naam over beide leggen zou een schaalfout inbouwen die niemand zou zien. Nu: prop-keten → `contentOpacityPct`, editor-ref → `contentOpacity`, i18n-label → `contentOpacity` (het label is «Plattegrond», geen percentage).
+
+3.  **Kebab-vormen: alleen ná een dubbele punt.** De regel is `(?<=:)fml-x\b`, zodat `:fml-opacity=` en `@update:fml-opacity=` meegaan maar `class="fml-fold"` en de CSS-selector `.fml-fold` niet. Dat bleek meteen nuttig: `fml-thickness-pick-tier` was wél een prop (3×), `fml-fold` puur CSS (13×).
+
+4.  **`openingMerge` is persisted.** `fmlConversion` staat in `UserSettingsV1`, dus die vroeg dezelfde lees-alias als fase 5 (`obj.openingMerge ?? obj.fmlConversion` op beide normalisatie-ingangen), met test en omgekeerd bewijs. **Dit was ik bijna vergeten** — de rename zelf typecheckt en test groen zónder alias; alleen bestaande browsers zouden hun merge-instelling stil zien terugvallen naar fabriek.
+
+### Twee botsingen die de typecheck ving
+
+-   `plan-canvas-openings.ts` exporteerde dezelfde constante onder **twee** namen: `DEFAULT_FML_WINDOW_HEIGHT_CM` én een alias `DEFAULT_WINDOW_HEIGHT_CM`. Iemand had de doelnaam al vooruitgezet. De rename laat die samenvallen; het export-blok gaat van 5 regels naar 3.
+-   `fmlExportPlan` → `generatedPlan` botste met een **bestaande** `generatedPlan` in hetzelfde bestand: dat is de ruwe bundel-plattegrond, terwijl `fmlExportPlan` de gehármoniseerde is (`buildPreviewFromRawBundle`). Twee verschillende dingen. Geworden: `harmonizedPlan`. Mijn voorstel `generatedPlan` in de tabel hierboven was dus fout.
+
+### Nacontrole — 2026-09-14: twee gaten in mijn eigen aanpak
+
+De smoke-test van de gebruiker gaf drie meldingen. Dat was reden om de rename-rondes ná de feiten te toetsen op twee foutklassen die de typecheck principieel níet ziet. Eén ervan leverde een echte bug op.
+
+**Gat 1 — een rename kan op een naam landen die al bestaat.** In dezelfde scope is dat een redeclare-fout, maar in een *geneste* scope is het legale shadowing: stil, en de betekenis verandert. [`scripts/audit-rename-shadowing.mjs`](../../../../frontend/scripts/audit-rename-shadowing.mjs) vergelijkt per bestand de git-versie van vóór de ronde: bestond de doelnaam daar al én de oude naam? **13 treffers**, waarvan 3 al bekend (die ving de typecheck). De acht in `useWorkspace.ts` bleken onschuldig: de «bestaande» naam was telkens de property-key die al de doelnaam had (`underlaySrc: fmlUnderlaySrc` werd `underlaySrc: underlaySrc`). Fase 5: nul treffers.
+
+**Gat 2 — een rename kan binnen een string-literal landen.** Identifiers hernoemen is veilig; strings zijn contracten met de buitenwereld. [`scripts/audit-rename-strings.mjs`](../../../../frontend/scripts/audit-rename-strings.mjs) zoekt daarop. **Één echt slachtoffer, en het was een bug:**
+
+```ts
+// vóór de C-ronde
+const EDITOR_UNLOCK_STORAGE_KEY       = 'bouwToFml.editorUnlocked'
+const EDITOR_UNLOCK_STORAGE_KEY_LEGACY = 'bouwToFml.fmlEditorUnlocked'
+// ná de C-ronde: de terugval wees naar dezelfde sleutel als de nieuwe
+```
+
+De legacy-terugval van de editor-gate was dus dood; iedereen die de editor al ontgrendeld had, moest opnieuw `J0rd!` typen. Gerepareerd, met twee tests in [`editor-gate.spec.ts`](../../../../frontend/tests/ui/editor-gate.spec.ts) die de letterlijke oude sleutel pinnen, omgekeerd bewezen.
+
+Bijkomend, ter afdekking van dezelfde klasse: [`scripts/check-i18n-keys.mjs`](../../../../frontend/scripts/check-i18n-keys.mjs) controleert nu dat élke `t('x.y')` in de bron in `nl`/`en`/`th` bestaat — **738 sleutels, nul ontbrekend**. De collisie-check van hierboven kijkt of een sleutel per ongeluk *mee* hernoemd wordt; deze kijkt of hij daarna nog *bestaat*. Twee kanten van dezelfde stille fout.
+
+Wat deze nacontrole níet verklaart: de drie meldingen uit de smoke-test (schaal en B/W-drempel van het vorige project op stap 1/2, en de «niet opgeslagen»-melding bij refresh). Geen van de 13 botsingen raakt die paden. Die zijn apart onderzocht.
+
+### CSS-klassen — GEDAAN, zie [`fase6-en-css-voorwerk.md`](fase6-en-css-voorwerk.md)
+
+Was hier nog «te doen» met een eigen risico — [het renameplan](../../../plans/fml_naar_plan_rename_5075de5d.plan.md) noemt dat fit-chrome en gesture-ignore-lijsten op klassenaam zoeken, en een gemiste klasse faalt stil. Dat risico bleek in de huidige code niet te bestaan: **geen enkele JS-regel leest een `fml-`klassenaam** (geen `classList`, geen `closest`, geen ignore-lijst). Uitgevoerd op 2026-09-14: 146 vervangingen in 11 bestanden, 34 basisnamen `fml-*` → `plan-*`, plus `fml-panel-fields.css` → `plan-panel-fields.css`. De ruwe telling hierboven was te hoog omdat ze klassen, importpaden en kebab-props door elkaar mengde.

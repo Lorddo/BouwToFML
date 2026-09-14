@@ -169,4 +169,38 @@ describe('useHScaleCalibration', () => {
       expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.1)
     })
   })
+
+  describe('cancel vs reset', () => {
+    function confirmedScale() {
+      const scale = useHScaleCalibration()
+      scale.init(1000, 800)
+      scale.state.value = { xLeft: 100, xRight: 300, xGuideY: 400, yTop: 50, yBottom: 250, yGuideX: 500 }
+      scale.distanceMmX.value = 1234
+      scale.distanceMmY.value = 5678
+      scale.confirm()
+      return scale
+    }
+
+    it('cancel laat de getypte mm en de linialen staan', () => {
+      const scale = confirmedScale()
+      scale.cancel()
+      expect(scale.confirmed.value).toBe(false)
+      expect(scale.distanceMmX.value).toBe(1234)
+      expect(scale.distanceMmY.value).toBe(5678)
+      expect(scale.state.value).not.toBeNull()
+    })
+
+    it('reset zet mm, linialen en bevestiging terug op fabriek', () => {
+      // Zonder dit droeg een nieuw project de maat van het vorige mee: de
+      // workspace-composable blijft gemount, dus alleen `cancel()` was te weinig.
+      const scale = confirmedScale()
+      scale.reset()
+      expect(scale.confirmed.value).toBe(false)
+      expect(scale.state.value).toBeNull()
+      expect(scale.distanceMmX.value).toBe(3000)
+      expect(scale.distanceMmY.value).toBe(3000)
+      expect(scale.confirmedPixelsPerMillimeterX.value).toBeNull()
+      expect(scale.confirmedPixelsPerMillimeterY.value).toBeNull()
+    })
+  })
 })

@@ -79,14 +79,14 @@ export function useWorkspacePlan(deps: {
       fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
       fmlBandMidBoundaryCm: thickness.fmlBandMidBoundaryCm,
       fmlBandMaxBoundaryCm: thickness.fmlBandMaxBoundaryCm,
-      fmlWallHeightCm: thickness.fmlWallHeightCm,
-      fmlDoorHeightCm: thickness.fmlDoorHeightCm,
-      fmlWindowHeightCm: thickness.fmlWindowHeightCm,
-      fmlWindowSillZCm: thickness.fmlWindowSillZCm,
-      fmlBovenlichtDefault: thickness.fmlBovenlichtDefault,
-      fmlWindowBovenlichtDefault: thickness.fmlWindowBovenlichtDefault,
-      fmlBovenlichtHeightCm: thickness.fmlBovenlichtHeightCm,
-      fmlBovenlichtGapCm: thickness.fmlBovenlichtGapCm,
+      planWallHeightCm: thickness.planWallHeightCm,
+      planDoorHeightCm: thickness.planDoorHeightCm,
+      planWindowHeightCm: thickness.planWindowHeightCm,
+      planWindowSillZCm: thickness.planWindowSillZCm,
+      planBovenlichtDefault: thickness.planBovenlichtDefault,
+      planWindowBovenlichtDefault: thickness.planWindowBovenlichtDefault,
+      planBovenlichtHeightCm: thickness.planBovenlichtHeightCm,
+      planBovenlichtGapCm: thickness.planBovenlichtGapCm,
     },
   )
 
@@ -101,27 +101,27 @@ export function useWorkspacePlan(deps: {
     previewUnderlayLayout: generate.previewUnderlayLayout,
   })
 
-  async function setFmlWallHeightCm(value: number): Promise<boolean> {
+  async function setPlanWallHeightCm(value: number): Promise<boolean> {
     return generate.applyPreviewDefault('wallHeightCm', value)
   }
 
-  async function setFmlDoorHeightCm(value: number): Promise<boolean> {
+  async function setPlanDoorHeightCm(value: number): Promise<boolean> {
     return generate.applyPreviewDefault('doorHeightCm', value)
   }
 
-  async function setFmlWindowHeightCm(value: number): Promise<boolean> {
+  async function setPlanWindowHeightCm(value: number): Promise<boolean> {
     return generate.applyPreviewDefault('windowHeightCm', value)
   }
 
-  async function setFmlWindowSillZCm(value: number): Promise<boolean> {
+  async function setPlanWindowSillZCm(value: number): Promise<boolean> {
     return generate.applyPreviewDefault('windowSillZCm', value)
   }
 
-  async function setFmlBovenlichtDefault(value: boolean): Promise<boolean> {
+  async function setPlanBovenlichtDefault(value: boolean): Promise<boolean> {
     return generate.applyPreviewDefault('bovenlichtDefault', value === true)
   }
 
-  async function setFmlWindowBovenlichtDefault(value: boolean): Promise<boolean> {
+  async function setPlanWindowBovenlichtDefault(value: boolean): Promise<boolean> {
     return generate.applyPreviewDefault('windowBovenlichtDefault', value === true)
   }
 
@@ -132,14 +132,14 @@ export function useWorkspacePlan(deps: {
     fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
     fmlBandMidBoundaryCm: thickness.fmlBandMidBoundaryCm,
     fmlBandMaxBoundaryCm: thickness.fmlBandMaxBoundaryCm,
-    fmlWallHeightCm: thickness.fmlWallHeightCm,
-    fmlDoorHeightCm: thickness.fmlDoorHeightCm,
-    fmlWindowHeightCm: thickness.fmlWindowHeightCm,
-    fmlWindowSillZCm: thickness.fmlWindowSillZCm,
-    fmlBovenlichtDefault: thickness.fmlBovenlichtDefault,
-    fmlWindowBovenlichtDefault: thickness.fmlWindowBovenlichtDefault,
-    fmlBovenlichtHeightCm: thickness.fmlBovenlichtHeightCm,
-    fmlBovenlichtGapCm: thickness.fmlBovenlichtGapCm,
+    planWallHeightCm: thickness.planWallHeightCm,
+    planDoorHeightCm: thickness.planDoorHeightCm,
+    planWindowHeightCm: thickness.planWindowHeightCm,
+    planWindowSillZCm: thickness.planWindowSillZCm,
+    planBovenlichtDefault: thickness.planBovenlichtDefault,
+    planWindowBovenlichtDefault: thickness.planWindowBovenlichtDefault,
+    planBovenlichtHeightCm: thickness.planBovenlichtHeightCm,
+    planBovenlichtGapCm: thickness.planBovenlichtGapCm,
     appliedFmlThicknessLimits: thickness.appliedFmlThicknessLimits,
     appliedFmlBandBoundaries: thickness.appliedFmlBandBoundaries,
     appliedFmlWallHeightCm: thickness.appliedFmlWallHeightCm,
@@ -156,25 +156,25 @@ export function useWorkspacePlan(deps: {
     setFmlThicknessMidCm: thickness.setFmlThicknessMidCm,
     setFmlThicknessMaxCm: thickness.setFmlThicknessMaxCm,
     /** Silent UI hydrate (floor-defaults) — geen overwrite-confirm. */
-    hydrateFmlWallHeightCm: thickness.setFmlWallHeightCm,
-    hydrateFmlDoorHeightCm: thickness.setFmlDoorHeightCm,
-    hydrateFmlWindowHeightCm: thickness.setFmlWindowHeightCm,
-    hydrateFmlWindowSillZCm: thickness.setFmlWindowSillZCm,
-    hydrateFmlBovenlichtDefault: thickness.setFmlBovenlichtDefault,
-    hydrateFmlWindowBovenlichtDefault: thickness.setFmlWindowBovenlichtDefault,
-    setFmlWallHeightCm,
-    setFmlDoorHeightCm,
-    setFmlWindowHeightCm,
-    setFmlWindowSillZCm,
-    setFmlBovenlichtDefault,
-    setFmlWindowBovenlichtDefault,
-    setFmlBovenlichtHeightCm: thickness.setFmlBovenlichtHeightCm,
-    setFmlBovenlichtGapCm: thickness.setFmlBovenlichtGapCm,
+    hydrateFmlWallHeightCm: thickness.setPlanWallHeightCm,
+    hydrateFmlDoorHeightCm: thickness.setPlanDoorHeightCm,
+    hydrateFmlWindowHeightCm: thickness.setPlanWindowHeightCm,
+    hydrateFmlWindowSillZCm: thickness.setPlanWindowSillZCm,
+    hydrateFmlBovenlichtDefault: thickness.setPlanBovenlichtDefault,
+    hydrateFmlWindowBovenlichtDefault: thickness.setPlanWindowBovenlichtDefault,
+    setPlanWallHeightCm,
+    setPlanDoorHeightCm,
+    setPlanWindowHeightCm,
+    setPlanWindowSillZCm,
+    setPlanBovenlichtDefault,
+    setPlanWindowBovenlichtDefault,
+    setPlanBovenlichtHeightCm: thickness.setPlanBovenlichtHeightCm,
+    setPlanBovenlichtGapCm: thickness.setPlanBovenlichtGapCm,
     setFmlBandMidBoundaryCm: thickness.setFmlBandMidBoundaryCm,
     setFmlBandMaxBoundaryCm: thickness.setFmlBandMaxBoundaryCm,
-    fmlThicknessPickTier: thickness.fmlThicknessPickTier,
-    fmlThicknessPickMessage: thickness.fmlThicknessPickMessage,
-    fmlThicknessPickBusy: thickness.fmlThicknessPickBusy,
+    thicknessPickTier: thickness.thicknessPickTier,
+    thicknessPickMessage: thickness.thicknessPickMessage,
+    thicknessPickBusy: thickness.thicknessPickBusy,
     startFmlThicknessPick: thickness.startFmlThicknessPick,
     cancelFmlThicknessPick: thickness.cancelFmlThicknessPick,
     handleFmlThicknessWallPick,
@@ -201,10 +201,10 @@ export function useWorkspacePlan(deps: {
     clearLivePlanCanvas: generate.clearLivePlanCanvas,
     resetGeneratedPreview: generate.resetGeneratedPreview,
     regenerateFml: generate.regenerateFml,
-    fmlRescaleActive: generate.fmlRescaleActive,
-    fmlRescaleState: generate.fmlRescaleState,
-    fmlRescaleDistanceMmX: generate.fmlRescaleDistanceMmX,
-    fmlRescaleDistanceMmY: generate.fmlRescaleDistanceMmY,
+    rescaleActive: generate.rescaleActive,
+    rescaleState: generate.rescaleState,
+    rescaleDistanceMmX: generate.rescaleDistanceMmX,
+    rescaleDistanceMmY: generate.rescaleDistanceMmY,
     beginPlanRescale: generate.beginPlanRescale,
     cancelPlanRescale: generate.cancelPlanRescale,
     updatePlanRescaleState: generate.updatePlanRescaleState,

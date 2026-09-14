@@ -11,12 +11,12 @@ const INK_THICKNESS_FACTOR = 0.9
  * Zoekvenster per zijde loodrecht op de muur (cm), per band-pick tier.
  * Buitenste-inkt in deze box — bewust niet hartlijn-walk (arcering).
  */
-export const FML_THICKNESS_PICK_SEARCH_CM = {
+export const THICKNESS_PICK_SEARCH_CM = {
   min: 20,
   max: 50,
 } as const
 /** Fallback als geen tier-zoekvenster is meegegeven. */
-const DEFAULT_WALL_SEARCH_CM = FML_THICKNESS_PICK_SEARCH_CM.max
+const DEFAULT_WALL_SEARCH_CM = THICKNESS_PICK_SEARCH_CM.max
 /** Overbrug interne witgaten bij diagonale fallback (cm). */
 const INTERNAL_GAP_TOLERANCE_CM = 6
 /** Korte box-lengte langs de muur-as (px). */

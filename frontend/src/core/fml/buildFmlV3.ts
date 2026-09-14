@@ -31,10 +31,10 @@ import type {
   Wall,
 } from './types'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 import { wallElevationAtT, wallEndpoint3D } from './wall-endpoint-height'
 import { resolveRoomType, UNLABELED_AREA_COLOR } from './roomtype-catalog'
@@ -211,8 +211,8 @@ function serializeOpening(op: Opening): Record<string, unknown> {
     // ESC:X-17 (E)
     z_height:
       op.z_height ??
-      (op.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM),
-    z: op.z ?? (op.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0),
+      (op.type === 'window' ? DEFAULT_WINDOW_HEIGHT_CM : DEFAULT_DOOR_HEIGHT_CM),
+    z: op.z ?? (op.type === 'window' ? DEFAULT_WINDOW_SILL_Z_CM : 0),
     mirrored: op.mirrored ?? [0, 0],
     materials: openingMaterials(op),
     guid: openingGuid(op),
@@ -585,7 +585,7 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
   }
 
   const fallbackProjectId = typeof plan.source?.id === 'number' ? plan.source.id : 900000001
-  const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_FML_WALL_HEIGHT_CM
+  const wallHeightCm = plan.floors[0]?.height ?? DEFAULT_WALL_HEIGHT_CM
 
   const syncedFloors = plan.floors.map((floor) => dropEmptyRidgeDesign(ensureDesignsSynced(floor)))
 

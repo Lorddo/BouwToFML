@@ -205,8 +205,8 @@ export async function runWalls(slug: string): Promise<WallsHarnessResult> {
     referenceWallThicknessPx: fixture.referenceWallThicknessPx,
   })
 
-  if (!pipeline.fmlReady || !pipeline.layer10) {
-    throw new Error(`Pipeline niet fmlReady (completedThrough=${pipeline.completedThroughLayer})`)
+  if (!pipeline.planReady || !pipeline.layer10) {
+    throw new Error(`Pipeline niet planReady (completedThrough=${pipeline.completedThroughLayer})`)
   }
 
   let wallsOutput = extractionFromPipeline({

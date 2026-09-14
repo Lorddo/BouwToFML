@@ -90,7 +90,7 @@ export type PlanRescaleImageLayout = {
  * Stap-1 pixel-handles → FML-cm via huidige underlay-layout.
  * Nulpunt zit in `origin` (wallCm = imageCm − origin); plek op de scan blijft.
  */
-export function fmlRescaleStateFromImageHandles(
+export function rescaleStateFromImageHandles(
   state: HScaleState,
   layout: PlanRescaleImageLayout,
 ): HScaleState | null {
@@ -113,7 +113,7 @@ export function resolvePlanRescaleState(params: {
   layout?: PlanRescaleImageLayout | null
 }): HScaleState | null {
   if (params.imageState && params.layout) {
-    const fromStep1 = fmlRescaleStateFromImageHandles(params.imageState, params.layout)
+    const fromStep1 = rescaleStateFromImageHandles(params.imageState, params.layout)
     if (fromStep1) return fromStep1
   }
   return initPlanRescaleStateFromWalls(params.walls)

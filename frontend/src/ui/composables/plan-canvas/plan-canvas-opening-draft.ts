@@ -15,9 +15,9 @@ import {
   resolveWindowBovenlicht,
 } from '@/core/fml/bovenlicht'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import { resolveHingeAtStart, resolveSwingSign } from '@/ui/components/plan-canvas-doors'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/plan-canvas-openings'
@@ -105,8 +105,8 @@ export function computeOpeningDraftState(
   const widthFirst = widths[0] ?? 90
   const heightFirst =
     heights[0] ??
-    (openingType === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM)
-  const sillFirst = sillZs[0] ?? (openingType === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0)
+    (openingType === 'window' ? DEFAULT_WINDOW_HEIGHT_CM : DEFAULT_DOOR_HEIGHT_CM)
+  const sillFirst = sillZs[0] ?? (openingType === 'window' ? DEFAULT_WINDOW_SILL_Z_CM : 0)
   const hingeFirst = hinges[0] ?? true
   const swingFirst = swings[0] ?? false
   const bovenlichtDefaultFallback =

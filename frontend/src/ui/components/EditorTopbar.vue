@@ -5,7 +5,7 @@ import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
-const DEFAULT_FML_HELP_KEYS = [
+const DEFAULT_PLAN_HELP_KEYS = [
   'result.toolbar.hintDefault',
   'result.toolbar.hintMeasure',
   'result.toolbar.hintNulpunt',
@@ -63,7 +63,7 @@ const helpQuery = ref('')
 const topbarRef = ref<HTMLElement | null>(null)
 useChromeFitScale(topbarRef)
 
-const resolvedHelpKeys = computed(() => props.helpKeys ?? DEFAULT_FML_HELP_KEYS)
+const resolvedHelpKeys = computed(() => props.helpKeys ?? DEFAULT_PLAN_HELP_KEYS)
 
 const helpItems = computed(() => {
   const q = helpQuery.value.trim().toLowerCase()

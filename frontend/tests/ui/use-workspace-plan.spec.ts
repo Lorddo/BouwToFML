@@ -70,11 +70,11 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
     const { api } = createFmlHarness(() => true)
     expect(api.planLimitsDirty.value).toBe(false)
 
-    await api.setFmlWallHeightCm(api.fmlWallHeightCm.value + 10)
+    await api.setPlanWallHeightCm(api.planWallHeightCm.value + 10)
     expect(api.planLimitsDirty.value).toBe(false)
-    expect(api.previewPlan.value?.floors[0]?.height).toBe(api.fmlWallHeightCm.value)
+    expect(api.previewPlan.value?.floors[0]?.height).toBe(api.planWallHeightCm.value)
 
-    await api.setFmlBovenlichtDefault(true)
+    await api.setPlanBovenlichtDefault(true)
     expect(api.planLimitsDirty.value).toBe(false)
 
     api.setPlanThicknessCms([...api.planThicknessCms.value.slice(0, -1), api.fmlThicknessMaxCm.value + 5])
@@ -91,19 +91,19 @@ describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
     edited.floors[0].walls[0].b.x = 333
     api.updatePreviewPlan(edited)
 
-    await api.setFmlWallHeightCm(310)
-    expect(api.fmlWallHeightCm.value).toBe(310)
+    await api.setPlanWallHeightCm(310)
+    expect(api.planWallHeightCm.value).toBe(310)
     expect(api.previewPlan.value?.floors[0]?.walls[0]?.b.x).toBe(333)
     expect(api.previewPlan.value?.floors[0]?.height).toBe(310)
   })
 
   it('hoogte-confirm annuleren past niets toe', async () => {
     const { api } = createFmlHarness(() => false)
-    const before = api.fmlWallHeightCm.value
+    const before = api.planWallHeightCm.value
     const floorBefore = api.previewPlan.value?.floors[0]?.height
 
-    await api.setFmlWallHeightCm(before + 25)
-    expect(api.fmlWallHeightCm.value).toBe(before)
+    await api.setPlanWallHeightCm(before + 25)
+    expect(api.planWallHeightCm.value).toBe(before)
     expect(api.previewPlan.value?.floors[0]?.height).toBe(floorBefore)
   })
 })

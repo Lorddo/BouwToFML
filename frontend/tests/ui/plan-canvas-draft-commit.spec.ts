@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createPlanCanvasDraftCommitScheduler,
-  FML_FIELD_COMMIT_DEBOUNCE_MS,
+  PLAN_FIELD_COMMIT_DEBOUNCE_MS,
   isTypingFieldTarget,
 } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
 
@@ -19,7 +19,7 @@ describe('createPlanCanvasDraftCommitScheduler', () => {
     const apply = vi.fn(() => ({ mutated: true }))
     scheduler.schedule('width', apply)
     expect(apply).not.toHaveBeenCalled()
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS - 1)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS - 1)
     expect(apply).not.toHaveBeenCalled()
     vi.advanceTimersByTime(1)
     expect(apply).toHaveBeenCalledTimes(1)
@@ -31,9 +31,9 @@ describe('createPlanCanvasDraftCommitScheduler', () => {
     const first = vi.fn(() => ({ mutated: true }))
     const second = vi.fn(() => ({ mutated: true }))
     scheduler.schedule('width', first)
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS - 100)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS - 100)
     scheduler.schedule('width', second)
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS - 1)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS - 1)
     expect(first).not.toHaveBeenCalled()
     expect(second).not.toHaveBeenCalled()
     vi.advanceTimersByTime(1)
@@ -48,7 +48,7 @@ describe('createPlanCanvasDraftCommitScheduler', () => {
     scheduler.schedule('width', apply)
     scheduler.flush('width')
     expect(apply).toHaveBeenCalledTimes(1)
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS)
     expect(apply).toHaveBeenCalledTimes(1)
     scheduler.dispose()
   })
@@ -70,7 +70,7 @@ describe('createPlanCanvasDraftCommitScheduler', () => {
     const apply = vi.fn(() => ({ mutated: true }))
     scheduler.schedule('width', apply)
     scheduler.cancelAll()
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS)
     expect(apply).not.toHaveBeenCalled()
     scheduler.dispose()
   })
@@ -100,9 +100,9 @@ describe('createPlanCanvasDraftCommitScheduler', () => {
       return { mutated: true }
     }
     scheduler.schedule('height', applyTwice)
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS)
     scheduler.schedule('height', applyTwice)
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS)
     expect(pushUndo).toHaveBeenCalledTimes(1)
     scheduler.dispose()
   })
@@ -135,7 +135,7 @@ describe('createPlanCanvasDraftCommitScheduler', () => {
     scheduler.dispose()
     expect(apply).toHaveBeenCalledTimes(1)
     scheduler.schedule('width', apply)
-    vi.advanceTimersByTime(FML_FIELD_COMMIT_DEBOUNCE_MS)
+    vi.advanceTimersByTime(PLAN_FIELD_COMMIT_DEBOUNCE_MS)
     expect(apply).toHaveBeenCalledTimes(1)
   })
 })

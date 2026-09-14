@@ -18,7 +18,7 @@ export interface BuildSemanticWallsOutputResult {
 
 /**
  * Bouwt semantic wall graph + segmentdikte op walls-tab-output.
- * Bron: V3 L10 alleen bij `fmlReady` (via `resolveFmlSourceLayer`).
+ * Bron: V3 L10 alleen bij `planReady` (via `resolveFmlSourceLayer`).
  * Idempotent: slaat over als de graph al past bij het huidige junction-totaal.
  */
 export async function buildSemanticWallsForOutput(

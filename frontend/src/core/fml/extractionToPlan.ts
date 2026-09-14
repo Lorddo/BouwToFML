@@ -3,10 +3,10 @@ import type { ExtractionOutput } from '@/core/extraction'
 import type { WallGraph } from '@/cv/port/wallJunctionGraph'
 import type { FloorPlan, Wall } from './types'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
   type ExtractionToPlanOptions,
 } from './extraction-to-plan-types'
 import { resolveBalance, toCmX, toCmY } from './extraction-to-plan-geom'
@@ -27,10 +27,10 @@ export type {
 } from './extraction-to-plan-types'
 
 export {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WALL_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WALL_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 
 export type FaceEvidenceByWallId = Map<string, WallFaceExtentsCm>
@@ -73,19 +73,19 @@ export function extractionToPlanWithOrigin(
   const floorHeightCm =
     Number.isFinite(options.floorHeightCm) && (options.floorHeightCm ?? 0) > 0
       ? Math.round(options.floorHeightCm!)
-      : DEFAULT_FML_WALL_HEIGHT_CM
+      : DEFAULT_WALL_HEIGHT_CM
   const defaultDoorHeightCm =
     Number.isFinite(options.defaultDoorHeightCm) && (options.defaultDoorHeightCm ?? 0) > 0
       ? Math.round(options.defaultDoorHeightCm!)
-      : DEFAULT_FML_DOOR_HEIGHT_CM
+      : DEFAULT_DOOR_HEIGHT_CM
   const defaultWindowHeightCm =
     Number.isFinite(options.defaultWindowHeightCm) && (options.defaultWindowHeightCm ?? 0) > 0
       ? Math.round(options.defaultWindowHeightCm!)
-      : DEFAULT_FML_WINDOW_HEIGHT_CM
+      : DEFAULT_WINDOW_HEIGHT_CM
   const defaultWindowSillZCm =
     Number.isFinite(options.defaultWindowSillZCm) && (options.defaultWindowSillZCm ?? 0) >= 0
       ? Math.round(options.defaultWindowSillZCm!)
-      : DEFAULT_FML_WINDOW_SILL_Z_CM
+      : DEFAULT_WINDOW_SILL_Z_CM
   if (options.pxPerMmX <= 0 || options.pxPerMmY <= 0) {
     throw new Error('Schaal ontbreekt: pixelsPerMillimeterX/Y moeten groter zijn dan 0.')
   }

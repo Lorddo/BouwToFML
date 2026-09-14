@@ -28,14 +28,14 @@ export function resolveBakeNulpuntImageCm(params: {
   pxPerMmX: number
   pxPerMmY: number
 }): Point2D {
-  const fmlZeroBasePx = cmPointToImagePx(
+  const zeroBasePx = cmPointToImagePx(
     { x: 0, y: 0 },
     params.originCm,
     params.pxPerMmX,
     params.pxPerMmY,
   )
-  const fmlZeroLivePx = transformPointByBounds(fmlZeroBasePx, params.baseBounds, params.bounds)
-  return imagePxToScantCm(fmlZeroLivePx, params.pxPerMmX, params.pxPerMmY)
+  const zeroLivePx = transformPointByBounds(zeroBasePx, params.baseBounds, params.bounds)
+  return imagePxToScantCm(zeroLivePx, params.pxPerMmX, params.pxPerMmY)
 }
 
 /**

@@ -546,7 +546,7 @@ function layersBody(
       report.summary?.completedThroughLayer != null
         ? `through L${report.summary.completedThroughLayer}`
         : null,
-      report.summary?.fmlReady != null ? `fmlReady=${report.summary.fmlReady}` : null,
+      report.summary?.planReady != null ? `planReady=${report.summary.planReady}` : null,
       report.journal?.degraded ? 'journal degraded' : null,
     ].filter(Boolean)
     parts.push(`<p class="muted">${escapeHtml(summaryBits.join(' · '))}</p>`)

@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
-import './fml-panel-fields.css'
+import './plan-panel-fields.css'
 
 const { t } = useI18n()
 
@@ -12,93 +12,93 @@ withDefaults(
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
     unit: ScaleInputUnit
-    fmlWallHeightCm?: number
-    fmlDoorHeightCm?: number
-    fmlWindowHeightCm?: number
-    fmlWindowSillZCm?: number
+    planWallHeightCm?: number
+    planDoorHeightCm?: number
+    planWindowHeightCm?: number
+    planWindowSillZCm?: number
   }>(),
   {
-    fmlWallHeightCm: 280,
-    fmlDoorHeightCm: 220,
-    fmlWindowHeightCm: 150,
-    fmlWindowSillZCm: 70,
+    planWallHeightCm: 280,
+    planDoorHeightCm: 220,
+    planWindowHeightCm: 150,
+    planWindowSillZCm: 70,
   },
 )
 
 const emit = defineEmits<{
-  'update:fmlWallHeightCm': [value: number]
-  'update:fmlDoorHeightCm': [value: number]
-  'update:fmlWindowHeightCm': [value: number]
-  'update:fmlWindowSillZCm': [value: number]
+  'update:planWallHeightCm': [value: number]
+  'update:planDoorHeightCm': [value: number]
+  'update:planWindowHeightCm': [value: number]
+  'update:planWindowSillZCm': [value: number]
 }>()
 </script>
 
 <template>
-  <details class="fml-fold">
+  <details class="plan-fold">
     <summary>{{ t('result.heightsFold') }}</summary>
-    <div class="fml-height-limits">
-      <label class="fml-limit-field">
+    <div class="plan-height-limits">
+      <label class="plan-limit-field">
         <span>{{ t('result.wallHeightM') }}</span>
         <ScaleLengthInput
           block
-          :cm="fmlWallHeightCm"
+          :cm="planWallHeightCm"
           :unit="unit"
           :min-cm="1"
           :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @update:cm="emit('update:fmlWallHeightCm', $event)"
+          @update:cm="emit('update:planWallHeightCm', $event)"
         />
       </label>
-      <label class="fml-limit-field">
+      <label class="plan-limit-field">
         <span :title="t('result.doorHeightTitle')">
           {{ t('result.doorHeightM') }}
         </span>
         <ScaleLengthInput
           block
-          :cm="fmlDoorHeightCm"
+          :cm="planDoorHeightCm"
           :unit="unit"
           :min-cm="1"
           :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @update:cm="emit('update:fmlDoorHeightCm', $event)"
+          @update:cm="emit('update:planDoorHeightCm', $event)"
         />
       </label>
-      <label class="fml-limit-field">
+      <label class="plan-limit-field">
         <span :title="t('result.windowSillTitle')">
           {{ t('result.windowSillM') }}
         </span>
         <ScaleLengthInput
           block
-          :cm="fmlWindowSillZCm"
+          :cm="planWindowSillZCm"
           :unit="unit"
           :min-cm="0"
           allow-zero
           :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @update:cm="emit('update:fmlWindowSillZCm', $event)"
+          @update:cm="emit('update:planWindowSillZCm', $event)"
         />
       </label>
-      <label class="fml-limit-field">
+      <label class="plan-limit-field">
         <span :title="t('result.windowGlassTitle')">
           {{ t('result.windowGlassM') }}
         </span>
         <ScaleLengthInput
           block
-          :cm="fmlWindowHeightCm"
+          :cm="planWindowHeightCm"
           :unit="unit"
           :min-cm="1"
           :debounce-ms="SCALE_LENGTH_COMMIT_DEBOUNCE_MS"
           :disabled="!scaleConfirmed || !hasCombinedOutput"
-          @update:cm="emit('update:fmlWindowHeightCm', $event)"
+          @update:cm="emit('update:planWindowHeightCm', $event)"
         />
       </label>
     </div>
-    <p class="fml-band-hint">{{ t('result.overrideHint') }}</p>
+    <p class="plan-band-hint">{{ t('result.overrideHint') }}</p>
   </details>
 </template>
 
 <style scoped>
-.fml-height-limits {
+.plan-height-limits {
   display: flex;
   flex-direction: column;
   gap: 4px;

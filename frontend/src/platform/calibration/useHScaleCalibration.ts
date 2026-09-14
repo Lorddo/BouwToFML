@@ -27,10 +27,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
 
+/** Fabrieksmaat van de linialen; ook waar `reset()` naar terugvalt. */
+const FACTORY_DISTANCE_MM = 3000
+
 export function useHScaleCalibration() {
   const state = ref<HScaleState | null>(null)
-  const distanceMmX = ref(3000)
-  const distanceMmY = ref(3000)
+  const distanceMmX = ref(FACTORY_DISTANCE_MM)
+  const distanceMmY = ref(FACTORY_DISTANCE_MM)
   const confirmed = ref(false)
   /** Vastgezet bij bevestigen — crop/rotatie/upscale op stap 1 wijzigt mm niet; export (stap 4) past px/mm aan. */
   const confirmedPixelsPerMillimeterX = ref<number | null>(null)
@@ -123,6 +126,18 @@ export function useHScaleCalibration() {
     confirmed.value = false
     confirmedPixelsPerMillimeterX.value = null
     confirmedPixelsPerMillimeterY.value = null
+  }
+
+  /**
+   * Terug naar fabriek, inclusief de getypte mm. Voor een nieuw project: `cancel()`
+   * laat de mm staan (bedoeld bij een nieuwe onderlegger in hetzelfde project),
+   * maar dan draagt een volgend project de maat van het vorige mee.
+   */
+  function reset(): void {
+    cancel()
+    state.value = null
+    distanceMmX.value = FACTORY_DISTANCE_MM
+    distanceMmY.value = FACTORY_DISTANCE_MM
   }
 
   /** Na upscale op stap 1→2: px/mm in finale beeldruimte (alleen export). */
@@ -271,6 +286,7 @@ export function useHScaleCalibration() {
     updatePartial,
     confirm,
     cancel,
+    reset,
     applyUpscaleToConfirmedScale,
     applyCardinalAxisSwapToConfirmedScale,
     recomputeConfirmedFromDistances,

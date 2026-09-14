@@ -15,7 +15,7 @@ function cloneSegments(segments: SegmentCandidate[]): SegmentCandidate[] {
  *
  * Productie (`geometry-pipeline`) roept dit **zonder** `wall`/`wallGraph` —
  * `segments` blijven dan leeg by design. FML-muren komen post-finalize via
- * `buildSemanticWallsForOutput` (L10 + `fmlReady`), niet via compose.
+ * `buildSemanticWallsForOutput` (L10 + `planReady`), niet via compose.
  *
  * Optionele `wall`/`wallGraph` blijven voor legacy/tests; injecteer hier geen
  * L10-segments (dat omzeilt de semantic gate).

@@ -4,9 +4,9 @@
  * Y = −worldZ (grond onderaan in Y-omlaag-canvas).
  */
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from './extraction-to-plan-types'
 import { readElevationProjection, type ElevationProjectionMode } from './elevation-views'
 import { listElevationFacadeGroups, wallGuidsInGroup } from './facade-groups'
@@ -612,12 +612,12 @@ function openingHeightCm(opening: Opening): number {
   if (typeof opening.z_height === 'number' && Number.isFinite(opening.z_height)) {
     return opening.z_height
   }
-  return opening.type === 'window' ? DEFAULT_FML_WINDOW_HEIGHT_CM : DEFAULT_FML_DOOR_HEIGHT_CM
+  return opening.type === 'window' ? DEFAULT_WINDOW_HEIGHT_CM : DEFAULT_DOOR_HEIGHT_CM
 }
 
 function openingSillCm(opening: Opening): number {
   if (typeof opening.z === 'number' && Number.isFinite(opening.z)) return opening.z
-  return opening.type === 'window' ? DEFAULT_FML_WINDOW_SILL_Z_CM : 0
+  return opening.type === 'window' ? DEFAULT_WINDOW_SILL_Z_CM : 0
 }
 
 export function localElevationOpeningId(

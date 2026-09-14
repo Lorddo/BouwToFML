@@ -149,7 +149,7 @@ export function pipelineResultToDebug(pipeline: PipelineV3Result): PipelineV3Deb
       incompleteLayers: pipeline.incompleteLayers,
       bridgeMode: 'native',
       completedThroughLayer: pipeline.completedThroughLayer,
-      fmlReady: pipeline.fmlReady,
+      planReady: pipeline.planReady,
     },
   }
 }

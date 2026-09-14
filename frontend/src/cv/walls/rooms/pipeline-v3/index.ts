@@ -42,7 +42,7 @@ export async function runPipelineV3(params: {
   bandBoundariesPx?: { midBoundaryPx: number; maxBoundaryPx: number }
 }): Promise<PipelineV3Result> {
   const incompleteLayers = listIncompleteLayers(V3_NATIVE_THROUGH_LAYER)
-  const fmlReady = isV3FmlReady(V3_NATIVE_THROUGH_LAYER)
+  const planReady = isV3FmlReady(V3_NATIVE_THROUGH_LAYER)
 
   // Mask is constant after finalize — build distance map once for L2/L4/L7–L10.
   const distanceMap =
@@ -139,7 +139,7 @@ export async function runPipelineV3(params: {
     pipelineVersion: 'v3',
     completedThroughLayer: V3_NATIVE_THROUGH_LAYER,
     incompleteLayers,
-    fmlReady,
+    planReady,
     obliqueAxes,
     layer1,
     layer2,

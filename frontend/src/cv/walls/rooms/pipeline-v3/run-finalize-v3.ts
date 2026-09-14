@@ -35,7 +35,7 @@ export interface FinalizeV3Result {
   layer10?: PipelineV3Layer10Result
   completedThroughLayer: number
   incompleteLayers: number[]
-  fmlReady: boolean
+  planReady: boolean
   roomWallMaskRle: ReturnType<typeof encodeMaskRle>
   pipelineV3Debug: PipelineV3Debug
   blobCount: number
@@ -278,7 +278,7 @@ export async function runFinalizePipelineV3(params: {
       incompleteLayers: pipeline.incompleteLayers,
       bridgeMode: 'native',
       completedThroughLayer: pipeline.completedThroughLayer,
-      fmlReady: pipeline.fmlReady,
+      planReady: pipeline.planReady,
     },
   }
 
@@ -299,7 +299,7 @@ export async function runFinalizePipelineV3(params: {
     layer10: layer10 ?? undefined,
     completedThroughLayer: pipeline.completedThroughLayer,
     incompleteLayers: pipeline.incompleteLayers,
-    fmlReady: pipeline.fmlReady,
+    planReady: pipeline.planReady,
     roomWallMaskRle,
     pipelineV3Debug,
     blobCount: params.prep.splitBlobs.blobs.length,

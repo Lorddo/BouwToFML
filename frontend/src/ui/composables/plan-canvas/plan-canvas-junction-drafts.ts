@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { DEFAULT_FML_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import {
   readJunctionElevation,
   wallEndpoint3D,
@@ -27,7 +27,7 @@ export function createJunctionDrafts(deps: JunctionDraftsDeps) {
   const { editor, selection, syncPlanToParent, draftCommit, floorHeight } = deps
   const { settingsJunctionId } = selection
 
-  const junctionHeightDraft = ref(DEFAULT_FML_WALL_HEIGHT_CM)
+  const junctionHeightDraft = ref(DEFAULT_WALL_HEIGHT_CM)
   const junctionHeightMixed = ref(false)
   const junctionBottomZDraft = ref(0)
   const junctionBottomZMixed = ref(false)

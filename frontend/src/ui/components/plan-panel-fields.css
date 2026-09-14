@@ -1,6 +1,6 @@
 /* Shared FmlPanel field styles (Heights + Thickness). Unscoped. */
 
-.fml-limit-field {
+.plan-limit-field {
   display: grid;
   grid-template-columns: auto minmax(7.25rem, 1fr);
   align-items: center;
@@ -9,26 +9,26 @@
   color: #334155;
 }
 
-.fml-limit-field > span {
+.plan-limit-field > span {
   min-width: 0;
   line-height: 1.2;
 }
 
-.fml-limit-field .scale-length-input {
+.plan-limit-field .scale-length-input {
   width: 100%;
   min-width: 0;
 }
 
-.fml-limit-field .band-input {
+.plan-limit-field .band-input {
   border-color: #93c5fd;
   background: #f8fbff;
 }
 
-.fml-limit-field .scale-length-input:has(input:disabled) {
+.plan-limit-field .scale-length-input:has(input:disabled) {
   opacity: 0.5;
 }
 
-.fml-limit-input-row {
+.plan-limit-input-row {
   display: grid;
   grid-template-columns: minmax(6.5rem, 1fr) 26px minmax(6.5rem, 1fr);
   gap: 4px;
@@ -36,23 +36,23 @@
   min-width: 0;
 }
 
-.fml-limit-spacer {
+.plan-limit-spacer {
   width: 26px;
   height: 26px;
 }
 
-.fml-limit-spacer.band-spacer {
+.plan-limit-spacer.band-spacer {
   width: 52px;
 }
 
-.fml-band-hint {
+.plan-band-hint {
   margin: 0 0 8px;
   font-size: 10px;
   color: #64748b;
   line-height: 1.35;
 }
 
-.fml-fold {
+.plan-fold {
   margin: 0 0 8px;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
@@ -60,7 +60,7 @@
   padding: 0 8px 8px;
 }
 
-.fml-fold summary {
+.plan-fold summary {
   cursor: pointer;
   list-style: none;
   margin: 0 -8px;
@@ -71,11 +71,11 @@
   user-select: none;
 }
 
-.fml-fold summary::-webkit-details-marker {
+.plan-fold summary::-webkit-details-marker {
   display: none;
 }
 
-.fml-fold summary::before {
+.plan-fold summary::before {
   content: '▸';
   display: inline-block;
   width: 1em;
@@ -83,11 +83,11 @@
   font-weight: 400;
 }
 
-.fml-fold[open] summary::before {
+.plan-fold[open] summary::before {
   content: '▾';
 }
 
-.fml-fold[open] summary {
+.plan-fold[open] summary {
   margin-bottom: 4px;
   border-bottom: 1px solid #e2e8f0;
 }

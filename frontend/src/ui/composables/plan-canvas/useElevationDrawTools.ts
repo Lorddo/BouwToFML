@@ -1,7 +1,7 @@
 import { ref, type Ref } from 'vue'
 import type { FloorPlan, Opening, Point2D } from '@/core/fml/types'
 import { maybeAddSiblingBovenlicht } from '@/core/fml/bovenlicht'
-import { DEFAULT_FML_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
+import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/fml/extraction-to-plan-types'
 import {
   projectFacadeElevation,
   type ElevationBovenlichtDefaults,
@@ -114,7 +114,7 @@ export function useElevationDrawTools(options: {
         ? Math.max(
             1,
             Math.round(
-              addDoorHeightCm.value || (props.defaultDoorHeightCm ?? DEFAULT_FML_DOOR_HEIGHT_CM),
+              addDoorHeightCm.value || (props.defaultDoorHeightCm ?? DEFAULT_DOOR_HEIGHT_CM),
             ),
           )
         : clampWindowOpeningHeight(addWindowHeightCm.value)

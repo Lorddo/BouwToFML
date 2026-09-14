@@ -152,20 +152,20 @@ export type WorkspaceFmlGenerateApplied = {
   fmlThicknessMaxCm: Ref<number>
   fmlBandMidBoundaryCm: Ref<number>
   fmlBandMaxBoundaryCm: Ref<number>
-  fmlWallHeightCm: Ref<number>
-  fmlDoorHeightCm: Ref<number>
-  fmlWindowHeightCm: Ref<number>
-  fmlWindowSillZCm: Ref<number>
-  fmlBovenlichtDefault: Ref<boolean>
-  fmlWindowBovenlichtDefault: Ref<boolean>
-  fmlBovenlichtHeightCm: Ref<number>
-  fmlBovenlichtGapCm: Ref<number>
+  planWallHeightCm: Ref<number>
+  planDoorHeightCm: Ref<number>
+  planWindowHeightCm: Ref<number>
+  planWindowSillZCm: Ref<number>
+  planBovenlichtDefault: Ref<boolean>
+  planWindowBovenlichtDefault: Ref<boolean>
+  planBovenlichtHeightCm: Ref<number>
+  planBovenlichtGapCm: Ref<number>
 }
 
 /**
  * Generate + preview/import/download.
  *
- * Preview priority: editedPreviewPlan > importedPlan > fmlExportPlan (harmonized generated).
+ * Preview priority: editedPreviewPlan > importedPlan > harmonizedPlan (geharmoniseerd uit de bundel).
  * `resetGeneratedPreview` clears only edited — bij sessie-restore kan imported nog
  * voorrang houden tot clearImportedFml; geen strikte invalidatie-contract.
  */
@@ -186,10 +186,10 @@ export function createWorkspaceFmlGenerate(
   /** Sidebar: onderlegger verslepen. */
   const underlayMoveMode = ref(false)
   /** Stap-4 Herschalen: H/V-linialen op FML-preview. */
-  const fmlRescaleActive = ref(false)
-  const fmlRescaleState = ref<HScaleState | null>(null)
-  const fmlRescaleDistanceMmX = ref(0)
-  const fmlRescaleDistanceMmY = ref(0)
+  const rescaleActive = ref(false)
+  const rescaleState = ref<HScaleState | null>(null)
+  const rescaleDistanceMmX = ref(0)
+  const rescaleDistanceMmY = ref(0)
 
   function persistOrientState(): FloorOrientPersist | null {
     if (isIdentityFloorOrient(planOrient.value)) return null
@@ -374,7 +374,7 @@ export function createWorkspaceFmlGenerate(
     }
   }
 
-  const fmlExportPlan = computed<FloorPlan | null>(() => {
+  const harmonizedPlan = computed<FloorPlan | null>(() => {
     const bundle = generatedBundle.value
     if (!bundle) return null
     return buildPreviewFromRawBundle(bundle, { seedNulpunt: false }).plan
@@ -382,12 +382,12 @@ export function createWorkspaceFmlGenerate(
 
   /** Actuele preview + export: canvas-bewerkingen > geïmporteerd > gegenereerd. */
   const previewPlan = computed(
-    () => editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value,
+    () => editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value,
   )
 
   /** Live keten op aanroeptijd — geen gecachte FML-string (D5). */
   function resolveLivePreviewPlan(): FloorPlan | null {
-    return editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    return editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value
   }
 
   function buildGeneratedFmlText(): string {
@@ -396,10 +396,10 @@ export function createWorkspaceFmlGenerate(
     const planForExport = stripFacadeGroupsFromPlan(plan)
     return buildFmlV3(planForExport, {
       name: plan.name,
-      bovenlichtDefault: applied.fmlBovenlichtDefault.value,
-      windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
-      bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
-      bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
+      bovenlichtDefault: applied.planBovenlichtDefault.value,
+      windowBovenlichtDefault: applied.planWindowBovenlichtDefault.value,
+      bovenlichtHeightCm: applied.planBovenlichtHeightCm.value,
+      bovenlichtGapCm: applied.planBovenlichtGapCm.value,
       useMetric: loadUserSettings().unitSystem === 'metric',
       ...(PLAN_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
@@ -413,48 +413,48 @@ export function createWorkspaceFmlGenerate(
     if (!floor) return null
     return summarizeOpeningHeightOverflows(
       findOpeningHeightOverflows(floor, {
-        doorBovenlichtDefault: applied.fmlBovenlichtDefault.value,
-        windowBovenlichtDefault: applied.fmlWindowBovenlichtDefault.value,
-        bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
-        bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
+        doorBovenlichtDefault: applied.planBovenlichtDefault.value,
+        windowBovenlichtDefault: applied.planWindowBovenlichtDefault.value,
+        bovenlichtHeightCm: applied.planBovenlichtHeightCm.value,
+        bovenlichtGapCm: applied.planBovenlichtGapCm.value,
       }),
     )
   })
 
   function writePreviewDefaultRefs(field: WorkspacePreviewDefaultField, raw: number | boolean): void {
     if (field === 'bovenlichtDefault') {
-      applied.fmlBovenlichtDefault.value = Boolean(raw)
+      applied.planBovenlichtDefault.value = Boolean(raw)
       return
     }
     if (field === 'windowBovenlichtDefault') {
-      applied.fmlWindowBovenlichtDefault.value = Boolean(raw)
+      applied.planWindowBovenlichtDefault.value = Boolean(raw)
       return
     }
     const n = Number(raw)
     if (!Number.isFinite(n)) return
     if (field === 'wallHeightCm') {
       const cm = Math.max(1, Math.round(n))
-      applied.fmlWallHeightCm.value = cm
+      applied.planWallHeightCm.value = cm
       applied.appliedFmlWallHeightCm.value = cm
       extractionHeightSeed.wallHeightCm = cm
       return
     }
     if (field === 'doorHeightCm') {
       const cm = Math.max(1, Math.round(n))
-      applied.fmlDoorHeightCm.value = cm
+      applied.planDoorHeightCm.value = cm
       applied.appliedFmlDoorHeightCm.value = cm
       extractionHeightSeed.doorHeightCm = cm
       return
     }
     if (field === 'windowHeightCm') {
       const cm = Math.max(1, Math.round(n))
-      applied.fmlWindowHeightCm.value = cm
+      applied.planWindowHeightCm.value = cm
       applied.appliedFmlWindowHeightCm.value = cm
       extractionHeightSeed.windowHeightCm = cm
       return
     }
     const cm = Math.max(0, Math.round(n))
-    applied.fmlWindowSillZCm.value = cm
+    applied.planWindowSillZCm.value = cm
     applied.appliedFmlWindowSillZCm.value = cm
     extractionHeightSeed.windowSillZCm = cm
   }
@@ -462,17 +462,17 @@ export function createWorkspaceFmlGenerate(
   function readPreviewDefault(field: WorkspacePreviewDefaultField): number | boolean {
     switch (field) {
       case 'wallHeightCm':
-        return applied.fmlWallHeightCm.value
+        return applied.planWallHeightCm.value
       case 'doorHeightCm':
-        return applied.fmlDoorHeightCm.value
+        return applied.planDoorHeightCm.value
       case 'windowHeightCm':
-        return applied.fmlWindowHeightCm.value
+        return applied.planWindowHeightCm.value
       case 'windowSillZCm':
-        return applied.fmlWindowSillZCm.value
+        return applied.planWindowSillZCm.value
       case 'bovenlichtDefault':
-        return applied.fmlBovenlichtDefault.value
+        return applied.planBovenlichtDefault.value
       case 'windowBovenlichtDefault':
-        return applied.fmlWindowBovenlichtDefault.value
+        return applied.planWindowBovenlichtDefault.value
     }
   }
 
@@ -641,10 +641,10 @@ export function createWorkspaceFmlGenerate(
       midBoundaryCm: applied.fmlBandMidBoundaryCm.value,
       maxBoundaryCm: applied.fmlBandMaxBoundaryCm.value,
     }
-    applied.appliedFmlWallHeightCm.value = applied.fmlWallHeightCm.value
-    applied.appliedFmlDoorHeightCm.value = applied.fmlDoorHeightCm.value
-    applied.appliedFmlWindowHeightCm.value = applied.fmlWindowHeightCm.value
-    applied.appliedFmlWindowSillZCm.value = applied.fmlWindowSillZCm.value
+    applied.appliedFmlWallHeightCm.value = applied.planWallHeightCm.value
+    applied.appliedFmlDoorHeightCm.value = applied.planDoorHeightCm.value
+    applied.appliedFmlWindowHeightCm.value = applied.planWindowHeightCm.value
+    applied.appliedFmlWindowSillZCm.value = applied.planWindowSillZCm.value
     syncExtractionHeightSeedFromApplied()
   }
 
@@ -682,7 +682,7 @@ export function createWorkspaceFmlGenerate(
     nulpuntImageCm: Point2D
   } | null {
     const plan =
-      planOverride ?? editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+      planOverride ?? editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value
     const layout = layoutOverride ?? previewUnderlayLayout.value
     if (!plan || !layout) return null
     if (Math.hypot(dropCm.x, dropCm.y) < 0.05) return null
@@ -736,7 +736,7 @@ export function createWorkspaceFmlGenerate(
   }): boolean {
     const factors = resolveRescaleFactorsFromRulers(params)
     if (factors == null) return false
-    const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value
     if (!plan) return false
     const layout = previewUnderlayLayout.value
 
@@ -772,7 +772,7 @@ export function createWorkspaceFmlGenerate(
   }
 
   function beginPlanRescale(): boolean {
-    const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value
     const walls = plan?.floors[0]?.walls ?? []
     const state = resolvePlanRescaleState({
       walls,
@@ -781,52 +781,52 @@ export function createWorkspaceFmlGenerate(
     })
     if (!state) return false
     const measured = measuredCmFromRescaleState(state)
-    fmlRescaleState.value = state
+    rescaleState.value = state
     const mmX = deps.scale.distanceMmX.value
     const mmY = deps.scale.distanceMmY.value
-    fmlRescaleDistanceMmX.value = mmX > 0 ? mmX : measured.x * 10
-    fmlRescaleDistanceMmY.value = mmY > 0 ? mmY : measured.y * 10
+    rescaleDistanceMmX.value = mmX > 0 ? mmX : measured.x * 10
+    rescaleDistanceMmY.value = mmY > 0 ? mmY : measured.y * 10
     underlayMoveMode.value = false
-    fmlRescaleActive.value = true
+    rescaleActive.value = true
     return true
   }
 
   function cancelPlanRescale(): void {
-    fmlRescaleActive.value = false
-    fmlRescaleState.value = null
+    rescaleActive.value = false
+    rescaleState.value = null
   }
 
   function updatePlanRescaleState(next: HScaleState): void {
-    if (!fmlRescaleActive.value) return
-    fmlRescaleState.value = { ...next }
+    if (!rescaleActive.value) return
+    rescaleState.value = { ...next }
   }
 
   function setPlanRescaleDistanceMmX(mm: number): void {
     if (!(mm > 0) || !Number.isFinite(mm)) return
-    fmlRescaleDistanceMmX.value = mm
+    rescaleDistanceMmX.value = mm
   }
 
   function setPlanRescaleDistanceMmY(mm: number): void {
     if (!(mm > 0) || !Number.isFinite(mm)) return
-    fmlRescaleDistanceMmY.value = mm
+    rescaleDistanceMmY.value = mm
   }
 
   function confirmPlanRescale(): boolean {
-    const state = fmlRescaleState.value
-    if (!state || !fmlRescaleActive.value) return false
+    const state = rescaleState.value
+    if (!state || !rescaleActive.value) return false
     const measured = measuredCmFromRescaleState(state)
     const ok = rescaleFmlFromRulers({
       measuredCmX: measured.x,
       measuredCmY: measured.y,
-      trueMmX: fmlRescaleDistanceMmX.value,
-      trueMmY: fmlRescaleDistanceMmY.value,
+      trueMmX: rescaleDistanceMmX.value,
+      trueMmY: rescaleDistanceMmY.value,
     })
     if (ok) cancelPlanRescale()
     return ok
   }
 
   function applyFloorOrientOpToPreview(op: FloorOrientOp): boolean {
-    const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value
     if (!plan) return false
     planOrient.value = composeFloorOrient(planOrient.value, op)
     editedPreviewPlan.value = applyFloorOrientOp(plan, op, 0)
@@ -900,7 +900,7 @@ export function createWorkspaceFmlGenerate(
 
   return {
     generatedPlan,
-    fmlExportPlan,
+    harmonizedPlan,
     previewPlan: previewPlan,
     buildGeneratedFmlText,
     generatedStats,
@@ -928,10 +928,10 @@ export function createWorkspaceFmlGenerate(
     clearLivePlanCanvas,
     resetGeneratedPreview,
     regenerateFml,
-    fmlRescaleActive,
-    fmlRescaleState,
-    fmlRescaleDistanceMmX,
-    fmlRescaleDistanceMmY,
+    rescaleActive,
+    rescaleState,
+    rescaleDistanceMmX,
+    rescaleDistanceMmY,
     beginPlanRescale,
     cancelPlanRescale,
     updatePlanRescaleState,

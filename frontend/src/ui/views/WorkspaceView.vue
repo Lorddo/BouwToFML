@@ -43,7 +43,7 @@ import { workspaceCanvasHelpKeys } from '../composables/workspace/workspace-canv
 const api = useWorkspace()
 const ws = proxyRefs(api)
 const canvasRef = api.canvasRef
-const fmlPreviewHostRef = ref<{
+const planCanvasHostRef = ref<{
   applyCornerMarkerModeFromSettings: () => void
   sanitizeWalls: () => boolean
 } | null>(null)
@@ -103,7 +103,7 @@ const {
   debugExportsVisible,
   hasUsedWallMask,
   onFmlResultTab,
-  fmlDevPanelVisible,
+  planDevPanelVisible,
   gapsDevPanelVisible,
   doorsDevPanelVisible,
   windowsDevPanelVisible,
@@ -182,7 +182,7 @@ defineExpose<{
   startNewWorkspace,
   applyUserViewerSettings: () => {
     api.applyUserViewerSettings()
-    fmlPreviewHostRef.value?.applyCornerMarkerModeFromSettings()
+    planCanvasHostRef.value?.applyCornerMarkerModeFromSettings()
   },
 })
 </script>
@@ -414,55 +414,55 @@ defineExpose<{
             :generated-stats="ws.generatedStats"
             :opening-height-overflow="ws.openingHeightOverflow"
             :floor-name="ws.activeFloor?.name ?? ''"
-            :fml-wall-height-cm="ws.fmlWallHeightCm"
-            :fml-door-height-cm="ws.fmlDoorHeightCm"
-            :fml-window-height-cm="ws.fmlWindowHeightCm"
-            :fml-window-sill-z-cm="ws.fmlWindowSillZCm"
-            :fml-bovenlicht-default="ws.fmlBovenlichtDefault"
-            :fml-window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
+            :plan-wall-height-cm="ws.planWallHeightCm"
+            :plan-door-height-cm="ws.planDoorHeightCm"
+            :plan-window-height-cm="ws.planWindowHeightCm"
+            :plan-window-sill-z-cm="ws.planWindowSillZCm"
+            :plan-bovenlicht-default="ws.planBovenlichtDefault"
+            :plan-window-bovenlicht-default="ws.planWindowBovenlichtDefault"
             :plan-thickness-cms="ws.planThicknessCms"
             :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
             :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
             :plan-limits-dirty="ws.planLimitsDirty"
-            :fml-thickness-pick-tier="ws.fmlThicknessPickTier"
-            :fml-thickness-pick-message="ws.fmlThicknessPickMessage"
-            :fml-thickness-pick-busy="ws.fmlThicknessPickBusy"
+            :thickness-pick-tier="ws.thicknessPickTier"
+            :thickness-pick-message="ws.thicknessPickMessage"
+            :thickness-pick-busy="ws.thicknessPickBusy"
             :imported-fml-text="ws.importedFmlText"
             :imported-stats="ws.importedStats"
             :imported-warnings="ws.importedWarnings"
-            :underlay-opacity="ws.fmlUnderlayOpacity"
-            :fml-opacity="ws.fmlContentOpacity"
-            :hide-plan-text="ws.fmlHidePlanText"
-            :underlay-available="!!ws.fmlUnderlaySrc && !!ws.previewUnderlayLayout"
-            :fml-orient-flip-x="ws.planOrient?.flipX === true"
+            :underlay-opacity="ws.underlayOpacityPct"
+            :content-opacity-pct="ws.contentOpacityPct"
+            :hide-plan-text="ws.hidePlanText"
+            :underlay-available="!!ws.underlaySrc && !!ws.previewUnderlayLayout"
+            :plan-orient-flip-x="ws.planOrient?.flipX === true"
             :has-any-floor-fml="ws.hasAnyFloorFml"
             :project-orient-flip-x="ws.projectOrientFlipX"
             :underlay-move-mode="ws.underlayMoveMode"
             :underlay-flip-x="ws.previewUnderlayLayout?.flipX === true"
-            :fml-rescale-active="ws.fmlRescaleActive"
-            :fml-rescale-state="ws.fmlRescaleState"
-            :fml-rescale-distance-mm-x="ws.fmlRescaleDistanceMmX"
-            :fml-rescale-distance-mm-y="ws.fmlRescaleDistanceMmY"
+            :rescale-active="ws.rescaleActive"
+            :rescale-state="ws.rescaleState"
+            :rescale-distance-mm-x="ws.rescaleDistanceMmX"
+            :rescale-distance-mm-y="ws.rescaleDistanceMmY"
             :scale-input-unit="ws.scaleInputUnit"
             :can-start-rescale="(ws.generatedStats?.walls ?? 0) > 0"
             @update:floor-name="
               (name) => ws.activeFloorId && ws.renameFloor(ws.activeFloorId, name)
             "
-            @update:underlay-opacity="ws.fmlUnderlayOpacity = $event"
-            @update:fml-opacity="ws.fmlContentOpacity = $event"
-            @update:hide-plan-text="ws.fmlHidePlanText = $event"
+            @update:underlay-opacity="ws.underlayOpacityPct = $event"
+            @update:content-opacity-pct="ws.contentOpacityPct = $event"
+            @update:hide-plan-text="ws.hidePlanText = $event"
             @update:underlay-move-mode="ws.setUnderlayMoveMode($event)"
-            @update:fml-wall-height-cm="ws.setFmlWallHeightCm"
-            @update:fml-door-height-cm="ws.setFmlDoorHeightCm"
-            @update:fml-window-height-cm="ws.setFmlWindowHeightCm"
-            @update:fml-window-sill-z-cm="ws.setFmlWindowSillZCm"
-            @update:fml-bovenlicht-default="ws.setFmlBovenlichtDefault"
-            @update:fml-window-bovenlicht-default="ws.setFmlWindowBovenlichtDefault"
+            @update:plan-wall-height-cm="ws.setPlanWallHeightCm"
+            @update:plan-door-height-cm="ws.setPlanDoorHeightCm"
+            @update:plan-window-height-cm="ws.setPlanWindowHeightCm"
+            @update:plan-window-sill-z-cm="ws.setPlanWindowSillZCm"
+            @update:plan-bovenlicht-default="ws.setPlanBovenlichtDefault"
+            @update:plan-window-bovenlicht-default="ws.setPlanWindowBovenlichtDefault"
             @update:plan-thickness-cms="ws.setPlanThicknessCms"
             @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
             @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
-            @update:fml-rescale-distance-mm-x="ws.setPlanRescaleDistanceMmX"
-            @update:fml-rescale-distance-mm-y="ws.setPlanRescaleDistanceMmY"
+            @update:rescale-distance-mm-x="ws.setPlanRescaleDistanceMmX"
+            @update:rescale-distance-mm-y="ws.setPlanRescaleDistanceMmY"
             @start-thickness-pick="ws.startFmlThicknessPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"
             @regenerate="ws.regenerateFml"
@@ -476,7 +476,7 @@ defineExpose<{
             @begin-rescale="ws.beginPlanRescale()"
             @cancel-rescale="ws.cancelPlanRescale()"
             @confirm-rescale="ws.confirmPlanRescale()"
-            @sanitize="fmlPreviewHostRef?.sanitizeWalls()"
+            @sanitize="planCanvasHostRef?.sanitizeWalls()"
           />
         </div>
 
@@ -545,33 +545,33 @@ defineExpose<{
           </button>
           <WorkspacePlanCanvasHost
             v-if="onFmlResultTab"
-            ref="fmlPreviewHostRef"
+            ref="planCanvasHostRef"
             v-model:canvas-fullscreen="canvasFullscreen"
             :floor-id="ws.activeFloorId"
             :plan="ws.previewPlan"
             :underlay-src="
-              ws.fmlUnderlayOpacity > 0 || ws.fmlThicknessPickTier ? ws.fmlUnderlaySrc : null
+              ws.underlayOpacityPct > 0 || ws.thicknessPickTier ? ws.underlaySrc : null
             "
-            :underlay-opacity="ws.fmlUnderlayOpacity / 100"
-            :content-opacity="ws.fmlContentOpacity / 100"
-            :labels-visible="!ws.fmlHidePlanText"
-            :underlay-width-px="ws.fmlUnderlaySize?.width ?? 0"
-            :underlay-height-px="ws.fmlUnderlaySize?.height ?? 0"
+            :underlay-opacity="ws.underlayOpacityPct / 100"
+            :content-opacity="ws.contentOpacityPct / 100"
+            :labels-visible="!ws.hidePlanText"
+            :underlay-width-px="ws.underlaySize?.width ?? 0"
+            :underlay-height-px="ws.underlaySize?.height ?? 0"
             :cm-origin="ws.previewUnderlayLayout?.origin ?? null"
             :px-per-mm-x="ws.previewUnderlayLayout?.pxPerMmX ?? 1"
             :px-per-mm-y="ws.previewUnderlayLayout?.pxPerMmY ?? 1"
             :rotation-deg="ws.previewUnderlayLayout?.rotationDeg ?? 0"
             :flip-x="ws.previewUnderlayLayout?.flipX === true"
             :underlay-move-mode="ws.underlayMoveMode"
-            :thickness-pick-tier="ws.fmlThicknessPickTier"
+            :thickness-pick-tier="ws.thicknessPickTier"
             :thickness-preset-cms="ws.planThicknessCms"
-            :bovenlicht-default="ws.fmlBovenlichtDefault"
-            :window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
-            :bovenlicht-height-cm="ws.fmlBovenlichtHeightCm"
-            :bovenlicht-gap-cm="ws.fmlBovenlichtGapCm"
+            :bovenlicht-default="ws.planBovenlichtDefault"
+            :window-bovenlicht-default="ws.planWindowBovenlichtDefault"
+            :bovenlicht-height-cm="ws.planBovenlichtHeightCm"
+            :bovenlicht-gap-cm="ws.planBovenlichtGapCm"
             :set-plan-nulpunt-image-cm="ws.setPlanNulpuntImageCm"
-            :rescale-mode="ws.fmlRescaleActive"
-            :rescale-state="ws.fmlRescaleState"
+            :rescale-mode="ws.rescaleActive"
+            :rescale-state="ws.rescaleState"
             @plan-update="ws.updatePreviewPlan"
             @thickness-wall-pick="ws.handleFmlThicknessWallPick"
             @cancel-thickness-pick="ws.cancelFmlThicknessPick"
@@ -782,7 +782,7 @@ defineExpose<{
       />
 
       <WorkspacePlanDevPanel
-        v-if="fmlDevPanelVisible"
+        v-if="planDevPanelVisible"
         :enabled="ws.scale.confirmed.value && !!ws.combinedOutput"
         :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
         :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"

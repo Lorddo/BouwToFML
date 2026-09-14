@@ -86,7 +86,7 @@ function offsetSegments(segments: Segment[], dx: number, dy: number): Segment[] 
 }
 
 describe('V3 L9/L10 dissolve → FML', () => {
-  it('natively completes through L10 (fmlReady)', () => {
+  it('natively completes through L10 (planReady)', () => {
     expect(V3_PIPELINE_LAST_LAYER).toBe(10)
     expect(V3_NATIVE_THROUGH_LAYER).toBe(10)
     expect(listIncompleteLayers()).toEqual([])
@@ -418,7 +418,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
     expect(sameBand.stats.zeroStubsDropped).toBeGreaterThanOrEqual(1)
   })
 
-  it('FML reads L10 only when fmlReady', () => {
+  it('FML reads L10 only when planReady', () => {
     const incomplete: PipelineV3Debug = {
       pipelineVersion: 'v3',
       layers: {
@@ -434,7 +434,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
       summary: {
         incompleteLayers: [10],
         completedThroughLayer: 9,
-        fmlReady: false,
+        planReady: false,
         bridgeMode: 'native',
       },
     }
@@ -453,7 +453,7 @@ describe('V3 L9/L10 dissolve → FML', () => {
       summary: {
         incompleteLayers: [],
         completedThroughLayer: 10,
-        fmlReady: true,
+        planReady: true,
         bridgeMode: 'native',
       },
     }

@@ -2,6 +2,8 @@
 
 export const EDITOR_PASSWORD = 'J0rd!'
 export const EDITOR_UNLOCK_STORAGE_KEY = 'bouwToFml.editorUnlocked'
+// Letterlijke sleutel van vóór de plan-rename: hernoemen laat de terugval op de
+// nieuwe sleutel wijzen, en dan moet iedereen opnieuw ontgrendelen.
 const EDITOR_UNLOCK_STORAGE_KEY_LEGACY = 'bouwToFml.fmlEditorUnlocked'
 
 export function readEditorUnlockFlag(storage: Pick<Storage, 'getItem'>): boolean {

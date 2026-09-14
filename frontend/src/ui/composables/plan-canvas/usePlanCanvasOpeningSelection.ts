@@ -16,8 +16,8 @@ import {
 } from '@/core/fml/opening-add-presets'
 import type { OpeningSubtypeDraft } from './plan-canvas-opening-draft'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import {
   buildMirrored,
@@ -94,9 +94,9 @@ export function usePlanCanvasOpeningSelection(options: {
   const openingSubtypeMixed = ref(false)
   const openingWidthDraft = ref(90)
   const openingWidthMixed = ref(false)
-  const openingHeightDraft = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
+  const openingHeightDraft = ref(DEFAULT_DOOR_HEIGHT_CM)
   const openingHeightMixed = ref(false)
-  const openingSillZDraft = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
+  const openingSillZDraft = ref(DEFAULT_WINDOW_SILL_Z_CM)
   const openingSillZMixed = ref(false)
   const openingHingeAtStartDraft = ref(true)
   const openingHingeMixed = ref(false)
@@ -527,7 +527,7 @@ export function usePlanCanvasOpeningSelection(options: {
 
     const subtype = resolveDoorSubtypeFromRefid(opening.kind)
     const width = clampOpeningWidth(opening.width)
-    const doorHeight = Math.round(opening.z_height ?? DEFAULT_FML_DOOR_HEIGHT_CM)
+    const doorHeight = Math.round(opening.z_height ?? DEFAULT_DOOR_HEIGHT_CM)
     const doorSill = Math.round(opening.z ?? 0)
     addDoorSubtype.value = subtype
     queueMicrotask(() => {

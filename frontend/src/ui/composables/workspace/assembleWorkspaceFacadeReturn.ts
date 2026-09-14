@@ -84,12 +84,12 @@ export type WorkspaceFacadeContext = {
   e2eFixture: ReturnType<
     typeof import('./useWorkspaceE2eFixtureExport').useWorkspaceE2eFixtureExport
   >
-  fmlUnderlayOpacity: Ref<number>
-  fmlContentOpacity: Ref<number>
-  fmlHidePlanText: Ref<boolean>
+  underlayOpacityPct: Ref<number>
+  contentOpacityPct: Ref<number>
+  hidePlanText: Ref<boolean>
   showCanvasGrid: Ref<boolean>
-  fmlUnderlaySrc: ComputedRef<string | null>
-  fmlUnderlaySize: ComputedRef<{ width: number; height: number } | null>
+  underlaySrc: ComputedRef<string | null>
+  underlaySize: ComputedRef<{ width: number; height: number } | null>
   fml: ReturnType<typeof useWorkspacePlan>
   pipeline: ReturnType<typeof useWorkspacePipeline>
   scaleUi: ReturnType<typeof useWorkspaceScale>
@@ -221,12 +221,12 @@ function sliceExports(ctx: WorkspaceFacadeContext) {
 
 function sliceFml(ctx: WorkspaceFacadeContext) {
   return {
-    fmlUnderlayOpacity: ctx.fmlUnderlayOpacity,
-    fmlContentOpacity: ctx.fmlContentOpacity,
-    fmlHidePlanText: ctx.fmlHidePlanText,
+    underlayOpacityPct: ctx.underlayOpacityPct,
+    contentOpacityPct: ctx.contentOpacityPct,
+    hidePlanText: ctx.hidePlanText,
     showCanvasGrid: ctx.showCanvasGrid,
-    fmlUnderlaySrc: ctx.fmlUnderlaySrc,
-    fmlUnderlaySize: ctx.fmlUnderlaySize,
+    underlaySrc: ctx.underlaySrc,
+    underlaySize: ctx.underlaySize,
     ...ctx.fml,
   }
 }

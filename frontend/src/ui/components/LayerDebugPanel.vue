@@ -209,14 +209,14 @@ function bridgeHint(): string | null {
     | {
         bridgeMode?: string
         completedThroughLayer?: number
-        fmlReady?: boolean
+        planReady?: boolean
         incompleteLayers?: number[]
       }
     | undefined
   if (!summary) return null
   const through = summary.completedThroughLayer
   const incomplete = summary.incompleteLayers ?? []
-  if (summary.fmlReady) return through != null ? `V3 compleet t/m L${through}` : 'V3 FML ready'
+  if (summary.planReady) return through != null ? `V3 compleet t/m L${through}` : 'V3 FML ready'
   if (through != null) {
     return `V3 stopt na L${through} — incomplete [${incomplete.join(',')}] — geen FML`
   }

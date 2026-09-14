@@ -10,7 +10,7 @@ const { t } = useI18n()
 withDefaults(
   defineProps<{
     underlayOpacity?: number
-    fmlOpacity?: number
+    contentOpacityPct?: number
     underlayAvailable?: boolean
     underlayMoveMode?: boolean
     underlayFlipX?: boolean
@@ -19,7 +19,7 @@ withDefaults(
   }>(),
   {
     underlayOpacity: 25,
-    fmlOpacity: 80,
+    contentOpacityPct: 80,
     underlayAvailable: false,
     underlayMoveMode: false,
     underlayFlipX: false,
@@ -29,7 +29,7 @@ withDefaults(
 
 const emit = defineEmits<{
   'update:underlayOpacity': [value: number]
-  'update:fmlOpacity': [value: number]
+  'update:contentOpacityPct': [value: number]
   'update:underlayMoveMode': [value: boolean]
   'update:hidePlanText': [value: boolean]
   underlayRotate90Cw: []
@@ -103,17 +103,17 @@ function releaseSliderFocus(event: Event): void {
   </div>
   <div class="underlay-opacity">
     <div class="underlay-opacity__label">
-      <span>{{ t('result.fmlOpacity') }}</span>
-      <span>{{ fmlOpacity }}%</span>
+      <span>{{ t('result.contentOpacity') }}</span>
+      <span>{{ contentOpacityPct }}%</span>
     </div>
     <input
       type="range"
       min="0"
       max="100"
       step="1"
-      :value="fmlOpacity"
-      :aria-label="t('result.fmlOpacityAria')"
-      @input="emit('update:fmlOpacity', Number(($event.target as HTMLInputElement).value))"
+      :value="contentOpacityPct"
+      :aria-label="t('result.contentOpacityAria')"
+      @input="emit('update:contentOpacityPct', Number(($event.target as HTMLInputElement).value))"
       @change="releaseSliderFocus"
       @pointerup="releaseSliderFocus"
     />

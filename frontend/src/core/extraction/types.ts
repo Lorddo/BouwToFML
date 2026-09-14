@@ -96,7 +96,7 @@ export interface PipelineV3Debug {
     /** Progressive stop marker (always native after V3 scaffold cutover). */
     bridgeMode?: 'native'
     completedThroughLayer?: number
-    fmlReady?: boolean
+    planReady?: boolean
   }
 }
 

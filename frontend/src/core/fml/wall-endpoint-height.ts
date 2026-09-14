@@ -1,4 +1,4 @@
-import { DEFAULT_FML_WALL_HEIGHT_CM } from './extraction-to-plan-types'
+import { DEFAULT_WALL_HEIGHT_CM } from './extraction-to-plan-types'
 import type { Floor, FloorPlan, FmlExtras, Opening, Wall } from './types'
 
 /** Floorplanner endpoint elevations (bottom z + top h). */
@@ -12,7 +12,7 @@ export type WallEnd = 'a' | 'b'
 const HEIGHT_EPS_CM = 0.05
 
 function clampHeightCm(heightCm: number): number {
-  if (!Number.isFinite(heightCm) || heightCm <= 0) return DEFAULT_FML_WALL_HEIGHT_CM
+  if (!Number.isFinite(heightCm) || heightCm <= 0) return DEFAULT_WALL_HEIGHT_CM
   return Math.round(heightCm)
 }
 
@@ -116,7 +116,7 @@ function stripEndpointKeys(extras: FmlExtras | undefined): FmlExtras | undefined
  */
 export function promoteWallElevationFromExtras(
   extras: FmlExtras | undefined,
-  fallbackHeightCm: number = DEFAULT_FML_WALL_HEIGHT_CM,
+  fallbackHeightCm: number = DEFAULT_WALL_HEIGHT_CM,
 ): { extras: FmlExtras | undefined; elevation?: { a: Endpoint3D; b: Endpoint3D } } {
   if (!extras) return { extras: undefined }
   const hasAz = extras.az != null
@@ -531,7 +531,7 @@ export function splitWallEndpointExtras(
               extras.bz != null &&
               typeof (extras.bz as Endpoint3D).h === 'number'
             ? endpointHeightCm(extras.bz as Endpoint3D)
-            : DEFAULT_FML_WALL_HEIGHT_CM
+            : DEFAULT_WALL_HEIGHT_CM
 
   const az = parseEndpoint3D(rawEndpoint(wall, 'a'), fallback)
   const bz = parseEndpoint3D(rawEndpoint(wall, 'b'), fallback)

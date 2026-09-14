@@ -4,9 +4,9 @@ export interface Point2D {
 }
 
 /** Clamp semantic `balancePx` naar Floorplanner FML 0..1 (fractie links van a→b). */
-export const FML_WALL_BALANCE_MIN = 0
-export const FML_WALL_BALANCE_MAX = 1
-export const FML_WALL_BALANCE_FALLBACK = 0.5
+export const WALL_BALANCE_MIN = 0
+export const WALL_BALANCE_MAX = 1
+export const WALL_BALANCE_FALLBACK = 0.5
 
 export function toCmX(px: number, pxPerMmX: number): number {
   return px / pxPerMmX / 10
@@ -17,10 +17,10 @@ export function toCmY(px: number, pxPerMmY: number): number {
 }
 
 export function resolveBalance(balancePx: number | undefined): number {
-  if (!Number.isFinite(balancePx)) return FML_WALL_BALANCE_FALLBACK
+  if (!Number.isFinite(balancePx)) return WALL_BALANCE_FALLBACK
   const clamped = Math.min(
-    FML_WALL_BALANCE_MAX,
-    Math.max(FML_WALL_BALANCE_MIN, balancePx ?? FML_WALL_BALANCE_FALLBACK),
+    WALL_BALANCE_MAX,
+    Math.max(WALL_BALANCE_MIN, balancePx ?? WALL_BALANCE_FALLBACK),
   )
   return Math.round(clamped * 100) / 100
 }

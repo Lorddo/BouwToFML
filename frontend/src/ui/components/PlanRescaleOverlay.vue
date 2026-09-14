@@ -95,43 +95,43 @@ onUnmounted(() => {
 <template>
   <svg
     ref="rootRef"
-    class="fml-rescale-overlay"
+    class="plan-rescale-overlay"
     :width="width"
     :height="height"
     @mousedown.stop.prevent
   >
     <line
-      class="fml-rescale-leg fml-rescale-leg--h"
+      class="plan-rescale-leg plan-rescale-leg--h"
       :x1="hLeft.x"
       y1="0"
       :x2="hLeft.x"
       :y2="height"
     />
     <line
-      class="fml-rescale-leg fml-rescale-leg--h"
+      class="plan-rescale-leg plan-rescale-leg--h"
       :x1="hRight.x"
       y1="0"
       :x2="hRight.x"
       :y2="height"
     />
     <line
-      class="fml-rescale-cross fml-rescale-cross--h"
+      class="plan-rescale-cross plan-rescale-cross--h"
       :x1="hLeft.x"
       :y1="hCrossY"
       :x2="hRight.x"
       :y2="hCrossY"
       @pointerdown="onPointerDown('xGuideY', $event)"
     />
-    <line class="fml-rescale-leg fml-rescale-leg--v" x1="0" :y1="vTop.y" :x2="width" :y2="vTop.y" />
+    <line class="plan-rescale-leg plan-rescale-leg--v" x1="0" :y1="vTop.y" :x2="width" :y2="vTop.y" />
     <line
-      class="fml-rescale-leg fml-rescale-leg--v"
+      class="plan-rescale-leg plan-rescale-leg--v"
       x1="0"
       :y1="vBottom.y"
       :x2="width"
       :y2="vBottom.y"
     />
     <line
-      class="fml-rescale-cross fml-rescale-cross--v"
+      class="plan-rescale-cross plan-rescale-cross--v"
       :x1="vCrossX"
       :y1="vTop.y"
       :x2="vCrossX"
@@ -139,101 +139,101 @@ onUnmounted(() => {
       @pointerdown="onPointerDown('yGuideX', $event)"
     />
     <circle
-      class="fml-rescale-handle fml-rescale-handle--h"
+      class="plan-rescale-handle plan-rescale-handle--h"
       :cx="hLeft.x"
       :cy="hLeft.y"
       r="8"
       @pointerdown="onPointerDown('xLeft', $event)"
     />
     <circle
-      class="fml-rescale-handle fml-rescale-handle--h"
+      class="plan-rescale-handle plan-rescale-handle--h"
       :cx="hRight.x"
       :cy="hRight.y"
       r="8"
       @pointerdown="onPointerDown('xRight', $event)"
     />
     <circle
-      class="fml-rescale-handle fml-rescale-handle--v"
+      class="plan-rescale-handle plan-rescale-handle--v"
       :cx="vTop.x"
       :cy="vTop.y"
       r="8"
       @pointerdown="onPointerDown('yTop', $event)"
     />
     <circle
-      class="fml-rescale-handle fml-rescale-handle--v"
+      class="plan-rescale-handle plan-rescale-handle--v"
       :cx="vBottom.x"
       :cy="vBottom.y"
       r="8"
       @pointerdown="onPointerDown('yBottom', $event)"
     />
-    <text class="fml-rescale-label fml-rescale-label--h" :x="hLeft.x - 14" :y="hLeft.y + 4">H</text>
-    <text class="fml-rescale-label fml-rescale-label--h" :x="hRight.x + 14" :y="hRight.y + 4">
+    <text class="plan-rescale-label plan-rescale-label--h" :x="hLeft.x - 14" :y="hLeft.y + 4">H</text>
+    <text class="plan-rescale-label plan-rescale-label--h" :x="hRight.x + 14" :y="hRight.y + 4">
       H
     </text>
-    <text class="fml-rescale-label fml-rescale-label--v" :x="vTop.x" :y="vTop.y - 14">V</text>
-    <text class="fml-rescale-label fml-rescale-label--v" :x="vBottom.x" :y="vBottom.y + 18">V</text>
+    <text class="plan-rescale-label plan-rescale-label--v" :x="vTop.x" :y="vTop.y - 14">V</text>
+    <text class="plan-rescale-label plan-rescale-label--v" :x="vBottom.x" :y="vBottom.y + 18">V</text>
   </svg>
 </template>
 
 <style scoped>
-.fml-rescale-overlay {
+.plan-rescale-overlay {
   position: absolute;
   inset: 0;
   z-index: 6;
   pointer-events: none;
 }
 
-.fml-rescale-leg {
+.plan-rescale-leg {
   fill: none;
   stroke-width: 1.5;
   stroke-dasharray: 6 4;
   pointer-events: none;
 }
 
-.fml-rescale-leg--h {
+.plan-rescale-leg--h {
   stroke: #0284c7;
 }
 
-.fml-rescale-leg--v {
+.plan-rescale-leg--v {
   stroke: #d97706;
 }
 
-.fml-rescale-cross {
+.plan-rescale-cross {
   fill: none;
   stroke-width: 3;
   pointer-events: stroke;
   cursor: grab;
 }
 
-.fml-rescale-cross--h {
+.plan-rescale-cross--h {
   stroke: #0284c7;
 }
 
-.fml-rescale-cross--v {
+.plan-rescale-cross--v {
   stroke: #d97706;
 }
 
-.fml-rescale-handle {
+.plan-rescale-handle {
   stroke: #fff;
   stroke-width: 2;
   pointer-events: all;
   cursor: grab;
 }
 
-.fml-rescale-handle--h {
+.plan-rescale-handle--h {
   fill: #0284c7;
 }
 
-.fml-rescale-handle--v {
+.plan-rescale-handle--v {
   fill: #d97706;
 }
 
-.fml-rescale-handle:active,
-.fml-rescale-cross:active {
+.plan-rescale-handle:active,
+.plan-rescale-cross:active {
   cursor: grabbing;
 }
 
-.fml-rescale-label {
+.plan-rescale-label {
   font:
     700 12px system-ui,
     Segoe UI,
@@ -245,11 +245,11 @@ onUnmounted(() => {
   text-anchor: middle;
 }
 
-.fml-rescale-label--h {
+.plan-rescale-label--h {
   fill: #0284c7;
 }
 
-.fml-rescale-label--v {
+.plan-rescale-label--v {
   fill: #d97706;
 }
 </style>

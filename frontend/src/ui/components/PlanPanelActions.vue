@@ -11,7 +11,7 @@ withDefaults(
     hasCombinedOutput: boolean
     planLimitsDirty?: boolean
     /** FML X-spiegel actief (toggle-uiterlijk). */
-    fmlOrientFlipX?: boolean
+    planOrientFlipX?: boolean
     /** ≥1 floor heeft FML (project-spiegel). */
     hasAnyFloorFml?: boolean
     /** Alle FML-floors hebben flipX (project-spiegel toggle). */
@@ -19,7 +19,7 @@ withDefaults(
   }>(),
   {
     planLimitsDirty: false,
-    fmlOrientFlipX: false,
+    planOrientFlipX: false,
     hasAnyFloorFml: false,
     projectOrientFlipX: false,
   },
@@ -35,12 +35,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="fml-actions sidebar-icon-row">
+  <div class="plan-actions sidebar-icon-row">
     <button
       v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
       type="button"
       class="sidebar-icon-btn"
-      :class="{ 'is-on': fmlOrientFlipX }"
+      :class="{ 'is-on': planOrientFlipX }"
       :disabled="!hasCombinedOutput || !scaleConfirmed"
       :title="t('result.mirrorVerticalHint')"
       @click="emit('mirrorVertical')"
@@ -92,24 +92,24 @@ const emit = defineEmits<{
       <span>{{ t('result.regenerate') }}</span>
     </button>
   </div>
-  <p v-if="planLimitsDirty" class="fml-hint fml-dirty-hint">
+  <p v-if="planLimitsDirty" class="plan-hint plan-dirty-hint">
     {{ t('result.dirtyHint') }}
   </p>
 </template>
 
 <style scoped>
-.fml-actions {
+.plan-actions {
   margin-top: 8px;
   margin-bottom: 0;
 }
 
-.fml-hint {
+.plan-hint {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.4;
 }
 
-.fml-dirty-hint {
+.plan-dirty-hint {
   color: #b45309;
 }
 </style>

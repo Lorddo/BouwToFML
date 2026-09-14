@@ -13,7 +13,7 @@ import PlanRescalePanel from '../components/PlanRescalePanel.vue'
 import ScaleConfirmBar from '../components/ScaleConfirmBar.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
 import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
-import '../components/fml-panel-fields.css'
+import '../components/plan-panel-fields.css'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
@@ -109,7 +109,7 @@ const {
   resetInspectState,
 } = useEditorInspect()
 
-const /** FML-geometrie opacity 0–1; 0 = uit. */ fmlOpacity = ref(0.8)
+const /** FML-geometrie opacity 0–1; 0 = uit. */ contentOpacity = ref(0.8)
 const /** Sesssie-only: kamer-/FML-labels verbergen. */ hidePlanText = ref(false)
 const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
 const userSettings = loadUserSettings()
@@ -219,10 +219,10 @@ const {
   canStartUnderlayScale,
   rescaleOverlayActive,
   rescaleOverlayState,
-  fmlRescaleActive,
-  fmlRescaleState,
-  fmlRescaleDistanceMmX,
-  fmlRescaleDistanceMmY,
+  rescaleActive,
+  rescaleState,
+  rescaleDistanceMmX,
+  rescaleDistanceMmY,
   underlayScaleActive,
   underlayScaleState,
   underlayScaleMmX,
@@ -403,7 +403,7 @@ function convertActiveDimensionsToManual(): void {
 // --- Opacity / text ---
 
 function onFmlOpacityInput(event: Event): void {
-  fmlOpacity.value = Number((event.target as HTMLInputElement).value) / 100
+  contentOpacity.value = Number((event.target as HTMLInputElement).value) / 100
 }
 
 // --- Opening overflow ---
@@ -540,7 +540,7 @@ const {
   sessionDefaults,
   orientByFloor,
   pendingAlignRebase,
-  fmlOpacity,
+  contentOpacity,
   hidePlanText,
   floors,
   t,
@@ -708,16 +708,16 @@ defineExpose({
             </div>
             <div class="opacity-row">
               <div class="opacity-row__label">
-                <span>{{ t('result.fmlOpacity') }}</span>
-                <span>{{ Math.round(fmlOpacity * 100) }}%</span>
+                <span>{{ t('result.contentOpacity') }}</span>
+                <span>{{ Math.round(contentOpacity * 100) }}%</span>
               </div>
               <input
                 type="range"
                 min="0"
                 max="100"
                 step="1"
-                :value="Math.round(fmlOpacity * 100)"
-                :aria-label="t('result.fmlOpacityAria')"
+                :value="Math.round(contentOpacity * 100)"
+                :aria-label="t('result.contentOpacityAria')"
                 @input="onFmlOpacityInput"
               />
             </div>
@@ -732,7 +732,7 @@ defineExpose({
             </label>
           </div>
 
-          <details v-if="!inspectMode" class="fml-fold defaults-fold">
+          <details v-if="!inspectMode" class="plan-fold defaults-fold">
             <summary>{{ t('project.title') }}</summary>
             <div class="project-block">
               <label class="defaults-field">
@@ -811,7 +811,7 @@ defineExpose({
 
           <details
             v-if="!inspectMode"
-            class="fml-fold defaults-fold"
+            class="plan-fold defaults-fold"
             :class="{ 'is-reuse-needed': needsUnderlayReuse }"
             :open="underlayFoldOpen"
             @toggle="underlayFoldOpen = ($event.target as HTMLDetailsElement).open"
@@ -966,7 +966,7 @@ defineExpose({
             </div>
           </details>
 
-          <details v-if="gevelsMode && !inspectMode" class="fml-fold defaults-fold" open>
+          <details v-if="gevelsMode && !inspectMode" class="plan-fold defaults-fold" open>
             <summary>{{ t('viewer.elevationHeightsFold') }}</summary>
             <ElevationHeightFields
               :unit="scaleInputUnit"
@@ -994,18 +994,18 @@ defineExpose({
             <p v-if="bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
           </details>
 
-          <details v-if="!inspectMode && !gevelsMode" class="fml-fold defaults-fold">
-            <summary>{{ t('viewer.fmlFold') }}</summary>
+          <details v-if="!inspectMode && !gevelsMode" class="plan-fold defaults-fold">
+            <summary>{{ t('viewer.planFold') }}</summary>
             <div class="sidebar-icon-row sidebar-plan-actions">
               <button
                 type="button"
                 class="sidebar-icon-btn"
-                :class="{ 'is-on': fmlRescaleActive }"
+                :class="{ 'is-on': rescaleActive }"
                 :disabled="!canStartRescale"
                 :title="t('result.rescaleHint')"
                 :aria-label="t('result.rescale')"
-                :aria-pressed="fmlRescaleActive"
-                @click="fmlRescaleActive ? cancelPlanRescale() : beginPlanRescale()"
+                :aria-pressed="rescaleActive"
+                @click="rescaleActive ? cancelPlanRescale() : beginPlanRescale()"
               >
                 <ToolbeltIcon name="rescale" />
                 <span>{{ t('result.rescale') }}</span>
@@ -1049,11 +1049,11 @@ defineExpose({
             <PlanRescalePanel
               v-if="!underlayScaleActive"
               hide-start
-              :active="fmlRescaleActive"
+              :active="rescaleActive"
               :can-start="canStartRescale"
-              :state="fmlRescaleState"
-              :mm-x="fmlRescaleDistanceMmX"
-              :mm-y="fmlRescaleDistanceMmY"
+              :state="rescaleState"
+              :mm-x="rescaleDistanceMmX"
+              :mm-y="rescaleDistanceMmY"
               :unit="scaleInputUnit"
               @begin="beginPlanRescale()"
               @cancel="cancelPlanRescale()"
@@ -1109,7 +1109,7 @@ defineExpose({
             />
           </details>
 
-          <details v-if="!inspectMode && !gevelsMode && !dakMode" class="fml-fold defaults-fold">
+          <details v-if="!inspectMode && !gevelsMode && !dakMode" class="plan-fold defaults-fold">
             <summary>{{ t('viewer.dimensionsFold') }}</summary>
             <EditorDimensionFields
               :settings="dimensionSettings"
@@ -1174,16 +1174,16 @@ defineExpose({
     <main class="viewer-main">
       <div
         v-if="isLoadingFml"
-        class="fml-load-overlay"
+        class="plan-load-overlay"
         role="status"
         aria-live="polite"
         aria-busy="true"
       >
-        <div class="fml-load-card">
-          <div class="fml-load-spinner" aria-hidden="true" />
-          <p class="fml-load-title">{{ loadStatusLabel }}</p>
-          <p v-if="loadFileName" class="fml-load-file">{{ loadFileName }}</p>
-          <p class="fml-load-hint">{{ t('viewer.loadHint') }}</p>
+        <div class="plan-load-card">
+          <div class="plan-load-spinner" aria-hidden="true" />
+          <p class="plan-load-title">{{ loadStatusLabel }}</p>
+          <p v-if="loadFileName" class="plan-load-file">{{ loadFileName }}</p>
+          <p class="plan-load-hint">{{ t('viewer.loadHint') }}</p>
         </div>
       </div>
       <template v-if="plan">
@@ -1287,7 +1287,7 @@ defineExpose({
             :underlay-width-px="elevationUnderlayWidthPx"
             :underlay-height-px="elevationUnderlayHeightPx"
             :underlay-opacity="elevationUnderlaySrc ? underlayOpacity : 0"
-            :content-opacity="fmlOpacity"
+            :content-opacity="contentOpacity"
             :cm-origin="elevationUnderlayLayout?.origin ?? null"
             :px-per-mm-x="elevationUnderlayLayout?.pxPerMmX ?? 1"
             :px-per-mm-y="elevationUnderlayLayout?.pxPerMmY ?? 1"
@@ -1333,7 +1333,7 @@ defineExpose({
             :underlay-width-px="underlayWidthPx"
             :underlay-height-px="underlayHeightPx"
             :underlay-opacity="underlaySrc ? underlayOpacity : 0"
-            :content-opacity="fmlOpacity"
+            :content-opacity="contentOpacity"
             :labels-visible="!hidePlanText"
             :cm-origin="underlayLayout?.origin ?? null"
             :px-per-mm-x="underlayLayout?.pxPerMmX ?? 1"
@@ -1354,7 +1354,7 @@ defineExpose({
             :underlay-width-px="underlayWidthPx"
             :underlay-height-px="underlayHeightPx"
             :underlay-opacity="underlaySrc ? underlayOpacity : 0"
-            :content-opacity="fmlOpacity"
+            :content-opacity="contentOpacity"
             :labels-visible="!hidePlanText"
             :cm-origin="underlayLayout?.origin ?? null"
             :px-per-mm-x="underlayLayout?.pxPerMmX ?? 1"
@@ -1379,7 +1379,7 @@ defineExpose({
             @plan-update="onPlanUpdate"
             @update:underlay-move-mode="underlayMoveMode = $event"
             @update-rescale-state="onRescaleStateUpdate"
-            @cancel-rescale="fmlRescaleActive ? cancelPlanRescale() : cancelUnderlayScale()"
+            @cancel-rescale="rescaleActive ? cancelPlanRescale() : cancelUnderlayScale()"
             @update:canvas-fullscreen="canvasFullscreen = $event"
             @update:dimension-vis="dimensionVis = $event"
           />
@@ -1577,7 +1577,7 @@ defineExpose({
   border-radius: 0;
 }
 
-.fml-load-overlay {
+.plan-load-overlay {
   position: absolute;
   inset: 0;
   z-index: 20;
@@ -1588,7 +1588,7 @@ defineExpose({
   backdrop-filter: blur(2px);
 }
 
-.fml-load-card {
+.plan-load-card {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1602,36 +1602,36 @@ defineExpose({
   text-align: center;
 }
 
-.fml-load-spinner {
+.plan-load-spinner {
   width: 28px;
   height: 28px;
   border: 3px solid #e2e8f0;
   border-top-color: #2563eb;
   border-radius: 50%;
-  animation: fml-load-spin 0.7s linear infinite;
+  animation: plan-load-spin 0.7s linear infinite;
 }
 
-@keyframes fml-load-spin {
+@keyframes plan-load-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.fml-load-title {
+.plan-load-title {
   margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: #0f172a;
 }
 
-.fml-load-file {
+.plan-load-file {
   margin: 0;
   font-size: 12px;
   color: #64748b;
   word-break: break-all;
 }
 
-.fml-load-hint {
+.plan-load-hint {
   margin: 4px 0 0;
   font-size: 11px;
   color: #94a3b8;

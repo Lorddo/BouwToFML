@@ -52,7 +52,7 @@ export function defineE2eSuite(slug: string, options: E2eSuiteOptions = {}): voi
 
     it('muren: L2–L10 + FML-poort (zonder openingen)', async () => {
       expect(walls.journalDegraded).toBe(false)
-      expect(walls.pipeline.fmlReady).toBe(true)
+      expect(walls.pipeline.planReady).toBe(true)
       expect(walls.fmlSnapshot.wallCount).toBeGreaterThan(10)
       expect(walls.layersSnapshot.layers.layer10?.segments).toBeGreaterThan(0)
       expect(walls.layersSnapshot.layers.layer4?.invariantReport?.ok).toBe(true)

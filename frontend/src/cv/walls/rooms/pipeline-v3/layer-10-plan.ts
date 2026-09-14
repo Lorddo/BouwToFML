@@ -201,7 +201,7 @@ export function runLayer10Fml(params: {
     allJunctionsReady,
     totalSegmentsReady: allSegmentsReady.length,
     totalJunctionsReady: allJunctionsReady.length,
-    fmlStats: {
+    planStats: {
       chainsCollapsed,
       segmentsRemoved,
       fakeLRemoved,

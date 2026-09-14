@@ -13,7 +13,7 @@ import {
   JUNCTION_BALANCE_JOG_STUB_MAX_CM,
   JUNCTION_BALANCE_STUB_MAX_CM,
 } from '@/core/fml/align-wall-junction-balance'
-import { FML_WALL_BALANCE_FALLBACK } from '@/core/fml/extraction-to-plan-geom'
+import { WALL_BALANCE_FALLBACK } from '@/core/fml/extraction-to-plan-geom'
 import {
   clampWallBalance,
   floorplannerLeftNormal,
@@ -123,7 +123,7 @@ function faceCrossCoord(wall: Wall, side: FlushSide, balance = wall.balance): nu
   const vertical = wallIsVertical(wall)
   const c = crossAxisComponent(floorplannerLeftNormal(wallDirectionUnit(wall)), vertical)
   const thickness = wall.thickness
-  const b = clampWallBalance(balance ?? FML_WALL_BALANCE_FALLBACK)
+  const b = clampWallBalance(balance ?? WALL_BALANCE_FALLBACK)
   if (side === 'plus') return cl + c * (thickness * b)
   return cl - c * (thickness * (1 - b))
 }
@@ -147,7 +147,7 @@ function balanceForWorldFlushFace(
   const vertical = wallIsVertical(wall)
   const c = crossAxisComponent(floorplannerLeftNormal(wallDirectionUnit(wall)), vertical)
   const thickness = wall.thickness
-  if (!(thickness > 1e-9) || Math.abs(c) < 1e-12) return FML_WALL_BALANCE_FALLBACK
+  if (!(thickness > 1e-9) || Math.abs(c) < 1e-12) return WALL_BALANCE_FALLBACK
 
   const delta = flushCross - cl
   const fromPlus = clampWallBalance(delta / (c * thickness))

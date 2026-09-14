@@ -1,8 +1,8 @@
 import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/fml/bovenlicht'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import {
   openingWorldCenter as openingWorldCenterOnAxis,
@@ -41,15 +41,15 @@ export function buildOpeningId(wallId: string, opening: Opening, openingIndex: n
 }
 
 function resolveDoorOpeningHeight(opening: Opening): number {
-  return Math.round(opening.z_height ?? DEFAULT_FML_DOOR_HEIGHT_CM)
+  return Math.round(opening.z_height ?? DEFAULT_DOOR_HEIGHT_CM)
 }
 
 function resolveWindowOpeningHeight(opening: Opening): number {
-  return Math.round(opening.z_height ?? DEFAULT_FML_WINDOW_HEIGHT_CM)
+  return Math.round(opening.z_height ?? DEFAULT_WINDOW_HEIGHT_CM)
 }
 
 export function resolveWindowSillZ(opening: Opening): number {
-  return Math.round(opening.z ?? DEFAULT_FML_WINDOW_SILL_Z_CM)
+  return Math.round(opening.z ?? DEFAULT_WINDOW_SILL_Z_CM)
 }
 
 /** Dorpel vanaf vloer: raam default 70, deur/overig default 0. */
@@ -70,12 +70,12 @@ export function clampOpeningWidth(widthCm: number): number {
 }
 
 function clampDoorOpeningHeight(heightCm: number): number {
-  if (!Number.isFinite(heightCm)) return DEFAULT_FML_DOOR_HEIGHT_CM
+  if (!Number.isFinite(heightCm)) return DEFAULT_DOOR_HEIGHT_CM
   return Math.max(MIN_OPENING_HEIGHT_CM, Math.min(MAX_OPENING_HEIGHT_CM, Math.round(heightCm)))
 }
 
 export function clampWindowOpeningHeight(heightCm: number): number {
-  if (!Number.isFinite(heightCm)) return DEFAULT_FML_WINDOW_HEIGHT_CM
+  if (!Number.isFinite(heightCm)) return DEFAULT_WINDOW_HEIGHT_CM
   return Math.max(MIN_OPENING_HEIGHT_CM, Math.min(MAX_OPENING_HEIGHT_CM, Math.round(heightCm)))
 }
 
@@ -84,7 +84,7 @@ export function clampOpeningHeight(heightCm: number, type: OpeningType): number 
 }
 
 export function clampOpeningSillZ(zCm: number): number {
-  if (!Number.isFinite(zCm)) return DEFAULT_FML_WINDOW_SILL_Z_CM
+  if (!Number.isFinite(zCm)) return DEFAULT_WINDOW_SILL_Z_CM
   return Math.max(MIN_OPENING_SILL_Z_CM, Math.min(MAX_OPENING_SILL_Z_CM, Math.round(zCm)))
 }
 
@@ -250,9 +250,9 @@ export function addOpeningToWall(walls: Wall[], wallId: string, opening: Opening
     t,
     z_height:
       opening.type === 'door'
-        ? (opening.z_height ?? DEFAULT_FML_DOOR_HEIGHT_CM)
-        : (opening.z_height ?? DEFAULT_FML_WINDOW_HEIGHT_CM),
-    z: opening.type === 'window' ? (opening.z ?? DEFAULT_FML_WINDOW_SILL_Z_CM) : opening.z,
+        ? (opening.z_height ?? DEFAULT_DOOR_HEIGHT_CM)
+        : (opening.z_height ?? DEFAULT_WINDOW_HEIGHT_CM),
+    z: opening.type === 'window' ? (opening.z ?? DEFAULT_WINDOW_SILL_Z_CM) : opening.z,
   }
 
   const nextWall: Wall = {
@@ -406,10 +406,6 @@ export function removeOpeningsById(walls: Wall[], openingIds: Iterable<string>):
   return changed ? nextWalls : walls
 }
 
-export {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM as DEFAULT_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM as DEFAULT_WINDOW_SILL_Z_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
-}
+// Vóór de rename stonden hier twee namen voor dezelfde constante (`DEFAULT_FML_*`
+// plus een alias zonder voorvoegsel); die vallen nu samen.
+export { DEFAULT_DOOR_HEIGHT_CM, DEFAULT_WINDOW_HEIGHT_CM, DEFAULT_WINDOW_SILL_Z_CM }

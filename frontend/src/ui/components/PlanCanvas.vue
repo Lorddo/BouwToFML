@@ -535,8 +535,8 @@ function onShowCanvasGrid(next: boolean) {
   showCanvasGrid.value = setShowCanvasGrid(next)
 }
 
-const fmlToolbarRef = ref<{ hint: string } | null>(null)
-const toolbarHint = computed(() => fmlToolbarRef.value?.hint ?? '')
+const planToolbarRef = ref<{ hint: string } | null>(null)
+const toolbarHint = computed(() => planToolbarRef.value?.hint ?? '')
 
 const {
   activePlanTool,
@@ -1354,7 +1354,7 @@ watch(
     />
     <PlanToolbar
       v-if="!inspectMode && !rescaleMode"
-      ref="fmlToolbarRef"
+      ref="planToolbarRef"
       v-model:active-tool="activePlanTool"
       v-model:area-side-dims-visible="areaSideDimsVisible"
       v-model:add-door-subtype="addDoorSubtype"

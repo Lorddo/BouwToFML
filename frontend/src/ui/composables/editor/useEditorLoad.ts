@@ -60,7 +60,7 @@ export function useEditorLoad(deps: {
   sessionDefaults: Ref<ViewerSessionDefaults>
   orientByFloor: Ref<Record<number, FloorOrientState>>
   pendingAlignRebase: Ref<RebasePlanToItemRefidResult | null>
-  fmlOpacity: Ref<number>
+  contentOpacity: Ref<number>
   hidePlanText: Ref<boolean>
   floors: Ref<readonly Floor[]>
   // vue-i18n ComposerTranslation — keep loose to avoid coupling the composable to i18n types.
@@ -205,7 +205,7 @@ export function useEditorLoad(deps: {
     )
     deps.sessionDefaults.value = defaults
     deps.hydrateFloorDefaultsFromPlan(deps.plan.value)
-    deps.fmlOpacity.value = 0.8
+    deps.contentOpacity.value = 0.8
     deps.hidePlanText.value = false
     resetTransientUi()
   }
@@ -316,7 +316,7 @@ export function useEditorLoad(deps: {
     deps.plan.value = null
     deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
     deps.hydrateFloorDefaultsFromPlan(null)
-    deps.fmlOpacity.value = 0.8
+    deps.contentOpacity.value = 0.8
     deps.hidePlanText.value = false
     resetTransientUi()
   }

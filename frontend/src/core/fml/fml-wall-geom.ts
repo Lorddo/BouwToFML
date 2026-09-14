@@ -1,5 +1,5 @@
 import type { Opening, Point2D, Wall } from './types'
-import { FML_WALL_BALANCE_FALLBACK } from './extraction-to-plan-geom'
+import { WALL_BALANCE_FALLBACK } from './extraction-to-plan-geom'
 
 /**
  * Floorplanner-linkernormaal in FML-ruimte (Y omlaag, zoals het scherm).
@@ -34,11 +34,11 @@ export function totalWallLengthCm(walls: Array<Pick<Wall, 'a' | 'b'>>): number {
 }
 
 /** Veilige rail voor editor/import (Floorplanner 1000% / −250%). Detectie blijft 0–1. */
-export const FML_WALL_BALANCE_ABS_MAX = 10
+export const WALL_BALANCE_ABS_MAX = 10
 
 export function clampWallBalance(balance: number | undefined): number {
-  if (!Number.isFinite(balance)) return FML_WALL_BALANCE_FALLBACK
-  return Math.min(FML_WALL_BALANCE_ABS_MAX, Math.max(-FML_WALL_BALANCE_ABS_MAX, balance as number))
+  if (!Number.isFinite(balance)) return WALL_BALANCE_FALLBACK
+  return Math.min(WALL_BALANCE_ABS_MAX, Math.max(-WALL_BALANCE_ABS_MAX, balance as number))
 }
 
 export function wallDirectionUnit(wall: Pick<Wall, 'a' | 'b'>): Point2D {

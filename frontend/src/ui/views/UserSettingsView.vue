@@ -15,7 +15,7 @@ import {
   PLAN_DISPLAY_STYLE_CHOICES,
   UserSettingsParseError,
   type CornerMarkerMode,
-  type FmlConversionSettings,
+  type OpeningMergeSettings,
   type PlanDisplaySettings,
   type OpeningDisplayColorKey,
   type PlanDisplayStyleChoice,
@@ -71,7 +71,7 @@ function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
       openingColors: { ...settings.planDisplay.openingColors },
       facadeGroups: settings.planDisplay.facadeGroups.map((group) => ({ ...group })),
     },
-    fmlConversion: { ...settings.fmlConversion },
+    openingMerge: { ...settings.openingMerge },
     roomTagColors: { ...settings.roomTagColors },
   }
 }
@@ -119,8 +119,8 @@ function patchViewer(patch: Partial<PlanDisplaySettings>) {
   Object.assign(draft.planDisplay, patch)
 }
 
-function patchConversion(patch: Partial<FmlConversionSettings>) {
-  Object.assign(draft.fmlConversion, patch)
+function patchConversion(patch: Partial<OpeningMergeSettings>) {
+  Object.assign(draft.openingMerge, patch)
 }
 
 function onRoomTagColorInput(role: number, value: string) {
@@ -238,7 +238,7 @@ function persistDraft(): UserSettingsV1 {
     scaleInputUnit: draft.scaleInputUnit,
     defaults: { ...draft.defaults },
     planDisplay: { ...draft.planDisplay },
-    fmlConversion: { ...draft.fmlConversion },
+    openingMerge: { ...draft.openingMerge },
     roomTagColors: { ...draft.roomTagColors },
   })
   Object.assign(draft, cloneSettings(saved))
@@ -313,7 +313,7 @@ function onExport() {
     scaleInputUnit: draft.scaleInputUnit,
     defaults: { ...draft.defaults },
     planDisplay: { ...draft.planDisplay },
-    fmlConversion: { ...draft.fmlConversion },
+    openingMerge: { ...draft.openingMerge },
     roomTagColors: { ...draft.roomTagColors },
   })
   statusMessage.value = t('settings.exportDownloaded')
@@ -559,13 +559,13 @@ onBeforeUnmount(() => {
     </section>
 
     <section v-if="!isViewer" class="panel settings-section">
-      <h3>{{ t('settings.fmlConversion') }}</h3>
-      <p class="hint">{{ t('settings.fmlConversionHint') }}</p>
+      <h3>{{ t('settings.openingMerge') }}</h3>
+      <p class="hint">{{ t('settings.openingMergeHint') }}</p>
       <div class="defaults-grid">
         <label class="field compact check conversion-check">
           <input
             type="checkbox"
-            :checked="draft.fmlConversion.mergeDoubleDoors"
+            :checked="draft.openingMerge.mergeDoubleDoors"
             @change="
               patchConversion({
                 mergeDoubleDoors: ($event.target as HTMLInputElement).checked,
@@ -577,7 +577,7 @@ onBeforeUnmount(() => {
         <label class="field compact check conversion-check">
           <input
             type="checkbox"
-            :checked="draft.fmlConversion.mergeMultiWindows"
+            :checked="draft.openingMerge.mergeMultiWindows"
             @change="
               patchConversion({
                 mergeMultiWindows: ($event.target as HTMLInputElement).checked,
@@ -645,7 +645,7 @@ onBeforeUnmount(() => {
       </div>
       <div class="opacity-row">
         <div class="opacity-label">
-          <span>{{ t('settings.fmlOpacity') }}</span>
+          <span>{{ t('settings.contentOpacity') }}</span>
           <span>{{ draft.planDisplay.contentOpacityPct }}%</span>
         </div>
         <input
@@ -654,7 +654,7 @@ onBeforeUnmount(() => {
           max="100"
           step="1"
           :value="draft.planDisplay.contentOpacityPct"
-          :aria-label="t('settings.fmlOpacityAria')"
+          :aria-label="t('settings.contentOpacityAria')"
           @input="
             patchViewer({
               contentOpacityPct: Number(($event.target as HTMLInputElement).value),

@@ -19,7 +19,7 @@ import { elevationViewForGroup, setElevationViewDrawing } from '@/core/fml/eleva
 import { scaleUnderlayLayout } from '@/core/fml/scale-floor-plan'
 import { scaleFloorPlanAndRegenAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import {
-  fmlRescaleStateFromImageHandles,
+  rescaleStateFromImageHandles,
   initPlanRescaleStateFromWalls,
   initImageScaleHandles,
   measuredCmFromRescaleState,
@@ -85,10 +85,10 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
   const reuseUnderlayOpen = ref(false)
   const underlayFoldOpen = ref(false)
 
-  const fmlRescaleActive = ref(false)
-  const fmlRescaleState = ref<HScaleState | null>(null)
-  const fmlRescaleDistanceMmX = ref(0)
-  const fmlRescaleDistanceMmY = ref(0)
+  const rescaleActive = ref(false)
+  const rescaleState = ref<HScaleState | null>(null)
+  const rescaleDistanceMmX = ref(0)
+  const rescaleDistanceMmY = ref(0)
   const underlayScaleActive = ref(false)
   const underlayScaleState = ref<HScaleState | null>(null)
   const underlayScaleMmX = ref(3000)
@@ -386,8 +386,8 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
   // --- FML rescale ---
 
   function cancelPlanRescale(): void {
-    fmlRescaleActive.value = false
-    fmlRescaleState.value = null
+    rescaleActive.value = false
+    rescaleState.value = null
   }
 
   function beginPlanRescale(): boolean {
@@ -396,40 +396,40 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     const state = initPlanRescaleStateFromWalls(walls)
     if (!state) return false
     const measured = measuredCmFromRescaleState(state)
-    fmlRescaleState.value = state
-    fmlRescaleDistanceMmX.value = measured.x * 10
-    fmlRescaleDistanceMmY.value = measured.y * 10
+    rescaleState.value = state
+    rescaleDistanceMmX.value = measured.x * 10
+    rescaleDistanceMmY.value = measured.y * 10
     underlayMoveMode.value = false
     cancelUnderlayScale()
-    fmlRescaleActive.value = true
+    rescaleActive.value = true
     return true
   }
 
   function updatePlanRescaleState(next: HScaleState): void {
-    if (!fmlRescaleActive.value) return
-    fmlRescaleState.value = { ...next }
+    if (!rescaleActive.value) return
+    rescaleState.value = { ...next }
   }
 
   function setPlanRescaleDistanceMmX(mm: number): void {
     if (!(mm > 0) || !Number.isFinite(mm)) return
-    fmlRescaleDistanceMmX.value = mm
+    rescaleDistanceMmX.value = mm
   }
 
   function setPlanRescaleDistanceMmY(mm: number): void {
     if (!(mm > 0) || !Number.isFinite(mm)) return
-    fmlRescaleDistanceMmY.value = mm
+    rescaleDistanceMmY.value = mm
   }
 
   function confirmPlanRescale(): boolean {
-    const state = fmlRescaleState.value
+    const state = rescaleState.value
     const current = plan.value
-    if (!state || !fmlRescaleActive.value || !current) return false
+    if (!state || !rescaleActive.value || !current) return false
     const measured = measuredCmFromRescaleState(state)
     const factors = resolveRescaleFactorsFromRulers({
       measuredCmX: measured.x,
       measuredCmY: measured.y,
-      trueMmX: fmlRescaleDistanceMmX.value,
-      trueMmY: fmlRescaleDistanceMmY.value,
+      trueMmX: rescaleDistanceMmX.value,
+      trueMmY: rescaleDistanceMmY.value,
     })
     if (factors == null) return false
     plan.value = scaleFloorPlanAndRegenAreas(current, factors, activeFloorIndex.value)
@@ -454,7 +454,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     const heightPx = activeUnderlayHeightPx.value
     const handles = initImageScaleHandles(widthPx, heightPx)
     if (!layout || !handles) return false
-    const cmState = fmlRescaleStateFromImageHandles(handles, layout)
+    const cmState = rescaleStateFromImageHandles(handles, layout)
     if (!cmState) return false
     const measured = measuredCmFromRescaleState(cmState)
     cancelPlanRescale()
@@ -472,7 +472,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
   }
 
   function onRescaleStateUpdate(next: HScaleState): void {
-    if (fmlRescaleActive.value) updatePlanRescaleState(next)
+    if (rescaleActive.value) updatePlanRescaleState(next)
     else if (underlayScaleActive.value) updateUnderlayScaleState(next)
   }
 
@@ -558,9 +558,9 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
 
   const canStartUnderlayScale = computed(() => underlayAvailable.value && !inspectMode.value)
 
-  const rescaleOverlayActive = computed(() => fmlRescaleActive.value || underlayScaleActive.value)
+  const rescaleOverlayActive = computed(() => rescaleActive.value || underlayScaleActive.value)
   const rescaleOverlayState = computed(() =>
-    fmlRescaleActive.value ? fmlRescaleState.value : underlayScaleState.value,
+    rescaleActive.value ? rescaleState.value : underlayScaleState.value,
   )
 
   const underlayScalePxX = computed(() => {
@@ -642,10 +642,10 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     canStartUnderlayScale,
     rescaleOverlayActive,
     rescaleOverlayState,
-    fmlRescaleActive,
-    fmlRescaleState,
-    fmlRescaleDistanceMmX,
-    fmlRescaleDistanceMmY,
+    rescaleActive,
+    rescaleState,
+    rescaleDistanceMmX,
+    rescaleDistanceMmY,
     underlayScaleActive,
     underlayScaleState,
     underlayScaleMmX,

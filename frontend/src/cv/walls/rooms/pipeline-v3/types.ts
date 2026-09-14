@@ -155,7 +155,7 @@ export interface PipelineV3Layer10Result {
   allJunctionsReady: RoomWallJunction[]
   totalSegmentsReady: number
   totalJunctionsReady: number
-  fmlStats: {
+  planStats: {
     chainsCollapsed: number
     segmentsRemoved: number
     fakeLRemoved: number
@@ -185,13 +185,13 @@ export type PipelineV3LayerDebugView = PipelineV3LayerDebug
 /**
  * Partial V3 result: only native layers are present.
  * incompleteLayers lists everything after `completedThroughLayer`.
- * fmlReady is true only when L10 completed natively.
+ * planReady is true only when L10 completed natively.
  */
 export interface PipelineV3Result {
   pipelineVersion: 'v3'
   completedThroughLayer: number
   incompleteLayers: number[]
-  fmlReady: boolean
+  planReady: boolean
   /** L3-assen — ook voor dikte-sampling op de hartlijn. */
   obliqueAxes: ObliqueAxis[]
   layer1: PipelineV3Layer1Result

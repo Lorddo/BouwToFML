@@ -15,16 +15,16 @@ export interface SemanticGraphFromFmlLayer {
   wallGraph: WallGraph
 }
 
-// ESC:W-53 (B) — fmlReady-gate; geen L8/L9-fallback
+// ESC:W-53 (B) — planReady-gate; geen L8/L9-fallback
 // ESC:X-21 (B) — alias van W-53 (DRY 2026-08-01; geen aparte telsite)
 /**
  * FML-bronlaag voor semantic walls.
- * V3-only: L10 alleen bij `fmlReady` (geen L8/L9 fallback).
+ * V3-only: L10 alleen bij `planReady` (geen L8/L9 fallback).
  */
 export function resolveFmlSourceLayer(walls: ExtractionOutput): PipelineLayerDebug | undefined {
   const debug = walls.pipelineV3Debug
   if (!debug) return undefined
-  if (debug.summary?.fmlReady !== true) {
+  if (debug.summary?.planReady !== true) {
     tally('W-53', 'not_ready')
     return undefined
   }

@@ -103,7 +103,7 @@ function onBlurY() {
 </script>
 
 <template>
-  <div v-if="!hideStart || active" class="fml-rescale-panel">
+  <div v-if="!hideStart || active" class="plan-rescale-panel">
     <button
       v-if="!active"
       type="button"
@@ -167,11 +167,11 @@ function onBlurY() {
 </template>
 
 <style scoped>
-.fml-rescale-panel {
+.plan-rescale-panel {
   margin: 0 0 10px;
 }
 
-.fml-rescale-panel > .sidebar-icon-btn {
+.plan-rescale-panel > .sidebar-icon-btn {
   justify-content: flex-start;
   text-align: left;
 }

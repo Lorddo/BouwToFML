@@ -1,9 +1,9 @@
 import { ref, watch } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import {
-  DEFAULT_FML_DOOR_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_HEIGHT_CM,
-  DEFAULT_FML_WINDOW_SILL_Z_CM,
+  DEFAULT_DOOR_HEIGHT_CM,
+  DEFAULT_WINDOW_HEIGHT_CM,
+  DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/fml/extraction-to-plan-types'
 import {
   hitElevationBand,
@@ -59,12 +59,12 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
   const activeTool = ref<ElevTool>('select')
   const addDoorSubtype = ref<DoorAddSubtype>('standard')
   const addDoorWidthCm = ref(resolveDoorAddPreset('standard').defaultWidthCm)
-  const addDoorHeightCm = ref(DEFAULT_FML_DOOR_HEIGHT_CM)
+  const addDoorHeightCm = ref(DEFAULT_DOOR_HEIGHT_CM)
   const addDoorSillZCm = ref(0)
   const addWindowSubtype = ref<WindowAddSubtype>('single')
   const addWindowWidthCm = ref(resolveWindowAddPreset('single').defaultWidthCm)
-  const addWindowSillZCm = ref(DEFAULT_FML_WINDOW_SILL_Z_CM)
-  const addWindowHeightCm = ref(DEFAULT_FML_WINDOW_HEIGHT_CM)
+  const addWindowSillZCm = ref(DEFAULT_WINDOW_SILL_Z_CM)
+  const addWindowHeightCm = ref(DEFAULT_WINDOW_HEIGHT_CM)
 
   watch(addDoorSubtype, (subtype) => {
     addDoorWidthCm.value = resolveDoorAddPreset(subtype).defaultWidthCm

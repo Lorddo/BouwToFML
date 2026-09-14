@@ -39,7 +39,7 @@ function onBandMaxBoundaryInput(event: Event): void {
 </script>
 
 <template>
-  <div v-if="enabled" class="panel fml-dev-panel">
+  <div v-if="enabled" class="panel plan-dev-panel">
     <h3>FML meetbanden</h3>
     <p class="hint">
       Grenzen voor min/mid/max-classificatie. Pas aan en klik Regenereren in het FML-paneel.
@@ -74,7 +74,7 @@ function onBandMaxBoundaryInput(event: Event): void {
 </template>
 
 <style scoped>
-.fml-dev-panel {
+.plan-dev-panel {
   margin-top: 8px;
 }
 
