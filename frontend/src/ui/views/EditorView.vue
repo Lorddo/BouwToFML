@@ -14,41 +14,11 @@ import ScaleConfirmBar from '../components/ScaleConfirmBar.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
 import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
 import '../components/fml-panel-fields.css'
-import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import {
   findOpeningHeightOverflows,
   summarizeOpeningHeightOverflows,
 } from '@/core/fml/opening-height-overflow'
 import { cloneUnderlayOriginLayout } from '@/core/fml/drawing-to-underlay-layout'
-import {
-  applyFloorOrientOp,
-  composeFloorOrient,
-  defaultFloorOrient,
-  type FloorOrientOp,
-  type FloorOrientState,
-} from '@/core/fml/floor-plan-orient'
-import { downloadFml, downloadText } from '@/core/fml/downloadFml'
-import {
-  createPlgDocument,
-  writePlg,
-  type PlgSettings,
-} from '@/core/plg/plg-document'
-import {
-  assignWallsToGroup,
-  createFacadeGroup,
-  detachWallsFromGroup,
-  facadeMemberIdsOnFloor,
-  groupIdsForWall,
-  listFacadeGroups,
-  renameFacadeGroup,
-  STAMP_FACADE_GROUP_ID,
-  stripStampGroupFromPlan,
-} from '@/core/fml/facade-groups'
-import { setNokThicknessCm, setSlabThicknessCm } from '@/core/fml/floor-stack'
-import { bindFloorWallsToRoofs, listFloorsWithRoofPlanes } from '@/core/fml/bind-walls-to-roofs'
-import { overwriteRidgeDakThickness } from '@/core/fml/ridge-walls'
-import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import {
   countExpandableBovenlicht,
   countFoldableBovenlicht,
@@ -58,40 +28,30 @@ import {
   writeBovenlichtPacked,
 } from '@/core/fml/bovenlicht'
 import { canApplyStampToFloor } from '@/core/fml/apply-stamp-to-floor'
-import { setElevationProjection } from '@/core/fml/elevation-views'
 import { useEditorDak } from '@/ui/composables/editor/useEditorDak'
 import { useEditorDimensions } from '@/ui/composables/editor/useEditorDimensions'
 import { useEditorGevels } from '@/ui/composables/editor/useEditorGevels'
 import { useEditorUnderlay } from '@/ui/composables/editor/useEditorUnderlay'
-import { applyJunctionSanitizeToPlan } from '@/core/fml/materialize-wall-junctions'
 import type { RebasePlanToItemRefidResult } from '@/core/fml/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/fml/types'
+import { useEditorBindRoof } from '@/ui/composables/editor/useEditorBindRoof'
+import { useEditorDownload } from '@/ui/composables/editor/useEditorDownload'
+import { useEditorFacadeGroups } from '@/ui/composables/editor/useEditorFacadeGroups'
 import { useEditorInspect } from '@/ui/composables/editor/useEditorInspect'
+import { useEditorOrient } from '@/ui/composables/editor/useEditorOrient'
 import { EDITOR_PLAN_FILE_ACCEPT } from '@/ui/composables/editor/parse-editor-plan-file'
 import { useEditorLoad } from '@/ui/composables/editor/useEditorLoad'
 import { useEditorSessionDefaults } from '@/ui/composables/editor/useEditorSessionDefaults'
-import {
-  cancelPlanChromeDialog,
-  confirmPlanChrome,
-  promptFacadeGroupName,
-  promptFacadeGroupsEdit,
-  promptPlanChromeChoice,
-} from '@/ui/composables/plan-chrome-dialog'
-import { withStackedFacadeWalls } from '@/ui/composables/plan-facade-stacked'
+import { cancelPlanChromeDialog, confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import {
-  formatScaleInputLabel,
-  type ScaleInputUnit,
-} from '@/ui/composables/settings/scale-input-unit'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 
 const { t } = useI18n()
 
 const plan = ref<FloorPlan | null>(null)
 const warnings = ref<ImportWarning[]>([])
 const error = ref<string | null>(null)
-const bindRoofHint = ref<string | null>(null)
-const bindRoofFloorIndex = ref<number | null>(null)
 const fileName = ref<string | null>(null)
 const activeFloorIndex = ref(0)
 const previewCanvasRef = ref<{
@@ -151,8 +111,6 @@ const {
 
 const /** FML-geometrie opacity 0–1; 0 = uit. */ fmlOpacity = ref(0.8)
 const /** Sesssie-only: kamer-/FML-labels verbergen. */ hidePlanText = ref(false)
-const /** Per-floor FML-oriëntatie (viewer heeft geen regenerate-from-detectie). */ orientByFloor =
-    ref<Record<number, FloorOrientState>>({})
 const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
 const userSettings = loadUserSettings()
 const scaleInputUnit = ref<ScaleInputUnit>(userSettings.scaleInputUnit)
@@ -160,10 +118,6 @@ const thicknessPresetCms = ref<number[]>([...userSettings.defaults.thicknessCms]
 
 const floors = computed(() => plan.value?.floors ?? [])
 const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
-
-const inspectFacadeGroups = computed(() =>
-  listFacadeGroups(plan.value).filter((group) => group.id !== STAMP_FACADE_GROUP_ID),
-)
 
 let selectFloorLater: (index: number) => void | Promise<void> = () => {}
 let leaveGevelsLater = (): void => {}
@@ -183,6 +137,8 @@ const gevels = useEditorGevels({
   planUnderlayLayout: computed(() => underlayBox.api?.underlayLayout.value ?? null),
   planUnderlayWidthPx: computed(() => underlayBox.api?.underlayWidthPx.value ?? 0),
   planUnderlayHeightPx: computed(() => underlayBox.api?.underlayHeightPx.value ?? 0),
+  scaleInputUnit,
+  t,
   leaveDakMode: () => dak.leaveDakMode(),
   onLeaveGevels: (wasOn) => {
     const u = underlayBox.api
@@ -217,6 +173,10 @@ const {
   leaveGevelsMode,
   enterGevelsMode,
   syncElevationUnderlayFromPlan,
+  onElevationStoryHeight,
+  onElevationNok,
+  onElevationProjection,
+  onElevationSlab,
 } = gevels
 leaveGevelsLater = leaveGevelsMode
 
@@ -367,103 +327,13 @@ watch(viewerMode, (mode) => {
 
 // --- Inspect facade logic ---
 
-function inspectFacadeChecked(groupId: string): boolean {
-  const hit = lastInspectHit.value
-  if (!hit || hit.kind !== 'wall' || !plan.value) return false
-  return groupIdsForWall(plan.value, hit.id).includes(groupId)
-}
-
-const inspectMemberFacadeGroups = computed(() =>
-  inspectFacadeGroups.value.filter((group) => inspectFacadeChecked(group.id)),
-)
-
-const inspectAddableFacadeGroups = computed(() =>
-  inspectFacadeGroups.value.filter((group) => !inspectFacadeChecked(group.id)),
-)
-
-function refreshInspectFacadeHit(): void {
-  const hit = lastInspectHit.value
-  if (!hit || hit.kind !== 'wall' || !plan.value) return
-  const groupIds = groupIdsForWall(plan.value, hit.id)
-  const ids =
-    groupIds.length === 1
-      ? facadeMemberIdsOnFloor(plan.value, groupIds[0], hit.floorIndex)
-      : undefined
-  lastInspectHit.value = {
-    ...hit,
-    ids: ids && ids.length > 0 ? ids : undefined,
-  }
-  plan.value = { ...plan.value }
-}
-
-async function onInspectFacadeToggle(groupId: string, enabled: boolean): Promise<void> {
-  const hit = lastInspectHit.value
-  if (!hit || hit.kind !== 'wall' || !plan.value) return
-  const selectedIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
-  if (enabled) {
-    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'assign', groupId)
-    assignWallsToGroup(plan.value, groupId, wallIds)
-  } else {
-    const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'detach', groupId)
-    detachWallsFromGroup(plan.value, groupId, wallIds)
-  }
-  refreshInspectFacadeHit()
-}
-
-async function onInspectFacadeChange(event: Event): Promise<void> {
-  const select = event.target as HTMLSelectElement
-  const value = select.value
-  select.value = ''
-  if (!value) return
-  if (value === '__edit__') {
-    await onInspectFacadeEditAll()
-    return
-  }
-  if (value === '__new__') {
-    await onInspectFacadeNew()
-    return
-  }
-  await onInspectFacadeToggle(value, true)
-}
-
-async function onInspectFacadeEditAll(): Promise<void> {
-  const groups = inspectFacadeGroups.value
-  if (groups.length === 0 || !plan.value) return
-  const edited = await promptFacadeGroupsEdit(groups.map((g) => ({ id: g.id, name: g.name })))
-  if (!edited) return
-  let changed = false
-  for (const row of edited) {
-    const current = groups.find((g) => g.id === row.id)
-    if (!current || current.name === row.name) continue
-    renameFacadeGroup(plan.value, row.id, { name: row.name })
-    changed = true
-  }
-  if (changed) plan.value = { ...plan.value }
-}
-
-async function onInspectFacadeNew(): Promise<void> {
-  const hit = lastInspectHit.value
-  if (!hit || hit.kind !== 'wall' || !plan.value) return
-  const selectedIds = hit.ids && hit.ids.length > 0 ? hit.ids : [hit.id]
-  const name = await promptFacadeGroupName()
-  if (name == null) return
-  const wallIds = await withStackedFacadeWalls(plan.value, selectedIds, 'create')
-  const group = createFacadeGroup(plan.value, { name })
-  assignWallsToGroup(plan.value, group.id, wallIds)
-  refreshInspectFacadeHit()
-}
-
-function onInspectFacadeSelectMembers(groupId: string): void {
-  const hit = lastInspectHit.value
-  if (!hit || hit.kind !== 'wall' || !plan.value) return
-  const ids = facadeMemberIdsOnFloor(plan.value, groupId, hit.floorIndex)
-  if (ids.length === 0) return
-  lastInspectHit.value = { ...hit, ids }
-}
-
-async function onInspectFacadeRemove(groupId: string): Promise<void> {
-  await onInspectFacadeToggle(groupId, false)
-}
+const {
+  memberFacadeGroups: inspectMemberFacadeGroups,
+  addableFacadeGroups: inspectAddableFacadeGroups,
+  onFacadeChange: onInspectFacadeChange,
+  onFacadeSelectMembers: onInspectFacadeSelectMembers,
+  onFacadeRemove: onInspectFacadeRemove,
+} = useEditorFacadeGroups({ plan, lastInspectHit })
 
 // --- Session defaults ---
 
@@ -551,57 +421,27 @@ const openingOverflow = computed(() => {
   )
 })
 
-// --- FML export ---
+// --- Download ---
 
-/** Live plan → FML-string alleen bij download (geen computed bij elke mutatie). */
-function buildCurrentFmlText(): string {
-  if (!plan.value) return ''
-  const exportPlan = stripStampGroupFromPlan(plan.value)
-  return buildFmlV3(exportPlan, {
-    name: exportPlan.name,
-    bovenlichtDefault: (_floor, index) => defaultsForFloor(index).bovenlichtDefault,
-    windowBovenlichtDefault: (_floor, index) => defaultsForFloor(index).windowBovenlichtDefault,
-    bovenlichtHeightCm: (_floor, index) => defaultsForFloor(index).bovenlichtHeightCm,
-    bovenlichtGapCm: (_floor, index) => defaultsForFloor(index).bovenlichtGapCm,
-    useMetric: loadUserSettings().unitSystem === 'metric',
-  })
-}
+const { downloadCurrentFml, downloadCurrentPlg } = useEditorDownload({
+  plan,
+  fileName,
+  scaleInputUnit,
+  activeFloorDefaults,
+  defaultsForFloor,
+  flushPendingFieldCommits: flushPreviewFieldCommits,
+  persistActiveUnderlayDrawing,
+})
 
 // --- Orient ---
 
-const activeFmlOrient = computed(
-  () => orientByFloor.value[activeFloorIndex.value] ?? defaultFloorOrient(),
-)
-
-const projectOrientFlipX = computed(() => {
-  const list = floors.value
-  if (list.length === 0) return false
-  return list.every((_, i) => (orientByFloor.value[i] ?? defaultFloorOrient()).flipX)
-})
-
-function applyViewerFloorOrient(op: FloorOrientOp): void {
-  if (!plan.value) return
-  const idx = activeFloorIndex.value
-  const prev = orientByFloor.value[idx] ?? defaultFloorOrient()
-  orientByFloor.value = {
-    ...orientByFloor.value,
-    [idx]: composeFloorOrient(prev, op),
-  }
-  plan.value = applyFloorOrientOp(plan.value, op, idx)
-  underlayMoveMode.value = false
-}
-
-function applyViewerProjectOrient(op: 'flipX'): void {
-  if (!plan.value || plan.value.floors.length === 0) return
-  const nextOrient: Record<number, FloorOrientState> = { ...orientByFloor.value }
-  for (let i = 0; i < plan.value.floors.length; i++) {
-    const prev = nextOrient[i] ?? defaultFloorOrient()
-    nextOrient[i] = composeFloorOrient(prev, op)
-  }
-  orientByFloor.value = nextOrient
-  plan.value = applyFloorOrientOp(plan.value, op, null)
-  underlayMoveMode.value = false
-}
+const {
+  orientByFloor,
+  activeFloorOrient,
+  projectOrientFlipX,
+  applyFloorOrient,
+  applyProjectOrient,
+} = useEditorOrient({ plan, activeFloorIndex, floors, underlayMoveMode })
 
 // --- Stamp ---
 
@@ -614,136 +454,15 @@ function applyStampFromSidebar(): void {
   previewCanvasRef.value?.applyStampToActiveFloor?.()
 }
 
-// --- Elevation events ---
-
-async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
-  if (!plan.value) return
-  const count = countPlanWalls(plan.value, floorIndex)
-  const ok = await confirmPlanChrome({
-    title: t('viewer.defaultsOverwriteTitle'),
-    message: t('viewer.defaultsOverwriteWallFloor', {
-      length: formatScaleInputLabel(cm, scaleInputUnit.value),
-      cm: formatScaleInputLabel(cm, scaleInputUnit.value),
-      count,
-    }),
-    confirmLabel: t('common.apply'),
-    cancelLabel: t('common.cancel'),
-  })
-  if (!ok || !plan.value) return
-  plan.value = overwritePlanWallHeights(plan.value, cm, floorIndex)
-}
-
-function onElevationNok(cm: number): void {
-  if (!plan.value) return
-  plan.value = overwriteRidgeDakThickness(setNokThicknessCm(plan.value, cm), cm)
-}
-
-function onElevationProjection(mode: 'architect' | 'projective'): void {
-  if (!plan.value) return
-  plan.value = setElevationProjection(plan.value, mode)
-}
-
-function onElevationSlab(floorIndex: number, cm: number): void {
-  const floor = plan.value?.floors[floorIndex]
-  if (!plan.value || !floor) return
-  plan.value = setSlabThicknessCm(plan.value, floor.level, cm)
-}
-
 // --- Bind walls to roof ---
-
-const floorsWithRoofPlanes = computed(() => listFloorsWithRoofPlanes(plan.value))
-
-const canBindWallsToRoof = computed(() => {
-  if (!plan.value) return false
-  if (dakMode.value) return resolveBindRoofFloorIndex() != null
-  return floorsWithRoofPlanes.value.length > 0
+const { bindRoofHint, canBindWallsToRoof, bindWallsToRoof } = useEditorBindRoof({
+  plan,
+  activeFloorIndex,
+  dakMode,
+  gevelsMode,
+  canvas: previewCanvasRef,
+  t,
 })
-
-function resolveBindRoofFloorIndex(): number | null {
-  const floorList = floorsWithRoofPlanes.value
-  if (floorList.length === 0) return null
-  if (dakMode.value) {
-    return floorList.some((f) => f.floorIndex === activeFloorIndex.value)
-      ? activeFloorIndex.value
-      : null
-  }
-  if (
-    bindRoofFloorIndex.value != null &&
-    floorList.some((f) => f.floorIndex === bindRoofFloorIndex.value)
-  ) {
-    return bindRoofFloorIndex.value
-  }
-  if (floorList.some((f) => f.floorIndex === activeFloorIndex.value)) {
-    return activeFloorIndex.value
-  }
-  return floorList[0]?.floorIndex ?? null
-}
-
-watch([floorsWithRoofPlanes, activeFloorIndex, dakMode, gevelsMode], () => {
-  const resolved = resolveBindRoofFloorIndex()
-  if (resolved != null) bindRoofFloorIndex.value = resolved
-  else bindRoofFloorIndex.value = null
-  bindRoofHint.value = null
-})
-
-async function bindWallsToRoof(): Promise<void> {
-  if (!plan.value) return
-  const floorList = floorsWithRoofPlanes.value
-  if (floorList.length === 0) return
-
-  let floorIndex: number | null
-  if (dakMode.value) {
-    floorIndex = resolveBindRoofFloorIndex()
-  } else if (floorList.length === 1) {
-    floorIndex = floorList[0]?.floorIndex ?? null
-  } else {
-    const picked = await promptPlanChromeChoice({
-      title: t('viewer.bindWallsToRoof'),
-      message: t('viewer.bindWallsToRoofPickHint'),
-      confirmLabel: t('viewer.bindWallsToRoof'),
-      defaultValue: String(resolveBindRoofFloorIndex() ?? floorList[0]?.floorIndex ?? 0),
-      listItems: floorList.map((floor) => ({
-        id: String(floor.floorIndex),
-        name: floor.name,
-      })),
-    })
-    if (picked == null) return
-    floorIndex = Number(picked)
-    if (!floorList.some((floor) => floor.floorIndex === floorIndex)) return
-    bindRoofFloorIndex.value = floorIndex
-  }
-  if (floorIndex == null) return
-  applyBindWallsToRoof(floorIndex)
-}
-
-function applyBindWallsToRoof(floorIndex: number): void {
-  if (!plan.value) return
-
-  if (dakMode.value && previewCanvasRef.value?.bindWallsToRoof) {
-    const result = previewCanvasRef.value.bindWallsToRoof(floorIndex)
-    if (!result) return
-    bindRoofHint.value = t('viewer.bindWallsToRoofResult', {
-      bound: result.boundJunctions,
-      skipped: result.skippedBlocked + result.skippedUncovered,
-      splits: result.splits,
-    })
-    return
-  }
-
-  previewCanvasRef.value?.flushPendingFieldCommits?.()
-  const result = bindFloorWallsToRoofs(plan.value, floorIndex, {
-    splitCreases: true,
-    splitWalls: splitWallAtT,
-  })
-  bindRoofHint.value = t('viewer.bindWallsToRoofResult', {
-    bound: result.boundJunctions,
-    skipped: result.skippedBlocked + result.skippedUncovered,
-    splits: result.splits,
-  })
-  if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) return
-  previewCanvasRef.value?.pushUndo?.()
-  plan.value = result.plan
-}
 
 // --- Align fixture rebase ---
 
@@ -781,59 +500,6 @@ watch(pendingAlignRebase, async (preview) => {
   if (ok) applyAlignFixtureRebase()
   else dismissAlignFixtureRebase()
 })
-
-// --- Download ---
-
-function buildViewerPlgSettings(): PlgSettings {
-  const settings = loadUserSettings()
-  return {
-    unitSystem: settings.unitSystem,
-    scaleInputUnit: scaleInputUnit.value,
-    planDisplayStyle: settings.fmlViewer.planDisplayStyle ?? 'editor',
-    showCanvasGrid: settings.fmlViewer.showCanvasGrid !== false,
-    // Sessie-defaults dekken alleen de openingshoogtes; dikte-catalogus en
-    // banden komen uit de gebruikersinstellingen.
-    defaults: { ...settings.defaults, ...activeFloorDefaults.value },
-  }
-}
-
-function downloadCurrentFml(): void {
-  flushPreviewFieldCommits()
-  persistActiveUnderlayDrawing()
-  if (!plan.value) return
-  const junctioned = applyJunctionSanitizeToPlan(plan.value)
-  if (junctioned !== plan.value) {
-    plan.value = junctioned
-  }
-  const text = buildCurrentFmlText()
-  if (!text) return
-  const base = fileName.value?.replace(/\.[^.]+$/i, '') || plan.value?.name?.trim() || 'fml-export'
-  downloadFml(text, `${base}.fml`)
-}
-
-function downloadCurrentPlg(): void {
-  flushPreviewFieldCommits()
-  persistActiveUnderlayDrawing()
-  if (!plan.value) return
-  const junctioned = applyJunctionSanitizeToPlan(plan.value)
-  if (junctioned !== plan.value) {
-    plan.value = junctioned
-  }
-  const exportPlan = stripStampGroupFromPlan(plan.value)
-  const base = fileName.value?.replace(/\.[^.]+$/i, '') || exportPlan.name?.trim() || 'plan-export'
-  const leftover = exportPlan.source?.leftover
-  const doc = createPlgDocument({
-    project: {
-      id: `viewer-${base}`,
-      name: exportPlan.name || base,
-      address: '',
-    },
-    settings: buildViewerPlgSettings(),
-    plan: exportPlan,
-    ...(leftover ? { foreign: { fml: leftover } } : {}),
-  })
-  downloadText(writePlg(doc), `${base}.plg`, 'application/json')
-}
 
 function onPlanUpdate(next: FloorPlan, layout?: PreviewUnderlayLayout | null): void {
   plan.value = next
@@ -1102,7 +768,7 @@ defineExpose({
                   :title="t('result.mirrorProjectHint')"
                   :aria-label="t('result.mirrorProject')"
                   :aria-pressed="projectOrientFlipX"
-                  @click="applyViewerProjectOrient('flipX')"
+                  @click="applyProjectOrient('flipX')"
                 >
                   <ToolbeltIcon name="mirror_plan" />
                   <span>{{ t('result.mirrorProject') }}</span>
@@ -1401,11 +1067,11 @@ defineExpose({
                 <button
                   type="button"
                   class="sidebar-icon-btn"
-                  :class="{ 'is-on': activeFmlOrient.flipX }"
+                  :class="{ 'is-on': activeFloorOrient.flipX }"
                   :title="t('result.mirrorVerticalHint')"
                   :aria-label="t('result.mirrorVertical')"
-                  :aria-pressed="activeFmlOrient.flipX"
-                  @click="applyViewerFloorOrient('flipX')"
+                  :aria-pressed="activeFloorOrient.flipX"
+                  @click="applyFloorOrient('flipX')"
                 >
                   <ToolbeltIcon name="mirror_plan" />
                   <span>{{ t('result.mirrorVertical') }}</span>
@@ -1415,7 +1081,7 @@ defineExpose({
                   class="sidebar-icon-btn"
                   :title="t('result.rotate90CcwHint')"
                   :aria-label="t('result.rotate90Ccw')"
-                  @click="applyViewerFloorOrient('rotCcw')"
+                  @click="applyFloorOrient('rotCcw')"
                 >
                   <ToolbeltIcon name="rotate_plan_ccw" />
                   <span>{{ t('result.rotate90Ccw') }}</span>
@@ -1425,7 +1091,7 @@ defineExpose({
                   class="sidebar-icon-btn"
                   :title="t('result.rotate90CwHint')"
                   :aria-label="t('result.rotate90Cw')"
-                  @click="applyViewerFloorOrient('rotCw')"
+                  @click="applyFloorOrient('rotCw')"
                 >
                   <ToolbeltIcon name="rotate_plan_cw" />
                   <span>{{ t('result.rotate90Cw') }}</span>

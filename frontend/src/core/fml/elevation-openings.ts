@@ -23,8 +23,6 @@ import {
   updateOpeningById,
 } from '@/ui/components/plan-canvas-openings'
 
-export { decodePlanOpeningId, encodePlanOpeningId } from './opening-ids'
-
 export type ElevationOpeningWrite = Partial<
   Pick<
     Opening,

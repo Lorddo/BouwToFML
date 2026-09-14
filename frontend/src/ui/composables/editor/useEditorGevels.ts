@@ -1,11 +1,27 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type { FloorPlan } from '@/core/fml/types'
 import { hasElevationFacadeGroups, listElevationFacadeGroups } from '@/core/fml/facade-groups'
-import { elevationViewForGroup, readElevationProjection } from '@/core/fml/elevation-views'
-import { elevationDakThicknessCm, elevationFloorGroups } from '@/core/fml/floor-stack'
+import {
+  elevationViewForGroup,
+  readElevationProjection,
+  setElevationProjection,
+} from '@/core/fml/elevation-views'
+import {
+  elevationDakThicknessCm,
+  elevationFloorGroups,
+  setNokThicknessCm,
+  setSlabThicknessCm,
+} from '@/core/fml/floor-stack'
+import { overwriteRidgeDakThickness } from '@/core/fml/ridge-walls'
+import { countPlanWalls, overwritePlanWallHeights } from '@/core/fml/wall-endpoint-height'
 import { imageDimensions, loadImage } from '@/platform/image'
 import { previewUnderlayLayoutFromDrawing } from '@/core/fml/drawing-to-underlay-layout'
+import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
+import {
+  formatScaleInputLabel,
+  type ScaleInputUnit,
+} from '@/ui/composables/settings/scale-input-unit'
 
 /**
  * Gevels-tab: groep, projectie, hoogte-stack, elevation-onderlegger + actieve underlay.
@@ -16,9 +32,12 @@ export function useEditorGevels(options: {
   planUnderlayLayout: Ref<PreviewUnderlayLayout | null>
   planUnderlayWidthPx: Ref<number>
   planUnderlayHeightPx: Ref<number>
+  scaleInputUnit: Ref<ScaleInputUnit>
   leaveDakMode: () => void
   onLeaveGevels: (wasOn: boolean) => void
   onEnterGevels: () => void
+  // vue-i18n ComposerTranslation — keep loose to avoid coupling the composable to i18n types.
+  t: (key: string, ...args: unknown[]) => string
 }) {
   const gevelsMode = ref(false)
   const elevationGroupId = ref('')
@@ -110,6 +129,46 @@ export function useEditorGevels(options: {
     if (on) leaveGevelsMode()
   })
 
+  // --- Hoogte-stack schrijven (tegenhangers van de computeds hierboven) ---
+
+  /** Verdiepingshoogte overschrijft alle muren op die floor — daarom een confirm. */
+  async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
+    if (!options.plan.value) return
+    const count = countPlanWalls(options.plan.value, floorIndex)
+    const ok = await confirmPlanChrome({
+      title: options.t('viewer.defaultsOverwriteTitle'),
+      message: options.t('viewer.defaultsOverwriteWallFloor', {
+        length: formatScaleInputLabel(cm, options.scaleInputUnit.value),
+        cm: formatScaleInputLabel(cm, options.scaleInputUnit.value),
+        count,
+      }),
+      confirmLabel: options.t('common.apply'),
+      cancelLabel: options.t('common.cancel'),
+    })
+    if (!ok || !options.plan.value) return
+    options.plan.value = overwritePlanWallHeights(options.plan.value, cm, floorIndex)
+  }
+
+  /** Dakdikte is globaal: stack én de nokbalken zelf. */
+  function onElevationNok(cm: number): void {
+    if (!options.plan.value) return
+    options.plan.value = overwriteRidgeDakThickness(
+      setNokThicknessCm(options.plan.value, cm),
+      cm,
+    )
+  }
+
+  function onElevationProjection(mode: 'architect' | 'projective'): void {
+    if (!options.plan.value) return
+    options.plan.value = setElevationProjection(options.plan.value, mode)
+  }
+
+  function onElevationSlab(floorIndex: number, cm: number): void {
+    const floor = options.plan.value?.floors[floorIndex]
+    if (!options.plan.value || !floor) return
+    options.plan.value = setSlabThicknessCm(options.plan.value, floor.level, cm)
+  }
+
   return {
     gevelsMode,
     elevationGroupId,
@@ -128,5 +187,9 @@ export function useEditorGevels(options: {
     leaveGevelsMode,
     enterGevelsMode,
     syncElevationUnderlayFromPlan,
+    onElevationStoryHeight,
+    onElevationNok,
+    onElevationProjection,
+    onElevationSlab,
   }
 }

@@ -1,6 +1,6 @@
 ﻿import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
 import { parseFmlHex } from '@/core/fml/roomtype-catalog'
-import type { FloorItem, FloorLineType, Point2D } from '@/core/fml/types'
+import type { FloorItem, FloorLineType } from '@/core/fml/types'
 import { dimensionLengthCm, setDimensionLengthCentered } from '@/core/fml/offset-dimension-line'
 import { resolveFixtureCatalog } from '@/core/fml/fixture-refid-catalog'
 import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/fml/ridge-walls'
@@ -14,6 +14,11 @@ import { usePlanCanvasOpeningSelection } from './usePlanCanvasOpeningSelection'
 import { usePlanCanvasWallSelection } from './usePlanCanvasWallSelection'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import type { PlanViewContext } from './plan-view-context'
+import type { PlanSnapResolve } from './plan-canvas-snap-resolve'
+import {
+  watchBovenlichtDefaults,
+  type PlanSessionDefaults,
+} from './plan-canvas-session-defaults'
 import { togglePlanSelected } from './plan-canvas-selected'
 import { clampLabelFontSize, lineStrokeColor } from './plan-canvas-render-annotations'
 import type { createPlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
@@ -27,6 +32,8 @@ interface SelectionCoordinatorOptions {
   hitTest: HitTestApi
   selection: PlanCanvasSelectionRefs
   editor: EditorApi
+  /** Gedeelde snap-geometrie; surface-edit gebruikt dezelfde als de teken-tools. */
+  snap: PlanSnapResolve
   draftCommit: DraftCommitScheduler
   syncPlanToParent: (layout?: UnderlayOriginLayout | null) => void
   flushPendingFieldCommits: () => void
@@ -38,10 +45,8 @@ interface SelectionCoordinatorOptions {
   containerRef: Ref<HTMLDivElement | null>
   axisLocked: ComputedRef<boolean>
   areaSurfaceEditEnabled: ComputedRef<boolean>
-  bovenlichtDefault?: Ref<boolean>
-  windowBovenlichtDefault?: Ref<boolean>
-  bovenlichtHeightCm?: Ref<number>
-  bovenlichtGapCm?: Ref<number>
+  /** Wat een nieuwe opening erft van de instellingen. */
+  session: PlanSessionDefaults
   view: PlanViewContext
   ridgeZCm: Ref<number | undefined>
   pendingFixture: Ref<FixturePlaceOption | null>
@@ -62,10 +67,6 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     cancelItemDragPending,
     containerRef,
     axisLocked,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
     ridgeZCm,
     pendingFixture,
     ensureRidgeZDraft,
@@ -75,7 +76,22 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
   const { settingsWallIds, hoveredWallId, hoveredJunctionId, activePlanTool, drawWallKind } =
     selection
 
-  const openingDraftSync = { run: (): void => {} }
+  // Openingen eerst: muur-selectie moet de opening-draft kunnen bijwerken, maar
+  // opening-selectie heeft niets uit muur-selectie nodig. Er was dus geen echte
+  // cyclus, alleen een constructie-orde die de verkeerde kant op stond.
+  const openingSelection = usePlanCanvasOpeningSelection({
+    editor,
+    selection,
+    syncPlanToParent,
+    draftCommit,
+    flushPendingFieldCommits,
+    cancelMoveDragPending,
+    cancelOpeningDragPending,
+    bovenlichtDefault: options.session.bovenlichtDefault,
+    windowBovenlichtDefault: options.session.windowBovenlichtDefault,
+    bovenlichtHeightCm: options.session.bovenlichtHeightCm,
+    bovenlichtGapCm: options.session.bovenlichtGapCm,
+  })
 
   const wallSelection = usePlanCanvasWallSelection({
     editor,
@@ -88,7 +104,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     cancelMoveDragPending,
     cancelDrawWallDrag: () => options.cancelDrawWallDrag(),
     cancelMeasureDrag: () => options.cancelMeasureDrag(),
-    syncOpeningDraftFromSelection: () => openingDraftSync.run(),
+    syncOpeningDraftFromSelection: openingSelection.syncOpeningDraftFromSelection,
     thicknessPresetCms,
   })
 
@@ -155,21 +171,6 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     beginSelectionBoxDrag,
   } = wallSelection
 
-  const openingSelection = usePlanCanvasOpeningSelection({
-    editor,
-    selection,
-    syncPlanToParent,
-    draftCommit,
-    flushPendingFieldCommits,
-    cancelMoveDragPending,
-    cancelOpeningDragPending,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
-  })
-  openingDraftSync.run = () => openingSelection.syncOpeningDraftFromSelection()
-
   const {
     openingSubtypeDraft,
     openingSubtypeMixed,
@@ -210,26 +211,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     deleteSelectedOpenings,
   } = openingSelection
 
-  if (bovenlichtDefault) {
-    watch(bovenlichtDefault, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
-  if (windowBovenlichtDefault) {
-    watch(windowBovenlichtDefault, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
-  if (bovenlichtHeightCm) {
-    watch(bovenlichtHeightCm, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
-  if (bovenlichtGapCm) {
-    watch(bovenlichtGapCm, () => {
-      syncOpeningDraftFromSelection()
-    })
-  }
+  watchBovenlichtDefaults(options.session, syncOpeningDraftFromSelection)
 
   const areaSelection = usePlanCanvasAreaSelection({
     selection,
@@ -245,10 +227,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     selection,
     editor,
     hitTest,
-    resolvePoint: (cm, snapDisabled, extraAxisPoints, excludeSurfaceId) => {
-      // Deferred binding â€” caller sets resolveSurfacePoint after construction.
-      return surfaceEditResolvePoint(cm, snapDisabled, extraAxisPoints, excludeSurfaceId)
-    },
+    resolvePoint: options.snap.resolveSurfacePoint,
     axisLocked,
     syncPlanToParent,
     isRidgeHit: (cm) => {
@@ -257,24 +236,6 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
       return wallId != null && isRidgeWallId(editor.localPlan.value, wallId)
     },
   })
-
-  let surfaceEditResolvePoint: (
-    cm: Point2D,
-    snapDisabled: boolean,
-    extraAxisPoints?: Point2D[],
-    excludeSurfaceId?: string | null,
-  ) => Point2D = (cm) => cm
-
-  function bindResolveSurfacePoint(
-    fn: (
-      cm: Point2D,
-      snapDisabled: boolean,
-      extraAxisPoints?: Point2D[],
-      excludeSurfaceId?: string | null,
-    ) => Point2D,
-  ): void {
-    surfaceEditResolvePoint = fn
-  }
 
   // --- Annotation label/line edit ---
 
@@ -861,7 +822,6 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     // Area / surface
     areaSelection,
     surfaceEdit,
-    bindResolveSurfacePoint,
 
     // Annotation label/line
     toggleSettingsLabel,

@@ -6,6 +6,7 @@ import type { InspectHit } from './plan-inspect'
 import { pickInspectTarget } from './plan-inspect'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import { clearPlanMoveModes } from './plan-canvas-selected'
 
 type SurfaceRec = { id: string; isCutout?: boolean }
 
@@ -26,8 +27,6 @@ export function usePlanCanvasInspect(options: {
   const {
     settingsWallIds,
     settingsOpeningIds,
-    moveWallId,
-    moveOpeningId,
     hoveredWallId,
     hoveredOpeningId,
     hoveredJunctionId,
@@ -64,10 +63,7 @@ export function usePlanCanvasInspect(options: {
       })(),
     })
 
-    moveWallId.value = null
-    moveOpeningId.value = null
-    selection.moveItemId.value = null
-    selection.pinnedJunctionId.value = null
+    clearPlanMoveModes(selection)
     selection.surfaceEditId.value = null
 
     if (!picked) {

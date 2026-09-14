@@ -142,26 +142,6 @@ export function copyUnderlayFromDonor(
   return setElevationViewDrawing(plan, groupId, clone)
 }
 
-/** @deprecated gebruik listUnderlayReuseDonors */
-export function listFloorUnderlayDonors(
-  plan: FloorPlan,
-  excludeIndex: number,
-): UnderlayReuseDonor[] {
-  return listUnderlayReuseDonors(plan, { floorIndex: excludeIndex, elevationGroupId: null }).filter(
-    (donor) => donor.kind === 'floor',
-  )
-}
-
-/** @deprecated gebruik listUnderlayReuseDonors */
-export function listElevationUnderlayDonors(
-  plan: FloorPlan,
-  excludeGroupId: string,
-): UnderlayReuseDonor[] {
-  return listUnderlayReuseDonors(plan, { elevationGroupId: excludeGroupId }).filter(
-    (donor) => donor.kind === 'elevation',
-  )
-}
-
 export function copyFloorUnderlay(
   plan: FloorPlan,
   fromIndex: number,

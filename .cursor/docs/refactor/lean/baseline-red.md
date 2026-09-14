@@ -9,7 +9,7 @@ Dit is de nullijn voor [`editor_kernel_plugins_v2_d0e1ed1b.plan.md`](../../../pl
 
 310 testbestanden, 2453 tests. **9 rood in 4 bestanden.** Suite liep door (geen Windows-hang, duur ~30 s).
 
-Stand na fase 3.0 (pointer-cascade-spec erbij): 311 bestanden, 2499 tests, **dezelfde 9 rood**.
+Verloop van de campagne, telkens **dezelfde 9 rood**: fase 3.0 (pointer-cascade-spec) 311 bestanden / 2499 tests → fase 3 batch 1 (Selected-store) 312 / 2518 → fase 4b (snap + sessie-defaults) 314 / 2531 → fase 1 batch 2 (alias-test viel mee weg) 314 / 2530 → fase 5 (4 specs op de shell-composables) 318 / 2559 → fase 3 batch 2 (tweede lane + gevelgroep) 318 / **2563**.
 
 | # | Test | Status |
 |---|---|---|

@@ -45,6 +45,3 @@ export function resolveRelocatePointerIntent(args: {
   if (wantsRelocate(args.touchNav, args.moveMod)) return 'drag'
   return 'select'
 }
-
-/** @deprecated Alias — gebruik resolveRelocatePointerIntent. */
-export const resolveWallPointerIntent = resolveRelocatePointerIntent

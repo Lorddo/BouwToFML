@@ -1,30 +1,8 @@
 ﻿import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
-import { BOVENLICHT_GAP_CM, BOVENLICHT_HEIGHT_CM } from '@/core/fml/bovenlicht'
 import { resolveDoorAddPreset, resolveWindowAddPreset } from '@/core/fml/opening-add-presets'
-import type { Point2D, Wall } from '@/core/fml/types'
-import { isRidgeWallId } from '@/core/fml/ridge-walls'
-import { listDakSnapWalls } from '@/core/fml/ridge-floor'
-import { ROOF_TOUCH_SLACK_CM } from '@/core/fml/roof-planes'
+import type { Point2D } from '@/core/fml/types'
 import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
-import {
-  JUNCTION_POINT_SNAP_CM,
-  ROOM_DRAW_SNAP_CM,
-  snapDrawWallEndpoint,
-  snapPointToJunctions,
-  snapPointToWallCenters,
-  snapRoomDrawEndPoint,
-  snapToNearbyEndpointAxes,
-  snapToNearbyPointAxes,
-  snapToPolygonGeometry,
-  closedRingSegments,
-  openPolylineSegments,
-} from '@/ui/components/plan-canvas-junctions'
-import {
-  isAllowedDakDrawPoint,
-  dakRoofRingsFromFloor,
-  resolveDakSurfacePoint,
-  resolveRidgeDrawPoint,
-} from '@/ui/components/plan-canvas-dak-draw-snap'
+import { isAllowedDakDrawPoint } from '@/ui/components/plan-canvas-dak-draw-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import { usePlanCanvasAddOpening } from './usePlanCanvasAddOpening'
@@ -42,6 +20,11 @@ import { usePlanCanvasAddFixture } from './usePlanCanvasAddFixture'
 import type { FixturePlaceOption } from '@/core/fml/fixture-refid-catalog'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import type { PlanViewContext } from './plan-view-context'
+import type { PlanSnapResolve } from './plan-canvas-snap-resolve'
+import {
+  resolveBovenlichtDefaults,
+  type PlanSessionDefaults,
+} from './plan-canvas-session-defaults'
 import type { ContentLayout } from './usePlanCanvasViewport'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
 
@@ -51,6 +34,8 @@ interface ToolCoordinatorOptions {
   hitTest: HitTestApi
   selection: PlanCanvasSelectionRefs
   editor: EditorApi
+  /** Gedeelde snap-geometrie; ook de SelectionCoordinator leest deze service. */
+  snap: PlanSnapResolve
   viewport: {
     viewScale: Ref<number>
     contentLayout: Ref<ContentLayout | null>
@@ -65,11 +50,8 @@ interface ToolCoordinatorOptions {
   areaSurfaceEditEnabled: ComputedRef<boolean>
   annotationEditEnabled: ComputedRef<boolean>
   labelsVisible: ComputedRef<boolean>
-  bovenlichtDefault?: Ref<boolean>
-  windowBovenlichtDefault?: Ref<boolean>
-  bovenlichtHeightCm?: Ref<number>
-  bovenlichtGapCm?: Ref<number>
-  bovenlichtPacked?: Ref<boolean>
+  /** Wat een nieuwe opening erft van de instellingen. */
+  session: PlanSessionDefaults
   view: PlanViewContext
   roofOverlayOnPlan?: Ref<boolean>
   ensureRoofOverlayOn?: () => void
@@ -113,11 +95,6 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     areaSurfaceEditEnabled,
     annotationEditEnabled,
     labelsVisible,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
-    bovenlichtPacked,
     underlayMoveMode,
     syncPlanToParent,
     ignoreNextPlanWatch,
@@ -149,9 +126,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
   const pendingFixture = options.pendingFixture
   const ridgeZCm = options.ridgeZCm
 
-  const drawingRoof = computed(
-    () => options.view.mode === 'dak' || activePlanTool.value === 'draw_roof',
-  )
+  const drawingRoof = options.snap.drawingRoof
   const drawWallMode = computed(() => activePlanTool.value === 'draw_wall')
   const drawRoomMode = computed(() => activePlanTool.value === 'draw_room')
   const drawSurfaceMode = computed(
@@ -227,137 +202,8 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     cancelUnderlayMoveDrag: () => {},
   }
 
-  function ridgeDrawSnapWalls(): ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>> {
-    const plan = editor.localPlan.value
-    if (options.view.mode === 'dak' && plan) {
-      return listDakSnapWalls(plan, editor.floorIndex.value)
-    }
-    return editor.walls.value
-  }
-
-  function roofOverlaySnapEnabled(): boolean {
-    if (options.view.mode === 'dak') return false
-    if (options.roofOverlayOnPlan?.value === false) return false
-    const viewer = loadUserSettings().fmlViewer
-    if (options.roofOverlayOnPlan == null && viewer.showRoofOverlayOnPlan === false) return false
-    return viewer.showRoofPlanesOnPlan !== false
-  }
-
-  function snapToRoofPlaneRings(cm: Point2D): Point2D | null {
-    const plan = editor.localPlan.value
-    if (!plan || !roofOverlaySnapEnabled()) return null
-    const rings = dakRoofRingsFromFloor(plan.floors[editor.floorIndex.value])
-    if (rings.length === 0) return null
-    const verts = rings.flat()
-    const segments = rings.flatMap((ring) => closedRingSegments(ring))
-    return snapToPolygonGeometry(cm, verts, segments, ROOF_TOUCH_SLACK_CM)
-  }
-
-  function resolveDrawPoint(cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean): Point2D {
-    if (drawWallKind.value === 'ridge') {
-      return resolveRidgeDrawPoint(cm, {
-        plan: editor.localPlan.value,
-        floorIndex: editor.floorIndex.value,
-        walls: ridgeDrawSnapWalls(),
-        axisAnchor,
-        lockAxis: axisLocked.value,
-        snapDisabled,
-      })
-    }
-    const junction = hitTest.hitTestJunctionAtCm(cm)
-    let point = junction ? { x: junction.cmX, y: junction.cmY } : cm
-    if (!junction) {
-      point = snapToNearbyEndpointAxes(editor.walls.value, [], point)
-      point = snapPointToJunctions(editor.junctions.value, point, JUNCTION_POINT_SNAP_CM)
-      point = snapPointToWallCenters(editor.walls.value, point, JUNCTION_POINT_SNAP_CM)
-      if (!snapDisabled) {
-        const roofSnap = snapToRoofPlaneRings(point)
-        if (roofSnap) point = roofSnap
-      }
-    }
-    if (axisAnchor) {
-      point = snapDrawWallEndpoint(axisAnchor, point, axisLocked.value)
-    }
-    return point
-  }
-
-  function resolveRoomStartPoint(cm: Point2D): Point2D {
-    const junction = hitTest.hitTestJunctionAtCm(cm)
-    if (junction) return { x: junction.cmX, y: junction.cmY }
-    return snapPointToJunctions(editor.junctions.value, cm, ROOM_DRAW_SNAP_CM)
-  }
-
-  function resolveRoomEndPoint(cm: Point2D, start: Point2D): Point2D {
-    return snapRoomDrawEndPoint(editor.junctions.value, editor.walls.value, cm, start)
-  }
-
-  function resolveSurfacePoint(
-    cm: Point2D,
-    snapDisabled: boolean,
-    extraAxisPoints?: Point2D[],
-    excludeSurfaceId?: string | null,
-  ): Point2D {
-    if (snapDisabled) return cm
-    if (drawingRoof.value && editor.localPlan.value) {
-      const extra = extraAxisPoints ?? []
-      if (extra.length === 0) {
-        const junction = hitTest.hitTestJunctionAtCm(cm)
-        const onRidge =
-          junction?.refs.some((ref) => isRidgeWallId(editor.localPlan.value, ref.wallId)) === true
-        if (junction && onRidge) {
-          return resolveDakSurfacePoint(
-            { x: junction.cmX, y: junction.cmY },
-            {
-              plan: editor.localPlan.value,
-              floorIndex: editor.floorIndex.value,
-              extraAxisPoints: extra,
-              lockAxis: axisLocked.value,
-              excludeSurfaceId,
-            },
-          )
-        }
-      }
-      return resolveDakSurfacePoint(cm, {
-        plan: editor.localPlan.value,
-        floorIndex: editor.floorIndex.value,
-        extraAxisPoints: extra,
-        axisAnchor: extra.length > 0 ? extra[extra.length - 1] : undefined,
-        lockAxis: axisLocked.value,
-        excludeSurfaceId,
-      })
-    }
-    const junction = hitTest.hitTestJunctionAtCm(cm)
-    if (junction) return { x: junction.cmX, y: junction.cmY }
-
-    const extra = extraAxisPoints ?? []
-    const rings: Point2D[][] = []
-    for (const surface of editor.surfaces.value) {
-      if (excludeSurfaceId && surface.id === excludeSurfaceId) continue
-      if (surface.poly && surface.poly.length >= 2) {
-        rings.push(surface.poly.map((p) => ({ x: p.x, y: p.y })))
-      }
-    }
-    for (const area of editor.areas.value) {
-      if (area.poly && area.poly.length >= 2) rings.push(area.poly)
-    }
-    const ringVerts = rings.flat()
-    const segments = [
-      ...rings.flatMap((ring) => closedRingSegments(ring)),
-      ...openPolylineSegments(extra),
-    ]
-    const polySnap = snapToPolygonGeometry(
-      cm,
-      [...ringVerts, ...extra],
-      segments,
-      JUNCTION_POINT_SNAP_CM,
-    )
-    if (polySnap) return polySnap
-
-    const wallPoints = editor.walls.value.flatMap((wall) => [wall.a, wall.b])
-    const axis = snapToNearbyPointAxes([...wallPoints, ...ringVerts, ...extra], cm)
-    const junctionSnap = snapPointToJunctions(editor.junctions.value, axis, JUNCTION_POINT_SNAP_CM)
-    return snapPointToWallCenters(editor.walls.value, junctionSnap, JUNCTION_POINT_SNAP_CM)
-  }
+  const { resolveDrawPoint, resolveRoomStartPoint, resolveRoomEndPoint, resolveSurfacePoint } =
+    options.snap
 
   const { wallThicknessDraft, wallHeightDraft, wallBottomZDraft } = options
 
@@ -526,13 +372,8 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
-    bovenlichtPacked,
-    bovenlichtDefaults: computed(() => ({
-      doorDefault: bovenlichtDefault?.value === true,
-      windowDefault: windowBovenlichtDefault?.value === true,
-      heightCm: bovenlichtHeightCm?.value ?? BOVENLICHT_HEIGHT_CM,
-      gapCm: bovenlichtGapCm?.value ?? BOVENLICHT_GAP_CM,
-    })),
+    bovenlichtPacked: options.session.bovenlichtPacked,
+    bovenlichtDefaults: resolveBovenlichtDefaults(options.session),
     beforePlace: () => {
       cancelSelectionBoxDrag()
       cancelMoveDragPending()
@@ -704,12 +545,6 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     addFixture,
     nulpunt,
     underlayMove,
-
-    // Snap resolvers
-    resolveDrawPoint,
-    resolveRoomStartPoint,
-    resolveRoomEndPoint,
-    resolveSurfacePoint,
 
     // Cancellers / orchestrators
     drawMeasureCancels,

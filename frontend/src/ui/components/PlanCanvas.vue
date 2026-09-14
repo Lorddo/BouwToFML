@@ -380,11 +380,13 @@ const interaction = usePlanCanvasInteraction({
   spacePressed,
   thicknessPickTier: thicknessPickTierRef,
   thicknessPresetCms: thicknessPresetCmsRef,
-  bovenlichtDefault: bovenlichtDefaultRef,
-  windowBovenlichtDefault: windowBovenlichtDefaultRef,
-  bovenlichtHeightCm: bovenlichtHeightCmRef,
-  bovenlichtGapCm: bovenlichtGapCmRef,
-  bovenlichtPacked: bovenlichtPackedRef,
+  session: {
+    bovenlichtDefault: bovenlichtDefaultRef,
+    windowBovenlichtDefault: windowBovenlichtDefaultRef,
+    bovenlichtHeightCm: bovenlichtHeightCmRef,
+    bovenlichtGapCm: bovenlichtGapCmRef,
+    bovenlichtPacked: bovenlichtPackedRef,
+  },
   getUnderlayLayout: () => {
     // Origin mag (0,0) zijn â€” object is altijd truthy; alleen null/undefined blokkeert.
     if (props.cmOrigin == null) {

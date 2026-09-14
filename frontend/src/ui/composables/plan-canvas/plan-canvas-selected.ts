@@ -23,10 +23,16 @@ export type PlanSelectedKind =
 
 export interface PlanSelectRequest {
   kind: PlanSelectedKind
-  /** Settings-paneel; meerdere ids alleen bij muur en opening. */
+  /**
+   * Settings-paneel; meerdere ids alleen bij muur en opening.
+   * Bij `facadeGroup` zijn dit de **leden-muren op deze verdieping** — een
+   * gevelgroep is geen broertje van de muur maar een muurselectie mét markering.
+   */
   settingsIds?: string[]
   /** Verplaats-doel. Bij de knoop is dit `pinnedJunctionId` (wacht op precise). */
   moveId?: string | null
+  /** Alleen `kind: 'facadeGroup'`: welke groep `settingsIds` beschrijft. */
+  groupId?: string | null
 }
 
 /**
@@ -50,6 +56,20 @@ export function clearPlanSelected(selection: PlanCanvasSelectionRefs): void {
   selection.settingsSurfaceId.value = null
   selection.settingsLabelId.value = null
   selection.settingsLineId.value = null
+  selection.moveDimensionId.value = null
+}
+
+/**
+ * Verlaat elke verplaats-modus, maar houd de settings-selectie. Nodig waar het
+ * paneel open mag blijven terwijl de grepen weg moeten — inspect-modus en elke
+ * inspect-pick. `surfaceEditId` en de draw-punten horen bij ToolSession en
+ * blijven daarom bij de aanroeper.
+ */
+export function clearPlanMoveModes(selection: PlanCanvasSelectionRefs): void {
+  selection.moveWallId.value = null
+  selection.pinnedJunctionId.value = null
+  selection.moveOpeningId.value = null
+  selection.moveItemId.value = null
   selection.moveDimensionId.value = null
 }
 
@@ -94,7 +114,8 @@ export function setPlanSelected(
       selection.settingsLineId.value = first
       break
     case 'facadeGroup':
-      selection.settingsFacadeGroupId.value = first
+      selection.settingsWallIds.value = [...ids]
+      selection.settingsFacadeGroupId.value = next.groupId ?? null
       break
     case 'dimension':
       selection.moveDimensionId.value = moveId ?? first

@@ -38,15 +38,6 @@ export type BindWallsToRoofsResult = {
 
 type Point3 = Point2D & { z: number }
 
-type JunctionRef = { wallId: string; end: WallEnd }
-
-type Junction = {
-  id: string
-  x: number
-  y: number
-  refs: JunctionRef[]
-}
-
 function hypot2(ax: number, ay: number, bx: number, by: number): number {
   return Math.hypot(bx - ax, by - ay)
 }
@@ -87,46 +78,6 @@ function distToPolyEdges(point: Point2D, poly: readonly Point2D[]): number {
 
 function samePoint(a: Point2D, b: Point2D, slackCm = ROOF_SAME_POINT_CM): boolean {
   return hypot2(a.x, a.y, b.x, b.y) <= slackCm
-}
-
-function junctionKey(point: Point2D, epsCm = 2): string {
-  const q = 1 / epsCm
-  return `${Math.round(point.x * q)},${Math.round(point.y * q)}`
-}
-
-function stableJunctionId(refs: JunctionRef[]): string {
-  return [...refs]
-    .sort((a, b) => a.wallId.localeCompare(b.wallId) || a.end.localeCompare(b.end))
-    .map((ref) => `${ref.wallId}:${ref.end}`)
-    .join('|')
-}
-
-/** Hartlijn-knopen van vloer-muren (geen nok). */
-export function buildFloorJunctions(walls: ReadonlyArray<Wall>): Junction[] {
-  const map = new Map<string, Junction>()
-  for (const wall of walls) {
-    for (const end of ['a', 'b'] as const) {
-      const point = wall[end]
-      const key = junctionKey(point)
-      const existing = map.get(key)
-      if (!existing) {
-        map.set(key, {
-          id: '',
-          x: point.x,
-          y: point.y,
-          refs: [{ wallId: wall.id, end }],
-        })
-        continue
-      }
-      existing.refs.push({ wallId: wall.id, end })
-      existing.x = (existing.x * (existing.refs.length - 1) + point.x) / existing.refs.length
-      existing.y = (existing.y * (existing.refs.length - 1) + point.y) / existing.refs.length
-    }
-  }
-  return Array.from(map.values()).map((junction) => ({
-    ...junction,
-    id: stableJunctionId(junction.refs),
-  }))
 }
 
 function surfaceRing(surface: FloorSurface): Point2D[] {

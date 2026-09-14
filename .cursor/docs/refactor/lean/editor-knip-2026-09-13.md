@@ -5,6 +5,8 @@ Baseline: [`baseline-red.md`](baseline-red.md). Plan: [`editor_kernel_plugins_v2
 
 ## Samenvatting
 
+> **Status: fase 1 afgerond.** Batch 1 (3 bestanden) en batch 2 (5 exports) zijn uitgevoerd — zie onderaan.
+
 - **3 bestanden verwijderbaar** (categorie A, ~450 regels) — 1 vierde vondst bewust behouden
 - **136 ongebruikte exports + 123 ongebruikte types**, waarvan **75 barrel-re-exports** — triage, geen bulk
 - **1 deprecated alias** met alleen een eigen test eromheen
@@ -72,4 +74,21 @@ De drie categorie-A-bestanden zijn via `git rm` verwijderd (deletie gestaged, pa
 - [x] `npx vue-tsc -b` — `src/` schoon, geen nieuwe fouten
 - [x] `npx vitest run` — 310 bestanden, 2453 tests, **9 rood**, exact de bekende lijst uit [`baseline-red.md`](baseline-red.md)
 
-Nog te doen: **batch 2** = de vier categorie-B-posten (`listFloorUnderlayDonors`, `listElevationUnderlayDonors`, `buildFloorJunctions`, de re-exportregel in `elevation-openings.ts`) plus de deprecated alias `resolveWallPointerIntent`, waarvoor `plan-canvas-mods.spec.ts` mee moet.
+## Batch 2 — uitgevoerd (2026-09-14)
+
+Alle vijf posten weg. Vóór het verwijderen opnieuw op nul lezers gecontroleerd; alleen bij de re-export bleek de check nodig — `facade-elevation.ts:48` importeert `encodePlanOpeningId`, maar rechtstreeks uit `opening-ids.ts`, dus de doorgeefregel in `elevation-openings.ts` was inderdaad dood.
+
+| Post | Bestand | Gevolg |
+|---|---|---|
+| `listFloorUnderlayDonors` + `listElevationUnderlayDonors` | `copy-underlay-drawing.ts` | 20 regels; beide waren `@deprecated` filters over `listUnderlayReuseDonors` |
+| `buildFloorJunctions` | `bind-walls-to-roofs.ts` | 28 regels, **plus 24 regels aanhang** |
+| re-export `decodePlanOpeningId` / `encodePlanOpeningId` | `elevation-openings.ts` | 1 regel |
+| `resolveWallPointerIntent` (alias) | `plan-canvas-mods.ts` | 3 regels + 6 in `plan-canvas-mods.spec.ts` |
+
+`buildFloorJunctions` was de enige lezer van een hele knoop-cluster: de types `Junction` / `JunctionRef` en de helpers `junctionKey` / `stableJunctionId`. Die stonden tussen de dak-geometrie en zien er levend uit; **de typecheck wees ze zelf aan** zodra de functie weg was. Zelfde patroon als bij de snap-extractie in fase 4b: de compiler is hier de betrouwbaarder zoeker dan grep.
+
+- [x] `npx vue-tsc -b` — nul fouten
+- [x] `npx vitest run` — 314 bestanden, **2530** tests (was 2531; de alias-test verdween mee), **dezelfde 9 rood**
+- [x] `npx knip` — exports 136 → 131; het enige "dode bestand" is de bewust bewaarde `test-plan-fixtures.ts`
+
+**Fase 1 klaar.** Wat bewust blijft liggen: de 75 barrel-re-exports, de resterende ~50 exports en 123 types, en de vier categorie-F-posten.

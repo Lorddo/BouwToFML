@@ -1,43 +1,31 @@
 ﻿import { computed, ref, type ComputedRef, type Ref } from 'vue'
-import type { Point2D } from '@/core/fml/types'
-import type { ItemResizeSide } from './item-resize-handles'
-import type { ItemRotateCorner } from './item-rotate-handles'
-import type { PlanOpeningHandleKind, PlanOpeningResizeSide } from './plan-canvas-opening-handles'
 import { PLAN_CANVAS_CHROME_SELECTOR } from './plan-canvas-gestures'
-import { isSettingsMod } from './plan-canvas-mods'
 import { allowsFmlStickyHit, type FmlStickySelectKind } from './plan-canvas-sticky-select'
 import { planStickySelectKind } from './plan-canvas-selected'
 import type { PlanViewContext } from './plan-view-context'
-import { runPlanHitCascade } from './plan-canvas-hit-cascade'
+import {
+  runPlanHitCascade,
+  type PlanHitCascadeActions,
+  type PlanHitCascadeModes,
+} from './plan-canvas-hit-cascade'
+import {
+  dispatchPlanToolDblClick,
+  dispatchPlanToolDown,
+  dispatchPlanToolHover,
+  resolvePlanToolCursor,
+  type PlanToolEntry,
+} from './plan-canvas-tool-registry'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
-import type { RenderJunction } from './plan-canvas-render-types'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 
-export interface PointerToolModes {
-  drawWallMode: ComputedRef<boolean>
-  drawRoomMode: ComputedRef<boolean>
-  drawSurfaceMode: ComputedRef<boolean>
-  drawLabelMode: ComputedRef<boolean>
-  drawLineMode: ComputedRef<boolean>
-  addDoorMode: ComputedRef<boolean>
-  addWindowMode: ComputedRef<boolean>
-  measureMode: ComputedRef<boolean>
-  nulpuntMode: ComputedRef<boolean>
-  underlayMoveMode: ComputedRef<boolean>
-  selectionBoxMode: ComputedRef<boolean>
-  areaSurfaceEditEnabled: ComputedRef<boolean>
-  annotationEditEnabled: ComputedRef<boolean>
-  labelsVisible: ComputedRef<boolean>
-  inspectMode: ComputedRef<boolean>
-  addFixtureMode: ComputedRef<boolean>
-  settingsMod: Ref<boolean> | ComputedRef<boolean>
-  moveMod: Ref<boolean> | ComputedRef<boolean>
-  touchNav: Ref<boolean> | ComputedRef<boolean>
-  manualDimensionsEnabled?: ComputedRef<boolean>
-  hitTestDimensionAtCm?: (cm: Point2D) => string | null
-  hitTestDimensionEndpointAtCm?: (cm: Point2D) => { id: string; end: 'a' | 'b' } | null
-}
+/**
+ * Sinds de tool-registry leest de pointer geen tool-booleans meer: de tien
+ * `drawXMode` / `addXMode`-vlaggen zaten in `tools`. Wat overblijft is precies
+ * wat de select-cascade nodig heeft, dus het is één contract geworden in plaats
+ * van twee lijsten die synchroon gehouden moesten worden.
+ */
+export type PointerToolModes = PlanHitCascadeModes
 
 export interface PointerDragState {
   draggingWall: ComputedRef<boolean> | Ref<boolean>
@@ -57,75 +45,19 @@ export interface PointerDragState {
   draggingAreaLabel?: ComputedRef<boolean> | Ref<boolean>
 }
 
-export interface PointerActions {
+/**
+ * Wat de pointer zélf doet: pannen en de drie move-drafts afmaken. De
+ * teken-tools zitten in `tools`; al het overige is cascade-werk.
+ */
+interface PointerOwnActions {
   beginPanDrag: (event: MouseEvent) => void
-  onDrawWallClick: (event: MouseEvent) => void
-  updateDrawWallHover: (event: MouseEvent) => void
-  clearDrawWallHover: () => void
-  beginMeasure: (event: MouseEvent) => void
-  updateMeasureHover: (event: MouseEvent) => void
-  clearMeasureHover: () => void
-  onDrawRoomClick: (event: MouseEvent) => void
-  updateDrawRoomHover: (event: MouseEvent) => void
-  clearDrawRoomHover: () => void
-  onDrawSurfaceClick: (event: MouseEvent) => void
-  onDrawSurfaceDblClick: (event: MouseEvent) => void
-  updateDrawSurfaceHover: (event: MouseEvent) => void
-  clearDrawSurfaceHover: () => void
-  onDrawLabelClick: (event: MouseEvent) => void
-  onDrawLineClick: (event: MouseEvent) => void
-  updateDrawLineHover: (event: MouseEvent) => void
-  clearDrawLineHover: () => void
-  onSurfaceEditPointerDown: (event: MouseEvent) => boolean
-  beginNulpuntDrag: (event: MouseEvent) => boolean
-  beginUnderlayMoveDrag: (event: MouseEvent) => boolean
-  placeDoor: (wallId: string, cm: Point2D) => string | null
-  placeWindow: (wallId: string, cm: Point2D) => string | null
-  startJunctionDrag: (junction: RenderJunction, event: MouseEvent) => void
-  onJunctionMoveClick: (junction: RenderJunction, event: MouseEvent) => boolean
-  updateJunctionMoveHover: (event: MouseEvent) => void
-  beginSelectionBoxDrag: (event: MouseEvent) => void
-  toggleSettingsOpening: (openingId: string) => void
-  toggleSettingsArea: (areaId: string) => void
-  selectSettingsArea: (areaId: string) => void
-  toggleSettingsSurface: (surfaceId: string) => void
-  beginAreaLabelDrag: (kind: 'area' | 'surface', id: string, event: MouseEvent) => void
-  startAreaLabelDragPending: (kind: 'area' | 'surface', id: string, event: MouseEvent) => void
-  selectRoofSurface?: (surfaceId: string, mutate: boolean) => void
-  toggleSettingsLabel: (labelId: string) => void
-  toggleSettingsLine: (lineId: string) => void
-  toggleSettingsWall: (wallId: string, cm: Point2D) => void
-  /** Left-klik: Ã©Ã©n muur selecteren (settings + verplaatsen). */
-  selectWall: (wallId: string, cm: Point2D) => void
-  toggleSettingsJunction: (junctionId: string) => void
-  clearSelection: () => void
-  clearOpeningSelectionState: () => void
-  beginOpeningDrag: (openingId: string, event: MouseEvent) => void
-  startOpeningDragPending: (openingId: string, event: MouseEvent) => void
-  hitOpeningHandle: (cm: Point2D) => PlanOpeningHandleKind | null
-  beginOpeningResize: (openingId: string, side: PlanOpeningResizeSide, event: MouseEvent) => void
-  onOpeningMoveClick: (openingId: string, event: MouseEvent) => boolean
-  updateOpeningMoveHover: (event: MouseEvent) => void
-  beginWallDrag: (wallId: string, event: MouseEvent) => void
-  startMoveDragPending: (wallId: string, event: MouseEvent) => void
-  onWallMoveClick: (wallId: string, event: MouseEvent) => boolean
-  updateWallMoveHover: (event: MouseEvent) => void
   stopContentGroupDrag: () => void
-  applyInspectPick: (cm: Point2D) => void
-  updateInspectHover: (event: MouseEvent) => void
-  placeFixture: (cm: Point2D, opts?: { snapDisabled?: boolean }) => string | null
-  startItemDragPending: (guid: string, event: MouseEvent) => void
-  beginItemDrag: (guid: string, event: MouseEvent) => void
-  toggleSettingsItem: (guid: string) => void
-  cancelItemDragPending: () => void
-  hitItemResizeHandle: (cm: Point2D) => ItemResizeSide | null
-  beginItemResize: (guid: string, side: ItemResizeSide, event: MouseEvent) => void
-  hitItemRotateHandle: (cm: Point2D) => ItemRotateCorner | null
-  beginItemRotate: (guid: string, corner: ItemRotateCorner, event: MouseEvent) => void
-  startDimensionDragPending: (id: string, event: MouseEvent) => void
-  beginDimensionDrag: (id: string, event: MouseEvent) => void
-  beginDimensionEndpointDrag: (id: string, end: 'a' | 'b', event: MouseEvent) => void
+  updateWallMoveHover: (event: MouseEvent) => void
+  updateJunctionMoveHover: (event: MouseEvent) => void
+  updateOpeningMoveHover: (event: MouseEvent) => void
 }
+
+export type PointerActions = PlanHitCascadeActions & PointerOwnActions
 
 export function usePlanCanvasPointer(options: {
   hitTest: HitTestApi
@@ -135,12 +67,24 @@ export function usePlanCanvasPointer(options: {
   modes: PointerToolModes
   drag: PointerDragState
   actions: PointerActions
+  /** Geordende tool-lijst; de volgorde ís de prioriteit. */
+  tools: ReadonlyArray<PlanToolEntry>
   spacePressed: Ref<boolean>
   thicknessPickTier: Ref<FmlThicknessBand | null>
   emit: (event: 'thicknessWallPick', payload: string) => void
 }) {
-  const { hitTest, selection, view, modes, drag, actions, spacePressed, thicknessPickTier, emit } =
-    options
+  const {
+    hitTest,
+    selection,
+    view,
+    modes,
+    drag,
+    actions,
+    tools,
+    spacePressed,
+    thicknessPickTier,
+    emit,
+  } = options
 
   const {
     moveWallId,
@@ -151,7 +95,6 @@ export function usePlanCanvasPointer(options: {
     hoveredItemId,
     hoveredOpeningId,
     hoveredJunctionId,
-    activePlanTool,
     pinnedJunctionId,
   } = selection
 
@@ -159,29 +102,11 @@ export function usePlanCanvasPointer(options: {
   const hoverAreaLabel = ref(false)
 
   const canvasCursor = computed(() => {
-    if (modes.measureMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
-    if (modes.nulpuntMode.value && !spacePressed.value && !thicknessPickTier.value) {
-      return drag.isNulpuntDragging() ? 'grabbing' : 'grab'
+    if (!spacePressed.value && !thicknessPickTier.value) {
+      const toolCursor = resolvePlanToolCursor(tools)
+      if (toolCursor) return toolCursor
     }
-    if (modes.underlayMoveMode.value && !spacePressed.value && !thicknessPickTier.value) {
-      return drag.isUnderlayMoveDragging() ? 'grabbing' : 'grab'
-    }
-    if (modes.drawWallMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
-    if (modes.drawRoomMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
-    if (modes.drawSurfaceMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
-    if (modes.drawLabelMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
-    if (modes.drawLineMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
     if (selection.surfaceEditId.value && !spacePressed.value) return 'crosshair'
-    if (modes.addDoorMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
-    if (modes.addWindowMode.value && !spacePressed.value && !thicknessPickTier.value)
-      return 'crosshair'
     if (modes.selectionBoxMode.value && !spacePressed.value && !thicknessPickTier.value)
       return 'crosshair'
     if (thicknessPickTier.value) return 'crosshair'
@@ -276,76 +201,7 @@ export function usePlanCanvasPointer(options: {
       return
     }
 
-    if (modes.inspectMode.value) {
-      actions.applyInspectPick(cm)
-      return
-    }
-
-    if (modes.drawWallMode.value) {
-      actions.onDrawWallClick(event)
-      return
-    }
-
-    if (modes.measureMode.value) {
-      actions.beginMeasure(event)
-      return
-    }
-
-    if (modes.nulpuntMode.value) {
-      actions.beginNulpuntDrag(event)
-      return
-    }
-
-    if (modes.underlayMoveMode.value) {
-      actions.beginUnderlayMoveDrag(event)
-      return
-    }
-
-    if (modes.drawRoomMode.value) {
-      actions.onDrawRoomClick(event)
-      return
-    }
-
-    if (modes.drawSurfaceMode.value) {
-      actions.onDrawSurfaceClick(event)
-      return
-    }
-
-    if (modes.drawLabelMode.value) {
-      actions.onDrawLabelClick(event)
-      return
-    }
-
-    if (modes.drawLineMode.value) {
-      actions.onDrawLineClick(event)
-      return
-    }
-
-    if (selection.surfaceEditId.value && modes.areaSurfaceEditEnabled.value) {
-      if (actions.onSurfaceEditPointerDown(event)) return
-    }
-
-    if (modes.addDoorMode.value || modes.addWindowMode.value) {
-      const wallId = hitTest.hitTestWallAtCm(cm)
-      if (!wallId) return
-      const openingId = modes.addDoorMode.value
-        ? actions.placeDoor(wallId, cm)
-        : actions.placeWindow(wallId, cm)
-      if (openingId) activePlanTool.value = null
-      return
-    }
-
-    if (modes.addFixtureMode.value) {
-      const guid = actions.placeFixture(cm, {
-        snapDisabled: isSettingsMod(event, modes.settingsMod.value),
-      })
-      if (guid) {
-        settingsItemId.value = guid
-        moveItemId.value = null
-        activePlanTool.value = null
-      }
-      return
-    }
+    if (dispatchPlanToolDown(tools, cm, event)) return
 
     runPlanHitCascade({
       cm,
@@ -391,35 +247,7 @@ export function usePlanCanvasPointer(options: {
     ) {
       return
     }
-    if (modes.inspectMode.value) {
-      actions.updateInspectHover(event)
-      return
-    }
-    if (modes.measureMode.value) {
-      actions.updateMeasureHover(event)
-      return
-    }
-    if (modes.drawWallMode.value) {
-      actions.updateDrawWallHover(event)
-      return
-    }
-    if (modes.drawRoomMode.value) {
-      actions.updateDrawRoomHover(event)
-      return
-    }
-    if (modes.drawSurfaceMode.value) {
-      actions.updateDrawSurfaceHover(event)
-      return
-    }
-    if (modes.drawLineMode.value) {
-      actions.updateDrawLineHover(event)
-      return
-    }
-    actions.clearMeasureHover()
-    actions.clearDrawWallHover()
-    actions.clearDrawRoomHover()
-    actions.clearDrawSurfaceHover()
-    actions.clearDrawLineHover()
+    if (dispatchPlanToolHover(tools, event)) return
 
     pendingMoveEvent = event
     if (moveRaf != null) return
@@ -494,9 +322,7 @@ export function usePlanCanvasPointer(options: {
     onWrapPointerMove,
     cancelPendingMove,
     onWrapDblClick(event: MouseEvent): void {
-      if (modes.drawSurfaceMode.value) {
-        actions.onDrawSurfaceDblClick(event)
-      }
+      dispatchPlanToolDblClick(tools, event)
     },
   }
 }

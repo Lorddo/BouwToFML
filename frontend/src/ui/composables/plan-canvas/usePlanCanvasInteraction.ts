@@ -7,6 +7,7 @@ import type { InspectHit } from './plan-inspect'
 import { createPlanCanvasEditorKeyHandlers } from './plan-canvas-editor-keyboard'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import { usePlanCanvasInspect } from './usePlanCanvasInspect'
+import { clearPlanMoveModes } from './plan-canvas-selected'
 import { usePlanCanvasAreaLabelDrag } from './usePlanCanvasAreaLabelDrag'
 import type { MeasureDrawMode } from './usePlanCanvasMeasure'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
@@ -20,6 +21,9 @@ import {
 } from './plan-canvas-wall-internal-measure'
 import { usePlanCanvasPanZoom } from './usePlanCanvasPanZoom'
 import { usePlanCanvasPointer } from './usePlanCanvasPointer'
+import type { PlanToolEntry } from './plan-canvas-tool-registry'
+import { createPlanToolEntries } from './plan-canvas-tool-entries'
+import type { PlanSessionDefaults } from './plan-canvas-session-defaults'
 import { filterManualDimensions, readPlanSlices } from '@/core/fml/plan-slices'
 import { hitTestDimensionAtCm } from '@/core/fml/offset-dimension-line'
 import { usePlanCanvasWallDrag } from './usePlanCanvasWallDrag'
@@ -36,6 +40,7 @@ export type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 export { createPlanCanvasSelection } from './plan-canvas-selection'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
 import type { PlanViewContext } from './plan-view-context'
+import { createPlanSnapResolve } from './plan-canvas-snap-resolve'
 
 import type { ContentLayout } from './usePlanCanvasViewport'
 import type { UnderlayOriginLayout } from '@/core/fml/translate-floor-plan'
@@ -69,11 +74,8 @@ export function usePlanCanvasInteraction(options: {
   shiftPressed: Ref<boolean>
   spacePressed: Ref<boolean>
   thicknessPickTier: Ref<FmlThicknessBand | null>
-  bovenlichtDefault?: Ref<boolean>
-  windowBovenlichtDefault?: Ref<boolean>
-  bovenlichtHeightCm?: Ref<number>
-  bovenlichtGapCm?: Ref<number>
-  bovenlichtPacked?: Ref<boolean>
+  /** Wat een nieuwe opening erft van de instellingen. */
+  session: PlanSessionDefaults
   getUnderlayLayout?: () => UnderlayOriginLayout | null
   setFmlNulpuntImageCm?: (point: Point2D | null) => void
   underlayMoveMode?: Ref<boolean>
@@ -109,11 +111,6 @@ export function usePlanCanvasInteraction(options: {
     shiftPressed,
     spacePressed,
     thicknessPickTier,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
-    bovenlichtPacked,
     getUnderlayLayout,
     setFmlNulpuntImageCm,
     underlayMoveMode: underlayMoveModeProp,
@@ -188,6 +185,19 @@ export function usePlanCanvasInteraction(options: {
 
   const axisLockMod = ref(false)
   const axisLocked = computed(() => shiftPressed.value || axisLockMod.value)
+
+  // Gedeelde snap-geometrie: één service voor de teken-tools én surface-edit.
+  // Hier gebouwd omdat beide coördinatoren hem lezen; dat maakte de deferred
+  // `bindResolveSurfacePoint` overbodig.
+  const snap = createPlanSnapResolve({
+    editor,
+    hitTest,
+    view: options.view,
+    drawWallKind: selection.drawWallKind,
+    activePlanTool: selection.activePlanTool,
+    axisLocked,
+    roofOverlayOnPlan: options.roofOverlayOnPlan,
+  })
 
   // Shared refs owned here (needed by both coordinators)
   const ridgeZCm = ref<number | undefined>(undefined)
@@ -289,6 +299,7 @@ export function usePlanCanvasInteraction(options: {
     hitTest,
     selection,
     editor,
+    snap,
     draftCommit,
     syncPlanToParent,
     flushPendingFieldCommits,
@@ -300,10 +311,7 @@ export function usePlanCanvasInteraction(options: {
     containerRef: options.containerRef,
     axisLocked,
     areaSurfaceEditEnabled,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
+    session: options.session,
     view: options.view,
     ridgeZCm,
     pendingFixture,
@@ -317,6 +325,7 @@ export function usePlanCanvasInteraction(options: {
     hitTest,
     selection,
     editor,
+    snap,
     viewport: {
       viewScale: viewport.viewScale,
       contentLayout: viewport.contentLayout,
@@ -331,11 +340,7 @@ export function usePlanCanvasInteraction(options: {
     areaSurfaceEditEnabled,
     annotationEditEnabled,
     labelsVisible,
-    bovenlichtDefault,
-    windowBovenlichtDefault,
-    bovenlichtHeightCm,
-    bovenlichtGapCm,
-    bovenlichtPacked,
+    session: options.session,
     view: options.view,
     roofOverlayOnPlan: options.roofOverlayOnPlan,
     ensureRoofOverlayOn: options.ensureRoofOverlayOn,
@@ -397,11 +402,7 @@ export function usePlanCanvasInteraction(options: {
     deactivateDrawTool,
     acceptDrawDraft,
     confirmNulpuntBake,
-    resolveSurfacePoint,
   } = toolCoord
-
-  // Bind the resolveSurfacePoint into surfaceEdit (deferred circular dep)
-  selCoord.bindResolveSurfacePoint(resolveSurfacePoint)
 
   const {
     selectedFacadeGroupPanel,
@@ -618,12 +619,9 @@ export function usePlanCanvasInteraction(options: {
     if (!on) return
     selection.activePlanTool.value = null
     underlayMoveMode.value = false
-    selection.moveWallId.value = null
-    selection.moveOpeningId.value = null
-    selection.moveDimensionId.value = null
+    clearPlanMoveModes(selection)
     selection.hoveredDimensionId.value = null
     selection.hoveredDimensionEnd.value = null
-    selection.pinnedJunctionId.value = null
     selection.surfaceEditId.value = null
     selection.roofPolyMutate.value = false
     selection.drawSurfacePoints.value = null
@@ -642,6 +640,49 @@ export function usePlanCanvasInteraction(options: {
     underlayMove.cancelUnderlayMoveDrag()
   })
 
+  // --- Tool-registry ---
+  //
+  // De volgorde ís de prioriteit; één-op-één overgenomen uit de oude reeks
+  // `if (mode.value)`-takken in de pointer. Verschuif hier niets zonder
+  // plan-canvas-pointer-cascade.spec.ts erbij.
+
+  const isSlicerEditing = (): boolean =>
+    options.measureDrawMode?.value === 'slicer' && options.slicerEditMode?.value === true
+
+  const planTools: PlanToolEntry[] = createPlanToolEntries({
+    selection,
+    hitTest,
+    modes: {
+      inspectMode,
+      drawWallMode,
+      measureMode,
+      nulpuntMode,
+      underlayMoveMode,
+      drawRoomMode,
+      drawSurfaceMode,
+      drawLabelMode,
+      drawLineMode,
+      addDoorMode,
+      addWindowMode,
+      addFixtureMode,
+      areaSurfaceEditEnabled,
+      settingsMod,
+    },
+    isSlicerEditing,
+    inspect: { applyInspectPick, updateInspectHover },
+    drawWall,
+    measure,
+    nulpunt,
+    underlayMove,
+    drawRoom,
+    drawSurface,
+    drawLabel,
+    drawLine,
+    surfaceEdit: { onSurfaceEditPointerDown: surfaceEdit.onPointerDown },
+    addOpening,
+    addFixture,
+  })
+
   // --- Pointer ---
 
   const { canvasCursor, onWrapPointerDown, onWrapPointerMove, onWrapDblClick, cancelPendingMove } =
@@ -649,23 +690,14 @@ export function usePlanCanvasInteraction(options: {
       hitTest,
       selection,
       view: options.view,
+      tools: planTools,
       modes: {
-        drawWallMode,
-        drawRoomMode,
-        drawSurfaceMode,
-        drawLabelMode,
-        drawLineMode,
-        addDoorMode,
-        addWindowMode,
         measureMode,
-        nulpuntMode,
-        underlayMoveMode,
         selectionBoxMode,
         areaSurfaceEditEnabled,
         annotationEditEnabled,
         labelsVisible,
         inspectMode,
-        addFixtureMode,
         settingsMod,
         moveMod,
         touchNav,
@@ -702,45 +734,6 @@ export function usePlanCanvasInteraction(options: {
       },
       actions: {
         beginPanDrag: panZoom.beginPanDrag,
-        onDrawWallClick: drawWall.onDrawWallClick,
-        updateDrawWallHover: drawWall.updateDrawWallHover,
-        clearDrawWallHover: drawWall.clearDrawWallHover,
-        beginMeasure: (event) => {
-          if (
-            options.measureDrawMode?.value === 'slicer' &&
-            options.slicerEditMode?.value === true
-          ) {
-            return
-          }
-          measure.beginMeasure(event)
-        },
-        updateMeasureHover: (event) => {
-          if (
-            options.measureDrawMode?.value === 'slicer' &&
-            options.slicerEditMode?.value === true
-          ) {
-            measure.clearMeasureHover()
-            return
-          }
-          measure.updateMeasureHover(event)
-        },
-        clearMeasureHover: measure.clearMeasureHover,
-        onDrawRoomClick: drawRoom.onDrawRoomClick,
-        updateDrawRoomHover: drawRoom.updateDrawRoomHover,
-        clearDrawRoomHover: drawRoom.clearDrawRoomHover,
-        onDrawSurfaceClick: drawSurface.onDrawSurfaceClick,
-        onDrawSurfaceDblClick: drawSurface.onDrawSurfaceDblClick,
-        updateDrawSurfaceHover: drawSurface.updateDrawSurfaceHover,
-        clearDrawSurfaceHover: drawSurface.clearDrawSurfaceHover,
-        onDrawLabelClick: drawLabel.onDrawLabelClick,
-        onDrawLineClick: drawLine.onDrawLineClick,
-        updateDrawLineHover: drawLine.updateDrawLineHover,
-        clearDrawLineHover: drawLine.clearDrawLineHover,
-        onSurfaceEditPointerDown: surfaceEdit.onPointerDown,
-        beginNulpuntDrag: nulpunt.beginNulpuntDrag,
-        beginUnderlayMoveDrag: underlayMove.beginUnderlayMoveDrag,
-        placeDoor: addOpening.placeDoor,
-        placeWindow: addOpening.placeWindow,
         startJunctionDrag: wallDrag.startJunctionDrag,
         onJunctionMoveClick: (junction, event) => {
           wallDrag.cancelMoveDragPending()
@@ -783,9 +776,6 @@ export function usePlanCanvasInteraction(options: {
         stopContentGroupDrag: () => {
           contentGroupRef.value?.getNode()?.stopDrag()
         },
-        applyInspectPick,
-        updateInspectHover,
-        placeFixture: addFixture.placeFixture,
         startItemDragPending: itemDrag.startItemDragPending,
         beginItemDrag: itemDrag.beginItemDrag,
         toggleSettingsItem,

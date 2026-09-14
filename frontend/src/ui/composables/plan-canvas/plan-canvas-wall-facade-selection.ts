@@ -19,6 +19,7 @@ import { withStackedFacadeWalls } from '@/ui/composables/plan-facade-stacked'
 import { tGlobal } from '@/ui/i18n'
 import { facadeGroupDisplayName } from './facade-group-label'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import { setPlanSelected } from './plan-canvas-selected'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 
@@ -51,10 +52,6 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
   const {
     settingsWallIds,
     settingsFacadeGroupId,
-    settingsJunctionId,
-    settingsOpeningIds,
-    moveOpeningId,
-    moveWallId,
     activePlanTool,
   } = selection
 
@@ -327,18 +324,14 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
       activePlanTool.value = null
     }
     const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
-    settingsFacadeGroupId.value = acrossFloors ? groupId : null
-    settingsWallIds.value = group.wallGuids.filter((id) => onFloor.has(id))
+    const memberIds = group.wallGuids.filter((id) => onFloor.has(id))
+    setPlanSelected(
+      selection,
+      acrossFloors
+        ? { kind: 'facadeGroup', settingsIds: memberIds, groupId }
+        : { kind: 'wall', settingsIds: memberIds },
+    )
     deps.settingsWallSplitClickCm.value = null
-    settingsJunctionId.value = null
-    settingsOpeningIds.value = []
-    moveOpeningId.value = null
-    moveWallId.value = null
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
-    selection.settingsLabelId.value = null
-    selection.settingsLineId.value = null
-    selection.settingsItemId.value = null
     if (acrossFloors) deps.syncFacadeThicknessDraftFromGroup()
     else deps.syncWallThicknessDraftFromSelection()
   }
@@ -367,18 +360,8 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     const ids = stampMemberIdsOnActiveFloor.value
     if (ids.length === 0) return
     flushPendingFieldCommits()
-    settingsFacadeGroupId.value = null
-    settingsWallIds.value = [...ids]
+    setPlanSelected(selection, { kind: 'wall', settingsIds: [...ids] })
     deps.settingsWallSplitClickCm.value = null
-    settingsJunctionId.value = null
-    settingsOpeningIds.value = []
-    moveOpeningId.value = null
-    moveWallId.value = null
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
-    selection.settingsLabelId.value = null
-    selection.settingsLineId.value = null
-    selection.settingsItemId.value = null
     syncWallThicknessDraftFromSelection()
   }
 

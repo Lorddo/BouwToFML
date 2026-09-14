@@ -95,7 +95,7 @@ Elf bestanden (4.172 regels) horen bij het gevel-aanzicht en vallen **buiten** d
 
 Ze zijn niet "puur" en dus **geen import-only verhuizing**: ze trekken plattegrond-helpers binnen (`plan-canvas-mods`, `usePlanCanvasViewport`, `plan-canvas-measure`, `plan-canvas-vertex-hit`, `plan-canvas-opening-move-measure`). Wie ze naar een eigen map tilt, houdt die import-richting over — en botst met de gate van fase 6. De verhuizing kan pas als de kernel benoemd is, zodat de brug naar kernel-modules loopt in plaats van naar willekeurige plattegrond-bestanden. Eigen batch, na de campagne.
 
-Let op: `useElevationSelectEdit.ts` is met 1773 regels de grootste composable van de editor (alleen `ui/views/EditorView.vue` met 2398 is groter). Dat is een eigen campagne waard, niet deze.
+Let op: `useElevationSelectEdit.ts` is met 1773 regels de grootste composable van de editor (alleen `ui/views/EditorView.vue` is groter — 2398 bij het opstellen van deze kaart, 2064 na fase 5, waarvan nog maar 587 script). Dat is een eigen campagne waard, niet deze.
 
 ---
 
@@ -157,6 +157,26 @@ Regels: pointer 820 → 788, SelectionCoordinator 955 → 914, WallSelection 777
 *De Selected-bak had twee resolvers met verschillende prioriteit.* Sticky doet muur vóór opening; `deleteSelected()` doet **opening vóór muur**. Eén afgeleide `Selected.kind` kan die twee niet beide bedienen zonder gedrag te veranderen, dus de plan-aanname "één `kind` volstaat" gaat hier niet op. **Besluit 2026-09-13: twee resolvers houden.** Het zijn verschillende vragen — "wat houd ik vast" (mag deze hit erdoor?) versus "wat verwijder ik". Ze staan expliciet naast elkaar met een comment dat het verschil opzettelijk is; `deleteSelected()` houdt zijn eigen keten. Niet unificeren zonder aparte afweging: het raakt een destructieve actie.
 
 *Eén echte inconsistentie gerepareerd.* `toggleSettingsItem` wiste `settingsJunctionId`, maar `toggleSettingsLabel` en `toggleSettingsLine` niet. Omdat `selectedJunctionPanel` alleen op die ref kijkt, bleef de knoop-strip openstaan naast de label-strip. De unieke writer wist hem nu altijd; vastgelegd in de spec.
+
+### Gebouwd (fase 3, batch 2): een tweede lane, en de gevelgroep rechtgezet
+
+Naast "wis alles, zet één soort" bleek er een **tweede** wis-blok rond te zwerven: *verlaat elke verplaats-modus, houd het settings-paneel open*. Dat is geen variant van `clearPlanSelected` maar een eigen vraag, en hij zat twee keer met een ander bereik in de code. `clearPlanMoveModes(selection)` (5 refs) vervangt beide:
+
+-   `applyInspectPick` wiste vier van de vijf (`moveDimensionId` niet — onschadelijk, want de inspect-watch had die al genuld).
+-   De inspect-watch in Interaction wiste er ook vier, maar **een andere vier**: `moveItemId` bleef staan. Wie met een meubel in verplaats-modus naar inspect ging, hield die grepen tot de eerste pick. Alle vier de zusjes werden wél genuld, dus dit was een vergeten regel, geen keuze. Nu weg.
+
+`surfaceEditId` en de draw-punten staan bij beide aanroepers in hetzelfde blok, maar horen bij ToolSession (§4) en blijven daarom buiten de functie — de naam moet blijven kloppen.
+
+**De gevelgroep was geen broertje van de muur.** `setPlanSelected` had een `kind: 'facadeGroup'` dat alleen `settingsFacadeGroupId` zette, en **geen enkele productie-aanroeper** — alleen een generieke testlus. De echte gevelgroep-selectie stond ernaast in [`plan-canvas-wall-facade-selection.ts`](../../../../frontend/src/ui/composables/plan-canvas/plan-canvas-wall-facade-selection.ts) en zette twee dingen: de leden-muren op deze verdieping *plus* de groepsmarkering. Omdat er niets aan het oude contract hing, kon het gewoon eerlijk gemaakt worden: `settingsIds` = de leden-muren, `groupId` = de markering. De twee blokken van elf regels worden daarmee één `setPlanSelected`-aanroep, en "alleen deze verdieping" is nu letterlijk `kind: 'wall'` — wat het altijd al was.
+
+Bijeffect dat de lane erbij haalt: die twee selecties lieten `pinnedJunctionId`, `moveItemId` en `moveDimensionId` staan terwijl ze `settingsJunctionId` en `settingsItemId` wél wisten. Een vastgepinde knoop zonder knoop-selectie is restafval; de lane ruimt het op.
+
+**Wat blijft liggen, en waarom.** 49 ruwe schrijvers van `move*Id`, in twee soorten:
+
+-   **~10 in de sleep-composables** (`usePlanCanvasWallMove`, `OpeningDrag`, `OpeningMove`, `OpeningResize`, `ItemDrag`, `JunctionMove`, `DimensionDrag`). Die zetten één move-doel bij het starten van een sleep en moeten de settings-selectie juist **niet** aanraken. `setPlanSelected` is daar het verkeerde gereedschap; een derde helper (`setPlanMoveTarget`) zou de andere vier moeten nullen en dat is niet wat ze nu doen. Deze staan goed.
+-   **~39 in `usePlanCanvasWallSelection` (16), `usePlanCanvasOpeningSelection` (10), `usePlanCanvasAreaSelection` (4) en de coördinatoren.** Dit zijn de toggle-functies: ze wissen "alles behalve mijn eigen soort", maar elk met een **ander** bereik — `toggleSettingsJunction` laat bijvoorbeeld `settingsAreaId` en `settingsSurfaceId` staan waar `clearOtherSelections` die wél wist. Op de lane zetten betekent per functie extra clears, en er is **geen karakteriseringstest op de settings-strip** die zegt of dat mag. Die test is de volgende stap; zonder hem is dit de big-bang die het plan juist wil vermijden.
+
+Regels: facade-selection 429 → 414, Inspect 161 → 158, Interaction 1192 → 1190; `plan-canvas-selected.ts` 165 → 186. Suite 2563, dezelfde 9 rood, knip gelijk.
 
 ---
 
@@ -280,6 +300,61 @@ Wat dit opheft: `PointerToolModes` (**25 leden**, twintig booleans die alle uit 
 
 Wat het **niet** doet: de select-cascade (§5, stappen 13–28) is geen plugin. Dat is kernel-gedrag dat na de tool-dispatch komt. Plugins krijgen de klik eerst; de cascade is de bodem.
 
+### Gebouwd (fase 4b, slice 1): de snap-dienst heeft een huis
+
+[`plan-canvas-snap-resolve.ts`](../../../../frontend/src/ui/composables/plan-canvas/plan-canvas-snap-resolve.ts) (226 regels, kernel) bezit nu de vier resolvers plus de drie dak-helpers die eronder zaten (`ridgeDrawSnapWalls`, `roofOverlaySnapEnabled`, `snapToRoofPlaneRings`). De ToolCoordinator ging van 723 naar **568** regels en houdt géén geometrie meer over: alle veertien imports uit `plan-canvas-junctions` en drie van de vier uit `plan-canvas-dak-draw-snap` zijn daar verdwenen. Dat de typecheck ze allemaal als ongebruikt aanwees, is het bewijs dat de knip op de juiste naad lag.
+
+Het contract is smal gehouden met indexed access op de editor-API (`PlanSnapEditor` = zes velden uit `ReturnType<typeof usePlanEditor>`), zodat de service niet de hele editor binnentrekt en toch geen types hoeft te gokken. Nieuwe spec: [`plan-canvas-snap-resolve.spec.ts`](../../../../frontend/tests/ui/plan-canvas-snap-resolve.spec.ts), negen tests, groen op de eerste run.
+
+**De eerste deferred binding is structureel weg, niet verplaatst.** `bindResolveSurfacePoint` bestond omdat de SelectionCoordinator `resolveSurfacePoint` nodig had terwijl die functie in de ToolCoordinator woonde, die ná hem gebouwd wordt. Nu de snap-dienst een eigen module is, bouwt `usePlanCanvasInteraction.ts` hem **vóór** beide coördinatoren en geeft hij hem als gewone optie mee. Weg: het `let`-slot, de `bindResolveSurfacePoint`-functie, de export ervan, de wrapper-arrow in `usePlanCanvasSurfaceEdit`-opties en de vier resolvers uit het ToolCoordinator-return (die na de bind geen enkele lezer meer hadden). Er is geen lazy context voor nodig gebleken.
+
+Eén blokkade zat in de weg: `drawingRoof` (dak-tab óf de `draw_roof`-tool) stond in het midden van de twintig tool-mode-computeds, terwijl de snap-dienst hem nodig heeft en eerder gebouwd wordt. In plaats van de computed te dupliceren leidt de service hem nu zelf af uit `activePlanTool` + `view` en geeft hem terug; de ToolCoordinator leest `options.snap.drawingRoof`. Als de registry straks de mode-bag oplost, heeft `drawingRoof` al een huis.
+
+### Gebouwd (fase 4b, slice 2): de registry
+
+[`plan-canvas-tool-registry.ts`](../../../../frontend/src/ui/composables/plan-canvas/plan-canvas-tool-registry.ts) (86 r) is het contract plus vier dispatchers (`down`, `hover`, `dblClick`, `cursor`); [`plan-canvas-tool-entries.ts`](../../../../frontend/src/ui/composables/plan-canvas/plan-canvas-tool-entries.ts) (240 r) is de lijst van twaalf. **Pointer 502 → 328** — sinds het begin van de campagne 820 → 328.
+
+De pointer kent geen enkele tool meer bij naam. Wat verdween: twaalf `if (mode.value)`-takken in `onWrapPointerDown`, zes hover-takken plus vijf losse `clearXHover()`-aanroepen in `onWrapPointerMove`, tien cursor-takken en de dubbelklik-tak. Wat ervoor kwam: vier regels dispatch.
+
+Daardoor krompen ook de twee bags:
+
+| Bag | Was | Nu |
+|---|---|---|
+| `PointerToolModes` | 22 leden | **alias van `PlanHitCascadeModes`** (12) |
+| `PointerActions` | 66 leden | `PlanHitCascadeActions` (36) `&` 5 eigen |
+
+De winst is dubbel. Tien tool-booleans en vijfentwintig tool-methodes zijn weg omdat ze in de entries zitten. En wat overbleef bleek **exact** het cascade-contract te zijn: `PointerToolModes` is nu een alias in plaats van een handmatig synchroon gehouden kopie, en `PointerActions` erft van het cascade-contract in plaats van al zijn zesendertig leden te herhalen. De pointer houdt vijf eigen acties over: pannen, de Konva-drag stoppen en de drie move-drafts.
+
+**De entries staan niet in de Interaction-laag maar in een eigen module, en dat was geen stijlkeuze.** Drie karakteriseringstests dekken echte entry-logica: een deur plaatsen vereist een muur-hit (en valt bij een misser *niet* door naar de cascade), plaatsen wist de actieve tool, en surface-edit is het enige punt dat mag doorvallen. Had ik de lijst in `usePlanCanvasInteraction.ts` laten staan, dan had het testharnas een kopie van die logica moeten bouwen en testten die drie tests hun eigen kopie. Nu roepen productie en harnas dezelfde `createPlanToolEntries` aan; het harnas levert alleen recorders als tool-composables. De deps zijn de composables zélf, versmald tot de methodes die de entries gebruiken — geen adapterlaag, geen omgedoopte methodes, op één uitzondering: `surfaceEdit.onPointerDown` heet in het contract `onSurfaceEditPointerDown`, omdat de korte naam buiten die module niets zegt (en het call-logboek van de tests leesbaar moet blijven).
+
+Twee ordeningen zijn bewust net anders dan voorheen, beide zonder waarneembaar verschil. De cursor-lus staat nu vóór de `surfaceEditId`-check in plaats van erna, zodat deur/raam-plaatsen daar nu vóór komt — beide geven `crosshair`. En bij het wissen van hover-voorbeelden wist elke tool zijn eigen staat, dus de onderlinge orde van die vijf aanroepen doet niet mee. `add_fixture` heeft bewust geen `cursor`: dat had het ook niet.
+
+### Gebouwd (fase 4b, slot): geen lazy context nodig
+
+**Ook de tweede deferred binding was geen cyclus.** `openingDraftSync = { run: () => {} }` stond er omdat `wallSelection` de opening-draft moet kunnen bijwerken terwijl `openingSelection` ná hem werd gebouwd. Maar `usePlanCanvasOpeningSelection` neemt niets uit `wallSelection` af: zijn deps zijn editor, selection, de vier commit-callbacks en de bovenlicht-refs — allemaal uit de opties van de coördinator. De constructie-orde stond simpelweg de verkeerde kant op. Openingen eerst bouwen, dan `syncOpeningDraftFromSelection` direct meegeven, en het `{ run }`-slot plus de late toewijzing zijn weg.
+
+Daarmee is de **lazy plugin-context uit dit plan niet gebouwd, omdat er niets voor over is.** Beide gevallen die hem rechtvaardigden bleken verkeerde bouwvolgorde, niet echte wederzijdse afhankelijkheid. Het contract hierboven blijft staan als richting voor als er ooit een echte cyclus opduikt; nu zou het een oplossing zonder probleem zijn.
+
+### Gebouwd (fase 4b, slot): sessie-defaults
+
+[`plan-canvas-session-defaults.ts`](../../../../frontend/src/ui/composables/plan-canvas/plan-canvas-session-defaults.ts) (54 r) bundelt de vijf refs tot één `PlanSessionDefaults` en bezit de twee dingen die eruit volgden: `resolveBovenlichtDefaults` (de vier waarden waarmee een nieuwe opening geplaatst wordt) en `watchBovenlichtDefaults` (vier identieke watchers werden één lus). Interaction 1206 → 1192, ToolCoordinator 568 → 558, SelectionCoordinator 896 → 875; per contract vijf optievelden terug naar één.
+
+`bovenlichtPacked` zit wél in de bundel maar **niet** in de watcher: dat verandert de weergave (losse ramen versus één groep), niet de waarden in de draft. Die grens is met een test vastgelegd, want hij is niet af te lezen uit de code. De opening-domeinlogica — drafts, mixed-staat, packed-groepen — bleef staan waar hij stond, precies zoals dit plan voorschreef.
+
+### Gebouwd (fase 5): de shell
+
+De lijm-tabel in §1 noemde vier `useEditor*`-bestanden als doel. Het werden er vijf, en de indeling ging **op zorg** in plaats van op de bestemmingen die het plan voorstelde:
+
+- [`useEditorDownload.ts`](../../../../frontend/src/ui/composables/editor/useEditorDownload.ts) (102 r) — `.fml` + `.plg`. Het gedeelde voorwerk (velden flushen, onderlegger vastleggen, knopen sanitizen) stond twee keer woordelijk in de view en is nu één `prepareExportPlan`.
+- [`useEditorBindRoof.ts`](../../../../frontend/src/ui/composables/editor/useEditorBindRoof.ts) (138 r) — **niet** in `useEditorDak`, zoals het plan voorstelde. Dat bestand is 57 regels tab-staat en kent `gevelsMode`, het canvas en i18n niet; bind-roof is een plan-muterend commando met dialoog. `dakMode` gaat er als gewone invoer in, en het canvas via een smal `BindRoofCanvas` (3 methodes) in plaats van de volle `previewCanvasRef`-vorm.
+- [`useEditorFacadeGroups.ts`](../../../../frontend/src/ui/composables/editor/useEditorFacadeGroups.ts) (162 r) — **niet** in `useEditorInspect`. De cluster is gevelgroep-CRUD; dat de trigger een inspect-hit is maakt het geen inspect-logica. Gesplitst naar zorg, niet naar aanleiding.
+- [`useEditorOrient.ts`](../../../../frontend/src/ui/composables/editor/useEditorOrient.ts) (65 r) — plattegrond-oriëntatie per verdieping, inclusief de `orientByFloor`-ref die eerst los in de view stond en alleen door dit cluster plus `useEditorLoad` gelezen werd.
+- De vier elevation-handlers gingen wél naar `useEditorGevels.ts` (132 → 195): de lezers van de hoogte-stack stonden daar al, de schrijvers horen ernaast.
+
+**Script 921 → 587 regels.** Template en CSS bleven per opdracht staan, dus het bestand als geheel gaat 2398 → 2064.
+
+Wat de 29 nieuwe tests aan het licht brachten: de resultaat-melding na «muren aan dak binden» overleefde een geslaagde bind niet. De watch die stale meldingen opruimt hing aan `floorsWithRoofPlanes`, en die computed geeft bij élke plan-mutatie een nieuwe array — dus de bind wiste zijn eigen melding op de volgende tick. Viel er níets te binden, dan bleef de melding wél staan: de tekenaar zag alleen een melding als er niets gebeurd was. De watch was 1:1 overgenomen, dus geen regressie, maar wel een echte bug. **Gerepareerd 2026-09-14:** de watch kijkt nu naar een stabiele sleutel (wélke verdiepingen dakvlakken hebben) in plaats van naar de array-identiteit. Twee tests pinnen beide kanten — de melding overleeft de eigen mutatie, en wist nog wel bij een verdieping-wissel.
+
 ---
 
 ## 7. Wat de kaart betekent voor de volgende fasen
@@ -287,9 +362,9 @@ Wat het **niet** doet: de select-cascade (§5, stappen 13–28) is geen plugin. 
 | Fase | Wat deze kaart vastlegt |
 |---|---|
 | 3.0 | **klaar** — 46 tests over de 28 exit-punten, beide takken × plan/dak × Ctrl/Shift/touch |
-| 3 | **batch 1 klaar** — schrijf-lane + sticky-read in `plan-canvas-selected.ts`; de ~23 lezers van `move*Id` staan nog op de refs |
+| 3 | **batch 1+2 klaar** — schrijf-lane, sticky-read, `clearPlanMoveModes`, gevelgroep-contract. Nog 49 ruwe schrijvers: ~10 horen daar (sleep-start), ~39 wachten op een karakteriseringstest op de settings-strip |
 | 4a | **klaar** — §5 in `plan-canvas-hit-cascade.ts`; `PlanViewContext` gebouwd in `PlanCanvas.vue`, geen `dakMode`-drilling meer |
-| 4b | §6: tool-map + lazy context + `plan-canvas-snap-resolve.ts` als huis |
-| 5 | §1 lijm-tabel: de vier `useEditor*`-shell-bestanden zijn het doel |
+| 4b | **klaar** — tool-registry + `plan-canvas-snap-resolve.ts` + `PlanSessionDefaults`; lazy context bleek onnodig |
+| 5 | **klaar** — vier commando-clusters uit `EditorView.vue` (script 921 → 587); zie onder |
 | 6 | §1 bakken zijn de gate-regels; §3 noemt de props-dubbeling die dan weg moet |
 | later | §2: de elf aanzicht-bestanden, mét de brug-lijst |

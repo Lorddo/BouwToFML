@@ -3,7 +3,6 @@ import {
   isAxisLock,
   isSettingsMod,
   resolveRelocatePointerIntent,
-  resolveWallPointerIntent,
   wantsClickMove,
   wantsRelocate,
 } from '@/ui/composables/plan-canvas/plan-canvas-mods'
@@ -47,12 +46,6 @@ describe('plan-canvas-mods', () => {
       'select',
     )
     expect(resolveRelocatePointerIntent({ touchNav: true, moveMod: true, shiftKey: false })).toBe(
-      'precise',
-    )
-  })
-
-  it('resolveWallPointerIntent blijft alias van resolveRelocatePointerIntent', () => {
-    expect(resolveWallPointerIntent({ touchNav: false, moveMod: false, shiftKey: true })).toBe(
       'precise',
     )
   })

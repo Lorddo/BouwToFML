@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createPlanCanvasSelection } from '@/ui/composables/plan-canvas/plan-canvas-selection'
 import {
+  clearPlanMoveModes,
   clearPlanSelected,
   planStickySelectKind,
   setPlanSelected,
@@ -85,6 +86,35 @@ describe('clearPlanSelected', () => {
   })
 })
 
+describe('clearPlanMoveModes', () => {
+  it('wist de vijf verplaats-doelen en laat de settings-selectie staan', () => {
+    const s = createPlanCanvasSelection()
+    fillEverything(s)
+    clearPlanMoveModes(s)
+    expect(snapshot(s)).toEqual({
+      ...EMPTY,
+      settingsWallIds: ['w1'],
+      settingsFacadeGroupId: 'g1',
+      settingsJunctionId: 'j1',
+      settingsOpeningIds: ['o1'],
+      settingsItemId: 'f1',
+      settingsAreaId: 'a1',
+      settingsSurfaceId: 's1',
+      settingsLabelId: 'l1',
+      settingsLineId: 'ln1',
+    })
+  })
+
+  it('laat ToolSession met rust', () => {
+    const s = createPlanCanvasSelection()
+    s.surfaceEditId.value = 'sf1'
+    s.activePlanTool.value = 'draw_wall'
+    clearPlanMoveModes(s)
+    expect(s.surfaceEditId.value).toBe('sf1')
+    expect(s.activePlanTool.value).toBe('draw_wall')
+  })
+})
+
 describe('setPlanSelected — precies één soort blijft over', () => {
   it('muur: settings-lijst en move-doel kunnen samen', () => {
     const s = createPlanCanvasSelection()
@@ -124,7 +154,6 @@ describe('setPlanSelected — precies één soort blijft over', () => {
       ['surface', 'settingsSurfaceId'],
       ['label', 'settingsLabelId'],
       ['line', 'settingsLineId'],
-      ['facadeGroup', 'settingsFacadeGroupId'],
     ] as const
     for (const [kind, ref] of cases) {
       const s = createPlanCanvasSelection()
@@ -132,6 +161,24 @@ describe('setPlanSelected — precies één soort blijft over', () => {
       setPlanSelected(s, { kind, settingsIds: ['x1'] })
       expect(snapshot(s)).toEqual({ ...EMPTY, [ref]: 'x1' })
     }
+  })
+
+  it('gevelgroep is een muurselectie met markering', () => {
+    // Geen broertje van de muur: de leden-muren op deze verdieping staan gewoon
+    // in settingsWallIds, met de groep ernaast. Zonder `groupId` blijft de
+    // markering leeg — dat is de "alleen deze verdieping"-keuze.
+    const s = createPlanCanvasSelection()
+    fillEverything(s)
+    setPlanSelected(s, { kind: 'facadeGroup', settingsIds: ['w1', 'w2'], groupId: 'g3' })
+    expect(snapshot(s)).toEqual({
+      ...EMPTY,
+      settingsWallIds: ['w1', 'w2'],
+      settingsFacadeGroupId: 'g3',
+    })
+
+    setPlanSelected(s, { kind: 'facadeGroup', settingsIds: ['w1'] })
+    expect(s.settingsFacadeGroupId.value).toBeNull()
+    expect(s.settingsWallIds.value).toEqual(['w1'])
   })
 
   it('maatlijn landt op moveDimensionId, ook via settingsIds', () => {

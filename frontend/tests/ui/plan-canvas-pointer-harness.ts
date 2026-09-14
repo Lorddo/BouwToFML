@@ -13,6 +13,8 @@ import {
   createPlanViewContext,
   type PlanViewContext,
 } from '@/ui/composables/plan-canvas/plan-view-context'
+import { createPlanToolEntries } from '@/ui/composables/plan-canvas/plan-canvas-tool-entries'
+import type { PlanToolEntry } from '@/ui/composables/plan-canvas/plan-canvas-tool-registry'
 import type { HitTestApi } from '@/ui/composables/plan-canvas/plan-canvas-hit-test-api'
 import type { RenderJunction } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
@@ -101,6 +103,8 @@ export interface ModeFixture {
   moveMod?: boolean
   /** Touch-navigatie: tik = selecteren, niet slepen. */
   touchNav?: boolean
+  /** Slicer-edit actief: de meet-tool laat de klik dan met rust. */
+  slicerEditing?: boolean
 }
 
 export interface DraftFixture {
@@ -148,23 +152,14 @@ function makeView(fx: ModeFixture): PlanViewContext {
   })
 }
 
+const isTool = (fx: ModeFixture, name: NonNullable<ModeFixture['tool']>) =>
+  computed(() => (fx.tool ?? null) === name)
+
 function makeModes(fx: ModeFixture, handles: HandleFixture): PointerToolModes {
-  const tool = fx.tool ?? null
-  const is = (name: NonNullable<ModeFixture['tool']>) => computed(() => tool === name)
   return {
-    drawWallMode: is('draw_wall'),
-    drawRoomMode: is('draw_room'),
-    drawSurfaceMode: is('draw_surface'),
-    drawLabelMode: is('draw_label'),
-    drawLineMode: is('draw_line'),
-    addDoorMode: is('add_door'),
-    addWindowMode: is('add_window'),
-    addFixtureMode: is('add_fixture'),
-    measureMode: is('measure'),
-    nulpuntMode: is('nulpunt'),
-    underlayMoveMode: is('underlay_move'),
-    selectionBoxMode: is('selection_box'),
-    inspectMode: is('inspect'),
+    measureMode: isTool(fx, 'measure'),
+    selectionBoxMode: isTool(fx, 'selection_box'),
+    inspectMode: isTool(fx, 'inspect'),
     areaSurfaceEditEnabled: computed(() => fx.areaSurfaceEdit ?? true),
     annotationEditEnabled: computed(() => fx.annotationEdit ?? true),
     labelsVisible: computed(() => fx.labelsVisible ?? true),
@@ -175,6 +170,61 @@ function makeModes(fx: ModeFixture, handles: HandleFixture): PointerToolModes {
     hitTestDimensionAtCm: () => handles.dimension ?? null,
     hitTestDimensionEndpointAtCm: () => handles.dimensionEnd ?? null,
   }
+}
+
+/**
+ * De echte tool-lijst, met recorders als tool-composables. Zo lopen de tests
+ * door de productielogica van de entries (muur-hit vereist, tool wissen na
+ * plaatsen, surface-edit mag doorvallen) en niet door een kopie.
+ */
+function makeTools(
+  fx: ModeFixture,
+  handles: HandleFixture,
+  selection: PlanCanvasSelectionRefs,
+  hitTest: HitTestApi,
+  calls: string[],
+  placed: string | null,
+): PlanToolEntry[] {
+  const rec = recorder(calls, {
+    onSurfaceEditPointerDown: handles.surfaceEditConsumes === true,
+    placeDoor: placed,
+    placeWindow: placed,
+    placeFixture: placed,
+    isDragging: false,
+  })
+  return createPlanToolEntries({
+    selection,
+    hitTest,
+    modes: {
+      inspectMode: isTool(fx, 'inspect'),
+      drawWallMode: isTool(fx, 'draw_wall'),
+      measureMode: isTool(fx, 'measure'),
+      nulpuntMode: isTool(fx, 'nulpunt'),
+      underlayMoveMode: isTool(fx, 'underlay_move'),
+      drawRoomMode: isTool(fx, 'draw_room'),
+      drawSurfaceMode: isTool(fx, 'draw_surface'),
+      drawLabelMode: isTool(fx, 'draw_label'),
+      drawLineMode: isTool(fx, 'draw_line'),
+      addDoorMode: isTool(fx, 'add_door'),
+      addWindowMode: isTool(fx, 'add_window'),
+      addFixtureMode: isTool(fx, 'add_fixture'),
+      areaSurfaceEditEnabled: computed(() => fx.areaSurfaceEdit ?? true),
+      settingsMod: computed(() => fx.ctrl ?? false),
+    },
+    isSlicerEditing: () => fx.slicerEditing === true,
+    inspect: rec(),
+    drawWall: rec(),
+    measure: rec(),
+    nulpunt: rec(),
+    underlayMove: rec(),
+    drawRoom: rec(),
+    drawSurface: rec(),
+    drawLabel: rec(),
+    drawLine: rec(),
+    surfaceEdit: rec(),
+    addOpening: rec(),
+    addFixture: rec(),
+  })
 }
 
 function makeDrag(fx: DraftFixture): PointerDragState {
@@ -199,28 +249,32 @@ function makeDrag(fx: DraftFixture): PointerDragState {
 }
 
 /**
- * Elke actie wordt een recorder. Handle-lookups en plaatsingen geven een echte
- * waarde terug, want de cascade leest die om te beslissen of hij doorloopt.
+ * Elke methode wordt een recorder. Handle-lookups en plaatsingen geven een
+ * echte waarde terug, want de cascade en de tool-entries lezen die om te
+ * beslissen of ze doorlopen.
  */
+function recorder(calls: string[], returns: Record<string, unknown>) {
+  return <T>(): T =>
+    new Proxy({} as Record<string, unknown>, {
+      get: (_target, prop: string) => {
+        return (...args: unknown[]) => {
+          void args
+          calls.push(prop)
+          return prop in returns ? returns[prop] : null
+        }
+      },
+    }) as unknown as T
+}
+
 function makeActions(calls: string[], handles: HandleFixture, placed: string | null): PointerActions {
-  const returns: Record<string, unknown> = {
+  return recorder(calls, {
     hitOpeningHandle: handles.openingHandle ?? null,
     hitItemResizeHandle: handles.itemResize ?? null,
     hitItemRotateHandle: handles.itemRotate ?? null,
-    onSurfaceEditPointerDown: handles.surfaceEditConsumes === true,
     placeDoor: placed,
     placeWindow: placed,
     placeFixture: placed,
-  }
-  return new Proxy({} as Record<string, unknown>, {
-    get: (_target, prop: string) => {
-      return (...args: unknown[]) => {
-        void args
-        calls.push(prop)
-        return prop in returns ? returns[prop] : null
-      }
-    },
-  }) as unknown as PointerActions
+  })<PointerActions>()
 }
 
 export function makePointerHarness(
@@ -246,11 +300,20 @@ export function makePointerHarness(
   const spacePressed: Ref<boolean> = ref(options.space === true)
   const thicknessPickTier = ref<FmlThicknessBand | null>(options.thicknessTier ?? null)
 
+  const hitTest = makeHitTest(hits, options.noCm === true)
   const pointer = usePlanCanvasPointer({
-    hitTest: makeHitTest(hits, options.noCm === true),
+    hitTest,
     selection,
     view: makeView(options.modes ?? {}),
     modes: makeModes(options.modes ?? {}, handles),
+    tools: makeTools(
+      options.modes ?? {},
+      handles,
+      selection,
+      hitTest,
+      calls,
+      options.placed ?? 'new-id',
+    ),
     drag: makeDrag(options.drafts ?? {}),
     actions: makeActions(calls, handles, options.placed ?? 'new-id'),
     spacePressed,
