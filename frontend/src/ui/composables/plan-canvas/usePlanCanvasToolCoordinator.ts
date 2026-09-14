@@ -60,7 +60,7 @@ interface ToolCoordinatorOptions {
   dimensionVis?: Ref<import('@/core/fml/fml-dimension-vis').DimensionVis>
   selectedSliceIndex?: Ref<number>
   getUnderlayLayout?: () => UnderlayOriginLayout | null
-  setFmlNulpuntImageCm?: (point: Point2D | null) => void
+  setPlanNulpuntImageCm?: (point: Point2D | null) => void
   underlayMoveMode: Ref<boolean> & { value: boolean }
   getInputUnit?: () => ScaleInputUnit
   syncPlanToParent: (layout?: UnderlayOriginLayout | null) => void
@@ -72,7 +72,7 @@ interface ToolCoordinatorOptions {
   cancelOpeningDragPending: () => void
   cancelItemDragPending: () => void
   flushPendingFieldCommits: () => void
-  /** Refs owned by WallSelection â€” passed in to avoid circular deps. */
+  /** Refs owned by WallSelection — passed in to avoid circular deps. */
   wallThicknessDraft: Ref<number>
   wallHeightDraft: Ref<number>
   wallBottomZDraft: Ref<number>
@@ -336,7 +336,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     getMode: () => options.measureDrawMode?.value ?? 'tape',
     canPersist: () => !inspectMode.value,
     getSlicerSlices: () => editor.planSlices.value,
-    getSlicerOffsetSnapCm: () => loadUserSettings().fmlViewer.slicerOffsetSnapCm,
+    getSlicerOffsetSnapCm: () => loadUserSettings().planDisplay.slicerOffsetSnapCm,
     getManualDimensions: () => {
       const floor = editor.localPlan.value?.floors[editor.floorIndex.value]
       return filterManualDimensions(editor.dimensions.value, readPlanSlices(floor))
@@ -402,7 +402,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     nulpuntMode,
     getUnderlayLayout: () => options.getUnderlayLayout?.() ?? null,
     getFloorIndex: () => editor.floorIndex.value,
-    setFmlNulpuntImageCm: (point) => options.setFmlNulpuntImageCm?.(point),
+    setPlanNulpuntImageCm: (point) => options.setPlanNulpuntImageCm?.(point),
     markParentPlanSync: () => {
       ignoreNextPlanWatch.value = true
       pendingPlanSyncSkips.value = Math.max(pendingPlanSyncSkips.value, 2)
@@ -420,7 +420,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     hitTest,
     underlayMoveMode,
     getUnderlayLayout: () => options.getUnderlayLayout?.() ?? null,
-    setFmlNulpuntImageCm: (point) => options.setFmlNulpuntImageCm?.(point),
+    setPlanNulpuntImageCm: (point) => options.setPlanNulpuntImageCm?.(point),
     syncLayoutToParent: (layout) => syncPlanToParent(layout),
     beforeBegin: () => {
       cancelSelectionBoxDrag()

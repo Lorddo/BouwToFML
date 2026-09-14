@@ -33,8 +33,8 @@ export type WorkspaceDevSessionRestoreFlowDeps = {
     plan: FloorPlan,
     layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
   ) => void
-  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
-  setFmlOrient?: (state: import('@/ui/composables/project/types').FloorOrientPersist | null) => void
+  setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+  setPlanOrient?: (state: import('@/ui/composables/project/types').FloorOrientPersist | null) => void
 }
 
 export function createWorkspaceDevSessionRestoreFlow(
@@ -112,10 +112,10 @@ export function createWorkspaceDevSessionRestoreFlow(
       deps.updatePreviewPlan(options.applyPreviewPlan, options.applyPreviewUnderlayLayout ?? null)
     }
     if (options?.applyFmlNulpuntImageCm !== undefined) {
-      deps.setFmlNulpuntImageCm?.(options.applyFmlNulpuntImageCm)
+      deps.setPlanNulpuntImageCm?.(options.applyFmlNulpuntImageCm)
     }
     if (options?.applyFmlOrient !== undefined) {
-      deps.setFmlOrient?.(options.applyFmlOrient)
+      deps.setPlanOrient?.(options.applyFmlOrient)
     }
   }
 

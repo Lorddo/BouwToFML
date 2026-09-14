@@ -86,8 +86,8 @@ export function buildWorkspaceDevSessionDeps(ctx: {
       plan: import('@/core/fml/types').FloorPlan,
       layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
     ) => void
-    setFmlNulpuntImageCm: (point: { x: number; y: number } | null) => void
-    setFmlOrient: (
+    setPlanNulpuntImageCm: (point: { x: number; y: number } | null) => void
+    setPlanOrient: (
       state: import('@/ui/composables/project/types').FloorOrientPersist | null,
     ) => void
   }
@@ -177,8 +177,8 @@ export function buildWorkspaceDevSessionDeps(ctx: {
     finalizeWallDetection: () => ctx.roomFaces.finalizeWallDetection(),
     onEnterResultStep: () => ctx.semanticWalls.buildForResultStep(),
     updatePreviewPlan: (plan, layout) => ctx.fml.updatePreviewPlan(plan, layout),
-    setFmlNulpuntImageCm: (point) => ctx.fml.setFmlNulpuntImageCm(point),
-    setFmlOrient: (state) => ctx.fml.setFmlOrient(state),
+    setPlanNulpuntImageCm: (point) => ctx.fml.setPlanNulpuntImageCm(point),
+    setPlanOrient: (state) => ctx.fml.setPlanOrient(state),
     serializeFaceOverrides: () => {
       const cache = ctx.roomFaces.roomRasterCache.value
       return cache ? serializeFaceOverrides(cache) : []

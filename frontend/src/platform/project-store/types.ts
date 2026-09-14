@@ -88,8 +88,12 @@ export type PlgFloorDocument = {
   previewPlan: FloorPlan | null
   previewUnderlayLayout: PreviewUnderlayLayout | null
   /** Gebruikers-nulpunt in scant-cm; optioneel voor oude records. */
+  planNulpuntImageCm?: { x: number; y: number } | null
+  /** Oriëntatie van de plattegrond; optioneel voor oude records. */
+  planOrient?: FloorOrientPersist | null
+  /** @deprecated Records van vóór de plan-rename; alleen lezen. */
   fmlNulpuntImageCm?: { x: number; y: number } | null
-  /** FML-oriëntatie; optioneel voor oude records. */
+  /** @deprecated Records van vóór de plan-rename; alleen lezen. */
   fmlOrient?: FloorOrientPersist | null
   /** Schaalkalibratie (was `session.scale`). */
   scale: PersistedDevSession['scale'] | null

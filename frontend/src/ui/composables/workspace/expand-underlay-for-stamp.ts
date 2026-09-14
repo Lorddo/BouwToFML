@@ -40,7 +40,7 @@ export async function expandUnderlayForStamp(deps: {
   ocrMask: Ref<Uint8Array | null>
   ocrMaskedRegions: Ref<OcrTextCandidate[]>
   getFmlNulpuntImageCm: () => Point2D | null
-  setFmlNulpuntImageCm: (point: Point2D | null) => void
+  setPlanNulpuntImageCm: (point: Point2D | null) => void
   publishWallBwUnderlay: () => Promise<void>
 }): Promise<ExpandUnderlayForStampResult> {
   const img = deps.originalImageEl.value
@@ -98,7 +98,7 @@ function applyPadToPixelState(
     ocrMask: Ref<Uint8Array | null>
     ocrMaskedRegions: Ref<OcrTextCandidate[]>
     getFmlNulpuntImageCm: () => Point2D | null
-    setFmlNulpuntImageCm: (point: Point2D | null) => void
+    setPlanNulpuntImageCm: (point: Point2D | null) => void
   },
   pad: CanvasPad,
   oldW: number,
@@ -144,6 +144,6 @@ function applyPadToPixelState(
   const pxPerMmX = deps.scale.pixelsPerMillimeterX.value
   const pxPerMmY = deps.scale.pixelsPerMillimeterY.value
   if (nulpunt && pxPerMmX > 0 && pxPerMmY > 0) {
-    deps.setFmlNulpuntImageCm(translateNulpuntImageCm(nulpunt, pad, pxPerMmX, pxPerMmY))
+    deps.setPlanNulpuntImageCm(translateNulpuntImageCm(nulpunt, pad, pxPerMmX, pxPerMmY))
   }
 }

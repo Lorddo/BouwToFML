@@ -60,12 +60,12 @@ export type FloorWorkspaceBlob = {
    * Gebruikers-nulpunt in scant-cm (imageCm = FML + layout.origin).
    * Overleeft regenerate: opnieuw toepassen i.p.v. bbox-min origin.
    */
-  fmlNulpuntImageCm?: { x: number; y: number } | null
+  planNulpuntImageCm?: { x: number; y: number } | null
   /**
    * FML-oriëntatie t.o.v. canonieke generate (spiegel + 90°).
    * Overleeft regenerate: opnieuw toepassen ná nulpunt.
    */
-  fmlOrient?: FloorOrientPersist | null
+  planOrient?: FloorOrientPersist | null
   /**
    * Laatste bevestigde bronscan + schaal van deze verdieping (vóór crop).
    * Gebruikt door «Onderlegger overnemen» als donor; overschrijft bij elke schaal-bevestiging.

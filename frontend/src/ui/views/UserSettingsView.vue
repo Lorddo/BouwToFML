@@ -16,7 +16,7 @@ import {
   UserSettingsParseError,
   type CornerMarkerMode,
   type FmlConversionSettings,
-  type EditorSettings,
+  type PlanDisplaySettings,
   type OpeningDisplayColorKey,
   type PlanDisplayStyleChoice,
   type ScaleInputUnit,
@@ -66,10 +66,10 @@ function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
     unitSystem: settings.unitSystem,
     scaleInputUnit: settings.scaleInputUnit,
     defaults: { ...settings.defaults },
-    fmlViewer: {
-      ...settings.fmlViewer,
-      openingColors: { ...settings.fmlViewer.openingColors },
-      facadeGroups: settings.fmlViewer.facadeGroups.map((group) => ({ ...group })),
+    planDisplay: {
+      ...settings.planDisplay,
+      openingColors: { ...settings.planDisplay.openingColors },
+      facadeGroups: settings.planDisplay.facadeGroups.map((group) => ({ ...group })),
     },
     fmlConversion: { ...settings.fmlConversion },
     roomTagColors: { ...settings.roomTagColors },
@@ -115,8 +115,8 @@ function patchThicknessCatalog(cms: number[]) {
   patchDefaults({ thicknessCms: cms, ...limits })
 }
 
-function patchViewer(patch: Partial<EditorSettings>) {
-  Object.assign(draft.fmlViewer, patch)
+function patchViewer(patch: Partial<PlanDisplaySettings>) {
+  Object.assign(draft.planDisplay, patch)
 }
 
 function patchConversion(patch: Partial<FmlConversionSettings>) {
@@ -193,7 +193,7 @@ const openingColorRows: { key: OpeningDisplayColorKey; labelKey: string }[] = [
 ]
 
 function openingColorIsOverride(key: OpeningDisplayColorKey): boolean {
-  return draft.fmlViewer.openingColors[key].toLowerCase() !== FACTORY_OPENING_COLORS[key]
+  return draft.planDisplay.openingColors[key].toLowerCase() !== FACTORY_OPENING_COLORS[key]
 }
 
 const hasAnyOpeningColorOverride = computed(() =>
@@ -203,31 +203,31 @@ const hasAnyOpeningColorOverride = computed(() =>
 function onOpeningColorInput(key: OpeningDisplayColorKey, value: string): void {
   const hex = parseFmlHex(value)
   if (!hex) return
-  draft.fmlViewer.openingColors[key] = hex
+  draft.planDisplay.openingColors[key] = hex
 }
 
 function resetOpeningColor(key: OpeningDisplayColorKey): void {
-  draft.fmlViewer.openingColors[key] = FACTORY_OPENING_COLORS[key]
+  draft.planDisplay.openingColors[key] = FACTORY_OPENING_COLORS[key]
 }
 
 function resetAllOpeningColors(): void {
-  draft.fmlViewer.openingColors = { ...FACTORY_OPENING_COLORS }
+  draft.planDisplay.openingColors = { ...FACTORY_OPENING_COLORS }
 }
 
 const clearHeightFillIsOverride = computed(
   () =>
-    draft.fmlViewer.clearHeightFillColor.toUpperCase() !==
+    draft.planDisplay.clearHeightFillColor.toUpperCase() !==
     DEFAULT_CLEAR_HEIGHT_FILL_COLOR.toUpperCase(),
 )
 
 function onClearHeightFillColorInput(value: string): void {
   const hex = parseFmlHex(value)
   if (!hex) return
-  draft.fmlViewer.clearHeightFillColor = hex
+  draft.planDisplay.clearHeightFillColor = hex
 }
 
 function resetClearHeightFillColor(): void {
-  draft.fmlViewer.clearHeightFillColor = DEFAULT_CLEAR_HEIGHT_FILL_COLOR
+  draft.planDisplay.clearHeightFillColor = DEFAULT_CLEAR_HEIGHT_FILL_COLOR
 }
 
 function persistDraft(): UserSettingsV1 {
@@ -237,7 +237,7 @@ function persistDraft(): UserSettingsV1 {
     unitSystem: draft.unitSystem,
     scaleInputUnit: draft.scaleInputUnit,
     defaults: { ...draft.defaults },
-    fmlViewer: { ...draft.fmlViewer },
+    planDisplay: { ...draft.planDisplay },
     fmlConversion: { ...draft.fmlConversion },
     roomTagColors: { ...draft.roomTagColors },
   })
@@ -273,22 +273,22 @@ function onResetFactory() {
       scaleInputUnit: factory.scaleInputUnit,
       defaults: { ...factory.defaults },
       roomTagColors: {},
-      fmlViewer: {
-        ...current.fmlViewer,
-        cornerMarkerMode: factory.fmlViewer.cornerMarkerMode,
-        openingColors: { ...factory.fmlViewer.openingColors },
-        slicerOffsetSnapCm: factory.fmlViewer.slicerOffsetSnapCm,
-        planDisplayStyle: factory.fmlViewer.planDisplayStyle,
-        ridgeDisplayWidthCm: factory.fmlViewer.ridgeDisplayWidthCm,
-        showRidgeDisplay: factory.fmlViewer.showRidgeDisplay,
-        showCanvasGrid: factory.fmlViewer.showCanvasGrid,
-        showRoofOverlayOnPlan: factory.fmlViewer.showRoofOverlayOnPlan,
-        showRoofPlanesOnPlan: factory.fmlViewer.showRoofPlanesOnPlan,
-        showClearHeight150: factory.fmlViewer.showClearHeight150,
-        showClearHeight200: factory.fmlViewer.showClearHeight200,
-        showClearHeightPlanFill: factory.fmlViewer.showClearHeightPlanFill,
-        clearHeightFillColor: factory.fmlViewer.clearHeightFillColor,
-        facadeGroups: factory.fmlViewer.facadeGroups.map((group) => ({ ...group })),
+      planDisplay: {
+        ...current.planDisplay,
+        cornerMarkerMode: factory.planDisplay.cornerMarkerMode,
+        openingColors: { ...factory.planDisplay.openingColors },
+        slicerOffsetSnapCm: factory.planDisplay.slicerOffsetSnapCm,
+        planDisplayStyle: factory.planDisplay.planDisplayStyle,
+        ridgeDisplayWidthCm: factory.planDisplay.ridgeDisplayWidthCm,
+        showRidgeDisplay: factory.planDisplay.showRidgeDisplay,
+        showCanvasGrid: factory.planDisplay.showCanvasGrid,
+        showRoofOverlayOnPlan: factory.planDisplay.showRoofOverlayOnPlan,
+        showRoofPlanesOnPlan: factory.planDisplay.showRoofPlanesOnPlan,
+        showClearHeight150: factory.planDisplay.showClearHeight150,
+        showClearHeight200: factory.planDisplay.showClearHeight200,
+        showClearHeightPlanFill: factory.planDisplay.showClearHeightPlanFill,
+        clearHeightFillColor: factory.planDisplay.clearHeightFillColor,
+        facadeGroups: factory.planDisplay.facadeGroups.map((group) => ({ ...group })),
       },
     })
     Object.assign(draft, cloneSettings(saved))
@@ -312,7 +312,7 @@ function onExport() {
     unitSystem: draft.unitSystem,
     scaleInputUnit: draft.scaleInputUnit,
     defaults: { ...draft.defaults },
-    fmlViewer: { ...draft.fmlViewer },
+    planDisplay: { ...draft.planDisplay },
     fmlConversion: { ...draft.fmlConversion },
     roomTagColors: { ...draft.roomTagColors },
   })
@@ -553,7 +553,7 @@ onBeforeUnmount(() => {
       <h3>{{ t('settings.facadeGroups') }}</h3>
       <p class="hint">{{ t('settings.facadeGroupsHint') }}</p>
       <FacadeGroupPresetFields
-        :groups="draft.fmlViewer.facadeGroups"
+        :groups="draft.planDisplay.facadeGroups"
         @update:groups="patchViewer({ facadeGroups: $event })"
       />
     </section>
@@ -623,18 +623,18 @@ onBeforeUnmount(() => {
     </section>
 
     <section v-if="!isViewer" class="panel settings-section">
-      <h3>{{ t('settings.fmlViewer') }}</h3>
+      <h3>{{ t('settings.planDisplay') }}</h3>
       <div class="opacity-row">
         <div class="opacity-label">
           <span>{{ t('settings.underlayOpacity') }}</span>
-          <span>{{ draft.fmlViewer.underlayOpacityPct }}%</span>
+          <span>{{ draft.planDisplay.underlayOpacityPct }}%</span>
         </div>
         <input
           type="range"
           min="0"
           max="100"
           step="1"
-          :value="draft.fmlViewer.underlayOpacityPct"
+          :value="draft.planDisplay.underlayOpacityPct"
           :aria-label="t('settings.underlayOpacityAria')"
           @input="
             patchViewer({
@@ -646,18 +646,18 @@ onBeforeUnmount(() => {
       <div class="opacity-row">
         <div class="opacity-label">
           <span>{{ t('settings.fmlOpacity') }}</span>
-          <span>{{ draft.fmlViewer.fmlOpacityPct }}%</span>
+          <span>{{ draft.planDisplay.contentOpacityPct }}%</span>
         </div>
         <input
           type="range"
           min="0"
           max="100"
           step="1"
-          :value="draft.fmlViewer.fmlOpacityPct"
+          :value="draft.planDisplay.contentOpacityPct"
           :aria-label="t('settings.fmlOpacityAria')"
           @input="
             patchViewer({
-              fmlOpacityPct: Number(($event.target as HTMLInputElement).value),
+              contentOpacityPct: Number(($event.target as HTMLInputElement).value),
             })
           "
         />
@@ -670,7 +670,7 @@ onBeforeUnmount(() => {
       <label class="field compact check">
         <input
           type="checkbox"
-          :checked="draft.fmlViewer.showRidgeDisplay"
+          :checked="draft.planDisplay.showRidgeDisplay"
           @change="
             patchViewer({
               showRidgeDisplay: ($event.target as HTMLInputElement).checked,
@@ -680,12 +680,12 @@ onBeforeUnmount(() => {
         <span>{{ t('settings.showRidgeDisplay') }}</span>
       </label>
       <p class="hint">{{ t('settings.showRidgeDisplayHint') }}</p>
-      <label v-if="draft.fmlViewer.showRidgeDisplay" class="field compact">
+      <label v-if="draft.planDisplay.showRidgeDisplay" class="field compact">
         <span>{{ t('settings.ridgeDisplayWidthCm') }}</span>
         <ScaleLengthInput
           block
           :unit-system="draft.unitSystem"
-          :cm="draft.fmlViewer.ridgeDisplayWidthCm"
+          :cm="draft.planDisplay.ridgeDisplayWidthCm"
           :unit="draft.scaleInputUnit"
           :min-cm="1"
           :max-cm="80"
@@ -693,13 +693,13 @@ onBeforeUnmount(() => {
           @update:cm="patchViewer({ ridgeDisplayWidthCm: $event })"
         />
       </label>
-      <p v-if="draft.fmlViewer.showRidgeDisplay" class="hint">
+      <p v-if="draft.planDisplay.showRidgeDisplay" class="hint">
         {{ t('settings.ridgeDisplayWidthHint') }}
       </p>
       <label class="field compact check">
         <input
           type="checkbox"
-          :checked="draft.fmlViewer.showRoofPlanesOnPlan"
+          :checked="draft.planDisplay.showRoofPlanesOnPlan"
           @change="
             patchViewer({
               showRoofPlanesOnPlan: ($event.target as HTMLInputElement).checked,
@@ -712,7 +712,7 @@ onBeforeUnmount(() => {
       <label class="field compact check">
         <input
           type="checkbox"
-          :checked="draft.fmlViewer.showClearHeight150"
+          :checked="draft.planDisplay.showClearHeight150"
           @change="
             patchViewer({
               showClearHeight150: ($event.target as HTMLInputElement).checked,
@@ -725,7 +725,7 @@ onBeforeUnmount(() => {
       <label class="field compact check">
         <input
           type="checkbox"
-          :checked="draft.fmlViewer.showClearHeight200"
+          :checked="draft.planDisplay.showClearHeight200"
           @change="
             patchViewer({
               showClearHeight200: ($event.target as HTMLInputElement).checked,
@@ -738,7 +738,7 @@ onBeforeUnmount(() => {
       <label class="field compact check">
         <input
           type="checkbox"
-          :checked="draft.fmlViewer.showClearHeightPlanFill"
+          :checked="draft.planDisplay.showClearHeightPlanFill"
           @change="
             patchViewer({
               showClearHeightPlanFill: ($event.target as HTMLInputElement).checked,
@@ -752,7 +752,7 @@ onBeforeUnmount(() => {
         <div class="roomtag-row">
           <span class="roomtag-name">{{ t('settings.clearHeightFillColor') }}</span>
           <HexColorField
-            :model-value="draft.fmlViewer.clearHeightFillColor"
+            :model-value="draft.planDisplay.clearHeightFillColor"
             :aria-label="t('settings.clearHeightFillColor')"
             @update:model-value="onClearHeightFillColorInput"
           />
@@ -775,7 +775,7 @@ onBeforeUnmount(() => {
       <p class="hint">{{ t('settings.openingColorsHint') }}</p>
       <label class="field compact">
         <span>{{ t('settings.planDisplayStyle') }}</span>
-        <select :value="draft.fmlViewer.planDisplayStyle" @change="onPlanDisplayStyleChange">
+        <select :value="draft.planDisplay.planDisplayStyle" @change="onPlanDisplayStyleChange">
           <option v-for="style in PLAN_DISPLAY_STYLE_CHOICES" :key="style" :value="style">
             {{ planDisplayStyleLabel(style) }}
           </option>
@@ -785,7 +785,7 @@ onBeforeUnmount(() => {
       <label class="field compact check">
         <input
           type="checkbox"
-          :checked="draft.fmlViewer.showCanvasGrid"
+          :checked="draft.planDisplay.showCanvasGrid"
           @change="
             patchViewer({
               showCanvasGrid: ($event.target as HTMLInputElement).checked,
@@ -799,7 +799,7 @@ onBeforeUnmount(() => {
         <div v-for="row in openingColorRows" :key="row.key" class="roomtag-row">
           <span class="roomtag-name">{{ t(row.labelKey) }}</span>
           <HexColorField
-            :model-value="draft.fmlViewer.openingColors[row.key]"
+            :model-value="draft.planDisplay.openingColors[row.key]"
             :aria-label="t(row.labelKey)"
             @update:model-value="onOpeningColorInput(row.key, $event)"
           />
@@ -830,7 +830,7 @@ onBeforeUnmount(() => {
       <p class="hint">{{ t('settings.cornerMarkersHint') }}</p>
       <label class="field compact">
         <span>{{ t('settings.cornerMarkers') }}</span>
-        <select :value="draft.fmlViewer.cornerMarkerMode" @change="onCornerMarkerModeChange">
+        <select :value="draft.planDisplay.cornerMarkerMode" @change="onCornerMarkerModeChange">
           <option v-for="mode in CORNER_MARKER_MODES" :key="mode" :value="mode">
             {{ cornerMarkerModeLabel(mode) }}
           </option>
@@ -841,7 +841,7 @@ onBeforeUnmount(() => {
         <ScaleLengthInput
           block
           :unit-system="draft.unitSystem"
-          :cm="draft.fmlViewer.slicerOffsetSnapCm"
+          :cm="draft.planDisplay.slicerOffsetSnapCm"
           :unit="draft.scaleInputUnit"
           :min-cm="1"
           :max-cm="500"

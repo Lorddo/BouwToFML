@@ -915,7 +915,7 @@
     "roomTagResetRow": "Terug naar catalogus",
     "roomTagResetAll": "Alle kleuren terug naar fabriek",
     "roomTagResetAllTitle": "Wis alle kleuroverschrijvingen; catalogus-fabriekskleuren gelden weer",
-    "fmlViewer": "Plattegrond (weergave)",
+    "planDisplay": "Plattegrond (weergave)",
     "underlayOpacity": "Onderlegger",
     "underlayOpacityAria": "Onderlegger opacity",
     "fmlOpacity": "Plattegrond",

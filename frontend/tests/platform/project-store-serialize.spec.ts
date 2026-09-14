@@ -11,7 +11,7 @@ import {
 } from '@/platform/project-store/serialize'
 import { PERSISTED_PROJECT_SCHEMA_VERSION } from '@/platform/project-store/types'
 import { createEmptyProjectState } from '@/ui/composables/project/defaults'
-import type { ProjectState } from '@/ui/composables/project/types'
+import type { FloorOrientPersist, ProjectState } from '@/ui/composables/project/types'
 import type { DevWorkspaceSessionV2 } from '@/platform/dev-workspace/types'
 import { DEFAULT_PREPROCESS } from '@/platform/image'
 
@@ -153,6 +153,45 @@ describe('project-store serialize (schema v2 plan+cv)', () => {
       floorCount: 1,
       updatedAt: '2026-08-05T12:00:00.000Z',
     })
+  })
+
+  it('schrijft planNulpuntImageCm/planOrient en leest de oude fml*-sleutels nog (rename fase 5)', () => {
+    const empty = createEmptyProjectState({ id: 'proj-2', name: 'Alias', address: 'Street 2' })
+    const floorId = empty.floors[0].id
+    const orient: FloorOrientPersist = { quarterTurnsCw: 1, flipX: true }
+    const state: ProjectState = {
+      ...empty,
+      blobs: {
+        [floorId]: {
+          session: null,
+          generatedFloor: null,
+          previewPlan: null,
+          previewUnderlayLayout: null,
+          planNulpuntImageCm: { x: 12, y: 34 },
+          planOrient: orient,
+        },
+      },
+    }
+
+    // Schrijfkant: alleen de nieuwe sleutels gaan naar IDB.
+    const persisted = toPersistedProject(state, '2026-09-14T12:00:00.000Z')
+    const plan = persisted.blobs[floorId]!.plan
+    expect(plan.planNulpuntImageCm).toEqual({ x: 12, y: 34 })
+    expect(plan.planOrient).toEqual(orient)
+    expect('fmlNulpuntImageCm' in plan).toBe(false)
+    expect('fmlOrient' in plan).toBe(false)
+
+    // Leeskant: een record van vóór de rename draagt alleen de oude sleutels.
+    const legacy = structuredClone(persisted)
+    const legacyPlan = legacy.blobs[floorId]!.plan as Record<string, unknown>
+    delete legacyPlan.planNulpuntImageCm
+    delete legacyPlan.planOrient
+    legacyPlan.fmlNulpuntImageCm = { x: 12, y: 34 }
+    legacyPlan.fmlOrient = orient
+
+    const restored = fromPersistedProject(legacy)
+    expect(restored.blobs[floorId]?.planNulpuntImageCm).toEqual({ x: 12, y: 34 })
+    expect(restored.blobs[floorId]?.planOrient).toEqual(orient)
   })
 
   it('omits detectionExact from sidecar for result floors with previewPlan', () => {

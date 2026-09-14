@@ -20,6 +20,8 @@ Bij het slot van fase 3 gaf `npx vitest run` **19 rood** en brak af na 508 s. Ti
 
 `npx vitest run tests/ui` geeft **877 tests, 7 rood** — exact de bekende zeven uit deze lijst die in `tests/ui` staan (5× test-doors, 2× nulpunt-bake). Dat is de betrouwbare meting, en die staat ook zo in het plan.
 
+Rename fase 5 raakt de persist-laag, dus daar is `tests/ui tests/platform` gemeten: **992 tests, dezelfde 7 rood**.
+
 Eén blijvende twijfel: `inkEdit > cloneSourceToEditCanvas` faalt ook solo. Die staat niet in deze baseline en is niet door de campagne veroorzaakt (de working tree raakte alleen `plan-canvas/`-selectie). Bij een volgende herijking uitzoeken of hij sinds de commit rood staat.
 
 | # | Test | Status |

@@ -217,7 +217,7 @@ export function useEditorLoad(deps: {
     sessionDefaults?: ViewerSessionDefaults
   }): Promise<void> {
     pruneFacadeGroups(args.plan)
-    ensureDefaultFacadeGroups(args.plan, loadUserSettings().fmlViewer.facadeGroups)
+    ensureDefaultFacadeGroups(args.plan, loadUserSettings().planDisplay.facadeGroups)
     deps.plan.value = applyJunctionSanitizeToPlan(args.plan)
     deps.sessionDefaults.value =
       args.sessionDefaults ?? seedViewerDefaultsFromPlan(args.plan, 0)

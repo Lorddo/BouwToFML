@@ -36,7 +36,7 @@ export function usePlanCanvasNulpunt(options: {
   getUnderlayLayout: () => UnderlayOriginLayout | null
   /** Actieve floor in localPlan (workspace preview = meestal 0). */
   getFloorIndex: () => number
-  setFmlNulpuntImageCm: (point: Point2D | null) => void
+  setPlanNulpuntImageCm: (point: Point2D | null) => void
   markParentPlanSync: () => void
   nudgeContentLayout: (dxCm: number, dyCm: number) => void
   beforeBegin: () => void
@@ -157,7 +157,7 @@ export function usePlanCanvasNulpunt(options: {
       keepUndo: true,
       keepParentSyncSkip: true,
     })
-    options.setFmlNulpuntImageCm(applied.nulpuntImageCm)
+    options.setPlanNulpuntImageCm(applied.nulpuntImageCm)
     // Muren gingen −P; layout-min moet mee −P zodat schermpositie gelijk blijft.
     options.nudgeContentLayout(-dropCm.x, -dropCm.y)
 

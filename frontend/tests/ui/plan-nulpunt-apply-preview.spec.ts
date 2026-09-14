@@ -73,7 +73,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
     expect(applied).not.toBeNull()
     expect(applied!.plan.floors[0].walls[0].a).toEqual({ x: 0, y: 0 })
     expect(applied!.layout.origin).toEqual({ x: 150, y: 260 })
-    expect(generate.fmlNulpuntImageCm.value).toEqual({ x: 150, y: 260 })
+    expect(generate.planNulpuntImageCm.value).toEqual({ x: 150, y: 260 })
     expect(generate.previewPlan.value?.floors[0]!.name).toBe('1e')
 
     // Zelfde uitkomst als core helper
@@ -171,12 +171,12 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
       pxPerMmX: 1,
       pxPerMmY: 1,
     })
-    generate.setFmlNulpuntImageCm({ x: 9, y: 9 })
+    generate.setPlanNulpuntImageCm({ x: 9, y: 9 })
     expect(generate.previewPlan.value).not.toBeNull()
 
     generate.clearLivePlanCanvas()
     expect(generate.previewPlan.value).toBeNull()
-    expect(generate.fmlNulpuntImageCm.value).toBeNull()
+    expect(generate.planNulpuntImageCm.value).toBeNull()
     expect(generate.previewUnderlayLayout.value).toBeNull()
   })
 })

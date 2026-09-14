@@ -35,7 +35,7 @@ const props = defineProps<{
   windowBovenlichtDefault?: boolean
   bovenlichtHeightCm?: number
   bovenlichtGapCm?: number
-  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+  setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void
   /** Workspace: Herschalen H/V-linialen. */
   rescaleMode?: boolean
   rescaleState?: HScaleState | null
@@ -101,7 +101,7 @@ defineExpose({
     :bovenlicht-height-cm="bovenlichtHeightCm"
     :bovenlicht-gap-cm="bovenlichtGapCm"
     :bovenlicht-packed="bovenlichtPacked"
-    :set-fml-nulpunt-image-cm="props.setFmlNulpuntImageCm"
+    :set-plan-nulpunt-image-cm="props.setPlanNulpuntImageCm"
     :rescale-mode="rescaleMode === true"
     :rescale-state="rescaleState ?? null"
     :canvas-fullscreen="canvasFullscreen === true"

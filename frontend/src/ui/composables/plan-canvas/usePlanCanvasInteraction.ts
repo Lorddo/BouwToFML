@@ -77,7 +77,7 @@ export function usePlanCanvasInteraction(options: {
   /** Wat een nieuwe opening erft van de instellingen. */
   session: PlanSessionDefaults
   getUnderlayLayout?: () => UnderlayOriginLayout | null
-  setFmlNulpuntImageCm?: (point: Point2D | null) => void
+  setPlanNulpuntImageCm?: (point: Point2D | null) => void
   underlayMoveMode?: Ref<boolean>
   areaSurfaceEditEnabled?: Ref<boolean>
   annotationEditEnabled?: Ref<boolean>
@@ -112,7 +112,7 @@ export function usePlanCanvasInteraction(options: {
     spacePressed,
     thicknessPickTier,
     getUnderlayLayout,
-    setFmlNulpuntImageCm,
+    setPlanNulpuntImageCm,
     underlayMoveMode: underlayMoveModeProp,
     areaSurfaceEditEnabled: areaSurfaceEditEnabledProp,
     annotationEditEnabled: annotationEditEnabledProp,
@@ -178,7 +178,7 @@ export function usePlanCanvasInteraction(options: {
       ...current,
       origin: layoutOrigin ? { ...layoutOrigin } : current.origin,
     }
-    setFmlNulpuntImageCm?.(nextLayout.origin)
+    setPlanNulpuntImageCm?.(nextLayout.origin)
     viewport.refitContentLayout()
     syncPlanToParent(nextLayout)
   }
@@ -286,7 +286,7 @@ export function usePlanCanvasInteraction(options: {
     syncPlanToParent,
   })
 
-  // --- Selection Coordinator (created first â€” owns wallThicknessDraft etc.) ---
+  // --- Selection Coordinator (created first — owns wallThicknessDraft etc.) ---
 
   let toolCoordEnsureRidgeZDraft: () => number = () => 0
 
@@ -349,7 +349,7 @@ export function usePlanCanvasInteraction(options: {
     dimensionVis: options.dimensionVis,
     selectedSliceIndex: options.selectedSliceIndex,
     getUnderlayLayout,
-    setFmlNulpuntImageCm,
+    setPlanNulpuntImageCm,
     underlayMoveMode: underlayMoveMode,
     getInputUnit: options.getInputUnit,
     syncPlanToParent,

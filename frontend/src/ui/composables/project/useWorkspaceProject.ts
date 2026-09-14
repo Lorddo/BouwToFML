@@ -83,10 +83,10 @@ export type WorkspaceProjectDeps = {
   /** Gebruikers-nulpunt in scant-cm, of null. */
   getFmlNulpuntImageCm: () => { x: number; y: number } | null
   /** Zet nulpunt bij floor-hydrate (na restore). */
-  setFmlNulpuntImageCm: (point: { x: number; y: number } | null) => void
+  setPlanNulpuntImageCm: (point: { x: number; y: number } | null) => void
   /** FML-oriëntatie (spiegel/90°) t.o.v. canonieke generate. */
   getFmlOrient: () => FloorOrientPersist | null
-  setFmlOrient: (state: FloorOrientPersist | null) => void
+  setPlanOrient: (state: FloorOrientPersist | null) => void
   /**
    * Wis live FML-preview ná capture, vóór activeFloorId-wissel —
    * anders remount de canvas met de vorige verdieping als plan.
@@ -116,8 +116,8 @@ function emptyBlob(): FloorWorkspaceBlob {
     generatedFloor: null,
     previewPlan: null,
     previewUnderlayLayout: null,
-    fmlNulpuntImageCm: null,
-    fmlOrient: null,
+    planNulpuntImageCm: null,
+    planOrient: null,
     sourceUnderlay: null,
     pdfUnderlaySource: null,
     sourcePdfUnderlay: null,
@@ -401,9 +401,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     // Live nulpunt is source of truth voor déze floor (ook null) — geen prev lekken
     // naar een andere verdieping bij switch.
     const liveNulpunt = deps.getFmlNulpuntImageCm()
-    const fmlNulpuntImageCm = liveNulpunt ? clonePlain(liveNulpunt) : null
+    const planNulpuntImageCm = liveNulpunt ? clonePlain(liveNulpunt) : null
     const liveOrient = deps.getFmlOrient()
-    const fmlOrient = liveOrient ? clonePlain(liveOrient) : null
+    const planOrient = liveOrient ? clonePlain(liveOrient) : null
     const generatedFloor = previewPlan?.floors[0] ?? prev.generatedFloor
     const status = floorStatusFromFlowStep(deps.flowStep.value)
     const floorStatus = session ? (status === 'empty' ? 'input' : status) : 'empty'
@@ -418,8 +418,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           generatedFloor,
           previewPlan,
           previewUnderlayLayout,
-          fmlNulpuntImageCm,
-          fmlOrient,
+          planNulpuntImageCm,
+          planOrient,
           // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
           sourceUnderlay: prev.sourceUnderlay ?? null,
           // Live PDF (full-page space). After crop the getter is null — do not keep
@@ -459,12 +459,12 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       applyPreviewUnderlayLayout: isResult
         ? (blob.previewUnderlayLayout ?? layoutFromSessionScale(blob.session.scale))
         : null,
-      applyFmlNulpuntImageCm: isResult ? (blob.fmlNulpuntImageCm ?? null) : null,
-      applyFmlOrient: isResult ? (blob.fmlOrient ?? null) : null,
+      applyFmlNulpuntImageCm: isResult ? (blob.planNulpuntImageCm ?? null) : null,
+      applyFmlOrient: isResult ? (blob.planOrient ?? null) : null,
     })
     if (!isResult) {
-      deps.setFmlNulpuntImageCm(null)
-      deps.setFmlOrient(null)
+      deps.setPlanNulpuntImageCm(null)
+      deps.setPlanOrient(null)
     }
     deps.setPdfUnderlaySource?.(blob.pdfUnderlaySource ?? null)
   }
@@ -792,7 +792,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     if (count === 0) return 0
     state.value = { ...state.value, blobs: nextBlobs }
     if (activeMirrored) {
-      deps.setFmlOrient(activeMirrored.fmlOrient ?? null)
+      deps.setPlanOrient(activeMirrored.planOrient ?? null)
       const livePlan =
         activeMirrored.previewPlan ??
         (activeMirrored.generatedFloor
@@ -832,8 +832,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     const plan = planFromActiveBlob()
     if (!blob || !plan) return
     deps.updatePreviewPlan(plan, blob.previewUnderlayLayout ?? null)
-    deps.setFmlNulpuntImageCm(blob.fmlNulpuntImageCm ?? null)
-    deps.setFmlOrient(blob.fmlOrient ?? null)
+    deps.setPlanNulpuntImageCm(blob.planNulpuntImageCm ?? null)
+    deps.setPlanOrient(blob.planOrient ?? null)
   }
 
   /** True als ≥1 floor een plattegrond heeft (`previewPlan` / generatedFloor — geen download). */
@@ -852,7 +852,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       const blob = state.value.blobs[meta.id]
       if (!blob?.previewPlan?.floors[0] && !blob?.generatedFloor) continue
       seen += 1
-      if (blob.fmlOrient?.flipX !== true) return false
+      if (blob.planOrient?.flipX !== true) return false
     }
     return seen > 0
   }
@@ -879,8 +879,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           generatedFloor: floor ? clonePlain(floor) : null,
           previewPlan,
           previewUnderlayLayout: liveLayout ? clonePlain(liveLayout) : prev.previewUnderlayLayout,
-          fmlNulpuntImageCm: liveNulpunt ? clonePlain(liveNulpunt) : null,
-          fmlOrient: liveOrient ? clonePlain(liveOrient) : null,
+          planNulpuntImageCm: liveNulpunt ? clonePlain(liveNulpunt) : null,
+          planOrient: liveOrient ? clonePlain(liveOrient) : null,
         },
       },
       floors: state.value.floors.map((f) =>

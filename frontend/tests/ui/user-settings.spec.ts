@@ -9,6 +9,7 @@ import {
   saveUserSettings,
   setShowCanvasGrid,
   setShowRoofOverlayOnPlan,
+  USER_SETTINGS_STORAGE_KEY,
   UserSettingsParseError,
 } from '@/ui/composables/settings/user-settings'
 import { createDefaultFloorFmlDefaults } from '@/ui/composables/project/defaults'
@@ -50,9 +51,9 @@ describe('user-settings', () => {
     expect(settings).toEqual(createFactoryUserSettings())
     expect(settings.unitSystem).toBe('metric')
     expect(settings.scaleInputUnit).toBe('mm')
-    expect(settings.fmlViewer.underlayOpacityPct).toBe(25)
-    expect(settings.fmlViewer.fmlOpacityPct).toBe(80)
-    expect(settings.fmlViewer.cornerMarkerMode).toBe('skew')
+    expect(settings.planDisplay.underlayOpacityPct).toBe(25)
+    expect(settings.planDisplay.contentOpacityPct).toBe(80)
+    expect(settings.planDisplay.cornerMarkerMode).toBe('skew')
   })
 
   it('save/load roundtrip', () => {
@@ -62,8 +63,8 @@ describe('user-settings', () => {
     next.scaleInputUnit = 'm'
     next.defaults.wallHeightCm = 300
     next.defaults.thicknessCms = [8, 20, 30]
-    next.fmlViewer.underlayOpacityPct = 40
-    next.fmlViewer.fmlOpacityPct = 90
+    next.planDisplay.underlayOpacityPct = 40
+    next.planDisplay.contentOpacityPct = 90
     saveUserSettings(next)
     expect(loadUserSettings().locale).toBe('nl')
     expect(loadUserSettings().unitSystem).toBe('imperial')
@@ -71,9 +72,9 @@ describe('user-settings', () => {
     expect(loadUserSettings().defaults.wallHeightCm).toBe(300)
     expect(loadUserSettings().defaults.thicknessCms).toEqual([8, 20, 30])
     expect(loadUserSettings().defaults.thicknessMinCm).toBe(8)
-    expect(loadUserSettings().fmlViewer).toEqual({
+    expect(loadUserSettings().planDisplay).toEqual({
       underlayOpacityPct: 40,
-      fmlOpacityPct: 90,
+      contentOpacityPct: 90,
       cornerMarkerMode: 'skew',
       openingColors: {
         door: '#f59e0b',
@@ -101,38 +102,38 @@ describe('user-settings', () => {
   })
 
   it('showCanvasGrid factory true; missing → true; false preserved', () => {
-    expect(createFactoryUserSettings().fmlViewer.showCanvasGrid).toBe(true)
-    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.showCanvasGrid).toBe(true)
+    expect(createFactoryUserSettings().planDisplay.showCanvasGrid).toBe(true)
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).planDisplay.showCanvasGrid).toBe(true)
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { showCanvasGrid: false },
-      }).fmlViewer.showCanvasGrid,
+        planDisplay: { showCanvasGrid: false },
+      }).planDisplay.showCanvasGrid,
     ).toBe(false)
     const next = createFactoryUserSettings()
-    next.fmlViewer.showCanvasGrid = false
+    next.planDisplay.showCanvasGrid = false
     saveUserSettings(next)
-    expect(loadUserSettings().fmlViewer.showCanvasGrid).toBe(false)
+    expect(loadUserSettings().planDisplay.showCanvasGrid).toBe(false)
     expect(setShowCanvasGrid(true)).toBe(true)
-    expect(loadUserSettings().fmlViewer.showCanvasGrid).toBe(true)
+    expect(loadUserSettings().planDisplay.showCanvasGrid).toBe(true)
   })
 
   it('showRoofOverlayOnPlan factory true; missing → true; false preserved', () => {
-    expect(createFactoryUserSettings().fmlViewer.showRoofOverlayOnPlan).toBe(true)
-    expect(createFactoryUserSettings().fmlViewer.showRoofPlanesOnPlan).toBe(true)
+    expect(createFactoryUserSettings().planDisplay.showRoofOverlayOnPlan).toBe(true)
+    expect(createFactoryUserSettings().planDisplay.showRoofPlanesOnPlan).toBe(true)
     expect(
-      normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.showRoofOverlayOnPlan,
+      normalizeUserSettings({ version: 1, defaults: {} }).planDisplay.showRoofOverlayOnPlan,
     ).toBe(true)
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { showRoofOverlayOnPlan: false, showRoofPlanesOnPlan: false },
-      }).fmlViewer,
+        planDisplay: { showRoofOverlayOnPlan: false, showRoofPlanesOnPlan: false },
+      }).planDisplay,
     ).toMatchObject({ showRoofOverlayOnPlan: false, showRoofPlanesOnPlan: false })
     expect(setShowRoofOverlayOnPlan(false)).toBe(false)
-    expect(loadUserSettings().fmlViewer.showRoofOverlayOnPlan).toBe(false)
+    expect(loadUserSettings().planDisplay.showRoofOverlayOnPlan).toBe(false)
     expect(setShowRoofOverlayOnPlan(true)).toBe(true)
   })
 
@@ -205,6 +206,51 @@ describe('user-settings', () => {
     })
   })
 
+  it('legacy load: fmlViewer/fmlOpacityPct blijven leesbaar (rename fase 5)', () => {
+    const normalized = normalizeUserSettings({
+      version: 1,
+      fmlViewer: {
+        underlayOpacityPct: 40,
+        fmlOpacityPct: 55,
+        showCanvasGrid: false,
+        planDisplayStyle: 'bouw',
+      },
+    })
+    expect(normalized.planDisplay.underlayOpacityPct).toBe(40)
+    expect(normalized.planDisplay.contentOpacityPct).toBe(55)
+    expect(normalized.planDisplay.showCanvasGrid).toBe(false)
+    expect(normalized.planDisplay.planDisplayStyle).toBe('bouw')
+  })
+
+  it('legacy load: nieuwe sleutel wint van de oude als beide er staan', () => {
+    const normalized = normalizeUserSettings({
+      version: 1,
+      fmlViewer: { fmlOpacityPct: 55 },
+      planDisplay: { contentOpacityPct: 90, fmlOpacityPct: 55 },
+    })
+    expect(normalized.planDisplay.contentOpacityPct).toBe(90)
+  })
+
+  it('legacy load: een browser met alleen fmlViewer in localStorage', () => {
+    mockStorage.setItem(
+      USER_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        version: 1,
+        locale: 'nl',
+        fmlViewer: { fmlOpacityPct: 33, showRoofOverlayOnPlan: false },
+      }),
+    )
+    const loaded = loadUserSettings()
+    expect(loaded.planDisplay.contentOpacityPct).toBe(33)
+    expect(loaded.planDisplay.showRoofOverlayOnPlan).toBe(false)
+    // Save schrijft alleen de nieuwe vorm terug.
+    saveUserSettings(loaded)
+    const raw = JSON.parse(mockStorage.getItem(USER_SETTINGS_STORAGE_KEY) ?? '{}')
+    expect(raw.planDisplay.contentOpacityPct).toBe(33)
+    expect(raw.fmlViewer).toBeUndefined()
+    expect(raw.planDisplay.fmlOpacityPct).toBeUndefined()
+  })
+
   it('legacy load: alleen min/mid/max → catalogus [10,20,30]', () => {
     const normalized = normalizeUserSettings({
       version: 1,
@@ -235,7 +281,7 @@ describe('user-settings', () => {
         bandMidBoundaryCm: 10,
         bandMaxBoundaryCm: 20,
       },
-      fmlViewer: { underlayOpacityPct: 150, fmlOpacityPct: -5 },
+      planDisplay: { underlayOpacityPct: 150, contentOpacityPct: -5 },
     })
     expect(normalized.defaults.wallHeightCm).toBe(createFactoryUserSettings().defaults.wallHeightCm)
     expect(normalized.defaults.doorHeightCm).toBe(200)
@@ -246,50 +292,50 @@ describe('user-settings', () => {
     expect(normalized.defaults.windowBovenlichtDefault).toBe(true)
     expect(normalized.defaults.bovenlichtHeightCm).toBe(35)
     expect(normalized.defaults.bovenlichtGapCm).toBe(8)
-    expect(normalized.fmlViewer.underlayOpacityPct).toBe(100)
-    expect(normalized.fmlViewer.fmlOpacityPct).toBe(0)
-    expect(normalized.fmlViewer.cornerMarkerMode).toBe('skew')
+    expect(normalized.planDisplay.underlayOpacityPct).toBe(100)
+    expect(normalized.planDisplay.contentOpacityPct).toBe(0)
+    expect(normalized.planDisplay.cornerMarkerMode).toBe('skew')
     expect(normalized.defaults.dakThicknessCm).toBe(30)
     expect(normalized.defaults.slabThicknessCm).toBe(20)
-    expect(normalized.fmlViewer.ridgeDisplayWidthCm).toBe(10)
+    expect(normalized.planDisplay.ridgeDisplayWidthCm).toBe(10)
   })
 
   it('normalize cornerMarkerMode: missing/invalid → skew; accepts off/square', () => {
-    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.cornerMarkerMode).toBe(
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).planDisplay.cornerMarkerMode).toBe(
       'skew',
     )
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { cornerMarkerMode: 'both' },
-      }).fmlViewer.cornerMarkerMode,
+        planDisplay: { cornerMarkerMode: 'both' },
+      }).planDisplay.cornerMarkerMode,
     ).toBe('skew')
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { cornerMarkerMode: 'off' },
-      }).fmlViewer.cornerMarkerMode,
+        planDisplay: { cornerMarkerMode: 'off' },
+      }).planDisplay.cornerMarkerMode,
     ).toBe('off')
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { cornerMarkerMode: 'square' },
-      }).fmlViewer.cornerMarkerMode,
+        planDisplay: { cornerMarkerMode: 'square' },
+      }).planDisplay.cornerMarkerMode,
     ).toBe('square')
   })
 
-  it('parseUserSettingsJson accepts missing fmlViewer', () => {
+  it('parseUserSettingsJson accepts missing planDisplay', () => {
     const json = JSON.stringify({
       version: 1,
       defaults: createFactoryUserSettings().defaults,
     })
     const parsed = parseUserSettingsJson(json)
-    expect(parsed.fmlViewer).toEqual({
+    expect(parsed.planDisplay).toEqual({
       underlayOpacityPct: 25,
-      fmlOpacityPct: 80,
+      contentOpacityPct: 80,
       cornerMarkerMode: 'skew',
       openingColors: {
         door: '#f59e0b',
@@ -317,29 +363,29 @@ describe('user-settings', () => {
   })
 
   it('normalize planDisplayStyle: missing/invalid → editor; accepts bouw + architect', () => {
-    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.planDisplayStyle).toBe(
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).planDisplay.planDisplayStyle).toBe(
       'editor',
     )
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { planDisplayStyle: 'architect' },
-      }).fmlViewer.planDisplayStyle,
+        planDisplay: { planDisplayStyle: 'architect' },
+      }).planDisplay.planDisplayStyle,
     ).toBe('architect')
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { planDisplayStyle: 'bouw' },
-      }).fmlViewer.planDisplayStyle,
+        planDisplay: { planDisplayStyle: 'bouw' },
+      }).planDisplay.planDisplayStyle,
     ).toBe('bouw')
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { planDisplayStyle: 'nope' },
-      }).fmlViewer.planDisplayStyle,
+        planDisplay: { planDisplayStyle: 'nope' },
+      }).planDisplay.planDisplayStyle,
     ).toBe('editor')
   })
 
@@ -362,7 +408,7 @@ describe('user-settings', () => {
   it('resetUserSettingsToFactory restores factory and clears custom storage', () => {
     const next = createFactoryUserSettings()
     next.defaults.wallHeightCm = 999
-    next.fmlViewer.fmlOpacityPct = 10
+    next.planDisplay.contentOpacityPct = 10
     saveUserSettings(next)
     const reset = resetUserSettingsToFactory()
     expect(reset).toEqual(createFactoryUserSettings())
@@ -379,34 +425,34 @@ describe('user-settings', () => {
   })
 
   it('facadeGroups factory 4; missing → factory; empty array blijft leeg', () => {
-    expect(createFactoryUserSettings().fmlViewer.facadeGroups).toEqual([
+    expect(createFactoryUserSettings().planDisplay.facadeGroups).toEqual([
       { id: 'front', name: 'Front' },
       { id: 'back', name: 'Back' },
       { id: 'left', name: 'Left' },
       { id: 'right', name: 'Right' },
     ])
-    expect(normalizeUserSettings({ version: 1, defaults: {} }).fmlViewer.facadeGroups).toEqual(
-      createFactoryUserSettings().fmlViewer.facadeGroups,
+    expect(normalizeUserSettings({ version: 1, defaults: {} }).planDisplay.facadeGroups).toEqual(
+      createFactoryUserSettings().planDisplay.facadeGroups,
     )
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: { facadeGroups: [] },
-      }).fmlViewer.facadeGroups,
+        planDisplay: { facadeGroups: [] },
+      }).planDisplay.facadeGroups,
     ).toEqual([])
     expect(
       normalizeUserSettings({
         version: 1,
         defaults: {},
-        fmlViewer: {
+        planDisplay: {
           facadeGroups: [
             { id: 'stamp', name: 'Stempel' },
             { id: 'front', name: 'Straat' },
             { id: 'front', name: 'dup' },
           ],
         },
-      }).fmlViewer.facadeGroups,
+      }).planDisplay.facadeGroups,
     ).toEqual([{ id: 'front', name: 'Straat' }])
   })
 })

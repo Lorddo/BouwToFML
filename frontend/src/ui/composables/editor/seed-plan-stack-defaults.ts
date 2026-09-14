@@ -14,9 +14,9 @@ export function seedPlanFromUserSettings(
     dakThicknessCm: settings.defaults.dakThicknessCm,
     slabThicknessCm: settings.defaults.slabThicknessCm,
   })
-  const withRidge = seedRidgeDisplayWidthIfMissing(withStack, settings.fmlViewer.ridgeDisplayWidthCm)
+  const withRidge = seedRidgeDisplayWidthIfMissing(withStack, settings.planDisplay.ridgeDisplayWidthCm)
   if (options?.facadeCatalog === true) {
-    ensureDefaultFacadeGroups(withRidge, settings.fmlViewer.facadeGroups)
+    ensureDefaultFacadeGroups(withRidge, settings.planDisplay.facadeGroups)
   }
   return withRidge
 }

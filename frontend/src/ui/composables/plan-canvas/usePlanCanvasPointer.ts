@@ -145,7 +145,7 @@ export function usePlanCanvasPointer(options: {
 
   function onWrapPointerDown(event: MouseEvent): void {
     if (event.button !== 0) return
-    // Touch synthesizes an undispatched MouseEvent â€” target is null, niet chrome.
+    // Touch synthesizes an undispatched MouseEvent — target is null, niet chrome.
     const target = event.target instanceof Element ? event.target : null
     if (target?.closest(PLAN_CANVAS_CHROME_SELECTOR)) {
       return

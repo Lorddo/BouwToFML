@@ -50,7 +50,7 @@ export interface PlanCanvasHostProps {
   defaultWindowSillZCm?: number
 
   // ── Capability / mode ──
-  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+  setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void
   /**
    * Capability preset. When set, derives area/annotation/inspect/touch flags.
    * Prefer this over the legacy boolean props below.

@@ -76,7 +76,7 @@ export function usePlanCanvasSlicer(options: {
       point = snapSliceHandleAxis(anchor, point)
       if (sliceHandleDrag.which === 'p') {
         const preferred =
-          loadUserSettings().fmlViewer.slicerOffsetSnapCm ?? DEFAULT_SLICER_OFFSET_SNAP_CM
+          loadUserSettings().planDisplay.slicerOffsetSnapCm ?? DEFAULT_SLICER_OFFSET_SNAP_CM
         const draft = { m: slice.m, p: point }
         point = snapSlicerPPoint({
           point,

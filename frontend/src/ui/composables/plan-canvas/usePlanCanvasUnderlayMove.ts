@@ -14,7 +14,7 @@ export function usePlanCanvasUnderlayMove(options: {
   hitTest: UnderlayMoveHitTest
   underlayMoveMode: { value: boolean }
   getUnderlayLayout: () => UnderlayOriginLayout | null
-  setFmlNulpuntImageCm: (point: Point2D | null) => void
+  setPlanNulpuntImageCm: (point: Point2D | null) => void
   syncLayoutToParent: (layout: UnderlayOriginLayout) => void
   beforeBegin: () => void
 }) {
@@ -70,7 +70,7 @@ export function usePlanCanvasUnderlayMove(options: {
         y: startOrigin.y - dy,
       },
     }
-    options.setFmlNulpuntImageCm({ ...next.origin })
+    options.setPlanNulpuntImageCm({ ...next.origin })
     options.syncLayoutToParent(next)
   }
 

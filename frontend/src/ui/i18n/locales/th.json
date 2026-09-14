@@ -915,7 +915,7 @@
     "roomTagResetRow": "รีเซ็ตเป็นแคตตาล็อก",
     "roomTagResetAll": "รีเซ็ตสีทั้งหมดเป็นค่าโรงงาน",
     "roomTagResetAllTitle": "ล้างการแทนที่สีทั้งหมด ใช้สีโรงงานจากแคตตาล็อกอีกครั้ง",
-    "fmlViewer": "แบบแปลน (การแสดงผล)",
+    "planDisplay": "แบบแปลน (การแสดงผล)",
     "underlayOpacity": "ภาพพื้น",
     "underlayOpacityAria": "ความทึบภาพพื้น",
     "fmlOpacity": "แบบแปลน",

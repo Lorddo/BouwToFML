@@ -133,8 +133,8 @@ export type UseWorkspaceDevSessionDeps = {
     plan: import('@/core/fml/types').FloorPlan,
     layout?: import('@/ui/composables/project/types').PreviewUnderlayLayout | null,
   ) => void
-  setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
-  setFmlOrient?: (state: import('@/ui/composables/project/types').FloorOrientPersist | null) => void
+  setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+  setPlanOrient?: (state: import('@/ui/composables/project/types').FloorOrientPersist | null) => void
 }
 
 export function useWorkspaceDevSession(deps: UseWorkspaceDevSessionDeps) {

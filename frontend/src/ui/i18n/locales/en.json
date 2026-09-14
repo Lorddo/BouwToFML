@@ -915,7 +915,7 @@
     "roomTagResetRow": "Reset to catalogue",
     "roomTagResetAll": "Reset all colours to factory",
     "roomTagResetAllTitle": "Clear all colour overrides; catalogue factory colours apply again",
-    "fmlViewer": "Plan (display)",
+    "planDisplay": "Plan (display)",
     "underlayOpacity": "Underlay",
     "underlayOpacityAria": "Underlay opacity",
     "fmlOpacity": "Plan",

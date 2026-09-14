@@ -93,13 +93,13 @@ export const USER_SETTINGS_STORAGE_KEY = 'bouwToFml.userSettings'
 export const USER_SETTINGS_VERSION = 1 as const
 
 /** Factory FML-viewer opacities (percent 0–100). */
-export const DEFAULT_FML_UNDERLAY_OPACITY_PCT = 25
-export const DEFAULT_FML_CONTENT_OPACITY_PCT = 80
+export const DEFAULT_UNDERLAY_OPACITY_PCT = 25
+export const DEFAULT_CONTENT_OPACITY_PCT = 80
 export { DEFAULT_SLICER_OFFSET_SNAP_CM } from '@/core/fml/slice-offset-snap'
 
-export type EditorSettings = {
+export type PlanDisplaySettings = {
   underlayOpacityPct: number
-  fmlOpacityPct: number
+  contentOpacityPct: number
   /** Overlay: binnenhoeken H+V / scheef. */
   cornerMarkerMode: CornerMarkerMode
   /** Preview-kleuren deuren / ramen / bovenlicht-hartlijn. */
@@ -144,7 +144,7 @@ export type UserSettingsV1 = {
   /** Schaalliniaal + FML typen (kamer/muur/move); doorrekening blijft cm. */
   scaleInputUnit: ScaleInputUnit
   defaults: ProjectFmlDefaults
-  fmlViewer: EditorSettings
+  planDisplay: PlanDisplaySettings
   fmlConversion: FmlConversionSettings
   /** Per-role kleur-overrides t.o.v. roomtype-catalogus (alleen afwijkingen). */
   roomTagColors: Record<string, string>
@@ -217,10 +217,10 @@ export function createFactoryFmlDefaults(): ProjectFmlDefaults {
   }
 }
 
-export function createFactoryEditorSettings(): EditorSettings {
+export function createFactoryPlanDisplaySettings(): PlanDisplaySettings {
   return {
-    underlayOpacityPct: DEFAULT_FML_UNDERLAY_OPACITY_PCT,
-    fmlOpacityPct: DEFAULT_FML_CONTENT_OPACITY_PCT,
+    underlayOpacityPct: DEFAULT_UNDERLAY_OPACITY_PCT,
+    contentOpacityPct: DEFAULT_CONTENT_OPACITY_PCT,
     cornerMarkerMode: DEFAULT_CORNER_MARKER_MODE,
     openingColors: createFactoryOpeningDisplayColors(),
     slicerOffsetSnapCm: DEFAULT_SLICER_OFFSET_SNAP_CM,
@@ -252,7 +252,7 @@ export function createFactoryUserSettings(): UserSettingsV1 {
     unitSystem: DEFAULT_UNIT_SYSTEM,
     scaleInputUnit: DEFAULT_SCALE_INPUT_UNIT,
     defaults: createFactoryFmlDefaults(),
-    fmlViewer: createFactoryEditorSettings(),
+    planDisplay: createFactoryPlanDisplaySettings(),
     fmlConversion: createFactoryFmlConversionSettings(),
     roomTagColors: {},
   }
@@ -323,14 +323,18 @@ function normalizeFacadeGroupPresets(
   return out
 }
 
-function normalizeEditor(
+function normalizePlanDisplay(
   raw: unknown,
-  factory: EditorSettings = createFactoryEditorSettings(),
-): EditorSettings {
+  factory: PlanDisplaySettings = createFactoryPlanDisplaySettings(),
+): PlanDisplaySettings {
   const src = asRecord(raw)
   return {
     underlayOpacityPct: clampOpacityPct(src.underlayOpacityPct, factory.underlayOpacityPct),
-    fmlOpacityPct: clampOpacityPct(src.fmlOpacityPct, factory.fmlOpacityPct),
+    // Lees-alias: browsers van vóór de plan-rename hebben `fmlOpacityPct` opgeslagen.
+    contentOpacityPct: clampOpacityPct(
+      src.contentOpacityPct ?? src.fmlOpacityPct,
+      factory.contentOpacityPct,
+    ),
     cornerMarkerMode: normalizeCornerMarkerMode(src.cornerMarkerMode ?? factory.cornerMarkerMode),
     openingColors: normalizeOpeningDisplayColors(src.openingColors ?? factory.openingColors),
     slicerOffsetSnapCm: positiveCm(src.slicerOffsetSnapCm, factory.slicerOffsetSnapCm),
@@ -395,7 +399,7 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
     unitSystem: normalizeUnitSystem(obj.unitSystem),
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults, factory.defaults),
-    fmlViewer: normalizeEditor(obj.fmlViewer, factory.fmlViewer),
+    planDisplay: normalizePlanDisplay(obj.planDisplay ?? obj.fmlViewer, factory.planDisplay),
     fmlConversion: normalizeFmlConversion(obj.fmlConversion, factory.fmlConversion),
     roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
@@ -403,7 +407,7 @@ export function normalizeUserSettings(raw: unknown): UserSettingsV1 {
 
 /**
  * Strict parse for import. Requires version: 1 and a defaults object.
- * Missing fmlViewer / fmlConversion / scaleInputUnit / unitSystem → factory (forward-compatible).
+ * Missing planDisplay / fmlConversion / scaleInputUnit / unitSystem → factory (forward-compatible).
  */
 export function parseUserSettingsJson(raw: string): UserSettingsV1 {
   let parsed: unknown
@@ -428,7 +432,7 @@ export function parseUserSettingsJson(raw: string): UserSettingsV1 {
     unitSystem: normalizeUnitSystem(obj.unitSystem),
     scaleInputUnit: normalizeScaleInputUnit(obj.scaleInputUnit),
     defaults: normalizeDefaults(obj.defaults),
-    fmlViewer: normalizeEditor(obj.fmlViewer),
+    planDisplay: normalizePlanDisplay(obj.planDisplay ?? obj.fmlViewer),
     fmlConversion: normalizeFmlConversion(obj.fmlConversion),
     roomTagColors: normalizeRoomTagColors(obj.roomTagColors),
   }
@@ -477,8 +481,8 @@ export function setShowCanvasGrid(show: boolean): boolean {
   const current = loadUserSettings()
   return saveUserSettings({
     ...current,
-    fmlViewer: { ...current.fmlViewer, showCanvasGrid: show === true },
-  }).fmlViewer.showCanvasGrid
+    planDisplay: { ...current.planDisplay, showCanvasGrid: show === true },
+  }).planDisplay.showCanvasGrid
 }
 
 /** Persist plattegrond dak-overlay master (topbar toggle). */
@@ -486,8 +490,8 @@ export function setShowRoofOverlayOnPlan(show: boolean): boolean {
   const current = loadUserSettings()
   return saveUserSettings({
     ...current,
-    fmlViewer: { ...current.fmlViewer, showRoofOverlayOnPlan: show === true },
-  }).fmlViewer.showRoofOverlayOnPlan
+    planDisplay: { ...current.planDisplay, showRoofOverlayOnPlan: show === true },
+  }).planDisplay.showRoofOverlayOnPlan
 }
 
 export function resetUserSettingsToFactory(): UserSettingsV1 {

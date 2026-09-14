@@ -33,7 +33,7 @@ describe('underlay display orient + regenerate compose', () => {
     expect(next.flipX).toBe(true)
   })
 
-  it('regenerate-pad: fmlOrient blijft equivalent aan knop-ops', () => {
+  it('regenerate-pad: planOrient blijft equivalent aan knop-ops', () => {
     const plan: FloorPlan = {
       name: 'G',
       floors: [

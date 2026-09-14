@@ -95,7 +95,7 @@ const props = withDefaults(defineProps<PlanCanvasHostProps>(), {
   defaultDoorHeightCm: undefined,
   defaultWindowHeightCm: undefined,
   defaultWindowSillZCm: undefined,
-  setFmlNulpuntImageCm: undefined,
+  setPlanNulpuntImageCm: undefined,
   kind: undefined,
   areaSurfaceEditEnabled: undefined,
   annotationEditEnabled: undefined,
@@ -166,7 +166,7 @@ const emit = defineEmits<{
 }>()
 
 const measureDrawMode = ref<MeasureDrawMode>('tape')
-/** Slicer: true = handles bewerken, false = nieuwe Pâ†’M plaatsen. */
+/** Slicer: true = handles bewerken, false = nieuwe P→M plaatsen. */
 const slicerEditMode = ref(false)
 const selectedSliceIndex = ref(-1)
 const internalDimensionVis = ref<DimensionVis>(
@@ -298,7 +298,7 @@ const underlayProps = computed(() => ({
 const dakMode = computed(() => props.dakMode === true)
 
 /**
- * View-as, Ã©Ã©n keer gebouwd en als object doorgegeven aan interaction en render.
+ * View-as, één keer gebouwd en als object doorgegeven aan interaction en render.
  * De `dakMode`-computed hierboven blijft voor de template-bindingen; composables
  * krijgen de context, niet de losse ref.
  */
@@ -307,17 +307,17 @@ const viewContext = createPlanViewContext({
   isRidgeWallId: (wallId) => isRidgeWallId(editor.localPlan.value, wallId),
 })
 const drawInputUnit = ref<ScaleInputUnit>(loadUserSettings().scaleInputUnit)
-const planDisplayStyle = ref<PlanDisplayStyleChoice>(loadUserSettings().fmlViewer.planDisplayStyle)
-const showCanvasGrid = ref(loadUserSettings().fmlViewer.showCanvasGrid !== false)
-const showRoofOverlayOnPlan = ref(loadUserSettings().fmlViewer.showRoofOverlayOnPlan !== false)
-const showRoofPlanesOnPlan = ref(loadUserSettings().fmlViewer.showRoofPlanesOnPlan !== false)
-const showClearHeight150 = ref(loadUserSettings().fmlViewer.showClearHeight150 !== false)
-const showClearHeight200 = ref(loadUserSettings().fmlViewer.showClearHeight200 === true)
-const showClearHeightPlanFill = ref(loadUserSettings().fmlViewer.showClearHeightPlanFill === true)
+const planDisplayStyle = ref<PlanDisplayStyleChoice>(loadUserSettings().planDisplay.planDisplayStyle)
+const showCanvasGrid = ref(loadUserSettings().planDisplay.showCanvasGrid !== false)
+const showRoofOverlayOnPlan = ref(loadUserSettings().planDisplay.showRoofOverlayOnPlan !== false)
+const showRoofPlanesOnPlan = ref(loadUserSettings().planDisplay.showRoofPlanesOnPlan !== false)
+const showClearHeight150 = ref(loadUserSettings().planDisplay.showClearHeight150 !== false)
+const showClearHeight200 = ref(loadUserSettings().planDisplay.showClearHeight200 === true)
+const showClearHeightPlanFill = ref(loadUserSettings().planDisplay.showClearHeightPlanFill === true)
 const clearHeightFillColor = ref(
-  loadUserSettings().fmlViewer.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
+  loadUserSettings().planDisplay.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
 )
-const showRidgeDisplay = ref(loadUserSettings().fmlViewer.showRidgeDisplay !== false)
+const showRidgeDisplay = ref(loadUserSettings().planDisplay.showRidgeDisplay !== false)
 
 function onShowRoofOverlayOnPlan(next: boolean) {
   showRoofOverlayOnPlan.value = setShowRoofOverlayOnPlan(next)
@@ -388,7 +388,7 @@ const interaction = usePlanCanvasInteraction({
     bovenlichtPacked: bovenlichtPackedRef,
   },
   getUnderlayLayout: () => {
-    // Origin mag (0,0) zijn â€” object is altijd truthy; alleen null/undefined blokkeert.
+    // Origin mag (0,0) zijn — object is altijd truthy; alleen null/undefined blokkeert.
     if (props.cmOrigin == null) {
       // Fallback zodat nulpunt niet stil faalt zonder underlay-layout prop.
       return {
@@ -411,7 +411,7 @@ const interaction = usePlanCanvasInteraction({
       ...(props.flipX ? { flipX: true } : {}),
     }
   },
-  setFmlNulpuntImageCm: (point) => props.setFmlNulpuntImageCm?.(point),
+  setPlanNulpuntImageCm: (point) => props.setPlanNulpuntImageCm?.(point),
   underlayMoveMode: underlayMoveModeRef,
   areaSurfaceEditEnabled,
   annotationEditEnabled,
@@ -509,25 +509,25 @@ const inspectWallPolygons = computed(() => {
 
 /** Overlay: area-zijdematen; onafhankelijk van activePlanTool. */
 const areaSideDimsVisible = ref(false)
-const cornerMarkerMode = ref<CornerMarkerMode>(loadUserSettings().fmlViewer.cornerMarkerMode)
+const cornerMarkerMode = ref<CornerMarkerMode>(loadUserSettings().planDisplay.cornerMarkerMode)
 const openingColors = ref<OpeningDisplayColors>({
-  ...loadUserSettings().fmlViewer.openingColors,
+  ...loadUserSettings().planDisplay.openingColors,
 })
 
 function applyCornerMarkerModeFromSettings(): void {
   const settings = loadUserSettings()
-  cornerMarkerMode.value = settings.fmlViewer.cornerMarkerMode
-  openingColors.value = { ...settings.fmlViewer.openingColors }
-  planDisplayStyle.value = settings.fmlViewer.planDisplayStyle
-  showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
-  showRoofOverlayOnPlan.value = settings.fmlViewer.showRoofOverlayOnPlan !== false
-  showRoofPlanesOnPlan.value = settings.fmlViewer.showRoofPlanesOnPlan !== false
-  showClearHeight150.value = settings.fmlViewer.showClearHeight150 !== false
-  showClearHeight200.value = settings.fmlViewer.showClearHeight200 === true
-  showClearHeightPlanFill.value = settings.fmlViewer.showClearHeightPlanFill === true
+  cornerMarkerMode.value = settings.planDisplay.cornerMarkerMode
+  openingColors.value = { ...settings.planDisplay.openingColors }
+  planDisplayStyle.value = settings.planDisplay.planDisplayStyle
+  showCanvasGrid.value = settings.planDisplay.showCanvasGrid !== false
+  showRoofOverlayOnPlan.value = settings.planDisplay.showRoofOverlayOnPlan !== false
+  showRoofPlanesOnPlan.value = settings.planDisplay.showRoofPlanesOnPlan !== false
+  showClearHeight150.value = settings.planDisplay.showClearHeight150 !== false
+  showClearHeight200.value = settings.planDisplay.showClearHeight200 === true
+  showClearHeightPlanFill.value = settings.planDisplay.showClearHeightPlanFill === true
   clearHeightFillColor.value =
-    settings.fmlViewer.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
-  showRidgeDisplay.value = settings.fmlViewer.showRidgeDisplay !== false
+    settings.planDisplay.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
+  showRidgeDisplay.value = settings.planDisplay.showRidgeDisplay !== false
   drawInputUnit.value = settings.scaleInputUnit
 }
 
@@ -1659,7 +1659,7 @@ watch(
         @pointerdown.stop
         @click.stop.prevent="confirmNulpuntBake"
       >
-        âœ“
+        ✓
       </button>
       <button
         type="button"
@@ -1668,7 +1668,7 @@ watch(
         @pointerdown.stop
         @click.stop.prevent="cancelNulpuntPending"
       >
-        âœ•
+        ✕
       </button>
     </div>
     <svg
@@ -1737,7 +1737,7 @@ watch(
         @pointerdown.stop
         @click.stop="acceptDrawDraft"
       >
-        âœ“
+        ✓
       </button>
     </div>
     <div
@@ -1929,7 +1929,7 @@ watch(
   touch-action: manipulation;
 }
 
-/* Hardcoded â€” scoped @import of :root tokens never matches, so var() here
+/* Hardcoded — scoped @import of :root tokens never matches, so var() here
    made left/bottom/z-index invalid and the Konva stage hid the library. */
 .fixture-palette-dock {
   position: absolute;

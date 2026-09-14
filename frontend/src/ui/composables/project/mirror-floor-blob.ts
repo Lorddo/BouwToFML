@@ -45,7 +45,7 @@ export function mirrorFloorBlobVertical(blob: FloorWorkspaceBlob): {
         ...blob,
         previewPlan: nextPlan,
         generatedFloor: nextFloor ? cloneFloor(nextFloor) : blob.generatedFloor,
-        fmlOrient: nextOrientPersist(blob.fmlOrient),
+        planOrient: nextOrientPersist(blob.planOrient),
       },
       mirrored: true,
     }
@@ -59,7 +59,7 @@ export function mirrorFloorBlobVertical(blob: FloorWorkspaceBlob): {
         ...blob,
         generatedFloor: nextFloor ? cloneFloor(nextFloor) : null,
         previewPlan: null,
-        fmlOrient: nextOrientPersist(blob.fmlOrient),
+        planOrient: nextOrientPersist(blob.planOrient),
       },
       mirrored: true,
     }

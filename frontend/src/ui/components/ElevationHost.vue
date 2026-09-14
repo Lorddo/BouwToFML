@@ -112,14 +112,14 @@ useChromeFitScale(elevDockRef, { containerSelector: '.elev-host, .plan-canvas-wr
 
 // --- Settings state ---
 const planDisplayStyle = ref<PlanDisplayStyleChoice>(
-  loadUserSettings().fmlViewer.planDisplayStyle ?? DEFAULT_PLAN_DISPLAY_STYLE,
+  loadUserSettings().planDisplay.planDisplayStyle ?? DEFAULT_PLAN_DISPLAY_STYLE,
 )
-const showCanvasGrid = ref(loadUserSettings().fmlViewer.showCanvasGrid !== false)
+const showCanvasGrid = ref(loadUserSettings().planDisplay.showCanvasGrid !== false)
 
 function applyCornerMarkerModeFromSettings(): void {
   const settings = loadUserSettings()
-  planDisplayStyle.value = settings.fmlViewer.planDisplayStyle
-  showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
+  planDisplayStyle.value = settings.planDisplay.planDisplayStyle
+  showCanvasGrid.value = settings.planDisplay.showCanvasGrid !== false
 }
 
 function onShowCanvasGrid(next: boolean) {
@@ -284,7 +284,7 @@ const underlayMove = usePlanCanvasUnderlayMove({
   hitTest: { clientToCm },
   underlayMoveMode,
   getUnderlayLayout: elevationUnderlayLayoutFromProps,
-  setFmlNulpuntImageCm: () => undefined,
+  setPlanNulpuntImageCm: () => undefined,
   syncLayoutToParent: (layout) => emit('update:underlayLayout', layout),
   beforeBegin: () => undefined,
 })

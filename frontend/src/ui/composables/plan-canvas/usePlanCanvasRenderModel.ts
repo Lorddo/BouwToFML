@@ -284,7 +284,7 @@ export function usePlanCanvasRenderModel(
           })),
         )
         if (!wallFillPathData) {
-          throw new Error('fml-walls: empty union path â€” refusing per-wall fallback')
+          throw new Error('fml-walls: empty union path — refusing per-wall fallback')
         }
       }
     }

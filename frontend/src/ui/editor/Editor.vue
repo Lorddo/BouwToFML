@@ -37,7 +37,7 @@ withDefaults(
     defaultDoorHeightCm?: number
     defaultWindowHeightCm?: number
     defaultWindowSillZCm?: number
-    setFmlNulpuntImageCm?: (point: { x: number; y: number } | null) => void
+    setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void
     labelsVisible?: boolean
     rescaleMode?: boolean
     rescaleState?: HScaleState | null
@@ -115,7 +115,7 @@ defineExpose({
     :default-door-height-cm="defaultDoorHeightCm"
     :default-window-height-cm="defaultWindowHeightCm"
     :default-window-sill-z-cm="defaultWindowSillZCm"
-    :set-fml-nulpunt-image-cm="setFmlNulpuntImageCm"
+    :set-plan-nulpunt-image-cm="setPlanNulpuntImageCm"
     :labels-visible="labelsVisible"
     :rescale-mode="rescaleMode"
     :rescale-state="rescaleState"

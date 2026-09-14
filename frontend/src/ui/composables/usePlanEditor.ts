@@ -316,7 +316,7 @@ export function usePlanEditor(
       facadeStamp.ensureStampFacadeGroup(localPlan.value)
     }
     if (localPlan.value && options?.ensureDefaultFacades?.value === true) {
-      ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().fmlViewer.facadeGroups)
+      ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().planDisplay.facadeGroups)
     }
     if (!optionsReplace?.keepUndo) {
       undoModule.clearStacks()
@@ -342,7 +342,7 @@ export function usePlanEditor(
         facadeStamp.ensureStampFacadeGroup(localPlan.value)
       }
       if (localPlan.value && options?.ensureDefaultFacades?.value === true) {
-        ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().fmlViewer.facadeGroups)
+        ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().planDisplay.facadeGroups)
       }
       undoModule.clearStacks()
     },

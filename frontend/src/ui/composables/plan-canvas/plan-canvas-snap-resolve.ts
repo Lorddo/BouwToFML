@@ -95,7 +95,7 @@ export function createPlanSnapResolve(deps: PlanSnapResolveDeps): PlanSnapResolv
   function roofOverlaySnapEnabled(): boolean {
     if (view.mode === 'dak') return false
     if (deps.roofOverlayOnPlan?.value === false) return false
-    const viewer = loadUserSettings().fmlViewer
+    const viewer = loadUserSettings().planDisplay
     if (deps.roofOverlayOnPlan == null && viewer.showRoofOverlayOnPlan === false) return false
     return viewer.showRoofPlanesOnPlan !== false
   }

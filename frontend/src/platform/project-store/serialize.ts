@@ -249,10 +249,10 @@ function persistBlob(
     previewUnderlayLayout: blob.previewUnderlayLayout
       ? toStorableDevSession(blob.previewUnderlayLayout)
       : null,
-    fmlNulpuntImageCm: blob.fmlNulpuntImageCm
-      ? toStorableDevSession(blob.fmlNulpuntImageCm)
-      : (blob.fmlNulpuntImageCm ?? null),
-    fmlOrient: blob.fmlOrient ? toStorableDevSession(blob.fmlOrient) : (blob.fmlOrient ?? null),
+    planNulpuntImageCm: blob.planNulpuntImageCm
+      ? toStorableDevSession(blob.planNulpuntImageCm)
+      : (blob.planNulpuntImageCm ?? null),
+    planOrient: blob.planOrient ? toStorableDevSession(blob.planOrient) : (blob.planOrient ?? null),
     scale: split?.scale ?? scaleFallback,
     sourceUnderlay: blob.sourceUnderlay ? persistSourceUnderlay(blob.sourceUnderlay) : null,
     // Floor pdfUnderlaySource / sourcePdfUnderlay stay memory-only (stale ROI + quota).
@@ -285,8 +285,9 @@ function restoreBlob(blob: PersistedFloorBlob): FloorWorkspaceBlob {
     generatedFloor,
     previewPlan,
     previewUnderlayLayout: plan.previewUnderlayLayout,
-    fmlNulpuntImageCm: plan.fmlNulpuntImageCm ?? null,
-    fmlOrient: plan.fmlOrient ?? null,
+    // Lees-alias: records van vóór de plan-rename dragen nog de `fml*`-sleutels.
+    planNulpuntImageCm: plan.planNulpuntImageCm ?? plan.fmlNulpuntImageCm ?? null,
+    planOrient: plan.planOrient ?? plan.fmlOrient ?? null,
     sourceUnderlay: plan.sourceUnderlay ? restoreSourceUnderlay(plan.sourceUnderlay) : null,
     pdfUnderlaySource: null,
     sourcePdfUnderlay: null,

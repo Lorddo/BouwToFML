@@ -244,8 +244,8 @@ export function useWorkspace() {
     },
     onBakeNulpunt: (nulpunt) => {
       // Zaai current nulpunt alleen als leeg; bakeNulpuntImageCm zit in wallStamp.
-      if (planApi && planApi.fmlNulpuntImageCm.value == null) {
-        planApi.setFmlNulpuntImageCm(nulpunt)
+      if (planApi && planApi.planNulpuntImageCm.value == null) {
+        planApi.setPlanNulpuntImageCm(nulpunt)
       }
     },
   })
@@ -323,11 +323,11 @@ export function useWorkspace() {
     setLocalError,
   })
 
-  const initialViewer = loadUserSettings().fmlViewer
+  const initialViewer = loadUserSettings().planDisplay
   const initialConversion = loadUserSettings().fmlConversion
   const fmlUnderlayOpacity = ref(initialViewer.underlayOpacityPct)
   /** FML-geometrie opacity in de viewer (percent 0–100). */
-  const fmlContentOpacity = ref(initialViewer.fmlOpacityPct)
+  const fmlContentOpacity = ref(initialViewer.contentOpacityPct)
   /** Sesssie-only: kamer-/FML-labels verbergen (niet in user-settings). */
   const fmlHidePlanText = ref(false)
   /** Viewport-vast hulpraster op stap 1–3 canvas. */
@@ -337,9 +337,9 @@ export function useWorkspace() {
 
   function applyUserViewerSettings(): void {
     const settings = loadUserSettings()
-    fmlUnderlayOpacity.value = settings.fmlViewer.underlayOpacityPct
-    fmlContentOpacity.value = settings.fmlViewer.fmlOpacityPct
-    showCanvasGrid.value = settings.fmlViewer.showCanvasGrid !== false
+    fmlUnderlayOpacity.value = settings.planDisplay.underlayOpacityPct
+    fmlContentOpacity.value = settings.planDisplay.contentOpacityPct
+    showCanvasGrid.value = settings.planDisplay.showCanvasGrid !== false
     mergeDoubleDoors.value = settings.fmlConversion.mergeDoubleDoors
     mergeMultiWindows.value = settings.fmlConversion.mergeMultiWindows
     scaleUi.applyScaleInputUnitFromSettings()
@@ -598,8 +598,8 @@ export function useWorkspace() {
       eraserMask: inputMask.eraserMask,
       ocrMask: inputMask.ocrMask,
       ocrMaskedRegions: inputMask.ocrMaskedRegions,
-      getFmlNulpuntImageCm: () => fml.fmlNulpuntImageCm.value ?? null,
-      setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
+      getFmlNulpuntImageCm: () => fml.planNulpuntImageCm.value ?? null,
+      setPlanNulpuntImageCm: (point) => fml.setPlanNulpuntImageCm(point),
       publishWallBwUnderlay: () => preprocessUi.publishWallBwUnderlay(),
     })
   }
@@ -893,10 +893,10 @@ export function useWorkspace() {
     getPreviewPlan: () => fml.previewPlan.value ?? null,
     getPreviewUnderlayLayout: () => fml.previewUnderlayLayout.value ?? null,
     updatePreviewPlan: (plan, layout) => fml.updatePreviewPlan(plan, layout),
-    getFmlNulpuntImageCm: () => fml.fmlNulpuntImageCm.value ?? null,
-    setFmlNulpuntImageCm: (point) => fml.setFmlNulpuntImageCm(point),
+    getFmlNulpuntImageCm: () => fml.planNulpuntImageCm.value ?? null,
+    setPlanNulpuntImageCm: (point) => fml.setPlanNulpuntImageCm(point),
     getFmlOrient: () => fml.persistOrientState(),
-    setFmlOrient: (state) => fml.setFmlOrient(state),
+    setPlanOrient: (state) => fml.setPlanOrient(state),
     clearLivePlanCanvas: () => fml.clearLivePlanCanvas(),
     applyFmlDefaultsToUi: (defaults) => {
       fml.hydrateFmlWallHeightCm(defaults.wallHeightCm)
@@ -1114,8 +1114,8 @@ export function useWorkspace() {
     return {
       unitSystem: settings.unitSystem,
       scaleInputUnit: settings.scaleInputUnit,
-      planDisplayStyle: settings.fmlViewer.planDisplayStyle ?? 'editor',
-      showCanvasGrid: settings.fmlViewer.showCanvasGrid !== false,
+      planDisplayStyle: settings.planDisplay.planDisplayStyle ?? 'editor',
+      showCanvasGrid: settings.planDisplay.showCanvasGrid !== false,
       defaults: { ...project.activeFloorDefaults.value },
     }
   }
@@ -1435,8 +1435,8 @@ export function useWorkspace() {
     setFmlDoorHeightCm,
     setFmlWindowHeightCm,
     setFmlWindowSillZCm,
-    setFmlNulpuntImageCm: (point: { x: number; y: number } | null) =>
-      fml.setFmlNulpuntImageCm(point),
+    setPlanNulpuntImageCm: (point: { x: number; y: number } | null) =>
+      fml.setPlanNulpuntImageCm(point),
     updatePreviewPlan: fml.updatePreviewPlan,
     downloadProjectFml,
     downloadProjectPlg,

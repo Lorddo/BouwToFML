@@ -132,7 +132,7 @@ export type WorkspaceFmlGenerateDeps = {
   floorLevel?: Ref<number | null>
   /**
    * Stempelset vector-inject (stap 2 bake). null = geen inject.
-   * bakeNulpunt zaait fmlNulpuntImageCm als die leeg is.
+   * bakeNulpunt zaait planNulpuntImageCm als die leeg is.
    */
   getStampVectorInject?: () => WorkspaceFmlStampInject | null
   /** Test/override: zelfde seam als useEditorSessionDefaults.confirmOverwrite. */
@@ -180,9 +180,9 @@ export function createWorkspaceFmlGenerate(
   /** Layout bij snelle floor-restore (zonder live generatedBundle). */
   const persistedUnderlayLayout = ref<PreviewUnderlayLayout | null>(null)
   /** Gebruikers-nulpunt in scant-cm; overleeft regenerate. */
-  const fmlNulpuntImageCm = ref<Point2D | null>(null)
+  const planNulpuntImageCm = ref<Point2D | null>(null)
   /** FML D4-oriëntatie t.o.v. canonieke generate; overleeft regenerate. */
-  const fmlOrient = ref<FloorOrientState>(defaultFloorOrient())
+  const planOrient = ref<FloorOrientState>(defaultFloorOrient())
   /** Sidebar: onderlegger verslepen. */
   const underlayMoveMode = ref(false)
   /** Stap-4 Herschalen: H/V-linialen op FML-preview. */
@@ -192,19 +192,19 @@ export function createWorkspaceFmlGenerate(
   const fmlRescaleDistanceMmY = ref(0)
 
   function persistOrientState(): FloorOrientPersist | null {
-    if (isIdentityFloorOrient(fmlOrient.value)) return null
+    if (isIdentityFloorOrient(planOrient.value)) return null
     return {
-      quarterTurnsCw: fmlOrient.value.quarterTurnsCw,
-      flipX: fmlOrient.value.flipX,
+      quarterTurnsCw: planOrient.value.quarterTurnsCw,
+      flipX: planOrient.value.flipX,
     }
   }
 
-  function setFmlOrient(state: FloorOrientPersist | FloorOrientState | null | undefined): void {
+  function setPlanOrient(state: FloorOrientPersist | FloorOrientState | null | undefined): void {
     if (!state) {
-      fmlOrient.value = defaultFloorOrient()
+      planOrient.value = defaultFloorOrient()
       return
     }
-    fmlOrient.value = {
+    planOrient.value = {
       quarterTurnsCw: state.quarterTurnsCw,
       flipX: state.flipX,
     }
@@ -215,7 +215,7 @@ export function createWorkspaceFmlGenerate(
     layoutAfterNulpunt: PreviewUnderlayLayout,
     previousLayout: PreviewUnderlayLayout | null,
   ): { plan: FloorPlan; layout: PreviewUnderlayLayout } {
-    const oriented = applyFloorOrientFromCanonical(plan, fmlOrient.value, 0)
+    const oriented = applyFloorOrientFromCanonical(plan, planOrient.value, 0)
     const layout = copyUnderlayDisplayOrient(
       cloneUnderlayOriginLayout(layoutAfterNulpunt),
       previousLayout,
@@ -294,10 +294,10 @@ export function createWorkspaceFmlGenerate(
   }
 
   function ensureNulpuntSeededFromStamp(stamp: WorkspaceFmlStampInject | null): Point2D | null {
-    if (fmlNulpuntImageCm.value) return fmlNulpuntImageCm.value
+    if (planNulpuntImageCm.value) return planNulpuntImageCm.value
     if (!stamp) return null
-    fmlNulpuntImageCm.value = { ...stamp.bakeNulpuntImageCm }
-    return fmlNulpuntImageCm.value
+    planNulpuntImageCm.value = { ...stamp.bakeNulpuntImageCm }
+    return planNulpuntImageCm.value
   }
 
   /**
@@ -311,7 +311,7 @@ export function createWorkspaceFmlGenerate(
     const stamp = resolveStampInject()
     let next = plan
     if (stamp && stamp.walls.length > 0) {
-      const current = fmlNulpuntImageCm.value ?? stamp.bakeNulpuntImageCm
+      const current = planNulpuntImageCm.value ?? stamp.bakeNulpuntImageCm
       const offsetCm = resolveStampInjectOffsetCm(stamp.bakeNulpuntImageCm, current)
       const injected = injectStampWallsIntoPlan(next, 0, stamp.walls, {
         offsetCm,
@@ -352,7 +352,7 @@ export function createWorkspaceFmlGenerate(
   ): { plan: FloorPlan; layout: PreviewUnderlayLayout } {
     const stamp = resolveStampInject()
     const seed = options?.seedNulpunt !== false
-    let nulpunt = fmlNulpuntImageCm.value
+    let nulpunt = planNulpuntImageCm.value
     if (!nulpunt && stamp) {
       nulpunt = seed ? ensureNulpuntSeededFromStamp(stamp) : { ...stamp.bakeNulpuntImageCm }
     }
@@ -590,9 +590,9 @@ export function createWorkspaceFmlGenerate(
     const built = buildPreviewFromRawBundle(bundle)
     const oriented = applyOrientAndPreserveUnderlayDisplay(built.plan, built.layout, prevDisplay)
     const stamp = resolveStampInject()
-    const hasNulpunt = fmlNulpuntImageCm.value != null || stamp != null
+    const hasNulpunt = planNulpuntImageCm.value != null || stamp != null
     editedPreviewPlan.value =
-      hasNulpunt || !isIdentityFloorOrient(fmlOrient.value) ? oriented.plan : null
+      hasNulpunt || !isIdentityFloorOrient(planOrient.value) ? oriented.plan : null
     persistedUnderlayLayout.value = oriented.layout
   }
 
@@ -609,9 +609,9 @@ export function createWorkspaceFmlGenerate(
       const built = buildPreviewFromRawBundle(bundle)
       const oriented = applyOrientAndPreserveUnderlayDisplay(built.plan, built.layout, prevDisplay)
       const stamp = resolveStampInject()
-      const hasNulpunt = fmlNulpuntImageCm.value != null || stamp != null
+      const hasNulpunt = planNulpuntImageCm.value != null || stamp != null
       editedPreviewPlan.value =
-        hasNulpunt || !isIdentityFloorOrient(fmlOrient.value) ? oriented.plan : null
+        hasNulpunt || !isIdentityFloorOrient(planOrient.value) ? oriented.plan : null
       persistedUnderlayLayout.value = oriented.layout
     },
     { flush: 'sync' },
@@ -663,8 +663,8 @@ export function createWorkspaceFmlGenerate(
     persistedUnderlayLayout.value = layout ? cloneUnderlayOriginLayout(layout) : null
   }
 
-  function setFmlNulpuntImageCm(point: Point2D | null): void {
-    fmlNulpuntImageCm.value = point ? { x: point.x, y: point.y } : null
+  function setPlanNulpuntImageCm(point: Point2D | null): void {
+    planNulpuntImageCm.value = point ? { x: point.x, y: point.y } : null
   }
 
   /**
@@ -689,11 +689,11 @@ export function createWorkspaceFmlGenerate(
     const appliedNulpunt = applyNulpunt(plan, layout, dropCm)
     editedPreviewPlan.value = appliedNulpunt.plan
     persistedUnderlayLayout.value = cloneUnderlayOriginLayout(appliedNulpunt.layout)
-    fmlNulpuntImageCm.value = { ...appliedNulpunt.nulpuntImageCm }
+    planNulpuntImageCm.value = { ...appliedNulpunt.nulpuntImageCm }
     return {
       plan: appliedNulpunt.plan,
       layout: persistedUnderlayLayout.value,
-      nulpuntImageCm: fmlNulpuntImageCm.value,
+      nulpuntImageCm: planNulpuntImageCm.value,
     }
   }
 
@@ -704,8 +704,8 @@ export function createWorkspaceFmlGenerate(
     importedWarnings.value = []
     importedFmlText.value = ''
     persistedUnderlayLayout.value = null
-    fmlNulpuntImageCm.value = null
-    fmlOrient.value = defaultFloorOrient()
+    planNulpuntImageCm.value = null
+    planOrient.value = defaultFloorOrient()
     underlayMoveMode.value = false
     cancelPlanRescale()
   }
@@ -750,9 +750,9 @@ export function createWorkspaceFmlGenerate(
     if (layout) {
       persistedUnderlayLayout.value = scaleUnderlayLayout(layout, factors)
     }
-    const nulpunt = fmlNulpuntImageCm.value
+    const nulpunt = planNulpuntImageCm.value
     if (nulpunt) {
-      fmlNulpuntImageCm.value = scaleNulpuntImageCm(nulpunt, factors)
+      planNulpuntImageCm.value = scaleNulpuntImageCm(nulpunt, factors)
     }
     if (deps.scale.confirmed.value) {
       if (
@@ -828,7 +828,7 @@ export function createWorkspaceFmlGenerate(
   function applyFloorOrientOpToPreview(op: FloorOrientOp): boolean {
     const plan = editedPreviewPlan.value ?? importedPlan.value ?? fmlExportPlan.value
     if (!plan) return false
-    fmlOrient.value = composeFloorOrient(fmlOrient.value, op)
+    planOrient.value = composeFloorOrient(planOrient.value, op)
     editedPreviewPlan.value = applyFloorOrientOp(plan, op, 0)
     underlayMoveMode.value = false
     return true
@@ -911,15 +911,15 @@ export function createWorkspaceFmlGenerate(
     importedStats,
     previewUnderlayLayout,
     editedPreviewPlan,
-    fmlNulpuntImageCm,
-    fmlOrient,
+    planNulpuntImageCm,
+    planOrient,
     underlayMoveMode,
     syncAppliedFromDraft,
     applyPreviewDefault,
     updatePreviewPlan,
     setPreviewUnderlayLayout,
-    setFmlNulpuntImageCm,
-    setFmlOrient,
+    setPlanNulpuntImageCm,
+    setPlanOrient,
     persistOrientState,
     applyFloorOrientOpToPreview,
     applyUnderlayOrientOp,

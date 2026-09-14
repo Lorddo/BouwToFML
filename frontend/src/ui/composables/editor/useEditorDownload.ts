@@ -43,8 +43,8 @@ export function useEditorDownload(deps: {
     return {
       unitSystem: settings.unitSystem,
       scaleInputUnit: deps.scaleInputUnit.value,
-      planDisplayStyle: settings.fmlViewer.planDisplayStyle ?? 'editor',
-      showCanvasGrid: settings.fmlViewer.showCanvasGrid !== false,
+      planDisplayStyle: settings.planDisplay.planDisplayStyle ?? 'editor',
+      showCanvasGrid: settings.planDisplay.showCanvasGrid !== false,
       // Sessie-defaults dekken alleen de openingshoogtes; dikte-catalogus en
       // banden komen uit de gebruikersinstellingen.
       defaults: { ...settings.defaults, ...deps.activeFloorDefaults.value },

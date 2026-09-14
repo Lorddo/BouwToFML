@@ -30,28 +30,28 @@ function emptyBlob(overrides: Partial<FloorWorkspaceBlob> = {}): FloorWorkspaceB
     generatedFloor: null,
     previewPlan: null,
     previewUnderlayLayout: null,
-    fmlNulpuntImageCm: null,
-    fmlOrient: null,
+    planNulpuntImageCm: null,
+    planOrient: null,
     sourceUnderlay: null,
     ...overrides,
   }
 }
 
 describe('mirrorFloorBlobVertical', () => {
-  it('spiegelt previewPlan + generatedFloor; compose fmlOrient; underlay ongemoeid', () => {
+  it('spiegelt previewPlan + generatedFloor; compose planOrient; underlay ongemoeid', () => {
     const layout = { origin: { x: 1, y: 2 }, pxPerMmX: 3, pxPerMmY: 4, flipX: true }
     const floor = wallFloor(10)
     const blob = emptyBlob({
       previewPlan: planFromFloor(floor),
       generatedFloor: floor,
       previewUnderlayLayout: layout,
-      fmlOrient: { quarterTurnsCw: 0, flipX: false },
+      planOrient: { quarterTurnsCw: 0, flipX: false },
     })
     const { blob: next, mirrored } = mirrorFloorBlobVertical(blob)
     expect(mirrored).toBe(true)
     expect(next.previewPlan!.floors[0].walls[0].a.x).toBe(-10)
     expect(next.generatedFloor!.walls[0].a.x).toBe(-10)
-    expect(next.fmlOrient).toEqual({ quarterTurnsCw: 0, flipX: true })
+    expect(next.planOrient).toEqual({ quarterTurnsCw: 0, flipX: true })
     expect(next.previewUnderlayLayout).toEqual(layout)
   })
 
@@ -59,12 +59,12 @@ describe('mirrorFloorBlobVertical', () => {
     const floor = wallFloor(10)
     const blob = emptyBlob({
       previewPlan: planFromFloor(floor),
-      fmlOrient: null,
+      planOrient: null,
     })
     const once = mirrorFloorBlobVertical(blob).blob
     const twice = mirrorFloorBlobVertical(once).blob
     expect(twice.previewPlan!.floors[0].walls[0].a).toEqual(floor.walls[0].a)
-    expect(twice.fmlOrient).toBeNull()
+    expect(twice.planOrient).toBeNull()
 
     const empty = emptyBlob()
     const skipped = mirrorFloorBlobVertical(empty)
@@ -74,10 +74,10 @@ describe('mirrorFloorBlobVertical', () => {
 
   it('spiegelt generatedFloor zonder previewPlan', () => {
     const floor = wallFloor(20)
-    const blob = emptyBlob({ generatedFloor: floor, fmlOrient: { quarterTurnsCw: 1, flipX: true } })
+    const blob = emptyBlob({ generatedFloor: floor, planOrient: { quarterTurnsCw: 1, flipX: true } })
     const { blob: next, mirrored } = mirrorFloorBlobVertical(blob)
     expect(mirrored).toBe(true)
     expect(next.generatedFloor!.walls[0].a.x).toBe(-20)
-    expect(next.fmlOrient).toEqual({ quarterTurnsCw: 1, flipX: false })
+    expect(next.planOrient).toEqual({ quarterTurnsCw: 1, flipX: false })
   })
 })
