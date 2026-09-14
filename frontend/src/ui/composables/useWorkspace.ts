@@ -27,7 +27,7 @@ import { useWorkspaceSignaturePreview } from './useWorkspaceSignaturePreview'
 import { useWorkspaceOverlays } from './useWorkspaceOverlays'
 import { useWorkspaceExports } from './useWorkspaceExports'
 import { useWorkspaceE2eFixtureExport } from './workspace/useWorkspaceE2eFixtureExport'
-import { useWorkspaceFml } from './useWorkspaceFml'
+import { useWorkspacePlan } from './useWorkspacePlan'
 import { useWorkspacePipeline } from './workspace/useWorkspacePipeline'
 import { useWorkspaceScale } from './workspace/useWorkspaceScale'
 import { useWorkspaceRoomPipeline } from './workspace/useWorkspaceRoomPipeline'
@@ -37,7 +37,7 @@ import { bakeOcrMaskIntoInkOverlay } from '@/cv/preprocess/compose-wall-bw'
 import { useWorkspaceDevSession } from './workspace/useWorkspaceDevSession'
 import { useWorkspaceWallPipeline } from './workspace/useWorkspaceWallPipeline'
 import type { WorkspaceFlowStep } from './workspace/constants'
-import { FML_AREA_SURFACE_EDIT_VISIBLE } from './workspace/constants'
+import { PLAN_AREA_SURFACE_EDIT_VISIBLE } from './workspace/constants'
 import { useWorkspaceDebugProbeFromContext } from './workspace/useWorkspaceDebugProbe'
 import { useWorkspacePdfUpload } from './workspace/useWorkspacePdfUpload'
 import { useWorkspaceLifecycle } from './workspace/useWorkspaceLifecycle'
@@ -74,7 +74,7 @@ import {
 import { clonePlain } from '@/platform/dev-workspace'
 import type { FloorPlan } from '@/core/fml/types'
 import { promptPlanChromeChoice } from '@/ui/composables/plan-chrome-dialog'
-import { sanitizeFilename } from './workspace/workspace-fml-generate'
+import { sanitizeFilename } from './workspace/workspace-plan-generate'
 import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
 import {
   emptyTabOutputs,
@@ -244,8 +244,8 @@ export function useWorkspace() {
     },
     onBakeNulpunt: (nulpunt) => {
       // Zaai current nulpunt alleen als leeg; bakeNulpuntImageCm zit in wallStamp.
-      if (fmlApi && fmlApi.fmlNulpuntImageCm.value == null) {
-        fmlApi.setFmlNulpuntImageCm(nulpunt)
+      if (planApi && planApi.fmlNulpuntImageCm.value == null) {
+        planApi.setFmlNulpuntImageCm(nulpunt)
       }
     },
   })
@@ -352,7 +352,7 @@ export function useWorkspace() {
   })
 
   /** Late-bind: FML na door/window faces (directe refs; geen mirror-watches). */
-  let fmlApi: ReturnType<typeof useWorkspaceFml> | null = null
+  let planApi: ReturnType<typeof useWorkspacePlan> | null = null
   let getThicknessCatalogCms = (): number[] => [...FACTORY_THICKNESS_CMS]
   let syncThicknessCmToFloorDefaults: ((cm: number) => void) | null = null
   let writeCatalogToFloorDefaults: ((cms: number[]) => void) | null = null
@@ -392,12 +392,12 @@ export function useWorkspace() {
       updateRectFmlRefId,
       updateRectWallThicknessCm,
       getWallThicknessLimits: () => {
-        if (fmlApi) {
+        if (planApi) {
           return {
-            minCm: fmlApi.fmlThicknessMinCm.value,
-            midCm: fmlApi.fmlThicknessMidCm.value,
-            maxCm: fmlApi.fmlThicknessMaxCm.value,
-            thicknessCms: [...fmlApi.fmlThicknessCms.value],
+            minCm: planApi.fmlThicknessMinCm.value,
+            midCm: planApi.fmlThicknessMidCm.value,
+            maxCm: planApi.fmlThicknessMaxCm.value,
+            thicknessCms: [...planApi.planThicknessCms.value],
           }
         }
         return loadFmlWallThicknessLimits()
@@ -408,13 +408,13 @@ export function useWorkspace() {
         y: scale.pixelsPerMillimeterY.value,
       }),
       addThicknessToCatalog: (cm) => {
-        if (!fmlApi || !(cm > 0)) return
-        fmlApi.setFmlThicknessCms(addThicknessToCatalog(fmlApi.fmlThicknessCms.value, cm))
+        if (!planApi || !(cm > 0)) return
+        planApi.setPlanThicknessCms(addThicknessToCatalog(planApi.planThicknessCms.value, cm))
         syncThicknessCmToFloorDefaults?.(cm)
       },
       replaceCatalogThickness: (cms) => {
-        if (!fmlApi) return
-        fmlApi.setFmlThicknessCms(cms)
+        if (!planApi) return
+        planApi.setPlanThicknessCms(cms)
         writeCatalogToFloorDefaults?.(cms)
       },
       setPendingWallThicknessCm,
@@ -445,7 +445,7 @@ export function useWorkspace() {
       showLayer14,
       fml: {
         resetGeneratedPreview: () => {
-          fmlApi?.resetGeneratedPreview()
+          planApi?.resetGeneratedPreview()
         },
       },
       devSessionRestoring,
@@ -547,7 +547,7 @@ export function useWorkspace() {
   const fmlFloorLevel = ref<number | null>(null)
   const fmlFloorId = ref<string | null>(null)
 
-  const fml = useWorkspaceFml({
+  const fml = useWorkspacePlan({
     imageName,
     combinedOutput: pipeline.combinedOutput,
     scale,
@@ -583,7 +583,7 @@ export function useWorkspace() {
       }
     },
   })
-  fmlApi = fml
+  planApi = fml
 
   async function expandUnderlayForStampIfNeeded() {
     return expandUnderlayForStamp({
@@ -907,7 +907,7 @@ export function useWorkspace() {
       fml.hydrateFmlWindowBovenlichtDefault(defaults.windowBovenlichtDefault)
       fml.setFmlBovenlichtHeightCm(defaults.bovenlichtHeightCm)
       fml.setFmlBovenlichtGapCm(defaults.bovenlichtGapCm)
-      fml.setFmlThicknessCms(
+      fml.setPlanThicknessCms(
         normalizeThicknessCatalog(
           defaults.thicknessCms ??
             catalogFromLegacyLimits({
@@ -918,7 +918,7 @@ export function useWorkspace() {
         ),
       )
       // Meetbanden blijven uit muur-REF (niet floor-defaults) — anders false dirty na meting.
-      // Programmatische sync = geen «gewijzigd»-hint; alleen handmatige FmlPanel-edits.
+      // Programmatische sync = geen «gewijzigd»-hint; alleen handmatige PlanPanel-edits.
       fml.syncAppliedFromDraft()
     },
     shouldSkipPersist: () =>
@@ -932,7 +932,7 @@ export function useWorkspace() {
   // Eerste sync: factory-FML-UI → actieve vloer-/user-defaults (o.a. bovenlicht).
   restoreFmlDefaultsFromActiveFloor()
   getThicknessCatalogCms = () =>
-    fml.fmlThicknessCms?.value ? [...fml.fmlThicknessCms.value] : [...FACTORY_THICKNESS_CMS]
+    fml.planThicknessCms?.value ? [...fml.planThicknessCms.value] : [...FACTORY_THICKNESS_CMS]
   writeCatalogToFloorDefaults = (cms) => {
     const catalog = normalizeThicknessCatalog(cms)
     const limits = limitsFromCatalog(catalog)
@@ -1121,7 +1121,7 @@ export function useWorkspace() {
   }
 
   function downloadProjectPlg(): void {
-    if (fml.fmlLimitsDirty.value) {
+    if (fml.planLimitsDirty.value) {
       fml.syncAppliedFromDraft()
     }
     const plan = project.buildMergedProjectPlan()
@@ -1220,7 +1220,7 @@ export function useWorkspace() {
   }
 
   /**
-   * FmlPanel-checkbox → overwrite-confirm op live plan + actieve vloer-defaults.
+   * PlanPanel-checkbox → overwrite-confirm op live plan + actieve vloer-defaults.
    * Zonder write-through bleef project-download op defaults.bovenlichtDefault=false.
    */
   async function setFmlBovenlichtDefault(value: boolean): Promise<void> {
@@ -1238,7 +1238,7 @@ export function useWorkspace() {
   }
 
   function exportMergedProjectPlan(): FloorPlan | null {
-    if (fml.fmlLimitsDirty.value) {
+    if (fml.planLimitsDirty.value) {
       fml.syncAppliedFromDraft()
     }
     const plan = project.buildMergedProjectPlan()
@@ -1252,7 +1252,7 @@ export function useWorkspace() {
 
   function downloadProjectFml(): void {
     // Dirty hoogte/dikte meenemen zonder canvas-edits te wissen (bovenlicht is live).
-    if (fml.fmlLimitsDirty.value) {
+    if (fml.planLimitsDirty.value) {
       fml.syncAppliedFromDraft()
     }
     const plan = project.buildMergedProjectPlan()
@@ -1260,7 +1260,7 @@ export function useWorkspace() {
       setLocalError(tGlobal('project.errors.noFloorReadyForFml'))
       return
     }
-    // Bron van waarheid = floor.defaults (schrijft FmlPanel write-through + project-setup).
+    // Bron van waarheid = floor.defaults (schrijft PlanPanel write-through + project-setup).
     // Live UI alleen als fallback wanneer floor-meta niet matcht (niet actieve-floor override:
     // underlay-reset wist UI naar false terwijl defaults true konden blijven).
     const floorsMeta = project.projectFloors.value
@@ -1291,7 +1291,7 @@ export function useWorkspace() {
         return meta.defaults.bovenlichtGapCm
       },
       useMetric: loadUserSettings().unitSystem === 'metric',
-      ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
+      ...(PLAN_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
     setLocalError(null)
     downloadFml(text, `${sanitizeFilename(plan.name)}.fml`)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import {
-  FML_HIDE_PLAN_TEXT_CONTROL_VISIBLE,
-  FML_ORIENT_CONTROLS_VISIBLE,
+  PLAN_HIDE_PLAN_TEXT_CONTROL_VISIBLE,
+  PLAN_ORIENT_CONTROLS_VISIBLE,
 } from '@/ui/composables/workspace/constants'
 
 const { t } = useI18n()
@@ -63,7 +63,7 @@ function releaseSliderFocus(event: Event): void {
     />
     <div class="underlay-orient">
       <button
-        v-if="FML_ORIENT_CONTROLS_VISIBLE"
+        v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
         type="button"
         class="underlay-orient__btn"
         :title="t('result.underlayRotate90CcwHint')"
@@ -72,7 +72,7 @@ function releaseSliderFocus(event: Event): void {
         {{ t('result.underlayRotate90Ccw') }}
       </button>
       <button
-        v-if="FML_ORIENT_CONTROLS_VISIBLE"
+        v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
         type="button"
         class="underlay-orient__btn"
         :title="t('result.underlayRotate90CwHint')"
@@ -81,7 +81,7 @@ function releaseSliderFocus(event: Event): void {
         {{ t('result.underlayRotate90Cw') }}
       </button>
       <button
-        v-if="FML_ORIENT_CONTROLS_VISIBLE"
+        v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
         type="button"
         class="underlay-orient__btn"
         :class="{ 'underlay-orient__btn--active': underlayFlipX }"
@@ -118,7 +118,7 @@ function releaseSliderFocus(event: Event): void {
       @pointerup="releaseSliderFocus"
     />
   </div>
-  <label v-if="FML_HIDE_PLAN_TEXT_CONTROL_VISIBLE" class="hide-plan-text">
+  <label v-if="PLAN_HIDE_PLAN_TEXT_CONTROL_VISIBLE" class="hide-plan-text">
     <input
       type="checkbox"
       :checked="hidePlanText"

@@ -13,7 +13,7 @@ import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
 import { bindNumericDraftField, bindScaleLengthDraftField } from './plan-canvas-draft-commit'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
-import { clearPlanSelected } from './plan-canvas-selected'
+import { clearPlanSelected, setPlanSelected } from './plan-canvas-selected'
 import {
   collectAllOfBoxKind,
   collectBoxSelectHits,
@@ -346,16 +346,12 @@ export function usePlanCanvasWallSelection(options: {
 
   // ── Toggle settings ──
 
-  function clearCompetingWallSelection(): void {
-    settingsOpeningIds.value = []
-    moveOpeningId.value = null
-    settingsJunctionId.value = null
+  /**
+   * Wat er náást de Selected-bak hoort en dus niet in `setPlanSelected` zit:
+   * de teken-sessie en de mixed-vlag van de knoop.
+   */
+  function clearCompetingToolSession(): void {
     junctionHeightMixed.value = false
-    settingsFacadeGroupId.value = null
-    selection.settingsItemId.value = null
-    selection.moveItemId.value = null
-    selection.settingsAreaId.value = null
-    selection.settingsSurfaceId.value = null
     selection.surfaceEditId.value = null
     selection.roofPolyMutate.value = false
   }
@@ -364,10 +360,9 @@ export function usePlanCanvasWallSelection(options: {
   function selectWall(wallId: string, clickCm?: Point2D | null): void {
     flushPendingFieldCommits()
     cancelMoveDragPending()
-    clearCompetingWallSelection()
-    settingsWallIds.value = []
+    clearCompetingToolSession()
+    setPlanSelected(selection, { kind: 'wall', moveId: wallId })
     settingsWallSplitClickCm.value = clickCm ? { ...clickCm } : null
-    moveWallId.value = wallId
     syncWallThicknessDraftFromSelection()
   }
 
@@ -375,51 +370,53 @@ export function usePlanCanvasWallSelection(options: {
     flushPendingFieldCommits()
     cancelMoveDragPending()
     const leavingFacade = settingsFacadeGroupId.value != null
-    clearCompetingWallSelection()
+    clearCompetingToolSession()
+
+    // Eerst de huidige muurstaat lezen: `setPlanSelected` wist de bak.
+    const current = [...settingsWallIds.value]
+    const currentMove = moveWallId.value
+    let nextIds: string[]
+    let nextMove: string | null
+    let splitClick: Point2D | null
+
     if (leavingFacade) {
-      settingsWallIds.value = [wallId]
-      settingsWallSplitClickCm.value = clickCm ? { ...clickCm } : null
-      if (moveWallId.value && moveWallId.value !== wallId) moveWallId.value = null
-      syncWallThicknessDraftFromSelection()
-      return
-    }
-    const current = settingsWallIds.value
-    if (current.includes(wallId)) {
-      settingsWallIds.value = current.filter((id) => id !== wallId)
-      if (moveWallId.value === wallId) moveWallId.value = null
-      if (settingsWallIds.value.length !== 1) settingsWallSplitClickCm.value = null
+      // Niet toevoegen aan de groep, maar er uit stappen naar deze ene muur.
+      nextIds = [wallId]
+      nextMove = currentMove === wallId ? currentMove : null
+      splitClick = clickCm ? { ...clickCm } : null
+    } else if (current.includes(wallId)) {
+      nextIds = current.filter((id) => id !== wallId)
+      nextMove = currentMove === wallId ? null : currentMove
+      splitClick = nextIds.length === 1 ? settingsWallSplitClickCm.value : null
     } else {
-      settingsWallIds.value = [...current, wallId]
-      settingsWallSplitClickCm.value = clickCm ? { ...clickCm } : null
-      if (moveWallId.value && !settingsWallIds.value.includes(moveWallId.value)) {
-        moveWallId.value = null
-      }
+      nextIds = [...current, wallId]
+      nextMove = currentMove != null && nextIds.includes(currentMove) ? currentMove : null
+      splitClick = clickCm ? { ...clickCm } : null
     }
+
+    setPlanSelected(selection, { kind: 'wall', settingsIds: nextIds, moveId: nextMove })
+    settingsWallSplitClickCm.value = splitClick
     syncWallThicknessDraftFromSelection()
   }
 
   function toggleSettingsJunction(junctionId: string): void {
     flushPendingFieldCommits()
     cancelMoveDragPending()
-    settingsOpeningIds.value = []
-    moveOpeningId.value = null
-    settingsFacadeGroupId.value = null
-    settingsWallIds.value = []
     settingsWallSplitClickCm.value = null
-    moveWallId.value = null
-    selection.settingsItemId.value = null
-    selection.moveItemId.value = null
     wallThicknessMixed.value = false
     wallBalanceMixed.value = false
     wallHeightMixed.value = false
     wallBottomZMixed.value = false
-    if (settingsJunctionId.value === junctionId) {
-      settingsJunctionId.value = null
+
+    const wasSelected = settingsJunctionId.value === junctionId
+    setPlanSelected(
+      selection,
+      wasSelected ? null : { kind: 'junction', settingsIds: [junctionId], moveId: junctionId },
+    )
+    if (wasSelected) {
       junctionHeightMixed.value = false
       return
     }
-    settingsJunctionId.value = junctionId
-    pinnedJunctionId.value = junctionId
     syncJunctionHeightDraftFromSelection()
   }
 

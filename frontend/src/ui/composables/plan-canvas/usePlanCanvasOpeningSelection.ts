@@ -37,6 +37,7 @@ import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
 import { bindScaleLengthDraftField } from './plan-canvas-draft-commit'
 import { computeOpeningDraftState } from './plan-canvas-opening-draft'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import { setPlanSelected } from './plan-canvas-selected'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 
@@ -190,27 +191,24 @@ export function usePlanCanvasOpeningSelection(options: {
     flushPendingFieldCommits()
     cancelMoveDragPending()
     cancelOpeningDragPending()
-    moveWallId.value = null
-    settingsWallIds.value = []
-    selection.settingsFacadeGroupId.value = null
-    selection.settingsJunctionId.value = null
-    pinnedJunctionId.value = null
-    moveOpeningId.value = null
-    selection.settingsItemId.value = null
-    selection.moveItemId.value = null
+
+    // Eerst de huidige opening-staat lezen: `setPlanSelected` wist de bak.
     const located = editor.resolveOpening(openingId)
-    const current = settingsOpeningIds.value
+    const current = [...settingsOpeningIds.value]
+    let nextIds: string[]
     if (current.includes(openingId)) {
-      settingsOpeningIds.value = current.filter((id) => id !== openingId)
+      nextIds = current.filter((id) => id !== openingId)
     } else if (located) {
       const existing = selectedOpenings()
       const sameType =
         existing.length === 0 ||
         existing.every((item) => item.opening.type === located.opening.type)
-      settingsOpeningIds.value = sameType ? [...current, openingId] : [openingId]
+      nextIds = sameType ? [...current, openingId] : [openingId]
     } else {
-      settingsOpeningIds.value = [...current, openingId]
+      nextIds = [...current, openingId]
     }
+
+    setPlanSelected(selection, { kind: 'opening', settingsIds: nextIds })
     syncOpeningDraftFromSelection()
   }
 

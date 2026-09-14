@@ -16,7 +16,7 @@ withDefaults(
     hasCombinedOutput: boolean
     unit: ScaleInputUnit
     underlayAvailable?: boolean
-    fmlThicknessCms?: number[]
+    planThicknessCms?: number[]
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
     fmlThicknessPickTier?: FmlThicknessPickTier | null
@@ -25,7 +25,7 @@ withDefaults(
   }>(),
   {
     underlayAvailable: false,
-    fmlThicknessCms: () => [...FACTORY_THICKNESS_CMS],
+    planThicknessCms: () => [...FACTORY_THICKNESS_CMS],
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
     fmlThicknessPickTier: null,
@@ -35,7 +35,7 @@ withDefaults(
 )
 
 const emit = defineEmits<{
-  'update:fmlThicknessCms': [value: number[]]
+  'update:planThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   startThicknessPick: [tier: FmlThicknessPickTier]
@@ -47,10 +47,10 @@ const emit = defineEmits<{
   <details class="fml-fold">
     <summary>{{ t('result.thicknessFold') }}</summary>
     <ThicknessCatalogFields
-      :cms="fmlThicknessCms"
+      :cms="planThicknessCms"
       :unit="unit"
       :disabled="!scaleConfirmed || !hasCombinedOutput"
-      @update:cms="emit('update:fmlThicknessCms', $event)"
+      @update:cms="emit('update:planThicknessCms', $event)"
     />
     <div class="fml-thickness-limits">
       <label class="fml-limit-field">

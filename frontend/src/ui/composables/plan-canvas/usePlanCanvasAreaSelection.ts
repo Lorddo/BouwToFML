@@ -10,6 +10,7 @@ import {
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import { setPlanSelected } from './plan-canvas-selected'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
@@ -30,11 +31,6 @@ export function usePlanCanvasAreaSelection(options: {
     settingsSurfaceId,
     surfaceEditId,
     roofPolyMutate,
-    settingsWallIds,
-    moveWallId,
-    settingsOpeningIds,
-    moveOpeningId,
-    pinnedJunctionId,
   } = options.selection
 
   const { draftCommit, flushPendingFieldCommits } = options
@@ -60,27 +56,18 @@ export function usePlanCanvasAreaSelection(options: {
     customNameDraft.value = ''
   }
 
-  function clearOtherSelections(): void {
+  function cancelCompetingDrags(): void {
     options.cancelMoveDragPending()
     options.cancelOpeningDragPending()
-    moveWallId.value = null
-    settingsWallIds.value = []
-    options.selection.settingsFacadeGroupId.value = null
-    options.selection.settingsJunctionId.value = null
-    pinnedJunctionId.value = null
-    moveOpeningId.value = null
-    settingsOpeningIds.value = []
-    options.selection.settingsItemId.value = null
-    options.selection.moveItemId.value = null
   }
 
   function toggleSettingsArea(areaId: string): void {
     flushPendingFieldCommits()
-    clearOtherSelections()
-    settingsSurfaceId.value = null
+    cancelCompetingDrags()
+    const wasSelected = settingsAreaId.value === areaId
+    setPlanSelected(options.selection, wasSelected ? null : { kind: 'area', settingsIds: [areaId] })
     surfaceEditId.value = null
     roofPolyMutate.value = false
-    settingsAreaId.value = settingsAreaId.value === areaId ? null : areaId
     syncCustomNameDraftFromSelection()
   }
 
@@ -98,11 +85,10 @@ export function usePlanCanvasAreaSelection(options: {
 
   function selectRoofSurface(surfaceId: string, mutate: boolean): void {
     flushPendingFieldCommits()
-    clearOtherSelections()
-    settingsAreaId.value = null
+    cancelCompetingDrags()
+    setPlanSelected(options.selection, { kind: 'surface', settingsIds: [surfaceId] })
     const surface = options.editor.surfaces.value.find((item) => item.id === surfaceId)
     const roof = surface != null && isRoofSurface(surface)
-    settingsSurfaceId.value = surfaceId
     surfaceEditId.value = roof ? surfaceId : mutate ? surfaceId : null
     roofPolyMutate.value = roof && mutate
     syncCustomNameDraftFromSelection()

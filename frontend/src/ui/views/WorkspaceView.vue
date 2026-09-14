@@ -10,7 +10,7 @@ import WorkspaceSidebarInputStep from '../components/WorkspaceSidebarInputStep.v
 import WorkspaceSidebarPreprocessStep from '../components/WorkspaceSidebarPreprocessStep.vue'
 import WorkspaceSidebarTemplatesStep from '../components/WorkspaceSidebarTemplatesStep.vue'
 import LayerDebugPanel from '../components/LayerDebugPanel.vue'
-import WorkspaceFmlResultPanel from '../components/WorkspaceFmlResultPanel.vue'
+import WorkspacePlanResultPanel from '../components/WorkspacePlanResultPanel.vue'
 import WorkspacePlanCanvasHost from '../components/WorkspacePlanCanvasHost.vue'
 import WorkspaceFloorplanCanvasHost from '../components/WorkspaceFloorplanCanvasHost.vue'
 import ResultWallsLayerPanel from '../components/ResultWallsLayerPanel.vue'
@@ -21,7 +21,7 @@ import WorkspaceDebugSidebar from '../components/WorkspaceDebugSidebar.vue'
 import WorkspaceDebugExportsPanel from '../components/WorkspaceDebugExportsPanel.vue'
 import WorkspaceDebugProbePanel from '../components/WorkspaceDebugProbePanel.vue'
 import WorkspaceOcrDevPanel from '../components/WorkspaceOcrDevPanel.vue'
-import WorkspaceFmlDevPanel from '../components/WorkspaceFmlDevPanel.vue'
+import WorkspacePlanDevPanel from '../components/WorkspacePlanDevPanel.vue'
 import WorkspaceGapsDevPanel from '../components/WorkspaceGapsDevPanel.vue'
 import WorkspaceDoorsDevPanel from '../components/WorkspaceDoorsDevPanel.vue'
 import WorkspaceWindowsDevPanel from '../components/WorkspaceWindowsDevPanel.vue'
@@ -267,7 +267,7 @@ defineExpose<{
               minCm: ws.fmlThicknessMinCm,
               midCm: ws.fmlThicknessMidCm,
               maxCm: ws.fmlThicknessMaxCm,
-              thicknessCms: ws.fmlThicknessCms,
+              thicknessCms: ws.planThicknessCms,
             }"
             :wall-ref-thickness-measures="ws.wallRefThicknessMeasures"
             :selected-rect-id="ws.selectedRectId"
@@ -407,7 +407,7 @@ defineExpose<{
             @toggle-lines="ws.showLines = $event"
           />
 
-          <WorkspaceFmlResultPanel
+          <WorkspacePlanResultPanel
             v-if="ws.flowStep === 'result' && ws.resultTab === 'vector'"
             :scale-confirmed="ws.scale.confirmed.value"
             :has-combined-output="!!ws.combinedOutput"
@@ -420,10 +420,10 @@ defineExpose<{
             :fml-window-sill-z-cm="ws.fmlWindowSillZCm"
             :fml-bovenlicht-default="ws.fmlBovenlichtDefault"
             :fml-window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
-            :fml-thickness-cms="ws.fmlThicknessCms"
+            :plan-thickness-cms="ws.planThicknessCms"
             :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"
             :fml-band-max-boundary-cm="ws.fmlBandMaxBoundaryCm"
-            :fml-limits-dirty="ws.fmlLimitsDirty"
+            :plan-limits-dirty="ws.planLimitsDirty"
             :fml-thickness-pick-tier="ws.fmlThicknessPickTier"
             :fml-thickness-pick-message="ws.fmlThicknessPickMessage"
             :fml-thickness-pick-busy="ws.fmlThicknessPickBusy"
@@ -458,7 +458,7 @@ defineExpose<{
             @update:fml-window-sill-z-cm="ws.setFmlWindowSillZCm"
             @update:fml-bovenlicht-default="ws.setFmlBovenlichtDefault"
             @update:fml-window-bovenlicht-default="ws.setFmlWindowBovenlichtDefault"
-            @update:fml-thickness-cms="ws.setFmlThicknessCms"
+            @update:plan-thickness-cms="ws.setPlanThicknessCms"
             @update:fml-band-mid-boundary-cm="ws.setFmlBandMidBoundaryCm"
             @update:fml-band-max-boundary-cm="ws.setFmlBandMaxBoundaryCm"
             @update:fml-rescale-distance-mm-x="ws.setPlanRescaleDistanceMmX"
@@ -564,7 +564,7 @@ defineExpose<{
             :flip-x="ws.previewUnderlayLayout?.flipX === true"
             :underlay-move-mode="ws.underlayMoveMode"
             :thickness-pick-tier="ws.fmlThicknessPickTier"
-            :thickness-preset-cms="ws.fmlThicknessCms"
+            :thickness-preset-cms="ws.planThicknessCms"
             :bovenlicht-default="ws.fmlBovenlichtDefault"
             :window-bovenlicht-default="ws.fmlWindowBovenlichtDefault"
             :bovenlicht-height-cm="ws.fmlBovenlichtHeightCm"
@@ -608,7 +608,7 @@ defineExpose<{
                       minCm: ws.fmlThicknessMinCm,
                       midCm: ws.fmlThicknessMidCm,
                       maxCm: ws.fmlThicknessMaxCm,
-                      thicknessCms: ws.fmlThicknessCms,
+                      thicknessCms: ws.planThicknessCms,
                     }
                   : null
               "
@@ -781,7 +781,7 @@ defineExpose<{
         @export-window-face-report="ws.exportWindowFaceReport"
       />
 
-      <WorkspaceFmlDevPanel
+      <WorkspacePlanDevPanel
         v-if="fmlDevPanelVisible"
         :enabled="ws.scale.confirmed.value && !!ws.combinedOutput"
         :fml-band-mid-boundary-cm="ws.fmlBandMidBoundaryCm"

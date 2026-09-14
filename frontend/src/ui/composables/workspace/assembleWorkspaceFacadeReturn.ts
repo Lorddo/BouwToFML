@@ -15,7 +15,7 @@ import type { useWorkspaceSignaturePreview } from '../useWorkspaceSignaturePrevi
 import type { useWorkspaceOverlays } from '../useWorkspaceOverlays'
 import type { useWorkspaceDebugProbe } from './useWorkspaceDebugProbe'
 import type { useWorkspaceExports } from '../useWorkspaceExports'
-import type { useWorkspaceFml } from '../useWorkspaceFml'
+import type { useWorkspacePlan } from '../useWorkspacePlan'
 import type { useWorkspacePipeline } from './useWorkspacePipeline'
 import type { useWorkspaceScale } from './useWorkspaceScale'
 import type { useWorkspaceFlow } from './useWorkspaceFlow'
@@ -90,7 +90,7 @@ export type WorkspaceFacadeContext = {
   showCanvasGrid: Ref<boolean>
   fmlUnderlaySrc: ComputedRef<string | null>
   fmlUnderlaySize: ComputedRef<{ width: number; height: number } | null>
-  fml: ReturnType<typeof useWorkspaceFml>
+  fml: ReturnType<typeof useWorkspacePlan>
   pipeline: ReturnType<typeof useWorkspacePipeline>
   scaleUi: ReturnType<typeof useWorkspaceScale>
   preprocessUi: ReturnType<typeof useWorkspacePreprocess>

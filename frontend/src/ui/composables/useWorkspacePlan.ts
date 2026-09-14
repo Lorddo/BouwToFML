@@ -3,11 +3,11 @@ import type { ExtractionOutput } from '@/core/extraction'
 import type { useHScaleCalibration } from '@/platform/calibration'
 import type { OrientedDoor } from '@/cv/doors'
 import type { BoundWindow } from '@/cv/windows'
-import { createWorkspaceFmlGenerate } from './workspace/workspace-fml-generate'
-import type { WorkspaceFmlStampInject } from './workspace/workspace-fml-generate'
-import { createWorkspaceFmlThicknessUi } from './workspace/workspace-fml-thickness-ui'
+import { createWorkspaceFmlGenerate } from './workspace/workspace-plan-generate'
+import type { WorkspaceFmlStampInject } from './workspace/workspace-plan-generate'
+import { createWorkspaceFmlThicknessUi } from './workspace/workspace-plan-thickness-ui'
 
-export function useWorkspaceFml(deps: {
+export function useWorkspacePlan(deps: {
   imageName: Ref<string | null>
   combinedOutput: Ref<ExtractionOutput | null>
   scale: ReturnType<typeof useHScaleCalibration>
@@ -73,7 +73,7 @@ export function useWorkspaceFml(deps: {
       appliedFmlDoorHeightCm: thickness.appliedFmlDoorHeightCm,
       appliedFmlWindowHeightCm: thickness.appliedFmlWindowHeightCm,
       appliedFmlWindowSillZCm: thickness.appliedFmlWindowSillZCm,
-      fmlThicknessCms: thickness.fmlThicknessCms,
+      planThicknessCms: thickness.planThicknessCms,
       fmlThicknessMinCm: thickness.fmlThicknessMinCm,
       fmlThicknessMidCm: thickness.fmlThicknessMidCm,
       fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
@@ -126,7 +126,7 @@ export function useWorkspaceFml(deps: {
   }
 
   return {
-    fmlThicknessCms: thickness.fmlThicknessCms,
+    planThicknessCms: thickness.planThicknessCms,
     fmlThicknessMinCm: thickness.fmlThicknessMinCm,
     fmlThicknessMidCm: thickness.fmlThicknessMidCm,
     fmlThicknessMaxCm: thickness.fmlThicknessMaxCm,
@@ -146,12 +146,12 @@ export function useWorkspaceFml(deps: {
     appliedFmlDoorHeightCm: thickness.appliedFmlDoorHeightCm,
     appliedFmlWindowHeightCm: thickness.appliedFmlWindowHeightCm,
     appliedFmlWindowSillZCm: thickness.appliedFmlWindowSillZCm,
-    fmlLimitsDirty: thickness.fmlLimitsDirty,
+    planLimitsDirty: thickness.planLimitsDirty,
     fmlBandDirty: thickness.fmlBandDirty,
     applyBandBoundariesFromReferenceWall: thickness.applyBandBoundariesFromReferenceWall,
     resetFmlSessionDefaults: thickness.resetFmlSessionDefaults,
     syncAppliedFromDraft: generate.syncAppliedFromDraft,
-    setFmlThicknessCms: thickness.setFmlThicknessCms,
+    setPlanThicknessCms: thickness.setPlanThicknessCms,
     setFmlThicknessMinCm: thickness.setFmlThicknessMinCm,
     setFmlThicknessMidCm: thickness.setFmlThicknessMidCm,
     setFmlThicknessMaxCm: thickness.setFmlThicknessMaxCm,

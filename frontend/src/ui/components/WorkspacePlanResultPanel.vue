@@ -4,10 +4,10 @@ import type { ImportWarning } from '@/core/fml/types'
 import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-overflow'
 import type { HScaleState } from '@/platform/calibration'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import FmlPanel from './FmlPanel.vue'
+import PlanPanel from './PlanPanel.vue'
 
 /**
- * Presentational FML sidebar block for WorkspaceView — props/emits mirror FmlPanel.
+ * Presentational FML sidebar block for WorkspaceView — props/emits mirror PlanPanel.
  * No workspace state lives here; parent keeps useWorkspace wiring.
  */
 withDefaults(
@@ -23,10 +23,10 @@ withDefaults(
     fmlWindowSillZCm: number
     fmlBovenlichtDefault: boolean
     fmlWindowBovenlichtDefault: boolean
-    fmlThicknessCms: number[]
+    planThicknessCms: number[]
     fmlBandMidBoundaryCm: number
     fmlBandMaxBoundaryCm: number
-    fmlLimitsDirty: boolean
+    planLimitsDirty: boolean
     fmlThicknessPickTier: FmlThicknessPickTier | null
     fmlThicknessPickMessage: string | null
     fmlThicknessPickBusy: boolean
@@ -78,7 +78,7 @@ const emit = defineEmits<{
   'update:fmlWindowSillZCm': [value: number]
   'update:fmlBovenlichtDefault': [value: boolean]
   'update:fmlWindowBovenlichtDefault': [value: boolean]
-  'update:fmlThicknessCms': [value: number[]]
+  'update:planThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:fmlRescaleDistanceMmX': [value: number]
@@ -101,7 +101,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <FmlPanel
+  <PlanPanel
     :scale-confirmed="scaleConfirmed"
     :has-combined-output="hasCombinedOutput"
     :generated-stats="generatedStats"
@@ -113,10 +113,10 @@ const emit = defineEmits<{
     :fml-window-sill-z-cm="fmlWindowSillZCm"
     :fml-bovenlicht-default="fmlBovenlichtDefault"
     :fml-window-bovenlicht-default="fmlWindowBovenlichtDefault"
-    :fml-thickness-cms="fmlThicknessCms"
+    :plan-thickness-cms="planThicknessCms"
     :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
     :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
-    :fml-limits-dirty="fmlLimitsDirty"
+    :plan-limits-dirty="planLimitsDirty"
     :fml-thickness-pick-tier="fmlThicknessPickTier"
     :fml-thickness-pick-message="fmlThicknessPickMessage"
     :fml-thickness-pick-busy="fmlThicknessPickBusy"
@@ -149,7 +149,7 @@ const emit = defineEmits<{
     @update:fml-window-sill-z-cm="emit('update:fmlWindowSillZCm', $event)"
     @update:fml-bovenlicht-default="emit('update:fmlBovenlichtDefault', $event)"
     @update:fml-window-bovenlicht-default="emit('update:fmlWindowBovenlichtDefault', $event)"
-    @update:fml-thickness-cms="emit('update:fmlThicknessCms', $event)"
+    @update:plan-thickness-cms="emit('update:planThicknessCms', $event)"
     @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
     @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
     @update:fml-rescale-distance-mm-x="emit('update:fmlRescaleDistanceMmX', $event)"

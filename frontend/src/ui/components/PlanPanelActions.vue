@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { FML_ORIENT_CONTROLS_VISIBLE } from '@/ui/composables/workspace/constants'
+import { PLAN_ORIENT_CONTROLS_VISIBLE } from '@/ui/composables/workspace/constants'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 
 const { t } = useI18n()
@@ -9,7 +9,7 @@ withDefaults(
   defineProps<{
     scaleConfirmed: boolean
     hasCombinedOutput: boolean
-    fmlLimitsDirty?: boolean
+    planLimitsDirty?: boolean
     /** FML X-spiegel actief (toggle-uiterlijk). */
     fmlOrientFlipX?: boolean
     /** ≥1 floor heeft FML (project-spiegel). */
@@ -18,7 +18,7 @@ withDefaults(
     projectOrientFlipX?: boolean
   }>(),
   {
-    fmlLimitsDirty: false,
+    planLimitsDirty: false,
     fmlOrientFlipX: false,
     hasAnyFloorFml: false,
     projectOrientFlipX: false,
@@ -37,7 +37,7 @@ const emit = defineEmits<{
 <template>
   <div class="fml-actions sidebar-icon-row">
     <button
-      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
       type="button"
       class="sidebar-icon-btn"
       :class="{ 'is-on': fmlOrientFlipX }"
@@ -49,7 +49,7 @@ const emit = defineEmits<{
       <span>{{ t('result.mirrorVertical') }}</span>
     </button>
     <button
-      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
       type="button"
       class="sidebar-icon-btn"
       :class="{ 'is-on': projectOrientFlipX }"
@@ -61,7 +61,7 @@ const emit = defineEmits<{
       <span>{{ t('result.mirrorProject') }}</span>
     </button>
     <button
-      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
       type="button"
       class="sidebar-icon-btn"
       :disabled="!hasCombinedOutput || !scaleConfirmed"
@@ -72,7 +72,7 @@ const emit = defineEmits<{
       <span>{{ t('result.rotate90Ccw') }}</span>
     </button>
     <button
-      v-if="FML_ORIENT_CONTROLS_VISIBLE"
+      v-if="PLAN_ORIENT_CONTROLS_VISIBLE"
       type="button"
       class="sidebar-icon-btn"
       :disabled="!hasCombinedOutput || !scaleConfirmed"
@@ -85,14 +85,14 @@ const emit = defineEmits<{
     <button
       type="button"
       class="sidebar-icon-btn sidebar-icon-btn--primary"
-      :disabled="!hasCombinedOutput || !scaleConfirmed || !fmlLimitsDirty"
+      :disabled="!hasCombinedOutput || !scaleConfirmed || !planLimitsDirty"
       @click="emit('regenerate')"
     >
       <ToolbeltIcon name="check" />
       <span>{{ t('result.regenerate') }}</span>
     </button>
   </div>
-  <p v-if="fmlLimitsDirty" class="fml-hint fml-dirty-hint">
+  <p v-if="planLimitsDirty" class="fml-hint fml-dirty-hint">
     {{ t('result.dirtyHint') }}
   </p>
 </template>

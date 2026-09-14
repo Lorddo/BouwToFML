@@ -32,7 +32,7 @@ import {
   parseFmlHex,
 } from '@/core/fml/roomtype-catalog'
 import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
-import { FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
+import { PLAN_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
 import HexColorField from '@/ui/components/HexColorField.vue'
 import ScaleLengthInput from '@/ui/components/ScaleLengthInput.vue'
 import ThicknessCatalogFields from '@/ui/components/ThicknessCatalogFields.vue'
@@ -50,7 +50,7 @@ const props = withDefaults(
 )
 
 const isViewer = computed(() => props.variant === 'viewer')
-const showRoomTags = computed(() => isViewer.value || FML_ROOM_TAG_COLOR_SETTINGS_VISIBLE)
+const showRoomTags = computed(() => isViewer.value || PLAN_ROOM_TAG_COLOR_SETTINGS_VISIBLE)
 
 const emit = defineEmits<{
   saved: []

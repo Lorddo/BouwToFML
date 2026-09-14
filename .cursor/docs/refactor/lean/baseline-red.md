@@ -11,6 +11,17 @@ Dit is de nullijn voor [`editor_kernel_plugins_v2_d0e1ed1b.plan.md`](../../../pl
 
 Verloop van de campagne, telkens **dezelfde 9 rood**: fase 3.0 (pointer-cascade-spec) 311 bestanden / 2499 tests → fase 3 batch 1 (Selected-store) 312 / 2518 → fase 4b (snap + sessie-defaults) 314 / 2531 → fase 1 batch 2 (alias-test viel mee weg) 314 / 2530 → fase 5 (4 specs op de shell-composables) 318 / 2559 → fase 3 batch 2 (tweede lane + gevelgroep) 318 / **2563**.
 
+### De volle suite is op deze machine geen meetlat (2026-09-14)
+
+Bij het slot van fase 3 gaf `npx vitest run` **19 rood** en brak af na 508 s. Tien daarvan waren niet echt:
+
+-   **Negen canvas-/OpenCV-tests** (`cleanBinary`, `inkEdit`, `compose-wall-bw`, `layer-flow`, `stamp-underlay-pad`, `room-raster-merge`, `layer-6-repair`, `face-overlay-perf`, `working-image-utils`) zijn apart gróén, of wisselen per samenstelling van de run. Load-afhankelijk.
+-   **De nieuwe import-gate** tikte de 5 s-testlimiet aan omdat hij de import-graaf per test opnieuw bouwde. Opgelost door hem één keer op module-niveau te bouwen (collect-fase kent geen limiet).
+
+`npx vitest run tests/ui` geeft **877 tests, 7 rood** — exact de bekende zeven uit deze lijst die in `tests/ui` staan (5× test-doors, 2× nulpunt-bake). Dat is de betrouwbare meting, en die staat ook zo in het plan.
+
+Eén blijvende twijfel: `inkEdit > cloneSourceToEditCanvas` faalt ook solo. Die staat niet in deze baseline en is niet door de campagne veroorzaakt (de working tree raakte alleen `plan-canvas/`-selectie). Bij een volgende herijking uitzoeken of hij sinds de commit rood staat.
+
 | # | Test | Status |
 |---|---|---|
 | 1 | `tests/core/rebase-plan-to-item-refid.spec.ts` — schuift drawing-midden mee en muteert | bekend |

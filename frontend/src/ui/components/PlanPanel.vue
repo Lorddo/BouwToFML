@@ -5,11 +5,11 @@ import type { OpeningHeightOverflowSummary } from '@/core/fml/opening-height-ove
 import type { HScaleState } from '@/platform/calibration'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { useI18n } from 'vue-i18n'
-import FmlPanelActions from './FmlPanelActions.vue'
-import FmlPanelHeights from './FmlPanelHeights.vue'
+import PlanPanelActions from './PlanPanelActions.vue'
+import PlanPanelHeights from './PlanPanelHeights.vue'
 import PlanOpeningOverflowNotice from './PlanOpeningOverflowNotice.vue'
-import FmlPanelOpacity from './FmlPanelOpacity.vue'
-import FmlPanelThickness from './FmlPanelThickness.vue'
+import PlanPanelOpacity from './PlanPanelOpacity.vue'
+import PlanPanelThickness from './PlanPanelThickness.vue'
 import PlanRescalePanel from './PlanRescalePanel.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './fml-panel-fields.css'
@@ -46,10 +46,10 @@ withDefaults(
     fmlWindowSillZCm?: number
     fmlBovenlichtDefault?: boolean
     fmlWindowBovenlichtDefault?: boolean
-    fmlThicknessCms?: number[]
+    planThicknessCms?: number[]
     fmlBandMidBoundaryCm?: number
     fmlBandMaxBoundaryCm?: number
-    fmlLimitsDirty?: boolean
+    planLimitsDirty?: boolean
     fmlThicknessPickTier?: FmlThicknessPickTier | null
     fmlThicknessPickMessage?: string | null
     fmlThicknessPickBusy?: boolean
@@ -82,10 +82,10 @@ withDefaults(
     fmlWindowSillZCm: 70,
     fmlBovenlichtDefault: false,
     fmlWindowBovenlichtDefault: false,
-    fmlThicknessCms: () => [10, 20, 30],
+    planThicknessCms: () => [10, 20, 30],
     fmlBandMidBoundaryCm: 12,
     fmlBandMaxBoundaryCm: 23,
-    fmlLimitsDirty: false,
+    planLimitsDirty: false,
     fmlThicknessPickTier: null,
     fmlThicknessPickMessage: null,
     fmlThicknessPickBusy: false,
@@ -119,7 +119,7 @@ const emit = defineEmits<{
   'update:fmlWindowSillZCm': [value: number]
   'update:fmlBovenlichtDefault': [value: boolean]
   'update:fmlWindowBovenlichtDefault': [value: boolean]
-  'update:fmlThicknessCms': [value: number[]]
+  'update:planThicknessCms': [value: number[]]
   'update:fmlBandMidBoundaryCm': [value: number]
   'update:fmlBandMaxBoundaryCm': [value: number]
   'update:underlayOpacity': [value: number]
@@ -189,7 +189,7 @@ function onWindowBovenlichtChange(event: Event): void {
       :unit="scaleInputUnit"
     />
 
-    <FmlPanelOpacity
+    <PlanPanelOpacity
       :underlay-opacity="underlayOpacity"
       :fml-opacity="fmlOpacity"
       :underlay-available="underlayAvailable"
@@ -225,25 +225,25 @@ function onWindowBovenlichtChange(event: Event): void {
       <span>{{ t('result.bovenlichtAllWindows') }}</span>
     </label>
 
-    <FmlPanelThickness
+    <PlanPanelThickness
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
       :unit="scaleInputUnit"
       :underlay-available="underlayAvailable"
-      :fml-thickness-cms="fmlThicknessCms"
+      :plan-thickness-cms="planThicknessCms"
       :fml-band-mid-boundary-cm="fmlBandMidBoundaryCm"
       :fml-band-max-boundary-cm="fmlBandMaxBoundaryCm"
       :fml-thickness-pick-tier="fmlThicknessPickTier"
       :fml-thickness-pick-message="fmlThicknessPickMessage"
       :fml-thickness-pick-busy="fmlThicknessPickBusy"
-      @update:fml-thickness-cms="emit('update:fmlThicknessCms', $event)"
+      @update:plan-thickness-cms="emit('update:planThicknessCms', $event)"
       @update:fml-band-mid-boundary-cm="emit('update:fmlBandMidBoundaryCm', $event)"
       @update:fml-band-max-boundary-cm="emit('update:fmlBandMaxBoundaryCm', $event)"
       @start-thickness-pick="emit('startThicknessPick', $event)"
       @cancel-thickness-pick="emit('cancelThicknessPick')"
     />
 
-    <FmlPanelHeights
+    <PlanPanelHeights
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
       :unit="scaleInputUnit"
@@ -282,10 +282,10 @@ function onWindowBovenlichtChange(event: Event): void {
       <span>{{ t('result.sanitize') }}</span>
     </button>
 
-    <FmlPanelActions
+    <PlanPanelActions
       :scale-confirmed="scaleConfirmed"
       :has-combined-output="hasCombinedOutput"
-      :fml-limits-dirty="fmlLimitsDirty"
+      :plan-limits-dirty="planLimitsDirty"
       :fml-orient-flip-x="fmlOrientFlipX"
       :has-any-floor-fml="hasAnyFloorFml"
       :project-orient-flip-x="projectOrientFlipX"

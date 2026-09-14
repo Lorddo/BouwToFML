@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import type { ExtractionOutput } from '@/core/extraction'
 import type { FloorPlan } from '@/core/fml/types'
-import { useWorkspaceFml } from '@/ui/composables/useWorkspaceFml'
+import { useWorkspacePlan } from '@/ui/composables/useWorkspacePlan'
 
 const minimalOutput: ExtractionOutput = {
   candidates: [],
@@ -19,7 +19,7 @@ function createFmlHarness(confirmOverwrite: (message: string) => boolean = () =>
     pixelsPerMillimeterY: ref(1),
   }
   let lastError: string | null = null
-  const api = useWorkspaceFml({
+  const api = useWorkspacePlan({
     imageName,
     combinedOutput,
     scale: scale as never,
@@ -35,7 +35,7 @@ function createFmlHarness(confirmOverwrite: (message: string) => boolean = () =>
   return { api, imageName, combinedOutput, scale, getLastError: () => lastError }
 }
 
-describe('useWorkspaceFml — export volgt canvas-bewerkingen', () => {
+describe('useWorkspacePlan — export volgt canvas-bewerkingen', () => {
   it('download-FML-text bevat gewijzigde muurdikte na updatePreviewPlan', () => {
     const { api } = createFmlHarness()
     const base = api.previewPlan.value
@@ -66,22 +66,22 @@ describe('useWorkspaceFml — export volgt canvas-bewerkingen', () => {
     expect(after.floors[0].designs[0].walls[0].b.x).toBe(originalB + 77)
   })
 
-  it('fmlLimitsDirty alleen na dikte-edit, niet na hoogte / bovenlicht', async () => {
+  it('planLimitsDirty alleen na dikte-edit, niet na hoogte / bovenlicht', async () => {
     const { api } = createFmlHarness(() => true)
-    expect(api.fmlLimitsDirty.value).toBe(false)
+    expect(api.planLimitsDirty.value).toBe(false)
 
     await api.setFmlWallHeightCm(api.fmlWallHeightCm.value + 10)
-    expect(api.fmlLimitsDirty.value).toBe(false)
+    expect(api.planLimitsDirty.value).toBe(false)
     expect(api.previewPlan.value?.floors[0]?.height).toBe(api.fmlWallHeightCm.value)
 
     await api.setFmlBovenlichtDefault(true)
-    expect(api.fmlLimitsDirty.value).toBe(false)
+    expect(api.planLimitsDirty.value).toBe(false)
 
-    api.setFmlThicknessCms([...api.fmlThicknessCms.value.slice(0, -1), api.fmlThicknessMaxCm.value + 5])
-    expect(api.fmlLimitsDirty.value).toBe(true)
+    api.setPlanThicknessCms([...api.planThicknessCms.value.slice(0, -1), api.fmlThicknessMaxCm.value + 5])
+    expect(api.planLimitsDirty.value).toBe(true)
 
     api.syncAppliedFromDraft()
-    expect(api.fmlLimitsDirty.value).toBe(false)
+    expect(api.planLimitsDirty.value).toBe(false)
   })
 
   it('hoogtewijziging na canvas-edit blijft op editedPreviewPlan (geen regeneratie)', async () => {

@@ -54,7 +54,7 @@ import {
   regeneratePlanAreas,
   scaleFloorPlanAndRegenAreas,
 } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
-import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
+import { PLAN_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
 import {
   measuredCmFromRescaleState,
   resolvePlanRescaleState,
@@ -146,7 +146,7 @@ export type WorkspaceFmlGenerateApplied = {
   appliedFmlDoorHeightCm: Ref<number>
   appliedFmlWindowHeightCm: Ref<number>
   appliedFmlWindowSillZCm: Ref<number>
-  fmlThicknessCms: Ref<number[]>
+  planThicknessCms: Ref<number[]>
   fmlThicknessMinCm: Ref<number>
   fmlThicknessMidCm: Ref<number>
   fmlThicknessMaxCm: Ref<number>
@@ -401,7 +401,7 @@ export function createWorkspaceFmlGenerate(
       bovenlichtHeightCm: applied.fmlBovenlichtHeightCm.value,
       bovenlichtGapCm: applied.fmlBovenlichtGapCm.value,
       useMetric: loadUserSettings().unitSystem === 'metric',
-      ...(FML_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
+      ...(PLAN_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
   }
 
@@ -635,7 +635,7 @@ export function createWorkspaceFmlGenerate(
       minCm: applied.fmlThicknessMinCm.value,
       midCm: applied.fmlThicknessMidCm.value,
       maxCm: applied.fmlThicknessMaxCm.value,
-      thicknessCms: [...applied.fmlThicknessCms.value],
+      thicknessCms: [...applied.planThicknessCms.value],
     }
     applied.appliedFmlBandBoundaries.value = {
       midBoundaryCm: applied.fmlBandMidBoundaryCm.value,

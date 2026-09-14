@@ -10,7 +10,7 @@ import type { SelectionRect } from '@/platform/selection'
 import type { TemplateTab } from '@/cv/preprocess/layer-preprocess'
 import type { useExtraction } from '../useExtraction'
 import type { useOpenCvLoader } from '../useOpenCvLoader'
-import type { useWorkspaceFml } from '../useWorkspaceFml'
+import type { useWorkspacePlan } from '../useWorkspacePlan'
 import type { useWorkspacePreprocess } from './useWorkspacePreprocess'
 import type { useWorkspaceRoomPipeline } from './useWorkspaceRoomPipeline'
 import type { WorkspaceFlowStep } from './constants'
@@ -88,7 +88,7 @@ export function buildWorkspaceRoomPipelineDeps(ctx: {
   showLayer11: Ref<boolean>
   showLayer12: Ref<boolean>
   showLayer14: Ref<boolean>
-  fml: Pick<ReturnType<typeof useWorkspaceFml>, 'resetGeneratedPreview'>
+  fml: Pick<ReturnType<typeof useWorkspacePlan>, 'resetGeneratedPreview'>
   devSessionRestoring: Ref<boolean>
   applyAutoGapsInkMode?: (mode: import('@/cv/gaps').GapsInkMode) => void
   clearGapsInkModeManual?: () => void

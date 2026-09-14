@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import { applyNulpunt } from '@/core/fml/translate-floor-plan'
 import type { FloorPlan } from '@/core/fml/types'
-import { createWorkspaceFmlGenerate } from '@/ui/composables/workspace/workspace-fml-generate'
+import { createWorkspaceFmlGenerate } from '@/ui/composables/workspace/workspace-plan-generate'
 
 function samplePlan(): FloorPlan {
   return {
@@ -47,7 +47,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
         appliedFmlDoorHeightCm: ref(210),
         appliedFmlWindowHeightCm: ref(120),
         appliedFmlWindowSillZCm: ref(90),
-        fmlThicknessCms: ref([10, 20, 30]),
+        planThicknessCms: ref([10, 20, 30]),
         fmlThicknessMinCm: ref(10),
         fmlThicknessMidCm: ref(20),
         fmlThicknessMaxCm: ref(30),
@@ -101,7 +101,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
         appliedFmlDoorHeightCm: ref(210),
         appliedFmlWindowHeightCm: ref(120),
         appliedFmlWindowSillZCm: ref(90),
-        fmlThicknessCms: ref([10, 20, 30]),
+        planThicknessCms: ref([10, 20, 30]),
         fmlThicknessMinCm: ref(10),
         fmlThicknessMidCm: ref(20),
         fmlThicknessMaxCm: ref(30),
@@ -149,7 +149,7 @@ describe('applyNulpuntAtFmlCm (workspace preview)', () => {
         appliedFmlDoorHeightCm: ref(210),
         appliedFmlWindowHeightCm: ref(120),
         appliedFmlWindowSillZCm: ref(90),
-        fmlThicknessCms: ref([10, 20, 30]),
+        planThicknessCms: ref([10, 20, 30]),
         fmlThicknessMinCm: ref(10),
         fmlThicknessMidCm: ref(20),
         fmlThicknessMaxCm: ref(30),

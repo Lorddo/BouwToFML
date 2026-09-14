@@ -80,7 +80,7 @@ export type WorkspaceFmlThicknessPreview = {
 export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps) {
   const storedLimits = loadFmlWallThicknessLimits()
   const storedBandBoundaries = loadFmlThicknessBandBoundaries()
-  const fmlThicknessCms = ref(
+  const planThicknessCms = ref(
     normalizeThicknessCatalog(
       storedLimits.thicknessCms ?? [storedLimits.minCm, storedLimits.midCm, storedLimits.maxCm],
     ),
@@ -124,7 +124,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   }
 
   watch(
-    fmlThicknessCms,
+    planThicknessCms,
     (cms) => {
       saveFmlWallThicknessLimits(syncLegacyFromCatalog(cms))
     },
@@ -138,9 +138,9 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     })
   })
 
-  const fmlLimitsDirty = computed(
+  const planLimitsDirty = computed(
     () =>
-      fmlThicknessCms.value.join() !==
+      planThicknessCms.value.join() !==
         (appliedFmlThicknessLimits.value.thicknessCms ?? []).join() ||
       fmlThicknessMinCm.value !== appliedFmlThicknessLimits.value.minCm ||
       fmlThicknessMidCm.value !== appliedFmlThicknessLimits.value.midCm ||
@@ -161,7 +161,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     pxPerMmY: number,
     _measures?: WallRefThicknessMeasure[],
   ): void {
-    const limits = limitsFromCatalog(fmlThicknessCms.value)
+    const limits = limitsFromCatalog(planThicknessCms.value)
     const derived = deriveFmlBandBoundariesFromCatalogExtrema({
       smallestCm: limits.minCm,
       largestCm: limits.maxCm,
@@ -184,7 +184,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
           deps.scale.pixelsPerMillimeterX.value,
           deps.scale.pixelsPerMillimeterY.value,
           deps.referenceWallBandSync!.devSessionRestoring.value,
-          fmlThicknessCms.value.join(),
+          planThicknessCms.value.join(),
         ] as const,
       ([refPx, confirmed, pxX, pxY, restoring]) => {
         if (restoring) return
@@ -196,7 +196,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
 
   /** Reset export- en banddefaults bij nieuwe onderlegger (geen vorig-project geheugen). */
   function resetFmlSessionDefaults(): void {
-    fmlThicknessCms.value = [...FACTORY_THICKNESS_CMS]
+    planThicknessCms.value = [...FACTORY_THICKNESS_CMS]
     fmlThicknessMinCm.value = DEFAULT_FML_WALL_THICKNESS_LIMITS.minCm
     fmlThicknessMidCm.value = DEFAULT_FML_WALL_THICKNESS_LIMITS.midCm
     fmlThicknessMaxCm.value = DEFAULT_FML_WALL_THICKNESS_LIMITS.maxCm
@@ -225,26 +225,26 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     saveFmlThicknessBandBoundaries(DEFAULT_FML_BAND_BOUNDARIES)
   }
 
-  function setFmlThicknessCms(cms: number[]): void {
-    fmlThicknessCms.value = normalizeThicknessCatalog(cms)
+  function setPlanThicknessCms(cms: number[]): void {
+    planThicknessCms.value = normalizeThicknessCatalog(cms)
   }
 
   function setFmlThicknessMinCm(value: number): void {
-    const next = [...fmlThicknessCms.value]
+    const next = [...planThicknessCms.value]
     next[0] = value
-    setFmlThicknessCms(next)
+    setPlanThicknessCms(next)
   }
 
   function setFmlThicknessMidCm(value: number): void {
-    const next = [...fmlThicknessCms.value]
+    const next = [...planThicknessCms.value]
     next[Math.floor((next.length - 1) / 2)] = value
-    setFmlThicknessCms(next)
+    setPlanThicknessCms(next)
   }
 
   function setFmlThicknessMaxCm(value: number): void {
-    const next = [...fmlThicknessCms.value]
+    const next = [...planThicknessCms.value]
     next[next.length - 1] = value
-    setFmlThicknessCms(next)
+    setPlanThicknessCms(next)
   }
 
   function setFmlWallHeightCm(value: number): void {
@@ -377,7 +377,7 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
   }
 
   return {
-    fmlThicknessCms,
+    planThicknessCms,
     fmlThicknessMinCm,
     fmlThicknessMidCm,
     fmlThicknessMaxCm,
@@ -397,14 +397,14 @@ export function createWorkspaceFmlThicknessUi(deps: WorkspaceFmlThicknessUiDeps)
     appliedFmlDoorHeightCm,
     appliedFmlWindowHeightCm,
     appliedFmlWindowSillZCm,
-    fmlLimitsDirty,
+    planLimitsDirty,
     fmlBandDirty,
     fmlThicknessPickTier,
     fmlThicknessPickMessage,
     fmlThicknessPickBusy,
     applyBandBoundariesFromReferenceWall,
     resetFmlSessionDefaults,
-    setFmlThicknessCms,
+    setPlanThicknessCms,
     setFmlThicknessMinCm,
     setFmlThicknessMidCm,
     setFmlThicknessMaxCm,

@@ -4,12 +4,12 @@ import type { FloorPlan } from '@/core/fml/types'
 import { readBovenlichtPacked } from '@/core/fml/bovenlicht'
 import type { FmlThicknessBand } from '@/core/fml/fml-wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
-import { FML_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
+import { PLAN_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
 import PlanCanvas from './PlanCanvas.vue'
 
 /**
  * Presentational FML canvas host for WorkspaceView (detection kind).
- * Sidebar panel is `WorkspaceFmlResultPanel` (layout keeps them apart; same FML result step).
+ * Sidebar panel is `WorkspacePlanResultPanel` (layout keeps them apart; same FML result step).
  */
 const props = defineProps<{
   plan: FloorPlan | null
@@ -59,7 +59,7 @@ const emit = defineEmits<{
  * Product gate: when area/surface edit is enabled in workspace, override detection preset.
  * Canvas `kind` still supplies the rest of the detection profile.
  */
-const areaSurfaceEditEnabled = computed(() => FML_AREA_SURFACE_EDIT_VISIBLE)
+const areaSurfaceEditEnabled = computed(() => PLAN_AREA_SURFACE_EDIT_VISIBLE)
 const bovenlichtPacked = computed(() => readBovenlichtPacked(props.plan))
 
 const canvasRef = ref<{

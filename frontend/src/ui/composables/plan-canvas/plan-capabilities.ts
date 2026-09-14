@@ -112,7 +112,7 @@ export const PLAN_CAPABILITIES_INSPECT: PlanCapabilities = Object.freeze({
 
 /**
  * Workspace stap-4 FML result. Matches product gates:
- * `FML_AREA_SURFACE_EDIT_VISIBLE=false`, no fixture/annotation tools, no touch chrome.
+ * `PLAN_AREA_SURFACE_EDIT_VISIBLE=false`, no fixture/annotation tools, no touch chrome.
  * Same canvas top chrome as editor/inspect (topbar, no inline hint).
  */
 export const PLAN_CAPABILITIES_DETECTION: PlanCapabilities = Object.freeze({

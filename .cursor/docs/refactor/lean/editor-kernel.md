@@ -178,6 +178,22 @@ Bijeffect dat de lane erbij haalt: die twee selecties lieten `pinnedJunctionId`,
 
 Regels: facade-selection 429 → 414, Inspect 161 → 158, Interaction 1192 → 1190; `plan-canvas-selected.ts` 165 → 186. Suite 2563, dezelfde 9 rood, knip gelijk.
 
+### Gebouwd (fase 3, slot): de vier selectie-ingangen op de lane
+
+De karakteriseringstest die batch 2 als voorwaarde stelde staat er: [`plan-canvas-settings-strip.spec.ts`](../../../../frontend/tests/ui/plan-canvas-settings-strip.spec.ts), 19 tests. Hij bouwt de drie échte selectie-composables (Wall, Opening, Area) op één selectie-bak — ze zijn direct construeerbaar, dus er was geen harnas nodig zoals bij de pointer.
+
+**Eerst het waarom.** De strip in `PlanToolbarSettings.vue` **stapelt** panelen. Alleen een gevelgroep-selectie onderdrukt de muur-strook; wall / opening / area / label / line / dimension / item hebben elk een losse `v-if` op hun eigen paneel. Restafval in de settings-refs is dus geen onzichtbare rommel maar een tweede strook op het scherm — dezelfde klasse als de knoop-strook die in batch 1 bleef openstaan.
+
+**Wat de spec vond.** De vier ingangen wisten elk "alles behalve mijn soort" met een ander bereik, en **geen van de vier raakte label, lijn of maatlijn aan**. Concreet: een tekstlabel selecteren en dan een muur aanklikken gaf twee stroken naast elkaar. Omgekeerd (muur, dan label) niet, want `togglePlanSelected` — de lane uit batch 1 — wist wél alles. Die asymmetrie was het bewijs dat het een vergeten regel was en geen keuze.
+
+**Wat er veranderd is.** `toggleSettingsWall`, `selectWall`, `toggleSettingsJunction`, `toggleSettingsOpening`, `toggleSettingsArea` en `selectRoofSurface` gaan nu allemaal door `setPlanSelected`. Het patroon is telkens hetzelfde: eerst de huidige staat van je eigen soort lézen (de lane wist de bak), dan de volgende staat berekenen, dan één aanroep. `clearCompetingWallSelection` (12 regels) en `clearOtherSelections` (13 regels) zijn verdwenen; wat overblijft is `clearCompetingToolSession` respectievelijk `cancelCompetingDrags` — precies de dingen die **niet** in de Selected-bak horen (`surfaceEditId`, `roofPolyMutate`, de mixed-vlag, de sleep-annuleringen).
+
+Dit is een **zichtbare gedragswijziging**: één klik sluit nu élke andere strook. Bewust doorgevoerd omdat de tegenkant (twee stroken) niemand kan willen en de lane het al zo deed; staat als handmatige check in de memory.
+
+Ruwe `move*Id`-schrijvers 49 → **35**, en de resterende zitten waar ze horen: ~10 in de sleep-composables plus de clears elders in Wall/Opening. Regels: WallSelection 766 → 763, OpeningSelection 592 → 590, AreaSelection 377 → 363. De winst is klein omdat de weggehaalde clear-blokken worden ingeruild voor een expliciete "lees eerst je eigen staat"-berekening — dat is de bedoeling: de duplicatie verdwijnt, de logica wordt zichtbaar.
+
+Bijvangst in de gate: die **liep in de volle suite rood en bij een gerichte run groen**. Oorzaak was geen echte schending maar de 5 s-testlimiet — de graaf werd per test opnieuw over heel `src/ui` geregexd (~3 s per test, en onder last meer). Nu wordt de import-graaf één keer op module-niveau gebouwd; het zware werk zit in de collect-fase, die geen testlimiet heeft. Testtijd 6,8 s → 3,4 s.
+
 ---
 
 ## 5. Hit-prioriteit, zoals de code het nu doet
