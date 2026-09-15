@@ -47,21 +47,21 @@ function mouseAt(clientX: number, clientY: number): MouseEvent {
 }
 
 function installWindowStub(): {
-  getMouseup: () => ((event: MouseEvent) => void) | null
+  getPointerup: () => ((event: MouseEvent) => void) | null
   restore: () => void
 } {
-  let mouseupHandler: ((event: MouseEvent) => void) | null = null
+  let pointerupHandler: ((event: MouseEvent) => void) | null = null
   const stub = {
     addEventListener(type: string, handler: EventListenerOrEventListenerObject) {
-      if (type === 'mouseup') mouseupHandler = handler as (event: MouseEvent) => void
+      if (type === 'pointerup') pointerupHandler = handler as (event: MouseEvent) => void
     },
     removeEventListener(type: string) {
-      if (type === 'mouseup') mouseupHandler = null
+      if (type === 'pointerup') pointerupHandler = null
     },
   }
   vi.stubGlobal('window', stub)
   return {
-    getMouseup: () => mouseupHandler,
+    getPointerup: () => pointerupHandler,
     restore: () => vi.unstubAllGlobals(),
   }
 }
@@ -104,7 +104,7 @@ describe('usePlanCanvasNulpunt bake flow', () => {
     })
 
     api.beginNulpuntDrag(mouseAt(40, 60))
-    win.getMouseup()!(mouseAt(40, 60))
+    win.getPointerup()!(mouseAt(40, 60))
 
     const baked = api.confirmNulpuntBake()
     expect(baked).not.toBeNull()
@@ -139,7 +139,7 @@ describe('usePlanCanvasNulpunt bake flow', () => {
     })
 
     api.beginNulpuntDrag(mouseAt(12, 8))
-    win.getMouseup()!(mouseAt(12, 8))
+    win.getPointerup()!(mouseAt(12, 8))
     nulpuntMode.value = false
     expect(api.nulpuntPendingCm.value).toBeNull()
     expect(setNulpunt).not.toHaveBeenCalled()

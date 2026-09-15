@@ -5,9 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-09-15 (catalogus-banden: max(min×1.2,max×0.25) / max×0.9)
+Laatste update: 2026-09-15 (bekende 9 rood groen; e2e kromme-mijdrecht deuren)
 
 ## Huidige focus
+
+**Bekende 9 rood (GEFIXT 2026-09-15)** — Vier clusters, geen campagne-schuld. (1) `test-doors` pad `frontend/examples/FML(test)` → repo-root `examples/FML(test)` (inhoud daarna groen). (2) nulpunt-bake-harnas `mouseup` → `pointerup`. (3) stair `strokeWidth` expect `< 0.8` → `STAIR_STROKE_W` (1,5). (4) `rebasePlanToItemRefid` schoof `drawing` dubbel (`translateFloorPlan` deed het al). `tests/ui` 912 groen.
+
+**E2E herberekend (2026-09-15)** — 27/27 groen. X-10 `mergeDoubleDoors` uit in de harness (Settings-merge is product-UI; E2E pin’t ruwe L12). Openings-snapshots van 5 fixtures ververst; muren-snapshots ongewijzigd.
+
+**Host-props `kind` (GEBOUWD 2026-09-15)** — Vier legacy-booleans van `PlanCanvas` weg. Alleen `kind` + `dakMode` (view-as → area). `resolveHostFlags` + spec; Workspace-binding dood. Typecheck 0, `tests/ui` 912 groen.
 
 **Catalogus-banden (GEBOUWD 2026-09-15)** — Detectie-gate: min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9; overlap → grootste×0,25/×0,9. Stap-4: bandvelden als 2e kolom naast catalogus (max boven, min onder), zonder uitlegtekst. FML-export blijft nearest catalogus-slot.
 
@@ -213,6 +219,12 @@ Laatste update: 2026-09-15 (catalogus-banden: max(min×1.2,max×0.25) / max×0.9
 
 ## Wat WERKT
 
+**Aanzicht SelectEdit-split:** selectie-lane + opening-sleep + structuur-sleep + commits; Precise blijft `applyOpeningRect`. 21 karakteriseringstests. `tests/ui` 933 groen.
+
+**Bekende 9 rood:** fixturepad, nulpunt-pointer, stair 1,5 cm, rebase drawing één keer. `tests/ui` 912 groen.
+
+**Host-props `kind`:** Editor/Inspect/Workspace zetten alleen `kind`. Geen `areaSurfaceEditEnabled` / `annotationEditEnabled` / `inspectMode` / `touchEditor` meer op `PlanCanvas`. Dak-tab forceert area via `dakMode`. Productgate `PLAN_AREA_SURFACE_EDIT_VISIBLE` blijft (generate/fill); detection-preset blijft `false`.
+
 **Catalogus-cm typen:** bestaande maat (20 → 25) via Backspace of select-all; catalogus schrijft pas bij blur/Enter/−+. Rij blijft actief/groen tot commit. Stap 2 + Settings + editor + project-setup.
 
 **Catalogus-banden:** min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9; stap-4 2e kolom (max boven / min onder) naast diktes, zonder hinttekst.
@@ -292,7 +304,8 @@ Laatste update: 2026-09-15 (catalogus-banden: max(min×1.2,max×0.25) / max×0.9
 - Gevelgroep-defaults: nieuw editor-plan → 4 groepen in muur-dropdown (Voor/Achter/Links/Rechts); Gevels-tab pas na toewijzen; Settings hernoemen/verwijderen/toevoegen; Bewerken… +/− — nog niet handmatig.
 - Converter stap-4 «Openen in editor»: plattegrond op stap 4 → knop → editor toont muren **én** onderlegger (scan+schaal) **én** muurdikte-knoppen van de converter-catalogus; terug naar converter blijft intact; editor met bestaande inhoud vraagt bevestigen — nog niet handmatig.
 - Stap-4 hoogte vs dikte: muur verslepen → hoogte wijzigen (plattegrond blijft, confirm verschijnt niet bij het eerste cijfer) → herschalen (gebruikt de bewerkte plattegrond) → dikte wijzigen (hergenereert wél) → downloaden — nog niet handmatig.
-- Bekende rode tests (9, herijkt 2026-09-13 → [`baseline-red.md`](../docs/refactor/lean/baseline-red.md)): opening-fixture-catalog stair `strokeWidth`, rebase drawing-shift, 2× plan-nulpunt-bake, 5× plan-canvas-test-doors (fixturepad). De 2× user-settings zijn **niet meer rood**. Identity-asserties op `kind`/`id` groen. `test:e2e` nog niet opnieuw na identity.
+- Bekende 9 rood zijn groen (2026-09-15). [`baseline-red.md`](../docs/refactor/lean/baseline-red.md) is de oude nullijn.
+- **E2E (2026-09-15):** 27/27. Harness `mergeDoubleDoors: false`; 5× `*.fml.json` + ledger ververst (ruwe L12). Muren-snapshots gelijk.
 - Meet nooit een baseline met een tweede agent-sessie in dezelfde working tree: dat gaf een spook-rode `bind-walls-to-roofs` (test geschreven ná start van de run, implementatie 3 min later).
 - LBE draaien: teken muur-ref → hoeken draaien op scheve muur; randen schalen; sleep in vak (geen grab-icoon); meting bij afronden volgt de hoek; Ctrl = geen 90°-snap — nog niet handmatig.
 - Keep-axis flush-connect: Test(31) midden — dunne V naar hoek → hoek schuift; balance ~0.83 (niet 0.75-quantize); segment-slide geen auto-balance — nog niet handmatig.
@@ -407,6 +420,8 @@ Laatste update: 2026-09-15 (catalogus-banden: max(min×1.2,max×0.25) / max×0.9
 
 ## Recente besluiten
 
+- **2026-09-15** — E2E pin’t ruwe L12-deuren (`mergeDoubleDoors: false`). X-10 twin→double blijft Settings. Openings-snapshots van 5 fixtures ververst.
+- **2026-09-15** — PlanCanvas-host: alleen `kind` zet het preset. Vier legacy-booleans weg; `dakMode` blijft view-as voor area. Productgate en detection-preset blijven gescheiden (comment: bij aanzetten beide).
 - **2026-09-15** — Detectie-banden: min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9. Catalogus (tot 8) is FML-waarheid; banden alleen CV-gate. Stap-4: 2e kolom naast diktes, geen uitleg.
 - **2026-09-15** — Catalogus-cm alleen bij blur/Enter/stepper, niet per toets. Live `20→2` hersorteerde de lijst, remountte het veld en zette de actieve rij uit. Debounce is te zwak (pauze op `2` schrijft alsnog).
 - **2026-09-14** — Editor: project-lokale muurdikte-catalogus. Nieuw plan laadt Settings-defaults; «Openen in editor» neemt de unie van converter-floorcatalogi mee; `.plg` roundtript `settings.defaults.thicknessCms`. Settings wijzigen overschrijft een open plan niet. Converter blijft per floor. Onderleggers gaan mee via `floor.drawing` (session-PNG); FML-export stript lokale URL's nog.

@@ -9,8 +9,8 @@
     "filteredZeroThickness": 2,
     "matchDistCm": 20,
     "openingRecall": {
-      "door": 100,
-      "overall": 100,
+      "door": 83.3,
+      "overall": 92.3,
       "window": 100,
     },
     "referenceDoorCount": 6,
@@ -526,9 +526,18 @@
             0,
             0,
           ],
-          "t": 0.5,
+          "t": 0.4,
           "type": "door",
-          "width": 174.4,
+          "width": 95.4,
+        },
+        {
+          "mirrored": [
+            1,
+            0,
+          ],
+          "t": 0.6,
+          "type": "door",
+          "width": 98.5,
         },
         {
           "t": 0.2,

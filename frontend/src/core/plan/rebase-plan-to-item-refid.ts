@@ -1,6 +1,6 @@
 import { FML_ALIGN_FIXTURE_KIND } from './fixture-refid-catalog'
 import { translateFloorPlan } from './translate-floor-plan'
-import type { DrawingMeta, Floor, FloorItem, FloorPlan } from './types'
+import type { Floor, FloorItem, FloorPlan } from './types'
 import type { FixtureAssetKind } from './fixture-kind-catalog'
 
 export { FML_ALIGN_FIXTURE_KIND }
@@ -19,22 +19,9 @@ function findAlignItem(floor: Floor, kind: FixtureAssetKind): FloorItem | undefi
   return floor.items?.find((item) => item.kind === kind)
 }
 
-function shiftDrawing(
-  drawing: DrawingMeta | undefined,
-  dx: number,
-  dy: number,
-): DrawingMeta | undefined {
-  if (!drawing) return drawing
-  return {
-    ...drawing,
-    x: drawing.x + dx,
-    y: drawing.y + dy,
-  }
-}
-
 /**
  * Zet per floor het eerste item met `kind` op plan `(0,0)`.
- * Floors zonder match of al op origin blijven. Drawing-midden schuift mee.
+ * Floors zonder match of al op origin blijven. Drawing schuift mee via translate.
  */
 export function rebasePlanToItemRefid(
   plan: FloorPlan,
@@ -61,17 +48,8 @@ export function rebasePlanToItemRefid(
       alreadyAtOrigin.push(i)
       continue
     }
-    const dx = -item.x
-    const dy = -item.y
-    next = translateFloorPlan(next, dx, dy, i)
-    const translated = next.floors[i]
-    if (!translated) continue
-    next = {
-      ...next,
-      floors: next.floors.map((candidate, idx) =>
-        idx === i ? { ...candidate, drawing: shiftDrawing(translated.drawing, dx, dy) } : candidate,
-      ),
-    }
+    next = translateFloorPlan(next, -item.x, -item.y, i)
+    if (!next.floors[i]) continue
     moved.push(i)
   }
 

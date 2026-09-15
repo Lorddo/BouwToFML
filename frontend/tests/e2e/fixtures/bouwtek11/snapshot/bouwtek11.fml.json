@@ -314,6 +314,15 @@
       "openings": [
         {
           "mirrored": [
+            1,
+            0,
+          ],
+          "t": 0.5,
+          "type": "door",
+          "width": 189.4,
+        },
+        {
+          "mirrored": [
             0,
             0,
           ],

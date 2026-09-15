@@ -6,6 +6,7 @@ import {
 } from '@/core/plan/fixture-refid-catalog'
 import { fixturePlaceSizeCm } from '@/core/plan/fixture-place-defaults'
 import { buildFixtureSymbol } from '@/core/plan/fixture-symbols'
+import { STAIR_STROKE_W } from '@/core/plan/fixture-symbols/types'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import {
   buildWindowSymbol,
@@ -70,7 +71,7 @@ describe('fixture catalog + symbols', () => {
     expect(stair.circles).toHaveLength(0)
     expect(stair.polylines.length).toBeGreaterThan(8)
     expect(stair.arrowPolylines?.length).toBe(2)
-    expect(stair.strokeWidth).toBeLessThan(0.8)
+    expect(stair.strokeWidth).toBe(STAIR_STROKE_W)
     expect(stair.overWalls).toBe(false)
     expect(buildFixtureSymbol('countertop', 180, 60).overWalls).toBe(false)
 

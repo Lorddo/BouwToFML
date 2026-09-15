@@ -96,6 +96,8 @@ export async function runOpenings(walls: WallsHarnessResult): Promise<OpeningsHa
     defaultWindowSillZCm: fixture.fml.windowSillZCm,
     layer12Doors,
     layer14Windows,
+    // X-10 twin→double is Settings (`openingMerge`). E2E pin’t ruwe L12-deuren.
+    mergeDoubleDoors: false,
   })
 
   const harmonized = harmonizeWallThickness(

@@ -9,8 +9,8 @@
     "filteredZeroThickness": 0,
     "matchDistCm": 20,
     "openingRecall": {
-      "door": 93.8,
-      "overall": 75,
+      "door": 68.8,
+      "overall": 63.9,
       "window": 60,
     },
     "referenceDoorCount": 16,
@@ -242,12 +242,21 @@
       "openings": [
         {
           "mirrored": [
+            1,
+            0,
+          ],
+          "t": 0.6,
+          "type": "door",
+          "width": 88.1,
+        },
+        {
+          "mirrored": [
             0,
             0,
           ],
-          "t": 0.5,
+          "t": 0.4,
           "type": "door",
-          "width": 174.7,
+          "width": 88.1,
         },
         {
           "t": 0.2,
@@ -334,12 +343,21 @@
       "openings": [
         {
           "mirrored": [
+            1,
+            1,
+          ],
+          "t": 0.7,
+          "type": "door",
+          "width": 112.4,
+        },
+        {
+          "mirrored": [
             0,
             1,
           ],
-          "t": 0.5,
+          "t": 0.3,
           "type": "door",
-          "width": 222,
+          "width": 109.6,
         },
       ],
       "thickness": 10,
@@ -520,12 +538,21 @@
       "openings": [
         {
           "mirrored": [
+            1,
+            1,
+          ],
+          "t": 0.7,
+          "type": "door",
+          "width": 51.7,
+        },
+        {
+          "mirrored": [
             0,
             1,
           ],
-          "t": 0.5,
+          "t": 0.3,
           "type": "door",
-          "width": 102.6,
+          "width": 48.8,
         },
       ],
       "thickness": 10,
@@ -1058,9 +1085,18 @@
             0,
             0,
           ],
-          "t": 0.4,
+          "t": 0.3,
           "type": "door",
-          "width": 175.4,
+          "width": 86.7,
+        },
+        {
+          "mirrored": [
+            1,
+            0,
+          ],
+          "t": 0.5,
+          "type": "door",
+          "width": 86.7,
         },
       ],
       "thickness": 20,
