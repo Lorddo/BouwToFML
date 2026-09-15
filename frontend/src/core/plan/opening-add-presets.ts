@@ -33,6 +33,8 @@ export const WINDOW_ADD_SUBTYPES = [
 
 export type DoorAddSubtype = (typeof DOOR_ADD_SUBTYPES)[number]
 export type WindowAddSubtype = (typeof WINDOW_ADD_SUBTYPES)[number]
+/** Dropdown-waarde: deur- of raam-subtype. */
+export type OpeningSubtypeDraft = DoorAddSubtype | WindowAddSubtype
 
 export interface OpeningAddPreset {
   type: OpeningType

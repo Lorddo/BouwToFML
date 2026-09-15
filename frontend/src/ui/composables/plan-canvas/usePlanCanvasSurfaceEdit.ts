@@ -10,7 +10,7 @@ import { hitSelectedVertex, pointInPoly } from '@/core/plan/vertex-hit'
 import type { FloorSurface, Point2D } from '@/core/plan/types'
 import { snapPolygonVertexAxisLock } from '@/ui/components/plan-canvas-junction-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

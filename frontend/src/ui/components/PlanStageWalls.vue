@@ -9,7 +9,7 @@ import {
   OPENING_STROKE_CM,
   SELECTION_HIGHLIGHT_PAD_PX,
   worldStrokeStage,
-} from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+} from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 import {
   ARCHITECT_STROKE,
   isArchitectPlanStyle,

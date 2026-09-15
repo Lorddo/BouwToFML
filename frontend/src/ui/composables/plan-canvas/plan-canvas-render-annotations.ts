@@ -4,7 +4,7 @@ import {
   formatScaleInputLabel,
   type ScaleInputUnit,
 } from '@/ui/composables/settings/scale-input-unit'
-import { measureDistanceCm } from './plan-canvas-measure'
+import { measureDistanceCm } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 import { AREA_LABEL_HEIGHT_CM, planLabelBox } from './plan-canvas-render-areas'
 import type { RenderDimension, RenderLabel, RenderLine } from './plan-canvas-render-types'
 

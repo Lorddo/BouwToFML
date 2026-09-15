@@ -10,9 +10,9 @@ import {
 } from '@/ui/components/plan-canvas-wall-edit'
 import { projectPointToWallT } from '@/ui/components/plan-canvas-openings'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
-import { bindNumericDraftField, bindScaleLengthDraftField } from './plan-canvas-draft-commit'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import { bindNumericDraftField, bindScaleLengthDraftField } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { clearPlanSelected, setPlanSelected } from './plan-canvas-selected'
 import {
   collectAllOfBoxKind,

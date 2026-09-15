@@ -9,7 +9,7 @@ import {
 import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/plan/slice-offset-snap'
 import type { PlanSlice } from '@/core/plan/plan-slices'
 import type { RenderJunction } from './usePlanCanvasRenderModel'
-import { type MeasureLine, measureDistanceCm } from './plan-canvas-measure'
+import { type MeasureLine, measureDistanceCm } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 
 let measureIdCounter = 0
 

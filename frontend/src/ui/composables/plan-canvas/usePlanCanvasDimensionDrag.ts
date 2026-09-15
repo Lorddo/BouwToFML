@@ -13,7 +13,7 @@ import {
   snapDrawPointWithManualDimensions,
 } from '@/ui/components/plan-canvas-wall-face-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

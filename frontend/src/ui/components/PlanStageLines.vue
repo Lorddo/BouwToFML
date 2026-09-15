@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { dimensionLabelVisibleOnScreen } from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+import { dimensionLabelVisibleOnScreen } from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 import type {
   RenderDimension,
   RenderLine,

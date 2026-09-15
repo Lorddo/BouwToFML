@@ -1,12 +1,12 @@
 import { ref, type ComputedRef, type Ref } from 'vue'
 import type { Point2D } from '@/core/plan/types'
-import { isSettingsMod } from './plan-canvas-mods'
+import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/plan-canvas-fixture-face-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

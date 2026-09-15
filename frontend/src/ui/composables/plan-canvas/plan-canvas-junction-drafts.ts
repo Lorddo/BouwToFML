@@ -6,9 +6,9 @@ import {
   wallEndpointHeightCm,
 } from '@/core/plan/wall-endpoint-height'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
-import { bindScaleLengthDraftField } from './plan-canvas-draft-commit'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import { bindScaleLengthDraftField } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

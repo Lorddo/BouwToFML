@@ -8,6 +8,7 @@ import {
 } from '@/core/plan/wall-thickness-catalog'
 import type { ScaleInputUnit, UnitSystem } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import { createThicknessCatalogEditSession } from './thickness-catalog-draft'
 
 type CatalogRow = { id: number; cm: number | null }
 
@@ -36,16 +37,26 @@ const { t } = useI18n()
 let nextRowId = 1
 const rows = ref<CatalogRow[]>([])
 const fieldRefs = ref<Array<{ focus: () => void }>>([])
+const editSession = createThicknessCatalogEditSession()
 
 function catalogSignature(cms: readonly number[]): string {
   return normalizeThicknessCatalog(cms).slice().reverse().join(',')
 }
 
 function rowsFromCatalog(cms: readonly number[]): void {
-  rows.value = normalizeThicknessCatalog(cms)
-    .slice()
-    .reverse()
-    .map((cm) => ({ id: nextRowId++, cm }))
+  const nextCms = normalizeThicknessCatalog(cms).slice().reverse()
+  const prev = rows.value
+  const used = new Set<number>()
+  const next = nextCms.map((cm) => {
+    const existing = prev.find((row) => !used.has(row.id) && row.cm === cm)
+    if (existing) {
+      used.add(existing.id)
+      return existing
+    }
+    return { id: nextRowId++, cm }
+  })
+  const drafts = prev.filter((row) => row.cm == null)
+  rows.value = drafts.length > 0 ? [...next, ...drafts] : next
 }
 
 watch(
@@ -74,13 +85,13 @@ function emitCommitted(): void {
 }
 
 function setAt(id: number, cm: number): void {
-  if (!(cm > 0) || !Number.isFinite(cm)) return
-  const row = rows.value.find((item) => item.id === id)
-  if (!row) return
-  row.cm = cm
+  editSession.type(id, cm)
 }
 
-function onRowCommit(): void {
+function onRowCommit(id: number): void {
+  const row = rows.value.find((item) => item.id === id)
+  const typed = editSession.take(id)
+  if (row && typed != null) row.cm = typed
   emitCommitted()
 }
 
@@ -110,42 +121,47 @@ function canRemoveRow(row: CatalogRow): boolean {
 </script>
 
 <template>
-  <div class="thickness-catalog">
-    <div v-for="(row, index) in rows" :key="row.id" class="thickness-catalog__row">
-      <ScaleLengthInput
-        ref="fieldRefs"
-        :cm="row.cm ?? 0"
-        :mixed="row.cm == null"
-        :unit="unit"
-        :unit-system="unitSystem"
-        :min-cm="1"
-        :disabled="disabled"
-        :hide-suffix="hideSuffix"
-        :block="block"
-        :aria-label="t('settings.thicknessRowAria', { n: index + 1 })"
-        @update:cm="setAt(row.id, $event)"
-        @commit="onRowCommit"
-      />
+  <div class="thickness-catalog" :class="{ 'thickness-catalog--with-bands': $slots.bands }">
+    <div class="thickness-catalog__rows">
+      <div v-for="(row, index) in rows" :key="row.id" class="thickness-catalog__row">
+        <ScaleLengthInput
+          ref="fieldRefs"
+          :cm="row.cm ?? 0"
+          :mixed="row.cm == null"
+          :unit="unit"
+          :unit-system="unitSystem"
+          :min-cm="1"
+          :disabled="disabled"
+          :hide-suffix="hideSuffix"
+          :block="block"
+          :aria-label="t('settings.thicknessRowAria', { n: index + 1 })"
+          @update:cm="setAt(row.id, $event)"
+          @commit="onRowCommit(row.id)"
+        />
+        <button
+          type="button"
+          class="thickness-catalog__remove"
+          :disabled="disabled || !canRemoveRow(row)"
+          :title="t('settings.thicknessRemove')"
+          :aria-label="t('settings.thicknessRemove')"
+          @click="removeAt(row.id)"
+        >
+          −
+        </button>
+      </div>
       <button
         type="button"
-        class="thickness-catalog__remove"
-        :disabled="disabled || !canRemoveRow(row)"
-        :title="t('settings.thicknessRemove')"
-        :aria-label="t('settings.thicknessRemove')"
-        @click="removeAt(row.id)"
+        class="thickness-catalog__add"
+        :disabled="disabled || !canAdd"
+        :title="t('settings.thicknessAdd')"
+        @click="addRow"
       >
-        −
+        +
       </button>
     </div>
-    <button
-      type="button"
-      class="thickness-catalog__add"
-      :disabled="disabled || !canAdd"
-      :title="t('settings.thicknessAdd')"
-      @click="addRow"
-    >
-      +
-    </button>
+    <div v-if="$slots.bands" class="thickness-catalog__bands">
+      <slot name="bands" />
+    </div>
   </div>
 </template>
 
@@ -154,6 +170,29 @@ function canRemoveRow(row: CatalogRow): boolean {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.thickness-catalog--with-bands {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.thickness-catalog__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.thickness-catalog__bands {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding-bottom: 32px; /* align with last catalog row above the + button */
 }
 
 .thickness-catalog__row {

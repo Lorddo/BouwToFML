@@ -14,7 +14,7 @@ import {
   roomEndFromHv,
   seedDrawRoomEnd,
   seedDrawWallEnd,
-} from '@/ui/composables/plan-canvas/plan-canvas-draw-measure'
+} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 
 describe('plan-canvas-draw-measure', () => {
   describe('parseDrawLengthToCm', () => {

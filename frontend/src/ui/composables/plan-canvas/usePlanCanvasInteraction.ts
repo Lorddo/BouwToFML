@@ -13,7 +13,7 @@ import type { MeasureDrawMode } from './usePlanCanvasMeasure'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { usePlanCanvasOpeningDrag } from './usePlanCanvasOpeningDrag'
 import { usePlanCanvasOpeningResize } from './usePlanCanvasOpeningResize'
-import { buildOpeningMoveMeasureLines } from './plan-canvas-opening-move-measure'
+import { buildOpeningMoveMeasureLines } from '@/ui/composables/canvas-kernel/plan-canvas-opening-move-measure'
 import {
   buildWallsInternalMeasureLines,
   wallIdsForJunctionMove,
@@ -34,15 +34,15 @@ import { usePlanCanvasOpeningMove } from './usePlanCanvasOpeningMove'
 import { usePlanCanvasItemDrag } from './usePlanCanvasItemDrag'
 import { usePlanCanvasItemResize } from './usePlanCanvasItemResize'
 import { usePlanCanvasItemRotate } from './usePlanCanvasItemRotate'
-import { createPlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
+import { createPlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 
-export type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+export type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 export { createPlanCanvasSelection } from './plan-canvas-selection'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { PlanViewContext } from './plan-view-context'
 import { createPlanSnapResolve } from './plan-canvas-snap-resolve'
 
-import type { ContentLayout } from './usePlanCanvasViewport'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import { usePlanCanvasToolCoordinator } from './usePlanCanvasToolCoordinator'
 import { usePlanCanvasSelectionCoordinator } from './usePlanCanvasSelectionCoordinator'

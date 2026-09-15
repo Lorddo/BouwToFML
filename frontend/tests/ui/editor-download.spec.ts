@@ -35,6 +35,7 @@ function setup(options: { plan?: FloorPlan | null; fileName?: string | null } = 
     plan,
     fileName: ref(options.fileName ?? null),
     scaleInputUnit: ref('cm'),
+    thicknessPresetCms: ref([10, 20, 30]),
     activeFloorDefaults: computed(() => defaults),
     defaultsForFloor: () => defaults,
     flushPendingFieldCommits: () => calls.push('flush'),
@@ -103,6 +104,7 @@ describe('useEditorDownload', () => {
     expect(doc.format).toBe('plg-plan')
     expect(doc.plan.floors[0].walls).toHaveLength(1)
     expect(doc.settings.scaleInputUnit).toBe('cm')
+    expect(doc.settings.defaults.thicknessCms).toEqual([10, 20, 30])
   })
 
   it('buildCurrentFmlText geeft leeg terug zonder plan', () => {

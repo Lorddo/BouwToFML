@@ -142,10 +142,6 @@ describe('fml embed import boundary', () => {
  * kernel/plugin/view/lijm, en die verdeling in een test kopiëren betekent twee
  * lijsten die uiteenlopen. De regel hieronder is sterker én onderhoudsvrij:
  * niemand mag omhoog, met precies drie benoemde uitzonderingen.
- *
- * Niet in deze gate: imports uit `ui/components/plan-canvas-*.ts`. Dat zijn
- * pure geometrie-helpers die alleen verkeerd staan (geen componenten); ze
- * verhuizen bij de aanzicht-batch, niet hier.
  */
 describe('plan-canvas kernel boundary (gate stap 1)', () => {
   const PLAN_CANVAS = 'ui/composables/plan-canvas'
@@ -219,6 +215,68 @@ describe('plan-canvas kernel boundary (gate stap 1)', () => {
   })
 })
 
+/**
+ * Gate stap 2: de selectie-factory is kernel-eigendom. Plugins krijgen de refs
+ * geïnjecteerd en typeren ze via `plan-canvas-selection-types.ts`.
+ */
+describe('plan-canvas selection factory (gate stap 2)', () => {
+  const FACTORY = 'ui/composables/plan-canvas/plan-canvas-selection.ts'
+  const ALLOW = new Set([
+    'ui/composables/plan-canvas/usePlanCanvasInteraction.ts',
+  ])
+
+  it('alleen Interaction importeert de selectie-factory', () => {
+    const uiFiles = listTsFilesRecursive(resolve(SRC_ROOT, 'ui'), /\.(ts|vue)$/)
+    const offenders = importsFrom(uiFiles)
+      .filter((edge) => edge.to === FACTORY && edge.from !== FACTORY && !ALLOW.has(edge.from))
+      .map((edge) => `${edge.from} → ${edge.to}`)
+
+    expect(offenders, 'plugins typeren via plan-canvas-selection-types, niet de factory').toEqual([])
+  })
+})
+
+/**
+ * Aanzicht woont in `elevation/`, gedeelde bruggen in `canvas-kernel/`.
+ * De mappen importeren elkaar niet; beide mogen de kernel-bruggen lezen.
+ */
+describe('elevation / plan-canvas map-gate', () => {
+  const PLAN = 'ui/composables/plan-canvas'
+  const ELEV = 'ui/composables/elevation'
+  const KERNEL = 'ui/composables/canvas-kernel'
+
+  const planFiles = listTsFilesRecursive(resolve(SRC_ROOT, PLAN))
+  const elevFiles = listTsFilesRecursive(resolve(SRC_ROOT, ELEV))
+  const kernelFiles = listTsFilesRecursive(resolve(SRC_ROOT, KERNEL))
+
+  it('de drie mappen hebben bronbestanden', () => {
+    expect(planFiles.length).toBeGreaterThan(20)
+    expect(elevFiles.length).toBeGreaterThan(5)
+    expect(kernelFiles.length).toBeGreaterThan(5)
+  })
+
+  it('elevation/ importeert plan-canvas/ niet', () => {
+    const offenders = importsFrom(elevFiles)
+      .filter((edge) => isUnder(edge.to, PLAN))
+      .map((edge) => `${edge.from} → ${edge.to}`)
+    expect(offenders).toEqual([])
+  })
+
+  it('plan-canvas/ importeert elevation/ niet', () => {
+    const offenders = importsFrom(planFiles)
+      .filter((edge) => isUnder(edge.to, ELEV))
+      .map((edge) => `${edge.from} → ${edge.to}`)
+    expect(offenders).toEqual([])
+  })
+
+  it('canvas-kernel/ importeert plan-canvas/ noch elevation/', () => {
+    const offenders = importsFrom(kernelFiles)
+      .filter((edge) => isUnder(edge.to, PLAN) || isUnder(edge.to, ELEV))
+      .map((edge) => `${edge.from} → ${edge.to}`)
+    expect(offenders).toEqual([])
+  })
+})
+
+
 describe('core/plg import boundary (E1)', () => {
   const plgRoot = resolve(SRC_ROOT, 'core/plg')
   const plgFiles = listTsFilesRecursive(plgRoot)
@@ -263,24 +321,14 @@ describe('core/plg import boundary (E1)', () => {
  * Fase 6: `core/plan/` is het domein, `core/fml/` is één van zijn adapters. Een domein
  * dat zijn adapter importeert maakt de splitsing ongedaan.
  *
- * De UI-regel heeft een bevroren allowlist in plaats van nul. Vier modules in
- * `core/plan/` importeren geometrie-helpers uit `ui/components/plan-canvas-*.ts` —
- * dezelfde verkeerd gestalde helpers die gate stap 1 aan de andere kant vond. Ze
- * verhuizen bij de geometrie-batch; tot dan mag de lijst niet groeien.
+ * Geometrie-helpers (`opening-plan-ops`, `wall-render-geometry`) wonen in `core/plan/`.
+ * Het domein reikt niet naar `ui/`.
  *
  * De CV-randen staan er bewust apart in: `extractionToPlan` en `layer-openings-to-plan`
  * *zijn* de brug van detectie naar plattegrond, dus die kennen `cv/`-types per definitie.
  */
 describe('core/plan import boundary (fase 6)', () => {
   const planFiles = listTsFilesRecursive(resolve(SRC_ROOT, 'core/plan'))
-
-  /** Bevroren: verdwijnt met de geometrie-verhuizing, groeit tot dan niet. */
-  const UI_ALLOWLIST = [
-    'core/plan/elevation-opening-edit.ts → ui/components/plan-canvas-openings.ts',
-    'core/plan/elevation-openings.ts → ui/components/plan-canvas-openings.ts',
-    'core/plan/opening-along-wall-resize.ts → ui/components/plan-canvas-openings.ts',
-    'core/plan/ridge-floor.ts → ui/components/plan-canvas-wall-polygons.ts',
-  ] as const
 
   /** De detectie-brug: deze drie mogen `cv/` kennen, de rest van het domein niet. */
   const CV_BRIDGE = [
@@ -301,14 +349,12 @@ describe('core/plan import boundary (fase 6)', () => {
     expect(offenders, 'core/plan mag core/fml niet importeren').toEqual([])
   })
 
-  it('core/plan reikt niet naar ui/, op de bevroren vier na', () => {
-    const allowed = new Set<string>(UI_ALLOWLIST)
+  it('core/plan reikt niet naar ui/', () => {
     const offenders = importsFrom(planFiles)
       .filter((edge) => isUnder(edge.to, 'ui'))
       .map((edge) => `${edge.from} → ${edge.to}`)
-      .filter((edge) => !allowed.has(edge))
 
-    expect(offenders, 'nieuwe afhankelijkheid van core/plan op ui/').toEqual([])
+    expect(offenders, 'core/plan mag ui/ niet importeren').toEqual([])
   })
 
   it('alleen de detectie-brug kent cv/', () => {

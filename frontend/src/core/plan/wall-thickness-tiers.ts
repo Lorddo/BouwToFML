@@ -1,16 +1,18 @@
 import { tally } from '@/core/diagnostics'
 
 const THICKNESS_BAND_MID_BOUNDARY_CM = 12
-const THICKNESS_BAND_MAX_BOUNDARY_CM = 23
+const THICKNESS_BAND_MAX_BOUNDARY_CM = 27
 
-/** Ondergrens mid-band t.o.v. referentie-muur (dikste): min &lt; 40%. Fallback bij te krappe catalogus. */
+/** Ondergrens mid-band t.o.v. referentie-muur (dikste): min &lt; 40%. Alleen ref-px-tak. */
 export const THICKNESS_BAND_MID_RATIO = 0.4
-/** Bovengrens mid-band t.o.v. referentie-muur: mid t/m 80%, max &gt; 80%. */
+/** Bovengrens mid-band t.o.v. referentie-muur: mid t/m 80%, max &gt; 80%. Alleen ref-px-tak. */
 export const THICKNESS_BAND_MAX_RATIO = 0.8
-/** Min-bak: tot kleinste catalogus-cm × 1,2 (20% erboven). */
+/** Min-bak kandidaat: tot kleinste catalogus-cm × 1,2 (20% erboven). */
 export const THICKNESS_CATALOG_MIN_HEADROOM = 1.2
-/** Max-bak: vanaf grootste catalogus-cm × 0,8 (20% eronder). */
-export const THICKNESS_CATALOG_MAX_FOOTROOM = 0.8
+/** Min-bak kandidaat: tot grootste catalogus-cm × 0,25. */
+export const THICKNESS_CATALOG_MIN_FROM_MAX = 0.25
+/** Max-bak: vanaf grootste catalogus-cm × 0,9. */
+export const THICKNESS_CATALOG_MAX_FOOTROOM = 0.9
 
 export type ThicknessBand = 'min' | 'mid' | 'max'
 
@@ -118,10 +120,10 @@ export function deriveBandBoundariesCmFromRefPx(
 }
 
 /**
- * L7/L9/L10-drempels uit catalogus-extremen (niet 40/80 van alleen de max).
- * min &lt; kleinste×1,2 · mid daartussen · max &gt; grootste×0,8.
- * 10/20/51 → 12 / 40,8 (20 blijft mid). 10/20/30 → 12 / 24 (gelijk aan 40/80 van 30).
- * Overlap (krappe catalogus) → 40/80 van de grootste.
+ * L7/L9/L10-drempels uit catalogus-extremen.
+ * min &lt; max(kleinste×1,2, grootste×0,25) · mid daartussen · max &gt; grootste×0,9.
+ * 10/20/51 → 12,8 / 45,9 (20 blijft mid). 10/20/30 → 12 / 27.
+ * Overlap (krappe catalogus) → grootste×0,25 / grootste×0,9.
  */
 export function deriveBandBoundariesFromCatalogExtrema(params: {
   smallestCm: number
@@ -135,14 +137,16 @@ export function deriveBandBoundariesFromCatalogExtrema(params: {
   }
   const lo = Math.min(smallest, largest)
   const hi = Math.max(smallest, largest)
-  const midBoundaryCm = roundBoundaryCm(lo * THICKNESS_CATALOG_MIN_HEADROOM)
+  const fromMin = lo * THICKNESS_CATALOG_MIN_HEADROOM
+  const fromMax = hi * THICKNESS_CATALOG_MIN_FROM_MAX
+  const midBoundaryCm = roundBoundaryCm(Math.max(fromMin, fromMax))
   const maxBoundaryCm = roundBoundaryCm(hi * THICKNESS_CATALOG_MAX_FOOTROOM)
   if (midBoundaryCm >= maxBoundaryCm) {
     tally('REF-14', 'extrema_overlap_fallback')
-    return resolveEffectiveBandBoundaries({
-      midBoundaryCm: roundBoundaryCm(hi * THICKNESS_BAND_MID_RATIO),
-      maxBoundaryCm: roundBoundaryCm(hi * THICKNESS_BAND_MAX_RATIO),
-    })
+    return {
+      midBoundaryCm: roundBoundaryCm(hi * THICKNESS_CATALOG_MIN_FROM_MAX),
+      maxBoundaryCm: roundBoundaryCm(hi * THICKNESS_CATALOG_MAX_FOOTROOM),
+    }
   }
   tally('REF-14', 'from_catalog_extrema')
   return { midBoundaryCm, maxBoundaryCm }

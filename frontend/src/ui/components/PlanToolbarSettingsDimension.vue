@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import { PLAN_FIELD_COMMIT_DEBOUNCE_MS } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
+import { PLAN_FIELD_COMMIT_DEBOUNCE_MS } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { MIN_DIMENSION_LENGTH_CM } from '@/core/plan/offset-dimension-line'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'

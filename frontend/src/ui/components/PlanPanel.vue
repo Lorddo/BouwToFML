@@ -84,7 +84,7 @@ withDefaults(
     planWindowBovenlichtDefault: false,
     planThicknessCms: () => [10, 20, 30],
     planBandMidBoundaryCm: 12,
-    planBandMaxBoundaryCm: 23,
+    planBandMaxBoundaryCm: 27,
     planLimitsDirty: false,
     thicknessPickTier: null,
     thicknessPickMessage: null,

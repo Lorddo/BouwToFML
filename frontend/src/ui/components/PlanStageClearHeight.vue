@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { worldDashStage, worldStrokeStage } from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+import { worldDashStage, worldStrokeStage } from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 import type { RenderClearHeight } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
 import {
   clearHeightFillRgba,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   shouldRefitForExtraBoundsAppear,
   worldOverflowsLayout,
-} from '@/ui/composables/plan-canvas/usePlanCanvasViewport'
+} from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 
 const layout = {
   minX: 0,

@@ -24,6 +24,7 @@ import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
 import { DEFAULT_WALL_THICKNESS_LIMITS } from '@/core/plan/wall-thickness-limits'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import { createThicknessCatalogEditSession } from './thickness-catalog-draft'
 import {
   TOOLBELT_HOTKEY_PRIORITY,
   useToolbeltHotkey,
@@ -87,14 +88,27 @@ let nextRowId = 1
 const draftRows = ref<CatalogDraftRow[]>([])
 const fieldRefs = ref<Array<{ focus: () => void }>>([])
 const newRowIds = new Set<number>()
+const editSession = createThicknessCatalogEditSession()
 
 function catalogSignature(cms: readonly number[]): string {
   return [...cms].slice().reverse().join(',')
 }
 
 function rowsFromCatalog(cms: readonly number[]): void {
-  newRowIds.clear()
-  draftRows.value = cms.map((cm) => ({ id: nextRowId++, cm }))
+  const prev = draftRows.value
+  const used = new Set<number>()
+  const next = cms.map((cm) => {
+    const existing = prev.find(
+      (row) => !used.has(row.id) && !newRowIds.has(row.id) && row.cm === cm,
+    )
+    if (existing) {
+      used.add(existing.id)
+      return existing
+    }
+    return { id: nextRowId++, cm }
+  })
+  const drafts = prev.filter((row) => newRowIds.has(row.id))
+  draftRows.value = drafts.length > 0 ? [...next, ...drafts] : next
 }
 
 watch(
@@ -143,23 +157,24 @@ function doorTemplateLabel(kind: string): string {
 }
 
 function onCatalogCm(rowId: number, cm: number) {
-  if (!Number.isFinite(cm) || cm <= 0) return
-  const row = draftRows.value.find((item) => item.id === rowId)
-  if (!row) return
-  const previous = row.cm
-  row.cm = cm
-  if (newRowIds.has(rowId)) return
-  if (previous == null || previous === cm) return
-  emit('updateCatalogThickness', previous, cm)
+  editSession.type(rowId, cm)
 }
 
 function onDraftCommit(rowId: number) {
-  if (!newRowIds.has(rowId)) return
   const row = draftRows.value.find((item) => item.id === rowId)
-  if (row?.cm == null || !(row.cm > 0)) return
-  if (catalogCms.value.includes(row.cm)) return
-  newRowIds.delete(rowId)
-  emit('setCatalogCms', addThicknessToCatalog(catalogCms.value, row.cm))
+  if (!row) return
+  if (newRowIds.has(rowId)) {
+    const added = editSession.commitNew(rowId, catalogCms.value)
+    if (added?.kind !== 'add') return
+    row.cm = added.cm
+    newRowIds.delete(rowId)
+    emit('setCatalogCms', addThicknessToCatalog(catalogCms.value, added.cm))
+    return
+  }
+  const replaced = editSession.commitExisting(rowId, row.cm)
+  if (replaced?.kind !== 'replace') return
+  row.cm = replaced.newCm
+  emit('updateCatalogThickness', replaced.oldCm, replaced.newCm)
 }
 
 function onCatalogRowClick(row: (typeof catalogRows.value)[number]) {

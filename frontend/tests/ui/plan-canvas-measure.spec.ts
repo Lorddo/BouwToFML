@@ -3,7 +3,7 @@ import {
   buildMeasureLineScreen,
   formatMeasureDistanceCm,
   measureDistanceCm,
-} from '@/ui/composables/plan-canvas/plan-canvas-measure'
+} from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 
 describe('plan-canvas-measure', () => {
   it('meet afstand in cm', () => {

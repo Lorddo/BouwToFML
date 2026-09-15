@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type { Point2D } from '@/core/plan/types'
 import { areaLabelAnchorCm, areaPolygonCentroid } from './plan-canvas-render-areas'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

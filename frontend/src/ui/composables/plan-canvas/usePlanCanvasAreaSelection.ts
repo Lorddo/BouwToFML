@@ -8,8 +8,8 @@ import {
   resolveRoomType,
 } from '@/core/plan/roomtype-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { setPlanSelected } from './plan-canvas-selected'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 

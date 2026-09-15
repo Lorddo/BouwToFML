@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildUnderlayStageGeom,
   underlayContentBoundsCm,
-} from '@/ui/composables/plan-canvas/plan-canvas-underlay-layout'
+} from '@/ui/composables/canvas-kernel/plan-canvas-underlay-layout'
 
 describe('buildUnderlayStageGeom', () => {
   it('zonder rot/flip: linker-as + center-rotatie (visueel top-left)', () => {

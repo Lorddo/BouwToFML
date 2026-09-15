@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ElevationRenderModel } from '@/ui/composables/plan-canvas/useElevationRenderModel'
-import type { ElevationInteraction } from '@/ui/composables/plan-canvas/useElevationInteraction'
+import type { ElevationRenderModel } from '@/ui/composables/elevation/useElevationRenderModel'
+import type { ElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
 import type { FacadeElevation } from '@/core/plan/facade-elevation'
 import { FACTORY_OPENING_COLORS } from '@/ui/composables/settings/opening-display-colors'
 import { ARCHITECT_AREA_FILL } from '@/ui/composables/settings/plan-display-style'

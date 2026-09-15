@@ -5,7 +5,7 @@ import {
   openingDragPointerWithGrab,
   openingGrabOffsetCm,
 } from '@/ui/components/plan-canvas-opening-drag-geom'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

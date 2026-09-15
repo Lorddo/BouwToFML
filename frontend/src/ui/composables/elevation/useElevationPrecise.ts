@@ -19,7 +19,7 @@ import {
   elevationPreciseHeightDelta,
   elevationPreciseOffset,
 } from './elevation-precise-move'
-import { resolveRelocatePointerIntent } from './plan-canvas-mods'
+import { resolveRelocatePointerIntent } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import type { ElevationInteractionProps } from './elevation-interaction-types'
 
 type PreciseDraft =

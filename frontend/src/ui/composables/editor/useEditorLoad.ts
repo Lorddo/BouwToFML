@@ -6,6 +6,7 @@ import {
 } from '@/core/plan/empty-floor-plan'
 import { ensureDefaultFacadeGroups, pruneFacadeGroups } from '@/core/plan/facade-groups'
 import { applyJunctionSanitizeToPlan } from '@/core/plan/materialize-wall-junctions'
+import { normalizeThicknessCatalog } from '@/core/plan/wall-thickness-catalog'
 import { parseEditorPlanFile } from '@/ui/composables/editor/parse-editor-plan-file'
 import {
   rebasePlanToItemRefid,
@@ -21,6 +22,14 @@ import {
 } from '@/core/plan/viewer-session-defaults'
 import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+
+function catalogFromUserDefaults(): number[] {
+  return normalizeThicknessCatalog(loadUserSettings().defaults.thicknessCms)
+}
+
+export type LoadPlanOptions = {
+  thicknessCms?: readonly number[]
+}
 
 type PlanLoadPhase = 'reading' | 'parsing' | 'building'
 
@@ -75,6 +84,7 @@ export function useEditorLoad(deps: {
   hydrateFloorDefaultsFromPlan: (plan: FloorPlan | null) => void
   addFloorDefaultsSlot: (index: number, source?: ViewerSessionDefaults) => void
   removeFloorDefaultsSlot: (index: number) => void
+  applyThicknessCatalog: (cms: readonly number[]) => void
 }) {
   const loadPhase = ref<PlanLoadPhase | null>(null)
   const loadFileName = ref<string | null>(null)
@@ -205,6 +215,7 @@ export function useEditorLoad(deps: {
     )
     deps.sessionDefaults.value = defaults
     deps.hydrateFloorDefaultsFromPlan(deps.plan.value)
+    deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.contentOpacity.value = 0.8
     deps.hidePlanText.value = false
     resetTransientUi()
@@ -215,6 +226,7 @@ export function useEditorLoad(deps: {
     warnings: ImportWarning[]
     sourceName: string
     sessionDefaults?: ViewerSessionDefaults
+    thicknessCms?: readonly number[]
   }): Promise<void> {
     pruneFacadeGroups(args.plan)
     ensureDefaultFacadeGroups(args.plan, loadUserSettings().planDisplay.facadeGroups)
@@ -222,6 +234,7 @@ export function useEditorLoad(deps: {
     deps.sessionDefaults.value =
       args.sessionDefaults ?? seedViewerDefaultsFromPlan(args.plan, 0)
     deps.hydrateFloorDefaultsFromPlan(args.plan)
+    deps.applyThicknessCatalog(args.thicknessCms ?? catalogFromUserDefaults())
     deps.warnings.value = args.warnings
     deps.fileName.value = args.sourceName
     deps.activeFloorIndex.value = 0
@@ -241,6 +254,7 @@ export function useEditorLoad(deps: {
     deps.plan.value = null
     deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
     deps.hydrateFloorDefaultsFromPlan(null)
+    deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.warnings.value = []
     deps.fileName.value = null
     deps.activeFloorIndex.value = 0
@@ -256,14 +270,23 @@ export function useEditorLoad(deps: {
   }
 
   /** In-memory openen (converter → editor, geen download). */
-  async function loadPlan(plan: FloorPlan, sourceName: string): Promise<void> {
+  async function loadPlan(
+    plan: FloorPlan,
+    sourceName: string,
+    options?: LoadPlanOptions,
+  ): Promise<void> {
     deps.error.value = null
     deps.clearUnderlayState()
     loadPhase.value = 'building'
     loadFileName.value = sourceName
     await yieldToPaint()
     try {
-      await applyOpenedPlan({ plan, warnings: [], sourceName })
+      await applyOpenedPlan({
+        plan,
+        warnings: [],
+        sourceName,
+        thicknessCms: options?.thicknessCms,
+      })
     } catch (err) {
       failOpen()
       deps.error.value = err instanceof Error ? err.message : deps.t('viewer.importFailed')
@@ -302,6 +325,8 @@ export function useEditorLoad(deps: {
           opened.kind === 'plg' && opened.plgSettings
             ? sessionDefaultsFromPartial(opened.plgSettings.defaults)
             : undefined,
+        thicknessCms:
+          opened.kind === 'plg' ? opened.plgSettings?.defaults.thicknessCms : undefined,
       })
     } catch (err) {
       failOpen()
@@ -316,6 +341,7 @@ export function useEditorLoad(deps: {
     deps.plan.value = null
     deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
     deps.hydrateFloorDefaultsFromPlan(null)
+    deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.contentOpacity.value = 0.8
     deps.hidePlanText.value = false
     resetTransientUi()

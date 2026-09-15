@@ -1,4 +1,4 @@
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { resolvePlanStickySelectKind, type PlanStickySelectKind } from './plan-canvas-sticky-select'
 
 /**

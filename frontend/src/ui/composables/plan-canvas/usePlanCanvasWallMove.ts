@@ -11,7 +11,7 @@ import {
   applyDrawTypeKey,
   isDrawTypeLengthKey,
   parseDrawLengthDraftToCm,
-} from './plan-canvas-draw-measure'
+} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

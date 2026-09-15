@@ -14,12 +14,12 @@ import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import { PLAN_CANVAS_CHROME_SELECTOR } from '@/ui/composables/plan-canvas/plan-canvas-gestures'
 import { usePlanCanvasUnderlayMove } from '@/ui/composables/plan-canvas/usePlanCanvasUnderlayMove'
 import { usePlanCanvasPanZoom } from '@/ui/composables/plan-canvas/usePlanCanvasPanZoom'
-import { useElevationPointer } from '@/ui/composables/plan-canvas/useElevationPointer'
+import { useElevationPointer } from '@/ui/composables/elevation/useElevationPointer'
 import { usePlanCanvasTouch, usePlanTouchNav } from '@/ui/composables/plan-canvas/usePlanCanvasTouch'
 import { useStage } from '@/platform/canvas'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
-import { useElevationRenderModel } from '@/ui/composables/plan-canvas/useElevationRenderModel'
-import { useElevationInteraction } from '@/ui/composables/plan-canvas/useElevationInteraction'
+import { useElevationRenderModel } from '@/ui/composables/elevation/useElevationRenderModel'
+import { useElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/plan-canvas-openings'
 import {
   DEFAULT_PLAN_DISPLAY_STYLE,
@@ -155,7 +155,7 @@ const canvasLocked = computed(() => underlayMoveMode.value || props.rescaleMode 
 
 // --- Interaction composable (created first — owns selection/tool state) ---
 import type { FacadeElevation } from '@/core/plan/facade-elevation'
-import type { ContentLayout } from '@/ui/composables/plan-canvas/usePlanCanvasViewport'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 const _elevation = shallowRef<FacadeElevation | null>(null)
 
 // Pointer needs viewport from render model, but render model needs interaction refs.

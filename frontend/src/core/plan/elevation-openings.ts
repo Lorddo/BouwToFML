@@ -21,7 +21,7 @@ import {
   addOpeningToWall,
   removeOpeningsById,
   updateOpeningById,
-} from '@/ui/components/plan-canvas-openings'
+} from './opening-plan-ops'
 
 export type ElevationOpeningWrite = Partial<
   Pick<

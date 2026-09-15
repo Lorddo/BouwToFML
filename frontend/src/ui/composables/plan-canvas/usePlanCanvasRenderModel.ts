@@ -1,4 +1,4 @@
-﻿import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/plan/ridge-walls'
 import { listBlockedRoofRings, listSkyExposedWalls } from '@/core/plan/ridge-floor'
 import { computeClearHeightOverlays } from '@/core/plan/roof-clear-height'
@@ -16,9 +16,9 @@ import {
   wallFillComponentsToPathData,
 } from '@/ui/components/plan-canvas-wall-polygons'
 import { loadImage } from '@/platform/image'
-import type { ContentLayout } from './usePlanCanvasViewport'
-import { layoutTransform } from './usePlanCanvasViewport'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
+import { layoutTransform } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { PlanViewContext } from './plan-view-context'
 import { buildRenderDoorGroupsAndWindows, buildRenderFixtures } from './plan-canvas-render-openings'
 import { buildRenderAreaSideDims } from './plan-canvas-area-side-dims'
@@ -28,7 +28,7 @@ import {
   type RenderCornerMarker,
 } from './plan-canvas-corner-markers'
 import { buildRenderAreas, buildRenderSurfaces } from './plan-canvas-render-areas'
-import { PLAN_HANDLE_RADIUS_PX } from './plan-canvas-vertex-hit'
+import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import {
   buildRenderDimensions,
   buildRenderLabels,
@@ -47,7 +47,7 @@ import {
   buildSelectedOpeningPanel,
   buildSelectedWallPanel,
 } from './plan-canvas-selected-panels'
-import { buildUnderlayStageGeom } from './plan-canvas-underlay-layout'
+import { buildUnderlayStageGeom } from '@/ui/composables/canvas-kernel/plan-canvas-underlay-layout'
 import {
   DEFAULT_SCALE_INPUT_UNIT,
   type ScaleInputUnit,

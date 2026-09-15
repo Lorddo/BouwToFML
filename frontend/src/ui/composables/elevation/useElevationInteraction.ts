@@ -24,10 +24,10 @@ import {
   applyDrawTypeKey,
   isDrawTypeLengthKey,
   parseDrawLengthDraftToCm,
-} from './plan-canvas-draw-measure'
-import { isTypingFieldTarget } from './plan-canvas-draft-commit'
+} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import { isTypingFieldTarget } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
-import { PLAN_HANDLE_HIT_PX } from './plan-canvas-vertex-hit'
+import { PLAN_HANDLE_HIT_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import type { ElevTool } from './elevation-tool'
 import type { ElevationInteractionDeps } from './elevation-interaction-types'
 import { useElevationDrawTools } from './useElevationDrawTools'

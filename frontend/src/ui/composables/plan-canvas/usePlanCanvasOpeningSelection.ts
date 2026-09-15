@@ -33,10 +33,10 @@ import {
   resolveWindowSillZ,
 } from '@/ui/components/plan-canvas-openings'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
-import { bindScaleLengthDraftField } from './plan-canvas-draft-commit'
+import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import { bindScaleLengthDraftField } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { computeOpeningDraftState } from './plan-canvas-opening-draft'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { setPlanSelected } from './plan-canvas-selected'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

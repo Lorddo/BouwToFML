@@ -5,7 +5,7 @@ import {
   resolveRelocatePointerIntent,
   wantsClickMove,
   wantsRelocate,
-} from '@/ui/composables/plan-canvas/plan-canvas-mods'
+} from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 
 describe('plan-canvas-mods', () => {
   it('settings toggle works without ctrlKey', () => {

@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import type { FloorPlan, Point2D } from '@/core/plan/types'
 import type { ElevationBovenlichtDefaults, FacadeElevation } from '@/core/plan/facade-elevation'
-import type { ContentLayout } from './usePlanCanvasViewport'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 
 export type { ElevTool } from './elevation-tool'

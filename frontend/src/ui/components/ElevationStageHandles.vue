@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { ElevationRenderModel } from '@/ui/composables/plan-canvas/useElevationRenderModel'
-import type { ElevationInteraction } from '@/ui/composables/plan-canvas/useElevationInteraction'
+import type { ElevationRenderModel } from '@/ui/composables/elevation/useElevationRenderModel'
+import type { ElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
 import type { FacadeElevation } from '@/core/plan/facade-elevation'
-import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/plan-canvas/plan-canvas-vertex-hit'
+import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 
 const props = defineProps<{
   elevation: FacadeElevation | null

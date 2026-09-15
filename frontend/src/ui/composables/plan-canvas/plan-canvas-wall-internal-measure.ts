@@ -1,7 +1,7 @@
 import type { Opening, Point2D, Wall } from '@/core/plan/types'
-import { connectorInsetAlong } from './plan-canvas-draw-measure'
-import { type MeasureLine } from './plan-canvas-measure'
-import { OPENING_MOVE_MEASURE_INSET_CM } from './plan-canvas-opening-move-measure'
+import { connectorInsetAlong } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import { type MeasureLine } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
+import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/canvas-kernel/plan-canvas-opening-move-measure'
 
 const EPS = 1e-6
 

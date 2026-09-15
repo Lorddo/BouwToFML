@@ -7,7 +7,7 @@ import {
   resolveUnderlayPxPerMmFromRulers,
 } from '@/core/plan/drawing-to-underlay-layout'
 import type { DrawingMeta } from '@/core/plan/types'
-import { buildUnderlayStageGeom } from '@/ui/composables/plan-canvas/plan-canvas-underlay-layout'
+import { buildUnderlayStageGeom } from '@/ui/composables/canvas-kernel/plan-canvas-underlay-layout'
 
 /** Kinderdijkstraat 53 1 — floors[0].drawing (zonder url). */
 const KINDERDIJK_DRAWING: DrawingMeta = {
@@ -115,6 +115,34 @@ describe('drawingFromImageScale', () => {
     expect(layout!.origin.y).toBeCloseTo(0)
     expect(layout!.pxPerMmX).toBeCloseTo(2)
     expect(layout!.pxPerMmY).toBeCloseTo(2)
+  })
+
+  it('roundtrip bewaart flipX (display-only)', () => {
+    const drawing = drawingFromImageScale({
+      imageWidthPx: 2000,
+      imageHeightPx: 1000,
+      pxPerMmX: 2,
+      pxPerMmY: 2,
+      origin: { x: 10, y: 20 },
+      flipX: true,
+    })
+    expect(drawing?.flipX).toBe(true)
+    const layout = previewUnderlayLayoutFromDrawing(drawing!, { width: 2000, height: 1000 })
+    expect(layout!.flipX).toBe(true)
+    expect(layout!.origin.x).toBeCloseTo(10)
+    expect(layout!.origin.y).toBeCloseTo(20)
+  })
+
+  it('zonder flipX → geen veld op drawing of layout', () => {
+    const drawing = drawingFromImageScale({
+      imageWidthPx: 2000,
+      imageHeightPx: 1000,
+      pxPerMmX: 2,
+      pxPerMmY: 2,
+    })
+    expect(drawing?.flipX).toBeUndefined()
+    const layout = previewUnderlayLayoutFromDrawing(drawing!, { width: 2000, height: 1000 })
+    expect(layout!.flipX).toBeUndefined()
   })
 
   it('bewaart origin bij stretch (geen muur-rescale)', () => {

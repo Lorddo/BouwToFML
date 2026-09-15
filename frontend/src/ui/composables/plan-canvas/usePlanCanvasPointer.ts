@@ -17,7 +17,7 @@ import {
 } from './plan-canvas-tool-registry'
 import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 /**
  * Sinds de tool-registry leest de pointer geen tool-booleans meer: de tien

@@ -7,7 +7,7 @@ import {
   dimensionLabelVisibleOnScreen,
   worldDashStage,
   worldStrokeStage,
-} from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+} from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 
 describe('worldStrokeStage', () => {
   it('schaalt cm met layout.scale', () => {

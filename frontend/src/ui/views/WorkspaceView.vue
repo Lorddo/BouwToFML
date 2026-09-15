@@ -52,7 +52,7 @@ const sidebarOpen = ref(true)
 const sidebarOpenBeforeFullscreen = ref(true)
 const canvasFullscreen = defineModel<boolean>('canvasFullscreen', { default: false })
 const emit = defineEmits<{
-  openInEditor: [plan: FloorPlan]
+  openInEditor: [plan: FloorPlan, thicknessCms: number[]]
 }>()
 const { t } = useI18n()
 
@@ -170,9 +170,9 @@ function onRasterRedo() {
 }
 
 function onOpenInEditor(): void {
-  const plan = api.exportMergedProjectPlan()
-  if (!plan) return
-  emit('openInEditor', plan)
+  const exported = api.exportMergedProjectPlan()
+  if (!exported) return
+  emit('openInEditor', exported.plan, exported.thicknessCms)
 }
 
 defineExpose<{

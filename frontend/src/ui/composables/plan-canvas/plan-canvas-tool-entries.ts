@@ -1,8 +1,8 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { Point2D } from '@/core/plan/types'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
-import { isSettingsMod } from './plan-canvas-mods'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
+import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import type { PlanToolEntry } from './plan-canvas-tool-registry'
 
 /**

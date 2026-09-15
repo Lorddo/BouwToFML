@@ -18,7 +18,7 @@ import {
 import { withStackedFacadeWalls } from '@/ui/composables/plan-facade-stacked'
 import { tGlobal } from '@/ui/i18n'
 import { facadeGroupDisplayName } from './facade-group-label'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { setPlanSelected } from './plan-canvas-selected'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

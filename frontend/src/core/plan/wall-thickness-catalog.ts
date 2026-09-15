@@ -73,6 +73,18 @@ export function normalizeThicknessCatalog(cms: readonly number[] | null | undefi
   return capCatalogToMax(padCatalogToMin(cleaned))
 }
 
+/** Unie van meerdere catalogi, daarna genormaliseerd (min 3, cap 8). */
+export function unionThicknessCatalogs(
+  catalogs: readonly (readonly number[] | null | undefined)[],
+): number[] {
+  const all: number[] = []
+  for (const catalog of catalogs) {
+    if (!catalog) continue
+    all.push(...catalog)
+  }
+  return normalizeThicknessCatalog(all)
+}
+
 export function addThicknessToCatalog(cms: readonly number[], cm: number): number[] {
   if (!isPositiveCm(cm)) return normalizeThicknessCatalog(cms)
   const current = normalizeThicknessCatalog(cms)

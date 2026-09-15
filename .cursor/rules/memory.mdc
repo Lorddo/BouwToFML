@@ -5,11 +5,17 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage + CSS-batch KLAAR)
+Laatste update: 2026-09-15 (catalogus-banden: max(min×1.2,max×0.25) / max×0.9)
 
 ## Huidige focus
 
-**Kernel-campagne AF, rename-campagne AF** — Alle fasen gedaan, inclusief gate stap 1, het slot van fase 3 en rename fase 6. Wat nog op de rol staat: het aanzicht uit `plan-canvas/` tillen (7 brug-modules eerst) en de **geometrie-verhuizing** — vier modules in `core/plan` importeren omhoog naar `ui/components/plan-canvas-*.ts`, bevroren in de gate. Gate stap 2 (alleen kernel leest ruwe refs) wacht op het verdwijnen van de shim.
+**Catalogus-banden (GEBOUWD 2026-09-15)** — Detectie-gate: min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9; overlap → grootste×0,25/×0,9. Stap-4: bandvelden als 2e kolom naast catalogus (max boven, min onder), zonder uitlegtekst. FML-export blijft nearest catalogus-slot.
+
+**Catalogus bestaande maat typen (GEFIXT 2026-09-15)** — Stap-2 refs + Settings/editor-catalogus schreven bij élke toets (`20` + Backspace → `2`, of select-all + eerste cijfer). Catalogus hersorteerde, rijen kregen nieuwe ids, veld verloor focus en de actieve/groene rij viel weg. Commit nu pas bij blur/Enter/stepper; rijen houden hun id. Session: `thickness-catalog-draft.ts`.
+
+**Converter → editor (GEBOUWD, smoke-test 2026-09-14)** — Stap-4 «Openen in editor» hangt per floor de detectie-scan als `drawing` (`workingImagePng` + `previewUnderlayLayout`, inclusief `flipX`). FML-download stript data:/blob:-URL's nog steeds. Editor heeft nu een **project-lokale** muurdikte-catalogus (niet meer alleen Settings): converter-unie van floor-catalogi gaat mee; nieuw plan / `.plg` laadt defaults; Settings-wijziging overschrijft een open plan niet. UI in de project-vouw.
+
+**Kernel-campagne AF, rename-campagne AF, vervolg AF** — Geometrie in `core/plan/` (`opening-plan-ops`, `wall-render-geometry`); aanzicht in `composables/elevation/` (11 files); 9 brug-modules in `composables/canvas-kernel/`; map-gate + gate stap 2 (factory alleen via Interaction; types in `plan-canvas-selection-types.ts`). Typecheck 0, `tests/ui` 902 met de bekende 7 rood.
 
 **Rename fase 6 (KLAAR)** — `core/fml` gesplitst: **104 bestanden naar `core/plan/`**, drie blijven (`importFmlV3`, `buildFmlV3`, `downloadFml`). Sweeps: 851 `@/core/fml`→`@/core/plan`, 25 relatieve `../fml/` in `core/plg`, 22 in de blijvers, 28 sibling-imports ná de bestandsrename, plus **120 identifiers + 10 bestandsnamen** (1333 vervangingen in 157 bestanden). Typecheck 0, 2580 tests met de bekende 9 rood, knip 129 exports (was 131). Scripts: `rename-phase6-move/names/relpaths.mjs`, kaart in `phase6-name-map.mjs` waar de rename **én** de twee na-audits uit lezen (drie kopieën lopen uiteen — zo mist een audit een echte botsing). **Elke regel had een teller**: alle 120 namen en 10 paden raakten, de 116 nul-treffers waren enkel kebab-varianten van niet-props.
 
@@ -19,7 +25,7 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 **Fase 6 audits: nul echte bevindingen, twéé fouten in de meetlat** — Shadowing 0, strings 0, i18n 0 botsingen / 738 sleutels compleet, mojibake 0. Maar de shadowing-audit deed eerst **stilzwijgend niets**: hij vergeleek twee git-refs terwijl het werk ongecommit was («0 gewijzigde bestanden»), en sloeg daarna alle 104 verhuisde bestanden over omdat het nieuwe pad niet in de oude ref bestaat — juist de bestanden met hernoemde identifiers. Nu volgt hij renames via `git diff --name-status -M` en méldt hij hoeveel hij oversloeg. Tweede fout: bij een rename met streepjes zit de nieuwe naam ín de oude (`fml-wall-thickness-limits` bevat `wall-thickness-limits`, want `-` is geen woordteken), dus élke zo'n rename meldde 29× een botsing met zichzelf; hij knipt de oude naam nu eerst weg.
 
-**Import-gate strakker + een schending blootgelegd** — `core/plg` raakt `core/fml` **helemaal niet meer** aan, ook `fml-adapter` niet, dus de type-only-uitzondering uit E1 is dood: de regel is nu «`core/plg` importeert `core/fml` niet, type noch value». Spec omgedoopt naar [`import-boundaries.spec.ts`](../../frontend/tests/ui/import-boundaries.spec.ts), 12 tests. Nieuw: het domein importeert zijn eigen adapter niet (nul), alleen de detectie-brug (`extractionToPlan`, `extraction-to-plan-walls`, `layer-openings-to-plan`) mag `cv/` kennen (5 randen), en **`core/plan` reikt op vier plekken omhoog naar `ui/components/`** (`plan-canvas-openings` 3×, `plan-canvas-wall-polygons` 1×) — dezelfde verkeerd gestalde geometrie die gate stap 1 aan de andere kant vond, nu met het domein als afnemer. Bevroren allowlist, verdwijnt met de geometrie-verhuizing. Beide nieuwe regels omgekeerd bewezen. `tests/core/fml/` gespiegeld: 46 van 49 specs naar `tests/core/plan/`, 3 adapter-specs blijven, 7 losse specs omgedoopt met hun module.
+**Import-gate strakker + geometrie-verhuizing (KLAAR)** — `core/plg` raakt `core/fml` niet aan. Spec [`import-boundaries.spec.ts`](../../frontend/tests/ui/import-boundaries.spec.ts), 17 tests. Domein importeert zijn adapter niet; detectie-brug mag `cv/` (5 randen); **`core/plan` reikt niet meer naar `ui/`** (`opening-plan-ops` + `wall-render-geometry` wonen in het domein, UI-stubs re-exporteren). Gate stap 2: alleen Interaction importeert de selectie-factory. Map-gate: `elevation/` ⊄ `plan-canvas/` ⊄ `elevation/`; `canvas-kernel/` importeert geen van beide.
 
 **CSS-klassen-batch (KLAAR)** — 146 vervangingen in 11 bestanden (`scripts/rename-css-classes.mjs`): 34 basisnamen `fml-*` → `plan-*`, modifiers (`--h`/`--v`/`--preview`) volgen automatisch want `-` is geen woordteken. `git mv fml-panel-fields.css → plan-panel-fields.css`. **Het gevreesde risico bestond niet:** geen enkele JS-regel leest een `fml-`klassenaam (geen `classList`, geen `closest`, geen gesture-ignore-lijst) — dat eerst geverifieerd, daarna gesweept. **De ruwe telling (57 klassen / 24 bestanden) was te hoog**: die mengde klassen, importpaden en kebab-props. `scripts/classify-fml-tokens.mjs` bepaalt per token wát het is; vijf tokens leken klasse en zijn het niet (`fml-ref-id`/`fml-text` = groep A-props, `fml-band-*` = C1-props, `fml-export` = échte `.fml`-bestandsnaam, `fml-preview` = Vue `:key`, en `fml-generate`/`fml-settings` = substring-artefact van `workspace-fml-generate` / `bouwtofml-settings.json`). **Meetlat vóór de wijziging gebouwd**, niet erna: `scripts/check-css-class-pairing.mjs` vergelijkt gebruikte tegen gedefinieerde klassen — 104/101 met 5 wees-gebruikt + 2 wees-gedefinieerd, ná de rename exact dezelfde zeven met `plan-`. Die meetlat had zelf eerst een fout (`_` niet in de tekenklasse → 51 valse BEM-wezen); een check die te veel meldt is even nutteloos als een die te weinig meldt. Typecheck 0, 995 tests met de bekende 7 rood, knip gelijk.
 
@@ -93,7 +99,7 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 **Dikte-catalogus** — Settings/refs/harmonize/editor één `thicknessCms[]` (min 3, factory 10/20/30, tot 8). Editor-prop `thicknessPresetCms`; knoppen “X cm”; draw-default = grootste. Pipeline-schaal = max-equivalent. Gate blijft 3 bakken uit extremen. Geen N-emmers L9/L10; stempel/⊕-pick blijven gate.
 
-**Gate L7/L9/L10** — drempels uit catalogus min/max: min tot kleinste×1,2, max vanaf grootste×0,8, mid ertussen. 10/20/51 houdt 20 in mid. Nog geen N-emmers.
+**Gate L7/L9/L10** — drempels uit catalogus: min tot max(kleinste×1,2, grootste×0,25), max vanaf grootste×0,9, mid ertussen. Overlap → grootste×0,25/×0,9. Nog geen N-emmers.
 
 **Rescale kamermaten** — na herschalen `areas[]` opnieuw uit binnenfaces (`scaleFloorPlanAndRegenAreas`). Mee-schalen van het gat is te kort omdat muurdikte blijft. Workspace + FML-editor.
 
@@ -207,6 +213,10 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 ## Wat WERKT
 
+**Catalogus-cm typen:** bestaande maat (20 → 25) via Backspace of select-all; catalogus schrijft pas bij blur/Enter/−+. Rij blijft actief/groen tot commit. Stap 2 + Settings + editor + project-setup.
+
+**Catalogus-banden:** min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9; stap-4 2e kolom (max boven / min onder) naast diktes, zonder hinttekst.
+
 **Dakvlakken op verdieping:** topbar-master `showRoofOverlayOnPlan` (icoon `roof`); Settings `showRoofPlanesOnPlan` + 1,50/2,00/fill. Overlay `listening: false`. Tool `draw_roof` (editor) → `addRidgeSurface`. Wang-snap 8 cm. Dak-tab ongewijzigd. Converter stap 4: geen knop/overlay.
 
 **`.plg`:** `core/plg/` (extension-types, plg-document, plg-migrations, fml-adapter/*). Getypt: `wall.elevation`, `wall.role`, `wall.stampOwned` (runtime-only, niet geserialiseerd), `opening.frame`, `plan.facadeGroups`, `plan.elevations`, `plan.roof` (ridge/planes/stack), `plan.settings.bovenlichtPacked`, `design.slices`, `design.autoDimensions`, `design.role`, `surface.origin`. Accessor-signaturen ongewijzigd → call sites buiten `core/fml/` onaangeroerd. Adapters schrijven de oude FML-vorm terug (`ridge: true`, `btfRole`, `btfSlices`, `btfFrame`, `btfOrigin`); `floorStack`/`elevationViews`/`elevationProjection` worden gezet en daarna gestript. `serializePlanSettings` draait **vóór** `stripFloorplannerHostileSettings`; `hydrate` draait ná de hele legacy import-keten. Download: `.fml` én `.plg`. E1-gate: `core/plg` mag geen `cv/`/`ui/`/`platform/`; alleen `fml-adapter/` mag value-imports uit `core/fml/` (type-only elders toegestaan). `PlanIoCaps` op de drie presets (editor = tekenbureau: FML in + lossy uit; tenant-splitsing later).
@@ -215,7 +225,7 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 **Topnav:** `Nieuw` naast titel; Dashboard / Converter / Editor / tandwiel. Editor zonder extra wachtwoord. Dashboard nieuwe tab. Wissel houdt views gemount. Chrome-theme (bordeaux rail) teruggezet.
 
-**Converter → editor:** stap-4 knop «Openen in editor» (onder download). Clone van `previewPlan` (in-memory, zelfde merge als project-download); geen `.fml`-rondje. Editor-edits muteren de converter-blobs niet. Bevestigen als de editor al muren/kamers/objecten heeft; annuleren blijft op de converter. Geen CV-sidecar.
+**Converter → editor:** stap-4 knop «Openen in editor» (onder download). Clone van `previewPlan` + detectie-onderlegger (`floor.drawing` uit session-PNG + layout) + project-catalogus (unie van floor-`thicknessCms`). Geen `.fml`-rondje. Editor-edits muteren de converter-blobs niet. Bevestigen als de editor al muren/kamers/objecten heeft; annuleren blijft op de converter. Geen CV-sidecar.
 
 **Gevelgroep-defaults:** editor zaait Voor/Achter/Links/Rechts (Settings-catalogus) als het plan nog geen gevelgroep heeft. Tekenaar wijst muren toe; hernoemen/toevoegen/verwijderen in Settings of Bewerken…. Lege groepen blijven; Gevels-tab alleen groepen mét muren.
 
@@ -231,7 +241,7 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 **Stap 1:** schaal/rotatie/crop/gum. Optionele «Rotatie vastzetten» (zelfde bake als 1→2). Geen auto-trim van witte randen; canvas wit. Geen refs. Floor **clamp 3000px** (vloer+plafond). Asymmetrie-waarschuwing H/V >2%.
 
-**Onderlegger overnemen (stap 1):** `reuseUnderlayFromProject` kopieert scan + schaal **én** de dikte-catalogus van de donor-floor (`thicknessCms` + min/mid/max). LBE-refs liften niet mee — rijen blijven ongemarkeerd tot er op die verdieping getekend is; meting blijft bij 2→3 ná ink-bake. Editor-«Onderlegger hergebruiken» (`copyUnderlayFromDonor`, floor→floor, floor→gevel, gevel→gevel) kopieert bewust alleen `drawing`: daar is de catalogus **globaal** (`FmlViewerView` leest `userSettings.defaults.thicknessCms`), dus er valt niets per verdieping over te nemen. Converter = per floor (`ws.fmlThicknessCms`). Besluit 2026-09-11: tweedeling houden.
+**Onderlegger overnemen (stap 1):** `reuseUnderlayFromProject` kopieert scan + schaal **én** de dikte-catalogus van de donor-floor (`thicknessCms` + min/mid/max). LBE-refs liften niet mee — rijen blijven ongemarkeerd tot er op die verdieping getekend is; meting blijft bij 2→3 ná ink-bake. Editor-«Onderlegger hergebruiken» (`copyUnderlayFromDonor`) kopieert alleen `drawing`: de editor-catalogus is **project-lokaal** (één lijst, niet per floor). Converter blijft per floor.
 
 **Stap 2:** B/W-tune + **LBE-refs** (cataloguslijst altijd zichtbaar; tik rij = teken die cm; geen losse Muur-knop; groen/vinkje = getekend) + OCR-toggle (default uit). Afronden meet dikte/stijl op post-bake **`baseBw`** (niet bij tekenen). `effectiveBw = baseBw ⊕ ocrMask ⊕ inkOverlay`. Dev Int muur = lui Otsu vanaf origineel. Muurstempel (opt. Stempelset: translate-only + nulpunt-zaad) + B/W-overnemen. Stempel buiten scan → wit pad (`expandUnderlayForStamp`). Fabrieksreset = alleen laag-tune.
 
@@ -255,6 +265,10 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 ## Open / handmatig checken
 
+- **Catalogus-banden (2026-09-15):** factory 10/20/30 → banden ~12 / 27; catalogus met max 51 → min ~12,8; stap-4: max-band naast dikste rij, min-band naast dunste; ⊕ werkt nog; Settings/editor zonder band-kolom.
+
+- **Catalogus-cm typen (2026-09-15):** 20 → Backspace → 2 → 5 (veld blijft actief); select-all + `15`; −/+ nog meteen; blur schrijft. Stap 2 (actieve/groene rij blijft tot commit) + Settings/editor.
+
 - **Fase 6 (2026-09-14):** puur mechanisch (paden + namen), dus de typecheck dekt het grootste deel. Wat een typecheck niet ziet en de audits schoon meldden: **detectie end-to-end** (`layer-openings-to-plan` + `extraction-to-plan-*` zijn hernoemd), **stap-2 dikte-catalogus** (`wall-thickness-catalog/limits/tiers` verhuisd én hernoemd, met twee localStorage-sleutels), en **editor-download `.fml` + `.plg`** (de drie adapter-bestanden lezen nu allemaal via `@/core/plan/`). Diktes en banden uit een bestaande browser moeten blijven staan — de sleutelstrings zijn niet aangeraakt.
 
 - **Nieuw project (2026-09-14):** project A schaal bevestigen + B/W tunen → topnav «Nieuw» → stap 1 linialen op 3000 mm en niet bevestigd, stap 2 sliders op fabriek. Binnen hetzelfde project een nieuwe onderlegger laden moet de getypte mm juist **wel** houden.
@@ -276,7 +290,7 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 - Ruimte niet sticky: editor kamer selecteren → klik deur/raam/muur pakt die (geen leeg-klik); muur geselecteerd + klik naast deur blijft muur — nog niet handmatig.
 - `.plg` IDB v2: vers project stap 1–4 → floor-switch heen/weer → herstart → «Verder werken» (stap 4 open via `previewPlan`, stap 3 leeg) → «Project downloaden» met keuze `.fml`/`.plg`; editor Download `.plg` — nog niet handmatig.
 - Gevelgroep-defaults: nieuw editor-plan → 4 groepen in muur-dropdown (Voor/Achter/Links/Rechts); Gevels-tab pas na toewijzen; Settings hernoemen/verwijderen/toevoegen; Bewerken… +/− — nog niet handmatig.
-- Converter stap-4 «Openen in editor»: plattegrond op stap 4 (geen download nodig) → knop → editor toont het project; terug naar converter blijft intact; editor met bestaande inhoud vraagt bevestigen (annuleren blijft op converter) — nog niet handmatig.
+- Converter stap-4 «Openen in editor»: plattegrond op stap 4 → knop → editor toont muren **én** onderlegger (scan+schaal) **én** muurdikte-knoppen van de converter-catalogus; terug naar converter blijft intact; editor met bestaande inhoud vraagt bevestigen — nog niet handmatig.
 - Stap-4 hoogte vs dikte: muur verslepen → hoogte wijzigen (plattegrond blijft, confirm verschijnt niet bij het eerste cijfer) → herschalen (gebruikt de bewerkte plattegrond) → dikte wijzigen (hergenereert wél) → downloaden — nog niet handmatig.
 - Bekende rode tests (9, herijkt 2026-09-13 → [`baseline-red.md`](../docs/refactor/lean/baseline-red.md)): opening-fixture-catalog stair `strokeWidth`, rebase drawing-shift, 2× plan-nulpunt-bake, 5× plan-canvas-test-doors (fixturepad). De 2× user-settings zijn **niet meer rood**. Identity-asserties op `kind`/`id` groen. `test:e2e` nog niet opnieuw na identity.
 - Meet nooit een baseline met een tweede agent-sessie in dezelfde working tree: dat gaf een spook-rode `bind-walls-to-roofs` (test geschreven ná start van de run, implementatie 3 min later).
@@ -393,6 +407,9 @@ Laatste update: 2026-09-14 (kernel-campagne KLAAR; rename fase 4+5+6 + C-triage 
 
 ## Recente besluiten
 
+- **2026-09-15** — Detectie-banden: min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9. Catalogus (tot 8) is FML-waarheid; banden alleen CV-gate. Stap-4: 2e kolom naast diktes, geen uitleg.
+- **2026-09-15** — Catalogus-cm alleen bij blur/Enter/stepper, niet per toets. Live `20→2` hersorteerde de lijst, remountte het veld en zette de actieve rij uit. Debounce is te zwak (pauze op `2` schrijft alsnog).
+- **2026-09-14** — Editor: project-lokale muurdikte-catalogus. Nieuw plan laadt Settings-defaults; «Openen in editor» neemt de unie van converter-floorcatalogi mee; `.plg` roundtript `settings.defaults.thicknessCms`. Settings wijzigen overschrijft een open plan niet. Converter blijft per floor. Onderleggers gaan mee via `floor.drawing` (session-PNG); FML-export stript lokale URL's nog.
 - **2026-09-14** — Tel een rename-restant nooit met een voorvoegsel-anker. `\bfml[A-Z]` mist `Fml` in het midden van een naam en onderschatte fase 6 met een factor twee. Meet met `Fml` op elke positie.
 - **2026-09-14** — Eén kaart-module (`phase6-name-map.mjs`) voor de rename-run én de na-audits. Drie hand-onderhouden kopieën lopen uiteen, en dan mist de audit precies de botsing waarvoor hij bestaat.
 - **2026-09-14** — Elke rename-regel krijgt een teller. Nul treffers = naam verkeerd gegokt, en dat wil je zien in plaats van stil missen.

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { MeasureLine } from '@/ui/composables/plan-canvas/plan-canvas-measure'
-import { buildMeasureLineScreen } from '@/ui/composables/plan-canvas/plan-canvas-measure'
+import type { MeasureLine } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
+import { buildMeasureLineScreen } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 import {
   DEFAULT_SCALE_INPUT_UNIT,
   type ScaleInputUnit,

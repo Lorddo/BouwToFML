@@ -98,6 +98,11 @@ export interface DrawingMeta {
   url?: string
   alpha?: number
   visible?: boolean
+  /**
+   * Display-only: Konva scaleX −1 om bitmap-midden.
+   * Niet naar FML (Floorplanner kent geen flip); `.plg` en de editor wel.
+   */
+  flipX?: boolean
   /** Overige drawing-keys (id/depth/…). */
   extras?: PlanExtras
 }

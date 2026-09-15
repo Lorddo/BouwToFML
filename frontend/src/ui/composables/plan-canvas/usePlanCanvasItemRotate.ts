@@ -4,7 +4,7 @@ import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/components/plan-canvas-fixture-face-snap'
-import { isSettingsMod } from './plan-canvas-mods'
+import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import {
   hitItemRotateHandleAtCm,
   itemRotationSnapCandidatesDeg,

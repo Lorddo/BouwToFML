@@ -3,11 +3,11 @@ import {
   buildOpeningMoveMeasureLines,
   OPENING_MOVE_MEASURE_INSET_CM,
   openingMoveMeasureLengthsCm,
-} from '@/ui/composables/plan-canvas/plan-canvas-opening-move-measure'
+} from '@/ui/composables/canvas-kernel/plan-canvas-opening-move-measure'
 import {
   formatMeasureDistanceCm,
   measureDistanceCm,
-} from '@/ui/composables/plan-canvas/plan-canvas-measure'
+} from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 import type { Wall } from '@/core/plan/types'
 
 const wall400 = {

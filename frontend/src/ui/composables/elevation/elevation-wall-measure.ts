@@ -1,7 +1,7 @@
 import type { ElevationJunction, ElevationWallRect } from '@/core/plan/facade-elevation'
 import type { Point2D } from '@/core/plan/types'
-import { OPENING_MOVE_MEASURE_INSET_CM } from './plan-canvas-opening-move-measure'
-import { type MeasureLine, measureDistanceCm } from './plan-canvas-measure'
+import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/canvas-kernel/plan-canvas-opening-move-measure'
+import { type MeasureLine, measureDistanceCm } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 
 const EPS = 1e-6
 /** Eindhoogtes apart tonen als het vlak meer dan 1 cm scheef is. */

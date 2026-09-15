@@ -27,7 +27,7 @@ import {
   detailSymbolsVisibleOnScreen,
   worldDashStage,
   worldStrokeStage,
-} from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+} from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 import type {
   RenderPlanGlyph,
   RenderModel,

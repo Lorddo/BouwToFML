@@ -1,6 +1,7 @@
 import { computed, nextTick, ref, type Ref } from 'vue'
 import type { Floor, FloorPlan } from '@/core/plan/types'
 import { wallsInStampGroup } from '@/core/plan/facade-groups'
+import { unionThicknessCatalogs } from '@/core/plan/wall-thickness-catalog'
 import type { PreprocessConfig } from '@/platform/image'
 import { clonePlain, type DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { DrawingProfileId } from '@/platform/profile'
@@ -24,6 +25,10 @@ import {
   thicknessCatalogPatchFromFloorDefaults,
 } from './defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
+import {
+  attachWorkspaceUnderlayToFloor,
+  layoutFromSessionScale,
+} from './attach-workspace-underlay'
 import { mergeFloorPlans } from './merge-floor-plans'
 import { mirrorFloorBlobVertical } from './mirror-floor-blob'
 import {
@@ -126,25 +131,6 @@ function emptyBlob(): FloorWorkspaceBlob {
 
 function isDurableUnderlaySrc(src: string | null | undefined): boolean {
   return !!src && !src.startsWith('blob:')
-}
-
-/** Fallback als oude blob nog geen layout had — origin 0; px/mm uit schaal-snapshot. */
-function layoutFromSessionScale(
-  scale: DevWorkspaceSession['scale'] | null | undefined,
-): PreviewUnderlayLayout | null {
-  if (!scale?.confirmed) return null
-  const pxPerMmX =
-    'confirmedPixelsPerMillimeterX' in scale &&
-    typeof scale.confirmedPixelsPerMillimeterX === 'number'
-      ? scale.confirmedPixelsPerMillimeterX
-      : 0
-  const pxPerMmY =
-    'confirmedPixelsPerMillimeterY' in scale &&
-    typeof scale.confirmedPixelsPerMillimeterY === 'number'
-      ? scale.confirmedPixelsPerMillimeterY
-      : pxPerMmX
-  if (!(pxPerMmX > 0) || !(pxPerMmY > 0)) return null
-  return { origin: { x: 0, y: 0 }, pxPerMmX, pxPerMmY }
 }
 
 function isQuotaExceeded(error: unknown): boolean {
@@ -760,15 +746,29 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       const generated = blob?.previewPlan?.floors[0] ?? blob?.generatedFloor ?? null
       if (!generated) continue
       const defaults = effectiveDefaultsForFloor(meta.id)
-      floors.push({
+      const stamped = {
         ...generated,
         name: meta.name,
         level: meta.level,
         height: defaults.wallHeightCm,
-      })
+      }
+      floors.push(blob ? attachWorkspaceUnderlayToFloor(stamped, blob) : stamped)
     }
     if (floors.length === 0) return null
     return mergeFloorPlans(state.value.meta.name, floors)
+  }
+
+  /** Unie van catalogi van floors mét plattegrond — editor is project-breed. */
+  function mergedThicknessCatalog(): number[] {
+    const catalogs: number[][] = []
+    for (const meta of state.value.floors) {
+      const blob = state.value.blobs[meta.id]
+      if (!blob?.previewPlan?.floors[0] && !blob?.generatedFloor) continue
+      catalogs.push(
+        thicknessCatalogPatchFromFloorDefaults(effectiveDefaultsForFloor(meta.id)).thicknessCms,
+      )
+    }
+    return unionThicknessCatalogs(catalogs)
   }
 
   /**
@@ -969,6 +969,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     applyPersistedState,
     resetProject,
     buildMergedProjectPlan,
+    mergedThicknessCatalog,
     applyProjectMirrorVertical,
     hasAnyFloorPlan,
     hasActiveFloorPlan,

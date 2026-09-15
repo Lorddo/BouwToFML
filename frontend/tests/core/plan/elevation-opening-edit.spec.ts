@@ -17,7 +17,7 @@ import {
   translateElevationRect,
   wallSideForElevationResize,
 } from '@/core/plan/elevation-opening-edit'
-import { MAX_OPENING_WIDTH_CM } from '@/ui/components/plan-canvas-openings'
+import { MAX_OPENING_WIDTH_CM } from '@/core/plan/opening-plan-ops'
 import type { ElevationWallRect } from '@/core/plan/facade-elevation'
 import { type Opening,
   type Wall } from '@/core/plan/types'

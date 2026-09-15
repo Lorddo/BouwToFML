@@ -11,6 +11,7 @@ import {
   nextUnusedCatalogCm,
   normalizeThicknessCatalog,
   thicknessPxToCm,
+  unionThicknessCatalogs,
 } from '@/core/plan/wall-thickness-catalog'
 
 describe('normalizeThicknessCatalog', () => {
@@ -108,6 +109,17 @@ describe('classify / nearest / limits', () => {
   it('limitsFromCatalog: first / midden / last', () => {
     expect(limitsFromCatalog([10, 20, 30])).toEqual({ minCm: 10, midCm: 20, maxCm: 30 })
     expect(limitsFromCatalog([10, 15, 20, 30])).toEqual({ minCm: 10, midCm: 15, maxCm: 30 })
+  })
+})
+
+describe('unionThicknessCatalogs', () => {
+  it('voegt unieke cm samen en normaliseert', () => {
+    expect(unionThicknessCatalogs([[7, 15, 30], [10, 20, 30]])).toEqual([7, 10, 15, 20, 30])
+  })
+
+  it('leeg → factory', () => {
+    expect(unionThicknessCatalogs([])).toEqual([...FACTORY_THICKNESS_CMS])
+    expect(unionThicknessCatalogs([null, []])).toEqual([...FACTORY_THICKNESS_CMS])
   })
 })
 

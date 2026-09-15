@@ -9,6 +9,7 @@ import PlanOpeningOverflowNotice from '../components/PlanOpeningOverflowNotice.v
 import EditorDefaultsFields from '../components/EditorDefaultsFields.vue'
 import EditorDimensionFields from '../components/EditorDimensionFields.vue'
 import EditorInspectPanel from '../components/EditorInspectPanel.vue'
+import ThicknessCatalogFields from '../components/ThicknessCatalogFields.vue'
 import PlanRescalePanel from '../components/PlanRescalePanel.vue'
 import ScaleConfirmBar from '../components/ScaleConfirmBar.vue'
 import ToolbeltIcon from '../components/canvas/ToolbeltIcon.vue'
@@ -45,7 +46,8 @@ import { useEditorSessionDefaults } from '@/ui/composables/editor/useEditorSessi
 import { cancelPlanChromeDialog, confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import type { ScaleInputUnit, UnitSystem } from '@/ui/composables/settings/scale-input-unit'
+import { normalizeThicknessCatalog } from '@/core/plan/wall-thickness-catalog'
 
 const { t } = useI18n()
 
@@ -114,7 +116,14 @@ const /** Sesssie-only: kamer-/FML-labels verbergen. */ hidePlanText = ref(false
 const pendingAlignRebase = ref<RebasePlanToItemRefidResult | null>(null)
 const userSettings = loadUserSettings()
 const scaleInputUnit = ref<ScaleInputUnit>(userSettings.scaleInputUnit)
-const thicknessPresetCms = ref<number[]>([...userSettings.defaults.thicknessCms])
+const unitSystem = ref<UnitSystem>(userSettings.unitSystem)
+const thicknessPresetCms = ref<number[]>(
+  normalizeThicknessCatalog(userSettings.defaults.thicknessCms),
+)
+
+function applyThicknessCatalog(cms: readonly number[]): void {
+  thicknessPresetCms.value = normalizeThicknessCatalog(cms)
+}
 
 const floors = computed(() => plan.value?.floors ?? [])
 const activeFloor = computed(() => floors.value[activeFloorIndex.value] ?? floors.value[0] ?? null)
@@ -427,6 +436,7 @@ const { downloadCurrentFml, downloadCurrentPlg } = useEditorDownload({
   plan,
   fileName,
   scaleInputUnit,
+  thicknessPresetCms,
   activeFloorDefaults,
   defaultsForFloor,
   flushPendingFieldCommits: flushPreviewFieldCommits,
@@ -554,6 +564,7 @@ const {
   hydrateFloorDefaultsFromPlan,
   addFloorDefaultsSlot,
   removeFloorDefaultsSlot,
+  applyThicknessCatalog,
 })
 selectFloorLater = selectFloor
 
@@ -573,7 +584,7 @@ function onSelectDakDesign(floorIndex: number): void {
 function applyViewerSettings(): void {
   const settings = loadUserSettings()
   scaleInputUnit.value = settings.scaleInputUnit
-  thicknessPresetCms.value = [...settings.defaults.thicknessCms]
+  unitSystem.value = settings.unitSystem
   previewCanvasRef.value?.applyCornerMarkerModeFromSettings?.()
 }
 
@@ -805,6 +816,18 @@ defineExpose({
                   <ToolbeltIcon name="add" />
                   <span>{{ t('project.addFloor') }}</span>
                 </button>
+              </div>
+              <div class="project-catalog">
+                <span class="defaults-field">{{ t('viewer.thicknessCatalogTitle') }}</span>
+                <p class="defaults-hint">{{ t('viewer.thicknessCatalogHint') }}</p>
+                <ThicknessCatalogFields
+                  :cms="thicknessPresetCms"
+                  :unit="scaleInputUnit"
+                  :unit-system="unitSystem"
+                  hide-suffix
+                  block
+                  @update:cms="applyThicknessCatalog"
+                />
               </div>
             </div>
           </details>
@@ -1778,6 +1801,16 @@ defineExpose({
   flex-direction: column;
   gap: 10px;
   margin-top: 8px;
+}
+
+.project-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.project-catalog .defaults-hint {
+  margin: 0 0 4px;
 }
 
 .floor-edit-list {

@@ -3,7 +3,7 @@ import {
   createPlanCanvasDraftCommitScheduler,
   PLAN_FIELD_COMMIT_DEBOUNCE_MS,
   isTypingFieldTarget,
-} from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
+} from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 
 describe('createPlanCanvasDraftCommitScheduler', () => {
   beforeEach(() => {

@@ -1018,6 +1018,8 @@
     "replacePlanTitle": "Huidige plattegrond vervangen?",
     "replacePlanBody": "De editor heeft al een plattegrond. Die wordt vervangen door het converter-project.",
     "defaultsTitle": "Defaults (dit bestand)",
+    "thicknessCatalogTitle": "Muurdiktes (dit plan)",
+    "thicknessCatalogHint": "Voorinstellingen voor nieuwe muren. Start uit de globale defaults of de converter-catalogus; wijzigen hier raakt Settings niet.",
     "defaultsHint": "Geladen uit het bestand. Een waarde wijzigen overschrijft dat veld in het hele project — bestaande muur-/deur-/raamhoogtes blijven tot je bevestigt.",
     "defaultsHintFloor": "Alleen deze verdieping. Een waarde wijzigen overschrijft dat veld op de huidige verdieping — eerst bevestigen.",
     "defaultsOverwriteTitle": "Hoogtes overschrijven",

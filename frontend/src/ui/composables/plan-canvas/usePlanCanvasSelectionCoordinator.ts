@@ -12,7 +12,7 @@ import { usePlanCanvasAreaSelection } from './usePlanCanvasAreaSelection'
 import { usePlanCanvasSurfaceEdit } from './usePlanCanvasSurfaceEdit'
 import { usePlanCanvasOpeningSelection } from './usePlanCanvasOpeningSelection'
 import { usePlanCanvasWallSelection } from './usePlanCanvasWallSelection'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { PlanViewContext } from './plan-view-context'
 import type { PlanSnapResolve } from './plan-canvas-snap-resolve'
 import {
@@ -21,7 +21,7 @@ import {
 } from './plan-canvas-session-defaults'
 import { togglePlanSelected } from './plan-canvas-selected'
 import { clampLabelFontSize, lineStrokeColor } from './plan-canvas-render-annotations'
-import type { createPlanCanvasDraftCommitScheduler } from './plan-canvas-draft-commit'
+import type { createPlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import type { FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
 import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 

@@ -1,5 +1,5 @@
 import { onBeforeUnmount, toValue, watch, type MaybeRefOrGetter } from 'vue'
-import { isTypingFieldTarget } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
+import { isTypingFieldTarget } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 
 export type ToolbeltHotkey = 'Delete' | 'Escape'
 

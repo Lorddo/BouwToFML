@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ElevationRenderModel } from '@/ui/composables/plan-canvas/useElevationRenderModel'
-import type { ElevationInteraction } from '@/ui/composables/plan-canvas/useElevationInteraction'
+import type { ElevationRenderModel } from '@/ui/composables/elevation/useElevationRenderModel'
+import type { ElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
 import type { FacadeElevation } from '@/core/plan/facade-elevation'
 
 const props = defineProps<{

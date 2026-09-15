@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import ThicknessCatalogFields from './ThicknessCatalogFields.vue'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
-import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import './plan-panel-fields.css'
 
 const { t } = useI18n()
@@ -27,7 +26,7 @@ withDefaults(
     underlayAvailable: false,
     planThicknessCms: () => [...FACTORY_THICKNESS_CMS],
     planBandMidBoundaryCm: 12,
-    planBandMaxBoundaryCm: 23,
+    planBandMaxBoundaryCm: 27,
     thicknessPickTier: null,
     thicknessPickMessage: null,
     thicknessPickBusy: false,
@@ -51,36 +50,8 @@ const emit = defineEmits<{
       :unit="unit"
       :disabled="!scaleConfirmed || !hasCombinedOutput"
       @update:cms="emit('update:planThicknessCms', $event)"
-    />
-    <div class="plan-thickness-limits">
-      <label class="plan-limit-field">
-        <span :title="t('result.thicknessMinTitle')">{{ t('result.pickMinTitle') }}</span>
-        <div class="plan-limit-input-row">
-          <button
-            type="button"
-            class="pick-btn"
-            :title="t('result.pickMinTitle')"
-            :class="{ active: thicknessPickTier === 'min' }"
-            :disabled="
-              !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || thicknessPickBusy
-            "
-            @click="emit('startThicknessPick', 'min')"
-          >
-            ⊕
-          </button>
-          <ScaleLengthInput
-            input-class="band-input"
-            :cm="planBandMidBoundaryCm"
-            :unit="unit"
-            :min-cm="1"
-            :aria-label="t('result.bandMidTitle')"
-            :disabled="!scaleConfirmed || !hasCombinedOutput"
-            @update:cm="emit('update:planBandMidBoundaryCm', $event)"
-          />
-        </div>
-      </label>
-      <label class="plan-limit-field">
-        <span :title="t('result.thicknessMaxTitle')">{{ t('result.pickMaxTitle') }}</span>
+    >
+      <template #bands>
         <div class="plan-limit-input-row">
           <button
             type="button"
@@ -104,17 +75,31 @@ const emit = defineEmits<{
             @update:cm="emit('update:planBandMaxBoundaryCm', $event)"
           />
         </div>
-      </label>
-    </div>
-    <p class="plan-band-hint">
-      {{
-        t('result.bandHint', {
-          mid: formatScaleInputLabel(planBandMidBoundaryCm, unit),
-          max: formatScaleInputLabel(planBandMaxBoundaryCm, unit),
-        })
-      }}
-      <span class="plan-band-ratio">{{ t('result.bandHintRatio') }}</span>
-    </p>
+        <div class="plan-limit-input-row">
+          <button
+            type="button"
+            class="pick-btn"
+            :title="t('result.pickMinTitle')"
+            :class="{ active: thicknessPickTier === 'min' }"
+            :disabled="
+              !scaleConfirmed || !hasCombinedOutput || !underlayAvailable || thicknessPickBusy
+            "
+            @click="emit('startThicknessPick', 'min')"
+          >
+            ⊕
+          </button>
+          <ScaleLengthInput
+            input-class="band-input"
+            :cm="planBandMidBoundaryCm"
+            :unit="unit"
+            :min-cm="1"
+            :aria-label="t('result.bandMidTitle')"
+            :disabled="!scaleConfirmed || !hasCombinedOutput"
+            @update:cm="emit('update:planBandMidBoundaryCm', $event)"
+          />
+        </div>
+      </template>
+    </ThicknessCatalogFields>
     <p v-if="thicknessPickMessage" class="plan-hint plan-pick-hint">
       {{ thicknessPickMessage }}
       <button
@@ -130,11 +115,10 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
-.plan-thickness-limits {
+.plan-limit-input-row {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 4px;
-  margin: 8px 0 0;
 }
 
 .pick-btn {
@@ -167,7 +151,7 @@ const emit = defineEmits<{
 }
 
 .plan-hint {
-  margin: 0 0 8px;
+  margin: 8px 0 0;
   font-size: 12px;
   color: #475569;
   line-height: 1.4;

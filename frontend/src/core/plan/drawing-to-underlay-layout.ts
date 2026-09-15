@@ -26,6 +26,7 @@ export function previewUnderlayLayoutFromDrawing(
   if (Math.abs(drawing.rotation) >= ROTATION_EPS_DEG) {
     layout.rotationDeg = drawing.rotation
   }
+  if (drawing.flipX === true) layout.flipX = true
   return layout
 }
 
@@ -51,6 +52,8 @@ export type DrawingFromImageScaleParams = {
   url?: string
   alpha?: number
   rotation?: number
+  /** Display-only; weggelaten / false = geen flip. */
+  flipX?: boolean
 }
 
 /**
@@ -77,6 +80,7 @@ export function drawingFromImageScale(params: DrawingFromImageScaleParams): Draw
   }
   if (params.url != null) drawing.url = params.url
   if (params.alpha != null && Number.isFinite(params.alpha)) drawing.alpha = params.alpha
+  if (params.flipX === true) drawing.flipX = true
   return drawing
 }
 

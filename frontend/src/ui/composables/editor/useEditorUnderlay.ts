@@ -349,6 +349,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
       url,
       alpha: Math.round(underlayOpacity.value * 100),
       rotation: layout.rotationDeg ?? 0,
+      flipX: layout.flipX === true,
     })
     if (!drawing) return
     plan.value = setElevationViewDrawing(current, id, drawing)
@@ -373,6 +374,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
       url,
       alpha: Math.round(underlayOpacity.value * 100),
       rotation: layout.rotationDeg ?? 0,
+      flipX: layout.flipX === true,
     })
     if (!drawing) return
     if (floor.drawing?.extras) drawing.extras = floor.drawing.extras
@@ -507,6 +509,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
       url,
       alpha: Math.round(underlayOpacity.value * 100),
       rotation: layout.rotationDeg ?? 0,
+      flipX: layout.flipX === true,
     })
     if (!drawing) return false
     if (gevelsMode.value && elevationGroupId.value) {

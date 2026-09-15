@@ -3,8 +3,7 @@ import {
   isTriangleWindow,
   resolveDoorSubtypeFromRefid,
   resolveWindowSubtypeFromRefid,
-  type DoorAddSubtype,
-  type WindowAddSubtype,
+  type OpeningSubtypeDraft,
 } from '@/core/plan/opening-add-presets'
 import {
   BOVENLICHT_GAP_CM,
@@ -24,7 +23,7 @@ import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/plan-c
 
 export type OpeningDraftType = OpeningType | 'mixed'
 
-export type OpeningSubtypeDraft = DoorAddSubtype | WindowAddSubtype
+export type { OpeningSubtypeDraft }
 
 export interface OpeningDraftState {
   openingType: OpeningDraftType

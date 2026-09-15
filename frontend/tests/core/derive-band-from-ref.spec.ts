@@ -6,7 +6,7 @@ import {
   THICKNESS_BAND_MAX_RATIO,
   THICKNESS_BAND_MID_RATIO,
   THICKNESS_CATALOG_MAX_FOOTROOM,
-  THICKNESS_CATALOG_MIN_HEADROOM,
+  THICKNESS_CATALOG_MIN_FROM_MAX,
 } from '@/core/plan/wall-thickness-tiers'
 
 describe('deriveBandBoundariesCmFromRefPx', () => {
@@ -31,41 +31,54 @@ describe('deriveBandBoundariesCmFromRefPx', () => {
     expect(classifyThicknessBand(refCm, boundaries)).toBe('max')
   })
 
-  it('faalt hard zonder geldige ref of schaal (geen stille 12/23)', () => {
+  it('faalt hard zonder geldige ref of schaal (geen stille default)', () => {
     expect(() => deriveBandBoundariesCmFromRefPx(0, 0.2, 0.2)).toThrow(/referentie|schaal/i)
     expect(() => deriveBandBoundariesCmFromRefPx(60, 0, 0)).toThrow(/referentie|schaal/i)
   })
 })
 
 describe('deriveBandBoundariesFromCatalogExtrema', () => {
-  it('zet min tot kleinste+20% en max vanaf grootste−20% (10/20/51)', () => {
+  it('min = max(kleinste×1,2, grootste×0,25); max = grootste×0,9 (10/20/51)', () => {
     const bounds = deriveBandBoundariesFromCatalogExtrema({
       smallestCm: 10,
       largestCm: 51,
     })
-    expect(bounds.midBoundaryCm).toBeCloseTo(10 * THICKNESS_CATALOG_MIN_HEADROOM, 5)
-    expect(bounds.maxBoundaryCm).toBeCloseTo(51 * THICKNESS_CATALOG_MAX_FOOTROOM, 5)
+    // 51×0,25 = 12,75 → afgerond 12,8; 51×0,9 = 45,9
+    expect(bounds.midBoundaryCm).toBe(12.8)
+    expect(bounds.maxBoundaryCm).toBe(45.9)
     expect(classifyThicknessBand(10, bounds)).toBe('min')
     expect(classifyThicknessBand(20, bounds)).toBe('mid')
     expect(classifyThicknessBand(51, bounds)).toBe('max')
   })
 
-  it('is gelijk aan 40/80 van 30 bij factory 10/30', () => {
+  it('factory 10/30: min 12, max 27', () => {
     const extrema = deriveBandBoundariesFromCatalogExtrema({
       smallestCm: 10,
       largestCm: 30,
     })
-    expect(extrema.midBoundaryCm).toBeCloseTo(30 * THICKNESS_BAND_MID_RATIO, 5)
-    expect(extrema.maxBoundaryCm).toBeCloseTo(30 * THICKNESS_BAND_MAX_RATIO, 5)
+    expect(extrema.midBoundaryCm).toBe(12)
+    expect(extrema.maxBoundaryCm).toBe(27)
   })
 
-  it('valt terug op 40/80 van de grootste als drempels overlappen', () => {
+  it('7/47: min vanuit grootste×0,25 (wint van kleinste×1,2)', () => {
+    const bounds = deriveBandBoundariesFromCatalogExtrema({
+      smallestCm: 7,
+      largestCm: 47,
+    })
+    // 47×0,25 = 11,75 → 11,8; 7×1,2 = 8,4
+    expect(bounds.midBoundaryCm).toBe(11.8)
+    expect(bounds.maxBoundaryCm).toBeCloseTo(47 * THICKNESS_CATALOG_MAX_FOOTROOM, 5)
+    expect(classifyThicknessBand(7, bounds)).toBe('min')
+    expect(classifyThicknessBand(10, bounds)).toBe('min')
+  })
+
+  it('valt terug op grootste×0,25 / ×0,9 als drempels overlappen', () => {
     const bounds = deriveBandBoundariesFromCatalogExtrema({
       smallestCm: 20,
       largestCm: 22,
     })
-    expect(bounds.midBoundaryCm).toBeCloseTo(22 * THICKNESS_BAND_MID_RATIO, 5)
-    expect(bounds.maxBoundaryCm).toBeCloseTo(22 * THICKNESS_BAND_MAX_RATIO, 5)
+    expect(bounds.midBoundaryCm).toBeCloseTo(22 * THICKNESS_CATALOG_MIN_FROM_MAX, 5)
+    expect(bounds.maxBoundaryCm).toBeCloseTo(22 * THICKNESS_CATALOG_MAX_FOOTROOM, 5)
   })
 
   it('faalt zonder positieve extremen', () => {

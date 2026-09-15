@@ -5,10 +5,8 @@ import {
   type PointerDragState,
   type PointerToolModes,
 } from '@/ui/composables/plan-canvas/usePlanCanvasPointer'
-import {
-  createPlanCanvasSelection,
-  type PlanCanvasSelectionRefs,
-} from '@/ui/composables/plan-canvas/plan-canvas-selection'
+import { createPlanCanvasSelection } from '@/ui/composables/plan-canvas/plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from '@/ui/composables/plan-canvas/plan-canvas-selection-types'
 import {
   createPlanViewContext,
   type PlanViewContext,

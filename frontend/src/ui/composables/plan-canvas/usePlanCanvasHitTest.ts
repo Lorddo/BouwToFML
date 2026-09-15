@@ -1,13 +1,13 @@
 import type { ComputedRef, Ref } from 'vue'
 import type Konva from 'konva'
 import { DEFAULT_RIDGE_DISPLAY_WIDTH_CM } from '@/core/plan/ridge-walls'
-import { PLAN_HANDLE_HIT_COARSE_PX, PLAN_HANDLE_HIT_PX } from './plan-canvas-vertex-hit'
+import { PLAN_HANDLE_HIT_COARSE_PX, PLAN_HANDLE_HIT_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import type { FloorItem, Point2D, Wall } from '@/core/plan/types'
 import { labelHitBoxCm } from './plan-canvas-render-annotations'
 import { areaLabelHitHalfExtentsCm } from './plan-canvas-render-areas'
 import { distancePointToSegment, hitTestRidgeBeamAtCm } from './plan-canvas-ridge-hit'
 import { normalizeCmBBox } from './plan-canvas-wall-select'
-import type { ContentLayout } from './usePlanCanvasViewport'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type {
   RenderArea,
   RenderDoorGroup,

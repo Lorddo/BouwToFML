@@ -6,7 +6,7 @@ import {
   DEFAULT_LABEL_FONT_COLOR,
   DEFAULT_LABEL_FONT_SIZE_PX,
 } from './plan-canvas-render-annotations'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

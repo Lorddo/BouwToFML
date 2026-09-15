@@ -27,7 +27,7 @@ import { loadImage } from '@/platform/image'
 import {
   buildUnderlayStageGeom,
   underlayContentBoundsCm,
-} from '@/ui/composables/plan-canvas/plan-canvas-underlay-layout'
+} from '@/ui/composables/canvas-kernel/plan-canvas-underlay-layout'
 import {
   OPENING_ARC_DASH_CM,
   OPENING_STROKE_CM,
@@ -35,11 +35,11 @@ import {
   SELECTION_HIGHLIGHT_PAD_PX,
   worldDashStage,
   worldStrokeStage,
-} from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+} from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 import {
   layoutTransform,
   usePlanCanvasViewport,
-} from '@/ui/composables/plan-canvas/usePlanCanvasViewport'
+} from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import {
   ARCHITECT_AREA_FILL,
   isArchitectPlanStyle,
@@ -51,7 +51,7 @@ import { FACTORY_OPENING_COLORS } from '@/ui/composables/settings/opening-displa
 import {
   PLAN_HANDLE_RADIUS_PX,
   PLAN_HANDLE_HIT_PX,
-} from '@/ui/composables/plan-canvas/plan-canvas-vertex-hit'
+} from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import { floorWallBaseWorldZ } from '@/core/plan/floor-stack'
 export type ElevSettingsRef =
   | { kind: 'opening'; id: string; mode: 'quick' | 'edit' }

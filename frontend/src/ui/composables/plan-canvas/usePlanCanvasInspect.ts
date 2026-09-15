@@ -5,7 +5,7 @@ import { findOpeningById } from '@/ui/components/plan-canvas-openings'
 import type { InspectHit } from './plan-inspect'
 import { pickInspectTarget } from './plan-inspect'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { clearPlanMoveModes } from './plan-canvas-selected'
 
 type SurfaceRec = { id: string; isCutout?: boolean }

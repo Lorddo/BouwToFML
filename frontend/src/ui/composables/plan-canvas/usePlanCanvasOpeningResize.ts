@@ -1,7 +1,7 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
 import type { Point2D } from '@/core/plan/types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import {
   hitPlanOpeningHandle,
   planOpeningHandlePointsCm,
@@ -10,7 +10,7 @@ import {
   type PlanOpeningHandlePoint,
   type PlanOpeningResizeSide,
 } from './plan-canvas-opening-handles'
-import { PLAN_HANDLE_HIT_COARSE_PX, PLAN_HANDLE_HIT_PX } from './plan-canvas-vertex-hit'
+import { PLAN_HANDLE_HIT_COARSE_PX, PLAN_HANDLE_HIT_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

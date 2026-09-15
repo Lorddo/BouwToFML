@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { ElevationWallRect } from '@/core/plan/facade-elevation'
-import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/plan-canvas/plan-canvas-opening-move-measure'
+import { OPENING_MOVE_MEASURE_INSET_CM } from '@/ui/composables/canvas-kernel/plan-canvas-opening-move-measure'
 import {
   buildElevationJunctionHeightMeasureLines,
   buildElevationRidgeHeightMeasureLines,
   buildElevationRoofVertexHeightMeasureLines,
   buildElevationWallFaceMeasureLines,
   elevationWallFaceMeasureLengthsCm,
-} from '@/ui/composables/plan-canvas/plan-canvas-elevation-wall-measure'
+} from '@/ui/composables/elevation/elevation-wall-measure'
 
 function wall400x280(overrides: Partial<ElevationWallRect> = {}): ElevationWallRect {
   return {

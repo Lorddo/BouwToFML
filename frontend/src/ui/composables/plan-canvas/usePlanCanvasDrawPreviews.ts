@@ -1,6 +1,6 @@
 import { computed, type Ref } from 'vue'
 import type { Point2D } from '@/core/plan/types'
-import { layoutTransform, type ContentLayout } from './usePlanCanvasViewport'
+import { layoutTransform, type ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 
 export function usePlanCanvasDrawPreviews(opts: {
   drawWallPreview: Ref<{ a: Point2D; b: Point2D } | null>

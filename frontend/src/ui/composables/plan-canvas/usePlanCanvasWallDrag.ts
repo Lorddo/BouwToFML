@@ -10,7 +10,7 @@ import {
 } from '@/ui/components/plan-canvas-junctions'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { RenderJunction } from './usePlanCanvasRenderModel'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

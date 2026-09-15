@@ -9,7 +9,7 @@ withDefaults(
   {
     enabled: false,
     planBandMidBoundaryCm: 12,
-    planBandMaxBoundaryCm: 23,
+    planBandMaxBoundaryCm: 27,
     planBandDirty: false,
   },
 )

@@ -7,7 +7,7 @@ import {
   MAX_OPENING_WIDTH_CM,
   MIN_OPENING_WIDTH_CM,
   wallCollinearEnds,
-} from '@/ui/components/plan-canvas-openings'
+} from './opening-plan-ops'
 
 export type OpeningAlongWallSide = 'start' | 'end'
 

@@ -35,7 +35,11 @@ const editorMounted = ref(appView.value === 'editor')
 const workspaceRef = ref<InstanceType<typeof WorkspaceView> | null>(null)
 const editorRef = ref<{
   startNewPlan: () => void
-  loadPlan: (plan: FloorPlan, sourceName: string) => Promise<void>
+  loadPlan: (
+    plan: FloorPlan,
+    sourceName: string,
+    options?: { thicknessCms?: readonly number[] },
+  ) => Promise<void>
   hasOpenContent: () => boolean
   applyViewerSettings: () => void
   applyCornerMarkerModeFromSettings: () => void
@@ -84,7 +88,7 @@ function goToEditor(): void {
   appView.value = 'editor'
 }
 
-async function openProjectInEditor(plan: FloorPlan): Promise<void> {
+async function openProjectInEditor(plan: FloorPlan, thicknessCms?: readonly number[]): Promise<void> {
   if (editorRef.value?.hasOpenContent?.()) {
     const ok = await confirmPlanChrome({
       title: t('viewer.replacePlanTitle'),
@@ -98,7 +102,7 @@ async function openProjectInEditor(plan: FloorPlan): Promise<void> {
   await nextTick()
   if (!editorRef.value?.loadPlan) await nextTick()
   const name = `${plan.name?.trim() || 'project'}.plg`
-  await editorRef.value?.loadPlan(plan, name)
+  await editorRef.value?.loadPlan(plan, name, { thicknessCms })
 }
 
 function openSettings(): void {

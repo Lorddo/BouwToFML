@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import type { Point2D } from '@/core/plan/types'
-import type { ContentLayout } from './usePlanCanvasViewport'
-import { layoutTransform } from './usePlanCanvasViewport'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
+import { layoutTransform } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 
 export function elevationClientToCm(
   clientX: number,

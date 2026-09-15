@@ -38,6 +38,7 @@ export function cloneDrawingMeta(drawing: DrawingMeta): DrawingMeta {
   if (drawing.url != null) next.url = drawing.url
   if (drawing.alpha != null) next.alpha = drawing.alpha
   if (drawing.visible != null) next.visible = drawing.visible
+  if (drawing.flipX === true) next.flipX = true
   if (drawing.extras) next.extras = { ...drawing.extras }
   return next
 }

@@ -18,14 +18,14 @@ import { usePlanCanvasNulpunt } from './usePlanCanvasNulpunt'
 import { usePlanCanvasUnderlayMove } from './usePlanCanvasUnderlayMove'
 import { usePlanCanvasAddFixture } from './usePlanCanvasAddFixture'
 import type { FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { PlanViewContext } from './plan-view-context'
 import type { PlanSnapResolve } from './plan-canvas-snap-resolve'
 import {
   resolveBovenlichtDefaults,
   type PlanSessionDefaults,
 } from './plan-canvas-session-defaults'
-import type { ContentLayout } from './usePlanCanvasViewport'
+import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

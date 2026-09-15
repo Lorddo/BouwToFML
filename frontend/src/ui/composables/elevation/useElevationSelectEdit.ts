@@ -113,15 +113,15 @@ import {
   type DoorAddSubtype,
   type WindowAddSubtype,
 } from '@/core/plan/opening-add-presets'
-import type { OpeningSubtypeDraft } from '@/ui/composables/plan-canvas/plan-canvas-opening-draft'
-import { buildElevationOpeningMeasureLines } from './plan-canvas-elevation-opening-measure'
+import type { OpeningSubtypeDraft } from '@/core/plan/opening-add-presets'
+import { buildElevationOpeningMeasureLines } from './elevation-opening-measure'
 import {
   buildElevationJunctionHeightMeasureLines,
   buildElevationRidgeHeightMeasureLines,
   buildElevationRoofVertexHeightMeasureLines,
   buildElevationWallFaceMeasureLines,
-} from './plan-canvas-elevation-wall-measure'
-import { isSettingsMod } from './plan-canvas-mods'
+} from './elevation-wall-measure'
+import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import type {
   ElevSettings,
   ElevTool,

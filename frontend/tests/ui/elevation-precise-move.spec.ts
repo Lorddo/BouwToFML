@@ -5,7 +5,7 @@ import {
   elevationPreciseCommitMinCm,
   elevationPreciseHeightDelta,
   elevationPreciseOffset,
-} from '@/ui/composables/plan-canvas/elevation-precise-move'
+} from '@/ui/composables/elevation/elevation-precise-move'
 
 describe('elevation-precise-move', () => {
   it('offset volgt hover; getypte maat gaat dezelfde kant op', () => {

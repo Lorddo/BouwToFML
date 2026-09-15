@@ -1,9 +1,9 @@
 import type { ComputedRef, Ref } from 'vue'
 import { isPlanOneshotDrawTool } from '@/ui/components/canvas/planToolbeltItems'
 import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
-import { isTypingFieldTarget } from './plan-canvas-draft-commit'
-import type { MeasureLine } from './plan-canvas-measure'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import { isTypingFieldTarget } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
+import type { MeasureLine } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 /**
  * Editor keyboard: Escape/Enter/Delete/undo. Inspect-modus blokkeert undo/delete.

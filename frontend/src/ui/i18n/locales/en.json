@@ -1018,6 +1018,8 @@
     "replacePlanTitle": "Replace the current plan?",
     "replacePlanBody": "The editor already has a plan. It will be replaced by the converter project.",
     "defaultsTitle": "Defaults (this file)",
+    "thicknessCatalogTitle": "Wall thicknesses (this plan)",
+    "thicknessCatalogHint": "Presets for new walls. Starts from the global defaults or the converter catalog; changing it here does not update Settings.",
     "defaultsHint": "Loaded from the file. Changing a value overwrites that field on the whole project — walls/doors/windows keep their own heights until you confirm.",
     "defaultsHintFloor": "This floor only. Changing a value overwrites that field on the current storey — confirm first.",
     "defaultsOverwriteTitle": "Overwrite heights",

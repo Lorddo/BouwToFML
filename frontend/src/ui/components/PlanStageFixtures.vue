@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { detailSymbolsVisibleOnScreen } from '@/ui/composables/plan-canvas/plan-canvas-world-stroke'
+import { detailSymbolsVisibleOnScreen } from '@/ui/composables/canvas-kernel/plan-canvas-world-stroke'
 import { inspectColorFor } from '@/ui/composables/plan-canvas/plan-inspect'
 import type { RenderFixture } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
 import type { RenderModel } from '@/ui/composables/plan-canvas/usePlanCanvasRenderModel'

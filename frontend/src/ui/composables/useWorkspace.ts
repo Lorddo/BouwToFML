@@ -1111,12 +1111,20 @@ export function useWorkspace() {
 
   function buildWorkspacePlgSettings(): PlgSettings {
     const settings = loadUserSettings()
+    const catalog = project.mergedThicknessCatalog()
+    const limits = limitsFromCatalog(catalog)
     return {
       unitSystem: settings.unitSystem,
       scaleInputUnit: settings.scaleInputUnit,
       planDisplayStyle: settings.planDisplay.planDisplayStyle ?? 'editor',
       showCanvasGrid: settings.planDisplay.showCanvasGrid !== false,
-      defaults: { ...project.activeFloorDefaults.value },
+      defaults: {
+        ...project.activeFloorDefaults.value,
+        thicknessCms: catalog,
+        thicknessMinCm: limits.minCm,
+        thicknessMidCm: limits.midCm,
+        thicknessMaxCm: limits.maxCm,
+      },
     }
   }
 
@@ -1237,7 +1245,7 @@ export function useWorkspace() {
     project.updateActiveFloorDefaults({ windowBovenlichtDefault: on }, { syncUi: false })
   }
 
-  function exportMergedProjectPlan(): FloorPlan | null {
+  function exportMergedProjectPlan(): { plan: FloorPlan; thicknessCms: number[] } | null {
     if (fml.planLimitsDirty.value) {
       fml.syncAppliedFromDraft()
     }
@@ -1247,7 +1255,10 @@ export function useWorkspace() {
       return null
     }
     setLocalError(null)
-    return clonePlain(plan)
+    return {
+      plan: clonePlain(plan),
+      thicknessCms: project.mergedThicknessCatalog(),
+    }
   }
 
   function downloadProjectFml(): void {

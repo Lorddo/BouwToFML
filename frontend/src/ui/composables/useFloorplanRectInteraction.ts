@@ -7,7 +7,7 @@ import {
   rectCenter,
   rectRotationDeg,
 } from '@/platform/selection/oriented-rect'
-import { isTypingFieldTarget } from '@/ui/composables/plan-canvas/plan-canvas-draft-commit'
+import { isTypingFieldTarget } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import {
   resizeFromSide,
   type ItemResizeSide,

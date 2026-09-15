@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import type { FloorLineType, Point2D } from '@/core/plan/types'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import { DEFAULT_LINE_COLOR, DEFAULT_LINE_THICKNESS_PX } from './plan-canvas-render-annotations'
-import type { PlanCanvasSelectionRefs } from './plan-canvas-selection'
+import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 

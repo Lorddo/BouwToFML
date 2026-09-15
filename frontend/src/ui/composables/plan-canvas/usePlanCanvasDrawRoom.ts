@@ -17,7 +17,7 @@ import {
   roomSideThicknesses,
   seedDrawRoomEnd,
   type DrawThickWall,
-} from './plan-canvas-draw-measure'
+} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 import { isLiveDrawPointer } from './plan-canvas-touch-tap'
 import type { RenderJunction } from './usePlanCanvasRenderModel'
 

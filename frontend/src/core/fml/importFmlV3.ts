@@ -258,7 +258,17 @@ const LINE_KNOWN = new Set(['a', 'b', 'type', 'color', 'thickness', 'guid'])
 
 const DIMENSION_KNOWN = new Set(['type', 'a', 'b', 'guid'])
 
-const DRAWING_KNOWN = new Set(['x', 'y', 'width', 'height', 'rotation', 'url', 'alpha', 'visible'])
+const DRAWING_KNOWN = new Set([
+  'x',
+  'y',
+  'width',
+  'height',
+  'rotation',
+  'url',
+  'alpha',
+  'visible',
+  'flipX',
+])
 
 const DESIGN_KNOWN = new Set([
   'name',
@@ -526,6 +536,7 @@ function parseDrawing(raw: RawDrawing | undefined): DrawingMeta | undefined {
     url: raw.url,
     alpha: raw.alpha,
     visible: raw.visible,
+    ...(raw.flipX === true ? { flipX: true } : {}),
     extras: pickExtras(raw, DRAWING_KNOWN),
   }
 }
