@@ -287,7 +287,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
       ) {
         return
       }
-      select.selectOpening(hit.openingId, wantEdit ? 'edit' : 'quick')
+      select.selectOpening(hit.openingId, 'edit')
       return
     }
     const junction = hitElevationJunction(elev, cm)

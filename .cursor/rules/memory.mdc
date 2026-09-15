@@ -5,9 +5,15 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-09-15 (17 geometrie-helpers uit ui/components)
+Laatste update: 2026-09-15 (herschalen = binnenmaat)
 
 ## Huidige focus
+
+**Herschalen = binnenmaat (GEBOUWD 2026-09-15)** — liniaal op binnenfaces: `f = (I★ + T) / (I + T)` i.p.v. `I★ / I`. `T` = hart→face op beide handles. Detectie 3,01×3,55 + typ 3×3,5 → kamer 3,00×3,50 in één ronde (niet 2,99×3,49). Muurdikte blijft. Stap-4 + editor. Test in `plan-canvas-rescale-from-measure.spec.ts`.
+
+**Deur/raam left-klik = volle settings (GEBOUWD 2026-09-15)** — plattegrond `moveOpeningId` toont nu `full` (type, scharnier, bovenlicht, kopie, delete); aanzicht left-klik = `edit` (maten + randen). Muren blijven left = basis / Ctrl = geavanceerd. Ctrl op opening blijft multi-select.
+
+**Verdiepingshoogte ≠ nokspan (GEFIXT 2026-09-15)** — `overwritePlanWallHeights` (editor-defaults + Gevels-stack + stap-4) zette `h − z` van Dak-nokken op de nieuwe floor-height. Span is dakdikte (`overwriteRidgeDakThickness`). Nok-Z en span blijven nu staan; plattegrondmuren + `floor.height` wel.
 
 **Geometrie-helpers verhuisd (KLAAR 2026-09-15)** — 17 `ui/components/plan-canvas-*.ts` weg. Domein: outline, junction-familie, wall-edit/slide/draw, opening-drag, balance-offset. Plan-only: doors / dak-draw-snap / fixture-face-snap / wall-face-snap in `composables/plan-canvas`. Geen stubs. `splitPlanWallAtT` importeert `splitWallAtT` zelf. Typecheck 0, `tests/ui` 933 groen, import-gate `core/plan` ⊄ `ui/`.
 
@@ -221,6 +227,12 @@ Laatste update: 2026-09-15 (17 geometrie-helpers uit ui/components)
 
 ## Wat WERKT
 
+**Herschalen binnenmaat:** liniaal op binnenkant + echte maat → kamer die maat in één ronde. `T` uit face-handles; geen T (midden in de kamer) = oude hartlijn-factor. Muurdikte ongewijzigd.
+
+**Deur/raam toolbar:** left-klik = volle strook (niet meer compact). Aanzicht: left-klik = edit (maten + randen). Muren ongewijzigd.
+
+**Verdiepingshoogte / nok:** floor-height overwrite raakt geen Dak-design en geen `role: ridge`. Dakdikte blijft de enige span-schrijver. Test in `wall-endpoint-height.spec.ts`.
+
 **Geometrie-helpers:** geen `ui/components/plan-canvas-*.ts` meer. Elevation leest openings/split uit `@/core/plan`. Barrel `@/core/plan/junctions`. `tests/ui` 933 groen.
 
 **Aanzicht SelectEdit-split:** selectie-lane + opening-sleep + structuur-sleep + commits; Precise blijft `applyOpeningRect`. 21 karakteriseringstests. `tests/ui` 933 groen.
@@ -277,9 +289,15 @@ Laatste update: 2026-09-15 (17 geometrie-helpers uit ui/components)
 
 **«Niet opgeslagen» bij refresh (ONDERZOCHT — blijft zo, besluit 2026-09-14)** — Eén listener: `useWorkspaceLifecycle.onBeforeUnload` (regel ~108). Conditie is **alleen** `imageSrc` truthy — geen dirty-vlag, geen koppeling met download of IDB-persist. De melding komt dus bij élke F5 zodra er een onderlegger staat, ook direct ná «Project downloaden». Er bestaat géén vlag om op false te zetten; een fix zou nieuwe state vragen. **Bewust laten staan:** `detectionExact` wordt niet opgeslagen (quota), dus een refresh verliest écht stap-3-werk — de waarschuwing is inhoudelijk terecht, alleen de browsertekst zegt iets anders.
 
-**Herschalen stap 4: paar mm rest bij een binnenmaat (VERKLAARD, geen bug)** — Uit de smoke-test («eerste keer paar mm mis, tweede keer goed», na eerst slepen dan typen). Het confirm-pad is exact voor **as-maten**: `factor = trueCm / measuredCm` op alle muur-eindpunten, géén afronding, geen debounce op de velden (`@input` commit per toets), en het paneel sluit bij confirm dus er is geen oude liniaal-staat. Maar **muurdikte schaalt bewust niet mee** (`scale-floor-plan.ts`: «Muurdikte blijft; binnenmaten kloppen pas na `scaleFloorPlanAndRegenAreas`»). Meet je tussen muur*vlakken*, dan is de rest ná één ronde `t · (f − 1)`: bij een 20 cm-muur en 1% correctie exact 2 mm, en een tweede ronde brengt dat op `t²(f−1)/T` ≈ nul. Dat is precies het gemelde patroon. **Richting staat vast (gebruiker, 2026-09-14): maten op een plattegrond zijn vrijwel altijd binnenmaten, dus de liniaal moet een binnenmaat aannemen en in één ronde kloppen — de tekenaar vragen om een hartlijn-maat is geen optie.** Fix = intern itereren of de dikte-rest compenseren, niet de UI-tekst. Nog niet gebouwd (bewust geparkeerd tijdens de schoonmaak). Let op bij het bouwen: vroeger bleef de oude binnenmaat na herschalen staan (bug), dus «het werkte voorheen» is geen betrouwbare meetlat.
+**Herschalen stap 4: binnenmaat in één ronde (GEFIXT 2026-09-15)** — Was `true/measured` op hartlijnen → rest `T·(f−1)` (3,55→3,49). Nu `(I★+T)/(I+T)` met `T` uit face-handles. Handles niet op een face → T=0, oude factor.
 
 ## Open / handmatig checken
+
+- **Herschalen binnenmaat (2026-09-15):** detectie-kamer 3,01×3,55, liniaal op binnenkant, typ 3×3,5 → kamermaten 3,00×3,50 (niet 2,99×3,49). Editor hetzelfde. Handles midden in de kamer blijven de oude factor.
+
+- **Deur/raam volle settings (2026-09-15):** left-klik deur/raam op plattegrond → type, scharnier, bovenlicht, kopie, delete (niet alleen breedte/hoogte); aanzicht left-klik → maten + randen; muur left-klik blijft basis-strip.
+
+- **Verdiepingshoogte / nok (2026-09-15):** editor linkermenu hoogte hele floor → muren volgen, nokbalken zelfde span/Z; dakdikte (Gevels/Settings) verandert wél de balkdikte.
 
 - **Catalogus-banden (2026-09-15):** factory 10/20/30 → banden ~12 / 27; catalogus met max 51 → min ~12,8; stap-4: max-band naast dikste rij, min-band naast dunste; ⊕ werkt nog; Settings/editor zonder band-kolom.
 
@@ -424,6 +442,9 @@ Laatste update: 2026-09-15 (17 geometrie-helpers uit ui/components)
 
 ## Recente besluiten
 
+- **2026-09-15** — Herschalen-liniaal is een binnenmaat. Factor `(I★ + T) / (I + T)` zodat het gat in één ronde op de getypte maat zit; muurdikte blijft. Hartlijn-maat vragen is geen optie.
+- **2026-09-15** — Deur/raam left-klik toont de volle settings-strook (gelijk Ctrl). Type, scharnier, bovenlicht, kopie, delete moeten makkelijk beschikbaar zijn. Muren blijven left = basis / Ctrl = geavanceerd.
+- **2026-09-15** — Verdiepingshoogte (linkermenu / Gevels) overschrijft geen nokbalken. Span alleen via dakdikte; onderkant blijft. `overwritePlanWallHeights` slaat Dak-design + ridge-muren over.
 - **2026-09-15** — 17 geometrie-helpers uit `ui/components`: domein naar `core/plan`, plan-only snap/glyphs naar `composables/plan-canvas`. Geen blijvende stubs. `splitPlanWallAtT` zonder injectie.
 - **2026-09-15** — E2E pin’t ruwe L12-deuren (`mergeDoubleDoors: false`). X-10 twin→double blijft Settings. Openings-snapshots van 5 fixtures ververst.
 - **2026-09-15** — PlanCanvas-host: alleen `kind` zet het preset. Vier legacy-booleans weg; `dakMode` blijft view-as voor area. Productgate en detection-preset blijven gescheiden (comment: bij aanzetten beide).

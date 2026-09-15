@@ -188,11 +188,8 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
       selectedOpeningId.value === id &&
       settingsTarget.value?.kind === 'opening' &&
       settingsTarget.value.mode === 'edit'
-    if (!wantEdit && !alreadyEdit) {
-      selectOpening(id, 'quick')
-      return
-    }
     selectOpening(id, 'edit')
+    if (!wantEdit && !alreadyEdit) return
     if (alreadyEdit) {
       beginOpeningDrag(id, 'move', cm, rect, rect.wallId, rect.floorIndex)
       return

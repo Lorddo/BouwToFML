@@ -58,6 +58,7 @@ import { PLAN_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/const
 import {
   measuredCmFromRescaleState,
   resolvePlanRescaleState,
+  innerThicknessFromRescaleState,
   resolveRescaleFactorsFromRulers,
   scaleNulpuntImageCm,
 } from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
@@ -726,13 +727,16 @@ export function createWorkspacePlanGenerate(
 
   /**
    * Stap-4: anisotrope H/V-schaal van het **huidige** plan (edits blijven).
-   * Geen muurdikte-schaal; underlay per as; kalibratie alleen als schaal confirmed.
+   * Liniaal = binnenmaat (T uit face-handles); muurdikte zelf blijft.
+   * Underlay per as; kalibratie alleen als schaal confirmed.
    */
   function rescalePlanFromRulers(params: {
     measuredCmX: number
     measuredCmY: number
     trueMmX: number
     trueMmY: number
+    innerThicknessCmX?: number
+    innerThicknessCmY?: number
   }): boolean {
     const factors = resolveRescaleFactorsFromRulers(params)
     if (factors == null) return false
@@ -814,12 +818,17 @@ export function createWorkspacePlanGenerate(
   function confirmPlanRescale(): boolean {
     const state = rescaleState.value
     if (!state || !rescaleActive.value) return false
+    const plan = editedPreviewPlan.value ?? importedPlan.value ?? harmonizedPlan.value
+    const walls = plan?.floors[0]?.walls ?? []
     const measured = measuredCmFromRescaleState(state)
+    const thick = innerThicknessFromRescaleState(state, walls)
     const ok = rescalePlanFromRulers({
       measuredCmX: measured.x,
       measuredCmY: measured.y,
       trueMmX: rescaleDistanceMmX.value,
       trueMmY: rescaleDistanceMmY.value,
+      innerThicknessCmX: thick.x,
+      innerThicknessCmY: thick.y,
     })
     if (ok) cancelPlanRescale()
     return ok

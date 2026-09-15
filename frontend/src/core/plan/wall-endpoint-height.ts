@@ -1,5 +1,5 @@
 import { DEFAULT_WALL_HEIGHT_CM } from './extraction-to-plan-types'
-import type { Floor, FloorPlan, PlanExtras, Opening, Wall } from './types'
+import type { Floor, FloorDesign, FloorPlan, PlanExtras, Opening, Wall } from './types'
 
 /** Floorplanner endpoint elevations (bottom z + top h). */
 export interface Endpoint3D {
@@ -585,7 +585,33 @@ function mapPlanOpenings(
   )
 }
 
-/** Overschrijf `floor.height` + alle elevation-ends (z behouden). Deuren/ramen ongemoeid. */
+/** Zelfde markering als `isRidgeWall` / `isRidgeDesign` — geen import (cyclus). */
+function isRidgeFloorHeightWall(wall: Wall): boolean {
+  if (wall.role === 'ridge') return true
+  return wall.extras?.ridge === true
+}
+
+function isRidgeFloorHeightDesign(design: FloorDesign): boolean {
+  if (design.role === 'ridge') return true
+  if (design.source?.settings?.btfRole === 'ridge') return true
+  return design.name.trim().toLowerCase() === 'dak'
+}
+
+function mapFloorHeightWall(wall: Wall, heightCm: number): Wall {
+  // Nok: span (`h − z`) is dakdikte, niet verdiepingshoogte.
+  if (isRidgeFloorHeightWall(wall)) return wall
+  return withWallUniformHeight(wall, heightCm, heightCm)
+}
+
+function mapFloorHeightDesign(design: FloorDesign, heightCm: number): FloorDesign {
+  if (isRidgeFloorHeightDesign(design)) return design
+  return {
+    ...design,
+    walls: design.walls.map((wall) => mapFloorHeightWall(wall, heightCm)),
+  }
+}
+
+/** Overschrijf `floor.height` + plattegrond-elevation (z behouden). Nokbalken en deuren/ramen blijven. */
 export function overwritePlanWallHeights(
   plan: FloorPlan,
   heightCm: number,
@@ -597,14 +623,10 @@ export function overwritePlanWallHeights(
     floors: plan.floors.map((floor, i) => {
       if (floorIndex != null && i !== floorIndex) return floor
       const nextFloor: Floor = { ...floor, height }
-      const mapWall = (wall: Wall): Wall => withWallUniformHeight(wall, height, height)
       return {
         ...nextFloor,
-        walls: nextFloor.walls.map(mapWall),
-        designs: nextFloor.designs?.map((design) => ({
-          ...design,
-          walls: design.walls.map(mapWall),
-        })),
+        walls: nextFloor.walls.map((wall) => mapFloorHeightWall(wall, height)),
+        designs: nextFloor.designs?.map((design) => mapFloorHeightDesign(design, height)),
       }
     }),
   }

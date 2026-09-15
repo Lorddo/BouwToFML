@@ -22,6 +22,12 @@ import {
   withWallUniformBottomZ,
 } from '@/core/plan/wall-endpoint-height'
 import { cloneWalls, splitWallAtPoint } from '@/core/plan/junction-core'
+import {
+  listRidgeWallsOnFloor,
+  markWallAsRidge,
+  ridgeEndpointExtras,
+  setRidgeWallsOnFloor,
+} from '@/core/plan/ridge-walls'
 import { splitWallAtT } from '@/core/plan/wall-edit'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'id' | 'a' | 'b'>): Wall {
@@ -249,6 +255,43 @@ describe('wall-endpoint-height', () => {
     const doorsOnly = overwritePlanDoorHeights(plan, 210)
     expect(doorsOnly.floors[0].height).toBe(280)
     expect(doorsOnly.floors[0].walls[0].openings[0].z_height).toBe(210)
+  })
+
+  it('overwritePlanWallHeights laat nokbalken met rust (span blijft dakdikte)', () => {
+    const plan: FloorPlan = {
+      name: 't',
+      floors: [
+        {
+          name: 'bg',
+          level: 0,
+          height: 280,
+          walls: [
+            wall({
+              id: 'w1',
+              a: { x: 0, y: 0 },
+              b: { x: 10, y: 0 },
+              elevation: { a: { z: 0, h: 280 }, b: { z: 0, h: 280 } },
+            }),
+          ],
+        },
+      ],
+    }
+    const extras = ridgeEndpointExtras(280, 20, 280)
+    const ridge = markWallAsRidge(
+      wall({ id: 'r1', a: { x: 0, y: 40 }, b: { x: 100, y: 40 } }),
+      extras,
+    )
+    plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
+
+    const next = overwritePlanWallHeights(plan, 300)
+    expect(next.floors[0].height).toBe(300)
+    expect(wallEndpointHeightCm(next.floors[0].walls[0], 'a', 300)).toBe(300)
+
+    const updated = listRidgeWallsOnFloor(next.floors[0])[0]
+    expect(updated).toBeTruthy()
+    expect(updated.elevation?.a).toEqual({ z: 280, h: 300 })
+    expect(updated.elevation?.b).toEqual({ z: 280, h: 300 })
+    expect(wallEndpointHeightCm(updated, 'a', 300)).toBe(20)
   })
 
   it('split interpolatie az/bz op t', () => {

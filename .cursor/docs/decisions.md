@@ -225,8 +225,8 @@ Zie `.cursor/docs/v1-workflow-ui.md` voor volledige flow.
 | Sidebar | **Één linkse rail** die per fase verder openschuift |
 | Schaal-gate | Tekening **greyed** tot schaal bevestigd (✓); **twee H-overlays** direct bij import |
 | Schaal-UI | Horizontale + verticale **H** (poten over volledig scherm); mm op middelstuk; ✓/✕ rechts |
-| Stap-4 rescale | «Herschalen» bij plan-met-muren (ook na heropenen + FML-viewer): H/V apart, geen muurdikte |
-| Rescale kamers | Na herschalen `areas[]` opnieuw uit binnenfaces (`scaleFloorPlanAndRegenAreas`) — muurdikte blijft, dus mee-schalen van het gat geeft te korte kamermaten |
+| Stap-4 rescale | «Herschalen» bij plan-met-muren (ook na heropenen + viewer): H/V apart, geen muurdikte. Liniaal = **binnenmaat**: `f = (I★ + T) / (I + T)` met `T` uit face-handles |
+| Rescale kamers | Na herschalen `areas[]` opnieuw uit binnenfaces (`scaleFloorPlanAndRegenAreas`) — muurdikte blijft; de factor compenseert T zodat het gat in één ronde klopt |
 | Herschalen | Zelfde posities + mm herstellen voor mini-aanpassingen (workspace: stap-1 handles via layout; viewer: bbox) |
 | Menu (rechtsboven) | **Nieuw project** (bevestiging, sessie wissen) + **Kleuren** (localStorage) |
 | Kleuren local | Muurlijnen, deuren, ramen, linialen H horizontaal/verticaal — per tekenaar, geen server |

@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/plan/scale-floor-plan'
-import type { FloorPlan } from '@/core/plan/types'
+import type { FloorPlan, Wall } from '@/core/plan/types'
+import { buildAreaSideDims } from '@/ui/composables/plan-canvas/plan-canvas-area-side-dims'
+import { scaleFloorPlanAndRegenAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import {
+  innerThicknessFromRescaleState,
   rescaleStateFromImageHandles,
   initPlanRescaleStateFromWalls,
   initImageScaleHandles,
   resolvePlanRescaleState,
+  resolveRescaleFactorsFromInnerRulers,
   resolveRescaleFactorsFromRulers,
   resolveRescaleGeometryFactor,
   scaleNulpuntImageCm,
@@ -57,6 +61,30 @@ describe('plan-canvas-rescale-from-measure', () => {
         trueMmY: 1000,
       }),
     ).toBeNull()
+  })
+
+  it('binnenmaat-factor: (I★ + T) / (I + T), niet I★ / I', () => {
+    expect(
+      resolveRescaleFactorsFromRulers({
+        measuredCmX: 355,
+        measuredCmY: 301,
+        trueMmX: 3500,
+        trueMmY: 3000,
+        innerThicknessCmX: 20,
+        innerThicknessCmY: 20,
+      }),
+    ).toEqual({ x: 370 / 375, y: 320 / 321 })
+  })
+
+  it('zonder T blijft de oude hartlijn-factor', () => {
+    expect(
+      resolveRescaleFactorsFromRulers({
+        measuredCmX: 355,
+        measuredCmY: 301,
+        trueMmX: 3500,
+        trueMmY: 3000,
+      }),
+    ).toEqual({ x: 350 / 355, y: 300 / 301 })
   })
 
   it('init linialen binnen muur-bbox', () => {
@@ -330,5 +358,91 @@ describe('scaleFloorPlan', () => {
     expect(layout.origin.y).toBeCloseTo(62.5)
     expect(layout.pxPerMmX).toBeCloseTo(0.2 / 1.1)
     expect(layout.pxPerMmY).toBeCloseTo(0.3 / 1.25)
+  })
+})
+
+function boxWall(
+  id: string,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+  thickness = 20,
+): Wall {
+  return {
+    id,
+    a: { x: ax, y: ay },
+    b: { x: bx, y: by },
+    thickness,
+    balance: 0.5,
+    openings: [],
+  }
+}
+
+/** Hart 375 × 321, dikte 20 → binnen 355 × 301 (detectie-voorbeeld 3,55 × 3,01 m). */
+function detectionRoomWalls(): Wall[] {
+  return [
+    boxWall('n', 0, 0, 375, 0),
+    boxWall('e', 375, 0, 375, 321),
+    boxWall('s', 375, 321, 0, 321),
+    boxWall('w', 0, 321, 0, 0),
+  ]
+}
+
+const innerHandles = {
+  xLeft: 10,
+  xRight: 365,
+  xGuideY: 160,
+  yTop: 10,
+  yBottom: 311,
+  yGuideX: 180,
+}
+
+describe('rescale binnenmaat (liniaal op binnenfaces)', () => {
+  it('T uit handles = 20 + 20 per as', () => {
+    expect(innerThicknessFromRescaleState(innerHandles, detectionRoomWalls())).toEqual({
+      x: 20,
+      y: 20,
+    })
+  })
+
+  it('handles midden in de kamer → T = 0 (geen face)', () => {
+    expect(
+      innerThicknessFromRescaleState(
+        {
+          xLeft: 100,
+          xRight: 250,
+          xGuideY: 160,
+          yTop: 80,
+          yBottom: 220,
+          yGuideX: 180,
+        },
+        detectionRoomWalls(),
+      ),
+    ).toEqual({ x: 0, y: 0 })
+  })
+
+  it('één ronde 3,55×3,01 → 3,50×3,00, niet 3,49×2,99', () => {
+    const walls = detectionRoomWalls()
+    const factors = resolveRescaleFactorsFromInnerRulers({
+      state: innerHandles,
+      walls,
+      trueMmX: 3500,
+      trueMmY: 3000,
+    })
+    expect(factors).not.toBeNull()
+    expect(factors!.x).toBeCloseTo(370 / 375)
+    expect(factors!.y).toBeCloseTo(320 / 321)
+
+    const plan: FloorPlan = {
+      name: 't',
+      floors: [{ name: 'BG', level: 0, height: 280, walls }],
+    }
+    const next = scaleFloorPlanAndRegenAreas(plan, factors!, 0)
+    const lengths = buildAreaSideDims(next.floors[0]?.areas, { unit: 'cm' })
+      .map((d) => Math.round(d.lengthCm * 10) / 10)
+      .sort((a, b) => a - b)
+    expect(lengths).toEqual([300, 300, 350, 350])
+    expect(next.floors[0].walls[0].thickness).toBe(20)
   })
 })

@@ -44,7 +44,7 @@ const props = withDefaults(
     showDoorButtons?: boolean
     /** Driehoekraam: één spiegelknop (mirrored[0]), geen scharnier/draai. */
     showMirrorButton?: boolean
-    /** Alleen breedte/hoogte/vloer (gewone klik); geen type-extra's. */
+    /** Alleen breedte/hoogte/vloer; geen type-extra's. Muren gebruiken dit nog; deuren/ramen niet. */
     compact?: boolean
   }>(),
   {

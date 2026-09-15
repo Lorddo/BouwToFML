@@ -22,6 +22,7 @@ import {
   rescaleStateFromImageHandles,
   initPlanRescaleStateFromWalls,
   initImageScaleHandles,
+  innerThicknessFromRescaleState,
   measuredCmFromRescaleState,
   resolveRescaleFactorsFromRulers,
 } from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
@@ -427,11 +428,15 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     const current = plan.value
     if (!state || !rescaleActive.value || !current) return false
     const measured = measuredCmFromRescaleState(state)
+    const walls = current.floors[activeFloorIndex.value]?.walls ?? []
+    const thick = innerThicknessFromRescaleState(state, walls)
     const factors = resolveRescaleFactorsFromRulers({
       measuredCmX: measured.x,
       measuredCmY: measured.y,
       trueMmX: rescaleDistanceMmX.value,
       trueMmY: rescaleDistanceMmY.value,
+      innerThicknessCmX: thick.x,
+      innerThicknessCmY: thick.y,
     })
     if (factors == null) return false
     plan.value = scaleFloorPlanAndRegenAreas(current, factors, activeFloorIndex.value)

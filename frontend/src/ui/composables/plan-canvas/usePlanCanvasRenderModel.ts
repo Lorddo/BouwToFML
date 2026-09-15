@@ -634,11 +634,14 @@ export function usePlanCanvasRenderModel(
   const selectedOpeningPanel = computed(() => {
     const model = renderModel.value
     if (!model) return null
+    // Left-klik én Ctrl-klik: volle strook. Deuren/ramen hebben type, scharnier,
+    // bovenlicht, kopie en delete die je bij een gewone klik wilt zien — anders
+    // dan muren, waar left-klik bewust de basis-strip houdt.
     if (settingsOpeningIds.value.length > 0) {
       return buildSelectedOpeningPanel(model, settingsOpeningIds.value, 'full')
     }
     if (moveOpeningId.value) {
-      return buildSelectedOpeningPanel(model, [moveOpeningId.value], 'quick')
+      return buildSelectedOpeningPanel(model, [moveOpeningId.value], 'full')
     }
     return null
   })

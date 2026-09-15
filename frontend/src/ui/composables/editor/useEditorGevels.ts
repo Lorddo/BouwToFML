@@ -131,7 +131,7 @@ export function useEditorGevels(options: {
 
   // --- Hoogte-stack schrijven (tegenhangers van de computeds hierboven) ---
 
-  /** Verdiepingshoogte overschrijft alle muren op die floor — daarom een confirm. */
+  /** Verdiepingshoogte overschrijft plattegrondmuren op die floor (nokbalken via dakdikte). */
   async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
     if (!options.plan.value) return
     const count = countPlanWalls(options.plan.value, floorIndex)

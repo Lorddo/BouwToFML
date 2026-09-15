@@ -3,6 +3,7 @@ import type { Wall } from '@/core/plan/types'
 import type { RenderModel } from '@/ui/composables/plan-canvas/plan-canvas-render-types'
 import {
   buildSelectedJunctionPanel,
+  buildSelectedOpeningPanel,
   buildSelectedWallPanel,
 } from '@/ui/composables/plan-canvas/plan-canvas-selected-panels'
 
@@ -36,6 +37,39 @@ describe('buildSelectedWallPanel', () => {
     expect(buildSelectedWallPanel(model, ['w1'], 280)?.mode).toBe('full')
     expect(buildSelectedWallPanel(model, ['w1'], 280, 'quick')?.mode).toBe('quick')
     expect(buildSelectedWallPanel(model, ['w1'], 280, 'full')?.canSplit).toBe(true)
+  })
+})
+
+describe('buildSelectedOpeningPanel', () => {
+  it('zet de opening-strip standaard op full (left-klik = Ctrl-klik)', () => {
+    const opening = {
+      id: 'o1',
+      kind: 'door.single' as const,
+      t: 0.5,
+      width: 90,
+      type: 'door' as const,
+    }
+    const model = {
+      wallLines: [],
+      ridgeLines: [],
+      doorGroups: [
+        {
+          id: 'w1-door-o1',
+          wallId: 'w1',
+          openingIndex: 0,
+          openings: [opening],
+          hitPoints: [],
+          gapPoints: [],
+          label: 'Deur',
+          detail: '',
+          glyphs: [],
+        },
+      ],
+      windows: [],
+    } as unknown as RenderModel
+
+    expect(buildSelectedOpeningPanel(model, ['w1-door-o1'])?.mode).toBe('full')
+    expect(buildSelectedOpeningPanel(model, ['w1-door-o1'], 'full')?.mode).toBe('full')
   })
 })
 

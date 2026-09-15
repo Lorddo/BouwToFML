@@ -7,6 +7,10 @@ import {
 import { toCmX, toCmY } from '@/core/plan/extraction-to-plan-geom'
 import type { PlanScaleFactors } from '@/core/plan/scale-floor-plan'
 import type { Point2D, Wall } from '@/core/plan/types'
+import {
+  WALL_FACE_SNAP_CM,
+  wallFaceSegments,
+} from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 
 /**
  * Pure helpers for stap-4 H/V-liniaal → anisotrope geometry rescale (zoals stap 1).
@@ -22,16 +26,104 @@ export function resolveRescaleGeometryFactor(measuredCm: number, trueCm: number)
   return factor
 }
 
-function axisFactor(measuredCm: number, trueMm: number): number | null {
+function axisFactor(measuredCm: number, trueMm: number, innerThicknessCm = 0): number | null {
   if (!(measuredCm >= SCALE_RESCALE_MIN_MEASURED_CM) || !(trueMm > 0)) return null
   if (!Number.isFinite(measuredCm) || !Number.isFinite(trueMm)) return null
-  const factor = trueMm / 10 / measuredCm
+  const t = innerThicknessCm > 0 && Number.isFinite(innerThicknessCm) ? innerThicknessCm : 0
+  // Liniaal = binnenmaat; muurdikte blijft. Hartlijn-factor = (I★ + T) / (I + T).
+  const factor = (trueMm / 10 + t) / (measuredCm + t)
   if (factor < SCALE_GEOMETRY_FACTOR_MIN || factor > SCALE_GEOMETRY_FACTOR_MAX) return null
   return factor
 }
 
+function centerlineCoordOnAxis(
+  wall: Pick<Wall, 'a' | 'b'>,
+  point: Point2D,
+  axis: 'x' | 'y',
+): number {
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const len2 = dx * dx + dy * dy
+  if (len2 < 1e-12) return axis === 'x' ? wall.a.x : wall.a.y
+  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / len2
+  return axis === 'x' ? wall.a.x + dx * t : wall.a.y + dy * t
+}
+
+function faceAlongPad(wall: Pick<Wall, 'thickness'>, radiusCm: number): number {
+  return radiusCm + Math.max(0, wall.thickness)
+}
+
+/** Afstand handle → hartlijn op deze as, als de handle op een face van die as zit. */
+export function handleInnerThicknessCm(
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+  point: Point2D,
+  axis: 'x' | 'y',
+  radiusCm = WALL_FACE_SNAP_CM,
+): number {
+  if (walls.length === 0 || !(radiusCm > 0)) return 0
+  let bestFaceDist = radiusCm
+  let bestOffset = 0
+  let found = false
+  for (const wall of walls) {
+    const pad = faceAlongPad(wall, radiusCm)
+    for (const face of wallFaceSegments(wall)) {
+      if (axis === 'x' && face.axis === 'h') continue
+      if (axis === 'y' && face.axis === 'v') continue
+      let faceDist: number
+      if (face.axis === 'v') {
+        const faceX = (face.a.x + face.b.x) / 2
+        const minY = Math.min(face.a.y, face.b.y) - pad
+        const maxY = Math.max(face.a.y, face.b.y) + pad
+        if (point.y < minY || point.y > maxY) continue
+        faceDist = Math.abs(point.x - faceX)
+      } else if (face.axis === 'h') {
+        const faceY = (face.a.y + face.b.y) / 2
+        const minX = Math.min(face.a.x, face.b.x) - pad
+        const maxX = Math.max(face.a.x, face.b.x) + pad
+        if (point.x < minX || point.x > maxX) continue
+        faceDist = Math.abs(point.y - faceY)
+      } else {
+        const dx = face.b.x - face.a.x
+        const dy = face.b.y - face.a.y
+        const len2 = dx * dx + dy * dy
+        if (len2 < 1e-12) continue
+        const t = ((point.x - face.a.x) * dx + (point.y - face.a.y) * dy) / len2
+        const len = Math.sqrt(len2)
+        const padT = pad / len
+        if (t < -padT || t > 1 + padT) continue
+        const projX = face.a.x + dx * t
+        const projY = face.a.y + dy * t
+        faceDist = Math.hypot(point.x - projX, point.y - projY)
+      }
+      if (faceDist >= (found ? bestFaceDist : radiusCm)) continue
+      found = true
+      bestFaceDist = faceDist
+      bestOffset = Math.abs(
+        (axis === 'x' ? point.x : point.y) - centerlineCoordOnAxis(wall, point, axis),
+      )
+    }
+  }
+  return found ? bestOffset : 0
+}
+
+/** T per as: som van hart→face op beide liniaalpunten (binnenmaat-compensatie). */
+export function innerThicknessFromRescaleState(
+  state: HScaleState,
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+): { x: number; y: number } {
+  return {
+    x:
+      handleInnerThicknessCm(walls, { x: state.xLeft, y: state.xGuideY }, 'x') +
+      handleInnerThicknessCm(walls, { x: state.xRight, y: state.xGuideY }, 'x'),
+    y:
+      handleInnerThicknessCm(walls, { x: state.yGuideX, y: state.yTop }, 'y') +
+      handleInnerThicknessCm(walls, { x: state.yGuideX, y: state.yBottom }, 'y'),
+  }
+}
+
 /**
- * Aparte H/V-factoren (trueMm / measuredCm), zoals stap-1 schaal.
+ * Aparte H/V-factoren. Liniaal is binnenmaat: optioneel `innerThicknessCm`
+ * (hart→binnen, beide zijden) zodat het gat na één ronde op de echte maat zit.
  * Beide spans ≥ 50 cm; minstens één as ≠ 1.
  */
 export function resolveRescaleFactorsFromRulers(params: {
@@ -39,12 +131,33 @@ export function resolveRescaleFactorsFromRulers(params: {
   measuredCmY: number
   trueMmX: number
   trueMmY: number
+  innerThicknessCmX?: number
+  innerThicknessCmY?: number
 }): PlanScaleFactors | null {
-  const factorX = axisFactor(params.measuredCmX, params.trueMmX)
-  const factorY = axisFactor(params.measuredCmY, params.trueMmY)
+  const factorX = axisFactor(params.measuredCmX, params.trueMmX, params.innerThicknessCmX ?? 0)
+  const factorY = axisFactor(params.measuredCmY, params.trueMmY, params.innerThicknessCmY ?? 0)
   if (factorX == null || factorY == null) return null
   if (Math.abs(factorX - 1) < 1e-9 && Math.abs(factorY - 1) < 1e-9) return null
   return { x: factorX, y: factorY }
+}
+
+/** Stap-4/editor confirm: gemeten span + T uit face-handles. */
+export function resolveRescaleFactorsFromInnerRulers(params: {
+  state: HScaleState
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>
+  trueMmX: number
+  trueMmY: number
+}): PlanScaleFactors | null {
+  const measured = measuredCmFromRescaleState(params.state)
+  const thick = innerThicknessFromRescaleState(params.state, params.walls)
+  return resolveRescaleFactorsFromRulers({
+    measuredCmX: measured.x,
+    measuredCmY: measured.y,
+    trueMmX: params.trueMmX,
+    trueMmY: params.trueMmY,
+    innerThicknessCmX: thick.x,
+    innerThicknessCmY: thick.y,
+  })
 }
 
 /** @deprecated alias — gebruik resolveRescaleFactorsFromRulers */
