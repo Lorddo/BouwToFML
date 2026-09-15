@@ -35,8 +35,8 @@ import {
   syncRidgeWallGuidsFromDesigns,
 } from '@/core/plan/ridge-walls'
 import type { FloorPlan, Wall } from '@/core/plan/types'
-import { addRidgeSegment, addWallSegment } from '@/ui/components/plan-canvas-wall-draw-geom'
-import { buildJunctions, moveJunctionWithWallJoins } from '@/ui/components/plan-canvas-junctions'
+import { addRidgeSegment, addWallSegment } from '@/core/plan/wall-draw-geom'
+import { buildJunctions, moveJunctionWithWallJoins } from '@/core/plan/junctions'
 
 function wall(id: string, a = { x: 0, y: 0 }, b = { x: 400, y: 0 }): Wall {
   return { id, a, b, thickness: 20, openings: [] }

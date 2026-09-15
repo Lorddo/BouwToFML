@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWallOutlinePolylines } from '@/ui/components/plan-canvas-wall-polygons'
+import { buildWallOutlinePolylines } from '@/core/plan/wall-outline'
 
 function polylineCoversY(
   polylines: { x: number; y: number }[][],

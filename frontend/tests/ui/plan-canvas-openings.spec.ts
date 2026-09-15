@@ -8,7 +8,7 @@ import {
   MAX_OPENING_WIDTH_CM,
   projectPointToWallT,
   updateOpeningById,
-} from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 import {
   BOVENLICHT_MARKER_STROKE,
   BOVENLICHT_MARKER_STROKE_PX,

@@ -1,7 +1,7 @@
 import type { ComputedRef, Ref } from 'vue'
 import type { FloorPlan, Point2D, Wall } from '@/core/plan/types'
 import { facadeMemberIdsOnFloor, groupIdsForWall } from '@/core/plan/facade-groups'
-import { findOpeningById } from '@/ui/components/plan-canvas-openings'
+import { findOpeningById } from '@/core/plan/opening-plan-ops'
 import type { InspectHit } from './plan-inspect'
 import { pickInspectTarget } from './plan-inspect'
 import type { HitTestApi } from './plan-canvas-hit-test-api'

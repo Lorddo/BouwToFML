@@ -5,7 +5,7 @@ import type { FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
 import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-fixture-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

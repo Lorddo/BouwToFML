@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { PlanToolId } from './canvas/planToolbeltItems'
-import { sliderPercentFromDraft } from './plan-canvas-wall-edit'
+import { sliderPercentFromDraft } from '@/core/plan/wall-edit'
 import {
   formatScaleInputLabel,
   type ScaleInputUnit,

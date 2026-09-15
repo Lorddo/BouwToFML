@@ -9,9 +9,9 @@ import {
 } from '@/core/plan/opening-along-wall-resize'
 import { findOpeningById } from '@/core/plan/opening-wall-ops'
 import type { Opening, Point2D, Wall } from '@/core/plan/types'
-import { projectPointToWallTUnclamped } from '@/ui/components/plan-canvas-opening-drag-geom'
-import { collectCollinearWallIds } from '@/ui/components/plan-canvas-openings'
-import { offsetPointByWallBalance } from '@/ui/components/plan-canvas-wall-polygons'
+import { projectPointToWallTUnclamped } from '@/core/plan/opening-drag-geom'
+import { collectCollinearWallIds } from '@/core/plan/opening-plan-ops'
+import { offsetPointByWallBalance } from '@/core/plan/plan-wall-geom'
 
 export type PlanOpeningResizeSide = OpeningAlongWallSide
 export type PlanOpeningHandleKind = PlanOpeningResizeSide | 'move'

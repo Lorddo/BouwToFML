@@ -17,7 +17,6 @@ import {
 import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/plan/ridge-walls'
 import type { FloorPlan, Opening, Wall } from '@/core/plan/types'
 import { wallEndpoint3D } from '@/core/plan/wall-endpoint-height'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 
 function wall(
   id: string,
@@ -326,7 +325,6 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
     const plan = saddlePlan()
     const result = bindFloorWallsToRoofs(plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     expect(result.splits).toBeGreaterThanOrEqual(2) // left + right gables
     const leftParts = result.plan.floors[0].walls.filter(
@@ -348,7 +346,6 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
     const before = plan.floors[0].walls.length
     const result = bindFloorWallsToRoofs(plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     const shortStill = result.plan.floors[0].walls.find((w) => w.id === 'short')
     expect(shortStill).toBeTruthy()
@@ -403,7 +400,6 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
 
     const result = bindFloorWallsToRoofs(plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     const frontParts = result.plan.floors[0].walls.filter(
       (w) => w.id === 'front' || w.id.startsWith('front-split-'),
@@ -423,7 +419,6 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
 
     const twice = bindFloorWallsToRoofs(result.plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     expect(twice.splits).toBe(0)
   })
@@ -446,7 +441,6 @@ describe('bindFloorWallsToRoofs V2 crease-split', () => {
     const plan = saddleWithCornerDormer()
     const result = bindFloorWallsToRoofs(plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     const rightParts = result.plan.floors[0].walls.filter(
       (w) => w.id === 'right' || w.id.startsWith('right-split-'),
@@ -587,12 +581,10 @@ describe('bindFloorWallsToRoofs dakkapel-rand flush', () => {
     const plan = saddleWithCornerDormer()
     const once = bindFloorWallsToRoofs(plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     expect(once.splits).toBeGreaterThan(0)
     const twice = bindFloorWallsToRoofs(once.plan, 0, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     expect(twice.splits).toBe(0)
     expect(twice.flushedEdges).toBe(0)

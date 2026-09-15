@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref } from 'vue'
 import type { HScaleState } from '@/platform/calibration'
 import type { Point2D, Wall } from '@/core/plan/types'
-import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/plan-canvas-wall-face-snap'
+import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 
 type HandleId = 'xLeft' | 'xRight' | 'xGuideY' | 'yTop' | 'yBottom' | 'yGuideX'
 

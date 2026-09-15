@@ -14,7 +14,7 @@ import {
   clampWindowOpeningHeight,
   projectPointToWallT,
   wallCollinearEnds,
-} from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>

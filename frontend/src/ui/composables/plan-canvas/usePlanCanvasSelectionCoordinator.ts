@@ -1,11 +1,10 @@
-﻿import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
+import { computed, ref, watch, type Ref, type ComputedRef } from 'vue'
 import { parsePlanHex } from '@/core/plan/roomtype-catalog'
 import type { FloorItem, FloorLineType } from '@/core/plan/types'
 import { dimensionLengthCm, setDimensionLengthCentered } from '@/core/plan/offset-dimension-line'
 import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
 import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/plan/ridge-walls'
 import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/plan/bind-walls-to-roofs'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { HitTestApi } from './plan-canvas-hit-test-api'
 import { usePlanCanvasAreaSelection } from './usePlanCanvasAreaSelection'
@@ -642,7 +641,6 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     flushPendingFieldCommits()
     const result = bindFloorWallsToRoofs(editor.localPlan.value, floorIndexTarget, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) {
       return result

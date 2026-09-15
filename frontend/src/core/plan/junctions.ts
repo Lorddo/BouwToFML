@@ -1,6 +1,6 @@
 /**
- * Public barrel for FML preview junction/wall edit helpers.
- * Implementation lives in sibling modules; import path stays stable.
+ * Public barrel for junction / wall-edit helpers.
+ * Implementation lives in sibling modules.
  */
 
 export type {
@@ -8,7 +8,7 @@ export type {
   SplitWallResult,
   WallEndRef,
   WallPointMatch,
-} from './plan-canvas-junction-core'
+} from './junction-core'
 
 export {
   buildJunctions,
@@ -20,7 +20,7 @@ export {
   mergeJunctions,
   moveJunction,
   stableJunctionId,
-} from './plan-canvas-junction-core'
+} from './junction-core'
 
 export {
   connectJunctionsKeepAxis,
@@ -29,7 +29,7 @@ export {
   isFlushOnlyJunctionConnect,
   mergeJunctionsAware,
   snapPointToJunctionsFlushAware,
-} from './plan-canvas-junction-flush-connect'
+} from './junction-flush-connect'
 
 export {
   applyShiftSnapAxisAligned,
@@ -45,7 +45,7 @@ export {
   snapToPolygonGeometry,
   closedRingSegments,
   openPolylineSegments,
-} from './plan-canvas-junction-snap'
+} from './junction-snap'
 
 export {
   resolveWallSlidePointerDelta,
@@ -54,7 +54,7 @@ export {
   slideWallSegmentAlongAxis,
   moveJunctionWithWallJoins,
   splitWallAtPoint,
-} from './plan-canvas-wall-slide'
+} from './wall-slide'
 
 export {
   balanceToPercent,
@@ -76,11 +76,11 @@ export {
   setPlanWallsThicknessKeepBalance,
   splitWallAtMidpoint,
   splitWallAtT,
-} from './plan-canvas-wall-edit'
+} from './wall-edit'
 
 export {
   addRidgeSegment,
   addRoomRect,
   addWallSegment,
   findWallAtPoint,
-} from './plan-canvas-wall-draw-geom'
+} from './wall-draw-geom'

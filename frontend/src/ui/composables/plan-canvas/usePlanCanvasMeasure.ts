@@ -5,7 +5,7 @@ import {
   snapDrawPointToWallFaces,
   snapDrawPointWithManualDimensions,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-wall-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 import { DEFAULT_SLICER_OFFSET_SNAP_CM, snapSlicerPPoint } from '@/core/plan/slice-offset-snap'
 import type { PlanSlice } from '@/core/plan/plan-slices'
 import type { RenderJunction } from './usePlanCanvasRenderModel'

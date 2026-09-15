@@ -10,10 +10,8 @@ import {
   type ThicknessBandBoundaries,
 } from '@/core/plan/wall-thickness-tiers'
 import { resolveBakeNulpuntImageCm } from '@/core/plan/stamp-nulpunt'
-import {
-  buildWallOutlinePolylines,
-  type WallPolygonInput,
-} from '@/ui/components/plan-canvas-wall-polygons'
+import { buildWallOutlinePolylines } from '@/core/plan/wall-outline'
+import type { WallPolygonInput } from '@/core/plan/wall-render-types'
 import {
   DEFAULT_STAMP_BANDS,
   STAMP_CONTOUR_LINE_PX,

@@ -6,7 +6,7 @@ import {
   dakRoofRingsFromFloor,
   resolveDakSurfacePoint,
   resolveRidgeDrawPoint,
-} from '@/ui/components/plan-canvas-dak-draw-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-dak-draw-snap'
 
 function roofSurface(id: string, poly: FloorSurface['poly']): FloorSurface {
   return {

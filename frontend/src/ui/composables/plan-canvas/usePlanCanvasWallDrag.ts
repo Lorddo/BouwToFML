@@ -7,7 +7,7 @@ import {
   resolveWallSlidePointerDelta,
   snapWallSlideDeltaToJunctions,
   stableJunctionId,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { RenderJunction } from './usePlanCanvasRenderModel'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'

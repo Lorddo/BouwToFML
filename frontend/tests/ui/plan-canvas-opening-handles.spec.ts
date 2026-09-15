@@ -3,7 +3,7 @@ import {
   clampOpeningWidthKeepOppositeEdge,
   openingEdgesAlongWall,
 } from '@/core/plan/opening-along-wall-resize'
-import { MAX_OPENING_WIDTH_CM } from '@/ui/components/plan-canvas-openings'
+import { MAX_OPENING_WIDTH_CM } from '@/core/plan/opening-plan-ops'
 import {
   planOpeningHandlePointsCm,
   resizeOpeningAlongWallFromPointer,

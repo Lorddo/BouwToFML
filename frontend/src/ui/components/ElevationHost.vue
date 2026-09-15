@@ -20,7 +20,7 @@ import { useStage } from '@/platform/canvas'
 import { useChromeFitScale } from '@/ui/composables/useChromeFitScale'
 import { useElevationRenderModel } from '@/ui/composables/elevation/useElevationRenderModel'
 import { useElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
-import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/plan-canvas-openings'
+import { resolveOpeningHeight, resolveWindowSillZ } from '@/core/plan/opening-plan-ops'
 import {
   DEFAULT_PLAN_DISPLAY_STYLE,
   type PlanDisplayStyleChoice,

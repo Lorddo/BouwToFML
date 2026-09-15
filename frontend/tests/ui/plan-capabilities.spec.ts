@@ -3,6 +3,7 @@ import {
   PLAN_CAPABILITIES_DETECTION,
   PLAN_CAPABILITIES_EDITOR,
   PLAN_CAPABILITIES_INSPECT,
+  resolveHostFlags,
   resolvePlanCapabilities,
 } from '@/ui/composables/plan-canvas/plan-capabilities'
 
@@ -78,6 +79,51 @@ describe('plan-capabilities', () => {
       nativeWrite: true,
       fmlImport: true,
       fmlExport: 'lossy',
+    })
+  })
+})
+
+describe('resolveHostFlags', () => {
+  it('editor: area + annotation + touch on, inspect off', () => {
+    expect(resolveHostFlags('editor')).toEqual({
+      areaSurfaceEditEnabled: true,
+      annotationEditEnabled: true,
+      inspectMode: false,
+      touchEditor: true,
+    })
+  })
+
+  it('inspect: only inspect on', () => {
+    expect(resolveHostFlags('inspect')).toEqual({
+      areaSurfaceEditEnabled: false,
+      annotationEditEnabled: false,
+      inspectMode: true,
+      touchEditor: false,
+    })
+  })
+
+  it('detection: area off (matches PLAN_AREA_SURFACE_EDIT_VISIBLE)', () => {
+    expect(resolveHostFlags('detection')).toEqual({
+      areaSurfaceEditEnabled: false,
+      annotationEditEnabled: false,
+      inspectMode: false,
+      touchEditor: false,
+    })
+  })
+
+  it('dakMode forces area/surface edit regardless of kind', () => {
+    expect(resolveHostFlags('detection', true).areaSurfaceEditEnabled).toBe(true)
+    expect(resolveHostFlags('inspect', true).areaSurfaceEditEnabled).toBe(true)
+    expect(resolveHostFlags('editor', true).areaSurfaceEditEnabled).toBe(true)
+    expect(resolveHostFlags('detection', true)).toMatchObject({
+      annotationEditEnabled: false,
+      inspectMode: false,
+      touchEditor: false,
+    })
+    expect(resolveHostFlags('inspect', true)).toMatchObject({
+      annotationEditEnabled: false,
+      inspectMode: true,
+      touchEditor: false,
     })
   })
 })

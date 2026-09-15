@@ -8,12 +8,12 @@ import {
   samplePlanArc,
   type PlanGlyph,
 } from '@/core/plan/opening-plan-symbol'
-import { groupDoorOpeningsOnWall } from '@/ui/components/plan-canvas-doors'
-import { buildWindowOpeningId } from '@/ui/components/plan-canvas-openings'
+import { groupDoorOpeningsOnWall } from '@/ui/composables/plan-canvas/plan-canvas-doors'
+import { buildWindowOpeningId } from '@/core/plan/opening-plan-ops'
 import {
   offsetFlatPointsByWallBalance,
   offsetPointByWallBalance,
-} from '@/ui/components/plan-canvas-wall-polygons'
+} from '@/core/plan/plan-wall-geom'
 import {
   buildOpeningGapPolygon,
   clamp01,

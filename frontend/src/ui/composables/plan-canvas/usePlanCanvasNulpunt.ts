@@ -2,7 +2,7 @@ import { computed, ref, watch, type Ref } from 'vue'
 import { cloneUnderlayOriginLayout } from '@/core/plan/drawing-to-underlay-layout'
 import { applyNulpunt } from '@/core/plan/translate-floor-plan'
 import type { FloorPlan, Point2D } from '@/core/plan/types'
-import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/components/plan-canvas-wall-face-snap'
+import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 

@@ -3,7 +3,7 @@ import { ensureDesignsSynced } from '@/core/plan/design-sync'
 import { holeMatchesFloorCutout } from '@/core/plan/ridge-floor'
 import { scaleFloorPlan, type PlanScaleFactors } from '@/core/plan/scale-floor-plan'
 import type { Floor, FloorPlan, Wall } from '@/core/plan/types'
-import { buildWallRenderGeometry } from '@/ui/components/plan-canvas-wall-polygons'
+import { buildWallRenderGeometry } from '@/core/plan/wall-render-geometry'
 import { snapHoleRingsToWallFaces } from './snap-area-holes-to-faces'
 
 /**

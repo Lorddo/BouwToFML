@@ -17,15 +17,15 @@ import {
   splitWallAtPoint,
   type JunctionNode,
   type WallEndRef,
-} from './plan-canvas-junction-core'
-import { openingWorldCenter, reprojectWallOpenings } from './plan-canvas-openings'
+} from './junction-core'
+import { openingWorldCenter, reprojectWallOpenings } from '@/core/plan/opening-plan-ops'
 import {
   addSegmentPathWithJunctionBreaks,
   materializeCrossingsAlongWall,
   materializeEndpointJoinsAtPoint,
   splitCarrierWallsAtJunctionsOnSegment,
   splitCrossedWallsAlongSegment,
-} from './plan-canvas-wall-draw-geom'
+} from './wall-draw-geom'
 
 const RIGID_TRANSLATION_EPS_CM = 1e-6
 

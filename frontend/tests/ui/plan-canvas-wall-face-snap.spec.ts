@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from 'vue'
 import type { Wall } from '@/core/plan/types'
-import { snapDrawWallEndpoint } from '@/ui/components/plan-canvas-junction-snap'
+import { snapDrawWallEndpoint } from '@/core/plan/junction-snap'
 import {
   isOnDakBoundary,
   snapDakDrawPoint,
@@ -12,7 +12,7 @@ import {
   wallFaceSegments,
   DAK_FACE_SNAP_CM,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-wall-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 import { usePlanCanvasMeasure } from '@/ui/composables/plan-canvas/usePlanCanvasMeasure'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'a' | 'b' | 'thickness'>): Wall {

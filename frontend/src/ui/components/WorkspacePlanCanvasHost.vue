@@ -4,7 +4,6 @@ import type { FloorPlan } from '@/core/plan/types'
 import { readBovenlichtPacked } from '@/core/plan/bovenlicht'
 import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
-import { PLAN_AREA_SURFACE_EDIT_VISIBLE } from '@/ui/composables/workspace/constants'
 import PlanCanvas from './PlanCanvas.vue'
 
 /**
@@ -55,11 +54,6 @@ const emit = defineEmits<{
   'update:canvasFullscreen': [value: boolean]
 }>()
 
-/**
- * Product gate: when area/surface edit is enabled in workspace, override detection preset.
- * Canvas `kind` still supplies the rest of the detection profile.
- */
-const areaSurfaceEditEnabled = computed(() => PLAN_AREA_SURFACE_EDIT_VISIBLE)
 const bovenlichtPacked = computed(() => readBovenlichtPacked(props.plan))
 
 const canvasRef = ref<{
@@ -80,7 +74,6 @@ defineExpose({
     ref="canvasRef"
     :key="floorId ? `fml-preview:${floorId}` : 'fml-preview'"
     kind="detection"
-    :area-surface-edit-enabled="areaSurfaceEditEnabled"
     :plan="plan"
     :underlay-src="underlaySrc"
     :underlay-opacity="underlayOpacity"

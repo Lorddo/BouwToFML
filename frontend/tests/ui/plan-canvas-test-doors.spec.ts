@@ -3,7 +3,7 @@ import { resolve } from 'path'
 import { describe, expect, it } from 'vitest'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { resolveOpeningCatalog } from '@/core/plan/opening-refid-catalog'
-import { groupDoorOpeningsOnWall } from '@/ui/components/plan-canvas-doors'
+import { groupDoorOpeningsOnWall } from '@/ui/composables/plan-canvas/plan-canvas-doors'
 
 const TEST_FML = resolve(__dirname, '../../../examples/FML(test)/test-doors.json.fml')
 

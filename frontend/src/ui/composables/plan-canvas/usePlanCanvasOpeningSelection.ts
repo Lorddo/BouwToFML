@@ -23,7 +23,7 @@ import {
   buildMirrored,
   resolveHingeAtStart,
   resolveSwingSign,
-} from '@/ui/components/plan-canvas-doors'
+} from '@/ui/composables/plan-canvas/plan-canvas-doors'
 import {
   clampOpeningHeight,
   clampOpeningSillZ,
@@ -31,7 +31,7 @@ import {
   resolveOpeningHeight,
   resolveOpeningSillZ,
   resolveWindowSillZ,
-} from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { bindScaleLengthDraftField } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'

@@ -48,7 +48,7 @@ import {
   splitWallAtT,
   type SplitWallResult,
   type WallEndRef,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 
 export interface EditorRidgeRoofDeps {
   localPlan: Ref<FloorPlan | null>

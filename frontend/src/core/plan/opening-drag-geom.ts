@@ -5,8 +5,8 @@ import {
   COLLINEAR_DOT_THRESHOLD,
   distance,
   normalizeDir,
-} from './plan-canvas-junction-core'
-import { findOpeningById, openingWorldCenter, projectPointToWallT } from './plan-canvas-openings'
+} from '@/core/plan/junction-core'
+import { findOpeningById, openingWorldCenter, projectPointToWallT } from '@/core/plan/opening-plan-ops'
 
 export { moveOpeningToWall }
 

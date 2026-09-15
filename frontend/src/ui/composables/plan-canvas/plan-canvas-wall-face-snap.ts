@@ -5,9 +5,9 @@ import {
 } from '@/core/plan/offset-dimension-line'
 import type { FloorDimension, Point2D, Wall } from '@/core/plan/types'
 import { snapPointToOuterWallFaces } from '@/core/plan/wall-outer-face'
-import { WALL_AXIS_EPS_CM } from './plan-canvas-junction-core'
-import { closestPointInRadius, snapDrawWallEndpoint } from './plan-canvas-junction-snap'
-import { resolveWallExtents } from './plan-canvas-wall-polygons'
+import { WALL_AXIS_EPS_CM } from '@/core/plan/junction-core'
+import { closestPointInRadius, snapDrawWallEndpoint } from '@/core/plan/junction-snap'
+import { resolveWallExtents } from '@/core/plan/wall-render-geometry'
 
 /** Soft snap naar lange binnen-/buitenfaces (cm); Ctrl/Cmd schakelt uit. */
 export const WALL_FACE_SNAP_CM = 15

@@ -9,12 +9,12 @@ import { filterManualDimensions, readPlanSlices } from '@/core/plan/plan-slices'
 import { readDimensionSettings } from '@/core/plan/plan-dimension-settings'
 import type { DimensionVis } from '@/core/plan/plan-dimension-vis'
 import { bakeSliceDimensions } from '@/core/plan/slice-dimension-lines'
-import { junctionIdsForWall, type WallEndRef } from '@/ui/components/plan-canvas-junctions'
+import { junctionIdsForWall, type WallEndRef } from '@/core/plan/junctions'
+import { buildWallOutlinePolylines } from '@/core/plan/wall-outline'
 import {
-  buildWallOutlinePolylines,
   buildWallRenderGeometry,
   wallFillComponentsToPathData,
-} from '@/ui/components/plan-canvas-wall-polygons'
+} from '@/core/plan/wall-render-geometry'
 import { loadImage } from '@/platform/image'
 import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import { layoutTransform } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'

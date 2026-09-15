@@ -1,10 +1,19 @@
 import type { Ref } from 'vue'
 import type { FloorPlan, Point2D } from '@/core/plan/types'
-import type { ElevationBovenlichtDefaults, FacadeElevation } from '@/core/plan/facade-elevation'
+import type {
+  ElevationBovenlichtDefaults,
+  ElevationRect,
+  ElevationWallRect,
+  FacadeElevation,
+} from '@/core/plan/facade-elevation'
+import type { ElevationSnapGuide } from '@/core/plan/elevation-opening-edit'
+import type { DoorAddSubtype, WindowAddSubtype } from '@/core/plan/opening-add-presets'
 import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 
-export type { ElevTool } from './elevation-tool'
+import type { ElevTool } from './elevation-tool'
+
+export type { ElevTool }
 
 export type ElevSettings =
   | { kind: 'opening'; id: string; mode: 'quick' | 'edit' }
@@ -50,4 +59,42 @@ export interface ElevationInteractionDeps {
   underlayMoveMode: Ref<boolean>
   useTouchNav: Ref<boolean>
   floorBovenlichtDefaults: (floorIndex: number) => ElevationBovenlichtDefaults
+}
+
+export interface ElevationSelectEditOptions {
+  props: ElevationInteractionProps
+  elevation: Ref<FacadeElevation | null>
+  clientToCm: ElevationInteractionDeps['clientToCm']
+  pointerCm: ElevationInteractionDeps['pointerCm']
+  canvasLocked: Ref<boolean>
+  activeTool: Ref<ElevTool>
+  elevSettingsMod: Ref<boolean>
+  snapGuide: Ref<ElevationSnapGuide | null>
+  floorBovenlichtDefaults: (floorIndex: number) => ElevationBovenlichtDefaults
+  pushUndo: () => void
+  commitPlan: (next: FloorPlan) => void
+  addDoorSubtype: Ref<DoorAddSubtype>
+  addDoorWidthCm: Ref<number>
+  addDoorHeightCm: Ref<number>
+  addDoorSillZCm: Ref<number>
+  addWindowSubtype: Ref<WindowAddSubtype>
+  addWindowWidthCm: Ref<number>
+  addWindowSillZCm: Ref<number>
+  addWindowHeightCm: Ref<number>
+  preciseIntent: (event: { shiftKey?: boolean }) => boolean
+  beginPreciseOpening: (
+    openingId: string,
+    cm: Point2D,
+    rect: ElevationRect,
+    wallId: string,
+    floorIndex: number,
+  ) => void
+  beginPreciseRidge: (wall: ElevationWallRect, cm: Point2D) => void
+  beginPreciseJunction: (
+    junction: { id: string; heightCm: number; floorIndex: number; ridge?: boolean },
+    refs: Array<{ wallId: string; end: 'a' | 'b' }>,
+    cm: Point2D,
+  ) => void
+  hasPreciseDraft: () => boolean
+  commitPreciseDraft: () => boolean
 }

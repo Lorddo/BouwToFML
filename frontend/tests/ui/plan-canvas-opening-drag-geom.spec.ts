@@ -8,8 +8,8 @@ import {
   openingGrabOffsetCm,
   projectPointToWallTUnclamped,
   resolveOpeningDragTarget,
-} from '@/ui/components/plan-canvas-opening-drag-geom'
-import { findOpeningById, updateOpeningById } from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-drag-geom'
+import { findOpeningById, updateOpeningById } from '@/core/plan/opening-plan-ops'
 import type { Wall } from '@/core/plan/types'
 
 function doorOnWall(params: {

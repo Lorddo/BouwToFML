@@ -5,7 +5,7 @@ import { importFmlV3 } from '@/core/fml/importFmlV3'
 import {
   buildWallRenderGeometry,
   maxFillVertexDistanceFromWallEnds,
-} from '@/ui/components/plan-canvas-wall-polygons'
+} from '@/core/plan/wall-render-geometry'
 
 const KINDERDIJK = resolve(
   __dirname,

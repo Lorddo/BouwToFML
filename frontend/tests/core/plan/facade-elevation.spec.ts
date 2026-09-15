@@ -69,7 +69,6 @@ import {
   updatePlanOpening,
 } from '@/core/plan/elevation-openings'
 import { flushDormerEdgeWallOutward } from '@/core/plan/dormer-edge-walls'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import { type FloorPlan,
   type Wall } from '@/core/plan/types'
 import { makeEndpoint3D } from '@/core/plan/wall-endpoint-height'
@@ -205,7 +204,7 @@ describe('facade-elevation', () => {
 
   it('split + junction-hoogte maakt een knik in het aanzicht', () => {
     const plan = twoFloorPlan()
-    const split = splitPlanWallAtT(plan, 'front-bg', 0.5, splitWallAtT)
+    const split = splitPlanWallAtT(plan, 'front-bg', 0.5)
     expect(split).not.toBeNull()
     const group = listFacadeGroups(split!.plan).find((item) => item.id === 'G1')
     expect(group?.wallGuids).toEqual(expect.arrayContaining(['front-bg', split!.secondWallId]))

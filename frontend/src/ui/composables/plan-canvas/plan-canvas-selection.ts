@@ -9,7 +9,7 @@ import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
-} from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 import type { PlanToolId } from '@/ui/components/canvas/planToolbeltItems'
 import type { Point2D } from '@/core/plan/types'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'

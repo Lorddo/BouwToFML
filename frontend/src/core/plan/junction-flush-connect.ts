@@ -31,10 +31,10 @@ import {
   pruneCollapsedWalls,
   stableJunctionId,
   type JunctionNode,
-} from './plan-canvas-junction-core'
-import { openingWorldCenter, reprojectWallOpenings } from './plan-canvas-openings'
-import { setWallsBalance } from './plan-canvas-wall-edit'
-import { moveJunctionWithWallJoins } from './plan-canvas-wall-slide'
+} from './junction-core'
+import { openingWorldCenter, reprojectWallOpenings } from '@/core/plan/opening-plan-ops'
+import { setWallsBalance } from './wall-edit'
+import { moveJunctionWithWallJoins } from './wall-slide'
 
 const COLLINEAR_EPS_DEG = 12
 /** Extra slack op Δt/2 voor parallelle face-flush. */

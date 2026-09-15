@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Wall } from '@/core/plan/types'
-import { buildJunctions } from '@/ui/components/plan-canvas-junction-core'
+import { buildJunctions } from '@/core/plan/junction-core'
 import {
   CORNER_AXIS_EPS_CM,
   CORNER_MARKER_PAD_CM,

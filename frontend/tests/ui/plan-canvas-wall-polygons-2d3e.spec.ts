@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildWallRenderGeometry,
   pointInFillComponents,
-} from '@/ui/components/plan-canvas-wall-polygons'
+} from '@/core/plan/wall-render-geometry'
 
 describe('2D_3E wall union (real FML)', () => {
   it('unions all walls without clipper ring errors', () => {

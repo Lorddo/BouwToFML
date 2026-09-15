@@ -18,8 +18,8 @@ import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/plan/extraction-to-plan-types'
-import { resolveHingeAtStart, resolveSwingSign } from '@/ui/components/plan-canvas-doors'
-import { resolveOpeningHeight, resolveWindowSillZ } from '@/ui/components/plan-canvas-openings'
+import { resolveHingeAtStart, resolveSwingSign } from '@/ui/composables/plan-canvas/plan-canvas-doors'
+import { resolveOpeningHeight, resolveWindowSillZ } from '@/core/plan/opening-plan-ops'
 
 export type OpeningDraftType = OpeningType | 'mixed'
 

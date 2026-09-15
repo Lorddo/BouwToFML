@@ -3,7 +3,7 @@ import type { FloorArea, Point2D, Wall } from '@/core/plan/types'
 import {
   resolveWallSlidePointerDelta,
   snapWallSlideDeltaToJunctions,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import { cloneAreasSnapshot } from './plan-canvas-area-live'

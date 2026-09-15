@@ -8,7 +8,7 @@ import {
 } from '@/core/plan/roomtype-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { Point2D } from '@/core/plan/types'
-import { snapDrawWallEndpoint } from '@/ui/components/plan-canvas-junction-snap'
+import { snapDrawWallEndpoint } from '@/core/plan/junction-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import type { RenderJunction } from './plan-canvas-render-types'

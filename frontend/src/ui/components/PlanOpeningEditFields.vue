@@ -8,7 +8,7 @@ import {
   MIN_BOVENLICHT_HEIGHT_CM,
 } from '@/core/plan/bovenlicht'
 import type { OpeningType } from '@/core/plan/types'
-import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/ui/components/plan-canvas-openings'
+import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/core/plan/opening-plan-ops'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'

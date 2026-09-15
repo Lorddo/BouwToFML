@@ -1,7 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import { bindFloorWallsToRoofs, listFloorsWithRoofPlanes } from '@/core/plan/bind-walls-to-roofs'
 import type { FloorPlan } from '@/core/plan/types'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import { promptPlanChromeChoice } from '@/ui/composables/plan-chrome-dialog'
 
 /** De drie canvas-methodes die het binden nodig heeft. */
@@ -131,7 +130,6 @@ export function useEditorBindRoof(deps: {
     deps.canvas.value?.flushPendingFieldCommits?.()
     const result = bindFloorWallsToRoofs(deps.plan.value, floorIndex, {
       splitCreases: true,
-      splitWalls: splitWallAtT,
     })
     setBindRoofHint(result)
     if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) return

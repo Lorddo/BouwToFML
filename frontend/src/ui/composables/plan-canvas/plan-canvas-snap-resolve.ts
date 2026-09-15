@@ -16,12 +16,12 @@ import {
   snapToPolygonGeometry,
   closedRingSegments,
   openPolylineSegments,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 import {
   dakRoofRingsFromFloor,
   resolveDakSurfacePoint,
   resolveRidgeDrawPoint,
-} from '@/ui/components/plan-canvas-dak-draw-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-dak-draw-snap'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { HitTestApi } from './plan-canvas-hit-test-api'

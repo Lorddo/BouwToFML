@@ -21,8 +21,8 @@ import {
   withWallElevationShift,
   withWallUniformBottomZ,
 } from '@/core/plan/wall-endpoint-height'
-import { cloneWalls, splitWallAtPoint } from '@/ui/components/plan-canvas-junction-core'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
+import { cloneWalls, splitWallAtPoint } from '@/core/plan/junction-core'
+import { splitWallAtT } from '@/core/plan/wall-edit'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'id' | 'a' | 'b'>): Wall {
   return {

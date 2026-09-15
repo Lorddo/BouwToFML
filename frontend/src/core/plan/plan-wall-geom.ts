@@ -71,6 +71,38 @@ export function wallBalanceMidOffsetCm(thickness: number, balance?: number): num
   return (plus - minus) / 2
 }
 
+/** Shift an axis point onto the wall body mid-line for the given balance. */
+export function offsetPointByWallBalance(
+  point: Point2D,
+  wallUnit: Point2D,
+  thickness: number,
+  balance?: number,
+): Point2D {
+  const mid = wallBalanceMidOffsetCm(thickness, balance)
+  if (Math.abs(mid) < 1e-9) return point
+  return offsetPoint(point, floorplannerLeftNormal(wallUnit), mid)
+}
+
+/** Flat `[x,y,…]` polyline in cm — same mid-line shift as {@link offsetPointByWallBalance}. */
+export function offsetFlatPointsByWallBalance(
+  points: number[],
+  wallUnit: Point2D,
+  thickness: number,
+  balance?: number,
+): number[] {
+  const mid = wallBalanceMidOffsetCm(thickness, balance)
+  if (Math.abs(mid) < 1e-9 || points.length < 2) return points
+  const n = floorplannerLeftNormal(wallUnit)
+  const ox = n.x * mid
+  const oy = n.y * mid
+  const out = points.slice()
+  for (let i = 0; i + 1 < out.length; i += 2) {
+    out[i] += ox
+    out[i + 1] += oy
+  }
+  return out
+}
+
 function lerpPoint(a: Point2D, b: Point2D, t: number): Point2D {
   return {
     x: a.x + (b.x - a.x) * t,

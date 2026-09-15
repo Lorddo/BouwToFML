@@ -5,7 +5,7 @@ import {
   fixtureObbHalfAlongNormal,
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-fixture-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
 
 function wall(partial: Partial<Wall> & Pick<Wall, 'a' | 'b' | 'thickness'>): Wall {
   return {

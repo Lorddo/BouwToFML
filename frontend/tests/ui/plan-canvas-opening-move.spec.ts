@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
 import type { Wall } from '@/core/plan/types'
 import { buildLocalOpeningId } from '@/core/plan/opening-ids'
-import { slideOpeningAlongWall } from '@/ui/components/plan-canvas-opening-drag-geom'
+import { slideOpeningAlongWall } from '@/core/plan/opening-drag-geom'
 import { usePlanCanvasOpeningMove } from '@/ui/composables/plan-canvas/usePlanCanvasOpeningMove'
 
 function mouseAt(x: number, y: number): MouseEvent {

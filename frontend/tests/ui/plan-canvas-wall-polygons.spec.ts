@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { wallJoinFaceCorner } from '@/core/plan/plan-wall-geom'
+import { offsetPointByWallBalance, wallBalanceMidOffsetCm } from '@/core/plan/plan-wall-geom'
 import {
   buildWallRenderGeometry,
-  offsetPointByWallBalance,
-  pointInFillComponents,
   maxFillVertexDistanceFromWallEnds,
+  pointInFillComponents,
   resolveWallExtents,
-  wallBalanceMidOffsetCm,
-} from '@/ui/components/plan-canvas-wall-polygons'
+} from '@/core/plan/wall-render-geometry'
 
 function hasVertex(
   points: { x: number; y: number }[],

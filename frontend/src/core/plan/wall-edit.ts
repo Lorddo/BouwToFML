@@ -17,8 +17,8 @@ import {
   stableJunctionId,
   type SplitWallResult,
   type WallEndRef,
-} from './plan-canvas-junction-core'
-import { redistributeOpeningsAcrossSplit } from './plan-canvas-openings'
+} from './junction-core'
+import { redistributeOpeningsAcrossSplit } from '@/core/plan/opening-plan-ops'
 
 /** FML-fractie (0.5 = 50%). Buiten 0–1 toegestaan; rail ±1000%. */
 export function clampBalance(balance: number): number {

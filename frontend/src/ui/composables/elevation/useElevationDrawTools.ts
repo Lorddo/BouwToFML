@@ -36,10 +36,9 @@ import {
   clampOpeningSillZ,
   clampOpeningWidth,
   clampWindowOpeningHeight,
-} from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 import { type DoorAddSubtype, type WindowAddSubtype } from '@/core/plan/opening-add-presets'
 import { buildOpeningFromPreset } from '@/core/plan/opening-from-preset'
-import { splitWallAtT } from '@/ui/components/plan-canvas-wall-edit'
 import type { ElevTool } from './elevation-tool'
 import type { ElevationInteractionProps } from './elevation-interaction-types'
 
@@ -274,7 +273,7 @@ export function useElevationDrawTools(options: {
   function commitSplitDraft(): void {
     const draft = splitDraft.value
     if (!draft) return
-    const result = splitPlanWallAtT(props.plan, draft.wallId, draft.t, splitWallAtT)
+    const result = splitPlanWallAtT(props.plan, draft.wallId, draft.t)
     if (!result) return
     pushUndo()
     commitPlan(result.plan)

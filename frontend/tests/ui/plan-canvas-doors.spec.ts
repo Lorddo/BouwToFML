@@ -8,7 +8,7 @@ import {
   resolveHingeAtStart,
   resolveSwingSign,
   resolveSwingSpanWithinOpening,
-} from '@/ui/components/plan-canvas-doors'
+} from '@/ui/composables/plan-canvas/plan-canvas-doors'
 
 function doorOpening(partial: Partial<Opening> & Pick<Opening, 't' | 'width'>): Opening {
   return {

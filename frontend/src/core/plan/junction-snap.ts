@@ -8,8 +8,8 @@ import {
   refKey,
   type JunctionNode,
   type WallEndRef,
-} from './plan-canvas-junction-core'
-import { findWallAtPoint } from './plan-canvas-wall-draw-geom'
+} from './junction-core'
+import { findWallAtPoint } from './wall-draw-geom'
 
 function isWallSegmentHorizontal(wall: { a: Point2D; b: Point2D }): boolean {
   const dx = Math.abs(wall.b.x - wall.a.x)

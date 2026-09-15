@@ -4,7 +4,7 @@ import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-fixture-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 

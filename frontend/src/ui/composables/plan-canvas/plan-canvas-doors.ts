@@ -13,7 +13,7 @@ import {
   type PlanGlyph,
 } from '@/core/plan/opening-plan-symbol'
 import { clamp01 } from '@/core/plan/extraction-to-plan-geom'
-import { buildDoorOpeningId } from '@/ui/components/plan-canvas-openings'
+import { buildDoorOpeningId } from '@/core/plan/opening-plan-ops'
 
 export { buildMirrored, resolveHingeAtStart, resolveSwingSign }
 export type { DoorSymbol, PlanGlyph }

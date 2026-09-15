@@ -4,7 +4,7 @@ import {
   type JunctionNode,
   type WallEndRef,
   stableJunctionId,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { RenderJunction } from './plan-canvas-render-types'

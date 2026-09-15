@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { Point2D, Wall } from '@/core/plan/types'
-import { projectPointToWallTUnclamped } from '@/ui/components/plan-canvas-opening-drag-geom'
+import { projectPointToWallTUnclamped } from '@/core/plan/opening-drag-geom'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import {

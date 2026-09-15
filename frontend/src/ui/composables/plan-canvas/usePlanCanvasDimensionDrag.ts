@@ -11,7 +11,7 @@ import type { FloorDimension, Point2D } from '@/core/plan/types'
 import {
   MANUAL_DIM_FACE_SNAP_CM,
   snapDrawPointWithManualDimensions,
-} from '@/ui/components/plan-canvas-wall-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 

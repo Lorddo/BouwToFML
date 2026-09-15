@@ -6,7 +6,7 @@ import {
 } from '@/core/plan/wall-endpoint-height'
 import type { RenderModel, RenderWall } from './plan-canvas-render-types'
 import { computeOpeningDraftState } from './plan-canvas-opening-draft'
-import type { WallEndRef } from '@/ui/components/plan-canvas-junction-core'
+import type { WallEndRef } from '@/core/plan/junction-core'
 
 export function buildSelectedWallPanel(
   model: RenderModel,

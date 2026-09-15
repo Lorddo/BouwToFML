@@ -55,7 +55,10 @@ import {
 } from '@/ui/composables/settings/user-settings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { PlanCanvasHostProps } from '@/ui/composables/plan-canvas/plan-canvas-host-props'
-import { resolvePlanCapabilities } from '@/ui/composables/plan-canvas/plan-capabilities'
+import {
+  resolveHostFlags,
+  resolvePlanCapabilities,
+} from '@/ui/composables/plan-canvas/plan-capabilities'
 import { tGlobal } from '@/ui/i18n'
 import {
   clampLabelFontSize,
@@ -96,51 +99,27 @@ const props = withDefaults(defineProps<PlanCanvasHostProps>(), {
   defaultWindowHeightCm: undefined,
   defaultWindowSillZCm: undefined,
   setPlanNulpuntImageCm: undefined,
-  kind: undefined,
-  areaSurfaceEditEnabled: undefined,
-  annotationEditEnabled: undefined,
-  inspectMode: undefined,
   inspectColors: undefined,
   labelsVisible: true,
   rescaleMode: false,
   rescaleState: null,
-  touchEditor: undefined,
   canvasFullscreen: false,
   dimensionVis: undefined,
   dakMode: false,
 })
 
-const capabilities = computed(() =>
-  props.kind != null ? resolvePlanCapabilities(props.kind) : null,
-)
-
-/** Explicit prop wins; else kind preset; else false. */
-function flagFromPropOrKind(prop: boolean | undefined, fromKind: boolean | undefined): boolean {
-  if (prop != null) return prop === true
-  if (fromKind != null) return fromKind
-  return false
-}
-
-const areaSurfaceEditEnabled = computed(
-  () =>
-    props.dakMode === true ||
-    flagFromPropOrKind(props.areaSurfaceEditEnabled, capabilities.value?.areaSurfaceEdit),
-)
-const annotationEditEnabled = computed(() =>
-  flagFromPropOrKind(props.annotationEditEnabled, capabilities.value?.annotationEdit),
-)
-const inspectMode = computed(() =>
-  flagFromPropOrKind(props.inspectMode, capabilities.value?.inspect),
-)
-const touchEditor = computed(() =>
-  flagFromPropOrKind(props.touchEditor, capabilities.value?.touchChrome),
-)
+const capabilities = computed(() => resolvePlanCapabilities(props.kind))
+const hostFlags = computed(() => resolveHostFlags(props.kind, props.dakMode === true))
+const areaSurfaceEditEnabled = computed(() => hostFlags.value.areaSurfaceEditEnabled)
+const annotationEditEnabled = computed(() => hostFlags.value.annotationEditEnabled)
+const inspectMode = computed(() => hostFlags.value.inspectMode)
+const touchEditor = computed(() => hostFlags.value.touchEditor)
 const viewportChrome = computed(
-  () => capabilities.value?.viewportChrome === true || touchEditor.value,
+  () => capabilities.value.viewportChrome === true || touchEditor.value,
 )
 const includeSurfaceTool = computed(() => areaSurfaceEditEnabled.value)
 const includeRoofTool = computed(
-  () => props.dakMode !== true && capabilities.value?.tools.draw_roof === true,
+  () => props.dakMode !== true && capabilities.value.tools.draw_roof === true,
 )
 /** Editor + inspect: overlay-knop. Converter stap 4 niet. */
 const showRoofOverlayChrome = computed(
@@ -148,9 +127,7 @@ const showRoofOverlayChrome = computed(
 )
 const includeAnnotationTools = computed(() => annotationEditEnabled.value)
 const includeFixtureTool = computed(
-  () =>
-    touchEditor.value &&
-    (capabilities.value == null || capabilities.value.fixtureLibrary !== false),
+  () => touchEditor.value && capabilities.value.fixtureLibrary !== false,
 )
 
 const emit = defineEmits<{
@@ -785,11 +762,11 @@ watch(slicerEditMode, (edit) => {
 })
 
 /** Workspace-detectie: alleen Stempel (geen gevel-UI). */
-const facadeGroupsStampPreset = computed(() => capabilities.value?.settingsVariant === 'workspace')
+const facadeGroupsStampPreset = computed(() => capabilities.value.settingsVariant === 'workspace')
 /** Editor + detectie: Stempel-checkbox. Inspect: uit. */
 const stampGroupUiEnabled = computed(() => {
   const caps = capabilities.value
-  if (!caps?.facadeGroups) return false
+  if (!caps.facadeGroups) return false
   return caps.settingsVariant === 'viewer' || caps.settingsVariant === 'workspace'
 })
 /** Editor: gevelgroepen zonder stamp. Detectie: gevel-UI verborgen. */

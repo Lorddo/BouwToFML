@@ -5,9 +5,11 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-09-15 (bekende 9 rood groen; e2e kromme-mijdrecht deuren)
+Laatste update: 2026-09-15 (17 geometrie-helpers uit ui/components)
 
 ## Huidige focus
+
+**Geometrie-helpers verhuisd (KLAAR 2026-09-15)** — 17 `ui/components/plan-canvas-*.ts` weg. Domein: outline, junction-familie, wall-edit/slide/draw, opening-drag, balance-offset. Plan-only: doors / dak-draw-snap / fixture-face-snap / wall-face-snap in `composables/plan-canvas`. Geen stubs. `splitPlanWallAtT` importeert `splitWallAtT` zelf. Typecheck 0, `tests/ui` 933 groen, import-gate `core/plan` ⊄ `ui/`.
 
 **Bekende 9 rood (GEFIXT 2026-09-15)** — Vier clusters, geen campagne-schuld. (1) `test-doors` pad `frontend/examples/FML(test)` → repo-root `examples/FML(test)` (inhoud daarna groen). (2) nulpunt-bake-harnas `mouseup` → `pointerup`. (3) stair `strokeWidth` expect `< 0.8` → `STAIR_STROKE_W` (1,5). (4) `rebasePlanToItemRefid` schoof `drawing` dubbel (`translateFloorPlan` deed het al). `tests/ui` 912 groen.
 
@@ -31,7 +33,7 @@ Laatste update: 2026-09-15 (bekende 9 rood groen; e2e kromme-mijdrecht deuren)
 
 **Fase 6 audits: nul echte bevindingen, twéé fouten in de meetlat** — Shadowing 0, strings 0, i18n 0 botsingen / 738 sleutels compleet, mojibake 0. Maar de shadowing-audit deed eerst **stilzwijgend niets**: hij vergeleek twee git-refs terwijl het werk ongecommit was («0 gewijzigde bestanden»), en sloeg daarna alle 104 verhuisde bestanden over omdat het nieuwe pad niet in de oude ref bestaat — juist de bestanden met hernoemde identifiers. Nu volgt hij renames via `git diff --name-status -M` en méldt hij hoeveel hij oversloeg. Tweede fout: bij een rename met streepjes zit de nieuwe naam ín de oude (`fml-wall-thickness-limits` bevat `wall-thickness-limits`, want `-` is geen woordteken), dus élke zo'n rename meldde 29× een botsing met zichzelf; hij knipt de oude naam nu eerst weg.
 
-**Import-gate strakker + geometrie-verhuizing (KLAAR)** — `core/plg` raakt `core/fml` niet aan. Spec [`import-boundaries.spec.ts`](../../frontend/tests/ui/import-boundaries.spec.ts), 17 tests. Domein importeert zijn adapter niet; detectie-brug mag `cv/` (5 randen); **`core/plan` reikt niet meer naar `ui/`** (`opening-plan-ops` + `wall-render-geometry` wonen in het domein, UI-stubs re-exporteren). Gate stap 2: alleen Interaction importeert de selectie-factory. Map-gate: `elevation/` ⊄ `plan-canvas/` ⊄ `elevation/`; `canvas-kernel/` importeert geen van beide.
+**Import-gate strakker + geometrie-verhuizing (KLAAR)** — `core/plg` raakt `core/fml` niet aan. Spec [`import-boundaries.spec.ts`](../../frontend/tests/ui/import-boundaries.spec.ts), 17 tests. Domein importeert zijn adapter niet; detectie-brug mag `cv/` (5 randen); **`core/plan` reikt niet meer naar `ui/`** (outline / junction / wall-edit / opening-drag wonen in het domein; geen UI-stubs). Gate stap 2: alleen Interaction importeert de selectie-factory. Map-gate: `elevation/` ⊄ `plan-canvas/` ⊄ `elevation/`; `canvas-kernel/` importeert geen van beide.
 
 **CSS-klassen-batch (KLAAR)** — 146 vervangingen in 11 bestanden (`scripts/rename-css-classes.mjs`): 34 basisnamen `fml-*` → `plan-*`, modifiers (`--h`/`--v`/`--preview`) volgen automatisch want `-` is geen woordteken. `git mv fml-panel-fields.css → plan-panel-fields.css`. **Het gevreesde risico bestond niet:** geen enkele JS-regel leest een `fml-`klassenaam (geen `classList`, geen `closest`, geen gesture-ignore-lijst) — dat eerst geverifieerd, daarna gesweept. **De ruwe telling (57 klassen / 24 bestanden) was te hoog**: die mengde klassen, importpaden en kebab-props. `scripts/classify-fml-tokens.mjs` bepaalt per token wát het is; vijf tokens leken klasse en zijn het niet (`fml-ref-id`/`fml-text` = groep A-props, `fml-band-*` = C1-props, `fml-export` = échte `.fml`-bestandsnaam, `fml-preview` = Vue `:key`, en `fml-generate`/`fml-settings` = substring-artefact van `workspace-fml-generate` / `bouwtofml-settings.json`). **Meetlat vóór de wijziging gebouwd**, niet erna: `scripts/check-css-class-pairing.mjs` vergelijkt gebruikte tegen gedefinieerde klassen — 104/101 met 5 wees-gebruikt + 2 wees-gedefinieerd, ná de rename exact dezelfde zeven met `plan-`. Die meetlat had zelf eerst een fout (`_` niet in de tekenklasse → 51 valse BEM-wezen); een check die te veel meldt is even nutteloos als een die te weinig meldt. Typecheck 0, 995 tests met de bekende 7 rood, knip gelijk.
 
@@ -218,6 +220,8 @@ Laatste update: 2026-09-15 (bekende 9 rood groen; e2e kromme-mijdrecht deuren)
 **Eenheden fase 2 klaar** — alle user-facing lengtes via `ScaleLengthInput` + `scaleInputUnit`; FML `useMetric` ← `unitSystem`. Unit-switch herschrijft geen cm.
 
 ## Wat WERKT
+
+**Geometrie-helpers:** geen `ui/components/plan-canvas-*.ts` meer. Elevation leest openings/split uit `@/core/plan`. Barrel `@/core/plan/junctions`. `tests/ui` 933 groen.
 
 **Aanzicht SelectEdit-split:** selectie-lane + opening-sleep + structuur-sleep + commits; Precise blijft `applyOpeningRect`. 21 karakteriseringstests. `tests/ui` 933 groen.
 
@@ -420,6 +424,7 @@ Laatste update: 2026-09-15 (bekende 9 rood groen; e2e kromme-mijdrecht deuren)
 
 ## Recente besluiten
 
+- **2026-09-15** — 17 geometrie-helpers uit `ui/components`: domein naar `core/plan`, plan-only snap/glyphs naar `composables/plan-canvas`. Geen blijvende stubs. `splitPlanWallAtT` zonder injectie.
 - **2026-09-15** — E2E pin’t ruwe L12-deuren (`mergeDoubleDoors: false`). X-10 twin→double blijft Settings. Openings-snapshots van 5 fixtures ververst.
 - **2026-09-15** — PlanCanvas-host: alleen `kind` zet het preset. Vier legacy-booleans weg; `dakMode` blijft view-as voor area. Productgate en detection-preset blijven gescheiden (comment: bij aanzetten beide).
 - **2026-09-15** — Detectie-banden: min = max(kleinste×1,2, grootste×0,25), max = grootste×0,9. Catalogus (tot 8) is FML-waarheid; banden alleen CV-gate. Stap-4: 2e kolom naast diktes, geen uitleg.
@@ -429,7 +434,7 @@ Laatste update: 2026-09-15 (bekende 9 rood groen; e2e kromme-mijdrecht deuren)
 - **2026-09-14** — Eén kaart-module (`phase6-name-map.mjs`) voor de rename-run én de na-audits. Drie hand-onderhouden kopieën lopen uiteen, en dan mist de audit precies de botsing waarvoor hij bestaat.
 - **2026-09-14** — Elke rename-regel krijgt een teller. Nul treffers = naam verkeerd gegokt, en dat wil je zien in plaats van stil missen.
 - **2026-09-14** — Een audit die «0 gewijzigde bestanden» of «overgeslagen» meldt is niet groen maar blind. Rename-detectie (`git diff -M`) is verplicht zodra de batch bestanden verplaatst, en het aantal overgeslagen bestanden hoort in de uitvoer.
-- **2026-09-14** — E1-gate: `core/plg` importeert `core/fml` niet, type noch value. De type-only-uitzondering bestond alleen omdat het domein in `core/fml/types` woonde; sinds fase 6 is die dood. `core/plan` → `ui/` heeft een **bevroren allowlist** van 4 randen (geometrie-helpers), geen nul — vastzetten wat er is, laten verdwijnen bij de verhuizing.
+- **2026-09-14** — E1-gate: `core/plg` importeert `core/fml` niet, type noch value. De type-only-uitzondering bestond alleen omdat het domein in `core/fml/types` woonde; sinds fase 6 is die dood. `core/plan` → `ui/` is sindsdien **nul** (helpers verhuisd 2026-09-15).
 - **2026-09-14** — «Niet opgeslagen»-melding bij refresh blijft ongewijzigd: de conditie (`imageSrc` gevuld) is grof, maar een refresh verliest écht stap-3-werk omdat `detectionExact` niet wordt bewaard. Geen dirty-vlag introduceren.
 - **2026-09-14** — Reset-onderscheid vastgelegd: `resetScaleFull` (nieuw project / nieuwe sessie) zet óók de getypte mm op fabriek; `resetScaleUi` (nieuwe onderlegger, zelfde project) laat die staan. Reden: de workspace-composable blijft gemount, dus «Nieuw» wist anders alleen de project-state en niet de losse refs.
 - **2026-09-14** — Een mechanische rename vraagt twee controles die de typecheck niet dekt: landt de nieuwe naam op een naam die al bestaat (shadowing in geneste scope), en landt hij binnen een string-literal (storage-sleutels, i18n-paden, klassen). De editor-gate-legacy-sleutel bewees de tweede. Scripts: `audit-rename-shadowing.mjs`, `audit-rename-strings.mjs`, `check-i18n-keys.mjs`.

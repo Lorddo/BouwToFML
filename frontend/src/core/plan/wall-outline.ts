@@ -17,18 +17,18 @@ import {
   scale,
   toClippingRing,
   toUnionGeom,
-} from '@/ui/components/plan-canvas-wall-fill'
+} from '@/core/plan/wall-render-geometry'
 import type {
   WallFillComponent,
   WallOutlineOpeningInput,
   WallOutlinePolyline,
   WallPolygonInput,
-} from '@/ui/components/plan-canvas-wall-polygons-types'
+} from '@/core/plan/wall-render-types'
 
 export type {
   WallOutlineOpeningInput,
   WallOutlinePolyline,
-} from '@/ui/components/plan-canvas-wall-polygons-types'
+} from '@/core/plan/wall-render-types'
 
 /** Midpoint of an edge within this of a sill/jamb → drop (opening glyph closes). */
 const OPENING_EDGE_DROP_EPS_CM = 0.15

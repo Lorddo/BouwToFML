@@ -14,7 +14,7 @@ import {
   samePoint,
   splitWallAtPoint,
   type WallPointMatch,
-} from './plan-canvas-junction-core'
+} from './junction-core'
 
 function hasSegmentBetween(
   walls: Wall[],

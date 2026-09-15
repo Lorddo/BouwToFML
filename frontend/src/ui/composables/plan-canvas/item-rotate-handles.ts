@@ -2,8 +2,8 @@ import type { Point2D, Wall } from '@/core/plan/types'
 import {
   fixtureObbHalfAlongNormal,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-fixture-face-snap'
-import { wallFaceSegments } from '@/ui/components/plan-canvas-wall-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
+import { wallFaceSegments } from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
 import { itemLocalToWorld, worldToItemLocal } from './item-resize-handles'
 
 export type ItemRotateCorner = 'ne' | 'se' | 'sw' | 'nw'

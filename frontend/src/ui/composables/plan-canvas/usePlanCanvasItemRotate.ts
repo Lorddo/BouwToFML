@@ -3,7 +3,7 @@ import type { FloorItem, Point2D } from '@/core/plan/types'
 import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
-} from '@/ui/components/plan-canvas-fixture-face-snap'
+} from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
 import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import {
   hitItemRotateHandleAtCm,

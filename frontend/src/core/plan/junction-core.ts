@@ -7,7 +7,7 @@ import {
   openingWorldCenter,
   redistributeOpeningsAcrossSplit,
   reprojectWallOpenings,
-} from './plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 
 const JUNCTION_SNAP_CM = 2
 const JUNCTION_MERGE_CM = 3

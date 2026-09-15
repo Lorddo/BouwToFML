@@ -54,6 +54,8 @@ export const PLAN_ORIENT_CONTROLS_VISIBLE = false
  * Area/surface taggen + draw_surface in de product-workspace (stap 4).
  * Areas blijven auto-genereren/exporteren; Ctrl+klik + surface-tool
  * uit tot klant meerwerk goedkeurt. Losse FML-viewer houdt volle edit (default aan).
+ * Bij aanzetten ook `PLAN_CAPABILITIES_DETECTION.areaSurfaceEdit` — geen import
+ * workspace → plan-canvas.
  */
 export const PLAN_AREA_SURFACE_EDIT_VISIBLE = false
 

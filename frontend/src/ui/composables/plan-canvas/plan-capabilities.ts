@@ -112,8 +112,10 @@ export const PLAN_CAPABILITIES_INSPECT: PlanCapabilities = Object.freeze({
 
 /**
  * Workspace stap-4 FML result. Matches product gates:
- * `PLAN_AREA_SURFACE_EDIT_VISIBLE=false`, no fixture/annotation tools, no touch chrome.
- * Same canvas top chrome as editor/inspect (topbar, no inline hint).
+ * `PLAN_AREA_SURFACE_EDIT_VISIBLE=false` (generate/fill-kleur), no fixture/annotation
+ * tools, no touch chrome. Same canvas top chrome as editor/inspect (topbar, no inline hint).
+ * Bij aanzetten van `areaSurfaceEdit` ook `PLAN_AREA_SURFACE_EDIT_VISIBLE` — geen import
+ * workspace → plan-canvas.
  */
 export const PLAN_CAPABILITIES_DETECTION: PlanCapabilities = Object.freeze({
   mutate: true,
@@ -153,4 +155,22 @@ const PRESETS: Record<PlanKind, PlanCapabilities> = {
 
 export function resolvePlanCapabilities(kind: PlanKind): PlanCapabilities {
   return PRESETS[kind]
+}
+
+/** Derived host flags. `dakMode` is view-as and forces area/surface edit. */
+export type PlanHostFlags = {
+  areaSurfaceEditEnabled: boolean
+  annotationEditEnabled: boolean
+  inspectMode: boolean
+  touchEditor: boolean
+}
+
+export function resolveHostFlags(kind: PlanKind, dakMode = false): PlanHostFlags {
+  const caps = resolvePlanCapabilities(kind)
+  return {
+    areaSurfaceEditEnabled: dakMode === true || caps.areaSurfaceEdit,
+    annotationEditEnabled: caps.annotationEdit,
+    inspectMode: caps.inspect,
+    touchEditor: caps.touchChrome,
+  }
 }

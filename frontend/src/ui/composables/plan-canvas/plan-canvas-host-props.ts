@@ -51,23 +51,8 @@ export interface PlanCanvasHostProps {
 
   // ── Capability / mode ──
   setPlanNulpuntImageCm?: (point: { x: number; y: number } | null) => void
-  /**
-   * Capability preset. When set, derives area/annotation/inspect/touch flags.
-   * Prefer this over the legacy boolean props below.
-   */
-  kind?: PlanKind
-  /**
-   * Area/surface Ctrl+klik + draw_surface. Default **false** (product-safe).
-   * Ignored when `kind` is set (use detection/editor preset).
-   */
-  areaSurfaceEditEnabled?: boolean
-  /**
-   * Labels/lijnen plaatsen (Ctrl+klik selecteren). Default **false**.
-   * Ignored when `kind` is set.
-   */
-  annotationEditEnabled?: boolean
-  /** Read-only inspect. Ignored when `kind` is set. */
-  inspectMode?: boolean
+  /** Capability preset — only host ingress for area/annotation/inspect/touch. */
+  kind: PlanKind
   /** FML-id → #RRGGBB statusfill. */
   inspectColors?: Record<string, string>
   /** Kamer-/surface-benaming + FML draw_label. Default true.
@@ -77,8 +62,6 @@ export interface PlanCanvasHostProps {
   /** Workspace: Herschalen-modus (H/V-linialen). Viewer uit. */
   rescaleMode?: boolean
   rescaleState?: HScaleState | null
-  /** Fixture tool + coarse-pointer rail. Ignored when `kind` is set. */
-  touchEditor?: boolean
   /** Viewer: chrome (header/floor-rail) verborgen. */
   canvasFullscreen?: boolean
   /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */

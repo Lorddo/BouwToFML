@@ -20,9 +20,9 @@ import {
   type FacadeGroup,
   type FacadeGroupCreateInput,
 } from '@/core/plan/facade-groups'
-import { setPlanWallsThicknessKeepBalance } from '@/ui/components/plan-canvas-wall-edit'
+import { setPlanWallsThicknessKeepBalance } from '@/core/plan/wall-edit'
 import { regenerateFloorAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
-import { materializeEndpointJoinsAtPoint } from '@/ui/components/plan-canvas-wall-draw-geom'
+import { materializeEndpointJoinsAtPoint } from '@/core/plan/wall-draw-geom'
 
 export interface EditorFacadeStampDeps {
   localPlan: Ref<FloorPlan | null>

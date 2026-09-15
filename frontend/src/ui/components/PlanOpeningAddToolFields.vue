@@ -7,7 +7,7 @@ import {
   type DoorAddSubtype,
   type WindowAddSubtype,
 } from '@/core/plan/opening-add-presets'
-import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/ui/components/plan-canvas-openings'
+import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/core/plan/opening-plan-ops'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { PlanToolId } from './canvas/planToolbeltItems'
 import ScaleLengthInput from './ScaleLengthInput.vue'

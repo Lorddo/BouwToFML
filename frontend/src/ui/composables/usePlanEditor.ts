@@ -43,10 +43,9 @@ import {
   snapPointToWallCenters,
   snapToNearbyEndpointAxes,
   stableJunctionId,
-  splitWallAtT,
   type JunctionNode,
   type WallEndRef,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 import {
   addOpeningToWall,
   buildOpeningId,
@@ -54,11 +53,11 @@ import {
   removeOpeningsById,
   updateOpeningById,
   type OpeningLocation,
-} from '@/ui/components/plan-canvas-openings'
+} from '@/core/plan/opening-plan-ops'
 import {
   applyOpeningDragMove as applyOpeningDragMoveWalls,
   slideOpeningAlongWall as slideOpeningAlongWallGeom,
-} from '@/ui/components/plan-canvas-opening-drag-geom'
+} from '@/core/plan/opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import { cloneAreasSnapshot } from '@/ui/composables/plan-canvas/plan-canvas-area-live'
 import { ensureDefaultFacadeGroups } from '@/core/plan/facade-groups'
@@ -617,7 +616,7 @@ export function usePlanEditor(
       return ridgeRoof.applyRidgeWallSplit(wallId, t)
     }
     if (!localPlan.value) return null
-    const result = splitPlanWallAtT(localPlan.value, wallId, t, splitWallAtT)
+    const result = splitPlanWallAtT(localPlan.value, wallId, t)
     if (!result) return null
     localPlan.value = result.plan
     scheduleAreaRegen()

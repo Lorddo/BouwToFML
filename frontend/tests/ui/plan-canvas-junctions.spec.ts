@@ -42,7 +42,7 @@ import {
   splitWallAtMidpoint,
   splitWallAtT,
   stableJunctionId,
-} from '@/ui/components/plan-canvas-junctions'
+} from '@/core/plan/junctions'
 
 describe('buildJunctions', () => {
   it('merges wall endpoints at the same junction into one node', () => {

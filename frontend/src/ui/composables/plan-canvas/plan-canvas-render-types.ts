@@ -1,7 +1,7 @@
 import type { RenderAreaSideDim } from './plan-canvas-area-side-dims'
 import type { Opening, Wall } from '@/core/plan/types'
 import type { PlanGlyphRole } from '@/core/plan/opening-plan-symbol'
-import type { WallEndRef } from '@/ui/components/plan-canvas-junctions'
+import type { WallEndRef } from '@/core/plan/junctions'
 
 export interface RenderWall {
   id: string

@@ -22,6 +22,7 @@ import {
   removeOpeningsById,
   updateOpeningById,
 } from './opening-plan-ops'
+import { splitWallAtT } from './wall-edit'
 
 export type ElevationOpeningWrite = Partial<
   Pick<
@@ -199,28 +200,18 @@ export function addPlanOpening(
   return { plan: next, openingId }
 }
 
-/** UI-split (junctions/openings) — core importeert geen `plan-canvas-wall-edit`.
- * Callers: inject `splitWallAtT` from UI as `splitWalls` (geom), plan remap via this helper.
- */
-export type SplitWallAtTFn = (
-  walls: Wall[],
-  wallId: string,
-  t: number,
-) => { walls: Wall[]; firstWallId: string; secondWallId: string } | null
-
-/** Plan-level split: wall geom via `splitWalls` + facade-group remap. Prefer over raw UI split for hosts. */
+/** Plan-level split: wall geom via `splitWallAtT` + facade-group remap. */
 export function splitPlanWallAtT(
   plan: FloorPlan,
   wallId: string,
   t: number,
-  splitWalls: SplitWallAtTFn,
 ): { plan: FloorPlan; firstWallId: string; secondWallId: string; floorIndex: number } | null {
   let floorIndex = -1
   let firstWallId = ''
   let secondWallId = ''
   const next = mapPlanWalls(plan, (walls, index) => {
     if (firstWallId) return walls
-    const split = splitWalls(walls, wallId, t)
+    const split = splitWallAtT(walls, wallId, t)
     if (!split) return walls
     floorIndex = index
     firstWallId = split.firstWallId

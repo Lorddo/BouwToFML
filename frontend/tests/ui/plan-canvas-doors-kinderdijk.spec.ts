@@ -3,7 +3,7 @@ import { resolve } from 'path'
 import { describe, expect, it } from 'vitest'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { samplePlanArc, type PlanArcGlyph } from '@/core/plan/opening-plan-symbol'
-import { groupDoorOpeningsOnWall } from '@/ui/components/plan-canvas-doors'
+import { groupDoorOpeningsOnWall } from '@/ui/composables/plan-canvas/plan-canvas-doors'
 
 const KINDERDIJK = resolve(
   __dirname,

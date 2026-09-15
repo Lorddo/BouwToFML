@@ -1,6 +1,6 @@
 import { wallJoinFaceCorner } from '@/core/plan/plan-wall-geom'
 import type { Point2D, Wall } from '@/core/plan/types'
-import { buildJunctions, type JunctionNode } from '@/ui/components/plan-canvas-junction-core'
+import { buildJunctions, type JunctionNode } from '@/core/plan/junction-core'
 import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-mode'
 
 /** Eindpunten op dezelfde H/V-lijn (cm). Strakker dan snap (0,5 / 2). */

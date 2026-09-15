@@ -3,7 +3,7 @@
  * Optioneel eerst knippen op nok/kil én dakvlak-omtrek, daarna binden.
  */
 import { clampOpeningToStory } from './elevation-opening-edit'
-import { splitPlanWallAtT, type SplitWallAtTFn } from './elevation-openings'
+import { splitPlanWallAtT } from './elevation-openings'
 import { isPointSkyExposedOnFloor } from './ridge-floor'
 import { listRidgeWallsOnFloor } from './ridge-walls'
 import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM, isDormerLikeRoof, resolveDormerParent } from './roof-planes'
@@ -22,8 +22,6 @@ export const BIND_MIN_SPLIT_SEGMENT_CM = 4
 export type BindWallsToRoofsOptions = {
   /** Knip muren op nok/kil én dakvlak-omtrek vóór binden (V2). */
   splitCreases?: boolean
-  /** Injecteerbare split (tests / UI); default = geen knip zonder deze fn. */
-  splitWalls?: SplitWallAtTFn
 }
 
 export type BindWallsToRoofsResult = {
@@ -342,7 +340,6 @@ function splitFloorOnCreases(
   plan: FloorPlan,
   floorIndex: number,
   creases: ReadonlyArray<Crease>,
-  splitWalls: SplitWallAtTFn,
 ): { plan: FloorPlan; splits: number } {
   let next = plan
   let splits = 0
@@ -355,7 +352,7 @@ function splitFloorOnCreases(
       if (!(wall.thickness > 1e-6)) continue
       const t = findCreaseSplitT(wall, creases)
       if (t == null) continue
-      const result = splitPlanWallAtT(next, wall.id, t, splitWalls)
+      const result = splitPlanWallAtT(next, wall.id, t)
       if (!result) continue
       next = result.plan
       splits += 1
@@ -560,10 +557,10 @@ export function bindFloorWallsToRoofs(
 
   let working = plan
   let splits = 0
-  if (options?.splitCreases === true && options.splitWalls) {
+  if (options?.splitCreases === true) {
     const creases = collectRoofCreases(surfaces, listRidgeWallsOnFloor(floor))
     if (creases.length > 0) {
-      const splitResult = splitFloorOnCreases(working, floorIndex, creases, options.splitWalls)
+      const splitResult = splitFloorOnCreases(working, floorIndex, creases)
       working = splitResult.plan
       splits = splitResult.splits
     }
