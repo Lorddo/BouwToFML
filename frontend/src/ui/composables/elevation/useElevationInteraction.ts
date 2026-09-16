@@ -11,6 +11,7 @@ import {
   hitElevationOpening,
   hitElevationRoofPlane,
   hitElevationRoofVertex,
+  hitElevationSkylight,
   hitElevationWall,
 } from '@/core/plan/elevation-hit'
 import type { ElevationSnapGuide } from '@/core/plan/elevation-opening-edit'
@@ -290,6 +291,11 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
       select.selectOpening(hit.openingId, 'edit')
       return
     }
+    const skylight = hitElevationSkylight(elev, cm, select.selectedSkylightId.value)
+    if (skylight) {
+      select.selectSkylight(skylight.itemId)
+      return
+    }
     const junction = hitElevationJunction(elev, cm)
     if (junction) {
       select.selectJunction(junction.id)
@@ -425,6 +431,11 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
         select.deleteSelectedOpening()
         return
       }
+      if (select.settingsTarget.value?.kind === 'skylight') {
+        event.preventDefault()
+        select.deleteSelectedSkylight()
+        return
+      }
       if (select.settingsTarget.value?.kind === 'roof') {
         event.preventDefault()
         select.deleteSelectedRoof()
@@ -490,10 +501,15 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     addWindowSillZCm,
     addWindowHeightCm,
     selectedOpeningId: select.selectedOpeningId,
+    selectedSkylightId: select.selectedSkylightId,
     settingsTarget: select.settingsTarget,
     elevSettingsOpen: select.elevSettingsOpen,
     selectedOpening: select.selectedOpening,
     selectedOpeningRect: select.selectedOpeningRect,
+    selectedSkylight: select.selectedSkylight,
+    selectedSkylightElev: select.selectedSkylightElev,
+    skylightHandles: select.skylightHandles,
+    skylightMoveHandle: select.skylightMoveHandle,
     openingHandles: select.openingHandles,
     openingMoveHandle: select.openingMoveHandle,
     selectedRidgeWall: select.selectedRidgeWall,
@@ -536,6 +552,9 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     onContentClick,
     onContentMove,
     onOpeningDown: select.onOpeningDown,
+    onSkylightDown: select.onSkylightDown,
+    onSkylightMoveHandleDown: select.onSkylightMoveHandleDown,
+    onSkylightHandleDown: select.onSkylightHandleDown,
     onMoveHandleDown: select.onMoveHandleDown,
     onHandleDown: select.onHandleDown,
     onJunctionDown: select.onJunctionDown,
@@ -554,6 +573,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     commitOpeningSubtype: select.commitOpeningSubtype,
     copySelectedOpening: select.copySelectedOpening,
     deleteSelectedOpening: select.deleteSelectedOpening,
+    deleteSelectedSkylight: select.deleteSelectedSkylight,
     deleteSelectedRidge: select.deleteSelectedRidge,
     deleteSelectedRoof: select.deleteSelectedRoof,
     commitSelectedField: select.commitSelectedField,

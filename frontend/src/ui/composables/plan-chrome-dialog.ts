@@ -195,6 +195,24 @@ export async function promptPlanChromeChoice(
   return typeof result === 'string' && choices.some((row) => row.id === result) ? result : null
 }
 
+export type PlanExportFormat = 'fml' | 'plg'
+
+/** Zelfde FML/PLG-keuze als stap-4 «Project downloaden». Null = geannuleerd. */
+export async function promptPlanExportFormat(): Promise<PlanExportFormat | null> {
+  const picked = await promptPlanChromeChoice({
+    title: tGlobal('result.downloadProjectTitle'),
+    message: tGlobal('result.downloadProjectMessage'),
+    listItems: [
+      { id: 'fml', name: tGlobal('result.downloadFml') },
+      { id: 'plg', name: tGlobal('result.downloadPlg') },
+    ],
+    defaultValue: 'fml',
+    confirmLabel: tGlobal('common.apply'),
+  })
+  if (picked === 'fml' || picked === 'plg') return picked
+  return null
+}
+
 export type FacadeSelectScope = 'floor' | 'all'
 
 /** Chip «Selecteer»: huidige verdieping of alle verdiepingen. Null = geannuleerd. */

@@ -165,15 +165,42 @@ function collectKindsForSerialize(plan: FloorPlan): Record<string, RoofKindEntry
   return Object.keys(kinds).length > 0 ? kinds : undefined
 }
 
+function planeIdList(planes: { surfaceIds?: unknown; surfaceGuids?: unknown } | undefined): unknown {
+  return planes?.surfaceIds ?? planes?.surfaceGuids
+}
+
 function hydrateRoof(plan: FloorPlan): void {
-  const ridge = readRidgeWallsSettings(plan)
-  const planes = readRoofPlanesSettings(plan)
+  const settingsRidge = plan.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY]
   const settingsStack = plan.source?.settings?.[FLOOR_STACK_SETTINGS_KEY]
   const rawPlanesSettings = plan.source?.settings?.[ROOF_PLANES_SETTINGS_KEY]
-  const kindsFromSettings =
-    rawPlanesSettings && typeof rawPlanesSettings === 'object'
-      ? parseKindsMap((rawPlanesSettings as Record<string, unknown>)[ROOF_PLANES_KINDS_KEY])
-      : {}
+  const hasSettingsRidge = settingsRidge != null && typeof settingsRidge === 'object'
+  const hasSettingsPlanes = rawPlanesSettings != null && typeof rawPlanesSettings === 'object'
+  const emptyDefaultRidge = {
+    wallIds: [] as string[],
+    displayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
+  }
+  const emptyDefaultStack = { nokThicknessCm: DEFAULT_NOK_THICKNESS_CM, floors: [] as [] }
+  if (!plan.roof?.ridge && hasSettingsRidge) {
+    plan.roof = {
+      ridge: settingsRidge as NonNullable<FloorPlan['roof']>['ridge'],
+      planes: plan.roof?.planes ?? { surfaceIds: [] },
+      stack: plan.roof?.stack ?? emptyDefaultStack,
+    }
+  }
+  const typedPlaneIds = planeIdList(plan.roof?.planes)
+  const planesEmpty = !Array.isArray(typedPlaneIds) || typedPlaneIds.length === 0
+  if (planesEmpty && hasSettingsPlanes) {
+    plan.roof = {
+      ridge: plan.roof?.ridge ?? emptyDefaultRidge,
+      planes: rawPlanesSettings as NonNullable<FloorPlan['roof']>['planes'],
+      stack: plan.roof?.stack ?? emptyDefaultStack,
+    }
+  }
+  const ridge = readRidgeWallsSettings(plan)
+  const planes = readRoofPlanesSettings(plan)
+  const kindsFromSettings = hasSettingsPlanes
+    ? parseKindsMap((rawPlanesSettings as Record<string, unknown>)[ROOF_PLANES_KINDS_KEY])
+    : {}
   const stack =
     settingsStack != null
       ? normalizeStackFromSettings(settingsStack)
@@ -181,19 +208,35 @@ function hydrateRoof(plan: FloorPlan): void {
         ? plan.roof.stack
         : readFloorStack(plan)
 
-  plan.roof = {
-    ridge: {
-      wallGuids: [...ridge.wallGuids],
-      displayWidthCm: ridge.displayWidthCm || DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
-    },
-    planes: { surfaceGuids: [...planes.surfaceGuids] },
-    stack: {
-      nokThicknessCm: stack.nokThicknessCm,
-      floors: stack.floors.map((entry) => ({ ...entry })),
-    },
-    ...(plan.roof?.clearHeightOverride
-      ? { clearHeightOverride: plan.roof.clearHeightOverride }
-      : {}),
+  const hasRidgeContent =
+    ridge.wallIds.length > 0 || ridge.displayWidthCm !== DEFAULT_RIDGE_DISPLAY_WIDTH_CM
+  const hasPlanesContent = planes.surfaceIds.length > 0
+  const hasStackContent =
+    stack.floors.length > 0 || stack.nokThicknessCm !== DEFAULT_NOK_THICKNESS_CM
+  const shouldWriteRoof =
+    plan.roof != null ||
+    hasSettingsRidge ||
+    hasSettingsPlanes ||
+    settingsStack != null ||
+    hasRidgeContent ||
+    hasPlanesContent ||
+    hasStackContent
+
+  if (shouldWriteRoof) {
+    plan.roof = {
+      ridge: {
+        wallIds: [...ridge.wallIds],
+        displayWidthCm: ridge.displayWidthCm || DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
+      },
+      planes: { surfaceIds: [...planes.surfaceIds] },
+      stack: {
+        nokThicknessCm: stack.nokThicknessCm,
+        floors: stack.floors.map((entry) => ({ ...entry })),
+      },
+      ...(plan.roof?.clearHeightOverride
+        ? { clearHeightOverride: plan.roof.clearHeightOverride }
+        : {}),
+    }
   }
 
   if (plan.source?.settings) {
@@ -258,17 +301,17 @@ export const roofAdapter: FmlConceptAdapter = {
     const stack = roof?.stack ?? readFloorStack(plan)
 
     const hasRidgeContent =
-      ridge.wallGuids.length > 0 || ridge.displayWidthCm !== DEFAULT_RIDGE_DISPLAY_WIDTH_CM
+      ridge.wallIds.length > 0 || ridge.displayWidthCm !== DEFAULT_RIDGE_DISPLAY_WIDTH_CM
     if (hasRidgeContent) {
       settings[RIDGE_WALLS_SETTINGS_KEY] = {
-        wallGuids: [...ridge.wallGuids],
+        wallGuids: [...ridge.wallIds],
         displayWidthCm: ridge.displayWidthCm,
       }
     }
-    if (planes.surfaceGuids.length > 0) {
+    if (planes.surfaceIds.length > 0) {
       const kinds = collectKindsForSerialize(plan)
       settings[ROOF_PLANES_SETTINGS_KEY] = {
-        surfaceGuids: [...planes.surfaceGuids],
+        surfaceGuids: [...planes.surfaceIds],
         ...(kinds ? { [ROOF_PLANES_KINDS_KEY]: kinds } : {}),
       }
     }

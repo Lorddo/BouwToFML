@@ -7,6 +7,3 @@ export function getFaceToolbeltItems(): ToolbeltItem[] {
     { id: 'box_wall', icon: 'wall', label: tGlobal('toolbelt.face.boxWall') },
   ]
 }
-
-/** @deprecated Prefer getFaceToolbeltItems() so locale updates apply. */
-export const FACE_TOOLBELT_ITEMS: ToolbeltItem[] = getFaceToolbeltItems()

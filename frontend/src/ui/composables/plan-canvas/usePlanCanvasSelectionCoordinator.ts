@@ -642,7 +642,12 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     const result = bindFloorWallsToRoofs(editor.localPlan.value, floorIndexTarget, {
       splitCreases: true,
     })
-    if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) {
+    if (
+      result.boundJunctions === 0 &&
+      result.splits === 0 &&
+      result.flushedEdges === 0 &&
+      result.boundSkylights === 0
+    ) {
       return result
     }
     editor.pushUndo()

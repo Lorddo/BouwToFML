@@ -963,7 +963,7 @@ Werknaam BTF verviel op 2026-09-10: `btf` = *BouwToFML* en is de verkeerde merkn
 | Editor-tenant | Tekenbureau: FML in/uit aan; externe klant: geen FML |
 | Knip | Ander host-domein; package bij ~90% + launch; geen tweede repo nu |
 
-Uitwerking: `.cursor/docs/plg-native-format-plan.md`; uitvoering `.cursor/plans/plg_native_format_eff0f41f.plan.md`.
+Uitwerking: `.cursor/docs/plg-native-format-plan.md`; schema: `.cursor/docs/plg-specification.md`; uitvoering `.cursor/plans/plg_native_format_eff0f41f.plan.md`.
 
 ### Uitvoering (2026-09-11)
 
@@ -982,6 +982,7 @@ Uitwerking: `.cursor/docs/plg-native-format-plan.md`; uitvoering `.cursor/plans/
 | Naamhygiëne | TS-identifiers `btf*` hernoemd (`plan-slices.ts`, `readPlanSlices`, `OPENING_FRAME_EXTRA`); de FML-JSON-**waarden** `btfSlices`/`btfFrame`/`btfRole`/`btfOrigin` blijven staan |
 | Converter → editor | Stap-4 knop «Openen in editor»: clone van `previewPlan` (in-memory plattegrond, geen download). Confirm als de editor al inhoud heeft; CV-sidecar blijft in de converter |
 | Taal | Intern/editor = plattegrond / `.plg`; converter-klant-UI mag FML. «FML-editor» vermijden. Pad `/FML-editor` blijft tot een gerichte rename |
+| Schema-document (2026-09-16) | [`.cursor/docs/plg-specification.md`](plg-specification.md) is de veld-voor-veld waarheid. Agent-regel `.cursor/rules/plg-schema.mdc`: eerst de spec, geen stille velden/kinds/extras. Wijziging alleen na overleg + zelfde PR als types/migratie/adapter |
 
 ---
 
@@ -1099,6 +1100,22 @@ Uitwerking: `.cursor/docs/roof-clear-height.md`.
 | Fase 0–3 nu | i18n + `/editor` + shell + `PlanCanvas` / `plan-canvas/` |
 | Fase 4–6 later | workspace-panels, persist-keys, `core/fml` → `core/plan` ná kernel-campagne |
 | Redirect | `/FML-editor` en `/fml-editor/` → `/editor` (app-level, geen Cloudflare `_redirects`) |
+
+---
+
+## `.plg` v1 opruimen (2026-09-16)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Converter-banden / min-mid-max | Niet in `.plg`; runtime `limitsFromCatalog` |
+| `opening.bovenlicht*` | Persist; FML blijft siblings synthetiseren |
+| Live dak/vloer | `plan.roof.stack`; defaults alleen seed-als-leeg |
+| `ridgeZCm` | Per-floor default-Z voor **nieuwe** nokken; niet live geometrie |
+| `source.settings`-fallback | Promote op load, daarna alleen typed accessors |
+| `extras.fmlRefid` | Niet in `.plg`; FML-export = catalogus-default; `ImportWarning` |
+| `Opening.type` | Altijd uit `kind` |
+| `wallGuids` / `surfaceGuids` | In `.plg`: `wallIds` / `surfaceIds`; FML-adapter houdt oude settings-keys |
+| IDB vs bestand | `cv`-sidecar ≠ `.plg`; geen migratie (`version` blijft 1) |
 
 ---
 

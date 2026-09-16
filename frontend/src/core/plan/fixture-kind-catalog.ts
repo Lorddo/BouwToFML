@@ -158,7 +158,7 @@ export function listFixturePlaceOptions(): FixturePlaceOption[] {
   const out: FixturePlaceOption[] = []
   for (const entry of entries) {
     const kind = coerceKind(entry.kind)
-    if (kind === 'hidden') continue
+    if (kind === 'hidden' || kind === 'dormer') continue
     const label = entry.label?.trim() || 'Object'
     const categorie = entry.categorie?.trim() || 'overig'
     const key = `${categorie}|${kind}|${label}`

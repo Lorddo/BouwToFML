@@ -68,12 +68,13 @@ import {
 import { downloadFml, downloadText } from '@/core/fml/downloadFml'
 import {
   createPlgDocument,
+  toPlgFloorDefaults,
   writePlg,
   type PlgSettings,
 } from '@/core/plg/plg-document'
 import { clonePlain } from '@/platform/dev-workspace'
 import type { FloorPlan } from '@/core/plan/types'
-import { promptPlanChromeChoice } from '@/ui/composables/plan-chrome-dialog'
+import { promptPlanExportFormat } from '@/ui/composables/plan-chrome-dialog'
 import { sanitizeFilename } from './workspace/workspace-plan-generate'
 import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
 import {
@@ -1112,19 +1113,15 @@ export function useWorkspace() {
   function buildWorkspacePlgSettings(): PlgSettings {
     const settings = loadUserSettings()
     const catalog = project.mergedThicknessCatalog()
-    const limits = limitsFromCatalog(catalog)
     return {
       unitSystem: settings.unitSystem,
       scaleInputUnit: settings.scaleInputUnit,
       planDisplayStyle: settings.planDisplay.planDisplayStyle ?? 'editor',
       showCanvasGrid: settings.planDisplay.showCanvasGrid !== false,
-      defaults: {
+      defaults: toPlgFloorDefaults({
         ...project.activeFloorDefaults.value,
         thicknessCms: catalog,
-        thicknessMinCm: limits.minCm,
-        thicknessMidCm: limits.midCm,
-        thicknessMaxCm: limits.maxCm,
-      },
+      }),
     }
   }
 
@@ -1148,16 +1145,7 @@ export function useWorkspace() {
   }
 
   async function downloadProjectExport(): Promise<void> {
-    const format = await promptPlanChromeChoice({
-      title: tGlobal('result.downloadProjectTitle'),
-      message: tGlobal('result.downloadProjectMessage'),
-      listItems: [
-        { id: 'fml', name: tGlobal('result.downloadFml') },
-        { id: 'plg', name: tGlobal('result.downloadPlg') },
-      ],
-      defaultValue: 'fml',
-      confirmLabel: tGlobal('common.apply'),
-    })
+    const format = await promptPlanExportFormat()
     if (format === 'plg') downloadProjectPlg()
     else if (format === 'fml') downloadProjectFml()
   }

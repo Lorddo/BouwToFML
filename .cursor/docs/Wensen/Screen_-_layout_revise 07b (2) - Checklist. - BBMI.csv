@@ -1,0 +1,48 @@
+,Scan app. ,Tekenaar,Inmeter/ inspecteur,Checklist,Comments voor BBMI module,,,,,,Wo,OI,EB,GGB,AP
+"Het hoogste punt van de ruimte is tussen 1,5 meter en 2,0 meter hoog;",x,,,,,,Ja,Nee,Onbekend,,,,,,
+"De ruimte is bouwkundig slechts geschikt als bergruimte. Voorbeelden hiervan zijn een kelder, fietsenstalling of een garage",,,x*,*Inmeter/inspecteur bepaald zelf ruimte classificatie,,,☐,☐,☐,,,,,,
+Serre,,,x,1) Volledig afgsloten ruimte,,,☐,☑,☐,,☐,☐,☐,☑,☐
+,,,,,,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,x,2) De ruimte is geisoleerd,,,☐,☑,☐,,☐,☐,☑,☐,☐
+,,,,,,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,x,3) De ruimte is voorzien van binnen klimaatregeling,,,☐,☑,☐,,☐,☐,☑,☐,☐
+,,,,,,,☑,☐,☐,,☑,☐,☐,☐,☐
+Externe bergruimte(n),,,,1) Volledig afgsloten ruimte,,,☑,☐,☐,,☐,☐,☐,☐,☐
+,,,,,,,☐,☑,☐,,☐,☐,☐,☑,☐
+,,,x,2) Gedeelde muur met het hoofdgebouw,"Voorbeelden OI of EB, zie PDF Meetinstructies gebruiksoppervlakte woningen",,☐,☐,☐,,☐,☐,☐,☐,☐
+,,,,3) Alleen bereikbaar via de open lucht,,,☐,☐,☐,,☐,☐,☐,☐,☐
+,,,,4) Binnendoor bereikbaar,,,☐,☐,☐,,☐,☐,☐,☐,☐
+Souterrain,x,,,1) Plafond hoogte,Hoger dan 1.9m. (officieel min. 2.0m hoogte. Bepaalde marktsgementen (met name A'dam) heeft gedoogd beleid om alsnog als Wo te classificeren.,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,Lager dan 1.9m,,☐,☑,☐,,☐,☑,☐,☐,☐
+Ruimte met balken,,,x,1) Hoogte tot aan de balken,Hoger dan 1.9m,,☑,☐,☐,,☑,☐,☐,☐,☐
+,x,,x*,"2) Muren kan balkon, als constructie vervangen","Lager dan 1.9m, alleen als het aantal balken zo gering is, dat bij vervanging van deze balken door muren 'bruikbare kamer(s) ontstaan = Wo. *Inspecteur moet expliciet vermelden dat balken vervangen kunnen worden door muren.",,☑,☐,☐,,☑,☑,☐,☐,☐
+Erker,x,,,1) Plafond hoogte,Hoger  dan 1.9m,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,Lager  dan 1.9m en hoger dan 1.5m,,☑,☐,☐,,☐,☑,☐,☐,☐
+,,,,,Lager dan 1.5m ,,☑,☐,☐,,☐,☐,☐,☐,☑
+Zwembad,x,,,1) Ruimte is volledig afsluitbaar,,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,x,,,,☐,☑,☐,,☐,☑,☐,☐,☐
+Zolder,x,,,1) Toegang tot de zolder/vliering,Trap,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,Luik of vlizo trap (ladder),,☑,☐,☐,,☐,☑,☐,☐,☐
+,x,,,2) Hoogte,Lager dan 1.5m,,☑,☐,☐,,☐,☐,☐,☐,☑
+,,,,,Hoger dan 1.5m en lager dan 2m,,☑,☐,☐,,☐,☑,☐,☐,☐
+,,,,,Hoger dan 2m,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,x*,,"Het hoogste punt van de ruimte is boven de 2,0 meter, maar het aaneengesloten oppervlak hoger dan 2,0 m is kleiner dan 4,0 m2",<4m²,,☑,☐,☐,,☐,☑,☐,☐,☐
+,,,,,>4m²,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,>0.5m²,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,x,3) Daglicht toetrede (lees: glas) oppervlakte,<0.5m²,,☐,☑,☐,,☐,☑,☐,☐,☐
+,,,,4) Bouwtechnische aspecten,Zolder is voorzien van isolatie en/of binnen klimaatregeling,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,Zolder is voorzien van isolatie en/of binnen klimaatregeling,,☐,☑,☐,,☐,☑,☐,☐,☐
+Omgebouwde garage/Berging/Schuur,,,,1) gebruikersfunctie,Toegangekelijk/geschikt voor een auto,,☑,☐,☐,,☐,☑,☐,☐,☐
+,,,,,Niet toegangekelijk/geschikt voor een auto,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,2) De ruimte is voorzien van binnen klimaatregeling,,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,,,☐,☑,☐,,☐,☑,☐,☐,☐
+Carport,,,,1) Direct verbonden aan hoofgebouw,Of minder dan 10cm afstand van hoofdgebouw,,☑,☐,☐,,☐,☐,☐,☑,☐
+,,,,,,,☐,☑,☐,,☐,☐,☐,☐,☐
+Parkeerplaats,,,,1) Locatie,Bevindt in een volledig van de buitenwereld af te sluiten complex,,☑,☐,☐,,☐,☐,☑,☐,☐
+,,,,,,,☐,☑,☐,,☐,☐,☐,☐,☐
+Meterkast,,,,1) Locatie,Meterkast bevind zich achter de voordeur van de woning/appartement,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,"Meterkast bevind zich voor de voordeur, direct verbonden aan de woning/appartement.",,☑,☐,☐,,☐,☑,☐,☐,☐
+,,,,,"Meterkast bevind zich voor de voordeur, staat los van de woning/appartement.",,☑,☐,☐,,☐,☐,☑,☐,☐
+Berging/kast (apartement),,,,1) Locatie,Kast bevind zich achter de voordeur van de woning/appartement,,☑,☐,☐,,☑,☐,☐,☐,☐
+,,,,,"Kast bevind zich voor de voordeur, direct verbonden aan de woning/appartement.",,☑,☐,☐,,☐,☑,☐,☐,☐
+,,,,,"Kast bevind zich voor de voordeur, staat los van de woning/appartement.",,☑,☐,☐,,☐,☐,☑,☐,☐

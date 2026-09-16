@@ -88,12 +88,14 @@ export function usePlanCanvasItemDrag(options: {
   ): Point2D {
     const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return cm
+    const snapDisabled =
+      item.kind === 'skylight' || isSettingsMod(event, options.settingsMod.value)
     return snapFixtureCenterToWallFaces(
       options.editor.walls.value,
       cm,
       { width: item.width, height: item.height, rotationDeg: item.rotation ?? 0 },
       WALL_FACE_SNAP_CM,
-      { disabled: isSettingsMod(event, options.settingsMod.value) },
+      { disabled: snapDisabled },
     )
   }
 

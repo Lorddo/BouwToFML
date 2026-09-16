@@ -1,4 +1,5 @@
 import type { FloorArea, Point2D } from './types'
+import { ringAreaAbs } from './polygon-ring'
 import { UNLABELED_AREA_COLOR } from './roomtype-catalog'
 
 /** Minimale room-oppervlakte (cm²) — ~0,04 m². */
@@ -11,16 +12,6 @@ function shortGuid(): string {
   return Math.floor(Math.random() * 0xffffff)
     .toString(16)
     .padStart(6, '0')
-}
-
-function ringAreaAbs(ring: Point2D[]): number {
-  let area = 0
-  for (let i = 0; i < ring.length; i += 1) {
-    const a = ring[i]
-    const b = ring[(i + 1) % ring.length]
-    area += a.x * b.y - b.x * a.y
-  }
-  return Math.abs(area) / 2
 }
 
 function centroid(ring: Point2D[]): Point2D {

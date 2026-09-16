@@ -57,7 +57,7 @@ export function readPlanSlices(floor: Floor | null | undefined): PlanSlice[] {
   const design = activeDesign(floor)
   if (!design) return []
   if (design.slices !== undefined) return normalizeSliceList(design.slices)
-  return normalizeSliceList(design.source?.settings?.[PLAN_SLICES_SETTINGS_KEY])
+  return []
 }
 
 export function readPlanSlicesFromPlan(

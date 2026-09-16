@@ -53,7 +53,8 @@ export function usePlanCanvasItemRotate(options: {
   ): void {
     const item = options.editor.items.value.find((entry) => entry.id === guid)
     if (!item) return
-    const snapDisabled = isSettingsMod(event, options.settingsMod.value)
+    const snapDisabled =
+      item.kind === 'skylight' || isSettingsMod(event, options.settingsMod.value)
     const patch: Partial<FloorItem> = { rotation }
     if (snapPosition && !snapDisabled) {
       const snapped = snapFixtureCenterToWallFaces(

@@ -22,12 +22,13 @@ export function usePlanCanvasAddFixture(options: {
     const option = options.pendingFixture.value
     if (!option) return null
     const size = fixturePlaceSizeCm(option.kind)
+    const skipWallSnap = option.kind === 'skylight' || opts?.snapDisabled === true
     const snapped = snapFixtureCenterToWallFaces(
       options.editor.walls.value,
       cm,
       { width: size.width, height: size.height, rotationDeg: 0 },
       WALL_FACE_SNAP_CM,
-      { disabled: opts?.snapDisabled === true },
+      { disabled: skipWallSnap },
     )
     const item: Omit<FloorItem, 'id'> = {
       kind: option.kind,

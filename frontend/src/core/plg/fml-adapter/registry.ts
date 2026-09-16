@@ -59,3 +59,11 @@ export const FML_CONCEPT_ADAPTERS: FmlConceptAdapter[] = [
   openingKindAdapter,
   fixtureKindAdapter,
 ]
+
+/** FML-settings → getypte velden; daarna zijn accessors settings-vrij. */
+export function promotePlanExtensions(plan: FloorPlan): FloorPlan {
+  for (const adapter of FML_CONCEPT_ADAPTERS) {
+    adapter.hydrate?.(plan)
+  }
+  return plan
+}

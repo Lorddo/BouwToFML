@@ -254,10 +254,7 @@ export function foldBovenlichtOnWalls(walls: Wall[]): Wall[] {
 
 /** Ontbrekend / niet-false → packed (huidige default). */
 export function readBovenlichtPacked(plan: FloorPlan | null | undefined): boolean {
-  if (plan?.settings?.bovenlichtPacked != null) {
-    return plan.settings.bovenlichtPacked !== false
-  }
-  return plan?.source?.settings?.bovenlichtPacked !== false
+  return plan?.settings?.bovenlichtPacked !== false
 }
 
 export function writeBovenlichtPacked(plan: FloorPlan, packed: boolean): FloorPlan {

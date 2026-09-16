@@ -190,6 +190,26 @@ export function elevationWallFillRings(
   return holes.length === 0 ? [outer] : [outer, ...holes]
 }
 
+/**
+ * Evenodd-ringen: dakplaat-omtrek + gaten voor dakramen op dat vlak.
+ */
+export function elevationRoofFillRings(
+  roof: { fillPoints: readonly Point2D[]; points: readonly Point2D[] },
+  skylights: ReadonlyArray<{ surfaceId: string; points: readonly Point2D[] }>,
+  surfaceId: string,
+): Point2D[][] {
+  const outer =
+    roof.fillPoints.length >= 3 ? [...roof.fillPoints] : roof.points.length >= 3 ? [...roof.points] : []
+  if (outer.length < 3) return []
+  const holes: Point2D[][] = []
+  for (const skylight of skylights) {
+    if (skylight.surfaceId !== surfaceId) continue
+    if (skylight.points.length < 3) continue
+    holes.push([...skylight.points])
+  }
+  return holes.length === 0 ? [outer] : [outer, ...holes]
+}
+
 /** Binnenkant: staanders + top (hoogte = hartlijn-einde). Hartlijn blijft onzichtbaar. */
 export function elevationWallInnerStrokes(
   wall: ElevationWallRect,

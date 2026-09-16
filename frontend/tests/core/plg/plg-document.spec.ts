@@ -44,13 +44,8 @@ const FACTORY_PLG_SETTINGS: PlgSettings = {
     bovenlichtHeightCm: 40,
     bovenlichtGapCm: 10,
     thicknessCms: [10, 20, 30],
-    thicknessMinCm: 10,
-    thicknessMidCm: 20,
-    thicknessMaxCm: 30,
     dakThicknessCm: 30,
     slabThicknessCm: 20,
-    bandMidBoundaryCm: 15,
-    bandMaxBoundaryCm: 25,
   },
 }
 
@@ -101,6 +96,183 @@ describe('plg-document roundtrip', () => {
     const original = writePlg(sampleDoc())
     const roundtrip = writePlg(readPlg(original))
     expect(roundtrip).toBe(original)
+  })
+
+  it('writePlg laat converter-banden en min/mid/max weg; read slikt oude keys', () => {
+    const doc = sampleDoc()
+    const written = JSON.parse(writePlg(doc)) as {
+      settings: { defaults: Record<string, unknown> }
+    }
+    expect(written.settings.defaults.thicknessCms).toEqual([10, 20, 30])
+    expect(written.settings.defaults.thicknessMinCm).toBeUndefined()
+    expect(written.settings.defaults.bandMidBoundaryCm).toBeUndefined()
+
+    const withLegacy = {
+      ...JSON.parse(writePlg(doc)),
+      settings: {
+        ...doc.settings,
+        defaults: {
+          ...doc.settings.defaults,
+          thicknessMinCm: 8,
+          thicknessMidCm: 16,
+          thicknessMaxCm: 32,
+          bandMidBoundaryCm: 11,
+          bandMaxBoundaryCm: 22,
+        },
+      },
+    }
+    const read = readPlg(withLegacy)
+    expect(read.settings.defaults.thicknessCms).toEqual([10, 20, 30])
+    expect(
+      (read.settings.defaults as unknown as Record<string, unknown>).thicknessMinCm,
+    ).toBeUndefined()
+  })
+
+  it('writePlg bewaart bovenlicht-override + maten op de opening', () => {
+    const doc = sampleDoc()
+    const wall = doc.plan.floors[0]?.walls[0]
+    if (!wall) throw new Error('expected wall')
+    wall.openings = [
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        kind: 'door.single',
+        type: 'door',
+        t: 0.5,
+        width: 90,
+        z: 0,
+        z_height: 220,
+        bovenlicht: true,
+        bovenlichtHeightCm: 45,
+        bovenlichtGapCm: 12,
+      },
+    ]
+    const round = readPlg(writePlg(doc)).plan.floors[0]?.walls[0]?.openings[0]
+    expect(round?.bovenlicht).toBe(true)
+    expect(round?.bovenlichtHeightCm).toBe(45)
+    expect(round?.bovenlichtGapCm).toBe(12)
+  })
+
+  it('readPlg promoveert source.settings → typed en wist de keys', () => {
+    const doc = sampleDoc()
+    doc.plan.source = {
+      settings: {
+        bovenlichtPacked: false,
+        floorStack: {
+          nokThicknessCm: 42,
+          floors: [{ level: 0, thicknessCm: 18, ridgeZCm: 250 }],
+        },
+        ridgeWalls: { wallGuids: ['w0'], displayWidthCm: 12 },
+        roofPlanes: { surfaceGuids: ['s1'] },
+        facadeGroups: [{ id: 'front', code: 'front', name: 'Front', wallGuids: ['w0'] }],
+      },
+    }
+    const read = readPlg(doc)
+    expect(read.plan.settings?.bovenlichtPacked).toBe(false)
+    expect(read.plan.roof?.stack).toMatchObject({
+      nokThicknessCm: 42,
+      floors: [{ level: 0, thicknessCm: 18, ridgeZCm: 250 }],
+    })
+    expect(read.plan.roof?.ridge.wallIds).toEqual(['w0'])
+    expect(read.plan.roof?.ridge.displayWidthCm).toBe(12)
+    expect(read.plan.roof?.planes.surfaceIds).toEqual(['s1'])
+    expect(read.plan.facadeGroups?.[0]?.wallIds).toEqual(['w0'])
+    expect(read.plan.source?.settings?.floorStack).toBeUndefined()
+    expect(read.plan.source?.settings?.ridgeWalls).toBeUndefined()
+    expect(read.plan.source?.settings?.roofPlanes).toBeUndefined()
+    expect(read.plan.source?.settings?.facadeGroups).toBeUndefined()
+    expect(read.plan.source?.settings?.bovenlichtPacked).toBeUndefined()
+  })
+
+  it('writePlg schrijft wallIds en stript extras.fmlRefid; oude wallGuids worden gelezen', () => {
+    const doc = sampleDoc()
+    const wall = doc.plan.floors[0]?.walls[0]
+    if (!wall) throw new Error('expected wall')
+    wall.openings = [
+      {
+        id: '22222222-2222-4222-8222-222222222222',
+        kind: 'door.single',
+        type: 'window',
+        t: 0.4,
+        width: 90,
+        extras: { fmlRefid: 'deadbeef' },
+      },
+    ]
+    doc.plan.facadeGroups = [
+      { id: 'front', code: 'front', name: 'Front', wallIds: ['w0'] },
+    ]
+    doc.plan.roof = {
+      ridge: { wallIds: ['w0'], displayWidthCm: 10 },
+      planes: { surfaceIds: [] },
+      stack: { nokThicknessCm: 30, floors: [] },
+    }
+
+    const written = JSON.parse(writePlg(doc)) as {
+      plan: {
+        facadeGroups?: Array<{ wallIds?: string[]; wallGuids?: string[] }>
+        roof?: { ridge?: { wallIds?: string[]; wallGuids?: string[] } }
+        floors: Array<{
+          walls: Array<{
+            openings: Array<{ extras?: { fmlRefid?: string }; type?: string }>
+          }>
+        }>
+      }
+    }
+    expect(written.plan.facadeGroups?.[0]?.wallIds).toEqual(['w0'])
+    expect(written.plan.facadeGroups?.[0]?.wallGuids).toBeUndefined()
+    expect(written.plan.roof?.ridge?.wallIds).toEqual(['w0'])
+    expect(written.plan.roof?.ridge?.wallGuids).toBeUndefined()
+    expect(written.plan.floors[0]?.walls[0]?.openings[0]?.extras?.fmlRefid).toBeUndefined()
+    expect(readPlg(written).plan.floors[0]?.walls[0]?.openings[0]?.type).toBe('door')
+
+    const legacy = structuredClone(written)
+    if (legacy.plan.facadeGroups?.[0]) {
+      legacy.plan.facadeGroups[0].wallGuids = ['w0']
+      delete legacy.plan.facadeGroups[0].wallIds
+    }
+    if (legacy.plan.roof?.ridge) {
+      legacy.plan.roof.ridge.wallGuids = ['w0']
+      delete legacy.plan.roof.ridge.wallIds
+    }
+    const fromLegacy = readPlg(legacy)
+    expect(fromLegacy.plan.facadeGroups?.[0]?.wallIds).toEqual(['w0'])
+    expect(fromLegacy.plan.roof?.ridge.wallIds).toEqual(['w0'])
+  })
+
+  it('importFmlV3 waarschuwt bij onbekende opening-refid en zet geen fmlRefid', () => {
+    const { plan, warnings } = importFmlV3({
+      name: 'Unmapped',
+      floors: [
+        {
+          name: 'Begane grond',
+          designs: [
+            {
+              name: 'Begane grond',
+              walls: [
+                {
+                  guid: 'w-unmapped',
+                  a: { x: 0, y: 0 },
+                  b: { x: 200, y: 0 },
+                  openings: [
+                    {
+                      guid: 'o-unmapped',
+                      refid: 'not-a-catalog-hash',
+                      type: 'door',
+                      t: 0.5,
+                      width: 90,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    const opening = plan.floors[0]?.walls[0]?.openings[0]
+    expect(opening?.kind).toBe('door.unmapped')
+    expect(opening?.type).toBe('door')
+    expect(opening?.extras?.fmlRefid).toBeUndefined()
+    expect(warnings.some((w) => w.message.includes('Onbekende FML-opening'))).toBe(true)
   })
 
   it('writePlg is stabiel ondanks gemuteerde key-insert-order', () => {

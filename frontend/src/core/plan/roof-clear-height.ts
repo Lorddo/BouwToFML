@@ -4,6 +4,11 @@
  */
 import polygonClipping from 'polygon-clipping'
 import { sampleCeilingRoofAtPoint } from './bind-walls-to-roofs'
+import {
+  resolvePolygonIntersection,
+  ringAreaAbs,
+  toClipRing,
+} from './polygon-ring'
 import { dakThicknessCmForPlan } from './ridge-walls'
 import { isDormerLikeRoof, listRidgeSurfacesOnFloor } from './roof-planes'
 import type { FloorArea, FloorPlan, FloorSurface, Point2D } from './types'
@@ -39,20 +44,10 @@ export type ClearHeightBandRow = {
   source: ClearHeightBandSource
 }
 
-function resolveIntersectionFn(): typeof polygonClipping.intersection {
-  const mod = polygonClipping as unknown as {
-    intersection?: typeof polygonClipping.intersection
-    default?: { intersection?: typeof polygonClipping.intersection }
-  }
-  const fn = mod.intersection ?? mod.default?.intersection
-  if (!fn) throw new Error('polygon-clipping.intersection is not available')
-  return fn
-}
-
 function intersectRings(a: readonly Point2D[], b: readonly Point2D[]): Point2D[][] {
   if (a.length < 3 || b.length < 3) return []
   try {
-    const intersection = resolveIntersectionFn()
+    const intersection = resolvePolygonIntersection()
     const result = intersection([toClipRing(a)], [toClipRing(b)])
     const out: Point2D[][] = []
     for (const polygon of result) {
@@ -64,27 +59,6 @@ function intersectRings(a: readonly Point2D[], b: readonly Point2D[]): Point2D[]
   } catch {
     return []
   }
-}
-
-function ringArea(ring: readonly Point2D[]): number {
-  let sum = 0
-  for (let i = 0; i < ring.length; i += 1) {
-    const a = ring[i]
-    const b = ring[(i + 1) % ring.length]
-    if (!a || !b) continue
-    sum += a.x * b.y - b.x * a.y
-  }
-  return Math.abs(sum) / 2
-}
-
-function toClipRing(poly: readonly Point2D[]): Array<[number, number]> {
-  const ring: Array<[number, number]> = poly.map((p) => [p.x, p.y])
-  const first = ring[0]
-  const last = ring[ring.length - 1]
-  if (first && last && (first[0] !== last[0] || first[1] !== last[1])) {
-    ring.push([first[0], first[1]])
-  }
-  return ring
 }
 
 export function clampLiningCm(liningCm: number, dakThicknessCm: number): number {
@@ -397,14 +371,14 @@ function clipFillToLiningAreas(
     if (area.poly.length < 3) continue
     if (resolveAreaLiningCm(area, dakThicknessCm) !== liningCm) continue
     for (const piece of intersectRings(ring, area.poly)) {
-      if (piece.length >= 3 && ringArea(piece) >= 100) out.push(piece)
+      if (piece.length >= 3 && ringAreaAbs(piece) >= 100) out.push(piece)
     }
   }
   if (liningCm === liningDefault) {
     const covered = areas.filter((a) => a.poly.length >= 3).map((a) => a.poly)
     if (covered.length > 0) {
       for (const piece of subtractRings(ring, covered)) {
-        if (piece.length >= 3 && ringArea(piece) >= 100) out.push(piece)
+        if (piece.length >= 3 && ringAreaAbs(piece) >= 100) out.push(piece)
       }
     }
   }
@@ -500,7 +474,7 @@ export function computeClearHeightContour(
       const below = portionBelowZ(surface, zCut)
       if (isDormerLikeRoof(surface, surfaces)) {
         for (const ring of below) {
-          if (ring.length < 3 || ringArea(ring) < 100) continue
+          if (ring.length < 3 || ringAreaAbs(ring) < 100) continue
           for (const clipped of clipFillToLiningAreas(
             ring,
             areas,
@@ -517,9 +491,9 @@ export function computeClearHeightContour(
         .filter((d) => !d.roofParentId || d.roofParentId === surface.id)
         .map((d) => d.poly)
       for (const ring of below) {
-        if (ring.length < 3 || ringArea(ring) < 100) continue
+        if (ring.length < 3 || ringAreaAbs(ring) < 100) continue
         for (const punched of subtractRings(ring, childPolys)) {
-          if (punched.length < 3 || ringArea(punched) < 100) continue
+          if (punched.length < 3 || ringAreaAbs(punched) < 100) continue
           for (const clipped of clipFillToLiningAreas(
             punched,
             areas,
@@ -661,7 +635,7 @@ export function computeClearHeightBands(
       }
     }
     const cell = step * step
-    const totalArea = ringArea(area.poly)
+    const totalArea = ringAreaAbs(area.poly)
     const scale = samples > 0 ? totalArea / (samples * cell) : 0
     rows.push({
       areaId: area.id,

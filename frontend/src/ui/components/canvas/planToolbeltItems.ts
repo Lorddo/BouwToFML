@@ -149,9 +149,3 @@ export function getPlanEditTools(options?: {
 }): ToolbeltItem[] {
   return [...getPlanDrawTools(options), ...getPlanLibraryTools(options)]
 }
-
-/** @deprecated Prefer getPlanSelectTools() so locale updates apply. */
-export const PLAN_SELECT_TOOLS: ToolbeltItem[] = getPlanSelectTools()
-
-/** @deprecated Prefer getPlanEditTools() so locale updates apply. */
-export const PLAN_EDIT_TOOLS: ToolbeltItem[] = getPlanEditTools()

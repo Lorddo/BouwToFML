@@ -31,6 +31,9 @@ const wallOuterStroke = r.wallOuterStroke
 const wallInnerStroke = r.wallInnerStroke
 const roofOuterStroke = r.roofOuterStroke
 const roofRingPoints = r.roofRingPoints
+const stageRoofFillPath = r.stageRoofFillPath
+const skylightSelected = r.skylightSelected
+const skylightsOnRoof = r.skylightsOnRoof
 const openingGhostFill = r.openingGhostFill
 const openingGhostOpacity = r.openingGhostOpacity
 const glyphStrokeColor = r.glyphStrokeColor
@@ -46,6 +49,7 @@ const ix = props.interaction
 const selectedOpeningId = ix.selectedOpeningId
 const onRidgeWallDown = ix.onRidgeWallDown
 const onOpeningDown = ix.onOpeningDown
+const onSkylightDown = ix.onSkylightDown
 const onJunctionDown = ix.onJunctionDown
 const stopKonvaBubble = ix.stopKonvaBubble
 </script>
@@ -80,17 +84,44 @@ const stopKonvaBubble = ix.stopKonvaBubble
       <!-- Painter: muren + dakvlakken op diepte (verder weg eerst). Omtrek blijft ná alles. -->
       <template v-for="item in paintStack" :key="item.key">
         <v-group v-if="item.kind === 'roof'">
-          <v-line
+          <v-path
             :config="{
-              points: stagePoly(roofRingPoints(item.roof)),
-              closed: true,
+              data: stageRoofFillPath(item.roof),
               fill: roofBodyFill(item.roof.color),
+              fillRule: 'evenodd',
               strokeEnabled: false,
               perfectDrawEnabled: false,
               opacity: roofSelected(item.roof.id) ? 1 : architectStyle ? 1 : 0.92,
               listening: false,
             }"
           />
+          <template v-for="skylight in skylightsOnRoof(item.roof.id)" :key="skylight.id">
+            <v-line
+              :config="{
+                points: stagePoly(skylight.points),
+                closed: true,
+                fill: architectStyle ? ARCHITECT_AREA_FILL : skylight.fill,
+                stroke: architectStyle ? elevLineColor : skylight.stroke,
+                strokeWidth: elevStroke,
+                dash: elevDash,
+                opacity: skylightSelected(skylight.itemId) ? 1 : 0.9,
+                listening: false,
+                perfectDrawEnabled: false,
+              }"
+            />
+            <v-line
+              :config="{
+                points: stagePoly(skylight.points),
+                closed: true,
+                fill: skylightSelected(skylight.itemId) ? '#f97316' : '#38bdf8',
+                opacity: skylightSelected(skylight.itemId) ? 0.35 : 0.08,
+                strokeEnabled: false,
+                listening: true,
+                perfectDrawEnabled: false,
+              }"
+              @mousedown="onSkylightDown(skylight.itemId, $event)"
+            />
+          </template>
         </v-group>
         <v-group v-else-if="item.kind === 'plane'" :config="{ listening: true }">
         <!-- Wall layers -->

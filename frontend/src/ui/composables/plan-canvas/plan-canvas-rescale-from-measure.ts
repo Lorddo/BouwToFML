@@ -160,32 +160,6 @@ export function resolveRescaleFactorsFromInnerRulers(params: {
   })
 }
 
-/** @deprecated alias — gebruik resolveRescaleFactorsFromRulers */
-export function resolveRescaleFactorFromRulers(params: {
-  measuredCmX: number
-  measuredCmY: number
-  trueMmX: number
-  trueMmY: number
-}): PlanScaleFactors | null {
-  return resolveRescaleFactorsFromRulers(params)
-}
-
-/** |factorX − factorY| / avg als procent (zelfde drempel-idee als stap-1 axisMismatch). */
-export function rescaleAxisMismatchPct(params: {
-  measuredCmX: number
-  measuredCmY: number
-  trueMmX: number
-  trueMmY: number
-}): number {
-  const { measuredCmX, measuredCmY, trueMmX, trueMmY } = params
-  if (!(measuredCmX > 0) || !(measuredCmY > 0) || !(trueMmX > 0) || !(trueMmY > 0)) return 0
-  const factorX = trueMmX / 10 / measuredCmX
-  const factorY = trueMmY / 10 / measuredCmY
-  const avg = (factorX + factorY) / 2
-  if (!(avg > 0)) return 0
-  return (Math.abs(factorX - factorY) / avg) * 100
-}
-
 export function measuredCmFromRescaleState(state: HScaleState): { x: number; y: number } {
   return {
     x: Math.abs(state.xRight - state.xLeft),

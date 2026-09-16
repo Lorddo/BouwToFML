@@ -2,7 +2,11 @@
  * Inbound normalize: legacy `guid`/`refid` → verplicht `id` + `kind`.
  * Geen PLG-versiebump — V1 ongepubliceerd; tolerant voor lokale blobs.
  */
-import { resolveOpeningKind, type OpeningKind } from '../../plan/opening-kind-catalog'
+import {
+  openingTypeFromKind,
+  resolveOpeningKind,
+  type OpeningKind,
+} from '../../plan/opening-kind-catalog'
 import { resolveFixtureKind, type FixtureAssetKind } from '../../plan/fixture-kind-catalog'
 import type { Floor, FloorItem, FloorPlan, Opening, OpeningType, Wall } from '../../plan/types'
 import { openingKindFromFmlRefid } from './opening-fml-refids'
@@ -27,33 +31,25 @@ function normalizeOpening(raw: Opening): Opening {
   const id = readString(rec.id) || readString(rec.guid) || newId()
   delete (rec as { guid?: string }).guid
 
-  const type: OpeningType = rec.type === 'window' ? 'window' : 'door'
+  const hintedType: OpeningType = rec.type === 'window' ? 'window' : 'door'
   let kind: OpeningKind | undefined = readString(rec.kind) as OpeningKind | undefined
   if (kind) {
     kind = resolveOpeningKind(kind).kind
   } else {
     const refid = readString(rec.refid) || readString(rec.extras?.[FML_REFID_EXTRA])
-    const mapped = openingKindFromFmlRefid(refid, type)
-    kind = mapped.kind
-    if (refid && !mapped.known) {
-      rec.extras = { ...(rec.extras ?? {}), [FML_REFID_EXTRA]: refid }
-    }
+    kind = openingKindFromFmlRefid(refid, hintedType).kind
   }
   delete (rec as { refid?: string }).refid
 
-  // Drop stale fmlRefid when kind is known (canonical export will re-derive).
   if (rec.extras && FML_REFID_EXTRA in rec.extras) {
-    const mapped = openingKindFromFmlRefid(String(rec.extras[FML_REFID_EXTRA]), type)
-    if (mapped.known && mapped.kind === kind) {
-      const next = { ...rec.extras }
-      delete next[FML_REFID_EXTRA]
-      rec.extras = Object.keys(next).length > 0 ? next : undefined
-    }
+    const next = { ...rec.extras }
+    delete next[FML_REFID_EXTRA]
+    rec.extras = Object.keys(next).length > 0 ? next : undefined
   }
 
   rec.id = id
   rec.kind = kind!
-  rec.type = type
+  rec.type = openingTypeFromKind(kind!)
   return rec
 }
 
@@ -67,21 +63,14 @@ function normalizeItem(raw: FloorItem): FloorItem {
     kind = resolveFixtureKind(kind).kind
   } else {
     const refid = readString(rec.refid) || readString(rec.extras?.[FML_REFID_EXTRA])
-    const mapped = fixtureKindFromFmlRefid(refid)
-    kind = mapped.kind
-    if (refid && !mapped.known) {
-      rec.extras = { ...(rec.extras ?? {}), [FML_REFID_EXTRA]: refid }
-    }
+    kind = fixtureKindFromFmlRefid(refid).kind
   }
   delete (rec as { refid?: string }).refid
 
   if (rec.extras && FML_REFID_EXTRA in rec.extras) {
-    const mapped = fixtureKindFromFmlRefid(String(rec.extras[FML_REFID_EXTRA]))
-    if (mapped.known && mapped.kind === kind) {
-      const next = { ...rec.extras }
-      delete next[FML_REFID_EXTRA]
-      rec.extras = Object.keys(next).length > 0 ? next : undefined
-    }
+    const next = { ...rec.extras }
+    delete next[FML_REFID_EXTRA]
+    rec.extras = Object.keys(next).length > 0 ? next : undefined
   }
 
   rec.id = id

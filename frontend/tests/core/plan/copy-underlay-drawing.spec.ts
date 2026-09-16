@@ -100,8 +100,8 @@ describe('elevation underlay reuse', () => {
     let plan = planWithFloors()
     const voor = createFacadeGroup(plan, { name: 'Voorgevel' })
     const achter = createFacadeGroup(plan, { name: 'Achtergevel' })
-    voor.wallGuids.push('w1')
-    achter.wallGuids.push('w2')
+    voor.wallIds.push('w1')
+    achter.wallIds.push('w2')
     plan = setElevationViewDrawing(plan, voor.id, DRAWING_B)
     return { plan, voorId: voor.id, achterId: achter.id }
   }

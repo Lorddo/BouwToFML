@@ -593,7 +593,6 @@ function isRidgeFloorHeightWall(wall: Wall): boolean {
 
 function isRidgeFloorHeightDesign(design: FloorDesign): boolean {
   if (design.role === 'ridge') return true
-  if (design.source?.settings?.btfRole === 'ridge') return true
   return design.name.trim().toLowerCase() === 'dak'
 }
 

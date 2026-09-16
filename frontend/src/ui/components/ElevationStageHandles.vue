@@ -28,6 +28,8 @@ const wallAxisEndHandles = ix.wallAxisEndHandles
 const ridgeHandles = ix.ridgeHandles
 const openingMoveHandle = ix.openingMoveHandle
 const openingHandles = ix.openingHandles
+const skylightMoveHandle = ix.skylightMoveHandle
+const skylightHandles = ix.skylightHandles
 const onRoofVertexDown = ix.onRoofVertexDown
 const onWallElevHandleDown = ix.onWallElevHandleDown
 const onJunctionElevHandleDown = ix.onJunctionElevHandleDown
@@ -37,6 +39,8 @@ const onWallAxisEndHandleDown = ix.onWallAxisEndHandleDown
 const onRidgeHandleDown = ix.onRidgeHandleDown
 const onMoveHandleDown = ix.onMoveHandleDown
 const onHandleDown = ix.onHandleDown
+const onSkylightMoveHandleDown = ix.onSkylightMoveHandleDown
+const onSkylightHandleDown = ix.onSkylightHandleDown
 const stopKonvaBubble = ix.stopKonvaBubble
 </script>
 
@@ -227,6 +231,41 @@ const stopKonvaBubble = ix.stopKonvaBubble
         listening: true,
       }"
       @mousedown="onHandleDown(handle.side, $event)"
+    />
+
+    <!-- Skylight move handle -->
+    <v-circle
+      v-if="skylightMoveHandle"
+      :config="{
+        ...(() => {
+          const stage = layoutXform.toStagePoint(skylightMoveHandle.x, skylightMoveHandle.y)
+          return { x: stage.x, y: stage.y }
+        })(),
+        radius: 6 / viewScale,
+        fill: '#f97316',
+        stroke: '#fff',
+        strokeWidth: 2 / viewScale,
+        listening: true,
+      }"
+      @mousedown="onSkylightMoveHandleDown"
+    />
+
+    <!-- Skylight resize handles -->
+    <v-circle
+      v-for="handle in skylightHandles"
+      :key="`skylight-handle-${handle.side}`"
+      :config="{
+        ...(() => {
+          const stage = layoutXform.toStagePoint(handle.x, handle.y)
+          return { x: stage.x, y: stage.y }
+        })(),
+        radius: 6 / viewScale,
+        fill: '#fff',
+        stroke: '#f97316',
+        strokeWidth: 2 / viewScale,
+        listening: true,
+      }"
+      @mousedown="onSkylightHandleDown(handle.side, $event)"
     />
 
     <!-- Plan-side labels -->

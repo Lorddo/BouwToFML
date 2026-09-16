@@ -5,9 +5,25 @@ alwaysApply: true
 
 # Memory – BouwToFML
 
-Laatste update: 2026-09-15 (herschalen = binnenmaat)
+Laatste update: 2026-09-16 (plg schema opruimen)
 
 ## Huidige focus
+
+**`.plg` v1 opruimen (GEBOUWD 2026-09-16)** — converter-banden/min-mid-max uit het bestand (`toPlgFloorDefaults`); `opening.bovenlicht*` persist; stack wint (`dakThicknessCmForPlan`); promote op load, accessors typed-only; geen `extras.fmlRefid` (catalogus-default + ImportWarning); `type` uit `kind`; `wallIds`/`surfaceIds` (FML-settings blijven `wallGuids`); spec Converter vs IDB + `ridgeZCm` = nok-default. Tests in `plg-document.spec.ts`.
+
+**Opening over T-knoop (GEFIXT 2026-09-16)** — Blind/raam dat over een T hangt recentreerde bij resize (`clampDoorOpeningT` → `t=0.5`) → beide zijdes kropen. Collineair eind laat `t` nu buiten [0,1]; doodlopend eind ongewijzigd. Aanzicht-snap negeert de T-naad van de eigen keten. Tests: `opening-plan-ops.spec.ts`, `elevation-opening-edit.spec.ts`, `plan-canvas-opening-handles.spec.ts`.
+
+**Editor-download = stap-4 popup (GEBOUWD 2026-09-16)** — één knop «Project downloaden»; `promptPlanExportFormat` kiest `.fml` / `.plg` (zelfde chrome als detectie). Serialisatie ongewijzigd. Tests: `editor-download.spec.ts`, `plan-chrome-dialog.spec.ts`.
+
+**`.plg` schema-document (GEBOUWD 2026-09-16)** — [`.cursor/docs/plg-specification.md`](../docs/plg-specification.md) = veld-voor-veld (zoals FML v30). Agent-regel `.cursor/rules/plg-schema.mdc` (always): eerst de spec, geen stille velden/kinds/extras. Waarom-doc blijft `plg-native-format-plan.md`.
+
+**Dakraam-sleep `startCm` (GEFIXT 2026-09-15)** — Gevels: na 4px-drempel deed `cancelPending()` `pending = null` en las daarna `pending.startCm` → `Cannot read properties of null (reading 'startCm')`. Sleep-start gebruikt nu de klik-closure. Test: `elevation-skylight-drag.spec.ts`.
+
+**Dakramen op dakvlak + aanzicht (GEBOUWD 2026-09-15)** — `FloorItem.roofSurfaceId`; koppeling alleen via «Muren aan dak» (`bindSkylightToRoofs`). Gevels: evenodd-gat + glyph, select/move/resize langs schild. Geen auto-snap op plattegrond (muur-snap uit voor skylight). FML: `btfRoofSurfaceId`. Specs: `skylight-roof.spec.ts` (15).
+
+**Cleanup 3 batches (KLAAR 2026-09-15)** — dood: fixtures + 2 patch-scripts; aliassen: rescale + toolbelt-snapshots + 2 facade-re-exports; DRY: `core/plan/polygon-ring.ts` (signed/abs + clip). Typecheck 0; gerichte suite 977 groen (1 rood = aanzicht opening left=edit vs stale quick-assert, product vandaag).
+
+**Cleanup-check (2026-09-15)** — geen resterende godfiles die nu knippen vragen. Dikke files = lijm of één zorg.
 
 **Herschalen = binnenmaat (GEBOUWD 2026-09-15)** — liniaal op binnenfaces: `f = (I★ + T) / (I + T)` i.p.v. `I★ / I`. `T` = hart→face op beide handles. Detectie 3,01×3,55 + typ 3×3,5 → kamer 3,00×3,50 in één ronde (niet 2,99×3,49). Muurdikte blijft. Stap-4 + editor. Test in `plan-canvas-rescale-from-measure.spec.ts`.
 
@@ -227,6 +243,16 @@ Laatste update: 2026-09-15 (herschalen = binnenmaat)
 
 ## Wat WERKT
 
+**`.plg` v1 schoon:** download zonder banden/min-mid-max; bovenlicht-override roundtript; `readPlg` promoveert settings → `plan.roof` / `facadeGroups` en wist de keys; unmapped FML-opening → `door.unmapped` + warning, geen `fmlRefid`; `.plg` schrijft `wallIds`.
+
+**Opening over T-knoop:** verkleinen aan één kant houdt de andere; centrum mag voorbij de naad. Doodlopende muur recentreert nog bij te breed. T-stippellijn is geen 8 cm-magneet meer. Ctrl blijft snap-uit.
+
+**Editor-download popup:** één knop opent dezelfde FML/PLG-keuze als stap-4; annuleren downloadt niets.
+
+**Dakramen op dakvlak:** plaats skylight-fixture → «Muren aan dak» zet `roofSurfaceId`+`z`. Gevels: gat in dakplaat + glas-glyph; select/move/resize langs schild. Geen auto-dak-snap. Muur-face-snap uit voor skylight. Sleep voorbij 4px crasht niet meer (`pending.startCm` na `cancelPending`).
+
+**Herschalen binnenmaat:** liniaal op binnenkant + echte maat → kamer die maat in één ronde. `T` uit face-handles; geen T (midden in de kamer) = oude hartlijn-factor. Muurdikte ongewijzigd.
+
 **Herschalen binnenmaat:** liniaal op binnenkant + echte maat → kamer die maat in één ronde. `T` uit face-handles; geen T (midden in de kamer) = oude hartlijn-factor. Muurdikte ongewijzigd.
 
 **Deur/raam toolbar:** left-klik = volle strook (niet meer compact). Aanzicht: left-klik = edit (maten + randen). Muren ongewijzigd.
@@ -247,7 +273,7 @@ Laatste update: 2026-09-15 (herschalen = binnenmaat)
 
 **Dakvlakken op verdieping:** topbar-master `showRoofOverlayOnPlan` (icoon `roof`); Settings `showRoofPlanesOnPlan` + 1,50/2,00/fill. Overlay `listening: false`. Tool `draw_roof` (editor) → `addRidgeSurface`. Wang-snap 8 cm. Dak-tab ongewijzigd. Converter stap 4: geen knop/overlay.
 
-**`.plg`:** `core/plg/` (extension-types, plg-document, plg-migrations, fml-adapter/*). Getypt: `wall.elevation`, `wall.role`, `wall.stampOwned` (runtime-only, niet geserialiseerd), `opening.frame`, `plan.facadeGroups`, `plan.elevations`, `plan.roof` (ridge/planes/stack), `plan.settings.bovenlichtPacked`, `design.slices`, `design.autoDimensions`, `design.role`, `surface.origin`. Accessor-signaturen ongewijzigd → call sites buiten `core/fml/` onaangeroerd. Adapters schrijven de oude FML-vorm terug (`ridge: true`, `btfRole`, `btfSlices`, `btfFrame`, `btfOrigin`); `floorStack`/`elevationViews`/`elevationProjection` worden gezet en daarna gestript. `serializePlanSettings` draait **vóór** `stripFloorplannerHostileSettings`; `hydrate` draait ná de hele legacy import-keten. Download: `.fml` én `.plg`. E1-gate: `core/plg` mag geen `cv/`/`ui/`/`platform/`; alleen `fml-adapter/` mag value-imports uit `core/fml/` (type-only elders toegestaan). `PlanIoCaps` op de drie presets (editor = tekenbureau: FML in + lossy uit; tenant-splitsing later).
+**`.plg`:** schema-doc [`.cursor/docs/plg-specification.md`](../docs/plg-specification.md) + regel `plg-schema.mdc`. Code: `core/plg/` (extension-types, plg-document, plg-migrations, fml-adapter/*). Getypt: `wall.elevation`, `wall.role`, `wall.stampOwned` (runtime-only, niet geserialiseerd), `opening.frame`, `plan.facadeGroups`, `plan.elevations`, `plan.roof` (ridge/planes/stack), `plan.settings.bovenlichtPacked`, `design.slices`, `design.autoDimensions`, `design.role`, `surface.origin`. Accessor-signaturen ongewijzigd → call sites buiten `core/fml/` onaangeroerd. Adapters schrijven de oude FML-vorm terug (`ridge: true`, `btfRole`, `btfSlices`, `btfFrame`, `btfOrigin`); `floorStack`/`elevationViews`/`elevationProjection` worden gezet en daarna gestript. `serializePlanSettings` draait **vóór** `stripFloorplannerHostileSettings`; `hydrate` draait ná de hele legacy import-keten. Download: `.fml` én `.plg`. E1-gate: `core/plg` mag geen `cv/`/`ui/`/`platform/`; alleen `fml-adapter/` mag value-imports uit `core/fml/` (type-only elders toegestaan). `PlanIoCaps` op de drie presets (editor = tekenbureau: FML in + lossy uit; tenant-splitsing later).
 
 **FML on-demand:** `buildFmlV3` draait bij download/copy (`buildGeneratedFmlText()` / `buildCurrentFmlText()`), altijd op de live keten `editedPreviewPlan ?? importedPlan ?? fmlExportPlan`. Dat is de **FML-adapter**, niet het aanmaken van de plattegrond — die staat al in `previewPlan`. Stap-4 hoogtes muteren die plattegrond via overwrite-all-confirm; alleen diktes/banden zetten `fmlLimitsDirty` en hergenereren echt.
 
@@ -292,6 +318,14 @@ Laatste update: 2026-09-15 (herschalen = binnenmaat)
 **Herschalen stap 4: binnenmaat in één ronde (GEFIXT 2026-09-15)** — Was `true/measured` op hartlijnen → rest `T·(f−1)` (3,55→3,49). Nu `(I★+T)/(I+T)` met `T` uit face-handles. Handles niet op een face → T=0, oude factor.
 
 ## Open / handmatig checken
+
+- **`.plg` v1 opruimen (2026-09-16):** editor-download `.plg` heeft `thicknessCms` zonder banden; deur met bovenlicht-override komt terug; FML-import onbekende refid toont warning, export gebruikt catalogus-default; gevelgroep-leden in bestand als `wallIds`.
+
+- **Opening over T (2026-09-16):** Gevels — blind paneel over T; sleep één handle → andere kant blijft; geen sprong naar het midden van het korte stuk; T-stippellijn trekt niet. Doodlopend muureinde stopt nog. Ctrl = geen snap.
+
+- **Editor-download popup (2026-09-16):** plattegrond open → «Project downloaden» → popup FML/PLG (zelfde als stap-4); .fml / .plg landt; Annuleren geen bestand.
+
+- **Dakraam-sleep Gevels (2026-09-15):** gekoppeld dakraam verslepen (>4 px) geen `startCm`-crash; blijft op het schild.
 
 - **Herschalen binnenmaat (2026-09-15):** detectie-kamer 3,01×3,55, liniaal op binnenkant, typ 3×3,5 → kamermaten 3,00×3,50 (niet 2,99×3,49). Editor hetzelfde. Handles midden in de kamer blijven de oude factor.
 
@@ -427,8 +461,8 @@ Laatste update: 2026-09-15 (herschalen = binnenmaat)
 - L6 connector ~35 files; Cat C generalisatie = product-F.
 - Pipeline-V3 Cat C + meer fixtures buiten BouwTek11/2D_3E = apart product-go.
 - Lean/DRY + production-refactor ronde 1–22 **klaar**; clusters leeg.
-- Identiteit-cutover: de 108 typefouten in testbestanden zijn opgelost (build is groen), maar `src/core/fml/test-plan-fixtures.ts` + `scripts/patch-tests-id-kind.mjs` / `patch-remaining-refids.mjs` hebben nog nul lezers — knip noemt ze dood. Bewust bewaard tot de cutover echt af is; anders weggooien.
-- `ringArea` 4x los gedefinieerd (elevation-linework, roof-clear-height, roof-overlap, plan-canvas-wall-fill); `toClipRing` + `resolveIntersectionFn` 2x. DRY-materiaal, geen dode code.
+- Identiteit-cutover af: fixtures + patch-scripts verwijderd (cleanup 2026-09-15).
+- `ringArea` / clip-helpers: owner `core/plan/polygon-ring.ts` (signed + abs + toClipRing + intersection).
 
 ## Architectuur (niet wijzigen zonder overleg)
 
@@ -442,6 +476,12 @@ Laatste update: 2026-09-15 (herschalen = binnenmaat)
 
 ## Recente besluiten
 
+- **2026-09-16** — `.plg` v1: geen converter-banden/hash; bovenlicht persist; stack wint; promote dan typed-only; `wallIds`; `ridgeZCm` = default nieuwe nok; IDB `cv` ≠ bestand. Geen `migratePlg`.
+- **2026-09-16** — Opening over T: `clampDoorOpeningT` recentreert niet meer naar 0.5 als er een collineair eind is; `t` mag buiten [0,1]. Vaste kant bij resize blijft. Doodlopend eind ongewijzigd. Aanzicht-snap slaat de T-naad van de host-keten over.
+- **2026-09-16** — Editor-download is één knop + popup (FML/PLG), dezelfde chrome als stap-4. Geen twee losse knoppen meer.
+- **2026-09-16** — `.plg` heeft een schema-document (`plg-specification.md`) + always-regel: agents lezen die eerst en wijzigen het model niet zonder overleg. Types blijven de code-bron; de spec is het contract.
+- **2026-09-15** — Dakraam-sleep op Gevels: klik-`startCm` uit de closure, niet uit `pending` ná `cancelPending()`.
+- **2026-09-15** — Dakramen blijven `skylight`-fixtures. Koppeling alleen via «Muren aan dak» (geen auto-snap). Aanzicht: punch + glyph + edit langs schild; Z samplet live van het dakvlak.
 - **2026-09-15** — Herschalen-liniaal is een binnenmaat. Factor `(I★ + T) / (I + T)` zodat het gat in één ronde op de getypte maat zit; muurdikte blijft. Hartlijn-maat vragen is geen optie.
 - **2026-09-15** — Deur/raam left-klik toont de volle settings-strook (gelijk Ctrl). Type, scharnier, bovenlicht, kopie, delete moeten makkelijk beschikbaar zijn. Muren blijven left = basis / Ctrl = geavanceerd.
 - **2026-09-15** — Verdiepingshoogte (linkermenu / Gevels) overschrijft geen nokbalken. Span alleen via dakdikte; onderkant blijft. `overwritePlanWallHeights` slaat Dak-design + ridge-muren over.

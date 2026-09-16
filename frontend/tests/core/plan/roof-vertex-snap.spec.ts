@@ -144,7 +144,7 @@ describe('roof-vertex-snap', () => {
     expect(surface.extras?.btfOrigin).toBeUndefined()
     plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [surface])
     syncRoofPlaneGuidsFromDesigns(plan)
-    expect(plan.roof?.planes.surfaceGuids).toEqual(['roof-1'])
+    expect(plan.roof?.planes.surfaceIds).toEqual(['roof-1'])
 
     const raw = JSON.parse(buildFmlV3(plan)) as {
       settings: { roofPlanes?: { surfaceGuids: string[] } }
@@ -159,7 +159,7 @@ describe('roof-vertex-snap', () => {
     expect(dakSurf?.btfOrigin).toBe('manual')
 
     const imported = importFmlV3(raw).plan
-    expect(imported.roof?.planes.surfaceGuids).toEqual(['roof-1'])
+    expect(imported.roof?.planes.surfaceIds).toEqual(['roof-1'])
     expect(imported.source?.settings?.roofPlanes).toBeUndefined()
     const again = listRidgeSurfacesOnFloor(imported.floors[0])[0]
     expect(again?.origin).toBe('manual')

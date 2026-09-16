@@ -261,6 +261,13 @@ describe('bovenlichtPacked expand/fold', () => {
         floors: [],
         source: { settings: { bovenlichtPacked: false } },
       }),
+    ).toBe(true)
+    expect(
+      readBovenlichtPacked({
+        name: 'x',
+        floors: [],
+        settings: { bovenlichtPacked: false },
+      }),
     ).toBe(false)
   })
 

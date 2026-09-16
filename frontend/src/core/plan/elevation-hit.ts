@@ -10,6 +10,7 @@ import {
   type ElevationOpeningRect,
   type ElevationRect,
   type ElevationRoofPlane,
+  type ElevationSkylight,
   type ElevationWallRect,
   type FacadeElevation,
 } from './facade-elevation'
@@ -355,6 +356,37 @@ export function hitElevationRoofPlane(
     const fill = plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points
     if (pointInPoly(point, fill) || distToPolyEdges(point, fill) <= ELEVATION_ROOF_EDGE_HIT_CM) {
       return plane
+    }
+  }
+  return null
+}
+
+/** Dakraam-hit (dieper eerst); zelfde poly-test als dakvlak. */
+export function hitElevationSkylight(
+  elevation: FacadeElevation,
+  point: Point2D,
+  preferItemId?: string | null,
+): ElevationSkylight | null {
+  const list = elevation.skylights
+  if (preferItemId) {
+    const preferred = list.find((item) => item.itemId === preferItemId)
+    if (preferred && preferred.points.length >= 3) {
+      if (
+        pointInPoly(point, preferred.points) ||
+        distToPolyEdges(point, preferred.points) <= ELEVATION_ROOF_EDGE_HIT_CM
+      ) {
+        return preferred
+      }
+    }
+  }
+  const sorted = [...list].sort((a, b) => b.depthCm - a.depthCm)
+  for (const skylight of sorted) {
+    if (skylight.points.length < 3) continue
+    if (
+      pointInPoly(point, skylight.points) ||
+      distToPolyEdges(point, skylight.points) <= ELEVATION_ROOF_EDGE_HIT_CM
+    ) {
+      return skylight
     }
   }
   return null

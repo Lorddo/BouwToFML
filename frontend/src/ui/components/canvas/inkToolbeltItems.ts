@@ -9,6 +9,3 @@ export function getInkToolbeltItems(): ToolbeltItem[] {
     { id: 'rect', icon: 'rect', label: tGlobal('toolbelt.ink.rect'), showSize: true },
   ]
 }
-
-/** @deprecated Prefer getInkToolbeltItems() so locale updates apply. */
-export const INK_TOOLBELT_ITEMS: ToolbeltItem[] = getInkToolbeltItems()

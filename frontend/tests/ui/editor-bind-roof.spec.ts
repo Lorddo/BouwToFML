@@ -63,6 +63,8 @@ function setup(options: { plan: FloorPlan | null; dak?: boolean; activeFloor?: n
       skippedBlocked: 1,
       skippedUncovered: 2,
       splits: 4,
+      boundSkylights: 0,
+      skippedSkylights: 0,
     })),
   }
   const api = useEditorBindRoof({

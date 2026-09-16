@@ -5,6 +5,7 @@ import {
   wallFaces,
   wallJoinFaceCorner,
 } from '@/core/plan/plan-wall-geom'
+import { ringAreaSigned } from '@/core/plan/polygon-ring'
 import type { Point2D } from '@/core/plan/types'
 import type {
   WallFillComponent,
@@ -129,16 +130,6 @@ function junctionPoint(
 
 export function alongWallDir(wall: WallPolygonInput): Point2D {
   return normalize(subtract(wall.b, wall.a))
-}
-
-function ringArea(ring: Point2D[]): number {
-  let area = 0
-  for (let i = 0; i < ring.length; i += 1) {
-    const a = ring[i]
-    const b = ring[(i + 1) % ring.length]
-    area += a.x * b.y - b.x * a.y
-  }
-  return area / 2
 }
 
 const ON_SEGMENT_EPS_CM = 3
@@ -437,13 +428,13 @@ function buildWallRectPolygon(
   const a = endCorners(wall, 'a', adj, wallById, walls)
   const b = endCorners(wall, 'b', adj, wallById, walls)
   const points = [a.left, b.left, b.right, a.right]
-  if (ringArea(points) < 0) points.reverse()
+  if (ringAreaSigned(points) < 0) points.reverse()
   if (!isBowtieQuad(points)) return points
 
   const squareA = squareCapCorners(wall, 'a', adj, wallById, walls)
   const squareB = squareCapCorners(wall, 'b', adj, wallById, walls)
   const fallback = [squareA.left, squareB.left, squareB.right, squareA.right]
-  if (ringArea(fallback) < 0) fallback.reverse()
+  if (ringAreaSigned(fallback) < 0) fallback.reverse()
   return fallback
 }
 
@@ -473,12 +464,12 @@ export function toClippingRing(points: Point2D[]): [number, number][] {
     if (first.x === last.x && first.y === last.y) deduped.pop()
   }
   if (deduped.length < 3) return []
-  if (Math.abs(ringArea(deduped)) < 1e-6) return []
+  if (Math.abs(ringAreaSigned(deduped)) < 1e-6) return []
 
   const pairs: [number, number][] = deduped.map((p) => [p.x, p.y])
   const first = pairs[0]
   pairs.push([first[0], first[1]])
-  if (ringArea(deduped) < 0) {
+  if (ringAreaSigned(deduped) < 0) {
     const open = pairs.slice(0, -1).reverse()
     return [...open, open[0]]
   }

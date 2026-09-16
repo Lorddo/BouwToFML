@@ -48,13 +48,8 @@ const FACTORY_PLG_SETTINGS: PlgSettings = {
     bovenlichtHeightCm: 40,
     bovenlichtGapCm: 10,
     thicknessCms: [10, 20, 30],
-    thicknessMinCm: 10,
-    thicknessMidCm: 20,
-    thicknessMaxCm: 30,
     dakThicknessCm: 30,
     slabThicknessCm: 20,
-    bandMidBoundaryCm: 15,
-    bandMaxBoundaryCm: 25,
   },
 }
 

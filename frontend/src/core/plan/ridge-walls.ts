@@ -38,7 +38,7 @@ export const DEFAULT_RIDGE_DISPLAY_WIDTH_CM = 10
 export const RIDGE_WALL_EXTRA = 'ridge' as const
 
 export type RidgeWallsSettings = {
-  wallGuids: string[]
+  wallIds: string[]
   displayWidthCm: number
 }
 
@@ -73,11 +73,11 @@ function clampDisplayWidthCm(value: unknown): number {
 
 function parseRidgeSettings(raw: unknown): RidgeWallsSettings {
   if (!raw || typeof raw !== 'object') {
-    return { wallGuids: [], displayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM }
+    return { wallIds: [], displayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM }
   }
   const record = raw as Record<string, unknown>
   return {
-    wallGuids: normalizeWallGuids(record.wallGuids),
+    wallIds: normalizeWallGuids(record.wallIds ?? record.wallGuids),
     displayWidthCm: clampDisplayWidthCm(record.displayWidthCm),
   }
 }
@@ -85,24 +85,21 @@ function parseRidgeSettings(raw: unknown): RidgeWallsSettings {
 export function isRidgeDesign(design: FloorDesign | null | undefined): boolean {
   if (!design) return false
   if (design.role === RIDGE_DESIGN_ROLE) return true
-  const role = design.source?.settings?.[PLAN_ROLE_SETTINGS_KEY]
-  if (role === RIDGE_DESIGN_ROLE) return true
   return design.name.trim().toLowerCase() === RIDGE_DESIGN_NAME.toLowerCase()
 }
 
 export function readRidgeWallsSettings(plan: FloorPlan | null | undefined): RidgeWallsSettings {
-  if (plan?.roof?.ridge) return parseRidgeSettings(plan.roof.ridge)
-  return parseRidgeSettings(plan?.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY])
+  return parseRidgeSettings(plan?.roof?.ridge)
 }
 
 function writeRidgeWallsSettings(plan: FloorPlan, next: RidgeWallsSettings): void {
   // Nieuwe roof-object zodat shallow-copied plans hun oude ridge behouden.
   plan.roof = {
     ridge: {
-      wallGuids: [...next.wallGuids],
+      wallIds: [...next.wallIds],
       displayWidthCm: clampDisplayWidthCm(next.displayWidthCm),
     },
-    planes: plan.roof?.planes ?? { surfaceGuids: [] },
+    planes: plan.roof?.planes ?? { surfaceIds: [] },
     stack: plan.roof?.stack ?? { nokThicknessCm: DEFAULT_NOK_THICKNESS_CM, floors: [] },
   }
   const source = plan.source
@@ -129,15 +126,13 @@ export function setRidgeDisplayWidthCm(plan: FloorPlan, widthCm: number): FloorP
 /** Alleen als het plan nog geen expliciete `displayWidthCm` heeft. */
 export function seedRidgeDisplayWidthIfMissing(plan: FloorPlan, widthCm: number): FloorPlan {
   if (plan.roof?.ridge && 'displayWidthCm' in plan.roof.ridge) return plan
-  const raw = plan.source?.settings?.[RIDGE_WALLS_SETTINGS_KEY]
-  if (raw && typeof raw === 'object' && 'displayWidthCm' in raw) return plan
   return setRidgeDisplayWidthCm(plan, widthCm)
 }
 
 export function isRidgeWallId(plan: FloorPlan | null | undefined, wallGuid: string): boolean {
   const id = wallGuid.trim()
   if (!id) return false
-  if (readRidgeWallsSettings(plan).wallGuids.includes(id)) return true
+  if (readRidgeWallsSettings(plan).wallIds.includes(id)) return true
   if (!plan) return false
   for (const floor of plan.floors) {
     const design = floor.designs?.find(isRidgeDesign)
@@ -208,33 +203,33 @@ export function collectRidgeWallIdsOnPlan(plan: FloorPlan | null | undefined): s
 export function syncRidgeWallGuidsFromDesigns(plan: FloorPlan): string[] {
   const current = readRidgeWallsSettings(plan)
   const wallGuids = collectRidgeWallIdsOnPlan(plan)
-  writeRidgeWallsSettings(plan, { ...current, wallGuids })
+  writeRidgeWallsSettings(plan, { ...current, wallIds: wallGuids })
   return wallGuids
 }
 
-export function assignRidgeWallGuids(plan: FloorPlan, wallGuids: readonly string[]): void {
+export function assignRidgeWallGuids(plan: FloorPlan, wallIds: readonly string[]): void {
   const current = readRidgeWallsSettings(plan)
-  const merged = [...current.wallGuids]
-  for (const id of normalizeWallGuids(wallGuids)) {
+  const merged = [...current.wallIds]
+  for (const id of normalizeWallGuids(wallIds)) {
     if (!merged.includes(id)) merged.push(id)
   }
-  writeRidgeWallsSettings(plan, { ...current, wallGuids: merged })
+  writeRidgeWallsSettings(plan, { ...current, wallIds: merged })
 }
 
-export function detachRidgeWallGuids(plan: FloorPlan, wallGuids: readonly string[]): void {
-  const idSet = new Set(normalizeWallGuids(wallGuids))
+export function detachRidgeWallGuids(plan: FloorPlan, wallIds: readonly string[]): void {
+  const idSet = new Set(normalizeWallGuids(wallIds))
   if (idSet.size === 0) return
   const current = readRidgeWallsSettings(plan)
   writeRidgeWallsSettings(plan, {
     ...current,
-    wallGuids: current.wallGuids.filter((id) => !idSet.has(id)),
+    wallIds: current.wallIds.filter((id) => !idSet.has(id)),
   })
 }
 
 export function applyRidgeWallRemaps(plan: FloorPlan, remaps: readonly WallIdRemap[]): void {
   if (remaps.length === 0) return
   const current = readRidgeWallsSettings(plan)
-  let next = [...current.wallGuids]
+  let next = [...current.wallIds]
   for (const remap of remaps) {
     const from = remap.fromId.trim()
     if (!from) continue
@@ -258,7 +253,7 @@ export function applyRidgeWallRemaps(plan: FloorPlan, remaps: readonly WallIdRem
     }
     next = rebuilt
   }
-  writeRidgeWallsSettings(plan, { ...current, wallGuids: next })
+  writeRidgeWallsSettings(plan, { ...current, wallIds: next })
 }
 
 export function pruneRidgeWalls(plan: FloorPlan): string[] {
@@ -693,12 +688,12 @@ export function unmarkWallAsRidge(wall: Wall, thicknessCm: number, floorHeightCm
 /** Filter ridge-GUIDs uit een assign-lijst (gevel/stamp). */
 export function rejectRidgeGuids(
   plan: FloorPlan | null | undefined,
-  wallGuids: readonly string[],
+  wallIds: readonly string[],
 ): string[] {
-  return wallGuids.filter((id) => !isRidgeWallId(plan, id))
+  return wallIds.filter((id) => !isRidgeWallId(plan, id))
 }
 
-export function detachRidgeFromPlanGroups(plan: FloorPlan, wallGuids: readonly string[]): void {
-  detachWallsFromFacade(plan, wallGuids)
-  detachWallsFromStamp(plan, wallGuids)
+export function detachRidgeFromPlanGroups(plan: FloorPlan, wallIds: readonly string[]): void {
+  detachWallsFromFacade(plan, wallIds)
+  detachWallsFromStamp(plan, wallIds)
 }

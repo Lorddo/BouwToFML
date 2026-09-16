@@ -16,6 +16,7 @@ import {
   groupElevationPaintPlanes,
 } from './elevation-paint'
 import { glyphFromElevationRect } from './elevation-opening-symbol'
+import { ringAreaSigned } from './polygon-ring'
 
 export type ElevationLineRole = 'wall' | 'inner' | 'glyph' | 'roof' | 'slab' | 'ridge'
 
@@ -52,16 +53,6 @@ function lerp(a: Point2D, b: Point2D, t: number): Point2D {
   return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
 }
 
-function ringArea(ring: Point2D[]): number {
-  let sum = 0
-  for (let i = 0; i < ring.length; i += 1) {
-    const a = ring[i]
-    const b = ring[(i + 1) % ring.length]
-    sum += a.x * b.y - b.x * a.y
-  }
-  return sum / 2
-}
-
 function ensureClosedRing(points: Point2D[]): Point2D[] {
   if (points.length === 0) return points
   const first = points[0]
@@ -87,12 +78,12 @@ function toClippingRing(points: Point2D[]): [number, number][] {
     if (first.x === last.x && first.y === last.y) deduped.pop()
   }
   if (deduped.length < 3) return []
-  if (Math.abs(ringArea(deduped)) < 1e-6) return []
+  if (Math.abs(ringAreaSigned(deduped)) < 1e-6) return []
 
   const pairs: [number, number][] = deduped.map((p) => [p.x, p.y])
   const first = pairs[0]
   pairs.push([first[0], first[1]])
-  if (ringArea(deduped) < 0) {
+  if (ringAreaSigned(deduped) < 0) {
     const open = pairs.slice(0, -1).reverse()
     return [...open, open[0]]
   }

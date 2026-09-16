@@ -5,8 +5,14 @@ import { stripStampGroupFromPlan } from '@/core/plan/facade-groups'
 import { applyJunctionSanitizeToPlan } from '@/core/plan/materialize-wall-junctions'
 import type { FloorPlan } from '@/core/plan/types'
 import type { ViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
-import { createPlgDocument, writePlg, type PlgSettings } from '@/core/plg/plg-document'
-import { limitsFromCatalog, normalizeThicknessCatalog } from '@/core/plan/wall-thickness-catalog'
+import {
+  createPlgDocument,
+  toPlgFloorDefaults,
+  writePlg,
+  type PlgSettings,
+} from '@/core/plg/plg-document'
+import { normalizeThicknessCatalog } from '@/core/plan/wall-thickness-catalog'
+import { promptPlanExportFormat } from '@/ui/composables/plan-chrome-dialog'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
@@ -43,21 +49,17 @@ export function useEditorDownload(deps: {
   function buildPlgSettings(): PlgSettings {
     const settings = loadUserSettings()
     const catalog = normalizeThicknessCatalog(deps.thicknessPresetCms.value)
-    const limits = limitsFromCatalog(catalog)
     return {
       unitSystem: settings.unitSystem,
       scaleInputUnit: deps.scaleInputUnit.value,
       planDisplayStyle: settings.planDisplay.planDisplayStyle ?? 'editor',
       showCanvasGrid: settings.planDisplay.showCanvasGrid !== false,
       // Hoogtes per verdieping; dikte-catalogus is project-lokaal (niet de globale Settings).
-      defaults: {
+      defaults: toPlgFloorDefaults({
         ...settings.defaults,
         ...deps.activeFloorDefaults.value,
         thicknessCms: [...catalog],
-        thicknessMinCm: limits.minCm,
-        thicknessMidCm: limits.midCm,
-        thicknessMaxCm: limits.maxCm,
-      },
+      }),
     }
   }
 
@@ -104,9 +106,18 @@ export function useEditorDownload(deps: {
     downloadText(writePlg(doc), `${base}.plg`, 'application/json')
   }
 
+  /** Zelfde popup als stap-4: kies .fml of .plg, daarna serialiseren. */
+  async function downloadCurrentExport(): Promise<void> {
+    if (!deps.plan.value) return
+    const format = await promptPlanExportFormat()
+    if (format === 'plg') downloadCurrentPlg()
+    else if (format === 'fml') downloadCurrentFml()
+  }
+
   return {
     buildCurrentFmlText,
     downloadCurrentFml,
     downloadCurrentPlg,
+    downloadCurrentExport,
   }
 }

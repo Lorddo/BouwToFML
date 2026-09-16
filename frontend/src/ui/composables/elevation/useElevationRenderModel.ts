@@ -1,22 +1,24 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import type { FloorPlan, Point2D, Wall } from '@/core/plan/types'
 import {
-  elevationAxisPlanSides,
-  projectFacadeElevation,
-  type ElevationBovenlichtDefaults,
-  type ElevationOpeningRect,
-  type ElevationPlanSide,
-  type ElevationRect,
-  type ElevationRoofPlane,
-  type ElevationWallRect,
-} from '@/core/plan/facade-elevation'
-import {
   compareElevationPaintStackItems,
+  elevationRoofFillRings,
   elevationWallFillPoints,
   elevationWallFillRings,
   elevationWallInnerStrokes,
   groupElevationPaintPlanes,
 } from '@/core/plan/elevation-paint'
+import {
+  type ElevationBovenlichtDefaults,
+  type ElevationOpeningRect,
+  type ElevationPlanSide,
+  type ElevationRect,
+  type ElevationRoofPlane,
+  type ElevationSkylight,
+  type ElevationWallRect,
+  elevationAxisPlanSides,
+  projectFacadeElevation,
+} from '@/core/plan/facade-elevation'
 import {
   elevationOpeningHoleIsRect,
   elevationOpeningHolePoints,
@@ -60,6 +62,7 @@ export type ElevSettingsRef =
   | { kind: 'junction'; id: string }
   | { kind: 'ridge'; wallId: string; floorIndex: number; end?: 'a' | 'b' }
   | { kind: 'roof'; id: string; vertexIndex: number | null }
+  | { kind: 'skylight'; id: string; mode: 'edit' }
   | null
 
 export interface ElevationRenderModelProps {
@@ -263,6 +266,21 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
 
   function stageWallFillPath(wall: ElevationWallRect, holes: readonly ElevationRect[]): string {
     return elevationWallFillRings(wall, wall.ridge ? [] : holes)
+      .map((ring) => {
+        const pts = ring.map((point) => layoutXform.value.toStagePoint(point.x, point.y))
+        const first = pts[0]
+        if (!first || pts.length < 3) return ''
+        return `M${first.x} ${first.y}${pts
+          .slice(1)
+          .map((point) => `L${point.x} ${point.y}`)
+          .join('')}Z`
+      })
+      .join('')
+  }
+
+  function stageRoofFillPath(plane: ElevationRoofPlane): string {
+    const skylights = elevation.value?.skylights ?? []
+    return elevationRoofFillRings(plane, skylights, plane.id)
       .map((ring) => {
         const pts = ring.map((point) => layoutXform.value.toStagePoint(point.x, point.y))
         const first = pts[0]
@@ -567,6 +585,15 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     return plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points
   }
 
+  function skylightSelected(itemId: string): boolean {
+    const target = settingsTarget.value
+    return target?.kind === 'skylight' && target.id === itemId
+  }
+
+  function skylightsOnRoof(surfaceId: string): ElevationSkylight[] {
+    return (elevation.value?.skylights ?? []).filter((item) => item.surfaceId === surfaceId)
+  }
+
   function openingGhostFill(openingId: string, type: 'door' | 'window'): string | undefined {
     if (architectStyle.value) return ARCHITECT_AREA_FILL
     if (selectedOpeningId.value === openingId) return '#f97316'
@@ -644,6 +671,7 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     stageRect,
     stageWallPoly,
     stageWallFillPath,
+    stageRoofFillPath,
     stagePoly,
     stagePoints,
     openingGhostStage,
@@ -665,6 +693,8 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     wallInnerStroke,
     roofOuterStroke,
     roofRingPoints,
+    skylightSelected,
+    skylightsOnRoof,
     openingGhostFill,
     openingGhostOpacity,
     glyphStrokeColor,

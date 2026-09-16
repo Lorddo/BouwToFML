@@ -13,6 +13,7 @@ import {
   setPlanWallHeight,
   updatePlanOpening,
 } from '@/core/plan/elevation-openings'
+import { deletePlanSkylight } from '@/core/plan/elevation-skylight-edit'
 import { setSlabThicknessCm } from '@/core/plan/floor-stack'
 import {
   clampOpeningHeight,
@@ -68,9 +69,11 @@ export function useElevationSelectCommits(options: {
   const {
     selectedOpeningId,
     selectedOpening,
+    selectedSkylightId,
     settingsTarget,
     settingsJunction,
     selectOpening,
+    selectSkylight,
     clearSettings,
   } = state
 
@@ -125,6 +128,14 @@ export function useElevationSelectCommits(options: {
     pushUndo()
     commitPlan(removePlanOpening(props.plan, id))
     selectOpening(null)
+  }
+
+  function deleteSelectedSkylight(): void {
+    const id = selectedSkylightId.value
+    if (!id) return
+    pushUndo()
+    commitPlan(deletePlanSkylight(props.plan, id))
+    selectSkylight(null)
   }
 
   function deleteSelectedRidge(): void {
@@ -303,6 +314,7 @@ export function useElevationSelectCommits(options: {
     commitOpeningSubtype,
     copySelectedOpening,
     deleteSelectedOpening,
+    deleteSelectedSkylight,
     deleteSelectedRidge,
     deleteSelectedRoof,
     commitSelectedField,

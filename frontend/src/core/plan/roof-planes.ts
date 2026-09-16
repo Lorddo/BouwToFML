@@ -45,7 +45,7 @@ export const ROOF_SAME_POINT_CM = 4
 export type RoofSurfaceOrigin = typeof ROOF_ORIGIN_GENERATED | typeof ROOF_ORIGIN_MANUAL
 
 export type RoofPlanesSettings = {
-  surfaceGuids: string[]
+  surfaceIds: string[]
 }
 
 function cloneSettings(settings: PlanExtras | undefined): PlanExtras {
@@ -72,21 +72,19 @@ function normalizeGuids(raw: unknown): string[] {
 
 export function readRoofPlanesSettings(plan: FloorPlan | null | undefined): RoofPlanesSettings {
   if (plan?.roof?.planes) {
-    return { surfaceGuids: normalizeGuids(plan.roof.planes.surfaceGuids) }
+    const raw = plan.roof.planes as { surfaceIds?: unknown; surfaceGuids?: unknown }
+    return { surfaceIds: normalizeGuids(raw.surfaceIds ?? raw.surfaceGuids) }
   }
-  const raw = plan?.source?.settings?.[ROOF_PLANES_SETTINGS_KEY]
-  if (!raw || typeof raw !== 'object') return { surfaceGuids: [] }
-  const record = raw as Record<string, unknown>
-  return { surfaceGuids: normalizeGuids(record.surfaceGuids) }
+  return { surfaceIds: [] }
 }
 
 function writeRoofPlanesSettings(plan: FloorPlan, next: RoofPlanesSettings): void {
   plan.roof = {
     ridge: plan.roof?.ridge ?? {
-      wallGuids: [],
+      wallIds: [],
       displayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
     },
-    planes: { surfaceGuids: [...next.surfaceGuids] },
+    planes: { surfaceIds: [...next.surfaceIds] },
     stack: plan.roof?.stack ?? { nokThicknessCm: DEFAULT_NOK_THICKNESS_CM, floors: [] },
   }
   const source = plan.source
@@ -311,7 +309,7 @@ export function collectRoofPlaneIdsOnPlan(plan: FloorPlan | null | undefined): s
 
 export function syncRoofPlaneGuidsFromDesigns(plan: FloorPlan): string[] {
   const surfaceGuids = collectRoofPlaneIdsOnPlan(plan)
-  writeRoofPlanesSettings(plan, { surfaceGuids })
+  writeRoofPlanesSettings(plan, { surfaceIds: surfaceGuids })
   return surfaceGuids
 }
 
@@ -369,7 +367,7 @@ export function setRidgeSurfacesOnFloor(floor: Floor, surfaces: FloorSurface[]):
 export function isRidgeSurfaceId(plan: FloorPlan | null | undefined, surfaceId: string): boolean {
   const id = surfaceId.trim()
   if (!id) return false
-  if (readRoofPlanesSettings(plan).surfaceGuids.includes(id)) return true
+  if (readRoofPlanesSettings(plan).surfaceIds.includes(id)) return true
   if (!plan) return false
   for (const floor of plan.floors) {
     const design = floor.designs?.find(isRidgeDesign)

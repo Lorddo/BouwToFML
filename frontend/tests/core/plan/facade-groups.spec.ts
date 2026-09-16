@@ -64,7 +64,7 @@ describe('facade-groups', () => {
     expect(group.id).toBe('G1')
     expect(group.code).toBe('VG')
     expect(group.name).toBe('Voorgevel')
-    expect(group.wallGuids).toEqual([])
+    expect(group.wallIds).toEqual([])
     expect(typeof group.nativeId).toBe('number')
     expect(typeof group.groupMarker).toBe('number')
     expect(listFacadeGroups(plan)).toHaveLength(1)
@@ -141,14 +141,10 @@ describe('facade-groups', () => {
 
   it('overlap tussen groepen blijft bij list/prune', () => {
     const plan = planWithWalls(['w1', 'w2'])
-    plan.source = {
-      settings: {
-        facadeGroups: [
-          { id: 'G1', code: 'A', name: 'A', wallGuids: ['w1', 'w2'] },
-          { id: 'G2', code: 'B', name: 'B', wallGuids: ['w1'] },
-        ],
-      },
-    }
+    plan.facadeGroups = [
+      { id: 'G1', code: 'A', name: 'A', wallIds: ['w1', 'w2'] },
+      { id: 'G2', code: 'B', name: 'B', wallIds: ['w1'] },
+    ]
     expect(groupIdsForWall(plan, 'w1').sort()).toEqual(['G1', 'G2'])
     expect(wallGuidsInGroup(plan, 'G2')).toEqual(['w1'])
     pruneFacadeGroups(plan)
@@ -198,7 +194,7 @@ describe('facade-groups', () => {
     expect(renamed?.id).toBe('G1')
     expect(renamed?.code).toBe('VG')
     expect(renamed?.name).toBe('Voorgevel')
-    expect(renamed?.wallGuids).toEqual(['w1'])
+    expect(renamed?.wallIds).toEqual(['w1'])
     expect(plan.floors[0].walls[0].extras?.groupMarkerConfig).toBeUndefined()
   })
 
@@ -231,14 +227,14 @@ describe('facade-groups', () => {
       id: 'G1',
       code: 'VG',
       name: 'Voorgevel',
-      wallGuids: ['wall-a', 'wall-b'],
+      wallIds: ['wall-a', 'wall-b'],
       nativeId: g1.nativeId,
     })
     expect(listFacadeGroups(reimported)[0]).toMatchObject({
       id: 'G1',
       code: 'VG',
       name: 'Voorgevel',
-      wallGuids: ['wall-a', 'wall-b'],
+      wallIds: ['wall-a', 'wall-b'],
       nativeId: g1.nativeId,
     })
   })
@@ -616,25 +612,21 @@ describe('hydrateFacadeGroupsFromNativeMarkers', () => {
     hydrateFacadeGroupsFromNativeMarkers(plan)
     const g1 = listFacadeGroups(plan).find((g) => g.id === 'G1')
     expect(g1?.name).toBe('Voor')
-    expect(g1?.wallGuids).toEqual(['w1'])
+    expect(g1?.wallIds).toEqual(['w1'])
   })
 
   it('stale catalogus blijft tot prune; hydrate no-op als extras bestaan', () => {
     const plan = planWithWalls(['alive-new'])
-    plan.source = {
-      settings: {
-        facadeGroups: [
-          {
-            id: 'G1',
-            code: 'L',
-            name: 'L',
-            nativeId: 708151,
-            groupMarker: 1,
-            wallGuids: ['dead-old'],
-          },
-        ],
+    plan.facadeGroups = [
+      {
+        id: 'G1',
+        code: 'L',
+        name: 'L',
+        nativeId: 708151,
+        groupMarker: 1,
+        wallIds: ['dead-old'],
       },
-    }
+    ]
     plan.floors[0].walls[0].extras = {
       groupMarker: 1,
       groupMarkerConfig: { locked: true, groupId: 708151, name: 'gevel links' },
@@ -648,11 +640,7 @@ describe('hydrateFacadeGroupsFromNativeMarkers', () => {
 
   it('oude FML alleen catalogus: geen native markers zonder sync', () => {
     const plan = planWithWalls(['w1', 'w2'])
-    plan.source = {
-      settings: {
-        facadeGroups: [{ id: 'G1', code: 'VG', name: 'Voor', wallGuids: ['w1', 'w2'] }],
-      },
-    }
+    plan.facadeGroups = [{ id: 'G1', code: 'VG', name: 'Voor', wallIds: ['w1', 'w2'] }]
     hydrateFacadeGroupsFromNativeMarkers(plan)
     expect(groupIdForWall(plan, 'w1')).toBe('G1')
     expect(plan.floors[0].walls[0].extras?.groupMarkerConfig).toBeUndefined()

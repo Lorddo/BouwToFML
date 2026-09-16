@@ -25,7 +25,7 @@ Intern is de plattegrond **`.plg`** (`FloorPlan` + `PlgDocument`). FML is een **
 | **converter** / detectie-app | — | Klant-UI van BouwToFML: «FML», «Vector / FML», download `.fml` |
 | Pad `/editor` (redirect vanaf `/FML-editor`) | — | Converter-workspace + `core/fml` later (rename fase 4–6) |
 
-**Regel:** in conversatie en nieuwe docs «editor» + «plattegrond». Alleen in de converter-UI (en klantgesprekken over Floorplanner-export) «FML». Tekenbureau-tenant: FML-import/export; overige editor-accounts alleen `.plg`. Uitwerking: `.cursor/docs/plg-native-format-plan.md`.
+**Regel:** in conversatie en nieuwe docs «editor» + «plattegrond». Alleen in de converter-UI (en klantgesprekken over Floorplanner-export) «FML». Tekenbureau-tenant: FML-import/export; overige editor-accounts alleen `.plg`. Schema: [`.cursor/docs/plg-specification.md`](../docs/plg-specification.md). Waarom: [`.cursor/docs/plg-native-format-plan.md`](../docs/plg-native-format-plan.md).
 
 ## Documentatie
 
@@ -74,6 +74,7 @@ Alle projectdocs staan in `.cursor/docs/` — **niet** verspreid over losse mark
 | **Productidee self-serve (21 aug; geld → prijsdoc)** | `.cursor/docs/product-idee-self-serve-plattegrond.md` |
 | **Openings-preprocess (deur+raam eigen B/W, plan)** | `.cursor/docs/openings-preprocess-refactor-plan.md` |
 | **IFC/DWG → FML (vooronderzoek + plan)** | `.cursor/docs/ifc-dwg-naar-fml-plan.md` |
+| **`.plg` schema (velden, kinds, persist)** | `.cursor/docs/plg-specification.md` |
 | **Eigen planformaat `.plg` (FML + IFC als adapters)** | `.cursor/docs/plg-native-format-plan.md` |
 | **Clear height 1,50/2,00 + dakkapel** | `.cursor/docs/roof-clear-height.md` |
 | Sessie-geheugen (lopende staat) | `.cursor/rules/memory.mdc` |

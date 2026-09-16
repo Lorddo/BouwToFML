@@ -1,11 +1,12 @@
 import type { ElevationWallRect } from '@/core/plan/facade-elevation'
-import { hitElevationOpening } from '@/core/plan/elevation-hit'
+import { hitElevationOpening, hitElevationSkylight } from '@/core/plan/elevation-hit'
 import { type ElevResizeSide } from '@/core/plan/elevation-opening-edit'
 import { type WallElevationEditMode } from '@/core/plan/wall-endpoint-height'
 import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import type { ElevationSelectEditOptions } from './elevation-interaction-types'
 import { createElevationSelectState } from './elevation-select-state'
 import { useElevationOpeningDrag } from './useElevationOpeningDrag'
+import { useElevationSkylightDrag } from './useElevationSkylightDrag'
 import { useElevationStructureDrag } from './useElevationStructureDrag'
 import { useElevationSelectCommits } from './useElevationSelectCommits'
 
@@ -46,13 +47,16 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
   })
   const {
     selectedOpeningId,
+    selectedSkylightId,
     settingsTarget,
     selectedOpeningRect,
+    selectedSkylightElev,
     selectedAxisEditWall,
     selectedRidgeWall,
     selectedRoofPlane,
     settingsJunction,
     selectOpening,
+    selectSkylight,
     selectWallSettings,
     selectJunction,
     selectRidge,
@@ -76,6 +80,16 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     beginOpeningDrag,
     cleanupOpeningDrag,
   } = openingDrag
+
+  const skylightDrag = useElevationSkylightDrag({
+    props,
+    elevation,
+    clientToCm,
+    snapGuide,
+    pushUndo,
+    commitPlan,
+  })
+  const { beginSkylightDrag, cleanup: cleanupSkylightDrag } = skylightDrag
 
   const structureDrag = useElevationStructureDrag({
     props,
@@ -197,6 +211,50 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     startOpeningMovePending(id, rect, cm, event)
   }
 
+  function onSkylightDown(itemId: string, event: { evt: MouseEvent }): void {
+    stopKonvaBubble(event)
+    markOpeningPointerHandled()
+    if (activeTool.value !== 'select' || canvasLocked.value) return
+    const elev = elevation.value
+    const cm = pointerCm(event)
+    if (!elev || !cm) return
+    const hit =
+      hitElevationSkylight(elev, cm, selectedSkylightId.value) ??
+      elev.skylights.find((item) => item.itemId === itemId)
+    if (!hit) return
+    const already =
+      selectedSkylightId.value === hit.itemId && settingsTarget.value?.kind === 'skylight'
+    selectSkylight(hit.itemId)
+    if (already) {
+      beginSkylightDrag(hit, 'move', { clientX: event.evt.clientX, clientY: event.evt.clientY, evt: event.evt })
+    }
+  }
+
+  function onSkylightMoveHandleDown(event: { evt: MouseEvent }): void {
+    event.evt.stopPropagation()
+    if (activeTool.value !== 'select' || canvasLocked.value) return
+    const skylight = selectedSkylightElev.value
+    if (!skylight) return
+    beginSkylightDrag(skylight, 'move', {
+      clientX: event.evt.clientX,
+      clientY: event.evt.clientY,
+      evt: event.evt,
+    })
+  }
+
+  function onSkylightHandleDown(side: ElevResizeSide, event: { evt: MouseEvent }): void {
+    event.evt.stopPropagation()
+    if (activeTool.value !== 'select' || canvasLocked.value) return
+    if (settingsTarget.value?.kind !== 'skylight') return
+    const skylight = selectedSkylightElev.value
+    if (!skylight) return
+    beginSkylightDrag(skylight, side, {
+      clientX: event.evt.clientX,
+      clientY: event.evt.clientY,
+      evt: event.evt,
+    })
+  }
+
   function onMoveHandleDown(event: { evt: MouseEvent }): void {
     event.evt.stopPropagation()
     if (activeTool.value !== 'select' || canvasLocked.value) return
@@ -316,6 +374,7 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
 
   function cleanupSelectListeners(): void {
     cleanupOpeningDrag()
+    cleanupSkylightDrag()
     cleanupStructureDrag()
   }
 
@@ -328,17 +387,20 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     isContentClickIgnored,
     ...commits,
     onOpeningDown,
+    onSkylightDown,
+    onSkylightMoveHandleDown,
+    onSkylightHandleDown,
     onMoveHandleDown,
     onHandleDown,
     onJunctionDown,
+    onRoofVertexDown,
+    onWallElevHandleDown,
     onJunctionElevHandleDown,
-    onRidgeWallDown,
     onRidgeMoveHandleDown,
     onRidgeHandleDown,
     onRidgeEndHandleDown,
     onWallAxisEndHandleDown,
-    onWallElevHandleDown,
-    onRoofVertexDown,
+    onRidgeWallDown,
     cleanupSelectListeners,
   }
 }

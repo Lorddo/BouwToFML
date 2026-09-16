@@ -225,22 +225,14 @@ export function splitPlanWallAtT(
 }
 
 function cloneFacadeGroupPlan(plan: FloorPlan): FloorPlan {
-  const settings = plan.source?.settings
-  if (!settings || !plan.source) return plan
   const groups = listFacadeGroups(plan)
   if (groups.length === 0) return plan
   return {
     ...plan,
-    source: {
-      ...plan.source,
-      settings: {
-        ...settings,
-        facadeGroups: groups.map((group) => ({
-          ...group,
-          wallGuids: [...group.wallGuids],
-        })),
-      },
-    },
+    facadeGroups: groups.map((group) => ({
+      ...group,
+      wallIds: [...group.wallIds],
+    })),
   }
 }
 

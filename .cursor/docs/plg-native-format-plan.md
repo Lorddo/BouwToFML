@@ -2,6 +2,8 @@
 
 Peildatum: 2026-09-11 · Status: **GEBOUWD** (fase A–F) · Bron: gesprek 2026-08-24 → 2026-09-11
 
+**Veld-voor-veld schema (wat het bestand is):** [`.cursor/docs/plg-specification.md`](plg-specification.md). Dit document is het waarom + de adapters. Schema wijzigen: overleg, niet stil.
+
 Aanleiding: de losstaande editor wordt een eigen product (ander domein). FML vasthouden als intern werkmodel én als klantbestand is daar de verkeerde default. Klanten van die editor **mogen geen FML ontvangen**; FML blijft wél beschikbaar als gated import/export.
 
 > **Naamswijziging 2026-09-10:** werknaam **BTF → PLG**. Extensie **`.plg`**, schema `format: "plg-plan"`. `btf` was de afkorting van *BouwToFML* en zit als prefix in bestaande code (`btfSlices`, `btfFrame`, `btfRole`). Voor een losstaand product is dat de verkeerde merknaam in een klantbestand. Zie §9 voor de rename-scope.

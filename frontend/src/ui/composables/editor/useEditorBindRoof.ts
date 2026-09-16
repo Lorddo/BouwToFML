@@ -12,6 +12,9 @@ export interface BindRoofCanvas {
     skippedBlocked: number
     skippedUncovered: number
     splits: number
+    flushedEdges?: number
+    boundSkylights?: number
+    skippedSkylights?: number
   } | null
 }
 
@@ -109,10 +112,14 @@ export function useEditorBindRoof(deps: {
     skippedBlocked: number
     skippedUncovered: number
     splits: number
+    boundSkylights?: number
+    skippedSkylights?: number
   }): void {
     bindRoofHint.value = deps.t('viewer.bindWallsToRoofResult', {
       bound: result.boundJunctions,
-      skipped: result.skippedBlocked + result.skippedUncovered,
+      skylights: result.boundSkylights ?? 0,
+      skipped:
+        result.skippedBlocked + result.skippedUncovered + (result.skippedSkylights ?? 0),
       splits: result.splits,
     })
   }
@@ -132,7 +139,14 @@ export function useEditorBindRoof(deps: {
       splitCreases: true,
     })
     setBindRoofHint(result)
-    if (result.boundJunctions === 0 && result.splits === 0 && result.flushedEdges === 0) return
+    if (
+      result.boundJunctions === 0 &&
+      result.splits === 0 &&
+      result.flushedEdges === 0 &&
+      result.boundSkylights === 0
+    ) {
+      return
+    }
     deps.canvas.value?.pushUndo?.()
     deps.plan.value = result.plan
   }

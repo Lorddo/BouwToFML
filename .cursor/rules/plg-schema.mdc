@@ -1,0 +1,39 @@
+---
+description: `.plg` is het plancontract — lees de spec vóór bouwen; schema niet stil wijzigen
+alwaysApply: true
+---
+
+# `.plg`-schema (niet stil wijzigen)
+
+Lees `.cursor/docs/plg-specification.md` vóór je iets bouwt dat de plattegrond raakt: velden, kinds, persist, import/export, editor-CRUD, Meetstaat, IFC, inspect.
+
+FML is een **adapter**, geen opslag. FML-vorm: `.cursor/docs/floorplanner/v30-specification.md` + `.cursor/rules/fml-format.mdc`. Waarom `.plg` bestaat: `.cursor/docs/plg-native-format-plan.md`.
+
+## Eerst mappen, niet verzinnen
+
+Bestaat het al als getypt veld (`Opening.kind`, `frame`, `roofSurfaceId`, `liningCm`, `plan.roof`, …)? Gebruik dat. Nieuwe productdata **niet** in `extras` / `btf*` / `source.settings` stoppen.
+
+## Schema-wijziging = overleg
+
+Niet zonder akkoord van de gebruiker:
+
+- veld toevoegen, hernoemen, type wijzigen of verplicht maken
+- opening-/fixture-kind toevoegen
+- `version` / `migratePlg` / IDB-planhelft
+- FML-mapping van een eigen concept (nieuwe extras-key i.p.v. veld)
+- CV-bytes of sessie-only state (`stampOwned`) in `.plg` schrijven
+- Converter-gate (banden, `thicknessMin/Mid/Max`) of `extras.fmlRefid` in `.plg` schrijven
+
+IDB `cv` (scan, B/W, maskers, `tabOutputs`) is **niet** `.plg`. Download = alleen `PlgDocument`. `opening.bovenlicht*` hoort wél in het bestand.
+
+Voorstel kort: welk veld, waarom het bestaande tekortschiet, persist vs runtime, wat FML verliest. Na ja: types + spec + eventueel migratie + adapter in dezelfde wijziging.
+
+## Bronnen (niet dupliceren)
+
+| Laag | Module |
+|---|---|
+| Document | `frontend/src/core/plg/plg-document.ts` |
+| Extensies | `frontend/src/core/plg/extension-types.ts` |
+| Plan | `frontend/src/core/plan/types.ts` |
+| Kinds | `core/plan/data/opening-kinds.json`, `fixture-kinds.json` |
+| FML-brug | `frontend/src/core/plg/fml-adapter/` (registry; volgorde telt) |

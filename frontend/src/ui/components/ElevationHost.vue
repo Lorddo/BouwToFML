@@ -312,6 +312,7 @@ const {
   settingsJunction,
   settingsRidge,
   settingsRoof,
+  selectedSkylight,
   undoStack,
   redoStack,
   elevMoveMod,
@@ -326,6 +327,7 @@ const {
   commitOpeningSubtype,
   copySelectedOpening,
   deleteSelectedOpening,
+  deleteSelectedSkylight,
   deleteSelectedRidge,
   deleteSelectedRoof,
   commitSelectedField,
@@ -605,7 +607,20 @@ defineExpose({
         <template v-if="elevSettingsOpen">
           <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
           <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--plan">
-            <template v-if="settingsRoof">
+            <template v-if="settingsTarget?.kind === 'skylight' && selectedSkylight">
+              <span class="plan-toolbelt__meta">
+                {{ selectedSkylight.item.name || t('viewer.elevationSkylight') }}
+              </span>
+              <ToolbeltActionButton
+                icon="delete"
+                :title="t('result.toolbar.deleteSkylight')"
+                :aria-label="t('result.toolbar.deleteSkylight')"
+                hotkey="Delete"
+                :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
+                @click="deleteSelectedSkylight"
+              />
+            </template>
+            <template v-else-if="settingsRoof">
               <span v-if="settingsRoof.heightCm == null" class="plan-toolbelt__meta">
                 {{ t('viewer.elevationRoof', { name: settingsRoof.name }) }}
               </span>

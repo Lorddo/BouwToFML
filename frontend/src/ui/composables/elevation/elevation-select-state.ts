@@ -30,6 +30,10 @@ import {
 } from '@/core/plan/opening-add-presets'
 import type { OpeningSubtypeDraft } from '@/core/plan/opening-add-presets'
 import { elevationHandlePoints, elevationRectCenter } from '@/core/plan/elevation-opening-edit'
+import {
+  findSkylightInPlan,
+  skylightElevBounds,
+} from '@/core/plan/elevation-skylight-edit'
 import { buildElevationOpeningMeasureLines } from './elevation-opening-measure'
 import {
   buildElevationJunctionHeightMeasureLines,
@@ -53,6 +57,7 @@ export function createElevationSelectState(options: {
   const { props, elevation, activeTool, floorBovenlichtDefaults } = options
 
   const selectedOpeningId = ref<string | null>(null)
+  const selectedSkylightId = ref<string | null>(null)
   const settingsTarget = ref<ElevSettings | null>(null)
   const elevSettingsOpen = computed(
     () => settingsTarget.value != null || activeTool.value !== 'select',
@@ -68,6 +73,42 @@ export function createElevationSelectState(options: {
     const id = selectedOpeningId.value
     if (!id || !elevation.value) return null
     return elevation.value.openings.find((item) => item.openingId === id) ?? null
+  })
+
+  const selectedSkylight = computed(() => {
+    const id = selectedSkylightId.value
+    if (!id) return null
+    return findSkylightInPlan(props.plan, id)
+  })
+
+  const selectedSkylightElev = computed(() => {
+    const id = selectedSkylightId.value
+    if (!id || !elevation.value) return null
+    return elevation.value.skylights.find((item) => item.itemId === id) ?? null
+  })
+
+  const selectedSkylightRect = computed(() => {
+    const elev = selectedSkylightElev.value
+    if (!elev) return null
+    return skylightElevBounds(elev.points)
+  })
+
+  const skylightHandles = computed(() => {
+    const rect = selectedSkylightRect.value
+    if (
+      !rect ||
+      settingsTarget.value?.kind !== 'skylight' ||
+      settingsTarget.value.mode !== 'edit'
+    ) {
+      return []
+    }
+    return elevationHandlePoints(rect)
+  })
+
+  const skylightMoveHandle = computed(() => {
+    const rect = selectedSkylightRect.value
+    if (!rect || settingsTarget.value?.kind !== 'skylight') return null
+    return elevationRectCenter(rect)
   })
 
   const openingHandles = computed(() => {
@@ -380,33 +421,45 @@ export function createElevationSelectState(options: {
   }
 
   function selectOpening(openingId: string | null, mode: 'quick' | 'edit' | null = null): void {
+    selectedSkylightId.value = null
     selectedOpeningId.value = openingId
     settingsTarget.value =
       mode && openingId != null ? { kind: 'opening', id: openingId, mode } : null
   }
 
+  function selectSkylight(itemId: string | null): void {
+    selectedOpeningId.value = null
+    selectedSkylightId.value = itemId
+    settingsTarget.value = itemId ? { kind: 'skylight', id: itemId, mode: 'edit' } : null
+  }
+
   function selectWallSettings(wallId: string, floorIndex: number): void {
     selectedOpeningId.value = null
+    selectedSkylightId.value = null
     settingsTarget.value = { kind: 'wall', wallId, floorIndex }
   }
 
   function selectJunction(id: string | null): void {
     selectedOpeningId.value = null
+    selectedSkylightId.value = null
     settingsTarget.value = id ? { kind: 'junction', id } : null
   }
 
   function selectRidge(wallId: string, floorIndex: number, end?: 'a' | 'b'): void {
     selectedOpeningId.value = null
+    selectedSkylightId.value = null
     settingsTarget.value = { kind: 'ridge', wallId, floorIndex, end }
   }
 
   function selectRoof(id: string | null, vertexIndex: number | null = null): void {
     selectedOpeningId.value = null
+    selectedSkylightId.value = null
     settingsTarget.value = id ? { kind: 'roof', id, vertexIndex } : null
   }
 
   function selectSlabSettings(floorIndex: number): void {
     selectedOpeningId.value = null
+    selectedSkylightId.value = null
     settingsTarget.value = { kind: 'slab', floorIndex }
   }
 
@@ -420,15 +473,22 @@ export function createElevationSelectState(options: {
 
   function clearSelectionOnGroupChange(): void {
     selectedOpeningId.value = null
+    selectedSkylightId.value = null
     settingsTarget.value = null
   }
 
   return {
     selectedOpeningId,
+    selectedSkylightId,
     settingsTarget,
     elevSettingsOpen,
     selectedOpening,
     selectedOpeningRect,
+    selectedSkylight,
+    selectedSkylightElev,
+    selectedSkylightRect,
+    skylightHandles,
+    skylightMoveHandle,
     openingHandles,
     openingMoveHandle,
     openingMoveMeasureLines,
@@ -455,6 +515,7 @@ export function createElevationSelectState(options: {
     settingsRoof,
     elevationMeasureLines,
     selectOpening,
+    selectSkylight,
     selectWallSettings,
     selectJunction,
     selectRidge,

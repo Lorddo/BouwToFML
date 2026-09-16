@@ -1,6 +1,7 @@
 import { toStorableDevSession } from '@/platform/dev-workspace/storable'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import { normalizePlanIdentities } from '@/core/plg/fml-adapter/normalize-plan-identities'
+import { promotePlanExtensions } from '@/core/plg/fml-adapter/registry'
 import type { FloorPlan } from '@/core/plan/types'
 import type {
   FloorWorkspaceBlob,
@@ -272,7 +273,9 @@ function restoreBlob(blob: PersistedFloorBlob): FloorWorkspaceBlob {
     session = restoreSession(joinPersistedSession(blob.cv, plan.scale))
   }
   const previewPlan = plan.previewPlan
-    ? normalizePlanIdentities(toStorableDevSession(plan.previewPlan) as FloorPlan)
+    ? promotePlanExtensions(
+        normalizePlanIdentities(toStorableDevSession(plan.previewPlan) as FloorPlan),
+      )
     : null
   const generatedFloor = plan.generatedFloor
     ? (normalizePlanIdentities({

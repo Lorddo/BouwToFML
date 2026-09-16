@@ -83,13 +83,34 @@ describe('dakkapel overlap + ouder', () => {
     expect(validateRoofOverlap(other, [main])?.code).toBe('plane_plane')
   })
 
-  it('validateRoofOverlap: dakkapel zonder ouder wordt geweigerd', () => {
+  it('validateRoofOverlap: dakkapel zonder ouder mag (ook op een hoofddak)', () => {
     const child = dormer('d1', [
       { x: 40, y: 40 },
       { x: 120, y: 40 },
       { x: 120, y: 100 },
       { x: 40, y: 100 },
     ])
-    expect(validateRoofOverlap(child, [main])?.code).toBe('dormer_no_parent')
+    expect(validateRoofOverlap(child, [main])).toBeNull()
+    expect(validateRoofOverlap(child, [])).toBeNull()
+  })
+
+  it('validateRoofOverlap: dakkapel met verkeerde ouder op ander plane faalt', () => {
+    const other = plane('other', [
+      { x: 0, y: 0 },
+      { x: 400, y: 0 },
+      { x: 400, y: 300 },
+      { x: 0, y: 300 },
+    ])
+    const child = dormer(
+      'd1',
+      [
+        { x: 40, y: 40 },
+        { x: 120, y: 40 },
+        { x: 120, y: 100 },
+        { x: 40, y: 100 },
+      ],
+      'missing',
+    )
+    expect(validateRoofOverlap(child, [other])?.code).toBe('dormer_wrong_parent')
   })
 })

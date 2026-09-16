@@ -13,7 +13,8 @@ Maatlijnen: Autogen (flags + overlay), Slicer (`btfSlices` `{m,p}` + bake `dimen
 V1: **structurele types** — in het **domein** als `Opening.kind` (`door.single`, …); FML-export schrijft Floorplanner-`refid` via de adapter. POC start met standaard enkeldeur + standaard raam. Visuele stijl per makelaar: V2.
 
 Referentie-examples: `examples/FML(current)/` — zie `examples-inventory.md`.
-Volledige spec: `.cursor/docs/floorplanner/v30-specification.md`.
+Volledige FML-spec: `.cursor/docs/floorplanner/v30-specification.md`.
+Domein / `.plg` (eerst lezen bij bouwen): `.cursor/docs/plg-specification.md`.
 
 ## Formaat
 

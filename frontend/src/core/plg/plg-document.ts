@@ -12,6 +12,7 @@ import type { FloorPlan, PlanExtras } from '../plan/types'
 import { migratePlg } from './plg-migrations'
 import { CURRENT_PLG_VERSION } from './plg-version'
 import { normalizePlanIdentities } from './fml-adapter/normalize-plan-identities'
+import { promotePlanExtensions } from './fml-adapter/registry'
 
 export { CURRENT_PLG_VERSION }
 export const PLG_FORMAT = 'plg-plan' as const
@@ -27,8 +28,8 @@ export type PlgScaleInputUnit = 'mm' | 'cm' | 'm' | 'ft-in'
 export type PlgPlanDisplayStyle = 'editor' | 'bouw' | 'architect'
 
 /**
- * Canonieke floor-/project-defaults (hoogtes, diktes, banden, bovenlicht).
- * `ProjectPlanDefaults` in de UI is een alias hiervan.
+ * Canonieke floor-/project-defaults in het `.plg`-bestand.
+ * Converter-gate (banden, min/mid/max) hoort niet hier — zie `limitsFromCatalog`.
  */
 export interface PlgFloorDefaults {
   wallHeightCm: number
@@ -41,14 +42,35 @@ export interface PlgFloorDefaults {
   bovenlichtGapCm: number
   /** Catalogus muurdiktes (min 3, tot 8). */
   thicknessCms: number[]
-  /** Legacy write-through: first / midden / last van thicknessCms. */
-  thicknessMinCm: number
-  thicknessMidCm: number
-  thicknessMaxCm: number
   dakThicknessCm: number
   slabThicknessCm: number
-  bandMidBoundaryCm: number
-  bandMaxBoundaryCm: number
+}
+
+/** Converter-only: afgeleid van `thicknessCms`, niet in `.plg`. */
+export const PLG_CONVERTER_DEFAULT_KEYS = [
+  'thicknessMinCm',
+  'thicknessMidCm',
+  'thicknessMaxCm',
+  'bandMidBoundaryCm',
+  'bandMaxBoundaryCm',
+] as const
+
+export function toPlgFloorDefaults(
+  defaults: PlgFloorDefaults & Record<string, unknown>,
+): PlgFloorDefaults {
+  return {
+    wallHeightCm: defaults.wallHeightCm,
+    doorHeightCm: defaults.doorHeightCm,
+    windowHeightCm: defaults.windowHeightCm,
+    windowSillZCm: defaults.windowSillZCm,
+    bovenlichtDefault: defaults.bovenlichtDefault,
+    windowBovenlichtDefault: defaults.windowBovenlichtDefault,
+    bovenlichtHeightCm: defaults.bovenlichtHeightCm,
+    bovenlichtGapCm: defaults.bovenlichtGapCm,
+    thicknessCms: [...defaults.thicknessCms],
+    dakThicknessCm: defaults.dakThicknessCm,
+    slabThicknessCm: defaults.slabThicknessCm,
+  }
 }
 
 /**
@@ -124,13 +146,8 @@ const DEFAULTS_KEYS = [
   'bovenlichtHeightCm',
   'bovenlichtGapCm',
   'thicknessCms',
-  'thicknessMinCm',
-  'thicknessMidCm',
-  'thicknessMaxCm',
   'dakThicknessCm',
   'slabThicknessCm',
-  'bandMidBoundaryCm',
-  'bandMaxBoundaryCm',
 ] as const
 
 const FOREIGN_KEYS = ['fml'] as const
@@ -245,13 +262,8 @@ function parseFloorDefaults(raw: unknown): PlgFloorDefaults {
     bovenlichtHeightCm: requireNumber(raw, 'bovenlichtHeightCm', ctx),
     bovenlichtGapCm: requireNumber(raw, 'bovenlichtGapCm', ctx),
     thicknessCms: requireNumberArray(raw, 'thicknessCms', ctx),
-    thicknessMinCm: requireNumber(raw, 'thicknessMinCm', ctx),
-    thicknessMidCm: requireNumber(raw, 'thicknessMidCm', ctx),
-    thicknessMaxCm: requireNumber(raw, 'thicknessMaxCm', ctx),
     dakThicknessCm: requireNumber(raw, 'dakThicknessCm', ctx),
     slabThicknessCm: requireNumber(raw, 'slabThicknessCm', ctx),
-    bandMidBoundaryCm: requireNumber(raw, 'bandMidBoundaryCm', ctx),
-    bandMaxBoundaryCm: requireNumber(raw, 'bandMaxBoundaryCm', ctx),
   }
 }
 
@@ -309,7 +321,7 @@ function parsePlan(raw: unknown): FloorPlan {
     throw new PlgDocumentError('plan.floors must be an array')
   }
   // Domein blijft FloorPlan; diepe validatie is FML-/editor-territorium.
-  return normalizePlanIdentities(raw as unknown as FloorPlan)
+  return promotePlanExtensions(normalizePlanIdentities(raw as unknown as FloorPlan))
 }
 
 function normalizeDocument(raw: unknown): PlgDocument {
@@ -368,7 +380,8 @@ export function readPlg(json: string | object): PlgDocument {
 }
 
 function orderDefaults(defaults: PlgFloorDefaults): Record<string, unknown> {
-  return pickOrdered({ ...defaults }, DEFAULTS_KEYS)
+  const fileOnly = toPlgFloorDefaults(defaults as PlgFloorDefaults & Record<string, unknown>)
+  return pickOrdered({ ...fileOnly }, DEFAULTS_KEYS)
 }
 
 function orderSettings(settings: PlgSettings): Record<string, unknown> {
@@ -400,6 +413,11 @@ function orderForeign(foreign: PlgForeign): Record<string, unknown> {
  * Session-only velden horen niet in `.plg` (B7: `wall.stampOwned`).
  * Werkt op een canonieke deep-copy zodat de caller's plan onaangeroerd blijft.
  */
+function stripFmlRefid(extras: Record<string, unknown> | undefined): void {
+  if (!extras || !('fmlRefid' in extras)) return
+  delete extras.fmlRefid
+}
+
 function stripSessionOnlyFromPlan(plan: FloorPlan): FloorPlan {
   const cloned = canonicalizeValue(plan) as FloorPlan
   const stripWalls = (walls: FloorPlan['floors'][number]['walls'] | undefined) => {
@@ -408,12 +426,22 @@ function stripSessionOnlyFromPlan(plan: FloorPlan): FloorPlan {
       if (wall && typeof wall === 'object' && 'stampOwned' in wall) {
         delete (wall as { stampOwned?: boolean }).stampOwned
       }
+      for (const opening of wall.openings ?? []) {
+        stripFmlRefid(opening.extras as Record<string, unknown> | undefined)
+      }
+    }
+  }
+  const stripItems = (items: FloorPlan['floors'][number]['items'] | undefined) => {
+    for (const item of items ?? []) {
+      stripFmlRefid(item.extras as Record<string, unknown> | undefined)
     }
   }
   for (const floor of cloned.floors ?? []) {
     stripWalls(floor.walls)
+    stripItems(floor.items)
     for (const design of floor.designs ?? []) {
       stripWalls(design.walls)
+      stripItems(design.items)
     }
   }
   return cloned

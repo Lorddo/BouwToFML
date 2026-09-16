@@ -64,6 +64,9 @@ const previewCanvasRef = ref<{
     skippedBlocked: number
     skippedUncovered: number
     splits: number
+    flushedEdges?: number
+    boundSkylights?: number
+    skippedSkylights?: number
   } | null
   applyStampToActiveFloor?: () => boolean
   canApplyStampOnActiveFloor?: () => boolean
@@ -432,7 +435,7 @@ const openingOverflow = computed(() => {
 
 // --- Download ---
 
-const { downloadCurrentFml, downloadCurrentPlg } = useEditorDownload({
+const { downloadCurrentExport } = useEditorDownload({
   plan,
   fileName,
   scaleInputUnit,
@@ -660,24 +663,13 @@ defineExpose({
             <button
               v-if="plan"
               type="button"
-              class="sidebar-icon-btn sidebar-icon-btn--primary"
-              title="Download .fml"
-              aria-label="Download .fml"
-              @click="downloadCurrentFml"
-            >
-              <ToolbeltIcon name="download" />
-              <span>Download .fml</span>
-            </button>
-            <button
-              v-if="plan"
-              type="button"
               class="sidebar-icon-btn"
-              title="Download .plg"
-              aria-label="Download .plg"
-              @click="downloadCurrentPlg"
+              :title="t('result.downloadProject')"
+              :aria-label="t('result.downloadProject')"
+              @click="downloadCurrentExport"
             >
               <ToolbeltIcon name="download" />
-              <span>Download .plg</span>
+              <span>{{ t('result.downloadProject') }}</span>
             </button>
             <button
               v-if="!plan"
@@ -1172,13 +1164,10 @@ defineExpose({
           <div class="actions sidebar-download-row">
             <button
               type="button"
-              class="upload-btn primary download-fml"
-              @click="downloadCurrentFml"
+              class="upload-btn primary download-export"
+              @click="downloadCurrentExport"
             >
-              Download .fml
-            </button>
-            <button type="button" class="upload-btn download-plg" @click="downloadCurrentPlg">
-              Download .plg
+              {{ t('result.downloadProject') }}
             </button>
           </div>
         </div>
@@ -2051,7 +2040,7 @@ defineExpose({
   margin-top: 16px;
 }
 
-.download-fml {
+.download-export {
   min-width: 180px;
   height: 36px;
 }

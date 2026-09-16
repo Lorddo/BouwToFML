@@ -60,10 +60,7 @@ export function readDimensionSettings(
   const floor = plan?.floors[floorIndex] ?? plan?.floors[0]
   const idx = plattegrondDesignIndex(floor)
   const design = idx >= 0 ? floor?.designs?.[idx] : (floor?.designs?.[0] ?? undefined)
-  const engineAutoDims =
-    design?.autoDimensions != null
-      ? design.autoDimensions === true
-      : design?.source?.settings?.engineAutoDims === true
+  const engineAutoDims = design?.autoDimensions === true
   return { engineAutoDims, dimensionMode, generateOuterDimension }
 }
 

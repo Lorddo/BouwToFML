@@ -1,6 +1,6 @@
 /**
- * Opening kind ↔ FML refid/guid (via extras.fmlRefid bij unmapped).
- * Hydrate is grotendeels gedekt door `normalizePlanIdentities`; serialize schrijft hashes.
+ * Opening kind ↔ FML refid/guid.
+ * Hydrate is grotendeels gedekt door `normalizePlanIdentities`; serialize schrijft catalogus-hashes.
  */
 import type { FloorPlan, Opening } from '../../plan/types'
 import { fmlRefidForOpeningKind } from './opening-fml-refids'
@@ -8,11 +8,7 @@ import { FML_REFID_EXTRA } from './normalize-plan-identities'
 import type { FmlConceptAdapter } from './registry'
 
 function serializeOpening(op: Opening, out: Record<string, unknown>): void {
-  const preserved =
-    typeof op.extras?.[FML_REFID_EXTRA] === 'string'
-      ? String(op.extras[FML_REFID_EXTRA]).trim()
-      : ''
-  out.refid = preserved || fmlRefidForOpeningKind(op.kind)
+  out.refid = fmlRefidForOpeningKind(op.kind)
   out.guid = op.id
   delete out.kind
   delete out.id

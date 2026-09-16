@@ -20,11 +20,19 @@ function clearFacadeGroupsSettingsKey(plan: {
 export const facadeGroupsAdapter: FmlConceptAdapter = {
   id: 'facade-groups',
   hydrate(plan) {
+    if (!plan.facadeGroups && Array.isArray(plan.source?.settings?.[FACADE_GROUPS_SETTINGS_KEY])) {
+      plan.facadeGroups = listFacadeGroups({
+        ...plan,
+        facadeGroups: plan.source.settings[FACADE_GROUPS_SETTINGS_KEY] as NonNullable<
+          typeof plan.facadeGroups
+        >,
+      })
+    }
     const groups = listFacadeGroups(plan)
     if (groups.length > 0) {
       plan.facadeGroups = groups.map((group) => ({
         ...group,
-        wallGuids: [...group.wallGuids],
+        wallIds: [...group.wallIds],
       }))
     } else {
       delete plan.facadeGroups

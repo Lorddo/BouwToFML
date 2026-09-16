@@ -17,10 +17,15 @@ export type ProjectMeta = {
 }
 
 /**
- * Floor-/project-defaults — alias van canonieke `PlgFloorDefaults` (`core/plg`).
- * Hoogtes, diktes, banden, bovenlicht.
+ * Floor-/project-defaults: `.plg`-velden plus converter-gate (niet in download).
  */
-export type ProjectPlanDefaults = PlgFloorDefaults
+export type ProjectPlanDefaults = PlgFloorDefaults & {
+  thicknessMinCm: number
+  thicknessMidCm: number
+  thicknessMaxCm: number
+  bandMidBoundaryCm: number
+  bandMaxBoundaryCm: number
+}
 
 export type FloorMeta = {
   id: string

@@ -47,6 +47,14 @@ import {
 } from './dormer-edge-walls'
 import { buildLocalOpeningId, encodePlanOpeningId } from './opening-ids'
 import {
+  hasSkylightRoofLink,
+  isSkylightItem,
+  projectSkylightToElevation,
+  sampleSkylightOnRoof,
+  SKYLIGHT_ELEV_FILL,
+  SKYLIGHT_ELEV_STROKE,
+} from './skylight-roof'
+import {
   type Floor,
   type FloorPlan,
   type FloorSurface,
@@ -147,6 +155,19 @@ export type ElevationRoofPlane = {
   parentId?: string
 }
 
+/** Dakraam op een zichtbaar dakvlak (quad volgt helling). */
+export type ElevationSkylight = {
+  id: string
+  itemId: string
+  floorIndex: number
+  surfaceId: string
+  /** Vier hoeken in aanzicht-cm (helling volgt). */
+  points: Point2D[]
+  depthCm: number
+  fill: string
+  stroke: string
+}
+
 /** Grijs per gevelgroep — afwijkend van muur `#94a3b8`. */
 export const ELEVATION_ROOF_FILL_GRAYS = [
   '#64748b',
@@ -190,6 +211,7 @@ export type FacadeElevation = {
   transoms: ElevationOpeningRect[]
   bands: ElevationBand[]
   roofPlanes: ElevationRoofPlane[]
+  skylights: ElevationSkylight[]
   junctions: ElevationJunction[]
   bounds: ElevationRect
 }
@@ -729,6 +751,7 @@ export function projectFacadeElevation(
       transoms: [],
       bands: [],
       roofPlanes: [],
+      skylights: [],
       junctions: [],
       bounds: emptyBounds(),
     }
@@ -1005,6 +1028,40 @@ export function projectFacadeElevation(
     return a.id.localeCompare(b.id)
   })
 
+  const visibleRoofIds = new Set(roofPlanes.map((plane) => plane.id))
+  const roofDepthById = new Map(roofPlanes.map((plane) => [plane.id, plane.depthCm] as const))
+  const skylights: ElevationSkylight[] = []
+  plan.floors.forEach((floor, floorIndex) => {
+    const items = floor.items
+    if (!items?.length) return
+    const surfaces = listRidgeSurfacesOnFloor(floor)
+    if (surfaces.length === 0) return
+    const base = floorWallBaseWorldZ(plan, floorIndex)
+    for (const item of items) {
+      if (!isSkylightItem(item) || !hasSkylightRoofLink(item)) continue
+      const sampled = sampleSkylightOnRoof(surfaces, item)
+      if (!sampled || !visibleRoofIds.has(sampled.surfaceId)) continue
+      const points = projectSkylightToElevation(sampled, {
+        lineOrigin,
+        elevAxis,
+        floorBaseZ: base,
+        projectOnAxis,
+        elevY,
+      })
+      if (points.length < 3) continue
+      skylights.push({
+        id: `skylight-${floorIndex}-${item.id}`,
+        itemId: item.id,
+        floorIndex,
+        surfaceId: sampled.surfaceId,
+        points,
+        depthCm: roofDepthById.get(sampled.surfaceId) ?? 0,
+        fill: SKYLIGHT_ELEV_FILL,
+        stroke: SKYLIGHT_ELEV_STROKE,
+      })
+    }
+  })
+
   const bands: ElevationBand[] = []
   const facadeXs = walls.filter((w) => !w.ridge).flatMap((w) => [w.x0, w.x1])
   const xs =
@@ -1052,6 +1109,7 @@ export function projectFacadeElevation(
     transoms,
     bands,
     roofPlanes,
+    skylights,
     junctions,
     bounds: unionBounds([
       ...walls,
@@ -1067,6 +1125,12 @@ export function projectFacadeElevation(
           y1: Math.max(...ring.map((point) => point.y)),
         }
       }),
+      ...skylights.map((skylight) => ({
+        x0: Math.min(...skylight.points.map((point) => point.x)),
+        x1: Math.max(...skylight.points.map((point) => point.x)),
+        y0: Math.min(...skylight.points.map((point) => point.y)),
+        y1: Math.max(...skylight.points.map((point) => point.y)),
+      })),
     ]),
   }
 }

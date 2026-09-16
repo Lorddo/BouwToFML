@@ -8,8 +8,10 @@ import {
   collectOpeningSnapTargets,
   openingShapeSnapEdges,
   ELEVATION_OPENING_SNAP_CM,
+  elevationCollinearJointXs,
   elevationCollinearXBounds,
   elevationRectCenter,
+  excludeElevationSnapXs,
   hitElevationHandle,
   pickElevationWallForOpeningX,
   resizeElevationRect,
@@ -602,5 +604,89 @@ describe('elevation-opening-edit', () => {
     const bounds = elevationCollinearXBounds([left, right], left, planWalls)
     expect(bounds.left).toBe(-10)
     expect(bounds.right).toBe(410)
+  })
+
+  it('west-resize over een T-naad houdt de oostkant vast (centrum mag voorbij de host)', () => {
+    const host: Wall = {
+      id: 'gevel-l',
+      a: { x: 0, y: 0 },
+      b: { x: 200, y: 0 },
+      thickness: 20,
+      openings: [],
+    }
+    const planWalls: Wall[] = [
+      host,
+      { id: 'gevel-r', a: { x: 200, y: 0 }, b: { x: 400, y: 0 }, thickness: 20, openings: [] },
+    ]
+    const start: Opening = {
+      type: 'window',
+      id: 'blind-1',
+      kind: 'window.blind',
+      t: 1,
+      width: 250,
+      z: 220,
+      z_height: 20,
+    }
+    const startRight = 200 + 125
+    const patch = clampOpeningPatchKeepOppositeEdge(
+      host,
+      start,
+      { t: 1.175, width: 180, z: 220, z_height: 20 },
+      'w',
+      280,
+      planWalls,
+      true,
+    )
+    expect(patch.t * 200 + patch.width / 2).toBeCloseTo(startRight, 5)
+    expect(patch.width).toBe(180)
+    expect(patch.t).toBeGreaterThan(1)
+  })
+
+  it('T-naad van de eigen keten is geen snap-magneet; geveluiteinden blijven dat wel', () => {
+    const left: ElevationWallRect = {
+      wallId: 'gevel-l',
+      floorIndex: 0,
+      depthCm: 0,
+      xa: 0,
+      xb: 200,
+      x0: -10,
+      x1: 200,
+      y0: -280,
+      y1: 0,
+      aTop: { x: -10, y: -280 },
+      aBottom: { x: -10, y: 0 },
+      bTop: { x: 200, y: -280 },
+      bBottom: { x: 200, y: 0 },
+      innerATop: { x: 10, y: -280 },
+      innerABottom: { x: 10, y: 0 },
+      innerBTop: { x: 190, y: -280 },
+      innerBBottom: { x: 190, y: 0 },
+    }
+    const right: ElevationWallRect = {
+      ...left,
+      wallId: 'gevel-r',
+      xa: 200,
+      xb: 400,
+      x0: 200,
+      x1: 410,
+      aTop: { x: 200, y: -280 },
+      aBottom: { x: 200, y: 0 },
+      bTop: { x: 410, y: -280 },
+      bBottom: { x: 410, y: 0 },
+      innerATop: { x: 210, y: -280 },
+      innerABottom: { x: 210, y: 0 },
+      innerBTop: { x: 390, y: -280 },
+      innerBBottom: { x: 390, y: 0 },
+    }
+    const planWalls: Wall[] = [
+      { id: 'gevel-l', a: { x: 0, y: 0 }, b: { x: 200, y: 0 }, thickness: 20, openings: [] },
+      { id: 'gevel-r', a: { x: 200, y: 0 }, b: { x: 400, y: 0 }, thickness: 20, openings: [] },
+    ]
+    const joints = elevationCollinearJointXs([left, right], planWalls, 'gevel-l')
+    expect(joints).toContain(200)
+    expect(joints).toContain(190)
+    expect(joints).toContain(210)
+    const snapped = excludeElevationSnapXs([-10, 200, 410], joints)
+    expect(snapped).toEqual([-10, 410])
   })
 })

@@ -3,12 +3,18 @@ import { computed, ref } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
 import { createFactoryViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
 import { useEditorDownload } from '@/ui/composables/editor/useEditorDownload'
+import type { PlanExportFormat } from '@/ui/composables/plan-chrome-dialog'
 
 const downloads: Array<{ filename: string; content: string }> = []
+const exportChoice = vi.fn<(...args: unknown[]) => Promise<PlanExportFormat | null>>()
 
 vi.mock('@/core/fml/downloadFml', () => ({
   downloadFml: (content: string, filename: string) => downloads.push({ content, filename }),
   downloadText: (content: string, filename: string) => downloads.push({ content, filename }),
+}))
+
+vi.mock('@/ui/composables/plan-chrome-dialog', () => ({
+  promptPlanExportFormat: () => exportChoice(),
 }))
 
 function planWithWall(name = 'Woonhuis'): FloorPlan {
@@ -47,6 +53,7 @@ function setup(options: { plan?: FloorPlan | null; fileName?: string | null } = 
 describe('useEditorDownload', () => {
   beforeEach(() => {
     downloads.length = 0
+    exportChoice.mockReset()
   })
 
   it('flusht velden en onderlegger vóór het serialiseren', () => {
@@ -111,5 +118,35 @@ describe('useEditorDownload', () => {
     const { buildCurrentFmlText } = setup({ plan: null })
 
     expect(buildCurrentFmlText()).toBe('')
+  })
+
+  it('downloadCurrentExport volgt de popup-keuze', async () => {
+    const { downloadCurrentExport } = setup()
+    exportChoice.mockResolvedValueOnce('fml')
+    await downloadCurrentExport()
+    expect(downloads[0]?.filename).toBe('Woonhuis.fml')
+
+    exportChoice.mockResolvedValueOnce('plg')
+    await downloadCurrentExport()
+    expect(downloads[1]?.filename).toBe('Woonhuis.plg')
+  })
+
+  it('downloadCurrentExport doet niets bij annuleren', async () => {
+    const { downloadCurrentExport, calls } = setup()
+    exportChoice.mockResolvedValueOnce(null)
+
+    await downloadCurrentExport()
+
+    expect(downloads).toEqual([])
+    expect(calls).toEqual([])
+  })
+
+  it('downloadCurrentExport doet niets zonder plan', async () => {
+    const { downloadCurrentExport } = setup({ plan: null })
+
+    await downloadCurrentExport()
+
+    expect(exportChoice).not.toHaveBeenCalled()
+    expect(downloads).toEqual([])
   })
 })

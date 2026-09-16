@@ -15,9 +15,8 @@ export type OpeningDragMoveResult = {
   openingId: string
 }
 
-function clamp01(t: number): number {
-  if (!Number.isFinite(t)) return 0.5
-  return Math.max(0, Math.min(1, t))
+function finiteT(t: number): number {
+  return Number.isFinite(t) ? t : 0.5
 }
 
 function cloneWallsForOpenings(walls: Wall[]): Wall[] {
@@ -65,7 +64,7 @@ export function moveOpeningToWall(
   const targetIndex = walls.findIndex((wall) => wall.id === targetWallId)
   if (targetIndex < 0) return null
 
-  const softT = clamp01(t)
+  const softT = finiteT(t)
 
   if (located.wallId === targetWallId) {
     if (Math.abs(located.opening.t - softT) <= 1e-9) {

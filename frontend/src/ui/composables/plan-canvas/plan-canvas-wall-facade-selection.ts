@@ -105,7 +105,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     const out = new Set<string>()
     for (const group of listFacadeGroups(plan)) {
       if (!common.has(group.id)) continue
-      for (const id of group.wallGuids) {
+      for (const id of group.wallIds) {
         if (onFloor.has(id)) out.add(id)
       }
     }
@@ -117,7 +117,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     return (
       listFacadeGroups(editor.localPlan.value)
         .find((group) => group.id === STAMP_FACADE_GROUP_ID)
-        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
+        ?.wallIds.filter((id) => onFloor.has(id)) ?? []
     )
   })
 
@@ -127,7 +127,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     if (!groupId || !plan) return null
     const group = listFacadeGroups(plan).find((entry) => entry.id === groupId)
     if (!group) return null
-    const idSet = new Set(group.wallGuids)
+    const idSet = new Set(group.wallIds)
     let wallCount = 0
     let floorCount = 0
     for (const floor of plan.floors) {
@@ -304,7 +304,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     const group = listFacadeGroups(plan).find((entry) => entry.id === groupId)
     if (!group || !plan) return
 
-    const idSet = new Set(group.wallGuids)
+    const idSet = new Set(group.wallIds)
     let floorCount = 0
     for (const floor of plan.floors) {
       if (floor.walls.some((wall) => idSet.has(wall.id))) floorCount += 1
@@ -324,7 +324,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
       activePlanTool.value = null
     }
     const onFloor = new Set(editor.walls.value.map((wall) => wall.id))
-    const memberIds = group.wallGuids.filter((id) => onFloor.has(id))
+    const memberIds = group.wallIds.filter((id) => onFloor.has(id))
     setPlanSelected(
       selection,
       acrossFloors
@@ -349,7 +349,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
     const members =
       listFacadeGroups(editor.localPlan.value)
         .find((group) => group.id === groupId)
-        ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
+        ?.wallIds.filter((id) => onFloor.has(id)) ?? []
     if (members.length === 0) return false
     if (settingsWallIds.value.length !== members.length) return true
     const selected = new Set(settingsWallIds.value)
@@ -377,7 +377,7 @@ export function createWallFacadeSelection(deps: WallFacadeSelectionDeps) {
       settingsWallIds.value =
         listFacadeGroups(editor.localPlan.value)
           .find((group) => group.id === groupId)
-          ?.wallGuids.filter((id) => onFloor.has(id)) ?? []
+          ?.wallIds.filter((id) => onFloor.has(id)) ?? []
     },
   )
 

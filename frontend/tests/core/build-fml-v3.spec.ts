@@ -394,7 +394,7 @@ describe('buildFmlV3 — bovenlicht export', () => {
 
   it('packed false: export geen expand; import behoudt los raam', () => {
     const plan = doorOnlyPlan({ bovenlicht: true })
-    plan.source = { settings: { bovenlichtPacked: false } }
+    plan.settings = { bovenlichtPacked: false }
     // Unpacked plan: los raam al aanwezig, geen flags nodig voor export-shape.
     plan.floors[0].walls[0].openings = [
       {

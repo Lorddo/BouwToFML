@@ -26,8 +26,7 @@ export function readElevationProjection(
   const typed = plan?.elevations?.projection
   if (typed === 'projective') return 'projective'
   if (typed === 'architect') return 'architect'
-  const raw = plan?.source?.settings?.[ELEVATION_PROJECTION_SETTINGS_KEY]
-  return raw === 'projective' ? 'projective' : DEFAULT_ELEVATION_PROJECTION
+  return DEFAULT_ELEVATION_PROJECTION
 }
 
 function clearElevationSettingsKeys(settings: PlanExtras): PlanExtras {
@@ -104,7 +103,7 @@ function normalizeView(raw: unknown): ElevationView | null {
 }
 
 export function listElevationViews(plan: FloorPlan | null | undefined): ElevationView[] {
-  const raw = plan?.elevations?.views ?? plan?.source?.settings?.[ELEVATION_VIEWS_SETTINGS_KEY]
+  const raw = plan?.elevations?.views
   if (!Array.isArray(raw)) return []
   const out: ElevationView[] = []
   const seen = new Set<string>()

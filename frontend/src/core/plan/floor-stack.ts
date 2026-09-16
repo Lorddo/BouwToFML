@@ -97,10 +97,10 @@ function withRoofStack(plan: FloorPlan, stack: FloorStack): FloorPlan {
     ...plan,
     roof: {
       ridge: plan.roof?.ridge ?? {
-        wallGuids: [],
+        wallIds: [],
         displayWidthCm: DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
       },
-      planes: plan.roof?.planes ?? { surfaceGuids: [] },
+      planes: plan.roof?.planes ?? { surfaceIds: [] },
       stack: normalized,
     },
     source: stripFloorStackSettings(plan),
@@ -108,8 +108,7 @@ function withRoofStack(plan: FloorPlan, stack: FloorStack): FloorPlan {
 }
 
 export function readFloorStack(plan: FloorPlan | null | undefined): FloorStack {
-  if (plan?.roof?.stack) return normalizeStack(plan.roof.stack)
-  return normalizeStack(plan?.source?.settings?.[FLOOR_STACK_SETTINGS_KEY])
+  return normalizeStack(plan?.roof?.stack)
 }
 
 export function slabThicknessCm(stack: FloorStack, level: number): number {
@@ -183,10 +182,9 @@ export function elevationFloorGroups(plan: FloorPlan): ElevationFloorGroup[] {
 /** Schrijf defaults alleen als `floorStack` / `plan.roof.stack` nog ontbreekt of een floor geen plaat heeft. */
 export function seedFloorStackIfMissing(plan: FloorPlan, defaults: FloorStackDefaults): FloorPlan {
   const typed = plan.roof?.stack
-  const raw = plan.source?.settings?.[FLOOR_STACK_SETTINGS_KEY]
   const dak = clampPositiveCm(defaults.dakThicknessCm, DEFAULT_NOK_THICKNESS_CM)
   const slab = clampPositiveCm(defaults.slabThicknessCm, DEFAULT_FLOOR_THICKNESS_CM)
-  if (!typed && (!raw || typeof raw !== 'object')) {
+  if (!typed) {
     return writeFloorStack(plan, {
       nokThicknessCm: dak,
       floors: plan.floors.map((floor) => ({

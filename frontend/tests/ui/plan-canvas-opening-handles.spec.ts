@@ -68,6 +68,32 @@ describe('opening-along-wall-resize', () => {
     expect(patch.t * 200 - patch.width / 2).toBeCloseTo(startLeft, 5)
     expect(patch.t * 200 + patch.width / 2).toBeLessThanOrEqual(210)
   })
+
+  it('start-resize over T houdt de overstekende eindkant', () => {
+    const host = wall({
+      id: 'gevel-l',
+      b: { x: 200, y: 0 },
+    })
+    const neighbor: Wall = {
+      id: 'gevel-r',
+      a: { x: 200, y: 0 },
+      b: { x: 400, y: 0 },
+      thickness: 20,
+      openings: [],
+    }
+    const start = { t: 1, width: 250 }
+    const startRight = 200 + 125
+    const patch = clampOpeningWidthKeepOppositeEdge(
+      host,
+      start,
+      { t: 1.175, width: 180 },
+      'start',
+      [host, neighbor],
+    )
+    expect(patch.t * 200 + patch.width / 2).toBeCloseTo(startRight, 5)
+    expect(patch.width).toBe(180)
+    expect(patch.t).toBeGreaterThan(1)
+  })
 })
 
 describe('plan-canvas-opening-handles', () => {

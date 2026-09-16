@@ -11,9 +11,7 @@ import type { FacadeGroup as PlgFacadeGroup } from '../plg/extension-types'
 import { createDefaultFacadeGroups } from '../plg/extension-types'
 
 export {
-  createDefaultFacadeGroups,
   createDefaultFacadeGroupPresets,
-  DEFAULT_FACADE_GROUP_IDS,
   DEFAULT_FACADE_GROUP_NAMES,
   isDefaultFacadeGroupId,
   MAX_FACADE_GROUP_PRESETS,
@@ -109,7 +107,7 @@ function normalizeGroup(raw: unknown): FacadeGroup | null {
     id,
     code,
     name,
-    wallGuids: normalizeWallGuids(record.wallGuids),
+    wallIds: normalizeWallGuids(record.wallIds ?? record.wallGuids),
     ...(nativeId != null ? { nativeId } : {}),
     ...(groupMarker != null ? { groupMarker } : {}),
   }
@@ -122,8 +120,6 @@ function isStampGroup(group: FacadeGroup): boolean {
 function isPlanDesign(design: FloorDesign | null | undefined): boolean {
   if (!design) return false
   if (design.role === 'ridge') return false
-  const role = design.source?.settings?.['btfRole']
-  if (role === 'ridge') return false
   if (design.name?.trim().toLowerCase() === 'dak') return false
   return true
 }
@@ -132,13 +128,13 @@ function isPlanDesign(design: FloorDesign | null | undefined): boolean {
 function dedupeWallGuidsInGroups(groups: FacadeGroup[]): FacadeGroup[] {
   return groups.map((group) => {
     const seen = new Set<string>()
-    const wallGuids: string[] = []
-    for (const id of group.wallGuids) {
+    const wallIds: string[] = []
+    for (const id of group.wallIds) {
       if (seen.has(id)) continue
       seen.add(id)
-      wallGuids.push(id)
+      wallIds.push(id)
     }
-    return { ...group, wallGuids }
+    return { ...group, wallIds }
   })
 }
 
@@ -147,7 +143,7 @@ function serializeGroup(group: FacadeGroup): Record<string, unknown> {
     id: group.id,
     code: group.code,
     name: group.name,
-    wallGuids: [...group.wallGuids],
+    wallGuids: [...group.wallIds],
   }
   if (group.nativeId != null) out.nativeId = group.nativeId
   if (group.groupMarker != null) out.groupMarker = group.groupMarker
@@ -203,7 +199,7 @@ function writeGroupsCatalogOnly(plan: FloorPlan, groups: FacadeGroup[]): FacadeG
   const unique = dedupeWallGuidsInGroups(ensureNativeIds(groups))
   plan.facadeGroups = unique.map((group) => ({
     ...group,
-    wallGuids: [...group.wallGuids],
+    wallIds: [...group.wallIds],
   }))
   // Settings-key alleen via FML-adapter; in-sessie geen dual-write.
   if (plan.source?.settings && FACADE_GROUPS_SETTINGS_KEY in plan.source.settings) {
@@ -237,10 +233,9 @@ function retainCatalogGroups(groups: FacadeGroup[]): FacadeGroup[] {
   return groups
 }
 
-/** Lees + normaliseer `plan.facadeGroups` (settings-fallback vóór FML-adapter hydrate). */
+/** Lees + normaliseer `plan.facadeGroups`. */
 export function listFacadeGroups(plan: FloorPlan | null | undefined): FacadeGroup[] {
-  const raw =
-    plan?.facadeGroups ?? plan?.source?.settings?.[FACADE_GROUPS_SETTINGS_KEY]
+  const raw = plan?.facadeGroups
   if (!Array.isArray(raw)) return []
   const out: FacadeGroup[] = []
   const seenIds = new Set<string>()
@@ -263,7 +258,7 @@ export function groupIdsForWall(plan: FloorPlan | null | undefined, wallGuid: st
   const out: string[] = []
   for (const group of listFacadeGroups(plan)) {
     if (isStampGroup(group)) continue
-    if (group.wallGuids.includes(id)) out.push(group.id)
+    if (group.wallIds.includes(id)) out.push(group.id)
   }
   return out
 }
@@ -287,13 +282,13 @@ export function isWallInStampGroup(plan: FloorPlan | null | undefined, wallGuid:
 
 export function wallGuidsInGroup(plan: FloorPlan | null | undefined, groupId: string): string[] {
   const group = listFacadeGroups(plan).find((entry) => entry.id === groupId)
-  return group ? [...group.wallGuids] : []
+  return group ? [...group.wallIds] : []
 }
 
 /** Gevelgroepen die een aanzicht mogen krijgen (geen stamp, minstens één muur). */
 export function listElevationFacadeGroups(plan: FloorPlan | null | undefined): FacadeGroup[] {
   return listFacadeGroups(plan).filter(
-    (group) => !isStampGroup(group) && group.wallGuids.length > 0,
+    (group) => !isStampGroup(group) && group.wallIds.length > 0,
   )
 }
 
@@ -343,11 +338,11 @@ export function syncNativeMarkersOnWalls(plan: FloorPlan): void {
       stampGroup = group
       continue
     }
-    for (const guid of group.wallGuids) {
+    for (const guid of group.wallIds) {
       if (!facadeByGuid.has(guid)) facadeByGuid.set(guid, group)
     }
   }
-  const stampGuids = new Set(stampGroup?.wallGuids ?? [])
+  const stampGuids = new Set(stampGroup?.wallIds ?? [])
 
   for (const wall of collectPlanWalls(plan)) {
     const guid = wall.id?.trim()
@@ -454,7 +449,7 @@ function clonePlanForExport(plan: FloorPlan): FloorPlan {
     ...plan,
     facadeGroups: plan.facadeGroups?.map((group) => ({
       ...group,
-      wallGuids: [...group.wallGuids],
+      wallIds: [...group.wallIds],
     })),
     elevations: plan.elevations
       ? {
@@ -481,7 +476,7 @@ export function createFacadeGroup(
   const id = nextGroupId(existing)
   const name = isNonEmptyString(input.name) ? input.name.trim() : `Gevel ${id}`
   const code = isNonEmptyString(input.code) ? input.code.trim() : id
-  const next = [...existing, { id, code, name, wallGuids: [] as string[] }]
+  const next = [...existing, { id, code, name, wallIds: [] as string[] }]
   writeGroups(plan, next)
   return listFacadeGroups(plan).find((g) => g.id === id)!
 }
@@ -499,7 +494,7 @@ export function ensureStampFacadeGroup(plan: FloorPlan): boolean {
       id: STAMP_FACADE_GROUP_ID,
       code: STAMP_FACADE_GROUP_ID,
       name: STAMP_FACADE_GROUP_NAME,
-      wallGuids: [],
+      wallIds: [],
       nativeId: STAMP_NATIVE_GROUP_ID,
       groupMarker: STAMP_NATIVE_GROUP_ID,
     },
@@ -518,7 +513,7 @@ function normalizeSeedGroups(presets: readonly FacadeGroupSeed[] | null | undefi
     if (!id || id === STAMP_FACADE_GROUP_ID || seen.has(id)) continue
     seen.add(id)
     const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : id
-    out.push({ id, code: id, name, wallGuids: [] })
+    out.push({ id, code: id, name, wallIds: [] })
   }
   return out
 }
@@ -621,9 +616,9 @@ export function renameFacadeGroup(
 export function assignWallsToGroup(
   plan: FloorPlan,
   groupId: string,
-  wallGuids: readonly string[],
+  wallIds: readonly string[],
 ): FacadeGroup | null {
-  const ids = normalizeWallGuids(wallGuids)
+  const ids = normalizeWallGuids(wallIds)
   if (ids.length === 0) return listFacadeGroups(plan).find((g) => g.id === groupId) ?? null
 
   const groups = listFacadeGroups(plan)
@@ -631,45 +626,45 @@ export function assignWallsToGroup(
 
   const next = groups.map((group) => {
     if (group.id !== groupId) return group
-    const merged = [...group.wallGuids]
+    const merged = [...group.wallIds]
     for (const id of ids) {
       if (!merged.includes(id)) merged.push(id)
     }
-    return { ...group, wallGuids: merged }
+    return { ...group, wallIds: merged }
   })
   writeGroups(plan, next)
   return listFacadeGroups(plan).find((g) => g.id === groupId) ?? null
 }
 
 /** Zet muren in Stempel (zorgt dat stamp-groep bestaat). */
-export function assignWallsToStamp(plan: FloorPlan, wallGuids: readonly string[]): void {
+export function assignWallsToStamp(plan: FloorPlan, wallIds: readonly string[]): void {
   ensureStampFacadeGroup(plan)
-  assignWallsToGroup(plan, STAMP_FACADE_GROUP_ID, wallGuids)
+  assignWallsToGroup(plan, STAMP_FACADE_GROUP_ID, wallIds)
 }
 
 /** Haal muren alleen uit Stempel; gevel-lidmaatschap blijft. */
-export function detachWallsFromStamp(plan: FloorPlan, wallGuids: readonly string[]): void {
-  const idSet = new Set(normalizeWallGuids(wallGuids))
+export function detachWallsFromStamp(plan: FloorPlan, wallIds: readonly string[]): void {
+  const idSet = new Set(normalizeWallGuids(wallIds))
   if (idSet.size === 0) return
   const groups = listFacadeGroups(plan).map((group) => {
     if (!isStampGroup(group)) return group
     return {
       ...group,
-      wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
+      wallIds: group.wallIds.filter((id) => !idSet.has(id)),
     }
   })
   writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /** Haal muren uit alle gevelgroepen; stamp-lidmaatschap blijft. */
-export function detachWallsFromFacade(plan: FloorPlan, wallGuids: readonly string[]): void {
-  const idSet = new Set(normalizeWallGuids(wallGuids))
+export function detachWallsFromFacade(plan: FloorPlan, wallIds: readonly string[]): void {
+  const idSet = new Set(normalizeWallGuids(wallIds))
   if (idSet.size === 0) return
   const groups = listFacadeGroups(plan).map((group) => {
     if (isStampGroup(group)) return group
     return {
       ...group,
-      wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
+      wallIds: group.wallIds.filter((id) => !idSet.has(id)),
     }
   })
   writeGroups(plan, retainCatalogGroups(groups))
@@ -679,27 +674,27 @@ export function detachWallsFromFacade(plan: FloorPlan, wallGuids: readonly strin
 export function detachWallsFromGroup(
   plan: FloorPlan,
   groupId: string,
-  wallGuids: readonly string[],
+  wallIds: readonly string[],
 ): void {
-  const idSet = new Set(normalizeWallGuids(wallGuids))
+  const idSet = new Set(normalizeWallGuids(wallIds))
   if (idSet.size === 0) return
   const groups = listFacadeGroups(plan).map((group) => {
     if (group.id !== groupId) return group
     return {
       ...group,
-      wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
+      wallIds: group.wallIds.filter((id) => !idSet.has(id)),
     }
   })
   writeGroups(plan, retainCatalogGroups(groups))
 }
 
 /** Haal muren uit alle groepen (gevel + stamp); lege catalogus-slots blijven. */
-export function detachWalls(plan: FloorPlan, wallGuids: readonly string[]): void {
-  const idSet = new Set(normalizeWallGuids(wallGuids))
+export function detachWalls(plan: FloorPlan, wallIds: readonly string[]): void {
+  const idSet = new Set(normalizeWallGuids(wallIds))
   if (idSet.size === 0) return
   const groups = listFacadeGroups(plan).map((group) => ({
     ...group,
-    wallGuids: group.wallGuids.filter((id) => !idSet.has(id)),
+    wallIds: group.wallIds.filter((id) => !idSet.has(id)),
   }))
   writeGroups(plan, retainCatalogGroups(groups))
 }
@@ -716,7 +711,7 @@ export function deleteFacadeGroup(
   const group = groups.find((entry) => entry.id === groupId)
   if (!group) return true
   if (isStampGroup(group)) return false
-  if (group.wallGuids.length > 0 && options?.force !== true) return false
+  if (group.wallIds.length > 0 && options?.force !== true) return false
   writeGroups(
     plan,
     groups.filter((entry) => entry.id !== groupId),
@@ -916,7 +911,7 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
     nativeId?: number
     name?: string
     groupMarker?: number
-    wallGuids: string[]
+    wallIds: string[]
   }
   const clusters: Cluster[] = []
 
@@ -939,7 +934,7 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
         nativeId: hit.nativeId,
         name: hit.name,
         groupMarker: hit.groupMarker,
-        wallGuids: [],
+        wallIds: [],
       }
       clusters.push(cluster)
     } else {
@@ -949,7 +944,7 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
         cluster.groupMarker = hit.groupMarker
       }
     }
-    if (!cluster.wallGuids.includes(hit.guid)) cluster.wallGuids.push(hit.guid)
+    if (!cluster.wallIds.includes(hit.guid)) cluster.wallIds.push(hit.guid)
   }
 
   const usedIds = new Set<string>()
@@ -970,9 +965,9 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
       if (byName) return byName
     }
     // Zelfde muur-GUID in oude catalogus → behoud G1-id (sync vult native).
-    for (const guid of cluster.wallGuids) {
+    for (const guid of cluster.wallIds) {
       const byMember = existing.find(
-        (g) => !isStampGroup(g) && !usedIds.has(g.id) && g.wallGuids.includes(guid),
+        (g) => !isStampGroup(g) && !usedIds.has(g.id) && g.wallIds.includes(guid),
       )
       if (byMember) return byMember
     }
@@ -993,7 +988,7 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
       id: finalId,
       code: prev?.code ?? finalId,
       name: cluster.name ?? prev?.name ?? finalId,
-      wallGuids: [...cluster.wallGuids],
+      wallIds: [...cluster.wallIds],
       nativeId: cluster.nativeId ?? prev?.nativeId,
       groupMarker: cluster.groupMarker ?? prev?.groupMarker,
     })
@@ -1002,7 +997,7 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
   // Fallback: catalogus-leden zonder native markers (oude FML)
   const claimed = new Set<string>()
   for (const g of nextGroups) {
-    for (const id of g.wallGuids) claimed.add(id)
+    for (const id of g.wallIds) claimed.add(id)
   }
   for (const prev of existing) {
     if (isStampGroup(prev)) continue
@@ -1010,26 +1005,26 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
       // Merge leftover catalog guids that are alive and unclaimed
       const target = nextGroups.find((g) => g.id === prev.id)
       if (!target) continue
-      for (const guid of prev.wallGuids) {
+      for (const guid of prev.wallIds) {
         if (!alive.has(guid) || claimed.has(guid)) continue
-        target.wallGuids.push(guid)
+        target.wallIds.push(guid)
         claimed.add(guid)
       }
       continue
     }
-    const leftover = prev.wallGuids.filter((guid) => alive.has(guid) && !claimed.has(guid))
+    const leftover = prev.wallIds.filter((guid) => alive.has(guid) && !claimed.has(guid))
     if (leftover.length === 0) continue
     usedIds.add(prev.id)
     for (const guid of leftover) claimed.add(guid)
     nextGroups.push({
       ...prev,
-      wallGuids: leftover,
+      wallIds: leftover,
     })
   }
 
   // Stamp
   const prevStamp = existing.find((g) => isStampGroup(g))
-  const stampFromCatalog = (prevStamp?.wallGuids ?? []).filter(
+  const stampFromCatalog = (prevStamp?.wallIds ?? []).filter(
     (guid) => alive.has(guid) && !stampGuids.includes(guid),
   )
   // Only keep catalog stamp fallback for walls that have no facade-native conflict handling
@@ -1045,7 +1040,7 @@ export function hydrateFacadeGroupsFromNativeMarkers(plan: FloorPlan): FacadeGro
       id: STAMP_FACADE_GROUP_ID,
       code: STAMP_FACADE_GROUP_ID,
       name: stampName ?? prevStamp?.name ?? STAMP_FACADE_GROUP_NAME,
-      wallGuids: [...new Set(stampGuids)],
+      wallIds: [...new Set(stampGuids)],
       nativeId: stampNativeId ?? prevStamp?.nativeId ?? STAMP_NATIVE_GROUP_ID,
       groupMarker: prevStamp?.groupMarker ?? stampNativeId ?? STAMP_NATIVE_GROUP_ID,
     })
@@ -1065,7 +1060,7 @@ export function pruneFacadeGroups(plan: FloorPlan): FacadeGroup[] {
   const alive = collectWallIds(plan)
   const groups = listFacadeGroups(plan).map((group) => ({
     ...group,
-    wallGuids: group.wallGuids.filter((id) => alive.has(id)),
+    wallIds: group.wallIds.filter((id) => alive.has(id)),
   }))
   return writeGroups(plan, retainCatalogGroups(groups))
 }
@@ -1086,7 +1081,7 @@ export function remapFacadeGroupWallIds(
 
   const ownerIds = new Set<string>()
   for (const group of listFacadeGroups(plan)) {
-    if (group.wallGuids.includes(from)) ownerIds.add(group.id)
+    if (group.wallIds.includes(from)) ownerIds.add(group.id)
   }
   if (ownerIds.size === 0) return
 
@@ -1095,7 +1090,7 @@ export function remapFacadeGroupWallIds(
     if (ownerIds.has(group.id)) {
       const next: string[] = []
       const seen = new Set<string>()
-      for (const id of group.wallGuids) {
+      for (const id of group.wallIds) {
         if (id === from) {
           for (const replacement of replacements) {
             if (seen.has(replacement)) continue
@@ -1108,12 +1103,12 @@ export function remapFacadeGroupWallIds(
         seen.add(id)
         next.push(id)
       }
-      return { ...group, wallGuids: next }
+      return { ...group, wallIds: next }
     }
     // Nieuwe split-ids niet in niet-eigenaar-groepen laten staan (corrupt import).
     return {
       ...group,
-      wallGuids: group.wallGuids.filter((id) => id !== from && !replacementSet.has(id)),
+      wallIds: group.wallIds.filter((id) => id !== from && !replacementSet.has(id)),
     }
   })
   writeGroups(plan, retainCatalogGroups(groups))
@@ -1172,11 +1167,11 @@ function wallsShareFacadeAxis(
  */
 export function findStackedWallIds(
   plan: FloorPlan | null | undefined,
-  wallGuids: readonly string[],
+  wallIds: readonly string[],
   options?: { epsCm?: number },
 ): string[] {
   if (!plan) return []
-  const seedIds = new Set(normalizeWallGuids(wallGuids))
+  const seedIds = new Set(normalizeWallGuids(wallIds))
   if (seedIds.size === 0) return []
 
   const epsCm = options?.epsCm ?? STACKED_WALL_EPS_CM

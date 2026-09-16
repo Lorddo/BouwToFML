@@ -16,7 +16,7 @@ import {
   openingEdgesAlongWall,
 } from './opening-along-wall-resize'
 import { wallElevationAtT } from './wall-endpoint-height'
-import { collectCollinearWallIds } from './opening-plan-ops'
+import { collectCollinearWallIds, wallCollinearEnds } from './opening-plan-ops'
 
 export type ElevResizeSide = 'n' | 'e' | 's' | 'w'
 
@@ -211,6 +211,32 @@ export function elevationCollinearXBounds(
     right = Math.max(right, item.aTop.x, item.bTop.x)
   }
   return { left, right }
+}
+
+/** Hartlijn + faces van de T-naden in de host-keten — geen snap-magneet tijdens resize/move. */
+export function elevationCollinearJointXs(
+  walls: readonly ElevationWallRect[],
+  planWalls: readonly Pick<Wall, 'id' | 'a' | 'b'>[],
+  hostWallId: string,
+): number[] {
+  const chain = new Set(collectCollinearWallIds(planWalls, hostWallId))
+  const xs: number[] = []
+  for (const item of walls) {
+    if (item.ridge || !chain.has(item.wallId)) continue
+    const ends = wallCollinearEnds(planWalls, item.wallId)
+    if (ends.a) xs.push(item.xa, item.aTop.x, item.innerATop.x)
+    if (ends.b) xs.push(item.xb, item.bTop.x, item.innerBTop.x)
+  }
+  return xs
+}
+
+export function excludeElevationSnapXs(
+  xs: readonly number[],
+  exclude: readonly number[],
+  eps = 0.5,
+): number[] {
+  if (exclude.length === 0) return [...xs]
+  return xs.filter((x) => !exclude.some((joint) => Math.abs(x - joint) <= eps))
 }
 
 export function pickElevationWallForOpeningX(

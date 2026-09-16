@@ -331,10 +331,10 @@ describe('ridge-walls', () => {
     assignRidgeWallGuids(plan, ['r1'])
     const next = removeRidgeWallsFromPlan(plan, ['r1'])
     expect(listRidgeWallsOnFloor(next.floors[0])).toHaveLength(0)
-    expect(readRidgeWallsSettings(next).wallGuids).not.toContain('r1')
+    expect(readRidgeWallsSettings(next).wallIds).not.toContain('r1')
     expect(next.floors[0].walls.map((item) => item.id)).toEqual(['w1'])
     expect(listRidgeWallsOnFloor(plan.floors[0])).toHaveLength(1)
-    expect(readRidgeWallsSettings(plan).wallGuids).toContain('r1')
+    expect(readRidgeWallsSettings(plan).wallIds).toContain('r1')
   })
 
   it('.plg-roundtrip: nok woont in plan.roof; FML-uit heeft ridge:true + btfRole + ridgeWalls', () => {
@@ -342,7 +342,7 @@ describe('ridge-walls', () => {
     const ridge = markWallAsRidge(wall('r1', { x: 40, y: 80 }, { x: 360, y: 80 }))
     plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
     assignRidgeWallGuids(plan, ['r1'])
-    expect(plan.roof?.ridge.wallGuids).toEqual(['r1'])
+    expect(plan.roof?.ridge.wallIds).toEqual(['r1'])
     expect(listRidgeWallsOnFloor(plan.floors[0])[0]?.role).toBe('ridge')
     expect(listRidgeWallsOnFloor(plan.floors[0])[0]?.extras?.ridge).toBeUndefined()
 
@@ -362,7 +362,7 @@ describe('ridge-walls', () => {
     expect(dak?.walls?.find((w) => w.guid === 'r1')?.ridge).toBe(true)
 
     const imported = importFmlV3(raw).plan
-    expect(imported.roof?.ridge.wallGuids).toEqual(['r1'])
+    expect(imported.roof?.ridge.wallIds).toEqual(['r1'])
     expect(imported.source?.settings?.ridgeWalls).toBeUndefined()
     const importedRidge = listRidgeWallsOnFloor(imported.floors[0])[0]
     expect(importedRidge?.role).toBe('ridge')

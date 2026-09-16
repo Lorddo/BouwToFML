@@ -12,7 +12,9 @@ import {
   clampElevationOpeningResize,
   clampOpeningPatchKeepOppositeEdge,
   collectOpeningSnapTargets,
+  elevationCollinearJointXs,
   elevationCollinearXBounds,
+  excludeElevationSnapXs,
   pickElevationWallForOpeningX,
   resizeElevationRect,
   snapElevationRect,
@@ -82,7 +84,13 @@ export function useElevationOpeningDrag(options: {
             rect,
             drag?.mode === 'move' || !drag ? 'move' : drag.mode,
             {
-              xs: [...openingTargets.xs, ...collectElevationWallSnapXs(elev.walls)],
+              xs: [
+                ...openingTargets.xs,
+                ...excludeElevationSnapXs(
+                  collectElevationWallSnapXs(elev.walls),
+                  elevationCollinearJointXs(elev.walls, floorWalls, wall.wallId),
+                ),
+              ],
               ys: openingTargets.ys,
             },
             undefined,

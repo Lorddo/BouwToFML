@@ -207,7 +207,7 @@ describe('facade-elevation', () => {
     const split = splitPlanWallAtT(plan, 'front-bg', 0.5)
     expect(split).not.toBeNull()
     const group = listFacadeGroups(split!.plan).find((item) => item.id === 'G1')
-    expect(group?.wallGuids).toEqual(expect.arrayContaining(['front-bg', split!.secondWallId]))
+    expect(group?.wallIds).toEqual(expect.arrayContaining(['front-bg', split!.secondWallId]))
     const elev = projectFacadeElevation(split!.plan, 'G1')
     const midX = 200 * elev!.axis.x
     const mid = elev!.junctions.find((item) => item.floorIndex === 0 && Math.abs(item.x - midX) < 1)
@@ -1313,10 +1313,7 @@ describe('facade-elevation', () => {
 
   it('unpacked: los raam in openings, geen synthetische transom', () => {
     const plan = twoFloorPlan()
-    plan.source = {
-      ...plan.source,
-      settings: { ...(plan.source?.settings ?? {}), bovenlichtPacked: false },
-    }
+    plan.settings = { ...(plan.settings ?? {}), bovenlichtPacked: false }
     const withDoor = addPlanOpening(plan, 'front-bg', {
       type: 'door',
       kind: 'door.single',

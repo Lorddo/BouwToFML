@@ -8,6 +8,7 @@ import {
   ELEVATION_VIEWS_SETTINGS_KEY,
   listElevationViews,
   readElevationProjection,
+  type ElevationView,
 } from '../../plan/elevation-views'
 import type { FmlConceptAdapter } from './registry'
 
@@ -23,10 +24,18 @@ function clearElevationSettingsKeys(plan: {
 export const elevationsAdapter: FmlConceptAdapter = {
   id: 'elevations',
   hydrate(plan) {
+    const settingsViews = plan.source?.settings?.[ELEVATION_VIEWS_SETTINGS_KEY]
+    const settingsProjection = plan.source?.settings?.[ELEVATION_PROJECTION_SETTINGS_KEY]
+    if (!plan.elevations && (Array.isArray(settingsViews) || settingsProjection != null)) {
+      plan.elevations = {
+        projection: settingsProjection === 'projective' ? 'projective' : DEFAULT_ELEVATION_PROJECTION,
+        views: Array.isArray(settingsViews) ? (settingsViews as ElevationView[]) : [],
+      }
+    }
     const views = listElevationViews(plan)
     const projection = readElevationProjection(plan)
     const hasProjectionKey =
-      plan.source?.settings?.[ELEVATION_PROJECTION_SETTINGS_KEY] != null ||
+      settingsProjection != null ||
       plan.elevations?.projection != null
     if (views.length > 0 || hasProjectionKey || projection !== DEFAULT_ELEVATION_PROJECTION) {
       plan.elevations = {

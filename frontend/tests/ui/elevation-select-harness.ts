@@ -174,6 +174,7 @@ export function makeElevationFixture(overrides: Partial<FacadeElevation> = {}): 
     transoms: [],
     bands: [],
     roofPlanes: [],
+    skylights: [],
     junctions: [junction, ridgeJunction],
     bounds: { x0: 0, y0: -450, x1: 400, y1: 0 },
     ...overrides,

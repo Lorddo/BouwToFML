@@ -43,7 +43,7 @@ export interface FacadeGroup {
   id: string
   code: string
   name: string
-  wallGuids: string[]
+  wallIds: string[]
   /** Floorplanner `groupMarkerConfig.groupId` (stamp: stampGroupId). */
   nativeId?: number
   /** Floorplanner `groupMarker` timestamp. */
@@ -77,7 +77,7 @@ export function createDefaultFacadeGroups(): FacadeGroup[] {
     id,
     code: id,
     name: DEFAULT_FACADE_GROUP_NAMES[id],
-    wallGuids: [],
+    wallIds: [],
   }))
 }
 
@@ -88,24 +88,24 @@ export function createDefaultFacadeGroupPresets(): FacadeGroupPreset[] {
   }))
 }
 
-/** Nok-GUID-lijst + weergavedikte (nu `settings.ridgeWalls`). */
+/** Nok-id-lijst + weergavedikte (nu `settings.ridgeWalls`). */
 export interface RidgeModel {
-  wallGuids: string[]
+  wallIds: string[]
   displayWidthCm: number
 }
 
 export const DEFAULT_RIDGE_DISPLAY_WIDTH_CM = 10
 
-/** Dakvlak-GUID-lijst (nu `settings.roofPlanes`). */
+/** Dakvlak-id-lijst (nu `settings.roofPlanes`). */
 export interface RoofPlaneModel {
-  surfaceGuids: string[]
+  surfaceIds: string[]
 }
 
 /** Eén vloerplaat in de gevel-stack (nu `settings.floorStack.floors[]`). */
 export interface FloorStackEntry {
   level: number
   thicknessCm: number
-  /** Default nok-onderkant t.o.v. deze vloer; ontbreekt → floor.height. */
+  /** Default onderkant-Z voor nieuwe nokken op deze floor; ontbreekt → floor.height. */
   ridgeZCm?: number
 }
 
@@ -162,8 +162,8 @@ export type SurfaceOrigin = 'generated' | 'manual'
 /** Dakvlak-soort: hoofddak of dakkapel (kind van een ouder-vlak). */
 export type RoofKind = 'plane' | 'dormer'
 
-/** Muurrol (nu `extras.ridge === true` → typed `wall.role`). */
-export type WallRole = 'ridge'
+/** Muurrol (nok: `extras.ridge === true` → typed `wall.role`). Dakkapel-U: alleen `.plg`. */
+export type WallRole = 'ridge' | 'dormer'
 
 /** Design-rol (nu `design.settings.btfRole`). */
 export type DesignRole = 'ridge'

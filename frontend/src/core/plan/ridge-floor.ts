@@ -5,6 +5,7 @@
  */
 import { buildWallRenderGeometry } from './wall-render-geometry'
 import { wallFaces } from './plan-wall-geom'
+import { ringAreaAbs } from './polygon-ring'
 import {
   listRidgeWallsOnFloor,
   setRidgeWallsOnFloor,
@@ -82,17 +83,6 @@ function ringCentroid(ring: readonly Point2D[]): Point2D {
     sy += point.y
   }
   return { x: sx / n, y: sy / n }
-}
-
-function ringAreaAbs(ring: readonly Point2D[]): number {
-  let area = 0
-  for (let i = 0; i < ring.length; i += 1) {
-    const a = ring[i]
-    const b = ring[(i + 1) % ring.length]
-    if (!a || !b) continue
-    area += a.x * b.y - b.x * a.y
-  }
-  return Math.abs(area) / 2
 }
 
 /** Hole ≈ cutout, niet de kamer eromheen. */

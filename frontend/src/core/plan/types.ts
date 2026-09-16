@@ -29,18 +29,16 @@ export interface Opening {
   name_x?: number
   name_y?: number
   /**
-   * Session-only: bovenlicht bij FML-export (niet in viewer) voor deur of raam.
-   * `null`/`undefined` = erf vloerdefault (deur/raam apart); `true`/`false` = force.
+   * Bovenlicht-override (`.plg`). `null`/`undefined` = erf vloerdefault (deur/raam apart).
+   * FML-export synthetiseert een sibling-raam en wist de flags op de ouder.
    */
   bovenlicht?: boolean | null
   /**
-   * Session-only glashoogte van het gesynthetiseerde bovenlicht (cm).
-   * `null`/`undefined` = erf vloerdefault; gezet = force.
+   * Glashoogte van het bovenlicht (cm). `null`/`undefined` = erf vloerdefault.
    */
   bovenlichtHeightCm?: number | null
   /**
-   * Session-only dorpel-gap boven de opening (cm).
-   * `null`/`undefined` = erf vloerdefault; gezet = force.
+   * Dorpel-gap boven de opening (cm). `null`/`undefined` = erf vloerdefault.
    */
   bovenlichtGapCm?: number | null
   /**
@@ -55,10 +53,7 @@ export interface Opening {
    * Alle vier verplicht wanneer gezet.
    */
   frame?: { leftCm: number; rightCm: number; topCm: number; bottomCm: number }
-  /**
-   * Overige opening-keys.
-   * Adapter mag `fmlRefid` zetten voor unmapped FML-roundtrip (niet onze identiteit).
-   */
+  /** Overige opening-keys. Geen `fmlRefid` — unmapped FML krijgt catalogus-default + ImportWarning. */
   extras?: PlanExtras
 }
 
@@ -121,14 +116,16 @@ export interface FloorItem {
   z_height?: number
   rotation?: number
   mirrored?: [number, number]
+  /**
+   * Gekoppeld dakvlak (GUID van `FloorSurface` in het Dak-design).
+   * Gezet door «Muren aan dak»; aanzicht samplet live Z via dit id.
+   */
+  roofSurfaceId?: string
   name?: string
   showLabel?: boolean
   name_x?: number
   name_y?: number
-  /**
-   * Overige item-keys.
-   * Adapter mag `fmlRefid` zetten voor unmapped FML-roundtrip.
-   */
+  /** Overige item-keys. Geen `fmlRefid` — unmapped FML krijgt catalogus-default + ImportWarning. */
   extras?: PlanExtras
 }
 

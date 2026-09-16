@@ -13,6 +13,7 @@ import {
   hasCollinearContinuation,
   isKopseDormerEdgeWall,
 } from './dormer-edge-walls'
+import { bindSkylightToRoofs, isSkylightItem } from './skylight-roof'
 import type { FloorPlan, FloorSurface, Point2D, Wall } from './types'
 import { wallEndpoint3D, type WallEnd } from './wall-endpoint-height'
 
@@ -32,6 +33,9 @@ export type BindWallsToRoofsResult = {
   splits: number
   /** Randmuren van een dakkapel: hartlijn naar buitenface. */
   flushedEdges: number
+  /** Dakraam-fixtures gekoppeld aan een dakvlak. */
+  boundSkylights: number
+  skippedSkylights: number
 }
 
 type Point3 = Point2D & { z: number }
@@ -548,6 +552,8 @@ export function bindFloorWallsToRoofs(
     skippedUncovered: 0,
     splits: 0,
     flushedEdges: 0,
+    boundSkylights: 0,
+    skippedSkylights: 0,
   }
   const floor = plan.floors[floorIndex]
   if (!floor) return empty
@@ -604,12 +610,34 @@ export function bindFloorWallsToRoofs(
     working = mapFloorWalls(working, floorIndex, () => walls)
   }
 
+  let boundSkylights = 0
+  let skippedSkylights = 0
+  const skylightFloor = working.floors[floorIndex]
+  if (skylightFloor?.items?.some((item) => isSkylightItem(item))) {
+    const nextItems = (skylightFloor.items ?? []).map((item) => {
+      if (!isSkylightItem(item)) return item
+      const result = bindSkylightToRoofs(item, surfaces, working, floorIndex)
+      if (!result.ok) {
+        skippedSkylights += 1
+        return item
+      }
+      boundSkylights += 1
+      return result.item
+    })
+    working = {
+      ...working,
+      floors: working.floors.map((floor, index) =>
+        index === floorIndex ? { ...floor, items: nextItems } : floor,
+      ),
+    }
+  }
+
   // Floorplanner: floor.height ≥ hoogste muurtop — alleen op de bovenste
   // verdieping. Erboven stapelt het aanzicht op story-height (plaat+height);
   // een nok/aanbouw-dak mag 1e/2e niet optillen.
   const boundFloor = working.floors[floorIndex]
   const hasFloorAbove = working.floors[floorIndex + 1] != null
-  if (boundFloor && !hasFloorAbove && (boundJunctions > 0 || splits > 0)) {
+  if (boundFloor && !hasFloorAbove && (boundJunctions > 0 || splits > 0 || boundSkylights > 0)) {
     let maxTop = boundFloor.height
     for (const wall of boundFloor.walls) {
       for (const end of ['a', 'b'] as const) {
@@ -639,6 +667,8 @@ export function bindFloorWallsToRoofs(
     skippedUncovered,
     splits,
     flushedEdges,
+    boundSkylights,
+    skippedSkylights,
   }
 }
 

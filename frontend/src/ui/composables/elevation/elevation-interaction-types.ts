@@ -22,6 +22,7 @@ export type ElevSettings =
   | { kind: 'junction'; id: string }
   | { kind: 'ridge'; wallId: string; floorIndex: number; end?: 'a' | 'b' }
   | { kind: 'roof'; id: string; vertexIndex: number | null }
+  | { kind: 'skylight'; id: string; mode: 'edit' }
 
 export interface ElevationInteractionProps {
   plan: FloorPlan

@@ -167,8 +167,10 @@ export function clampDoorOpeningT(
   if (!Number.isFinite(t) || len < 1e-6) return 0.5
   const half = Math.max(0.5, widthCm / 2)
   const cap = Math.max(0, (wall.thickness ?? 0) / 2)
-  const minT = ends?.a ? 0 : (half - cap) / len
-  const maxT = ends?.b ? 1 : 1 - (half - cap) / len
+  // Collineair eind: centrum mag voorbij de naad (opening hangt over de buur).
+  // Doodlopend eind: opening blijft op de muur (½ dikte-cap).
+  const minT = ends?.a ? Number.NEGATIVE_INFINITY : (half - cap) / len
+  const maxT = ends?.b ? Number.POSITIVE_INFINITY : 1 - (half - cap) / len
   if (minT > maxT) return 0.5
   return Math.max(minT, Math.min(maxT, t))
 }
@@ -182,10 +184,9 @@ export function projectPointToWallT(wall: Pick<Wall, 'a' | 'b'>, point: Point2D)
   return projectOpeningT(wall, point)
 }
 
-/** Wereldpositie van het openingscentrum op de muur (parameter `t`). */
+/** Wereldpositie van het openingscentrum op de as (`t` mag buiten [0,1] bij een T-naad). */
 export function openingWorldCenter(wall: Pick<Wall, 'a' | 'b'>, t: number): Point2D {
-  const clamped = Math.max(0, Math.min(1, Number.isFinite(t) ? t : 0.5))
-  return openingWorldCenterOnAxis(wall, clamped)
+  return openingWorldCenterOnAxis(wall, Number.isFinite(t) ? t : 0.5)
 }
 
 /**

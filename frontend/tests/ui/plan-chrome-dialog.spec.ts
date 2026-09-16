@@ -8,6 +8,7 @@ import {
   promptFacadeSelectScope,
   promptPlanChrome,
   promptPlanChromeChoice,
+  promptPlanExportFormat,
   registerPlanChromeDialogHost,
   resetPlanChromeDialogForTests,
   resolvePlanChromeDialog,
@@ -84,6 +85,19 @@ describe('plan-chrome-dialog', () => {
     if (state) state.state.inputValue = 'all'
     confirmPlanChromeDialog()
     await expect(pending).resolves.toBe('all')
+    unregister()
+  })
+
+  it('promptPlanExportFormat returns fml or plg', async () => {
+    const unregister = registerPlanChromeDialogHost()
+    const pending = promptPlanExportFormat()
+    const state = planChromeDialogState().value
+    expect(state?.state.request.kind).toBe('choice')
+    expect(state?.state.inputValue).toBe('fml')
+    expect(state?.state.request.listItems?.map((row) => row.id)).toEqual(['fml', 'plg'])
+    if (state) state.state.inputValue = 'plg'
+    confirmPlanChromeDialog()
+    await expect(pending).resolves.toBe('plg')
     unregister()
   })
 
