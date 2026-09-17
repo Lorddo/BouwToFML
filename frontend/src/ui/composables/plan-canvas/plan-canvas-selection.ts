@@ -55,5 +55,6 @@ export function createPlanCanvasSelection(): PlanCanvasSelectionRefs {
     addWindowHeightCm: ref(DEFAULT_WINDOW_HEIGHT_CM),
     activePlanTool: ref<PlanToolId | null>(null),
     drawWallKind: ref<'wall' | 'ridge'>('wall'),
+    drawRoomKind: ref<'room' | 'dormer'>('room'),
   }
 }

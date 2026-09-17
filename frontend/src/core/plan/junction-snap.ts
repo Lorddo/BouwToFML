@@ -1,5 +1,6 @@
 import type { Point2D, Wall } from '@/core/plan/types'
 import {
+  DRAW_START_AXIS_SNAP_CM,
   ENDPOINT_SNAP_RADIUS_CM,
   ROOM_DRAW_END_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
@@ -311,4 +312,17 @@ export function snapDrawWallEndpoint(
   const dy = Math.abs(candidate.y - start.y)
   if (dx >= dy) return { x: candidate.x, y: start.y }
   return { x: start.x, y: candidate.y }
+}
+
+/** Soft H/V t.o.v. start: binnen `radiusCm` van een as, anders vrij. */
+export function snapSoftAxisFromStart(
+  start: Point2D,
+  candidate: Point2D,
+  radiusCm = DRAW_START_AXIS_SNAP_CM,
+): Point2D {
+  const dx = Math.abs(candidate.x - start.x)
+  const dy = Math.abs(candidate.y - start.y)
+  if (dy <= radiusCm && dy <= dx) return { x: candidate.x, y: start.y }
+  if (dx <= radiusCm && dx <= dy) return { x: start.x, y: candidate.y }
+  return candidate
 }

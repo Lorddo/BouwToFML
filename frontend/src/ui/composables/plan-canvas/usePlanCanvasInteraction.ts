@@ -361,6 +361,7 @@ export function usePlanCanvasInteraction(options: {
     cancelOpeningDragPending: () => openingDrag.cancelOpeningDragPending(),
     cancelItemDragPending: () => itemDrag.cancelItemDragPending(),
     flushPendingFieldCommits,
+    takePendingPlaceFrame: () => selCoord.takePendingPlaceFrame(),
     wallThicknessDraft: selCoord.wallThicknessDraft,
     wallHeightDraft: selCoord.wallHeightDraft,
     wallBottomZDraft: selCoord.wallBottomZDraft,
@@ -391,6 +392,7 @@ export function usePlanCanvasInteraction(options: {
     nulpuntMode,
     drawWall,
     drawRoom,
+    drawDormer,
     drawSurface,
     drawLabel,
     drawLine,
@@ -633,6 +635,7 @@ export function usePlanCanvasInteraction(options: {
     cancelPreciseMoves()
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
+    drawDormer.cancelDrawDormer()
     drawSurface.cancelDrawSurface()
     drawLine.cancelDrawLine()
     measure.cancelMeasureDrag()
@@ -675,6 +678,7 @@ export function usePlanCanvasInteraction(options: {
     nulpunt,
     underlayMove,
     drawRoom,
+    drawDormer,
     drawSurface,
     drawLabel,
     drawLine,
@@ -823,6 +827,7 @@ export function usePlanCanvasInteraction(options: {
     surfaceEdit,
     drawWall,
     drawRoom,
+    drawDormer,
     wallMove,
     junctionMove,
     openingMove,
@@ -877,6 +882,7 @@ export function usePlanCanvasInteraction(options: {
     cancelSelectionBoxDrag()
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
+    drawDormer.cancelDrawDormer()
     drawSurface.cancelDrawSurface()
     drawLine.cancelDrawLine()
     surfaceEdit.cancelDrag()
@@ -909,8 +915,17 @@ export function usePlanCanvasInteraction(options: {
     selectionBoxPreview,
     drawWallPreview: drawWall.drawWallPreview,
     drawRoomPreview: drawRoom.drawRoomPreview,
+    drawDormerPreview: drawDormer.drawDormerPreview,
+    drawDormerFront: drawDormer.drawDormerFront,
     drawWallDrafting: computed(() => drawWall.isDrafting()),
-    drawRoomDrafting: computed(() => drawRoom.isDrafting()),
+    drawRoomDrafting: computed(() => drawRoom.isDrafting() || drawDormer.isDrafting()),
+    drawDormerDrafting: computed(() => drawDormer.isDrafting()),
+    drawDormerPhase: drawDormer.phase,
+    drawDormerMeasureLengthCm: drawDormer.measureLengthCm,
+    drawDormerMeasureDepthCm: drawDormer.measureDepthCm,
+    drawDormerTypeText: drawDormer.typeText,
+    drawDormerTypeDepthText: drawDormer.typeDepthText,
+    drawDormerTypeField: drawDormer.typeField,
     wallMoveDrafting: computed(() => isPreciseMoveDrafting()),
     wallMoveMeasureLengthCm: computed(() => {
       if (wallMove.isDrafting()) return wallMove.measureLengthCm.value
@@ -960,7 +975,7 @@ export function usePlanCanvasInteraction(options: {
     cancelDrawRoomDraft: drawRoom.cancelDrawRoomDrag,
     acceptDrawDraft,
     deactivateDrawTool,
-    isDrawDrafting: () => drawWall.isDrafting() || drawRoom.isDrafting(),
+    isDrawDrafting: () => drawWall.isDrafting() || drawRoom.isDrafting() || drawDormer.isDrafting(),
     isWallMoveDrafting: () => isPreciseMoveDrafting(),
     isPreciseMoveDrafting,
     hitClickMoveAtClient: (clientX: number, clientY: number) => {
@@ -1022,6 +1037,7 @@ export function usePlanCanvasInteraction(options: {
     rotateSelectedItem: selCoord.rotateSelectedItem,
     toggleSelectedItemMirror: selCoord.toggleSelectedItemMirror,
     drawWallKind: selection.drawWallKind,
+    drawRoomKind: selection.drawRoomKind,
     ridgeZCm,
     selectedFacadeGroupPanel,
     settingsWallIds: selection.settingsWallIds,
@@ -1063,6 +1079,14 @@ export function usePlanCanvasInteraction(options: {
     openingBovenlichtHeightMixed: selCoord.openingBovenlichtHeightMixed,
     openingBovenlichtGapDraft: selCoord.openingBovenlichtGapDraft,
     openingBovenlichtGapMixed: selCoord.openingBovenlichtGapMixed,
+    openingFrameLeftDraft: selCoord.openingFrameLeftDraft,
+    openingFrameLeftMixed: selCoord.openingFrameLeftMixed,
+    openingFrameRightDraft: selCoord.openingFrameRightDraft,
+    openingFrameRightMixed: selCoord.openingFrameRightMixed,
+    openingFrameTopDraft: selCoord.openingFrameTopDraft,
+    openingFrameTopMixed: selCoord.openingFrameTopMixed,
+    openingFrameBottomDraft: selCoord.openingFrameBottomDraft,
+    openingFrameBottomMixed: selCoord.openingFrameBottomMixed,
     addDoorSubtype: selection.addDoorSubtype,
     addDoorWidthCm: selection.addDoorWidthCm,
     addDoorHeightCm: selection.addDoorHeightCm,
@@ -1100,6 +1124,14 @@ export function usePlanCanvasInteraction(options: {
     commitOpeningBovenlichtHeight: selCoord.commitOpeningBovenlichtHeight,
     onOpeningBovenlichtGapCm: selCoord.onOpeningBovenlichtGapCm,
     commitOpeningBovenlichtGap: selCoord.commitOpeningBovenlichtGap,
+    onOpeningFrameLeftCm: selCoord.onOpeningFrameLeftCm,
+    commitOpeningFrameLeft: selCoord.commitOpeningFrameLeft,
+    onOpeningFrameRightCm: selCoord.onOpeningFrameRightCm,
+    commitOpeningFrameRight: selCoord.commitOpeningFrameRight,
+    onOpeningFrameTopCm: selCoord.onOpeningFrameTopCm,
+    commitOpeningFrameTop: selCoord.commitOpeningFrameTop,
+    onOpeningFrameBottomCm: selCoord.onOpeningFrameBottomCm,
+    commitOpeningFrameBottom: selCoord.commitOpeningFrameBottom,
     copySelectedOpening: selCoord.copySelectedOpening,
     deleteSelectedOpenings: selCoord.deleteSelectedOpenings,
     splitSelectedWall,

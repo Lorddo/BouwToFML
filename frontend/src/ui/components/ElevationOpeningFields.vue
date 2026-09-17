@@ -19,6 +19,11 @@ const props = withDefaults(
     hingeAtStart?: boolean
     swingRight?: boolean
     showMirrorButton?: boolean
+    showFrame?: boolean
+    frameLeftCm?: number
+    frameRightCm?: number
+    frameTopCm?: number
+    frameBottomCm?: number
   }>(),
   {
     bovenlicht: false,
@@ -28,6 +33,11 @@ const props = withDefaults(
     hingeAtStart: true,
     swingRight: false,
     showMirrorButton: false,
+    showFrame: false,
+    frameLeftCm: 5,
+    frameRightCm: 5,
+    frameTopCm: 5,
+    frameBottomCm: 0,
   },
 )
 
@@ -41,6 +51,10 @@ const emit = defineEmits<{
   toggleHinge: []
   toggleSwing: []
   remove: []
+  frameLeft: [cm: number]
+  frameRight: [cm: number]
+  frameTop: [cm: number]
+  frameBottom: [cm: number]
 }>()
 
 const { t } = useI18n()
@@ -67,7 +81,6 @@ function emitBovenlichtGap(cm: number): void {
 </script>
 
 <template>
-  <span class="plan-toolbelt__meta">{{ kindLabel }}</span>
   <PlanOpeningEditFields
     :unit="unit"
     :type="type"
@@ -81,6 +94,11 @@ function emitBovenlichtGap(cm: number): void {
     :hinge-at-start="hingeAtStart"
     :swing-right="swingRight"
     :show-mirror-button="showMirrorButton"
+    :show-frame="showFrame"
+    :frame-left-cm="frameLeftCm"
+    :frame-right-cm="frameRightCm"
+    :frame-top-cm="frameTopCm"
+    :frame-bottom-cm="frameBottomCm"
     show-sill
     show-delete
     @width="emitWidth"
@@ -89,8 +107,16 @@ function emitBovenlichtGap(cm: number): void {
     @bovenlicht="emit('bovenlicht', ($event.target as HTMLInputElement).checked)"
     @bovenlicht-height="emitBovenlichtHeight"
     @bovenlicht-gap="emitBovenlichtGap"
+    @frame-left="emit('frameLeft', $event)"
+    @frame-right="emit('frameRight', $event)"
+    @frame-top="emit('frameTop', $event)"
+    @frame-bottom="emit('frameBottom', $event)"
     @toggle-hinge="emit('toggleHinge')"
     @toggle-swing="emit('toggleSwing')"
     @remove="emit('remove')"
-  />
+  >
+    <template #leading>
+      <span class="plan-toolbelt__meta">{{ kindLabel }}</span>
+    </template>
+  </PlanOpeningEditFields>
 </template>

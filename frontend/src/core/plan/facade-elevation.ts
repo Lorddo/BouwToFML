@@ -56,9 +56,9 @@ import {
 } from './skylight-roof'
 import {
   type Floor,
+  type FloorItem,
   type FloorPlan,
   type FloorSurface,
-  type PlanExtras,
   type Opening,
   type OpeningType,
   type Point2D,
@@ -127,7 +127,8 @@ export type ElevationOpeningRect = ElevationRect & {
   mirrored?: [number, number]
   /** FML-breedte (cm), ongeprojecteerd — kozijn-X schalen met (x1−x0)/widthCm. */
   widthCm: number
-  extras?: PlanExtras
+  /** Instance-kozijn; ontbreekt → catalogus in glyph. */
+  frame?: Opening['frame']
   /** Muur-a ligt links in het aanzicht (`xa <= xb`); scharnier/kruk-X. */
   startOnLeft?: boolean
   /** Zelfde diepte als de host-muur; groter = vóór. */
@@ -166,6 +167,9 @@ export type ElevationSkylight = {
   depthCm: number
   fill: string
   stroke: string
+  /** Plattegrond-breedte (voor L/R-schaal van het kozijn). */
+  widthCm: number
+  frame?: FloorItem['frame']
 }
 
 /** Grijs per gevelgroep — afwijkend van muur `#94a3b8`. */
@@ -866,7 +870,7 @@ export function projectFacadeElevation(
         kind: opening.kind,
         mirrored: opening.mirrored,
         widthCm: width,
-        extras: opening.extras,
+        frame: opening.frame,
         startOnLeft,
         depthCm,
         x0,
@@ -1058,6 +1062,8 @@ export function projectFacadeElevation(
         depthCm: roofDepthById.get(sampled.surfaceId) ?? 0,
         fill: SKYLIGHT_ELEV_FILL,
         stroke: SKYLIGHT_ELEV_STROKE,
+        widthCm: item.width,
+        frame: item.frame,
       })
     }
   })

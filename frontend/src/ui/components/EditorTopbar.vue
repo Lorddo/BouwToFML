@@ -11,6 +11,7 @@ const DEFAULT_PLAN_HELP_KEYS = [
   'result.toolbar.hintNulpunt',
   'result.toolbar.hintDrawWall',
   'result.toolbar.hintDrawRoom',
+  'result.toolbar.hintDrawDormer',
   'result.toolbar.hintDrawSurface',
   'result.toolbar.hintDrawRoof',
   'result.toolbar.hintDrawLabel',

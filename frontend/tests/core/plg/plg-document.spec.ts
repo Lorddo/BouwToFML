@@ -98,6 +98,101 @@ describe('plg-document roundtrip', () => {
     expect(roundtrip).toBe(original)
   })
 
+  it('writePlg stript FML-extras plg* uit openings/items/surfaces/design.settings', () => {
+    const doc = sampleDoc()
+    const wall = doc.plan.floors[0]?.walls[0]
+    if (!wall) throw new Error('expected wall')
+    wall.openings = [
+      {
+        id: 'o1',
+        kind: 'door.single',
+        type: 'door',
+        t: 0.5,
+        width: 90,
+        z: 0,
+        z_height: 220,
+        frame: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 0 },
+        extras: { plgFrame: { leftCm: 9, rightCm: 9, topCm: 9, bottomCm: 9 } },
+      },
+    ]
+    doc.plan.floors[0].items = [
+      {
+        id: 'sky1',
+        kind: 'skylight',
+        x: 100,
+        y: 100,
+        width: 80,
+        height: 80,
+        roofSurfaceId: 'roof-1',
+        frame: { leftCm: 6, rightCm: 6, topCm: 4, bottomCm: 4 },
+        extras: { plgRoofSurfaceId: 'should-not-persist' },
+      },
+    ]
+    doc.plan.floors[0].designs = [
+      {
+        name: 'A',
+        walls: [],
+        slices: [{ m: { x: 0, y: 0 }, p: { x: 100, y: 0 } }],
+        surfaces: [
+          {
+            id: 'roof-1',
+            poly: [
+              { x: 0, y: 0, z: 300 },
+              { x: 100, y: 0, z: 300 },
+              { x: 100, y: 100, z: 300 },
+              { x: 0, y: 100, z: 300 },
+            ],
+            color: '#ccc',
+            showAreaLabel: false,
+            isRoof: true,
+            origin: 'manual',
+            extras: { plgOrigin: 'generated' },
+          },
+        ],
+        source: {
+          settings: {
+            plgSlices: [{ m: { x: 1, y: 1 }, p: { x: 2, y: 2 } }],
+            plgRole: 'ridge',
+          },
+        },
+      },
+    ]
+
+    const written = JSON.parse(writePlg(doc)) as {
+      plan: {
+        floors: Array<{
+          walls: Array<{ openings: Array<{ extras?: Record<string, unknown>; frame?: unknown }> }>
+          items?: Array<{
+            extras?: Record<string, unknown>
+            roofSurfaceId?: string
+            frame?: unknown
+          }>
+          designs?: Array<{
+            slices?: unknown
+            source?: { settings?: Record<string, unknown> }
+            surfaces?: Array<{ extras?: Record<string, unknown>; origin?: string }>
+          }>
+        }>
+      }
+    }
+    const floor = written.plan.floors[0]
+    expect(floor.walls[0]?.openings[0]?.frame).toEqual({
+      leftCm: 5,
+      rightCm: 5,
+      topCm: 5,
+      bottomCm: 0,
+    })
+    expect(floor.walls[0]?.openings[0]?.extras?.plgFrame).toBeUndefined()
+    expect(floor.items?.[0]?.roofSurfaceId).toBe('roof-1')
+    expect(floor.items?.[0]?.frame).toEqual({ leftCm: 6, rightCm: 6, topCm: 4, bottomCm: 4 })
+    expect(floor.items?.[0]?.extras?.plgRoofSurfaceId).toBeUndefined()
+    expect(floor.designs?.[0]?.slices).toEqual([{ m: { x: 0, y: 0 }, p: { x: 100, y: 0 } }])
+    expect(floor.designs?.[0]?.source?.settings?.plgSlices).toBeUndefined()
+    expect(floor.designs?.[0]?.source?.settings?.plgRole).toBeUndefined()
+    expect(floor.designs?.[0]?.surfaces?.[0]?.origin).toBe('manual')
+    expect(floor.designs?.[0]?.surfaces?.[0]?.extras?.plgOrigin).toBeUndefined()
+  })
+
   it('writePlg laat converter-banden en min/mid/max weg; read slikt oude keys', () => {
     const doc = sampleDoc()
     const written = JSON.parse(writePlg(doc)) as {

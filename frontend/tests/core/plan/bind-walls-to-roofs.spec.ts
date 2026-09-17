@@ -5,13 +5,16 @@ import {
   listFloorsWithRoofPlanes,
   sampleCeilingRoofAtPoint,
   sampleRoofZAtPoint,
+  syncDormerAssemblyAfterRoofEdit,
 } from '@/core/plan/bind-walls-to-roofs'
 import { createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import {
   isDormerLikeRoof,
+  listRidgeSurfacesOnFloor,
   makeRoofSurface,
   markRoofSurfaceManual,
+  setRidgeSurfaceVerticesZ,
   setRidgeSurfacesOnFloor,
 } from '@/core/plan/roof-planes'
 import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/plan/ridge-walls'
@@ -575,6 +578,98 @@ describe('bindFloorWallsToRoofs dakkapel-rand flush', () => {
     expect(wallEndpoint3D(wang, 'a', 280).h).toBeGreaterThanOrEqual(270)
     expect(wang.balance === 0 || wang.balance === 1).toBe(false)
     expect(wang.a.x).toBeCloseTo(wang.b.x, 5)
+  })
+
+  it('syncDormerAssemblyAfterRoofEdit: goot-Z omhoog bindt kopse top zonder knop', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel-Z', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+      wall('wang', { x: 100, y: 0 }, { x: 100, y: 120 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 100 },
+          { x: 400, y: 0, z: 100 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        roofKind: 'dormer',
+        roofParentId: 'parent',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 320 },
+          { x: 100, y: 120, z: 320 },
+        ],
+      }),
+    ])
+    // Eerst hoogtes op 280 (alsof al gebonden), daarna alleen dak-Z omhoog.
+    const raised = setRidgeSurfaceVerticesZ(plan, 'd1', [0, 1], 340)
+    expect(listRidgeSurfacesOnFloor(raised.floors[0]).find((s) => s.id === 'd1')!.poly[0]?.z).toBe(
+      340,
+    )
+    expect(
+      wallEndpoint3D(raised.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h,
+    ).toBe(280)
+
+    const synced = syncDormerAssemblyAfterRoofEdit(raised, 'd1')
+    const front = synced.floors[0].walls.find((w) => w.id === 'front')!
+    const wang = synced.floors[0].walls.find((w) => w.id === 'wang')!
+    expect(wallEndpoint3D(front, 'a', 280).h).toBe(340)
+    expect(wallEndpoint3D(front, 'b', 280).h).toBe(340)
+    expect(wallEndpoint3D(front, 'a', 280).z).toBeGreaterThanOrEqual(90)
+    const wangFrontEnd =
+      Math.abs(wang.a.y) < 1 ? 'a' : Math.abs(wang.b.y) < 1 ? 'b' : null
+    expect(wangFrontEnd).not.toBeNull()
+    expect(wallEndpoint3D(wang, wangFrontEnd!, 280).h).toBe(340)
+  })
+
+  it('sync na eerdere bind+flush: goot-Z blijft kopse bijwerken', () => {
+    const plan = createEmptyFloorPlan({ name: 'Kapel-Z2', wallHeightCm: 280 })
+    plan.floors[0].walls = [
+      wall('front', { x: 100, y: 0 }, { x: 250, y: 0 }),
+      wall('wang', { x: 100, y: 0 }, { x: 100, y: 120 }),
+    ]
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'parent',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 100 },
+          { x: 400, y: 0, z: 100 },
+          { x: 400, y: 400, z: 400 },
+          { x: 0, y: 400, z: 400 },
+        ],
+      }),
+      makeRoofSurface({
+        id: 'd1',
+        origin: 'manual',
+        roofKind: 'dormer',
+        roofParentId: 'parent',
+        poly: [
+          { x: 100, y: 0, z: 280 },
+          { x: 250, y: 0, z: 280 },
+          { x: 250, y: 120, z: 320 },
+          { x: 100, y: 120, z: 320 },
+        ],
+      }),
+    ])
+    const bound = bindFloorWallsToRoofs(plan, 0).plan
+    expect(wallEndpoint3D(bound.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h).toBe(
+      280,
+    )
+    const raised = setRidgeSurfaceVerticesZ(bound, 'd1', [0, 1], 340)
+    const synced = syncDormerAssemblyAfterRoofEdit(raised, 'd1')
+    expect(wallEndpoint3D(synced.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h).toBe(
+      340,
+    )
   })
 
   it('tweede bind is no-op: geen extra knip, muren blijven recht', () => {

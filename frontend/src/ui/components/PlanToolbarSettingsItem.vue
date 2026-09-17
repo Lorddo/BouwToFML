@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import OpeningFrameFields from './OpeningFrameFields.vue'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './plan-toolbelt-settings-fields.css'
@@ -17,6 +18,11 @@ defineProps<{
     rotationDeg: number
     mirroredX: boolean
     mirroredY: boolean
+    showFrame?: boolean
+    frameLeftCm?: number
+    frameRightCm?: number
+    frameTopCm?: number
+    frameBottomCm?: number
   }
 }>()
 
@@ -26,6 +32,10 @@ const emit = defineEmits<{
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
+  itemFrameLeft: [cm: number]
+  itemFrameRight: [cm: number]
+  itemFrameTop: [cm: number]
+  itemFrameBottom: [cm: number]
   copyItem: []
   deleteItem: []
 }>()
@@ -34,6 +44,8 @@ const { t } = useI18n()
 </script>
 
 <template>
+  <div class="plan-toolbelt-stack">
+    <div class="plan-toolbelt__row plan-toolbelt__row--primary">
   <label class="plan-toolbelt__field">
     <span class="plan-toolbelt__field-label">{{ t('viewer.itemWidth') }}</span>
     <span class="plan-toolbelt__field-controls">
@@ -113,4 +125,19 @@ const { t } = useI18n()
     :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
     @click="emit('deleteItem')"
   />
+    </div>
+    <div v-if="selectedItemPanel.showFrame" class="plan-toolbelt__row">
+      <OpeningFrameFields
+        :unit="unit"
+        :left-cm="selectedItemPanel.frameLeftCm ?? 5"
+        :right-cm="selectedItemPanel.frameRightCm ?? 5"
+        :top-cm="selectedItemPanel.frameTopCm ?? 5"
+        :bottom-cm="selectedItemPanel.frameBottomCm ?? 5"
+        @left="emit('itemFrameLeft', $event)"
+        @right="emit('itemFrameRight', $event)"
+        @top="emit('itemFrameTop', $event)"
+        @bottom="emit('itemFrameBottom', $event)"
+      />
+    </div>
+  </div>
 </template>

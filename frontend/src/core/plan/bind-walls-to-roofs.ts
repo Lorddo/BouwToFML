@@ -6,7 +6,7 @@ import { clampOpeningToStory } from './elevation-opening-edit'
 import { splitPlanWallAtT } from './elevation-openings'
 import { isPointSkyExposedOnFloor } from './ridge-floor'
 import { listRidgeWallsOnFloor } from './ridge-walls'
-import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM, isDormerLikeRoof, resolveDormerParent } from './roof-planes'
+import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM, isDormerLikeRoof, resolveDormerParent, followDormerWallsForSurfaceMove } from './roof-planes'
 import {
   findDormerEdgeSurface,
   flushKopseDormerWalls,
@@ -23,6 +23,8 @@ export const BIND_MIN_SPLIT_SEGMENT_CM = 4
 export type BindWallsToRoofsOptions = {
   /** Knip muren op nok/kil én dakvlak-omtrek vóór binden (V2). */
   splitCreases?: boolean
+  /** Alleen deze muren binden (lokale dakkapel-place). Geen skylights / floor-lift. */
+  wallIds?: ReadonlyArray<string>
 }
 
 export type BindWallsToRoofsResult = {
@@ -86,11 +88,15 @@ function surfaceRing(surface: FloorSurface): Point2D[] {
   return surface.poly.map((p) => ({ x: p.x, y: p.y }))
 }
 
-function surfaceCoversPoint(surface: FloorSurface, point: Point2D): boolean {
+function surfaceCoversPoint(
+  surface: FloorSurface,
+  point: Point2D,
+  touchSlackCm = ROOF_TOUCH_SLACK_CM,
+): boolean {
   const ring = surfaceRing(surface)
   if (ring.length < 3) return false
   if (pointInPolygon(point, ring)) return true
-  return distToPolyEdges(point, ring) <= ROOF_TOUCH_SLACK_CM
+  return distToPolyEdges(point, ring) <= touchSlackCm
 }
 
 /** Barycentrische Z in driehoek; null als punt buiten (met lichte slack). */
@@ -116,6 +122,11 @@ export type SampleRoofZOptions = {
   prefer?: 'min' | 'max'
   /** Alleen deze surface-ids samplen. */
   surfaceIds?: ReadonlyArray<string>
+  /**
+   * Afstand tot poly-rand voor hit (default `ROOF_TOUCH_SLACK_CM`).
+   * Dakkapel na flush: hartlijn op buitenface → ½ dikte + slack.
+   */
+  touchSlackCm?: number
 }
 
 /** Dakvlak-Z op XY. Default prefer=min (overlap → laagste). */
@@ -125,6 +136,10 @@ export function sampleRoofZAtPoint(
   options?: SampleRoofZOptions,
 ): number | null {
   const prefer = options?.prefer ?? 'min'
+  const touchSlack =
+    options?.touchSlackCm != null && Number.isFinite(options.touchSlackCm)
+      ? Math.max(0, options.touchSlackCm)
+      : ROOF_TOUCH_SLACK_CM
   const idFilter =
     options?.surfaceIds && options.surfaceIds.length > 0
       ? new Set(options.surfaceIds)
@@ -132,7 +147,7 @@ export function sampleRoofZAtPoint(
   let best: number | null = null
   for (const surface of surfaces) {
     if (idFilter && !idFilter.has(surface.id)) continue
-    if (!surfaceCoversPoint(surface, point)) continue
+    if (!surfaceCoversPoint(surface, point, touchSlack)) continue
     const pts: Point3[] = surface.poly.map((p) => ({
       x: p.x,
       y: p.y,
@@ -151,7 +166,7 @@ export function sampleRoofZAtPoint(
     }
     if (zHit == null) {
       let edgeZ: number | null = null
-      let edgeDist = ROOF_TOUCH_SLACK_CM
+      let edgeDist = touchSlack
       for (let i = 0; i < pts.length; i += 1) {
         const a = pts[i]
         const b = pts[(i + 1) % pts.length]
@@ -460,6 +475,11 @@ function endAlreadyAt(
   return Math.abs(cur.z - z) < 0.51 && Math.abs(cur.h - h) < 0.51
 }
 
+function dormerEdgeSampleSlackCm(wall: Pick<Wall, 'thickness'>): number {
+  const half = Number.isFinite(wall.thickness) ? Math.max(0, wall.thickness) * 0.5 : 0
+  return ROOF_TOUCH_SLACK_CM + half
+}
+
 function bindOneWallToRoofs(
   wall: Wall,
   walls: ReadonlyArray<Wall>,
@@ -473,7 +493,13 @@ function bindOneWallToRoofs(
   const kopse = edge != null && isKopseDormerEdgeWall(wall, edge, surfaces)
   const wang = edge != null && !kopse
   const parent = edge ? parentOfNested(edge, surfaces) : null
-  const wangFullHeight = wang && hasCollinearContinuation(wall, walls)
+  const edgeSlack = edge ? dormerEdgeSampleSlackCm(wall) : ROOF_TOUCH_SLACK_CM
+  const wangFullHeight =
+    wang &&
+    hasCollinearContinuation(
+      wall,
+      walls.filter((other) => findDormerEdgeSurface(other, surfaces)?.id !== edge.id),
+    )
   let next = wall
   let bound = false
   let blocked = 0
@@ -485,10 +511,10 @@ function bindOneWallToRoofs(
       continue
     }
     if (kopse && edge) {
-      const childZ = sampleRoofZAtPoint([edge], point)
+      const childZ = sampleRoofZAtPoint([edge], point, { touchSlackCm: edgeSlack })
       const parentZ = parent
-        ? sampleRoofZAtPoint([parent], point)
-        : sampleRoofZAtPoint(planes, point)
+        ? sampleRoofZAtPoint([parent], point, { touchSlackCm: edgeSlack })
+        : sampleRoofZAtPoint(planes, point, { touchSlackCm: edgeSlack })
       if (childZ == null || parentZ == null) {
         uncovered += 1
         continue
@@ -499,7 +525,7 @@ function bindOneWallToRoofs(
       continue
     }
     if (wang && edge) {
-      const childZ = sampleRoofZAtPoint([edge], point)
+      const childZ = sampleRoofZAtPoint([edge], point, { touchSlackCm: edgeSlack })
       if (childZ == null) {
         uncovered += 1
         continue
@@ -511,8 +537,8 @@ function bindOneWallToRoofs(
         continue
       }
       const parentZ = parent
-        ? sampleRoofZAtPoint([parent], point)
-        : sampleRoofZAtPoint(planes, point)
+        ? sampleRoofZAtPoint([parent], point, { touchSlackCm: edgeSlack })
+        : sampleRoofZAtPoint(planes, point, { touchSlackCm: edgeSlack })
       if (parentZ == null) {
         uncovered += 1
         continue
@@ -561,9 +587,13 @@ export function bindFloorWallsToRoofs(
   const surfaces = listRidgeSurfacesOnFloor(floor)
   if (surfaces.length === 0) return empty
 
+  const onlyWallIds =
+    options?.wallIds && options.wallIds.length > 0 ? new Set(options.wallIds) : null
+  const localOnly = onlyWallIds != null
+
   let working = plan
   let splits = 0
-  if (options?.splitCreases === true) {
+  if (options?.splitCreases === true && !localOnly) {
     const creases = collectRoofCreases(surfaces, listRidgeWallsOnFloor(floor))
     if (creases.length > 0) {
       const splitResult = splitFloorOnCreases(working, floorIndex, creases)
@@ -583,6 +613,7 @@ export function bindFloorWallsToRoofs(
   const touchedWallIds = new Set<string>()
 
   walls = walls.map((wall) => {
+    if (onlyWallIds && !onlyWallIds.has(wall.id)) return wall
     if (!(wall.thickness > 1e-6)) return wall
     const result = bindOneWallToRoofs(wall, walls, surfaces, working, floorIndex, floorHeightCm)
     skippedBlocked += result.blocked
@@ -603,7 +634,9 @@ export function bindFloorWallsToRoofs(
     })
   }
 
-  const flushed = flushKopseDormerWalls(walls, surfaces)
+  const flushed = localOnly
+    ? { walls, flushed: 0 }
+    : flushKopseDormerWalls(walls, surfaces)
   walls = flushed.walls
   const flushedEdges = flushed.flushed
   if (touchedWallIds.size > 0 || flushedEdges > 0) {
@@ -613,7 +646,7 @@ export function bindFloorWallsToRoofs(
   let boundSkylights = 0
   let skippedSkylights = 0
   const skylightFloor = working.floors[floorIndex]
-  if (skylightFloor?.items?.some((item) => isSkylightItem(item))) {
+  if (!localOnly && skylightFloor?.items?.some((item) => isSkylightItem(item))) {
     const nextItems = (skylightFloor.items ?? []).map((item) => {
       if (!isSkylightItem(item)) return item
       const result = bindSkylightToRoofs(item, surfaces, working, floorIndex)
@@ -637,7 +670,12 @@ export function bindFloorWallsToRoofs(
   // een nok/aanbouw-dak mag 1e/2e niet optillen.
   const boundFloor = working.floors[floorIndex]
   const hasFloorAbove = working.floors[floorIndex + 1] != null
-  if (boundFloor && !hasFloorAbove && (boundJunctions > 0 || splits > 0 || boundSkylights > 0)) {
+  if (
+    !localOnly &&
+    boundFloor &&
+    !hasFloorAbove &&
+    (boundJunctions > 0 || splits > 0 || boundSkylights > 0)
+  ) {
     let maxTop = boundFloor.height
     for (const wall of boundFloor.walls) {
       for (const end of ['a', 'b'] as const) {
@@ -670,6 +708,45 @@ export function bindFloorWallsToRoofs(
     boundSkylights,
     skippedSkylights,
   }
+}
+
+/**
+ * Alleen de randmuren van één dakkapel-vlak opnieuw op dak-Z zetten
+ * (kopse: ouder→kind; wang: dak-tot-dak). Zelfde recept als «Muren aan dak»,
+ * zonder crease-split / floor-height tillen.
+ */
+export function bindDormerEdgeWallsToRoof(plan: FloorPlan, surfaceId: string): FloorPlan {
+  const id = surfaceId.trim()
+  if (!id) return plan
+  for (let floorIndex = 0; floorIndex < plan.floors.length; floorIndex += 1) {
+    const floor = plan.floors[floorIndex]
+    if (!floor) continue
+    const surfaces = listRidgeSurfacesOnFloor(floor)
+    const surface = surfaces.find((entry) => entry.id === id)
+    if (!surface || !isDormerLikeRoof(surface, surfaces)) continue
+    const wallIds = floor.walls
+      .filter((wall) => findDormerEdgeSurface(wall, surfaces)?.id === id)
+      .map((wall) => wall.id)
+    if (wallIds.length === 0) return plan
+    return bindFloorWallsToRoofs(plan, floorIndex, { wallIds }).plan
+  }
+  return plan
+}
+
+/**
+ * Na dakkapel-dak-edit: optioneel XY-wangen syncen, daarna altijd edge-hoogtes
+ * (voorzijde + onderkanten) — zodat je «Muren aan dak» niet opnieuw hoeft.
+ */
+export function syncDormerAssemblyAfterRoofEdit(
+  plan: FloorPlan,
+  surfaceId: string,
+  oldPoly?: ReadonlyArray<Point2D & { z?: number }>,
+): FloorPlan {
+  const withXy =
+    oldPoly && oldPoly.length > 0
+      ? followDormerWallsForSurfaceMove(plan, surfaceId, oldPoly)
+      : plan
+  return bindDormerEdgeWallsToRoof(withXy, surfaceId)
 }
 
 /** Floors met minstens één dakvlak (voor UI-keuze). */

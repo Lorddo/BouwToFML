@@ -22,6 +22,7 @@ import {
   nearestElevationRidgeJunction,
   openingOverlapRatio,
   openingPatchFromElevationRect,
+  pairedElevationRoofVertexIndices,
   snapElevationY,
 } from '@/core/plan/elevation-hit'
 import {
@@ -37,6 +38,7 @@ import {
   roofSurfaceOrigin,
   setRidgeSurfaceVertex,
   setRidgeSurfaceVertexZ,
+  setRidgeSurfaceVerticesZ,
   setRidgeSurfacesOnFloor,
 } from '@/core/plan/roof-planes'
 import {
@@ -357,6 +359,26 @@ describe('facade-elevation', () => {
     expect(located?.width).toBe(90)
     expect(located?.z_height).toBe(140)
     expect((located?.z ?? 0) + 140).toBeLessThanOrEqual(280)
+  })
+
+  it('updatePlanOpening schrijft opening.frame door', () => {
+    const plan = twoFloorPlan()
+    const added = addPlanOpening(plan, 'front-bg', {
+      type: 'window',
+      kind: 'window.single',
+      t: 0.5,
+      width: 100,
+      z: 80,
+      z_height: 140,
+      id: 'win-frame',
+    })
+    const next = updatePlanOpening(added.plan, added.openingId!, {
+      frame: { leftCm: 12, rightCm: 12, topCm: 8, bottomCm: 8 },
+    })
+    const located = next.floors[0]?.walls
+      .find((item) => item.id === 'front-bg')
+      ?.openings.find((item) => item.id === 'win-frame')
+    expect(located?.frame).toEqual({ leftCm: 12, rightCm: 12, topCm: 8, bottomCm: 8 })
   })
 
   it('opening GUID blijft bij dorpel-sleep', () => {
@@ -1040,6 +1062,131 @@ describe('facade-elevation', () => {
     const movedPt = elevNext.roofPlanes[0].points[vi]
     expect(movedPt.x).toBeCloseTo(along, 5)
     expect(movedPt.y).toBeCloseTo(plane.points[vi].y, 5)
+  })
+
+  it('dakvlak-paar: zijaanzicht pakt goot-beide; voorzijde blijft 1 punt', () => {
+    const H = 260
+    const end = makeEndpoint3D(0, H)
+    const thick = (id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall => ({
+      id,
+      a,
+      b,
+      thickness: 20,
+      openings: [],
+      extras: { az: end, bz: { ...end } },
+    })
+    const plan = createEmptyFloorPlan({ name: 'Dak-paar', wallHeightCm: H })
+    plan.floors[0].walls = [
+      thick('south', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      thick('east', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      thick('north', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      thick('west', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const south = createFacadeGroup(plan, { name: 'Zuid' })
+    const west = createFacadeGroup(plan, { name: 'West' })
+    assignWallsToGroup(plan, south.id, ['south'])
+    assignWallsToGroup(plan, west.id, ['west'])
+    const withRoofs = attachGableRoofs(plan)
+
+    const elevWest = projectFacadeElevation(withRoofs, west.id)!
+    const planeWest = elevWest.roofPlanes.find((p) => p.id === 'roof-s')!
+    // Goot-hoeken (-10,-10) en (810,-10) vallen op dezelfde aanzicht-X/Y van opzij.
+    const eaveIdx = planeWest.points.findIndex(
+      (p, i, arr) => arr.every((o) => o.y >= p.y - 1e-6),
+    )
+    expect(eaveIdx).toBeGreaterThanOrEqual(0)
+    const pairWest = pairedElevationRoofVertexIndices(planeWest, eaveIdx)
+    expect(pairWest).toHaveLength(2)
+
+    const before = listRidgeSurfacesOnFloor(withRoofs.floors[0]).find((s) => s.id === 'roof-s')!
+    const nextZ = (before.poly[pairWest[0]]?.z ?? H) + 40
+    const paired = setRidgeSurfaceVerticesZ(withRoofs, 'roof-s', pairWest, nextZ)
+    const after = listRidgeSurfacesOnFloor(paired.floors[0]).find((s) => s.id === 'roof-s')!
+    expect(after.poly[pairWest[0]]?.z).toBe(nextZ)
+    expect(after.poly[pairWest[1]]?.z).toBe(nextZ)
+    const ridgeIdx = [0, 1, 2, 3].find((i) => !pairWest.includes(i))!
+    expect(after.poly[ridgeIdx]?.z).toBe(before.poly[ridgeIdx]?.z)
+
+    const elevSouth = projectFacadeElevation(withRoofs, south.id)!
+    const planeSouth = elevSouth.roofPlanes.find((p) => p.id === 'roof-s')!
+    const frontPair = pairedElevationRoofVertexIndices(planeSouth, 0)
+    expect(frontPair).toEqual([0])
+    const solo = setRidgeSurfaceVerticesZ(withRoofs, 'roof-s', frontPair, nextZ)
+    const afterSolo = listRidgeSurfacesOnFloor(solo.floors[0]).find((s) => s.id === 'roof-s')!
+    expect(afterSolo.poly[0]?.z).toBe(nextZ)
+    expect(afterSolo.poly[1]?.z).toBe(before.poly[1]?.z)
+    expect(afterSolo.poly[2]?.z).toBe(before.poly[2]?.z)
+    expect(afterSolo.poly[3]?.z).toBe(before.poly[3]?.z)
+  })
+
+  it('dakvlak-paar: dakkapel paart intern; ouder ongewijzigd; tol >12 cm = geen paar', () => {
+    const H = 260
+    const ridgeZ = 450
+    const end = makeEndpoint3D(0, H)
+    const thick = (id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall => ({
+      id,
+      a,
+      b,
+      thickness: 20,
+      openings: [],
+      extras: { az: end, bz: { ...end } },
+    })
+    const plan = createEmptyFloorPlan({ name: 'Dak-kapel-paar', wallHeightCm: H })
+    plan.floors[0].walls = [
+      thick('south', { x: 0, y: 0 }, { x: 800, y: 0 }),
+      thick('east', { x: 800, y: 0 }, { x: 800, y: 800 }),
+      thick('north', { x: 800, y: 800 }, { x: 0, y: 800 }),
+      thick('west', { x: 0, y: 800 }, { x: 0, y: 0 }),
+    ]
+    const west = createFacadeGroup(plan, { name: 'West' })
+    assignWallsToGroup(plan, west.id, ['west'])
+    attachGableRoofs(plan, H, ridgeZ)
+    const dormer = makeRoofSurface({
+      id: 'roof-dormer',
+      origin: 'manual',
+      roofKind: 'dormer',
+      roofParentId: 'roof-s',
+      poly: [
+        { x: 200, y: -10, z: 320 },
+        { x: 400, y: -10, z: 320 },
+        { x: 400, y: 120, z: 380 },
+        { x: 200, y: 120, z: 380 },
+      ],
+    })
+    const existing = listRidgeSurfacesOnFloor(plan.floors[0])
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [...existing, dormer])
+
+    const elevWest = projectFacadeElevation(plan, west.id)!
+    const dormerPlane = elevWest.roofPlanes.find((p) => p.id === 'roof-dormer')!
+    const eaveIdx = dormerPlane.points.findIndex(
+      (p, _i, arr) => arr.every((o) => o.y >= p.y - 1e-6),
+    )
+    const dormerPair = pairedElevationRoofVertexIndices(dormerPlane, eaveIdx)
+    expect(dormerPair).toHaveLength(2)
+
+    const parentBefore = listRidgeSurfacesOnFloor(plan.floors[0]).find((s) => s.id === 'roof-s')!
+    const next = setRidgeSurfaceVerticesZ(plan, 'roof-dormer', dormerPair, 350)
+    const parentAfter = listRidgeSurfacesOnFloor(next.floors[0]).find((s) => s.id === 'roof-s')!
+    const dormerAfter = listRidgeSurfacesOnFloor(next.floors[0]).find((s) => s.id === 'roof-dormer')!
+    expect(dormerAfter!.poly[dormerPair[0]]?.z).toBe(350)
+    expect(dormerAfter!.poly[dormerPair[1]]?.z).toBe(350)
+    expect(parentAfter!.poly.map((p) => p.z)).toEqual(parentBefore.poly.map((p) => p.z))
+
+    const skewed = {
+      id: 'skew',
+      floorIndex: 0,
+      points: [
+        { x: 0, y: 0 },
+        { x: 20, y: 0 },
+        { x: 20, y: 100 },
+        { x: 0, y: 100 },
+      ],
+      fillPoints: [],
+      color: '#000',
+      depthCm: 0,
+    }
+    expect(pairedElevationRoofVertexIndices(skewed, 0)).toEqual([0])
+    expect(pairedElevationRoofVertexIndices(skewed, 0, 25)).toEqual([0, 1])
   })
 
   it('bovenlicht-flag: groen vlak boven de deur met juiste Z', () => {

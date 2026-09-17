@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  OPENING_FRAME_EXTRA,
+  buildOpeningFramePatch,
+  buildSkylightFramePatch,
   clampFramePair,
+  effectiveSkylightFrame,
   insetOpeningRect,
   resolveOpeningFrame,
 } from '@/core/plan/opening-display-geom'
@@ -75,25 +77,58 @@ describe('opening-display-geom', () => {
     expect(clampFramePair(5, 5, 0.5)).toEqual([0, 0])
   })
 
-  it('extras.btfFrame wint van catalogus', () => {
+  it('zonder frame valt terug op catalogus', () => {
     const catalog = resolveOpeningCatalog('window.single', 'window')
-    const frame = resolveOpeningFrame(
-      { extras: { [OPENING_FRAME_EXTRA]: { leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 } } },
-      catalog,
-    )
-    expect(frame).toEqual({ leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 })
+    const frame = resolveOpeningFrame({}, catalog)
+    expect(frame).toEqual(catalog.frame)
   })
 
-  it('opening.frame wint van catalogus en van legacy extras', () => {
+  it('opening.frame wint van catalogus', () => {
     const catalog = resolveOpeningCatalog('window.single', 'window')
     const frame = resolveOpeningFrame(
       {
         frame: { leftCm: 9, rightCm: 9, topCm: 2, bottomCm: 2 },
-        extras: { [OPENING_FRAME_EXTRA]: { leftCm: 8, rightCm: 8, topCm: 3, bottomCm: 3 } },
-      } as { extras?: Record<string, unknown> },
+      },
       catalog,
     )
     expect(frame).toEqual({ leftCm: 9, rightCm: 9, topCm: 2, bottomCm: 2 })
+  })
+
+  it('buildOpeningFramePatch schrijft alle vier en clampt binnenwerk ≥ 1 cm', () => {
+    const patched = buildOpeningFramePatch(
+      {
+        kind: 'window.single',
+        width: 100,
+        z_height: 8,
+        type: 'window',
+      },
+      { topCm: 5 },
+    )
+    expect(patched.leftCm).toBeGreaterThanOrEqual(0)
+    expect(patched.rightCm).toBeGreaterThanOrEqual(0)
+    expect(patched.topCm).toBeGreaterThanOrEqual(0)
+    expect(patched.bottomCm).toBeGreaterThanOrEqual(0)
+    const inset = insetOpeningRect({ width: 100, height: 8 }, patched)
+    expect(inset.inner.height).toBeGreaterThanOrEqual(1)
+    expect(inset.inner.width).toBeGreaterThanOrEqual(1)
+  })
+
+  it('dakraam zonder frame valt terug op 5 cm rondom', () => {
+    expect(effectiveSkylightFrame({})).toEqual({
+      leftCm: 5,
+      rightCm: 5,
+      topCm: 5,
+      bottomCm: 5,
+    })
+  })
+
+  it('buildSkylightFramePatch schrijft instance en clampt binnenwerk', () => {
+    const patched = buildSkylightFramePatch(
+      { width: 80, height: 8, frame: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 } },
+      { topCm: 6 },
+    )
+    expect(patched.topCm + patched.bottomCm).toBeLessThanOrEqual(7)
+    expect(patched.leftCm).toBe(5)
   })
 })
 
@@ -114,6 +149,23 @@ describe('elevation opening glyph', () => {
     expect(glyph.inner.y1).toBeCloseTo(-5, 5)
     expect(glyph.polys.some((poly) => poly.role === 'frame')).toBe(true)
     expect(glyph.polys.some((poly) => poly.role === 'glass')).toBe(true)
+  })
+
+  it('typed opening.frame wint van catalogus-5 (20/20/20/100)', () => {
+    const glyph = glyphFromElevationRect({
+      x0: 0,
+      x1: 200,
+      y0: -200,
+      y1: 0,
+      type: 'window',
+      kind: 'window.single',
+      widthCm: 200,
+      frame: { leftCm: 20, rightCm: 20, topCm: 20, bottomCm: 100 },
+    })
+    expect(glyph.inner.x0).toBeCloseTo(20, 5)
+    expect(glyph.inner.x1).toBeCloseTo(180, 5)
+    expect(glyph.inner.y0).toBeCloseTo(-180, 5)
+    expect(glyph.inner.y1).toBeCloseTo(-100, 5)
   })
 
   it('dubbel/driedelig raam heeft tussenstijl als kozijnband', () => {

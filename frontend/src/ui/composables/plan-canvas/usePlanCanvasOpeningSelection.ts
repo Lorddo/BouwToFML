@@ -32,6 +32,12 @@ import {
   resolveOpeningSillZ,
   resolveWindowSillZ,
 } from '@/core/plan/opening-plan-ops'
+import {
+  buildOpeningFramePatch,
+  effectiveOpeningFrame,
+  isFramelessOpeningKind,
+  type OpeningFrameCm,
+} from '@/core/plan/opening-display-geom'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { bindScaleLengthDraftField } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
@@ -46,6 +52,12 @@ const FIELD_HEIGHT = 'opening-height'
 const FIELD_SILL_Z = 'opening-sill-z'
 const FIELD_BOVENLICHT_HEIGHT = 'opening-bovenlicht-height'
 const FIELD_BOVENLICHT_GAP = 'opening-bovenlicht-gap'
+const FIELD_FRAME_LEFT = 'opening-frame-left'
+const FIELD_FRAME_RIGHT = 'opening-frame-right'
+const FIELD_FRAME_TOP = 'opening-frame-top'
+const FIELD_FRAME_BOTTOM = 'opening-frame-bottom'
+
+type FrameSide = keyof OpeningFrameCm
 
 export function usePlanCanvasOpeningSelection(options: {
   editor: EditorApi
@@ -108,6 +120,16 @@ export function usePlanCanvasOpeningSelection(options: {
   const openingBovenlichtHeightMixed = ref(false)
   const openingBovenlichtGapDraft = ref(BOVENLICHT_GAP_CM)
   const openingBovenlichtGapMixed = ref(false)
+  const openingFrameLeftDraft = ref(5)
+  const openingFrameLeftMixed = ref(false)
+  const openingFrameRightDraft = ref(5)
+  const openingFrameRightMixed = ref(false)
+  const openingFrameTopDraft = ref(5)
+  const openingFrameTopMixed = ref(false)
+  const openingFrameBottomDraft = ref(0)
+  const openingFrameBottomMixed = ref(false)
+  /** Kopie-plaatsing: instance-frame tot de volgende placeOpening. */
+  const pendingPlaceFrame = ref<OpeningFrameCm | null>(null)
 
   /** Settings-selectie, of enkele move-selectie bij gewone klik. */
   function editableOpeningIds(): string[] {
@@ -138,6 +160,10 @@ export function usePlanCanvasOpeningSelection(options: {
       openingBovenlichtHeightDraft.value = bovenlichtHeightCm?.value ?? BOVENLICHT_HEIGHT_CM
       openingBovenlichtGapMixed.value = false
       openingBovenlichtGapDraft.value = bovenlichtGapCm?.value ?? BOVENLICHT_GAP_CM
+      openingFrameLeftMixed.value = false
+      openingFrameRightMixed.value = false
+      openingFrameTopMixed.value = false
+      openingFrameBottomMixed.value = false
       return
     }
     const draft = computeOpeningDraftState(
@@ -169,6 +195,14 @@ export function usePlanCanvasOpeningSelection(options: {
     openingBovenlichtHeightDraft.value = draft.bovenlichtHeightCm
     openingBovenlichtGapMixed.value = draft.bovenlichtGapMixed
     openingBovenlichtGapDraft.value = draft.bovenlichtGapCm
+    openingFrameLeftMixed.value = draft.frameLeftMixed
+    openingFrameLeftDraft.value = draft.frameLeftCm
+    openingFrameRightMixed.value = draft.frameRightMixed
+    openingFrameRightDraft.value = draft.frameRightCm
+    openingFrameTopMixed.value = draft.frameTopMixed
+    openingFrameTopDraft.value = draft.frameTopCm
+    openingFrameBottomMixed.value = draft.frameBottomMixed
+    openingFrameBottomDraft.value = draft.frameBottomCm
   }
 
   function clearOpeningSelectionState(): void {
@@ -185,6 +219,10 @@ export function usePlanCanvasOpeningSelection(options: {
     openingBovenlichtMixed.value = false
     openingBovenlichtHeightMixed.value = false
     openingBovenlichtGapMixed.value = false
+    openingFrameLeftMixed.value = false
+    openingFrameRightMixed.value = false
+    openingFrameTopMixed.value = false
+    openingFrameBottomMixed.value = false
   }
 
   function toggleSettingsOpening(openingId: string): void {
@@ -366,6 +404,69 @@ export function usePlanCanvasOpeningSelection(options: {
     return { mutated: true }
   }
 
+  function setFrameSideDraft(side: FrameSide, value: number): void {
+    if (side === 'leftCm') {
+      openingFrameLeftDraft.value = value
+      openingFrameLeftMixed.value = false
+    } else if (side === 'rightCm') {
+      openingFrameRightDraft.value = value
+      openingFrameRightMixed.value = false
+    } else if (side === 'topCm') {
+      openingFrameTopDraft.value = value
+      openingFrameTopMixed.value = false
+    } else {
+      openingFrameBottomDraft.value = value
+      openingFrameBottomMixed.value = false
+    }
+  }
+
+  function applyFrameSideToOpenings(
+    openingIds: string[],
+    side: FrameSide,
+    valueRaw: number,
+  ): { mutated: boolean } {
+    const value = Math.max(0, Math.round(valueRaw))
+    setFrameSideDraft(side, value)
+    if (openingIds.length === 0) return { mutated: false }
+    const needsWrite = openingIds.some((id) => {
+      const located = editor.resolveOpening(id)
+      if (!located) return false
+      if (located.opening.type !== 'door' && located.opening.type !== 'window') return false
+      if (isFramelessOpeningKind(located.opening.kind)) return false
+      const next = buildOpeningFramePatch(located.opening, { [side]: value })
+      const current = located.opening.frame
+      if (!current) return true
+      return (
+        current.leftCm !== next.leftCm ||
+        current.rightCm !== next.rightCm ||
+        current.topCm !== next.topCm ||
+        current.bottomCm !== next.bottomCm
+      )
+    })
+    if (!needsWrite) return { mutated: false }
+    const fieldId =
+      side === 'leftCm'
+        ? FIELD_FRAME_LEFT
+        : side === 'rightCm'
+          ? FIELD_FRAME_RIGHT
+          : side === 'topCm'
+            ? FIELD_FRAME_TOP
+            : FIELD_FRAME_BOTTOM
+    draftCommit.beginUndoGroup(fieldId, () => editor.pushUndo())
+    for (const openingId of openingIds) {
+      const located = editor.resolveOpening(openingId)
+      if (!located) continue
+      if (located.opening.type !== 'door' && located.opening.type !== 'window') continue
+      if (isFramelessOpeningKind(located.opening.kind)) continue
+      editor.updateOpening(openingId, {
+        frame: buildOpeningFramePatch(located.opening, { [side]: value }),
+      })
+    }
+    syncOpeningDraftFromSelection()
+    syncPlanToParent()
+    return { mutated: true }
+  }
+
   const widthField = bindScaleLengthDraftField({
     fieldId: FIELD_WIDTH,
     draftCommit,
@@ -416,6 +517,46 @@ export function usePlanCanvasOpeningSelection(options: {
       return () => applyBovenlichtGapToOpenings(openingIds, value)
     },
   })
+  const frameLeftField = bindScaleLengthDraftField({
+    fieldId: FIELD_FRAME_LEFT,
+    draftCommit,
+    draft: openingFrameLeftDraft,
+    mixed: openingFrameLeftMixed,
+    applyWithValue: (value) => {
+      const openingIds = editableOpeningIds()
+      return () => applyFrameSideToOpenings(openingIds, 'leftCm', value)
+    },
+  })
+  const frameRightField = bindScaleLengthDraftField({
+    fieldId: FIELD_FRAME_RIGHT,
+    draftCommit,
+    draft: openingFrameRightDraft,
+    mixed: openingFrameRightMixed,
+    applyWithValue: (value) => {
+      const openingIds = editableOpeningIds()
+      return () => applyFrameSideToOpenings(openingIds, 'rightCm', value)
+    },
+  })
+  const frameTopField = bindScaleLengthDraftField({
+    fieldId: FIELD_FRAME_TOP,
+    draftCommit,
+    draft: openingFrameTopDraft,
+    mixed: openingFrameTopMixed,
+    applyWithValue: (value) => {
+      const openingIds = editableOpeningIds()
+      return () => applyFrameSideToOpenings(openingIds, 'topCm', value)
+    },
+  })
+  const frameBottomField = bindScaleLengthDraftField({
+    fieldId: FIELD_FRAME_BOTTOM,
+    draftCommit,
+    draft: openingFrameBottomDraft,
+    mixed: openingFrameBottomMixed,
+    applyWithValue: (value) => {
+      const openingIds = editableOpeningIds()
+      return () => applyFrameSideToOpenings(openingIds, 'bottomCm', value)
+    },
+  })
 
   const onOpeningWidthCm = widthField.onCm
   const commitOpeningWidth = widthField.commit
@@ -427,6 +568,14 @@ export function usePlanCanvasOpeningSelection(options: {
   const commitOpeningBovenlichtHeight = bovenlichtHeightField.commit
   const onOpeningBovenlichtGapCm = bovenlichtGapField.onCm
   const commitOpeningBovenlichtGap = bovenlichtGapField.commit
+  const onOpeningFrameLeftCm = frameLeftField.onCm
+  const commitOpeningFrameLeft = frameLeftField.commit
+  const onOpeningFrameRightCm = frameRightField.onCm
+  const commitOpeningFrameRight = frameRightField.commit
+  const onOpeningFrameTopCm = frameTopField.onCm
+  const commitOpeningFrameTop = frameTopField.commit
+  const onOpeningFrameBottomCm = frameBottomField.onCm
+  const commitOpeningFrameBottom = frameBottomField.commit
 
   function applyOpeningMirrorPatch(params: { hingeAtStart?: boolean; swingRight?: boolean }): void {
     flushPendingFieldCommits()
@@ -504,6 +653,9 @@ export function usePlanCanvasOpeningSelection(options: {
     const selected = selectedOpenings()
     if (selected.length !== 1) return
     const { opening } = selected[0]
+    pendingPlaceFrame.value = isFramelessOpeningKind(opening.kind)
+      ? null
+      : { ...effectiveOpeningFrame(opening) }
     if (opening.type === 'window') {
       const subtype = resolveWindowSubtypeFromRefid(opening.kind)
       const width = clampOpeningWidth(opening.width)
@@ -544,6 +696,12 @@ export function usePlanCanvasOpeningSelection(options: {
     activePlanTool.value = 'add_door'
   }
 
+  function takePendingPlaceFrame(): OpeningFrameCm | null {
+    const frame = pendingPlaceFrame.value
+    pendingPlaceFrame.value = null
+    return frame
+  }
+
   watch([moveOpeningId, settingsOpeningIds], () => {
     syncOpeningDraftFromSelection()
   })
@@ -567,6 +725,14 @@ export function usePlanCanvasOpeningSelection(options: {
     openingBovenlichtHeightMixed,
     openingBovenlichtGapDraft,
     openingBovenlichtGapMixed,
+    openingFrameLeftDraft,
+    openingFrameLeftMixed,
+    openingFrameRightDraft,
+    openingFrameRightMixed,
+    openingFrameTopDraft,
+    openingFrameTopMixed,
+    openingFrameBottomDraft,
+    openingFrameBottomMixed,
     syncOpeningDraftFromSelection,
     clearOpeningSelectionState,
     toggleSettingsOpening,
@@ -584,6 +750,15 @@ export function usePlanCanvasOpeningSelection(options: {
     commitOpeningBovenlichtHeight,
     onOpeningBovenlichtGapCm,
     commitOpeningBovenlichtGap,
+    onOpeningFrameLeftCm,
+    commitOpeningFrameLeft,
+    onOpeningFrameRightCm,
+    commitOpeningFrameRight,
+    onOpeningFrameTopCm,
+    commitOpeningFrameTop,
+    onOpeningFrameBottomCm,
+    commitOpeningFrameBottom,
+    takePendingPlaceFrame,
     copySelectedOpening,
     deleteSelectedOpenings,
   }

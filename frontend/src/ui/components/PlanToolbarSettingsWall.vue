@@ -64,6 +64,7 @@ const props = withDefaults(
     stampGroupMixed?: boolean
     canSelectStampMembers?: boolean
     drawWallKind?: 'wall' | 'ridge'
+    drawRoomKind?: 'room' | 'dormer'
     dakMode?: boolean
     ridgeFloorDraft?: number | null
     ridgeFloorMixed?: boolean
@@ -81,6 +82,7 @@ const props = withDefaults(
     stampGroupMixed: false,
     canSelectStampMembers: false,
     drawWallKind: 'wall',
+    drawRoomKind: 'room',
     dakMode: false,
     ridgeFloorDraft: null,
     ridgeFloorMixed: false,
@@ -116,6 +118,7 @@ const emit = defineEmits<{
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
   wallKindChange: [kind: 'wall' | 'ridge']
+  roomKindChange: [kind: 'room' | 'dormer']
   ridgeZInput: [cm: number | null]
   ridgeFloorChange: [floorIndex: number]
 }>()
@@ -130,6 +133,10 @@ const thicknessPresets = computed(() =>
 
 const isDrawWallOrRoom = computed(
   () => props.activeTool === 'draw_wall' || props.activeTool === 'draw_room',
+)
+const showRoomKindSelect = computed(() => props.activeTool === 'draw_room')
+const isDormerDraw = computed(
+  () => props.activeTool === 'draw_room' && props.drawRoomKind === 'dormer',
 )
 
 const isQuickWallPanel = computed(() => props.selectedWallPanel?.mode === 'quick')
@@ -271,6 +278,25 @@ function onRidgeZCm(cm: number): void {
 <template>
   <div class="plan-toolbelt-stack">
     <div class="plan-toolbelt__row plan-toolbelt__row--primary">
+      <div v-if="showRoomKindSelect" class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.roomKind') }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <select
+            class="plan-toolbelt__select"
+            :aria-label="t('result.toolbar.roomKindAria')"
+            :value="drawRoomKind"
+            @change="
+              emit(
+                'roomKindChange',
+                (($event.target as HTMLSelectElement).value || 'room') as 'room' | 'dormer',
+              )
+            "
+          >
+            <option value="room">{{ t('result.toolbar.roomKindRoom') }}</option>
+            <option value="dormer">{{ t('result.toolbar.roomKindDormer') }}</option>
+          </select>
+        </div>
+      </div>
       <div v-if="showRidgeFloorSelect" class="plan-toolbelt__field">
         <span class="plan-toolbelt__field-label">{{ t('result.toolbar.ridgeFloor') }}</span>
         <div class="plan-toolbelt__field-controls">
@@ -457,7 +483,9 @@ function onRidgeZCm(cm: number): void {
         v-if="showAdvancedElevation && !isRidgeMode"
         class="plan-toolbelt__field"
       >
-        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.wallHeight') }}</span>
+        <span class="plan-toolbelt__field-label">{{
+          isDormerDraw ? t('result.toolbar.dormerHeight') : t('result.toolbar.wallHeight')
+        }}</span>
         <div class="plan-toolbelt__field-controls">
           <ScaleLengthInput
             :cm="wallHeightDraft"
@@ -465,7 +493,11 @@ function onRidgeZCm(cm: number): void {
             :min-cm="1"
             :max-cm="1000"
             :mixed="!!selectedWallPanel && wallHeightMixed"
-            :aria-label="t('result.toolbar.wallHeightAria', { unit: t(`common.${unit}`) })"
+            :aria-label="
+              isDormerDraw
+                ? t('result.toolbar.dormerHeightAria', { unit: t(`common.${unit}`) })
+                : t('result.toolbar.wallHeightAria', { unit: t(`common.${unit}`) })
+            "
             input-class="plan-toolbelt__thickness-input"
             @update:cm="emit('wallHeightCm', $event)"
             @commit="emit('commitWallHeight')"

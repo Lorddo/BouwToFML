@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  FIT_DRAWN_PLAN_PAD_CM,
+  resolveFitContentBounds,
   shouldRefitForExtraBoundsAppear,
+  shouldRefitForUnderlayAppear,
   worldOverflowsLayout,
 } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 
@@ -50,5 +53,40 @@ describe('shouldRefitForExtraBoundsAppear', () => {
     expect(shouldRefitForExtraBoundsAppear({ minX: 0, minY: 0, spanX: 0, spanY: 100 }, null)).toBe(
       false,
     )
+  })
+})
+
+describe('shouldRefitForUnderlayAppear', () => {
+  const underlay = { minX: 0, minY: 0, spanX: 4000, spanY: 3000 }
+
+  it('herfit niet als er al getekende geometrie is', () => {
+    expect(shouldRefitForUnderlayAppear(underlay, null, true)).toBe(false)
+  })
+
+  it('herfit wél op een lege floor wanneer de onderlegger binnenkomt', () => {
+    expect(shouldRefitForUnderlayAppear(underlay, null, false)).toBe(true)
+  })
+})
+
+describe('resolveFitContentBounds', () => {
+  const drawn = { minX: 100, minY: 80, spanX: 800, spanY: 600 }
+  const underlay = { minX: 0, minY: 0, spanX: 4000, spanY: 3000 }
+  const padded = {
+    minX: drawn.minX - FIT_DRAWN_PLAN_PAD_CM,
+    minY: drawn.minY - FIT_DRAWN_PLAN_PAD_CM,
+    spanX: drawn.spanX + FIT_DRAWN_PLAN_PAD_CM * 2,
+    spanY: drawn.spanY + FIT_DRAWN_PLAN_PAD_CM * 2,
+  }
+
+  it('kiest de getekende plattegrond boven een grotere onderlegger, met maatlijn-marge', () => {
+    expect(resolveFitContentBounds(drawn, underlay)).toEqual(padded)
+  })
+
+  it('valt terug op de onderlegger als er nog niets getekend is', () => {
+    expect(resolveFitContentBounds(null, underlay)).toEqual(underlay)
+  })
+
+  it('levert null zonder geometrie en zonder onderlegger', () => {
+    expect(resolveFitContentBounds(null, null)).toBeNull()
   })
 })

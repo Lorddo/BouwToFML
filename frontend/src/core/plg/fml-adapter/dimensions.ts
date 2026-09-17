@@ -1,12 +1,11 @@
 /**
- * B5 — design.slices + design.autoDimensions ↔ FML design.settings.btfSlices / engineAutoDims.
+ * B5 — design.slices + design.autoDimensions ↔ FML design.settings.plgSlices / engineAutoDims.
  *
- * Bake naar dimensions[] in buildFmlV3 leest nog `design.source.settings.btfSlices`
- * (private readSlicesFromDesignSettings). Daarom sync't serializeDesignSettings
- * slices tijdelijk terug naar design.source.settings vóór die bake.
+ * Bake naar dimensions[] in buildFmlV3 leest `design.slices` (typed). Serialize schrijft
+ * alleen op het export-settings-object — nooit terug op het live plan.
  */
-import { PLAN_SLICES_SETTINGS_KEY } from '../../plan/plan-slices'
 import type { FloorDesign, FloorPlan, Point2D } from '../../plan/types'
+import { FML_PLAN_SLICES_SETTINGS_KEY } from './plg-fml-extras'
 import type { FmlConceptAdapter } from './registry'
 
 function isFinitePoint(value: unknown): value is Point2D {
@@ -31,9 +30,9 @@ function hydrateDesign(design: FloorDesign): void {
     if (design.autoDimensions == null && design.slices == null) return
   }
 
-  if (design.slices === undefined && Array.isArray(settings?.[PLAN_SLICES_SETTINGS_KEY])) {
+  if (design.slices === undefined && Array.isArray(settings?.[FML_PLAN_SLICES_SETTINGS_KEY])) {
     const slices: Array<{ m: Point2D; p: Point2D }> = []
-    for (const entry of settings![PLAN_SLICES_SETTINGS_KEY] as unknown[]) {
+    for (const entry of settings![FML_PLAN_SLICES_SETTINGS_KEY] as unknown[]) {
       const slice = normalizeSlice(entry)
       if (slice) slices.push(slice)
     }
@@ -46,7 +45,7 @@ function hydrateDesign(design: FloorDesign): void {
 
   if (settings) {
     const next = { ...settings }
-    delete next[PLAN_SLICES_SETTINGS_KEY]
+    delete next[FML_PLAN_SLICES_SETTINGS_KEY]
     delete next.engineAutoDims
     if (design.source) {
       design.source.settings = Object.keys(next).length > 0 ? next : undefined
@@ -63,24 +62,12 @@ function hydratePlan(plan: FloorPlan): void {
 function serializeDesignSettings(design: FloorDesign, settings: Record<string, unknown>): void {
   if (design.slices !== undefined) {
     if (design.slices.length > 0) {
-      const payload = design.slices.map((s) => ({
+      settings[FML_PLAN_SLICES_SETTINGS_KEY] = design.slices.map((s) => ({
         m: { x: s.m.x, y: s.m.y },
         p: { x: s.p.x, y: s.p.y },
       }))
-      settings[PLAN_SLICES_SETTINGS_KEY] = payload
-      // Bridge: buildFmlV3 serializeDimensionsForDesign leest nog design.source.settings.
-      if (!design.source) design.source = {}
-      design.source.settings = {
-        ...(design.source.settings ?? {}),
-        [PLAN_SLICES_SETTINGS_KEY]: payload,
-      }
     } else {
-      delete settings[PLAN_SLICES_SETTINGS_KEY]
-      if (design.source?.settings && PLAN_SLICES_SETTINGS_KEY in design.source.settings) {
-        const src = { ...design.source.settings }
-        delete src[PLAN_SLICES_SETTINGS_KEY]
-        design.source.settings = Object.keys(src).length > 0 ? src : undefined
-      }
+      delete settings[FML_PLAN_SLICES_SETTINGS_KEY]
     }
   }
 

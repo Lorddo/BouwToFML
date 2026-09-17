@@ -2,7 +2,8 @@ import type { Ref } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
 import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/plan/bovenlicht'
 import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
-import { removeRidgeSurfaceOnPlan, setRidgeSurfaceVertexZ } from '@/core/plan/roof-planes'
+import { removeRidgeSurfaceOnPlan, setRidgeSurfaceVerticesZ } from '@/core/plan/roof-planes'
+import { syncDormerAssemblyAfterRoofEdit } from '@/core/plan/bind-walls-to-roofs'
 import { removeRidgeWallsFromPlan, setPlanRidgeJunctionZ } from '@/core/plan/ridge-walls'
 import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from '@/core/plan/door-swing-symbol'
 import {
@@ -13,8 +14,16 @@ import {
   setPlanWallHeight,
   updatePlanOpening,
 } from '@/core/plan/elevation-openings'
-import { deletePlanSkylight } from '@/core/plan/elevation-skylight-edit'
+import { deletePlanSkylight, updatePlanSkylight } from '@/core/plan/elevation-skylight-edit'
+import { pairedElevationRoofVertexIndices } from '@/core/plan/elevation-hit'
 import { setSlabThicknessCm } from '@/core/plan/floor-stack'
+import {
+  buildOpeningFramePatch,
+  buildSkylightFramePatch,
+  effectiveOpeningFrame,
+  isFramelessOpeningKind,
+  type OpeningFrameCm,
+} from '@/core/plan/opening-display-geom'
 import {
   clampOpeningHeight,
   clampOpeningSillZ,
@@ -50,6 +59,7 @@ export function useElevationSelectCommits(options: {
   addWindowWidthCm: Ref<number>
   addWindowSillZCm: Ref<number>
   addWindowHeightCm: Ref<number>
+  pendingPlaceFrame: Ref<OpeningFrameCm | null>
 }) {
   const {
     props,
@@ -65,11 +75,14 @@ export function useElevationSelectCommits(options: {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    pendingPlaceFrame,
   } = options
   const {
     selectedOpeningId,
     selectedOpening,
     selectedSkylightId,
+    selectedSkylight,
+    selectedRoofPlane,
     settingsTarget,
     settingsJunction,
     selectOpening,
@@ -92,6 +105,9 @@ export function useElevationSelectCommits(options: {
   function copySelectedOpening(): void {
     const located = selectedOpening.value
     if (!located) return
+    pendingPlaceFrame.value = isFramelessOpeningKind(located.opening.kind)
+      ? null
+      : { ...effectiveOpeningFrame(located.opening) }
     if (located.opening.type === 'window') {
       const subtype = resolveWindowSubtypeFromRefid(located.opening.kind)
       const width = clampOpeningWidth(located.opening.width)
@@ -181,6 +197,38 @@ export function useElevationSelectCommits(options: {
       return
     }
     commitPlan(updatePlanOpening(props.plan, id, { z: clampOpeningSillZ(cm) }))
+  }
+
+  function commitSelectedFrame(
+    side: 'leftCm' | 'rightCm' | 'topCm' | 'bottomCm',
+    cm: number,
+  ): void {
+    const id = selectedOpeningId.value
+    const located = selectedOpening.value
+    if (!id || !located) return
+    if (located.opening.type !== 'door' && located.opening.type !== 'window') return
+    if (isFramelessOpeningKind(located.opening.kind)) return
+    pushUndo()
+    commitPlan(
+      updatePlanOpening(props.plan, id, {
+        frame: buildOpeningFramePatch(located.opening, { [side]: Math.max(0, Math.round(cm)) }),
+      }),
+    )
+  }
+
+  function commitSelectedSkylightFrame(
+    side: 'leftCm' | 'rightCm' | 'topCm' | 'bottomCm',
+    cm: number,
+  ): void {
+    const id = selectedSkylightId.value
+    const located = selectedSkylight.value
+    if (!id || !located) return
+    pushUndo()
+    commitPlan(
+      updatePlanSkylight(props.plan, id, {
+        frame: buildSkylightFramePatch(located.item, { [side]: Math.max(0, Math.round(cm)) }),
+      }),
+    )
   }
 
   function commitSelectedBovenlicht(on: boolean): void {
@@ -297,8 +345,13 @@ export function useElevationSelectCommits(options: {
   function commitRoofVertexHeight(cm: number): void {
     const target = settingsTarget.value
     if (target?.kind !== 'roof' || target.vertexIndex == null) return
+    const plane = selectedRoofPlane.value
+    const indices = plane
+      ? pairedElevationRoofVertexIndices(plane, target.vertexIndex)
+      : [target.vertexIndex]
     pushUndo()
-    commitPlan(setRidgeSurfaceVertexZ(props.plan, target.id, target.vertexIndex, cm))
+    const withZ = setRidgeSurfaceVerticesZ(props.plan, target.id, indices, cm)
+    commitPlan(syncDormerAssemblyAfterRoofEdit(withZ, target.id))
   }
 
   function commitSlabHeight(cm: number): void {
@@ -318,6 +371,8 @@ export function useElevationSelectCommits(options: {
     deleteSelectedRidge,
     deleteSelectedRoof,
     commitSelectedField,
+    commitSelectedFrame,
+    commitSelectedSkylightFrame,
     commitSelectedBovenlicht,
     commitSelectedBovenlichtHeight,
     commitSelectedBovenlichtGap,

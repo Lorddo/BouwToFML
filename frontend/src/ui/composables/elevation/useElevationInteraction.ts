@@ -66,6 +66,9 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
   const addWindowWidthCm = ref(resolveWindowAddPreset('single').defaultWidthCm)
   const addWindowSillZCm = ref(DEFAULT_WINDOW_SILL_Z_CM)
   const addWindowHeightCm = ref(DEFAULT_WINDOW_HEIGHT_CM)
+  const pendingPlaceFrame = ref<import('@/core/plan/opening-display-geom').OpeningFrameCm | null>(
+    null,
+  )
 
   watch(addDoorSubtype, (subtype) => {
     addDoorWidthCm.value = resolveDoorAddPreset(subtype).defaultWidthCm
@@ -130,6 +133,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    pendingPlaceFrame,
     preciseIntent: (event) => preciseBox.current!.preciseIntent(event),
     beginPreciseOpening: (...args) => preciseBox.current!.beginPreciseOpening(...args),
     beginPreciseRidge: (...args) => preciseBox.current!.beginPreciseRidge(...args),
@@ -177,6 +181,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    pendingPlaceFrame,
   })
 
   function toggleOpeningTool(
@@ -577,6 +582,8 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     deleteSelectedRidge: select.deleteSelectedRidge,
     deleteSelectedRoof: select.deleteSelectedRoof,
     commitSelectedField: select.commitSelectedField,
+    commitSelectedFrame: select.commitSelectedFrame,
+    commitSelectedSkylightFrame: select.commitSelectedSkylightFrame,
     commitSelectedBovenlicht: select.commitSelectedBovenlicht,
     commitSelectedBovenlichtHeight: select.commitSelectedBovenlichtHeight,
     commitSelectedBovenlichtGap: select.commitSelectedBovenlichtGap,

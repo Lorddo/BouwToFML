@@ -1,15 +1,10 @@
 /**
- * Persistente maatlijn-slicers: alleen `{ m, p }` per liniaal op `design.slices`
- * (was `design.settings.btfSlices`). H/V/hoek en meetas volgen uit P−M;
- * maten worden live herberekend.
- *
- * FML-settingskey blijft `'btfSlices'` (Floorplanner-compatibiliteit).
+ * Persistente maatlijn-slicers: alleen `{ m, p }` per liniaal op `design.slices`.
+ * H/V/hoek en meetas volgen uit P−M; maten worden live herberekend.
+ * FML-export schrijft `plgSlices` via de adapter — niet hier.
  */
 import { flushActiveDesign } from './design-sync'
 import type { Floor, FloorDimension, FloorPlan, Point2D } from './types'
-
-/** FML `design.settings`-key; waarde bewust `'btfSlices'`. */
-export const PLAN_SLICES_SETTINGS_KEY = 'btfSlices'
 
 /** Afstand tot P-lijn om een custom_dimension als slicer-bake te zien (cm). */
 export const PLAN_SLICE_DIM_ON_LINE_CM = 1
@@ -42,17 +37,13 @@ function normalizeSliceList(raw: unknown): PlanSlice[] {
   return out
 }
 
-function cloneSettings(settings: Record<string, unknown> | undefined): Record<string, unknown> {
-  return { ...(settings ?? {}) }
-}
-
 function activeDesign(floor: Floor | null | undefined) {
   if (!floor) return undefined
   const idx = Math.max(0, floor.activeDesignIndex ?? 0)
   return floor.designs?.[idx] ?? floor.designs?.[0]
 }
 
-/** Lees slicers van de actieve design (`slices`, fallback legacy settings). */
+/** Lees slicers van de actieve design (`design.slices`). */
 export function readPlanSlices(floor: Floor | null | undefined): PlanSlice[] {
   const design = activeDesign(floor)
   if (!design) return []
@@ -70,7 +61,7 @@ export function readPlanSlicesFromPlan(
 
 /**
  * Schrijf slicers op de actieve design van `floorIndex`.
- * Immutable plan-update (flush + design.slices); legacy settings-key weg.
+ * Immutable plan-update (flush + design.slices).
  */
 export function writePlanSlices(plan: FloorPlan, slices: PlanSlice[], floorIndex = 0): FloorPlan {
   const idx = Math.max(0, Math.min(floorIndex, plan.floors.length - 1))
@@ -80,14 +71,11 @@ export function writePlanSlices(plan: FloorPlan, slices: PlanSlice[], floorIndex
     const designIdx = Math.max(0, flushed.activeDesignIndex ?? 0)
     const designs = (flushed.designs ?? []).map((design, di) => {
       if (di !== designIdx) return design
-      const settings = cloneSettings(design.source?.settings)
-      delete settings[PLAN_SLICES_SETTINGS_KEY]
       const nextSlices =
         slices.length === 0 ? undefined : slices.map((s) => ({ m: { ...s.m }, p: { ...s.p } }))
       return {
         ...design,
         slices: nextSlices,
-        source: { ...design.source, settings },
       }
     })
     return { ...flushed, designs }

@@ -1,7 +1,8 @@
 /**
  * Buiten- en binnenkant van een gevelmuur in het aanzicht (cm voorbij de hartlijn).
- * Zelfde knoop-logica als de plattegrond-baksteen: vrij einde = halve eigen dikte;
- * knoop = buur-lichaam langs de uit-/inwaartse as (balance-aware).
+ * Zelfde knoop-logica als de plattegrond-baksteen: vrij I-eind = butt op a/b
+ * (`FREE_END_EXTEND_CM`); knoop = buur-lichaam langs de uit-/inwaartse as
+ * (balance-aware).
  */
 import {
   floorplannerLeftNormal,
@@ -9,10 +10,10 @@ import {
   wallDirectionUnit,
 } from './plan-wall-geom'
 import type { Point2D, Wall } from './types'
+import { FREE_END_EXTEND_CM } from './wall-render-geometry'
 
 const ENDPOINT_EPS_CM = 3
 const ON_SEGMENT_EPS_CM = 3
-const FREE_END_FACTOR = 0.5
 
 export type ElevationWallEndFaces = {
   /** Extra cm voorbij einde A/B aan de zichtbare buitenkant. */
@@ -92,7 +93,7 @@ function facesAtEnd(
     }
   }
   return {
-    outer: Math.max(0, wall.thickness * FREE_END_FACTOR),
+    outer: FREE_END_EXTEND_CM,
     inner: 0,
   }
 }

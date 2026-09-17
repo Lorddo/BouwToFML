@@ -1,6 +1,6 @@
 /**
  * Getypte `.plg`-extensies (Fase A).
- * Schemakeys zijn schoon (`frame`, `slices`, `role`) — geen `btf*`-prefix.
+ * Schemakeys zijn schoon (`frame`, `slices`, `role`).
  * Defaults = huidige impliciete FML-/accessor-gedrag (code wint op het plan).
  */
 import type { DrawingMeta, Point2D } from '../plan/types'
@@ -28,7 +28,7 @@ export interface WallEndpointElevations {
 }
 
 /**
- * Display-kozijn per opening (nu `extras.btfFrame`).
+ * Display-kozijn per opening (`opening.frame`) of dakraam (`item.frame`).
  * Alle vier verplicht — zelfde contract als `OpeningFrameCm`.
  */
 export interface OpeningFrame {
@@ -150,13 +150,13 @@ export interface PlanElevations {
   views: ElevationView[]
 }
 
-/** Maatlijn-slicer op een design (nu `design.settings.btfSlices`). */
+/** Maatlijn-slicer op een design (`design.slices`). */
 export interface PlanSlice {
   m: Point2D
   p: Point2D
 }
 
-/** Herkomst van een dakvlak-surface (nu `extras.btfOrigin`). */
+/** Herkomst van een dakvlak-surface (`surface.origin`). */
 export type SurfaceOrigin = 'generated' | 'manual'
 
 /** Dakvlak-soort: hoofddak of dakkapel (kind van een ouder-vlak). */
@@ -165,5 +165,5 @@ export type RoofKind = 'plane' | 'dormer'
 /** Muurrol (nok: `extras.ridge === true` → typed `wall.role`). Dakkapel-U: alleen `.plg`. */
 export type WallRole = 'ridge' | 'dormer'
 
-/** Design-rol (nu `design.settings.btfRole`). */
+/** Design-rol (`design.role`). */
 export type DesignRole = 'ridge'

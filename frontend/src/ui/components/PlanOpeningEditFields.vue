@@ -11,6 +11,7 @@ import type { OpeningType } from '@/core/plan/types'
 import { MAX_OPENING_WIDTH_CM, MIN_OPENING_HEIGHT_CM } from '@/core/plan/opening-plan-ops'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import ScaleLengthInput from './ScaleLengthInput.vue'
+import OpeningFrameFields from './OpeningFrameFields.vue'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
 import ToolbeltIcon from './canvas/ToolbeltIcon.vue'
 import './plan-toolbelt-settings-fields.css'
@@ -46,6 +47,16 @@ const props = withDefaults(
     showMirrorButton?: boolean
     /** Alleen breedte/hoogte/vloer; geen type-extra's. Muren gebruiken dit nog; deuren/ramen niet. */
     compact?: boolean
+    /** Tweede rij kozijnmaten (Settings-toggle). */
+    showFrame?: boolean
+    frameLeftCm?: number
+    frameRightCm?: number
+    frameTopCm?: number
+    frameBottomCm?: number
+    frameLeftMixed?: boolean
+    frameRightMixed?: boolean
+    frameTopMixed?: boolean
+    frameBottomMixed?: boolean
   }>(),
   {
     bovenlicht: false,
@@ -68,6 +79,15 @@ const props = withDefaults(
     showDoorButtons: true,
     showMirrorButton: false,
     compact: false,
+    showFrame: false,
+    frameLeftCm: 5,
+    frameRightCm: 5,
+    frameTopCm: 5,
+    frameBottomCm: 0,
+    frameLeftMixed: false,
+    frameRightMixed: false,
+    frameTopMixed: false,
+    frameBottomMixed: false,
   },
 )
 
@@ -87,6 +107,14 @@ const emit = defineEmits<{
   toggleSwing: []
   copy: []
   remove: []
+  frameLeftInput: [cm: number]
+  frameLeft: [cm: number]
+  frameRightInput: [cm: number]
+  frameRight: [cm: number]
+  frameTopInput: [cm: number]
+  frameTop: [cm: number]
+  frameBottomInput: [cm: number]
+  frameBottom: [cm: number]
 }>()
 
 const { t } = useI18n()
@@ -94,11 +122,12 @@ const { t } = useI18n()
 const isDoor = computed(() => props.type === 'door')
 const isWindow = computed(() => props.type === 'window')
 const showSillField = computed(() => props.showSill ?? (isWindow.value || isDoor.value))
-const showPacked = computed(() => !props.compact && props.bovenlichtPacked !== false)
+const showBovenlichtCheckbox = computed(() => !props.compact && (isDoor.value || isWindow.value))
 const showBovenlichtMeasures = computed(
-  () => !props.compact && showPacked.value && (props.bovenlicht || props.bovenlichtMixed),
+  () => showBovenlichtCheckbox.value && (props.bovenlicht || props.bovenlichtMixed),
 )
 const showExtras = computed(() => !props.compact)
+const showFrameRow = computed(() => props.showFrame === true && !props.compact)
 const hingeTitle = computed(() => {
   if (props.hingeMixed) return t('result.toolbar.hingeMixed')
   return props.hingeAtStart ? t('result.toolbar.hingeAtStart') : t('result.toolbar.hingeAtEnd')
@@ -206,162 +235,188 @@ function onBovenlichtGapCommit(): void {
 </script>
 
 <template>
-  <div class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{ t('result.toolbar.width') }}</span>
-    <div class="plan-toolbelt__field-controls">
-      <ScaleLengthInput
-        :cm="widthCm"
+  <div class="plan-toolbelt-stack">
+    <div class="plan-toolbelt__row plan-toolbelt__row--primary">
+      <slot name="leading" />
+      <div class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.width') }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="widthCm"
+            :unit="unit"
+            :min-cm="10"
+            :max-cm="MAX_OPENING_WIDTH_CM"
+            :mixed="widthMixed"
+            :aria-label="
+              isWindow
+                ? t('result.toolbar.windowWidthAria', { unit: t(`common.${unit}`) })
+                : t('result.toolbar.doorWidthAria', { unit: t(`common.${unit}`) })
+            "
+            input-class="plan-toolbelt__thickness-input"
+            @update:cm="onWidthCm"
+            @commit="onWidthCommit"
+          />
+        </div>
+      </div>
+      <div v-if="isDoor || isWindow" class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{
+          isWindow ? t('result.toolbar.glass') : t('result.toolbar.height')
+        }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="heightCm"
+            :unit="unit"
+            :min-cm="MIN_OPENING_HEIGHT_CM"
+            :max-cm="500"
+            :mixed="heightMixed"
+            :aria-label="
+              isWindow
+                ? t('result.toolbar.glassAria', { unit: t(`common.${unit}`) })
+                : t('result.toolbar.doorHeightAria', { unit: t(`common.${unit}`) })
+            "
+            input-class="plan-toolbelt__thickness-input"
+            @update:cm="onHeightCm"
+            @commit="onHeightCommit"
+          />
+        </div>
+      </div>
+      <div v-if="showSillField" class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="sillZCm"
+            :unit="unit"
+            :min-cm="0"
+            allow-zero
+            :max-cm="400"
+            :mixed="sillMixed"
+            :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
+            input-class="plan-toolbelt__thickness-input"
+            @update:cm="onSillCm"
+            @commit="onSillCommit"
+          />
+        </div>
+      </div>
+      <label
+        v-if="showBovenlichtCheckbox"
+        class="plan-toolbelt__field plan-toolbelt__field--checkbox"
+        :title="t('result.toolbar.bovenlichtTitle')"
+      >
+        <input
+          type="checkbox"
+          :checked="bovenlicht"
+          :indeterminate.prop="bovenlichtMixed"
+          :aria-label="t('result.toolbar.bovenlicht')"
+          @change="onBovenlicht"
+        />
+        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.bovenlicht') }}</span>
+      </label>
+      <div v-if="showBovenlichtMeasures" class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.bovenlichtGap') }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="bovenlichtGapCm"
+            :unit="unit"
+            :min-cm="MIN_BOVENLICHT_GAP_CM"
+            :max-cm="MAX_BOVENLICHT_GAP_CM"
+            :allow-zero="MIN_BOVENLICHT_GAP_CM <= 0"
+            :mixed="bovenlichtGapMixed"
+            :aria-label="t('result.toolbar.bovenlichtGapAria', { unit: t(`common.${unit}`) })"
+            input-class="plan-toolbelt__thickness-input"
+            @update:cm="onBovenlichtGapCm"
+            @commit="onBovenlichtGapCommit"
+          />
+        </div>
+      </div>
+      <div v-if="showBovenlichtMeasures" class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{ t('result.toolbar.bovenlichtHeight') }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <ScaleLengthInput
+            :cm="bovenlichtHeightCm"
+            :unit="unit"
+            :min-cm="MIN_BOVENLICHT_HEIGHT_CM"
+            :max-cm="MAX_BOVENLICHT_HEIGHT_CM"
+            :mixed="bovenlichtHeightMixed"
+            :aria-label="t('result.toolbar.bovenlichtHeightAria', { unit: t(`common.${unit}`) })"
+            input-class="plan-toolbelt__thickness-input"
+            @update:cm="onBovenlichtHeightCm"
+            @commit="onBovenlichtHeightCommit"
+          />
+        </div>
+      </div>
+      <button
+        v-if="showExtras && showMirrorButton"
+        type="button"
+        class="canvas-toolbelt__btn"
+        :class="{ 'canvas-toolbelt__btn--active': !hingeMixed && !hingeAtStart }"
+        :title="mirrorTitle"
+        :aria-label="mirrorTitle"
+        @click="emit('toggleHinge')"
+      >
+        <ToolbeltIcon name="mirror_h" />
+      </button>
+      <button
+        v-if="showExtras && isDoor && showDoorButtons"
+        type="button"
+        class="canvas-toolbelt__btn"
+        :class="{ 'canvas-toolbelt__btn--active': !hingeMixed && !hingeAtStart }"
+        :title="hingeTitle"
+        :aria-label="hingeTitle"
+        @click="emit('toggleHinge')"
+      >
+        <ToolbeltIcon name="hinge" />
+      </button>
+      <button
+        v-if="showExtras && isDoor && showDoorButtons"
+        type="button"
+        class="canvas-toolbelt__btn"
+        :class="{ 'canvas-toolbelt__btn--active': !swingMixed && swingRight }"
+        :title="swingTitle"
+        :aria-label="swingTitle"
+        @click="emit('toggleSwing')"
+      >
+        <ToolbeltIcon name="swing" />
+      </button>
+      <button
+        v-if="showExtras && showCopy"
+        type="button"
+        class="canvas-toolbelt__btn"
+        :title="t('result.toolbar.copyOpeningTitle')"
+        :aria-label="t('result.toolbar.copyOpening')"
+        @click="emit('copy')"
+      >
+        <ToolbeltIcon name="copy" />
+      </button>
+      <ToolbeltActionButton
+        v-if="showExtras && showDelete"
+        icon="delete"
+        :title="deleteTitle"
+        :aria-label="deleteTitle"
+        hotkey="Delete"
+        :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
+        @click="emit('remove')"
+      />
+    </div>
+    <div v-if="showFrameRow" class="plan-toolbelt__row">
+      <OpeningFrameFields
         :unit="unit"
-        :min-cm="10"
-        :max-cm="MAX_OPENING_WIDTH_CM"
-        :mixed="widthMixed"
-        :aria-label="
-          isWindow
-            ? t('result.toolbar.windowWidthAria', { unit: t(`common.${unit}`) })
-            : t('result.toolbar.doorWidthAria', { unit: t(`common.${unit}`) })
-        "
-        input-class="plan-toolbelt__thickness-input"
-        @update:cm="onWidthCm"
-        @commit="onWidthCommit"
+        :left-cm="frameLeftCm"
+        :right-cm="frameRightCm"
+        :top-cm="frameTopCm"
+        :bottom-cm="frameBottomCm"
+        :left-mixed="frameLeftMixed"
+        :right-mixed="frameRightMixed"
+        :top-mixed="frameTopMixed"
+        :bottom-mixed="frameBottomMixed"
+        @left-input="emit('frameLeftInput', $event)"
+        @left="emit('frameLeft', $event)"
+        @right-input="emit('frameRightInput', $event)"
+        @right="emit('frameRight', $event)"
+        @top-input="emit('frameTopInput', $event)"
+        @top="emit('frameTop', $event)"
+        @bottom-input="emit('frameBottomInput', $event)"
+        @bottom="emit('frameBottom', $event)"
       />
     </div>
   </div>
-  <div v-if="isDoor || isWindow" class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{
-      isWindow ? t('result.toolbar.glass') : t('result.toolbar.height')
-    }}</span>
-    <div class="plan-toolbelt__field-controls">
-      <ScaleLengthInput
-        :cm="heightCm"
-        :unit="unit"
-        :min-cm="MIN_OPENING_HEIGHT_CM"
-        :max-cm="500"
-        :mixed="heightMixed"
-        :aria-label="
-          isWindow
-            ? t('result.toolbar.glassAria', { unit: t(`common.${unit}`) })
-            : t('result.toolbar.doorHeightAria', { unit: t(`common.${unit}`) })
-        "
-        input-class="plan-toolbelt__thickness-input"
-        @update:cm="onHeightCm"
-        @commit="onHeightCommit"
-      />
-    </div>
-  </div>
-  <div v-if="showSillField" class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{ t('result.toolbar.floor') }}</span>
-    <div class="plan-toolbelt__field-controls">
-      <ScaleLengthInput
-        :cm="sillZCm"
-        :unit="unit"
-        :min-cm="0"
-        allow-zero
-        :max-cm="400"
-        :mixed="sillMixed"
-        :aria-label="t('result.toolbar.floorAria', { unit: t(`common.${unit}`) })"
-        input-class="plan-toolbelt__thickness-input"
-        @update:cm="onSillCm"
-        @commit="onSillCommit"
-      />
-    </div>
-  </div>
-  <label
-    v-if="showPacked && (isDoor || isWindow)"
-    class="plan-toolbelt__field plan-toolbelt__field--checkbox"
-    :title="t('result.toolbar.bovenlichtTitle')"
-  >
-    <input
-      type="checkbox"
-      :checked="bovenlicht"
-      :indeterminate.prop="bovenlichtMixed"
-      :aria-label="t('result.toolbar.bovenlicht')"
-      @change="onBovenlicht"
-    />
-    <span class="plan-toolbelt__field-label">{{ t('result.toolbar.bovenlicht') }}</span>
-  </label>
-  <div v-if="showBovenlichtMeasures" class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{ t('result.toolbar.bovenlichtGap') }}</span>
-    <div class="plan-toolbelt__field-controls">
-      <ScaleLengthInput
-        :cm="bovenlichtGapCm"
-        :unit="unit"
-        :min-cm="MIN_BOVENLICHT_GAP_CM"
-        :max-cm="MAX_BOVENLICHT_GAP_CM"
-        :allow-zero="MIN_BOVENLICHT_GAP_CM <= 0"
-        :mixed="bovenlichtGapMixed"
-        :aria-label="t('result.toolbar.bovenlichtGapAria', { unit: t(`common.${unit}`) })"
-        input-class="plan-toolbelt__thickness-input"
-        @update:cm="onBovenlichtGapCm"
-        @commit="onBovenlichtGapCommit"
-      />
-    </div>
-  </div>
-  <div v-if="showBovenlichtMeasures" class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{ t('result.toolbar.bovenlichtHeight') }}</span>
-    <div class="plan-toolbelt__field-controls">
-      <ScaleLengthInput
-        :cm="bovenlichtHeightCm"
-        :unit="unit"
-        :min-cm="MIN_BOVENLICHT_HEIGHT_CM"
-        :max-cm="MAX_BOVENLICHT_HEIGHT_CM"
-        :mixed="bovenlichtHeightMixed"
-        :aria-label="t('result.toolbar.bovenlichtHeightAria', { unit: t(`common.${unit}`) })"
-        input-class="plan-toolbelt__thickness-input"
-        @update:cm="onBovenlichtHeightCm"
-        @commit="onBovenlichtHeightCommit"
-      />
-    </div>
-  </div>
-  <button
-    v-if="showExtras && showMirrorButton"
-    type="button"
-    class="canvas-toolbelt__btn"
-    :class="{ 'canvas-toolbelt__btn--active': !hingeMixed && !hingeAtStart }"
-    :title="mirrorTitle"
-    :aria-label="mirrorTitle"
-    @click="emit('toggleHinge')"
-  >
-    <ToolbeltIcon name="mirror_h" />
-  </button>
-  <button
-    v-if="showExtras && isDoor && showDoorButtons"
-    type="button"
-    class="canvas-toolbelt__btn"
-    :class="{ 'canvas-toolbelt__btn--active': !hingeMixed && !hingeAtStart }"
-    :title="hingeTitle"
-    :aria-label="hingeTitle"
-    @click="emit('toggleHinge')"
-  >
-    <ToolbeltIcon name="hinge" />
-  </button>
-  <button
-    v-if="showExtras && isDoor && showDoorButtons"
-    type="button"
-    class="canvas-toolbelt__btn"
-    :class="{ 'canvas-toolbelt__btn--active': !swingMixed && swingRight }"
-    :title="swingTitle"
-    :aria-label="swingTitle"
-    @click="emit('toggleSwing')"
-  >
-    <ToolbeltIcon name="swing" />
-  </button>
-  <button
-    v-if="showExtras && showCopy"
-    type="button"
-    class="canvas-toolbelt__btn"
-    :title="t('result.toolbar.copyOpeningTitle')"
-    :aria-label="t('result.toolbar.copyOpening')"
-    @click="emit('copy')"
-  >
-    <ToolbeltIcon name="copy" />
-  </button>
-  <ToolbeltActionButton
-    v-if="showExtras && showDelete"
-    icon="delete"
-    :title="deleteTitle"
-    :aria-label="deleteTitle"
-    hotkey="Delete"
-    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
-    @click="emit('remove')"
-  />
 </template>

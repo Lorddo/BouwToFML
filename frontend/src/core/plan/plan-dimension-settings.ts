@@ -28,7 +28,7 @@ function cloneSettings(settings: Record<string, unknown> | undefined): Record<st
   return { ...(settings ?? {}) }
 }
 
-/** Actieve plattegrond-design; Dak (`btfRole: ridge`) krijgt geen maatvoering. */
+/** Actieve plattegrond-design; Dak (`design.role: ridge`) krijgt geen maatvoering. */
 export function plattegrondDesignIndex(floor: Floor | null | undefined): number {
   const designs = floor?.designs ?? []
   if (designs.length === 0) return -1

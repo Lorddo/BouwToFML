@@ -15,14 +15,12 @@ import {
   DEFAULT_RIDGE_DISPLAY_WIDTH_CM,
   isRidgeDesign,
   isRidgeWall,
-  PLAN_ROLE_SETTINGS_KEY,
   RIDGE_DESIGN_ROLE,
   RIDGE_WALL_EXTRA,
   RIDGE_WALLS_SETTINGS_KEY,
   readRidgeWallsSettings,
 } from '../../plan/ridge-walls'
 import {
-  ROOF_ORIGIN_EXTRA,
   ROOF_ORIGIN_GENERATED,
   ROOF_ORIGIN_MANUAL,
   ROOF_PLANES_KINDS_KEY,
@@ -34,6 +32,7 @@ import {
 } from '../../plan/roof-planes'
 import type { FloorDesign, FloorPlan, FloorSurface, Wall } from '../../plan/types'
 import type { RoofKind } from '../extension-types'
+import { FML_PLAN_ROLE_SETTINGS_KEY, FML_ROOF_ORIGIN_EXTRA } from './plg-fml-extras'
 import type { FmlConceptAdapter } from './registry'
 
 function clampPositiveCm(value: unknown, fallback: number): number {
@@ -90,30 +89,30 @@ function hydrateWallRole(wall: Wall): void {
 function hydrateDesignRole(design: FloorDesign): void {
   if (
     design.role === RIDGE_DESIGN_ROLE ||
-    design.source?.settings?.[PLAN_ROLE_SETTINGS_KEY] === RIDGE_DESIGN_ROLE ||
+    design.source?.settings?.[FML_PLAN_ROLE_SETTINGS_KEY] === RIDGE_DESIGN_ROLE ||
     isRidgeDesign(design)
   ) {
     design.role = RIDGE_DESIGN_ROLE
   }
-  if (design.source?.settings && PLAN_ROLE_SETTINGS_KEY in design.source.settings) {
+  if (design.source?.settings && FML_PLAN_ROLE_SETTINGS_KEY in design.source.settings) {
     const settings = { ...design.source.settings }
-    delete settings[PLAN_ROLE_SETTINGS_KEY]
+    delete settings[FML_PLAN_ROLE_SETTINGS_KEY]
     design.source = { ...design.source, settings }
   }
 }
 
 function hydrateSurfaceOrigin(surface: FloorSurface): void {
   if (surface.origin === ROOF_ORIGIN_MANUAL || surface.origin === ROOF_ORIGIN_GENERATED) {
-    // typed wint; strip legacy
+    // typed wint; strip FML extras-key
   } else {
-    const raw = surface.extras?.[ROOF_ORIGIN_EXTRA]
+    const raw = surface.extras?.[FML_ROOF_ORIGIN_EXTRA]
     if (raw === ROOF_ORIGIN_MANUAL || raw === ROOF_ORIGIN_GENERATED) {
       surface.origin = raw
     }
   }
-  if (surface.extras && ROOF_ORIGIN_EXTRA in surface.extras) {
+  if (surface.extras && FML_ROOF_ORIGIN_EXTRA in surface.extras) {
     const extras = { ...surface.extras }
-    delete extras[ROOF_ORIGIN_EXTRA]
+    delete extras[FML_ROOF_ORIGIN_EXTRA]
     surface.extras = Object.keys(extras).length > 0 ? extras : undefined
   }
 }
@@ -283,14 +282,14 @@ export const roofAdapter: FmlConceptAdapter = {
   },
 
   serializeSurface(surface, out) {
-    if (surface.origin != null || surface.extras?.[ROOF_ORIGIN_EXTRA] != null) {
-      out[ROOF_ORIGIN_EXTRA] = roofSurfaceOrigin(surface)
+    if (surface.origin != null || surface.extras?.[FML_ROOF_ORIGIN_EXTRA] != null) {
+      out[FML_ROOF_ORIGIN_EXTRA] = roofSurfaceOrigin(surface)
     }
   },
 
   serializeDesignSettings(design, settings) {
     if (design.role === RIDGE_DESIGN_ROLE || isRidgeDesign(design)) {
-      settings[PLAN_ROLE_SETTINGS_KEY] = RIDGE_DESIGN_ROLE
+      settings[FML_PLAN_ROLE_SETTINGS_KEY] = RIDGE_DESIGN_ROLE
     }
   },
 

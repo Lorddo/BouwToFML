@@ -188,6 +188,7 @@ export function addSegmentPathWithJunctionBreaks(
   options: {
     thickness: number
     balance?: number
+    role?: Wall['role']
     idPrefix: string
     minLengthCm: number
     /** Optionele az/bz (+ overige extras) voor nieuwe segmenten. */
@@ -212,6 +213,7 @@ export function addSegmentPathWithJunctionBreaks(
       b: { x: p2.x, y: p2.y },
       thickness: options.thickness,
       balance: options.balance,
+      ...(options.role ? { role: options.role } : {}),
       openings: [],
       extras: promoted.extras,
       elevation: promoted.elevation,

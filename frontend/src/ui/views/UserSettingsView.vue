@@ -70,6 +70,10 @@ function cloneSettings(settings: UserSettingsV1): UserSettingsV1 {
       ...settings.planDisplay,
       openingColors: { ...settings.planDisplay.openingColors },
       facadeGroups: settings.planDisplay.facadeGroups.map((group) => ({ ...group })),
+      openingFrameDefaults: {
+        door: { ...settings.planDisplay.openingFrameDefaults.door },
+        window: { ...settings.planDisplay.openingFrameDefaults.window },
+      },
     },
     openingMerge: { ...settings.openingMerge },
     roomTagColors: { ...settings.roomTagColors },
@@ -289,6 +293,11 @@ function onResetFactory() {
         showClearHeightPlanFill: factory.planDisplay.showClearHeightPlanFill,
         clearHeightFillColor: factory.planDisplay.clearHeightFillColor,
         facadeGroups: factory.planDisplay.facadeGroups.map((group) => ({ ...group })),
+        showOpeningFrameEdit: factory.planDisplay.showOpeningFrameEdit,
+        openingFrameDefaults: {
+          door: { ...factory.planDisplay.openingFrameDefaults.door },
+          window: { ...factory.planDisplay.openingFrameDefaults.window },
+        },
       },
     })
     Object.assign(draft, cloneSettings(saved))
@@ -506,6 +515,177 @@ onBeforeUnmount(() => {
             "
           />
           <span>{{ t('settings.bovenlichtWindows') }}</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel settings-section">
+      <h3>{{ t('settings.openingFrame') }}</h3>
+      <p class="hint">{{ t('settings.openingFrameHint') }}</p>
+      <label class="field compact check">
+        <input
+          type="checkbox"
+          :checked="draft.planDisplay.showOpeningFrameEdit"
+          @change="
+            patchViewer({
+              showOpeningFrameEdit: ($event.target as HTMLInputElement).checked,
+            })
+          "
+        />
+        <span>{{ t('settings.showOpeningFrameEdit') }}</span>
+      </label>
+      <div class="defaults-grid">
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameDoorLeft') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.door.leftCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  door: { ...draft.planDisplay.openingFrameDefaults.door, leftCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameDoorRight') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.door.rightCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  door: { ...draft.planDisplay.openingFrameDefaults.door, rightCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameDoorTop') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.door.topCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  door: { ...draft.planDisplay.openingFrameDefaults.door, topCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameDoorBottom') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.door.bottomCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  door: { ...draft.planDisplay.openingFrameDefaults.door, bottomCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameWindowLeft') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.window.leftCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  window: { ...draft.planDisplay.openingFrameDefaults.window, leftCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameWindowRight') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.window.rightCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  window: { ...draft.planDisplay.openingFrameDefaults.window, rightCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameWindowTop') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.window.topCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  window: { ...draft.planDisplay.openingFrameDefaults.window, topCm: $event },
+                },
+              })
+            "
+          />
+        </label>
+        <label class="field compact">
+          <span>{{ t('settings.openingFrameWindowBottom') }}</span>
+          <ScaleLengthInput
+            block
+            :unit-system="draft.unitSystem"
+            :cm="draft.planDisplay.openingFrameDefaults.window.bottomCm"
+            :unit="draft.scaleInputUnit"
+            :min-cm="0"
+            allow-zero
+            @update:cm="
+              patchViewer({
+                openingFrameDefaults: {
+                  ...draft.planDisplay.openingFrameDefaults,
+                  window: { ...draft.planDisplay.openingFrameDefaults.window, bottomCm: $event },
+                },
+              })
+            "
+          />
         </label>
       </div>
     </section>

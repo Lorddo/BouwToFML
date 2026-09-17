@@ -50,6 +50,12 @@ export function createPlanCanvasEditorKeyHandlers(options: {
     commitFromMeasure: () => boolean
     handleTypeKey: (event: KeyboardEvent) => boolean
   }
+  drawDormer?: {
+    isDragging: () => boolean
+    cancelDrawDormer: () => void
+    commitFromMeasure: () => boolean
+    handleTypeKey: (event: KeyboardEvent) => boolean
+  }
   wallMove: {
     isDrafting: () => boolean
     cancelWallMove: () => void
@@ -110,6 +116,7 @@ export function createPlanCanvasEditorKeyHandlers(options: {
     surfaceEdit,
     drawWall,
     drawRoom,
+    drawDormer,
     wallMove,
     junctionMove,
     openingMove,
@@ -149,6 +156,10 @@ export function createPlanCanvasEditorKeyHandlers(options: {
       event.preventDefault()
       return
     }
+    if (drawDormer?.isDragging() && drawDormer.handleTypeKey(event)) {
+      event.preventDefault()
+      return
+    }
     if (wallMove.isDrafting() && wallMove.handleTypeKey(event)) {
       event.preventDefault()
       return
@@ -168,6 +179,11 @@ export function createPlanCanvasEditorKeyHandlers(options: {
       }
       if (drawRoom.isDragging() && drawRoom.commitFromMeasure()) {
         event.preventDefault()
+        return
+      }
+      if (drawDormer?.isDragging()) {
+        event.preventDefault()
+        drawDormer.commitFromMeasure()
         return
       }
       if (wallMove.isDrafting() && wallMove.commitFromMeasure()) {
@@ -208,6 +224,11 @@ export function createPlanCanvasEditorKeyHandlers(options: {
       if (drawRoom.isDragging()) {
         event.preventDefault()
         drawRoom.cancelDrawRoomDrag()
+        return
+      }
+      if (drawDormer?.isDragging()) {
+        event.preventDefault()
+        drawDormer.cancelDrawDormer()
         return
       }
       if (wallMove.isDrafting()) {

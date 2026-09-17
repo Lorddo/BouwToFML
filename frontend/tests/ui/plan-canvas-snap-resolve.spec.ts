@@ -84,6 +84,32 @@ describe('resolveDrawPoint', () => {
     expect(point.x).toBe(200)
   })
 
+  it('eerste lijn: soft H/V t.o.v. start tot 50 cm, Ctrl laat los', () => {
+    const snap = makeSnap({})
+    const pulled = snap.resolveDrawPoint({ x: 200, y: 40 }, { x: 0, y: 0 })
+    expect(pulled).toEqual({ x: 200, y: 0 })
+    const free = snap.resolveDrawPoint({ x: 200, y: 80 }, { x: 0, y: 0 })
+    expect(free).toEqual({ x: 200, y: 80 })
+    const ctrl = snap.resolveDrawPoint({ x: 200, y: 40 }, { x: 0, y: 0 }, true)
+    expect(ctrl).toEqual({ x: 200, y: 40 })
+  })
+
+  it('dakkapel-voorzijde negeert knopen; alleen H/V t.o.v. start', () => {
+    const snap = makeSnap({
+      junctionHit: { cmX: 250, cmY: 250 },
+      junctions: [{ x: 250, y: 250 }],
+    })
+    expect(snap.resolveDormerFrontPoint({ x: 256, y: 249 })).toEqual({ x: 256, y: 249 })
+    expect(snap.resolveDormerFrontPoint({ x: 200, y: 40 }, { x: 0, y: 0 })).toEqual({
+      x: 200,
+      y: 0,
+    })
+    expect(snap.resolveDormerFrontPoint({ x: 200, y: 40 }, { x: 0, y: 0 }, true)).toEqual({
+      x: 200,
+      y: 40,
+    })
+  })
+
   it('nok-tekenen gaat langs het nok-recept, niet langs de knoop-hit', () => {
     // Zonder plan levert het nok-pad de rauwe cursor; het punt is dat de
     // knoop-hit hier bewust niet gebruikt wordt.

@@ -141,7 +141,7 @@ describe('roof-vertex-snap', () => {
       ],
     })
     expect(surface.origin).toBe('manual')
-    expect(surface.extras?.btfOrigin).toBeUndefined()
+    expect(surface.extras?.plgOrigin).toBeUndefined()
     plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [surface])
     syncRoofPlaneGuidsFromDesigns(plan)
     expect(plan.roof?.planes.surfaceIds).toEqual(['roof-1'])
@@ -149,20 +149,20 @@ describe('roof-vertex-snap', () => {
     const raw = JSON.parse(buildFmlV3(plan)) as {
       settings: { roofPlanes?: { surfaceGuids: string[] } }
       floors: Array<{
-        designs?: Array<{ surfaces?: Array<{ guid: string; btfOrigin?: string }> }>
+        designs?: Array<{ surfaces?: Array<{ guid: string; plgOrigin?: string }> }>
       }>
     }
     expect(raw.settings.roofPlanes?.surfaceGuids).toEqual(['roof-1'])
     const dakSurf = raw.floors[0].designs
       ?.flatMap((d) => d.surfaces ?? [])
       .find((s) => s.guid === 'roof-1')
-    expect(dakSurf?.btfOrigin).toBe('manual')
+    expect(dakSurf?.plgOrigin).toBe('manual')
 
     const imported = importFmlV3(raw).plan
     expect(imported.roof?.planes.surfaceIds).toEqual(['roof-1'])
     expect(imported.source?.settings?.roofPlanes).toBeUndefined()
     const again = listRidgeSurfacesOnFloor(imported.floors[0])[0]
     expect(again?.origin).toBe('manual')
-    expect(again?.extras?.btfOrigin).toBeUndefined()
+    expect(again?.extras?.plgOrigin).toBeUndefined()
   })
 })

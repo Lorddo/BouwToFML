@@ -216,6 +216,7 @@ function makeTools(
     nulpunt: rec(),
     underlayMove: rec(),
     drawRoom: rec(),
+    drawDormer: rec(),
     drawSurface: rec(),
     drawLabel: rec(),
     drawLine: rec(),

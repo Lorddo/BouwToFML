@@ -150,7 +150,7 @@ describe('plan-slices + slice-dimension-lines', () => {
     }
 
     const raw = JSON.parse(buildFmlV3(plan))
-    expect(raw.floors[0].designs[0].settings.btfSlices).toEqual([slice])
+    expect(raw.floors[0].designs[0].settings.plgSlices).toEqual([slice])
     const exportedDims = raw.floors[0].designs[0].dimensions as Array<{
       a: { x: number; y: number }
       b: { x: number; y: number }
@@ -165,17 +165,17 @@ describe('plan-slices + slice-dimension-lines', () => {
 
     const { plan: imported } = importFmlV3(raw)
     expect(readPlanSlices(imported.floors[0])).toEqual([slice])
-    // Typed veld na hydrate; legacy settings-key weg
+    // Typed veld na hydrate; FML settings-key weg
     expect(imported.floors[0].designs?.[0]?.slices).toEqual([slice])
-    expect(imported.floors[0].designs?.[0]?.source?.settings?.btfSlices).toBeUndefined()
+    expect(imported.floors[0].designs?.[0]?.source?.settings?.plgSlices).toBeUndefined()
     // Bake gestript; manual blijft (ids worden bij import opnieuw gegenereerd)
     const dims = imported.floors[0].dimensions ?? []
     expect(dims.some((d) => Math.abs(d.a.y + 80) < 1 && Math.abs(d.b.y + 80) < 1)).toBe(true)
     expect(dims.every((d) => !(Math.abs(d.a.x + 50) < 1 && Math.abs(d.b.x + 50) < 1))).toBe(true)
 
-    // FML-roundtrip opnieuw: bake + btfSlices terug in export
+    // FML-roundtrip opnieuw: bake + plgSlices terug in export
     const reExported = JSON.parse(buildFmlV3(imported))
-    expect(reExported.floors[0].designs[0].settings.btfSlices).toEqual([slice])
+    expect(reExported.floors[0].designs[0].settings.plgSlices).toEqual([slice])
     const reDims = reExported.floors[0].designs[0].dimensions as Array<{
       a: { x: number; y: number }
       b: { x: number; y: number }

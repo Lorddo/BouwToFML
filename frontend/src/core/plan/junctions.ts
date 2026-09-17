@@ -13,6 +13,7 @@ export type {
 export {
   buildJunctions,
   findMergeTarget,
+  DRAW_START_AXIS_SNAP_CM,
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_END_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
@@ -36,6 +37,7 @@ export {
   applyShiftSnapFromAllOppositeEnds,
   applyShiftSnapFromOppositeEnd,
   snapDrawWallEndpoint,
+  snapSoftAxisFromStart,
   snapPointToJunctions,
   snapPointToWallCenters,
   snapRoomDrawEndPoint,

@@ -274,6 +274,8 @@ export function isKopseDormerEdgeWall(
 ): boolean {
   if (!isWallOnDormerEdge(wall, dormer)) return false
   if (wall.openings.length > 0) return true
+  const balance = wall.balance ?? 0.5
+  if (Math.abs(balance) < 1e-6 || Math.abs(balance - 1) < 1e-6) return true
   const parent = parentOfDormer(dormer, surfaces)
   const slope = parent ? roofSlopeDir(parent) : null
   if (!slope) return false

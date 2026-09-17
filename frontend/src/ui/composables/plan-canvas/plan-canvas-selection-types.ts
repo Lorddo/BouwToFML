@@ -45,4 +45,5 @@ export interface PlanCanvasSelectionRefs {
   addWindowHeightCm: Ref<number>
   activePlanTool: Ref<PlanToolId | null>
   drawWallKind: Ref<'wall' | 'ridge'>
+  drawRoomKind: Ref<'room' | 'dormer'>
 }

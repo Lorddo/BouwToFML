@@ -66,6 +66,7 @@ function skyHit(): ElevationSkylight {
     depthCm: 80,
     fill: '#dbeafe',
     stroke: '#60a5fa',
+    widthCm: 80,
   }
 }
 

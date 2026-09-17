@@ -1,4 +1,5 @@
 import { tally } from '@/core/diagnostics'
+import { FML_STANDARD_NOTICE_KEY, fmlExportNotice } from './fml-license-notice'
 import { FML_CONCEPT_ADAPTERS } from '../plg/fml-adapter/registry'
 import { fmlRefidForOpeningKind } from '../plg/fml-adapter/opening-fml-refids'
 import {
@@ -13,7 +14,7 @@ import {
 } from '@/core/plan/bovenlicht'
 import { ensureDesignsSynced } from '@/core/plan/design-sync'
 import { dropEmptyRidgeDesign, isRidgeDesign } from '@/core/plan/ridge-walls'
-import { PLAN_SLICES_SETTINGS_KEY, filterManualDimensions, type PlanSlice } from '@/core/plan/plan-slices'
+import { filterManualDimensions, type PlanSlice } from '@/core/plan/plan-slices'
 import { bakeSliceDimensions } from '@/core/plan/slice-dimension-lines'
 import type { DimensionMode } from '@/core/plan/plan-dimension-settings'
 import type {
@@ -483,8 +484,8 @@ function isDimensionMode(value: unknown): value is DimensionMode {
   return value === 'interior' || value === 'exterior'
 }
 
-function readSlicesFromDesignSettings(settings: Record<string, unknown> | undefined): PlanSlice[] {
-  const raw = settings?.[PLAN_SLICES_SETTINGS_KEY]
+function readSlicesFromDesign(design: FloorDesign): PlanSlice[] {
+  const raw = design.slices
   if (!Array.isArray(raw)) return []
   const out: PlanSlice[] = []
   for (const entry of raw) {
@@ -509,8 +510,7 @@ function readSlicesFromDesignSettings(settings: Record<string, unknown> | undefi
 }
 
 function serializeDimensionsForDesign(design: FloorDesign, plan: FloorPlan): FloorDimension[] {
-  const settings = design.source?.settings
-  const slices = readSlicesFromDesignSettings(settings)
+  const slices = readSlicesFromDesign(design)
   const rawMode = plan.source?.settings?.dimensionMode
   const mode: DimensionMode = isDimensionMode(rawMode) ? rawMode : 'interior'
   const manual = filterManualDimensions(design.dimensions, slices)
@@ -612,8 +612,12 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
   }
   const projectSettings = stripFloorplannerHostileSettings(projectSettingsRaw)
 
+  const leftover = { ...(plan.source?.leftover ?? {}) }
+  delete leftover[FML_STANDARD_NOTICE_KEY]
+
   const output: Record<string, unknown> = {
-    ...(plan.source?.leftover ?? {}),
+    [FML_STANDARD_NOTICE_KEY]: fmlExportNotice(),
+    ...leftover,
     id: plan.source?.id ?? fallbackProjectId,
     name: options.name ?? plan.name,
     public: plan.source?.public ?? false,

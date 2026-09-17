@@ -401,9 +401,47 @@ export function hitElevationRoofVertex(
   return hitSelectedVertex(plane.points, point, tolCm, preferIndex)
 }
 
+/**
+ * Punten van hetzelfde dakvlak die in dit aanzicht op elkaar vallen
+ * (zelfde X én Y binnen tol) — typisch het goot-/nok-paar van opzij.
+ * Voor/achter blijven los: daar verschillen de vier hoeken in X of Y.
+ * Altijd inclusief `vertexIndex` zelf (als die bestaat).
+ */
+export function pairedElevationRoofVertexIndices(
+  plane: Pick<ElevationRoofPlane, 'points'>,
+  vertexIndex: number,
+  tolCm = ELEVATION_ROOF_VERTEX_HIT_CM,
+): number[] {
+  const anchor = plane.points[vertexIndex]
+  if (!anchor) return []
+  const out: number[] = []
+  for (let i = 0; i < plane.points.length; i += 1) {
+    const point = plane.points[i]
+    if (!point) continue
+    if (Math.hypot(point.x - anchor.x, point.y - anchor.y) <= tolCm) {
+      out.push(i)
+    }
+  }
+  return out
+}
+
+export type ElevationRoofSnapSkip = {
+  planeId: string
+  /** Eén of meer indices (paar bij zijaanzicht-sleep). */
+  vertexIndices: readonly number[]
+}
+
+function skipRoofSnapIndex(
+  skip: ElevationRoofSnapSkip | undefined,
+  planeId: string,
+  index: number,
+): boolean {
+  return Boolean(skip && skip.planeId === planeId && skip.vertexIndices.includes(index))
+}
+
 export function collectElevationRoofSnapYs(
   elevation: FacadeElevation,
-  skip?: { planeId: string; vertexIndex: number },
+  skip?: ElevationRoofSnapSkip,
 ): number[] {
   const ys: number[] = []
   for (const wall of elevation.walls) {
@@ -411,7 +449,7 @@ export function collectElevationRoofSnapYs(
   }
   for (const plane of elevation.roofPlanes) {
     plane.points.forEach((point, index) => {
-      if (skip && plane.id === skip.planeId && index === skip.vertexIndex) return
+      if (skipRoofSnapIndex(skip, plane.id, index)) return
       ys.push(point.y)
     })
   }
@@ -421,7 +459,7 @@ export function collectElevationRoofSnapYs(
 /** Muurfaces + knopen + andere dakvlak-punten (uitlijnen langs de gevel). */
 export function collectElevationRoofSnapXs(
   elevation: FacadeElevation,
-  skip?: { planeId: string; vertexIndex: number },
+  skip?: ElevationRoofSnapSkip,
 ): number[] {
   const xs = collectElevationWallSnapXs(elevation.walls)
   for (const junction of elevation.junctions) {
@@ -429,7 +467,7 @@ export function collectElevationRoofSnapXs(
   }
   for (const plane of elevation.roofPlanes) {
     plane.points.forEach((point, index) => {
-      if (skip && plane.id === skip.planeId && index === skip.vertexIndex) return
+      if (skipRoofSnapIndex(skip, plane.id, index)) return
       xs.push(point.x)
     })
   }

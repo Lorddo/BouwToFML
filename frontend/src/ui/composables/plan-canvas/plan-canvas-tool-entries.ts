@@ -65,6 +65,11 @@ export interface PlanToolEntryDeps {
     updateDrawRoomHover: (event: MouseEvent) => void
     clearDrawRoomHover: () => void
   }
+  drawDormer: {
+    onDrawDormerClick: (event: MouseEvent) => void
+    updateDrawDormerHover: (event: MouseEvent) => void
+    clearDrawDormerHover: () => void
+  }
   drawSurface: {
     onDrawSurfaceClick: (event: MouseEvent) => void
     onDrawSurfaceDblClick: (event: MouseEvent) => void
@@ -158,11 +163,27 @@ export function createPlanToolEntries(deps: PlanToolEntryDeps): PlanToolEntry[] 
       id: 'draw_room',
       active: () => modes.drawRoomMode.value,
       down: (_cm, event) => {
-        deps.drawRoom.onDrawRoomClick(event)
+        if (deps.selection.drawRoomKind.value === 'dormer') {
+          deps.drawDormer.onDrawDormerClick(event)
+        } else {
+          deps.drawRoom.onDrawRoomClick(event)
+        }
         return true
       },
-      hover: (event) => deps.drawRoom.updateDrawRoomHover(event),
-      clearHover: () => deps.drawRoom.clearDrawRoomHover(),
+      hover: (event) => {
+        if (deps.selection.drawRoomKind.value === 'dormer') {
+          deps.drawDormer.updateDrawDormerHover(event)
+        } else {
+          deps.drawRoom.updateDrawRoomHover(event)
+        }
+      },
+      clearHover: () => {
+        if (deps.selection.drawRoomKind.value === 'dormer') {
+          deps.drawDormer.clearDrawDormerHover()
+        } else {
+          deps.drawRoom.clearDrawRoomHover()
+        }
+      },
       cursor: crosshair,
     },
     {

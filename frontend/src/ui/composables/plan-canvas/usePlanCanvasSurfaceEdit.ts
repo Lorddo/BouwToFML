@@ -59,6 +59,7 @@ export function usePlanCanvasSurfaceEdit(options: {
   let snapDisabled = false
   let pendingZ: { index: number; z: number } | null = null
   let dragMoveHandler: ((event: MouseEvent) => void) | null = null
+  let bodyDrag: { startCm: Point2D; startPoly: Point2D[] } | null = null
   const DRAG_START_PX = 4
 
   function isEditing(): boolean {
@@ -149,6 +150,7 @@ export function usePlanCanvasSurfaceEdit(options: {
 
   function onDragUp(): void {
     draggingVertexIndex.value = null
+    bodyDrag = null
     snapDisabled = false
     cleanupDragListeners()
     if (didPushUndo) {
@@ -169,6 +171,32 @@ export function usePlanCanvasSurfaceEdit(options: {
         draggingVertexIndex.value = index
       }
       onDragMove(move)
+    }
+    dragMoveHandler = onMove
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      if (dragMoveHandler === onMove) dragMoveHandler = null
+      onDragUp()
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp, { once: true })
+  }
+
+  function beginBodyDrag(event: MouseEvent, startCm: Point2D, startPoly: Point2D[]): void {
+    const startX = event.clientX
+    const startY = event.clientY
+    bodyDrag = null
+    didPushUndo = false
+    const onMove = (move: MouseEvent) => {
+      const cm = options.hitTest.clientToCm(move.clientX, move.clientY)
+      if (!cm) return
+      if (bodyDrag == null) {
+        if (Math.hypot(move.clientX - startX, move.clientY - startY) < DRAG_START_PX) return
+        bodyDrag = { startCm, startPoly }
+      }
+      const dx = cm.x - bodyDrag.startCm.x
+      const dy = cm.y - bodyDrag.startCm.y
+      commitPoly(bodyDrag.startPoly.map((p) => ({ x: p.x + dx, y: p.y + dy })))
     }
     dragMoveHandler = onMove
     const onUp = () => {
@@ -251,6 +279,9 @@ export function usePlanCanvasSurfaceEdit(options: {
 
     if (options.isRidgeHit?.(raw) === true) return false
     if (pointInPoly(raw, poly)) {
+      if (currentSurface()?.roofKind === 'dormer') {
+        beginBodyDrag(event, raw, poly)
+      }
       event.preventDefault()
       return true
     }
@@ -261,6 +292,7 @@ export function usePlanCanvasSurfaceEdit(options: {
   function cancelDrag(): void {
     cleanupDragListeners()
     draggingVertexIndex.value = null
+    bodyDrag = null
     snapDisabled = false
     didPushUndo = false
   }

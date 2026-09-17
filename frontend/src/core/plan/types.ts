@@ -49,7 +49,7 @@ export interface Opening {
   /** @deprecated Zie swingHingeInsetCm. */
   swingFreeInsetCm?: number
   /**
-   * Display-kozijn in het FML-gat (was `extras.btfFrame`).
+   * Display-kozijn in het FML-gat (`opening.frame`).
    * Alle vier verplicht wanneer gezet.
    */
   frame?: { leftCm: number; rightCm: number; topCm: number; bottomCm: number }
@@ -73,7 +73,7 @@ export interface Wall {
     a: { z: number; h: number }
     b: { z: number; h: number }
   }
-  /** Nok-muur (`.plg`); FML-adapter schrijft `extras.ridge: true`. */
+  /** Nok (`ridge`) of dakkapel-U (`dormer`, alleen `.plg`). FML schrijft `extras.ridge` alleen bij ridge. */
   role?: import('../plg/extension-types').WallRole
   /**
    * Session-only stempel-eigendom (was `extras.stampOwned`).
@@ -125,6 +125,11 @@ export interface FloorItem {
   showLabel?: boolean
   name_x?: number
   name_y?: number
+  /**
+   * Display-kozijn in het dakraam-gat (`item.frame`). Alleen `skylight`.
+   * Alle vier verplicht wanneer gezet. FML kent geen kozijn.
+   */
+  frame?: { leftCm: number; rightCm: number; topCm: number; bottomCm: number }
   /** Overige item-keys. Geen `fmlRefid` — unmapped FML krijgt catalogus-default + ImportWarning. */
   extras?: PlanExtras
 }
@@ -167,7 +172,7 @@ export interface FloorSurface {
   isCutout?: boolean
   isRoof?: boolean
   pattern?: number
-  /** Dakvlak-herkomst (`.plg`); FML-adapter schrijft `extras.btfOrigin`. */
+  /** Dakvlak-herkomst (`.plg`); FML-adapter schrijft `extras.plgOrigin`. */
   origin?: import('../plg/extension-types').SurfaceOrigin
   /** Hoofddak of dakkapel (`.plg`); default `'plane'`. */
   roofKind?: import('../plg/extension-types').RoofKind
@@ -245,11 +250,11 @@ export interface FloorDesign {
   labels?: FloorLabel[]
   lines?: FloorLine[]
   dimensions?: FloorDimension[]
-  /** Maatlijn-slicers (was `settings.btfSlices`). */
+  /** Maatlijn-slicers (`design.slices`). */
   slices?: Array<{ m: Point2D; p: Point2D }>
   /** Autogen-maatlijnen (was `settings.engineAutoDims`). */
   autoDimensions?: boolean
-  /** Dak-design (`.plg`); FML-adapter schrijft `settings.btfRole`. */
+  /** Dak-design (`.plg`); FML-adapter schrijft `settings.plgRole`. */
   role?: import('../plg/extension-types').DesignRole
   source?: FloorDesignSource
 }

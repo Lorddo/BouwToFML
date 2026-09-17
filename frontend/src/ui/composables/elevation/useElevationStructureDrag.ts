@@ -12,6 +12,7 @@ import {
   collectElevationSegmentSnapYs,
   collectElevationWallSnapXs,
   ELEVATION_SEGMENT_SNAP_CM,
+  pairedElevationRoofVertexIndices,
   snapElevationX,
   snapElevationY,
 } from '@/core/plan/elevation-hit'
@@ -30,7 +31,8 @@ import {
   snapElevationRidgeCenter,
 } from '@/core/plan/elevation-ridge-edit'
 import { applyElevationWallEndAlongPlanAxis } from '@/core/plan/elevation-wall-end-edit'
-import { findRidgeSurface, setRidgeSurfaceVertex } from '@/core/plan/roof-planes'
+import { findRidgeSurface, setRidgeSurfaceVertices } from '@/core/plan/roof-planes'
+import { syncDormerAssemblyAfterRoofEdit } from '@/core/plan/bind-walls-to-roofs'
 import { listRidgeWallsOnFloor, setPlanRidgeJunctionZ } from '@/core/plan/ridge-walls'
 import { setPlanJunctionElevationEdit, setPlanWallElevationEdit } from '@/core/plan/elevation-openings'
 import {
@@ -447,12 +449,23 @@ export function useElevationStructureDrag(options: {
     surfaceId: string
     vertexIndex: number
     floorIndex: number
+    /** Poly bij sleep-start — wangen syncen pas bij loslaten. */
+    startPoly: Array<Point2D & { z?: number }>
+    /** Laatste commit tijdens sleep (props.plan kan 1 frame achterlopen). */
+    lastPlan: FloorPlan
   }
 
   let roofVertexDrag: RoofVertexDrag | null = null
 
   function beginRoofVertexDrag(surfaceId: string, vertexIndex: number, floorIndex: number): void {
-    roofVertexDrag = { surfaceId, vertexIndex, floorIndex }
+    const surface = findRidgeSurface(props.plan, surfaceId)
+    roofVertexDrag = {
+      surfaceId,
+      vertexIndex,
+      floorIndex,
+      startPoly: (surface?.poly ?? []).map((p) => ({ x: p.x, y: p.y, z: p.z })),
+      lastPlan: props.plan,
+    }
     pushUndo()
     window.addEventListener('pointermove', onRoofVertexMove)
     window.addEventListener('pointerup', onRoofVertexUp, { once: true })
@@ -463,33 +476,55 @@ export function useElevationStructureDrag(options: {
     const elev = elevation.value
     const cm = clientToCm(event.clientX, event.clientY)
     if (!elev || !cm) return
-    const surface = findRidgeSurface(props.plan, roofVertexDrag.surfaceId)
-    const keep = surface?.poly[roofVertexDrag.vertexIndex]
-    if (!keep) return
+    const surface = findRidgeSurface(roofVertexDrag.lastPlan, roofVertexDrag.surfaceId)
+    if (!surface?.poly[roofVertexDrag.vertexIndex]) return
+    const plane = elev.roofPlanes.find((item) => item.id === roofVertexDrag!.surfaceId)
+    const solo = event.ctrlKey || event.metaKey
+    const pairIndices =
+      plane && !solo
+        ? pairedElevationRoofVertexIndices(plane, roofVertexDrag.vertexIndex)
+        : [roofVertexDrag.vertexIndex]
     const skip = {
       planeId: roofVertexDrag.surfaceId,
-      vertexIndex: roofVertexDrag.vertexIndex,
+      vertexIndices: pairIndices,
     }
     const snapped = snapPointerCm(
       cm,
-      event.ctrlKey || event.metaKey,
+      solo,
       collectElevationRoofSnapXs(elev, skip),
       collectElevationRoofSnapYs(elev, skip),
     )
-    const xy = unprojectElevationAlong(snapped.x, keep, elev)
-    commitPlan(
-      setRidgeSurfaceVertex(props.plan, roofVertexDrag.surfaceId, roofVertexDrag.vertexIndex, {
-        x: xy.x,
-        y: xy.y,
-        z: elevCmToLocalZ(roofVertexDrag.floorIndex, snapped.y),
-      }),
+    const z = elevCmToLocalZ(roofVertexDrag.floorIndex, snapped.y)
+    const patches = pairIndices.flatMap((vertexIndex) => {
+      const point = surface.poly[vertexIndex]
+      if (!point) return []
+      const xy = unprojectElevationAlong(snapped.x, point, elev)
+      return [{ vertexIndex, x: xy.x, y: xy.y, z }]
+    })
+    if (patches.length === 0) return
+    // Geen wang-follow tijdens sleep: anders springen snap-doelen heen en weer.
+    const next = setRidgeSurfaceVertices(roofVertexDrag.lastPlan, roofVertexDrag.surfaceId, patches, {
+      followDormerWalls: false,
+    })
+    roofVertexDrag.lastPlan = next
+    commitPlan(next)
+  }
+
+  function flushRoofVertexWallFollow(drag: RoofVertexDrag): void {
+    const next = syncDormerAssemblyAfterRoofEdit(
+      drag.lastPlan,
+      drag.surfaceId,
+      drag.startPoly.length > 0 ? drag.startPoly : undefined,
     )
+    if (next !== drag.lastPlan) commitPlan(next)
   }
 
   function onRoofVertexUp(): void {
     window.removeEventListener('pointermove', onRoofVertexMove)
+    const drag = roofVertexDrag
     roofVertexDrag = null
     snapGuide.value = null
+    if (drag) flushRoofVertexWallFollow(drag)
   }
 
   function cleanupStructureDrag(): void {
@@ -505,7 +540,9 @@ export function useElevationStructureDrag(options: {
     wallElevDrag = null
     wallElevDragStarted = false
     junctionDrag = null
+    const pendingRoof = roofVertexDrag
     roofVertexDrag = null
+    if (pendingRoof) flushRoofVertexWallFollow(pendingRoof)
   }
 
   return {

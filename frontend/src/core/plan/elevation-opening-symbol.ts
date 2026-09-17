@@ -473,12 +473,12 @@ export function glyphFromElevationRect(rect: {
   kind: string
   mirrored?: [number, number]
   widthCm: number
-  extras?: import('./types').PlanExtras
+  frame?: import('./types').Opening['frame']
   /** Muur-a ligt links in het aanzicht (`xa <= xb`). Default true. */
   startOnLeft?: boolean
 }): ElevationOpeningSymbol {
   const catalog = resolveOpeningCatalog(rect.kind, rect.type)
-  const base = resolveOpeningFrame({ extras: rect.extras }, catalog)
+  const base = resolveOpeningFrame({ frame: rect.frame }, catalog)
   const projW = Math.max(0.1, rect.x1 - rect.x0)
   const worldW = Math.max(0.1, rect.widthCm)
   const scaleX = projW / worldW

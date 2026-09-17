@@ -65,3 +65,46 @@ describe('computeOpeningDraftState — bovenlicht measures', () => {
     expect(draft?.hingeMixed).toBe(false)
   })
 })
+
+describe('computeOpeningDraftState — kozijn', () => {
+  it('zonder frame toont catalogus (raam 5 rondom, deur dorpel 0)', () => {
+    const windowDraft = computeOpeningDraftState([windowOpening()])
+    expect(windowDraft?.frameLeftCm).toBe(5)
+    expect(windowDraft?.frameRightCm).toBe(5)
+    expect(windowDraft?.frameTopCm).toBe(5)
+    expect(windowDraft?.frameBottomCm).toBe(5)
+    expect(windowDraft?.frameLeftMixed).toBe(false)
+
+    const doorDraft = computeOpeningDraftState([door()])
+    expect(doorDraft?.frameBottomCm).toBe(0)
+    expect(doorDraft?.frameLeftCm).toBe(5)
+  })
+
+  it('instance-frame wint van catalogus', () => {
+    const draft = computeOpeningDraftState([
+      windowOpening({
+        frame: { leftCm: 12, rightCm: 8, topCm: 4, bottomCm: 10 },
+      }),
+    ])
+    expect(draft?.frameLeftCm).toBe(12)
+    expect(draft?.frameRightCm).toBe(8)
+    expect(draft?.frameTopCm).toBe(4)
+    expect(draft?.frameBottomCm).toBe(10)
+  })
+
+  it('mixed per kant bij verschillende frames', () => {
+    const draft = computeOpeningDraftState([
+      windowOpening({
+        id: 'a',
+        frame: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 },
+      }),
+      windowOpening({
+        id: 'b',
+        frame: { leftCm: 10, rightCm: 5, topCm: 5, bottomCm: 5 },
+      }),
+    ])
+    expect(draft?.frameLeftMixed).toBe(true)
+    expect(draft?.frameRightMixed).toBe(false)
+    expect(draft?.frameLeftCm).toBe(5)
+  })
+})

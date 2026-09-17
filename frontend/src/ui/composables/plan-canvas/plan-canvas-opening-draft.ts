@@ -18,6 +18,7 @@ import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/plan/extraction-to-plan-types'
+import { effectiveOpeningFrame } from '@/core/plan/opening-display-geom'
 import { resolveHingeAtStart, resolveSwingSign } from '@/ui/composables/plan-canvas/plan-canvas-doors'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/core/plan/opening-plan-ops'
 
@@ -49,6 +50,15 @@ export interface OpeningDraftState {
   /** Effectieve dorpel-gap (override of vloerdefault). */
   bovenlichtGapCm: number
   bovenlichtGapMixed: boolean
+  /** Effectief kozijn (instance of catalogus); mixed per kant. */
+  frameLeftCm: number
+  frameLeftMixed: boolean
+  frameRightCm: number
+  frameRightMixed: boolean
+  frameTopCm: number
+  frameTopMixed: boolean
+  frameBottomCm: number
+  frameBottomMixed: boolean
 }
 
 export interface OpeningDraftOptions {
@@ -120,6 +130,12 @@ export function computeOpeningDraftState(
   const bovenlichtHeightFirst = bovenlichtHeights[0] ?? floorHeightDefault
   const bovenlichtGapFirst = bovenlichtGaps[0] ?? floorGapDefault
 
+  const frames = openings.map((opening) => effectiveOpeningFrame(opening))
+  const frameLeftFirst = Math.round(frames[0]?.leftCm ?? 5)
+  const frameRightFirst = Math.round(frames[0]?.rightCm ?? 5)
+  const frameTopFirst = Math.round(frames[0]?.topCm ?? 5)
+  const frameBottomFirst = Math.round(frames[0]?.bottomCm ?? 0)
+
   return {
     openingType,
     subtype: subtypeFirst,
@@ -140,5 +156,13 @@ export function computeOpeningDraftState(
     bovenlichtHeightMixed: bovenlichtHeights.some((value) => value !== bovenlichtHeightFirst),
     bovenlichtGapCm: bovenlichtGapFirst,
     bovenlichtGapMixed: bovenlichtGaps.some((value) => value !== bovenlichtGapFirst),
+    frameLeftCm: frameLeftFirst,
+    frameLeftMixed: frames.some((frame) => Math.round(frame.leftCm) !== frameLeftFirst),
+    frameRightCm: frameRightFirst,
+    frameRightMixed: frames.some((frame) => Math.round(frame.rightCm) !== frameRightFirst),
+    frameTopCm: frameTopFirst,
+    frameTopMixed: frames.some((frame) => Math.round(frame.topCm) !== frameTopFirst),
+    frameBottomCm: frameBottomFirst,
+    frameBottomMixed: frames.some((frame) => Math.round(frame.bottomCm) !== frameBottomFirst),
   }
 }

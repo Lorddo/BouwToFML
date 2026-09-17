@@ -279,6 +279,7 @@ export function makeElevationSelectHarness(options: ElevationSelectHarnessOption
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    pendingPlaceFrame: ref(null),
     preciseIntent: () => options.preciseIntent === true,
     beginPreciseOpening: () => {
       calls.push('beginPreciseOpening')

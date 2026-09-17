@@ -39,6 +39,7 @@ import {
   stairStraightDouble,
   stairWinder180,
 } from './stairs'
+import type { OpeningFrameCm } from '../opening-display-geom'
 import { emptyShape, isFurnitureKind, type FixtureSymbolShape } from './types'
 
 export type { FixtureSymbolShape } from './types'
@@ -52,6 +53,7 @@ export function buildFixtureSymbol(
   widthCm: number,
   heightCm: number,
   mirror: { x?: boolean; y?: boolean; rotation?: number } = {},
+  frame?: OpeningFrameCm,
 ): FixtureSymbolShape {
   const w = Math.max(8, widthCm)
   const h = Math.max(8, heightCm)
@@ -127,7 +129,7 @@ export function buildFixtureSymbol(
     case 'balustrade':
       return balustrade(widthCm, heightCm)
     case 'skylight':
-      return skylight(w, h)
+      return skylight(w, h, frame)
     case 'roof_eave':
       return roofEave(w, h)
     case 'dormer':

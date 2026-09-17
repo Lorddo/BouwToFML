@@ -10,6 +10,12 @@ import {
 const EMPTY_WORLD_SPAN_X = 2000
 const EMPTY_WORLD_SPAN_Y = 1500
 
+/**
+ * Ademruimte rond muren/items (cm): autogen-ketting + totaal + tick,
+ * plus ruimte zodat topbar/toolbelt de maatlijnen niet bedekt.
+ */
+export const FIT_DRAWN_PLAN_PAD_CM = 160
+
 export type ExtraContentBounds = {
   minX: number
   minY: number
@@ -66,7 +72,7 @@ export function layoutTransform(layout: ContentLayout) {
   }
 }
 
-/** true als `bounds` buiten de huidige fit-world valt (import/generate/onderlegger groter). */
+/** true als `bounds` buiten de huidige fit-world valt (import/generate groter). */
 export function worldOverflowsLayout(
   layout: ContentLayout,
   bounds: ExtraContentBounds,
@@ -92,17 +98,43 @@ export function shouldRefitForExtraBoundsAppear(
   return !prev || prev.spanX <= 0 || prev.spanY <= 0
 }
 
-function mergeBounds(
-  a: ExtraContentBounds | null,
-  b: ExtraContentBounds | null,
+/**
+ * Auto-herfit bij onderlegger alleen op een lege floor.
+ * Getekende muren/items winnen: een ongecropte scan mag de view niet uitzoomen.
+ */
+export function shouldRefitForUnderlayAppear(
+  next: ExtraContentBounds | null | undefined,
+  prev: ExtraContentBounds | null | undefined,
+  hasDrawnGeom: boolean,
+): boolean {
+  if (hasDrawnGeom) return false
+  return shouldRefitForExtraBoundsAppear(next, prev)
+}
+
+export function expandFitBounds(
+  bounds: ExtraContentBounds,
+  padCm: number,
+): ExtraContentBounds {
+  if (!(padCm > 0)) return bounds
+  return {
+    minX: bounds.minX - padCm,
+    minY: bounds.minY - padCm,
+    spanX: Math.max(1, bounds.spanX + padCm * 2),
+    spanY: Math.max(1, bounds.spanY + padCm * 2),
+  }
+}
+
+/**
+ * Passend / verdieping-wissel: getekende plattegrond eerst.
+ * Onderlegger alleen als er nog geen muren of items zijn (lege floor + scan).
+ */
+export function resolveFitContentBounds(
+  geom: ExtraContentBounds | null,
+  extra: ExtraContentBounds | null,
+  drawnPadCm = FIT_DRAWN_PLAN_PAD_CM,
 ): ExtraContentBounds | null {
-  if (!a) return b
-  if (!b) return a
-  const minX = Math.min(a.minX, b.minX)
-  const minY = Math.min(a.minY, b.minY)
-  const maxX = Math.max(a.minX + a.spanX, b.minX + b.spanX)
-  const maxY = Math.max(a.minY + a.spanY, b.minY + b.spanY)
-  return { minX, minY, spanX: Math.max(1, maxX - minX), spanY: Math.max(1, maxY - minY) }
+  if (geom) return expandFitBounds(geom, drawnPadCm)
+  return extra
 }
 
 export function usePlanCanvasViewport(
@@ -128,7 +160,7 @@ export function usePlanCanvasViewport(
     const extraOk = extra && extra.spanX > 0 && extra.spanY > 0 ? extra : null
     const geom = resolveGeomBounds(wallList, itemList)
     return (
-      mergeBounds(geom, extraOk) ?? {
+      resolveFitContentBounds(geom, extraOk) ?? {
         minX: 0,
         minY: 0,
         spanX: EMPTY_WORLD_SPAN_X,
@@ -227,8 +259,9 @@ export function usePlanCanvasViewport(
   })
 
   watch(extraBounds, (next, prev) => {
-    if (!shouldRefitForExtraBoundsAppear(next, prev)) return
-    // Onderlegger komt later binnen dan muren: herfit alleen als die de world vergroot.
+    const hasDrawnGeom = resolveGeomBounds(walls.value, items.value) != null
+    if (!shouldRefitForUnderlayAppear(next, prev, hasDrawnGeom)) return
+    // Lege floor: onderlegger komt later binnen — herfit alleen als die de world vergroot.
     const layout = contentLayout.value
     if (!layout || worldOverflowsLayout(layout, next!)) resetView()
   })

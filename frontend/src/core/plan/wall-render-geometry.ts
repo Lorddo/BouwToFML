@@ -22,8 +22,11 @@ export type {
 } from './wall-render-types'
 
 const ENDPOINT_EPS_CM = 3
-/** Half-thickness end extend so meeting walls always overlap for boolean union. */
-const END_EXTEND_FACTOR = 0.5
+/**
+ * Free I-end: body stops on a/b (butt). Keep in sync with
+ * `elevation-wall-faces` free-end outer = 0.
+ */
+export const FREE_END_EXTEND_CM = 0
 /** Tiny overlap past a miter so clipper union seals without bloating faces. */
 export const UNION_SEAL_CM = 0.05
 /** Nearly-collinear join: skip miter (otherwise a spike). */
@@ -195,7 +198,7 @@ function joinExtendCm(needed: number): number {
 }
 
 /**
- * Free end: half self thickness (square cap).
+ * Free I-end: butt on a/b (`FREE_END_EXTEND_CM`).
  * Joined end: neighbor body extent along this wall's out-dir (balance-aware) —
  * flush faces do not grow a false exterior ear; centered walls keep thickness/2.
  * Mid-span T into host: same extent, inset so the host façade stays straight.
@@ -220,7 +223,7 @@ function resolveEndExtendCm(
     return joinExtendCm(needed)
   }
 
-  return Math.max(wall.thickness * END_EXTEND_FACTOR, UNION_SEAL_CM)
+  return FREE_END_EXTEND_CM
 }
 
 function intoWallFromEnd(wall: WallPolygonInput, end: 'a' | 'b'): Point2D {
@@ -417,7 +420,7 @@ function squareCapCorners(
 
 /**
  * Oriented body along the Floorplanner axis. Joined ends use face-miters
- * (same join-corner as schuine hoeken); free ends stay square caps.
+ * (same join-corner as schuine hoeken); free I-ends are butt caps on a/b.
  */
 function buildWallRectPolygon(
   wall: WallPolygonInput,
@@ -529,7 +532,7 @@ function unionWallRects(rects: Point2D[][]): WallFillComponent[] {
 }
 
 /**
- * Per-wall bodies (mitered joins, square free ends) + boolean-union fill.
+ * Per-wall bodies (mitered joins, butt free I-ends) + boolean-union fill.
  */
 export function buildWallRenderGeometry(walls: WallPolygonInput[]): WallRenderGeometry {
   if (walls.length === 0) {

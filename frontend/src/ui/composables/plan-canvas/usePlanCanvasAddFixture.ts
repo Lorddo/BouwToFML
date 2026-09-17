@@ -6,6 +6,7 @@ import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
+import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
@@ -40,6 +41,9 @@ export function usePlanCanvasAddFixture(options: {
       rotation: 0,
       mirrored: [0, 0],
       name: option.label,
+      ...(option.kind === 'skylight'
+        ? { frame: { ...loadUserSettings().planDisplay.openingFrameDefaults.window } }
+        : {}),
     }
     options.beforePlace()
     options.editor.pushUndo()

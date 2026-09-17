@@ -1,3 +1,4 @@
+import { FML_STANDARD_NOTICE_KEY } from './fml-license-notice'
 import { promotePlanExtensions } from '../plg/fml-adapter/registry'
 import { normalizePlanIdentities } from '../plg/fml-adapter/normalize-plan-identities'
 import {
@@ -298,7 +299,15 @@ const FLOOR_KNOWN = new Set([
   'cameras',
 ])
 
-const PROJECT_KNOWN = new Set(['name', 'id', 'public', 'features', 'settings', 'floors'])
+const PROJECT_KNOWN = new Set([
+  'name',
+  'id',
+  'public',
+  'features',
+  'settings',
+  'floors',
+  FML_STANDARD_NOTICE_KEY,
+])
 
 function pickExtras(raw: Record<string, unknown>, known: Set<string>): PlanExtras | undefined {
   const extras: PlanExtras = {}
@@ -720,14 +729,14 @@ export function importFmlV3(json: string | object): ImportResult {
   if (plan.source?.settings?.bovenlichtPacked !== false) {
     plan = foldBovenlichtOnPlan(plan)
   }
-  // Slicer-bake op P-lijn opnieuw genereren; strip uit dimensions zodat live/export niet dubbelt.
-  plan = stripBakedSliceDimensionsFromPlan(plan)
   hydrateFacadeGroupsFromNativeMarkers(plan)
   // PLG adapters (Fase A+): FML-raw → getypte velden. Draaien NÁ de legacy-keten
   // ensureRidgeDesigns → syncRidgeWallGuids → syncRoofPlaneGuids → bovenlicht-fold →
-  // slice-strip → facade-hydrate, zodat adapters een genormaliseerd plan zien.
+  // facade-hydrate, zodat adapters een genormaliseerd plan zien.
   // Volgorde in FML_CONCEPT_ADAPTERS moet die keten weerspiegelen (niet-commutatief).
   promotePlanExtensions(plan)
+  // Slicer-bake op P-lijn opnieuw genereren; strip ná hydrate zodat design.slices bekend is.
+  plan = stripBakedSliceDimensionsFromPlan(plan)
   normalizePlanIdentities(plan)
   return { plan, warnings }
 }

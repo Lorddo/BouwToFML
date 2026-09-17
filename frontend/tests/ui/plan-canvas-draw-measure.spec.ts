@@ -192,5 +192,31 @@ describe('plan-canvas-draw-measure', () => {
       expect(connectorInsetAlong({ x: 0, y: 0 }, { x: 0, y: -1 }, [host])).toBeCloseTo(10)
       expect(connectorInsetAlong({ x: 0, y: 0 }, { x: 1, y: 0 }, [host])).toBeCloseTo(0)
     })
+
+    it('vrij I-eind zonder host: inset 0', () => {
+      expect(connectorInsetAlong({ x: 50, y: 0 }, { x: 1, y: 0 }, [])).toBe(0)
+    })
+
+    it('mid-span T in host: inset = host half-thickness', () => {
+      const host = {
+        a: { x: 0, y: 0 },
+        b: { x: 200, y: 0 },
+        thickness: 20,
+        balance: 0.5,
+      }
+      // Point mid-host, measuring along +Y (into host body from south)
+      expect(connectorInsetAlong({ x: 100, y: 0 }, { x: 0, y: -1 }, [host])).toBeCloseTo(10)
+      expect(connectorInsetAlong({ x: 100, y: 0 }, { x: 0, y: 1 }, [host])).toBeCloseTo(10)
+    })
+
+    it('collinear wall is ignored (no self-inset)', () => {
+      const along = {
+        a: { x: 0, y: 0 },
+        b: { x: 100, y: 0 },
+        thickness: 20,
+        balance: 0.5,
+      }
+      expect(connectorInsetAlong({ x: 0, y: 0 }, { x: 1, y: 0 }, [along])).toBe(0)
+    })
   })
 })

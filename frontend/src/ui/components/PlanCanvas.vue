@@ -32,6 +32,10 @@ import { inspectColorFor, type InspectHit } from '@/ui/composables/plan-canvas/p
 import { PLAN_CANVAS_CHROME_SELECTOR } from '@/ui/composables/plan-canvas/plan-canvas-gestures'
 import { usePlanCanvasTouch, usePlanTouchNav } from '@/ui/composables/plan-canvas/usePlanCanvasTouch'
 import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
+import {
+  buildSkylightFramePatch,
+  effectiveSkylightFrame,
+} from '@/core/plan/opening-display-geom'
 import { itemResizeHandleWorlds } from '@/ui/composables/plan-canvas/item-resize-handles'
 import { itemRotateHandleWorlds } from '@/ui/composables/plan-canvas/item-rotate-handles'
 import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
@@ -295,6 +299,7 @@ const clearHeightFillColor = ref(
   loadUserSettings().planDisplay.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
 )
 const showRidgeDisplay = ref(loadUserSettings().planDisplay.showRidgeDisplay !== false)
+const showOpeningFrameEdit = ref(loadUserSettings().planDisplay.showOpeningFrameEdit !== false)
 
 function onShowRoofOverlayOnPlan(next: boolean) {
   showRoofOverlayOnPlan.value = setShowRoofOverlayOnPlan(next)
@@ -505,6 +510,7 @@ function applyCornerMarkerModeFromSettings(): void {
   clearHeightFillColor.value =
     settings.planDisplay.clearHeightFillColor ?? DEFAULT_CLEAR_HEIGHT_FILL_COLOR
   showRidgeDisplay.value = settings.planDisplay.showRidgeDisplay !== false
+  showOpeningFrameEdit.value = settings.planDisplay.showOpeningFrameEdit !== false
   drawInputUnit.value = settings.scaleInputUnit
 }
 
@@ -522,7 +528,15 @@ const {
   selectAllOfBoxKind,
   drawWallPreview,
   drawRoomPreview,
+  drawDormerPreview,
+  drawDormerFront,
   drawWallDrafting,
+  drawDormerDrafting,
+  drawDormerMeasureLengthCm,
+  drawDormerMeasureDepthCm,
+  drawDormerTypeText,
+  drawDormerTypeDepthText,
+  drawDormerTypeField,
   drawRoomDrafting,
   wallMoveDrafting,
   wallMoveMeasureLengthCm,
@@ -582,6 +596,7 @@ const {
   moveOpeningId,
   openingHandlesCm,
   drawWallKind,
+  drawRoomKind,
   ridgeZCm,
   applySelectedWallKind,
   applyRidgeZInput,
@@ -619,6 +634,14 @@ const {
   openingBovenlichtHeightMixed,
   openingBovenlichtGapDraft,
   openingBovenlichtGapMixed,
+  openingFrameLeftDraft,
+  openingFrameLeftMixed,
+  openingFrameRightDraft,
+  openingFrameRightMixed,
+  openingFrameTopDraft,
+  openingFrameTopMixed,
+  openingFrameBottomDraft,
+  openingFrameBottomMixed,
   addDoorSubtype,
   addDoorWidthCm,
   addDoorSillZCm,
@@ -654,6 +677,14 @@ const {
   commitOpeningBovenlichtHeight,
   onOpeningBovenlichtGapCm,
   commitOpeningBovenlichtGap,
+  onOpeningFrameLeftCm,
+  commitOpeningFrameLeft,
+  onOpeningFrameRightCm,
+  commitOpeningFrameRight,
+  onOpeningFrameTopCm,
+  commitOpeningFrameTop,
+  onOpeningFrameBottomCm,
+  commitOpeningFrameBottom,
   copySelectedOpening,
   deleteSelectedOpenings,
   splitSelectedWall,
@@ -951,6 +982,7 @@ const selectedItemPanel = computed(() => {
   const item = editor.items.value.find((entry) => entry.id === guid)
   if (!item) return null
   const info = resolveFixtureCatalog(item.kind, { width: item.width, height: item.height })
+  const frame = item.kind === 'skylight' ? effectiveSkylightFrame(item) : null
   return {
     id: guid,
     label: item.name ?? info.label,
@@ -959,6 +991,11 @@ const selectedItemPanel = computed(() => {
     rotationDeg: item.rotation ?? 0,
     mirroredX: item.mirrored?.[0] === 1,
     mirroredY: item.mirrored?.[1] === 1,
+    showFrame: item.kind === 'skylight' && showOpeningFrameEdit.value,
+    frameLeftCm: frame?.leftCm ?? 5,
+    frameRightCm: frame?.rightCm ?? 5,
+    frameTopCm: frame?.topCm ?? 5,
+    frameBottomCm: frame?.bottomCm ?? 5,
   }
 })
 
@@ -978,6 +1015,16 @@ function onItemRotationInput(event: Event): void {
   const raw = Number((event.target as HTMLInputElement).value) || 0
   updateSelectedItem({
     rotation: ((raw % 360) + 360) % 360,
+  })
+}
+
+function onItemFrameSide(side: 'leftCm' | 'rightCm' | 'topCm' | 'bottomCm', cm: number): void {
+  const guid = settingsItemId.value
+  if (!guid) return
+  const item = editor.items.value.find((entry) => entry.id === guid)
+  if (!item || item.kind !== 'skylight') return
+  updateSelectedItem({
+    frame: buildSkylightFramePatch(item, { [side]: Math.max(0, Math.round(cm)) }),
   })
 }
 
@@ -1134,6 +1181,9 @@ const {
   drawRoomPreviewPolygon,
   drawWallMeasureLabel,
   drawRoomMeasureLabels,
+  drawDormerFrontScreen,
+  drawDormerUScreen,
+  drawDormerMeasureLabel,
   drawSurfacePreviewScreen,
   drawSurfacePreviewPolyline,
   drawLinePreviewScreen,
@@ -1142,6 +1192,8 @@ const {
 } = usePlanCanvasDrawPreviews({
   drawWallPreview,
   drawRoomPreview,
+  drawDormerFront,
+  drawDormerPreview,
   drawSurfacePoints,
   drawSurfaceHoverCm,
   drawLinePoints,
@@ -1160,6 +1212,15 @@ const drawRoomMeasureHLabelText = computed(() =>
 const drawRoomMeasureVLabelText = computed(() =>
   formatDrawTypeLabel(drawRoomTypeVText.value, drawRoomMeasureVCm.value, drawInputUnit.value),
 )
+const drawDormerFrontLabelText = computed(() =>
+  formatDrawTypeLabel(drawDormerTypeText.value, drawDormerMeasureLengthCm.value, drawInputUnit.value),
+)
+const drawDormerDepthLabelText = computed(() =>
+  formatDrawTypeLabel(drawDormerTypeDepthText.value, drawDormerMeasureDepthCm.value, drawInputUnit.value),
+)
+function applyDrawRoomKind(kind: 'room' | 'dormer') {
+  drawRoomKind.value = kind
+}
 const wallMoveMeasureLabel = computed(() => {
   if (!wallMoveDrafting.value) return null
   const cm = wallMoveLabelCm.value
@@ -1413,7 +1474,16 @@ watch(
       :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
       :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
       :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+      :opening-frame-left-draft="openingFrameLeftDraft"
+      :opening-frame-left-mixed="openingFrameLeftMixed"
+      :opening-frame-right-draft="openingFrameRightDraft"
+      :opening-frame-right-mixed="openingFrameRightMixed"
+      :opening-frame-top-draft="openingFrameTopDraft"
+      :opening-frame-top-mixed="openingFrameTopMixed"
+      :opening-frame-bottom-draft="openingFrameBottomDraft"
+      :opening-frame-bottom-mixed="openingFrameBottomMixed"
       :bovenlicht-packed="bovenlichtPacked"
+      :show-opening-frame-edit="showOpeningFrameEdit"
       :thickness-preset-cms="thicknessPresetCms"
       :measure-line-count="measureLines.length"
       :measure-persist-enabled="props.kind === 'editor'"
@@ -1435,6 +1505,7 @@ watch(
       :stamp-group-mixed="stampGroupMixed"
       :can-select-stamp-members="canSelectStampMembers"
       :draw-wall-kind="drawWallKind"
+      :draw-room-kind="drawRoomKind"
       :ridge-z-cm="ridgeZCm"
       :ridge-floor-draft="ridgeFloorDraft"
       :ridge-floor-mixed="ridgeFloorMixed"
@@ -1466,6 +1537,14 @@ watch(
       @commit-opening-bovenlicht-height="commitOpeningBovenlichtHeight"
       @opening-bovenlicht-gap-cm="onOpeningBovenlichtGapCm"
       @commit-opening-bovenlicht-gap="commitOpeningBovenlichtGap"
+      @opening-frame-left-cm="onOpeningFrameLeftCm"
+      @commit-opening-frame-left="commitOpeningFrameLeft"
+      @opening-frame-right-cm="onOpeningFrameRightCm"
+      @commit-opening-frame-right="commitOpeningFrameRight"
+      @opening-frame-top-cm="onOpeningFrameTopCm"
+      @commit-opening-frame-top="commitOpeningFrameTop"
+      @opening-frame-bottom-cm="onOpeningFrameBottomCm"
+      @commit-opening-frame-bottom="commitOpeningFrameBottom"
       @copy-opening="copySelectedOpening"
       @delete-openings="deleteSelectedOpenings"
       @split-wall="splitSelectedWall"
@@ -1476,6 +1555,7 @@ watch(
       @stamp-group-change="applyStampGroupSelection"
       @select-stamp-members="selectStampGroupMembers"
       @wall-kind-change="applySelectedWallKind"
+      @room-kind-change="applyDrawRoomKind"
       @ridge-z-input="applyRidgeZInput"
       @ridge-floor-change="applyRidgeFloorInput"
       @clear-selection="clearSelection"
@@ -1510,6 +1590,10 @@ watch(
       @item-rotation-input="onItemRotationInput"
       @toggle-item-mirror-x="toggleSelectedItemMirror(0)"
       @toggle-item-mirror-y="toggleSelectedItemMirror(1)"
+      @item-frame-left="(cm) => onItemFrameSide('leftCm', cm)"
+      @item-frame-right="(cm) => onItemFrameSide('rightCm', cm)"
+      @item-frame-top="(cm) => onItemFrameSide('topCm', cm)"
+      @item-frame-bottom="(cm) => onItemFrameSide('bottomCm', cm)"
       @copy-item="copySelectedItem"
       @delete-item="deleteSelectedItem"
       @dimension-length-cm="applySelectedDimensionLength"
@@ -1689,6 +1773,70 @@ watch(
         r="8"
       />
     </svg>
+    <svg
+      v-if="drawDormerFrontScreen && !drawDormerUScreen"
+      class="draw-wall-preview"
+      :width="stageSize.width"
+      :height="stageSize.height"
+    >
+      <line
+        :x1="drawDormerFrontScreen.x1"
+        :y1="drawDormerFrontScreen.y1"
+        :x2="drawDormerFrontScreen.x2"
+        :y2="drawDormerFrontScreen.y2"
+      />
+      <circle
+        class="draw-draft-handle"
+        :cx="drawDormerFrontScreen.x1"
+        :cy="drawDormerFrontScreen.y1"
+        r="8"
+      />
+      <circle
+        class="draw-draft-handle"
+        :cx="drawDormerFrontScreen.x2"
+        :cy="drawDormerFrontScreen.y2"
+        r="8"
+      />
+    </svg>
+    <svg
+      v-if="drawDormerUScreen"
+      class="draw-dormer-preview"
+      :width="stageSize.width"
+      :height="stageSize.height"
+    >
+      <line
+        v-for="(seg, idx) in [drawDormerUScreen.front, drawDormerUScreen.wangA, drawDormerUScreen.wangB]"
+        :key="`dormer-u-${idx}`"
+        :x1="seg.x1"
+        :y1="seg.y1"
+        :x2="seg.x2"
+        :y2="seg.y2"
+      />
+    </svg>
+    <div
+      v-if="drawDormerDrafting && drawDormerMeasureLabel"
+      class="draw-measure-label draw-measure-label--wall"
+      :class="{ 'draw-measure-label--typing': drawDormerTypeField === 'front' }"
+      :style="{
+        left: `${drawDormerMeasureLabel.front.x}px`,
+        top: `${drawDormerMeasureLabel.front.y}px`,
+      }"
+    >
+      {{ drawDormerFrontLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+    </div>
+    <div
+      v-if="drawDormerMeasureLabel?.depth"
+      class="draw-measure-label draw-measure-label--wall"
+      :class="{ 'draw-measure-label--typing': drawDormerTypeField === 'depth' }"
+      :style="{
+        left: `${drawDormerMeasureLabel.depth.x}px`,
+        top: `${drawDormerMeasureLabel.depth.y}px`,
+      }"
+    >
+      {{ drawDormerDepthLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+    </div>
     <div
       v-if="drawWallMeasureLabel"
       class="draw-measure-label draw-measure-label--wall"
@@ -1995,6 +2143,20 @@ watch(
   stroke: #f97316;
   stroke-width: 2;
   stroke-dasharray: 6 4;
+}
+
+.draw-dormer-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
+.draw-dormer-preview line {
+  stroke: #f97316;
+  stroke-width: 3;
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
 }
 
 .draw-draft-handle {

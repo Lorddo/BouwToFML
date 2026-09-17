@@ -32,8 +32,6 @@ import {
 export const RIDGE_WALLS_SETTINGS_KEY = 'ridgeWalls'
 export const RIDGE_DESIGN_NAME = 'Dak'
 export const RIDGE_DESIGN_ROLE = 'ridge'
-/** FML `design.settings`-key; waarde bewust `'btfRole'`. */
-export const PLAN_ROLE_SETTINGS_KEY = 'btfRole'
 export const DEFAULT_RIDGE_DISPLAY_WIDTH_CM = 10
 export const RIDGE_WALL_EXTRA = 'ridge' as const
 

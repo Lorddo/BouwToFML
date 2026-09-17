@@ -8,6 +8,8 @@ import {
 
 const EPS = 1e-6
 const TOUCH_EPS_CM = 1
+/** Mid-span T: same band as wall-render `findMidspanHosts`. */
+const ON_SEGMENT_EPS_CM = 3
 
 export type DrawThickWall = Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>
 
@@ -47,6 +49,18 @@ function wallTouchesPoint(wall: DrawThickWall, point: Point2D, epsCm: number): b
   )
 }
 
+/** Point lies on host axis interior (not near ends) — mid-span T into host. */
+function wallIsMidspanHost(wall: DrawThickWall, point: Point2D, epsCm: number): boolean {
+  const dx = wall.b.x - wall.a.x
+  const dy = wall.b.y - wall.a.y
+  const len = Math.hypot(dx, dy)
+  if (len < EPS) return false
+  const t = ((point.x - wall.a.x) * dx + (point.y - wall.a.y) * dy) / (len * len)
+  if (t < 0.02 || t > 0.98) return false
+  const proj = { x: wall.a.x + dx * t, y: wall.a.y + dy * t }
+  return Math.hypot(point.x - proj.x, point.y - proj.y) <= epsCm
+}
+
 function isCollinearWithDir(wall: DrawThickWall, along: Point2D): boolean {
   const dx = wall.b.x - wall.a.x
   const dy = wall.b.y - wall.a.y
@@ -55,9 +69,21 @@ function isCollinearWithDir(wall: DrawThickWall, along: Point2D): boolean {
   return Math.abs(dx * along.y - dy * along.x) / len < 0.15
 }
 
+function bodyExtentAlong(
+  wall: DrawThickWall,
+  ux: number,
+  uy: number,
+): number {
+  const n = wallLeftNormal(wall)
+  const { plus, minus } = resolveWallBalanceExtents(wall.thickness, wall.balance)
+  const d = n.x * ux + n.y * uy
+  return Math.max(0, plus * d, -minus * d)
+}
+
 /**
  * Hoe ver een bestaande muur het lichaam in `along` duwt vanaf `point`.
- * Leeg / collinear → 0 (vrijstaand = hartlijn = binnenmaat).
+ * Eindpunt-T of mid-span T in host → balance-aware body extent.
+ * Leeg / collinear / vrij I-eind → 0 (hartlijn = zichtbare muur).
  */
 export function connectorInsetAlong(
   point: Point2D,
@@ -69,15 +95,15 @@ export function connectorInsetAlong(
   if (alongLen < EPS) return 0
   const ux = along.x / alongLen
   const uy = along.y / alongLen
+  const midEps = Math.max(epsCm, ON_SEGMENT_EPS_CM)
   let best = 0
   for (const wall of walls) {
     if ((wall.thickness ?? 0) <= 0) continue
-    if (!wallTouchesPoint(wall, point, epsCm)) continue
     if (isCollinearWithDir(wall, { x: ux, y: uy })) continue
-    const n = wallLeftNormal(wall)
-    const { plus, minus } = resolveWallBalanceExtents(wall.thickness, wall.balance)
-    const d = n.x * ux + n.y * uy
-    best = Math.max(best, plus * d, -minus * d, 0)
+    const atEnd = wallTouchesPoint(wall, point, epsCm)
+    const midspan = !atEnd && wallIsMidspanHost(wall, point, midEps)
+    if (!atEnd && !midspan) continue
+    best = Math.max(best, bodyExtentAlong(wall, ux, uy))
   }
   return best
 }

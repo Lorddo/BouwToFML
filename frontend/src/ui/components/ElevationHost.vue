@@ -22,6 +22,11 @@ import { useElevationRenderModel } from '@/ui/composables/elevation/useElevation
 import { useElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
 import { resolveOpeningHeight, resolveWindowSillZ } from '@/core/plan/opening-plan-ops'
 import {
+  effectiveOpeningFrame,
+  effectiveSkylightFrame,
+  isFramelessOpeningKind,
+} from '@/core/plan/opening-display-geom'
+import {
   DEFAULT_PLAN_DISPLAY_STYLE,
   type PlanDisplayStyleChoice,
 } from '@/ui/composables/settings/plan-display-style'
@@ -34,6 +39,7 @@ import EditorModifierRail from './EditorModifierRail.vue'
 import ElevationHeightOnlyFields from './ElevationHeightOnlyFields.vue'
 import ElevationOpeningFields from './ElevationOpeningFields.vue'
 import ElevationOpeningQuickFields from './ElevationOpeningQuickFields.vue'
+import OpeningFrameFields from './OpeningFrameFields.vue'
 import PlanOpeningAddToolFields from './PlanOpeningAddToolFields.vue'
 import PlanMeasureOverlay from './PlanMeasureOverlay.vue'
 import PlanRescaleOverlay from './PlanRescaleOverlay.vue'
@@ -115,11 +121,13 @@ const planDisplayStyle = ref<PlanDisplayStyleChoice>(
   loadUserSettings().planDisplay.planDisplayStyle ?? DEFAULT_PLAN_DISPLAY_STYLE,
 )
 const showCanvasGrid = ref(loadUserSettings().planDisplay.showCanvasGrid !== false)
+const showOpeningFrameEdit = ref(loadUserSettings().planDisplay.showOpeningFrameEdit !== false)
 
 function applyCornerMarkerModeFromSettings(): void {
   const settings = loadUserSettings()
   planDisplayStyle.value = settings.planDisplay.planDisplayStyle
   showCanvasGrid.value = settings.planDisplay.showCanvasGrid !== false
+  showOpeningFrameEdit.value = settings.planDisplay.showOpeningFrameEdit !== false
 }
 
 function onShowCanvasGrid(next: boolean) {
@@ -331,6 +339,8 @@ const {
   deleteSelectedRidge,
   deleteSelectedRoof,
   commitSelectedField,
+  commitSelectedFrame,
+  commitSelectedSkylightFrame,
   commitSelectedBovenlicht,
   commitSelectedBovenlichtHeight,
   commitSelectedBovenlichtGap,
@@ -608,17 +618,34 @@ defineExpose({
           <div class="canvas-toolbelt-dock__sep" aria-hidden="true" />
           <div class="canvas-toolbelt-dock__section canvas-toolbelt-dock__section--plan">
             <template v-if="settingsTarget?.kind === 'skylight' && selectedSkylight">
-              <span class="plan-toolbelt__meta">
-                {{ selectedSkylight.item.name || t('viewer.elevationSkylight') }}
-              </span>
-              <ToolbeltActionButton
-                icon="delete"
-                :title="t('result.toolbar.deleteSkylight')"
-                :aria-label="t('result.toolbar.deleteSkylight')"
-                hotkey="Delete"
-                :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
-                @click="deleteSelectedSkylight"
-              />
+              <div class="plan-toolbelt-stack">
+                <div class="plan-toolbelt__row plan-toolbelt__row--primary">
+                  <span class="plan-toolbelt__meta">
+                    {{ selectedSkylight.item.name || t('viewer.elevationSkylight') }}
+                  </span>
+                  <ToolbeltActionButton
+                    icon="delete"
+                    :title="t('result.toolbar.deleteSkylight')"
+                    :aria-label="t('result.toolbar.deleteSkylight')"
+                    hotkey="Delete"
+                    :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
+                    @click="deleteSelectedSkylight"
+                  />
+                </div>
+                <div v-if="showOpeningFrameEdit" class="plan-toolbelt__row">
+                  <OpeningFrameFields
+                    :unit="unit"
+                    :left-cm="effectiveSkylightFrame(selectedSkylight.item).leftCm"
+                    :right-cm="effectiveSkylightFrame(selectedSkylight.item).rightCm"
+                    :top-cm="effectiveSkylightFrame(selectedSkylight.item).topCm"
+                    :bottom-cm="effectiveSkylightFrame(selectedSkylight.item).bottomCm"
+                    @left="(cm) => commitSelectedSkylightFrame('leftCm', cm)"
+                    @right="(cm) => commitSelectedSkylightFrame('rightCm', cm)"
+                    @top="(cm) => commitSelectedSkylightFrame('topCm', cm)"
+                    @bottom="(cm) => commitSelectedSkylightFrame('bottomCm', cm)"
+                  />
+                </div>
+              </div>
             </template>
             <template v-else-if="settingsRoof">
               <span v-if="settingsRoof.heightCm == null" class="plan-toolbelt__meta">
@@ -746,12 +773,26 @@ defineExpose({
               :hinge-at-start="selectedOpeningHingeAtStart"
               :swing-right="selectedOpeningSwingRight"
               :show-mirror-button="openingSubtype === 'triangle'"
+              :show-frame="
+                showOpeningFrameEdit &&
+                openingSubtype !== 'passage' &&
+                openingSubtype !== 'archway' &&
+                !isFramelessOpeningKind(selectedOpening.opening.kind)
+              "
+              :frame-left-cm="effectiveOpeningFrame(selectedOpening.opening).leftCm"
+              :frame-right-cm="effectiveOpeningFrame(selectedOpening.opening).rightCm"
+              :frame-top-cm="effectiveOpeningFrame(selectedOpening.opening).topCm"
+              :frame-bottom-cm="effectiveOpeningFrame(selectedOpening.opening).bottomCm"
               @width="(cm) => commitSelectedField('width', cm)"
               @height="(cm) => commitSelectedField('height', cm)"
               @sill="(cm) => commitSelectedField('sill', cm)"
               @bovenlicht="commitSelectedBovenlicht"
               @bovenlicht-height="commitSelectedBovenlichtHeight"
               @bovenlicht-gap="commitSelectedBovenlichtGap"
+              @frame-left="(cm) => commitSelectedFrame('leftCm', cm)"
+              @frame-right="(cm) => commitSelectedFrame('rightCm', cm)"
+              @frame-top="(cm) => commitSelectedFrame('topCm', cm)"
+              @frame-bottom="(cm) => commitSelectedFrame('bottomCm', cm)"
               @toggle-hinge="toggleSelectedOpeningHinge"
               @toggle-swing="toggleSelectedOpeningSwing"
               @remove="deleteSelectedOpening"

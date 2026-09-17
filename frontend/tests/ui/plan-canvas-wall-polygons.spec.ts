@@ -166,20 +166,23 @@ describe('buildWallRenderGeometry', () => {
     expect(pointInFillComponents({ x: 50, y: 40 }, geometry.fillComponents)).toBe(false)
   })
 
-  it('uses square caps on free ends (extended by half thickness)', () => {
+  it('butt caps on free I-ends (body stops on a/b)', () => {
     const geometry = buildWallRenderGeometry([
       { id: 'w1', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20 },
     ])
 
     const w1 = geometry.wallPolygons.find((polygon) => polygon.id === 'w1')!
-    // Ends extend ±10 past a/b
-    expect(hasVertex(w1.points, { x: 110, y: 10 })).toBe(true)
-    expect(hasVertex(w1.points, { x: 110, y: -10 })).toBe(true)
-    expect(hasVertex(w1.points, { x: -10, y: 10 })).toBe(true)
-    expect(hasVertex(w1.points, { x: -10, y: -10 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 100, y: 10 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 100, y: -10 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 0, y: 10 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 0, y: -10 })).toBe(true)
+    // Past axis ends is empty (no square-cap half-thickness).
+    expect(pointInFillComponents({ x: 110, y: 0 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: -10, y: 0 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: 50, y: 0 }, geometry.fillComponents)).toBe(true)
   })
 
-  it('uses asymmetric balance on free ends', () => {
+  it('uses asymmetric balance on free I-ends (still butt on a/b)', () => {
     const geometry = buildWallRenderGeometry([
       {
         id: 'w1',
@@ -191,9 +194,23 @@ describe('buildWallRenderGeometry', () => {
     ])
 
     const w1 = geometry.wallPolygons.find((polygon) => polygon.id === 'w1')!
-    // a→b +X: plus (balance 0.75) = links = −Y; minus = +Y
-    expect(hasVertex(w1.points, { x: 110, y: -15 })).toBe(true)
-    expect(hasVertex(w1.points, { x: 110, y: 5 })).toBe(true)
+    // a→b +X: plus (balance 0.75) = links = −Y; minus = +Y; X = a/b
+    expect(hasVertex(w1.points, { x: 100, y: -15 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 100, y: 5 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 0, y: -15 })).toBe(true)
+    expect(hasVertex(w1.points, { x: 0, y: 5 })).toBe(true)
+  })
+
+  it('L buitenmiter blijft; I-eind steekt niet voorbij a/b', () => {
+    const geometry = buildWallRenderGeometry([
+      { id: 'h', a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: 0.5 },
+      { id: 'v', a: { x: 0, y: 0 }, b: { x: 0, y: 80 }, thickness: 20, balance: 0.5 },
+    ])
+    // Outer L-miter still filled
+    expect(pointInFillComponents({ x: -8, y: -8 }, geometry.fillComponents)).toBe(true)
+    // Free ends of H (at x=100) and V (at y=80): no half-thickness past axis
+    expect(pointInFillComponents({ x: 110, y: 0 }, geometry.fillComponents)).toBe(false)
+    expect(pointInFillComponents({ x: 0, y: 90 }, geometry.fillComponents)).toBe(false)
   })
 
   it('flush balance=0 L has no false exterior ear beyond the join', () => {

@@ -48,7 +48,10 @@ describe('fixture catalog + symbols', () => {
   it('lists placeable catalog rows with default footprints', () => {
     const options = listFixturePlaceOptions()
     expect(options.length).toBeGreaterThan(10)
-    expect(options.every((item) => item.kind && item.kind !== 'hidden')).toBe(true)
+    expect(options.every((item) => item.kind && item.kind !== 'hidden' && item.kind !== 'dormer')).toBe(
+      true,
+    )
+    expect(options.some((item) => item.kind === 'dormer')).toBe(false)
     expect(fixturePlaceSizeCm('countertop')).toEqual({ width: 120, height: 60 })
     expect(fixturePlaceSizeCm('generic')).toEqual({ width: 60, height: 60 })
   })
@@ -97,9 +100,23 @@ describe('fixture catalog + symbols', () => {
     expect(chase.overWalls).toBe(true)
 
     const skylight = buildFixtureSymbol('skylight', 56, 55)
-    expect(skylight.dash?.length).toBeGreaterThan(0)
+    expect(skylight.dash).toBeUndefined()
+    expect(skylight.polylines).toHaveLength(2)
+    expect(skylight.fillPolygons?.length).toBe(1)
     expect(skylight.fill).toBe('#dbeafe')
     expect(skylight.stroke).toBe('#60a5fa')
+    const framed = buildFixtureSymbol(
+      'skylight',
+      80,
+      80,
+      {},
+      { leftCm: 10, rightCm: 4, topCm: 6, bottomCm: 2 },
+    )
+    const inner = framed.polylines[1]
+    expect(inner?.[0]).toBeCloseTo(-30, 5)
+    expect(inner?.[1]).toBeCloseTo(-34, 5)
+    expect(inner?.[2]).toBeCloseTo(36, 5)
+    expect(inner?.[5]).toBeCloseTo(38, 5)
     const pivotX = stair.polylines[0]?.[0] ?? 0
     const pivotY = stair.polylines[0]?.[1] ?? 1
     expect(pivotX).toBeCloseTo(52.5, 5)

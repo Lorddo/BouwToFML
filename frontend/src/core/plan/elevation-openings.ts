@@ -36,6 +36,7 @@ export type ElevationOpeningWrite = Partial<
     | 'bovenlicht'
     | 'bovenlichtHeightCm'
     | 'bovenlichtGapCm'
+    | 'frame'
   >
 >
 
@@ -136,6 +137,7 @@ export function updatePlanOpening(
         ? { bovenlichtHeightCm: patch.bovenlichtHeightCm }
         : {}),
       ...(patch.bovenlichtGapCm !== undefined ? { bovenlichtGapCm: patch.bovenlichtGapCm } : {}),
+      ...(patch.frame !== undefined ? { frame: patch.frame } : {}),
     })
     if (next !== walls) wrote = true
     return next

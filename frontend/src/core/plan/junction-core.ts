@@ -13,6 +13,8 @@ const JUNCTION_SNAP_CM = 2
 const JUNCTION_MERGE_CM = 3
 /** Soft H/V-snap naar andere muuruiteinden (cm); Ctrl/Cmd schakelt uit. */
 export const ENDPOINT_SNAP_RADIUS_CM = 15
+/** Soft H/V-magnet t.o.v. het teken-startpunt (eerste lijn muur/dakkapel). Ctrl/Cmd uit. */
+export const DRAW_START_AXIS_SNAP_CM = 50
 /** Soft snap naar andere knooppunten bij junction-drag / tekenen (cm). */
 export const JUNCTION_POINT_SNAP_CM = 15
 /**

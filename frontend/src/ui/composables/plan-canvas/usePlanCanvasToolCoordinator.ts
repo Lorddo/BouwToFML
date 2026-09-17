@@ -8,6 +8,7 @@ import type { HitTestApi } from './plan-canvas-hit-test-api'
 import { usePlanCanvasAddOpening } from './usePlanCanvasAddOpening'
 import { usePlanCanvasDrawWall } from './usePlanCanvasDrawWall'
 import { usePlanCanvasDrawRoom } from './usePlanCanvasDrawRoom'
+import { usePlanCanvasDrawDormer } from './usePlanCanvasDrawDormer'
 import { usePlanCanvasDrawSurface } from './usePlanCanvasDrawSurface'
 import { usePlanCanvasDrawLabel } from './usePlanCanvasDrawLabel'
 import { usePlanCanvasDrawLine } from './usePlanCanvasDrawLine'
@@ -72,6 +73,8 @@ interface ToolCoordinatorOptions {
   cancelOpeningDragPending: () => void
   cancelItemDragPending: () => void
   flushPendingFieldCommits: () => void
+  /** Kopie-frame tot volgende place; null = Settings-default. */
+  takePendingPlaceFrame?: () => import('@/core/plan/opening-display-geom').OpeningFrameCm | null
   /** Refs owned by WallSelection — passed in to avoid circular deps. */
   wallThicknessDraft: Ref<number>
   wallHeightDraft: Ref<number>
@@ -118,6 +121,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     addWindowHeightCm,
     activePlanTool,
     drawWallKind,
+    drawRoomKind,
   } = selection
 
   const settingsMod = ref(false)
@@ -202,7 +206,13 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     cancelUnderlayMoveDrag: () => {},
   }
 
-  const { resolveDrawPoint, resolveRoomStartPoint, resolveRoomEndPoint, resolveSurfacePoint } =
+  const {
+    resolveDrawPoint,
+    resolveDormerFrontPoint,
+    resolveRoomStartPoint,
+    resolveRoomEndPoint,
+    resolveSurfacePoint,
+  } =
     options.snap
 
   const { wallThicknessDraft, wallHeightDraft, wallBottomZDraft } = options
@@ -268,6 +278,35 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     onPlaced: () => {
       activePlanTool.value = null
     },
+  })
+
+  const drawDormer = usePlanCanvasDrawDormer({
+    hitTest,
+    editor,
+    hoveredJunctionId,
+    wallThicknessDraft,
+    wallHeightDraft,
+    wallBottomZDraft,
+    resolveFrontPoint: resolveDormerFrontPoint,
+    placeOnSecondClick: () => !coarsePointer.value && !touchNav.value,
+    getInputUnit: () => options.getInputUnit?.() ?? 'm',
+    beforeBegin: () => {
+      cancelSelectionBoxDrag()
+      cancelMoveDragPending()
+      cancelOpeningDragPending()
+      clearSelection()
+      drawRoom.cancelDrawRoomDrag()
+    },
+    syncPlanToParent,
+    onPlaced: () => {
+      activePlanTool.value = null
+    },
+  })
+
+  watch(drawRoomKind, (kind, prev) => {
+    if (kind === prev) return
+    if (kind === 'dormer') drawRoom.cancelDrawRoomDrag()
+    else drawDormer.cancelDrawDormer()
   })
 
   const drawSurface = usePlanCanvasDrawSurface({
@@ -374,6 +413,12 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     addWindowHeightCm,
     bovenlichtPacked: options.session.bovenlichtPacked,
     bovenlichtDefaults: resolveBovenlichtDefaults(options.session),
+    resolvePlaceFrame: (type) => {
+      const pending = options.takePendingPlaceFrame?.()
+      if (pending) return pending
+      const defaults = loadUserSettings().planDisplay.openingFrameDefaults
+      return type === 'door' ? { ...defaults.door } : { ...defaults.window }
+    },
     beforePlace: () => {
       cancelSelectionBoxDrag()
       cancelMoveDragPending()
@@ -431,14 +476,20 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
   drawMeasureCancels.cancelUnderlayMoveDrag = underlayMove.cancelUnderlayMoveDrag
 
   drawMeasureCancels.cancelDrawWallDrag = drawWall.cancelDrawWallDrag
-  drawMeasureCancels.cancelDrawRoomDrag = drawRoom.cancelDrawRoomDrag
+  drawMeasureCancels.cancelDrawRoomDrag = () => {
+    drawRoom.cancelDrawRoomDrag()
+    drawDormer.cancelDrawDormer()
+  }
   drawMeasureCancels.cancelMeasureDrag = measure.cancelMeasureDrag
 
   watch(drawWallMode, (on) => {
     if (!on) drawWall.cancelDrawWallDrag()
   })
   watch(drawRoomMode, (on) => {
-    if (!on) drawRoom.cancelDrawRoomDrag()
+    if (!on) {
+      drawRoom.cancelDrawRoomDrag()
+      drawDormer.cancelDrawDormer()
+    }
   })
   watch(drawLineMode, (on) => {
     if (!on) drawLine.cancelDrawLine()
@@ -447,6 +498,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
   function deactivateDrawTool(): void {
     drawWall.cancelDrawWallDrag()
     drawRoom.cancelDrawRoomDrag()
+    drawDormer.cancelDrawDormer()
     drawSurface.cancelDrawSurface()
     drawLine.cancelDrawLine()
     measure.cancelMeasureDrag()
@@ -456,6 +508,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
 
   function acceptDrawDraft(): boolean {
     if (drawWall.isDrafting()) return drawWall.commitFromMeasure()
+    if (drawDormer.isDrafting()) return drawDormer.commitFromMeasure()
     if (drawRoom.isDrafting()) return drawRoom.commitFromMeasure()
     if (drawSurface.commitDrawSurface()) return true
     return drawLine.commitFromHover()
@@ -537,6 +590,7 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     // Draw composables
     drawWall,
     drawRoom,
+    drawDormer,
     drawSurface,
     drawLabel,
     drawLine,

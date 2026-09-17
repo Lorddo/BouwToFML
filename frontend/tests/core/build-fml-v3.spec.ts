@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
+import {
+  FML_STANDARD_NOTICE,
+  FML_STANDARD_NOTICE_KEY,
+} from '@/core/fml/fml-license-notice'
 import { type FloorPlan, type Opening } from '@/core/plan/types'
 
 function planWithDoors(): FloorPlan {
@@ -51,6 +55,23 @@ describe('buildFmlV3 — Floorplanner-valid formaat', () => {
     expect(withMetric.settings.useMetric).toBe(true)
     const omitted = JSON.parse(buildFmlV3(planWithDoors()))
     expect(omitted.settings.useMetric).toBe(true)
+  })
+
+  it('schrijft de FML-licentietag op project-root (niet in leftover na import)', () => {
+    const raw = JSON.parse(buildFmlV3(planWithDoors()))
+    expect(raw[FML_STANDARD_NOTICE_KEY]).toBe(FML_STANDARD_NOTICE)
+    expect(buildFmlV3(planWithDoors())).toContain(FML_STANDARD_NOTICE)
+
+    const parsed = importFmlV3(raw)
+    expect(parsed.plan.source?.leftover?.[FML_STANDARD_NOTICE_KEY]).toBeUndefined()
+
+    const stale = planWithDoors()
+    stale.source = {
+      leftover: { [FML_STANDARD_NOTICE_KEY]: 'stale', other: 1 },
+    }
+    const again = JSON.parse(buildFmlV3(stale))
+    expect(again[FML_STANDARD_NOTICE_KEY]).toBe(FML_STANDARD_NOTICE)
+    expect(again.other).toBe(1)
   })
 
   it('bevat alle verplichte project/floor/design velden', () => {

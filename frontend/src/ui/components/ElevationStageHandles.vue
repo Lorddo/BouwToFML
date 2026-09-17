@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ElevationRenderModel } from '@/ui/composables/elevation/useElevationRenderModel'
 import type { ElevationInteraction } from '@/ui/composables/elevation/useElevationInteraction'
 import type { FacadeElevation } from '@/core/plan/facade-elevation'
+import { pairedElevationRoofVertexIndices } from '@/core/plan/elevation-hit'
 import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 
 const props = defineProps<{
@@ -42,6 +44,14 @@ const onHandleDown = ix.onHandleDown
 const onSkylightMoveHandleDown = ix.onSkylightMoveHandleDown
 const onSkylightHandleDown = ix.onSkylightHandleDown
 const stopKonvaBubble = ix.stopKonvaBubble
+
+/** Geselecteerd dakvlak-punt + zijaanzicht-paar (zelfde X/Y) geel. */
+const selectedRoofVertexIndices = computed(() => {
+  const target = settingsTarget.value
+  const plane = selectedRoofPlane.value
+  if (target?.kind !== 'roof' || target.vertexIndex == null || !plane) return new Set<number>()
+  return new Set(pairedElevationRoofVertexIndices(plane, target.vertexIndex))
+})
 </script>
 
 <template>
@@ -92,10 +102,7 @@ const stopKonvaBubble = ix.stopKonvaBubble
           return { x: stage.x, y: stage.y }
         })(),
         radius: PLAN_HANDLE_RADIUS_PX / viewScale,
-        fill:
-          settingsTarget?.kind === 'roof' && settingsTarget.vertexIndex === index
-            ? '#fbbf24'
-            : '#f97316',
+        fill: selectedRoofVertexIndices.has(index) ? '#fbbf24' : '#f97316',
         stroke: '#fff',
         strokeWidth: 2 / viewScale,
         listening: true,

@@ -36,7 +36,7 @@
     "koof": "Koof / schacht ??? zwarte omlijning met kruis over de volle rechthoek.",
     "railing": "Traphek ??? donkere balk met spijlen.",
     "balustrade": "Balkonbalustrade ??? zelfde spijlen als traphek, grijs.",
-    "skylight": "Dakraam ??? dashed vierkant.",
+    "skylight": "Dakraam ??? kozijn (buiten + binnen) + glas.",
     "roof_eave": "Knieschot / dakrand ??? lichte balk.",
     "dormer": "Dakkapel ??? U van muren, open naar de kamer (lokale ???Y); buitenmuur (lokale +Y) met 2 ramen.",
     "oil_bottle": "Oil bottle ??? twee concentrische cirkels (Floorplanner-uitlijningsanker)."

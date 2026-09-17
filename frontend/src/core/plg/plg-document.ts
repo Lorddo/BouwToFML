@@ -2,7 +2,7 @@
  * Versioned `.plg`-document (Fase C1).
  *
  * `.plg` = bestaande `FloorPlan` + header/settings. Geen parallel objectmodel.
- * Schemakeys schoon (`slices`/`frame`/`role` elders) — nooit `btf*` in klant-JSON.
+ * Schemakeys schoon (`slices`/`frame`/`role` elders) — FML-extras (`plg*`) horen niet in klant-JSON.
  *
  * Importgrens: type-only `FloorPlan`/`PlanExtras` uit `core/fml` (domein = FloorPlan).
  * `PlgSettings` / `PlgFloorDefaults` / unit-unions zijn hier de **canonieke bron**;
@@ -12,6 +12,7 @@ import type { FloorPlan, PlanExtras } from '../plan/types'
 import { migratePlg } from './plg-migrations'
 import { CURRENT_PLG_VERSION } from './plg-version'
 import { normalizePlanIdentities } from './fml-adapter/normalize-plan-identities'
+import { PLG_STRIP_FML_EXTRA_KEYS } from './fml-adapter/plg-fml-extras'
 import { promotePlanExtensions } from './fml-adapter/registry'
 
 export { CURRENT_PLG_VERSION }
@@ -411,11 +412,19 @@ function orderForeign(foreign: PlgForeign): Record<string, unknown> {
 
 /**
  * Session-only velden horen niet in `.plg` (B7: `wall.stampOwned`).
+ * FML-extras (`plg*`) evenmin — typed fields only.
  * Werkt op een canonieke deep-copy zodat de caller's plan onaangeroerd blijft.
  */
 function stripFmlRefid(extras: Record<string, unknown> | undefined): void {
   if (!extras || !('fmlRefid' in extras)) return
   delete extras.fmlRefid
+}
+
+function stripPlgFmlExtraKeys(bag: Record<string, unknown> | undefined): void {
+  if (!bag) return
+  for (const key of PLG_STRIP_FML_EXTRA_KEYS) {
+    if (key in bag) delete bag[key]
+  }
 }
 
 function stripSessionOnlyFromPlan(plan: FloorPlan): FloorPlan {
@@ -427,21 +436,35 @@ function stripSessionOnlyFromPlan(plan: FloorPlan): FloorPlan {
         delete (wall as { stampOwned?: boolean }).stampOwned
       }
       for (const opening of wall.openings ?? []) {
-        stripFmlRefid(opening.extras as Record<string, unknown> | undefined)
+        const extras = opening.extras as Record<string, unknown> | undefined
+        stripFmlRefid(extras)
+        stripPlgFmlExtraKeys(extras)
       }
     }
   }
   const stripItems = (items: FloorPlan['floors'][number]['items'] | undefined) => {
     for (const item of items ?? []) {
-      stripFmlRefid(item.extras as Record<string, unknown> | undefined)
+      const extras = item.extras as Record<string, unknown> | undefined
+      stripFmlRefid(extras)
+      stripPlgFmlExtraKeys(extras)
+    }
+  }
+  const stripSurfaces = (surfaces: FloorPlan['floors'][number]['surfaces'] | undefined) => {
+    for (const surface of surfaces ?? []) {
+      stripPlgFmlExtraKeys(surface.extras as Record<string, unknown> | undefined)
     }
   }
   for (const floor of cloned.floors ?? []) {
     stripWalls(floor.walls)
     stripItems(floor.items)
+    stripSurfaces(floor.surfaces)
     for (const design of floor.designs ?? []) {
       stripWalls(design.walls)
       stripItems(design.items)
+      stripSurfaces(design.surfaces)
+      if (design.source?.settings) {
+        stripPlgFmlExtraKeys(design.source.settings as Record<string, unknown>)
+      }
     }
   }
   return cloned

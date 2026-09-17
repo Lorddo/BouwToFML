@@ -8,6 +8,7 @@ import {
   JUNCTION_POINT_SNAP_CM,
   ROOM_DRAW_SNAP_CM,
   snapDrawWallEndpoint,
+  snapSoftAxisFromStart,
   snapPointToJunctions,
   snapPointToWallCenters,
   snapRoomDrawEndPoint,
@@ -67,6 +68,8 @@ export interface PlanSnapResolve {
    */
   drawingRoof: ComputedRef<boolean>
   resolveDrawPoint: (cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean) => Point2D
+  /** Dakkapel-voorzijde: alleen H/V t.o.v. P1. Geen knoop/muur/dak-snap. */
+  resolveDormerFrontPoint: (cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean) => Point2D
   resolveRoomStartPoint: (cm: Point2D) => Point2D
   resolveRoomEndPoint: (cm: Point2D, start: Point2D) => Point2D
   resolveSurfacePoint: (
@@ -133,9 +136,24 @@ export function createPlanSnapResolve(deps: PlanSnapResolveDeps): PlanSnapResolv
       }
     }
     if (axisAnchor) {
-      point = snapDrawWallEndpoint(axisAnchor, point, axisLocked.value)
+      if (axisLocked.value) {
+        point = snapDrawWallEndpoint(axisAnchor, point, true)
+      } else if (!snapDisabled) {
+        point = snapSoftAxisFromStart(axisAnchor, point)
+      }
     }
     return point
+  }
+
+  function resolveDormerFrontPoint(
+    cm: Point2D,
+    axisAnchor?: Point2D,
+    snapDisabled?: boolean,
+  ): Point2D {
+    if (!axisAnchor) return cm
+    if (axisLocked.value) return snapDrawWallEndpoint(axisAnchor, cm, true)
+    if (snapDisabled) return cm
+    return snapSoftAxisFromStart(axisAnchor, cm)
   }
 
   function resolveRoomStartPoint(cm: Point2D): Point2D {
@@ -219,6 +237,7 @@ export function createPlanSnapResolve(deps: PlanSnapResolveDeps): PlanSnapResolv
   return {
     drawingRoof,
     resolveDrawPoint,
+    resolveDormerFrontPoint,
     resolveRoomStartPoint,
     resolveRoomEndPoint,
     resolveSurfacePoint,

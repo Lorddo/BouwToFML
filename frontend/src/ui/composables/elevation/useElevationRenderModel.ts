@@ -24,6 +24,7 @@ import {
   elevationOpeningHolePoints,
   glyphFromElevationRect,
 } from '@/core/plan/elevation-opening-symbol'
+import { buildSkylightElevationGlyph } from '@/core/plan/elevation-skylight-symbol'
 import { listElevationFacadeGroups } from '@/core/plan/facade-groups'
 import { loadImage } from '@/platform/image'
 import {
@@ -594,6 +595,35 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     return (elevation.value?.skylights ?? []).filter((item) => item.surfaceId === surfaceId)
   }
 
+  function stageSkylightGlyph(skylight: ElevationSkylight) {
+    const symbol = buildSkylightElevationGlyph({
+      points: skylight.points,
+      frame: skylight.frame,
+      widthCm: skylight.widthCm,
+    })
+    const xform = layoutXform.value
+    const toPoints = (flat: number[]) => {
+      const out: number[] = []
+      for (let i = 0; i < flat.length; i += 2) {
+        const px = flat[i]
+        const py = flat[i + 1]
+        if (px == null || py == null) continue
+        const point = xform.toStagePoint(px, py)
+        out.push(point.x, point.y)
+      }
+      return out
+    }
+    return {
+      polys: symbol.polys.map((poly, i) => ({
+        key: `${skylight.id}-g-${i}-${poly.role}`,
+        points: toPoints(poly.points),
+        closed: poly.closed !== false,
+        fill: poly.fill === true,
+        role: poly.role,
+      })),
+    }
+  }
+
   function openingGhostFill(openingId: string, type: 'door' | 'window'): string | undefined {
     if (architectStyle.value) return ARCHITECT_AREA_FILL
     if (selectedOpeningId.value === openingId) return '#f97316'
@@ -695,6 +725,7 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     roofRingPoints,
     skylightSelected,
     skylightsOnRoof,
+    stageSkylightGlyph,
     openingGhostFill,
     openingGhostOpacity,
     glyphStrokeColor,

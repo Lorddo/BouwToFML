@@ -31,6 +31,7 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    pendingPlaceFrame,
     preciseIntent,
     beginPreciseOpening,
     beginPreciseRidge,
@@ -126,6 +127,7 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     addWindowWidthCm,
     addWindowSillZCm,
     addWindowHeightCm,
+    pendingPlaceFrame,
   })
 
   function stopKonvaBubble(event: { cancelBubble?: boolean; evt?: Event | null }): void {

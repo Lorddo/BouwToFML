@@ -67,7 +67,8 @@ describe('fml-dimension-settings', () => {
         {
           name: 'Dak',
           walls: [],
-          source: { settings: { btfRole: 'ridge', engineAutoDims: true } },
+          role: 'ridge',
+          source: { settings: { engineAutoDims: true } },
         },
       ],
       activeDesignIndex: 0,

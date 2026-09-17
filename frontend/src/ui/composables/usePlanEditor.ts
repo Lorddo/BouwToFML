@@ -19,6 +19,12 @@ import { isStampOwnedWall } from '@/core/plan/stamp-owned'
 import { resolveStampOwnership } from '@/core/plan/resolve-stamp-ownership'
 import { DEFAULT_WALL_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import { splitPlanWallAtT } from '@/core/plan/elevation-openings'
+import { applyDormerDrawToPlan } from '@/core/plan/dormer-draw'
+import {
+  syncDormerRoofPolysFromWalls,
+  weldDormerAssemblyCorners,
+} from '@/core/plan/dormer-follow-roof'
+import { listRidgeSurfacesOnFloor, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
 import {
   addRoomRect,
   addWallSegment,
@@ -283,12 +289,33 @@ export function usePlanEditor(
     flushAreaRegen,
   })
 
+  function commitFloorWalls(nextWalls: Wall[]): void {
+    const floor = localPlan.value?.floors[floorIndex.value]
+    if (!floor) {
+      patchActiveFloor({ walls: nextWalls })
+      return
+    }
+    const surfaces = listRidgeSurfacesOnFloor(floor)
+    let walls = nextWalls
+    for (const surface of surfaces) {
+      if (surface.roofKind !== 'dormer') continue
+      walls = weldDormerAssemblyCorners(walls, surface.poly)
+    }
+    const nextSurfaces = syncDormerRoofPolysFromWalls(walls, surfaces)
+    if (!nextSurfaces) {
+      patchActiveFloor({ walls })
+      return
+    }
+    const nextFloor = setRidgeSurfacesOnFloor({ ...floor, walls }, nextSurfaces)
+    patchActiveFloor({ walls: nextFloor.walls, designs: nextFloor.designs })
+  }
+
   function previewWallsWithLiveAreas(nextWalls: Wall[], baseAreas?: FloorArea[]): void {
     if (areaRegenTimer != null) {
       clearTimeout(areaRegenTimer)
       areaRegenTimer = null
     }
-    patchActiveFloor({ walls: nextWalls })
+    commitFloorWalls(nextWalls)
     const floor = localPlan.value?.floors[floorIndex.value] ?? localPlan.value?.floors[0]
     if (!floor) return
     const next = regenerateFloorAreas(floor)
@@ -383,7 +410,7 @@ export function usePlanEditor(
 
   function setWalls(nextWalls: Wall[]): void {
     if (!localPlan.value) return
-    patchActiveFloor({ walls: nextWalls })
+    commitFloorWalls(nextWalls)
     scheduleAreaRegen()
   }
 
@@ -761,6 +788,39 @@ export function usePlanEditor(
     return result.wallIds
   }
 
+  function applyDormerDraw(
+    frontA: Point2D,
+    frontB: Point2D,
+    depthPoint: Point2D,
+    thicknessCm: number,
+    optionsDormer?: { heightCm?: number; bottomZCm?: number },
+  ): string[] | null {
+    if (!localPlan.value) return null
+    const heightCm =
+      optionsDormer?.heightCm != null &&
+      Number.isFinite(optionsDormer.heightCm) &&
+      optionsDormer.heightCm > 0
+        ? optionsDormer.heightCm
+        : floorHeightCm.value
+    const bottomZCm =
+      optionsDormer?.bottomZCm != null && Number.isFinite(optionsDormer.bottomZCm)
+        ? optionsDormer.bottomZCm
+        : 0
+    const roofZCm = Math.max(1, Math.round(bottomZCm + heightCm))
+    const result = applyDormerDrawToPlan(localPlan.value, floorIndex.value, {
+      frontA,
+      frontB,
+      depthPoint,
+      thicknessCm,
+      roofZCm,
+      bottomZCm,
+    })
+    if (!result) return null
+    localPlan.value = result.plan
+    flushAreaRegen()
+    return result.wallIds
+  }
+
   // --- Opening operations ---
 
   function applyOpeningAdd(wallId: string, opening: Opening): string | null {
@@ -795,6 +855,7 @@ export function usePlanEditor(
         | 'bovenlichtHeightCm'
         | 'bovenlichtGapCm'
         | 'kind'
+        | 'frame'
       >
     >,
   ): void {
@@ -833,6 +894,7 @@ export function usePlanEditor(
         | 'bovenlichtHeightCm'
         | 'bovenlichtGapCm'
         | 'kind'
+        | 'frame'
       >
     >,
   ): void {
@@ -936,6 +998,7 @@ export function usePlanEditor(
     ridgeFloorIndexForWall: ridgeRoof.ridgeFloorIndexForWall,
     applyWallKind: ridgeRoof.applyWallKind,
     applyRoomRect,
+    applyDormerDraw,
     applyOpeningAdd,
     resolveOpening,
     resolveDoorOpening,

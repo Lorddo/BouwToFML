@@ -34,6 +34,7 @@ const roofRingPoints = r.roofRingPoints
 const stageRoofFillPath = r.stageRoofFillPath
 const skylightSelected = r.skylightSelected
 const skylightsOnRoof = r.skylightsOnRoof
+const stageSkylightGlyph = r.stageSkylightGlyph
 const openingGhostFill = r.openingGhostFill
 const openingGhostOpacity = r.openingGhostOpacity
 const glyphStrokeColor = r.glyphStrokeColor
@@ -97,14 +98,15 @@ const stopKonvaBubble = ix.stopKonvaBubble
           />
           <template v-for="skylight in skylightsOnRoof(item.roof.id)" :key="skylight.id">
             <v-line
+              v-for="poly in stageSkylightGlyph(skylight).polys"
+              :key="poly.key"
               :config="{
-                points: stagePoly(skylight.points),
-                closed: true,
-                fill: architectStyle ? ARCHITECT_AREA_FILL : skylight.fill,
-                stroke: architectStyle ? elevLineColor : skylight.stroke,
+                points: poly.points,
+                closed: poly.closed,
+                fill: glyphPolyFill(poly.role, false, 'window', poly.fill),
+                stroke: glyphStrokeColor(false),
                 strokeWidth: elevStroke,
-                dash: elevDash,
-                opacity: skylightSelected(skylight.itemId) ? 1 : 0.9,
+                opacity: architectStyle ? 1 : glyphOpacity(poly.role, false),
                 listening: false,
                 perfectDrawEnabled: false,
               }"

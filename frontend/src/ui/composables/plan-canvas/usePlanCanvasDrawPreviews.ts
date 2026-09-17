@@ -1,10 +1,13 @@
 import { computed, type Ref } from 'vue'
+import type { DormerFootprint } from '@/core/plan/dormer-draw'
 import type { Point2D } from '@/core/plan/types'
 import { layoutTransform, type ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 
 export function usePlanCanvasDrawPreviews(opts: {
   drawWallPreview: Ref<{ a: Point2D; b: Point2D } | null>
   drawRoomPreview: Ref<Point2D[] | null>
+  drawDormerFront?: Ref<{ a: Point2D; b: Point2D } | null>
+  drawDormerPreview?: Ref<DormerFootprint | null>
   drawSurfacePoints?: Ref<Point2D[] | null>
   drawSurfaceHoverCm?: Ref<Point2D | null>
   drawLinePoints?: Ref<Point2D[] | null>
@@ -16,6 +19,8 @@ export function usePlanCanvasDrawPreviews(opts: {
   const {
     drawWallPreview,
     drawRoomPreview,
+    drawDormerFront,
+    drawDormerPreview,
     drawSurfacePoints,
     drawSurfaceHoverCm,
     drawLinePoints,
@@ -143,12 +148,65 @@ export function usePlanCanvasDrawPreviews(opts: {
     }
   }
 
+  const drawDormerFrontScreen = computed(() => {
+    const front = drawDormerFront?.value
+    const layout = contentLayout.value
+    if (!front || !layout) return null
+    const a = cmToScreen(front.a.x, front.a.y)
+    const b = cmToScreen(front.b.x, front.b.y)
+    return { x1: a.x, y1: a.y, x2: b.x, y2: b.y }
+  })
+
+  const drawDormerUScreen = computed(() => {
+    const footprint = drawDormerPreview?.value
+    if (!footprint) return null
+    return {
+      front: {
+        x1: cmToScreen(footprint.frontA.x, footprint.frontA.y).x,
+        y1: cmToScreen(footprint.frontA.x, footprint.frontA.y).y,
+        x2: cmToScreen(footprint.frontB.x, footprint.frontB.y).x,
+        y2: cmToScreen(footprint.frontB.x, footprint.frontB.y).y,
+      },
+      wangA: {
+        x1: cmToScreen(footprint.frontA.x, footprint.frontA.y).x,
+        y1: cmToScreen(footprint.frontA.x, footprint.frontA.y).y,
+        x2: cmToScreen(footprint.backA.x, footprint.backA.y).x,
+        y2: cmToScreen(footprint.backA.x, footprint.backA.y).y,
+      },
+      wangB: {
+        x1: cmToScreen(footprint.frontB.x, footprint.frontB.y).x,
+        y1: cmToScreen(footprint.frontB.x, footprint.frontB.y).y,
+        x2: cmToScreen(footprint.backB.x, footprint.backB.y).x,
+        y2: cmToScreen(footprint.backB.x, footprint.backB.y).y,
+      },
+    }
+  })
+
+  const drawDormerMeasureLabel = computed(() => {
+    const u = drawDormerUScreen.value
+    if (u) {
+      return {
+        front: { x: (u.front.x1 + u.front.x2) / 2, y: (u.front.y1 + u.front.y2) / 2 },
+        depth: { x: (u.wangA.x1 + u.wangA.x2) / 2, y: (u.wangA.y1 + u.wangA.y2) / 2 },
+      }
+    }
+    const front = drawDormerFrontScreen.value
+    if (!front) return null
+    return {
+      front: { x: (front.x1 + front.x2) / 2, y: (front.y1 + front.y2) / 2 },
+      depth: null as { x: number; y: number } | null,
+    }
+  })
+
   return {
     drawWallPreviewScreen,
     drawRoomPreviewScreen,
     drawRoomPreviewPolygon,
     drawWallMeasureLabel,
     drawRoomMeasureLabels,
+    drawDormerFrontScreen,
+    drawDormerUScreen,
+    drawDormerMeasureLabel,
     drawSurfacePreviewScreen,
     drawSurfacePreviewPolyline,
     drawLinePreviewScreen,

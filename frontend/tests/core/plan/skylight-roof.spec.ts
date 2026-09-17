@@ -13,6 +13,10 @@ import {
 import { elevationRoofFillRings } from '@/core/plan/elevation-paint'
 import { projectFacadeElevation } from '@/core/plan/facade-elevation'
 import {
+  buildSkylightElevationGlyph,
+  classifyElevQuadEdges,
+} from '@/core/plan/elevation-skylight-symbol'
+import {
   bindSkylightToRoofs,
   isSkylightItem,
   sampleSkylightOnRoof,
@@ -27,7 +31,7 @@ import {
 import type { FloorItem, FloorPlan, Wall } from '@/core/plan/types'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
-import { BTF_ROOF_SURFACE_ID_EXTRA } from '@/core/plg/fml-adapter/fixture-kind'
+import { FML_ROOF_SURFACE_ID_EXTRA } from '@/core/plg/fml-adapter/plg-fml-extras'
 import { ensureDesignsSynced } from '@/core/plan/design-sync'
 
 function wall(
@@ -233,6 +237,24 @@ describe('skylight elevation', () => {
     const other = elevationRoofFillRings(roof!, elev.skylights, 'roof-n')
     expect(other.length).toBe(1)
   })
+
+  it('kozijn-glyph: parallellogram krijgt frame-banden + glas', () => {
+    const points = [
+      { x: 0, y: 0 },
+      { x: 80, y: -10 },
+      { x: 80, y: 40 },
+      { x: 0, y: 50 },
+    ]
+    expect(classifyElevQuadEdges(points).sort()).toEqual(['bottom', 'left', 'right', 'top'].sort())
+    const glyph = buildSkylightElevationGlyph({
+      points,
+      widthCm: 80,
+      frame: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 },
+    })
+    expect(glyph.polys.filter((p) => p.role === 'frame')).toHaveLength(4)
+    expect(glyph.polys.filter((p) => p.role === 'glass')).toHaveLength(1)
+    expect(glyph.inner.x1 - glyph.inner.x0).toBeGreaterThan(50)
+  })
 })
 
 describe('skylight elev edit', () => {
@@ -286,7 +308,7 @@ describe('skylight elev edit', () => {
 })
 
 describe('skylight FML adapter', () => {
-  it('schrijft btfRoofSurfaceId en hydrateert terug', () => {
+  it('schrijft plgRoofSurfaceId en hydrateert terug', () => {
     let plan = saddleWithSkylight({
       skylight: { roofSurfaceId: 'roof-s', z: 330 },
     })
@@ -295,7 +317,7 @@ describe('skylight FML adapter', () => {
       floors: plan.floors.map((floor) => ensureDesignsSynced(floor)),
     }
     const text = buildFmlV3(plan)
-    expect(text).toContain(BTF_ROOF_SURFACE_ID_EXTRA)
+    expect(text).toContain(FML_ROOF_SURFACE_ID_EXTRA)
     expect(text).toContain('roof-s')
     const imported = importFmlV3(text)
     const floor = imported.plan.floors[0]
@@ -303,5 +325,22 @@ describe('skylight FML adapter', () => {
       floor.items?.find((i) => i.kind === 'skylight') ??
       floor.designs?.flatMap((d) => d.items ?? []).find((i) => i.kind === 'skylight')
     expect(item?.roofSurfaceId).toBe('roof-s')
+  })
+
+  it('FML-export schrijft geen item.frame / plgFrame', () => {
+    let plan = saddleWithSkylight({
+      skylight: {
+        roofSurfaceId: 'roof-s',
+        z: 330,
+        frame: { leftCm: 8, rightCm: 8, topCm: 6, bottomCm: 6 },
+      },
+    })
+    plan = {
+      ...plan,
+      floors: plan.floors.map((floor) => ensureDesignsSynced(floor)),
+    }
+    const text = buildFmlV3(plan)
+    expect(text).not.toContain('"leftCm":8')
+    expect(text).not.toContain('plgFrame')
   })
 })

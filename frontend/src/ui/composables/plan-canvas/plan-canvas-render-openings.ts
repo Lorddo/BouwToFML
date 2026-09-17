@@ -241,11 +241,17 @@ export function buildRenderFixtures(floor: Floor, toStagePoint: StagePointFn): R
       catalog.kind === 'stair_quarter_90_up' ||
       catalog.kind === 'stair_straight' ||
       catalog.kind === 'stair_straight_double'
-    const symbol = buildFixtureSymbol(catalog.kind, item.width, item.height, {
-      x: item.mirrored?.[0] === 1,
-      y: item.mirrored?.[1] === 1,
-      rotation: item.rotation ?? 0,
-    })
+    const symbol = buildFixtureSymbol(
+      catalog.kind,
+      item.width,
+      item.height,
+      {
+        x: item.mirrored?.[0] === 1,
+        y: item.mirrored?.[1] === 1,
+        rotation: item.rotation ?? 0,
+      },
+      catalog.kind === 'skylight' ? item.frame : undefined,
+    )
     const center = toStagePoint(item.x, item.y)
     const origin = toStagePoint(0, 0)
     const unit = toStagePoint(1, 0)

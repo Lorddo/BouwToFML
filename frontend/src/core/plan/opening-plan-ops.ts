@@ -281,6 +281,7 @@ type OpeningPatch = Partial<
     | 'bovenlichtHeightCm'
     | 'bovenlichtGapCm'
     | 'kind'
+    | 'frame'
   >
 >
 
@@ -372,6 +373,30 @@ export function updateOpeningById(walls: Wall[], openingId: string, patch: Openi
     const next = patch.bovenlichtGapCm == null ? null : clampBovenlichtGapCm(patch.bovenlichtGapCm)
     if (nextOpening.bovenlichtGapCm !== next) {
       nextOpening.bovenlichtGapCm = next
+      changed = true
+    }
+  }
+
+  if (patch.frame !== undefined && (nextOpening.type === 'door' || nextOpening.type === 'window')) {
+    const next = patch.frame
+      ? {
+          leftCm: Math.max(0, patch.frame.leftCm),
+          rightCm: Math.max(0, patch.frame.rightCm),
+          topCm: Math.max(0, patch.frame.topCm),
+          bottomCm: Math.max(0, patch.frame.bottomCm),
+        }
+      : undefined
+    const prev = nextOpening.frame
+    const same =
+      next == null
+        ? prev == null
+        : prev != null &&
+          prev.leftCm === next.leftCm &&
+          prev.rightCm === next.rightCm &&
+          prev.topCm === next.topCm &&
+          prev.bottomCm === next.bottomCm
+    if (!same) {
+      nextOpening.frame = next
       changed = true
     }
   }

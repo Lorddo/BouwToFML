@@ -1,3 +1,8 @@
+import {
+  effectiveSkylightFrame,
+  insetOpeningRect,
+  type OpeningFrameCm,
+} from '../opening-display-geom'
 import { emptyShape, type FixtureSymbolShape } from './types'
 
 export function glassWall(widthCm: number, heightCm: number): FixtureSymbolShape {
@@ -216,12 +221,26 @@ export function canopy(w: number, h: number): FixtureSymbolShape {
   })
 }
 
-export function skylight(w: number, h: number): FixtureSymbolShape {
+export function skylight(w: number, h: number, frame?: OpeningFrameCm): FixtureSymbolShape {
+  const resolved = insetOpeningRect({ width: w, height: h }, effectiveSkylightFrame({ frame }))
+  const x0 = -w / 2
+  const y0 = -h / 2
+  const ix0 = x0 + resolved.frame.leftCm
+  const iy0 = y0 + resolved.frame.topCm
+  const ix1 = ix0 + resolved.inner.width
+  const iy1 = iy0 + resolved.inner.height
+  const outer: number[] = [x0, y0, x0 + w, y0, x0 + w, y0 + h, x0, y0 + h, x0, y0]
+  const inner: number[] = [ix0, iy0, ix1, iy0, ix1, iy1, ix0, iy1, ix0, iy0]
+  const hasFrame =
+    resolved.frame.leftCm > 0.2 ||
+    resolved.frame.rightCm > 0.2 ||
+    resolved.frame.topCm > 0.2 ||
+    resolved.frame.bottomCm > 0.2
   return emptyShape({
-    rects: [[-w / 2, -h / 2, w, h]],
+    fillPolygons: [[ix0, iy0, ix1, iy0, ix1, iy1, ix0, iy1]],
+    polylines: hasFrame ? [outer, inner] : [outer],
     stroke: '#60a5fa',
     fill: '#dbeafe',
-    dash: [8, 5],
     strokeWidth: 1.6,
     overWalls: true,
   })

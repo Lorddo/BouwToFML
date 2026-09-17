@@ -15,6 +15,7 @@ import {
   findRidgeDesignIndex,
   isRidgeDesign,
 } from './ridge-walls'
+import { followDormerWallsOnFloor, polyXyChanged } from './dormer-follow-roof'
 import type { Floor, FloorPlan, FloorSurface, PlanExtras, Point2D } from './types'
 import type { RoofKind } from '../plg/extension-types'
 
@@ -35,7 +36,6 @@ export function resolveRoofSurfaceColor(color?: string | null, dormer = false): 
 
 export const ROOF_ORIGIN_GENERATED = 'generated'
 export const ROOF_ORIGIN_MANUAL = 'manual'
-export const ROOF_ORIGIN_EXTRA = 'btfOrigin'
 
 export const ROOF_TOUCH_SLACK_CM = 8
 export const ROOF_VERTICAL_Z_SLACK_CM = 8
@@ -261,21 +261,17 @@ export function withRoofKind(
 export function roofSurfaceOrigin(surface: FloorSurface | null | undefined): RoofSurfaceOrigin {
   if (surface?.origin === ROOF_ORIGIN_MANUAL) return ROOF_ORIGIN_MANUAL
   if (surface?.origin === ROOF_ORIGIN_GENERATED) return ROOF_ORIGIN_GENERATED
-  const raw = surface?.extras?.[ROOF_ORIGIN_EXTRA]
-  return raw === ROOF_ORIGIN_MANUAL ? ROOF_ORIGIN_MANUAL : ROOF_ORIGIN_GENERATED
+  return ROOF_ORIGIN_GENERATED
 }
 
 export function markRoofSurface(
   surface: FloorSurface,
   origin: RoofSurfaceOrigin = ROOF_ORIGIN_MANUAL,
 ): FloorSurface {
-  const extras = { ...(surface.extras ?? {}) }
-  delete extras[ROOF_ORIGIN_EXTRA]
   return {
     ...surface,
     isRoof: true,
     origin,
-    extras: Object.keys(extras).length > 0 ? extras : undefined,
   }
 }
 
@@ -314,27 +310,71 @@ export function syncRoofPlaneGuidsFromDesigns(plan: FloorPlan): string[] {
 }
 
 /** Patch één dakvlak op de floor die het bezit (multi-verdieping). */
+export type MapRidgeSurfaceOptions = {
+  /**
+   * Default true. Zet uit tijdens live sleep (aanzicht): wangen volgen anders
+   * elke pointermove → snap-doelen springen. Sync bij loslaten via
+   * `followDormerWallsForSurfaceMove`.
+   */
+  followDormerWalls?: boolean
+}
+
 export function mapRidgeSurfaceOnPlan(
   plan: FloorPlan,
   surfaceId: string,
   map: (surface: FloorSurface) => FloorSurface,
+  options?: MapRidgeSurfaceOptions,
 ): FloorPlan {
   const id = surfaceId.trim()
   if (!id) return plan
+  const followWalls = options?.followDormerWalls !== false
   let changed = false
   const floors = plan.floors.map((floor) => {
     const current = listRidgeSurfacesOnFloor(floor)
-    if (!current.some((surface) => surface.id === id)) return floor
+    const previous = current.find((surface) => surface.id === id)
+    if (!previous) return floor
     changed = true
-    return setRidgeSurfacesOnFloor(
-      floor,
-      current.map((surface) => (surface.id === id ? map(surface) : surface)),
-    )
+    const nextSurfaces = current.map((surface) => (surface.id === id ? map(surface) : surface))
+    let nextFloor = setRidgeSurfacesOnFloor(floor, nextSurfaces)
+    const mapped = nextSurfaces.find((surface) => surface.id === id)
+    if (
+      followWalls &&
+      mapped &&
+      isDormerLikeRoof(previous, current) &&
+      polyXyChanged(previous.poly, mapped.poly)
+    ) {
+      nextFloor = followDormerWallsOnFloor(nextFloor, previous.poly, mapped.poly)
+    }
+    return nextFloor
   })
   if (!changed) return plan
   const next = { ...plan, floors }
   syncRoofPlaneGuidsFromDesigns(next)
   return next
+}
+
+/**
+ * Na live sleep zonder wang-follow: één keer muren syncen van `oldPoly` → huidig vlak.
+ * No-op als geen dakkapel of XY ongewijzigd.
+ */
+export function followDormerWallsForSurfaceMove(
+  plan: FloorPlan,
+  surfaceId: string,
+  oldPoly: ReadonlyArray<Point2D & { z?: number }>,
+): FloorPlan {
+  const id = surfaceId.trim()
+  if (!id || oldPoly.length === 0) return plan
+  let changed = false
+  const floors = plan.floors.map((floor) => {
+    const current = listRidgeSurfacesOnFloor(floor)
+    const surface = current.find((entry) => entry.id === id)
+    if (!surface || !isDormerLikeRoof(surface, current)) return floor
+    if (!polyXyChanged(oldPoly, surface.poly)) return floor
+    const nextFloor = followDormerWallsOnFloor(floor, oldPoly, surface.poly)
+    if (nextFloor !== floor) changed = true
+    return nextFloor
+  })
+  return changed ? { ...plan, floors } : plan
 }
 
 export function removeRidgeSurfaceOnPlan(plan: FloorPlan, surfaceId: string): FloorPlan {
@@ -403,6 +443,50 @@ function clampRoofVertexZ(plan: FloorPlan, surfaceId: string, zCm: number): numb
   return clampRoofVertexZCm(zCm, slabCmForRoofSurface(plan, surfaceId))
 }
 
+export type RidgeSurfaceVertexPatch = {
+  vertexIndex: number
+  x?: number
+  y?: number
+  z?: number
+}
+
+/**
+ * Meerdere dakvlak-hoeken in één `mapRidgeSurfaceOnPlan` (dakkapel-XY-follow één keer).
+ * Ontbrekende velden per patch blijven; markeert het vlak `manual`.
+ */
+export function setRidgeSurfaceVertices(
+  plan: FloorPlan,
+  surfaceId: string,
+  patches: readonly RidgeSurfaceVertexPatch[],
+  options?: MapRidgeSurfaceOptions,
+): FloorPlan {
+  if (patches.length === 0) return plan
+  return mapRidgeSurfaceOnPlan(
+    plan,
+    surfaceId,
+    (surface) => {
+      let changed = false
+      const poly = surface.poly.map((entry, index) => {
+        const patch = patches.find((item) => item.vertexIndex === index)
+        if (!patch) return entry
+        const x = patch.x ?? entry.x
+        const y = patch.y ?? entry.y
+        const z = patch.z != null ? clampRoofVertexZ(plan, surfaceId, patch.z) : (entry.z ?? 0)
+        if (entry.x === x && entry.y === y && Math.round(entry.z ?? 0) === z) return entry
+        changed = true
+        return { ...entry, x, y, z }
+      })
+      if (!changed) return surface
+      return markRoofSurfaceManual({
+        ...surface,
+        isRoof: true,
+        poly,
+      })
+    },
+    options,
+  )
+}
+
 /** Eén dakvlak-hoek; ontbrekende velden blijven. Markeert het vlak `manual`. */
 export function setRidgeSurfaceVertex(
   plan: FloorPlan,
@@ -410,21 +494,7 @@ export function setRidgeSurfaceVertex(
   vertexIndex: number,
   next: { x?: number; y?: number; z?: number },
 ): FloorPlan {
-  return mapRidgeSurfaceOnPlan(plan, surfaceId, (surface) => {
-    const point = surface.poly[vertexIndex]
-    if (!point) return surface
-    const x = next.x ?? point.x
-    const y = next.y ?? point.y
-    const z = next.z != null ? clampRoofVertexZ(plan, surfaceId, next.z) : (point.z ?? 0)
-    if (point.x === x && point.y === y && Math.round(point.z ?? 0) === z) return surface
-    return markRoofSurfaceManual({
-      ...surface,
-      isRoof: true,
-      poly: surface.poly.map((entry, index) =>
-        index === vertexIndex ? { ...entry, x, y, z } : entry,
-      ),
-    })
-  })
+  return setRidgeSurfaceVertices(plan, surfaceId, [{ vertexIndex, ...next }])
 }
 
 /** Alleen Z van één dakvlak-hoek; X/Y blijven. Markeert het vlak `manual`. */
@@ -435,6 +505,20 @@ export function setRidgeSurfaceVertexZ(
   zCm: number,
 ): FloorPlan {
   return setRidgeSurfaceVertex(plan, surfaceId, vertexIndex, { z: zCm })
+}
+
+/** Zelfde Z op meerdere hoeken (zijaanzicht-paar). */
+export function setRidgeSurfaceVerticesZ(
+  plan: FloorPlan,
+  surfaceId: string,
+  vertexIndices: readonly number[],
+  zCm: number,
+): FloorPlan {
+  return setRidgeSurfaceVertices(
+    plan,
+    surfaceId,
+    vertexIndices.map((vertexIndex) => ({ vertexIndex, z: zCm })),
+  )
 }
 
 export function findRidgeSurface(

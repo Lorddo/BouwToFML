@@ -337,7 +337,7 @@ describe('ridge-walls', () => {
     expect(readRidgeWallsSettings(plan).wallIds).toContain('r1')
   })
 
-  it('.plg-roundtrip: nok woont in plan.roof; FML-uit heeft ridge:true + btfRole + ridgeWalls', () => {
+  it('.plg-roundtrip: nok woont in plan.roof; FML-uit heeft ridge:true + plgRole + ridgeWalls', () => {
     const plan = planWithWall()
     const ridge = markWallAsRidge(wall('r1', { x: 40, y: 80 }, { x: 360, y: 80 }))
     plan.floors[0] = setRidgeWallsOnFloor(plan.floors[0], [ridge])
@@ -351,14 +351,14 @@ describe('ridge-walls', () => {
       floors: Array<{
         designs?: Array<{
           name?: string
-          settings?: { btfRole?: string }
+          settings?: { plgRole?: string }
           walls?: Array<{ guid: string; ridge?: boolean }>
         }>
       }>
     }
     expect(raw.settings.ridgeWalls?.wallGuids).toEqual(['r1'])
     const dak = raw.floors[0].designs?.find((d) => d.name === 'Dak')
-    expect(dak?.settings?.btfRole).toBe('ridge')
+    expect(dak?.settings?.plgRole).toBe('ridge')
     expect(dak?.walls?.find((w) => w.guid === 'r1')?.ridge).toBe(true)
 
     const imported = importFmlV3(raw).plan

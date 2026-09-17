@@ -82,6 +82,7 @@ export interface ElevationSelectEditOptions {
   addWindowWidthCm: Ref<number>
   addWindowSillZCm: Ref<number>
   addWindowHeightCm: Ref<number>
+  pendingPlaceFrame: Ref<import('@/core/plan/opening-display-geom').OpeningFrameCm | null>
   preciseIntent: (event: { shiftKey?: boolean }) => boolean
   beginPreciseOpening: (
     openingId: string,

@@ -60,12 +60,6 @@ export const PLAN_ORIENT_CONTROLS_VISIBLE = false
 export const PLAN_AREA_SURFACE_EDIT_VISIBLE = false
 
 /**
- * Kozijndikte per opening bewerken (extras.btfFrame).
- * Resolver + renderer lezen het veld al; UI uit tot Floorplanner-onafhankelijke settings.
- */
-export const PLAN_OPENING_FRAME_EDIT_VISIBLE = false
-
-/**
  * «Tekst verbergen» in workspace stap-4 opacity-paneel.
  * Losse FML-viewer houdt de checkbox. Product-UI uit tot nodig.
  */

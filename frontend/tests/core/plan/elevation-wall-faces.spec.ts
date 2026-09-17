@@ -21,20 +21,20 @@ function wall(
 }
 
 describe('resolveElevationWallEndFaces', () => {
-  it('vrij einde: buiten = halve dikte, binnen = hartlijn', () => {
+  it('vrij I-eind: butt op hartlijn (outer = 0)', () => {
     const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })
     const faces = resolveElevationWallEndFaces(front, [front])
-    expect(faces.outerA).toBeCloseTo(10, 5)
-    expect(faces.outerB).toBeCloseTo(10, 5)
+    expect(faces.outerA).toBeCloseTo(0, 5)
+    expect(faces.outerB).toBeCloseTo(0, 5)
     expect(faces.innerA).toBe(0)
     expect(faces.innerB).toBe(0)
   })
 
-  it('hoek met return: buiten én binnen = halve burendikte', () => {
+  it('hoek met return: vrij A = 0; B = burenextent', () => {
     const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })
     const ret = wall('return', { x: 400, y: 0 }, { x: 400, y: 200 })
     const faces = resolveElevationWallEndFaces(front, [front, ret])
-    expect(faces.outerA).toBeCloseTo(10, 5)
+    expect(faces.outerA).toBeCloseTo(0, 5)
     expect(faces.innerA).toBe(0)
     expect(faces.outerB).toBeCloseTo(10, 5)
     expect(faces.innerB).toBeCloseTo(10, 5)
@@ -120,11 +120,11 @@ describe('elevationOwnThicknessFaceXs', () => {
 })
 
 describe('elevationWallProjectedXs', () => {
-  it('face-on houdt knoop-oren', () => {
+  it('face-on: vrij A butt; knoop-oren alleen bij B', () => {
     const front = wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })
     const ret = wall('return', { x: 400, y: 0 }, { x: 400, y: 200 })
     const xs = elevationWallProjectedXs(0, 400, 1, front, { x: 1, y: 0 }, [front, ret])
-    expect(xs.xOuterA).toBeCloseTo(-10, 5)
+    expect(xs.xOuterA).toBeCloseTo(0, 5)
     expect(xs.xOuterB).toBeCloseTo(410, 5)
     expect(xs.xInnerB).toBeCloseTo(390, 5)
   })

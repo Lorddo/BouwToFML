@@ -139,6 +139,11 @@ const props = withDefaults(
       rotationDeg: number
       mirroredX: boolean
       mirroredY: boolean
+      showFrame?: boolean
+      frameLeftCm?: number
+      frameRightCm?: number
+      frameTopCm?: number
+      frameBottomCm?: number
     } | null
     roomTypes: ReadonlyArray<{ role: number; name: string; color: string }>
     surfaceEditActive?: boolean
@@ -182,7 +187,16 @@ const props = withDefaults(
     openingBovenlichtHeightMixed: boolean
     openingBovenlichtGapDraft: number
     openingBovenlichtGapMixed: boolean
+    openingFrameLeftDraft?: number
+    openingFrameLeftMixed?: boolean
+    openingFrameRightDraft?: number
+    openingFrameRightMixed?: boolean
+    openingFrameTopDraft?: number
+    openingFrameTopMixed?: boolean
+    openingFrameBottomDraft?: number
+    openingFrameBottomMixed?: boolean
     bovenlichtPacked?: boolean
+    showOpeningFrameEdit?: boolean
     thicknessPresetCms?: number[]
     measureLineCount?: number
     /** Alleen editor: manual + slicer beschikbaar. */
@@ -205,6 +219,7 @@ const props = withDefaults(
     stampGroupMixed?: boolean
     canSelectStampMembers?: boolean
     drawWallKind?: 'wall' | 'ridge'
+    drawRoomKind?: 'room' | 'dormer'
     dakMode?: boolean
     ridgeFloorDraft?: number | null
     ridgeFloorMixed?: boolean
@@ -232,6 +247,7 @@ const props = withDefaults(
     stampGroupMixed: false,
     canSelectStampMembers: false,
     drawWallKind: 'wall',
+    drawRoomKind: 'room',
     dakMode: false,
     ridgeFloorDraft: null,
     ridgeFloorMixed: false,
@@ -254,6 +270,8 @@ const props = withDefaults(
     parentRoofOptions: () => [],
     dakThicknessCm: 20,
     slabThicknessCm: 20,
+    bovenlichtPacked: true,
+    showOpeningFrameEdit: true,
   },
 )
 
@@ -285,6 +303,14 @@ const emit = defineEmits<{
   commitOpeningBovenlichtHeight: []
   openingBovenlichtGapCm: [cm: number]
   commitOpeningBovenlichtGap: []
+  openingFrameLeftCm: [cm: number]
+  commitOpeningFrameLeft: []
+  openingFrameRightCm: [cm: number]
+  commitOpeningFrameRight: []
+  openingFrameTopCm: [cm: number]
+  commitOpeningFrameTop: []
+  openingFrameBottomCm: [cm: number]
+  commitOpeningFrameBottom: []
   copyOpening: []
   deleteOpenings: []
   splitWall: []
@@ -296,6 +322,7 @@ const emit = defineEmits<{
   stampGroupChange: [enabled: boolean]
   selectStampMembers: []
   wallKindChange: [kind: 'wall' | 'ridge']
+  roomKindChange: [kind: 'room' | 'dormer']
   ridgeZInput: [cm: number | null]
   ridgeFloorChange: [floorIndex: number]
   clearMeasures: []
@@ -328,6 +355,10 @@ const emit = defineEmits<{
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
+  itemFrameLeft: [cm: number]
+  itemFrameRight: [cm: number]
+  itemFrameTop: [cm: number]
+  itemFrameBottom: [cm: number]
   copyItem: []
   deleteItem: []
   dimensionLengthCm: [cm: number]
@@ -466,6 +497,7 @@ const isRoofPanel = computed(
         :stamp-group-mixed="stampGroupMixed"
         :can-select-stamp-members="canSelectStampMembers"
         :draw-wall-kind="drawWallKind"
+        :draw-room-kind="drawRoomKind"
         :dak-mode="dakMode"
         :ridge-z-cm="ridgeZCm"
         :ridge-floor-draft="ridgeFloorDraft"
@@ -492,6 +524,7 @@ const isRoofPanel = computed(
         @stamp-group-change="emit('stampGroupChange', $event)"
         @select-stamp-members="emit('selectStampMembers')"
         @wall-kind-change="emit('wallKindChange', $event)"
+        @room-kind-change="emit('roomKindChange', $event)"
         @ridge-z-input="emit('ridgeZInput', $event)"
         @ridge-floor-change="emit('ridgeFloorChange', $event)"
       >
@@ -556,7 +589,16 @@ const isRoofPanel = computed(
         :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
         :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
         :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+        :opening-frame-left-draft="openingFrameLeftDraft"
+        :opening-frame-left-mixed="openingFrameLeftMixed"
+        :opening-frame-right-draft="openingFrameRightDraft"
+        :opening-frame-right-mixed="openingFrameRightMixed"
+        :opening-frame-top-draft="openingFrameTopDraft"
+        :opening-frame-top-mixed="openingFrameTopMixed"
+        :opening-frame-bottom-draft="openingFrameBottomDraft"
+        :opening-frame-bottom-mixed="openingFrameBottomMixed"
         :bovenlicht-packed="bovenlichtPacked"
+        :show-opening-frame-edit="showOpeningFrameEdit"
         @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
         @opening-width-cm="emit('openingWidthCm', $event)"
         @commit-opening-width="emit('commitOpeningWidth')"
@@ -571,6 +613,14 @@ const isRoofPanel = computed(
         @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
         @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
         @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+        @opening-frame-left-cm="emit('openingFrameLeftCm', $event)"
+        @commit-opening-frame-left="emit('commitOpeningFrameLeft')"
+        @opening-frame-right-cm="emit('openingFrameRightCm', $event)"
+        @commit-opening-frame-right="emit('commitOpeningFrameRight')"
+        @opening-frame-top-cm="emit('openingFrameTopCm', $event)"
+        @commit-opening-frame-top="emit('commitOpeningFrameTop')"
+        @opening-frame-bottom-cm="emit('openingFrameBottomCm', $event)"
+        @commit-opening-frame-bottom="emit('commitOpeningFrameBottom')"
         @copy-opening="emit('copyOpening')"
         @delete-openings="emit('deleteOpenings')"
       />
@@ -631,7 +681,16 @@ const isRoofPanel = computed(
           :opening-bovenlicht-height-mixed="openingBovenlichtHeightMixed"
           :opening-bovenlicht-gap-draft="openingBovenlichtGapDraft"
           :opening-bovenlicht-gap-mixed="openingBovenlichtGapMixed"
+          :opening-frame-left-draft="openingFrameLeftDraft"
+          :opening-frame-left-mixed="openingFrameLeftMixed"
+          :opening-frame-right-draft="openingFrameRightDraft"
+          :opening-frame-right-mixed="openingFrameRightMixed"
+          :opening-frame-top-draft="openingFrameTopDraft"
+          :opening-frame-top-mixed="openingFrameTopMixed"
+          :opening-frame-bottom-draft="openingFrameBottomDraft"
+          :opening-frame-bottom-mixed="openingFrameBottomMixed"
           :bovenlicht-packed="bovenlichtPacked"
+          :show-opening-frame-edit="showOpeningFrameEdit"
           @commit-opening-subtype="emit('commitOpeningSubtype', $event)"
           @opening-width-cm="emit('openingWidthCm', $event)"
           @commit-opening-width="emit('commitOpeningWidth')"
@@ -646,6 +705,14 @@ const isRoofPanel = computed(
           @commit-opening-bovenlicht-height="emit('commitOpeningBovenlichtHeight')"
           @opening-bovenlicht-gap-cm="emit('openingBovenlichtGapCm', $event)"
           @commit-opening-bovenlicht-gap="emit('commitOpeningBovenlichtGap')"
+          @opening-frame-left-cm="emit('openingFrameLeftCm', $event)"
+          @commit-opening-frame-left="emit('commitOpeningFrameLeft')"
+          @opening-frame-right-cm="emit('openingFrameRightCm', $event)"
+          @commit-opening-frame-right="emit('commitOpeningFrameRight')"
+          @opening-frame-top-cm="emit('openingFrameTopCm', $event)"
+          @commit-opening-frame-top="emit('commitOpeningFrameTop')"
+          @opening-frame-bottom-cm="emit('openingFrameBottomCm', $event)"
+          @commit-opening-frame-bottom="emit('commitOpeningFrameBottom')"
           @copy-opening="emit('copyOpening')"
           @delete-openings="emit('deleteOpenings')"
         />
@@ -724,6 +791,10 @@ const isRoofPanel = computed(
           @item-rotation-input="emit('itemRotationInput', $event)"
           @toggle-item-mirror-x="emit('toggleItemMirrorX')"
           @toggle-item-mirror-y="emit('toggleItemMirrorY')"
+          @item-frame-left="emit('itemFrameLeft', $event)"
+          @item-frame-right="emit('itemFrameRight', $event)"
+          @item-frame-top="emit('itemFrameTop', $event)"
+          @item-frame-bottom="emit('itemFrameBottom', $event)"
           @copy-item="emit('copyItem')"
           @delete-item="emit('deleteItem')"
         />

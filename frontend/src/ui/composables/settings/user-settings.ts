@@ -6,6 +6,7 @@ import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/plan/extraction-to-plan-types'
+import { defaultOpeningFrame, type OpeningFrameCm } from '@/core/plan/opening-kind-catalog'
 import {
   catalogFromLegacyLimits,
   FACTORY_THICKNESS_CMS,
@@ -128,6 +129,15 @@ export type PlanDisplaySettings = {
   clearHeightFillColor: string
   /** Catalogus voor nieuwe editor-plannen (factory: Front/Back/Left/Right). */
   facadeGroups: FacadeGroupPreset[]
+  /** Kozijnvelden in opening-strook (plattegrond + Gevels). */
+  showOpeningFrameEdit: boolean
+  /** Defaults voor nieuw geplaatste openingen (niet passage/boog). */
+  openingFrameDefaults: OpeningFrameDefaults
+}
+
+export type OpeningFrameDefaults = {
+  door: OpeningFrameCm
+  window: OpeningFrameCm
 }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
@@ -217,6 +227,34 @@ export function createFactoryPlanDefaults(): ProjectPlanDefaults {
   }
 }
 
+export function createFactoryOpeningFrameDefaults(): OpeningFrameDefaults {
+  return {
+    door: defaultOpeningFrame('door', 'single'),
+    window: defaultOpeningFrame('window', 'single'),
+  }
+}
+
+function normalizeOpeningFrameCm(raw: unknown, factory: OpeningFrameCm): OpeningFrameCm {
+  const src = asRecord(raw)
+  return {
+    leftCm: nonNegativeCm(src.leftCm, factory.leftCm),
+    rightCm: nonNegativeCm(src.rightCm, factory.rightCm),
+    topCm: nonNegativeCm(src.topCm, factory.topCm),
+    bottomCm: nonNegativeCm(src.bottomCm, factory.bottomCm),
+  }
+}
+
+function normalizeOpeningFrameDefaults(
+  raw: unknown,
+  factory: OpeningFrameDefaults = createFactoryOpeningFrameDefaults(),
+): OpeningFrameDefaults {
+  const src = asRecord(raw)
+  return {
+    door: normalizeOpeningFrameCm(src.door, factory.door),
+    window: normalizeOpeningFrameCm(src.window, factory.window),
+  }
+}
+
 export function createFactoryPlanDisplaySettings(): PlanDisplaySettings {
   return {
     underlayOpacityPct: DEFAULT_UNDERLAY_OPACITY_PCT,
@@ -235,6 +273,8 @@ export function createFactoryPlanDisplaySettings(): PlanDisplaySettings {
     showClearHeightPlanFill: false,
     clearHeightFillColor: DEFAULT_CLEAR_HEIGHT_FILL_COLOR,
     facadeGroups: createDefaultFacadeGroupPresets(),
+    showOpeningFrameEdit: true,
+    openingFrameDefaults: createFactoryOpeningFrameDefaults(),
   }
 }
 
@@ -371,6 +411,14 @@ function normalizePlanDisplay(
       parsePlanHex(typeof src.clearHeightFillColor === 'string' ? src.clearHeightFillColor : null) ??
       factory.clearHeightFillColor,
     facadeGroups: normalizeFacadeGroupPresets(src.facadeGroups, factory.facadeGroups),
+    showOpeningFrameEdit:
+      typeof src.showOpeningFrameEdit === 'boolean'
+        ? src.showOpeningFrameEdit
+        : factory.showOpeningFrameEdit,
+    openingFrameDefaults: normalizeOpeningFrameDefaults(
+      src.openingFrameDefaults,
+      factory.openingFrameDefaults,
+    ),
   }
 }
 

@@ -65,8 +65,18 @@ const props = defineProps<{
   openingBovenlichtHeightMixed: boolean
   openingBovenlichtGapDraft: number
   openingBovenlichtGapMixed: boolean
+  openingFrameLeftDraft?: number
+  openingFrameLeftMixed?: boolean
+  openingFrameRightDraft?: number
+  openingFrameRightMixed?: boolean
+  openingFrameTopDraft?: number
+  openingFrameTopMixed?: boolean
+  openingFrameBottomDraft?: number
+  openingFrameBottomMixed?: boolean
   /** Alleen packed-modus toont checkbox/gap/hoogte. Default true. */
   bovenlichtPacked?: boolean
+  /** Tweede rij kozijnmaten. */
+  showOpeningFrameEdit?: boolean
 }>()
 
 const showPackedBovenlichtUi = computed(() => props.bovenlichtPacked !== false)
@@ -86,6 +96,14 @@ const emit = defineEmits<{
   commitOpeningBovenlichtHeight: []
   openingBovenlichtGapCm: [cm: number]
   commitOpeningBovenlichtGap: []
+  openingFrameLeftCm: [cm: number]
+  commitOpeningFrameLeft: []
+  openingFrameRightCm: [cm: number]
+  commitOpeningFrameRight: []
+  openingFrameTopCm: [cm: number]
+  commitOpeningFrameTop: []
+  openingFrameBottomCm: [cm: number]
+  commitOpeningFrameBottom: []
   copyOpening: []
   deleteOpenings: []
 }>()
@@ -183,33 +201,17 @@ const showTriangleMirror = computed(
     props.openingSubtypeDraft === 'triangle' &&
     !props.openingSubtypeMixed,
 )
+const showFrameEdit = computed(
+  () =>
+    props.showOpeningFrameEdit !== false &&
+    !isQuickOpeningPanel.value &&
+    (isDoorSelection.value || isWindowSelection.value) &&
+    props.openingSubtypeDraft !== 'passage' &&
+    props.openingSubtypeDraft !== 'archway',
+)
 </script>
 
 <template>
-  <span v-if="selectedOpeningPanel && isQuickOpeningPanel" class="plan-toolbelt__meta">
-    {{ openingKindLabel }}
-  </span>
-  <span v-else-if="selectedOpeningPanel && !canChangeOpeningSubtype" class="plan-toolbelt__meta">
-    {{ openingKindLabel }}
-  </span>
-  <div v-if="selectedOpeningPanel && canChangeOpeningSubtype" class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{ selectedSubtypeAria }}</span>
-    <div class="plan-toolbelt__field-controls">
-      <select
-        class="plan-toolbelt__select"
-        :aria-label="selectedSubtypeAria"
-        :value="openingSubtypeMixed ? '' : openingSubtypeDraft"
-        @change="onOpeningSubtypeChange"
-      >
-        <option v-if="openingSubtypeMixed" value="" disabled>
-          {{ t('result.toolbar.custom') }}
-        </option>
-        <option v-for="opt in selectedSubtypeOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
-    </div>
-  </div>
   <PlanOpeningEditFields
     v-if="selectedOpeningPanel && (isDoorSelection || isWindowSelection)"
     :unit="unit"
@@ -235,6 +237,15 @@ const showTriangleMirror = computed(
     :show-copy="canCopyOpening"
     :show-delete="!isQuickOpeningPanel"
     :compact="isQuickOpeningPanel"
+    :show-frame="showFrameEdit"
+    :frame-left-cm="openingFrameLeftDraft ?? 5"
+    :frame-right-cm="openingFrameRightDraft ?? 5"
+    :frame-top-cm="openingFrameTopDraft ?? 5"
+    :frame-bottom-cm="openingFrameBottomDraft ?? 0"
+    :frame-left-mixed="openingFrameLeftMixed === true"
+    :frame-right-mixed="openingFrameRightMixed === true"
+    :frame-top-mixed="openingFrameTopMixed === true"
+    :frame-bottom-mixed="openingFrameBottomMixed === true"
     @width-input="emit('openingWidthCm', $event)"
     @width="onOpeningWidthChange"
     @height-input="emit('openingHeightCm', $event)"
@@ -246,11 +257,46 @@ const showTriangleMirror = computed(
     @bovenlicht-height="onOpeningBovenlichtHeightChange"
     @bovenlicht-gap-input="emit('openingBovenlichtGapCm', $event)"
     @bovenlicht-gap="onOpeningBovenlichtGapChange"
+    @frame-left-input="emit('openingFrameLeftCm', $event)"
+    @frame-left="emit('commitOpeningFrameLeft')"
+    @frame-right-input="emit('openingFrameRightCm', $event)"
+    @frame-right="emit('commitOpeningFrameRight')"
+    @frame-top-input="emit('openingFrameTopCm', $event)"
+    @frame-top="emit('commitOpeningFrameTop')"
+    @frame-bottom-input="emit('openingFrameBottomCm', $event)"
+    @frame-bottom="emit('commitOpeningFrameBottom')"
     @toggle-hinge="emit('toggleOpeningHinge')"
     @toggle-swing="emit('toggleOpeningSwing')"
     @copy="emit('copyOpening')"
     @remove="emit('deleteOpenings')"
-  />
+  >
+    <template #leading>
+      <span v-if="isQuickOpeningPanel" class="plan-toolbelt__meta">
+        {{ openingKindLabel }}
+      </span>
+      <span v-else-if="!canChangeOpeningSubtype" class="plan-toolbelt__meta">
+        {{ openingKindLabel }}
+      </span>
+      <div v-else class="plan-toolbelt__field">
+        <span class="plan-toolbelt__field-label">{{ selectedSubtypeAria }}</span>
+        <div class="plan-toolbelt__field-controls">
+          <select
+            class="plan-toolbelt__select"
+            :aria-label="selectedSubtypeAria"
+            :value="openingSubtypeMixed ? '' : openingSubtypeDraft"
+            @change="onOpeningSubtypeChange"
+          >
+            <option v-if="openingSubtypeMixed" value="" disabled>
+              {{ t('result.toolbar.custom') }}
+            </option>
+            <option v-for="opt in selectedSubtypeOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+      </div>
+    </template>
+  </PlanOpeningEditFields>
   <ToolbeltActionButton
     v-if="isMixedOpening"
     icon="delete"

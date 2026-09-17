@@ -7,6 +7,7 @@ import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import type { Opening, Point2D } from '@/core/plan/types'
 import { buildOpeningFromPreset } from '@/core/plan/opening-from-preset'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/plan/opening-add-presets'
+import type { OpeningFrameCm } from '@/core/plan/opening-display-geom'
 import {
   clampDoorOpeningT,
   clampOpeningSillZ,
@@ -32,6 +33,8 @@ export function usePlanCanvasAddOpening(options: {
   /** Unpacked: place sibling-raam als floor-default aan. */
   bovenlichtPacked?: Ref<boolean>
   bovenlichtDefaults?: Ref<ExpandBovenlichtFloorDefaults>
+  /** Kopie-frame of null → Settings-default. */
+  resolvePlaceFrame?: (type: 'door' | 'window') => OpeningFrameCm | undefined
   beforePlace: () => void
   syncPlanToParent: () => void
 }) {
@@ -76,6 +79,7 @@ export function usePlanCanvasAddOpening(options: {
       heightCm,
       sillZCm,
       t: openingT,
+      frame: options.resolvePlaceFrame?.(mode),
     })
 
     options.beforePlace()

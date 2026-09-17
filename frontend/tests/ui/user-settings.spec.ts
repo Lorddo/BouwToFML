@@ -98,6 +98,11 @@ describe('user-settings', () => {
         { id: 'left', name: 'Left' },
         { id: 'right', name: 'Right' },
       ],
+      showOpeningFrameEdit: true,
+      openingFrameDefaults: {
+        door: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 0 },
+        window: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 },
+      },
     })
   })
 
@@ -369,6 +374,11 @@ describe('user-settings', () => {
         { id: 'left', name: 'Left' },
         { id: 'right', name: 'Right' },
       ],
+      showOpeningFrameEdit: true,
+      openingFrameDefaults: {
+        door: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 0 },
+        window: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 },
+      },
     })
   })
 
