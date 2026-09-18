@@ -9,6 +9,7 @@ import {
   type RoomRasterCache,
 } from '@/cv/walls/rooms/room-raster-cache'
 import { isFinalizeTabOutput } from '@/cv/workspace/layer-flow'
+import { tGlobal } from '@/ui/i18n'
 import { resolveThinDoorMaskKeepFaceIds } from './door-thin-mask-finalize'
 import type { RoomPhase } from './useWorkspaceRoomFaces'
 import type { TemplatesFinalizePhase } from './workspace-view-visibility'
@@ -46,7 +47,7 @@ export async function finalizeWallDetection(ctx: {
 
   ctx.setRoomPhase('finalizing')
   ctx.setFinalizePhase('walls')
-  ctx.setStatus?.('Afronden detectie…')
+  ctx.setStatus?.(tGlobal('templates.status.finalize'))
   const accepted = ctx.getAcceptedDoorHyps?.() ?? []
   const maskKeepDoorFaceIds = await resolveThinDoorMaskKeepFaceIds({
     cache,

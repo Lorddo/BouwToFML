@@ -83,6 +83,14 @@
       "leaf": "glass"
     },
     {
+      "kind": "door.double_standard",
+      "type": "door",
+      "label": "Dubbele deur (standaard)",
+      "glyph": "double_wide",
+      "swingInsetCm": 5,
+      "leaf": "glass"
+    },
+    {
       "kind": "door.double_solid",
       "type": "door",
       "label": "Dubbele deur (vol)",
@@ -119,6 +127,14 @@
       "type": "door",
       "label": "Schuifpui (1 schuivend)",
       "glyph": "sliding_single",
+      "swingInsetCm": 0,
+      "leaf": "glass"
+    },
+    {
+      "kind": "door.sliding_single_mirror",
+      "type": "door",
+      "label": "Schuifpui (1 schuivend, gespiegeld)",
+      "glyph": "sliding_single_mirror",
       "swingInsetCm": 0,
       "leaf": "glass"
     },

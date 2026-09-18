@@ -1,4 +1,4 @@
-import { displayAreaLabel } from '@/core/plan/roomtype-catalog'
+import { displayAreaLabelLocalized } from '@/ui/i18n/catalog-labels'
 import { resolveRoofSurfaceColor } from '@/core/plan/roof-planes'
 import type { FloorArea, FloorSurface, Point2D } from '@/core/plan/types'
 import type { RenderArea, RenderSurface } from './plan-canvas-render-types'
@@ -173,7 +173,7 @@ function mapTaggedPoly(
     id: item.id,
     points,
     fill: item.color || '#ffffff',
-    label: displayAreaLabel(item),
+    label: displayAreaLabelLocalized(item),
     labelX: labelStage.x,
     labelY: labelStage.y,
     labelCm,

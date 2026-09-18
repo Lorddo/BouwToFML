@@ -169,8 +169,8 @@ function onRasterRedo() {
   }
 }
 
-function onOpenInEditor(): void {
-  const exported = api.exportMergedProjectPlan()
+async function onOpenInEditor(): Promise<void> {
+  const exported = await api.exportMergedProjectPlan()
   if (!exported) return
   emit('openInEditor', exported.plan, exported.thicknessCms)
 }

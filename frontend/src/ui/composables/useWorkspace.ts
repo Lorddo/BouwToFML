@@ -1320,15 +1320,7 @@ export function useWorkspace() {
     }
   }
 
-  async function prepareExportedProjectPlan(): Promise<FloorPlan | null> {
-    if (fml.planLimitsDirty.value) {
-      fml.syncAppliedFromDraft()
-    }
-    const plan = project.buildMergedProjectPlan()
-    if (!plan) {
-      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
-      return null
-    }
+  async function uploadMergedPlanUnderlays(plan: FloorPlan): Promise<FloorPlan> {
     try {
       const plateSrcs = project.projectFloors.value.map((floor) => {
         const blob = project.projectState.value.blobs[floor.id]
@@ -1348,6 +1340,18 @@ export function useWorkspace() {
     } catch {
       return plan
     }
+  }
+
+  async function prepareExportedProjectPlan(): Promise<FloorPlan | null> {
+    if (fml.planLimitsDirty.value) {
+      fml.syncAppliedFromDraft()
+    }
+    const plan = project.buildMergedProjectPlan()
+    if (!plan) {
+      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
+      return null
+    }
+    return uploadMergedPlanUnderlays(plan)
   }
 
   async function downloadProjectPlg(): Promise<void> {
@@ -1465,15 +1469,12 @@ export function useWorkspace() {
     else project.updateActiveFloorDefaults(patch, { syncUi: false })
   }
 
-  function exportMergedProjectPlan(): { plan: FloorPlan; thicknessCms: number[] } | null {
-    if (fml.planLimitsDirty.value) {
-      fml.syncAppliedFromDraft()
-    }
-    const plan = project.buildMergedProjectPlan()
-    if (!plan) {
-      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
-      return null
-    }
+  async function exportMergedProjectPlan(): Promise<{
+    plan: FloorPlan
+    thicknessCms: number[]
+  } | null> {
+    const plan = await prepareExportedProjectPlan()
+    if (!plan) return null
     setLocalError(null)
     return {
       plan: clonePlain(plan),

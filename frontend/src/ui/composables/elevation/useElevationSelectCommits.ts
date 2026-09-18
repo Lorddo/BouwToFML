@@ -2,7 +2,13 @@ import type { Ref } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
 import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/plan/bovenlicht'
 import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
-import { removeRidgeSurfaceOnPlan, setRidgeSurfaceVerticesZ } from '@/core/plan/roof-planes'
+import {
+  findRidgeSurface,
+  isDormerRoof,
+  removeRidgeSurfaceOnPlan,
+  setRidgeSurfaceHeightCm,
+  setRidgeSurfaceVerticesZ,
+} from '@/core/plan/roof-planes'
 import { syncDormerAssemblyAfterRoofEdit } from '@/core/plan/bind-walls-to-roofs'
 import {
   overwriteRidgeDakThickness,
@@ -363,7 +369,15 @@ export function useElevationSelectCommits(options: {
 
   function commitRoofVertexHeight(cm: number): void {
     const target = settingsTarget.value
-    if (target?.kind !== 'roof' || target.vertexIndex == null) return
+    if (target?.kind !== 'roof') return
+    if (target.vertexIndex == null) {
+      const surface = findRidgeSurface(props.plan, target.id)
+      if (!isDormerRoof(surface)) return
+      pushUndo()
+      const withZ = setRidgeSurfaceHeightCm(props.plan, target.id, cm)
+      commitPlan(syncDormerAssemblyAfterRoofEdit(withZ, target.id))
+      return
+    }
     const plane = selectedRoofPlane.value
     const indices = plane
       ? pairedElevationRoofVertexIndices(plane, target.vertexIndex)

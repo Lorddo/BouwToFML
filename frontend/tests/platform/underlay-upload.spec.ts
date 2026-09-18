@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   resolveUnderlayLoadUrl,
   underlayKeyFromUrl,
+  uploadUnderlayDataUrl,
 } from '@/platform/underlay-upload'
 
 const KEY =
@@ -31,5 +32,32 @@ describe('underlayKeyFromUrl / resolveUnderlayLoadUrl', () => {
     expect(resolveUnderlayLoadUrl('https://example.com/scan.png')).toBe(
       'https://example.com/scan.png',
     )
+  })
+})
+
+describe('uploadUnderlayDataUrl', () => {
+  it('laat een https-URL staan zonder fetch', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    await expect(
+      uploadUnderlayDataUrl({
+        dataUrl: 'https://pub.example/v1/p/f/abc.png',
+        projectId: 'p',
+        floorId: 'f',
+        token: 't',
+      }),
+    ).resolves.toBe('https://pub.example/v1/p/f/abc.png')
+    expect(fetchSpy).not.toHaveBeenCalled()
+    fetchSpy.mockRestore()
+  })
+
+  it('geeft null bij een onbruikbare data-URL', async () => {
+    await expect(
+      uploadUnderlayDataUrl({
+        dataUrl: 'not-an-image',
+        projectId: 'p',
+        floorId: 'f',
+        token: 't',
+      }),
+    ).resolves.toBeNull()
   })
 })

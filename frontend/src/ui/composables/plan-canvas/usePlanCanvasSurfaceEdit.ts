@@ -8,7 +8,10 @@ import {
 import { resolveInsertedRoofVertexZ, snapRoofVertexZ } from '@/core/plan/roof-vertex-snap'
 import {
   clampRoofVertexZCm,
+  findRidgeSurface,
+  isDormerRoof,
   isRoofSurface,
+  setRidgeSurfaceHeightCm,
   slabCmForRoofSurface,
 } from '@/core/plan/roof-planes'
 import { DEFAULT_FLOOR_THICKNESS_CM } from '@/core/plan/floor-stack'
@@ -414,9 +417,32 @@ export function usePlanCanvasSurfaceEdit(options: {
     pendingZ = null
   }
 
+  function applySurfaceHeight(zCm: number): void {
+    const surface = currentSurface()
+    if (!isDormerRoof(surface)) return
+    const plan = options.editor.localPlan.value
+    if (!plan) return
+    const next = setRidgeSurfaceHeightCm(plan, surface.id, zCm)
+    if (next === plan) return
+    if (!didPushUndo) {
+      options.editor.pushUndo()
+      didPushUndo = true
+    }
+    const nextSurface = findRidgeSurface(next, surface.id)
+    if (nextSurface) {
+      options.editor.updateSurface(surface.id, { poly: nextSurface.poly })
+    }
+    options.editor.applyWallsAfterRoofEdit(surface.id)
+    options.syncPlanToParent()
+    didPushUndo = false
+  }
+
   function setSelectedVertexZ(zCm: number): void {
     const idx = selectedVertexIndex.value
-    if (idx == null) return
+    if (idx == null) {
+      applySurfaceHeight(zCm)
+      return
+    }
     typeText.value = ''
     didPushUndo = false
     pendingZ = { index: idx, z: zCm }

@@ -1,4 +1,5 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { i18n } from '@/ui/i18n'
 import { isRoofSurface, resolveDormerParent } from '@/core/plan/roof-planes'
 import type { FloorArea, FloorSurface } from '@/core/plan/types'
 import {
@@ -8,6 +9,7 @@ import {
   resolveRoomType,
 } from '@/core/plan/roomtype-catalog'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import { roomTypeDisplayName } from '@/ui/i18n/catalog-labels'
 import type { PlanCanvasDraftCommitScheduler } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
 import { setPlanSelected } from './plan-canvas-selected'
@@ -324,7 +326,13 @@ export function usePlanCanvasAreaSelection(options: {
   }
 
   return {
-    roomTypes: listRoomTypes(),
+    roomTypes: computed(() => {
+      void i18n.global.locale.value
+      return listRoomTypes().map((rt) => ({
+        ...rt,
+        name: roomTypeDisplayName(rt.role, rt.name),
+      }))
+    }),
     customNameDraft,
     syncCustomNameDraftFromSelection,
     clearTaggedSelection,

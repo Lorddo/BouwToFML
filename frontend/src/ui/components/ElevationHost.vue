@@ -45,6 +45,7 @@ import OpeningFrameFields from './OpeningFrameFields.vue'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 import PlanOpeningAddToolFields from './PlanOpeningAddToolFields.vue'
 import PlanMeasureOverlay from './PlanMeasureOverlay.vue'
+import PlanMeasureTypeLabel from './PlanMeasureTypeLabel.vue'
 import PlanRescaleOverlay from './PlanRescaleOverlay.vue'
 import CanvasToolbelt from './canvas/CanvasToolbelt.vue'
 import ToolbeltActionButton from './canvas/ToolbeltActionButton.vue'
@@ -603,26 +604,19 @@ defineExpose({
       :to-screen="cmToScreen"
       :unit="unit"
     />
-    <div
+    <PlanMeasureTypeLabel
       v-if="preciseMeasureLabel"
-      class="draw-measure-label draw-measure-label--wall"
-      :class="{ 'draw-measure-label--typing': !!preciseTypeText }"
-      :style="{ left: `${preciseMeasureLabel.x}px`, top: `${preciseMeasureLabel.y}px` }"
-    >
-      {{ preciseMeasureLabelText
-      }}<span class="draw-measure-label__unit">{{ unit }}</span>
-      <button
-        v-if="preciseTypeText"
-        type="button"
-        class="draw-measure-label__accept"
-        :title="t('result.toolbar.acceptDrawDraft')"
-        :aria-label="t('result.toolbar.acceptDrawDraft')"
-        @pointerdown.stop
-        @click.stop="commitPreciseDraft()"
-      >
-        ✓
-      </button>
-    </div>
+      tone="elev"
+      :x="preciseMeasureLabel.x"
+      :y="preciseMeasureLabel.y"
+      :text="preciseMeasureLabelText"
+      :unit="unit"
+      :typing="!!preciseTypeText"
+      show-accept
+      :accept-title="t('result.toolbar.acceptPreciseMove')"
+      :accept-aria="t('result.toolbar.acceptPreciseMove')"
+      @accept="commitPreciseDraft()"
+    />
     <PlanRescaleOverlay
       v-if="rescaleMode && rescaleState"
       :state="rescaleState"
@@ -978,44 +972,4 @@ defineExpose({
   border-color: #0f172a;
 }
 
-.draw-measure-label {
-  position: absolute;
-  z-index: 8;
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(15, 23, 42, 0.88);
-  color: #fff;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.draw-measure-label--typing {
-  outline: 2px solid #f97316;
-  outline-offset: 1px;
-}
-
-.draw-measure-label__unit {
-  opacity: 0.75;
-  font-size: 11px;
-}
-
-.draw-measure-label__accept {
-  pointer-events: auto;
-  border: 0;
-  background: #22c55e;
-  color: #052e16;
-  border-radius: 3px;
-  width: 18px;
-  height: 18px;
-  line-height: 18px;
-  padding: 0;
-  cursor: pointer;
-  font-size: 12px;
-}
 </style>

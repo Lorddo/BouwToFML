@@ -16,11 +16,13 @@ export type DoorOpeningKind =
   | 'door.flush'
   | 'door.half_glass'
   | 'door.double'
+  | 'door.double_standard'
   | 'door.double_solid'
   | 'door.bifold'
   | 'door.bifold_double'
   | 'door.pocket'
   | 'door.sliding_single'
+  | 'door.sliding_single_mirror'
   | 'door.sliding'
   | 'door.elevator'
   | 'door.garage'
@@ -46,6 +48,7 @@ export type DoorAssetKind =
   | 'sliding'
   | 'sliding_pocket'
   | 'sliding_single'
+  | 'sliding_single_mirror'
   | 'garage'
   | 'passage'
   | 'archway'
@@ -113,6 +116,7 @@ function asDoorGlyph(raw: string): DoorAssetKind {
     'sliding',
     'sliding_pocket',
     'sliding_single',
+    'sliding_single_mirror',
     'garage',
     'passage',
     'archway',
@@ -189,7 +193,9 @@ function inferLeaf(entry: KindEntry | undefined, type: OpeningType, glyph: Openi
   if (type === 'window') return 'glass'
   if (glyph === 'garage') return 'paneled'
   if (glyph === 'sliding_pocket') return 'solid'
-  if (glyph === 'sliding' || glyph === 'sliding_single') return 'glass'
+  if (glyph === 'sliding' || glyph === 'sliding_single' || glyph === 'sliding_single_mirror') {
+    return 'glass'
+  }
   return 'solid'
 }
 
@@ -212,6 +218,7 @@ export function toCvDoorKind(glyph: OpeningAssetKind): DoorResolvedKindCompat {
   if (
     glyph === 'sliding_pocket' ||
     glyph === 'sliding_single' ||
+    glyph === 'sliding_single_mirror' ||
     glyph === 'sliding' ||
     glyph === 'elevator' ||
     glyph === 'garage'
@@ -248,11 +255,16 @@ export function resolveWindowPanelCount(
   return 1
 }
 
+const OPENING_KIND_ALIASES: Record<string, OpeningKind> = {
+  'door.double_balcony': 'door.double_standard',
+}
+
 export function resolveOpeningKind(kind: OpeningKind | string | undefined | null): OpeningCatalogInfo {
   const raw = typeof kind === 'string' ? kind.trim() : ''
-  const resolved: OpeningKind = isOpeningKind(raw)
-    ? raw
-    : raw.startsWith('window.')
+  const aliased: string = OPENING_KIND_ALIASES[raw] ?? raw
+  const resolved: OpeningKind = isOpeningKind(aliased)
+    ? aliased
+    : aliased.startsWith('window.')
       ? 'window.unmapped'
       : 'door.unmapped'
   const type = openingTypeFromKind(resolved)

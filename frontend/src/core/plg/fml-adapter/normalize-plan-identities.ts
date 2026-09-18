@@ -8,6 +8,7 @@ import {
   type OpeningKind,
 } from '../../plan/opening-kind-catalog'
 import { resolveFixtureKind, type FixtureAssetKind } from '../../plan/fixture-kind-catalog'
+import { normalizeRailFixtureSize } from '../../plan/fixture-place-defaults'
 import type { Floor, FloorItem, FloorPlan, Opening, OpeningType, Wall } from '../../plan/types'
 import { openingKindFromFmlRefid } from './opening-fml-refids'
 import { fixtureKindFromFmlRefid } from './fixture-fml-refids'
@@ -75,6 +76,9 @@ function normalizeItem(raw: FloorItem): FloorItem {
 
   rec.id = id
   rec.kind = kind!
+  const railSize = normalizeRailFixtureSize(rec)
+  rec.width = railSize.width
+  rec.height = railSize.height
   return rec
 }
 

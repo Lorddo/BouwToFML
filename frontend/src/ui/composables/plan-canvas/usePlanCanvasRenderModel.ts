@@ -1,4 +1,5 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
+import { i18n } from '@/ui/i18n'
 import { listRidgeWallsOnFloor, ridgeDisplayWidthCm } from '@/core/plan/ridge-walls'
 import { listBlockedRoofRings, listSkyExposedWalls } from '@/core/plan/ridge-floor'
 import { computeClearHeightOverlays } from '@/core/plan/roof-clear-height'
@@ -146,6 +147,7 @@ export function usePlanCanvasRenderModel(
   )
 
   const renderModel = computed((): RenderModel | null => {
+    void i18n.global.locale.value
     viewport.ensureContentLayout()
     const layout = viewport.contentLayout.value
     const activeFloor = floor.value

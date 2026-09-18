@@ -87,6 +87,32 @@ function uploadSrcForFloor(
   return null
 }
 
+/**
+ * Data-URL → R2 https. Al https → teruggeven. Fout / geen bytes → null
+ * (caller houdt de data-URL; download probeert het opnieuw).
+ */
+export async function uploadUnderlayDataUrl(params: {
+  dataUrl: string
+  projectId: string
+  floorId: string
+  token: string
+}): Promise<string | null> {
+  const src = params.dataUrl.trim()
+  if (isHttpsDrawingUrl(src)) return src
+  const bytes = pngBytesFromUnderlaySrc(src)
+  if (!bytes) return null
+  try {
+    return await uploadPlanUnderlayBytes({
+      bytes,
+      projectId: params.projectId,
+      floorId: params.floorId,
+      token: params.token,
+    })
+  } catch {
+    return null
+  }
+}
+
 export async function uploadPlanUnderlayBytes(params: {
   bytes: Uint8Array
   projectId: string
@@ -142,21 +168,17 @@ export async function ensurePlanUnderlaysUploaded(
     if (!drawing) continue
     if (isHttpsDrawingUrl(drawing.url)) continue
     const src = uploadSrcForFloor(drawing.url, params.plateSrcs?.[floorIndex])
-    const bytes = pngBytesFromUnderlaySrc(src)
-    if (!bytes) continue
+    if (!src) continue
     const floorId = params.floorIds[floorIndex] ?? `floor-${floorIndex}`
-    try {
-      const url = await uploadPlanUnderlayBytes({
-        bytes,
-        projectId: params.projectId,
-        floorId,
-        token: params.token,
-      })
-      nextFloors[floorIndex] = { ...floor, drawing: { ...drawing, url } }
-      urls.push({ floorIndex, url })
-    } catch {
-      // Bestand gaat door; writePlg / buildFmlV3 laten data-URL weg.
-    }
+    const url = await uploadUnderlayDataUrl({
+      dataUrl: src,
+      projectId: params.projectId,
+      floorId,
+      token: params.token,
+    })
+    if (!url) continue
+    nextFloors[floorIndex] = { ...floor, drawing: { ...drawing, url } }
+    urls.push({ floorIndex, url })
   }
   return { plan: { ...plan, floors: nextFloors }, urls }
 }

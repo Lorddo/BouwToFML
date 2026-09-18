@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { listFixturePlaceOptions, type FixturePlaceOption } from '@/core/plan/fixture-refid-catalog'
+import { fixtureCategoryLabel, fixtureDisplayLabel } from '@/ui/i18n/catalog-labels'
 import {
   TOOLBELT_HOTKEY_PRIORITY,
   useToolbeltHotkey,
@@ -27,12 +28,27 @@ const categories = computed(() => {
   return ['all', ...[...set].sort((a, b) => a.localeCompare(b))]
 })
 
+function optionLabel(item: FixturePlaceOption): string {
+  return fixtureDisplayLabel(item.kind, item.label)
+}
+
+function optionCategory(item: FixturePlaceOption): string {
+  return fixtureCategoryLabel(item.categorie)
+}
+
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   return options.filter((item) => {
     if (category.value !== 'all' && item.categorie !== category.value) return false
     if (!q) return true
-    return item.label.toLowerCase().includes(q) || item.categorie.toLowerCase().includes(q)
+    const label = optionLabel(item).toLowerCase()
+    const cat = optionCategory(item).toLowerCase()
+    return (
+      label.includes(q) ||
+      cat.includes(q) ||
+      item.label.toLowerCase().includes(q) ||
+      item.categorie.toLowerCase().includes(q)
+    )
   })
 })
 </script>
@@ -53,7 +69,7 @@ const filtered = computed(() => {
         :aria-label="t('viewer.fixtureCategory')"
       >
         <option v-for="cat in categories" :key="cat" :value="cat">
-          {{ cat === 'all' ? t('viewer.fixtureAll') : cat }}
+          {{ cat === 'all' ? t('viewer.fixtureAll') : fixtureCategoryLabel(cat) }}
         </option>
       </select>
       <button
@@ -75,8 +91,8 @@ const filtered = computed(() => {
         :class="{ 'is-active': selected?.kind === item.kind && selected?.label === item.label }"
         @click="selected = item"
       >
-        <span class="fixture-palette__name">{{ item.label }}</span>
-        <span class="fixture-palette__meta">{{ item.categorie }}</span>
+        <span class="fixture-palette__name">{{ optionLabel(item) }}</span>
+        <span class="fixture-palette__meta">{{ optionCategory(item) }}</span>
       </button>
       <p v-if="filtered.length === 0" class="fixture-palette__empty">
         {{ t('viewer.fixtureEmpty') }}

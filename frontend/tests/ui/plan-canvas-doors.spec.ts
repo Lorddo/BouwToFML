@@ -166,6 +166,27 @@ describe('groupDoorOpeningsOnWall', () => {
     expect(polylines(groups[0].glyphs, 'arrow')).toHaveLength(1)
   })
 
+  it('renders sliding_single_mirror with the leaf on the opposite half', () => {
+    const wall = { a: { x: 0, y: 0 }, b: { x: 300, y: 0 } }
+    const opening = {
+      kind: 'door.sliding_single' as const,
+      t: 0.5,
+      width: 180,
+    }
+    const normal = groupDoorOpeningsOnWall('wall-1', wall.a, wall.b, [doorOpening(opening)])
+    const mirrored = groupDoorOpeningsOnWall('wall-1', wall.a, wall.b, [
+      doorOpening({ ...opening, kind: 'door.sliding_single_mirror' }),
+    ])
+    expect(mirrored[0].catalogLabel).toBe('Schuifpui (1 schuivend, gespiegeld)')
+    const leafXs = (groups: typeof normal) => {
+      const leaf = polylines(groups[0].glyphs, 'leaf')[0]
+      return [leaf.points[0], leaf.points[2], leaf.points[4], leaf.points[6]]
+    }
+    const normalMid = (Math.min(...leafXs(normal)) + Math.max(...leafXs(normal))) / 2
+    const mirrorMid = (Math.min(...leafXs(mirrored)) + Math.max(...leafXs(mirrored))) / 2
+    expect(mirrorMid).toBeGreaterThan(normalMid)
+  })
+
   it('renders Anna kast-schuif (df95e84f) as pocket arrows', () => {
     const groups = groupDoorOpeningsOnWall('wall-1', { x: 10, y: 0 }, { x: -154, y: 0 }, [
       doorOpening({
@@ -447,6 +468,7 @@ describe('resolveOpeningCatalog', () => {
     expect(resolveOpeningCatalog('d2785cc45c9c0ec86644135d22fa9ac9c49bcad6', 'door').kind).toBe(
       'sliding_single',
     )
+    expect(resolveOpeningCatalog('6161', 'door').kind).toBe('sliding_single_mirror')
     expect(resolveOpeningCatalog('9c1479d9dfc482859aea10b9dd67f5e7773fff6d', 'door').kind).toBe(
       'double_wide',
     )

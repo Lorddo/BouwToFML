@@ -31,7 +31,8 @@ import {
   listRoomTypes,
   parsePlanHex,
 } from '@/core/plan/roomtype-catalog'
-import { applyLocale, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
+import { applyLocale, i18n, SUPPORTED_LOCALES, type AppLocale } from '@/ui/i18n'
+import { roomTypeDisplayName } from '@/ui/i18n/catalog-labels'
 import { PLAN_ROOM_TAG_COLOR_SETTINGS_VISIBLE } from '@/ui/composables/workspace/constants'
 import HexColorField from '@/ui/components/HexColorField.vue'
 import ScaleLengthInput from '@/ui/components/ScaleLengthInput.vue'
@@ -85,21 +86,22 @@ const statusMessage = ref<string | null>(null)
 const errorMessage = ref<string | null>(null)
 const importInputRef = ref<HTMLInputElement | null>(null)
 
-const roomTypeRows = computed(() =>
-  listRoomTypes().map((rt) => {
+const roomTypeRows = computed(() => {
+  void i18n.global.locale.value
+  return listRoomTypes().map((rt) => {
     const key = String(rt.role)
     const effective = effectiveRoomTypeColor(rt.role, draft.roomTagColors)
     const factory = factoryRoomTypeColor(rt.role)
     return {
       role: rt.role,
-      name: rt.name,
+      name: roomTypeDisplayName(rt.role, rt.name),
       key,
       color: effective,
       hasOverride: Object.prototype.hasOwnProperty.call(draft.roomTagColors, key),
       factory,
     }
-  }),
-)
+  })
+})
 
 const hasAnyRoomTagOverride = computed(() => Object.keys(draft.roomTagColors).length > 0)
 

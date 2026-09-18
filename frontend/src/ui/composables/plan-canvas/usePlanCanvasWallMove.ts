@@ -12,11 +12,7 @@ import {
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import { cloneAreasSnapshot } from './plan-canvas-area-live'
-import {
-  applyDrawTypeKey,
-  isDrawTypeLengthKey,
-  parseDrawLengthDraftToCm,
-} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import { applyLengthTypeKey } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 import type { MeasureLine } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
@@ -274,11 +270,10 @@ export function usePlanCanvasWallMove(options: {
   function handleTypeKey(event: KeyboardEvent): boolean {
     if (!draft) return false
     if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) return true
-    if (!isDrawTypeLengthKey(event)) return false
-    const next = applyDrawTypeKey(typeText.value, event.key)
-    if (next == null) return false
-    typeText.value = next
-    draft.overrideCm = parseDrawLengthDraftToCm(next, inputUnit())
+    const applied = applyLengthTypeKey(event, typeText.value, inputUnit())
+    if (!applied) return false
+    typeText.value = applied.text
+    draft.overrideCm = applied.cm
     rebuildFromHover()
     return true
   }

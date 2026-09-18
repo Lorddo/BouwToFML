@@ -5,6 +5,7 @@ import {
   connectorInsetAlong,
   endFromDirection,
   applyDrawTypeKey,
+  applyLengthTypeKey,
   formatDrawLength,
   formatDrawLengthMeters,
   formatDrawTypeLabel,
@@ -100,6 +101,23 @@ describe('plan-canvas-draw-measure', () => {
       expect(applyDrawTypeKey('200c', 'm')).toBe('200cm')
       expect(applyDrawTypeKey('12', 'i')).toBe('12i')
       expect(applyDrawTypeKey('12i', 'n')).toBe('12in')
+    })
+  })
+
+  describe('applyLengthTypeKey', () => {
+    function keyEvent(key: string): KeyboardEvent {
+      return { key, ctrlKey: false, metaKey: false, altKey: false } as KeyboardEvent
+    }
+
+    it('appends a digit and parses metres', () => {
+      expect(applyLengthTypeKey(keyEvent('3'), '', 'm')).toEqual({ text: '3', cm: 300 })
+      expect(applyLengthTypeKey(keyEvent('.'), '3', 'm')).toEqual({ text: '3.', cm: 300 })
+      expect(applyLengthTypeKey(keyEvent('1'), '3.', 'm')).toEqual({ text: '3.1', cm: 310 })
+    })
+
+    it('ignores Tab and letters that are not a length key', () => {
+      expect(applyLengthTypeKey(keyEvent('Tab'), '3', 'm')).toBeNull()
+      expect(applyLengthTypeKey(keyEvent('a'), '3', 'm')).toBeNull()
     })
   })
 

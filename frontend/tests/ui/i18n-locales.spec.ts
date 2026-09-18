@@ -58,4 +58,17 @@ describe('i18n locales', () => {
     }
     applyLocale('en')
   })
+
+  it('editor tabs are translated, not leftover Dutch', () => {
+    applyLocale('en')
+    expect(tGlobal('viewer.elevationTab')).toBe('Facade')
+    expect(tGlobal('viewer.dakTab')).toBe('Roof')
+    applyLocale('th')
+    expect(tGlobal('viewer.elevationTab')).toBe('รูปด้าน')
+    expect(tGlobal('viewer.dakTab')).toBe('หลังคา')
+    applyLocale('nl')
+    expect(tGlobal('viewer.elevationTab')).toBe('Gevels')
+    expect(tGlobal('viewer.dakTab')).toBe('Dak')
+    applyLocale('en')
+  })
 })

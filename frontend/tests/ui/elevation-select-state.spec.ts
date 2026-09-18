@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { dakThicknessCmForPlan } from '@/core/plan/ridge-walls'
-import { makeRoofSurface, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
+import { findRidgeSurface, makeRoofSurface, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
 import {
   makeElevationSelectHarness,
   OPENING_ID,
@@ -209,5 +209,68 @@ describe('elevation-select-state — dakdikte', () => {
     select.commitRoofThickness(42)
     expect(calls).toEqual(['pushUndo', 'commitPlan'])
     expect(dakThicknessCmForPlan(planHolder.plan)).toBe(42)
+  })
+})
+
+describe('elevation-select-state — dakkapel vlakhoogte', () => {
+  function attachDormer(h: ReturnType<typeof harness>, zs = [300, 300, 320, 320]): void {
+    h.planHolder.plan.floors[0] = setRidgeSurfacesOnFloor(h.planHolder.plan.floors[0], [
+      makeRoofSurface({
+        id: 'roof-dormer',
+        origin: 'manual',
+        roofKind: 'dormer',
+        poly: [
+          { x: 80, y: 0, z: zs[0] },
+          { x: 200, y: 0, z: zs[1] },
+          { x: 200, y: 80, z: zs[2] },
+          { x: 80, y: 80, z: zs[3] },
+        ],
+      }),
+    ])
+  }
+
+  it('vlakselectie toont vlakhoogte, hoofddak zonder punt niet', () => {
+    const h = harness()
+    attachDormer(h)
+    h.select.selectRoof('roof-dormer', null)
+    expect(h.select.settingsRoof.value?.heightCm).toBe(300)
+
+    h.planHolder.plan.floors[0] = setRidgeSurfacesOnFloor(h.planHolder.plan.floors[0], [
+      makeRoofSurface({
+        id: 'roof-1',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 400 },
+          { x: 400, y: 200, z: 400 },
+          { x: 0, y: 200, z: 280 },
+        ],
+      }),
+    ])
+    h.select.selectRoof('roof-1', null)
+    expect(h.select.settingsRoof.value?.heightCm).toBeNull()
+  })
+
+  it('commit zonder punt zet alle hoeken op dezelfde hoogte', () => {
+    const h = harness()
+    attachDormer(h)
+    h.select.selectRoof('roof-dormer', null)
+    h.select.commitRoofVertexHeight(340)
+    const zs = findRidgeSurface(h.planHolder.plan, 'roof-dormer')?.poly.map((p) =>
+      Math.round(p.z ?? 0),
+    )
+    expect(h.calls).toEqual(['pushUndo', 'commitPlan'])
+    expect(zs).toEqual([340, 340, 340, 340])
+  })
+
+  it('commit met punt blijft één (of paar) hoek', () => {
+    const h = harness()
+    attachDormer(h, [300, 300, 300, 300])
+    h.select.selectRoof('roof-dormer', 0)
+    h.select.commitRoofVertexHeight(350)
+    const zs = findRidgeSurface(h.planHolder.plan, 'roof-dormer')?.poly.map((p) =>
+      Math.round(p.z ?? 0),
+    )
+    expect(zs).toEqual([350, 300, 300, 300])
   })
 })

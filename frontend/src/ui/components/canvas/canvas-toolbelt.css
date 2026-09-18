@@ -89,6 +89,12 @@
   flex: 0 1 auto;
 }
 
+.plan-toolbelt__row--secondary {
+  justify-content: flex-end;
+  align-items: flex-end;
+  width: 100%;
+}
+
 .plan-toolbelt__meta {
   font-size: 10px;
   color: #475569;

@@ -56,9 +56,12 @@
     {
       "kind": "door.double",
       "canonical": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
-      "aliases": [
-        "208"
-      ]
+      "aliases": []
+    },
+    {
+      "kind": "door.double_standard",
+      "canonical": "208",
+      "aliases": []
     },
     {
       "kind": "door.double_solid",
@@ -88,9 +91,12 @@
     {
       "kind": "door.sliding_single",
       "canonical": "d2785cc45c9c0ec86644135d22fa9ac9c49bcad6",
-      "aliases": [
-        "6161"
-      ]
+      "aliases": []
+    },
+    {
+      "kind": "door.sliding_single_mirror",
+      "canonical": "6161",
+      "aliases": []
     },
     {
       "kind": "door.sliding",

@@ -1101,6 +1101,7 @@ const tree = {
         french_balcony: t('French balcony', 'Frans balkon', 'ระเบียงฝรั่งเศส'),
         balcony: t('Balcony door', 'Balkondeur', 'ประตูระเบียง'),
         double: t('Double (glass)', 'Dubbele deur (glas)', 'คู่ (กระจก)'),
+        double_standard: t('Double door (standard)', 'Dubbele deur (standaard)', 'ประตูคู่มาตรฐาน'),
         double_solid: t('Double (solid)', 'Dubbele deur (vol)', 'คู่ (ทึบ)'),
         bifold: t('Bifold (2)', 'Vouwdeur (2-delig)', 'พับ (2)'),
         bifold_double: t('Bifold (4)', 'Vouwdeur (4-delig)', 'พับ (4)'),

@@ -22,6 +22,8 @@ import {
 } from '@/core/plan/floor-defaults'
 import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import { getConfiguredAccessPassword } from '@/ui/access-gate'
+import { ensurePlanUnderlaysUploaded } from '@/platform/underlay-upload'
 
 function catalogFromUserDefaults(): number[] {
   return normalizeThicknessCatalog(loadUserSettings().defaults.thicknessCms)
@@ -227,8 +229,19 @@ export function useEditorLoad(deps: {
     deps.clearUndoStacks()
     pruneFacadeGroups(args.plan)
     ensureDefaultFacadeGroups(args.plan, loadUserSettings().planDisplay.facadeGroups)
+    let opened = args.plan
+    try {
+      const uploaded = await ensurePlanUnderlaysUploaded(opened, {
+        projectId: opened.name?.trim() || 'editor',
+        floorIds: opened.floors.map((floor, index) => floor.name?.trim() || `floor-${index}`),
+        token: getConfiguredAccessPassword(),
+      })
+      opened = uploaded.plan
+    } catch {
+      // Data-URL blijft; download probeert R2 opnieuw.
+    }
     const settings = loadUserSettings()
-    deps.plan.value = seedMissingFloorDefaults(applyJunctionSanitizeToPlan(args.plan), {
+    deps.plan.value = seedMissingFloorDefaults(applyJunctionSanitizeToPlan(opened), {
       template: floorDefaultsFromTemplate({
         ...settings.defaults,
         openingFrameDefaults: settings.planDisplay.openingFrameDefaults,
@@ -244,7 +257,7 @@ export function useEditorLoad(deps: {
     deps.cancelPlanRescale()
     deps.cancelUnderlayScale()
     await deps.syncUnderlayForActiveFloor()
-    const preview = rebasePlanToItemRefid(args.plan)
+    const preview = rebasePlanToItemRefid(opened)
     deps.pendingAlignRebase.value = preview.moved.length > 0 ? preview : null
     await nextTick()
     await yieldToPaint()

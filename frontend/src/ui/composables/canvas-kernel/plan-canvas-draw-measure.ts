@@ -296,3 +296,15 @@ export function applyDrawTypeKey(text: string, key: string): string | null {
   if (key.length === 1 && key >= '0' && key <= '9') return text + key
   return null
 }
+
+/** Typ-lus: lengte-toets → nieuwe draft-tekst + geparsede cm (of null terwijl je `3.` typt). */
+export function applyLengthTypeKey(
+  event: KeyboardEvent,
+  typeText: string,
+  unit: ScaleInputUnit,
+): { text: string; cm: number | null } | null {
+  if (!isDrawTypeLengthKey(event)) return null
+  const next = applyDrawTypeKey(typeText, event.key)
+  if (next == null) return null
+  return { text: next, cm: parseDrawLengthDraftToCm(next, unit) }
+}

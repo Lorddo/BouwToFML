@@ -13,7 +13,13 @@ import {
   type FacadeElevation,
 } from '@/core/plan/facade-elevation'
 import { elevationRidgeRectCenter, elevationRidgeRectOf } from '@/core/plan/elevation-ridge-edit'
-import { findRidgeSurface, roofVertexZMinCm, slabCmForRoofSurface } from '@/core/plan/roof-planes'
+import {
+  findRidgeSurface,
+  isDormerRoof,
+  roofSurfaceHeightCm,
+  roofVertexZMinCm,
+  slabCmForRoofSurface,
+} from '@/core/plan/roof-planes'
 import { dakThicknessCmForPlan, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/plan/ridge-walls'
 import { resolveHingeAtStart, resolveSwingSign } from '@/core/plan/door-swing-symbol'
 import { findOpeningInPlan } from '@/core/plan/elevation-openings'
@@ -365,7 +371,12 @@ export function createElevationSelectState(options: {
     if (!surface) return null
     const plane = selectedRoofPlane.value
     const floor = plane ? props.plan.floors[plane.floorIndex] : null
-    const z = target.vertexIndex != null ? surface.poly[target.vertexIndex]?.z : null
+    const z =
+      target.vertexIndex != null
+        ? surface.poly[target.vertexIndex]?.z
+        : isDormerRoof(surface)
+          ? roofSurfaceHeightCm(surface)
+          : null
     return {
       id: target.id,
       name: floor?.name ?? '',

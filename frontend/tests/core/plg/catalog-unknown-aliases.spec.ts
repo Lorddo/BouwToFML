@@ -19,10 +19,13 @@ describe('onbekende-catalogus aliases (2026-09-18)', () => {
     expect(openingKindFromFmlRefid('219', 'window')).toEqual({ kind: 'window.double', known: true })
     expect(openingKindFromFmlRefid('220', 'window')).toEqual({ kind: 'window.triple', known: true })
     expect(openingKindFromFmlRefid('7000', 'window')).toEqual({ kind: 'door.round', known: true })
-    expect(openingKindFromFmlRefid('208', 'door')).toEqual({ kind: 'door.double', known: true })
+    expect(openingKindFromFmlRefid('208', 'door')).toEqual({
+      kind: 'door.double_standard',
+      known: true,
+    })
     expect(openingKindFromFmlRefid('222', 'door')).toEqual({ kind: 'door.passage', known: true })
     expect(openingKindFromFmlRefid('6161', 'door')).toEqual({
-      kind: 'door.sliding_single',
+      kind: 'door.sliding_single_mirror',
       known: true,
     })
     expect(openingKindFromFmlRefid('b3af7fd4e5a6cb72575a00e389cd45936a8ede7d', 'window')).toEqual({

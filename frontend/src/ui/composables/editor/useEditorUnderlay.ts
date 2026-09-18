@@ -33,6 +33,8 @@ import {
   pdfLoadErrorMessage,
   renderPdfPageToPngDataUrlForFile,
 } from '@/platform/upload'
+import { getConfiguredAccessPassword } from '@/ui/access-gate'
+import { uploadUnderlayDataUrl } from '@/platform/underlay-upload'
 
 export const EDITOR_UNDERLAY_FILE_ACCEPT =
   'image/png,image/jpeg,image/jpg,application/pdf,.pdf,.png,.jpg,.jpeg'
@@ -273,8 +275,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
         underlayHint.value = null
         return
       }
-      underlayHint.value =
-        'Onderlegger-URL kon niet laden (COEP/CORS). Kies lokaal een PNG/JPG van dezelfde scan.'
+      underlayHint.value = t('viewer.underlayCorsFailed')
       return
     }
 
@@ -295,6 +296,48 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
       reader.onerror = () => reject(reader.error ?? new Error('read failed'))
       reader.readAsDataURL(file)
     })
+  }
+
+  function editorUploadIds(kind: 'floor' | 'elevation'): { projectId: string; floorId: string } {
+    const current = plan.value
+    const projectId = current?.name?.trim() || 'editor'
+    if (kind === 'elevation') {
+      const group = elevationGroupId.value.trim() || 'gevel'
+      return { projectId, floorId: `elevation-${group}` }
+    }
+    const idx = activeFloorIndex.value
+    const floor = current?.floors[idx]
+    return { projectId, floorId: floor?.name?.trim() || `floor-${idx}` }
+  }
+
+  /** Data-URL op het live plan → R2 https. Fout laat de data-URL staan. */
+  async function promoteDrawingUrl(dataUrl: string, kind: 'floor' | 'elevation'): Promise<void> {
+    const ids = editorUploadIds(kind)
+    const https = await uploadUnderlayDataUrl({
+      dataUrl,
+      projectId: ids.projectId,
+      floorId: ids.floorId,
+      token: getConfiguredAccessPassword(),
+    })
+    if (!https || https === dataUrl) return
+    const current = plan.value
+    if (!current) return
+    if (kind === 'elevation') {
+      const groupId = elevationGroupId.value
+      const existing = elevationViewForGroup(current, groupId)?.drawing
+      if (!existing || existing.url !== dataUrl) return
+      plan.value = setElevationViewDrawing(current, groupId, { ...existing, url: https })
+      return
+    }
+    const idx = activeFloorIndex.value
+    const floor = current.floors[idx]
+    if (!floor?.drawing || floor.drawing.url !== dataUrl) return
+    plan.value = {
+      ...current,
+      floors: current.floors.map((item, i) =>
+        i === idx && item.drawing ? { ...item, drawing: { ...item.drawing, url: https } } : item,
+      ),
+    }
   }
 
   async function applyUnderlayFromPngDataUrl(dataUrl: string): Promise<void> {
@@ -319,6 +362,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
       const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
       elevationUnderlayLayout.value = layout
       underlayHint.value = null
+      await promoteDrawingUrl(dataUrl, 'elevation')
       await nextTick()
       previewCanvasRef.value?.resetView?.()
       beginUnderlayScale()
@@ -331,6 +375,7 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     }
     applyImageToUnderlay(dataUrl, width, height, drawing)
     underlayHint.value = null
+    await promoteDrawingUrl(dataUrl, 'floor')
     await nextTick()
     previewCanvasRef.value?.resetView?.()
     beginUnderlayScale()

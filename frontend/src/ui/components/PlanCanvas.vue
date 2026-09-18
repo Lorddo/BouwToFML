@@ -10,9 +10,11 @@ import {
 } from '@/core/plan/ridge-walls'
 import { DEFAULT_FLOOR_THICKNESS_CM, readFloorStack, slabThicknessCm } from '@/core/plan/floor-stack'
 import {
+  isDormerRoof,
   listParentRoofs,
   listRidgeSurfacesOnFloor,
   roofKindOf,
+  roofSurfaceHeightCm,
 } from '@/core/plan/roof-planes'
 import type { FloorPlan } from '@/core/plan/types'
 import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
@@ -33,6 +35,7 @@ import { PLAN_CANVAS_CHROME_SELECTOR } from '@/ui/composables/plan-canvas/plan-c
 import { planHidesJunctions } from '@/ui/composables/plan-canvas/plan-canvas-selected'
 import { usePlanCanvasTouch, usePlanTouchNav } from '@/ui/composables/plan-canvas/usePlanCanvasTouch'
 import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
+import { fixtureItemDisplayLabel } from '@/ui/i18n/catalog-labels'
 import {
   buildSkylightFramePatch,
   effectiveSkylightFrame,
@@ -69,7 +72,7 @@ import {
   resolveHostFlags,
   resolvePlanCapabilities,
 } from '@/ui/composables/plan-canvas/plan-capabilities'
-import { tGlobal } from '@/ui/i18n'
+import { i18n, tGlobal } from '@/ui/i18n'
 import {
   clampLabelFontSize,
   DEFAULT_LABEL_FONT_COLOR,
@@ -83,6 +86,7 @@ import PlanToolbar from './PlanToolbar.vue'
 import PlanFixturePalette from './PlanFixturePalette.vue'
 import PlanStage from './PlanStage.vue'
 import PlanMeasureOverlay from './PlanMeasureOverlay.vue'
+import PlanMeasureTypeLabel from './PlanMeasureTypeLabel.vue'
 import PlanRescaleOverlay from './PlanRescaleOverlay.vue'
 
 const props = withDefaults(defineProps<PlanCanvasHostProps>(), {
@@ -993,6 +997,7 @@ usePlanCanvasTouch({
 })
 
 const selectedItemPanel = computed(() => {
+  void i18n.global.locale.value
   const guid = settingsItemId.value
   if (!guid) return null
   const item = editor.items.value.find((entry) => entry.id === guid)
@@ -1001,7 +1006,7 @@ const selectedItemPanel = computed(() => {
   const frame = item.kind === 'skylight' ? effectiveSkylightFrame(item) : null
   return {
     id: guid,
-    label: item.name ?? info.label,
+    label: fixtureItemDisplayLabel(item, info.label),
     widthCm: item.width,
     heightCm: item.height,
     rotationDeg: item.rotation ?? 0,
@@ -1166,11 +1171,14 @@ const surfaceEditActive = computed(
 
 const roofVertexZCm = computed(() => {
   const idx = roofVertexIndex.value
-  if (idx == null) return null
   const id = surfaceEditId.value ?? selection.settingsSurfaceId.value
   const surface = editor.surfaces.value.find((item) => item.id === id)
-  const z = surface?.poly[idx]?.z
-  return typeof z === 'number' && Number.isFinite(z) ? Math.round(z) : null
+  if (!surface) return null
+  if (idx != null) {
+    const z = surface.poly[idx]?.z
+    return typeof z === 'number' && Number.isFinite(z) ? Math.round(z) : null
+  }
+  return isDormerRoof(surface) ? roofSurfaceHeightCm(surface) : null
 })
 
 const selectedRoofKind = computed(() => {
@@ -1188,13 +1196,18 @@ const selectedRoofParentId = computed(() => {
 })
 
 const parentRoofOptions = computed(() => {
+  void i18n.global.locale.value
   const floorSurfaces = listRidgeSurfacesOnFloor(floor.value)
   const selectedId = settingsSurfaceId.value
   return listParentRoofs(floorSurfaces)
     .filter((surface) => surface.id !== selectedId)
     .map((surface, index) => ({
       id: surface.id,
-      label: (surface.customName || surface.name || `Hoofddak ${index + 1}`).trim(),
+      label: (
+        surface.customName ||
+        surface.name ||
+        tGlobal('result.toolbar.roofPlaneUntitled', { n: index + 1 })
+      ).trim(),
     }))
 })
 
@@ -1860,102 +1873,72 @@ watch(
         :y2="seg.y2"
       />
     </svg>
-    <div
+    <PlanMeasureTypeLabel
       v-if="drawDormerDrafting && drawDormerMeasureLabel"
-      class="draw-measure-label draw-measure-label--wall"
-      :class="{ 'draw-measure-label--typing': drawDormerTypeField === 'front' }"
-      :style="{
-        left: `${drawDormerMeasureLabel.front.x}px`,
-        top: `${drawDormerMeasureLabel.front.y}px`,
-      }"
-    >
-      {{ drawDormerFrontLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-    </div>
-    <div
+      :x="drawDormerMeasureLabel.front.x"
+      :y="drawDormerMeasureLabel.front.y"
+      :text="drawDormerFrontLabelText"
+      :unit="drawInputUnit"
+      :typing="drawDormerTypeField === 'front'"
+    />
+    <PlanMeasureTypeLabel
       v-if="drawDormerMeasureLabel?.depth"
-      class="draw-measure-label draw-measure-label--wall"
-      :class="{ 'draw-measure-label--typing': drawDormerTypeField === 'depth' }"
-      :style="{
-        left: `${drawDormerMeasureLabel.depth.x}px`,
-        top: `${drawDormerMeasureLabel.depth.y}px`,
-      }"
-    >
-      {{ drawDormerDepthLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-    </div>
-    <div
+      :x="drawDormerMeasureLabel.depth.x"
+      :y="drawDormerMeasureLabel.depth.y"
+      :text="drawDormerDepthLabelText"
+      :unit="drawInputUnit"
+      :typing="drawDormerTypeField === 'depth'"
+    />
+    <PlanMeasureTypeLabel
       v-if="drawWallMeasureLabel"
-      class="draw-measure-label draw-measure-label--wall"
-      :class="{ 'draw-measure-label--typing': !!drawWallTypeText }"
-      :style="{ left: `${drawWallMeasureLabel.x}px`, top: `${drawWallMeasureLabel.y}px` }"
-    >
-      {{ drawWallMeasureLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-    </div>
-    <div
+      :x="drawWallMeasureLabel.x"
+      :y="drawWallMeasureLabel.y"
+      :text="drawWallMeasureLabelText"
+      :unit="drawInputUnit"
+      :typing="!!drawWallTypeText"
+    />
+    <PlanMeasureTypeLabel
       v-if="wallMoveMeasureLabel"
-      class="draw-measure-label draw-measure-label--wall"
-      :class="{ 'draw-measure-label--typing': !!wallMoveTypeText }"
-      :style="{ left: `${wallMoveMeasureLabel.x}px`, top: `${wallMoveMeasureLabel.y}px` }"
-    >
-      {{ wallMoveMeasureLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-      <button
-        type="button"
-        class="draw-measure-label__accept"
-        :title="tGlobal('result.toolbar.acceptDrawDraft')"
-        :aria-label="tGlobal('result.toolbar.acceptDrawDraft')"
-        @pointerdown.stop
-        @click.stop="commitActivePreciseMove"
-      >
-        ✓
-      </button>
-    </div>
-    <div
+      :x="wallMoveMeasureLabel.x"
+      :y="wallMoveMeasureLabel.y"
+      :text="wallMoveMeasureLabelText"
+      :unit="drawInputUnit"
+      :typing="!!wallMoveTypeText"
+      show-accept
+      :accept-title="tGlobal('result.toolbar.acceptPreciseMove')"
+      :accept-aria="tGlobal('result.toolbar.acceptPreciseMove')"
+      @accept="commitActivePreciseMove"
+    />
+    <PlanMeasureTypeLabel
       v-if="roofVertexMeasureLabel"
-      class="draw-measure-label draw-measure-label--wall"
-      :class="{ 'draw-measure-label--typing': !!roofVertexTypeText }"
-      :style="{ left: `${roofVertexMeasureLabel.x}px`, top: `${roofVertexMeasureLabel.y}px` }"
-    >
-      {{ roofVertexMeasureLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-      <button
-        v-if="roofVertexTypeText"
-        type="button"
-        class="draw-measure-label__accept"
-        :title="tGlobal('result.toolbar.acceptDrawDraft')"
-        :aria-label="tGlobal('result.toolbar.acceptDrawDraft')"
-        @pointerdown.stop
-        @click.stop="commitRoofVertexFromMeasure()"
-      >
-        ✓
-      </button>
-    </div>
-    <div
+      :x="roofVertexMeasureLabel.x"
+      :y="roofVertexMeasureLabel.y"
+      :text="roofVertexMeasureLabelText"
+      :unit="drawInputUnit"
+      :typing="!!roofVertexTypeText"
+      :show-accept="!!roofVertexTypeText"
+      :accept-title="tGlobal('result.toolbar.acceptPreciseMove')"
+      :accept-aria="tGlobal('result.toolbar.acceptPreciseMove')"
+      @accept="commitRoofVertexFromMeasure()"
+    />
+    <PlanMeasureTypeLabel
       v-if="drawRoomMeasureLabels"
-      class="draw-measure-label draw-measure-label--h"
-      :class="{ 'draw-measure-label--typing': drawRoomTypeField === 'h' }"
-      :style="{
-        left: `${drawRoomMeasureLabels.h.x}px`,
-        top: `${drawRoomMeasureLabels.h.y}px`,
-      }"
-    >
-      {{ drawRoomMeasureHLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-    </div>
-    <div
+      :x="drawRoomMeasureLabels.h.x"
+      :y="drawRoomMeasureLabels.h.y"
+      :text="drawRoomMeasureHLabelText"
+      :unit="drawInputUnit"
+      axis="h"
+      :typing="drawRoomTypeField === 'h'"
+    />
+    <PlanMeasureTypeLabel
       v-if="drawRoomMeasureLabels"
-      class="draw-measure-label draw-measure-label--v"
-      :class="{ 'draw-measure-label--typing': drawRoomTypeField === 'v' }"
-      :style="{
-        left: `${drawRoomMeasureLabels.v.x}px`,
-        top: `${drawRoomMeasureLabels.v.y}px`,
-      }"
-    >
-      {{ drawRoomMeasureVLabelText
-      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
-    </div>
+      :x="drawRoomMeasureLabels.v.x"
+      :y="drawRoomMeasureLabels.v.y"
+      :text="drawRoomMeasureVLabelText"
+      :unit="drawInputUnit"
+      axis="v"
+      :typing="drawRoomTypeField === 'v'"
+    />
     <svg
       v-if="drawSurfacePreviewScreen"
       class="draw-surface-preview"
@@ -2230,55 +2213,6 @@ watch(
   fill: #fff;
   stroke: #f97316;
   stroke-width: 2;
-}
-
-.draw-measure-label {
-  position: absolute;
-  z-index: 10;
-  pointer-events: none;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgb(255 255 255 / 0.94);
-  border: 1px solid #f97316;
-  color: #9a3412;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
-}
-
-.draw-measure-label--wall,
-.draw-measure-label--h {
-  transform: translate(-50%, calc(-100% - 8px));
-}
-
-.draw-measure-label--v {
-  transform: translate(10px, -50%);
-}
-
-.draw-measure-label--typing {
-  border-width: 2px;
-  box-shadow: 0 0 0 2px rgb(249 115 22 / 0.28);
-}
-
-.draw-measure-label__unit {
-  margin-left: 3px;
-  color: #c2410c;
-  font-size: 10px;
-}
-
-.draw-measure-label__accept {
-  margin-left: 6px;
-  padding: 0 4px;
-  border: 0;
-  border-radius: 3px;
-  background: #f97316;
-  color: #fff;
-  font-size: 11px;
-  line-height: 1.4;
-  cursor: pointer;
-  pointer-events: auto;
 }
 
 .draw-surface-preview {

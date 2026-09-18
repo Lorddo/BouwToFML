@@ -1,4 +1,13 @@
-import type { FixtureAssetKind } from './fixture-refid-catalog'
+import type { FixtureAssetKind } from './fixture-kind-catalog'
+
+/** Zelfde vakmaat als `balustrade_glass` (stijlen / spijlen per ~40 cm). */
+export const RAIL_BAY_CM = 40
+/** Strookdikte voor traphek / balustrade (niet het Floorplanner-vierkant). */
+export const RAIL_STRIP_THICKNESS_CM = 8
+
+export function isRailFixtureKind(kind: string): kind is FixtureAssetKind {
+  return kind === 'railing' || kind === 'balustrade' || kind === 'balustrade_glass'
+}
 
 /** Default footprint (cm) when placing a catalog fixture. */
 const DEFAULTS: Partial<Record<FixtureAssetKind, { width: number; height: number }>> = {
@@ -59,4 +68,28 @@ const DEFAULTS: Partial<Record<FixtureAssetKind, { width: number; height: number
 
 export function fixturePlaceSizeCm(kind: FixtureAssetKind): { width: number; height: number } {
   return DEFAULTS[kind] ?? { width: 60, height: 60 }
+}
+
+/**
+ * Floorplanner-hekken komen vaak als vierkant binnen. Zelfde setup als glashek:
+ * lange dunne strook; vakken volgen de lange zijde (~40 cm).
+ */
+export function normalizeRailFixtureSize(item: {
+  kind: string
+  width: number
+  height: number
+}): { width: number; height: number } {
+  if (!isRailFixtureKind(item.kind)) return { width: item.width, height: item.height }
+  const place = fixturePlaceSizeCm(item.kind)
+  const w = item.width
+  const h = item.height
+  if (!(w > 0) || !(h > 0)) return { width: place.width, height: place.height }
+
+  const along = Math.max(w, h)
+  const across = Math.min(w, h)
+  if (along / across >= 2) return { width: w, height: h }
+
+  const length = Math.max(along, RAIL_BAY_CM)
+  if (w >= h) return { width: length, height: RAIL_STRIP_THICKNESS_CM }
+  return { width: RAIL_STRIP_THICKNESS_CM, height: length }
 }

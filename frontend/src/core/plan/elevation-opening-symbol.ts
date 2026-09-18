@@ -15,6 +15,9 @@ import type { OpeningType, Point2D } from './types'
 export type ElevationGlyphRole =
   'frame' | 'leaf' | 'glass' | 'mullion' | 'hinge' | 'handle' | 'panel' | 'railing'
 
+/** Hout rondom glas in voordeur / balkondeur. */
+const LEAF_GLASS_WOOD_CM = 10
+
 /** Deurkrukhoogte vanaf de dorpel (NEN-achtig, leesbaar in aanzicht). */
 const HANDLE_HEIGHT_FROM_SILL_CM = 105
 const HANDLE_ROSE_R_CM = 2.4
@@ -184,6 +187,24 @@ function fillInner(
   pushRect(polys, role, inner.x0, inner.y0, inner.x1, inner.y1)
 }
 
+function pushBalconyLeaf(
+  polys: ElevationGlyphPoly[],
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): void {
+  pushRect(polys, 'leaf', x0, y0, x1, y1)
+  pushRect(
+    polys,
+    'glass',
+    x0 + LEAF_GLASS_WOOD_CM,
+    y0 + LEAF_GLASS_WOOD_CM,
+    x1 - LEAF_GLASS_WOOD_CM,
+    y1 - LEAF_GLASS_WOOD_CM,
+  )
+}
+
 function buildWindowRect(
   polys: ElevationGlyphPoly[],
   inner: ElevationOpeningOuter,
@@ -289,7 +310,9 @@ function buildSliding(
     return
   }
   // sliding_single: schuivend deel = eind-helft bij mirrored[0]=0 (zelfde als plattegrond-pijl).
-  const slidingOnLeft = startOnLeft ? !resolveHingeAtStart(mirrored) : resolveHingeAtStart(mirrored)
+  // sliding_single_mirror: omgekeerde default (catalogus 35).
+  const baseLeft = startOnLeft ? !resolveHingeAtStart(mirrored) : resolveHingeAtStart(mirrored)
+  const slidingOnLeft = kind === 'sliding_single_mirror' ? !baseLeft : baseLeft
   if (slidingOnLeft) {
     pushLeverHandle(polys, circles, { ...inner, x1: mid }, false)
   } else {
@@ -527,6 +550,7 @@ export function buildElevationOpeningSymbol(params: {
   const circles: ElevationGlyphCircle[] = []
   const symbol = params.catalog.elevationSymbol
   const kind = params.catalog.kind
+  const openingKind = params.catalog.openingKind
   const leaf = params.catalog.leaf
   const startOnLeft = params.startOnLeft !== false
   const hingeLeft = hingeOnLeft(params.mirrored, startOnLeft)
@@ -597,14 +621,24 @@ export function buildElevationOpeningSymbol(params: {
     return { polys, circles, inner }
   }
 
-  if (kind === 'sliding' || kind === 'sliding_single' || kind === 'sliding_pocket') {
+  if (
+    kind === 'sliding' ||
+    kind === 'sliding_single' ||
+    kind === 'sliding_single_mirror' ||
+    kind === 'sliding_pocket'
+  ) {
     buildSliding(polys, circles, inner, kind, leaf, inset.frame, params.mirrored, startOnLeft)
     return { polys, circles, inner }
   }
 
   if (kind === 'double_wide') {
-    fillInner(polys, inner, leaf)
     const mid = (inner.x0 + inner.x1) / 2
+    if (openingKind === 'door.double_standard') {
+      pushBalconyLeaf(polys, inner.x0, inner.y0, mid, inner.y1)
+      pushBalconyLeaf(polys, mid, inner.y0, inner.x1, inner.y1)
+    } else {
+      fillInner(polys, inner, leaf)
+    }
     pushStile(polys, mid, inner.y0, inner.y1, stileThicknessCm(inset.frame, inner.x1 - inner.x0, 2))
     pushHingeTicks(polys, { ...inner, x1: mid }, true)
     pushHingeTicks(polys, { ...inner, x0: mid }, false)
@@ -614,8 +648,18 @@ export function buildElevationOpeningSymbol(params: {
   }
 
   if (kind === 'half_glass' || symbol === 'half_glass') {
-    pushRect(polys, 'glass', inner.x0, inner.y0, inner.x1, (inner.y0 + inner.y1) / 2)
-    pushRect(polys, 'leaf', inner.x0, (inner.y0 + inner.y1) / 2, inner.x1, inner.y1)
+    const midY = (inner.y0 + inner.y1) / 2
+    pushRect(polys, 'leaf', inner.x0, inner.y0, inner.x1, inner.y1)
+    pushRect(
+      polys,
+      'glass',
+      inner.x0 + LEAF_GLASS_WOOD_CM,
+      inner.y0 + LEAF_GLASS_WOOD_CM,
+      inner.x1 - LEAF_GLASS_WOOD_CM,
+      midY - LEAF_GLASS_WOOD_CM,
+    )
+  } else if (openingKind === 'door.balcony') {
+    pushBalconyLeaf(polys, inner.x0, inner.y0, inner.x1, inner.y1)
   } else if (kind === 'french_balcony') {
     const glassY1 = inner.y0 + (inner.y1 - inner.y0) * 0.8
     pushRect(polys, 'glass', inner.x0, inner.y0, inner.x1, glassY1)

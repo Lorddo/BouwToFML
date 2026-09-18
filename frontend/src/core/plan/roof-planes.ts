@@ -105,7 +105,9 @@ export function roofKindOf(surface: FloorSurface | null | undefined): RoofKind {
   return surface?.roofKind === 'dormer' ? 'dormer' : 'plane'
 }
 
-export function isDormerRoof(surface: FloorSurface | null | undefined): boolean {
+export function isDormerRoof(
+  surface: FloorSurface | null | undefined,
+): surface is FloorSurface & { roofKind: 'dormer' } {
   return roofKindOf(surface) === 'dormer'
 }
 
@@ -517,6 +519,35 @@ export function setRidgeSurfaceVerticesZ(
     plan,
     surfaceId,
     vertexIndices.map((vertexIndex) => ({ vertexIndex, z: zCm })),
+  )
+}
+
+/** Weergave-Z van het vlak: eerste geldige hoek (typen zet alle hoeken gelijk). */
+export function roofSurfaceHeightCm(
+  surface: FloorSurface | null | undefined,
+): number | null {
+  if (!surface?.poly.length) return null
+  for (const point of surface.poly) {
+    const z = point.z
+    if (typeof z === 'number' && Number.isFinite(z)) return Math.round(z)
+  }
+  return null
+}
+
+/** Hele vlak in Z: alle hoeken op dezelfde getypte hoogte (geklemmd). */
+export function setRidgeSurfaceHeightCm(
+  plan: FloorPlan,
+  surfaceId: string,
+  zCm: number,
+): FloorPlan {
+  const surface = findRidgeSurface(plan, surfaceId)
+  if (!surface?.poly.length || !Number.isFinite(zCm)) return plan
+  const z = clampRoofVertexZ(plan, surfaceId, zCm)
+  if (surface.poly.every((point) => Math.round(point.z ?? 0) === z)) return plan
+  return setRidgeSurfaceVertices(
+    plan,
+    surfaceId,
+    surface.poly.map((_, vertexIndex) => ({ vertexIndex, z })),
   )
 }
 

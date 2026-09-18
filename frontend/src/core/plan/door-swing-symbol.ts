@@ -250,6 +250,7 @@ function buildSlidingSingleSymbol(params: {
   wallUnit: DoorSwingPoint
   mirrored?: [number, number]
   wallThickness?: number
+  invertHinge?: boolean
 }): DoorSymbol {
   const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
   const arrowLen = Math.max(16, span * 0.2)
@@ -267,7 +268,9 @@ function buildSlidingSingleSymbol(params: {
     offset,
     params.mirrored,
   )
-  const hingeAtStart = resolveHingeAtStart(params.mirrored)
+  const hingeAtStart = params.invertHinge
+    ? !resolveHingeAtStart(params.mirrored)
+    : resolveHingeAtStart(params.mirrored)
   // Default [0,0]: pijl op linker deel naar rechts t.o.v. muur a→b (omgekeerd van hingeAtStart-mapping).
   const arrowCenter = hingeAtStart ? rightCenter : leftCenter
   const towardEnd = !hingeAtStart
@@ -521,12 +524,14 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         wallThickness: params.wallThickness,
       })
     case 'sliding_single':
+    case 'sliding_single_mirror':
       return buildSlidingSingleSymbol({
         start: params.start,
         end: params.end,
         wallUnit: params.wallUnit,
         mirrored: params.mirrored,
         wallThickness: params.wallThickness,
+        invertHinge: params.kind === 'sliding_single_mirror',
       })
     case 'sliding_pocket':
       return buildSlidingPocketSymbol({

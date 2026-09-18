@@ -1,9 +1,30 @@
+import { RAIL_BAY_CM } from '../fixture-place-defaults'
 import {
   effectiveSkylightFrame,
   insetOpeningRect,
   type OpeningFrameCm,
 } from '../opening-display-geom'
 import { emptyShape, type FixtureSymbolShape } from './types'
+
+function railStripLayout(widthCm: number, heightCm: number) {
+  const w = Math.max(0.8, widthCm)
+  const h = Math.max(0.8, heightCm)
+  const alongW = w >= h
+  const along = alongW ? w : h
+  const across = alongW ? h : w
+  const nBays = Math.max(1, Math.round(along / RAIL_BAY_CM))
+  const post = Math.min(2.8, Math.max(1.2, along * 0.04))
+  const halfA = along / 2
+  const halfC = across / 2
+  const posts: number[][] = []
+  for (let i = 0; i <= nBays; i += 1) {
+    const alongPos = -halfA + (i / nBays) * along
+    const origin = alongPos - (i === 0 ? 0 : i === nBays ? post : post / 2)
+    if (alongW) posts.push([origin, -halfC, post, across])
+    else posts.push([-halfC, origin, across, post])
+  }
+  return { w, h, alongW, along, across, nBays, post, halfA, halfC, posts }
+}
 
 export function glassWall(widthCm: number, heightCm: number): FixtureSymbolShape {
   const w = Math.max(0.8, widthCm)
@@ -108,33 +129,25 @@ export function railing(
   stroke = '#0f172a',
   strokeWidth = 2.2,
 ): FixtureSymbolShape {
-  const alongW = w >= h
-  const along = alongW ? w : h
-  const across = alongW ? h : w
-  const nBars = Math.max(3, Math.round(along / (120 / 18)))
-  const halfA = along / 2
-  const halfC = across / 2
-  // Open aan +across (onderkant): alleen bovenregel + eindstijlen + spijlen.
+  const { alongW, along, nBays, halfA, halfC, posts } = railStripLayout(w, h)
+  // Zelfde vakken als glashek (~40 cm). Open aan +across: bovenregel + 2 spijlen per vak.
   const polylines: number[][] = alongW
-    ? [
-        [-halfA, -halfC, halfA, -halfC],
-        [-halfA, -halfC, -halfA, halfC],
-        [halfA, -halfC, halfA, halfC],
-      ]
-    : [
-        [-halfC, -halfA, -halfC, halfA],
-        [-halfC, -halfA, halfC, -halfA],
-        [-halfC, halfA, halfC, halfA],
-      ]
-  for (let i = 1; i <= nBars; i += 1) {
-    const t = -halfA + (i / (nBars + 1)) * along
-    if (alongW) polylines.push([t, -halfC, t, halfC])
-    else polylines.push([-halfC, t, halfC, t])
+    ? [[-halfA, -halfC, halfA, -halfC]]
+    : [[-halfC, -halfA, -halfC, halfA]]
+  for (let bay = 0; bay < nBays; bay += 1) {
+    const start = -halfA + (bay / nBays) * along
+    const span = along / nBays
+    for (const frac of [1 / 3, 2 / 3]) {
+      const t = start + span * frac
+      if (alongW) polylines.push([t, -halfC, t, halfC])
+      else polylines.push([-halfC, t, halfC, t])
+    }
   }
   return emptyShape({
+    rects: posts,
     polylines,
     stroke,
-    fill: 'transparent',
+    fill: stroke,
     strokeWidth,
     overWalls: true,
   })
@@ -355,22 +368,7 @@ export function balustrade(widthCm: number, heightCm: number): FixtureSymbolShap
 }
 
 export function balustradeGlass(widthCm: number, heightCm: number): FixtureSymbolShape {
-  const w = Math.max(0.8, widthCm)
-  const h = Math.max(0.8, heightCm)
-  const alongW = w >= h
-  const along = alongW ? w : h
-  const across = alongW ? h : w
-  const nPanels = Math.max(1, Math.round(along / 40))
-  const post = Math.min(2.8, Math.max(1.2, along * 0.04))
-  const halfA = along / 2
-  const halfC = across / 2
-  const posts: number[][] = []
-  for (let i = 0; i <= nPanels; i += 1) {
-    const alongPos = -halfA + (i / nPanels) * along
-    const origin = alongPos - (i === 0 ? 0 : i === nPanels ? post : post / 2)
-    if (alongW) posts.push([origin, -halfC, post, across])
-    else posts.push([-halfC, origin, across, post])
-  }
+  const { w, h, posts } = railStripLayout(widthCm, heightCm)
   return emptyShape({
     rects: [[-w / 2, -h / 2, w, h], ...posts],
     stroke: '#0e7490',

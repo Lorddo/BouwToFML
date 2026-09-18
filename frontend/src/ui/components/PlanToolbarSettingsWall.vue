@@ -177,6 +177,15 @@ const showFacadeStamp = computed(
   () =>
     !isQuickWallPanel.value && !!props.selectedWallPanel && selectedKind.value === 'wall',
 )
+const showActionIcons = computed(
+  () =>
+    !!props.selectedWallPanel ||
+    !!props.selectedJunctionPanel ||
+    isDrawWallOrRoom.value,
+)
+const showSecondaryRow = computed(
+  () => showActionIcons.value || (showFacadeStamp.value && !!props.facadeGroupsEnabled),
+)
 const showAdvancedElevation = computed(
   () => !isQuickWallPanel.value && (props.selectedWallPanel != null || isDrawWallOrRoom.value),
 )
@@ -537,33 +546,16 @@ function onRidgeZCm(cm: number): void {
           />
         </div>
       </div>
-      <button
-        v-if="selectedWallPanel?.count === 1"
-        type="button"
-        class="canvas-toolbelt__btn"
-        :title="t('result.toolbar.splitWall')"
-        :aria-label="t('result.toolbar.splitWall')"
-        :disabled="!selectedWallPanel?.canSplit"
-        @click="emit('splitWall')"
-      >
-        <ToolbeltIcon name="split" />
-      </button>
-      <ToolbeltActionButton
-        v-if="selectedWallPanel"
-        icon="delete"
-        :title="deleteWallTitle"
-        :aria-label="deleteWallTitle"
-        hotkey="Delete"
-        :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
-        @click="emit('deleteWalls')"
-      />
-      <slot name="trailing" />
     </div>
     <div
-      v-if="showFacadeStamp && facadeGroupsEnabled"
-      class="plan-toolbelt__field plan-toolbelt__field--row"
+      v-if="showSecondaryRow"
+      class="plan-toolbelt__row plan-toolbelt__row--secondary"
     >
-      <div class="plan-toolbelt__pair">
+      <div
+        v-if="showFacadeStamp && facadeGroupsEnabled"
+        class="plan-toolbelt__field plan-toolbelt__field--row"
+      >
+        <div class="plan-toolbelt__pair">
         <div v-if="!facadeGroupsStampPreset" class="plan-toolbelt__pair-item">
           <span class="plan-toolbelt__field-label">{{ t('result.toolbar.facadeGroup') }}</span>
           <div class="plan-toolbelt__facade-stack">
@@ -654,6 +646,30 @@ function onRidgeZCm(cm: number): void {
             </button>
           </div>
         </div>
+      </div>
+      </div>
+      <div v-if="showActionIcons" class="plan-toolbelt__actions">
+        <button
+          v-if="selectedWallPanel?.count === 1"
+          type="button"
+          class="canvas-toolbelt__btn"
+          :title="t('result.toolbar.splitWall')"
+          :aria-label="t('result.toolbar.splitWall')"
+          :disabled="!selectedWallPanel?.canSplit"
+          @click="emit('splitWall')"
+        >
+          <ToolbeltIcon name="split" />
+        </button>
+        <ToolbeltActionButton
+          v-if="selectedWallPanel"
+          icon="delete"
+          :title="deleteWallTitle"
+          :aria-label="deleteWallTitle"
+          hotkey="Delete"
+          :hotkey-priority="TOOLBELT_HOTKEY_PRIORITY.object"
+          @click="emit('deleteWalls')"
+        />
+        <slot name="trailing" />
       </div>
     </div>
   </div>

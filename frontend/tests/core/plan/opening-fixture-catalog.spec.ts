@@ -4,7 +4,8 @@ import {
   listFixturePlaceOptions,
   resolveFixtureCatalog,
 } from '@/core/plan/fixture-refid-catalog'
-import { fixturePlaceSizeCm } from '@/core/plan/fixture-place-defaults'
+import { fixturePlaceSizeCm, normalizeRailFixtureSize } from '@/core/plan/fixture-place-defaults'
+import { normalizePlanIdentities } from '@/core/plg/fml-adapter/normalize-plan-identities'
 import { buildFixtureSymbol } from '@/core/plan/fixture-symbols'
 import { STAIR_STROKE_W } from '@/core/plan/fixture-symbols/types'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
@@ -54,6 +55,9 @@ describe('fixture catalog + symbols', () => {
     expect(options.some((item) => item.kind === 'dormer')).toBe(false)
     expect(fixturePlaceSizeCm('countertop')).toEqual({ width: 120, height: 60 })
     expect(fixturePlaceSizeCm('generic')).toEqual({ width: 60, height: 60 })
+    expect(fixturePlaceSizeCm('railing')).toEqual({ width: 120, height: 8 })
+    expect(fixturePlaceSizeCm('balustrade')).toEqual({ width: 200, height: 8 })
+    expect(fixturePlaceSizeCm('balustrade_glass')).toEqual({ width: 200, height: 8 })
   })
 
   it('builds non-empty geometry for known kinds', () => {
@@ -163,8 +167,9 @@ describe('fixture catalog + symbols', () => {
     expect(arrow[5]).toBe(arrow[7])
     expect(-pivotX).toBeLessThan(-30)
     expect(buildFixtureSymbol('railing', 118, 10).polylines.length).toBeGreaterThan(2)
-    expect(buildFixtureSymbol('railing', 120, 10).polylines).toHaveLength(21)
-    expect(buildFixtureSymbol('railing', 120, 10).rects).toHaveLength(0)
+    const rail120 = buildFixtureSymbol('railing', 120, 10)
+    expect(rail120.rects).toHaveLength(4)
+    expect(rail120.polylines).toHaveLength(7)
   })
 
   it('builds quarter-turn stairs in the same stroke style as the 180 winder', () => {
@@ -358,8 +363,9 @@ describe('fixture catalog + symbols', () => {
 
     const ramp = buildFixtureSymbol('ramp', 120, 80)
     expect(ramp.arrowPolylines?.length).toBe(2)
-    expect(ramp.polylines).toHaveLength(0)
-    expect(ramp.fillPolygons ?? []).toHaveLength(0)
+    expect(ramp.polylines).toHaveLength(4)
+    expect(ramp.fillPolygons).toHaveLength(1)
+    expect(ramp.fill).toBe('#d8dde4')
     expect(ramp.overWalls).toBe(false)
     const rampShaft = ramp.arrowPolylines?.[0] ?? []
     expect(rampShaft[2] ?? 0).toBeLessThan(rampShaft[0] ?? 0)
@@ -372,66 +378,122 @@ describe('fixture catalog + symbols', () => {
       (line) =>
         line.length === 4 &&
         Math.abs((line[1] ?? 0) - (line[3] ?? 0)) < 0.01 &&
-        Math.abs((line[1] ?? 0) + 16) < 1 &&
+        Math.abs((line[1] ?? 0) + 8) < 1 &&
         (line[0] ?? 0) < -40 &&
         (line[2] ?? 0) > 40,
     )
-    expect(landLine?.[1] ?? 0).toBeCloseTo(-16, 5)
+    expect(landLine?.[1] ?? 0).toBeCloseTo(-8, 5)
 
     const c90 = buildFixtureSymbol('stair_c_90', 60, 80)
-    expect(c90.polylines.length).toBeGreaterThan(16)
     expect(c90.arrowPolylines?.length).toBe(2)
     expect(c90.overWalls).toBe(false)
     const cArrow = c90.arrowPolylines?.[0] ?? []
-    expect(cArrow[2] ?? 0).toBeGreaterThan(cArrow[0] ?? 0)
-    expect(cArrow[3]).toBeCloseTo(cArrow[1] ?? 0, 5)
-    const cHoriz = c90.polylines.filter(
+    expect(cArrow.length).toBeGreaterThanOrEqual(8)
+    expect(cArrow[0] ?? 0).toBeGreaterThan(10)
+    expect(cArrow[2] ?? 0).toBeCloseTo(0, 5)
+    expect(cArrow[4] ?? 0).toBeCloseTo(0, 5)
+    expect(cArrow[5] ?? 0).toBeLessThan(cArrow[3] ?? 0)
+    expect(cArrow[6] ?? 0).toBeGreaterThan(10)
+    const cTopY = -16
+    const cBotY = 16
+    const cMid = c90.polylines.filter(
       (line) =>
         line.length === 4 &&
         Math.abs((line[1] ?? 0) - (line[3] ?? 0)) < 0.01 &&
-        Math.abs(line[1] ?? 0) < 20 &&
         (line[0] ?? 0) < -20 &&
-        (line[2] ?? 0) > 20,
+        (line[2] ?? 0) > 20 &&
+        (line[1] ?? 0) > cTopY + 0.5 &&
+        (line[1] ?? 0) < cBotY - 0.5,
     )
-    expect(cHoriz.length).toBe(3)
+    expect(cMid.length).toBe(7)
+    const cTopWinders = c90.polylines.filter(
+      (line) =>
+        line.length === 4 &&
+        Math.abs((line[0] ?? 0) - 30) < 0.05 &&
+        Math.abs((line[1] ?? 0) - cTopY) < 0.05 &&
+        Math.hypot((line[2] ?? 0) - 30, (line[3] ?? 0) - cTopY) > 8,
+    )
+    expect(cTopWinders.length).toBeGreaterThanOrEqual(6)
+    const cBotWinders = c90.polylines.filter(
+      (line) =>
+        line.length === 4 &&
+        Math.abs((line[0] ?? 0) - 30) < 0.05 &&
+        Math.abs((line[1] ?? 0) - cBotY) < 0.05 &&
+        Math.hypot((line[2] ?? 0) - 30, (line[3] ?? 0) - cBotY) > 8,
+    )
+    expect(cBotWinders.length).toBeGreaterThanOrEqual(6)
 
     const l90 = buildFixtureSymbol('stair_l_90', 60, 80)
     expect(l90.arrowPolylines?.length).toBe(2)
     const lArrow = l90.arrowPolylines?.[0] ?? []
-    expect(lArrow[3] ?? 0).toBeLessThan(lArrow[1] ?? 0)
-    const lPivot = l90.polylines.find(
-      (line) =>
-        line.length === 4 &&
-        (line[0] ?? 0) > 0 &&
-        Math.abs((line[0] ?? 0) - (line[2] ?? 0)) < 0.01 &&
-        (line[3] ?? 0) > (line[1] ?? 0),
-    )
-    expect(lPivot?.[0] ?? 0).toBeGreaterThan(0)
+    expect(lArrow[0] ?? 0).toBeGreaterThan(10)
+    expect(lArrow[2] ?? 0).toBeCloseTo(0, 5)
+    expect(lArrow[4] ?? 0).toBeCloseTo(0, 5)
+    expect(lArrow[5] ?? 0).toBeLessThan(lArrow[3] ?? 0)
+    const lBotY = 16
     const lHoriz = l90.polylines.filter(
       (line) =>
         line.length === 4 &&
         Math.abs((line[1] ?? 0) - (line[3] ?? 0)) < 0.01 &&
-        Math.abs(line[1] ?? 0) < 39 &&
         (line[0] ?? 0) < -20 &&
-        (line[2] ?? 0) > 20,
+        (line[2] ?? 0) > 20 &&
+        (line[1] ?? 0) > -39 &&
+        (line[1] ?? 0) < lBotY - 0.5,
     )
-    expect(lHoriz.length).toBe(8)
+    expect(lHoriz.length).toBe(11)
+    const lWinders = l90.polylines.filter(
+      (line) =>
+        line.length === 4 &&
+        Math.abs((line[0] ?? 0) - 30) < 0.05 &&
+        Math.abs((line[1] ?? 0) - lBotY) < 0.05 &&
+        Math.hypot((line[2] ?? 0) - 30, (line[3] ?? 0) - lBotY) > 8,
+    )
+    expect(lWinders.length).toBe(cBotWinders.length)
+    expect(lWinders[0]).toEqual(cBotWinders[0])
+    const lTopWinders = l90.polylines.filter(
+      (line) =>
+        line.length === 4 &&
+        Math.abs((line[0] ?? 0) - 30) < 0.05 &&
+        Math.abs((line[1] ?? 0) + 16) < 0.05 &&
+        Math.hypot((line[2] ?? 0) - 30, (line[3] ?? 0) + 16) > 8,
+    )
+    expect(lTopWinders.length).toBe(0)
 
     const l90up = buildFixtureSymbol('stair_l_90_up', 60, 80)
     expect(l90up.arrowPolylines?.length).toBe(2)
     const upArrow = l90up.arrowPolylines?.[0] ?? []
-    expect(upArrow[2] ?? 0).toBeGreaterThan(upArrow[0] ?? 0)
-    expect(upArrow[3]).toBeCloseTo(upArrow[1] ?? 0, 5)
+    expect(upArrow[0] ?? 0).toBeCloseTo(0, 5)
+    expect(upArrow[2] ?? 0).toBeCloseTo(0, 5)
+    expect(upArrow[3] ?? 0).toBeLessThan(upArrow[1] ?? 0)
+    expect(upArrow[4] ?? 0).toBeGreaterThan(10)
+    const upPivotY = -16
     const upHoriz = l90up.polylines.filter(
       (line) =>
         line.length === 4 &&
         Math.abs((line[1] ?? 0) - (line[3] ?? 0)) < 0.01 &&
-        (line[1] ?? 0) > -20 &&
+        (line[1] ?? 0) > upPivotY + 0.5 &&
         (line[1] ?? 0) < 39 &&
         (line[0] ?? 0) < -20 &&
         (line[2] ?? 0) > 20,
     )
-    expect(upHoriz.length).toBe(8)
+    expect(upHoriz.length).toBe(11)
+    const upWinders = l90up.polylines.filter(
+      (line) =>
+        line.length === 4 &&
+        Math.abs((line[0] ?? 0) - 30) < 0.05 &&
+        Math.abs((line[1] ?? 0) - upPivotY) < 0.05 &&
+        Math.hypot((line[2] ?? 0) - 30, (line[3] ?? 0) - upPivotY) > 8,
+    )
+    expect(upWinders.length).toBe(cTopWinders.length)
+    expect(upWinders[0]).toEqual(cTopWinders[0])
+    const upBotWinders = l90up.polylines.filter(
+      (line) =>
+        line.length === 4 &&
+        Math.abs((line[0] ?? 0) - 30) < 0.05 &&
+        Math.abs((line[1] ?? 0) - 16) < 0.05 &&
+        Math.hypot((line[2] ?? 0) - 30, (line[3] ?? 0) - 16) > 8,
+    )
+    expect(upBotWinders.length).toBe(0)
 
     const fixtures = buildRenderFixtures(
       {
@@ -878,14 +940,51 @@ describe('fixture catalog + symbols', () => {
     expect(glassRail.overWalls).toBe(true)
     const threePane = buildFixtureSymbol('balustrade_glass', 120, 6)
     expect(threePane.rects.length).toBe(5)
+    expect(bal.rects).toHaveLength(rail.rects.length)
     expect(bal.polylines.length).toBe(rail.polylines.length)
     expect(bal.polylines.length).toBeGreaterThan(2)
     expect(bal.stroke).toBe('#64748b')
     expect(rail.stroke).toBe('#0f172a')
     expect(bal.strokeWidth).toBeLessThan(rail.strokeWidth ?? 2.2)
-    expect(bal.fill).toBe('transparent')
-    expect(bal.rects).toHaveLength(0)
+    expect(bal.fill).toBe('#64748b')
     expect(bal.overWalls).toBe(true)
+    const fivePane = buildFixtureSymbol('railing', 200, 8)
+    expect(fivePane.rects).toHaveLength(6)
+    expect(fivePane.polylines).toHaveLength(11)
+  })
+
+  it('flattens square rail fixtures to the same strip setup as glass panels', () => {
+    expect(normalizeRailFixtureSize({ kind: 'railing', width: 80, height: 80 })).toEqual({
+      width: 80,
+      height: 8,
+    })
+    expect(normalizeRailFixtureSize({ kind: 'balustrade', width: 120, height: 120 })).toEqual({
+      width: 120,
+      height: 8,
+    })
+    expect(normalizeRailFixtureSize({ kind: 'balustrade_glass', width: 80, height: 6 })).toEqual({
+      width: 80,
+      height: 6,
+    })
+    expect(normalizeRailFixtureSize({ kind: 'railing', width: 8, height: 200 })).toEqual({
+      width: 8,
+      height: 200,
+    })
+    const twoBay = buildFixtureSymbol('railing', 80, 8)
+    const threeBay = buildFixtureSymbol('railing', 120, 8)
+    const fiveBay = buildFixtureSymbol('balustrade', 200, 8)
+    expect(twoBay.rects).toHaveLength(3)
+    expect(twoBay.polylines).toHaveLength(5)
+    expect(threeBay.rects).toHaveLength(4)
+    expect(fiveBay.rects).toHaveLength(6)
+    const plan = normalizePlanIdentities({
+      floors: [
+        {
+          items: [{ id: 'r1', kind: 'railing', x: 0, y: 0, width: 100, height: 100 }],
+        },
+      ],
+    } as never)
+    expect(plan.floors[0]?.items?.[0]).toMatchObject({ width: 100, height: 8 })
   })
 
   it('resolves Van Ostadestraat 1e-achter bathroom, combo, stair, and long balustrade', () => {
@@ -950,7 +1049,7 @@ describe('fixture catalog + symbols', () => {
     const short = buildFixtureSymbol('balustrade', 74.22, 5.9)
     const long = buildFixtureSymbol('balustrade', 489.02, 5.9)
     expect(long.polylines.length).toBeGreaterThan(short.polylines.length)
-    expect(long.rects).toHaveLength(0)
+    expect(long.rects.length).toBeGreaterThan(short.rects.length)
     expect(long.stroke).toBe(short.stroke)
   })
 

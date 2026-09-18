@@ -77,6 +77,24 @@ describe('elevation-opening-symbol handles', () => {
     expect(handleXs(flipped)[0]).toBeLessThan(90)
   })
 
+  it('schuifpui 1 schuivend gespiegeld: kruk op de andere helft', () => {
+    const mirroredKind = doorRect({
+      kind: 'door.sliding_single_mirror',
+      mirrored: [0, 0],
+      widthCm: 180,
+      x1: 180,
+    })
+    const base = doorRect({
+      kind: 'door.sliding_single',
+      mirrored: [0, 0],
+      widthCm: 180,
+      x1: 180,
+    })
+    expect(handleXs(mirroredKind)).toHaveLength(1)
+    expect(handleXs(mirroredKind)[0]).toBeLessThan(90)
+    expect(handleXs(base)[0]).toBeGreaterThan(90)
+  })
+
   it('schuifpui 2 schuivend: kruk op beide delen', () => {
     const glyph = doorRect({
       kind: 'door.sliding',
@@ -129,10 +147,18 @@ describe('elevation-opening-symbol handles', () => {
     expect(glyph.polys.some((p) => p.role === 'hinge')).toBe(false)
   })
 
-  it('voordeur: glas in de bovenste helft', () => {
+  it('voordeur: glas in de bovenste helft, 10 cm hout rondom', () => {
     const glyph = doorRect({ kind: 'door.half_glass' })
-    expect(glyph.polys.some((p) => p.role === 'glass')).toBe(true)
+    const glass = glyph.polys.find((p) => p.role === 'glass')
+    expect(glass).toBeTruthy()
     expect(glyph.polys.some((p) => p.role === 'leaf')).toBe(true)
+    const xs = (glass!.points ?? []).filter((_, i) => i % 2 === 0)
+    const ys = (glass!.points ?? []).filter((_, i) => i % 2 === 1)
+    const midY = (glyph.inner.y0 + glyph.inner.y1) / 2
+    expect(Math.min(...xs)).toBeCloseTo(glyph.inner.x0 + 10, 5)
+    expect(Math.max(...xs)).toBeCloseTo(glyph.inner.x1 - 10, 5)
+    expect(Math.min(...ys)).toBeCloseTo(glyph.inner.y0 + 10, 5)
+    expect(Math.max(...ys)).toBeCloseTo(midY - 10, 5)
   })
 
   it('liftdeuren: middennaad, geen kruk', () => {
@@ -152,10 +178,32 @@ describe('elevation-opening-symbol handles', () => {
     expect(glyph.polys.some((p) => p.role === 'railing')).toBe(true)
   })
 
-  it('balkondeur: vol glas, kruk, geen railing', () => {
+  it('dubbele standaarddeur: twee glasvlakken met 10 cm hout, twee krukken', () => {
+    const glyph = doorRect({ kind: 'door.double_standard', widthCm: 180, x1: 180 })
+    const glasses = glyph.polys.filter((p) => p.role === 'glass')
+    expect(glasses).toHaveLength(2)
+    expect(handleXs(glyph)).toHaveLength(2)
+    const mid = (glyph.inner.x0 + glyph.inner.x1) / 2
+    const leftXs = (glasses[0]!.points ?? []).filter((_, i) => i % 2 === 0)
+    const rightXs = (glasses[1]!.points ?? []).filter((_, i) => i % 2 === 0)
+    expect(Math.min(...leftXs)).toBeCloseTo(glyph.inner.x0 + 10, 5)
+    expect(Math.max(...leftXs)).toBeCloseTo(mid - 10, 5)
+    expect(Math.min(...rightXs)).toBeCloseTo(mid + 10, 5)
+    expect(Math.max(...rightXs)).toBeCloseTo(glyph.inner.x1 - 10, 5)
+  })
+
+  it('balkondeur: glas met 10 cm hout rondom, kruk, geen railing', () => {
     const glyph = doorRect({ kind: 'door.balcony' })
-    expect(glyph.polys.some((p) => p.role === 'glass')).toBe(true)
+    const glass = glyph.polys.find((p) => p.role === 'glass')
+    expect(glass).toBeTruthy()
+    expect(glyph.polys.some((p) => p.role === 'leaf')).toBe(true)
     expect(glyph.polys.some((p) => p.role === 'railing')).toBe(false)
     expect(handleXs(glyph)).toHaveLength(1)
+    const xs = (glass!.points ?? []).filter((_, i) => i % 2 === 0)
+    const ys = (glass!.points ?? []).filter((_, i) => i % 2 === 1)
+    expect(Math.min(...xs)).toBeCloseTo(glyph.inner.x0 + 10, 5)
+    expect(Math.max(...xs)).toBeCloseTo(glyph.inner.x1 - 10, 5)
+    expect(Math.min(...ys)).toBeCloseTo(glyph.inner.y0 + 10, 5)
+    expect(Math.max(...ys)).toBeCloseTo(glyph.inner.y1 - 10, 5)
   })
 })

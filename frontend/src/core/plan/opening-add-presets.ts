@@ -15,6 +15,7 @@ export const DOOR_ADD_SUBTYPES = [
   'french_balcony',
   'balcony',
   'double',
+  'double_standard',
   'double_solid',
   'bifold',
   'bifold_double',
@@ -59,6 +60,7 @@ const DOOR_ADD_PRESETS: Record<DoorAddSubtype, OpeningAddPreset> = {
   french_balcony: { type: 'door', kind: 'door.french_balcony', defaultWidthCm: 90 },
   balcony: { type: 'door', kind: 'door.balcony', defaultWidthCm: 90 },
   double: { type: 'door', kind: 'door.double', defaultWidthCm: 140 },
+  double_standard: { type: 'door', kind: 'door.double_standard', defaultWidthCm: 140 },
   double_solid: { type: 'door', kind: 'door.double_solid', defaultWidthCm: 140 },
   bifold: { type: 'door', kind: 'door.bifold', defaultWidthCm: 160 },
   bifold_double: { type: 'door', kind: 'door.bifold_double', defaultWidthCm: 240 },
@@ -91,11 +93,13 @@ const KIND_TO_DOOR_SUBTYPE: Partial<Record<OpeningKind, DoorAddSubtype>> = {
   'door.french_balcony': 'french_balcony',
   'door.balcony': 'balcony',
   'door.double': 'double',
+  'door.double_standard': 'double_standard',
   'door.double_solid': 'double_solid',
   'door.bifold': 'bifold',
   'door.bifold_double': 'bifold_double',
   'door.pocket': 'pocket',
   'door.sliding_single': 'sliding_single',
+  'door.sliding_single_mirror': 'sliding_single',
   'door.sliding': 'sliding',
   'door.elevator': 'elevator',
   'door.garage': 'garage',
@@ -124,6 +128,7 @@ export function resolveWindowAddPreset(subtype: WindowAddSubtype): OpeningAddPre
 
 export function coerceDoorAddSubtype(value: string | undefined | null): DoorAddSubtype {
   const raw = (value ?? '').trim()
+  if (raw === 'double_balcony') return 'double_standard'
   if ((DOOR_ADD_SUBTYPES as readonly string[]).includes(raw)) return raw as DoorAddSubtype
   return resolveDoorSubtypeFromKind(raw)
 }

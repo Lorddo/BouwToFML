@@ -3,6 +3,7 @@ import { parsePlanHex } from '@/core/plan/roomtype-catalog'
 import type { FloorItem, FloorLineType } from '@/core/plan/types'
 import { dimensionLengthCm, setDimensionLengthCentered } from '@/core/plan/offset-dimension-line'
 import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
+import { fixtureItemDisplayLabel } from '@/ui/i18n/catalog-labels'
 import { isRidgeWallId, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/plan/ridge-walls'
 import { bindFloorWallsToRoofs, type BindWallsToRoofsResult } from '@/core/plan/bind-walls-to-roofs'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
@@ -707,7 +708,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     const info = resolveFixtureCatalog(item.kind, { width: item.width, height: item.height })
     pendingFixture.value = {
       kind: item.kind,
-      label: item.name ?? info.label,
+      label: fixtureItemDisplayLabel(item, info.label),
       categorie: info.categorie,
     }
     activePlanTool.value = 'add_fixture'

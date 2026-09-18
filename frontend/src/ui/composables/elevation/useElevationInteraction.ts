@@ -21,11 +21,7 @@ import {
   type DoorAddSubtype,
   type WindowAddSubtype,
 } from '@/core/plan/opening-add-presets'
-import {
-  applyDrawTypeKey,
-  isDrawTypeLengthKey,
-  parseDrawLengthDraftToCm,
-} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import { applyLengthTypeKey } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 import { isTypingFieldTarget } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
 import { elevationOpeningRestLineId } from './elevation-precise-move'
@@ -387,12 +383,15 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
         precise.commitPreciseDraft()
         return
       }
-      if (isDrawTypeLengthKey(event)) {
+      const applied = applyLengthTypeKey(
+        event,
+        precise.preciseTypeText.value,
+        props.unit ?? 'm',
+      )
+      if (applied) {
         event.preventDefault()
-        const next = applyDrawTypeKey(precise.preciseTypeText.value, event.key)
-        if (next == null) return
-        precise.preciseTypeText.value = next
-        precise.setPreciseOverrideCm(parseDrawLengthDraftToCm(next, props.unit ?? 'm'))
+        precise.preciseTypeText.value = applied.text
+        precise.setPreciseOverrideCm(applied.cm)
         precise.applyPreciseDraft()
         return
       }

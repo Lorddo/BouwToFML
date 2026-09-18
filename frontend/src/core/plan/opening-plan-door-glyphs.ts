@@ -141,6 +141,7 @@ function buildSlidingSingleGlyphs(params: {
   wallUnit: Point
   mirrored?: [number, number]
   wallThickness?: number
+  invertHinge?: boolean
 }): PlanGlyph[] {
   const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
   const wallTh =
@@ -162,7 +163,9 @@ function buildSlidingSingleGlyphs(params: {
     offset,
     params.mirrored,
   )
-  const hingeAtStart = resolveHingeAtStart(params.mirrored)
+  const hingeAtStart = params.invertHinge
+    ? !resolveHingeAtStart(params.mirrored)
+    : resolveHingeAtStart(params.mirrored)
   // Eén schuivend blad + vast glaspaneel; pijl op schuifhelft.
   const leafAlong0 = hingeAtStart ? 0 : span / 2
   const leafAlong1 = hingeAtStart ? span / 2 : span
@@ -639,6 +642,7 @@ export function buildDoorKindGlyphs(params: BuildDoorPlanSymbolInput): OpeningPl
         }),
       }
     case 'sliding_single':
+    case 'sliding_single_mirror':
       return {
         glyphs: buildSlidingSingleGlyphs({
           start: params.start,
@@ -646,6 +650,7 @@ export function buildDoorKindGlyphs(params: BuildDoorPlanSymbolInput): OpeningPl
           wallUnit: params.wallUnit,
           mirrored: params.mirrored,
           wallThickness: params.wallThickness,
+          invertHinge: params.kind === 'sliding_single_mirror',
         }),
       }
     case 'sliding_pocket':

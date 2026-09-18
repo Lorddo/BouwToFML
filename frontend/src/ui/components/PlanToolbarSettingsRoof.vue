@@ -81,7 +81,9 @@ function onParentChange(event: Event): void {
     </div>
   </div>
   <div class="plan-toolbelt__field">
-    <span class="plan-toolbelt__field-label">{{ t('result.toolbar.roofVertexZ') }}</span>
+    <span class="plan-toolbelt__field-label">{{
+      roofVertexIndex == null ? t('result.toolbar.roofPlaneZ') : t('result.toolbar.roofVertexZ')
+    }}</span>
     <div class="plan-toolbelt__field-controls">
       <ScaleLengthInput
         :key="`roof-z-${roofVertexIndex ?? 'none'}`"
@@ -91,7 +93,11 @@ function onParentChange(event: Event): void {
         allow-zero
         allow-negative
         :disabled="roofVertexZCm == null"
-        :aria-label="t('result.toolbar.roofVertexZAria', { unit: t(`common.${unit}`) })"
+        :aria-label="
+          roofVertexIndex == null
+            ? t('result.toolbar.roofPlaneZAria', { unit: t(`common.${unit}`) })
+            : t('result.toolbar.roofVertexZAria', { unit: t(`common.${unit}`) })
+        "
         input-class="plan-toolbelt__input"
         @update:cm="emit('roofVertexZInput', $event)"
       />

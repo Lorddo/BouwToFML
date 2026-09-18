@@ -67,6 +67,7 @@ export function groupDoorOpeningsOnWall(
     const isClearSpanLeaf =
       catalog.kind === 'sliding' ||
       catalog.kind === 'sliding_single' ||
+      catalog.kind === 'sliding_single_mirror' ||
       catalog.kind === 'sliding_pocket' ||
       catalog.kind === 'garage'
     const swing = isClearSpanLeaf
