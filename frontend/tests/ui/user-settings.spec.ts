@@ -7,7 +7,9 @@ import {
   parseUserSettingsJson,
   resetUserSettingsToFactory,
   saveUserSettings,
+  setOpeningFrameDefaultCm,
   setShowCanvasGrid,
+  setShowOpeningFrameEdit,
   setShowRoofOverlayOnPlan,
   USER_SETTINGS_STORAGE_KEY,
   UserSettingsParseError,
@@ -140,6 +142,18 @@ describe('user-settings', () => {
     expect(setShowRoofOverlayOnPlan(false)).toBe(false)
     expect(loadUserSettings().planDisplay.showRoofOverlayOnPlan).toBe(false)
     expect(setShowRoofOverlayOnPlan(true)).toBe(true)
+  })
+
+  it('opening-frame helpers persist toggle + one side without clobbering the rest', () => {
+    expect(setShowOpeningFrameEdit(false)).toBe(false)
+    expect(loadUserSettings().planDisplay.showOpeningFrameEdit).toBe(false)
+    expect(setShowOpeningFrameEdit(true)).toBe(true)
+
+    const next = setOpeningFrameDefaultCm('door', 'leftCm', 12)
+    expect(next.door.leftCm).toBe(12)
+    expect(next.door.rightCm).toBe(5)
+    expect(next.window.leftCm).toBe(5)
+    expect(loadUserSettings().planDisplay.openingFrameDefaults.door.leftCm).toBe(12)
   })
 
   it('normalize missing/invalid locale → en; accepts nl/th', () => {

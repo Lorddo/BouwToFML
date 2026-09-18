@@ -15,6 +15,7 @@ export type FixtureAssetKind =
   | 'dryer'
   | 'washer_dryer'
   | 'bathtub'
+  | 'bathtub_square'
   | 'sink_double'
   | 'toilet'
   | 'toilet_wall_hung'
@@ -24,21 +25,34 @@ export type FixtureAssetKind =
   | 'sink_vanity'
   | 'glass_wall'
   | 'entrance_arrow'
+  | 'doorbell'
   | 'north_cross'
   | 'fuse_box'
   | 'boiler'
   | 'heat_pump'
   | 'stair_winder_180'
+  | 'stair_u_landing'
+  | 'stair_c_90'
+  | 'stair_l_90'
+  | 'stair_l_90_up'
+  | 'stair_winder_270'
   | 'stair_quarter_90'
   | 'stair_quarter_90_up'
   | 'stair_straight'
   | 'stair_straight_double'
+  | 'stair_loft'
+  | 'stair_loft_dashed'
   | 'stair_opening'
+  | 'ramp'
   | 'canopy'
+  | 'awning'
   | 'chimney'
+  | 'column'
+  | 'column_round'
   | 'koof'
   | 'railing'
   | 'balustrade'
+  | 'balustrade_glass'
   | 'skylight'
   | 'roof_eave'
   | 'dormer'
@@ -57,6 +71,7 @@ const KNOWN_KINDS = new Set<FixtureAssetKind>([
   'dryer',
   'washer_dryer',
   'bathtub',
+  'bathtub_square',
   'sink_double',
   'toilet',
   'toilet_wall_hung',
@@ -66,21 +81,34 @@ const KNOWN_KINDS = new Set<FixtureAssetKind>([
   'sink_vanity',
   'glass_wall',
   'entrance_arrow',
+  'doorbell',
   'north_cross',
   'fuse_box',
   'boiler',
   'heat_pump',
   'stair_winder_180',
+  'stair_u_landing',
+  'stair_c_90',
+  'stair_l_90',
+  'stair_l_90_up',
+  'stair_winder_270',
   'stair_quarter_90',
   'stair_quarter_90_up',
   'stair_straight',
   'stair_straight_double',
+  'stair_loft',
+  'stair_loft_dashed',
   'stair_opening',
+  'ramp',
   'canopy',
+  'awning',
   'chimney',
+  'column',
+  'column_round',
   'koof',
   'railing',
   'balustrade',
+  'balustrade_glass',
   'skylight',
   'roof_eave',
   'dormer',

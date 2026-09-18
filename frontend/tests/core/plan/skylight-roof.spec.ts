@@ -17,11 +17,13 @@ import {
   classifyElevQuadEdges,
 } from '@/core/plan/elevation-skylight-symbol'
 import {
+  applySkylightRoofSnap,
   bindSkylightToRoofs,
   isSkylightItem,
   sampleSkylightOnRoof,
   skylightFootprintCorners,
 } from '@/core/plan/skylight-roof'
+import { roofSurfacePitchDeg } from '@/core/plan/dormer-edge-walls'
 import {
   listRidgeSurfacesOnFloor,
   makeRoofSurface,
@@ -170,7 +172,7 @@ describe('skylight-roof', () => {
     expect(Math.max(...zs) - Math.min(...zs)).toBeGreaterThan(5)
   })
 
-  it('bindSkylightToRoofs koppelt surface + z', () => {
+  it('bindSkylightToRoofs koppelt surface + z + pitch', () => {
     const plan = saddleWithSkylight()
     const surfaces = listRidgeSurfacesOnFloor(plan.floors[0])
     const item = plan.floors[0].items![0]!
@@ -179,6 +181,20 @@ describe('skylight-roof', () => {
     if (!result.ok) return
     expect(result.item.roofSurfaceId).toBe('roof-s')
     expect(result.item.z).toBeGreaterThan(280)
+    expect(result.item.pitchDeg).toBe(roofSurfacePitchDeg(surfaces[0]!))
+    expect(result.item.pitchDeg).toBeCloseTo(14.0, 1)
+  })
+
+  it('applySkylightRoofSnap koppelt op het schild en ontkoppelt ernaast', () => {
+    const plan = saddleWithSkylight()
+    const surfaces = listRidgeSurfacesOnFloor(plan.floors[0])
+    const item = plan.floors[0].items![0]!
+    const onRoof = applySkylightRoofSnap(item, surfaces, plan, 0)
+    expect(onRoof.roofSurfaceId).toBe('roof-s')
+    expect(onRoof.z).toBeGreaterThan(280)
+    expect(onRoof.pitchDeg).toBeCloseTo(14.0, 1)
+    const off = applySkylightRoofSnap({ ...onRoof, x: 900, y: 900 }, surfaces, plan, 0)
+    expect(off.roofSurfaceId).toBeUndefined()
   })
 
   it('bindFloorWallsToRoofs telt dakramen mee', () => {
@@ -342,5 +358,17 @@ describe('skylight FML adapter', () => {
     const text = buildFmlV3(plan)
     expect(text).not.toContain('"leftCm":8')
     expect(text).not.toContain('plgFrame')
+  })
+
+  it('FML-export schrijft geen pitchDeg', () => {
+    let plan = saddleWithSkylight({
+      skylight: { roofSurfaceId: 'roof-s', z: 330, pitchDeg: 14 },
+    })
+    plan = {
+      ...plan,
+      floors: plan.floors.map((floor) => ensureDesignsSynced(floor)),
+    }
+    const text = buildFmlV3(plan)
+    expect(text).not.toContain('pitchDeg')
   })
 })

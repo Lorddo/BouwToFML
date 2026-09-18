@@ -151,6 +151,9 @@ const props = withDefaults(
       mirroredX: boolean
       mirroredY: boolean
       showFrame?: boolean
+      showRoofPose?: boolean
+      zCm?: number
+      pitchDeg?: number
       frameLeftCm?: number
       frameRightCm?: number
       frameTopCm?: number
@@ -366,6 +369,8 @@ const emit = defineEmits<{
   roofVertexZInput: [cm: number]
   itemWidthCm: [cm: number]
   itemHeightCm: [cm: number]
+  itemZCm: [cm: number]
+  itemPitchInput: [event: Event]
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
@@ -771,6 +776,8 @@ defineExpose({ hint })
           @roof-vertex-z-input="emit('roofVertexZInput', $event)"
           @item-width-cm="emit('itemWidthCm', $event)"
           @item-height-cm="emit('itemHeightCm', $event)"
+          @item-z-cm="emit('itemZCm', $event)"
+          @item-pitch-input="emit('itemPitchInput', $event)"
           @item-rotation-input="emit('itemRotationInput', $event)"
           @toggle-item-mirror-x="emit('toggleItemMirrorX')"
           @toggle-item-mirror-y="emit('toggleItemMirrorY')"

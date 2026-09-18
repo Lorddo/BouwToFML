@@ -20,7 +20,7 @@ import {
 } from './junction-core'
 import { redistributeOpeningsAcrossSplit } from '@/core/plan/opening-plan-ops'
 
-/** FML-fractie (0.5 = 50%). Buiten 0–1 toegestaan; rail ±1000%. */
+/** FML-fractie (0.5 = 50%). Altijd 0–1 (0–100%). */
 export function clampBalance(balance: number): number {
   return Math.round(clampWallBalance(balance) * 1000) / 1000
 }
@@ -34,7 +34,7 @@ export function percentToBalance(percent: number): number {
   return clampBalance(percent / 100)
 }
 
-/** Slider blijft 0–100%; invoer mag daarbuiten. */
+/** Slider en invoer: 0–100%. */
 export function sliderPercentFromDraft(percent: number): number {
   if (!Number.isFinite(percent)) return 50
   return Math.min(BALANCE_SLIDER_PCT_MAX, Math.max(BALANCE_SLIDER_PCT_MIN, percent))

@@ -341,7 +341,7 @@ export function roundThicknessCm(value: number): number {
  * ketengemiddeldes. Balance: default 0.5; collineaire diktewissel-ketens flushen
  * alleen bij face-evidence (hint vanaf dikste); junction stubs in die scope
  * mogen verdwijnen — ESC:X-01.
- * Daarna sanitize (weld + near-H/V op as + collinear cover). Viewer = export.
+ * Daarna sanitize (weld + near-H/V op as + collinear cover + 180°-L). Viewer = export.
  *
  * Flush is keep-axis (gedeelde L10-lijn): alleen `balance`, `a`/`b` blijven.
  */

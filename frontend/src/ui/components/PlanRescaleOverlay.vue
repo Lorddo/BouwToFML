@@ -2,9 +2,13 @@
 import { computed, onUnmounted, ref } from 'vue'
 import type { HScaleState } from '@/platform/calibration'
 import type { Point2D, Wall } from '@/core/plan/types'
-import { snapPointToWallFaces, WALL_FACE_SNAP_CM } from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
+import {
+  applyRescaleHandleDrag,
+  snapRescaleHandle,
+  type RescaleHandleId,
+} from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
 
-type HandleId = 'xLeft' | 'xRight' | 'xGuideY' | 'yTop' | 'yBottom' | 'yGuideX'
+type HandleId = RescaleHandleId
 
 const props = withDefaults(
   defineProps<{
@@ -33,23 +37,21 @@ const hRight = computed(() => props.toScreen(props.state.xRight, props.state.xGu
 const vTop = computed(() => props.toScreen(props.state.yGuideX, props.state.yTop))
 const vBottom = computed(() => props.toScreen(props.state.yGuideX, props.state.yBottom))
 
-const hCrossY = computed(() => hLeft.value.y)
-const vCrossX = computed(() => vTop.value.x)
-
 function clientToLocal(event: PointerEvent): Point2D {
-  const rect = rootRef.value?.getBoundingClientRect()
-  if (!rect) return { x: event.clientX, y: event.clientY }
-  return { x: event.clientX - rect.left, y: event.clientY - rect.top }
+  const svg = rootRef.value
+  if (!svg) return { x: event.clientX, y: event.clientY }
+  const rect = svg.getBoundingClientRect()
+  if (!(rect.width > 0) || !(rect.height > 0)) return { x: 0, y: 0 }
+  const userW = svg.viewBox.baseVal.width || svg.width.baseVal.value || rect.width
+  const userH = svg.viewBox.baseVal.height || svg.height.baseVal.value || rect.height
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * userW,
+    y: ((event.clientY - rect.top) / rect.height) * userH,
+  }
 }
 
-function applySnap(point: Point2D): Point2D {
-  return snapPointToWallFaces(props.walls, point, WALL_FACE_SNAP_CM, {
-    disabled: snapDisabled.value,
-  })
-}
-
-function patchState(partial: Partial<HScaleState>): void {
-  emit('updateState', { ...props.state, ...partial })
+function patchState(next: HScaleState): void {
+  emit('updateState', next)
 }
 
 function onPointerMove(event: PointerEvent): void {
@@ -57,13 +59,11 @@ function onPointerMove(event: PointerEvent): void {
   if (!handle) return
   snapDisabled.value = event.ctrlKey || event.metaKey
   const local = clientToLocal(event)
-  const cm = applySnap(props.toCm(local.x, local.y))
-  if (handle === 'xLeft') patchState({ xLeft: cm.x, xGuideY: cm.y })
-  else if (handle === 'xRight') patchState({ xRight: cm.x, xGuideY: cm.y })
-  else if (handle === 'xGuideY') patchState({ xGuideY: cm.y })
-  else if (handle === 'yTop') patchState({ yTop: cm.y, yGuideX: cm.x })
-  else if (handle === 'yBottom') patchState({ yBottom: cm.y, yGuideX: cm.x })
-  else if (handle === 'yGuideX') patchState({ yGuideX: cm.x })
+  const raw = props.toCm(local.x, local.y)
+  const snapped = snapRescaleHandle(props.state, handle, raw, props.walls, {
+    disabled: snapDisabled.value,
+  })
+  patchState(applyRescaleHandleDrag(props.state, handle, snapped))
 }
 
 function endDrag(): void {
@@ -82,6 +82,14 @@ function onPointerDown(handle: HandleId, event: PointerEvent): void {
   event.stopPropagation()
   dragHandle.value = handle
   snapDisabled.value = event.ctrlKey || event.metaKey
+  const target = event.currentTarget
+  if (target instanceof Element) {
+    try {
+      target.setPointerCapture(event.pointerId)
+    } catch {
+      /* capture is optional — window listeners blijven de sleep volgen */
+    }
+  }
   window.addEventListener('pointermove', onPointerMove)
   window.addEventListener('pointerup', endDrag)
   window.addEventListener('pointercancel', endDrag)
@@ -117,9 +125,9 @@ onUnmounted(() => {
     <line
       class="plan-rescale-cross plan-rescale-cross--h"
       :x1="hLeft.x"
-      :y1="hCrossY"
+      :y1="hLeft.y"
       :x2="hRight.x"
-      :y2="hCrossY"
+      :y2="hRight.y"
       @pointerdown="onPointerDown('xGuideY', $event)"
     />
     <line class="plan-rescale-leg plan-rescale-leg--v" x1="0" :y1="vTop.y" :x2="width" :y2="vTop.y" />
@@ -132,9 +140,9 @@ onUnmounted(() => {
     />
     <line
       class="plan-rescale-cross plan-rescale-cross--v"
-      :x1="vCrossX"
+      :x1="vTop.x"
       :y1="vTop.y"
-      :x2="vCrossX"
+      :x2="vBottom.x"
       :y2="vBottom.y"
       @pointerdown="onPointerDown('yGuideX', $event)"
     />

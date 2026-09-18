@@ -94,6 +94,8 @@ describe('project-store serialize (schema v2 plan+cv)', () => {
               pageWidthPx: 3000,
               pageHeightPx: 2000,
             },
+            inputRotation: { rotationDeg: 3.5, rotate180: false },
+            scaleSpace: 'source',
           },
           sourcePdfUnderlay: {
             bytes: new Uint8Array([1, 2, 3]),
@@ -126,6 +128,11 @@ describe('project-store serialize (schema v2 plan+cv)', () => {
     expect(floorBlob?.plan.sourceUnderlay?.pngBytes).toBeInstanceOf(Uint8Array)
     expect(floorBlob?.plan.sourceUnderlay?.name).toBe('floor-src.png')
     expect(floorBlob?.plan.sourceUnderlay?.pdf?.fileName).toBe('plan.pdf')
+    expect(floorBlob?.plan.sourceUnderlay?.inputRotation).toEqual({
+      rotationDeg: 3.5,
+      rotate180: false,
+    })
+    expect(floorBlob?.plan.sourceUnderlay?.scaleSpace).toBe('source')
     expect('workingImagePng' in (floorBlob?.cv ?? {})).toBe(false)
     expect('session' in (floorBlob ?? {})).toBe(false)
     expect('pdfUnderlaySource' in (floorBlob?.plan ?? {})).toBe(false)
@@ -142,6 +149,11 @@ describe('project-store serialize (schema v2 plan+cv)', () => {
     expect(restored.blobs[floorId]?.sourceUnderlay?.src).toBe(png)
     expect(restored.blobs[floorId]?.sourceUnderlay?.name).toBe('floor-src.png')
     expect(restored.blobs[floorId]?.sourceUnderlay?.pdf?.fileName).toBe('plan.pdf')
+    expect(restored.blobs[floorId]?.sourceUnderlay?.inputRotation).toEqual({
+      rotationDeg: 3.5,
+      rotate180: false,
+    })
+    expect(restored.blobs[floorId]?.sourceUnderlay?.scaleSpace).toBe('source')
     expect(restored.blobs[floorId]?.pdfUnderlaySource).toBeNull()
     expect(restored.blobs[floorId]?.sourcePdfUnderlay).toBeNull()
 
@@ -153,6 +165,49 @@ describe('project-store serialize (schema v2 plan+cv)', () => {
       floorCount: 1,
       updatedAt: '2026-08-05T12:00:00.000Z',
     })
+  })
+
+  it('roundtrips planUnderlay sameAsSource + sourceToWorking zonder tweede PNG', () => {
+    const png = minimalPngDataUrl()
+    const empty = createEmptyProjectState({ id: 'proj-plate', name: 'Plate', address: '' })
+    const floorId = empty.floors[0].id
+    const state: ProjectState = {
+      ...empty,
+      blobs: {
+        [floorId]: {
+          session: sessionStub(png),
+          generatedFloor: null,
+          previewPlan: null,
+          previewUnderlayLayout: null,
+          sourceUnderlay: { src: png, name: 'src.png' },
+          planUnderlay: { src: png, width: 400, height: 200 },
+          sourceToWorking: {
+            sourceWidthPx: 400,
+            sourceHeightPx: 200,
+            workingWidthPx: 200,
+            workingHeightPx: 100,
+            offsetX: 10,
+            offsetY: 5,
+            scale: 0.5,
+            rotationDeg: 0,
+            rotate180: false,
+          },
+        },
+      },
+    }
+
+    const persisted = toPersistedProject(state, '2026-09-17T12:00:00.000Z')
+    const plan = persisted.blobs[floorId]!.plan
+    expect(plan.planUnderlay?.sameAsSource).toBe(true)
+    expect(plan.planUnderlay?.pngBytes).toBeUndefined()
+    expect(plan.planUnderlay?.width).toBe(400)
+    expect(plan.sourceToWorking?.offsetX).toBe(10)
+
+    const restored = fromPersistedProject(persisted)
+    expect(restored.blobs[floorId]?.planUnderlay?.src).toBe(png)
+    expect(restored.blobs[floorId]?.planUnderlay?.width).toBe(400)
+    expect(restored.blobs[floorId]?.sourceToWorking?.workingWidthPx).toBe(200)
+    expect(restored.blobs[floorId]?.sourceToWorking?.offsetY).toBe(5)
   })
 
   it('schrijft planNulpuntImageCm/planOrient en leest de oude fml*-sleutels nog (rename fase 5)', () => {
@@ -287,6 +342,108 @@ describe('project-store serialize (schema v2 plan+cv)', () => {
 
     const omitted = toPersistedProject(state, undefined, { omitSourcePdf: true })
     expect(omitted.sourcePdfUnderlay).toBeNull()
+  })
+
+  it('omitStampRasters drops stamp mask bytes and keeps inject metadata', () => {
+    const png = minimalPngDataUrl()
+    const empty = createEmptyProjectState({ id: 'proj-stamp', name: 'Test', address: 'Street 1' })
+    const floorId = empty.floors[0].id
+    const session = sessionStub(png)
+    const withStamp: DevWorkspaceSessionV2 = {
+      ...session,
+      wallStamp: {
+        donorFloorId: 'donor-1',
+        bands: { min: false, mid: true, max: true },
+        baseBounds: { x: 0, y: 0, width: 10, height: 10 },
+        bounds: { x: 0, y: 0, width: 10, height: 10 },
+        wallsCm: [],
+        originCm: { x: 0, y: 0 },
+        baked: true,
+        stampBwBase64: bytesToBase64(new Uint8Array([1, 0, 1, 0])),
+        stampMaskBase64: bytesToBase64(new Uint8Array([1, 1, 0, 0])),
+        eraseMaskBase64: bytesToBase64(new Uint8Array([0, 0, 0, 1])),
+        injectWalls: [
+          {
+            id: 'stamp-w1',
+            a: { x: 0, y: 0 },
+            b: { x: 100, y: 0 },
+            thickness: 10,
+            openings: [],
+          },
+        ],
+      },
+    }
+    const state: ProjectState = {
+      ...empty,
+      blobs: {
+        [floorId]: {
+          session: withStamp,
+          generatedFloor: null,
+          previewPlan: null,
+          previewUnderlayLayout: null,
+        },
+      },
+    }
+
+    const kept = toPersistedProject(state)
+    expect(kept.blobs[floorId]?.cv?.wallStamp?.stampBwBytes).toBeTruthy()
+    expect(kept.blobs[floorId]?.cv?.wallStamp?.injectWalls).toHaveLength(1)
+
+    const omitted = toPersistedProject(state, undefined, { omitStampRasters: true })
+    expect(omitted.blobs[floorId]?.cv?.wallStamp?.stampBwBytes).toBeUndefined()
+    expect(omitted.blobs[floorId]?.cv?.wallStamp?.stampMaskBytes).toBeUndefined()
+    expect(omitted.blobs[floorId]?.cv?.wallStamp?.eraseMaskBytes).toBeUndefined()
+    expect(omitted.blobs[floorId]?.cv?.wallStamp?.baked).toBe(true)
+    expect(omitted.blobs[floorId]?.cv?.wallStamp?.injectWalls).toHaveLength(1)
+  })
+
+  it('strips stamp rasters by default on result floors with previewPlan', () => {
+    const png = minimalPngDataUrl()
+    const empty = createEmptyProjectState({ id: 'proj-stamp-result', name: 'Test', address: 'Street 1' })
+    const floorId = empty.floors[0].id
+    const session = sessionStub(png)
+    const withStamp: DevWorkspaceSessionV2 = {
+      ...session,
+      flow: { ...session.flow, targetFlowStep: 'result', restoreMode: 'exact' },
+      wallStamp: {
+        donorFloorId: 'donor-1',
+        bands: { min: false, mid: true, max: true },
+        baseBounds: { x: 0, y: 0, width: 10, height: 10 },
+        bounds: { x: 0, y: 0, width: 10, height: 10 },
+        wallsCm: [],
+        originCm: { x: 0, y: 0 },
+        baked: true,
+        stampBwBase64: bytesToBase64(new Uint8Array([1, 0, 1, 0])),
+        injectWalls: [
+          {
+            id: 'stamp-w1',
+            a: { x: 0, y: 0 },
+            b: { x: 100, y: 0 },
+            thickness: 10,
+            openings: [],
+          },
+        ],
+      },
+    }
+    const state: ProjectState = {
+      ...empty,
+      blobs: {
+        [floorId]: {
+          session: withStamp,
+          generatedFloor: null,
+          previewPlan: {
+            name: 'Test',
+            floors: [{ name: 'F0', level: 0, height: 260, walls: [] }],
+          },
+          previewUnderlayLayout: null,
+        },
+      },
+    }
+
+    const persisted = toPersistedProject(state)
+    expect(persisted.blobs[floorId]?.cv?.wallStamp?.stampBwBytes).toBeUndefined()
+    expect(persisted.blobs[floorId]?.cv?.wallStamp?.baked).toBe(true)
+    expect(persisted.blobs[floorId]?.cv?.wallStamp?.injectWalls).toHaveLength(1)
   })
 
   it('rejects schema v1 records via isPersistedProject', () => {

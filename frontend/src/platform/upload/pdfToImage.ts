@@ -171,19 +171,43 @@ export async function renderPdfPagePreviewForFile(
   return renderPageToBlobUrl(pdf, pageNumber, scale)
 }
 
-export async function renderPdfPageToBlobUrlForFile(
+async function renderPageForFile(
   file: File,
   pageNumber: number,
   minMaxEdge = DEFAULT_MIN_MAX_EDGE,
-): Promise<RenderPdfPageResult> {
+): Promise<{ canvas: HTMLCanvasElement; pageRenderScale: number }> {
   const pdf = await ensurePdfForFile(file)
   const page = await pdf.getPage(pageNumber)
   const baseViewport = page.getViewport({ scale: 1 })
   const pageRenderScale = computeRenderScale(baseViewport.width, baseViewport.height, minMaxEdge)
   const canvas = await renderPageToCanvas(pdf, pageNumber, pageRenderScale)
+  return { canvas, pageRenderScale }
+}
+
+export async function renderPdfPageToBlobUrlForFile(
+  file: File,
+  pageNumber: number,
+  minMaxEdge = DEFAULT_MIN_MAX_EDGE,
+): Promise<RenderPdfPageResult> {
+  const { canvas, pageRenderScale } = await renderPageForFile(file, pageNumber, minMaxEdge)
   const blobUrl = await canvasToBlobUrl(canvas)
   return {
     blobUrl,
+    pageRenderScale,
+    pageWidthPx: canvas.width,
+    pageHeightPx: canvas.height,
+  }
+}
+
+/** Full-page PNG data-URL — editor keeps pixels, not PDF bytes. */
+export async function renderPdfPageToPngDataUrlForFile(
+  file: File,
+  pageNumber: number,
+  minMaxEdge = DEFAULT_MIN_MAX_EDGE,
+): Promise<{ dataUrl: string; pageRenderScale: number; pageWidthPx: number; pageHeightPx: number }> {
+  const { canvas, pageRenderScale } = await renderPageForFile(file, pageNumber, minMaxEdge)
+  return {
+    dataUrl: canvas.toDataURL('image/png'),
     pageRenderScale,
     pageWidthPx: canvas.width,
     pageHeightPx: canvas.height,

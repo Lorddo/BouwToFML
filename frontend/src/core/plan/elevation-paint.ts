@@ -97,19 +97,20 @@ export type ElevationPaintStackSortKey = {
 
 /**
  * Painter: verder weg eerst. Zelfde vlak: dak onder baksteen (voorgevel).
- * Dakkapel-dak ná ouderdak. Dichter dakvlak (zijgevel, voor de kapel langs) ná die muren.
+ * Dakkapel-dak altijd ná ouderdak (centroid van het schild is vaak dichterbij
+ * dan de kapel → anders ligt de ouder-kleur over de kapel).
+ * Dichter dakvlak (zijgevel, voor de kapel-muur langs) ná die muren.
  */
 export function compareElevationPaintStackItems(
   a: ElevationPaintStackSortKey,
   b: ElevationPaintStackSortKey,
 ): number {
-  const delta = a.depthCm - b.depthCm
-  if (Math.abs(delta) > ELEVATION_SAME_PLANE_CM) return delta
   if (a.kind === 'roof' && b.kind === 'roof') {
     if (a.dormer === true && b.dormer !== true) return 1
     if (b.dormer === true && a.dormer !== true) return -1
-    return delta
   }
+  const delta = a.depthCm - b.depthCm
+  if (Math.abs(delta) > ELEVATION_SAME_PLANE_CM) return delta
   if (a.kind === 'roof' && b.kind === 'plane') return -1
   if (a.kind === 'plane' && b.kind === 'roof') return 1
   return delta

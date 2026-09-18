@@ -511,6 +511,7 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         mirrored: params.mirrored,
         leafLength: params.leafLength,
       })
+    case 'elevator':
     case 'sliding':
       return buildSlidingDoubleSymbol({
         start: params.start,
@@ -541,8 +542,25 @@ export function buildDoorSwingSymbol(params: BuildDoorSwingSymbolInput): DoorSym
         end: params.end,
         wallUnit: params.wallUnit,
       })
+    case 'flush': {
+      const mid = {
+        x: (params.start.x + params.end.x) / 2,
+        y: (params.start.y + params.end.y) / 2,
+      }
+      const n = { x: -params.wallUnit.y, y: params.wallUnit.x }
+      const ext = 20
+      return {
+        leafLines: [
+          [params.start.x, params.start.y, params.end.x, params.end.y],
+          [mid.x - n.x * ext, mid.y - n.y * ext, mid.x + n.x * ext, mid.y + n.y * ext],
+        ],
+        arcPoints: [],
+        arrowPoints: [],
+      }
+    }
     case 'passage':
     case 'archway':
+    case 'round_opening':
       return { leafLines: [], arcPoints: [], arrowPoints: [] }
     case 'closet45':
       return buildSingleDoorSymbol({

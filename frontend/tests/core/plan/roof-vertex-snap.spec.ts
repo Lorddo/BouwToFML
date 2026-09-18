@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
-import { createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
+import { createBlankFloor, createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
 import { assignWallsToGroup, createFacadeGroup } from '@/core/plan/facade-groups'
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import {
@@ -18,7 +18,11 @@ import {
   setRidgeSurfacesOnFloor,
   syncRoofPlaneGuidsFromDesigns,
 } from '@/core/plan/roof-planes'
-import { snapRoofVertexToWallFace } from '@/core/plan/roof-vertex-snap'
+import {
+  resolveInsertedRoofVertexZ,
+  snapRoofVertexToWallFace,
+  snapRoofVertexZ,
+} from '@/core/plan/roof-vertex-snap'
 import type { FloorPlan, Wall } from '@/core/plan/types'
 import { makeEndpoint3D } from '@/core/plan/wall-endpoint-height'
 
@@ -69,12 +73,52 @@ describe('roof-vertex-snap', () => {
     expect(hit).not.toEqual({ x: 2, y: -10, z: H })
   })
 
+  it('BG-dak Z neemt geen 1e-muurtop over', () => {
+    const plan = housePlan()
+    const upper = createBlankFloor({ name: '1e', level: 1, wallHeightCm: 280 })
+    const high = makeEndpoint3D(0, 420)
+    upper.walls = rectWalls('u', 0, 0, 800, 800).map((item) => ({
+      ...item,
+      extras: { az: high, bz: { ...high } },
+    }))
+    plan.floors.push(upper)
+    expect(snapRoofVertexZ({ plan, floorIndex: 0, point: { x: 400, y: -10 } })).toBe(H)
+  })
+
   it('dakvlak-punt midden op goot blijft op die buitenface', () => {
     const plan = housePlan()
     const hit = snapRoofVertexToWallFace({ plan, point: { x: 400, y: -3 } })
     expect(hit?.x).toBeCloseTo(400)
     expect(hit?.y).toBeCloseTo(-10)
     expect(hit?.z).toBe(H)
+  })
+
+  it('nieuw punt op een muur krijgt muurtop, niet 0', () => {
+    const plan = housePlan()
+    expect(
+      resolveInsertedRoofVertexZ({
+        plan,
+        floorIndex: 0,
+        point: { x: 400, y: -10 },
+        edgeA: { z: 450 },
+        edgeB: { z: 260 },
+        t: 0.5,
+      }),
+    ).toBe(H)
+  })
+
+  it('nieuw punt zonder muur interpoleren op de rand', () => {
+    const plan = housePlan()
+    expect(
+      resolveInsertedRoofVertexZ({
+        plan,
+        floorIndex: 0,
+        point: { x: 400, y: 400 },
+        edgeA: { z: 260 },
+        edgeB: { z: 450 },
+        t: 0.5,
+      }),
+    ).toBe(355)
   })
 
   it('roundtrip: isRoof + z overleven; Dak met alleen surfaces blijft', () => {

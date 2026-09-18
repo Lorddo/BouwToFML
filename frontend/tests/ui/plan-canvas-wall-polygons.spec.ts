@@ -47,9 +47,9 @@ describe('wall balance extents', () => {
     expect(offsetPointByWallBalance(hinge, wallUnit, 30, 0.5)).toEqual({ x: 40, y: 0 })
   })
 
-  it('renders overshoot balance outside 0–1', () => {
-    expect(resolveWallExtents({ thickness: 20, balance: -2.5 })).toEqual({ plus: -50, minus: 70 })
-    expect(resolveWallExtents({ thickness: 20, balance: 10 })).toEqual({ plus: 200, minus: -180 })
+  it('clamps overshoot balance to 0–1', () => {
+    expect(resolveWallExtents({ thickness: 20, balance: -2.5 })).toEqual({ plus: 0, minus: 20 })
+    expect(resolveWallExtents({ thickness: 20, balance: 10 })).toEqual({ plus: 20, minus: 0 })
   })
 })
 

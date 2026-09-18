@@ -10,10 +10,12 @@ const props = withDefaults(
   defineProps<{
     canBake?: boolean
     baking?: boolean
+    bakedDeg?: number
   }>(),
   {
     canBake: false,
     baking: false,
+    bakedDeg: 0,
   },
 )
 const emit = defineEmits<{
@@ -24,12 +26,18 @@ const { t } = useI18n()
 
 const pendingRotation = computed(() => hasPendingInputRotation(model.value))
 const bakeDisabled = computed(() => props.baking || !props.canBake || !pendingRotation.value)
+const bakedLabel = computed(() => {
+  const deg = props.bakedDeg
+  if (Math.abs(deg) < 0.05) return ''
+  return t('input.bakedRotationLabel', { deg: deg.toFixed(1) })
+})
 </script>
 
 <template>
   <div class="panel">
     <h3>{{ t('input.rotationTitle') }}</h3>
     <p class="hint">{{ t('input.bakeRotationHint') }}</p>
+    <p v-if="bakedLabel" class="hint hint--baked">{{ bakedLabel }}</p>
     <div class="setting-row">
       <span class="setting-label">{{ t('input.rotationLabel') }}</span>
       <div class="field-row">
@@ -100,6 +108,10 @@ const bakeDisabled = computed(() => props.baking || !props.canBake || !pendingRo
   font-size: 12px;
   color: #666;
   margin: 4px 0;
+}
+
+.hint--baked {
+  color: #0f172a;
 }
 
 .sidebar-icon-btn {

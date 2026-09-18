@@ -169,6 +169,11 @@ export function togglePlanSelected(
  * muur). Dat is bestaand gedrag en geen vergissing van één van de twee: de
  * vragen zijn verschillend. Ze bewust apart houden.
  */
+/** Box-select pakt alleen segmenten; knopen zijn dan geen target en blijven uit. */
+export function planHidesJunctions(tool: string | null | undefined): boolean {
+  return tool === 'box_select'
+}
+
 export function planStickySelectKind(
   selection: PlanCanvasSelectionRefs,
 ): PlanStickySelectKind | null {

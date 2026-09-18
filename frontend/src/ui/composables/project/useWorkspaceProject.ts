@@ -1,5 +1,7 @@
 import { computed, nextTick, ref, type Ref } from 'vue'
 import type { Floor, FloorPlan } from '@/core/plan/types'
+import type { SourceToWorkingTransform } from '@/core/plan/source-underlay-transform'
+import { floorDefaultsFromTemplate } from '@/core/plan/floor-defaults'
 import { wallsInStampGroup } from '@/core/plan/facade-groups'
 import { unionThicknessCatalogs } from '@/core/plan/wall-thickness-catalog'
 import type { PreprocessConfig } from '@/platform/image'
@@ -12,6 +14,7 @@ import {
   deleteProject,
   saveProject,
 } from '@/platform/project-store'
+import { isPersistSizeError, persistErrorMessage } from '@/platform/project-store/persist-errors'
 import { clearDevSessionsStore } from '@/platform/dev-workspace/idb'
 import type { WorkspaceFlowStep } from '@/ui/composables/workspace/constants'
 import type { RestoreSessionOptions } from '@/ui/composables/workspace/workspace-dev-session-restore-flow'
@@ -37,7 +40,14 @@ import {
   clonePdfUnderlaySource,
   type PdfUnderlaySource,
 } from '@/platform/upload'
-import { pdfMetaFromSource, resolveReusePdfBytes } from './reuse-underlay-pdf'
+import {
+  keepSourceUnderlayRotation,
+  pdfMetaFromSource,
+  resolveReuseInputRotation,
+  resolveReusePdfBytes,
+  type ReuseUnderlayLoadOptions,
+  type UnderlayInputRotation,
+} from './reuse-underlay-pdf'
 import type {
   FloorMeta,
   FloorOrientPersist,
@@ -45,10 +55,11 @@ import type {
   PreviewUnderlayLayout,
   ProjectPlanDefaults,
   ProjectMeta,
+  PlanUnderlay,
   ProjectSourceUnderlay,
   ProjectState,
 } from './types'
-import { floorStatusFromFlowStep } from './types'
+import { floorStatusFromFlowStep, resolveHydrateFlowStep, type FloorFlowStep } from './types'
 
 export type WorkspaceProjectDeps = {
   flowStep: Ref<WorkspaceFlowStep>
@@ -69,6 +80,7 @@ export type WorkspaceProjectDeps = {
     name: string,
     scale?: DevWorkspaceSession['scale'],
     pdfSource?: PdfUnderlaySource | null,
+    reuseOpts?: ReuseUnderlayLoadOptions,
   ) => Promise<void>
   /**
    * Pas alleen B/W-tune + profile toe (geen LBE-rects, geen gemeten muurdikte —
@@ -112,6 +124,7 @@ export type WorkspaceProjectDeps = {
     pdfSource: PdfUnderlaySource,
     name: string,
     scale?: DevWorkspaceSession['scale'],
+    reuseOpts?: ReuseUnderlayLoadOptions,
   ) => Promise<void>
 }
 
@@ -124,6 +137,8 @@ function emptyBlob(): FloorWorkspaceBlob {
     planNulpuntImageCm: null,
     planOrient: null,
     sourceUnderlay: null,
+    planUnderlay: null,
+    sourceToWorking: null,
     pdfUnderlaySource: null,
     sourcePdfUnderlay: null,
   }
@@ -133,13 +148,24 @@ function isDurableUnderlaySrc(src: string | null | undefined): boolean {
   return !!src && !src.startsWith('blob:')
 }
 
-function isQuotaExceeded(error: unknown): boolean {
-  if (!error || typeof error !== 'object') return false
-  const e = error as { name?: string; code?: number; message?: string }
-  if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') return true
-  if (e.code === 22 || e.code === 1014) return true
-  const msg = typeof e.message === 'string' ? e.message.toLowerCase() : ''
-  return msg.includes('quota') || (msg.includes('storage') && msg.includes('full'))
+function sessionWithTargetStep(
+  session: DevWorkspaceSession,
+  target: FloorFlowStep,
+): DevWorkspaceSession {
+  if (session.schemaVersion !== 2 || session.flow.targetFlowStep === target) return session
+  return {
+    ...session,
+    flow: { ...session.flow, targetFlowStep: target },
+  }
+}
+
+function bumpSessionTargetToLiveStep(
+  session: DevWorkspaceSession | null,
+  liveStep: WorkspaceFlowStep,
+): DevWorkspaceSession | null {
+  if (!session || session.schemaVersion !== 2) return session
+  const bumped = resolveHydrateFlowStep(session.flow.targetFlowStep, floorStatusFromFlowStep(liveStep))
+  return sessionWithTargetStep(session, bumped)
 }
 
 export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
@@ -188,6 +214,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           omitLegacyProjectSource: true,
           stripClassifyRasters: true,
           omitSourcePdf: true,
+          omitStampRasters: true,
         },
       },
     ]
@@ -202,22 +229,27 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         return
       } catch (error) {
         lastError = error
-        if (!isQuotaExceeded(error) && attempt.label === 'default') {
-          // Non-quota: still try cleanup once (DataClone / transient), then fail.
+        if (attempt.label === 'default') {
+          // Quota, «too large» of DataClone: slankere tweede poging.
           continue
         }
-        if (!isQuotaExceeded(error) && attempt.label !== 'default') {
+        if (!isPersistSizeError(error)) {
           break
         }
       }
     }
 
-    if (isQuotaExceeded(lastError)) {
+    if (isPersistSizeError(lastError)) {
       deps.setLocalError(tGlobal('project.errors.persistQuota'))
-      console.warn('[project-store] quota exceeded after cleanup', lastError)
+      console.warn('[project-store] persist size/quota exceeded after cleanup', lastError)
       return
     }
-    deps.setLocalError(tGlobal('project.errors.persistFailed'))
+    const detail = persistErrorMessage(lastError)
+    deps.setLocalError(
+      detail
+        ? tGlobal('project.errors.persistFailedDetail', { message: detail })
+        : tGlobal('project.errors.persistFailed'),
+    )
     console.warn('[project-store] save failed', lastError)
   }
 
@@ -304,6 +336,18 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     persistProjectDebounced()
   }
 
+  function updateAllFloorDefaults(
+    patch: Partial<ProjectPlanDefaults>,
+    options?: { syncUi?: boolean },
+  ): void {
+    state.value = {
+      ...state.value,
+      floors: state.value.floors.map((f) => ({ ...f, defaults: { ...f.defaults, ...patch } })),
+    }
+    if (options?.syncUi !== false) syncActiveFloorDefaultsToUi()
+    persistProjectDebounced()
+  }
+
   function updateActiveFloorDefaults(
     patch: Partial<ProjectPlanDefaults>,
     options?: { syncUi?: boolean },
@@ -368,7 +412,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         }
       }
     } catch {
-      // Geen image → behoud vorige session of null.
+      // Capture kan falen (image nog bezig, stamp+exact te zwaar) — houd de
+      // vorige session, maar til targetFlowStep mee zodat resume niet op stap 2 blijft.
+      session = bumpSessionTargetToLiveStep(session, deps.flowStep.value)
     }
 
     const livePlan = deps.getPreviewPlan()
@@ -408,6 +454,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
           planOrient,
           // Schaal-bevestiging schrijft bronscan op de blob; niet wissen bij floor-switch.
           sourceUnderlay: prev.sourceUnderlay ?? null,
+          planUnderlay: prev.planUnderlay ?? null,
+          sourceToWorking: prev.sourceToWorking ?? null,
           // Live PDF (full-page space). After crop the getter is null — do not keep
           // prev (stale coords on the cropped working image).
           pdfUnderlaySource: deps.getPdfUnderlaySource
@@ -433,13 +481,17 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       deps.flowStep.value = 'input'
       return
     }
-    const targetStep =
+    const floorStatus =
+      state.value.floors.find((f) => f.id === floorId)?.status ?? 'empty'
+    const sessionTarget =
       blob.session.schemaVersion === 2 ? blob.session.flow.targetFlowStep : 'templates'
+    const targetStep = resolveHydrateFlowStep(sessionTarget, floorStatus)
+    const session = sessionWithTargetStep(blob.session, targetStep)
     const isResult = targetStep === 'result'
     // Altijd volledige session-restore (refs/dikte/detectie/B/W).
     // Oude «fast result»-pad wiste LBE-refs via clearWorkspaceForSession — breekt
     // stap-terug preserve na floor-switch/resume.
-    await deps.restoreSession(blob.session, {
+    await deps.restoreSession(session, {
       skipOpeningsRerun: isResult,
       applyPreviewPlan: isResult ? (blob.previewPlan ?? null) : null,
       applyPreviewUnderlayLayout: isResult
@@ -576,6 +628,58 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     persistCtrl.persistNow()
   }
 
+  function setPlanPlate(plate: {
+    planUnderlay: PlanUnderlay
+    sourceToWorking: SourceToWorkingTransform
+    /** `undefined` = inputRotation op de bronscan niet aanraken. */
+    inputRotation?: UnderlayInputRotation | null
+  }): void {
+    const id = state.value.activeFloorId
+    const prev = state.value.blobs[id] ?? emptyBlob()
+    const nextSource =
+      plate.inputRotation !== undefined && prev.sourceUnderlay
+        ? { ...prev.sourceUnderlay, inputRotation: plate.inputRotation }
+        : prev.sourceUnderlay
+    const nextProjectSource =
+      plate.inputRotation !== undefined && state.value.sourceUnderlay
+        ? { ...state.value.sourceUnderlay, inputRotation: plate.inputRotation }
+        : state.value.sourceUnderlay
+    state.value = {
+      ...state.value,
+      ...(plate.inputRotation !== undefined ? { sourceUnderlay: nextProjectSource } : {}),
+      blobs: {
+        ...state.value.blobs,
+        [id]: {
+          ...prev,
+          planUnderlay: {
+            ...plate.planUnderlay,
+            ...(prev.planUnderlay?.src === plate.planUnderlay.src && prev.planUnderlay.remoteUrl
+              ? { remoteUrl: prev.planUnderlay.remoteUrl }
+              : {}),
+          },
+          sourceToWorking: { ...plate.sourceToWorking },
+          sourceUnderlay: nextSource,
+        },
+      },
+    }
+    persistCtrl.persistNow()
+  }
+
+  function setPlanUnderlayRemoteUrl(floorId: string, remoteUrl: string): void {
+    const prev = state.value.blobs[floorId] ?? emptyBlob()
+    if (!prev.planUnderlay) return
+    state.value = {
+      ...state.value,
+      blobs: {
+        ...state.value.blobs,
+        [floorId]: {
+          ...prev,
+          planUnderlay: { ...prev.planUnderlay, remoteUrl },
+        },
+      },
+    }
+  }
+
   /**
    * Schaal bevestigd op actieve floor → bronscan per floor (+ project-level legacy).
    * Altijd overschrijven: her-upload + opnieuw bevestigen moet de donor bijwerken.
@@ -596,6 +700,11 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       pdf: pdfSource
         ? pdfMetaFromSource(pdfSource)
         : (underlay.pdf ?? prev.sourceUnderlay?.pdf ?? null),
+      inputRotation: keepSourceUnderlayRotation(
+        underlay.inputRotation,
+        prev.sourceUnderlay?.inputRotation,
+      ),
+      scaleSpace: underlay.scaleSpace ?? prev.sourceUnderlay?.scaleSpace,
     }
     state.value = {
       ...state.value,
@@ -632,7 +741,9 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   /**
-   * Expliciete knop stap 1: bronscan + schaal van donor-floor (geen crop).
+   * Expliciete knop stap 1: bronscan + schaal + rotatie van donor-floor (geen crop).
+   * Bronplaat (3k) wint van PDF-her-raster — schaal staat in die pixels.
+   * PDF-bytes blijven hangen voor een latere ROI-crop.
    * Neemt ook de muurdikte-catalogus over (cm + min/mid/max); géén LBE-rects
    * en géén gemeten dikte — refs tekent de tekenaar opnieuw op deze verdieping.
    */
@@ -652,19 +763,42 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
       return
     }
 
-    const donorPdf = preferred ? (state.value.blobs[preferred]?.sourcePdfUnderlay ?? null) : null
+    const donorBlob = preferred ? (state.value.blobs[preferred] ?? null) : null
+    const donorPdf = donorBlob?.sourcePdfUnderlay ?? null
     const pdfSource = resolveReusePdfBytes({
       sessionPdf: getProjectPdfStore(),
       donorPdf,
       projectPdf: state.value.sourcePdfUnderlay ?? null,
     })
+    const reuseOpts: ReuseUnderlayLoadOptions = {
+      inputRotation: resolveReuseInputRotation({
+        source,
+        transform: donorBlob?.sourceToWorking ?? null,
+        sessionPreprocess: donorBlob?.session?.preprocess ?? null,
+      }),
+      scaleSpace: source.scaleSpace ?? 'source',
+    }
 
     try {
-      if (pdfSource && deps.loadUnderlayFromPdf) {
-        setSourcePdfUnderlay(pdfSource)
-        await deps.loadUnderlayFromPdf(pdfSource, source.name, source.scale)
+      if (pdfSource) setSourcePdfUnderlay(pdfSource)
+      if (isDurableUnderlaySrc(source.src)) {
+        await deps.loadUnderlayWithScale(
+          source.src,
+          source.name,
+          source.scale,
+          pdfSource,
+          reuseOpts,
+        )
+      } else if (pdfSource && deps.loadUnderlayFromPdf) {
+        await deps.loadUnderlayFromPdf(pdfSource, source.name, source.scale, reuseOpts)
       } else {
-        await deps.loadUnderlayWithScale(source.src, source.name, source.scale, pdfSource)
+        await deps.loadUnderlayWithScale(
+          source.src,
+          source.name,
+          source.scale,
+          pdfSource,
+          reuseOpts,
+        )
       }
       // Catalogus ná succesvolle load: zelfde donor als de scan, zonder refs/meting.
       if (preferred) {
@@ -751,6 +885,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
         name: meta.name,
         level: meta.level,
         height: defaults.wallHeightCm,
+        defaults: floorDefaultsFromTemplate(defaults),
       }
       floors.push(blob ? attachWorkspaceUnderlayToFloor(stamped, blob) : stamped)
     }
@@ -945,6 +1080,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     switchingFloor,
     updateProjectMeta,
     updateActiveFloorDefaults,
+    updateAllFloorDefaults,
     resetActiveFloorDefaults,
     effectiveDefaultsForFloor,
     syncActiveFloorDefaultsToUi,
@@ -955,6 +1091,8 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     reorderFloors,
     setSourceUnderlay,
     ensureSourceUnderlay,
+    setPlanPlate,
+    setPlanUnderlayRemoteUrl,
     setSourcePdfUnderlay,
     reuseUnderlayFromProject,
     copyPreprocessAndRefsFromDonor,

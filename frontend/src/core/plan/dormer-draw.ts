@@ -3,7 +3,8 @@
  * Muren op de plattegrond (`role: dormer`); vlak op het Dak-design.
  */
 import { bindFloorWallsToRoofs } from './bind-walls-to-roofs'
-import { cloneWalls, MIN_WALL_LENGTH_CM } from './junction-core'
+import { inheritFacadeGroupsAfterWallsChanged } from './facade-groups'
+import { cloneWalls, MIN_WALL_LENGTH_CM, samePoint } from './junction-core'
 import { wallLeftNormal } from './plan-wall-geom'
 import { validateRoofOverlap } from './roof-overlap'
 import {
@@ -14,12 +15,21 @@ import {
   syncRoofPlaneGuidsFromDesigns,
 } from './roof-planes'
 import type { FloorPlan, FloorSurface, Point2D, Wall } from './types'
+import { dormerOuterPolyFromWalls } from './dormer-follow-roof'
 import {
   addSegmentPathWithJunctionBreaks,
   materializeEndpointJoinsAtPoint,
 } from './wall-draw-geom'
 
 const DORMER_ROLE = 'dormer' as const
+
+/** Snap + insnijden op bestaande muren (voorzijde en wang). */
+export const DORMER_WALL_SNAP_CM = 5
+
+/** Na snap liggen hoeken op de host; knip alleen nog lokaal. */
+const DORMER_SPLIT_TOL_CM = 1
+
+const PARALLEL_DOT = 0.99
 
 export function isDormerRoleWall(wall: Pick<Wall, 'role'> | null | undefined): boolean {
   return wall?.role === DORMER_ROLE
@@ -42,6 +52,8 @@ export type DormerDrawArgs = {
   thicknessCm: number
   roofZCm: number
   bottomZCm?: number
+  /** 0 = geen muur-snap. Default 5 cm. */
+  snapCm?: number
 }
 
 function hypot2(ax: number, ay: number, bx: number, by: number): number {
@@ -52,6 +64,150 @@ function unitOrNull(dx: number, dy: number): Point2D | null {
   const len = Math.hypot(dx, dy)
   if (len < 1e-9) return null
   return { x: dx / len, y: dy / len }
+}
+
+function distToSeg(p: Point2D, a: Point2D, b: Point2D): { dist: number; t: number } {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const lenSq = dx * dx + dy * dy
+  if (lenSq < 1e-9) return { dist: hypot2(p.x, p.y, a.x, a.y), t: 0 }
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq))
+  return { dist: hypot2(p.x, p.y, a.x + t * dx, a.y + t * dy), t }
+}
+
+function projectOnSeg(p: Point2D, a: Point2D, b: Point2D): Point2D {
+  const { t } = distToSeg(p, a, b)
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+}
+
+function unboundedT(a: Point2D, b: Point2D, p: Point2D): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const lenSq = dx * dx + dy * dy
+  if (lenSq < 1e-9) return 0
+  return ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq
+}
+
+function distToInfiniteLine(p: Point2D, a: Point2D, b: Point2D): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len = Math.hypot(dx, dy)
+  if (len < 1e-9) return hypot2(p.x, p.y, a.x, a.y)
+  return Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / len
+}
+
+function projectOnInfiniteLine(p: Point2D, a: Point2D, b: Point2D): Point2D {
+  const t = unboundedT(a, b, p)
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+}
+
+/** Hartlijn-snap, inclusief muuruiteinden (anders dan T-only `findWallAtPoint`). */
+export function snapPointToDormerWall(
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b'>>,
+  point: Point2D,
+  snapCm = DORMER_WALL_SNAP_CM,
+): Point2D {
+  let best = point
+  let bestD = snapCm
+  for (const wall of walls) {
+    const hit = distToSeg(point, wall.a, wall.b)
+    if (hit.dist <= bestD) {
+      bestD = hit.dist
+      best = projectOnSeg(point, wall.a, wall.b)
+    }
+  }
+  return best
+}
+
+function findCollinearHost(
+  walls: ReadonlyArray<Wall>,
+  a: Point2D,
+  b: Point2D,
+  snapCm: number,
+): Wall | null {
+  const segU = unitOrNull(b.x - a.x, b.y - a.y)
+  if (!segU) return null
+  let best: Wall | null = null
+  let bestD = snapCm
+  for (const wall of walls) {
+    const wU = unitOrNull(wall.b.x - wall.a.x, wall.b.y - wall.a.y)
+    if (!wU) continue
+    if (Math.abs(wU.x * segU.x + wU.y * segU.y) < PARALLEL_DOT) continue
+    const d = Math.max(distToInfiniteLine(a, wall.a, wall.b), distToInfiniteLine(b, wall.a, wall.b))
+    if (d > snapCm + 1e-9) continue
+    const tA = unboundedT(wall.a, wall.b, a)
+    const tB = unboundedT(wall.a, wall.b, b)
+    if (Math.max(tA, tB) < -0.01 || Math.min(tA, tB) > 1.01) continue
+    if (d < bestD - 1e-9) {
+      bestD = d
+      best = wall
+    }
+  }
+  return best
+}
+
+function snapFootprintPass(
+  walls: ReadonlyArray<Wall>,
+  footprint: DormerFootprint,
+  snapCm: number,
+): DormerFootprint {
+  let frontA = footprint.frontA
+  let frontB = footprint.frontB
+  const frontHost = findCollinearHost(walls, frontA, frontB, snapCm)
+  if (frontHost) {
+    frontA = projectOnInfiniteLine(frontA, frontHost.a, frontHost.b)
+    frontB = projectOnInfiniteLine(frontB, frontHost.a, frontHost.b)
+  } else {
+    frontA = snapPointToDormerWall(walls, frontA, snapCm)
+    frontB = snapPointToDormerWall(walls, frontB, snapCm)
+  }
+  const inward = unitOrNull(
+    footprint.backA.x - footprint.frontA.x,
+    footprint.backA.y - footprint.frontA.y,
+  )
+  if (!inward) return footprint
+  let backA = {
+    x: frontA.x + inward.x * footprint.depthCm,
+    y: frontA.y + inward.y * footprint.depthCm,
+  }
+  let backB = {
+    x: frontB.x + inward.x * footprint.depthCm,
+    y: frontB.y + inward.y * footprint.depthCm,
+  }
+  const wangAHost = findCollinearHost(walls, frontA, backA, snapCm)
+  if (wangAHost) {
+    frontA = projectOnInfiniteLine(frontA, wangAHost.a, wangAHost.b)
+    backA = projectOnInfiniteLine(backA, wangAHost.a, wangAHost.b)
+  }
+  const wangBHost = findCollinearHost(walls, frontB, backB, snapCm)
+  if (wangBHost) {
+    frontB = projectOnInfiniteLine(frontB, wangBHost.a, wangBHost.b)
+    backB = projectOnInfiniteLine(backB, wangBHost.a, wangBHost.b)
+  }
+  const midBack = { x: (backA.x + backB.x) / 2, y: (backA.y + backB.y) / 2 }
+  return projectDormerFootprint(frontA, frontB, midBack) ?? footprint
+}
+
+/** Voorzijde en wang op een nabije bestaande muur (≤5 cm); daarna weer haaks. */
+export function snapDormerFootprintToWalls(
+  walls: ReadonlyArray<Wall>,
+  footprint: DormerFootprint,
+  snapCm = DORMER_WALL_SNAP_CM,
+): DormerFootprint {
+  if (snapCm <= 0 || walls.length === 0) return footprint
+  let next = footprint
+  for (let pass = 0; pass < 2; pass += 1) {
+    next = snapFootprintPass(walls, next, snapCm)
+  }
+  return next
+}
+
+function existingSegment(walls: readonly Wall[], a: Point2D, b: Point2D): Wall | undefined {
+  return walls.find(
+    (wall) =>
+      (samePoint(wall.a, a) && samePoint(wall.b, b)) ||
+      (samePoint(wall.a, b) && samePoint(wall.b, a)),
+  )
 }
 
 /** Inward = diepte-richting (hover-zijde). Kopse-balance: dikte die kant op, hartlijn = buitenface. */
@@ -153,9 +309,11 @@ function wallDrawEndpoint(topHCm: number, bottomZCm: number): { z: number; h: nu
 export function addDormerWalls(
   walls: Wall[],
   footprint: DormerFootprint,
-  options: { thicknessCm: number; roofZCm: number; bottomZCm?: number },
-): { walls: Wall[]; wallIds: string[] } {
+  options: { thicknessCm: number; roofZCm: number; bottomZCm?: number; snapCm?: number },
+): { walls: Wall[]; wallIds: string[]; footprint: DormerFootprint } {
   const next = cloneWalls(walls)
+  const snapCm = options.snapCm ?? DORMER_WALL_SNAP_CM
+  const fp = snapDormerFootprintToWalls(next, footprint, snapCm)
   const thickness = Math.max(1, Math.min(200, Math.round(options.thicknessCm)))
   const bottomZCm = options.bottomZCm ?? 0
   const endpoint = wallDrawEndpoint(options.roofZCm, bottomZCm)
@@ -167,30 +325,37 @@ export function addDormerWalls(
     minLengthCm: MIN_WALL_LENGTH_CM,
     endpointExtras,
   }
-  const addedIds: string[] = []
-  addedIds.push(
-    ...addSegmentPathWithJunctionBreaks(next, footprint.frontA, footprint.frontB, {
-      ...common,
-      balance: footprint.kopseBalance,
-    }),
-  )
-  addedIds.push(
-    ...addSegmentPathWithJunctionBreaks(next, footprint.frontA, footprint.backA, {
-      ...common,
-      balance: 0.5,
-    }),
-  )
-  addedIds.push(
-    ...addSegmentPathWithJunctionBreaks(next, footprint.frontB, footprint.backB, {
-      ...common,
-      balance: 0.5,
-    }),
-  )
-  const exclude = new Set(addedIds)
-  for (const point of [footprint.frontA, footprint.frontB, footprint.backA, footprint.backB]) {
-    materializeEndpointJoinsAtPoint(next, point, { excludeWallIds: exclude, toleranceCm: 1 })
+  const corners = [fp.frontA, fp.frontB, fp.backA, fp.backB]
+  for (const point of corners) {
+    materializeEndpointJoinsAtPoint(next, point, { toleranceCm: DORMER_SPLIT_TOL_CM })
   }
-  return { walls: next, wallIds: addedIds }
+  const usedIds: string[] = []
+  const legs: Array<{ a: Point2D; b: Point2D; balance: number }> = [
+    { a: fp.frontA, b: fp.frontB, balance: fp.kopseBalance },
+    { a: fp.frontA, b: fp.backA, balance: 0.5 },
+    { a: fp.frontB, b: fp.backB, balance: 0.5 },
+  ]
+  for (const leg of legs) {
+    const reused = existingSegment(next, leg.a, leg.b)
+    if (reused) {
+      usedIds.push(reused.id)
+      continue
+    }
+    usedIds.push(
+      ...addSegmentPathWithJunctionBreaks(next, leg.a, leg.b, {
+        ...common,
+        balance: leg.balance,
+      }),
+    )
+  }
+  const exclude = new Set(usedIds)
+  for (const point of corners) {
+    materializeEndpointJoinsAtPoint(next, point, {
+      excludeWallIds: exclude,
+      toleranceCm: DORMER_SPLIT_TOL_CM,
+    })
+  }
+  return { walls: next, wallIds: usedIds, footprint: fp }
 }
 
 export function applyDormerDrawToPlan(
@@ -200,18 +365,23 @@ export function applyDormerDrawToPlan(
 ): { plan: FloorPlan; wallIds: string[]; surfaceId: string } | null {
   const floor = plan.floors[floorIndex]
   if (!floor) return null
-  const footprint = projectDormerFootprint(args.frontA, args.frontB, args.depthPoint)
-  if (!footprint) return null
-  const added = addDormerWalls(floor.walls, footprint, {
+  const raw = projectDormerFootprint(args.frontA, args.frontB, args.depthPoint)
+  if (!raw) return null
+  const beforeWalls = floor.walls
+  const added = addDormerWalls(floor.walls, raw, {
     thicknessCm: args.thicknessCm,
     roofZCm: args.roofZCm,
     bottomZCm: args.bottomZCm,
+    snapCm: args.snapCm,
   })
   if (added.wallIds.length === 0) return null
+  const footprint = added.footprint
 
   let nextFloor = { ...floor, walls: added.walls }
   const existing = listRidgeSurfacesOnFloor(nextFloor)
-  const poly = dormerOuterPolyFromFootprint(footprint, args.thicknessCm).map((p) => ({
+  const seed = dormerOuterPolyFromFootprint(footprint, args.thicknessCm)
+  const outer = dormerOuterPolyFromWalls(added.walls, { poly: seed }) ?? seed
+  const poly = outer.map((p) => ({
     ...p,
     z: args.roofZCm,
   }))
@@ -232,5 +402,10 @@ export function applyDormerDrawToPlan(
   }
   syncRoofPlaneGuidsFromDesigns(next)
   next = bindFloorWallsToRoofs(next, floorIndex, { wallIds: added.wallIds }).plan
+  inheritFacadeGroupsAfterWallsChanged(
+    next,
+    beforeWalls,
+    next.floors[floorIndex]?.walls ?? added.walls,
+  )
   return { plan: next, wallIds: added.wallIds, surfaceId }
 }

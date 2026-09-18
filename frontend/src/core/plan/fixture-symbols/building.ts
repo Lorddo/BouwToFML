@@ -17,6 +17,28 @@ export function glassWall(widthCm: number, heightCm: number): FixtureSymbolShape
   })
 }
 
+export function doorbell(w: number, h: number): FixtureSymbolShape {
+  const r = Math.min(w, h) * 0.28
+  const cy = -h * 0.08
+  const ringR = r * 0.72
+  const ringCy = cy + r + ringR * 0.85
+  const topR = r * 0.22
+  const topCy = cy - r - topR * 0.35
+  return emptyShape({
+    circles: [
+      [0, topCy, topR],
+      [0, cy, r],
+      [0, ringCy, ringR],
+    ],
+    polylines: [[0, cy - r, 0, ringCy + ringR]],
+    stroke: '#0f172a',
+    fill: 'transparent',
+    circleFill: 'transparent',
+    strokeWidth: 1.6,
+    overWalls: true,
+  })
+}
+
 export function entranceArrow(w: number, h: number): FixtureSymbolShape {
   const hw = w / 2
   const hh = h / 2
@@ -89,15 +111,27 @@ export function railing(
   const alongW = w >= h
   const along = alongW ? w : h
   const across = alongW ? h : w
-  const n = Math.max(4, Math.round(along / 14))
-  const polylines: number[][] = []
-  for (let i = 1; i < n; i += 1) {
-    const t = -along / 2 + (i / n) * along
-    if (alongW) polylines.push([t, -across / 2, t, across / 2])
-    else polylines.push([-across / 2, t, across / 2, t])
+  const nBars = Math.max(3, Math.round(along / (120 / 18)))
+  const halfA = along / 2
+  const halfC = across / 2
+  // Open aan +across (onderkant): alleen bovenregel + eindstijlen + spijlen.
+  const polylines: number[][] = alongW
+    ? [
+        [-halfA, -halfC, halfA, -halfC],
+        [-halfA, -halfC, -halfA, halfC],
+        [halfA, -halfC, halfA, halfC],
+      ]
+    : [
+        [-halfC, -halfA, -halfC, halfA],
+        [-halfC, -halfA, halfC, -halfA],
+        [-halfC, halfA, halfC, halfA],
+      ]
+  for (let i = 1; i <= nBars; i += 1) {
+    const t = -halfA + (i / (nBars + 1)) * along
+    if (alongW) polylines.push([t, -halfC, t, halfC])
+    else polylines.push([-halfC, t, halfC, t])
   }
   return emptyShape({
-    rects: [[-w / 2, -h / 2, w, h]],
     polylines,
     stroke,
     fill: 'transparent',
@@ -118,6 +152,28 @@ export function koof(w: number, h: number): FixtureSymbolShape {
     stroke: '#0f172a',
     fill: '#f8fafc',
     strokeWidth: 1.4,
+    overWalls: true,
+  })
+}
+
+export function column(w: number, h: number): FixtureSymbolShape {
+  return emptyShape({
+    rects: [[-w / 2, -h / 2, w, h]],
+    stroke: '#0f172a',
+    fill: '#94a3b8',
+    strokeWidth: 1.6,
+    overWalls: true,
+  })
+}
+
+export function columnRound(w: number, h: number): FixtureSymbolShape {
+  const r = Math.min(w, h) / 2
+  return emptyShape({
+    circles: [[0, 0, r]],
+    stroke: '#0f172a',
+    fill: '#94a3b8',
+    circleFill: '#94a3b8',
+    strokeWidth: 1.6,
     overWalls: true,
   })
 }
@@ -210,6 +266,26 @@ export function heatPump(w: number, h: number): FixtureSymbolShape {
   })
 }
 
+/** Hawaii-luifel: gestreept doek, geen beton-afdak. */
+export function awning(w: number, h: number): FixtureSymbolShape {
+  const hw = w / 2
+  const hh = h / 2
+  const n = Math.max(4, Math.round(w / 16))
+  const stripes: number[][] = []
+  for (let i = 1; i < n; i += 1) {
+    const x = -hw + (i / n) * w
+    stripes.push([x, -hh, x, hh])
+  }
+  return emptyShape({
+    rects: [[-hw, -hh, w, h]],
+    polylines: stripes,
+    stroke: '#b45309',
+    fill: '#fde68a',
+    strokeWidth: 1.2,
+    overWalls: true,
+  })
+}
+
 export function canopy(w: number, h: number): FixtureSymbolShape {
   return emptyShape({
     rects: [[-w / 2, -h / 2, w, h]],
@@ -276,4 +352,30 @@ export function hidden(): FixtureSymbolShape {
 
 export function balustrade(widthCm: number, heightCm: number): FixtureSymbolShape {
   return railing(Math.max(0.8, widthCm), Math.max(0.8, heightCm), '#64748b', 0.95)
+}
+
+export function balustradeGlass(widthCm: number, heightCm: number): FixtureSymbolShape {
+  const w = Math.max(0.8, widthCm)
+  const h = Math.max(0.8, heightCm)
+  const alongW = w >= h
+  const along = alongW ? w : h
+  const across = alongW ? h : w
+  const nPanels = Math.max(1, Math.round(along / 40))
+  const post = Math.min(2.8, Math.max(1.2, along * 0.04))
+  const halfA = along / 2
+  const halfC = across / 2
+  const posts: number[][] = []
+  for (let i = 0; i <= nPanels; i += 1) {
+    const alongPos = -halfA + (i / nPanels) * along
+    const origin = alongPos - (i === 0 ? 0 : i === nPanels ? post : post / 2)
+    if (alongW) posts.push([origin, -halfC, post, across])
+    else posts.push([-halfC, origin, across, post])
+  }
+  return emptyShape({
+    rects: [[-w / 2, -h / 2, w, h], ...posts],
+    stroke: '#0e7490',
+    fill: '#e0f2fe',
+    strokeWidth: 1.2,
+    overWalls: true,
+  })
 }

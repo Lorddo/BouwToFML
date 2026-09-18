@@ -5,7 +5,7 @@ import {
   createEmptyProjectState,
 } from '@/ui/composables/project/defaults'
 import { projectStepCanProceed } from '@/ui/composables/workspace/constants'
-import { floorStatusFromFlowStep } from '@/ui/composables/project/types'
+import { floorStatusFromFlowStep, resolveHydrateFlowStep } from '@/ui/composables/project/types'
 import type { Floor } from '@/core/plan/types'
 
 function wallFloor(name: string, level: number, wallId: string): Floor {
@@ -134,5 +134,14 @@ describe('project defaults + gates', () => {
   it('floorStatusFromFlowStep maps project to empty', () => {
     expect(floorStatusFromFlowStep('project')).toBe('empty')
     expect(floorStatusFromFlowStep('templates')).toBe('templates')
+  })
+
+  it('resolveHydrateFlowStep neemt de verste van session vs floor-status', () => {
+    expect(resolveHydrateFlowStep('preprocess', 'result')).toBe('result')
+    expect(resolveHydrateFlowStep('result', 'preprocess')).toBe('result')
+    expect(resolveHydrateFlowStep('preprocess', 'preprocess')).toBe('preprocess')
+    expect(resolveHydrateFlowStep('project', 'empty')).toBe('input')
+    expect(resolveHydrateFlowStep(undefined, 'templates')).toBe('templates')
+    expect(resolveHydrateFlowStep('templates', 'empty')).toBe('templates')
   })
 })

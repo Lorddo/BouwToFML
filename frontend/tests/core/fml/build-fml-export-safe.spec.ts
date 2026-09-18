@@ -100,6 +100,33 @@ describe('buildFmlV3 Floorplanner-safe export', () => {
     }
     const withCdn = JSON.parse(buildFmlV3(plan))
     expect(withCdn.floors[0].drawing.url).toBe('https://cdn.example.com/scan.png')
+    expect(withCdn.floors[0].drawing.visible).toBe(true)
+    expect(withCdn.floors[0].drawing.depth).toBe('HIGH')
+  })
+
+  it('schrijft drawing.visible + depth altijd (Floorplanner generate)', () => {
+    const plan = createEmptyFloorPlan({ name: 'Drawing-flags' })
+    plan.floors[0].walls = [wall('w1', { x: 0, y: 0 }, { x: 100, y: 0 })]
+    plan.floors[0].drawing = {
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 100,
+      rotation: 0,
+      url: 'https://cdn.example.com/scan.png',
+    }
+    const raw = JSON.parse(buildFmlV3(plan))
+    expect(raw.floors[0].drawing.visible).toBe(true)
+    expect(raw.floors[0].drawing.depth).toBe('HIGH')
+
+    plan.floors[0].drawing = {
+      ...plan.floors[0].drawing,
+      visible: false,
+      extras: { depth: 'LOW' },
+    }
+    const kept = JSON.parse(buildFmlV3(plan))
+    expect(kept.floors[0].drawing.visible).toBe(false)
+    expect(kept.floors[0].drawing.depth).toBe('LOW')
   })
 
   it('zet floor.height ≥ hoogste muurtop (scheve/nok-muren)', () => {

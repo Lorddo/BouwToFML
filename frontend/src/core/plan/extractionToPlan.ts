@@ -19,6 +19,7 @@ import { mapLayer12DoorsToOpenings } from './extraction-to-plan-doors'
 import { mapLayer14WindowsToOpenings } from './extraction-to-plan-windows'
 import { imagePxThicknessToCmAlongNormal } from './measure-underlay-wall-thickness'
 import type { WallFaceExtentsCm } from './wall-face-step-evidence'
+import { floorDefaultsFromTemplate } from './floor-defaults'
 
 export type {
   ExtractionToPlanOptions,
@@ -220,6 +221,11 @@ export function extractionToPlanWithOrigin(
           level: options.level ?? 0,
           height: floorHeightCm,
           walls,
+          defaults: floorDefaultsFromTemplate({
+            doorHeightCm: defaultDoorHeightCm,
+            windowHeightCm: defaultWindowHeightCm,
+            windowSillZCm: defaultWindowSillZCm,
+          }),
         },
       ],
     },

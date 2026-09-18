@@ -1,6 +1,6 @@
 {
   "beschrijving": "FML-adapter: FixtureAssetKind → canonieke Floorplanner-refid + aliases.",
-  "laatste_update": "2026-09-11",
+  "laatste_update": "2026-09-18",
   "alignKind": "oil_bottle",
   "entries": [
     {
@@ -94,6 +94,11 @@
       "aliases": []
     },
     {
+      "kind": "bathtub_square",
+      "canonical": "5a29a61452bd6d28398a56eb3ac559fa5f2f8a9c",
+      "aliases": []
+    },
+    {
       "kind": "shower_head",
       "canonical": "074b112e6d9be8860fce202dd706de49598db82d",
       "aliases": [
@@ -110,13 +115,21 @@
       "kind": "sink_large",
       "canonical": "7b5d656c72b56ae0e8200132ec92a1ae03869b93",
       "aliases": [
-        "8911888116d02e6058deb14839e65290eb9041be"
+        "8911888116d02e6058deb14839e65290eb9041be",
+        "7526c516ba52af0746a985899c71dcd54b3036f1"
       ]
     },
     {
       "kind": "entrance_arrow",
       "canonical": "sym-22",
       "aliases": []
+    },
+    {
+      "kind": "doorbell",
+      "canonical": "a32b295d3151d42cb5809d7ae24f5b7eaad800f2",
+      "aliases": [
+        "217a4cc8c41ce47c5a3af1c87b665aed5ad5ef84"
+      ]
     },
     {
       "kind": "north_cross",
@@ -146,8 +159,33 @@
       "aliases": []
     },
     {
+      "kind": "stair_u_landing",
+      "canonical": "4589a832b430a438497532cf949c0fca4422e5fa",
+      "aliases": []
+    },
+    {
+      "kind": "stair_winder_270",
+      "canonical": "575283d4277c38c85c9ccd1f2541560270224483",
+      "aliases": []
+    },
+    {
+      "kind": "stair_c_90",
+      "canonical": "f4dfb1284c71db8a36d38366191b11bffc1a0aad",
+      "aliases": []
+    },
+    {
+      "kind": "stair_l_90",
+      "canonical": "0a74fe428df1ffbc0d4eb91a1f5d93e810c02ac8",
+      "aliases": []
+    },
+    {
       "kind": "stair_quarter_90",
       "canonical": "7f4bebad787178e920c4c7aa11954aad24e457a1",
+      "aliases": []
+    },
+    {
+      "kind": "stair_l_90_up",
+      "canonical": "6a7f42be0fe9ad75f553aff035ef99a88b2f5b4f",
       "aliases": []
     },
     {
@@ -158,11 +196,25 @@
     {
       "kind": "stair_straight",
       "canonical": "17f4fb9a53843a0e345bfd587144ed48c08bf6f5",
-      "aliases": []
+      "aliases": [
+        "2fa75eaccb316cfe425443170a4c592ce744150d",
+        "aa120b01575651032fde11b1a73edbd14fc1e134",
+        "3eccd07e62d16033ccc432437a698441fdb39904"
+      ]
     },
     {
       "kind": "stair_straight_double",
       "canonical": "825bce5ff93725dbd0ab11b82e6a2b13f96475cf",
+      "aliases": []
+    },
+    {
+      "kind": "stair_loft_dashed",
+      "canonical": "e701f9f4b4cced9ece89e1a9be7ff16b3e8ebdc0",
+      "aliases": []
+    },
+    {
+      "kind": "ramp",
+      "canonical": "154ef47edc578f74c3c939bbbdddc992fb03152e",
       "aliases": []
     },
     {
@@ -183,6 +235,11 @@
       "aliases": []
     },
     {
+      "kind": "awning",
+      "canonical": "f4ac4e40e32c7e6b0dacb52c390e94462095943e",
+      "aliases": []
+    },
+    {
       "kind": "hidden",
       "canonical": "7518d7dd885df41f7caddb870d2561bdc5a1a861",
       "aliases": []
@@ -193,6 +250,16 @@
       "aliases": []
     },
     {
+      "kind": "column",
+      "canonical": "80e78b8385c1474321e95290e0478c4135c4b246",
+      "aliases": []
+    },
+    {
+      "kind": "column_round",
+      "canonical": "755f931e2b6ce0b0550475d705bda3fb16172bc2",
+      "aliases": []
+    },
+    {
       "kind": "koof",
       "canonical": "719b88456badf9658c0a2b9afbe6922026b6fd71",
       "aliases": []
@@ -200,7 +267,12 @@
     {
       "kind": "railing",
       "canonical": "0bcc0bc80f610a0cb428012520b7006d7fcb1ce8",
-      "aliases": []
+      "aliases": [
+        "1370b0fb20e3fb98e25a86c30291ee80177bb20e",
+        "74f724450aa8c35c6b6de2002b27acd6d4a39170",
+        "8d570e6107cc9797e86fb3b432c0ee93e040b78e",
+        "46545216942e52eba957507812a889d8a73fdf9c"
+      ]
     },
     {
       "kind": "balustrade",
@@ -209,6 +281,13 @@
         "9ab4ec64a812dbdb0848ab5c0267c97edb99a7c8",
         "a41b3eefff00293fdf1f5e04cb44295102cb3d57",
         "7292d81f717bee00e2879664e13ca45d081ee856"
+      ]
+    },
+    {
+      "kind": "balustrade_glass",
+      "canonical": "be2676cebc67e106722cb9e8f6e0d662263e84e4",
+      "aliases": [
+        "82f13d6382a3da7ae33a69db81eccb5baec5ec2f"
       ]
     },
     {

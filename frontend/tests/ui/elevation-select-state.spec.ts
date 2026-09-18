@@ -99,6 +99,24 @@ describe('elevation-select-state — één target', () => {
   })
 })
 
+describe('elevation-select-state — muur-grepen', () => {
+  it('muur heeft alleen hoogte + lift, geen midden-shift en geen XY-as-einden', () => {
+    const { select } = harness()
+    select.selectWallSettings('w1', 0)
+    expect(select.wallElevationHandles.value.map((handle) => handle.mode)).toEqual([
+      'height',
+      'lift',
+    ])
+    expect(select.wallAxisEndHandles.value).toEqual([])
+  })
+
+  it('knoop heeft alleen lift, geen midden-shift', () => {
+    const { select } = harness()
+    select.selectJunction('j1')
+    expect(select.junctionElevationHandles.value.map((handle) => handle.mode)).toEqual(['lift'])
+  })
+})
+
 describe('elevation-select-state — wall-hop herschrijft de selectie', () => {
   it('applyOpeningRect op een buurmuur zet opening-id én settings-id', () => {
     const { select } = harness()

@@ -53,8 +53,14 @@ import { useWorkspaceDoorSwingFaces } from './workspace/useWorkspaceDoorSwingFac
 import { useWorkspaceWindowFaces } from './workspace/useWorkspaceWindowFaces'
 import { assembleWorkspaceFacadeReturn } from './workspace/assembleWorkspaceFacadeReturn'
 import { useGapsInkModePersistence } from './workspace/useGapsInkModePersistence'
-import { totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
+import { hasPendingInputRotation, totalInputRotationDeg } from '@/platform/canvas/rotationPreview'
 import { useWorkspaceProject } from './project/useWorkspaceProject'
+import { resolveBlobSourceToWorking } from './project/attach-workspace-underlay'
+import {
+  compactInputRotation,
+  snapshotSourceUnderlayReuse,
+  type ReuseUnderlayLoadOptions,
+} from './project/reuse-underlay-pdf'
 import { loadUserSettings } from './settings/user-settings'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { factoryRoomTypeColor } from '@/core/plan/roomtype-catalog'
@@ -74,7 +80,20 @@ import {
 } from '@/core/plg/plg-document'
 import { clonePlain } from '@/platform/dev-workspace'
 import type { FloorPlan } from '@/core/plan/types'
+import {
+  applyInputRotationToTransform,
+  hasBakeRotation,
+  identitySourceToWorkingTransform,
+  resolveSourceUnderlayLayout,
+} from '@/core/plan/source-underlay-transform'
 import { promptPlanExportFormat } from '@/ui/composables/plan-chrome-dialog'
+import { getConfiguredAccessPassword } from '@/ui/access-gate'
+import {
+  ensurePlanUnderlaysUploaded,
+  isHttpsDrawingUrl,
+  pngBytesFromUnderlaySrc,
+  uploadPlanUnderlayBytes,
+} from '@/platform/underlay-upload'
 import { sanitizeFilename } from './workspace/workspace-plan-generate'
 import { isWallsClassifyOutput, isWallsOutputFinalized } from './workspace/room-faces-cache-sync'
 import {
@@ -345,12 +364,108 @@ export function useWorkspace() {
     mergeMultiWindows.value = settings.openingMerge.mergeMultiWindows
     scaleUi.applyScaleInputUnitFromSettings()
   }
-  const underlaySrc = computed(() => image.workingImageSrc.value ?? null)
+  const activeFloorBlob = computed(
+    () => project.projectState.value.blobs[project.activeFloorId.value] ?? null,
+  )
+  const underlaySrc = computed(() => {
+    if (flowStep.value === 'result') {
+      return (
+        activeFloorBlob.value?.planUnderlay?.src ??
+        activeFloorBlob.value?.sourceUnderlay?.src ??
+        image.workingImageSrc.value ??
+        null
+      )
+    }
+    return image.workingImageSrc.value ?? null
+  })
   const underlaySize = computed(() => {
+    if (flowStep.value === 'result') {
+      const plate = activeFloorBlob.value?.planUnderlay
+      if (plate && plate.width > 0 && plate.height > 0) {
+        return { width: plate.width, height: plate.height }
+      }
+    }
     const img = originalImageEl.value
     if (!img?.naturalWidth || !img.naturalHeight) return null
     return { width: img.naturalWidth, height: img.naturalHeight }
   })
+
+  function syncPlanPlate(): void {
+    const bake = image.planPlateBake.value
+    const plate = image.sourcePlate.value
+    const blob = activeFloorBlob.value
+    const sourceSrc = plate?.src ?? blob?.sourceUnderlay?.src ?? bake?.plateSrc ?? null
+    const plateWidth = plate?.width ?? bake?.plateWidth ?? 0
+    const plateHeight = plate?.height ?? bake?.plateHeight ?? 0
+    if (!bake?.plateSrc && !(sourceSrc && plateWidth > 0 && plateHeight > 0)) return
+
+    const pending = compactInputRotation(preprocess.value)
+    const storedRot = compactInputRotation(blob?.sourceUnderlay?.inputRotation)
+    const existing = blob?.sourceToWorking ?? null
+    let transform = bake?.sourceToWorking
+    if (transform && !hasBakeRotation(transform) && existing && hasBakeRotation(existing)) {
+      transform = existing
+    }
+    if (!transform) {
+      const base = existing ?? identitySourceToWorkingTransform(plateWidth, plateHeight)
+      transform = applyInputRotationToTransform(base, pending ?? storedRot)
+      if (existing && hasBakeRotation(existing) && !hasBakeRotation(transform)) {
+        transform = existing
+      }
+    }
+    const inputRotation =
+      compactInputRotation({
+        rotationDeg: transform.rotationDeg,
+        rotate180: transform.rotate180,
+      }) ??
+      pending ??
+      storedRot
+    // Alleen een echte hoek schrijven — nooit null over een bestaande rotatie.
+    const patchRotation = inputRotation ?? undefined
+
+    if (bake?.plateSrc) {
+      project.setPlanPlate({
+        planUnderlay: {
+          src: bake.plateSrc,
+          width: bake.plateWidth,
+          height: bake.plateHeight,
+        },
+        sourceToWorking: transform,
+        inputRotation: patchRotation,
+      })
+    } else {
+      project.setPlanPlate({
+        planUnderlay: {
+          src: sourceSrc!,
+          width: plateWidth,
+          height: plateHeight,
+        },
+        sourceToWorking: transform,
+        inputRotation: patchRotation,
+      })
+    }
+    void uploadActivePlanPlate()
+  }
+
+  async function uploadActivePlanPlate(): Promise<void> {
+    const floorId = project.activeFloorId.value
+    const plate = project.projectState.value.blobs[floorId]?.planUnderlay
+    if (!plate) return
+    if (isHttpsDrawingUrl(plate.remoteUrl) || isHttpsDrawingUrl(plate.src)) return
+    const bytes = pngBytesFromUnderlaySrc(plate.src)
+    if (!bytes) return
+    try {
+      const url = await uploadPlanUnderlayBytes({
+        bytes,
+        projectId: project.projectMeta.value.id,
+        floorId,
+        token: getConfiguredAccessPassword(),
+      })
+      project.setPlanUnderlayRemoteUrl(floorId, url)
+    } catch {
+      // Download probeert het opnieuw.
+    }
+  }
 
   /** Late-bind: FML na door/window faces (directe refs; geen mirror-watches). */
   let planApi: ReturnType<typeof useWorkspacePlan> | null = null
@@ -585,6 +700,27 @@ export function useWorkspace() {
     },
   })
   planApi = fml
+  const planPlateLayout = computed(() =>
+    resolveSourceUnderlayLayout(
+      fml.previewUnderlayLayout.value,
+      activeFloorBlob.value ? resolveBlobSourceToWorking(activeFloorBlob.value) : null,
+    ),
+  )
+  watch(
+    () => image.sourcePlate.value,
+    (plate) => {
+      if (!plate) return
+      if (activeFloorBlob.value?.planUnderlay?.src) return
+      syncPlanPlate()
+    },
+  )
+  watch(
+    () => image.planPlateBake.value,
+    (bake) => {
+      if (!bake) return
+      syncPlanPlate()
+    },
+  )
 
   async function expandUnderlayForStampIfNeeded() {
     return expandUnderlayForStamp({
@@ -790,6 +926,7 @@ export function useWorkspace() {
     name: string,
     scaleSnapshot?: Parameters<typeof scaleUi.restoreFromSessionSnapshot>[0],
     pdfSource?: PdfUnderlaySource | null,
+    reuseOpts?: ReuseUnderlayLoadOptions,
   ): Promise<void> {
     clearRects()
     doorSwingFaces.resetDoorSwingState()
@@ -803,6 +940,17 @@ export function useWorkspace() {
     image.prepareExactImageSrcLoad()
     setImageSource(src, name)
     await image.loadExactWorkingImage(src)
+    const rot = reuseOpts?.inputRotation
+    preprocess.value = {
+      ...preprocess.value,
+      rotationDeg: rot?.rotationDeg ?? 0,
+      rotate180: rot?.rotate180 ?? false,
+      autoRotationDeg: rot?.autoRotationDeg ?? 0,
+    }
+    // Schaal ná «Rotatie vastzetten»: eerst dezelfde bake, dan de linialen.
+    if (reuseOpts?.scaleSpace === 'working' && hasPendingInputRotation(preprocess.value)) {
+      await image.bakeInputRotation()
+    }
     if (scaleSnapshot) {
       scaleUi.restoreFromSessionSnapshot(scaleSnapshot)
     }
@@ -868,20 +1016,26 @@ export function useWorkspace() {
       flowStep.value = 'input'
     },
     loadUnderlayWithScale,
-    loadUnderlayFromPdf: async (pdfSource, name, scaleSnapshot) => {
+    loadUnderlayFromPdf: async (pdfSource, name, scaleSnapshot, reuseOpts) => {
       const rendered = await renderPdfPageFromBytes({
         bytes: pdfSource.bytes,
         pageNumber: pdfSource.pageNumber,
         pageRenderScale: pdfSource.pageRenderScale,
       })
-      await loadUnderlayWithScale(rendered.dataUrl, name, scaleSnapshot, {
-        bytes: pdfSource.bytes,
-        pageNumber: pdfSource.pageNumber,
-        fileName: pdfSource.fileName,
-        pageRenderScale: rendered.pageRenderScale,
-        pageWidthPx: rendered.pageWidthPx,
-        pageHeightPx: rendered.pageHeightPx,
-      })
+      await loadUnderlayWithScale(
+        rendered.dataUrl,
+        name,
+        scaleSnapshot,
+        {
+          bytes: pdfSource.bytes,
+          pageNumber: pdfSource.pageNumber,
+          fileName: pdfSource.fileName,
+          pageRenderScale: rendered.pageRenderScale,
+          pageWidthPx: rendered.pageWidthPx,
+          pageHeightPx: rendered.pageHeightPx,
+        },
+        reuseOpts,
+      )
     },
     applyPreprocessTune: ({ preprocess: nextPreprocess, drawingProfileId: nextProfile }) => {
       preprocess.value = normalizeStoredPreprocess({ ...nextPreprocess })
@@ -1052,7 +1206,10 @@ export function useWorkspace() {
     clearPolygonToolMode: inputMask.clearPolygonToolMode,
     clearRects,
     refreshMaskedWorkingImage: inputMask.refreshMaskedWorkingImage,
-    commitInputStepImage: image.commitInputStepImage,
+    commitInputStepImage: async () => {
+      await image.commitInputStepImage()
+      syncPlanPlate()
+    },
     commitInkEdits: inkEdit.commitInkEdits,
     refreshLayerUnderlayPreview: preprocessUi.refreshLayerUnderlayPreview,
     refreshAllDetectionUnderlays: preprocessUi.refreshAllDetectionUnderlays,
@@ -1125,15 +1282,39 @@ export function useWorkspace() {
     }
   }
 
-  function downloadProjectPlg(): void {
+  async function prepareExportedProjectPlan(): Promise<FloorPlan | null> {
     if (fml.planLimitsDirty.value) {
       fml.syncAppliedFromDraft()
     }
     const plan = project.buildMergedProjectPlan()
     if (!plan) {
       setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
-      return
+      return null
     }
+    try {
+      const plateSrcs = project.projectFloors.value.map((floor) => {
+        const blob = project.projectState.value.blobs[floor.id]
+        return blob?.planUnderlay?.src ?? blob?.sourceUnderlay?.src ?? null
+      })
+      const uploaded = await ensurePlanUnderlaysUploaded(plan, {
+        projectId: project.projectMeta.value.id,
+        floorIds: project.projectFloors.value.map((f) => f.id),
+        token: getConfiguredAccessPassword(),
+        plateSrcs,
+      })
+      for (const { floorIndex, url } of uploaded.urls) {
+        const floorId = project.projectFloors.value[floorIndex]?.id
+        if (floorId) project.setPlanUnderlayRemoteUrl(floorId, url)
+      }
+      return uploaded.plan
+    } catch {
+      return plan
+    }
+  }
+
+  async function downloadProjectPlg(): Promise<void> {
+    const plan = await prepareExportedProjectPlan()
+    if (!plan) return
     const meta = project.projectMeta.value
     const doc = createPlgDocument({
       project: { id: meta.id, name: meta.name || plan.name, address: meta.address },
@@ -1146,8 +1327,8 @@ export function useWorkspace() {
 
   async function downloadProjectExport(): Promise<void> {
     const format = await promptPlanExportFormat()
-    if (format === 'plg') downloadProjectPlg()
-    else if (format === 'fml') downloadProjectFml()
+    if (format === 'plg') await downloadProjectPlg()
+    else if (format === 'fml') await downloadProjectFml()
   }
 
   function resetWorkspace() {
@@ -1194,25 +1375,33 @@ export function useWorkspace() {
   async function setPlanWallHeightCm(value: number): Promise<void> {
     const applied = await fml.setPlanWallHeightCm(value)
     if (!applied) return
-    project.updateActiveFloorDefaults({ wallHeightCm: Math.round(value) }, { syncUi: false })
+    const wallPatch = { wallHeightCm: Math.round(value) }
+    if (applied === 'project') project.updateAllFloorDefaults(wallPatch, { syncUi: false })
+    else project.updateActiveFloorDefaults(wallPatch, { syncUi: false })
   }
 
   async function setPlanDoorHeightCm(value: number): Promise<void> {
     const applied = await fml.setPlanDoorHeightCm(value)
     if (!applied) return
-    project.updateActiveFloorDefaults({ doorHeightCm: Math.round(value) }, { syncUi: false })
+    const patch = { doorHeightCm: Math.round(value) }
+    if (applied === 'project') project.updateAllFloorDefaults(patch, { syncUi: false })
+    else project.updateActiveFloorDefaults(patch, { syncUi: false })
   }
 
   async function setPlanWindowHeightCm(value: number): Promise<void> {
     const applied = await fml.setPlanWindowHeightCm(value)
     if (!applied) return
-    project.updateActiveFloorDefaults({ windowHeightCm: Math.round(value) }, { syncUi: false })
+    const patch = { windowHeightCm: Math.round(value) }
+    if (applied === 'project') project.updateAllFloorDefaults(patch, { syncUi: false })
+    else project.updateActiveFloorDefaults(patch, { syncUi: false })
   }
 
   async function setPlanWindowSillZCm(value: number): Promise<void> {
     const applied = await fml.setPlanWindowSillZCm(value)
     if (!applied) return
-    project.updateActiveFloorDefaults({ windowSillZCm: Math.round(value) }, { syncUi: false })
+    const patch = { windowSillZCm: Math.round(value) }
+    if (applied === 'project') project.updateAllFloorDefaults(patch, { syncUi: false })
+    else project.updateActiveFloorDefaults(patch, { syncUi: false })
   }
 
   /**
@@ -1223,14 +1412,18 @@ export function useWorkspace() {
     const on = value === true
     const applied = await fml.setPlanBovenlichtDefault(on)
     if (!applied) return
-    project.updateActiveFloorDefaults({ bovenlichtDefault: on }, { syncUi: false })
+    const patch = { bovenlichtDefault: on }
+    if (applied === 'project') project.updateAllFloorDefaults(patch, { syncUi: false })
+    else project.updateActiveFloorDefaults(patch, { syncUi: false })
   }
 
   async function setPlanWindowBovenlichtDefault(value: boolean): Promise<void> {
     const on = value === true
     const applied = await fml.setPlanWindowBovenlichtDefault(on)
     if (!applied) return
-    project.updateActiveFloorDefaults({ windowBovenlichtDefault: on }, { syncUi: false })
+    const patch = { windowBovenlichtDefault: on }
+    if (applied === 'project') project.updateAllFloorDefaults(patch, { syncUi: false })
+    else project.updateActiveFloorDefaults(patch, { syncUi: false })
   }
 
   function exportMergedProjectPlan(): { plan: FloorPlan; thicknessCms: number[] } | null {
@@ -1249,46 +1442,11 @@ export function useWorkspace() {
     }
   }
 
-  function downloadProjectFml(): void {
-    // Dirty hoogte/dikte meenemen zonder canvas-edits te wissen (bovenlicht is live).
-    if (fml.planLimitsDirty.value) {
-      fml.syncAppliedFromDraft()
-    }
-    const plan = project.buildMergedProjectPlan()
-    if (!plan) {
-      setLocalError(tGlobal('project.errors.noFloorReadyForPlan'))
-      return
-    }
-    // Bron van waarheid = floor.defaults (schrijft PlanPanel write-through + project-setup).
-    // Live UI alleen als fallback wanneer floor-meta niet matcht (niet actieve-floor override:
-    // underlay-reset wist UI naar false terwijl defaults true konden blijven).
-    const floorsMeta = project.projectFloors.value
-    const liveBovenlicht = fml.planBovenlichtDefault.value
-    const liveWindowBovenlicht = fml.planWindowBovenlichtDefault.value
-    const liveBovenlichtHeight = fml.planBovenlichtHeightCm.value
-    const liveBovenlichtGap = fml.planBovenlichtGapCm.value
+  async function downloadProjectFml(): Promise<void> {
+    const plan = await prepareExportedProjectPlan()
+    if (!plan) return
     const text = buildFmlV3(plan, {
       name: plan.name,
-      bovenlichtDefault: (floor) => {
-        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
-        if (!meta) return liveBovenlicht
-        return meta.defaults.bovenlichtDefault === true
-      },
-      windowBovenlichtDefault: (floor) => {
-        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
-        if (!meta) return liveWindowBovenlicht
-        return meta.defaults.windowBovenlichtDefault === true
-      },
-      bovenlichtHeightCm: (floor) => {
-        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
-        if (!meta) return liveBovenlichtHeight
-        return meta.defaults.bovenlichtHeightCm
-      },
-      bovenlichtGapCm: (floor) => {
-        const meta = floorsMeta.find((f) => f.level === floor.level && f.name === floor.name)
-        if (!meta) return liveBovenlichtGap
-        return meta.defaults.bovenlichtGapCm
-      },
       useMetric: loadUserSettings().unitSystem === 'metric',
       ...(PLAN_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
@@ -1345,6 +1503,7 @@ export function useWorkspace() {
     showCanvasGrid,
     underlaySrc,
     underlaySize,
+    planPlateLayout,
     fml,
     pipeline,
     scaleUi,
@@ -1374,11 +1533,20 @@ export function useWorkspace() {
     onConfirmScale: () => {
       scaleUi.onConfirmScale()
       if (!scale.confirmed.value) return
-      // Duurzame PNG — nooit blob:-URL (die wordt revoked bij crop/nieuwe upload).
+      // Duurzame bronplaat — niet de gecropte werkplaat ná bake.
+      const plate = image.sourcePlate.value
       const img = originalImageEl.value
-      if (!img?.complete || img.naturalWidth <= 0) return
+      const durableSrc = plate?.src ?? (img?.complete ? imageElementToPngDataUrl(img) : null)
+      if (!durableSrc) return
       try {
-        const durableSrc = imageElementToPngDataUrl(img)
+        const reuseSnap = snapshotSourceUnderlayReuse({
+          preprocess: preprocess.value,
+          sourceToWorking:
+            image.planPlateBake.value?.sourceToWorking ??
+            activeFloorBlob.value?.sourceToWorking ??
+            null,
+          storedInputRotation: activeFloorBlob.value?.sourceUnderlay?.inputRotation ?? null,
+        })
         project.ensureSourceUnderlay(
           {
             src: durableSrc,
@@ -1395,9 +1563,12 @@ export function useWorkspace() {
                 ? { confirmedPixelsPerMillimeterY: scale.confirmedPixelsPerMillimeterY.value }
                 : {}),
             },
+            inputRotation: reuseSnap.inputRotation,
+            scaleSpace: reuseSnap.scaleSpace,
           },
           image.pdfUnderlaySource.value,
         )
+        syncPlanPlate()
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         setLocalError(tGlobal('input.errors.couldNotSaveProjectSource', { message }))

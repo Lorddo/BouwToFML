@@ -1,9 +1,23 @@
-# Worker + static assets (live: https://floorplan-fml.lorddo3066.workers.dev/).
-# SPA routes such as /FML-editor must use not_found_handling — do not add
-# `/* /index.html 200` in _redirects (Cloudflare error 100324, infinite loop).
-name = "floorplan-fml"
+# Klant: https://converter.palassoftwarestudio.workers.dev/
+# Test (oud account, geen R2-binding): floorplan-fml.lorddo3066.workers.dev
+# SPA routes: not_found_handling — geen `/* /index.html 200` in _redirects (CF 100324).
+name = "converter"
+account_id = "cff9a9a1268f9ed177a68130f5d96a00"
+main = "./worker/underlay-upload.ts"
 compatibility_date = "2026-08-19"
 
 [assets]
 directory = "./dist/"
+binding = "ASSETS"
 not_found_handling = "single-page-application"
+run_worker_first = ["/api/underlay", "/u/*"]
+
+# Bestaande bucket: palasstudio (EU). Zonder jurisdiction maakt wrangler een
+# tweede default-bucket met dezelfde naam. Dashboard-instellingen niet via deploy.
+[[r2_buckets]]
+binding = "UNDERLAYS"
+bucket_name = "palasstudio"
+jurisdiction = "eu"
+
+[vars]
+UNDERLAY_PUBLIC_BASE = "https://pub-1888612f786c47edb7abe789be446963.r2.dev"

@@ -1,9 +1,14 @@
 import type { FixtureAssetKind } from '../fixture-refid-catalog'
 import {
   balustrade,
+  balustradeGlass,
   boiler,
+  awning,
   canopy,
   chimney,
+  doorbell,
+  column,
+  columnRound,
   dormer,
   entranceArrow,
   fuseBox,
@@ -20,6 +25,7 @@ import {
 import { cabinetHigh, cooktop, countertop, dishwasher, fridge, kitchenSink } from './kitchen'
 import {
   bathtub,
+  bathtubSquare,
   dryer,
   sinkDouble,
   sinkLarge,
@@ -32,12 +38,20 @@ import {
   washingMachine,
 } from './sanitary'
 import {
+  stairC90,
+  stairL90,
+  stairL90Up,
+  stairLoft,
+  stairLoftDashed,
   stairOpening,
   stairQuarter90Arrival,
   stairQuarter90GoingUp,
   stairStraight,
   stairStraightDouble,
+  stairULanding,
   stairWinder180,
+  stairWinder270,
+  wheelchairRamp,
 } from './stairs'
 import type { OpeningFrameCm } from '../opening-display-geom'
 import { emptyShape, isFurnitureKind, type FixtureSymbolShape } from './types'
@@ -80,6 +94,8 @@ export function buildFixtureSymbol(
       return washerDryer(w, h)
     case 'bathtub':
       return bathtub(w, h)
+    case 'bathtub_square':
+      return bathtubSquare(w, h)
     case 'sink_double':
       return sinkDouble(w, h)
     case 'sink_vanity':
@@ -90,6 +106,8 @@ export function buildFixtureSymbol(
       return glassWall(widthCm, heightCm)
     case 'entrance_arrow':
       return entranceArrow(w, h)
+    case 'doorbell':
+      return doorbell(w, h)
     case 'north_cross':
       return northCross(w, h)
     case 'fuse_box':
@@ -108,6 +126,16 @@ export function buildFixtureSymbol(
       return heatPump(w, h)
     case 'stair_winder_180':
       return stairWinder180(w, h)
+    case 'stair_u_landing':
+      return stairULanding(w, h)
+    case 'stair_c_90':
+      return stairC90(w, h)
+    case 'stair_l_90':
+      return stairL90(w, h)
+    case 'stair_l_90_up':
+      return stairL90Up(w, h)
+    case 'stair_winder_270':
+      return stairWinder270(w, h)
     case 'stair_quarter_90':
       return stairQuarter90GoingUp(w, h, Boolean(mirror.x), mirror.rotation ?? 0, Boolean(mirror.y))
     case 'stair_quarter_90_up':
@@ -116,18 +144,32 @@ export function buildFixtureSymbol(
       return stairStraight(w, h, Boolean(mirror.x), mirror.rotation ?? 0, Boolean(mirror.y))
     case 'stair_straight_double':
       return stairStraightDouble(w, h, Boolean(mirror.x), mirror.rotation ?? 0, Boolean(mirror.y))
+    case 'stair_loft':
+      return stairLoft(w, h)
+    case 'stair_loft_dashed':
+      return stairLoftDashed(w, h)
     case 'stair_opening':
       return stairOpening(w, h)
+    case 'ramp':
+      return wheelchairRamp(w, h)
     case 'canopy':
       return canopy(w, h)
+    case 'awning':
+      return awning(w, h)
     case 'chimney':
       return chimney(w, h)
+    case 'column':
+      return column(w, h)
+    case 'column_round':
+      return columnRound(w, h)
     case 'koof':
       return koof(w, h)
     case 'railing':
       return railing(w, h)
     case 'balustrade':
       return balustrade(widthCm, heightCm)
+    case 'balustrade_glass':
+      return balustradeGlass(widthCm, heightCm)
     case 'skylight':
       return skylight(w, h, frame)
     case 'roof_eave':

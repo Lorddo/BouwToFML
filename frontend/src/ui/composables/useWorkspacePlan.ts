@@ -101,27 +101,27 @@ export function useWorkspacePlan(deps: {
     previewUnderlayLayout: generate.previewUnderlayLayout,
   })
 
-  async function setPlanWallHeightCm(value: number): Promise<boolean> {
+  async function setPlanWallHeightCm(value: number) {
     return generate.applyPreviewDefault('wallHeightCm', value)
   }
 
-  async function setPlanDoorHeightCm(value: number): Promise<boolean> {
+  async function setPlanDoorHeightCm(value: number) {
     return generate.applyPreviewDefault('doorHeightCm', value)
   }
 
-  async function setPlanWindowHeightCm(value: number): Promise<boolean> {
+  async function setPlanWindowHeightCm(value: number) {
     return generate.applyPreviewDefault('windowHeightCm', value)
   }
 
-  async function setPlanWindowSillZCm(value: number): Promise<boolean> {
+  async function setPlanWindowSillZCm(value: number) {
     return generate.applyPreviewDefault('windowSillZCm', value)
   }
 
-  async function setPlanBovenlichtDefault(value: boolean): Promise<boolean> {
+  async function setPlanBovenlichtDefault(value: boolean) {
     return generate.applyPreviewDefault('bovenlichtDefault', value === true)
   }
 
-  async function setPlanWindowBovenlichtDefault(value: boolean): Promise<boolean> {
+  async function setPlanWindowBovenlichtDefault(value: boolean) {
     return generate.applyPreviewDefault('windowBovenlichtDefault', value === true)
   }
 

@@ -11,7 +11,9 @@ FML is een **adapter**, geen opslag. FML-vorm: `.cursor/docs/floorplanner/v30-sp
 
 ## Eerst mappen, niet verzinnen
 
-Bestaat het al als getypt veld (`Opening.kind`, `frame`, `roofSurfaceId`, `liningCm`, `plan.roof`, …)? Gebruik dat. Nieuwe productdata **niet** in `extras` / `btf*` / `source.settings` stoppen.
+Bestaat het al als getypt veld (`Opening.kind`, `frame`, `roofSurfaceId`, `liningCm`, `plan.roof`, …)? Gebruik dat. Nieuwe productdata **niet** in `extras` / `source.settings` stoppen.
+
+FML-extras voor Floorplanner-hostile concepten heten alleen `plgFrame` / `plgSlices` / `plgRole` / `plgOrigin` / `plgRoofSurfaceId` (zie `plg-fml-extras.ts`). `.plg` schrijft die keys nooit — typed fields only.
 
 ## Schema-wijziging = overleg
 

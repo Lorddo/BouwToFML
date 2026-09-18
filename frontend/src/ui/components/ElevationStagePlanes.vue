@@ -49,6 +49,7 @@ const paintStack = r.elevationPaintStack
 const ix = props.interaction
 const selectedOpeningId = ix.selectedOpeningId
 const onRidgeWallDown = ix.onRidgeWallDown
+const onRoofDown = ix.onRoofDown
 const onOpeningDown = ix.onOpeningDown
 const onSkylightDown = ix.onSkylightDown
 const onJunctionDown = ix.onJunctionDown
@@ -93,8 +94,9 @@ const stopKonvaBubble = ix.stopKonvaBubble
               strokeEnabled: false,
               perfectDrawEnabled: false,
               opacity: roofSelected(item.roof.id) ? 1 : architectStyle ? 1 : 0.92,
-              listening: false,
+              listening: true,
             }"
+            @mousedown="onRoofDown(item.roof.id, $event)"
           />
           <template v-for="skylight in skylightsOnRoof(item.roof.id)" :key="skylight.id">
             <v-line

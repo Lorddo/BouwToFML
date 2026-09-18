@@ -30,6 +30,7 @@ import { usePlanCanvasDrawPreviews } from '@/ui/composables/plan-canvas/usePlanC
 import { formatDrawTypeLabel } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 import { inspectColorFor, type InspectHit } from '@/ui/composables/plan-canvas/plan-inspect'
 import { PLAN_CANVAS_CHROME_SELECTOR } from '@/ui/composables/plan-canvas/plan-canvas-gestures'
+import { planHidesJunctions } from '@/ui/composables/plan-canvas/plan-canvas-selected'
 import { usePlanCanvasTouch, usePlanTouchNav } from '@/ui/composables/plan-canvas/usePlanCanvasTouch'
 import { resolveFixtureCatalog } from '@/core/plan/fixture-refid-catalog'
 import {
@@ -37,7 +38,12 @@ import {
   effectiveSkylightFrame,
 } from '@/core/plan/opening-display-geom'
 import { itemResizeHandleWorlds } from '@/ui/composables/plan-canvas/item-resize-handles'
-import { itemRotateHandleWorlds } from '@/ui/composables/plan-canvas/item-rotate-handles'
+import { clampSkylightPitchDeg, clampSkylightZCm } from '@/core/plan/skylight-roof'
+import {
+  ITEM_ROTATE_HANDLE_ARC_D,
+  ITEM_ROTATE_HANDLE_HEAD_D,
+  itemRotateHandleWorlds,
+} from '@/ui/composables/plan-canvas/item-rotate-handles'
 import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import EditorTouchChrome from '@/ui/editor/EditorTouchChrome.vue'
 import type { HScaleState } from '@/platform/calibration'
@@ -107,6 +113,7 @@ const props = withDefaults(defineProps<PlanCanvasHostProps>(), {
   labelsVisible: true,
   rescaleMode: false,
   rescaleState: null,
+  rescaleSnapToWalls: true,
   canvasFullscreen: false,
   dimensionVis: undefined,
   dakMode: false,
@@ -250,7 +257,9 @@ const floor = computed(
     editor.localPlan.value?.floors[props.floorIndex] ?? editor.localPlan.value?.floors[0] ?? null,
 )
 const floorItems = computed(() => floor.value?.items ?? [])
-const rescaleWalls = computed(() => editor.walls.value)
+const rescaleWalls = computed(() =>
+  props.rescaleSnapToWalls === false ? [] : editor.walls.value,
+)
 const underlayFitBounds = computed(() =>
   underlayContentBoundsCm({
     cmOrigin: props.cmOrigin ?? null,
@@ -819,9 +828,10 @@ const facadeWallPolygons = computed(() => {
   return model.wallPolygons.filter((item) => idSet.has(item.id))
 })
 
-/** Move-rail: alle knopen tonen (touch heeft geen hover). */
+/** Move-rail: alle knopen tonen (touch heeft geen hover). Box-select: geen knopen. */
 const inspectVisibleJunctions = computed(() => {
   if (inspectMode.value) return []
+  if (planHidesJunctions(activePlanTool.value)) return []
   if (moveMod.value) return render.renderJunctions.value
   return visibleJunctions.value
 })
@@ -992,6 +1002,9 @@ const selectedItemPanel = computed(() => {
     mirroredX: item.mirrored?.[0] === 1,
     mirroredY: item.mirrored?.[1] === 1,
     showFrame: item.kind === 'skylight' && showOpeningFrameEdit.value,
+    showRoofPose: item.kind === 'skylight',
+    zCm: item.z ?? 0,
+    pitchDeg: item.pitchDeg ?? 0,
     frameLeftCm: frame?.leftCm ?? 5,
     frameRightCm: frame?.rightCm ?? 5,
     frameTopCm: frame?.topCm ?? 5,
@@ -1008,6 +1021,18 @@ function onItemWidthCm(cm: number): void {
 function onItemHeightCm(cm: number): void {
   updateSelectedItem({
     height: Math.max(1, cm),
+  })
+}
+
+function onItemZCm(cm: number): void {
+  updateSelectedItem({
+    z: clampSkylightZCm(cm),
+  })
+}
+
+function onItemPitchInput(event: Event): void {
+  updateSelectedItem({
+    pitchDeg: clampSkylightPitchDeg(Number((event.target as HTMLInputElement).value)),
   })
 }
 
@@ -1587,6 +1612,8 @@ watch(
       @roof-vertex-z-input="setRoofVertexZ"
       @item-width-cm="onItemWidthCm"
       @item-height-cm="onItemHeightCm"
+      @item-z-cm="onItemZCm"
+      @item-pitch-input="onItemPitchInput"
       @item-rotation-input="onItemRotationInput"
       @toggle-item-mirror-x="toggleSelectedItemMirror(0)"
       @toggle-item-mirror-y="toggleSelectedItemMirror(1)"
@@ -1622,8 +1649,8 @@ watch(
       >
         <title>{{ tGlobal('viewer.itemRotateHandle') }}</title>
         <circle class="item-rotate-handle__hit" :r="PLAN_HANDLE_RADIUS_PX" />
-        <path class="item-rotate-handle__arc" d="M 1.4 -2.5 A 2.8 2.8 0 1 1 -1.4 -2.5" />
-        <path class="item-rotate-handle__head" d="M 1.4 -2.5 L 0.2 -4.1 L 2.7 -3.9 Z" />
+        <path class="item-rotate-handle__arc" :d="ITEM_ROTATE_HANDLE_ARC_D" />
+        <path class="item-rotate-handle__head" :d="ITEM_ROTATE_HANDLE_HEAD_D" />
       </g>
       <circle
         v-for="handle in itemResizeHandles"

@@ -193,7 +193,8 @@ describe('harmonizeWallThickness', () => {
     ])
     const harmonized = harmonizeWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
-    expect(thicknesses).toEqual([10, 10, 10, 10])
+    expect(thicknesses).toEqual([10])
+    expect(harmonized.floors[0]?.walls).toHaveLength(1)
     expect(harmonized.floors[0]?.walls.every((item) => item.balance === 0.5)).toBe(true)
   })
 
@@ -227,7 +228,7 @@ describe('harmonizeWallThickness', () => {
     ])
     const harmonized = harmonizeWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
-    expect(thicknesses).toEqual([10, 20, 20])
+    expect(thicknesses).toEqual([10, 20])
   })
 
   it('catalogus: collineaire 7/10 wordt één slot (lengtewint 10)', () => {
@@ -245,7 +246,7 @@ describe('harmonizeWallThickness', () => {
       catalog,
     )
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
-    expect(thicknesses).toEqual([10, 10])
+    expect(thicknesses).toEqual([10])
   })
 
   it('catalogus: collineaire 10/22 houdt beide slots', () => {
@@ -309,7 +310,7 @@ describe('harmonizeWallThickness', () => {
     ])
     const harmonized = harmonizeWallThickness(plan, defaultLimits)
     const thicknesses = harmonized.floors[0]?.walls.map((item) => item.thickness) ?? []
-    expect(thicknesses).toEqual([30, 30, 30])
+    expect(thicknesses).toEqual([20])
   })
 
   it('flusht geharmoniseerde dikte terug naar designs[0]', () => {

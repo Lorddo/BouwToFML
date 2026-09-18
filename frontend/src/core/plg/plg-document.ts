@@ -14,6 +14,12 @@ import { CURRENT_PLG_VERSION } from './plg-version'
 import { normalizePlanIdentities } from './fml-adapter/normalize-plan-identities'
 import { PLG_STRIP_FML_EXTRA_KEYS } from './fml-adapter/plg-fml-extras'
 import { promotePlanExtensions } from './fml-adapter/registry'
+import {
+  cloneFloorDefaults,
+  floorDefaultsFromTemplate,
+  normalizeFloorDefaults,
+  seedMissingFloorDefaults,
+} from '../plan/floor-defaults'
 
 export { CURRENT_PLG_VERSION }
 export const PLG_FORMAT = 'plg-plan' as const
@@ -342,14 +348,17 @@ function normalizeDocument(raw: unknown): PlgDocument {
   }
 
   const foreign = parseForeign(raw.foreign)
+  const settings = parseSettings(raw.settings)
   const doc: PlgDocument = {
     format: PLG_FORMAT,
     version: CURRENT_PLG_VERSION,
     generator: requireString(raw, 'generator', 'document'),
     savedAt: requireString(raw, 'savedAt', 'document'),
     project: parseProject(raw.project),
-    settings: parseSettings(raw.settings),
-    plan: parsePlan(raw.plan),
+    settings,
+    plan: seedMissingFloorDefaults(parsePlan(raw.plan), {
+      template: floorDefaultsFromTemplate(settings.defaults),
+    }),
   }
   if (foreign !== undefined) {
     doc.foreign = foreign
@@ -427,6 +436,11 @@ function stripPlgFmlExtraKeys(bag: Record<string, unknown> | undefined): void {
   }
 }
 
+/** Zelfde regel als FML: alleen http(s) in het bestand, geen data:/blob:. */
+function isPersistedDrawingUrl(url: string | null | undefined): boolean {
+  return typeof url === 'string' && /^https?:\/\//i.test(url.trim())
+}
+
 function stripSessionOnlyFromPlan(plan: FloorPlan): FloorPlan {
   const cloned = canonicalizeValue(plan) as FloorPlan
   const stripWalls = (walls: FloorPlan['floors'][number]['walls'] | undefined) => {
@@ -454,10 +468,21 @@ function stripSessionOnlyFromPlan(plan: FloorPlan): FloorPlan {
       stripPlgFmlExtraKeys(surface.extras as Record<string, unknown> | undefined)
     }
   }
+  if (cloned.settings && 'openingFrameDefaults' in cloned.settings) {
+    const { openingFrameDefaults: _removed, ...rest } = cloned.settings
+    cloned.settings = rest
+  }
   for (const floor of cloned.floors ?? []) {
+    if (floor.defaults) {
+      floor.defaults = cloneFloorDefaults(normalizeFloorDefaults(floor.defaults))
+    }
     stripWalls(floor.walls)
     stripItems(floor.items)
     stripSurfaces(floor.surfaces)
+    if (floor.drawing && !isPersistedDrawingUrl(floor.drawing.url)) {
+      const { url: _dropped, ...layout } = floor.drawing
+      floor.drawing = layout
+    }
     for (const design of floor.designs ?? []) {
       stripWalls(design.walls)
       stripItems(design.items)
@@ -482,7 +507,11 @@ export function writePlg(doc: PlgDocument): string {
     savedAt: doc.savedAt,
     project: orderProject(doc.project),
     settings: orderSettings(doc.settings),
-    plan: stripSessionOnlyFromPlan(doc.plan),
+    plan: stripSessionOnlyFromPlan(
+      seedMissingFloorDefaults(doc.plan, {
+        template: floorDefaultsFromTemplate(doc.settings.defaults),
+      }),
+    ),
   }
   if (doc.foreign !== undefined) {
     payload.foreign = orderForeign(doc.foreign)

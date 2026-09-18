@@ -1121,6 +1121,172 @@ export function applyFacadeGroupRemaps(plan: FloorPlan, remaps: readonly WallIdR
   }
 }
 
+/** Hartlijn-ε voor inherit na tekenen (krapper dan gestapelde verdiepingen). */
+const INHERIT_AXIS_EPS_CM = 2
+
+function samePointCm(a: Point2D, b: Point2D, epsCm: number): boolean {
+  return Math.hypot(a.x - b.x, a.y - b.y) <= epsCm
+}
+
+function pointOnSegment(point: Point2D, a: Point2D, b: Point2D, epsCm: number): boolean {
+  const axis = wallAxisDir({ a, b })
+  if (!axis) return samePointCm(point, a, epsCm)
+  if (pointLineDistCm(point, a, axis.ux, axis.uy) > epsCm) return false
+  const t = projectAlongAxis(point, a, axis.ux, axis.uy)
+  return t >= -epsCm && t <= axis.len + epsCm
+}
+
+function wallsShareEndpoint(
+  left: Pick<Wall, 'a' | 'b'>,
+  right: Pick<Wall, 'a' | 'b'>,
+  epsCm: number,
+): boolean {
+  return (
+    samePointCm(left.a, right.a, epsCm) ||
+    samePointCm(left.a, right.b, epsCm) ||
+    samePointCm(left.b, right.a, epsCm) ||
+    samePointCm(left.b, right.b, epsCm)
+  )
+}
+
+function wallsAreParallel(left: Pick<Wall, 'a' | 'b'>, right: Pick<Wall, 'a' | 'b'>): boolean {
+  const a = wallAxisDir(left)
+  const b = wallAxisDir(right)
+  if (!a || !b) return false
+  return Math.abs(a.ux * b.ux + a.uy * b.uy) >= STACKED_WALL_PARALLEL_DOT
+}
+
+function segmentOverlapCm(seed: Pick<Wall, 'a' | 'b'>, cand: Pick<Wall, 'a' | 'b'>): number {
+  const axis = wallAxisDir(seed)
+  if (!axis) return 0
+  const c0 = projectAlongAxis(cand.a, seed.a, axis.ux, axis.uy)
+  const c1 = projectAlongAxis(cand.b, seed.a, axis.ux, axis.uy)
+  return Math.max(0, Math.min(axis.len, Math.max(c0, c1)) - Math.max(0, Math.min(c0, c1)))
+}
+
+/** Zelfde as + overlap langer dan een knooppunt (hergebruikte host, geen restant-helft). */
+function segmentsColocated(
+  seed: Pick<Wall, 'a' | 'b'>,
+  cand: Pick<Wall, 'a' | 'b'>,
+  epsCm: number,
+): boolean {
+  if (!wallsShareFacadeAxis(seed, cand, epsCm)) return false
+  return segmentOverlapCm(seed, cand) > epsCm * 2
+}
+
+function inferSplitRemapsFromMemberCuts(
+  beforeWalls: readonly Wall[],
+  afterWalls: readonly Wall[],
+  memberIds: ReadonlySet<string>,
+): WallIdRemap[] {
+  const beforeById = new Map(beforeWalls.map((wall) => [wall.id, wall]))
+  const afterById = new Map(afterWalls.map((wall) => [wall.id, wall]))
+  const intoByFrom = new Map<string, string[]>()
+  for (const neu of afterWalls) {
+    if (beforeById.has(neu.id)) continue
+    for (const old of beforeWalls) {
+      if (!memberIds.has(old.id)) continue
+      const remnant = afterById.get(old.id)
+      if (!remnant) continue
+      if (!pointOnSegment(neu.a, old.a, old.b, INHERIT_AXIS_EPS_CM)) continue
+      if (!pointOnSegment(neu.b, old.a, old.b, INHERIT_AXIS_EPS_CM)) continue
+      if (!wallsShareFacadeAxis(old, neu, INHERIT_AXIS_EPS_CM)) continue
+      if (segmentsColocated(remnant, neu, INHERIT_AXIS_EPS_CM)) continue
+      const into = intoByFrom.get(old.id) ?? [old.id]
+      if (!into.includes(neu.id)) into.push(neu.id)
+      intoByFrom.set(old.id, into)
+    }
+  }
+  return [...intoByFrom.entries()].map(([fromId, intoIds]) => ({ fromId, intoIds }))
+}
+
+function assignConnectedParallelNewWalls(
+  plan: FloorPlan,
+  afterWalls: readonly Wall[],
+  newIds: ReadonlySet<string>,
+): void {
+  if (newIds.size === 0) return
+  const eps = INHERIT_AXIS_EPS_CM
+  const afterById = new Map(afterWalls.map((wall) => [wall.id, wall]))
+  for (const group of listFacadeGroups(plan)) {
+    if (isStampGroup(group)) continue
+    const memberWalls = group.wallIds
+      .map((id) => afterById.get(id))
+      .filter((wall): wall is Wall => wall != null)
+    if (memberWalls.length === 0) continue
+    const seeds = memberWalls.filter((member) =>
+      afterWalls.some((wall) => newIds.has(wall.id) && wallsShareEndpoint(member, wall, eps)),
+    )
+    if (seeds.length === 0) continue
+
+    const reached = new Set<string>()
+    const queue: string[] = []
+    for (const seed of seeds) {
+      for (const wall of afterWalls) {
+        if (!newIds.has(wall.id) || reached.has(wall.id)) continue
+        if (!wallsShareEndpoint(seed, wall, eps)) continue
+        reached.add(wall.id)
+        queue.push(wall.id)
+      }
+    }
+    while (queue.length > 0) {
+      const id = queue.shift()
+      if (!id) break
+      const current = afterById.get(id)
+      if (!current) continue
+      for (const wall of afterWalls) {
+        if (!newIds.has(wall.id) || reached.has(wall.id)) continue
+        if (!wallsShareEndpoint(current, wall, eps)) continue
+        reached.add(wall.id)
+        queue.push(wall.id)
+      }
+    }
+
+    const addIds: string[] = []
+    for (const id of reached) {
+      if (group.wallIds.includes(id)) continue
+      const neu = afterById.get(id)
+      if (!neu) continue
+      if (memberWalls.some((member) => segmentsColocated(member, neu, eps))) continue
+      if (!seeds.some((seed) => wallsAreParallel(seed, neu))) continue
+      addIds.push(id)
+    }
+    if (addIds.length > 0) assignWallsToGroup(plan, group.id, addIds)
+  }
+}
+
+/**
+ * Na tekenen / knoop in een gevelgroep-lid: nieuwe host-helften blijven in de groep.
+ * Een nieuwe parallelle voorzijde (dakkapel, extra kamer) gaat mee tenzij die op
+ * dezelfde plek als een bestaand lid ligt. T-takken (niet-parallel) blijven buiten.
+ */
+export function inheritFacadeGroupsAfterWallsChanged(
+  plan: FloorPlan,
+  beforeWalls: readonly Wall[],
+  afterWalls: readonly Wall[],
+): void {
+  if (listFacadeGroups(plan).length === 0) return
+  const beforeIds = new Set(beforeWalls.map((wall) => wall.id))
+  const newIds = new Set(
+    afterWalls.map((wall) => wall.id).filter((id) => id && !beforeIds.has(id)),
+  )
+  if (newIds.size === 0) return
+
+  const memberIds = new Set<string>()
+  for (const group of listFacadeGroups(plan)) {
+    for (const id of group.wallIds) {
+      if (beforeIds.has(id)) memberIds.add(id)
+    }
+  }
+  if (memberIds.size === 0) return
+
+  applyFacadeGroupRemaps(
+    plan,
+    inferSplitRemapsFromMemberCuts(beforeWalls, afterWalls, memberIds),
+  )
+  assignConnectedParallelNewWalls(plan, afterWalls, newIds)
+}
+
 function wallAxisDir(wall: Pick<Wall, 'a' | 'b'>): { ux: number; uy: number; len: number } | null {
   const dx = wall.b.x - wall.a.x
   const dy = wall.b.y - wall.a.y

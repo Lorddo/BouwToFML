@@ -15,6 +15,7 @@ import {
   updatePlanOpening,
 } from '@/core/plan/elevation-openings'
 import { deletePlanSkylight, updatePlanSkylight } from '@/core/plan/elevation-skylight-edit'
+import { clampSkylightPitchDeg, clampSkylightZCm } from '@/core/plan/skylight-roof'
 import { pairedElevationRoofVertexIndices } from '@/core/plan/elevation-hit'
 import { setSlabThicknessCm } from '@/core/plan/floor-stack'
 import {
@@ -231,6 +232,20 @@ export function useElevationSelectCommits(options: {
     )
   }
 
+  function commitSelectedSkylightZ(cm: number): void {
+    const id = selectedSkylightId.value
+    if (!id) return
+    pushUndo()
+    commitPlan(updatePlanSkylight(props.plan, id, { z: clampSkylightZCm(cm) }))
+  }
+
+  function commitSelectedSkylightPitch(deg: number): void {
+    const id = selectedSkylightId.value
+    if (!id) return
+    pushUndo()
+    commitPlan(updatePlanSkylight(props.plan, id, { pitchDeg: clampSkylightPitchDeg(deg) }))
+  }
+
   function commitSelectedBovenlicht(on: boolean): void {
     const id = selectedOpeningId.value
     if (!id) return
@@ -373,6 +388,8 @@ export function useElevationSelectCommits(options: {
     commitSelectedField,
     commitSelectedFrame,
     commitSelectedSkylightFrame,
+    commitSelectedSkylightZ,
+    commitSelectedSkylightPitch,
     commitSelectedBovenlicht,
     commitSelectedBovenlichtHeight,
     commitSelectedBovenlichtGap,

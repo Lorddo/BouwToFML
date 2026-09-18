@@ -231,7 +231,7 @@ Vastgepind in [`plan-canvas-pointer-cascade.spec.ts`](../../../../frontend/tests
 | 14 | grepen van geselecteerde opening | move-greep → precise/drag; start/end → resize |
 | 15 | knoop | dak: alleen op nok. Ctrl → settings; anders precise / pin / drag |
 | 16 | dikte-pick | `emit('thicknessWallPick')`; **staat vóór box-select en opening** |
-| 17 | box-select | dus niet te starten bovenop een knoop |
+| 17 | box-select | start ook bovenop een knoop (knoop-tak slaat over) |
 | 18 | opening | wist expliciet 12 andere selectie-refs |
 | 19 | fixture | dak: uit |
 | 20 | maatlijn | eindpunt vóór lijn |

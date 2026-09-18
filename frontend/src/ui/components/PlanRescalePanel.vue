@@ -4,8 +4,8 @@ import { useI18n } from 'vue-i18n'
 import type { HScaleState } from '@/platform/calibration'
 import { SCALE_RESCALE_MIN_MEASURED_CM } from '@/platform/calibration'
 import {
+  diagnoseRescaleFactorsFromRulers,
   measuredCmFromRescaleState,
-  resolveRescaleFactorsFromRulers,
 } from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
 import {
   formatScaleInputLabel,
@@ -57,19 +57,23 @@ const measured = computed(() =>
   props.state ? measuredCmFromRescaleState(props.state) : { x: 0, y: 0 },
 )
 
-const canConfirm = computed(() => {
-  if (!props.active || !props.state) return false
-  return (
-    resolveRescaleFactorsFromRulers({
-      measuredCmX: measured.value.x,
-      measuredCmY: measured.value.y,
-      trueMmX: props.mmX,
-      trueMmY: props.mmY,
-    }) != null
-  )
+const reject = computed(() => {
+  if (!props.active || !props.state) return 'invalid' as const
+  return diagnoseRescaleFactorsFromRulers({
+    measuredCmX: measured.value.x,
+    measuredCmY: measured.value.y,
+    trueMmX: props.mmX,
+    trueMmY: props.mmY,
+  })
 })
 
-const minHint = computed(() => t('result.rescaleMinHint', { cm: SCALE_RESCALE_MIN_MEASURED_CM }))
+const canConfirm = computed(() => reject.value == null)
+
+const minHint = computed(() => {
+  if (reject.value === 'short') return t('result.rescaleMinHint', { cm: SCALE_RESCALE_MIN_MEASURED_CM })
+  if (reject.value === 'noop') return t('result.rescaleNoopHint')
+  return ''
+})
 
 function onFocusX() {
   editingX.value = true
@@ -155,7 +159,7 @@ function onBlurY() {
           </div>
         </label>
       </div>
-      <p class="rescale-min">{{ minHint }}</p>
+      <p v-if="minHint" class="rescale-min">{{ minHint }}</p>
       <div class="actions">
         <button type="button" class="primary" :disabled="!canConfirm" @click="emit('confirm')">
           {{ t('input.scaleApply') }}

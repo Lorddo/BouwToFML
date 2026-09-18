@@ -109,6 +109,43 @@ function stadiumPoly(
  * Losstaand bad: stadium (rechte zijden + ronde koppen), kraan op lokale −Y
  * (FML rot 90 zet die zijde tegen de rechtermuur).
  */
+/** Vierkant bad: rechthoekige kuip, kraan op lokale +X (rechter kopse kant). */
+export function bathtubSquare(w: number, h: number): FixtureSymbolShape {
+  const hw = w / 2
+  const hh = h / 2
+  const inset = Math.min(w, h) * 0.12
+  const faucetBand = Math.min(w, h) * 0.16
+  const faucetX = hw - faucetBand * 0.45
+  const spoutR = Math.min(w, h) * 0.045
+  const knobR = spoutR * 0.72
+  const knobSpan = Math.min(w, h) * 0.09
+  return emptyShape({
+    rects: [[-hw, -hh, w, h]],
+    polylines: [
+      [
+        -hw + inset,
+        -hh + inset,
+        hw - inset,
+        -hh + inset,
+        hw - inset,
+        hh - inset,
+        -hw + inset,
+        hh - inset,
+        -hw + inset,
+        -hh + inset,
+      ],
+    ],
+    circles: [
+      [faucetX, 0, spoutR],
+      [faucetX, -knobSpan, knobR],
+      [faucetX, knobSpan, knobR],
+    ],
+    fill: '#f8fafc',
+    circleFill: 'transparent',
+    overWalls: false,
+  })
+}
+
 export function bathtub(w: number, h: number): FixtureSymbolShape {
   const faucetBand = Math.min(w, h) * 0.2
   const bodyH = h - faucetBand
@@ -229,12 +266,29 @@ export function showerHead(w: number, h: number): FixtureSymbolShape {
 }
 
 export function sinkLarge(w: number, h: number): FixtureSymbolShape {
-  // Volle bbox — geen inset, anders een spleet tot de muur (item-rand ligt al flush).
+  // Plat vlak + kraan aan lokale −Y (bovenkant); kom naar +Y.
+  const inset = Math.min(w, h) * 0.1
+  const faucetSpace = Math.min(w, h) * 0.22
   const faucetR = Math.min(w, h) * 0.055
-  const faucetY = h / 2 - Math.min(w, h) * 0.16
+  const faucetY = -h / 2 + faucetSpace * 0.42
+  const basinY = -h / 2 + faucetSpace
   return emptyShape({
     rects: [[-w / 2, -h / 2, w, h]],
     circles: [[0, faucetY, faucetR]],
+    polylines: [
+      [
+        -w / 2 + inset,
+        h / 2 - inset,
+        w / 2 - inset,
+        h / 2 - inset,
+        w / 2 - inset,
+        basinY,
+        -w / 2 + inset,
+        basinY,
+        -w / 2 + inset,
+        h / 2 - inset,
+      ],
+    ],
     fill: '#f1f5f9',
     overWalls: false,
   })

@@ -6,12 +6,17 @@ import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { SCALE_LENGTH_COMMIT_DEBOUNCE_MS } from '@/ui/composables/settings/scale-length-field'
 import ScaleLengthInput from './ScaleLengthInput.vue'
 
-defineProps<{
-  unit: ScaleInputUnit
-  dakThicknessCm: number
-  floors: ElevationFloorGroup[]
-  projection?: ElevationProjectionMode
-}>()
+withDefaults(
+  defineProps<{
+    unit: ScaleInputUnit
+    dakThicknessCm: number
+    floors: ElevationFloorGroup[]
+    projection?: ElevationProjectionMode
+    /** Alleen Gevels: architect / projectief. */
+    showProjection?: boolean
+  }>(),
+  { showProjection: true },
+)
 
 const emit = defineEmits<{
   nok: [cm: number]
@@ -26,24 +31,26 @@ const { t } = useI18n()
 <template>
   <div class="elev-heights">
     <p class="elev-heights__hint">{{ t('viewer.elevationHeightsHint') }}</p>
-    <label class="elev-heights__row elev-heights__row--select">
-      <span>{{ t('viewer.elevationProjection') }}</span>
-      <select
-        :value="projection ?? 'architect'"
-        @change="
-          emit(
-            'projection',
-            ($event.target as HTMLSelectElement).value === 'projective'
-              ? 'projective'
-              : 'architect',
-          )
-        "
-      >
-        <option value="architect">{{ t('viewer.elevationProjectionArchitect') }}</option>
-        <option value="projective">{{ t('viewer.elevationProjectionProjective') }}</option>
-      </select>
-    </label>
-    <p class="elev-heights__hint">{{ t('viewer.elevationProjectionHint') }}</p>
+    <template v-if="showProjection">
+      <label class="elev-heights__row elev-heights__row--select">
+        <span>{{ t('viewer.elevationProjection') }}</span>
+        <select
+          :value="projection ?? 'architect'"
+          @change="
+            emit(
+              'projection',
+              ($event.target as HTMLSelectElement).value === 'projective'
+                ? 'projective'
+                : 'architect',
+            )
+          "
+        >
+          <option value="architect">{{ t('viewer.elevationProjectionArchitect') }}</option>
+          <option value="projective">{{ t('viewer.elevationProjectionProjective') }}</option>
+        </select>
+      </label>
+      <p class="elev-heights__hint">{{ t('viewer.elevationProjectionHint') }}</p>
+    </template>
     <label class="elev-heights__row">
       <span>{{ t('viewer.elevationNok') }}</span>
       <ScaleLengthInput

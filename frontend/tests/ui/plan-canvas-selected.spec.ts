@@ -3,6 +3,7 @@ import { createPlanCanvasSelection } from '@/ui/composables/plan-canvas/plan-can
 import {
   clearPlanMoveModes,
   clearPlanSelected,
+  planHidesJunctions,
   planStickySelectKind,
   setPlanSelected,
   togglePlanSelected,
@@ -286,5 +287,13 @@ describe('planStickySelectKind — gelijk aan de losse booleans', () => {
       if (flags.hasDimension) s.moveDimensionId.value = 'd1'
       expect(planStickySelectKind(s)).toBe(resolvePlanStickySelectKind(flags))
     }
+  })
+})
+
+describe('planHidesJunctions', () => {
+  it('verbergt knopen alleen bij box-select', () => {
+    expect(planHidesJunctions('box_select')).toBe(true)
+    expect(planHidesJunctions(null)).toBe(false)
+    expect(planHidesJunctions('draw_wall')).toBe(false)
   })
 })

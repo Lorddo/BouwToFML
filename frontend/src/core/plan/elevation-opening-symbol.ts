@@ -190,13 +190,22 @@ function buildWindowRect(
   panelCount: 1 | 2 | 3,
   frame: OpeningFrameCm,
   leaf: OpeningLeafKind = 'glass',
+  grid = false,
 ): void {
   pushRect(polys, leaf === 'glass' ? 'glass' : 'leaf', inner.x0, inner.y0, inner.x1, inner.y1)
   const span = inner.x1 - inner.x0
+  const height = inner.y1 - inner.y0
   const thickness = stileThicknessCm(frame, span, panelCount)
   for (let i = 1; i < panelCount; i += 1) {
     const x = inner.x0 + (span * i) / panelCount
     pushStile(polys, x, inner.y0, inner.y1, thickness)
+  }
+  if (!grid) return
+  const muntin = Math.max(1.2, thickness * 0.55)
+  for (const t of [1 / 3, 2 / 3]) {
+    pushStile(polys, inner.x0 + span * t, inner.y0, inner.y1, muntin)
+    const y = inner.y0 + height * t
+    pushLine(polys, 'mullion', inner.x0, y, inner.x1, y)
   }
 }
 
@@ -402,7 +411,9 @@ export function elevationOpeningHolePoints(
   if (glyph === 'triangle' || symbol === 'triangle') {
     return trianglePoints(outer, hingeOnLeft(opts?.mirrored, opts?.startOnLeft !== false))
   }
-  if (glyph === 'round' || symbol === 'round') return roundHolePoints(outer)
+  if (glyph === 'round' || symbol === 'round' || glyph === 'round_opening' || symbol === 'round_opening') {
+    return roundHolePoints(outer)
+  }
   if (glyph === 'half_round' || symbol === 'half_round') return halfRoundHolePoints(outer)
   return [
     { x: outer.x0, y: outer.y0 },
@@ -533,14 +544,14 @@ export function buildElevationOpeningSymbol(params: {
     return { polys, circles, inner }
   }
 
-  const frameless = kind === 'passage' || kind === 'archway'
+  const frameless = kind === 'passage' || kind === 'archway' || kind === 'round_opening'
   if (!frameless) {
     pushFrameBands(polys, params.outer, inset.frame)
   }
 
   if (params.catalog.type === 'window') {
     const panels = resolveWindowPanelCount(width, params.catalog.kind, params.catalog.panels)
-    buildWindowRect(polys, inner, panels, inset.frame, leaf)
+    buildWindowRect(polys, inner, panels, inset.frame, leaf, kind === 'grid' || symbol === 'grid')
     return { polys, circles, inner }
   }
 
@@ -550,6 +561,20 @@ export function buildElevationOpeningSymbol(params: {
 
   if (kind === 'garage') {
     buildGarage(polys, inner)
+    return { polys, circles, inner }
+  }
+
+  if (kind === 'elevator') {
+    fillInner(polys, inner, 'solid')
+    const mid = (inner.x0 + inner.x1) / 2
+    pushStile(polys, mid, inner.y0, inner.y1, stileThicknessCm(inset.frame, inner.x1 - inner.x0, 2))
+    circles.push({
+      role: 'panel',
+      cx: mid,
+      cy: inner.y0 + Math.min(8, (inner.y1 - inner.y0) * 0.06),
+      radius: 2.2,
+      fill: true,
+    })
     return { polys, circles, inner }
   }
 
@@ -588,9 +613,20 @@ export function buildElevationOpeningSymbol(params: {
     return { polys, circles, inner }
   }
 
-  fillInner(polys, inner, leaf)
-  pushHingeTicks(polys, inner, hingeLeft)
-  pushLeverHandle(polys, circles, inner, !hingeLeft)
+  if (kind === 'half_glass' || symbol === 'half_glass') {
+    pushRect(polys, 'glass', inner.x0, inner.y0, inner.x1, (inner.y0 + inner.y1) / 2)
+    pushRect(polys, 'leaf', inner.x0, (inner.y0 + inner.y1) / 2, inner.x1, inner.y1)
+  } else if (kind === 'french_balcony') {
+    const glassY1 = inner.y0 + (inner.y1 - inner.y0) * 0.8
+    pushRect(polys, 'glass', inner.x0, inner.y0, inner.x1, glassY1)
+    pushRect(polys, 'leaf', inner.x0, glassY1, inner.x1, inner.y1)
+  } else {
+    fillInner(polys, inner, leaf)
+  }
+  if (kind !== 'flush' && symbol !== 'flush') {
+    pushHingeTicks(polys, inner, hingeLeft)
+    pushLeverHandle(polys, circles, inner, !hingeLeft)
+  }
   if (kind === 'french_balcony') {
     buildFrenchBalcony(polys, inner)
   }

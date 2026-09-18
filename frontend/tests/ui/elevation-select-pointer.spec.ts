@@ -173,3 +173,59 @@ describe('elevation-select-pointer — onRidgeWallDown', () => {
     expect(elevationWindowListenerCounts().move).toBe(1)
   })
 })
+
+describe('elevation-select-pointer — onRoofDown', () => {
+  it('gewone klik selecteert het dakvlak', () => {
+    const h = harness()
+    h.select.onRoofDown('roof-1', mouseEvent())
+    expect(h.select.settingsTarget.value).toEqual({
+      kind: 'roof',
+      id: 'roof-1',
+      vertexIndex: null,
+    })
+  })
+
+  it('overlapping: Konva-ouder-id wijkt voor dakkapel (ook Ctrl)', () => {
+    const parent = [
+      { x: 0, y: -200 },
+      { x: 400, y: -200 },
+      { x: 400, y: 0 },
+      { x: 0, y: 0 },
+    ]
+    const cap = [
+      { x: 80, y: -160 },
+      { x: 180, y: -160 },
+      { x: 180, y: -80 },
+      { x: 80, y: -80 },
+    ]
+    const h = harness({ pointerCm: { x: 100, y: -140 } })
+    const elev = h.elevation.value
+    if (!elev) throw new Error('expected elevation')
+    elev.roofPlanes = [
+      {
+        id: 'main',
+        floorIndex: 0,
+        points: parent,
+        fillPoints: parent,
+        color: '#888',
+        depthCm: 80,
+      },
+      {
+        id: 'cap',
+        floorIndex: 0,
+        points: cap,
+        fillPoints: cap,
+        color: '#b88',
+        depthCm: 0,
+        dormer: true,
+        parentId: 'main',
+      },
+    ]
+    h.select.onRoofDown('main', mouseEvent({ ctrlKey: true }))
+    expect(h.select.settingsTarget.value).toEqual({
+      kind: 'roof',
+      id: 'cap',
+      vertexIndex: null,
+    })
+  })
+})

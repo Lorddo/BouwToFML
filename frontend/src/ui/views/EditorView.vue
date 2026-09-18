@@ -4,9 +4,10 @@ import { useI18n } from 'vue-i18n'
 import Editor from '@/ui/editor/Editor.vue'
 import Inspect from '@/ui/inspect/Inspect.vue'
 import ElevationHost from '../components/ElevationHost.vue'
+import PdfPageSelectDialog from '../components/PdfPageSelectDialog.vue'
 import ElevationHeightFields from '../components/ElevationHeightFields.vue'
 import PlanOpeningOverflowNotice from '../components/PlanOpeningOverflowNotice.vue'
-import EditorDefaultsFields from '../components/EditorDefaultsFields.vue'
+import EditorKozijnenFields from '../components/EditorKozijnenFields.vue'
 import EditorDimensionFields from '../components/EditorDimensionFields.vue'
 import EditorInspectPanel from '../components/EditorInspectPanel.vue'
 import ThicknessCatalogFields from '../components/ThicknessCatalogFields.vue'
@@ -32,7 +33,10 @@ import { canApplyStampToFloor } from '@/core/plan/apply-stamp-to-floor'
 import { useEditorDak } from '@/ui/composables/editor/useEditorDak'
 import { useEditorDimensions } from '@/ui/composables/editor/useEditorDimensions'
 import { useEditorGevels } from '@/ui/composables/editor/useEditorGevels'
-import { useEditorUnderlay } from '@/ui/composables/editor/useEditorUnderlay'
+import {
+  EDITOR_UNDERLAY_FILE_ACCEPT,
+  useEditorUnderlay,
+} from '@/ui/composables/editor/useEditorUnderlay'
 import type { RebasePlanToItemRefidResult } from '@/core/plan/rebase-plan-to-item-refid'
 import type { FloorPlan, ImportWarning } from '@/core/plan/types'
 import { useEditorBindRoof } from '@/ui/composables/editor/useEditorBindRoof'
@@ -45,8 +49,16 @@ import { useEditorLoad } from '@/ui/composables/editor/useEditorLoad'
 import { useEditorSessionDefaults } from '@/ui/composables/editor/useEditorSessionDefaults'
 import { cancelPlanChromeDialog, confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
-import { loadUserSettings } from '@/ui/composables/settings/user-settings'
-import type { ScaleInputUnit, UnitSystem } from '@/ui/composables/settings/scale-input-unit'
+import type { OpeningFrameCm } from '@/core/plan/opening-kind-catalog'
+import { expandBovenlichtDefaultsFromFloor } from '@/core/plan/floor-defaults'
+import {
+  type ScaleInputUnit,
+  type UnitSystem,
+} from '@/ui/composables/settings/scale-input-unit'
+import {
+  loadUserSettings,
+  setShowOpeningFrameEdit,
+} from '@/ui/composables/settings/user-settings'
 import { normalizeThicknessCatalog } from '@/core/plan/wall-thickness-catalog'
 
 const { t } = useI18n()
@@ -123,6 +135,7 @@ const unitSystem = ref<UnitSystem>(userSettings.unitSystem)
 const thicknessPresetCms = ref<number[]>(
   normalizeThicknessCatalog(userSettings.defaults.thicknessCms),
 )
+const showOpeningFrameEdit = ref(userSettings.planDisplay.showOpeningFrameEdit !== false)
 
 function applyThicknessCatalog(cms: readonly number[]): void {
   thicknessPresetCms.value = normalizeThicknessCatalog(cms)
@@ -248,6 +261,12 @@ const {
   clearUnderlayState,
   onUnderlayOpacityInput,
   onUnderlayFileInput,
+  showPdfPageDialog,
+  pendingPdfFile,
+  pdfPageConfirmBusy,
+  pdfPageConfirmError,
+  confirmPdfPage,
+  cancelPdfPage,
   persistElevationUnderlayDrawing,
   persistActiveUnderlayDrawing,
   cancelPlanRescale,
@@ -350,15 +369,16 @@ const {
 // --- Session defaults ---
 
 const {
-  sessionDefaults,
   activeFloorDefaults,
-  defaultsForFloor,
   onFloorDefaultCm,
   onFloorDefaultBool,
-  hydrateFloorDefaultsFromPlan,
-  addFloorDefaultsSlot,
-  removeFloorDefaultsSlot,
-} = useEditorSessionDefaults({ plan, activeFloorIndex, t })
+  onOpeningFrameCm,
+} = useEditorSessionDefaults({
+  plan,
+  activeFloorIndex,
+  t,
+  beforeApply: () => previewCanvasRef.value?.pushUndo?.(),
+})
 
 const bovenlichtPacked = computed(() => readBovenlichtPacked(plan.value))
 
@@ -366,15 +386,8 @@ async function onBovenlichtPackedChange(nextPacked: boolean): Promise<void> {
   if (!plan.value) return
   if (nextPacked === readBovenlichtPacked(plan.value)) return
 
-  const defaultsResolver = (floorIndex: number) => {
-    const d = defaultsForFloor(floorIndex)
-    return {
-      doorDefault: d.bovenlichtDefault,
-      windowDefault: d.windowBovenlichtDefault,
-      heightCm: d.bovenlichtHeightCm,
-      gapCm: d.bovenlichtGapCm,
-    }
-  }
+  const defaultsResolver = (floorIndex: number) =>
+    expandBovenlichtDefaultsFromFloor(plan.value?.floors[floorIndex])
   const count = nextPacked
     ? countFoldableBovenlicht(plan.value)
     : countExpandableBovenlicht(plan.value, defaultsResolver)
@@ -392,6 +405,35 @@ async function onBovenlichtPackedChange(nextPacked: boolean): Promise<void> {
   let next = plan.value
   next = nextPacked ? foldBovenlichtOnPlan(next) : expandBovenlichtOnPlan(next, defaultsResolver)
   plan.value = writeBovenlichtPacked(next, nextPacked)
+}
+
+async function onOpeningFrameSide(
+  kind: 'door' | 'window',
+  side: keyof OpeningFrameCm,
+  cm: number,
+): Promise<void> {
+  const sideKey =
+    kind === 'door'
+      ? side === 'leftCm'
+        ? 'settings.openingFrameDoorLeft'
+        : side === 'rightCm'
+          ? 'settings.openingFrameDoorRight'
+          : side === 'topCm'
+            ? 'settings.openingFrameDoorTop'
+            : 'settings.openingFrameDoorBottom'
+      : side === 'leftCm'
+        ? 'settings.openingFrameWindowLeft'
+        : side === 'rightCm'
+          ? 'settings.openingFrameWindowRight'
+          : side === 'topCm'
+            ? 'settings.openingFrameWindowTop'
+            : 'settings.openingFrameWindowBottom'
+  await onOpeningFrameCm(kind, side, cm, t(sideKey))
+}
+
+function onShowOpeningFrameEdit(show: boolean): void {
+  showOpeningFrameEdit.value = setShowOpeningFrameEdit(show)
+  previewCanvasRef.value?.applyCornerMarkerModeFromSettings?.()
 }
 
 // --- Dimensions ---
@@ -440,8 +482,7 @@ const { downloadCurrentExport } = useEditorDownload({
   fileName,
   scaleInputUnit,
   thicknessPresetCms,
-  activeFloorDefaults,
-  defaultsForFloor,
+  activeFloorIndex,
   flushPendingFieldCommits: flushPreviewFieldCommits,
   persistActiveUnderlayDrawing,
 })
@@ -550,7 +591,6 @@ const {
   error,
   fileName,
   activeFloorIndex,
-  sessionDefaults,
   orientByFloor,
   pendingAlignRebase,
   contentOpacity,
@@ -564,9 +604,6 @@ const {
   clearUnderlayState,
   syncUnderlayForActiveFloor,
   resetInspectState,
-  hydrateFloorDefaultsFromPlan,
-  addFloorDefaultsSlot,
-  removeFloorDefaultsSlot,
   applyThicknessCatalog,
 })
 selectFloorLater = selectFloor
@@ -735,6 +772,20 @@ defineExpose({
             </label>
           </div>
 
+          <div v-if="!inspectMode" class="sidebar-icon-row sanitize-standalone">
+            <button
+              type="button"
+              class="sidebar-icon-btn"
+              :disabled="!canStartRescale"
+              :title="t('result.sanitizeHint')"
+              :aria-label="t('result.sanitize')"
+              @click="previewCanvasRef?.sanitizeWalls?.()"
+            >
+              <ToolbeltIcon name="sanitize" />
+              <span>{{ t('result.sanitize') }}</span>
+            </button>
+          </div>
+
           <details v-if="!inspectMode" class="plan-fold defaults-fold">
             <summary>{{ t('project.title') }}</summary>
             <div class="project-block">
@@ -809,22 +860,105 @@ defineExpose({
                   <span>{{ t('project.addFloor') }}</span>
                 </button>
               </div>
-              <div class="project-catalog">
-                <span class="defaults-field">{{ t('viewer.thicknessCatalogTitle') }}</span>
-                <p class="defaults-hint">{{ t('viewer.thicknessCatalogHint') }}</p>
-                <ThicknessCatalogFields
-                  :cms="thicknessPresetCms"
-                  :unit="scaleInputUnit"
-                  :unit-system="unitSystem"
-                  hide-suffix
-                  block
-                  @update:cms="applyThicknessCatalog"
-                />
+            </div>
+          </details>
+
+          <details v-if="!inspectMode && !gevelsMode" class="plan-fold defaults-fold">
+            <summary>{{ t('viewer.planFold') }}</summary>
+            <div class="sidebar-icon-row sidebar-plan-actions">
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :class="{ 'is-on': rescaleActive }"
+                :disabled="!canStartRescale"
+                :title="t('result.rescaleHint')"
+                :aria-label="t('result.rescale')"
+                :aria-pressed="rescaleActive"
+                @click="rescaleActive ? cancelPlanRescale() : beginPlanRescale()"
+              >
+                <ToolbeltIcon name="rescale" />
+                <span>{{ t('result.rescale') }}</span>
+              </button>
+              <button
+                type="button"
+                class="sidebar-icon-btn"
+                :disabled="!canApplyStamp"
+                :title="t('viewer.applyStampHint')"
+                :aria-label="t('viewer.applyStamp')"
+                @click="applyStampFromSidebar"
+              >
+                <ToolbeltIcon name="edit" />
+                <span>{{ t('viewer.applyStamp') }}</span>
+              </button>
+              <button
+                v-if="dakMode"
+                type="button"
+                class="sidebar-icon-btn"
+                :disabled="!canBindWallsToRoof"
+                :title="t('viewer.bindWallsToRoofHint')"
+                :aria-label="t('viewer.bindWallsToRoof')"
+                @click="bindWallsToRoof"
+              >
+                <ToolbeltIcon name="roof" />
+                <span>{{ t('viewer.bindWallsToRoof') }}</span>
+              </button>
+            </div>
+            <p v-if="dakMode && bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
+            <PlanRescalePanel
+              v-if="!underlayScaleActive"
+              hide-start
+              :active="rescaleActive"
+              :can-start="canStartRescale"
+              :state="rescaleState"
+              :mm-x="rescaleDistanceMmX"
+              :mm-y="rescaleDistanceMmY"
+              :unit="scaleInputUnit"
+              @begin="beginPlanRescale()"
+              @cancel="cancelPlanRescale()"
+              @confirm="confirmPlanRescale()"
+              @update-mm-x="setPlanRescaleDistanceMmX"
+              @update-mm-y="setPlanRescaleDistanceMmY"
+            />
+            <div class="orient-block">
+              <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
+              <div class="orient-actions">
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :class="{ 'is-on': activeFloorOrient.flipX }"
+                  :title="t('result.mirrorVerticalHint')"
+                  :aria-label="t('result.mirrorVertical')"
+                  :aria-pressed="activeFloorOrient.flipX"
+                  @click="applyFloorOrient('flipX')"
+                >
+                  <ToolbeltIcon name="mirror_plan" />
+                  <span>{{ t('result.mirrorVertical') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :title="t('result.rotate90CcwHint')"
+                  :aria-label="t('result.rotate90Ccw')"
+                  @click="applyFloorOrient('rotCcw')"
+                >
+                  <ToolbeltIcon name="rotate_plan_ccw" />
+                  <span>{{ t('result.rotate90Ccw') }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="sidebar-icon-btn"
+                  :title="t('result.rotate90CwHint')"
+                  :aria-label="t('result.rotate90Cw')"
+                  @click="applyFloorOrient('rotCw')"
+                >
+                  <ToolbeltIcon name="rotate_plan_cw" />
+                  <span>{{ t('result.rotate90Cw') }}</span>
+                </button>
               </div>
             </div>
           </details>
 
-          <details
+<details
             v-if="!inspectMode"
             class="plan-fold defaults-fold"
             :class="{ 'is-reuse-needed': needsUnderlayReuse }"
@@ -884,7 +1018,7 @@ defineExpose({
                 <span>{{ t('viewer.uploadUnderlay') }}</span>
                 <input
                   type="file"
-                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+                  :accept="EDITOR_UNDERLAY_FILE_ACCEPT"
                   :disabled="isLoadingPlan"
                   @change="onUnderlayFileInput"
                 />
@@ -981,19 +1115,34 @@ defineExpose({
             </div>
           </details>
 
-          <details v-if="gevelsMode && !inspectMode" class="plan-fold defaults-fold" open>
+<details v-if="!inspectMode" class="plan-fold defaults-fold">
+            <summary>{{ t('viewer.thicknessFold') }}</summary>
+            <div class="project-catalog">
+              <p class="defaults-hint">{{ t('viewer.thicknessCatalogHint') }}</p>
+              <ThicknessCatalogFields
+                :cms="thicknessPresetCms"
+                :unit="scaleInputUnit"
+                :unit-system="unitSystem"
+                block
+                @update:cms="applyThicknessCatalog"
+              />
+            </div>
+          </details>
+
+<details v-if="!inspectMode" class="plan-fold defaults-fold" :open="gevelsMode">
             <summary>{{ t('viewer.elevationHeightsFold') }}</summary>
             <ElevationHeightFields
               :unit="scaleInputUnit"
               :dak-thickness-cm="elevationDakThicknessCm"
               :floors="elevationFloorGroups"
               :projection="elevationProjection"
+              :show-projection="gevelsMode"
               @nok="onElevationNok"
               @story="onElevationStoryHeight"
               @slab="onElevationSlab"
               @projection="onElevationProjection"
             />
-            <div class="sidebar-icon-row sidebar-plan-actions bind-roof-row">
+            <div v-if="gevelsMode" class="sidebar-icon-row sidebar-plan-actions bind-roof-row">
               <button
                 type="button"
                 class="sidebar-icon-btn"
@@ -1006,121 +1155,23 @@ defineExpose({
                 <span>{{ t('viewer.bindWallsToRoof') }}</span>
               </button>
             </div>
-            <p v-if="bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
+            <p v-if="gevelsMode && bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
           </details>
 
-          <details v-if="!inspectMode && !gevelsMode" class="plan-fold defaults-fold">
-            <summary>{{ t('viewer.planFold') }}</summary>
-            <div class="sidebar-icon-row sidebar-plan-actions">
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :class="{ 'is-on': rescaleActive }"
-                :disabled="!canStartRescale"
-                :title="t('result.rescaleHint')"
-                :aria-label="t('result.rescale')"
-                :aria-pressed="rescaleActive"
-                @click="rescaleActive ? cancelPlanRescale() : beginPlanRescale()"
-              >
-                <ToolbeltIcon name="rescale" />
-                <span>{{ t('result.rescale') }}</span>
-              </button>
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :disabled="!canStartRescale"
-                :title="t('result.sanitizeHint')"
-                :aria-label="t('result.sanitize')"
-                @click="previewCanvasRef?.sanitizeWalls?.()"
-              >
-                <ToolbeltIcon name="sanitize" />
-                <span>{{ t('result.sanitize') }}</span>
-              </button>
-              <button
-                type="button"
-                class="sidebar-icon-btn"
-                :disabled="!canApplyStamp"
-                :title="t('viewer.applyStampHint')"
-                :aria-label="t('viewer.applyStamp')"
-                @click="applyStampFromSidebar"
-              >
-                <ToolbeltIcon name="edit" />
-                <span>{{ t('viewer.applyStamp') }}</span>
-              </button>
-              <button
-                v-if="dakMode"
-                type="button"
-                class="sidebar-icon-btn"
-                :disabled="!canBindWallsToRoof"
-                :title="t('viewer.bindWallsToRoofHint')"
-                :aria-label="t('viewer.bindWallsToRoof')"
-                @click="bindWallsToRoof"
-              >
-                <ToolbeltIcon name="roof" />
-                <span>{{ t('viewer.bindWallsToRoof') }}</span>
-              </button>
-            </div>
-            <p v-if="dakMode && bindRoofHint" class="bind-roof-hint">{{ bindRoofHint }}</p>
-            <PlanRescalePanel
-              v-if="!underlayScaleActive"
-              hide-start
-              :active="rescaleActive"
-              :can-start="canStartRescale"
-              :state="rescaleState"
-              :mm-x="rescaleDistanceMmX"
-              :mm-y="rescaleDistanceMmY"
-              :unit="scaleInputUnit"
-              @begin="beginPlanRescale()"
-              @cancel="cancelPlanRescale()"
-              @confirm="confirmPlanRescale()"
-              @update-mm-x="setPlanRescaleDistanceMmX"
-              @update-mm-y="setPlanRescaleDistanceMmY"
-            />
-            <div class="orient-block">
-              <p class="orient-label">{{ t('result.floorOrientLabel') }}</p>
-              <div class="orient-actions">
-                <button
-                  type="button"
-                  class="sidebar-icon-btn"
-                  :class="{ 'is-on': activeFloorOrient.flipX }"
-                  :title="t('result.mirrorVerticalHint')"
-                  :aria-label="t('result.mirrorVertical')"
-                  :aria-pressed="activeFloorOrient.flipX"
-                  @click="applyFloorOrient('flipX')"
-                >
-                  <ToolbeltIcon name="mirror_plan" />
-                  <span>{{ t('result.mirrorVertical') }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="sidebar-icon-btn"
-                  :title="t('result.rotate90CcwHint')"
-                  :aria-label="t('result.rotate90Ccw')"
-                  @click="applyFloorOrient('rotCcw')"
-                >
-                  <ToolbeltIcon name="rotate_plan_ccw" />
-                  <span>{{ t('result.rotate90Ccw') }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="sidebar-icon-btn"
-                  :title="t('result.rotate90CwHint')"
-                  :aria-label="t('result.rotate90Cw')"
-                  @click="applyFloorOrient('rotCw')"
-                >
-                  <ToolbeltIcon name="rotate_plan_cw" />
-                  <span>{{ t('result.rotate90Cw') }}</span>
-                </button>
-              </div>
-            </div>
-            <EditorDefaultsFields
+          <details v-if="!inspectMode" class="plan-fold defaults-fold">
+            <summary>{{ t('viewer.kozijnenFold') }}</summary>
+            <EditorKozijnenFields
               :defaults="activeFloorDefaults"
               :unit="scaleInputUnit"
               :bovenlicht-packed="bovenlichtPacked"
+              :opening-frame-defaults="activeFloorDefaults.openingFrameDefaults"
+              :show-opening-frame-edit="showOpeningFrameEdit"
               :hint="t('viewer.defaultsHintFloor')"
               @cm="onFloorDefaultCm"
               @bool="onFloorDefaultBool"
               @packed="onBovenlichtPackedChange"
+              @frame="onOpeningFrameSide"
+              @show-frame-edit="onShowOpeningFrameEdit"
             />
           </details>
 
@@ -1318,15 +1369,7 @@ defineExpose({
             :bovenlicht-gap-cm="activeFloorDefaults.bovenlichtGapCm"
             :bovenlicht-packed="bovenlichtPacked"
             :resolve-bovenlicht-defaults="
-              (floorIndex) => {
-                const d = defaultsForFloor(floorIndex)
-                return {
-                  doorDefault: d.bovenlichtDefault,
-                  windowDefault: d.windowBovenlichtDefault,
-                  heightCm: d.bovenlichtHeightCm,
-                  gapCm: d.bovenlichtGapCm,
-                }
-              }
+              (floorIndex) => expandBovenlichtDefaultsFromFloor(plan?.floors[floorIndex])
             "
             @plan-update="onPlanUpdate"
             @update:group-id="elevationGroupId = $event"
@@ -1380,6 +1423,7 @@ defineExpose({
             :thickness-preset-cms="thicknessPresetCms"
             :rescale-mode="rescaleOverlayActive"
             :rescale-state="rescaleOverlayState"
+            :rescale-snap-to-walls="rescaleActive"
             :bovenlicht-default="activeFloorDefaults.bovenlichtDefault"
             :window-bovenlicht-default="activeFloorDefaults.windowBovenlichtDefault"
             :bovenlicht-height-cm="activeFloorDefaults.bovenlichtHeightCm"
@@ -1429,6 +1473,15 @@ defineExpose({
       </div>
     </main>
   </div>
+
+  <PdfPageSelectDialog
+    v-model:open="showPdfPageDialog"
+    :file="pendingPdfFile"
+    :confirm-busy="pdfPageConfirmBusy"
+    :confirm-error="pdfPageConfirmError"
+    @confirm="confirmPdfPage"
+    @cancel="cancelPdfPage"
+  />
 </template>
 
 <style scoped>
@@ -1981,6 +2034,10 @@ defineExpose({
 
 .opacity-block {
   margin-top: 8px;
+}
+
+.sanitize-standalone {
+  margin: 10px 0 8px;
 }
 
 .opacity-row {

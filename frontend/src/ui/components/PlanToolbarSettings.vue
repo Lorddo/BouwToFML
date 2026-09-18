@@ -140,6 +140,9 @@ const props = withDefaults(
       mirroredX: boolean
       mirroredY: boolean
       showFrame?: boolean
+      showRoofPose?: boolean
+      zCm?: number
+      pitchDeg?: number
       frameLeftCm?: number
       frameRightCm?: number
       frameTopCm?: number
@@ -352,6 +355,8 @@ const emit = defineEmits<{
   endSurfacePolygonEdit: []
   itemWidthCm: [cm: number]
   itemHeightCm: [cm: number]
+  itemZCm: [cm: number]
+  itemPitchInput: [event: Event]
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
@@ -788,6 +793,8 @@ const isRoofPanel = computed(
           :selected-item-panel="selectedItemPanel"
           @item-width-cm="emit('itemWidthCm', $event)"
           @item-height-cm="emit('itemHeightCm', $event)"
+          @item-z-cm="emit('itemZCm', $event)"
+          @item-pitch-input="emit('itemPitchInput', $event)"
           @item-rotation-input="emit('itemRotationInput', $event)"
           @toggle-item-mirror-x="emit('toggleItemMirrorX')"
           @toggle-item-mirror-y="emit('toggleItemMirrorY')"

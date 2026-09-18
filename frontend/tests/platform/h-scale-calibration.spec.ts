@@ -147,7 +147,7 @@ describe('useHScaleCalibration', () => {
       expect(scale.confirmed.value).toBe(true)
     })
 
-    it('weigerfactor buiten [0.5, 2] en ongeconfirmeerde schaal', () => {
+    it('weiger ongeconfirmeerde schaal en no-op; factor > 2 mag', () => {
       const scale = useHScaleCalibration()
       scale.init(1000, 800)
       scale.state.value = {
@@ -163,10 +163,9 @@ describe('useHScaleCalibration', () => {
       expect(scale.applyUniformGeometryFactor(1.1)).toBe(false)
 
       scale.confirm()
-      expect(scale.applyUniformGeometryFactor(0.4)).toBe(false)
-      expect(scale.applyUniformGeometryFactor(2.1)).toBe(false)
       expect(scale.applyUniformGeometryFactor(1)).toBe(false)
-      expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.1)
+      expect(scale.applyUniformGeometryFactor(2.1)).toBe(true)
+      expect(scale.pixelsPerMillimeterX.value).toBeCloseTo(0.1 / 2.1)
     })
   })
 

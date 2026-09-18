@@ -33,16 +33,7 @@ import {
   summarizeOpeningHeightOverflows,
   type OpeningHeightOverflowSummary,
 } from '@/core/plan/opening-height-overflow'
-import {
-  countPlanOpenings,
-  countPlanWalls,
-  overwritePlanDoorBovenlicht,
-  overwritePlanDoorHeights,
-  overwritePlanWallHeights,
-  overwritePlanWindowBovenlicht,
-  overwritePlanWindowHeights,
-  overwritePlanWindowSills,
-} from '@/core/plan/wall-endpoint-height'
+import { countPlanOpenings, countPlanWalls } from '@/core/plan/wall-endpoint-height'
 import type { ThicknessBandBoundaries } from '@/core/plan/wall-thickness-tiers'
 import type { WallThicknessLimits } from '@/core/plan/wall-thickness-limits'
 import type { ExtractionOutput } from '@/core/extraction'
@@ -67,7 +58,14 @@ import { tGlobal } from '@/ui/i18n'
 import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
-import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
+import { promptDefaultsApplyScope } from '@/ui/composables/plan-chrome-dialog'
+import {
+  applyFloorDefaultBool,
+  applyFloorDefaultNumber,
+  applyStoryHeight,
+  type DefaultsApplyScope,
+  type FloorDefaultNumberField,
+} from '@/core/plan/floor-defaults'
 
 /** Stap-4 defaults die de live plattegrond muteren (niet hergenereren). */
 export type WorkspacePreviewDefaultField =
@@ -397,10 +395,6 @@ export function createWorkspacePlanGenerate(
     const planForExport = stripFacadeGroupsFromPlan(plan)
     return buildFmlV3(planForExport, {
       name: plan.name,
-      bovenlichtDefault: applied.planBovenlichtDefault.value,
-      windowBovenlichtDefault: applied.planWindowBovenlichtDefault.value,
-      bovenlichtHeightCm: applied.planBovenlichtHeightCm.value,
-      bovenlichtGapCm: applied.planBovenlichtGapCm.value,
       useMetric: loadUserSettings().unitSystem === 'metric',
       ...(PLAN_AREA_SURFACE_EDIT_VISIBLE ? {} : { forceAreaFillColor: factoryRoomTypeColor(0) }),
     })
@@ -502,30 +496,14 @@ export function createWorkspacePlanGenerate(
     return countPlanOpenings(plan, 'window', 0)
   }
 
-  function overwriteLivePlan(
-    field: WorkspacePreviewDefaultField,
-    plan: FloorPlan,
-    next: number | boolean,
-  ): FloorPlan {
-    if (field === 'wallHeightCm') return overwritePlanWallHeights(plan, Number(next), 0)
-    if (field === 'doorHeightCm') return overwritePlanDoorHeights(plan, Number(next), 0)
-    if (field === 'windowHeightCm') return overwritePlanWindowHeights(plan, Number(next), 0)
-    if (field === 'windowSillZCm') return overwritePlanWindowSills(plan, Number(next), 0)
-    if (field === 'bovenlichtDefault') {
-      return overwritePlanDoorBovenlicht(plan, Boolean(next), 0)
-    }
-    return overwritePlanWindowBovenlicht(plan, Boolean(next), 0)
-  }
-
   /**
    * Stap-4: hoogtes/bovenlicht muteren de live plattegrond (zoals rescale/orient).
-   * Hergebruikt dezelfde overwrite-all-confirm als Settings-defaults / Gevels
-   * (`confirmPlanChrome` + `viewer.defaultsOverwrite*`).
+   * Zelfde apply-scope als de editor (Annuleren / Alleen nieuwe / Verdieping / Project).
    */
   async function applyPreviewDefault(
     field: WorkspacePreviewDefaultField,
     raw: number | boolean,
-  ): Promise<boolean> {
+  ): Promise<DefaultsApplyScope | false> {
     const current = readPreviewDefault(field)
     let next: number | boolean
     if (field === 'bovenlichtDefault' || field === 'windowBovenlichtDefault') {
@@ -544,7 +522,7 @@ export function createWorkspacePlanGenerate(
     const plan = resolveLivePreviewPlan()
     if (!plan) {
       writePreviewDefaultRefs(field, next)
-      return true
+      return 'defaultsOnly'
     }
 
     const count = countForPreviewDefault(field, plan)
@@ -553,35 +531,43 @@ export function createWorkspacePlanGenerate(
       typeof next === 'number'
         ? formatScaleInputLabel(next, loadUserSettings().scaleInputUnit)
         : next
-    const ok = deps.confirmOverwrite
-      ? await deps.confirmOverwrite(
-          tGlobal(overwriteKeyForField(field), {
-            count,
-            length: lengthLabel,
-            cm: lengthLabel,
-            state: enabled ? tGlobal('viewer.defaultsOn') : tGlobal('viewer.defaultsOff'),
-          }),
-        )
-      : await confirmPlanChrome({
-          title: tGlobal('viewer.defaultsOverwriteTitle'),
-          message: tGlobal(overwriteKeyForField(field), {
-            count,
-            length: lengthLabel,
-            cm: lengthLabel,
-            state: enabled ? tGlobal('viewer.defaultsOn') : tGlobal('viewer.defaultsOff'),
-          }),
-          confirmLabel: tGlobal('common.apply'),
-          cancelLabel: tGlobal('common.cancel'),
-        })
-    if (!ok) return false
+    const message = tGlobal(overwriteKeyForField(field), {
+      count,
+      length: lengthLabel,
+      cm: lengthLabel,
+      state: enabled ? tGlobal('viewer.defaultsOn') : tGlobal('viewer.defaultsOff'),
+    })
+    let scope: DefaultsApplyScope | null
+    if (deps.confirmOverwrite) {
+      const ok = await deps.confirmOverwrite(message)
+      scope = ok ? 'floor' : null
+    } else {
+      scope = await promptDefaultsApplyScope({
+        title: tGlobal('viewer.defaultsOverwriteTitle'),
+        message,
+        floorCount: plan.floors.length,
+        existingCount: count,
+        allowDefaultsOnly: field !== 'wallHeightCm',
+      })
+    }
+    if (!scope) return false
 
-    const nextPlan = overwriteLivePlan(field, plan, next)
+    let nextPlan = plan
+    if (field === 'wallHeightCm') {
+      if (scope !== 'defaultsOnly') {
+        nextPlan = applyStoryHeight(plan, 0, Number(next), scope)
+      }
+    } else if (field === 'bovenlichtDefault' || field === 'windowBovenlichtDefault') {
+      nextPlan = applyFloorDefaultBool(plan, 0, field, Boolean(next), scope)
+    } else {
+      nextPlan = applyFloorDefaultNumber(plan, 0, field as FloorDefaultNumberField, Number(next), scope)
+    }
     editedPreviewPlan.value = nextPlan
     if (importedPlan.value) {
       importedPlan.value = nextPlan
     }
     writePreviewDefaultRefs(field, next)
-    return true
+    return scope
   }
 
   function rebuildPreviewFromCanonical(preserveUnderlayDisplay: boolean): void {

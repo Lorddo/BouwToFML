@@ -25,7 +25,7 @@ export const ROOM_DRAW_SNAP_CM = 4
 /** Tweede hoek: H/V-uitlijning + knoop-landing (cm), krapper dan muur-teken 15 cm. */
 export const ROOM_DRAW_END_SNAP_CM = 8
 
-/** Slider-bereik (fractie 0–1 = 0–100%). Invoer mag daarbuiten. */
+/** Slider- én invoerbereik (fractie 0–1 = 0–100%). */
 export const BALANCE_MIN = 0
 export const BALANCE_MAX = 1
 export const BALANCE_SLIDER_PCT_MIN = 0

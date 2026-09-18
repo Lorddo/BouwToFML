@@ -76,6 +76,265 @@ export function stairWinder180(w: number, h: number): FixtureSymbolShape {
   })
 }
 
+/**
+ * U-trap met tussenbordes. rot=0: start linksonder, 7 treden omhoog,
+ * bordes over de volle breedte, 7 treden naar rechtsonder.
+ */
+export function stairULanding(w: number, h: number): FixtureSymbolShape {
+  const hw = w / 2
+  const hh = h / 2
+  const landing = h * 0.3
+  const landY = -hh + landing
+  const nTreads = 7
+  const polylines: number[][] = [
+    [-hw, -hh, hw, -hh],
+    [hw, -hh, hw, hh],
+    [hw, hh, -hw, hh],
+    [-hw, hh, -hw, -hh],
+    [-hw, landY, hw, landY],
+    [0, landY, 0, hh],
+  ]
+  for (let i = 1; i < nTreads; i += 1) {
+    const y = landY + (i / nTreads) * (hh - landY)
+    polylines.push([-hw, y, 0, y], [0, y, hw, y])
+  }
+  const leftX = -hw * 0.5
+  const rightX = hw * 0.5
+  const yBot = hh * 0.72
+  const yTop = landY + (hh - landY) * 0.12
+  const head = Math.min(w, h) * 0.055
+  return emptyShape({
+    fillPolygons: [[-hw, -hh, hw, -hh, hw, hh, -hw, hh]],
+    polylines,
+    arrowPolylines: [
+      [leftX, yBot, leftX, yTop, rightX, yTop, rightX, yBot],
+      arrowHead(rightX, yTop, rightX, yBot, head),
+    ],
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
+/**
+ * L-trap. rot=0: start rechtsonder (90°-winder), 8 rechte treden, pijl naar −Y (boven).
+ * Spil = binnenhoek rechtsonder; bestaande `stair_quarter_90` (Ostade/Anna) blijft apart.
+ */
+export function stairL90(w: number, h: number): FixtureSymbolShape {
+  const hw = w / 2
+  const hh = h / 2
+  const pivotX = hw * 0.28
+  const pivotY = hh * 0.28
+  const minX = -hw
+  const maxX = hw
+  const minY = -hh
+  const maxY = hh
+  const polylines: number[][] = [
+    [minX, minY, maxX, minY],
+    [maxX, minY, maxX, maxY],
+    [maxX, maxY, minX, maxY],
+    [minX, maxY, minX, minY],
+    [pivotX, pivotY, pivotX, maxY],
+    [pivotX, pivotY, maxX, pivotY],
+  ]
+  const nStraight = 8
+  for (let i = 1; i <= nStraight; i += 1) {
+    const y = minY + (i / (nStraight + 1)) * (pivotY - minY)
+    polylines.push([minX, y, maxX, y])
+  }
+  const nWinder = 5
+  const a0 = 0.08
+  const a1 = Math.PI / 2 - 0.08
+  for (let i = 1; i < nWinder; i += 1) {
+    const ang = a0 + (i / nWinder) * (a1 - a0)
+    const outer = rayToRect(pivotX, pivotY, ang, minX, maxX, minY, maxY)
+    polylines.push([pivotX, pivotY, outer.x, outer.y])
+  }
+  const tipY = minY + h * 0.06
+  const tailY = minY + h * 0.2
+  const head = Math.min(w, h) * 0.055
+  return emptyShape({
+    fillPolygons: [[minX, minY, maxX, minY, maxX, maxY, minX, maxY]],
+    polylines,
+    arrowPolylines: [[0, tailY, 0, tipY], arrowHead(0, tailY, 0, tipY, head)],
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
+/**
+ * L-trap opkomst. rot=0: 8 rechte treden vanaf onder, 90°-winder naar rechtsboven.
+ * Spil op de rechterrand; pijl naar +X. Niet `stair_quarter_90_up` (Ostade/Anna).
+ */
+export function stairL90Up(w: number, h: number): FixtureSymbolShape {
+  const hw = w / 2
+  const hh = h / 2
+  const wellL = 0
+  const pivotX = hw
+  const pivotY = -hh * 0.28
+  const minX = -hw
+  const maxX = hw
+  const minY = -hh
+  const maxY = hh
+  const polylines: number[][] = [
+    [minX, minY, maxX, minY],
+    [maxX, minY, maxX, maxY],
+    [maxX, maxY, minX, maxY],
+    [minX, maxY, minX, minY],
+    [wellL, pivotY, wellL, maxY],
+    [wellL, pivotY, pivotX, pivotY],
+  ]
+  const nStraight = 8
+  for (let i = 1; i <= nStraight; i += 1) {
+    const y = pivotY + (i / (nStraight + 1)) * (maxY - pivotY)
+    polylines.push([minX, y, maxX, y])
+  }
+  const nWinder = 5
+  const a0 = -Math.PI * 0.82
+  const a1 = -0.04
+  for (let i = 1; i < nWinder; i += 1) {
+    const ang = a0 + (i / nWinder) * (a1 - a0)
+    const outer = rayToRect(pivotX, pivotY, ang, minX, maxX, minY, maxY)
+    polylines.push([pivotX, pivotY, outer.x, outer.y])
+  }
+  const tailX = wellL + w * 0.12
+  const tipX = hw * 0.82
+  const head = Math.min(w, h) * 0.055
+  return emptyShape({
+    fillPolygons: [[minX, minY, maxX, minY, maxX, maxY, minX, maxY]],
+    polylines,
+    arrowPolylines: [
+      [tailX, pivotY, tipX, pivotY],
+      arrowHead(tailX, pivotY, tipX, pivotY, head),
+    ],
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
+/**
+ * C-trap. rot=0: start rechtsonder, 90°-winder, 3 rechte treden, 90°-winder, uit rechtsboven.
+ * Put rechts (open C); pijl langs de bovenkant naar +X.
+ */
+export function stairC90(w: number, h: number): FixtureSymbolShape {
+  const hw = w / 2
+  const hh = h / 2
+  const wellL = -hw * 0.06
+  const wellR = hw * 0.4
+  const wellT = -hh * 0.34
+  const wellB = hh * 0.34
+  const minX = -hw
+  const maxX = hw
+  const minY = -hh
+  const maxY = hh
+  const polylines: number[][] = [
+    [minX, minY, maxX, minY],
+    [maxX, minY, maxX, maxY],
+    [maxX, maxY, minX, maxY],
+    [minX, maxY, minX, minY],
+    [wellL, wellT, wellL, wellB],
+    [wellL, wellT, wellR, wellT],
+    [wellL, wellB, wellR, wellB],
+  ]
+  const nStraight = 3
+  for (let i = 1; i <= nStraight; i += 1) {
+    const y = wellT + (i / (nStraight + 1)) * (wellB - wellT)
+    polylines.push([minX, y, maxX, y])
+  }
+  const nWinder = 8
+  const botA0 = Math.PI * 0.92
+  const botA1 = Math.PI * 0.16
+  for (let i = 1; i < nWinder; i += 1) {
+    const ang = botA0 + (i / nWinder) * (botA1 - botA0)
+    const outer = rayToRect(wellR, wellB, ang, minX, maxX, minY, maxY)
+    polylines.push([wellR, wellB, outer.x, outer.y])
+  }
+  const topA0 = Math.PI * 0.92
+  const topA1 = -0.02
+  for (let i = 1; i < nWinder; i += 1) {
+    const ang = topA0 + (i / nWinder) * (topA1 - topA0)
+    const outer = rayToRect(wellR, wellT, ang, minX, maxX, minY, maxY)
+    polylines.push([wellR, wellT, outer.x, outer.y])
+  }
+  const tipX = hw * 0.92
+  const head = Math.min(w, h) * 0.055
+  return emptyShape({
+    fillPolygons: [[minX, minY, maxX, minY, maxX, maxY, minX, maxY]],
+    polylines,
+    arrowPolylines: [[wellR, wellT, tipX, wellT], arrowHead(wellR, wellT, tipX, wellT, head)],
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
+/**
+ * Ronde ¾-spiltrap. rot=0: open linksboven (12→9 uur).
+ * Loop 9 uur → 6 uur → 12 uur (klok tegen).
+ */
+export function stairWinder270(w: number, h: number): FixtureSymbolShape {
+  const r = Math.min(w, h) / 2
+  const aStart = Math.PI
+  const aEnd = -Math.PI / 2
+  const sweep = aEnd - aStart
+  const nTreads = Math.max(10, Math.round((1.5 * Math.PI * r) / 25))
+  const samples = 36
+  const pie: number[] = [0, 0]
+  const arc: number[] = []
+  for (let i = 0; i <= samples; i += 1) {
+    const a = aStart + (i / samples) * sweep
+    const x = Math.cos(a) * r
+    const y = Math.sin(a) * r
+    pie.push(x, y)
+    arc.push(x, y)
+  }
+  pie.push(0, 0)
+  const polylines: number[][] = [
+    arc,
+    [0, 0, Math.cos(aStart) * r, Math.sin(aStart) * r],
+    [0, 0, Math.cos(aEnd) * r, Math.sin(aEnd) * r],
+  ]
+  for (let i = 1; i < nTreads; i += 1) {
+    const a = aStart + (i / nTreads) * sweep
+    polylines.push([0, 0, Math.cos(a) * r, Math.sin(a) * r])
+  }
+  const aArrow0 = aStart + sweep * 0.06
+  const aArrow1 = aStart + sweep * 0.94
+  const arrowR = r * 0.58
+  const arrowN = 24
+  const shaft: number[] = []
+  for (let i = 0; i <= arrowN; i += 1) {
+    const a = aArrow0 + (i / arrowN) * (aArrow1 - aArrow0)
+    shaft.push(Math.cos(a) * arrowR, Math.sin(a) * arrowR)
+  }
+  const tipX = Math.cos(aArrow1) * arrowR
+  const tipY = Math.sin(aArrow1) * arrowR
+  const tangX = Math.sin(aArrow1)
+  const tangY = -Math.cos(aArrow1)
+  const fromX = tipX - tangX
+  const fromY = tipY - tangY
+  return emptyShape({
+    fillPolygons: [pie],
+    polylines,
+    arrowPolylines: [shaft, arrowHead(fromX, fromY, tipX, tipY, r * 0.08)],
+    stroke: STAIR_STROKE,
+    fill: STAIR_FILL,
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
 function mapPairs(pts: number[], f: (x: number, y: number) => [number, number]): number[] {
   const out: number[] = []
   for (let i = 0; i + 1 < pts.length; i += 2) {
@@ -281,7 +540,7 @@ export function stairStraight(
   const { a, r, run } = frame
   const left = mirrorX ? a : -a
   const right = -left
-  const nTreads = Math.max(8, Math.round(run / 24))
+  const nTreads = Math.max(4, Math.round(run / 25))
   const cutY = -r + run * 0.16
   const polylines: number[][] = [
     [left, -r, right, -r],
@@ -363,20 +622,63 @@ export function stairStraightDouble(
   })
 }
 
-/** Trapgat zonder vlucht: dashed opening + kruis. */
-export function stairOpening(w: number, h: number): FixtureSymbolShape {
+/**
+ * Rolstoelhelling. rot=0: pijl van +X naar −X (rechts → links).
+ */
+export function wheelchairRamp(w: number, h: number): FixtureSymbolShape {
+  const tailX = (w / 2) * 0.55
+  const tipX = -(w / 2) * 0.55
+  const head = Math.min(w, h) * 0.08
+  return emptyShape({
+    arrowPolylines: [
+      [tailX, 0, tipX, 0],
+      arrowHead(tailX, 0, tipX, 0, head),
+    ],
+    stroke: STAIR_STROKE,
+    fill: 'transparent',
+    strokeWidth: STAIR_STROKE_W,
+    arrowStrokeWidth: STAIR_ARROW_W,
+    overWalls: false,
+  })
+}
+
+function hatchCrossLines(w: number, h: number): number[][] {
   const hw = w / 2
   const hh = h / 2
+  return [
+    [-hw, -hh, hw, -hh],
+    [hw, -hh, hw, hh],
+    [hw, hh, -hw, hh],
+    [-hw, hh, -hw, -hh],
+    [-hw, -hh, hw, hh],
+    [-hw, hh, hw, -hh],
+  ]
+}
+
+/** Vlizotrap: kader + kruis, dichte lijnen. */
+export function stairLoft(w: number, h: number): FixtureSymbolShape {
   return emptyShape({
-    rects: [[-hw, -hh, w, h]],
-    polylines: [
-      [-hw, -hh, hw, hh],
-      [-hw, hh, hw, -hh],
-    ],
+    polylines: hatchCrossLines(w, h),
+    stroke: STAIR_STROKE,
+    fill: 'transparent',
+    strokeWidth: STAIR_STROKE_W,
+    overWalls: false,
+  })
+}
+
+/** Vlizotrap (catalogus 26): zelfde kruis, stippellijn. */
+export function stairLoftDashed(w: number, h: number): FixtureSymbolShape {
+  return emptyShape({
+    dashPolylines: hatchCrossLines(w, h),
     stroke: STAIR_STROKE,
     fill: 'transparent',
     dash: [6, 4],
     strokeWidth: STAIR_STROKE_W,
     overWalls: false,
   })
+}
+
+/** Trapgat zonder vlucht: dashed kader + kruis. */
+export function stairOpening(w: number, h: number): FixtureSymbolShape {
+  return stairLoftDashed(w, h)
 }

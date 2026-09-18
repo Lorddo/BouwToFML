@@ -8,6 +8,7 @@ import {
 import { openingTypeFromKind } from '@/core/plan/opening-kind-catalog'
 import { fixtureKindFromFmlRefid } from '../plg/fml-adapter/fixture-fml-refids'
 import { foldBovenlichtOnPlan } from '@/core/plan/bovenlicht'
+import { seedMissingFloorDefaults } from '@/core/plan/floor-defaults'
 import { hydrateFacadeGroupsFromNativeMarkers } from '@/core/plan/facade-groups'
 import { ensureRidgeDesignsOnPlan, syncRidgeWallGuidsFromDesigns } from '@/core/plan/ridge-walls'
 import { syncRoofPlaneGuidsFromDesigns } from '@/core/plan/roof-planes'
@@ -735,6 +736,7 @@ export function importFmlV3(json: string | object): ImportResult {
   // facade-hydrate, zodat adapters een genormaliseerd plan zien.
   // Volgorde in FML_CONCEPT_ADAPTERS moet die keten weerspiegelen (niet-commutatief).
   promotePlanExtensions(plan)
+  plan = seedMissingFloorDefaults(plan)
   // Slicer-bake op P-lijn opnieuw genereren; strip ná hydrate zodat design.slices bekend is.
   plan = stripBakedSliceDimensionsFromPlan(plan)
   normalizePlanIdentities(plan)

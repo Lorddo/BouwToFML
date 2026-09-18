@@ -18,6 +18,7 @@ import {
   closedRingSegments,
   openPolylineSegments,
 } from '@/core/plan/junctions'
+import { DORMER_WALL_SNAP_CM, snapPointToDormerWall } from '@/core/plan/dormer-draw'
 import {
   dakRoofRingsFromFloor,
   resolveDakSurfacePoint,
@@ -68,7 +69,7 @@ export interface PlanSnapResolve {
    */
   drawingRoof: ComputedRef<boolean>
   resolveDrawPoint: (cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean) => Point2D
-  /** Dakkapel-voorzijde: alleen H/V t.o.v. P1. Geen knoop/muur/dak-snap. */
+  /** Dakkapel-voorzijde: H/V t.o.v. P1 + muur/knoop 5 cm. */
   resolveDormerFrontPoint: (cm: Point2D, axisAnchor?: Point2D, snapDisabled?: boolean) => Point2D
   resolveRoomStartPoint: (cm: Point2D) => Point2D
   resolveRoomEndPoint: (cm: Point2D, start: Point2D) => Point2D
@@ -150,10 +151,18 @@ export function createPlanSnapResolve(deps: PlanSnapResolveDeps): PlanSnapResolv
     axisAnchor?: Point2D,
     snapDisabled?: boolean,
   ): Point2D {
-    if (!axisAnchor) return cm
-    if (axisLocked.value) return snapDrawWallEndpoint(axisAnchor, cm, true)
-    if (snapDisabled) return cm
-    return snapSoftAxisFromStart(axisAnchor, cm)
+    if (snapDisabled) {
+      if (!axisAnchor) return cm
+      if (axisLocked.value) return snapDrawWallEndpoint(axisAnchor, cm, true)
+      return cm
+    }
+    let point = snapPointToJunctions(editor.junctions.value, cm, DORMER_WALL_SNAP_CM)
+    point = snapPointToDormerWall(editor.walls.value, point, DORMER_WALL_SNAP_CM)
+    if (!axisAnchor) return point
+    if (axisLocked.value) point = snapDrawWallEndpoint(axisAnchor, point, true)
+    else point = snapSoftAxisFromStart(axisAnchor, point)
+    point = snapPointToJunctions(editor.junctions.value, point, DORMER_WALL_SNAP_CM)
+    return snapPointToDormerWall(editor.walls.value, point, DORMER_WALL_SNAP_CM)
   }
 
   function resolveRoomStartPoint(cm: Point2D): Point2D {

@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue'
-import { snapRoofVertexZ } from '@/core/plan/roof-vertex-snap'
+import { resolveInsertedRoofVertexZ, snapRoofVertexZ } from '@/core/plan/roof-vertex-snap'
 import {
   clampRoofVertexZCm,
   isRoofSurface,
@@ -60,7 +60,23 @@ export function usePlanCanvasSurfaceEdit(options: {
   let pendingZ: { index: number; z: number } | null = null
   let dragMoveHandler: ((event: MouseEvent) => void) | null = null
   let bodyDrag: { startCm: Point2D; startPoly: Point2D[] } | null = null
+  let roofDragStartPoly: Array<Point2D & { z?: number }> | null = null
   const DRAG_START_PX = 4
+
+  function captureRoofDragStart(): void {
+    const poly = currentSurface()?.poly
+    roofDragStartPoly = poly?.map((p) => ({ x: p.x, y: p.y, z: p.z })) ?? null
+  }
+
+  function flushRoofWallFollow(): void {
+    const id = options.selection.surfaceEditId.value
+    if (!id || !isRoofSurface(currentSurface())) {
+      roofDragStartPoly = null
+      return
+    }
+    options.editor.applyWallsAfterRoofEdit(id, roofDragStartPoly ?? undefined)
+    roofDragStartPoly = null
+  }
 
   function isEditing(): boolean {
     return options.selection.surfaceEditId.value != null
@@ -72,10 +88,10 @@ export function usePlanCanvasSurfaceEdit(options: {
     return options.editor.surfaces.value.find((s) => s.id === id)
   }
 
-  function currentPoly(): Point2D[] | null {
+  function currentPoly(): Array<Point2D & { z?: number }> | null {
     const surface = currentSurface()
     if (!surface?.poly?.length) return null
-    return surface.poly.map((p) => ({ x: p.x, y: p.y }))
+    return surface.poly.map((p) => ({ x: p.x, y: p.y, z: p.z }))
   }
 
   function resolveVertexZ(point: Point2D, previous?: { x: number; y: number; z?: number }): number {
@@ -93,7 +109,7 @@ export function usePlanCanvasSurfaceEdit(options: {
     return previous?.z ?? 0
   }
 
-  function commitPoly(poly: Point2D[]): void {
+  function commitPoly(poly: Array<Point2D & { z?: number }>): void {
     const id = options.selection.surfaceEditId.value
     if (!id) return
     if (!didPushUndo) {
@@ -109,7 +125,7 @@ export function usePlanCanvasSurfaceEdit(options: {
         z:
           index === dragIdx
             ? resolveVertexZ(p, existing?.poly[index])
-            : (existing?.poly[index]?.z ?? resolveVertexZ(p)),
+            : (p.z ?? existing?.poly[index]?.z ?? resolveVertexZ(p)),
       })),
     })
   }
@@ -154,8 +170,11 @@ export function usePlanCanvasSurfaceEdit(options: {
     snapDisabled = false
     cleanupDragListeners()
     if (didPushUndo) {
+      flushRoofWallFollow()
       options.syncPlanToParent()
       didPushUndo = false
+    } else {
+      roofDragStartPoly = null
     }
   }
 
@@ -164,6 +183,7 @@ export function usePlanCanvasSurfaceEdit(options: {
     const startY = event.clientY
     draggingVertexIndex.value = null
     didPushUndo = false
+    captureRoofDragStart()
     snapDisabled = event.ctrlKey || event.metaKey
     const onMove = (move: MouseEvent) => {
       if (draggingVertexIndex.value == null) {
@@ -187,6 +207,7 @@ export function usePlanCanvasSurfaceEdit(options: {
     const startY = event.clientY
     bodyDrag = null
     didPushUndo = false
+    captureRoofDragStart()
     const onMove = (move: MouseEvent) => {
       const cm = options.hitTest.clientToCm(move.clientX, move.clientY)
       if (!cm) return
@@ -269,7 +290,23 @@ export function usePlanCanvasSurfaceEdit(options: {
         poly,
         options.selection.surfaceEditId.value,
       )
-      const next = [...poly.slice(0, bestEi + 1), inserted, ...poly.slice(bestEi + 1)]
+      const plan = options.editor.localPlan.value
+      const insertedZ =
+        plan && isRoofSurface(currentSurface())
+          ? resolveInsertedRoofVertexZ({
+              plan,
+              floorIndex: options.editor.floorIndex.value,
+              point: inserted,
+              edgeA: currentSurface()?.poly[bestEi],
+              edgeB: currentSurface()?.poly[(bestEi + 1) % poly.length],
+              t: bestT,
+            })
+          : (currentSurface()?.poly[bestEi]?.z ?? 0)
+      const next = [
+        ...poly.slice(0, bestEi + 1),
+        { ...inserted, z: insertedZ },
+        ...poly.slice(bestEi + 1),
+      ]
       commitPoly(next)
       selectedVertexIndex.value = bestEi + 1
       beginVertexDrag(bestEi + 1, event)
@@ -279,7 +316,7 @@ export function usePlanCanvasSurfaceEdit(options: {
 
     if (options.isRidgeHit?.(raw) === true) return false
     if (pointInPoly(raw, poly)) {
-      if (currentSurface()?.roofKind === 'dormer') {
+      if (isRoofSurface(currentSurface())) {
         beginBodyDrag(event, raw, poly)
       }
       event.preventDefault()
@@ -295,6 +332,7 @@ export function usePlanCanvasSurfaceEdit(options: {
     bodyDrag = null
     snapDisabled = false
     didPushUndo = false
+    roofDragStartPoly = null
   }
 
   function applyVertexZ(index: number, zCm: number): void {
@@ -314,6 +352,9 @@ export function usePlanCanvasSurfaceEdit(options: {
     }
     const next = surface.poly.map((point, i) => (i === index ? { ...point, z } : point))
     options.editor.updateSurface(surface.id, { poly: next })
+    if (isRoofSurface(surface)) {
+      options.editor.applyWallsAfterRoofEdit(surface.id)
+    }
     options.syncPlanToParent()
     didPushUndo = false
   }

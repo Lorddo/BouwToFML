@@ -446,8 +446,8 @@ function onRidgeZCm(cm: number): void {
           />
           <input
             type="number"
-            min="-1000"
-            max="1000"
+            min="0"
+            max="100"
             step="1"
             class="plan-toolbelt__thickness-input plan-toolbelt__thickness-input--balance"
             :aria-label="t('result.toolbar.alignmentAria')"

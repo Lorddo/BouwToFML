@@ -1,13 +1,10 @@
 import type { HScaleState } from '@/platform/calibration'
-import {
-  SCALE_GEOMETRY_FACTOR_MAX,
-  SCALE_GEOMETRY_FACTOR_MIN,
-  SCALE_RESCALE_MIN_MEASURED_CM,
-} from '@/platform/calibration'
+import { SCALE_RESCALE_MIN_MEASURED_CM } from '@/platform/calibration'
 import { toCmX, toCmY } from '@/core/plan/extraction-to-plan-geom'
 import type { PlanScaleFactors } from '@/core/plan/scale-floor-plan'
 import type { Point2D, Wall } from '@/core/plan/types'
 import {
+  snapPointToWallFaces,
   WALL_FACE_SNAP_CM,
   wallFaceSegments,
 } from '@/ui/composables/plan-canvas/plan-canvas-wall-face-snap'
@@ -21,7 +18,7 @@ export function resolveRescaleGeometryFactor(measuredCm: number, trueCm: number)
   if (!(measuredCm >= SCALE_RESCALE_MIN_MEASURED_CM) || !(trueCm > 0)) return null
   if (!Number.isFinite(measuredCm) || !Number.isFinite(trueCm)) return null
   const factor = trueCm / measuredCm
-  if (factor < SCALE_GEOMETRY_FACTOR_MIN || factor > SCALE_GEOMETRY_FACTOR_MAX) return null
+  if (!(factor > 0) || !Number.isFinite(factor)) return null
   if (Math.abs(factor - 1) < 1e-9) return null
   return factor
 }
@@ -32,7 +29,7 @@ function axisFactor(measuredCm: number, trueMm: number, innerThicknessCm = 0): n
   const t = innerThicknessCm > 0 && Number.isFinite(innerThicknessCm) ? innerThicknessCm : 0
   // Liniaal = binnenmaat; muurdikte blijft. Hartlijn-factor = (I★ + T) / (I + T).
   const factor = (trueMm / 10 + t) / (measuredCm + t)
-  if (factor < SCALE_GEOMETRY_FACTOR_MIN || factor > SCALE_GEOMETRY_FACTOR_MAX) return null
+  if (!(factor > 0) || !Number.isFinite(factor)) return null
   return factor
 }
 
@@ -124,7 +121,7 @@ export function innerThicknessFromRescaleState(
 /**
  * Aparte H/V-factoren. Liniaal is binnenmaat: optioneel `innerThicknessCm`
  * (hart→binnen, beide zijden) zodat het gat na één ronde op de echte maat zit.
- * Beide spans ≥ 50 cm; minstens één as ≠ 1.
+ * Beide spans ≥ 50 cm; minstens één as ≠ 1. Geen 0.5–2-klem.
  */
 export function resolveRescaleFactorsFromRulers(params: {
   measuredCmX: number
@@ -139,6 +136,27 @@ export function resolveRescaleFactorsFromRulers(params: {
   if (factorX == null || factorY == null) return null
   if (Math.abs(factorX - 1) < 1e-9 && Math.abs(factorY - 1) < 1e-9) return null
   return { x: factorX, y: factorY }
+}
+
+export type RescaleRulersReject = 'short' | 'invalid' | 'noop'
+
+/** Waarom Toepassen uit staat — de 50 cm-hint alleen bij `short`. */
+export function diagnoseRescaleFactorsFromRulers(params: {
+  measuredCmX: number
+  measuredCmY: number
+  trueMmX: number
+  trueMmY: number
+  innerThicknessCmX?: number
+  innerThicknessCmY?: number
+}): RescaleRulersReject | null {
+  const shortX = !(params.measuredCmX >= SCALE_RESCALE_MIN_MEASURED_CM)
+  const shortY = !(params.measuredCmY >= SCALE_RESCALE_MIN_MEASURED_CM)
+  if (shortX || shortY) return 'short'
+  if (!(params.trueMmX > 0) || !(params.trueMmY > 0)) return 'invalid'
+  if (!Number.isFinite(params.measuredCmX) || !Number.isFinite(params.measuredCmY)) return 'invalid'
+  if (!Number.isFinite(params.trueMmX) || !Number.isFinite(params.trueMmY)) return 'invalid'
+  if (resolveRescaleFactorsFromRulers(params) == null) return 'noop'
+  return null
 }
 
 /** Stap-4/editor confirm: gemeten span + T uit face-handles. */
@@ -252,6 +270,51 @@ export function initPlanRescaleStateFromWalls(
     yBottom: maxY - insetY,
     yGuideX: (minX + maxX) / 2,
   }
+}
+
+export type RescaleHandleId = 'xLeft' | 'xRight' | 'xGuideY' | 'yTop' | 'yBottom' | 'yGuideX'
+
+/** Eindpunten schuiven op de liniaal; de dwarslijn verplaatst de hele liniaal. */
+export function lockRescaleHandleToAxis(
+  state: HScaleState,
+  handle: RescaleHandleId,
+  point: Point2D,
+): Point2D {
+  if (handle === 'xLeft' || handle === 'xRight') return { x: point.x, y: state.xGuideY }
+  if (handle === 'yTop' || handle === 'yBottom') return { x: state.yGuideX, y: point.y }
+  return point
+}
+
+/**
+ * Face-snap op de ruwe pointer, daarna lock op de liniaal.
+ * Zo volgt de muis de target-muur (ook boven/onder de middenlijn) terwijl
+ * de greep zelf op de liniaal blijft.
+ */
+export function snapRescaleHandle(
+  state: HScaleState,
+  handle: RescaleHandleId,
+  pointer: Point2D,
+  walls: ReadonlyArray<Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>>,
+  opts?: { disabled?: boolean; radiusCm?: number },
+): Point2D {
+  const snapped = snapPointToWallFaces(walls, pointer, opts?.radiusCm ?? WALL_FACE_SNAP_CM, {
+    disabled: opts?.disabled,
+  })
+  return lockRescaleHandleToAxis(state, handle, snapped)
+}
+
+export function applyRescaleHandleDrag(
+  state: HScaleState,
+  handle: RescaleHandleId,
+  point: Point2D,
+): HScaleState {
+  const locked = lockRescaleHandleToAxis(state, handle, point)
+  if (handle === 'xLeft') return { ...state, xLeft: locked.x }
+  if (handle === 'xRight') return { ...state, xRight: locked.x }
+  if (handle === 'xGuideY') return { ...state, xGuideY: locked.y }
+  if (handle === 'yTop') return { ...state, yTop: locked.y }
+  if (handle === 'yBottom') return { ...state, yBottom: locked.y }
+  return { ...state, yGuideX: locked.x }
 }
 
 /** Scale image-cm nulpunt (pixel blijft op FML 0,0). */

@@ -312,9 +312,8 @@ export function syncRoofPlaneGuidsFromDesigns(plan: FloorPlan): string[] {
 /** Patch één dakvlak op de floor die het bezit (multi-verdieping). */
 export type MapRidgeSurfaceOptions = {
   /**
-   * Default true. Zet uit tijdens live sleep (aanzicht): wangen volgen anders
-   * elke pointermove → snap-doelen springen. Sync bij loslaten via
-   * `followDormerWallsForSurfaceMove`.
+   * Default false. Live-follow tijdens sleep laat snap-doelen springen.
+   * Alleen dakkapel: XY-randmuren bij loslaten via `followDormerWallsForSurfaceMove`.
    */
   followDormerWalls?: boolean
 }
@@ -327,7 +326,7 @@ export function mapRidgeSurfaceOnPlan(
 ): FloorPlan {
   const id = surfaceId.trim()
   if (!id) return plan
-  const followWalls = options?.followDormerWalls !== false
+  const followWalls = options?.followDormerWalls === true
   let changed = false
   const floors = plan.floors.map((floor) => {
     const current = listRidgeSurfacesOnFloor(floor)
@@ -354,8 +353,8 @@ export function mapRidgeSurfaceOnPlan(
 }
 
 /**
- * Na live sleep zonder wang-follow: één keer muren syncen van `oldPoly` → huidig vlak.
- * No-op als geen dakkapel of XY ongewijzigd.
+ * Na live sleep zonder wang-follow: één keer dakkapel-randmuren syncen.
+ * No-op als geen dakkapel of XY ongewijzigd. Hoofddak verplaatst geen gevels.
  */
 export function followDormerWallsForSurfaceMove(
   plan: FloorPlan,

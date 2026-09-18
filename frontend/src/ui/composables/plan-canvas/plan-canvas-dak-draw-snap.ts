@@ -77,6 +77,7 @@ export function resolveRidgeDrawPoint(
   const snapped = snapDakDrawPoint(cm, {
     walls: opts.walls,
     ridges: listRidgeWallsOnFloor(floor),
+    roofRings: dakRoofRingsFromFloor(floor),
     axisAnchor: opts.axisAnchor,
     lockAxis: opts.lockAxis,
     snapDisabled: opts.snapDisabled === true,

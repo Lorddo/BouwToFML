@@ -90,6 +90,7 @@ export type WorkspaceFacadeContext = {
   showCanvasGrid: Ref<boolean>
   underlaySrc: ComputedRef<string | null>
   underlaySize: ComputedRef<{ width: number; height: number } | null>
+  planPlateLayout: ComputedRef<import('@/core/plan/translate-floor-plan').UnderlayOriginLayout | null>
   fml: ReturnType<typeof useWorkspacePlan>
   pipeline: ReturnType<typeof useWorkspacePipeline>
   scaleUi: ReturnType<typeof useWorkspaceScale>
@@ -202,6 +203,7 @@ function sliceInput(ctx: WorkspaceFacadeContext) {
     originalImageEl: ctx.originalImageEl,
     onImageLoaded: ctx.image.onImageLoaded,
     bakeInputRotation: ctx.image.bakeInputRotation,
+    bakedInputRotationDeg: ctx.image.bakedInputRotationDeg,
     canBakeInputRotation: ctx.image.canBakeInputRotation,
     inputCommitBusy: ctx.image.inputCommitBusy,
     ...ctx.signature,
@@ -227,6 +229,7 @@ function slicePlanState(ctx: WorkspaceFacadeContext) {
     showCanvasGrid: ctx.showCanvasGrid,
     underlaySrc: ctx.underlaySrc,
     underlaySize: ctx.underlaySize,
+    planPlateLayout: ctx.planPlateLayout,
     ...ctx.fml,
   }
 }

@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { tGlobal } from '@/ui/i18n'
+import type { DefaultsApplyScope } from '@/core/plan/floor-defaults'
 
 export type PlanChromeDialogKind = 'alert' | 'confirm' | 'prompt' | 'listEdit' | 'choice'
 
@@ -214,6 +215,48 @@ export async function promptPlanExportFormat(): Promise<PlanExportFormat | null>
 }
 
 export type FacadeSelectScope = 'floor' | 'all'
+
+export type { DefaultsApplyScope }
+
+/** Annuleren / Alleen nieuwe / Verdieping / Project. Null = geannuleerd. */
+export async function promptDefaultsApplyScope(params: {
+  title: string
+  message: string
+  floorCount: number
+  existingCount: number
+  allowDefaultsOnly?: boolean
+}): Promise<DefaultsApplyScope | null> {
+  const allowDefaultsOnly = params.allowDefaultsOnly !== false
+  if (params.existingCount <= 0 && allowDefaultsOnly) return 'defaultsOnly'
+
+  const listItems: FacadeGroupEditRow[] = []
+  if (allowDefaultsOnly) {
+    listItems.push({
+      id: 'defaultsOnly',
+      name: tGlobal('viewer.defaultsApplyDefaultsOnly'),
+    })
+  }
+  listItems.push({
+    id: 'floor',
+    name: tGlobal('viewer.defaultsApplyFloor'),
+  })
+  if (params.floorCount > 1) {
+    listItems.push({
+      id: 'project',
+      name: tGlobal('viewer.defaultsApplyProject'),
+    })
+  }
+
+  const picked = await promptPlanChromeChoice({
+    title: params.title,
+    message: params.message,
+    listItems,
+    defaultValue: allowDefaultsOnly ? 'defaultsOnly' : 'floor',
+    confirmLabel: tGlobal('common.apply'),
+  })
+  if (picked === 'defaultsOnly' || picked === 'floor' || picked === 'project') return picked
+  return null
+}
 
 /** Chip «Selecteer»: huidige verdieping of alle verdiepingen. Null = geannuleerd. */
 export async function promptFacadeSelectScope(params?: {

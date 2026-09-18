@@ -17,6 +17,14 @@ import {
   syncRoofPlaneGuidsFromDesigns,
 } from '@/core/plan/roof-planes'
 import type { FloorPlan, Wall } from '@/core/plan/types'
+import { sanitizePlanWalls } from '@/core/plan/sanitize-plan-walls'
+import { syncDormerRoofPolysFromWalls } from '@/core/plan/dormer-follow-roof'
+import {
+  assignWallsToGroup,
+  createFacadeGroup,
+  groupIdForWall,
+  wallGuidsInGroup,
+} from '@/core/plan/facade-groups'
 import { addWallSegment } from '@/core/plan/wall-draw-geom'
 import {
   buildWallRenderGeometry,
@@ -162,6 +170,159 @@ describe('dakkapel-teken macro', () => {
     expect(result).not.toBeNull()
     const child = listRidgeSurfacesOnFloor(result!.plan.floors[0]).find((s) => s.roofKind === 'dormer')
     expect(child?.roofParentId).toBe('main')
+  })
+
+  it('voorzijde op bestaande gevel → knipt host, geen dubbele muur', () => {
+    let plan = createEmptyFloorPlan({ wallHeightCm: 280 })
+    const host = addWallSegment(
+      plan.floors[0].walls,
+      { x: 0, y: 40 },
+      { x: 400, y: 40 },
+      20,
+      280,
+    )
+    expect(host).not.toBeNull()
+    plan = { ...plan, floors: [{ ...plan.floors[0], walls: host!.walls }] }
+    const result = place({
+      plan,
+      frontA: { x: 40, y: 43 },
+      frontB: { x: 160, y: 43 },
+      depthPoint: { x: 100, y: 120 },
+    })
+    expect(result).not.toBeNull()
+    const walls = result!.plan.floors[0].walls
+    const onFront = walls.filter(
+      (wall) => Math.abs(wall.a.y - 40) < 0.6 && Math.abs(wall.b.y - 40) < 0.6,
+    )
+    const covering = onFront.filter((wall) => {
+      const lo = Math.min(wall.a.x, wall.b.x)
+      const hi = Math.max(wall.a.x, wall.b.x)
+      return lo <= 40.6 && hi >= 159.4
+    })
+    expect(covering).toHaveLength(1)
+    expect(isDormerRoleWall(covering[0]!)).toBe(false)
+    expect(onFront.length).toBe(3)
+    const wangs = walls.filter((wall) => isDormerRoleWall(wall))
+    expect(wangs.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('dakkapel op gevel-lid: geknipte host-helften blijven in de groep', () => {
+    let plan = createEmptyFloorPlan({ wallHeightCm: 280 })
+    const host = addWallSegment(
+      plan.floors[0].walls,
+      { x: 0, y: 40 },
+      { x: 400, y: 40 },
+      20,
+      280,
+    )
+    expect(host).not.toBeNull()
+    plan = { ...plan, floors: [{ ...plan.floors[0], walls: host!.walls }] }
+    createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, 'G1', [host!.wallId])
+    const result = place({
+      plan,
+      frontA: { x: 40, y: 43 },
+      frontB: { x: 160, y: 43 },
+      depthPoint: { x: 100, y: 120 },
+    })
+    expect(result).not.toBeNull()
+    const members = wallGuidsInGroup(result!.plan, 'G1')
+    expect(members).toContain(host!.wallId)
+    expect(members.some((id) => id.startsWith('split-host-'))).toBe(true)
+    const walls = result!.plan.floors[0].walls
+    const wangs = walls.filter((wall) => isDormerRoleWall(wall))
+    expect(wangs.length).toBeGreaterThanOrEqual(2)
+    for (const wang of wangs) {
+      expect(groupIdForWall(result!.plan, wang.id)).toBeNull()
+    }
+  })
+
+  it('wang op bestaande muur → knipt host, geen dubbele wang', () => {
+    let plan = createEmptyFloorPlan({ wallHeightCm: 280 })
+    const host = addWallSegment(
+      plan.floors[0].walls,
+      { x: 40, y: 0 },
+      { x: 40, y: 400 },
+      20,
+      280,
+    )
+    expect(host).not.toBeNull()
+    plan = { ...plan, floors: [{ ...plan.floors[0], walls: host!.walls }] }
+    const result = place({
+      plan,
+      frontA: { x: 43, y: 40 },
+      frontB: { x: 160, y: 40 },
+      depthPoint: { x: 100, y: 120 },
+    })
+    expect(result).not.toBeNull()
+    const walls = result!.plan.floors[0].walls
+    const onWang = walls.filter(
+      (wall) => Math.abs(wall.a.x - 40) < 0.6 && Math.abs(wall.b.x - 40) < 0.6,
+    )
+    const covering = onWang.filter((wall) => {
+      const lo = Math.min(wall.a.y, wall.b.y)
+      const hi = Math.max(wall.a.y, wall.b.y)
+      return lo <= 40.6 && hi >= 119.4
+    })
+    expect(covering).toHaveLength(1)
+    expect(isDormerRoleWall(covering[0]!)).toBe(false)
+  })
+
+  it('kindvlak op gevel-wang tot buitenface, niet hartlijn; sync blijft quad', () => {
+    let plan = createEmptyFloorPlan({ wallHeightCm: 280 })
+    const host = addWallSegment(
+      plan.floors[0].walls,
+      { x: 40, y: 0 },
+      { x: 40, y: 400 },
+      30,
+      280,
+    )
+    expect(host).not.toBeNull()
+    plan = { ...plan, floors: [{ ...plan.floors[0], walls: host!.walls }] }
+    const result = place({
+      plan,
+      frontA: { x: 43, y: 40 },
+      frontB: { x: 160, y: 40 },
+      depthPoint: { x: 100, y: 120 },
+      thicknessCm: 20,
+    })
+    expect(result).not.toBeNull()
+    const surfaces = listRidgeSurfacesOnFloor(result!.plan.floors[0])
+    const roof = surfaces.find((s) => s.roofKind === 'dormer')
+    expect(roof).toBeTruthy()
+    expect(roof!.poly).toHaveLength(4)
+    const xs = roof!.poly.map((p) => p.x)
+    expect(Math.min(...xs)).toBeCloseTo(25, 2)
+    const synced = syncDormerRoofPolysFromWalls(result!.plan.floors[0].walls, surfaces)
+    const poly = (synced ?? surfaces).find((s) => s.roofKind === 'dormer')?.poly
+    expect(poly).toHaveLength(4)
+    expect(Math.min(...(poly ?? []).map((p) => p.x))).toBeCloseTo(25, 2)
+  })
+
+  it('sanitize na gevel-insnede houdt het kindvlak als quad', () => {
+    let plan = createEmptyFloorPlan({ wallHeightCm: 280 })
+    const host = addWallSegment(
+      plan.floors[0].walls,
+      { x: 0, y: 40 },
+      { x: 400, y: 40 },
+      20,
+      280,
+    )
+    expect(host).not.toBeNull()
+    plan = { ...plan, floors: [{ ...plan.floors[0], walls: host!.walls }] }
+    const result = place({
+      plan,
+      frontA: { x: 40, y: 40 },
+      frontB: { x: 160, y: 40 },
+      depthPoint: { x: 100, y: 120 },
+    })
+    expect(result).not.toBeNull()
+    const floor = result!.plan.floors[0]
+    const surfaces = listRidgeSurfacesOnFloor(floor)
+    const sanitized = sanitizePlanWalls(floor.walls)
+    const synced = syncDormerRoofPolysFromWalls(sanitized, surfaces)
+    const poly = (synced ?? surfaces)[0]?.poly
+    expect(poly).toHaveLength(4)
   })
 
   it('voorzijde over een kruisende binnenmuur → T-split', () => {

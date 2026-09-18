@@ -6,7 +6,7 @@ Peildatum: 2026-09-11 · Status: **GEBOUWD** (fase A–F) · Bron: gesprek 2026-
 
 Aanleiding: de losstaande editor wordt een eigen product (ander domein). FML vasthouden als intern werkmodel én als klantbestand is daar de verkeerde default. Klanten van die editor **mogen geen FML ontvangen**; FML blijft wél beschikbaar als gated import/export.
 
-> **Naamswijziging 2026-09-10:** werknaam **BTF → PLG**. Extensie **`.plg`**, schema `format: "plg-plan"`. `btf` was de afkorting van *BouwToFML* en zit als prefix in bestaande code (`btfSlices`, `btfFrame`, `btfRole`). Voor een losstaand product is dat de verkeerde merknaam in een klantbestand. Zie §9 voor de rename-scope.
+> **Naamswijziging 2026-09-10:** werknaam hernoemd naar **PLG**. Extensie **`.plg`**, schema `format: "plg-plan"`. FML-extras voor eigen concepten heten `plg*` (zie §9).
 
 Gerelateerd: [`ifc-dwg-naar-fml-plan.md`](ifc-dwg-naar-fml-plan.md), [`fml-inspect-pwa.md`](fml-inspect-pwa.md), [`Pricing & Marketplace Strategy – Floorplan Editor.md`](Pricing%20&%20Marketplace%20Strategy%20%E2%80%93%20Floorplan%20Editor.md), [`product-idee-self-serve-plattegrond.md`](product-idee-self-serve-plattegrond.md), [`decisions.md`](decisions.md).
 
@@ -69,7 +69,7 @@ Dat is de eigenlijke bron van de rommel. Eén bak, drie soorten data met tegenge
 | Soort | Voorbeelden | In `.plg` |
 |---|---|---|
 | **Floorplanner-eigen (passthrough)** | `decor`, `groupMarker`, `cameras`, `project_id` | **opaque bewaren** in `foreign.fml`, nooit typen |
-| **Onze extensies** | `btfFrame`, `btfSlices`, `roofPlanes`, `facadeGroups`, `bovenlichtPacked`, `floorStack`, `elevationViews`, `thicknessCms` | **getypt veld** |
+| **Onze extensies** | `plgFrame`, `plgSlices`, `roofPlanes`, `facadeGroups`, `bovenlichtPacked`, `floorStack`, `elevationViews`, `thicknessCms` | **getypt veld** |
 | **Sessie-only** | `stampOwned` (wordt in `buildFmlV3` weer verwijderd) | **niet opslaan** |
 
 Alleen de middelste categorie promoveert. De passthrough-bak **moet blijven bestaan**: promoveer je alles, dan kun je een klant-FML die je alleen wilde bewerken niet meer ongeschonden terugschrijven. Het bestaande `leftover` op drie niveaus (`FloorPlanSource`, `FloorSource`, `FloorDesignSource`) is daarvoor het goede patroon — in `.plg` onder een eerlijke naam.
@@ -83,10 +83,10 @@ De editor denkt al in `FloorPlan` (`frontend/src/core/fml/types.ts`) — FML-vor
 | Eigen concept | Waar het nu woont | Wringpunt |
 |---|---|---|
 | Gevelgroepen (multi-lid) | `settings.facadeGroups` | Native `groupMarker` wordt niet meer geschreven; download stript FP-markers |
-| Nok | sibling design `Dak` + `btfRole: "ridge"` | Geen first-class object; weld/T/X bewust uit |
+| Nok | sibling design `Dak` + `plgRole: "ridge"` | Geen first-class object; weld/T/X bewust uit |
 | Dakvlakken | `settings.roofPlanes` (GUID-lijst) | Surface-extras worden soms gestript |
-| Slicer-maten | `btfSlices` (bij import gestript) | FP ziet alleen gebakken `dimensions[]` |
-| Kozijn | `extras.btfFrame` | FML kent het gat, niet het kozijn |
+| Slicer-maten | `plgSlices` (bij import gestript) | FP ziet alleen gebakken `dimensions[]` |
+| Kozijn | `extras.plgFrame` | FML kent het gat, niet het kozijn |
 | Bovenlicht packed | session-only + `bovenlichtPacked` | Geen FML-entity |
 | Stempel | `extras.stampOwned`, groep `stamp` | Mag niet mee in klant-FML |
 | Junctions | afgeleid `wallId:end` | FML heeft geen knoop-guid |
@@ -211,19 +211,17 @@ PWA-contract blijft: subjects bij openen, join op guid + kind + floorIndex, geve
 
 ---
 
-## 9. Rename-scope `btf` → `plg`
+## 9. FML-extras `plg*` (uitgevoerd 2026-09-16)
 
-`btf` komt van *BouwToFML* en zit op ~120 plekken in ~25 bestanden (o.a. `core/fml/btf-slices.ts`, `extras.btfFrame`, `btfRole: "ridge"`). In één keer hernoemen is churn zonder opbrengst.
+Zie [`.cursor/docs/refactor/lean/plg-fml-extras.md`](../refactor/lean/plg-fml-extras.md).
 
-**Regel:** het onderscheid loopt langs zichtbaarheid.
+FML mag onze extensies dragen als `plgFrame` / `plgSlices` / `plgRole` / `plgOrigin` / `plgRoofSurfaceId`. `.plg` blijft getypt; `writePlg` stript die keys. Domein leest geen FML-extras meer.
 
-| Waar | Nu | Wanneer |
-|---|---|---|
-| **`.plg`-schemakeys** (klant ziet ze) | schoon: `slices`, `frame`, `role` | **meteen bij v1** — nooit `btf*` in een klantbestand |
-| Package/entry-namen (bestaan nog niet) | `plg-core` / `plg-fml` / `plg-ui`, `@plg/plan` | meteen |
-| TS-identifiers en bestandsnamen | `btfSlices`, `btf-slices.ts` mogen blijven | opruimen in een latere lean-pass |
-
-De serializer koppelt beide werelden, dus de interne naam hoeft de schemanaam niet te zijn. Zo hoeft de code-rename niet op het kritieke pad.
+| Waar | Stand |
+|---|---|
+| **`.plg`-schemakeys** | schoon: `slices`, `frame`, `role`, … |
+| **FML-extras** | alleen `plg*` (adapter) |
+| **Package/entry-namen** | `plg-core` / `plg-fml` / `plg-ui`, `@plg/plan` |
 
 ---
 
@@ -288,7 +286,6 @@ Zaad nu: `fml-editor/entry.ts`, `fml-inspect/entry.ts`. Eerste integratie mag pa
 - OpenCV / stap 1–3 in het editor-package
 - CV-werkstaat in `.plg` (blijft converter-sidecar)
 - `fmlGuid` hernoemen in de PWA op dag 1
-- `btf*` TS-identifiers hernoemen op dag 1 (§9)
 - Tweede repo of iframe nú
 - Native DWG/IFC als intern model (IFC blijft een adapter)
 
@@ -296,12 +293,13 @@ Zaad nu: `fml-editor/entry.ts`, `fml-inspect/entry.ts`. Eerste integratie mag pa
 
 ## 13. Besluiten
 
+- **2026-09-16** — FML-extras hernoemd naar `plg*`; lekken dicht (domein + writePlg + slicer-bake). Zie §9.
 - **2026-09-11** — Taal: intern/editor = plattegrond / `.plg`; converter-klant-UI mag FML blijven zeggen. «FML-editor» vermijden. Download serialiseert; maakt geen plan.
-- **2026-09-10** — Werknaam BTF → **PLG**; extensie `.plg`, schema `format: "plg-plan"`. `btf` = BouwToFML en is de verkeerde merknaam in een klantbestand van een losstaand product.
+- **2026-09-10** — Werknaam → **PLG**; extensie `.plg`, schema `format: "plg-plan"`.
 - **2026-09-10** — `.plg` wordt **ook het IDB-opslagschema**. Eén model, één migratiepad, download = opslaan wat er staat.
 - **2026-09-10** — CV-werkstaat (scan, maskers, refs, `tabOutputs`, detectie-cache) blijft een **converter-sidecar** buiten `.plg`.
 - **2026-09-10** — **Eén extensie, twee ondersteunende formats**: FML en IFC zijn gelijkwaardige adapters op `.plg`.
 - **2026-09-10** — IFC-import schrijft naar getypte domeinvelden (`origin.guid`, `wall.layers[]`), niet naar `extras`. Corrigeert het IFC-plan.
-- **2026-09-10** — `.plg`-schemakeys meteen schoon (`slices`, `frame`); TS-identifiers `btf*` later in een lean-pass.
+- **2026-09-10** — `.plg`-schemakeys meteen schoon (`slices`, `frame`).
 - **2026-09-10** — Versie + migratieketen vanaf v1, omdat `.plg` de opslag is en bestaande IDB dus meteen meetelt.
 - **2026-09-10** — Commerciële grond: contractueel geen FML-ondersteuning aan derden; zonder `.plg` kan de losstaande editor niet gelanceerd worden.

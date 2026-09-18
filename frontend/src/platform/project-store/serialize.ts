@@ -16,6 +16,7 @@ import {
   type PersistedProject,
   type PersistedProjectIndexEntry,
   type PersistedPdfUnderlay,
+  type PersistedPlanUnderlay,
   type PersistedSourceUnderlay,
   type PersistedWallStamp,
   type PlgFloorDocument,
@@ -83,21 +84,20 @@ type RuntimeWallStamp = {
 }
 
 function persistWallStamp(stamp: RuntimeWallStamp): PersistedWallStamp {
+  const {
+    eraseMaskBase64,
+    stampBwBase64,
+    stampMaskBase64,
+    bakeNulpuntImageCm,
+    ...meta
+  } = stamp
+  const cloned = toStorableDevSession(meta)
   return {
-    donorFloorId: stamp.donorFloorId,
-    bands: stamp.bands,
-    baseBounds: stamp.baseBounds,
-    bounds: stamp.bounds,
-    wallsCm: stamp.wallsCm,
-    sourceWallsCm: stamp.sourceWallsCm,
-    injectWalls: stamp.injectWalls,
-    originCm: stamp.originCm,
-    eraseMaskBytes: stamp.eraseMaskBase64 ? base64ToBytes(stamp.eraseMaskBase64) : undefined,
-    stampBwBytes: stamp.stampBwBase64 ? base64ToBytes(stamp.stampBwBase64) : undefined,
-    stampMaskBytes: stamp.stampMaskBase64 ? base64ToBytes(stamp.stampMaskBase64) : undefined,
-    baked: stamp.baked,
-    skipBandFilter: stamp.skipBandFilter,
-    bakeNulpuntImageCm: stamp.bakeNulpuntImageCm ? { ...stamp.bakeNulpuntImageCm } : undefined,
+    ...cloned,
+    eraseMaskBytes: eraseMaskBase64 ? base64ToBytes(eraseMaskBase64) : undefined,
+    stampBwBytes: stampBwBase64 ? base64ToBytes(stampBwBase64) : undefined,
+    stampMaskBytes: stampMaskBase64 ? base64ToBytes(stampMaskBase64) : undefined,
+    bakeNulpuntImageCm: bakeNulpuntImageCm ? { ...bakeNulpuntImageCm } : undefined,
   }
 }
 
@@ -136,6 +136,11 @@ export type PersistProjectOptions = {
   omitLegacyProjectSource?: boolean
   /** Drop shared PDF bytes (quota retry). */
   omitSourcePdf?: boolean
+  /**
+   * Drop stamp B/W/mask rasters; metadata + injectWalls blijven.
+   * Result-floors doen dit al standaard (zelfde voorwaarde als omitResultDetection).
+   */
+  omitStampRasters?: boolean
 }
 
 /** Quota-slim: drop face-raster buffers (tientallen MB) — classify opnieuw na restore. */
@@ -164,6 +169,14 @@ function stripClassifyRastersFromSession(session: DevWorkspaceSession): DevWorks
  * Quota-opties op de runtime-session (vóór sidecar-persist).
  * omitResultDetection / stripClassifyRasters raken alleen CV-velden.
  */
+function stripStampRastersFromSession(session: DevWorkspaceSession): DevWorkspaceSession {
+  const stamp = session.wallStamp
+  if (!stamp) return session
+  if (!stamp.eraseMaskBase64 && !stamp.stampBwBase64 && !stamp.stampMaskBase64) return session
+  const { eraseMaskBase64: _e, stampBwBase64: _b, stampMaskBase64: _m, ...rest } = stamp
+  return { ...session, wallStamp: rest }
+}
+
 function sessionForPersist(
   session: DevWorkspaceSession,
   blob: FloorWorkspaceBlob,
@@ -178,9 +191,15 @@ function sessionForPersist(
   ) {
     const { detectionExact: _de, detectionReplay: _dr, ...rest } = next
     next = rest
+    // Zelfde contract als detectionExact: stap 4 herstelt via previewPlan.
+    // Drie 3k-masks per floor laten één IDB-put falen («too large» ≠ quota).
+    next = stripStampRastersFromSession(next)
   }
   if (options?.stripClassifyRasters) {
     next = stripClassifyRastersFromSession(next)
+  }
+  if (options?.omitStampRasters) {
+    next = stripStampRastersFromSession(next)
   }
   return next
 }
@@ -256,6 +275,8 @@ function persistBlob(
     planOrient: blob.planOrient ? toStorableDevSession(blob.planOrient) : (blob.planOrient ?? null),
     scale: split?.scale ?? scaleFallback,
     sourceUnderlay: blob.sourceUnderlay ? persistSourceUnderlay(blob.sourceUnderlay) : null,
+    planUnderlay: persistPlanUnderlay(blob.planUnderlay, blob.sourceUnderlay?.src),
+    sourceToWorking: blob.sourceToWorking ? { ...blob.sourceToWorking } : null,
     // Floor pdfUnderlaySource / sourcePdfUnderlay stay memory-only (stale ROI + quota).
     // Project-level sourcePdfUnderlay is persisted separately.
   }
@@ -292,6 +313,11 @@ function restoreBlob(blob: PersistedFloorBlob): FloorWorkspaceBlob {
     planNulpuntImageCm: plan.planNulpuntImageCm ?? plan.fmlNulpuntImageCm ?? null,
     planOrient: plan.planOrient ?? plan.fmlOrient ?? null,
     sourceUnderlay: plan.sourceUnderlay ? restoreSourceUnderlay(plan.sourceUnderlay) : null,
+    planUnderlay: restorePlanUnderlay(
+      plan.planUnderlay,
+      plan.sourceUnderlay ? restoreSourceUnderlay(plan.sourceUnderlay).src : null,
+    ),
+    sourceToWorking: plan.sourceToWorking ? { ...plan.sourceToWorking } : null,
     pdfUnderlaySource: null,
     sourcePdfUnderlay: null,
   }
@@ -328,6 +354,45 @@ function restorePdfUnderlay(
   }
 }
 
+function persistPlanUnderlay(
+  underlay: FloorWorkspaceBlob['planUnderlay'],
+  sourceSrc: string | null | undefined,
+): PersistedPlanUnderlay | null {
+  if (!underlay || !(underlay.width > 0) || !(underlay.height > 0)) return null
+  const sameAsSource = !!sourceSrc && underlay.src === sourceSrc
+  const pngBytes = sameAsSource ? undefined : dataUrlToPngBytes(underlay.src)
+  if (!sameAsSource && !pngBytes && !underlay.remoteUrl) return null
+  return {
+    width: underlay.width,
+    height: underlay.height,
+    ...(underlay.remoteUrl ? { remoteUrl: underlay.remoteUrl } : {}),
+    ...(sameAsSource ? { sameAsSource: true } : {}),
+    ...(pngBytes ? { pngBytes } : {}),
+  }
+}
+
+function restorePlanUnderlay(
+  underlay: PersistedPlanUnderlay | null | undefined,
+  sourceSrc: string | null,
+): FloorWorkspaceBlob['planUnderlay'] {
+  if (!underlay) return null
+  const src =
+    underlay.remoteUrl && /^https?:\/\//i.test(underlay.remoteUrl)
+      ? underlay.remoteUrl
+      : underlay.sameAsSource && sourceSrc
+        ? sourceSrc
+        : underlay.pngBytes
+          ? pngBytesToDataUrl(underlay.pngBytes)
+          : sourceSrc
+  if (!src) return null
+  return {
+    src,
+    width: underlay.width,
+    height: underlay.height,
+    ...(underlay.remoteUrl ? { remoteUrl: underlay.remoteUrl } : {}),
+  }
+}
+
 function persistSourceUnderlay(underlay: ProjectSourceUnderlay): PersistedSourceUnderlay | null {
   const pngBytes = dataUrlToPngBytes(underlay.src)
   if (!pngBytes) return null
@@ -336,6 +401,8 @@ function persistSourceUnderlay(underlay: ProjectSourceUnderlay): PersistedSource
     name: underlay.name,
     scale: underlay.scale ? toStorableDevSession(underlay.scale) : undefined,
     ...(underlay.pdf ? { pdf: toStorableDevSession(underlay.pdf) } : {}),
+    ...(underlay.inputRotation ? { inputRotation: { ...underlay.inputRotation } } : {}),
+    ...(underlay.scaleSpace ? { scaleSpace: underlay.scaleSpace } : {}),
   }
 }
 
@@ -345,6 +412,8 @@ function restoreSourceUnderlay(underlay: PersistedSourceUnderlay): ProjectSource
     name: underlay.name,
     scale: underlay.scale,
     pdf: underlay.pdf ?? null,
+    inputRotation: underlay.inputRotation ?? null,
+    scaleSpace: underlay.scaleSpace,
   }
 }
 

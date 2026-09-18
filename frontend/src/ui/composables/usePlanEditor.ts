@@ -20,11 +20,13 @@ import { resolveStampOwnership } from '@/core/plan/resolve-stamp-ownership'
 import { DEFAULT_WALL_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import { splitPlanWallAtT } from '@/core/plan/elevation-openings'
 import { applyDormerDrawToPlan } from '@/core/plan/dormer-draw'
+import { syncWallsAfterRoofEdit } from '@/core/plan/bind-walls-to-roofs'
 import {
   syncDormerRoofPolysFromWalls,
   weldDormerAssemblyCorners,
 } from '@/core/plan/dormer-follow-roof'
 import { listRidgeSurfacesOnFloor, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
+import { applySkylightRoofSnap, isSkylightItem } from '@/core/plan/skylight-roof'
 import {
   addRoomRect,
   addWallSegment,
@@ -66,7 +68,10 @@ import {
 } from '@/core/plan/opening-drag-geom'
 import { regenerateFloorAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import { cloneAreasSnapshot } from '@/ui/composables/plan-canvas/plan-canvas-area-live'
-import { ensureDefaultFacadeGroups } from '@/core/plan/facade-groups'
+import {
+  ensureDefaultFacadeGroups,
+  inheritFacadeGroupsAfterWallsChanged,
+} from '@/core/plan/facade-groups'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 import {
@@ -295,6 +300,7 @@ export function usePlanEditor(
       patchActiveFloor({ walls: nextWalls })
       return
     }
+    const beforeWalls = floor.walls
     const surfaces = listRidgeSurfacesOnFloor(floor)
     let walls = nextWalls
     for (const surface of surfaces) {
@@ -304,10 +310,16 @@ export function usePlanEditor(
     const nextSurfaces = syncDormerRoofPolysFromWalls(walls, surfaces)
     if (!nextSurfaces) {
       patchActiveFloor({ walls })
+      if (localPlan.value) {
+        inheritFacadeGroupsAfterWallsChanged(localPlan.value, beforeWalls, walls)
+      }
       return
     }
     const nextFloor = setRidgeSurfacesOnFloor({ ...floor, walls }, nextSurfaces)
     patchActiveFloor({ walls: nextFloor.walls, designs: nextFloor.designs })
+    if (localPlan.value) {
+      inheritFacadeGroupsAfterWallsChanged(localPlan.value, beforeWalls, nextFloor.walls)
+    }
   }
 
   function previewWallsWithLiveAreas(nextWalls: Wall[], baseAreas?: FloorArea[]): void {
@@ -435,8 +447,44 @@ export function usePlanEditor(
     setFloorItems(next.length > 0 ? next : undefined)
   }
 
+  function snapSkylightItem<T extends Omit<FloorItem, 'id'> & { id?: string }>(item: T): T {
+    if (!isSkylightItem(item) || !localPlan.value) return item
+    const surfaces = listRidgeSurfacesOnFloor(localPlan.value.floors[floorIndex.value])
+    const snapped = applySkylightRoofSnap(
+      { ...item, id: item.id ?? '' },
+      surfaces,
+      localPlan.value,
+      floorIndex.value,
+    )
+    if (!item.id) {
+      const { id: _id, ...rest } = snapped
+      return rest as T
+    }
+    return snapped as T
+  }
+
   function applyItemDrag(guid: string, cm: Point2D): void {
-    updateItem(guid, { x: cm.x, y: cm.y })
+    const item = items.value.find((entry) => entry.id === guid)
+    if (!item) return
+    updateItem(guid, snapSkylightItem({ ...item, x: cm.x, y: cm.y }))
+  }
+
+  function refreshSkylightRoof(guid: string): void {
+    const item = items.value.find((entry) => entry.id === guid)
+    if (!item || !isSkylightItem(item)) return
+    const next = snapSkylightItem(item)
+    if (
+      next.z === item.z &&
+      next.pitchDeg === item.pitchDeg &&
+      next.roofSurfaceId === item.roofSurfaceId
+    ) {
+      return
+    }
+    updateItem(guid, {
+      z: next.z,
+      pitchDeg: next.pitchDeg,
+      roofSurfaceId: next.roofSurfaceId,
+    })
   }
 
   function setFloorGeometry(nextWalls: Wall[], nextItems?: FloorItem[]): void {
@@ -821,6 +869,17 @@ export function usePlanEditor(
     return result.wallIds
   }
 
+  function applyWallsAfterRoofEdit(
+    surfaceId: string,
+    oldPoly?: ReadonlyArray<Point2D & { z?: number }>,
+  ): void {
+    if (!localPlan.value) return
+    const next = syncWallsAfterRoofEdit(localPlan.value, surfaceId, oldPoly)
+    if (next === localPlan.value) return
+    localPlan.value = next
+    flushAreaRegen()
+  }
+
   // --- Opening operations ---
 
   function applyOpeningAdd(wallId: string, opening: Opening): string | null {
@@ -937,6 +996,8 @@ export function usePlanEditor(
     updateItem,
     removeItem,
     applyItemDrag,
+    refreshSkylightRoof,
+    snapSkylightItem,
     flushAreaRegen,
     updateArea,
     removeArea,
@@ -999,6 +1060,7 @@ export function usePlanEditor(
     applyWallKind: ridgeRoof.applyWallKind,
     applyRoomRect,
     applyDormerDraw,
+    applyWallsAfterRoofEdit,
     applyOpeningAdd,
     resolveOpening,
     resolveDoorOpening,

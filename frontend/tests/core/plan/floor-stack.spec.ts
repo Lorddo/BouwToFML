@@ -4,6 +4,9 @@ import { createBlankFloor, createEmptyFloorPlan } from '@/core/plan/empty-floor-
 import {
   elevationDakThicknessCm,
   elevationFloorGroups,
+  floorCeilingWorldZ,
+  floorSlabWorldRange,
+  floorWallBaseWorldZ,
   readFloorStack,
   seedFloorStackIfMissing,
   setNokThicknessCm,
@@ -39,6 +42,19 @@ describe('floor-stack elevation groups', () => {
     const stack = readFloorStack(next)
     expect(stack.floors.find((row) => row.level === 0)?.thicknessCm).toBe(22)
     expect(stack.floors.find((row) => row.level === 1)?.thicknessCm).toBe(18)
+  })
+
+  it('verdiepingsvloer is het plafond van de floor eronder', () => {
+    const plan = seedFloorStackIfMissing(
+      createEmptyFloorPlan({ name: 'Plafond', wallHeightCm: 280 }),
+      { dakThicknessCm: 30, slabThicknessCm: 20 },
+    )
+    plan.floors.push(createBlankFloor({ name: '1e', level: 1, wallHeightCm: 260 }))
+    const seeded = seedFloorStackIfMissing(plan, { dakThicknessCm: 30, slabThicknessCm: 20 })
+    const slab1 = floorSlabWorldRange(seeded, 1)!
+    expect(floorCeilingWorldZ(seeded, 0)).toBe(slab1.z0)
+    expect(slab1.z0).toBe(floorWallBaseWorldZ(seeded, 0) + 280)
+    expect(floorCeilingWorldZ(seeded, 1)).toBeNull()
   })
 })
 

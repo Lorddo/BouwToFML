@@ -6,6 +6,9 @@ import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-m
 /** Eindpunten op dezelfde H/V-lijn (cm). Strakker dan snap (0,5 / 2). */
 export const CORNER_AXIS_EPS_CM = 0.1
 
+/** Sector binnen dit van 90° telt als haaks (elke oriëntatie, niet alleen H/V). */
+export const CORNER_SQUARE_EPS_DEG = 0.2
+
 /** Sector ≥ dit telt als plat (T-onderzijde / doorgaande lijn), geen binnenhoek. */
 export const CORNER_FLAT_MIN_DEG = 179
 
@@ -85,11 +88,8 @@ function bisectorOf(a: Point2D, b: Point2D): Point2D {
   return normalizeDir(x, y) ?? a
 }
 
-function sectorKind(wallA: Wall, wallB: Wall): CornerKind {
-  const axisA = classifyWallAxis(wallA)
-  const axisB = classifyWallAxis(wallB)
-  if ((axisA === 'h' && axisB === 'v') || (axisA === 'v' && axisB === 'h')) return 'square'
-  return 'skew'
+function sectorKind(turnDeg: number): CornerKind {
+  return Math.abs(turnDeg - 90) <= CORNER_SQUARE_EPS_DEG ? 'square' : 'skew'
 }
 
 /** Binnenhoek van de twee faces + pad de sector in (cm). */
@@ -153,7 +153,7 @@ export function listCornerSectors(junction: JunctionNode, walls: Wall[]): Corner
       dirA: a.dir,
       dirB: b.dir,
       bisector,
-      kind: sectorKind(a.wall, b.wall),
+      kind: sectorKind(turn),
     })
   }
   return sectors

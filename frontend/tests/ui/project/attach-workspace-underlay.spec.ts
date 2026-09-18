@@ -6,6 +6,7 @@ import type { FloorWorkspaceBlob } from '@/ui/composables/project/types'
 import {
   attachWorkspaceUnderlayToFloor,
   drawingFromWorkspaceBlob,
+  resolveBlobSourceToWorking,
 } from '@/ui/composables/project/attach-workspace-underlay'
 
 const PNG =
@@ -84,6 +85,122 @@ describe('drawingFromWorkspaceBlob', () => {
     expect(drawingFromWorkspaceBlob(blob({ session: session({ workingImagePng: '' }) }))).toBeNull()
     expect(drawingFromWorkspaceBlob(blob({ session: null }))).toBeNull()
   })
+
+  it('planUnderlay wint van workingImagePng', () => {
+    const plate = 'data:image/png;base64,plate'
+    const drawing = drawingFromWorkspaceBlob(
+      blob({
+        planUnderlay: { src: plate, width: 4000, height: 2000 },
+        sourceToWorking: {
+          sourceWidthPx: 4000,
+          sourceHeightPx: 2000,
+          workingWidthPx: 2000,
+          workingHeightPx: 1000,
+          offsetX: 0,
+          offsetY: 0,
+          scale: 1,
+          rotationDeg: 0,
+          rotate180: false,
+        },
+      }),
+    )
+    expect(drawing!.url).toBe(plate)
+    expect(drawing!.width).toBeCloseTo(200)
+    expect(drawing!.height).toBeCloseTo(100)
+  })
+
+  it('schrijft bake-rotatie naar drawing.rotation', () => {
+    const drawing = drawingFromWorkspaceBlob(
+      blob({
+        sourceUnderlay: { src: 'data:image/png;base64,source', name: 'scan.png' },
+        sourceToWorking: {
+          sourceWidthPx: 1000,
+          sourceHeightPx: 800,
+          workingWidthPx: 800,
+          workingHeightPx: 1000,
+          offsetX: 0,
+          offsetY: 0,
+          scale: 1,
+          rotationDeg: 90,
+          rotate180: false,
+        },
+      }),
+    )
+    expect(drawing!.rotation).toBe(90)
+  })
+
+  it('identity-transform + sourceUnderlay.inputRotation → drawing.rotation', () => {
+    const next = blob({
+      sourceUnderlay: {
+        src: 'data:image/png;base64,source',
+        name: 'scan.png',
+        inputRotation: { rotationDeg: 12, rotate180: false },
+      },
+      sourceToWorking: {
+        sourceWidthPx: 2000,
+        sourceHeightPx: 1000,
+        workingWidthPx: 2000,
+        workingHeightPx: 1000,
+        offsetX: 0,
+        offsetY: 0,
+        scale: 1,
+        rotationDeg: 0,
+        rotate180: false,
+      },
+    })
+    expect(drawingFromWorkspaceBlob(next)!.rotation).toBe(12)
+    expect(resolveBlobSourceToWorking(next)?.rotationDeg).toBe(12)
+  })
+
+  it('bake-rotatie wint van sourceUnderlay.inputRotation', () => {
+    const transform = resolveBlobSourceToWorking(
+      blob({
+        sourceUnderlay: {
+          src: 'data:image/png;base64,source',
+          name: 'scan.png',
+          inputRotation: { rotationDeg: 12, rotate180: false },
+        },
+        sourceToWorking: {
+          sourceWidthPx: 1000,
+          sourceHeightPx: 800,
+          workingWidthPx: 800,
+          workingHeightPx: 1000,
+          offsetX: 0,
+          offsetY: 0,
+          scale: 1,
+          rotationDeg: 90,
+          rotate180: false,
+        },
+      }),
+    )
+    expect(transform?.rotationDeg).toBe(90)
+  })
+
+  it('sourceUnderlay + transform wint van workingImagePng', () => {
+    const source = 'data:image/png;base64,source'
+    const drawing = drawingFromWorkspaceBlob(
+      blob({
+        sourceUnderlay: {
+          src: source,
+          name: 'scan.png',
+        },
+        sourceToWorking: {
+          sourceWidthPx: 4000,
+          sourceHeightPx: 2000,
+          workingWidthPx: 2000,
+          workingHeightPx: 1000,
+          offsetX: 200,
+          offsetY: 0,
+          scale: 1,
+          rotationDeg: 0,
+          rotate180: false,
+        },
+      }),
+    )
+    expect(drawing!.url).toBe(source)
+    expect(drawing!.width).toBeCloseTo(200)
+    expect(drawing!.height).toBeCloseTo(100)
+  })
 })
 
 describe('attachWorkspaceUnderlayToFloor', () => {
@@ -93,7 +210,7 @@ describe('attachWorkspaceUnderlayToFloor', () => {
     expect(next.drawing?.flipX).toBe(true)
   })
 
-  it('houdt een bestaande herbruikbare drawing', () => {
+  it('houdt https-drawing als de blob geen plaat heeft', () => {
     const floor: Floor = {
       ...emptyFloor(),
       drawing: {
@@ -105,7 +222,10 @@ describe('attachWorkspaceUnderlayToFloor', () => {
         url: 'https://cdn.example.com/scan.png',
       },
     }
-    const next = attachWorkspaceUnderlayToFloor(floor, blob())
+    const next = attachWorkspaceUnderlayToFloor(
+      floor,
+      blob({ session: null, previewUnderlayLayout: null }),
+    )
     expect(next.drawing?.url).toBe('https://cdn.example.com/scan.png')
     expect(next.drawing?.x).toBe(1)
   })

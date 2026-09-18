@@ -567,6 +567,9 @@ export function usePlanCanvasWallSelection(options: {
 
   function toggleSelectionBoxMode(): void {
     activePlanTool.value = activePlanTool.value === 'box_select' ? null : 'box_select'
+    if (activePlanTool.value === 'box_select') {
+      selection.hoveredJunctionId.value = null
+    }
     cancelSelectionBoxDrag()
     cancelDrawWallDrag()
     cancelMeasureDrag()

@@ -1,6 +1,6 @@
 {
   "beschrijving": "Domein-catalogus opening-kinds (geen Floorplanner-hashes). Glyph/frame/leaf voor editor.",
-  "laatste_update": "2026-09-11",
+  "laatste_update": "2026-09-18",
   "entries": [
     {
       "kind": "door.single",
@@ -35,10 +35,42 @@
       "leaf": "solid"
     },
     {
+      "kind": "door.round",
+      "type": "door",
+      "label": "Ronde opening",
+      "glyph": "round_opening",
+      "swingInsetCm": 0,
+      "leaf": "solid"
+    },
+    {
       "kind": "door.french_balcony",
       "type": "door",
       "label": "Frans balkon",
       "glyph": "french_balcony",
+      "swingInsetCm": 5,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.balcony",
+      "type": "door",
+      "label": "Balkondeur",
+      "glyph": "single",
+      "swingInsetCm": 5,
+      "leaf": "glass"
+    },
+    {
+      "kind": "door.flush",
+      "type": "door",
+      "label": "Deur (zonder draaicirkel)",
+      "glyph": "flush",
+      "swingInsetCm": 0,
+      "leaf": "solid"
+    },
+    {
+      "kind": "door.half_glass",
+      "type": "door",
+      "label": "Voordeur (boven glas)",
+      "glyph": "half_glass",
       "swingInsetCm": 5,
       "leaf": "solid"
     },
@@ -99,6 +131,14 @@
       "leaf": "glass"
     },
     {
+      "kind": "door.elevator",
+      "type": "door",
+      "label": "Liftdeuren",
+      "glyph": "elevator",
+      "swingInsetCm": 0,
+      "leaf": "solid"
+    },
+    {
       "kind": "door.garage",
       "type": "door",
       "label": "Garagedeur",
@@ -119,6 +159,14 @@
       "type": "window",
       "label": "Raam",
       "glyph": "single",
+      "panels": 1,
+      "leaf": "glass"
+    },
+    {
+      "kind": "window.grid",
+      "type": "window",
+      "label": "Raam (raster)",
+      "glyph": "grid",
       "panels": 1,
       "leaf": "glass"
     },

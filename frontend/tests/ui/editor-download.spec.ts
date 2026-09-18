@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
-import { createFactoryViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
 import { useEditorDownload } from '@/ui/composables/editor/useEditorDownload'
 import type { PlanExportFormat } from '@/ui/composables/plan-chrome-dialog'
 
@@ -15,6 +14,7 @@ vi.mock('@/core/fml/downloadFml', () => ({
 
 vi.mock('@/ui/composables/plan-chrome-dialog', () => ({
   promptPlanExportFormat: () => exportChoice(),
+  alertPlanChrome: () => Promise.resolve(),
 }))
 
 function planWithWall(name = 'Woonhuis'): FloorPlan {
@@ -35,15 +35,13 @@ function planWithWall(name = 'Woonhuis'): FloorPlan {
 
 function setup(options: { plan?: FloorPlan | null; fileName?: string | null } = {}) {
   const plan = ref<FloorPlan | null>(options.plan === undefined ? planWithWall() : options.plan)
-  const defaults = createFactoryViewerSessionDefaults()
   const calls: string[] = []
   const api = useEditorDownload({
     plan,
     fileName: ref(options.fileName ?? null),
     scaleInputUnit: ref('cm'),
     thicknessPresetCms: ref([10, 20, 30]),
-    activeFloorDefaults: computed(() => defaults),
-    defaultsForFloor: () => defaults,
+    activeFloorIndex: ref(0),
     flushPendingFieldCommits: () => calls.push('flush'),
     persistActiveUnderlayDrawing: () => calls.push('persist'),
   })
@@ -56,56 +54,56 @@ describe('useEditorDownload', () => {
     exportChoice.mockReset()
   })
 
-  it('flusht velden en onderlegger vóór het serialiseren', () => {
+  it('flusht velden en onderlegger vóór het serialiseren', async () => {
     const { calls, downloadCurrentFml } = setup()
 
-    downloadCurrentFml()
+    await downloadCurrentFml()
 
     expect(calls).toEqual(['flush', 'persist'])
     expect(downloads).toHaveLength(1)
   })
 
-  it('doet niets zonder plan', () => {
+  it('doet niets zonder plan', async () => {
     const { downloadCurrentFml, downloadCurrentPlg } = setup({ plan: null })
 
-    downloadCurrentFml()
-    downloadCurrentPlg()
+    await downloadCurrentFml()
+    await downloadCurrentPlg()
 
     expect(downloads).toEqual([])
   })
 
-  it('bestandsnaam komt van het geopende bestand als dat er is', () => {
+  it('bestandsnaam komt van het geopende bestand als dat er is', async () => {
     const { downloadCurrentFml } = setup({ fileName: 'Kinderdijkstraat.plg' })
 
-    downloadCurrentFml()
+    await downloadCurrentFml()
 
     expect(downloads[0]?.filename).toBe('Kinderdijkstraat.fml')
   })
 
-  it('valt zonder bestandsnaam terug op de plannaam', () => {
+  it('valt zonder bestandsnaam terug op de plannaam', async () => {
     const { downloadCurrentFml, downloadCurrentPlg } = setup()
 
-    downloadCurrentFml()
-    downloadCurrentPlg()
+    await downloadCurrentFml()
+    await downloadCurrentPlg()
 
     expect(downloads[0]?.filename).toBe('Woonhuis.fml')
     expect(downloads[1]?.filename).toBe('Woonhuis.plg')
   })
 
-  it('valt zonder naam terug op een vaste naam per formaat', () => {
+  it('valt zonder naam terug op een vaste naam per formaat', async () => {
     const { downloadCurrentFml, downloadCurrentPlg } = setup({ plan: planWithWall('  ') })
 
-    downloadCurrentFml()
-    downloadCurrentPlg()
+    await downloadCurrentFml()
+    await downloadCurrentPlg()
 
     expect(downloads[0]?.filename).toBe('fml-export.fml')
     expect(downloads[1]?.filename).toBe('plan-export.plg')
   })
 
-  it('schrijft een `.plg`-document met de plattegrond erin', () => {
+  it('schrijft een `.plg`-document met de plattegrond erin', async () => {
     const { downloadCurrentPlg } = setup()
 
-    downloadCurrentPlg()
+    await downloadCurrentPlg()
 
     const doc = JSON.parse(downloads[0]?.content ?? '{}')
     expect(doc.format).toBe('plg-plan')
@@ -148,5 +146,60 @@ describe('useEditorDownload', () => {
 
     expect(exportChoice).not.toHaveBeenCalled()
     expect(downloads).toEqual([])
+  })
+
+  it('PLG en FML krijgen dezelfde https-plaat; data-URL verdwijnt uit beide', async () => {
+    const png =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const https =
+      'https://pub.example.com/v1/p/f/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png'
+    const source = planWithWall()
+    source.floors[0]!.drawing = {
+      x: 1,
+      y: 2,
+      width: 10,
+      height: 8,
+      rotation: 0,
+      url: png,
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ url: https }), { status: 200 })),
+    )
+    const { downloadCurrentFml, downloadCurrentPlg } = setup({ plan: source })
+
+    await downloadCurrentFml()
+    await downloadCurrentPlg()
+
+    const fml = JSON.parse(downloads[0]?.content ?? '{}')
+    const plg = JSON.parse(downloads[1]?.content ?? '{}')
+    expect(fml.floors[0].drawing.url).toBe(https)
+    expect(plg.plan.floors[0].drawing.url).toBe(https)
+    vi.unstubAllGlobals()
+  })
+
+  it('download gaat door als de upload faalt; bestand zonder data-URL', async () => {
+    const png =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const source = planWithWall()
+    source.floors[0]!.drawing = {
+      x: 1,
+      y: 2,
+      width: 10,
+      height: 8,
+      rotation: 0,
+      url: png,
+    }
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 401 })))
+    const { downloadCurrentFml, downloadCurrentPlg } = setup({ plan: source })
+
+    await downloadCurrentFml()
+    await downloadCurrentPlg()
+
+    const fml = JSON.parse(downloads[0]?.content ?? '{}')
+    const plg = JSON.parse(downloads[1]?.content ?? '{}')
+    expect(fml.floors[0].drawing.url).toBeUndefined()
+    expect(plg.plan.floors[0].drawing.url).toBeUndefined()
+    vi.unstubAllGlobals()
   })
 })

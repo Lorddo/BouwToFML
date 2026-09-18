@@ -98,12 +98,13 @@ export function mergeFloorPlans(projectName: string, floors: Floor[]): FloorPlan
 /** Haal floors[0] uit een gegenereerd single-floor plan en zet name/level/height. */
 export function stampFloorMeta(
   floor: Floor,
-  meta: { name: string; level: number; height: number },
+  meta: { name: string; level: number; height: number; defaults?: Floor['defaults'] },
 ): Floor {
   return {
     ...floor,
     name: meta.name,
     level: meta.level,
     height: meta.height,
+    ...(meta.defaults ? { defaults: meta.defaults } : {}),
   }
 }

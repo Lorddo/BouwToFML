@@ -19,6 +19,7 @@ import { loadImage } from '@/platform/image'
 import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import { layoutTransform } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type { PlanCanvasSelectionRefs } from './plan-canvas-selection-types'
+import { planHidesJunctions } from './plan-canvas-selected'
 import type { PlanViewContext } from './plan-view-context'
 import { buildRenderDoorGroupsAndWindows, buildRenderFixtures } from './plan-canvas-render-openings'
 import { buildRenderAreaSideDims } from './plan-canvas-area-side-dims'
@@ -509,6 +510,7 @@ export function usePlanCanvasRenderModel(
   })
 
   const visibleJunctionIds = computed(() => {
+    if (planHidesJunctions(selection.activePlanTool.value)) return new Set<string>()
     const showAllDrawJunctions =
       selection.activePlanTool.value === 'draw_room' ||
       (selection.activePlanTool.value === 'draw_wall' && selection.drawWallKind.value !== 'ridge') ||

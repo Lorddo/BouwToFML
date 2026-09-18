@@ -10,7 +10,13 @@ import type { ElementClass } from '@/core/extraction/types'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import type { ItemResizeSide } from '@/ui/composables/plan-canvas/item-resize-handles'
-import type { ItemRotateCorner } from '@/ui/composables/plan-canvas/item-rotate-handles'
+import {
+  ITEM_ROTATE_HANDLE_ARC_D,
+  ITEM_ROTATE_HANDLE_COLOR,
+  ITEM_ROTATE_HANDLE_HEAD_D,
+  type ItemRotateCorner,
+} from '@/ui/composables/plan-canvas/item-rotate-handles'
+import { PLAN_HANDLE_RADIUS_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import { EDGE_RESIZE_HANDLES, ROTATE_CORNERS } from '../composables/useFloorplanRectInteraction'
 import { rectRotationDeg } from '@/platform/selection/oriented-rect'
 
@@ -30,6 +36,7 @@ const props = defineProps<{
   } | null
   iconSize: number
   handleSize: number
+  stageScale: number
   iconPositions: (rect: SelectionRect) => {
     delete: { x: number; y: number }
   }
@@ -162,8 +169,6 @@ const edgeHandleConfigs = computed(() => {
 const rotateHandleConfigs = computed(() => {
   const rect = props.selectedRect
   if (!rect || !props.isSelectionMode) return []
-  const stroke = colorFor(rect.type)
-  const r = props.handleSize / 2
   const hx = rect.width / 2
   const hy = rect.height / 2
   const pos: Record<ItemRotateCorner, { x: number; y: number }> = {
@@ -172,41 +177,39 @@ const rotateHandleConfigs = computed(() => {
     sw: { x: -hx, y: hy },
     nw: { x: -hx, y: -hy },
   }
-  const scale = r / 3.5
+  const screen = 1 / Math.max(0.01, props.stageScale)
+  const parentRot = rectRotationDeg(rect)
   return ROTATE_CORNERS.map((corner) => {
     const local = pos[corner]
-    const localAngle = (Math.atan2(local.y, local.x) * 180) / Math.PI
     return {
       key: corner,
       group: {
         x: local.x,
         y: local.y,
-        rotation: localAngle + 90,
+        rotation: -parentRot,
+        scaleX: screen,
+        scaleY: screen,
+        cursor: 'grab',
         onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) =>
           props.onRotateHandleDown(e, corner, rect),
       },
       hit: {
-        radius: r,
+        radius: PLAN_HANDLE_RADIUS_PX,
         fill: '#ffffff',
-        stroke,
-        strokeWidth: 1.5,
-        strokeScaleEnabled: false,
+        stroke: ITEM_ROTATE_HANDLE_COLOR,
+        strokeWidth: 2,
       },
       arc: {
-        data: 'M 1.4 -2.5 A 2.8 2.8 0 1 1 -1.4 -2.5',
-        scaleX: scale,
-        scaleY: scale,
-        stroke,
-        strokeWidth: 1.2 / scale,
+        data: ITEM_ROTATE_HANDLE_ARC_D,
+        stroke: ITEM_ROTATE_HANDLE_COLOR,
+        strokeWidth: 1.5,
+        lineCap: 'round',
         fillEnabled: false,
         listening: false,
-        strokeScaleEnabled: false,
       },
       head: {
-        data: 'M 1.4 -2.5 L 0.2 -4.1 L 2.7 -3.9 Z',
-        scaleX: scale,
-        scaleY: scale,
-        fill: stroke,
+        data: ITEM_ROTATE_HANDLE_HEAD_D,
+        fill: ITEM_ROTATE_HANDLE_COLOR,
         strokeEnabled: false,
         listening: false,
       },

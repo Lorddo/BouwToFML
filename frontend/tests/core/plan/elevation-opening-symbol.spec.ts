@@ -116,4 +116,46 @@ describe('elevation-opening-symbol handles', () => {
     expect(handleXs(glyph)).toHaveLength(0)
     expect(glyph.polys.some((p) => p.role === 'handle')).toBe(false)
   })
+
+  it('ronde opening: geen kozijn, geen glas, geen kruk', () => {
+    const glyph = doorRect({ kind: 'door.round' })
+    expect(handleXs(glyph)).toHaveLength(0)
+    expect(glyph.polys.some((p) => p.role === 'glass' || p.role === 'frame')).toBe(false)
+  })
+
+  it('flush: geen kruk, geen scharnier', () => {
+    const glyph = doorRect({ kind: 'door.flush' })
+    expect(handleXs(glyph)).toHaveLength(0)
+    expect(glyph.polys.some((p) => p.role === 'hinge')).toBe(false)
+  })
+
+  it('voordeur: glas in de bovenste helft', () => {
+    const glyph = doorRect({ kind: 'door.half_glass' })
+    expect(glyph.polys.some((p) => p.role === 'glass')).toBe(true)
+    expect(glyph.polys.some((p) => p.role === 'leaf')).toBe(true)
+  })
+
+  it('liftdeuren: middennaad, geen kruk', () => {
+    const glyph = doorRect({ kind: 'door.elevator' })
+    expect(handleXs(glyph)).toHaveLength(0)
+    expect(glyph.polys.some((p) => p.role === 'mullion' || p.role === 'leaf')).toBe(true)
+    expect(glyph.circles.some((c) => c.role === 'panel')).toBe(true)
+  })
+
+  it('Frans balkon: glas 80% van het paneel + railing', () => {
+    const glyph = doorRect({ kind: 'door.french_balcony' })
+    const glass = glyph.polys.find((p) => p.role === 'glass')
+    expect(glass).toBeTruthy()
+    const ys = glass!.points.filter((_, i) => i % 2 === 1)
+    const glassH = Math.max(...ys) - Math.min(...ys)
+    expect(glassH / (glyph.inner.y1 - glyph.inner.y0)).toBeCloseTo(0.8, 5)
+    expect(glyph.polys.some((p) => p.role === 'railing')).toBe(true)
+  })
+
+  it('balkondeur: vol glas, kruk, geen railing', () => {
+    const glyph = doorRect({ kind: 'door.balcony' })
+    expect(glyph.polys.some((p) => p.role === 'glass')).toBe(true)
+    expect(glyph.polys.some((p) => p.role === 'railing')).toBe(false)
+    expect(handleXs(glyph)).toHaveLength(1)
+  })
 })

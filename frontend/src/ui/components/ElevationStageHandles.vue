@@ -26,7 +26,6 @@ const wallElevationHandles = ix.wallElevationHandles
 const junctionElevationHandles = ix.junctionElevationHandles
 const ridgeCenter = ix.ridgeCenter
 const ridgeEndHandles = ix.ridgeEndHandles
-const wallAxisEndHandles = ix.wallAxisEndHandles
 const ridgeHandles = ix.ridgeHandles
 const openingMoveHandle = ix.openingMoveHandle
 const openingHandles = ix.openingHandles
@@ -37,7 +36,6 @@ const onWallElevHandleDown = ix.onWallElevHandleDown
 const onJunctionElevHandleDown = ix.onJunctionElevHandleDown
 const onRidgeMoveHandleDown = ix.onRidgeMoveHandleDown
 const onRidgeEndHandleDown = ix.onRidgeEndHandleDown
-const onWallAxisEndHandleDown = ix.onWallAxisEndHandleDown
 const onRidgeHandleDown = ix.onRidgeHandleDown
 const onMoveHandleDown = ix.onMoveHandleDown
 const onHandleDown = ix.onHandleDown
@@ -74,7 +72,7 @@ const selectedRoofVertexIndices = computed(() => {
       @mousedown="interaction.onJunctionDown(junction.id, $event)"
     />
 
-    <!-- Junction elevation handles (shift/lift) -->
+    <!-- Junction elevation handles (lift) -->
     <v-circle
       v-for="handle in junctionElevationHandles"
       :key="`junc-elev-${handle.mode}`"
@@ -83,7 +81,7 @@ const selectedRoofVertexIndices = computed(() => {
           const stage = layoutXform.toStagePoint(handle.x, handle.y)
           return { x: stage.x, y: stage.y }
         })(),
-        radius: (handle.mode === 'shift' ? 6 : 5) / viewScale,
+        radius: 5 / viewScale,
         fill: '#fff',
         stroke: '#f97316',
         strokeWidth: 2 / viewScale,
@@ -120,7 +118,7 @@ const selectedRoofVertexIndices = computed(() => {
           const stage = layoutXform.toStagePoint(handle.x, handle.y)
           return { x: stage.x, y: stage.y }
         })(),
-        radius: (handle.mode === 'shift' ? 6 : 5) / viewScale,
+        radius: 5 / viewScale,
         fill: '#fff',
         stroke: '#f97316',
         strokeWidth: 2 / viewScale,
@@ -165,25 +163,6 @@ const selectedRoofVertexIndices = computed(() => {
         listening: true,
       }"
       @mousedown="onRidgeEndHandleDown(handle.end, $event)"
-      @click="stopKonvaBubble"
-    />
-
-    <!-- Dakkapel-randmuur as-einden -->
-    <v-circle
-      v-for="handle in wallAxisEndHandles"
-      :key="`wall-axis-end-${handle.end}`"
-      :config="{
-        ...(() => {
-          const stage = layoutXform.toStagePoint(handle.x, handle.y)
-          return { x: stage.x, y: stage.y }
-        })(),
-        radius: PLAN_HANDLE_RADIUS_PX / viewScale,
-        fill: '#f97316',
-        stroke: '#fff',
-        strokeWidth: 2 / viewScale,
-        listening: true,
-      }"
-      @mousedown="onWallAxisEndHandleDown(handle.end, $event)"
       @click="stopKonvaBubble"
     />
 

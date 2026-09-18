@@ -6,7 +6,7 @@ import {
   snapFixtureCenterToWallFaces,
   WALL_FACE_SNAP_CM,
 } from '@/ui/composables/plan-canvas/plan-canvas-fixture-face-snap'
-import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import { readPlanOpeningFrameDefaults } from '@/core/plan/opening-frame-defaults'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
@@ -31,7 +31,7 @@ export function usePlanCanvasAddFixture(options: {
       WALL_FACE_SNAP_CM,
       { disabled: skipWallSnap },
     )
-    const item: Omit<FloorItem, 'id'> = {
+    const draft: Omit<FloorItem, 'id'> = {
       kind: option.kind,
       x: snapped.x,
       y: snapped.y,
@@ -42,9 +42,17 @@ export function usePlanCanvasAddFixture(options: {
       mirrored: [0, 0],
       name: option.label,
       ...(option.kind === 'skylight'
-        ? { frame: { ...loadUserSettings().planDisplay.openingFrameDefaults.window } }
+        ? {
+            frame: {
+              ...readPlanOpeningFrameDefaults(
+                options.editor.localPlan.value,
+                options.editor.floorIndex.value,
+              ).window,
+            },
+          }
         : {}),
     }
+    const item = option.kind === 'skylight' ? options.editor.snapSkylightItem(draft) : draft
     options.beforePlace()
     options.editor.pushUndo()
     const guid = options.editor.addItem(item)

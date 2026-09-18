@@ -13,7 +13,7 @@ import { ROOF_TOUCH_SLACK_CM } from './roof-planes'
 import {
   hasSkylightRoofLink,
   isSkylightItem,
-  sampleSkylightOnRoof,
+  refreshSkylightRoofPose,
   skylightFootprintCorners,
 } from './skylight-roof'
 import type { FloorItem, FloorPlan, FloorSurface, Point2D } from './types'
@@ -238,7 +238,7 @@ export function clampSkylightToSurface(
   let next: FloorItem = { ...item, x: center.x, y: center.y }
   if (footprintFitsSurface(surface, next)) {
     const z = sampleRoofZAtPoint([surface], center)
-    return z == null ? next : { ...next, z }
+    return z == null ? next : refreshSkylightRoofPose({ ...next, z }, [surface])
   }
   // Krimp naar min zolang nodig (max 8 stappen).
   let width = item.width
@@ -250,7 +250,7 @@ export function clampSkylightToSurface(
     if (footprintFitsSurface(surface, next)) break
   }
   const z = sampleRoofZAtPoint([surface], { x: next.x, y: next.y })
-  return z == null ? next : { ...next, z }
+  return z == null ? next : refreshSkylightRoofPose({ ...next, z }, [surface])
 }
 
 export function moveSkylightFromElevation(
@@ -319,14 +319,12 @@ export function resizeSkylightFromElevation(
   return clampSkylightToSurface(next, surface)
 }
 
-/** Live Z verversen zonder positie te wijzigen (dakpunt versleept). */
+/** Live Z + helling verversen zonder positie te wijzigen (dakpunt versleept). */
 export function refreshSkylightZ(
   item: FloorItem,
   surfaces: ReadonlyArray<FloorSurface>,
 ): FloorItem {
-  const sampled = sampleSkylightOnRoof(surfaces, item)
-  if (!sampled) return item
-  return { ...item, z: sampled.centerZ, roofSurfaceId: sampled.surfaceId }
+  return refreshSkylightRoofPose(item, surfaces)
 }
 
 export {

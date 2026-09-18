@@ -4,7 +4,7 @@
 
 Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + per-floor blobs; CV blijft single-floor op de actieve verdieping.
 
-**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap. Floor-switch/resume op result → volledige session-restore (geen «fast» wipe van LBE-refs). Persist van een result-floor slaat `detectionExact` niet op (quota); stap 3 is dan leeg na resume, maar 3→4 blijft open als `previewPlan` er is **én** stap 3 geen classify-run heeft. Nieuwe 2→3-detectie wist de live-FML (blob blijft) en vereist weer afronden — stale FML houdt Next niet open tijdens classify.
+**Stap-navigatie (terug/vooruit):** afgeronde stap-state (refs, dikte, inkt, `tabOutputs`, FML) blijft bewaard. Alleen expliciete her-autoclassify / her-finalize wist het resultaat. Opnieuw enter stap 3 met bestaande detectie → geen OCR/classify-bootstrap. Floor-switch/resume op result → volledige session-restore (geen «fast» wipe van LBE-refs). Persist van een result-floor slaat `detectionExact` niet op (quota); stap 3 is dan leeg na resume, maar 3→4 blijft open als `previewPlan` er is **én** stap 3 geen classify-run heeft. Hydrate neemt de **verste** stap van `session.flow.targetFlowStep` en `floor.status` — een mislukte capture (stamp + exact-detectie) mag «Verder werken» niet op stap 2 houden als de floor al result is. Result-persist laat stamp-rasters weg (metadata + inject blijven); «too large»/DataClone telt als persist-size. Nieuwe 2→3-detectie wist de live-FML (blob blijft) en vereist weer afronden — stale FML houdt Next niet open tijdens classify.
 
 ## Stap 0 — Project (`flowStep: project`)
 
@@ -20,7 +20,7 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 
 | Stap | Knop | Wat |
 |------|------|-----|
-| 1 | «Onderlegger overnemen» | Donor-keuze: bronscan + schaal (geen crop). PDF: dezelfde pagina opnieuw rasteren uit sessie-store + projectbytes (gezet bij upload). Crop-commit gebruikt die bytes ook als de live-ref weg is (zelfde full-page maat). |
+| 1 | «Onderlegger overnemen» | Donor-keuze: bronplaat + schaal + rotatie (geen crop). PDF-bytes blijven voor ROI-crop; display = de 3k-bronplaat waar de schaal op staat (niet opnieuw rasteren). |
 | 2 | «B/W overnemen» | Donor-keuze: alleen preprocess-tune (+ optioneel gemeten dikte); geen LBE-rects (crop-coords) |
 | 2 | «Muurstempel» | FML-muren van donor-floor → canvas-align (REF-handles) + gum → bake: adaptive `stampBw` in `effectiveBw` + pure zwarte `stampMask` OR in Otsu. Optioneel Stempelset (groep `stamp` op donor): translate-only, nulpunt-zaad, vector-inject op stap 4 (donor-dikte pinned); anders diktebanden + stretch. Stempel buiten de scan → wit pad op de kleur-onderlegger (linialen/refs/masks/nulpunt schuiven mee) |
 | 3 | — | Solo: geen detectie-state delen |
@@ -40,13 +40,13 @@ Project-container: `frontend/src/ui/composables/project/` — `ProjectState` + p
 
 **Canvas:** stap 1–4 hebben een wit vlak (stap 4 = infinity-stage; 1–3 = witte stage-achtergrond). Optioneel **hulpraster** (Settings `showCanvasGrid`, default aan): viewport-vast, draait niet mee; puur visueel (niet bake/export). Stap 1/editor/gevel: onderlegger onder raster; stap 2/3/B/W: scan boven raster. Geen auto-trim van witte randen bij bake (`normalizeWorkingCanvas` laat wit staan). Detectie negeert wit. Gum/crop blijft user-actie; PDF-ROI blijft een echte crop.
 
-**PDF-crop:** bij «Volgende» met PDF-bron + meaningful crop (ook volle-breedte verdiepingsstrook) → ROI her-raster uit PDF (**3000px**). `getDocument` krijgt altijd een **kopie** van de bytes (pdf.js transferred de buffer). «Onderlegger overnemen» rastert de **volle pagina opnieuw uit dezelfde PDF-bytes + pagina** (niet de 3k-PNG). Bytes blijven in het project (IndexedDB; bij quota-retry weggelaten). PNG/JPG-crops ongewijzigd.
+**PDF-crop:** bij «Volgende» met PDF-bron + meaningful crop (ook volle-breedte verdiepingsstrook) → ROI her-raster uit PDF (**3000px**). `getDocument` krijgt altijd een **kopie** van de bytes (pdf.js transferred de buffer). «Onderlegger overnemen» laadt de 3k-bronplaat + schaal + rotatie; PDF-bytes blijven voor een latere ROI. Bytes blijven in het project (IndexedDB; bij quota-retry weggelaten). PNG/JPG-crops ongewijzigd.
 
 **Output:** `originalImageEl` + optioneel `maskedWorkingCanvas` (gum/crop). Geen referentievakken.
 
 **Gate naar stap 2:** schaal bevestigd (+ image). Rotatie-bake is niet verplicht op stap 1.
 
-Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen. Geen wit-trim na bake (rotatiehoek blijft wit). Optionele knop «Rotatie vastzetten» doet hetzelfde pad eerder, zodat H/V-linialen op een rechtgetrokken beeld gezet kunnen worden (scheve scans). Onbevestigde schaal → verse linialen na rotatie-bake (mm blijft).
+Bij «Volgende»: `commitInputStepImage` bakt rotatie/crop (PDF: optioneel ROI re-render), transformeert schaallinialen. Geen wit-trim na bake (rotatiehoek blijft wit). Optionele knop «Rotatie vastzetten» doet hetzelfde pad eerder, zodat H/V-linialen op een rechtgetrokken beeld gezet kunnen worden (scheve scans, bv. 5°). Opnieuw vastzetten mag (bv. nog +0,1°); hoeken tellen bij elkaar, bronplaat blijft de eerste. Rotatie en schaal zijn losse acties: bake wist geen bevestigde mm (alleen handle-transform); schaal-bevestigen wist geen gebakken/opgeslagen hoek (slider staat ná bake op 0). Onbevestigde schaal → verse linialen na rotatie-bake (mm blijft). Stap 4 / export toont de **bronplaat** (ongedraaide pixels) + `drawing.rotation` uit `sourceToWorking` (fallback: `sourceUnderlay.inputRotation` als de transform nog identity is — schaal vóór bake). Identity overschrijft geen gebakken hoek.
 
 ## Stap 2 — Voorbewerking (`flowStep: preprocess`)
 
@@ -132,7 +132,7 @@ Canvas-tab: alleen **Vector / FML** (`visibleResultLayerTabs`). **Muren** UI-ver
 
 **Verdiepingsnaam:** bewerkbaar bovenaan `FmlPanel` (actieve floor → `renameFloor`); zelfde bron als stap 0 / floor-rail.
 
-**Stempelset:** muursettings → vaste groep «Stempel» (`settings.facadeGroups` id `stamp` + `stampGroupId` op de muur); leden meenemen naar stap-2 Muurstempel. Bake zaait nulpunt; stap-4 generate (ná semantic + deuren/ramen) injecteert vectoren (offset = bake − current nulpunt), daarna **ownership-corridor** (`resolve-stamp-ownership`, `extras.stampOwned`: trim parallellen, T-snap, openings overzetten), en sanitizet tot stabiel. Gum filtert inject-lijst bij generate. Workspace-download stript `facadeGroups`, native gevel/stamp-markers én `stampOwned`.
+**Stempelset:** muursettings → vaste groep «Stempel» (`settings.facadeGroups` id `stamp` + `stampGroupId` op de muur); leden meenemen naar stap-2 Muurstempel. Bake zaait nulpunt; stap-4 generate (ná semantic + deuren/ramen) injecteert vectoren (offset = bake − current nulpunt), daarna **ownership-corridor** (`resolve-stamp-ownership`, `extras.stampOwned`: trim parallellen, T-snap, openings overzetten), en sanitizet tot stabiel. **180°-L:** restant-T van de donor (geen binnenmuur meer) last `mergeStraightLJunctions` tot één gevel — raster ná band-filter, inject ná gum, sanitize na cover. Gum filtert inject-lijst bij generate. Workspace-download stript `facadeGroups`, native gevel/stamp-markers én `stampOwned`.
 
 **Dev-view:** `WorkspaceDevViewPanel` in de debug-sidebar schakelt intern `preprocessTab` / `templateTab` / `resultTab` (geen sticky-redirect voor inkWall/doors/windows/ocr/result-walls — anders kan Dev niet blijven). Gaps blijft sticky → walls.
 

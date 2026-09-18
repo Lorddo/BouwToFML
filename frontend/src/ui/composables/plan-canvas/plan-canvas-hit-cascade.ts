@@ -154,25 +154,28 @@ export function runPlanHitCascade(deps: PlanHitCascadeDeps): void {
   }
 
   // 15 — knoop. Op de Dak-tab alleen als er een nok aan hangt.
-  const junction = hitTest.hitTestJunctionAtCm(cm)
-  const junctionOnRidge =
-    junction?.refs.some((ref) => view.isRidgeWallId(ref.wallId)) === true
-  if (junction && allowHit('wall') && (!onDak || junctionOnRidge)) {
-    if (ctrlHeld()) {
-      actions.toggleSettingsJunction(junction.id)
+  // Box-select pakt alleen segmenten: geen knoop-drag, ook niet op een punt.
+  if (!modes.selectionBoxMode.value) {
+    const junction = hitTest.hitTestJunctionAtCm(cm)
+    const junctionOnRidge =
+      junction?.refs.some((ref) => view.isRidgeWallId(ref.wallId)) === true
+    if (junction && allowHit('wall') && (!onDak || junctionOnRidge)) {
+      if (ctrlHeld()) {
+        actions.toggleSettingsJunction(junction.id)
+        return
+      }
+      const junctionIntent = relocateIntent()
+      if (junctionIntent === 'precise') {
+        actions.onJunctionMoveClick(junction, event)
+        return
+      }
+      if (junctionIntent === 'select') {
+        selection.pinnedJunctionId.value = junction.id
+        return
+      }
+      actions.startJunctionDrag(junction, event)
       return
     }
-    const junctionIntent = relocateIntent()
-    if (junctionIntent === 'precise') {
-      actions.onJunctionMoveClick(junction, event)
-      return
-    }
-    if (junctionIntent === 'select') {
-      selection.pinnedJunctionId.value = junction.id
-      return
-    }
-    actions.startJunctionDrag(junction, event)
-    return
   }
 
   // 16 — dikte-pick. Staat bewust vóór box-select en opening; zie §5.
@@ -182,7 +185,7 @@ export function runPlanHitCascade(deps: PlanHitCascadeDeps): void {
     return
   }
 
-  // 17 — box-select. Kan dus niet starten bovenop een knoop.
+  // 17 — box-select. Start ook bovenop een knoop (knoop-tak slaat over).
   if (modes.selectionBoxMode.value) {
     actions.beginSelectionBoxDrag(event)
     return

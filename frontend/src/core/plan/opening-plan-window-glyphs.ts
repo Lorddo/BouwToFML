@@ -233,6 +233,22 @@ export function buildWindowPlanSymbol(params: BuildWindowPlanSymbolInput): Openi
   }
   pushBand(span - rightCm, span)
 
+  if (params.kind === 'grid') {
+    const midAlong = span / 2
+    const mid = {
+      x: params.start.x + wallUnit.x * midAlong,
+      y: params.start.y + wallUnit.y * midAlong,
+    }
+    glyphs.push(
+      polyline('jamb', [
+        mid.x - normal.x * glassHalf,
+        mid.y - normal.y * glassHalf,
+        mid.x + normal.x * glassHalf,
+        mid.y + normal.y * glassHalf,
+      ]),
+    )
+  }
+
   glyphs.push(
     ...buildWindowOrnamentGlyphs({
       start: params.start,

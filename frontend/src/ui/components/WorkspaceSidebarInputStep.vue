@@ -26,6 +26,7 @@ const props = defineProps<{
   underlayDonorOptions?: Array<{ id: string; name: string }>
   canBakeRotation?: boolean
   bakingRotation?: boolean
+  bakedRotationDeg?: number
 }>()
 
 const preprocess = defineModel<PreprocessConfig>('preprocess', { required: true })
@@ -93,6 +94,7 @@ function onReuseUnderlay() {
     v-model="preprocess"
     :can-bake="canBakeRotation"
     :baking="bakingRotation"
+    :baked-deg="bakedRotationDeg ?? 0"
     @bake-rotation="$emit('bakeRotation')"
   />
 

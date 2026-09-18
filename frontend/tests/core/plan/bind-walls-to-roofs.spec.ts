@@ -13,6 +13,7 @@ import {
   isDormerLikeRoof,
   listRidgeSurfacesOnFloor,
   makeRoofSurface,
+  mapRidgeSurfaceOnPlan,
   markRoofSurfaceManual,
   setRidgeSurfaceVerticesZ,
   setRidgeSurfacesOnFloor,
@@ -670,6 +671,55 @@ describe('bindFloorWallsToRoofs dakkapel-rand flush', () => {
     expect(wallEndpoint3D(synced.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h).toBe(
       340,
     )
+  })
+
+  it('dakplaat goot-Z omhoog bindt geveltop zonder knop', () => {
+    const plan = saddlePlan()
+    const raised = setRidgeSurfaceVerticesZ(plan, 'roof-s', [0, 1], 320)
+    const synced = syncDormerAssemblyAfterRoofEdit(raised, 'roof-s')
+    expect(wallEndpoint3D(synced.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h).toBe(
+      320,
+    )
+    expect(wallEndpoint3D(synced.floors[0].walls.find((w) => w.id === 'front')!, 'b', 280).h).toBe(
+      320,
+    )
+    expect(wallEndpoint3D(synced.floors[0].walls.find((w) => w.id === 'back')!, 'a', 280).h).toBe(
+      280,
+    )
+  })
+
+  it('auto-bind laat gevel staan als de goot op de vloer zit; knop bindt wél', () => {
+    const plan = saddlePlan()
+    const lowered = setRidgeSurfaceVerticesZ(plan, 'roof-s', [0, 1], 0)
+    const synced = syncDormerAssemblyAfterRoofEdit(lowered, 'roof-s')
+    expect(wallEndpoint3D(synced.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h).toBe(
+      280,
+    )
+    const bound = bindFloorWallsToRoofs(lowered, 0).plan
+    expect(wallEndpoint3D(bound.floors[0].walls.find((w) => w.id === 'front')!, 'a', 280).h).toBe(1)
+  })
+
+  it('dakplaat-punten schuiven laat gevel-XY staan', () => {
+    const plan = saddlePlan()
+    const south = listRidgeSurfacesOnFloor(plan.floors[0]).find((s) => s.id === 'roof-s')
+    expect(south).toBeTruthy()
+    const oldPoly = south!.poly.map((p) => ({ ...p }))
+    const moved = mapRidgeSurfaceOnPlan(
+      plan,
+      'roof-s',
+      (surface) => ({
+        ...surface,
+        poly: surface.poly.map((p) => ({ ...p, y: p.y + 50 })),
+      }),
+      { followDormerWalls: false },
+    )
+    const synced = syncDormerAssemblyAfterRoofEdit(moved, 'roof-s', oldPoly)
+    const front = synced.floors[0].walls.find((w) => w.id === 'front')!
+    expect(front.a.y).toBe(0)
+    expect(front.b.y).toBe(0)
+    const left = synced.floors[0].walls.find((w) => w.id === 'left')!
+    expect(left.a.y).toBe(0)
+    expect(left.b.y).toBe(800)
   })
 
   it('tweede bind is no-op: geen extra knip, muren blijven recht', () => {

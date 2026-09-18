@@ -118,9 +118,14 @@ export interface FloorItem {
   mirrored?: [number, number]
   /**
    * Gekoppeld dakvlak (GUID van `FloorSurface` in het Dak-design).
-   * Gezet door «Muren aan dak»; aanzicht samplet live Z via dit id.
+   * Gezet bij plaatsen/slepen op een dakvlak, of via «Muren aan dak».
    */
   roofSurfaceId?: string
+  /**
+   * Helling van het dakraam in graden (0 = plat). Alleen `skylight`.
+   * Bij dakvlak-snap uit het schild; FML heeft geen veld (lossy).
+   */
+  pitchDeg?: number
   name?: string
   showLabel?: boolean
   name_x?: number
@@ -295,12 +300,24 @@ export interface Floor {
   designs?: FloorDesign[]
   activeDesignIndex?: number
   source?: FloorSource
+  /**
+   * Defaults voor nieuwe deuren/ramen/kozijnen op deze verdieping.
+   * Verdiepingshoogte = `height`. FML schrijft dit veld niet.
+   */
+  defaults?: import('./floor-defaults').FloorDefaults
 }
 
 /** Eigen plan-settings (niet Floorplanner-passthrough). */
 export interface FloorPlanSettings {
   /** Packed bovenlicht (default true). Was `source.settings.bovenlichtPacked`. */
   bovenlichtPacked?: boolean
+  /**
+   * @deprecated Legacy project-kozijnmaten; `readPlg` promoveert naar `floor.defaults`.
+   */
+  openingFrameDefaults?: {
+    door: { leftCm: number; rightCm: number; topCm: number; bottomCm: number }
+    window: { leftCm: number; rightCm: number; topCm: number; bottomCm: number }
+  }
 }
 
 export interface FloorPlan {

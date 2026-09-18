@@ -1,58 +1,45 @@
-import { computed, ref, type Ref } from 'vue'
+import { computed, type Ref } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
+import {
+  applyFloorDefaultBool,
+  applyFloorDefaultNumber,
+  applyOpeningFrameDefault,
+  applyStoryHeight,
+  createFactoryFloorDefaults,
+  readFloorDefaults,
+  type FloorDefaultBoolField,
+  type FloorDefaultNumberField,
+  type FloorDefaults,
+} from '@/core/plan/floor-defaults'
 import {
   countPlanBovenlichtOpenings,
   countPlanOpenings,
   countPlanWalls,
-  overwritePlanBovenlichtGap,
-  overwritePlanBovenlichtHeight,
-  overwritePlanDoorBovenlicht,
-  overwritePlanDoorHeights,
-  overwritePlanWallHeights,
-  overwritePlanWindowBovenlicht,
-  overwritePlanWindowHeights,
-  overwritePlanWindowSills,
 } from '@/core/plan/wall-endpoint-height'
-import {
-  createFactoryViewerSessionDefaults,
-  seedViewerDefaultsFromPlan,
-  type ViewerSessionDefaults,
-} from '@/core/plan/viewer-session-defaults'
-import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
+import { countPlanFramedOpenings } from '@/core/plan/opening-frame-defaults'
+import type { OpeningFrameCm } from '@/core/plan/opening-kind-catalog'
+import { promptDefaultsApplyScope } from '@/ui/composables/plan-chrome-dialog'
 import { formatScaleInputLabel } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
 /**
- * Viewer-defaults alleen per verdieping (zoals detectie).
- * Confirm vóór overwrite; geometrie via wall-endpoint-height helpers.
+ * Floor-defaults uit `plan.floors[i].defaults` (geen parallelle sessie-map).
  */
 export function useEditorSessionDefaults(deps: {
   plan: Ref<FloorPlan | null>
   activeFloorIndex: Ref<number>
-  // vue-i18n ComposerTranslation — keep loose to avoid coupling the composable to i18n types.
   t: (key: string, ...args: unknown[]) => string
-  confirmOverwrite?: (message: string) => boolean | Promise<boolean>
+  beforeApply?: () => void
 }) {
-  const sessionDefaults = ref<ViewerSessionDefaults>(createFactoryViewerSessionDefaults())
-  const floorDefaultsByIndex = ref<Record<number, ViewerSessionDefaults>>({})
-
-  function defaultsForFloor(index: number): ViewerSessionDefaults {
-    return floorDefaultsByIndex.value[index] ?? sessionDefaults.value
+  function defaultsForFloor(index: number): FloorDefaults {
+    return deps.plan.value
+      ? readFloorDefaults(deps.plan.value, index)
+      : createFactoryFloorDefaults()
   }
 
   const activeFloorDefaults = computed(() => defaultsForFloor(deps.activeFloorIndex.value))
 
-  async function confirmOverwrite(message: string): Promise<boolean> {
-    if (deps.confirmOverwrite) return deps.confirmOverwrite(message)
-    return confirmPlanChrome({
-      title: deps.t('viewer.defaultsOverwriteTitle'),
-      message,
-      confirmLabel: deps.t('common.apply'),
-      cancelLabel: deps.t('common.cancel'),
-    })
-  }
-
-  function overwriteKey(field: keyof ViewerSessionDefaults): string {
+  function overwriteKey(field: FloorDefaultNumberField | FloorDefaultBoolField | 'wallHeightCm'): string {
     switch (field) {
       case 'wallHeightCm':
         return 'viewer.defaultsOverwriteWallFloor'
@@ -73,66 +60,10 @@ export function useEditorSessionDefaults(deps: {
     }
   }
 
-  function applyFieldToDefaults(
-    target: ViewerSessionDefaults,
-    field: keyof ViewerSessionDefaults,
-    raw: number | boolean,
-  ): ViewerSessionDefaults {
-    const next = { ...target }
-    if (field === 'bovenlichtDefault' || field === 'windowBovenlichtDefault') {
-      next[field] = Boolean(raw)
-    } else if (field === 'windowSillZCm' || field === 'bovenlichtGapCm') {
-      const n = Number(raw)
-      next[field] = Number.isFinite(n) ? Math.max(0, n) : target[field]
-    } else {
-      const n = Number(raw)
-      next[field] = Number.isFinite(n) ? Math.max(1, n) : target[field]
-    }
-    return next
-  }
-
-  function applyOverwrite(
-    field: keyof ViewerSessionDefaults,
-    next: ViewerSessionDefaults,
+  function countForField(
+    field: FloorDefaultNumberField | FloorDefaultBoolField | 'wallHeightCm',
     floorIndex: number,
-  ): void {
-    if (!deps.plan.value) return
-    if (field === 'wallHeightCm') {
-      deps.plan.value = overwritePlanWallHeights(deps.plan.value, next.wallHeightCm, floorIndex)
-    } else if (field === 'doorHeightCm') {
-      deps.plan.value = overwritePlanDoorHeights(deps.plan.value, next.doorHeightCm, floorIndex)
-    } else if (field === 'windowHeightCm') {
-      deps.plan.value = overwritePlanWindowHeights(deps.plan.value, next.windowHeightCm, floorIndex)
-    } else if (field === 'windowSillZCm') {
-      deps.plan.value = overwritePlanWindowSills(deps.plan.value, next.windowSillZCm, floorIndex)
-    } else if (field === 'bovenlichtDefault') {
-      deps.plan.value = overwritePlanDoorBovenlicht(
-        deps.plan.value,
-        next.bovenlichtDefault,
-        floorIndex,
-      )
-    } else if (field === 'windowBovenlichtDefault') {
-      deps.plan.value = overwritePlanWindowBovenlicht(
-        deps.plan.value,
-        next.windowBovenlichtDefault,
-        floorIndex,
-      )
-    } else if (field === 'bovenlichtHeightCm') {
-      deps.plan.value = overwritePlanBovenlichtHeight(
-        deps.plan.value,
-        next.bovenlichtHeightCm,
-        floorIndex,
-      )
-    } else {
-      deps.plan.value = overwritePlanBovenlichtGap(
-        deps.plan.value,
-        next.bovenlichtGapCm,
-        floorIndex,
-      )
-    }
-  }
-
-  function countForField(field: keyof ViewerSessionDefaults, floorIndex: number): number {
+  ): number {
     const plan = deps.plan.value
     if (!plan) return 0
     if (field === 'wallHeightCm') return countPlanWalls(plan, floorIndex)
@@ -149,116 +80,113 @@ export function useEditorSessionDefaults(deps: {
     return countPlanBovenlichtOpenings(plan, floorIndex)
   }
 
-  async function applyFloorDefault(
-    field: keyof ViewerSessionDefaults,
-    raw: number | boolean,
+  async function promptScope(
+    field: FloorDefaultNumberField | FloorDefaultBoolField | 'wallHeightCm' | 'frame',
+    count: number,
+    nextLabel: string,
+    extra?: { state?: string; frameLabel?: string },
+  ): Promise<import('@/core/plan/floor-defaults').DefaultsApplyScope | null> {
+    const plan = deps.plan.value
+    if (!plan) return null
+    const allowDefaultsOnly = field !== 'wallHeightCm'
+    const message =
+      field === 'frame'
+        ? deps.t('viewer.defaultsOverwriteFrame', {
+            label: extra?.frameLabel,
+            length: nextLabel,
+            count,
+          })
+        : deps.t(overwriteKey(field), {
+            count,
+            length: nextLabel,
+            cm: nextLabel,
+            state: extra?.state,
+          })
+    return promptDefaultsApplyScope({
+      title: deps.t('viewer.defaultsOverwriteTitle'),
+      message,
+      floorCount: plan.floors.length,
+      existingCount: count,
+      allowDefaultsOnly,
+    })
+  }
+
+  async function onFloorDefaultCm(
+    field: FloorDefaultNumberField | 'wallHeightCm',
+    cm: number,
   ): Promise<void> {
-    if (!deps.plan.value) return
+    if (!deps.plan.value || !Number.isFinite(cm)) return
     const floorIndex = deps.activeFloorIndex.value
-    const current = activeFloorDefaults.value
-    const next = applyFieldToDefaults(current, field, raw)
-    if (next[field] === current[field]) return
+    const current =
+      field === 'wallHeightCm'
+        ? deps.plan.value.floors[floorIndex]?.height
+        : activeFloorDefaults.value[field]
+    const next =
+      field === 'windowSillZCm' || field === 'bovenlichtGapCm'
+        ? Math.max(0, Math.round(cm))
+        : Math.max(1, Math.round(cm))
+    if (next === current) return
 
     const count = countForField(field, floorIndex)
-    const enabled = Boolean(next[field])
-    const message = deps.t(overwriteKey(field), {
-      count,
-      length:
-        typeof next[field] === 'number'
-          ? formatScaleInputLabel(next[field], loadUserSettings().scaleInputUnit)
-          : next[field],
-      cm:
-        typeof next[field] === 'number'
-          ? formatScaleInputLabel(next[field], loadUserSettings().scaleInputUnit)
-          : next[field],
-      state: enabled ? deps.t('viewer.defaultsOn') : deps.t('viewer.defaultsOff'),
-    })
-    if (!(await confirmOverwrite(message))) return
-
-    applyOverwrite(field, next, floorIndex)
-    floorDefaultsByIndex.value = {
-      ...floorDefaultsByIndex.value,
-      [floorIndex]: next,
-    }
-  }
-
-  async function onFloorDefaultCm(field: keyof ViewerSessionDefaults, cm: number): Promise<void> {
-    if (!Number.isFinite(cm)) return
-    await applyFloorDefault(field, cm)
-  }
-
-  /** @deprecated Prefer onFloorDefaultCm — kept for Event-based callers. */
-  async function onFloorDefaultNumber(
-    field: keyof ViewerSessionDefaults,
-    event: Event,
-  ): Promise<void> {
-    const input = event.target as HTMLInputElement
-    const value = Number(input.value)
-    const before = activeFloorDefaults.value[field]
-    if (!Number.isFinite(value)) {
-      input.value = String(before)
+    const length = formatScaleInputLabel(next, loadUserSettings().scaleInputUnit)
+    const scope = await promptScope(field, count, length)
+    if (!scope || !deps.plan.value) return
+    deps.beforeApply?.()
+    if (field === 'wallHeightCm') {
+      if (scope === 'defaultsOnly') return
+      deps.plan.value = applyStoryHeight(deps.plan.value, floorIndex, next, scope)
       return
     }
-    await applyFloorDefault(field, value)
-    if (activeFloorDefaults.value[field] === before) {
-      input.value = String(before)
-    }
+    deps.plan.value = applyFloorDefaultNumber(deps.plan.value, floorIndex, field, next, scope)
   }
 
-  async function onFloorDefaultBool(
-    field: 'bovenlichtDefault' | 'windowBovenlichtDefault',
-    event: Event,
-  ): Promise<void> {
+  async function onFloorDefaultBool(field: FloorDefaultBoolField, event: Event): Promise<void> {
+    if (!deps.plan.value) return
     const input = event.target as HTMLInputElement
     const before = activeFloorDefaults.value[field]
-    await applyFloorDefault(field, input.checked)
-    if (activeFloorDefaults.value[field] === before) {
+    const next = input.checked
+    if (next === before) return
+    const floorIndex = deps.activeFloorIndex.value
+    const count = countForField(field, floorIndex)
+    const scope = await promptScope(field, count, String(next), {
+      state: next ? deps.t('viewer.defaultsOn') : deps.t('viewer.defaultsOff'),
+    })
+    if (!scope || !deps.plan.value) {
+      input.checked = before
+      return
+    }
+    deps.beforeApply?.()
+    deps.plan.value = applyFloorDefaultBool(deps.plan.value, floorIndex, field, next, scope)
+    if (readFloorDefaults(deps.plan.value, floorIndex)[field] === before) {
       input.checked = before
     }
   }
 
-  function hydrateFloorDefaultsFromPlan(plan: FloorPlan | null): void {
-    if (!plan) {
-      floorDefaultsByIndex.value = {}
-      return
-    }
-    const next: Record<number, ViewerSessionDefaults> = {}
-    for (let i = 0; i < plan.floors.length; i++) {
-      next[i] = seedViewerDefaultsFromPlan(plan, i, {
-        floorOnly: true,
-        fallback: sessionDefaults.value,
-      })
-    }
-    floorDefaultsByIndex.value = next
-  }
-
-  function addFloorDefaultsSlot(index: number, source?: ViewerSessionDefaults): void {
-    floorDefaultsByIndex.value = {
-      ...floorDefaultsByIndex.value,
-      [index]: { ...(source ?? sessionDefaults.value) },
-    }
-  }
-
-  function removeFloorDefaultsSlot(index: number): void {
-    const next: Record<number, ViewerSessionDefaults> = {}
-    for (const [key, value] of Object.entries(floorDefaultsByIndex.value)) {
-      const from = Number(key)
-      if (!Number.isFinite(from) || from === index) continue
-      const to = from > index ? from - 1 : from
-      next[to] = value
-    }
-    floorDefaultsByIndex.value = next
+  async function onOpeningFrameCm(
+    kind: 'door' | 'window',
+    side: keyof OpeningFrameCm,
+    cm: number,
+    label: string,
+  ): Promise<void> {
+    if (!deps.plan.value) return
+    const floorIndex = deps.activeFloorIndex.value
+    const current = activeFloorDefaults.value.openingFrameDefaults[kind][side]
+    const next = Math.max(0, Math.round(cm))
+    if (next === current) return
+    const count = countPlanFramedOpenings(deps.plan.value, kind, floorIndex)
+    const scope = await promptScope('frame', count, formatScaleInputLabel(next, loadUserSettings().scaleInputUnit), {
+      frameLabel: label,
+    })
+    if (!scope || !deps.plan.value) return
+    deps.beforeApply?.()
+    deps.plan.value = applyOpeningFrameDefault(deps.plan.value, floorIndex, kind, side, next, scope)
   }
 
   return {
-    sessionDefaults,
     activeFloorDefaults,
     defaultsForFloor,
     onFloorDefaultCm,
-    onFloorDefaultNumber,
     onFloorDefaultBool,
-    hydrateFloorDefaultsFromPlan,
-    addFloorDefaultsSlot,
-    removeFloorDefaultsSlot,
+    onOpeningFrameCm,
   }
 }

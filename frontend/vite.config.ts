@@ -78,6 +78,16 @@ export default defineConfig({
   },
   server: {
     headers: { ...isolationHeaders },
+    proxy: {
+      '/api/underlay': {
+        target: 'https://converter.palassoftwarestudio.workers.dev',
+        changeOrigin: true,
+      },
+      '/u': {
+        target: 'https://converter.palassoftwarestudio.workers.dev',
+        changeOrigin: true,
+      },
+    },
   },
   worker: {
     format: 'es',

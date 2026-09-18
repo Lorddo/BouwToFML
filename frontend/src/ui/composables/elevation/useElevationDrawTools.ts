@@ -40,7 +40,7 @@ import {
 import { type DoorAddSubtype, type WindowAddSubtype } from '@/core/plan/opening-add-presets'
 import { buildOpeningFromPreset } from '@/core/plan/opening-from-preset'
 import type { OpeningFrameCm } from '@/core/plan/opening-display-geom'
-import { loadUserSettings } from '@/ui/composables/settings/user-settings'
+import { readPlanOpeningFrameDefaults } from '@/core/plan/opening-frame-defaults'
 import type { ElevTool } from './elevation-tool'
 import type { ElevationInteractionProps } from './elevation-interaction-types'
 
@@ -136,7 +136,7 @@ export function useElevationDrawTools(options: {
     const t = Math.abs(xSpan) < 1e-6 ? 0.5 : (cm.x - wall.xa) / xSpan
     const pending = pendingPlaceFrame.value
     pendingPlaceFrame.value = null
-    const defaults = loadUserSettings().planDisplay.openingFrameDefaults
+    const defaults = readPlanOpeningFrameDefaults(props.plan, wall.floorIndex)
     const frame = pending ?? (type === 'door' ? { ...defaults.door } : { ...defaults.window })
     const opening: Opening = buildOpeningFromPreset({
       type,

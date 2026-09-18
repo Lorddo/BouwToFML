@@ -32,4 +32,11 @@ describe('compareElevationPaintStackItems', () => {
     expect(compareElevationPaintStackItems(parent, child)).toBeLessThan(0)
     expect(compareElevationPaintStackItems(child, parent)).toBeGreaterThan(0)
   })
+
+  it('dakkapel-dak ná ouderdak ook als het schild dichterbij is', () => {
+    const parent = { kind: 'roof' as const, depthCm: 80, dormer: false }
+    const child = { kind: 'roof' as const, depthCm: 0, dormer: true }
+    expect(compareElevationPaintStackItems(parent, child)).toBeLessThan(0)
+    expect(compareElevationPaintStackItems(child, parent)).toBeGreaterThan(0)
+  })
 })

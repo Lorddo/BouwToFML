@@ -1,5 +1,5 @@
 import type { Opening, Point2D, Wall } from './types'
-import { WALL_BALANCE_FALLBACK } from './extraction-to-plan-geom'
+import { WALL_BALANCE_FALLBACK, WALL_BALANCE_MAX, WALL_BALANCE_MIN } from './extraction-to-plan-geom'
 
 /**
  * Floorplanner-linkernormaal in FML-ruimte (Y omlaag, zoals het scherm).
@@ -7,7 +7,7 @@ import { WALL_BALANCE_FALLBACK } from './extraction-to-plan-geom'
  * Sta op **a**, kijk naar **b**: links = `{ x: dir.y, y: -dir.x }`.
  * `balance` is de fractie van de dikte aan die linkerzijde van de **hartlijn**
  * `a`/`b` (`0` = alles rechts, `1` = alles links, `0.5` = gecentreerd).
- * Floorplanner staat waarden buiten 0–1 toe; render volgt dat (tot ±1000%).
+ * Editor, detectie en render klemmen 0–1 (0–100%).
  *
  * Zelfde a→b-afhankelijkheid als deuren (`mirrored`). Draai a↔b om, dan
  * wisselen links/rechts: dezelfde wereld-face vraagt `1 - balance`.
@@ -33,12 +33,9 @@ export function totalWallLengthCm(walls: Array<Pick<Wall, 'a' | 'b'>>): number {
   return total
 }
 
-/** Veilige rail voor editor/import (Floorplanner 1000% / −250%). Detectie blijft 0–1. */
-export const WALL_BALANCE_ABS_MAX = 10
-
 export function clampWallBalance(balance: number | undefined): number {
   if (!Number.isFinite(balance)) return WALL_BALANCE_FALLBACK
-  return Math.min(WALL_BALANCE_ABS_MAX, Math.max(-WALL_BALANCE_ABS_MAX, balance as number))
+  return Math.min(WALL_BALANCE_MAX, Math.max(WALL_BALANCE_MIN, balance as number))
 }
 
 export function wallDirectionUnit(wall: Pick<Wall, 'a' | 'b'>): Point2D {

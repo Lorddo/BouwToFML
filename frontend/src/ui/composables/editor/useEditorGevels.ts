@@ -16,7 +16,7 @@ import { overwriteRidgeDakThickness } from '@/core/plan/ridge-walls'
 import { countPlanWalls, overwritePlanWallHeights } from '@/core/plan/wall-endpoint-height'
 import { imageDimensions, loadImage } from '@/platform/image'
 import { previewUnderlayLayoutFromDrawing } from '@/core/plan/drawing-to-underlay-layout'
-import { confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
+import { promptDefaultsApplyScope } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import {
   formatScaleInputLabel,
@@ -54,10 +54,9 @@ export function useEditorGevels(options: {
   const elevationDakThickness = computed(() =>
     options.plan.value ? elevationDakThicknessCm(options.plan.value) : 0,
   )
-  const elevationFloorGroupsList = computed(() => {
-    if (!options.plan.value || !gevelsMode.value) return []
-    return elevationFloorGroups(options.plan.value)
-  })
+  const elevationFloorGroupsList = computed(() =>
+    options.plan.value ? elevationFloorGroups(options.plan.value) : [],
+  )
   const elevationProjection = computed(() => readElevationProjection(options.plan.value))
 
   const activeUnderlayLayout = computed(() =>
@@ -135,18 +134,24 @@ export function useEditorGevels(options: {
   async function onElevationStoryHeight(floorIndex: number, cm: number): Promise<void> {
     if (!options.plan.value) return
     const count = countPlanWalls(options.plan.value, floorIndex)
-    const ok = await confirmPlanChrome({
+    const length = formatScaleInputLabel(cm, options.scaleInputUnit.value)
+    const scope = await promptDefaultsApplyScope({
       title: options.t('viewer.defaultsOverwriteTitle'),
       message: options.t('viewer.defaultsOverwriteWallFloor', {
-        length: formatScaleInputLabel(cm, options.scaleInputUnit.value),
-        cm: formatScaleInputLabel(cm, options.scaleInputUnit.value),
+        length,
+        cm: length,
         count,
       }),
-      confirmLabel: options.t('common.apply'),
-      cancelLabel: options.t('common.cancel'),
+      floorCount: options.plan.value.floors.length,
+      existingCount: count,
+      allowDefaultsOnly: false,
     })
-    if (!ok || !options.plan.value) return
-    options.plan.value = overwritePlanWallHeights(options.plan.value, cm, floorIndex)
+    if (!scope || scope === 'defaultsOnly' || !options.plan.value) return
+    options.plan.value = overwritePlanWallHeights(
+      options.plan.value,
+      cm,
+      scope === 'floor' ? floorIndex : undefined,
+    )
   }
 
   /** Dakdikte is globaal: stack én de nokbalken zelf. */

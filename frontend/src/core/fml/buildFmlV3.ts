@@ -3,8 +3,6 @@ import { FML_STANDARD_NOTICE_KEY, fmlExportNotice } from './fml-license-notice'
 import { FML_CONCEPT_ADAPTERS } from '../plg/fml-adapter/registry'
 import { fmlRefidForOpeningKind } from '../plg/fml-adapter/opening-fml-refids'
 import {
-  BOVENLICHT_GAP_CM,
-  BOVENLICHT_HEIGHT_CM,
   buildBovenlichtOpening,
   readBovenlichtPacked,
   resolveBovenlichtGapCm,
@@ -43,6 +41,7 @@ import { STAMP_OWNED_EXTRA } from '@/core/plan/stamp-owned'
 import { writeObjectLabel } from '@/core/plan/object-label'
 import { ELEVATION_PROJECTION_SETTINGS_KEY, ELEVATION_VIEWS_SETTINGS_KEY } from '@/core/plan/elevation-views'
 import { FLOOR_STACK_SETTINGS_KEY } from '@/core/plan/floor-stack'
+import { normalizeFloorDefaults } from '@/core/plan/floor-defaults'
 
 /**
  * Editor-only settings die Floorplanner bij import kunnen laten knallen
@@ -97,18 +96,15 @@ export type BovenlichtCmResolver = number | ((floor: Floor, floorIndex: number) 
 export interface BuildFmlV3Options {
   name?: string
   /**
-   * Project-/vloerdefault: bovenlicht op deuren zonder per-deur override.
-   * Boolean = zelfde default voor alle verdiepingen; functie = per floor.
+   * Alleen voor packed→losse ramen (FML kent geen bovenlicht).
+   * Ontbreekt → `floor.defaults`. Boolean = alle floors; functie = per floor.
    */
   bovenlichtDefault?: BovenlichtDefaultResolver
-  /**
-   * Project-/vloerdefault: bovenlicht op ramen zonder per-raam override.
-   * Boolean = zelfde default voor alle verdiepingen; functie = per floor.
-   */
+  /** Idem voor ramen. */
   windowBovenlichtDefault?: BovenlichtDefaultResolver
-  /** Glashoogte bovenlicht (cm); default fabriek 40. */
+  /** Glashoogte van het gesynthetiseerde raam; ontbreekt → floor.defaults. */
   bovenlichtHeightCm?: BovenlichtCmResolver
-  /** Afstand boven opening / dorpel-offset (cm); default fabriek 10. */
+  /** Gap van het gesynthetiseerde raam; ontbreekt → floor.defaults. */
   bovenlichtGapCm?: BovenlichtCmResolver
   /**
    * Product-gate: alle areas (en surfaces) exporteren met deze fill-kleur
@@ -260,9 +256,11 @@ function resolveDefaultOption(
   option: BovenlichtDefaultResolver | undefined,
   floor: Floor,
   floorIndex: number,
+  floorFallback: boolean,
 ): boolean {
   if (typeof option === 'function') return option(floor, floorIndex) === true
-  return option === true
+  if (typeof option === 'boolean') return option
+  return floorFallback
 }
 
 function resolveCmOption(
@@ -441,10 +439,30 @@ function serializeWall(
       ? expandOpeningsForExport(
           wall,
           floor.height,
-          resolveDefaultOption(options.bovenlichtDefault, floor, floorIndex),
-          resolveDefaultOption(options.windowBovenlichtDefault, floor, floorIndex),
-          resolveCmOption(options.bovenlichtHeightCm, floor, floorIndex, BOVENLICHT_HEIGHT_CM),
-          resolveCmOption(options.bovenlichtGapCm, floor, floorIndex, BOVENLICHT_GAP_CM),
+          resolveDefaultOption(
+            options.bovenlichtDefault,
+            floor,
+            floorIndex,
+            normalizeFloorDefaults(floor.defaults).bovenlichtDefault,
+          ),
+          resolveDefaultOption(
+            options.windowBovenlichtDefault,
+            floor,
+            floorIndex,
+            normalizeFloorDefaults(floor.defaults).windowBovenlichtDefault,
+          ),
+          resolveCmOption(
+            options.bovenlichtHeightCm,
+            floor,
+            floorIndex,
+            normalizeFloorDefaults(floor.defaults).bovenlichtHeightCm,
+          ),
+          resolveCmOption(
+            options.bovenlichtGapCm,
+            floor,
+            floorIndex,
+            normalizeFloorDefaults(floor.defaults).bovenlichtGapCm,
+          ),
         )
       : wall.openings
     ).map(serializeOpening),
@@ -455,13 +473,20 @@ function serializeWall(
   return out
 }
 
+function serializeDrawingDepth(drawing: DrawingMeta): 'LOW' | 'HIGH' {
+  const raw = drawing.extras?.depth
+  return raw === 'LOW' || raw === 'HIGH' ? raw : 'HIGH'
+}
+
 function serializeDrawing(drawing: DrawingMeta | undefined): Record<string, unknown> | undefined {
   if (!drawing) return undefined
   // Alleen cloud-URL's (http/https) meeschrijven. data:/blob: zijn lokaal tot we
   // cloud-storage voor onderleggers hebben — anders Floorplanner 500 / broken links.
   const url = isExportableDrawingUrl(drawing.url) ? drawing.url!.trim() : undefined
+  const extras = { ...(drawing.extras ?? {}) }
+  delete extras.depth
   return {
-    ...(drawing.extras ?? {}),
+    ...extras,
     x: drawing.x,
     y: drawing.y,
     width: drawing.width,
@@ -469,7 +494,9 @@ function serializeDrawing(drawing: DrawingMeta | undefined): Record<string, unkn
     rotation: drawing.rotation,
     ...(url != null ? { url } : {}),
     ...(drawing.alpha != null ? { alpha: drawing.alpha } : {}),
-    ...(drawing.visible != null ? { visible: drawing.visible } : {}),
+    // Floorplanner generate faalt zonder deze velden (Test 38, 2026-09-18).
+    visible: drawing.visible ?? true,
+    depth: serializeDrawingDepth(drawing),
   }
 }
 
@@ -642,8 +669,10 @@ export function buildFmlV3(plan: FloorPlan, options: BuildFmlV3Options = {}): st
       // eigen elevatie ineens zo hoog als de aanbouwnok.
       const hasFloorAbove = syncedFloors[floorIndex + 1] != null
       const exportHeight = exportFloorHeightCm(floor, hasFloorAbove)
+      const leftover = { ...(floor.source?.leftover ?? {}) }
+      delete leftover.defaults
       const floorOut: Record<string, unknown> = {
-        ...(floor.source?.leftover ?? {}),
+        ...leftover,
         id: floor.source?.id ?? fallbackProjectId + 10 + floorIndex,
         project_id: floor.source?.project_id ?? fallbackProjectId,
         name: floor.name,

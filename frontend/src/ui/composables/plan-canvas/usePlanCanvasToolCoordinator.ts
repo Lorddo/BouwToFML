@@ -14,6 +14,7 @@ import { usePlanCanvasDrawLabel } from './usePlanCanvasDrawLabel'
 import { usePlanCanvasDrawLine } from './usePlanCanvasDrawLine'
 import { usePlanCanvasMeasure, type MeasureDrawMode } from './usePlanCanvasMeasure'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { readPlanOpeningFrameDefaults } from '@/core/plan/opening-frame-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 import { usePlanCanvasNulpunt } from './usePlanCanvasNulpunt'
 import { usePlanCanvasUnderlayMove } from './usePlanCanvasUnderlayMove'
@@ -73,7 +74,7 @@ interface ToolCoordinatorOptions {
   cancelOpeningDragPending: () => void
   cancelItemDragPending: () => void
   flushPendingFieldCommits: () => void
-  /** Kopie-frame tot volgende place; null = Settings-default. */
+  /** Kopie-frame tot volgende place; null = project-default. */
   takePendingPlaceFrame?: () => import('@/core/plan/opening-display-geom').OpeningFrameCm | null
   /** Refs owned by WallSelection — passed in to avoid circular deps. */
   wallThicknessDraft: Ref<number>
@@ -416,7 +417,10 @@ export function usePlanCanvasToolCoordinator(options: ToolCoordinatorOptions) {
     resolvePlaceFrame: (type) => {
       const pending = options.takePendingPlaceFrame?.()
       if (pending) return pending
-      const defaults = loadUserSettings().planDisplay.openingFrameDefaults
+      const defaults = readPlanOpeningFrameDefaults(
+        options.editor.localPlan.value,
+        options.editor.floorIndex.value,
+      )
       return type === 'door' ? { ...defaults.door } : { ...defaults.window }
     },
     beforePlace: () => {

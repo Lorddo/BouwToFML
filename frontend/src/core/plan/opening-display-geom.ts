@@ -87,7 +87,7 @@ export function effectiveOpeningFrame(
 /** True als dit kind geen kozijnbanden toont (passage/boog). */
 export function isFramelessOpeningKind(kind: string | undefined | null): boolean {
   const glyph = resolveOpeningKind(kind).glyph
-  return glyph === 'passage' || glyph === 'archway'
+  return glyph === 'passage' || glyph === 'archway' || glyph === 'round_opening'
 }
 
 /** Clamp + normaliseer voor schrijven naar opening.frame. */

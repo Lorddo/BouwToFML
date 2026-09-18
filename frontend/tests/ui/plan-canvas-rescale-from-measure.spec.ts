@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest'
+import type { HScaleState } from '@/platform/calibration'
 import { scaleFloorPlan, scaleUnderlayLayout } from '@/core/plan/scale-floor-plan'
 import type { FloorPlan, Wall } from '@/core/plan/types'
 import { buildAreaSideDims } from '@/ui/composables/plan-canvas/plan-canvas-area-side-dims'
 import { scaleFloorPlanAndRegenAreas } from '@/ui/composables/plan-canvas/regenerate-floor-areas'
 import {
+  applyRescaleHandleDrag,
   innerThicknessFromRescaleState,
+  lockRescaleHandleToAxis,
+  snapRescaleHandle,
   rescaleStateFromImageHandles,
   initPlanRescaleStateFromWalls,
   initImageScaleHandles,
   resolvePlanRescaleState,
+  diagnoseRescaleFactorsFromRulers,
   resolveRescaleFactorsFromInnerRulers,
   resolveRescaleFactorsFromRulers,
   resolveRescaleGeometryFactor,
@@ -24,9 +29,43 @@ describe('plan-canvas-rescale-from-measure', () => {
     expect(resolveRescaleGeometryFactor(49, 50)).toBeNull()
   })
 
-  it('weigerfactor buiten [0.5, 2]', () => {
-    expect(resolveRescaleGeometryFactor(100, 250)).toBeNull()
-    expect(resolveRescaleGeometryFactor(100, 40)).toBeNull()
+  it('staat factor > 2 toe (15 m → 36 m na foute stap-1-schaal)', () => {
+    expect(resolveRescaleGeometryFactor(1541, 3600)).toBeCloseTo(3600 / 1541)
+    expect(
+      resolveRescaleFactorsFromRulers({
+        measuredCmX: 1541,
+        measuredCmY: 1251,
+        trueMmX: 36000,
+        trueMmY: 29800,
+      }),
+    ).toEqual({ x: 3600 / 1541, y: 2980 / 1251 })
+  })
+
+  it('diagnose: 50 cm alleen bij te korte liniaal, niet bij grote factor', () => {
+    expect(
+      diagnoseRescaleFactorsFromRulers({
+        measuredCmX: 49,
+        measuredCmY: 100,
+        trueMmX: 36000,
+        trueMmY: 29800,
+      }),
+    ).toBe('short')
+    expect(
+      diagnoseRescaleFactorsFromRulers({
+        measuredCmX: 1541,
+        measuredCmY: 1251,
+        trueMmX: 36000,
+        trueMmY: 29800,
+      }),
+    ).toBeNull()
+    expect(
+      diagnoseRescaleFactorsFromRulers({
+        measuredCmX: 100,
+        measuredCmY: 100,
+        trueMmX: 1000,
+        trueMmY: 1000,
+      }),
+    ).toBe('noop')
   })
 
   it('weigerfactor ≈ 1 (no-op)', () => {
@@ -444,5 +483,78 @@ describe('rescale binnenmaat (liniaal op binnenfaces)', () => {
       .sort((a, b) => a - b)
     expect(lengths).toEqual([300, 300, 350, 350])
     expect(next.floors[0].walls[0].thickness).toBe(20)
+  })
+
+  const rulers: HScaleState = {
+    xLeft: 100,
+    xRight: 400,
+    xGuideY: 200,
+    yTop: 50,
+    yBottom: 350,
+    yGuideX: 250,
+  }
+
+  it('houdt H-greep op de liniaal als de pointer wegspringt', () => {
+    expect(lockRescaleHandleToAxis(rulers, 'xLeft', { x: 80, y: 900 })).toEqual({
+      x: 80,
+      y: 200,
+    })
+    expect(applyRescaleHandleDrag(rulers, 'xLeft', { x: 80, y: 900 })).toEqual({
+      ...rulers,
+      xLeft: 80,
+    })
+    expect(applyRescaleHandleDrag(rulers, 'xRight', { x: 410, y: -20 }).xGuideY).toBe(200)
+  })
+
+  it('houdt V-greep op de liniaal als de pointer wegspringt', () => {
+    expect(applyRescaleHandleDrag(rulers, 'yTop', { x: 10, y: 40 })).toEqual({
+      ...rulers,
+      yTop: 40,
+    })
+    expect(applyRescaleHandleDrag(rulers, 'yBottom', { x: 900, y: 360 }).yGuideX).toBe(250)
+  })
+
+  it('verplaatst alleen de dwarslijn bij sleep op de liniaal', () => {
+    expect(applyRescaleHandleDrag(rulers, 'xGuideY', { x: 10, y: 180 })).toEqual({
+      ...rulers,
+      xGuideY: 180,
+    })
+    expect(applyRescaleHandleDrag(rulers, 'yGuideX', { x: 260, y: 10 })).toEqual({
+      ...rulers,
+      yGuideX: 260,
+    })
+  })
+
+  it('H-greep snapt X naar een muur die niet op de middenlijn ligt', () => {
+    const walls = [
+      { a: { x: 50, y: 0 }, b: { x: 50, y: 40 }, thickness: 10, balance: 0.5 },
+    ]
+    const snapped = snapRescaleHandle(rulers, 'xLeft', { x: 48, y: 20 }, walls)
+    expect(snapped.y).toBe(200)
+    expect(snapped.x).toBeCloseTo(45, 5)
+    expect(applyRescaleHandleDrag(rulers, 'xLeft', snapped).xLeft).toBeCloseTo(45, 5)
+    expect(applyRescaleHandleDrag(rulers, 'xLeft', snapped).xGuideY).toBe(200)
+  })
+
+  it('V-greep snapt Y naar een muur die niet op de middenlijn ligt', () => {
+    const walls = [
+      { a: { x: 400, y: 40 }, b: { x: 520, y: 40 }, thickness: 10, balance: 0.5 },
+    ]
+    const snapped = snapRescaleHandle(rulers, 'yTop', { x: 460, y: 38 }, walls)
+    expect(snapped.x).toBe(250)
+    expect(snapped.y).toBeCloseTo(35, 5)
+    expect(applyRescaleHandleDrag(rulers, 'yTop', snapped).yTop).toBeCloseTo(35, 5)
+    expect(applyRescaleHandleDrag(rulers, 'yTop', snapped).yGuideX).toBe(250)
+  })
+
+  it('zonder muren (onderlegger-schaal) blijft de pointer vrij op de liniaal', () => {
+    const walls = [
+      { a: { x: 50, y: 0 }, b: { x: 50, y: 40 }, thickness: 10, balance: 0.5 },
+    ]
+    expect(snapRescaleHandle(rulers, 'xLeft', { x: 48, y: 20 }, [])).toEqual({ x: 48, y: 200 })
+    expect(snapRescaleHandle(rulers, 'xLeft', { x: 48, y: 20 }, walls, { disabled: true })).toEqual({
+      x: 48,
+      y: 200,
+    })
   })
 })

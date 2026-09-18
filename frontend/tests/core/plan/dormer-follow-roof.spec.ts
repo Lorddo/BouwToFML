@@ -43,10 +43,16 @@ describe('dakkapel-muren volgen kindvlak', () => {
     expect(result).not.toBeNull()
     const surface = dormerPoly(result!.plan)
     expect(surface).toBeTruthy()
-    const next = mapRidgeSurfaceOnPlan(result!.plan, surface!.id, (s) => ({
+    const oldPoly = surface!.poly.map((p) => ({ ...p }))
+    const moved = mapRidgeSurfaceOnPlan(result!.plan, surface!.id, (s) => ({
       ...s,
       poly: translatePoly(s.poly, 50, 30),
     }))
+    expect(moved.floors[0].walls.filter(isDormerRoleWall)[0]!.a.x).toBeCloseTo(
+      result!.plan.floors[0].walls.filter(isDormerRoleWall)[0]!.a.x,
+      4,
+    )
+    const next = followDormerWallsForSurfaceMove(moved, surface!.id, oldPoly)
     const walls = next.floors[0].walls.filter(isDormerRoleWall)
     expect(walls).toHaveLength(result!.plan.floors[0].walls.filter(isDormerRoleWall).length)
     for (const wall of walls) {
@@ -65,7 +71,9 @@ describe('dakkapel-muren volgen kindvlak', () => {
     const surface = dormerPoly(result!.plan)!
     const backAIndex = surface.poly.findIndex((p) => Math.abs(p.x - 30) < 0.6 && Math.abs(p.y - 120) < 0.6)
     expect(backAIndex).toBeGreaterThanOrEqual(0)
-    const next = setRidgeSurfaceVertex(result!.plan, surface.id, backAIndex, { x: 30, y: 180 })
+    const oldPoly = surface.poly.map((p) => ({ ...p }))
+    const moved = setRidgeSurfaceVertex(result!.plan, surface.id, backAIndex, { x: 30, y: 180 })
+    const next = followDormerWallsForSurfaceMove(moved, surface.id, oldPoly)
     const before = result!.plan.floors[0].walls
     const after = next.floors[0].walls
     const frontBefore = before.filter(
@@ -136,14 +144,53 @@ describe('dakkapel-muren volgen kindvlak', () => {
         ),
       ],
     }
-    const next = mapRidgeSurfaceOnPlan(plan, 'd1', (s) => ({
+    const oldPoly = listRidgeSurfacesOnFloor(plan.floors[0]).find((s) => s.id === 'd1')!.poly
+    const mapped = mapRidgeSurfaceOnPlan(plan, 'd1', (s) => ({
       ...s,
       poly: translatePoly(s.poly, 40, 15),
     }))
+    const next = followDormerWallsForSurfaceMove(mapped, 'd1', oldPoly)
     const moved = next.floors[0].walls
     expect(moved.find((w) => w.id === 'wang-l')!.a).toEqual({ x: 140, y: 15 })
     expect(moved.find((w) => w.id === 'wang-r')!.b).toEqual({ x: 290, y: 135 })
     expect(moved.find((w) => w.id === 'front')!.a).toEqual({ x: 140, y: 15 })
+  })
+
+  it('dakkapel-sleep laat ouder-gevel staan', () => {
+    const result = place()
+    expect(result).not.toBeNull()
+    const surface = dormerPoly(result!.plan)!
+    const outer: Wall = {
+      id: 'outer',
+      a: { x: 0, y: 0 },
+      b: { x: 0, y: 400 },
+      thickness: 20,
+      openings: [],
+    }
+    const withOuter = {
+      ...result!.plan,
+      floors: [
+        {
+          ...result!.plan.floors[0],
+          walls: [...result!.plan.floors[0].walls, outer],
+        },
+      ],
+    }
+    const oldPoly = surface.poly.map((p) => ({ ...p }))
+    const mapped = mapRidgeSurfaceOnPlan(withOuter, surface.id, (s) => ({
+      ...s,
+      poly: translatePoly(s.poly, 50, 30),
+    }))
+    const next = followDormerWallsForSurfaceMove(mapped, surface.id, oldPoly)
+    const after = next.floors[0].walls.find((w) => w.id === 'outer')!
+    expect(after.a).toEqual({ x: 0, y: 0 })
+    expect(after.b).toEqual({ x: 0, y: 400 })
+    const wang = next.floors[0].walls.find(
+      (w) => isDormerRoleWall(w) && Math.abs(w.a.x - w.b.x) < 1,
+    )
+    expect(wang).toBeTruthy()
+    const before = result!.plan.floors[0].walls.find((w) => w.id === wang!.id)
+    expect(wang!.a.x).toBeCloseTo((before?.a.x ?? 0) + 50, 4)
   })
 
   it('wang verschuiven neemt het dakvlak mee naar de buitenface', () => {

@@ -225,8 +225,14 @@ function parentOfDormer(
   return resolveDormerParent(dormer, surfaces, dormer.id)
 }
 
+export type RoofSlopeMetrics = {
+  dir: Point2D
+  riseCm: number
+  runCm: number
+}
+
 /** Ouder-helling: laagste-Z → hoogste-Z van de poly (goot → nok). */
-export function roofSlopeDir(surface: FloorSurface): Point2D | null {
+export function roofSlopeMetrics(surface: FloorSurface): RoofSlopeMetrics | null {
   let loZ = Infinity
   let hiZ = -Infinity
   let loCount = 0
@@ -263,7 +269,23 @@ export function roofSlopeDir(surface: FloorSurface): Point2D | null {
   const dy = hiY / hiCount - loY / loCount
   const len = Math.hypot(dx, dy)
   if (len < 1e-6) return null
-  return { x: dx / len, y: dy / len }
+  return {
+    dir: { x: dx / len, y: dy / len },
+    riseCm: hiZ - loZ,
+    runCm: len,
+  }
+}
+
+export function roofSlopeDir(surface: FloorSurface): Point2D | null {
+  return roofSlopeMetrics(surface)?.dir ?? null
+}
+
+/** Hellingshoek van het schild, 0° = plat. */
+export function roofSurfacePitchDeg(surface: FloorSurface): number {
+  const metrics = roofSlopeMetrics(surface)
+  if (!metrics || metrics.runCm < 1e-6) return 0
+  const deg = (Math.atan(metrics.riseCm / metrics.runCm) * 180) / Math.PI
+  return Math.round(deg * 10) / 10
 }
 
 /** Kopse = dwars op ouder-helling (of een opening: voorkant met raam). */

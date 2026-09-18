@@ -219,6 +219,11 @@ export function floorWallBaseWorldZ(plan: FloorPlan, floorIndex: number): number
   return cum
 }
 
+/** Onderkant van de vloerplaat erboven — plafond-guard van deze floor. */
+export function floorCeilingWorldZ(plan: FloorPlan, floorIndex: number): number | null {
+  return floorSlabWorldRange(plan, floorIndex + 1)?.z0 ?? null
+}
+
 export function floorSlabWorldRange(
   plan: FloorPlan,
   floorIndex: number,
@@ -246,5 +251,17 @@ export function nokWorldRange(plan: FloorPlan): { z0: number; z1: number } {
     const base = floorWallBaseWorldZ(plan, i)
     top = Math.max(top, base + Math.max(0, floor.height))
   }
+  return { z0: top, z1: top + stack.nokThicknessCm }
+}
+
+/** Placeholder-dakplaat van één floor: muurtop → muurtop + dakdikte. */
+export function floorNokWorldRange(
+  plan: FloorPlan,
+  floorIndex: number,
+): { z0: number; z1: number } {
+  const floor = plan.floors[floorIndex]
+  const stack = readFloorStack(plan)
+  const base = floorWallBaseWorldZ(plan, floorIndex)
+  const top = base + Math.max(0, floor?.height ?? 0)
   return { z0: top, z1: top + stack.nokThicknessCm }
 }

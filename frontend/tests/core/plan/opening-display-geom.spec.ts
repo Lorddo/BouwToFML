@@ -282,6 +282,12 @@ describe('elevation opening glyph', () => {
     expect(hole.length).toBeGreaterThan(4)
     const ys = hole.map((p) => p.y)
     expect(Math.min(...ys)).toBeCloseTo(-220, 0)
+    const roundHole = elevationOpeningHolePoints(
+      { x0: 0, y0: -180, x1: 180, y1: 0 },
+      'door',
+      'door.round',
+    )
+    expect(roundHole.length).toBeGreaterThan(8)
   })
 
   it('driehoekraam heeft driehoek-frame + glas; blind is solid blad', () => {

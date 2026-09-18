@@ -7,6 +7,7 @@ import {
   promptFacadeGroupName,
   promptFacadeSelectScope,
   promptPlanChrome,
+  promptDefaultsApplyScope,
   promptPlanChromeChoice,
   promptPlanExportFormat,
   registerPlanChromeDialogHost,
@@ -85,6 +86,36 @@ describe('plan-chrome-dialog', () => {
     if (state) state.state.inputValue = 'all'
     confirmPlanChromeDialog()
     await expect(pending).resolves.toBe('all')
+    unregister()
+  })
+
+  it('promptDefaultsApplyScope slaat overwrite over bij count 0', async () => {
+    await expect(
+      promptDefaultsApplyScope({
+        title: 'Defaults',
+        message: 'Set?',
+        floorCount: 2,
+        existingCount: 0,
+      }),
+    ).resolves.toBe('defaultsOnly')
+  })
+
+  it('promptDefaultsApplyScope verbergt Project bij één floor', async () => {
+    const unregister = registerPlanChromeDialogHost()
+    const pending = promptDefaultsApplyScope({
+      title: 'Defaults',
+      message: 'Set?',
+      floorCount: 1,
+      existingCount: 2,
+    })
+    const state = planChromeDialogState().value
+    expect(state?.state.request.listItems?.map((row) => row.id)).toEqual([
+      'defaultsOnly',
+      'floor',
+    ])
+    if (state) state.state.inputValue = 'floor'
+    confirmPlanChromeDialog()
+    await expect(pending).resolves.toBe('floor')
     unregister()
   })
 

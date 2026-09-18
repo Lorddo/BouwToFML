@@ -40,6 +40,7 @@ import ElevationHeightOnlyFields from './ElevationHeightOnlyFields.vue'
 import ElevationOpeningFields from './ElevationOpeningFields.vue'
 import ElevationOpeningQuickFields from './ElevationOpeningQuickFields.vue'
 import OpeningFrameFields from './OpeningFrameFields.vue'
+import ScaleLengthInput from './ScaleLengthInput.vue'
 import PlanOpeningAddToolFields from './PlanOpeningAddToolFields.vue'
 import PlanMeasureOverlay from './PlanMeasureOverlay.vue'
 import PlanRescaleOverlay from './PlanRescaleOverlay.vue'
@@ -341,6 +342,8 @@ const {
   commitSelectedField,
   commitSelectedFrame,
   commitSelectedSkylightFrame,
+  commitSelectedSkylightZ,
+  commitSelectedSkylightPitch,
   commitSelectedBovenlicht,
   commitSelectedBovenlichtHeight,
   commitSelectedBovenlichtGap,
@@ -623,6 +626,40 @@ defineExpose({
                   <span class="plan-toolbelt__meta">
                     {{ selectedSkylight.item.name || t('viewer.elevationSkylight') }}
                   </span>
+                  <label class="plan-toolbelt__field">
+                    <span class="plan-toolbelt__field-label">{{ t('viewer.itemZ') }}</span>
+                    <span class="plan-toolbelt__field-controls">
+                      <ScaleLengthInput
+                        :cm="selectedSkylight.item.z ?? 0"
+                        :unit="unit"
+                        :min-cm="0"
+                        allow-zero
+                        :aria-label="t('viewer.itemZ')"
+                        input-class="plan-toolbelt__thickness-input"
+                        @update:cm="commitSelectedSkylightZ"
+                      />
+                    </span>
+                  </label>
+                  <label class="plan-toolbelt__field">
+                    <span class="plan-toolbelt__field-label">{{ t('viewer.itemPitch') }}</span>
+                    <span class="plan-toolbelt__field-controls">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="90"
+                        class="plan-toolbelt__thickness-input"
+                        :value="selectedSkylight.item.pitchDeg ?? 0"
+                        :aria-label="t('viewer.itemPitch')"
+                        @change="
+                          commitSelectedSkylightPitch(
+                            Number(($event.target as HTMLInputElement).value) || 0,
+                          )
+                        "
+                      />
+                      <span class="plan-toolbelt__unit">°</span>
+                    </span>
+                  </label>
                   <ToolbeltActionButton
                     icon="delete"
                     :title="t('result.toolbar.deleteSkylight')"

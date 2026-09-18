@@ -1,3 +1,4 @@
+import { resolveUnderlayLoadUrl } from '@/platform/underlay-upload'
 import { tGlobal } from '@/ui/i18n'
 
 export function imageDimensions(img: HTMLImageElement | HTMLCanvasElement): {
@@ -17,6 +18,6 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
     img.crossOrigin = 'anonymous'
     img.onload = () => resolve(img)
     img.onerror = () => reject(new Error(tGlobal('input.errors.imageLoadFailed')))
-    img.src = src
+    img.src = resolveUnderlayLoadUrl(src)
   })
 }

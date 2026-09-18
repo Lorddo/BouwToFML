@@ -5,8 +5,11 @@ import {
   sampleCeilingRoofAtPoint,
   sampleRoofZAtPoint,
 } from './bind-walls-to-roofs'
+import { roofSurfacePitchDeg } from './dormer-edge-walls'
 import { isPointSkyExposedOnFloor } from './ridge-floor'
 import type { FloorItem, FloorPlan, FloorSurface, Point2D } from './types'
+
+export const SKYLIGHT_Z_MAX_CM = 800
 
 export const SKYLIGHT_ELEV_FILL = '#dbeafe'
 export const SKYLIGHT_ELEV_STROKE = '#60a5fa'
@@ -42,6 +45,36 @@ function localToWorld(
 
 export function isSkylightItem(item: Pick<FloorItem, 'kind'> | null | undefined): boolean {
   return item?.kind === 'skylight'
+}
+
+export function clampSkylightZCm(zCm: number): number {
+  if (!Number.isFinite(zCm)) return 0
+  return Math.max(0, Math.min(SKYLIGHT_Z_MAX_CM, Math.round(zCm)))
+}
+
+export function clampSkylightPitchDeg(deg: number): number {
+  if (!Number.isFinite(deg)) return 0
+  return Math.max(0, Math.min(90, Math.round(deg * 10) / 10))
+}
+
+function withRoofPose(
+  item: FloorItem,
+  surfaceId: string,
+  z: number,
+  surfaces: ReadonlyArray<FloorSurface>,
+): FloorItem {
+  const surface = surfaces.find((entry) => entry.id === surfaceId)
+  return {
+    ...item,
+    roofSurfaceId: surfaceId,
+    z: clampSkylightZCm(z),
+    pitchDeg: clampSkylightPitchDeg(surface ? roofSurfacePitchDeg(surface) : (item.pitchDeg ?? 0)),
+  }
+}
+
+function unlinkSkylightRoof(item: FloorItem): FloorItem {
+  if (!item.roofSurfaceId) return item
+  return { ...item, roofSurfaceId: undefined }
 }
 
 /** Vier hoeken van de fixture-footprint in plan-XY (NW, NE, SE, SW). */
@@ -135,12 +168,33 @@ export function bindSkylightToRoofs(
   if (!sampled) return { ok: false, reason: 'uncovered' }
   return {
     ok: true,
-    item: {
-      ...item,
-      roofSurfaceId: sampled.surfaceId,
-      z: sampled.centerZ,
-    },
+    item: withRoofPose(item, sampled.surfaceId, sampled.centerZ, surfaces),
   }
+}
+
+/**
+ * Plaats/sleep: koppel aan het dakvlak onder het centrum (Z + helling).
+ * Geen dekking of geblokt door een floor erboven → koppeling los.
+ */
+export function applySkylightRoofSnap(
+  item: FloorItem,
+  surfaces: ReadonlyArray<FloorSurface>,
+  plan: FloorPlan,
+  floorIndex: number,
+): FloorItem {
+  if (!isSkylightItem(item)) return item
+  const result = bindSkylightToRoofs(item, surfaces, plan, floorIndex)
+  return result.ok ? result.item : unlinkSkylightRoof(item)
+}
+
+/** Live Z + helling verversen zonder de koppeling te verbreken. */
+export function refreshSkylightRoofPose(
+  item: FloorItem,
+  surfaces: ReadonlyArray<FloorSurface>,
+): FloorItem {
+  const sampled = sampleSkylightOnRoof(surfaces, item)
+  if (!sampled) return item
+  return withRoofPose(item, sampled.surfaceId, sampled.centerZ, surfaces)
 }
 
 /** Projecteer footprint-hoeken naar aanzicht-cm (X langs as, Y = −worldZ). */

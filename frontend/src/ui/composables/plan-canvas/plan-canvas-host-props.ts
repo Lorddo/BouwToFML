@@ -62,6 +62,8 @@ export interface PlanCanvasHostProps {
   /** Workspace: Herschalen-modus (H/V-linialen). Viewer uit. */
   rescaleMode?: boolean
   rescaleState?: HScaleState | null
+  /** Face-snap op muren. Alleen herschalen; onderlegger-schaal blijft vrij. Default aan. */
+  rescaleSnapToWalls?: boolean
   /** Viewer: chrome (header/floor-rail) verborgen. */
   canvasFullscreen?: boolean
   /** Exclusieve maatlijn-weergave (session). Alleen editor toont slicer/manual mutate. */

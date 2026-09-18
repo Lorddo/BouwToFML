@@ -13,6 +13,7 @@ export {
   pdfLoadErrorMessage,
   renderPdfPagePreviewForFile,
   renderPdfPageToBlobUrlForFile,
+  renderPdfPageToPngDataUrlForFile,
   renderPdfPageFromBytes,
   renderPdfPageRoiToCanvas,
   computeRoiRenderScale,

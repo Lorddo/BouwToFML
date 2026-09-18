@@ -4,6 +4,7 @@ import {
   dormerFrontCenterlineFromInner,
   pointAlong,
   projectDormerFootprint,
+  snapDormerFootprintToWalls,
   type DormerFootprint,
 } from '@/core/plan/dormer-draw'
 import type { Point2D } from '@/core/plan/types'
@@ -119,12 +120,16 @@ export function usePlanCanvasDrawDormer(options: {
       drawDormerPreview.value = null
       return
     }
-    drawDormerFront.value = { a: draft.frontA, b: draft.frontB }
-    drawDormerPreview.value = projectDormerFootprint(
+    const raw = projectDormerFootprint(
       draft.frontA,
       draft.frontB,
       depthHover(draft.frontA, draft.frontB, draft.hoverCm),
     )
+    const snapped = raw ? snapDormerFootprintToWalls(options.editor.walls.value, raw) : null
+    drawDormerFront.value = snapped
+      ? { a: snapped.frontA, b: snapped.frontB }
+      : { a: draft.frontA, b: draft.frontB }
+    drawDormerPreview.value = snapped
   }
 
   function resetTypeState(): void {

@@ -350,15 +350,21 @@ export function hitElevationRoofPlane(
   elevation: FacadeElevation,
   point: Point2D,
 ): ElevationRoofPlane | null {
+  let best: ElevationRoofPlane | null = null
   for (let i = elevation.roofPlanes.length - 1; i >= 0; i -= 1) {
     const plane = elevation.roofPlanes[i]
     if (!plane || plane.points.length < 3) continue
     const fill = plane.fillPoints.length >= 3 ? plane.fillPoints : plane.points
-    if (pointInPoly(point, fill) || distToPolyEdges(point, fill) <= ELEVATION_ROOF_EDGE_HIT_CM) {
-      return plane
+    if (!pointInPoly(point, fill) && distToPolyEdges(point, fill) > ELEVATION_ROOF_EDGE_HIT_CM) {
+      continue
     }
+    if (!best) {
+      best = plane
+      continue
+    }
+    if (plane.dormer === true && best.dormer !== true) best = plane
   }
-  return null
+  return best
 }
 
 /** Dakraam-hit (dieper eerst); zelfde poly-test als dakvlak. */
@@ -439,15 +445,22 @@ function skipRoofSnapIndex(
   return Boolean(skip && skip.planeId === planeId && skip.vertexIndices.includes(index))
 }
 
+function floorMatches(floorIndex: number | undefined, itemFloor: number): boolean {
+  return floorIndex == null || itemFloor === floorIndex
+}
+
 export function collectElevationRoofSnapYs(
   elevation: FacadeElevation,
   skip?: ElevationRoofSnapSkip,
+  floorIndex?: number,
 ): number[] {
   const ys: number[] = []
   for (const wall of elevation.walls) {
+    if (!floorMatches(floorIndex, wall.floorIndex)) continue
     ys.push(wall.aTop.y, wall.bTop.y)
   }
   for (const plane of elevation.roofPlanes) {
+    if (!floorMatches(floorIndex, plane.floorIndex)) continue
     plane.points.forEach((point, index) => {
       if (skipRoofSnapIndex(skip, plane.id, index)) return
       ys.push(point.y)
@@ -456,16 +469,23 @@ export function collectElevationRoofSnapYs(
   return ys
 }
 
-/** Muurfaces + knopen + andere dakvlak-punten (uitlijnen langs de gevel). */
+/** Muurfaces + knopen + andere dakvlak-punten van dezelfde floor (uitlijnen langs de gevel). */
 export function collectElevationRoofSnapXs(
   elevation: FacadeElevation,
   skip?: ElevationRoofSnapSkip,
+  floorIndex?: number,
 ): number[] {
-  const xs = collectElevationWallSnapXs(elevation.walls)
+  const xs = collectElevationWallSnapXs(
+    floorIndex == null
+      ? elevation.walls
+      : elevation.walls.filter((wall) => wall.floorIndex === floorIndex),
+  )
   for (const junction of elevation.junctions) {
+    if (!floorMatches(floorIndex, junction.floorIndex)) continue
     xs.push(junction.x)
   }
   for (const plane of elevation.roofPlanes) {
+    if (!floorMatches(floorIndex, plane.floorIndex)) continue
     plane.points.forEach((point, index) => {
       if (skipRoofSnapIndex(skip, plane.id, index)) return
       xs.push(point.x)
@@ -477,7 +497,12 @@ export function collectElevationRoofSnapXs(
 /** Tops + bottoms van muren/knopen (voor greep-snap in aanzicht). */
 export function collectElevationSegmentSnapYs(
   elevation: FacadeElevation,
-  skip?: { wallId?: string; wallIds?: readonly string[]; junctionId?: string },
+  skip?: {
+    wallId?: string
+    wallIds?: readonly string[]
+    junctionId?: string
+    floorIndex?: number
+  },
 ): number[] {
   const skipWalls = new Set<string>()
   if (skip?.wallId) skipWalls.add(skip.wallId)
@@ -487,10 +512,12 @@ export function collectElevationSegmentSnapYs(
   const ys: number[] = []
   for (const wall of elevation.walls) {
     if (skipWalls.has(wall.wallId)) continue
+    if (!floorMatches(skip?.floorIndex, wall.floorIndex)) continue
     ys.push(wall.aTop.y, wall.bTop.y, wall.aBottom.y, wall.bBottom.y)
   }
   for (const junction of elevation.junctions) {
     if (skip?.junctionId && junction.id === skip.junctionId) continue
+    if (!floorMatches(skip?.floorIndex, junction.floorIndex)) continue
     ys.push(junction.yTop, junction.yBot)
   }
   return ys

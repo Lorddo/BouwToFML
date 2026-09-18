@@ -94,7 +94,7 @@ describe('resolveDrawPoint', () => {
     expect(ctrl).toEqual({ x: 200, y: 40 })
   })
 
-  it('dakkapel-voorzijde negeert knopen; alleen H/V t.o.v. start', () => {
+  it('dakkapel-voorzijde: H/V t.o.v. start; knoop/muur alleen ≤5 cm', () => {
     const snap = makeSnap({
       junctionHit: { cmX: 250, cmY: 250 },
       junctions: [{ x: 250, y: 250 }],
@@ -108,6 +108,14 @@ describe('resolveDrawPoint', () => {
       x: 200,
       y: 40,
     })
+  })
+
+  it('dakkapel-voorzijde snapt ≤5 cm op een bestaande muur', () => {
+    const snap = makeSnap({
+      walls: [{ a: { x: 0, y: 40 }, b: { x: 400, y: 40 }, thickness: 20, balance: 0.5 }],
+    })
+    expect(snap.resolveDormerFrontPoint({ x: 80, y: 44 })).toEqual({ x: 80, y: 40 })
+    expect(snap.resolveDormerFrontPoint({ x: 80, y: 46 })).toEqual({ x: 80, y: 46 })
   })
 
   it('nok-tekenen gaat langs het nok-recept, niet langs de knoop-hit', () => {

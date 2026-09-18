@@ -6,7 +6,7 @@ import { clampOpeningToStory } from './elevation-opening-edit'
 import { splitPlanWallAtT } from './elevation-openings'
 import { isPointSkyExposedOnFloor } from './ridge-floor'
 import { listRidgeWallsOnFloor } from './ridge-walls'
-import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM, isDormerLikeRoof, resolveDormerParent, followDormerWallsForSurfaceMove } from './roof-planes'
+import { listRidgeSurfacesOnFloor, ROOF_SAME_POINT_CM, ROOF_TOUCH_SLACK_CM, ROOF_VERTICAL_Z_SLACK_CM, isDormerLikeRoof, isRoofSurface, resolveDormerParent, followDormerWallsForSurfaceMove } from './roof-planes'
 import {
   findDormerEdgeSurface,
   flushKopseDormerWalls,
@@ -25,6 +25,8 @@ export type BindWallsToRoofsOptions = {
   splitCreases?: boolean
   /** Alleen deze muren binden (lokale dakkapel-place). Geen skylights / floor-lift. */
   wallIds?: ReadonlyArray<string>
+  /** Auto-bind na dakvlak-edit: sla einden over waar het dak op/nabij de vloer zit. */
+  skipNearFloor?: boolean
 }
 
 export type BindWallsToRoofsResult = {
@@ -487,6 +489,7 @@ function bindOneWallToRoofs(
   plan: FloorPlan,
   floorIndex: number,
   floorHeightCm: number,
+  skipNearFloor = false,
 ): { wall: Wall; bound: boolean; blocked: number; uncovered: number } {
   const planes = surfaces.filter((s) => !isDormerLikeRoof(s, surfaces))
   const edge = findDormerEdgeSurface(wall, surfaces)
@@ -553,6 +556,10 @@ function bindOneWallToRoofs(
       uncovered += 1
       continue
     }
+    if (skipNearFloor && z <= ROOF_VERTICAL_Z_SLACK_CM) {
+      uncovered += 1
+      continue
+    }
     const current = wallEndpoint3D(next, end, floorHeightCm)
     const h = Math.max(current.z + 1, Math.round(z))
     if (Math.abs(current.h - h) < 0.51) continue
@@ -615,7 +622,15 @@ export function bindFloorWallsToRoofs(
   walls = walls.map((wall) => {
     if (onlyWallIds && !onlyWallIds.has(wall.id)) return wall
     if (!(wall.thickness > 1e-6)) return wall
-    const result = bindOneWallToRoofs(wall, walls, surfaces, working, floorIndex, floorHeightCm)
+    const result = bindOneWallToRoofs(
+      wall,
+      walls,
+      surfaces,
+      working,
+      floorIndex,
+      floorHeightCm,
+      options?.skipNearFloor === true,
+    )
     skippedBlocked += result.blocked
     skippedUncovered += result.uncovered
     if (!result.bound) return wall
@@ -733,9 +748,17 @@ export function bindDormerEdgeWallsToRoof(plan: FloorPlan, surfaceId: string): F
   return plan
 }
 
+function floorIndexOfRoofSurface(plan: FloorPlan, surfaceId: string): number {
+  const id = surfaceId.trim()
+  if (!id) return -1
+  return plan.floors.findIndex((floor) =>
+    listRidgeSurfacesOnFloor(floor).some((surface) => surface.id === id),
+  )
+}
+
 /**
- * Na dakkapel-dak-edit: optioneel XY-wangen syncen, daarna altijd edge-hoogtes
- * (voorzijde + onderkanten) — zodat je «Muren aan dak» niet opnieuw hoeft.
+ * Na dakvlak-edit: hoogtes binden. Dakkapel schuift ook de randmuren in XY;
+ * hoofddak laat de gevels staan (alleen `az`/`bz`).
  */
 export function syncDormerAssemblyAfterRoofEdit(
   plan: FloorPlan,
@@ -746,8 +769,18 @@ export function syncDormerAssemblyAfterRoofEdit(
     oldPoly && oldPoly.length > 0
       ? followDormerWallsForSurfaceMove(plan, surfaceId, oldPoly)
       : plan
-  return bindDormerEdgeWallsToRoof(withXy, surfaceId)
+  const floorIndex = floorIndexOfRoofSurface(withXy, surfaceId)
+  if (floorIndex < 0) return withXy
+  const surfaces = listRidgeSurfacesOnFloor(withXy.floors[floorIndex])
+  const surface = surfaces.find((entry) => entry.id === surfaceId.trim())
+  if (!surface || !isRoofSurface(surface)) return withXy
+  if (isDormerLikeRoof(surface, surfaces)) {
+    return bindDormerEdgeWallsToRoof(withXy, surfaceId)
+  }
+  return bindFloorWallsToRoofs(withXy, floorIndex, { skipNearFloor: true }).plan
 }
+
+export const syncWallsAfterRoofEdit = syncDormerAssemblyAfterRoofEdit
 
 /** Floors met minstens één dakvlak (voor UI-keuze). */
 export function listFloorsWithRoofPlanes(

@@ -52,8 +52,8 @@ describe('sanitizePlanWalls', () => {
     ]
     const out = sanitizePlanWalls(walls)
     expect(out.some((item) => item.id === 'short')).toBe(false)
-    expect(out.some((item) => item.id === 'long')).toBe(true)
     const hosts = out.filter((item) => classifyNearAxisWall(item) === 'H')
+    expect(hosts).toHaveLength(1)
     const moved = hosts
       .flatMap((item) => item.openings)
       .find((opening) => opening.id === 'moved')

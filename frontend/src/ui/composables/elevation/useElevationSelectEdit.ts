@@ -1,5 +1,9 @@
 import type { ElevationWallRect } from '@/core/plan/facade-elevation'
-import { hitElevationOpening, hitElevationSkylight } from '@/core/plan/elevation-hit'
+import {
+  hitElevationOpening,
+  hitElevationRoofPlane,
+  hitElevationSkylight,
+} from '@/core/plan/elevation-hit'
 import { type ElevResizeSide } from '@/core/plan/elevation-opening-edit'
 import { type WallElevationEditMode } from '@/core/plan/wall-endpoint-height'
 import { isSettingsMod } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
@@ -162,6 +166,16 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     const target = settingsTarget.value
     if (target?.kind !== 'wall') return
     beginWallElevDrag(target.wallId, target.floorIndex, mode)
+  }
+
+  function onRoofDown(roofId: string, event: { evt: MouseEvent }): void {
+    stopKonvaBubble(event)
+    markOpeningPointerHandled()
+    if (activeTool.value !== 'select' || canvasLocked.value) return
+    const cm = pointerCm(event)
+    const elev = elevation.value
+    const hit = cm && elev ? hitElevationRoofPlane(elev, cm) : null
+    selectRoof(hit?.id ?? roofId, null)
   }
 
   function onRoofVertexDown(vertexIndex: number, event: { evt: MouseEvent }): void {
@@ -395,6 +409,7 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     onMoveHandleDown,
     onHandleDown,
     onJunctionDown,
+    onRoofDown,
     onRoofVertexDown,
     onWallElevHandleDown,
     onJunctionElevHandleDown,

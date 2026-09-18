@@ -218,6 +218,30 @@ function analyzeFlushPair(
   return { wallS, wallT, parallel, ortho, distCm, alongCm, acrossCm }
 }
 
+function junctionsShareWall(source: JunctionNode, target: JunctionNode): boolean {
+  for (const refS of source.refs) {
+    for (const refT of target.refs) {
+      if (refS.wallId === refT.wallId) return true
+    }
+  }
+  return false
+}
+
+/**
+ * Keep-axis alleen als de pointer dichter bij landing/T is dan bij de vastgehouden knoop.
+ * Oppakken (pointer ≈ bron) mag geen flush triggeren — dat verspringt al aangesloten muren.
+ */
+function isApproachingFlushTarget(
+  point: Point2D,
+  source: Point2D,
+  landing: Point2D,
+  target: Point2D,
+): boolean {
+  const distToSource = distance(point, source)
+  const distToHit = Math.min(distance(point, landing), distance(point, target))
+  return distToHit < distToSource
+}
+
 function pickFlushPair(
   walls: ReadonlyArray<Wall>,
   source: JunctionNode,
@@ -363,6 +387,8 @@ export function isFlushOnlyJunctionConnect(
   target: JunctionNode,
 ): boolean {
   if (source.id === target.id) return false
+  // Al één muur gemeen = bestaande T/L, geen nieuwe keep-axis-connect.
+  if (junctionsShareWall(source, target)) return false
   const pair = pickFlushPair(walls, source, target)
   if (!pair) return false
   // Bestaande schuine muur: geen auto-flush (diagonaal mag).
@@ -661,6 +687,7 @@ export function findMergeTargetFlushAware(
     if (isFlushOnlyJunctionConnect(walls, sourceNode, junction)) {
       const landing = flushConnectLanding(walls, sourceNode, junction)
       if (!landing) continue
+      if (!isApproachingFlushTarget(position, sourceNode, landing, junction)) continue
       const distLanding = distance(position, landing)
       const distT = distance(position, junction)
       // Na snap: op landing. Zonder snap maar dicht bij T: toch keep-axis commit.
@@ -698,6 +725,7 @@ export function snapPointToJunctionsFlushAware(
     if (isFlushOnlyJunctionConnect(walls, source, junction)) {
       const landing = flushConnectLanding(walls, source, junction)
       if (!landing) continue
+      if (!isApproachingFlushTarget(point, source, landing, junction)) continue
       const dist = Math.min(distance(point, junction), distance(point, landing))
       if (dist <= bestDist) {
         bestDist = dist

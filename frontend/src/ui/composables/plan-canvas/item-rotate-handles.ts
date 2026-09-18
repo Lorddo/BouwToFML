@@ -10,6 +10,11 @@ export type ItemRotateCorner = 'ne' | 'se' | 'sw' | 'nw'
 
 const CORNERS: readonly ItemRotateCorner[] = ['ne', 'se', 'sw', 'nw']
 
+/** Zelfde glyph als fixture-rotatie (cirkel + pijl, schermvast). */
+export const ITEM_ROTATE_HANDLE_ARC_D = 'M 1.4 -2.5 A 2.8 2.8 0 1 1 -1.4 -2.5'
+export const ITEM_ROTATE_HANDLE_HEAD_D = 'M 1.4 -2.5 L 0.2 -4.1 L 2.7 -3.9 Z'
+export const ITEM_ROTATE_HANDLE_COLOR = '#ea580c'
+
 /** Magnet for 90°/180° and nearby wall angles while dragging a rotate handle. */
 export const ITEM_ROTATE_SNAP_DEG = 12
 

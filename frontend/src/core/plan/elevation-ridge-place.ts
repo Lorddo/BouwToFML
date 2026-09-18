@@ -3,14 +3,14 @@
  * klik → verdieping + buitenface→buitenface (sky-exposed).
  */
 import { ELEVATION_RIDGE_MIN_SIZE_CM } from './elevation-ridge-edit'
-import { snapElevationX } from './elevation-hit'
+import { collectElevationRoofSnapXs, ELEVATION_ROOF_Z_SNAP_CM, snapElevationX } from './elevation-hit'
 import {
   elevationDepthCm,
   elevationOutwardPerp,
   type ElevationRect,
   type FacadeElevation,
 } from './facade-elevation'
-import { floorWallBaseWorldZ } from './floor-stack'
+import { floorCeilingWorldZ, floorSlabWorldRange, floorWallBaseWorldZ } from './floor-stack'
 import { floorInteriorHitsPoint, isPointSkyExposedOnFloor } from './ridge-floor'
 import {
   assignRidgeWallGuids,
@@ -42,6 +42,8 @@ export type ElevationRidgePlaceResult = {
 
 const FACE_HIT_PAD = 0.15
 const X_PRESENT_SLACK_CM = 2
+/** Onderkant plaat + lichte snap eronder blijft floor N (goot op de plaat). */
+const SLAB_SOFFIT_SNAP_CM = ELEVATION_ROOF_Z_SNAP_CM
 
 function clonePlanForPlace(plan: FloorPlan): FloorPlan {
   return {
@@ -112,8 +114,9 @@ export function floorPresentAtElevationX(
 }
 
 /**
- * Hoogste floor met basis ≤ worldZ (−Y) die op X bestaat.
- * Geveldriehoek boven een lagere aanbouw → die lagere floor.
+ * Hoogste floor waarvan de vloerplaat de klik dekt.
+ * Onderkant plaat + snap-slack eronder blijft die floor (1e-dakplaat op de
+ * plaat-onderkant). Geen dak op een floor als er een verdiepingsvloer op X zit.
  */
 export function resolveElevationRidgeFloor(
   plan: FloorPlan,
@@ -122,11 +125,86 @@ export function resolveElevationRidgeFloor(
 ): number {
   const worldZ = -click.y
   for (let index = plan.floors.length - 1; index >= 0; index -= 1) {
-    if (floorWallBaseWorldZ(plan, index) > worldZ + 1e-6) continue
+    const slab = floorSlabWorldRange(plan, index)
+    if (!slab) continue
+    if (index > 0 && worldZ < slab.z0 - SLAB_SOFFIT_SNAP_CM) continue
     if (!floorPresentAtElevationX(plan, elev, index, click.x)) continue
     return index
   }
   return -1
+}
+
+/** True als floor+1 op deze aanzicht-X een gevel heeft — geen dak eronder. */
+export function storeyAboveBlocksRoofAtX(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  floorIndex: number,
+  xCm: number,
+): boolean {
+  return floorPresentAtElevationX(plan, elev, floorIndex + 1, xCm)
+}
+
+/** Aanzicht-Y van de onderkant van déze vloerplaat (goot-snap). */
+export function elevationFloorSoffitYAtX(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  floorIndex: number,
+  xCm: number,
+): number | null {
+  if (!floorPresentAtElevationX(plan, elev, floorIndex, xCm)) return null
+  const slab = floorSlabWorldRange(plan, floorIndex)
+  return slab ? -slab.z0 : null
+}
+
+/** Aanzicht-Y van de verdiepingsvloer erboven, alleen waar die floor op X bestaat. */
+export function elevationCeilingYAtX(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  floorIndex: number,
+  xCm: number,
+): number | null {
+  if (!floorPresentAtElevationX(plan, elev, floorIndex + 1, xCm)) return null
+  const ceiling = floorCeilingWorldZ(plan, floorIndex)
+  return ceiling == null ? null : -ceiling
+}
+
+export function clampElevationYToFloorCeiling(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  floorIndex: number,
+  xCm: number,
+  yCm: number,
+): number {
+  const ceilingY = elevationCeilingYAtX(plan, elev, floorIndex, xCm)
+  if (ceilingY == null) return yCm
+  return Math.max(yCm, ceilingY)
+}
+
+export function clampLocalZToFloorCeiling(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  floorIndex: number,
+  xCm: number,
+  localZ: number,
+  minZ = 0,
+): number {
+  const floor = Number.isFinite(localZ) ? localZ : 0
+  if (!floorPresentAtElevationX(plan, elev, floorIndex + 1, xCm)) {
+    return Math.max(minZ, floor)
+  }
+  const ceiling = floorCeilingWorldZ(plan, floorIndex)
+  if (ceiling == null) return Math.max(minZ, floor)
+  const maxZ = Math.max(minZ, Math.round(ceiling - floorWallBaseWorldZ(plan, floorIndex)))
+  return Math.min(Math.max(minZ, floor), maxZ)
+}
+
+export function withFloorCeilingSnapYs(
+  ys: readonly number[],
+  ceilingY: number | null,
+): number[] {
+  const next = ceilingY == null ? [...ys] : ys.filter((y) => y >= ceilingY - 1e-6)
+  if (ceilingY != null) next.push(ceilingY)
+  return next
 }
 
 /**
@@ -218,14 +296,18 @@ function ridgeZFromClick(
   return Math.max(0, Math.round(worldCenter - spanCm / 2 - base))
 }
 
-/** Snap X op muurknopen (8 cm); Ctrl elders. */
+/** Snap X op muurknopen + dakvlak-punten van dezelfde floor (8 cm); Ctrl elders. */
 export function snapElevationRidgePlaceX(
   elev: FacadeElevation,
   xCm: number,
   snapOff = false,
+  floorIndex?: number,
 ): number {
   if (snapOff) return xCm
-  const xs = elev.junctions.filter((item) => !item.ridge).map((item) => item.x)
+  const xs = elev.junctions
+    .filter((item) => !item.ridge && (floorIndex == null || item.floorIndex === floorIndex))
+    .map((item) => item.x)
+  xs.push(...collectElevationRoofSnapXs(elev, undefined, floorIndex))
   return snapElevationX(xCm, xs, 8)
 }
 
@@ -235,14 +317,26 @@ export function previewRidgeFromElevation(
   click: Point2D,
   options?: { snapOff?: boolean },
 ): ElevationRidgePlacePreview | null {
-  const x = snapElevationRidgePlaceX(elev, click.x, options?.snapOff === true)
+  const floorHint = resolveElevationRidgeFloor(plan, elev, click)
+  const x = snapElevationRidgePlaceX(
+    elev,
+    click.x,
+    options?.snapOff === true,
+    floorHint >= 0 ? floorHint : undefined,
+  )
   const snapped = { x, y: click.y }
-  const floorIndex = resolveElevationRidgeFloor(plan, elev, snapped)
+  const floorIndex = floorHint >= 0 ? floorHint : resolveElevationRidgeFloor(plan, elev, snapped)
   if (floorIndex < 0) return null
   const span = spanElevationRidgeOnFloor(plan, floorIndex, elev, x)
   if (!span) return null
   const spanCm = dakThicknessCmForPlan(plan)
-  const zCm = ridgeZFromClick(plan, floorIndex, snapped.y, spanCm)
+  const zCm = clampLocalZToFloorCeiling(
+    plan,
+    elev,
+    floorIndex,
+    x,
+    ridgeZFromClick(plan, floorIndex, snapped.y, spanCm),
+  )
   return {
     floorIndex,
     a: span.a,

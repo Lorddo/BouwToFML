@@ -17,9 +17,6 @@ export interface HScaleState {
  */
 export const SCALE_AXIS_MISMATCH_WARN_PCT = 2
 
-/** Stap-4 rescale: FML-geometrie factor = trueCm / measuredCm; clamp. */
-export const SCALE_GEOMETRY_FACTOR_MIN = 0.5
-export const SCALE_GEOMETRY_FACTOR_MAX = 2
 /** Minimale maatlijn-lengte (cm) vóór rescale toegestaan. */
 export const SCALE_RESCALE_MIN_MEASURED_CM = 50
 
@@ -191,7 +188,8 @@ export function useHScaleCalibration() {
 
   /**
    * Stap-4 rescale: px/mm per as ÷ factor; optioneel absolute distanceMm.
-   * Aparte H/V (zoals stap 1). Minstens één as ≠ 1; elke as in [0.5, 2].
+   * Aparte H/V (zoals stap 1). Minstens één as ≠ 1. Geen 0.5–2-klem —
+   * herschalen moet een foute stap-1-schaal (15 m → 36 m) kunnen rechtzetten.
    */
   function applyAxisGeometryFactors(
     factorX: number,
@@ -199,14 +197,7 @@ export function useHScaleCalibration() {
     distances?: { distanceMmX: number; distanceMmY: number },
   ): boolean {
     if (!confirmed.value) return false
-    if (
-      !Number.isFinite(factorX) ||
-      !Number.isFinite(factorY) ||
-      factorX < SCALE_GEOMETRY_FACTOR_MIN ||
-      factorX > SCALE_GEOMETRY_FACTOR_MAX ||
-      factorY < SCALE_GEOMETRY_FACTOR_MIN ||
-      factorY > SCALE_GEOMETRY_FACTOR_MAX
-    ) {
+    if (!Number.isFinite(factorX) || !Number.isFinite(factorY) || factorX <= 0 || factorY <= 0) {
       return false
     }
     if (Math.abs(factorX - 1) < 1e-9 && Math.abs(factorY - 1) < 1e-9) return false

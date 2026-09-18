@@ -19,6 +19,7 @@ import {
   wallsInStampGroup,
 } from './facade-groups'
 import { DEFAULT_WALL_HEIGHT_CM } from './extraction-to-plan-types'
+import { mergeStraightLJunctions } from './merge-straight-l-junctions'
 import { markStampOwned } from './stamp-owned'
 import { translatePointByOffset } from './stamp-nulpunt'
 import type { FloorPlan, Point2D, Wall } from './types'
@@ -202,7 +203,7 @@ export function applyStampToFloor(
     return { plan, addedWallIds: [], skippedCount: 0, sourceCount: 0 }
   }
 
-  const sources = collectStampSourceWalls(plan, targetFloorIndex)
+  const sources = mergeStraightLJunctions(collectStampSourceWalls(plan, targetFloorIndex)).walls
   if (sources.length === 0) {
     return { plan, addedWallIds: [], skippedCount: 0, sourceCount: 0 }
   }
@@ -294,8 +295,9 @@ export function injectStampWallsIntoPlan(
   let skippedCount = 0
   let removedOverlapCount = 0
   const facadePlan = options?.facadeLookupPlan ?? plan
+  const mergedSources = mergeStraightLJunctions(sources).walls
 
-  for (const source of sources) {
+  for (const source of mergedSources) {
     const placedA = translatePointByOffset(source.a, offsetCm)
     const placedB = translatePointByOffset(source.b, offsetCm)
     const matches = findMatchingSegmentIndices(nextWalls, placedA, placedB, epsCm)
@@ -357,7 +359,7 @@ export function canApplyStampToFloor(
   if (!plan) return false
   const floor = plan.floors[targetFloorIndex]
   if (!floor) return false
-  const sources = collectStampSourceWalls(plan, targetFloorIndex)
+  const sources = mergeStraightLJunctions(collectStampSourceWalls(plan, targetFloorIndex)).walls
   if (sources.length === 0) return false
   const epsCm = options?.epsCm ?? STAMP_APPLY_SEGMENT_EPS_CM
   return sources.some((source) => !hasMatchingSegment(floor.walls, source.a, source.b, epsCm))

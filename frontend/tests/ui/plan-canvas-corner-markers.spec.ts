@@ -4,6 +4,7 @@ import { buildJunctions } from '@/core/plan/junction-core'
 import {
   CORNER_AXIS_EPS_CM,
   CORNER_MARKER_PAD_CM,
+  CORNER_SQUARE_EPS_DEG,
   buildCornerMarkers,
   classifyWallAxis,
   innerCornerAnchorCm,
@@ -38,12 +39,31 @@ describe('listCornerSectors', () => {
     expect(sectors[0].y).toBeGreaterThan(10)
   })
 
-  it('1 mm-scheve L → 1 skew', () => {
-    const walls = [wall('h', 0, 0, 100, 0.15), wall('v', 0, 0, 0, 80)]
+  it('niet-haakse L (~5°) → 1 skew', () => {
+    const walls = [wall('h', 0, 0, 100, Math.tan((5 * Math.PI) / 180) * 100), wall('v', 0, 0, 0, 80)]
     const [junction] = buildJunctions(walls)
     const sectors = listCornerSectors(junction, walls)
     expect(sectors).toHaveLength(1)
     expect(sectors[0].kind).toBe('skew')
+  })
+
+  it('gedraaide haakse L (45°) → 1 square', () => {
+    const walls = [wall('a', 0, 0, 80, 80), wall('b', 0, 0, -80, 80)]
+    const [junction] = buildJunctions(walls)
+    const sectors = listCornerSectors(junction, walls)
+    expect(sectors).toHaveLength(1)
+    expect(sectors[0].kind).toBe('square')
+  })
+
+  it(`90° − ½ε blijft square; 90° − 2ε is skew (ε=${CORNER_SQUARE_EPS_DEG}°)`, () => {
+    const ray = (deg: number): [number, number] => {
+      const rad = (deg * Math.PI) / 180
+      return [Math.cos(rad) * 100, Math.sin(rad) * 100]
+    }
+    const within = [wall('h', 0, 0, 100, 0), wall('a', 0, 0, ...ray(90 - CORNER_SQUARE_EPS_DEG * 0.5))]
+    const outside = [wall('h', 0, 0, 100, 0), wall('a', 0, 0, ...ray(90 - CORNER_SQUARE_EPS_DEG * 2))]
+    expect(listCornerSectors(buildJunctions(within)[0], within)[0].kind).toBe('square')
+    expect(listCornerSectors(buildJunctions(outside)[0], outside)[0].kind).toBe('skew')
   })
 
   it('collinear doorgang → 0', () => {
@@ -69,11 +89,23 @@ describe('listCornerSectors', () => {
   })
 
   it('scheve T-tak → 2 skew', () => {
-    const walls = [wall('l', -80, 0, 0, 0), wall('r', 0, 0, 80, 0), wall('stem', 0, 0, 2, -60)]
+    const walls = [wall('l', -80, 0, 0, 0), wall('r', 0, 0, 80, 0), wall('stem', 0, 0, 8, -60)]
     const hub = buildJunctions(walls).find((j) => j.refs.length === 3)
     const sectors = listCornerSectors(hub!, walls)
     expect(sectors).toHaveLength(2)
     expect(sectors.every((s) => s.kind === 'skew')).toBe(true)
+  })
+
+  it('gedraaide haakse T (45°) → 2 square', () => {
+    const walls = [
+      wall('l', -80, -80, 0, 0),
+      wall('r', 0, 0, 80, 80),
+      wall('stem', 0, 0, -80, 80),
+    ]
+    const hub = buildJunctions(walls).find((j) => j.refs.length === 3)
+    const sectors = listCornerSectors(hub!, walls)
+    expect(sectors).toHaveLength(2)
+    expect(sectors.every((s) => s.kind === 'square')).toBe(true)
   })
 
   it('perfect X → 4 square', () => {
@@ -124,19 +156,22 @@ describe('innerCornerAnchorCm', () => {
 
 describe('buildCornerMarkers', () => {
   const lWalls = [wall('h', 0, 0, 100, 0), wall('v', 0, 0, 0, 80)]
-  const skewL = [wall('h', 0, 0, 100, 0.15), wall('v', 0, 0, 0, 80)]
+  const rotatedSquare = [wall('a', 0, 0, 80, 80), wall('b', 0, 0, -80, 80)]
+  const skewL = [wall('h', 0, 0, 100, Math.tan((5 * Math.PI) / 180) * 100), wall('v', 0, 0, 0, 80)]
 
   it('off → leeg', () => {
     expect(buildCornerMarkers(lWalls, 'off')).toHaveLength(0)
   })
 
-  it('square toont alleen exacte H+V', () => {
+  it('square toont alleen exacte 90° (H/V én gedraaid)', () => {
     expect(buildCornerMarkers(lWalls, 'square')).toHaveLength(1)
+    expect(buildCornerMarkers(rotatedSquare, 'square')).toHaveLength(1)
     expect(buildCornerMarkers(skewL, 'square')).toHaveLength(0)
   })
 
-  it('skew toont alleen niet-H+V', () => {
+  it('skew toont alleen niet-90°', () => {
     expect(buildCornerMarkers(lWalls, 'skew')).toHaveLength(0)
+    expect(buildCornerMarkers(rotatedSquare, 'skew')).toHaveLength(0)
     expect(buildCornerMarkers(skewL, 'skew')).toHaveLength(1)
   })
 })

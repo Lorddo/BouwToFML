@@ -15,11 +15,11 @@ import {
 import type { FloorOrientState } from '@/core/plan/floor-plan-orient'
 import type { Floor, FloorPlan, ImportWarning } from '@/core/plan/types'
 import {
-  createFactoryViewerSessionDefaults,
-  seedViewerDefaultsFromPlan,
-  sessionDefaultsFromPartial,
-  type ViewerSessionDefaults,
-} from '@/core/plan/viewer-session-defaults'
+  cloneFloorDefaults,
+  floorDefaultsFromTemplate,
+  readFloorDefaults,
+  seedMissingFloorDefaults,
+} from '@/core/plan/floor-defaults'
 import { seedPlanFromUserSettings } from '@/ui/composables/editor/seed-plan-stack-defaults'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
@@ -42,17 +42,11 @@ function yieldToPaint(): Promise<void> {
   })
 }
 
-function sessionDefaultsFromSettings(): ViewerSessionDefaults {
-  const d = loadUserSettings().defaults
-  return sessionDefaultsFromPartial({
-    wallHeightCm: d.wallHeightCm,
-    doorHeightCm: d.doorHeightCm,
-    windowHeightCm: d.windowHeightCm,
-    windowSillZCm: d.windowSillZCm,
-    bovenlichtDefault: d.bovenlichtDefault,
-    windowBovenlichtDefault: d.windowBovenlichtDefault,
-    bovenlichtHeightCm: d.bovenlichtHeightCm,
-    bovenlichtGapCm: d.bovenlichtGapCm,
+function floorDefaultsFromSettings() {
+  const settings = loadUserSettings()
+  return floorDefaultsFromTemplate({
+    ...settings.defaults,
+    openingFrameDefaults: settings.planDisplay.openingFrameDefaults,
   })
 }
 
@@ -66,7 +60,6 @@ export function useEditorLoad(deps: {
   error: Ref<string | null>
   fileName: Ref<string | null>
   activeFloorIndex: Ref<number>
-  sessionDefaults: Ref<ViewerSessionDefaults>
   orientByFloor: Ref<Record<number, FloorOrientState>>
   pendingAlignRebase: Ref<RebasePlanToItemRefidResult | null>
   contentOpacity: Ref<number>
@@ -81,9 +74,6 @@ export function useEditorLoad(deps: {
   clearUnderlayState: () => void
   syncUnderlayForActiveFloor: () => Promise<void>
   resetInspectState: () => void
-  hydrateFloorDefaultsFromPlan: (plan: FloorPlan | null) => void
-  addFloorDefaultsSlot: (index: number, source?: ViewerSessionDefaults) => void
-  removeFloorDefaultsSlot: (index: number) => void
   applyThicknessCatalog: (cms: readonly number[]) => void
 }) {
   const loadPhase = ref<PlanLoadPhase | null>(null)
@@ -163,17 +153,17 @@ export function useEditorLoad(deps: {
     deps.cancelPlanRescale()
     deps.cancelUnderlayScale()
     const nextIndex = current.floors.length
-    const defaults = sessionDefaultsFromSettings()
+    const sourceFloor = current.floors[deps.activeFloorIndex.value] ?? current.floors[0]
     const floor = createBlankFloor({
       name: emptyFloorNameIndexed(nextIndex),
       level: nextIndex,
-      wallHeightCm: defaults.wallHeightCm,
+      wallHeightCm: sourceFloor?.height,
+      defaults: cloneFloorDefaults(readFloorDefaults(current, deps.activeFloorIndex.value)),
     })
     deps.plan.value = seedPlanFromUserSettings(
       { ...current, floors: [...current.floors, floor] },
       { facadeCatalog: true },
     )
-    deps.addFloorDefaultsSlot(nextIndex, defaults)
     await selectFloor(nextIndex)
   }
 
@@ -196,7 +186,6 @@ export function useEditorLoad(deps: {
       nextOrient[to] = value
     }
     deps.orientByFloor.value = nextOrient
-    deps.removeFloorDefaultsSlot(index)
     deps.plan.value = { ...current, floors }
     const nextActive =
       deps.activeFloorIndex.value > index
@@ -208,13 +197,14 @@ export function useEditorLoad(deps: {
 
   function startNewPlan(): void {
     deps.flushPreviewFieldCommits()
-    const defaults = sessionDefaultsFromSettings()
+    const settings = loadUserSettings()
     deps.plan.value = seedPlanFromUserSettings(
-      createEmptyFloorPlan({ wallHeightCm: defaults.wallHeightCm }),
+      createEmptyFloorPlan({
+        wallHeightCm: settings.defaults.wallHeightCm,
+        defaults: floorDefaultsFromSettings(),
+      }),
       { facadeCatalog: true },
     )
-    deps.sessionDefaults.value = defaults
-    deps.hydrateFloorDefaultsFromPlan(deps.plan.value)
     deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.contentOpacity.value = 0.8
     deps.hidePlanText.value = false
@@ -225,15 +215,17 @@ export function useEditorLoad(deps: {
     plan: FloorPlan
     warnings: ImportWarning[]
     sourceName: string
-    sessionDefaults?: ViewerSessionDefaults
     thicknessCms?: readonly number[]
   }): Promise<void> {
     pruneFacadeGroups(args.plan)
     ensureDefaultFacadeGroups(args.plan, loadUserSettings().planDisplay.facadeGroups)
-    deps.plan.value = applyJunctionSanitizeToPlan(args.plan)
-    deps.sessionDefaults.value =
-      args.sessionDefaults ?? seedViewerDefaultsFromPlan(args.plan, 0)
-    deps.hydrateFloorDefaultsFromPlan(args.plan)
+    const settings = loadUserSettings()
+    deps.plan.value = seedMissingFloorDefaults(applyJunctionSanitizeToPlan(args.plan), {
+      template: floorDefaultsFromTemplate({
+        ...settings.defaults,
+        openingFrameDefaults: settings.planDisplay.openingFrameDefaults,
+      }),
+    })
     deps.applyThicknessCatalog(args.thicknessCms ?? catalogFromUserDefaults())
     deps.warnings.value = args.warnings
     deps.fileName.value = args.sourceName
@@ -252,8 +244,6 @@ export function useEditorLoad(deps: {
 
   function failOpen(): void {
     deps.plan.value = null
-    deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
-    deps.hydrateFloorDefaultsFromPlan(null)
     deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.warnings.value = []
     deps.fileName.value = null
@@ -321,10 +311,6 @@ export function useEditorLoad(deps: {
         plan: opened.plan,
         warnings: opened.warnings,
         sourceName: file.name,
-        sessionDefaults:
-          opened.kind === 'plg' && opened.plgSettings
-            ? sessionDefaultsFromPartial(opened.plgSettings.defaults)
-            : undefined,
         thicknessCms:
           opened.kind === 'plg' ? opened.plgSettings?.defaults.thicknessCms : undefined,
       })
@@ -339,8 +325,6 @@ export function useEditorLoad(deps: {
 
   function clearPlan(): void {
     deps.plan.value = null
-    deps.sessionDefaults.value = createFactoryViewerSessionDefaults()
-    deps.hydrateFloorDefaultsFromPlan(null)
     deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.contentOpacity.value = 0.8
     deps.hidePlanText.value = false

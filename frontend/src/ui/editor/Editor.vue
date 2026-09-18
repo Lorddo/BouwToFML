@@ -41,6 +41,7 @@ withDefaults(
     labelsVisible?: boolean
     rescaleMode?: boolean
     rescaleState?: HScaleState | null
+    rescaleSnapToWalls?: boolean
     canvasFullscreen?: boolean
     dimensionVis?: DimensionVis
     dakMode?: boolean
@@ -119,6 +120,7 @@ defineExpose({
     :labels-visible="labelsVisible"
     :rescale-mode="rescaleMode"
     :rescale-state="rescaleState"
+    :rescale-snap-to-walls="rescaleSnapToWalls !== false"
     :canvas-fullscreen="canvasFullscreen"
     :dimension-vis="dimensionVis"
     :dak-mode="dakMode"

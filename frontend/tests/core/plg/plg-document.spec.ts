@@ -98,6 +98,40 @@ describe('plg-document roundtrip', () => {
     expect(roundtrip).toBe(original)
   })
 
+  it('writePlg schrijft alleen https-drawing.url, geen data-URL', () => {
+    const https = sampleDoc()
+    https.plan.floors[0]!.drawing = {
+      x: 1,
+      y: 2,
+      width: 10,
+      height: 8,
+      rotation: 0,
+      url: 'https://pub.example.com/v1/p/f/scan.png',
+    }
+    const httpsWritten = JSON.parse(writePlg(https)) as {
+      plan: { floors: Array<{ drawing?: { url?: string; width: number } }> }
+    }
+    expect(httpsWritten.plan.floors[0]?.drawing?.url).toBe(
+      'https://pub.example.com/v1/p/f/scan.png',
+    )
+    expect(httpsWritten.plan.floors[0]?.drawing?.width).toBe(10)
+
+    const data = sampleDoc()
+    data.plan.floors[0]!.drawing = {
+      x: 1,
+      y: 2,
+      width: 10,
+      height: 8,
+      rotation: 0,
+      url: 'data:image/png;base64,AAA',
+    }
+    const dataWritten = JSON.parse(writePlg(data)) as {
+      plan: { floors: Array<{ drawing?: { url?: string; width: number } }> }
+    }
+    expect(dataWritten.plan.floors[0]?.drawing?.url).toBeUndefined()
+    expect(dataWritten.plan.floors[0]?.drawing?.width).toBe(10)
+  })
+
   it('writePlg stript FML-extras plg* uit openings/items/surfaces/design.settings', () => {
     const doc = sampleDoc()
     const wall = doc.plan.floors[0]?.walls[0]
@@ -124,6 +158,7 @@ describe('plg-document roundtrip', () => {
         width: 80,
         height: 80,
         roofSurfaceId: 'roof-1',
+        pitchDeg: 14,
         frame: { leftCm: 6, rightCm: 6, topCm: 4, bottomCm: 4 },
         extras: { plgRoofSurfaceId: 'should-not-persist' },
       },
@@ -165,6 +200,7 @@ describe('plg-document roundtrip', () => {
           items?: Array<{
             extras?: Record<string, unknown>
             roofSurfaceId?: string
+            pitchDeg?: number
             frame?: unknown
           }>
           designs?: Array<{
@@ -184,6 +220,7 @@ describe('plg-document roundtrip', () => {
     })
     expect(floor.walls[0]?.openings[0]?.extras?.plgFrame).toBeUndefined()
     expect(floor.items?.[0]?.roofSurfaceId).toBe('roof-1')
+    expect(floor.items?.[0]?.pitchDeg).toBe(14)
     expect(floor.items?.[0]?.frame).toEqual({ leftCm: 6, rightCm: 6, topCm: 4, bottomCm: 4 })
     expect(floor.items?.[0]?.extras?.plgRoofSurfaceId).toBeUndefined()
     expect(floor.designs?.[0]?.slices).toEqual([{ m: { x: 0, y: 0 }, p: { x: 100, y: 0 } }])
@@ -245,6 +282,25 @@ describe('plg-document roundtrip', () => {
     expect(round?.bovenlicht).toBe(true)
     expect(round?.bovenlichtHeightCm).toBe(45)
     expect(round?.bovenlichtGapCm).toBe(12)
+  })
+
+  it('readPlg zaait floor.defaults en schrijft ze terug; plan.settings.openingFrameDefaults verdwijnt', () => {
+    const doc = sampleDoc()
+    doc.plan.settings = {
+      ...(doc.plan.settings ?? {}),
+      openingFrameDefaults: {
+        door: { leftCm: 12, rightCm: 5, topCm: 5, bottomCm: 0 },
+        window: { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 },
+      },
+    }
+    const read = readPlg(doc)
+    expect(read.plan.floors[0]?.defaults?.openingFrameDefaults.door.leftCm).toBe(12)
+    expect(read.plan.settings?.openingFrameDefaults).toBeUndefined()
+    const written = JSON.parse(writePlg(read)) as {
+      plan: { floors: Array<{ defaults?: { doorHeightCm: number } }>; settings?: { openingFrameDefaults?: unknown } }
+    }
+    expect(written.plan.floors[0]?.defaults?.doorHeightCm).toBeGreaterThan(0)
+    expect(written.plan.settings?.openingFrameDefaults).toBeUndefined()
   })
 
   it('readPlg promoveert source.settings → typed en wist de keys', () => {

@@ -140,7 +140,6 @@ export function buildSkylightElevationGlyph(params: {
   const points = params.points
   if (points.length < 3) return empty
   const xs = points.map((p) => p.x)
-  const ys = points.map((p) => p.y)
   const projW = Math.max(0.1, Math.max(...xs) - Math.min(...xs))
   const worldW = Math.max(0.1, params.widthCm)
   const scaleX = projW / worldW

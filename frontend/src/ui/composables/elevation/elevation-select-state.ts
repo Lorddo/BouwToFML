@@ -208,14 +208,8 @@ export function createElevationSelectState(options: {
     return rect
   })
 
-  const wallAxisEndHandles = computed(() => {
-    const wall = selectedAxisEditWall.value
-    if (!wall) return []
-    return [
-      { end: 'a' as const, x: wall.aTop.x, y: wall.aTop.y },
-      { end: 'b' as const, x: wall.bTop.x, y: wall.bTop.y },
-    ]
-  })
+  /** XY van dakkapel-muren loopt via het dakvlak, niet via as-einden. */
+  const wallAxisEndHandles = computed(() => [] as Array<{ end: 'a' | 'b'; x: number; y: number }>)
 
   const openingSubtype = computed((): OpeningSubtypeDraft => {
     const opening = selectedOpening.value?.opening
@@ -294,10 +288,8 @@ export function createElevationSelectState(options: {
     const mx = (wall.xa + wall.xb) / 2
     const topY = (wall.aTop.y + wall.bTop.y) / 2
     const botY = (wall.aBottom.y + wall.bBottom.y) / 2
-    const midY = (topY + botY) / 2
     return [
       { mode: 'height' as const, x: mx, y: topY },
-      { mode: 'shift' as const, x: mx, y: midY },
       { mode: 'lift' as const, x: mx, y: botY },
     ]
   })
@@ -327,11 +319,7 @@ export function createElevationSelectState(options: {
   const junctionElevationHandles = computed(() => {
     const junction = settingsJunction.value
     if (!junction || junction.ridge) return []
-    const midY = (junction.yTop + junction.yBot) / 2
-    return [
-      { mode: 'shift' as const, x: junction.x, y: midY },
-      { mode: 'lift' as const, x: junction.x, y: junction.yBot },
-    ]
+    return [{ mode: 'lift' as const, x: junction.x, y: junction.yBot }]
   })
 
   const settingsSlab = computed(() => {

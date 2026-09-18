@@ -29,6 +29,7 @@ import {
   mergeJunctionsAware,
   isFlushOnlyJunctionConnect,
   flushConnectLanding,
+  findMergeTargetFlushAware,
   snapPointToJunctionsFlushAware,
   moveJunction,
   ROOM_DRAW_SNAP_CM,
@@ -2069,7 +2070,7 @@ describe('snapToPolygonGeometry', () => {
 })
 
 describe('setWallBalance', () => {
-  it('writes balance keep-axis (centerline stays, overshoot allowed)', () => {
+  it('writes balance keep-axis (centerline stays, clamped 0–1)', () => {
     const walls = [
       {
         id: 'w1',
@@ -2080,9 +2081,9 @@ describe('setWallBalance', () => {
         openings: [],
       },
     ]
-    expect(clampBalance(-2.5)).toBe(-2.5)
-    expect(clampBalance(10)).toBe(10)
-    expect(clampBalance(12)).toBe(10)
+    expect(clampBalance(-2.5)).toBe(0)
+    expect(clampBalance(10)).toBe(1)
+    expect(clampBalance(12)).toBe(1)
     expect(clampBalance(0)).toBe(0)
     expect(clampBalance(1)).toBe(1)
     const updated = setWallBalance(walls, 'w1', 0.72)
@@ -2091,12 +2092,12 @@ describe('setWallBalance', () => {
     expect(updated[0]?.b).toEqual({ x: 100, y: 0 })
   })
 
-  it('converts percent for the toolbelt (slider 0–100, input may overshoot)', () => {
+  it('converts percent for the toolbelt (slider and input 0–100)', () => {
     expect(balanceToPercent(0.5)).toBe(50)
     expect(balanceToPercent(0.72)).toBe(72)
     expect(percentToBalance(50)).toBe(0.5)
-    expect(percentToBalance(-250)).toBe(-2.5)
-    expect(percentToBalance(1000)).toBe(10)
+    expect(percentToBalance(-250)).toBe(0)
+    expect(percentToBalance(1000)).toBe(1)
     expect(sliderPercentFromDraft(-250)).toBe(0)
     expect(sliderPercentFromDraft(1000)).toBe(100)
     expect(sliderPercentFromDraft(72)).toBe(72)
@@ -2390,5 +2391,65 @@ describe('keep-axis flush-connect', () => {
     expect(snapped.x).toBeCloseTo(100, 5)
     expect(snapped.y).toBeCloseTo(80, 5)
     expect(snapped.x).not.toBeCloseTo(target.x, 0)
+  })
+
+  it('bestaande T deelt een muur: geen keep-axis (andere poot blijft)', () => {
+    const walls = [
+      wall('leftH', { x: 0, y: 80 }, { x: 100, y: 80 }, 30),
+      wall('rightH', { x: 100, y: 80 }, { x: 220, y: 80 }, 10),
+      wall('down', { x: 100, y: 80 }, { x: 100, y: 160 }, 20),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'leftH' && r.end === 'a'))!
+    const tee = junctions.find(
+      (j) =>
+        j.refs.some((r) => r.wallId === 'leftH' && r.end === 'b') &&
+        j.refs.some((r) => r.wallId === 'down'),
+    )!
+    expect(isFlushOnlyJunctionConnect(walls, source, tee)).toBe(false)
+    const atPickup = snapPointToJunctionsFlushAware(
+      junctions.filter((j) => j.id !== source.id),
+      { x: source.x, y: source.y },
+      15,
+      walls,
+      source,
+    )
+    expect(atPickup).toEqual({ x: source.x, y: source.y })
+  })
+
+  it('oppakken bij nabije parallelle muur: geen snap/merge tot de pointer nadert', () => {
+    const walls = [
+      wall('topH', { x: 0, y: 72 }, { x: 120, y: 72 }, 30),
+      wall('botH', { x: 120, y: 80 }, { x: 300, y: 80 }, 10),
+      wall('down', { x: 120, y: 80 }, { x: 120, y: 160 }, 20),
+    ]
+    const junctions = buildJunctions(walls)
+    const source = junctions.find((j) => j.refs.some((r) => r.wallId === 'topH' && r.end === 'b'))!
+    const tee = junctions.find(
+      (j) =>
+        j.refs.some((r) => r.wallId === 'botH' && r.end === 'a') &&
+        j.refs.some((r) => r.wallId === 'down'),
+    )!
+    expect(isFlushOnlyJunctionConnect(walls, source, tee)).toBe(true)
+
+    const others = junctions.filter((j) => j.id !== source.id)
+    const atPickup = snapPointToJunctionsFlushAware(others, { x: source.x, y: source.y }, 15, walls, source)
+    expect(atPickup.y).toBeCloseTo(source.y, 5)
+    expect(atPickup.x).toBeCloseTo(source.x, 5)
+    expect(
+      findMergeTargetFlushAware(junctions, source.refs, { x: source.x, y: source.y }, walls, 3, {
+        x: source.x,
+        y: source.y,
+      }),
+    ).toBeNull()
+
+    const approaching = snapPointToJunctionsFlushAware(others, { x: 120, y: 79 }, 15, walls, source)
+    expect(approaching.y).toBeCloseTo(72, 5)
+    expect(
+      findMergeTargetFlushAware(junctions, source.refs, { x: 120, y: 79 }, walls, 3, {
+        x: source.x,
+        y: source.y,
+      })?.id,
+    ).toBe(tee.id)
   })
 })

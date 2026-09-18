@@ -29,6 +29,8 @@ export async function tryBuildPdfRoiCanvas(params: {
   sourceWidth: number
   sourceHeight: number
   eraserMask: Uint8Array | null
+  /** false = schone ROI voor stap-4/editor (geen gum). */
+  applyEraser?: boolean
 }): Promise<PdfRoiCommitResult | null> {
   const { pdfSource, bounds, sourceWidth, sourceHeight, eraserMask } = params
   if (!shouldReRenderPdfRoi(bounds, sourceWidth, sourceHeight)) {
@@ -48,7 +50,12 @@ export async function tryBuildPdfRoiCanvas(params: {
     scale: roiScale,
   })
 
-  if (eraserMask && eraserMask.length === sourceWidth * sourceHeight && maskHasInk(eraserMask)) {
+  if (
+    params.applyEraser !== false &&
+    eraserMask &&
+    eraserMask.length === sourceWidth * sourceHeight &&
+    maskHasInk(eraserMask)
+  ) {
     const roiMask = cropAndScaleMask(
       eraserMask,
       sourceWidth,

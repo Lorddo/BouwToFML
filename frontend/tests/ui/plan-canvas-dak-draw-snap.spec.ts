@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
+import { createBlankFloor, createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
 import { findRidgeDesignIndex } from '@/core/plan/ridge-walls'
 import type { FloorSurface, Wall } from '@/core/plan/types'
 import {
@@ -103,6 +103,60 @@ describe('plan-canvas-dak-draw-snap', () => {
     )
     expect(snapped.x).toBeCloseTo(40)
     expect(snapped.y).toBeCloseTo(80)
+  })
+
+  it('resolveRidgeDrawPoint snapt naar een dakvlak-hoek', () => {
+    const plan = boxPlan()
+    const floor = plan.floors[0]
+    const designIndex = findRidgeDesignIndex(floor)
+    const design = floor.designs?.[designIndex]
+    if (!design) throw new Error('ridge design ontbreekt')
+    design.surfaces = [
+      roofSurface('plane', [
+        { x: 20, y: 20 },
+        { x: 80, y: 20 },
+        { x: 80, y: 70 },
+        { x: 20, y: 70 },
+      ]),
+    ]
+    const snapped = resolveRidgeDrawPoint(
+      { x: 22, y: 68 },
+      {
+        plan,
+        floorIndex: 0,
+        walls: floor.walls,
+        lockAxis: false,
+      },
+    )
+    expect(snapped.x).toBeCloseTo(20)
+    expect(snapped.y).toBeCloseTo(70)
+  })
+
+  it('dakvlak-punt snapt niet naar een dakvlak op een andere floor', () => {
+    const plan = boxPlan()
+    plan.floors.push(createBlankFloor({ name: '1e', level: 1, wallHeightCm: 280 }))
+    plan.floors[1].walls = plan.floors[0].walls.map((item) => ({
+      ...item,
+      id: `up-${item.id}`,
+    }))
+    const upper = plan.floors[1]
+    const designIndex = findRidgeDesignIndex(upper)
+    const design = upper.designs?.[designIndex]
+    if (!design) throw new Error('ridge design ontbreekt')
+    design.surfaces = [
+      roofSurface('upper-plane', [
+        { x: 20, y: 20 },
+        { x: 40, y: 20 },
+        { x: 40, y: 40 },
+        { x: 20, y: 40 },
+      ]),
+    ]
+    const snapped = resolveDakSurfacePoint(
+      { x: 22, y: 22 },
+      { plan, floorIndex: 0, lockAxis: false },
+    )
+    expect(snapped.x).not.toBeCloseTo(20, 0)
+    expect(snapped.y).not.toBeCloseTo(20, 0)
   })
 
   it('resolveRidgeDrawPoint met snapDisabled blijft op de pointer (lege floor)', () => {

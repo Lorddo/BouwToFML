@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 import type Konva from 'konva'
 import { isCanvasLike } from '@/cv/port/canvasEnv'
+import { resolveUnderlayLoadUrl } from '@/platform/underlay-upload'
 import type { ViewportTransform } from '@/ui/components/canvas/canvas-guide-grid'
 import { readStageViewport } from '@/ui/components/canvas/canvas-guide-grid'
 
@@ -58,7 +59,7 @@ export function useFloorplanCanvasImage(deps: {
           }
         }
       }
-      img.src = src
+      img.src = resolveUnderlayLoadUrl(src)
     },
     { immediate: true },
   )
@@ -111,7 +112,7 @@ export function useFloorplanCanvasImage(deps: {
         if (loadGen !== rasterOverlayLoadGen) return
         rasterOverlayObj.value = null
       }
-      img.src = src
+      img.src = resolveUnderlayLoadUrl(src)
     },
     { immediate: true },
   )

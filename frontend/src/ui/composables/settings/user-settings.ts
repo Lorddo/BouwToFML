@@ -6,7 +6,12 @@ import {
   DEFAULT_WINDOW_HEIGHT_CM,
   DEFAULT_WINDOW_SILL_Z_CM,
 } from '@/core/plan/extraction-to-plan-types'
-import { defaultOpeningFrame, type OpeningFrameCm } from '@/core/plan/opening-kind-catalog'
+import { type OpeningFrameCm } from '@/core/plan/opening-kind-catalog'
+import {
+  createFactoryOpeningFrameDefaults,
+  normalizeOpeningFrameDefaults,
+  type OpeningFrameDefaults,
+} from '@/core/plan/opening-frame-defaults'
 import {
   catalogFromLegacyLimits,
   FACTORY_THICKNESS_CMS,
@@ -135,10 +140,8 @@ export type PlanDisplaySettings = {
   openingFrameDefaults: OpeningFrameDefaults
 }
 
-export type OpeningFrameDefaults = {
-  door: OpeningFrameCm
-  window: OpeningFrameCm
-}
+export type { OpeningFrameDefaults }
+export { createFactoryOpeningFrameDefaults }
 
 /** Auto-merge bij FML-conversie (X-10 / R-27); factory aan = huidig gedrag. */
 export type OpeningMergeSettings = {
@@ -224,34 +227,6 @@ export function createFactoryPlanDefaults(): ProjectPlanDefaults {
     slabThicknessCm: DEFAULT_FLOOR_THICKNESS_CM,
     bandMidBoundaryCm: DEFAULT_THICKNESS_BAND_BOUNDARIES.midBoundaryCm,
     bandMaxBoundaryCm: DEFAULT_THICKNESS_BAND_BOUNDARIES.maxBoundaryCm,
-  }
-}
-
-export function createFactoryOpeningFrameDefaults(): OpeningFrameDefaults {
-  return {
-    door: defaultOpeningFrame('door', 'single'),
-    window: defaultOpeningFrame('window', 'single'),
-  }
-}
-
-function normalizeOpeningFrameCm(raw: unknown, factory: OpeningFrameCm): OpeningFrameCm {
-  const src = asRecord(raw)
-  return {
-    leftCm: nonNegativeCm(src.leftCm, factory.leftCm),
-    rightCm: nonNegativeCm(src.rightCm, factory.rightCm),
-    topCm: nonNegativeCm(src.topCm, factory.topCm),
-    bottomCm: nonNegativeCm(src.bottomCm, factory.bottomCm),
-  }
-}
-
-function normalizeOpeningFrameDefaults(
-  raw: unknown,
-  factory: OpeningFrameDefaults = createFactoryOpeningFrameDefaults(),
-): OpeningFrameDefaults {
-  const src = asRecord(raw)
-  return {
-    door: normalizeOpeningFrameCm(src.door, factory.door),
-    window: normalizeOpeningFrameCm(src.window, factory.window),
   }
 }
 
@@ -540,6 +515,33 @@ export function setShowRoofOverlayOnPlan(show: boolean): boolean {
     ...current,
     planDisplay: { ...current.planDisplay, showRoofOverlayOnPlan: show === true },
   }).planDisplay.showRoofOverlayOnPlan
+}
+
+/** Persist kozijnvelden in opening-strook (Settings + editor-Kozijnen). */
+export function setShowOpeningFrameEdit(show: boolean): boolean {
+  const current = loadUserSettings()
+  return saveUserSettings({
+    ...current,
+    planDisplay: { ...current.planDisplay, showOpeningFrameEdit: show === true },
+  }).planDisplay.showOpeningFrameEdit
+}
+
+/** Persist één kozijn-default (nieuwe openingen). */
+export function setOpeningFrameDefaultCm(
+  kind: 'door' | 'window',
+  side: keyof OpeningFrameCm,
+  cm: number,
+): OpeningFrameDefaults {
+  const current = loadUserSettings()
+  const nextDefaults: OpeningFrameDefaults = {
+    door: { ...current.planDisplay.openingFrameDefaults.door },
+    window: { ...current.planDisplay.openingFrameDefaults.window },
+  }
+  nextDefaults[kind] = { ...nextDefaults[kind], [side]: cm }
+  return saveUserSettings({
+    ...current,
+    planDisplay: { ...current.planDisplay, openingFrameDefaults: nextDefaults },
+  }).planDisplay.openingFrameDefaults
 }
 
 export function resetUserSettingsToFactory(): UserSettingsV1 {

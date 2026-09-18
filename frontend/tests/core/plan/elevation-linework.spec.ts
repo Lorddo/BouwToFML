@@ -4,6 +4,7 @@ import { projectFacadeElevation } from '@/core/plan/facade-elevation'
 import { assignWallsToGroup, createFacadeGroup } from '@/core/plan/facade-groups'
 import { addPlanOpening } from '@/core/plan/elevation-openings'
 import { markWallAsRidge, ridgeEndpointExtras, setRidgeWallsOnFloor } from '@/core/plan/ridge-walls'
+import { makeRoofSurface, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
 import { buildElevationLinework, clipSegmentAgainstOccluder } from '@/core/plan/elevation-linework'
 import { elevationWallFillRings, groupElevationPaintPlanes } from '@/core/plan/elevation-paint'
 import { type FloorPlan, type Wall } from '@/core/plan/types'
@@ -183,5 +184,30 @@ describe('elevation-linework', () => {
     // Nok-balk is de outline; geen extra AABB-band achter de balk.
     const nokBandCount = elev.bands.filter((b) => b.kind === 'nok').length
     expect(nokBandCount).toBe(0)
+  })
+
+  it('dakvlak zonder nok: dakplaat-outline, geen placeholder-band', () => {
+    const plan = createEmptyFloorPlan({ name: 'Roof', wallHeightCm: 280 })
+    plan.floors[0].walls = [wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })]
+    const group = createFacadeGroup(plan, { name: 'VG', code: 'VG' })
+    assignWallsToGroup(plan, group.id, ['front'])
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'roof-s',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 200, z: 400 },
+          { x: 0, y: 200, z: 400 },
+        ],
+      }),
+    ])
+    const elev = projectFacadeElevation(plan, group.id)!
+    expect(elev.roofPlanes).toHaveLength(1)
+    expect(elev.bands.some((b) => b.kind === 'nok')).toBe(false)
+    const lw = buildElevationLinework(elev)
+    expect(lw.strokes.some((s) => s.role === 'roof')).toBe(true)
+    expect(lw.strokes.some((s) => s.role === 'ridge')).toBe(false)
   })
 })

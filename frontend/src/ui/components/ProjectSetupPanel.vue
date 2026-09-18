@@ -219,7 +219,6 @@ function onRenameBlur(floorId: string, event: Event) {
           ]
         "
         :unit="unit"
-        hide-suffix
         @update:cms="
           emit('update:floorDefaults', {
             thicknessCms: $event,

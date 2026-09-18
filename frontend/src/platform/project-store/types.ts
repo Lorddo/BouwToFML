@@ -1,5 +1,6 @@
 import type { Floor, FloorPlan } from '@/core/plan/types'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
+import type { SourceToWorkingTransform } from '@/core/plan/source-underlay-transform'
 import type {
   FloorMeta,
   FloorOrientPersist,
@@ -67,6 +68,12 @@ export type PersistedSourceUnderlay = {
     pageWidthPx: number
     pageHeightPx: number
   }
+  inputRotation?: {
+    rotationDeg: number
+    rotate180: boolean
+    autoRotationDeg?: number
+  } | null
+  scaleSpace?: 'source' | 'working'
 }
 
 /** One shared PDF page for reuse/ROI (bytes + page). Omitted on quota retry. */
@@ -99,6 +106,17 @@ export type PlgFloorDocument = {
   scale: PersistedDevSession['scale'] | null
   /** Per-floor bronscan (vóór crop); optioneel. */
   sourceUnderlay?: PersistedSourceUnderlay | null
+  /** Stap-4/editor-plaat; pngBytes weggelaten als die gelijk is aan sourceUnderlay. */
+  planUnderlay?: PersistedPlanUnderlay | null
+  sourceToWorking?: SourceToWorkingTransform | null
+}
+
+export type PersistedPlanUnderlay = {
+  width: number
+  height: number
+  remoteUrl?: string
+  sameAsSource?: boolean
+  pngBytes?: Uint8Array
 }
 
 /**

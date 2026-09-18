@@ -59,16 +59,16 @@ describe('wall balance keep-axis', () => {
     expect(flushFaces.right.a.y).toBeCloseTo(30, 6)
   })
 
-  it('allows Floorplanner overshoot beyond 0–1 (clamped at ±1000%)', () => {
-    expect(clampWallBalance(-2.5)).toBeCloseTo(-2.5, 6)
-    expect(clampWallBalance(10)).toBe(10)
-    expect(clampWallBalance(12)).toBe(10)
+  it('clamps balance to 0–1 (0–100%)', () => {
+    expect(clampWallBalance(-2.5)).toBe(0)
+    expect(clampWallBalance(10)).toBe(1)
+    expect(clampWallBalance(12)).toBe(1)
     expect(clampWallBalance(undefined)).toBe(0.5)
 
     const overshoot = { a: { x: 0, y: 0 }, b: { x: 100, y: 0 }, thickness: 20, balance: -2.5 }
     const faces = wallFaces(overshoot)
-    expect(faces.left.a.y).toBeCloseTo(50, 6)
-    expect(faces.right.a.y).toBeCloseTo(70, 6)
+    expect(faces.left.a.y).toBeCloseTo(0, 6)
+    expect(faces.right.a.y).toBeCloseTo(20, 6)
   })
 })
 

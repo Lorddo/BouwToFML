@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
+import type Konva from 'konva'
 import type { HScaleState } from '@/platform/calibration'
+import { scaleOverlayHandleValue, type ScaleOverlayHandle } from './floorplan-scale-overlay'
 
 const LABEL_FONT_PX = 13
 const LABEL_GAP_PX = 16
 
-const props = defineProps<{
-  scaleState: HScaleState
-  imgWidth: number
-  imgHeight: number
-  stageScale: number
-}>()
+const props = withDefaults(
+  defineProps<{
+    scaleState: HScaleState
+    imgWidth: number
+    imgHeight: number
+    stageScale: number
+    spacePressed?: boolean
+  }>(),
+  { spacePressed: false },
+)
 
 const emit = defineEmits<{
   moveScaleHandle: [handle: keyof HScaleState, value: number]
 }>()
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value))
-}
 
 /** Schermconstante H/V-letters bij de handles — schalen niet mee met zoom. */
 const axisEndLabels = computed(() => {
@@ -53,37 +55,67 @@ const axisEndLabels = computed(() => {
   ]
 })
 
-function bindDragX(currentY: number) {
-  return (pos: { x: number; y: number }) => ({
-    x: clamp(pos.x, 0, props.imgWidth),
-    y: currentY,
-  })
-}
-
-function bindDragY(currentX: number) {
-  return (pos: { x: number; y: number }) => ({
-    x: currentX,
-    y: clamp(pos.y, 0, props.imgHeight),
-  })
-}
-
-function bindDragVerticalLeg() {
-  return (pos: { x: number; y: number }) => ({
-    x: clamp(pos.x, -10, props.imgWidth - 10),
-    y: 0,
-  })
-}
-
-function bindDragHorizontalLeg() {
-  return (pos: { x: number; y: number }) => ({
-    x: 0,
-    y: clamp(pos.y, -10, props.imgHeight - 10),
-  })
-}
-
 function legHalfWidth(): number {
   return Math.max(10, 12 / props.stageScale)
 }
+
+type DragSession = {
+  handle: ScaleOverlayHandle
+  stage: { setPointersPositions: (evt: PointerEvent | MouseEvent) => void }
+  parent: { getRelativePointerPosition: () => { x: number; y: number } | null }
+}
+
+const drag = ref<DragSession | null>(null)
+
+function applyPointer(event: PointerEvent | MouseEvent): void {
+  const session = drag.value
+  if (!session) return
+  session.stage.setPointersPositions(event)
+  const pos = session.parent.getRelativePointerPosition()
+  if (!pos) return
+  emit(
+    'moveScaleHandle',
+    session.handle,
+    scaleOverlayHandleValue(session.handle, pos, {
+      width: props.imgWidth,
+      height: props.imgHeight,
+    }),
+  )
+}
+
+function endDrag(): void {
+  if (!drag.value) return
+  drag.value = null
+  window.removeEventListener('pointermove', onWindowMove)
+  window.removeEventListener('pointerup', endDrag)
+  window.removeEventListener('pointercancel', endDrag)
+}
+
+function onWindowMove(event: PointerEvent): void {
+  applyPointer(event)
+}
+
+function onHandleDown(
+  handle: ScaleOverlayHandle,
+  event: Konva.KonvaEventObject<PointerEvent | MouseEvent>,
+): void {
+  if (drag.value || props.spacePressed) return
+  if ('button' in event.evt && event.evt.button !== 0) return
+  const stage = event.target.getStage()
+  const parent = event.target.getParent()
+  if (!stage || !parent) return
+  event.cancelBubble = true
+  event.evt.preventDefault()
+  drag.value = { handle, stage, parent }
+  applyPointer(event.evt)
+  window.addEventListener('pointermove', onWindowMove)
+  window.addEventListener('pointerup', endDrag)
+  window.addEventListener('pointercancel', endDrag)
+}
+
+onUnmounted(() => {
+  endDrag()
+})
 </script>
 
 <template>
@@ -95,10 +127,9 @@ function legHalfWidth(): number {
         width: Math.max(20, 24 / stageScale),
         height: imgHeight,
         fill: '#00000000',
-        draggable: true,
-        dragBoundFunc: bindDragVerticalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'xLeft', ($event.target as any).x() + legHalfWidth())"
+      @pointerdown="onHandleDown('xLeft', $event)"
+      @mousedown="onHandleDown('xLeft', $event)"
     />
     <v-rect
       :config="{
@@ -107,10 +138,9 @@ function legHalfWidth(): number {
         width: Math.max(20, 24 / stageScale),
         height: imgHeight,
         fill: '#00000000',
-        draggable: true,
-        dragBoundFunc: bindDragVerticalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'xRight', ($event.target as any).x() + legHalfWidth())"
+      @pointerdown="onHandleDown('xRight', $event)"
+      @mousedown="onHandleDown('xRight', $event)"
     />
     <v-rect
       :config="{
@@ -119,10 +149,9 @@ function legHalfWidth(): number {
         width: imgWidth,
         height: Math.max(20, 24 / stageScale),
         fill: '#00000000',
-        draggable: true,
-        dragBoundFunc: bindDragHorizontalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'yTop', ($event.target as any).y() + legHalfWidth())"
+      @pointerdown="onHandleDown('yTop', $event)"
+      @mousedown="onHandleDown('yTop', $event)"
     />
     <v-rect
       :config="{
@@ -131,10 +160,9 @@ function legHalfWidth(): number {
         width: imgWidth,
         height: Math.max(20, 24 / stageScale),
         fill: '#00000000',
-        draggable: true,
-        dragBoundFunc: bindDragHorizontalLeg(),
       }"
-      @dragmove="emit('moveScaleHandle', 'yBottom', ($event.target as any).y() + legHalfWidth())"
+      @pointerdown="onHandleDown('yBottom', $event)"
+      @mousedown="onHandleDown('yBottom', $event)"
     />
 
     <v-line
@@ -143,6 +171,7 @@ function legHalfWidth(): number {
         stroke: '#0ea5e9',
         strokeWidth: 1,
         strokeScaleEnabled: false,
+        listening: false,
       }"
     />
     <v-line
@@ -151,6 +180,7 @@ function legHalfWidth(): number {
         stroke: '#0ea5e9',
         strokeWidth: 1,
         strokeScaleEnabled: false,
+        listening: false,
       }"
     />
     <v-line
@@ -159,6 +189,7 @@ function legHalfWidth(): number {
         stroke: '#0ea5e9',
         strokeWidth: 1,
         strokeScaleEnabled: false,
+        listening: false,
       }"
     />
     <v-line
@@ -167,6 +198,7 @@ function legHalfWidth(): number {
         stroke: '#f59e0b',
         strokeWidth: 1,
         strokeScaleEnabled: false,
+        listening: false,
       }"
     />
     <v-line
@@ -175,6 +207,7 @@ function legHalfWidth(): number {
         stroke: '#f59e0b',
         strokeWidth: 1,
         strokeScaleEnabled: false,
+        listening: false,
       }"
     />
     <v-line
@@ -183,6 +216,7 @@ function legHalfWidth(): number {
         stroke: '#f59e0b',
         strokeWidth: 1,
         strokeScaleEnabled: false,
+        listening: false,
       }"
     />
     <v-circle
@@ -191,10 +225,9 @@ function legHalfWidth(): number {
         y: scaleState.xGuideY,
         radius: Math.max(7, 9 / stageScale),
         fill: '#0284c7',
-        draggable: true,
-        dragBoundFunc: bindDragX(scaleState.xGuideY),
       }"
-      @dragmove="emit('moveScaleHandle', 'xLeft', ($event.target as any).x())"
+      @pointerdown="onHandleDown('xLeft', $event)"
+      @mousedown="onHandleDown('xLeft', $event)"
     />
     <v-circle
       :config="{
@@ -202,10 +235,9 @@ function legHalfWidth(): number {
         y: scaleState.xGuideY,
         radius: Math.max(7, 9 / stageScale),
         fill: '#0284c7',
-        draggable: true,
-        dragBoundFunc: bindDragX(scaleState.xGuideY),
       }"
-      @dragmove="emit('moveScaleHandle', 'xRight', ($event.target as any).x())"
+      @pointerdown="onHandleDown('xRight', $event)"
+      @mousedown="onHandleDown('xRight', $event)"
     />
     <v-circle
       :config="{
@@ -213,10 +245,9 @@ function legHalfWidth(): number {
         y: scaleState.yTop,
         radius: Math.max(7, 9 / stageScale),
         fill: '#d97706',
-        draggable: true,
-        dragBoundFunc: bindDragY(scaleState.yGuideX),
       }"
-      @dragmove="emit('moveScaleHandle', 'yTop', ($event.target as any).y())"
+      @pointerdown="onHandleDown('yTop', $event)"
+      @mousedown="onHandleDown('yTop', $event)"
     />
     <v-circle
       :config="{
@@ -224,10 +255,9 @@ function legHalfWidth(): number {
         y: scaleState.yBottom,
         radius: Math.max(7, 9 / stageScale),
         fill: '#d97706',
-        draggable: true,
-        dragBoundFunc: bindDragY(scaleState.yGuideX),
       }"
-      @dragmove="emit('moveScaleHandle', 'yBottom', ($event.target as any).y())"
+      @pointerdown="onHandleDown('yBottom', $event)"
+      @mousedown="onHandleDown('yBottom', $event)"
     />
     <v-text v-for="label in axisEndLabels" :key="label.key" :config="label.config" />
   </v-group>

@@ -13,16 +13,33 @@ export function isAccessPasswordRequired(
   return password.trim().length > 0
 }
 
+function storageGet(storage: Storage, key: string): string | null {
+  try {
+    return storage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function storageSet(storage: Storage, key: string, value: string): void {
+  try {
+    storage.setItem(key, value)
+  } catch {
+    // Private mode / blocked storage — caller still holds unlock in memory.
+  }
+}
+
 export function isAccessUnlocked(
   password: string = getConfiguredAccessPassword(),
   storageKey: string = ACCESS_UNLOCK_STORAGE_KEY,
 ): boolean {
   if (!isAccessPasswordRequired(password)) return true
-  try {
-    return sessionStorage.getItem(storageKey) === '1'
-  } catch {
-    return false
+  if (storageGet(localStorage, storageKey) === '1') return true
+  if (storageGet(sessionStorage, storageKey) === '1') {
+    storageSet(localStorage, storageKey, '1')
+    return true
   }
+  return false
 }
 
 export function checkAccessPassword(
@@ -35,11 +52,8 @@ export function checkAccessPassword(
 }
 
 export function unlockAccess(storageKey: string = ACCESS_UNLOCK_STORAGE_KEY): void {
-  try {
-    sessionStorage.setItem(storageKey, '1')
-  } catch {
-    // Private mode / blocked storage — caller still holds unlock in memory.
-  }
+  storageSet(localStorage, storageKey, '1')
+  storageSet(sessionStorage, storageKey, '1')
 }
 
 export function tryUnlockAccess(

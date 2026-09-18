@@ -1,6 +1,6 @@
 {
   "beschrijving": "FML-adapter: OpeningKind → canonieke Floorplanner-refid + aliases (import).",
-  "laatste_update": "2026-09-11",
+  "laatste_update": "2026-09-18",
   "entries": [
     {
       "kind": "door.single",
@@ -19,11 +19,18 @@
     {
       "kind": "door.passage",
       "canonical": "181e49d1e848e8668befb4ee93bb5a2ec86b017c",
-      "aliases": []
+      "aliases": [
+        "222"
+      ]
     },
     {
       "kind": "door.archway",
       "canonical": "047a2a4afa369865012e7925b94c11a817ff0c69",
+      "aliases": []
+    },
+    {
+      "kind": "door.round",
+      "canonical": "7000",
       "aliases": []
     },
     {
@@ -32,9 +39,26 @@
       "aliases": []
     },
     {
+      "kind": "door.balcony",
+      "canonical": "3263",
+      "aliases": []
+    },
+    {
+      "kind": "door.flush",
+      "canonical": "206",
+      "aliases": []
+    },
+    {
+      "kind": "door.half_glass",
+      "canonical": "204",
+      "aliases": []
+    },
+    {
       "kind": "door.double",
       "canonical": "5ae0ee3c682e32c8c7ac15a6136d692df5737b22",
-      "aliases": []
+      "aliases": [
+        "208"
+      ]
     },
     {
       "kind": "door.double_solid",
@@ -64,7 +88,9 @@
     {
       "kind": "door.sliding_single",
       "canonical": "d2785cc45c9c0ec86644135d22fa9ac9c49bcad6",
-      "aliases": []
+      "aliases": [
+        "6161"
+      ]
     },
     {
       "kind": "door.sliding",
@@ -74,26 +100,43 @@
       ]
     },
     {
+      "kind": "door.elevator",
+      "canonical": "3264",
+      "aliases": []
+    },
+    {
       "kind": "door.garage",
       "canonical": "37bb0bbe45ba0a5efda34f3f1e0b7ace63084e7f",
-      "aliases": []
+      "aliases": [
+        "212"
+      ]
     },
     {
       "kind": "window.single",
       "canonical": "b88cd3f479455fbf57205a91c613c02b7e6dc2df",
       "aliases": [
-        "14980facdeef5985d186e6767ee5300a1845abbc"
+        "14980facdeef5985d186e6767ee5300a1845abbc",
+        "218"
       ]
+    },
+    {
+      "kind": "window.grid",
+      "canonical": "b3af7fd4e5a6cb72575a00e389cd45936a8ede7d",
+      "aliases": []
     },
     {
       "kind": "window.double",
       "canonical": "bbf86e131112adca8869e9970229a71d7ff3fc28",
-      "aliases": []
+      "aliases": [
+        "219"
+      ]
     },
     {
       "kind": "window.triple",
       "canonical": "e3296a727699a3fc70e70dfec4ab715ed368ef63",
-      "aliases": []
+      "aliases": [
+        "220"
+      ]
     },
     {
       "kind": "window.round",

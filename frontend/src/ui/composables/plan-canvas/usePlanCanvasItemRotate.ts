@@ -67,6 +67,7 @@ export function usePlanCanvasItemRotate(options: {
       patch.y = snapped.y
     }
     options.editor.updateItem(guid, patch)
+    options.editor.refreshSkylightRoof(guid)
   }
 
   function beginRotate(

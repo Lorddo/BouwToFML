@@ -15,6 +15,7 @@ import {
   findStackedWallIds,
   hasElevationFacadeGroups,
   hydrateFacadeGroupsFromNativeMarkers,
+  inheritFacadeGroupsAfterWallsChanged,
   groupIdForWall,
   groupIdsForWall,
   isWallInStampGroup,
@@ -34,6 +35,7 @@ import { applyStampToFloor, canApplyStampToFloor } from '@/core/plan/apply-stamp
 import { importFmlV3 } from '@/core/fml/importFmlV3'
 import { applyJunctionSanitizeToPlan } from '@/core/plan/materialize-wall-junctions'
 import { sanitizePlanWallsDetailed } from '@/core/plan/sanitize-plan-walls'
+import { addRoomRect, addWallSegment } from '@/core/plan/wall-draw-geom'
 import type { FloorPlan, Wall } from '@/core/plan/types'
 
 function wall(
@@ -184,6 +186,86 @@ describe('facade-groups', () => {
     applyFacadeGroupRemaps(plan, [{ fromId: 'east', intoIds: ['east', 'east-b'] }])
     expect(wallGuidsInGroup(plan, 'G1').sort()).toEqual(['east', 'east-b'])
     expect(groupIdForWall(plan, 'branch')).toBeNull()
+  })
+
+  it('T-knoop in gevel-lid: beide host-helften in groep, tak niet', () => {
+    const plan = createEmptyFloorPlan({ name: 'Inherit T' })
+    const host = addWallSegment([], { x: 0, y: 0 }, { x: 400, y: 0 }, 20)
+    expect(host).not.toBeNull()
+    plan.floors[0].walls = host!.walls
+    createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, 'G1', [host!.wallId])
+
+    const branched = addWallSegment(host!.walls, { x: 200, y: 0 }, { x: 200, y: 120 }, 20)
+    expect(branched).not.toBeNull()
+    inheritFacadeGroupsAfterWallsChanged(plan, host!.walls, branched!.walls)
+    plan.floors[0].walls = branched!.walls
+
+    const members = wallGuidsInGroup(plan, 'G1')
+    expect(members).toContain(host!.wallId)
+    expect(members.some((id) => id.startsWith('split-host-'))).toBe(true)
+    expect(members).not.toContain(branched!.wallId)
+    expect(groupIdForWall(plan, branched!.wallId)).toBeNull()
+  })
+
+  it('extra kamer op gevel: restanten + parallelle voorzijde in groep, wangen niet', () => {
+    const plan = createEmptyFloorPlan({ name: 'Inherit room' })
+    const host = addWallSegment([], { x: 0, y: 0 }, { x: 400, y: 0 }, 20)
+    expect(host).not.toBeNull()
+    plan.floors[0].walls = host!.walls
+    createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, 'G1', [host!.wallId])
+
+    const room = addRoomRect(
+      host!.walls,
+      [
+        { x: 80, y: 0 },
+        { x: 220, y: 0 },
+        { x: 220, y: 90 },
+        { x: 80, y: 90 },
+      ],
+      20,
+    )
+    expect(room).not.toBeNull()
+    inheritFacadeGroupsAfterWallsChanged(plan, host!.walls, room!.walls)
+    plan.floors[0].walls = room!.walls
+
+    const members = wallGuidsInGroup(plan, 'G1')
+    expect(members).toContain(host!.wallId)
+    expect(members.some((id) => id.startsWith('split-host-'))).toBe(true)
+
+    const front = room!.walls.find(
+      (item) =>
+        Math.abs(item.a.y - 90) < 0.6 &&
+        Math.abs(item.b.y - 90) < 0.6 &&
+        Math.min(item.a.x, item.b.x) <= 80.6 &&
+        Math.max(item.a.x, item.b.x) >= 219.4,
+    )
+    expect(front).toBeTruthy()
+    expect(members).toContain(front!.id)
+
+    const sides = room!.walls.filter(
+      (item) =>
+        Math.abs(item.a.x - item.b.x) < 0.6 &&
+        (Math.abs(item.a.x - 80) < 0.6 || Math.abs(item.a.x - 220) < 0.6),
+    )
+    expect(sides.length).toBeGreaterThanOrEqual(2)
+    for (const side of sides) {
+      expect(members).not.toContain(side.id)
+    }
+  })
+
+  it('nieuw segment op dezelfde plek als lid wordt niet nog eens toegevoegd', () => {
+    const plan = planWithWalls(['host'])
+    plan.floors[0].walls = [wall('host', { x: 0, y: 0 }, { x: 200, y: 0 })]
+    createFacadeGroup(plan, { name: 'Voor' })
+    assignWallsToGroup(plan, 'G1', ['host'])
+    const after = [
+      wall('host', { x: 0, y: 0 }, { x: 200, y: 0 }),
+      wall('dup', { x: 0, y: 0 }, { x: 200, y: 0 }),
+    ]
+    inheritFacadeGroupsAfterWallsChanged(plan, plan.floors[0].walls, after)
+    expect(wallGuidsInGroup(plan, 'G1')).toEqual(['host'])
   })
 
   it('renameFacadeGroup wijzigt naam/code, niet id; geen native sync op muur', () => {

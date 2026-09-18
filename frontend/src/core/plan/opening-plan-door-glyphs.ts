@@ -4,6 +4,7 @@ import {
   BIFOLD_EDGE_GAP_CM,
   PLAN_LEAF_THICKNESS_CM,
   SLIDING_STAGGER_CM,
+  WINDOW_ORNAMENT_RADIUS_CM,
   type OpeningPlanSymbol,
   type PlanGlyph,
   type Point,
@@ -114,6 +115,23 @@ function buildWideDoubleGlyphs(params: {
       hingeAtStartOverride: false,
       swingSignOverride: swingSign,
     }),
+  ]
+}
+
+/** Dwarsstreep op het midden: 20 cm naar beide zijden van de muur. */
+export const FLUSH_CROSS_EXTEND_CM = 20
+
+function buildFlushGlyphs(start: Point, end: Point, wallUnit: Point): PlanGlyph[] {
+  const mid = midpoint(start, end)
+  const n = wallNormal(wallUnit)
+  return [
+    polyline('leaf', [start.x, start.y, end.x, end.y]),
+    polyline('leaf', [
+      mid.x - n.x * FLUSH_CROSS_EXTEND_CM,
+      mid.y - n.y * FLUSH_CROSS_EXTEND_CM,
+      mid.x + n.x * FLUSH_CROSS_EXTEND_CM,
+      mid.y + n.y * FLUSH_CROSS_EXTEND_CM,
+    ]),
   ]
 }
 
@@ -265,6 +283,58 @@ function buildSlidingPocketGlyphs(params: {
   ]
 }
 
+/** Liftdeuren: twee bladen vanuit het midden + pijlen naar buiten. */
+function buildElevatorGlyphs(params: {
+  start: Point
+  end: Point
+  wallUnit: Point
+  mirrored?: [number, number]
+  wallThickness?: number
+}): PlanGlyph[] {
+  const span = Math.hypot(params.end.x - params.start.x, params.end.y - params.start.y)
+  const wallTh =
+    params.wallThickness != null && params.wallThickness > 0
+      ? params.wallThickness
+      : SLIDING_ARROW_FALLBACK_THICKNESS
+  const mid = midpoint(params.start, params.end)
+  const arrowLen = Math.max(16, span * 0.18)
+  const offset = slidingArrowOffset(params.wallThickness)
+  const leftCenter = slidingArrowLane(
+    { x: (params.start.x + mid.x) / 2, y: (params.start.y + mid.y) / 2 },
+    params.wallUnit,
+    offset,
+    params.mirrored,
+  )
+  const rightCenter = slidingArrowLane(
+    { x: (mid.x + params.end.x) / 2, y: (mid.y + params.end.y) / 2 },
+    params.wallUnit,
+    offset,
+    params.mirrored,
+  )
+  const frameHalf = planFrameHalfDepth(wallTh)
+  const normal = wallNormal(params.wallUnit)
+  return [
+    polyline(
+      'leaf',
+      leafQuadInGap(params.start, params.end, params.wallUnit, 0, span / 2, wallTh),
+      true,
+    ),
+    polyline(
+      'leaf',
+      leafQuadInGap(params.start, params.end, params.wallUnit, span / 2, span, wallTh),
+      true,
+    ),
+    polyline('mullion', [
+      mid.x - normal.x * frameHalf,
+      mid.y - normal.y * frameHalf,
+      mid.x + normal.x * frameHalf,
+      mid.y + normal.y * frameHalf,
+    ]),
+    polyline('arrow', arrowAlongWall(leftCenter, params.wallUnit, arrowLen, false)),
+    polyline('arrow', arrowAlongWall(rightCenter, params.wallUnit, arrowLen, true)),
+  ]
+}
+
 function buildGarageGlyphs(params: {
   start: Point
   end: Point
@@ -393,6 +463,45 @@ function buildBifoldGlyphs(params: {
 /**
  * Archway: stippellijn buitenfaces + 7 dwarsstrepen (midden dichter, randen ruimer).
  */
+function buildRoundOpeningGlyphs(params: {
+  start: Point
+  end: Point
+  wallUnit: Point
+  wallThickness?: number
+}): PlanGlyph[] {
+  const glyphs = buildOpeningFaceSills({ ...params, dashed: true })
+  const mid = midpoint(params.start, params.end)
+  const normal = wallNormal(params.wallUnit)
+  const wallTh =
+    params.wallThickness != null && params.wallThickness > 0
+      ? params.wallThickness
+      : SLIDING_ARROW_FALLBACK_THICKNESS
+  const gapEdge = {
+    x: mid.x - normal.x * (wallTh / 2),
+    y: mid.y - normal.y * (wallTh / 2),
+  }
+  const radius = WINDOW_ORNAMENT_RADIUS_CM
+  const unitN = {
+    x: gapEdge.x - mid.x,
+    y: gapEdge.y - mid.y,
+  }
+  const nLen = Math.hypot(unitN.x, unitN.y) || 1
+  unitN.x /= nLen
+  unitN.y /= nLen
+  const center = {
+    x: gapEdge.x + unitN.x * (radius + 2),
+    y: gapEdge.y + unitN.y * (radius + 2),
+  }
+  const points: number[] = []
+  const samples = 24
+  for (let i = 0; i <= samples; i += 1) {
+    const a = (i / samples) * Math.PI * 2
+    points.push(center.x + Math.cos(a) * radius, center.y + Math.sin(a) * radius)
+  }
+  glyphs.push(polyline('ornament', points))
+  return glyphs
+}
+
 function buildArchwayGlyphs(params: {
   start: Point
   end: Point
@@ -578,6 +687,15 @@ export function buildDoorKindGlyphs(params: BuildDoorPlanSymbolInput): OpeningPl
           wallThickness: params.wallThickness,
         }),
       }
+    case 'round_opening':
+      return {
+        glyphs: buildRoundOpeningGlyphs({
+          start: params.start,
+          end: params.end,
+          wallUnit: params.wallUnit,
+          wallThickness: params.wallThickness,
+        }),
+      }
     case 'closet45':
       return {
         glyphs: buildSingleSwingGlyphs({
@@ -588,6 +706,20 @@ export function buildDoorKindGlyphs(params: BuildDoorPlanSymbolInput): OpeningPl
           mirrored: params.mirrored,
           swingDegrees: 45,
           leafLength: params.leafLength,
+        }),
+      }
+    case 'flush':
+      return {
+        glyphs: buildFlushGlyphs(params.start, params.end, params.wallUnit),
+      }
+    case 'elevator':
+      return {
+        glyphs: buildElevatorGlyphs({
+          start: params.start,
+          end: params.end,
+          wallUnit: params.wallUnit,
+          mirrored: params.mirrored,
+          wallThickness: params.wallThickness,
         }),
       }
     case 'french_balcony':

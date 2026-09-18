@@ -67,6 +67,20 @@ describe('injectStampWallsIntoPlan', () => {
     ).toBe(22)
   })
 
+  it('last 180°-L van de donor (restant T-naad) tot één inject', () => {
+    const plan = createEmptyFloorPlan({ name: 'Target' })
+    plan.floors[0].walls = []
+    const sources = [
+      wall('src-west', { x: 0, y: 0 }, { x: 400, y: 0 }, 20),
+      wall('src-east', { x: 400, y: 0 }, { x: 800, y: 0 }, 20),
+    ]
+    const result = injectStampWallsIntoPlan(plan, 0, sources, { replaceOverlap: false })
+    expect(result.pinnedWallIds).toHaveLength(1)
+    const injected = result.plan.floors[0].walls[0]
+    const xs = [injected.a.x, injected.b.x].sort((l, r) => l - r)
+    expect(xs).toEqual([0, 800])
+  })
+
   it('neemt gevel over via facadeLookupPlan; niet in stamp', () => {
     const donor: FloorPlan = createEmptyFloorPlan({ name: 'Donor' })
     donor.floors[0].walls = [wall('src-1', { x: 0, y: 0 }, { x: 10, y: 0 }, 20)]
@@ -86,6 +100,28 @@ describe('injectStampWallsIntoPlan', () => {
 })
 
 describe('applyStampToFloor (regressie)', () => {
+  it('last 180°-L van de vorige verdieping tot één gevel', () => {
+    const plan = createEmptyFloorPlan({ name: 'Multi' })
+    plan.floors[0].walls = [
+      wall('s-west', { x: 0, y: 0 }, { x: 400, y: 0 }, 20),
+      wall('s-east', { x: 400, y: 0 }, { x: 800, y: 0 }, 20),
+    ]
+    plan.floors.push({
+      name: '1e',
+      level: 1,
+      height: 260,
+      walls: [],
+    })
+    ensureStampFacadeGroup(plan)
+    assignWallsToStamp(plan, ['s-west', 's-east'])
+
+    const result = applyStampToFloor(plan, 1)
+    expect(result.addedWallIds).toHaveLength(1)
+    const added = result.plan.floors[1].walls[0]
+    const xs = [added.a.x, added.b.x].sort((l, r) => l - r)
+    expect(xs).toEqual([0, 800])
+  })
+
   it('slaat bestaande segment over binnen 1 cm', () => {
     const plan = createEmptyFloorPlan({ name: 'Multi' })
     plan.floors[0].walls = [wall('s1', { x: 0, y: 0 }, { x: 100, y: 0 }, 20)]

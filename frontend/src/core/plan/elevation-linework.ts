@@ -343,8 +343,17 @@ function pushOpeningGlyphs(
   }
 }
 
-function hasRidgeWallOutline(elevation: FacadeElevation): boolean {
-  return elevation.walls.some((wall) => wall.ridge)
+function floorHasRoofOrRidgeOutline(
+  elevation: FacadeElevation,
+  floorIndex: number | undefined,
+): boolean {
+  if (floorIndex == null) {
+    return elevation.walls.some((wall) => wall.ridge) || elevation.roofPlanes.length > 0
+  }
+  return (
+    elevation.walls.some((wall) => wall.ridge && wall.floorIndex === floorIndex) ||
+    elevation.roofPlanes.some((plane) => plane.floorIndex === floorIndex)
+  )
 }
 
 /**
@@ -411,9 +420,8 @@ export function buildElevationLinework(elevation: FacadeElevation): ElevationLin
     pushClippedStroke(strokes, 'roof', pts, allWallOccluder, { closed: true })
   }
 
-  const skipNokBand = hasRidgeWallOutline(elevation)
   for (const band of elevation.bands) {
-    if (band.kind === 'nok' && skipNokBand) continue
+    if (band.kind === 'nok' && floorHasRoofOrRidgeOutline(elevation, band.floorIndex)) continue
     if (band.kind === 'nok') {
       pushClippedStroke(
         strokes,

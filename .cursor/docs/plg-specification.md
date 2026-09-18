@@ -108,7 +108,7 @@ interface PlgForeign {
 
 Content-sniff: `format === "plg-plan"` (niet de bestandsnaam). Hogere `version` dan de app kent → fout. Ontbrekende migratiestap → fout. Keten `migratePlg` is bij v1 leeg.
 
-Schemakeys in het bestand zijn schoon (`frame`, `slices`, `role`). Nooit `btf*` als **onze** JSON-key in een klant-`.plg`. FML-export mag intern nog `btfFrame` / `btfSlices` schrijven — dat is adapter-output, geen `.plg`.
+Schemakeys in het bestand zijn schoon (`frame`, `slices`, `role`). FML-extras (`plgFrame` / `plgSlices` / …) horen niet in een klant-`.plg` — dat is adapter-output.
 
 ---
 
@@ -162,7 +162,12 @@ interface FloorPlan {
 }
 
 interface FloorPlanSettings {
-  bovenlichtPacked?: boolean;       // default true
+  bovenlichtPacked?: boolean;       // default true; project-flag
+  /** @deprecated legacy zaad; readPlg promoveert naar floor.defaults */
+  openingFrameDefaults?: {
+    door: OpeningFrame;
+    window: OpeningFrame;
+  };
 }
 
 interface FloorPlanSource {
@@ -174,7 +179,9 @@ interface FloorPlanSource {
 }
 ```
 
-`facadeGroups`, `roof` en `elevations` staan **op het plan**, niet in `settings`. Na `readPlg` / promote zijn die settings-keys weg; accessors lezen alleen typed. De FML-adapter projecteert ze tijdelijk naar `source.settings` / design-settings op het export-object en stript wat Floorplanner niet mag zien.
+`facadeGroups`, `roof` en `elevations` staan **op het plan**, niet in de document-`settings`. Na `readPlg` / promote zijn die settings-keys weg; accessors lezen alleen typed. De FML-adapter projecteert ze tijdelijk naar `source.settings` / design-settings op het export-object en stript wat Floorplanner niet mag zien.
+
+`bovenlichtPacked` blijft project-breed: packed flags in `.plg` vs losse ramen. FML kent geen bovenlicht — export maakt altijd sibling-ramen en wist de flags. `openingFrameDefaults` op `plan.settings` is alleen legacy-zaad; live bron is `floor.defaults`.
 
 ---
 
@@ -187,6 +194,7 @@ interface Floor {
   name: string;
   level: number;
   height: number;                   // verhaal-hoogte (cm); niet de nokspan
+  defaults?: FloorDefaults;         // nieuwe deuren/ramen/kozijnen deze floor
   walls: Wall[];
   items?: FloorItem[];
   areas?: FloorArea[];
@@ -198,6 +206,20 @@ interface Floor {
   designs?: FloorDesign[];
   activeDesignIndex?: number;
   source?: FloorSource;
+}
+
+interface FloorDefaults {
+  doorHeightCm: number;
+  windowHeightCm: number;
+  windowSillZCm: number;
+  bovenlichtDefault: boolean;
+  windowBovenlichtDefault: boolean;
+  bovenlichtHeightCm: number;
+  bovenlichtGapCm: number;
+  openingFrameDefaults: {
+    door: OpeningFrame;
+    window: OpeningFrame;
+  };
 }
 
 interface FloorDesign {
@@ -221,6 +243,8 @@ interface PlanSlice {
 }
 ```
 
+`floor.defaults` is de bron voor nieuwe deuren/ramen/kozijnen op die verdieping (plaatsen + inherit). Ontbreekt bij load → één keer zaaien uit geometrie + legacy `plan.settings.openingFrameDefaults` + `settings.defaults`. Daarna is de floor de waarheid. **Niet** in `floor.defaults`: verdiepingshoogte (`floor.height`), vloerdikte / ridgeZ (`plan.roof.stack`), muurdiktes (`settings.defaults.thicknessCms`), packed (`plan.settings.bovenlichtPacked`). FML schrijft `floor.defaults` niet; packed flags worden bij export losse ramen, waarbij height/gap/flag uit `floor.defaults` komen als de opening geen override heeft.
+
 Nokbalken en dakvlakken wonen op het Dak-design (`role: "ridge"`), niet op de plattegrond-design. `floor.height` overschrijven tilt **geen** nokspan; span = dakdikte.
 
 Cameras, annotations en overige Floorplanner-designkeys: `source` / leftover, niet getypt.
@@ -242,7 +266,7 @@ interface DrawingMeta {
 }
 ```
 
-FML-export stript lokale `data:` / `blob:`-URL's. `.plg` mag die houden (editor-sessie).
+FML-export stript lokale `data:` / `blob:`-URL's. `.plg` mag die houden (editor-sessie). FML schrijft altijd `visible` (default `true`) en `depth` (`HIGH`, of `extras.depth` als `LOW`/`HIGH`) — Floorplanner generate faalt zonder die keys. Geen extra `.plg`-veld.
 
 ---
 
@@ -329,7 +353,11 @@ Bron: `opening-kinds.json`. Nieuw type = catalogus + overleg, geen ad-hoc string
 | `door.closet` | door | closet45 |
 | `door.passage` | door | passage |
 | `door.archway` | door | archway |
+| `door.round` | door | round_opening (cirkel, geen kozijn/glas) |
 | `door.french_balcony` | door | french_balcony |
+| `door.balcony` | door | single (glas, geen Frans-balkonhek) |
+| `door.flush` | door | flush (middenstreep ±20 cm, geen draaicirkel) |
+| `door.half_glass` | door | half_glass (voordeur, boven glas) |
 | `door.double` | door | double_wide (glas) |
 | `door.double_solid` | door | double_wide (vol) |
 | `door.bifold` | door | bifold |
@@ -337,9 +365,11 @@ Bron: `opening-kinds.json`. Nieuw type = catalogus + overleg, geen ad-hoc string
 | `door.pocket` | door | sliding_pocket |
 | `door.sliding_single` | door | sliding_single |
 | `door.sliding` | door | sliding |
+| `door.elevator` | door | elevator (twee schuifbladen, middennaad) |
 | `door.garage` | door | garage |
 | `door.unmapped` | door | single |
 | `window.single` | window | single |
+| `window.grid` | window | grid (ruiten) |
 | `window.double` | window | multi (2) |
 | `window.triple` | window | multi (3) |
 | `window.round` | window | round |
@@ -430,15 +460,17 @@ interface FloorItem {
   rotation?: number;
   mirrored?: [number, number];
   roofSurfaceId?: string;           // GUID FloorSurface (Dak-design)
+  pitchDeg?: number;                // alleen skylight; helling 0–90°
   name?: string;
   showLabel?: boolean;
   name_x?: number;
   name_y?: number;
+  frame?: OpeningFrame;             // alleen skylight; display in het gat
   extras?: Record<string, unknown>;
 }
 ```
 
-`skylight` is een fixture, geen `Opening`. Koppeling aan een schild alleen via «Muren aan dak» (`roofSurfaceId` + `z`). Geen auto-snap op de plattegrond. Aanzicht samplet Z live van dat vlak.
+`skylight` is een fixture, geen `Opening`. Plaatsen of slepen op een dakvlak koppelt `roofSurfaceId` + `z` + `pitchDeg` (helling van het schild). «Muren aan dak» doet hetzelfde. Aanzicht samplet Z live van dat vlak. Kozijn (`frame`) is hetzelfde contract als `opening.frame` (L/R/boven/onder); zonder veld = raam-default 5 cm rondom. FML kent geen kozijn en geen hellingshoek (`pitchDeg` is `.plg`-only).
 
 ### Fixture-kinds
 
@@ -448,12 +480,13 @@ Bron: `fixture-kinds.json` + `FixtureAssetKind`. Nieuw objecttype = catalogus + 
 |---|---|
 | `countertop` `fridge` `cabinet_high` `kitchen_sink` `cooktop` `dishwasher` | keuken |
 | `washing_machine` `dryer` `washer_dryer` | was |
-| `toilet` `toilet_wall_hung` `sink_small` `sink_large` `sink_vanity` `sink_double` `bathtub` `shower_head` `glass_wall` | sanitair |
+| `toilet` `toilet_wall_hung` `sink_small` `sink_large` `sink_vanity` `sink_double` `bathtub` `bathtub_square` `shower_head` `glass_wall` | sanitair |
 | `fuse_box` `boiler` `heat_pump` `koof` `oil_bottle` | installaties |
-| `stair_winder_180` `stair_quarter_90` `stair_quarter_90_up` `stair_straight` `stair_straight_double` `stair_opening` `railing` | trap |
+| `column` `column_round` | constructie |
+| `stair_winder_180` `stair_u_landing` `stair_c_90` `stair_l_90` `stair_l_90_up` `stair_winder_270` `stair_quarter_90` `stair_quarter_90_up` `stair_straight` `stair_straight_double` `stair_loft` `stair_loft_dashed` `stair_opening` `ramp` `railing` | trap |
 | `skylight` `roof_eave` `dormer` `chimney` | dak |
-| `canopy` `hidden` `balustrade` | buiten |
-| `entrance_arrow` `north_cross` | annotatie |
+| `canopy` `awning` `hidden` `balustrade` `balustrade_glass` | buiten |
+| `entrance_arrow` `doorbell` `north_cross` | annotatie |
 | `generic` | overig |
 
 `dormer` als fixture is het 2D-symbool (alleen FML-import / roundtrip, **niet plaatsbaar**). Het bouwkundige dakkapel-object is `FloorSurface.roofKind` + muren met `wall.role: "dormer"`.
@@ -629,15 +662,16 @@ Niet in `.plg`: XML, IFC als intern model, CV-bytes, `detectionExact`.
 |---|---|
 | `opening.id` / `kind` | `guid` / `refid` |
 | `wall.elevation.a/b` | `az` / `bz` |
-| `opening.frame` | `extras.btfFrame` |
-| `wall.role` / `design.role` | `extras.ridge` / `settings.btfRole` |
-| `surface.origin` / `roofKind` | `extras.btfOrigin` + lossy kinds |
-| `design.slices` | `settings.btfSlices` |
+| `opening.frame` / `item.frame` (skylight) | niet in FML (hydrate mag legacy `extras.plgFrame`) |
+| `wall.role` / `design.role` | `extras.ridge` / `settings.plgRole` |
+| `surface.origin` / `roofKind` | `extras.plgOrigin` + lossy kinds |
+| `design.slices` | `settings.plgSlices` |
 | `plan.facadeGroups` | `settings.facadeGroups` (export stript native markers) |
 | `plan.roof` | `ridgeWalls` / `roofPlanes` / `floorStack` (stack vaak gestript) |
 | `plan.elevations` | tijdelijk gezet, daarna gestript |
 | `drawing.flipX` | weg |
-| `item.roofSurfaceId` | `extras.btfRoofSurfaceId` |
+| `item.roofSurfaceId` | `extras.plgRoofSurfaceId` |
+| `item.pitchDeg` (skylight) | niet in FML |
 | `liningCm` / dakkapel-kind | deels `settings.roofPlanes.kinds` of weg |
 
 Niet “even een extras-key in FML zetten” i.p.v. een `.plg`-veld. Adapter-modules: één concept per file, haken in de registry, niet `importFmlV3` / `buildFmlV3` zelf verbouwen.
@@ -655,6 +689,8 @@ Drie plekken, niet één bestand. Types: `frontend/src/platform/project-store/ty
 | **IDB `cv`** | scan, B/W, refs, maskers, `tabOutputs`, detectie-cache, banden | **alleen converter** |
 
 Stap 1–3 horen nooit in `.plg`. Diagnose-HTML is een rapport-export, geen opslag.
+
+Na project-export is `floors[].drawing.url` een **https**-link (R2). Geen data-URL, geen tweede plaat. Crop/B/W blijven IDB `cv`. Rotatie en schaal zitten in `drawing` (`rotation`, `x/y/width/height`). Geen `migratePlg`.
 
 `readPlg` / IDB-restore roepen `promotePlanExtensions` aan: FML-`source.settings`-keys (`ridgeWalls`, `roofPlanes`, `floorStack`, `facadeGroups`, `bovenlichtPacked`, …) gaan naar getypte velden en verdwijnen daarna uit settings. Accessors lezen alleen typed. FML-export mag die keys tijdelijk op het export-object zetten.
 
@@ -739,6 +775,6 @@ Elke modelwijziging is een migratie — `.plg` is ook de IDB-planhelft.
 1. Bestaand veld hergebruiken? Eerst §8–16.
 2. Nee → voorstel: naam, betekenis, persist vs runtime, FML-mapping, of `version` omhoog moet.
 3. **Wachten op akkoord.** Daarna types + dit document + eventueel `MIGRATIONS` + adapter in dezelfde wijziging.
-4. Geen stille extras-key, geen `btf*`-schemakey, geen tweede objectmodel.
+4. Geen stille extras-key, geen tweede objectmodel. FML-hostile concepten alleen via `plg*` extras (adapter) of getypte `.plg`-velden.
 
 Besluiten die het model raken: ook [`.cursor/docs/decisions.md`](decisions.md).

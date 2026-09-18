@@ -5,6 +5,7 @@ import {
   resolveHingeAtStart,
   resolveSwingSign,
 } from '@/core/plan/door-swing-symbol'
+import { buildDoorKindGlyphs, FLUSH_CROSS_EXTEND_CM } from '@/core/plan/opening-plan-door-glyphs'
 
 describe('door-swing-symbol', () => {
   it('roundtrip mirrored blijft consistent', () => {
@@ -127,6 +128,38 @@ describe('door-swing-symbol', () => {
     const flippedY = (flippedSide.arrowPoints[0][1] + flippedSide.arrowPoints[0][3]) / 2
     expect(defaultY).toBeLessThan(gapEdgeNeg)
     expect(flippedY).toBeGreaterThan(gapEdgePos)
+  })
+
+  it('flush: bladlijn plus dwarsstreep 20 cm naar beide zijden', () => {
+    const symbol = buildDoorSwingSymbol({
+      start: { x: 0, y: 0 },
+      end: { x: 90, y: 0 },
+      wallUnit: { x: 1, y: 0 },
+      width: 90,
+      kind: 'flush',
+    })
+    expect(symbol.leafLines).toHaveLength(2)
+    expect(symbol.arcPoints).toHaveLength(0)
+    const cross = symbol.leafLines[1]
+    expect(cross[0]).toBeCloseTo(45, 5)
+    expect(cross[2]).toBeCloseTo(45, 5)
+    expect(Math.abs(cross[3] - cross[1])).toBeCloseTo(FLUSH_CROSS_EXTEND_CM * 2, 5)
+
+    const plan = buildDoorKindGlyphs({
+      kind: 'flush',
+      start: { x: 0, y: 0 },
+      end: { x: 90, y: 0 },
+      wallUnit: { x: 1, y: 0 },
+      width: 90,
+    })
+    const leaves = plan.glyphs.filter((g) => g.role === 'leaf' && g.kind === 'polyline')
+    expect(leaves).toHaveLength(2)
+    const planCross = leaves[1]
+    if (planCross.kind !== 'polyline') throw new Error('expected polyline')
+    expect(Math.hypot(planCross.points[2] - planCross.points[0], planCross.points[3] - planCross.points[1])).toBeCloseTo(
+      FLUSH_CROSS_EXTEND_CM * 2,
+      5,
+    )
   })
 
   it('french balcony swings inward and puts the rail on the FML exterior side', () => {

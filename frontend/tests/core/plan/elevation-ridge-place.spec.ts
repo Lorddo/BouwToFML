@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { createBlankFloor, createEmptyFloorPlan } from '@/core/plan/empty-floor-plan'
 import { assignWallsToGroup, createFacadeGroup } from '@/core/plan/facade-groups'
 import { projectFacadeElevation } from '@/core/plan/facade-elevation'
-import { floorWallBaseWorldZ } from '@/core/plan/floor-stack'
+import { floorSlabWorldRange, floorWallBaseWorldZ } from '@/core/plan/floor-stack'
 import {
+  clampLocalZToFloorCeiling,
   placeRidgeFromElevation,
   previewRidgeFromElevation,
   resolveElevationRidgeFloor,
+  snapElevationRidgePlaceX,
   spanElevationRidgeOnFloor,
 } from '@/core/plan/elevation-ridge-place'
 import {
@@ -14,6 +16,7 @@ import {
   ridgeEndpointZCm,
   ridgeDisplayWidthCm,
 } from '@/core/plan/ridge-walls'
+import { makeRoofSurface, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
 import type { Wall } from '@/core/plan/types'
 
 function wall(id: string, a: { x: number; y: number }, b: { x: number; y: number }): Wall {
@@ -120,6 +123,30 @@ describe('elevation-ridge-place', () => {
     expect(listRidgeWallsOnFloor(result!.plan.floors[0])).toHaveLength(0)
   })
 
+  it('klik op de 1e-vloerplaat (ook onderkant + snap) is de 1e', () => {
+    const { plan, groupId } = rectKopsePlan(280)
+    const upper = createBlankFloor({ name: '1e', level: 1, wallHeightCm: 280 })
+    upper.walls = plan.floors[0].walls.map((item) => ({
+      ...item,
+      id: `u-${item.id}`,
+      a: { ...item.a },
+      b: { ...item.b },
+    }))
+    plan.floors.push(upper)
+    assignWallsToGroup(plan, groupId, ['gable', 'u-gable'])
+    const elev = projectFacadeElevation(plan, groupId)!
+    const gable = elev.walls.find((item) => item.wallId === 'gable' && item.floorIndex === 0)!
+    const xMid = (gable.xa + gable.xb) / 2
+    const base1 = floorWallBaseWorldZ(plan, 1)
+    const slab1 = floorSlabWorldRange(plan, 1)!
+    expect(resolveElevationRidgeFloor(plan, elev, { x: xMid, y: -base1 })).toBe(1)
+    expect(resolveElevationRidgeFloor(plan, elev, { x: xMid, y: -(base1 + 80) })).toBe(1)
+    expect(resolveElevationRidgeFloor(plan, elev, { x: xMid, y: -slab1.z0 })).toBe(1)
+    expect(resolveElevationRidgeFloor(plan, elev, { x: xMid, y: -(slab1.z0 - 6) })).toBe(1)
+    expect(resolveElevationRidgeFloor(plan, elev, { x: xMid, y: -(slab1.z0 - 20) })).toBe(0)
+    expect(clampLocalZToFloorCeiling(plan, elev, 0, xMid, 600)).toBe(280)
+  })
+
   it('klik naast het gebouw → null', () => {
     const { plan, groupId } = rectKopsePlan()
     const elev = projectFacadeElevation(plan, groupId)!
@@ -139,5 +166,25 @@ describe('elevation-ridge-place', () => {
     const preview = previewRidgeFromElevation(plan, elev, { x: xMid, y: clickY })!
     expect(Math.abs(preview.rect.x1 - preview.rect.x0)).toBeCloseTo(ridgeDisplayWidthCm(plan), 0)
     expect(Math.abs(preview.rect.y1 - preview.rect.y0)).toBe(preview.spanCm)
+  })
+
+  it('nok-X snapt naar een dakvlak-punt', () => {
+    const { plan, groupId } = rectKopsePlan()
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'roof-s',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 0, y: 400, z: 380 },
+          { x: 400, y: 400, z: 380 },
+          { x: 400, y: 0, z: 280 },
+        ],
+      }),
+    ])
+    const elev = projectFacadeElevation(plan, groupId)!
+    expect(elev.roofPlanes.length).toBeGreaterThan(0)
+    const targetX = elev.roofPlanes[0]!.points[1]!.x
+    expect(snapElevationRidgePlaceX(elev, targetX + 6)).toBeCloseTo(targetX, 0)
   })
 })

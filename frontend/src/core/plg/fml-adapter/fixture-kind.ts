@@ -14,6 +14,7 @@ function serializeItem(item: FloorItem, out: Record<string, unknown>): void {
   delete out.kind
   delete out.id
   delete out.roofSurfaceId
+  delete out.pitchDeg
   const roofId = item.roofSurfaceId?.trim()
   if (roofId) out[FML_ROOF_SURFACE_ID_EXTRA] = roofId
   else delete out[FML_ROOF_SURFACE_ID_EXTRA]

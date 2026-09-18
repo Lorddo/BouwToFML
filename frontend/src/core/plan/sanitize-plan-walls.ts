@@ -1,10 +1,12 @@
 /**
  * FML wall sanitize (cm): weld near endpoints → near-H/V exact op as →
- * T/X junctions → collinear cover (muur-onder-muur), herhaald tot stabiel.
+ * T/X junctions → collinear cover (muur-onder-muur) → 180°-L lassen,
+ * herhaald tot stabiel.
  *
  * Keep-axis: alleen `a`/`b` (en splits); `balance` / `thickness` / extras blijven
  * van de overlever. Geen `alignWallJunctionBalance` (die wist import-balance).
  */
+import { mergeStraightLJunctions } from './merge-straight-l-junctions'
 import { classifyNearAxisWall, orthogonalizeNearAxisWalls } from './orthogonalize-near-axis-walls'
 import {
   openingWorldCenter,
@@ -413,9 +415,10 @@ export function wallsSanitizeChanged(before: Wall[], after: Wall[]): boolean {
 }
 
 /**
- * Weld → orthogonalize → T/X junctions → cover, herhaald tot geometrie stabiel is.
- * `balance` van elke overlevende muur blijft.
- * Remaps: host-helften op dezelfde as (T/X + cover); uitstekende T-tak niet.
+ * Weld → orthogonalize → T/X junctions → cover → 180°-L, herhaald tot geometrie
+ * stabiel is. `balance` van elke overlevende muur blijft.
+ * Remaps: host-helften op dezelfde as (T/X + cover); 180°-L absorbed → survivor;
+ * uitstekende T-tak niet.
  */
 export type SanitizePlanWallsResult = {
   walls: Wall[]
@@ -427,9 +430,10 @@ function runSanitizePass(walls: Wall[]): SanitizePlanWallsResult {
   const ortho = orthogonalizeNearAxisWalls(welded)
   const junctions = materializeWallJunctionsDetailed(ortho)
   const cover = absorbCoveredCollinearWalls(junctions.walls)
+  const straight = mergeStraightLJunctions(cover.walls)
   return {
-    walls: cover.walls,
-    remaps: [...junctions.remaps, ...cover.remaps],
+    walls: straight.walls,
+    remaps: [...junctions.remaps, ...cover.remaps, ...straight.remaps],
   }
 }
 

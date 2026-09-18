@@ -6,10 +6,14 @@ import { openingKindFromFmlRefid } from '../plg/fml-adapter/opening-fml-refids'
 /** Volgorde = deur-dropdown (plattegrond + aanzicht). */
 export const DOOR_ADD_SUBTYPES = [
   'standard',
+  'flush',
+  'half_glass',
   'closet',
   'passage',
   'archway',
+  'round',
   'french_balcony',
+  'balcony',
   'double',
   'double_solid',
   'bifold',
@@ -17,12 +21,14 @@ export const DOOR_ADD_SUBTYPES = [
   'pocket',
   'sliding_single',
   'sliding',
+  'elevator',
   'garage',
 ] as const
 
 /** Volgorde = raam-dropdown (plattegrond + aanzicht). */
 export const WINDOW_ADD_SUBTYPES = [
   'single',
+  'grid',
   'double',
   'triple',
   'round',
@@ -44,10 +50,14 @@ export interface OpeningAddPreset {
 
 const DOOR_ADD_PRESETS: Record<DoorAddSubtype, OpeningAddPreset> = {
   standard: { type: 'door', kind: 'door.single', defaultWidthCm: 90 },
+  flush: { type: 'door', kind: 'door.flush', defaultWidthCm: 90 },
+  half_glass: { type: 'door', kind: 'door.half_glass', defaultWidthCm: 90 },
   closet: { type: 'door', kind: 'door.closet', defaultWidthCm: 80 },
   passage: { type: 'door', kind: 'door.passage', defaultWidthCm: 90 },
   archway: { type: 'door', kind: 'door.archway', defaultWidthCm: 90 },
+  round: { type: 'door', kind: 'door.round', defaultWidthCm: 180 },
   french_balcony: { type: 'door', kind: 'door.french_balcony', defaultWidthCm: 90 },
+  balcony: { type: 'door', kind: 'door.balcony', defaultWidthCm: 90 },
   double: { type: 'door', kind: 'door.double', defaultWidthCm: 140 },
   double_solid: { type: 'door', kind: 'door.double_solid', defaultWidthCm: 140 },
   bifold: { type: 'door', kind: 'door.bifold', defaultWidthCm: 160 },
@@ -55,11 +65,13 @@ const DOOR_ADD_PRESETS: Record<DoorAddSubtype, OpeningAddPreset> = {
   pocket: { type: 'door', kind: 'door.pocket', defaultWidthCm: 100 },
   sliding_single: { type: 'door', kind: 'door.sliding_single', defaultWidthCm: 180 },
   sliding: { type: 'door', kind: 'door.sliding', defaultWidthCm: 180 },
+  elevator: { type: 'door', kind: 'door.elevator', defaultWidthCm: 90 },
   garage: { type: 'door', kind: 'door.garage', defaultWidthCm: 240 },
 }
 
 const WINDOW_ADD_PRESETS: Record<WindowAddSubtype, OpeningAddPreset> = {
   single: { type: 'window', kind: 'window.single', defaultWidthCm: 100 },
+  grid: { type: 'window', kind: 'window.grid', defaultWidthCm: 100 },
   double: { type: 'window', kind: 'window.double', defaultWidthCm: 150 },
   triple: { type: 'window', kind: 'window.triple', defaultWidthCm: 200 },
   round: { type: 'window', kind: 'window.round', defaultWidthCm: 98 },
@@ -70,10 +82,14 @@ const WINDOW_ADD_PRESETS: Record<WindowAddSubtype, OpeningAddPreset> = {
 
 const KIND_TO_DOOR_SUBTYPE: Partial<Record<OpeningKind, DoorAddSubtype>> = {
   'door.single': 'standard',
+  'door.flush': 'flush',
+  'door.half_glass': 'half_glass',
   'door.closet': 'closet',
   'door.passage': 'passage',
   'door.archway': 'archway',
+  'door.round': 'round',
   'door.french_balcony': 'french_balcony',
+  'door.balcony': 'balcony',
   'door.double': 'double',
   'door.double_solid': 'double_solid',
   'door.bifold': 'bifold',
@@ -81,12 +97,14 @@ const KIND_TO_DOOR_SUBTYPE: Partial<Record<OpeningKind, DoorAddSubtype>> = {
   'door.pocket': 'pocket',
   'door.sliding_single': 'sliding_single',
   'door.sliding': 'sliding',
+  'door.elevator': 'elevator',
   'door.garage': 'garage',
   'door.unmapped': 'standard',
 }
 
 const KIND_TO_WINDOW_SUBTYPE: Partial<Record<OpeningKind, WindowAddSubtype>> = {
   'window.single': 'single',
+  'window.grid': 'grid',
   'window.double': 'double',
   'window.triple': 'triple',
   'window.round': 'round',

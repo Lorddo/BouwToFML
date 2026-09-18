@@ -10,7 +10,7 @@ import {
 } from './extraction-to-plan-types'
 import { readElevationProjection, type ElevationProjectionMode } from './elevation-views'
 import { listElevationFacadeGroups, wallGuidsInGroup } from './facade-groups'
-import { floorSlabWorldRange, floorWallBaseWorldZ, readFloorStack } from './floor-stack'
+import { floorNokWorldRange, floorSlabWorldRange, floorWallBaseWorldZ, readFloorStack } from './floor-stack'
 import {
   elevationRidgeIsEndOn,
   elevationWallProjectedXs,
@@ -19,7 +19,6 @@ import {
 import {
   dakThicknessCmForPlan,
   listRidgeWallsOnFloor,
-  ridgeAwareNokWorldRange,
   ridgeDisplayWidthCm,
   ridgeEndpointZCm,
 } from './ridge-walls'
@@ -1020,15 +1019,16 @@ export function projectFacadeElevation(
       })
     })
   })
-  // Far→near, dan ouder vóór kind (dakkapel niet onder hoofddak).
+  // Ouder vóór kind (ook als het schild-centroid dichterbij is), daarna far→near.
   roofPlanes.sort((a, b) => {
-    if (a.depthCm !== b.depthCm) return a.depthCm - b.depthCm
-    if (a.floorIndex !== b.floorIndex) return a.floorIndex - b.floorIndex
+    if (a.dormer === true && b.dormer !== true) return 1
+    if (b.dormer === true && a.dormer !== true) return -1
     const aChildOfB = a.dormer === true && a.parentId === b.id
     const bChildOfA = b.dormer === true && b.parentId === a.id
     if (aChildOfB) return 1
     if (bChildOfA) return -1
-    if (a.dormer !== b.dormer) return a.dormer ? 1 : -1
+    if (a.depthCm !== b.depthCm) return a.depthCm - b.depthCm
+    if (a.floorIndex !== b.floorIndex) return a.floorIndex - b.floorIndex
     return a.id.localeCompare(b.id)
   })
 
@@ -1069,11 +1069,6 @@ export function projectFacadeElevation(
   })
 
   const bands: ElevationBand[] = []
-  const facadeXs = walls.filter((w) => !w.ridge).flatMap((w) => [w.x0, w.x1])
-  const xs =
-    facadeXs.length > 0 ? facadeXs : walls.length > 0 ? walls.flatMap((w) => [w.x0, w.x1]) : [0, 1]
-  const fallbackX0 = Math.min(...xs)
-  const fallbackX1 = Math.max(...xs)
   plan.floors.forEach((_, floorIndex) => {
     const range = floorSlabWorldRange(plan, floorIndex)
     if (!range) return
@@ -1090,17 +1085,27 @@ export function projectFacadeElevation(
       y1: elevY(range.z0),
     })
   })
-  // Alleen een placeholder-strip als er geen nokbalken zijn. Per-ridge AABB
-  // (x0/x1/y0/y1) zou achter een scheve dwarsligger een horizontale fill tonen.
+  // Placeholder-dakplaat per floor: alleen als díe floor geen dakvlak/nok heeft.
+  // Span = gevelmuren van die floor (niet de uitbouw van een lagere floor).
   const ridgeRects = walls.filter((w) => w.ridge)
-  if (ridgeRects.length === 0 && readFloorStack(plan).nokThicknessCm > 0) {
-    const nok = ridgeAwareNokWorldRange(plan)
-    bands.push({
-      kind: 'nok',
-      x0: fallbackX0,
-      x1: fallbackX1,
-      y0: elevY(nok.z1),
-      y1: elevY(nok.z0),
+  if (readFloorStack(plan).nokThicknessCm > 0) {
+    plan.floors.forEach((_, floorIndex) => {
+      const floorXs = walls
+        .filter((item) => !item.ridge && item.floorIndex === floorIndex)
+        .flatMap((item) => [item.x0, item.x1])
+      if (floorXs.length === 0) return
+      const hasRidge = ridgeRects.some((item) => item.floorIndex === floorIndex)
+      const hasRoof = roofPlanes.some((plane) => plane.floorIndex === floorIndex)
+      if (hasRidge || hasRoof) return
+      const nok = floorNokWorldRange(plan, floorIndex)
+      bands.push({
+        kind: 'nok',
+        floorIndex,
+        x0: Math.min(...floorXs),
+        x1: Math.max(...floorXs),
+        y0: elevY(nok.z1),
+        y1: elevY(nok.z0),
+      })
     })
   }
 

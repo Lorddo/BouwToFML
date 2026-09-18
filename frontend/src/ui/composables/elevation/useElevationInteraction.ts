@@ -311,16 +311,20 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
       select.selectRidge(ridgeWall.wallId, ridgeWall.floorIndex)
       return
     }
+    const roof = hitElevationRoofPlane(elev, cm)
+    if (roof?.dormer) {
+      select.selectRoof(roof.id, null)
+      return
+    }
     if (ridgeWall?.axisEdit) {
       select.selectWallSettings(ridgeWall.wallId, ridgeWall.floorIndex)
       return
     }
+    if (roof) {
+      select.selectRoof(roof.id, null)
+      return
+    }
     if (event.evt.ctrlKey || event.evt.metaKey) {
-      const roof = hitElevationRoofPlane(elev, cm)
-      if (roof) {
-        select.selectRoof(roof.id, null)
-        return
-      }
       const wall = hitElevationWall(elev, cm)
       if (wall) {
         select.selectWallSettings(wall.wallId, wall.floorIndex)
@@ -565,6 +569,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     onJunctionDown: select.onJunctionDown,
     onJunctionElevHandleDown: select.onJunctionElevHandleDown,
     onRidgeWallDown: select.onRidgeWallDown,
+    onRoofDown: select.onRoofDown,
     onRidgeMoveHandleDown: select.onRidgeMoveHandleDown,
     onRidgeHandleDown: select.onRidgeHandleDown,
     onRidgeEndHandleDown: select.onRidgeEndHandleDown,
@@ -584,6 +589,8 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     commitSelectedField: select.commitSelectedField,
     commitSelectedFrame: select.commitSelectedFrame,
     commitSelectedSkylightFrame: select.commitSelectedSkylightFrame,
+    commitSelectedSkylightZ: select.commitSelectedSkylightZ,
+    commitSelectedSkylightPitch: select.commitSelectedSkylightPitch,
     commitSelectedBovenlicht: select.commitSelectedBovenlicht,
     commitSelectedBovenlichtHeight: select.commitSelectedBovenlichtHeight,
     commitSelectedBovenlichtGap: select.commitSelectedBovenlichtGap,

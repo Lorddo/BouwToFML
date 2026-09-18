@@ -27,6 +27,15 @@ import {
   resolveRescaleFactorsFromRulers,
 } from '@/ui/composables/plan-canvas/plan-canvas-rescale-from-measure'
 import { imageDimensions, loadImage } from '@/platform/image'
+import {
+  closePdfSession,
+  isPdfFile,
+  pdfLoadErrorMessage,
+  renderPdfPageToPngDataUrlForFile,
+} from '@/platform/upload'
+
+export const EDITOR_UNDERLAY_FILE_ACCEPT =
+  'image/png,image/jpeg,image/jpg,application/pdf,.pdf,.png,.jpg,.jpeg'
 
 export interface UseEditorUnderlayOptions {
   plan: Ref<FloorPlan | null>
@@ -94,6 +103,11 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
   const underlayScaleState = ref<HScaleState | null>(null)
   const underlayScaleMmX = ref(3000)
   const underlayScaleMmY = ref(3000)
+
+  const showPdfPageDialog = ref(false)
+  const pendingPdfFile = ref<File | null>(null)
+  const pdfPageConfirmBusy = ref(false)
+  const pdfPageConfirmError = ref<string | null>(null)
 
   let localUnderlayObjectUrl: string | null = null
   let underlayLoadGen = 0
@@ -283,51 +297,87 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     })
   }
 
+  async function applyUnderlayFromPngDataUrl(dataUrl: string): Promise<void> {
+    if (!plan.value) return
+    cancelPlanRescale()
+    cancelUnderlayScale()
+    const img = await loadImage(dataUrl)
+    const { width, height } = imageDimensions(img)
+    const drawing = provisionalDrawingFromImage(
+      { width, height },
+      { url: dataUrl, alpha: Math.round(underlayOpacity.value * 100) },
+    )
+    if (!drawing) {
+      underlayHint.value = t('viewer.underlayInvalid')
+      return
+    }
+    if (gevelsMode.value && elevationGroupId.value) {
+      elevationUnderlayWidthPx.value = width
+      elevationUnderlayHeightPx.value = height
+      elevationUnderlaySrc.value = dataUrl
+      plan.value = setElevationViewDrawing(plan.value, elevationGroupId.value, drawing)
+      const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
+      elevationUnderlayLayout.value = layout
+      underlayHint.value = null
+      await nextTick()
+      previewCanvasRef.value?.resetView?.()
+      beginUnderlayScale()
+      return
+    }
+    const idx = activeFloorIndex.value
+    plan.value = {
+      ...plan.value,
+      floors: plan.value.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
+    }
+    applyImageToUnderlay(dataUrl, width, height, drawing)
+    underlayHint.value = null
+    await nextTick()
+    previewCanvasRef.value?.resetView?.()
+    beginUnderlayScale()
+  }
+
   async function onUnderlayFileInput(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement
     const file = input.files?.[0]
     input.value = ''
     if (!file || !plan.value) return
-    cancelPlanRescale()
-    cancelUnderlayScale()
+    if (isPdfFile(file)) {
+      pendingPdfFile.value = file
+      pdfPageConfirmError.value = null
+      showPdfPageDialog.value = true
+      return
+    }
     try {
-      const dataUrl = await fileToDataUrl(file)
-      const img = await loadImage(dataUrl)
-      const { width, height } = imageDimensions(img)
-      const drawing = provisionalDrawingFromImage(
-        { width, height },
-        { url: dataUrl, alpha: Math.round(underlayOpacity.value * 100) },
-      )
-      if (!drawing) {
-        underlayHint.value = t('viewer.underlayInvalid')
-        return
-      }
-      if (gevelsMode.value && elevationGroupId.value) {
-        elevationUnderlayWidthPx.value = width
-        elevationUnderlayHeightPx.value = height
-        elevationUnderlaySrc.value = dataUrl
-        plan.value = setElevationViewDrawing(plan.value, elevationGroupId.value, drawing)
-        const layout = previewUnderlayLayoutFromDrawing(drawing, { width, height })
-        elevationUnderlayLayout.value = layout
-        underlayHint.value = null
-        await nextTick()
-        previewCanvasRef.value?.resetView?.()
-        beginUnderlayScale()
-        return
-      }
-      const idx = activeFloorIndex.value
-      plan.value = {
-        ...plan.value,
-        floors: plan.value.floors.map((item, i) => (i === idx ? { ...item, drawing } : item)),
-      }
-      applyImageToUnderlay(dataUrl, width, height, drawing)
-      underlayHint.value = null
-      await nextTick()
-      previewCanvasRef.value?.resetView?.()
-      beginUnderlayScale()
+      await applyUnderlayFromPngDataUrl(await fileToDataUrl(file))
     } catch {
       underlayHint.value = t('viewer.underlayLoadFailed')
     }
+  }
+
+  async function confirmPdfPage(pageNumber: number): Promise<void> {
+    const file = pendingPdfFile.value
+    if (!file) return
+    pdfPageConfirmBusy.value = true
+    pdfPageConfirmError.value = null
+    try {
+      const rendered = await renderPdfPageToPngDataUrlForFile(file, pageNumber)
+      await closePdfSession()
+      await applyUnderlayFromPngDataUrl(rendered.dataUrl)
+      showPdfPageDialog.value = false
+      pendingPdfFile.value = null
+    } catch (error) {
+      pdfPageConfirmError.value = pdfLoadErrorMessage(error)
+    } finally {
+      pdfPageConfirmBusy.value = false
+    }
+  }
+
+  function cancelPdfPage(): void {
+    void closePdfSession()
+    showPdfPageDialog.value = false
+    pendingPdfFile.value = null
+    pdfPageConfirmBusy.value = false
+    pdfPageConfirmError.value = null
   }
 
   // --- Persist drawing ---
@@ -667,6 +717,12 @@ export function useEditorUnderlay(options: UseEditorUnderlayOptions) {
     clearUnderlayState,
     onUnderlayOpacityInput,
     onUnderlayFileInput,
+    showPdfPageDialog,
+    pendingPdfFile,
+    pdfPageConfirmBusy,
+    pdfPageConfirmError,
+    confirmPdfPage,
+    cancelPdfPage,
     persistElevationUnderlayDrawing,
     persistActiveUnderlayDrawing,
     cancelPlanRescale,

@@ -1,9 +1,14 @@
 import type { Floor, FloorPlan } from '@/core/plan/types'
+import type { SourceToWorkingTransform } from '@/core/plan/source-underlay-transform'
 import type { UnderlayOriginLayout } from '@/core/plan/translate-floor-plan'
 import type { PlgFloorDefaults } from '@/core/plg/plg-document'
 import type { DevWorkspaceSession } from '@/platform/dev-workspace'
 import type { PdfUnderlaySource } from '@/platform/upload'
-import type { PdfUnderlayMeta } from './reuse-underlay-pdf'
+import type {
+  PdfUnderlayMeta,
+  SourceUnderlayScaleSpace,
+  UnderlayInputRotation,
+} from './reuse-underlay-pdf'
 
 /** Flow steps shared by project blobs and workspace UI (no CV import). */
 export type WorkspaceFlowStep = 'project' | 'input' | 'preprocess' | 'templates' | 'result'
@@ -17,15 +22,22 @@ export type ProjectMeta = {
 }
 
 /**
- * Floor-/project-defaults: `.plg`-velden plus converter-gate (niet in download).
+ * Converter CV-gate (runtime/IDB). Niet in `.plg` — zie `limitsFromCatalog`.
+ * Gescheiden van `FloorDefaults` (deuren/ramen/kozijn op `floor.defaults`).
  */
-export type ProjectPlanDefaults = PlgFloorDefaults & {
+export type ConverterThicknessGate = {
   thicknessMinCm: number
   thicknessMidCm: number
   thicknessMaxCm: number
   bandMidBoundaryCm: number
   bandMaxBoundaryCm: number
 }
+
+/**
+ * FloorMeta.defaults = `.plg` settings.defaults + converter-gate.
+ * Opening-hoogtes/bovenlicht/kozijn → `FloorDefaults` via `floorDefaultsFromTemplate`.
+ */
+export type ProjectPlanDefaults = PlgFloorDefaults & ConverterThicknessGate
 
 export type FloorMeta = {
   id: string
@@ -77,6 +89,13 @@ export type FloorWorkspaceBlob = {
    */
   sourceUnderlay?: ProjectSourceUnderlay | null
   /**
+   * Plaat voor stap 4 / editor / export (origineel of schone PDF-ROI).
+   * Crop/B/W blijven op `session.workingImagePng`.
+   */
+  planUnderlay?: PlanUnderlay | null
+  /** Bronplaat → werkplaat; IDB-only, niet `.plg`. */
+  sourceToWorking?: SourceToWorkingTransform | null
+  /**
    * Runtime-only PDF bytes for ROI re-render at input commit (live working image).
    * Cleared after crop; never written to IndexedDB (`persistBlob` omits this field).
    */
@@ -95,6 +114,19 @@ export type ProjectSourceUnderlay = {
   scale?: DevWorkspaceSession['scale']
   /** PDF-pagina van deze bronscan (geen bytes — die zitten in `sourcePdfUnderlay`). */
   pdf?: PdfUnderlayMeta | null
+  /** Stap-1 rotatie bij schaal-bevestigen (preview of gebakken). */
+  inputRotation?: UnderlayInputRotation | null
+  /** In welke plaat de linialen staan — nodig ná bronplaat + rotatie-bake. */
+  scaleSpace?: SourceUnderlayScaleSpace
+}
+
+/** Stap-4 / editor-plaat (png/jpg). Niet de detectie-B/W. */
+export type PlanUnderlay = {
+  src: string
+  width: number
+  height: number
+  /** https na R2-upload; anders sessie-data-URL. */
+  remoteUrl?: string
 }
 
 export type ProjectState = {
@@ -120,4 +152,35 @@ export function isFloorFlowStep(step: WorkspaceFlowStep): step is FloorFlowStep 
 export function floorStatusFromFlowStep(step: WorkspaceFlowStep): FloorStatus {
   if (step === 'project') return 'empty'
   return step
+}
+
+const FLOOR_FLOW_RANK: Record<FloorFlowStep, number> = {
+  input: 1,
+  preprocess: 2,
+  templates: 3,
+  result: 4,
+}
+
+function asFloorFlowStep(step: WorkspaceFlowStep | FloorStatus | null | undefined): FloorFlowStep | null {
+  if (step === 'input' || step === 'preprocess' || step === 'templates' || step === 'result') {
+    return step
+  }
+  return null
+}
+
+/**
+ * Resume/floor-hydrate: neem de verste stap van session vs floor-status.
+ * Capture kan falen (stamp + exact-detectie) terwijl status + previewPlan wél
+ * al op result staan — anders landt «Verder werken» terug op stap 2.
+ */
+export function resolveHydrateFlowStep(
+  sessionTarget: WorkspaceFlowStep | undefined,
+  floorStatus: FloorStatus,
+): FloorFlowStep {
+  const fromSession = asFloorFlowStep(sessionTarget === 'project' ? 'input' : sessionTarget)
+  const fromStatus = asFloorFlowStep(floorStatus)
+  if (!fromSession && !fromStatus) return 'input'
+  if (!fromSession) return fromStatus!
+  if (!fromStatus) return fromSession
+  return FLOOR_FLOW_RANK[fromStatus] > FLOOR_FLOW_RANK[fromSession] ? fromStatus : fromSession
 }

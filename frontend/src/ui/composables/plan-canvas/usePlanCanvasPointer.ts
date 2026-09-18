@@ -278,7 +278,9 @@ export function usePlanCanvasPointer(options: {
           (nameHover.kind === 'surface' && nameHover.id === selection.settingsSurfaceId.value))
       const allowHover = (hit: PlanStickySelectKind): boolean =>
         allowsPlanStickyHit(currentStickyKind(), hit)
-      const junction = hitTest.hitTestJunctionAtCm(cm)
+      const junction = modes.selectionBoxMode.value
+        ? null
+        : hitTest.hitTestJunctionAtCm(cm)
       hoveredJunctionId.value = junction && allowHover('wall') ? junction.id : null
       const doorId = hitTest.hitTestOpeningAtCm(cm)
       hoveredOpeningId.value = doorId && allowHover('opening') ? doorId : null

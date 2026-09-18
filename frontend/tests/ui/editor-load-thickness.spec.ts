@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
-import { createFactoryViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
 import { FACTORY_THICKNESS_CMS } from '@/core/plan/wall-thickness-catalog'
 import { useEditorLoad } from '@/ui/composables/editor/useEditorLoad'
 
@@ -34,7 +33,6 @@ describe('useEditorLoad thickness catalog', () => {
       error: ref(null),
       fileName: ref(null),
       activeFloorIndex: ref(0),
-      sessionDefaults: ref(createFactoryViewerSessionDefaults()),
       orientByFloor: ref({}),
       pendingAlignRebase: ref(null),
       contentOpacity: ref(0.8),
@@ -48,9 +46,6 @@ describe('useEditorLoad thickness catalog', () => {
       clearUnderlayState: vi.fn(),
       syncUnderlayForActiveFloor: vi.fn(async () => undefined),
       resetInspectState: vi.fn(),
-      hydrateFloorDefaultsFromPlan: vi.fn(),
-      addFloorDefaultsSlot: vi.fn(),
-      removeFloorDefaultsSlot: vi.fn(),
       applyThicknessCatalog: (cms) => {
         catalog.value = [...cms]
       },

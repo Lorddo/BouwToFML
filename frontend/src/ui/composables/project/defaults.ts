@@ -86,6 +86,8 @@ export function createEmptyProjectState(meta?: Partial<ProjectMeta>): ProjectSta
         planNulpuntImageCm: null,
         planOrient: null,
         sourceUnderlay: null,
+        planUnderlay: null,
+        sourceToWorking: null,
         pdfUnderlaySource: null,
         sourcePdfUnderlay: null,
       },

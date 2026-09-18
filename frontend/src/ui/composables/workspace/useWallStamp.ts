@@ -9,6 +9,10 @@ import {
   DEFAULT_THICKNESS_BAND_BOUNDARIES,
   type ThicknessBandBoundaries,
 } from '@/core/plan/wall-thickness-tiers'
+import {
+  mergeStraightLJunctions,
+  mergeStraightLSegments,
+} from '@/core/plan/merge-straight-l-junctions'
 import { resolveBakeNulpuntImageCm } from '@/core/plan/stamp-nulpunt'
 import { buildWallOutlinePolylines } from '@/core/plan/wall-outline'
 import type { WallPolygonInput } from '@/core/plan/wall-render-types'
@@ -169,7 +173,7 @@ export function useWallStamp(deps: {
           thickness: w.thickness,
         }))
       : filterWallsByBands(sourceWallsCm.value, bands.value, boundaries)
-    wallsCm.value = filtered
+    wallsCm.value = mergeStraightLSegments(filtered)
     if (filtered.length === 0) {
       wallsPxBase.value = []
       return false
@@ -282,7 +286,9 @@ export function useWallStamp(deps: {
       thickness: w.thickness,
     }))
     const useStampSet = params.skipBandFilter === true
-    const filtered = useStampSet ? allWalls : filterWallsByBands(allWalls, bands.value, boundaries)
+    const filtered = mergeStraightLSegments(
+      useStampSet ? allWalls : filterWallsByBands(allWalls, bands.value, boundaries),
+    )
     if (filtered.length === 0) {
       error.value = tGlobal('preprocess.stampErrors.noWallsInBands')
       return false
@@ -656,18 +662,21 @@ export function useWallStamp(deps: {
     const live = bounds.value
     const pxPerMmX = deps.pxPerMmX()
     const pxPerMmY = deps.pxPerMmY()
-    if (!size || !base || !live) return walls.map((w) => ({ ...w, a: { ...w.a }, b: { ...w.b } }))
-    return filterInjectWallsByEraseMask({
-      walls,
-      eraseMask: eraseMask.value,
-      imageWidth: size.width,
-      imageHeight: size.height,
-      originCm: originCm.value,
-      baseBounds: base,
-      bounds: live,
-      pxPerMmX,
-      pxPerMmY,
-    })
+    const kept =
+      !size || !base || !live
+        ? walls.map((w) => ({ ...w, a: { ...w.a }, b: { ...w.b } }))
+        : filterInjectWallsByEraseMask({
+            walls,
+            eraseMask: eraseMask.value,
+            imageWidth: size.width,
+            imageHeight: size.height,
+            originCm: originCm.value,
+            baseBounds: base,
+            bounds: live,
+            pxPerMmX,
+            pxPerMmY,
+          })
+    return mergeStraightLJunctions(kept).walls
   }
 
   return {

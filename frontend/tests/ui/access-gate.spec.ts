@@ -8,7 +8,7 @@ import {
   unlockAccess,
 } from '@/ui/access-gate'
 
-const mockStorage = (() => {
+function memoryStorage() {
   const store = new Map<string, string>()
   return {
     getItem: (key: string) => store.get(key) ?? null,
@@ -22,19 +22,28 @@ const mockStorage = (() => {
       store.clear()
     },
   }
-})()
+}
+
+const sessionMock = memoryStorage()
+const localMock = memoryStorage()
 
 Object.defineProperty(globalThis, 'sessionStorage', {
-  value: mockStorage,
+  value: sessionMock,
+  configurable: true,
+})
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localMock,
   configurable: true,
 })
 
 beforeEach(() => {
-  mockStorage.clear()
+  sessionMock.clear()
+  localMock.clear()
 })
 
 afterEach(() => {
-  mockStorage.clear()
+  sessionMock.clear()
+  localMock.clear()
 })
 
 describe('access-gate', () => {
@@ -60,18 +69,25 @@ describe('access-gate', () => {
     expect(isAccessUnlocked('')).toBe(true)
   })
 
-  it('isAccessUnlocked follows sessionStorage when password required', () => {
+  it('isAccessUnlocked follows localStorage when password required', () => {
     expect(isAccessUnlocked('secret')).toBe(false)
     unlockAccess()
     expect(isAccessUnlocked('secret')).toBe(true)
   })
 
-  it('tryUnlockAccess writes sessionStorage on success', () => {
+  it('tryUnlockAccess writes localStorage on success', () => {
     expect(tryUnlockAccess('wrong', 'secret')).toBe(false)
-    expect(sessionStorage.getItem(ACCESS_UNLOCK_STORAGE_KEY)).toBeNull()
+    expect(localStorage.getItem(ACCESS_UNLOCK_STORAGE_KEY)).toBeNull()
 
     expect(tryUnlockAccess('secret', 'secret')).toBe(true)
-    expect(sessionStorage.getItem(ACCESS_UNLOCK_STORAGE_KEY)).toBe('1')
+    expect(localStorage.getItem(ACCESS_UNLOCK_STORAGE_KEY)).toBe('1')
     expect(isAccessUnlocked('secret')).toBe(true)
+  })
+
+  it('promoveert een oude sessionStorage-unlock naar localStorage', () => {
+    sessionStorage.setItem(ACCESS_UNLOCK_STORAGE_KEY, '1')
+    expect(localStorage.getItem(ACCESS_UNLOCK_STORAGE_KEY)).toBeNull()
+    expect(isAccessUnlocked('secret')).toBe(true)
+    expect(localStorage.getItem(ACCESS_UNLOCK_STORAGE_KEY)).toBe('1')
   })
 })

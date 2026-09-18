@@ -40,6 +40,11 @@ import {
   wallUniformBottomZCm,
   type WallElevationEditMode,
 } from '@/core/plan/wall-endpoint-height'
+import {
+  clampLocalZToFloorCeiling,
+  elevationCeilingYAtX,
+  withFloorCeilingSnapYs,
+} from '@/core/plan/elevation-ridge-place'
 import { floorWallBaseWorldZ } from '@/core/plan/floor-stack'
 import type { ElevationInteractionProps } from './elevation-interaction-types'
 
@@ -66,6 +71,21 @@ export function useElevationStructureDrag(options: {
 
   function elevCmToLocalZ(floorIndex: number, elevY: number): number {
     return -elevY - floorWallBaseWorldZ(props.plan, floorIndex)
+  }
+
+  function guardedSnapYs(
+    floorIndex: number,
+    xCm: number,
+    ys: readonly number[],
+  ): number[] {
+    return withFloorCeilingSnapYs(ys, elevationCeilingYAtX(props.plan, elevation.value!, floorIndex, xCm))
+  }
+
+  function localZAt(floorIndex: number, xCm: number, elevY: number): number {
+    const raw = Math.max(0, Math.round(elevCmToLocalZ(floorIndex, elevY)))
+    const elev = elevation.value
+    if (!elev) return raw
+    return clampLocalZToFloorCeiling(props.plan, elev, floorIndex, xCm, raw)
   }
 
   function snapPointerCm(
@@ -211,9 +231,14 @@ export function useElevationStructureDrag(options: {
       cm,
       event.ctrlKey || event.metaKey,
       collectElevationRidgeJunctionSnapXs(elev),
-      collectElevationSegmentSnapYs(elev, {
-        wallIds: ridgeEndDrag.refs.map((r) => r.wallId),
-      }),
+      guardedSnapYs(
+        ridgeEndDrag.floorIndex,
+        cm.x,
+        collectElevationSegmentSnapYs(elev, {
+          wallIds: ridgeEndDrag.refs.map((r) => r.wallId),
+          floorIndex: ridgeEndDrag.floorIndex,
+        }),
+      ),
       ELEVATION_SEGMENT_SNAP_CM,
     )
     commitPlan(
@@ -223,7 +248,7 @@ export function useElevationStructureDrag(options: {
         floorIndex: ridgeEndDrag.floorIndex,
         refs: ridgeEndDrag.refs,
         alongCm: snapped.x,
-        zCm: elevCmToLocalZ(ridgeEndDrag.floorIndex, snapped.y),
+        zCm: localZAt(ridgeEndDrag.floorIndex, snapped.x, snapped.y),
       }),
     )
   }
@@ -258,7 +283,14 @@ export function useElevationStructureDrag(options: {
       cm,
       event.ctrlKey || event.metaKey,
       collectElevationWallSnapXs(elev.walls),
-      collectElevationSegmentSnapYs(elev, { wallId: wallAxisEndDrag.wallId }),
+      guardedSnapYs(
+        wallAxisEndDrag.floorIndex,
+        cm.x,
+        collectElevationSegmentSnapYs(elev, {
+          wallId: wallAxisEndDrag.wallId,
+          floorIndex: wallAxisEndDrag.floorIndex,
+        }),
+      ),
       ELEVATION_SEGMENT_SNAP_CM,
     )
     commitPlan(
@@ -269,7 +301,7 @@ export function useElevationStructureDrag(options: {
         wallId: wallAxisEndDrag.wallId,
         end: wallAxisEndDrag.end,
         alongCm: snapped.x,
-        zCm: elevCmToLocalZ(wallAxisEndDrag.floorIndex, snapped.y),
+        zCm: localZAt(wallAxisEndDrag.floorIndex, snapped.x, snapped.y),
       }),
     )
   }
@@ -315,11 +347,18 @@ export function useElevationStructureDrag(options: {
       !elev || event.ctrlKey || event.metaKey,
       undefined,
       elev
-        ? collectElevationSegmentSnapYs(elev, { wallId: wallElevDrag.wallId })
+        ? guardedSnapYs(
+            wallElevDrag.floorIndex,
+            cm.x,
+            collectElevationSegmentSnapYs(elev, {
+              wallId: wallElevDrag.wallId,
+              floorIndex: wallElevDrag.floorIndex,
+            }),
+          )
         : undefined,
       ELEVATION_SEGMENT_SNAP_CM,
     )
-    const localZ = Math.max(0, Math.round(elevCmToLocalZ(wallElevDrag.floorIndex, snapped.y)))
+    const localZ = localZAt(wallElevDrag.floorIndex, snapped.x, snapped.y)
     const targetCm =
       wallElevDrag.mode === 'height' ? Math.max(1, localZ - wallElevDrag.startBottomZ) : localZ
     if (!wallElevDragStarted) {
@@ -407,25 +446,33 @@ export function useElevationStructureDrag(options: {
       !elev || event.ctrlKey || event.metaKey,
       undefined,
       elev
-        ? collectElevationSegmentSnapYs(elev, {
-            junctionId: junctionDrag.id,
-            wallIds: junctionDrag.refs.map((r) => r.wallId),
-          })
+        ? guardedSnapYs(
+            junctionDrag.floorIndex,
+            cm.x,
+            collectElevationSegmentSnapYs(elev, {
+              junctionId: junctionDrag.id,
+              wallIds: junctionDrag.refs.map((r) => r.wallId),
+              floorIndex: junctionDrag.floorIndex,
+            }),
+          )
         : undefined,
       ELEVATION_SEGMENT_SNAP_CM,
     )
     const y = snapped.y
     if (junctionDrag.ridge) {
-      const heightCm = Math.max(
+      const raw = Math.max(
         0,
         Math.min(800, Math.round(junctionDrag.startHeightCm - (y - junctionDrag.startY))),
       )
+      const heightCm = elev
+        ? clampLocalZToFloorCeiling(props.plan, elev, junctionDrag.floorIndex, snapped.x, raw)
+        : raw
       commitPlan(
         setPlanRidgeJunctionZ(props.plan, junctionDrag.floorIndex, junctionDrag.refs, heightCm),
       )
       return
     }
-    const localZ = Math.max(0, Math.round(elevCmToLocalZ(junctionDrag.floorIndex, y)))
+    const localZ = localZAt(junctionDrag.floorIndex, snapped.x, y)
     const targetCm =
       junctionDrag.mode === 'height' ? Math.max(1, localZ - junctionDrag.startBottomZ) : localZ
     commitPlan(
@@ -491,10 +538,14 @@ export function useElevationStructureDrag(options: {
     const snapped = snapPointerCm(
       cm,
       solo,
-      collectElevationRoofSnapXs(elev, skip),
-      collectElevationRoofSnapYs(elev, skip),
+      collectElevationRoofSnapXs(elev, skip, roofVertexDrag.floorIndex),
+      guardedSnapYs(
+        roofVertexDrag.floorIndex,
+        cm.x,
+        collectElevationRoofSnapYs(elev, skip, roofVertexDrag.floorIndex),
+      ),
     )
-    const z = elevCmToLocalZ(roofVertexDrag.floorIndex, snapped.y)
+    const z = localZAt(roofVertexDrag.floorIndex, snapped.x, snapped.y)
     const patches = pairIndices.flatMap((vertexIndex) => {
       const point = surface.poly[vertexIndex]
       if (!point) return []

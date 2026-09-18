@@ -161,6 +161,70 @@ describe('facade-elevation', () => {
     expect(Math.abs(bg.x1 - bg.x0)).toBeGreaterThan(Math.abs(up.x1 - up.x0) + 50)
   })
 
+  it('placeholder-dakplaat verdwijnt bij een dakvlak zonder nok', () => {
+    const plan = createEmptyFloorPlan({ name: 'Plaat', wallHeightCm: 280 })
+    plan.floors[0].walls = [wall('front', { x: 0, y: 0 }, { x: 400, y: 0 })]
+    const group = createFacadeGroup(plan, { name: 'Voor', code: 'VG' })
+    assignWallsToGroup(plan, group.id, ['front'])
+
+    const empty = projectFacadeElevation(plan, group.id)!
+    expect(empty.roofPlanes).toHaveLength(0)
+    expect(empty.walls.some((item) => item.ridge)).toBe(false)
+    expect(empty.bands.some((band) => band.kind === 'nok')).toBe(true)
+
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'roof-s',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 280 },
+          { x: 400, y: 200, z: 400 },
+          { x: 0, y: 200, z: 400 },
+        ],
+      }),
+    ])
+    const withRoof = projectFacadeElevation(plan, group.id)!
+    expect(withRoof.roofPlanes).toHaveLength(1)
+    expect(withRoof.walls.some((item) => item.ridge)).toBe(false)
+    expect(withRoof.bands.some((band) => band.kind === 'nok')).toBe(false)
+  })
+
+  it('BG-dakvlak laat de 1e-placeholder staan, alleen over de 1e-gevel', () => {
+    const plan = createEmptyFloorPlan({ name: 'Uitbouw', wallHeightCm: 250 })
+    plan.floors[0].walls = [wall('bg-side', { x: 0, y: 0 }, { x: 0, y: 800 })]
+    plan.floors.push(createBlankFloor({ name: '1e', level: 1, wallHeightCm: 250 }))
+    plan.floors[1].walls = [wall('up-side', { x: 0, y: 0 }, { x: 0, y: 400 })]
+    const group = createFacadeGroup(plan, { name: 'Zijgevel', code: 'ZG' })
+    assignWallsToGroup(plan, group.id, ['bg-side', 'up-side'])
+
+    const empty = projectFacadeElevation(plan, group.id)!
+    const placeholders = empty.bands.filter((band) => band.kind === 'nok')
+    expect(placeholders).toHaveLength(2)
+    const upEmpty = placeholders.find((band) => band.floorIndex === 1)!
+    const bgEmpty = placeholders.find((band) => band.floorIndex === 0)!
+    expect(Math.abs(bgEmpty.x1 - bgEmpty.x0)).toBeGreaterThan(Math.abs(upEmpty.x1 - upEmpty.x0) + 50)
+
+    plan.floors[0] = setRidgeSurfacesOnFloor(plan.floors[0], [
+      makeRoofSurface({
+        id: 'bg-roof',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 400, z: 250 },
+          { x: 200, y: 400, z: 250 },
+          { x: 200, y: 800, z: 250 },
+          { x: 0, y: 800, z: 250 },
+        ],
+      }),
+    ])
+    const withBgRoof = projectFacadeElevation(plan, group.id)!
+    const after = withBgRoof.bands.filter((band) => band.kind === 'nok')
+    expect(after.some((band) => band.floorIndex === 0)).toBe(false)
+    const upKeep = after.find((band) => band.floorIndex === 1)
+    expect(upKeep).toBeTruthy()
+    expect(Math.abs(upKeep!.x1 - upKeep!.x0)).toBeLessThan(Math.abs(bgEmpty.x1 - bgEmpty.x0) - 50)
+  })
+
   it('projecteert volle baksteen (buiten tot buiten) en laat return-wand vallen', () => {
     const plan = twoFloorPlan()
     const elev = projectFacadeElevation(plan, 'G1')
@@ -839,6 +903,83 @@ describe('facade-elevation', () => {
     expect(hitElevationRoofPlane(elev!, aboveTop)?.id).toBe(plane.id)
   })
 
+  it('hitElevationRoofPlane: dakkapel wint van overlapping ouderdak', () => {
+    const quad = [
+      { x: 0, y: -200 },
+      { x: 400, y: -200 },
+      { x: 400, y: 0 },
+      { x: 0, y: 0 },
+    ]
+    const cap = [
+      { x: 120, y: -80 },
+      { x: 280, y: -80 },
+      { x: 280, y: -20 },
+      { x: 120, y: -20 },
+    ]
+    const elev = {
+      roofPlanes: [
+        {
+          id: 'main',
+          floorIndex: 0,
+          points: quad,
+          fillPoints: quad,
+          color: '#888',
+          depthCm: 50,
+        },
+        {
+          id: 'cap',
+          floorIndex: 0,
+          points: cap,
+          fillPoints: cap,
+          color: '#b88',
+          depthCm: 50,
+          dormer: true,
+          parentId: 'main',
+        },
+      ],
+    } as Parameters<typeof hitElevationRoofPlane>[0]
+    expect(hitElevationRoofPlane(elev, { x: 200, y: -50 })?.id).toBe('cap')
+    expect(hitElevationRoofPlane(elev, { x: 20, y: -100 })?.id).toBe('main')
+  })
+
+  it('hitElevationRoofPlane: dakkapel wint ook als ouderdak dichterbij (later in lijst)', () => {
+    const quad = [
+      { x: 0, y: -200 },
+      { x: 400, y: -200 },
+      { x: 400, y: 0 },
+      { x: 0, y: 0 },
+    ]
+    const cap = [
+      { x: 120, y: -80 },
+      { x: 280, y: -80 },
+      { x: 280, y: -20 },
+      { x: 120, y: -20 },
+    ]
+    const elev = {
+      roofPlanes: [
+        {
+          id: 'cap',
+          floorIndex: 0,
+          points: cap,
+          fillPoints: cap,
+          color: '#b88',
+          depthCm: 0,
+          dormer: true,
+          parentId: 'main',
+        },
+        {
+          id: 'main',
+          floorIndex: 0,
+          points: quad,
+          fillPoints: quad,
+          color: '#888',
+          depthCm: 80,
+        },
+      ],
+    } as Parameters<typeof hitElevationRoofPlane>[0]
+    expect(hitElevationRoofPlane(elev, { x: 200, y: -50 })?.id).toBe('cap')
+  })
+
   it('thickenElevationRoofPoly: dikte 0 laat de ring ongewijzigd', () => {
     const ring = [
       { x: 0, y: 0 },
@@ -1091,8 +1232,8 @@ describe('facade-elevation', () => {
     const elevWest = projectFacadeElevation(withRoofs, west.id)!
     const planeWest = elevWest.roofPlanes.find((p) => p.id === 'roof-s')!
     // Goot-hoeken (-10,-10) en (810,-10) vallen op dezelfde aanzicht-X/Y van opzij.
-    const eaveIdx = planeWest.points.findIndex(
-      (p, i, arr) => arr.every((o) => o.y >= p.y - 1e-6),
+    const eaveIdx = planeWest.points.findIndex((p) =>
+      planeWest.points.every((o) => o.y >= p.y - 1e-6),
     )
     expect(eaveIdx).toBeGreaterThanOrEqual(0)
     const pairWest = pairedElevationRoofVertexIndices(planeWest, eaveIdx)

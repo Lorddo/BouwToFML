@@ -29,3 +29,4 @@ export {
   deleteOtherProjects,
 } from './idb'
 export { createProjectPersistController } from './persist-controller'
+export { isPersistSizeError, isQuotaExceeded, persistErrorMessage } from './persist-errors'

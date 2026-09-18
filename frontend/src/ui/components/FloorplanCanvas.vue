@@ -360,6 +360,7 @@ function onShowCanvasGrid(next: boolean) {
             :img-width="imgSize.w"
             :img-height="imgSize.h"
             :stage-scale="stageScale"
+            :space-pressed="spacePressed"
             @move-scale-handle="(handle, value) => emit('moveScaleHandle', handle, value)"
           />
           <FloorplanPolygonDraftLayer
@@ -455,6 +456,7 @@ function onShowCanvasGrid(next: boolean) {
             :wall-thickness-limits="wallThicknessLimits"
             :icon-size="iconSize"
             :handle-size="handleSize"
+            :stage-scale="stageScale"
             :icon-positions="iconPositions"
             :on-rect-mouse-down="onRectMouseDown"
             :on-resize-handle-down="onResizeHandleDown"

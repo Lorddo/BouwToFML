@@ -209,7 +209,7 @@ describe('pointer-cascade — D. select-cascade', () => {
     expect(h.calls).not.toContain('startOpeningDragPending')
   })
 
-  it('17 — box-select gaat vóór de opening, maar niet vóór de knoop', () => {
+  it('17 — box-select gaat vóór de opening én de knoop', () => {
     const opening = makePointerHarness({
       hits: { opening: 'o1' },
       modes: { tool: 'selection_box' },
@@ -222,8 +222,8 @@ describe('pointer-cascade — D. select-cascade', () => {
       modes: { tool: 'selection_box' },
     })
     knoop.click()
-    expect(knoop.calls).toContain('startJunctionDrag')
-    expect(knoop.calls).not.toContain('beginSelectionBoxDrag')
+    expect(knoop.calls).toContain('beginSelectionBoxDrag')
+    expect(knoop.calls).not.toContain('startJunctionDrag')
   })
 
   it('18 — opening wist de andere selecties en gaat vóór fixture en muur', () => {

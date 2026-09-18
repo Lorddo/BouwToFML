@@ -40,29 +40,36 @@ function onSubmit(): void {
 
 <template>
   <div class="access-gate">
-    <form class="access-gate__panel" @submit.prevent="onSubmit">
+    <div class="access-gate__panel">
       <h1 class="access-gate__title">{{ title ?? t('app.title') }}</h1>
       <p class="access-gate__subtitle">{{ subtitle ?? t('access.subtitle') }}</p>
-      <label class="access-gate__label" for="access-password">
+      <label class="access-gate__label" for="access-code">
         {{ t('access.password') }}
       </label>
       <input
-        id="access-password"
+        id="access-code"
         v-model="password"
         class="access-gate__input"
         type="password"
-        autocomplete="current-password"
+        name="access-code"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        data-1p-ignore
+        data-lpignore="true"
         autofocus
         :aria-invalid="error"
-        :aria-describedby="error ? 'access-password-error' : undefined"
+        :aria-describedby="error ? 'access-code-error' : undefined"
+        @keydown.enter.prevent="onSubmit"
       />
-      <p v-if="error" id="access-password-error" class="access-gate__error" role="alert">
+      <p v-if="error" id="access-code-error" class="access-gate__error" role="alert">
         {{ t('access.incorrect') }}
       </p>
-      <button type="submit" class="primary access-gate__submit">
+      <button type="button" class="primary access-gate__submit" @click="onSubmit">
         {{ t('access.submit') }}
       </button>
-    </form>
+    </div>
   </div>
 </template>
 

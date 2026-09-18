@@ -1,17 +1,35 @@
 /**
  * Dakvlak plaatsen vanuit kopgevel-aanzicht:
- * 2 klikken (goot + nok) → quad langs bestaande nok naar de andere kant.
+ * 2 klikken (goot + piek) → quad tot de andere gevel.
+ * Bestaande kopse nok is optioneel (magneet); zonder nok volgt de diepte de buitenfaces.
  */
-import { elevationInwardDir, resolveElevationRidgeFloor } from './elevation-ridge-place'
-import { snapElevationX } from './elevation-hit'
+import {
+  clampElevationYToFloorCeiling,
+  clampLocalZToFloorCeiling,
+  elevationCeilingYAtX,
+  elevationFloorSoffitYAtX,
+  elevationInwardDir,
+  resolveElevationRidgeFloor,
+  spanElevationRidgeOnFloor,
+  storeyAboveBlocksRoofAtX,
+  withFloorCeilingSnapYs,
+} from './elevation-ridge-place'
+import {
+  collectElevationRoofSnapXs,
+  collectElevationRoofSnapYs,
+  snapElevationX,
+  snapElevationY,
+} from './elevation-hit'
 import { elevationDepthCm, type FacadeElevation } from './facade-elevation'
-import { floorWallBaseWorldZ } from './floor-stack'
+import { DEFAULT_FLOOR_THICKNESS_CM, floorSlabWorldRange, floorWallBaseWorldZ } from './floor-stack'
 import { isPointSkyExposedOnFloor } from './ridge-floor'
 import { listRidgeWallsOnFloor } from './ridge-walls'
 import {
+  clampRoofVertexZCm,
   listRidgeSurfacesOnFloor,
   makeRoofSurface,
   markRoofSurfaceManual,
+  roofVertexZMinCm,
   ROOF_SAME_POINT_CM,
   setRidgeSurfacesOnFloor,
   syncRoofPlaneGuidsFromDesigns,
@@ -41,7 +59,7 @@ export type ElevationRoofPlacePreview = {
   poly: Point3[]
   /** Quad in aanzicht-cm (hartlijn), voor ghost-outline. */
   elevPoints: Point2D[]
-  ridgeWallId: string
+  ridgeWallId: string | null
 }
 
 export type ElevationRoofPlaceResult = {
@@ -70,8 +88,30 @@ function hypot2(ax: number, ay: number, bx: number, by: number): number {
   return Math.hypot(bx - ax, by - ay)
 }
 
-function zFromElevY(plan: FloorPlan, floorIndex: number, elevY: number): number {
-  return Math.max(0, Math.round(-elevY - floorWallBaseWorldZ(plan, floorIndex)))
+function slabCmOnFloor(plan: FloorPlan, floorIndex: number): number {
+  const slab = floorSlabWorldRange(plan, floorIndex)
+  if (!slab) return DEFAULT_FLOOR_THICKNESS_CM
+  return Math.max(0, Math.round(slab.z1 - slab.z0))
+}
+
+function zFromElevY(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  floorIndex: number,
+  xCm: number,
+  elevY: number,
+): number {
+  const raw = Math.round(-elevY - floorWallBaseWorldZ(plan, floorIndex))
+  const slabCm = slabCmOnFloor(plan, floorIndex)
+  const minZ = roofVertexZMinCm(slabCm)
+  return clampLocalZToFloorCeiling(
+    plan,
+    elev,
+    floorIndex,
+    xCm,
+    clampRoofVertexZCm(raw, slabCm),
+    minZ,
+  )
 }
 
 function elevYFromZ(plan: FloorPlan, floorIndex: number, zCm: number): number {
@@ -133,7 +173,7 @@ function facadeOutward(plan: FloorPlan, elev: FacadeElevation): Point2D {
   return { x: -inward.x, y: -inward.y }
 }
 
-/** Snap X op buitenface-randen + buitenhoeken (niet hartlijn-junctions). */
+/** Snap X op buitenface-randen + buitenhoeken + bestaande dakvlak-punten. */
 function snapEaveElevationX(
   plan: FloorPlan,
   elev: FacadeElevation,
@@ -153,7 +193,33 @@ function snapEaveElevationX(
       xs.push(projectElevX(corner, elev.axis))
     }
   }
+  xs.push(...collectElevationRoofSnapXs(elev, undefined, floorIndex))
   return snapElevationX(xCm, xs, OUTER_CORNER_SNAP_CM)
+}
+
+function snapRoofPlaceClickY(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  yCm: number,
+  snapOff: boolean,
+  floorIndex: number,
+  xCm: number,
+): number {
+  const soffitY = elevationFloorSoffitYAtX(plan, elev, floorIndex, xCm)
+  const ceilingY = elevationCeilingYAtX(plan, elev, floorIndex, xCm)
+  if (snapOff) return clampElevationYToFloorCeiling(plan, elev, floorIndex, xCm, yCm)
+  const ys = withFloorCeilingSnapYs(
+    collectElevationRoofSnapYs(elev, undefined, floorIndex),
+    ceilingY,
+  )
+  if (soffitY != null) ys.push(soffitY)
+  return clampElevationYToFloorCeiling(
+    plan,
+    elev,
+    floorIndex,
+    xCm,
+    snapElevationY(yCm, ys, OUTER_CORNER_SNAP_CM),
+  )
 }
 
 /**
@@ -250,7 +316,7 @@ export function mapElevationClickToFacadePoint(
     bestCornerDist = distX
     onFace = corner
   }
-  return { x: onFace.x, y: onFace.y, z: zFromElevY(plan, floorIndex, click.y) }
+  return { x: onFace.x, y: onFace.y, z: zFromElevY(plan, elev, floorIndex, x, click.y) }
 }
 
 type RidgeSnap = {
@@ -311,7 +377,7 @@ export function snapElevationClickToRidge(
     if (dist > bestDist) continue
     const topNear = ridgeEndpointTopZCm(wall, nearEnd, floor.height)
     const topFar = ridgeEndpointTopZCm(wall, farEnd, floor.height)
-    const z = freeZ ? zFromElevY(plan, floorIndex, click.y) : topNear
+    const z = freeZ ? zFromElevY(plan, elev, floorIndex, x, click.y) : topNear
     const farZ = freeZ ? z : topFar
     bestDist = dist
     best = {
@@ -325,8 +391,69 @@ export function snapElevationClickToRidge(
   return best
 }
 
-/** Quad: goot→nok langs de nok naar de andere kant. */
-export function buildRoofQuadFromGableEdge(nearEave: Point3, ridge: RidgeSnap): Point3[] | null {
+type RoofRidgeEdge = {
+  near: Point3
+  far: Point3
+  wallId: string | null
+}
+
+/** Piek zonder nok: zelfde X/Z op de gevel, diepte = buitenface→buitenface. */
+function syntheticRoofRidgeEdge(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  click: Point2D,
+  floorIndex: number,
+  options?: { snapOff?: boolean },
+): RoofRidgeEdge | null {
+  const peak = mapElevationClickToFacadePoint(plan, elev, click, floorIndex, options)
+  if (!peak) return null
+  const x = snapEaveElevationX(plan, elev, floorIndex, click.x, options?.snapOff === true)
+  const span = spanElevationRidgeOnFloor(plan, floorIndex, elev, x)
+  if (!span) return null
+  const dx = span.b.x - span.a.x
+  const dy = span.b.y - span.a.y
+  if (Math.hypot(dx, dy) < MIN_EDGE_CM) return null
+  return {
+    near: peak,
+    far: { x: peak.x + dx, y: peak.y + dy, z: peak.z },
+    wallId: null,
+  }
+}
+
+/**
+ * Piek-rand = altijd volle gevel→gevel (lineair).
+ * Kopse nok levert alleen Z (niet de lengte); vouw = tweede vlak.
+ */
+function resolveRoofRidgeEdge(
+  plan: FloorPlan,
+  elev: FacadeElevation,
+  click: Point2D,
+  floorIndex: number,
+  options?: { snapOff?: boolean; freeZ?: boolean },
+): RoofRidgeEdge | null {
+  const snapOff = options?.snapOff === true
+  const x = snapEaveElevationX(plan, elev, floorIndex, click.x, snapOff)
+  const snappedClick = {
+    x,
+    y: snapRoofPlaceClickY(plan, elev, click.y, snapOff, floorIndex, x),
+  }
+  const synthetic = syntheticRoofRidgeEdge(plan, elev, snappedClick, floorIndex, options)
+  if (!synthetic) return null
+  if (options?.freeZ === true) return synthetic
+  const ridge = snapElevationClickToRidge(plan, elev, snappedClick, floorIndex, options)
+  if (!ridge) return synthetic
+  return {
+    near: { ...synthetic.near, z: ridge.near.z },
+    far: { ...synthetic.far, z: ridge.far.z },
+    wallId: ridge.wall.id,
+  }
+}
+
+/** Quad: goot→piek, getransleerd tot de andere gevel. */
+export function buildRoofQuadFromGableEdge(
+  nearEave: Point3,
+  ridge: Pick<RoofRidgeEdge, 'near' | 'far'>,
+): Point3[] | null {
   const nearRidge = ridge.near
   const farRidge = ridge.far
   const dx = farRidge.x - nearRidge.x
@@ -362,12 +489,15 @@ export function beginRoofPlaceFromElevation(
   click: Point2D,
   options?: { snapOff?: boolean },
 ): ElevationRoofPlaceDraft | null {
-  const floorIndexHint = resolveElevationRidgeFloor(plan, elev, click)
-  if (floorIndexHint < 0) return null
-  const x = snapEaveElevationX(plan, elev, floorIndexHint, click.x, options?.snapOff === true)
-  const snapped = { x, y: click.y }
-  const floorIndex = resolveElevationRidgeFloor(plan, elev, snapped)
+  const hinted = resolveElevationRidgeFloor(plan, elev, click)
+  if (hinted < 0) return null
+  const snapOff = options?.snapOff === true
+  const x = snapEaveElevationX(plan, elev, hinted, click.x, snapOff)
+  const y = snapRoofPlaceClickY(plan, elev, click.y, snapOff, hinted, x)
+  const floorIndex = resolveElevationRidgeFloor(plan, elev, { x, y })
   if (floorIndex < 0) return null
+  if (storeyAboveBlocksRoofAtX(plan, elev, floorIndex, x)) return null
+  const snapped = { x, y }
   const eave = mapElevationClickToFacadePoint(plan, elev, snapped, floorIndex, options)
   if (!eave) return null
   return {
@@ -384,7 +514,8 @@ export function previewRoofFromElevation(
   click: Point2D,
   options?: { snapOff?: boolean; freeZ?: boolean },
 ): ElevationRoofPlacePreview | null {
-  const ridge = snapElevationClickToRidge(plan, elev, click, draft.floorIndex, options)
+  if (storeyAboveBlocksRoofAtX(plan, elev, draft.floorIndex, click.x)) return null
+  const ridge = resolveRoofRidgeEdge(plan, elev, click, draft.floorIndex, options)
   if (!ridge) return null
   const poly = buildRoofQuadFromGableEdge(draft.eave, ridge)
   if (!poly) return null
@@ -397,7 +528,7 @@ export function previewRoofFromElevation(
     floorIndex: draft.floorIndex,
     poly,
     elevPoints: elevPointsFromPoly(plan, elev, draft.floorIndex, poly),
-    ridgeWallId: ridge.wall.id,
+    ridgeWallId: ridge.wallId,
   }
 }
 
@@ -436,7 +567,7 @@ export function roofPlaceHoverElevPoint(
   click: Point2D,
   options?: { snapOff?: boolean; freeZ?: boolean },
 ): Point2D {
-  const ridge = snapElevationClickToRidge(plan, elev, click, draft.floorIndex, options)
+  const ridge = resolveRoofRidgeEdge(plan, elev, click, draft.floorIndex, options)
   if (ridge) {
     return {
       x: projectElevX(ridge.near, elev.axis),
@@ -444,7 +575,10 @@ export function roofPlaceHoverElevPoint(
     }
   }
   const x = snapEaveElevationX(plan, elev, draft.floorIndex, click.x, options?.snapOff === true)
-  return { x, y: click.y }
+  return {
+    x,
+    y: clampElevationYToFloorCeiling(plan, elev, draft.floorIndex, x, click.y),
+  }
 }
 
 export { ROOF_SAME_POINT_CM }

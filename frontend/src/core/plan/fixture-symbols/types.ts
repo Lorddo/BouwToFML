@@ -76,6 +76,7 @@ export function isFurnitureKind(kind: FixtureAssetKind): boolean {
     kind === 'dryer' ||
     kind === 'washer_dryer' ||
     kind === 'bathtub' ||
+    kind === 'bathtub_square' ||
     kind === 'sink_double' ||
     kind === 'toilet' ||
     kind === 'toilet_wall_hung' ||
@@ -85,11 +86,19 @@ export function isFurnitureKind(kind: FixtureAssetKind): boolean {
     kind === 'shower_head' ||
     kind === 'fuse_box' ||
     kind === 'stair_winder_180' ||
+    kind === 'stair_u_landing' ||
+    kind === 'stair_c_90' ||
+    kind === 'stair_l_90' ||
+    kind === 'stair_l_90_up' ||
+    kind === 'stair_winder_270' ||
     kind === 'stair_quarter_90' ||
     kind === 'stair_quarter_90_up' ||
     kind === 'stair_straight' ||
     kind === 'stair_straight_double' ||
+    kind === 'stair_loft' ||
+    kind === 'stair_loft_dashed' ||
     kind === 'stair_opening' ||
+    kind === 'ramp' ||
     kind === 'roof_eave'
   )
 }

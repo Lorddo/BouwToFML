@@ -19,6 +19,9 @@ defineProps<{
     mirroredX: boolean
     mirroredY: boolean
     showFrame?: boolean
+    showRoofPose?: boolean
+    zCm?: number
+    pitchDeg?: number
     frameLeftCm?: number
     frameRightCm?: number
     frameTopCm?: number
@@ -29,6 +32,8 @@ defineProps<{
 const emit = defineEmits<{
   itemWidthCm: [cm: number]
   itemHeightCm: [cm: number]
+  itemZCm: [cm: number]
+  itemPitchInput: [event: Event]
   itemRotationInput: [event: Event]
   toggleItemMirrorX: []
   toggleItemMirrorY: []
@@ -70,6 +75,36 @@ const { t } = useI18n()
         input-class="plan-toolbelt__thickness-input"
         @update:cm="emit('itemHeightCm', $event)"
       />
+    </span>
+  </label>
+  <label v-if="selectedItemPanel.showRoofPose" class="plan-toolbelt__field">
+    <span class="plan-toolbelt__field-label">{{ t('viewer.itemZ') }}</span>
+    <span class="plan-toolbelt__field-controls">
+      <ScaleLengthInput
+        :cm="selectedItemPanel.zCm ?? 0"
+        :unit="unit"
+        :min-cm="0"
+        allow-zero
+        :aria-label="t('viewer.itemZ')"
+        input-class="plan-toolbelt__thickness-input"
+        @update:cm="emit('itemZCm', $event)"
+      />
+    </span>
+  </label>
+  <label v-if="selectedItemPanel.showRoofPose" class="plan-toolbelt__field">
+    <span class="plan-toolbelt__field-label">{{ t('viewer.itemPitch') }}</span>
+    <span class="plan-toolbelt__field-controls">
+      <input
+        type="number"
+        step="0.1"
+        min="0"
+        max="90"
+        class="plan-toolbelt__thickness-input"
+        :value="selectedItemPanel.pitchDeg ?? 0"
+        :aria-label="t('viewer.itemPitch')"
+        @change="emit('itemPitchInput', $event)"
+      />
+      <span class="plan-toolbelt__unit">°</span>
     </span>
   </label>
   <button

@@ -1,10 +1,10 @@
-import type { ComputedRef, Ref } from 'vue'
+import type { Ref } from 'vue'
 import { buildFmlV3 } from '@/core/fml/buildFmlV3'
 import { downloadFml, downloadText } from '@/core/fml/downloadFml'
 import { stripStampGroupFromPlan } from '@/core/plan/facade-groups'
 import { applyJunctionSanitizeToPlan } from '@/core/plan/materialize-wall-junctions'
 import type { FloorPlan } from '@/core/plan/types'
-import type { ViewerSessionDefaults } from '@/core/plan/viewer-session-defaults'
+import { readFloorDefaults } from '@/core/plan/floor-defaults'
 import {
   createPlgDocument,
   toPlgFloorDefaults,
@@ -13,6 +13,8 @@ import {
 } from '@/core/plg/plg-document'
 import { normalizeThicknessCatalog } from '@/core/plan/wall-thickness-catalog'
 import { promptPlanExportFormat } from '@/ui/composables/plan-chrome-dialog'
+import { getConfiguredAccessPassword } from '@/ui/access-gate'
+import { ensurePlanUnderlaysUploaded } from '@/platform/underlay-upload'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import { loadUserSettings } from '@/ui/composables/settings/user-settings'
 
@@ -26,45 +28,48 @@ export function useEditorDownload(deps: {
   fileName: Ref<string | null>
   scaleInputUnit: Ref<ScaleInputUnit>
   thicknessPresetCms: Ref<number[]>
-  activeFloorDefaults: ComputedRef<ViewerSessionDefaults>
-  defaultsForFloor: (index: number) => ViewerSessionDefaults
+  activeFloorIndex: Ref<number>
   flushPendingFieldCommits: () => void
   persistActiveUnderlayDrawing: () => void
 }) {
-  /** Live plan → FML-string alleen bij download (geen computed bij elke mutatie). */
-  function buildCurrentFmlText(): string {
-    if (!deps.plan.value) return ''
-    const exportPlan = stripStampGroupFromPlan(deps.plan.value)
-    return buildFmlV3(exportPlan, {
-      name: exportPlan.name,
-      bovenlichtDefault: (_floor, index) => deps.defaultsForFloor(index).bovenlichtDefault,
-      windowBovenlichtDefault: (_floor, index) =>
-        deps.defaultsForFloor(index).windowBovenlichtDefault,
-      bovenlichtHeightCm: (_floor, index) => deps.defaultsForFloor(index).bovenlichtHeightCm,
-      bovenlichtGapCm: (_floor, index) => deps.defaultsForFloor(index).bovenlichtGapCm,
-      useMetric: loadUserSettings().unitSystem === 'metric',
-    })
-  }
-
   function buildPlgSettings(): PlgSettings {
     const settings = loadUserSettings()
     const catalog = normalizeThicknessCatalog(deps.thicknessPresetCms.value)
+    const floorDefaults = deps.plan.value
+      ? readFloorDefaults(deps.plan.value, deps.activeFloorIndex.value)
+      : undefined
     return {
       unitSystem: settings.unitSystem,
       scaleInputUnit: deps.scaleInputUnit.value,
       planDisplayStyle: settings.planDisplay.planDisplayStyle ?? 'editor',
       showCanvasGrid: settings.planDisplay.showCanvasGrid !== false,
-      // Hoogtes per verdieping; dikte-catalogus is project-lokaal (niet de globale Settings).
       defaults: toPlgFloorDefaults({
         ...settings.defaults,
-        ...deps.activeFloorDefaults.value,
+        ...floorDefaults,
+        wallHeightCm:
+          deps.plan.value?.floors[deps.activeFloorIndex.value]?.height ??
+          settings.defaults.wallHeightCm,
         thicknessCms: [...catalog],
       }),
     }
   }
 
+  function buildFmlTextFromPlan(plan: FloorPlan): string {
+    const exportPlan = stripStampGroupFromPlan(plan)
+    return buildFmlV3(exportPlan, {
+      name: exportPlan.name,
+      useMetric: loadUserSettings().unitSystem === 'metric',
+    })
+  }
+
+  /** Live plan → FML-string alleen bij download (geen computed bij elke mutatie). */
+  function buildCurrentFmlText(): string {
+    if (!deps.plan.value) return ''
+    return buildFmlTextFromPlan(deps.plan.value)
+  }
+
   /** Flush + knoop-sanitize; `null` als er niets te exporteren is. */
-  function prepareExportPlan(): FloorPlan | null {
+  async function prepareExportPlan(): Promise<FloorPlan | null> {
     deps.flushPendingFieldCommits()
     deps.persistActiveUnderlayDrawing()
     if (!deps.plan.value) return null
@@ -72,23 +77,35 @@ export function useEditorDownload(deps: {
     if (junctioned !== deps.plan.value) {
       deps.plan.value = junctioned
     }
-    return deps.plan.value
+    try {
+      const uploaded = await ensurePlanUnderlaysUploaded(deps.plan.value, {
+        projectId: deps.plan.value.name || 'editor',
+        floorIds: deps.plan.value.floors.map((floor, index) => floor.name || `floor-${index}`),
+        token: getConfiguredAccessPassword(),
+      })
+      if (uploaded.urls.length > 0) {
+        deps.plan.value = uploaded.plan
+      }
+      return uploaded.plan
+    } catch {
+      return deps.plan.value
+    }
   }
 
   function exportBaseName(plan: FloorPlan, fallback: string): string {
     return deps.fileName.value?.replace(/\.[^.]+$/i, '') || plan.name?.trim() || fallback
   }
 
-  function downloadCurrentFml(): void {
-    const prepared = prepareExportPlan()
+  async function downloadCurrentFml(): Promise<void> {
+    const prepared = await prepareExportPlan()
     if (!prepared) return
-    const text = buildCurrentFmlText()
+    const text = buildFmlTextFromPlan(prepared)
     if (!text) return
     downloadFml(text, `${exportBaseName(prepared, 'fml-export')}.fml`)
   }
 
-  function downloadCurrentPlg(): void {
-    const prepared = prepareExportPlan()
+  async function downloadCurrentPlg(): Promise<void> {
+    const prepared = await prepareExportPlan()
     if (!prepared) return
     const exportPlan = stripStampGroupFromPlan(prepared)
     const base = exportBaseName(exportPlan, 'plan-export')
@@ -110,8 +127,8 @@ export function useEditorDownload(deps: {
   async function downloadCurrentExport(): Promise<void> {
     if (!deps.plan.value) return
     const format = await promptPlanExportFormat()
-    if (format === 'plg') downloadCurrentPlg()
-    else if (format === 'fml') downloadCurrentFml()
+    if (format === 'plg') await downloadCurrentPlg()
+    else if (format === 'fml') await downloadCurrentFml()
   }
 
   return {

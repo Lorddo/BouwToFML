@@ -62,7 +62,7 @@ export function snapRoofVertexToWallFace(params: {
   let best: { z: number; dist: number } | null = null
   const floors =
     params.floorIndex != null
-      ? [params.plan.floors[params.floorIndex], params.plan.floors[params.floorIndex + 1]].filter(
+      ? [params.plan.floors[params.floorIndex]].filter(
           (floor): floor is NonNullable<typeof floor> => floor != null,
         )
       : params.plan.floors
@@ -94,4 +94,36 @@ export function snapRoofVertexZ(params: {
   if (face) return face.z
   const floor = params.plan.floors[params.floorIndex]
   return floor ? Math.round(floor.height) : 0
+}
+
+/**
+ * Nieuw dakvlak-punt: Z van de muur eronder; anders interpolatie op de rand
+ * (nooit 0 door een verschoven poly-index).
+ */
+export function resolveInsertedRoofVertexZ(params: {
+  plan: FloorPlan
+  floorIndex: number
+  point: Point2D
+  edgeA?: { z?: number }
+  edgeB?: { z?: number }
+  t?: number
+}): number {
+  const face = snapRoofVertexToWallFace({
+    plan: params.plan,
+    point: params.point,
+    floorIndex: params.floorIndex,
+  })
+  if (face) return face.z
+  const az = params.edgeA?.z
+  const bz = params.edgeB?.z
+  if (
+    typeof az === 'number' &&
+    Number.isFinite(az) &&
+    typeof bz === 'number' &&
+    Number.isFinite(bz)
+  ) {
+    const t = Math.max(0, Math.min(1, params.t ?? 0.5))
+    return Math.round(az + (bz - az) * t)
+  }
+  return snapRoofVertexZ(params)
 }

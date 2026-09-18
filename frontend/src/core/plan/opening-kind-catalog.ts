@@ -10,7 +10,11 @@ export type DoorOpeningKind =
   | 'door.closet'
   | 'door.passage'
   | 'door.archway'
+  | 'door.round'
   | 'door.french_balcony'
+  | 'door.balcony'
+  | 'door.flush'
+  | 'door.half_glass'
   | 'door.double'
   | 'door.double_solid'
   | 'door.bifold'
@@ -18,11 +22,13 @@ export type DoorOpeningKind =
   | 'door.pocket'
   | 'door.sliding_single'
   | 'door.sliding'
+  | 'door.elevator'
   | 'door.garage'
   | 'door.unmapped'
 
 export type WindowOpeningKind =
   | 'window.single'
+  | 'window.grid'
   | 'window.double'
   | 'window.triple'
   | 'window.round'
@@ -45,10 +51,14 @@ export type DoorAssetKind =
   | 'archway'
   | 'closet45'
   | 'french_balcony'
+  | 'flush'
+  | 'half_glass'
   | 'bifold'
   | 'bifold_double'
+  | 'elevator'
+  | 'round_opening'
 
-export type WindowAssetKind = 'single' | 'multi' | 'round' | 'half_round' | 'triangle'
+export type WindowAssetKind = 'single' | 'grid' | 'multi' | 'round' | 'half_round' | 'triangle'
 export type OpeningAssetKind = DoorAssetKind | WindowAssetKind
 
 /** CV/detectie-kinds: alle schuifvarianten vallen onder `sliding`. */
@@ -108,15 +118,26 @@ function asDoorGlyph(raw: string): DoorAssetKind {
     'archway',
     'closet45',
     'french_balcony',
+    'flush',
+    'half_glass',
     'bifold',
     'bifold_double',
+    'elevator',
+    'round_opening',
   ]
   return known.includes(k) ? k : 'single'
 }
 
 function asWindowGlyph(raw: string): WindowAssetKind {
   const k = raw as WindowAssetKind
-  if (k === 'multi' || k === 'round' || k === 'half_round' || k === 'triangle' || k === 'single') {
+  if (
+    k === 'multi' ||
+    k === 'round' ||
+    k === 'half_round' ||
+    k === 'triangle' ||
+    k === 'single' ||
+    k === 'grid'
+  ) {
     return k
   }
   return 'single'
@@ -138,7 +159,7 @@ export function defaultOpeningFrame(type: OpeningType, glyph: OpeningAssetKind):
   if (type === 'window') {
     return { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 5 }
   }
-  if (glyph === 'passage' || glyph === 'archway') {
+  if (glyph === 'passage' || glyph === 'archway' || glyph === 'round_opening') {
     return { leftCm: 0, rightCm: 0, topCm: 0, bottomCm: 0 }
   }
   return { leftCm: 5, rightCm: 5, topCm: 5, bottomCm: 0 }
@@ -192,6 +213,7 @@ export function toCvDoorKind(glyph: OpeningAssetKind): DoorResolvedKindCompat {
     glyph === 'sliding_pocket' ||
     glyph === 'sliding_single' ||
     glyph === 'sliding' ||
+    glyph === 'elevator' ||
     glyph === 'garage'
   ) {
     return 'sliding'
@@ -199,8 +221,16 @@ export function toCvDoorKind(glyph: OpeningAssetKind): DoorResolvedKindCompat {
   if (glyph === 'double_wide' || glyph === 'passage' || glyph === 'closet45' || glyph === 'single') {
     return glyph
   }
-  if (glyph === 'archway') return 'passage'
-  if (glyph === 'french_balcony' || glyph === 'bifold' || glyph === 'bifold_double') return 'single'
+  if (glyph === 'archway' || glyph === 'round_opening') return 'passage'
+  if (
+    glyph === 'french_balcony' ||
+    glyph === 'flush' ||
+    glyph === 'half_glass' ||
+    glyph === 'bifold' ||
+    glyph === 'bifold_double'
+  ) {
+    return 'single'
+  }
   return 'single'
 }
 

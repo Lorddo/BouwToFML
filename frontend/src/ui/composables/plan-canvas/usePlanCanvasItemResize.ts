@@ -46,6 +46,7 @@ export function usePlanCanvasItemResize(options: {
     if (!item) return
     const local = worldToItemLocal({ x: item.x, y: item.y }, cm, item.rotation ?? 0, item.mirrored)
     options.editor.updateItem(guid, resizeFromSide(item, side, local, MIN_SIZE_CM))
+    options.editor.refreshSkylightRoof(guid)
   }
 
   function beginResize(

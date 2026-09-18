@@ -3,6 +3,8 @@ import type { Wall } from '@/core/plan/types'
 import {
   angularDistanceDeg,
   hitItemRotateHandle,
+  ITEM_ROTATE_HANDLE_ARC_D,
+  ITEM_ROTATE_HANDLE_HEAD_D,
   itemLocalCorner,
   itemRotationSnapCandidatesDeg,
   ITEM_ROTATE_SNAP_DEG,
@@ -24,6 +26,11 @@ function wall(partial: Partial<Wall> & Pick<Wall, 'a' | 'b' | 'thickness'>): Wal
 }
 
 describe('item-rotate-handles', () => {
+  it('deelt dezelfde rotatie-glyph als fixtures', () => {
+    expect(ITEM_ROTATE_HANDLE_ARC_D).toContain('A 2.8 2.8')
+    expect(ITEM_ROTATE_HANDLE_HEAD_D).toContain('L 0.2 -4.1')
+  })
+
   it('puts handles on the four corners', () => {
     expect(itemLocalCorner(40, 20, 'ne')).toEqual({ x: 20, y: -10 })
     expect(itemLocalCorner(40, 20, 'sw')).toEqual({ x: -20, y: 10 })

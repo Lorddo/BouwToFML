@@ -11,6 +11,7 @@ import { ROTATION_EPS_DEG } from '@/cv/tools/rotateMat'
 import { hasPendingInputRotation } from '@/platform/canvas/rotationPreview'
 import { waitForOpenCV } from '@/cv/loadOpenCV'
 import { canvasToDataUrl } from '@/cv/tools/maskImage'
+import { imageElementToPngDataUrl } from '@/platform/dev-workspace/image-capture'
 import { pdfStoreMatchesRaster, type PdfUnderlaySource } from '@/platform/upload'
 import { tryBuildPdfRoiCanvas } from './commitPdfRoiUnderlay'
 
@@ -40,6 +41,26 @@ import {
 import { resolveDisplayImageSrc } from './resolveDisplayImageSrc'
 import type { SelectionRect } from '@/platform/selection'
 import { tGlobal } from '@/ui/i18n'
+import {
+  bakeRotationDeg,
+  composeSourceToWorkingBake,
+  identitySourceToWorkingTransform,
+  type SourceToWorkingTransform,
+} from '@/core/plan/source-underlay-transform'
+
+export type PlanPlateBake = {
+  sourceToWorking: SourceToWorkingTransform
+  plateWidth: number
+  plateHeight: number
+  /** Schone PDF-ROI; ontbreekt = gebruik sourceUnderlay. */
+  plateSrc?: string
+}
+
+export type SourcePlateSnapshot = {
+  src: string
+  width: number
+  height: number
+}
 
 export function useWorkspaceImage(deps: {
   imageSrc: Ref<string | null>
@@ -72,9 +93,46 @@ export function useWorkspaceImage(deps: {
   /** PDF bytes for ROI re-render at input commit (memory-only). */
   const pdfUnderlaySource = ref<PdfUnderlaySource | null>(null)
   const inputCommitBusy = ref(false)
+  const planPlateBake = ref<PlanPlateBake | null>(null)
+  /** Origineel ná 3k-clamp, vóór crop/gum-bake. Bake mag dit niet overschrijven. */
+  const sourcePlate = ref<SourcePlateSnapshot | null>(null)
   /** Guards against stale async upscale completing after a newer upload. */
   let imageSrcLoadGeneration = 0
   let inputCommitInFlight: Promise<void> | null = null
+
+  function snapshotSourcePlate(img: HTMLImageElement, src?: string | null): void {
+    if (sourcePlate.value) return
+    if (!img.naturalWidth || !img.naturalHeight) return
+    const durable =
+      typeof src === 'string' && src.startsWith('data:image/')
+        ? src
+        : imageElementToPngDataUrl(img)
+    sourcePlate.value = {
+      src: durable,
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+    }
+  }
+
+  function recordIdentityPlanPlate(): void {
+    if (planPlateBake.value) return
+    const plate = sourcePlate.value
+    if (plate) {
+      planPlateBake.value = {
+        sourceToWorking: identitySourceToWorkingTransform(plate.width, plate.height),
+        plateWidth: plate.width,
+        plateHeight: plate.height,
+      }
+      return
+    }
+    const img = deps.originalImageEl.value
+    if (!img?.naturalWidth || !img.naturalHeight) return
+    planPlateBake.value = {
+      sourceToWorking: identitySourceToWorkingTransform(img.naturalWidth, img.naturalHeight),
+      plateWidth: img.naturalWidth,
+      plateHeight: img.naturalHeight,
+    }
+  }
 
   function setPdfUnderlaySource(source: PdfUnderlaySource | null): void {
     pdfUnderlaySource.value = source
@@ -144,6 +202,7 @@ export function useWorkspaceImage(deps: {
         if (generation !== imageSrcLoadGeneration) return
         optimizationBaseSrc.value = base.src
         deps.originalImageEl.value = base.image
+        snapshotSourcePlate(base.image, base.src)
         if (base.scale !== 1) {
           applyPixelScaleFactorToCalibration(
             deps.scale,
@@ -159,6 +218,7 @@ export function useWorkspaceImage(deps: {
         const fallback = await loadImage(src)
         if (generation !== imageSrcLoadGeneration) return
         deps.originalImageEl.value = fallback
+        snapshotSourcePlate(fallback, src)
         onImageLoaded(fallback.naturalWidth, fallback.naturalHeight)
       }
     },
@@ -177,6 +237,11 @@ export function useWorkspaceImage(deps: {
   function prepareExactImageSrcLoad(): void {
     suppressNextSrcWatch.value = true
   }
+
+  const bakedInputRotationDeg = computed(() => {
+    const t = planPlateBake.value?.sourceToWorking
+    return t ? bakeRotationDeg(t) : 0
+  })
 
   const canBakeInputRotation = computed(
     () =>
@@ -204,7 +269,10 @@ export function useWorkspaceImage(deps: {
     const totalRotation = (preprocess.autoRotationDeg ?? 0) + (preprocess.rotationDeg ?? 0)
     const hasRotation = preprocess.rotate180 || Math.abs(totalRotation) > ROTATION_EPS_DEG
     const needsCommit = deps.eraserTouched.value || hasRotation
-    if (!needsCommit) return
+    if (!needsCommit) {
+      recordIdentityPlanPlate()
+      return
+    }
 
     inputCommitBusy.value = true
     try {
@@ -239,6 +307,9 @@ export function useWorkspaceImage(deps: {
     let densityFactor = 1
     let roiCropOffset = { x: 0, y: 0 }
     let usedPdfRoi = false
+    let cleanRoiDataUrl: string | null = null
+    let cleanRoiWidth = 0
+    let cleanRoiHeight = 0
 
     const pdfSource =
       usablePdfUnderlay(pdfUnderlaySource.value) ?? pdfStoreMatchesRaster(sourceWidth, sourceHeight)
@@ -246,6 +317,14 @@ export function useWorkspaceImage(deps: {
       const bounds = findContentBounds(source)
       if (bounds) {
         try {
+          const cleanRoi = await tryBuildPdfRoiCanvas({
+            pdfSource,
+            bounds,
+            sourceWidth,
+            sourceHeight,
+            eraserMask: null,
+            applyEraser: false,
+          })
           const roi = await tryBuildPdfRoiCanvas({
             pdfSource,
             bounds,
@@ -258,6 +337,11 @@ export function useWorkspaceImage(deps: {
             densityFactor = roi.densityFactor
             roiCropOffset = { x: bounds.left, y: bounds.top }
             usedPdfRoi = true
+            if (cleanRoi) {
+              cleanRoiDataUrl = canvasToDataUrl(cleanRoi.canvas)
+              cleanRoiWidth = cleanRoi.canvas.width
+              cleanRoiHeight = cleanRoi.canvas.height
+            }
           }
         } catch (err) {
           console.warn('[pdf-roi] crop re-render failed, keeping PNG bake', err)
@@ -412,11 +496,44 @@ export function useWorkspaceImage(deps: {
     } else {
       deps.ensureEraserMask(img.naturalWidth, img.naturalHeight)
     }
+    const rotate180 = preprocess.rotate180
     deps.resetBakedRotation()
     // After crop/gum the working image is no longer full-page raster space —
     // drop PDF source so a later erase cannot map ROI with stale coords.
     if (hadMask || usedPdfRoi) {
       clearPdfUnderlaySource()
+    }
+    const increment: SourceToWorkingTransform =
+      usedPdfRoi && cleanRoiDataUrl && cleanRoiWidth > 0
+        ? {
+            sourceWidthPx: cleanRoiWidth,
+            sourceHeightPx: cleanRoiHeight,
+            workingWidthPx: img.naturalWidth,
+            workingHeightPx: img.naturalHeight,
+            offsetX: 0,
+            offsetY: 0,
+            scale: normalized.scale,
+            rotationDeg: totalRotation,
+            rotate180,
+          }
+        : {
+            sourceWidthPx: sourceWidth,
+            sourceHeightPx: sourceHeight,
+            workingWidthPx: img.naturalWidth,
+            workingHeightPx: img.naturalHeight,
+            offsetX: usedPdfRoi ? roiCropOffset.x : normalized.cropOffset.x,
+            offsetY: usedPdfRoi ? roiCropOffset.y : normalized.cropOffset.y,
+            scale: totalScale,
+            rotationDeg: totalRotation,
+            rotate180,
+          }
+    const prevBake = planPlateBake.value
+    const composed = composeSourceToWorkingBake(prevBake?.sourceToWorking, increment)
+    planPlateBake.value = {
+      sourceToWorking: composed,
+      plateSrc: prevBake?.plateSrc ?? (usedPdfRoi ? cleanRoiDataUrl ?? undefined : undefined),
+      plateWidth: composed.sourceWidthPx,
+      plateHeight: composed.sourceHeightPx,
     }
     await deps.onAfterCommit?.()
   }
@@ -425,6 +542,8 @@ export function useWorkspaceImage(deps: {
     optimizationBaseSrc.value = null
     suppressNextSrcWatch.value = false
     deps.originalImageEl.value = null
+    sourcePlate.value = null
+    planPlateBake.value = null
     clearPdfUnderlaySource()
   }
 
@@ -442,7 +561,15 @@ export function useWorkspaceImage(deps: {
     loadExactWorkingImage,
     prepareExactImageSrcLoad,
     commitInputStepImage,
+    planPlateBake,
+    sourcePlate,
+    takePlanPlateBake: () => {
+      const next = planPlateBake.value
+      planPlateBake.value = null
+      return next
+    },
     bakeInputRotation,
+    bakedInputRotationDeg,
     canBakeInputRotation,
     inputCommitBusy,
     imageDimensions,

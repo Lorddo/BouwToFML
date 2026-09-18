@@ -356,70 +356,65 @@ function outerFaceOfWall(
   return leftIn > rightIn ? faces.left : faces.right
 }
 
-function signedArea(poly: readonly Point2D[]): number {
-  let sum = 0
-  for (let i = 0; i < poly.length; i += 1) {
-    const a = poly[i]
-    const b = poly[(i + 1) % poly.length]
-    if (!a || !b) continue
-    sum += a.x * b.y - b.x * a.y
-  }
-  return sum
+function intervalOverlap(a0: number, a1: number, b0: number, b1: number): number {
+  const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1))
+  const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1))
+  return Math.max(0, hi - lo)
 }
 
-function convexHull(points: readonly Point2D[]): Point2D[] {
-  const uniq: Point2D[] = []
-  for (const p of points) {
-    if (uniq.some((q) => hypot2(p.x, p.y, q.x, q.y) < 0.05)) continue
-    uniq.push({ x: p.x, y: p.y })
+/** Muur die deze poly-rand dekt — ook een lange gevel (einden mogen buiten het vlak). */
+function findWallForPolyEdge(
+  walls: readonly Wall[],
+  edgeA: Point2D,
+  edgeB: Point2D,
+): Wall | null {
+  const edgeLen = hypot2(edgeA.x, edgeA.y, edgeB.x, edgeB.y)
+  if (edgeLen < 1e-6) return null
+  const edgeU = {
+    x: (edgeB.x - edgeA.x) / edgeLen,
+    y: (edgeB.y - edgeA.y) / edgeLen,
   }
-  if (uniq.length < 3) return uniq
-  const sorted = uniq.slice().sort((a, b) => (a.x === b.x ? a.y - b.y : a.x - b.x))
-  const cross = (o: Point2D, a: Point2D, b: Point2D) =>
-    (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
-  const lower: Point2D[] = []
-  for (const p of sorted) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p) <= 0) {
-      lower.pop()
+  let best: Wall | null = null
+  let bestDist = Infinity
+  let bestOverlap = 0
+  for (const wall of walls) {
+    const dir = wallDirectionUnit(wall)
+    if (Math.abs(dir.x * edgeU.x + dir.y * edgeU.y) < PARALLEL_DOT) continue
+    const dist = Math.max(
+      distToInfiniteLine(wall.a, edgeA, edgeB),
+      distToInfiniteLine(wall.b, edgeA, edgeB),
+    )
+    const slack = wallEdgeSlack(wall) + 4
+    if (dist > slack) continue
+    const overlap = intervalOverlap(
+      lineT(edgeA, edgeB, wall.a),
+      lineT(edgeA, edgeB, wall.b),
+      0,
+      1,
+    )
+    if (overlap < 0.05) continue
+    if (dist < bestDist - 0.5 || (Math.abs(dist - bestDist) <= 0.5 && overlap > bestOverlap)) {
+      best = wall
+      bestDist = dist
+      bestOverlap = overlap
     }
-    lower.push(p)
   }
-  const upper: Point2D[] = []
-  for (let i = sorted.length - 1; i >= 0; i -= 1) {
-    const p = sorted[i]!
-    while (upper.length >= 2 && cross(upper[upper.length - 2]!, upper[upper.length - 1]!, p) <= 0) {
-      upper.pop()
-    }
-    upper.push(p)
-  }
-  lower.pop()
-  upper.pop()
-  return [...lower, ...upper]
+  return best
 }
 
-function alignRing(oldPoly: readonly Point2D[], hull: Point2D[]): Point2D[] {
-  if (hull.length < 3) return hull
-  let ring = hull.slice()
-  const oldSign = Math.sign(signedArea(oldPoly))
-  const newSign = Math.sign(signedArea(ring))
-  if (oldSign !== 0 && newSign !== 0 && oldSign !== newSign) ring = ring.slice().reverse()
-  const origin = oldPoly[0]
-  if (!origin) return ring
-  let best = 0
-  let bestD = Infinity
-  for (let i = 0; i < ring.length; i += 1) {
-    const p = ring[i]!
-    const d = hypot2(p.x, p.y, origin.x, origin.y)
-    if (d < bestD) {
-      bestD = d
-      best = i
-    }
-  }
-  return [...ring.slice(best), ...ring.slice(0, best)]
+function outerLineForPolyEdge(
+  walls: readonly Wall[],
+  edgeA: Point2D,
+  edgeB: Point2D,
+  centroid: Point2D,
+): { a: Point2D; b: Point2D } {
+  const wall = findWallForPolyEdge(walls, edgeA, edgeB)
+  if (!wall) return { a: edgeA, b: edgeB }
+  return outerFaceOfWall(wall, centroid)
 }
 
-function nearestZ(oldPoly: readonly Point2D[], point: Point2D): number | undefined {
-  let best: Point2D | undefined
+function nearestZ(oldPoly: ReadonlyArray<Point2D & { z?: number }>, point: Point2D): number | undefined {
+  let best: (Point2D & { z?: number }) | undefined
   let bestD = Infinity
   for (const q of oldPoly) {
     const d = hypot2(point.x, point.y, q.x, q.y)
@@ -435,18 +430,28 @@ export function dormerOuterPolyFromWalls(
   walls: readonly Wall[],
   surface: Pick<FloorSurface, 'poly'>,
 ): Point2D[] | null {
-  const members = walls.filter((wall) => isDormerAssemblyWall(wall, surface.poly))
-  if (members.length < 2) return null
-  const centroid = polyCentroid(surface.poly)
+  const poly = surface.poly
+  if (poly.length < 3) return null
+  const centroid = polyCentroid(poly)
   if (!centroid) return null
-  const corners: Point2D[] = []
-  for (const wall of members) {
-    const outer = outerFaceOfWall(wall, centroid)
-    corners.push(outer.a, outer.b)
+  const n = poly.length
+  const lines: Array<{ a: Point2D; b: Point2D }> = []
+  for (let i = 0; i < n; i += 1) {
+    const a = poly[i]
+    const b = poly[(i + 1) % n]
+    if (!a || !b) return null
+    lines.push(outerLineForPolyEdge(walls, a, b, centroid))
   }
-  const hull = convexHull(corners)
-  if (hull.length < 3) return null
-  return alignRing(surface.poly, hull)
+  const next: Point2D[] = []
+  for (let i = 0; i < n; i += 1) {
+    const prev = lines[(i - 1 + n) % n]
+    const curr = lines[i]
+    const origin = poly[i]
+    if (!prev || !curr || !origin) return null
+    const hit = unboundedIntersection(prev.a, prev.b, curr.a, curr.b)
+    next.push(hit ?? { x: origin.x, y: origin.y })
+  }
+  return next
 }
 
 /** Kindvlak-XY = buitenfaces van de randmuren. Z blijft van het oude vlak. */
