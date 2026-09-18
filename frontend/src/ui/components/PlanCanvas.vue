@@ -221,6 +221,7 @@ const ensureDefaultFacades = computed(() => props.kind === 'editor')
 const editor = usePlanEditor(toRef(props, 'plan'), toRef(props, 'floorIndex'), {
   ensureStampPreset,
   ensureDefaultFacades,
+  sessionUndo: props.sessionUndo,
 })
 const selection = createPlanCanvasSelection()
 
@@ -578,6 +579,7 @@ const {
   commitDrawWallFromMeasure,
   commitDrawRoomFromMeasure,
   acceptDrawDraft,
+  commitActivePreciseMove,
   deactivateDrawTool,
   isDrawDrafting,
   isWallMoveDrafting,
@@ -730,6 +732,10 @@ const {
   endSurfacePolygonEdit,
   roofVertexIndex,
   setRoofVertexZ,
+  roofVertexTypeText,
+  roofVertexMeasureLengthCm,
+  roofVertexLabelCm,
+  commitRoofVertexFromMeasure,
   roomTypes,
   updateSelectedLabelText,
   onLabelTextInput,
@@ -1254,6 +1260,20 @@ const wallMoveMeasureLabel = computed(() => {
 })
 const wallMoveMeasureLabelText = computed(() =>
   formatDrawTypeLabel(wallMoveTypeText.value, wallMoveMeasureLengthCm.value, drawInputUnit.value),
+)
+
+const roofVertexMeasureLabel = computed(() => {
+  if (roofVertexIndex.value == null) return null
+  const cm = roofVertexLabelCm.value
+  if (!cm) return null
+  return cmToScreen(cm.x, cm.y)
+})
+const roofVertexMeasureLabelText = computed(() =>
+  formatDrawTypeLabel(
+    roofVertexTypeText.value,
+    roofVertexMeasureLengthCm.value,
+    drawInputUnit.value,
+  ),
 )
 
 const handleItemId = computed(() => settingsItemId.value ?? moveItemId.value)
@@ -1887,7 +1907,27 @@ watch(
         :title="tGlobal('result.toolbar.acceptDrawDraft')"
         :aria-label="tGlobal('result.toolbar.acceptDrawDraft')"
         @pointerdown.stop
-        @click.stop="acceptDrawDraft"
+        @click.stop="commitActivePreciseMove"
+      >
+        ✓
+      </button>
+    </div>
+    <div
+      v-if="roofVertexMeasureLabel"
+      class="draw-measure-label draw-measure-label--wall"
+      :class="{ 'draw-measure-label--typing': !!roofVertexTypeText }"
+      :style="{ left: `${roofVertexMeasureLabel.x}px`, top: `${roofVertexMeasureLabel.y}px` }"
+    >
+      {{ roofVertexMeasureLabelText
+      }}<span class="draw-measure-label__unit">{{ drawInputUnit }}</span>
+      <button
+        v-if="roofVertexTypeText"
+        type="button"
+        class="draw-measure-label__accept"
+        :title="tGlobal('result.toolbar.acceptDrawDraft')"
+        :aria-label="tGlobal('result.toolbar.acceptDrawDraft')"
+        @pointerdown.stop
+        @click.stop="commitRoofVertexFromMeasure()"
       >
         ✓
       </button>

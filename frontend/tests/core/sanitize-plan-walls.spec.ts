@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { classifyNearAxisWall } from '@/core/plan/orthogonalize-near-axis-walls'
 import { sanitizePlanWalls, wallsSanitizeChanged } from '@/core/plan/sanitize-plan-walls'
-import { classifyWallAxis } from '@/ui/composables/plan-canvas/plan-canvas-corner-markers'
+import {
+  buildCornerMarkers,
+  classifyWallAxis,
+} from '@/ui/composables/plan-canvas/plan-canvas-corner-markers'
 import type { Wall } from '@/core/plan/types'
 
 function wall(
@@ -72,6 +75,22 @@ describe('sanitizePlanWalls', () => {
     const out = sanitizePlanWalls(walls)
     expect(out).toHaveLength(2)
     expect(out.map((item) => item.id).sort()).toEqual(['a', 'b'])
+  })
+
+  it('sub-nanometer dy telt als wijziging; as-snap is exact', () => {
+    // Test 41 Douche: f0-e27.b.y = a.y + 2.27e-13. Oude 1e-9-drempel in
+    // wallsSanitizeChanged gooide de snap weg → Opschonen no-op, ! bleef.
+    const residual = 2.2737367544323206e-13
+    const walls = [
+      wall('h', { x: 0, y: 0 }, { x: 163.634, y: residual }),
+      wall('v', { x: 163.634, y: residual }, { x: 163.634, y: 80 }),
+    ]
+    const out = sanitizePlanWalls(walls)
+    expect(wallsSanitizeChanged(walls, out)).toBe(true)
+    const h = out.find((item) => item.id === 'h')!
+    expect(h.a.y).toBe(h.b.y)
+    expect(buildCornerMarkers(out, 'skew')).toHaveLength(0)
+    expect(wallsSanitizeChanged(out, sanitizePlanWalls(out))).toBe(false)
   })
 
   it('5,6° gevel ongewijzigd', () => {

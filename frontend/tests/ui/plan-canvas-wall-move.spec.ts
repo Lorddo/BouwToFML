@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { effectScope, ref } from 'vue'
-import type { Wall } from '@/core/plan/types'
+import type { FloorArea, Wall } from '@/core/plan/types'
 import { usePlanCanvasWallMove } from '@/ui/composables/plan-canvas/usePlanCanvasWallMove'
 
 function mouseAt(x: number, y: number): MouseEvent {
@@ -228,4 +228,71 @@ describe('usePlanCanvasWallMove typed distance', () => {
     })
     scope.stop()
   })
+
+  it('typed value is room interior: hover south room 420, type 500 -> delta -80', () => {
+    const scope = effectScope()
+    scope.run(() => {
+      const preview = vi.fn()
+      const walls: Wall[] = [
+        {
+          id: 'mid',
+          a: { x: 0, y: 0 },
+          b: { x: 400, y: 0 },
+          thickness: 20,
+          balance: 0.5,
+          openings: [],
+        },
+      ]
+      const areas: FloorArea[] = [
+        {
+          id: 'south',
+          poly: [
+            { x: 0, y: 10 },
+            { x: 400, y: 10 },
+            { x: 400, y: 430 },
+            { x: 0, y: 430 },
+          ],
+          color: '#fff',
+          showAreaLabel: false,
+        },
+      ]
+      const move = usePlanCanvasWallMove({
+        hitTest: { clientToCm: (x, y) => ({ x, y }) },
+        editor: {
+          pushUndo: vi.fn(),
+          undo: vi.fn(),
+          flushAreaRegen: vi.fn(),
+          previewWallSlideAlongAxis: preview,
+          selectableWalls: { value: walls },
+          walls: { value: walls },
+          ridgeWalls: { value: [] },
+          areas: { value: areas },
+        } as never,
+        moveWallId: ref(null),
+        spacePressed: ref(false),
+        getInputUnit: () => 'cm',
+        syncPlanToParent: vi.fn(),
+      })
+
+      expect(move.beginWallMove('mid', mouseAt(200, 0))).toBe(true)
+      move.updateWallMoveHover(mouseAt(200, 40))
+      for (const key of ['5', '0', '0']) {
+        expect(move.handleTypeKey(typeKey(key))).toBe(true)
+      }
+      expect(move.measureLengthCm.value).toBeCloseTo(500, 5)
+      const label = move.wallMoveLabelCm.value
+      expect(label).not.toBeNull()
+      // Face mid y=10 + half van getypte span 500 → label y=260
+      expect(label!.y).toBeCloseTo(260, 5)
+      const span = move.spanMeasureLine.value
+      expect(span).not.toBeNull()
+      expect(span!.emphasis).toBe('typing')
+      expect(span!.suppressLabel).toBe(true)
+      expect(move.commitFromMeasure()).toBe(true)
+      const last = preview.mock.calls.at(-1)
+      expect(last?.[2]).toBeCloseTo(-80, 5)
+    })
+    scope.stop()
+  })
+
 })

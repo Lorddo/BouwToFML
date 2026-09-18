@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { dakThicknessCmForPlan } from '@/core/plan/ridge-walls'
+import { makeRoofSurface, setRidgeSurfacesOnFloor } from '@/core/plan/roof-planes'
 import {
   makeElevationSelectHarness,
   OPENING_ID,
   OPENING_ID_W2,
   elevWall,
+  transomRect,
 } from './elevation-select-harness'
 
 /**
@@ -88,6 +91,9 @@ describe('elevation-select-state — één target', () => {
 
     select.selectSlabSettings(0)
     expect(select.settingsTarget.value).toEqual({ kind: 'slab', floorIndex: 0 })
+
+    select.selectPlaceholderRoof(0)
+    expect(select.settingsTarget.value).toEqual({ kind: 'placeholderRoof', floorIndex: 0 })
   })
 
   it('group-change wist opening én settings', () => {
@@ -134,5 +140,74 @@ describe('elevation-select-state — wall-hop herschrijft de selectie', () => {
       id: OPENING_ID_W2,
       mode: 'edit',
     })
+  })
+})
+
+describe('elevation-select-state — packed bovenlicht', () => {
+  it('transom-edit toont alleen N/S-grepen op het bovenlicht', () => {
+    const { select, elevation } = harness()
+    elevation.value = {
+      ...elevation.value!,
+      transoms: [transomRect(OPENING_ID, 'w1')],
+    }
+    select.selectOpening(OPENING_ID, 'edit', 'transom')
+    expect(select.editingTransom.value).toBe(true)
+    expect(select.openingHandles.value.map((handle) => handle.side)).toEqual(['n', 's'])
+    expect(select.openingMoveHandle.value).toEqual({ x: 100, y: -230 })
+  })
+
+  it('ouder-edit houdt vier grepen op de deur/raam', () => {
+    const { select, elevation } = harness()
+    elevation.value = {
+      ...elevation.value!,
+      transoms: [transomRect(OPENING_ID, 'w1')],
+    }
+    select.selectOpening(OPENING_ID, 'edit')
+    expect(select.editingTransom.value).toBe(false)
+    expect(select.openingHandles.value.map((handle) => handle.side)).toEqual(['n', 's', 'e', 'w'])
+  })
+})
+
+describe('elevation-select-state — dakdikte', () => {
+  function attachRoofSurface(h: ReturnType<typeof harness>): void {
+    h.planHolder.plan.floors[0] = setRidgeSurfacesOnFloor(h.planHolder.plan.floors[0], [
+      makeRoofSurface({
+        id: 'roof-1',
+        origin: 'manual',
+        poly: [
+          { x: 0, y: 0, z: 280 },
+          { x: 400, y: 0, z: 400 },
+          { x: 400, y: 200, z: 400 },
+          { x: 0, y: 200, z: 280 },
+        ],
+      }),
+    ])
+  }
+
+  it('settingsRoof leest dakdikte uit de stack', () => {
+    const h = harness()
+    attachRoofSurface(h)
+    const { select, planHolder } = h
+    select.selectRoof('roof-1', null)
+    expect(select.settingsRoof.value?.thicknessCm).toBe(dakThicknessCmForPlan(planHolder.plan))
+  })
+
+  it('settingsPlaceholderRoof leest dezelfde dakdikte', () => {
+    const { select, planHolder } = harness()
+    select.selectPlaceholderRoof(0)
+    expect(select.settingsPlaceholderRoof.value).toEqual({
+      kind: 'placeholderRoof',
+      floorIndex: 0,
+      name: planHolder.plan.floors[0].name,
+      thicknessCm: dakThicknessCmForPlan(planHolder.plan),
+    })
+  })
+
+  it('commitRoofThickness schrijft stack + nokspan', () => {
+    const { select, planHolder, calls } = harness()
+    select.selectPlaceholderRoof(0)
+    select.commitRoofThickness(42)
+    expect(calls).toEqual(['pushUndo', 'commitPlan'])
+    expect(dakThicknessCmForPlan(planHolder.plan)).toBe(42)
   })
 })

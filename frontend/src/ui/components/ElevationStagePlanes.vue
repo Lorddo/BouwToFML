@@ -42,6 +42,7 @@ const glyphPolyFill = r.glyphPolyFill
 const glyphOpacity = r.glyphOpacity
 const wallOrRidgeSelected = r.wallOrRidgeSelected
 const slabSelected = r.slabSelected
+const placeholderRoofSelected = r.placeholderRoofSelected
 const roofSelected = r.roofSelected
 const junctionSelected = r.junctionSelected
 const paintStack = r.elevationPaintStack
@@ -71,7 +72,11 @@ const stopKonvaBubble = ix.stopKonvaBubble
           }"
         />
         <v-rect
-          v-if="band.kind === 'slab' && band.floorIndex != null && slabSelected(band.floorIndex)"
+          v-if="
+            band.floorIndex != null &&
+            ((band.kind === 'slab' && slabSelected(band.floorIndex)) ||
+              (band.kind === 'nok' && placeholderRoofSelected(band.floorIndex)))
+          "
           :config="{
             ...stageRect(band),
             fillEnabled: false,
@@ -266,7 +271,7 @@ const stopKonvaBubble = ix.stopKonvaBubble
               listening: true,
               perfectDrawEnabled: false,
             }"
-            @mousedown="onOpeningDown(transom.openingId, $event)"
+            @mousedown="onOpeningDown(transom.openingId, $event, 'transom')"
           />
           <v-rect
             v-else
@@ -277,8 +282,9 @@ const stopKonvaBubble = ix.stopKonvaBubble
               strokeWidth: elevStroke,
               opacity: 0.22,
               perfectDrawEnabled: false,
-              listening: false,
+              listening: true,
             }"
+            @mousedown="onOpeningDown(transom.openingId, $event, 'transom')"
           />
           <v-rect
             v-if="selectedOpeningId === transom.openingId"

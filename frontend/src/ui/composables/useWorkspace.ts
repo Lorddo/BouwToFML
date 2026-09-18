@@ -28,6 +28,11 @@ import { useWorkspaceOverlays } from './useWorkspaceOverlays'
 import { useWorkspaceExports } from './useWorkspaceExports'
 import { useWorkspaceE2eFixtureExport } from './workspace/useWorkspaceE2eFixtureExport'
 import { useWorkspacePlan } from './useWorkspacePlan'
+import {
+  createEditorSessionUndo,
+  type EditorSessionUndoSnapshot,
+} from './editor/editor-session-undo'
+import { cloneUnderlayOriginLayout } from '@/core/plan/drawing-to-underlay-layout'
 import { useWorkspacePipeline } from './workspace/useWorkspacePipeline'
 import { useWorkspaceScale } from './workspace/useWorkspaceScale'
 import { useWorkspaceRoomPipeline } from './workspace/useWorkspaceRoomPipeline'
@@ -1117,6 +1122,38 @@ export function useWorkspace() {
 
   const resumeCandidate = ref<PersistedProjectIndexEntry | null>(null)
 
+  const planSessionUndo = createEditorSessionUndo({
+    getPlan: () => fml.previewPlan.value,
+    getFloorIndex: () => 0,
+    getFloorId: () => project.activeFloorId.value,
+    apply: (snap: EditorSessionUndoSnapshot) => {
+      const targetId = snap.floorId ?? project.activeFloorId.value
+      if (targetId && targetId !== project.activeFloorId.value) {
+        project.writePreviewPlanToFloorBlob(
+          targetId,
+          snap.plan,
+          'layoutOrigin' in snap ? { layoutOrigin: snap.layoutOrigin ?? null } : undefined,
+        )
+        void project.switchFloor(targetId)
+        return
+      }
+      if ('layoutOrigin' in snap) {
+        const cur = fml.previewUnderlayLayout.value
+        const layout = cur
+          ? cloneUnderlayOriginLayout({
+              ...cur,
+              origin: snap.layoutOrigin
+                ? { x: snap.layoutOrigin.x, y: snap.layoutOrigin.y }
+                : cur.origin,
+            })
+          : null
+        fml.updatePreviewPlan(snap.plan, layout)
+        return
+      }
+      fml.updatePreviewPlan(snap.plan)
+    },
+  })
+
   onMounted(() => {
     void listProjectIndex()
       .then((entries) => {
@@ -1138,6 +1175,7 @@ export function useWorkspace() {
         setLocalError(tGlobal('project.errors.resumeFailed'))
         return
       }
+      planSessionUndo.clearStacks()
       project.applyPersistedState(restored)
       resumeCandidate.value = null
       await project.enterActiveFloorFromProject({ keepActiveFloor: true })
@@ -1332,6 +1370,7 @@ export function useWorkspace() {
   }
 
   function resetWorkspace() {
+    planSessionUndo.clearStacks()
     project.resetProject()
     resumeCandidate.value = null
     lifecycle.resetWorkspace()
@@ -1529,6 +1568,19 @@ export function useWorkspace() {
 
   return {
     ...facade,
+    planSessionUndo,
+    regeneratePlan: () => {
+      planSessionUndo.clearStacks()
+      fml.regeneratePlan()
+    },
+    resetGeneratedPreview: () => {
+      planSessionUndo.clearStacks()
+      fml.resetGeneratedPreview()
+    },
+    clearImportedFml: () => {
+      planSessionUndo.clearStacks()
+      fml.clearImportedFml()
+    },
     applyUserViewerSettings,
     onConfirmScale: () => {
       scaleUi.onConfirmScale()

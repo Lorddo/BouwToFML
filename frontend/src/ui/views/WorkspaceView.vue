@@ -550,6 +550,7 @@ defineExpose<{
             v-model:canvas-fullscreen="canvasFullscreen"
             :floor-id="ws.activeFloorId"
             :plan="ws.previewPlan"
+            :session-undo="ws.planSessionUndo"
             :underlay-src="
               ws.underlayOpacityPct > 0 || ws.thicknessPickTier ? ws.underlaySrc : null
             "

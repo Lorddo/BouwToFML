@@ -130,6 +130,36 @@ export function openingRect(openingId: string, wallId: string): ElevationOpening
   }
 }
 
+/** Packed bovenlicht boven de fixture-opening (gap 10, hoogte 40). */
+export function transomRect(openingId: string, wallId: string): ElevationOpeningRect {
+  return {
+    openingId,
+    openingGuid: 'o1',
+    wallId,
+    floorIndex: 0,
+    type: 'window',
+    kind: 'window.single',
+    widthCm: 80,
+    x0: 60,
+    x1: 140,
+    y0: -250,
+    y1: -210,
+    depthCm: 0,
+    startOnLeft: true,
+  }
+}
+
+export function dispatchElevationPointerMove(clientX: number, clientY: number): void {
+  for (const listener of moveListeners) {
+    listener({
+      clientX,
+      clientY,
+      ctrlKey: false,
+      metaKey: false,
+    } as PointerEvent)
+  }
+}
+
 export function makeElevationFixture(overrides: Partial<FacadeElevation> = {}): FacadeElevation {
   const w1 = elevWall({ wallId: 'w1', xa: 0, xb: 200 })
   const w2 = elevWall({ wallId: 'w2', xa: 200, xb: 400 })

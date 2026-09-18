@@ -44,11 +44,19 @@ const screenHover = computed(() => {
 
 <template>
   <svg class="plan-measure-overlay" :width="width" :height="height">
-    <g v-for="line in screenLines" :key="line.id" class="plan-measure-line">
+    <g
+      v-for="line in screenLines"
+      :key="line.id"
+      class="plan-measure-line"
+      :class="{
+        'plan-measure-line--active': line.emphasis === 'active',
+        'plan-measure-line--typing': line.emphasis === 'typing',
+      }"
+    >
       <line :x1="line.x1" :y1="line.y1" :x2="line.x2" :y2="line.y2" />
       <line :x1="line.tickAx1" :y1="line.tickAy1" :x2="line.tickAx2" :y2="line.tickAy2" />
       <line :x1="line.tickBx1" :y1="line.tickBy1" :x2="line.tickBx2" :y2="line.tickBy2" />
-      <text :x="line.labelX" :y="line.labelY">{{ line.label }}</text>
+      <text v-if="line.label" :x="line.labelX" :y="line.labelY">{{ line.label }}</text>
     </g>
     <g v-if="screenPreview" class="plan-measure-line plan-measure-line--preview">
       <line
@@ -103,6 +111,16 @@ const screenHover = computed(() => {
   stroke: #a78bfa;
 }
 
+.plan-measure-line--active line {
+  stroke: #f97316;
+  stroke-width: 2;
+}
+
+.plan-measure-line--typing line {
+  stroke: #ea580c;
+  stroke-width: 2.5;
+}
+
 .plan-measure-line text {
   font-size: 11px;
   font-weight: 600;
@@ -112,6 +130,11 @@ const screenHover = computed(() => {
   paint-order: stroke fill;
   stroke: #fff;
   stroke-width: 3px;
+}
+
+.plan-measure-line--active text,
+.plan-measure-line--typing text {
+  fill: #c2410c;
 }
 
 .plan-measure-hover circle {

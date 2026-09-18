@@ -1,4 +1,10 @@
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import {
+  applyDrawTypeKey,
+  isDrawTypeLengthKey,
+  parseDrawLengthDraftToCm,
+} from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 import { resolveInsertedRoofVertexZ, snapRoofVertexZ } from '@/core/plan/roof-vertex-snap'
 import {
   clampRoofVertexZCm,
@@ -45,16 +51,32 @@ export function usePlanCanvasSurfaceEdit(options: {
   syncPlanToParent: () => void
   /** Nokbalk onder de klik: niet opeten, zodat de nok geopend kan worden. */
   isRidgeHit?: (cm: Point2D) => boolean
+  getInputUnit?: () => ScaleInputUnit
 }) {
   const draggingVertexIndex = ref<number | null>(null)
   const selectedVertexIndex = ref<number | null>(null)
+  const typeText = ref('')
+  const measureLengthCm = ref(0)
+
+  function inputUnit(): ScaleInputUnit {
+    return options.getInputUnit?.() ?? 'm'
+  }
+
+  function clearTypeDraft(): void {
+    typeText.value = ''
+    syncMeasureLength()
+  }
 
   watch(
     () => options.selection.surfaceEditId.value,
     () => {
       selectedVertexIndex.value = null
+      clearTypeDraft()
     },
   )
+  watch(selectedVertexIndex, () => {
+    clearTypeDraft()
+  })
   let didPushUndo = false
   let snapDisabled = false
   let pendingZ: { index: number; z: number } | null = null
@@ -335,7 +357,30 @@ export function usePlanCanvasSurfaceEdit(options: {
     roofDragStartPoly = null
   }
 
-  function applyVertexZ(index: number, zCm: number): void {
+  function syncMeasureLength(): void {
+    const idx = selectedVertexIndex.value
+    const poly = currentPoly()
+    if (idx == null || !poly?.[idx]) {
+      measureLengthCm.value = 0
+      return
+    }
+    if (typeText.value) {
+      const parsed = parseDrawLengthDraftToCm(typeText.value, inputUnit())
+      measureLengthCm.value =
+        parsed != null ? Math.abs(parsed) : Math.abs(poly[idx].z ?? 0)
+      return
+    }
+    measureLengthCm.value = Math.abs(poly[idx].z ?? 0)
+  }
+
+  const vertexLabelCm = computed(() => {
+    const idx = selectedVertexIndex.value
+    const poly = currentPoly()
+    if (idx == null || !poly?.[idx]) return null
+    return { x: poly[idx].x, y: poly[idx].y }
+  })
+
+  function applyVertexZ(index: number, zCm: number, keepUndoOpen = false): void {
     const surface = currentSurface()
     if (!surface?.poly[index]) return
     const plan = options.editor.localPlan.value
@@ -345,7 +390,10 @@ export function usePlanCanvasSurfaceEdit(options: {
           plan ? slabCmForRoofSurface(plan, surface.id) : DEFAULT_FLOOR_THICKNESS_CM,
         )
       : Math.max(0, Math.round(zCm))
-    if (Math.round(surface.poly[index]?.z ?? 0) === z) return
+    if (Math.round(surface.poly[index]?.z ?? 0) === z) {
+      syncMeasureLength()
+      return
+    }
     if (!didPushUndo) {
       options.editor.pushUndo()
       didPushUndo = true
@@ -356,7 +404,8 @@ export function usePlanCanvasSurfaceEdit(options: {
       options.editor.applyWallsAfterRoofEdit(surface.id)
     }
     options.syncPlanToParent()
-    didPushUndo = false
+    if (!keepUndoOpen) didPushUndo = false
+    syncMeasureLength()
   }
 
   function flushPendingVertexZ(): void {
@@ -368,8 +417,37 @@ export function usePlanCanvasSurfaceEdit(options: {
   function setSelectedVertexZ(zCm: number): void {
     const idx = selectedVertexIndex.value
     if (idx == null) return
+    typeText.value = ''
+    didPushUndo = false
     pendingZ = { index: idx, z: zCm }
     applyVertexZ(idx, pendingZ.z)
+  }
+
+  function handleTypeKey(event: KeyboardEvent): boolean {
+    if (selectedVertexIndex.value == null) return false
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) return true
+    if (!isDrawTypeLengthKey(event)) return false
+    const next = applyDrawTypeKey(typeText.value, event.key)
+    if (next == null) return false
+    typeText.value = next
+    const parsed = parseDrawLengthDraftToCm(next, inputUnit())
+    if (parsed != null) {
+      const idx = selectedVertexIndex.value
+      pendingZ = { index: idx, z: parsed }
+      applyVertexZ(idx, parsed, true)
+    } else {
+      syncMeasureLength()
+    }
+    return true
+  }
+
+  function commitFromMeasure(): boolean {
+    if (selectedVertexIndex.value == null) return false
+    if (!typeText.value) return false
+    typeText.value = ''
+    didPushUndo = false
+    syncMeasureLength()
+    return true
   }
 
   return {
@@ -379,5 +457,11 @@ export function usePlanCanvasSurfaceEdit(options: {
     draggingVertexIndex,
     selectedVertexIndex,
     setSelectedVertexZ,
+    typeText,
+    measureLengthCm,
+    vertexLabelCm,
+    handleTypeKey,
+    commitFromMeasure,
+    clearTypeDraft,
   }
 }

@@ -469,6 +469,44 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
   }
 
   /**
+   * Schrijf een previewPlan in een floor-blob (undo/redo vóór hydrate).
+   * Raakt de live canvas niet — caller doet switchFloor of updatePreviewPlan.
+   */
+  function writePreviewPlanToFloorBlob(
+    floorId: string,
+    plan: FloorPlan,
+    options?: { layoutOrigin?: { x: number; y: number } | null },
+  ): void {
+    if (!state.value.floors.some((f) => f.id === floorId)) return
+    const prev = state.value.blobs[floorId] ?? emptyBlob()
+    const previewPlan = clonePlain({
+      ...plan,
+      floors: plan.floors[0] ? [plan.floors[0]] : [],
+    })
+    let previewUnderlayLayout = prev.previewUnderlayLayout
+    if (options && 'layoutOrigin' in options && previewUnderlayLayout) {
+      previewUnderlayLayout = clonePlain({
+        ...previewUnderlayLayout,
+        origin: options.layoutOrigin
+          ? { x: options.layoutOrigin.x, y: options.layoutOrigin.y }
+          : previewUnderlayLayout.origin,
+      })
+    }
+    state.value = {
+      ...state.value,
+      blobs: {
+        ...state.value.blobs,
+        [floorId]: {
+          ...prev,
+          previewPlan,
+          generatedFloor: previewPlan.floors[0] ?? prev.generatedFloor,
+          previewUnderlayLayout,
+        },
+      },
+    }
+  }
+
+  /**
    * Herstel floor uit blob: session = CV-sidecar + plan.scale (na IDB-restore samengevoegd).
    * Result-floor zonder detectionExact → stap 3 leeg; 3→4 via previewPlan.
    */
@@ -1103,6 +1141,7 @@ export function useWorkspaceProject(deps: WorkspaceProjectDeps) {
     enterActiveFloorFromProject,
     leaveFloorToProject,
     captureActiveFloorIntoBlob,
+    writePreviewPlanToFloorBlob,
     persistProject,
     applyPersistedState,
     resetProject,

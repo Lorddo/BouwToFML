@@ -37,7 +37,14 @@ export function createPlanCanvasEditorKeyHandlers(options: {
   areaSelection: {
     endSurfacePolygonEdit: () => void
   }
-  surfaceEdit: { cancelDrag: () => void }
+  surfaceEdit: {
+    cancelDrag: () => void
+    selectedVertexIndex: { value: number | null }
+    typeText: { value: string }
+    handleTypeKey: (event: KeyboardEvent) => boolean
+    commitFromMeasure: () => boolean
+    clearTypeDraft: () => void
+  }
   drawWall: {
     isDragging: () => boolean
     cancelDrawWallDrag: () => void
@@ -172,6 +179,13 @@ export function createPlanCanvasEditorKeyHandlers(options: {
       event.preventDefault()
       return
     }
+    if (
+      surfaceEdit.selectedVertexIndex.value != null &&
+      surfaceEdit.handleTypeKey(event)
+    ) {
+      event.preventDefault()
+      return
+    }
     if (event.key === 'Enter') {
       if (drawWall.isDragging() && drawWall.commitFromMeasure()) {
         event.preventDefault()
@@ -195,6 +209,13 @@ export function createPlanCanvasEditorKeyHandlers(options: {
         return
       }
       if (openingMove.isDrafting() && openingMove.commitFromMeasure()) {
+        event.preventDefault()
+        return
+      }
+      if (
+        surfaceEdit.selectedVertexIndex.value != null &&
+        surfaceEdit.commitFromMeasure()
+      ) {
         event.preventDefault()
         return
       }
@@ -244,6 +265,14 @@ export function createPlanCanvasEditorKeyHandlers(options: {
       if (openingMove.isDrafting()) {
         event.preventDefault()
         openingMove.cancelOpeningMove()
+        return
+      }
+      if (
+        surfaceEdit.selectedVertexIndex.value != null &&
+        surfaceEdit.typeText.value
+      ) {
+        event.preventDefault()
+        surfaceEdit.clearTypeDraft()
         return
       }
       if (drawSurface.draftPoints.value?.length) {

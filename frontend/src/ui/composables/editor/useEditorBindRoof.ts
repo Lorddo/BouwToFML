@@ -29,6 +29,8 @@ export function useEditorBindRoof(deps: {
   dakMode: Ref<boolean>
   gevelsMode: Ref<boolean>
   canvas: Ref<BindRoofCanvas | null>
+  /** Sessie-undo; valt terug op canvas.pushUndo als afwezig. */
+  pushUndo?: () => void
   // vue-i18n ComposerTranslation — keep loose to avoid coupling the composable to i18n types.
   t: (key: string, ...args: unknown[]) => string
 }) {
@@ -147,7 +149,7 @@ export function useEditorBindRoof(deps: {
     ) {
       return
     }
-    deps.canvas.value?.pushUndo?.()
+    ;(deps.pushUndo ?? (() => deps.canvas.value?.pushUndo?.()))()
     deps.plan.value = result.plan
   }
 

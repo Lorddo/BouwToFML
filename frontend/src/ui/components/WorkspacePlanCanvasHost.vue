@@ -4,6 +4,7 @@ import type { FloorPlan } from '@/core/plan/types'
 import { readBovenlichtPacked } from '@/core/plan/bovenlicht'
 import type { ThicknessBand } from '@/core/plan/wall-thickness-tiers'
 import type { HScaleState } from '@/platform/calibration'
+import type { EditorSessionUndoApi } from '@/ui/composables/editor/editor-session-undo'
 import PlanCanvas from './PlanCanvas.vue'
 
 /**
@@ -39,6 +40,8 @@ const props = defineProps<{
   rescaleMode?: boolean
   rescaleState?: HScaleState | null
   canvasFullscreen?: boolean
+  /** Stap-4 sessie-undo (deelt keten over floor-wissel). */
+  sessionUndo?: EditorSessionUndoApi
 }>()
 
 const emit = defineEmits<{
@@ -98,6 +101,7 @@ defineExpose({
     :rescale-mode="rescaleMode === true"
     :rescale-state="rescaleState ?? null"
     :canvas-fullscreen="canvasFullscreen === true"
+    :session-undo="sessionUndo"
     @plan-update="(plan, layout) => emit('planUpdate', plan, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"

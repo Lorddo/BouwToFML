@@ -5,6 +5,12 @@ import {
   type WallEndRef,
   stableJunctionId,
 } from '@/core/plan/junctions'
+import {
+  axisLockPoint,
+  pickPointInteriorCm,
+  pointDeltaForInterior,
+  roomSpanFromPoint,
+} from '@/core/plan/precise-move-room-span'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import type { RenderJunction } from './plan-canvas-render-types'
@@ -14,6 +20,7 @@ import {
   isDrawTypeLengthKey,
   parseDrawLengthDraftToCm,
 } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import type { MeasureLine } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 
@@ -27,7 +34,7 @@ const TYPED_COMMIT_MIN_CM = 0.1
 const MERGE_HIT_CM = 3
 
 /**
- * Knoop verplaatsen: klik → richting → klik (of typ afstand vanaf start + Enter).
+ * Knoop verplaatsen: klik → richting → klik (of typ binnenmaat van de gekozen ruimte + Enter).
  * Zelfde UX als muur-precise / muur tekenen.
  */
 export function usePlanCanvasJunctionMove(options: {
@@ -47,6 +54,7 @@ export function usePlanCanvasJunctionMove(options: {
   const typeText = ref('')
   const measureLengthCm = ref(0)
   const labelCm = ref<Point2D | null>(null)
+  const spanMeasureLine = ref<MeasureLine | null>(null)
 
   let draft: {
     refs: WallEndRef[]
@@ -58,6 +66,8 @@ export function usePlanCanvasJunctionMove(options: {
     baseAreas: FloorArea[] | undefined
     delta: number
     overrideCm: number | null
+    /** Getypte binnenmaat (label); null = toon |delta|. */
+    typedInteriorCm: number | null
     snapDisabled: boolean
   } | null = null
 
@@ -71,44 +81,122 @@ export function usePlanCanvasJunctionMove(options: {
     }
   }
 
-  function resolveTarget(snapDisabled: boolean): Point2D {
-    if (!draft) return { x: 0, y: 0 }
+  function resolveTarget(snapDisabled: boolean): {
+    target: Point2D
+    typedInteriorCm: number | null
+  } {
+    if (!draft) return { target: { x: 0, y: 0 }, typedInteriorCm: null }
     const dx = draft.hoverCm.x - draft.originCm.x
     const dy = draft.hoverCm.y - draft.originCm.y
     const hoverLen = Math.hypot(dx, dy)
     let raw: Point2D
+    let typedInteriorCm: number | null = null
     if (draft.overrideCm != null && draft.overrideCm !== 0) {
-      const dirLen = hoverLen > 1e-9 ? hoverLen : 1
-      const ux = hoverLen > 1e-9 ? dx / dirLen : 1
-      const uy = hoverLen > 1e-9 ? dy / dirLen : 0
-      const sign = draft.overrideCm < 0 ? -1 : 1
-      const dist = Math.abs(draft.overrideCm) * sign
-      raw = {
-        x: draft.originCm.x + ux * dist,
-        y: draft.originCm.y + uy * dist,
+      // Negatieve typ = oude afstandssemantiek (richting omkeren).
+      if (draft.overrideCm > 0) {
+        const intoDir =
+          hoverLen > 1e-9
+            ? { x: dx, y: dy }
+            : {
+                x: draft.lastCm.x - draft.originCm.x,
+                y: draft.lastCm.y - draft.originCm.y,
+              }
+        const room = pickPointInteriorCm(
+          draft.originCm,
+          draft.baseAreas ?? [],
+          intoDir,
+          draft.baseWalls,
+        )
+        if (room) {
+          const typedI = draft.overrideCm
+          const delta = pointDeltaForInterior(room.interiorCm, typedI, room.intoUnit)
+          raw = {
+            x: draft.originCm.x + delta.x,
+            y: draft.originCm.y + delta.y,
+          }
+          typedInteriorCm = typedI
+        } else {
+          const dirLen = hoverLen > 1e-9 ? hoverLen : 1
+          const ux = hoverLen > 1e-9 ? dx / dirLen : 1
+          const uy = hoverLen > 1e-9 ? dy / dirLen : 0
+          raw = {
+            x: draft.originCm.x + ux * draft.overrideCm,
+            y: draft.originCm.y + uy * draft.overrideCm,
+          }
+        }
+      } else {
+        const dirLen = hoverLen > 1e-9 ? hoverLen : 1
+        const ux = hoverLen > 1e-9 ? dx / dirLen : 1
+        const uy = hoverLen > 1e-9 ? dy / dirLen : 0
+        const dist = Math.abs(draft.overrideCm)
+        raw = {
+          x: draft.originCm.x - ux * dist,
+          y: draft.originCm.y - uy * dist,
+        }
       }
     } else {
-      raw = { ...draft.hoverCm }
+      raw = axisLockPoint(draft.originCm, draft.hoverCm)
     }
-    if (snapDisabled) return raw
-    return options.editor.snapJunctionPoint(draft.refs, raw, draft.baseWalls)
+    if (snapDisabled) return { target: raw, typedInteriorCm }
+    return {
+      target: options.editor.snapJunctionPoint(draft.refs, raw, draft.baseWalls),
+      typedInteriorCm,
+    }
   }
 
-  function applyTarget(target: Point2D): void {
+  function applyTarget(target: Point2D, typedInteriorCm: number | null = null): void {
     if (!draft) return
     draft.lastCm = target
     draft.delta = Math.hypot(target.x - draft.originCm.x, target.y - draft.originCm.y)
+    draft.typedInteriorCm = typedInteriorCm
     options.editor.previewJunctionMove(draft.baseWalls, nodeFromDraft(), target, draft.baseAreas)
-    measureLengthCm.value = Math.abs(
-      draft.overrideCm != null && draft.overrideCm !== 0 ? draft.overrideCm : draft.delta,
+
+    const dx = draft.hoverCm.x - draft.originCm.x
+    const dy = draft.hoverCm.y - draft.originCm.y
+    const intoDir =
+      Math.hypot(dx, dy) > 1e-9
+        ? { x: dx, y: dy }
+        : {
+            x: target.x - draft.originCm.x,
+            y: target.y - draft.originCm.y,
+          }
+    const room = pickPointInteriorCm(
+      draft.originCm,
+      draft.baseAreas ?? [],
+      intoDir,
+      draft.baseWalls,
     )
+    if (room) {
+      const spanLen = typedInteriorCm != null ? Math.abs(typedInteriorCm) : room.interiorCm
+      measureLengthCm.value = spanLen
+      const span = roomSpanFromPoint(draft.originCm, room.intoUnit, spanLen)
+      if (span) {
+        labelCm.value = {
+          x: (span.a.x + span.b.x) / 2,
+          y: (span.a.y + span.b.y) / 2,
+        }
+        const typing = typeText.value.length > 0
+        spanMeasureLine.value = {
+          id: 'junction-move-span',
+          a: span.a,
+          b: span.b,
+          emphasis: typing ? 'typing' : 'active',
+          suppressLabel: true,
+        }
+        return
+      }
+    }
+    measureLengthCm.value =
+      typedInteriorCm != null ? Math.abs(typedInteriorCm) : Math.abs(draft.delta)
     labelCm.value = { ...target }
+    spanMeasureLine.value = null
   }
 
   function rebuildFromHover(snapDisabled = false): void {
     if (!draft) return
     draft.snapDisabled = snapDisabled
-    applyTarget(resolveTarget(snapDisabled))
+    const resolved = resolveTarget(snapDisabled)
+    applyTarget(resolved.target, resolved.typedInteriorCm)
   }
 
   function clearDraftUi(): void {
@@ -117,6 +205,7 @@ export function usePlanCanvasJunctionMove(options: {
     typeText.value = ''
     measureLengthCm.value = 0
     labelCm.value = null
+    spanMeasureLine.value = null
     options.draggingJunctionId.value = null
   }
 
@@ -146,6 +235,7 @@ export function usePlanCanvasJunctionMove(options: {
       baseAreas: cloneAreasSnapshot(options.editor.areas.value),
       delta: 0,
       overrideCm: null,
+      typedInteriorCm: null,
       snapDisabled: event.ctrlKey || event.metaKey,
     }
     drafting.value = true
@@ -154,6 +244,7 @@ export function usePlanCanvasJunctionMove(options: {
     options.draggingJunctionId.value = junction.id
     measureLengthCm.value = 0
     labelCm.value = { ...origin }
+    spanMeasureLine.value = null
     return true
   }
 
@@ -182,8 +273,8 @@ export function usePlanCanvasJunctionMove(options: {
   function commitJunctionMove(): boolean {
     if (!draft) return false
     const minCm = draft.overrideCm != null ? TYPED_COMMIT_MIN_CM : CLICK_COMMIT_MIN_CM
-    const commitDelta =
-      draft.overrideCm != null && draft.overrideCm !== 0 ? Math.abs(draft.overrideCm) : draft.delta
+    // Altijd echte verplaatsing (bij room-mode is overrideCm de binnenmaat, geen delta).
+    const commitDelta = draft.delta
     if (commitDelta < minCm) {
       cancelJunctionMove()
       return false
@@ -232,6 +323,7 @@ export function usePlanCanvasJunctionMove(options: {
     typeText,
     measureLengthCm,
     junctionMoveLabelCm: labelCm,
+    spanMeasureLine,
     isDrafting: () => drafting.value,
     beginJunctionMove,
     updateJunctionMoveHover,

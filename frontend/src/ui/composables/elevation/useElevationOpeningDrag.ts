@@ -24,12 +24,21 @@ import {
   type ElevationSnapGuide,
 } from '@/core/plan/elevation-opening-edit'
 import { findOpeningInPlan, movePlanOpening, updatePlanOpening } from '@/core/plan/elevation-openings'
+import {
+  clampElevationTransomRect,
+  isElevationTransomDragMode,
+  transomPatchFromElevationRect,
+} from '@/core/plan/elevation-transom-edit'
+import { elevationWallYsAtX } from '@/core/plan/facade-elevation'
 import { floorWallBaseWorldZ } from '@/core/plan/floor-stack'
 import type { ElevationInteractionProps } from './elevation-interaction-types'
+
+type OpeningDragTarget = 'opening' | 'transom'
 
 type OpeningDrag = {
   openingId: string
   mode: 'move' | ElevResizeSide
+  target: OpeningDragTarget
   startCm: Point2D
   startRect: ElevationRect
   startOpening: Opening
@@ -53,12 +62,66 @@ export function useElevationOpeningDrag(options: {
 
   let drag: OpeningDrag | null = null
 
+  function applyTransomRect(
+    openingId: string,
+    wall: ElevationWallRect,
+    rect: ElevationRect,
+    snapOff: boolean,
+  ): void {
+    if (!drag || drag.target !== 'transom' || !isElevationTransomDragMode(drag.mode)) return
+    const elev = elevation.value
+    const parentRect = elev?.openings.find((item) => item.openingId === openingId)
+    if (!elev || !parentRect) return
+    const openingTargets = collectOpeningSnapTargets(
+      [...elev.openings, ...elev.transoms],
+      openingId,
+    )
+    const midX = (drag.startRect.x0 + drag.startRect.x1) / 2
+    const wallYs = elevationWallYsAtX(wall, midX)
+    const raw =
+      snapOff
+        ? { rect, guide: {} as ElevationSnapGuide }
+        : snapElevationRect(rect, drag.mode, {
+            xs: [],
+            ys: [
+              ...openingTargets.ys,
+              Math.min(parentRect.y0, parentRect.y1),
+              ...(wallYs ? [wallYs.top] : []),
+            ],
+          })
+    snapGuide.value = raw.guide.y != null ? { y: raw.guide.y } : null
+    const nextRect = clampElevationTransomRect(
+      drag.startRect,
+      parentRect,
+      wall,
+      { ...raw.rect, x0: drag.startRect.x0, x1: drag.startRect.x1 },
+      drag.mode,
+    )
+    const patch = transomPatchFromElevationRect(
+      drag.startOpening,
+      wall,
+      nextRect,
+      floorWallBaseWorldZ(props.plan, wall.floorIndex),
+    )
+    commitPlan(
+      updatePlanOpening(props.plan, openingId, {
+        bovenlicht: true,
+        bovenlichtHeightCm: patch.bovenlichtHeightCm,
+        bovenlichtGapCm: patch.bovenlichtGapCm,
+      }),
+    )
+  }
+
   function applyOpeningRect(
     openingId: string,
     wall: ElevationWallRect,
     rect: ElevationRect,
     snapOff: boolean,
   ): void {
+    if (drag?.target === 'transom') {
+      applyTransomRect(openingId, wall, rect, snapOff)
+      return
+    }
     const elev = elevation.value
     const openingTargets = elev
       ? collectOpeningSnapTargets([...elev.openings, ...elev.transoms], openingId)
@@ -214,6 +277,7 @@ export function useElevationOpeningDrag(options: {
     rect: ElevationOpeningRect,
     cm: Point2D,
     event: { evt: MouseEvent },
+    target: OpeningDragTarget = 'opening',
   ): void {
     cancelOpeningMovePending()
     const startX = event.evt.clientX
@@ -226,7 +290,7 @@ export function useElevationOpeningDrag(options: {
       }
       cancelOpeningMovePending()
       const nextCm = clientToCm(moveEvent.clientX, moveEvent.clientY) ?? cm
-      beginOpeningDrag(openingId, 'move', nextCm, rect, rect.wallId, rect.floorIndex)
+      beginOpeningDrag(openingId, 'move', nextCm, rect, rect.wallId, rect.floorIndex, target)
     }
     const onUp = () => cancelOpeningMovePending()
     openingMovePending = { onMove, onUp }
@@ -241,13 +305,16 @@ export function useElevationOpeningDrag(options: {
     rect: ElevationRect,
     wallId: string,
     floorIndex: number,
+    target: OpeningDragTarget = 'opening',
   ): void {
     cancelOpeningMovePending()
+    if (target === 'transom' && !isElevationTransomDragMode(mode)) return
     const located = findOpeningInPlan(props.plan, openingId)
     if (!located) return
     drag = {
       openingId,
       mode,
+      target,
       startCm: cm,
       startRect: { x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1 },
       startOpening: { ...located.opening },
@@ -270,7 +337,11 @@ export function useElevationOpeningDrag(options: {
     if (!cm) return
     const next =
       drag.mode === 'move'
-        ? translateElevationRect(drag.startRect, cm.x - drag.startCm.x, cm.y - drag.startCm.y)
+        ? translateElevationRect(
+            drag.startRect,
+            drag.target === 'transom' ? 0 : cm.x - drag.startCm.x,
+            cm.y - drag.startCm.y,
+          )
         : resizeElevationRect(drag.startRect, drag.mode, cm)
     applyOpeningRect(drag.openingId, wall, next, event.ctrlKey || event.metaKey)
   }

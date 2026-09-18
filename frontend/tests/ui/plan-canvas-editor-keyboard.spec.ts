@@ -34,7 +34,14 @@ function makeHandlers(overrides?: { typingTarget?: EventTarget | null }) {
       cancelDrawSurface: () => {},
     },
     areaSelection: { endSurfacePolygonEdit: () => {} },
-    surfaceEdit: { cancelDrag: () => {} },
+    surfaceEdit: {
+      cancelDrag: () => {},
+      selectedVertexIndex: ref(null),
+      typeText: ref(''),
+      handleTypeKey: () => false,
+      commitFromMeasure: () => false,
+      clearTypeDraft: () => {},
+    },
     drawWall: {
       isDragging: () => false,
       cancelDrawWallDrag: () => {},
@@ -124,7 +131,14 @@ describe('FML editor types wall measure without a toolbar field', () => {
         cancelDrawSurface: () => {},
       },
       areaSelection: { endSurfacePolygonEdit: () => {} },
-      surfaceEdit: { cancelDrag: () => {} },
+      surfaceEdit: {
+      cancelDrag: () => {},
+      selectedVertexIndex: ref(null),
+      typeText: ref(''),
+      handleTypeKey: () => false,
+      commitFromMeasure: () => false,
+      clearTypeDraft: () => {},
+    },
       drawWall: {
         isDragging: () => true,
         cancelDrawWallDrag: () => {},
@@ -199,5 +213,98 @@ describe('FML editor Escape deactivates draw tool', () => {
     selection.activePlanTool.value = 'draw_wall'
     pressEscape(input)
     expect(deactivateDrawTool).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('FML editor types roof vertex Z without toolbar focus', () => {
+  it('stuurt cijfers naar surfaceEdit als een dakhoek geselecteerd is', () => {
+    const handleTypeKey = vi.fn(() => true)
+    const deleteSelected = vi.fn()
+    const selection = createPlanCanvasSelection()
+    const handlers = createPlanCanvasEditorKeyHandlers({
+      selection,
+      inspectMode: computed(() => false),
+      drawSurfaceMode: computed(() => false),
+      measureMode: computed(() => false),
+      nulpuntMode: computed(() => false),
+      underlayMoveMode: { value: false },
+      thicknessPickTier: ref(null),
+      onKeyDown: () => {},
+      onKeyUp: () => {},
+      flushPendingFieldCommits: () => {},
+      deleteSelected,
+      clearSelection: () => {},
+      clearInspectSelect: () => {},
+      emitCancelThicknessPick: () => {},
+      undo: () => false,
+      redo: () => false,
+      syncPlanToParentAfterUndo: () => {},
+      drawSurface: {
+        draftPoints: ref(null),
+        commitDrawSurface: () => false,
+        cancelDrawSurface: () => {},
+      },
+      areaSelection: { endSurfacePolygonEdit: () => {} },
+      surfaceEdit: {
+        cancelDrag: () => {},
+        selectedVertexIndex: ref(0),
+        typeText: ref(''),
+        handleTypeKey,
+        commitFromMeasure: () => false,
+        clearTypeDraft: () => {},
+      },
+      drawWall: {
+        isDragging: () => false,
+        cancelDrawWallDrag: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      drawRoom: {
+        isDragging: () => false,
+        cancelDrawRoomDrag: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      wallMove: {
+        isDrafting: () => false,
+        cancelWallMove: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      junctionMove: {
+        isDrafting: () => false,
+        cancelJunctionMove: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      openingMove: {
+        isDrafting: () => false,
+        cancelOpeningMove: () => {},
+        commitFromMeasure: () => false,
+        handleTypeKey: () => false,
+      },
+      drawLine: { cancelDrawLine: () => {} },
+      deactivateDrawTool: () => {},
+      measure: {
+        isDragging: () => false,
+        cancelMeasureDrag: () => {},
+        measureLines: ref([]),
+        clearMeasureLines: () => {},
+      },
+      nulpunt: {
+        isDragging: () => false,
+        cancelNulpuntPending: () => {},
+        nulpuntHasPending: ref(false),
+      },
+      underlayMove: {
+        isDragging: () => false,
+        cancelUnderlayMoveDrag: () => {},
+      },
+    })
+
+    const event = new KeyboardEvent('keydown', { key: '3', bubbles: true })
+    handlers.onEditorKeyDown(event)
+    expect(handleTypeKey).toHaveBeenCalledTimes(1)
+    expect(deleteSelected).not.toHaveBeenCalled()
   })
 })

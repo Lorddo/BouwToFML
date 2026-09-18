@@ -14,7 +14,7 @@ import {
 } from '@/core/plan/facade-elevation'
 import { elevationRidgeRectCenter, elevationRidgeRectOf } from '@/core/plan/elevation-ridge-edit'
 import { findRidgeSurface, roofVertexZMinCm, slabCmForRoofSurface } from '@/core/plan/roof-planes'
-import { listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/plan/ridge-walls'
+import { dakThicknessCmForPlan, listRidgeWallsOnFloor, ridgeEndpointZCm } from '@/core/plan/ridge-walls'
 import { resolveHingeAtStart, resolveSwingSign } from '@/core/plan/door-swing-symbol'
 import { findOpeningInPlan } from '@/core/plan/elevation-openings'
 import {
@@ -75,6 +75,17 @@ export function createElevationSelectState(options: {
     return elevation.value.openings.find((item) => item.openingId === id) ?? null
   })
 
+  const selectedTransomRect = computed(() => {
+    const id = selectedOpeningId.value
+    if (!id || !elevation.value) return null
+    return elevation.value.transoms.find((item) => item.openingId === id) ?? null
+  })
+
+  const editingTransom = computed(
+    () =>
+      settingsTarget.value?.kind === 'opening' && settingsTarget.value.part === 'transom',
+  )
+
   const selectedSkylight = computed(() => {
     const id = selectedSkylightId.value
     if (!id) return null
@@ -112,22 +123,29 @@ export function createElevationSelectState(options: {
   })
 
   const openingHandles = computed(() => {
-    const rect = selectedOpeningRect.value
-    if (!rect || settingsTarget.value?.kind !== 'opening' || settingsTarget.value.mode !== 'edit') {
+    if (settingsTarget.value?.kind !== 'opening' || settingsTarget.value.mode !== 'edit') {
       return []
     }
+    if (editingTransom.value) {
+      const rect = selectedTransomRect.value
+      if (!rect) return []
+      return elevationHandlePoints(rect).filter((handle) => handle.side === 'n' || handle.side === 's')
+    }
+    const rect = selectedOpeningRect.value
+    if (!rect) return []
     return elevationHandlePoints(rect)
   })
 
   const openingMoveHandle = computed(() => {
-    const rect = selectedOpeningRect.value
-    if (!rect || settingsTarget.value?.kind !== 'opening') return null
+    if (settingsTarget.value?.kind !== 'opening') return null
+    const rect = editingTransom.value ? selectedTransomRect.value : selectedOpeningRect.value
+    if (!rect) return null
     return elevationRectCenter(rect)
   })
 
   const openingMoveMeasureLines = computed(() => {
     if (settingsTarget.value?.kind !== 'opening') return []
-    const rect = selectedOpeningRect.value
+    const rect = editingTransom.value ? selectedTransomRect.value : selectedOpeningRect.value
     const elev = elevation.value
     if (!rect || !elev) return []
     const wall = elev.walls.find(
@@ -354,6 +372,19 @@ export function createElevationSelectState(options: {
       vertexIndex: target.vertexIndex,
       heightCm: z != null ? Math.round(z) : null,
       minCm: roofVertexZMinCm(slabCmForRoofSurface(props.plan, target.id)),
+      thicknessCm: dakThicknessCmForPlan(props.plan),
+    }
+  })
+
+  const settingsPlaceholderRoof = computed(() => {
+    const target = settingsTarget.value
+    if (target?.kind !== 'placeholderRoof') return null
+    const floor = props.plan.floors[target.floorIndex]
+    if (!floor) return null
+    return {
+      ...target,
+      name: floor.name,
+      thicknessCm: dakThicknessCmForPlan(props.plan),
     }
   })
 
@@ -408,11 +439,22 @@ export function createElevationSelectState(options: {
     settingsTarget.value = null
   }
 
-  function selectOpening(openingId: string | null, mode: 'quick' | 'edit' | null = null): void {
+  function selectOpening(
+    openingId: string | null,
+    mode: 'quick' | 'edit' | null = null,
+    part?: 'transom',
+  ): void {
     selectedSkylightId.value = null
     selectedOpeningId.value = openingId
     settingsTarget.value =
-      mode && openingId != null ? { kind: 'opening', id: openingId, mode } : null
+      mode && openingId != null
+        ? {
+            kind: 'opening',
+            id: openingId,
+            mode,
+            ...(part === 'transom' ? { part } : {}),
+          }
+        : null
   }
 
   function selectSkylight(itemId: string | null): void {
@@ -451,6 +493,12 @@ export function createElevationSelectState(options: {
     settingsTarget.value = { kind: 'slab', floorIndex }
   }
 
+  function selectPlaceholderRoof(floorIndex: number): void {
+    selectedOpeningId.value = null
+    selectedSkylightId.value = null
+    settingsTarget.value = { kind: 'placeholderRoof', floorIndex }
+  }
+
   function retargetOpeningId(fromId: string, toId: string): void {
     if (selectedOpeningId.value === fromId) selectedOpeningId.value = toId
     const target = settingsTarget.value
@@ -472,6 +520,8 @@ export function createElevationSelectState(options: {
     elevSettingsOpen,
     selectedOpening,
     selectedOpeningRect,
+    selectedTransomRect,
+    editingTransom,
     selectedSkylight,
     selectedSkylightElev,
     selectedSkylightRect,
@@ -501,6 +551,7 @@ export function createElevationSelectState(options: {
     settingsJunction,
     selectedRoofPlane,
     settingsRoof,
+    settingsPlaceholderRoof,
     elevationMeasureLines,
     selectOpening,
     selectSkylight,
@@ -508,6 +559,7 @@ export function createElevationSelectState(options: {
     selectJunction,
     selectRidge,
     selectRoof,
+    selectPlaceholderRoof,
     selectSlabSettings,
     clearSettings,
     retargetOpeningId,

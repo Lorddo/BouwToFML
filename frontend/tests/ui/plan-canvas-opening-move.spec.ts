@@ -95,11 +95,12 @@ describe('usePlanCanvasOpeningMove typed distance', () => {
       move.updateOpeningMoveHover(mouseAt(140, 0))
       expect(move.handleTypeKey(typeKey('2'))).toBe(true)
       expect(move.handleTypeKey(typeKey('0'))).toBe(true)
+      // Hover naar B: typen = rechter restmaat. rightCm=55, typ 20 → delta 35.
       expect(move.measureLengthCm.value).toBeCloseTo(20)
       expect(move.commitFromMeasure()).toBe(true)
       expect(syncPlanToParent).toHaveBeenCalled()
-      expect(preview.mock.calls.at(-1)?.[2]).toBeCloseTo(20)
-      expect(walls[0].openings[0].t).toBeCloseTo(0.6)
+      expect(preview.mock.calls.at(-1)?.[2]).toBeCloseTo(35)
+      expect(walls[0].openings[0].t).toBeCloseTo(0.5 + 35 / 200)
     })
     scope.stop()
   })
@@ -176,6 +177,43 @@ describe('usePlanCanvasOpeningMove typed distance', () => {
       move.updateOpeningMoveHover(mouseAt(100.3, 0))
       expect(move.commitFromMeasure()).toBe(false)
       expect(undo).toHaveBeenCalled()
+    })
+    scope.stop()
+  })
+
+  it('places the type label on the active rest-side midpoint', () => {
+    const scope = effectScope()
+    scope.run(() => {
+      const walls = [doorWall('w1', 0.5)]
+      const openingId = buildLocalOpeningId('w1', walls[0].openings[0], 0)
+      const move = usePlanCanvasOpeningMove({
+        hitTest: { clientToCm: (x, y) => ({ x, y }) },
+        editor: {
+          pushUndo: vi.fn(),
+          undo: vi.fn(),
+          previewOpeningSlideAlongWall: vi.fn((_base, id) => id),
+          resolveOpening: () => ({
+            id: openingId,
+            wallId: 'w1',
+            wallIndex: 0,
+            wall: walls[0],
+            openingIndex: 0,
+            opening: walls[0].openings[0],
+          }),
+          walls: { value: walls },
+        } as never,
+        moveOpeningId: ref(null),
+        spacePressed: ref(false),
+        getInputUnit: () => 'cm',
+        syncPlanToParent: vi.fn(),
+      })
+
+      expect(move.beginOpeningMove(openingId, mouseAt(100, 0))).toBe(true)
+      move.updateOpeningMoveHover(mouseAt(140, 0))
+      expect(move.restSide.value).toBe('right')
+      // Rest right midpoint along wall: opening edge 145 → end 200 → mid 172.5 (offset only in Y).
+      expect(move.openingMoveLabelCm.value?.x).toBeCloseTo(172.5, 0)
+      expect(move.measureLengthCm.value).toBeCloseTo(55, 0)
     })
     scope.stop()
   })

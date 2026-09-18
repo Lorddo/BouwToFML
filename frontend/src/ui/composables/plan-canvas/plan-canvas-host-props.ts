@@ -70,4 +70,6 @@ export interface PlanCanvasHostProps {
   dimensionVis?: DimensionVis
   /** Dak-tab: uitslag van de actieve floor (nok + dakvlakken). */
   dakMode?: boolean
+  /** Editor-sessie undo (gedeeld met Gevels). Converter laat dit weg. */
+  sessionUndo?: import('@/ui/composables/editor/editor-session-undo').EditorSessionUndoApi
 }

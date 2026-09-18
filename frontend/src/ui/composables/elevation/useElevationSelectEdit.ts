@@ -1,6 +1,6 @@
 import type { ElevationWallRect } from '@/core/plan/facade-elevation'
 import {
-  hitElevationOpening,
+  hitElevationOpeningTarget,
   hitElevationRoofPlane,
   hitElevationSkylight,
 } from '@/core/plan/elevation-hit'
@@ -55,6 +55,7 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     selectedSkylightId,
     settingsTarget,
     selectedOpeningRect,
+    selectedTransomRect,
     selectedSkylightElev,
     selectedAxisEditWall,
     selectedRidgeWall,
@@ -189,7 +190,11 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     beginRoofVertexDrag(plane.id, vertexIndex, plane.floorIndex)
   }
 
-  function onOpeningDown(openingId: string, event: { evt: MouseEvent }): void {
+  function onOpeningDown(
+    openingId: string,
+    event: { evt: MouseEvent },
+    source?: 'transom',
+  ): void {
     stopKonvaBubble(event)
     markOpeningPointerHandled()
     if (activeTool.value !== 'select' || canvasLocked.value) return
@@ -197,34 +202,50 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
     const cm = pointerCm(event)
     const wantEdit = isSettingsMod(event.evt, elevSettingsMod.value)
     let id = openingId
-    if (elev && cm && selectedOpeningId.value) {
-      const preferred = hitElevationOpening(elev, cm, selectedOpeningId.value)
-      if (preferred && (wantEdit || preferred.openingId === selectedOpeningId.value)) {
-        id = preferred.openingId
+    let transom = source === 'transom'
+    if (elev && cm) {
+      const hit = hitElevationOpeningTarget(elev, cm, selectedOpeningId.value)
+      if (hit) {
+        if (!selectedOpeningId.value || wantEdit || hit.openingId === selectedOpeningId.value) {
+          id = hit.openingId
+          transom = hit.transom
+        } else if (hit.openingId === openingId) {
+          transom = hit.transom
+        }
+      } else if (source === 'transom') {
+        transom = true
       }
     }
-    const rect = elev?.openings.find((item) => item.openingId === id)
-    if (!elev || !rect || !cm) return
+    const parentRect = elev?.openings.find((item) => item.openingId === id)
+    const transomRect = elev?.transoms.find((item) => item.openingId === id)
+    const rect = transom ? transomRect : parentRect
+    if (!elev || !rect || !cm || !parentRect) return
     if (hasPreciseDraft()) {
       commitPreciseDraft()
       return
     }
     if (preciseIntent(event.evt)) {
+      if (transom) {
+        selectOpening(id, 'edit', 'transom')
+        return
+      }
       selectOpening(id, 'quick')
-      beginPreciseOpening(id, cm, rect, rect.wallId, rect.floorIndex)
+      beginPreciseOpening(id, cm, parentRect, parentRect.wallId, parentRect.floorIndex)
       return
     }
-    const alreadyEdit =
+    const alreadySame =
       selectedOpeningId.value === id &&
       settingsTarget.value?.kind === 'opening' &&
-      settingsTarget.value.mode === 'edit'
-    selectOpening(id, 'edit')
-    if (!wantEdit && !alreadyEdit) return
-    if (alreadyEdit) {
-      beginOpeningDrag(id, 'move', cm, rect, rect.wallId, rect.floorIndex)
+      settingsTarget.value.mode === 'edit' &&
+      (settingsTarget.value.part === 'transom') === transom
+    selectOpening(id, 'edit', transom ? 'transom' : undefined)
+    if (!wantEdit && !alreadySame) return
+    const target = transom ? 'transom' : 'opening'
+    if (alreadySame) {
+      beginOpeningDrag(id, 'move', cm, rect, rect.wallId, rect.floorIndex, target)
       return
     }
-    startOpeningMovePending(id, rect, cm, event)
+    startOpeningMovePending(id, rect, cm, event, target)
   }
 
   function onSkylightDown(itemId: string, event: { evt: MouseEvent }): void {
@@ -274,28 +295,47 @@ export function useElevationSelectEdit(options: ElevationSelectEditOptions) {
   function onMoveHandleDown(event: { evt: MouseEvent }): void {
     event.evt.stopPropagation()
     if (activeTool.value !== 'select' || canvasLocked.value) return
-    const rect = selectedOpeningRect.value
+    const transom = settingsTarget.value?.kind === 'opening' && settingsTarget.value.part === 'transom'
+    const rect = transom ? selectedTransomRect.value : selectedOpeningRect.value
     const cm = pointerCm(event)
     if (!rect || !cm) return
     if (hasPreciseDraft()) {
       commitPreciseDraft()
       return
     }
-    if (preciseIntent(event.evt)) {
+    if (preciseIntent(event.evt) && !transom) {
       beginPreciseOpening(rect.openingId, cm, rect, rect.wallId, rect.floorIndex)
       return
     }
-    beginOpeningDrag(rect.openingId, 'move', cm, rect, rect.wallId, rect.floorIndex)
+    beginOpeningDrag(
+      rect.openingId,
+      'move',
+      cm,
+      rect,
+      rect.wallId,
+      rect.floorIndex,
+      transom ? 'transom' : 'opening',
+    )
   }
 
   function onHandleDown(side: ElevResizeSide, event: { evt: MouseEvent }): void {
     event.evt.stopPropagation()
     if (activeTool.value !== 'select' || canvasLocked.value) return
     if (settingsTarget.value?.kind !== 'opening' || settingsTarget.value.mode !== 'edit') return
-    const rect = selectedOpeningRect.value
+    const transom = settingsTarget.value.part === 'transom'
+    if (transom && side !== 'n' && side !== 's') return
+    const rect = transom ? selectedTransomRect.value : selectedOpeningRect.value
     const cm = pointerCm(event)
     if (!rect || !cm) return
-    beginOpeningDrag(rect.openingId, side, cm, rect, rect.wallId, rect.floorIndex)
+    beginOpeningDrag(
+      rect.openingId,
+      side,
+      cm,
+      rect,
+      rect.wallId,
+      rect.floorIndex,
+      transom ? 'transom' : 'opening',
+    )
   }
 
   function onJunctionDown(junctionId: string, event: { evt: MouseEvent }): void {

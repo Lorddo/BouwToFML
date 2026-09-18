@@ -9,6 +9,10 @@ export interface MeasureLine {
   id: string
   a: Point2D
   b: Point2D
+  /** Actieve / typ-zijde (opening-move restmaten). */
+  emphasis?: 'active' | 'typing'
+  /** Verberg SVG-label (HTML-typveld ligt eroverheen). */
+  suppressLabel?: boolean
 }
 
 export function measureDistanceCm(a: Point2D, b: Point2D): number {
@@ -39,6 +43,7 @@ export interface MeasureLineScreen {
   labelX: number
   labelY: number
   label: string
+  emphasis?: 'active' | 'typing'
 }
 
 export function buildMeasureLineScreen(
@@ -72,6 +77,7 @@ export function buildMeasureLineScreen(
     tickBy2: p2.y + ny,
     labelX: (p1.x + p2.x) / 2,
     labelY: (p1.y + p2.y) / 2,
-    label: formatMeasureDistanceCm(distanceCm, unit),
+    label: line.suppressLabel ? '' : formatMeasureDistanceCm(distanceCm, unit),
+    emphasis: line.emphasis,
   }
 }

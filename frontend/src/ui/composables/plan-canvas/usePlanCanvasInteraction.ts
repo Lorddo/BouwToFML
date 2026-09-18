@@ -253,6 +253,13 @@ export function usePlanCanvasInteraction(options: {
     openingMove.cancelOpeningMove()
   }
 
+  function commitActivePreciseMove(): boolean {
+    if (wallMove.isDrafting()) return wallMove.commitFromMeasure()
+    if (junctionMove.isDrafting()) return junctionMove.commitFromMeasure()
+    if (openingMove.isDrafting()) return openingMove.commitFromMeasure()
+    return false
+  }
+
   const openingDrag = usePlanCanvasOpeningDrag({
     hitTest,
     editor,
@@ -317,6 +324,7 @@ export function usePlanCanvasInteraction(options: {
     pendingFixture,
     ensureRidgeZDraft: () => toolCoordEnsureRidgeZDraft(),
     thicknessPresetCms: options.thicknessPresetCms,
+    getInputUnit: options.getInputUnit,
   })
 
   // --- Tool Coordinator ---
@@ -528,7 +536,21 @@ export function usePlanCanvasInteraction(options: {
     if (!openingId) return []
     const located = editor.resolveOpening(openingId)
     if (!located) return []
-    return buildOpeningMoveMeasureLines(located.wall, located.opening, editor.walls.value)
+    const lines = buildOpeningMoveMeasureLines(located.wall, located.opening, editor.walls.value)
+    if (!openingMove.isDrafting()) return lines
+    const side = openingMove.restSide.value
+    if (!side) return lines
+    const activeId = side === 'left' ? 'opening-move-left' : 'opening-move-right'
+    const typing = openingMove.typeText.value.length > 0
+    return lines.map((line) =>
+      line.id === activeId
+        ? {
+            ...line,
+            emphasis: typing ? ('typing' as const) : ('active' as const),
+            suppressLabel: true,
+          }
+        : line,
+    )
   })
 
   const wallInternalMeasureLines = computed(() => {
@@ -551,8 +573,13 @@ export function usePlanCanvasInteraction(options: {
       }
     }
 
-    if (ids.size === 0) return []
-    return buildWallsInternalMeasureLines([...ids], walls)
+    const lines =
+      ids.size === 0 ? [] : buildWallsInternalMeasureLines([...ids], walls)
+    const span =
+      (wallMove.isDrafting() ? wallMove.spanMeasureLine.value : null) ??
+      (junctionMove.isDrafting() ? junctionMove.spanMeasureLine.value : null)
+    if (!span) return lines
+    return [...lines, span]
   })
 
   // --- Item resize/rotate ---
@@ -610,7 +637,9 @@ export function usePlanCanvasInteraction(options: {
 
   function undoEdit(): void {
     if (editor.undo()) {
-      syncPlanToParentAfterUndo()
+      if (!editor.sessionUndoOwnsApply) {
+        syncPlanToParentAfterUndo()
+      }
       syncWallThicknessDraftFromSelection()
     }
   }
@@ -821,7 +850,10 @@ export function usePlanCanvasInteraction(options: {
     },
     undo: () => editor.undo(),
     redo: () => editor.redo(),
-    syncPlanToParentAfterUndo,
+    syncPlanToParentAfterUndo: () => {
+      if (editor.sessionUndoOwnsApply) return
+      syncPlanToParentAfterUndo()
+    },
     drawSurface,
     areaSelection,
     surfaceEdit,
@@ -974,6 +1006,7 @@ export function usePlanCanvasInteraction(options: {
     cancelDrawWallDraft: drawWall.cancelDrawWallDrag,
     cancelDrawRoomDraft: drawRoom.cancelDrawRoomDrag,
     acceptDrawDraft,
+    commitActivePreciseMove,
     deactivateDrawTool,
     isDrawDrafting: () => drawWall.isDrafting() || drawRoom.isDrafting() || drawDormer.isDrafting(),
     isWallMoveDrafting: () => isPreciseMoveDrafting(),
@@ -1015,7 +1048,9 @@ export function usePlanCanvasInteraction(options: {
     undoEdit,
     redoEdit: () => {
       if (editor.redo()) {
-        syncPlanToParentAfterUndo()
+        if (!editor.sessionUndoOwnsApply) {
+          syncPlanToParentAfterUndo()
+        }
         syncWallThicknessDraftFromSelection()
       }
     },
@@ -1187,6 +1222,10 @@ export function usePlanCanvasInteraction(options: {
     },
     roofVertexIndex: surfaceEdit.selectedVertexIndex,
     setRoofVertexZ: surfaceEdit.setSelectedVertexZ,
+    roofVertexTypeText: surfaceEdit.typeText,
+    roofVertexMeasureLengthCm: surfaceEdit.measureLengthCm,
+    roofVertexLabelCm: surfaceEdit.vertexLabelCm,
+    commitRoofVertexFromMeasure: surfaceEdit.commitFromMeasure,
     roomTypes: areaSelection.roomTypes,
     commitDrawSurface: drawSurface.commitDrawSurface,
     cancelDrawSurface: drawSurface.cancelDrawSurface,

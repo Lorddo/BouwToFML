@@ -1,0 +1,25 @@
+interface SelectionCoordinatorOptions {
+  hitTest: HitTestApi
+  selection: PlanCanvasSelectionRefs
+  editor: EditorApi
+  /** Gedeelde snap-geometrie; surface-edit gebruikt dezelfde als de teken-tools. */
+  snap: PlanSnapResolve
+  draftCommit: DraftCommitScheduler
+  syncPlanToParent: (layout?: UnderlayOriginLayout | null) => void
+  flushPendingFieldCommits: () => void
+  cancelMoveDragPending: () => void
+  cancelOpeningDragPending: () => void
+  cancelItemDragPending: () => void
+  cancelDrawWallDrag: () => void
+  cancelMeasureDrag: () => void
+  containerRef: Ref<HTMLDivElement | null>
+  axisLocked: ComputedRef<boolean>
+  areaSurfaceEditEnabled: ComputedRef<boolean>
+  /** Wat een nieuwe opening erft van de instellingen. */
+  session: PlanSessionDefaults
+  view: PlanViewContext
+  ridgeZCm: Ref<number | undefined>
+  pendingFixture: Ref<FixturePlaceOption | null>
+  ensureRidgeZDraft: () => number
+  thicknessPresetCms?: Ref<number[] | undefined>
+}

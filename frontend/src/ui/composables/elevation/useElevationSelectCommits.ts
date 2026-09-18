@@ -4,7 +4,11 @@ import { clampBovenlichtGapCm, clampBovenlichtHeightCm } from '@/core/plan/boven
 import { DEFAULT_DOOR_HEIGHT_CM } from '@/core/plan/extraction-to-plan-types'
 import { removeRidgeSurfaceOnPlan, setRidgeSurfaceVerticesZ } from '@/core/plan/roof-planes'
 import { syncDormerAssemblyAfterRoofEdit } from '@/core/plan/bind-walls-to-roofs'
-import { removeRidgeWallsFromPlan, setPlanRidgeJunctionZ } from '@/core/plan/ridge-walls'
+import {
+  overwriteRidgeDakThickness,
+  removeRidgeWallsFromPlan,
+  setPlanRidgeJunctionZ,
+} from '@/core/plan/ridge-walls'
 import { buildMirrored, resolveHingeAtStart, resolveSwingSign } from '@/core/plan/door-swing-symbol'
 import {
   removePlanOpening,
@@ -17,7 +21,7 @@ import {
 import { deletePlanSkylight, updatePlanSkylight } from '@/core/plan/elevation-skylight-edit'
 import { clampSkylightPitchDeg, clampSkylightZCm } from '@/core/plan/skylight-roof'
 import { pairedElevationRoofVertexIndices } from '@/core/plan/elevation-hit'
-import { setSlabThicknessCm } from '@/core/plan/floor-stack'
+import { setNokThicknessCm, setSlabThicknessCm } from '@/core/plan/floor-stack'
 import {
   buildOpeningFramePatch,
   buildSkylightFramePatch,
@@ -378,6 +382,13 @@ export function useElevationSelectCommits(options: {
     commitPlan(setSlabThicknessCm(props.plan, floor.level, cm))
   }
 
+  function commitRoofThickness(cm: number): void {
+    const target = settingsTarget.value
+    if (target?.kind !== 'roof' && target?.kind !== 'placeholderRoof') return
+    pushUndo()
+    commitPlan(overwriteRidgeDakThickness(setNokThicknessCm(props.plan, cm), cm))
+  }
+
   return {
     commitOpeningSubtype,
     copySelectedOpening,
@@ -402,6 +413,7 @@ export function useElevationSelectCommits(options: {
     commitRidgeHeight,
     commitRoofVertexHeight,
     commitSlabHeight,
+    commitRoofThickness,
   }
 }
 

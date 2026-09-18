@@ -49,6 +49,8 @@ describe('useEditorLoad thickness catalog', () => {
       applyThicknessCatalog: (cms) => {
         catalog.value = [...cms]
       },
+      clearUndoStacks: vi.fn(),
+      pushUndo: vi.fn(),
     })
     return { api, catalog }
   }

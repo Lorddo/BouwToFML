@@ -78,6 +78,7 @@ import {
   createEditorUndo,
   type PlanCanvasUndoSnapshot,
 } from '@/ui/composables/plan-canvas/plan-editor-undo'
+import type { EditorSessionUndoApi } from '@/ui/composables/editor/editor-session-undo'
 import { createEditorAnnotations } from '@/ui/composables/plan-canvas/plan-editor-annotations'
 import { createEditorFacadeStamp } from '@/ui/composables/plan-canvas/plan-editor-facade-stamp'
 import { createEditorRidgeRoof } from '@/ui/composables/plan-canvas/plan-editor-ridge-roof'
@@ -140,11 +141,15 @@ export function usePlanEditor(
   options?: {
     ensureStampPreset?: Ref<boolean> | { readonly value: boolean }
     ensureDefaultFacades?: Ref<boolean> | { readonly value: boolean }
+    /** Editor-sessie undo (plattegrond/Dak/Gevels). Zonder = lokale floor-stack (converter). */
+    sessionUndo?: EditorSessionUndoApi
   },
 ) {
   const localPlan = ref<FloorPlan | null>(null)
   let skipNextPlanReset = false
   let areaRegenTimer: ReturnType<typeof setTimeout> | null = null
+  const sessionUndo = options?.sessionUndo
+  const sessionUndoOwnsApply = sessionUndo != null
 
   // --- Core floor computeds ---
 
@@ -228,12 +233,73 @@ export function usePlanEditor(
 
   // --- Undo module ---
 
-  const undoModule = createEditorUndo({
-    localPlan,
-    floorIndex,
-    walls: () => walls.value,
-    patchActiveFloor,
-  })
+  const localUndoModule = sessionUndoOwnsApply
+    ? null
+    : createEditorUndo({
+        localPlan,
+        floorIndex,
+        walls: () => walls.value,
+        patchActiveFloor,
+      })
+
+  function pushUndo(optionsPush?: { layoutOrigin?: Point2D | null }): void {
+    if (sessionUndo) {
+      sessionUndo.pushUndo(optionsPush)
+      return
+    }
+    localUndoModule!.pushUndo(optionsPush)
+  }
+
+  function popLastUndo(): void {
+    if (sessionUndo) {
+      sessionUndo.popLastUndo()
+      return
+    }
+    localUndoModule!.popLastUndo()
+  }
+
+  function syncLocalPlanFromSession(): void {
+    skipNextPlanReset = true
+    localPlan.value = plan.value ? clonePlan(plan.value) : null
+  }
+
+  function undo(): boolean {
+    if (sessionUndo) {
+      const ok = sessionUndo.undo()
+      if (ok) syncLocalPlanFromSession()
+      return ok
+    }
+    return localUndoModule!.undo()
+  }
+
+  function redo(): boolean {
+    if (sessionUndo) {
+      const ok = sessionUndo.redo()
+      if (ok) syncLocalPlanFromSession()
+      return ok
+    }
+    return localUndoModule!.redo()
+  }
+
+  function consumePendingUndoLayoutOrigin(): Point2D | null | undefined {
+    if (sessionUndo) return undefined
+    return localUndoModule!.consumePendingUndoLayoutOrigin()
+  }
+
+  function canUndo(): boolean {
+    return sessionUndo ? sessionUndo.canUndo() : localUndoModule!.canUndo()
+  }
+
+  function canRedo(): boolean {
+    return sessionUndo ? sessionUndo.canRedo() : localUndoModule!.canRedo()
+  }
+
+  const canUndoEdit = sessionUndo
+    ? sessionUndo.canUndoEdit
+    : localUndoModule!.canUndoEdit
+  const canRedoEdit = sessionUndo
+    ? sessionUndo.canRedoEdit
+    : localUndoModule!.canRedoEdit
 
   // --- Ridge/Roof module ---
 
@@ -288,8 +354,8 @@ export function usePlanEditor(
     localPlan,
     floorIndex,
     walls: () => walls.value,
-    pushUndo: undoModule.pushUndo,
-    popLastUndo: undoModule.popLastUndo,
+    pushUndo,
+    popLastUndo,
     patchActiveFloor,
     flushAreaRegen,
   })
@@ -345,19 +411,19 @@ export function usePlanEditor(
   }
 
   function replaceLocalPlan(
-    plan: FloorPlan | null,
+    nextPlan: FloorPlan | null,
     optionsReplace?: { keepUndo?: boolean; keepParentSyncSkip?: boolean },
   ): void {
     if (!optionsReplace?.keepParentSyncSkip) skipNextPlanReset = false
-    localPlan.value = plan ? clonePlan(plan) : null
+    localPlan.value = nextPlan ? clonePlan(nextPlan) : null
     if (localPlan.value && options?.ensureStampPreset?.value === true) {
       facadeStamp.ensureStampFacadeGroup(localPlan.value)
     }
     if (localPlan.value && options?.ensureDefaultFacades?.value === true) {
       ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().planDisplay.facadeGroups)
     }
-    if (!optionsReplace?.keepUndo) {
-      undoModule.clearStacks()
+    if (!sessionUndoOwnsApply && !optionsReplace?.keepUndo) {
+      localUndoModule!.clearStacks()
     }
   }
 
@@ -368,7 +434,7 @@ export function usePlanEditor(
         skipNextPlanReset = false
         if (value == null) {
           localPlan.value = null
-          undoModule.clearStacks()
+          if (!sessionUndoOwnsApply) localUndoModule!.clearStacks()
           return
         }
         // Echo van onze emit: zelfde geometry, undo houden.
@@ -382,13 +448,13 @@ export function usePlanEditor(
       if (localPlan.value && options?.ensureDefaultFacades?.value === true) {
         ensureDefaultFacadeGroups(localPlan.value, loadUserSettings().planDisplay.facadeGroups)
       }
-      undoModule.clearStacks()
+      if (!sessionUndoOwnsApply) localUndoModule!.clearStacks()
     },
     { immediate: true },
   )
 
   watch(floorIndex, () => {
-    undoModule.clearStacks()
+    if (!sessionUndoOwnsApply) localUndoModule!.clearStacks()
   })
 
   // --- Annotations module ---
@@ -766,7 +832,7 @@ export function usePlanEditor(
     const planChanged = wallsSanitizeChanged(walls.value, detailed.walls)
     const ridgeChanged = wallsSanitizeChanged(ridgeRoof.ridgeWalls.value, ridgeDetailed.walls)
     if (!planChanged && !ridgeChanged) return false
-    undoModule.pushUndo()
+    pushUndo()
     if (planChanged) setWalls(detailed.walls)
     if (ridgeChanged) ridgeRoof.setRidgeWalls(ridgeDetailed.walls)
     if (localPlan.value) {
@@ -987,10 +1053,10 @@ export function usePlanEditor(
     designs,
     activeDesignIndex,
     junctions,
-    pushUndo: undoModule.pushUndo,
+    pushUndo,
     prepareParentSync,
     replaceLocalPlan,
-    consumePendingUndoLayoutOrigin: undoModule.consumePendingUndoLayoutOrigin,
+    consumePendingUndoLayoutOrigin,
     setFloorGeometry,
     addItem,
     updateItem,
@@ -1126,11 +1192,12 @@ export function usePlanEditor(
       const exclude = new Set(refs.map((ref) => ref.wallId))
       return snapPointToWallCenters(sourceWalls, junctionSnap, JUNCTION_POINT_SNAP_CM, exclude)
     },
-    undo: undoModule.undo,
-    redo: undoModule.redo,
-    canUndo: undoModule.canUndo,
-    canRedo: undoModule.canRedo,
-    canUndoEdit: undoModule.canUndoEdit,
-    canRedoEdit: undoModule.canRedoEdit,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    canUndoEdit,
+    canRedoEdit,
+    sessionUndoOwnsApply,
   }
 }

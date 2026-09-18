@@ -45,6 +45,7 @@ withDefaults(
     canvasFullscreen?: boolean
     dimensionVis?: DimensionVis
     dakMode?: boolean
+    sessionUndo?: import('@/ui/composables/editor/editor-session-undo').EditorSessionUndoApi
   }>(),
   {
     floorIndex: 0,
@@ -124,6 +125,7 @@ defineExpose({
     :canvas-fullscreen="canvasFullscreen"
     :dimension-vis="dimensionVis"
     :dak-mode="dakMode"
+    :session-undo="sessionUndo"
     @plan-update="(p, layout) => emit('planUpdate', p, layout)"
     @thickness-wall-pick="emit('thicknessWallPick', $event)"
     @cancel-thickness-pick="emit('cancelThicknessPick')"

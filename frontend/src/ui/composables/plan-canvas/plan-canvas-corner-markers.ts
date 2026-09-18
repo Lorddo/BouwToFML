@@ -6,8 +6,11 @@ import type { CornerMarkerMode } from '@/ui/composables/settings/corner-marker-m
 /** Eindpunten op dezelfde H/V-lijn (cm). Strakker dan snap (0,5 / 2). */
 export const CORNER_AXIS_EPS_CM = 0.1
 
-/** Sector binnen dit van 90° telt als haaks (elke oriëntatie, niet alleen H/V). */
-export const CORNER_SQUARE_EPS_DEG = 0.2
+/**
+ * Weergave-slack: ≤ dit geen `!` / wel `|_`.
+ * Opschonen recht nog steeds kleinere resthoeken (ortho 1,5°).
+ */
+export const CORNER_SQUARE_EPS_DEG = 0.005
 
 /** Sector ≥ dit telt als plat (T-onderzijde / doorgaande lijn), geen binnenhoek. */
 export const CORNER_FLAT_MIN_DEG = 179

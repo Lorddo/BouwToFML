@@ -131,26 +131,21 @@ function wallOccludesElevationPoint(
   return !mine.some((rect) => pointInElevationRect(rect, point))
 }
 
-function resolveElevationOpeningHit(
-  elevation: FacadeElevation,
-  item: { rect: ElevationOpeningRect; transom: boolean },
-): ElevationOpeningRect {
-  if (!item.transom) return item.rect
-  return (
-    elevation.openings.find((opening) => opening.openingId === item.rect.openingId) ?? item.rect
-  )
+export type ElevationOpeningHit = {
+  openingId: string
+  transom: boolean
+  rect: ElevationOpeningRect
 }
 
-export function hitElevationOpening(
+function collectElevationOpeningHits(
   elevation: FacadeElevation,
   point: Point2D,
-  preferOpeningId?: string | null,
-): ElevationOpeningRect | null {
+): ElevationOpeningHit[] {
   const candidates: Array<{ rect: ElevationOpeningRect; transom: boolean }> = [
     ...elevation.transoms.map((rect) => ({ rect, transom: true })),
     ...elevation.openings.map((rect) => ({ rect, transom: false })),
   ].sort((a, b) => compareElevationPainter(b.rect, a.rect))
-  const hits: ElevationOpeningRect[] = []
+  const hits: ElevationOpeningHit[] = []
   const seen = new Set<string>()
   for (const item of candidates) {
     if (!pointInElevationOpening(item.rect, point)) continue
@@ -160,17 +155,44 @@ export function hitElevationOpening(
         wallOccludesElevationPoint(elevation, wall, point),
     )
     if (occluded) continue
-    const resolved = resolveElevationOpeningHit(elevation, item)
-    if (seen.has(resolved.openingId)) continue
-    seen.add(resolved.openingId)
-    hits.push(resolved)
+    const key = `${item.transom ? 't' : 'o'}:${item.rect.openingId}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    hits.push({
+      openingId: item.rect.openingId,
+      transom: item.transom,
+      rect: item.rect,
+    })
   }
+  return hits
+}
+
+/** Klik in het bovenlicht geeft het transom-rect; ouder-deur blijft een aparte hit. */
+export function hitElevationOpeningTarget(
+  elevation: FacadeElevation,
+  point: Point2D,
+  preferOpeningId?: string | null,
+): ElevationOpeningHit | null {
+  const hits = collectElevationOpeningHits(elevation, point)
   if (hits.length === 0) return null
   if (preferOpeningId) {
     const preferred = hits.find((hit) => hit.openingId === preferOpeningId)
     if (preferred) return preferred
   }
   return hits[0] ?? null
+}
+
+export function hitElevationOpening(
+  elevation: FacadeElevation,
+  point: Point2D,
+  preferOpeningId?: string | null,
+): ElevationOpeningRect | null {
+  const hit = hitElevationOpeningTarget(elevation, point, preferOpeningId)
+  if (!hit) return null
+  if (!hit.transom) return hit.rect
+  return (
+    elevation.openings.find((opening) => opening.openingId === hit.openingId) ?? hit.rect
+  )
 }
 
 export function hitElevationWall(

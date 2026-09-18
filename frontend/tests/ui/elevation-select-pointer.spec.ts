@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  dispatchElevationPointerMove,
   elevationWindowListenerCounts,
   makeElevationSelectHarness,
   mouseEvent,
   OPENING_ID,
+  transomRect,
 } from './elevation-select-harness'
 
 /**
@@ -45,14 +47,14 @@ describe('elevation-select-pointer — onOpeningDown prioriteit', () => {
     expect(elevationWindowListenerCounts().move).toBe(0)
   })
 
-  it('gewone klik = quick, geen sleep', () => {
+  it('gewone klik = edit, geen sleep', () => {
     const h = harness()
     h.select.onOpeningDown(OPENING_ID, mouseEvent())
     expect(h.calls).toEqual([])
     expect(h.select.settingsTarget.value).toEqual({
       kind: 'opening',
       id: OPENING_ID,
-      mode: 'quick',
+      mode: 'edit',
     })
     expect(elevationWindowListenerCounts().move).toBe(0)
   })
@@ -89,6 +91,52 @@ describe('elevation-select-pointer — onOpeningDown prioriteit', () => {
     tool.select.onOpeningDown(OPENING_ID, mouseEvent({ ctrlKey: true }))
     expect(tool.calls).toEqual([])
     expect(tool.select.selectedOpeningId.value).toBeNull()
+  })
+})
+
+describe('elevation-select-pointer — packed bovenlicht', () => {
+  function harnessTransom() {
+    const h = harness({ pointerCm: { x: 100, y: -230 } })
+    h.elevation.value = {
+      ...h.elevation.value!,
+      transoms: [transomRect(OPENING_ID, 'w1')],
+    }
+    return h
+  }
+
+  it('klik in het bovenlicht selecteert part transom, geen sleep', () => {
+    const h = harnessTransom()
+    h.select.onOpeningDown(OPENING_ID, mouseEvent())
+    expect(h.calls).toEqual([])
+    expect(h.select.settingsTarget.value).toEqual({
+      kind: 'opening',
+      id: OPENING_ID,
+      mode: 'edit',
+      part: 'transom',
+    })
+    expect(elevationWindowListenerCounts().move).toBe(0)
+  })
+
+  it('tweede klik in het bovenlicht start verticale sleep', () => {
+    const h = harnessTransom()
+    h.select.selectOpening(OPENING_ID, 'edit', 'transom')
+    h.select.onOpeningDown(OPENING_ID, mouseEvent())
+    expect(h.calls).toEqual(['pushUndo'])
+    expect(elevationWindowListenerCounts().move).toBe(1)
+  })
+
+  it('sleep naar boven schrijft gap, niet de ouder-Z', () => {
+    const h = harnessTransom()
+    h.select.selectOpening(OPENING_ID, 'edit', 'transom')
+    h.select.onMoveHandleDown(mouseEvent())
+    // 30 cm omhoog: fixture-Y negeert de vloerplaat, patch trekt die eraf.
+    dispatchElevationPointerMove(100, 260)
+    const opening = h.planHolder.plan.floors[0]?.walls[0]?.openings[0]
+    expect(opening?.bovenlicht).toBe(true)
+    expect(opening?.bovenlichtHeightCm).toBe(40)
+    expect(opening?.bovenlichtGapCm).toBe(20)
+    expect(opening?.z).toBe(80)
+    expect(opening?.z_height).toBe(120)
   })
 })
 

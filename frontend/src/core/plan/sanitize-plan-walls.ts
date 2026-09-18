@@ -394,7 +394,12 @@ export function absorbCoveredCollinearWalls(
   }
 }
 
-/** True als sanitize geometrie of muur-set wijzigde (voor undo-skip). */
+/**
+ * True als sanitize geometrie of muur-set wijzigde (voor undo-skip).
+ * Elke numerieke coord-wijziging telt — ook sub-nanometer as-snaps. Die
+ * laten `atan2` nét geen 90° zijn; hoekmarkers (ε=0°) tonen dan `!` terwijl
+ * een 1e-9-drempel de fix weggooide (Test 41, Douche-T).
+ */
 export function wallsSanitizeChanged(before: Wall[], after: Wall[]): boolean {
   if (before.length !== after.length) return true
   const byId = new Map(after.map((wall) => [wall.id, wall]))
@@ -402,10 +407,10 @@ export function wallsSanitizeChanged(before: Wall[], after: Wall[]): boolean {
     const next = byId.get(wall.id)
     if (!next) return true
     if (
-      Math.abs(next.a.x - wall.a.x) > COORD_EPS_CM ||
-      Math.abs(next.a.y - wall.a.y) > COORD_EPS_CM ||
-      Math.abs(next.b.x - wall.b.x) > COORD_EPS_CM ||
-      Math.abs(next.b.y - wall.b.y) > COORD_EPS_CM
+      next.a.x !== wall.a.x ||
+      next.a.y !== wall.a.y ||
+      next.b.x !== wall.b.x ||
+      next.b.y !== wall.b.y
     ) {
       return true
     }

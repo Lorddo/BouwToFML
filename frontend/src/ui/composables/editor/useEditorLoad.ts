@@ -75,6 +75,8 @@ export function useEditorLoad(deps: {
   syncUnderlayForActiveFloor: () => Promise<void>
   resetInspectState: () => void
   applyThicknessCatalog: (cms: readonly number[]) => void
+  clearUndoStacks: () => void
+  pushUndo: () => void
 }) {
   const loadPhase = ref<PlanLoadPhase | null>(null)
   const loadFileName = ref<string | null>(null)
@@ -132,6 +134,7 @@ export function useEditorLoad(deps: {
   function setPlanName(name: string): void {
     const current = deps.plan.value
     if (!current) return
+    deps.pushUndo()
     deps.plan.value = { ...current, name }
   }
 
@@ -139,6 +142,7 @@ export function useEditorLoad(deps: {
     const current = deps.plan.value
     const floor = current?.floors[index]
     if (!current || !floor) return
+    deps.pushUndo()
     deps.plan.value = {
       ...current,
       floors: current.floors.map((item, i) => (i === index ? { ...item, name } : item)),
@@ -152,6 +156,7 @@ export function useEditorLoad(deps: {
     deps.persistActiveUnderlayDrawing()
     deps.cancelPlanRescale()
     deps.cancelUnderlayScale()
+    deps.pushUndo()
     const nextIndex = current.floors.length
     const sourceFloor = current.floors[deps.activeFloorIndex.value] ?? current.floors[0]
     const floor = createBlankFloor({
@@ -177,6 +182,7 @@ export function useEditorLoad(deps: {
     }
     deps.cancelPlanRescale()
     deps.cancelUnderlayScale()
+    deps.pushUndo()
     const floors = current.floors.filter((_, i) => i !== index)
     const nextOrient: Record<number, FloorOrientState> = {}
     for (const [key, value] of Object.entries(deps.orientByFloor.value)) {
@@ -197,6 +203,7 @@ export function useEditorLoad(deps: {
 
   function startNewPlan(): void {
     deps.flushPreviewFieldCommits()
+    deps.clearUndoStacks()
     const settings = loadUserSettings()
     deps.plan.value = seedPlanFromUserSettings(
       createEmptyFloorPlan({
@@ -217,6 +224,7 @@ export function useEditorLoad(deps: {
     sourceName: string
     thicknessCms?: readonly number[]
   }): Promise<void> {
+    deps.clearUndoStacks()
     pruneFacadeGroups(args.plan)
     ensureDefaultFacadeGroups(args.plan, loadUserSettings().planDisplay.facadeGroups)
     const settings = loadUserSettings()
@@ -243,6 +251,7 @@ export function useEditorLoad(deps: {
   }
 
   function failOpen(): void {
+    deps.clearUndoStacks()
     deps.plan.value = null
     deps.applyThicknessCatalog(catalogFromUserDefaults())
     deps.warnings.value = []

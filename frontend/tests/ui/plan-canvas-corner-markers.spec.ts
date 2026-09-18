@@ -55,15 +55,33 @@ describe('listCornerSectors', () => {
     expect(sectors[0].kind).toBe('square')
   })
 
-  it(`90° − ½ε blijft square; 90° − 2ε is skew (ε=${CORNER_SQUARE_EPS_DEG}°)`, () => {
+  it('≤ 0,005° van 90° is square; 0,01° is skew', () => {
+    expect(CORNER_SQUARE_EPS_DEG).toBe(0.005)
     const ray = (deg: number): [number, number] => {
       const rad = (deg * Math.PI) / 180
       return [Math.cos(rad) * 100, Math.sin(rad) * 100]
     }
-    const within = [wall('h', 0, 0, 100, 0), wall('a', 0, 0, ...ray(90 - CORNER_SQUARE_EPS_DEG * 0.5))]
-    const outside = [wall('h', 0, 0, 100, 0), wall('a', 0, 0, ...ray(90 - CORNER_SQUARE_EPS_DEG * 2))]
-    expect(listCornerSectors(buildJunctions(within)[0], within)[0].kind).toBe('square')
-    expect(listCornerSectors(buildJunctions(outside)[0], outside)[0].kind).toBe('skew')
+    const exact = [wall('h', 0, 0, 100, 0), wall('v', 0, 0, 0, 100)]
+    const atEps = [wall('h', 0, 0, 100, 0), wall('a', 0, 0, ...ray(90 - CORNER_SQUARE_EPS_DEG))]
+    const off = [wall('h', 0, 0, 100, 0), wall('a', 0, 0, ...ray(89.99))]
+    expect(listCornerSectors(buildJunctions(exact)[0], exact)[0].kind).toBe('square')
+    expect(listCornerSectors(buildJunctions(atEps)[0], atEps)[0].kind).toBe('square')
+    expect(listCornerSectors(buildJunctions(off)[0], off)[0].kind).toBe('skew')
+  })
+
+  it('2e-13 cm dy (atan2-ruis) is square, geen !', () => {
+    const residual = 2.2737367544323206e-13
+    const walls = [
+      wall('h', 0, 0, 163.634, residual),
+      wall('v', 163.634, residual, 163.634, 80),
+      wall('cont', 163.634, residual, 220, residual),
+    ]
+    const junction = buildJunctions(walls).find((node) => node.refs.length === 3)
+    expect(junction).toBeTruthy()
+    const sectors = listCornerSectors(junction!, walls)
+    expect(sectors.length).toBeGreaterThan(0)
+    expect(sectors.every((sector) => sector.kind === 'square')).toBe(true)
+    expect(buildCornerMarkers(walls, 'skew')).toHaveLength(0)
   })
 
   it('collinear doorgang → 0', () => {

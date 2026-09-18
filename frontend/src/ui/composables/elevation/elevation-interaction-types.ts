@@ -10,18 +10,20 @@ import type { ElevationSnapGuide } from '@/core/plan/elevation-opening-edit'
 import type { DoorAddSubtype, WindowAddSubtype } from '@/core/plan/opening-add-presets'
 import type { ContentLayout } from '@/ui/composables/canvas-kernel/usePlanCanvasViewport'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import type { EditorSessionUndoApi } from '@/ui/composables/editor/editor-session-undo'
 
 import type { ElevTool } from './elevation-tool'
 
 export type { ElevTool }
 
 export type ElevSettings =
-  | { kind: 'opening'; id: string; mode: 'quick' | 'edit' }
+  | { kind: 'opening'; id: string; mode: 'quick' | 'edit'; part?: 'transom' }
   | { kind: 'wall'; wallId: string; floorIndex: number }
   | { kind: 'slab'; floorIndex: number }
   | { kind: 'junction'; id: string }
   | { kind: 'ridge'; wallId: string; floorIndex: number; end?: 'a' | 'b' }
   | { kind: 'roof'; id: string; vertexIndex: number | null }
+  | { kind: 'placeholderRoof'; floorIndex: number }
   | { kind: 'skylight'; id: string; mode: 'edit' }
 
 export interface ElevationInteractionProps {
@@ -60,6 +62,7 @@ export interface ElevationInteractionDeps {
   underlayMoveMode: Ref<boolean>
   useTouchNav: Ref<boolean>
   floorBovenlichtDefaults: (floorIndex: number) => ElevationBovenlichtDefaults
+  sessionUndo: EditorSessionUndoApi
 }
 
 export interface ElevationSelectEditOptions {

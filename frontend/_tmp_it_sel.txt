@@ -1,0 +1,29 @@
+usePlanCanvasSelectionCoordinator({
+    hitTest,
+    selection,
+    editor,
+    snap,
+    draftCommit,
+    syncPlanToParent,
+    flushPendingFieldCommits,
+    cancelMoveDragPending: () => wallDrag.cancelMoveDragPending(),
+    cancelOpeningDragPending: () => openingDrag.cancelOpeningDragPending(),
+    cancelItemDragPending: () => itemDrag.cancelItemDragPending(),
+    cancelDrawWallDrag: () => drawCancelsDeferred.cancelDrawWallDrag(),
+    cancelMeasureDrag: () => drawCancelsDeferred.cancelMeasureDrag(),
+    containerRef: options.containerRef,
+    axisLocked,
+    areaSurfaceEditEnabled,
+    session: options.session,
+    view: options.view,
+    ridgeZCm,
+    pendingFixture,
+    ensureRidgeZDraft: () => toolCoordEnsureRidgeZDraft(),
+    thicknessPresetCms: options.thicknessPresetCms,
+  })
+
+  // --- Tool Coordinator ---
+
+  const toolCoord = usePlanCanvasToolCoordinator({
+    hitTest,
+    selec

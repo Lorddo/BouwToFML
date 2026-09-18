@@ -15,10 +15,22 @@ import {
 import { listRidgeWallsOnFloor, setPlanRidgeJunctionZ } from '@/core/plan/ridge-walls'
 import { findOpeningInPlan, setPlanJunctionHeight } from '@/core/plan/elevation-openings'
 import {
+  elevationOpeningRestLengthCm,
+  elevationOpeningRestLineId,
   elevationPreciseCommitMinCm,
-  elevationPreciseHeightDelta,
   elevationPreciseOffset,
+  elevationPreciseOpeningOffset,
+  elevationPreciseOpeningRestSide,
+  elevationPreciseResultHeightCm,
+  elevationPreciseRidgeOffset,
+  elevationRectBottomZCm,
+  type ElevationOpeningRestSide,
 } from './elevation-precise-move'
+import {
+  buildElevationOpeningMeasureLines,
+  elevationOpeningMeasureLengthsCm,
+} from './elevation-opening-measure'
+import { floorWallBaseWorldZ } from '@/core/plan/floor-stack'
 import { resolveRelocatePointerIntent } from '@/ui/composables/canvas-kernel/plan-canvas-mods'
 import type { ElevationInteractionProps } from './elevation-interaction-types'
 
@@ -94,10 +106,95 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
 
   const preciseTypeText = ref('')
   const precisePreview = ref<{ a: Point2D; b: Point2D } | null>(null)
+  const preciseLabelCm = ref<Point2D | null>(null)
+  const preciseMeasureLengthCm = ref(0)
+  const preciseRestSide = ref<ElevationOpeningRestSide | null>(null)
 
   let preciseDraft: PreciseDraft | null = null
   let preciseIgnoreClick = false
   let preciseOverrideCm: number | null = null
+
+  function clearPreciseLabel(): void {
+    preciseLabelCm.value = null
+    preciseMeasureLengthCm.value = 0
+    preciseRestSide.value = null
+  }
+
+  function syncOpeningPreciseLabel(
+    draft: Extract<PreciseDraft, { kind: 'opening' }>,
+    wall: ElevationWallRect,
+    nextRect: ElevationRect,
+  ): void {
+    const side = elevationPreciseOpeningRestSide(
+      draft.startCm,
+      draft.hoverCm,
+      elevAxisLockMod.value,
+    )
+    preciseRestSide.value = side
+    const lengths = elevationOpeningMeasureLengthsCm(wall, nextRect)
+    if (side && preciseOverrideCm != null && preciseOverrideCm > 0) {
+      preciseMeasureLengthCm.value = Math.abs(preciseOverrideCm)
+    } else if (side && lengths) {
+      preciseMeasureLengthCm.value = elevationOpeningRestLengthCm(lengths, side)
+    } else {
+      preciseMeasureLengthCm.value =
+        Math.hypot(
+          nextRect.x0 + nextRect.x1 - (draft.startRect.x0 + draft.startRect.x1),
+          nextRect.y0 + nextRect.y1 - (draft.startRect.y0 + draft.startRect.y1),
+        ) / 2
+    }
+    if (side) {
+      const lines = buildElevationOpeningMeasureLines(wall, nextRect)
+      const line = lines.find((item) => item.id === elevationOpeningRestLineId(side))
+      if (line) {
+        preciseLabelCm.value = {
+          x: (line.a.x + line.b.x) / 2,
+          y: (line.a.y + line.b.y) / 2,
+        }
+        return
+      }
+    }
+    preciseLabelCm.value = elevationRectCenter(nextRect)
+  }
+
+  function syncRidgePreciseLabel(
+    draft: Extract<PreciseDraft, { kind: 'ridge' }>,
+    nextRect: ElevationRect,
+  ): void {
+    preciseRestSide.value = null
+    const base = floorWallBaseWorldZ(props.plan, draft.floorIndex)
+    const heightCm = elevationRectBottomZCm(nextRect, base)
+    preciseMeasureLengthCm.value =
+      preciseOverrideCm != null && preciseOverrideCm > 0
+        ? Math.abs(preciseOverrideCm)
+        : heightCm
+    const midX = (nextRect.x0 + nextRect.x1) / 2
+    const yBot = Math.max(nextRect.y0, nextRect.y1)
+    const floorY = -base
+    preciseLabelCm.value = {
+      x: midX,
+      y: (floorY + yBot) / 2,
+    }
+  }
+
+  function syncJunctionPreciseLabel(
+    draft: Extract<PreciseDraft, { kind: 'junction' }>,
+    heightCm: number,
+  ): void {
+    preciseRestSide.value = null
+    // Typ = absolute hoogte; zonder typ toon huidige knoophoogte (zelfde eenheid).
+    preciseMeasureLengthCm.value =
+      preciseOverrideCm != null && preciseOverrideCm > 0
+        ? Math.abs(preciseOverrideCm)
+        : Math.max(0, heightCm)
+    const topY = draft.startCm.y - (heightCm - draft.startHeightCm)
+    const floorY = draft.startCm.y + draft.startHeightCm
+    // Label mid tussen vloer en top (hoogtemaat), niet mid van de Δ-preview.
+    preciseLabelCm.value = {
+      x: draft.startCm.x,
+      y: (floorY + topY) / 2,
+    }
+  }
 
   function preciseIntent(event: { shiftKey?: boolean }): boolean {
     return (
@@ -115,6 +212,7 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
     preciseOverrideCm = null
     preciseTypeText.value = ''
     precisePreview.value = null
+    clearPreciseLabel()
   }
 
   function cancelPreciseDraft(): void {
@@ -144,10 +242,12 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       (item) => item.wallId === draft.wallId && item.floorIndex === draft.floorIndex,
     )
     if (!elev || !wall) return
-    const offset = elevationPreciseOffset(
+    const lengths = elevationOpeningMeasureLengthsCm(wall, draft.startRect)
+    const offset = elevationPreciseOpeningOffset(
       draft.startCm,
       draft.hoverCm,
       preciseOverrideCm,
+      lengths,
       elevAxisLockMod.value,
     )
     const next = translateElevationRect(draft.startRect, offset.x, offset.y)
@@ -157,16 +257,19 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       a: elevationRectCenter(draft.startRect),
       b: center,
     }
+    syncOpeningPreciseLabel(draft, wall, next)
   }
 
   function applyPreciseRidge(draft: Extract<PreciseDraft, { kind: 'ridge' }>): void {
     const elev = elevation.value
     if (!elev) return
-    const offset = elevationPreciseOffset(
+    const base = floorWallBaseWorldZ(props.plan, draft.floorIndex)
+    const startBottomZ = elevationRectBottomZCm(draft.startRect, base)
+    const offset = elevationPreciseRidgeOffset(
       draft.startCm,
       draft.hoverCm,
       preciseOverrideCm,
-      elevAxisLockMod.value,
+      startBottomZ,
     )
     const raw = translateElevationRect(draft.startRect, offset.x, offset.y)
     const snapped = snapElevationRidgeCenter(raw, collectElevationRidgeJunctionSnapXs(elev))
@@ -186,12 +289,24 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       a: elevationRectCenter(draft.startRect),
       b: elevationRectCenter(snapped.rect),
     }
+    syncRidgePreciseLabel(draft, snapped.rect)
   }
 
   function applyPreciseJunction(draft: Extract<PreciseDraft, { kind: 'junction' }>): void {
-    const delta = elevationPreciseHeightDelta(draft.startCm.y, draft.hoverCm.y, preciseOverrideCm)
-    const min = draft.ridge ? 0 : 1
-    const heightCm = Math.max(min, Math.min(800, Math.round(draft.startHeightCm + delta)))
+    const heightCm = Math.max(
+      draft.ridge ? 0 : 1,
+      Math.min(
+        800,
+        Math.round(
+          elevationPreciseResultHeightCm(
+            draft.startHeightCm,
+            draft.startCm.y,
+            draft.hoverCm.y,
+            preciseOverrideCm,
+          ),
+        ),
+      ),
+    )
     commitPlan(
       draft.ridge
         ? setPlanRidgeJunctionZ(props.plan, draft.floorIndex, draft.refs, heightCm)
@@ -201,6 +316,7 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       a: draft.startCm,
       b: { x: draft.startCm.x, y: draft.startCm.y - (heightCm - draft.startHeightCm) },
     }
+    syncJunctionPreciseLabel(draft, heightCm)
   }
 
   function applyPreciseDraft(): void {
@@ -222,29 +338,45 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
     if (!preciseDraft) return false
     const typed = preciseOverrideCm != null
     const minCm = elevationPreciseCommitMinCm(typed)
-    const delta =
-      preciseDraft.kind === 'junction'
-        ? Math.abs(
-            elevationPreciseHeightDelta(
-              preciseDraft.startCm.y,
-              preciseDraft.hoverCm.y,
-              preciseOverrideCm,
-            ),
-          )
-        : Math.hypot(
-            elevationPreciseOffset(
-              preciseDraft.startCm,
-              preciseDraft.hoverCm,
-              preciseOverrideCm,
-              elevAxisLockMod.value,
-            ).x,
-            elevationPreciseOffset(
-              preciseDraft.startCm,
-              preciseDraft.hoverCm,
-              preciseOverrideCm,
-              elevAxisLockMod.value,
-            ).y,
-          )
+    let delta: number
+    if (preciseDraft.kind === 'junction') {
+      const nextH = elevationPreciseResultHeightCm(
+        preciseDraft.startHeightCm,
+        preciseDraft.startCm.y,
+        preciseDraft.hoverCm.y,
+        preciseOverrideCm,
+      )
+      delta = Math.abs(nextH - preciseDraft.startHeightCm)
+    } else if (preciseDraft.kind === 'ridge') {
+      const base = floorWallBaseWorldZ(props.plan, preciseDraft.floorIndex)
+      const startZ = elevationRectBottomZCm(preciseDraft.startRect, base)
+      if (preciseOverrideCm != null && preciseOverrideCm > 0) {
+        delta = Math.abs(preciseOverrideCm - startZ)
+      } else {
+        const offset = elevationPreciseRidgeOffset(
+          preciseDraft.startCm,
+          preciseDraft.hoverCm,
+          preciseOverrideCm,
+          startZ,
+        )
+        delta = Math.hypot(offset.x, offset.y)
+      }
+    } else {
+      delta = Math.hypot(
+        elevationPreciseOffset(
+          preciseDraft.startCm,
+          preciseDraft.hoverCm,
+          preciseOverrideCm,
+          elevAxisLockMod.value,
+        ).x,
+        elevationPreciseOffset(
+          preciseDraft.startCm,
+          preciseDraft.hoverCm,
+          preciseOverrideCm,
+          elevAxisLockMod.value,
+        ).y,
+      )
+    }
     if (delta < minCm) {
       cancelPreciseDraft()
       return false
@@ -277,6 +409,11 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       wallId,
       floorIndex,
     }
+    const elev = elevation.value
+    const wall = elev?.walls.find(
+      (item) => item.wallId === wallId && item.floorIndex === floorIndex,
+    )
+    if (wall) syncOpeningPreciseLabel(preciseDraft, wall, preciseDraft.startRect)
     beginPreciseListen()
   }
 
@@ -302,6 +439,7 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       floorIndex: wall.floorIndex,
       startWall,
     }
+    syncRidgePreciseLabel(preciseDraft, startRect)
     beginPreciseListen()
   }
 
@@ -326,6 +464,7 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
       refs,
       ridge: junction.ridge,
     }
+    syncJunctionPreciseLabel(preciseDraft, junction.heightCm)
     beginPreciseListen()
   }
 
@@ -344,6 +483,9 @@ export function useElevationPrecise(options: UseElevationPreciseOptions) {
   return {
     preciseTypeText,
     precisePreview,
+    preciseLabelCm,
+    preciseMeasureLengthCm,
+    preciseRestSide,
     preciseIntent,
     clearPreciseDraftUi,
     cancelPreciseDraft,

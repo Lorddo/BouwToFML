@@ -47,6 +47,10 @@ import { useEditorOrient } from '@/ui/composables/editor/useEditorOrient'
 import { EDITOR_PLAN_FILE_ACCEPT } from '@/ui/composables/editor/parse-editor-plan-file'
 import { useEditorLoad } from '@/ui/composables/editor/useEditorLoad'
 import { useEditorSessionDefaults } from '@/ui/composables/editor/useEditorSessionDefaults'
+import {
+  createEditorSessionUndo,
+  type EditorSessionUndoSnapshot,
+} from '@/ui/composables/editor/editor-session-undo'
 import { cancelPlanChromeDialog, confirmPlanChrome } from '@/ui/composables/plan-chrome-dialog'
 import type { PreviewUnderlayLayout } from '@/ui/composables/project/types'
 import type { OpeningFrameCm } from '@/core/plan/opening-kind-catalog'
@@ -284,6 +288,32 @@ const {
   onElevationUnderlayLayout,
 } = underlay
 
+function applySessionUndoSnapshot(snapshot: EditorSessionUndoSnapshot): void {
+  if (activeFloorIndex.value !== snapshot.floorIndex) {
+    persistActiveUnderlayDrawing()
+  }
+  plan.value = snapshot.plan
+  activeFloorIndex.value = snapshot.floorIndex
+  if ('layoutOrigin' in snapshot) {
+    const current = underlayLayout.value
+    if (current) {
+      underlayLayout.value = {
+        ...cloneUnderlayOriginLayout(current),
+        origin: snapshot.layoutOrigin
+          ? { x: snapshot.layoutOrigin.x, y: snapshot.layoutOrigin.y }
+          : current.origin,
+      }
+    }
+  }
+  void syncUnderlayForActiveFloor()
+}
+
+const sessionUndo = createEditorSessionUndo({
+  getPlan: () => plan.value,
+  getFloorIndex: () => activeFloorIndex.value,
+  apply: applySessionUndoSnapshot,
+})
+
 function onViewerKeydown(event: KeyboardEvent): void {
   if (event.key === 'Escape' && reuseUnderlayOpen.value) {
     reuseUnderlayOpen.value = false
@@ -377,7 +407,7 @@ const {
   plan,
   activeFloorIndex,
   t,
-  beforeApply: () => previewCanvasRef.value?.pushUndo?.(),
+  beforeApply: () => sessionUndo.pushUndo(),
 })
 
 const bovenlichtPacked = computed(() => readBovenlichtPacked(plan.value))
@@ -401,7 +431,7 @@ async function onBovenlichtPackedChange(nextPacked: boolean): Promise<void> {
   })
   if (!ok || !plan.value) return
 
-  previewCanvasRef.value?.pushUndo?.()
+  sessionUndo.pushUndo()
   let next = plan.value
   next = nextPacked ? foldBovenlichtOnPlan(next) : expandBovenlichtOnPlan(next, defaultsResolver)
   plan.value = writeBovenlichtPacked(next, nextPacked)
@@ -515,6 +545,7 @@ const { bindRoofHint, canBindWallsToRoof, bindWallsToRoof } = useEditorBindRoof(
   dakMode,
   gevelsMode,
   canvas: previewCanvasRef,
+  pushUndo: () => sessionUndo.pushUndo(),
   t,
 })
 
@@ -605,6 +636,8 @@ const {
   syncUnderlayForActiveFloor,
   resetInspectState,
   applyThicknessCatalog,
+  clearUndoStacks: () => sessionUndo.clearStacks(),
+  pushUndo: () => sessionUndo.pushUndo(),
 })
 selectFloorLater = selectFloor
 
@@ -1371,6 +1404,7 @@ defineExpose({
             :resolve-bovenlicht-defaults="
               (floorIndex) => expandBovenlichtDefaultsFromFloor(plan?.floors[floorIndex])
             "
+            :session-undo="sessionUndo"
             @plan-update="onPlanUpdate"
             @update:group-id="elevationGroupId = $event"
             @update:underlay-move-mode="underlayMoveMode = $event"
@@ -1432,6 +1466,7 @@ defineExpose({
             :default-door-height-cm="activeFloorDefaults.doorHeightCm"
             :default-window-height-cm="activeFloorDefaults.windowHeightCm"
             :default-window-sill-z-cm="activeFloorDefaults.windowSillZCm"
+            :session-undo="sessionUndo"
             @plan-update="onPlanUpdate"
             @update:underlay-move-mode="underlayMoveMode = $event"
             @update-rescale-state="onRescaleStateUpdate"

@@ -63,6 +63,7 @@ export type ElevSettingsRef =
   | { kind: 'junction'; id: string }
   | { kind: 'ridge'; wallId: string; floorIndex: number; end?: 'a' | 'b' }
   | { kind: 'roof'; id: string; vertexIndex: number | null }
+  | { kind: 'placeholderRoof'; floorIndex: number }
   | { kind: 'skylight'; id: string; mode: 'edit' }
   | null
 
@@ -542,6 +543,11 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     return target?.kind === 'slab' && target.floorIndex === floorIndex
   }
 
+  function placeholderRoofSelected(floorIndex: number): boolean {
+    const target = settingsTarget.value
+    return target?.kind === 'placeholderRoof' && target.floorIndex === floorIndex
+  }
+
   function roofSelected(id: string): boolean {
     const target = settingsTarget.value
     return target?.kind === 'roof' && target.id === id
@@ -734,6 +740,7 @@ export function useElevationRenderModel(options: ElevationRenderModelOptions) {
     // Selection paint
     wallOrRidgeSelected,
     slabSelected,
+    placeholderRoofSelected,
     roofSelected,
     junctionSelected,
     // Measure

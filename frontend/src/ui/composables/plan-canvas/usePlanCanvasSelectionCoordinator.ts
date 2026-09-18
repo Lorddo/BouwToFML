@@ -51,6 +51,7 @@ interface SelectionCoordinatorOptions {
   pendingFixture: Ref<FixturePlaceOption | null>
   ensureRidgeZDraft: () => number
   thicknessPresetCms?: Ref<number[] | undefined>
+  getInputUnit?: () => import('@/ui/composables/settings/scale-input-unit').ScaleInputUnit
 }
 
 export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorOptions) {
@@ -246,6 +247,7 @@ export function usePlanCanvasSelectionCoordinator(options: SelectionCoordinatorO
     resolvePoint: options.snap.resolveSurfacePoint,
     axisLocked,
     syncPlanToParent,
+    getInputUnit: options.getInputUnit,
     isRidgeHit: (cm) => {
       if (options.view.mode !== 'dak') return false
       const wallId = hitTest.hitTestWallAtCm(cm)

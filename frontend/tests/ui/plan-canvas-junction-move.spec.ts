@@ -195,4 +195,65 @@ describe('usePlanCanvasJunctionMove typed distance', () => {
     })
     scope.stop()
   })
+
+  it('typed room interior moves the junction along the locked axis', () => {
+    const scope = effectScope()
+    scope.run(() => {
+      const preview = vi.fn()
+      const walls = [wall('w1', { x: 0, y: 0 }, { x: 0, y: 300 })]
+      const areas = [
+        {
+          id: 'room',
+          poly: [
+            { x: 0, y: 0 },
+            { x: 350, y: 0 },
+            { x: 350, y: 300 },
+            { x: 0, y: 300 },
+          ],
+          color: '#fff',
+          showAreaLabel: false,
+        },
+      ]
+      const move = usePlanCanvasJunctionMove({
+        hitTest: { clientToCm: (x, y) => ({ x, y }) },
+        editor: {
+          pushUndo: vi.fn(),
+          undo: vi.fn(),
+          flushAreaRegen: vi.fn(),
+          previewJunctionMove: preview,
+          snapJunctionPoint: (_refs: unknown, candidate: { x: number; y: number }) => candidate,
+          findMergeTarget: () => null,
+          applyJunctionMerge: vi.fn(),
+          junctions: { value: [] },
+          walls: { value: walls },
+          ridgeWalls: { value: [] },
+          areas: { value: areas },
+        } as never,
+        pinnedJunctionId: ref(null),
+        draggingJunctionId: ref(null),
+        spacePressed: ref(false),
+        getInputUnit: () => 'cm',
+        syncPlanToParent: vi.fn(),
+      })
+
+      expect(move.beginJunctionMove(junctionAt('j1', 0, 150, 'w1'), mouseAt(0, 150))).toBe(true)
+      move.updateJunctionMoveHover(mouseAt(40, 150))
+      expect(move.handleTypeKey(typeKey('3'))).toBe(true)
+      expect(move.handleTypeKey(typeKey('0'))).toBe(true)
+      expect(move.handleTypeKey(typeKey('0'))).toBe(true)
+      expect(move.measureLengthCm.value).toBeCloseTo(300)
+      const label = move.junctionMoveLabelCm.value
+      expect(label).not.toBeNull()
+      // Origin (0,150) + half span 300 langs +X → (150, 150)
+      expect(label!.x).toBeCloseTo(150, 5)
+      expect(label!.y).toBeCloseTo(150, 5)
+      expect(move.spanMeasureLine.value?.emphasis).toBe('typing')
+      expect(move.commitFromMeasure()).toBe(true)
+      const last = preview.mock.calls.at(-1)
+      // Span 350 → 300: knoop 50 cm de kamer in (+X).
+      expect(last?.[2].x).toBeCloseTo(50)
+      expect(last?.[2].y).toBeCloseTo(150)
+    })
+    scope.stop()
+  })
 })

@@ -4,6 +4,11 @@ import {
   resolveWallSlidePointerDelta,
   snapWallSlideDeltaToJunctions,
 } from '@/core/plan/junctions'
+import {
+  pickRoomInteriorCm,
+  roomSpanFromWall,
+  wallSlideDeltaForInterior,
+} from '@/core/plan/precise-move-room-span'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
 import type { usePlanEditor } from '@/ui/composables/usePlanEditor'
 import { cloneAreasSnapshot } from './plan-canvas-area-live'
@@ -12,6 +17,7 @@ import {
   isDrawTypeLengthKey,
   parseDrawLengthDraftToCm,
 } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import type { MeasureLine } from '@/ui/composables/canvas-kernel/plan-canvas-measure'
 
 type EditorApi = ReturnType<typeof usePlanEditor>
 
@@ -24,8 +30,8 @@ const CLICK_COMMIT_MIN_CM = 0.5
 const TYPED_COMMIT_MIN_CM = 0.1
 
 /**
- * Muur verschuiven: klik → richting → klik (of typ verplaatsing + Enter).
- * Maat = afstand vanaf de startpositie (zelfde invoer als muur/kamer).
+ * Muur verschuiven: klik → richting → klik (of typ binnenmaat + Enter).
+ * Typen = binnenmaat van de gekozen ruimte (hover-zijde); 2e klik zonder typen = delta.
  */
 export function usePlanCanvasWallMove(options: {
   hitTest: WallMoveHitTestApi
@@ -42,10 +48,11 @@ export function usePlanCanvasWallMove(options: {
   const typeText = ref('')
   const measureLengthCm = ref(0)
   const labelCm = ref<Point2D | null>(null)
+  const spanMeasureLine = ref<MeasureLine | null>(null)
 
   let draft: {
     wallId: string
-    wall: { a: Point2D; b: Point2D }
+    wall: Pick<Wall, 'a' | 'b' | 'thickness' | 'balance'>
     startCm: Point2D
     hoverCm: Point2D
     baseWalls: Wall[]
@@ -53,6 +60,8 @@ export function usePlanCanvasWallMove(options: {
     slideDir: Point2D
     delta: number
     overrideCm: number | null
+    /** Getypte binnenmaat (label); null = toon |delta|. */
+    typedInteriorCm: number | null
   } | null = null
 
   function defaultSlideDir(wall: { a: Point2D; b: Point2D }): Point2D {
@@ -67,14 +76,57 @@ export function usePlanCanvasWallMove(options: {
     if (!draft) {
       measureLengthCm.value = 0
       labelCm.value = null
+      spanMeasureLine.value = null
       return
     }
     const current = draft
-    measureLengthCm.value = Math.abs(current.delta)
     const wall =
       options.editor.selectableWalls.value.find((item) => item.id === current.wallId) ??
       current.wall
+    const dx = current.hoverCm.x - current.startCm.x
+    const dy = current.hoverCm.y - current.startCm.y
+    const intoDir =
+      Math.hypot(dx, dy) > 1e-9
+        ? { x: dx, y: dy }
+        : {
+            x: current.slideDir.x * (Math.sign(current.delta) || 1),
+            y: current.slideDir.y * (Math.sign(current.delta) || 1),
+          }
+    const room = pickRoomInteriorCm(
+      wall,
+      current.baseAreas ?? [],
+      intoDir,
+      current.baseWalls,
+    )
+    if (room) {
+      const spanLen =
+        current.typedInteriorCm != null
+          ? Math.abs(current.typedInteriorCm)
+          : room.interiorCm
+      measureLengthCm.value = spanLen
+      const span = roomSpanFromWall(wall, room.intoUnit, spanLen, room.spanOrigin)
+      if (span) {
+        labelCm.value = {
+          x: (span.a.x + span.b.x) / 2,
+          y: (span.a.y + span.b.y) / 2,
+        }
+        const typing = typeText.value.length > 0
+        spanMeasureLine.value = {
+          id: 'wall-move-span',
+          a: span.a,
+          b: span.b,
+          emphasis: typing ? 'typing' : 'active',
+          suppressLabel: true,
+        }
+        return
+      }
+    }
+    measureLengthCm.value =
+      current.typedInteriorCm != null
+        ? Math.abs(current.typedInteriorCm)
+        : Math.abs(current.delta)
     labelCm.value = wallMid(wall)
+    spanMeasureLine.value = null
   }
 
   function applyDelta(delta: number, slideDir: Point2D): void {
@@ -97,6 +149,32 @@ export function usePlanCanvasWallMove(options: {
     const dy = draft.hoverCm.y - draft.startCm.y
     const resolved = resolveWallSlidePointerDelta({ x: dx, y: dy }, draft.wall)
     if (draft.overrideCm != null && draft.overrideCm !== 0) {
+      const intoDir =
+        Math.hypot(dx, dy) > 1e-9
+          ? { x: dx, y: dy }
+          : {
+              x: resolved.slideDir.x * (Math.sign(draft.delta) || 1),
+              y: resolved.slideDir.y * (Math.sign(draft.delta) || 1),
+            }
+      const room = pickRoomInteriorCm(
+        draft.wall,
+        draft.baseAreas ?? [],
+        intoDir,
+        draft.baseWalls,
+      )
+      if (room) {
+        const typedI = Math.abs(draft.overrideCm)
+        const delta = wallSlideDeltaForInterior(
+          room.interiorCm,
+          typedI,
+          room.intoUnit,
+          resolved.slideDir,
+        )
+        draft.typedInteriorCm = typedI
+        applyDelta(delta, resolved.slideDir)
+        return
+      }
+      draft.typedInteriorCm = null
       const sign =
         draft.overrideCm < 0
           ? -1
@@ -106,6 +184,7 @@ export function usePlanCanvasWallMove(options: {
       applyDelta(Math.abs(draft.overrideCm) * sign, resolved.slideDir)
       return
     }
+    draft.typedInteriorCm = null
     const delta = snapDisabled
       ? resolved.delta
       : snapWallSlideDeltaToJunctions(
@@ -125,6 +204,7 @@ export function usePlanCanvasWallMove(options: {
     typeText.value = ''
     measureLengthCm.value = 0
     labelCm.value = null
+    spanMeasureLine.value = null
   }
 
   function beginWallMove(wallId: string, event: MouseEvent): boolean {
@@ -140,7 +220,12 @@ export function usePlanCanvasWallMove(options: {
     const source = ridge ? options.editor.ridgeWalls.value : options.editor.walls.value
     draft = {
       wallId,
-      wall: { a: { ...wall.a }, b: { ...wall.b } },
+      wall: {
+        a: { ...wall.a },
+        b: { ...wall.b },
+        thickness: wall.thickness,
+        balance: wall.balance,
+      },
       startCm: cm,
       hoverCm: cm,
       baseWalls: JSON.parse(JSON.stringify(source)) as Wall[],
@@ -148,6 +233,7 @@ export function usePlanCanvasWallMove(options: {
       slideDir: defaultSlideDir(wall),
       delta: 0,
       overrideCm: null,
+      typedInteriorCm: null,
     }
     drafting.value = true
     typeText.value = ''
@@ -202,6 +288,7 @@ export function usePlanCanvasWallMove(options: {
     typeText,
     measureLengthCm,
     wallMoveLabelCm: labelCm,
+    spanMeasureLine,
     isDrafting: () => drafting.value,
     beginWallMove,
     updateWallMoveHover,

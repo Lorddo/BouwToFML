@@ -45,6 +45,107 @@ export function elevationPreciseHeightDelta(
   return raw
 }
 
+/**
+ * Resultaat-hoogte voor knoop/nok: positieve typ = absolute hoogte (vanaf vloer),
+ * niet Δ. Negatieve typ / geen typ = oude delta-semantiek.
+ */
+export function elevationPreciseResultHeightCm(
+  startHeightCm: number,
+  startY: number,
+  hoverY: number,
+  overrideCm: number | null,
+): number {
+  if (overrideCm != null && overrideCm > 0) return overrideCm
+  return startHeightCm + elevationPreciseHeightDelta(startY, hoverY, overrideCm)
+}
+
+/**
+ * Nok-precise: altijd H/V. Positieve typ = absolute vloer→onderkant (alleen Y).
+ * Zonder typ / negatief = as-locked offset (zoals muur).
+ */
+export function elevationPreciseRidgeOffset(
+  start: Point2D,
+  hover: Point2D,
+  overrideCm: number | null,
+  startBottomZCm: number,
+): Point2D {
+  if (overrideCm != null && overrideCm > 0) {
+    return { x: 0, y: -(overrideCm - startBottomZCm) }
+  }
+  return elevationPreciseOffset(start, hover, overrideCm, true)
+}
+
+/** Onderkant-Z van een aanzicht-rect t.o.v. de verdiepingsvloer. */
+export function elevationRectBottomZCm(rect: { y0: number; y1: number }, floorBaseWorldZ: number): number {
+  const yBot = Math.max(rect.y0, rect.y1)
+  return Math.max(0, Math.round(-yBot - floorBaseWorldZ))
+}
+
+export type ElevationOpeningRestLengths = {
+  leftCm: number
+  rightCm: number
+  floorCm: number
+  ceilingCm: number
+}
+
+export type ElevationOpeningRestSide = 'left' | 'right' | 'floor' | 'ceiling'
+
+const EPS = 1e-6
+
+/** Actieve restmaat uit hover-richting (zelfde as-keuze als opening-offset). */
+export function elevationPreciseOpeningRestSide(
+  start: Point2D,
+  hover: Point2D,
+  axisLock = false,
+): ElevationOpeningRestSide | null {
+  let dx = hover.x - start.x
+  let dy = hover.y - start.y
+  if (axisLock) {
+    if (Math.abs(dx) >= Math.abs(dy)) dy = 0
+    else dx = 0
+  }
+  if (Math.abs(dx) < EPS && Math.abs(dy) < EPS) return null
+  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? 'right' : 'left'
+  return dy > 0 ? 'floor' : 'ceiling'
+}
+
+export function elevationOpeningRestLineId(side: ElevationOpeningRestSide): string {
+  return `elev-opening-${side}`
+}
+
+export function elevationOpeningRestLengthCm(
+  lengths: ElevationOpeningRestLengths,
+  side: ElevationOpeningRestSide,
+): number {
+  if (side === 'left') return lengths.leftCm
+  if (side === 'right') return lengths.rightCm
+  if (side === 'floor') return lengths.floorCm
+  return lengths.ceilingCm
+}
+
+/**
+ * Opening-precise: positieve typ = restmaat (L/R of vloer/plafond) volgens hover.
+ * Negatief / geen lengths → oude delta-offset.
+ */
+export function elevationPreciseOpeningOffset(
+  start: Point2D,
+  hover: Point2D,
+  overrideCm: number | null,
+  lengths: ElevationOpeningRestLengths | null,
+  axisLock = false,
+): Point2D {
+  if (overrideCm == null || overrideCm <= 0 || !lengths) {
+    return elevationPreciseOffset(start, hover, overrideCm, axisLock)
+  }
+  const side = elevationPreciseOpeningRestSide(start, hover, axisLock)
+  if (!side) return elevationPreciseOffset(start, hover, overrideCm, axisLock)
+  const typedI = overrideCm
+  if (side === 'right') return { x: lengths.rightCm - typedI, y: 0 }
+  if (side === 'left') return { x: typedI - lengths.leftCm, y: 0 }
+  if (side === 'floor') return { x: 0, y: lengths.floorCm - typedI }
+  return { x: 0, y: typedI - lengths.ceilingCm }
+}
+
 export function elevationPreciseCommitMinCm(typed: boolean): number {
   return typed ? ELEV_PRECISE_TYPED_MIN_CM : ELEV_PRECISE_CLICK_MIN_CM
 }

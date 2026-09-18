@@ -32,6 +32,8 @@ import {
 } from '@/ui/composables/settings/plan-display-style'
 import { loadUserSettings, setShowCanvasGrid } from '@/ui/composables/settings/user-settings'
 import type { ScaleInputUnit } from '@/ui/composables/settings/scale-input-unit'
+import { formatDrawTypeLabel } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
+import type { EditorSessionUndoApi } from '@/ui/composables/editor/editor-session-undo'
 import type { ToolbeltItem } from './canvas/canvas-toolbelt.types'
 import { TOOLBELT_HOTKEY_PRIORITY } from '@/ui/composables/canvas/useToolbeltHotkey'
 import EditorTopbar from './EditorTopbar.vue'
@@ -81,6 +83,7 @@ const props = withDefaults(
     bovenlichtPacked?: boolean
     resolveBovenlichtDefaults?: (floorIndex: number) => ElevationBovenlichtDefaults
     unit?: ScaleInputUnit
+    sessionUndo: EditorSessionUndoApi
   }>(),
   {
     underlaySrc: null,
@@ -204,6 +207,7 @@ const interaction = useElevationInteraction({
   underlayMoveMode,
   useTouchNav,
   floorBovenlichtDefaults,
+  sessionUndo: props.sessionUndo,
 })
 
 // --- Render model composable ---
@@ -321,13 +325,18 @@ const {
   settingsJunction,
   settingsRidge,
   settingsRoof,
+  settingsPlaceholderRoof,
   selectedSkylight,
-  undoStack,
-  redoStack,
+  canUndoEdit,
+  canRedoEdit,
   elevMoveMod,
   elevSettingsMod,
   elevAxisLockMod,
   precisePreview,
+  preciseTypeText,
+  preciseLabelCm,
+  preciseMeasureLengthCm,
+  commitPreciseDraft,
   elevationMeasureLines,
   onContentClick,
   onContentMove,
@@ -356,6 +365,7 @@ const {
   commitRidgeHeight,
   commitRoofVertexHeight,
   commitSlabHeight,
+  commitRoofThickness,
   undoEdit,
   redoEdit,
   pushUndo,
@@ -365,6 +375,15 @@ const {
   onTouchEditPointerDown,
   onTouchEditPointerMove,
 } = interaction
+
+const preciseMeasureLabel = computed(() => {
+  const cm = preciseLabelCm.value
+  if (!cm) return null
+  return cmToScreen(cm.x, cm.y)
+})
+const preciseMeasureLabelText = computed(() =>
+  formatDrawTypeLabel(preciseTypeText.value, preciseMeasureLengthCm.value, props.unit),
+)
 
 // --- Pan/zoom composable ---
 const panZoom = usePlanCanvasPanZoom({
@@ -473,8 +492,8 @@ defineExpose({
     @wheel.prevent="panZoom.onWheel"
   >
     <EditorTopbar
-      :can-undo="undoStack.length > 0"
-      :can-redo="redoStack.length > 0"
+      :can-undo="canUndoEdit"
+      :can-redo="canRedoEdit"
       :hint="t('viewer.elevationHint')"
       :fullscreen="canvasFullscreen"
       :show-canvas-grid="showCanvasGrid"
@@ -584,6 +603,26 @@ defineExpose({
       :to-screen="cmToScreen"
       :unit="unit"
     />
+    <div
+      v-if="preciseMeasureLabel"
+      class="draw-measure-label draw-measure-label--wall"
+      :class="{ 'draw-measure-label--typing': !!preciseTypeText }"
+      :style="{ left: `${preciseMeasureLabel.x}px`, top: `${preciseMeasureLabel.y}px` }"
+    >
+      {{ preciseMeasureLabelText
+      }}<span class="draw-measure-label__unit">{{ unit }}</span>
+      <button
+        v-if="preciseTypeText"
+        type="button"
+        class="draw-measure-label__accept"
+        :title="t('result.toolbar.acceptDrawDraft')"
+        :aria-label="t('result.toolbar.acceptDrawDraft')"
+        @pointerdown.stop
+        @click.stop="commitPreciseDraft()"
+      >
+        ✓
+      </button>
+    </div>
     <PlanRescaleOverlay
       v-if="rescaleMode && rescaleState"
       :state="rescaleState"
@@ -684,12 +723,21 @@ defineExpose({
                 </div>
               </div>
             </template>
-            <template v-else-if="settingsRoof">
-              <span v-if="settingsRoof.heightCm == null" class="plan-toolbelt__meta">
+            <template v-else-if="settingsRoof || settingsPlaceholderRoof">
+              <span
+                v-if="settingsPlaceholderRoof"
+                class="plan-toolbelt__meta"
+              >
+                {{ t('viewer.elevationGeneratedRoof', { name: settingsPlaceholderRoof.name }) }}
+              </span>
+              <span
+                v-else-if="settingsRoof && settingsRoof.heightCm == null"
+                class="plan-toolbelt__meta"
+              >
                 {{ t('viewer.elevationRoof', { name: settingsRoof.name }) }}
               </span>
               <ElevationHeightOnlyFields
-                v-else
+                v-else-if="settingsRoof && settingsRoof.heightCm != null"
                 :key="`roof-${settingsRoof.id}-${settingsRoof.vertexIndex}`"
                 :unit="unit"
                 :title="t('viewer.elevationRoof', { name: settingsRoof.name })"
@@ -698,7 +746,23 @@ defineExpose({
                 :max="800"
                 @height="commitRoofVertexHeight"
               />
+              <div class="plan-toolbelt__field">
+                <span class="plan-toolbelt__field-label">{{ t('viewer.elevationNok') }}</span>
+                <div class="plan-toolbelt__field-controls">
+                  <ScaleLengthInput
+                    :key="`roof-thk-${settingsRoof?.id ?? settingsPlaceholderRoof?.floorIndex}`"
+                    :cm="settingsRoof?.thicknessCm ?? settingsPlaceholderRoof?.thicknessCm ?? 0"
+                    :unit="unit"
+                    :min-cm="0"
+                    allow-zero
+                    :aria-label="t('viewer.elevationNok')"
+                    input-class="plan-toolbelt__thickness-input"
+                    @update:cm="commitRoofThickness"
+                  />
+                </div>
+              </div>
               <ToolbeltActionButton
+                v-if="settingsRoof"
                 icon="delete"
                 :title="t('result.toolbar.deleteRoof')"
                 :aria-label="t('result.toolbar.deleteRoof')"
@@ -912,5 +976,46 @@ defineExpose({
   background: #0f172a;
   color: #fff;
   border-color: #0f172a;
+}
+
+.draw-measure-label {
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.draw-measure-label--typing {
+  outline: 2px solid #f97316;
+  outline-offset: 1px;
+}
+
+.draw-measure-label__unit {
+  opacity: 0.75;
+  font-size: 11px;
+}
+
+.draw-measure-label__accept {
+  pointer-events: auto;
+  border: 0;
+  background: #22c55e;
+  color: #052e16;
+  border-radius: 3px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
 }
 </style>

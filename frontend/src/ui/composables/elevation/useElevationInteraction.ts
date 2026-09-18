@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { FloorPlan } from '@/core/plan/types'
 import {
   DEFAULT_DOOR_HEIGHT_CM,
@@ -8,7 +8,7 @@ import {
 import {
   hitElevationBand,
   hitElevationJunction,
-  hitElevationOpening,
+  hitElevationOpeningTarget,
   hitElevationRoofPlane,
   hitElevationRoofVertex,
   hitElevationSkylight,
@@ -28,6 +28,7 @@ import {
 } from '@/ui/composables/canvas-kernel/plan-canvas-draw-measure'
 import { isTypingFieldTarget } from '@/ui/composables/canvas-kernel/plan-canvas-draft-commit'
 import { hasToolbeltHotkey } from '@/ui/composables/canvas/useToolbeltHotkey'
+import { elevationOpeningRestLineId } from './elevation-precise-move'
 import { PLAN_HANDLE_HIT_PX } from '@/ui/composables/canvas-kernel/plan-canvas-vertex-hit'
 import type { ElevTool } from './elevation-tool'
 import type { ElevationInteractionDeps } from './elevation-interaction-types'
@@ -55,6 +56,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     underlayMoveMode,
     useTouchNav,
     floorBovenlichtDefaults,
+    sessionUndo,
   } = deps
 
   const activeTool = ref<ElevTool>('select')
@@ -78,15 +80,12 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
   })
 
   const snapGuide = ref<ElevationSnapGuide | null>(null)
-  const undoStack = ref<FloorPlan[]>([])
-  const redoStack = ref<FloorPlan[]>([])
   const elevMoveMod = ref(false)
   const elevSettingsMod = ref(false)
   const elevAxisLockMod = ref(false)
 
   function pushUndo(): void {
-    undoStack.value = [...undoStack.value, props.plan].slice(-40)
-    redoStack.value = []
+    sessionUndo.pushUndo()
   }
 
   function commitPlan(next: FloorPlan): void {
@@ -94,19 +93,11 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
   }
 
   function undoEdit(): void {
-    const prev = undoStack.value[undoStack.value.length - 1]
-    if (!prev) return
-    undoStack.value = undoStack.value.slice(0, -1)
-    redoStack.value = [...redoStack.value, props.plan]
-    emit.planUpdate(prev)
+    sessionUndo.undo()
   }
 
   function redoEdit(): void {
-    const next = redoStack.value[redoStack.value.length - 1]
-    if (!next) return
-    redoStack.value = redoStack.value.slice(0, -1)
-    undoStack.value = [...undoStack.value, props.plan]
-    emit.planUpdate(next)
+    sessionUndo.redo()
   }
 
   const preciseBox: {
@@ -282,18 +273,18 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
       }
       if (hitElevationRoofPlane(elev, cm)?.id === selectedRoof.id) return
     }
-    const hit = hitElevationOpening(elev, cm, select.selectedOpeningId.value)
+    const hit = hitElevationOpeningTarget(elev, cm, select.selectedOpeningId.value)
     if (hit) {
       const wantEdit = event.evt.ctrlKey || event.evt.metaKey
-      if (
-        !wantEdit &&
+      const samePart =
         select.selectedOpeningId.value === hit.openingId &&
         select.settingsTarget.value?.kind === 'opening' &&
-        select.settingsTarget.value.mode === 'edit'
-      ) {
+        select.settingsTarget.value.mode === 'edit' &&
+        (select.settingsTarget.value.part === 'transom') === hit.transom
+      if (!wantEdit && samePart) {
         return
       }
-      select.selectOpening(hit.openingId, 'edit')
+      select.selectOpening(hit.openingId, 'edit', hit.transom ? 'transom' : undefined)
       return
     }
     const skylight = hitElevationSkylight(elev, cm, select.selectedSkylightId.value)
@@ -322,6 +313,11 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     }
     if (roof) {
       select.selectRoof(roof.id, null)
+      return
+    }
+    const placeholder = hitElevationBand(elev, cm, 'nok')
+    if (placeholder && placeholder.floorIndex != null) {
+      select.selectPlaceholderRoof(placeholder.floorIndex)
       return
     }
     if (event.evt.ctrlKey || event.evt.metaKey) {
@@ -541,23 +537,43 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     settingsJunction: select.settingsJunction,
     selectedRoofPlane: select.selectedRoofPlane,
     settingsRoof: select.settingsRoof,
+    settingsPlaceholderRoof: select.settingsPlaceholderRoof,
     snapGuide,
     splitDraft: draw.splitDraft,
     ridgePlacePreview: draw.ridgePlacePreview,
     roofPlaceDraft: draw.roofPlaceDraft,
     roofPlacePreview: draw.roofPlacePreview,
     roofPlaceHover: draw.roofPlaceHover,
-    undoStack,
-    redoStack,
+    canUndoEdit: sessionUndo.canUndoEdit,
+    canRedoEdit: sessionUndo.canRedoEdit,
     undoEdit,
     redoEdit,
     pushUndo,
-    elevationMeasureLines: select.elevationMeasureLines,
+    elevationMeasureLines: computed(() => {
+      const lines = select.elevationMeasureLines.value
+      const side = precise.preciseRestSide.value
+      if (!precise.hasPreciseDraft() || !side) return lines
+      const activeId = elevationOpeningRestLineId(side)
+      const typing = precise.preciseTypeText.value.length > 0
+      return lines.map((line) =>
+        line.id === activeId
+          ? {
+              ...line,
+              emphasis: typing ? ('typing' as const) : ('active' as const),
+              suppressLabel: true,
+            }
+          : line,
+      )
+    }),
     elevMoveMod,
     elevSettingsMod,
     elevAxisLockMod,
     preciseTypeText: precise.preciseTypeText,
     precisePreview: precise.precisePreview,
+    preciseLabelCm: precise.preciseLabelCm,
+    preciseMeasureLengthCm: precise.preciseMeasureLengthCm,
+    preciseRestSide: precise.preciseRestSide,
+    commitPreciseDraft: () => precise.commitPreciseDraft(),
     onContentClick,
     onContentMove,
     onOpeningDown: select.onOpeningDown,
@@ -603,6 +619,7 @@ export function useElevationInteraction(deps: ElevationInteractionDeps) {
     commitRidgeHeight: select.commitRidgeHeight,
     commitRoofVertexHeight: select.commitRoofVertexHeight,
     commitSlabHeight: select.commitSlabHeight,
+    commitRoofThickness: select.commitRoofThickness,
     cleanupListeners,
     onGroupChange,
     onKeydown,

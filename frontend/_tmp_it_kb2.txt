@@ -1,0 +1,49 @@
+createPlanCanvasEditorKeyHandlers({
+    selection,
+    inspectMode,
+    drawSurfaceMode,
+    measureMode,
+    nulpuntMode,
+    underlayMoveMode,
+    thicknessPickTier,
+    onKeyDown,
+    onKeyUp,
+    flushPendingFieldCommits,
+    deleteSelected,
+    clearSelection,
+    clearInspectSelect,
+    emitCancelThicknessPick: () => emit('cancelThicknessPick'),
+    clearSelectedSlice: () => {
+      if (!options.selectedSliceIndex || options.selectedSliceIndex.value < 0) return false
+      options.selectedSliceIndex.value = -1
+      return true
+    },
+    undo: () => editor.undo(),
+    redo: () => editor.redo(),
+    syncPlanToParentAfterUndo: () => {
+      if (editor.sessionUndoOwnsApply) return
+      syncPlanToParentAfterUndo()
+    },
+    drawSurface,
+    areaSelection,
+    surfaceEdit,
+    drawWall,
+    drawRoom,
+    drawDormer,
+    wallMove,
+    junctionMove,
+    openingMove,
+    drawLine,
+    deactivateDrawTool,
+    measure,
+    nulpunt,
+    underlayMove,
+  })
+
+  // --- External plan change ---
+
+  function handleExternalPlanChange(): void {
+    if (pendingPlanSyncSkips.value > 0) {
+      pendingPlanSyncSkips.value -= 1
+      ignoreNextPlanWatch.value = pendingPlanSyncSkips.value > 0
+     

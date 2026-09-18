@@ -16,6 +16,7 @@ import {
   collectElevationSplitSnapXs,
   elevationSplitPreviewAt,
   hitElevationOpening,
+  hitElevationOpeningTarget,
   hitElevationRoofPlane,
   hitElevationRoofVertex,
   hitElevationWall,
@@ -1431,6 +1432,10 @@ describe('facade-elevation', () => {
     const hit = hitElevationOpening(elev, mid)
     expect(hit?.openingId).toBe(elev.openings[0].openingId)
     expect(hit?.type).toBe('door')
+    const target = hitElevationOpeningTarget(elev, mid)
+    expect(target?.transom).toBe(true)
+    expect(target?.openingId).toBe(elev.openings[0].openingId)
+    expect(target?.rect.y0).toBeCloseTo(transom.y0, 5)
   })
 
   it('twee overlappinge ramen: preferOpeningId blijft op het gekozen raam', () => {
