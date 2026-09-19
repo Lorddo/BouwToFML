@@ -44,6 +44,7 @@ dist/
 !.env.production
 
 # ── Test- en debug-artifacts ──
+/frontend/_tmp*
 coverage/
 .vitest-report.json
 debug-*.out

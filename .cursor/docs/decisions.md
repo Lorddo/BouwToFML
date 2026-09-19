@@ -305,7 +305,7 @@ Zie `klant-eisen-v1.md` §2 voor volledige specificatie.
 
 **2026-08-22 — Vouwdeuren in menu:** `bifold` (`e7ef286f…`, 2-delig) en `bifold_double` (`919e3f1a…`, 4-delig) in `DOOR_ADD_SUBTYPES`. Aanzicht: 2/4 panelen + scharnier tussen de twee delen per deur. Plattegrond: V-vouw (2 of 4 bladlijnen).
 
-**2026-09-18 — Onbekende catalogus 1–9:** visuele IDs uit `onbekende-catalogus-items.fml`. Nieuw: `window.grid` (`b3af7fd4…`), `door.flush` (206, geen draaicirkel), `door.half_glass` (204, bovenste helft glas). Alias: 218→`window.single`, 2fa75eac+aa120b01→`stair_straight`, 1370b0fb+74f72445→`railing`. 3263 later `door.balcony` (niet Frans). Alleen nieuwe uniques; rotatie 0.
+**2026-09-18 — Catalogus 8/7 glas-deuren:** `door.half_glass` + `door.balcony` — 10 cm hout rondom het glas. Geen schema-wijziging.
 
 **2026-09-18 — Catalogus 10 liftdeuren:** `3264` → nieuw `door.elevator` (twee schuifbladen, middennaad, geen kruk). Staedion 3e.
 
@@ -317,15 +317,17 @@ Zie `klant-eisen-v1.md` §2 voor volledige specificatie.
 
 **2026-09-18 — Catalogus 17 ronde ¾-trap:** `575283d4…` → nieuw `stair_winder_270`. rot=0: open linksboven; loop 9→6→12 uur.
 
+**2026-09-19 — Hekken geen vierkant:** `railing` / `balustrade` / `balustrade_glass` = strook zoals glashek (vak ~40 cm, dikte 8 cm). Vierkante import-maat wordt plat; spijl-count volgt de lengte. Geen schema-wijziging.
+
 **2026-09-18 — Catalogus 21 balkonhek glas:** `be2676ce…` → nieuw `balustrade_glass` (paneel, geen spijlen).
 
 **2026-09-18 — Catalogus 22–23:** `a32b295d…` → nieuw `doorbell`; `46545216…` → `railing`.
 
-**2026-09-18 — Catalogus 20 C-trap:** `f4dfb128…` → nieuw `stair_c_90` (niet quarter). Start rechtsonder, 90°-winder, 3 rechte treden, 90°-winder, uit rechtsboven.
+**2026-09-18 — Catalogus 20 lange U:** `f4dfb128…` → `stair_c_90`. Zelfde 90°-binnenhoek als 25, boven én onder, spil rechts. Pijl kort/90/lang over het midden. Geen spiegel, geen put.
 
-**2026-09-18 — Catalogus 24 L-trap:** `0a74fe42…` → nieuw `stair_l_90` (start rechtsonder, 90°-winder, 8 rechte treden, pijl omhoog). Niet `stair_quarter_90`.
+**2026-09-18 — Catalogus 24 L-trap:** `0a74fe42…` → `stair_l_90`. Zelfde als 20 zonder bovenste 90°. Onderhoek deelt `pushRightBottomTurn`. Pijl kort/90/lang omhoog.
 
-**2026-09-18 — Catalogus 25 L-trap opkomst:** `6a7f42be…` → nieuw `stair_l_90_up` (8 recht vanaf onder, 90° naar rechtsboven). Niet `stair_quarter_90_up`.
+**2026-09-18 — Catalogus 25 L-trap opkomst:** `6a7f42be…` → `stair_l_90_up`. Zelfde als 20 zonder onderste 90°. Bovenhoek deelt `pushRightTopTurn`. Pijl lang/90/kort naar de spil.
 
 **2026-09-18 — Catalogus 26 vlizotrap:** `e701f9f4…` → nieuw `stair_loft_dashed` (kader + kruis, stippellijn). Bestaande `stair_loft` = zelfde kruis, dichte lijn. Trapgat deelt de dashed glyph.
 
@@ -337,15 +339,15 @@ Zie `klant-eisen-v1.md` §2 voor volledige specificatie.
 
 **2026-09-18 — Catalogus 31 rechte trap 7 treden:** `3eccd07e…` → `stair_straight`.
 
-**2026-09-18 — Catalogus 32 rolstoelhelling:** `154ef47e…` → nieuw `ramp` (rot=0: pijl +X→−X).
+**2026-09-18 — Catalogus 32 rolstoelhelling:** `154ef47e…` → `ramp` (licht betonvlak `#d8dde4` + pijl +X→−X).
 
-**2026-09-18 — Catalogus 33 dubbele deuren glas:** `208` → `door.double`.
+**2026-09-19 — Catalogus 33 dubbele deur standaard:** `208` → `door.double_standard` (niet balkon). Twee vleugels, 10 cm hout rondom glas. `door.double` blijft glas. Oude kindnaam `door.double_balcony` aliast. In dropdown.
 
 **2026-09-18 — Catalogus 34 vierkante opening:** `222` → `door.passage`.
 
-**2026-09-18 — Catalogus 35 schuifpui 1 deel:** `6161` → `door.sliding_single`.
+**2026-09-18 — Catalogus 35 schuifpui 1 deel gespiegeld:** `6161` → `door.sliding_single_mirror` (import-only, geen deur-dropdown).
 
-**2026-09-18 — Catalogus 36 U-trap bordes:** `4589a832…` → nieuw `stair_u_landing` (7+bordes+7, geen spil).
+**2026-09-18 — Catalogus 36 U-trap bordes:** `4589a832…` → `stair_u_landing` (7+bordes+7; bordes 40% van de lengte).
 
 **2026-09-18 — Catalogus 7 balkondeur:** `3263` → nieuw `door.balcony` (glyph single, blad glas, geen Frans-hek). `door.french_balcony` + `9c845cf2…` ongewijzigd.
 
@@ -386,6 +388,7 @@ Per verdieping **inputvelden**:
 | **2026-09-17** | App laadt de bronplaat via Worker `GET /u/{key}` (`Cross-Origin-Resource-Policy: cross-origin`). COEP `require-corp` blokkeert kale `r2.dev`. `drawing.url` in `.plg`/`.fml` blijft de public r2-link. |
 | **2026-09-17** | Stap-1 «Onderlegger overnemen»: bronplaat + schaal + rotatie (geen crop). Niet opnieuw rasteren uit PDF — die pixels matchen de schaal niet meer ná bronplaat/rotatie-bake. PDF-bytes blijven voor ROI. `inputRotation` + `scaleSpace` op de donor (`source` = linialen vóór bake, `working` = ná «Rotatie vastzetten»). |
 | **2026-09-17** | Editor-onderlegger mag PDF: zelfde paginadialoog als de converter, daarna **volle pagina → PNG** (3k). Geen PDF-bytes bewaren — de editor heeft geen crop/ROI. Daarna dezelfde PNG-plaat als een gewone upload. |
+| **2026-09-18** | Editor-upload (plattegrond + Gevels) zet `drawing.url` meteen op R2-https (zelfde pad als converter stap 1). Converter → editor en `loadPlan` doen dezelfde check als download. Fout laat de data-URL staan. |
 
 POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat geen drawing.
 
@@ -408,6 +411,8 @@ POC-input kan nog steeds `drawing.url` uit examples gebruiken; V1-export bevat g
 | **2026-09-17** | Aanzicht placeholder-dakplaat (`bands.kind === 'nok'`) verdwijnt bij **dakvlakken** én bij nokbalken. Was alleen gekoppeld aan nokken: een dakvlak zonder nok liet de gegenereerde strook staan. Nok-skip blijft (geen AABB achter scheve dwarsligger). |
 | **2026-09-17** | Placeholder-dakplaat is **per floor**: een BG-dakvlak wist de 1e-plaat niet. Span = gevelmuren van díe floor (niet de uitbouw van een lagere floor). |
 | **2026-09-17** | Dakvlak/nok-snap alleen **dezelfde floor** (ook het eerste vlak, niet pas het tweede). BG magnet niet naar het dak van de 1e. |
+| **2026-09-18** | Precise-move typveld: Plan-✓ commit’t muur/knoop/opening-move (`commitActivePreciseMove`, niet `acceptDrawDraft`). Gevels nok + knoop: canvas-typveld. Plattegrond muur/knoop: label op mid van actieve kamerspan + maatlijn-emphasis. |
+| **2026-09-18** | Gevels-toolbelt bij dakvlak **én** placeholder-dakplaat (`bands.kind === 'nok'`): veld Dakdikte schrijft `plan.roof.stack.nokThicknessCm` + nokspan. Placeholder is gewone klik (geen Ctrl). Geen per-vlak dikte, geen `.plg`-veld. |
 | **2026-09-18** | Verdiepingsvloer = aanzicht-guard. Hele plaat van floor N (ook onderkant + 8 cm-snap) = floor N. Geen dak tekenen op een floor als er een verdiepingsvloer op die X zit. Aanbouw (geen hogere floor op X) vrij. |
 | **2026-09-17** | Auto-bind na dakvlak-edit (`syncDormerAssemblyAfterRoofEdit`) laat gevels staan als de goot op/nabij de vloer zit (z ≤ 8 cm). «Muren aan dak» bindt wél. |
 | **2026-09-17** | Dakvlak-punten zijaanzicht: hoeken van **hetzelfde** vlak die op dezelfde aanzicht-X/Y vallen (≤12 cm) bewegen samen (goot-/nok-paar). Voor/achter blijven 4 losse. Dakkapel paart intern, niet met ouder. Ctrl/Meta = één punt. Toolbelt-Z idem. Bij loslaten/typen: dakkapel-randmuren (kopse + wang, top én onderkant) syncen via `syncDormerAssemblyAfterRoofEdit` — geen aparte «Muren aan dak» meer nodig voor hoogte. |
@@ -932,10 +937,11 @@ Los product, niet BouwToFML-detectie. Canonieke tekst: `.cursor/docs/Pricing & M
 | Beslissing | Keuze |
 |------------|--------|
 | Setting | `planDisplay.cornerMarkerMode`: `off` / `square` / `skew` |
-| Default | `skew` — `!` op binnenhoeken die niet exact 90° zijn |
-| `square` | `|_` op exacte 90° binnenhoeken (elke oriëntatie, niet alleen H/V) |
+| Default | `skew` — `!` op binnenhoeken die meer dan 0,005° van 90° afwijken |
+| `square` | `|_` op ~90° binnenhoeken (elke oriëntatie, slack 0,005°) |
 | Scope | Elke binnenhoek-sector &lt; 180°: L=1, T=2, X=4; plat T-vlak geen teken |
-| Haaks | Sectorhoek binnen 0,2° van 90° (`CORNER_SQUARE_EPS_DEG`); schuine muren die loodrecht staan zijn square |
+| Haaks | Sectorhoek binnen 0,005° van 90° (`CORNER_SQUARE_EPS_DEG`); schuine muren die loodrecht staan zijn square |
+| Weergave vs fix | `!` pas boven 0,005°; Opschonen recht nog tot 1,5° (near-H/V). `wallsSanitizeChanged` ziet elke coord-wijziging |
 | Plaats | In de sector langs de hoekbissectrice (niet op het knooppunt) |
 | Overlay | Viewer-only; geen FML-export |
 | UI | Alleen Instellingen (geen toolbar) |
@@ -1271,6 +1277,76 @@ Uitwerking: `.cursor/docs/roof-clear-height.md`.
 | Upload | Plaat = bronpixels; Floorplanner draait via `drawing.rotation` |
 | Losse acties | Rechtzetten (bake) en schaal-bevestigen bijten elkaar niet, ongeacht volgorde. Ná bake staat de slider op 0; schaal-snapshot houdt bake/opgeslagen hoek. Bake raakt bevestigde mm niet (alleen liniaal-transform). Scheve scan (~5°) eerst rechtzetten, dan H/V-linialen. |
 | Meerdere baktes | Elke «Rotatie vastzetten» telt bij de vorige (`composeSourceToWorkingBake`). 5° + 0,1° + 0,1° = 5,2° op de bronplaat. Slider is steeds de delta. |
+
+---
+
+## Precise move: typ binnenmaat (2026-09-18)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Semantiek | Typen tijdens precise move = **resultaatmaat** van de gekozen ruimte (niet Δ vanaf start). 2e klik / sleep zonder typen blijft pixel-delta |
+| Zijde | Hover t.o.v. start kiest links/rechts/boven/onder; typen bevriest die zijde (`typeText`-gate) |
+| Gevel-fallback | Geen kamer aan hover-zijde → span van de kamer die er wél is; geen enkele kamer → oude delta |
+| Opening | Typ L/R-restmaat (plattegrond) of L/R/vloer/plafond (gevels) |
+| Knoop | As-lock H/V + room-span; label = binnenmaat; commit op echte verplaatsing |
+| Schema | Geen `.plg`-veld, geen extras, geen migratie |
+
+---
+
+## Dakkapel vlakhoogte (2026-09-18)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Trigger | Vlakselectie zonder hoek, alleen `roofKind: dormer` |
+| Semantiek | Getypte waarde = Z van **alle** hoeken (vlak wordt plat) |
+| Hoofddak | Blijft per hoek; geen vlakhoogte zonder punt |
+| Schema | Geen nieuw veld, geen extras, geen `migratePlg` |
+
+---
+
+## Gevel dakdikte op selectie (2026-09-18)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Bron | Bestaande globale `nokThicknessCm` (zelfde als zijbalk «Dakdikte») |
+| Dakvlak | Toolbelt-veld bij klik; punthoogte + delete blijven |
+| Placeholder | Gewone klik op de grijze strook (`kind: 'placeholderRoof'`); zelfde veld, geen delete |
+| Schema | Geen per-vlak dikte, geen extras, geen `migratePlg` |
+
+---
+
+## Gevel bovenlicht sleep (2026-09-18)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Selectie | Klik in het packed transom = `part: 'transom'` op de ouder-opening (zelfde id) |
+| Move | Alleen verticaal; schrijft `bovenlichtGapCm` (dorpel), hoogte vast |
+| Grepen | Alleen N/S (`bovenlichtHeightCm` / dorpel met latei vast). Geen E/W |
+| Breedte | Blijft die van de ouder |
+| Unpacked | Sibling-raam blijft een gewone opening (volle grepen) |
+| Schema | Bestaande typed velden; geen extras, geen `migratePlg` |
+
+---
+
+## i18n tabs + catalogus (2026-09-18)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Tabs | `viewer.elevationTab` / `dakTab` per locale (EN Facade/Roof, TH รูปด้าน/หลังคา, NL Gevels/Dak) |
+| Catalogus | UI via `catalog.fixtures` / `fixtureCategories` / `roomTypes`; JSON-`label` blijft NL voor FML |
+| Floor-naam | Blijft NL in het bestand (`Begane grond` / `Verdieping n`) |
+| Schema | Geen `.plg`-veld, geen extras, geen `migratePlg` |
+
+---
+
+## Muur-toolbelt acties 2e rij (2026-09-18)
+
+| Beslissing | Keuze |
+|------------|--------|
+| Probleem | Lange dikte-catalogus + `nowrap` knipte split/delete/annuleren weg in de dock |
+| Layout | Regel 1 = dikte/balans(/hoogte). Regel 2 rechts = split + delete + annuleren |
+| Gevel | Full-strip: gevel/stempel links op dezelfde 2e regel |
+| Schema | Geen `.plg`-veld, geen extras |
 
 ---
 

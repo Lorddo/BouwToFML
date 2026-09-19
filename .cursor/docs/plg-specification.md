@@ -359,11 +359,13 @@ Bron: `opening-kinds.json`. Nieuw type = catalogus + overleg, geen ad-hoc string
 | `door.flush` | door | flush (middenstreep ±20 cm, geen draaicirkel) |
 | `door.half_glass` | door | half_glass (voordeur, boven glas) |
 | `door.double` | door | double_wide (glas) |
+| `door.double_standard` | door | double_wide (standaard: hout + glas 10 cm per vleugel) |
 | `door.double_solid` | door | double_wide (vol) |
 | `door.bifold` | door | bifold |
 | `door.bifold_double` | door | bifold_double |
 | `door.pocket` | door | sliding_pocket |
 | `door.sliding_single` | door | sliding_single |
+| `door.sliding_single_mirror` | door | sliding_single_mirror (6161; import-only, geen dropdown) |
 | `door.sliding` | door | sliding |
 | `door.elevator` | door | elevator (twee schuifbladen, middennaad) |
 | `door.garage` | door | garage |
